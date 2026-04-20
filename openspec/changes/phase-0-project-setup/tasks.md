@@ -36,7 +36,7 @@
 
 - [ ] 4.1 Create `.github/workflows/ci.yml` with jobs: `lint` (runs `npm run lint`), `typecheck` (runs `npm run typecheck`), `build` (runs `npm run build`) — triggered on pull_request to main
 - [ ] 4.2 Add Lighthouse CI job to `.github/workflows/ci.yml` using `treosh/lighthouse-ci-action` against Vercel preview URL
-- [ ] 4.3 Create `.lighthouserc.json` with thresholds: performance ≥ 80, accessibility ≥ 80, best-practices ≥ 80, seo ≥ 80
+- [ ] 4.3 Create `.lighthouserc.json` with thresholds: performance ≥ 90, accessibility ≥ 90, best-practices ≥ 90, seo ≥ 90
 - [ ] 4.4 Configure Vercel project: link repository, set build command (`npm run build`), output directory (`.output`), and environment variables
 - [ ] 4.5 Create `.github/workflows/deploy.yml` with Vercel production deploy on push to main
 - [ ] 4.6 Document required GitHub secrets in repository README: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`, `LHCI_GITHUB_APP_TOKEN`
