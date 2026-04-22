@@ -3,7 +3,21 @@
     "allow": [
       "Bash(openspec new *)",
       "Bash(openspec status *)",
-      "Bash(openspec instructions *)"
+      "Bash(openspec instructions *)",
+      "Bash(openspec list *)",
+      "Bash(python3 -c \"import sys,json;d=json.load\\(sys.stdin\\);print\\(list\\(d.keys\\(\\)\\)\\)\")",
+      "Bash(grep -n '$t\\(' app/layouts/admin.vue app/layouts/manager.vue app/layouts/tenant.vue)",
+      "Bash(npm run *)",
+      "Bash(cp -r app/locales/vi/* i18n/locales/vi/)",
+      "Bash(cp -r app/locales/en/* i18n/locales/en/)",
+      "Bash(npm ls *)",
+      "Bash(npm view *)",
+      "Bash(npx --version)",
+      "Bash(cp -r /Users/thanhtung.nguyen/Documents/personal/zeno-house/openspec/changes/phase-0-project-setup/specs/auth-infrastructure /Users/thanhtung.nguyen/Documents/personal/zeno-house/openspec/specs/)",
+      "Bash(cp -r /Users/thanhtung.nguyen/Documents/personal/zeno-house/openspec/changes/phase-0-project-setup/specs/ci-cd-pipeline /Users/thanhtung.nguyen/Documents/personal/zeno-house/openspec/specs/)",
+      "Bash(cp -r /Users/thanhtung.nguyen/Documents/personal/zeno-house/openspec/changes/phase-0-project-setup/specs/i18n-setup /Users/thanhtung.nguyen/Documents/personal/zeno-house/openspec/specs/)",
+      "Bash(cp -r /Users/thanhtung.nguyen/Documents/personal/zeno-house/openspec/changes/phase-0-project-setup/specs/project-scaffold /Users/thanhtung.nguyen/Documents/personal/zeno-house/openspec/specs/)",
+      "Bash(cp -r /Users/thanhtung.nguyen/Documents/personal/zeno-house/openspec/changes/phase-0-project-setup/specs/supabase-schema /Users/thanhtung.nguyen/Documents/personal/zeno-house/openspec/specs/)"
     ]
   }
 }

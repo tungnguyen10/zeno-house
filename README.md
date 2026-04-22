@@ -1,75 +1,57 @@
-# Nuxt Minimal Starter
+# zeno-house
 
-Look at the [Nuxt documentation](https://nuxt.com/docs/getting-started/introduction) to learn more.
+Hệ thống quản lý nhà trọ — Rental Property Management System
 
 ## Setup
 
-Make sure to install dependencies:
-
 ```bash
-# npm
 npm install
-
-# pnpm
-pnpm install
-
-# yarn
-yarn install
-
-# bun
-bun install
 ```
 
-## Development Server
-
-Start the development server on `http://localhost:3000`:
+Copy `.env.example` to `.env` and fill in your Supabase credentials:
 
 ```bash
-# npm
-npm run dev
-
-# pnpm
-pnpm dev
-
-# yarn
-yarn dev
-
-# bun
-bun run dev
+cp .env.example .env
 ```
 
-## Production
-
-Build the application for production:
+## Development
 
 ```bash
-# npm
-npm run build
-
-# pnpm
-pnpm build
-
-# yarn
-yarn build
-
-# bun
-bun run build
+npm run dev        # Start dev server at http://localhost:3000
+npm run typecheck  # TypeScript type check
+npm run lint       # ESLint check
+npm run lint:fix   # ESLint auto-fix
+npm run build      # Production build
+npm run preview    # Preview production build
 ```
 
-Locally preview production build:
+## CI/CD — Required GitHub Secrets
+
+Configure these in **Settings → Secrets and variables → Actions**:
+
+| Secret | Description |
+|--------|-------------|
+| `SUPABASE_URL` | Your Supabase project URL |
+| `SUPABASE_KEY` | Supabase anon/public key |
+| `SUPABASE_SERVICE_KEY` | Supabase service role key (server-side only) |
+| `VERCEL_TOKEN` | Vercel personal access token |
+| `VERCEL_ORG_ID` | Vercel organization ID |
+| `VERCEL_PROJECT_ID` | Vercel project ID |
+| `LHCI_GITHUB_APP_TOKEN` | Lighthouse CI GitHub App token |
+
+## Database
+
+Apply the migration to your Supabase project:
 
 ```bash
-# npm
-npm run preview
+# Via Supabase CLI
+supabase db push
 
-# pnpm
-pnpm preview
-
-# yarn
-yarn preview
-
-# bun
-bun run preview
+# Or paste supabase/migrations/001_initial_schema.sql into the Supabase SQL editor
 ```
 
-Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.
+After applying the migration, generate TypeScript types:
+
+```bash
+supabase gen types typescript --project-id <your-project-id> > app/types/database.types.ts
+```

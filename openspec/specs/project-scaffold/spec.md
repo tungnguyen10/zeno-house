@@ -53,3 +53,31 @@ The system SHALL include a `.env.example` file listing all required environment 
 #### Scenario: .env.example is complete
 - **WHEN** a new developer reviews `.env.example`
 - **THEN** all variables needed to run the app locally are listed with example values or descriptions
+
+### Requirement: app.vue wraps content in UApp for Nuxt UI v4
+The system SHALL wrap all layout content in `<UApp>` in `app.vue` to enable Nuxt UI v4 theming, CSS variable injection, toast notifications, and modal support.
+
+#### Scenario: UApp is present
+- **WHEN** the app renders any page
+- **THEN** Nuxt UI components (UButton, UCard, UTable, etc.) render with correct colors and styles
+
+### Requirement: Node.js 20+ is required
+The system SHALL require Node.js 20 or higher. This MUST be documented in the README.
+
+#### Scenario: App fails to start on older Node
+- **WHEN** a developer runs `npm run dev` with Node.js below v18
+- **THEN** the process exits with `ERR_REQUIRE_ESM` — developer must upgrade
+
+### Requirement: Dev server runs over HTTPS
+The system SHALL configure `devServer.https: true` in `nuxt.config.ts` so the local dev server runs on `https://localhost:3000`.
+
+#### Scenario: HTTPS on localhost
+- **WHEN** developer runs `npm run dev`
+- **THEN** dev server starts on `https://localhost:3000` with a self-signed certificate
+
+### Requirement: Layout files use slot outlet
+All layout files (`admin.vue`, `manager.vue`, `tenant.vue`, `default.vue`) SHALL use `<slot />` as the page content outlet — NOT `<NuxtPage />`.
+
+#### Scenario: Page renders inside layout
+- **WHEN** a page with `definePageMeta({ layout: 'admin' })` is visited
+- **THEN** the admin sidebar is visible and the page content renders inside the `<slot />`

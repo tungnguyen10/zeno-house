@@ -18,7 +18,7 @@ Key constraints:
 - Auto-deploy to Vercel on merge to main
 
 **Non-Goals:**
-- Any feature UI pages (login, dashboard, rooms, etc.) — those are Phase 1+
+- Feature UI pages (rooms detail, invoices, contracts forms, etc.) — those are Phase 1+
 - Seed data or demo content
 - Mobile app or PWA configuration
 - Email/SMS notification providers
@@ -74,7 +74,7 @@ Key constraints:
 
 ## Migration Plan
 
-1. Run `pnpm create nuxt-app` scaffold
+1. Run `npm create nuxt-app` scaffold
 2. Install and configure all dependencies
 3. Run Supabase migration SQL against the project database
 4. Set environment variables in Vercel dashboard
