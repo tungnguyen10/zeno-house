@@ -17,7 +17,8 @@
       "Bash(cp -r /Users/thanhtung.nguyen/Documents/personal/zeno-house/openspec/changes/phase-0-project-setup/specs/ci-cd-pipeline /Users/thanhtung.nguyen/Documents/personal/zeno-house/openspec/specs/)",
       "Bash(cp -r /Users/thanhtung.nguyen/Documents/personal/zeno-house/openspec/changes/phase-0-project-setup/specs/i18n-setup /Users/thanhtung.nguyen/Documents/personal/zeno-house/openspec/specs/)",
       "Bash(cp -r /Users/thanhtung.nguyen/Documents/personal/zeno-house/openspec/changes/phase-0-project-setup/specs/project-scaffold /Users/thanhtung.nguyen/Documents/personal/zeno-house/openspec/specs/)",
-      "Bash(cp -r /Users/thanhtung.nguyen/Documents/personal/zeno-house/openspec/changes/phase-0-project-setup/specs/supabase-schema /Users/thanhtung.nguyen/Documents/personal/zeno-house/openspec/specs/)"
+      "Bash(cp -r /Users/thanhtung.nguyen/Documents/personal/zeno-house/openspec/changes/phase-0-project-setup/specs/supabase-schema /Users/thanhtung.nguyen/Documents/personal/zeno-house/openspec/specs/)",
+      "Bash([[ -f \"instructions/$f.md\" ]])"
     ]
   }
 }
