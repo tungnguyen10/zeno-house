@@ -11,6 +11,8 @@ export default defineNuxtConfig({
     },
   },
 
+  css: ['~/assets/css/main.css'],
+
   modules: [
     '@nuxt/ui',
     '@nuxtjs/i18n',
@@ -60,15 +62,14 @@ export default defineNuxtConfig({
   },
 
   supabase: {
+    url: process.env.SUPABASE_URL,
+    key: process.env.SUPABASE_KEY,
+    serviceKey: process.env.SUPABASE_SECRET_KEY,
     redirect: false,
   },
 
   runtimeConfig: {
-    supabaseServiceKey: '',
-    public: {
-      supabaseUrl: process.env.SUPABASE_URL ?? '',
-      supabaseKey: process.env.SUPABASE_KEY ?? '',
-    },
+    supabaseServiceKey: process.env.SUPABASE_SECRET_KEY ?? '',
   },
 
   typescript: {
@@ -83,7 +84,7 @@ export default defineNuxtConfig({
     componentPrefix: "icon",
   },
   pinia: {
-    storesDirs: ["~/stores/**"],
+    storesDirs: ["./app/stores/**"],
   },
   vite: {
     optimizeDeps: {

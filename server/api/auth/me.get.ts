@@ -11,14 +11,15 @@ export default defineEventHandler(async (event) => {
 
   const { data: profile } = await client
     .from('profiles')
-    .select('role, full_name')
+    .select('role, full_name, created_at')
     .eq('id', user.id)
-    .single() as { data: { role: string; full_name: string | null } | null; error: unknown }
+    .single() as { data: { role: string; full_name: string | null; created_at: string } | null; error: unknown }
 
   return {
     id: user.id,
     email: user.email,
     role: profile?.role ?? null,
     full_name: profile?.full_name ?? null,
+    created_at: profile?.created_at ?? '',
   }
 })

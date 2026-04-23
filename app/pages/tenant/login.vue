@@ -1,11 +1,11 @@
 <template>
-  <AuthLoginForm :loading="loading" :error="error" @submit="handleSubmit" />
+  <AuthLoginForm variant="tenant" :loading="loading" :error="error" @submit="handleSubmit" />
 </template>
 
 <script setup lang="ts">
 definePageMeta({ layout: "auth", middleware: ["guest"] });
 
-const { login, logout, isAdmin, isManager, isTenant } = useAuth();
+const { login, signOut, isTenant } = useAuth();
 const { t } = useI18n();
 
 const loading = ref(false);
@@ -16,13 +16,12 @@ async function handleSubmit({ email, password }: { email: string; password: stri
   error.value = "";
   try {
     await login(email, password);
-    if (isTenant.value) {
-      await logout();
+    if (!isTenant.value) {
+      await signOut();
       error.value = t("auth.errors.wrong_role");
       return;
     }
-    if (isAdmin.value) await navigateTo("/admin");
-    else if (isManager.value) await navigateTo("/manager");
+    await navigateTo("/tenant");
   } catch (err) {
     error.value = err instanceof Error ? err.message : t("auth.login_failed");
   } finally {

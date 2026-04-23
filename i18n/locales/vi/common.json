@@ -51,6 +51,7 @@
     "currency": "vi-VN",
     "currency_symbol": "₫"
   },
+  "app_name": "Zeno House",
   "loading": "Đang tải...",
   "empty": "Không có dữ liệu",
   "error": "Đã xảy ra lỗi",
