@@ -5,11 +5,11 @@ Defines requirements for the `instructions/` directory — a set of coding conve
 ## Requirements
 
 ### Requirement: instructions/ directory exists with 7 coding convention files
-The system SHALL have an `instructions/` directory at the project root containing 7 markdown files covering coding conventions for Claude Code and team members.
+The system SHALL have an `instructions/` directory at the project root containing 8 markdown files covering coding conventions for Claude Code and team members.
 
 #### Scenario: All required instruction files exist
 - **WHEN** a developer checks out the repository
-- **THEN** `instructions/project-structure.md`, `instructions/typescript.md`, `instructions/supabase-platform.md`, `instructions/api-conventions.md`, `instructions/components.md`, `instructions/composables.md`, `instructions/stores.md`, `instructions/styling.md` all exist
+- **THEN** `instructions/project-structure.md`, `instructions/typescript.md`, `instructions/supabase-platform.md`, `instructions/api-conventions.md`, `instructions/components.md`, `instructions/composables.md`, `instructions/stores.md`, `instructions/styling.md`, `instructions/svg.md` all exist
 
 ### Requirement: Each instruction file contains actionable rules with anti-patterns
 The system SHALL have each instruction file contain: a brief purpose statement, explicit DO rules with examples, and explicit anti-pattern (DON'T) rules that prevent common mistakes.

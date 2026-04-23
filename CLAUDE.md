@@ -63,6 +63,7 @@ npm run lint:fix
 @instructions/composables.md
 @instructions/stores.md
 @instructions/styling.md
+@instructions/svg.md
 
 ## Maintenance
 

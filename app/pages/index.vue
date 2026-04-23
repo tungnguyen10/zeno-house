@@ -1,11 +1,19 @@
 <script setup lang="ts">
-const user = useSupabaseUser()
+import { useAuthStore } from "~/stores/auth";
+
+const user = useSupabaseUser();
+const authStore = useAuthStore();
 
 if (!user.value) {
-  await navigateTo('/login')
+  await navigateTo("/login");
+} else {
+  const role = await authStore.fetchRole();
+  if (role === "admin") await navigateTo("/admin");
+  else if (role === "manager") await navigateTo("/manager");
+  else await navigateTo("/tenant");
 }
 </script>
 
 <template>
-  loading...
+  <div />
 </template>

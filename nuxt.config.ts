@@ -18,6 +18,7 @@ export default defineNuxtConfig({
     '@pinia/nuxt',
     '@vueuse/nuxt',
     '@nuxt/eslint',
+    'nuxt-svgo',
   ],
 
   i18n: {
@@ -77,7 +78,13 @@ export default defineNuxtConfig({
   devServer: {
     https: true,
   },
-
+  svgo: {
+    autoImportPath: "~/assets/icons",
+    componentPrefix: "icon",
+  },
+  pinia: {
+    storesDirs: ["~/stores/**"],
+  },
   vite: {
     optimizeDeps: {
       include: ['zod'],
