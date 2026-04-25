@@ -1,4 +1,4 @@
-## ADDED Requirements
+## Requirements
 
 ### Requirement: server/api/auth/me returns authenticated user profile
 The system SHALL expose a `GET /api/auth/me` server route that returns the authenticated user's `id`, `email`, `role`, and `full_name` from the `profiles` table. Returns 401 if the request is unauthenticated.
@@ -42,15 +42,26 @@ The system SHALL have a `role.ts` Nuxt route middleware that checks the user's r
 - **THEN** access is allowed (admin is a superset of manager)
 
 ### Requirement: Auth Pinia store caches role to avoid duplicate API calls
-The system SHALL have a `useAuthStore` Pinia store that caches the user's role after the first `/api/auth/me` call. Subsequent calls within the same session return the cached value.
+The system SHALL have a `useAuthStore` Pinia store that caches the authenticated user's `user` object (from Supabase Auth) and full `profile` (from `profiles` table). `role` is derived from `profile.role`. Subsequent calls within the same session return the cached value. The store exposes:
+- `$reset()` — clears all state on logout
+- `setProfile(data: Profile)` — directly populates `user` and `profile` from a Profile object (used by `useAuth.login()` to bypass the server-side `/api/auth/me` call during login)
+- `fetchProfile()` — fetches from `GET /api/auth/me` and populates the store; used by middleware on subsequent page navigations
 
 #### Scenario: Role fetched once per session
 - **WHEN** a user logs in and navigates between pages
-- **THEN** `/api/auth/me` is called exactly once; subsequent role reads hit the store cache
+- **THEN** `/api/auth/me` is called at most once per session; subsequent role reads hit the store cache
+
+#### Scenario: setProfile populates store directly
+- **WHEN** `setProfile(profile)` is called with a valid Profile object
+- **THEN** `user` and `profile` are populated immediately without an API call
 
 #### Scenario: Cache cleared on logout
 - **WHEN** a user logs out
-- **THEN** `clearRole()` is called and the cached role is reset to `null`
+- **THEN** `$reset()` is called, clearing `user`, `profile`, and `role`
+
+#### Scenario: Store exposes user and profile
+- **WHEN** a component reads `useAuthStore().profile`
+- **THEN** it receives the full profile object including `full_name`, `email`, `role`
 
 ### Requirement: Login page authenticates users and redirects by role
 The system SHALL have a login page at `/login` with an email/password form. On successful login, the user is immediately redirected to their role-based dashboard without visiting the index route.

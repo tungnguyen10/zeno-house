@@ -36,6 +36,16 @@ export function useAuth() {
     }
   }
 
+  async function loginWithGoogle() {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${useRequestURL().origin}/auth/callback`,
+      },
+    });
+    if (error) throw new Error(error.message);
+  }
+
   async function signOut() {
     await supabase.auth.signOut();
     authStore.$reset();
@@ -62,5 +72,5 @@ export function useAuth() {
     return ROLE_HIERARCHY[current as Role] >= ROLE_HIERARCHY[requiredRole];
   }
 
-  return { login, signOut, logout, forgotPassword, fetchProfile, isAdmin, isManager, isTenant, hasPermission };
+  return { login, loginWithGoogle, signOut, logout, forgotPassword, fetchProfile, isAdmin, isManager, isTenant, hasPermission };
 }

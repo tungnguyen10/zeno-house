@@ -1,7 +1,47 @@
 @import "tailwindcss";
 @import "@nuxt/ui";
 
-/* Inter Variable Font */
+/* ─── Custom design tokens ───────────────────────────────────────────────── */
+@theme {
+  /* Brand */
+  --color-theme:        #0B59DB;
+  --color-theme-purple: #6653E8;
+  --color-brand:        #79F4E4;
+
+  /* Text */
+  --color-title: #0B1422;
+  --color-body:  #6E7070;
+
+  /* Backgrounds */
+  --color-smoke:      #F2F5FA;
+  --color-smoke-blue: #EEF1FF;
+  --color-smoke-card: #F4F6F8;
+
+  /* Borders */
+  --color-border:       #D5D7DA;
+  --color-border-light: #E1E4E5;
+
+  /* Status */
+  --color-success: #28A745;
+  --color-error:   #DC3545;
+  --color-warning: #FFB539;
+
+  /* Dark sections */
+  --color-dark:      #1A1B1D;
+  --color-dark-card: #242528;
+  --color-dark-nav:  #001C49;
+  --color-dark-deep: #0a0f1e;
+
+  /* Fonts */
+  --font-inter: Inter, ui-sans-serif, system-ui;
+
+  /* z-index scale extensions */
+  --z-60: 60;
+  --z-70: 70;
+  --z-80: 80;
+}
+
+/* ─── Inter Variable Font ────────────────────────────────────────────────── */
 @font-face {
   font-family: 'Inter';
   src: url('/fonts/Inter-VariableFont_opsz,wght.ttf') format('truetype');
@@ -18,7 +58,7 @@
   font-display: swap;
 }
 
-/* Custom scrollbar */
+/* ─── Utilities ──────────────────────────────────────────────────────────── */
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }

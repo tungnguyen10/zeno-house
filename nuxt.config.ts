@@ -66,6 +66,11 @@ export default defineNuxtConfig({
     key: process.env.SUPABASE_KEY,
     serviceKey: process.env.SUPABASE_SECRET_KEY,
     redirect: false,
+    redirectOptions: {
+      login: '/login',
+      callback: '/auth/callback',
+      exclude: ['/login', '/tenant/login', '/forgot-password', '/auth/callback'],
+    },
   },
 
   runtimeConfig: {

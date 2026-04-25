@@ -25,6 +25,14 @@ app/assets/icons/
 └── briefcase.svg       → <IconBriefcase />
 ```
 
+## Workflow: Check Before Creating
+
+**Before adding any SVG, check `app/assets/icons/` first.** If the icon exists, reuse it directly. Only create a new `.svg` file if it is genuinely absent.
+
+1. Look in `app/assets/icons/` for the icon you need
+2. If found → use `<IconName />` directly
+3. If not found → create a new `.svg` in `app/assets/icons/` using `currentColor`, then use `<IconName />`
+
 ## Component Usage
 
 Use the auto-imported `<Icon*>` component. The prefix is `icon` and the filename is converted to PascalCase:
@@ -55,7 +63,7 @@ Set icon size with Tailwind utilities on the component. Never use HTML `width`/`
 
 ## Color & Theming
 
-Icons in `app/assets/icons/` MUST use `currentColor` for stroke and fill. This lets Tailwind text-color utilities propagate naturally:
+New SVG files MUST use `currentColor` for stroke and fill so Tailwind text-color utilities apply:
 
 ```vue
 <IconSearch class="text-gray-500" />       <!-- gray stroke/fill -->
@@ -63,17 +71,22 @@ Icons in `app/assets/icons/` MUST use `currentColor` for stroke and fill. This l
 <IconSearch class="text-red-500" />         <!-- error state -->
 ```
 
-**Brand SVGs with hardcoded colors** (logos, illustrations) MUST NOT go in `app/assets/icons/`. Place them in `public/` and reference via `<img>`:
+Example SVG structure using `currentColor`:
 
-```vue
-<!-- Brand logo with hardcoded colors -->
-<img src="/logo.svg" alt="Zeno House" class="h-8" />
+```svg
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <!-- paths here -->
+</svg>
 ```
+
+> **Note**: Some existing icons (e.g. `google.svg`) may have hardcoded brand colors and won't respond to Tailwind text-color utilities — that is expected. All newly created icons must use `currentColor`.
 
 ## Anti-patterns
 
-- **DON'T** use `<img src="...svg">` for icons — loses theming and accessibility
+- **DON'T** use `<img src="...svg">` for SVGs — loses component API, theming, and sizing control
 - **DON'T** copy-paste raw `<svg>` markup inline — unmanageable at scale
 - **DON'T** create subdirectories inside `app/assets/icons/` — auto-import is flat
-- **DON'T** hardcode hex colors in SVG files under `app/assets/icons/` — use `currentColor`
 - **DON'T** use `width`/`height` HTML attributes — use Tailwind `size-*` or `w-* h-*`
+- **DON'T** hardcode colors in new SVG files — use `currentColor`
+- **DON'T** create a new icon file without first checking if one already exists in `app/assets/icons/`

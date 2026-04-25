@@ -1,16 +1,27 @@
 <template>
-  <AuthLoginForm variant="tenant" :loading="loading" :error="error" @submit="handleSubmit" />
+  <AuthLoginForm variant="tenant" :loading="loading" :google-loading="googleLoading" :error="error" @submit="handleSubmit" @google="handleGoogle" />
 </template>
 
 <script setup lang="ts">
 definePageMeta({ layout: "auth", middleware: ["guest"] });
 
-const { login, signOut, isTenant } = useAuth();
+const { login, loginWithGoogle, signOut, isTenant } = useAuth();
 const { t } = useI18n();
 
 const loading = ref(false);
+const googleLoading = ref(false);
 const error = ref("");
 
+async function handleGoogle() {
+  googleLoading.value = true;
+  error.value = "";
+  try {
+    await loginWithGoogle();
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : t("auth.login_failed");
+    googleLoading.value = false;
+  }
+}
 async function handleSubmit({ email, password }: { email: string; password: string }) {
   loading.value = true;
   error.value = "";

@@ -1,11 +1,19 @@
 ## ADDED Requirements
 
 ### Requirement: useAuth composable exposes login and logout actions
-The system SHALL provide a `useAuth()` composable in `app/composables/useAuth.ts` that exposes `login(email, password)` and `logout()` functions. `login()` calls Supabase Auth and updates the store; `logout()` calls Supabase signOut and resets all stores.
+The system SHALL provide a `useAuth()` composable in `app/composables/useAuth.ts` that exposes `login(email, password)`, `logout()`, and `signOut()` functions.
+
+- `login()` calls `supabase.auth.signInWithPassword()` then queries the `profiles` table directly via the Supabase client (not via `/api/auth/me`) to populate the store immediately — this avoids the SSR cookie timing issue where the server-side API call fires before the session cookie is set. If no profile row exists, the session is cleared and an error is thrown.
+- `logout()` calls `signOut()` then redirects to `/login`.
+- `signOut()` clears the Supabase session and resets the store without redirecting — used when the caller needs to handle navigation itself (e.g. blocking wrong-role login).
 
 #### Scenario: Successful login updates store and redirects
 - **WHEN** `login(email, password)` is called with valid credentials
-- **THEN** the auth store is populated with `user` and `profile`, and the caller can redirect based on role
+- **THEN** the auth store is populated with `user` and `profile` via direct Supabase client query, and the caller can redirect based on role
+
+#### Scenario: Login with no profile row signs out and throws
+- **WHEN** `login(email, password)` is called and no `profiles` row exists for the user
+- **THEN** the Supabase session is cleared and an `invalid_credentials` error is thrown
 
 #### Scenario: Failed login throws with message
 - **WHEN** `login(email, password)` is called with invalid credentials
@@ -14,6 +22,10 @@ The system SHALL provide a `useAuth()` composable in `app/composables/useAuth.ts
 #### Scenario: Logout clears all store state
 - **WHEN** `logout()` is called
 - **THEN** `useAuthStore.$reset()` is called, the Supabase session is cleared, and the user is redirected to `/login`
+
+#### Scenario: signOut clears state without redirect
+- **WHEN** `signOut()` is called
+- **THEN** `useAuthStore.$reset()` is called and the Supabase session is cleared, but no navigation occurs
 
 ### Requirement: useAuth composable exposes role-based computed flags
 The system SHALL expose `isAdmin`, `isManager`, and `isTenant` as computed refs derived from `useAuthStore().profile.role`. These are read-only and reactive.

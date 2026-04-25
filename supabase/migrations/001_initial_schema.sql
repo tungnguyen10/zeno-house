@@ -334,8 +334,10 @@ CREATE INDEX idx_payments_invoice_id ON payments(invoice_id);
 CREATE OR REPLACE FUNCTION handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO public.profiles (id, email, role)
-  VALUES (NEW.id, NEW.email, 'tenant');
+  INSERT INTO public.profiles (id, email, full_name, role)
+  VALUES (NEW.id, NEW.email, NEW.raw_user_meta_data->>'full_name', 'tenant')
+  ON CONFLICT (id) DO UPDATE
+    SET full_name = COALESCE(profiles.full_name, EXCLUDED.full_name);
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, auth;

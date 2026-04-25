@@ -33,6 +33,20 @@
       <UButton type="submit" class="w-full justify-center" :loading="loading">
         {{ $t("auth.login") }}
       </UButton>
+
+      <UDivider :label="$t('auth.or')" />
+
+      <UButton
+        variant="outline"
+        class="w-full justify-center"
+        :loading="googleLoading"
+        @click="$emit('google')"
+      >
+        <template #leading>
+          <IconGoogle class="w-4 h-4" />
+        </template>
+        {{ $t("auth.login_with_google") }}
+      </UButton>
     </UForm>
 
     <template #footer>
@@ -49,11 +63,13 @@ import { z } from "zod";
 defineProps<{
   variant?: "admin" | "tenant";
   loading?: boolean;
+  googleLoading?: boolean;
   error?: string;
 }>();
 
 const emit = defineEmits<{
   (e: "submit", payload: { email: string; password: string }): void;
+  (e: "google"): void;
 }>();
 
 const form = reactive({ email: "", password: "" });
