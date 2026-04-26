@@ -47,6 +47,56 @@ const statusColor = {
 
 Available tokens: `room-available`, `room-occupied`, `room-maintenance`, `room-reserved`
 
+## `cn()` — Conditional & Merged Classes
+
+Use `cn()` (auto-imported from `app/utils/cn.ts`) when classes are conditional or composed from props. It combines **clsx** (conditional logic) + **tailwind-merge** (conflict resolution):
+
+```vue
+<script setup lang="ts">
+const props = defineProps<{ variant?: "primary" | "danger"; disabled?: boolean }>();
+</script>
+
+<template>
+  <!-- Conditional classes -->
+  <div :class="cn('rounded px-4 py-2', props.disabled && 'opacity-50 cursor-not-allowed')">
+    ...
+  </div>
+
+  <!-- Variant-based composition -->
+  <button
+    :class="cn(
+      'rounded px-4 py-2 font-medium',
+      props.variant === 'danger' ? 'bg-red-500 text-white' : 'bg-primary text-white',
+    )"
+  >
+    ...
+  </button>
+</template>
+```
+
+**When to use `cn()` vs plain `:class`:**
+
+| Situation | Use |
+| --- | --- |
+| Static classes only | `class="..."` |
+| One condition (`v-if`-style toggle) | `:class="{ 'opacity-50': disabled }"` |
+| Multiple conditions / prop-driven variants | `cn(...)` |
+| Merging base + override (component API) | `cn(baseClasses, props.class)` |
+
+`cn()` is especially useful in reusable components that accept a `class` prop:
+
+```vue
+<script setup lang="ts">
+const props = defineProps<{ class?: string }>();
+</script>
+
+<template>
+  <div :class="cn('base-styles here', props.class)">
+    <slot />
+  </div>
+</template>
+```
+
 ## TailwindCSS Usage
 
 Use Tailwind utilities for layout and spacing. Follow mobile-first responsive prefixes:

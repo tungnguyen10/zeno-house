@@ -98,7 +98,7 @@ Use Nuxt UI components before building custom HTML + Tailwind:
 
 Use a **folder + `index.vue`** only when there are sibling files. A component with no siblings MUST be a single `.vue` file.
 
-```
+```text
 ✅ features/room/Card.vue              (single file, no siblings)
 ✅ layout/nav/index.vue + NavLinks.vue (folder needed — has sibling)
 ❌ features/room/Card/index.vue        (folder with no siblings — anti-pattern)
@@ -108,7 +108,7 @@ Use a **folder + `index.vue`** only when there are sibling files. A component wi
 
 The subfolder name becomes the prefix — don't repeat it in the filename:
 
-```
+```text
 ❌ features/room/RoomCard.vue   → <RoomRoomCard />  (duplicated)
 ✅ features/room/Card.vue       → <RoomCard />       (clean)
 ```
@@ -127,17 +127,20 @@ Always use `$t()` for user-facing strings:
 ## Code Standards
 
 **Use `v-for` for repeated markup** — never duplicate template blocks that differ only in data:
+
 ```vue
 <a v-for="item in navItems" :key="item.id">{{ item.label }}</a>
 ```
 
 **No inline styles** — use Tailwind classes or `<style scoped>`:
+
 ```vue
 <!-- Bad -->  <div :style="{ color: '#ff0000' }">
 <!-- Good -->  <div class="text-red-500">
 ```
 
 **No external CDN URLs** for static assets — put them in `public/` and use root-relative paths:
+
 ```vue
 <!-- Bad -->  <img src="https://cdn.example.com/logo.svg" />
 <!-- Good --> <img src="/logo.svg" />
