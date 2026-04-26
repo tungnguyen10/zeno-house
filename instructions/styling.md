@@ -97,6 +97,76 @@ const props = defineProps<{ class?: string }>();
 </template>
 ```
 
+## Mobile First
+
+Write CSS for mobile (375px) FIRST, then scale up. Breakpoint order: base → `sm:` → `md:` → `lg:` → `xl:`.
+
+```html
+<!-- ✅ Mobile first -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+
+<!-- ❌ Desktop first -->
+<div class="grid grid-cols-3 sm:grid-cols-2 grid-cols-1">
+```
+
+- Never use `max-width` to hide elements on mobile
+- Test every component at 375px, 390px (iPhone), 430px before marking done
+
+## Responsive Layout
+
+```text
+Container:    max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8
+
+Spacing scale (stick to these values):
+  4 → 8 → 12 → 16 → 20 → 24 → 32 → 48 → 64 → 80 → 96
+
+Gap standard:
+  Mobile:  gap-4
+  Tablet:  sm:gap-6
+  Desktop: lg:gap-8
+```
+
+## Touch & Interaction
+
+- Minimum touch target: **44×44px** (WCAG 2.5.5)
+- No hover-only interaction — must have tap equivalent
+- Use bottom navigation instead of top navigation on mobile
+
+## Typography Scale
+
+```text
+Display:  text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight
+H1:       text-3xl sm:text-4xl font-bold leading-tight
+H2:       text-2xl sm:text-3xl font-semibold leading-snug
+H3:       text-xl sm:text-2xl font-semibold leading-snug
+Body lg:  text-lg leading-relaxed
+Body:     text-base leading-relaxed
+Small:    text-sm leading-normal
+Caption:  text-xs leading-normal text-muted
+```
+
+## Spacing Rhythm
+
+```text
+Section padding:  py-16 sm:py-20 lg:py-24
+Card padding:     p-4 sm:p-6
+Content gap:      space-y-4 sm:space-y-6
+Inline gap:       gap-2 sm:gap-3
+```
+
+## Color Usage
+
+Use NuxtUI color tokens — never hardcode hex values:
+
+```text
+Primary action:    color="primary"
+Destructive:       color="error"
+Success:           color="success"
+Neutral:           color="neutral"
+Muted text:        class="text-muted"
+Background subtle: class="bg-muted"
+```
+
 ## TailwindCSS Usage
 
 Use Tailwind utilities for layout and spacing. Follow mobile-first responsive prefixes:
@@ -121,10 +191,90 @@ Nuxt UI handles dark mode automatically via its color system. Don't add manual `
 <div class="text-red-500 mt-4">...</div>
 ```
 
+## Animation & Motion
+
+```text
+Micro-interaction:  transition-all duration-200 ease-out
+Fade in/out:        transition-opacity duration-300
+Slide:              transition-transform duration-300
+Page transition:    300–500ms
+```
+
+Always respect the reduced-motion preference:
+
+```css
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: 0.01ms !important; }
+}
+```
+
+Vue `<Transition>` pattern:
+
+```vue
+<Transition
+  enter-active-class="transition-all duration-300 ease-out"
+  enter-from-class="opacity-0 translate-y-2"
+  enter-to-class="opacity-100 translate-y-0"
+  leave-active-class="transition-all duration-200 ease-in"
+  leave-from-class="opacity-100 translate-y-0"
+  leave-to-class="opacity-0 translate-y-2"
+>
+  <div v-if="show">...</div>
+</Transition>
+```
+
+## Responsive Patterns
+
+### Navigation
+
+```text
+Mobile:  Bottom tab bar or hamburger menu
+Tablet:  Side drawer
+Desktop: Top horizontal nav
+```
+
+### Grid Layouts
+
+```html
+<!-- Card grid -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+
+<!-- Content + sidebar -->
+<div class="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-8">
+
+<!-- Hero section -->
+<div class="flex flex-col lg:flex-row items-center gap-8 lg:gap-16">
+```
+
+### Images — always use NuxtImg
+
+```vue
+<NuxtImg
+  src="/image.jpg"
+  alt="description"
+  width="800"
+  height="600"
+  class="w-full h-auto object-cover"
+  loading="lazy"
+  format="webp"
+/>
+```
+
+## Performance
+
+- `loading="lazy"` for all below-the-fold images
+- `useLazyFetch` for data that doesn't need SSR
+- Never import a full library for a single function
+- `defineAsyncComponent` for heavy components
+- Always set `width`/`height` on `<NuxtImg>` to avoid layout shift
+
 ## Anti-patterns
 
 - **DON'T** reimplement Nuxt UI components with custom HTML + Tailwind
 - **DON'T** use inline styles (`:style` binding) for presentational purposes
-- **DON'T** hardcode hex colors — use Tailwind tokens or Nuxt UI color props
+- **DON'T** hardcode hex colors (`#fff`, `#000`) — use Tailwind tokens or Nuxt UI color props
 - **DON'T** use arbitrary Tailwind values (`w-[347px]`) unless truly necessary — prefer scale values
 - **DON'T** add `<style scoped>` blocks for things achievable with Tailwind utilities
+- **DON'T** write desktop-first CSS — always mobile-first
+- **DON'T** use hover-only interactions — always provide a tap equivalent
+- **DON'T** use `!important`

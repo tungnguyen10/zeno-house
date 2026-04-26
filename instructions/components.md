@@ -2,7 +2,7 @@
 
 ## Directory Structure
 
-```
+```text
 app/components/
 ├── ui/                        # Generic, reusable UI — no business logic
 │   ├── Button.vue             # → <UIButton />
@@ -35,7 +35,7 @@ app/components/
 ## Categories
 
 | Category | Prefix | Purpose | May access stores? |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `ui/` | `<UI.../>` | Generic, reusable, no business logic | No |
 | `layout/` | `<Layout.../>` | App shell, used in app.vue or all pages | Yes (auth state) |
 | `form/` | `<Form.../>` | Form fields, validation display | No |
@@ -146,6 +146,117 @@ Always use `$t()` for user-facing strings:
 <!-- Good --> <img src="/logo.svg" />
 ```
 
+## NuxtUI Component Reference
+
+Check NuxtUI before writing custom HTML. Key components:
+
+| Need | Component |
+| --- | --- |
+| Button | `<UButton>` |
+| Input / Textarea | `<UInput>`, `<UTextarea>` |
+| Select | `<USelect>` |
+| Modal | `<UModal>` |
+| Dropdown | `<UDropdownMenu>` |
+| Navigation | `<UNavigationMenu>` |
+| Table | `<UTable>` |
+| Card | `<UCard>` |
+| Badge | `<UBadge>` |
+| Toast | `useToast()` |
+| Form + validation | `<UForm>` + Zod |
+| Icons | `<UIcon name="i-lucide-*" />` |
+
+### UForm + Zod Pattern
+
+```vue
+<script setup lang="ts">
+import { z } from "zod";
+
+const schema = z.object({
+  email: z.string().email("Email không hợp lệ"),
+  name: z.string().min(2, "Tối thiểu 2 ký tự"),
+});
+type Schema = z.output<typeof schema>;
+
+const state = reactive<Partial<Schema>>({ email: "", name: "" });
+
+async function onSubmit(data: Schema) {
+  // ...
+}
+</script>
+
+<template>
+  <UForm :schema="schema" :state="state" @submit="onSubmit">
+    <UFormField label="Email" name="email">
+      <UInput v-model="state.email" type="email" />
+    </UFormField>
+    <UButton type="submit">Gửi</UButton>
+  </UForm>
+</template>
+```
+
+## Component Script Order
+
+Structure `<script setup>` sections in this order:
+
+```vue
+<script setup lang="ts">
+// 1. Props & Emits
+const props = withDefaults(defineProps<Props>(), { loading: false });
+const emit = defineEmits<{ click: [event: MouseEvent]; close: [] }>();
+
+// 2. Composables / Stores
+const { t } = useI18n();
+
+// 3. State
+const isOpen = ref(false);
+
+// 4. Computed
+const classes = computed(() => ({ ... }));
+
+// 5. Methods
+function handleClick(e: MouseEvent) {
+  emit("click", e);
+}
+</script>
+```
+
+## Accessibility
+
+- Every `<img>` must have `alt` (or `alt=""` for decorative images)
+- Every form field needs `<label>` or `aria-label`
+- Interactive elements must be keyboard-focusable with a visible focus ring
+- Color contrast: minimum 4.5:1 for text, 3:1 for large text
+- Heading hierarchy must not skip levels (h1 → h2 → h3)
+- Keyboard navigation: Tab, Enter, Escape, Arrow keys must work
+- Use ARIA roles where needed: `role="dialog"`, `role="alert"`, etc.
+
+## Component Checklist
+
+Before marking a component done:
+
+```text
+UI:
+[ ] Works at 375px (mobile)
+[ ] Works at 768px (tablet)
+[ ] Works at 1280px (desktop)
+[ ] Dark mode renders correctly
+[ ] Animations are smooth
+
+Code:
+[ ] TypeScript props fully typed
+[ ] No hardcoded colors or sizes
+[ ] Loading state if fetching data
+[ ] Empty state if displaying a list
+[ ] Error state if operation can fail
+[ ] No console.log statements
+
+A11y:
+[ ] Alt text on all images
+[ ] Labels on all form fields
+[ ] Keyboard navigable
+[ ] Sufficient color contrast
+```
+
 ## Anti-patterns
 
 - **DON'T** call `$fetch`, `useFetch`, or `useSupabaseClient()` in components
@@ -153,3 +264,5 @@ Always use `$t()` for user-facing strings:
 - **DON'T** hardcode Vietnamese/English strings — use `$t()` keys
 - **DON'T** create a folder with only `index.vue` and no siblings
 - **DON'T** use Options API (`export default defineComponent({...})`)
+- **DON'T** ship a component without loading/empty/error states when data is fetched
+- **DON'T** build a custom component when NuxtUI already provides one
