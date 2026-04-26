@@ -62,6 +62,12 @@ export function useAuth() {
     if (error) throw new Error(error.message);
   }
 
+  async function resetPassword(password: string) {
+    const { error } = await supabase.auth.updateUser({ password });
+    if (error) throw new Error(error.message);
+    await signOut();
+  }
+
   async function fetchProfile() {
     await authStore.fetchProfile();
   }
@@ -72,5 +78,5 @@ export function useAuth() {
     return ROLE_HIERARCHY[current as Role] >= ROLE_HIERARCHY[requiredRole];
   }
 
-  return { login, loginWithGoogle, signOut, logout, forgotPassword, fetchProfile, isAdmin, isManager, isTenant, hasPermission };
+  return { login, loginWithGoogle, signOut, logout, forgotPassword, resetPassword, fetchProfile, isAdmin, isManager, isTenant, hasPermission };
 }

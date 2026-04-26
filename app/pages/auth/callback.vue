@@ -4,7 +4,7 @@
 
 <script setup lang="ts">
 import type { Role } from "~/types";
-import { useAuthStore } from '~/stores/auth';
+import { useAuthStore } from "~/stores/auth";
 
 definePageMeta({ layout: false });
 

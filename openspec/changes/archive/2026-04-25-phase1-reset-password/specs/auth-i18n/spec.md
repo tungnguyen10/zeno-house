@@ -1,4 +1,4 @@
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Auth i18n keys exist in vi and en locales
 The system SHALL have `i18n/locales/vi/auth.json` and `i18n/locales/en/auth.json` containing all translation keys used by login pages, forgot-password page, reset-password page, and auth-related error messages. No auth string is hardcoded in templates.

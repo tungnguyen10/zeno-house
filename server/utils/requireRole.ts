@@ -7,10 +7,11 @@ export async function requireRole(
   event: H3Event,
   ...roles: Role[]
 ): Promise<{ user: User; role: Role }> {
-  const user = await serverSupabaseUser(event);
-  if (!user) {
+  const rawUser = await serverSupabaseUser(event);
+  if (!rawUser) {
     throw createError({ statusCode: 401, message: "Unauthorized" });
   }
+  const user = rawUser as unknown as User;
 
   const client = serverSupabaseServiceRole(event);
   const { data: profile } = await client

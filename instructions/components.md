@@ -41,6 +41,20 @@ app/components/
 | `form/` | `<Form.../>` | Form fields, validation display | No |
 | `features/` | `<FeatureName.../>` | Domain-specific, feature-scoped | Yes |
 
+## Using Pinia Stores in Components
+
+Pinia stores (`useAuthStore`, `useRoomsStore`, etc.) are **auto-imported** by Nuxt — no explicit import needed:
+
+```vue
+<script setup lang="ts">
+// ✅ No import needed — Nuxt auto-imports all stores from app/stores/
+const authStore = useAuthStore();
+const { role } = storeToRefs(authStore);
+</script>
+```
+
+Only `layout/` and `features/` components may access stores (see Categories table above).
+
 ## Rule: Components are presentational
 
 Components receive data via props and emit events. They call composables when they need data — they do **not** call APIs or Supabase directly.
