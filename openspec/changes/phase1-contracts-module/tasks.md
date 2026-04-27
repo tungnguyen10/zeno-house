@@ -1,10 +1,10 @@
 ## 1. Database & Types
 
-- [ ] 1.1 Create Supabase migration: `contract_templates` table (`id`, `name`, `content_html`, `created_by`, `created_at`)
-- [ ] 1.2 Create Supabase migration: `contracts` table (`id`, `tenant_id`, `room_id`, `template_id`, `content_html`, `status`, `start_date`, `end_date`, `rent_amount`, `deposit_amount`, `previous_contract_id`, `terminated_reason`, `created_at`)
-- [ ] 1.3 Add RLS policies for both tables (admin all, manager scoped to own buildings)
+- [ ] 1.1 Add migration 003 additions for `contract_templates`: table already exists (migration 001) with `id`, `building_id`, `name`, `content` (NOT `content_html`), `is_default`, `created_at`, `updated_at` — no new columns needed
+- [ ] 1.2 Add migration 003 additions for `contracts`: table already exists (migration 001) with `id`, `room_id`, `tenant_id`, `template_id`, `start_date`, `end_date`, `monthly_rent` (NOT `rent_amount`), `deposit_paid` (NOT `deposit_amount`), `payment_day`, `status`, `notes`, `created_at`, `updated_at`. Add via migration 003: `content_html TEXT`, `previous_contract_id UUID REFERENCES contracts(id)`, `terminated_reason TEXT`. Also extend `contract_status` enum in migration 003: add `'pending_signature'`, `'renewed'`
+- [ ] 1.3 Verify existing RLS policies in migration 001 for both tables (admin all, manager scoped to own buildings)
 - [ ] 1.4 Create `app/types/contracts.ts` — `Contract`, `ContractTemplate` interfaces, `ContractStatus` enum, Zod schemas
-- [ ] 1.5 Create `locales/vi/contracts.json` + `locales/en/contracts.json`
+- [ ] 1.5 Fill `i18n/locales/vi/contracts.json` + `i18n/locales/en/contracts.json` with required keys (files already exist)
 
 ## 2. API Routes — Contracts
 
@@ -31,7 +31,7 @@
 
 - [ ] 5.1 Create `app/components/features/contract/StatusBadge.vue`
 - [ ] 5.2 Create `app/components/features/contract/Card.vue` — status, tenant name, room, dates, expiry warning
-- [ ] 5.3 Create `app/components/features/contract/Form.vue` — tenant select, room select, template select, dates, amounts
+- [ ] 5.3 Create `app/components/features/contract/Form.vue` — tenant select, room select, template select, start_date, end_date, monthly_rent, deposit_paid, payment_day
 - [ ] 5.4 Create `app/components/features/contract/Detail.vue` — renders `content_html` in sandboxed iframe, disabled PDF button
 - [ ] 5.5 Create `app/components/features/contract/TemplateEditor.vue` — textarea + live preview pane with sample data
 - [ ] 5.6 Create `app/components/features/contract/Preview.vue` — readonly rendered HTML view

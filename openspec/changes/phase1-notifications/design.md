@@ -1,6 +1,6 @@
 ## Context
 
-`notifications` table has: `id`, `user_id` (FK profiles), `type` (`invoice` | `contract` | `maintenance` | `system`), `title`, `body`, `link` (route to navigate to), `is_read`, `created_at`. Supabase Realtime broadcasts INSERT events filtered by `user_id`.
+`notifications` table has: `id`, `user_id` (FK profiles), `type TEXT` (`invoice` | `contract` | `maintenance` | `system`), `title`, `body`, `reference_id UUID` (FK to the related record), `reference_type TEXT` (e.g. `'contract'`, `'maintenance_request'`, `'invoice'`), `is_read`, `created_at`. There is NO `link` column — navigation route is computed client-side from `reference_type` + `reference_id`. Supabase Realtime broadcasts INSERT events filtered by `user_id`.
 
 `useNotificationsStore` initializes a Realtime channel subscription when the user logs in and tears it down on logout. The `NotificationBell` stub in 1.2 already reads `useNotificationsStore().unreadCount` — once the store is real, the bell lights up automatically.
 
@@ -36,7 +36,7 @@
 
 ### 3. Other modules insert notifications via a shared server utility
 
-`server/utils/notifications.ts` exports `createNotification(client, { userId, type, title, body, link })`. Called from contract termination, maintenance status changes, etc.
+`server/utils/notifications.ts` exports `createNotification(client, { userId, type, title, body, referenceId, referenceType })`. Called from contract termination, maintenance status changes, etc. Navigation route is computed client-side from `reference_type` + `reference_id` (no `link` column in schema).
 
 **Why**: Centralises notification creation logic; modules don't need to know the table schema.
 

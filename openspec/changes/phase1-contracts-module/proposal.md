@@ -15,7 +15,7 @@ Contracts are the legal binding between tenants and rooms — they define rent a
 
 ### New Capabilities
 
-- `contracts-crud`: Full CRUD for contracts with status lifecycle (draft → pending_signature → active → expired/terminated/renewed)
+- `contracts-crud`: Full CRUD for contracts with status lifecycle (pending → active → expired/terminated); migration 003 adds pending_signature + renewed; draft status does NOT exist
 - `contract-templates`: Reusable HTML templates with mustache-style placeholders; contracts snapshot the rendered HTML at creation time
 
 ### Modified Capabilities

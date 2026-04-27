@@ -1,6 +1,6 @@
 ## Context
 
-Supabase PostgreSQL is the data store. The `buildings` table needs a migration. RLS must be enabled. Admin and manager both manage buildings, but managers can only see their own (enforced via RLS `owner_id` column). All API calls go through `server/api/` — the composable never touches Supabase directly.
+Supabase PostgreSQL is the data store. The `buildings` table already exists (migration 001). RLS is already enabled. Admin and manager both manage buildings, but managers can only see their own (enforced via RLS `manager_id` column). All API calls go through `server/api/` — the composable never touches Supabase directly.
 
 ## Goals / Non-Goals
 
@@ -44,9 +44,9 @@ Rooms and Tenants modules need a building picker. `BuildingSelect.vue` fetches a
 
 ## Risks / Trade-offs
 
-- **RLS for manager scope** → Manager should only see buildings they own. This requires an `owner_id` FK on `buildings`. If not set correctly, managers see all buildings. Mitigation: migration includes `owner_id` column + RLS policy `buildings_manager_select`.
-- **Migration dependency** → This change requires a Supabase migration to be applied before the app runs. Development requires local Supabase or migration applied to staging.
+- **RLS for manager scope** → Manager should only see buildings they manage. The `manager_id` FK on `buildings` already exists in migration 001. RLS policy `buildings_manager_select` already exists and uses `manager_id`. Verify these are correct before implementing.
+- **Migration dependency** → Migration 001 already created the `buildings` table and RLS. Migration 003 adds `total_floors INTEGER NOT NULL DEFAULT 1`. Migration 003 must be applied before this module runs.
 
 ## Open Questions
 
-- Does a building have an `owner_id` (manager FK) or is access managed differently? → Use `owner_id uuid references profiles(id)` for manager scoping.
+- Does a building have a manager FK or is access managed differently? → Resolved: the schema uses `manager_id uuid references profiles(id)` (NOT `owner_id`) — already in migration 001.

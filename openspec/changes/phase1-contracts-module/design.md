@@ -2,10 +2,13 @@
 
 Contracts link tenants to rooms with a defined period and rent amount. The template system uses `{{placeholder}}` syntax (Mustache-like). When a contract is created from a template, the rendered HTML is stored as `content_html` on the contract row — this is the legal snapshot, independent of future template changes.
 
+> **Schema notes:** The `contracts` table already exists (migration 001) with fields: `id`, `room_id`, `tenant_id`, `template_id`, `start_date`, `end_date`, `monthly_rent`, `deposit_paid`, `payment_day`, `status`, `notes`, `created_at`, `updated_at`. The following fields do NOT exist yet and require migration 003: `content_html TEXT`, `previous_contract_id UUID REFERENCES contracts(id)`, `terminated_reason TEXT`. The `contract_templates` table stores template body as `content` (NOT `content_html`). Status enum additions (`pending_signature`, `renewed`) also require migration 003.
+
 ## Goals / Non-Goals
 
 **Goals:**
-- Contract lifecycle: draft → pending_signature → active → expired/terminated/renewed
+
+- Contract lifecycle (migration 001): `pending → active → expired/terminated`. Migration 003 adds `pending_signature` + `renewed`. The `draft` status does NOT exist — do not add it
 - Template editor with live preview using real tenant/room data
 - Expiry warnings at 7/30/60 days
 - Renew flow creates a new contract linked to the old one
@@ -27,7 +30,7 @@ Contracts link tenants to rooms with a defined period and rent amount. The templ
 
 ### 2. Available placeholders are defined as a fixed set
 
-Supported: `{{tenant_name}}`, `{{tenant_phone}}`, `{{tenant_cccd}}`, `{{room_name}}`, `{{building_name}}`, `{{rent_amount}}`, `{{start_date}}`, `{{end_date}}`, `{{deposit_amount}}`.
+Supported: `{{tenant_name}}`, `{{tenant_phone}}`, `{{tenant_identity_number}}`, `{{room_number}}`, `{{building_name}}`, `{{monthly_rent}}`, `{{start_date}}`, `{{end_date}}`, `{{deposit_paid}}`.
 
 **Why**: Fixed set is easy to document and validate; extensible in Phase 2.
 

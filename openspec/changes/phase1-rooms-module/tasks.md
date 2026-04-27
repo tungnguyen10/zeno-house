@@ -1,9 +1,9 @@
 ## 1. Database & Types
 
-- [ ] 1.1 Create Supabase migration: `rooms` table (`id`, `building_id`, `name`, `floor`, `monthly_rent`, `status`, `description`, `created_at`)
-- [ ] 1.2 Add RLS policies: `rooms_admin_all`, `rooms_manager_select/insert/update/delete` (scoped via building owner_id)
+- [ ] 1.1 Add migration 003: `ALTER TABLE rooms ADD COLUMN thumbnail_url TEXT` (`rooms` table already exists from migration 001 with `id`, `building_id`, `room_number`, `floor`, `area`, `base_price`, `deposit_amount`, `max_occupants`, `status`, `description`, `created_at`, `updated_at`)
+- [ ] 1.2 Verify existing RLS policies in migration 001: `rooms_admin_all`, `rooms_manager_select/insert/update/delete` (scoped via building `manager_id`)
 - [ ] 1.3 Create `app/types/rooms.ts` — `Room` interface, `RoomStatus` enum, `createRoomSchema`, `updateRoomSchema`
-- [ ] 1.4 Create `locales/vi/rooms.json` + `locales/en/rooms.json`
+- [ ] 1.4 Fill `i18n/locales/vi/rooms.json` + `i18n/locales/en/rooms.json` with required keys (files already exist)
 
 ## 2. API Routes
 
@@ -20,9 +20,9 @@
 ## 4. Components
 
 - [ ] 4.1 Create `app/components/features/room/StatusBadge.vue` — colored badge for room status
-- [ ] 4.2 Create `app/components/features/room/Card.vue` — status color background, room name, floor, rent, tenant name if occupied
+- [ ] 4.2 Create `app/components/features/room/Card.vue` — status color background, room_number, floor, base_price, tenant name if occupied
 - [ ] 4.3 Create `app/components/features/room/Grid.vue` — responsive grid wrapper using `v-for`
-- [ ] 4.4 Create `app/components/features/room/Form.vue` — name, building select, floor, monthly rent, status, description
+- [ ] 4.4 Create `app/components/features/room/Form.vue` — room_number, building select, floor, base_price, deposit_amount, status, description
 - [ ] 4.5 Create `app/components/features/room/Filters.vue` — building dropdown, status multi-select, floor input, search
 - [ ] 4.6 Create `app/components/features/room/Select.vue` — dropdown to pick a room (used in Tenants/Contracts)
 

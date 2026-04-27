@@ -12,7 +12,7 @@ The system SHALL have `NotificationBell.vue` display the live unread notificatio
 - **THEN** the bell renders without a badge
 
 ### Requirement: Notification dropdown shows 5 most recent with navigation
-The system SHALL show a dropdown from the bell icon listing the 5 most recent notifications with icon, title, time-ago, and read/unread state. Clicking a notification marks it as read and navigates to its `link` route.
+The system SHALL show a dropdown from the bell icon listing the 5 most recent notifications with icon, title, time-ago, and read/unread state. Clicking a notification marks it as read and navigates to the route computed client-side from `reference_type` + `reference_id` (no `link` column in schema).
 
 #### Scenario: Clicking notification navigates to linked route
 - **WHEN** a user clicks a maintenance notification
@@ -37,7 +37,7 @@ The system SHALL unsubscribe the Supabase Realtime channel when `useNotification
 - **THEN** the Realtime channel is unsubscribed before the store state is cleared
 
 ### Requirement: Other modules create notifications via shared server utility
-The system SHALL have a `server/utils/notifications.ts` utility that other server routes use to insert notification rows. Callers provide `userId`, `type`, `title`, `body`, and `link`.
+The system SHALL have a `server/utils/notifications.ts` utility that other server routes use to insert notification rows. Callers provide `userId`, `type`, `title`, `body`, `referenceId`, and `referenceType` (no `link` field — navigation is computed client-side).
 
 #### Scenario: Maintenance status change creates tenant notification
 - **WHEN** an admin changes a maintenance request to `in_progress`

@@ -12,21 +12,21 @@ The system SHALL provide a maintenance request list at `/admin/maintenance` and 
 - **THEN** only requests from rooms in buildings they own are shown
 
 ### Requirement: Status workflow enforces forward-only transitions
-The system SHALL enforce the status transitions: `pending → in_progress → completed`, and `pending → cancelled`. Reverse transitions or skipping states are rejected.
+The system SHALL enforce the status transitions: `open → in_progress → resolved → closed`. Reverse transitions or skipping states are rejected. Valid enum values (migration 001): `'open'`, `'in_progress'`, `'resolved'`, `'closed'`.
 
 #### Scenario: Invalid transition returns 400
-- **WHEN** an admin tries to set a `completed` request back to `in_progress`
+- **WHEN** an admin tries to set a `resolved` request back to `in_progress`
 - **THEN** the API returns HTTP 400 with "Invalid status transition"
 
-#### Scenario: Pending can be cancelled
-- **WHEN** an admin sets a `pending` request to `cancelled`
+#### Scenario: Open request can be moved to in_progress
+- **WHEN** an admin sets an `open` request to `in_progress`
 - **THEN** the transition succeeds
 
 ### Requirement: Status changes are recorded in history table
 The system SHALL write a row to `maintenance_status_history` for every status change, recording `from_status`, `to_status`, `changed_by`, `notes`, and `timestamp`.
 
 #### Scenario: Status history grows on each change
-- **WHEN** an admin changes a request from `pending` to `in_progress`
+- **WHEN** an admin changes a request from `open` to `in_progress`
 - **THEN** a new row appears in `maintenance_status_history` for that request
 
 ### Requirement: MaintenanceTimeline renders full status history

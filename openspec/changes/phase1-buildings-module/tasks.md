@@ -1,9 +1,9 @@
 ## 1. Database & Types
 
-- [ ] 1.1 Create Supabase migration: `buildings` table (`id`, `name`, `address`, `owner_id`, `description`, `created_at`)
-- [ ] 1.2 Add RLS policies: `buildings_admin_all`, `buildings_manager_select` (own only), `buildings_manager_insert`, `buildings_manager_update`, `buildings_manager_delete`
+- [ ] 1.1 Add migration 003: `ALTER TABLE buildings ADD COLUMN total_floors INTEGER NOT NULL DEFAULT 1` (`buildings` table already exists from migration 001 with `id`, `name`, `address`, `manager_id`, `description`, `created_at`, `updated_at`)
+- [ ] 1.2 Verify existing RLS policies in migration 001 use `manager_id` (not `owner_id`): `buildings_admin_all`, `buildings_manager_select`, `buildings_manager_insert`, `buildings_manager_update`, `buildings_manager_delete`
 - [ ] 1.3 Create `app/types/buildings.ts` — `Building` interface, `createBuildingSchema`, `updateBuildingSchema` (Zod)
-- [ ] 1.4 Create `locales/vi/buildings.json` + `locales/en/buildings.json`
+- [ ] 1.4 Fill `i18n/locales/vi/buildings.json` + `i18n/locales/en/buildings.json` with required keys (files already exist)
 
 ## 2. API Routes
 

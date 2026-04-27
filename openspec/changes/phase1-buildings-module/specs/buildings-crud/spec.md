@@ -9,7 +9,7 @@ The system SHALL provide a buildings list page at `/admin/buildings` and `/manag
 
 #### Scenario: Manager sees only own buildings
 - **WHEN** a manager navigates to `/manager/buildings`
-- **THEN** only buildings where they are the `owner_id` are listed
+- **THEN** only buildings where they are the `manager_id` are listed
 
 #### Scenario: Search filters list in real time
 - **WHEN** a user types in the search field
@@ -52,7 +52,7 @@ The system SHALL show a confirmation modal before deleting a building. Deletion 
 - **THEN** the building is deleted and removed from the list with a success toast
 
 ### Requirement: Buildings API enforces auth and role
-The system SHALL have server routes for buildings that require authentication and verify role. Manager routes enforce `owner_id` scoping via RLS.
+The system SHALL have server routes for buildings that require authentication and verify role. Manager routes enforce `manager_id` scoping via RLS.
 
 #### Scenario: Unauthenticated request returns 401
 - **WHEN** an unauthenticated call is made to `GET /api/buildings`

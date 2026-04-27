@@ -4,7 +4,7 @@
 The system SHALL have a `contract_templates` table storing HTML content with `{{placeholder}}` syntax. Templates can be created, edited, and deleted by admin/manager.
 
 #### Scenario: Template with valid placeholders is saved
-- **WHEN** an admin saves a template containing `{{tenant_name}}` and `{{rent_amount}}`
+- **WHEN** an admin saves a template containing `{{tenant_name}}` and `{{monthly_rent}}`
 - **THEN** the template is stored and available for contract creation
 
 ### Requirement: Generating a contract from a template renders a snapshot

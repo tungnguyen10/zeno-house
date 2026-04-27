@@ -4,11 +4,11 @@ Tenants need a self-service portal to view their room, contract, submit maintena
 
 ## What Changes
 
-- Implement `/tenant` dashboard, `/tenant/contract`, `/tenant/maintenance`, `/tenant/maintenance/new`, `/tenant/profile`, `/tenant/notifications` (stub) pages
+- Implement `/tenant` dashboard, `/tenant/contracts`, `/tenant/maintenance`, `/tenant/maintenance/new`, `/tenant/account`, `/tenant/notifications` (stub) pages
 - `/tenant/invoices` as a placeholder (full invoices in Phase 2)
 - Add `TenantDashboard.vue`, `TenantRoomInfo.vue`, `TenantContractView.vue`, `TenantMaintenanceForm.vue`, `TenantMaintenanceList.vue` components
-- Add server routes for tenant self-service reads: `GET /api/tenant/me/room`, `GET /api/tenant/me/contract`, `POST /api/tenant/me/maintenance`
-- Add `locales/vi/tenant-portal.json` + `locales/en/tenant-portal.json`
+- Add server routes for tenant self-service reads: `GET /api/tenant/me/room`, `GET /api/tenant/me/contracts`, `POST /api/tenant/me/maintenance`
+- Add `i18n/locales/vi/tenant-portal.json` + `i18n/locales/en/tenant-portal.json` (register namespace in nuxt.config.ts)
 - Mobile-first design using the `tenant.vue` layout with bottom navigation
 
 ## Capabilities

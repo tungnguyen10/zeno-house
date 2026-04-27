@@ -23,7 +23,7 @@ The system SHALL persist filter state (`building_id`, `status`, `floor`, `search
 - **THEN** the same filtered view is restored
 
 ### Requirement: Clicking a room card opens a quick view modal
-The system SHALL show a modal with full room details (name, floor, rent, status, current tenant if occupied) when a user clicks on a room card, without navigating away from the grid.
+The system SHALL show a modal with full room details (room_number, floor, base_price, status, current tenant if occupied) when a user clicks on a room card, without navigating away from the grid.
 
 #### Scenario: Quick view shows tenant name when occupied
 - **WHEN** a user clicks an occupied room card
@@ -33,7 +33,7 @@ The system SHALL show a modal with full room details (name, floor, rent, status,
 The system SHALL provide create (`/rooms/new`) and edit (`/rooms/[id]/edit`) pages with forms validated using `createRoomSchema` and `updateRoomSchema`.
 
 #### Scenario: Form validates required fields
-- **WHEN** a user submits a room form without a name or monthly rent
+- **WHEN** a user submits a room form without a room_number or base_price
 - **THEN** inline validation errors are shown and no API call is made
 
 #### Scenario: Creating a room with a building sets building_id

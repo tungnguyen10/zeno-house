@@ -12,10 +12,10 @@ The system SHALL display a dashboard at `/tenant` showing the tenant's current r
 - **THEN** the dashboard shows 0 unpaid invoices
 
 ### Requirement: Tenant can view their active contract read-only
-The system SHALL provide a `/tenant/contract` page showing the rendered contract HTML (`content_html`) read-only. A disabled "Tải PDF" button is visible.
+The system SHALL provide a `/tenant/contracts` page showing the rendered contract HTML (`content_html`) read-only. A disabled "Tải PDF" button is visible.
 
 #### Scenario: Contract page renders HTML content
-- **WHEN** a tenant navigates to `/tenant/contract`
+- **WHEN** a tenant navigates to `/tenant/contracts`
 - **THEN** their active contract's `content_html` is rendered (sanitized)
 
 #### Scenario: No active contract shows empty state
@@ -23,11 +23,11 @@ The system SHALL provide a `/tenant/contract` page showing the rendered contract
 - **THEN** an empty state message is shown
 
 ### Requirement: Tenant can submit maintenance requests
-The system SHALL provide a form at `/tenant/maintenance/new` for submitting a maintenance request with title, description, priority (low/medium/high/urgent), and up to 3 photos.
+The system SHALL provide a form at `/tenant/maintenance/new` for submitting a maintenance request with title, description, priority INTEGER (1=low, 2=medium, 3=high — no "urgent" level), and up to 3 photos.
 
 #### Scenario: Submitted request appears in tenant's list
 - **WHEN** a tenant submits a maintenance request
-- **THEN** the request appears at `/tenant/maintenance` with status "pending"
+- **THEN** the request appears at `/tenant/maintenance` with status `open`
 
 #### Scenario: Photo upload limited to 3 images
 - **WHEN** a tenant attempts to upload a 4th photo
@@ -40,10 +40,10 @@ The system SHALL display only the authenticated tenant's maintenance requests at
 - **WHEN** a tenant views `/tenant/maintenance`
 - **THEN** only requests they submitted are shown
 
-### Requirement: Tenant profile page allows editing personal info and changing password
-The system SHALL provide a `/tenant/profile` page where the tenant can update their `full_name`, `phone`, `address`, and change their password.
+### Requirement: Tenant account page allows editing personal info and changing password
+The system SHALL provide a `/tenant/account` page (NOT `/tenant/profile`) where the tenant can update their `full_name` and `phone` (on `profiles`) and `permanent_address`, `emergency_contact_name`, `emergency_contact_phone` (on `tenants`), and change their password.
 
-#### Scenario: Profile edit saves updated name
+#### Scenario: Account edit saves updated name
 - **WHEN** a tenant updates their full_name and saves
 - **THEN** the profile is updated and a success toast is shown
 

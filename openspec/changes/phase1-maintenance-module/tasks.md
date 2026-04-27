@@ -1,11 +1,11 @@
 ## 1. Database & Types
 
-- [ ] 1.1 Create Supabase migration: `maintenance_requests` table (`id`, `tenant_id`, `room_id`, `title`, `description`, `priority`, `status`, `assigned_to`, `estimated_cost`, `actual_cost`, `photo_urls`, `created_at`, `updated_at`)
-- [ ] 1.2 Create Supabase migration: `maintenance_status_history` table (`id`, `request_id`, `from_status`, `to_status`, `changed_by`, `notes`, `created_at`)
-- [ ] 1.3 Add RLS policies: admin all; manager scoped to own buildings; tenant insert + select own
+- [ ] 1.1 `maintenance_requests` table already exists from migration 001 with: `id`, `room_id`, `tenant_id`, `title`, `description`, `status` (enum: `'open'`, `'in_progress'`, `'resolved'`, `'closed'`), `priority INTEGER` (1=low, 2=medium, 3=high), `resolved_at`, `resolved_by`, `created_at`, `updated_at`. Add via migration 003: `image_urls TEXT[] NOT NULL DEFAULT '{}'`, `assigned_to UUID REFERENCES profiles(id)`, `estimated_cost NUMERIC`, `actual_cost NUMERIC`
+- [ ] 1.2 `maintenance_status_history` table does NOT exist yet — add via migration 003: `id`, `request_id FK maintenance_requests`, `from_status`, `to_status`, `changed_by FK profiles`, `notes`, `created_at`
+- [ ] 1.3 Verify existing RLS policies in migration 001: admin all; manager scoped to own buildings; tenant insert + select own
 - [ ] 1.4 Create private Supabase Storage bucket `maintenance` for photo uploads
 - [ ] 1.5 Create `app/types/maintenance.ts` — `MaintenanceRequest`, `MaintenanceStatus`, `MaintenancePriority` types, Zod schemas
-- [ ] 1.6 Create `locales/vi/maintenance.json` + `locales/en/maintenance.json`
+- [ ] 1.6 Fill `i18n/locales/vi/maintenance.json` + `i18n/locales/en/maintenance.json` with required keys (files already exist)
 
 ## 2. API Routes
 

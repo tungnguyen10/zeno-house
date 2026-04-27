@@ -1,10 +1,11 @@
 ## ADDED Requirements
 
 ### Requirement: Contract status follows defined lifecycle
-The system SHALL enforce a contract status lifecycle: `draft` → `pending_signature` → `active` → `expired` | `terminated` | `renewed`. Invalid transitions are rejected by the API.
+The system SHALL enforce a contract status lifecycle: `pending → active → expired | terminated`. Migration 003 adds `pending_signature` and `renewed` to the enum for future use. The `draft` status does NOT exist — do not add it. Invalid transitions are rejected by the API.
 
-#### Scenario: Active contract cannot be set back to draft
-- **WHEN** the API receives a status update from `active` to `draft`
+#### Scenario: Active contract cannot be set back to pending
+
+- **WHEN** the API receives a status update from `active` to `pending`
 - **THEN** the server returns HTTP 400 with an invalid transition message
 
 #### Scenario: Creating contract sets room to occupied

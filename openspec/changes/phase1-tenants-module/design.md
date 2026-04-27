@@ -19,7 +19,9 @@ Tenants are both DB records (`tenants` table with personal info) and Supabase Au
 
 ### 1. Two separate tables: `tenants` (personal info) and `profiles` (auth/role)
 
-The `tenants` table stores: `full_name`, `phone`, `cccd`, `cccd_front_url`, `cccd_back_url`, `dob`, `address`, `profile_id` (FK to profiles). The `profiles` table has `role = 'tenant'`.
+The `tenants` table stores: `id` (= `profiles.id` FK — NOT a separate `profile_id` column), `identity_number` (NOT `cccd`), `identity_issued_date`, `identity_issued_place`, `permanent_address`, `emergency_contact_name`, `emergency_contact_phone`, `created_at`. `full_name` and `phone` are on the `profiles` table, NOT on `tenants`. The `profiles` table has `role = 'tenant'`.
+
+Fields `cccd_front_url`, `cccd_back_url`, `cccd_verified` do NOT exist in migration 001 — they are added via migration 003. The `dob` field does NOT exist in the current schema — defer to a future migration if needed.
 
 **Why**: Separates auth identity from personal/rental data. A tenant's auth account can exist before their personal info is complete.
 
@@ -37,7 +39,7 @@ The `tenants` table stores: `full_name`, `phone`, `cccd`, `cccd_front_url`, `ccc
 
 ### 4. CCCDUpload component stores images in Supabase Storage
 
-`CCCDUpload.vue` calls `POST /api/upload/cccd` which stores in `storage/cccd/` bucket and returns public URL. The URL is stored in `tenants.cccd_front_url`.
+`CCCDUpload.vue` calls `POST /api/upload/cccd` which stores in `storage/cccd/` bucket and returns public URL. The URL is stored in `tenants.cccd_front_url` / `tenants.cccd_back_url` (added via migration 003 — not in migration 001).
 
 **Why**: Keeps blob out of DB; Supabase Storage has built-in access control.
 
