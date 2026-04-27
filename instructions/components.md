@@ -113,6 +113,30 @@ The subfolder name becomes the prefix — don't repeat it in the filename:
 ✅ features/room/Card.vue       → <RoomCard />       (clean)
 ```
 
+## Per-module Build Order
+
+Build every domain module bottom-up — core before UI. Never start a page before its composable exists:
+
+```text
+Step 1 → app/types/<domain>.ts          interfaces + Zod schemas (tsc must pass)
+Step 2 → server/api/<resource>/         auth + role + validate + query
+Step 3 → app/composables/use<Domain>.ts $fetch calls, reactive refs, no UI
+Step 4 → app/components/features/       presentational, typed props from Step 1
+Step 5 → app/pages/<role>/<domain>/     wire composables → components, mobile-first
+```
+
+**Admin pages** follow a **table-first** pattern: list (UTable) → detail → create/edit form.
+
+**Tenant pages** follow a **card-first** pattern: a single active record as a hero card. Tenants interact with their own data (1 room, 1 contract) — never a generic list of records.
+
+```vue
+<!-- Admin: table-first -->
+<UTable :rows="buildings" :columns="columns" />
+
+<!-- Tenant: card-first -->
+<UCard><!-- hero: room 201, Tòa An Khang, còn 127 ngày --></UCard>
+```
+
 ## i18n
 
 Always use `$t()` for user-facing strings:

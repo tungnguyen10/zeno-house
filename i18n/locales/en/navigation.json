@@ -1,0 +1,29 @@
+{
+  "navigation": {
+    "sidebar": {
+      "dashboard": "Dashboard",
+      "buildings": "Buildings",
+      "rooms": "Rooms",
+      "tenants": "Tenants",
+      "contracts": "Contracts",
+      "invoices": "Invoices",
+      "utilities": "Utilities",
+      "expenses": "Expenses",
+      "maintenance": "Maintenance",
+      "reports": "Reports",
+      "settings": "Settings"
+    },
+    "tenant_nav": {
+      "home": "Home",
+      "invoices": "Invoices",
+      "contracts": "Contracts",
+      "maintenance": "Maintenance",
+      "notifications": "Notifications",
+      "account": "Account"
+    },
+    "user_menu": {
+      "profile": "Profile",
+      "logout": "Logout"
+    }
+  }
+}

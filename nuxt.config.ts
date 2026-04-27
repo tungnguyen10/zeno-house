@@ -38,6 +38,7 @@ export default defineNuxtConfig({
           'vi/contracts.json',
           'vi/invoices.json',
           'vi/utilities.json',
+          'vi/navigation.json',
         ],
       },
       {
@@ -53,6 +54,7 @@ export default defineNuxtConfig({
           'en/contracts.json',
           'en/invoices.json',
           'en/utilities.json',
+          'en/navigation.json',
         ],
       },
     ],
@@ -88,8 +90,11 @@ export default defineNuxtConfig({
     autoImportPath: "~/assets/icons",
     componentPrefix: "icon",
   },
+  imports: {
+    dirs: ["stores"],
+  },
   pinia: {
-    storesDirs: ["./app/stores/**"],
+    storesDirs: ["./stores/**"],
   },
   vite: {
     optimizeDeps: {

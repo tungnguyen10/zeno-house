@@ -156,7 +156,9 @@ Inline gap:       gap-2 sm:gap-3
 
 ## Color Usage
 
-Use NuxtUI color tokens — never hardcode hex values:
+### NuxtUI component colors
+
+Use NuxtUI color props — never hardcode hex values on components:
 
 ```text
 Primary action:    color="primary"
@@ -165,6 +167,35 @@ Success:           color="success"
 Neutral:           color="neutral"
 Muted text:        class="text-muted"
 Background subtle: class="bg-muted"
+```
+
+> **`app.config.ts` required**: NuxtUI's `color="primary"` resolves through its own internal token system. Without `app.config.ts` at project root declaring `ui: { colors: { primary: 'blue' } }`, the two color systems diverge silently. Always ensure this file exists.
+
+### Custom design tokens
+
+`app/assets/css/main.css` defines `@theme` tokens for non-NuxtUI elements. Use them via CSS variable syntax — never hardcode their hex values directly:
+
+| Token | Use for |
+| --- | --- |
+| `--color-theme` | Active nav items, primary links, focus rings (custom elements) |
+| `--color-theme-purple` | Secondary badges, premium feature highlights |
+| `--color-brand` | Logo gradient, landing/marketing pages only — **not in app UI** |
+| `--color-title` | H1, H2, H3, label text |
+| `--color-body` | Body text, descriptions, secondary info |
+| `--color-smoke` | Page background (admin content area) |
+| `--color-smoke-blue` | Table row hover, selected state backgrounds |
+| `--color-smoke-card` | Custom card backgrounds (when overriding NuxtUI defaults) |
+| `--color-border` | Dividers, table borders, input borders (custom elements) |
+| `--color-dark-nav` | Sidebar background in dark/navy variant |
+| `--color-success/error/warning` | Status states on custom (non-NuxtUI) elements only |
+
+```vue
+<!-- ✅ Custom token via CSS var -->
+<nav :class="'bg-[--color-dark-nav]'">...</nav>
+<p class="text-[--color-body]">...</p>
+
+<!-- ❌ Hardcoded hex -->
+<nav style="background: #001C49">...</nav>
 ```
 
 ## TailwindCSS Usage

@@ -34,7 +34,7 @@
         {{ $t("auth.login") }}
       </UButton>
 
-      <UDivider :label="$t('auth.or')" />
+      <USeparator :label="$t('auth.or')" />
 
       <UButton
         variant="outline"
