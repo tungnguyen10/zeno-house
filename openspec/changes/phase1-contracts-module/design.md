@@ -15,6 +15,7 @@ Contracts link tenants to rooms with a defined period and rent amount. The templ
 - PDF export button as disabled placeholder (tooltip: "Sắp có")
 
 **Non-Goals:**
+
 - E-signature integration (Phase 2)
 - PDF generation (Phase 2)
 - Digital stamp/watermark (Phase 2)
@@ -60,3 +61,14 @@ No rich-text editor — templates are HTML strings. A `<pre>` preview pane updat
 ## Open Questions
 
 - Should `pending_signature` be skippable? (i.e., can admin directly set `active`?) → Yes, for manual/offline signature workflows.
+
+## Multi-tenant contract model (decided 2026-04-27)
+
+When `rooms.max_occupants > 1`: **1 shared contract per room** covering all co-tenants.
+
+- `contracts.tenant_id` = primary tenant (first check-in / the one who submitted the form)
+- All roommates are listed by name inside the contract body via `{{tenant_names}}` placeholder
+- RLS policy: any tenant whose `room_tenants.room_id` matches the contract's `room_id` can SELECT
+- Invoice: 1 invoice per month for the full room rent — not split per person
+- Checkout 1 roommate: update `room_tenants.move_out_date` only; contract stays active until all leave or explicitly terminated
+- Contract create form: select primary tenant + display all current `room_tenants` for the room to list as co-tenants

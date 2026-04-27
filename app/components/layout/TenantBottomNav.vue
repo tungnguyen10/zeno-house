@@ -5,7 +5,6 @@ const route = useRoute();
 const navItems = computed(() => [
   { label: t("navigation.tenant_nav.home"), icon: "IconHome", to: "/tenant" },
   { label: t("navigation.tenant_nav.invoices"), icon: "IconReceipt", to: "/tenant/invoices" },
-  { label: t("navigation.tenant_nav.contracts"), icon: "IconFileText", to: "/tenant/contracts" },
   { label: t("navigation.tenant_nav.maintenance"), icon: "IconWrench", to: "/tenant/maintenance" },
   { label: t("navigation.tenant_nav.notifications"), icon: "IconBell", to: "/tenant/notifications" },
   { label: t("navigation.tenant_nav.account"), icon: "IconUser", to: "/tenant/account" },
