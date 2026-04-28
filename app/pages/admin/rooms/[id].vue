@@ -1,16 +1,18 @@
+<script setup lang="ts">
+definePageMeta({ layout: "admin", middleware: ["auth", "role"] });
+</script>
+
 <template>
   <div>
-    <div class="flex items-center gap-3 mb-6">
-      <UButton variant="ghost" icon="i-heroicons-arrow-left" @click="navigateTo('/admin/rooms')" />
-      <h1 class="text-2xl font-bold">{{ $t('nav.rooms') }}</h1>
+    <div class="mb-6 flex items-center gap-3">
+      <UButton variant="ghost" @click="navigateTo('/admin/rooms')">
+        <IconArrowLeft class="size-4" />
+      </UButton>
+      <h1 class="text-2xl font-bold text-[--color-title]">{{ $t("navigation.sidebar.rooms") }}</h1>
     </div>
 
     <UCard>
-      <p class="text-gray-500">{{ $t('loading') }}</p>
+      <p class="text-[--color-body]">{{ $t("loading") }}</p>
     </UCard>
   </div>
 </template>
-
-<script setup lang="ts">
-definePageMeta({ layout: 'admin', middleware: ['auth', 'role'] })
-</script>

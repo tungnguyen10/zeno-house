@@ -9,9 +9,9 @@
 
     <UCard v-else class="w-full max-w-sm text-center">
       <template #header>
-        <h1 class="text-xl font-bold">{{ $t("auth.password_updated") }}</h1>
+        <h1 class="text-xl font-bold text-[--color-title]">{{ $t("auth.password_updated") }}</h1>
       </template>
-      <p class="text-sm text-gray-500">{{ $t("auth.password_updated_description") }}</p>
+      <p class="text-sm text-[--color-body]">{{ $t("auth.password_updated_description") }}</p>
       <template #footer>
         <NuxtLink to="/login" class="text-sm text-primary hover:underline">
           {{ $t("auth.back_to_login") }}

@@ -1,12 +1,14 @@
 <template>
   <div>
-    <div class="flex items-center gap-3 mb-6">
-      <UButton variant="ghost" icon="i-heroicons-arrow-left" @click="navigateTo('/manager/contracts')" />
-      <h1 class="text-2xl font-bold">{{ $t('nav.contracts') }}</h1>
+    <div class="mb-6 flex items-center gap-3">
+      <UButton variant="ghost" @click="navigateTo('/manager/contracts')">
+        <IconArrowLeft class="size-4" />
+      </UButton>
+      <h1 class="text-2xl font-bold text-[--color-title]">{{ $t('navigation.sidebar.contracts') }}</h1>
     </div>
 
     <UCard>
-      <p class="text-gray-500">{{ $t('loading') }}</p>
+      <p class="text-[--color-body]">{{ $t('loading') }}</p>
     </UCard>
   </div>
 </template>

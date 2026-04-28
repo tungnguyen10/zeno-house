@@ -1,11 +1,11 @@
 <template>
   <div>
-    <h1 class="text-2xl font-bold mb-6">{{ $t('nav.invoices') }}</h1>
+    <h1 class="text-2xl font-bold mb-6 text-[--color-title]">{{ $t('navigation.sidebar.invoices') }}</h1>
 
     <UCard>
       <UTable :rows="[]" :columns="columns">
         <template #empty-state>
-          <div class="text-center py-8 text-gray-500">{{ $t('empty') }}</div>
+          <div class="text-center py-8 text-[--color-body]">{{ $t('empty') }}</div>
         </template>
       </UTable>
     </UCard>
@@ -23,5 +23,5 @@ const columns = [
   { key: 'due_date', label: 'Hạn thanh toán' },
   { key: 'status', label: 'Trạng thái' },
   { key: 'actions', label: t('actions.view') },
-] as any[]
+] as const
 </script>

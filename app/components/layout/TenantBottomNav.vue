@@ -18,7 +18,7 @@ function isActive(to: string) {
 
 <template>
   <nav
-    class="fixed bottom-0 left-0 right-0 z-20 flex h-16 items-center justify-around border-t border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900 md:hidden"
+    class="fixed bottom-0 left-0 right-0 z-20 flex h-16 items-center justify-around border-t border-[--color-border] bg-[--color-bg-surface] md:hidden"
     aria-label="Bottom navigation"
   >
     <NuxtLink
@@ -28,8 +28,8 @@ function isActive(to: string) {
       :class="cn(
         'flex flex-1 flex-col items-center gap-1 py-2 text-xs font-medium transition-colors',
         isActive(item.to)
-          ? 'text-primary-600 dark:text-primary-400'
-          : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200',
+          ? 'text-[--color-theme]'
+          : 'text-[--color-body] hover:text-[--color-title]',
       )"
       :aria-current="isActive(item.to) ? 'page' : undefined"
     >

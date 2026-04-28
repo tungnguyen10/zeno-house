@@ -1,8 +1,8 @@
 <template>
   <UCard class="w-full max-w-sm">
     <template #header>
-      <h1 class="text-xl font-bold text-center">{{ $t("app_name") }}</h1>
-      <p class="text-sm text-center text-gray-500 mt-1">
+      <h1 class="text-xl font-bold text-center text-[--color-title]">{{ $t("app_name") }}</h1>
+      <p class="text-sm text-center text-[--color-body] mt-1">
         {{ variant === "tenant" ? $t("auth.tenant_portal") : $t("auth.admin_portal") }}
       </p>
     </template>

@@ -1,9 +1,9 @@
 <template>
   <UCard v-if="success" class="w-full max-w-sm">
     <template #header>
-      <h1 class="text-xl font-bold text-center">{{ $t("auth.reset_sent") }}</h1>
+      <h1 class="text-xl font-bold text-center text-[--color-title]">{{ $t("auth.reset_sent") }}</h1>
     </template>
-    <p class="text-center text-sm text-gray-600 dark:text-gray-400">
+    <p class="text-center text-sm text-[--color-body]">
       {{ $t("auth.reset_sent_description") }}
     </p>
     <template #footer>
@@ -15,8 +15,8 @@
 
   <UCard v-else class="w-full max-w-sm">
     <template #header>
-      <h1 class="text-xl font-bold text-center">{{ $t("auth.forgot_password_title") }}</h1>
-      <p class="text-sm text-center text-gray-500 mt-1">{{ $t("auth.forgot_password_description") }}</p>
+      <h1 class="text-xl font-bold text-center text-[--color-title]">{{ $t("auth.forgot_password_title") }}</h1>
+      <p class="text-sm text-center text-[--color-body] mt-1">{{ $t("auth.forgot_password_description") }}</p>
     </template>
 
     <UForm :schema="schema" :state="form" class="space-y-4" @submit="onSubmit">

@@ -41,9 +41,9 @@ function isActive(to: string) {
 </script>
 
 <template>
-  <aside class="flex h-full w-64 flex-col border-r border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
-    <div class="flex h-16 items-center px-6 border-b border-gray-200 dark:border-gray-700">
-      <span class="text-lg font-bold text-gray-900 dark:text-white">Zeno House</span>
+  <aside class="flex h-full w-64 flex-col border-r border-transparent bg-dark-nav">
+    <div class="flex h-16 items-center px-6 border-b border-white/10">
+      <span class="text-lg font-bold text-white">Zeno House</span>
     </div>
 
     <nav class="flex-1 overflow-y-auto py-4" aria-label="Sidebar navigation">
@@ -54,8 +54,8 @@ function isActive(to: string) {
             :class="cn(
               'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
               isActive(item.to)
-                ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/20 dark:text-primary-400'
-                : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800',
+                ? 'bg-white/15 text-white'
+                : 'text-white/60 hover:text-white hover:bg-white/10',
             )"
             :aria-current="isActive(item.to) ? 'page' : undefined"
           >

@@ -3,12 +3,12 @@ const { logout } = useLogout();
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-50 dark:bg-gray-950">
+  <div class="min-h-screen bg-[--color-bg-page]">
     <!-- Simplified top header -->
     <header
-      class="sticky top-0 z-20 flex h-14 items-center justify-between border-b border-gray-200 bg-white px-4 dark:border-gray-700 dark:bg-gray-900"
+      class="sticky top-0 z-20 flex h-14 items-center justify-between border-b border-[--color-border] bg-[--color-bg-surface] px-4"
     >
-      <span class="text-base font-bold text-gray-900 dark:text-white">
+      <span class="text-base font-bold text-[--color-title]">
         Zeno House
       </span>
 

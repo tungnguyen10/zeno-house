@@ -8,7 +8,7 @@ watch(() => route.path, () => {
 </script>
 
 <template>
-  <div class="flex min-h-screen bg-gray-50 dark:bg-gray-950">
+  <div class="flex min-h-screen bg-[--color-bg-page]">
     <!-- Desktop sidebar -->
     <div class="hidden md:flex md:shrink-0">
       <LayoutSidebar />

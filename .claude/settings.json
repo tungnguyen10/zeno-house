@@ -28,10 +28,20 @@
       "Bash(grep -rn '\\\\`/tenant/contract\\\\`' openspec/changes --include=\"*.md\" --exclude-dir=archive)",
       "mcp__supabase__list_migrations",
       "mcp__supabase__execute_sql",
-      "mcp__supabase__apply_migration"
+      "mcp__supabase__apply_migration",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" https://localhost:3001 -k)",
+      "Bash(openspec archive *)",
+      "Bash(git stash *)",
+      "Bash(grep -rn \"#[0-9A-Fa-f]\\\\{3,6\\\\}\" /Users/thanhtung.nguyen/Documents/personal/zeno-house/app --include=\"*.vue\")",
+      "Bash(xargs -I{} sh -c 'echo \"=== {} ===\" && cat \"{}\"')",
+      "Bash(python3)",
+      "Bash(grep -rn '$t\\('\\\\''nav\\\\.\\\\|t\\('\\\\''nav\\\\.\\\\|t\\(\"nav\\\\.' app/ '--include=*.vue')",
+      "Bash(sed -i '' 's/<h1 class=\"text-xl font-bold text-center\">/<h1 class=\"text-xl font-bold text-center text-[--color-title]\">/g' app/components/auth/ForgotPasswordForm.vue app/components/auth/LoginForm.vue app/components/auth/ResetPasswordForm.vue)",
+      "Bash(sed -i '' 's/<h1 class=\"text-xl font-bold\">{{ \\\\$t\\(\"auth.password_updated\"\\) }}<\\\\/h1>/<h1 class=\"text-xl font-bold text-[--color-title]\">{{ $t\\(\"auth.password_updated\"\\) }}<\\\\/h1>/g' app/pages/reset-password.vue)"
     ],
     "additionalDirectories": [
-      "/Users/thanhtung.nguyen/Documents/personal/zeno-house/i18n/locales/vi"
+      "/Users/thanhtung.nguyen/Documents/personal/zeno-house/i18n/locales/vi",
+      "/Users/thanhtung.nguyen/Documents/personal/zeno-house/app/pages/manager/rooms"
     ]
   }
 }

@@ -56,8 +56,8 @@ const items = computed(() => [
     </template>
 
     <template #item-logout="{ item }">
-      <IconLogOut class="size-4 shrink-0 text-red-500" />
-      <span class="text-red-500">{{ item.label }}</span>
+      <IconLogOut class="size-4 shrink-0 text-[--color-error]" />
+      <span class="text-[--color-error]">{{ item.label }}</span>
     </template>
   </UDropdownMenu>
 </template>

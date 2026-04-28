@@ -10,7 +10,7 @@ const label = computed(() => {
 
 <template>
   <nav aria-label="breadcrumb">
-    <span class="text-sm font-medium text-gray-700 dark:text-gray-300">
+    <span class="text-sm font-medium text-[--color-title]">
       {{ label }}
     </span>
   </nav>

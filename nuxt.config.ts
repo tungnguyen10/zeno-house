@@ -79,6 +79,10 @@ export default defineNuxtConfig({
     supabaseServiceKey: process.env.SUPABASE_SECRET_KEY ?? '',
   },
 
+  colorMode: {
+    classSuffix: '',
+  },
+
   typescript: {
     strict: true,
   },

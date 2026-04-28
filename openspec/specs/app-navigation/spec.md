@@ -5,23 +5,35 @@ App navigation shell for admin, manager, and tenant roles. Covers the sidebar, h
 ## Requirements
 
 ### Requirement: Default layout renders sidebar and header for admin/manager
-The system SHALL implement `app/layouts/default.vue` with a sidebar navigation on the left and a header bar on top. The sidebar contains all admin/manager menu items. The header contains breadcrumb, notification bell, user dropdown, and language switcher.
+The system SHALL implement `app/layouts/admin.vue` (và `manager.vue`) với sidebar navigation bên trái và header bar bên trên. Layout wrapper SHALL dùng `bg-[--color-bg-page]`. Sidebar SHALL dùng `bg-dark-nav` (`#001C49`) — structural dark zone, không thay đổi theo dark mode. Header SHALL dùng `bg-[--color-bg-surface]` với `border-[--color-border]`.
 
 #### Scenario: Admin sees all sidebar items
-- **WHEN** an admin user views any page using the default layout
+- **WHEN** an admin user views any page using the admin layout
 - **THEN** the sidebar shows: Dashboard, Tòa nhà, Phòng, Khách thuê, Hợp đồng, Hóa đơn, Điện nước, Chi phí, Bảo trì, Báo cáo, Cài đặt
 
 #### Scenario: Manager does not see Cài đặt
-- **WHEN** a manager user views any page using the default layout
+- **WHEN** a manager user views any page using the manager layout
 - **THEN** the sidebar shows all items except "Cài đặt"
 
 #### Scenario: Sidebar routes are role-aware
 - **WHEN** a manager user views the sidebar
 - **THEN** all nav links point to `/manager/...` paths, not `/admin/...`
 
-#### Scenario: Active menu item is highlighted
+#### Scenario: Active menu item is highlighted on dark sidebar
 - **WHEN** the current route matches a sidebar link
-- **THEN** that link is visually highlighted as active
+- **THEN** that link hiển thị với `bg-white/15 text-white` (active state cho nền dark navy)
+
+#### Scenario: Inactive menu items có màu phù hợp với dark sidebar
+- **WHEN** a sidebar link is not active
+- **THEN** link hiển thị `text-white/60` và hover thành `text-white bg-white/10`
+
+#### Scenario: Sidebar background là navy trong cả light và dark mode
+- **WHEN** user toggle dark mode
+- **THEN** sidebar background vẫn là `#001C49` (dark-nav không thay đổi)
+
+#### Scenario: Layout background đổi theo dark mode
+- **WHEN** user toggle dark mode
+- **THEN** main content area background đổi từ `#F2F5FA` sang `#0a0f1e`
 
 ### Requirement: Default layout is mobile responsive with hamburger menu
 The system SHALL hide the sidebar on small screens and show a hamburger button in the header that toggles sidebar visibility via an overlay.
@@ -66,6 +78,17 @@ The system SHALL implement `app/layouts/tenant.vue` with a simplified top header
 #### Scenario: Active bottom nav item is highlighted
 - **WHEN** the current route matches a bottom nav item
 - **THEN** that item is visually highlighted
+
+### Requirement: Header chứa dark mode toggle
+Header SHALL có `LayoutDarkModeToggle.vue` component hiển thị sun/moon icon. Component này wrap logic từ `useColorMode()` (VueUse hoặc Nuxt color-mode).
+
+#### Scenario: Toggle button hiển thị đúng icon
+- **WHEN** đang ở light mode
+- **THEN** button hiển thị moon icon; **WHEN** dark mode, hiển thị sun icon
+
+#### Scenario: Toggle button accessible
+- **WHEN** button rendered
+- **THEN** có `aria-label` mô tả action ("Switch to dark mode" / "Switch to light mode")
 
 ### Requirement: Navigation uses i18n keys for all labels
 The system SHALL have `i18n/locales/vi/navigation.json` and `i18n/locales/en/navigation.json` containing all sidebar and bottom nav labels under a `"navigation"` root key. No navigation label is hardcoded in templates.
