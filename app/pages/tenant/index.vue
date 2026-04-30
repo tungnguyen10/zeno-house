@@ -1,5 +1,7 @@
 <script setup lang="ts">
-definePageMeta({ layout: "tenant", middleware: ["auth", "role"] });
+definePageMeta({ layout: "tenant", middleware: ["auth", "tenant"] });
+
+const { t } = useI18n();
 
 // server:false — avoids SSR 404 when API doesn't exist yet; shows skeleton then empty state
 // TODO: replace with useTenantPortal() composable when tenant-portal module ships
@@ -8,23 +10,23 @@ const { data: myRoom, pending: roomLoading } = useFetch("/api/tenant/me/room", {
   server: false,
 });
 
-const quickActions = [
+const quickActions = computed(() => [
   {
-    label: "Hóa đơn",
+    label: t("navigation.tenant_nav.invoices"),
     icon: "IconReceipt",
     to: "/tenant/invoices",
   },
   {
-    label: "Thông báo",
+    label: t("navigation.tenant_nav.notifications"),
     icon: "IconBell",
     to: "/tenant/notifications",
   },
   {
-    label: "Tài khoản",
+    label: t("navigation.tenant_nav.account"),
     icon: "IconUser",
     to: "/tenant/account",
   },
-];
+]);
 </script>
 
 <template>
@@ -34,7 +36,7 @@ const quickActions = [
 
     <!-- Quick actions -->
     <div class="space-y-2">
-      <p class="text-xs font-medium text-[--color-body]">Truy cập nhanh</p>
+      <p class="text-xs font-medium text-[--color-body]">{{ t("navigation.tenant_nav.quick_access") }}</p>
       <div class="flex gap-2">
         <NuxtLink
           v-for="item in quickActions"

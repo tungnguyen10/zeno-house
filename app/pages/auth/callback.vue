@@ -46,9 +46,12 @@ async function handleSession(userId: string, email: string | undefined) {
       created_at: profileData.created_at,
     });
 
-    if (profileData.role === "admin") await navigateTo("/admin");
-    else if (profileData.role === "manager") await navigateTo("/manager");
-    else await navigateTo("/tenant");
+    if (profileData.role === "admin" || profileData.role === "manager") {
+      await usePermissionsStore().loadPermissions();
+      await navigateTo("/app");
+    } else {
+      await navigateTo("/tenant");
+    }
   } else {
     await supabase.auth.signOut();
     await navigateTo("/login");

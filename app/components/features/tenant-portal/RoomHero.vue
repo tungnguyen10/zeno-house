@@ -12,6 +12,8 @@ const props = defineProps<{
   loading?: boolean;
 }>();
 
+const { t } = useI18n();
+
 const remainingDays = computed(() => {
   if (!props.room) return 0;
   const end = new Date(props.room.contract_end_date);
@@ -57,8 +59,8 @@ const progressColor = computed(() => {
     <div class="mb-3 flex size-12 items-center justify-center rounded-full bg-[--color-bg-muted]">
       <IconHome class="size-6 text-[--color-body]" />
     </div>
-    <p class="text-sm font-medium text-[--color-title]">Chưa có phòng</p>
-    <p class="mt-1 text-xs text-[--color-body]">Liên hệ chủ nhà để được phân phòng</p>
+    <p class="text-sm font-medium text-[--color-title]">{{ t("rooms.hero.no_room") }}</p>
+    <p class="mt-1 text-xs text-[--color-body]">{{ t("rooms.hero.no_room_desc") }}</p>
   </div>
 
   <!-- Hero card -->
@@ -70,17 +72,17 @@ const progressColor = computed(() => {
     <div class="mb-4">
       <p class="text-xs font-medium uppercase tracking-wide text-[--color-body]">
         {{ room.building_name }}
-        <span v-if="room.floor"> · Tầng {{ room.floor }}</span>
+        <span v-if="room.floor"> · {{ t("rooms.hero.floor_label", { n: room.floor }) }}</span>
       </p>
       <p class="mt-0.5 text-2xl font-bold text-[--color-title]">
-        Phòng {{ room.room_number }}
+        {{ t("rooms.hero.room_label", { n: room.room_number }) }}
       </p>
     </div>
 
     <!-- Countdown -->
     <div class="mb-4 space-y-1.5">
       <div class="flex items-center justify-between text-xs text-[--color-body]">
-        <span>Thời hạn hợp đồng</span>
+        <span>{{ t("rooms.hero.contract_duration") }}</span>
         <span
           :class="cn(
             'font-semibold',
@@ -89,7 +91,7 @@ const progressColor = computed(() => {
             'text-[--color-title]',
           )"
         >
-          {{ remainingDays }} ngày còn lại
+          {{ t("rooms.hero.days_remaining", { n: remainingDays }) }}
         </span>
       </div>
       <div class="h-1.5 w-full overflow-hidden rounded-full bg-[--color-bg-muted]">
@@ -110,7 +112,7 @@ const progressColor = computed(() => {
         size="sm"
       >
         <IconWrench class="size-4" />
-        Yêu cầu bảo trì
+        {{ t("rooms.hero.maintenance_request") }}
       </UButton>
       <UButton
         to="/tenant/contracts"
@@ -119,7 +121,7 @@ const progressColor = computed(() => {
         size="sm"
       >
         <IconFileText class="size-4" />
-        Xem hợp đồng
+        {{ t("rooms.hero.view_contract") }}
       </UButton>
     </div>
   </div>

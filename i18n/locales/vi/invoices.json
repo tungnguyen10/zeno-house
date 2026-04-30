@@ -1,1 +1,20 @@
-{}
+{
+  "invoices": {
+    "title": "Hóa đơn",
+    "columns": {
+      "tenant": "Khách thuê",
+      "room": "Phòng",
+      "billing_month": "Kỳ thu",
+      "total_amount": "Số tiền",
+      "due_date": "Hạn thanh toán",
+      "status": "Trạng thái"
+    },
+    "status": {
+      "pending": "Chờ thanh toán",
+      "paid": "Đã thanh toán",
+      "overdue": "Quá hạn",
+      "cancelled": "Đã hủy"
+    },
+    "empty": "Chưa có hóa đơn nào"
+  }
+}

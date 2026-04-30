@@ -11,7 +11,12 @@
       "expenses": "Expenses",
       "maintenance": "Maintenance",
       "reports": "Reports",
-      "settings": "Settings"
+      "settings": "Settings",
+      "managers": "Manage Managers",
+      "occupancy": "Occupancy rate"
+    },
+    "landing": {
+      "goToDashboard": "Go to dashboard"
     },
     "tenant_nav": {
       "home": "Home",
@@ -19,7 +24,8 @@
       "contracts": "Contracts",
       "maintenance": "Maintenance",
       "notifications": "Notifications",
-      "account": "Account"
+      "account": "Account",
+      "quick_access": "Quick access"
     },
     "user_menu": {
       "profile": "Profile",

@@ -33,8 +33,10 @@ async function handleSubmit({ email, password }: { email: string; password: stri
       error.value = t("auth.errors.wrong_role");
       return;
     }
-    if (isAdmin.value) await navigateTo("/admin");
-    else if (isManager.value) await navigateTo("/manager");
+    if (isAdmin.value || isManager.value) {
+      await usePermissionsStore().loadPermissions();
+      await navigateTo("/app");
+    }
   } catch (err) {
     error.value = err instanceof Error ? err.message : t("auth.login_failed");
   } finally {

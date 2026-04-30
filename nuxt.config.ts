@@ -39,6 +39,7 @@ export default defineNuxtConfig({
           'vi/contracts.json',
           'vi/invoices.json',
           'vi/utilities.json',
+          'vi/managers.json',
         ],
       },
       {
@@ -55,6 +56,7 @@ export default defineNuxtConfig({
           'en/contracts.json',
           'en/invoices.json',
           'en/utilities.json',
+          'en/managers.json',
         ],
       },
     ],

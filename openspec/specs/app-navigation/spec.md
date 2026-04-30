@@ -5,23 +5,23 @@ App navigation shell for admin, manager, and tenant roles. Covers the sidebar, h
 ## Requirements
 
 ### Requirement: Default layout renders sidebar and header for admin/manager
-The system SHALL implement `app/layouts/admin.vue` (và `manager.vue`) với sidebar navigation bên trái và header bar bên trên. Layout wrapper SHALL dùng `bg-[--color-bg-page]`. Sidebar SHALL dùng `bg-dark-nav` (`#001C49`) — structural dark zone, không thay đổi theo dark mode. Header SHALL dùng `bg-[--color-bg-surface]` với `border-[--color-border]`.
+The system SHALL implement `app/layouts/app.vue` (replacing `admin.vue` and `manager.vue`) with a sidebar navigation on the left and a header bar on top. The sidebar contains nav items filtered by the current user's permission set. The header contains breadcrumb, notification bell, user dropdown, dark mode toggle, and language switcher.
 
 #### Scenario: Admin sees all sidebar items
-- **WHEN** an admin user views any page using the admin layout
-- **THEN** the sidebar shows: Dashboard, Tòa nhà, Phòng, Khách thuê, Hợp đồng, Hóa đơn, Điện nước, Chi phí, Bảo trì, Báo cáo, Cài đặt
+- **WHEN** a user with `role = 'admin'` views any `/app/*` page
+- **THEN** the sidebar shows: Dashboard, Tòa nhà, Phòng, Khách thuê, Hợp đồng, Hóa đơn, Điện nước, Chi phí, Bảo trì, Báo cáo, Quản lý người quản lý, Cài đặt
 
-#### Scenario: Manager does not see Cài đặt
-- **WHEN** a manager user views any page using the manager layout
-- **THEN** the sidebar shows all items except "Cài đặt"
+#### Scenario: Manager sees only permitted feature items
+- **WHEN** a user with `role = 'manager'` has grants for `rooms` and `invoices` only
+- **THEN** the sidebar shows: Dashboard, Tòa nhà, Phòng, Hóa đơn (feature items with no grant are hidden); Cài đặt and Quản lý người quản lý are not shown
 
-#### Scenario: Sidebar routes are role-aware
-- **WHEN** a manager user views the sidebar
-- **THEN** all nav links point to `/manager/...` paths, not `/admin/...`
+#### Scenario: Sidebar routes all point to /app/*
+- **WHEN** any authenticated user (admin or manager) views the sidebar
+- **THEN** all nav links point to `/app/...` paths
 
-#### Scenario: Active menu item is highlighted on dark sidebar
+#### Scenario: Active menu item is highlighted
 - **WHEN** the current route matches a sidebar link
-- **THEN** that link hiển thị với `bg-white/15 text-white` (active state cho nền dark navy)
+- **THEN** that link is visually highlighted as active
 
 #### Scenario: Inactive menu items có màu phù hợp với dark sidebar
 - **WHEN** a sidebar link is not active
@@ -89,6 +89,32 @@ Header SHALL có `LayoutDarkModeToggle.vue` component hiển thị sun/moon icon
 #### Scenario: Toggle button accessible
 - **WHEN** button rendered
 - **THEN** có `aria-label` mô tả action ("Switch to dark mode" / "Switch to light mode")
+
+### Requirement: app-guard middleware protects all /app/* routes
+The system SHALL have an `app-guard.ts` Nuxt route middleware that verifies the current user has `role = 'admin'` or `role = 'manager'`. Any other role (including tenant) is redirected to `/login`.
+
+#### Scenario: Admin accesses /app routes
+- **WHEN** a user with `role = 'admin'` navigates to `/app/rooms`
+- **THEN** the page renders normally
+
+#### Scenario: Manager accesses /app routes
+- **WHEN** a user with `role = 'manager'` navigates to `/app/rooms`
+- **THEN** the page renders normally (feature-level permission checked inside the page)
+
+#### Scenario: Tenant blocked from /app routes
+- **WHEN** a user with `role = 'tenant'` navigates to `/app`
+- **THEN** they are redirected to `/login`
+
+### Requirement: Old /admin and /manager paths redirect to /app equivalents
+The system SHALL serve 301 redirects from `/admin/*` → `/app/*` and `/manager/*` → `/app/*` to prevent broken bookmarks after path migration.
+
+#### Scenario: Old admin URL redirects
+- **WHEN** a browser navigates to `/admin/rooms`
+- **THEN** a 301 redirect sends them to `/app/rooms`
+
+#### Scenario: Old manager URL redirects
+- **WHEN** a browser navigates to `/manager/contracts`
+- **THEN** a 301 redirect sends them to `/app/contracts`
 
 ### Requirement: Navigation uses i18n keys for all labels
 The system SHALL have `i18n/locales/vi/navigation.json` and `i18n/locales/en/navigation.json` containing all sidebar and bottom nav labels under a `"navigation"` root key. No navigation label is hardcoded in templates.

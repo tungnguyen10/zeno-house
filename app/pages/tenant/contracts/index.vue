@@ -13,16 +13,16 @@
 </template>
 
 <script setup lang="ts">
-definePageMeta({ layout: 'tenant', middleware: ['auth', 'role'] })
+definePageMeta({ layout: 'tenant', middleware: ['auth', 'tenant'] })
 
 const { t } = useI18n()
 
 const columns = [
-  { key: 'room', label: 'Phòng' },
-  { key: 'start_date', label: 'Ngày bắt đầu' },
-  { key: 'end_date', label: 'Ngày kết thúc' },
-  { key: 'monthly_rent', label: 'Tiền thuê/tháng' },
-  { key: 'status', label: 'Trạng thái' },
-  { key: 'actions', label: t('actions.view') },
-] as const
+  { accessorKey: "room", header: t("contracts.columns.room") },
+  { accessorKey: "start_date", header: t("contracts.columns.start_date") },
+  { accessorKey: "end_date", header: t("contracts.columns.end_date") },
+  { accessorKey: "monthly_rent", header: t("contracts.columns.monthly_rent") },
+  { accessorKey: "status", header: t("contracts.columns.status") },
+  { id: "actions", header: t("actions.view") },
+];
 </script>

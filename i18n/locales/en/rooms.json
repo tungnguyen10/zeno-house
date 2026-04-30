@@ -1,1 +1,36 @@
-{}
+{
+  "rooms": {
+    "title": "Rooms",
+    "columns": {
+      "room_number": "Room",
+      "building": "Building",
+      "floor": "Floor",
+      "status": "Status",
+      "base_price": "Base price"
+    },
+    "detail": {
+      "title": "Room details",
+      "room_number": "Room number",
+      "floor": "Floor",
+      "area": "Area",
+      "base_price": "Base price"
+    },
+    "status": {
+      "available": "Available",
+      "occupied": "Occupied",
+      "maintenance": "Maintenance",
+      "reserved": "Reserved"
+    },
+    "empty": "No rooms found",
+    "hero": {
+      "no_room": "No room assigned",
+      "no_room_desc": "Contact your landlord to get a room assigned",
+      "room_label": "Room {n}",
+      "floor_label": "Floor {n}",
+      "contract_duration": "Contract duration",
+      "days_remaining": "{n} days remaining",
+      "maintenance_request": "Request maintenance",
+      "view_contract": "View contract"
+    }
+  }
+}

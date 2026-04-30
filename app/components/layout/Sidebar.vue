@@ -1,41 +1,43 @@
 <script setup lang="ts">
-import type { Role } from "~/types";
-
 const { t } = useI18n();
 const route = useRoute();
 const authStore = useAuthStore();
+const permissionsStore = usePermissionsStore();
 const { role } = storeToRefs(authStore);
 
 interface NavItem {
   label: string;
   icon: string;
   to: string;
+  feature?: string;
   adminOnly?: boolean;
 }
 
-const base = computed(() => (role.value as Role) === "admin" ? "/admin" : "/manager");
-
 const allNavItems = computed<NavItem[]>(() => [
-  { label: t("navigation.sidebar.dashboard"), icon: "IconDashboard", to: base.value },
-  { label: t("navigation.sidebar.buildings"), icon: "IconBuilding", to: `${base.value}/buildings` },
-  { label: t("navigation.sidebar.rooms"), icon: "IconDoorOpen", to: `${base.value}/rooms` },
-  { label: t("navigation.sidebar.tenants"), icon: "IconUsers", to: `${base.value}/tenants` },
-  { label: t("navigation.sidebar.contracts"), icon: "IconFileText", to: `${base.value}/contracts` },
-  { label: t("navigation.sidebar.invoices"), icon: "IconReceipt", to: `${base.value}/invoices` },
-  { label: t("navigation.sidebar.utilities"), icon: "IconZap", to: `${base.value}/utilities` },
-  { label: t("navigation.sidebar.expenses"), icon: "IconWallet", to: `${base.value}/expenses` },
-  { label: t("navigation.sidebar.maintenance"), icon: "IconWrench", to: `${base.value}/maintenance` },
-  { label: t("navigation.sidebar.reports"), icon: "IconBarChart", to: `${base.value}/reports` },
-  { label: t("navigation.sidebar.settings"), icon: "IconSettings", to: `${base.value}/settings`, adminOnly: true },
+  { label: t("navigation.sidebar.dashboard"), icon: "IconDashboard", to: "/app" },
+  { label: t("navigation.sidebar.buildings"), icon: "IconBuilding", to: "/app/buildings" },
+  { label: t("navigation.sidebar.rooms"), icon: "IconDoorOpen", to: "/app/rooms", feature: "rooms" },
+  { label: t("navigation.sidebar.tenants"), icon: "IconUsers", to: "/app/tenants", feature: "tenants" },
+  { label: t("navigation.sidebar.contracts"), icon: "IconFileText", to: "/app/contracts", feature: "contracts" },
+  { label: t("navigation.sidebar.invoices"), icon: "IconReceipt", to: "/app/invoices", feature: "invoices" },
+  { label: t("navigation.sidebar.utilities"), icon: "IconZap", to: "/app/utilities", feature: "utilities" },
+  { label: t("navigation.sidebar.expenses"), icon: "IconWallet", to: "/app/expenses" },
+  { label: t("navigation.sidebar.maintenance"), icon: "IconWrench", to: "/app/maintenance" },
+  { label: t("navigation.sidebar.reports"), icon: "IconBarChart", to: "/app/reports" },
+  { label: t("navigation.sidebar.managers"), icon: "IconUserCog", to: "/app/managers", adminOnly: true },
+  { label: t("navigation.sidebar.settings"), icon: "IconSettings", to: "/app/settings", adminOnly: true },
 ]);
 
 const navItems = computed(() =>
-  allNavItems.value.filter(
-    (item) => !item.adminOnly || (role.value as Role) === "admin",
-  ),
+  allNavItems.value.filter((item) => {
+    if (item.adminOnly) return role.value === "admin";
+    if (item.feature) return permissionsStore.hasAnyPermission(item.feature);
+    return true;
+  }),
 );
 
 function isActive(to: string) {
+  if (to === "/app") return route.path === "/app";
   return route.path === to || route.path.startsWith(to + "/");
 }
 </script>

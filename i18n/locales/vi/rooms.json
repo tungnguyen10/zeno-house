@@ -1,1 +1,36 @@
-{}
+{
+  "rooms": {
+    "title": "Phòng",
+    "columns": {
+      "room_number": "Phòng",
+      "building": "Nhà trọ",
+      "floor": "Tầng",
+      "status": "Trạng thái",
+      "base_price": "Giá thuê"
+    },
+    "detail": {
+      "title": "Thông tin phòng",
+      "room_number": "Số phòng",
+      "floor": "Tầng",
+      "area": "Diện tích",
+      "base_price": "Giá thuê"
+    },
+    "status": {
+      "available": "Trống",
+      "occupied": "Đang thuê",
+      "maintenance": "Bảo trì",
+      "reserved": "Đã đặt"
+    },
+    "empty": "Chưa có phòng nào",
+    "hero": {
+      "no_room": "Chưa có phòng",
+      "no_room_desc": "Liên hệ chủ nhà để được phân phòng",
+      "room_label": "Phòng {n}",
+      "floor_label": "Tầng {n}",
+      "contract_duration": "Thời hạn hợp đồng",
+      "days_remaining": "{n} ngày còn lại",
+      "maintenance_request": "Yêu cầu bảo trì",
+      "view_contract": "Xem hợp đồng"
+    }
+  }
+}

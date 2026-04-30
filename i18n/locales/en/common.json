@@ -22,6 +22,7 @@
     "export": "Export",
     "import": "Import",
     "view": "View",
+    "remove": "Remove",
     "back": "Back",
     "next": "Next",
     "previous": "Previous"

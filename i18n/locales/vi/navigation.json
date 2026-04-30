@@ -11,7 +11,12 @@
       "expenses": "Chi phí",
       "maintenance": "Bảo trì",
       "reports": "Báo cáo",
-      "settings": "Cài đặt"
+      "settings": "Cài đặt",
+      "managers": "Quản lý người quản lý",
+      "occupancy": "Tỷ lệ lấp đầy"
+    },
+    "landing": {
+      "goToDashboard": "Vào trang quản lý"
     },
     "tenant_nav": {
       "home": "Trang chủ",
@@ -19,7 +24,8 @@
       "contracts": "Hợp đồng",
       "maintenance": "Bảo trì",
       "notifications": "Thông báo",
-      "account": "Tài khoản"
+      "account": "Tài khoản",
+      "quick_access": "Truy cập nhanh"
     },
     "user_menu": {
       "profile": "Hồ sơ cá nhân",

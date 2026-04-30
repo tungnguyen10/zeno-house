@@ -1,1 +1,22 @@
-{}
+{
+  "contracts": {
+    "title": "Contracts",
+    "columns": {
+      "tenant": "Tenant",
+      "room": "Room",
+      "start_date": "Start date",
+      "end_date": "End date",
+      "monthly_rent": "Monthly rent",
+      "status": "Status"
+    },
+    "status": {
+      "pending": "Pending",
+      "pending_signature": "Pending signature",
+      "active": "Active",
+      "expired": "Expired",
+      "terminated": "Terminated",
+      "renewed": "Renewed"
+    },
+    "empty": "No contracts found"
+  }
+}

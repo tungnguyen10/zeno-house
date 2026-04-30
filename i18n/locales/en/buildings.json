@@ -1,1 +1,35 @@
-{}
+{
+  "buildings": {
+    "title": "Buildings",
+    "columns": {
+      "name": "Building name",
+      "address": "Address",
+      "total_floors": "Floors",
+      "total_rooms": "Total rooms",
+      "available_rooms": "Available rooms"
+    },
+    "detail": {
+      "title": "Building details",
+      "name": "Building name",
+      "address": "Address",
+      "description": "Description",
+      "total_floors": "Floors"
+    },
+    "form": {
+      "create_title": "Add building",
+      "edit_title": "Edit building",
+      "name_placeholder": "Enter building name",
+      "address_placeholder": "Enter address",
+      "description_placeholder": "Description (optional)",
+      "total_floors_placeholder": "Number of floors"
+    },
+    "stats": {
+      "total": "Total rooms",
+      "available": "Available",
+      "occupied": "Occupied"
+    },
+    "empty": "No buildings yet",
+    "delete_confirm": "Are you sure you want to delete this building? This action cannot be undone.",
+    "delete_blocked": "Cannot delete a building that has rooms. Remove or reassign the rooms first."
+  }
+}

@@ -1,4 +1,4 @@
-## ADDED Requirements
+## Requirements
 
 ### Requirement: All domain tables are created via migration script
 The system SHALL have a single SQL migration file that creates all domain tables: `profiles`, `buildings`, `rooms`, `tenants`, `room_tenants`, `contracts`, `contract_templates`, `invoices`, `invoice_service_fees`, `invoice_discounts`, `utility_readings`, `meter_changes`, `service_fee_types`, `room_service_fees`, `expenses`, `expense_categories`, `maintenance_requests`, `notifications`, `notification_settings`, `payments`, `promotions`, `applied_promotions`, `room_transfers`.
@@ -24,7 +24,7 @@ Every table SHALL have RLS enabled with policies for all 3 roles. RLS MUST NOT b
 
 #### Scenario: Manager sees only their assigned buildings
 - **WHEN** an authenticated user with role `manager` queries `rooms`
-- **THEN** only rooms belonging to buildings assigned to that manager are returned
+- **THEN** only rooms where `building_id IN (SELECT building_id FROM building_managers WHERE manager_id = auth.uid())` are returned
 
 #### Scenario: Tenant sees only their own data
 - **WHEN** an authenticated user with role `tenant` queries `invoices`
@@ -55,3 +55,10 @@ The `profiles` table SHALL have a `role` column (enum: `admin | manager | tenant
 #### Scenario: Role enum is enforced
 - **WHEN** an insert or update sets `role` to an invalid value
 - **THEN** the database rejects it with a constraint violation
+
+### Requirement: building_managers table exists with correct schema
+The system SHALL have a `building_managers` table as defined in the building-managers spec, created via a numbered SQL migration file.
+
+#### Scenario: Migration creates building_managers table
+- **WHEN** the migration is applied
+- **THEN** `building_managers` exists with columns: `id uuid pk`, `building_id uuid fk→buildings`, `manager_id uuid fk→profiles`, `permissions text[]`, `granted_by uuid fk→profiles`, `granted_at timestamptz`, `unique(building_id, manager_id)`

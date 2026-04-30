@@ -42,6 +42,7 @@ export const useAuthStore = defineStore("auth", () => {
   function $reset() {
     user.value = null;
     profile.value = null;
+    usePermissionsStore().$reset();
   }
 
   function clearRole() {

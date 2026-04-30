@@ -27,19 +27,23 @@ The system SHALL have an `auth.ts` Nuxt route middleware that redirects unauthen
 - **THEN** the page renders without redirect
 
 ### Requirement: Role middleware enforces role-based route access
-The system SHALL have a `role.ts` Nuxt route middleware that checks the user's role against the route prefix (`/admin`, `/manager`, `/tenant`) and redirects to `/login` on mismatch.
+The system SHALL replace the URL-prefix-based `role.ts` middleware with an `app-guard.ts` middleware. The new middleware checks that the user has `role = 'admin'` or `role = 'manager'` to access `/app/*` routes. The old `role.ts`, `admin.ts`, and `manager.ts` middleware files SHALL be removed.
 
-#### Scenario: Admin accesses /admin routes
-- **WHEN** a user with `role = 'admin'` navigates to `/admin/rooms`
+#### Scenario: Admin accesses /app routes
+- **WHEN** a user with `role = 'admin'` navigates to `/app/rooms`
 - **THEN** the page renders normally
 
-#### Scenario: Tenant blocked from /admin routes
-- **WHEN** a user with `role = 'tenant'` navigates to `/admin`
+#### Scenario: Manager accesses /app routes
+- **WHEN** a user with `role = 'manager'` navigates to `/app/rooms`
+- **THEN** the page renders normally
+
+#### Scenario: Tenant blocked from /app routes
+- **WHEN** a user with `role = 'tenant'` navigates to `/app`
 - **THEN** they are redirected to `/login`
 
-#### Scenario: Admin can access /manager routes
-- **WHEN** a user with `role = 'admin'` navigates to `/manager`
-- **THEN** access is allowed (admin is a superset of manager)
+#### Scenario: Unauthenticated user blocked from /app routes
+- **WHEN** an unauthenticated user navigates to `/app`
+- **THEN** they are redirected to `/login`
 
 ### Requirement: Auth Pinia store caches role to avoid duplicate API calls
 The system SHALL have a `useAuthStore` Pinia store that caches the authenticated user's `user` object (from Supabase Auth) and full `profile` (from `profiles` table). `role` is derived from `profile.role`. Subsequent calls within the same session return the cached value. The store exposes:
@@ -81,6 +85,17 @@ The system SHALL have a login page at `/login` with an email/password form. On s
 #### Scenario: Wrong credentials shows error
 - **WHEN** a user submits incorrect email or password
 - **THEN** an error alert is shown on the login page and no redirect occurs
+
+### Requirement: usePermissionsStore is loaded after successful login
+The system SHALL call `usePermissionsStore().loadPermissions()` as part of the post-login flow so that permissions are available before the first `/app/*` page renders.
+
+#### Scenario: Permissions available on first page load after login
+- **WHEN** a manager logs in and is redirected to `/app`
+- **THEN** `usePermissionsStore.grants` is already populated before the dashboard component mounts
+
+#### Scenario: Permissions available on hard refresh
+- **WHEN** a manager hard-refreshes a page at `/app/rooms`
+- **THEN** `usePermissionsStore.loadPermissions()` is called in the `app-guard` middleware if grants are empty, ensuring the page renders with correct permissions
 
 ### Requirement: Index page redirects unauthenticated users to login
 The system SHALL have an index page at `/` that redirects unauthenticated users to `/login`. Authenticated users are redirected by the login page flow.

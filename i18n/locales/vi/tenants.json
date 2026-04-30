@@ -1,1 +1,12 @@
-{}
+{
+  "tenants": {
+    "title": "Khách thuê",
+    "columns": {
+      "full_name": "Họ tên",
+      "phone": "SĐT",
+      "room": "Phòng",
+      "status": "Trạng thái"
+    },
+    "empty": "Chưa có khách thuê nào"
+  }
+}

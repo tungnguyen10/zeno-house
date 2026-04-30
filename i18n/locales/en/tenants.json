@@ -1,1 +1,12 @@
-{}
+{
+  "tenants": {
+    "title": "Tenants",
+    "columns": {
+      "full_name": "Full name",
+      "phone": "Phone",
+      "room": "Room",
+      "status": "Status"
+    },
+    "empty": "No tenants found"
+  }
+}

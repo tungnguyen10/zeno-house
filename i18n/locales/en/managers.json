@@ -1,0 +1,46 @@
+{
+  "managers": {
+    "dashboard": {
+      "noBuildings": "No buildings assigned",
+      "contactAdmin": "Contact your administrator to be assigned to a building",
+      "description": "Today's activity overview",
+      "stat": {
+        "active_tenants": "Active tenants",
+        "open_maintenance": "Open maintenance",
+        "expiring_contracts": "Expiring contracts (30d)"
+      },
+      "recent_activity": {
+        "title": "Recent activity",
+        "coming_soon": "Coming soon",
+        "description": "Activity log will appear here once modules are activated"
+      },
+      "rooms_by_status": {
+        "title": "Rooms by status",
+        "description": "Occupancy chart will appear once the rooms module is activated"
+      }
+    },
+    "list": {
+      "name": "Full name",
+      "email": "Email",
+      "buildings": "Managed buildings",
+      "noBuildings": "No buildings assigned"
+    },
+    "assignment": {
+      "title": "Assign building",
+      "building": "Building",
+      "selectBuilding": "Select a building",
+      "permissions": "Feature permissions",
+      "assign": "Assign",
+      "saved": "Assignment saved",
+      "revoked": "Assignment revoked",
+      "error": "An error occurred, please try again"
+    },
+    "features": {
+      "rooms": "Rooms",
+      "contracts": "Contracts",
+      "invoices": "Invoices",
+      "tenants": "Tenants",
+      "utilities": "Utilities"
+    }
+  }
+}

@@ -50,8 +50,7 @@ onMounted(async () => {
   // redirect them to their dashboard instead of showing the reset form.
   if (route.query.type !== "recovery") {
     const role = authStore.role ?? await authStore.fetchRole();
-    if (role === "admin") await navigateTo("/admin");
-    else if (role === "manager") await navigateTo("/manager");
+    if (role === "admin" || role === "manager") await navigateTo("/app");
     else await navigateTo("/tenant");
   }
 });
