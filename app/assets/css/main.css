@@ -43,6 +43,12 @@
   --color-warning:    #FFB539;    /* warning text / icon */
   --color-warning-bg: #FFFBEB;    /* warning banner background */
 
+  /* Room status colors */
+  --color-room-available:   #22c55e;  /* green-500 */
+  --color-room-occupied:    #3b82f6;  /* blue-500 */
+  --color-room-maintenance: #f97316;  /* orange-500 */
+  --color-room-reserved:    #a855f7;  /* purple-500 */
+
   /* Typography */
   --font-inter: Inter, ui-sans-serif, system-ui;
 

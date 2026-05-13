@@ -12,8 +12,12 @@
       "title": "Room details",
       "room_number": "Room number",
       "floor": "Floor",
-      "area": "Area",
-      "base_price": "Base price"
+      "area": "Area (m²)",
+      "base_price": "Base price",
+      "deposit_amount": "Deposit",
+      "max_occupants": "Max occupants",
+      "description": "Description",
+      "current_tenant": "Current tenant"
     },
     "status": {
       "available": "Available",
@@ -21,7 +25,36 @@
       "maintenance": "Maintenance",
       "reserved": "Reserved"
     },
+    "form": {
+      "create_title": "Add room",
+      "edit_title": "Edit room",
+      "room_number_placeholder": "e.g. 101, 2A, ...",
+      "floor_placeholder": "Enter floor number",
+      "area_placeholder": "Enter area",
+      "base_price_placeholder": "Enter base price",
+      "deposit_amount_placeholder": "Enter deposit amount",
+      "max_occupants_placeholder": "Enter max occupants",
+      "description_placeholder": "Room description..."
+    },
+    "filters": {
+      "all_buildings": "All buildings",
+      "all_statuses": "All statuses",
+      "floor_placeholder": "Floor",
+      "search_placeholder": "Search rooms..."
+    },
+    "stats": {
+      "total": "Total rooms",
+      "available": "Available",
+      "occupied": "Occupied",
+      "maintenance": "Maintenance",
+      "reserved": "Reserved",
+      "occupancy_rate": "Occupancy rate"
+    },
     "empty": "No rooms found",
+    "delete_confirm": "Are you sure you want to delete this room?",
+    "delete_blocked": "Cannot delete a room with an active contract",
+    "select_placeholder": "Select a room",
+    "quick_view": "Quick view",
     "hero": {
       "no_room": "No room assigned",
       "no_room_desc": "Contact your landlord to get a room assigned",
