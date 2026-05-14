@@ -11,13 +11,15 @@ interface StatusConfig {
 }
 
 const statusMap: Record<string, StatusConfig> = {
-  active:     { label: 'Đang hoạt động', class: 'bg-success-neon/10 text-success-neon' },
-  inactive:   { label: 'Ngừng hoạt động', class: 'bg-dark-surface text-muted' },
-  pending:    { label: 'Chờ duyệt', class: 'bg-warning/10 text-warning' },
-  terminated: { label: 'Đã chấm dứt', class: 'bg-error-bg text-error-vivid' },
-  occupied:   { label: 'Đã có người thuê', class: 'bg-cyan/10 text-cyan' },
-  vacant:     { label: 'Trống', class: 'bg-success-neon/10 text-success-neon' },
-  expired:    { label: 'Hết hạn', class: 'bg-warning/10 text-warning' },
+  active:       { label: 'Đang hoạt động', class: 'bg-success-neon/10 text-success-neon' },
+  inactive:     { label: 'Ngừng hoạt động', class: 'bg-dark-surface text-muted' },
+  pending:      { label: 'Chờ duyệt', class: 'bg-warning/10 text-warning' },
+  terminated:   { label: 'Đã chấm dứt', class: 'bg-error-bg text-error-vivid' },
+  available:    { label: 'Trống', class: 'bg-success-neon/10 text-success-neon' },
+  occupied:     { label: 'Đã có người thuê', class: 'bg-cyan/10 text-cyan' },
+  maintenance:  { label: 'Đang bảo trì', class: 'bg-warning/10 text-warning' },
+  vacant:       { label: 'Trống', class: 'bg-success-neon/10 text-success-neon' },
+  expired:      { label: 'Hết hạn', class: 'bg-warning/10 text-warning' },
 }
 
 const config = computed(() =>

@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import type { ApiSuccess } from '~/types/api'
-import type { Building } from '~/types/buildings'
-
 const route = useRoute()
 const authStore = useAuthStore()
 const id = route.params.id as string
 
-const { data, error, status } = await useFetch<ApiSuccess<Building>>(`/api/buildings/${id}`)
-const building = computed(() => data.value?.data ?? null)
+const { building, isLoading, error } = useBuildingDetail(id)
+
+watchEffect(() => {
+  if (error.value?.statusCode === 404) navigateTo('/buildings')
+})
 
 const showDeleteModal = ref(false)
 const isDeleting = ref(false)
@@ -24,16 +24,12 @@ async function confirmDelete() {
   }
 }
 
-// 404 redirect
-if (error.value?.statusCode === 404) {
-  await navigateTo('/buildings')
-}
 </script>
 
 <template>
   <div>
     <!-- Loading -->
-    <div v-if="status === 'pending'" class="space-y-4">
+    <div v-if="isLoading" class="space-y-4">
       <UiSkeleton class="h-8 w-64 rounded-lg" />
       <UiSkeleton class="h-48 rounded-xl" />
     </div>

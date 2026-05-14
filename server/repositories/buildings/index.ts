@@ -2,7 +2,7 @@ import { serverSupabaseClient } from '#supabase/server'
 import type { H3Event } from 'h3'
 import type { Building } from '~/types/buildings'
 import type { BuildingCreateInput, BuildingUpdateInput } from '~/utils/validators/buildings'
-import { mapBuilding } from '~/utils/mappers/buildings'
+import { mapBuilding, type BuildingRow } from '~/utils/mappers/buildings'
 
 export const BuildingRepository = {
   async findAll(
@@ -15,24 +15,24 @@ export const BuildingRepository = {
 
     const { data, error, count } = await client
       .from('buildings')
-      .select('*', { count: 'exact' })
+      .select('*, rooms(count)', { count: 'exact' })
       .order('created_at', { ascending: false })
       .range(from, to)
 
     if (error) throw createError({ statusCode: 500, message: error.message })
-    return { items: (data ?? []).map(mapBuilding), total: count ?? 0 }
+    return { items: (data as BuildingRow[] ?? []).map(mapBuilding), total: count ?? 0 }
   },
 
   async findById(event: H3Event, id: string): Promise<Building | null> {
     const client = await serverSupabaseClient(event)
     const { data, error } = await client
       .from('buildings')
-      .select('*')
+      .select('*, rooms(count)')
       .eq('id', id)
       .maybeSingle()
 
     if (error) throw createError({ statusCode: 500, message: error.message })
-    return data ? mapBuilding(data) : null
+    return data ? mapBuilding(data as BuildingRow) : null
   },
 
   async insert(event: H3Event, input: BuildingCreateInput): Promise<Building> {
@@ -45,11 +45,11 @@ export const BuildingRepository = {
         description: input.description ?? null,
         status: input.status ?? 'active',
       })
-      .select()
+      .select('*, rooms(count)')
       .single()
 
     if (error) throw createError({ statusCode: 500, message: error.message })
-    return mapBuilding(data)
+    return mapBuilding(data as BuildingRow)
   },
 
   async update(event: H3Event, id: string, input: BuildingUpdateInput): Promise<Building> {
@@ -63,11 +63,11 @@ export const BuildingRepository = {
         ...(input.status !== undefined && { status: input.status }),
       })
       .eq('id', id)
-      .select()
+      .select('*, rooms(count)')
       .single()
 
     if (error) throw createError({ statusCode: 500, message: error.message })
-    return mapBuilding(data)
+    return mapBuilding(data as BuildingRow)
   },
 
   async remove(event: H3Event, id: string): Promise<void> {

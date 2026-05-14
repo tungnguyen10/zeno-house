@@ -1,18 +1,14 @@
 <script setup lang="ts">
-import type { ApiSuccess } from '~/types/api'
-import type { Building } from '~/types/buildings'
 import type { BuildingFormData } from '~/components/buildings/BuildingForm.vue'
 
 const route = useRoute()
 const id = route.params.id as string
 
-const { data, error } = await useFetch<ApiSuccess<Building>>(`/api/buildings/${id}`)
+const { building, error } = useBuildingDetail(id)
 
-if (error.value?.statusCode === 404) {
-  await navigateTo('/buildings')
-}
-
-const building = computed(() => data.value?.data ?? null)
+watchEffect(() => {
+  if (error.value?.statusCode === 404) navigateTo('/buildings')
+})
 
 const { isLoading, errors, apiError, submitUpdate } = useBuildingForm()
 

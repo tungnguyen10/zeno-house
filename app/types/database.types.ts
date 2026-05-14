@@ -22,7 +22,6 @@ export type Database = {
           id: string
           name: string
           status: string
-          total_rooms: number
           updated_at: string
         }
         Insert: {
@@ -32,7 +31,6 @@ export type Database = {
           id?: string
           name: string
           status?: string
-          total_rooms?: number
           updated_at?: string
         }
         Update: {
@@ -42,10 +40,56 @@ export type Database = {
           id?: string
           name?: string
           status?: string
-          total_rooms?: number
           updated_at?: string
         }
         Relationships: []
+      }
+      rooms: {
+        Row: {
+          area: number | null
+          building_id: string
+          created_at: string
+          description: string | null
+          floor: number
+          id: string
+          monthly_rent: number
+          room_number: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          area?: number | null
+          building_id: string
+          created_at?: string
+          description?: string | null
+          floor?: number
+          id?: string
+          monthly_rent?: number
+          room_number: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          area?: number | null
+          building_id?: string
+          created_at?: string
+          description?: string | null
+          floor?: number
+          id?: string
+          monthly_rent?: number
+          room_number?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rooms_building_id_fkey"
+            columns: ["building_id"]
+            isOneToOne: false
+            referencedRelation: "buildings"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
