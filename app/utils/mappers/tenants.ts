@@ -1,0 +1,17 @@
+import type { Tables } from '~/types/database.types'
+import type { Tenant } from '~/types/tenants'
+
+export function mapTenant(row: Tables<'tenants'>): Tenant {
+  return {
+    id: row.id,
+    fullName: row.full_name,
+    phone: row.phone,
+    email: row.email,
+    idNumber: row.id_number,
+    dateOfBirth: row.date_of_birth,
+    permanentAddress: row.permanent_address,
+    notes: row.notes,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  }
+}

@@ -30,6 +30,22 @@ Client-side UI for managing rooms. Includes list page with filters, detail page,
 - **WHEN** room id does not exist
 - **THEN** 404 page shown
 
+#### Scenario: Show current tenant when occupied
+- **WHEN** room has an active assignment record
+- **THEN** current tenant's name and phone are displayed with a link to tenant detail
+
+#### Scenario: Show assign button when no active assignment
+- **WHEN** room has no active assignment record and user is admin
+- **THEN** a "Giao phòng" button is shown that opens an assign modal
+
+#### Scenario: Show unassign button when assigned
+- **WHEN** room has an active assignment record and user is admin
+- **THEN** a "Thu phòng" button is shown with UiConfirmModal for confirmation
+
+#### Scenario: Assign modal selects tenant and date
+- **WHEN** admin opens assign modal
+- **THEN** can search/select from unassigned tenants only and pick start_date; submit calls assign API
+
 ### Requirement: Create room page
 `/rooms/create` page SHALL present RoomForm. On success redirects to /rooms. Shows API errors inline.
 

@@ -44,8 +44,8 @@ F0.1.6  Quality Gates Baseline       ✅  archived: 2026-05-14-quality-gates-bas
 ```
 F0.2.1  Rooms End-to-End             ✅  archived: 2026-05-14-rooms-end-to-end
 F0.2.2  Shared Patterns              ✅  archived: 2026-05-14-shared-patterns
-F0.2.3  Tenants End-to-End           🔲  tenants-end-to-end
-F0.2.4  Room Assignment              🔲  room-assignment
+F0.2.3  Tenants End-to-End           ✅  archived: 2026-05-14-tenants-end-to-end
+F0.2.4  Room Assignment              ✅  archived: 2026-05-14-room-assignment
 F0.2.5  Contracts Basic              🔲  contracts-basic
 F0.2.6  Dashboard Summary            🔲  dashboard-summary
 F0.2.7  v0.2 Quality Baseline        🔲  v02-quality-baseline

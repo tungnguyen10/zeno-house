@@ -1,0 +1,57 @@
+## Purpose
+
+Server API for room assignments. Provides assign, unassign, and lookup endpoints. Business logic checks: room must not be `maintenance` and must have no active assignment; tenant must have no active assignment elsewhere.
+
+## Requirements
+
+### Requirement: Assign room endpoint
+`POST /api/room-assignments` SHALL create a new active assignment. Body: `room_id` (required), `tenant_id` (required), `start_date` (required, date string), `notes` (optional). Validates: room must exist and not be `maintenance`; room must have no active assignment record; tenant must exist and have no active assignment. On success: creates assignment record AND sets room.status = 'occupied'. Returns 201 with created assignment.
+
+#### Scenario: Assign success
+- **WHEN** admin POSTs valid assign data for an available room and unassigned tenant
+- **THEN** returns 201 with assignment; room.status becomes 'occupied'
+
+#### Scenario: Room not available
+- **WHEN** admin tries to assign a room that is `maintenance`, or a room that already has an active assignment record
+- **THEN** returns 409 CONFLICT with message indicating the room cannot be assigned
+
+#### Scenario: Tenant already assigned
+- **WHEN** admin tries to assign a tenant who already has an active assignment
+- **THEN** returns 409 CONFLICT with message indicating tenant is already assigned to another room
+
+#### Scenario: Validation error
+- **WHEN** body is missing room_id, tenant_id, or start_date
+- **THEN** returns 422 VALIDATION_ERROR
+
+### Requirement: Unassign room endpoint
+`DELETE /api/room-assignments/:id` SHALL end an active assignment by setting `end_date = today`. Also sets room.status = 'available'. Returns 200 with updated assignment. Returns 404 if assignment not found. Returns 409 if assignment already ended.
+
+#### Scenario: Unassign success
+- **WHEN** admin DELETEs an active assignment
+- **THEN** end_date set to today; room.status becomes 'available'; returns 200
+
+#### Scenario: Already ended
+- **WHEN** assignment already has an end_date
+- **THEN** returns 409 CONFLICT
+
+### Requirement: Get current assignment for a room
+`GET /api/room-assignments/room/:roomId` SHALL return the active assignment for a room (end_date IS NULL), including joined tenant info. Returns null data if no active assignment.
+
+#### Scenario: Room has active tenant
+- **WHEN** admin calls GET /api/room-assignments/room/:roomId for an occupied room
+- **THEN** returns assignment with tenant fullName, phone, id
+
+#### Scenario: Room is vacant
+- **WHEN** room has no active assignment
+- **THEN** returns { data: null }
+
+### Requirement: Get current assignment for a tenant
+`GET /api/room-assignments/tenant/:tenantId` SHALL return the active assignment for a tenant (end_date IS NULL), including joined room info (roomNumber, floor, building name). Returns null data if tenant has no active assignment.
+
+#### Scenario: Tenant is assigned
+- **WHEN** admin calls GET for an assigned tenant
+- **THEN** returns assignment with room roomNumber, floor, building name
+
+#### Scenario: Tenant not assigned
+- **WHEN** tenant has no active assignment
+- **THEN** returns { data: null }

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { Building } from '~/types/buildings'
 import type { ApiSuccess } from '~/types/api'
+import type { AssignInput } from '~/utils/validators/room-assignments'
 import { formatCurrency } from '~/utils/format/currency'
 
 definePageMeta({ title: 'Chi tiết phòng' })
@@ -9,7 +10,7 @@ const route = useRoute()
 const authStore = useAuthStore()
 const id = route.params.id as string
 
-const { room, isLoading, error } = useRoomDetail(id)
+const { room, isLoading, error, refresh: refreshRoom } = useRoomDetail(id)
 
 // Fetch building for display context — only after room is known
 const buildingId = computed(() => room.value?.buildingId ?? '')
@@ -19,8 +20,17 @@ const { data: buildingData } = await useFetch<ApiSuccess<Building>>(
 )
 const building = computed(() => buildingData.value?.data ?? null)
 
+// Room assignment
+const { assignment, assign, unassign } = useRoomAssignment(id)
+
 const showDeleteModal = ref(false)
 const isDeleting = ref(false)
+
+const showAssignModal = ref(false)
+const isAssigning = ref(false)
+
+const showUnassignModal = ref(false)
+const isUnassigning = ref(false)
 
 async function confirmDelete() {
   isDeleting.value = true
@@ -31,6 +41,31 @@ async function confirmDelete() {
   finally {
     isDeleting.value = false
     showDeleteModal.value = false
+  }
+}
+
+async function handleAssign(input: AssignInput) {
+  isAssigning.value = true
+  try {
+    await assign(input)
+    showAssignModal.value = false
+    await refreshRoom()
+  }
+  finally {
+    isAssigning.value = false
+  }
+}
+
+async function confirmUnassign() {
+  if (!assignment.value) return
+  isUnassigning.value = true
+  try {
+    await unassign(assignment.value.id)
+    showUnassignModal.value = false
+    await refreshRoom()
+  }
+  finally {
+    isUnassigning.value = false
   }
 }
 
@@ -98,6 +133,40 @@ if (error.value?.statusCode === 404) {
           <p class="text-sm text-white">{{ room.description }}</p>
         </div>
       </div>
+
+      <!-- Occupancy section -->
+      <div class="rounded-xl border border-dark-border bg-dark-surface p-6 mt-4">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-sm font-semibold text-white">Khách thuê hiện tại</h2>
+          <div v-if="authStore.isAdmin">
+            <UiButton
+              v-if="!assignment"
+              size="sm"
+              @click="showAssignModal = true"
+            >
+              Giao phòng
+            </UiButton>
+            <UiButton
+              v-else
+              variant="danger"
+              size="sm"
+              @click="showUnassignModal = true"
+            >
+              Thu phòng
+            </UiButton>
+          </div>
+        </div>
+        <div v-if="assignment">
+          <div class="text-sm text-white">
+            <NuxtLink :to="`/tenants/${assignment.tenant.id}`" class="font-medium hover:text-cyan transition-colors">
+              {{ assignment.tenant.fullName }}
+            </NuxtLink>
+          </div>
+          <p class="text-sm text-muted mt-0.5">{{ assignment.tenant.phone }}</p>
+          <p class="text-xs text-muted mt-1">Từ ngày {{ new Date(assignment.startDate).toLocaleDateString('vi-VN') }}</p>
+        </div>
+        <p v-else class="text-sm text-muted">Phòng trống</p>
+      </div>
     </template>
 
     <!-- Delete modal -->
@@ -108,6 +177,26 @@ if (error.value?.statusCode === 404) {
       :loading="isDeleting"
       @confirm="confirmDelete"
       @cancel="showDeleteModal = false"
+    />
+
+    <!-- Assign modal -->
+    <RoomAssignModal
+      :open="showAssignModal"
+      :room-id="id"
+      :loading="isAssigning"
+      @assign="handleAssign"
+      @cancel="showAssignModal = false"
+    />
+
+    <!-- Unassign confirm modal -->
+    <UiConfirmModal
+      :open="showUnassignModal"
+      title="Xác nhận thu phòng"
+      :message="`Bạn có chắc muốn thu phòng ${room?.roomNumber ?? ''}? Khách thuê ${assignment?.tenant.fullName ?? ''} sẽ được đánh dấu rời phòng hôm nay.`"
+      confirm-label="Thu phòng"
+      :loading="isUnassigning"
+      @confirm="confirmUnassign"
+      @cancel="showUnassignModal = false"
     />
   </div>
 </template>
