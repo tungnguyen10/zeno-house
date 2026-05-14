@@ -8,6 +8,8 @@ export interface RoomFilters {
   buildingId?: string
   status?: string
   floor?: number
+  page?: number
+  limit?: number
 }
 
 export const RoomRepository = {
@@ -16,12 +18,17 @@ export const RoomRepository = {
     filters: RoomFilters = {},
   ): Promise<{ items: Room[]; total: number }> {
     const client = await serverSupabaseClient(event)
+    const page = filters.page ?? 1
+    const limit = filters.limit ?? 20
+    const from = (page - 1) * limit
+    const to = from + limit - 1
 
     let query = client
       .from('rooms')
       .select('*', { count: 'exact' })
       .order('floor', { ascending: true })
       .order('room_number', { ascending: true })
+      .range(from, to)
 
     if (filters.buildingId) query = query.eq('building_id', filters.buildingId)
     if (filters.status) query = query.eq('status', filters.status)

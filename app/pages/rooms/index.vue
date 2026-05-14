@@ -5,7 +5,7 @@ import type { ApiSuccess } from '~/types/api'
 definePageMeta({ title: 'Phòng' })
 
 const authStore = useAuthStore()
-const { rooms, total, isLoading, error, buildingId, status } = useRoomList()
+const { rooms, total, totalPages, page, isLoading, error, buildingId, status } = useRoomList()
 
 const { data: buildingsData } = await useFetch<ApiSuccess<Building[]> & { meta: { total: number } }>(
   '/api/buildings',
@@ -78,6 +78,15 @@ const buildings = computed(() => buildingsData.value?.data ?? [])
           :building-name="buildings.find(b => b.id === room.buildingId)?.name"
         />
       </NuxtLink>
+    </div>
+
+    <!-- Pagination -->
+    <div v-if="totalPages > 1" class="flex items-center justify-between mt-6 pt-4 border-t border-dark-border">
+      <p class="text-sm text-muted">Trang {{ page }} / {{ totalPages }}</p>
+      <div class="flex gap-2">
+        <UiButton variant="secondary" size="sm" :disabled="page <= 1" @click="page--">← Trước</UiButton>
+        <UiButton variant="secondary" size="sm" :disabled="page >= totalPages" @click="page++">Tiếp →</UiButton>
+      </div>
     </div>
   </div>
 </template>

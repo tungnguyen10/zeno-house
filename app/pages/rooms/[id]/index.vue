@@ -101,18 +101,13 @@ if (error.value?.statusCode === 404) {
     </template>
 
     <!-- Delete modal -->
-    <UiModal :open="showDeleteModal" title="Xác nhận xoá" @close="showDeleteModal = false">
-      <template #default>
-        <p class="text-sm text-muted">
-          Bạn có chắc muốn xoá phòng <strong class="text-white">{{ room?.roomNumber }}</strong>? Hành động này không thể hoàn tác.
-        </p>
-      </template>
-      <template #footer>
-        <div class="flex justify-end gap-3">
-          <UiButton variant="secondary" @click="showDeleteModal = false">Huỷ</UiButton>
-          <UiButton variant="danger" :loading="isDeleting" @click="confirmDelete">Xoá</UiButton>
-        </div>
-      </template>
-    </UiModal>
+    <UiConfirmModal
+      :open="showDeleteModal"
+      title="Xác nhận xoá"
+      :message="`Bạn có chắc muốn xoá phòng ${room?.roomNumber ?? ''}${building ? ` (${building.name})` : ''}? Hành động này không thể hoàn tác.`"
+      :loading="isDeleting"
+      @confirm="confirmDelete"
+      @cancel="showDeleteModal = false"
+    />
   </div>
 </template>

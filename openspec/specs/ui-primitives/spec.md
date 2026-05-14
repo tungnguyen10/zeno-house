@@ -91,3 +91,20 @@
 #### Scenario: UiSkeleton nhận class để control kích thước
 - **WHEN** UiSkeleton được render với `class="w-full h-4"`
 - **THEN** skeleton có đúng kích thước đó
+
+---
+
+### Requirement: UiConfirmModal component
+The system SHALL provide a `UiConfirmModal` component for confirmation dialogs. Props: `open` (boolean), `title` (string), `message` (string), `confirmLabel` (string, default "Xoá"), `loading` (boolean). Emits: `confirm`, `cancel`. Supports optional default slot to override the message with richer HTML content. Used to replace inline delete modal logic in domain detail pages.
+
+#### Scenario: Confirm action
+- **WHEN** user clicks the confirm button
+- **THEN** component emits `confirm` event
+
+#### Scenario: Cancel action
+- **WHEN** user clicks cancel or closes modal
+- **THEN** component emits `cancel` event
+
+#### Scenario: Loading state
+- **WHEN** `loading` prop is true
+- **THEN** confirm button shows loading indicator and is disabled
