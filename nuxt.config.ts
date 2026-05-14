@@ -58,6 +58,11 @@ export default defineNuxtConfig({
     typeCheck: false, // bật true khi cần build-time type check
   },
 
+  // Auto-import composables từ tất cả subdirectories
+  imports: {
+    dirs: ['composables/**'],
+  },
+
   svgo: {
     autoImportPath: "./assets/icons/",
     defaultImport: "component",

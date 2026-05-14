@@ -15,12 +15,15 @@
     "@pinia/nuxt": "^0.11.3",
     "@vueuse/motion": "^3.0.3",
     "@vueuse/nuxt": "^14.2.1",
+    "clsx": "^2.1.1",
+    "dayjs": "^1.11.20",
     "eslint": "^10.3.0",
     "nuxt": "^4.4.5",
     "nuxt-svgo": "^5.3.0",
     "pinia": "^3.0.4",
     "vue": "^3.5.34",
-    "vue-router": "^5.0.6"
+    "vue-router": "^5.0.6",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@nuxtjs/tailwindcss": "^6.14.0",
