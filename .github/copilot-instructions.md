@@ -33,8 +33,8 @@ F0.1.1  Project Skeleton             ✅  infra, config, deps
 F0.1.2  App Shell Foundation         🔄  layouts, AppSidebar, AppHeader, UI primitives
 F0.1.3  Auth + Session + Permission  ✅  archived: 2026-05-14-auth-session-foundation
 F0.1.4  API & Server Architecture    ✅  archived: 2026-05-14-api-server-architecture
-F0.1.5  Domain Vertical Slice        ⏳  Buildings end-to-end
-F0.1.6  Quality Gates Baseline       ⏳
+F0.1.5  Domain Vertical Slice        ✅  archived: 2026-05-14-buildings-vertical-slice
+F0.1.6  Quality Gates Baseline       ✅  archived: 2026-05-14-quality-gates-baseline
 ```
 
 **Nguyên tắc incremental:** chỉ set up thứ gì phục vụ bước kế tiếp. Không tạo abstraction khi mới có 1 nơi dùng.

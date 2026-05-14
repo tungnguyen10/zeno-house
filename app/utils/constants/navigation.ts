@@ -1,5 +1,3 @@
-import type { Component } from 'vue'
-
 export interface NavItem {
   key: string
   label: string

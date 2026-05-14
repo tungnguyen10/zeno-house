@@ -58,7 +58,7 @@ const inputClass = computed(() =>
       :aria-describedby="error ? `${inputId}-error` : hint ? `${inputId}-hint` : undefined"
       :class="inputClass"
       @input="emit('update:modelValue', ($event.target as HTMLInputElement).value)"
-    />
+    >
 
     <p v-if="error" :id="`${inputId}-error`" class="text-xs text-error" role="alert">
       {{ error }}

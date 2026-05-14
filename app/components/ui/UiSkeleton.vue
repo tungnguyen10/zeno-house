@@ -1,7 +1,5 @@
 <script setup lang="ts">
-defineProps<{
-  // No required props — consumer controls size via class
-}>()
+// No props — class/style pass through via $attrs (inheritAttrs: true)
 </script>
 
 <template>
