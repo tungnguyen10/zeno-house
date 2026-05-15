@@ -20,7 +20,7 @@ Client-side UI for managing tenants. Includes list page with search (debounced) 
 - **THEN** empty state message displayed with create button
 
 ### Requirement: Tenant detail page
-`/tenants/:id` page SHALL display all tenant fields including full_name, phone, email, id_number, date_of_birth, permanent_address, notes. Admin sees edit and delete buttons. Delete uses `UiConfirmModal`.
+`/tenants/:id` page SHALL display all tenant fields including full_name, phone, email, id_number, date_of_birth, permanent_address, notes. Admin sees edit and delete buttons. Delete uses `UiConfirmModal`. The page SHALL also display a read-only "Hợp đồng" section listing all contracts for this tenant (contract id, room number + building, start_date, end_date, status badge), each linking to `/contracts/:id`. When no contracts exist, show a "Chưa có hợp đồng" placeholder.
 
 #### Scenario: Detail view
 - **WHEN** admin navigates to /tenants/:id
@@ -41,7 +41,14 @@ Client-side UI for managing tenants. Includes list page with search (debounced) 
 #### Scenario: Show no room when unassigned
 - **WHEN** tenant has no active room assignment
 - **THEN** "Chưa có phòng" placeholder displayed
-- **THEN** redirected to /tenants
+
+#### Scenario: Show contracts list
+- **WHEN** tenant has one or more contracts
+- **THEN** each contract shown with room, dates, and status badge linking to /contracts/:id
+
+#### Scenario: Show no contracts placeholder
+- **WHEN** tenant has no contracts
+- **THEN** "Chưa có hợp đồng" placeholder displayed in the Hợp đồng section
 
 ### Requirement: Create tenant page
 `/tenants/create` page SHALL present TenantForm. Required fields: full_name, phone. Optional: email, id_number, date_of_birth, permanent_address, notes. On success redirects to /tenants. Shows API errors inline.

@@ -1,0 +1,38 @@
+import type { Tables } from '~/types/database.types'
+import type { Contract, ContractStatus, ContractWithDetails } from '~/types/contracts'
+
+export function mapContract(row: Tables<'contracts'>): Contract {
+  return {
+    id: row.id,
+    roomId: row.room_id,
+    tenantId: row.tenant_id,
+    startDate: row.start_date,
+    endDate: row.end_date,
+    monthlyRent: row.monthly_rent,
+    deposit: row.deposit,
+    status: row.status as ContractStatus,
+    notes: row.notes,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  }
+}
+
+export function mapContractWithDetails(row: Tables<'contracts'> & {
+  rooms: { id: string; room_number: string; floor: number; buildings: { name: string } | null } | null
+  tenants: { id: string; full_name: string; phone: string } | null
+}): ContractWithDetails {
+  return {
+    ...mapContract(row),
+    room: {
+      id: row.rooms?.id ?? '',
+      roomNumber: row.rooms?.room_number ?? '',
+      floor: row.rooms?.floor ?? 0,
+      buildingName: row.rooms?.buildings?.name ?? '',
+    },
+    tenant: {
+      id: row.tenants?.id ?? '',
+      fullName: row.tenants?.full_name ?? '',
+      phone: row.tenants?.phone ?? '',
+    },
+  }
+}

@@ -20,7 +20,7 @@ Client-side UI for managing rooms. Includes list page with filters, detail page,
 - **THEN** empty state message displayed with create button
 
 ### Requirement: Room detail page
-`/rooms/:id` page SHALL display full room info including building name, all fields, and occupancy status badge.
+`/rooms/:id` page SHALL display full room info including building name, all fields, and occupancy status badge. Admin sees edit and delete buttons. The page SHALL also display a read-only "Hợp đồng" section listing all contracts for this room (contract id, tenant full_name, start_date, end_date, status badge), each linking to `/contracts/:id`. When no contracts exist, show a "Chưa có hợp đồng" placeholder.
 
 #### Scenario: Detail view
 - **WHEN** admin navigates to /rooms/:id
@@ -45,6 +45,14 @@ Client-side UI for managing rooms. Includes list page with filters, detail page,
 #### Scenario: Assign modal selects tenant and date
 - **WHEN** admin opens assign modal
 - **THEN** can search/select from unassigned tenants only and pick start_date; submit calls assign API
+
+#### Scenario: Show contracts list
+- **WHEN** room has one or more contracts
+- **THEN** each contract shown with tenant name, dates, and status badge linking to /contracts/:id
+
+#### Scenario: Show no contracts placeholder
+- **WHEN** room has no contracts
+- **THEN** "Chưa có hợp đồng" placeholder displayed in the Hợp đồng section
 
 ### Requirement: Create room page
 `/rooms/create` page SHALL present RoomForm. On success redirects to /rooms. Shows API errors inline.

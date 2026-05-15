@@ -44,6 +44,63 @@ export type Database = {
         }
         Relationships: []
       }
+      contracts: {
+        Row: {
+          created_at: string
+          deposit: number
+          end_date: string
+          id: string
+          monthly_rent: number
+          notes: string | null
+          room_id: string
+          start_date: string
+          status: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          deposit?: number
+          end_date: string
+          id?: string
+          monthly_rent: number
+          notes?: string | null
+          room_id: string
+          start_date: string
+          status?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          deposit?: number
+          end_date?: string
+          id?: string
+          monthly_rent?: number
+          notes?: string | null
+          room_id?: string
+          start_date?: string
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contracts_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       room_assignments: {
         Row: {
           created_at: string

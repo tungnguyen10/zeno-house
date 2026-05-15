@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { Building } from '~/types/buildings'
+import type { ContractWithDetails } from '~/types/contracts'
 import type { ApiSuccess } from '~/types/api'
 import type { AssignInput } from '~/utils/validators/room-assignments'
 import { formatCurrency } from '~/utils/format/currency'
@@ -22,6 +23,13 @@ const building = computed(() => buildingData.value?.data ?? null)
 
 // Room assignment
 const { assignment, assign, unassign } = useRoomAssignment(id)
+
+// Contracts
+const { data: contractsData } = await useFetch<ApiSuccess<ContractWithDetails[]> & { meta: { total: number } }>(
+  '/api/contracts',
+  { query: { room_id: id, limit: 50 } },
+)
+const roomContracts = computed(() => contractsData.value?.data ?? [])
 
 const showDeleteModal = ref(false)
 const isDeleting = ref(false)
@@ -166,6 +174,37 @@ if (error.value?.statusCode === 404) {
           <p class="text-xs text-muted mt-1">Từ ngày {{ new Date(assignment.startDate).toLocaleDateString('vi-VN') }}</p>
         </div>
         <p v-else class="text-sm text-muted">Phòng trống</p>
+      </div>
+
+      <!-- Contracts section -->
+      <div class="rounded-xl border border-dark-border bg-dark-surface p-6 mt-4">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-sm font-semibold text-white">Hợp đồng</h2>
+          <NuxtLink v-if="authStore.isAdmin" to="/contracts/create" class="text-xs text-cyan hover:underline">
+            + Thêm
+          </NuxtLink>
+        </div>
+        <div v-if="roomContracts.length > 0" class="space-y-2">
+          <NuxtLink
+            v-for="contract in roomContracts"
+            :key="contract.id"
+            :to="`/contracts/${contract.id}`"
+            class="flex items-center justify-between rounded-lg border border-dark-border px-3 py-2 hover:border-cyan/40 transition-colors"
+          >
+            <div>
+              <div class="flex items-center gap-2">
+                <p class="text-xs font-medium text-white">{{ contract.tenant.fullName }}</p>
+                <UiStatusBadge :status="contract.status" />
+              </div>
+              <p class="text-xs text-muted mt-0.5">
+                {{ new Date(contract.startDate).toLocaleDateString('vi-VN') }} — {{ new Date(contract.endDate).toLocaleDateString('vi-VN') }}
+                · {{ formatCurrency(contract.monthlyRent) }}/tháng
+              </p>
+            </div>
+            <span class="text-muted text-xs ml-2">›</span>
+          </NuxtLink>
+        </div>
+        <p v-else class="text-sm text-muted">Chưa có hợp đồng</p>
       </div>
     </template>
 
