@@ -46,9 +46,22 @@ F0.2.1  Rooms End-to-End             ✅  archived: 2026-05-14-rooms-end-to-end
 F0.2.2  Shared Patterns              ✅  archived: 2026-05-14-shared-patterns
 F0.2.3  Tenants End-to-End           ✅  archived: 2026-05-14-tenants-end-to-end
 F0.2.4  Room Assignment              ✅  archived: 2026-05-14-room-assignment
-F0.2.5  Contracts Basic              🔲  contracts-basic
-F0.2.6  Dashboard Summary            🔲  dashboard-summary
-F0.2.7  v0.2 Quality Baseline        🔲  v02-quality-baseline
+F0.2.5  Contracts Basic              ✅  archived: 2026-05-15-contracts-basic
+F0.2.6  Dashboard Summary            ✅  archived: 2026-05-15-dashboard-summary
+F0.2.7  v0.2 Quality Baseline        ✅  archived: 2026-05-15-v02-quality-baseline
+```
+
+## Phased Foundation: v0.3
+
+```
+F0.3.1  Utility Readings E2E         🔲  utility-readings-e2e
+F0.3.2  Service Fees Basic           🔲  service-fees-basic
+F0.3.3  Invoice Model                🔲  invoice-model
+F0.3.4  Generate Invoice Single      🔲  generate-invoice-single
+F0.3.5  Generate Invoice Batch       🔲  generate-invoice-batch
+F0.3.6  Payment Tracking             🔲  payment-tracking
+F0.3.7  Billing Summary              🔲  billing-summary
+F0.3.8  v0.3 Quality Baseline        🔲  v03-quality-baseline
 ```
 
 ## Data Flow

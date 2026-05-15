@@ -17,7 +17,7 @@ export default withNuxt(
       '@typescript-eslint/unified-signatures': 'warn',
 
       // General
-      'no-console': ['warn', { allow: ['warn', 'error'] }],
+      'no-console': ['error', { allow: ['warn', 'error'] }],
     },
   }
 )
