@@ -80,10 +80,14 @@ export const ContractRepository = {
       .insert({
         room_id: input.room_id,
         tenant_id: input.tenant_id,
+        building_id: input.building_id ?? null,
         start_date: input.start_date,
         end_date: input.end_date,
         monthly_rent: input.monthly_rent,
         deposit: input.deposit ?? 0,
+        occupant_count: input.occupant_count ?? 1,
+        discount_amount: input.discount_amount ?? 0,
+        surcharge_amount: input.surcharge_amount ?? 0,
         status: input.status ?? 'active',
         notes: input.notes ?? null,
       })
@@ -101,10 +105,14 @@ export const ContractRepository = {
       .update({
         ...(input.room_id !== undefined && { room_id: input.room_id }),
         ...(input.tenant_id !== undefined && { tenant_id: input.tenant_id }),
+        ...(input.building_id !== undefined && { building_id: input.building_id }),
         ...(input.start_date !== undefined && { start_date: input.start_date }),
         ...(input.end_date !== undefined && { end_date: input.end_date }),
         ...(input.monthly_rent !== undefined && { monthly_rent: input.monthly_rent }),
         ...(input.deposit !== undefined && { deposit: input.deposit }),
+        ...(input.occupant_count !== undefined && { occupant_count: input.occupant_count }),
+        ...(input.discount_amount !== undefined && { discount_amount: input.discount_amount }),
+        ...(input.surcharge_amount !== undefined && { surcharge_amount: input.surcharge_amount }),
         ...(input.status !== undefined && { status: input.status }),
         ...(input.notes !== undefined && { notes: input.notes }),
       })

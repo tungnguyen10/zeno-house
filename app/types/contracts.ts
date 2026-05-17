@@ -4,10 +4,14 @@ export interface Contract {
   id: string
   roomId: string
   tenantId: string
+  buildingId: string | null
   startDate: string
   endDate: string
   monthlyRent: number
   deposit: number
+  occupantCount: number
+  discountAmount: number
+  surchargeAmount: number
   status: ContractStatus
   notes: string | null
   createdAt: string

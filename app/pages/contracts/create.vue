@@ -12,6 +12,9 @@ const formData = ref<ContractFormData>({
   end_date: '',
   monthly_rent: '',
   deposit: '',
+  occupant_count: '1',
+  discount_amount: '0',
+  surcharge_amount: '0',
   status: 'active',
   notes: '',
 })
@@ -24,6 +27,9 @@ async function onSubmit(data: ContractFormData) {
     end_date: data.end_date,
     monthly_rent: Number(data.monthly_rent),
     deposit: data.deposit ? Number(data.deposit) : 0,
+    occupant_count: data.occupant_count ? Number(data.occupant_count) : 1,
+    discount_amount: data.discount_amount ? Number(data.discount_amount) : 0,
+    surcharge_amount: data.surcharge_amount ? Number(data.surcharge_amount) : 0,
     status: data.status,
     notes: data.notes || null,
   })

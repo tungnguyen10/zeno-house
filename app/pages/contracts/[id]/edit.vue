@@ -25,6 +25,9 @@ const formData = ref<ContractFormData>({
   end_date: contract.value?.endDate ?? '',
   monthly_rent: String(contract.value?.monthlyRent ?? ''),
   deposit: String(contract.value?.deposit ?? ''),
+  occupant_count: String(contract.value?.occupantCount ?? '1'),
+  discount_amount: String(contract.value?.discountAmount ?? '0'),
+  surcharge_amount: String(contract.value?.surchargeAmount ?? '0'),
   status: contract.value?.status ?? 'active',
   notes: contract.value?.notes ?? '',
 })
@@ -37,6 +40,9 @@ async function onSubmit(data: ContractFormData) {
     end_date: data.end_date || undefined,
     monthly_rent: data.monthly_rent ? Number(data.monthly_rent) : undefined,
     deposit: data.deposit !== '' ? Number(data.deposit) : undefined,
+    occupant_count: data.occupant_count ? Number(data.occupant_count) : undefined,
+    discount_amount: data.discount_amount !== '' ? Number(data.discount_amount) : undefined,
+    surcharge_amount: data.surcharge_amount !== '' ? Number(data.surcharge_amount) : undefined,
     status: data.status,
     notes: data.notes || null,
   })

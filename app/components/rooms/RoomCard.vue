@@ -13,7 +13,6 @@ defineProps<{
     <div class="flex items-start justify-between gap-2 mb-3">
       <div class="min-w-0">
         <p class="text-base font-semibold text-white truncate">Phòng {{ room.roomNumber }}</p>
-        <p v-if="buildingName" class="text-xs text-muted truncate mt-0.5">{{ buildingName }}</p>
       </div>
       <UiStatusBadge :status="room.status" />
     </div>

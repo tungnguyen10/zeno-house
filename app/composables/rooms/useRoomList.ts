@@ -6,7 +6,7 @@ export function useRoomList() {
   const status = ref<string | undefined>(undefined)
   const floor = ref<number | undefined>(undefined)
   const page = ref(1)
-  const limit = 20
+  const limit = 200
 
   // Reset page when filters change
   watch([buildingId, status, floor], () => { page.value = 1 })

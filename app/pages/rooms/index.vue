@@ -5,13 +5,26 @@ import type { ApiSuccess } from '~/types/api'
 definePageMeta({ title: 'Phòng' })
 
 const authStore = useAuthStore()
-const { rooms, total, totalPages, page, isLoading, error, buildingId, status } = useRoomList()
+const { rooms, total, isLoading, error, status } = useRoomList()
 
 const { data: buildingsData } = await useFetch<ApiSuccess<Building[]> & { meta: { total: number } }>(
   '/api/buildings',
   { query: { limit: 100 } },
 )
 const buildings = computed(() => buildingsData.value?.data ?? [])
+
+const roomsByBuilding = computed(() => {
+  const groups: Record<string, typeof rooms.value> = {}
+  for (const room of rooms.value) {
+    if (!groups[room.buildingId]) groups[room.buildingId] = []
+    groups[room.buildingId]!.push(room)
+  }
+  return groups
+})
+
+const buildingsWithRooms = computed(() =>
+  buildings.value.filter(b => (roomsByBuilding.value[b.id]?.length ?? 0) > 0),
+)
 </script>
 
 <template>
@@ -26,16 +39,8 @@ const buildings = computed(() => buildingsData.value?.data ?? [])
       </NuxtLink>
     </div>
 
-    <!-- Filters -->
+    <!-- Status filter -->
     <div class="flex flex-wrap gap-3 mb-6">
-      <select
-        v-model="buildingId"
-        class="rounded-md border border-dark-border bg-dark-surface px-3 py-1.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan/30 focus:border-cyan/70"
-      >
-        <option :value="undefined">Tất cả tòa nhà</option>
-        <option v-for="b in buildings" :key="b.id" :value="b.id">{{ b.name }}</option>
-      </select>
-
       <select
         v-model="status"
         class="rounded-md border border-dark-border bg-dark-surface px-3 py-1.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan/30 focus:border-cyan/70"
@@ -48,8 +53,13 @@ const buildings = computed(() => buildingsData.value?.data ?? [])
     </div>
 
     <!-- Loading -->
-    <div v-if="isLoading" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-      <UiSkeleton v-for="n in 6" :key="n" class="h-36 rounded-xl" />
+    <div v-if="isLoading" class="space-y-8">
+      <div v-for="n in 2" :key="n">
+        <UiSkeleton class="h-5 w-32 rounded mb-3" />
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+          <UiSkeleton v-for="m in 4" :key="m" class="h-32 rounded-xl" />
+        </div>
+      </div>
     </div>
 
     <!-- Error -->
@@ -59,7 +69,7 @@ const buildings = computed(() => buildingsData.value?.data ?? [])
 
     <!-- Empty -->
     <UiEmptyState
-      v-else-if="rooms.length === 0"
+      v-else-if="buildingsWithRooms.length === 0"
       title="Chưa có phòng nào"
       description="Bắt đầu bằng cách thêm phòng đầu tiên."
     >
@@ -70,23 +80,33 @@ const buildings = computed(() => buildingsData.value?.data ?? [])
       </template>
     </UiEmptyState>
 
-    <!-- Grid -->
-    <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-      <NuxtLink v-for="room in rooms" :key="room.id" :to="`/rooms/${room.id}`">
-        <RoomCard
-          :room="room"
-          :building-name="buildings.find(b => b.id === room.buildingId)?.name"
-        />
-      </NuxtLink>
-    </div>
-
-    <!-- Pagination -->
-    <div v-if="totalPages > 1" class="flex items-center justify-between mt-6 pt-4 border-t border-dark-border">
-      <p class="text-sm text-muted">Trang {{ page }} / {{ totalPages }}</p>
-      <div class="flex gap-2">
-        <UiButton variant="secondary" size="sm" :disabled="page <= 1" @click="page--">← Trước</UiButton>
-        <UiButton variant="secondary" size="sm" :disabled="page >= totalPages" @click="page++">Tiếp →</UiButton>
-      </div>
+    <!-- Grouped by building -->
+    <div v-else class="space-y-8">
+      <section v-for="building in buildingsWithRooms" :key="building.id">
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center gap-2">
+            <h2 class="text-sm font-semibold text-white">{{ building.name }}</h2>
+            <span class="text-xs text-muted">
+              {{ roomsByBuilding[building.id]?.length }} phòng
+            </span>
+          </div>
+          <NuxtLink
+            :to="`/buildings/${building.id}`"
+            class="text-xs text-muted hover:text-cyan transition-colors"
+          >
+            Xem tòa nhà →
+          </NuxtLink>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+          <NuxtLink
+            v-for="room in roomsByBuilding[building.id]"
+            :key="room.id"
+            :to="`/rooms/${room.id}`"
+          >
+            <RoomCard :room="room" />
+          </NuxtLink>
+        </div>
+      </section>
     </div>
   </div>
 </template>

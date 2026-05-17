@@ -81,6 +81,75 @@ async function confirmDelete() {
           <p class="text-sm text-white">{{ building.description }}</p>
         </div>
       </div>
+
+      <!-- Owner / Contact -->
+      <div
+        v-if="building.ownerName || building.ownerPhone || building.ownerEmail"
+        class="rounded-xl border border-dark-border bg-dark-surface p-6 mt-4"
+      >
+        <h3 class="text-sm font-semibold text-white mb-4">Chủ sở hữu</h3>
+        <div class="grid grid-cols-2 gap-4">
+          <div v-if="building.ownerName">
+            <p class="text-xs text-muted mb-1">Tên chủ nhà</p>
+            <p class="text-sm text-white">{{ building.ownerName }}</p>
+          </div>
+          <div v-if="building.ownerPhone">
+            <p class="text-xs text-muted mb-1">Số điện thoại</p>
+            <p class="text-sm text-white">{{ building.ownerPhone }}</p>
+          </div>
+          <div v-if="building.ownerEmail">
+            <p class="text-xs text-muted mb-1">Email</p>
+            <p class="text-sm text-white">{{ building.ownerEmail }}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Billing config -->
+      <div class="rounded-xl border border-dark-border bg-dark-surface p-6 mt-4">
+        <h3 class="text-sm font-semibold text-white mb-4">Cấu hình tính phí</h3>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <p class="text-xs text-muted mb-1">Tính tiền điện</p>
+            <p class="text-sm text-white capitalize">
+              {{ { per_kwh: 'Theo kWh', fixed: 'Cố định', tiered: 'Lũy kế' }[building.electricityPricingType] }}
+              <span v-if="building.defaultElectricityRate" class="text-muted"> — {{ building.defaultElectricityRate.toLocaleString('vi-VN') }}đ</span>
+            </p>
+          </div>
+          <div>
+            <p class="text-xs text-muted mb-1">Tính tiền nước</p>
+            <p class="text-sm text-white">
+              {{ { per_m3: 'Theo m³', per_person: 'Theo người', fixed_per_room: 'Cố định/phòng' }[building.waterPricingType] }}
+              <span v-if="building.defaultWaterRate" class="text-muted"> — {{ building.defaultWaterRate.toLocaleString('vi-VN') }}đ</span>
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Schedule -->
+      <div
+        v-if="building.meterReadingDay || building.billingGenerationDay || building.paymentDueDay"
+        class="rounded-xl border border-dark-border bg-dark-surface p-6 mt-4"
+      >
+        <h3 class="text-sm font-semibold text-white mb-4">Lịch vận hành</h3>
+        <div class="grid grid-cols-2 gap-4">
+          <div v-if="building.meterReadingDay">
+            <p class="text-xs text-muted mb-1">Ngày chốt số</p>
+            <p class="text-sm text-white">{{ building.meterReadingDay }}</p>
+          </div>
+          <div v-if="building.billingGenerationDay">
+            <p class="text-xs text-muted mb-1">Ngày lập hóa đơn</p>
+            <p class="text-sm text-white">{{ building.billingGenerationDay }}</p>
+          </div>
+          <div v-if="building.paymentDueDay">
+            <p class="text-xs text-muted mb-1">Ngày đến hạn</p>
+            <p class="text-sm text-white">{{ building.paymentDueDay }}</p>
+          </div>
+          <div>
+            <p class="text-xs text-muted mb-1">Số ngày gia hạn</p>
+            <p class="text-sm text-white">{{ building.gracePeriodDays }}</p>
+          </div>
+        </div>
+      </div>
     </template>
 
     <!-- Delete confirmation modal -->

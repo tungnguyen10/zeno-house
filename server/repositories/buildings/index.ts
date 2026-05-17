@@ -44,6 +44,18 @@ export const BuildingRepository = {
         address: input.address,
         description: input.description ?? null,
         status: input.status ?? 'active',
+        owner_name: input.owner_name ?? null,
+        owner_phone: input.owner_phone ?? null,
+        owner_email: input.owner_email ?? null,
+        electricity_pricing_type: input.electricity_pricing_type ?? 'per_kwh',
+        default_electricity_rate: input.default_electricity_rate ?? null,
+        water_pricing_type: input.water_pricing_type ?? 'per_m3',
+        default_water_rate: input.default_water_rate ?? null,
+        default_service_fees: input.default_service_fees ?? null,
+        meter_reading_day: input.meter_reading_day ?? null,
+        billing_generation_day: input.billing_generation_day ?? null,
+        payment_due_day: input.payment_due_day ?? null,
+        grace_period_days: input.grace_period_days ?? 0,
       })
       .select('*, rooms(count)')
       .single()
@@ -61,6 +73,18 @@ export const BuildingRepository = {
         ...(input.address !== undefined && { address: input.address }),
         ...(input.description !== undefined && { description: input.description }),
         ...(input.status !== undefined && { status: input.status }),
+        ...(input.owner_name !== undefined && { owner_name: input.owner_name }),
+        ...(input.owner_phone !== undefined && { owner_phone: input.owner_phone }),
+        ...(input.owner_email !== undefined && { owner_email: input.owner_email }),
+        ...(input.electricity_pricing_type !== undefined && { electricity_pricing_type: input.electricity_pricing_type }),
+        ...(input.default_electricity_rate !== undefined && { default_electricity_rate: input.default_electricity_rate }),
+        ...(input.water_pricing_type !== undefined && { water_pricing_type: input.water_pricing_type }),
+        ...(input.default_water_rate !== undefined && { default_water_rate: input.default_water_rate }),
+        ...(input.default_service_fees !== undefined && { default_service_fees: input.default_service_fees }),
+        ...(input.meter_reading_day !== undefined && { meter_reading_day: input.meter_reading_day }),
+        ...(input.billing_generation_day !== undefined && { billing_generation_day: input.billing_generation_day }),
+        ...(input.payment_due_day !== undefined && { payment_due_day: input.payment_due_day }),
+        ...(input.grace_period_days !== undefined && { grace_period_days: input.grace_period_days }),
       })
       .eq('id', id)
       .select('*, rooms(count)')

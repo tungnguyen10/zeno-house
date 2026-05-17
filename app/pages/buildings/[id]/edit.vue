@@ -17,7 +17,42 @@ const formData = ref<BuildingFormData>({
   address: building.value?.address ?? '',
   description: building.value?.description ?? '',
   status: building.value?.status ?? 'active',
+  ownerName: building.value?.ownerName ?? '',
+  ownerPhone: building.value?.ownerPhone ?? '',
+  ownerEmail: building.value?.ownerEmail ?? '',
+  electricityPricingType: building.value?.electricityPricingType ?? 'per_kwh',
+  defaultElectricityRate: building.value?.defaultElectricityRate?.toString() ?? '',
+  waterPricingType: building.value?.waterPricingType ?? 'per_m3',
+  defaultWaterRate: building.value?.defaultWaterRate?.toString() ?? '',
+  meterReadingDay: building.value?.meterReadingDay?.toString() ?? '',
+  billingGenerationDay: building.value?.billingGenerationDay?.toString() ?? '',
+  paymentDueDay: building.value?.paymentDueDay?.toString() ?? '',
+  gracePeriodDays: building.value?.gracePeriodDays?.toString() ?? '0',
 })
+
+watch(() => building.value, (b) => {
+  if (!b) return
+  formData.value = {
+    name: b.name,
+    address: b.address,
+    description: b.description ?? '',
+    status: b.status,
+    ownerName: b.ownerName ?? '',
+    ownerPhone: b.ownerPhone ?? '',
+    ownerEmail: b.ownerEmail ?? '',
+    electricityPricingType: b.electricityPricingType,
+    defaultElectricityRate: b.defaultElectricityRate?.toString() ?? '',
+    waterPricingType: b.waterPricingType,
+    defaultWaterRate: b.defaultWaterRate?.toString() ?? '',
+    meterReadingDay: b.meterReadingDay?.toString() ?? '',
+    billingGenerationDay: b.billingGenerationDay?.toString() ?? '',
+    paymentDueDay: b.paymentDueDay?.toString() ?? '',
+    gracePeriodDays: b.gracePeriodDays?.toString() ?? '0',
+  }
+})
+
+const toNum = (v: string) => v === '' ? null : Number(v)
+const toDay = (v: string) => v === '' ? null : Number(v)
 
 async function onSubmit(data: BuildingFormData) {
   await submitUpdate(id, {
@@ -25,12 +60,23 @@ async function onSubmit(data: BuildingFormData) {
     address: data.address,
     description: data.description || null,
     status: data.status,
+    owner_name: data.ownerName || null,
+    owner_phone: data.ownerPhone || null,
+    owner_email: data.ownerEmail || null,
+    electricity_pricing_type: data.electricityPricingType,
+    default_electricity_rate: toNum(data.defaultElectricityRate),
+    water_pricing_type: data.waterPricingType,
+    default_water_rate: toNum(data.defaultWaterRate),
+    meter_reading_day: toDay(data.meterReadingDay),
+    billing_generation_day: toDay(data.billingGenerationDay),
+    payment_due_day: toDay(data.paymentDueDay),
+    grace_period_days: data.gracePeriodDays === '' ? 0 : Number(data.gracePeriodDays),
   })
 }
 </script>
 
 <template>
-  <div class="max-w-2xl">
+  <div class="max-w-3xl">
     <div class="mb-6">
       <NuxtLink :to="`/buildings/${id}`" class="text-sm text-muted hover:text-white transition-colors">
         ← {{ building?.name ?? 'Chi tiết tòa nhà' }}

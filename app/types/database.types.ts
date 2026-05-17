@@ -17,74 +17,180 @@ export type Database = {
       buildings: {
         Row: {
           address: string
+          billing_generation_day: number | null
           created_at: string
+          default_electricity_rate: number | null
+          default_service_fees: Json | null
+          default_water_rate: number | null
           description: string | null
+          electricity_pricing_type: string
+          grace_period_days: number
           id: string
+          meter_reading_day: number | null
           name: string
+          owner_email: string | null
+          owner_name: string | null
+          owner_phone: string | null
+          payment_due_day: number | null
           status: string
           updated_at: string
+          water_pricing_type: string
         }
         Insert: {
           address: string
+          billing_generation_day?: number | null
           created_at?: string
+          default_electricity_rate?: number | null
+          default_service_fees?: Json | null
+          default_water_rate?: number | null
           description?: string | null
+          electricity_pricing_type?: string
+          grace_period_days?: number
           id?: string
+          meter_reading_day?: number | null
           name: string
+          owner_email?: string | null
+          owner_name?: string | null
+          owner_phone?: string | null
+          payment_due_day?: number | null
           status?: string
           updated_at?: string
+          water_pricing_type?: string
         }
         Update: {
           address?: string
+          billing_generation_day?: number | null
           created_at?: string
+          default_electricity_rate?: number | null
+          default_service_fees?: Json | null
+          default_water_rate?: number | null
           description?: string | null
+          electricity_pricing_type?: string
+          grace_period_days?: number
           id?: string
+          meter_reading_day?: number | null
           name?: string
+          owner_email?: string | null
+          owner_name?: string | null
+          owner_phone?: string | null
+          payment_due_day?: number | null
           status?: string
           updated_at?: string
+          water_pricing_type?: string
         }
         Relationships: []
       }
-      contracts: {
+      contract_occupants: {
         Row: {
+          billing_counted: boolean
+          contract_id: string
           created_at: string
-          deposit: number
-          end_date: string
           id: string
-          monthly_rent: number
-          notes: string | null
-          room_id: string
-          start_date: string
-          status: string
+          move_in_date: string
+          move_out_date: string | null
+          role: string
           tenant_id: string
           updated_at: string
         }
         Insert: {
+          billing_counted?: boolean
+          contract_id: string
           created_at?: string
-          deposit?: number
-          end_date: string
           id?: string
-          monthly_rent: number
-          notes?: string | null
-          room_id: string
-          start_date: string
-          status?: string
+          move_in_date: string
+          move_out_date?: string | null
+          role?: string
           tenant_id: string
           updated_at?: string
         }
         Update: {
+          billing_counted?: boolean
+          contract_id?: string
           created_at?: string
-          deposit?: number
-          end_date?: string
           id?: string
-          monthly_rent?: number
-          notes?: string | null
-          room_id?: string
-          start_date?: string
-          status?: string
+          move_in_date?: string
+          move_out_date?: string | null
+          role?: string
           tenant_id?: string
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "contract_occupants_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_occupants_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contracts: {
+        Row: {
+          building_id: string | null
+          created_at: string
+          deposit: number
+          discount_amount: number
+          end_date: string
+          id: string
+          monthly_rent: number
+          notes: string | null
+          occupant_count: number
+          room_id: string
+          start_date: string
+          status: string
+          surcharge_amount: number
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          building_id?: string | null
+          created_at?: string
+          deposit?: number
+          discount_amount?: number
+          end_date: string
+          id?: string
+          monthly_rent: number
+          notes?: string | null
+          occupant_count?: number
+          room_id: string
+          start_date: string
+          status?: string
+          surcharge_amount?: number
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          building_id?: string | null
+          created_at?: string
+          deposit?: number
+          discount_amount?: number
+          end_date?: string
+          id?: string
+          monthly_rent?: number
+          notes?: string | null
+          occupant_count?: number
+          room_id?: string
+          start_date?: string
+          status?: string
+          surcharge_amount?: number
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contracts_building_id_fkey"
+            columns: ["building_id"]
+            isOneToOne: false
+            referencedRelation: "buildings"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "contracts_room_id_fkey"
             columns: ["room_id"]
@@ -97,6 +203,69 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meter_devices: {
+        Row: {
+          building_id: string
+          created_at: string
+          end_reading: number | null
+          id: string
+          installed_at: string
+          meter_code: string | null
+          meter_type: string
+          notes: string | null
+          removed_at: string | null
+          room_id: string
+          start_reading: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          building_id: string
+          created_at?: string
+          end_reading?: number | null
+          id?: string
+          installed_at: string
+          meter_code?: string | null
+          meter_type: string
+          notes?: string | null
+          removed_at?: string | null
+          room_id: string
+          start_reading?: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          building_id?: string
+          created_at?: string
+          end_reading?: number | null
+          id?: string
+          installed_at?: string
+          meter_code?: string | null
+          meter_type?: string
+          notes?: string | null
+          removed_at?: string | null
+          room_id?: string
+          start_reading?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meter_devices_building_id_fkey"
+            columns: ["building_id"]
+            isOneToOne: false
+            referencedRelation: "buildings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meter_devices_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
             referencedColumns: ["id"]
           },
         ]
