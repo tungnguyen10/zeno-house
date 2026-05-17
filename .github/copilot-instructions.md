@@ -54,13 +54,15 @@ F0.2.7  v0.2 Quality Baseline        ✅  archived: 2026-05-15-v02-quality-basel
 ## Phased Foundation: v0.2.5 — Core Data Alignment
 
 ```
-F0.2.5.1  Building Operational Config    ✅  archived: 2026-05-17-product-flow-foundation
-F0.2.5.2  Quick Room Setup               ✅  archived: 2026-05-17-product-flow-foundation
-F0.2.5.3  Contract Commercial Terms      ✅  archived: 2026-05-17-product-flow-foundation
-F0.2.5.4  Occupants / Roommates Model    ✅  archived: 2026-05-17-product-flow-foundation
-F0.2.5.5  Meter Device Lifecycle         ✅  archived: 2026-05-17-product-flow-foundation
-F0.2.5.6  Navigation Alignment           ✅  archived: 2026-05-17-product-flow-foundation
-F0.2.5.7  Architecture ADRs              ✅  archived: 2026-05-17-product-flow-foundation
+F0.2.5.1  Building Operational Config               ✅  archived: 2026-05-17-product-flow-foundation
+F0.2.5.2  Quick Room Setup                          ✅  archived: 2026-05-17-product-flow-foundation
+F0.2.5.3  Contract Commercial Terms                 ✅  archived: 2026-05-17-product-flow-foundation
+F0.2.5.4  Occupants / Roommates Model               ✅  archived: 2026-05-17-product-flow-foundation
+F0.2.5.5  Meter Device Lifecycle                    ✅  archived: 2026-05-17-product-flow-foundation
+F0.2.5.6  Navigation Alignment                      ✅  archived: 2026-05-17-product-flow-foundation
+F0.2.5.7  Architecture ADRs                         ✅  archived: 2026-05-17-product-flow-foundation
+F0.2.5.8  Contract Payments / Deposit / Prepaid Rent 🔲  contract-payments
+F0.2.5.9  Contract Renewal Model                    🔲  contract-renewal
 ```
 
 

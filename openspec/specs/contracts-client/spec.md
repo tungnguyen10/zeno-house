@@ -35,11 +35,26 @@ Client-side UI for managing contracts. List page with status filter, detail page
 - **THEN** redirected to /contracts
 
 ### Requirement: Create contract page
-`/contracts/create` page SHALL present `ContractForm`. Required fields: room_id (searchable select from existing rooms without active contracts), tenant_id (searchable select from existing tenants), start_date, end_date, monthly_rent. Optional: deposit, status, notes. On success redirects to `/contracts/:id`. Shows API errors inline, including 409 CONFLICT for active contract on room.
+`/contracts/create` page SHALL use a **two-step visual layout** with numbered step indicators and a connector line:
 
-#### Scenario: Create success
+- **Step 1 — Thông tin hợp đồng**: presents `ContractForm`. Required fields: room_id (searchable select from existing rooms without active contracts), tenant_id (searchable select from available tenants only), start_date, end_date, monthly_rent. Optional: deposit, status, notes. Shows API errors inline, including 409 CONFLICT for active contract on room.
+- **Step 2 — Người ở chung (tuỳ chọn)**: presents a pending occupants panel. Admin may add roommates before submitting using an inline `ContractOccupantForm` (with `available=true` filter). Each pending occupant is displayed as a row with avatar initial, name, move-in date, billing badge ("Tính tiền" / "Không tính"), and a remove button.
+
+On submit: contract is created first. If pending occupants exist, adds are fired in parallel (`Promise.allSettled`). A non-blocking amber warning banner is shown if any occupant add fails; redirect to detail page happens regardless.
+
+`excludeTenantIds` passed to `ContractOccupantForm` is a computed array of: primary `tenant_id` from form + all already-pending occupant `tenant_id`s.
+
+#### Scenario: Create success (no pending occupants)
 - **WHEN** admin fills required fields and submits
 - **THEN** contract created, redirected to detail page
+
+#### Scenario: Create success (with pending occupants)
+- **WHEN** admin fills required fields, adds occupants in Step 2, and submits
+- **THEN** contract created, occupant adds fired in parallel, redirected to detail page
+
+#### Scenario: Occupant add partial failure
+- **WHEN** contract created but one or more occupant adds fail
+- **THEN** amber warning banner shown; redirect still proceeds to detail page
 
 #### Scenario: Validation error
 - **WHEN** admin submits without required fields
@@ -48,6 +63,10 @@ Client-side UI for managing contracts. List page with status filter, detail page
 #### Scenario: Active contract conflict
 - **WHEN** admin submits for a room that already has an active contract
 - **THEN** error displayed inline: "Phòng này đã có hợp đồng đang hiệu lực"
+
+#### Scenario: Pending occupant excluded from picker
+- **WHEN** admin selects an occupant and then opens the add form again
+- **THEN** already-added occupant and the primary tenant do not appear in picker
 
 ### Requirement: Edit contract page
 `/contracts/:id/edit` page SHALL pre-fill `ContractForm` with existing data. On success redirects to `/contracts/:id`.

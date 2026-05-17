@@ -17,14 +17,4 @@ export interface MeterDevice {
   updatedAt: string
 }
 
-export interface ContractOccupant {
-  id: string
-  contractId: string
-  tenantId: string
-  role: 'primary' | 'roommate'
-  moveInDate: string
-  moveOutDate: string | null
-  billingCounted: boolean
-  createdAt: string
-  updatedAt: string
-}
+

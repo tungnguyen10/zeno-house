@@ -1,4 +1,4 @@
-export type ContractStatus = 'active' | 'expired' | 'terminated'
+export type ContractStatus = 'active' | 'expired' | 'terminated' | 'renewed'
 
 export interface Contract {
   id: string
@@ -12,6 +12,9 @@ export interface Contract {
   occupantCount: number
   discountAmount: number
   surchargeAmount: number
+  previousContractId: string | null
+  originalEndDate: string | null
+  renewalCount: number
   status: ContractStatus
   notes: string | null
   createdAt: string

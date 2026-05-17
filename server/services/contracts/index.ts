@@ -3,6 +3,7 @@ import type { AuthUser } from '~/types/auth'
 import type { ContractWithDetails } from '~/types/contracts'
 import type { ContractCreateInput, ContractUpdateInput } from '~/utils/validators/contracts'
 import { ContractRepository, type ContractFilters } from '../../repositories/contracts'
+import { ContractOccupantRepository } from '../../repositories/contract-occupants'
 
 export const ContractService = {
   async list(
@@ -24,8 +25,14 @@ export const ContractService = {
   async create(event: H3Event, user: AuthUser, input: ContractCreateInput): Promise<ContractWithDetails> {
     if (!can(user, 'contracts.create')) throwForbidden('Không có quyền tạo hợp đồng')
     if (input.status === 'active' || !input.status) {
-      const existing = await ContractRepository.findActiveByRoomId(event, input.room_id)
-      if (existing) throwConflict('Phòng này đã có hợp đồng đang hiệu lực')
+      const roomConflict = await ContractRepository.findActiveByRoomId(event, input.room_id)
+      if (roomConflict) throwConflict('Phòng này đã có hợp đồng đang hiệu lực')
+
+      const primaryConflict = await ContractRepository.findActiveByTenantId(event, input.tenant_id)
+      if (primaryConflict) throwConflict('Khách thuê này đang đứng tên hợp đồng tại phòng khác')
+
+      const occupantConflict = await ContractOccupantRepository.findActiveOccupancyByTenant(event, input.tenant_id)
+      if (occupantConflict) throwConflict('Khách thuê này đang ở theo hợp đồng khác')
     }
     return ContractRepository.insert(event, input)
   },

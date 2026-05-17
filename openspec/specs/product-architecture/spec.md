@@ -31,7 +31,7 @@ Layer 1 — Foundation          Auth, permissions, server infrastructure
 
 ### Contract
 - **Is**: The legal link between Tenant ↔ Room for a period and the commercial truth for billing
-- **Contains**: Start date, end date, monthly rent, deposit, status, occupant count, discount, surcharge, and commercial notes
+- **Contains**: Start date, end date, monthly rent, deposit, status, occupant count, discount, surcharge, commercial notes, renewal chain (`previous_contract_id`, `renewal_count`), and contract-level payment records (deposit paid, prepaid rent)
 - **Must NOT contain**: Invoice state (invoices reference contracts; contracts don't embed invoices)
 
 ### Utility Reading
@@ -63,13 +63,15 @@ User selects Building + Month  →  Billing Workspace opens
 These changes prepare Core Data to support the Monthly Billing Workspace cleanly, without carrying forward ambiguities into v0.3.
 
 ```
-F0.2.5.1  Building Operational Config     ✅  product-flow-foundation
-F0.2.5.2  Quick Room Setup                ✅  product-flow-foundation
-F0.2.5.3  Contract Commercial Terms       ✅  product-flow-foundation
-F0.2.5.4  Occupants / Roommates Model     ✅  product-flow-foundation
-F0.2.5.5  Meter Device Lifecycle          ✅  product-flow-foundation
-F0.2.5.6  Navigation Alignment            ✅  product-flow-foundation
-F0.2.5.7  Architecture ADRs               ✅  product-flow-foundation
+F0.2.5.1  Building Operational Config               ✅  product-flow-foundation
+F0.2.5.2  Quick Room Setup                          ✅  product-flow-foundation
+F0.2.5.3  Contract Commercial Terms                 ✅  product-flow-foundation
+F0.2.5.4  Occupants / Roommates Model               ✅  product-flow-foundation
+F0.2.5.5  Meter Device Lifecycle                    ✅  product-flow-foundation
+F0.2.5.6  Navigation Alignment                      ✅  product-flow-foundation
+F0.2.5.7  Architecture ADRs                         ✅  product-flow-foundation
+F0.2.5.8  Contract Payments / Deposit / Prepaid Rent 🔲  contract-payments
+F0.2.5.9  Contract Renewal Model                    🔲  contract-renewal
 ```
 
 ## Architecture Decision Records

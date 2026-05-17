@@ -3,7 +3,7 @@ import type { Room } from '~/types/rooms'
 import type { Tenant } from '~/types/tenants'
 import type { Building } from '~/types/buildings'
 import type { ApiSuccess } from '~/types/api'
-import type { ContractStatus, ContractWithDetails } from '~/types/contracts'
+import type { ContractWithDetails } from '~/types/contracts'
 import { formatCurrency } from '~/utils/format/currency'
 
 export interface ContractFormData {
@@ -16,7 +16,7 @@ export interface ContractFormData {
   occupant_count: string
   discount_amount: string
   surcharge_amount: string
-  status: ContractStatus
+  status: 'active' | 'expired' | 'terminated'
   notes: string
 }
 
@@ -25,6 +25,7 @@ const props = withDefaults(defineProps<{
   loading?: boolean
   errors?: Record<string, string[]>
   apiError?: string | null
+  excludeContractId?: string
 }>(), {
   loading: false,
   errors: () => ({}),
@@ -92,7 +93,12 @@ const selectedRoom = computed(() =>
 // Tenants
 const tenantSearch = ref('')
 const { data: tenantsData } = useFetch<ApiSuccess<Tenant[]>>('/api/tenants', {
-  query: computed(() => ({ q: tenantSearch.value || undefined, limit: 50 })),
+  query: computed(() => ({
+    q: tenantSearch.value || undefined,
+    limit: 50,
+    available: true,
+    excludeContractId: props.excludeContractId || undefined,
+  })),
   watch: [tenantSearch],
 })
 const filteredTenants = computed(() => tenantsData.value?.data ?? [])
@@ -363,7 +369,7 @@ function onSubmit() {
         :value="modelValue.status"
         :disabled="loading"
         class="block w-full rounded-md border border-dark-border px-3 py-2 bg-dark-surface text-white focus:outline-none focus:ring-2 focus:border-cyan/70 focus:ring-cyan/30 text-sm disabled:bg-dark-hover disabled:text-muted disabled:cursor-not-allowed"
-        @change="update('status', ($event.target as HTMLSelectElement).value as ContractStatus)"
+        @change="update('status', ($event.target as HTMLSelectElement).value as 'active' | 'expired' | 'terminated')"
       >
         <option value="active">Đang hiệu lực</option>
         <option value="expired">Đã hết hạn</option>

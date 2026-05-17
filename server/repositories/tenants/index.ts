@@ -9,6 +9,8 @@ export interface TenantFilters {
   page?: number
   limit?: number
   unassigned?: boolean
+  available?: boolean
+  excludeContractId?: string
 }
 
 export const TenantRepository = {
@@ -40,6 +42,25 @@ export const TenantRepository = {
       const assignedIds = (activeAssignments ?? []).map((a) => a.tenant_id)
       if (assignedIds.length > 0) {
         query = query.not('id', 'in', `(${assignedIds.join(',')})`)
+      }
+    }
+
+    if (filters.available) {
+      // Exclude tenants who are primary on another active contract
+      let primaryQuery = client.from('contracts').select('tenant_id').eq('status', 'active')
+      if (filters.excludeContractId) primaryQuery = primaryQuery.neq('id', filters.excludeContractId)
+      const { data: primaryContracts } = await primaryQuery
+      const primaryIds = (primaryContracts ?? []).map((c) => c.tenant_id)
+
+      // Exclude tenants who are active occupants in another contract
+      let occupantQuery = client.from('contract_occupants').select('tenant_id').is('move_out_date', null)
+      if (filters.excludeContractId) occupantQuery = occupantQuery.neq('contract_id', filters.excludeContractId)
+      const { data: activeOccupants } = await occupantQuery
+      const occupantIds = (activeOccupants ?? []).map((o) => o.tenant_id)
+
+      const occupiedIds = [...new Set([...primaryIds, ...occupantIds])]
+      if (occupiedIds.length > 0) {
+        query = query.not('id', 'in', `(${occupiedIds.join(',')})`)
       }
     }
 

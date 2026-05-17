@@ -35,10 +35,15 @@ Server-side API for contracts. CRUD endpoints with Zod validation, auth guard, a
 - **THEN** returns 404 NOT_FOUND
 
 ### Requirement: Create contract endpoint
-`POST /api/contracts` SHALL create a new contract. Body validated with Zod: `room_id` (required UUID), `tenant_id` (required UUID), `start_date` (required date string YYYY-MM-DD), `end_date` (required date string YYYY-MM-DD, must be after start_date), `monthly_rent` (required number ≥ 0), `deposit` (optional number ≥ 0, default 0), `status` (optional, default `active`), `notes` (optional string). Returns 201 with created contract. Returns 409 CONFLICT if room already has an active contract.
+`POST /api/contracts` SHALL create a new contract. Body validated with Zod: `room_id` (required UUID), `tenant_id` (required UUID), `start_date` (required date string YYYY-MM-DD), `end_date` (required date string YYYY-MM-DD, must be after start_date), `monthly_rent` (required number ≥ 0), `deposit` (optional number ≥ 0, default 0), `status` (optional, default `active`), `notes` (optional string). Returns 201 with created contract.
+
+When status is `active` (or omitted), the API SHALL additionally verify:
+1. No other active contract exists for the same room
+2. The primary tenant (`tenant_id`) is not already standing as primary on another active contract
+3. The primary tenant is not currently an active occupant (no `move_out_date`) in another contract
 
 #### Scenario: Create success
-- **WHEN** admin POSTs valid contract data for a room with no active contract
+- **WHEN** admin POSTs valid contract data and tenant has no active occupancy elsewhere
 - **THEN** returns 201 with created contract
 
 #### Scenario: Missing required fields
@@ -51,7 +56,15 @@ Server-side API for contracts. CRUD endpoints with Zod validation, auth guard, a
 
 #### Scenario: Room already has active contract
 - **WHEN** admin POSTs for a room that already has status='active' contract
-- **THEN** returns 409 CONFLICT with code CONFLICT
+- **THEN** returns 409 CONFLICT: "Phòng này đã có hợp đồng đang hiệu lực"
+
+#### Scenario: Tenant already primary on another contract
+- **WHEN** admin POSTs tenant_id that is already tenant_id of another active contract
+- **THEN** returns 409 CONFLICT: "Khách thuê này đang đứng tên hợp đồng tại phòng khác"
+
+#### Scenario: Tenant already active occupant elsewhere
+- **WHEN** admin POSTs tenant_id that is currently an active occupant in another contract
+- **THEN** returns 409 CONFLICT: "Khách thuê này đang ở theo hợp đồng khác"
 
 ### Requirement: Update contract endpoint
 `PATCH /api/contracts/:id` SHALL update an existing contract. All fields optional (partial update). Business rule: if status changes to `active` and room already has another active contract, return 409 CONFLICT. Returns updated contract. Returns 404 if not found.

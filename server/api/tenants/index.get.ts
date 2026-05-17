@@ -12,6 +12,8 @@ export default defineEventHandler(async (event) => {
     page,
     limit,
     unassigned: query.unassigned === 'true',
+    available: query.available === 'true',
+    excludeContractId: query.excludeContractId ? String(query.excludeContractId) : undefined,
   }
 
   const { items, total } = await TenantService.list(event, user, filters)

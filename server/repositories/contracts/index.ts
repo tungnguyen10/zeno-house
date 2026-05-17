@@ -73,6 +73,19 @@ export const ContractRepository = {
     return data ? mapContract(data) : null
   },
 
+  async findActiveByTenantId(event: H3Event, tenantId: string, excludeContractId?: string): Promise<Contract | null> {
+    const client = await serverSupabaseClient(event)
+    let query = client
+      .from('contracts')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .eq('status', 'active')
+    if (excludeContractId) query = query.neq('id', excludeContractId)
+    const { data, error } = await query.maybeSingle()
+    if (error) throw createError({ statusCode: 500, message: error.message })
+    return data ? mapContract(data) : null
+  },
+
   async insert(event: H3Event, input: ContractCreateInput): Promise<ContractWithDetails> {
     const client = await serverSupabaseClient(event)
     const { data, error } = await client

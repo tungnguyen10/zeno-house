@@ -80,6 +80,66 @@ export type Database = {
         }
         Relationships: []
       }
+      contract_payments: {
+        Row: {
+          id: string
+          contract_id: string
+          tenant_id: string | null
+          payment_type: string
+          amount: number
+          covered_period_start: string | null
+          covered_period_end: string | null
+          paid_at: string
+          payment_method: string | null
+          note: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          contract_id: string
+          tenant_id?: string | null
+          payment_type: string
+          amount: number
+          covered_period_start?: string | null
+          covered_period_end?: string | null
+          paid_at: string
+          payment_method?: string | null
+          note?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          contract_id?: string
+          tenant_id?: string | null
+          payment_type?: string
+          amount?: number
+          covered_period_start?: string | null
+          covered_period_end?: string | null
+          paid_at?: string
+          payment_method?: string | null
+          note?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_payments_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_payments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contract_occupants: {
         Row: {
           billing_counted: boolean
@@ -131,6 +191,63 @@ export type Database = {
           },
         ]
       }
+      contract_renewals: {
+        Row: {
+          id: string
+          contract_id: string
+          new_contract_id: string | null
+          mode: string
+          old_end_date: string
+          new_end_date: string
+          old_monthly_rent: number
+          new_monthly_rent: number
+          reason: string | null
+          created_by: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          contract_id: string
+          new_contract_id?: string | null
+          mode: string
+          old_end_date: string
+          new_end_date: string
+          old_monthly_rent: number
+          new_monthly_rent: number
+          reason?: string | null
+          created_by: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          contract_id?: string
+          new_contract_id?: string | null
+          mode?: string
+          old_end_date?: string
+          new_end_date?: string
+          old_monthly_rent?: number
+          new_monthly_rent?: number
+          reason?: string | null
+          created_by?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_renewals_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_renewals_new_contract_id_fkey"
+            columns: ["new_contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contracts: {
         Row: {
           building_id: string | null
@@ -142,6 +259,9 @@ export type Database = {
           monthly_rent: number
           notes: string | null
           occupant_count: number
+          original_end_date: string | null
+          previous_contract_id: string | null
+          renewal_count: number
           room_id: string
           start_date: string
           status: string
@@ -159,6 +279,9 @@ export type Database = {
           monthly_rent: number
           notes?: string | null
           occupant_count?: number
+          original_end_date?: string | null
+          previous_contract_id?: string | null
+          renewal_count?: number
           room_id: string
           start_date: string
           status?: string
@@ -176,6 +299,9 @@ export type Database = {
           monthly_rent?: number
           notes?: string | null
           occupant_count?: number
+          original_end_date?: string | null
+          previous_contract_id?: string | null
+          renewal_count?: number
           room_id?: string
           start_date?: string
           status?: string
@@ -189,6 +315,13 @@ export type Database = {
             columns: ["building_id"]
             isOneToOne: false
             referencedRelation: "buildings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_previous_contract_id_fkey"
+            columns: ["previous_contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
             referencedColumns: ["id"]
           },
           {

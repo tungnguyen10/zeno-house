@@ -28,7 +28,7 @@ const formData = ref<ContractFormData>({
   occupant_count: String(contract.value?.occupantCount ?? '1'),
   discount_amount: String(contract.value?.discountAmount ?? '0'),
   surcharge_amount: String(contract.value?.surchargeAmount ?? '0'),
-  status: contract.value?.status ?? 'active',
+  status: (contract.value?.status === 'renewed' ? 'expired' : contract.value?.status) ?? 'active',
   notes: contract.value?.notes ?? '',
 })
 
@@ -64,6 +64,7 @@ async function onSubmit(data: ContractFormData) {
     <div class="rounded-xl border border-dark-border bg-dark-surface p-6">
       <ContractForm
         v-model="formData"
+        :exclude-contract-id="id"
         :loading="isLoading"
         :errors="errors"
         :api-error="apiError"
