@@ -50,6 +50,20 @@ async function confirmDelete() {
           <h1 class="text-xl font-semibold text-white mt-2">{{ building.name }}</h1>
         </div>
         <div v-if="authStore.isAdmin" class="flex gap-2 shrink-0">
+          <UiButton
+            variant="secondary"
+            size="sm"
+            @click="navigateTo(`/buildings/${id}/meter-readings`)"
+          >
+            Nhập chỉ số tháng {{ new Date().getMonth() + 1 }}
+          </UiButton>
+          <UiButton
+            variant="secondary"
+            size="sm"
+            @click="navigateTo(`/buildings/${id}/settings`)"
+          >
+            Dịch vụ
+          </UiButton>
           <NuxtLink :to="`/buildings/${building.id}/edit`">
             <UiButton variant="secondary" size="sm">Chỉnh sửa</UiButton>
           </NuxtLink>

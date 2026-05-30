@@ -7,6 +7,7 @@ import { mapContract, mapContractWithDetails } from '~/utils/mappers/contracts'
 export interface ContractFilters {
   room_id?: string
   tenant_id?: string
+  building_id?: string
   status?: string
   page?: number
   limit?: number
@@ -14,7 +15,7 @@ export interface ContractFilters {
 
 const DETAIL_SELECT = `
   *,
-  rooms (id, room_number, floor, buildings (name)),
+  rooms!inner (id, room_number, floor, building_id, buildings (name)),
   tenants (id, full_name, phone)
 `
 
@@ -37,6 +38,10 @@ export const ContractRepository = {
 
     if (filters.room_id) query = query.eq('room_id', filters.room_id)
     if (filters.tenant_id) query = query.eq('tenant_id', filters.tenant_id)
+    if (filters.building_id) {
+      // building_id may be null on old contracts — join via rooms instead
+      query = query.eq('rooms.building_id', filters.building_id)
+    }
     if (filters.status) query = query.eq('status', filters.status)
 
     const { data, error, count } = await query

@@ -77,6 +77,19 @@ Status badge SHALL use color coding: `available` → green, `occupied` → cyan,
 
 ---
 
+### Requirement: Meter readings section in room detail
+The room detail page SHALL include a "Chỉ số đồng hồ" section below the contracts section showing historical meter readings for the room.
+
+#### Scenario: Section renders
+- **WHEN** navigating to `/rooms/:id`
+- **THEN** page includes `<RoomMeterReadings :room-id="id" />` component showing past readings grouped by meter type
+
+#### Scenario: Empty state
+- **WHEN** room has no meter readings recorded
+- **THEN** section shows an empty state message
+
+---
+
 ### Requirement: Room list pagination
 The `/rooms` list page SHALL support pagination matching the buildings list pattern. `useRoomList` SHALL expose `page` (reactive, default 1), `totalPages` (computed), and reset `page` to 1 when filters change. UI shows prev/next buttons when `totalPages > 1`.
 

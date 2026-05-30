@@ -26,6 +26,12 @@ const formData = ref<TenantFormData>({
   date_of_birth: tenant.value?.dateOfBirth ?? '',
   permanent_address: tenant.value?.permanentAddress ?? '',
   notes: tenant.value?.notes ?? '',
+  gender: tenant.value?.gender ?? '',
+  occupation: tenant.value?.occupation ?? '',
+  id_issued_date: tenant.value?.idIssuedDate ?? '',
+  id_issued_place: tenant.value?.idIssuedPlace ?? '',
+  emergency_contact_name: tenant.value?.emergencyContactName ?? '',
+  emergency_contact_phone: tenant.value?.emergencyContactPhone ?? '',
 })
 
 async function onSubmit(data: TenantFormData) {
@@ -37,6 +43,12 @@ async function onSubmit(data: TenantFormData) {
     date_of_birth: data.date_of_birth || null,
     permanent_address: data.permanent_address || null,
     notes: data.notes || null,
+    gender: (data.gender as 'male' | 'female' | 'other' | null) || null,
+    occupation: data.occupation || null,
+    id_issued_date: data.id_issued_date || null,
+    id_issued_place: data.id_issued_place || null,
+    emergency_contact_name: data.emergency_contact_name || null,
+    emergency_contact_phone: data.emergency_contact_phone || null,
   })
 }
 </script>

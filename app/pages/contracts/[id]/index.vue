@@ -13,6 +13,7 @@ const { contract, isLoading, error, refresh: refreshContract } = useContractDeta
 const { payments, isLoading: paymentsLoading, addPayment, updatePayment, removePayment } = useContractPayments(id)
 const { renewals, isLoading: renewalsLoading, renew } = useContractRenewals(id)
 const { occupants, isLoading: occupantsLoading, addOccupant, moveOut, removeOccupant } = useContractOccupants(id)
+const { services: contractServices, isLoading: servicesLoading, updateService: updateContractService } = useContractServices(id)
 
 const showPaymentForm = ref(false)
 const isAddingPayment = ref(false)
@@ -452,6 +453,28 @@ watchEffect(() => {
             </div>
           </template>
         </div>
+      </div>
+
+      <!-- Services section -->
+      <div class="rounded-xl border border-dark-border bg-dark-surface p-6 mt-4">
+        <h2 class="text-sm font-semibold text-white mb-4">Dịch vụ hàng tháng</h2>
+        <ContractServicesTab
+          :services="contractServices"
+          :loading="servicesLoading"
+          @update="updateContractService"
+        />
+      </div>
+
+      <!-- Handover readings section -->
+      <div class="rounded-xl border border-dark-border bg-dark-surface p-6 mt-4">
+        <h2 class="text-sm font-semibold text-white mb-4">Số bàn giao</h2>
+        <ContractHandoverReadings
+          :contract-id="id"
+          :room-id="contract.room.id"
+          :start-date="contract.startDate"
+          :end-date="contract.endDate"
+          :status="contract.status"
+        />
       </div>
 
       <!-- Renewal form inline -->

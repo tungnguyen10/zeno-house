@@ -80,9 +80,13 @@ watchEffect(() => {
             <p class="text-xs text-muted mb-1">Email</p>
             <p class="text-sm text-white">{{ tenant.email }}</p>
           </div>
-          <div v-if="tenant.idNumber">
-            <p class="text-xs text-muted mb-1">Số CMND/CCCD</p>
-            <p class="text-sm text-white">{{ tenant.idNumber }}</p>
+          <div v-if="tenant.gender">
+            <p class="text-xs text-muted mb-1">Giới tính</p>
+            <p class="text-sm text-white">{{ tenant.gender === 'male' ? 'Nam' : tenant.gender === 'female' ? 'Nữ' : 'Khác' }}</p>
+          </div>
+          <div v-if="tenant.occupation">
+            <p class="text-xs text-muted mb-1">Nghề nghiệp</p>
+            <p class="text-sm text-white">{{ tenant.occupation }}</p>
           </div>
           <div v-if="tenant.dateOfBirth">
             <p class="text-xs text-muted mb-1">Ngày sinh</p>
@@ -97,6 +101,41 @@ watchEffect(() => {
           <p class="text-xs text-muted mb-1">Địa chỉ thường trú</p>
           <p class="text-sm text-white">{{ tenant.permanentAddress }}</p>
         </div>
+
+        <!-- CMND/CCCD -->
+        <div v-if="tenant.idNumber || tenant.idIssuedDate || tenant.idIssuedPlace" class="pt-3 border-t border-dark-border space-y-3">
+          <p class="text-xs font-medium text-muted uppercase tracking-wide">CMND / CCCD</p>
+          <div class="grid grid-cols-2 gap-4">
+            <div v-if="tenant.idNumber">
+              <p class="text-xs text-muted mb-1">Số CMND/CCCD</p>
+              <p class="text-sm text-white">{{ tenant.idNumber }}</p>
+            </div>
+            <div v-if="tenant.idIssuedDate">
+              <p class="text-xs text-muted mb-1">Ngày cấp</p>
+              <p class="text-sm text-white">{{ new Date(tenant.idIssuedDate).toLocaleDateString('vi-VN') }}</p>
+            </div>
+            <div v-if="tenant.idIssuedPlace">
+              <p class="text-xs text-muted mb-1">Nơi cấp</p>
+              <p class="text-sm text-white">{{ tenant.idIssuedPlace }}</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Liên hệ khẩn cấp -->
+        <div v-if="tenant.emergencyContactName || tenant.emergencyContactPhone" class="pt-3 border-t border-dark-border space-y-3">
+          <p class="text-xs font-medium text-muted uppercase tracking-wide">Liên hệ khẩn cấp</p>
+          <div class="grid grid-cols-2 gap-4">
+            <div v-if="tenant.emergencyContactName">
+              <p class="text-xs text-muted mb-1">Tên</p>
+              <p class="text-sm text-white">{{ tenant.emergencyContactName }}</p>
+            </div>
+            <div v-if="tenant.emergencyContactPhone">
+              <p class="text-xs text-muted mb-1">Số điện thoại</p>
+              <p class="text-sm text-white">{{ tenant.emergencyContactPhone }}</p>
+            </div>
+          </div>
+        </div>
+
         <div v-if="tenant.notes">
           <p class="text-xs text-muted mb-1">Ghi chú</p>
           <p class="text-sm text-white">{{ tenant.notes }}</p>

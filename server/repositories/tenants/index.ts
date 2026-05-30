@@ -90,6 +90,12 @@ export const TenantRepository = {
         date_of_birth: input.date_of_birth ?? null,
         permanent_address: input.permanent_address ?? null,
         notes: input.notes ?? null,
+        gender: input.gender ?? null,
+        occupation: input.occupation ?? null,
+        id_issued_date: input.id_issued_date ?? null,
+        id_issued_place: input.id_issued_place ?? null,
+        emergency_contact_name: input.emergency_contact_name ?? null,
+        emergency_contact_phone: input.emergency_contact_phone ?? null,
       })
       .select()
       .single()
@@ -110,6 +116,12 @@ export const TenantRepository = {
         ...(input.date_of_birth !== undefined && { date_of_birth: input.date_of_birth }),
         ...(input.permanent_address !== undefined && { permanent_address: input.permanent_address }),
         ...(input.notes !== undefined && { notes: input.notes }),
+        ...(input.gender !== undefined && { gender: input.gender }),
+        ...(input.occupation !== undefined && { occupation: input.occupation }),
+        ...(input.id_issued_date !== undefined && { id_issued_date: input.id_issued_date }),
+        ...(input.id_issued_place !== undefined && { id_issued_place: input.id_issued_place }),
+        ...(input.emergency_contact_name !== undefined && { emergency_contact_name: input.emergency_contact_name }),
+        ...(input.emergency_contact_phone !== undefined && { emergency_contact_phone: input.emergency_contact_phone }),
       })
       .eq('id', id)
       .select()

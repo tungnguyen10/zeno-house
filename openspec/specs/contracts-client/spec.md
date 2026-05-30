@@ -39,8 +39,9 @@ Client-side UI for managing contracts. List page with status filter, detail page
 
 - **Step 1 — Thông tin hợp đồng**: presents `ContractForm`. Required fields: room_id (searchable select from existing rooms without active contracts), tenant_id (searchable select from available tenants only), start_date, end_date, monthly_rent. Optional: deposit, status, notes. Shows API errors inline, including 409 CONFLICT for active contract on room.
 - **Step 2 — Người ở chung (tuỳ chọn)**: presents a pending occupants panel. Admin may add roommates before submitting using an inline `ContractOccupantForm` (with `available=true` filter). Each pending occupant is displayed as a row with avatar initial, name, move-in date, billing badge ("Tính tiền" / "Không tính"), and a remove button.
+- **Step 3 — Dịch vụ hàng tháng**: appears after contract is created. Shows `ContractServicesTab` loaded with the new contract's auto-cloned services. Admin can adjust per-service amount, quantity, or toggle before clicking "Xong" to proceed to contract detail.
 
-On submit: contract is created first. If pending occupants exist, adds are fired in parallel (`Promise.allSettled`). A non-blocking amber warning banner is shown if any occupant add fails; redirect to detail page happens regardless.
+On submit: contract is created first. If pending occupants exist, adds are fired in parallel (`Promise.allSettled`). A non-blocking amber warning banner is shown if any occupant add fails. After occupants, Step 3 (services) is shown before final redirect.
 
 `excludeTenantIds` passed to `ContractOccupantForm` is a computed array of: primary `tenant_id` from form + all already-pending occupant `tenant_id`s.
 
@@ -50,7 +51,11 @@ On submit: contract is created first. If pending occupants exist, adds are fired
 
 #### Scenario: Create success (with pending occupants)
 - **WHEN** admin fills required fields, adds occupants in Step 2, and submits
-- **THEN** contract created, occupant adds fired in parallel, redirected to detail page
+- **THEN** contract created, occupant adds fired in parallel, Step 3 (services) shown for adjustment
+
+#### Scenario: Services adjustment in Step 3
+- **WHEN** Step 3 is shown after contract creation
+- **THEN** `ContractServicesTab` displays auto-cloned services; admin can adjust then click "Xong" to navigate to detail page
 
 #### Scenario: Occupant add partial failure
 - **WHEN** contract created but one or more occupant adds fail
@@ -96,3 +101,22 @@ AppSidebar SHALL include a "Hợp đồng" nav item linking to `/contracts`.
 #### Scenario: Sidebar shows contracts link
 - **WHEN** admin views sidebar
 - **THEN** "Hợp đồng" item visible and links to /contracts
+
+### Requirement: Handover readings section in contract detail
+The contract detail page SHALL include a "Số bàn giao" section showing handover meter readings (electricity + water) for the contracted room. Readings are identified by `room_id + meter_type` — no device lookup required.
+
+#### Scenario: Section always shows two rows
+- **WHEN** navigating to `/contracts/:id`
+- **THEN** section shows one row for electricity and one for water, regardless of whether readings exist yet
+
+#### Scenario: Save handover-in reading
+- **WHEN** admin enters a value and blurs the input
+- **THEN** system creates/updates a `meter_readings` row with `reading_type = 'handover_in'`, `room_id`, `meter_type`, and the contract start month
+
+#### Scenario: Handover-out readings
+- **WHEN** contract status is 'terminated' or 'expired'
+- **THEN** section also shows handover_out row per meter type
+
+#### Scenario: Saved indicator
+- **WHEN** a reading already exists for a meter type
+- **THEN** a ✓ indicator is shown; on re-save the value is updated (upsert)

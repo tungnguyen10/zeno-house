@@ -3,6 +3,7 @@ import type { AuthUser } from '~/types/auth'
 import type { ContractWithDetails } from '~/types/contracts'
 import type { ContractCreateInput, ContractUpdateInput } from '~/utils/validators/contracts'
 import { ContractRepository, type ContractFilters } from '../../repositories/contracts'
+import { ContractServiceService } from '../contract-services'
 import { ContractOccupantRepository } from '../../repositories/contract-occupants'
 import { RoomRepository } from '../../repositories/rooms'
 
@@ -41,7 +42,16 @@ export const ContractService = {
       if (occupantConflict) throwConflict('Khách thuê này đang ở theo hợp đồng khác')
     }
 
-    const contract = await ContractRepository.insert(event, input)
+    const contract = await ContractRepository.insert(event, {
+      ...input,
+      building_id: input.building_id ?? room.buildingId ?? null,
+    })
+
+    // Best-effort: clone active building_services → contract_services
+    const buildingId = input.building_id ?? room.buildingId
+    if (buildingId) {
+      await ContractServiceService.cloneFromBuilding(event, contract.id, buildingId)
+    }
 
     if (input.status === 'active' || !input.status) {
       await RoomRepository.update(event, input.room_id, { status: 'occupied' })

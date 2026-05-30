@@ -1,5 +1,5 @@
 import type { Tables } from '~/types/database.types'
-import type { Building, BuildingStatus, ElectricityPricingType, ServiceFeeDefault, WaterPricingType } from '~/types/buildings'
+import type { Building, BuildingStatus, ElectricityPricingType, WaterPricingType } from '~/types/buildings'
 
 export type BuildingRow = Tables<'buildings'> & { rooms: [{ count: number }] }
 
@@ -18,7 +18,6 @@ export function mapBuilding(row: BuildingRow): Building {
     defaultElectricityRate: row.default_electricity_rate,
     waterPricingType: row.water_pricing_type as WaterPricingType,
     defaultWaterRate: row.default_water_rate,
-    defaultServiceFees: row.default_service_fees as ServiceFeeDefault[] | null,
     meterReadingDay: row.meter_reading_day,
     billingGenerationDay: row.billing_generation_day,
     paymentDueDay: row.payment_due_day,

@@ -25,7 +25,6 @@ export interface Building {
   defaultElectricityRate: number | null
   waterPricingType: WaterPricingType
   defaultWaterRate: number | null
-  defaultServiceFees: ServiceFeeDefault[] | null
   meterReadingDay: number | null
   billingGenerationDay: number | null
   paymentDueDay: number | null
@@ -46,7 +45,6 @@ export interface BuildingInput {
   defaultElectricityRate?: number | null
   waterPricingType?: WaterPricingType
   defaultWaterRate?: number | null
-  defaultServiceFees?: ServiceFeeDefault[] | null
   meterReadingDay?: number | null
   billingGenerationDay?: number | null
   paymentDueDay?: number | null

@@ -191,6 +191,12 @@ if (error.value?.statusCode === 404) {
         </div>
         <p v-else class="text-sm text-muted">Chưa có hợp đồng</p>
       </div>
+
+      <!-- Meter readings section -->
+      <div class="rounded-xl border border-dark-border bg-dark-surface p-6 mt-4">
+        <h2 class="text-sm font-semibold text-white mb-3">Chỉ số đồng hồ</h2>
+        <RoomMeterReadings :room-id="id" />
+      </div>
     </template>
 
     <!-- Delete modal -->

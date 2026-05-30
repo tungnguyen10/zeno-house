@@ -1,0 +1,76 @@
+## Purpose
+
+Server API for recording and querying meter readings (electricity + water). Readings are identified by `(room_id, meter_type, period_year, period_month, reading_type)` — no meter device abstraction. Supports monthly billing readings and contract handover (in/out) readings.
+
+## Requirements
+
+### Requirement: List meter readings
+The API SHALL return meter readings filtered by room or building.
+
+#### Scenario: Get readings for a room
+- **WHEN** GET `/api/meter-readings?room_id=<id>` is called by an authenticated admin or manager
+- **THEN** system returns `{ data: MeterReading[] }` ordered by period DESC
+
+#### Scenario: Get readings for a building in a period
+- **WHEN** GET `/api/meter-readings?building_id=<id>&period_year=<y>&period_month=<m>`
+- **THEN** system returns all readings for that building in the given period
+
+#### Scenario: Unauthenticated request
+- **WHEN** any meter-readings endpoint is called without a valid session
+- **THEN** system returns 401 UNAUTHENTICATED
+
+### Requirement: Create meter reading
+The API SHALL accept `room_id` and `meter_type` directly without requiring a `meter_device_id`.
+
+#### Scenario: Create monthly reading
+- **WHEN** POST `/api/meter-readings` with `{ room_id, meter_type, reading_type, period_year, period_month, reading_date, reading_value }`
+- **THEN** system creates the reading and returns `{ data: MeterReading }`
+
+#### Scenario: `meter_device_id` is not accepted
+- **WHEN** POST includes a `meter_device_id` field
+- **THEN** system ignores the field (or returns validation error)
+
+### Requirement: Bulk upsert uses room-based conflict key
+The bulk endpoint SHALL upsert on `(room_id, meter_type, period_year, period_month, reading_type)`.
+
+#### Scenario: Bulk upsert idempotent
+- **WHEN** POST `/api/meter-readings/bulk` is called twice with same `room_id + meter_type + period + reading_type`
+- **THEN** second call updates the existing row, no duplicate created
+
+#### Scenario: Bulk upsert multiple rooms
+- **WHEN** POST `/api/meter-readings/bulk` with readings for multiple rooms
+- **THEN** all rows are upserted atomically; response includes `meta.count`
+
+### Requirement: Update meter reading
+The API SHALL allow correcting an existing reading.
+
+#### Scenario: Patch reading value
+- **WHEN** PATCH `/api/meter-readings/:id` with `{ reading_value: <corrected> }`
+- **THEN** system updates only the provided fields and returns updated `MeterReading`
+
+### Requirement: Building rooms status query needs no devices
+The status query SHALL return rooms with their meter types directly, not via device lookup.
+
+#### Scenario: Get building rooms status
+- **WHEN** GET `/api/meter-readings/bulk?building_id=&period_year=&period_month=`
+- **THEN** returns array of `{ roomId, roomNumber, floor, devices: [{ meterType, existingReading, previousReading }] }`
+- **AND** each room always has exactly 2 meter entries: electricity + water
+
+#### Scenario: Previous reading fallback to handover_in
+- **WHEN** a room has no monthly reading from the previous period but has a `handover_in` reading
+- **THEN** `previousReading` is populated with the `handover_in` reading (first billing month support)
+
+#### Scenario: Only occupied rooms returned
+- **WHEN** building has a mix of occupied and vacant rooms
+- **THEN** only rooms with `status = 'occupied'` are included in the response
+
+### Requirement: Permission guard
+The API SHALL reject insufficient permissions.
+
+#### Scenario: Read requires meter-readings.read
+- **WHEN** a role without `meter-readings.read` calls GET
+- **THEN** system returns 403 FORBIDDEN
+
+#### Scenario: Write requires meter-readings.write
+- **WHEN** a role without `meter-readings.write` calls POST or PATCH
+- **THEN** system returns 403 FORBIDDEN

@@ -7,6 +7,12 @@ export interface TenantFormData {
   date_of_birth: string
   permanent_address: string
   notes: string
+  gender: string
+  occupation: string
+  id_issued_date: string
+  id_issued_place: string
+  emergency_contact_name: string
+  emergency_contact_phone: string
 }
 
 const props = withDefaults(defineProps<{
@@ -111,6 +117,78 @@ function onSubmit() {
       />
       <p v-if="errors.notes?.[0]" class="text-xs text-error">{{ errors.notes[0] }}</p>
     </div>
+
+    <!-- Section: Thông tin bổ sung -->
+    <div class="pt-2 border-t border-dark-border">
+      <p class="text-sm font-medium text-muted mb-4">Thông tin bổ sung</p>
+    </div>
+
+    <!-- id_issued_date -->
+    <UiInput
+      label="Ngày cấp CMND/CCCD"
+      type="date"
+      :model-value="modelValue.id_issued_date"
+      :error="errors.id_issued_date?.[0]"
+      :disabled="loading"
+      @update:model-value="update('id_issued_date', $event)"
+    />
+
+    <!-- id_issued_place -->
+    <UiInput
+      label="Nơi cấp CMND/CCCD"
+      :model-value="modelValue.id_issued_place"
+      :error="errors.id_issued_place?.[0]"
+      :disabled="loading"
+      placeholder="Cục CS ĐKQL cư trú và DLQG về dân cư"
+      @update:model-value="update('id_issued_place', $event)"
+    />
+
+    <!-- gender -->
+    <div class="flex flex-col gap-1.5">
+      <label class="text-sm font-medium text-white">Giới tính</label>
+      <select
+        :value="modelValue.gender"
+        :disabled="loading"
+        class="block w-full rounded-md border border-dark-border bg-dark-surface px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan/30 focus:border-cyan/70 disabled:bg-dark-hover disabled:text-muted disabled:cursor-not-allowed"
+        @change="update('gender', ($event.target as HTMLSelectElement).value)"
+      >
+        <option value="">— Không chọn —</option>
+        <option value="male">Nam</option>
+        <option value="female">Nữ</option>
+        <option value="other">Khác</option>
+      </select>
+      <p v-if="errors.gender?.[0]" class="text-xs text-error">{{ errors.gender[0] }}</p>
+    </div>
+
+    <!-- occupation -->
+    <UiInput
+      label="Nghề nghiệp"
+      :model-value="modelValue.occupation"
+      :error="errors.occupation?.[0]"
+      :disabled="loading"
+      placeholder="Nhân viên văn phòng, sinh viên..."
+      @update:model-value="update('occupation', $event)"
+    />
+
+    <!-- emergency_contact_name -->
+    <UiInput
+      label="Liên hệ khẩn cấp — Tên"
+      :model-value="modelValue.emergency_contact_name"
+      :error="errors.emergency_contact_name?.[0]"
+      :disabled="loading"
+      placeholder="Nguyễn Thị B"
+      @update:model-value="update('emergency_contact_name', $event)"
+    />
+
+    <!-- emergency_contact_phone -->
+    <UiInput
+      label="Liên hệ khẩn cấp — SĐT"
+      :model-value="modelValue.emergency_contact_phone"
+      :error="errors.emergency_contact_phone?.[0]"
+      :disabled="loading"
+      placeholder="0901234567"
+      @update:model-value="update('emergency_contact_phone', $event)"
+    />
 
     <!-- Actions -->
     <div class="flex justify-end gap-3 pt-2">

@@ -20,7 +20,6 @@ export type Database = {
           billing_generation_day: number | null
           created_at: string
           default_electricity_rate: number | null
-          default_service_fees: Json | null
           default_water_rate: number | null
           description: string | null
           electricity_pricing_type: string
@@ -41,7 +40,6 @@ export type Database = {
           billing_generation_day?: number | null
           created_at?: string
           default_electricity_rate?: number | null
-          default_service_fees?: Json | null
           default_water_rate?: number | null
           description?: string | null
           electricity_pricing_type?: string
@@ -62,7 +60,6 @@ export type Database = {
           billing_generation_day?: number | null
           created_at?: string
           default_electricity_rate?: number | null
-          default_service_fees?: Json | null
           default_water_rate?: number | null
           description?: string | null
           electricity_pricing_type?: string
@@ -79,6 +76,57 @@ export type Database = {
           water_pricing_type?: string
         }
         Relationships: []
+      }
+      building_services: {
+        Row: {
+          id: string
+          building_id: string
+          catalog_id: string
+          default_amount: number
+          pricing_type: string | null
+          is_active: boolean
+          sort_order: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          building_id: string
+          catalog_id: string
+          default_amount?: number
+          pricing_type?: string | null
+          is_active?: boolean
+          sort_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          building_id?: string
+          catalog_id?: string
+          default_amount?: number
+          pricing_type?: string | null
+          is_active?: boolean
+          sort_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "building_services_building_id_fkey"
+            columns: ["building_id"]
+            isOneToOne: false
+            referencedRelation: "buildings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "building_services_catalog_id_fkey"
+            columns: ["catalog_id"]
+            isOneToOne: false
+            referencedRelation: "service_catalog"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       contract_payments: {
         Row: {
@@ -248,6 +296,57 @@ export type Database = {
           },
         ]
       }
+      contract_services: {
+        Row: {
+          id: string
+          contract_id: string
+          catalog_id: string
+          amount: number
+          quantity: number
+          is_enabled: boolean
+          notes: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          contract_id: string
+          catalog_id: string
+          amount: number
+          quantity?: number
+          is_enabled?: boolean
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          contract_id?: string
+          catalog_id?: string
+          amount?: number
+          quantity?: number
+          is_enabled?: boolean
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_services_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_services_catalog_id_fkey"
+            columns: ["catalog_id"]
+            isOneToOne: false
+            referencedRelation: "service_catalog"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contracts: {
         Row: {
           building_id: string | null
@@ -340,62 +439,65 @@ export type Database = {
           },
         ]
       }
-      meter_devices: {
+      meter_readings: {
         Row: {
           building_id: string
           created_at: string
-          end_reading: number | null
           id: string
-          installed_at: string
-          meter_code: string | null
+          is_estimated: boolean
           meter_type: string
           notes: string | null
-          removed_at: string | null
+          period_month: number
+          period_year: number
+          reading_date: string
+          reading_type: string
+          reading_value: number
+          recorded_by: string | null
           room_id: string
-          start_reading: number
-          status: string
           updated_at: string
         }
         Insert: {
           building_id: string
           created_at?: string
-          end_reading?: number | null
           id?: string
-          installed_at: string
-          meter_code?: string | null
+          is_estimated?: boolean
           meter_type: string
           notes?: string | null
-          removed_at?: string | null
+          period_month: number
+          period_year: number
+          reading_date: string
+          reading_type: string
+          reading_value: number
+          recorded_by?: string | null
           room_id: string
-          start_reading?: number
-          status?: string
           updated_at?: string
         }
         Update: {
           building_id?: string
           created_at?: string
-          end_reading?: number | null
           id?: string
-          installed_at?: string
-          meter_code?: string | null
+          is_estimated?: boolean
           meter_type?: string
           notes?: string | null
-          removed_at?: string | null
+          period_month?: number
+          period_year?: number
+          reading_date?: string
+          reading_type?: string
+          reading_value?: number
+          recorded_by?: string | null
           room_id?: string
-          start_reading?: number
-          status?: string
           updated_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "meter_devices_building_id_fkey"
+            foreignKeyName: "meter_readings_building_id_fkey"
             columns: ["building_id"]
             isOneToOne: false
             referencedRelation: "buildings"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "meter_devices_room_id_fkey"
+            foreignKeyName: "meter_readings_room_id_fkey"
             columns: ["room_id"]
             isOneToOne: false
             referencedRelation: "rooms"
@@ -450,15 +552,57 @@ export type Database = {
           },
         ]
       }
+      service_catalog: {
+        Row: {
+          id: string
+          code: string
+          name: string
+          pricing_type: string
+          unit: string | null
+          description: string | null
+          is_active: boolean
+          sort_order: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          code: string
+          name: string
+          pricing_type: string
+          unit?: string | null
+          description?: string | null
+          is_active?: boolean
+          sort_order?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          code?: string
+          name?: string
+          pricing_type?: string
+          unit?: string | null
+          description?: string | null
+          is_active?: boolean
+          sort_order?: number
+          created_at?: string
+        }
+        Relationships: []
+      }
       tenants: {
         Row: {
           created_at: string
           date_of_birth: string | null
           email: string | null
+          emergency_contact_name: string | null
+          emergency_contact_phone: string | null
           full_name: string
+          gender: string | null
           id: string
+          id_issued_date: string | null
+          id_issued_place: string | null
           id_number: string | null
           notes: string | null
+          occupation: string | null
           permanent_address: string | null
           phone: string
           updated_at: string
@@ -467,10 +611,16 @@ export type Database = {
           created_at?: string
           date_of_birth?: string | null
           email?: string | null
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
           full_name: string
+          gender?: string | null
           id?: string
+          id_issued_date?: string | null
+          id_issued_place?: string | null
           id_number?: string | null
           notes?: string | null
+          occupation?: string | null
           permanent_address?: string | null
           phone: string
           updated_at?: string
@@ -479,10 +629,16 @@ export type Database = {
           created_at?: string
           date_of_birth?: string | null
           email?: string | null
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
           full_name?: string
+          gender?: string | null
           id?: string
+          id_issued_date?: string | null
+          id_issued_place?: string | null
           id_number?: string | null
           notes?: string | null
+          occupation?: string | null
           permanent_address?: string | null
           phone?: string
           updated_at?: string

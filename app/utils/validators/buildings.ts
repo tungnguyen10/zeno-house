@@ -24,7 +24,6 @@ export const buildingCreateSchema = z.object({
   default_electricity_rate: z.number().min(0).nullable().optional(),
   water_pricing_type: z.enum(['per_m3', 'per_person', 'fixed_per_room']).optional().default('per_m3'),
   default_water_rate: z.number().min(0).nullable().optional(),
-  default_service_fees: z.array(serviceFeeDefaultSchema).nullable().optional(),
   // Schedule
   meter_reading_day: daySchema.nullable().optional(),
   billing_generation_day: daySchema.nullable().optional(),

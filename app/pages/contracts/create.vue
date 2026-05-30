@@ -9,6 +9,12 @@ definePageMeta({ title: 'Thêm hợp đồng mới' })
 const route = useRoute()
 const { isLoading, errors, apiError, submitCreate } = useContractForm()
 
+// Created contract id — used for Step 3 (services)
+const createdContractId = ref<string | null>(null)
+const { services: contractServices, isLoading: servicesLoading, updateService } = useContractServices(
+  computed(() => createdContractId.value ?? ''),
+)
+
 const formData = ref<ContractFormData>({
   room_id: (route.query.room_id as string) || '',
   tenant_id: '',
@@ -97,7 +103,8 @@ async function onSubmit(data: ContractFormData) {
     }
   }
 
-  await navigateTo(`/contracts/${created.id}`)
+  // Show Step 3 — services
+  createdContractId.value = created.id
 }
 </script>
 
@@ -260,7 +267,39 @@ async function onSubmit(data: ContractFormData) {
         </div>
       </div>
 
+      <!-- Step 3 — Services (appears after contract is created) -->
+      <div v-if="createdContractId" class="flex gap-5 mt-0">
+        <div class="flex flex-col items-center shrink-0">
+          <div class="w-px h-6 bg-dark-border" />
+          <div class="size-10 rounded-full bg-cyan/10 border border-cyan/30 flex items-center justify-center">
+            <span class="text-cyan text-sm font-semibold">3</span>
+          </div>
+        </div>
+
+        <div class="flex-1 pt-6 pb-8">
+          <div class="mb-4 flex items-start justify-between gap-3">
+            <div>
+              <p class="text-sm font-semibold text-white">Dịch vụ hàng tháng</p>
+              <p class="text-xs text-muted mt-0.5">Điều chỉnh nếu cần — đã sao chép từ cài đặt tòa nhà</p>
+            </div>
+            <UiButton
+              variant="primary"
+              size="sm"
+              @click="navigateTo(`/contracts/${createdContractId}`)"
+            >
+              Xong →
+            </UiButton>
+          </div>
+          <div class="rounded-xl border border-dark-border bg-dark-surface p-6">
+            <ContractServicesTab
+              :services="contractServices"
+              :loading="servicesLoading"
+              @update="updateService"
+            />
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
 </template>
-
