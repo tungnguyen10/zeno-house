@@ -48,23 +48,23 @@ function handlePricingTypeChange(catalogId: string, event: Event) {
 
 <template>
   <div class="overflow-x-auto">
-    <div v-if="loading" class="py-8 text-center text-sm text-gray-500">Đang tải...</div>
-    <table v-else class="min-w-full divide-y divide-gray-200 text-sm">
-      <thead class="bg-gray-50">
+    <div v-if="loading" class="py-8 text-center text-sm text-muted">Đang tải...</div>
+    <table v-else class="min-w-full divide-y divide-dark-border text-sm">
+      <thead class="bg-dark-card">
         <tr>
-          <th class="px-4 py-3 text-left font-medium text-gray-700">Dịch vụ</th>
-          <th class="px-4 py-3 text-left font-medium text-gray-700">Loại tính phí</th>
-          <th class="px-4 py-3 text-right font-medium text-gray-700">Đơn giá mặc định</th>
-          <th class="px-4 py-3 text-center font-medium text-gray-700">Kích hoạt</th>
+          <th class="px-4 py-3 text-left font-medium text-muted">Dịch vụ</th>
+          <th class="px-4 py-3 text-left font-medium text-muted">Loại tính phí</th>
+          <th class="px-4 py-3 text-right font-medium text-muted">Đơn giá mặc định</th>
+          <th class="px-4 py-3 text-center font-medium text-muted">Kích hoạt</th>
         </tr>
       </thead>
-      <tbody class="divide-y divide-gray-100 bg-white">
+      <tbody class="divide-y divide-dark-border bg-dark-surface">
         <tr v-for="item in catalog" :key="item.id">
-          <td class="px-4 py-3 font-medium text-gray-900">{{ item.name }}</td>
+          <td class="px-4 py-3 font-medium text-white">{{ item.name }}</td>
           <td class="px-4 py-3">
             <select
               :value="effectivePricingType(item)"
-              class="rounded border border-gray-300 px-2 py-1 text-sm focus:border-blue-500 focus:outline-none"
+              class="rounded border border-dark-border bg-dark-surface px-2 py-1 text-sm text-white focus:border-cyan/70 focus:ring-1 focus:ring-cyan/30 focus:outline-none"
               @change="handlePricingTypeChange(item.id, $event)"
             >
               <option v-for="(label, type) in PRICING_TYPE_LABELS" :key="type" :value="type">
@@ -78,7 +78,7 @@ function handlePricingTypeChange(catalogId: string, event: Event) {
               min="0"
               step="1000"
               :value="getService(item.id)?.defaultAmount ?? 0"
-              class="w-32 rounded border border-gray-300 px-2 py-1 text-right text-sm focus:border-blue-500 focus:outline-none"
+              class="w-32 rounded border border-dark-border bg-dark-surface px-2 py-1 text-right text-sm text-white focus:border-cyan/70 focus:ring-1 focus:ring-cyan/30 focus:outline-none"
               @blur="handleAmountBlur(item.id, $event)"
             >
           </td>
@@ -87,7 +87,7 @@ function handlePricingTypeChange(catalogId: string, event: Event) {
               type="button"
               :class="[
                 'relative inline-flex h-5 w-9 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none',
-                getService(item.id)?.isActive ? 'bg-blue-600' : 'bg-gray-200',
+                getService(item.id)?.isActive ? 'bg-cyan' : 'bg-dark-border',
               ]"
               :aria-label="`Bật/tắt ${item.name}`"
               @click="handleToggle(item.id, getService(item.id)?.isActive ?? false)"

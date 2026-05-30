@@ -11,6 +11,7 @@ export function mapContract(row: Tables<'contracts'>): Contract {
     endDate: row.end_date,
     monthlyRent: row.monthly_rent,
     deposit: row.deposit,
+    paymentDay: row.payment_day ?? null,
     occupantCount: row.occupant_count,
     discountAmount: row.discount_amount,
     surchargeAmount: row.surcharge_amount,
@@ -25,7 +26,7 @@ export function mapContract(row: Tables<'contracts'>): Contract {
 }
 
 export function mapContractWithDetails(row: Tables<'contracts'> & {
-  rooms: { id: string; room_number: string; floor: number; buildings: { name: string } | null } | null
+  rooms: { id: string; room_number: string; floor: number; building_id: string; buildings: { name: string } | null } | null
   tenants: { id: string; full_name: string; phone: string } | null
 }): ContractWithDetails {
   return {
@@ -34,6 +35,7 @@ export function mapContractWithDetails(row: Tables<'contracts'> & {
       id: row.rooms?.id ?? '',
       roomNumber: row.rooms?.room_number ?? '',
       floor: row.rooms?.floor ?? 0,
+      buildingId: row.rooms?.building_id ?? '',
       buildingName: row.rooms?.buildings?.name ?? '',
     },
     tenant: {

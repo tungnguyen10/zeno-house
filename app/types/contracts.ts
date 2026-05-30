@@ -4,11 +4,12 @@ export interface Contract {
   id: string
   roomId: string
   tenantId: string
-  buildingId: string | null
+  buildingId: string
   startDate: string
   endDate: string
   monthlyRent: number
   deposit: number
+  paymentDay: number | null
   occupantCount: number
   discountAmount: number
   surchargeAmount: number
@@ -26,6 +27,7 @@ export interface ContractWithDetails extends Contract {
     id: string
     roomNumber: string
     floor: number
+    buildingId: string
     buildingName: string
   }
   tenant: {

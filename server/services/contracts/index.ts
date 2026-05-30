@@ -44,7 +44,7 @@ export const ContractService = {
 
     const contract = await ContractRepository.insert(event, {
       ...input,
-      building_id: input.building_id ?? room.buildingId ?? null,
+      building_id: input.building_id ?? room.buildingId,
     })
 
     // Best-effort: clone active building_services → contract_services

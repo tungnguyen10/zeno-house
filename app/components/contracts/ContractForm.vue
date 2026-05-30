@@ -13,6 +13,7 @@ export interface ContractFormData {
   end_date: string
   monthly_rent: string
   deposit: string
+  payment_day: string
   occupant_count: string
   discount_amount: string
   surcharge_amount: string
@@ -361,6 +362,17 @@ function onSubmit() {
         @update:model-value="update('surcharge_amount', $event)"
       />
     </div>
+
+    <!-- payment_day -->
+    <UiInput
+      label="Ngày thanh toán (ghi đè tòa nhà, 1–31)"
+      type="number"
+      :model-value="modelValue.payment_day"
+      :error="errors.payment_day?.[0]"
+      :disabled="loading"
+      placeholder="Mặc định theo tòa nhà"
+      @update:model-value="update('payment_day', $event)"
+    />
 
     <!-- status -->
     <div class="flex flex-col gap-1.5">

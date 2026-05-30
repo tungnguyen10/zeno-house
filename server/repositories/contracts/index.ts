@@ -38,10 +38,7 @@ export const ContractRepository = {
 
     if (filters.room_id) query = query.eq('room_id', filters.room_id)
     if (filters.tenant_id) query = query.eq('tenant_id', filters.tenant_id)
-    if (filters.building_id) {
-      // building_id may be null on old contracts — join via rooms instead
-      query = query.eq('rooms.building_id', filters.building_id)
-    }
+    if (filters.building_id) query = query.eq('building_id', filters.building_id)
     if (filters.status) query = query.eq('status', filters.status)
 
     const { data, error, count } = await query
@@ -98,7 +95,7 @@ export const ContractRepository = {
       .insert({
         room_id: input.room_id,
         tenant_id: input.tenant_id,
-        building_id: input.building_id ?? null,
+        building_id: input.building_id ?? '',
         start_date: input.start_date,
         end_date: input.end_date,
         monthly_rent: input.monthly_rent,
@@ -123,7 +120,7 @@ export const ContractRepository = {
       .update({
         ...(input.room_id !== undefined && { room_id: input.room_id }),
         ...(input.tenant_id !== undefined && { tenant_id: input.tenant_id }),
-        ...(input.building_id !== undefined && { building_id: input.building_id }),
+        ...(input.building_id !== undefined && input.building_id !== null && { building_id: input.building_id }),
         ...(input.start_date !== undefined && { start_date: input.start_date }),
         ...(input.end_date !== undefined && { end_date: input.end_date }),
         ...(input.monthly_rent !== undefined && { monthly_rent: input.monthly_rent }),

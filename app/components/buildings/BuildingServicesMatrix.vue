@@ -53,30 +53,30 @@ function handleToggle(service: ContractService) {
 
 <template>
   <div class="overflow-x-auto">
-    <div v-if="loading" class="py-8 text-center text-sm text-gray-500">Đang tải...</div>
-    <div v-else-if="contracts.length === 0" class="py-8 text-center text-sm text-gray-500">
+    <div v-if="loading" class="py-8 text-center text-sm text-muted">Đang tải...</div>
+    <div v-else-if="contracts.length === 0" class="py-8 text-center text-sm text-muted">
       Không có hợp đồng active nào.
     </div>
-    <table v-else class="min-w-full divide-y divide-gray-200 text-sm">
-      <thead class="bg-gray-50">
+    <table v-else class="min-w-full divide-y divide-dark-border text-sm">
+      <thead class="bg-dark-card">
         <tr>
-          <th class="sticky left-0 z-10 bg-gray-50 px-4 py-3 text-left font-medium text-gray-700 min-w-[160px]">
+          <th class="sticky left-0 z-10 bg-dark-card px-4 py-3 text-left font-medium text-muted min-w-[160px]">
             Phòng / Khách
           </th>
           <th
             v-for="item in activeCatalog"
             :key="item.id"
-            class="px-3 py-3 text-center font-medium text-gray-700 min-w-[120px]"
+            class="px-3 py-3 text-center font-medium text-muted min-w-[120px]"
           >
             {{ item.name }}
           </th>
         </tr>
       </thead>
-      <tbody class="divide-y divide-gray-100 bg-white">
+      <tbody class="divide-y divide-dark-border bg-dark-surface">
         <tr v-for="row in contracts" :key="row.contractId">
-          <td class="sticky left-0 z-10 bg-white px-4 py-3">
-            <p class="font-medium text-gray-900">Phòng {{ row.roomNumber }}</p>
-            <p class="text-xs text-gray-500 truncate max-w-[140px]">{{ row.tenantName }}</p>
+          <td class="sticky left-0 z-10 bg-dark-surface px-4 py-3">
+            <p class="font-medium text-white">Phòng {{ row.roomNumber }}</p>
+            <p class="text-xs text-muted truncate max-w-[140px]">{{ row.tenantName }}</p>
           </td>
           <td
             v-for="item in activeCatalog"
@@ -90,7 +90,7 @@ function handleToggle(service: ContractService) {
                   type="button"
                   :class="[
                     'relative inline-flex h-4 w-8 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none',
-                    getService(row.contractId, item.id)!.isEnabled ? 'bg-blue-600' : 'bg-gray-200',
+                    getService(row.contractId, item.id)!.isEnabled ? 'bg-cyan' : 'bg-dark-border',
                   ]"
                   @click="handleToggle(getService(row.contractId, item.id)!)"
                 >
@@ -108,7 +108,7 @@ function handleToggle(service: ContractService) {
                   step="1000"
                   :value="getService(row.contractId, item.id)!.amount"
                   :disabled="!getService(row.contractId, item.id)!.isEnabled"
-                  class="w-20 rounded border border-gray-200 px-1 py-0.5 text-center text-xs focus:border-blue-500 focus:outline-none disabled:opacity-40"
+                  class="w-20 rounded border border-dark-border bg-dark-surface px-1 py-0.5 text-center text-xs text-white focus:border-cyan/70 focus:outline-none disabled:opacity-40"
                   @blur="handleAmountBlur(getService(row.contractId, item.id)!, $event)"
                 >
                 <!-- Quantity input -->
@@ -118,13 +118,13 @@ function handleToggle(service: ContractService) {
                   step="1"
                   :value="getService(row.contractId, item.id)!.quantity"
                   :disabled="!getService(row.contractId, item.id)!.isEnabled"
-                  class="w-12 rounded border border-gray-200 px-1 py-0.5 text-center text-xs focus:border-blue-500 focus:outline-none disabled:opacity-40"
+                  class="w-12 rounded border border-dark-border bg-dark-surface px-1 py-0.5 text-center text-xs text-white focus:border-cyan/70 focus:outline-none disabled:opacity-40"
                   title="Số lượng"
                   @blur="handleQuantityBlur(getService(row.contractId, item.id)!, $event)"
                 >
               </div>
             </template>
-            <span v-else class="text-xs text-gray-300">—</span>
+            <span v-else class="text-xs text-dark-border">—</span>
           </td>
         </tr>
       </tbody>

@@ -349,7 +349,7 @@ export type Database = {
       }
       contracts: {
         Row: {
-          building_id: string | null
+          building_id: string
           created_at: string
           deposit: number
           discount_amount: number
@@ -359,6 +359,7 @@ export type Database = {
           notes: string | null
           occupant_count: number
           original_end_date: string | null
+          payment_day: number | null
           previous_contract_id: string | null
           renewal_count: number
           room_id: string
@@ -369,7 +370,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          building_id?: string | null
+          building_id: string
           created_at?: string
           deposit?: number
           discount_amount?: number
@@ -379,6 +380,7 @@ export type Database = {
           notes?: string | null
           occupant_count?: number
           original_end_date?: string | null
+          payment_day?: number | null
           previous_contract_id?: string | null
           renewal_count?: number
           room_id: string
@@ -389,7 +391,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          building_id?: string | null
+          building_id?: string
           created_at?: string
           deposit?: number
           discount_amount?: number
@@ -399,6 +401,7 @@ export type Database = {
           notes?: string | null
           occupant_count?: number
           original_end_date?: string | null
+          payment_day?: number | null
           previous_contract_id?: string | null
           renewal_count?: number
           room_id?: string
