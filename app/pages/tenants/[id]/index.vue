@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import type { RoomAssignmentWithRoom } from '~/types/room-assignments'
 import type { ContractWithDetails } from '~/types/contracts'
 import type { ApiSuccess } from '~/types/api'
 import { formatCurrency } from '~/utils/format/currency'
@@ -12,18 +11,13 @@ const id = route.params.id as string
 
 const { tenant, isLoading, error } = useTenantDetail(id)
 
-// Current room assignment
-const { data: assignmentData } = await useFetch<ApiSuccess<RoomAssignmentWithRoom | null>>(
-  `/api/room-assignments/tenant/${id}`,
-)
-const currentAssignment = computed(() => assignmentData.value?.data ?? null)
-
 // Contracts
 const { data: contractsData } = await useFetch<ApiSuccess<ContractWithDetails[]> & { meta: { total: number } }>(
   '/api/contracts',
   { query: { tenant_id: id, limit: 50 } },
 )
 const tenantContracts = computed(() => contractsData.value?.data ?? [])
+const activeContract = computed(() => tenantContracts.value.find(c => c.status === 'active') ?? null)
 
 const showDeleteModal = ref(false)
 const isDeleting = ref(false)
@@ -112,15 +106,15 @@ watchEffect(() => {
       <!-- Current room section -->
       <div class="rounded-xl border border-dark-border bg-dark-surface p-6 mt-4">
         <h2 class="text-sm font-semibold text-white mb-3">Phòng đang thuê</h2>
-        <div v-if="currentAssignment">
+        <div v-if="activeContract">
           <NuxtLink
-            :to="`/rooms/${currentAssignment.room.id}`"
+            :to="`/rooms/${activeContract.room.id}`"
             class="text-sm font-medium text-white hover:text-cyan transition-colors"
           >
-            Phòng {{ currentAssignment.room.roomNumber }}
+            Phòng {{ activeContract.room.roomNumber }}
           </NuxtLink>
-          <p class="text-sm text-muted mt-0.5">Tầng {{ currentAssignment.room.floor }} — {{ currentAssignment.room.buildingName }}</p>
-          <p class="text-xs text-muted mt-1">Từ ngày {{ new Date(currentAssignment.startDate).toLocaleDateString('vi-VN') }}</p>
+          <p class="text-sm text-muted mt-0.5">Tầng {{ activeContract.room.floor }} — {{ activeContract.room.buildingName }}</p>
+          <p class="text-xs text-muted mt-1">Từ ngày {{ new Date(activeContract.startDate).toLocaleDateString('vi-VN') }}</p>
         </div>
         <p v-else class="text-sm text-muted">Chưa có phòng</p>
       </div>

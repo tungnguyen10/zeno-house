@@ -34,12 +34,12 @@ Client-side UI for managing tenants. Includes list page with search (debounced) 
 - **WHEN** tenant id does not exist
 - **THEN** redirected to /tenants
 
-#### Scenario: Show current room when assigned
-- **WHEN** tenant has an active room assignment
+#### Scenario: Show current room when occupied
+- **WHEN** tenant has an active contract (status = 'active')
 - **THEN** current room number, floor, and building name are displayed with a link to room detail
 
-#### Scenario: Show no room when unassigned
-- **WHEN** tenant has no active room assignment
+#### Scenario: Show no room when no active contract
+- **WHEN** tenant has no active contract
 - **THEN** "Chưa có phòng" placeholder displayed
 
 #### Scenario: Show contracts list

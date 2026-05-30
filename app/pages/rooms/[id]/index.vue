@@ -2,7 +2,6 @@
 import type { Building } from '~/types/buildings'
 import type { ContractWithDetails } from '~/types/contracts'
 import type { ApiSuccess } from '~/types/api'
-import type { AssignInput } from '~/utils/validators/room-assignments'
 import { formatCurrency } from '~/utils/format/currency'
 
 definePageMeta({ title: 'Chi tiết phòng' })
@@ -21,24 +20,19 @@ const { data: buildingData } = await useFetch<ApiSuccess<Building>>(
 )
 const building = computed(() => buildingData.value?.data ?? null)
 
-// Room assignment
-const { assignment, assign, unassign } = useRoomAssignment(id)
-
 // Contracts
-const { data: contractsData } = await useFetch<ApiSuccess<ContractWithDetails[]> & { meta: { total: number } }>(
+const { data: contractsData, refresh: refreshContracts } = await useFetch<ApiSuccess<ContractWithDetails[]> & { meta: { total: number } }>(
   '/api/contracts',
   { query: { room_id: id, limit: 50 } },
 )
 const roomContracts = computed(() => contractsData.value?.data ?? [])
+const activeContract = computed(() => roomContracts.value.find(c => c.status === 'active') ?? null)
 
 const showDeleteModal = ref(false)
 const isDeleting = ref(false)
 
-const showAssignModal = ref(false)
-const isAssigning = ref(false)
-
-const showUnassignModal = ref(false)
-const isUnassigning = ref(false)
+const showTerminateModal = ref(false)
+const isTerminating = ref(false)
 
 async function confirmDelete() {
   isDeleting.value = true
@@ -52,28 +46,19 @@ async function confirmDelete() {
   }
 }
 
-async function handleAssign(input: AssignInput) {
-  isAssigning.value = true
+async function confirmTerminate() {
+  if (!activeContract.value) return
+  isTerminating.value = true
   try {
-    await assign(input)
-    showAssignModal.value = false
-    await refreshRoom()
+    await $fetch(`/api/contracts/${activeContract.value.id}`, {
+      method: 'PATCH',
+      body: { status: 'terminated' },
+    })
+    showTerminateModal.value = false
+    await Promise.all([refreshContracts(), refreshRoom()])
   }
   finally {
-    isAssigning.value = false
-  }
-}
-
-async function confirmUnassign() {
-  if (!assignment.value) return
-  isUnassigning.value = true
-  try {
-    await unassign(assignment.value.id)
-    showUnassignModal.value = false
-    await refreshRoom()
-  }
-  finally {
-    isUnassigning.value = false
+    isTerminating.value = false
   }
 }
 
@@ -148,30 +133,30 @@ if (error.value?.statusCode === 404) {
           <h2 class="text-sm font-semibold text-white">Khách thuê hiện tại</h2>
           <div v-if="authStore.isAdmin">
             <UiButton
-              v-if="!assignment"
+              v-if="!activeContract && room.status !== 'maintenance'"
               size="sm"
-              @click="showAssignModal = true"
+              @click="navigateTo(`/contracts/create?room_id=${id}`)"
             >
               Giao phòng
             </UiButton>
             <UiButton
-              v-else
+              v-else-if="activeContract"
               variant="danger"
               size="sm"
-              @click="showUnassignModal = true"
+              @click="showTerminateModal = true"
             >
               Thu phòng
             </UiButton>
           </div>
         </div>
-        <div v-if="assignment">
+        <div v-if="activeContract">
           <div class="text-sm text-white">
-            <NuxtLink :to="`/tenants/${assignment.tenant.id}`" class="font-medium hover:text-cyan transition-colors">
-              {{ assignment.tenant.fullName }}
+            <NuxtLink :to="`/tenants/${activeContract.tenant.id}`" class="font-medium hover:text-cyan transition-colors">
+              {{ activeContract.tenant.fullName }}
             </NuxtLink>
           </div>
-          <p class="text-sm text-muted mt-0.5">{{ assignment.tenant.phone }}</p>
-          <p class="text-xs text-muted mt-1">Từ ngày {{ new Date(assignment.startDate).toLocaleDateString('vi-VN') }}</p>
+          <p class="text-sm text-muted mt-0.5">{{ activeContract.tenant.phone }}</p>
+          <p class="text-xs text-muted mt-1">Từ ngày {{ new Date(activeContract.startDate).toLocaleDateString('vi-VN') }}</p>
         </div>
         <p v-else class="text-sm text-muted">Phòng trống</p>
       </div>
@@ -218,24 +203,15 @@ if (error.value?.statusCode === 404) {
       @cancel="showDeleteModal = false"
     />
 
-    <!-- Assign modal -->
-    <RoomAssignModal
-      :open="showAssignModal"
-      :room-id="id"
-      :loading="isAssigning"
-      @assign="handleAssign"
-      @cancel="showAssignModal = false"
-    />
-
-    <!-- Unassign confirm modal -->
+    <!-- Terminate contract confirm modal -->
     <UiConfirmModal
-      :open="showUnassignModal"
+      :open="showTerminateModal"
       title="Xác nhận thu phòng"
-      :message="`Bạn có chắc muốn thu phòng ${room?.roomNumber ?? ''}? Khách thuê ${assignment?.tenant.fullName ?? ''} sẽ được đánh dấu rời phòng hôm nay.`"
+      :message="`Bạn có chắc muốn thu phòng ${room?.roomNumber ?? ''}? Hợp đồng của ${activeContract?.tenant.fullName ?? 'khách thuê'} sẽ được thanh lý.`"
       confirm-label="Thu phòng"
-      :loading="isUnassigning"
-      @confirm="confirmUnassign"
-      @cancel="showUnassignModal = false"
+      :loading="isTerminating"
+      @confirm="confirmTerminate"
+      @cancel="showTerminateModal = false"
     />
   </div>
 </template>

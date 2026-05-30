@@ -11,7 +11,6 @@ export default defineEventHandler(async (event) => {
     q: query.q ? String(query.q) : undefined,
     page,
     limit,
-    unassigned: query.unassigned === 'true',
     available: query.available === 'true',
     excludeContractId: query.excludeContractId ? String(query.excludeContractId) : undefined,
   }

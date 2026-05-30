@@ -1,6 +1,8 @@
-## Purpose
+## Status
 
-Database schema for room assignments — the link between tenants and rooms. Tracks assignment history with start/end dates. Enforces one active assignment per room via partial unique index.
+**DEPRECATED** — Removed in change `2026-05-30-contract-as-assignment`.
+
+The `room_assignments` table has been dropped. Room occupancy is now tracked exclusively via `contracts.status = 'active'`. The `rooms.status` field is driven by contract lifecycle in `ContractService`.
 
 ## Requirements
 

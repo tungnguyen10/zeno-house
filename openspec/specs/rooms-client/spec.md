@@ -31,20 +31,16 @@ Client-side UI for managing rooms. Includes list page with filters, detail page,
 - **THEN** 404 page shown
 
 #### Scenario: Show current tenant when occupied
-- **WHEN** room has an active assignment record
+- **WHEN** room has an active contract (status = 'active')
 - **THEN** current tenant's name and phone are displayed with a link to tenant detail
 
-#### Scenario: Show assign button when no active assignment
-- **WHEN** room has no active assignment record and user is admin
-- **THEN** a "Giao phòng" button is shown that opens an assign modal
+#### Scenario: Show assign button when no active contract
+- **WHEN** room has no active contract and room.status is not 'maintenance' and user is admin
+- **THEN** a "Giao phòng" button is shown that navigates to `/contracts/create?room_id=<id>`
 
-#### Scenario: Show unassign button when assigned
-- **WHEN** room has an active assignment record and user is admin
-- **THEN** a "Thu phòng" button is shown with UiConfirmModal for confirmation
-
-#### Scenario: Assign modal selects tenant and date
-- **WHEN** admin opens assign modal
-- **THEN** can search/select from unassigned tenants only and pick start_date; submit calls assign API
+#### Scenario: Show unassign button when occupied
+- **WHEN** room has an active contract and user is admin
+- **THEN** a "Thu phòng" button is shown with UiConfirmModal; confirm calls PATCH /api/contracts/:id with status 'terminated'
 
 #### Scenario: Show contracts list
 - **WHEN** room has one or more contracts

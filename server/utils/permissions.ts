@@ -19,9 +19,6 @@ const PERMISSIONS: Record<UserRole, Set<string>> = {
     'contracts.create',
     'contracts.update',
     'contracts.delete',
-    'room-assignments.read',
-    'room-assignments.create',
-    'room-assignments.delete',
   ]),
   manager: new Set([
     'buildings.read',
@@ -29,7 +26,6 @@ const PERMISSIONS: Record<UserRole, Set<string>> = {
     'rooms.update',
     'tenants.read',
     'contracts.read',
-    'room-assignments.read',
   ]),
 }
 

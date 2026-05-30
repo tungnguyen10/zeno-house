@@ -1,6 +1,10 @@
-## Purpose
+## Status
 
-Server API for room assignments. Provides assign, unassign, and lookup endpoints. Business logic checks: room must not be `maintenance` and must have no active assignment; tenant must have no active assignment elsewhere.
+**DEPRECATED** — Removed in change `2026-05-30-contract-as-assignment`.
+
+Room assignment is now handled by contract lifecycle. Creating an active contract (`POST /api/contracts`) sets `room.status = 'occupied'`. Terminating a contract (`PATCH /api/contracts/:id` with `status: 'terminated'`) sets `room.status = 'available'`.
+
+See `contracts-api` spec for current contract endpoints.
 
 ## Requirements
 

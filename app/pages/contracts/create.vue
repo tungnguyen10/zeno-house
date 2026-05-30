@@ -6,10 +6,11 @@ import type { ApiSuccess } from '~/types/api'
 
 definePageMeta({ title: 'Thêm hợp đồng mới' })
 
+const route = useRoute()
 const { isLoading, errors, apiError, submitCreate } = useContractForm()
 
 const formData = ref<ContractFormData>({
-  room_id: '',
+  room_id: (route.query.room_id as string) || '',
   tenant_id: '',
   start_date: '',
   end_date: '',

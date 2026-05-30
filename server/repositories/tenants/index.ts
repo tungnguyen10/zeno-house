@@ -8,7 +8,6 @@ export interface TenantFilters {
   q?: string
   page?: number
   limit?: number
-  unassigned?: boolean
   available?: boolean
   excludeContractId?: string
 }
@@ -32,17 +31,6 @@ export const TenantRepository = {
 
     if (filters.q) {
       query = query.or(`full_name.ilike.%${filters.q}%,phone.ilike.%${filters.q}%`)
-    }
-
-    if (filters.unassigned) {
-      const { data: activeAssignments } = await client
-        .from('room_assignments')
-        .select('tenant_id')
-        .is('end_date', null)
-      const assignedIds = (activeAssignments ?? []).map((a) => a.tenant_id)
-      if (assignedIds.length > 0) {
-        query = query.not('id', 'in', `(${assignedIds.join(',')})`)
-      }
     }
 
     if (filters.available) {
