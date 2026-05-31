@@ -232,7 +232,7 @@ async function onSubmit(data: ContractFormData) {
                   >{{ occ.billing_counted ? 'Tính tiền' : 'Không tính' }}</span>
                   <button
                     type="button"
-                    class="p-1.5 rounded-md text-muted hover:text-red-400 hover:bg-red-400/10 transition-colors"
+                    class="p-1.5 rounded-md text-muted hover:text-error hover:bg-error/10 transition-colors"
                     title="Xoá"
                     @click="removePendingOccupant(occ.tenant_id)"
                   >

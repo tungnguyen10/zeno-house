@@ -318,7 +318,7 @@ watchEffect(() => {
             </NuxtLink>
             <p class="text-xs text-muted mt-0.5">{{ contract.tenant.phone }}</p>
           </div>
-          <span class="text-xs text-zinc-400 border border-dark-border rounded px-2 py-0.5 shrink-0">Người thuê chính</span>
+          <span class="text-xs text-muted border border-dark-border rounded px-2 py-0.5 shrink-0">Người thuê chính</span>
         </div>
 
         <!-- Roommate list -->
@@ -334,8 +334,8 @@ watchEffect(() => {
               occ.moveOutDate ? 'border-dark-border opacity-50' : 'border-dark-border',
             ]"
           >
-            <div class="size-8 rounded-full bg-zinc-800 flex items-center justify-center shrink-0">
-              <span class="text-zinc-400 text-xs font-bold">{{ occ.tenantName?.charAt(0).toUpperCase() ?? '?' }}</span>
+            <div class="size-8 rounded-full bg-dark-hover flex items-center justify-center shrink-0">
+              <span class="text-muted text-xs font-bold">{{ occ.tenantName?.charAt(0).toUpperCase() ?? '?' }}</span>
             </div>
             <div class="min-w-0 flex-1">
               <p class="text-sm font-medium text-white">{{ occ.tenantName ?? occ.tenantId.slice(0, 8) + '…' }}</p>
@@ -350,13 +350,13 @@ watchEffect(() => {
             <template v-if="authStore.isAdmin">
               <button
                 v-if="!occ.moveOutDate"
-                class="text-xs text-zinc-400 hover:text-white transition-colors shrink-0"
+                class="text-xs text-muted hover:text-white transition-colors shrink-0"
                 @click="moveOutOccupantId = occ.id; moveOutDate = new Date().toISOString().slice(0, 10)"
               >
                 Ghi nhận rời
               </button>
               <button
-                class="text-xs text-red-400 hover:text-red-300 transition-colors shrink-0 ml-1"
+                class="text-xs text-error hover:text-error/80 transition-colors shrink-0 ml-1"
                 @click="deletingOccupantId = occ.id"
               >
                 Xoá
@@ -431,19 +431,19 @@ watchEffect(() => {
                   </template>
                   <template v-if="payment.paymentMethod"> · {{ payment.paymentMethod }}</template>
                 </p>
-                <p v-if="payment.note" class="text-xs text-zinc-500 mt-0.5 italic">{{ payment.note }}</p>
+                <p v-if="payment.note" class="text-xs text-muted mt-0.5 italic">{{ payment.note }}</p>
               </div>
               <div class="flex items-center gap-2 shrink-0 ml-4">
                 <p class="text-sm font-semibold text-cyan">{{ formatCurrency(payment.amount) }}</p>
                 <template v-if="authStore.isAdmin">
                   <button
-                    class="text-xs text-zinc-400 hover:text-white transition-colors"
+                    class="text-xs text-muted hover:text-white transition-colors"
                     @click="editingPayment = payment; editPaymentApiError = null"
                   >
                     Sửa
                   </button>
                   <button
-                    class="text-xs text-red-400 hover:text-red-300 transition-colors"
+                    class="text-xs text-error hover:text-error/80 transition-colors"
                     @click="deletingPaymentId = payment.id"
                   >
                     Xoá
@@ -494,11 +494,11 @@ watchEffect(() => {
       <div class="rounded-xl border border-dark-border bg-dark-surface p-6 mt-4">
         <div class="flex items-center justify-between mb-4">
           <h2 class="text-sm font-semibold text-white">Lịch sử gia hạn</h2>
-          <span v-if="contract.renewalCount > 0" class="text-xs text-zinc-400">{{ contract.renewalCount }} lần</span>
+          <span v-if="contract.renewalCount > 0" class="text-xs text-muted">{{ contract.renewalCount }} lần</span>
         </div>
 
         <!-- Previous contract link -->
-        <div v-if="contract.previousContractId" class="mb-3 text-xs text-zinc-400">
+        <div v-if="contract.previousContractId" class="mb-3 text-xs text-muted">
           Hợp đồng trước:
           <NuxtLink :to="`/contracts/${contract.previousContractId}`" class="text-cyan hover:text-white transition-colors font-mono ml-1">
             {{ contract.previousContractId.slice(0, 8) }}...
@@ -524,10 +524,10 @@ watchEffect(() => {
                   {{ new Date(renewal.oldEndDate).toLocaleDateString('vi-VN') }}
                   → {{ new Date(renewal.newEndDate).toLocaleDateString('vi-VN') }}
                 </p>
-                <p v-if="renewal.oldMonthlyRent !== renewal.newMonthlyRent" class="text-xs text-zinc-400 mt-0.5">
+                <p v-if="renewal.oldMonthlyRent !== renewal.newMonthlyRent" class="text-xs text-muted mt-0.5">
                   Giá: {{ formatCurrency(renewal.oldMonthlyRent) }} → {{ formatCurrency(renewal.newMonthlyRent) }}
                 </p>
-                <p v-if="renewal.reason" class="text-xs text-zinc-500 italic mt-0.5">{{ renewal.reason }}</p>
+                <p v-if="renewal.reason" class="text-xs text-muted italic mt-0.5">{{ renewal.reason }}</p>
               </div>
               <div class="text-right shrink-0">
                 <p class="text-xs text-muted">{{ new Date(renewal.createdAt).toLocaleDateString('vi-VN') }}</p>

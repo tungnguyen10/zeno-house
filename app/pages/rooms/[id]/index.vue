@@ -197,6 +197,9 @@ if (error.value?.statusCode === 404) {
         <h2 class="text-sm font-semibold text-white mb-3">Chỉ số đồng hồ</h2>
         <RoomMeterReadings :room-id="id" />
       </div>
+
+      <!-- Billing history section -->
+      <RoomBillingHistory :room-id="id" :building-id="buildingId" class="mt-4" />
     </template>
 
     <!-- Delete modal -->

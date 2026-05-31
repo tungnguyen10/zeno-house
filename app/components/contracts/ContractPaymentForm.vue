@@ -70,21 +70,21 @@ function handleSubmit() {
   emit('submit', input)
 }
 
-const inputClass = 'block w-full rounded-md border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-cyan-500'
-const labelClass = 'block text-sm font-medium text-zinc-300 mb-1'
-const errorClass = 'mt-1 text-xs text-red-400'
+const inputClass = 'block w-full rounded-md border border-dark-border bg-dark-surface px-3 py-2 text-sm text-white placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-cyan/30 focus:border-cyan/70'
+const labelClass = 'block text-sm font-medium text-muted mb-1'
+const errorClass = 'mt-1 text-xs text-error'
 </script>
 
 <template>
   <form class="space-y-4" novalidate @submit.prevent="handleSubmit">
     <!-- API error -->
-    <div v-if="props.apiError" class="rounded-md bg-red-900/30 border border-red-700 px-4 py-3 text-sm text-red-300">
+    <div v-if="props.apiError" class="rounded-md bg-error/10 border border-error/30 px-4 py-3 text-sm text-error">
       {{ props.apiError }}
     </div>
 
     <!-- Payment type -->
     <div>
-      <label :class="labelClass">Loại thanh toán <span class="text-red-400">*</span></label>
+      <label :class="labelClass">Loại thanh toán <span class="text-error">*</span></label>
       <select v-model="form.payment_type" :class="inputClass">
         <option v-for="(label, val) in PAYMENT_TYPE_LABELS" :key="val" :value="val">{{ label }}</option>
       </select>
@@ -93,24 +93,24 @@ const errorClass = 'mt-1 text-xs text-red-400'
 
     <!-- Amount -->
     <div>
-      <label :class="labelClass">Số tiền (VND) <span class="text-red-400">*</span></label>
+      <label :class="labelClass">Số tiền (VND) <span class="text-error">*</span></label>
       <input
         v-model="form.amount"
         type="number"
         min="1"
         placeholder="ví dụ: 3000000"
-        :class="clsx(inputClass, fieldErrors.amount && 'border-red-500')"
+        :class="clsx(inputClass, fieldErrors.amount && 'border-error/50')"
       >
       <p v-if="fieldErrors.amount" :class="errorClass">{{ fieldErrors.amount }}</p>
-      <p v-else-if="form.amount && !isNaN(Number(form.amount)) && Number(form.amount) > 0" class="mt-1 text-xs text-zinc-400">
+      <p v-else-if="form.amount && !isNaN(Number(form.amount)) && Number(form.amount) > 0" class="mt-1 text-xs text-muted">
         {{ formatCurrency(Number(form.amount)) }}
       </p>
     </div>
 
     <!-- Paid at -->
     <div>
-      <label :class="labelClass">Ngày thanh toán <span class="text-red-400">*</span></label>
-      <input v-model="form.paid_at" type="date" :class="clsx(inputClass, fieldErrors.paid_at && 'border-red-500')" >
+      <label :class="labelClass">Ngày thanh toán <span class="text-error">*</span></label>
+      <input v-model="form.paid_at" type="date" :class="clsx(inputClass, fieldErrors.paid_at && 'border-error/50')" >
       <p v-if="fieldErrors.paid_at" :class="errorClass">{{ fieldErrors.paid_at }}</p>
     </div>
 
@@ -123,7 +123,7 @@ const errorClass = 'mt-1 text-xs text-red-400'
             v-model="form.covered_period_start"
             type="text"
             placeholder="2025-01"
-            :class="clsx(inputClass, fieldErrors.covered_period_start && 'border-red-500')"
+            :class="clsx(inputClass, fieldErrors.covered_period_start && 'border-error/50')"
           >
           <p v-if="fieldErrors.covered_period_start" :class="errorClass">{{ fieldErrors.covered_period_start }}</p>
         </div>
@@ -133,7 +133,7 @@ const errorClass = 'mt-1 text-xs text-red-400'
             v-model="form.covered_period_end"
             type="text"
             placeholder="2025-03"
-            :class="clsx(inputClass, fieldErrors.covered_period_end && 'border-red-500')"
+            :class="clsx(inputClass, fieldErrors.covered_period_end && 'border-error/50')"
           >
           <p v-if="fieldErrors.covered_period_end" :class="errorClass">{{ fieldErrors.covered_period_end }}</p>
         </div>
@@ -161,7 +161,7 @@ const errorClass = 'mt-1 text-xs text-red-400'
     <div class="flex items-center justify-end gap-3 pt-2">
       <button
         type="button"
-        class="px-4 py-2 text-sm font-medium text-zinc-300 hover:text-white transition-colors"
+        class="px-4 py-2 text-sm font-medium text-muted hover:text-white transition-colors"
         @click="emit('cancel')"
       >
         Huỷ

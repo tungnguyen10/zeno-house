@@ -70,8 +70,23 @@ F0.2.5.4  Occupants / Roommates Model               ✅  product-flow-foundation
 F0.2.5.5  Meter Device Lifecycle                    ✅  product-flow-foundation
 F0.2.5.6  Navigation Alignment                      ✅  product-flow-foundation
 F0.2.5.7  Architecture ADRs                         ✅  product-flow-foundation
-F0.2.5.8  Contract Payments / Deposit / Prepaid Rent 🔲  contract-payments
-F0.2.5.9  Contract Renewal Model                    🔲  contract-renewal
+F0.2.5.8  Contract Payments / Deposit / Prepaid Rent ✅  contract-payments
+F0.2.5.9  Contract Renewal Model                    ✅  contract-renewal
+```
+
+## v0.3 Roadmap — Monthly Billing Workspace
+
+These changes implement the core billing loop: meter readings → preview → generate snapshot → payment tracking.
+
+```
+F0.3.1  Billing Runs          ← billing_periods + billing_runs tables, service, API
+F0.3.2  Billing Run Items     ← billing_items + bulk payment tracking
+F0.3.3  Billing Snapshot Layer ← 3 snapshot tables (contract/service/utility), pricing types
+F0.3.4  Billing Workspace     ← hybrid-tab UI: readings → preview → billing result
+F0.3.5  Pricing Engine        ← extracted pure function, unit testable, shared preview/generate
+F0.3.6  Billing Preview       ← manual trigger preview, warnings, no save
+F0.3.7  Finalize              ← period lock/unlock, state machine
+F0.3.9  Quality Baseline      ← typecheck, lint, scenario coverage
 ```
 
 ## Architecture Decision Records
@@ -113,6 +128,28 @@ F0.2.5.9  Contract Renewal Model                    🔲  contract-renewal
 **Decision**: The Contract record is the source of truth for rent amount, deposit, occupant count, and commercial terms. Room default rent is a fallback only.
 
 **Rationale**: Billing must be able to snapshot terms as of a specific period. Using room defaults instead of contract terms creates inconsistency when room defaults change.
+
+---
+
+### ADR-006: Monthly Billing Is a Building-Level Bulk Workspace
+
+**Decision**: Monthly billing is processed as a workspace scoped to a single building + calendar period. Users enter meter readings in bulk, preview charges, generate an immutable snapshot, and track payments — all within the workspace. No billing actions from Room detail pages.
+
+**No proration in v0.3**: Contracts starting/ending mid-month are billed at full-month rent.
+
+**Snapshot layer**: Billing snapshot is persisted across 3 child tables (`billing_contract_snapshots`, `billing_service_snapshots`, `billing_utility_snapshots`) rather than a JSONB blob, enabling SQL aggregation for analytics.
+
+See [ADR-006](../../docs/architecture/adr-006-monthly-billing-workspace.md) for full details.
+
+---
+
+### ADR-007: Meter Readings Are Billing Inputs, Not Room Metadata
+
+**Decision**: Meter readings are entered during a billing run as inputs to utility charge calculation. They are not a permanent historical log on the Room page. The `meter_readings` table is extended with `old_reading`, `new_reading`, `consumption`, `is_adjusted`, `adjustment_reason`, `updated_by`.
+
+**Consumption rule**: `is_adjusted = false` → `consumption = new_reading - old_reading` (negative blocks generate). `is_adjusted = true` → manual consumption with required `adjustment_reason`.
+
+See [ADR-007](../../docs/architecture/adr-007-meter-readings-as-billing-inputs.md) for full details.
 
 ## Requirements
 

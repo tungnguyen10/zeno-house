@@ -11,6 +11,13 @@ export interface MeterReading {
   isEstimated: boolean
   notes: string | null
   recordedBy: string | null
+  // billing fields (v0.3)
+  oldReading: number | null
+  newReading: number | null
+  consumption: number | null
+  isAdjusted: boolean
+  adjustmentReason: string | null
+  updatedBy: string | null
   createdAt: string
   updatedAt: string
 }

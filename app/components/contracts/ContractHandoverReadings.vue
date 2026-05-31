@@ -150,7 +150,7 @@ const meterTypeLabel: Record<MeterType, string> = { electricity: 'Điện', wate
         </table>
       </div>
 
-      <p v-if="saveError" class="text-xs text-red-400 mt-2">{{ saveError }}</p>
+      <p v-if="saveError" class="text-xs text-error mt-2">{{ saveError }}</p>
       <p v-if="isSaving" class="text-xs text-muted mt-2">Đang lưu...</p>
     </template>
   </div>
