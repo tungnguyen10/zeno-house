@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { PricingType, ServiceCatalogItem } from '~/types/service-catalog'
 import type { BuildingService } from '~/types/building-services'
+import type { UiTableColumn } from '~/components/ui/UiTable.vue'
 
 const props = defineProps<{
   buildingId: string
@@ -15,11 +16,11 @@ const emit = defineEmits<{
   (e: 'updatePricingType', catalogId: string, pricingType: PricingType): void
 }>()
 
-const PRICING_TYPE_LABELS: Record<PricingType, string> = {
-  fixed_per_room: 'Cố định / phòng',
-  per_person: 'Theo người',
-  per_vehicle: 'Theo xe',
-}
+const PRICING_TYPE_OPTIONS: { value: PricingType, label: string }[] = [
+  { value: 'fixed_per_room', label: 'Cố định / phòng' },
+  { value: 'per_person', label: 'Theo người' },
+  { value: 'per_vehicle', label: 'Theo xe' },
+]
 
 function getService(catalogId: string): BuildingService | undefined {
   return props.services.find(s => s.catalogId === catalogId)
@@ -29,10 +30,6 @@ function effectivePricingType(item: ServiceCatalogItem): PricingType {
   return getService(item.id)?.pricingType ?? item.pricingType
 }
 
-function handleToggle(catalogId: string, current: boolean) {
-  emit('toggle', catalogId, !current)
-}
-
 function handleAmountBlur(catalogId: string, event: Event) {
   const value = Number((event.target as HTMLInputElement).value)
   if (!Number.isNaN(value) && value >= 0) {
@@ -40,68 +37,53 @@ function handleAmountBlur(catalogId: string, event: Event) {
   }
 }
 
-function handlePricingTypeChange(catalogId: string, event: Event) {
-  const value = (event.target as HTMLSelectElement).value as PricingType
-  emit('updatePricingType', catalogId, value)
-}
+const columns: UiTableColumn<ServiceCatalogItem>[] = [
+  { key: 'name', label: 'Dịch vụ' },
+  { key: 'pricingType', label: 'Loại tính phí' },
+  { key: 'amount', label: 'Đơn giá mặc định', numeric: true, width: 'w-44' },
+  { key: 'active', label: 'Kích hoạt', width: 'w-24' },
+]
 </script>
 
 <template>
-  <div class="overflow-x-auto">
-    <div v-if="loading" class="py-8 text-center text-sm text-muted">Đang tải...</div>
-    <table v-else class="min-w-full divide-y divide-dark-border text-sm">
-      <thead class="bg-dark-card">
-        <tr>
-          <th class="px-4 py-3 text-left font-medium text-muted">Dịch vụ</th>
-          <th class="px-4 py-3 text-left font-medium text-muted">Loại tính phí</th>
-          <th class="px-4 py-3 text-right font-medium text-muted">Đơn giá mặc định</th>
-          <th class="px-4 py-3 text-center font-medium text-muted">Kích hoạt</th>
-        </tr>
-      </thead>
-      <tbody class="divide-y divide-dark-border bg-dark-surface">
-        <tr v-for="item in catalog" :key="item.id">
-          <td class="px-4 py-3 font-medium text-white">{{ item.name }}</td>
-          <td class="px-4 py-3">
-            <select
-              :value="effectivePricingType(item)"
-              class="rounded border border-dark-border bg-dark-surface px-2 py-1 text-sm text-white focus:border-cyan/70 focus:ring-1 focus:ring-cyan/30 focus:outline-none"
-              @change="handlePricingTypeChange(item.id, $event)"
-            >
-              <option v-for="(label, type) in PRICING_TYPE_LABELS" :key="type" :value="type">
-                {{ label }}
-              </option>
-            </select>
-          </td>
-          <td class="px-4 py-3 text-right">
-            <input
-              type="number"
-              min="0"
-              step="1000"
-              :value="getService(item.id)?.defaultAmount ?? 0"
-              class="w-32 rounded border border-dark-border bg-dark-surface px-2 py-1 text-right text-sm text-white focus:border-cyan/70 focus:ring-1 focus:ring-cyan/30 focus:outline-none"
-              @blur="handleAmountBlur(item.id, $event)"
-            >
-          </td>
-          <td class="px-4 py-3 text-center">
-            <button
-              type="button"
-              :class="[
-                'relative inline-flex h-5 w-9 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none',
-                getService(item.id)?.isActive ? 'bg-cyan' : 'bg-dark-border',
-              ]"
-              :aria-label="`Bật/tắt ${item.name}`"
-              @click="handleToggle(item.id, getService(item.id)?.isActive ?? false)"
-            >
-              <span
-                :class="[
-                  'pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out',
-                  getService(item.id)?.isActive ? 'translate-x-4' : 'translate-x-0',
-                ]"
-              />
-            </button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
+  <UiTable
+    :rows="catalog"
+    :columns="columns"
+    :loading="loading"
+    empty-title="Chưa có dịch vụ nào"
+  >
+    <template #cell-name="{ row }">
+      <span class="font-medium text-white">{{ row.name }}</span>
+    </template>
+
+    <template #cell-pricingType="{ row }">
+      <UiSelect
+        :model-value="effectivePricingType(row)"
+        :options="PRICING_TYPE_OPTIONS"
+        class="w-44"
+        @update:model-value="(value) => emit('updatePricingType', row.id, value as PricingType)"
+      />
+    </template>
+
+    <template #cell-amount="{ row }">
+      <input
+        type="number"
+        min="0"
+        step="1000"
+        :value="getService(row.id)?.defaultAmount ?? 0"
+        class="w-32 rounded-md border border-dark-border bg-dark-surface px-2 py-1.5 text-right text-sm text-white focus:border-cyan/70 focus:ring-2 focus:ring-cyan/30 focus:outline-none"
+        @blur="handleAmountBlur(row.id, $event)"
+      >
+    </template>
+
+    <template #cell-active="{ row }">
+      <UiToggle
+        :model-value="getService(row.id)?.isActive ?? false"
+        :aria-label="`Bật/tắt ${row.name}`"
+        size="sm"
+        @update:model-value="(value) => emit('toggle', row.id, value)"
+      />
+    </template>
+  </UiTable>
 </template>
+

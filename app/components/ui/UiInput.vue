@@ -21,18 +21,34 @@ const emit = defineEmits<{
   (e: 'update:modelValue', value: string): void
 }>()
 
-// Auto-generate id if not provided
-const inputId = computed(() => props.id ?? `ui-input-${Math.random().toString(36).slice(2, 9)}`)
+// Stable id: prefer prop, else Vue's SSR-safe useId so the same instance keeps the same id
+// across hydration. Avoids mismatched aria attributes on re-render.
+const generatedId = useId()
+const inputId = computed(() => props.id ?? generatedId)
+
+const slots = useSlots()
+const hasPrefix = computed(() => !!slots.prefix)
+const hasSuffix = computed(() => !!slots.suffix)
+
+const wrapperClass = computed(() =>
+  clsx(
+    'flex w-full items-stretch rounded-md border bg-dark-surface text-white',
+    'focus-within:ring-2 focus-within:ring-offset-0',
+    props.error
+      ? 'border-error/50 focus-within:border-error/60 focus-within:ring-error/30'
+      : 'border-dark-border focus-within:border-cyan/70 focus-within:ring-cyan/30',
+    props.disabled && 'bg-dark-hover text-muted cursor-not-allowed',
+  ),
+)
 
 const inputClass = computed(() =>
   clsx(
-    'block w-full rounded-md border px-3 py-2 bg-dark-surface text-white placeholder-muted',
-    'focus:outline-none focus:ring-2 focus:ring-offset-0',
-    props.error
-      ? 'border-error/50 focus:border-error/60 focus:ring-error/30'
-      : 'border-dark-border focus:border-cyan/70 focus:ring-cyan/30',
-    props.disabled && 'bg-dark-hover text-muted cursor-not-allowed',
-  )
+    'block w-full bg-transparent px-3 py-2 text-white placeholder-muted',
+    'focus:outline-none',
+    hasPrefix.value && 'pl-1',
+    hasSuffix.value && 'pr-1',
+    props.disabled && 'cursor-not-allowed text-muted',
+  ),
 )
 </script>
 
@@ -47,18 +63,36 @@ const inputClass = computed(() =>
       <span v-if="required" class="text-error ml-0.5" aria-hidden="true">*</span>
     </label>
 
-    <input
-      :id="inputId"
-      :type="type"
-      :value="modelValue"
-      :placeholder="placeholder"
-      :disabled="disabled"
-      :required="required"
-      :aria-invalid="!!error"
-      :aria-describedby="error ? `${inputId}-error` : hint ? `${inputId}-hint` : undefined"
-      :class="inputClass"
-      @input="emit('update:modelValue', ($event.target as HTMLInputElement).value)"
-    >
+    <div :class="wrapperClass">
+      <span
+        v-if="hasPrefix"
+        class="flex items-center pl-3 pr-1 text-sm text-muted select-none"
+        aria-hidden="true"
+      >
+        <slot name="prefix" />
+      </span>
+
+      <input
+        :id="inputId"
+        :type="type"
+        :value="modelValue"
+        :placeholder="placeholder"
+        :disabled="disabled"
+        :required="required"
+        :aria-invalid="!!error"
+        :aria-describedby="error ? `${inputId}-error` : hint ? `${inputId}-hint` : undefined"
+        :class="inputClass"
+        @input="emit('update:modelValue', ($event.target as HTMLInputElement).value)"
+      >
+
+      <span
+        v-if="hasSuffix"
+        class="flex items-center pr-3 pl-1 text-sm text-muted select-none"
+        aria-hidden="true"
+      >
+        <slot name="suffix" />
+      </span>
+    </div>
 
     <p v-if="error" :id="`${inputId}-error`" class="text-xs text-error" role="alert">
       {{ error }}

@@ -25,32 +25,32 @@ const roomsByBuilding = computed(() => {
 const buildingsWithRooms = computed(() =>
   buildings.value.filter(b => (roomsByBuilding.value[b.id]?.length ?? 0) > 0),
 )
+
+const statusOptions = [
+  { value: 'available', label: 'Trống' },
+  { value: 'occupied', label: 'Đã có người thuê' },
+  { value: 'maintenance', label: 'Đang bảo trì' },
+]
 </script>
 
 <template>
   <div>
-    <div class="flex items-center justify-between mb-6">
-      <div>
-        <h1 class="text-xl font-semibold text-white">Phòng</h1>
-        <p class="text-sm text-muted mt-0.5">{{ total }} phòng</p>
-      </div>
-      <NuxtLink v-if="authStore.isAdmin" to="/rooms/create">
-        <UiButton>Thêm phòng</UiButton>
-      </NuxtLink>
-    </div>
+    <UiPageHeader title="Phòng" :description="`${total} phòng`">
+      <template #actions>
+        <NuxtLink v-if="authStore.isAdmin" to="/rooms/create">
+          <UiButton>Thêm phòng</UiButton>
+        </NuxtLink>
+      </template>
+    </UiPageHeader>
 
-    <!-- Status filter -->
-    <div class="flex flex-wrap gap-3 mb-6">
-      <select
+    <UiToolbar class="mb-6">
+      <UiSelect
         v-model="status"
-        class="rounded-md border border-dark-border bg-dark-surface px-3 py-1.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan/30 focus:border-cyan/70"
-      >
-        <option :value="undefined">Tất cả trạng thái</option>
-        <option value="available">Trống</option>
-        <option value="occupied">Đã có người thuê</option>
-        <option value="maintenance">Đang bảo trì</option>
-      </select>
-    </div>
+        :options="statusOptions"
+        placeholder="Tất cả trạng thái"
+        class="w-full sm:w-56"
+      />
+    </UiToolbar>
 
     <!-- Loading -->
     <div v-if="isLoading" class="space-y-8">
@@ -63,9 +63,9 @@ const buildingsWithRooms = computed(() =>
     </div>
 
     <!-- Error -->
-    <div v-else-if="error" class="text-sm text-error p-4 rounded-lg bg-error/10 border border-error/20">
+    <UiAlert v-else-if="error" severity="danger">
       Không thể tải danh sách phòng. Vui lòng thử lại.
-    </div>
+    </UiAlert>
 
     <!-- Empty -->
     <UiEmptyState

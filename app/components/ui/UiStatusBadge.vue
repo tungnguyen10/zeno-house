@@ -1,39 +1,18 @@
 <script setup lang="ts">
-import clsx from 'clsx'
+import { resolveStatus, type StatusContext } from '~/utils/constants/statuses'
 
 const props = defineProps<{
   status: string
+  /**
+   * Disambiguates keys that appear in multiple status maps (e.g. `draft`, `issued`
+   * exist for both billing period and invoice). Omit for entity defaults.
+   */
+  context?: StatusContext
 }>()
 
-interface StatusConfig {
-  label: string
-  class: string
-}
-
-const statusMap: Record<string, StatusConfig> = {
-  active:       { label: 'Đang hoạt động', class: 'bg-success-neon/10 text-success-neon' },
-  inactive:     { label: 'Ngừng hoạt động', class: 'bg-dark-surface text-muted' },
-  pending:      { label: 'Chờ duyệt', class: 'bg-warning/10 text-warning' },
-  terminated:   { label: 'Đã chấm dứt', class: 'bg-error-bg text-error-vivid' },
-  available:    { label: 'Trống', class: 'bg-success-neon/10 text-success-neon' },
-  occupied:     { label: 'Đã có người thuê', class: 'bg-cyan/10 text-cyan' },
-  maintenance:  { label: 'Đang bảo trì', class: 'bg-warning/10 text-warning' },
-  vacant:       { label: 'Trống', class: 'bg-success-neon/10 text-success-neon' },
-  expired:      { label: 'Hết hạn', class: 'bg-warning/10 text-warning' },
-}
-
-const config = computed(() =>
-  statusMap[props.status] ?? { label: props.status, class: 'bg-dark-surface text-muted' },
-)
-
-const badgeClass = computed(() =>
-  clsx(
-    'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
-    config.value.class,
-  )
-)
+const config = computed(() => resolveStatus(props.status, props.context))
 </script>
 
 <template>
-  <span :class="badgeClass">{{ config.label }}</span>
+  <UiBadge :variant="config.variant" pill>{{ config.label }}</UiBadge>
 </template>

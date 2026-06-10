@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import clsx from 'clsx'
 import { formatCurrency } from '~/utils/format/currency'
 import type { ContractPayment } from '~/types/contract-payments'
 import type { ContractPaymentCreateInput } from '~/utils/validators/contract-payments'
@@ -17,15 +16,17 @@ const emit = defineEmits<{
 
 const isEdit = computed(() => !!props.initialData)
 
-const PAYMENT_TYPE_LABELS: Record<string, string> = {
-  deposit: 'Đặt cọc',
-  prepaid_rent: 'Trả trước tiền thuê',
-  rent: 'Tiền thuê',
-  other: 'Khác',
-}
+type PaymentType = ContractPaymentCreateInput['payment_type']
+
+const PAYMENT_TYPE_OPTIONS: { value: PaymentType, label: string }[] = [
+  { value: 'deposit', label: 'Đặt cọc' },
+  { value: 'prepaid_rent', label: 'Trả trước tiền thuê' },
+  { value: 'rent', label: 'Tiền thuê' },
+  { value: 'other', label: 'Khác' },
+]
 
 const form = reactive({
-  payment_type: (props.initialData?.paymentType ?? 'deposit') as ContractPaymentCreateInput['payment_type'],
+  payment_type: (props.initialData?.paymentType ?? 'deposit') as PaymentType,
   amount: props.initialData?.amount ? String(props.initialData.amount) : '',
   paid_at: props.initialData?.paidAt ?? new Date().toISOString().slice(0, 10),
   covered_period_start: props.initialData?.coveredPeriodStart ?? '',
@@ -37,6 +38,12 @@ const form = reactive({
 const fieldErrors = ref<Record<string, string>>({})
 
 const showPeriod = computed(() => form.payment_type === 'prepaid_rent' || form.payment_type === 'rent')
+
+const amountHint = computed(() => {
+  const value = Number(form.amount)
+  if (!form.amount || isNaN(value) || value <= 0) return undefined
+  return formatCurrency(value)
+})
 
 function validate(): boolean {
   fieldErrors.value = {}
@@ -69,110 +76,73 @@ function handleSubmit() {
   }
   emit('submit', input)
 }
-
-const inputClass = 'block w-full rounded-md border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-cyan-500'
-const labelClass = 'block text-sm font-medium text-zinc-300 mb-1'
-const errorClass = 'mt-1 text-xs text-red-400'
 </script>
 
 <template>
   <form class="space-y-4" novalidate @submit.prevent="handleSubmit">
-    <!-- API error -->
-    <div v-if="props.apiError" class="rounded-md bg-red-900/30 border border-red-700 px-4 py-3 text-sm text-red-300">
+    <UiAlert v-if="props.apiError" severity="danger">
       {{ props.apiError }}
+    </UiAlert>
+
+    <UiSelect
+      v-model="form.payment_type"
+      label="Loại thanh toán"
+      :options="PAYMENT_TYPE_OPTIONS"
+      :error="fieldErrors.payment_type"
+      required
+    />
+
+    <UiInput
+      v-model="form.amount"
+      label="Số tiền (VND)"
+      type="number"
+      placeholder="ví dụ: 3000000"
+      :error="fieldErrors.amount"
+      :hint="amountHint"
+      required
+    />
+
+    <UiInput
+      v-model="form.paid_at"
+      label="Ngày thanh toán"
+      type="date"
+      :error="fieldErrors.paid_at"
+      required
+    />
+
+    <div v-if="showPeriod" class="grid grid-cols-2 gap-3">
+      <UiInput
+        v-model="form.covered_period_start"
+        label="Kỳ bắt đầu"
+        placeholder="2025-01"
+        :error="fieldErrors.covered_period_start"
+      />
+      <UiInput
+        v-model="form.covered_period_end"
+        label="Kỳ kết thúc"
+        placeholder="2025-03"
+        :error="fieldErrors.covered_period_end"
+      />
     </div>
 
-    <!-- Payment type -->
-    <div>
-      <label :class="labelClass">Loại thanh toán <span class="text-red-400">*</span></label>
-      <select v-model="form.payment_type" :class="inputClass">
-        <option v-for="(label, val) in PAYMENT_TYPE_LABELS" :key="val" :value="val">{{ label }}</option>
-      </select>
-      <p v-if="fieldErrors.payment_type" :class="errorClass">{{ fieldErrors.payment_type }}</p>
-    </div>
+    <UiInput
+      v-model="form.payment_method"
+      label="Hình thức thanh toán"
+      placeholder="Tiền mặt, chuyển khoản, ..."
+    />
 
-    <!-- Amount -->
-    <div>
-      <label :class="labelClass">Số tiền (VND) <span class="text-red-400">*</span></label>
-      <input
-        v-model="form.amount"
-        type="number"
-        min="1"
-        placeholder="ví dụ: 3000000"
-        :class="clsx(inputClass, fieldErrors.amount && 'border-red-500')"
-      >
-      <p v-if="fieldErrors.amount" :class="errorClass">{{ fieldErrors.amount }}</p>
-      <p v-else-if="form.amount && !isNaN(Number(form.amount)) && Number(form.amount) > 0" class="mt-1 text-xs text-zinc-400">
-        {{ formatCurrency(Number(form.amount)) }}
-      </p>
-    </div>
+    <UiTextarea
+      v-model="form.note"
+      label="Ghi chú"
+      :rows="2"
+      placeholder="Ghi chú thêm (tuỳ chọn)"
+    />
 
-    <!-- Paid at -->
-    <div>
-      <label :class="labelClass">Ngày thanh toán <span class="text-red-400">*</span></label>
-      <input v-model="form.paid_at" type="date" :class="clsx(inputClass, fieldErrors.paid_at && 'border-red-500')" >
-      <p v-if="fieldErrors.paid_at" :class="errorClass">{{ fieldErrors.paid_at }}</p>
-    </div>
-
-    <!-- Period (for prepaid_rent and rent) -->
-    <template v-if="showPeriod">
-      <div class="grid grid-cols-2 gap-3">
-        <div>
-          <label :class="labelClass">Kỳ bắt đầu</label>
-          <input
-            v-model="form.covered_period_start"
-            type="text"
-            placeholder="2025-01"
-            :class="clsx(inputClass, fieldErrors.covered_period_start && 'border-red-500')"
-          >
-          <p v-if="fieldErrors.covered_period_start" :class="errorClass">{{ fieldErrors.covered_period_start }}</p>
-        </div>
-        <div>
-          <label :class="labelClass">Kỳ kết thúc</label>
-          <input
-            v-model="form.covered_period_end"
-            type="text"
-            placeholder="2025-03"
-            :class="clsx(inputClass, fieldErrors.covered_period_end && 'border-red-500')"
-          >
-          <p v-if="fieldErrors.covered_period_end" :class="errorClass">{{ fieldErrors.covered_period_end }}</p>
-        </div>
-      </div>
-    </template>
-
-    <!-- Payment method -->
-    <div>
-      <label :class="labelClass">Hình thức thanh toán</label>
-      <input
-        v-model="form.payment_method"
-        type="text"
-        placeholder="Tiền mặt, chuyển khoản, ..."
-        :class="inputClass"
-      >
-    </div>
-
-    <!-- Note -->
-    <div>
-      <label :class="labelClass">Ghi chú</label>
-      <textarea v-model="form.note" rows="2" :class="inputClass" placeholder="Ghi chú thêm (tuỳ chọn)" />
-    </div>
-
-    <!-- Actions -->
     <div class="flex items-center justify-end gap-3 pt-2">
-      <button
-        type="button"
-        class="px-4 py-2 text-sm font-medium text-zinc-300 hover:text-white transition-colors"
-        @click="emit('cancel')"
-      >
-        Huỷ
-      </button>
-      <button
-        type="submit"
-        :disabled="props.loading"
-        class="px-4 py-2 text-sm font-medium rounded-md bg-cyan-600 text-white hover:bg-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-      >
-      {{ props.loading ? 'Đang lưu...' : (isEdit ? 'Cập nhật' : 'Lưu thanh toán') }}
-      </button>
+      <UiButton variant="ghost" type="button" @click="emit('cancel')">Huỷ</UiButton>
+      <UiButton type="submit" :loading="props.loading">
+        {{ isEdit ? 'Cập nhật' : 'Lưu thanh toán' }}
+      </UiButton>
     </div>
   </form>
 </template>
