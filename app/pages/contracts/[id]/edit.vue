@@ -55,7 +55,7 @@ async function onSubmit(data: ContractFormData) {
 </script>
 
 <template>
-  <div class="max-w-2xl">
+  <div class="">
     <div class="mb-6">
       <NuxtLink :to="`/contracts/${id}`" class="text-sm text-muted hover:text-white transition-colors">
         ← Chi tiết hợp đồng

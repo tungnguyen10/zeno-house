@@ -5,6 +5,8 @@ import type { ContractRenewal } from '~/types/contract-renewals'
 import type { ContractRenewInput } from '~/utils/validators/contract-renewals'
 import { ContractRenewalRepository } from '../repositories/contract-renewals'
 import { ContractRepository } from '../repositories/contracts'
+import { ContractServiceRepository } from '../repositories/contract-services'
+import { ContractOccupantRepository } from '../repositories/contract-occupants'
 
 export const ContractRenewalService = {
   async list(event: H3Event, user: AuthUser, contractId: string): Promise<ContractRenewal[]> {
@@ -31,19 +33,11 @@ export const ContractRenewalService = {
     const newRent = input.new_monthly_rent ?? contract.monthlyRent
 
     if (input.mode === 'extend') {
-      // Update contract end_date in place, preserve original_end_date
-      const { error } = await client
-        .from('contracts')
-        .update({
-          end_date: newEndDate,
-          ...(newRent !== undefined && { monthly_rent: newRent }),
-          original_end_date: contract.originalEndDate ?? contract.endDate,
-          renewal_count: contract.renewalCount + 1,
-        })
-        .eq('id', contractId)
-      if (error) throw createError({ statusCode: 500, message: error.message })
-
-      return ContractRenewalRepository.insert(event, {
+      // ORDER MATTERS: insert the log BEFORE mutating the contract.
+      // If the contract UPDATE fails, we delete the log to roll back.
+      // If we update first and the log insert fails, renewal_count gets bumped
+      // without a matching log row → UI shows "N lần" with fewer entries.
+      const renewal = await ContractRenewalRepository.insert(event, {
         contract_id: contractId,
         new_contract_id: null,
         mode: 'extend',
@@ -54,10 +48,41 @@ export const ContractRenewalService = {
         reason: input.reason ?? null,
         created_by: user.id,
       })
+
+      const { error } = await client
+        .from('contracts')
+        .update({
+          end_date: newEndDate,
+          ...(newRent !== undefined && { monthly_rent: newRent }),
+          original_end_date: contract.originalEndDate ?? contract.endDate,
+          renewal_count: contract.renewalCount + 1,
+        })
+        .eq('id', contractId)
+      if (error) {
+        // Best-effort rollback: remove the orphan log row
+        await ContractRenewalRepository.deleteById(event, renewal.id)
+        throw createError({ statusCode: 500, message: error.message })
+      }
+
+      return renewal
     }
 
     // mode === 'new_contract'
-    // Create successor contract
+    // ORDER MATTERS: there is a partial unique index
+    //   CREATE UNIQUE INDEX contracts_one_active_per_room ON contracts(room_id) WHERE status = 'active'
+    // We must flip the old contract OUT of `active` BEFORE inserting the successor as `active`,
+    // otherwise the insert violates the index.
+    //
+    // The old contract → `renewed` transition is done via the raw client (not ContractService.update)
+    // so it does NOT trigger the room-release side effect (we want the room to stay `occupied`).
+    const { error: markRenewedError } = await client
+      .from('contracts')
+      .update({ status: 'renewed' })
+      .eq('id', contractId)
+    if (markRenewedError) throw createError({ statusCode: 500, message: markRenewedError.message })
+
+    // Now insert successor as active. If this fails, roll the old contract back to `active`
+    // so the room is not left orphaned without an active contract.
     const { data: newContractData, error: insertError } = await client
       .from('contracts')
       .insert({
@@ -68,6 +93,7 @@ export const ContractRenewalService = {
         end_date: newEndDate,
         monthly_rent: newRent,
         deposit: contract.deposit,
+        payment_day: contract.paymentDay,
         occupant_count: contract.occupantCount,
         discount_amount: contract.discountAmount,
         surcharge_amount: contract.surchargeAmount,
@@ -78,14 +104,21 @@ export const ContractRenewalService = {
       })
       .select('id')
       .single()
-    if (insertError) throw createError({ statusCode: 500, message: insertError.message })
+    if (insertError) {
+      // Best-effort rollback: restore old contract status
+      await client.from('contracts').update({ status: 'active' }).eq('id', contractId)
+      throw createError({ statusCode: 500, message: insertError.message })
+    }
 
-    // Mark old contract as renewed
-    const { error: updateError } = await client
-      .from('contracts')
-      .update({ status: 'renewed' })
-      .eq('id', contractId)
-    if (updateError) throw createError({ statusCode: 500, message: updateError.message })
+    // Carry forward billing-critical context to the successor.
+    // Contract payments (deposit/prepaid/rent/other) are intentionally NOT copied.
+    await ContractServiceRepository.cloneFromContract(event, contractId, newContractData.id)
+    await ContractOccupantRepository.cloneActiveToContract(
+      event,
+      contractId,
+      newContractData.id,
+      contract.endDate,
+    )
 
     return ContractRenewalRepository.insert(event, {
       contract_id: contractId,

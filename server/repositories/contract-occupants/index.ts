@@ -90,4 +90,37 @@ export const ContractOccupantRepository = {
       .eq('id', occupantId)
     if (error) throw createError({ statusCode: 500, message: error.message })
   },
+
+  async cloneActiveToContract(
+    event: H3Event,
+    sourceContractId: string,
+    targetContractId: string,
+    moveInDate: string,
+  ): Promise<void> {
+    const client = await serverSupabaseClient(event)
+
+    const { data: activeOccupants, error: fetchError } = await client
+      .from('contract_occupants')
+      .select('tenant_id, role, billing_counted')
+      .eq('contract_id', sourceContractId)
+      .is('move_out_date', null)
+
+    if (fetchError || !activeOccupants || activeOccupants.length === 0) return
+
+    const rows = activeOccupants.map(o => ({
+      contract_id: targetContractId,
+      tenant_id: o.tenant_id,
+      role: o.role,
+      move_in_date: moveInDate,
+      billing_counted: o.billing_counted,
+    }))
+
+    const { error: insertError } = await client
+      .from('contract_occupants')
+      .insert(rows)
+
+    if (insertError) {
+      console.error('[ContractOccupantRepository.cloneActiveToContract]', insertError.message)
+    }
+  },
 }

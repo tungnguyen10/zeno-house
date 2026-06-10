@@ -41,7 +41,7 @@ async function onSubmit(data: TenantFormData) {
 </script>
 
 <template>
-  <div class="max-w-2xl">
+  <div class="">
     <div class="mb-6">
       <NuxtLink to="/tenants" class="text-sm text-muted hover:text-white transition-colors">
         ← Danh sách khách thuê

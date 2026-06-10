@@ -41,7 +41,7 @@ async function onSubmit(data: RoomFormData) {
 </script>
 
 <template>
-  <div class="max-w-2xl">
+  <div class="">
     <div class="mb-6">
       <NuxtLink :to="`/rooms/${id}`" class="text-sm text-muted hover:text-white transition-colors">
         ← Phòng {{ room?.roomNumber ?? '' }}

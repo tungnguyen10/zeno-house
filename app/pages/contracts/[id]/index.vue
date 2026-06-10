@@ -92,8 +92,19 @@ async function handleRenew(input: ContractRenewInput) {
     } else {
       await refreshContract()
     }
-  } catch {
-    renewalApiError.value = 'Không thể gia hạn hợp đồng. Vui lòng thử lại.'
+  } catch (err: unknown) {
+    const fetchErr = err as {
+      data?: { error?: { message?: string }, message?: string, statusMessage?: string }
+      statusMessage?: string
+      message?: string
+    }
+    renewalApiError.value
+      = fetchErr?.data?.error?.message
+      ?? fetchErr?.data?.message
+      ?? fetchErr?.data?.statusMessage
+      ?? fetchErr?.statusMessage
+      ?? fetchErr?.message
+      ?? 'Không thể gia hạn hợp đồng. Vui lòng thử lại.'
   } finally {
     isRenewing.value = false
   }
@@ -372,10 +383,15 @@ watchEffect(() => {
       <!-- Payments section -->
       <div class="rounded-xl border border-dark-border bg-dark-surface p-6 mt-4">
         <div class="flex items-center justify-between mb-4">
-          <h2 class="text-sm font-semibold text-white">Thanh toán</h2>
+          <div>
+            <h2 class="text-sm font-semibold text-white">Thanh toán hợp đồng</h2>
+            <p class="text-xs text-muted mt-0.5">
+              Ghi nhận đặt cọc, trả trước và các khoản phát sinh khi ký hợp đồng. Không dùng cho thanh toán hóa đơn hàng tháng — phần đó sẽ chuyển sang không gian Vận hành tháng khi có.
+            </p>
+          </div>
           <button
             v-if="authStore.isAdmin && !showPaymentForm"
-            class="text-xs font-medium text-cyan hover:text-white transition-colors"
+            class="text-xs font-medium text-cyan hover:text-white transition-colors whitespace-nowrap"
             @click="showPaymentForm = true"
           >
             + Thêm thanh toán

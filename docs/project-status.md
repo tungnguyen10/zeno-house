@@ -57,7 +57,7 @@ Hệ thống quản lý bất động sản cho chủ nhà trọ/tòa nhà.
 ### Rooms
 - CRUD: list, create, edit, detail
 - Status: `available` / `occupied` / `maintenance`
-- Detail page: thông tin phòng, hợp đồng đang active (tenant, link), lịch sử hợp đồng
+- Detail page: thông tin phòng, hợp đồng đang active (tenant, link), lịch sử hợp đồng (không hiển thị nhập chỉ số đồng hồ — monthly readings thuộc không gian Vận hành tháng)
 - Nút "Giao phòng" (admin, khi available) → navigate `/contracts/create?room_id=...`
 - Nút "Thu phòng" (admin, khi có active contract) → terminate contract → room về `available`
 - **Side-effects tự động**: tạo contract → room `occupied`; terminate/expire → room `available` (bỏ qua nếu đang `maintenance`)
@@ -130,7 +130,7 @@ type ApiError   = { error: { code: string; message: string; details?: unknown } 
 | Domain | Files |
 |--------|-------|
 | buildings | `useBuildingList`, `useBuildingDetail`, `useBuildingForm`, `useBuildingServices`, `useBuildingMeterReadings`, `useBuildingContractServices` |
-| rooms | `useRoomList`, `useRoomDetail`, `useRoomForm`, `useMeterReadings` |
+| rooms | `useRoomList`, `useRoomDetail`, `useRoomForm` |
 | tenants | `useTenantList`, `useTenantDetail`, `useTenantForm` |
 | contracts | `useContractList`, `useContractDetail`, `useContractForm`, `useContractOccupants`, `useContractPayments`, `useContractRenewals`, `useContractServices`, `useContractHandoverReadings` |
 | misc | `useDashboardSummary` |
@@ -147,7 +147,7 @@ type ApiError   = { error: { code: string; message: string; details?: unknown } 
 | Domain | Components |
 |--------|------------|
 | buildings | `BuildingCard`, `BuildingForm`, `BuildingServiceSettings`, `BuildingServicesMatrix`, `MeterReadingBulkInput` |
-| rooms | `RoomCard`, `RoomForm`, `RoomMeterReadings` |
+| rooms | `RoomCard`, `RoomForm` |
 | tenants | `TenantForm` |
 | contracts | `ContractForm`, `ContractOccupantForm`, `ContractPaymentForm`, `ContractRenewalForm`, `ContractServicesTab`, `ContractHandoverReadings` |
 

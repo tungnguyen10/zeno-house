@@ -63,6 +63,7 @@ F0.2.5.6  Navigation Alignment                      ✅  archived: 2026-05-17-pr
 F0.2.5.7  Architecture ADRs                         ✅  archived: 2026-05-17-product-flow-foundation
 F0.2.5.8  Contract Payments / Deposit / Prepaid Rent ✅  archived: 2026-05-17-contract-payments
 F0.2.5.9  Contract Renewal Model                    ✅  archived: 2026-05-17-contract-renewal
+F0.2.5.10 Cleanup & Billing Readiness               ✅  archived: 2026-06-10-cleanup-billing-readiness
 ```
 
 

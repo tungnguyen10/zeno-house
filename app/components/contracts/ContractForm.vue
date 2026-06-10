@@ -115,8 +115,9 @@ function update<K extends keyof ContractFormData>(field: K, value: ContractFormD
 function selectRoom(roomId: string) {
   const room = availableRooms.value.find((r) => r.id === roomId)
   const updates: Partial<ContractFormData> = { room_id: roomId }
-  // Auto-fill rent from room default if not yet set
-  if (room && !props.modelValue.monthly_rent) {
+  // Room là nguồn giá chuẩn — luôn ghi đè giá thuê theo phòng khi đổi phòng.
+  // User vẫn có thể sửa tay sau (ví dụ: giảm giá đặc biệt cho hợp đồng dài hạn).
+  if (room) {
     updates.monthly_rent = String(room.monthlyRent)
   }
   emit('update:modelValue', { ...props.modelValue, ...updates })
@@ -310,16 +311,21 @@ function onSubmit() {
     />
 
     <!-- monthly_rent -->
-    <UiInput
-      label="Giá thuê / tháng (VNĐ)"
-      type="number"
-      :model-value="modelValue.monthly_rent"
-      :error="errors.monthly_rent?.[0]"
-      :disabled="loading"
-      required
-      placeholder="0"
-      @update:model-value="update('monthly_rent', $event)"
-    />
+    <div class="flex flex-col gap-1">
+      <UiInput
+        label="Giá thuê / tháng (VNĐ)"
+        type="number"
+        :model-value="modelValue.monthly_rent"
+        :error="errors.monthly_rent?.[0]"
+        :disabled="loading"
+        required
+        placeholder="0"
+        @update:model-value="update('monthly_rent', $event)"
+      />
+      <p v-if="selectedRoom" class="text-xs text-muted">
+        Mặc định lấy theo phòng ({{ formatCurrency(selectedRoom.monthlyRent) }}/tháng) — sửa nếu cần ghi đè.
+      </p>
+    </div>
 
     <!-- deposit -->
     <UiInput

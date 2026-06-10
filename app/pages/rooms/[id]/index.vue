@@ -110,7 +110,10 @@ if (error.value?.statusCode === 404) {
           </div>
           <div>
             <p class="text-xs text-muted mb-1">Giá thuê / tháng</p>
-            <p class="text-sm text-white font-medium">{{ formatCurrency(room.monthlyRent) }}</p>
+            <p class="text-sm text-white font-medium">{{ formatCurrency(activeContract?.monthlyRent ?? room.monthlyRent) }}</p>
+            <p v-if="activeContract && activeContract.monthlyRent !== room.monthlyRent" class="text-xs text-muted mt-0.5">
+              Theo hợp đồng đang hiệu lực
+            </p>
           </div>
           <div v-if="room.area">
             <p class="text-xs text-muted mb-1">Diện tích</p>
@@ -190,12 +193,6 @@ if (error.value?.statusCode === 404) {
           </NuxtLink>
         </div>
         <p v-else class="text-sm text-muted">Chưa có hợp đồng</p>
-      </div>
-
-      <!-- Meter readings section -->
-      <div class="rounded-xl border border-dark-border bg-dark-surface p-6 mt-4">
-        <h2 class="text-sm font-semibold text-white mb-3">Chỉ số đồng hồ</h2>
-        <RoomMeterReadings :room-id="id" />
       </div>
     </template>
 

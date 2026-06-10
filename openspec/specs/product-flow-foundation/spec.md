@@ -1,15 +1,15 @@
 ## ADDED Requirements
 
 ### Requirement: Product flow foundation before billing workspace
-The system SHALL provide a foundation change that aligns Core Data with the future Monthly Billing Workspace before any billing runtime features are introduced. This foundation SHALL cover building operational config, quick room setup, occupant / roommate modeling, contract commercial terms, meter device lifecycle design, and navigation alignment.
+The system SHALL provide a foundation change that aligns Core Data with the future Monthly Billing Workspace before any billing runtime features are introduced. This foundation SHALL cover building operational config, quick room setup, occupant / roommate modeling, contract commercial terms, simplified meter reading inputs, and navigation alignment.
 
 #### Scenario: Foundation scope is visible
 - **WHEN** a developer reads the change specification
-- **THEN** they can see that the change covers core-data alignment only and does not include utility reading entry, service fee CRUD, invoice generation, or payment tracking
+- **THEN** they can see that the change covers core-data alignment only and does not include invoice generation, payment allocation, debt tracking, tenant portal, or automation
 
 #### Scenario: Room-centric billing is excluded
 - **WHEN** a developer proposes adding billing actions to Room detail as part of this foundation
-- **THEN** the specification states that Room detail remains a master data screen and billing work is deferred to the workspace model
+- **THEN** the specification states that Room detail remains a master data / occupancy screen and billing work is deferred to the workspace model
 
 ### Requirement: Building operational config
 The system SHALL allow a Building to store operational configuration values including owner/contact metadata, electricity pricing type, default electricity rate, water pricing type, default water rate, default service fees, meter reading day, billing generation day, payment due day, and grace period days.
@@ -55,16 +55,16 @@ The system SHALL treat Contract as the source of truth for commercial billing te
 - **WHEN** a room has a default rent that differs from the contract rent
 - **THEN** the contract rent takes precedence for billing-related decisions
 
-### Requirement: Meter device lifecycle design
-The system SHALL define meter device lifecycle metadata for electricity and water meters, including active, replaced, broken, and inactive states, and SHALL preserve old meter history when a meter is replaced.
+### Requirement: Simplified meter reading foundation
+The system SHALL treat electricity and water readings as room-scoped readings identified by `(room_id, meter_type, period_year, period_month, reading_type)`. The foundation SHALL NOT require a `meter_devices` lifecycle abstraction.
 
-#### Scenario: Meter replacement preserves history
-- **WHEN** a meter is replaced
-- **THEN** the old meter remains recorded with an end reading or removed timestamp and the new meter starts a fresh lifecycle
+#### Scenario: Meter device lifecycle is not required
+- **WHEN** a developer implements monthly or handover readings
+- **THEN** the implementation uses `room_id + meter_type` directly and does not require creating or querying meter devices
 
-#### Scenario: Old readings are not overwritten
-- **WHEN** a new meter is installed in place of an old one
-- **THEN** historical readings for the old meter remain queryable
+#### Scenario: Handover reading supports first billing month
+- **WHEN** a room has no monthly reading from the previous period but has a `handover_in` reading
+- **THEN** the monthly reading workflow can use `handover_in` as the previous reading fallback
 
 ### Requirement: Operations navigation placeholder
 The system SHALL expose an Operations navigation group with a Monthly Billing placeholder route. The placeholder route SHALL communicate that billing execution is workspace-scoped and not room-centric.

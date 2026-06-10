@@ -111,7 +111,7 @@ async function onSubmit(data: ContractFormData) {
 </script>
 
 <template>
-  <div class="max-w-2xl">
+  <div class="">
     <!-- Page header -->
     <div class="mb-8">
       <NuxtLink

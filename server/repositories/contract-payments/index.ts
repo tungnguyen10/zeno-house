@@ -33,7 +33,6 @@ export const ContractPaymentRepository = {
       .from('contract_payments')
       .insert({
         contract_id: contractId,
-        tenant_id: input.tenant_id ?? null,
         payment_type: input.payment_type,
         amount: input.amount,
         covered_period_start: input.covered_period_start ?? null,

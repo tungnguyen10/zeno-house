@@ -5,7 +5,6 @@ export function mapContractPayment(row: Tables<'contract_payments'>): ContractPa
   return {
     id: row.id,
     contractId: row.contract_id,
-    tenantId: row.tenant_id,
     paymentType: row.payment_type as ContractPaymentType,
     amount: row.amount,
     coveredPeriodStart: row.covered_period_start,

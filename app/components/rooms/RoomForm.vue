@@ -98,16 +98,21 @@ function onSubmit() {
       </select>
     </div>
 
-    <UiInput
-      :model-value="String(modelValue.monthly_rent)"
-      label="Giá thuê / tháng (VND)"
-      placeholder="Ví dụ: 3500000"
-      type="number"
-      required
-      :disabled="loading"
-      :error="errors?.monthly_rent?.[0]"
-      @update:model-value="update('monthly_rent', Number($event))"
-    />
+    <div class="flex flex-col gap-1">
+      <UiInput
+        :model-value="String(modelValue.monthly_rent)"
+        label="Giá thuê / tháng (VND)"
+        placeholder="Ví dụ: 3500000"
+        type="number"
+        required
+        :disabled="loading"
+        :error="errors?.monthly_rent?.[0]"
+        @update:model-value="update('monthly_rent', Number($event))"
+      />
+      <p class="text-xs text-muted">
+        Đây là giá chuẩn của phòng — hợp đồng mới sẽ mặc định lấy theo giá này.
+      </p>
+    </div>
 
     <UiInput
       :model-value="modelValue.area"

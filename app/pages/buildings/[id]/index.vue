@@ -53,9 +53,9 @@ async function confirmDelete() {
           <UiButton
             variant="secondary"
             size="sm"
-            @click="navigateTo(`/buildings/${id}/meter-readings`)"
+            @click="navigateTo(`/billing?building=${id}`)"
           >
-            Nhập chỉ số tháng {{ new Date().getMonth() + 1 }}
+            Vận hành tháng {{ new Date().getMonth() + 1 }}
           </UiButton>
           <UiButton
             variant="secondary"

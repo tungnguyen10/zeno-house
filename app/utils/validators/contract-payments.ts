@@ -3,7 +3,6 @@ import { z } from 'zod'
 const PERIOD_REGEX = /^\d{4}-(0[1-9]|1[0-2])$/
 
 export const contractPaymentCreateSchema = z.object({
-  tenant_id: z.string().uuid('ID khách thuê không hợp lệ').nullable().optional(),
   payment_type: z.enum(['deposit', 'prepaid_rent', 'rent', 'other']),
   amount: z.number().positive('Số tiền phải lớn hơn 0'),
   covered_period_start: z

@@ -132,7 +132,6 @@ export type Database = {
         Row: {
           id: string
           contract_id: string
-          tenant_id: string | null
           payment_type: string
           amount: number
           covered_period_start: string | null
@@ -146,7 +145,6 @@ export type Database = {
         Insert: {
           id?: string
           contract_id: string
-          tenant_id?: string | null
           payment_type: string
           amount: number
           covered_period_start?: string | null
@@ -160,7 +158,6 @@ export type Database = {
         Update: {
           id?: string
           contract_id?: string
-          tenant_id?: string | null
           payment_type?: string
           amount?: number
           covered_period_start?: string | null
@@ -177,13 +174,6 @@ export type Database = {
             columns: ["contract_id"]
             isOneToOne: false
             referencedRelation: "contracts"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "contract_payments_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]
