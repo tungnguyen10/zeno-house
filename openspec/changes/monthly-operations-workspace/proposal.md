@@ -46,7 +46,11 @@ The next product step should make `/billing` the real monthly operations center.
   - `invoices`
   - `invoice_charges`
   - `invoice_payments`
+  - `billing_audit_events`
+- Add a lightweight utility usage snapshot/override model for meter reset or meter replacement cases without reintroducing meter device lifecycle management.
 - Support issuing invoice snapshots, recording invoice payments, viewing outstanding debt, and closing a period.
+- Preserve monthly calculation snapshots and operational audit history for billing-critical actions.
+- Define correction rules for pre-issue edits, void/reissue, paid-invoice adjustments, and closed-period corrections.
 - Add billing permissions and Supabase RLS policies for the new tables.
 - Document all database operations as manual SQL for Supabase Dashboard SQL Editor.
 
@@ -64,7 +68,7 @@ The next product step should make `/billing` the real monthly operations center.
   - permission map
   - database type generation after manual SQL is applied
 - Database:
-  - add 4 billing runtime tables
+  - add 6 billing runtime tables
   - add indexes, constraints, triggers, and RLS policies
   - no destructive cleanup expected in this change
 - Existing domains:
@@ -80,6 +84,7 @@ The next product step should make `/billing` the real monthly operations center.
 - Tiered electricity calculation engine
 - Editing historical invoice charge formulas after issue
 - Automatically migrating legacy `contract_payments.rent` rows into invoice payments
+- Full accounting ledger or double-entry bookkeeping
 
 ## Supabase Manual DB Scope
 
@@ -91,7 +96,10 @@ Required objects:
 - `public.invoices`
 - `public.invoice_charges`
 - `public.invoice_payments`
+- `public.billing_audit_events`
+- `public.billing_utility_usages`
 - indexes for period, invoice, status, and debt lookup
+- indexes for audit lookup by period, entity, actor, and created_at
 - RLS policies for admin/manager billing access
 - `updated_at` triggers using existing `public.set_updated_at()`
 
@@ -103,8 +111,8 @@ The SQL script must include:
 - post-apply verification queries
 - rollback note
 
-## Open Questions
+## Final Decisions For Implementation
 
-- Whether managers may close/reopen a period, or only admins may do that.
-- Whether invoice numbers should be human-readable from v1 of this change or deferred.
-- Whether water `per_person` should use active `contract_occupants` count for the whole period or contract `occupant_count` as fallback only.
+- Managers may read/write billing work but may not close/reopen periods by default; close/reopen requires `billing.close`.
+- Human-readable invoice numbers are deferred; this change can use internal UUIDs and display room/tenant/period context.
+- Water `per_person` uses active `contract_occupants` with `billing_counted = true`; fallback to `contracts.occupant_count` only when no occupant rows exist.

@@ -114,11 +114,21 @@ Before issue, charges are calculated from live contract, service, occupant, buil
 
 This avoids stale drafts while preserving auditability after invoice issue.
 
-### D3 - One invoice per contract per period
+Snapshot expectation:
+
+- `invoices` stores period/contract/room/tenant references and final amount totals
+- `invoice_charges` stores the line-level source, quantity, unit price, amount, and enough metadata to reconstruct how that line was calculated
+- utility charge metadata should include current/previous reading ids and values, billable usage, rate, pricing type, and whether the previous reading came from monthly, handover fallback, or a workspace usage override
+- per-person water metadata should include billing occupant count and source/fallback used
+- service charge metadata should include contract_service id, catalog id, quantity, and amount at issue time
+
+After issue, later changes to contract rent, service price, occupant count, or meter readings must not mutate already issued invoice totals.
+
+### D3 - One active invoice per contract per period
 
 An invoice belongs to one `billing_period` and one `contract`. It also stores `room_id` and `tenant_id` as snapshot references for query speed and historical display.
 
-Uniqueness: `(billing_period_id, contract_id)`.
+Uniqueness: one non-void invoice per `(billing_period_id, contract_id)`. Voided invoices remain as immutable history and may be replaced by a linked reissued invoice.
 
 ### D4 - Charge calculation rules
 
@@ -139,6 +149,37 @@ For each active contract in the selected building/period:
 
 `current` is the monthly reading for the target period. `previous` is previous month monthly reading, falling back to `handover_in` for first billing month, matching the existing meter reading API behavior.
 
+For normal usage, billable consumption is:
+
+```text
+current_reading_value - previous_reading_value
+```
+
+For meter reset/replacement, the workspace must allow an explicit utility usage override for that room + meter type + period. This avoids reintroducing a full meter device lifecycle while still making the monthly bill correct.
+
+Replacement example:
+
+```text
+Previous month final reading: 980
+Old meter final at replacement: 1000
+New meter starts at: 0
+Current new meter reading: 20
+
+Billable usage = (1000 - 980) + (20 - 0) = 40
+```
+
+The override must store enough data to explain the calculation:
+
+- previous source reading id/value
+- old meter final reading, when relevant
+- new meter start reading, when relevant
+- current reading id/value
+- billable usage
+- reason: `replacement`, `reset`, `correction`, or `manual_adjustment`
+- note
+
+When a valid override exists, draft charge and issued invoice must use `billable_usage` from the override instead of deriving usage directly from current minus previous.
+
 Billing occupant count should be computed from `contract_occupants` rows active during the period and `billing_counted = true`. If no occupant rows exist, fallback to `contracts.occupant_count`.
 
 ### D5 - Missing or invalid inputs block issue
@@ -148,7 +189,7 @@ Issue must be blocked when:
 - active contract lacks required billing references
 - required utility pricing config is missing
 - per-usage utility requires current or previous reading and either is missing
-- current reading is lower than previous reading
+- current reading is lower than previous reading and there is no valid utility usage override
 - building electricity pricing is `tiered`
 - invoice for the same contract and period already exists unless the operation is an idempotent re-issue of a draft
 
@@ -158,6 +199,38 @@ Monthly collection records go to `invoice_payments`, not `contract_payments`.
 
 `contract_payments` remains for deposit/prepaid/legacy contract-level records. Existing `rent` rows remain readable but must not be treated as invoice settlement source.
 
+### D6a - Corrections follow invoice state
+
+Correction behavior must depend on invoice and period state:
+
+```text
+Before issue
+  -> edit source data or utility usage override
+  -> draft recalculates
+
+Issued, no payment recorded
+  -> void invoice
+  -> reissue replacement invoice from corrected inputs
+
+Issued, payment already recorded
+  -> do not mutate old invoice totals
+  -> add an adjustment line to current/future invoice
+  -> keep original invoice and payment history intact
+
+Closed period
+  -> normal edits blocked
+  -> admin may reopen explicitly, or create adjustment in a later open period
+```
+
+Rules:
+
+- Directly editing issued invoice charge formulas is not allowed.
+- Voiding an invoice requires reason, actor, and timestamp.
+- A reissued invoice should link to the voided invoice it replaces.
+- Adjustments use `invoice_charges.charge_type = 'adjustment'` and metadata must reference the original invoice/period/reason.
+- Payment correction, if supported, must be audited and must update paid/balance/status transactionally.
+- Once a period is closed, correction should prefer adjustment in a later period unless an admin explicitly reopens the period.
+
 ### D7 - Period close locks mutable monthly actions
 
 When a period is `closed`:
@@ -166,6 +239,31 @@ When a period is `closed`:
 - invoice charges should not be regenerated
 - invoice payments should not be added/edited through the normal flow
 - reopening, if implemented, must be an explicit privileged action
+
+### D7a - Billing audit events preserve operational history
+
+Billing-critical actions should append immutable audit events. This is separate from invoice snapshots:
+
+- snapshots answer: "what numbers were billed?"
+- audit events answer: "who did what, when, and what changed?"
+
+Required audited actions:
+
+- period opened
+- period status changed
+- readings saved from the billing workspace
+- utility usage override created or updated
+- draft reviewed or issue attempted with blockers
+- invoices issued
+- invoice payment recorded
+- invoice payment corrected or removed, if supported
+- invoice voided, if supported
+- invoice reissued from a voided invoice
+- adjustment charge created
+- period closed
+- period reopened, if supported
+
+Audit events should store actor id, action, entity type/id, billing period id, before/after JSON when applicable, metadata JSON, and timestamp.
 
 ### D8 - Permissions
 
@@ -249,6 +347,10 @@ Columns:
 - `issued_at timestamptz`
 - `paid_at timestamptz`
 - `voided_at timestamptz`
+- `voided_by uuid references auth.users(id)`
+- `void_reason text`
+- `superseded_by_invoice_id uuid references public.invoices(id) on delete set null`
+- `supersedes_invoice_id uuid references public.invoices(id) on delete set null`
 - `subtotal_amount numeric(12,0) not null default 0`
 - `discount_amount numeric(12,0) not null default 0`
 - `surcharge_amount numeric(12,0) not null default 0`
@@ -261,12 +363,14 @@ Columns:
 
 Constraints/indexes:
 
-- `unique (billing_period_id, contract_id)`
+- partial unique index on `(billing_period_id, contract_id)` where `status <> 'void'`
 - check amounts are non-negative except no check needed for line-level negative adjustment if handled in charges
+- check `void_reason` is present when status is `void`
 - index `(billing_period_id, status)`
 - index `(contract_id)`
 - index `(tenant_id)`
 - index `(balance_amount)` where `balance_amount > 0`
+- index `(supersedes_invoice_id)`
 
 Data impact: additive only.
 
@@ -360,19 +464,107 @@ Rollback:
 drop table if exists public.invoice_payments cascade;
 ```
 
-### Operation 5 - Triggers and RLS
+### Operation 5 - Create `billing_utility_usages`
+
+Columns:
+
+- `id uuid primary key default gen_random_uuid()`
+- `billing_period_id uuid not null references public.billing_periods(id) on delete cascade`
+- `room_id uuid not null references public.rooms(id) on delete restrict`
+- `meter_type text not null check (meter_type in ('electricity','water'))`
+- `previous_reading_id uuid references public.meter_readings(id) on delete set null`
+- `previous_reading_value numeric(12,3) not null check (previous_reading_value >= 0)`
+- `current_reading_id uuid references public.meter_readings(id) on delete set null`
+- `current_reading_value numeric(12,3) not null check (current_reading_value >= 0)`
+- `old_meter_final_value numeric(12,3) check (old_meter_final_value >= 0)`
+- `new_meter_start_value numeric(12,3) check (new_meter_start_value >= 0)`
+- `billable_usage numeric(12,3) not null check (billable_usage >= 0)`
+- `reason text not null default 'normal' check (reason in ('normal','replacement','reset','correction','manual_adjustment'))`
+- `note text`
+- `created_by uuid references auth.users(id)`
+- `created_at timestamptz not null default now()`
+- `updated_at timestamptz not null default now()`
+
+Constraints/indexes:
+
+- `unique (billing_period_id, room_id, meter_type)`
+- index `(room_id, meter_type)`
+- index `(billing_period_id)`
+
+Data impact: additive only.
+
+Verification:
+
+```sql
+select column_name, data_type
+from information_schema.columns
+where table_schema = 'public'
+  and table_name = 'billing_utility_usages'
+order by ordinal_position;
+```
+
+Rollback:
+
+```sql
+drop table if exists public.billing_utility_usages cascade;
+```
+
+### Operation 6 - Create `billing_audit_events`
+
+Columns:
+
+- `id uuid primary key default gen_random_uuid()`
+- `billing_period_id uuid references public.billing_periods(id) on delete cascade`
+- `actor_id uuid references auth.users(id)`
+- `action text not null`
+- `entity_type text not null check (entity_type in ('billing_period','meter_reading','billing_utility_usage','invoice','invoice_charge','invoice_payment'))`
+- `entity_id uuid`
+- `before_data jsonb`
+- `after_data jsonb`
+- `metadata jsonb not null default '{}'::jsonb`
+- `created_at timestamptz not null default now()`
+
+Constraints/indexes:
+
+- index `(billing_period_id, created_at desc)`
+- index `(entity_type, entity_id, created_at desc)`
+- index `(actor_id, created_at desc)`
+- check `action <> ''`
+
+Data impact: additive only.
+
+Verification:
+
+```sql
+select column_name, data_type
+from information_schema.columns
+where table_schema = 'public'
+  and table_name = 'billing_audit_events'
+order by ordinal_position;
+```
+
+Rollback:
+
+```sql
+drop table if exists public.billing_audit_events cascade;
+```
+
+### Operation 7 - Triggers and RLS
 
 Triggers:
 
 - add `public.set_updated_at()` trigger to `billing_periods`
 - add `public.set_updated_at()` trigger to `invoices`
 - add `public.set_updated_at()` trigger to `invoice_payments`
+- add `public.set_updated_at()` trigger to `billing_utility_usages`
 
 RLS:
 
-- enable RLS on all four new tables
-- admin: all operations on all four tables
-- manager: select/insert/update on `billing_periods`, `invoices`, `invoice_charges`, `invoice_payments`, except close/reopen remains enforced in service layer through `billing.close`
+- enable RLS on all six new tables
+- admin: all operations on all six tables
+- manager: select/insert/update on `billing_periods`, `invoices`, `invoice_charges`, `invoice_payments`, `billing_utility_usages`
+- manager: select/insert on `billing_audit_events`; audit updates/deletes should not be part of normal application behavior
+- close/reopen remains enforced in service layer through `billing.close`
 
 Post-apply verification:
 
@@ -380,7 +572,7 @@ Post-apply verification:
 select tablename, rowsecurity
 from pg_tables
 where schemaname = 'public'
-  and tablename in ('billing_periods', 'invoices', 'invoice_charges', 'invoice_payments');
+  and tablename in ('billing_periods', 'invoices', 'invoice_charges', 'invoice_payments', 'billing_utility_usages', 'billing_audit_events');
 ```
 
 ## Risks
@@ -389,3 +581,4 @@ where schemaname = 'public'
 - `tiered` electricity exists in building config but has no tier schema. Blocking issue for tiered buildings is safer than silently misbilling.
 - Payment totals must be kept consistent. The implementation should update invoice `paid_amount`, `balance_amount`, and `status` transactionally when payments change.
 - Closing a period without a reopen strategy can trap mistakes. If reopen is deferred, close confirmation must be explicit and visible.
+- Audit events can grow quickly. The first version should index by period/entity/actor and avoid storing oversized payloads.

@@ -44,6 +44,10 @@ The billing workspace SHALL provide monthly meter reading entry for the selected
 - **WHEN** readings already exist for the workspace period
 - **THEN** the reading step preloads them for review or correction
 
+#### Scenario: Meter replacement override
+- **WHEN** the current reading cannot be calculated normally from the previous reading because a meter was replaced or reset
+- **THEN** the reading step allows the user to enter old meter final value, new meter start value, current value, billable usage, reason, and note
+
 ### Requirement: Charge review UI
 The billing workspace SHALL show draft charges before issue.
 
@@ -76,6 +80,21 @@ The billing workspace SHALL support monthly collection tracking.
 #### Scenario: Debt list
 - **WHEN** invoices have remaining balances
 - **THEN** the workspace shows outstanding debt by room/tenant
+
+### Requirement: Correction UI
+The billing workspace SHALL expose correction actions according to invoice and period state.
+
+#### Scenario: Pre-issue correction
+- **WHEN** invoices have not been issued
+- **THEN** the UI lets users correct readings, utility overrides, or billing inputs and return to review
+
+#### Scenario: Void and reissue visible
+- **WHEN** an issued invoice has no payments and the period is not closed
+- **THEN** the UI offers void/reissue with required reason
+
+#### Scenario: Adjustment visible
+- **WHEN** an invoice already has payments or belongs to a closed period
+- **THEN** the UI guides the user to create an adjustment in a current or future open period instead of editing the old invoice
 
 ### Requirement: Closed period UI
 The billing workspace SHALL represent closed periods as locked.

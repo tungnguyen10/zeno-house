@@ -63,6 +63,10 @@ The API SHALL provide draft invoice previews before issue.
 - **WHEN** the workspace requests draft charges
 - **THEN** the API returns per-contract draft invoices with line items, totals, warnings, and blockers
 
+#### Scenario: Utility override used
+- **WHEN** a period-scoped utility usage override exists for a room and meter type
+- **THEN** the draft charge uses the override billable usage and includes override metadata
+
 #### Scenario: Unsupported tiered electricity
 - **WHEN** a building uses tiered electricity pricing
 - **THEN** the API returns a blocker instead of silently calculating electricity charges
@@ -88,3 +92,22 @@ The API SHALL record monthly payments against invoices.
 #### Scenario: Overpayment rejected
 - **WHEN** a payment would make paid amount greater than invoice total
 - **THEN** the API rejects the request with validation error
+
+### Requirement: Invoice correction API
+The API SHALL support controlled invoice corrections.
+
+#### Scenario: Void unpaid invoice
+- **WHEN** a user with sufficient permission voids an issued invoice with no payments
+- **THEN** the API marks it void, stores void reason metadata, and appends an audit event
+
+#### Scenario: Reissue replacement invoice
+- **WHEN** a voided invoice needs replacement
+- **THEN** the API issues a new invoice linked to the voided invoice
+
+#### Scenario: Paid invoice adjustment
+- **WHEN** a correction targets an invoice with recorded payments
+- **THEN** the API rejects direct mutation and requires an adjustment charge on a current or future invoice
+
+#### Scenario: Closed period direct mutation rejected
+- **WHEN** a correction targets a closed period without explicit reopen flow
+- **THEN** the API rejects normal edit, void, or reissue actions
