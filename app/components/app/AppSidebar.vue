@@ -68,6 +68,7 @@ function navItemClass(to: string) {
             @click="emit('close')"
           >
             <span class="shrink-0 w-5 h-5 text-current" aria-hidden="true">
+              <!-- Icon placeholder — replaced by nuxt-svgo when SVGs are added -->
               <svg viewBox="0 0 20 20" fill="currentColor">
                 <circle cx="10" cy="10" r="3" />
               </svg>

@@ -163,36 +163,26 @@ export const MeterReadingRepository = {
 
   async bulkUpsert(
     event: H3Event,
-    readings: Array<MeterReadingCreateInput & { building_id: string; recorded_by?: string | null; updated_by?: string | null }>,
+    readings: Array<MeterReadingCreateInput & { building_id: string; recorded_by?: string | null }>,
   ): Promise<MeterReading[]> {
     const client = await serverSupabaseClient(event)
     const { data, error } = await client
       .from('meter_readings')
       .upsert(
-        readings.map((r) => {
-          // Sync reading_value = new_reading when new_reading is provided (billing write path)
-          const readingValue = r.new_reading != null ? r.new_reading : r.reading_value
-          return {
-            room_id: r.room_id,
-            building_id: r.building_id,
-            meter_type: r.meter_type,
-            reading_type: r.reading_type,
-            period_year: r.period_year,
-            period_month: r.period_month,
-            reading_date: r.reading_date,
-            reading_value: readingValue,
-            is_estimated: r.is_estimated ?? false,
-            notes: r.notes ?? null,
-            recorded_by: r.recorded_by ?? null,
-            old_reading: r.old_reading ?? null,
-            new_reading: r.new_reading ?? null,
-            consumption: r.consumption ?? null,
-            is_adjusted: r.is_adjusted ?? false,
-            adjustment_reason: r.adjustment_reason ?? null,
-            updated_by: r.updated_by ?? null,
-            updated_at: new Date().toISOString(),
-          }
-        }),
+        readings.map(r => ({
+          room_id: r.room_id,
+          building_id: r.building_id,
+          meter_type: r.meter_type,
+          reading_type: r.reading_type,
+          period_year: r.period_year,
+          period_month: r.period_month,
+          reading_date: r.reading_date,
+          reading_value: r.reading_value,
+          is_estimated: r.is_estimated ?? false,
+          notes: r.notes ?? null,
+          recorded_by: r.recorded_by ?? null,
+          updated_at: new Date().toISOString(),
+        })),
         { onConflict: 'room_id,meter_type,period_year,period_month,reading_type' },
       )
       .select()
@@ -229,31 +219,6 @@ export const MeterReadingRepository = {
       .from('meter_readings')
       .select('*')
       .eq('id', id)
-      .maybeSingle()
-
-    if (error) throw createError({ statusCode: 500, message: error.message })
-    return data ? mapMeterReading(data) : null
-  },
-
-  /**
-   * Returns the most recent monthly reading for a room+meterType, regardless of period.
-   * Used to auto-populate old_reading when opening the billing workspace.
-   */
-  async findLatestByRoomAndType(
-    event: H3Event,
-    roomId: string,
-    meterType: string,
-  ): Promise<MeterReading | null> {
-    const client = await serverSupabaseClient(event)
-    const { data, error } = await client
-      .from('meter_readings')
-      .select('*')
-      .eq('room_id', roomId)
-      .eq('meter_type', meterType)
-      .eq('reading_type', 'monthly')
-      .order('period_year', { ascending: false })
-      .order('period_month', { ascending: false })
-      .limit(1)
       .maybeSingle()
 
     if (error) throw createError({ statusCode: 500, message: error.message })
