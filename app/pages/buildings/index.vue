@@ -5,15 +5,16 @@ const { buildings, total, totalPages, page, isLoading, error } = useBuildingList
 
 <template>
   <div>
-    <div class="flex items-center justify-between mb-6">
-      <div>
-        <h1 class="text-xl font-semibold text-white">Tòa nhà</h1>
-        <p class="text-sm text-muted mt-0.5">{{ total }} tòa nhà</p>
-      </div>
-      <NuxtLink v-if="authStore.isAdmin" to="/buildings/create">
-        <UiButton>Thêm tòa nhà</UiButton>
-      </NuxtLink>
-    </div>
+    <UiPageHeader
+      title="Tòa nhà"
+      :description="`${total} tòa nhà`"
+    >
+      <template v-if="authStore.isAdmin" #actions>
+        <NuxtLink to="/buildings/create">
+          <UiButton>Thêm tòa nhà</UiButton>
+        </NuxtLink>
+      </template>
+    </UiPageHeader>
 
     <!-- Loading -->
     <div v-if="isLoading" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -21,9 +22,9 @@ const { buildings, total, totalPages, page, isLoading, error } = useBuildingList
     </div>
 
     <!-- Error -->
-    <div v-else-if="error" class="text-sm text-error p-4 rounded-lg bg-error/10 border border-error/20">
+    <UiAlert v-else-if="error" severity="danger">
       Không thể tải danh sách tòa nhà. Vui lòng thử lại.
-    </div>
+    </UiAlert>
 
     <!-- Empty -->
     <UiEmptyState

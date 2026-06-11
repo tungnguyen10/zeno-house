@@ -102,3 +102,30 @@ The billing workspace SHALL represent closed periods as locked.
 #### Scenario: Period closed
 - **WHEN** the workspace period is closed
 - **THEN** normal editing actions are disabled and the UI explains the locked state
+
+### Requirement: Billing UI uses operational design system
+The billing entry page and workspace SHALL be built from the adopted operational design-system primitives and patterns. Billing pages SHALL NOT introduce raw form controls, raw tables, raw alert blocks, or billing-only duplicate primitives unless the exception is documented.
+
+#### Scenario: Billing entry page composition
+- **WHEN** a user opens `/billing`
+- **THEN** the page uses `UiPageHeader`, `UiToolbar`, `UiMetric`, `UiTable`, `UiStatusBadge`, `UiAlert`, `UiSkeleton`, and `UiEmptyState` according to the state being rendered
+
+#### Scenario: Workspace composition
+- **WHEN** a user opens a billing workspace
+- **THEN** the workspace uses `UiPageHeader`, `UiTabs`, `UiSection`, `UiMetric`, `UiTable`, `UiAlert`, and primitive-backed actions for the end-to-end monthly flow
+
+#### Scenario: Dense editable billing rows
+- **WHEN** readings, charge review, adjustment, or payment rows require editable fields
+- **THEN** they use compact `UiInput`, `UiSelect`, or `UiTextarea` controls rather than raw inline input classes
+
+#### Scenario: Searchable billing selection
+- **WHEN** a billing workflow requires selecting a high-cardinality building, room, tenant, contract, invoice, or related subject
+- **THEN** it uses the searchable select primitive from the design system rather than a billing-specific custom dropdown
+
+#### Scenario: Billing status badge context
+- **WHEN** period, invoice, or correction statuses are displayed
+- **THEN** `UiStatusBadge` is rendered with the correct context so overlapping status keys use the correct label and semantic variant
+
+#### Scenario: Raw billing UI exception documented
+- **WHEN** a raw `input`, `select`, `textarea`, `table`, or `button` remains in billing pages/components
+- **THEN** the implementation documents why the design-system primitive cannot cover it yet and what follow-up is needed

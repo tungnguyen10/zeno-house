@@ -17,10 +17,16 @@ const props = withDefaults(defineProps<{
   required?: boolean
   disabled?: boolean
   id?: string
+  /**
+   * `normal` — default form field sizing (py-2).
+   * `compact` — dense table-cell / matrix sizing (py-1 text-xs).
+   */
+  density?: 'normal' | 'compact'
 }>(), {
   modelValue: null,
   required: false,
   disabled: false,
+  density: 'normal',
 })
 
 const emit = defineEmits<{
@@ -43,7 +49,8 @@ function onChange(event: Event) {
 
 const selectClass = computed(() =>
   clsx(
-    'block w-full rounded-md border bg-dark-surface px-3 py-2 text-sm text-white',
+    'block w-full rounded-md border bg-dark-surface px-3 text-white',
+    props.density === 'compact' ? 'py-1 text-xs' : 'py-2 text-sm',
     'focus:outline-none focus:ring-2 focus:ring-offset-0',
     // Native select arrow on dark theme: hide default and re-add via background image
     'appearance-none bg-no-repeat bg-[right_0.75rem_center] bg-[length:1rem_1rem]',

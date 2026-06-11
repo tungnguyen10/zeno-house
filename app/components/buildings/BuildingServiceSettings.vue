@@ -30,10 +30,10 @@ function effectivePricingType(item: ServiceCatalogItem): PricingType {
   return getService(item.id)?.pricingType ?? item.pricingType
 }
 
-function handleAmountBlur(catalogId: string, event: Event) {
-  const value = Number((event.target as HTMLInputElement).value)
-  if (!Number.isNaN(value) && value >= 0) {
-    emit('updateAmount', catalogId, value)
+function handleAmountInput(catalogId: string, value: string) {
+  const num = Number(value)
+  if (!Number.isNaN(num) && num >= 0) {
+    emit('updateAmount', catalogId, num)
   }
 }
 
@@ -60,20 +60,20 @@ const columns: UiTableColumn<ServiceCatalogItem>[] = [
       <UiSelect
         :model-value="effectivePricingType(row)"
         :options="PRICING_TYPE_OPTIONS"
+        density="compact"
         class="w-44"
         @update:model-value="(value) => emit('updatePricingType', row.id, value as PricingType)"
       />
     </template>
 
     <template #cell-amount="{ row }">
-      <input
+      <UiInput
+        density="compact"
         type="number"
-        min="0"
-        step="1000"
-        :value="getService(row.id)?.defaultAmount ?? 0"
-        class="w-32 rounded-md border border-dark-border bg-dark-surface px-2 py-1.5 text-right text-sm text-white focus:border-cyan/70 focus:ring-2 focus:ring-cyan/30 focus:outline-none"
-        @blur="handleAmountBlur(row.id, $event)"
-      >
+        :model-value="String(getService(row.id)?.defaultAmount ?? 0)"
+        class="w-32 text-right"
+        @update:model-value="(v) => handleAmountInput(row.id, v as string)"
+      />
     </template>
 
     <template #cell-active="{ row }">

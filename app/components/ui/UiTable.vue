@@ -69,7 +69,7 @@ function getCellValue(row: TRow, col: UiTableColumn<TRow>): unknown {
 </script>
 
 <template>
-  <div class="overflow-x-auto rounded-xl border border-dark-border bg-dark-surface">
+  <div class="relative overflow-x-auto rounded-xl border border-dark-border bg-dark-surface">
     <table class="min-w-full text-sm">
       <caption v-if="caption" class="sr-only">{{ caption }}</caption>
       <thead

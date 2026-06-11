@@ -77,58 +77,52 @@ async function handleUpdatePricingType(catalogId: string, pricingType: PricingTy
 
 <template>
   <div>
-    <div class="mb-6">
+    <UiPageHeader title="Cài đặt dịch vụ">
       <NuxtLink :to="`/buildings/${id}`" class="text-sm text-muted hover:text-white transition-colors">
         ← {{ building?.name ?? 'Tòa nhà' }}
       </NuxtLink>
-      <h1 class="text-xl font-semibold text-white mt-2">Cài đặt dịch vụ</h1>
-    </div>
+    </UiPageHeader>
 
     <!-- Building-level defaults -->
-    <div class="rounded-xl border border-dark-border bg-dark-surface p-6">
-      <h2 class="text-sm font-semibold text-white mb-4">Cấu hình mặc định</h2>
-      <p class="text-xs text-muted mb-6">
-        Bật dịch vụ nào sẽ tự động áp dụng vào hợp đồng mới. Đơn giá là giá trị gợi ý — có thể chỉnh trực tiếp trên hợp đồng.
-      </p>
-      <BuildingServiceSettings
-        :building-id="id"
-        :catalog="catalog"
-        :services="services"
-        :loading="loadingServices"
-        @toggle="handleToggle"
-        @update-amount="handleUpdateAmount"
-        @update-pricing-type="handleUpdatePricingType"
-      />
-    </div>
+    <UiSection title="Cấu hình mặc định" description="Bật dịch vụ nào sẽ tự động áp dụng vào hợp đồng mới. Đơn giá là giá trị gợi ý — có thể chỉnh trực tiếp trên hợp đồng." class="mt-6">
+      <div class="rounded-xl border border-dark-border bg-dark-surface p-6">
+        <BuildingServiceSettings
+          :building-id="id"
+          :catalog="catalog"
+          :services="services"
+          :loading="loadingServices"
+          @toggle="handleToggle"
+          @update-amount="handleUpdateAmount"
+          @update-pricing-type="handleUpdatePricingType"
+        />
+      </div>
+    </UiSection>
 
     <!-- Sync to active contracts -->
-    <div class="rounded-xl border border-dark-border bg-dark-surface p-6 mt-4">
-      <div class="flex items-center justify-between gap-4">
-        <div>
-          <h2 class="text-sm font-semibold text-white">Đồng bộ xuống hợp đồng active</h2>
-          <p class="text-xs text-muted mt-1">Thêm dịch vụ còn thiếu vào các hợp đồng đang active — không ghi đè giá đã chỉnh.</p>
-        </div>
-        <div class="flex items-center gap-3 shrink-0">
+    <UiSection title="Đồng bộ xuống hợp đồng active" description="Thêm dịch vụ còn thiếu vào các hợp đồng đang active — không ghi đè giá đã chỉnh." class="mt-6">
+      <template #actions>
+        <div class="flex items-center gap-3">
           <span v-if="syncResult" class="text-xs text-green-400">{{ syncResult }}</span>
           <UiButton size="sm" :loading="isSyncing" @click="handleSync">
             Đồng bộ
           </UiButton>
         </div>
-      </div>
-    </div>
+      </template>
+    </UiSection>
 
     <!-- Per-contract matrix -->
-    <div class="rounded-xl border border-dark-border bg-dark-surface p-6 mt-4">
-      <h2 class="text-sm font-semibold text-white mb-4">Dịch vụ theo hợp đồng</h2>
-      <BuildingServicesMatrix
-        :building-id="id"
-        :catalog="services.filter(s => s.isActive).map(s => s.catalog)"
-        :contracts="contractRows"
-        :services="contractServices"
-        :loading="loadingMatrix"
-        @update="updateContractService"
-      />
-    </div>
+    <UiSection title="Dịch vụ theo hợp đồng" class="mt-6">
+      <div class="rounded-xl border border-dark-border bg-dark-surface p-6">
+        <BuildingServicesMatrix
+          :building-id="id"
+          :catalog="services.filter(s => s.isActive).map(s => s.catalog)"
+          :contracts="contractRows"
+          :services="contractServices"
+          :loading="loadingMatrix"
+          @update="updateContractService"
+        />
+      </div>
+    </UiSection>
   </div>
 </template>
 

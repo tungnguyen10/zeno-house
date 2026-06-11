@@ -46,21 +46,16 @@ function onSubmit() {
 <template>
   <form class="space-y-5" @submit.prevent="onSubmit">
     <!-- Building selector -->
-    <div class="flex flex-col gap-1.5">
-      <label class="text-sm font-medium text-white">
-        Tòa nhà <span class="text-error">*</span>
-      </label>
-      <select
-        :value="modelValue.building_id"
-        :disabled="loading"
-        class="block w-full rounded-md border border-dark-border bg-dark-surface px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan/30 focus:border-cyan/70 disabled:bg-dark-hover disabled:text-muted disabled:cursor-not-allowed"
-        @change="update('building_id', ($event.target as HTMLSelectElement).value)"
-      >
-        <option value="">-- Chọn tòa nhà --</option>
-        <option v-for="b in buildings" :key="b.id" :value="b.id">{{ b.name }}</option>
-      </select>
-      <p v-if="errors?.building_id?.[0]" class="text-xs text-error">{{ errors.building_id[0] }}</p>
-    </div>
+    <UiSelect
+      :model-value="modelValue.building_id"
+      label="Tòa nhà"
+      :options="buildings.map(b => ({ value: b.id, label: b.name }))"
+      placeholder="-- Chọn tòa nhà --"
+      required
+      :disabled="loading"
+      :error="errors?.building_id?.[0]"
+      @update:model-value="update('building_id', String($event ?? ''))"
+    />
 
     <UiInput
       :model-value="modelValue.room_number"
@@ -84,19 +79,17 @@ function onSubmit() {
     />
 
     <!-- Status -->
-    <div class="flex flex-col gap-1.5">
-      <label class="text-sm font-medium text-white">Trạng thái</label>
-      <select
-        :value="modelValue.status"
-        :disabled="loading"
-        class="block w-full rounded-md border border-dark-border bg-dark-surface px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan/30 focus:border-cyan/70 disabled:bg-dark-hover disabled:text-muted disabled:cursor-not-allowed"
-        @change="update('status', ($event.target as HTMLSelectElement).value as RoomStatus)"
-      >
-        <option value="available">Trống</option>
-        <option value="occupied">Đã có người thuê</option>
-        <option value="maintenance">Đang bảo trì</option>
-      </select>
-    </div>
+    <UiSelect
+      :model-value="modelValue.status"
+      label="Trạng thái"
+      :options="[
+        { value: 'available', label: 'Trống' },
+        { value: 'occupied', label: 'Đã có người thuê' },
+        { value: 'maintenance', label: 'Đang bảo trì' },
+      ]"
+      :disabled="loading"
+      @update:model-value="update('status', String($event) as RoomStatus)"
+    />
 
     <div class="flex flex-col gap-1">
       <UiInput

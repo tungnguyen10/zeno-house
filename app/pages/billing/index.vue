@@ -18,6 +18,16 @@ const monthOptions = Array.from({ length: 12 }, (_, i) => i + 1)
 
 const canContinue = computed(() => Boolean(selectedBuildingId.value))
 
+const buildingSelectOptions = computed(() =>
+  buildings.value.map(b => ({ value: b.id, label: b.name }))
+)
+const yearSelectOptions = computed(() =>
+  yearOptions.value.map(y => ({ value: y, label: String(y) }))
+)
+const monthSelectOptions = computed(() =>
+  monthOptions.map(m => ({ value: m, label: `Tháng ${m}` }))
+)
+
 function openMeterReadings() {
   if (!selectedBuildingId.value) return
   // For now, monthly entry lives on building-scoped meter-readings.
@@ -31,46 +41,34 @@ function openMeterReadings() {
 
 <template>
   <div class="">
-    <div class="mb-6">
-      <h1 class="text-xl font-semibold text-white">Vận hành tháng</h1>
-      <p class="text-sm text-muted mt-1">
-        Chọn tòa nhà và kỳ thanh toán để bắt đầu nhập chỉ số đồng hồ và chuẩn bị số liệu cho hóa đơn.
-        Mọi tác vụ tính tiền hàng tháng sẽ diễn ra trong không gian làm việc theo Tòa nhà + Kỳ, không phải trên từng phòng.
-      </p>
-    </div>
+    <UiPageHeader title="Vận hành tháng" description="Chọn tòa nhà và kỳ thanh toán để bắt đầu nhập chỉ số đồng hồ và chuẩn bị số liệu cho hóa đơn." />
 
     <div class="rounded-xl border border-dark-border bg-dark-surface p-6 space-y-4">
-      <div>
-        <label class="block text-xs text-muted mb-1.5">Tòa nhà</label>
-        <select
+      <UiSection title="Chọn tòa nhà">
+        <UiSelect
           v-model="selectedBuildingId"
-          class="w-full rounded-lg border border-dark-border bg-dark-bg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan/60"
+          :options="buildingSelectOptions"
+          placeholder="— Chọn tòa nhà —"
           :disabled="isLoading"
-        >
-          <option value="">— Chọn tòa nhà —</option>
-          <option v-for="b in buildings" :key="b.id" :value="b.id">{{ b.name }}</option>
-        </select>
-      </div>
+          class="w-full"
+        />
+      </UiSection>
 
       <div class="grid grid-cols-2 gap-4">
-        <div>
-          <label class="block text-xs text-muted mb-1.5">Tháng</label>
-          <select
-            v-model.number="selectedMonth"
-            class="w-full rounded-lg border border-dark-border bg-dark-bg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan/60"
-          >
-            <option v-for="m in monthOptions" :key="m" :value="m">Tháng {{ m }}</option>
-          </select>
-        </div>
-        <div>
-          <label class="block text-xs text-muted mb-1.5">Năm</label>
-          <select
-            v-model.number="selectedYear"
-            class="w-full rounded-lg border border-dark-border bg-dark-bg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan/60"
-          >
-            <option v-for="y in yearOptions" :key="y" :value="y">{{ y }}</option>
-          </select>
-        </div>
+        <UiSection title="Tháng">
+          <UiSelect
+            v-model="selectedMonth"
+            :options="monthSelectOptions"
+            class="w-full"
+          />
+        </UiSection>
+        <UiSection title="Năm">
+          <UiSelect
+            v-model="selectedYear"
+            :options="yearSelectOptions"
+            class="w-full"
+          />
+        </UiSection>
       </div>
 
       <div class="pt-2">

@@ -4,6 +4,8 @@
 
 Monthly billing is the main recurring job for a property manager. After `cleanup-billing-readiness`, the app has clean billing inputs but still lacks a single operational workspace where the manager can run a month end-to-end.
 
+This change should be implemented after `adopt-operational-design-system`. The billing workspace is table-heavy, correction-heavy, and status-heavy; building it before design-system adoption would recreate the same raw controls, ad-hoc tables, and one-off alerts that the cleanup change is meant to remove.
+
 Current state:
 
 - `/billing` only selects building + month and jumps to the old meter-reading page
@@ -53,6 +55,12 @@ The next product step should make `/billing` the real monthly operations center.
 - Define correction rules for pre-issue edits, void/reissue, paid-invoice adjustments, and closed-period corrections.
 - Add billing permissions and Supabase RLS policies for the new tables.
 - Document all database operations as manual SQL for Supabase Dashboard SQL Editor.
+- Build the `/billing` entry page and workspace using the adopted operational design system:
+  - `UiPageHeader`, `UiToolbar`, `UiMetric`, `UiTabs`, `UiTable`, `UiSection`
+  - `UiInput`, `UiSelect`, `UiTextarea` with compact density for dense rows
+  - searchable select primitive for building/room/tenant/contract/invoice selection where simple select is insufficient
+  - `UiAlert`, `UiEmptyState`, `UiSkeleton`, `UiStatusBadge`, `UiModal`/optional `UiDrawer`
+- Treat `adopt-operational-design-system` as a prerequisite for implementation sequencing.
 
 ## Impact
 
@@ -62,6 +70,7 @@ The next product step should make `/billing` the real monthly operations center.
   - new billing workspace page(s)
   - billing composables/components
   - navigation wording if needed
+  - must consume primitives and patterns finalized by `adopt-operational-design-system`
 - Server:
   - new billing API endpoints
   - new billing service/repository
@@ -85,6 +94,7 @@ The next product step should make `/billing` the real monthly operations center.
 - Editing historical invoice charge formulas after issue
 - Automatically migrating legacy `contract_payments.rent` rows into invoice payments
 - Full accounting ledger or double-entry bookkeeping
+- Recreating local billing-only UI primitives that duplicate `app/components/ui/*`
 
 ## Supabase Manual DB Scope
 

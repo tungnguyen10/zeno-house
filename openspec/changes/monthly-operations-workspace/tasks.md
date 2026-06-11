@@ -1,5 +1,14 @@
 # Tasks
 
+## 0. Prerequisite Design System Adoption
+
+- [ ] 0.1 Complete `adopt-operational-design-system` before implementing billing UI screens
+- [ ] 0.2 Confirm compact `UiInput`, `UiSelect`, and `UiTextarea` are available for dense billing rows
+- [ ] 0.3 Confirm searchable select primitive is available for building/room/tenant/contract/invoice selection
+- [ ] 0.4 Confirm `UiTable`, `UiTabs`, `UiMetric`, `UiToolbar`, `UiSection`, `UiAlert`, `UiStatusBadge`, `UiModal`, and optional `UiDrawer` cover the billing workspace needs
+- [ ] 0.5 Confirm `/ui-showcase` demonstrates the primitives/states that billing will rely on
+- [ ] 0.6 Document any remaining primitive gap before starting billing UI, rather than building a billing-only duplicate component
+
 ## 1. Supabase Manual SQL
 
 - [ ] 1.1 Prepare a single SQL script for Supabase Dashboard SQL Editor; do not rely on `supabase db push`
@@ -36,19 +45,22 @@
 
 ## 3. Billing Workspace UI
 
-- [ ] 3.1 Update `/billing` into a billing period list and monthly work queue
-- [ ] 3.2 Add filters for building, month/year, status, and debt state
+- [ ] 3.1 Update `/billing` into a billing period list and monthly work queue using `UiPageHeader`, `UiToolbar`, `UiMetric`, `UiTable`, `UiStatusBadge`, `UiAlert`, `UiSkeleton`, and `UiEmptyState`
+- [ ] 3.2 Add filters for building, month/year, status, and debt state using design-system controls and searchable select where needed
 - [ ] 3.3 Add create/open period action from `/billing`
-- [ ] 3.4 Add workspace route scoped by `buildingId + YYYY-MM`
-- [ ] 3.5 Add overview step with period status, coverage, missing readings, draft total, issued total, paid total, and debt total
-- [ ] 3.6 Embed bulk meter reading entry in the Readings step using selected period from the workspace route
-- [ ] 3.7 Add utility usage override UI for meter replacement/reset when current reading cannot be derived normally from previous reading
-- [ ] 3.8 Add Review Charges step with per-room/per-contract line item preview and blockers
-- [ ] 3.9 Add Issue Invoices action with confirmation and idempotency handling
-- [ ] 3.10 Add invoice correction UI for void/reissue when invoice has no payments
-- [ ] 3.11 Add adjustment UI for paid invoice or closed-period correction
-- [ ] 3.12 Add Payments/Debt step for recording payments and showing paid/partial/unpaid/overdue
-- [ ] 3.13 Add Close Period step with role-aware action and locked-state messaging
+- [ ] 3.4 Add workspace route scoped by `buildingId + YYYY-MM` with `UiPageHeader`, period status badge context, and role-aware primary actions
+- [ ] 3.5 Add workspace navigation with `UiTabs` for overview, readings, review charges, issue invoices, payments/debt, audit, and close period
+- [ ] 3.6 Add overview step with `UiMetric` totals for period status, coverage, missing readings, draft total, issued total, paid total, and debt total
+- [ ] 3.7 Embed bulk meter reading entry in the Readings step using selected period from the workspace route and compact primitive inputs for editable rows
+- [ ] 3.8 Add utility usage override UI for meter replacement/reset using modal/drawer pattern, compact controls, required reason, source context, and note
+- [ ] 3.9 Add Review Charges step with `UiTable` per-room/per-contract line item preview, numeric alignment, blockers, warnings, and contextual status badges
+- [ ] 3.10 Add Issue Invoices action with `UiModal`/confirmation, blocker alerts, and idempotency handling
+- [ ] 3.11 Add invoice correction UI for void/reissue when invoice has no payments, including source context and required reason
+- [ ] 3.12 Add adjustment UI for paid invoice or closed-period correction, including original invoice reference and current/future period target
+- [ ] 3.13 Add Payments/Debt step with `UiTable` for recording payments and showing paid/partial/unpaid/overdue using invoice status context
+- [ ] 3.14 Add billing audit step with dense list/table of actor, action, entity, timestamp, and metadata summary
+- [ ] 3.15 Add Close Period step with role-aware action, confirmation surface, locked-state messaging, and `billing.close` permission handling
+- [ ] 3.16 Ensure billing UI introduces no raw `input`, `select`, `textarea`, `table`, or `button` markup except documented exceptions or primitive internals
 
 ## 4. Boundary Updates
 
@@ -69,3 +81,7 @@
 - [ ] 5.8 Verify audit events exist for all billing-critical actions in the happy path
 - [ ] 5.9 Verify meter replacement calculation uses utility usage override and snapshots previous/current/replacement values into invoice charge metadata
 - [ ] 5.10 Verify correction flow: pre-issue edit recalculates draft, unpaid issued invoice can be voided/reissued, paid invoice correction creates adjustment, closed period blocks normal edits
+- [ ] 5.11 Verify `adopt-operational-design-system` is complete before billing UI implementation is considered complete
+- [ ] 5.12 Run raw UI scans on billing pages/components for `<input`, `<select`, `<textarea`, `<table`, and `<button`; resolve or document every remaining match
+- [ ] 5.13 Verify `/billing` and representative workspace tabs render correctly at desktop and mobile widths without text overflow, card nesting, or overlapping controls
+- [ ] 5.14 Verify billing status badges use explicit period/invoice/correction context

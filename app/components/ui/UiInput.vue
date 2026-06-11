@@ -11,10 +11,16 @@ const props = withDefaults(defineProps<{
   required?: boolean
   disabled?: boolean
   id?: string
+  /**
+   * `normal` — default form field sizing (py-2).
+   * `compact` — dense table-cell / matrix sizing (py-1 text-xs).
+   */
+  density?: 'normal' | 'compact'
 }>(), {
   type: 'text',
   required: false,
   disabled: false,
+  density: 'normal',
 })
 
 const emit = defineEmits<{
@@ -43,8 +49,9 @@ const wrapperClass = computed(() =>
 
 const inputClass = computed(() =>
   clsx(
-    'block w-full bg-transparent px-3 py-2 text-white placeholder-muted',
+    'block w-full bg-transparent px-3 text-white placeholder-muted',
     'focus:outline-none',
+    props.density === 'compact' ? 'py-1 text-xs' : 'py-2 text-sm',
     hasPrefix.value && 'pl-1',
     hasSuffix.value && 'pr-1',
     props.disabled && 'cursor-not-allowed text-muted',

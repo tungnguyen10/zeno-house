@@ -19,6 +19,8 @@ const {
 
 const saveSuccess = ref(false)
 
+const monthOptions = Array.from({ length: 12 }, (_, i) => ({ value: i + 1, label: `Tháng ${i + 1}` }))
+
 async function onSave(readings: Parameters<typeof saveBulk>[0]) {
   saveSuccess.value = false
   const ok = await saveBulk(readings)
@@ -28,38 +30,36 @@ async function onSave(readings: Parameters<typeof saveBulk>[0]) {
 
 <template>
   <div>
-    <div class="mb-6">
+    <UiPageHeader title="Nhập chỉ số đồng hồ">
       <NuxtLink :to="`/buildings/${id}`" class="text-sm text-muted hover:text-white transition-colors">
         ← {{ building?.name ?? 'Tòa nhà' }}
       </NuxtLink>
-      <h1 class="text-xl font-semibold text-white mt-2">Nhập chỉ số đồng hồ</h1>
-    </div>
+    </UiPageHeader>
 
     <!-- Period selector -->
     <div class="flex items-center gap-3 mb-4">
       <label class="text-sm text-muted">Kỳ:</label>
-      <select
+      <UiSelect
         v-model="periodMonth"
-        class="rounded border border-dark-border bg-dark-surface px-3 py-1.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan/30"
-      >
-        <option v-for="m in 12" :key="m" :value="m">Tháng {{ m }}</option>
-      </select>
-      <input
+        :options="monthOptions"
+        class="w-36"
+      />
+      <UiInput
         v-model="periodYear"
         type="number"
         min="2020"
         max="2100"
-        class="w-24 rounded border border-dark-border bg-dark-surface px-3 py-1.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan/30"
-      >
+        class="w-24"
+      />
     </div>
 
     <!-- Success / error messages -->
-    <div v-if="saveSuccess" class="mb-4 rounded-lg border border-green-500/20 bg-green-500/10 px-4 py-3 text-sm text-green-400">
+    <UiAlert v-if="saveSuccess" severity="success" class="mb-4">
       Đã lưu {{ savedCount }} chỉ số thành công.
-    </div>
-    <div v-if="saveErrors.length > 0" class="mb-4 rounded-lg border border-error/20 bg-error/10 px-4 py-3 text-sm text-error">
+    </UiAlert>
+    <UiAlert v-if="saveErrors.length > 0" severity="danger" class="mb-4">
       {{ saveErrors[0] }}
-    </div>
+    </UiAlert>
 
     <div class="rounded-xl border border-dark-border bg-dark-surface p-6">
       <div v-if="isLoading" class="space-y-2">

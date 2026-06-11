@@ -40,7 +40,6 @@ const emit = defineEmits<{
 }>()
 
 // Rooms with buildings lookup
-const roomSearch = ref('')
 const { data: roomsData } = useFetch<ApiSuccess<Room[]>>('/api/rooms', {
   query: computed(() => ({ limit: 200 })),
 })
@@ -75,37 +74,22 @@ const availableRooms = computed(() =>
   (roomsData.value?.data ?? []).filter((r) => !occupiedRoomIds.value.has(r.id)),
 )
 
-const filteredRooms = computed(() => {
-  const q = roomSearch.value.trim().toLowerCase()
-  if (!q) return availableRooms.value
-  return availableRooms.value.filter((r) => {
-    const buildingName = buildingMap.value[r.buildingId] ?? ''
-    return (
-      r.roomNumber.toLowerCase().includes(q) ||
-      buildingName.toLowerCase().includes(q)
-    )
-  })
-})
-
 const selectedRoom = computed(() =>
-  (roomsData.value?.data ?? []).find((r) => r.id === props.modelValue.room_id),
+  (roomsData.value?.data ?? []).find((r) => r.id === props.modelValue.room_id) ?? null,
 )
 
-// Tenants
-const tenantSearch = ref('')
+// Tenants — pre-load available tenants; UiCombobox handles client-side filtering
 const { data: tenantsData } = useFetch<ApiSuccess<Tenant[]>>('/api/tenants', {
   query: computed(() => ({
-    q: tenantSearch.value || undefined,
-    limit: 50,
+    limit: 200,
     available: true,
     excludeContractId: props.excludeContractId || undefined,
   })),
-  watch: [tenantSearch],
 })
-const filteredTenants = computed(() => tenantsData.value?.data ?? [])
+const availableTenants = computed(() => tenantsData.value?.data ?? [])
 
 const selectedTenant = computed(() =>
-  filteredTenants.value.find((t) => t.id === props.modelValue.tenant_id),
+  availableTenants.value.find((t) => t.id === props.modelValue.tenant_id) ?? null,
 )
 
 function update<K extends keyof ContractFormData>(field: K, value: ContractFormData[K]) {
@@ -123,6 +107,18 @@ function selectRoom(roomId: string) {
   emit('update:modelValue', { ...props.modelValue, ...updates })
 }
 
+function onRoomSelect(room: Room | null) {
+  if (!room) {
+    update('room_id', '')
+    return
+  }
+  selectRoom(room.id)
+}
+
+function onTenantSelect(tenant: Tenant | null) {
+  update('tenant_id', tenant?.id ?? '')
+}
+
 function onSubmit() {
   emit('submit', props.modelValue)
 }
@@ -132,161 +128,36 @@ function onSubmit() {
   <form class="space-y-5" @submit.prevent="onSubmit">
 
     <!-- Room picker -->
-    <div class="flex flex-col gap-1.5">
-      <label class="text-sm font-medium text-muted">
-        Phòng <span class="text-error ml-0.5" aria-hidden="true">*</span>
-      </label>
-
-      <!-- Selected room chip -->
-      <div
-        v-if="selectedRoom"
-        class="flex items-center justify-between px-3 py-2.5 rounded-lg border border-cyan/30 bg-cyan/5"
-      >
-        <div class="flex items-center gap-3 min-w-0">
-          <div class="size-8 rounded-md bg-cyan/10 flex items-center justify-center shrink-0">
-            <span class="text-cyan text-xs font-bold">{{ selectedRoom.roomNumber }}</span>
-          </div>
-          <div class="min-w-0">
-            <p class="text-sm font-medium text-white">Phòng {{ selectedRoom.roomNumber }}</p>
-            <p class="text-xs text-muted truncate">
-              {{ buildingMap[selectedRoom.buildingId] ?? '' }}
-              · {{ formatCurrency(selectedRoom.monthlyRent) }}/tháng
-            </p>
-          </div>
-        </div>
-        <button
-          type="button"
-          :disabled="loading"
-          class="text-muted hover:text-white transition-colors shrink-0 ml-2 disabled:opacity-40"
-          @click="update('room_id', '')"
-        >
-          ✕
-        </button>
-      </div>
-
-      <!-- Search + list -->
-      <div
-        :class="[
-          'rounded-lg border overflow-hidden',
-          errors.room_id ? 'border-error/50' : 'border-dark-border',
-        ]"
-      >
-        <div class="relative">
-          <span class="absolute left-3 top-1/2 -translate-y-1/2 text-muted text-xs pointer-events-none">🔍</span>
-          <input
-            v-model="roomSearch"
-            type="text"
-            placeholder="Tìm số phòng hoặc tòa nhà..."
-            :disabled="loading"
-            class="block w-full pl-7 pr-3 py-2 bg-dark-surface text-white placeholder-muted focus:outline-none focus:ring-0 text-sm border-b border-dark-border disabled:text-muted disabled:cursor-not-allowed"
-          >
-        </div>
-        <div class="max-h-44 overflow-y-auto bg-dark-surface">
-          <button
-            v-for="r in filteredRooms"
-            :key="r.id"
-            type="button"
-            :disabled="loading"
-            :class="[
-              'flex items-center justify-between w-full px-3 py-2.5 text-left transition-colors text-sm border-b border-dark-border/50 last:border-0',
-              modelValue.room_id === r.id
-                ? 'bg-cyan/10 text-cyan'
-                : 'text-white hover:bg-dark-hover',
-            ]"
-            @click="selectRoom(r.id)"
-          >
-            <span class="font-medium">
-              Phòng {{ r.roomNumber }}
-              <span class="font-normal text-muted ml-1.5">{{ buildingMap[r.buildingId] ?? '' }}</span>
-            </span>
-            <span class="text-muted text-xs shrink-0 ml-2">{{ formatCurrency(r.monthlyRent) }}/tháng</span>
-          </button>
-          <div v-if="filteredRooms.length === 0" class="px-3 py-5 text-center text-muted text-sm">
-            Không tìm thấy phòng trống nào
-          </div>
-        </div>
-      </div>
-      <p v-if="errors.room_id" class="text-xs text-error">{{ errors.room_id[0] }}</p>
-    </div>
+    <UiCombobox
+      :model-value="selectedRoom"
+      :options="availableRooms"
+      :option-key="r => r.id"
+      :option-label="r => `Phòng ${r.roomNumber} — ${buildingMap[r.buildingId] ?? ''} (${formatCurrency(r.monthlyRent)}/tháng)`"
+      label="Phòng"
+      placeholder="Tìm và chọn phòng..."
+      search-placeholder="Tìm số phòng hoặc tòa nhà..."
+      required
+      :disabled="loading"
+      :error="errors.room_id?.[0]"
+      empty-message="Không tìm thấy phòng trống nào"
+      @update:model-value="onRoomSelect"
+    />
 
     <!-- Tenant picker -->
-    <div class="flex flex-col gap-1.5">
-      <label class="text-sm font-medium text-muted">
-        Khách thuê <span class="text-error ml-0.5" aria-hidden="true">*</span>
-      </label>
-
-      <!-- Selected tenant chip -->
-      <div
-        v-if="selectedTenant"
-        class="flex items-center justify-between px-3 py-2.5 rounded-lg border border-cyan/30 bg-cyan/5"
-      >
-        <div class="flex items-center gap-3 min-w-0">
-          <div class="size-8 rounded-full bg-cyan/10 flex items-center justify-center shrink-0">
-            <span class="text-cyan text-xs font-bold">{{ selectedTenant.fullName.charAt(0).toUpperCase() }}</span>
-          </div>
-          <div class="min-w-0">
-            <p class="text-sm font-medium text-white">{{ selectedTenant.fullName }}</p>
-            <p class="text-xs text-muted">{{ selectedTenant.phone }}</p>
-          </div>
-        </div>
-        <button
-          type="button"
-          :disabled="loading"
-          class="text-muted hover:text-white transition-colors shrink-0 ml-2 disabled:opacity-40"
-          @click="update('tenant_id', '')"
-        >
-          ✕
-        </button>
-      </div>
-
-      <!-- Search + list -->
-      <div
-        :class="[
-          'rounded-lg border overflow-hidden',
-          errors.tenant_id ? 'border-error/50' : 'border-dark-border',
-        ]"
-      >
-        <div class="relative">
-          <span class="absolute left-3 top-1/2 -translate-y-1/2 text-muted text-xs pointer-events-none">🔍</span>
-          <input
-            v-model="tenantSearch"
-            type="text"
-            placeholder="Tìm theo tên hoặc số điện thoại..."
-            :disabled="loading"
-            class="block w-full pl-7 pr-3 py-2 bg-dark-surface text-white placeholder-muted focus:outline-none focus:ring-0 text-sm border-b border-dark-border disabled:text-muted disabled:cursor-not-allowed"
-          >
-        </div>
-        <div class="max-h-44 overflow-y-auto bg-dark-surface">
-          <button
-            v-for="t in filteredTenants"
-            :key="t.id"
-            type="button"
-            :disabled="loading"
-            :class="[
-              'flex items-center gap-3 w-full px-3 py-2.5 text-left transition-colors text-sm border-b border-dark-border/50 last:border-0',
-              modelValue.tenant_id === t.id
-                ? 'bg-cyan/10'
-                : 'hover:bg-dark-hover',
-            ]"
-            @click="update('tenant_id', t.id)"
-          >
-            <div class="size-7 rounded-full bg-dark-hover flex items-center justify-center shrink-0 text-xs font-bold text-muted">
-              {{ t.fullName.charAt(0).toUpperCase() }}
-            </div>
-            <div class="min-w-0">
-              <p :class="['font-medium truncate', modelValue.tenant_id === t.id ? 'text-cyan' : 'text-white']">
-                {{ t.fullName }}
-              </p>
-              <p class="text-xs text-muted">{{ t.phone }}</p>
-            </div>
-          </button>
-          <div v-if="filteredTenants.length === 0" class="px-3 py-5 text-center text-muted text-sm">
-            Không tìm thấy khách thuê nào
-          </div>
-        </div>
-      </div>
-      <p v-if="errors.tenant_id" class="text-xs text-error">{{ errors.tenant_id[0] }}</p>
-    </div>
+    <UiCombobox
+      :model-value="selectedTenant"
+      :options="availableTenants"
+      :option-key="t => t.id"
+      :option-label="t => `${t.fullName} — ${t.phone}`"
+      label="Khách thuê"
+      placeholder="Tìm và chọn khách thuê..."
+      search-placeholder="Tìm theo tên hoặc số điện thoại..."
+      required
+      :disabled="loading"
+      :error="errors.tenant_id?.[0]"
+      empty-message="Không tìm thấy khách thuê nào"
+      @update:model-value="onTenantSelect"
+    />
 
     <!-- start_date -->
     <UiInput
@@ -381,37 +252,33 @@ function onSubmit() {
     />
 
     <!-- status -->
-    <div class="flex flex-col gap-1.5">
-      <label class="text-sm font-medium text-muted">Trạng thái</label>
-      <select
-        :value="modelValue.status"
-        :disabled="loading"
-        class="block w-full rounded-md border border-dark-border px-3 py-2 bg-dark-surface text-white focus:outline-none focus:ring-2 focus:border-cyan/70 focus:ring-cyan/30 text-sm disabled:bg-dark-hover disabled:text-muted disabled:cursor-not-allowed"
-        @change="update('status', ($event.target as HTMLSelectElement).value as 'active' | 'expired' | 'terminated')"
-      >
-        <option value="active">Đang hiệu lực</option>
-        <option value="expired">Đã hết hạn</option>
-        <option value="terminated">Đã chấm dứt</option>
-      </select>
-    </div>
+    <UiSelect
+      :model-value="modelValue.status"
+      label="Trạng thái"
+      :options="[
+        { value: 'active', label: 'Đang hiệu lực' },
+        { value: 'expired', label: 'Đã hết hạn' },
+        { value: 'terminated', label: 'Đã chấm dứt' },
+      ]"
+      :disabled="loading"
+      @update:model-value="update('status', String($event) as 'active' | 'expired' | 'terminated')"
+    />
 
     <!-- notes -->
-    <div class="flex flex-col gap-1.5">
-      <label class="text-sm font-medium text-muted">Ghi chú</label>
-      <textarea
-        :value="modelValue.notes"
-        :disabled="loading"
-        rows="3"
-        placeholder="Ghi chú hợp đồng (không bắt buộc)"
-        class="block w-full rounded-md border border-dark-border px-3 py-2 bg-dark-surface text-white placeholder-muted focus:outline-none focus:ring-2 focus:border-cyan/70 focus:ring-cyan/30 text-sm resize-none disabled:bg-dark-hover disabled:text-muted disabled:cursor-not-allowed"
-        @input="update('notes', ($event.target as HTMLTextAreaElement).value)"
-      />
-    </div>
+    <UiTextarea
+      label="Ghi chú"
+      :model-value="modelValue.notes"
+      :disabled="loading"
+      :rows="3"
+      resize="none"
+      placeholder="Ghi chú hợp đồng (không bắt buộc)"
+      @update:model-value="update('notes', $event)"
+    />
 
     <!-- API Error -->
-    <div v-if="apiError" class="rounded-lg border border-error/20 bg-error/10 px-4 py-3 text-sm text-error">
+    <UiAlert v-if="apiError" severity="danger">
       {{ apiError }}
-    </div>
+    </UiAlert>
 
     <!-- Actions -->
     <div class="flex justify-end gap-3 pt-2">

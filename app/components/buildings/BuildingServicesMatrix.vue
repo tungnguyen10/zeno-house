@@ -32,15 +32,15 @@ function getService(contractId: string, catalogId: string): ContractService | un
   return props.services.find(s => s.contractId === contractId && s.catalogId === catalogId)
 }
 
-function handleAmountBlur(service: ContractService, event: Event) {
-  const amount = Number((event.target as HTMLInputElement).value)
+function handleAmountInput(service: ContractService, value: string) {
+  const amount = Number(value)
   if (!Number.isNaN(amount) && amount >= 0) {
     emit('update', service.id, { amount })
   }
 }
 
-function handleQuantityBlur(service: ContractService, event: Event) {
-  const quantity = Number((event.target as HTMLInputElement).value)
+function handleQuantityInput(service: ContractService, value: string) {
+  const quantity = Number(value)
   if (Number.isInteger(quantity) && quantity >= 1) {
     emit('update', service.id, { quantity })
   }
@@ -52,11 +52,15 @@ function handleToggle(service: ContractService) {
 </script>
 
 <template>
+  <!-- Note: This component uses a raw <table> with sticky first column, which cannot
+       be cleanly represented by UiTable (which does not support sticky columns).
+       The cell controls (toggles, inputs) use ui primitives. -->
   <div class="overflow-x-auto">
     <div v-if="loading" class="py-8 text-center text-sm text-muted">Đang tải...</div>
-    <div v-else-if="contracts.length === 0" class="py-8 text-center text-sm text-muted">
-      Không có hợp đồng active nào.
-    </div>
+    <UiEmptyState
+      v-else-if="contracts.length === 0"
+      title="Không có hợp đồng active nào"
+    />
     <table v-else class="min-w-full divide-y divide-dark-border text-sm">
       <thead class="bg-dark-card">
         <tr>
@@ -86,42 +90,30 @@ function handleToggle(service: ContractService) {
             <template v-if="getService(row.contractId, item.id)">
               <div class="flex flex-col items-center gap-1">
                 <!-- Toggle -->
-                <button
-                  type="button"
-                  :class="[
-                    'relative inline-flex h-4 w-8 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none',
-                    getService(row.contractId, item.id)!.isEnabled ? 'bg-cyan' : 'bg-dark-border',
-                  ]"
-                  @click="handleToggle(getService(row.contractId, item.id)!)"
-                >
-                  <span
-                    :class="[
-                      'pointer-events-none inline-block h-3 w-3 rounded-full bg-white shadow transition duration-200 ease-in-out',
-                      getService(row.contractId, item.id)!.isEnabled ? 'translate-x-4' : 'translate-x-0',
-                    ]"
-                  />
-                </button>
+                <UiToggle
+                  :model-value="getService(row.contractId, item.id)!.isEnabled"
+                  size="sm"
+                  :aria-label="`Bật/tắt ${item.name} cho phòng ${row.roomNumber}`"
+                  @update:model-value="handleToggle(getService(row.contractId, item.id)!)"
+                />
                 <!-- Amount input -->
-                <input
+                <UiInput
+                  density="compact"
                   type="number"
-                  min="0"
-                  step="1000"
-                  :value="getService(row.contractId, item.id)!.amount"
+                  :model-value="String(getService(row.contractId, item.id)!.amount)"
                   :disabled="!getService(row.contractId, item.id)!.isEnabled"
-                  class="w-20 rounded border border-dark-border bg-dark-surface px-1 py-0.5 text-center text-xs text-white focus:border-cyan/70 focus:outline-none disabled:opacity-40"
-                  @blur="handleAmountBlur(getService(row.contractId, item.id)!, $event)"
-                >
+                  class="w-20 text-center"
+                  @update:model-value="(v) => handleAmountInput(getService(row.contractId, item.id)!, v as string)"
+                />
                 <!-- Quantity input -->
-                <input
+                <UiInput
+                  density="compact"
                   type="number"
-                  min="1"
-                  step="1"
-                  :value="getService(row.contractId, item.id)!.quantity"
+                  :model-value="String(getService(row.contractId, item.id)!.quantity)"
                   :disabled="!getService(row.contractId, item.id)!.isEnabled"
-                  class="w-12 rounded border border-dark-border bg-dark-surface px-1 py-0.5 text-center text-xs text-white focus:border-cyan/70 focus:outline-none disabled:opacity-40"
-                  title="Số lượng"
-                  @blur="handleQuantityBlur(getService(row.contractId, item.id)!, $event)"
-                >
+                  class="w-12 text-center"
+                  @update:model-value="(v) => handleQuantityInput(getService(row.contractId, item.id)!, v as string)"
+                />
               </div>
             </template>
             <span v-else class="text-xs text-dark-border">—</span>

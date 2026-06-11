@@ -152,3 +152,18 @@ The system SHALL append audit events for billing-critical workspace actions.
 #### Scenario: Payment action audited
 - **WHEN** invoice payment is recorded, corrected, or removed
 - **THEN** the system appends billing audit events with before/after data when applicable
+
+### Requirement: Design system adoption prerequisite
+The monthly operations workspace implementation SHALL depend on the adopted operational design system. Implementation SHALL NOT begin billing UI construction until the design-system adoption change provides the required primitive coverage for compact controls, searchable selection, dense tables, operational sections, alerts, tabs, metrics, and contextual status badges.
+
+#### Scenario: Design system adoption completed first
+- **WHEN** implementation work is planned for the monthly operations workspace
+- **THEN** `adopt-operational-design-system` is completed or its primitive requirements are otherwise available in the codebase first
+
+#### Scenario: Billing UI does not fork primitives
+- **WHEN** a monthly operations screen needs controls, tables, sections, modals, alerts, status badges, tabs, metrics, or searchable selection
+- **THEN** it uses `app/components/ui/*` primitives instead of creating billing-only duplicate UI components
+
+#### Scenario: Billing UI verification includes raw control scan
+- **WHEN** monthly operations workspace implementation is complete
+- **THEN** source scans confirm billing pages/components do not contain unexplained raw controls, raw tables, or raw alert blocks outside primitive internals

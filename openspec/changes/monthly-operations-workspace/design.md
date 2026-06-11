@@ -13,6 +13,8 @@ The cleanup change established that monthly billing belongs to a Building + Peri
 
 The missing layer is runtime billing state: which month is being processed, what charge snapshot was issued, what has been paid, what remains due, and whether the period is closed.
 
+Implementation sequencing constraint: `adopt-operational-design-system` should land before this change is implemented. Monthly billing must use the adopted primitive set and operational patterns rather than introducing billing-only raw controls, tables, alerts, or section wrappers.
+
 ## Information Architecture
 
 ```text
@@ -46,6 +48,33 @@ Navigation: Vận hành -> /billing
 ```
 
 The manager's first job is not to choose a form; it is to know what needs attention. `/billing` should therefore behave like a monthly operations list and queue. The workspace remains the focused surface for doing the work of one building/month.
+
+## UI Composition Contract
+
+The billing UI must be composed from the operational design system:
+
+- `/billing` entry:
+  - `UiPageHeader` for page context and primary action
+  - `UiToolbar` for building, month/year, status, debt, and search filters
+  - `UiMetric` for current month totals and queue counts
+  - `UiTable` for billing period rows
+  - `UiStatusBadge` with `context="period"` for period statuses
+  - `UiAlert`, `UiSkeleton`, and `UiEmptyState` for feedback states
+- Workspace:
+  - `UiPageHeader` for building + period context, status, and primary actions
+  - `UiTabs` for Overview, Readings, Review Charges, Issue Invoices, Payments/Debt, Audit, and Close Period
+  - `UiSection` for each step area without nested decorative cards
+  - `UiMetric` for period totals
+  - `UiTable` for readings, invoice previews, payments, debt, and audit events
+  - compact `UiInput`, `UiSelect`, and `UiTextarea` for editable table cells and dense correction fields
+  - searchable select primitive for high-cardinality choices such as room, tenant, contract, invoice, or building when a normal select is not efficient
+  - `UiModal` or optional `UiDrawer` for correction, void/reissue, adjustment, and close-period confirmation surfaces
+- Status semantics:
+  - period statuses must pass `context="period"`
+  - invoice statuses must pass `context="invoice"`
+  - blocker/correction statuses must pass `context="correction"`
+
+Raw `input`, `select`, `textarea`, `table`, and `button` markup should not be introduced in billing pages/components except inside `app/components/ui/` or a documented exception.
 
 ## User Flow
 
@@ -107,6 +136,8 @@ Recommended list groups:
 - `Closed`: period is locked
 
 The list should support opening an existing period and creating/opening a missing period for a selected building + month.
+
+The list UI should be dense and scannable. It should not use a card grid for period rows because managers need to compare many buildings by reading progress, invoice totals, paid totals, and debt.
 
 ### D2 - Draft calculation is recomputable, issued invoice is a snapshot
 
@@ -230,6 +261,8 @@ Rules:
 - Adjustments use `invoice_charges.charge_type = 'adjustment'` and metadata must reference the original invoice/period/reason.
 - Payment correction, if supported, must be audited and must update paid/balance/status transactionally.
 - Once a period is closed, correction should prefer adjustment in a later period unless an admin explicitly reopens the period.
+
+Correction surfaces must preserve source context. A user should see the original invoice/period/room/tenant and the reason field before confirming void, reissue, or adjustment. These surfaces should use the modal/drawer patterns from the design system.
 
 ### D7 - Period close locks mutable monthly actions
 

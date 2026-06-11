@@ -12,6 +12,37 @@ const selectValue = ref<string | null>(null)
 const checkboxValue = ref(false)
 const toggleValue = ref(true)
 
+// UiCombobox demo
+interface DemoOption {
+  id: string
+  name: string
+}
+const comboboxOptions: DemoOption[] = [
+  { id: 'r1', name: 'P101 — Toà A (Đang trống)' },
+  { id: 'r2', name: 'P102 — Toà A (Đang trống)' },
+  { id: 'r3', name: 'P201 — Toà A (Đã thuê)' },
+  { id: 'r4', name: 'B305 — Toà B (Đang trống)' },
+  { id: 'r5', name: 'B306 — Toà B (Bảo trì)' },
+]
+const comboboxSelected = ref<DemoOption | null>(null)
+const comboboxDisabled = ref<DemoOption | null>(null)
+const comboboxLoading = ref<DemoOption | null>(null)
+const comboboxError = ref<DemoOption | null>(null)
+
+// Compact density demo
+const compactInput = ref('')
+const compactSelect = ref<string | null>(null)
+const compactTextarea = ref('')
+
+interface DensityDemoRow { id: number }
+const densityDemoRows: DensityDemoRow[] = [{ id: 1 }, { id: 2 }]
+const densityDemoColumns: UiTableColumn<DensityDemoRow>[] = [
+  { key: 'roomNumber', label: 'Phòng' },
+  { key: 'type', label: 'Loại' },
+  { key: 'quantity', label: 'Số lượng', numeric: true },
+  { key: 'notes', label: 'Ghi chú' },
+]
+
 // Modal state
 const modalSm = ref(false)
 const modalMd = ref(false)
@@ -180,8 +211,112 @@ function dismissAlert(key: string) {
       </div>
     </UiSection>
 
-    <UiSection title="UiCheckbox / UiToggle" description="Boolean controls.">
+    <!-- UiCombobox -->
+    <UiSection title="UiCombobox" description="Searchable selection — label, required, disabled, loading, empty, error, clear.">
       <div class="grid gap-4 md:grid-cols-2">
+        <!-- Normal / selected -->
+        <UiCombobox
+          v-model="comboboxSelected"
+          label="Phòng"
+          :options="comboboxOptions"
+          :option-key="o => o.id"
+          :option-label="o => o.name"
+          placeholder="Chọn phòng..."
+          required
+        />
+        <!-- Loading -->
+        <UiCombobox
+          v-model="comboboxLoading"
+          label="Đang tải (loading)"
+          :options="[]"
+          :option-key="o => (o as DemoOption).id"
+          :option-label="o => (o as DemoOption).name"
+          placeholder="Chờ dữ liệu..."
+          loading
+        />
+        <!-- Disabled -->
+        <UiCombobox
+          v-model="comboboxDisabled"
+          label="Khoá (disabled)"
+          :options="comboboxOptions"
+          :option-key="o => o.id"
+          :option-label="o => o.name"
+          placeholder="Không thể chọn"
+          disabled
+        />
+        <!-- Error -->
+        <UiCombobox
+          v-model="comboboxError"
+          label="Có lỗi"
+          :options="comboboxOptions"
+          :option-key="o => o.id"
+          :option-label="o => o.name"
+          placeholder="Chọn phòng..."
+          error="Vui lòng chọn phòng"
+          required
+        />
+        <!-- Empty -->
+        <UiCombobox
+          v-model="comboboxSelected"
+          label="Không có kết quả (empty options)"
+          :options="[]"
+          :option-key="o => o.id"
+          :option-label="o => o.name"
+          placeholder="Không có phòng nào"
+          empty-message="Không tìm thấy phòng nào phù hợp"
+        />
+      </div>
+      <p class="mt-3 text-xs text-muted">
+        Đang chọn: <span class="text-cyan">{{ comboboxSelected ? comboboxSelected.name : '(chưa chọn)' }}</span>
+      </p>
+    </UiSection>
+
+    <!-- Compact density -->
+    <UiSection title="Compact density (UiInput / UiSelect / UiTextarea)" description="density=&quot;compact&quot; cho editable table cells, meter readings, billing review rows.">
+      <UiTable :rows="densityDemoRows" :columns="densityDemoColumns">
+        <template #cell-roomNumber="{ row }">
+          <UiInput
+            v-if="row.id === 1"
+            v-model="compactInput"
+            density="compact"
+            placeholder="P101"
+          />
+          <UiInput v-else density="compact" placeholder="P102" />
+        </template>
+        <template #cell-type="{ row }">
+          <UiSelect
+            v-if="row.id === 1"
+            v-model="compactSelect"
+            density="compact"
+            :options="selectOptions"
+            placeholder="Chọn..."
+          />
+          <UiSelect
+            v-else
+            density="compact"
+            :options="selectOptions"
+            placeholder="Chọn..."
+          />
+        </template>
+        <template #cell-quantity>
+          <UiInput density="compact" type="number" placeholder="0" />
+        </template>
+        <template #cell-notes="{ row }">
+          <UiTextarea
+            v-if="row.id === 1"
+            v-model="compactTextarea"
+            density="compact"
+            :rows="1"
+            resize="none"
+            placeholder="Ghi chú..."
+          />
+          <span v-else class="text-muted text-xs">—</span>
+        </template>
+      </UiTable>
+      <p class="mt-2 text-xs text-muted">Compact controls maintain the same focus/error/disabled behavior — only sizing is reduced.</p>
+    </UiSection>
+
+    <UiSection title="UiCheckbox / UiToggle" description="Boolean controls.">      <div class="grid gap-4 md:grid-cols-2">
         <div class="space-y-3 rounded-xl border border-dark-border bg-dark-surface p-4">
           <p class="text-xs uppercase tracking-wide text-muted">Checkbox</p>
           <UiCheckbox v-model="checkboxValue" label="Đồng ý điều khoản" />

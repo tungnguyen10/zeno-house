@@ -17,26 +17,24 @@ function onSearch() {
 
 <template>
   <div>
-    <div class="flex items-center justify-between mb-6">
-      <div>
-        <h1 class="text-xl font-semibold text-white">Khách thuê</h1>
-        <p class="text-sm text-muted mt-0.5">{{ total }} khách thuê</p>
-      </div>
-      <NuxtLink v-if="authStore.isAdmin" to="/tenants/create">
-        <UiButton>Thêm khách thuê</UiButton>
-      </NuxtLink>
-    </div>
+    <UiPageHeader title="Khách thuê" :description="`${total} khách thuê`">
+      <template #actions>
+        <NuxtLink v-if="authStore.isAdmin" to="/tenants/create">
+          <UiButton>Thêm khách thuê</UiButton>
+        </NuxtLink>
+      </template>
+    </UiPageHeader>
 
     <!-- Search -->
-    <div class="mb-6">
-      <input
+    <UiToolbar class="mb-6">
+      <UiInput
         v-model="searchInput"
         type="text"
         placeholder="Tìm theo tên hoặc số điện thoại..."
-        class="w-full max-w-sm rounded-md border border-dark-border bg-dark-surface px-3 py-1.5 text-sm text-white placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-cyan/30 focus:border-cyan/70"
-        @input="onSearch"
-      >
-    </div>
+        class="w-full max-w-sm"
+        @update:model-value="onSearch"
+      />
+    </UiToolbar>
 
     <!-- Loading -->
     <div v-if="isLoading" class="space-y-3">
@@ -44,9 +42,9 @@ function onSearch() {
     </div>
 
     <!-- Error -->
-    <div v-else-if="error" class="text-sm text-error p-4 rounded-lg bg-error/10 border border-error/20">
+    <UiAlert v-else-if="error" severity="danger">
       Không thể tải danh sách khách thuê. Vui lòng thử lại.
-    </div>
+    </UiAlert>
 
     <!-- Empty -->
     <UiEmptyState

@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import clsx from 'clsx'
 import { formatCurrency } from '~/utils/format/currency'
 import type { ContractRenewInput } from '~/utils/validators/contract-renewals'
 
@@ -76,32 +75,20 @@ function handleSubmit() {
     <div class="flex flex-col gap-1.5">
       <span class="text-sm font-medium text-muted">Hình thức gia hạn</span>
       <div class="grid grid-cols-2 gap-2">
-        <button
+        <UiButton
           type="button"
-          :class="clsx(
-            'px-3 py-2 text-sm rounded-md border transition-colors',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan/40',
-            form.mode === 'extend'
-              ? 'border-cyan/60 bg-cyan/10 text-cyan'
-              : 'border-dark-border text-muted hover:border-dark-hover hover:text-white',
-          )"
+          :variant="form.mode === 'extend' ? 'primary' : 'secondary'"
           @click="form.mode = 'extend'"
         >
           Gia hạn đơn giản
-        </button>
-        <button
+        </UiButton>
+        <UiButton
           type="button"
-          :class="clsx(
-            'px-3 py-2 text-sm rounded-md border transition-colors',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan/40',
-            form.mode === 'new_contract'
-              ? 'border-cyan/60 bg-cyan/10 text-cyan'
-              : 'border-dark-border text-muted hover:border-dark-hover hover:text-white',
-          )"
+          :variant="form.mode === 'new_contract' ? 'primary' : 'secondary'"
           @click="form.mode = 'new_contract'"
         >
           Hợp đồng mới
-        </button>
+        </UiButton>
       </div>
       <p class="text-xs text-muted">
         <template v-if="form.mode === 'extend'">Gia hạn tại chỗ — cùng hợp đồng, cập nhật ngày kết thúc.</template>

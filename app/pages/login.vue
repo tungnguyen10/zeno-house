@@ -67,9 +67,9 @@ async function handleSubmit() {
           required
         />
 
-        <p v-if="errorMessage" role="alert" class="text-sm text-error-vivid">
+        <UiAlert v-if="errorMessage" severity="danger" role="alert">
           {{ errorMessage }}
-        </p>
+        </UiAlert>
 
         <UiButton type="submit" class="w-full" size="md" :loading="loading">
           Đăng nhập

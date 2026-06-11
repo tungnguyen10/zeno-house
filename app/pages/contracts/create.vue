@@ -112,19 +112,11 @@ async function onSubmit(data: ContractFormData) {
 
 <template>
   <div class="">
-    <!-- Page header -->
-    <div class="mb-8">
-      <NuxtLink
-        to="/contracts"
-        class="inline-flex items-center gap-1.5 text-sm text-muted hover:text-white transition-colors"
-      >
-        <svg class="size-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M10 3L5 8l5 5" />
-        </svg>
-        Danh sách hợp đồng
+    <UiPageHeader title="Thêm hợp đồng mới">
+      <NuxtLink to="/contracts" class="text-sm text-muted hover:text-white transition-colors">
+        ← Danh sách hợp đồng
       </NuxtLink>
-      <h1 class="text-xl font-semibold text-white mt-2">Thêm hợp đồng mới</h1>
-    </div>
+    </UiPageHeader>
 
     <!-- ── Two-step layout ──────────────────────────────────────────────── -->
     <div>
@@ -230,16 +222,17 @@ async function onSubmit(data: ContractFormData) {
                       : 'text-muted bg-dark-hover border-dark-border'"
                     class="text-xs border rounded-full px-2 py-0.5 font-medium"
                   >{{ occ.billing_counted ? 'Tính tiền' : 'Không tính' }}</span>
-                  <button
-                    type="button"
-                    class="p-1.5 rounded-md text-muted hover:text-red-400 hover:bg-red-400/10 transition-colors"
+                  <UiButton
+                    variant="ghost"
+                    icon-only
+                    size="sm"
                     title="Xoá"
                     @click="removePendingOccupant(occ.tenant_id)"
                   >
                     <svg class="size-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
                       <path d="M2 2l12 12M14 2L2 14" />
                     </svg>
-                  </button>
+                  </UiButton>
                 </div>
               </div>
             </div>
@@ -257,15 +250,9 @@ async function onSubmit(data: ContractFormData) {
           </div>
 
           <!-- Error banner (occupant post-submit failure) -->
-          <div
-            v-if="occupantSubmitError"
-            class="mt-3 flex items-start gap-2.5 rounded-lg border border-amber-400/20 bg-amber-400/5 px-4 py-3"
-          >
-            <svg class="size-4 text-amber-400 shrink-0 mt-px" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-              <path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
-            </svg>
-            <p class="text-sm text-amber-400">{{ occupantSubmitError }}</p>
-          </div>
+          <UiAlert v-if="occupantSubmitError" severity="warning" class="mt-3">
+            {{ occupantSubmitError }}
+          </UiAlert>
         </div>
       </div>
 
