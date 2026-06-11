@@ -3,15 +3,18 @@ import type {
   BillingPeriod,
   BillingWorkspaceOverview,
   BillingDraftResponse,
+  BillingDraftGridResponse,
   Invoice,
   BillingUtilityUsage,
   BillingAuditEvent,
   IssueInvoicesResult,
 } from '~/types/billing'
+import type { MeterReading } from '~/types/meter-readings'
 import type {
   IssueInvoicesInput,
   UtilityUsageOverrideInput,
 } from '~/utils/validators/billing'
+import type { MeterReadingBulkInput } from '~/utils/validators/meter-readings'
 
 /**
  * Workspace-level data for one billing period: overview, drafts, invoices,
@@ -24,12 +27,14 @@ export function useBillingPeriodWorkspace(periodId: MaybeRefOrGetter<string>) {
   const period = ref<BillingPeriod | null>(null)
   const overview = ref<BillingWorkspaceOverview | null>(null)
   const drafts = ref<BillingDraftResponse | null>(null)
+  const grid = ref<BillingDraftGridResponse | null>(null)
   const invoices = ref<Invoice[]>([])
   const utilityUsages = ref<BillingUtilityUsage[]>([])
   const auditEvents = ref<BillingAuditEvent[]>([])
 
   const overviewLoading = ref(false)
   const draftsLoading = ref(false)
+  const gridLoading = ref(false)
   const invoicesLoading = ref(false)
   const utilityLoading = ref(false)
   const auditLoading = ref(false)
@@ -55,6 +60,27 @@ export function useBillingPeriodWorkspace(periodId: MaybeRefOrGetter<string>) {
     } finally {
       draftsLoading.value = false
     }
+  }
+
+  async function loadGrid() {
+    if (!id.value) return
+    gridLoading.value = true
+    try {
+      const resp = await $fetch<ApiSuccess<BillingDraftGridResponse>>(`/api/billing/periods/${id.value}/draft-grid`)
+      grid.value = resp.data
+    } finally {
+      gridLoading.value = false
+    }
+  }
+
+  async function saveReadings(readings: MeterReadingBulkInput['readings']): Promise<MeterReading[]> {
+    if (readings.length === 0) return []
+    const resp = await $fetch<ApiSuccess<MeterReading[]>>(`/api/meter-readings/bulk`, {
+      method: 'POST',
+      body: { readings },
+    })
+    await Promise.all([loadGrid(), loadOverview()])
+    return resp.data
   }
 
   async function loadInvoices() {
@@ -96,7 +122,7 @@ export function useBillingPeriodWorkspace(periodId: MaybeRefOrGetter<string>) {
       method: 'POST',
       body: input,
     })
-    await Promise.all([loadOverview(), loadInvoices(), loadDrafts()])
+    await Promise.all([loadOverview(), loadInvoices(), loadDrafts(), loadGrid()])
     return resp.data
   }
 
@@ -116,7 +142,7 @@ export function useBillingPeriodWorkspace(periodId: MaybeRefOrGetter<string>) {
       method: 'POST',
       body: input,
     })
-    await Promise.all([loadUtilityUsages(), loadDrafts()])
+    await Promise.all([loadUtilityUsages(), loadDrafts(), loadGrid()])
     return resp.data
   }
 
@@ -125,21 +151,25 @@ export function useBillingPeriodWorkspace(periodId: MaybeRefOrGetter<string>) {
     period,
     overview,
     drafts,
+    grid,
     invoices,
     utilityUsages,
     auditEvents,
     overviewLoading,
     draftsLoading,
+    gridLoading,
     invoicesLoading,
     utilityLoading,
     auditLoading,
     loadOverview,
     loadDrafts,
+    loadGrid,
     loadInvoices,
     loadUtilityUsages,
     loadAudit,
     issue,
     close,
+    saveReadings,
     saveUtilityOverride,
   }
 }

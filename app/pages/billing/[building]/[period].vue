@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import type { UiTabItem } from '~/components/ui/UiTabs.vue'
 import BillingOverviewStep from '~/components/billing/BillingOverviewStep.vue'
-import BillingReadingsStep from '~/components/billing/BillingReadingsStep.vue'
-import BillingDraftReviewStep from '~/components/billing/BillingDraftReviewStep.vue'
+import BillingDraftGridStep from '~/components/billing/BillingDraftGridStep.vue'
 import BillingIssueStep from '~/components/billing/BillingIssueStep.vue'
 import BillingPaymentsStep from '~/components/billing/BillingPaymentsStep.vue'
 import BillingAuditStep from '~/components/billing/BillingAuditStep.vue'
@@ -47,10 +46,10 @@ await resolvePeriod()
 
 const workspace = useBillingPeriodWorkspace(periodId)
 const {
-  period, overview, drafts, invoices, utilityUsages, auditEvents,
-  overviewLoading, draftsLoading, invoicesLoading, utilityLoading, auditLoading,
-  loadOverview, loadDrafts, loadInvoices, loadUtilityUsages, loadAudit,
-  issue, close, saveUtilityOverride,
+  period, overview, drafts, grid, invoices, utilityUsages, auditEvents,
+  overviewLoading, draftsLoading, gridLoading, invoicesLoading, auditLoading,
+  loadOverview, loadDrafts, loadGrid, loadInvoices, loadUtilityUsages, loadAudit,
+  issue, close, saveReadings, saveUtilityOverride,
 } = workspace
 
 // Load overview eagerly so the header can render the period status
@@ -63,11 +62,22 @@ const tab = ref<string>('overview')
 const tabs = computed<UiTabItem[]>(() => {
   const status = period.value?.status
   const closed = status === 'closed'
+  const issued = status === 'issued' || status === 'collecting' || closed
   return [
     { key: 'overview', label: 'Tổng quan' },
-    { key: 'readings', label: 'Nhập chỉ số', reason: closed ? 'Kỳ đã chốt' : undefined, disabled: closed },
-    { key: 'review', label: 'Soát hoá đơn', count: drafts.value?.totals.blockedDraftCount ?? undefined, reason: closed ? 'Kỳ đã chốt' : undefined, disabled: closed },
-    { key: 'issue', label: 'Phát hành', count: drafts.value?.totals.issuableDraftCount ?? undefined, reason: closed ? 'Kỳ đã chốt' : undefined, disabled: closed },
+    {
+      key: 'draft-grid',
+      label: 'Chỉ số & hoá đơn nháp',
+      count: grid.value?.totals.blockedDraftCount || undefined,
+      reason: closed ? 'Kỳ đã chốt' : undefined,
+    },
+    {
+      key: 'issue',
+      label: 'Phát hành',
+      count: drafts.value?.totals.issuableDraftCount ?? undefined,
+      reason: closed ? 'Kỳ đã chốt' : issued ? 'Kỳ đã phát hành' : undefined,
+      disabled: closed,
+    },
     { key: 'payments', label: 'Thanh toán & công nợ' },
     { key: 'audit', label: 'Nhật ký' },
     { key: 'close', label: 'Chốt kỳ', reason: closed ? 'Kỳ đã chốt' : undefined },
@@ -75,15 +85,18 @@ const tabs = computed<UiTabItem[]>(() => {
 })
 
 watch(tab, async (current) => {
-  if (current === 'review' || current === 'issue') {
+  if (current === 'draft-grid') {
+    const tasks: Promise<unknown>[] = []
+    if (!grid.value) tasks.push(loadGrid())
+    if (utilityUsages.value.length === 0) tasks.push(loadUtilityUsages())
+    if (tasks.length > 0) await Promise.all(tasks)
+  }
+  if (current === 'issue') {
     if (!drafts.value) await loadDrafts()
     if (invoices.value.length === 0) await loadInvoices()
   }
-  if (current === 'payments') {
-    if (invoices.value.length === 0) await loadInvoices()
-  }
+  if (current === 'payments' && invoices.value.length === 0) await loadInvoices()
   if (current === 'audit' && auditEvents.value.length === 0) await loadAudit()
-  if (current === 'readings' && utilityUsages.value.length === 0) await loadUtilityUsages()
   if (current === 'close' && !drafts.value) await loadDrafts()
 })
 
@@ -124,21 +137,14 @@ function periodLabel(): string {
           @refresh="loadOverview"
         />
 
-        <BillingReadingsStep
-          v-else-if="tab === 'readings'"
+        <BillingDraftGridStep
+          v-else-if="tab === 'draft-grid'"
+          :response="grid"
+          :loading="gridLoading"
           :period="period"
-          :building-id="buildingId"
-          :utility-usages="utilityUsages"
-          :utility-loading="utilityLoading"
-          @reload="async () => { await loadUtilityUsages(); await loadDrafts(); await loadOverview() }"
-          @save-override="async (input) => { await saveUtilityOverride(input) }"
-        />
-
-        <BillingDraftReviewStep
-          v-else-if="tab === 'review'"
-          :drafts="drafts"
-          :loading="draftsLoading"
-          @refresh="loadDrafts"
+          :on-save-readings="async (readings) => { await saveReadings(readings); await loadDrafts() }"
+          :on-save-override="async (input) => { await saveUtilityOverride(input) }"
+          @refresh="async () => { await loadGrid(); await loadOverview() }"
         />
 
         <BillingIssueStep

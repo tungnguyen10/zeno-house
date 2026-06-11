@@ -217,3 +217,82 @@ export interface InvoiceWithCharges {
   charges: InvoiceCharge[]
   payments: InvoicePayment[]
 }
+
+// ---------------------------------------------------------------------------
+// Draft Grid read model (combines reading entry + draft review into one room
+// centered grid). Composed at the service boundary; not a new repository.
+// ---------------------------------------------------------------------------
+
+export type BillingDraftGridRowType = 'billable_contract' | 'vacant_baseline' | 'data_warning'
+
+export type BillingDraftGridRowStatus =
+  | 'missing_reading'
+  | 'blocked'
+  | 'warning'
+  | 'ready'
+  | 'issued'
+  | 'partial'
+  | 'paid'
+  | 'baseline'
+
+export type BillingDraftGridUtilitySource =
+  | 'monthly'
+  | 'handover_fallback'
+  | 'override'
+  | 'fixed'
+  | 'per_person'
+  | 'not_applicable'
+
+export interface BillingDraftGridUtilityCell {
+  meterType: MeterType
+  required: boolean
+  editable: boolean
+  previousReadingId: string | null
+  previousValue: number | null
+  currentReadingId: string | null
+  currentValue: number | null
+  readingDate: string | null
+  usage: number | null
+  rate: number | null
+  amount: number | null
+  pricingType: string | null
+  overrideId: string | null
+  source: BillingDraftGridUtilitySource
+  blockerCode: BillingBlockerCode | null
+}
+
+export interface BillingDraftGridRow {
+  key: string
+  rowType: BillingDraftGridRowType
+  roomId: string
+  roomNumber: string | null
+  floor: number | null
+  contractId: string | null
+  tenantId: string | null
+  tenantName: string | null
+  contractCode: string | null
+  invoiceId: string | null
+  invoiceStatus: InvoiceStatus | null
+  editable: boolean
+  status: BillingDraftGridRowStatus
+  electricity: BillingDraftGridUtilityCell | null
+  water: BillingDraftGridUtilityCell | null
+  rentAndServiceTotal: number
+  draftTotal: number | null
+  blockers: BillingDraftBlocker[]
+  warnings: BillingDraftWarning[]
+  lines: BillingDraftLine[]
+}
+
+export interface BillingDraftGridResponse {
+  period: BillingPeriod
+  batchReadingDate: string
+  rows: BillingDraftGridRow[]
+  totals: {
+    requiredReadingCount: number
+    completeReadingCount: number
+    readyDraftCount: number
+    blockedDraftCount: number
+    draftTotal: number
+  }
+}

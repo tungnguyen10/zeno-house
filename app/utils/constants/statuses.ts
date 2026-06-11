@@ -67,6 +67,9 @@ export const CORRECTION_STATUSES: Record<string, StatusDef> = {
   adjustment: { label: 'Điều chỉnh', variant: 'warning' },
   replacement: { label: 'Thay thế', variant: 'warning' },
   corrected: { label: 'Đã hiệu chỉnh', variant: 'accent' },
+  missing_reading: { label: 'Thiếu chỉ số', variant: 'warning' },
+  ready: { label: 'Sẵn sàng', variant: 'success' },
+  baseline: { label: 'Không lập hoá đơn', variant: 'neutral' },
 }
 
 /**

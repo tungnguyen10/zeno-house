@@ -88,28 +88,28 @@
 
 ## 6. Optimize Billing Draft Grid
 
-- [ ] 6.1 Capture `optimize-billing-draft-grid` as the finishing scope inside `monthly-operations-workspace`, not as a separate archived change
-- [ ] 6.2 Define draft-grid DTO types for `BillingDraftGridResponse`, `BillingDraftGridRow`, and `BillingDraftGridUtilityCell`
-- [ ] 6.3 Add draft-grid API/read model endpoint by composing existing period, room, meter reading, utility override, invoice, and draft calculation data
-- [ ] 6.4 Keep draft-grid API composition in service/API code; do not introduce a new repository layer for this optimization
-- [ ] 6.5 Ensure draft-grid required reading counts are derived from active billing contracts and pricing rules that require meter readings, not from `rooms.status = 'occupied'` alone
-- [ ] 6.6 Include optional vacant baseline rows in the read model without creating draft invoices or blocking issue
-- [ ] 6.7 Include issued/closed editability state in each draft-grid row and utility cell
-- [ ] 6.8 Include override metadata and warning context in utility cells when `billing_utility_usages` applies
-- [ ] 6.9 Implement `BillingDraftGridStep` using `UiTable`, compact controls, `UiStatusBadge`, `UiAlert`, `UiModal`, and design-system layout primitives
-- [ ] 6.10 Render desktop columns: TT, Chi tiết, Phòng, Khách thuê, Số điện mới, Số nước mới, Tiền điện, Tiền nước, Phòng/Dịch vụ, Tổng nháp, Trạng thái, Thao tác
+- [x] 6.1 Capture `optimize-billing-draft-grid` as the finishing scope inside `monthly-operations-workspace`, not as a separate archived change
+- [x] 6.2 Define draft-grid DTO types for `BillingDraftGridResponse`, `BillingDraftGridRow`, and `BillingDraftGridUtilityCell`
+- [x] 6.3 Add draft-grid API/read model endpoint by composing existing period, room, meter reading, utility override, invoice, and draft calculation data
+- [x] 6.4 Keep draft-grid API composition in service/API code; do not introduce a new repository layer for this optimization
+- [x] 6.5 Ensure draft-grid required reading counts are derived from active billing contracts and pricing rules that require meter readings, not from `rooms.status = 'occupied'` alone
+- [x] 6.6 Include optional vacant baseline rows in the read model without creating draft invoices or blocking issue
+- [x] 6.7 Include issued/closed editability state in each draft-grid row and utility cell
+- [x] 6.8 Include override metadata and warning context in utility cells when `billing_utility_usages` applies
+- [x] 6.9 Implement `BillingDraftGridStep` using `UiTable`, compact controls, `UiStatusBadge`, `UiAlert`, `UiModal`, and design-system layout primitives
+- [x] 6.10 Render desktop columns: TT, Chi tiết, Phòng, Khách thuê, Số điện mới, Số nước mới, Tiền điện, Tiền nước, Phòng/Dịch vụ, Tổng nháp, Trạng thái, Thao tác
 - [ ] 6.11 Render mobile row layout that avoids full horizontal table scanning and preserves edit/read/recompute actions
-- [ ] 6.12 Add toolbar with batch reading date, `Áp dụng cho dòng trống`, and filters for `Cần xử lý`, `Tất cả`, `Phòng trống`, `Có lỗi`, and `Đã sẵn sàng`
-- [ ] 6.13 Apply reading date defaults: existing date preserved, current period defaults to today, past period defaults to last day of the period
-- [ ] 6.14 Track local unsaved reading changes and submit only changed meter readings on `Lưu & tính lại`
-- [ ] 6.15 Refresh draft-grid read model and overview totals after saving readings or utility overrides
-- [ ] 6.16 Preserve selected filter and expanded row state across draft-grid refresh when possible
-- [ ] 6.17 Add row details expansion for full invoice line items, blockers, warnings, and override actions
-- [ ] 6.18 Add utility override modal from a row/utility cell with previous/current values, old meter final, new meter start, billable usage, reason, and note
-- [ ] 6.19 Replace `BillingReadingsStep` and `BillingDraftReviewStep` wiring in the workspace with `BillingDraftGridStep`
-- [ ] 6.20 Drop separate `Nhập chỉ số` and `Soát hoá đơn` tabs from workspace navigation; add one `Chỉ số & hoá đơn nháp` tab
-- [ ] 6.21 Keep `Phát hành` as a separate tab for v1 and make it reflect the same draft-grid/draft blocker state
-- [ ] 6.22 Ensure period states `issued`, `collecting`, `partial/paid invoice rows`, and `closed` render draft-grid rows as read-only
+- [x] 6.12 Add toolbar with batch reading date, `Áp dụng cho dòng trống`, and filters for `Cần xử lý`, `Tất cả`, `Phòng trống`, `Có lỗi`, and `Đã sẵn sàng`
+- [x] 6.13 Apply reading date defaults: existing date preserved, current period defaults to today, past period defaults to last day of the period
+- [x] 6.14 Track local unsaved reading changes and submit only changed meter readings on `Lưu & tính lại`
+- [x] 6.15 Refresh draft-grid read model and overview totals after saving readings or utility overrides
+- [x] 6.16 Preserve selected filter and expanded row state across draft-grid refresh when possible
+- [x] 6.17 Add row details expansion for full invoice line items, blockers, warnings, and override actions
+- [x] 6.18 Add utility override modal from a row/utility cell with previous/current values, old meter final, new meter start, billable usage, reason, and note
+- [x] 6.19 Replace `BillingReadingsStep` and `BillingDraftReviewStep` wiring in the workspace with `BillingDraftGridStep`
+- [x] 6.20 Drop separate `Nhập chỉ số` and `Soát hoá đơn` tabs from workspace navigation; add one `Chỉ số & hoá đơn nháp` tab
+- [x] 6.21 Keep `Phát hành` as a separate tab for v1 and make it reflect the same draft-grid/draft blocker state
+- [x] 6.22 Ensure period states `issued`, `collecting`, `partial/paid invoice rows`, and `closed` render draft-grid rows as read-only
 - [ ] 6.23 Verify active-contract room happy path: enter electricity/water readings, save/recompute, see utility amounts and draft total, then issue from `Phát hành`
 - [ ] 6.24 Verify vacant room baseline: optional reading can be saved, no invoice is created, and missing vacant readings do not block issue
 - [ ] 6.25 Verify blocker row: missing utility pricing or required reading shows blocker in the row and prevents issue
@@ -117,4 +117,4 @@
 - [ ] 6.27 Verify issued period behavior: draft-grid rows are read-only and correction guidance points to void/reissue or adjustment flow
 - [ ] 6.28 Verify closed period behavior: all normal reading inputs and override actions are disabled
 - [ ] 6.29 Verify desktop and mobile draft-grid layouts for text overflow, overlapping controls, and scannability
-- [ ] 6.30 Update OpenSpec validation and task status after the draft-grid optimization is implemented
+- [x] 6.30 Update OpenSpec validation and task status after the draft-grid optimization is implemented
