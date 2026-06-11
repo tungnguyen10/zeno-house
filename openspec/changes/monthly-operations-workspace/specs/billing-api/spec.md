@@ -111,3 +111,30 @@ The API SHALL support controlled invoice corrections.
 #### Scenario: Closed period direct mutation rejected
 - **WHEN** a correction targets a closed period without explicit reopen flow
 - **THEN** the API rejects normal edit, void, or reissue actions
+
+### Requirement: Draft grid read model API
+The API SHALL provide a draft-grid read model for the `Chỉ số & hoá đơn nháp` workspace tab. The endpoint SHALL compose existing period, room, meter reading, utility override, invoice, and draft calculation data without introducing a new repository layer for this optimization.
+
+#### Scenario: Draft grid requested
+- **WHEN** the workspace requests the draft grid for a billing period
+- **THEN** the API returns period context, batch reading date, room-centered rows, utility cells, line totals, blockers, warnings, and aggregate totals
+
+#### Scenario: Billable contract row
+- **WHEN** a room has an active billing contract in the selected period
+- **THEN** the read model returns a `billable_contract` row with contract, tenant, utility, draft lines, draft total, and editability state
+
+#### Scenario: Vacant baseline row
+- **WHEN** a room has no active billing contract and is eligible for baseline reading entry
+- **THEN** the read model may return a `vacant_baseline` row that has utility cells but no invoice-producing draft total
+
+#### Scenario: Required readings follow billing logic
+- **WHEN** reading progress is computed for the draft grid
+- **THEN** required readings are derived from active billing contracts and pricing rules that require meter readings, not from room status alone
+
+#### Scenario: Read-only state included
+- **WHEN** a row has an issued invoice or belongs to a closed period
+- **THEN** the read model marks the row and utility cells as non-editable
+
+#### Scenario: Override metadata included
+- **WHEN** a utility usage override exists for a room meter in the period
+- **THEN** the read model includes override id, source, billable usage, amount, and warning context for that utility cell

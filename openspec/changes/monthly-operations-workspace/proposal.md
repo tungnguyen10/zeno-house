@@ -61,6 +61,13 @@ The next product step should make `/billing` the real monthly operations center.
   - searchable select primitive for building/room/tenant/contract/invoice selection where simple select is insufficient
   - `UiAlert`, `UiEmptyState`, `UiSkeleton`, `UiStatusBadge`, `UiModal`/optional `UiDrawer`
 - Treat `adopt-operational-design-system` as a prerequisite for implementation sequencing.
+- Optimize the implemented workspace with `optimize-billing-draft-grid` before archive:
+  - replace separate Readings and Review Charges tabs with one `Chỉ số & hoá đơn nháp` work tab
+  - render one row per room/contract billing subject instead of one row per room-meter pair
+  - provide a batch reading date and row-level advanced override only when needed
+  - show reading inputs, utility calculations, room/service totals, draft total, blockers, and warnings in the same row
+  - include vacant rooms as optional baseline rows that do not create invoices and do not block issue
+  - keep invoice issue, payment/debt, audit, and close-period flows as separate tabs
 
 ## Impact
 
@@ -71,9 +78,11 @@ The next product step should make `/billing` the real monthly operations center.
   - billing composables/components
   - navigation wording if needed
   - must consume primitives and patterns finalized by `adopt-operational-design-system`
+  - add a draft-grid read model and `BillingDraftGridStep` UI composition
 - Server:
   - new billing API endpoints
   - new billing service/repository
+  - draft-grid endpoint composition built from existing services/repositories; no new repository layer for the optimization
   - permission map
   - database type generation after manual SQL is applied
 - Database:
@@ -95,6 +104,8 @@ The next product step should make `/billing` the real monthly operations center.
 - Automatically migrating legacy `contract_payments.rent` rows into invoice payments
 - Full accounting ledger or double-entry bookkeeping
 - Recreating local billing-only UI primitives that duplicate `app/components/ui/*`
+- New database tables for the draft-grid optimization
+- Moving payment collection into the draft grid before invoice issue
 
 ## Supabase Manual DB Scope
 

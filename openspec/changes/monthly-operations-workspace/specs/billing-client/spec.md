@@ -129,3 +129,116 @@ The billing entry page and workspace SHALL be built from the adopted operational
 #### Scenario: Raw billing UI exception documented
 - **WHEN** a raw `input`, `select`, `textarea`, `table`, or `button` remains in billing pages/components
 - **THEN** the implementation documents why the design-system primitive cannot cover it yet and what follow-up is needed
+
+### Requirement: Billing draft grid workspace tab
+The billing workspace SHALL provide a `Chỉ số & hoá đơn nháp` tab that combines monthly reading entry and draft invoice review into one room-centered grid.
+
+#### Scenario: One room row
+- **WHEN** a room has an active billing contract in the selected period
+- **THEN** the grid renders one row for that room/contract with electricity input, water input, utility charge preview, rent/service summary, draft total, status, and detail action
+
+#### Scenario: Separate meter rows are not the primary UI
+- **WHEN** a room has both electricity and water meters
+- **THEN** the primary grid does not render two separate top-level rows for the room
+
+#### Scenario: Batch reading date
+- **WHEN** the user opens the draft grid
+- **THEN** the toolbar shows one batch reading date that can be applied to empty reading rows
+
+#### Scenario: Past period date default
+- **WHEN** an empty reading belongs to a past period
+- **THEN** its default batch reading date is the last day of that period
+
+#### Scenario: Current period date default
+- **WHEN** an empty reading belongs to the current period
+- **THEN** its default batch reading date is today's date
+
+#### Scenario: Existing reading date preserved
+- **WHEN** a reading already exists for the period
+- **THEN** the grid preserves the stored reading date instead of overwriting it with the batch date
+
+#### Scenario: Utility formula visible
+- **WHEN** electricity or water can be calculated
+- **THEN** the grid shows previous value, current value, usage, rate, and amount in the utility cell
+
+#### Scenario: Draft detail expands
+- **WHEN** the user opens row details
+- **THEN** the row shows full draft invoice line items, blockers, warnings, and override actions for that room/contract
+
+### Requirement: Draft grid mobile behavior
+The billing draft grid SHALL provide a mobile layout that preserves the same work without requiring horizontal scanning of all desktop columns.
+
+#### Scenario: Mobile row composition
+- **WHEN** the grid is viewed on a mobile viewport
+- **THEN** each row shows room, tenant, draft total, electricity input/amount, water input/amount, rent/service summary, status, and detail action in a stacked compact layout
+
+#### Scenario: Mobile edit workflow
+- **WHEN** the user edits readings on mobile
+- **THEN** they can enter new values, see blocker/amount feedback, save, and reopen details without leaving the tab
+
+### Requirement: Vacant room baseline rows
+The billing draft grid SHALL include vacant rooms only as optional baseline rows, not as invoice-producing rows.
+
+#### Scenario: Vacant baseline row
+- **WHEN** a vacant room is shown in the grid
+- **THEN** it can accept electricity/water readings for baseline tracking but shows `Không lập hoá đơn` or equivalent baseline status
+
+#### Scenario: Vacant row does not block issue
+- **WHEN** a vacant room lacks readings
+- **THEN** invoice issue for active contracts is not blocked by that vacant room
+
+#### Scenario: Default filter hides optional vacant rows
+- **WHEN** the grid opens in the default `Cần xử lý` filter
+- **THEN** optional vacant baseline rows are hidden unless they contain invalid data or require user attention
+
+### Requirement: Draft grid override modal
+The billing draft grid SHALL expose meter replacement/reset/correction through a row-level modal.
+
+#### Scenario: Override modal opens from utility cell
+- **WHEN** a reading has negative consumption or the user chooses override for a utility cell
+- **THEN** the modal shows room, tenant/contract context, meter type, previous value, current value, old meter final value, new meter start value, billable usage, reason, and note fields
+
+#### Scenario: Override save refreshes grid
+- **WHEN** an override is saved
+- **THEN** the draft grid refreshes and the affected utility cell uses override usage and warning/status feedback
+
+### Requirement: Draft grid edit gating
+The billing draft grid SHALL enforce read-only behavior once billing state makes direct reading edits unsafe.
+
+#### Scenario: Draft period editable
+- **WHEN** the period is in draft, readings, or review state and no invoice has been issued for the row
+- **THEN** reading inputs and applicable override actions are editable
+
+#### Scenario: Issued invoice row read-only
+- **WHEN** an invoice has been issued for a row
+- **THEN** reading inputs and draft line edits are read-only and corrections must use void/reissue or adjustment flow
+
+#### Scenario: Closed period read-only
+- **WHEN** the period is closed
+- **THEN** all normal reading inputs and override actions are disabled
+
+### Requirement: Draft grid recompute workflow
+The billing draft grid SHALL save changed readings and recompute draft totals from the server read model.
+
+#### Scenario: Save changed readings only
+- **WHEN** the user clicks `Lưu & tính lại`
+- **THEN** the client submits changed meter readings and does not resubmit unchanged rows unnecessarily
+
+#### Scenario: Server is source of truth after save
+- **WHEN** saving readings succeeds
+- **THEN** the grid refreshes from the draft-grid API/read model and displays server-computed utility amounts, line totals, blockers, warnings, and draft totals
+
+#### Scenario: Filter state preserved
+- **WHEN** the grid refreshes after save
+- **THEN** the selected filter and expanded rows are preserved when the corresponding rows still exist
+
+### Requirement: Issue remains a separate confirmation tab
+The workspace SHALL keep invoice issuing as a separate `Phát hành` tab for this change, while using the same draft readiness source as the draft grid.
+
+#### Scenario: Issue tab remains
+- **WHEN** all billable rows are ready in `Chỉ số & hoá đơn nháp`
+- **THEN** the user still proceeds to `Phát hành` for final confirmation
+
+#### Scenario: Issue tab reflects draft-grid blockers
+- **WHEN** draft-grid rows have blockers
+- **THEN** the issue tab displays the same blocker state and prevents issuing

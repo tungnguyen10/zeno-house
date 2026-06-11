@@ -90,12 +90,11 @@ Raw `input`, `select`, `textarea`, `table`, and `button` markup should not be in
   │   ├─ draft total
   │   ├─ issued/paid/debt totals
   │   └─ period status
-  ├─ Readings
-  │   └─ reuse bulk meter reading input for this building + period
-  ├─ Review Charges
-  │   ├─ one draft invoice per active contract
-  │   ├─ line items by rent/utilities/services/discount/surcharge
-  │   └─ blockers/warnings before issue
+  ├─ Chỉ số & hoá đơn nháp
+  │   ├─ one row per room/contract billing subject
+  │   ├─ enter electricity/water readings inline
+  │   ├─ preview utility charges, room/service totals, blockers, and warnings
+  │   └─ expand row for full draft invoice line items and override actions
   ├─ Issue Invoices
   │   └─ persist invoice snapshots + charge lines
   ├─ Payments / Debt
@@ -105,6 +104,201 @@ Raw `input`, `select`, `textarea`, `table`, and `button` markup should not be in
   └─ Close Period
       └─ lock changes after all review conditions pass
 ```
+
+## Optimize Billing Draft Grid
+
+`optimize-billing-draft-grid` is a finishing phase inside this change. It replaces the first-pass split between `BillingReadingsStep` and `BillingDraftReviewStep` with a single work grid that matches the manager's monthly operation: enter new readings and immediately see whether each room's draft bill is ready.
+
+### UX model
+
+The primary tab label should be `Chỉ số & hoá đơn nháp`.
+
+Default grid columns on desktop:
+
+- `TT`
+- `Chi tiết`
+- `Phòng`
+- `Khách thuê`
+- `Số điện mới`
+- `Số nước mới`
+- `Tiền điện`
+- `Tiền nước`
+- `Phòng/Dịch vụ`
+- `Tổng nháp`
+- `Trạng thái`
+- `Thao tác`
+
+Column behavior:
+
+- `Phòng` includes room number and optional building/floor context.
+- `Khách thuê` includes tenant name and compact phone/contract context where available.
+- `Số điện mới` and `Số nước mới` are compact editable inputs only when the period is editable and the row requires or allows readings.
+- `Tiền điện` and `Tiền nước` show previous value, current value, usage formula, rate, and computed amount when available.
+- `Phòng/Dịch vụ` summarizes rent and service totals; full line items remain in the expanded row.
+- `Tổng nháp` uses the server draft total when a contract draft exists.
+- `Trạng thái` shows `Thiếu chỉ số`, `Có lỗi`, `Cần soát`, `Sẵn sàng`, `Đã phát hành`, `Đã thu một phần`, `Đã thu`, or `Không lập hoá đơn` as appropriate.
+- `Thao tác` exposes row-level actions such as override, expand details, or open issued invoice/payment action when valid.
+
+The grid should default to rows needing attention, with filters:
+
+- `Cần xử lý`
+- `Tất cả`
+- `Phòng trống`
+- `Có lỗi`
+- `Đã sẵn sàng`
+
+### Mobile behavior
+
+Mobile should not render the full desktop table horizontally as the primary experience. It should collapse each room into a dense row/card using the same data:
+
+```text
+P01 · Võ Chí Linh                         Tổng nháp 1,965,000
+Điện: Cũ 3669 -> Mới [3823]  154 x 3,500 = 539,000
+Nước: Cũ 507  -> Mới [511]   4 x 14,000 = 56,000
+Phòng/DV: 1,370,000                    [Chi tiết]
+```
+
+Mobile must preserve the least-action workflow: edit new readings, see utility amount, see blocker, save/recompute, and expand details without navigating away.
+
+### Batch reading date
+
+The tab should provide one batch reading date in the toolbar:
+
+```text
+Ngày đọc chỉ số: [YYYY-MM-DD] [Áp dụng cho dòng trống]
+```
+
+Default date rules:
+
+- if existing readings are present, keep their saved reading dates;
+- if the period is the current month, default empty rows to today;
+- if the period is in the past, default empty rows to the last day of that period;
+- row-level date override is advanced behavior and should be inside row details or an overflow action, not a visible column by default.
+
+### Vacant room baseline
+
+Rows with an active contract in the period are billing rows. Vacant rooms are optional baseline rows:
+
+- they may accept electricity/water readings;
+- they do not create draft invoices;
+- they do not block invoice issue;
+- they are hidden from the default `Cần xử lý` filter unless they have invalid data or the user chooses `Phòng trống`;
+- they display `Không lập hoá đơn` or `Baseline` status.
+
+Required reading progress should be computed from active billing contracts and pricing rules that require meter readings, not from `rooms.status = 'occupied'` alone.
+
+### Override modal
+
+Meter replacement/reset/correction should be handled from the row, not as a separate disconnected section. The override surface should use `UiModal` and show:
+
+- room, tenant/contract context;
+- meter type;
+- previous source reading id/value;
+- current reading id/value;
+- old meter final value;
+- new meter start value;
+- billable usage;
+- reason;
+- note;
+- save/cancel actions.
+
+Saving an override refreshes the draft grid and the existing draft calculation.
+
+### Read model
+
+The grid should be powered by a read model composed at the API/service boundary, not by the component stitching raw readings and drafts itself.
+
+Suggested response shape:
+
+```ts
+interface BillingDraftGridResponse {
+  period: BillingPeriod
+  batchReadingDate: string
+  rows: BillingDraftGridRow[]
+  totals: {
+    requiredReadingCount: number
+    completeReadingCount: number
+    readyDraftCount: number
+    blockedDraftCount: number
+    draftTotal: number
+  }
+}
+
+interface BillingDraftGridRow {
+  key: string
+  rowType: 'billable_contract' | 'vacant_baseline' | 'data_warning'
+  roomId: string
+  roomNumber: string | null
+  floor: number | null
+  contractId: string | null
+  tenantId: string | null
+  tenantName: string | null
+  contractCode: string | null
+  invoiceId: string | null
+  invoiceStatus: InvoiceStatus | null
+  editable: boolean
+  status: 'missing_reading' | 'blocked' | 'warning' | 'ready' | 'issued' | 'partial' | 'paid' | 'baseline'
+  electricity: BillingDraftGridUtilityCell | null
+  water: BillingDraftGridUtilityCell | null
+  rentAndServiceTotal: number
+  draftTotal: number | null
+  blockers: BillingDraftBlocker[]
+  warnings: BillingDraftWarning[]
+  lines: BillingDraftLine[]
+}
+
+interface BillingDraftGridUtilityCell {
+  meterType: 'electricity' | 'water'
+  required: boolean
+  editable: boolean
+  previousReadingId: string | null
+  previousValue: number | null
+  currentReadingId: string | null
+  currentValue: number | null
+  readingDate: string | null
+  usage: number | null
+  rate: number | null
+  amount: number | null
+  pricingType: string | null
+  overrideId: string | null
+  source: 'monthly' | 'handover_fallback' | 'override' | 'fixed' | 'per_person' | 'not_applicable'
+  blockerCode: string | null
+}
+```
+
+The endpoint may compose existing period, room, reading, utility override, and draft services. It should not introduce a new repository layer for this optimization.
+
+### Edit gating
+
+Rows are editable only when the period is not closed and the invoice has not been issued for that contract. Issued, collecting, partial, paid, and closed states should be read-only in the grid.
+
+Rules:
+
+- `draft/readings/review`: reading inputs are editable.
+- `issued/collecting`: readings and draft lines are read-only; corrections must use void/reissue or adjustment flow.
+- `closed`: all normal edits are disabled.
+- vacant baseline rows are editable only while the period is not closed and no issued billing state depends on them.
+
+### Recompute strategy
+
+The UI should maintain local input state for unsaved reading values. `Lưu & tính lại` should:
+
+1. upsert changed meter readings only;
+2. save override changes when submitted through the override modal;
+3. refresh the draft-grid endpoint;
+4. refresh overview totals;
+5. preserve current filter/expanded-row state when possible.
+
+Draft totals shown after save should come from the server read model, not client-only formulas. Client-side usage/amount previews may be shown as immediate hints, but server refresh is the source of truth.
+
+### Issue tab A/B decision
+
+Two valid options exist:
+
+- Option A: keep `Phát hành` as a separate tab. This is safer for v1 because it preserves an explicit final confirmation step after the grid is clean.
+- Option B: merge issue CTA into the top of `Chỉ số & hoá đơn nháp` once every visible billable row is ready. This reduces one tab but risks hiding the final financial checkpoint.
+
+Decision for this change: use Option A. Keep `Phát hành` as a separate tab, but make it read from the same draft-grid/draft source so it does not feel disconnected.
 
 ## Decisions
 

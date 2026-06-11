@@ -15,7 +15,7 @@ export function mapMeterReading(row: Tables<'meter_readings'>): MeterReading {
     isEstimated: row.is_estimated,
     notes: row.notes,
     recordedBy: row.recorded_by,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
+    createdAt: row.created_at ?? '',
+    updatedAt: row.updated_at ?? '',
   }
 }

@@ -14,6 +14,237 @@ export type Database = {
   }
   public: {
     Tables: {
+      billing_audit_events: {
+        Row: {
+          action: string
+          actor_id: string | null
+          after_data: Json | null
+          before_data: Json | null
+          billing_period_id: string | null
+          created_at: string
+          entity_id: string | null
+          entity_type: string
+          id: string
+          metadata: Json
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          after_data?: Json | null
+          before_data?: Json | null
+          billing_period_id?: string | null
+          created_at?: string
+          entity_id?: string | null
+          entity_type: string
+          id?: string
+          metadata?: Json
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          after_data?: Json | null
+          before_data?: Json | null
+          billing_period_id?: string | null
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          metadata?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_audit_events_billing_period_id_fkey"
+            columns: ["billing_period_id"]
+            isOneToOne: false
+            referencedRelation: "billing_periods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      billing_periods: {
+        Row: {
+          building_id: string
+          closed_at: string | null
+          created_at: string
+          id: string
+          issued_at: string | null
+          opened_by: string | null
+          period_month: number
+          period_year: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          building_id: string
+          closed_at?: string | null
+          created_at?: string
+          id?: string
+          issued_at?: string | null
+          opened_by?: string | null
+          period_month: number
+          period_year: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          building_id?: string
+          closed_at?: string | null
+          created_at?: string
+          id?: string
+          issued_at?: string | null
+          opened_by?: string | null
+          period_month?: number
+          period_year?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_periods_building_id_fkey"
+            columns: ["building_id"]
+            isOneToOne: false
+            referencedRelation: "buildings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      billing_utility_usages: {
+        Row: {
+          billable_usage: number
+          billing_period_id: string
+          created_at: string
+          created_by: string | null
+          current_reading_id: string | null
+          current_reading_value: number
+          id: string
+          meter_type: string
+          new_meter_start_value: number | null
+          note: string | null
+          old_meter_final_value: number | null
+          previous_reading_id: string | null
+          previous_reading_value: number
+          reason: string
+          room_id: string
+          updated_at: string
+        }
+        Insert: {
+          billable_usage: number
+          billing_period_id: string
+          created_at?: string
+          created_by?: string | null
+          current_reading_id?: string | null
+          current_reading_value: number
+          id?: string
+          meter_type: string
+          new_meter_start_value?: number | null
+          note?: string | null
+          old_meter_final_value?: number | null
+          previous_reading_id?: string | null
+          previous_reading_value: number
+          reason?: string
+          room_id: string
+          updated_at?: string
+        }
+        Update: {
+          billable_usage?: number
+          billing_period_id?: string
+          created_at?: string
+          created_by?: string | null
+          current_reading_id?: string | null
+          current_reading_value?: number
+          id?: string
+          meter_type?: string
+          new_meter_start_value?: number | null
+          note?: string | null
+          old_meter_final_value?: number | null
+          previous_reading_id?: string | null
+          previous_reading_value?: number
+          reason?: string
+          room_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_utility_usages_billing_period_id_fkey"
+            columns: ["billing_period_id"]
+            isOneToOne: false
+            referencedRelation: "billing_periods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "billing_utility_usages_current_reading_id_fkey"
+            columns: ["current_reading_id"]
+            isOneToOne: false
+            referencedRelation: "meter_readings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "billing_utility_usages_previous_reading_id_fkey"
+            columns: ["previous_reading_id"]
+            isOneToOne: false
+            referencedRelation: "meter_readings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "billing_utility_usages_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      building_services: {
+        Row: {
+          building_id: string
+          catalog_id: string
+          created_at: string | null
+          default_amount: number
+          id: string
+          is_active: boolean
+          pricing_type: string | null
+          sort_order: number
+          updated_at: string | null
+        }
+        Insert: {
+          building_id: string
+          catalog_id: string
+          created_at?: string | null
+          default_amount?: number
+          id?: string
+          is_active?: boolean
+          pricing_type?: string | null
+          sort_order?: number
+          updated_at?: string | null
+        }
+        Update: {
+          building_id?: string
+          catalog_id?: string
+          created_at?: string | null
+          default_amount?: number
+          id?: string
+          is_active?: boolean
+          pricing_type?: string | null
+          sort_order?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "building_services_building_id_fkey"
+            columns: ["building_id"]
+            isOneToOne: false
+            referencedRelation: "buildings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "building_services_catalog_id_fkey"
+            columns: ["catalog_id"]
+            isOneToOne: false
+            referencedRelation: "service_catalog"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       buildings: {
         Row: {
           address: string
@@ -77,107 +308,6 @@ export type Database = {
         }
         Relationships: []
       }
-      building_services: {
-        Row: {
-          id: string
-          building_id: string
-          catalog_id: string
-          default_amount: number
-          pricing_type: string | null
-          is_active: boolean
-          sort_order: number
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          building_id: string
-          catalog_id: string
-          default_amount?: number
-          pricing_type?: string | null
-          is_active?: boolean
-          sort_order?: number
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          building_id?: string
-          catalog_id?: string
-          default_amount?: number
-          pricing_type?: string | null
-          is_active?: boolean
-          sort_order?: number
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "building_services_building_id_fkey"
-            columns: ["building_id"]
-            isOneToOne: false
-            referencedRelation: "buildings"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "building_services_catalog_id_fkey"
-            columns: ["catalog_id"]
-            isOneToOne: false
-            referencedRelation: "service_catalog"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      contract_payments: {
-        Row: {
-          id: string
-          contract_id: string
-          payment_type: string
-          amount: number
-          covered_period_start: string | null
-          covered_period_end: string | null
-          paid_at: string
-          payment_method: string | null
-          note: string | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          contract_id: string
-          payment_type: string
-          amount: number
-          covered_period_start?: string | null
-          covered_period_end?: string | null
-          paid_at: string
-          payment_method?: string | null
-          note?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          contract_id?: string
-          payment_type?: string
-          amount?: number
-          covered_period_start?: string | null
-          covered_period_end?: string | null
-          paid_at?: string
-          payment_method?: string | null
-          note?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "contract_payments_contract_id_fkey"
-            columns: ["contract_id"]
-            isOneToOne: false
-            referencedRelation: "contracts"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       contract_occupants: {
         Row: {
           billing_counted: boolean
@@ -229,45 +359,95 @@ export type Database = {
           },
         ]
       }
-      contract_renewals: {
+      contract_payments: {
         Row: {
-          id: string
+          amount: number
           contract_id: string
-          new_contract_id: string | null
-          mode: string
-          old_end_date: string
-          new_end_date: string
-          old_monthly_rent: number
-          new_monthly_rent: number
-          reason: string | null
-          created_by: string
+          covered_period_end: string | null
+          covered_period_start: string | null
           created_at: string
+          id: string
+          note: string | null
+          paid_at: string
+          payment_method: string | null
+          payment_type: string
+          updated_at: string
         }
         Insert: {
-          id?: string
+          amount: number
           contract_id: string
-          new_contract_id?: string | null
-          mode: string
-          old_end_date: string
-          new_end_date: string
-          old_monthly_rent: number
-          new_monthly_rent: number
-          reason?: string | null
-          created_by: string
+          covered_period_end?: string | null
+          covered_period_start?: string | null
           created_at?: string
+          id?: string
+          note?: string | null
+          paid_at: string
+          payment_method?: string | null
+          payment_type: string
+          updated_at?: string
         }
         Update: {
-          id?: string
+          amount?: number
           contract_id?: string
-          new_contract_id?: string | null
-          mode?: string
-          old_end_date?: string
-          new_end_date?: string
-          old_monthly_rent?: number
-          new_monthly_rent?: number
-          reason?: string | null
-          created_by?: string
+          covered_period_end?: string | null
+          covered_period_start?: string | null
           created_at?: string
+          id?: string
+          note?: string | null
+          paid_at?: string
+          payment_method?: string | null
+          payment_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_payments_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contract_renewals: {
+        Row: {
+          contract_id: string
+          created_at: string
+          created_by: string
+          id: string
+          mode: string
+          new_contract_id: string | null
+          new_end_date: string
+          new_monthly_rent: number
+          old_end_date: string
+          old_monthly_rent: number
+          reason: string | null
+        }
+        Insert: {
+          contract_id: string
+          created_at?: string
+          created_by: string
+          id?: string
+          mode: string
+          new_contract_id?: string | null
+          new_end_date: string
+          new_monthly_rent: number
+          old_end_date: string
+          old_monthly_rent: number
+          reason?: string | null
+        }
+        Update: {
+          contract_id?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          mode?: string
+          new_contract_id?: string | null
+          new_end_date?: string
+          new_monthly_rent?: number
+          old_end_date?: string
+          old_monthly_rent?: number
+          reason?: string | null
         }
         Relationships: [
           {
@@ -288,51 +468,51 @@ export type Database = {
       }
       contract_services: {
         Row: {
-          id: string
-          contract_id: string
-          catalog_id: string
           amount: number
-          quantity: number
+          catalog_id: string
+          contract_id: string
+          created_at: string | null
+          id: string
           is_enabled: boolean
           notes: string | null
-          created_at: string
-          updated_at: string
+          quantity: number
+          updated_at: string | null
         }
         Insert: {
-          id?: string
-          contract_id: string
-          catalog_id: string
           amount: number
-          quantity?: number
+          catalog_id: string
+          contract_id: string
+          created_at?: string | null
+          id?: string
           is_enabled?: boolean
           notes?: string | null
-          created_at?: string
-          updated_at?: string
+          quantity?: number
+          updated_at?: string | null
         }
         Update: {
-          id?: string
-          contract_id?: string
-          catalog_id?: string
           amount?: number
-          quantity?: number
+          catalog_id?: string
+          contract_id?: string
+          created_at?: string | null
+          id?: string
           is_enabled?: boolean
           notes?: string | null
-          created_at?: string
-          updated_at?: string
+          quantity?: number
+          updated_at?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "contract_services_contract_id_fkey"
-            columns: ["contract_id"]
-            isOneToOne: false
-            referencedRelation: "contracts"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "contract_services_catalog_id_fkey"
             columns: ["catalog_id"]
             isOneToOne: false
             referencedRelation: "service_catalog"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_services_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
             referencedColumns: ["id"]
           },
         ]
@@ -432,14 +612,237 @@ export type Database = {
           },
         ]
       }
-      meter_readings: {
+      invoice_charges: {
         Row: {
-          building_id: string
+          amount: number
+          charge_type: string
           created_at: string
           id: string
+          invoice_id: string
+          label: string
+          metadata: Json
+          quantity: number
+          sort_order: number
+          source_id: string | null
+          source_type: string | null
+          unit_price: number
+        }
+        Insert: {
+          amount?: number
+          charge_type: string
+          created_at?: string
+          id?: string
+          invoice_id: string
+          label: string
+          metadata?: Json
+          quantity?: number
+          sort_order?: number
+          source_id?: string | null
+          source_type?: string | null
+          unit_price?: number
+        }
+        Update: {
+          amount?: number
+          charge_type?: string
+          created_at?: string
+          id?: string
+          invoice_id?: string
+          label?: string
+          metadata?: Json
+          quantity?: number
+          sort_order?: number
+          source_id?: string | null
+          source_type?: string | null
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_charges_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoice_payments: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          invoice_id: string
+          note: string | null
+          paid_at: string
+          payment_method: string | null
+          recorded_by: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          invoice_id: string
+          note?: string | null
+          paid_at: string
+          payment_method?: string | null
+          recorded_by?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          invoice_id?: string
+          note?: string | null
+          paid_at?: string
+          payment_method?: string | null
+          recorded_by?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_payments_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoices: {
+        Row: {
+          balance_amount: number
+          billing_period_id: string
+          contract_id: string
+          created_at: string
+          discount_amount: number
+          due_date: string | null
+          id: string
+          issued_at: string | null
+          notes: string | null
+          paid_amount: number
+          paid_at: string | null
+          room_id: string
+          status: string
+          subtotal_amount: number
+          superseded_by_invoice_id: string | null
+          supersedes_invoice_id: string | null
+          surcharge_amount: number
+          tenant_id: string
+          total_amount: number
+          updated_at: string
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
+        }
+        Insert: {
+          balance_amount?: number
+          billing_period_id: string
+          contract_id: string
+          created_at?: string
+          discount_amount?: number
+          due_date?: string | null
+          id?: string
+          issued_at?: string | null
+          notes?: string | null
+          paid_amount?: number
+          paid_at?: string | null
+          room_id: string
+          status?: string
+          subtotal_amount?: number
+          superseded_by_invoice_id?: string | null
+          supersedes_invoice_id?: string | null
+          surcharge_amount?: number
+          tenant_id: string
+          total_amount?: number
+          updated_at?: string
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
+        }
+        Update: {
+          balance_amount?: number
+          billing_period_id?: string
+          contract_id?: string
+          created_at?: string
+          discount_amount?: number
+          due_date?: string | null
+          id?: string
+          issued_at?: string | null
+          notes?: string | null
+          paid_amount?: number
+          paid_at?: string | null
+          room_id?: string
+          status?: string
+          subtotal_amount?: number
+          superseded_by_invoice_id?: string | null
+          supersedes_invoice_id?: string | null
+          surcharge_amount?: number
+          tenant_id?: string
+          total_amount?: number
+          updated_at?: string
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_billing_period_id_fkey"
+            columns: ["billing_period_id"]
+            isOneToOne: false
+            referencedRelation: "billing_periods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_superseded_by_invoice_id_fkey"
+            columns: ["superseded_by_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_supersedes_invoice_id_fkey"
+            columns: ["supersedes_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meter_readings: {
+        Row: {
+          adjustment_reason: string | null
+          building_id: string
+          consumption: number | null
+          created_at: string | null
+          id: string
+          is_adjusted: boolean
           is_estimated: boolean
           meter_type: string
+          new_reading: number | null
           notes: string | null
+          old_reading: number | null
           period_month: number
           period_year: number
           reading_date: string
@@ -447,15 +850,21 @@ export type Database = {
           reading_value: number
           recorded_by: string | null
           room_id: string
-          updated_at: string
+          updated_at: string | null
+          updated_by: string | null
         }
         Insert: {
+          adjustment_reason?: string | null
           building_id: string
-          created_at?: string
+          consumption?: number | null
+          created_at?: string | null
           id?: string
+          is_adjusted?: boolean
           is_estimated?: boolean
           meter_type: string
+          new_reading?: number | null
           notes?: string | null
+          old_reading?: number | null
           period_month: number
           period_year: number
           reading_date: string
@@ -463,15 +872,21 @@ export type Database = {
           reading_value: number
           recorded_by?: string | null
           room_id: string
-          updated_at?: string
+          updated_at?: string | null
+          updated_by?: string | null
         }
         Update: {
+          adjustment_reason?: string | null
           building_id?: string
-          created_at?: string
+          consumption?: number | null
+          created_at?: string | null
           id?: string
+          is_adjusted?: boolean
           is_estimated?: boolean
           meter_type?: string
+          new_reading?: number | null
           notes?: string | null
+          old_reading?: number | null
           period_month?: number
           period_year?: number
           reading_date?: string
@@ -479,7 +894,8 @@ export type Database = {
           reading_value?: number
           recorded_by?: string | null
           room_id?: string
-          updated_at?: string
+          updated_at?: string | null
+          updated_by?: string | null
         }
         Relationships: [
           {
@@ -547,37 +963,37 @@ export type Database = {
       }
       service_catalog: {
         Row: {
-          id: string
           code: string
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean
           name: string
           pricing_type: string
-          unit: string | null
-          description: string | null
-          is_active: boolean
           sort_order: number
-          created_at: string
+          unit: string | null
         }
         Insert: {
-          id?: string
           code: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
           name: string
           pricing_type: string
-          unit?: string | null
-          description?: string | null
-          is_active?: boolean
           sort_order?: number
-          created_at?: string
+          unit?: string | null
         }
         Update: {
-          id?: string
           code?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
           name?: string
           pricing_type?: string
-          unit?: string | null
-          description?: string | null
-          is_active?: boolean
           sort_order?: number
-          created_at?: string
+          unit?: string | null
         }
         Relationships: []
       }
@@ -646,7 +1062,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      utility_type: "electricity" | "water"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -773,6 +1189,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      utility_type: ["electricity", "water"],
+    },
   },
 } as const
