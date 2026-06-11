@@ -1,0 +1,188 @@
+## ADDED Requirements
+
+### Requirement: Select primitive
+The system SHALL provide `UiSelect` as the standard select control for forms and toolbars.
+
+#### Scenario: Select with label and options
+- **WHEN** `UiSelect` is rendered with label and options
+- **THEN** it displays a dark themed select control with label, selected value, and available options
+
+#### Scenario: Select error state
+- **WHEN** `UiSelect` receives an error
+- **THEN** it renders an error message and error border consistently with `UiInput`
+
+#### Scenario: Select disabled state
+- **WHEN** `UiSelect` is disabled
+- **THEN** it uses disabled styling and cannot be changed
+
+### Requirement: Textarea primitive
+The system SHALL provide `UiTextarea` as the standard multiline text input.
+
+#### Scenario: Textarea with hint
+- **WHEN** `UiTextarea` is rendered with a hint
+- **THEN** it displays the hint using muted helper text
+
+#### Scenario: Textarea error state
+- **WHEN** `UiTextarea` receives an error
+- **THEN** it renders an error message and error border consistently with `UiInput`
+
+### Requirement: Boolean controls
+The system SHALL provide `UiCheckbox` and `UiToggle` for boolean choices.
+
+#### Scenario: Checkbox for explicit selection
+- **WHEN** a form needs a persisted true/false field
+- **THEN** it can use `UiCheckbox` with label, disabled state, and error/hint support where needed
+
+#### Scenario: Toggle for immediate operational switch
+- **WHEN** a settings table needs an on/off switch
+- **THEN** it can use `UiToggle` with stable size, dark inactive state, cyan active state, and accessible label
+
+### Requirement: Generic badge primitive
+The system SHALL provide `UiBadge` for small semantic labels and status markers.
+
+#### Scenario: Badge variants
+- **WHEN** a badge is rendered with neutral, accent, success, warning, or danger variant
+- **THEN** it maps to the design system status colors
+
+#### Scenario: Status badge can reuse badge
+- **WHEN** `UiStatusBadge` renders a domain status
+- **THEN** it can delegate visual styling to `UiBadge` or follow the same variant mapping
+
+### Requirement: Alert primitive
+The system SHALL provide `UiAlert` for inline feedback and blockers.
+
+#### Scenario: Error alert
+- **WHEN** an API or validation error needs to be shown
+- **THEN** `UiAlert` renders a dark themed danger alert with readable text
+
+#### Scenario: Warning blocker
+- **WHEN** a billing workflow has missing readings or unsupported pricing
+- **THEN** `UiAlert` can render warning/blocker content without custom inline alert classes
+
+### Requirement: Table primitive
+The system SHALL provide `UiTable` for operational data tables.
+
+#### Scenario: Dense table
+- **WHEN** `UiTable` is rendered in dense mode
+- **THEN** it uses compact row height, dark header/body surfaces, dark borders, and readable `text-sm` cells
+
+#### Scenario: Table loading state
+- **WHEN** table data is loading
+- **THEN** the table renders skeleton or loading rows without layout shift
+
+#### Scenario: Table empty state
+- **WHEN** table data is empty
+- **THEN** the table renders a consistent empty state
+
+#### Scenario: Numeric alignment
+- **WHEN** a column contains currency, totals, readings, or counts
+- **THEN** the table supports right-aligned numeric cells
+
+#### Scenario: Action column
+- **WHEN** rows expose actions
+- **THEN** the table supports a stable action column that does not disrupt row scanning
+
+### Requirement: Tabs primitive
+The system SHALL provide `UiTabs` for workspace navigation.
+
+#### Scenario: Tabs render active state
+- **WHEN** one tab is active
+- **THEN** the active tab is visually distinct using the cyan/accent style
+
+#### Scenario: Tabs support disabled state
+- **WHEN** a workflow tab is blocked
+- **THEN** the tab can render disabled state and optional reason
+
+### Requirement: Operational layout primitives
+The system SHALL provide layout primitives for repeated operational screens.
+
+#### Scenario: Page header
+- **WHEN** a page needs title, description, context, and actions
+- **THEN** it uses `UiPageHeader`
+
+#### Scenario: Toolbar
+- **WHEN** a page needs filters, search, and right-side actions
+- **THEN** it uses `UiToolbar`
+
+#### Scenario: Metric
+- **WHEN** a workspace needs compact summary values
+- **THEN** it uses `UiMetric` rather than dashboard-scale stat cards
+
+#### Scenario: Section
+- **WHEN** a page needs a titled content region
+- **THEN** it uses `UiSection` for header/content structure without forcing nested cards
+
+### Requirement: Modal and drawer surfaces
+The system SHALL standardize modal and optional drawer surfaces for operational actions.
+
+#### Scenario: Modal size variants
+- **WHEN** `UiModal` is used for different content sizes
+- **THEN** it supports size variants such as sm, md, lg, and xl
+
+#### Scenario: Drawer for dense correction forms
+- **WHEN** a workflow needs a dense correction or override form
+- **THEN** the system may provide `UiDrawer` or side panel with dark surface styling and clear actions
+
+## MODIFIED Requirements
+
+### Requirement: UiButton hỗ trợ variant và size
+`UiButton` SHALL hỗ trợ `variant` (`primary` | `secondary` | `danger` | `ghost`) và `size` (`sm` | `md` | `lg`). SHALL support `loading` và `disabled` state. SHALL render `<button>` với đúng type attribute. Icon and icon-only usages SHALL be accessible with visible text or an aria-label.
+
+#### Scenario: UiButton render đúng theo variant
+- **WHEN** UiButton được render với `variant="primary"`
+- **THEN** button có visual style cyan accent consistent with the dark operational theme
+
+#### Scenario: UiButton ghost variant
+- **WHEN** UiButton được render với `variant="ghost"`
+- **THEN** button has low-emphasis styling suitable for toolbar/icon actions
+
+#### Scenario: UiButton disabled không cho click
+- **WHEN** UiButton có prop `disabled` hoặc `loading`
+- **THEN** button không nhận click event và có visual style mờ (opacity-50)
+
+#### Scenario: UiButton loading hiển thị spinner
+- **WHEN** UiButton có prop `loading="true"`
+- **THEN** button hiển thị spinner icon và disabled
+
+#### Scenario: Icon-only button is accessible
+- **WHEN** UiButton is used without visible text
+- **THEN** it provides an accessible label
+
+### Requirement: UiInput hỗ trợ label và error state
+`UiInput` SHALL nhận `label`, `modelValue`, `error` (string), `hint`, và `required`. SHALL emit `update:modelValue`. SHALL hiển thị error message bên dưới input khi `error` có giá trị. It SHOULD support stable ids and optional prefix/suffix slots for operational values such as currency, unit, and percent.
+
+#### Scenario: UiInput hiển thị label
+- **WHEN** UiInput được render với prop `label="Tên tòa nhà"`
+- **THEN** `<label>` element hiển thị "Tên tòa nhà" và liên kết với input qua `for`/`id`
+
+#### Scenario: UiInput hiển thị error message
+- **WHEN** UiInput có prop `error="Tên tòa nhà là bắt buộc"`
+- **THEN** error message hiển thị bên dưới input với màu đỏ, input có border đỏ
+
+#### Scenario: UiInput emit update:modelValue khi người dùng gõ
+- **WHEN** người dùng gõ vào UiInput
+- **THEN** `update:modelValue` được emit với giá trị mới
+
+#### Scenario: UiInput suffix for unit
+- **WHEN** UiInput is used for a meter reading, currency, or percentage field
+- **THEN** it can display unit context without custom wrapper markup
+
+### Requirement: UiStatusBadge hiển thị status với màu sắc tương ứng
+`UiStatusBadge` SHALL nhận `status` string và hiển thị với màu sắc khác nhau theo từng trạng thái. SHALL có label tiếng Việt cho từng status. It SHALL cover core entity statuses and billing statuses, with fallback style for unknown values.
+
+#### Scenario: UiStatusBadge hiển thị đúng màu theo status
+- **WHEN** UiStatusBadge nhận `status="active"`
+- **THEN** badge hiển thị màu semantic success/accent với label tương ứng
+
+#### Scenario: UiStatusBadge không crash với status không xác định
+- **WHEN** UiStatusBadge nhận một status value không có trong map
+- **THEN** badge hiển thị fallback style (neutral) thay vì throw error
+
+#### Scenario: Billing status labels
+- **WHEN** UiStatusBadge receives billing period or invoice statuses
+- **THEN** it renders Vietnamese labels and semantic variants for draft, readings, review, issued, collecting, partial, paid, overdue, closed, and void
+
+#### Scenario: Status context disambiguation
+- **WHEN** the same status key (e.g. `draft`, `issued`) exists in both billing period and invoice contexts
+- **THEN** `UiStatusBadge` accepts an optional `context` (`'entity' | 'period' | 'invoice' | 'correction'`) so the badge picks the matching label/variant from the corresponding map
+

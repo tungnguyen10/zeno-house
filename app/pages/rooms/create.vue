@@ -29,17 +29,16 @@ async function onSubmit(data: RoomFormData) {
 </script>
 
 <template>
-  <div class="max-w-2xl">
-    <div class="mb-6">
+  <div class="">
+    <UiPageHeader title="Thêm phòng mới">
       <NuxtLink to="/rooms" class="text-sm text-muted hover:text-white transition-colors">
         ← Danh sách phòng
       </NuxtLink>
-      <h1 class="text-xl font-semibold text-white mt-2">Thêm phòng mới</h1>
-    </div>
+    </UiPageHeader>
 
-    <div v-if="apiError" class="mb-4 rounded-lg border border-error/20 bg-error/10 px-4 py-3 text-sm text-error">
+    <UiAlert v-if="apiError" severity="danger" class="mb-4">
       {{ apiError }}
-    </div>
+    </UiAlert>
 
     <div class="rounded-xl border border-dark-border bg-dark-surface p-6">
       <RoomForm

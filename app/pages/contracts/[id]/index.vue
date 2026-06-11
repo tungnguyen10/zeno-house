@@ -92,8 +92,19 @@ async function handleRenew(input: ContractRenewInput) {
     } else {
       await refreshContract()
     }
-  } catch {
-    renewalApiError.value = 'Không thể gia hạn hợp đồng. Vui lòng thử lại.'
+  } catch (err: unknown) {
+    const fetchErr = err as {
+      data?: { error?: { message?: string }, message?: string, statusMessage?: string }
+      statusMessage?: string
+      message?: string
+    }
+    renewalApiError.value
+      = fetchErr?.data?.error?.message
+      ?? fetchErr?.data?.message
+      ?? fetchErr?.data?.statusMessage
+      ?? fetchErr?.statusMessage
+      ?? fetchErr?.message
+      ?? 'Không thể gia hạn hợp đồng. Vui lòng thử lại.'
   } finally {
     isRenewing.value = false
   }
@@ -176,38 +187,34 @@ watchEffect(() => {
     </div>
 
     <!-- Error -->
-    <div v-else-if="error && error.statusCode !== 404" class="text-sm text-error p-4 rounded-lg bg-error/10 border border-error/20">
+    <UiAlert v-else-if="error && error.statusCode !== 404" severity="danger">
       Không thể tải thông tin hợp đồng.
-    </div>
+    </UiAlert>
 
     <!-- Detail -->
     <template v-else-if="contract">
-      <div class="flex items-start justify-between gap-4 mb-6">
-        <div>
-          <NuxtLink to="/contracts" class="text-sm text-muted hover:text-white transition-colors">
-            ← Danh sách hợp đồng
-          </NuxtLink>
-          <div class="flex items-center gap-3 mt-2">
-            <h1 class="text-xl font-semibold text-white">Hợp đồng</h1>
-            <UiStatusBadge :status="contract.status" />
+      <UiPageHeader title="Hợp đồng">
+        <div class="flex items-center gap-2 mt-1">
+          <UiStatusBadge :status="contract.status" />
+          <span class="text-xs text-muted font-mono">{{ contract.id }}</span>
+        </div>
+        <template #actions>
+          <div v-if="authStore.isAdmin" class="flex gap-2 shrink-0 flex-wrap justify-end">
+            <UiButton
+              v-if="contract.status === 'active' || contract.status === 'expired'"
+              variant="secondary"
+              size="sm"
+              @click="showRenewalForm = !showRenewalForm"
+            >
+              Gia hạn
+            </UiButton>
+            <NuxtLink :to="`/contracts/${contract.id}/edit`">
+              <UiButton variant="secondary" size="sm">Chỉnh sửa</UiButton>
+            </NuxtLink>
+            <UiButton variant="danger" size="sm" @click="showDeleteModal = true">Xoá</UiButton>
           </div>
-          <p class="text-xs text-muted mt-0.5 font-mono">{{ contract.id }}</p>
-        </div>
-        <div v-if="authStore.isAdmin" class="flex gap-2 shrink-0 flex-wrap justify-end">
-          <UiButton
-            v-if="contract.status === 'active' || contract.status === 'expired'"
-            variant="secondary"
-            size="sm"
-            @click="showRenewalForm = !showRenewalForm"
-          >
-            Gia hạn
-          </UiButton>
-          <NuxtLink :to="`/contracts/${contract.id}/edit`">
-            <UiButton variant="secondary" size="sm">Chỉnh sửa</UiButton>
-          </NuxtLink>
-          <UiButton variant="danger" size="sm" @click="showDeleteModal = true">Xoá</UiButton>
-        </div>
-      </div>
+        </template>
+      </UiPageHeader>
 
       <div class="rounded-xl border border-dark-border bg-dark-surface p-6 space-y-4">
         <div class="grid grid-cols-2 gap-4">
@@ -242,34 +249,35 @@ watchEffect(() => {
       </div>
 
       <!-- Room section -->
-      <div class="rounded-xl border border-dark-border bg-dark-surface p-6 mt-4">
-        <h2 class="text-sm font-semibold text-white mb-3">Phòng</h2>
-        <NuxtLink
-          :to="`/rooms/${contract.room.id}`"
-          class="text-sm font-medium text-white hover:text-cyan transition-colors"
-        >
-          Phòng {{ contract.room.roomNumber }}
-        </NuxtLink>
-        <p class="text-sm text-muted mt-0.5">Tầng {{ contract.room.floor }} — {{ contract.room.buildingName }}</p>
-      </div>
+      <UiSection title="Phòng" class="mt-6">
+        <div class="rounded-xl border border-dark-border bg-dark-surface p-4">
+          <NuxtLink
+            :to="`/rooms/${contract.room.id}`"
+            class="text-sm font-medium text-white hover:text-cyan transition-colors"
+          >
+            Phòng {{ contract.room.roomNumber }}
+          </NuxtLink>
+          <p class="text-sm text-muted mt-0.5">Tầng {{ contract.room.floor }} — {{ contract.room.buildingName }}</p>
+        </div>
+      </UiSection>
 
       <!-- Tenant section -->
-      <div class="rounded-xl border border-dark-border bg-dark-surface p-6 mt-4">
-        <h2 class="text-sm font-semibold text-white mb-3">Khách thuê</h2>
-        <NuxtLink
-          :to="`/tenants/${contract.tenant.id}`"
-          class="text-sm font-medium text-white hover:text-cyan transition-colors"
-        >
-          {{ contract.tenant.fullName }}
-        </NuxtLink>
-        <p class="text-sm text-muted mt-0.5">{{ contract.tenant.phone }}</p>
-      </div>
+      <UiSection title="Khách thuê" class="mt-6">
+        <div class="rounded-xl border border-dark-border bg-dark-surface p-4">
+          <NuxtLink
+            :to="`/tenants/${contract.tenant.id}`"
+            class="text-sm font-medium text-white hover:text-cyan transition-colors"
+          >
+            {{ contract.tenant.fullName }}
+          </NuxtLink>
+          <p class="text-sm text-muted mt-0.5">{{ contract.tenant.phone }}</p>
+        </div>
+      </UiSection>
 
       <!-- Occupants section -->
-      <div class="rounded-xl border border-dark-border bg-dark-surface p-6 mt-4">
-        <div class="flex items-center justify-between mb-4">
+      <UiSection title="Người ở" class="mt-6">
+        <template #actions>
           <div class="flex items-center gap-2">
-            <h2 class="text-sm font-semibold text-white">Người ở</h2>
             <template v-if="!occupantsLoading">
               <!-- +1 for primary tenant -->
               <span
@@ -283,15 +291,16 @@ watchEffect(() => {
                 {{ occupants.filter(o => !o.moveOutDate).length + 1 }}/{{ contract.occupantCount }}
               </span>
             </template>
+            <UiButton
+              v-if="authStore.isAdmin && !showOccupantForm"
+              variant="secondary"
+              size="sm"
+              @click="showOccupantForm = true"
+            >
+              + Thêm người ở
+            </UiButton>
           </div>
-          <button
-            v-if="authStore.isAdmin && !showOccupantForm"
-            class="text-xs font-medium text-cyan hover:text-white transition-colors"
-            @click="showOccupantForm = true"
-          >
-            + Thêm người ở
-          </button>
-        </div>
+        </template>
 
         <!-- Add form -->
         <div v-if="showOccupantForm" class="mb-4 rounded-lg border border-dark-border p-4">
@@ -318,7 +327,7 @@ watchEffect(() => {
             </NuxtLink>
             <p class="text-xs text-muted mt-0.5">{{ contract.tenant.phone }}</p>
           </div>
-          <span class="text-xs text-muted border border-dark-border rounded px-2 py-0.5 shrink-0">Người thuê chính</span>
+          <span class="text-xs text-zinc-400 border border-dark-border rounded px-2 py-0.5 shrink-0">Người thuê chính</span>
         </div>
 
         <!-- Roommate list -->
@@ -334,8 +343,8 @@ watchEffect(() => {
               occ.moveOutDate ? 'border-dark-border opacity-50' : 'border-dark-border',
             ]"
           >
-            <div class="size-8 rounded-full bg-dark-hover flex items-center justify-center shrink-0">
-              <span class="text-muted text-xs font-bold">{{ occ.tenantName?.charAt(0).toUpperCase() ?? '?' }}</span>
+            <div class="size-8 rounded-full bg-zinc-800 flex items-center justify-center shrink-0">
+              <span class="text-zinc-400 text-xs font-bold">{{ occ.tenantName?.charAt(0).toUpperCase() ?? '?' }}</span>
             </div>
             <div class="min-w-0 flex-1">
               <p class="text-sm font-medium text-white">{{ occ.tenantName ?? occ.tenantId.slice(0, 8) + '…' }}</p>
@@ -347,40 +356,43 @@ watchEffect(() => {
                 </template>
               </p>
             </div>
-            <template v-if="authStore.isAdmin">
-              <button
-                v-if="!occ.moveOutDate"
-                class="text-xs text-muted hover:text-white transition-colors shrink-0"
-                @click="moveOutOccupantId = occ.id; moveOutDate = new Date().toISOString().slice(0, 10)"
-              >
-                Ghi nhận rời
-              </button>
-              <button
-                class="text-xs text-error hover:text-error/80 transition-colors shrink-0 ml-1"
-                @click="deletingOccupantId = occ.id"
-              >
-                Xoá
-              </button>
-            </template>
+              <template v-if="authStore.isAdmin">
+                <UiButton
+                  v-if="!occ.moveOutDate"
+                  variant="ghost"
+                  size="sm"
+                  @click="moveOutOccupantId = occ.id; moveOutDate = new Date().toISOString().slice(0, 10)"
+                >
+                  Ghi nhận rời
+                </UiButton>
+                <UiButton
+                  variant="ghost"
+                  size="sm"
+                  class="text-red-400 hover:text-red-300"
+                  @click="deletingOccupantId = occ.id"
+                >
+                  Xoá
+                </UiButton>
+              </template>
           </div>
           <p v-if="occupants.filter(o => o.role === 'roommate').length === 0 && !showOccupantForm" class="text-sm text-muted text-center py-3">
             Chưa có người ở chung nào.
           </p>
         </div>
-      </div>
+      </UiSection>
 
       <!-- Payments section -->
-      <div class="rounded-xl border border-dark-border bg-dark-surface p-6 mt-4">
-        <div class="flex items-center justify-between mb-4">
-          <h2 class="text-sm font-semibold text-white">Thanh toán</h2>
-          <button
+      <UiSection title="Thanh toán hợp đồng" description="Ghi nhận đặt cọc, trả trước và các khoản phát sinh khi ký hợp đồng. Không dùng cho thanh toán hóa đơn hàng tháng." class="mt-6">
+        <template #actions>
+          <UiButton
             v-if="authStore.isAdmin && !showPaymentForm"
-            class="text-xs font-medium text-cyan hover:text-white transition-colors"
+            variant="secondary"
+            size="sm"
             @click="showPaymentForm = true"
           >
             + Thêm thanh toán
-          </button>
-        </div>
+          </UiButton>
+        </template>
 
         <!-- Add payment form -->
         <template v-if="showPaymentForm">
@@ -431,74 +443,80 @@ watchEffect(() => {
                   </template>
                   <template v-if="payment.paymentMethod"> · {{ payment.paymentMethod }}</template>
                 </p>
-                <p v-if="payment.note" class="text-xs text-muted mt-0.5 italic">{{ payment.note }}</p>
+                <p v-if="payment.note" class="text-xs text-zinc-500 mt-0.5 italic">{{ payment.note }}</p>
               </div>
               <div class="flex items-center gap-2 shrink-0 ml-4">
                 <p class="text-sm font-semibold text-cyan">{{ formatCurrency(payment.amount) }}</p>
                 <template v-if="authStore.isAdmin">
-                  <button
-                    class="text-xs text-muted hover:text-white transition-colors"
+                  <UiButton
+                    variant="ghost"
+                    size="sm"
                     @click="editingPayment = payment; editPaymentApiError = null"
                   >
                     Sửa
-                  </button>
-                  <button
-                    class="text-xs text-error hover:text-error/80 transition-colors"
+                  </UiButton>
+                  <UiButton
+                    variant="ghost"
+                    size="sm"
+                    class="text-red-400 hover:text-red-300"
                     @click="deletingPaymentId = payment.id"
                   >
                     Xoá
-                  </button>
+                  </UiButton>
                 </template>
               </div>
             </div>
           </template>
         </div>
-      </div>
+      </UiSection>
 
       <!-- Services section -->
-      <div class="rounded-xl border border-dark-border bg-dark-surface p-6 mt-4">
-        <h2 class="text-sm font-semibold text-white mb-4">Dịch vụ hàng tháng</h2>
-        <ContractServicesTab
-          :services="contractServices"
-          :loading="servicesLoading"
-          @update="updateContractService"
-        />
-      </div>
+      <UiSection title="Dịch vụ hàng tháng" class="mt-6">
+        <div class="rounded-xl border border-dark-border bg-dark-surface p-4">
+          <ContractServicesTab
+            :services="contractServices"
+            :loading="servicesLoading"
+            @update="updateContractService"
+          />
+        </div>
+      </UiSection>
 
       <!-- Handover readings section -->
-      <div class="rounded-xl border border-dark-border bg-dark-surface p-6 mt-4">
-        <h2 class="text-sm font-semibold text-white mb-4">Số bàn giao</h2>
-        <ContractHandoverReadings
-          :contract-id="id"
-          :room-id="contract.room.id"
-          :start-date="contract.startDate"
-          :end-date="contract.endDate"
-          :status="contract.status"
-        />
-      </div>
+      <UiSection title="Số bàn giao" class="mt-6">
+        <div class="rounded-xl border border-dark-border bg-dark-surface p-4">
+          <ContractHandoverReadings
+            :contract-id="id"
+            :room-id="contract.room.id"
+            :start-date="contract.startDate"
+            :end-date="contract.endDate"
+            :status="contract.status"
+          />
+        </div>
+      </UiSection>
 
       <!-- Renewal form inline -->
-      <div v-if="showRenewalForm" class="rounded-xl border border-cyan-800 bg-dark-surface p-6 mt-4">
-        <h2 class="text-sm font-semibold text-white mb-4">Gia hạn hợp đồng</h2>
-        <ContractRenewalForm
-          :current-end-date="contract.endDate"
-          :current-monthly-rent="contract.monthlyRent"
-          :loading="isRenewing"
-          :api-error="renewalApiError"
-          @submit="handleRenew"
-          @cancel="showRenewalForm = false; renewalApiError = null"
-        />
-      </div>
+      <UiSection v-if="showRenewalForm" title="Gia hạn hợp đồng" class="mt-6">
+        <div class="rounded-xl border border-cyan-800 bg-dark-surface p-4">
+          <ContractRenewalForm
+            :current-end-date="contract.endDate"
+            :current-monthly-rent="contract.monthlyRent"
+            :loading="isRenewing"
+            :api-error="renewalApiError"
+            @submit="handleRenew"
+            @cancel="showRenewalForm = false; renewalApiError = null"
+          />
+        </div>
+      </UiSection>
 
       <!-- Renewals history -->
-      <div class="rounded-xl border border-dark-border bg-dark-surface p-6 mt-4">
-        <div class="flex items-center justify-between mb-4">
-          <h2 class="text-sm font-semibold text-white">Lịch sử gia hạn</h2>
-          <span v-if="contract.renewalCount > 0" class="text-xs text-muted">{{ contract.renewalCount }} lần</span>
-        </div>
+      <UiSection title="Lịch sử gia hạn" class="mt-6">
+        <template #actions>
+          <span v-if="contract.renewalCount > 0" class="text-xs text-zinc-400">{{ contract.renewalCount }} lần</span>
+        </template>
+        <div class="rounded-xl border border-dark-border bg-dark-surface p-4">
 
         <!-- Previous contract link -->
-        <div v-if="contract.previousContractId" class="mb-3 text-xs text-muted">
+        <div v-if="contract.previousContractId" class="mb-3 text-xs text-zinc-400">
           Hợp đồng trước:
           <NuxtLink :to="`/contracts/${contract.previousContractId}`" class="text-cyan hover:text-white transition-colors font-mono ml-1">
             {{ contract.previousContractId.slice(0, 8) }}...
@@ -524,10 +542,10 @@ watchEffect(() => {
                   {{ new Date(renewal.oldEndDate).toLocaleDateString('vi-VN') }}
                   → {{ new Date(renewal.newEndDate).toLocaleDateString('vi-VN') }}
                 </p>
-                <p v-if="renewal.oldMonthlyRent !== renewal.newMonthlyRent" class="text-xs text-muted mt-0.5">
+                <p v-if="renewal.oldMonthlyRent !== renewal.newMonthlyRent" class="text-xs text-zinc-400 mt-0.5">
                   Giá: {{ formatCurrency(renewal.oldMonthlyRent) }} → {{ formatCurrency(renewal.newMonthlyRent) }}
                 </p>
-                <p v-if="renewal.reason" class="text-xs text-muted italic mt-0.5">{{ renewal.reason }}</p>
+                <p v-if="renewal.reason" class="text-xs text-zinc-500 italic mt-0.5">{{ renewal.reason }}</p>
               </div>
               <div class="text-right shrink-0">
                 <p class="text-xs text-muted">{{ new Date(renewal.createdAt).toLocaleDateString('vi-VN') }}</p>
@@ -542,7 +560,8 @@ watchEffect(() => {
             </div>
           </div>
         </div>
-      </div>
+        </div>
+      </UiSection>
     </template>
 
     <!-- Move-out modal -->
@@ -551,11 +570,11 @@ watchEffect(() => {
         <h2 class="text-sm font-semibold text-white">Ghi nhận ngày rời phòng</h2>
         <div class="flex flex-col gap-1.5">
           <label class="text-sm text-muted">Ngày rời</label>
-          <input
+          <UiInput
             v-model="moveOutDate"
             type="date"
-            class="block w-full px-3 py-2 rounded-lg border border-dark-border bg-dark-surface text-white focus:outline-none focus:border-cyan text-sm"
-          >
+            class="w-full"
+          />
         </div>
         <div class="flex gap-2">
           <UiButton size="sm" :loading="isMovingOut" @click="handleMoveOut">Xác nhận</UiButton>

@@ -1,16 +1,27 @@
 import type { Tables } from '~/types/database.types'
 import type {
   BillingPeriod,
-  BillingPeriodStatus,
-  BillingRun,
-  BillingRunStatus,
-  BillingItem,
-  BillingPaymentStatus,
-  BillingPaymentMethod,
-  BillingContractSnapshot,
-  BillingServiceSnapshot,
-  BillingUtilitySnapshot,
+  Invoice,
+  InvoiceCharge,
+  InvoicePayment,
+  BillingUtilityUsage,
+  BillingAuditEvent,
 } from '~/types/billing'
+import type {
+  BillingPeriodStatus,
+  InvoiceStatus,
+  ChargeType,
+  MeterType,
+  UtilityUsageReason,
+  BillingAuditEntityType,
+} from '~/utils/constants/billing'
+
+function asMetadata(value: unknown): Record<string, unknown> {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    return value as Record<string, unknown>
+  }
+  return {}
+}
 
 export function mapBillingPeriod(row: Tables<'billing_periods'>): BillingPeriod {
   return {
@@ -19,91 +30,111 @@ export function mapBillingPeriod(row: Tables<'billing_periods'>): BillingPeriod 
     periodYear: row.period_year,
     periodMonth: row.period_month,
     status: row.status as BillingPeriodStatus,
-    finalizedAt: row.finalized_at,
-    finalizedBy: row.finalized_by,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
+    openedBy: row.opened_by,
+    issuedAt: row.issued_at,
+    closedAt: row.closed_at,
+    createdAt: row.created_at ?? '',
+    updatedAt: row.updated_at ?? '',
   }
 }
 
-export function mapBillingRun(row: Tables<'billing_runs'>): BillingRun {
+export function mapInvoice(row: Tables<'invoices'>): Invoice {
   return {
     id: row.id,
     billingPeriodId: row.billing_period_id,
-    buildingId: row.building_id,
-    status: row.status as BillingRunStatus,
-    schemaVersion: row.schema_version,
-    generatedAt: row.generated_at,
-    generatedBy: row.generated_by,
-    itemCount: row.item_count,
-    totalAmount: Number(row.total_amount),
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-  }
-}
-
-export function mapBillingItem(row: Tables<'billing_items'>): BillingItem {
-  return {
-    id: row.id,
-    billingRunId: row.billing_run_id,
-    roomId: row.room_id,
     contractId: row.contract_id,
+    roomId: row.room_id,
     tenantId: row.tenant_id,
-    rentAmount: Number(row.rent_amount),
-    serviceAmount: Number(row.service_amount),
-    electricityAmount: Number(row.electricity_amount),
-    waterAmount: Number(row.water_amount),
-    utilityAmount: Number(row.utility_amount),
-    totalAmount: Number(row.total_amount),
-    paymentStatus: row.payment_status as BillingPaymentStatus,
+    status: row.status as InvoiceStatus,
+    dueDate: row.due_date,
+    issuedAt: row.issued_at,
     paidAt: row.paid_at,
-    paidBy: row.paid_by,
-    paymentMethod: (row.payment_method as BillingPaymentMethod) ?? null,
-    paymentNote: row.payment_note,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-  }
-}
-
-export function mapBillingContractSnapshot(row: Tables<'billing_contract_snapshots'>): BillingContractSnapshot {
-  return {
-    id: row.id,
-    billingItemId: row.billing_item_id,
-    monthlyRent: Number(row.monthly_rent),
-    surchargeAmount: Number(row.surcharge_amount),
+    voidedAt: row.voided_at,
+    voidedBy: row.voided_by,
+    voidReason: row.void_reason,
+    supersededByInvoiceId: row.superseded_by_invoice_id,
+    supersedesInvoiceId: row.supersedes_invoice_id,
+    subtotalAmount: Number(row.subtotal_amount),
     discountAmount: Number(row.discount_amount),
-    paymentDay: row.payment_day,
-    occupantCount: row.occupant_count,
-    createdAt: row.created_at,
+    surchargeAmount: Number(row.surcharge_amount),
+    totalAmount: Number(row.total_amount),
+    paidAmount: Number(row.paid_amount),
+    balanceAmount: Number(row.balance_amount),
+    notes: row.notes,
+    createdAt: row.created_at ?? '',
+    updatedAt: row.updated_at ?? '',
   }
 }
 
-export function mapBillingServiceSnapshot(row: Tables<'billing_service_snapshots'>): BillingServiceSnapshot {
+export function mapInvoiceCharge(row: Tables<'invoice_charges'>): InvoiceCharge {
   return {
     id: row.id,
-    billingItemId: row.billing_item_id,
-    catalogId: row.catalog_id,
-    serviceName: row.service_name,
-    pricingType: row.pricing_type as 'fixed' | 'per_person',
+    invoiceId: row.invoice_id,
+    chargeType: row.charge_type as ChargeType,
+    label: row.label,
+    sourceType: row.source_type,
+    sourceId: row.source_id,
+    quantity: Number(row.quantity),
+    unitPrice: Number(row.unit_price),
     amount: Number(row.amount),
-    quantity: row.quantity,
-    total: Number(row.total),
-    createdAt: row.created_at,
+    metadata: asMetadata(row.metadata),
+    sortOrder: row.sort_order,
+    createdAt: row.created_at ?? '',
   }
 }
 
-export function mapBillingUtilitySnapshot(row: Tables<'billing_utility_snapshots'>): BillingUtilitySnapshot {
+export function mapInvoicePayment(row: Tables<'invoice_payments'>): InvoicePayment {
   return {
     id: row.id,
-    billingItemId: row.billing_item_id,
-    meterType: row.meter_type as 'electricity' | 'water',
-    oldReading: row.old_reading != null ? Number(row.old_reading) : null,
-    newReading: row.new_reading != null ? Number(row.new_reading) : null,
-    consumption: row.consumption != null ? Number(row.consumption) : null,
-    unitPrice: row.unit_price != null ? Number(row.unit_price) : null,
-    total: Number(row.total),
-    isAdjusted: row.is_adjusted,
-    adjustmentReason: row.adjustment_reason,
-    createdAt: row.created_at,
+    invoiceId: row.invoice_id,
+    amount: Number(row.amount),
+    paidAt: row.paid_at,
+    paymentMethod: row.payment_method,
+    note: row.note,
+    recordedBy: row.recorded_by,
+    createdAt: row.created_at ?? '',
+    updatedAt: row.updated_at ?? '',
+  }
+}
+
+export function mapBillingUtilityUsage(
+  row: Tables<'billing_utility_usages'>,
+): BillingUtilityUsage {
+  return {
+    id: row.id,
+    billingPeriodId: row.billing_period_id,
+    roomId: row.room_id,
+    meterType: row.meter_type as MeterType,
+    previousReadingId: row.previous_reading_id,
+    previousReadingValue: Number(row.previous_reading_value),
+    currentReadingId: row.current_reading_id,
+    currentReadingValue: Number(row.current_reading_value),
+    oldMeterFinalValue:
+      row.old_meter_final_value === null ? null : Number(row.old_meter_final_value),
+    newMeterStartValue:
+      row.new_meter_start_value === null ? null : Number(row.new_meter_start_value),
+    billableUsage: Number(row.billable_usage),
+    reason: row.reason as UtilityUsageReason,
+    note: row.note,
+    createdBy: row.created_by,
+    createdAt: row.created_at ?? '',
+    updatedAt: row.updated_at ?? '',
+  }
+}
+
+export function mapBillingAuditEvent(
+  row: Tables<'billing_audit_events'>,
+): BillingAuditEvent {
+  return {
+    id: row.id,
+    billingPeriodId: row.billing_period_id,
+    actorId: row.actor_id,
+    action: row.action,
+    entityType: row.entity_type as BillingAuditEntityType,
+    entityId: row.entity_id,
+    beforeData: row.before_data,
+    afterData: row.after_data,
+    metadata: asMetadata(row.metadata),
+    createdAt: row.created_at ?? '',
   }
 }

@@ -8,10 +8,7 @@ const { summary, isLoading } = useDashboardSummary()
 
 <template>
   <div>
-    <div class="mb-6">
-      <h2 class="text-xl font-semibold text-white">Dashboard</h2>
-      <p class="mt-1 text-sm text-muted">Tổng quan hệ thống</p>
-    </div>
+    <UiPageHeader title="Dashboard" description="Tổng quan hệ thống" />
 
     <!-- Stat cards -->
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">

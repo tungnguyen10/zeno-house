@@ -5,32 +5,33 @@ definePageMeta({ title: 'Hợp đồng' })
 
 const authStore = useAuthStore()
 const { contracts, total, totalPages, page, statusFilter, isLoading, error } = useContractList()
+
+const statusOptions = [
+  { value: 'active', label: 'Đang hiệu lực' },
+  { value: 'expired', label: 'Đã hết hạn' },
+  { value: 'terminated', label: 'Đã chấm dứt' },
+]
 </script>
 
 <template>
   <div>
-    <div class="flex items-center justify-between mb-6">
-      <div>
-        <h1 class="text-xl font-semibold text-white">Hợp đồng</h1>
-        <p class="text-sm text-muted mt-0.5">{{ total }} hợp đồng</p>
-      </div>
-      <NuxtLink v-if="authStore.isAdmin" to="/contracts/create">
-        <UiButton>Thêm hợp đồng</UiButton>
-      </NuxtLink>
-    </div>
+    <UiPageHeader title="Hợp đồng" :description="`${total} hợp đồng`">
+      <template #actions>
+        <NuxtLink v-if="authStore.isAdmin" to="/contracts/create">
+          <UiButton>Thêm hợp đồng</UiButton>
+        </NuxtLink>
+      </template>
+    </UiPageHeader>
 
     <!-- Status filter -->
-    <div class="mb-6">
-      <select
+    <UiToolbar class="mb-6">
+      <UiSelect
         v-model="statusFilter"
-        class="rounded-md border border-dark-border bg-dark-surface px-3 py-1.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan/30 focus:border-cyan/70"
-      >
-        <option :value="undefined">Tất cả trạng thái</option>
-        <option value="active">Đang hiệu lực</option>
-        <option value="expired">Đã hết hạn</option>
-        <option value="terminated">Đã chấm dứt</option>
-      </select>
-    </div>
+        :options="statusOptions"
+        placeholder="Tất cả trạng thái"
+        class="w-56"
+      />
+    </UiToolbar>
 
     <!-- Loading -->
     <div v-if="isLoading" class="space-y-3">
@@ -38,9 +39,9 @@ const { contracts, total, totalPages, page, statusFilter, isLoading, error } = u
     </div>
 
     <!-- Error -->
-    <div v-else-if="error" class="text-sm text-error p-4 rounded-lg bg-error/10 border border-error/20">
+    <UiAlert v-else-if="error" severity="danger">
       Không thể tải danh sách hợp đồng. Vui lòng thử lại.
-    </div>
+    </UiAlert>
 
     <!-- Empty -->
     <UiEmptyState

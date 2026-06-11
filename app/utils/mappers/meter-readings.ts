@@ -15,12 +15,6 @@ export function mapMeterReading(row: Tables<'meter_readings'>): MeterReading {
     isEstimated: row.is_estimated,
     notes: row.notes,
     recordedBy: row.recorded_by,
-    oldReading: row.old_reading != null ? Number(row.old_reading) : null,
-    newReading: row.new_reading != null ? Number(row.new_reading) : null,
-    consumption: row.consumption != null ? Number(row.consumption) : null,
-    isAdjusted: row.is_adjusted ?? false,
-    adjustmentReason: row.adjustment_reason ?? null,
-    updatedBy: row.updated_by ?? null,
     createdAt: row.created_at ?? '',
     updatedAt: row.updated_at ?? '',
   }

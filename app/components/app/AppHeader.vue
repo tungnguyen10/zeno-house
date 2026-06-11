@@ -25,16 +25,17 @@ const userInitial = computed(() => {
 <template>
   <header class="flex h-16 shrink-0 items-center gap-4 border-b border-dark-border bg-dark-card px-4 sm:px-6">
     <!-- Hamburger button — mobile only -->
-    <button
-      type="button"
-      class="rounded-md p-1.5 text-muted hover:bg-dark-hover hover:text-white lg:hidden"
+    <UiButton
+      variant="ghost"
+      icon-only
+      class="lg:hidden"
       aria-label="Mở sidebar"
       @click="emit('toggleSidebar')"
     >
       <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
         <path fill-rule="evenodd" d="M2 4.75A.75.75 0 0 1 2.75 4h14.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 4.75ZM2 10a.75.75 0 0 1 .75-.75h14.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 10Zm0 5.25a.75.75 0 0 1 .75-.75h14.5a.75.75 0 0 1 0 1.5H2.75a.75.75 0 0 1-.75-.75Z" clip-rule="evenodd" />
       </svg>
-    </button>
+    </UiButton>
 
     <!-- Page title -->
     <div class="flex-1 min-w-0">
@@ -51,9 +52,9 @@ const userInitial = computed(() => {
       <div class="flex h-8 w-8 items-center justify-center rounded-full bg-cyan/20" aria-hidden="true">
         <span class="text-xs font-semibold text-cyan">{{ userInitial }}</span>
       </div>
-      <button
-        type="button"
-        class="rounded-md p-1.5 text-muted hover:bg-dark-hover hover:text-white transition-colors"
+      <UiButton
+        variant="ghost"
+        icon-only
         aria-label="Đăng xuất"
         title="Đăng xuất"
         @click="logout"
@@ -62,7 +63,7 @@ const userInitial = computed(() => {
           <path fill-rule="evenodd" d="M3 4.25A2.25 2.25 0 0 1 5.25 2h5.5A2.25 2.25 0 0 1 13 4.25v2a.75.75 0 0 1-1.5 0v-2a.75.75 0 0 0-.75-.75h-5.5a.75.75 0 0 0-.75.75v11.5c0 .414.336.75.75.75h5.5a.75.75 0 0 0 .75-.75v-2a.75.75 0 0 1 1.5 0v2A2.25 2.25 0 0 1 10.75 18h-5.5A2.25 2.25 0 0 1 3 15.75V4.25Z" clip-rule="evenodd" />
           <path fill-rule="evenodd" d="M6 10a.75.75 0 0 1 .75-.75h9.546l-1.048-1.047a.75.75 0 1 1 1.06-1.06l2.35 2.347a.75.75 0 0 1 0 1.06l-2.35 2.348a.75.75 0 1 1-1.06-1.06l1.047-1.048H6.75A.75.75 0 0 1 6 10Z" clip-rule="evenodd" />
         </svg>
-      </button>
+      </UiButton>
     </div>
   </header>
 </template>

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { ContractService } from '~/types/contract-services'
 import type { ContractServiceUpdateInput } from '~/utils/validators/contract-services'
+import type { UiTableColumn } from '~/components/ui/UiTable.vue'
 
 defineProps<{
   services: ContractService[]
@@ -15,15 +16,15 @@ function subtotal(s: ContractService): number {
   return s.isEnabled ? s.amount * s.quantity : 0
 }
 
-function handleAmountBlur(s: ContractService, event: Event) {
-  const amount = Number((event.target as HTMLInputElement).value)
+function handleAmountInput(s: ContractService, value: string) {
+  const amount = Number(value)
   if (!Number.isNaN(amount) && amount >= 0) {
     emit('update', s.id, { amount })
   }
 }
 
-function handleQuantityBlur(s: ContractService, event: Event) {
-  const quantity = Number((event.target as HTMLInputElement).value)
+function handleQuantityInput(s: ContractService, value: string) {
+  const quantity = Number(value)
   if (Number.isInteger(quantity) && quantity >= 1) {
     emit('update', s.id, { quantity })
   }
@@ -33,83 +34,78 @@ function handleToggle(s: ContractService) {
   emit('update', s.id, { is_enabled: !s.isEnabled })
 }
 
-function handleNotesBlur(s: ContractService, event: Event) {
-  const notes = (event.target as HTMLInputElement).value.trim() || null
+function handleNotesInput(s: ContractService, value: string) {
+  const notes = value.trim() || null
   emit('update', s.id, { notes })
 }
+
+const columns: UiTableColumn<ContractService>[] = [
+  { key: 'name', label: 'Dịch vụ' },
+  { key: 'amount', label: 'Đơn giá', numeric: true, width: 'w-36' },
+  { key: 'quantity', label: 'Số lượng', numeric: true, width: 'w-24' },
+  { key: 'subtotal', label: 'Thành tiền', numeric: true },
+  { key: 'toggle', label: 'Bật/Tắt', width: 'w-24' },
+  { key: 'notes', label: 'Ghi chú' },
+]
 </script>
 
 <template>
-  <div class="overflow-x-auto">
-    <div v-if="loading" class="py-8 text-center text-sm text-muted">Đang tải...</div>
-    <div v-else-if="services.length === 0" class="py-8 text-center text-sm text-muted">
-      Chưa có dịch vụ nào được cấu hình cho hợp đồng này
-    </div>
-    <table v-else class="min-w-full divide-y divide-dark-border text-sm">
-      <thead class="bg-dark-card">
-        <tr>
-          <th class="px-4 py-3 text-left font-medium text-muted">Dịch vụ</th>
-          <th class="px-4 py-3 text-right font-medium text-muted">Đơn giá</th>
-          <th class="px-4 py-3 text-right font-medium text-muted">Số lượng</th>
-          <th class="px-4 py-3 text-right font-medium text-muted">Thành tiền</th>
-          <th class="px-4 py-3 text-center font-medium text-muted">Bật/Tắt</th>
-          <th class="px-4 py-3 text-left font-medium text-muted">Ghi chú</th>
-        </tr>
-      </thead>
-      <tbody class="divide-y divide-dark-border bg-dark-surface">
-        <tr v-for="s in services" :key="s.id" :class="[!s.isEnabled && 'opacity-50']">
-          <td class="px-4 py-3 font-medium text-white">{{ s.catalog.name }}</td>
-          <td class="px-4 py-3 text-right">
-            <input
-              type="number"
-              min="0"
-              step="1000"
-              :value="s.amount"
-              class="w-28 rounded border border-dark-border bg-dark-surface px-2 py-1 text-right text-sm text-white focus:border-cyan/70 focus:ring-1 focus:ring-cyan/30 focus:outline-none"
-              @blur="handleAmountBlur(s, $event)"
-            >
-          </td>
-          <td class="px-4 py-3 text-right">
-            <input
-              type="number"
-              min="1"
-              :value="s.quantity"
-              class="w-16 rounded border border-dark-border bg-dark-surface px-2 py-1 text-right text-sm text-white focus:border-cyan/70 focus:ring-1 focus:ring-cyan/30 focus:outline-none"
-              @blur="handleQuantityBlur(s, $event)"
-            >
-          </td>
-          <td class="px-4 py-3 text-right font-medium text-white">
-            {{ subtotal(s).toLocaleString('vi-VN') }}đ
-          </td>
-          <td class="px-4 py-3 text-center">
-            <button
-              type="button"
-              :class="[
-                'relative inline-flex h-5 w-9 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none',
-                s.isEnabled ? 'bg-cyan' : 'bg-dark-border',
-              ]"
-              :aria-label="`Bật/tắt ${s.catalog.name}`"
-              @click="handleToggle(s)"
-            >
-              <span
-                :class="[
-                  'pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out',
-                  s.isEnabled ? 'translate-x-4' : 'translate-x-0',
-                ]"
-              />
-            </button>
-          </td>
-          <td class="px-4 py-3">
-            <input
-              type="text"
-              :value="s.notes ?? ''"
-              placeholder="Ghi chú..."
-              class="w-full rounded border border-dark-border bg-dark-surface px-2 py-1 text-sm text-white placeholder-muted focus:border-cyan/70 focus:ring-1 focus:ring-cyan/30 focus:outline-none"
-              @blur="handleNotesBlur(s, $event)"
-            >
-          </td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
+  <UiTable
+    :rows="services"
+    :columns="columns"
+    :loading="loading"
+    empty-title="Chưa có dịch vụ nào"
+    empty-description="Chưa có dịch vụ nào được cấu hình cho hợp đồng này"
+  >
+    <template #cell-name="{ row }">
+      <span :class="[!row.isEnabled && 'opacity-50', 'font-medium text-white']">{{ row.catalog.name }}</span>
+    </template>
+
+    <template #cell-amount="{ row }">
+      <UiInput
+        density="compact"
+        type="number"
+        :model-value="String(row.amount)"
+        class="w-28"
+        @update:model-value="(v) => handleAmountInput(row, v as string)"
+      />
+    </template>
+
+    <template #cell-quantity="{ row }">
+      <UiInput
+        density="compact"
+        type="number"
+        :model-value="String(row.quantity)"
+        class="w-16"
+        @update:model-value="(v) => handleQuantityInput(row, v as string)"
+      />
+    </template>
+
+    <template #cell-subtotal="{ row }">
+      <span :class="[!row.isEnabled && 'line-through text-muted', 'font-medium text-white']">
+        {{ subtotal(row).toLocaleString('vi-VN') }}đ
+      </span>
+    </template>
+
+    <template #cell-toggle="{ row }">
+      <div class="flex justify-center">
+        <UiToggle
+          :model-value="row.isEnabled"
+          :aria-label="`Bật/tắt ${row.catalog.name}`"
+          size="sm"
+          @update:model-value="handleToggle(row)"
+        />
+      </div>
+    </template>
+
+    <template #cell-notes="{ row }">
+      <UiInput
+        density="compact"
+        type="text"
+        :model-value="row.notes ?? ''"
+        placeholder="Ghi chú..."
+        @update:model-value="(v) => handleNotesInput(row, v as string)"
+      />
+    </template>
+  </UiTable>
 </template>

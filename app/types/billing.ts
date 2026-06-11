@@ -1,7 +1,17 @@
-export type BillingPeriodStatus = 'draft' | 'finalized'
-export type BillingRunStatus = 'draft' | 'generated'
-export type BillingPaymentStatus = 'unpaid' | 'paid'
-export type BillingPaymentMethod = 'cash' | 'bank_transfer' | 'other'
+import type {
+  BillingPeriodStatus,
+  InvoiceStatus,
+  ChargeType,
+  MeterType,
+  UtilityUsageReason,
+  BillingAuditEntityType,
+  BillingBlockerCode,
+  BillingWarningCode,
+} from '~/utils/constants/billing'
+
+// ---------------------------------------------------------------------------
+// Domain DTOs (camelCase, front-end facing)
+// ---------------------------------------------------------------------------
 
 export interface BillingPeriod {
   id: string
@@ -9,162 +19,280 @@ export interface BillingPeriod {
   periodYear: number
   periodMonth: number
   status: BillingPeriodStatus
-  finalizedAt: string | null
-  finalizedBy: string | null
+  openedBy: string | null
+  issuedAt: string | null
+  closedAt: string | null
   createdAt: string
   updatedAt: string
 }
 
-export interface BillingRun {
+export interface Invoice {
   id: string
   billingPeriodId: string
-  buildingId: string
-  status: BillingRunStatus
-  schemaVersion: number
-  generatedAt: string | null
-  generatedBy: string | null
-  itemCount: number
-  totalAmount: number
-  createdAt: string
-  updatedAt: string
-}
-
-export interface BillingItem {
-  id: string
-  billingRunId: string
-  roomId: string
   contractId: string
+  roomId: string
   tenantId: string
-  rentAmount: number
-  serviceAmount: number
-  electricityAmount: number
-  waterAmount: number
-  utilityAmount: number
-  totalAmount: number
-  paymentStatus: BillingPaymentStatus
+  status: InvoiceStatus
+  dueDate: string | null
+  issuedAt: string | null
   paidAt: string | null
-  paidBy: string | null
-  paymentMethod: BillingPaymentMethod | null
-  paymentNote: string | null
+  voidedAt: string | null
+  voidedBy: string | null
+  voidReason: string | null
+  supersededByInvoiceId: string | null
+  supersedesInvoiceId: string | null
+  subtotalAmount: number
+  discountAmount: number
+  surchargeAmount: number
+  totalAmount: number
+  paidAmount: number
+  balanceAmount: number
+  notes: string | null
   createdAt: string
   updatedAt: string
 }
 
-export interface BillingItemSummary extends BillingItem {
-  room: {
-    id: string
-    roomNumber: string
-    floor: number
-  }
-  tenant: {
-    id: string
-    fullName: string
-    phone: string
-  }
-}
-
-export interface BillingContractSnapshot {
+export interface InvoiceCharge {
   id: string
-  billingItemId: string
-  monthlyRent: number
-  surchargeAmount: number
-  discountAmount: number
-  paymentDay: number | null
-  occupantCount: number
-  createdAt: string
-}
-
-export interface BillingServiceSnapshot {
-  id: string
-  billingItemId: string
-  catalogId: string | null
-  serviceName: string
-  pricingType: 'fixed' | 'per_person'
-  amount: number
+  invoiceId: string
+  chargeType: ChargeType
+  label: string
+  sourceType: string | null
+  sourceId: string | null
   quantity: number
-  total: number
+  unitPrice: number
+  amount: number
+  metadata: Record<string, unknown>
+  sortOrder: number
   createdAt: string
 }
 
-export interface BillingUtilitySnapshot {
+export interface InvoicePayment {
   id: string
-  billingItemId: string
-  meterType: 'electricity' | 'water'
-  oldReading: number | null
-  newReading: number | null
-  consumption: number | null
-  unitPrice: number | null
-  total: number
-  isAdjusted: boolean
-  adjustmentReason: string | null
+  invoiceId: string
+  amount: number
+  paidAt: string
+  paymentMethod: string | null
+  note: string | null
+  recordedBy: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface BillingUtilityUsage {
+  id: string
+  billingPeriodId: string
+  roomId: string
+  meterType: MeterType
+  previousReadingId: string | null
+  previousReadingValue: number
+  currentReadingId: string | null
+  currentReadingValue: number
+  oldMeterFinalValue: number | null
+  newMeterStartValue: number | null
+  billableUsage: number
+  reason: UtilityUsageReason
+  note: string | null
+  createdBy: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface BillingAuditEvent {
+  id: string
+  billingPeriodId: string | null
+  actorId: string | null
+  action: string
+  entityType: BillingAuditEntityType
+  entityId: string | null
+  beforeData: unknown
+  afterData: unknown
+  metadata: Record<string, unknown>
   createdAt: string
 }
 
-export interface BillingItemDetail extends BillingItemSummary {
-  contractSnapshot: BillingContractSnapshot
-  serviceSnapshots: BillingServiceSnapshot[]
-  utilitySnapshots: BillingUtilitySnapshot[]
-}
+// ---------------------------------------------------------------------------
+// List/overview/draft DTOs
+// ---------------------------------------------------------------------------
 
-export interface BillingWorkspaceData {
+export interface BillingPeriodSummary {
   period: BillingPeriod
-  run: BillingRun | null
-  activeContracts: BillingWorkspaceContract[]
-  meterReadings: BillingWorkspaceMeterReading[]
-  warnings: BillingWorkspaceWarning[]
-  buildingRates: {
-    electricityRate: number
-    waterRate: number
-  }
+  buildingId: string
+  buildingName: string | null
+  contractCount: number
+  invoiceCount: number
+  readingCompleteCount: number
+  readingRequiredCount: number
+  issuedTotal: number
+  paidTotal: number
+  outstandingBalance: number
 }
 
-export interface BillingWorkspaceContract {
+export interface BillingPeriodListFilters {
+  building_id?: string
+  period_year?: number
+  period_month?: number
+  status?: BillingPeriodStatus
+  has_debt?: boolean
+}
+
+export interface BillingWorkspaceOverview {
+  period: BillingPeriod
+  buildingId: string
+  buildingName: string | null
+  contractCount: number
+  invoiceCount: number
+  readingCompleteCount: number
+  readingRequiredCount: number
+  draftTotal: number
+  issuedTotal: number
+  paidTotal: number
+  outstandingBalance: number
+}
+
+export interface BillingDraftBlocker {
+  code: BillingBlockerCode
+  message: string
+  meta?: Record<string, unknown>
+}
+
+export interface BillingDraftWarning {
+  code: BillingWarningCode
+  message: string
+  meta?: Record<string, unknown>
+}
+
+export interface BillingDraftLine {
+  chargeType: ChargeType
+  label: string
+  sourceType: string | null
+  sourceId: string | null
+  quantity: number
+  unitPrice: number
+  amount: number
+  metadata: Record<string, unknown>
+  sortOrder: number
+}
+
+export interface BillingDraftInvoice {
   contractId: string
   roomId: string
-  roomNumber: string
-  floor: number
   tenantId: string
-  tenantName: string
-  monthlyRent: number
-  surchargeAmount: number
+  contractCode: string | null
+  roomNumber: string | null
+  tenantName: string | null
+  lines: BillingDraftLine[]
+  subtotalAmount: number
   discountAmount: number
-  paymentDay: number | null
-  occupantCount: number
-  services: {
-    contractServiceId: string
-    catalogId: string
-    name: string
-    pricingType: 'fixed' | 'per_person'
-    amount: number
-    quantity: number
-    isEnabled: boolean
-  }[]
+  surchargeAmount: number
+  totalAmount: number
+  blockers: BillingDraftBlocker[]
+  warnings: BillingDraftWarning[]
+  existingInvoiceId: string | null
+  existingInvoiceStatus: InvoiceStatus | null
 }
 
-export interface BillingWorkspaceMeterReading {
+export interface BillingDraftResponse {
+  period: BillingPeriod
+  drafts: BillingDraftInvoice[]
+  totals: {
+    draftTotal: number
+    blockedDraftCount: number
+    issuableDraftCount: number
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Issue / void / reissue / adjustment / payment input shapes (DTOs the API
+// returns; validators define the wire-level Zod inputs).
+// ---------------------------------------------------------------------------
+
+export interface IssueInvoicesResult {
+  issuedCount: number
+  invoices: Invoice[]
+}
+
+export interface InvoiceWithCharges {
+  invoice: Invoice
+  charges: InvoiceCharge[]
+  payments: InvoicePayment[]
+}
+
+// ---------------------------------------------------------------------------
+// Draft Grid read model (combines reading entry + draft review into one room
+// centered grid). Composed at the service boundary; not a new repository.
+// ---------------------------------------------------------------------------
+
+export type BillingDraftGridRowType = 'billable_contract' | 'vacant_baseline' | 'data_warning'
+
+export type BillingDraftGridRowStatus =
+  | 'missing_reading'
+  | 'blocked'
+  | 'warning'
+  | 'ready'
+  | 'issued'
+  | 'partial'
+  | 'paid'
+  | 'baseline'
+
+export type BillingDraftGridUtilitySource =
+  | 'monthly'
+  | 'handover_fallback'
+  | 'override'
+  | 'fixed'
+  | 'per_person'
+  | 'not_applicable'
+
+export interface BillingDraftGridUtilityCell {
+  meterType: MeterType
+  required: boolean
+  editable: boolean
+  previousReadingId: string | null
+  previousValue: number | null
+  currentReadingId: string | null
+  currentValue: number | null
+  readingDate: string | null
+  usage: number | null
+  rate: number | null
+  amount: number | null
+  pricingType: string | null
+  overrideId: string | null
+  source: BillingDraftGridUtilitySource
+  blockerCode: BillingBlockerCode | null
+}
+
+export interface BillingDraftGridRow {
+  key: string
+  rowType: BillingDraftGridRowType
   roomId: string
-  meterType: 'electricity' | 'water'
-  existingReadingId: string | null
-  oldReading: number | null
-  newReading: number | null
-  consumption: number | null
-  isAdjusted: boolean
-  adjustmentReason: string | null
+  roomNumber: string | null
+  floor: number | null
+  contractId: string | null
+  tenantId: string | null
+  tenantName: string | null
+  contractCode: string | null
+  invoiceId: string | null
+  invoiceStatus: InvoiceStatus | null
+  editable: boolean
+  status: BillingDraftGridRowStatus
+  electricity: BillingDraftGridUtilityCell | null
+  water: BillingDraftGridUtilityCell | null
+  rentAndServiceTotal: number
+  draftTotal: number | null
+  blockers: BillingDraftBlocker[]
+  warnings: BillingDraftWarning[]
+  lines: BillingDraftLine[]
 }
 
-export interface BillingWorkspaceWarning {
-  roomId: string
-  roomNumber: string
-  type: 'missing_reading' | 'negative_consumption' | 'no_rate_configured' | 'zero_rent'
-  meterType?: string
-  value?: number
-}
-
-export interface BillingItemsSummary {
-  totalRooms: number
-  totalReceivable: number
-  totalPaid: number
-  totalUnpaid: number
-  totalElectricity: number
-  totalWater: number
+export interface BillingDraftGridResponse {
+  period: BillingPeriod
+  batchReadingDate: string
+  rows: BillingDraftGridRow[]
+  totals: {
+    requiredReadingCount: number
+    completeReadingCount: number
+    readyDraftCount: number
+    blockedDraftCount: number
+    draftTotal: number
+  }
 }

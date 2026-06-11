@@ -1,12 +1,30 @@
 <script setup lang="ts">
-defineProps<{
+import clsx from 'clsx'
+
+const props = withDefaults(defineProps<{
   open: boolean
   title?: string
-}>()
+  /** Width preset. Defaults to `md` (max-w-lg) for backwards compatibility. */
+  size?: 'sm' | 'md' | 'lg' | 'xl'
+}>(), {
+  size: 'md',
+})
 
 const emit = defineEmits<{
   (e: 'close'): void
 }>()
+
+const panelClass = computed(() =>
+  clsx(
+    'relative z-10 w-full rounded-2xl bg-dark-card shadow-xl',
+    {
+      'max-w-md': props.size === 'sm',
+      'max-w-lg': props.size === 'md',
+      'max-w-2xl': props.size === 'lg',
+      'max-w-4xl': props.size === 'xl',
+    },
+  ),
+)
 
 // Trap focus and handle Escape key
 function onKeydown(event: KeyboardEvent) {
@@ -45,7 +63,7 @@ function onAfterEnter(el: Element) {
         />
 
         <!-- Dialog panel -->
-          <div class="relative z-10 w-full max-w-lg rounded-2xl bg-dark-card shadow-xl">
+        <div :class="panelClass">
           <!-- Header -->
           <div class="flex items-center justify-between border-b border-dark-border px-6 py-4">
             <h2 class="text-base font-semibold text-white">
@@ -69,7 +87,10 @@ function onAfterEnter(el: Element) {
           </div>
 
           <!-- Footer -->
-          <div v-if="$slots.footer" class="flex justify-end gap-3 border-t border-dark-border px-6 py-4">
+          <div
+            v-if="$slots.footer"
+            class="flex flex-col-reverse gap-2 border-t border-dark-border px-6 py-4 sm:flex-row sm:justify-end sm:gap-3"
+          >
             <slot name="footer" />
           </div>
         </div>

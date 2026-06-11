@@ -105,18 +105,16 @@ function onSubmit() {
     />
 
     <!-- notes -->
-    <div class="flex flex-col gap-1.5">
-      <label class="text-sm font-medium text-white">Ghi chú</label>
-      <textarea
-        :value="modelValue.notes"
-        :disabled="loading"
-        rows="3"
-        placeholder="Thông tin thêm về khách thuê..."
-        class="block w-full rounded-md border border-dark-border bg-dark-surface px-3 py-2 text-sm text-white placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-cyan/30 focus:border-cyan/70 disabled:bg-dark-hover disabled:text-muted disabled:cursor-not-allowed resize-none"
-        @input="update('notes', ($event.target as HTMLTextAreaElement).value)"
-      />
-      <p v-if="errors.notes?.[0]" class="text-xs text-error">{{ errors.notes[0] }}</p>
-    </div>
+    <UiTextarea
+      label="Ghi chú"
+      :model-value="modelValue.notes"
+      :error="errors.notes?.[0]"
+      :disabled="loading"
+      :rows="3"
+      resize="none"
+      placeholder="Thông tin thêm về khách thuê..."
+      @update:model-value="update('notes', $event)"
+    />
 
     <!-- Section: Thông tin bổ sung -->
     <div class="pt-2 border-t border-dark-border">
@@ -144,21 +142,19 @@ function onSubmit() {
     />
 
     <!-- gender -->
-    <div class="flex flex-col gap-1.5">
-      <label class="text-sm font-medium text-white">Giới tính</label>
-      <select
-        :value="modelValue.gender"
-        :disabled="loading"
-        class="block w-full rounded-md border border-dark-border bg-dark-surface px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan/30 focus:border-cyan/70 disabled:bg-dark-hover disabled:text-muted disabled:cursor-not-allowed"
-        @change="update('gender', ($event.target as HTMLSelectElement).value)"
-      >
-        <option value="">— Không chọn —</option>
-        <option value="male">Nam</option>
-        <option value="female">Nữ</option>
-        <option value="other">Khác</option>
-      </select>
-      <p v-if="errors.gender?.[0]" class="text-xs text-error">{{ errors.gender[0] }}</p>
-    </div>
+    <UiSelect
+      label="Giới tính"
+      :model-value="modelValue.gender || null"
+      :options="[
+        { value: 'male', label: 'Nam' },
+        { value: 'female', label: 'Nữ' },
+        { value: 'other', label: 'Khác' },
+      ]"
+      placeholder="— Không chọn —"
+      :disabled="loading"
+      :error="errors.gender?.[0]"
+      @update:model-value="update('gender', String($event ?? ''))"
+    />
 
     <!-- occupation -->
     <UiInput

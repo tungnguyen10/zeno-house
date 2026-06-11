@@ -76,6 +76,9 @@ const meterTypeLabel: Record<MeterType, string> = { electricity: 'Điện', wate
       <UiSkeleton class="h-8 w-full rounded" />
     </div>
 
+    <!-- Note: raw <table> is kept here because the direction column is conditional
+         (showHandoverOut) and the per-meterType row grouping cannot be cleanly
+         represented with UiTable's column-based model. Cell controls use primitives. -->
     <template v-else>
       <div class="overflow-x-auto">
         <table class="w-full text-sm">
@@ -95,26 +98,24 @@ const meterTypeLabel: Record<MeterType, string> = { electricity: 'Điện', wate
                 <td class="py-2 pr-3 text-white font-medium">{{ meterTypeLabel[meterType] }}</td>
                 <td v-if="showHandoverOut" class="py-2 pr-3 text-xs text-muted">Vào</td>
                 <td class="py-2 pr-3">
-                  <input
-                    v-model="getRow(meterType, 'handover_in').value"
+                  <UiInput
+                    density="compact"
                     type="number"
-                    min="0"
-                    step="0.001"
+                    :model-value="getRow(meterType, 'handover_in').value"
                     placeholder="0"
-                    class="w-full rounded border border-dark-border bg-dark px-2 py-1 text-right text-sm text-white placeholder-muted focus:outline-none focus:ring-1 focus:ring-cyan"
-                    @blur="handleSave(meterType, 'handover_in')"
-                  >
+                    @update:model-value="(v) => { getRow(meterType, 'handover_in').value = String(v); handleSave(meterType, 'handover_in') }"
+                  />
                 </td>
                 <td class="py-2 pr-3">
-                  <input
-                    v-model="getRow(meterType, 'handover_in').date"
+                  <UiInput
+                    density="compact"
                     type="date"
-                    class="w-full rounded border border-dark-border bg-dark px-2 py-1 text-sm text-white focus:outline-none focus:ring-1 focus:ring-cyan"
-                    @blur="handleSave(meterType, 'handover_in')"
-                  >
+                    :model-value="getRow(meterType, 'handover_in').date"
+                    @update:model-value="(v) => { getRow(meterType, 'handover_in').date = String(v); handleSave(meterType, 'handover_in') }"
+                  />
                 </td>
                 <td class="py-2 text-center">
-                  <span v-if="getReadingByType(meterType, 'handover_in')" class="text-xs text-green-400">✓</span>
+                  <span v-if="getReadingByType(meterType, 'handover_in')" class="text-xs text-success-neon">✓</span>
                 </td>
               </tr>
 
@@ -123,26 +124,24 @@ const meterTypeLabel: Record<MeterType, string> = { electricity: 'Điện', wate
                 <td class="py-2 pr-3 text-white font-medium">{{ meterTypeLabel[meterType] }}</td>
                 <td class="py-2 pr-3 text-xs text-muted">Ra</td>
                 <td class="py-2 pr-3">
-                  <input
-                    v-model="getRow(meterType, 'handover_out').value"
+                  <UiInput
+                    density="compact"
                     type="number"
-                    min="0"
-                    step="0.001"
+                    :model-value="getRow(meterType, 'handover_out').value"
                     placeholder="0"
-                    class="w-full rounded border border-dark-border bg-dark px-2 py-1 text-right text-sm text-white placeholder-muted focus:outline-none focus:ring-1 focus:ring-cyan"
-                    @blur="handleSave(meterType, 'handover_out')"
-                  >
+                    @update:model-value="(v) => { getRow(meterType, 'handover_out').value = String(v); handleSave(meterType, 'handover_out') }"
+                  />
                 </td>
                 <td class="py-2 pr-3">
-                  <input
-                    v-model="getRow(meterType, 'handover_out').date"
+                  <UiInput
+                    density="compact"
                     type="date"
-                    class="w-full rounded border border-dark-border bg-dark px-2 py-1 text-sm text-white focus:outline-none focus:ring-1 focus:ring-cyan"
-                    @blur="handleSave(meterType, 'handover_out')"
-                  >
+                    :model-value="getRow(meterType, 'handover_out').date"
+                    @update:model-value="(v) => { getRow(meterType, 'handover_out').date = String(v); handleSave(meterType, 'handover_out') }"
+                  />
                 </td>
                 <td class="py-2 text-center">
-                  <span v-if="getReadingByType(meterType, 'handover_out')" class="text-xs text-green-400">✓</span>
+                  <span v-if="getReadingByType(meterType, 'handover_out')" class="text-xs text-success-neon">✓</span>
                 </td>
               </tr>
             </template>
@@ -150,7 +149,7 @@ const meterTypeLabel: Record<MeterType, string> = { electricity: 'Điện', wate
         </table>
       </div>
 
-      <p v-if="saveError" class="text-xs text-error mt-2">{{ saveError }}</p>
+      <UiAlert v-if="saveError" severity="danger" class="mt-2">{{ saveError }}</UiAlert>
       <p v-if="isSaving" class="text-xs text-muted mt-2">Đang lưu...</p>
     </template>
   </div>

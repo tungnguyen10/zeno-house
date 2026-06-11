@@ -1,11 +1,17 @@
-## ADDED Requirements
+## Purpose
 
+Defines the catalog of generic UI primitives in `app/components/ui/` — buttons, inputs, modals, badges, alerts, tables, tabs, layout primitives, feedback states, and confirmation surfaces — so domain pages and workflows can be composed from a stable, dark-themed component vocabulary instead of hand-written markup.
+## Requirements
 ### Requirement: UiButton hỗ trợ variant và size
-`UiButton` SHALL hỗ trợ `variant` (`primary` | `secondary` | `danger`) và `size` (`sm` | `md` | `lg`). SHALL support `loading` và `disabled` state. SHALL render `<button>` với đúng type attribute.
+`UiButton` SHALL hỗ trợ `variant` (`primary` | `secondary` | `danger` | `ghost`) và `size` (`sm` | `md` | `lg`). SHALL support `loading` và `disabled` state. SHALL render `<button>` với đúng type attribute. Icon and icon-only usages SHALL be accessible with visible text or an aria-label.
 
 #### Scenario: UiButton render đúng theo variant
 - **WHEN** UiButton được render với `variant="primary"`
-- **THEN** button có visual style xanh (bg-blue-600 hoặc tương đương)
+- **THEN** button có visual style cyan accent consistent with the dark operational theme
+
+#### Scenario: UiButton ghost variant
+- **WHEN** UiButton được render với `variant="ghost"`
+- **THEN** button has low-emphasis styling suitable for toolbar/icon actions
 
 #### Scenario: UiButton disabled không cho click
 - **WHEN** UiButton có prop `disabled` hoặc `loading`
@@ -15,10 +21,12 @@
 - **WHEN** UiButton có prop `loading="true"`
 - **THEN** button hiển thị spinner icon và disabled
 
----
+#### Scenario: Icon-only button is accessible
+- **WHEN** UiButton is used without visible text
+- **THEN** it provides an accessible label
 
 ### Requirement: UiInput hỗ trợ label và error state
-`UiInput` SHALL nhận `label`, `modelValue`, `error` (string), và `required`. SHALL emit `update:modelValue`. SHALL hiển thị error message bên dưới input khi `error` có giá trị.
+`UiInput` SHALL nhận `label`, `modelValue`, `error` (string), `hint`, và `required`. SHALL emit `update:modelValue`. SHALL hiển thị error message bên dưới input khi `error` có giá trị. It SHOULD support stable ids and optional prefix/suffix slots for operational values such as currency, unit, and percent.
 
 #### Scenario: UiInput hiển thị label
 - **WHEN** UiInput được render với prop `label="Tên tòa nhà"`
@@ -32,7 +40,9 @@
 - **WHEN** người dùng gõ vào UiInput
 - **THEN** `update:modelValue` được emit với giá trị mới
 
----
+#### Scenario: UiInput suffix for unit
+- **WHEN** UiInput is used for a meter reading, currency, or percentage field
+- **THEN** it can display unit context without custom wrapper markup
 
 ### Requirement: UiModal hỗ trợ open/close và title
 `UiModal` SHALL nhận `open` (boolean), `title` (string). SHALL emit `close` khi người dùng click backdrop hoặc nút close. SHALL dùng `<Teleport to="body">` để render ngoài DOM hierarchy.
@@ -53,20 +63,24 @@
 - **WHEN** người dùng click vào nút đóng (X) của modal
 - **THEN** event `close` được emit
 
----
-
 ### Requirement: UiStatusBadge hiển thị status với màu sắc tương ứng
-`UiStatusBadge` SHALL nhận `status` string và hiển thị với màu sắc khác nhau theo từng trạng thái. SHALL có label tiếng Việt cho từng status.
+`UiStatusBadge` SHALL nhận `status` string và hiển thị với màu sắc khác nhau theo từng trạng thái. SHALL có label tiếng Việt cho từng status. It SHALL cover core entity statuses and billing statuses, with fallback style for unknown values.
 
 #### Scenario: UiStatusBadge hiển thị đúng màu theo status
 - **WHEN** UiStatusBadge nhận `status="active"`
-- **THEN** badge hiển thị màu xanh lá (green) với label tương ứng
+- **THEN** badge hiển thị màu semantic success/accent với label tương ứng
 
 #### Scenario: UiStatusBadge không crash với status không xác định
 - **WHEN** UiStatusBadge nhận một status value không có trong map
-- **THEN** badge hiển thị fallback style (gray) thay vì throw error
+- **THEN** badge hiển thị fallback style (neutral) thay vì throw error
 
----
+#### Scenario: Billing status labels
+- **WHEN** UiStatusBadge receives billing period or invoice statuses
+- **THEN** it renders Vietnamese labels and semantic variants for draft, readings, review, issued, collecting, partial, paid, overdue, closed, and void
+
+#### Scenario: Status context disambiguation
+- **WHEN** the same status key (e.g. `draft`, `issued`) exists in both billing period and invoice contexts
+- **THEN** `UiStatusBadge` accepts an optional `context` (`'entity' | 'period' | 'invoice' | 'correction'`) so the badge picks the matching label/variant from the corresponding map
 
 ### Requirement: UiEmptyState hiển thị trạng thái rỗng
 `UiEmptyState` SHALL nhận `title` (string), `description` (string, optional), và optional slot `action` cho CTA button. SHALL dùng cho trường hợp list rỗng hoặc không có data.
@@ -79,8 +93,6 @@
 - **WHEN** UiEmptyState có content trong slot `action`
 - **THEN** content đó hiển thị bên dưới description
 
----
-
 ### Requirement: UiSkeleton dùng cho loading placeholder
 `UiSkeleton` SHALL nhận `class` để control kích thước. SHALL hiển thị animated shimmer effect. Dùng thay cho spinner khi cần placeholder cho content đang load.
 
@@ -91,8 +103,6 @@
 #### Scenario: UiSkeleton nhận class để control kích thước
 - **WHEN** UiSkeleton được render với `class="w-full h-4"`
 - **THEN** skeleton có đúng kích thước đó
-
----
 
 ### Requirement: UiConfirmModal component
 The system SHALL provide a `UiConfirmModal` component for confirmation dialogs. Props: `open` (boolean), `title` (string), `message` (string), `confirmLabel` (string, default "Xoá"), `loading` (boolean). Emits: `confirm`, `cancel`. Supports optional default slot to override the message with richer HTML content. Used to replace inline delete modal logic in domain detail pages.
@@ -108,3 +118,187 @@ The system SHALL provide a `UiConfirmModal` component for confirmation dialogs. 
 #### Scenario: Loading state
 - **WHEN** `loading` prop is true
 - **THEN** confirm button shows loading indicator and is disabled
+
+### Requirement: Select primitive
+The system SHALL provide `UiSelect` as the standard select control for forms and toolbars.
+
+#### Scenario: Select with label and options
+- **WHEN** `UiSelect` is rendered with label and options
+- **THEN** it displays a dark themed select control with label, selected value, and available options
+
+#### Scenario: Select error state
+- **WHEN** `UiSelect` receives an error
+- **THEN** it renders an error message and error border consistently with `UiInput`
+
+#### Scenario: Select disabled state
+- **WHEN** `UiSelect` is disabled
+- **THEN** it uses disabled styling and cannot be changed
+
+### Requirement: Textarea primitive
+The system SHALL provide `UiTextarea` as the standard multiline text input.
+
+#### Scenario: Textarea with hint
+- **WHEN** `UiTextarea` is rendered with a hint
+- **THEN** it displays the hint using muted helper text
+
+#### Scenario: Textarea error state
+- **WHEN** `UiTextarea` receives an error
+- **THEN** it renders an error message and error border consistently with `UiInput`
+
+### Requirement: Boolean controls
+The system SHALL provide `UiCheckbox` and `UiToggle` for boolean choices.
+
+#### Scenario: Checkbox for explicit selection
+- **WHEN** a form needs a persisted true/false field
+- **THEN** it can use `UiCheckbox` with label, disabled state, and error/hint support where needed
+
+#### Scenario: Toggle for immediate operational switch
+- **WHEN** a settings table needs an on/off switch
+- **THEN** it can use `UiToggle` with stable size, dark inactive state, cyan active state, and accessible label
+
+### Requirement: Generic badge primitive
+The system SHALL provide `UiBadge` for small semantic labels and status markers.
+
+#### Scenario: Badge variants
+- **WHEN** a badge is rendered with neutral, accent, success, warning, or danger variant
+- **THEN** it maps to the design system status colors
+
+#### Scenario: Status badge can reuse badge
+- **WHEN** `UiStatusBadge` renders a domain status
+- **THEN** it can delegate visual styling to `UiBadge` or follow the same variant mapping
+
+### Requirement: Alert primitive
+The system SHALL provide `UiAlert` for inline feedback and blockers.
+
+#### Scenario: Error alert
+- **WHEN** an API or validation error needs to be shown
+- **THEN** `UiAlert` renders a dark themed danger alert with readable text
+
+#### Scenario: Warning blocker
+- **WHEN** a billing workflow has missing readings or unsupported pricing
+- **THEN** `UiAlert` can render warning/blocker content without custom inline alert classes
+
+### Requirement: Table primitive
+The system SHALL provide `UiTable` for operational data tables.
+
+#### Scenario: Dense table
+- **WHEN** `UiTable` is rendered in dense mode
+- **THEN** it uses compact row height, dark header/body surfaces, dark borders, and readable `text-sm` cells
+
+#### Scenario: Table loading state
+- **WHEN** table data is loading
+- **THEN** the table renders skeleton or loading rows without layout shift
+
+#### Scenario: Table empty state
+- **WHEN** table data is empty
+- **THEN** the table renders a consistent empty state
+
+#### Scenario: Numeric alignment
+- **WHEN** a column contains currency, totals, readings, or counts
+- **THEN** the table supports right-aligned numeric cells
+
+#### Scenario: Action column
+- **WHEN** rows expose actions
+- **THEN** the table supports a stable action column that does not disrupt row scanning
+
+### Requirement: Tabs primitive
+The system SHALL provide `UiTabs` for workspace navigation.
+
+#### Scenario: Tabs render active state
+- **WHEN** one tab is active
+- **THEN** the active tab is visually distinct using the cyan/accent style
+
+#### Scenario: Tabs support disabled state
+- **WHEN** a workflow tab is blocked
+- **THEN** the tab can render disabled state and optional reason
+
+### Requirement: Operational layout primitives
+The system SHALL provide layout primitives for repeated operational screens.
+
+#### Scenario: Page header
+- **WHEN** a page needs title, description, context, and actions
+- **THEN** it uses `UiPageHeader`
+
+#### Scenario: Toolbar
+- **WHEN** a page needs filters, search, and right-side actions
+- **THEN** it uses `UiToolbar`
+
+#### Scenario: Metric
+- **WHEN** a workspace needs compact summary values
+- **THEN** it uses `UiMetric` rather than dashboard-scale stat cards
+
+#### Scenario: Section
+- **WHEN** a page needs a titled content region
+- **THEN** it uses `UiSection` for header/content structure without forcing nested cards
+
+### Requirement: Modal and drawer surfaces
+The system SHALL standardize modal and optional drawer surfaces for operational actions.
+
+#### Scenario: Modal size variants
+- **WHEN** `UiModal` is used for different content sizes
+- **THEN** it supports size variants such as sm, md, lg, and xl
+
+#### Scenario: Drawer for dense correction forms
+- **WHEN** a workflow needs a dense correction or override form
+- **THEN** the system may provide `UiDrawer` or side panel with dark surface styling and clear actions
+
+### Requirement: Searchable select primitive
+The UI primitive system SHALL provide a searchable selection primitive for choosing an item from a list of domain options such as rooms, tenants, contracts, buildings, or invoices. The primitive SHALL support `modelValue`, option identity, option label rendering, `label`, `required`, `disabled`, `loading`, `error`, empty state text, and clear/select behavior.
+
+#### Scenario: Search filters options
+- **WHEN** a user types a query into the searchable select
+- **THEN** matching options remain visible and non-matching options are hidden or deprioritized without changing the selected value until the user selects an option
+
+#### Scenario: Selected option is emitted
+- **WHEN** a user selects an option from the searchable select
+- **THEN** the primitive emits `update:modelValue` with the selected option value and displays the selected option label
+
+#### Scenario: Empty result is visible
+- **WHEN** the searchable select has no matching options for the current query
+- **THEN** it renders a consistent dark themed empty state instead of an unstyled blank dropdown
+
+#### Scenario: Searchable select error state
+- **WHEN** the searchable select receives an error string
+- **THEN** it renders the error message and error border consistently with `UiInput` and `UiSelect`
+
+#### Scenario: Searchable select supports loading
+- **WHEN** options are loading
+- **THEN** the primitive communicates the loading state and prevents ambiguous selection
+
+### Requirement: Compact density for form controls
+`UiInput`, `UiSelect`, and `UiTextarea` SHALL support compact density in addition to their default size so editable tables, matrix cells, meter readings, and billing review rows can use primitive controls without custom inline classes.
+
+#### Scenario: Compact input in table cell
+- **WHEN** `UiInput` is rendered with compact density inside a table cell
+- **THEN** it uses reduced padding and stable height while retaining label-less accessibility, focus ring, disabled state, prefix/suffix slots, and error styling
+
+#### Scenario: Compact select in toolbar or table
+- **WHEN** `UiSelect` is rendered with compact density
+- **THEN** it uses reduced height and padding while preserving placeholder, disabled state, option rendering, error state, and dark select arrow styling
+
+#### Scenario: Compact textarea for dense correction note
+- **WHEN** `UiTextarea` is rendered with compact density
+- **THEN** it uses compact spacing while preserving resize behavior, error state, and helper text
+
+### Requirement: Primitive-backed icon actions
+Icon-only and low-emphasis action buttons SHALL use `UiButton` with `iconOnly` or an equivalent primitive-backed pattern instead of raw `<button>` styling outside primitive internals.
+
+#### Scenario: Accessible icon-only action
+- **WHEN** an icon-only action is rendered in the shell, toolbar, row action, or modal header
+- **THEN** the action has an accessible label and uses the design-system focus, hover, disabled, and size behavior
+
+#### Scenario: Raw button exception is documented
+- **WHEN** a raw `<button>` remains outside `app/components/ui/`
+- **THEN** the implementation documents why it is a justified exception or migrates it to `UiButton`
+
+### Requirement: Primitive showcase remains complete
+The internal primitive showcase SHALL render every public primitive and every material variant/state added by this change.
+
+#### Scenario: Searchable select showcase
+- **WHEN** the searchable select primitive is added
+- **THEN** `/ui-showcase` renders examples for normal, selected, loading, empty, disabled, and error states
+
+#### Scenario: Compact density showcase
+- **WHEN** compact density is added to form controls
+- **THEN** `/ui-showcase` renders compact input, select, and textarea examples in a dense/table-like context
+

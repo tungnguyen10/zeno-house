@@ -36,67 +36,38 @@ async function confirmDelete() {
     </div>
 
     <!-- Error -->
-    <div v-else-if="error && error.statusCode !== 404" class="text-sm text-error p-4 rounded-lg bg-error/10 border border-error/20">
+    <UiAlert v-else-if="error && error.statusCode !== 404" severity="danger">
       Không thể tải thông tin tòa nhà.
-    </div>
+    </UiAlert>
 
     <!-- Detail -->
     <template v-else-if="building">
-      <div class="flex items-start justify-between gap-4 mb-4">
-        <div>
-          <NuxtLink to="/buildings" class="text-sm text-muted hover:text-white transition-colors">
-            ← Danh sách tòa nhà
-          </NuxtLink>
-          <h1 class="text-xl font-semibold text-white mt-2">{{ building.name }}</h1>
-        </div>
+      <UiPageHeader :title="building.name">
+        <template #actions>
         <div v-if="authStore.isAdmin" class="flex gap-2 shrink-0">
+          <UiButton
+            variant="secondary"
+            size="sm"
+            @click="navigateTo(`/billing?building=${id}`)"
+          >
+            Vận hành tháng {{ new Date().getMonth() + 1 }}
+          </UiButton>
+          <UiButton
+            variant="secondary"
+            size="sm"
+            @click="navigateTo(`/buildings/${id}/settings`)"
+          >
+            Dịch vụ
+          </UiButton>
           <NuxtLink :to="`/buildings/${building.id}/edit`">
             <UiButton variant="secondary" size="sm">Chỉnh sửa</UiButton>
           </NuxtLink>
           <UiButton variant="danger" size="sm" @click="showDeleteModal = true">Xoá</UiButton>
         </div>
-      </div>
+        </template>
+      </UiPageHeader>
 
-      <!-- Sub-tabs -->
-      <div class="border-b border-dark-border mb-6">
-        <nav class="flex gap-6">
-          <NuxtLink
-            :to="`/buildings/${id}`"
-            :class="[
-              'pb-3 text-sm font-medium transition-colors border-b-2 -mb-px',
-              route.path === `/buildings/${id}`
-                ? 'border-primary text-white'
-                : 'border-transparent text-muted hover:text-white',
-            ]"
-          >
-            Tổng quan
-          </NuxtLink>
-          <NuxtLink
-            :to="`/buildings/${id}/billing?year=${new Date().getFullYear()}&month=${new Date().getMonth() + 1}`"
-            :class="[
-              'pb-3 text-sm font-medium transition-colors border-b-2 -mb-px',
-              route.path.includes('/billing')
-                ? 'border-primary text-white'
-                : 'border-transparent text-muted hover:text-white',
-            ]"
-          >
-            Tính tiền
-          </NuxtLink>
-          <NuxtLink
-            :to="`/buildings/${id}/settings`"
-            :class="[
-              'pb-3 text-sm font-medium transition-colors border-b-2 -mb-px',
-              route.path.includes('/settings')
-                ? 'border-primary text-white'
-                : 'border-transparent text-muted hover:text-white',
-            ]"
-          >
-            Cài đặt
-          </NuxtLink>
-        </nav>
-      </div>
-
-      <div class="rounded-xl border border-dark-border bg-dark-surface p-6 space-y-4">
+      <div class="rounded-xl border border-dark-border bg-dark-surface p-6 space-y-4 mt-6">
         <div class="grid grid-cols-2 gap-4">
           <div>
             <p class="text-xs text-muted mb-1">Địa chỉ</p>

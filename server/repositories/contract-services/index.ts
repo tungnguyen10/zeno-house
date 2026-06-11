@@ -49,6 +49,38 @@ export const ContractServiceRepository = {
     }
   },
 
+  async cloneFromContract(
+    event: H3Event,
+    sourceContractId: string,
+    targetContractId: string,
+  ): Promise<void> {
+    const client = await serverSupabaseClient(event)
+
+    const { data: sourceServices, error: fetchError } = await client
+      .from('contract_services')
+      .select('catalog_id, amount, quantity, is_enabled, notes')
+      .eq('contract_id', sourceContractId)
+
+    if (fetchError || !sourceServices || sourceServices.length === 0) return
+
+    const rows = sourceServices.map(s => ({
+      contract_id: targetContractId,
+      catalog_id: s.catalog_id,
+      amount: s.amount,
+      quantity: s.quantity,
+      is_enabled: s.is_enabled,
+      notes: s.notes ?? null,
+    }))
+
+    const { error: insertError } = await client
+      .from('contract_services')
+      .upsert(rows, { onConflict: 'contract_id,catalog_id' })
+
+    if (insertError) {
+      console.error('[ContractServiceRepository.cloneFromContract]', insertError.message)
+    }
+  },
+
   async syncFromBuilding(
     event: H3Event,
     buildingId: string,

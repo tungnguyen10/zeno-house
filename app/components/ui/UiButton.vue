@@ -2,27 +2,40 @@
 import clsx from 'clsx'
 
 const props = withDefaults(defineProps<{
-  variant?: 'primary' | 'secondary' | 'danger'
+  variant?: 'primary' | 'secondary' | 'danger' | 'ghost'
   size?: 'sm' | 'md' | 'lg'
   type?: 'button' | 'submit' | 'reset'
   loading?: boolean
   disabled?: boolean
+  /**
+   * Accessible label. Required when the button renders only an icon
+   * (no readable slot content) so screen readers announce the action.
+   */
+  ariaLabel?: string
+  /** Square padding for icon-only usage. */
+  iconOnly?: boolean
 }>(), {
   variant: 'primary',
   size: 'md',
   type: 'button',
   loading: false,
   disabled: false,
+  iconOnly: false,
 })
 
 const buttonClass = computed(() =>
   clsx(
-    'inline-flex items-center justify-center gap-2 font-medium rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
-    // Size
-    {
+    'inline-flex items-center justify-center gap-2 font-medium rounded-md transition-colors',
+    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-0',
+    !props.iconOnly && {
       'px-3 py-1.5 text-xs': props.size === 'sm',
       'px-4 py-2 text-sm': props.size === 'md',
       'px-5 py-2.5 text-sm': props.size === 'lg',
+    },
+    props.iconOnly && {
+      'h-7 w-7 text-xs': props.size === 'sm',
+      'h-9 w-9 text-sm': props.size === 'md',
+      'h-10 w-10 text-sm': props.size === 'lg',
     },
     // Variant
     {
@@ -32,6 +45,8 @@ const buttonClass = computed(() =>
         props.variant === 'secondary',
       'bg-error text-white hover:bg-error/85 focus-visible:ring-error':
         props.variant === 'danger',
+      'bg-transparent text-muted hover:bg-dark-hover hover:text-white focus-visible:ring-dark-border':
+        props.variant === 'ghost',
     },
     // State
     {
@@ -48,6 +63,7 @@ const buttonClass = computed(() =>
     :disabled="disabled || loading"
     :aria-disabled="disabled || loading"
     :aria-busy="loading"
+    :aria-label="ariaLabel"
   >
     <!-- Loading spinner -->
     <svg

@@ -78,18 +78,16 @@ function onSubmit() {
         @update:model-value="update('description', $event)"
       />
 
-      <div class="flex flex-col gap-1.5">
-        <label class="text-sm font-medium text-white">Trạng thái</label>
-        <select
-          :value="modelValue.status"
-          :disabled="loading"
-          class="block w-full rounded-md border border-dark-border bg-dark-surface px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan/30 focus:border-cyan/70 disabled:bg-dark-hover disabled:text-muted disabled:cursor-not-allowed"
-          @change="update('status', ($event.target as HTMLSelectElement).value)"
-        >
-          <option value="active">Đang hoạt động</option>
-          <option value="inactive">Ngừng hoạt động</option>
-        </select>
-      </div>
+      <UiSelect
+        :model-value="modelValue.status"
+        label="Trạng thái"
+        :options="[
+          { value: 'active', label: 'Đang hoạt động' },
+          { value: 'inactive', label: 'Ngừng hoạt động' },
+        ]"
+        :disabled="loading"
+        @update:model-value="update('status', String($event))"
+      />
     </div>
 
     <!-- Owner / Contact -->
@@ -129,19 +127,17 @@ function onSubmit() {
       <h3 class="text-sm font-semibold text-white border-b border-dark-border pb-2">Cấu hình tính phí mặc định</h3>
 
       <div class="grid grid-cols-2 gap-4">
-        <div class="flex flex-col gap-1.5">
-          <label class="text-sm font-medium text-white">Loại tính tiền điện</label>
-          <select
-            :value="modelValue.electricityPricingType"
-            :disabled="loading"
-            class="block w-full rounded-md border border-dark-border bg-dark-surface px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan/30 focus:border-cyan/70 disabled:bg-dark-hover disabled:text-muted disabled:cursor-not-allowed"
-            @change="update('electricityPricingType', ($event.target as HTMLSelectElement).value)"
-          >
-            <option value="per_kwh">Theo kWh</option>
-            <option value="fixed">Cố định</option>
-            <option value="tiered">Lũy kế</option>
-          </select>
-        </div>
+        <UiSelect
+          :model-value="modelValue.electricityPricingType"
+          label="Loại tính tiền điện"
+          :options="[
+            { value: 'per_kwh', label: 'Theo kWh' },
+            { value: 'fixed', label: 'Cố định' },
+            { value: 'tiered', label: 'Lũy kế' },
+          ]"
+          :disabled="loading"
+          @update:model-value="update('electricityPricingType', String($event))"
+        />
 
         <UiInput
           :model-value="modelValue.defaultElectricityRate"
@@ -154,19 +150,17 @@ function onSubmit() {
       </div>
 
       <div class="grid grid-cols-2 gap-4">
-        <div class="flex flex-col gap-1.5">
-          <label class="text-sm font-medium text-white">Loại tính tiền nước</label>
-          <select
-            :value="modelValue.waterPricingType"
-            :disabled="loading"
-            class="block w-full rounded-md border border-dark-border bg-dark-surface px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan/30 focus:border-cyan/70 disabled:bg-dark-hover disabled:text-muted disabled:cursor-not-allowed"
-            @change="update('waterPricingType', ($event.target as HTMLSelectElement).value)"
-          >
-            <option value="per_m3">Theo m³</option>
-            <option value="per_person">Theo người</option>
-            <option value="fixed_per_room">Cố định/phòng</option>
-          </select>
-        </div>
+        <UiSelect
+          :model-value="modelValue.waterPricingType"
+          label="Loại tính tiền nước"
+          :options="[
+            { value: 'per_m3', label: 'Theo m³' },
+            { value: 'per_person', label: 'Theo người' },
+            { value: 'fixed_per_room', label: 'Cố định/phòng' },
+          ]"
+          :disabled="loading"
+          @update:model-value="update('waterPricingType', String($event))"
+        />
 
         <UiInput
           :model-value="modelValue.defaultWaterRate"

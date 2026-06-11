@@ -5,7 +5,7 @@ Recording and managing contract-level payments (deposit, prepaid rent, rent, oth
 ## Requirements
 
 ### Requirement: Contract payment recording
-The system SHALL allow recording payments against a contract. A payment SHALL include: type (`deposit` | `prepaid_rent` | `rent` | `other`), amount (positive number), paid_at date, optional payment_method, optional note, and optional period coverage (`covered_period_start`, `covered_period_end` in YYYY-MM format) for prepaid rent.
+The system SHALL allow recording payments against a contract. A payment SHALL include: type (`deposit` | `prepaid_rent` | `rent` | `other`), amount (positive number), paid_at date, optional payment_method, optional note, and optional period coverage (`covered_period_start`, `covered_period_end` in YYYY-MM format) for prepaid rent. Contract-level payments are intended for pre-invoice financial events: `deposit` and `prepaid_rent` are the primary supported types. `rent` and `other` remain for backward compatibility until invoice settlement exists, but they SHALL NOT be treated as the future source of truth for monthly invoice settlement.
 
 #### Scenario: Deposit recorded
 - **WHEN** admin records a deposit payment
@@ -26,3 +26,11 @@ The system SHALL allow recording payments against a contract. A payment SHALL in
 #### Scenario: Non-positive amount rejected
 - **WHEN** payment submitted with amount ≤ 0
 - **THEN** request rejected with VALIDATION_ERROR
+
+#### Scenario: Monthly settlement boundary is explicit
+- **WHEN** a developer implements monthly invoice collection
+- **THEN** the implementation uses invoice-level payment allocation instead of relying on contract-level `rent` payments as the financial source of truth
+
+#### Scenario: Legacy rent payment remains readable
+- **WHEN** a contract has an existing payment with type `rent`
+- **THEN** it remains retrievable in the contract payment list for compatibility

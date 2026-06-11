@@ -55,13 +55,12 @@ async function onSubmit(data: ContractFormData) {
 </script>
 
 <template>
-  <div class="max-w-2xl">
-    <div class="mb-6">
+  <div class="">
+    <UiPageHeader title="Chỉnh sửa hợp đồng">
       <NuxtLink :to="`/contracts/${id}`" class="text-sm text-muted hover:text-white transition-colors">
         ← Chi tiết hợp đồng
       </NuxtLink>
-      <h1 class="text-xl font-semibold text-white mt-2">Chỉnh sửa hợp đồng</h1>
-    </div>
+    </UiPageHeader>
 
     <div class="rounded-xl border border-dark-border bg-dark-surface p-6">
       <ContractForm

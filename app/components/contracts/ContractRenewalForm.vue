@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import clsx from 'clsx'
 import { formatCurrency } from '~/utils/format/currency'
 import type { ContractRenewInput } from '~/utils/validators/contract-renewals'
 
@@ -56,97 +55,77 @@ function handleSubmit() {
       }
   emit('submit', input)
 }
-
-const inputClass = 'block w-full rounded-md border border-dark-border bg-dark-surface px-3 py-2 text-sm text-white placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-cyan/30 focus:border-cyan/70'
-const labelClass = 'block text-sm font-medium text-muted mb-1'
-const errorClass = 'mt-1 text-xs text-error'
 </script>
 
 <template>
   <form class="space-y-4" @submit.prevent="handleSubmit">
-    <!-- API error -->
-    <div v-if="props.apiError" class="rounded-md bg-error/10 border border-error/30 px-4 py-3 text-sm text-error">
+    <UiAlert v-if="props.apiError" severity="danger">
       {{ props.apiError }}
-    </div>
+    </UiAlert>
 
     <!-- Current term info -->
     <div class="rounded-md bg-dark-surface border border-dark-border px-4 py-3 text-sm text-muted">
-      Ngày kết thúc hiện tại: <span class="text-white font-medium">{{ new Date(props.currentEndDate).toLocaleDateString('vi-VN') }}</span>
-      · Giá thuê: <span class="text-white font-medium">{{ formatCurrency(props.currentMonthlyRent) }}</span>
+      Ngày kết thúc hiện tại:
+      <span class="text-white font-medium">{{ new Date(props.currentEndDate).toLocaleDateString('vi-VN') }}</span>
+      · Giá thuê:
+      <span class="text-white font-medium">{{ formatCurrency(props.currentMonthlyRent) }}</span>
     </div>
 
     <!-- Mode -->
-    <div>
-      <label :class="labelClass">Hình thức gia hạn</label>
+    <div class="flex flex-col gap-1.5">
+      <span class="text-sm font-medium text-muted">Hình thức gia hạn</span>
       <div class="grid grid-cols-2 gap-2">
-        <button
+        <UiButton
           type="button"
-          :class="clsx('px-3 py-2 text-sm rounded-md border transition-colors', form.mode === 'extend' ? 'border-cyan bg-cyan/10 text-cyan' : 'border-dark-border text-muted hover:border-dark-hover')"
+          :variant="form.mode === 'extend' ? 'primary' : 'secondary'"
           @click="form.mode = 'extend'"
         >
           Gia hạn đơn giản
-        </button>
-        <button
+        </UiButton>
+        <UiButton
           type="button"
-          :class="clsx('px-3 py-2 text-sm rounded-md border transition-colors', form.mode === 'new_contract' ? 'border-cyan bg-cyan/10 text-cyan' : 'border-dark-border text-muted hover:border-dark-hover')"
+          :variant="form.mode === 'new_contract' ? 'primary' : 'secondary'"
           @click="form.mode = 'new_contract'"
         >
           Hợp đồng mới
-        </button>
+        </UiButton>
       </div>
-      <p class="mt-1.5 text-xs text-muted">
+      <p class="text-xs text-muted">
         <template v-if="form.mode === 'extend'">Gia hạn tại chỗ — cùng hợp đồng, cập nhật ngày kết thúc.</template>
         <template v-else>Tạo hợp đồng kế tiếp — hợp đồng hiện tại chuyển sang trạng thái "đã gia hạn".</template>
       </p>
     </div>
 
-    <!-- New end date -->
-    <div>
-      <label :class="labelClass">Ngày kết thúc mới <span class="text-error">*</span></label>
-      <input v-model="form.new_end_date" type="date" :class="clsx(inputClass, fieldErrors.new_end_date && 'border-error/50')" >
-      <p v-if="fieldErrors.new_end_date" :class="errorClass">{{ fieldErrors.new_end_date }}</p>
-    </div>
+    <UiInput
+      v-model="form.new_end_date"
+      label="Ngày kết thúc mới"
+      type="date"
+      :error="fieldErrors.new_end_date"
+      required
+    />
 
-    <!-- New rent -->
-    <div>
-      <label :class="labelClass">
-        Giá thuê mới (VND)
-        <span v-if="form.mode === 'new_contract'" class="text-error">*</span>
-        <span v-else class="text-muted font-normal">(tuỳ chọn)</span>
-      </label>
-      <input
-        v-model="form.new_monthly_rent"
-        type="number"
-        min="0"
-        step="100000"
-        :placeholder="`Mặc định: ${formatCurrency(props.currentMonthlyRent)}`"
-        :class="clsx(inputClass, fieldErrors.new_monthly_rent && 'border-error/50')"
-      >
-      <p v-if="fieldErrors.new_monthly_rent" :class="errorClass">{{ fieldErrors.new_monthly_rent }}</p>
-    </div>
+    <UiInput
+      v-model="form.new_monthly_rent"
+      label="Giá thuê mới (VND)"
+      type="number"
+      :placeholder="`Mặc định: ${formatCurrency(props.currentMonthlyRent)}`"
+      :error="fieldErrors.new_monthly_rent"
+      :hint="form.mode === 'new_contract' ? undefined : 'Tuỳ chọn — bỏ trống để giữ giá hiện tại'"
+      :required="form.mode === 'new_contract'"
+    />
 
-    <!-- Reason -->
-    <div>
-      <label :class="labelClass">Lý do gia hạn (tuỳ chọn)</label>
-      <textarea v-model="form.reason" rows="2" :class="inputClass" placeholder="Ghi chú lý do gia hạn..." />
-    </div>
+    <UiTextarea
+      v-model="form.reason"
+      label="Lý do gia hạn (tuỳ chọn)"
+      :rows="2"
+      placeholder="Ghi chú lý do gia hạn..."
+    />
 
-    <!-- Actions -->
     <div class="flex items-center justify-end gap-3 pt-2">
-      <button
-        type="button"
-        class="px-4 py-2 text-sm font-medium text-muted hover:text-white transition-colors"
-        @click="emit('cancel')"
-      >
-        Huỷ
-      </button>
-      <button
-        type="submit"
-        :disabled="props.loading"
-        class="px-4 py-2 text-sm font-medium rounded-md bg-cyan-600 text-white hover:bg-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-      >
-        {{ props.loading ? 'Đang xử lý...' : (form.mode === 'extend' ? 'Gia hạn' : 'Tạo hợp đồng mới') }}
-      </button>
+      <UiButton variant="ghost" type="button" @click="emit('cancel')">Huỷ</UiButton>
+      <UiButton type="submit" :loading="props.loading">
+        {{ form.mode === 'extend' ? 'Gia hạn' : 'Tạo hợp đồng mới' }}
+      </UiButton>
     </div>
   </form>
 </template>

@@ -7,34 +7,30 @@ The `room_assignments` table has been dropped. Room occupancy is now tracked exc
 ## Requirements
 
 ### Requirement: Room assignments table schema
-The system SHALL have a `room_assignments` table with columns: `id` (uuid PK), `room_id` (uuid FK → rooms.id ON DELETE CASCADE), `tenant_id` (uuid FK → tenants.id ON DELETE RESTRICT), `start_date` (date NOT NULL), `end_date` (date NULL — null means active), `notes` (text NULL), `created_at` (timestamptz default now()), `updated_at` (timestamptz default now()). A partial unique index SHALL enforce at most one active assignment per room: `UNIQUE (room_id) WHERE end_date IS NULL`.
+**HISTORICAL — no longer in effect.** Prior to the contract-as-assignment migration the system had a `room_assignments` table with columns: `id` (uuid PK), `room_id` (uuid FK → rooms.id ON DELETE CASCADE), `tenant_id` (uuid FK → tenants.id ON DELETE RESTRICT), `start_date` (date NOT NULL), `end_date` (date NULL — null means active), `notes` (text NULL), `created_at` (timestamptz default now()), `updated_at` (timestamptz default now()). A partial unique index enforced at most one active assignment per room: `UNIQUE (room_id) WHERE end_date IS NULL`. The table no longer exists; do not add code that depends on it.
 
-#### Scenario: Migration creates table
-- **WHEN** migration is applied
-- **THEN** `room_assignments` table exists with all columns, FK constraints, and partial unique index
+#### Scenario: Table is no longer present
+- **WHEN** a developer inspects the live database
+- **THEN** `room_assignments` is absent and any read/write against it MUST be removed
 
-#### Scenario: One active assignment per room enforced
-- **WHEN** an INSERT is attempted for a room that already has an active assignment (end_date IS NULL)
-- **THEN** the database rejects the insert with a unique constraint violation
+#### Scenario: Active occupancy lookup
+- **WHEN** a developer needs to know which tenant currently occupies a room
+- **THEN** they query `contracts WHERE status = 'active' AND room_id = ?` instead of `room_assignments`
 
-#### Scenario: Tenant delete blocked if assigned
-- **WHEN** a DELETE is attempted on a tenant with active or historical assignments
-- **THEN** the database rejects with FK RESTRICT violation
+#### Scenario: Tenant delete protection
+- **WHEN** a developer needs to prevent deleting a tenant with active occupancy
+- **THEN** the guard is implemented against `contracts` FK constraints, not against `room_assignments`
 
 ### Requirement: Room assignments RLS policies
-RLS SHALL be enabled on `room_assignments`. Policy `room_assignments_admin_all`: admin full access. Policy `room_assignments_manager_select`: manager SELECT only.
+**HISTORICAL — no longer in effect.** RLS policies (`room_assignments_admin_all`, `room_assignments_manager_select`) existed only for the deprecated `room_assignments` table and were removed with the table.
 
-#### Scenario: Admin can assign
-- **WHEN** admin inserts a room assignment
-- **THEN** operation succeeds
-
-#### Scenario: Manager read-only
-- **WHEN** manager attempts to insert or delete a room assignment
-- **THEN** operation rejected by RLS
+#### Scenario: Policies removed with table
+- **WHEN** the contract-as-assignment migration ran
+- **THEN** the RLS policies for `room_assignments` were dropped together with the table
 
 ### Requirement: Generated TypeScript types for room_assignments
-After migration, `database.types.ts` SHALL include `room_assignments` Row/Insert/Update types.
+**HISTORICAL — no longer in effect.** `database.types.ts` previously included `room_assignments` Row/Insert/Update types. After the contract-as-assignment migration these types are no longer generated.
 
-#### Scenario: Types available after regen
-- **WHEN** `database.types.ts` is regenerated
-- **THEN** `Tables<'room_assignments'>` is available with correct FK column types
+#### Scenario: Types absent after regen
+- **WHEN** `database.types.ts` is regenerated against the current schema
+- **THEN** `Tables<'room_assignments'>` is not present

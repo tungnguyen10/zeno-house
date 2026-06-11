@@ -1,5 +1,12 @@
 <script setup lang="ts">
 import type { BuildingFormData } from '~/components/buildings/BuildingForm.vue'
+import type { UiTableColumn } from '~/components/ui/UiTable.vue'
+
+interface PreviewRoom {
+  roomNumber: string
+  rent: number
+  area: number | null
+}
 
 const { isLoading, errors, apiError, submitCreate } = useBuildingForm()
 
@@ -30,12 +37,6 @@ const quickDefaultRent = ref(0)
 const quickDefaultArea = ref<number | null>(null)
 const quickSamePriceForAll = ref(true)
 
-interface PreviewRoom {
-  roomNumber: string
-  rent: number
-  area: number | null
-}
-
 const previewRooms = computed<PreviewRoom[]>(() => {
   if (!enableQuickRooms.value) return []
   return Array.from({ length: quickRoomCount.value }, (_, i) => ({
@@ -56,6 +57,12 @@ function updatePreviewRent(index: number, value: number) {
 
 
 const quickRoomError = ref<string | null>(null)
+
+const previewColumns: UiTableColumn<PreviewRoom>[] = [
+  { key: 'roomNumber', label: 'Mã phòng' },
+  { key: 'rent', label: 'Giá thuê (đ)', numeric: true },
+  { key: 'area', label: 'Diện tích (m²)', numeric: true },
+]
 
 async function onSubmit(data: BuildingFormData) {
   quickRoomError.value = null
@@ -95,16 +102,15 @@ async function onSubmit(data: BuildingFormData) {
 
 <template>
   <div class="max-w-3xl">
-    <div class="mb-6">
+    <UiPageHeader title="Thêm tòa nhà mới">
       <NuxtLink to="/buildings" class="text-sm text-muted hover:text-white transition-colors">
         ← Danh sách tòa nhà
       </NuxtLink>
-      <h1 class="text-xl font-semibold text-white mt-2">Thêm tòa nhà mới</h1>
-    </div>
+    </UiPageHeader>
 
-    <div v-if="apiError" class="mb-4 rounded-lg border border-error/20 bg-error/10 px-4 py-3 text-sm text-error">
+    <UiAlert v-if="apiError" severity="danger" class="mb-4">
       {{ apiError }}
-    </div>
+    </UiAlert>
 
     <div class="rounded-xl border border-dark-border bg-dark-surface p-6 mb-6">
       <BuildingForm
@@ -125,119 +131,84 @@ async function onSubmit(data: BuildingFormData) {
     <div class="rounded-xl border border-dark-border bg-dark-surface p-6 mb-6">
       <div class="flex items-center justify-between mb-4">
         <h3 class="text-sm font-semibold text-white">Tạo phòng nhanh</h3>
-        <label class="flex items-center gap-2 cursor-pointer">
-          <input
-            v-model="enableQuickRooms"
-            type="checkbox"
-            class="h-4 w-4 rounded border-dark-border accent-cyan"
-          >
-          <span class="text-sm text-muted">Bật tạo phòng nhanh</span>
-        </label>
+        <UiCheckbox
+          v-model="enableQuickRooms"
+          label="Bật tạo phòng nhanh"
+        />
       </div>
 
       <template v-if="enableQuickRooms">
         <div class="grid grid-cols-2 gap-4 mb-4">
-          <div class="flex flex-col gap-1.5">
-            <label class="text-sm font-medium text-white">Số lượng phòng</label>
-            <input
-              v-model.number="quickRoomCount"
-              type="number"
-              min="1"
-              max="100"
-              class="block w-full rounded-md border border-dark-border bg-dark-surface px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan/30 focus:border-cyan/70"
-            >
-          </div>
-          <div class="flex flex-col gap-1.5">
-            <label class="text-sm font-medium text-white">Tiền tố mã phòng</label>
-            <input
-              v-model="quickRoomPrefix"
-              type="text"
-              maxlength="10"
-              placeholder="Ví dụ: P, A, B"
-              class="block w-full rounded-md border border-dark-border bg-dark-surface px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan/30 focus:border-cyan/70"
-            >
-          </div>
-          <div class="flex flex-col gap-1.5">
-            <label class="text-sm font-medium text-white">Số bắt đầu</label>
-            <input
-              v-model.number="quickRoomNumberStart"
-              type="number"
-              min="1"
-              class="block w-full rounded-md border border-dark-border bg-dark-surface px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan/30 focus:border-cyan/70"
-            >
-          </div>
-          <div class="flex flex-col gap-1.5">
-            <label class="text-sm font-medium text-white">Giá thuê mặc định (đ)</label>
-            <input
-              v-model.number="quickDefaultRent"
-              type="number"
-              min="0"
-              class="block w-full rounded-md border border-dark-border bg-dark-surface px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan/30 focus:border-cyan/70"
-            >
-          </div>
-          <div class="flex flex-col gap-1.5">
-            <label class="text-sm font-medium text-white">Diện tích (m²)</label>
-            <input
-              v-model.number="quickDefaultArea"
-              type="number"
-              min="1"
-              placeholder="Tuỳ chọn"
-              class="block w-full rounded-md border border-dark-border bg-dark-surface px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan/30 focus:border-cyan/70"
-            >
-          </div>
+          <UiInput
+            label="Số lượng phòng"
+            type="number"
+            :model-value="String(quickRoomCount)"
+            @update:model-value="(v) => quickRoomCount = Number(v)"
+          />
+          <UiInput
+            v-model="quickRoomPrefix"
+            label="Tiền tố mã phòng"
+            placeholder="Ví dụ: P, A, B"
+          />
+          <UiInput
+            label="Số bắt đầu"
+            type="number"
+            :model-value="String(quickRoomNumberStart)"
+            @update:model-value="(v) => quickRoomNumberStart = Number(v)"
+          />
+          <UiInput
+            label="Giá thuê mặc định (đ)"
+            type="number"
+            :model-value="String(quickDefaultRent)"
+            @update:model-value="(v) => quickDefaultRent = Number(v)"
+          />
+          <UiInput
+            label="Diện tích (m²)"
+            type="number"
+            :model-value="quickDefaultArea !== null ? String(quickDefaultArea) : ''"
+            placeholder="Tuỳ chọn"
+            @update:model-value="(v) => quickDefaultArea = v === '' ? null : Number(v)"
+          />
         </div>
 
         <!-- Preview table -->
         <div v-if="previewRooms.length" class="mt-4">
-          <div v-if="hasDuplicateRoomCodes" class="mb-2 text-sm text-error">
-            ⚠ Mã phòng bị trùng. Vui lòng thay đổi tiền tố hoặc số bắt đầu.
-          </div>
+          <UiAlert v-if="hasDuplicateRoomCodes" severity="warning" class="mb-2">
+            Mã phòng bị trùng. Vui lòng thay đổi tiền tố hoặc số bắt đầu.
+          </UiAlert>
           <p class="text-xs text-muted mb-2">Xem trước {{ previewRooms.length }} phòng sẽ được tạo:</p>
-          <div class="overflow-x-auto rounded-lg border border-dark-border">
-            <table class="w-full text-sm">
-              <thead>
-                <tr class="border-b border-dark-border bg-dark-hover">
-                  <th class="px-3 py-2 text-left text-xs text-muted font-medium">Mã phòng</th>
-                  <th class="px-3 py-2 text-left text-xs text-muted font-medium">Giá thuê (đ)</th>
-                  <th class="px-3 py-2 text-left text-xs text-muted font-medium">Diện tích (m²)</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr
-                  v-for="(room, i) in previewRooms"
-                  :key="room.roomNumber"
-                  class="border-b border-dark-border last:border-0"
-                >
-                  <td class="px-3 py-2 text-white font-mono">{{ room.roomNumber }}</td>
-                  <td class="px-3 py-2">
-                    <input
-                      v-if="!quickSamePriceForAll"
-                      :value="room.rent"
-                      type="number"
-                      min="0"
-                      class="w-full rounded border border-dark-border bg-dark-hover px-2 py-1 text-sm text-white"
-                      @input="updatePreviewRent(i, Number(($event.target as HTMLInputElement).value))"
-                    >
-                    <span v-else class="text-white">{{ room.rent.toLocaleString('vi-VN') }}</span>
-                  </td>
-                  <td class="px-3 py-2 text-muted">{{ room.area ?? '—' }}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <label class="flex items-center gap-2 mt-3 cursor-pointer">
-            <input
-              v-model="quickSamePriceForAll"
-              type="checkbox"
-              class="h-4 w-4 rounded border-dark-border accent-cyan"
-            >
-            <span class="text-sm text-muted">Đồng giá cho tất cả phòng</span>
-          </label>
+          <UiTable
+            :rows="previewRooms"
+            :columns="previewColumns"
+            row-key="roomNumber"
+          >
+            <template #cell-roomNumber="{ row }">
+              <span class="font-mono text-white">{{ row.roomNumber }}</span>
+            </template>
+            <template #cell-rent="{ row }">
+              <UiInput
+                v-if="!quickSamePriceForAll"
+                density="compact"
+                type="number"
+                :model-value="String(row.rent)"
+                @update:model-value="(v) => updatePreviewRent(previewRooms.indexOf(row), Number(v))"
+              />
+              <span v-else>{{ row.rent.toLocaleString('vi-VN') }}</span>
+            </template>
+            <template #cell-area="{ row }">
+              {{ row.area ?? '—' }}
+            </template>
+          </UiTable>
+          <UiCheckbox
+            v-model="quickSamePriceForAll"
+            label="Đồng giá cho tất cả phòng"
+            class="mt-3"
+          />
         </div>
 
-        <div v-if="quickRoomError" class="mt-3 text-sm text-error">
+        <UiAlert v-if="quickRoomError" severity="danger" class="mt-3">
           {{ quickRoomError }}
-        </div>
+        </UiAlert>
       </template>
     </div>
 

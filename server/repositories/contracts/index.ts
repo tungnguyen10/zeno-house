@@ -90,16 +90,20 @@ export const ContractRepository = {
 
   async insert(event: H3Event, input: ContractCreateInput): Promise<ContractWithDetails> {
     const client = await serverSupabaseClient(event)
+    if (!input.building_id) {
+      throw createError({ statusCode: 500, message: 'building_id is required on insert (resolve from room before calling repository)' })
+    }
     const { data, error } = await client
       .from('contracts')
       .insert({
         room_id: input.room_id,
         tenant_id: input.tenant_id,
-        building_id: input.building_id ?? '',
+        building_id: input.building_id,
         start_date: input.start_date,
         end_date: input.end_date,
         monthly_rent: input.monthly_rent,
         deposit: input.deposit ?? 0,
+        payment_day: input.payment_day ?? null,
         occupant_count: input.occupant_count ?? 1,
         discount_amount: input.discount_amount ?? 0,
         surcharge_amount: input.surcharge_amount ?? 0,
@@ -125,6 +129,7 @@ export const ContractRepository = {
         ...(input.end_date !== undefined && { end_date: input.end_date }),
         ...(input.monthly_rent !== undefined && { monthly_rent: input.monthly_rent }),
         ...(input.deposit !== undefined && { deposit: input.deposit }),
+        ...(input.payment_day !== undefined && { payment_day: input.payment_day }),
         ...(input.occupant_count !== undefined && { occupant_count: input.occupant_count }),
         ...(input.discount_amount !== undefined && { discount_amount: input.discount_amount }),
         ...(input.surcharge_amount !== undefined && { surcharge_amount: input.surcharge_amount }),
