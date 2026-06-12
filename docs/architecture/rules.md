@@ -58,3 +58,9 @@
 - Không tạo abstraction khi mới chỉ có 1 nơi dùng.
 - Khi một pattern được dùng lần thứ hai, mới nâng thành shared pattern.
 - Mỗi bước phải để lại kết quả chạy được.
+## 7. Test Rules
+
+- Vitest is the default unit/component test runner.
+- Billing service coverage is scoped first to `server/services/billing/**`.
+- Use deterministic builders in `tests/__fixtures__/billing/`; avoid random data in baseline rule tests.
+- Mock repositories and Supabase at service boundaries. Prefer pure rule helpers when validating billing math or status policy.

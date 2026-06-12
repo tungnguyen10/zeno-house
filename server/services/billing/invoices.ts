@@ -21,6 +21,7 @@ import { BillingAuditService } from './audit'
 import { BillingDraftService } from './drafts'
 import { BillingPeriodService } from './periods'
 import { BillingDisplayResolver } from './display'
+import { validateAdjustment } from './rules'
 
 export const InvoiceService = {
   async list(event: H3Event, user: AuthUser, billingPeriodId: string): Promise<Invoice[]> {
@@ -292,6 +293,14 @@ export const InvoiceService = {
     const target = await InvoiceRepository.findById(event, input.target_invoice_id)
     if (!target) throwNotFound('Không tìm thấy hoá đơn đích')
     if (target.status === 'void') throwConflict('Hoá đơn đã huỷ — không thể thêm điều chỉnh')
+
+    const period = await BillingPeriodRepository.findById(event, target.billingPeriodId)
+    validateAdjustment({
+      periodStatus: period?.status,
+      invoicePaidAmount: target.paidAmount,
+      amount: input.amount,
+      reason: input.reason,
+    })
 
     // Build the charge row.
     const existingCharges = await InvoiceRepository.listCharges(event, target.id)

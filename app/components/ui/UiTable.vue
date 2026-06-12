@@ -1,4 +1,5 @@
 <script setup lang="ts" generic="TRow extends object">
+import { computed } from 'vue'
 import clsx from 'clsx'
 
 export interface UiTableColumn<TRow> {

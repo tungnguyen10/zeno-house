@@ -9,6 +9,7 @@ import { BillingPeriodRepository } from '../../repositories/billing/periods'
 import { BillingAuditService } from './audit'
 import { BillingPeriodService } from './periods'
 import { BillingDisplayResolver } from './display'
+import { calculateInvoicePaymentStatus } from './rules'
 
 export const InvoicePaymentService = {
   async list(event: H3Event, user: AuthUser, invoiceId: string): Promise<InvoicePayment[]> {
@@ -47,18 +48,14 @@ export const InvoicePaymentService = {
 
     let updatedInvoice: Invoice
     try {
-      const newPaid = invoice.paidAmount + input.amount
-      const newBalance = invoice.totalAmount - newPaid
-      let nextStatus: Invoice['status'] = invoice.status
-      if (newBalance <= 0) nextStatus = 'paid'
-      else if (newPaid > 0) nextStatus = 'partial'
-      const paidAt = newBalance <= 0 ? input.paid_at : null
+      const next = calculateInvoicePaymentStatus(invoice, input.amount)
+      const paidAt = next.balanceAmount <= 0 ? input.paid_at : null
       updatedInvoice = await InvoiceRepository.updatePaymentTotals(
         event,
         invoiceId,
-        newPaid,
-        newBalance,
-        nextStatus,
+        next.paidAmount,
+        next.balanceAmount,
+        next.status,
         paidAt,
       )
     } catch (e) {

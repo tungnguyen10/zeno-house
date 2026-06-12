@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed, useId, useSlots } from 'vue'
 import clsx from 'clsx'
 
 const props = withDefaults(defineProps<{

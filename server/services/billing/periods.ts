@@ -15,6 +15,7 @@ import type {
 import { BillingPeriodRepository } from '../../repositories/billing/periods'
 import { InvoiceRepository } from '../../repositories/billing/invoices'
 import { BillingAuditService } from './audit'
+import { assertPeriodCanTransition } from './rules'
 
 interface BuildingLite {
   id: string
@@ -311,6 +312,7 @@ export const BillingPeriodService = {
   ): Promise<BillingPeriod> {
     const period = await BillingPeriodRepository.findById(event, id)
     if (!period) throwNotFound('Không tìm thấy kỳ vận hành')
+    assertPeriodCanTransition(period.status, next)
     if (period.status === next) return period
     const updated = await BillingPeriodRepository.updateStatus(event, period.id, next, {
       issued_at: next === 'issued' ? new Date().toISOString() : undefined,

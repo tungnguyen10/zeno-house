@@ -47,6 +47,8 @@ export function formatAuditSummary(action: string, metadata: Record<string, unkn
       return 'Mở kỳ vận hành'
     case 'period.closed':
       return 'Chốt kỳ vận hành'
+    case 'period.unissued':
+      return 'Huy phat hanh ky van hanh'
     case 'period.status_changed': {
       const from = stringValue(meta.from) ?? stringValue(asRecord(meta.before).status) ?? stringValue(meta.previous_status) ?? '...'
       const to = stringValue(meta.to) ?? stringValue(asRecord(meta.after).status) ?? stringValue(meta.next_status) ?? '...'
@@ -95,6 +97,11 @@ export function formatAuditSummary(action: string, metadata: Record<string, unkn
       const amount = formatCurrency(meta.amount) ?? '0đ'
       const method = stringValue(meta.payment_method)
       return `Ghi thu ${amount}${method ? ` bằng ${method}` : ''}`
+    }
+    case 'payments.bulk_recorded': {
+      const count = numberValue(meta.count) ?? numberValue(meta.payment_count) ?? 0
+      const amount = formatCurrency(meta.amount)
+      return `Ghi thu hang loat ${count} khoan${amount ? `, tong ${amount}` : ''}`
     }
     case 'invoice.issue_attempted': {
       const blocked = numberValue(meta.blocked_count) ?? 0

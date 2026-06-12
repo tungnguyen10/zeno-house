@@ -11,7 +11,10 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "typecheck": "nuxt typecheck",
-    "prepare": "husky"
+    "prepare": "husky",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@nuxt/eslint": "^1.15.2",
@@ -31,9 +34,15 @@
   },
   "devDependencies": {
     "@nuxtjs/tailwindcss": "^6.14.0",
+    "@vitejs/plugin-vue": "^6.0.7",
+    "@vitest/coverage-v8": "^4.1.8",
+    "@vue/test-utils": "^2.4.11",
+    "happy-dom": "^20.10.2",
     "husky": "^9.1.7",
     "lint-staged": "^16.4.0",
     "tailwindcss": "^3.4.19",
+    "vite-tsconfig-paths": "^6.1.1",
+    "vitest": "^4.1.8",
     "vue-tsc": "^3.2.9"
   },
   "lint-staged": {

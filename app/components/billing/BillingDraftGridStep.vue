@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed, nextTick, ref, watch } from 'vue'
 import clsx from 'clsx'
 import type { UiTableColumn } from '~/components/ui/UiTable.vue'
 import type {
@@ -107,6 +108,52 @@ function readingDraftValue(row: BillingDraftGridRow, type: MeterType): string {
 
 function setReadingDraftValue(row: BillingDraftGridRow, type: MeterType, value: string) {
   localReadings.value[cellKey(row, type)] = value
+}
+
+function editableRowsFor(type: MeterType): BillingDraftGridRow[] {
+  return filteredRows.value.filter((row) => {
+    const cell = type === 'electricity' ? row.electricity : row.water
+    return row.editable && !!cell?.editable
+  })
+}
+
+function focusReadingCell(row: BillingDraftGridRow, type: MeterType) {
+  nextTick(() => {
+    const selector = `[data-reading-cell="${row.roomId}::${type}"] input`
+    const input = document.querySelector<HTMLInputElement>(selector)
+    input?.focus()
+    input?.select()
+  })
+}
+
+function handleReadingTab(event: KeyboardEvent, row: BillingDraftGridRow, type: MeterType) {
+  event.preventDefault()
+  if (type === 'electricity' && row.water?.editable) {
+    focusReadingCell(row, 'water')
+    return
+  }
+  const rows = editableRowsFor(type)
+  const currentIndex = rows.findIndex(r => r.key === row.key)
+  const nextRow = rows[currentIndex + 1]
+  if (nextRow) focusReadingCell(nextRow, type)
+}
+
+function handleReadingPaste(event: ClipboardEvent, row: BillingDraftGridRow, type: MeterType) {
+  const text = event.clipboardData?.getData('text/plain') ?? ''
+  const values = text
+    .split(/\r?\n/)
+    .flatMap(line => line.split('\t'))
+    .map(value => value.trim())
+    .filter(Boolean)
+  if (values.length <= 1) return
+  event.preventDefault()
+  const rows = editableRowsFor(type)
+  const startIndex = rows.findIndex(r => r.key === row.key)
+  if (startIndex < 0) return
+  values.forEach((value, offset) => {
+    const targetRow = rows[startIndex + offset]
+    if (targetRow) setReadingDraftValue(targetRow, type, value)
+  })
 }
 
 function isCellDirty(row: BillingDraftGridRow, type: MeterType): boolean {
@@ -629,11 +676,14 @@ const lineColumns: UiTableColumn<BillingDraftLine>[] = [
             <UiInput
               v-if="(row as BillingDraftGridRow).electricity!.editable"
               type="number"
+              :data-reading-cell="`${(row as BillingDraftGridRow).roomId}::electricity`"
               :model-value="readingDraftValue(row as BillingDraftGridRow, 'electricity')"
               density="compact"
               class="w-28"
               :class="clsx(isCellDirty(row as BillingDraftGridRow, 'electricity') && 'ring-2 ring-blue-500')"
               @update:model-value="setReadingDraftValue(row as BillingDraftGridRow, 'electricity', String($event ?? ''))"
+              @keydown.tab="handleReadingTab($event, row as BillingDraftGridRow, 'electricity')"
+              @paste="handleReadingPaste($event, row as BillingDraftGridRow, 'electricity')"
             />
             <span v-else class="text-sm text-white tabular-nums">
               {{ (row as BillingDraftGridRow).electricity!.currentValue ?? '—' }}
@@ -653,11 +703,14 @@ const lineColumns: UiTableColumn<BillingDraftLine>[] = [
             <UiInput
               v-if="(row as BillingDraftGridRow).water!.editable"
               type="number"
+              :data-reading-cell="`${(row as BillingDraftGridRow).roomId}::water`"
               :model-value="readingDraftValue(row as BillingDraftGridRow, 'water')"
               density="compact"
               class="w-28"
               :class="clsx(isCellDirty(row as BillingDraftGridRow, 'water') && 'ring-2 ring-blue-500')"
               @update:model-value="setReadingDraftValue(row as BillingDraftGridRow, 'water', String($event ?? ''))"
+              @keydown.tab="handleReadingTab($event, row as BillingDraftGridRow, 'water')"
+              @paste="handleReadingPaste($event, row as BillingDraftGridRow, 'water')"
             />
             <span v-else class="text-sm text-white tabular-nums">
               {{ (row as BillingDraftGridRow).water!.currentValue ?? '—' }}

@@ -234,7 +234,7 @@ Client **khÃ´ng** gá»i Supabase trá»±c tiáº¿p cho business data.
 |--------|----------|-----------|
 | `billing-readability-and-polish` | Bỏ UID khỏi cột chính, gom IA 3 tab, drawer audit, header overflow Chốt kỳ, toast, **callout chênh lệch draft↔issued** | ✅ section 1–14 đã code; ✅ all_done 49/49 |
 | `billing-power-features` | Bulk paste chá»‰ sá»‘, bulk thanh toÃ¡n, **há»§y phÃ¡t hÃ nh cáº£ ká»³** (`billing.unissue`), export Excel | â³ chÆ°a báº¯t Ä‘áº§u |
-| `billing-test-baseline` | Vitest + fixtures + unit/integration cho service & composable billing | â³ chÆ°a báº¯t Ä‘áº§u |
+| `billing-test-baseline` | Vitest + fixtures + unit/integration cho service & composable billing | baseline test framework seeded |
 
 Má»i change Ä‘á»u `npx openspec validate <id> --strict` pass. Spec sá»‘ng á»Ÿ `openspec/changes/<id>/`.
 

@@ -38,6 +38,14 @@ yarn dev
 bun run dev
 ```
 
+## Tests
+
+Run the test suite:
+
+```bash
+npm test
+```
+
 ## Production
 
 Build the application for production:

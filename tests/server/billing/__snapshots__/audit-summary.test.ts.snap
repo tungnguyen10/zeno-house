@@ -1,0 +1,19 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`billing audit summary formatter > formats documented actions 1`] = `
+[
+  "Mở kỳ vận hành",
+  "Đổi trạng thái: draft → issued",
+  "Chốt kỳ vận hành",
+  "Huy phat hanh ky van hanh",
+  "Lưu 2 chỉ số",
+  "Ghi đè chỉ số electricity, lý do replacement",
+  "Phát hành 3 hoá đơn, hạn 05/06/2026",
+  "Huỷ hoá đơn 100.000đ — wrong amount",
+  "Phát hành lại hoá đơn 100.000đ → 120.000đ",
+  "Tạo điều chỉnh credit -50.000đ",
+  "Ghi thu 50.000đ bằng cash",
+  "Ghi thu hang loat 3 khoan",
+  "Thử phát hành - 1 hoá đơn bị chặn",
+]
+`;
