@@ -21,8 +21,8 @@ export type BillingPeriodListQuery = z.infer<typeof billingPeriodListQuerySchema
 
 export const billingPeriodOpenSchema = z.object({
   building_id: z.string().uuid(),
-  period_year: z.number().int().min(2000).max(2100),
-  period_month: z.number().int().min(1).max(12),
+  period_year: z.coerce.number().int().min(2000).max(2100),
+  period_month: z.coerce.number().int().min(1).max(12),
 })
 export type BillingPeriodOpenInput = z.infer<typeof billingPeriodOpenSchema>
 
