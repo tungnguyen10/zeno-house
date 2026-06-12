@@ -16,7 +16,7 @@ Cần polish trước khi nhồi thêm tính năng mới (xem `billing-power-fea
   - Giữ: `Chỉ số & hoá đơn nháp`, `Phát hành`, `Thanh toán & công nợ`
   - Xoá tab `Tổng quan` → thay bằng **sticky KPI strip** ngay dưới `UiPageHeader`, luôn hiện ở mọi tab
   - Xoá tab `Nhật ký` → thay bằng **drawer phải** mở từ button `[Nhật ký]` trên header
-  - Xoá tab `Chốt kỳ` → thay bằng **kebab menu** trên header (một item "Chốt kỳ" có confirm modal)
+  - Xoá tab `Chốt kỳ` → thay bằng **header overflow action** trên header (một item "Chốt kỳ" có confirm modal)
 - **UI polish nhỏ**:
   - Save bar trong draft grid ẩn khi period read-only (`issued/collecting/closed`)
   - Bỏ button no-op `Áp dụng cho dòng trống` (hoặc thay bằng hành động thật: fill batch date vào local state cho cell trống)
@@ -34,7 +34,7 @@ Cần polish trước khi nhồi thêm tính năng mới (xem `billing-power-fea
 - `billing-readability`: server-side DTO enrichment contract (display names, audit summary, entity labels) + client rendering rule "không hiển thị UID trong cột chính của bảng" + draft–issued discrepancy callout với CTA điều chỉnh / hủy‑phát hành lại.
 
 ### Modified Capabilities
-- `billing-ui-readiness`: workspace IA mới (3 tab + sticky KPI + drawer + kebab), bỏ tab `Tổng quan`/`Nhật ký`/`Chốt kỳ`. Bổ sung primitive `UiDrawer` và pattern kebab menu trong `UiPageHeader`.
+- `billing-ui-readiness`: workspace IA mới (3 tab + sticky KPI + drawer + header overflow), bỏ tab `Tổng quan`/`Nhật ký`/`Chốt kỳ`. Bổ sung primitive `UiDrawer` và pattern header overflow action trong `UiPageHeader`.
 
 ## Impact
 
@@ -45,7 +45,7 @@ Cần polish trước khi nhồi thêm tính năng mới (xem `billing-power-fea
   - `server/services/billing/display.ts` (mới) — `BillingDisplayResolver` batch lookup
   - `app/types/billing.ts` — `Invoice`, `BillingAuditEvent`, `InvoicePayment` thêm field tên (optional để không phá DTO consumer khác)
 - **Client**:
-  - `app/pages/billing/[building]/[period].vue` — IA mới (sticky strip + 3 tab + drawer + kebab)
+  - `app/pages/billing/[building]/[period].vue` — IA mới (sticky strip + 3 tab + drawer + header overflow)
   - `app/components/billing/BillingPaymentsStep.vue` — render tên + số phòng; mở adjustment/void modal khi nhận intent từ draft grid CTA
   - `app/components/billing/BillingAuditStep.vue` — render `summary` thay metadata dump, `actorName` thay UID; chuyển thành drawer content (vẫn giữ component, chỉ đổi nơi render)
   - `app/components/billing/BillingDraftGridStep.vue` — ẩn save bar khi read-only, bỏ button no-op, thêm discrepancy callout trong row expanded

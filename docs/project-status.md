@@ -1,6 +1,6 @@
-# Zeno House — Trạng thái dự án (31/05/2026)
+# Zeno House â€” Tráº¡ng thÃ¡i dá»± Ã¡n (31/05/2026)
 
-Hệ thống quản lý bất động sản cho chủ nhà trọ/tòa nhà.
+Há»‡ thá»‘ng quáº£n lÃ½ báº¥t Ä‘á»™ng sáº£n cho chá»§ nhÃ  trá»/tÃ²a nhÃ .
 
 ---
 
@@ -14,7 +14,7 @@ Hệ thống quản lý bất động sản cho chủ nhà trọ/tòa nhà.
 | Auth + DB | Supabase (`@nuxtjs/supabase`) |
 | Validation | Zod v4 |
 | Icons | SVG via `nuxt-svgo` (auto-import prefix `Icon`) |
-| Font | Inter variable — self-hosted `/public/fonts/` |
+| Font | Inter variable â€” self-hosted `/public/fonts/` |
 | Email | Resend API |
 | Bot protection | Cloudflare Turnstile |
 
@@ -22,7 +22,7 @@ Hệ thống quản lý bất động sản cho chủ nhà trọ/tòa nhà.
 
 ## Database (20 migrations)
 
-| File | Nội dung |
+| File | Ná»™i dung |
 |------|----------|
 | `20260514000000` | `buildings` table |
 | `20260514000001` | Fix buildings RLS |
@@ -33,16 +33,16 @@ Hệ thống quản lý bất động sản cho chủ nhà trọ/tòa nhà.
 | `20260515000000` | `contracts` table |
 | `20260517000000` | Building operational config (area, floors, type) |
 | `20260517000001` | Contract commercial terms (price, deposit, payment day) |
-| `20260517000002` | Occupants + meter_devices (meter_devices sau bị drop) |
+| `20260517000002` | Occupants + meter_devices (meter_devices sau bá»‹ drop) |
 | `20260517000003` | `contract_payments` table |
 | `20260517000004` | Contract renewal columns |
 | `20260517000005` | `contract_renewals` table |
 | `20260517000006` | Occupant uniqueness constraint |
-| `20260530000000` | DROP `room_assignments` (thay bằng contracts) |
+| `20260530000000` | DROP `room_assignments` (thay báº±ng contracts) |
 | `20260530100000` | Tenant enrichment: +gender, occupation, id_issued_*, emergency_contact_* |
-| `20260530200000–05` | `service_catalog` (8 items), `building_services`, `contract_services`, seed, migrate, drop old JSONB column |
+| `20260530200000â€“05` | `service_catalog` (8 items), `building_services`, `contract_services`, seed, migrate, drop old JSONB column |
 | `20260530300000` | `meter_readings` table |
-| `20260530400000` | Simplify meter model: DROP `meter_devices`, đổi UNIQUE key sang `(room_id, meter_type, period_year, period_month, reading_type)` |
+| `20260530400000` | Simplify meter model: DROP `meter_devices`, Ä‘á»•i UNIQUE key sang `(room_id, meter_type, period_year, period_month, reading_type)` |
 
 ---
 
@@ -50,55 +50,55 @@ Hệ thống quản lý bất động sản cho chủ nhà trọ/tòa nhà.
 
 ### Buildings
 - CRUD: list (`/buildings`), create, edit, detail
-- Detail page: thông tin tòa nhà, danh sách phòng, link tới settings & meter-readings
-- **Settings** (`/buildings/[id]/settings`): cấu hình 8 dịch vụ mặc định (toggle + amount + pricing_type), bảng matrix cross-tab cho active contracts, nút đồng bộ dịch vụ vào hợp đồng
-- **Meter Readings** (`/buildings/[id]/meter-readings`): chọn kỳ (tháng/năm), nhập hàng loạt điện/nước cho từng phòng, hiện consumption so với kỳ trước, bulk upsert
+- Detail page: thÃ´ng tin tÃ²a nhÃ , danh sÃ¡ch phÃ²ng, link tá»›i settings & meter-readings
+- **Settings** (`/buildings/[id]/settings`): cáº¥u hÃ¬nh 8 dá»‹ch vá»¥ máº·c Ä‘á»‹nh (toggle + amount + pricing_type), báº£ng matrix cross-tab cho active contracts, nÃºt Ä‘á»“ng bá»™ dá»‹ch vá»¥ vÃ o há»£p Ä‘á»“ng
+- **Meter Readings** (`/buildings/[id]/meter-readings`): chá»n ká»³ (thÃ¡ng/nÄƒm), nháº­p hÃ ng loáº¡t Ä‘iá»‡n/nÆ°á»›c cho tá»«ng phÃ²ng, hiá»‡n consumption so vá»›i ká»³ trÆ°á»›c, bulk upsert
 
 ### Rooms
 - CRUD: list, create, edit, detail
 - Status: `available` / `occupied` / `maintenance`
-- Detail page: thông tin phòng, hợp đồng đang active (tenant, link), lịch sử hợp đồng (không hiển thị nhập chỉ số đồng hồ — monthly readings thuộc không gian Vận hành tháng)
-- Nút "Giao phòng" (admin, khi available) → navigate `/contracts/create?room_id=...`
-- Nút "Thu phòng" (admin, khi có active contract) → terminate contract → room về `available`
-- **Side-effects tự động**: tạo contract → room `occupied`; terminate/expire → room `available` (bỏ qua nếu đang `maintenance`)
+- Detail page: thÃ´ng tin phÃ²ng, há»£p Ä‘á»“ng Ä‘ang active (tenant, link), lá»‹ch sá»­ há»£p Ä‘á»“ng (khÃ´ng hiá»ƒn thá»‹ nháº­p chá»‰ sá»‘ Ä‘á»“ng há»“ â€” monthly readings thuá»™c khÃ´ng gian Váº­n hÃ nh thÃ¡ng)
+- NÃºt "Giao phÃ²ng" (admin, khi available) â†’ navigate `/contracts/create?room_id=...`
+- NÃºt "Thu phÃ²ng" (admin, khi cÃ³ active contract) â†’ terminate contract â†’ room vá» `available`
+- **Side-effects tá»± Ä‘á»™ng**: táº¡o contract â†’ room `occupied`; terminate/expire â†’ room `available` (bá» qua náº¿u Ä‘ang `maintenance`)
 
 ### Tenants
 - CRUD: list, create, edit, detail
-- **Enriched profile**: gender, nghề nghiệp, ngày cấp / nơi cấp CCCD, liên hệ khẩn cấp (tên + phone)
-- Detail page: thông tin cá nhân đầy đủ, hợp đồng active, lịch sử hợp đồng
+- **Enriched profile**: gender, nghá» nghiá»‡p, ngÃ y cáº¥p / nÆ¡i cáº¥p CCCD, liÃªn há»‡ kháº©n cáº¥p (tÃªn + phone)
+- Detail page: thÃ´ng tin cÃ¡ nhÃ¢n Ä‘áº§y Ä‘á»§, há»£p Ä‘á»“ng active, lá»‹ch sá»­ há»£p Ä‘á»“ng
 
-### Contracts *(entity trung tâm)*
+### Contracts *(entity trung tÃ¢m)*
 - CRUD: list, create wizard, edit, detail
-- **Commercial terms**: giá thuê, tiền cọc, ngày thanh toán, chu kỳ hợp đồng
-- **Occupants/Roommates**: thêm người ở cùng, ghi nhận ngày dọn ra, xóa
-- **Payments**: add/edit/delete (deposit, prepaid_rent, rent, other), hiện tổng tiền đã thanh toán
-- **Renewals**: gia hạn tại chỗ (extend) hoặc tạo hợp đồng mới (new_contract) → auto navigate sang contract mới
-- **Contract Services**: kế thừa từ building services khi tạo (clone), chỉnh sửa per-contract (amount, quantity, is_enabled, notes)
-- **Handover Readings**: 2 rows cố định (điện / nước) cho handover_in (khi tạo) và handover_out (chỉ khi terminated/expired)
+- **Commercial terms**: giÃ¡ thuÃª, tiá»n cá»c, ngÃ y thanh toÃ¡n, chu ká»³ há»£p Ä‘á»“ng
+- **Occupants/Roommates**: thÃªm ngÆ°á»i á»Ÿ cÃ¹ng, ghi nháº­n ngÃ y dá»n ra, xÃ³a
+- **Payments**: add/edit/delete (deposit, prepaid_rent, rent, other), hiá»‡n tá»•ng tiá»n Ä‘Ã£ thanh toÃ¡n
+- **Renewals**: gia háº¡n táº¡i chá»— (extend) hoáº·c táº¡o há»£p Ä‘á»“ng má»›i (new_contract) â†’ auto navigate sang contract má»›i
+- **Contract Services**: káº¿ thá»«a tá»« building services khi táº¡o (clone), chá»‰nh sá»­a per-contract (amount, quantity, is_enabled, notes)
+- **Handover Readings**: 2 rows cá»‘ Ä‘á»‹nh (Ä‘iá»‡n / nÆ°á»›c) cho handover_in (khi táº¡o) vÃ  handover_out (chá»‰ khi terminated/expired)
 - Status: `active` / `expired` / `terminated`
 
 ### Meter Readings
-- Model đơn giản: `(room_id, meter_type, period_year, period_month, reading_type)`
+- Model Ä‘Æ¡n giáº£n: `(room_id, meter_type, period_year, period_month, reading_type)`
 - `reading_type`: `monthly` | `handover_in` | `handover_out`
 - API: `GET/POST /api/meter-readings`, `GET/POST /api/meter-readings/bulk`, `PATCH /api/meter-readings/[id]`
 
 ### Service Catalog & Services
-- **8 catalog items** cố định: điện, nước, internet, rác, xe máy/ô tô, vệ sinh, thang máy, bảo vệ
-- **building_services**: override giá/trạng thái/pricing_type per building
-- **contract_services**: clone từ building khi tạo contract, chỉnh sửa per contract (amount, quantity, is_enabled, notes)
+- **8 catalog items** cá»‘ Ä‘á»‹nh: Ä‘iá»‡n, nÆ°á»›c, internet, rÃ¡c, xe mÃ¡y/Ã´ tÃ´, vá»‡ sinh, thang mÃ¡y, báº£o vá»‡
+- **building_services**: override giÃ¡/tráº¡ng thÃ¡i/pricing_type per building
+- **contract_services**: clone tá»« building khi táº¡o contract, chá»‰nh sá»­a per contract (amount, quantity, is_enabled, notes)
 - `pricing_type`: `fixed` | `per_person` | `per_unit`
-- Đồng bộ: nút sync thêm dịch vụ còn thiếu vào hợp đồng active của building
+- Äá»“ng bá»™: nÃºt sync thÃªm dá»‹ch vá»¥ cÃ²n thiáº¿u vÃ o há»£p Ä‘á»“ng active cá»§a building
 
 ### Dashboard
-- Summary cards: số tòa nhà, phòng available/occupied/maintenance, hợp đồng active, tổng tenant
+- Summary cards: sá»‘ tÃ²a nhÃ , phÃ²ng available/occupied/maintenance, há»£p Ä‘á»“ng active, tá»•ng tenant
 
 ---
 
-## Server Layer (API → Service → Repository)
+## Server Layer (API â†’ Service â†’ Repository)
 
 **12 domain groups** trong `server/`:
 
-| Group | Endpoints chính |
+| Group | Endpoints chÃ­nh |
 |-------|-----------------|
 | `buildings` | GET list, POST, GET detail, PATCH, DELETE |
 | `rooms` | GET list, POST, GET detail, PATCH, DELETE |
@@ -113,7 +113,7 @@ Hệ thống quản lý bất động sản cho chủ nhà trọ/tòa nhà.
 | `contract-payments` | GET, POST, PATCH, DELETE |
 | `contract-renewals` | GET, POST |
 
-Mỗi group: **repository** (Supabase query only) → **service** (business logic + permission check) → **API handler** (Zod validate + auth guard + response envelope)
+Má»—i group: **repository** (Supabase query only) â†’ **service** (business logic + permission check) â†’ **API handler** (Zod validate + auth guard + response envelope)
 
 **Response envelope:**
 ```ts
@@ -172,14 +172,14 @@ type ApiError   = { error: { code: string; message: string; details?: unknown } 
 | `/tenants/[id]` | Detail (full profile, contracts) |
 | `/tenants/[id]/edit` | Edit form |
 | `/contracts` | List |
-| `/contracts/create` | Create wizard (pre-fill từ `?room_id=`) |
-| `/contracts/[id]` | Detail (tất cả sections) |
+| `/contracts/create` | Create wizard (pre-fill tá»« `?room_id=`) |
+| `/contracts/[id]` | Detail (táº¥t cáº£ sections) |
 | `/contracts/[id]/edit` | Edit form |
 
-### Validators (Zod schemas, dùng chung client + server)
+### Validators (Zod schemas, dÃ¹ng chung client + server)
 `buildings`, `rooms`, `tenants`, `contracts`, `contract-occupants`, `contract-payments`, `contract-renewals`, `contract-services`, `building-services`, `meter-readings`
 
-### Mappers (DB row → DTO)
+### Mappers (DB row â†’ DTO)
 `buildings`, `rooms`, `tenants`, `contracts`, `contract-occupants`, `contract-payments`, `contract-renewals`, `contract-services`, `building-services`, `service-catalog`, `meter-readings`
 
 ---
@@ -187,7 +187,7 @@ type ApiError   = { error: { code: string; message: string; details?: unknown } 
 ## Auth & Permissions
 
 - Supabase Auth (email/password)
-- Roles: `admin` (full access), `manager` (building được phân công)
+- Roles: `admin` (full access), `manager` (building Ä‘Æ°á»£c phÃ¢n cÃ´ng)
 - Route guard: `auth.global.ts` middleware
 - Capabilities check trong `server/utils/permissions.ts`
 - `useAuthStore` (Pinia): session, user, role, `isAdmin`
@@ -198,23 +198,23 @@ type ApiError   = { error: { code: string; message: string; details?: unknown } 
 
 ```
 page
- └─▶ composable ($fetch / useFetch)
-       └─▶ server/api/   (Zod validate, auth guard)
-             └─▶ server/services/   (business logic, permission check)
-                   └─▶ server/repositories/   (Supabase query)
+ â””â”€â–¶ composable ($fetch / useFetch)
+       â””â”€â–¶ server/api/   (Zod validate, auth guard)
+             â””â”€â–¶ server/services/   (business logic, permission check)
+                   â””â”€â–¶ server/repositories/   (Supabase query)
 ```
 
-Client **không** gọi Supabase trực tiếp cho business data.
+Client **khÃ´ng** gá»i Supabase trá»±c tiáº¿p cho business data.
 
 ---
 
-## Những gì chưa có (out of scope v0.1–v0.2.5)
+## Nhá»¯ng gÃ¬ chÆ°a cÃ³ (out of scope v0.1â€“v0.2.5)
 
 - Invoice / billing module
 - Tenant portal (role `tenant`)
-- Notification / email flow (Resend API đã setup, chưa dùng)
-- Google Analytics (key đã có trong env, chưa integrate UI)
-- CI pipeline (spec có, chưa implement)
+- Notification / email flow (Resend API Ä‘Ã£ setup, chÆ°a dÃ¹ng)
+- Google Analytics (key Ä‘Ã£ cÃ³ trong env, chÆ°a integrate UI)
+- CI pipeline (spec cÃ³, chÆ°a implement)
 
 ---
 
@@ -226,119 +226,119 @@ Client **không** gọi Supabase trực tiếp cho business data.
 
 ---
 
-## Billing workspace — trạng thái & roadmap (12/06/2026)
+## Billing workspace â€” tráº¡ng thÃ¡i & roadmap (12/06/2026)
 
-### 3 OpenSpec change đang mở
+### 3 OpenSpec change Ä‘ang má»Ÿ
 
-| Change | Mục tiêu | Trạng thái |
+| Change | Má»¥c tiÃªu | Tráº¡ng thÃ¡i |
 |--------|----------|-----------|
-| `billing-readability-and-polish` | Bỏ UID khỏi cột chính, gom IA 3 tab, drawer audit, kebab Chốt kỳ, toast, **callout chênh lệch draft↔issued** | ✅ section 1–13 đã code; ⏳ section 14 (discrepancy callout, 8 task) chưa làm |
-| `billing-power-features` | Bulk paste chỉ số, bulk thanh toán, **hủy phát hành cả kỳ** (`billing.unissue`), export Excel | ⏳ chưa bắt đầu |
-| `billing-test-baseline` | Vitest + fixtures + unit/integration cho service & composable billing | ⏳ chưa bắt đầu |
+| `billing-readability-and-polish` | Bỏ UID khỏi cột chính, gom IA 3 tab, drawer audit, header overflow Chốt kỳ, toast, **callout chênh lệch draft↔issued** | ✅ section 1–14 đã code; ✅ all_done 49/49 |
+| `billing-power-features` | Bulk paste chá»‰ sá»‘, bulk thanh toÃ¡n, **há»§y phÃ¡t hÃ nh cáº£ ká»³** (`billing.unissue`), export Excel | â³ chÆ°a báº¯t Ä‘áº§u |
+| `billing-test-baseline` | Vitest + fixtures + unit/integration cho service & composable billing | â³ chÆ°a báº¯t Ä‘áº§u |
 
-Mọi change đều `npx openspec validate <id> --strict` pass. Spec sống ở `openspec/changes/<id>/`.
+Má»i change Ä‘á»u `npx openspec validate <id> --strict` pass. Spec sá»‘ng á»Ÿ `openspec/changes/<id>/`.
 
-### Bug đã sửa khi smoke-test
+### Bug Ä‘Ã£ sá»­a khi smoke-test
 
-- **Void không tính lại draft**: `app/pages/billing/[building]/[period].vue` `@reload` thiếu `loadDrafts()` + `loadGrid()`. Fix bằng named function `reloadAfterInvoiceChange()` gọi đủ 4 loader.
-- **Tab name lệch**: `BillingIssueStep.vue` còn ghi "Soát hoá đơn" sau khi merge tab → đổi thành "Chỉ số & hoá đơn nháp".
+- **Void khÃ´ng tÃ­nh láº¡i draft**: `app/pages/billing/[building]/[period].vue` `@reload` thiáº¿u `loadDrafts()` + `loadGrid()`. Fix báº±ng named function `reloadAfterInvoiceChange()` gá»i Ä‘á»§ 4 loader.
+- **Tab name lá»‡ch**: `BillingIssueStep.vue` cÃ²n ghi "SoÃ¡t hoÃ¡ Ä‘Æ¡n" sau khi merge tab â†’ Ä‘á»•i thÃ nh "Chá»‰ sá»‘ & hoÃ¡ Ä‘Æ¡n nhÃ¡p".
 
-### Nguyên tắc bất di bất dịch
+### NguyÃªn táº¯c báº¥t di báº¥t dá»‹ch
 
-1. **Invoice `issued` là immutable.** Không có endpoint nào sửa số tiền của invoice đã phát hành.
-2. **Mọi thay đổi đi qua đúng 3 lối**:
-   - `void + reissue` — chỉ khi invoice **chưa có payment** và kỳ chưa close.
-   - `adjustment` — khi invoice **đã có payment**, tạo dòng điều chỉnh (delta âm = hoàn, dương = thu thêm).
-   - `unissue` (cả kỳ) — admin only, dùng khi cấu hình lệch hàng loạt; sẽ void invoice chưa thu, giữ invoice đã thu.
-3. **Mọi destructive action** (void / unissue / close) bắt buộc nhập **lý do ≥10 ký tự**, lưu vào audit metadata, format ra summary tiếng Việt qua `formatAuditSummary`.
-4. **UI dẫn đường, không tự động.** Override chỉ số sau phát hành KHÔNG tự update invoice — UI hiện callout đề xuất, manager phải bấm CTA.
-5. **Không lộ UID** ở cột chính bất kỳ bảng nào. UID chỉ trong drawer "Chi tiết kỹ thuật" hoặc tooltip.
+1. **Invoice `issued` lÃ  immutable.** KhÃ´ng cÃ³ endpoint nÃ o sá»­a sá»‘ tiá»n cá»§a invoice Ä‘Ã£ phÃ¡t hÃ nh.
+2. **Má»i thay Ä‘á»•i Ä‘i qua Ä‘Ãºng 3 lá»‘i**:
+   - `void + reissue` â€” chá»‰ khi invoice **chÆ°a cÃ³ payment** vÃ  ká»³ chÆ°a close.
+   - `adjustment` â€” khi invoice **Ä‘Ã£ cÃ³ payment**, táº¡o dÃ²ng Ä‘iá»u chá»‰nh (delta Ã¢m = hoÃ n, dÆ°Æ¡ng = thu thÃªm).
+   - `unissue` (cáº£ ká»³) â€” admin only, dÃ¹ng khi cáº¥u hÃ¬nh lá»‡ch hÃ ng loáº¡t; sáº½ void invoice chÆ°a thu, giá»¯ invoice Ä‘Ã£ thu.
+3. **Má»i destructive action** (void / unissue / close) báº¯t buá»™c nháº­p **lÃ½ do â‰¥10 kÃ½ tá»±**, lÆ°u vÃ o audit metadata, format ra summary tiáº¿ng Viá»‡t qua `formatAuditSummary`.
+4. **UI dáº«n Ä‘Æ°á»ng, khÃ´ng tá»± Ä‘á»™ng.** Override chá»‰ sá»‘ sau phÃ¡t hÃ nh KHÃ”NG tá»± update invoice â€” UI hiá»‡n callout Ä‘á» xuáº¥t, manager pháº£i báº¥m CTA.
+5. **KhÃ´ng lá»™ UID** á»Ÿ cá»™t chÃ­nh báº¥t ká»³ báº£ng nÃ o. UID chá»‰ trong drawer "Chi tiáº¿t ká»¹ thuáº­t" hoáº·c tooltip.
 
-### Flow tổng (sau khi 3 change land)
+### Flow tá»•ng (sau khi 3 change land)
 
 ```mermaid
 flowchart TD
-    Start([Manager mở kỳ vận hành]) --> KPI[Sticky KPI strip]
-    KPI --> Tab1[Tab: Chỉ số & hoá đơn nháp]
+    Start([Manager má»Ÿ ká»³ váº­n hÃ nh]) --> KPI[Sticky KPI strip]
+    KPI --> Tab1[Tab: Chá»‰ sá»‘ & hoÃ¡ Ä‘Æ¡n nhÃ¡p]
 
-    Tab1 --> EnterReading[Nhập chỉ số điện/nước]
+    Tab1 --> EnterReading[Nháº­p chá»‰ sá»‘ Ä‘iá»‡n/nÆ°á»›c]
     EnterReading --> AutoSave[Auto-save debounce 800ms]
-    AutoSave --> ComputeDraft[Server tính lại draft]
+    AutoSave --> ComputeDraft[Server tÃ­nh láº¡i draft]
 
-    ComputeDraft --> CheckIssued{Đã có invoice<br/>cho HĐ này?}
-    CheckIssued -- Chưa --> Issuable[Draft sẵn sàng phát hành]
-    Issuable --> Tab2[Tab: Phát hành]
-    Tab2 --> IssueAll[Phát hành toàn kỳ]
+    ComputeDraft --> CheckIssued{ÄÃ£ cÃ³ invoice<br/>cho HÄ nÃ y?}
+    CheckIssued -- ChÆ°a --> Issuable[Draft sáºµn sÃ ng phÃ¡t hÃ nh]
+    Issuable --> Tab2[Tab: PhÃ¡t hÃ nh]
+    Tab2 --> IssueAll[PhÃ¡t hÃ nh toÃ n ká»³]
     IssueAll --> Issued([Invoice = issued])
 
-    CheckIssued -- Có rồi --> CompareTotal{Draft vs Issued<br/>chênh ≥ 1.000đ?}
-    CompareTotal -- Không --> Skip[Bỏ qua, đã đồng bộ]
-    CompareTotal -- Có --> Callout[⚠️ Discrepancy Callout]
+    CheckIssued -- CÃ³ rá»“i --> CompareTotal{Draft vs Issued<br/>chÃªnh â‰¥ 1.000Ä‘?}
+    CompareTotal -- KhÃ´ng --> Skip[Bá» qua, Ä‘Ã£ Ä‘á»“ng bá»™]
+    CompareTotal -- CÃ³ --> Callout[âš ï¸ Discrepancy Callout]
 
-    Callout --> CheckPayment{Invoice đã có<br/>payment?}
-    CheckPayment -- Chưa thu --> Choice1[CTA: Adjustment / Void+Reissue]
+    Callout --> CheckPayment{Invoice Ä‘Ã£ cÃ³<br/>payment?}
+    CheckPayment -- ChÆ°a thu --> Choice1[CTA: Adjustment / Void+Reissue]
     Choice1 -- Adjustment --> AdjModal[Adjustment modal<br/>pre-fill amount = -delta]
-    Choice1 -- Void+Reissue --> VoidModal[Void modal + lý do]
+    Choice1 -- Void+Reissue --> VoidModal[Void modal + lÃ½ do]
     VoidModal --> VoidDone[Invoice = void] --> Tab1
-    CheckPayment -- Đã thu --> Choice2[CTA Adjustment only<br/>Void disabled]
+    CheckPayment -- ÄÃ£ thu --> Choice2[CTA Adjustment only<br/>Void disabled]
     Choice2 --> AdjModal
     AdjModal --> Issued
 
-    Issued --> Tab3[Tab: Thanh toán & công nợ]
+    Issued --> Tab3[Tab: Thanh toÃ¡n & cÃ´ng ná»£]
     Tab3 --> Pay[Ghi thu / bulk thu]
-    Pay --> Paid{Đủ?}
-    Paid -- Chưa --> Tab3
-    Paid -- Đủ --> Kebab[Kebab → Chốt kỳ]
-    Kebab --> Closed([Kỳ = closed])
+    Pay --> Paid{Äá»§?}
+    Paid -- ChÆ°a --> Tab3
+    Paid -- Äá»§ --> header overflow[header overflow â†’ Chá»‘t ká»³]
+    header overflow --> Closed([Ká»³ = closed])
 
-    Issued -.unissue cả kỳ.-> KebabAdmin[Kebab → Hủy phát hành]
-    KebabAdmin --> UnissueModal[Modal: lý do + preview]
+    Issued -.unissue cáº£ ká»³.-> header overflowAdmin[header overflow â†’ Há»§y phÃ¡t hÃ nh]
+    header overflowAdmin --> UnissueModal[Modal: lÃ½ do + preview]
     UnissueModal --> Tab1
 
-    Tab1 -.Nhật ký.-> Drawer[UiDrawer phải - audit]
-    Tab2 -.Nhật ký.-> Drawer
-    Tab3 -.Nhật ký.-> Drawer
+    Tab1 -.Nháº­t kÃ½.-> Drawer[UiDrawer pháº£i - audit]
+    Tab2 -.Nháº­t kÃ½.-> Drawer
+    Tab3 -.Nháº­t kÃ½.-> Drawer
 ```
 
-### 4 case xử lý lệch số
+### 4 case xá»­ lÃ½ lá»‡ch sá»‘
 
-| Case | Khi nào | Action |
+| Case | Khi nÃ o | Action |
 |------|---------|--------|
-| Happy path | Lần đầu phát hành kỳ | Nhập chỉ số → Phát hành → Thu → Chốt |
-| Override sau phát hành (chưa thu) | Phát hiện sai trước khi khách trả | Override → Callout → **Hủy + Phát hành lại** |
-| Override sau phát hành (đã thu) | Phát hiện sai sau khi đã thu | Override → Callout → **Tạo điều chỉnh** |
-| Sai cấu hình cả kỳ | Phát hành nhầm hàng loạt (vd giá điện sai) | Kebab → **Hủy phát hành kỳ** (admin) → fix config → phát hành lại |
+| Happy path | Láº§n Ä‘áº§u phÃ¡t hÃ nh ká»³ | Nháº­p chá»‰ sá»‘ â†’ PhÃ¡t hÃ nh â†’ Thu â†’ Chá»‘t |
+| Override sau phÃ¡t hÃ nh (chÆ°a thu) | PhÃ¡t hiá»‡n sai trÆ°á»›c khi khÃ¡ch tráº£ | Override â†’ Callout â†’ **Há»§y + PhÃ¡t hÃ nh láº¡i** |
+| Override sau phÃ¡t hÃ nh (Ä‘Ã£ thu) | PhÃ¡t hiá»‡n sai sau khi Ä‘Ã£ thu | Override â†’ Callout â†’ **Táº¡o Ä‘iá»u chá»‰nh** |
+| Sai cáº¥u hÃ¬nh cáº£ ká»³ | PhÃ¡t hÃ nh nháº§m hÃ ng loáº¡t (vd giÃ¡ Ä‘iá»‡n sai) | header overflow â†’ **Há»§y phÃ¡t hÃ nh ká»³** (admin) â†’ fix config â†’ phÃ¡t hÃ nh láº¡i |
 
-### Section 14 — Discrepancy callout (chưa làm, 8 task)
+### Section 14 â€” Discrepancy callout (chÆ°a lÃ m, 8 task)
 
-Tóm tắt từ `openspec/changes/billing-readability-and-polish/tasks.md` group 14:
+TÃ³m táº¯t tá»« `openspec/changes/billing-readability-and-polish/tasks.md` group 14:
 
-1. **Server**: extend draft response per contract với `existingInvoice: { id, totalAmount, paidAmount, status } | null` (source: `activeInvoiceByContract` đã có trong `server/services/billing/drafts.ts`).
-2. **Types**: thêm field vào `BillingDraftInvoice` ở `app/types/billing.ts`.
-3. **Component mới**: `app/components/billing/BillingDraftDiscrepancyCallout.vue`
-   - Render khi `existingInvoice` tồn tại và `|delta| ≥ 1000`
-   - 2 CTA với rule: paid → disable Void; closed → ẩn cả 2
-   - Emit `intent:adjustment` `{ invoiceId, amount: -delta, label }` và `intent:void-reissue` `{ invoiceId }`
-4. **Mount** trong row expanded của `BillingDraftGridStep.vue`, gần warnings.
-5. **Bubble intent** lên `[period].vue`: switch sang tab payments, focus invoice row, mở modal pre-filled.
-6. **`BillingPaymentsStep.vue`** nhận inbound intent (prop hoặc shared store) → mở modal đúng.
-7. **`useBillingInvoiceActions`** thêm shortcut `referenceInvoiceId` + `label` cho adjustment payload.
+1. **Server**: extend draft response per contract vá»›i `existingInvoice: { id, totalAmount, paidAmount, status } | null` (source: `activeInvoiceByContract` Ä‘Ã£ cÃ³ trong `server/services/billing/drafts.ts`).
+2. **Types**: thÃªm field vÃ o `BillingDraftInvoice` á»Ÿ `app/types/billing.ts`.
+3. **Component má»›i**: `app/components/billing/BillingDraftDiscrepancyCallout.vue`
+   - Render khi `existingInvoice` tá»“n táº¡i vÃ  `|delta| â‰¥ 1000`
+   - 2 CTA vá»›i rule: paid â†’ disable Void; closed â†’ áº©n cáº£ 2
+   - Emit `intent:adjustment` `{ invoiceId, amount: -delta, label }` vÃ  `intent:void-reissue` `{ invoiceId }`
+4. **Mount** trong row expanded cá»§a `BillingDraftGridStep.vue`, gáº§n warnings.
+5. **Bubble intent** lÃªn `[period].vue`: switch sang tab payments, focus invoice row, má»Ÿ modal pre-filled.
+6. **`BillingPaymentsStep.vue`** nháº­n inbound intent (prop hoáº·c shared store) â†’ má»Ÿ modal Ä‘Ãºng.
+7. **`useBillingInvoiceActions`** thÃªm shortcut `referenceInvoiceId` + `label` cho adjustment payload.
 8. **Smoke test** end-to-end.
 
-### Files chính trong billing workspace
+### Files chÃ­nh trong billing workspace
 
-| File | Vai trò |
+| File | Vai trÃ² |
 |------|---------|
-| `app/pages/billing/[building]/[period].vue` | Workspace 3 tab + sticky KPI + drawer + kebab |
+| `app/pages/billing/[building]/[period].vue` | Workspace 3 tab + sticky KPI + drawer + header overflow action |
 | `app/components/billing/BillingKpiStrip.vue` | KPI strip sticky |
-| `app/components/billing/BillingDraftGridStep.vue` | Tab 1 — nhập chỉ số + draft grid |
-| `app/components/billing/BillingIssueStep.vue` | Tab 2 — phát hành |
-| `app/components/billing/BillingPaymentsStep.vue` | Tab 3 — thu tiền + adjustment + void |
-| `app/components/billing/BillingAuditStep.vue` | Body của audit drawer |
-| `app/components/billing/BillingCloseStep.vue` | Body của modal Chốt kỳ (kebab) |
-| `server/services/billing/drafts.ts` | Tính draft per contract, computed `activeInvoiceByContract` |
+| `app/components/billing/BillingDraftGridStep.vue` | Tab 1 â€” nháº­p chá»‰ sá»‘ + draft grid |
+| `app/components/billing/BillingIssueStep.vue` | Tab 2 â€” phÃ¡t hÃ nh |
+| `app/components/billing/BillingPaymentsStep.vue` | Tab 3 â€” thu tiá»n + adjustment + void |
+| `app/components/billing/BillingAuditStep.vue` | Body cá»§a audit drawer |
+| `app/components/billing/BillingCloseStep.vue` | Body của modal Chốt kỳ (header overflow action) |
+| `server/services/billing/drafts.ts` | TÃ­nh draft per contract, computed `activeInvoiceByContract` |
 | `server/services/billing/invoices.ts` | Issue / void / reissue / adjustment |
 | `server/services/billing/payments.ts` | Record payment, list payment |
 | `server/services/billing/audit.ts` | List audit + enrich qua resolver |
-| `server/services/billing/audit-summary.ts` | `formatAuditSummary(action, metadata)` ra tiếng Việt |
+| `server/services/billing/audit-summary.ts` | `formatAuditSummary(action, metadata)` ra tiáº¿ng Viá»‡t |
 | `server/services/billing/display.ts` | `BillingDisplayResolver` batch lookup actors/invoices/contracts |

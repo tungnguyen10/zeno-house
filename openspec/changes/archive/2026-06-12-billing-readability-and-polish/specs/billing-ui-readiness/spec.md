@@ -1,11 +1,11 @@
 ## MODIFIED Requirements
 
 ### Requirement: Billing workspace readiness
-The design system SHALL provide primitives and patterns sufficient to build the Building + Period workspace using a streamlined three-tab information architecture: a sticky KPI strip at the top, three primary work tabs, and overflow surfaces (drawer + kebab menu) for reference and rare actions.
+The design system SHALL provide primitives and patterns sufficient to build the Building + Period workspace using a streamlined three-tab information architecture: a sticky KPI strip at the top, three primary work tabs, and overflow surfaces (drawer + header overflow action) for reference and rare actions.
 
 #### Scenario: Workspace composition
 - **WHEN** the billing workspace is implemented
-- **THEN** it can be composed from `UiPageHeader` (with kebab menu and drawer trigger button), a sticky KPI strip below the header, `UiTabs` for three primary tabs, `UiSection` for tab content, and action surfaces from the design system
+- **THEN** it can be composed from `UiPageHeader` (with header overflow button and drawer trigger button), a sticky KPI strip below the header, `UiTabs` for three primary tabs, `UiSection` for tab content, and action surfaces from the design system
 
 #### Scenario: Workspace primary tabs
 - **WHEN** the billing workspace renders top-level tabs
@@ -19,9 +19,9 @@ The design system SHALL provide primitives and patterns sufficient to build the 
 - **WHEN** the user opens the audit log from the workspace header
 - **THEN** the audit list is presented inside `UiDrawer` (right-side overlay) rather than a tab, preserving the active work tab underneath
 
-#### Scenario: Close period from kebab menu
-- **WHEN** an admin user opens the workspace header kebab menu
-- **THEN** the menu exposes a "Chốt kỳ" item that opens a confirmation modal — there is no dedicated close-period tab
+#### Scenario: Close period from header overflow action
+- **WHEN** an admin user clicks the workspace header overflow action
+- **THEN** the action opens a close-period confirmation modal � there is no dedicated close-period tab
 
 #### Scenario: Review charges
 - **WHEN** charge review is implemented inside the `Chỉ số & hoá đơn nháp` tab
@@ -63,16 +63,16 @@ The design system SHALL provide a `UiDrawer` primitive used for right-side overl
 - **WHEN** `UiDrawer` is used to host the billing audit list
 - **THEN** the audit table renders without bespoke styling and uses standard density and primitives
 
-### Requirement: Workspace header kebab menu pattern
-The design system SHALL document and support a kebab/overflow menu pattern in `UiPageHeader` for rare or destructive actions that should not occupy primary tab slots.
+### Requirement: Workspace header overflow action pattern
+The design system SHALL document and support a header overflow action pattern in `UiPageHeader` for rare or destructive actions that should not occupy primary tab slots.
 
-#### Scenario: Kebab menu surfaces rare actions
+#### Scenario: Header overflow action surfaces rare actions
 - **WHEN** a workspace has actions used at most once per session (e.g. `Chốt kỳ`, future `Hủy phát hành kỳ`)
-- **THEN** they can be placed in a `UiDropdownMenu` or equivalent kebab affordance from the page header without creating a dedicated tab
+- **THEN** they can be placed behind an icon-only header overflow affordance from the page header without creating a dedicated tab; when several actions exist, the affordance can graduate to `UiDropdownMenu` or equivalent
 
-#### Scenario: Kebab menu respects permissions
-- **WHEN** the current user lacks the capability for a kebab item (e.g. `billing.close`)
-- **THEN** the item is hidden or rendered disabled with a permission reason tooltip
+#### Scenario: Header overflow action respects permissions
+- **WHEN** the current user lacks the capability for a header overflow action (e.g. `billing.close`)
+- **THEN** the action is hidden or rendered disabled with a permission reason tooltip
 
 ### Requirement: Toast notification host
 The design system SHALL provide a toast notification host and a `useToast` composable used to surface mutation success and failure states.

@@ -104,7 +104,7 @@ Examples:
 | `payment.recorded` | "Ghi thu {amount}đ{' bằng ' + payment_method if payment_method}" |
 | `invoice.issue_attempted` | "Thử phát hành — {blocked_count} hoá đơn bị chặn" |
 
-### D4 — Workspace IA mới: 3 tab + sticky KPI + drawer + kebab
+### D4 — Workspace IA mới: 3 tab + sticky KPI + drawer + header overflow
 
 Layout:
 ```
@@ -123,12 +123,12 @@ Layout:
 ```
 
 Component đổi:
-- `app/pages/billing/[building]/[period].vue` — sticky strip + tabs gọn + kebab + nút mở drawer
+- `app/pages/billing/[building]/[period].vue` — sticky strip + tabs gọn + header overflow + nút mở drawer
 - `BillingOverviewStep.vue` → reuse logic làm sticky strip component (`BillingKpiStrip.vue`); component cũ có thể xoá hoặc ngừng dùng
 - `BillingAuditStep.vue` → render bên trong drawer (component giữ nguyên, chỉ đổi nơi mount)
-- `BillingCloseStep.vue` → render bên trong modal mở từ kebab
+- `BillingCloseStep.vue` → render bên trong modal mở từ header overflow
 
-Kebab menu (đề xuất):
+header overflow action (đề xuất):
 - "Chốt kỳ" (admin only, disable nếu không đủ điều kiện đóng)
 - "Mở nhật ký" (alternative cho nút bên cạnh)
 - Sau này: "Hủy phát hành kỳ" (cấp ở change `billing-power-features`)
@@ -165,7 +165,7 @@ Hiện tại `reference_invoice_id` là text input UID. Thay bằng `UiCombobox`
 
 **Quyết định:** Render callout trong row expanded của `BillingDraftGridStep` khi:
 - Hợp đồng có `existingInvoice` (status không phải `void`)
-- `|draft.totals.draftTotal − existingInvoice.totalAmount| ≥ 1.000đ` (threshold tránh noise do làm tròn)
+- `|draft.draftTotal − existingInvoice.totalAmount| ≥ 1.000đ` (threshold tránh noise do làm tròn)
 
 Component mới `BillingDraftDiscrepancyCallout.vue`:
 - Severity `warning`.
@@ -180,7 +180,7 @@ Component mới `BillingDraftDiscrepancyCallout.vue`:
 
 **Vị trí render:** Trong `BillingDraftGridStep.vue` — row expand panel, sát section warnings, trên section lines table. Khi không có `existingInvoice` hoặc delta < 1.000đ → component không render gì.
 
-**Tính delta ở client:** Dùng `draft.totals.draftTotal` (đã có trong `BillingDraftInvoice`) và `existingInvoice.totalAmount` (cần thêm vào `BillingDraftInvoice` từ server hoặc lookup từ `invoices.value` ở composable). Đề xuất thêm field `existingInvoice: { id, totalAmount, paidAmount, status } | null` vào draft response — server đã có thông tin này (filter `activeInvoiceByContract`), chỉ cần expose ra DTO.
+**Tính delta ở client:** Dùng `draft.draftTotal` và `existingInvoice.totalAmount` trên `BillingDraftGridRow`. Server vẫn expose `existingInvoice: { id, totalAmount, paidAmount, status } | null` trên `BillingDraftInvoice`, rồi `BillingDraftGridService` chuyển field này sang row model để callout có đủ context ngay trong expanded row.
 
 **Không tự động hoá:** Không có nút "Tự động đồng bộ" — luôn yêu cầu manager confirm hành động (adjustment hay void+reissue) vì có ý nghĩa nghiệp vụ với khách thuê.
 
@@ -188,7 +188,7 @@ Component mới `BillingDraftDiscrepancyCallout.vue`:
 
 - **[Lazy resolver làm chậm list endpoint]** → Mitigation: batch query gom theo entity_type, tổng 3-5 query thêm; không gọi N+1; cache trong cùng request bằng Map.
 - **[Tên đổi thì audit cũ hiện tên mới — mất tính "fact at time"]** → Mitigation: ghi vào risk log, sau này nếu cần chuyển snapshot model thì không phá API cũ. v1 ưu tiên consistency UI.
-- **[3 tab có thể không đủ cho phase sau khi power-features thêm bulk/unissue]** → Mitigation: kebab menu đã chuẩn bị slot. Bulk select không cần tab riêng. Unissue đặt vào kebab. Không cần thêm tab.
+- **[3 tab có thể không đủ cho phase sau khi power-features thêm bulk/unissue]** → Mitigation: header overflow action đã chuẩn bị slot. Bulk select không cần tab riêng. Unissue đặt vào header overflow. Không cần thêm tab.
 - **[UiDrawer chưa có trong design system]** → Mitigation: D5 thêm primitive này; spec `billing-ui-readiness` MODIFIED ghi nhận có drawer.
 - **[Toast framework là cross-cutting]** → Mitigation: scope nhỏ — 1 host + 1 composable, không state machine, không queue priority. Đủ dùng cho billing.
 - **[Component cũ `BillingOverviewStep`, `BillingCloseStep` còn ở repo nhưng không reachable]** → Mitigation: dọn ở task cuối change; nếu không kịp, để lại 1 task `cleanup` cho follow-up. Đừng xoá vội nếu chưa chắc không có ai import.
@@ -198,7 +198,7 @@ Component mới `BillingDraftDiscrepancyCallout.vue`:
 1. **Server enrichment trước**: thêm DTO field mới (optional), enrich resolver. UI cũ vẫn render UID — không gãy gì.
 2. **UI Readability**: cập nhật `BillingPaymentsStep`, `BillingAuditStep` dùng field mới. UI hiện tên thay UID.
 3. **UiDrawer + Toast primitive**: thêm vào `app/components/ui/`. Showcase ở `/ui-showcase`.
-4. **IA refactor**: cập nhật page `[period].vue`. Bỏ tab cũ, thêm sticky strip + drawer + kebab.
+4. **IA refactor**: cập nhật page `[period].vue`. Bỏ tab cũ, thêm sticky strip + drawer + header overflow.
 5. **Cleanup**: xoá file/component không còn dùng (`BillingOverviewStep` nếu logic chuyển hết sang strip).
 
 Rollback: mỗi bước commit riêng. Bước (4) là big bang nhất nhưng chỉ thay 1 page file — git revert nhanh.
