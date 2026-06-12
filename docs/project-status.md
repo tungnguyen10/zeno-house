@@ -215,3 +215,130 @@ Client **không** gọi Supabase trực tiếp cho business data.
 - Notification / email flow (Resend API đã setup, chưa dùng)
 - Google Analytics (key đã có trong env, chưa integrate UI)
 - CI pipeline (spec có, chưa implement)
+
+---
+
+## v0.2.5 cleanup update (12/06/2026)
+
+- Billing workspace readability polish landed: invoice/payment/audit DTOs now carry display fields so primary UI columns can show tenant, room, actor, entity label, and Vietnamese audit summaries instead of raw UUIDs.
+- Billing workspace IA is reduced to three primary tabs with a sticky KPI strip, audit in `UiDrawer`, and close-period in a header overflow action.
+- Design system now includes `UiDrawer`, `UiToastHost`, and `useToast` patterns for billing mutation feedback.
+
+---
+
+## Billing workspace — trạng thái & roadmap (12/06/2026)
+
+### 3 OpenSpec change đang mở
+
+| Change | Mục tiêu | Trạng thái |
+|--------|----------|-----------|
+| `billing-readability-and-polish` | Bỏ UID khỏi cột chính, gom IA 3 tab, drawer audit, kebab Chốt kỳ, toast, **callout chênh lệch draft↔issued** | ✅ section 1–13 đã code; ⏳ section 14 (discrepancy callout, 8 task) chưa làm |
+| `billing-power-features` | Bulk paste chỉ số, bulk thanh toán, **hủy phát hành cả kỳ** (`billing.unissue`), export Excel | ⏳ chưa bắt đầu |
+| `billing-test-baseline` | Vitest + fixtures + unit/integration cho service & composable billing | ⏳ chưa bắt đầu |
+
+Mọi change đều `npx openspec validate <id> --strict` pass. Spec sống ở `openspec/changes/<id>/`.
+
+### Bug đã sửa khi smoke-test
+
+- **Void không tính lại draft**: `app/pages/billing/[building]/[period].vue` `@reload` thiếu `loadDrafts()` + `loadGrid()`. Fix bằng named function `reloadAfterInvoiceChange()` gọi đủ 4 loader.
+- **Tab name lệch**: `BillingIssueStep.vue` còn ghi "Soát hoá đơn" sau khi merge tab → đổi thành "Chỉ số & hoá đơn nháp".
+
+### Nguyên tắc bất di bất dịch
+
+1. **Invoice `issued` là immutable.** Không có endpoint nào sửa số tiền của invoice đã phát hành.
+2. **Mọi thay đổi đi qua đúng 3 lối**:
+   - `void + reissue` — chỉ khi invoice **chưa có payment** và kỳ chưa close.
+   - `adjustment` — khi invoice **đã có payment**, tạo dòng điều chỉnh (delta âm = hoàn, dương = thu thêm).
+   - `unissue` (cả kỳ) — admin only, dùng khi cấu hình lệch hàng loạt; sẽ void invoice chưa thu, giữ invoice đã thu.
+3. **Mọi destructive action** (void / unissue / close) bắt buộc nhập **lý do ≥10 ký tự**, lưu vào audit metadata, format ra summary tiếng Việt qua `formatAuditSummary`.
+4. **UI dẫn đường, không tự động.** Override chỉ số sau phát hành KHÔNG tự update invoice — UI hiện callout đề xuất, manager phải bấm CTA.
+5. **Không lộ UID** ở cột chính bất kỳ bảng nào. UID chỉ trong drawer "Chi tiết kỹ thuật" hoặc tooltip.
+
+### Flow tổng (sau khi 3 change land)
+
+```mermaid
+flowchart TD
+    Start([Manager mở kỳ vận hành]) --> KPI[Sticky KPI strip]
+    KPI --> Tab1[Tab: Chỉ số & hoá đơn nháp]
+
+    Tab1 --> EnterReading[Nhập chỉ số điện/nước]
+    EnterReading --> AutoSave[Auto-save debounce 800ms]
+    AutoSave --> ComputeDraft[Server tính lại draft]
+
+    ComputeDraft --> CheckIssued{Đã có invoice<br/>cho HĐ này?}
+    CheckIssued -- Chưa --> Issuable[Draft sẵn sàng phát hành]
+    Issuable --> Tab2[Tab: Phát hành]
+    Tab2 --> IssueAll[Phát hành toàn kỳ]
+    IssueAll --> Issued([Invoice = issued])
+
+    CheckIssued -- Có rồi --> CompareTotal{Draft vs Issued<br/>chênh ≥ 1.000đ?}
+    CompareTotal -- Không --> Skip[Bỏ qua, đã đồng bộ]
+    CompareTotal -- Có --> Callout[⚠️ Discrepancy Callout]
+
+    Callout --> CheckPayment{Invoice đã có<br/>payment?}
+    CheckPayment -- Chưa thu --> Choice1[CTA: Adjustment / Void+Reissue]
+    Choice1 -- Adjustment --> AdjModal[Adjustment modal<br/>pre-fill amount = -delta]
+    Choice1 -- Void+Reissue --> VoidModal[Void modal + lý do]
+    VoidModal --> VoidDone[Invoice = void] --> Tab1
+    CheckPayment -- Đã thu --> Choice2[CTA Adjustment only<br/>Void disabled]
+    Choice2 --> AdjModal
+    AdjModal --> Issued
+
+    Issued --> Tab3[Tab: Thanh toán & công nợ]
+    Tab3 --> Pay[Ghi thu / bulk thu]
+    Pay --> Paid{Đủ?}
+    Paid -- Chưa --> Tab3
+    Paid -- Đủ --> Kebab[Kebab → Chốt kỳ]
+    Kebab --> Closed([Kỳ = closed])
+
+    Issued -.unissue cả kỳ.-> KebabAdmin[Kebab → Hủy phát hành]
+    KebabAdmin --> UnissueModal[Modal: lý do + preview]
+    UnissueModal --> Tab1
+
+    Tab1 -.Nhật ký.-> Drawer[UiDrawer phải - audit]
+    Tab2 -.Nhật ký.-> Drawer
+    Tab3 -.Nhật ký.-> Drawer
+```
+
+### 4 case xử lý lệch số
+
+| Case | Khi nào | Action |
+|------|---------|--------|
+| Happy path | Lần đầu phát hành kỳ | Nhập chỉ số → Phát hành → Thu → Chốt |
+| Override sau phát hành (chưa thu) | Phát hiện sai trước khi khách trả | Override → Callout → **Hủy + Phát hành lại** |
+| Override sau phát hành (đã thu) | Phát hiện sai sau khi đã thu | Override → Callout → **Tạo điều chỉnh** |
+| Sai cấu hình cả kỳ | Phát hành nhầm hàng loạt (vd giá điện sai) | Kebab → **Hủy phát hành kỳ** (admin) → fix config → phát hành lại |
+
+### Section 14 — Discrepancy callout (chưa làm, 8 task)
+
+Tóm tắt từ `openspec/changes/billing-readability-and-polish/tasks.md` group 14:
+
+1. **Server**: extend draft response per contract với `existingInvoice: { id, totalAmount, paidAmount, status } | null` (source: `activeInvoiceByContract` đã có trong `server/services/billing/drafts.ts`).
+2. **Types**: thêm field vào `BillingDraftInvoice` ở `app/types/billing.ts`.
+3. **Component mới**: `app/components/billing/BillingDraftDiscrepancyCallout.vue`
+   - Render khi `existingInvoice` tồn tại và `|delta| ≥ 1000`
+   - 2 CTA với rule: paid → disable Void; closed → ẩn cả 2
+   - Emit `intent:adjustment` `{ invoiceId, amount: -delta, label }` và `intent:void-reissue` `{ invoiceId }`
+4. **Mount** trong row expanded của `BillingDraftGridStep.vue`, gần warnings.
+5. **Bubble intent** lên `[period].vue`: switch sang tab payments, focus invoice row, mở modal pre-filled.
+6. **`BillingPaymentsStep.vue`** nhận inbound intent (prop hoặc shared store) → mở modal đúng.
+7. **`useBillingInvoiceActions`** thêm shortcut `referenceInvoiceId` + `label` cho adjustment payload.
+8. **Smoke test** end-to-end.
+
+### Files chính trong billing workspace
+
+| File | Vai trò |
+|------|---------|
+| `app/pages/billing/[building]/[period].vue` | Workspace 3 tab + sticky KPI + drawer + kebab |
+| `app/components/billing/BillingKpiStrip.vue` | KPI strip sticky |
+| `app/components/billing/BillingDraftGridStep.vue` | Tab 1 — nhập chỉ số + draft grid |
+| `app/components/billing/BillingIssueStep.vue` | Tab 2 — phát hành |
+| `app/components/billing/BillingPaymentsStep.vue` | Tab 3 — thu tiền + adjustment + void |
+| `app/components/billing/BillingAuditStep.vue` | Body của audit drawer |
+| `app/components/billing/BillingCloseStep.vue` | Body của modal Chốt kỳ (kebab) |
+| `server/services/billing/drafts.ts` | Tính draft per contract, computed `activeInvoiceByContract` |
+| `server/services/billing/invoices.ts` | Issue / void / reissue / adjustment |
+| `server/services/billing/payments.ts` | Record payment, list payment |
+| `server/services/billing/audit.ts` | List audit + enrich qua resolver |
+| `server/services/billing/audit-summary.ts` | `formatAuditSummary(action, metadata)` ra tiếng Việt |
+| `server/services/billing/display.ts` | `BillingDisplayResolver` batch lookup actors/invoices/contracts |

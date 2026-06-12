@@ -658,9 +658,20 @@ export const BillingDraftService = {
         warnings,
         existingInvoiceId: existing?.id ?? null,
         existingInvoiceStatus: existing?.status ?? null,
+        existingInvoice: existing
+          ? {
+              id: existing.id,
+              totalAmount: existing.totalAmount,
+              paidAmount: existing.paidAmount,
+              status: existing.status,
+            }
+          : null,
       }
       drafts.push(draft)
-      draftTotalSum += total
+      // Only sum drafts that would actually be issued — a contract with an
+      // active invoice is blocked by DUPLICATE_INVOICE, so its draft total
+      // never lands in a real issue. Mirrors grid.ts treatment.
+      if (!existing) draftTotalSum += total
       if (blockers.length > 0) blockedCount += 1
       else issuableCount += 1
     }

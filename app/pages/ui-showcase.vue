@@ -49,6 +49,8 @@ const modalMd = ref(false)
 const modalLg = ref(false)
 const modalXl = ref(false)
 const confirmOpen = ref(false)
+const drawerOpen = ref(false)
+const toast = useToast()
 
 // Tabs
 const activeTab = ref('overview')
@@ -544,6 +546,27 @@ function dismissAlert(key: string) {
         @confirm="confirmOpen = false"
         @cancel="confirmOpen = false"
       />
+    </UiSection>
+
+    <UiSection title="UiDrawer / Toast" description="Right-side drawer and non-blocking feedback.">
+      <div class="flex flex-wrap gap-2">
+        <UiButton variant="secondary" @click="drawerOpen = true">Open drawer</UiButton>
+        <UiButton @click="toast.success('Đã lưu thay đổi')">Success toast</UiButton>
+        <UiButton variant="danger" @click="toast.error('Không thể lưu thay đổi')">Error toast</UiButton>
+        <UiButton variant="ghost" @click="toast.info('Đang xử lý dữ liệu')">Info toast</UiButton>
+      </div>
+
+      <UiDrawer v-model="drawerOpen" title="Nhật ký thao tác">
+        <div class="space-y-3">
+          <p class="text-sm text-muted">Drawer dùng cho bề mặt tham chiếu như audit log hoặc chi tiết hoá đơn.</p>
+          <UiAlert severity="info">Backdrop, Esc và nút đóng đều tắt drawer.</UiAlert>
+        </div>
+        <template #footer>
+          <div class="flex justify-end">
+            <UiButton variant="secondary" @click="drawerOpen = false">Đóng</UiButton>
+          </div>
+        </template>
+      </UiDrawer>
     </UiSection>
 
     <!-- Empty / Skeleton -->

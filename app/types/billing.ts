@@ -50,6 +50,9 @@ export interface Invoice {
   notes: string | null
   createdAt: string
   updatedAt: string
+  tenantName?: string | null
+  roomNumber?: string | null
+  contractCode?: string | null
 }
 
 export interface InvoiceCharge {
@@ -77,6 +80,7 @@ export interface InvoicePayment {
   recordedBy: string | null
   createdAt: string
   updatedAt: string
+  recordedByName?: string | null
 }
 
 export interface BillingUtilityUsage {
@@ -109,6 +113,12 @@ export interface BillingAuditEvent {
   afterData: unknown
   metadata: Record<string, unknown>
   createdAt: string
+  actorName?: string | null
+  actorEmail?: string | null
+  entityLabel?: string | null
+  entitySubLabel?: string | null
+  entityHref?: string | null
+  summary?: string
 }
 
 // ---------------------------------------------------------------------------
@@ -148,6 +158,7 @@ export interface BillingWorkspaceOverview {
   issuedTotal: number
   paidTotal: number
   outstandingBalance: number
+  auditEvents: BillingAuditEvent[]
 }
 
 export interface BillingDraftBlocker {
@@ -174,6 +185,13 @@ export interface BillingDraftLine {
   sortOrder: number
 }
 
+export interface BillingExistingInvoiceContext {
+  id: string
+  totalAmount: number
+  paidAmount: number
+  status: InvoiceStatus
+}
+
 export interface BillingDraftInvoice {
   contractId: string
   roomId: string
@@ -190,6 +208,7 @@ export interface BillingDraftInvoice {
   warnings: BillingDraftWarning[]
   existingInvoiceId: string | null
   existingInvoiceStatus: InvoiceStatus | null
+  existingInvoice?: BillingExistingInvoiceContext | null
 }
 
 export interface BillingDraftResponse {
@@ -273,6 +292,7 @@ export interface BillingDraftGridRow {
   contractCode: string | null
   invoiceId: string | null
   invoiceStatus: InvoiceStatus | null
+  existingInvoice?: BillingExistingInvoiceContext | null
   editable: boolean
   status: BillingDraftGridRowStatus
   electricity: BillingDraftGridUtilityCell | null

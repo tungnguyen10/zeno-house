@@ -124,3 +124,27 @@ Cho destructive button dùng `focus-visible:ring-error`. Không tắt outline m�
 ## 7. Database
 
 Không có thay đổi schema database cho design system change này.
+
+## 8. Drawer, Toast, Kebab
+
+### UiDrawer
+
+Use `UiDrawer` for reference surfaces that should preserve the current workspace context, such as billing audit logs or invoice detail side panels.
+
+- Props: `modelValue`, `title`, `width` (default `w-96`).
+- Slots: `header`, default body, `footer`.
+- Behavior: right-side slide-in, backdrop click closes, Esc closes, focus remains inside the drawer while open.
+- Mobile: pass a responsive width such as `w-full sm:w-[44rem]` when the content needs more room.
+
+### Toasts
+
+Mount `UiToastHost` once in the default layout and call `useToast()` from pages/components handling mutations.
+
+- Use `success(message)` after completed user actions.
+- Use `error(message)` with the server error message when a mutation fails.
+- Use `info(message)` for neutral progress or status feedback.
+- Position is top-right on desktop and bottom-center on mobile; messages auto-dismiss after 4 seconds and pause on hover.
+
+### Header Kebab
+
+Rare or destructive workspace actions belong in the page header overflow instead of taking a tab slot. Billing uses this for `Ch?t k?`; future actions such as cancel/unissue can join the same menu. Hide or disable items when the current user lacks permission or the current entity state is ineligible.

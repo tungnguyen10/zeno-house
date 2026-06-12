@@ -81,3 +81,41 @@ Billing UI components SHALL not render raw UUIDs in primary columns of invoices,
 #### Scenario: Optional UID access for power users
 - **WHEN** a payment or audit row needs raw UID for debugging
 - **THEN** it is available via row click into a detail surface, copy action, or developer tooling — but is not the default visual
+
+### Requirement: Draft surfaces existing invoice context
+The draft response per contract SHALL include the active (non-void) issued invoice for that contract when one exists.
+
+#### Scenario: Draft includes existingInvoice when invoice has been issued
+- **WHEN** a draft row is computed for a contract that already has an active issued invoice in the period
+- **THEN** the response includes `existingInvoice: { id, totalAmount, paidAmount, status }` for that draft
+
+#### Scenario: Draft existingInvoice null when no active invoice
+- **WHEN** the contract has no issued invoice for the period, or the only invoice is voided
+- **THEN** `existingInvoice` is null
+
+### Requirement: Draft–issued discrepancy callout
+The draft grid SHALL surface a discrepancy callout when a draft total differs materially from the corresponding issued invoice total, and SHALL guide the user to the correct correction flow.
+
+#### Scenario: Callout shown when delta is significant
+- **WHEN** a draft row has an `existingInvoice` and `|draft total − existingInvoice.totalAmount| ≥ 1000`
+- **THEN** the row expanded panel renders a warning callout that displays the issued amount, the new draft amount, and the signed delta
+
+#### Scenario: Callout hidden when delta is negligible
+- **WHEN** the delta is less than 1000 (rounding noise) or no issued invoice exists
+- **THEN** no discrepancy callout is rendered for that row
+
+#### Scenario: Callout offers Adjustment CTA
+- **WHEN** the callout is visible and the period is not closed
+- **THEN** a primary CTA labelled "Tạo điều chỉnh" opens the adjustment modal pre-filled with `reference_invoice_id` set to the issued invoice and `amount` set to the negative of the delta
+
+#### Scenario: Callout offers Void+Reissue CTA when no payments
+- **WHEN** the callout is visible, the period is not closed, and the issued invoice has zero successful payments
+- **THEN** a secondary CTA labelled "Hủy + Phát hành lại" opens the void modal for that invoice and on success surfaces a hint to reissue from the draft tab
+
+#### Scenario: Void+Reissue disabled when payments exist
+- **WHEN** the issued invoice has at least one successful payment
+- **THEN** the "Hủy + Phát hành lại" CTA is disabled with a tooltip explaining that paid invoices must be corrected via Adjustment
+
+#### Scenario: Both CTAs hidden when period closed
+- **WHEN** the period status is `closed`
+- **THEN** the callout still renders the discrepancy text but hides both CTAs and explains that the period is closed

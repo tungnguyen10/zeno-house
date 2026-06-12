@@ -1,9 +1,10 @@
 ## Why
 
-Billing workspace cơ bản đã hoạt động (`monthly-operations-workspace` 80/98 tasks done) nhưng chưa production-ready ở 2 mặt:
+Billing workspace cơ bản đã hoạt động (`monthly-operations-workspace` 80/98 tasks done) nhưng chưa production-ready ở 3 mặt:
 
 1. **UID lộ ra UI** — tab Thanh toán hiển thị `contractId`/`roomId` thay vì tên khách + số phòng; tab Nhật ký hiển thị `actorId` UUID thay vì tên người và `metadata` dump dạng `key=...` không đọc được.
 2. **Information architecture nặng** — 6 tab (Tổng quan, Nháp, Phát hành, TT&CN, Nhật ký, Chốt kỳ) trộn lẫn thông tin, hành động chính, tham chiếu hiếm. Manager phải nhảy tab để biết tổng quan, mất context khi xem audit.
+3. **Draft và issued lệch im lặng** — sau khi override điện/nước, draft được tính lại nhưng hoá đơn đã phát hành không đổi (đúng theo nguyên tắc immutable). Hiện UI không cảnh báo chênh lệch và không hướng dẫn manager vào flow sửa đúng (điều chỉnh hay hủy + phát hành lại). Người dùng tưởng "override không ăn".
 
 Cần polish trước khi nhồi thêm tính năng mới (xem `billing-power-features`).
 
@@ -21,12 +22,16 @@ Cần polish trước khi nhồi thêm tính năng mới (xem `billing-power-fea
   - Bỏ button no-op `Áp dụng cho dòng trống` (hoặc thay bằng hành động thật: fill batch date vào local state cho cell trống)
   - Toast notification (success/error) cho mọi mutation: phát hành, thu, void, reissue, adjustment, override
   - Adjustment modal: thay text input UID `reference_invoice_id` bằng `UiSelect` chọn từ list invoice đã phát hành của period
+- **Discrepancy callout** (mới):
+  - Khi draft total khác invoice đã phát hành ≥ 1.000đ, hiện callout vàng trong row expanded của draft grid: "Hoá đơn hiện tại {issued}đ, draft mới {draft}đ, chênh {delta:+}đ".
+  - 2 CTA: **[Tạo điều chỉnh]** (mở adjustment modal pre-fill `amount = -delta`, label = "Điều chỉnh do override tiêu thụ") và **[Hủy + Phát hành lại]** (mở void modal với hint "sau khi hủy, phát hành lại từ tab Chỉ số & hoá đơn nháp").
+  - Với hoá đơn đã thu đủ (paid): ưu tiên CTA "Tạo điều chỉnh"; CTA "Hủy" disable vì hệ thống không cho void invoice có payment thành công (rule có sẵn).
 - **Resolver layer mới ở server**: `BillingDisplayResolver` batch-load `auth.users`, `tenants`, `rooms`, `invoices`, `billing_periods`, `buildings` để gắn tên/label vào DTO. Không lưu snapshot vào DB ở phiên này — resolve lazy lúc list.
 
 ## Capabilities
 
 ### New Capabilities
-- `billing-readability`: server-side DTO enrichment contract (display names, audit summary, entity labels) + client rendering rule "không hiển thị UID trong cột chính của bảng".
+- `billing-readability`: server-side DTO enrichment contract (display names, audit summary, entity labels) + client rendering rule "không hiển thị UID trong cột chính của bảng" + draft–issued discrepancy callout với CTA điều chỉnh / hủy‑phát hành lại.
 
 ### Modified Capabilities
 - `billing-ui-readiness`: workspace IA mới (3 tab + sticky KPI + drawer + kebab), bỏ tab `Tổng quan`/`Nhật ký`/`Chốt kỳ`. Bổ sung primitive `UiDrawer` và pattern kebab menu trong `UiPageHeader`.
@@ -41,9 +46,10 @@ Cần polish trước khi nhồi thêm tính năng mới (xem `billing-power-fea
   - `app/types/billing.ts` — `Invoice`, `BillingAuditEvent`, `InvoicePayment` thêm field tên (optional để không phá DTO consumer khác)
 - **Client**:
   - `app/pages/billing/[building]/[period].vue` — IA mới (sticky strip + 3 tab + drawer + kebab)
-  - `app/components/billing/BillingPaymentsStep.vue` — render tên + số phòng
+  - `app/components/billing/BillingPaymentsStep.vue` — render tên + số phòng; mở adjustment/void modal khi nhận intent từ draft grid CTA
   - `app/components/billing/BillingAuditStep.vue` — render `summary` thay metadata dump, `actorName` thay UID; chuyển thành drawer content (vẫn giữ component, chỉ đổi nơi render)
-  - `app/components/billing/BillingDraftGridStep.vue` — ẩn save bar khi read-only, bỏ button no-op
+  - `app/components/billing/BillingDraftGridStep.vue` — ẩn save bar khi read-only, bỏ button no-op, thêm discrepancy callout trong row expanded
+  - `app/components/billing/BillingDraftDiscrepancyCallout.vue` (mới) — callout vàng với delta + CTA
   - `app/components/ui/UiDrawer.vue` (mới) — drawer phải overlay
   - Toast composable hoặc dùng `UiAlert` floating
 - **Database**: không có schema change. Dùng resolver lazy.

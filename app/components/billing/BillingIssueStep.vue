@@ -114,7 +114,7 @@ const columns: UiTableColumn<BillingDraftInvoice>[] = [
         </UiAlert>
 
         <UiAlert v-if="blockedDrafts.length > 0" severity="warning" title="Một số hợp đồng đang bị blocker">
-          {{ blockedDrafts.length }} hợp đồng chưa thể phát hành. Mở tab “Soát hoá đơn” để xem chi tiết.
+          {{ blockedDrafts.length }} hợp đồng chưa thể phát hành. Mở tab “Chỉ số & hoá đơn nháp” để xem chi tiết.
         </UiAlert>
 
         <UiTable

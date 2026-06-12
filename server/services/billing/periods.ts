@@ -241,6 +241,7 @@ export const BillingPeriodService = {
       period.periodYear,
       period.periodMonth,
     )
+    const auditEvents = await BillingAuditService.listByPeriod(event, user, period.id)
 
     return {
       period,
@@ -254,6 +255,7 @@ export const BillingPeriodService = {
       issuedTotal,
       paidTotal,
       outstandingBalance: outstanding,
+      auditEvents,
     }
   },
 

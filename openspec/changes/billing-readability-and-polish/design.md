@@ -159,6 +159,31 @@ Trigger toast ở các mutation:
 
 Hiện tại `reference_invoice_id` là text input UID. Thay bằng `UiCombobox` với options là danh sách invoice đã phát hành của period (label: "{room} · {tenant} · {amount}đ"). Optional (cho phép null) vì adjustment không bắt buộc reference.
 
+### D8 — Discrepancy callout: hướng dẫn manager khi draft ≠ issued
+
+**Vấn đề:** Sau khi override điện/nước, draft total đổi (vd `3.638.000đ`) nhưng invoice đã phát hành giữ nguyên (vd `3.725.000đ`) vì rule immutable. Manager không biết phải làm gì → tưởng "override không ăn".
+
+**Quyết định:** Render callout trong row expanded của `BillingDraftGridStep` khi:
+- Hợp đồng có `existingInvoice` (status không phải `void`)
+- `|draft.totals.draftTotal − existingInvoice.totalAmount| ≥ 1.000đ` (threshold tránh noise do làm tròn)
+
+Component mới `BillingDraftDiscrepancyCallout.vue`:
+- Severity `warning`.
+- Title: "Draft mới khác hoá đơn đã phát hành".
+- Body: "Hoá đơn hiện tại {issued}đ — Draft sau override {draft}đ — Chênh **{delta:+}đ**".
+- 2 CTA primary (chỉ khi `period.status` không phải `closed`):
+  - **Tạo điều chỉnh** — emit `intent:adjustment` với `{ invoiceId, amount: -delta, label: "Điều chỉnh do override tiêu thụ" }`. Page parent chuyển tab `payments`, mở adjustment modal pre-fill.
+  - **Hủy + Phát hành lại** — emit `intent:void-reissue` với `{ invoiceId }`. Page chuyển tab `payments`, mở void modal; sau khi void thành công, toast hint "Vào tab Chỉ số & hoá đơn nháp để phát hành lại".
+- Rule disable CTA:
+  - Invoice có ≥ 1 successful payment → disable "Hủy + Phát hành lại" (server đã chặn, UI cảnh báo trước). Tooltip: "Hoá đơn đã có thanh toán, dùng Điều chỉnh".
+  - Invoice paid đủ → vẫn cho phép Adjustment (giảm thì hoàn/giữ làm prepaid; tăng thì khách phải thu thêm).
+
+**Vị trí render:** Trong `BillingDraftGridStep.vue` — row expand panel, sát section warnings, trên section lines table. Khi không có `existingInvoice` hoặc delta < 1.000đ → component không render gì.
+
+**Tính delta ở client:** Dùng `draft.totals.draftTotal` (đã có trong `BillingDraftInvoice`) và `existingInvoice.totalAmount` (cần thêm vào `BillingDraftInvoice` từ server hoặc lookup từ `invoices.value` ở composable). Đề xuất thêm field `existingInvoice: { id, totalAmount, paidAmount, status } | null` vào draft response — server đã có thông tin này (filter `activeInvoiceByContract`), chỉ cần expose ra DTO.
+
+**Không tự động hoá:** Không có nút "Tự động đồng bộ" — luôn yêu cầu manager confirm hành động (adjustment hay void+reissue) vì có ý nghĩa nghiệp vụ với khách thuê.
+
 ## Risks / Trade-offs
 
 - **[Lazy resolver làm chậm list endpoint]** → Mitigation: batch query gom theo entity_type, tổng 3-5 query thêm; không gọi N+1; cache trong cùng request bằng Map.

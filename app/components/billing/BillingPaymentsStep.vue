@@ -1,29 +1,39 @@
 <script setup lang="ts">
 import type { UiTableColumn } from '~/components/ui/UiTable.vue'
-import type { BillingPeriod, Invoice, InvoicePayment, InvoiceWithCharges } from '~/types/billing'
+import type { BillingDraftResponse, BillingPeriod, Invoice, InvoicePayment, InvoiceWithCharges } from '~/types/billing'
 import type { AdjustmentChargeInput, VoidInvoiceInput } from '~/utils/validators/billing'
 import { formatCurrency } from '~/utils/format/currency'
+
+export interface BillingPaymentsIntent {
+  id: number
+  type: 'adjustment' | 'void-reissue'
+  invoiceId: string
+  amount?: number
+  label?: string
+}
 
 const props = defineProps<{
   period: BillingPeriod
   invoices: Invoice[]
   loading: boolean
+  intent?: BillingPaymentsIntent | null
+  drafts?: BillingDraftResponse | null
 }>()
 
 const emit = defineEmits<{ reload: [] }>()
 
-const { load, recordPayment, voidInvoice, reissue, addAdjustment, listPayments } = useBillingInvoiceActions()
+const { createAdjustmentPayload, load, recordPayment, voidInvoice, addAdjustment, listPayments } = useBillingInvoiceActions()
+const toast = useToast()
 
 const periodIsClosed = computed(() => props.period.status === 'closed')
 
-const filterStatus = ref<'all' | 'paid' | 'partial' | 'unpaid' | 'overdue' | 'void'>('all')
+const filterStatus = ref<'all' | 'paid' | 'partial' | 'unpaid' | 'overdue'>('all')
 const filterOptions = [
   { value: 'all', label: 'Tất cả' },
   { value: 'unpaid', label: 'Chưa thu' },
   { value: 'partial', label: 'Một phần' },
   { value: 'paid', label: 'Đã thu' },
   { value: 'overdue', label: 'Quá hạn' },
-  { value: 'void', label: 'Đã huỷ' },
 ]
 
 const today = new Date().toISOString().slice(0, 10)
@@ -35,10 +45,39 @@ function deriveBucket(inv: Invoice): 'paid' | 'partial' | 'unpaid' | 'overdue' |
   return 'unpaid'
 }
 
-const filteredInvoices = computed(() => {
-  if (filterStatus.value === 'all') return props.invoices
-  return props.invoices.filter(i => deriveBucket(i) === filterStatus.value)
+const activeInvoices = computed(() => props.invoices.filter(i => i.status !== 'void'))
+const voidedInvoices = computed(() =>
+  props.invoices
+    .filter(i => i.status === 'void')
+    .slice()
+    .sort((a, b) => (b.voidedAt ?? '').localeCompare(a.voidedAt ?? '')),
+)
+const replacementById = computed(() => {
+  const byId = new Map(props.invoices.map(i => [i.id, i]))
+  return byId
 })
+
+const filteredInvoices = computed(() => {
+  if (filterStatus.value === 'all') return activeInvoices.value
+  return activeInvoices.value.filter(i => deriveBucket(i) === filterStatus.value)
+})
+
+const issuedInvoiceOptions = computed(() =>
+  props.invoices
+    .filter(inv => inv.status !== 'void')
+    .map(inv => ({
+      id: inv.id,
+      label: `${inv.roomNumber ? `P.${inv.roomNumber}` : inv.id.slice(0, 8)} · ${inv.tenantName ?? 'Khách thuê'} · ${formatCurrency(inv.totalAmount)}`,
+    })),
+)
+
+function invoiceDisplay(row: Invoice): { title: string; subtitle: string } {
+  const title = [row.tenantName, row.roomNumber ? `P.${row.roomNumber}` : null].filter(Boolean).join(' · ')
+  return {
+    title: title || row.contractCode || row.contractId,
+    subtitle: row.contractCode ?? row.contractId,
+  }
+}
 
 const summary = computed(() => {
   const issuedTotal = props.invoices.filter(i => i.status !== 'void')
@@ -118,11 +157,13 @@ async function submitPayment() {
       payment_method: paymentForm.payment_method.trim() || null,
       note: paymentForm.note.trim() || null,
     })
+    toast.success(`Đã ghi ${formatCurrency(paymentForm.amount)}`)
     showPaymentModal.value = false
     emit('reload')
   } catch (err) {
     const e = err as { data?: { error?: { message?: string } } }
     paymentError.value = e.data?.error?.message ?? 'Ghi nhận thất bại'
+    toast.error(paymentError.value)
   } finally {
     paymentSubmitting.value = false
   }
@@ -134,11 +175,13 @@ const voidForm = reactive<VoidInvoiceInput>({ reason: '' })
 const voidSubmitting = ref(false)
 const voidError = ref<string | null>(null)
 const voidTarget = ref<Invoice | null>(null)
+const showReissueHintAfterVoid = ref(false)
 
-function startVoid(inv: Invoice) {
+function startVoid(inv: Invoice, options?: { reason?: string; showReissueHint?: boolean }) {
   voidTarget.value = inv
-  voidForm.reason = ''
+  voidForm.reason = options?.reason ?? ''
   voidError.value = null
+  showReissueHintAfterVoid.value = !!options?.showReissueHint
   showVoidModal.value = true
 }
 
@@ -152,47 +195,19 @@ async function submitVoid() {
   voidError.value = null
   try {
     await voidInvoice(voidTarget.value.id, { reason: voidForm.reason })
+    toast.success('Đã huỷ hoá đơn')
+    if (showReissueHintAfterVoid.value) {
+      toast.info('Vào tab Chỉ số & hoá đơn nháp để phát hành lại')
+    }
     showVoidModal.value = false
+    showReissueHintAfterVoid.value = false
     emit('reload')
   } catch (err) {
     const e = err as { data?: { error?: { message?: string } } }
     voidError.value = e.data?.error?.message ?? 'Huỷ hoá đơn thất bại'
+    toast.error(voidError.value)
   } finally {
     voidSubmitting.value = false
-  }
-}
-
-// ---------- Reissue ----------
-const showReissueModal = ref(false)
-const reissueForm = reactive({ due_date: '', notes: '' })
-const reissueSubmitting = ref(false)
-const reissueError = ref<string | null>(null)
-const reissueTarget = ref<Invoice | null>(null)
-
-function startReissue(inv: Invoice) {
-  reissueTarget.value = inv
-  reissueForm.due_date = inv.dueDate ?? ''
-  reissueForm.notes = ''
-  reissueError.value = null
-  showReissueModal.value = true
-}
-
-async function submitReissue() {
-  if (!reissueTarget.value) return
-  reissueSubmitting.value = true
-  reissueError.value = null
-  try {
-    await reissue(reissueTarget.value.id, {
-      due_date: reissueForm.due_date.trim() || null,
-      notes: reissueForm.notes.trim() || null,
-    })
-    showReissueModal.value = false
-    emit('reload')
-  } catch (err) {
-    const e = err as { data?: { error?: { message?: string } } }
-    reissueError.value = e.data?.error?.message ?? 'Phát hành lại thất bại'
-  } finally {
-    reissueSubmitting.value = false
   }
 }
 
@@ -205,12 +220,21 @@ const adjustmentSubmitting = ref(false)
 const adjustmentError = ref<string | null>(null)
 const adjustmentTarget = ref<Invoice | null>(null)
 
-function startAdjustment(inv: Invoice) {
+const selectedReferenceInvoice = computed({
+  get() {
+    return issuedInvoiceOptions.value.find(option => option.id === adjustmentForm.reference_invoice_id) ?? null
+  },
+  set(option: { id: string; label: string } | null) {
+    adjustmentForm.reference_invoice_id = option?.id ?? null
+  },
+})
+
+function startAdjustment(inv: Invoice, prefill?: { amount?: number; label?: string; referenceInvoiceId?: string | null; reason?: string }) {
   adjustmentTarget.value = inv
-  adjustmentForm.label = ''
-  adjustmentForm.amount = 0
-  adjustmentForm.reason = ''
-  adjustmentForm.reference_invoice_id = inv.supersedesInvoiceId
+  adjustmentForm.label = prefill?.label ?? ''
+  adjustmentForm.amount = prefill?.amount ?? 0
+  adjustmentForm.reason = prefill?.reason ?? ''
+  adjustmentForm.reference_invoice_id = prefill?.referenceInvoiceId ?? inv.supersedesInvoiceId
   adjustmentError.value = null
   showAdjustmentModal.value = true
 }
@@ -228,18 +252,20 @@ async function submitAdjustment() {
   adjustmentSubmitting.value = true
   adjustmentError.value = null
   try {
-    const payload: Omit<AdjustmentChargeInput, 'target_invoice_id'> = {
+    const payload: Omit<AdjustmentChargeInput, 'target_invoice_id'> = createAdjustmentPayload({
       label: adjustmentForm.label,
-      amount: Math.trunc(adjustmentForm.amount),
+      amount: adjustmentForm.amount,
       reason: adjustmentForm.reason,
-      reference_invoice_id: adjustmentForm.reference_invoice_id,
-    }
+      referenceInvoiceId: adjustmentForm.reference_invoice_id,
+    })
     await addAdjustment(adjustmentTarget.value.id, payload)
+    toast.success('Đã lưu điều chỉnh')
     showAdjustmentModal.value = false
     emit('reload')
   } catch (err) {
     const e = err as { data?: { error?: { message?: string } } }
     adjustmentError.value = e.data?.error?.message ?? 'Lưu điều chỉnh thất bại'
+    toast.error(adjustmentError.value)
   } finally {
     adjustmentSubmitting.value = false
   }
@@ -256,6 +282,32 @@ watch(selectedInvoice, async (next) => {
     await refreshPayments(next.invoice.id)
   }
 })
+
+watch(
+  () => props.intent,
+  (intent) => {
+    if (!intent) return
+    const invoice = props.invoices.find(inv => inv.id === intent.invoiceId)
+    if (!invoice) {
+      toast.error('Không tìm thấy hoá đơn để xử lý')
+      return
+    }
+    if (intent.type === 'adjustment') {
+      startAdjustment(invoice, {
+        amount: intent.amount,
+        label: intent.label,
+        reason: intent.label,
+        referenceInvoiceId: intent.invoiceId,
+      })
+      return
+    }
+    startVoid(invoice, {
+      reason: 'Void for reissue after reading adjustment',
+      showReissueHint: true,
+    })
+  },
+  { immediate: true },
+)
 </script>
 
 <template>
@@ -282,8 +334,8 @@ watch(selectedInvoice, async (next) => {
         <template #cell-tenant="{ row }">
           <UiButton variant="ghost" size="sm" class="!px-0 !py-0 !h-auto text-left" @click="openDetail(row)">
             <span class="block">
-              <span class="block text-white text-sm">{{ row.contractId }}</span>
-              <span class="block text-xs text-muted">Phòng: {{ row.roomId }}</span>
+              <span class="block text-white text-sm">{{ invoiceDisplay(row).title }}</span>
+              <span class="block text-xs text-muted">{{ invoiceDisplay(row).subtitle }}</span>
             </span>
           </UiButton>
         </template>
@@ -319,15 +371,6 @@ watch(selectedInvoice, async (next) => {
               Huỷ
             </UiButton>
             <UiButton
-              v-if="row.status === 'void'"
-              size="sm"
-              variant="ghost"
-              :disabled="periodIsClosed || !!row.supersededByInvoiceId"
-              @click.stop="startReissue(row)"
-            >
-              Phát hành lại
-            </UiButton>
-            <UiButton
               v-if="row.status === 'paid' || row.status === 'partial'"
               size="sm"
               variant="ghost"
@@ -341,8 +384,55 @@ watch(selectedInvoice, async (next) => {
       </UiTable>
     </UiSection>
 
+    <UiSection
+      v-if="voidedInvoices.length > 0"
+      title="Hoá đơn đã huỷ"
+      :description="`${voidedInvoices.length} hoá đơn — snapshot tại thời điểm huỷ. Không đếm vào công nợ.`"
+    >
+      <div class="relative overflow-x-auto rounded-xl border border-dark-border bg-dark-surface">
+        <table class="min-w-full text-sm">
+          <thead class="bg-dark-card text-xs uppercase tracking-wide text-muted">
+            <tr>
+              <th class="px-3 py-2 text-left font-medium">Hợp đồng</th>
+              <th class="px-3 py-2 text-right tabular-nums hidden md:table-cell font-medium w-32">Tổng tại thời điểm huỷ</th>
+              <th class="px-3 py-2 text-left hidden md:table-cell w-32 font-medium">Huỷ lúc</th>
+              <th class="px-3 py-2 text-left font-medium">Lý do</th>
+              <th class="px-3 py-2 text-left w-44 font-medium">Thay thế bằng</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-dark-border">
+            <tr v-for="row in voidedInvoices" :key="row.id" class="transition-colors">
+              <td class="px-3 py-2 align-middle">
+                <span class="block text-white text-sm">{{ invoiceDisplay(row).title }}</span>
+                <span class="block text-xs text-muted">{{ invoiceDisplay(row).subtitle }}</span>
+              </td>
+              <td class="px-3 py-2 text-right tabular-nums hidden md:table-cell text-muted line-through">
+                {{ formatCurrency(row.totalAmount) }}
+              </td>
+              <td class="px-3 py-2 hidden md:table-cell text-xs text-muted">
+                {{ row.voidedAt ? new Date(row.voidedAt).toLocaleString('vi-VN') : '—' }}
+              </td>
+              <td class="px-3 py-2 text-sm text-white">
+                <span v-if="row.voidReason">{{ row.voidReason }}</span>
+                <span v-else class="text-muted">—</span>
+              </td>
+              <td class="px-3 py-2 text-xs">
+                <template v-if="row.supersededByInvoiceId && replacementById.get(row.supersededByInvoiceId)">
+                  <span class="text-cyan">
+                    {{ formatCurrency(replacementById.get(row.supersededByInvoiceId)!.totalAmount) }}
+                  </span>
+                  <span class="text-muted ml-1">(đã phát hành lại)</span>
+                </template>
+                <span v-else class="text-muted">Chưa phát hành lại</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </UiSection>
+
     <!-- Detail / payments history modal -->
-    <UiModal :open="!!selectedInvoice && !showPaymentModal && !showVoidModal && !showReissueModal && !showAdjustmentModal" title="Chi tiết hoá đơn" size="lg" @close="closeDetail">
+    <UiModal :open="!!selectedInvoice && !showPaymentModal && !showVoidModal && !showAdjustmentModal" title="Chi tiết hoá đơn" size="lg" @close="closeDetail">
       <div class="space-y-4">
         <UiAlert v-if="detailError" severity="danger">{{ detailError }}</UiAlert>
         <div v-if="detailLoading">
@@ -377,6 +467,7 @@ watch(selectedInvoice, async (next) => {
                 { key: 'paid_at', label: 'Ngày', width: 'w-28' },
                 { key: 'amount', label: 'Số tiền', numeric: true, width: 'w-32' },
                 { key: 'payment_method', label: 'Hình thức', hideOnMobile: true },
+                { key: 'recorded_by', label: 'Người ghi', hideOnMobile: true },
                 { key: 'note', label: 'Ghi chú', hideOnMobile: true },
               ]"
               row-key="id"
@@ -385,6 +476,7 @@ watch(selectedInvoice, async (next) => {
               <template #cell-paid_at="{ row }">{{ row.paidAt }}</template>
               <template #cell-amount="{ row }">{{ formatCurrency(row.amount) }}</template>
               <template #cell-payment_method="{ row }">{{ row.paymentMethod ?? '—' }}</template>
+              <template #cell-recorded_by="{ row }">{{ row.recordedByName ?? 'Hệ thống' }}</template>
               <template #cell-note="{ row }">{{ row.note ?? '—' }}</template>
             </UiTable>
           </UiSection>
@@ -433,24 +525,6 @@ watch(selectedInvoice, async (next) => {
       </template>
     </UiModal>
 
-    <!-- Reissue -->
-    <UiModal :open="showReissueModal" title="Phát hành lại sau khi huỷ" @close="showReissueModal = false">
-      <div class="space-y-3">
-        <p class="text-sm text-muted">Tính lại khoản phí dựa trên dữ liệu hiện tại; hoá đơn mới sẽ liên kết tới hoá đơn đã huỷ.</p>
-        <UiSection title="Hạn thanh toán">
-          <UiInput v-model="reissueForm.due_date" type="date" class="w-full" />
-        </UiSection>
-        <UiSection title="Ghi chú">
-          <UiInput v-model="reissueForm.notes" placeholder="Tuỳ chọn" class="w-full" />
-        </UiSection>
-        <UiAlert v-if="reissueError" severity="danger">{{ reissueError }}</UiAlert>
-      </div>
-      <template #footer>
-        <UiButton variant="secondary" :disabled="reissueSubmitting" @click="showReissueModal = false">Huỷ</UiButton>
-        <UiButton :loading="reissueSubmitting" @click="submitReissue">Phát hành lại</UiButton>
-      </template>
-    </UiModal>
-
     <!-- Adjustment -->
     <UiModal :open="showAdjustmentModal" title="Điều chỉnh hoá đơn" @close="showAdjustmentModal = false">
       <div class="space-y-3">
@@ -463,6 +537,17 @@ watch(selectedInvoice, async (next) => {
         </UiSection>
         <UiSection title="Lý do">
           <UiInput v-model="adjustmentForm.reason" placeholder="Lý do điều chỉnh..." class="w-full" />
+        </UiSection>
+        <UiSection title="Hoá đơn tham chiếu">
+          <UiCombobox
+            v-model="selectedReferenceInvoice"
+            :options="issuedInvoiceOptions"
+            :option-key="option => option.id"
+            :option-label="option => option.label"
+            placeholder="Không chọn"
+            search-placeholder="Tìm hoá đơn..."
+            empty-message="Không có hoá đơn phù hợp"
+          />
         </UiSection>
         <UiAlert v-if="adjustmentError" severity="danger">{{ adjustmentError }}</UiAlert>
       </div>

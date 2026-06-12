@@ -20,11 +20,13 @@ import { InvoicePaymentRepository } from '../../repositories/billing/payments'
 import { BillingAuditService } from './audit'
 import { BillingDraftService } from './drafts'
 import { BillingPeriodService } from './periods'
+import { BillingDisplayResolver } from './display'
 
 export const InvoiceService = {
   async list(event: H3Event, user: AuthUser, billingPeriodId: string): Promise<Invoice[]> {
     if (!can(user, 'billing.read')) throwForbidden('Không có quyền xem hoá đơn')
-    return InvoiceRepository.listByPeriod(event, billingPeriodId)
+    const invoices = await InvoiceRepository.listByPeriod(event, billingPeriodId)
+    return new BillingDisplayResolver(event).enrichInvoices(invoices)
   },
 
   async getWithCharges(
@@ -37,7 +39,13 @@ export const InvoiceService = {
     if (!invoice) throwNotFound('Không tìm thấy hoá đơn')
     const charges = await InvoiceRepository.listCharges(event, invoiceId)
     const payments = await InvoicePaymentRepository.listByInvoice(event, invoiceId)
-    return { invoice, charges, payments }
+    const resolver = new BillingDisplayResolver(event)
+    const [enrichedInvoice] = await resolver.enrichInvoices([invoice])
+    return {
+      invoice: enrichedInvoice ?? invoice,
+      charges,
+      payments: await resolver.enrichPayments(payments),
+    }
   },
 
   /**
@@ -136,7 +144,10 @@ export const InvoiceService = {
       },
     })
 
-    return { issuedCount: issuedInvoices.length, invoices: issuedInvoices }
+    return {
+      issuedCount: issuedInvoices.length,
+      invoices: await new BillingDisplayResolver(event).enrichInvoices(issuedInvoices),
+    }
   },
 
   /**
@@ -170,10 +181,15 @@ export const InvoiceService = {
       entity_id: invoiceId,
       before_data: invoice,
       after_data: voided,
-      metadata: { reason: input.reason },
+      metadata: {
+        reason: input.reason,
+        total_amount: invoice.totalAmount,
+        contract_id: invoice.contractId,
+      },
     })
 
-    return voided
+    const [enriched] = await new BillingDisplayResolver(event).enrichInvoices([voided])
+    return enriched ?? voided
   },
 
   /**
@@ -248,10 +264,14 @@ export const InvoiceService = {
       metadata: {
         replacement_for_invoice_id: voided.id,
         contract_id: voided.contractId,
+        old_total_amount: voided.totalAmount,
+        new_total_amount: invoice.totalAmount,
+        void_reason: voided.voidReason,
       },
     })
 
-    return invoice
+    const [enriched] = await new BillingDisplayResolver(event).enrichInvoices([invoice])
+    return enriched ?? invoice
   },
 
   /**
@@ -346,6 +366,7 @@ export const InvoiceService = {
       },
     })
 
-    return { invoice: updated, charge }
+    const [enriched] = await new BillingDisplayResolver(event).enrichInvoices([updated])
+    return { invoice: enriched ?? updated, charge }
   },
 }

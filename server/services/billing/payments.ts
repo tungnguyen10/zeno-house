@@ -8,11 +8,13 @@ import { InvoicePaymentRepository } from '../../repositories/billing/payments'
 import { BillingPeriodRepository } from '../../repositories/billing/periods'
 import { BillingAuditService } from './audit'
 import { BillingPeriodService } from './periods'
+import { BillingDisplayResolver } from './display'
 
 export const InvoicePaymentService = {
   async list(event: H3Event, user: AuthUser, invoiceId: string): Promise<InvoicePayment[]> {
     if (!can(user, 'billing.read')) throwForbidden('Không có quyền xem khoản thu')
-    return InvoicePaymentRepository.listByInvoice(event, invoiceId)
+    const payments = await InvoicePaymentRepository.listByInvoice(event, invoiceId)
+    return new BillingDisplayResolver(event).enrichPayments(payments)
   },
 
   /**
@@ -85,6 +87,12 @@ export const InvoicePaymentService = {
       },
     })
 
-    return { payment, invoice: updatedInvoice }
+    const resolver = new BillingDisplayResolver(event)
+    const [enrichedPayment] = await resolver.enrichPayments([payment])
+    const [enrichedInvoice] = await resolver.enrichInvoices([updatedInvoice])
+    return {
+      payment: enrichedPayment ?? payment,
+      invoice: enrichedInvoice ?? updatedInvoice,
+    }
   },
 }

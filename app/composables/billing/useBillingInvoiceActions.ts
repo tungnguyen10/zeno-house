@@ -16,6 +16,20 @@ import type {
  * reissue, add adjustment, record payment.
  */
 export function useBillingInvoiceActions() {
+  function createAdjustmentPayload(input: {
+    label: string
+    amount: number
+    reason?: string | null
+    referenceInvoiceId?: string | null
+  }): Omit<AdjustmentChargeInput, 'target_invoice_id'> {
+    return {
+      label: input.label,
+      amount: Math.trunc(input.amount),
+      reason: input.reason?.trim() || input.label,
+      reference_invoice_id: input.referenceInvoiceId ?? null,
+    }
+  }
+
   async function load(invoiceId: string): Promise<InvoiceWithCharges> {
     const resp = await $fetch<ApiSuccess<InvoiceWithCharges>>(`/api/billing/invoices/${invoiceId}`)
     return resp.data
@@ -59,6 +73,7 @@ export function useBillingInvoiceActions() {
   }
 
   return {
+    createAdjustmentPayload,
     load,
     voidInvoice,
     reissue,

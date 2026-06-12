@@ -25,13 +25,18 @@ const props = defineProps<{
 
 defineEmits<{
   (e: 'refresh'): void
+  (e: 'intent:adjustment', payload: { invoiceId: string; amount: number; label: string }): void
+  (e: 'intent:void-reissue', payload: { invoiceId: string }): void
 }>()
 
 // ---------------------------------------------------------------------------
 // Period editability
 // ---------------------------------------------------------------------------
 
-const periodEditable = computed(() => props.period?.status !== 'closed')
+const periodEditable = computed(() => {
+  const status = props.period?.status
+  return status !== 'issued' && status !== 'collecting' && status !== 'closed'
+})
 
 // ---------------------------------------------------------------------------
 // Toolbar state
@@ -190,13 +195,6 @@ function previousReadingHint(cell: BillingDraftGridUtilityCell | null): string {
 // Toolbar actions
 // ---------------------------------------------------------------------------
 
-function applyBatchDateToEmpty() {
-  // Empty rows pick up the batch date at save time via saveAll(). This button
-  // exists so the user has an explicit confirmation surface; no client state
-  // needs to mutate before save because the date is read just-in-time.
-  // Intentionally a no-op visual confirmation.
-}
-
 async function saveAll() {
   if (!periodEditable.value) return
   if (!props.period) return
@@ -238,36 +236,157 @@ async function saveAll() {
 // Override modal
 // ---------------------------------------------------------------------------
 
+type OverrideReason = 'normal' | 'replacement' | 'reset' | 'correction' | 'manual_adjustment'
+
+interface MeterFormState {
+  enabled: boolean
+  previousReadingId: string | null
+  previousValue: string
+  currentReadingId: string | null
+  currentValue: string
+  oldMeterFinal: string
+  newMeterStart: string
+  billableUsage: string
+  reason: OverrideReason
+  note: string
+}
+
+function emptyMeterForm(): MeterFormState {
+  return {
+    enabled: false,
+    previousReadingId: null,
+    previousValue: '',
+    currentReadingId: null,
+    currentValue: '',
+    oldMeterFinal: '',
+    newMeterStart: '',
+    billableUsage: '',
+    reason: 'replacement',
+    note: '',
+  }
+}
+
 const overrideOpen = ref(false)
 const overrideRow = ref<BillingDraftGridRow | null>(null)
-const overrideMeterType = ref<MeterType>('electricity')
-const overridePreviousReadingId = ref<string | null>(null)
-const overridePreviousValue = ref<string>('')
-const overrideCurrentReadingId = ref<string | null>(null)
-const overrideCurrentValue = ref<string>('')
-const overrideOldMeterFinal = ref<string>('')
-const overrideNewMeterStart = ref<string>('')
-const overrideBillableUsage = ref<string>('')
-const overrideReason = ref<'normal' | 'replacement' | 'reset' | 'correction' | 'manual_adjustment'>('replacement')
-const overrideNote = ref<string>('')
+const overrideElectricity = ref<MeterFormState>(emptyMeterForm())
+const overrideWater = ref<MeterFormState>(emptyMeterForm())
 const overrideError = ref<string | null>(null)
 const overrideSaving = ref(false)
 
-function openOverrideModal(row: BillingDraftGridRow, type: MeterType) {
-  if (!row.editable) return
+function toNum(v: string): number | null {
+  if (v.trim() === '') return null
+  const n = Number(v)
+  return Number.isFinite(n) ? n : null
+}
+
+interface BillableResult { value: number | null; missing: string[] }
+
+function computeBillable(form: MeterFormState): BillableResult {
+  const prev = toNum(form.previousValue)
+  const curr = toNum(form.currentValue)
+  const oldFinal = toNum(form.oldMeterFinal)
+  const newStart = toNum(form.newMeterStart)
+  const reason = form.reason
+  const missing: string[] = []
+
+  if (reason === 'manual_adjustment') return { value: null, missing: [] }
+
+  if (prev === null) missing.push('Chỉ số kỳ trước')
+  if (curr === null) missing.push('Chỉ số kỳ này')
+
+  if (reason === 'replacement') {
+    if (oldFinal === null) missing.push('Số cuối đồng hồ cũ')
+    if (newStart === null) missing.push('Số đầu đồng hồ mới')
+    if (missing.length > 0) return { value: null, missing }
+    return { value: (oldFinal! - prev!) + (curr! - newStart!), missing: [] }
+  }
+  if (reason === 'reset') {
+    if (oldFinal === null) missing.push('Số cuối đồng hồ cũ (trước khi nhảy về 0)')
+    if (missing.length > 0) return { value: null, missing }
+    return { value: (oldFinal! - prev!) + curr!, missing: [] }
+  }
+  if (missing.length > 0) return { value: null, missing }
+  return { value: curr! - prev!, missing: [] }
+}
+
+const electricityBillable = computed(() => computeBillable(overrideElectricity.value))
+const waterBillable = computed(() => computeBillable(overrideWater.value))
+
+watch(electricityBillable, (next) => {
+  const f = overrideElectricity.value
+  if (f.reason === 'manual_adjustment') return
+  f.billableUsage = next.value !== null ? String(next.value) : ''
+})
+
+watch(waterBillable, (next) => {
+  const f = overrideWater.value
+  if (f.reason === 'manual_adjustment') return
+  f.billableUsage = next.value !== null ? String(next.value) : ''
+})
+
+watch(() => overrideElectricity.value.reason, (r, prev) => {
+  const f = overrideElectricity.value
+  if (r !== 'replacement' && r !== 'reset') f.oldMeterFinal = ''
+  if (r !== 'replacement') f.newMeterStart = ''
+  if (r === 'manual_adjustment') return
+  if (prev === 'manual_adjustment') {
+    const next = electricityBillable.value
+    f.billableUsage = next.value !== null ? String(next.value) : ''
+  }
+})
+
+watch(() => overrideWater.value.reason, (r, prev) => {
+  const f = overrideWater.value
+  if (r !== 'replacement' && r !== 'reset') f.oldMeterFinal = ''
+  if (r !== 'replacement') f.newMeterStart = ''
+  if (r === 'manual_adjustment') return
+  if (prev === 'manual_adjustment') {
+    const next = waterBillable.value
+    f.billableUsage = next.value !== null ? String(next.value) : ''
+  }
+})
+
+function populateMeterForm(row: BillingDraftGridRow, type: MeterType): MeterFormState {
   const cell = type === 'electricity' ? row.electricity : row.water
-  if (!cell) return
+  const form = emptyMeterForm()
+  if (!cell) return form
+  form.previousReadingId = cell.previousReadingId
+  form.previousValue = cell.previousValue !== null ? String(cell.previousValue) : ''
+  form.currentReadingId = cell.currentReadingId
+  form.currentValue = cell.currentValue !== null ? String(cell.currentValue) : ''
+  form.billableUsage = cell.usage !== null ? String(Math.max(cell.usage, 0)) : ''
+  return form
+}
+
+const electricityRequired = computed(() => !!overrideRow.value?.electricity?.required)
+const waterRequired = computed(() => !!overrideRow.value?.water?.required)
+
+function openOverrideModal(row: BillingDraftGridRow, type?: MeterType) {
+  if (!row.editable) return
+  const hasElec = !!row.electricity?.required
+  const hasWater = !!row.water?.required
+  if (!hasElec && !hasWater) return
   overrideRow.value = row
-  overrideMeterType.value = type
-  overridePreviousReadingId.value = cell.previousReadingId
-  overridePreviousValue.value = cell.previousValue !== null ? String(cell.previousValue) : ''
-  overrideCurrentReadingId.value = cell.currentReadingId
-  overrideCurrentValue.value = cell.currentValue !== null ? String(cell.currentValue) : ''
-  overrideOldMeterFinal.value = ''
-  overrideNewMeterStart.value = ''
-  overrideBillableUsage.value = cell.usage !== null ? String(Math.max(cell.usage, 0)) : ''
-  overrideReason.value = 'replacement'
-  overrideNote.value = ''
+  if (hasElec) {
+    overrideElectricity.value = populateMeterForm(row, 'electricity')
+    overrideElectricity.value.enabled = type ? type === 'electricity' : !hasWater || true
+  } else {
+    overrideElectricity.value = emptyMeterForm()
+  }
+  if (hasWater) {
+    overrideWater.value = populateMeterForm(row, 'water')
+    overrideWater.value.enabled = type ? type === 'water' : !hasElec || true
+  } else {
+    overrideWater.value = emptyMeterForm()
+  }
+  // If a specific type was requested, leave only that one enabled by default;
+  // otherwise enable both when both are required so the user can adjust together.
+  if (type === 'electricity') overrideWater.value.enabled = false
+  if (type === 'water') overrideElectricity.value.enabled = false
+  if (!type) {
+    if (hasElec) overrideElectricity.value.enabled = true
+    if (hasWater) overrideWater.value.enabled = true
+  }
   overrideError.value = null
   overrideOpen.value = true
 }
@@ -277,41 +396,61 @@ function closeOverrideModal() {
   overrideRow.value = null
 }
 
+function validateForm(form: MeterFormState, label: string): string | null {
+  const billable = Number(form.billableUsage)
+  const prev = Number(form.previousValue)
+  const curr = Number(form.currentValue)
+  if (!Number.isFinite(billable) || billable < 0) return `${label}: tiêu thụ tính tiền phải >= 0`
+  if (!Number.isFinite(prev) || !Number.isFinite(curr)) return `${label}: giá trị chỉ số không hợp lệ`
+  if (form.reason !== 'normal' && form.note.trim().length === 0) return `${label}: cần ghi rõ lý do điều chỉnh`
+  return null
+}
+
+function buildOverridePayload(form: MeterFormState, type: MeterType): UtilityUsageOverrideInput {
+  const oldFinal = form.oldMeterFinal.trim()
+  const newStart = form.newMeterStart.trim()
+  return {
+    room_id: overrideRow.value!.roomId,
+    meter_type: type,
+    previous_reading_id: form.previousReadingId,
+    previous_reading_value: Number(form.previousValue),
+    current_reading_id: form.currentReadingId,
+    current_reading_value: Number(form.currentValue),
+    old_meter_final_value: oldFinal === '' ? null : Number(oldFinal),
+    new_meter_start_value: newStart === '' ? null : Number(newStart),
+    billable_usage: Number(form.billableUsage),
+    reason: form.reason,
+    note: form.note.trim() === '' ? null : form.note.trim(),
+  }
+}
+
 async function submitOverride() {
   if (!overrideRow.value) return
-  const billable = Number(overrideBillableUsage.value)
-  const prev = Number(overridePreviousValue.value)
-  const curr = Number(overrideCurrentValue.value)
-  if (!Number.isFinite(billable) || billable < 0) {
-    overrideError.value = 'Tiêu thụ tính tiền phải >= 0'
+  const elec = overrideElectricity.value
+  const water = overrideWater.value
+  const tasks: Array<{ payload: UtilityUsageOverrideInput }> = []
+
+  if (electricityRequired.value && elec.enabled) {
+    const err = validateForm(elec, 'Điện')
+    if (err) { overrideError.value = err; return }
+    tasks.push({ payload: buildOverridePayload(elec, 'electricity') })
+  }
+  if (waterRequired.value && water.enabled) {
+    const err = validateForm(water, 'Nước')
+    if (err) { overrideError.value = err; return }
+    tasks.push({ payload: buildOverridePayload(water, 'water') })
+  }
+  if (tasks.length === 0) {
+    overrideError.value = 'Hãy bật ít nhất một loại đồng hồ để điều chỉnh'
     return
   }
-  if (!Number.isFinite(prev) || !Number.isFinite(curr)) {
-    overrideError.value = 'Giá trị chỉ số không hợp lệ'
-    return
-  }
-  if (overrideReason.value !== 'normal' && overrideNote.value.trim().length === 0) {
-    overrideError.value = 'Cần ghi rõ lý do điều chỉnh'
-    return
-  }
+
   overrideError.value = null
   overrideSaving.value = true
   try {
-    const oldFinal = overrideOldMeterFinal.value.trim()
-    const newStart = overrideNewMeterStart.value.trim()
-    await props.onSaveOverride({
-      room_id: overrideRow.value.roomId,
-      meter_type: overrideMeterType.value,
-      previous_reading_id: overridePreviousReadingId.value,
-      previous_reading_value: prev,
-      current_reading_id: overrideCurrentReadingId.value,
-      current_reading_value: curr,
-      old_meter_final_value: oldFinal === '' ? null : Number(oldFinal),
-      new_meter_start_value: newStart === '' ? null : Number(newStart),
-      billable_usage: billable,
-      reason: overrideReason.value,
-      note: overrideNote.value.trim() === '' ? null : overrideNote.value.trim(),
-    })
+    for (const task of tasks) {
+      await props.onSaveOverride(task.payload)
+    }
     closeOverrideModal()
   } catch (e) {
     overrideError.value = e instanceof Error ? e.message : 'Lưu thất bại'
@@ -383,14 +522,6 @@ const lineColumns: UiTableColumn<BillingDraftLine>[] = [
               :disabled="!periodEditable"
             />
           </div>
-          <UiButton
-            variant="ghost"
-            size="sm"
-            :disabled="!periodEditable || !batchReadingDate"
-            @click="applyBatchDateToEmpty"
-          >
-            Áp dụng cho dòng trống
-          </UiButton>
         </div>
         <template #actions>
           <div class="flex flex-wrap items-center gap-2">
@@ -579,20 +710,12 @@ const lineColumns: UiTableColumn<BillingDraftLine>[] = [
         <template #cell-actions="{ row }">
           <div class="flex items-center justify-end gap-1">
             <UiButton
-              v-if="(row as BillingDraftGridRow).electricity && (row as BillingDraftGridRow).electricity!.required && (row as BillingDraftGridRow).editable"
+              v-if="((row as BillingDraftGridRow).electricity?.required || (row as BillingDraftGridRow).water?.required) && (row as BillingDraftGridRow).editable"
               variant="ghost"
               size="sm"
-              @click="openOverrideModal(row as BillingDraftGridRow, 'electricity')"
+              @click="openOverrideModal(row as BillingDraftGridRow)"
             >
-              Điều chỉnh điện
-            </UiButton>
-            <UiButton
-              v-if="(row as BillingDraftGridRow).water && (row as BillingDraftGridRow).water!.required && (row as BillingDraftGridRow).editable"
-              variant="ghost"
-              size="sm"
-              @click="openOverrideModal(row as BillingDraftGridRow, 'water')"
-            >
-              Điều chỉnh nước
+              Điều chỉnh chỉ số
             </UiButton>
           </div>
         </template>
@@ -628,6 +751,14 @@ const lineColumns: UiTableColumn<BillingDraftLine>[] = [
         >
           {{ w.message }}
         </UiAlert>
+
+        <BillingDraftDiscrepancyCallout
+          v-if="period"
+          :draft="row"
+          :period="period"
+          @intent:adjustment="$emit('intent:adjustment', $event)"
+          @intent:void-reissue="$emit('intent:void-reissue', $event)"
+        />
 
         <UiTable
           v-if="row.lines.length > 0"
@@ -675,55 +806,177 @@ const lineColumns: UiTableColumn<BillingDraftLine>[] = [
     </UiSection>
 
     <!-- Override modal -->
-    <UiModal :open="overrideOpen" title="Điều chỉnh tiêu thụ" @close="closeOverrideModal">
-      <div v-if="overrideRow" class="space-y-3">
+    <UiModal :open="overrideOpen" title="Điều chỉnh chỉ số" size="lg" @close="closeOverrideModal">
+      <div v-if="overrideRow" class="space-y-4">
         <p class="text-sm text-muted">
           Phòng <span class="font-semibold text-white">P{{ overrideRow.roomNumber ?? '—' }}</span>
           <span v-if="overrideRow.tenantName"> · {{ overrideRow.tenantName }}</span>
-          · {{ overrideMeterType === 'electricity' ? 'Điện' : 'Nước' }}
         </p>
 
-        <div class="grid grid-cols-2 gap-3">
-          <div class="flex flex-col gap-1">
-            <label for="ovr-prev" class="text-xs text-muted">Chỉ số kỳ trước</label>
-            <UiInput id="ovr-prev" v-model="overridePreviousValue" type="number" />
-          </div>
-          <div class="flex flex-col gap-1">
-            <label for="ovr-curr" class="text-xs text-muted">Chỉ số kỳ này</label>
-            <UiInput id="ovr-curr" v-model="overrideCurrentValue" type="number" />
-          </div>
-          <div class="flex flex-col gap-1">
-            <label for="ovr-old" class="text-xs text-muted">Số cuối đồng hồ cũ</label>
-            <UiInput id="ovr-old" v-model="overrideOldMeterFinal" type="number" />
-          </div>
-          <div class="flex flex-col gap-1">
-            <label for="ovr-new" class="text-xs text-muted">Số đầu đồng hồ mới</label>
-            <UiInput id="ovr-new" v-model="overrideNewMeterStart" type="number" />
-          </div>
-          <div class="flex flex-col gap-1 col-span-2">
-            <label for="ovr-billable" class="text-xs text-muted">Tiêu thụ tính tiền</label>
-            <UiInput id="ovr-billable" v-model="overrideBillableUsage" type="number" />
-          </div>
+        <p v-if="electricityRequired && waterRequired" class="text-xs text-muted">
+          Có thể bật cùng lúc cả hai loại đồng hồ để điều chỉnh trong một thao tác.
+        </p>
+
+        <!-- Electricity panel -->
+        <div
+          v-if="electricityRequired"
+          class="rounded-lg border border-dark-border bg-dark-surface p-3 space-y-3"
+        >
+          <label class="flex items-center gap-2 text-sm font-medium text-white">
+            <input
+              type="checkbox"
+              :checked="overrideElectricity.enabled"
+              class="h-4 w-4 rounded border-dark-border bg-dark-card"
+              @change="overrideElectricity.enabled = ($event.target as HTMLInputElement).checked"
+            >
+            Điều chỉnh đồng hồ điện
+          </label>
+
+          <template v-if="overrideElectricity.enabled">
+            <div class="grid grid-cols-2 gap-3">
+              <div class="flex flex-col gap-1">
+                <label class="text-xs text-muted">Chỉ số kỳ trước</label>
+                <UiInput v-model="overrideElectricity.previousValue" type="number" />
+              </div>
+              <div class="flex flex-col gap-1">
+                <label class="text-xs text-muted">Chỉ số kỳ này</label>
+                <UiInput v-model="overrideElectricity.currentValue" type="number" />
+              </div>
+              <div
+                v-if="overrideElectricity.reason === 'replacement' || overrideElectricity.reason === 'reset'"
+                class="flex flex-col gap-1"
+              >
+                <label class="text-xs text-muted">
+                  {{ overrideElectricity.reason === 'reset' ? 'Số cuối trước khi nhảy về 0' : 'Số cuối đồng hồ cũ' }}
+                </label>
+                <UiInput v-model="overrideElectricity.oldMeterFinal" type="number" />
+              </div>
+              <div
+                v-if="overrideElectricity.reason === 'replacement'"
+                class="flex flex-col gap-1"
+              >
+                <label class="text-xs text-muted">Số đầu đồng hồ mới</label>
+                <UiInput v-model="overrideElectricity.newMeterStart" type="number" />
+              </div>
+              <div class="flex flex-col gap-1 col-span-2">
+                <label class="text-xs text-muted">
+                  Tiêu thụ tính tiền (kWh)
+                  <span v-if="overrideElectricity.reason !== 'manual_adjustment'" class="text-muted">(tự tính)</span>
+                </label>
+                <UiInput
+                  v-model="overrideElectricity.billableUsage"
+                  type="number"
+                  :disabled="overrideElectricity.reason !== 'manual_adjustment'"
+                />
+                <p v-if="overrideElectricity.reason !== 'manual_adjustment' && electricityBillable.missing.length > 0" class="text-xs text-warning">
+                  Cần điền: {{ electricityBillable.missing.join(', ') }}
+                </p>
+                <p v-else-if="overrideElectricity.reason !== 'manual_adjustment' && electricityBillable.value !== null && electricityBillable.value < 0" class="text-xs text-error-vivid">
+                  Kết quả âm ({{ electricityBillable.value }}) — kiểm tra lại các chỉ số.
+                </p>
+              </div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div class="flex flex-col gap-1">
+                <label class="text-xs text-muted">Lý do</label>
+                <UiSelect
+                  v-model="overrideElectricity.reason"
+                  :options="[
+                    { value: 'replacement', label: 'Thay đồng hồ' },
+                    { value: 'reset', label: 'Đồng hồ nhảy về 0' },
+                    { value: 'correction', label: 'Đính chính chỉ số sai' },
+                    { value: 'manual_adjustment', label: 'Điều chỉnh thủ công' },
+                    { value: 'normal', label: 'Bình thường' },
+                  ]"
+                />
+              </div>
+              <div class="flex flex-col gap-1">
+                <label class="text-xs text-muted">Ghi chú</label>
+                <UiInput v-model="overrideElectricity.note" />
+              </div>
+            </div>
+          </template>
         </div>
 
-        <div class="flex flex-col gap-1">
-          <label for="ovr-reason" class="text-xs text-muted">Lý do</label>
-          <UiSelect
-            id="ovr-reason"
-            v-model="overrideReason"
-            :options="[
-              { value: 'replacement', label: 'Thay đồng hồ' },
-              { value: 'reset', label: 'Đồng hồ nhảy về 0' },
-              { value: 'correction', label: 'Đính chính chỉ số sai' },
-              { value: 'manual_adjustment', label: 'Điều chỉnh thủ công' },
-              { value: 'normal', label: 'Bình thường' },
-            ]"
-          />
-        </div>
+        <!-- Water panel -->
+        <div
+          v-if="waterRequired"
+          class="rounded-lg border border-dark-border bg-dark-surface p-3 space-y-3"
+        >
+          <label class="flex items-center gap-2 text-sm font-medium text-white">
+            <input
+              type="checkbox"
+              :checked="overrideWater.enabled"
+              class="h-4 w-4 rounded border-dark-border bg-dark-card"
+              @change="overrideWater.enabled = ($event.target as HTMLInputElement).checked"
+            >
+            Điều chỉnh đồng hồ nước
+          </label>
 
-        <div class="flex flex-col gap-1">
-          <label for="ovr-note" class="text-xs text-muted">Ghi chú</label>
-          <UiTextarea id="ovr-note" v-model="overrideNote" :rows="3" />
+          <template v-if="overrideWater.enabled">
+            <div class="grid grid-cols-2 gap-3">
+              <div class="flex flex-col gap-1">
+                <label class="text-xs text-muted">Chỉ số kỳ trước</label>
+                <UiInput v-model="overrideWater.previousValue" type="number" />
+              </div>
+              <div class="flex flex-col gap-1">
+                <label class="text-xs text-muted">Chỉ số kỳ này</label>
+                <UiInput v-model="overrideWater.currentValue" type="number" />
+              </div>
+              <div
+                v-if="overrideWater.reason === 'replacement' || overrideWater.reason === 'reset'"
+                class="flex flex-col gap-1"
+              >
+                <label class="text-xs text-muted">
+                  {{ overrideWater.reason === 'reset' ? 'Số cuối trước khi nhảy về 0' : 'Số cuối đồng hồ cũ' }}
+                </label>
+                <UiInput v-model="overrideWater.oldMeterFinal" type="number" />
+              </div>
+              <div
+                v-if="overrideWater.reason === 'replacement'"
+                class="flex flex-col gap-1"
+              >
+                <label class="text-xs text-muted">Số đầu đồng hồ mới</label>
+                <UiInput v-model="overrideWater.newMeterStart" type="number" />
+              </div>
+              <div class="flex flex-col gap-1 col-span-2">
+                <label class="text-xs text-muted">
+                  Tiêu thụ tính tiền (m³)
+                  <span v-if="overrideWater.reason !== 'manual_adjustment'" class="text-muted">(tự tính)</span>
+                </label>
+                <UiInput
+                  v-model="overrideWater.billableUsage"
+                  type="number"
+                  :disabled="overrideWater.reason !== 'manual_adjustment'"
+                />
+                <p v-if="overrideWater.reason !== 'manual_adjustment' && waterBillable.missing.length > 0" class="text-xs text-warning">
+                  Cần điền: {{ waterBillable.missing.join(', ') }}
+                </p>
+                <p v-else-if="overrideWater.reason !== 'manual_adjustment' && waterBillable.value !== null && waterBillable.value < 0" class="text-xs text-error-vivid">
+                  Kết quả âm ({{ waterBillable.value }}) — kiểm tra lại các chỉ số.
+                </p>
+              </div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div class="flex flex-col gap-1">
+                <label class="text-xs text-muted">Lý do</label>
+                <UiSelect
+                  v-model="overrideWater.reason"
+                  :options="[
+                    { value: 'replacement', label: 'Thay đồng hồ' },
+                    { value: 'reset', label: 'Đồng hồ nhảy về 0' },
+                    { value: 'correction', label: 'Đính chính chỉ số sai' },
+                    { value: 'manual_adjustment', label: 'Điều chỉnh thủ công' },
+                    { value: 'normal', label: 'Bình thường' },
+                  ]"
+                />
+              </div>
+              <div class="flex flex-col gap-1">
+                <label class="text-xs text-muted">Ghi chú</label>
+                <UiInput v-model="overrideWater.note" />
+              </div>
+            </div>
+          </template>
         </div>
 
         <UiAlert v-if="overrideError" severity="danger" :title="'Lỗi'">
