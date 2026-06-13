@@ -1,3 +1,7 @@
+## Implementation Note
+
+The initial implementation enforces the measured seeded service-test baseline in `vitest.config.ts`: branches 25%, functions 28%, lines 36%, statements 32%. The 70%+ billing service coverage target remains a follow-up target after more service-level tests are added. CI enforces the current gate with `npm run test:coverage`.
+
 ## Context
 
 Repo Nuxt 4 + TS strict + Pinia + Supabase đã tồn tại nhưng chưa có test framework. Lý do trước đây: focus vào delivery foundation (auth, buildings, rooms, tenants, contracts, billing) trong v0.1 và v0.2. Bây giờ billing đã đủ phức tạp (rule rent, discount, điện 4 mode, nước 3 mode, handover fallback, override merge, blocker, adjustment, status transitions) nên không thể tiếp tục phụ thuộc vào smoke test bằng tay.

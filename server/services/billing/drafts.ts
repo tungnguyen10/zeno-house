@@ -16,6 +16,7 @@ import {
 import { BillingPeriodRepository } from '../../repositories/billing/periods'
 import { InvoiceRepository } from '../../repositories/billing/invoices'
 import { BillingUtilityUsageRepository } from '../../repositories/billing/utility-usages'
+import { calculateProratedRent } from './rules'
 
 // ---------------------------------------------------------------------------
 // Types describing the source rows we load. Kept local to this service so the
@@ -281,15 +282,26 @@ export const BillingDraftService = {
       }
 
       // 1) Rent
+      const rent = calculateProratedRent({
+        monthlyRent: contract.monthly_rent,
+        periodYear: period.periodYear,
+        periodMonth: period.periodMonth,
+        startDate: contract.start_date,
+        endDate: contract.end_date,
+      })
       lines.push({
         chargeType: 'rent',
         label: 'Tiền phòng',
         sourceType: 'contract',
         sourceId: contract.id,
-        quantity: 1,
+        quantity: rent.billableDays / rent.periodDays,
         unitPrice: contract.monthly_rent,
-        amount: contract.monthly_rent,
-        metadata: { monthly_rent: contract.monthly_rent },
+        amount: rent.amount,
+        metadata: {
+          monthly_rent: contract.monthly_rent,
+          billable_days: rent.billableDays,
+          period_days: rent.periodDays,
+        },
         sortOrder: 0,
       })
 
