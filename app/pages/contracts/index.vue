@@ -1,10 +1,23 @@
 <script setup lang="ts">
+import type { Building } from '~/types/buildings'
+import type { ApiSuccess } from '~/types/api'
 import { formatCurrency } from '~/utils/format/currency'
 
 definePageMeta({ title: 'Hợp đồng' })
 
 const authStore = useAuthStore()
-const { contracts, total, totalPages, page, statusFilter, isLoading, error } = useContractList()
+const { contracts, total, totalPages, page, statusFilter, buildingFilter, isLoading, error } = useContractList()
+
+const { data: buildingsData } = await useFetch<ApiSuccess<Building[]> & { meta: { total: number } }>(
+  '/api/buildings',
+  { query: { limit: 100 } },
+)
+const buildingOptions = computed(() =>
+  (buildingsData.value?.data ?? []).map(building => ({
+    value: building.id,
+    label: building.name,
+  })),
+)
 
 const statusOptions = [
   { value: 'active', label: 'Đang hiệu lực' },
@@ -23,13 +36,19 @@ const statusOptions = [
       </template>
     </UiPageHeader>
 
-    <!-- Status filter -->
-    <UiToolbar class="mb-6">
+    <!-- Filters -->
+    <UiToolbar class="mb-6 flex-wrap">
+      <UiSelect
+        v-model="buildingFilter"
+        :options="buildingOptions"
+        placeholder="Tất cả tòa nhà"
+        class="w-full sm:w-64"
+      />
       <UiSelect
         v-model="statusFilter"
         :options="statusOptions"
         placeholder="Tất cả trạng thái"
-        class="w-56"
+        class="w-full sm:w-56"
       />
     </UiToolbar>
 

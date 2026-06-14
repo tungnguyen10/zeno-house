@@ -1,8 +1,22 @@
 <script setup lang="ts">
+import type { Building } from '~/types/buildings'
+import type { ApiSuccess } from '~/types/api'
+
 definePageMeta({ title: 'Khách thuê' })
 
 const authStore = useAuthStore()
-const { tenants, total, totalPages, page, isLoading, error, q } = useTenantList()
+const { tenants, total, totalPages, page, isLoading, error, q, buildingFilter } = useTenantList()
+
+const { data: buildingsData } = await useFetch<ApiSuccess<Building[]> & { meta: { total: number } }>(
+  '/api/buildings',
+  { query: { limit: 100 } },
+)
+const buildingOptions = computed(() =>
+  (buildingsData.value?.data ?? []).map(building => ({
+    value: building.id,
+    label: building.name,
+  })),
+)
 
 const searchInput = ref('')
 let searchTimer: ReturnType<typeof setTimeout> | null = null
@@ -25,8 +39,14 @@ function onSearch() {
       </template>
     </UiPageHeader>
 
-    <!-- Search -->
-    <UiToolbar class="mb-6">
+    <!-- Filters -->
+    <UiToolbar class="mb-6 flex-wrap">
+      <UiSelect
+        v-model="buildingFilter"
+        :options="buildingOptions"
+        placeholder="Tất cả tòa nhà"
+        class="w-full sm:w-64"
+      />
       <UiInput
         v-model="searchInput"
         type="text"
@@ -69,6 +89,7 @@ function onSearch() {
       >
         <div>
           <p class="text-sm font-medium text-white">{{ tenant.fullName }}</p>
+          <p class="text-xs text-muted mt-0.5">Tạo {{ new Date(tenant.createdAt).toLocaleDateString('vi-VN') }}</p>
           <p class="text-xs text-muted mt-0.5">{{ tenant.phone }}{{ tenant.idNumber ? ` · CMND/CCCD: ${tenant.idNumber}` : '' }}</p>
         </div>
         <span class="text-muted text-xs">›</span>

@@ -6,6 +6,7 @@ import { mapTenant } from '~/utils/mappers/tenants'
 
 export interface TenantFilters {
   q?: string
+  building_id?: string
   page?: number
   limit?: number
   available?: boolean
@@ -28,6 +29,36 @@ export const TenantRepository = {
       .select('*', { count: 'exact' })
       .order('full_name', { ascending: true })
       .range(from, to)
+
+    if (filters.building_id) {
+      const { data: contracts, error: contractError } = await client
+        .from('contracts')
+        .select('id, tenant_id')
+        .eq('building_id', filters.building_id)
+
+      if (contractError) throw createError({ statusCode: 500, message: contractError.message })
+
+      const contractIds = (contracts ?? []).map(contract => contract.id)
+      const primaryTenantIds = (contracts ?? []).map(contract => contract.tenant_id)
+      let occupantTenantIds: string[] = []
+
+      if (contractIds.length > 0) {
+        const { data: occupants, error: occupantError } = await client
+          .from('contract_occupants')
+          .select('tenant_id')
+          .in('contract_id', contractIds)
+
+        if (occupantError) throw createError({ statusCode: 500, message: occupantError.message })
+        occupantTenantIds = (occupants ?? []).map(occupant => occupant.tenant_id)
+      }
+
+      const tenantIds = [...new Set([...primaryTenantIds, ...occupantTenantIds])]
+      if (tenantIds.length === 0) {
+        return { items: [], total: 0 }
+      }
+
+      query = query.in('id', tenantIds)
+    }
 
     if (filters.q) {
       query = query.or(`full_name.ilike.%${filters.q}%,phone.ilike.%${filters.q}%`)

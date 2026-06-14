@@ -3,16 +3,17 @@ import type { ApiSuccess } from '~/types/api'
 
 export function useContractList() {
   const statusFilter = ref<string | undefined>(undefined)
+  const buildingFilter = ref<string | undefined>(undefined)
   const page = ref(1)
   const limit = 20
 
-  watch([statusFilter], () => { page.value = 1 })
+  watch([statusFilter, buildingFilter], () => { page.value = 1 })
 
   const { data, status: fetchStatus, error, refresh } = useFetch<
     ApiSuccess<ContractWithDetails[]> & { meta: { total: number; page: number; limit: number; totalPages: number } }
   >('/api/contracts', {
-    query: { status: statusFilter, page, limit },
-    watch: [statusFilter, page],
+    query: { status: statusFilter, building_id: buildingFilter, page, limit },
+    watch: [statusFilter, buildingFilter, page],
   })
 
   const contracts = computed(() => data.value?.data ?? [])
@@ -26,6 +27,7 @@ export function useContractList() {
     totalPages,
     page,
     statusFilter,
+    buildingFilter,
     isLoading,
     error,
     refresh,

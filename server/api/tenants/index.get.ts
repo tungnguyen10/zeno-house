@@ -9,6 +9,7 @@ export default defineEventHandler(async (event) => {
 
   const filters = {
     q: query.q ? String(query.q) : undefined,
+    building_id: query.building_id ? String(query.building_id) : undefined,
     page,
     limit,
     available: query.available === 'true',

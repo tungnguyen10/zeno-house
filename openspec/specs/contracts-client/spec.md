@@ -5,7 +5,7 @@ Client-side UI for managing contracts. List page with status filter, detail page
 ## Requirements
 
 ### Requirement: Contract list page
-`/contracts` page SHALL display all contracts in a list. Supports filter by status (dropdown: all / active / expired / terminated). Shows loading skeleton and empty state. Admin sees create button. Includes pagination (prev/next) when `totalPages > 1`. Each row/card shows: room number + building name, tenant full_name, start_date, end_date, monthly_rent, status badge.
+`/contracts` page SHALL display all contracts in a list. Supports filter by building and status (dropdown: all / active / expired / terminated). When no building is selected, the page SHALL list contracts from all buildings. Shows loading skeleton and empty state. Admin sees create button. Includes pagination (prev/next) when `totalPages > 1`. Each row/card shows: room number + building name, tenant full_name, start_date, end_date, monthly_rent, status badge.
 
 #### Scenario: List loads
 - **WHEN** admin navigates to /contracts
@@ -14,6 +14,14 @@ Client-side UI for managing contracts. List page with status filter, detail page
 #### Scenario: Filter by status
 - **WHEN** admin selects 'active' from the status filter
 - **THEN** list updates to show only active contracts
+
+#### Scenario: Filter by building
+- **WHEN** admin selects a building in the contracts toolbar
+- **THEN** list updates to show only contracts for that building
+
+#### Scenario: Clear building filter
+- **WHEN** admin clears the selected building
+- **THEN** list updates to show contracts from all buildings
 
 #### Scenario: Empty state
 - **WHEN** no contracts exist or no contracts match filter
@@ -85,10 +93,10 @@ On submit: contract is created first. If pending occupants exist, adds are fired
 - **THEN** redirected to /contracts
 
 ### Requirement: Contract composables
-`useContractList` SHALL expose: `contracts`, `total`, `totalPages`, `page`, `statusFilter`, `isLoading`, `error`, `refresh`. Reset `page` to 1 when `statusFilter` changes. `useContractDetail(id)` SHALL mirror `useBuildingDetail` pattern with reactive id ref. `useContractForm` SHALL handle create/edit with Zod client-side validation matching server rules.
+`useContractList` SHALL expose: `contracts`, `total`, `totalPages`, `page`, `statusFilter`, `buildingFilter`, `isLoading`, `error`, `refresh`. Reset `page` to 1 when `statusFilter` or `buildingFilter` changes. `useContractDetail(id)` SHALL mirror `useBuildingDetail` pattern with reactive id ref. `useContractForm` SHALL handle create/edit with Zod client-side validation matching server rules.
 
-#### Scenario: Status filter resets pagination
-- **WHEN** user changes status filter
+#### Scenario: Filters reset pagination
+- **WHEN** user changes status or building filter
 - **THEN** page resets to 1 automatically
 
 #### Scenario: useContractDetail reactive id
