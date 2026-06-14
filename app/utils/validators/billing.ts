@@ -11,7 +11,7 @@ import {
 // ---------------------------------------------------------------------------
 
 export const billingPeriodListQuerySchema = z.object({
-  building_id: z.string().uuid().optional(),
+  building_id: z.string().min(1).optional(),
   period_year: z.coerce.number().int().min(2000).max(2100).optional(),
   period_month: z.coerce.number().int().min(1).max(12).optional(),
   status: z.enum(BILLING_PERIOD_STATUSES).optional(),
@@ -20,7 +20,7 @@ export const billingPeriodListQuerySchema = z.object({
 export type BillingPeriodListQuery = z.infer<typeof billingPeriodListQuerySchema>
 
 export const billingPeriodOpenSchema = z.object({
-  building_id: z.string().uuid(),
+  building_id: z.string().min(1),
   period_year: z.coerce.number().int().min(2000).max(2100),
   period_month: z.coerce.number().int().min(1).max(12),
 })

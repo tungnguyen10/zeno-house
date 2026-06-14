@@ -13,6 +13,15 @@ export interface Tenant {
   emergencyContactPhone: string | null
   permanentAddress: string | null
   notes: string | null
+  hasActiveContract?: boolean
+  activeAssignment?: {
+    contractId: string
+    roomId: string
+    roomNumber: string
+    buildingId: string
+    buildingName: string
+    buildingSlug: string | null
+  } | null
   createdAt: string
   updatedAt: string
 }

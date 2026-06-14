@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { Building } from '~/types/buildings'
 import type { ApiSuccess } from '~/types/api'
+import { buildingPath, roomPath } from '~/utils/routes/operational'
 
 definePageMeta({ title: 'Phòng' })
 
@@ -91,7 +92,7 @@ const statusOptions = [
             </span>
           </div>
           <NuxtLink
-            :to="`/buildings/${building.id}`"
+            :to="buildingPath(building)"
             class="text-xs text-muted hover:text-cyan transition-colors"
           >
             Xem tòa nhà →
@@ -101,7 +102,7 @@ const statusOptions = [
           <NuxtLink
             v-for="room in roomsByBuilding[building.id]"
             :key="room.id"
-            :to="`/rooms/${room.id}`"
+            :to="roomPath({ id: room.id, roomNumber: room.roomNumber, building })"
           >
             <RoomCard :room="room" />
           </NuxtLink>

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { Building } from '~/types/buildings'
+import { buildingPath } from '~/utils/routes/operational'
 
 defineProps<{
   building: Building
@@ -8,7 +9,7 @@ defineProps<{
 
 <template>
   <NuxtLink
-    :to="`/buildings/${building.id}`"
+    :to="buildingPath(building)"
     class="block rounded-xl border border-dark-border bg-dark-surface p-5 hover:border-cyan/40 hover:bg-dark-hover transition-colors"
   >
     <div class="flex items-start justify-between gap-3 mb-3">
@@ -24,5 +25,11 @@ defineProps<{
       </svg>
       <span>{{ building.totalRooms }} phòng</span>
     </div>
+    <p class="mt-3 truncate text-xs text-muted">
+      {{ building.serviceSummary.activeCount }} dịch vụ
+      <template v-if="building.serviceSummary.activeNames.length">
+        · {{ building.serviceSummary.activeNames.slice(0, 3).join(' · ') }}
+      </template>
+    </p>
   </NuxtLink>
 </template>

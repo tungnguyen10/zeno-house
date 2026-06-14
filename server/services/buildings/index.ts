@@ -16,7 +16,7 @@ export const BuildingService = {
 
   async get(event: H3Event, user: AuthUser, id: string): Promise<Building> {
     if (!can(user, 'buildings.read')) throwForbidden('Không có quyền xem tòa nhà')
-    const building = await BuildingRepository.findById(event, id)
+    const building = await BuildingRepository.findByIdentifier(event, id)
     if (!building) throwNotFound('Không tìm thấy tòa nhà')
     return building
   },
@@ -37,15 +37,15 @@ export const BuildingService = {
     input: BuildingUpdateInput,
   ): Promise<Building> {
     if (!can(user, 'buildings.update')) throwForbidden('Không có quyền cập nhật tòa nhà')
-    const existing = await BuildingRepository.findById(event, id)
+    const existing = await BuildingRepository.findByIdentifier(event, id)
     if (!existing) throwNotFound('Không tìm thấy tòa nhà')
-    return BuildingRepository.update(event, id, input)
+    return BuildingRepository.update(event, existing.id, input)
   },
 
   async remove(event: H3Event, user: AuthUser, id: string): Promise<void> {
     if (!can(user, 'buildings.delete')) throwForbidden('Không có quyền xoá tòa nhà')
-    const existing = await BuildingRepository.findById(event, id)
+    const existing = await BuildingRepository.findByIdentifier(event, id)
     if (!existing) throwNotFound('Không tìm thấy tòa nhà')
-    return BuildingRepository.remove(event, id)
+    return BuildingRepository.remove(event, existing.id)
   },
 }

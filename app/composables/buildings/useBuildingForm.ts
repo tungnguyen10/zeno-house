@@ -2,6 +2,7 @@ import type { Building } from '~/types/buildings'
 import type { ApiSuccess } from '~/types/api'
 import { buildingCreateSchema, buildingUpdateSchema } from '~/utils/validators/buildings'
 import type { BuildingCreateInput, BuildingUpdateInput } from '~/utils/validators/buildings'
+import { buildingPath } from '~/utils/routes/operational'
 
 interface QuickRoom {
   room_number: string
@@ -77,11 +78,11 @@ export function useBuildingForm() {
 
     isLoading.value = true
     try {
-      await $fetch<ApiSuccess<Building>>(`/api/buildings/${id}`, {
+      const res = await $fetch<ApiSuccess<Building>>(`/api/buildings/${id}`, {
         method: 'PATCH',
         body: result.data,
       })
-      await navigateTo(`/buildings/${id}`)
+      await navigateTo(buildingPath(res.data))
     }
     catch (e: unknown) {
       const err = e as { data?: { error?: { message?: string } } }

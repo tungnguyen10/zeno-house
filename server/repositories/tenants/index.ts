@@ -7,10 +7,71 @@ import { mapTenant } from '~/utils/mappers/tenants'
 export interface TenantFilters {
   q?: string
   building_id?: string
+  contract_state?: 'with_contract' | 'without_contract'
   page?: number
   limit?: number
   available?: boolean
   excludeContractId?: string
+}
+
+interface TenantAssignment {
+  contractId: string
+  roomId: string
+  roomNumber: string
+  buildingId: string
+  buildingName: string
+  buildingSlug: string | null
+}
+
+async function loadActiveAssignments(event: H3Event): Promise<Map<string, TenantAssignment>> {
+  const client = await serverSupabaseClient(event)
+  const { data: contracts, error: contractError } = await client
+    .from('contracts')
+    .select('id, tenant_id, room_id, building_id, rooms(room_number, buildings(name, slug))')
+    .eq('status', 'active')
+
+  if (contractError) throw createError({ statusCode: 500, message: contractError.message })
+
+  const assignments = new Map<string, TenantAssignment>()
+  const activeContracts = contracts ?? []
+  for (const contract of activeContracts) {
+    const room = contract.rooms as { room_number?: string | null; buildings?: { name?: string | null; slug?: string | null } | null } | null
+    assignments.set(contract.tenant_id, {
+      contractId: contract.id,
+      roomId: contract.room_id,
+      roomNumber: room?.room_number ?? '',
+      buildingId: contract.building_id,
+      buildingName: room?.buildings?.name ?? '',
+      buildingSlug: room?.buildings?.slug ?? null,
+    })
+  }
+
+  if (activeContracts.length === 0) return assignments
+
+  const { data: occupants, error: occupantError } = await client
+    .from('contract_occupants')
+    .select('tenant_id, contract_id')
+    .is('move_out_date', null)
+    .in('contract_id', activeContracts.map(contract => contract.id))
+
+  if (occupantError) throw createError({ statusCode: 500, message: occupantError.message })
+
+  const contractById = new Map(activeContracts.map(contract => [contract.id, contract]))
+  for (const occupant of occupants ?? []) {
+    const contract = contractById.get(occupant.contract_id)
+    if (!contract || assignments.has(occupant.tenant_id)) continue
+    const room = contract.rooms as { room_number?: string | null; buildings?: { name?: string | null; slug?: string | null } | null } | null
+    assignments.set(occupant.tenant_id, {
+      contractId: contract.id,
+      roomId: contract.room_id,
+      roomNumber: room?.room_number ?? '',
+      buildingId: contract.building_id,
+      buildingName: room?.buildings?.name ?? '',
+      buildingSlug: room?.buildings?.slug ?? null,
+    })
+  }
+
+  return assignments
 }
 
 export const TenantRepository = {
@@ -29,6 +90,9 @@ export const TenantRepository = {
       .select('*', { count: 'exact' })
       .order('full_name', { ascending: true })
       .range(from, to)
+
+    const activeAssignments = await loadActiveAssignments(event)
+    const occupiedIds = [...activeAssignments.keys()]
 
     if (filters.building_id) {
       const { data: contracts, error: contractError } = await client
@@ -64,6 +128,14 @@ export const TenantRepository = {
       query = query.or(`full_name.ilike.%${filters.q}%,phone.ilike.%${filters.q}%`)
     }
 
+    if (filters.contract_state === 'with_contract') {
+      if (occupiedIds.length === 0) return { items: [], total: 0 }
+      query = query.in('id', occupiedIds)
+    }
+    else if (filters.contract_state === 'without_contract' && occupiedIds.length > 0) {
+      query = query.not('id', 'in', `(${occupiedIds.join(',')})`)
+    }
+
     if (filters.available) {
       // Exclude tenants who are primary on another active contract
       let primaryQuery = client.from('contracts').select('tenant_id').eq('status', 'active')
@@ -85,7 +157,18 @@ export const TenantRepository = {
 
     const { data, error, count } = await query
     if (error) throw createError({ statusCode: 500, message: error.message })
-    return { items: (data ?? []).map(mapTenant), total: count ?? 0 }
+    return {
+      items: (data ?? []).map((row) => {
+        const tenant = mapTenant(row)
+        const activeAssignment = activeAssignments.get(tenant.id) ?? null
+        return {
+          ...tenant,
+          hasActiveContract: Boolean(activeAssignment),
+          activeAssignment,
+        }
+      }),
+      total: count ?? 0,
+    }
   },
 
   async findById(event: H3Event, id: string): Promise<Tenant | null> {

@@ -1,9 +1,12 @@
 <script setup lang="ts">
+import { buildingEditPath, buildingSettingsPath } from '~/utils/routes/operational'
+
 const route = useRoute()
 const authStore = useAuthStore()
 const id = route.params.id as string
 
 const { building, isLoading, error } = useBuildingDetail(id)
+const { services: buildingServices, isLoading: loadingServices, updateService: updateBuildingService, refresh: refreshBuildingServices } = useBuildingServices(id)
 
 watchEffect(() => {
   if (error.value?.statusCode === 404) navigateTo('/buildings')
@@ -11,6 +14,7 @@ watchEffect(() => {
 
 const showDeleteModal = ref(false)
 const isDeleting = ref(false)
+const togglingServiceId = ref<string | null>(null)
 
 async function confirmDelete() {
   isDeleting.value = true
@@ -21,6 +25,17 @@ async function confirmDelete() {
   finally {
     isDeleting.value = false
     showDeleteModal.value = false
+  }
+}
+
+async function toggleBuildingService(serviceId: string, isActive: boolean) {
+  togglingServiceId.value = serviceId
+  try {
+    await updateBuildingService(serviceId, { is_active: !isActive })
+    await refreshBuildingServices()
+  }
+  finally {
+    togglingServiceId.value = null
   }
 }
 
@@ -48,18 +63,11 @@ async function confirmDelete() {
           <UiButton
             variant="secondary"
             size="sm"
-            @click="navigateTo(`/billing?building=${id}`)"
-          >
-            Vận hành tháng {{ new Date().getMonth() + 1 }}
-          </UiButton>
-          <UiButton
-            variant="secondary"
-            size="sm"
-            @click="navigateTo(`/buildings/${id}/settings`)"
+            @click="navigateTo(buildingSettingsPath(building))"
           >
             Dịch vụ
           </UiButton>
-          <NuxtLink :to="`/buildings/${building.id}/edit`">
+          <NuxtLink :to="buildingEditPath(building)">
             <UiButton variant="secondary" size="sm">Chỉnh sửa</UiButton>
           </NuxtLink>
           <UiButton variant="danger" size="sm" @click="showDeleteModal = true">Xoá</UiButton>
@@ -134,6 +142,50 @@ async function confirmDelete() {
           </div>
         </div>
       </div>
+
+      <UiSection title="Dịch vụ" class="mt-4">
+        <template #actions>
+          <UiButton
+            variant="secondary"
+            size="sm"
+            @click="navigateTo(buildingSettingsPath(building))"
+          >
+            Quản lý dịch vụ
+          </UiButton>
+        </template>
+        <div class="rounded-xl border border-dark-border bg-dark-surface p-4">
+          <div v-if="loadingServices" class="space-y-2">
+            <UiSkeleton v-for="n in 3" :key="n" class="h-10 rounded-lg" />
+          </div>
+          <div v-else-if="buildingServices.length === 0" class="text-sm text-muted">
+            Chưa cấu hình dịch vụ.
+          </div>
+          <div v-else class="divide-y divide-dark-border">
+            <div
+              v-for="service in buildingServices"
+              :key="service.id"
+              class="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0"
+            >
+              <div class="min-w-0">
+                <p class="text-sm font-medium text-white truncate">{{ service.catalog.name }}</p>
+                <p class="text-xs text-muted">
+                  {{ service.defaultAmount.toLocaleString('vi-VN') }}đ · {{ service.pricingType }}
+                </p>
+              </div>
+              <UiToggle
+                v-if="authStore.isAdmin"
+                :model-value="service.isActive"
+                :aria-label="`${service.isActive ? 'Tắt' : 'Bật'} ${service.catalog.name}`"
+                :disabled="togglingServiceId === service.id"
+                @update:model-value="toggleBuildingService(service.id, service.isActive)"
+              />
+              <UiBadge v-else :variant="service.isActive ? 'success' : 'neutral'">
+                {{ service.isActive ? 'Bật' : 'Tắt' }}
+              </UiBadge>
+            </div>
+          </div>
+        </div>
+      </UiSection>
 
       <!-- Schedule -->
       <div

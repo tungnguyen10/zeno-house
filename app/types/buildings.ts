@@ -10,13 +10,21 @@ export interface ServiceFeeDefault {
   enabled: boolean
 }
 
+export interface BuildingServiceSummary {
+  totalCount: number
+  activeCount: number
+  activeNames: string[]
+}
+
 export interface Building {
   id: string
+  slug: string
   name: string
   address: string
   description: string | null
   status: BuildingStatus
   totalRooms: number
+  serviceSummary: BuildingServiceSummary
   // Operational config
   ownerName: string | null
   ownerPhone: string | null
@@ -35,6 +43,7 @@ export interface Building {
 
 export interface BuildingInput {
   name: string
+  slug?: string
   address: string
   description?: string | null
   status?: BuildingStatus

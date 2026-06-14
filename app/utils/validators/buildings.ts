@@ -12,6 +12,7 @@ export const serviceFeeDefaultSchema = z.object({
 
 export const buildingCreateSchema = z.object({
   name: z.string().min(2, 'Tên tòa nhà phải có ít nhất 2 ký tự').max(100, 'Tên quá dài'),
+  slug: z.string().min(2).max(120).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).optional(),
   address: z.string().min(5, 'Địa chỉ phải có ít nhất 5 ký tự').max(200, 'Địa chỉ quá dài'),
   description: z.string().max(500, 'Mô tả quá dài').nullable().optional(),
   status: z.enum(['active', 'inactive']).optional().default('active'),

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { BuildingFormData } from '~/components/buildings/BuildingForm.vue'
+import { buildingPath } from '~/utils/routes/operational'
 
 const route = useRoute()
 const id = route.params.id as string
@@ -78,7 +79,7 @@ async function onSubmit(data: BuildingFormData) {
 <template>
   <div class="max-w-3xl">
     <UiPageHeader title="Chỉnh sửa tòa nhà">
-      <NuxtLink :to="`/buildings/${id}`" class="text-sm text-muted hover:text-white transition-colors">
+      <NuxtLink :to="building ? buildingPath(building) : `/buildings/${id}`" class="text-sm text-muted hover:text-white transition-colors">
         ← {{ building?.name ?? 'Chi tiết tòa nhà' }}
       </NuxtLink>
     </UiPageHeader>
@@ -93,7 +94,7 @@ async function onSubmit(data: BuildingFormData) {
         :loading="isLoading"
         :errors="errors"
         @submit="onSubmit"
-        @cancel="navigateTo(`/buildings/${id}`)"
+        @cancel="navigateTo(building ? buildingPath(building) : `/buildings/${id}`)"
       />
     </div>
   </div>

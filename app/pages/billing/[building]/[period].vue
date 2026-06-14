@@ -10,7 +10,7 @@ import BillingCloseStep from '~/components/billing/BillingCloseStep.vue'
 import BillingUnissueModal from '~/components/billing/BillingUnissueModal.vue'
 import type { Building } from '~/types/buildings'
 import type { ApiSuccess } from '~/types/api'
-import { isUuid, slugifyName } from '~/utils/format/slug'
+import { isUuid } from '~/utils/format/slug'
 
 definePageMeta({ title: 'Kỳ vận hành' })
 
@@ -33,7 +33,7 @@ const resolving = ref(true)
 async function resolveBuildingId(): Promise<string> {
   if (isUuid(buildingParam)) return buildingParam
   const resp = await $fetch<ApiSuccess<Building[]>>('/api/buildings', { query: { limit: 200 } })
-  const match = resp.data.find(b => slugifyName(b.name) === buildingParam)
+  const match = resp.data.find(b => b.slug === buildingParam)
   if (!match) throw createError({ statusCode: 404, statusMessage: 'Không tìm thấy tòa nhà' })
   return match.id
 }

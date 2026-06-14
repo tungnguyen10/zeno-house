@@ -3,6 +3,7 @@ import type { H3Event } from 'h3'
 import type { Room } from '~/types/rooms'
 import type { RoomCreateInput, RoomUpdateInput } from '~/utils/validators/rooms'
 import { mapRoom } from '~/utils/mappers/rooms'
+import { slugifyName } from '~/utils/format/slug'
 
 export interface RoomFilters {
   buildingId?: string
@@ -50,6 +51,22 @@ export const RoomRepository = {
 
     if (error) throw createError({ statusCode: 500, message: error.message })
     return data ? mapRoom(data) : null
+  },
+
+  async findByBuildingAndRoomSlug(
+    event: H3Event,
+    buildingId: string,
+    roomSlug: string,
+  ): Promise<Room | null> {
+    const client = await serverSupabaseClient(event)
+    const { data, error } = await client
+      .from('rooms')
+      .select('*')
+      .eq('building_id', buildingId)
+
+    if (error) throw createError({ statusCode: 500, message: error.message })
+    const row = (data ?? []).find(room => slugifyName(room.room_number) === roomSlug)
+    return row ? mapRoom(row) : null
   },
 
   async insert(event: H3Event, input: RoomCreateInput): Promise<Room> {

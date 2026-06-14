@@ -2,6 +2,7 @@
 import type { ContractWithDetails } from '~/types/contracts'
 import type { ApiSuccess } from '~/types/api'
 import { formatCurrency } from '~/utils/format/currency'
+import { contractPath } from '~/utils/routes/operational'
 
 definePageMeta({ title: 'Chi tiết khách thuê' })
 
@@ -164,7 +165,7 @@ watchEffect(() => {
             <NuxtLink
               v-for="contract in tenantContracts"
               :key="contract.id"
-              :to="`/contracts/${contract.id}`"
+              :to="contractPath(contract)"
               class="flex items-center justify-between rounded-lg border border-dark-border px-3 py-2 hover:border-cyan/40 transition-colors"
             >
               <div>

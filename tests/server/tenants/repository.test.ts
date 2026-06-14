@@ -29,6 +29,8 @@ interface ContractRow {
   id: string
   building_id: string
   tenant_id: string
+  status?: string
+  room_id?: string
 }
 
 interface ContractOccupantRow {
@@ -91,6 +93,10 @@ function createClientMock(input: {
       return this
     }
 
+    is() {
+      return this
+    }
+
     in(column: string, values: string[]) {
       this.inValues.set(column, values)
       return this
@@ -118,6 +124,8 @@ function createClientMock(input: {
         let rows = [...input.contracts]
         const buildingId = this.equals.get('building_id')
         if (buildingId) rows = rows.filter(row => row.building_id === buildingId)
+        const status = this.equals.get('status')
+        if (status) rows = rows.filter(row => row.status === status)
         return { data: rows, error: null, count: rows.length }
       }
 
@@ -163,8 +171,8 @@ describe('TenantRepository.findAll', () => {
         buildTenant({ id: 'other-1', full_name: 'Cuong Le', phone: '0901000003' }),
       ],
       contracts: [
-        { id: 'contract-1', building_id: 'building-1', tenant_id: 'primary-1' },
-        { id: 'contract-2', building_id: 'building-2', tenant_id: 'other-1' },
+        { id: 'contract-1', building_id: 'building-1', tenant_id: 'primary-1', status: 'active', room_id: 'room-1' },
+        { id: 'contract-2', building_id: 'building-2', tenant_id: 'other-1', status: 'active', room_id: 'room-2' },
       ],
       occupants: [
         { contract_id: 'contract-1', tenant_id: 'occupant-1' },
@@ -186,7 +194,7 @@ describe('TenantRepository.findAll', () => {
         buildTenant({ id: 'occupant-1', full_name: 'An Tran', phone: '0912000002' }),
       ],
       contracts: [
-        { id: 'contract-1', building_id: 'building-1', tenant_id: 'primary-1' },
+        { id: 'contract-1', building_id: 'building-1', tenant_id: 'primary-1', status: 'active', room_id: 'room-1' },
       ],
       occupants: [
         { contract_id: 'contract-1', tenant_id: 'occupant-1' },

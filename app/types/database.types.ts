@@ -262,6 +262,7 @@ export type Database = {
           owner_name: string | null
           owner_phone: string | null
           payment_due_day: number | null
+          slug: string
           status: string
           updated_at: string
           water_pricing_type: string
@@ -282,6 +283,7 @@ export type Database = {
           owner_name?: string | null
           owner_phone?: string | null
           payment_due_day?: number | null
+          slug?: string
           status?: string
           updated_at?: string
           water_pricing_type?: string
@@ -302,6 +304,7 @@ export type Database = {
           owner_name?: string | null
           owner_phone?: string | null
           payment_due_day?: number | null
+          slug?: string
           status?: string
           updated_at?: string
           water_pricing_type?: string

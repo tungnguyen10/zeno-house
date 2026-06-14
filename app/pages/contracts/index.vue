@@ -2,6 +2,7 @@
 import type { Building } from '~/types/buildings'
 import type { ApiSuccess } from '~/types/api'
 import { formatCurrency } from '~/utils/format/currency'
+import { contractPath } from '~/utils/routes/operational'
 
 definePageMeta({ title: 'Hợp đồng' })
 
@@ -80,7 +81,7 @@ const statusOptions = [
       <NuxtLink
         v-for="contract in contracts"
         :key="contract.id"
-        :to="`/contracts/${contract.id}`"
+        :to="contractPath(contract)"
         class="flex items-center justify-between px-4 py-3 rounded-xl bg-dark-surface border border-dark-border hover:border-cyan/40 transition-colors"
       >
         <div class="min-w-0">

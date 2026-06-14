@@ -2,6 +2,7 @@
 import type { ApiSuccess } from '~/types/api'
 import type { PricingType, ServiceCatalogItem } from '~/types/service-catalog'
 import type { ContractWithDetails } from '~/types/contracts'
+import { buildingPath } from '~/utils/routes/operational'
 
 const route = useRoute()
 const id = route.params.id as string
@@ -78,7 +79,7 @@ async function handleUpdatePricingType(catalogId: string, pricingType: PricingTy
 <template>
   <div>
     <UiPageHeader title="Cài đặt dịch vụ">
-      <NuxtLink :to="`/buildings/${id}`" class="text-sm text-muted hover:text-white transition-colors">
+      <NuxtLink :to="building ? buildingPath(building) : `/buildings/${id}`" class="text-sm text-muted hover:text-white transition-colors">
         ← {{ building?.name ?? 'Tòa nhà' }}
       </NuxtLink>
     </UiPageHeader>

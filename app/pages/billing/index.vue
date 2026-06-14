@@ -3,7 +3,7 @@ import type { UiTableColumn } from '~/components/ui/UiTable.vue'
 import type { BillingPeriodSummary } from '~/types/billing'
 import { BILLING_PERIOD_STATUSES } from '~/utils/constants/billing'
 import { formatCurrency } from '~/utils/format/currency'
-import { slugifyName } from '~/utils/format/slug'
+import { billingWorkspacePath } from '~/utils/routes/operational'
 
 definePageMeta({ title: 'Vận hành tháng' })
 
@@ -122,8 +122,7 @@ async function submitOpenPeriod() {
     })
     showOpenModal.value = false
     const building = buildings.value.find(b => b.id === period.buildingId)
-    const buildingSegment = building ? slugifyName(building.name) : period.buildingId
-    await navigateTo(`/billing/${buildingSegment}/${period.periodYear}-${String(period.periodMonth).padStart(2, '0')}`)
+    await navigateTo(billingWorkspacePath(building ?? { id: period.buildingId }, period.periodYear, period.periodMonth))
   } catch (err) {
     const e = err as { data?: { error?: { message?: string } }; statusMessage?: string }
     openError.value = e.data?.error?.message ?? e.statusMessage ?? 'Không thể mở kỳ vận hành'
@@ -133,8 +132,11 @@ async function submitOpenPeriod() {
 }
 
 function gotoWorkspace(row: BillingPeriodSummary) {
-  const segment = row.buildingName ? slugifyName(row.buildingName) : row.buildingId
-  router.push(`/billing/${segment}/${row.period.periodYear}-${String(row.period.periodMonth).padStart(2, '0')}`)
+  router.push(billingWorkspacePath(
+    { id: row.buildingId, slug: row.buildingSlug, name: row.buildingName },
+    row.period.periodYear,
+    row.period.periodMonth,
+  ))
 }
 
 function readingProgress(row: BillingPeriodSummary): string {

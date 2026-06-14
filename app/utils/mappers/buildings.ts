@@ -6,11 +6,17 @@ export type BuildingRow = Tables<'buildings'> & { rooms: [{ count: number }] }
 export function mapBuilding(row: BuildingRow): Building {
   return {
     id: row.id,
+    slug: row.slug,
     name: row.name,
     address: row.address,
     description: row.description,
     status: row.status as BuildingStatus,
     totalRooms: row.rooms[0]?.count ?? 0,
+    serviceSummary: {
+      totalCount: 0,
+      activeCount: 0,
+      activeNames: [],
+    },
     ownerName: row.owner_name,
     ownerPhone: row.owner_phone,
     ownerEmail: row.owner_email,

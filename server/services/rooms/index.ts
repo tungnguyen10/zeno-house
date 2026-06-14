@@ -3,6 +3,7 @@ import type { AuthUser } from '~/types/auth'
 import type { Room } from '~/types/rooms'
 import type { RoomCreateInput, RoomUpdateInput } from '~/utils/validators/rooms'
 import { RoomRepository, type RoomFilters } from '../../repositories/rooms'
+import { BuildingRepository } from '../../repositories/buildings'
 
 export const RoomService = {
   async list(
@@ -17,6 +18,20 @@ export const RoomService = {
   async get(event: H3Event, user: AuthUser, id: string): Promise<Room> {
     if (!can(user, 'rooms.read')) throwForbidden('Không có quyền xem phòng')
     const room = await RoomRepository.findById(event, id)
+    if (!room) throwNotFound('Không tìm thấy phòng')
+    return room
+  },
+
+  async getByBuildingAndRoomSlug(
+    event: H3Event,
+    user: AuthUser,
+    buildingIdentifier: string,
+    roomSlug: string,
+  ): Promise<Room> {
+    if (!can(user, 'rooms.read')) throwForbidden('Không có quyền xem phòng')
+    const building = await BuildingRepository.findByIdentifier(event, buildingIdentifier)
+    if (!building) throwNotFound('Không tìm thấy tòa nhà')
+    const room = await RoomRepository.findByBuildingAndRoomSlug(event, building.id, roomSlug)
     if (!room) throwNotFound('Không tìm thấy phòng')
     return room
   },

@@ -128,6 +128,7 @@ export interface BillingAuditEvent {
 export interface BillingPeriodSummary {
   period: BillingPeriod
   buildingId: string
+  buildingSlug?: string | null
   buildingName: string | null
   contractCount: number
   invoiceCount: number
@@ -149,6 +150,7 @@ export interface BillingPeriodListFilters {
 export interface BillingWorkspaceOverview {
   period: BillingPeriod
   buildingId: string
+  buildingSlug?: string | null
   buildingName: string | null
   contractCount: number
   invoiceCount: number

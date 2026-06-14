@@ -15,12 +15,14 @@ import type {
 import { BillingPeriodRepository } from '../../repositories/billing/periods'
 import { InvoiceRepository } from '../../repositories/billing/invoices'
 import { InvoicePaymentRepository } from '../../repositories/billing/payments'
+import { BuildingRepository } from '../../repositories/buildings'
 import { assertReason } from '../../utils/billing/reason'
 import { BillingAuditService } from './audit'
 import { assertPeriodCanTransition } from './rules'
 
 interface BuildingLite {
   id: string
+  slug: string | null
   name: string | null
   defaultElectricityRate: number | null
   defaultWaterRate: number | null
@@ -31,7 +33,7 @@ async function loadBuildingsByIds(event: H3Event, ids: string[]): Promise<Map<st
   const supabase = await serverSupabaseClient(event)
   const { data, error } = await supabase
     .from('buildings')
-    .select('id, name, default_electricity_rate, default_water_rate')
+    .select('id, slug, name, default_electricity_rate, default_water_rate')
     .in('id', ids)
   if (error) throw createError({ statusCode: 500, message: error.message })
   return new Map(
@@ -39,6 +41,7 @@ async function loadBuildingsByIds(event: H3Event, ids: string[]): Promise<Map<st
       b.id,
       {
         id: b.id,
+        slug: b.slug ?? null,
         name: b.name ?? null,
         defaultElectricityRate: b.default_electricity_rate === null ? null : Number(b.default_electricity_rate),
         defaultWaterRate: b.default_water_rate === null ? null : Number(b.default_water_rate),
@@ -107,8 +110,15 @@ export const BillingPeriodService = {
   ): Promise<BillingPeriodSummary[]> {
     if (!can(user, 'billing.read')) throwForbidden('Không có quyền xem kỳ vận hành')
 
+    let buildingId = filters.building_id
+    if (buildingId) {
+      const building = await BuildingRepository.findByIdentifier(event, buildingId)
+      if (!building) throwNotFound('Không tìm thấy tòa nhà')
+      buildingId = building.id
+    }
+
     const repoFilters: BillingPeriodListFilters = {
-      building_id: filters.building_id,
+      building_id: buildingId,
       period_year: filters.period_year,
       period_month: filters.period_month,
       status: filters.status,
@@ -144,6 +154,7 @@ export const BillingPeriodService = {
       summaries.push({
         period,
         buildingId: period.buildingId,
+        buildingSlug: building?.slug ?? null,
         buildingName: building?.name ?? null,
         contractCount,
         invoiceCount: activeInvoices.length,
@@ -172,16 +183,19 @@ export const BillingPeriodService = {
   ): Promise<BillingPeriod> {
     if (!can(user, 'billing.write')) throwForbidden('Không có quyền tạo kỳ vận hành')
 
+    const building = await BuildingRepository.findByIdentifier(event, input.building_id)
+    if (!building) throwNotFound('Không tìm thấy tòa nhà')
+
     const existing = await BillingPeriodRepository.findByBuildingPeriod(
       event,
-      input.building_id,
+      building.id,
       input.period_year,
       input.period_month,
     )
     if (existing) return existing
 
     const created = await BillingPeriodRepository.insert(event, {
-      building_id: input.building_id,
+      building_id: building.id,
       period_year: input.period_year,
       period_month: input.period_month,
       opened_by: user.id ?? null,

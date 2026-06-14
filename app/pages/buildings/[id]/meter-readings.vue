@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { buildingPath } from '~/utils/routes/operational'
+
 definePageMeta({ title: 'Nhập chỉ số đồng hồ' })
 
 const route = useRoute()
@@ -31,7 +33,7 @@ async function onSave(readings: Parameters<typeof saveBulk>[0]) {
 <template>
   <div>
     <UiPageHeader title="Nhập chỉ số đồng hồ">
-      <NuxtLink :to="`/buildings/${id}`" class="text-sm text-muted hover:text-white transition-colors">
+      <NuxtLink :to="building ? buildingPath(building) : `/buildings/${id}`" class="text-sm text-muted hover:text-white transition-colors">
         ← {{ building?.name ?? 'Tòa nhà' }}
       </NuxtLink>
     </UiPageHeader>

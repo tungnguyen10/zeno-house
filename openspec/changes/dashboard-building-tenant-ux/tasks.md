@@ -1,51 +1,61 @@
 ## 1. Building Slugs and Data Model
 
-- [ ] 1.1 Add a Supabase migration for `buildings.slug`, backfill existing rows, and enforce uniqueness.
-- [ ] 1.2 Update generated/local database types for the new `buildings.slug` column.
-- [ ] 1.3 Add slug generation/collision handling for create and update building flows.
-- [ ] 1.4 Extend building mapper and DTO types with `slug`.
-- [ ] 1.5 Add repository/service support for id-or-slug building lookup.
+- [x] 1.1 Add a Supabase migration for `buildings.slug`, backfill existing rows, and enforce uniqueness.
+- [x] 1.2 Update generated/local database types for the new `buildings.slug` column.
+- [x] 1.3 Add slug generation/collision handling for create and update building flows.
+- [x] 1.4 Extend building mapper and DTO types with `slug`.
+- [x] 1.5 Add repository/service support for id-or-slug building lookup.
 
-## 2. Building Services UX
+## 2. Operational URL Identifiers
 
-- [ ] 2.1 Extend building list/detail API responses with active service summary data.
-- [ ] 2.2 Update `useBuildingList` and `useBuildingDetail` to expose slug and service summary data.
-- [ ] 2.3 Update building cards and detail navigation to prefer `/buildings/<slug>` links.
-- [ ] 2.4 Add building service summary display to building list cards and building detail.
-- [ ] 2.5 Add admin-only fast active/inactive service toggles on building detail.
-- [ ] 2.6 Remove the redundant month-specific operation CTA from building detail.
+- [x] 2.1 Add shared helpers for building paths, scoped room paths, billing workspace paths, and id/code fallback route params.
+- [x] 2.2 Update building-scoped child links to use building slug where available.
+- [x] 2.3 Add room scoped slug support for building room links while keeping UUID room detail routes working.
+- [x] 2.4 Update billing workspace links to prefer `/billing/<buildingSlug>/<YYYY-MM>` and keep UUID building params supported.
+- [x] 2.5 Update contract links to prefer stable contract code/slug when available and fall back to UUID.
+- [x] 2.6 Document and enforce that tenant routes do not use name-derived slugs.
 
-## 3. Tenant Contract State
+## 3. Building Services UX
 
-- [ ] 3.1 Extend tenant API filters with `contract_state=with_contract|without_contract`.
-- [ ] 3.2 Enrich tenant list DTOs with `hasActiveContract` and active room/building summary.
-- [ ] 3.3 Update tenant mapper/types/composable to carry contract-state and active assignment data.
-- [ ] 3.4 Add the contract-state filter control to `/tenants` and reset pagination on changes.
-- [ ] 3.5 Add tenant list badges for "Co HD" and "Chua co HD".
-- [ ] 3.6 Show current room/building context on tenant list rows when available.
+- [x] 3.1 Extend building list/detail API responses with active service summary data.
+- [x] 3.2 Update `useBuildingList` and `useBuildingDetail` to expose slug and service summary data.
+- [x] 3.3 Update building cards and detail navigation to prefer `/buildings/<slug>` links.
+- [x] 3.4 Add building service summary display to building list cards and building detail.
+- [x] 3.5 Add admin-only fast active/inactive service toggles on building detail.
+- [x] 3.6 Remove the redundant month-specific operation CTA from building detail.
 
-## 4. Dashboard API
+## 4. Tenant Contract State
 
-- [ ] 4.1 Expand dashboard summary types with contract, billing, trend, and pending operation sections.
-- [ ] 4.2 Aggregate room status and occupancy-by-building with building slugs.
-- [ ] 4.3 Aggregate active contracts and expiring-soon contracts.
-- [ ] 4.4 Aggregate current-month invoice total, paid amount, outstanding amount, and overdue amount.
-- [ ] 4.5 Aggregate recent monthly paid/outstanding billing trend data.
-- [ ] 4.6 Build pending operation items for missing readings, unissued invoices, and overdue invoices.
+- [x] 4.1 Extend tenant API filters with `contract_state=with_contract|without_contract`.
+- [x] 4.2 Enrich tenant list DTOs with `hasActiveContract` and active room/building summary.
+- [x] 4.3 Update tenant mapper/types/composable to carry contract-state and active assignment data.
+- [x] 4.4 Add the contract-state filter control to `/tenants` and reset pagination on changes.
+- [x] 4.5 Add tenant list badges for "Có HĐ" and "Chưa có HĐ".
+- [x] 4.6 Show current room/building context on tenant list rows when available.
 
-## 5. Dashboard UI
+## 5. Dashboard API
 
-- [ ] 5.1 Replace the basic dashboard card layout with room, contract, and billing KPI groups.
-- [ ] 5.2 Add occupancy-by-building chart using existing operational UI primitives.
-- [ ] 5.3 Add revenue/debt-by-month chart using existing operational UI primitives.
-- [ ] 5.4 Add pending operations table with severity, counts, and workflow links.
-- [ ] 5.5 Add loading and empty states for each dashboard section.
-- [ ] 5.6 Ensure dashboard layout remains dense, readable, and responsive on mobile and desktop.
+- [x] 5.1 Expand dashboard summary types with contract, billing, trend, and pending operation sections.
+- [x] 5.2 Aggregate room status and occupancy-by-building with building slugs.
+- [x] 5.3 Aggregate active contracts and expiring-soon contracts.
+- [x] 5.4 Aggregate current-month invoice total, paid amount, outstanding amount, and overdue amount.
+- [x] 5.5 Aggregate recent monthly paid/outstanding billing trend data.
+- [x] 5.6 Build pending operation items for missing readings, unissued invoices, and overdue invoices.
 
-## 6. Verification
+## 6. Dashboard UI
 
-- [ ] 6.1 Add or update tests for building slug generation and id-or-slug lookup.
-- [ ] 6.2 Add or update tests for tenant contract-state filtering and active assignment enrichment.
-- [ ] 6.3 Add or update tests for dashboard summary aggregate shape and empty-state behavior.
-- [ ] 6.4 Run typecheck and relevant test suites.
-- [ ] 6.5 Manually verify `/`, `/buildings`, building detail slug URLs, and `/tenants` in the browser.
+- [x] 6.1 Replace the basic dashboard card layout with room, contract, and billing KPI groups.
+- [x] 6.2 Add occupancy-by-building chart using existing operational UI primitives.
+- [x] 6.3 Add revenue/debt-by-month chart using existing operational UI primitives.
+- [x] 6.4 Add pending operations table with severity, counts, and workflow links.
+- [x] 6.5 Add loading and empty states for each dashboard section.
+- [x] 6.6 Ensure dashboard layout remains dense, readable, and responsive on mobile and desktop.
+
+## 7. Verification
+
+- [x] 7.1 Add or update tests for building slug generation and id-or-slug lookup.
+- [x] 7.2 Add or update tests for operational URL helper behavior and UUID fallback links.
+- [x] 7.3 Add or update tests for tenant contract-state filtering and active assignment enrichment.
+- [x] 7.4 Add or update tests for dashboard summary aggregate shape and empty-state behavior.
+- [x] 7.5 Run typecheck and relevant test suites.
+- [ ] 7.6 Manually verify `/`, `/buildings`, building detail slug URLs, building-scoped room links, billing workspace links, contract links, and `/tenants` in the browser.

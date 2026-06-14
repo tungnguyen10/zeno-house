@@ -5,7 +5,7 @@ import type { ApiSuccess } from '~/types/api'
 definePageMeta({ title: 'Khách thuê' })
 
 const authStore = useAuthStore()
-const { tenants, total, totalPages, page, isLoading, error, q, buildingFilter } = useTenantList()
+const { tenants, total, totalPages, page, isLoading, error, q, buildingFilter, contractStateFilter } = useTenantList()
 
 const { data: buildingsData } = await useFetch<ApiSuccess<Building[]> & { meta: { total: number } }>(
   '/api/buildings',
@@ -17,6 +17,11 @@ const buildingOptions = computed(() =>
     label: building.name,
   })),
 )
+const contractStateOptions = [
+  { value: '', label: 'Tất cả HĐ' },
+  { value: 'with_contract', label: 'Có HĐ' },
+  { value: 'without_contract', label: 'Chưa có HĐ' },
+]
 
 const searchInput = ref('')
 let searchTimer: ReturnType<typeof setTimeout> | null = null
@@ -46,6 +51,12 @@ function onSearch() {
         :options="buildingOptions"
         placeholder="Tất cả tòa nhà"
         class="w-full sm:w-64"
+      />
+      <UiSelect
+        v-model="contractStateFilter"
+        :options="contractStateOptions"
+        placeholder="Tất cả HĐ"
+        class="w-full sm:w-40"
       />
       <UiInput
         v-model="searchInput"
@@ -93,6 +104,12 @@ function onSearch() {
           <p class="text-xs text-muted mt-0.5">{{ tenant.phone }}{{ tenant.idNumber ? ` · CMND/CCCD: ${tenant.idNumber}` : '' }}</p>
         </div>
         <span class="text-muted text-xs">›</span>
+        <p v-if="tenant.activeAssignment" class="text-xs text-muted">
+          Phòng {{ tenant.activeAssignment.roomNumber }} · {{ tenant.activeAssignment.buildingName }}
+        </p>
+        <UiBadge :variant="tenant.hasActiveContract ? 'success' : 'neutral'" pill>
+          {{ tenant.hasActiveContract ? 'Có HĐ' : 'Chưa có HĐ' }}
+        </UiBadge>
       </NuxtLink>
     </div>
 
