@@ -34,3 +34,48 @@
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* Themed scrollbar — dark surface, subtle by default, brighter on hover.
+   Applied globally so every overflowing region matches the design system
+   instead of falling back to the OS default. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: theme('colors.dark.border') transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: theme('colors.dark.border');
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: theme('colors.dark.hover');
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Hide native number input spinners — we use validation/typing instead. */
+input[type='number']::-webkit-outer-spin-button,
+input[type='number']::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type='number'] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}

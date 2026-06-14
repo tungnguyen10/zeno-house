@@ -233,10 +233,22 @@ Client **khÃ´ng** gá»i Supabase trá»±c tiáº¿p cho business data.
 | Change | Má»¥c tiÃªu | Tráº¡ng thÃ¡i |
 |--------|----------|-----------|
 | `billing-readability-and-polish` | Bỏ UID khỏi cột chính, gom IA 3 tab, drawer audit, header overflow Chốt kỳ, toast, **callout chênh lệch draft↔issued** | ✅ section 1–14 đã code; ✅ all_done 49/49 |
-| `billing-power-features` | Bulk paste chá»‰ sá»‘, bulk thanh toÃ¡n, **há»§y phÃ¡t hÃ nh cáº£ ká»³** (`billing.unissue`), export Excel | â³ chÆ°a báº¯t Ä‘áº§u |
+| `billing-power-features` | Bulk paste chỉ số, bulk thanh toán, **huỷ phát hành cả kỳ** (`billing.unissue`), export Excel | ✅ tất cả 12 section đã code; lint + typecheck + vitest pass |
 | `billing-test-baseline` | Vitest + fixtures + unit/integration cho service & composable billing | baseline test framework seeded |
 
-Má»i change Ä‘á»u `npx openspec validate <id> --strict` pass. Spec sá»‘ng á»Ÿ `openspec/changes/<id>/`.
+Mỗi change đều `npx openspec validate <id> --strict` pass. Spec sống ở `openspec/changes/<id>/`.
+
+### Endpoint billing mới (billing-power-features)
+
+| Method | Path | Permission | Mô tả |
+| --- | --- | --- | --- |
+| POST | `/api/billing/invoices/bulk-payments` | `billing.write` | Ghi thu nhiều hoá đơn cùng method/date/note. Rollback nếu một dòng fail; trả 409 với `details.failed_index`. Audit gộp `payments.bulk_recorded`. |
+| POST | `/api/billing/periods/:id/unissue` | `billing.unissue` | Huỷ phát hành kỳ. Yêu cầu `reason ≥10 ký tự`. Void các hoá đơn chưa thu, giữ lại đã thu, đưa kỳ về `draft` (nếu không còn HĐ giữ) hoặc `collecting`. Audit `period.unissued`. |
+| GET | `/api/billing/periods/:id/export` | `billing.read` | Tải file `.xlsx` 3 sheet (Hoá đơn / Thanh toán / Tổng hợp). Tên file `billing-{slug}-{YYYY-MM}.xlsx`. |
+
+### Capability mới
+
+- `billing.unissue` — chỉ admin. Đăng ký trong `server/utils/permissions.ts`. Bắt buộc đi cùng `assertReason(reason, 10)`.
 
 ### Bug Ä‘Ã£ sá»­a khi smoke-test
 

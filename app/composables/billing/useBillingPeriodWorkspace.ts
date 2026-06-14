@@ -68,6 +68,12 @@ export function useBillingPeriodWorkspace(periodId: MaybeRefOrGetter<string>) {
     try {
       const resp = await $fetch<ApiSuccess<BillingDraftGridResponse>>(`/api/billing/periods/${id.value}/draft-grid`)
       grid.value = resp.data
+      // Merged response includes the workspace overview; sync it so callers
+      // can rely on a single grid fetch instead of two parallel requests.
+      if (resp.data.overview) {
+        overview.value = resp.data.overview
+        period.value = resp.data.overview.period
+      }
     } finally {
       gridLoading.value = false
     }
@@ -79,7 +85,7 @@ export function useBillingPeriodWorkspace(periodId: MaybeRefOrGetter<string>) {
       method: 'POST',
       body: { readings },
     })
-    await Promise.all([loadGrid(), loadOverview()])
+    await loadGrid()
     return resp.data
   }
 
@@ -136,6 +142,28 @@ export function useBillingPeriodWorkspace(periodId: MaybeRefOrGetter<string>) {
     return resp.data
   }
 
+  async function unissue(reason: string): Promise<{ voided: number; retained: number; status: BillingPeriod['status'] }> {
+    if (!id.value) throw new Error('No period id')
+    const resp = await $fetch<ApiSuccess<{ voided: number; retained: number; status: BillingPeriod['status'] }>>(
+      `/api/billing/periods/${id.value}/unissue`,
+      { method: 'POST', body: { reason } },
+    )
+    await Promise.all([loadInvoices(), loadGrid(), loadDrafts(), loadAudit()])
+    return resp.data
+  }
+
+  async function exportXlsx(): Promise<{ blob: Blob; fileName: string }> {
+    if (!id.value) throw new Error('No period id')
+    const response = await $fetch.raw<Blob>(`/api/billing/periods/${id.value}/export`, {
+      responseType: 'blob',
+    })
+    const blob = response._data as Blob
+    const disposition = response.headers.get('content-disposition') ?? ''
+    const match = disposition.match(/filename="?([^";]+)"?/i)
+    const fileName = match?.[1] ?? `billing-${id.value}.xlsx`
+    return { blob, fileName }
+  }
+
   async function saveUtilityOverride(input: UtilityUsageOverrideInput): Promise<BillingUtilityUsage> {
     if (!id.value) throw new Error('No period id')
     const resp = await $fetch<ApiSuccess<BillingUtilityUsage>>(`/api/billing/periods/${id.value}/utility-usages`, {
@@ -169,6 +197,8 @@ export function useBillingPeriodWorkspace(periodId: MaybeRefOrGetter<string>) {
     loadAudit,
     issue,
     close,
+    unissue,
+    exportXlsx,
     saveReadings,
     saveUtilityOverride,
   }

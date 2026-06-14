@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import clsx from 'clsx'
 import type { UiTableColumn } from '~/components/ui/UiTable.vue'
 import type {
@@ -12,6 +12,7 @@ import type {
 import type { MeterReadingBulkInput } from '~/utils/validators/meter-readings'
 import type { UtilityUsageOverrideInput } from '~/utils/validators/billing'
 import { formatCurrency } from '~/utils/format/currency'
+import { parsePastedColumn } from '~/utils/billing/clipboard'
 
 type GridFilter = 'needs_action' | 'all' | 'vacant' | 'errors' | 'ready'
 type MeterType = 'electricity' | 'water'
@@ -48,6 +49,21 @@ const batchReadingDate = ref<string>('')
 const expandedRowKeys = ref<Set<string>>(new Set())
 const localReadings = ref<Record<string, string>>({}) // key = `${roomId}::${meterType}`
 const isSaving = ref(false)
+
+// Per-row auto-save state ----------------------------------------------------
+type RowSaveState = 'idle' | 'saving' | 'saved' | 'error'
+const rowSaveState = ref<Record<string, RowSaveState>>({})
+const rowSaveError = ref<Record<string, string>>({})
+const pasteHighlight = ref<Set<string>>(new Set())
+const rowSaveTimers: Record<string, ReturnType<typeof setTimeout>> = {}
+const rowSavedFlash: Record<string, ReturnType<typeof setTimeout>> = {}
+const AUTO_SAVE_DEBOUNCE_MS = 800
+const PASTE_HIGHLIGHT_MS = 1500
+
+onBeforeUnmount(() => {
+  for (const t of Object.values(rowSaveTimers)) clearTimeout(t)
+  for (const t of Object.values(rowSavedFlash)) clearTimeout(t)
+})
 
 watch(
   () => props.response?.batchReadingDate,
@@ -108,6 +124,85 @@ function readingDraftValue(row: BillingDraftGridRow, type: MeterType): string {
 
 function setReadingDraftValue(row: BillingDraftGridRow, type: MeterType, value: string) {
   localReadings.value[cellKey(row, type)] = value
+  scheduleRowSave(row)
+}
+
+function scheduleRowSave(row: BillingDraftGridRow) {
+  if (!periodEditable.value || !row.editable) return
+  const existing = rowSaveTimers[row.roomId]
+  if (existing) clearTimeout(existing)
+  // Reset transient saved/error markers as the user is editing again.
+  if (rowSaveState.value[row.roomId] === 'saved' || rowSaveState.value[row.roomId] === 'error') {
+    rowSaveState.value[row.roomId] = 'idle'
+    Reflect.deleteProperty(rowSaveError.value, row.roomId)
+  }
+  rowSaveTimers[row.roomId] = setTimeout(() => {
+    void saveRow(row)
+  }, AUTO_SAVE_DEBOUNCE_MS)
+}
+
+function buildRowReadingsPayload(row: BillingDraftGridRow): MeterReadingBulkInput['readings'] {
+  if (!props.period) return []
+  if (!batchReadingDate.value) return []
+  const out: MeterReadingBulkInput['readings'] = []
+  for (const type of ['electricity', 'water'] as MeterType[]) {
+    if (!isCellDirty(row, type)) continue
+    const cell = type === 'electricity' ? row.electricity : row.water
+    if (!cell) continue
+    const localValue = localReadings.value[cellKey(row, type)] ?? ''
+    const trimmed = localValue.trim()
+    if (trimmed === '') continue
+    const numeric = Number(trimmed)
+    if (!Number.isFinite(numeric)) continue
+    out.push({
+      room_id: row.roomId,
+      meter_type: type,
+      period_year: props.period.periodYear,
+      period_month: props.period.periodMonth,
+      reading_type: 'monthly',
+      reading_date: cell.readingDate ?? batchReadingDate.value,
+      reading_value: numeric,
+    })
+  }
+  return out
+}
+
+async function saveRow(row: BillingDraftGridRow) {
+  Reflect.deleteProperty(rowSaveTimers, row.roomId)
+  const payload = buildRowReadingsPayload(row)
+  if (payload.length === 0) {
+    rowSaveState.value[row.roomId] = 'idle'
+    return
+  }
+  rowSaveState.value[row.roomId] = 'saving'
+  Reflect.deleteProperty(rowSaveError.value, row.roomId)
+  try {
+    await props.onSaveReadings(payload)
+    // Clear local drafts for the cells we just persisted; the merged grid
+    // refresh will provide fresh stored values.
+    for (const item of payload) {
+      Reflect.deleteProperty(localReadings.value, `${item.room_id}::${item.meter_type}`)
+    }
+    rowSaveState.value[row.roomId] = 'saved'
+    if (rowSavedFlash[row.roomId]) clearTimeout(rowSavedFlash[row.roomId])
+    rowSavedFlash[row.roomId] = setTimeout(() => {
+      if (rowSaveState.value[row.roomId] === 'saved') {
+        rowSaveState.value[row.roomId] = 'idle'
+      }
+    }, PASTE_HIGHLIGHT_MS)
+  }
+  catch (err) {
+    rowSaveState.value[row.roomId] = 'error'
+    rowSaveError.value[row.roomId] = err instanceof Error ? err.message : 'Lưu thất bại'
+  }
+}
+
+function rowSaveStateOf(row: BillingDraftGridRow): RowSaveState {
+  return rowSaveState.value[row.roomId] ?? 'idle'
+}
+
+function isPasteHighlighted(row: BillingDraftGridRow, type: MeterType): boolean {
+  return pasteHighlight.value.has(cellKey(row, type))
 }
 
 function editableRowsFor(type: MeterType): BillingDraftGridRow[] {
@@ -128,32 +223,63 @@ function focusReadingCell(row: BillingDraftGridRow, type: MeterType) {
 
 function handleReadingTab(event: KeyboardEvent, row: BillingDraftGridRow, type: MeterType) {
   event.preventDefault()
-  if (type === 'electricity' && row.water?.editable) {
-    focusReadingCell(row, 'water')
-    return
+  const direction = event.shiftKey ? -1 : 1
+  if (direction === 1) {
+    if (type === 'electricity' && row.water?.editable) {
+      focusReadingCell(row, 'water')
+      return
+    }
+  }
+  else {
+    if (type === 'water' && row.electricity?.editable) {
+      focusReadingCell(row, 'electricity')
+      return
+    }
   }
   const rows = editableRowsFor(type)
   const currentIndex = rows.findIndex(r => r.key === row.key)
-  const nextRow = rows[currentIndex + 1]
+  const nextRow = rows[currentIndex + direction]
   if (nextRow) focusReadingCell(nextRow, type)
+}
+
+function handleReadingKeydown(event: KeyboardEvent, row: BillingDraftGridRow, type: MeterType) {
+  if (event.key === 'Tab') {
+    handleReadingTab(event, row, type)
+    return
+  }
+  if (event.key === 'Enter') {
+    event.preventDefault()
+    const direction = event.shiftKey ? -1 : 1
+    const rows = editableRowsFor(type)
+    const currentIndex = rows.findIndex(r => r.key === row.key)
+    const nextRow = rows[currentIndex + direction]
+    if (nextRow) focusReadingCell(nextRow, type)
+  }
 }
 
 function handleReadingPaste(event: ClipboardEvent, row: BillingDraftGridRow, type: MeterType) {
   const text = event.clipboardData?.getData('text/plain') ?? ''
-  const values = text
-    .split(/\r?\n/)
-    .flatMap(line => line.split('\t'))
-    .map(value => value.trim())
-    .filter(Boolean)
+  const values = parsePastedColumn(text)
   if (values.length <= 1) return
   event.preventDefault()
   const rows = editableRowsFor(type)
   const startIndex = rows.findIndex(r => r.key === row.key)
   if (startIndex < 0) return
+  const affected: Array<{ row: BillingDraftGridRow; key: string }> = []
   values.forEach((value, offset) => {
     const targetRow = rows[startIndex + offset]
-    if (targetRow) setReadingDraftValue(targetRow, type, value)
+    if (!targetRow) return
+    const key = cellKey(targetRow, type)
+    setReadingDraftValue(targetRow, type, value)
+    affected.push({ row: targetRow, key })
   })
+  // Briefly highlight pasted cells so users see what changed.
+  for (const { key } of affected) pasteHighlight.value.add(key)
+  pasteHighlight.value = new Set(pasteHighlight.value)
+  setTimeout(() => {
+    for (const { key } of affected) pasteHighlight.value.delete(key)
+    pasteHighlight.value = new Set(pasteHighlight.value)
+  }, PASTE_HIGHLIGHT_MS)
 }
 
 function isCellDirty(row: BillingDraftGridRow, type: MeterType): boolean {
@@ -514,12 +640,12 @@ const columns: UiTableColumn<BillingDraftGridRow>[] = [
   { key: 'order', label: 'TT', width: 'w-12' },
   { key: 'expand', label: '', width: 'w-10' },
   { key: 'room', label: 'Phòng' },
-  { key: 'tenant', label: 'Khách thuê', hideOnMobile: true },
-  { key: 'electricity_input', label: 'Số điện mới', numeric: true, hideOnMobile: true, width: 'w-32' },
-  { key: 'water_input', label: 'Số nước mới', numeric: true, hideOnMobile: true, width: 'w-32' },
-  { key: 'electricity_amount', label: 'Tiền điện', numeric: true, hideOnMobile: true, width: 'w-36' },
-  { key: 'water_amount', label: 'Tiền nước', numeric: true, hideOnMobile: true, width: 'w-36' },
-  { key: 'rent_service', label: 'Phòng/Dịch vụ', numeric: true, hideOnMobile: true, width: 'w-36' },
+  { key: 'tenant', label: 'Khách thuê' },
+  { key: 'electricity_input', label: 'Số điện mới', numeric: true, width: 'w-32' },
+  { key: 'water_input', label: 'Số nước mới', numeric: true, width: 'w-32' },
+  { key: 'electricity_amount', label: 'Tiền điện', numeric: true, width: 'w-36' },
+  { key: 'water_amount', label: 'Tiền nước', numeric: true, width: 'w-36' },
+  { key: 'rent_service', label: 'Phòng/Dịch vụ', numeric: true, width: 'w-36' },
   { key: 'draft_total', label: 'Tổng nháp', numeric: true, width: 'w-36' },
   { key: 'status', label: 'Trạng thái', width: 'w-32' },
   { key: 'actions', label: '', action: true, width: 'w-32' },
@@ -592,19 +718,19 @@ const lineColumns: UiTableColumn<BillingDraftLine>[] = [
       >
         <p class="text-sm text-muted">
           <template v-if="dirtyCountValue > 0">
-            Có <span class="font-semibold text-white">{{ dirtyCountValue }}</span> chỉ số chưa lưu.
+            Đang nhập <span class="font-semibold text-white">{{ dirtyCountValue }}</span> chỉ số. Tự động lưu sau khi dừng gõ.
           </template>
           <template v-else>
-            Không có thay đổi chưa lưu.
+            Mọi thay đổi đã được tự động lưu.
           </template>
         </p>
         <UiButton
-          variant="primary"
+          variant="ghost"
           size="sm"
           :disabled="dirtyCountValue === 0 || isSaving"
           @click="saveAll"
         >
-          {{ isSaving ? 'Đang lưu...' : 'Lưu & tính lại' }}
+          {{ isSaving ? 'Đang lưu...' : 'Lưu ngay' }}
         </UiButton>
       </div>
 
@@ -630,6 +756,7 @@ const lineColumns: UiTableColumn<BillingDraftLine>[] = [
         row-key="key"
         :empty-title="'Không có dòng phù hợp với bộ lọc'"
         :empty-description="'Đổi bộ lọc để xem các dòng khác.'"
+        class="hidden md:block"
       >
         <template #cell-order="{ row }">
           <span class="text-xs text-muted">
@@ -680,9 +807,12 @@ const lineColumns: UiTableColumn<BillingDraftLine>[] = [
               :model-value="readingDraftValue(row as BillingDraftGridRow, 'electricity')"
               density="compact"
               class="w-28"
-              :class="clsx(isCellDirty(row as BillingDraftGridRow, 'electricity') && 'ring-2 ring-blue-500')"
+              :class="clsx(
+                isCellDirty(row as BillingDraftGridRow, 'electricity') && 'ring-2 ring-blue-500',
+                isPasteHighlighted(row as BillingDraftGridRow, 'electricity') && 'bg-amber-100/40',
+              )"
               @update:model-value="setReadingDraftValue(row as BillingDraftGridRow, 'electricity', String($event ?? ''))"
-              @keydown.tab="handleReadingTab($event, row as BillingDraftGridRow, 'electricity')"
+              @keydown="handleReadingKeydown($event, row as BillingDraftGridRow, 'electricity')"
               @paste="handleReadingPaste($event, row as BillingDraftGridRow, 'electricity')"
             />
             <span v-else class="text-sm text-white tabular-nums">
@@ -707,9 +837,12 @@ const lineColumns: UiTableColumn<BillingDraftLine>[] = [
               :model-value="readingDraftValue(row as BillingDraftGridRow, 'water')"
               density="compact"
               class="w-28"
-              :class="clsx(isCellDirty(row as BillingDraftGridRow, 'water') && 'ring-2 ring-blue-500')"
+              :class="clsx(
+                isCellDirty(row as BillingDraftGridRow, 'water') && 'ring-2 ring-blue-500',
+                isPasteHighlighted(row as BillingDraftGridRow, 'water') && 'bg-amber-100/40',
+              )"
               @update:model-value="setReadingDraftValue(row as BillingDraftGridRow, 'water', String($event ?? ''))"
-              @keydown.tab="handleReadingTab($event, row as BillingDraftGridRow, 'water')"
+              @keydown="handleReadingKeydown($event, row as BillingDraftGridRow, 'water')"
               @paste="handleReadingPaste($event, row as BillingDraftGridRow, 'water')"
             />
             <span v-else class="text-sm text-white tabular-nums">
@@ -761,7 +894,26 @@ const lineColumns: UiTableColumn<BillingDraftLine>[] = [
         </template>
 
         <template #cell-actions="{ row }">
-          <div class="flex items-center justify-end gap-1">
+          <div class="flex items-center justify-end gap-2">
+            <span
+              v-if="rowSaveStateOf(row as BillingDraftGridRow) === 'saving'"
+              class="text-[11px] text-muted"
+            >
+              Đang lưu…
+            </span>
+            <span
+              v-else-if="rowSaveStateOf(row as BillingDraftGridRow) === 'saved'"
+              class="text-[11px] text-emerald-400"
+            >
+              Đã lưu ✓
+            </span>
+            <span
+              v-else-if="rowSaveStateOf(row as BillingDraftGridRow) === 'error'"
+              class="text-[11px] text-rose-400"
+              :title="rowSaveError[(row as BillingDraftGridRow).roomId]"
+            >
+              Lỗi
+            </span>
             <UiButton
               v-if="((row as BillingDraftGridRow).electricity?.required || (row as BillingDraftGridRow).water?.required) && (row as BillingDraftGridRow).editable"
               variant="ghost"
@@ -773,6 +925,26 @@ const lineColumns: UiTableColumn<BillingDraftLine>[] = [
           </div>
         </template>
       </UiTable>
+
+      <!-- Mobile cards (stacked) -->
+      <div
+        v-if="!loading && response && filteredRows.length > 0"
+        class="md:hidden space-y-2"
+      >
+        <BillingMobileDraftRow
+          v-for="row in filteredRows"
+          :key="row.key"
+          :row="row"
+          :reading-value-of="readingDraftValue"
+          :is-cell-dirty="isCellDirty"
+          :is-paste-highlighted="isPasteHighlighted"
+          :save-state-of="rowSaveStateOf"
+          @update="setReadingDraftValue($event.row, $event.type, $event.value)"
+          @keydown="handleReadingKeydown($event.event, $event.row, $event.type)"
+          @paste="handleReadingPaste($event.event, $event.row, $event.type)"
+          @override="openOverrideModal($event)"
+        />
+      </div>
 
       <!-- Expanded row details -->
       <div

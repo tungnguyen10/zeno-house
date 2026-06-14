@@ -16,6 +16,18 @@ export const InvoicePaymentRepository = {
     return (data ?? []).map(mapInvoicePayment)
   },
 
+  async listByInvoiceIds(event: H3Event, invoiceIds: string[]): Promise<InvoicePayment[]> {
+    if (invoiceIds.length === 0) return []
+    const client = await serverSupabaseClient(event)
+    const { data, error } = await client
+      .from('invoice_payments')
+      .select('*')
+      .in('invoice_id', invoiceIds)
+      .order('paid_at', { ascending: true })
+    if (error) throw createError({ statusCode: 500, message: error.message })
+    return (data ?? []).map(mapInvoicePayment)
+  },
+
   async sumByInvoice(event: H3Event, invoiceId: string): Promise<number> {
     const client = await serverSupabaseClient(event)
     const { data, error } = await client

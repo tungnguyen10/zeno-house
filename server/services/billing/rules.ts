@@ -9,6 +9,7 @@ import {
   BILLING_BLOCKER_CODES,
   BILLING_WARNING_CODES,
 } from '~/utils/constants/billing'
+import { assertReason } from '../../utils/billing/reason'
 
 export interface DraftRulePeriod {
   periodYear: number
@@ -406,7 +407,7 @@ export function validateAdjustment(input: {
   if (input.amount < 0 && Math.abs(input.amount) > input.invoicePaidAmount) {
     throwConflict('Dieu chinh am vuot qua so tien da thu')
   }
-  if (input.amount < 0 && Math.abs(input.amount) >= 100_000 && input.reason.trim().length < 10) {
-    throwValidationError('Ly do dieu chinh am phai co it nhat 10 ky tu')
+  if (input.amount < 0 && Math.abs(input.amount) >= 100_000) {
+    assertReason(input.reason, 10)
   }
 }

@@ -7,6 +7,7 @@ import BillingPaymentsStep from '~/components/billing/BillingPaymentsStep.vue'
 import type { BillingPaymentsIntent } from '~/components/billing/BillingPaymentsStep.vue'
 import BillingAuditStep from '~/components/billing/BillingAuditStep.vue'
 import BillingCloseStep from '~/components/billing/BillingCloseStep.vue'
+import BillingUnissueModal from '~/components/billing/BillingUnissueModal.vue'
 
 definePageMeta({ title: 'Kỳ vận hành' })
 
@@ -68,6 +69,8 @@ const {
   loadAudit,
   issue,
   close,
+  unissue,
+  exportXlsx,
   saveReadings,
   saveUtilityOverride,
 } = workspace
@@ -76,10 +79,21 @@ if (periodId.value) await loadOverview()
 
 const auth = useAuthStore()
 const canClose = computed(() => auth.isAdmin)
+const canUnissue = computed(() => auth.isAdmin)
 const toast = useToast()
-const tab = ref<string>('draft-grid')
+const initialStatus = period.value?.status
+const tab = ref<string>(
+  initialStatus === 'issued' || initialStatus === 'collecting' || initialStatus === 'closed'
+    ? 'payments'
+    : 'draft-grid',
+)
 const auditOpen = ref(false)
 const closeOpen = ref(false)
+const unissueOpen = ref(false)
+const unissueSubmitting = ref(false)
+const unissueError = ref<string | null>(null)
+const exportLoading = ref(false)
+const actionMenuOpen = ref(false)
 const paymentsIntent = ref<BillingPaymentsIntent | null>(null)
 let paymentsIntentId = 0
 
@@ -126,7 +140,7 @@ watch(tab, async (current) => {
     tasks.push(loadDrafts())
     await Promise.all(tasks)
   }
-})
+}, { immediate: true })
 
 watch(auditOpen, async (open) => {
   if (open && auditEvents.value.length === 0) await loadAudit()
@@ -134,6 +148,10 @@ watch(auditOpen, async (open) => {
 
 watch(closeOpen, async (open) => {
   if (open && !drafts.value) await loadDrafts()
+})
+
+watch(unissueOpen, async (open) => {
+  if (open && invoices.value.length === 0) await loadInvoices()
 })
 
 function periodLabel(): string {
@@ -196,6 +214,47 @@ async function reloadAfterInvoiceChange() {
   await Promise.all([loadInvoices(), loadOverview(), loadDrafts(), loadGrid()])
 }
 
+async function unissuePeriodFromModal(reason: string) {
+  unissueSubmitting.value = true
+  unissueError.value = null
+  try {
+    const result = await unissue(reason)
+    toast.success(`Đã huỷ phát hành ${result.voided} hoá đơn — giữ lại ${result.retained} đã thu`)
+    unissueOpen.value = false
+  }
+  catch (err) {
+    const e = err as { data?: { error?: { message?: string } }; message?: string }
+    unissueError.value = e.data?.error?.message ?? e.message ?? 'Huỷ phát hành thất bại'
+    toast.error(unissueError.value)
+  }
+  finally {
+    unissueSubmitting.value = false
+  }
+}
+
+async function exportPeriodXlsx() {
+  exportLoading.value = true
+  try {
+    const { blob, fileName } = await exportXlsx()
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = fileName
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+    toast.success('Đã xuất file Excel')
+  }
+  catch (err) {
+    const e = err as { data?: { error?: { message?: string } }; message?: string }
+    toast.error(e.data?.error?.message ?? e.message ?? 'Xuất Excel thất bại')
+  }
+  finally {
+    exportLoading.value = false
+  }
+}
+
 async function openPaymentsIntent(intent: Omit<BillingPaymentsIntent, 'id'>) {
   if (invoices.value.length === 0) await loadInvoices()
   tab.value = 'payments'
@@ -217,17 +276,60 @@ async function openPaymentsIntent(intent: Omit<BillingPaymentsIntent, 'id'>) {
       >
         <template #actions>
           <UiStatusBadge v-if="period" :status="period.status" context="period" />
-          <UiButton variant="secondary" size="sm" @click="auditOpen = true">Nhật ký</UiButton>
-          <UiButton
-            variant="ghost"
-            size="sm"
-            icon-only
-            aria-label="Thêm hành động"
-            :disabled="!canClose || period?.status === 'closed'"
-            @click="closeOpen = true"
-          >
-            ...
-          </UiButton>
+          <div class="relative">
+            <UiButton
+              variant="ghost"
+              size="sm"
+              icon-only
+              aria-label="Thêm hành động"
+              @click="actionMenuOpen = !actionMenuOpen"
+            >
+              ...
+            </UiButton>
+            <template v-if="actionMenuOpen">
+              <div
+                class="fixed inset-0 z-30"
+                aria-hidden="true"
+                @click="actionMenuOpen = false"
+              />
+              <div
+                class="absolute right-0 z-40 mt-2 w-56 rounded-lg border border-dark-border bg-dark-card py-1 shadow-lg shadow-black/40"
+              >
+                <button
+                  type="button"
+                  class="block w-full px-3 py-2 text-left text-sm text-white hover:bg-dark-surface"
+                  @click="actionMenuOpen = false; auditOpen = true"
+                >
+                  Nhật ký
+                </button>
+                <button
+                  type="button"
+                  class="block w-full px-3 py-2 text-left text-sm text-white hover:bg-dark-surface disabled:cursor-not-allowed disabled:opacity-40"
+                  :disabled="exportLoading"
+                  @click="actionMenuOpen = false; exportPeriodXlsx()"
+                >
+                  {{ exportLoading ? 'Đang xuất…' : 'Xuất Excel' }}
+                </button>
+                <div class="my-1 h-px bg-dark-border" />
+                <button
+                  type="button"
+                  class="block w-full px-3 py-2 text-left text-sm text-white hover:bg-dark-surface disabled:cursor-not-allowed disabled:opacity-40"
+                  :disabled="!canClose || period?.status === 'closed'"
+                  @click="actionMenuOpen = false; closeOpen = true"
+                >
+                  Chốt kỳ
+                </button>
+                <button
+                  type="button"
+                  class="block w-full px-3 py-2 text-left text-sm text-rose-400 hover:bg-dark-surface disabled:cursor-not-allowed disabled:opacity-40"
+                  :disabled="!canUnissue || period?.status === 'closed' || period?.status === 'draft'"
+                  @click="actionMenuOpen = false; unissueOpen = true"
+                >
+                  Huỷ phát hành kỳ
+                </button>
+              </div>
+            </template>
+          </div>
           <NuxtLink to="/billing">
             <UiButton variant="ghost" size="sm">← Danh sách kỳ</UiButton>
           </NuxtLink>
@@ -291,6 +393,15 @@ async function openPaymentsIntent(intent: Omit<BillingPaymentsIntent, 'id'>) {
           @close-period="closePeriodFromModal"
         />
       </UiModal>
+
+      <BillingUnissueModal
+        :open="unissueOpen"
+        :invoices="invoices"
+        :submitting="unissueSubmitting"
+        :error-message="unissueError"
+        @close="unissueOpen = false"
+        @submit="unissuePeriodFromModal"
+      />
     </template>
   </div>
 </template>

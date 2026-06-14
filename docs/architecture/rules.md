@@ -45,6 +45,14 @@
 - Check theo capability thay vì role trực tiếp: `can('buildings.create')`.
 - UI check chỉ để ẩn/disable — bảo mật thật nằm ở server và RLS.
 
+### Billing capabilities
+
+| Capability | Roles | Notes |
+| --- | --- | --- |
+| `billing.read` | admin, manager | Đọc kỳ, hoá đơn, thanh toán, xuất Excel. |
+| `billing.write` | admin, manager | Lưu chỉ số, ghi đè, phát hành, ghi thu (đơn lẻ + hàng loạt), điều chỉnh. |
+| `billing.unissue` | admin | Huỷ phát hành kỳ — bắt buộc nhập lý do ≥10 ký tự, từ chối khi kỳ đã `closed`. Audit `period.unissued` ghi lại số HĐ huỷ và số HĐ giữ lại. |
+
 ## 5. Styling Rules
 
 - Dùng Tailwind utility classes.

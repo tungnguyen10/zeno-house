@@ -16,6 +16,7 @@ import { BILLING_BLOCKER_CODES, type BillingBlockerCode } from '~/utils/constant
 import { BillingPeriodRepository } from '../../repositories/billing/periods'
 import { BillingUtilityUsageRepository } from '../../repositories/billing/utility-usages'
 import { BillingDraftService } from './drafts'
+import { BillingPeriodService } from './periods'
 
 // ---------------------------------------------------------------------------
 // Types for source rows
@@ -458,6 +459,7 @@ export const BillingDraftGridService = {
         blockedDraftCount,
         draftTotal: draftTotalSum,
       },
+      overview: await BillingPeriodService.getOverview(event, user, period.id),
     }
   },
 }

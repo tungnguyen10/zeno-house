@@ -20,7 +20,7 @@ Billing UI readiness SHALL include compact primitive controls for meter readings
 - **THEN** quantities, unit prices, adjustments, and notes can be displayed or edited without custom inline form classes
 
 #### Scenario: Required reason capture
-- **WHEN** the user performs a destructive billing action (void invoice, reissue invoice, unissue period, save meter override, create negative adjustment of significant magnitude)
+- **WHEN** the user performs a destructive billing action (void invoice, reissue invoice, unissue period, save meter override, create negative adjustment with absolute value ≥ 100 000 ₫)
 - **THEN** the design system provides a textarea pattern with a live character counter and disables submit until the trimmed reason reaches the minimum length
 
 ## ADDED Requirements

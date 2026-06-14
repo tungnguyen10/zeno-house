@@ -20,6 +20,10 @@ export default defineNuxtConfig({
     "@nuxtjs/supabase",
   ],
 
+  tailwindcss: {
+    cssPath: "~/assets/scss/main.scss",
+  },
+
   // Runtime config — NUXT_* env vars are auto-mapped
   runtimeConfig: {
     resendApiKey: "", // RESEND_API_KEY

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { UiTableColumn } from '~/components/ui/UiTable.vue'
 import type { BillingDraftResponse, BillingPeriod, Invoice, InvoicePayment, InvoiceWithCharges } from '~/types/billing'
-import type { AdjustmentChargeInput, VoidInvoiceInput } from '~/utils/validators/billing'
+import type { AdjustmentChargeInput, BulkPaymentItemInput, VoidInvoiceInput } from '~/utils/validators/billing'
 import { formatCurrency } from '~/utils/format/currency'
 
 export interface BillingPaymentsIntent {
@@ -22,7 +22,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{ reload: [] }>()
 
-const { createAdjustmentPayload, load, recordPayment, voidInvoice, addAdjustment, listPayments } = useBillingInvoiceActions()
+const { createAdjustmentPayload, load, recordPayment, recordBulkPayments, voidInvoice, addAdjustment, listPayments } = useBillingInvoiceActions()
 const toast = useToast()
 
 const periodIsClosed = computed(() => props.period.status === 'closed')
@@ -89,6 +89,7 @@ const summary = computed(() => {
 })
 
 const columns: UiTableColumn<Invoice>[] = [
+  { key: 'select', label: '', width: 'w-10' },
   { key: 'tenant', label: 'Hợp đồng' },
   { key: 'status', label: 'Trạng thái', width: 'w-32' },
   { key: 'totalAmount', label: 'Tổng tiền', numeric: true, hideOnMobile: true },
@@ -97,6 +98,90 @@ const columns: UiTableColumn<Invoice>[] = [
   { key: 'dueDate', label: 'Hạn', hideOnMobile: true, width: 'w-28' },
   { key: 'actions', label: '', action: true, width: 'w-44' },
 ]
+
+// ---------- Bulk selection ----------
+const selectedIds = ref<Set<string>>(new Set())
+
+function isSelectableForBulk(inv: Invoice): boolean {
+  if (periodIsClosed.value) return false
+  if (inv.status === 'void' || inv.status === 'paid') return false
+  return inv.balanceAmount > 0
+}
+
+const bulkCandidates = computed(() => filteredInvoices.value.filter(isSelectableForBulk))
+
+const allBulkSelected = computed(() =>
+  bulkCandidates.value.length > 0 && bulkCandidates.value.every(inv => selectedIds.value.has(inv.id)),
+)
+
+function toggleSelect(invoiceId: string) {
+  if (selectedIds.value.has(invoiceId)) selectedIds.value.delete(invoiceId)
+  else selectedIds.value.add(invoiceId)
+  selectedIds.value = new Set(selectedIds.value)
+}
+
+function toggleSelectAll() {
+  if (allBulkSelected.value) {
+    for (const inv of bulkCandidates.value) selectedIds.value.delete(inv.id)
+  }
+  else {
+    for (const inv of bulkCandidates.value) selectedIds.value.add(inv.id)
+  }
+  selectedIds.value = new Set(selectedIds.value)
+}
+
+function clearSelection() {
+  selectedIds.value = new Set()
+}
+
+const selectedInvoicesForBulk = computed<Invoice[]>(() =>
+  Array.from(selectedIds.value)
+    .map(id => activeInvoices.value.find(inv => inv.id === id))
+    .filter((inv): inv is Invoice => !!inv),
+)
+
+// ---------- Bulk modal ----------
+const showBulkModal = ref(false)
+const bulkSubmitting = ref(false)
+const bulkError = ref<string | null>(null)
+const bulkFailedInvoiceId = ref<string | null>(null)
+
+function openBulkModal() {
+  if (selectedInvoicesForBulk.value.length === 0) return
+  bulkError.value = null
+  bulkFailedInvoiceId.value = null
+  showBulkModal.value = true
+}
+
+function closeBulkModal() {
+  if (bulkSubmitting.value) return
+  showBulkModal.value = false
+}
+
+async function submitBulkPayments(payload: BulkPaymentItemInput[]) {
+  bulkSubmitting.value = true
+  bulkError.value = null
+  bulkFailedInvoiceId.value = null
+  try {
+    const result = await recordBulkPayments(payload)
+    toast.success(`Đã ghi thu ${result.count} khoản, tổng ${formatCurrency(result.totalAmount)}`)
+    showBulkModal.value = false
+    clearSelection()
+    emit('reload')
+  }
+  catch (err) {
+    const e = err as { data?: { error?: { message?: string; details?: { failed_index?: number } } } }
+    const failedIndex = e.data?.error?.details?.failed_index
+    if (typeof failedIndex === 'number' && payload[failedIndex]) {
+      bulkFailedInvoiceId.value = payload[failedIndex].invoice_id
+    }
+    bulkError.value = e.data?.error?.message ?? 'Ghi thu hàng loạt thất bại'
+    toast.error(bulkError.value)
+  }
+  finally {
+    bulkSubmitting.value = false
+  }
+}
 
 // ---------- Detail panel ----------
 const selectedInvoice = ref<InvoiceWithCharges | null>(null)
@@ -322,6 +407,16 @@ watch(
 
       <UiToolbar>
         <UiSelect v-model="filterStatus" :options="filterOptions" class="w-44" />
+        <template #actions>
+          <UiButton
+            v-if="bulkCandidates.length > 0 && !periodIsClosed"
+            variant="ghost"
+            size="sm"
+            @click="toggleSelectAll"
+          >
+            {{ allBulkSelected ? 'Bỏ chọn tất cả' : `Chọn tất cả (${bulkCandidates.length})` }}
+          </UiButton>
+        </template>
       </UiToolbar>
 
       <UiTable
@@ -331,6 +426,16 @@ watch(
         empty-title="Chưa có hoá đơn"
         empty-description="Phát hành hoá đơn từ tab “Phát hành”."
       >
+        <template #cell-select="{ row }">
+          <input
+            v-if="isSelectableForBulk(row as Invoice)"
+            type="checkbox"
+            class="h-4 w-4"
+            :checked="selectedIds.has((row as Invoice).id)"
+            @change="toggleSelect((row as Invoice).id)"
+            @click.stop
+          >
+        </template>
         <template #cell-tenant="{ row }">
           <UiButton variant="ghost" size="sm" class="!px-0 !py-0 !h-auto text-left" @click="openDetail(row)">
             <span class="block">
@@ -556,5 +661,41 @@ watch(
         <UiButton :loading="adjustmentSubmitting" @click="submitAdjustment">Lưu</UiButton>
       </template>
     </UiModal>
+
+    <!-- Bulk payments -->
+    <BillingBulkPaymentModal
+      :open="showBulkModal"
+      :invoices="selectedInvoicesForBulk"
+      :failed-invoice-id="bulkFailedInvoiceId"
+      :error-message="bulkError"
+      :submitting="bulkSubmitting"
+      @close="closeBulkModal"
+      @submit="submitBulkPayments"
+    />
+
+    <!-- Sticky bulk action bar -->
+    <Transition
+      enter-active-class="transition duration-150 ease-out"
+      enter-from-class="opacity-0 translate-y-2"
+      enter-to-class="opacity-100 translate-y-0"
+      leave-active-class="transition duration-150 ease-in"
+      leave-from-class="opacity-100 translate-y-0"
+      leave-to-class="opacity-0 translate-y-2"
+    >
+      <div
+        v-if="selectedIds.size > 0"
+        class="fixed bottom-4 left-1/2 z-30 -translate-x-1/2 rounded-full border border-dark-border bg-dark-card px-4 py-2 shadow-lg shadow-black/40 backdrop-blur"
+      >
+        <div class="flex items-center gap-3">
+          <span class="text-sm text-white">
+            Đã chọn <span class="font-semibold">{{ selectedIds.size }}</span> hoá đơn
+          </span>
+          <UiButton variant="ghost" size="sm" @click="clearSelection">Bỏ chọn</UiButton>
+          <UiButton variant="primary" size="sm" @click="openBulkModal">
+            Ghi thu hàng loạt
+          </UiButton>
+        </div>
+      </div>
+    </Transition>
   </div>
 </template>

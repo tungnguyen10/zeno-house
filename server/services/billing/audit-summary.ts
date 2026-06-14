@@ -47,8 +47,14 @@ export function formatAuditSummary(action: string, metadata: Record<string, unkn
       return 'Mở kỳ vận hành'
     case 'period.closed':
       return 'Chốt kỳ vận hành'
-    case 'period.unissued':
-      return 'Huy phat hanh ky van hanh'
+    case 'period.unissued': {
+      const voided = numberValue(meta.voided_count) ?? 0
+      const retained = numberValue(meta.retained_paid_count) ?? 0
+      const reason = stringValue(meta.reason)
+      const parts: string[] = [`Huỷ phát hành kỳ — huỷ ${voided} HĐ, giữ ${retained} HĐ đã thu`]
+      if (reason) parts.push(`— ${reason}`)
+      return parts.join(' ')
+    }
     case 'period.status_changed': {
       const from = stringValue(meta.from) ?? stringValue(asRecord(meta.before).status) ?? stringValue(meta.previous_status) ?? '...'
       const to = stringValue(meta.to) ?? stringValue(asRecord(meta.after).status) ?? stringValue(meta.next_status) ?? '...'
@@ -100,8 +106,8 @@ export function formatAuditSummary(action: string, metadata: Record<string, unkn
     }
     case 'payments.bulk_recorded': {
       const count = numberValue(meta.count) ?? numberValue(meta.payment_count) ?? 0
-      const amount = formatCurrency(meta.amount)
-      return `Ghi thu hang loat ${count} khoan${amount ? `, tong ${amount}` : ''}`
+      const total = formatCurrency(meta.total_amount) ?? formatCurrency(meta.amount)
+      return `Ghi thu hàng loạt ${count} khoản${total ? `, tổng ${total}` : ''}`
     }
     case 'invoice.issue_attempted': {
       const blocked = numberValue(meta.blocked_count) ?? 0

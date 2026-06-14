@@ -315,4 +315,5 @@ export interface BillingDraftGridResponse {
     blockedDraftCount: number
     draftTotal: number
   }
+  overview: BillingWorkspaceOverview
 }

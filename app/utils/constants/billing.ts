@@ -74,6 +74,8 @@ export const BILLING_AUDIT_ACTIONS = {
   INVOICE_REISSUED: 'invoice.reissued',
   ADJUSTMENT_CREATED: 'invoice.adjustment_created',
   PAYMENT_RECORDED: 'invoice.payment_recorded',
+  PAYMENTS_BULK_RECORDED: 'payments.bulk_recorded',
+  PERIOD_UNISSUED: 'period.unissued',
 } as const
 
 export type BillingAuditAction =

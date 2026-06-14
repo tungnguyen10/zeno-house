@@ -5,7 +5,7 @@ A `POST /api/billing/periods/:id/unissue` endpoint SHALL revert the issue step f
 
 #### Scenario: Unissue succeeds and voids unpaid invoices
 - **WHEN** an authorized actor calls unissue on a period with status `issued` or `collecting`, all invoices have zero successful payments, and `reason` is at least 10 characters after trim
-- **THEN** every invoice is voided via the existing void path, the period status returns to `drafted`, an audit event `period.unissued` is appended with metadata `{ reason, voided_count, retained_paid_count: 0, retained_invoice_ids: [] }`, and the response returns `{ voided, retained: 0, status: "drafted" }`
+- **THEN** every invoice is voided via the existing void path, the period status returns to `draft`, an audit event `period.unissued` is appended with metadata `{ reason, voided_count, retained_paid_count: 0, retained_invoice_ids: [] }`, and the response returns `{ voided, retained: 0, status: "draft" }`
 
 #### Scenario: Unissue retains paid invoices
 - **WHEN** unissue is called and one or more invoices have at least one successful payment

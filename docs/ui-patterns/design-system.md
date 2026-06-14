@@ -148,3 +148,24 @@ Mount `UiToastHost` once in the default layout and call `useToast()` from pages/
 ### Header Overflow
 
 Rare or destructive workspace actions belong in the page header overflow instead of taking a tab slot. Billing uses this for `Chốt kỳ`; future actions such as cancel/unissue can join the same surface. Hide or disable actions when the current user lacks permission or the current entity state is ineligible.
+
+The billing workspace header now uses a dropdown menu containing **Xuất Excel**, **Huỷ phát hành kỳ** (admin-only, danger style, disabled when status is `closed` or `draft`), and **Chốt kỳ** (admin-only, disabled when status is `closed`). Open/close the menu with the kebab button; clicks on the transparent backdrop dismiss it.
+
+## 9. Bulk-select pattern
+
+Used in `BillingPaymentsStep` so operators can record many payments in one round trip.
+
+- Add a 40px-wide leading column with checkboxes; only render the checkbox when the row is eligible (e.g. invoice has remaining balance).
+- Provide a header "Chọn tất cả (N)" / "Bỏ chọn tất cả" toggle in the table toolbar `#actions` slot.
+- Render a sticky bottom bar (`fixed bottom-4 left-1/2 -translate-x-1/2 z-30`, with `<Transition>`) showing the count plus primary "Ghi thu hàng loạt" / secondary "Bỏ chọn".
+- Open a modal that pre-fills one row per selected invoice (default amount = remaining balance) and exposes shared fields (payment method, payment date, note).
+- On 409 responses with `details.failed_index`, highlight the failing row inside the modal (`bg-rose-500/10`) and surface the server message via toast — keep the modal open so the operator can adjust.
+
+## 10. Inline 2-line mobile rows
+
+Replaces the desktop draft grid on `< md` widths so meter inputs remain accessible without horizontal scroll.
+
+- Hide the `UiTable` with `class="hidden md:block"` and render `BillingMobileDraftRow` inside `<div class="md:hidden">`.
+- Line 1: room and tenant on the left, the editable meter input on the right.
+- Line 2: previous/new reading delta plus computed kWh/m³ rate as muted helper text.
+- Reuse the same dirty-cell highlight, paste highlight, and per-row save indicator as the desktop view by passing helper props (`readingValueOf`, `isCellDirty`, `isPasteHighlighted`, `saveStateOf`).

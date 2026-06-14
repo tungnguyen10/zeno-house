@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: Period Excel export endpoint
-A `GET /api/billing/periods/:id/export.xlsx` endpoint SHALL return an `.xlsx` workbook containing invoices, payments, and KPI summary for the period.
+A `GET /api/billing/periods/:id/export` endpoint SHALL return an `.xlsx` workbook containing invoices, payments, and KPI summary for the period.
 
 #### Scenario: Export returns workbook with three sheets
 - **WHEN** the endpoint is called with `Accept: */*` or `Accept: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`

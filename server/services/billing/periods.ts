@@ -14,6 +14,8 @@ import type {
 } from '~/utils/validators/billing'
 import { BillingPeriodRepository } from '../../repositories/billing/periods'
 import { InvoiceRepository } from '../../repositories/billing/invoices'
+import { InvoicePaymentRepository } from '../../repositories/billing/payments'
+import { assertReason } from '../../utils/billing/reason'
 import { BillingAuditService } from './audit'
 import { assertPeriodCanTransition } from './rules'
 
@@ -326,5 +328,86 @@ export const BillingPeriodService = {
       after_data: { status: updated.status },
     })
     return updated
+  },
+
+  /**
+   * Unissue a period: void every invoice that has zero successful payments and
+   * retain invoices that already received any payment. The period drops back
+   * to `draft` if everything was voided, or stays in `collecting` so the
+   * remaining paid invoices can continue to be tracked while readings/issuing
+   * is reopened. Requires `billing.unissue`.
+   */
+  async unissue(
+    event: H3Event,
+    user: AuthUser,
+    id: string,
+    reasonInput: string,
+  ): Promise<{ voided: number; retained: number; status: BillingPeriod['status'] }> {
+    if (!can(user, 'billing.unissue')) throwForbidden('Không có quyền huỷ phát hành kỳ')
+    const reason = assertReason(reasonInput, 10)
+
+    const period = await BillingPeriodRepository.findById(event, id)
+    if (!period) throwNotFound('Không tìm thấy kỳ vận hành')
+    if (period.status === 'closed') throwConflict('Kỳ đã chốt — không thể huỷ phát hành')
+
+    const invoices = await InvoiceRepository.listByPeriod(event, period.id)
+    const active = invoices.filter(inv => inv.status !== 'void')
+
+    const voidTargets: typeof active = []
+    const retained: typeof active = []
+    for (const inv of active) {
+      if (inv.paidAmount > 0) {
+        retained.push(inv)
+        continue
+      }
+      const payments = await InvoicePaymentRepository.listByInvoice(event, inv.id)
+      if (payments.length > 0) retained.push(inv)
+      else voidTargets.push(inv)
+    }
+
+    for (const inv of voidTargets) {
+      const voided = await InvoiceRepository.voidById(event, inv.id, user.id ?? null, reason)
+      await BillingAuditService.append(event, user, {
+        billing_period_id: period.id,
+        action: BILLING_AUDIT_ACTIONS.INVOICE_VOIDED,
+        entity_type: 'invoice',
+        entity_id: inv.id,
+        before_data: inv,
+        after_data: voided,
+        metadata: {
+          reason,
+          total_amount: inv.totalAmount,
+          contract_id: inv.contractId,
+          via: 'period.unissue',
+        },
+      })
+    }
+
+    const nextStatus: BillingPeriod['status'] = retained.length === 0 ? 'draft' : 'collecting'
+    let updated = period
+    if (period.status !== nextStatus) {
+      updated = await BillingPeriodRepository.updateStatus(event, period.id, nextStatus, {})
+    }
+
+    await BillingAuditService.append(event, user, {
+      billing_period_id: period.id,
+      action: BILLING_AUDIT_ACTIONS.PERIOD_UNISSUED,
+      entity_type: 'billing_period',
+      entity_id: period.id,
+      before_data: { status: period.status },
+      after_data: { status: updated.status },
+      metadata: {
+        reason,
+        voided_count: voidTargets.length,
+        retained_paid_count: retained.length,
+        retained_invoice_ids: retained.map(inv => inv.id),
+      },
+    })
+
+    return {
+      voided: voidTargets.length,
+      retained: retained.length,
+      status: updated.status,
+    }
   },
 }

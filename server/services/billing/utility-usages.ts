@@ -5,6 +5,7 @@ import { BILLING_AUDIT_ACTIONS } from '~/utils/constants/billing'
 import type { UtilityUsageOverrideInput } from '~/utils/validators/billing'
 import { BillingPeriodRepository } from '../../repositories/billing/periods'
 import { BillingUtilityUsageRepository } from '../../repositories/billing/utility-usages'
+import { assertReason } from '../../utils/billing/reason'
 import { BillingAuditService } from './audit'
 
 export const BillingUtilityUsageService = {
@@ -29,6 +30,10 @@ export const BillingUtilityUsageService = {
     input: UtilityUsageOverrideInput,
   ): Promise<BillingUtilityUsage> {
     if (!can(user, 'billing.write')) throwForbidden('Không có quyền điều chỉnh tiêu thụ')
+
+    if (input.reason !== 'normal') {
+      assertReason(input.note ?? '', 10)
+    }
 
     const period = await BillingPeriodRepository.findById(event, billingPeriodId)
     if (!period) throwNotFound('Không tìm thấy kỳ vận hành')

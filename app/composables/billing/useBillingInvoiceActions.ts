@@ -6,10 +6,18 @@ import type {
 } from '~/types/billing'
 import type {
   AdjustmentChargeInput,
+  BulkPaymentItemInput,
   InvoicePaymentCreateInput,
   ReissueInvoiceInput,
   VoidInvoiceInput,
 } from '~/utils/validators/billing'
+
+export interface BulkPaymentsResult {
+  count: number
+  totalAmount: number
+  invoiceIds: string[]
+  payments: InvoicePayment[]
+}
 
 /**
  * Invoice-scoped operations for the billing workspace: load detail, void,
@@ -67,6 +75,14 @@ export function useBillingInvoiceActions() {
     return resp.data
   }
 
+  async function recordBulkPayments(payments: BulkPaymentItemInput[]): Promise<BulkPaymentsResult> {
+    const resp = await $fetch<ApiSuccess<BulkPaymentsResult>>(`/api/billing/invoices/bulk-payments`, {
+      method: 'POST',
+      body: { payments },
+    })
+    return resp.data
+  }
+
   async function listPayments(invoiceId: string): Promise<InvoicePayment[]> {
     const resp = await $fetch<ApiSuccess<InvoicePayment[]>>(`/api/billing/invoices/${invoiceId}/payments`)
     return resp.data
@@ -79,6 +95,7 @@ export function useBillingInvoiceActions() {
     reissue,
     addAdjustment,
     recordPayment,
+    recordBulkPayments,
     listPayments,
   }
 }

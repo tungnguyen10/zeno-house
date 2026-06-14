@@ -12,14 +12,12 @@ const now = new Date()
 
 const initialBuilding = typeof route.query.building === 'string' ? route.query.building : undefined
 const initialYear = typeof route.query.year === 'string' ? Number(route.query.year) : now.getFullYear()
-const initialMonth = typeof route.query.month === 'string' ? Number(route.query.month) : now.getMonth() + 1
 const initialStatus = typeof route.query.status === 'string' ? route.query.status : undefined
 
 const { buildings, isLoading: buildingsLoading } = useBuildingList()
 const { filters, periods, isLoading, refresh, openPeriod } = useBillingPeriodList({
   building_id: initialBuilding,
   period_year: initialYear,
-  period_month: initialMonth,
   status: initialStatus as BillingPeriodSummary['period']['status'] | undefined,
 })
 
@@ -174,7 +172,6 @@ function periodLabel(row: BillingPeriodSummary): string {
         :disabled="buildingsLoading"
         class="w-48"
       />
-      <UiSelect v-model="filters.period_month" :options="monthOptions" class="w-32" />
       <UiSelect v-model="filters.period_year" :options="yearOptions" class="w-28" />
       <UiSelect v-model="filters.status" :options="statusOptions" class="w-44" />
       <UiSelect v-model="debtFilter" :options="debtOptions" class="w-36" />

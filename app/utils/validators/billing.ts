@@ -26,6 +26,11 @@ export const billingPeriodOpenSchema = z.object({
 })
 export type BillingPeriodOpenInput = z.infer<typeof billingPeriodOpenSchema>
 
+export const billingPeriodUnissueSchema = z.object({
+  reason: z.string().min(1).max(500),
+})
+export type BillingPeriodUnissueInput = z.infer<typeof billingPeriodUnissueSchema>
+
 // ---------------------------------------------------------------------------
 // Utility usage override
 // ---------------------------------------------------------------------------
@@ -108,6 +113,25 @@ export const invoicePaymentCreateSchema = z.object({
   note: z.string().max(500).nullable().optional(),
 })
 export type InvoicePaymentCreateInput = z.infer<typeof invoicePaymentCreateSchema>
+
+// ---------------------------------------------------------------------------
+// Bulk invoice payments
+// ---------------------------------------------------------------------------
+
+export const bulkPaymentItemSchema = z.object({
+  invoice_id: z.string().uuid(),
+  amount: z.number().int().positive(),
+  payment_method: z.string().max(100).nullable().optional(),
+  payment_date: z.string().min(1, 'Cần ngày thanh toán'),
+  reference: z.string().max(200).nullable().optional(),
+  note: z.string().max(500).nullable().optional(),
+})
+export type BulkPaymentItemInput = z.infer<typeof bulkPaymentItemSchema>
+
+export const bulkPaymentsBodySchema = z.object({
+  payments: z.array(bulkPaymentItemSchema).min(1, 'Cần ít nhất 1 dòng thanh toán'),
+})
+export type BulkPaymentsBodyInput = z.infer<typeof bulkPaymentsBodySchema>
 
 // ---------------------------------------------------------------------------
 // Charge schema (used for draft → issue mapping; not directly exposed)

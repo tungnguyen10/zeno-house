@@ -27,7 +27,7 @@ function select(tab: UiTabItem) {
 </script>
 
 <template>
-  <div role="tablist" class="flex items-center gap-1 border-b border-dark-border overflow-x-auto">
+  <div role="tablist" class="flex items-center gap-1 border-b border-dark-border overflow-x-auto no-scrollbar">
     <button
       v-for="tab in tabs"
       :key="tab.key"
