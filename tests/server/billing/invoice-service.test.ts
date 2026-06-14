@@ -103,7 +103,12 @@ describe('InvoiceService invoice lifecycle methods', () => {
     issueOne.mockResolvedValue({ invoice: replacement, charges: [] })
     const { InvoiceService } = await import('../../../server/services/billing/invoices')
 
-    const result = await InvoiceService.reissueInvoice({} as never, { id: 'user-1' } as never, voided.id, { due_date: '2026-06-05' })
+    const result = await InvoiceService.reissueInvoice(
+      {} as never,
+      { id: 'user-1' } as never,
+      voided.id,
+      { due_date: '2026-06-05', reason: 'wrong reading fixed' },
+    )
 
     expect(result.id).toBe(replacement.id)
     expect(issueOne).toHaveBeenCalledWith(
@@ -114,7 +119,10 @@ describe('InvoiceService invoice lifecycle methods', () => {
     expect(linkSupersededBy).toHaveBeenCalledWith(expect.anything(), voided.id, replacement.id)
     expect(append).toHaveBeenCalledWith(expect.anything(), expect.anything(), expect.objectContaining({
       action: 'invoice.reissued',
-      metadata: expect.objectContaining({ replacement_for_invoice_id: voided.id }),
+      metadata: expect.objectContaining({
+        reason: 'wrong reading fixed',
+        replacement_for_invoice_id: voided.id,
+      }),
     }))
   })
 })

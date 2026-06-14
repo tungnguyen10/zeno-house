@@ -12,7 +12,7 @@ export function parsePastedColumn(raw: string): string[] {
   while (lines.length > 0 && lines[lines.length - 1]!.trim() === '') {
     lines.pop()
   }
-  return lines.map(normalizeCell)
+  return lines.map(line => normalizeCell(line.split('\t')[0] ?? ''))
 }
 
 function normalizeCell(cell: string): string {

@@ -336,6 +336,7 @@ async function openPaymentsIntent(intent: Omit<BillingPaymentsIntent, 'id'>) {
                   type="button"
                   class="block w-full px-3 py-2 text-left text-sm text-rose-400 hover:bg-dark-surface disabled:cursor-not-allowed disabled:opacity-40"
                   :disabled="!canUnissue || period?.status === 'closed' || period?.status === 'draft'"
+                  :title="period?.status === 'closed' ? 'Kỳ đã chốt nên không thể huỷ phát hành' : (!canUnissue ? 'Bạn không có quyền huỷ phát hành kỳ' : undefined)"
                   @click="actionMenuOpen = false; unissueOpen = true"
                 >
                   Huỷ phát hành kỳ

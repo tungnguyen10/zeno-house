@@ -84,6 +84,7 @@ export type VoidInvoiceInput = z.infer<typeof voidInvoiceSchema>
 // ---------------------------------------------------------------------------
 
 export const reissueInvoiceSchema = z.object({
+  reason: z.string().min(1, 'Cần nhập lý do phát hành lại').max(500),
   due_date: z.string().nullable().optional(),
   notes: z.string().max(500).nullable().optional(),
 })

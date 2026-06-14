@@ -212,6 +212,16 @@ function editableRowsFor(type: MeterType): BillingDraftGridRow[] {
   })
 }
 
+function editableCellOrder(): Array<{ row: BillingDraftGridRow; type: MeterType }> {
+  const cells: Array<{ row: BillingDraftGridRow; type: MeterType }> = []
+  for (const row of filteredRows.value) {
+    if (!row.editable) continue
+    if (row.electricity?.editable) cells.push({ row, type: 'electricity' })
+    if (row.water?.editable) cells.push({ row, type: 'water' })
+  }
+  return cells
+}
+
 function focusReadingCell(row: BillingDraftGridRow, type: MeterType) {
   nextTick(() => {
     const selector = `[data-reading-cell="${row.roomId}::${type}"] input`
@@ -224,22 +234,10 @@ function focusReadingCell(row: BillingDraftGridRow, type: MeterType) {
 function handleReadingTab(event: KeyboardEvent, row: BillingDraftGridRow, type: MeterType) {
   event.preventDefault()
   const direction = event.shiftKey ? -1 : 1
-  if (direction === 1) {
-    if (type === 'electricity' && row.water?.editable) {
-      focusReadingCell(row, 'water')
-      return
-    }
-  }
-  else {
-    if (type === 'water' && row.electricity?.editable) {
-      focusReadingCell(row, 'electricity')
-      return
-    }
-  }
-  const rows = editableRowsFor(type)
-  const currentIndex = rows.findIndex(r => r.key === row.key)
-  const nextRow = rows[currentIndex + direction]
-  if (nextRow) focusReadingCell(nextRow, type)
+  const cells = editableCellOrder()
+  const currentIndex = cells.findIndex(c => c.row.key === row.key && c.type === type)
+  const next = cells[currentIndex + direction]
+  if (next) focusReadingCell(next.row, next.type)
 }
 
 function handleReadingKeydown(event: KeyboardEvent, row: BillingDraftGridRow, type: MeterType) {
@@ -778,7 +776,7 @@ const lineColumns: UiTableColumn<BillingDraftLine>[] = [
         <template #cell-room="{ row }">
           <div class="flex flex-col">
             <span class="text-sm font-semibold text-white">
-              P{{ (row as BillingDraftGridRow).roomNumber ?? '—' }}
+              {{ (row as BillingDraftGridRow).roomNumber ?? '—' }}
             </span>
             <span v-if="(row as BillingDraftGridRow).floor !== null" class="text-xs text-muted">
               Tầng {{ (row as BillingDraftGridRow).floor }}

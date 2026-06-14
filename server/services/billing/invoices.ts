@@ -207,6 +207,7 @@ export const InvoiceService = {
     input: ReissueInvoiceInput,
   ): Promise<Invoice> {
     if (!can(user, 'billing.write')) throwForbidden('Không có quyền phát hành lại hoá đơn')
+    const reason = assertReason(input.reason, 10)
 
     const voided = await InvoiceRepository.findById(event, voidedInvoiceId)
     if (!voided) throwNotFound('Không tìm thấy hoá đơn cần phát hành lại')
@@ -265,6 +266,7 @@ export const InvoiceService = {
       entity_type: 'invoice',
       entity_id: invoice.id,
       metadata: {
+        reason,
         replacement_for_invoice_id: voided.id,
         contract_id: voided.contractId,
         old_total_amount: voided.totalAmount,

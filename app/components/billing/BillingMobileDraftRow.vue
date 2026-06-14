@@ -44,7 +44,7 @@ function meterLabel(type: MeterType): string {
     <header class="flex items-start justify-between gap-2">
       <div class="min-w-0">
         <p class="text-sm font-semibold text-white">
-          P.{{ row.roomNumber ?? '—' }}
+          {{ row.roomNumber ?? '—' }}
           <template v-if="row.tenantName">
             <span class="text-muted">·</span>
             <span class="text-white">{{ row.tenantName }}</span>

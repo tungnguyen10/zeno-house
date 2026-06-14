@@ -137,7 +137,7 @@ function submit() {
                   {{ invoiceById.get(row.invoiceId)?.tenantName ?? '—' }}
                   <template v-if="invoiceById.get(row.invoiceId)?.roomNumber">
                     <span class="text-muted">·</span>
-                    P.{{ invoiceById.get(row.invoiceId)!.roomNumber }}
+                    {{ invoiceById.get(row.invoiceId)!.roomNumber }}
                   </template>
                 </span>
                 <span class="block text-xs text-muted">

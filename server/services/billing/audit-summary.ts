@@ -86,7 +86,7 @@ export function formatAuditSummary(action: string, metadata: Record<string, unkn
     case 'invoice.reissued': {
       const oldTotal = formatCurrency(meta.old_total_amount)
       const newTotal = formatCurrency(meta.new_total_amount)
-      const reason = stringValue(meta.void_reason)
+      const reason = stringValue(meta.reason) ?? stringValue(meta.void_reason)
       const parts: string[] = ['Phát hành lại hoá đơn']
       if (oldTotal && newTotal) parts.push(`${oldTotal} → ${newTotal}`)
       else if (newTotal) parts.push(newTotal)
