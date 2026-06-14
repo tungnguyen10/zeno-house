@@ -73,6 +73,167 @@ describe('InvoiceService invoice lifecycle methods', () => {
     }))
   })
 
+  it('issues only ready drafts and preserves invoice charge calculation metadata', async () => {
+    findPeriodById.mockResolvedValue(buildPeriod({ id: 'period-1', status: 'issued' }))
+    const issued = buildInvoice({ id: 'invoice-issued', totalAmount: 1_720_000 })
+    calculateDraft.mockResolvedValue({
+      totals: {
+        blockedDraftCount: 1,
+        issuableDraftCount: 1,
+      },
+      drafts: [
+        {
+          contractId: 'contract-ready',
+          roomId: 'room-ready',
+          tenantId: 'tenant-ready',
+          subtotalAmount: 1_820_000,
+          discountAmount: 100_000,
+          surchargeAmount: 0,
+          totalAmount: 1_720_000,
+          blockers: [],
+          existingInvoiceId: null,
+          lines: [
+            {
+              chargeType: 'electricity',
+              label: 'Electricity replacement usage',
+              sourceType: 'override',
+              sourceId: 'override-1',
+              quantity: 35,
+              unitPrice: 4_000,
+              amount: 140_000,
+              sortOrder: 20,
+              metadata: {
+                source: 'usage_override',
+                previous_reading_id: 'prev-reading',
+                previous_reading_value: 100,
+                current_reading_id: 'current-reading',
+                current_reading_value: 5,
+                old_meter_final_value: 130,
+                new_meter_start_value: 0,
+                billable_usage: 35,
+                rate: 4_000,
+                pricing_type: 'per_kwh',
+              },
+            },
+          ],
+        },
+        {
+          contractId: 'contract-blocked',
+          roomId: 'room-blocked',
+          tenantId: 'tenant-blocked',
+          subtotalAmount: 0,
+          discountAmount: 0,
+          surchargeAmount: 0,
+          totalAmount: 0,
+          blockers: [{ code: 'missing_current_reading', message: 'missing', meta: {} }],
+          existingInvoiceId: null,
+          lines: [],
+        },
+        {
+          contractId: 'contract-existing',
+          roomId: 'room-existing',
+          tenantId: 'tenant-existing',
+          subtotalAmount: 1_000_000,
+          discountAmount: 0,
+          surchargeAmount: 0,
+          totalAmount: 1_000_000,
+          blockers: [],
+          existingInvoiceId: 'invoice-existing',
+          lines: [],
+        },
+      ],
+    })
+    issueOne.mockResolvedValue({ invoice: issued, charges: [] })
+    const { InvoiceService } = await import('../../../server/services/billing/invoices')
+
+    const result = await InvoiceService.issueInvoices(
+      {} as never,
+      { id: 'user-1' } as never,
+      'period-1',
+      { due_date: '2026-06-05' },
+    )
+
+    expect(result.issuedCount).toBe(1)
+    expect(issueOne).toHaveBeenCalledTimes(1)
+    expect(issueOne).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        contract_id: 'contract-ready',
+        total: 1_720_000,
+      }),
+      [expect.objectContaining({
+        charge_type: 'electricity',
+        source_type: 'override',
+        source_id: 'override-1',
+        quantity: 35,
+        metadata: expect.objectContaining({
+          source: 'usage_override',
+          previous_reading_value: 100,
+          current_reading_value: 5,
+          old_meter_final_value: 130,
+          new_meter_start_value: 0,
+          billable_usage: 35,
+          pricing_type: 'per_kwh',
+        }),
+      })],
+    )
+    expect(append).toHaveBeenCalledWith(expect.anything(), expect.anything(), expect.objectContaining({
+      action: 'invoices.issued',
+      metadata: expect.objectContaining({ issued_count: 1, invoice_ids: ['invoice-issued'] }),
+    }))
+  })
+
+  it('audits an issue attempt and creates no invoices when all drafts are blocked or already issued', async () => {
+    findPeriodById.mockResolvedValue(buildPeriod({ id: 'period-1', status: 'review' }))
+    calculateDraft.mockResolvedValue({
+      totals: {
+        blockedDraftCount: 1,
+        issuableDraftCount: 0,
+      },
+      drafts: [
+        {
+          contractId: 'contract-blocked',
+          roomId: 'room-blocked',
+          tenantId: 'tenant-blocked',
+          subtotalAmount: 0,
+          discountAmount: 0,
+          surchargeAmount: 0,
+          totalAmount: 0,
+          blockers: [{ code: 'missing_current_reading', message: 'missing', meta: {} }],
+          existingInvoiceId: null,
+          lines: [],
+        },
+        {
+          contractId: 'contract-existing',
+          roomId: 'room-existing',
+          tenantId: 'tenant-existing',
+          subtotalAmount: 1_000_000,
+          discountAmount: 0,
+          surchargeAmount: 0,
+          totalAmount: 1_000_000,
+          blockers: [],
+          existingInvoiceId: 'invoice-existing',
+          lines: [],
+        },
+      ],
+    })
+    const { InvoiceService } = await import('../../../server/services/billing/invoices')
+
+    const result = await InvoiceService.issueInvoices(
+      {} as never,
+      { id: 'user-1' } as never,
+      'period-1',
+      { due_date: '2026-06-05' },
+    )
+
+    expect(result).toEqual({ issuedCount: 0, invoices: [] })
+    expect(issueOne).not.toHaveBeenCalled()
+    expect(append).toHaveBeenCalledWith(expect.anything(), expect.anything(), expect.objectContaining({
+      action: 'invoice.issue_attempted',
+      metadata: expect.objectContaining({ blocked_count: 1, issuable_count: 0, issued: 0 }),
+    }))
+  })
+
   it('blocks voiding invoices that already have payments', async () => {
     findInvoiceById.mockResolvedValue(buildInvoice({ paidAmount: 100_000, status: 'partial' }))
     const { InvoiceService } = await import('../../../server/services/billing/invoices')

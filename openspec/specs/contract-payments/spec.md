@@ -1,11 +1,9 @@
 ## Purpose
 
 Recording and managing contract-level payments (deposit, prepaid rent, rent, other). Payments are nested under a contract and support period coverage for prepaid rent scenarios.
-
 ## Requirements
-
 ### Requirement: Contract payment recording
-The system SHALL allow recording payments against a contract. A payment SHALL include: type (`deposit` | `prepaid_rent` | `rent` | `other`), amount (positive number), paid_at date, optional payment_method, optional note, and optional period coverage (`covered_period_start`, `covered_period_end` in YYYY-MM format) for prepaid rent. Contract-level payments are intended for pre-invoice financial events: `deposit` and `prepaid_rent` are the primary supported types. `rent` and `other` remain for backward compatibility until invoice settlement exists, but they SHALL NOT be treated as the future source of truth for monthly invoice settlement.
+The system SHALL allow recording payments against a contract. A payment SHALL include: type (`deposit` | `prepaid_rent` | `rent` | `other`), amount (positive number), paid_at date, optional payment_method, optional note, and optional period coverage (`covered_period_start`, `covered_period_end` in YYYY-MM format) for prepaid rent. Contract-level payments are intended for pre-invoice financial events: `deposit` and `prepaid_rent` are the primary supported types. `rent` and `other` remain for backward compatibility until invoice settlement exists, but they SHALL NOT be treated as the source of truth for monthly invoice settlement. After monthly invoices are introduced, monthly rent/utility/service collection SHALL be recorded through invoice-level payments.
 
 #### Scenario: Deposit recorded
 - **WHEN** admin records a deposit payment
@@ -24,7 +22,7 @@ The system SHALL allow recording payments against a contract. A payment SHALL in
 - **THEN** request rejected with VALIDATION_ERROR
 
 #### Scenario: Non-positive amount rejected
-- **WHEN** payment submitted with amount ≤ 0
+- **WHEN** payment submitted with amount <= 0
 - **THEN** request rejected with VALIDATION_ERROR
 
 #### Scenario: Monthly settlement boundary is explicit
@@ -34,3 +32,8 @@ The system SHALL allow recording payments against a contract. A payment SHALL in
 #### Scenario: Legacy rent payment remains readable
 - **WHEN** a contract has an existing payment with type `rent`
 - **THEN** it remains retrievable in the contract payment list for compatibility
+
+#### Scenario: Invoice payment is separate
+- **WHEN** a user records payment for an issued monthly invoice
+- **THEN** the payment is recorded against the invoice, not as a new contract-level `rent` payment
+

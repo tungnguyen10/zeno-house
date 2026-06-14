@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
+import type { UiTableColumn } from '~/components/ui/UiTable.vue'
 import type { Invoice } from '~/types/billing'
 import type { BulkPaymentItemInput } from '~/utils/validators/billing'
 import { formatCurrency } from '~/utils/format/currency'
@@ -49,6 +50,13 @@ watch(
 )
 
 const invoiceById = computed(() => new Map(props.invoices.map(i => [i.id, i])))
+
+const columns: UiTableColumn<RowState>[] = [
+  { key: 'enabled', label: 'Chọn', width: 'w-10' },
+  { key: 'invoice', label: 'Hoá đơn' },
+  { key: 'balance', label: 'Công nợ', numeric: true, width: 'w-32' },
+  { key: 'amount', label: 'Số thu', numeric: true, width: 'w-32' },
+]
 
 const totalAmount = computed(() =>
   rows.value.reduce((s, r) => (r.enabled ? s + (Number.isFinite(r.amount) ? r.amount : 0) : s), 0),
@@ -109,68 +117,46 @@ function submit() {
         </UiSection>
       </div>
 
-      <div class="rounded-lg border border-dark-border">
-        <table class="min-w-full text-sm">
-          <thead class="bg-dark-card text-xs uppercase tracking-wide text-muted">
-            <tr>
-              <th class="px-3 py-2 text-left w-10">Chọn</th>
-              <th class="px-3 py-2 text-left">Hoá đơn</th>
-              <th class="px-3 py-2 text-right tabular-nums w-32">Công nợ</th>
-              <th class="px-3 py-2 text-right tabular-nums w-32">Số thu</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-dark-border">
-            <tr
-              v-for="row in rows"
-              :key="row.invoiceId"
-              :class="failedInvoiceId === row.invoiceId ? 'bg-rose-500/10' : ''"
-            >
-              <td class="px-3 py-2 align-middle">
-                <input
-                  v-model="row.enabled"
-                  type="checkbox"
-                  class="h-4 w-4"
-                >
-              </td>
-              <td class="px-3 py-2 align-middle">
-                <span class="block text-white text-sm">
-                  {{ invoiceById.get(row.invoiceId)?.tenantName ?? '—' }}
-                  <template v-if="invoiceById.get(row.invoiceId)?.roomNumber">
-                    <span class="text-muted">·</span>
-                    {{ invoiceById.get(row.invoiceId)!.roomNumber }}
-                  </template>
-                </span>
-                <span class="block text-xs text-muted">
-                  {{ invoiceById.get(row.invoiceId)?.contractCode ?? row.invoiceId.slice(0, 8) }}
-                </span>
-              </td>
-              <td class="px-3 py-2 text-right tabular-nums text-muted">
-                {{ formatCurrency(invoiceById.get(row.invoiceId)?.balanceAmount ?? 0) }}
-              </td>
-              <td class="px-3 py-2 text-right">
-                <UiInput
-                  v-model.number="row.amount"
-                  type="number"
-                  min="0"
-                  density="compact"
-                  class="w-28 text-right"
-                  :disabled="!row.enabled"
-                />
-              </td>
-            </tr>
-          </tbody>
-          <tfoot class="bg-dark-card text-sm">
-            <tr>
-              <td class="px-3 py-2" colspan="2">
-                <span class="text-muted">{{ enabledCount }} hoá đơn được chọn</span>
-              </td>
-              <td class="px-3 py-2 text-right text-muted">Tổng</td>
-              <td class="px-3 py-2 text-right tabular-nums font-semibold text-white">
-                {{ formatCurrency(totalAmount) }}
-              </td>
-            </tr>
-          </tfoot>
-        </table>
+      <div class="space-y-2">
+        <UiTable
+          :rows="rows"
+          :columns="columns"
+          row-key="invoiceId"
+          empty-title="Chưa có hoá đơn còn công nợ"
+        >
+          <template #cell-enabled="{ row }">
+            <UiCheckbox v-model="row.enabled" />
+          </template>
+          <template #cell-invoice="{ row }">
+            <span class="block text-white text-sm">
+              {{ invoiceById.get(row.invoiceId)?.tenantName ?? '---' }}
+              <template v-if="invoiceById.get(row.invoiceId)?.roomNumber">
+                <span class="text-muted">·</span>
+                {{ invoiceById.get(row.invoiceId)!.roomNumber }}
+              </template>
+            </span>
+            <span class="block text-xs text-muted">
+              {{ invoiceById.get(row.invoiceId)?.contractCode ?? row.invoiceId.slice(0, 8) }}
+            </span>
+          </template>
+          <template #cell-balance="{ row }">
+            <span class="text-muted">{{ formatCurrency(invoiceById.get(row.invoiceId)?.balanceAmount ?? 0) }}</span>
+          </template>
+          <template #cell-amount="{ row }">
+            <UiInput
+              v-model.number="row.amount"
+              type="number"
+              min="0"
+              density="compact"
+              class="w-28 text-right"
+              :disabled="!row.enabled"
+            />
+          </template>
+        </UiTable>
+        <div class="flex items-center justify-between rounded-md bg-dark-card px-3 py-2 text-sm">
+          <span class="text-muted">{{ enabledCount }} hoá đơn được chọn</span>
+          <span class="tabular-nums font-semibold text-white">{{ formatCurrency(totalAmount) }}</span>
+        </div>
       </div>
     </div>
     <template #footer>
@@ -180,7 +166,7 @@ function submit() {
         :disabled="!!validationError || !!submitting"
         @click="submit"
       >
-        {{ submitting ? 'Đang ghi…' : `Ghi thu ${formatCurrency(totalAmount)}` }}
+        {{ submitting ? 'Đang ghi...' : `Ghi thu ${formatCurrency(totalAmount)}` }}
       </UiButton>
     </template>
   </UiModal>

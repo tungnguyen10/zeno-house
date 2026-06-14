@@ -73,17 +73,17 @@
 
 - [x] 5.1 Validate OpenSpec change with `openspec validate monthly-operations-workspace --strict`
 - [x] 5.2 Run typecheck/lint/test commands available in the project
-- [ ] 5.3 Verify manager/admin permission behavior for billing endpoints
-- [ ] 5.4 Verify Supabase RLS is enabled for all new tables
-- [ ] 5.5 Verify a happy path: open period -> enter readings -> review charges -> issue invoices -> record partial/full payment -> close period
-- [ ] 5.6 Verify blockers prevent issuing when required readings/rates are missing
-- [ ] 5.7 Verify issued invoices remain unchanged after later edits to contract/service/reading source data
-- [ ] 5.8 Verify audit events exist for all billing-critical actions in the happy path
-- [ ] 5.9 Verify meter replacement calculation uses utility usage override and snapshots previous/current/replacement values into invoice charge metadata
-- [ ] 5.10 Verify correction flow: pre-issue edit recalculates draft, unpaid issued invoice can be voided/reissued, paid invoice correction creates adjustment, closed period blocks normal edits
-- [ ] 5.11 Verify `adopt-operational-design-system` is complete before billing UI implementation is considered complete
+- [x] 5.3 Verify manager/admin permission behavior for billing endpoints
+- [x] 5.4 Verify Supabase RLS is enabled for all new tables
+- [x] 5.5 Verify a happy path: open period -> enter readings -> review charges -> issue invoices -> record partial/full payment -> close period
+- [x] 5.6 Verify blockers prevent issuing when required readings/rates are missing
+- [x] 5.7 Verify issued invoices remain unchanged after later edits to contract/service/reading source data
+- [x] 5.8 Verify audit events exist for all billing-critical actions in the happy path
+- [x] 5.9 Verify meter replacement calculation uses utility usage override and snapshots previous/current/replacement values into invoice charge metadata
+- [x] 5.10 Verify correction flow: pre-issue edit recalculates draft, unpaid issued invoice can be voided/reissued, paid invoice correction creates adjustment, closed period blocks normal edits
+- [x] 5.11 Verify `adopt-operational-design-system` is complete before billing UI implementation is considered complete
 - [x] 5.12 Run raw UI scans on billing pages/components for `<input`, `<select`, `<textarea`, `<table`, and `<button`; resolve or document every remaining match
-- [ ] 5.13 Verify `/billing` and representative workspace tabs render correctly at desktop and mobile widths without text overflow, card nesting, or overlapping controls
+- [x] 5.13 Verify `/billing` and representative workspace tabs render correctly at desktop and mobile widths without text overflow, card nesting, or overlapping controls
 - [x] 5.14 Verify billing status badges use explicit period/invoice/correction context
 
 ## 6. Optimize Billing Draft Grid
@@ -98,7 +98,7 @@
 - [x] 6.8 Include override metadata and warning context in utility cells when `billing_utility_usages` applies
 - [x] 6.9 Implement `BillingDraftGridStep` using `UiTable`, compact controls, `UiStatusBadge`, `UiAlert`, `UiModal`, and design-system layout primitives
 - [x] 6.10 Render desktop columns: TT, Chi tiết, Phòng, Khách thuê, Số điện mới, Số nước mới, Tiền điện, Tiền nước, Phòng/Dịch vụ, Tổng nháp, Trạng thái, Thao tác
-- [ ] 6.11 Render mobile row layout that avoids full horizontal table scanning and preserves edit/read/recompute actions
+- [x] 6.11 Render mobile row layout that avoids full horizontal table scanning and preserves edit/read/recompute actions
 - [x] 6.12 Add toolbar with batch reading date, `Áp dụng cho dòng trống`, and filters for `Cần xử lý`, `Tất cả`, `Phòng trống`, `Có lỗi`, and `Đã sẵn sàng`
 - [x] 6.13 Apply reading date defaults: existing date preserved, current period defaults to today, past period defaults to last day of the period
 - [x] 6.14 Track local unsaved reading changes and submit only changed meter readings on `Lưu & tính lại`
@@ -110,11 +110,11 @@
 - [x] 6.20 Drop separate `Nhập chỉ số` and `Soát hoá đơn` tabs from workspace navigation; add one `Chỉ số & hoá đơn nháp` tab
 - [x] 6.21 Keep `Phát hành` as a separate tab for v1 and make it reflect the same draft-grid/draft blocker state
 - [x] 6.22 Ensure period states `issued`, `collecting`, `partial/paid invoice rows`, and `closed` render draft-grid rows as read-only
-- [ ] 6.23 Verify active-contract room happy path: enter electricity/water readings, save/recompute, see utility amounts and draft total, then issue from `Phát hành`
-- [ ] 6.24 Verify vacant room baseline: optional reading can be saved, no invoice is created, and missing vacant readings do not block issue
-- [ ] 6.25 Verify blocker row: missing utility pricing or required reading shows blocker in the row and prevents issue
-- [ ] 6.26 Verify electricity override row: negative/replacement case saves override, recomputes billable usage, shows warning, and snapshots override metadata when issued
-- [ ] 6.27 Verify issued period behavior: draft-grid rows are read-only and correction guidance points to void/reissue or adjustment flow
-- [ ] 6.28 Verify closed period behavior: all normal reading inputs and override actions are disabled
-- [ ] 6.29 Verify desktop and mobile draft-grid layouts for text overflow, overlapping controls, and scannability
+- [x] 6.23 Verify active-contract room happy path: enter electricity/water readings, save/recompute, see utility amounts and draft total, then issue from `Phát hành`
+- [x] 6.24 Verify vacant room baseline: optional reading can be saved, no invoice is created, and missing vacant readings do not block issue
+- [x] 6.25 Verify blocker row: missing utility pricing or required reading shows blocker in the row and prevents issue
+- [x] 6.26 Verify electricity override row: negative/replacement case saves override, recomputes billable usage, shows warning, and snapshots override metadata when issued
+- [x] 6.27 Verify issued period behavior: draft-grid rows are read-only and correction guidance points to void/reissue or adjustment flow
+- [x] 6.28 Verify closed period behavior: all normal reading inputs and override actions are disabled
+- [x] 6.29 Verify desktop and mobile draft-grid layouts for text overflow, overlapping controls, and scannability
 - [x] 6.30 Update OpenSpec validation and task status after the draft-grid optimization is implemented

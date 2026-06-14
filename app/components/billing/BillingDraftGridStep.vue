@@ -952,7 +952,7 @@ const lineColumns: UiTableColumn<BillingDraftLine>[] = [
       >
         <div class="flex items-center justify-between">
           <p class="text-sm font-semibold text-white">
-            Chi tiết phòng P{{ row.roomNumber ?? '—' }}
+            Chi tiết phòng {{ row.roomNumber ?? '—' }}
             <span v-if="row.tenantName" class="text-muted">· {{ row.tenantName }}</span>
           </p>
           <UiButton variant="ghost" size="sm" @click="toggleExpand(row)">Đóng</UiButton>
@@ -1045,15 +1045,11 @@ const lineColumns: UiTableColumn<BillingDraftLine>[] = [
           v-if="electricityRequired"
           class="rounded-lg border border-dark-border bg-dark-surface p-3 space-y-3"
         >
-          <label class="flex items-center gap-2 text-sm font-medium text-white">
-            <input
-              type="checkbox"
-              :checked="overrideElectricity.enabled"
-              class="h-4 w-4 rounded border-dark-border bg-dark-card"
-              @change="overrideElectricity.enabled = ($event.target as HTMLInputElement).checked"
-            >
-            Điều chỉnh đồng hồ điện
-          </label>
+          <UiCheckbox
+            :model-value="overrideElectricity.enabled"
+            label="Điều chỉnh đồng hồ điện"
+            @update:model-value="overrideElectricity.enabled = $event"
+          />
 
           <template v-if="overrideElectricity.enabled">
             <div class="grid grid-cols-2 gap-3">
@@ -1126,16 +1122,11 @@ const lineColumns: UiTableColumn<BillingDraftLine>[] = [
           v-if="waterRequired"
           class="rounded-lg border border-dark-border bg-dark-surface p-3 space-y-3"
         >
-          <label class="flex items-center gap-2 text-sm font-medium text-white">
-            <input
-              type="checkbox"
-              :checked="overrideWater.enabled"
-              class="h-4 w-4 rounded border-dark-border bg-dark-card"
-              @change="overrideWater.enabled = ($event.target as HTMLInputElement).checked"
-            >
-            Điều chỉnh đồng hồ nước
-          </label>
-
+          <UiCheckbox
+            :model-value="overrideWater.enabled"
+            label="Điều chỉnh đồng hồ nước"
+            @update:model-value="overrideWater.enabled = $event"
+          />
           <template v-if="overrideWater.enabled">
             <div class="grid grid-cols-2 gap-3">
               <div class="flex flex-col gap-1">

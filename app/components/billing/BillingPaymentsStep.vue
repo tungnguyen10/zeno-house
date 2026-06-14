@@ -99,6 +99,14 @@ const columns: UiTableColumn<Invoice>[] = [
   { key: 'actions', label: '', action: true, width: 'w-44' },
 ]
 
+const voidedColumns: UiTableColumn<Invoice>[] = [
+  { key: 'contract', label: 'Hợp đồng' },
+  { key: 'totalAmount', label: 'Tổng tại thời điểm huỷ', numeric: true, hideOnMobile: true, width: 'w-32' },
+  { key: 'voidedAt', label: 'Huỷ lúc', hideOnMobile: true, width: 'w-32' },
+  { key: 'voidReason', label: 'Lý do' },
+  { key: 'replacement', label: 'Thay thế bằng', width: 'w-44' },
+]
+
 // ---------- Bulk selection ----------
 const selectedIds = ref<Set<string>>(new Set())
 
@@ -427,14 +435,12 @@ watch(
         empty-description="Phát hành hoá đơn từ tab “Phát hành”."
       >
         <template #cell-select="{ row }">
-          <input
+          <UiCheckbox
             v-if="isSelectableForBulk(row as Invoice)"
-            type="checkbox"
-            class="h-4 w-4"
-            :checked="selectedIds.has((row as Invoice).id)"
-            @change="toggleSelect((row as Invoice).id)"
+            :model-value="selectedIds.has((row as Invoice).id)"
+            @update:model-value="toggleSelect((row as Invoice).id)"
             @click.stop
-          >
+          />
         </template>
         <template #cell-tenant="{ row }">
           <UiButton variant="ghost" size="sm" class="!px-0 !py-0 !h-auto text-left" @click="openDetail(row)">
@@ -494,46 +500,31 @@ watch(
       title="Hoá đơn đã huỷ"
       :description="`${voidedInvoices.length} hoá đơn — snapshot tại thời điểm huỷ. Không đếm vào công nợ.`"
     >
-      <div class="relative overflow-x-auto rounded-xl border border-dark-border bg-dark-surface">
-        <table class="min-w-full text-sm">
-          <thead class="bg-dark-card text-xs uppercase tracking-wide text-muted">
-            <tr>
-              <th class="px-3 py-2 text-left font-medium">Hợp đồng</th>
-              <th class="px-3 py-2 text-right tabular-nums hidden md:table-cell font-medium w-32">Tổng tại thời điểm huỷ</th>
-              <th class="px-3 py-2 text-left hidden md:table-cell w-32 font-medium">Huỷ lúc</th>
-              <th class="px-3 py-2 text-left font-medium">Lý do</th>
-              <th class="px-3 py-2 text-left w-44 font-medium">Thay thế bằng</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-dark-border">
-            <tr v-for="row in voidedInvoices" :key="row.id" class="transition-colors">
-              <td class="px-3 py-2 align-middle">
-                <span class="block text-white text-sm">{{ invoiceDisplay(row).title }}</span>
-                <span class="block text-xs text-muted">{{ invoiceDisplay(row).subtitle }}</span>
-              </td>
-              <td class="px-3 py-2 text-right tabular-nums hidden md:table-cell text-muted line-through">
-                {{ formatCurrency(row.totalAmount) }}
-              </td>
-              <td class="px-3 py-2 hidden md:table-cell text-xs text-muted">
-                {{ row.voidedAt ? new Date(row.voidedAt).toLocaleString('vi-VN') : '—' }}
-              </td>
-              <td class="px-3 py-2 text-sm text-white">
-                <span v-if="row.voidReason">{{ row.voidReason }}</span>
-                <span v-else class="text-muted">—</span>
-              </td>
-              <td class="px-3 py-2 text-xs">
-                <template v-if="row.supersededByInvoiceId && replacementById.get(row.supersededByInvoiceId)">
-                  <span class="text-cyan">
-                    {{ formatCurrency(replacementById.get(row.supersededByInvoiceId)!.totalAmount) }}
-                  </span>
-                  <span class="text-muted ml-1">(đã phát hành lại)</span>
-                </template>
-                <span v-else class="text-muted">Chưa phát hành lại</span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+      <UiTable :rows="voidedInvoices" :columns="voidedColumns">
+        <template #cell-contract="{ row }">
+          <span class="block text-white text-sm">{{ invoiceDisplay(row).title }}</span>
+          <span class="block text-xs text-muted">{{ invoiceDisplay(row).subtitle }}</span>
+        </template>
+        <template #cell-totalAmount="{ row }">
+          <span class="text-muted line-through">{{ formatCurrency(row.totalAmount) }}</span>
+        </template>
+        <template #cell-voidedAt="{ row }">
+          <span class="text-xs text-muted">{{ row.voidedAt ? new Date(row.voidedAt).toLocaleString('vi-VN') : '---' }}</span>
+        </template>
+        <template #cell-voidReason="{ row }">
+          <span v-if="row.voidReason" class="text-sm text-white">{{ row.voidReason }}</span>
+          <span v-else class="text-muted">---</span>
+        </template>
+        <template #cell-replacement="{ row }">
+          <template v-if="row.supersededByInvoiceId && replacementById.get(row.supersededByInvoiceId)">
+            <span class="text-cyan">
+              {{ formatCurrency(replacementById.get(row.supersededByInvoiceId)!.totalAmount) }}
+            </span>
+            <span class="text-muted ml-1">(đã phát hành lại)</span>
+          </template>
+          <span v-else class="text-muted">Chưa phát hành lại</span>
+        </template>
+      </UiTable>
     </UiSection>
 
     <!-- Detail / payments history modal -->

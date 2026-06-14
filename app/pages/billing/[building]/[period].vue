@@ -308,39 +308,43 @@ async function openPaymentsIntent(intent: Omit<BillingPaymentsIntent, 'id'>) {
               <div
                 class="absolute right-0 z-40 mt-2 w-56 rounded-lg border border-dark-border bg-dark-card py-1 shadow-lg shadow-black/40"
               >
-                <button
-                  type="button"
-                  class="block w-full px-3 py-2 text-left text-sm text-white hover:bg-dark-surface"
+                <UiButton
+                  variant="ghost"
+                  size="sm"
+                  class="!flex !w-full !justify-start !rounded-none !px-3 !py-2 text-left !text-white hover:!bg-dark-surface"
                   @click="actionMenuOpen = false; auditOpen = true"
                 >
                   Nhật ký
-                </button>
-                <button
-                  type="button"
-                  class="block w-full px-3 py-2 text-left text-sm text-white hover:bg-dark-surface disabled:cursor-not-allowed disabled:opacity-40"
+                </UiButton>
+                <UiButton
+                  variant="ghost"
+                  size="sm"
+                  class="!flex !w-full !justify-start !rounded-none !px-3 !py-2 text-left !text-white hover:!bg-dark-surface"
                   :disabled="exportLoading"
                   @click="actionMenuOpen = false; exportPeriodXlsx()"
                 >
                   {{ exportLoading ? 'Đang xuất…' : 'Xuất Excel' }}
-                </button>
+                </UiButton>
                 <div class="my-1 h-px bg-dark-border" />
-                <button
-                  type="button"
-                  class="block w-full px-3 py-2 text-left text-sm text-white hover:bg-dark-surface disabled:cursor-not-allowed disabled:opacity-40"
+                <UiButton
+                  variant="ghost"
+                  size="sm"
+                  class="!flex !w-full !justify-start !rounded-none !px-3 !py-2 text-left !text-white hover:!bg-dark-surface"
                   :disabled="!canClose || period?.status === 'closed'"
                   @click="actionMenuOpen = false; closeOpen = true"
                 >
                   Chốt kỳ
-                </button>
-                <button
-                  type="button"
-                  class="block w-full px-3 py-2 text-left text-sm text-rose-400 hover:bg-dark-surface disabled:cursor-not-allowed disabled:opacity-40"
+                </UiButton>
+                <UiButton
+                  variant="ghost"
+                  size="sm"
+                  class="!flex !w-full !justify-start !rounded-none !px-3 !py-2 text-left !text-rose-400 hover:!bg-dark-surface"
                   :disabled="!canUnissue || period?.status === 'closed' || period?.status === 'draft'"
                   :title="period?.status === 'closed' ? 'Kỳ đã chốt nên không thể huỷ phát hành' : (!canUnissue ? 'Bạn không có quyền huỷ phát hành kỳ' : undefined)"
                   @click="actionMenuOpen = false; unissueOpen = true"
                 >
                   Huỷ phát hành kỳ
-                </button>
+                </UiButton>
               </div>
             </template>
           </div>

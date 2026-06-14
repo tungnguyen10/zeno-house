@@ -80,13 +80,14 @@ function technicalJson(row: BillingAuditEvent): string {
       <template #cell-summary="{ row }">
         <div class="space-y-2">
           <p class="text-sm text-white">{{ row.summary ?? `Hành động: ${row.action}` }}</p>
-          <button
-            type="button"
-            class="text-xs text-muted hover:text-white"
+          <UiButton
+            variant="ghost"
+            size="sm"
+            class="!h-auto !px-0 !py-0 !text-xs !text-muted hover:!text-white"
             @click="toggleTechnical(row.id)"
           >
             Chi tiết kỹ thuật
-          </button>
+          </UiButton>
           <pre
             v-if="expanded.has(row.id)"
             class="max-h-48 overflow-auto rounded-md border border-dark-border bg-dark-surface p-2 text-xs text-muted"
