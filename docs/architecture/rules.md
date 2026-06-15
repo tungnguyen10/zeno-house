@@ -1,72 +1,85 @@
-# Architecture Rules — Zeno House v0.1
+# Architecture Rules - Zeno House
 
 ## 1. State Rules
 
-- State chia thành 3 nhóm: **server state**, **global client state**, **local component state**.
-- **Server state** (danh sách buildings, rooms...) đặt ở composable với `useFetch`/`$fetch`. Không nhét vào Pinia.
-- **Pinia** chỉ dùng cho state thật sự global: session, sidebar open/close, notification queue.
-- **Form state** nằm trong component hoặc composable của form. Không lưu vào store.
-- Mỗi domain có composable tách theo mục đích: `list`, `detail`, `form`.
-- Không duplicate derived state — ưu tiên `computed`.
-- Store không điều khiển trực tiếp modal hoặc toast business flow.
+- State is split into **server state**, **global client state**, and **local component state**.
+- Server state such as buildings, rooms, tenants, contracts, periods, invoices, and dashboard summaries lives in composables using `useFetch` or `$fetch`.
+- Pinia is reserved for truly global state, currently auth/session and role-derived helpers.
+- Form state belongs in the component or in a form-specific composable, not in a global store.
+- Each domain should keep composables purpose-specific: `list`, `detail`, `form`, or a named workflow such as `useBillingPeriodWorkspace`.
+- Do not duplicate derived state. Prefer `computed`.
+- Stores should not directly control business modals or toast flows.
 
 ## 2. API Rules
 
-- **Client không gọi Supabase trực tiếp** cho business data — luôn đi qua `server/api/`.
-- Mọi endpoint phải validate input bằng Zod.
-- Response phải dùng envelope chuẩn:
+- The client must not call Supabase directly for business data. Use `server/api/**`.
+- Every mutating endpoint and every endpoint with query/body input validates through Zod schemas in `app/utils/validators/**`.
+- Responses use the standard envelope:
+
   ```ts
   type ApiSuccess<T> = { data: T; meta?: Record<string, unknown> }
-  type ApiError   = { error: { code: string; message: string; details?: unknown } }
+  type ApiError = { error: { code: string; message: string; details?: unknown } }
   ```
-- `repository` chỉ query và persist — không có business rule.
-- `service` xử lý business rule và permission check.
-- List endpoint hỗ trợ pagination nếu là resource chính.
-- Không trả raw DB row ra response — phải map qua mapper.
-- Error codes chuẩn hóa: `UNAUTHENTICATED` | `FORBIDDEN` | `NOT_FOUND` | `VALIDATION_ERROR` | `CONFLICT`.
+
+- Repositories only query and persist. They do not contain business rules.
+- Services own business rules, permissions, orchestration, and audit side effects.
+- List endpoints for primary resources should support filtering and pagination when the UI needs it.
+- Do not return raw DB rows. Map through `app/utils/mappers/**`.
+- Standard error codes: `UNAUTHENTICATED`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION_ERROR`, `CONFLICT`.
 
 ## 3. Component Rules
 
-- Component chia thành 3 lớp: `ui/` (primitive), `<domain>/` (display block), `app/` (shell).
-- Component mặc định là presentational — không fetch data.
-- Data fetch ưu tiên ở page hoặc composable.
-- Props phải typed rõ ràng, tránh truyền object lớn chưa map.
-- Emit phải diễn tả intent: `submit`, `remove`, `changeStatus` — không dùng `click` chung chung.
-- Component quan trọng phải xử lý `loading`, `empty`, `error` state.
-- Accessibility là rule mặc định: label cho input, aria-label cho icon button, focus-visible style.
+- Components are split into `ui/` primitives, domain display/workflow components, and `app/` shell components.
+- Components are presentational by default. Fetch data in pages or composables.
+- Props must be typed clearly. Avoid passing large unmapped DB-shaped objects.
+- Emits should describe intent, for example `submit`, `remove`, `refresh`, `intent:adjustment`.
+- Important components must handle `loading`, `empty`, and `error` states.
+- Accessibility is default: labels for inputs, `aria-label` for icon-only buttons, and visible focus styles.
 
 ## 4. Permission Rules
 
-- Permission có 3 lớp: **route-level**, **action-level**, **data-level**.
-- `route-level` → middleware (`auth.ts`, `role.ts`).
-- `action-level` → `usePermissions()` hoặc `RoleGate` component.
-- `data-level` → re-check ở server và Supabase RLS policy.
-- Không hardcode role string rải rác trong component — dùng constants.
-- Check theo capability thay vì role trực tiếp: `can('buildings.create')`.
-- UI check chỉ để ẩn/disable — bảo mật thật nằm ở server và RLS.
+- Permission has three layers: route-level, action-level, and data-level.
+- Route-level protection lives in Nuxt middleware.
+- Action-level checks use role/capability helpers and should only hide or disable UI.
+- Data-level enforcement is repeated on the server and backed by Supabase RLS policies.
+- Do not scatter role string checks through components. Prefer constants and capability checks.
+- Security lives on the server. UI checks are not sufficient.
 
-### Billing capabilities
+### Billing Capabilities
 
 | Capability | Roles | Notes |
 | --- | --- | --- |
-| `billing.read` | admin, manager | Đọc kỳ, hoá đơn, thanh toán, xuất Excel. |
-| `billing.write` | admin, manager | Lưu chỉ số, ghi đè, phát hành, ghi thu (đơn lẻ + hàng loạt), điều chỉnh. |
-| `billing.unissue` | admin | Huỷ phát hành kỳ — bắt buộc nhập lý do ≥10 ký tự, từ chối khi kỳ đã `closed`. Audit `period.unissued` ghi lại số HĐ huỷ và số HĐ giữ lại. |
+| `billing.read` | admin, manager | Read periods, drafts, invoices, payments, audit, and export Excel. |
+| `billing.write` | admin, manager | Save readings/overrides, issue invoices, record payments, bulk payments, adjustments, void/reissue. |
+| `billing.close` | admin | Close a period when status is `issued` or `collecting` and no invoice has an outstanding balance. |
+| `billing.unissue` | admin | Unissue a non-closed period. Requires a reason of at least 10 characters, voids unpaid invoices, retains paid invoices, and records `period.unissued`. |
 
 ## 5. Styling Rules
 
-- Dùng Tailwind utility classes.
-- Dùng `clsx` cho conditional/dynamic class composition.
-- Không dùng inline `style=""`.
-- CSS custom chỉ viết trong `app/assets/scss/main.scss` cho những thứ Tailwind không express được.
+- Use Tailwind utility classes.
+- Use `clsx` for conditional or dynamic class composition.
+- Avoid inline `style=""`.
+- Custom CSS belongs in `app/assets/scss/main.scss` only when Tailwind cannot express the rule cleanly.
+- Follow `docs/ui-patterns/design-system.md` for dark operational UI patterns.
 
 ## 6. Incremental Principle
 
-- Chỉ tạo file/folder khi có feature thật cần dùng.
-- Không tạo abstraction khi mới chỉ có 1 nơi dùng.
-- Khi một pattern được dùng lần thứ hai, mới nâng thành shared pattern.
-- Mỗi bước phải để lại kết quả chạy được.
-## 7. Test Rules
+- Create files and folders only when a real feature needs them.
+- Do not add abstractions for one call site.
+- Promote a shared pattern when it appears for the second time and the shape is stable.
+- Each step should leave the app runnable.
+
+## 7. Billing Invariants
+
+- An issued invoice snapshot is immutable except through supported correction flows.
+- Corrections use one of three paths: `void + reissue`, `adjustment`, or period-level `unissue`.
+- `void + reissue` is only for unpaid invoices in non-closed periods.
+- `adjustment` is used once collection has started or when replacing the invoice is not appropriate.
+- Period close is admin-only and requires no outstanding invoices.
+- Period unissue is admin-only, unavailable after close, and requires an explicit reason.
+- Every destructive billing action writes audit metadata that can be rendered into Vietnamese summaries.
+
+## 8. Test Rules
 
 - Vitest is the default unit/component test runner.
 - Billing service coverage is scoped first to `server/services/billing/**`.
