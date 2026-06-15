@@ -1,9 +1,7 @@
 ## Purpose
 
 Client-side UI for managing rooms. Includes list page with filters, detail page, create and edit pages. Status badge uses color coding per room occupancy state.
-
 ## Requirements
-
 ### Requirement: Room list page
 `/rooms` page SHALL display all rooms in a table/card list. Supports filter by building (dropdown), status (dropdown), floor (input). Shows loading skeleton and empty state. Admin sees create button.
 
@@ -111,3 +109,26 @@ The `/rooms` list page SHALL support pagination matching the buildings list patt
 #### Scenario: Filter resets page
 - **WHEN** user changes building or status filter
 - **THEN** page resets to 1 automatically
+
+### Requirement: Room links support building-scoped slugs
+Room UI links SHALL prefer building-scoped readable URLs when building slug and room slug are available, while preserving existing `/rooms/:id` links.
+
+#### Scenario: Room link uses building and room slug
+- **WHEN** a room has building slug `toa-a` and room slug `a101`
+- **THEN** the preferred room detail link is `/buildings/toa-a/rooms/a101`
+
+#### Scenario: Room link falls back to id
+- **WHEN** a room does not have enough slug context
+- **THEN** the UI can link to `/rooms/<id>`
+
+### Requirement: Room detail accepts id route and scoped route
+The room detail UI SHALL be reachable from existing UUID room URLs and from building-scoped room slug URLs.
+
+#### Scenario: Existing room id URL works
+- **WHEN** user opens `/rooms/<uuid>`
+- **THEN** the room detail page loads the matching room
+
+#### Scenario: Scoped room slug URL works
+- **WHEN** user opens `/buildings/toa-a/rooms/a101`
+- **THEN** the room detail page loads room A101 in building Toa A
+

@@ -1,9 +1,7 @@
 ## Purpose
 
 Server-side API for contracts. CRUD endpoints with Zod validation, auth guard, and 409 CONFLICT protection when a room already has an active contract.
-
 ## Requirements
-
 ### Requirement: List contracts endpoint
 `GET /api/contracts` SHALL return a paginated list of contracts. Query params: `room_id` (optional UUID filter), `tenant_id` (optional UUID filter), `building_id` (optional UUID filter), `status` (optional, one of `active` | `expired` | `terminated`), `page` (default 1), `limit` (default 20). Response: `{ data: Contract[], meta: { total, page, limit, totalPages } }`. Requires authenticated session with admin or manager role.
 
@@ -206,3 +204,19 @@ The system SHALL persist `contract_renewals` rows from the server using the serv
 - **WHEN** the renewal service rolls back a log row after a follow-up contract mutation fails
 - **THEN** the repository deletes the log row using the service-role Supabase client
 - **AND** the rollback SHALL be best-effort: a rollback failure SHALL be logged but SHALL NOT mask the original error returned to the caller
+
+### Requirement: Contract API supports id or code lookup
+`GET /api/contracts/:identifier` SHALL support UUID id lookup and stable contract-code lookup when contract codes are available.
+
+#### Scenario: Lookup contract by id
+- **WHEN** authenticated user calls GET /api/contracts/<uuid>
+- **THEN** the API returns the matching contract
+
+#### Scenario: Lookup contract by code
+- **WHEN** authenticated user calls GET /api/contracts/hd-2026-0001
+- **THEN** the API returns the matching contract
+
+#### Scenario: Unknown contract code
+- **WHEN** authenticated user calls GET /api/contracts/unknown-code
+- **THEN** the API returns 404 NOT_FOUND
+

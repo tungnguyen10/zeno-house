@@ -2,13 +2,24 @@ import { vi } from 'vitest'
 import { buildPeriod } from '../../__fixtures__/billing/period'
 
 const findById = vi.fn()
+const findByBuildingPeriod = vi.fn()
+const insert = vi.fn()
 const updateStatus = vi.fn()
 const append = vi.fn()
+const findBuildingByIdentifier = vi.fn()
 
 vi.mock('../../../server/repositories/billing/periods', () => ({
   BillingPeriodRepository: {
     findById,
+    findByBuildingPeriod,
+    insert,
     updateStatus,
+  },
+}))
+
+vi.mock('../../../server/repositories/buildings', () => ({
+  BuildingRepository: {
+    findByIdentifier: findBuildingByIdentifier,
   },
 }))
 
@@ -25,6 +36,25 @@ vi.mock('../../../server/services/billing/audit', () => ({
 describe('BillingPeriodService.advanceStatus', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+  })
+
+  it('opens a period by building slug through id-or-slug lookup', async () => {
+    const created = buildPeriod({ buildingId: 'building-1', periodYear: 2026, periodMonth: 6 })
+    findBuildingByIdentifier.mockResolvedValue({ id: 'building-1', slug: 'toa-a' })
+    findByBuildingPeriod.mockResolvedValue(null)
+    insert.mockResolvedValue(created)
+    const { BillingPeriodService } = await import('../../../server/services/billing/periods')
+
+    const result = await BillingPeriodService.openOrGet(
+      {} as never,
+      { id: 'user-1' } as never,
+      { building_id: 'toa-a', period_year: 2026, period_month: 6 },
+    )
+
+    expect(findBuildingByIdentifier).toHaveBeenCalledWith(expect.anything(), 'toa-a')
+    expect(findByBuildingPeriod).toHaveBeenCalledWith(expect.anything(), 'building-1', 2026, 6)
+    expect(insert).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ building_id: 'building-1' }))
+    expect(result.id).toBe(created.id)
   })
 
   it('updates status and appends an audit event', async () => {

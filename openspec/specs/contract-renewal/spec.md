@@ -27,7 +27,7 @@ The system SHALL support creating a successor contract when terms change signifi
 - **THEN** request rejected with CONFLICT
 
 ### Requirement: Contract renewal history
-A `contract_renewals` log records each renewal event with old/new end date, old/new rent, mode, and optional reason.
+The system SHALL record each renewal event in a `contract_renewals` log with old/new end date, old/new rent, mode, and optional reason.
 
 #### Scenario: Renewal history retrievable
 - **WHEN** admin views a contract's renewal history

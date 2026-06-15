@@ -2,6 +2,9 @@
 
 > Living document — update this spec when domain boundaries change.
 
+## Purpose
+Defines the platform architecture, domain boundaries, operational workspace model, and architectural decisions that guide product changes.
+
 ## Platform Layers
 
 ```

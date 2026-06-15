@@ -1,4 +1,7 @@
-## ADDED Requirements
+## Purpose
+Defines foundational product flow behavior for buildings, rooms, contracts, occupants, and operational navigation.
+
+## Requirements
 
 ### Requirement: Product flow foundation before billing workspace
 The system SHALL provide a foundation change that aligns Core Data with the future Monthly Billing Workspace before any billing runtime features are introduced. This foundation SHALL cover building operational config, quick room setup, occupant / roommate modeling, contract commercial terms, simplified meter reading inputs, and navigation alignment.

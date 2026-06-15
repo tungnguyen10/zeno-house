@@ -1,4 +1,7 @@
-## ADDED Requirements
+## Purpose
+Defines shared API response and authentication user types used between server handlers and client code.
+
+## Requirements
 
 ### Requirement: ApiSuccess và ApiError là shared TypeScript types
 `app/types/api.ts` SHALL export `ApiSuccess<T>`, `ApiError`, và `ErrorCode` union type. Tất cả server API handlers SHALL trả về `ApiSuccess<T>` hoặc throw với shape `ApiError`.

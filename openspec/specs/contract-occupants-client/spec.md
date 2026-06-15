@@ -26,7 +26,7 @@ Exposed: `occupants`, `isLoading`, `error`, `addOccupant(input)`, `moveOut(occup
 - **THEN** occupant removed from list
 
 ### Requirement: Occupant form component
-`ContractOccupantForm` provides a form to add a new roommate. Role is always `roommate` — no role selector shown.
+`ContractOccupantForm` SHALL provide a form to add a new roommate. Role is always `roommate` — no role selector shown.
 
 **Fields:** tenant searchable select, move_in_date (defaults today), billing_counted (checkbox, defaults true).
 

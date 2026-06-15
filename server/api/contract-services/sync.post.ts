@@ -1,7 +1,7 @@
 import { ContractServiceService } from '../../services/contract-services'
 import { z } from 'zod'
 
-const syncSchema = z.object({ building_id: z.string().uuid() })
+const syncSchema = z.object({ building_id: z.string().min(1) })
 
 export default defineEventHandler(async (event) => {
   const user = await requireAuth(event)

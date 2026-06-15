@@ -1,4 +1,7 @@
-## ADDED Requirements
+## Purpose
+Defines authentication and guest route guard behavior for protected admin pages and login routing.
+
+## Requirements
 
 ### Requirement: Global auth middleware bảo vệ tất cả admin routes
 `middleware/auth.global.ts` SHALL chạy trên mọi navigation. Nếu route không nằm trong public routes list và user chưa authenticated, SHALL redirect về `/login`.

@@ -3,17 +3,26 @@ import { buildContract } from '../../__fixtures__/billing/contract'
 
 const mocks = vi.hoisted(() => ({
   findByIdentifier: vi.fn(),
+  findAll: vi.fn(),
   findActiveByRoomId: vi.fn(),
   update: vi.fn(),
   remove: vi.fn(),
+  findBuildingByIdentifier: vi.fn(),
 }))
 
 vi.mock('../../../server/repositories/contracts', () => ({
   ContractRepository: {
     findByIdentifier: mocks.findByIdentifier,
+    findAll: mocks.findAll,
     findActiveByRoomId: mocks.findActiveByRoomId,
     update: mocks.update,
     remove: mocks.remove,
+  },
+}))
+
+vi.mock('../../../server/repositories/buildings', () => ({
+  BuildingRepository: {
+    findByIdentifier: mocks.findBuildingByIdentifier,
   },
 }))
 
@@ -57,6 +66,23 @@ function buildContractWithDetails() {
 describe('ContractService code lookup', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+  })
+
+  it('resolves building slug filters before listing contracts', async () => {
+    const contract = buildContractWithDetails()
+    mocks.findBuildingByIdentifier.mockResolvedValue({ id: 'building-1', slug: 'toa-a' })
+    mocks.findAll.mockResolvedValue({ items: [contract], total: 1 })
+    const { ContractService } = await import('../../../server/services/contracts')
+
+    const result = await ContractService.list(
+      {} as never,
+      { id: 'user-1' } as never,
+      { building_id: 'toa-a', status: 'active' },
+    )
+
+    expect(mocks.findBuildingByIdentifier).toHaveBeenCalledWith(expect.anything(), 'toa-a')
+    expect(mocks.findAll).toHaveBeenCalledWith(expect.anything(), { building_id: 'building-1', status: 'active' })
+    expect(result.total).toBe(1)
   })
 
   it('loads contract detail by persisted contract code', async () => {

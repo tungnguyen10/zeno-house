@@ -1,4 +1,6 @@
-## Status
+## Purpose
+
+Documents the deprecated room assignment API behavior and explains that active occupancy is now handled by contract lifecycle.
 
 **DEPRECATED** — Removed in change `2026-05-30-contract-as-assignment`.
 

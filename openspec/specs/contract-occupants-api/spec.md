@@ -49,7 +49,7 @@ The API SHALL enforce single active occupancy per tenant:
 - **THEN** 409 CONFLICT returned
 
 ### Requirement: Active occupancy uniqueness enforced at DB level
-A partial unique index `contract_occupants_active_tenant_unique ON contract_occupants(tenant_id) WHERE move_out_date IS NULL` ensures atomic uniqueness even under concurrent requests.
+The database MUST enforce atomic active occupancy uniqueness with a partial unique index `contract_occupants_active_tenant_unique ON contract_occupants(tenant_id) WHERE move_out_date IS NULL`, including under concurrent requests.
 
 #### Scenario: Concurrent add rejected
 - **WHEN** two concurrent requests attempt to add the same tenant to different contracts

@@ -1,4 +1,7 @@
-## ADDED Requirements
+## Purpose
+Defines the authenticated admin application shell, layouts, navigation, and route-level presentation expectations.
+
+## Requirements
 
 ### Requirement: Default layout wraps admin pages
 App SHALL render tất cả admin page với `layouts/default.vue` bao gồm AppSidebar ở trái và AppHeader ở trên. Content area ở giữa scroll độc lập.

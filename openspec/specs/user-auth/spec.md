@@ -1,4 +1,7 @@
-## ADDED Requirements
+## Purpose
+Defines user authentication behavior for login and logout using Supabase email and password sessions.
+
+## Requirements
 
 ### Requirement: Login bằng email và password
 App SHALL cho phép admin user đăng nhập bằng email và password qua Supabase Auth. Form SHALL hiển thị loading state khi đang xử lý và error message khi thất bại.

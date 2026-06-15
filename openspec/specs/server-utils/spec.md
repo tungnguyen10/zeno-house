@@ -1,4 +1,7 @@
-## ADDED Requirements
+## Purpose
+Defines shared server utility behavior for typed errors, authenticated users, and permission checks.
+
+## Requirements
 
 ### Requirement: Typed error throwing helpers
 `server/utils/errors.ts` SHALL export `throwForbidden(message?)`, `throwNotFound(message?)`, `throwValidationError(message?, details?)`, `throwConflict(message?)`. Mỗi helper SHALL throw `createError` với đúng HTTP status code và `{ error: { code, message } }` shape.

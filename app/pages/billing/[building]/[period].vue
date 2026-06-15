@@ -8,9 +8,6 @@ import type { BillingPaymentsIntent } from '~/components/billing/BillingPayments
 import BillingAuditStep from '~/components/billing/BillingAuditStep.vue'
 import BillingCloseStep from '~/components/billing/BillingCloseStep.vue'
 import BillingUnissueModal from '~/components/billing/BillingUnissueModal.vue'
-import type { Building } from '~/types/buildings'
-import type { ApiSuccess } from '~/types/api'
-import { isUuid } from '~/utils/format/slug'
 
 definePageMeta({ title: 'Kỳ vận hành' })
 
@@ -25,27 +22,17 @@ if (!buildingParam || !Number.isFinite(periodYear) || !Number.isFinite(periodMon
   throw createError({ statusCode: 404, statusMessage: 'Kỳ vận hành không hợp lệ' })
 }
 
-const buildingId = ref<string>('')
 const periodId = ref<string>('')
 const resolveError = ref<string | null>(null)
 const resolving = ref(true)
-
-async function resolveBuildingId(): Promise<string> {
-  if (isUuid(buildingParam)) return buildingParam
-  const resp = await $fetch<ApiSuccess<Building[]>>('/api/buildings', { query: { limit: 200 } })
-  const match = resp.data.find(b => b.slug === buildingParam)
-  if (!match) throw createError({ statusCode: 404, statusMessage: 'Không tìm thấy tòa nhà' })
-  return match.id
-}
 
 async function resolvePeriod() {
   resolving.value = true
   resolveError.value = null
   try {
-    buildingId.value = await resolveBuildingId()
     const resp = await $fetch<{ data: { id: string } }>('/api/billing/periods', {
       method: 'POST',
-      body: { building_id: buildingId.value, period_year: periodYear, period_month: periodMonth },
+      body: { building_id: buildingParam, period_year: periodYear, period_month: periodMonth },
     })
     periodId.value = resp.data.id
   }

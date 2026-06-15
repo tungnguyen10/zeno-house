@@ -1,9 +1,7 @@
 ## Purpose
 
 HTTP API for managing rooms. All endpoints require authentication. Admin-only endpoints: create, update, delete. Read endpoints available to both admin and manager.
-
 ## Requirements
-
 ### Requirement: List rooms endpoint
 `GET /api/rooms` SHALL return paginated room list. Optional query params: `building_id`, `status`, `floor`. Response: `{ data: RoomDto[], meta: { total } }`. Requires authentication.
 
@@ -74,3 +72,19 @@ HTTP API for managing rooms. All endpoints require authentication. Admin-only en
 #### Scenario: Manager forbidden
 - **WHEN** manager tries to delete room
 - **THEN** returns 403 FORBIDDEN
+
+### Requirement: Room API supports scoped slug lookup
+Room read APIs SHALL support lookup by UUID id and by building identifier plus room slug where scoped room URLs are used.
+
+#### Scenario: Lookup room by id
+- **WHEN** authenticated user requests a room by UUID id
+- **THEN** the API returns the matching room DTO
+
+#### Scenario: Lookup room by building slug and room slug
+- **WHEN** authenticated user requests room `a101` under building slug `toa-a`
+- **THEN** the API returns the matching room DTO for that building
+
+#### Scenario: Unknown scoped room slug
+- **WHEN** authenticated user requests unknown room slug under a valid building
+- **THEN** the API returns 404 NOT_FOUND
+

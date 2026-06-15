@@ -1,4 +1,7 @@
-## ADDED Requirements
+## Purpose
+Defines client session store behavior and authentication actions used across the application.
+
+## Requirements
 
 ### Requirement: Auth store chứa session state
 `stores/auth.ts` SHALL expose reactive session state dựa trên `useSupabaseUser()`. Store SHALL cung cấp `user`, `isAuthenticated`, `role`, và `isAdmin` getters.

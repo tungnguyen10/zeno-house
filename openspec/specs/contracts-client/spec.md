@@ -1,9 +1,7 @@
 ## Purpose
 
 Client-side UI for managing contracts. List page with status filter, detail page, create and edit pages with `ContractForm`. Follows the same composable + page pattern as buildings, rooms, and tenants.
-
 ## Requirements
-
 ### Requirement: Contract list page
 `/contracts` page SHALL display all contracts in a list. Supports filter by building and status (dropdown: all / active / expired / terminated). When no building is selected, the page SHALL list contracts from all buildings. Shows loading skeleton and empty state. Admin sees create button. Includes pagination (prev/next) when `totalPages > 1`. Each row/card shows: room number + building name, tenant full_name, start_date, end_date, monthly_rent, status badge.
 
@@ -152,3 +150,22 @@ The contract create/edit form SHALL automatically populate the `monthly_rent` in
 #### Scenario: Helper text discloses the rent source
 - **WHEN** a room is selected
 - **THEN** the form displays helper text indicating the value defaulted from the room and may be overridden
+
+### Requirement: Contract links prefer stable codes
+Contract UI links SHALL prefer stable contract codes or slugs when available, while preserving UUID contract detail links.
+
+#### Scenario: Contract link uses code
+- **WHEN** a contract has code `hd-2026-0001`
+- **THEN** the preferred detail link is `/contracts/hd-2026-0001`
+
+#### Scenario: Contract link falls back to id
+- **WHEN** a contract has no stable code
+- **THEN** the UI links to `/contracts/<id>`
+
+### Requirement: Contract URLs do not derive from tenant names
+Contract routes SHALL NOT use tenant-name-derived slugs.
+
+#### Scenario: Contract with tenant name
+- **WHEN** UI renders a contract for tenant Nguyen Van A
+- **THEN** the contract URL does not include a slug derived from `Nguyen Van A`
+

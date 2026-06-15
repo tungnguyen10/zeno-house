@@ -58,4 +58,4 @@
 - [x] 7.3 Add or update tests for tenant contract-state filtering and active assignment enrichment.
 - [x] 7.4 Add or update tests for dashboard summary aggregate shape and empty-state behavior.
 - [x] 7.5 Run typecheck and relevant test suites.
-- [ ] 7.6 Manually verify `/`, `/buildings`, building detail slug URLs, building-scoped room links, billing workspace links, contract links, and `/tenants` in the browser.
+- [x] 7.6 Manually verify `/`, `/buildings`, building detail slug URLs, building-scoped room links, billing workspace links, contract links, and `/tenants` in the browser.
