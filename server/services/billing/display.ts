@@ -25,6 +25,7 @@ export interface RoomDisplay {
 
 export interface ContractDisplay {
   id: string
+  contractCode: string | null
   roomId: string | null
   tenantId: string | null
 }
@@ -38,6 +39,7 @@ export interface PeriodDisplay {
 
 export interface InvoiceDisplay {
   id: string
+  invoiceCode: string | null
   billingPeriodId: string
   contractId: string
   roomId: string
@@ -55,7 +57,7 @@ function uniqueIds(ids: MaybeId[]): string[] {
   return [...new Set(ids.filter((id): id is string => typeof id === 'string' && id.length > 0))]
 }
 
-function contractCode(id: MaybeId): string | null {
+function fallbackContractCode(id: MaybeId): string | null {
   return id ? `HĐ ${id.slice(0, 8)}` : null
 }
 
@@ -154,7 +156,7 @@ export class BillingDisplayResolver {
       this.countQuery('contracts')
       const { data, error } = await client
         .from('contracts')
-        .select('id, room_id, tenant_id')
+        .select('id, contract_code, room_id, tenant_id')
         .in('id', missing)
       if (error) throw createError({ statusCode: 500, message: error.message })
       const found = new Set<string>()
@@ -162,6 +164,7 @@ export class BillingDisplayResolver {
         found.add(row.id)
         this.contracts.set(row.id, {
           id: row.id,
+          contractCode: row.contract_code ?? null,
           roomId: row.room_id ?? null,
           tenantId: row.tenant_id ?? null,
         })
@@ -207,7 +210,7 @@ export class BillingDisplayResolver {
       this.countQuery('invoices')
       const { data, error } = await client
         .from('invoices')
-        .select('id, billing_period_id, contract_id, room_id, tenant_id, total_amount, balance_amount')
+        .select('id, invoice_code, billing_period_id, contract_id, room_id, tenant_id, total_amount, balance_amount')
         .in('id', missing)
       if (error) throw createError({ statusCode: 500, message: error.message })
       const found = new Set<string>()
@@ -215,6 +218,7 @@ export class BillingDisplayResolver {
         found.add(row.id)
         this.invoices.set(row.id, {
           id: row.id,
+          invoiceCode: row.invoice_code ?? null,
           billingPeriodId: row.billing_period_id,
           contractId: row.contract_id,
           roomId: row.room_id,
@@ -231,17 +235,20 @@ export class BillingDisplayResolver {
   }
 
   async enrichInvoices<T extends { tenantId: string; roomId: string; contractId: string }>(invoices: T[]): Promise<Array<T & { tenantName: string | null; roomNumber: string | null; contractCode: string | null }>> {
-    const [tenants, rooms] = await Promise.all([
+    const [tenants, rooms, contracts] = await Promise.all([
       this.loadTenants(invoices.map(i => i.tenantId)),
       this.loadRooms(invoices.map(i => i.roomId)),
       this.loadContracts(invoices.map(i => i.contractId)),
     ])
-    return invoices.map(invoice => ({
-      ...invoice,
-      tenantName: tenants.get(invoice.tenantId)?.fullName ?? null,
-      roomNumber: rooms.get(invoice.roomId)?.roomNumber ?? null,
-      contractCode: contractCode(invoice.contractId),
-    }))
+    return invoices.map(invoice => {
+      const contract = contracts.get(invoice.contractId)
+      return {
+        ...invoice,
+        tenantName: tenants.get(invoice.tenantId)?.fullName ?? null,
+        roomNumber: rooms.get(invoice.roomId)?.roomNumber ?? null,
+        contractCode: contract?.contractCode ?? fallbackContractCode(invoice.contractId),
+      }
+    })
   }
 
   async enrichPayments<T extends { recordedBy: string | null }>(payments: T[]): Promise<Array<T & { recordedByName: string | null }>> {
@@ -273,7 +280,7 @@ export class BillingDisplayResolver {
       const tenant = tenants.get(invoice.tenantId)
       const period = periods.get(invoice.billingPeriodId)
       return {
-        label: `Hoá đơn ${room?.roomNumber ? `P${room.roomNumber}` : invoice.id.slice(0, 8)}${tenant?.fullName ? ` · ${tenant.fullName}` : ''}`,
+        label: `${invoice.invoiceCode ?? `Hoá đơn ${invoice.id.slice(0, 8)}`}${room?.roomNumber ? ` · P${room.roomNumber}` : ''}${tenant?.fullName ? ` · ${tenant.fullName}` : ''}`,
         subLabel: [periodToken(period), `${Math.trunc(invoice.totalAmount).toLocaleString('vi-VN')}đ`].filter(Boolean).join(' · ') || null,
       }
     }
@@ -286,7 +293,6 @@ export class BillingDisplayResolver {
 
   async entityHref(entityType: BillingAuditEntityType, entityId: MaybeId, ctx: BillingDisplayContext = {}): Promise<string | null> {
     if (!entityId) return null
-    if (ctx.buildingId && ctx.periodToken) return `/billing/${ctx.buildingId}/${ctx.periodToken}`
     if (entityType === 'billing_period') {
       const period = (await this.loadPeriods([entityId])).get(entityId)
       const token = periodToken(period)
@@ -295,10 +301,9 @@ export class BillingDisplayResolver {
     if (entityType === 'invoice') {
       const invoice = (await this.loadInvoices([entityId])).get(entityId)
       if (!invoice) return null
-      const period = (await this.loadPeriods([invoice.billingPeriodId])).get(invoice.billingPeriodId)
-      const token = periodToken(period)
-      return period && token ? `/billing/${period.buildingId}/${token}` : null
+      return `/billing/invoices/${invoice.invoiceCode ?? invoice.id}`
     }
+    if (ctx.buildingId && ctx.periodToken) return `/billing/${ctx.buildingId}/${ctx.periodToken}`
     return ctx.buildingId && ctx.periodToken ? `/billing/${ctx.buildingId}/${ctx.periodToken}` : null
   }
 }

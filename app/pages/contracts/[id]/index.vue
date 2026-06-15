@@ -2,6 +2,7 @@
 import { formatCurrency } from '~/utils/format/currency'
 import type { ContractPaymentCreateInput } from '~/utils/validators/contract-payments'
 import type { ContractRenewInput } from '~/utils/validators/contract-renewals'
+import { contractPath } from '~/utils/routes/operational'
 
 definePageMeta({ title: 'Chi tiết hợp đồng' })
 
@@ -88,7 +89,7 @@ async function handleRenew(input: ContractRenewInput) {
     showRenewalForm.value = false
     // If new contract was created, navigate to it
     if (renewal.newContractId) {
-      await navigateTo(`/contracts/${renewal.newContractId}`)
+              await navigateTo(`/contracts/${renewal.newContractId}`)
     } else {
       await refreshContract()
     }
@@ -196,7 +197,7 @@ watchEffect(() => {
       <UiPageHeader title="Hợp đồng">
         <div class="flex items-center gap-2 mt-1">
           <UiStatusBadge :status="contract.status" />
-          <span class="text-xs text-muted font-mono">{{ contract.id }}</span>
+          <span class="text-xs text-muted font-mono">{{ contract.contractCode }}</span>
         </div>
         <template #actions>
           <div v-if="authStore.isAdmin" class="flex gap-2 shrink-0 flex-wrap justify-end">
@@ -208,7 +209,7 @@ watchEffect(() => {
             >
               Gia hạn
             </UiButton>
-            <NuxtLink :to="`/contracts/${contract.id}/edit`">
+            <NuxtLink :to="`${contractPath(contract)}/edit`">
               <UiButton variant="secondary" size="sm">Chỉnh sửa</UiButton>
             </NuxtLink>
             <UiButton variant="danger" size="sm" @click="showDeleteModal = true">Xoá</UiButton>

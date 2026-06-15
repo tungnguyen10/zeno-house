@@ -33,7 +33,9 @@ export interface BulkPaymentsResult {
 export const InvoicePaymentService = {
   async list(event: H3Event, user: AuthUser, invoiceId: string): Promise<InvoicePayment[]> {
     if (!can(user, 'billing.read')) throwForbidden('Không có quyền xem khoản thu')
-    const payments = await InvoicePaymentRepository.listByInvoice(event, invoiceId)
+    const invoice = await InvoiceRepository.findByIdentifier(event, invoiceId)
+    if (!invoice) throwNotFound('Không tìm thấy hoá đơn')
+    const payments = await InvoicePaymentRepository.listByInvoice(event, invoice.id)
     return new BillingDisplayResolver(event).enrichPayments(payments)
   },
 
@@ -50,7 +52,7 @@ export const InvoicePaymentService = {
   ): Promise<{ payment: InvoicePayment; invoice: Invoice }> {
     if (!can(user, 'billing.write')) throwForbidden('Không có quyền ghi nhận thanh toán')
 
-    const invoice = await InvoiceRepository.findById(event, invoiceId)
+    const invoice = await InvoiceRepository.findByIdentifier(event, invoiceId)
     if (!invoice) throwNotFound('Không tìm thấy hoá đơn')
     if (invoice.status === 'void') throwConflict('Hoá đơn đã huỷ — không thể ghi nhận thanh toán')
     if (input.amount > invoice.balanceAmount) {
@@ -63,7 +65,7 @@ export const InvoicePaymentService = {
     const period = await BillingPeriodRepository.findById(event, invoice.billingPeriodId)
     if (period?.status === 'closed') throwConflict('Kỳ đã chốt — không thể ghi nhận thanh toán mới')
 
-    const payment = await InvoicePaymentRepository.insert(event, invoiceId, user.id ?? null, input)
+    const payment = await InvoicePaymentRepository.insert(event, invoice.id, user.id ?? null, input)
 
     let updatedInvoice: Invoice
     try {
@@ -71,7 +73,7 @@ export const InvoicePaymentService = {
       const paidAt = next.balanceAmount <= 0 ? input.paid_at : null
       updatedInvoice = await InvoiceRepository.updatePaymentTotals(
         event,
-        invoiceId,
+        invoice.id,
         next.paidAmount,
         next.balanceAmount,
         next.status,
@@ -96,7 +98,7 @@ export const InvoicePaymentService = {
       before_data: { paid_amount: invoice.paidAmount, balance_amount: invoice.balanceAmount, status: invoice.status },
       after_data: { paid_amount: updatedInvoice.paidAmount, balance_amount: updatedInvoice.balanceAmount, status: updatedInvoice.status },
       metadata: {
-        invoice_id: invoiceId,
+        invoice_id: invoice.id,
         amount: payment.amount,
         paid_at: payment.paidAt,
         payment_method: payment.paymentMethod,

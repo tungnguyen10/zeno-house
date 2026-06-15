@@ -2,6 +2,7 @@
 import type { ApiSuccess } from '~/types/api'
 import type { ContractWithDetails } from '~/types/contracts'
 import type { ContractFormData } from '~/components/contracts/ContractForm.vue'
+import { contractPath } from '~/utils/routes/operational'
 
 definePageMeta({ title: 'Chỉnh sửa hợp đồng' })
 
@@ -49,7 +50,7 @@ async function onSubmit(data: ContractFormData) {
     notes: data.notes || null,
   })
   if (updated) {
-    await navigateTo(`/contracts/${id}`)
+    await navigateTo(contractPath(updated))
   }
 }
 </script>
@@ -57,7 +58,7 @@ async function onSubmit(data: ContractFormData) {
 <template>
   <div class="">
     <UiPageHeader title="Chỉnh sửa hợp đồng">
-      <NuxtLink :to="`/contracts/${id}`" class="text-sm text-muted hover:text-white transition-colors">
+      <NuxtLink :to="contract ? contractPath(contract) : `/contracts/${id}`" class="text-sm text-muted hover:text-white transition-colors">
         ← Chi tiết hợp đồng
       </NuxtLink>
     </UiPageHeader>
@@ -70,7 +71,7 @@ async function onSubmit(data: ContractFormData) {
         :errors="errors"
         :api-error="apiError"
         @submit="onSubmit"
-        @cancel="navigateTo(`/contracts/${id}`)"
+        @cancel="navigateTo(contract ? contractPath(contract) : `/contracts/${id}`)"
       />
     </div>
   </div>

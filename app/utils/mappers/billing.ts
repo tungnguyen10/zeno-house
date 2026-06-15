@@ -41,6 +41,7 @@ export function mapBillingPeriod(row: Tables<'billing_periods'>): BillingPeriod 
 export function mapInvoice(row: Tables<'invoices'>): Invoice {
   return {
     id: row.id,
+    invoiceCode: row.invoice_code,
     billingPeriodId: row.billing_period_id,
     contractId: row.contract_id,
     roomId: row.room_id,

@@ -3,6 +3,7 @@ import type { H3Event } from 'h3'
 import type { Contract, ContractWithDetails } from '~/types/contracts'
 import type { ContractCreateInput, ContractUpdateInput } from '~/utils/validators/contracts'
 import { mapContract, mapContractWithDetails } from '~/utils/mappers/contracts'
+import { isUuid } from '~/utils/format/slug'
 
 export interface ContractFilters {
   room_id?: string
@@ -18,6 +19,35 @@ const DETAIL_SELECT = `
   rooms!inner (id, room_number, floor, building_id, buildings (name)),
   tenants (id, full_name, phone)
 `
+
+function contractCodePrefix(startDate: string): string {
+  const date = new Date(startDate)
+  const year = Number.isFinite(date.getTime()) ? date.getUTCFullYear() : new Date().getUTCFullYear()
+  return `hd-${year}`
+}
+
+function sequenceFromCode(prefix: string, code: string | null): number {
+  if (!code?.startsWith(`${prefix}-`)) return 0
+  const seq = Number(code.slice(prefix.length + 1))
+  return Number.isInteger(seq) ? seq : 0
+}
+
+async function buildUniqueContractCode(event: H3Event, startDate: string): Promise<string> {
+  const client = await serverSupabaseClient(event)
+  const prefix = contractCodePrefix(startDate)
+  const { data, error } = await client
+    .from('contracts')
+    .select('contract_code')
+    .ilike('contract_code', `${prefix}-%`)
+
+  if (error) throw createError({ statusCode: 500, message: error.message })
+
+  const used = new Set((data ?? []).map(row => row.contract_code).filter(Boolean))
+  let next = Math.max(0, ...(data ?? []).map(row => sequenceFromCode(prefix, row.contract_code))) + 1
+
+  while (used.has(`${prefix}-${String(next).padStart(4, '0')}`)) next++
+  return `${prefix}-${String(next).padStart(4, '0')}`
+}
 
 export const ContractRepository = {
   async findAll(
@@ -50,11 +80,16 @@ export const ContractRepository = {
   },
 
   async findById(event: H3Event, id: string): Promise<ContractWithDetails | null> {
+    return this.findByIdentifier(event, id)
+  },
+
+  async findByIdentifier(event: H3Event, identifier: string): Promise<ContractWithDetails | null> {
     const client = await serverSupabaseClient(event)
+    const column = isUuid(identifier) ? 'id' : 'contract_code'
     const { data, error } = await client
       .from('contracts')
       .select(DETAIL_SELECT)
-      .eq('id', id)
+      .eq(column, identifier)
       .maybeSingle()
 
     if (error) throw createError({ statusCode: 500, message: error.message })
@@ -93,9 +128,11 @@ export const ContractRepository = {
     if (!input.building_id) {
       throw createError({ statusCode: 500, message: 'building_id is required on insert (resolve from room before calling repository)' })
     }
+    const contractCode = await buildUniqueContractCode(event, input.start_date)
     const { data, error } = await client
       .from('contracts')
       .insert({
+        contract_code: contractCode,
         room_id: input.room_id,
         tenant_id: input.tenant_id,
         building_id: input.building_id,

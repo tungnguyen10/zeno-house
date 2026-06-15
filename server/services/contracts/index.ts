@@ -19,7 +19,7 @@ export const ContractService = {
 
   async get(event: H3Event, user: AuthUser, id: string): Promise<ContractWithDetails> {
     if (!can(user, 'contracts.read')) throwForbidden('Không có quyền xem hợp đồng')
-    const contract = await ContractRepository.findById(event, id)
+    const contract = await ContractRepository.findByIdentifier(event, id)
     if (!contract) throwNotFound('Không tìm thấy hợp đồng')
     return contract
   },
@@ -72,7 +72,7 @@ export const ContractService = {
 
   async update(event: H3Event, user: AuthUser, id: string, input: ContractUpdateInput): Promise<ContractWithDetails> {
     if (!can(user, 'contracts.update')) throwForbidden('Không có quyền cập nhật hợp đồng')
-    const existing = await ContractRepository.findById(event, id)
+    const existing = await ContractRepository.findByIdentifier(event, id)
     if (!existing) throwNotFound('Không tìm thấy hợp đồng')
 
     const newStatus = input.status ?? existing.status
@@ -82,11 +82,11 @@ export const ContractService = {
     const roomChanged = newRoomId !== existing.roomId
 
     if (willBeActive) {
-      const conflict = await ContractRepository.findActiveByRoomId(event, newRoomId, id)
+      const conflict = await ContractRepository.findActiveByRoomId(event, newRoomId, existing.id)
       if (conflict) throwConflict('Phòng này đã có hợp đồng đang hiệu lực')
     }
 
-    const updated = await ContractRepository.update(event, id, input)
+    const updated = await ContractRepository.update(event, existing.id, input)
 
     // Release the previous room whenever the contract leaves it while having been active there:
     //   - active → expired/terminated (status transition)
@@ -113,10 +113,10 @@ export const ContractService = {
 
   async remove(event: H3Event, user: AuthUser, id: string): Promise<void> {
     if (!can(user, 'contracts.delete')) throwForbidden('Không có quyền xoá hợp đồng')
-    const existing = await ContractRepository.findById(event, id)
+    const existing = await ContractRepository.findByIdentifier(event, id)
     if (!existing) throwNotFound('Không tìm thấy hợp đồng')
 
-    await ContractRepository.remove(event, id)
+    await ContractRepository.remove(event, existing.id)
 
     // If the deleted contract was active, release the room (unless under maintenance).
     // Deleting expired/terminated/renewed contracts must not change room status.

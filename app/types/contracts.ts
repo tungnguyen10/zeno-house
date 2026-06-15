@@ -2,6 +2,7 @@ export type ContractStatus = 'active' | 'expired' | 'terminated' | 'renewed'
 
 export interface Contract {
   id: string
+  contractCode: string
   roomId: string
   tenantId: string
   buildingId: string

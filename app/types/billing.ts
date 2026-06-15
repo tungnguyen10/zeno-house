@@ -28,6 +28,7 @@ export interface BillingPeriod {
 
 export interface Invoice {
   id: string
+  invoiceCode: string
   billingPeriodId: string
   contractId: string
   roomId: string

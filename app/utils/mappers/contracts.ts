@@ -4,6 +4,7 @@ import type { Contract, ContractStatus, ContractWithDetails } from '~/types/cont
 export function mapContract(row: Tables<'contracts'>): Contract {
   return {
     id: row.id,
+    contractCode: row.contract_code,
     roomId: row.room_id,
     tenantId: row.tenant_id,
     buildingId: row.building_id,

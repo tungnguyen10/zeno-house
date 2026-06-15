@@ -3,6 +3,7 @@ import type { Invoice, InvoicePayment } from '~/types/billing'
 export function buildInvoice(overrides: Partial<Invoice> = {}): Invoice {
   return {
     id: 'invoice-1',
+    invoiceCode: 'inv-2026-05-0001',
     billingPeriodId: 'period-2026-05',
     contractId: 'contract-1',
     roomId: 'room-1',

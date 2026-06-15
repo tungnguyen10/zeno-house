@@ -157,9 +157,7 @@ export const BuildingRepository = {
     const client = await serverSupabaseClient(event)
     const slug = input.slug
       ? await buildUniqueSlug(event, input.slug, id)
-      : input.name
-        ? await buildUniqueSlug(event, input.name, id)
-        : undefined
+      : undefined
     const { data, error } = await client
       .from('buildings')
       .update({

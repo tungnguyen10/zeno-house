@@ -95,7 +95,7 @@ export type ReissueInvoiceInput = z.infer<typeof reissueInvoiceSchema>
 // ---------------------------------------------------------------------------
 
 export const adjustmentChargeSchema = z.object({
-  target_invoice_id: z.string().uuid(),
+  target_invoice_id: z.string().min(1),
   label: z.string().min(1).max(200),
   amount: z.number().int(),
   reason: z.string().min(1).max(500),

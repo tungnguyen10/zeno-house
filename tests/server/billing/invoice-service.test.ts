@@ -3,22 +3,28 @@ import { buildInvoice } from '../../__fixtures__/billing/invoice'
 import { buildPeriod } from '../../__fixtures__/billing/period'
 
 const findInvoiceById = vi.fn()
+const findInvoiceByIdentifier = vi.fn()
 const voidById = vi.fn()
 const findActiveByPeriodContract = vi.fn()
 const issueOne = vi.fn()
 const linkSupersededBy = vi.fn()
+const listCharges = vi.fn()
+const listPaymentsByInvoice = vi.fn()
 const findPeriodById = vi.fn()
 const append = vi.fn()
 const calculateDraft = vi.fn()
 const enrichInvoices = vi.fn(async invoices => invoices)
+const enrichPayments = vi.fn(async payments => payments)
 
 vi.mock('../../../server/repositories/billing/invoices', () => ({
   InvoiceRepository: {
     findById: findInvoiceById,
+    findByIdentifier: findInvoiceByIdentifier,
     voidById,
     findActiveByPeriodContract,
     issueOne,
     linkSupersededBy,
+    listCharges,
   },
 }))
 
@@ -29,7 +35,9 @@ vi.mock('../../../server/repositories/billing/periods', () => ({
 }))
 
 vi.mock('../../../server/repositories/billing/payments', () => ({
-  InvoicePaymentRepository: {},
+  InvoicePaymentRepository: {
+    listByInvoice: listPaymentsByInvoice,
+  },
 }))
 
 vi.mock('../../../server/services/billing/audit', () => ({
@@ -46,7 +54,7 @@ vi.mock('../../../server/services/billing/drafts', () => ({
 
 vi.mock('../../../server/services/billing/display', () => ({
   BillingDisplayResolver: vi.fn(function BillingDisplayResolver() {
-    return { enrichInvoices }
+    return { enrichInvoices, enrichPayments }
   }),
 }))
 
@@ -54,12 +62,33 @@ describe('InvoiceService invoice lifecycle methods', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     findPeriodById.mockResolvedValue(buildPeriod({ id: 'period-1', status: 'issued' }))
+    listCharges.mockResolvedValue([])
+    listPaymentsByInvoice.mockResolvedValue([])
+  })
+
+  it('loads an invoice by business code and uses the resolved id for child rows', async () => {
+    const invoice = buildInvoice({ id: 'invoice-1', invoiceCode: 'inv-2026-05-0001' })
+    findInvoiceByIdentifier.mockResolvedValue(invoice)
+    listCharges.mockResolvedValue([{ id: 'charge-1' }])
+    listPaymentsByInvoice.mockResolvedValue([{ id: 'payment-1' }])
+    const { InvoiceService } = await import('../../../server/services/billing/invoices')
+
+    const result = await InvoiceService.getWithCharges(
+      {} as never,
+      { id: 'user-1' } as never,
+      'inv-2026-05-0001',
+    )
+
+    expect(findInvoiceByIdentifier).toHaveBeenCalledWith(expect.anything(), 'inv-2026-05-0001')
+    expect(listCharges).toHaveBeenCalledWith(expect.anything(), invoice.id)
+    expect(listPaymentsByInvoice).toHaveBeenCalledWith(expect.anything(), invoice.id)
+    expect(result.invoice.invoiceCode).toBe('inv-2026-05-0001')
   })
 
   it('voids an issued invoice with no payments and records audit metadata', async () => {
     const invoice = buildInvoice({ id: 'invoice-1', paidAmount: 0, status: 'issued' })
     const voided = buildInvoice({ ...invoice, status: 'void', voidReason: 'wrong reading' })
-    findInvoiceById.mockResolvedValue(invoice)
+    findInvoiceByIdentifier.mockResolvedValue(invoice)
     voidById.mockResolvedValue(voided)
     const { InvoiceService } = await import('../../../server/services/billing/invoices')
 
@@ -235,7 +264,7 @@ describe('InvoiceService invoice lifecycle methods', () => {
   })
 
   it('blocks voiding invoices that already have payments', async () => {
-    findInvoiceById.mockResolvedValue(buildInvoice({ paidAmount: 100_000, status: 'partial' }))
+    findInvoiceByIdentifier.mockResolvedValue(buildInvoice({ paidAmount: 100_000, status: 'partial' }))
     const { InvoiceService } = await import('../../../server/services/billing/invoices')
 
     await expect(InvoiceService.voidInvoice({} as never, { id: 'user-1' } as never, 'invoice-1', { reason: 'wrong reading' }))
@@ -246,7 +275,7 @@ describe('InvoiceService invoice lifecycle methods', () => {
   it('reissues a voided invoice and links the replacement to the original invoice', async () => {
     const voided = buildInvoice({ id: 'invoice-old', status: 'void', paidAmount: 0, voidReason: 'wrong reading' })
     const replacement = buildInvoice({ id: 'invoice-new', supersedesInvoiceId: voided.id })
-    findInvoiceById.mockResolvedValue(voided)
+    findInvoiceByIdentifier.mockResolvedValue(voided)
     findActiveByPeriodContract.mockResolvedValue(null)
     calculateDraft.mockResolvedValue({
       drafts: [{

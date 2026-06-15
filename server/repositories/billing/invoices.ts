@@ -3,7 +3,37 @@ import type { H3Event } from 'h3'
 import type { Invoice, InvoiceCharge } from '~/types/billing'
 import type { InvoiceStatus } from '~/utils/constants/billing'
 import { mapInvoice, mapInvoiceCharge } from '~/utils/mappers/billing'
+import { isUuid } from '~/utils/format/slug'
 import type { ChargeInput } from '~/utils/validators/billing'
+
+function sequenceFromCode(prefix: string, code: string | null): number {
+  if (!code?.startsWith(`${prefix}-`)) return 0
+  const seq = Number(code.slice(prefix.length + 1))
+  return Number.isInteger(seq) ? seq : 0
+}
+
+async function buildUniqueInvoiceCode(event: H3Event, billingPeriodId: string): Promise<string> {
+  const client = await serverSupabaseClient(event)
+  const { data: period, error: periodError } = await client
+    .from('billing_periods')
+    .select('period_year, period_month')
+    .eq('id', billingPeriodId)
+    .single()
+  if (periodError) throw createError({ statusCode: 500, message: periodError.message })
+
+  const prefix = `inv-${period.period_year}-${String(period.period_month).padStart(2, '0')}`
+  const { data, error } = await client
+    .from('invoices')
+    .select('invoice_code')
+    .ilike('invoice_code', `${prefix}-%`)
+  if (error) throw createError({ statusCode: 500, message: error.message })
+
+  const used = new Set((data ?? []).map(row => row.invoice_code).filter(Boolean))
+  let next = Math.max(0, ...(data ?? []).map(row => sequenceFromCode(prefix, row.invoice_code))) + 1
+
+  while (used.has(`${prefix}-${String(next).padStart(4, '0')}`)) next++
+  return `${prefix}-${String(next).padStart(4, '0')}`
+}
 
 export const InvoiceRepository = {
   async listByPeriod(event: H3Event, billingPeriodId: string): Promise<Invoice[]> {
@@ -18,11 +48,16 @@ export const InvoiceRepository = {
   },
 
   async findById(event: H3Event, id: string): Promise<Invoice | null> {
+    return this.findByIdentifier(event, id)
+  },
+
+  async findByIdentifier(event: H3Event, identifier: string): Promise<Invoice | null> {
     const client = await serverSupabaseClient(event)
+    const column = isUuid(identifier) ? 'id' : 'invoice_code'
     const { data, error } = await client
       .from('invoices')
       .select('*')
-      .eq('id', id)
+      .eq(column, identifier)
       .maybeSingle()
     if (error) throw createError({ statusCode: 500, message: error.message })
     return data ? mapInvoice(data) : null
@@ -64,10 +99,12 @@ export const InvoiceRepository = {
     charges: ChargeInput[],
   ): Promise<{ invoice: Invoice; charges: InvoiceCharge[] }> {
     const client = await serverSupabaseClient(event)
+    const invoiceCode = await buildUniqueInvoiceCode(event, input.billing_period_id)
 
     const { data: invoiceRow, error: invErr } = await client
       .from('invoices')
       .insert({
+        invoice_code: invoiceCode,
         billing_period_id: input.billing_period_id,
         contract_id: input.contract_id,
         room_id: input.room_id,

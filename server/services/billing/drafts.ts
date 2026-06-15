@@ -34,6 +34,7 @@ interface BuildingPricing {
 
 interface ContractRow {
   id: string
+  contract_code: string | null
   building_id: string
   room_id: string
   tenant_id: string
@@ -152,7 +153,7 @@ export const BillingDraftService = {
     // Active contracts for this building/period
     const { data: contracts, error: cErr } = await supabase
       .from('contracts')
-      .select('id, building_id, room_id, tenant_id, start_date, end_date, monthly_rent, occupant_count, discount_amount, surcharge_amount, payment_day, status')
+      .select('id, contract_code, building_id, room_id, tenant_id, start_date, end_date, monthly_rent, occupant_count, discount_amount, surcharge_amount, payment_day, status')
       .eq('building_id', period.buildingId)
       .lte('start_date', lastDay)
       .or(`end_date.gte.${firstDay},end_date.is.null`)
@@ -658,7 +659,7 @@ export const BillingDraftService = {
         contractId: contract.id,
         roomId: contract.room_id,
         tenantId: contract.tenant_id,
-        contractCode: null,
+        contractCode: contract.contract_code ?? null,
         roomNumber: room?.room_number ?? null,
         tenantName: tenant?.full_name ?? null,
         lines,

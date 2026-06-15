@@ -31,11 +31,16 @@ interface ContractRow {
   tenant_id: string
   status?: string
   room_id?: string
+  rooms?: {
+    room_number?: string | null
+    buildings?: { name?: string | null; slug?: string | null } | null
+  } | null
 }
 
 interface ContractOccupantRow {
   contract_id: string
   tenant_id: string
+  move_out_date?: string | null
 }
 
 function buildTenant(overrides: Partial<TenantRow>): TenantRow {
@@ -68,6 +73,7 @@ function createClientMock(input: {
   class QueryBuilder {
     private equals = new Map<string, string>()
     private inValues = new Map<string, string[]>()
+    private notInValues = new Map<string, string[]>()
     private search: string | null = null
     private rangeFrom = 0
     private rangeTo = Number.POSITIVE_INFINITY
@@ -108,7 +114,11 @@ function createClientMock(input: {
       return this
     }
 
-    not() {
+    not(column: string, operator: string, value: string) {
+      if (operator === 'in') {
+        const values = value.replace(/^\(|\)$/g, '').split(',').filter(Boolean)
+        this.notInValues.set(column, values)
+      }
       return this
     }
 
@@ -133,12 +143,16 @@ function createClientMock(input: {
         let rows = [...input.occupants]
         const contractIds = this.inValues.get('contract_id')
         if (contractIds) rows = rows.filter(row => contractIds.includes(row.contract_id))
+        const excludedContractIds = this.notInValues.get('contract_id')
+        if (excludedContractIds) rows = rows.filter(row => !excludedContractIds.includes(row.contract_id))
         return { data: rows, error: null, count: rows.length }
       }
 
       let rows = [...input.tenants]
       const tenantIds = this.inValues.get('id')
       if (tenantIds) rows = rows.filter(row => tenantIds.includes(row.id))
+      const excludedTenantIds = this.notInValues.get('id')
+      if (excludedTenantIds) rows = rows.filter(row => !excludedTenantIds.includes(row.id))
       if (this.search) {
         rows = rows.filter(row =>
           row.full_name.toLowerCase().includes(this.search!)
@@ -206,5 +220,72 @@ describe('TenantRepository.findAll', () => {
 
     expect(result.total).toBe(1)
     expect(result.items[0]?.id).toBe('primary-1')
+  })
+
+  it('filters tenants with active contracts and enriches active assignments', async () => {
+    serverSupabaseClient.mockResolvedValue(createClientMock({
+      tenants: [
+        buildTenant({ id: 'primary-1', full_name: 'Binh Nguyen', phone: '0901000001' }),
+        buildTenant({ id: 'occupant-1', full_name: 'An Tran', phone: '0901000002' }),
+        buildTenant({ id: 'free-1', full_name: 'Cuong Le', phone: '0901000003' }),
+      ],
+      contracts: [
+        {
+          id: 'contract-1',
+          building_id: 'building-1',
+          tenant_id: 'primary-1',
+          status: 'active',
+          room_id: 'room-1',
+          rooms: {
+            room_number: 'A101',
+            buildings: { name: 'Toa A', slug: 'toa-a' },
+          },
+        },
+      ],
+      occupants: [
+        { contract_id: 'contract-1', tenant_id: 'occupant-1' },
+      ],
+    }))
+
+    const { TenantRepository } = await import('../../../server/repositories/tenants')
+    const result = await TenantRepository.findAll({} as never, { contract_state: 'with_contract' })
+
+    expect(result.total).toBe(2)
+    expect(result.items.map(tenant => tenant.id)).toEqual(['occupant-1', 'primary-1'])
+    expect(result.items.every(tenant => tenant.hasActiveContract)).toBe(true)
+    expect(result.items[0]?.activeAssignment).toMatchObject({
+      contractId: 'contract-1',
+      roomId: 'room-1',
+      roomNumber: 'A101',
+      buildingId: 'building-1',
+      buildingName: 'Toa A',
+      buildingSlug: 'toa-a',
+    })
+  })
+
+  it('filters tenants without active primary or occupant contracts', async () => {
+    serverSupabaseClient.mockResolvedValue(createClientMock({
+      tenants: [
+        buildTenant({ id: 'primary-1', full_name: 'Binh Nguyen', phone: '0901000001' }),
+        buildTenant({ id: 'occupant-1', full_name: 'An Tran', phone: '0901000002' }),
+        buildTenant({ id: 'free-1', full_name: 'Cuong Le', phone: '0901000003' }),
+      ],
+      contracts: [
+        { id: 'contract-1', building_id: 'building-1', tenant_id: 'primary-1', status: 'active', room_id: 'room-1' },
+      ],
+      occupants: [
+        { contract_id: 'contract-1', tenant_id: 'occupant-1' },
+      ],
+    }))
+
+    const { TenantRepository } = await import('../../../server/repositories/tenants')
+    const result = await TenantRepository.findAll({} as never, { contract_state: 'without_contract' })
+
+    expect(result.total).toBe(1)
+    expect(result.items[0]).toMatchObject({
+      id: 'free-1',
+      hasActiveContract: false,
+      activeAssignment: null,
+    })
   })
 })

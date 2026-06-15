@@ -4,11 +4,12 @@ import type { DraftRuleContract, UtilityRuleConfig } from '~/server/services/bil
 export function buildContract(overrides: Partial<Contract> = {}): Contract {
   return {
     id: 'contract-1',
+    contractCode: 'hd-2026-0001',
     roomId: 'room-1',
     tenantId: 'tenant-1',
     buildingId: 'building-1',
     startDate: '2026-05-01',
-    endDate: null,
+    endDate: '2027-05-01',
     monthlyRent: 3_100_000,
     deposit: 3_100_000,
     paymentDay: 5,

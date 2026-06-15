@@ -20,8 +20,14 @@ export interface ContractRouteSubject {
   slug?: string | null
 }
 
+export interface InvoiceRouteSubject {
+  id: string
+  code?: string | null
+  invoiceCode?: string | null
+}
+
 export function buildingRouteSegment(building: BuildingRouteSubject): string {
-  return building.slug || (building.name ? slugifyName(building.name) : building.id)
+  return building.slug || building.id
 }
 
 export function buildingPath(building: BuildingRouteSubject): string {
@@ -57,6 +63,14 @@ export function billingWorkspacePath(
 
 export function contractPath(contract: ContractRouteSubject): string {
   return `/contracts/${contract.slug || contract.contractCode || contract.code || contract.id}`
+}
+
+export function invoiceRouteSegment(invoice: InvoiceRouteSubject): string {
+  return invoice.invoiceCode || invoice.code || invoice.id
+}
+
+export function invoicePath(invoice: InvoiceRouteSubject): string {
+  return `/billing/invoices/${invoiceRouteSegment(invoice)}`
 }
 
 export function tenantPath(id: string): string {

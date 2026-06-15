@@ -3,6 +3,7 @@ import type { UiTableColumn } from '~/components/ui/UiTable.vue'
 import type { BillingDraftResponse, BillingPeriod, Invoice, InvoicePayment, InvoiceWithCharges } from '~/types/billing'
 import type { AdjustmentChargeInput, BulkPaymentItemInput, VoidInvoiceInput } from '~/utils/validators/billing'
 import { formatCurrency } from '~/utils/format/currency'
+import { invoicePath, invoiceRouteSegment } from '~/utils/routes/operational'
 
 export interface BillingPaymentsIntent {
   id: number
@@ -75,7 +76,7 @@ function invoiceDisplay(row: Invoice): { title: string; subtitle: string } {
   const title = [row.tenantName, row.roomNumber ? `P.${row.roomNumber}` : null].filter(Boolean).join(' · ')
   return {
     title: title || row.contractCode || row.contractId,
-    subtitle: row.contractCode ?? row.contractId,
+    subtitle: row.invoiceCode || row.contractCode || row.contractId,
   }
 }
 
@@ -200,7 +201,7 @@ async function openDetail(inv: Invoice) {
   detailLoading.value = true
   detailError.value = null
   try {
-    selectedInvoice.value = await load(inv.id)
+    selectedInvoice.value = await load(invoiceRouteSegment(inv))
   } catch (err) {
     const e = err as { data?: { error?: { message?: string } } }
     detailError.value = e.data?.error?.message ?? 'Không thể tải hoá đơn'
@@ -244,7 +245,7 @@ async function submitPayment() {
   paymentSubmitting.value = true
   paymentError.value = null
   try {
-    await recordPayment(selectedInvoice.value.invoice.id, {
+    await recordPayment(invoiceRouteSegment(selectedInvoice.value.invoice), {
       amount: paymentForm.amount,
       paid_at: paymentForm.paid_at,
       payment_method: paymentForm.payment_method.trim() || null,
@@ -287,7 +288,7 @@ async function submitVoid() {
   voidSubmitting.value = true
   voidError.value = null
   try {
-    await voidInvoice(voidTarget.value.id, { reason: voidForm.reason })
+    await voidInvoice(invoiceRouteSegment(voidTarget.value), { reason: voidForm.reason })
     toast.success('Đã huỷ hoá đơn')
     if (showReissueHintAfterVoid.value) {
       toast.info('Vào tab Chỉ số & hoá đơn nháp để phát hành lại')
@@ -351,7 +352,7 @@ async function submitAdjustment() {
       reason: adjustmentForm.reason,
       referenceInvoiceId: adjustmentForm.reference_invoice_id,
     })
-    await addAdjustment(adjustmentTarget.value.id, payload)
+    await addAdjustment(invoiceRouteSegment(adjustmentTarget.value), payload)
     toast.success('Đã lưu điều chỉnh')
     showAdjustmentModal.value = false
     emit('reload')
@@ -372,7 +373,7 @@ async function refreshPayments(invoiceId: string) {
 
 watch(selectedInvoice, async (next) => {
   if (next?.invoice.id && !showPaymentModal.value) {
-    await refreshPayments(next.invoice.id)
+    await refreshPayments(invoiceRouteSegment(next.invoice))
   }
 })
 
@@ -463,6 +464,13 @@ watch(
         <template #cell-dueDate="{ row }">{{ row.dueDate ?? '—' }}</template>
         <template #cell-actions="{ row }">
           <div class="flex items-center justify-end gap-1">
+            <NuxtLink
+              :to="invoicePath(row)"
+              class="inline-flex h-8 items-center justify-center rounded-md px-3 text-xs font-medium text-muted transition hover:bg-dark-hover hover:text-white"
+              @click.stop
+            >
+              Mở
+            </NuxtLink>
             <UiButton
               v-if="row.status === 'issued' || row.status === 'partial' || row.status === 'overdue'"
               size="sm"

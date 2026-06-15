@@ -523,6 +523,7 @@ export type Database = {
       contracts: {
         Row: {
           building_id: string
+          contract_code: string
           created_at: string
           deposit: number
           discount_amount: number
@@ -544,6 +545,7 @@ export type Database = {
         }
         Insert: {
           building_id: string
+          contract_code?: string
           created_at?: string
           deposit?: number
           discount_amount?: number
@@ -565,6 +567,7 @@ export type Database = {
         }
         Update: {
           building_id?: string
+          contract_code?: string
           created_at?: string
           deposit?: number
           discount_amount?: number
@@ -721,6 +724,7 @@ export type Database = {
           discount_amount: number
           due_date: string | null
           id: string
+          invoice_code: string
           issued_at: string | null
           notes: string | null
           paid_amount: number
@@ -746,6 +750,7 @@ export type Database = {
           discount_amount?: number
           due_date?: string | null
           id?: string
+          invoice_code?: string
           issued_at?: string | null
           notes?: string | null
           paid_amount?: number
@@ -771,6 +776,7 @@ export type Database = {
           discount_amount?: number
           due_date?: string | null
           id?: string
+          invoice_code?: string
           issued_at?: string | null
           notes?: string | null
           paid_amount?: number

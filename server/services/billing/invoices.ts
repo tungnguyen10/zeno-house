@@ -37,10 +37,10 @@ export const InvoiceService = {
     invoiceId: string,
   ): Promise<InvoiceWithCharges> {
     if (!can(user, 'billing.read')) throwForbidden('Không có quyền xem hoá đơn')
-    const invoice = await InvoiceRepository.findById(event, invoiceId)
+    const invoice = await InvoiceRepository.findByIdentifier(event, invoiceId)
     if (!invoice) throwNotFound('Không tìm thấy hoá đơn')
-    const charges = await InvoiceRepository.listCharges(event, invoiceId)
-    const payments = await InvoicePaymentRepository.listByInvoice(event, invoiceId)
+    const charges = await InvoiceRepository.listCharges(event, invoice.id)
+    const payments = await InvoicePaymentRepository.listByInvoice(event, invoice.id)
     const resolver = new BillingDisplayResolver(event)
     const [enrichedInvoice] = await resolver.enrichInvoices([invoice])
     return {
@@ -165,7 +165,7 @@ export const InvoiceService = {
     if (!can(user, 'billing.write')) throwForbidden('Không có quyền huỷ hoá đơn')
     const reason = assertReason(input.reason, 10)
 
-    const invoice = await InvoiceRepository.findById(event, invoiceId)
+    const invoice = await InvoiceRepository.findByIdentifier(event, invoiceId)
     if (!invoice) throwNotFound('Không tìm thấy hoá đơn')
     if (invoice.status === 'void') throwConflict('Hoá đơn đã được huỷ trước đó')
     if (invoice.paidAmount > 0) {
@@ -175,13 +175,13 @@ export const InvoiceService = {
     const period = await BillingPeriodRepository.findById(event, invoice.billingPeriodId)
     if (period?.status === 'closed') throwConflict('Kỳ đã chốt — không thể huỷ hoá đơn trực tiếp')
 
-    const voided = await InvoiceRepository.voidById(event, invoiceId, user.id ?? null, reason)
+    const voided = await InvoiceRepository.voidById(event, invoice.id, user.id ?? null, reason)
 
     await BillingAuditService.append(event, user, {
       billing_period_id: invoice.billingPeriodId,
       action: BILLING_AUDIT_ACTIONS.INVOICE_VOIDED,
       entity_type: 'invoice',
-      entity_id: invoiceId,
+      entity_id: invoice.id,
       before_data: invoice,
       after_data: voided,
       metadata: {
@@ -209,7 +209,7 @@ export const InvoiceService = {
     if (!can(user, 'billing.write')) throwForbidden('Không có quyền phát hành lại hoá đơn')
     const reason = assertReason(input.reason, 10)
 
-    const voided = await InvoiceRepository.findById(event, voidedInvoiceId)
+    const voided = await InvoiceRepository.findByIdentifier(event, voidedInvoiceId)
     if (!voided) throwNotFound('Không tìm thấy hoá đơn cần phát hành lại')
     if (voided.status !== 'void') throwConflict('Chỉ có thể phát hành lại hoá đơn đã huỷ')
 
@@ -294,7 +294,7 @@ export const InvoiceService = {
   ): Promise<{ invoice: Invoice; charge: InvoiceCharge }> {
     if (!can(user, 'billing.write')) throwForbidden('Không có quyền tạo điều chỉnh')
 
-    const target = await InvoiceRepository.findById(event, input.target_invoice_id)
+    const target = await InvoiceRepository.findByIdentifier(event, input.target_invoice_id)
     if (!target) throwNotFound('Không tìm thấy hoá đơn đích')
     if (target.status === 'void') throwConflict('Hoá đơn đã huỷ — không thể thêm điều chỉnh')
 
