@@ -18,7 +18,6 @@ const buildingOptions = computed(() =>
   })),
 )
 const contractStateOptions = [
-  { value: '', label: 'Tất cả HĐ' },
   { value: 'with_contract', label: 'Có HĐ' },
   { value: 'without_contract', label: 'Chưa có HĐ' },
 ]
