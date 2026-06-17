@@ -172,11 +172,16 @@ async function closePeriodFromModal() {
   }
 }
 
-async function saveReadingsWithToast(readings: Parameters<typeof saveReadings>[0]) {
+async function saveReadingsWithToast(
+  readings: Parameters<typeof saveReadings>[0],
+  options?: Parameters<typeof saveReadings>[1] & { silent?: boolean; refreshDrafts?: boolean },
+) {
   try {
-    const result = await saveReadings(readings)
+    const result = await saveReadings(readings, options)
+    if (!options?.silent) {
     toast.success(`Đã lưu ${result.length} chỉ số`)
-    await loadDrafts()
+    }
+    if (options?.refreshDrafts ?? options?.refresh ?? true) await loadDrafts()
   }
   catch (err) {
     const e = err as { data?: { error?: { message?: string } }; message?: string }

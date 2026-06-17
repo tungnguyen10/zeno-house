@@ -121,6 +121,7 @@ function mountGrid(overrides: Partial<{
         UiSelect: empty,
         UiEmptyState: empty,
         UiSkeleton: empty,
+        BillingBulkReadingEntryModal: empty,
         BillingDraftDiscrepancyCallout: empty,
       },
     },
@@ -157,6 +158,34 @@ describe('BillingDraftGridStep', () => {
     wrapper.unmount()
   })
 
+  it('pasted values auto-save through the no-refresh path', async () => {
+    vi.useFakeTimers()
+    const onSaveReadings = vi.fn(async () => {})
+    const wrapper = mountGrid({ onSaveReadings })
+    const first = wrapper.get('[data-reading-cell="room-1::electricity"] input')
+
+    await first.trigger('paste', {
+      clipboardData: {
+        getData: () => '123\n456',
+      },
+    })
+    await vi.advanceTimersByTimeAsync(801)
+
+    expect(onSaveReadings).toHaveBeenCalledTimes(2)
+    expect(onSaveReadings).toHaveBeenNthCalledWith(
+      1,
+      [expect.objectContaining({ room_id: 'room-1', meter_type: 'electricity', reading_value: 123 })],
+      { refresh: false, refreshDrafts: false, silent: true },
+    )
+    expect(onSaveReadings).toHaveBeenNthCalledWith(
+      2,
+      [expect.objectContaining({ room_id: 'room-2', meter_type: 'electricity', reading_value: 456 })],
+      { refresh: false, refreshDrafts: false, silent: true },
+    )
+    wrapper.unmount()
+    vi.useRealTimers()
+  })
+
   it('renders a stacked mobile row layout for the same draft rows', () => {
     const wrapper = mountGrid()
 
@@ -177,14 +206,45 @@ describe('BillingDraftGridStep', () => {
     await vi.advanceTimersByTimeAsync(801)
 
     expect(onSaveReadings).toHaveBeenCalledTimes(1)
-    expect(onSaveReadings).toHaveBeenCalledWith([expect.objectContaining({
-      room_id: 'room-1',
-      meter_type: 'electricity',
-      period_year: 2026,
-      period_month: 5,
-      reading_type: 'monthly',
-      reading_value: 123,
-    })])
+    expect(onSaveReadings).toHaveBeenCalledWith(
+      [expect.objectContaining({
+        room_id: 'room-1',
+        meter_type: 'electricity',
+        period_year: 2026,
+        period_month: 5,
+        reading_type: 'monthly',
+        reading_value: 123,
+      })],
+      { refresh: false, refreshDrafts: false, silent: true },
+    )
+    wrapper.unmount()
+    vi.useRealTimers()
+  })
+
+  it('shows optimistic utility amount and row total while editing', async () => {
+    const wrapper = mountGrid()
+    const electricity = wrapper.get('[data-reading-cell="room-1::electricity"] input')
+
+    await electricity.setValue('123')
+
+    expect(wrapper.text()).toContain('92.000')
+    expect(wrapper.text()).toContain('3.192.000')
+    wrapper.unmount()
+  })
+
+  it('keeps local input visible when auto-save fails', async () => {
+    vi.useFakeTimers()
+    const onSaveReadings = vi.fn(async () => {
+      throw new Error('save failed')
+    })
+    const wrapper = mountGrid({ onSaveReadings })
+    const electricity = wrapper.get('[data-reading-cell="room-1::electricity"] input')
+
+    await electricity.setValue('123')
+    await vi.advanceTimersByTimeAsync(801)
+
+    expect((electricity.element as HTMLInputElement).value).toBe('123')
+    expect(wrapper.text()).toContain('Lỗi')
     wrapper.unmount()
     vi.useRealTimers()
   })

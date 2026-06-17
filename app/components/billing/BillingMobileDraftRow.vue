@@ -1,13 +1,12 @@
 <script setup lang="ts">
 import clsx from 'clsx'
 import type { BillingDraftGridRow, BillingDraftGridUtilityCell } from '~/types/billing'
-import { formatCurrency } from '~/utils/format/currency'
+import { formatCurrency as formatCurrencyValue } from '~/utils/format/currency'
 
 type MeterType = 'electricity' | 'water'
 
 defineProps<{
   row: BillingDraftGridRow
-  /** Current local draft value for an editable cell (preferred over stored). */
   readingValueOf: (row: BillingDraftGridRow, type: MeterType) => string
   isCellDirty: (row: BillingDraftGridRow, type: MeterType) => boolean
   isPasteHighlighted: (row: BillingDraftGridRow, type: MeterType) => boolean
@@ -25,14 +24,21 @@ function meterUnit(type: MeterType): string {
   return type === 'electricity' ? 'kWh' : 'm³'
 }
 
-function formatRate(cell: BillingDraftGridUtilityCell | null): string {
-  if (!cell || cell.rate === null) return '—'
-  const unit = meterUnit(cell.meterType)
-  return `${formatCurrency(cell.rate)}/${unit}`
-}
-
 function meterLabel(type: MeterType): string {
   return type === 'electricity' ? 'Điện' : 'Nước'
+}
+
+function meterCell(row: BillingDraftGridRow, type: MeterType): BillingDraftGridUtilityCell | null {
+  return type === 'electricity' ? row.electricity : row.water
+}
+
+function formatCurrency(amount: number | null): string {
+  return amount === null ? '—' : formatCurrencyValue(amount)
+}
+
+function formatRate(cell: BillingDraftGridUtilityCell | null): string {
+  if (!cell || cell.rate === null) return '—'
+  return `${formatCurrencyValue(cell.rate)}/${meterUnit(cell.meterType)}`
 }
 </script>
 
@@ -55,7 +61,7 @@ function meterLabel(type: MeterType): string {
         </p>
       </div>
       <div class="shrink-0 text-[11px]">
-        <span v-if="saveStateOf(row) === 'saving'" class="text-muted">Đang lưu…</span>
+        <span v-if="saveStateOf(row) === 'saving'" class="text-muted">Đang lưu...</span>
         <span v-else-if="saveStateOf(row) === 'saved'" class="text-emerald-400">Đã lưu ✓</span>
         <span v-else-if="saveStateOf(row) === 'error'" class="text-rose-400">Lỗi</span>
       </div>
@@ -66,11 +72,11 @@ function meterLabel(type: MeterType): string {
       :key="type"
       class="space-y-1"
     >
-      <template v-if="(type === 'electricity' ? row.electricity : row.water)">
+      <template v-if="meterCell(row, type)">
         <div class="flex items-center gap-2">
           <span class="text-xs text-muted w-10 shrink-0">{{ meterLabel(type) }}</span>
           <UiInput
-            v-if="(type === 'electricity' ? row.electricity : row.water)!.editable"
+            v-if="meterCell(row, type)!.editable"
             type="number"
             :placeholder="meterUnit(type)"
             :model-value="readingValueOf(row, type)"
@@ -84,30 +90,24 @@ function meterLabel(type: MeterType): string {
             @keydown="emit('keydown', { event: $event, row, type })"
             @paste="emit('paste', { event: $event, row, type })"
           />
-          <span
-            v-else
-            class="flex-1 text-sm text-white tabular-nums"
-          >
-            {{ (type === 'electricity' ? row.electricity : row.water)!.currentValue ?? '—' }}
+          <span v-else class="flex-1 text-sm text-white tabular-nums">
+            {{ meterCell(row, type)!.currentValue ?? '—' }}
           </span>
           <span class="text-xs text-muted tabular-nums w-20 text-right">
-            {{ (type === 'electricity' ? row.electricity : row.water)!.amount !== null
-              ? formatCurrency((type === 'electricity' ? row.electricity : row.water)!.amount!)
-              : '—' }}
+            {{ formatCurrency(meterCell(row, type)!.amount) }}
           </span>
         </div>
         <p class="text-[11px] text-muted pl-12">
           Cũ
           <span class="text-white tabular-nums">
-            {{ (type === 'electricity' ? row.electricity : row.water)!.previousValue ?? '—' }}
+            {{ meterCell(row, type)!.previousValue ?? '—' }}
           </span>
-          → Mới
+          →
+          Mới
           <span class="text-white tabular-nums">
-            {{ readingValueOf(row, type) || '—' }}
+            {{ readingValueOf(row, type) || meterCell(row, type)!.currentValue || '—' }}
           </span>
-          ·
-          {{ meterLabel(type) }}
-          {{ formatRate(type === 'electricity' ? row.electricity : row.water) }}
+          · {{ meterLabel(type) }} {{ formatRate(meterCell(row, type)) }}
         </p>
       </template>
     </div>

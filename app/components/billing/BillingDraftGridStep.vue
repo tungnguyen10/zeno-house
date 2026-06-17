@@ -13,6 +13,11 @@ import type { MeterReadingBulkInput } from '~/utils/validators/meter-readings'
 import type { UtilityUsageOverrideInput } from '~/utils/validators/billing'
 import { formatCurrency } from '~/utils/format/currency'
 import { parsePastedColumn } from '~/utils/billing/clipboard'
+import {
+  formatOptimisticUsage,
+  optimisticRowDisplay,
+  type OptimisticUtilityDisplay,
+} from '~/utils/billing/draft-grid-optimistic'
 
 type GridFilter = 'needs_action' | 'all' | 'vacant' | 'errors' | 'ready'
 type MeterType = 'electricity' | 'water'
@@ -21,7 +26,10 @@ const props = defineProps<{
   response: BillingDraftGridResponse | null
   loading: boolean
   period: BillingPeriod | null
-  onSaveReadings: (readings: MeterReadingBulkInput['readings']) => Promise<void>
+  onSaveReadings: (
+    readings: MeterReadingBulkInput['readings'],
+    options?: { refresh?: boolean; silent?: boolean; refreshDrafts?: boolean },
+  ) => Promise<void>
   onSaveOverride: (input: UtilityUsageOverrideInput) => Promise<void>
 }>()
 
@@ -49,6 +57,7 @@ const batchReadingDate = ref<string>('')
 const expandedRowKeys = ref<Set<string>>(new Set())
 const localReadings = ref<Record<string, string>>({}) // key = `${roomId}::${meterType}`
 const isSaving = ref(false)
+const bulkEntryOpen = ref(false)
 
 // Per-row auto-save state ----------------------------------------------------
 type RowSaveState = 'idle' | 'saving' | 'saved' | 'error'
@@ -177,7 +186,7 @@ async function saveRow(row: BillingDraftGridRow) {
   rowSaveState.value[row.roomId] = 'saving'
   Reflect.deleteProperty(rowSaveError.value, row.roomId)
   try {
-    await props.onSaveReadings(payload)
+    await props.onSaveReadings(payload, { refresh: false, refreshDrafts: false, silent: true })
     // Clear local drafts for the cells we just persisted; the merged grid
     // refresh will provide fresh stored values.
     for (const item of payload) {
@@ -271,11 +280,14 @@ function handleReadingPaste(event: ClipboardEvent, row: BillingDraftGridRow, typ
     setReadingDraftValue(targetRow, type, value)
     affected.push({ row: targetRow, key })
   })
-  // Briefly highlight pasted cells so users see what changed.
-  for (const { key } of affected) pasteHighlight.value.add(key)
+  highlightReadingCells(affected.map(item => item.key))
+}
+
+function highlightReadingCells(keys: string[]) {
+  for (const key of keys) pasteHighlight.value.add(key)
   pasteHighlight.value = new Set(pasteHighlight.value)
   setTimeout(() => {
-    for (const { key } of affected) pasteHighlight.value.delete(key)
+    for (const key of keys) pasteHighlight.value.delete(key)
     pasteHighlight.value = new Set(pasteHighlight.value)
   }, PASTE_HIGHLIGHT_MS)
 }
@@ -342,19 +354,45 @@ function statusBadgeFor(row: BillingDraftGridRow): { status: string; context: 'p
 // Cell formatting
 // ---------------------------------------------------------------------------
 
-function formatUsage(cell: BillingDraftGridUtilityCell | null): string {
-  if (!cell) return '—'
-  if (cell.source === 'fixed') return 'Cố định'
-  if (cell.source === 'per_person') return cell.usage !== null ? `${cell.usage} người` : '—'
-  if (cell.source === 'not_applicable') return '—'
-  if (cell.usage === null) return '—'
-  const unit = cell.meterType === 'electricity' ? 'kWh' : 'm³'
-  return `${cell.usage} ${unit}`
+function rowDisplay(row: BillingDraftGridRow) {
+  return optimisticRowDisplay(row, localReadings.value)
 }
 
-function formatCellAmount(cell: BillingDraftGridUtilityCell | null): string {
-  if (!cell || cell.amount === null) return '—'
-  return formatCurrency(cell.amount)
+function utilityDisplay(row: BillingDraftGridRow, type: MeterType): OptimisticUtilityDisplay {
+  const display = rowDisplay(row)
+  return type === 'electricity' ? display.electricity : display.water
+}
+
+function formatDisplayAmount(display: OptimisticUtilityDisplay): string {
+  return display.amount !== null ? formatCurrency(display.amount) : '—'
+}
+
+function displayDraftTotal(row: BillingDraftGridRow): number | null {
+  return rowDisplay(row).draftTotal
+}
+
+function displayGridRow(row: BillingDraftGridRow): BillingDraftGridRow {
+  const display = rowDisplay(row)
+  return {
+    ...row,
+    draftTotal: display.draftTotal,
+    electricity: row.electricity
+      ? {
+          ...row.electricity,
+          currentValue: display.electricity.currentValue,
+          usage: display.electricity.usage,
+          amount: display.electricity.amount,
+        }
+      : null,
+    water: row.water
+      ? {
+          ...row.water,
+          currentValue: display.water.currentValue,
+          usage: display.water.usage,
+          amount: display.water.amount,
+        }
+      : null,
+  }
 }
 
 function previousReadingHint(cell: BillingDraftGridUtilityCell | null): string {
@@ -396,11 +434,20 @@ async function saveAll() {
   if (payload.length === 0) return
   isSaving.value = true
   try {
-    await props.onSaveReadings(payload)
+    await props.onSaveReadings(payload, { refresh: false, refreshDrafts: false })
     localReadings.value = {}
   } finally {
     isSaving.value = false
   }
+}
+
+function applyBulkReadings(updates: Array<{ row: BillingDraftGridRow; type: MeterType; value: string }>) {
+  const keys: string[] = []
+  for (const update of updates) {
+    setReadingDraftValue(update.row, update.type, update.value)
+    keys.push(cellKey(update.row, update.type))
+  }
+  highlightReadingCells(keys)
 }
 
 // ---------------------------------------------------------------------------
@@ -693,6 +740,15 @@ const lineColumns: UiTableColumn<BillingDraftLine>[] = [
               :disabled="!periodEditable"
             />
           </div>
+          <UiButton
+            v-if="periodEditable"
+            variant="secondary"
+            size="sm"
+            class="mb-0.5"
+            @click="bulkEntryOpen = true"
+          >
+            Nhập nhanh
+          </UiButton>
         </div>
         <template #actions>
           <div class="flex flex-wrap items-center gap-2">
@@ -853,10 +909,10 @@ const lineColumns: UiTableColumn<BillingDraftLine>[] = [
         <template #cell-electricity_amount="{ row }">
           <div class="flex flex-col items-end gap-0.5">
             <span class="text-sm tabular-nums text-white">
-              {{ formatCellAmount((row as BillingDraftGridRow).electricity) }}
+              {{ formatDisplayAmount(utilityDisplay(row as BillingDraftGridRow, 'electricity')) }}
             </span>
             <span class="text-[10px] text-muted">
-              {{ formatUsage((row as BillingDraftGridRow).electricity) }}
+              {{ formatOptimisticUsage(utilityDisplay(row as BillingDraftGridRow, 'electricity')) }}
             </span>
           </div>
         </template>
@@ -864,10 +920,10 @@ const lineColumns: UiTableColumn<BillingDraftLine>[] = [
         <template #cell-water_amount="{ row }">
           <div class="flex flex-col items-end gap-0.5">
             <span class="text-sm tabular-nums text-white">
-              {{ formatCellAmount((row as BillingDraftGridRow).water) }}
+              {{ formatDisplayAmount(utilityDisplay(row as BillingDraftGridRow, 'water')) }}
             </span>
             <span class="text-[10px] text-muted">
-              {{ formatUsage((row as BillingDraftGridRow).water) }}
+              {{ formatOptimisticUsage(utilityDisplay(row as BillingDraftGridRow, 'water')) }}
             </span>
           </div>
         </template>
@@ -880,7 +936,7 @@ const lineColumns: UiTableColumn<BillingDraftLine>[] = [
 
         <template #cell-draft_total="{ row }">
           <span class="text-sm font-semibold tabular-nums text-white">
-            {{ (row as BillingDraftGridRow).draftTotal !== null ? formatCurrency((row as BillingDraftGridRow).draftTotal!) : '—' }}
+            {{ displayDraftTotal(row as BillingDraftGridRow) !== null ? formatCurrency(displayDraftTotal(row as BillingDraftGridRow)!) : '—' }}
           </span>
         </template>
 
@@ -932,7 +988,7 @@ const lineColumns: UiTableColumn<BillingDraftLine>[] = [
         <BillingMobileDraftRow
           v-for="row in filteredRows"
           :key="row.key"
-          :row="row"
+          :row="displayGridRow(row)"
           :reading-value-of="readingDraftValue"
           :is-cell-dirty="isCellDirty"
           :is-paste-highlighted="isPasteHighlighted"
@@ -1205,5 +1261,11 @@ const lineColumns: UiTableColumn<BillingDraftLine>[] = [
         </UiButton>
       </template>
     </UiModal>
+    <BillingBulkReadingEntryModal
+      :open="bulkEntryOpen"
+      :rows="filteredRows"
+      @close="bulkEntryOpen = false"
+      @apply="applyBulkReadings"
+    />
   </div>
 </template>

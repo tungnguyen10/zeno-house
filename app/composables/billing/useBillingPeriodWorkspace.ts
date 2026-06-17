@@ -16,6 +16,10 @@ import type {
 } from '~/utils/validators/billing'
 import type { MeterReadingBulkInput } from '~/utils/validators/meter-readings'
 
+export interface SaveReadingsOptions {
+  refresh?: boolean
+}
+
 /**
  * Workspace-level data for one billing period: overview, drafts, invoices,
  * utility overrides, and audit events. Each section is its own request so
@@ -79,13 +83,16 @@ export function useBillingPeriodWorkspace(periodId: MaybeRefOrGetter<string>) {
     }
   }
 
-  async function saveReadings(readings: MeterReadingBulkInput['readings']): Promise<MeterReading[]> {
+  async function saveReadings(
+    readings: MeterReadingBulkInput['readings'],
+    options: SaveReadingsOptions = {},
+  ): Promise<MeterReading[]> {
     if (readings.length === 0) return []
     const resp = await $fetch<ApiSuccess<MeterReading[]>>(`/api/meter-readings/bulk`, {
       method: 'POST',
       body: { readings },
     })
-    await loadGrid()
+    if (options.refresh ?? true) await loadGrid()
     return resp.data
   }
 
