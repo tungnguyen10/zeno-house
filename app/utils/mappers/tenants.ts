@@ -4,6 +4,7 @@ import type { Tenant } from '~/types/tenants'
 export function mapTenant(row: Tables<'tenants'>): Tenant {
   return {
     id: row.id,
+    code: row.code,
     fullName: row.full_name,
     phone: row.phone,
     email: row.email,

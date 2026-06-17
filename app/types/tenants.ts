@@ -1,5 +1,6 @@
 export interface Tenant {
   id: string
+  code: string
   fullName: string
   phone: string
   email: string | null

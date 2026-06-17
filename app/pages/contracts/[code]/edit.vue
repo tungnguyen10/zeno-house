@@ -7,7 +7,7 @@ import { contractPath } from '~/utils/routes/operational'
 definePageMeta({ title: 'Chỉnh sửa hợp đồng' })
 
 const route = useRoute()
-const id = route.params.id as string
+const id = route.params.code as string
 
 const { data, error } = await useFetch<ApiSuccess<ContractWithDetails>>(`/api/contracts/${id}`)
 

@@ -7,6 +7,7 @@ export function mapBuilding(row: BuildingRow): Building {
   return {
     id: row.id,
     slug: row.slug,
+    code: row.code,
     name: row.name,
     address: row.address,
     description: row.description,

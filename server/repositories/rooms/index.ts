@@ -3,7 +3,7 @@ import type { H3Event } from 'h3'
 import type { Room } from '~/types/rooms'
 import type { RoomCreateInput, RoomUpdateInput } from '~/utils/validators/rooms'
 import { mapRoom } from '~/utils/mappers/rooms'
-import { slugifyName } from '~/utils/format/slug'
+import { isUuid, slugifyName } from '~/utils/format/slug'
 
 export interface RoomFilters {
   buildingId?: string
@@ -71,11 +71,28 @@ export const RoomRepository = {
 
   async insert(event: H3Event, input: RoomCreateInput): Promise<Room> {
     const client = await serverSupabaseClient(event)
+
+    // Generate slug from room_number
+    const roomSlug = slugifyName(input.room_number) || input.room_number.toLowerCase()
+
+    // Fetch building code to compose room code
+    const { data: buildingRow, error: buildingError } = await client
+      .from('buildings')
+      .select('code')
+      .eq('id', input.building_id)
+      .single()
+    if (buildingError || !buildingRow) {
+      throw createError({ statusCode: 500, message: 'Cannot resolve building code for room' })
+    }
+    const roomCode = `${buildingRow.code}-${roomSlug}`
+
     const { data, error } = await client
       .from('rooms')
       .insert({
         building_id: input.building_id,
         room_number: input.room_number,
+        slug: roomSlug,
+        code: roomCode,
         floor: input.floor,
         status: input.status ?? 'available',
         monthly_rent: input.monthly_rent,
@@ -123,5 +140,18 @@ export const RoomRepository = {
     const client = await serverSupabaseClient(event)
     const { error } = await client.from('rooms').delete().eq('id', id)
     if (error) throw createError({ statusCode: 500, message: error.message })
+  },
+
+  async findByIdentifier(event: H3Event, identifier: string): Promise<Room | null> {
+    const client = await serverSupabaseClient(event)
+    const column = isUuid(identifier) ? 'id' : 'code'
+    const { data, error } = await client
+      .from('rooms')
+      .select('*')
+      .eq(column, identifier)
+      .maybeSingle()
+
+    if (error) throw createError({ statusCode: 500, message: error.message })
+    return data ? mapRoom(data) : null
   },
 }

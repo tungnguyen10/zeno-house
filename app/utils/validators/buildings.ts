@@ -32,7 +32,9 @@ export const buildingCreateSchema = z.object({
   grace_period_days: z.number().int().min(0).optional().default(0),
 })
 
-export const buildingUpdateSchema = buildingCreateSchema.partial()
+export const buildingUpdateSchema = buildingCreateSchema.partial().extend({
+  code: z.string().min(1).max(20).regex(/^[a-z0-9]+$/, 'Code chỉ được chứa chữ thường và số').optional(),
+})
 
 export type BuildingCreateInput = z.infer<typeof buildingCreateSchema>
 export type BuildingUpdateInput = z.infer<typeof buildingUpdateSchema>

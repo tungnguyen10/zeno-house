@@ -102,7 +102,7 @@ const statusOptions = [
           <NuxtLink
             v-for="room in roomsByBuilding[building.id]"
             :key="room.id"
-            :to="roomPath({ id: room.id, roomNumber: room.roomNumber, building })"
+            :to="roomPath({ id: room.id, code: room.code, roomNumber: room.roomNumber, building })"
           >
             <RoomCard :room="room" />
           </NuxtLink>

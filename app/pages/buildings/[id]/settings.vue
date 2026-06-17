@@ -7,7 +7,7 @@ import { buildingPath } from '~/utils/routes/operational'
 const route = useRoute()
 const id = route.params.id as string
 
-const { building } = useBuildingDetail(id)
+const { building, refresh: refreshBuilding } = useBuildingDetail(id)
 const { services, isLoading: loadingServices, upsertService, updateService, syncToContracts } = useBuildingServices(id)
 const { allServices: contractServices, isLoading: loadingMatrix, updateService: updateContractService, refresh: refreshMatrix } = useBuildingContractServices(id)
 
@@ -23,6 +23,37 @@ const contractRows = computed(() =>
     tenantName: c.tenant.fullName,
   })),
 )
+
+// Building code
+const codeInput = ref('')
+const isCodeLocked = computed(() => (building.value?.totalRooms ?? 0) > 0)
+const isSavingCode = ref(false)
+const codeSaveError = ref<string | null>(null)
+const codeSaveSuccess = ref(false)
+
+watch(() => building.value?.code, (code) => {
+  if (code) codeInput.value = code
+}, { immediate: true })
+
+async function handleSaveCode() {
+  if (!codeInput.value || codeInput.value === building.value?.code) return
+  isSavingCode.value = true
+  codeSaveError.value = null
+  codeSaveSuccess.value = false
+  try {
+    await $fetch(`/api/buildings/${id}`, { method: 'PATCH', body: { code: codeInput.value } })
+    await refreshBuilding()
+    codeSaveSuccess.value = true
+    setTimeout(() => { codeSaveSuccess.value = false }, 3000)
+  }
+  catch (err: unknown) {
+    const msg = (err as { data?: { error?: { message?: string } } })?.data?.error?.message
+    codeSaveError.value = msg ?? 'Không thể lưu code. Vui lòng thử lại.'
+  }
+  finally {
+    isSavingCode.value = false
+  }
+}
 
 // Sync
 const isSyncing = ref(false)
@@ -83,6 +114,44 @@ async function handleUpdatePricingType(catalogId: string, pricingType: PricingTy
         ← {{ building?.name ?? 'Tòa nhà' }}
       </NuxtLink>
     </UiPageHeader>
+
+    <!-- Building code -->
+    <UiSection title="Building Code" description="Code ngắn dùng trong URL và tên hợp đồng. Không thể đổi sau khi tòa nhà đã có phòng." class="mt-6">
+      <div class="rounded-xl border border-dark-border bg-dark-surface p-6">
+        <div class="flex items-end gap-4">
+          <div class="flex-1">
+            <label class="block text-sm text-muted mb-1">Code</label>
+            <div class="relative">
+              <input
+                v-model="codeInput"
+                type="text"
+                :disabled="isCodeLocked"
+                :title="isCodeLocked ? 'Code không thể đổi sau khi tòa nhà đã có phòng' : undefined"
+                class="w-full rounded-lg border border-dark-border bg-dark-bg px-3 py-2 text-sm font-mono text-white placeholder-muted focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                placeholder="vd: zhpn"
+              >
+            </div>
+            <p v-if="isCodeLocked" class="mt-1 text-xs text-muted">
+              Code đã bị khóa vì tòa nhà có {{ building?.totalRooms }} phòng.
+            </p>
+          </div>
+          <UiButton
+            v-if="!isCodeLocked"
+            :loading="isSavingCode"
+            :disabled="!codeInput || codeInput === building?.code"
+            @click="handleSaveCode"
+          >
+            Lưu
+          </UiButton>
+        </div>
+        <UiAlert v-if="codeSaveError" severity="danger" class="mt-3">
+          {{ codeSaveError }}
+        </UiAlert>
+        <p v-if="codeSaveSuccess" class="mt-2 text-xs text-green-400">
+          Code đã được lưu.
+        </p>
+      </div>
+    </UiSection>
 
     <!-- Building-level defaults -->
     <UiSection title="Cấu hình mặc định" description="Bật dịch vụ nào sẽ tự động áp dụng vào hợp đồng mới. Đơn giá là giá trị gợi ý — có thể chỉnh trực tiếp trên hợp đồng." class="mt-6">

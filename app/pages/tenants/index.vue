@@ -94,7 +94,7 @@ function onSearch() {
       <NuxtLink
         v-for="tenant in tenants"
         :key="tenant.id"
-        :to="`/tenants/${tenant.id}`"
+        :to="`/tenants/${tenant.code}`"
         class="flex items-center justify-between px-4 py-3 rounded-xl bg-dark-surface border border-dark-border hover:border-cyan/40 transition-colors"
       >
         <div>

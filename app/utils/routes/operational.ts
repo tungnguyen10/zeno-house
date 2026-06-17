@@ -8,9 +8,14 @@ export interface BuildingRouteSubject {
 
 export interface RoomRouteSubject {
   id: string
+  code?: string | null
   roomNumber?: string | null
   slug?: string | null
   building?: BuildingRouteSubject | null
+}
+
+export interface TenantRouteSubject {
+  code: string
 }
 
 export interface ContractRouteSubject {
@@ -47,10 +52,17 @@ export function roomRouteSegment(room: RoomRouteSubject): string {
 }
 
 export function roomPath(room: RoomRouteSubject): string {
+  if (room.code) {
+    return `/rooms/${room.code}`
+  }
   if (room.building) {
     return `${buildingPath(room.building)}/rooms/${roomRouteSegment(room)}`
   }
   return `/rooms/${room.id}`
+}
+
+export function roomEditPath(room: RoomRouteSubject): string {
+  return `${roomPath(room)}/edit`
 }
 
 export function billingWorkspacePath(
@@ -73,6 +85,6 @@ export function invoicePath(invoice: InvoiceRouteSubject): string {
   return `/billing/invoices/${invoiceRouteSegment(invoice)}`
 }
 
-export function tenantPath(id: string): string {
-  return `/tenants/${id}`
+export function tenantPath(tenant: TenantRouteSubject): string {
+  return `/tenants/${tenant.code}`
 }

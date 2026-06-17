@@ -17,7 +17,7 @@ export const RoomService = {
 
   async get(event: H3Event, user: AuthUser, id: string): Promise<Room> {
     if (!can(user, 'rooms.read')) throwForbidden('Không có quyền xem phòng')
-    const room = await RoomRepository.findById(event, id)
+    const room = await RoomRepository.findByIdentifier(event, id)
     if (!room) throwNotFound('Không tìm thấy phòng')
     return room
   },

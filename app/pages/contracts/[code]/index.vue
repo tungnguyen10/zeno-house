@@ -2,13 +2,24 @@
 import { formatCurrency } from '~/utils/format/currency'
 import type { ContractPaymentCreateInput } from '~/utils/validators/contract-payments'
 import type { ContractRenewInput } from '~/utils/validators/contract-renewals'
+import type { ContractWithDetails } from '~/types/contracts'
+import type { ApiSuccess } from '~/types/api'
 import { contractPath } from '~/utils/routes/operational'
+import { isUuid } from '~/utils/format/slug'
 
 definePageMeta({ title: 'Chi tiết hợp đồng' })
 
 const route = useRoute()
 const authStore = useAuthStore()
-const id = route.params.id as string
+const id = route.params.code as string
+
+// Redirect UUID-based URLs to code-based canonical URL
+if (isUuid(id)) {
+  const { data: redirectData } = await useFetch<ApiSuccess<ContractWithDetails>>(`/api/contracts/${id}`)
+  if (redirectData.value?.data) {
+    await navigateTo(contractPath(redirectData.value.data), { replace: true })
+  }
+}
 
 const { contract, isLoading, error, refresh: refreshContract } = useContractDetail(id)
 const { payments, isLoading: paymentsLoading, addPayment, updatePayment, removePayment } = useContractPayments(id)

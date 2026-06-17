@@ -16,14 +16,14 @@ export interface ContractFilters {
 
 const DETAIL_SELECT = `
   *,
-  rooms!inner (id, room_number, floor, building_id, buildings (name)),
-  tenants (id, full_name, phone)
+  rooms!inner (id, room_number, floor, building_id, code, buildings (name)),
+  tenants (id, full_name, phone, code)
 `
 
-function contractCodePrefix(startDate: string): string {
+function contractCodePrefix(buildingCode: string, startDate: string): string {
   const date = new Date(startDate)
   const year = Number.isFinite(date.getTime()) ? date.getUTCFullYear() : new Date().getUTCFullYear()
-  return `hd-${year}`
+  return `hd-${buildingCode}-${year}`
 }
 
 function sequenceFromCode(prefix: string, code: string | null): number {
@@ -32,9 +32,9 @@ function sequenceFromCode(prefix: string, code: string | null): number {
   return Number.isInteger(seq) ? seq : 0
 }
 
-async function buildUniqueContractCode(event: H3Event, startDate: string): Promise<string> {
+async function buildUniqueContractCode(event: H3Event, buildingCode: string, startDate: string): Promise<string> {
   const client = await serverSupabaseClient(event)
-  const prefix = contractCodePrefix(startDate)
+  const prefix = contractCodePrefix(buildingCode, startDate)
   const { data, error } = await client
     .from('contracts')
     .select('contract_code')
@@ -128,7 +128,18 @@ export const ContractRepository = {
     if (!input.building_id) {
       throw createError({ statusCode: 500, message: 'building_id is required on insert (resolve from room before calling repository)' })
     }
-    const contractCode = await buildUniqueContractCode(event, input.start_date)
+
+    // Resolve building code for contract code generation
+    const { data: buildingRow, error: buildingError } = await client
+      .from('buildings')
+      .select('code')
+      .eq('id', input.building_id)
+      .single()
+    if (buildingError || !buildingRow) {
+      throw createError({ statusCode: 500, message: 'Cannot resolve building code for contract' })
+    }
+
+    const contractCode = await buildUniqueContractCode(event, buildingRow.code, input.start_date)
     const { data, error } = await client
       .from('contracts')
       .insert({

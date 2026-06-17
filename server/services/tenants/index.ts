@@ -16,7 +16,7 @@ export const TenantService = {
 
   async get(event: H3Event, user: AuthUser, id: string): Promise<Tenant> {
     if (!can(user, 'tenants.read')) throwForbidden('Không có quyền xem khách thuê')
-    const tenant = await TenantRepository.findById(event, id)
+    const tenant = await TenantRepository.findByIdentifier(event, id)
     if (!tenant) throwNotFound('Không tìm thấy khách thuê')
     return tenant
   },

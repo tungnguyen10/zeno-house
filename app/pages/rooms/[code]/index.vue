@@ -2,14 +2,24 @@
 import type { Building } from '~/types/buildings'
 import type { ContractWithDetails } from '~/types/contracts'
 import type { ApiSuccess } from '~/types/api'
+import type { Room } from '~/types/rooms'
 import { formatCurrency } from '~/utils/format/currency'
-import { contractPath } from '~/utils/routes/operational'
+import { contractPath, roomEditPath, roomPath } from '~/utils/routes/operational'
+import { isUuid } from '~/utils/format/slug'
 
 definePageMeta({ title: 'Chi tiết phòng' })
 
 const route = useRoute()
 const authStore = useAuthStore()
-const id = route.params.id as string
+const id = route.params.code as string
+
+// Redirect UUID-based URLs to code-based canonical URL
+if (isUuid(id)) {
+  const { data: redirectData } = await useFetch<ApiSuccess<Room>>(`/api/rooms/${id}`)
+  if (redirectData.value?.data) {
+    await navigateTo(roomPath(redirectData.value.data), { replace: true })
+  }
+}
 
 const { room, isLoading, error, refresh: refreshRoom } = useRoomDetail(id)
 
@@ -86,7 +96,7 @@ if (error.value?.statusCode === 404) {
       <UiPageHeader :title="`Phòng ${room.roomNumber}`" :description="building?.name">
         <template #actions>
           <div v-if="authStore.isAdmin" class="flex gap-2 shrink-0">
-            <NuxtLink :to="`/rooms/${room.id}/edit`">
+            <NuxtLink :to="roomEditPath(room)">
               <UiButton variant="secondary" size="sm">Chỉnh sửa</UiButton>
             </NuxtLink>
             <UiButton variant="danger" size="sm" @click="showDeleteModal = true">Xoá</UiButton>
@@ -148,7 +158,7 @@ if (error.value?.statusCode === 404) {
         <div class="rounded-xl border border-dark-border bg-dark-surface p-4">
           <div v-if="activeContract">
             <div class="text-sm text-white">
-              <NuxtLink :to="`/tenants/${activeContract.tenant.id}`" class="font-medium hover:text-cyan transition-colors">
+              <NuxtLink :to="`/tenants/${activeContract.tenant.code}`" class="font-medium hover:text-cyan transition-colors">
                 {{ activeContract.tenant.fullName }}
               </NuxtLink>
             </div>

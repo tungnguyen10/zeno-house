@@ -6,7 +6,7 @@ import type { TenantFormData } from '~/components/tenants/TenantForm.vue'
 definePageMeta({ title: 'Chỉnh sửa khách thuê' })
 
 const route = useRoute()
-const id = route.params.id as string
+const id = route.params.code as string
 
 const { data, error } = await useFetch<ApiSuccess<Tenant>>(`/api/tenants/${id}`)
 

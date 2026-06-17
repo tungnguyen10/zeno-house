@@ -26,14 +26,18 @@ Server-side API for contracts. CRUD endpoints with Zod validation, auth guard, a
 - **THEN** returns 401 UNAUTHENTICATED
 
 ### Requirement: Get contract by id endpoint
-`GET /api/contracts/:id` SHALL return a single contract by UUID including joined `room` (room_number, floor, building name) and `tenant` (full_name, phone). Returns 404 NOT_FOUND if not found.
+`GET /api/contracts/:identifier` SHALL accept either a UUID or a `contract_code` value as the path parameter. When `identifier` is not a UUID, the server SHALL look up by `contract_code` column. Returns a single contract including joined `room` (room_number, floor, building name) and `tenant` (full_name, phone). Returns 404 NOT_FOUND if not found.
 
-#### Scenario: Contract found
-- **WHEN** admin calls GET /api/contracts/:id with valid id
+#### Scenario: Contract found by UUID
+- **WHEN** admin calls GET /api/contracts/:uuid with valid UUID
+- **THEN** returns contract with nested room and tenant summary fields
+
+#### Scenario: Contract found by code
+- **WHEN** admin calls GET /api/contracts/hd-zhpn-2026-0001
 - **THEN** returns contract with nested room and tenant summary fields
 
 #### Scenario: Contract not found
-- **WHEN** id does not match any contract
+- **WHEN** identifier matches neither UUID nor contract_code
 - **THEN** returns 404 NOT_FOUND
 
 ### Requirement: Create contract endpoint
@@ -205,18 +209,18 @@ The system SHALL persist `contract_renewals` rows from the server using the serv
 - **THEN** the repository deletes the log row using the service-role Supabase client
 - **AND** the rollback SHALL be best-effort: a rollback failure SHALL be logged but SHALL NOT mask the original error returned to the caller
 
-### Requirement: Contract API supports id or code lookup
-`GET /api/contracts/:identifier` SHALL support UUID id lookup and stable contract-code lookup when contract codes are available.
+### Requirement: Contract code generation uses building code
+The server contract creation logic SHALL generate `contract_code` using the format `hd-{buildingCode}-{year}-{seq}`. The `buildingCode` SHALL be resolved from the contracted room's building. Sequence SHALL be scoped to `{buildingCode}-{year}` prefix.
 
-#### Scenario: Lookup contract by id
-- **WHEN** authenticated user calls GET /api/contracts/<uuid>
-- **THEN** the API returns the matching contract
+#### Scenario: Code generated on create
+- **WHEN** a contract is created for room in building with code `zhpn` and `start_date = 2026-09-01`
+- **THEN** the generated `contract_code` is `hd-zhpn-2026-0001` (or next in sequence)
 
-#### Scenario: Lookup contract by code
-- **WHEN** authenticated user calls GET /api/contracts/hd-2026-0001
-- **THEN** the API returns the matching contract
+#### Scenario: Sequence scoped per building per year
+- **WHEN** contracts exist for `zhpn` in 2026 up to `hd-zhpn-2026-0003`
+- **THEN** the next contract for `zhpn` in 2026 gets `hd-zhpn-2026-0004`
 
-#### Scenario: Unknown contract code
-- **WHEN** authenticated user calls GET /api/contracts/unknown-code
-- **THEN** the API returns 404 NOT_FOUND
+#### Scenario: Different building gets independent sequence
+- **WHEN** building `hnt` has no contracts in 2026
+- **THEN** first contract for `hnt` in 2026 gets `hd-hnt-2026-0001` regardless of `zhpn` sequence
 

@@ -6,7 +6,7 @@ import type { RoomFormData } from '~/components/rooms/RoomForm.vue'
 definePageMeta({ title: 'Chỉnh sửa phòng' })
 
 const route = useRoute()
-const id = route.params.id as string
+const id = route.params.code as string
 
 const { data, error } = await useFetch<ApiSuccess<Room>>(`/api/rooms/${id}`)
 

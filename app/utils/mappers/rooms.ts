@@ -6,6 +6,8 @@ export function mapRoom(row: Tables<'rooms'>): Room {
     id: row.id,
     buildingId: row.building_id,
     roomNumber: row.room_number,
+    slug: row.slug,
+    code: row.code,
     floor: row.floor,
     status: row.status as RoomStatus,
     monthlyRent: row.monthly_rent,

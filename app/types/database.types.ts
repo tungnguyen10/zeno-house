@@ -249,6 +249,7 @@ export type Database = {
         Row: {
           address: string
           billing_generation_day: number | null
+          code: string
           created_at: string
           default_electricity_rate: number | null
           default_water_rate: number | null
@@ -270,6 +271,7 @@ export type Database = {
         Insert: {
           address: string
           billing_generation_day?: number | null
+          code?: string
           created_at?: string
           default_electricity_rate?: number | null
           default_water_rate?: number | null
@@ -291,6 +293,7 @@ export type Database = {
         Update: {
           address?: string
           billing_generation_day?: number | null
+          code?: string
           created_at?: string
           default_electricity_rate?: number | null
           default_water_rate?: number | null
@@ -927,36 +930,42 @@ export type Database = {
         Row: {
           area: number | null
           building_id: string
+          code: string
           created_at: string
           description: string | null
           floor: number
           id: string
           monthly_rent: number
           room_number: string
+          slug: string
           status: string
           updated_at: string
         }
         Insert: {
           area?: number | null
           building_id: string
+          code?: string
           created_at?: string
           description?: string | null
           floor?: number
           id?: string
           monthly_rent?: number
           room_number: string
+          slug?: string
           status?: string
           updated_at?: string
         }
         Update: {
           area?: number | null
           building_id?: string
+          code?: string
           created_at?: string
           description?: string | null
           floor?: number
           id?: string
           monthly_rent?: number
           room_number?: string
+          slug?: string
           status?: string
           updated_at?: string
         }
@@ -1008,6 +1017,7 @@ export type Database = {
       }
       tenants: {
         Row: {
+          code: string
           created_at: string
           date_of_birth: string | null
           email: string | null
@@ -1026,6 +1036,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          code?: string
           created_at?: string
           date_of_birth?: string | null
           email?: string | null
@@ -1044,6 +1055,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          code?: string
           created_at?: string
           date_of_birth?: string | null
           email?: string | null

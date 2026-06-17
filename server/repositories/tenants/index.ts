@@ -3,6 +3,8 @@ import type { H3Event } from 'h3'
 import type { Tenant } from '~/types/tenants'
 import type { TenantCreateInput, TenantUpdateInput } from '~/utils/validators/tenants'
 import { mapTenant } from '~/utils/mappers/tenants'
+import { isUuid } from '~/utils/format/slug'
+import { nameInitialsFromFullName } from '~/utils/format/codes'
 
 export interface TenantFilters {
   q?: string
@@ -21,6 +23,34 @@ interface TenantAssignment {
   buildingId: string
   buildingName: string
   buildingSlug: string | null
+}
+
+async function buildUniqueTenantCode(
+  event: H3Event,
+  fullName: string,
+  createdAt: string,
+): Promise<string> {
+  const client = await serverSupabaseClient(event)
+  const initials = nameInitialsFromFullName(fullName) || 'kh'
+  const year = new Date(createdAt).getUTCFullYear()
+  const prefix = `${initials}-${year}`
+
+  const { data, error } = await client
+    .from('tenants')
+    .select('code')
+    .ilike('code', `${prefix}-%`)
+
+  if (error) throw createError({ statusCode: 500, message: error.message })
+
+  const used = new Set((data ?? []).map(row => row.code).filter(Boolean))
+  let next = (data ?? []).reduce((max, row) => {
+    if (!row.code?.startsWith(`${prefix}-`)) return max
+    const seq = Number(row.code.slice(prefix.length + 1))
+    return Number.isFinite(seq) && seq > max ? seq : max
+  }, 0) + 1
+
+  while (used.has(`${prefix}-${String(next).padStart(4, '0')}`)) next++
+  return `${prefix}-${String(next).padStart(4, '0')}`
 }
 
 async function loadActiveAssignments(event: H3Event): Promise<Map<string, TenantAssignment>> {
@@ -194,9 +224,12 @@ export const TenantRepository = {
 
   async insert(event: H3Event, input: TenantCreateInput): Promise<Tenant> {
     const client = await serverSupabaseClient(event)
+    const createdAt = new Date().toISOString()
+    const code = await buildUniqueTenantCode(event, input.full_name, createdAt)
     const { data, error } = await client
       .from('tenants')
       .insert({
+        code,
         full_name: input.full_name,
         phone: input.phone,
         email: input.email ?? null,
@@ -249,5 +282,18 @@ export const TenantRepository = {
     const client = await serverSupabaseClient(event)
     const { error } = await client.from('tenants').delete().eq('id', id)
     if (error) throw createError({ statusCode: 500, message: error.message })
+  },
+
+  async findByIdentifier(event: H3Event, identifier: string): Promise<Tenant | null> {
+    const client = await serverSupabaseClient(event)
+    const column = isUuid(identifier) ? 'id' : 'code'
+    const { data, error } = await client
+      .from('tenants')
+      .select('*')
+      .eq(column, identifier)
+      .maybeSingle()
+
+    if (error) throw createError({ statusCode: 500, message: error.message })
+    return data ? mapTenant(data) : null
   },
 }

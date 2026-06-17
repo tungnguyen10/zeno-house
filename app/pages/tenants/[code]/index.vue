@@ -1,14 +1,24 @@
 <script setup lang="ts">
 import type { ContractWithDetails } from '~/types/contracts'
 import type { ApiSuccess } from '~/types/api'
+import type { Tenant } from '~/types/tenants'
 import { formatCurrency } from '~/utils/format/currency'
-import { contractPath } from '~/utils/routes/operational'
+import { contractPath, tenantPath } from '~/utils/routes/operational'
+import { isUuid } from '~/utils/format/slug'
 
 definePageMeta({ title: 'Chi tiết khách thuê' })
 
 const route = useRoute()
 const authStore = useAuthStore()
-const id = route.params.id as string
+const id = route.params.code as string
+
+// Redirect UUID-based URLs to code-based canonical URL
+if (isUuid(id)) {
+  const { data: redirectData } = await useFetch<ApiSuccess<Tenant>>(`/api/tenants/${id}`)
+  if (redirectData.value?.data) {
+    await navigateTo(tenantPath(redirectData.value.data), { replace: true })
+  }
+}
 
 const { tenant, isLoading, error } = useTenantDetail(id)
 
@@ -58,7 +68,7 @@ watchEffect(() => {
       <UiPageHeader :title="tenant.fullName" :description="tenant.phone">
         <template #actions>
           <div v-if="authStore.isAdmin" class="flex gap-2 shrink-0">
-            <NuxtLink :to="`/tenants/${tenant.id}/edit`">
+            <NuxtLink :to="`/tenants/${tenant.code}/edit`">
               <UiButton variant="secondary" size="sm">Chỉnh sửa</UiButton>
             </NuxtLink>
             <UiButton variant="danger" size="sm" @click="showDeleteModal = true">Xoá</UiButton>
@@ -143,7 +153,7 @@ watchEffect(() => {
         <div class="rounded-xl border border-dark-border bg-dark-surface p-4">
           <div v-if="activeContract">
             <NuxtLink
-              :to="`/rooms/${activeContract.room.id}`"
+              :to="`/rooms/${activeContract.room.code}`"
               class="text-sm font-medium text-white hover:text-cyan transition-colors"
             >
               Phòng {{ activeContract.room.roomNumber }}

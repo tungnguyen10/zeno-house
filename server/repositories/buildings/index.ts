@@ -4,6 +4,7 @@ import type { Building, BuildingServiceSummary } from '~/types/buildings'
 import type { BuildingCreateInput, BuildingUpdateInput } from '~/utils/validators/buildings'
 import { mapBuilding, type BuildingRow } from '~/utils/mappers/buildings'
 import { isUuid, slugifyName } from '~/utils/format/slug'
+import { buildingCodeFromSlug } from '~/utils/format/codes'
 
 async function buildUniqueSlug(
   event: H3Event,
@@ -33,8 +34,35 @@ async function buildUniqueSlug(
   }
 }
 
-async function loadServiceSummaries(
+async function buildUniqueCode(
   event: H3Event,
+  slug: string,
+  excludeId?: string,
+): Promise<string> {
+  const client = await serverSupabaseClient(event)
+  const baseCode = buildingCodeFromSlug(slug) || 'b'
+  let candidate = baseCode
+  let suffix = 2
+
+  while (true) {
+    let query = client
+      .from('buildings')
+      .select('id')
+      .eq('code', candidate)
+      .limit(1)
+
+    if (excludeId) query = query.neq('id', excludeId)
+
+    const { data, error } = await query
+    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (!data || data.length === 0) return candidate
+
+    candidate = `${baseCode}${suffix}`
+    suffix++
+  }
+}
+
+async function loadServiceSummaries(  event: H3Event,
   buildingIds: string[],
 ): Promise<Map<string, BuildingServiceSummary>> {
   if (buildingIds.length === 0) return new Map()
@@ -125,10 +153,12 @@ export const BuildingRepository = {
   async insert(event: H3Event, input: BuildingCreateInput): Promise<Building> {
     const client = await serverSupabaseClient(event)
     const slug = await buildUniqueSlug(event, input.slug ?? input.name)
+    const code = await buildUniqueCode(event, slug)
     const { data, error } = await client
       .from('buildings')
       .insert({
         slug,
+        code,
         name: input.name,
         address: input.address,
         description: input.description ?? null,
@@ -158,10 +188,27 @@ export const BuildingRepository = {
     const slug = input.slug
       ? await buildUniqueSlug(event, input.slug, id)
       : undefined
+
+    // Check code lock: reject if building already has rooms
+    let newCode: string | undefined
+    if (input.code !== undefined) {
+      const { data: roomsCheck, error: roomsError } = await client
+        .from('rooms')
+        .select('id')
+        .eq('building_id', id)
+        .limit(1)
+      if (roomsError) throw createError({ statusCode: 500, message: roomsError.message })
+      if (roomsCheck && roomsCheck.length > 0) {
+        throw createError({ statusCode: 409, message: 'Building code cannot be changed after rooms have been created' })
+      }
+      newCode = await buildUniqueCode(event, input.code, id)
+    }
+
     const { data, error } = await client
       .from('buildings')
       .update({
         ...(slug !== undefined && { slug }),
+        ...(newCode !== undefined && { code: newCode }),
         ...(input.name !== undefined && { name: input.name }),
         ...(input.address !== undefined && { address: input.address }),
         ...(input.description !== undefined && { description: input.description }),

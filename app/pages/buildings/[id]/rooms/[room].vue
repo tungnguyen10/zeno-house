@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { ApiSuccess } from '~/types/api'
 import type { Room } from '~/types/rooms'
+import { roomPath } from '~/utils/routes/operational'
 
 const route = useRoute()
 const buildingIdentifier = route.params.id as string
@@ -11,8 +12,8 @@ const { data, error } = await useFetch<ApiSuccess<Room>>(
 )
 
 watchEffect(() => {
-  if (data.value?.data?.id) {
-    navigateTo(`/rooms/${data.value.data.id}`, { replace: true })
+  if (data.value?.data) {
+    navigateTo(roomPath(data.value.data), { replace: true })
   }
   else if (error.value) {
     navigateTo('/rooms', { replace: true })

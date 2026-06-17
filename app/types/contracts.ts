@@ -26,6 +26,7 @@ export interface Contract {
 export interface ContractWithDetails extends Contract {
   room: {
     id: string
+    code: string
     roomNumber: string
     floor: number
     buildingId: string
@@ -33,6 +34,7 @@ export interface ContractWithDetails extends Contract {
   }
   tenant: {
     id: string
+    code: string
     fullName: string
     phone: string
   }

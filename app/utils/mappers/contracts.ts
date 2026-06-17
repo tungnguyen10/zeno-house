@@ -27,8 +27,8 @@ export function mapContract(row: Tables<'contracts'>): Contract {
 }
 
 export function mapContractWithDetails(row: Tables<'contracts'> & {
-  rooms: { id: string; room_number: string; floor: number; building_id: string; buildings: { name: string } | null } | null
-  tenants: { id: string; full_name: string; phone: string } | null
+  rooms: { id: string; room_number: string; floor: number; building_id: string; code: string; buildings: { name: string } | null } | null
+  tenants: { id: string; full_name: string; phone: string; code: string } | null
 }): ContractWithDetails {
   return {
     ...mapContract(row),
@@ -38,11 +38,13 @@ export function mapContractWithDetails(row: Tables<'contracts'> & {
       floor: row.rooms?.floor ?? 0,
       buildingId: row.rooms?.building_id ?? '',
       buildingName: row.rooms?.buildings?.name ?? '',
+      code: row.rooms?.code ?? '',
     },
     tenant: {
       id: row.tenants?.id ?? '',
       fullName: row.tenants?.full_name ?? '',
       phone: row.tenants?.phone ?? '',
+      code: row.tenants?.code ?? '',
     },
   }
 }

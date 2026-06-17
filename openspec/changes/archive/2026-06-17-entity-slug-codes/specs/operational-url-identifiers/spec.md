@@ -1,18 +1,4 @@
-# operational-url-identifiers Specification
-
-## Purpose
-TBD - created by archiving change dashboard-building-tenant-ux. Update Purpose after archive.
-## Requirements
-### Requirement: Operational URLs use stable readable identifiers
-User-facing operational routes SHALL prefer stable persisted slugs or business codes over raw UUIDs when the entity has a safe non-PII identifier. Existing UUID routes SHALL remain supported during migration.
-
-#### Scenario: Readable identifier preferred
-- **WHEN** UI renders a link for an entity with a safe slug or business code
-- **THEN** the generated URL uses that slug or code instead of the raw UUID
-
-#### Scenario: UUID fallback supported
-- **WHEN** a user opens an existing UUID-based URL
-- **THEN** the application resolves the record and renders the same destination
+## MODIFIED Requirements
 
 ### Requirement: Person records avoid name-derived slugs
 Routes for sensitive person records such as tenants SHALL NOT use slugs derived from personal names. They SHALL use `tenant.code` (format `{nameInitials}-{year}-{seq}`) as the URL identifier. The code is non-PII: it is not reconstructable to full name from initials alone.
@@ -25,6 +11,8 @@ Routes for sensitive person records such as tenants SHALL NOT use slugs derived 
 - **WHEN** UI renders a tenant link for tenant `"Nguyễn Văn A"`
 - **THEN** the URL does not include `nguyen-van-a` or any slug derived from the full name
 
+---
+
 ### Requirement: Scoped child entities use parent context
 Room routes SHALL use `room.code` (globally unique, format `{buildingCode}-{roomSlug}`) as the canonical URL identifier. The parent-context route `/buildings/:buildingSlug/rooms/:roomSlug` SHALL remain available as a navigation entry point but SHALL redirect to the canonical `/rooms/:roomCode` URL.
 
@@ -36,8 +24,10 @@ Room routes SHALL use `room.code` (globally unique, format `{buildingCode}-{room
 - **WHEN** user navigates to `/buildings/zeno-house-phu-nhuan/rooms/b201`
 - **THEN** the application resolves the room and redirects to `/rooms/zhpn-b201`
 
+---
+
 ### Requirement: Business documents use document codes
-Business documents such as contracts and invoices SHALL prefer stable document codes for user-facing URLs when those codes exist. They SHALL NOT derive URLs from tenant names.
+Contract routes SHALL use `contract_code` in format `hd-{buildingCode}-{year}-{seq}` as the URL identifier.
 
 #### Scenario: Contract route uses new-format code
 - **WHEN** UI renders a contract link with code `hd-zhpn-2026-0001`
@@ -47,7 +37,7 @@ Business documents such as contracts and invoices SHALL prefer stable document c
 - **WHEN** UI renders an invoice link with a stable invoice code
 - **THEN** the URL uses the invoice code instead of a tenant-name slug
 
----
+## ADDED Requirements
 
 ### Requirement: UUID-based URLs resolve via redirect
 Legacy UUID-based URLs for rooms, tenants, and contracts SHALL remain resolvable. When a UUID identifier is detected, the server or page SHALL resolve the record and redirect to its canonical code-based URL.
@@ -63,4 +53,3 @@ Legacy UUID-based URLs for rooms, tenants, and contracts SHALL remain resolvable
 #### Scenario: Legacy contract UUID URL redirects
 - **WHEN** user navigates to `/contracts/uuid`
 - **THEN** the application resolves the contract and redirects to `/contracts/hd-zhpn-2026-0001`
-

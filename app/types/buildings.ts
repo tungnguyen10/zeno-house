@@ -19,6 +19,7 @@ export interface BuildingServiceSummary {
 export interface Building {
   id: string
   slug: string
+  code: string
   name: string
   address: string
   description: string | null
