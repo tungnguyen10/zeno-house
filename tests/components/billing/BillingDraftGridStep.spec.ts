@@ -232,6 +232,30 @@ describe('BillingDraftGridStep', () => {
     wrapper.unmount()
   })
 
+  it('keeps optimistic amounts visible after auto-save succeeds without grid reload', async () => {
+    vi.useFakeTimers()
+    const onSaveReadings = vi.fn(async () => {})
+    const wrapper = mountGrid({ onSaveReadings })
+    const electricity = wrapper.get('[data-reading-cell="room-1::electricity"] input')
+
+    await electricity.setValue('123')
+    // Optimistic display visible before save
+    expect(wrapper.text()).toContain('92.000')
+
+    // Auto-save fires — must NOT wipe the optimistic display
+    await vi.advanceTimersByTimeAsync(801)
+    await wrapper.vm.$nextTick()
+
+    expect(onSaveReadings).toHaveBeenCalledTimes(1)
+    expect((electricity.element as HTMLInputElement).value).toBe('123')
+    // Amounts still show after save (savedReadings keeps them until server refresh)
+    expect(wrapper.text()).toContain('92.000')
+    expect(wrapper.text()).toContain('3.192.000')
+
+    wrapper.unmount()
+    vi.useRealTimers()
+  })
+
   it('keeps local input visible when auto-save fails', async () => {
     vi.useFakeTimers()
     const onSaveReadings = vi.fn(async () => {
@@ -277,5 +301,51 @@ describe('BillingDraftGridStep', () => {
     expect(wrapper.text()).not.toContain('Điều chỉnh chỉ số')
 
     wrapper.unmount()
+  })
+
+  it('bulk apply populates cells, highlights them, and schedules row auto-save without full grid reload', async () => {
+    vi.useFakeTimers()
+    const onSaveReadings = vi.fn(async () => {})
+    const wrapper = mountGrid({ onSaveReadings })
+
+    // Call applyBulkReadings via defineExpose — simulates the @apply emit from the modal.
+    wrapper.vm.applyBulkReadings([
+      { row: buildRow({ roomId: 'room-1' }), type: 'electricity', value: '130' },
+      { row: buildRow({ roomId: 'room-1' }), type: 'water', value: '15' },
+    ])
+    await wrapper.vm.$nextTick()
+
+    // Cells should reflect the applied values immediately
+    const electricity = wrapper.get('[data-reading-cell="room-1::electricity"] input')
+    const water = wrapper.get('[data-reading-cell="room-1::water"] input')
+    expect((electricity.element as HTMLInputElement).value).toBe('130')
+    expect((water.element as HTMLInputElement).value).toBe('15')
+
+    // After debounce, row saves through the no-refresh path
+    await vi.advanceTimersByTimeAsync(801)
+    expect(onSaveReadings).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({ room_id: 'room-1', meter_type: 'electricity', reading_value: 130 }),
+        expect.objectContaining({ room_id: 'room-1', meter_type: 'water', reading_value: 15 }),
+      ]),
+      { refresh: false, refreshDrafts: false, silent: true },
+    )
+    // Must NOT have triggered a full grid reload (refresh: true call)
+    expect(onSaveReadings).not.toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ refresh: true }),
+    )
+
+    // After auto-save, the input values and optimistic amounts must remain
+    // visible (via savedReadings) — not revert to server nulls.
+    await wrapper.vm.$nextTick()
+    expect((electricity.element as HTMLInputElement).value).toBe('130')
+    expect((water.element as HTMLInputElement).value).toBe('15')
+    // Optimistic electricity: (130-100)=30 kWh * 4000 = 120,000; water: (15-10)=5 m³ * 15000 = 75,000
+    expect(wrapper.text()).toContain('120.000')
+    expect(wrapper.text()).toContain('75.000')
+
+    wrapper.unmount()
+    vi.useRealTimers()
   })
 })

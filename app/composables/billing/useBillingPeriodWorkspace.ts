@@ -18,6 +18,10 @@ import type { MeterReadingBulkInput } from '~/utils/validators/meter-readings'
 
 export interface SaveReadingsOptions {
   refresh?: boolean
+  /** Suppress the success toast shown by the page-level wrapper. */
+  silent?: boolean
+  /** Refresh the drafts tab after saving (page-level concern). */
+  refreshDrafts?: boolean
 }
 
 /**

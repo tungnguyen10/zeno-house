@@ -174,7 +174,7 @@ async function closePeriodFromModal() {
 
 async function saveReadingsWithToast(
   readings: Parameters<typeof saveReadings>[0],
-  options?: Parameters<typeof saveReadings>[1] & { silent?: boolean; refreshDrafts?: boolean },
+  options?: Parameters<typeof saveReadings>[1],
 ) {
   try {
     const result = await saveReadings(readings, options)

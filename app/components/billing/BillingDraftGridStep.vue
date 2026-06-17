@@ -55,7 +55,10 @@ const periodEditable = computed(() => {
 const filter = ref<GridFilter>('needs_action')
 const batchReadingDate = ref<string>('')
 const expandedRowKeys = ref<Set<string>>(new Set())
-const localReadings = ref<Record<string, string>>({}) // key = `${roomId}::${meterType}`
+const localReadings = ref<Record<string, string>>({})  // unsaved edits — key = `${roomId}::${meterType}`
+const savedReadings = ref<Record<string, string>>({})  // persisted but not yet refreshed from server
+// Merged overlay used for optimistic display: local overrides saved.
+const effectiveReadings = computed(() => ({ ...savedReadings.value, ...localReadings.value }))
 const isSaving = ref(false)
 const bulkEntryOpen = ref(false)
 
@@ -80,6 +83,16 @@ watch(
     if (next && !batchReadingDate.value) batchReadingDate.value = next
   },
   { immediate: true },
+)
+
+// When the grid is refreshed from the server, discard both local and saved
+// overlays so the authoritative server values are shown.
+watch(
+  () => props.response,
+  () => {
+    localReadings.value = {}
+    savedReadings.value = {}
+  },
 )
 
 // ---------------------------------------------------------------------------
@@ -124,8 +137,11 @@ function cellKey(row: BillingDraftGridRow, type: MeterType): string {
 }
 
 function readingDraftValue(row: BillingDraftGridRow, type: MeterType): string {
-  const local = localReadings.value[cellKey(row, type)]
+  const key = cellKey(row, type)
+  const local = localReadings.value[key]
   if (local !== undefined) return local
+  const saved = savedReadings.value[key]
+  if (saved !== undefined) return saved
   const cell = type === 'electricity' ? row.electricity : row.water
   if (!cell) return ''
   return cell.currentValue !== null ? String(cell.currentValue) : ''
@@ -187,10 +203,12 @@ async function saveRow(row: BillingDraftGridRow) {
   Reflect.deleteProperty(rowSaveError.value, row.roomId)
   try {
     await props.onSaveReadings(payload, { refresh: false, refreshDrafts: false, silent: true })
-    // Clear local drafts for the cells we just persisted; the merged grid
-    // refresh will provide fresh stored values.
+    // Move persisted cells from localReadings → savedReadings so the optimistic
+    // display stays visible until the next explicit grid refresh.
     for (const item of payload) {
-      Reflect.deleteProperty(localReadings.value, `${item.room_id}::${item.meter_type}`)
+      const key = `${item.room_id}::${item.meter_type}`
+      savedReadings.value[key] = String(item.reading_value)
+      Reflect.deleteProperty(localReadings.value, key)
     }
     rowSaveState.value[row.roomId] = 'saved'
     if (rowSavedFlash[row.roomId]) clearTimeout(rowSavedFlash[row.roomId])
@@ -355,7 +373,7 @@ function statusBadgeFor(row: BillingDraftGridRow): { status: string; context: 'p
 // ---------------------------------------------------------------------------
 
 function rowDisplay(row: BillingDraftGridRow) {
-  return optimisticRowDisplay(row, localReadings.value)
+  return optimisticRowDisplay(row, effectiveReadings.value)
 }
 
 function utilityDisplay(row: BillingDraftGridRow, type: MeterType): OptimisticUtilityDisplay {
@@ -371,28 +389,36 @@ function displayDraftTotal(row: BillingDraftGridRow): number | null {
   return rowDisplay(row).draftTotal
 }
 
-function displayGridRow(row: BillingDraftGridRow): BillingDraftGridRow {
-  const display = rowDisplay(row)
-  return {
-    ...row,
-    draftTotal: display.draftTotal,
-    electricity: row.electricity
-      ? {
-          ...row.electricity,
-          currentValue: display.electricity.currentValue,
-          usage: display.electricity.usage,
-          amount: display.electricity.amount,
-        }
-      : null,
-    water: row.water
-      ? {
-          ...row.water,
-          currentValue: display.water.currentValue,
-          usage: display.water.usage,
-          amount: display.water.amount,
-        }
-      : null,
+const displayGridRowMap = computed<Map<string, BillingDraftGridRow>>(() => {
+  const map = new Map<string, BillingDraftGridRow>()
+  for (const row of props.response?.rows ?? []) {
+    const display = optimisticRowDisplay(row, effectiveReadings.value)
+    map.set(row.roomId, {
+      ...row,
+      draftTotal: display.draftTotal,
+      electricity: row.electricity
+        ? {
+            ...row.electricity,
+            currentValue: display.electricity.currentValue,
+            usage: display.electricity.usage,
+            amount: display.electricity.amount,
+          }
+        : null,
+      water: row.water
+        ? {
+            ...row.water,
+            currentValue: display.water.currentValue,
+            usage: display.water.usage,
+            amount: display.water.amount,
+          }
+        : null,
+    })
   }
+  return map
+})
+
+function displayGridRow(row: BillingDraftGridRow): BillingDraftGridRow {
+  return displayGridRowMap.value.get(row.roomId) ?? row
 }
 
 function previousReadingHint(cell: BillingDraftGridUtilityCell | null): string {
@@ -435,6 +461,11 @@ async function saveAll() {
   isSaving.value = true
   try {
     await props.onSaveReadings(payload, { refresh: false, refreshDrafts: false })
+    // Move all saved entries to savedReadings; server refresh will clear them.
+    for (const item of payload) {
+      const key = `${item.room_id}::${item.meter_type}`
+      savedReadings.value[key] = String(item.reading_value)
+    }
     localReadings.value = {}
   } finally {
     isSaving.value = false
@@ -449,6 +480,8 @@ function applyBulkReadings(updates: Array<{ row: BillingDraftGridRow; type: Mete
   }
   highlightReadingCells(keys)
 }
+
+defineExpose({ applyBulkReadings })
 
 // ---------------------------------------------------------------------------
 // Override modal

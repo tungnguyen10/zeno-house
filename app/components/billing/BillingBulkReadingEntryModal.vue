@@ -40,6 +40,16 @@ const guidance = computed(() => {
   const rows = props.rows.filter(row => row.editable)
   const needsElectricity = rows.some(row => row.electricity?.editable)
   const needsWater = rows.some(row => row.water?.editable)
+  const hasMixed = needsElectricity && needsWater
+    && rows.some(row => row.electricity?.editable && !row.water?.editable)
+
+  if (hasMixed) {
+    return {
+      title: 'Các phòng có yêu cầu nhập chỉ số khác nhau.',
+      examples: ['A101 12345 12', 'A102 45678', '12345'],
+      note: 'Mỗi phòng chỉ cần nhập chỉ số áp dụng cho phòng đó. Cột không áp dụng sẽ được đánh dấu trong preview.',
+    }
+  }
   if (needsElectricity && needsWater) {
     return {
       title: 'Nhập theo phòng hoặc theo thứ tự đang hiển thị.',
