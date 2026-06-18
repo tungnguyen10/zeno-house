@@ -15,6 +15,7 @@ import type {
 import { BILLING_BLOCKER_CODES, type BillingBlockerCode } from '~/utils/constants/billing'
 import { BillingPeriodRepository } from '../../repositories/billing/periods'
 import { BillingUtilityUsageRepository } from '../../repositories/billing/utility-usages'
+import { calculateRequiredReadingProgress } from './core'
 import { BillingDraftService } from './drafts'
 import { BillingPeriodService } from './periods'
 
@@ -348,11 +349,20 @@ export const BillingDraftGridService = {
 
     // Override metadata for warnings (used directly by draft service, but we may need
     // it for cells where the draft has no electricity/water line — currently not the case).
-    await BillingUtilityUsageRepository.listByPeriod(event, period.id)
+    const usageOverrides = await BillingUtilityUsageRepository.listByPeriod(event, period.id)
+    const sharedReadingProgress = calculateRequiredReadingProgress({
+      contracts: draftResp.drafts.map(draft => ({ room_id: draft.roomId })),
+      pricing,
+      readings: (currentData ?? []) as Array<{ room_id: string; meter_type: 'electricity' | 'water' }>,
+      overrides: usageOverrides.map(override => ({
+        roomId: override.roomId,
+        meterType: override.meterType,
+      })),
+    })
 
     const rows: BillingDraftGridRow[] = []
-    let requiredReadingCount = 0
-    let completeReadingCount = 0
+    const requiredReadingCount = sharedReadingProgress.required
+    const completeReadingCount = sharedReadingProgress.complete
     let readyDraftCount = 0
     let blockedDraftCount = 0
     let draftTotalSum = 0
@@ -369,16 +379,6 @@ export const BillingDraftGridService = {
         const rowEditable = periodEditable && !invoiceIsActive
         const elecCell = buildBillableCell('electricity', draft, pricing, elecCurrent, elecPrev, rowEditable)
         const waterCell = buildBillableCell('water', draft, pricing, waterCurrent, waterPrev, rowEditable)
-
-        // Required-reading accounting
-        if (elecCell.required) {
-          requiredReadingCount += 1
-          if (elecCell.currentReadingId || elecCell.source === 'override') completeReadingCount += 1
-        }
-        if (waterCell.required) {
-          requiredReadingCount += 1
-          if (waterCell.currentReadingId || waterCell.source === 'override') completeReadingCount += 1
-        }
 
         // rentAndService = total - electricity amount - water amount
         const elecAmt = elecCell.amount ?? 0

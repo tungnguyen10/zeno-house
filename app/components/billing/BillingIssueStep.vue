@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed, ref } from 'vue'
 import type { UiTableColumn } from '~/components/ui/UiTable.vue'
 import type { BillingDraftInvoice, BillingDraftResponse, IssueInvoicesResult } from '~/types/billing'
 import type { IssueInvoicesInput } from '~/utils/validators/billing'
@@ -7,6 +8,7 @@ import { formatCurrency } from '~/utils/format/currency'
 const props = defineProps<{
   drafts: BillingDraftResponse | null
   loading: boolean
+  onIssue?: (input: IssueInvoicesInput) => Promise<IssueInvoicesResult | undefined>
 }>()
 
 const emit = defineEmits<{
@@ -69,7 +71,9 @@ async function confirmIssue() {
   submitError.value = null
   try {
     const contractIds = Array.from(selected.value)
-    emit('issue', { contract_ids: contractIds })
+    const input = { contract_ids: contractIds }
+    const result = props.onIssue ? await props.onIssue(input) : (emit('issue', input), undefined)
+    lastResult.value = result ?? null
     showConfirm.value = false
     selected.value = new Set()
   } catch (err) {

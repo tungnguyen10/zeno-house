@@ -80,6 +80,17 @@ Common warnings:
 - utility override applied
 - occupant count fallback to contract value
 
+## Period Queue Metrics
+
+Period list, workspace overview, draft calculation, and draft grid use the same server-side billing core definitions:
+
+- billable contracts are overlapping contracts whose status is not `terminated`
+- required reading progress is based on billable contract rooms and building pricing
+- electricity requires a current monthly reading only for `per_kwh`
+- water requires a current monthly reading only for `per_m3`
+- `per_person` and `fixed_per_room` water do not add required reading work
+- a saved utility usage override counts as complete for the matching room/meter
+
 ## Workspace UI
 
 The workspace route `/billing/[building]/[period]` has three tabs:

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed, ref } from 'vue'
 import type { BillingPeriod, BillingWorkspaceOverview } from '~/types/billing'
 import { formatCurrency } from '~/utils/format/currency'
 
@@ -6,6 +7,7 @@ const props = defineProps<{
   overview: BillingWorkspaceOverview
   period: BillingPeriod
   canClose: boolean
+  onClosePeriod?: () => Promise<void>
 }>()
 
 const emit = defineEmits<{ closePeriod: [] }>()
@@ -28,7 +30,8 @@ async function confirmClose() {
   submitting.value = true
   submitError.value = null
   try {
-    emit('closePeriod')
+    if (props.onClosePeriod) await props.onClosePeriod()
+    else emit('closePeriod')
     showConfirm.value = false
   } catch (err) {
     const e = err as { data?: { error?: { message?: string } } }

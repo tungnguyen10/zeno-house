@@ -1,5 +1,6 @@
 import type { H3Event } from 'h3'
-import { serverSupabaseClient } from '#supabase/server'
+import { serverSupabaseClient, serverSupabaseServiceRole } from '#supabase/server'
+import type { Database } from '~/types/database.types'
 import type { BillingAuditEntityType } from '~/utils/constants/billing'
 
 type MaybeId = string | null | undefined
@@ -66,6 +67,15 @@ function periodToken(period: PeriodDisplay | null | undefined): string | null {
   return `${period.periodYear}-${String(period.periodMonth).padStart(2, '0')}`
 }
 
+function userDisplayName(user: { user_metadata?: Record<string, unknown> | null; email?: string | null }): string | null {
+  const metadata = user.user_metadata ?? {}
+  for (const key of ['full_name', 'name', 'display_name']) {
+    const value = metadata[key]
+    if (typeof value === 'string' && value.trim()) return value.trim()
+  }
+  return user.email ?? null
+}
+
 export class BillingDisplayResolver {
   private readonly event: H3Event
   private queryCounts: Record<string, number> = {}
@@ -90,8 +100,28 @@ export class BillingDisplayResolver {
 
   async loadActors(ids: MaybeId[]): Promise<Map<string, ActorDisplay | null>> {
     const missing = uniqueIds(ids).filter(id => !this.actors.has(id))
-    for (const id of missing) {
-      this.actors.set(id, { id, name: null, email: null })
+    if (missing.length > 0) {
+      this.countQuery('auth.users')
+      const found = new Set<string>()
+      try {
+        const client = serverSupabaseServiceRole<Database>(this.event)
+        await Promise.all(missing.map(async (id) => {
+          const { data, error } = await client.auth.admin.getUserById(id)
+          if (error || !data?.user) return
+          found.add(id)
+          this.actors.set(id, {
+            id,
+            name: userDisplayName(data.user),
+            email: data.user.email ?? null,
+          })
+        }))
+      } catch {
+        // Keep billing read DTOs available even when Auth admin lookup is not
+        // configured for the runtime or unit test environment.
+      }
+      for (const id of missing) {
+        if (!found.has(id)) this.actors.set(id, { id, name: null, email: null })
+      }
     }
     return new Map(uniqueIds(ids).map(id => [id, this.actors.get(id) ?? null]))
   }

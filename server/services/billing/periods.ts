@@ -18,6 +18,11 @@ import { InvoicePaymentRepository } from '../../repositories/billing/payments'
 import { BuildingRepository } from '../../repositories/buildings'
 import { assertReason } from '../../utils/billing/reason'
 import { BillingAuditService } from './audit'
+import {
+  loadBillableContractsInPeriod,
+  loadRequiredReadingProgress,
+  type BillableContractPeriodRow,
+} from './core'
 import { assertPeriodCanTransition } from './rules'
 
 interface BuildingLite {
@@ -26,6 +31,8 @@ interface BuildingLite {
   name: string | null
   defaultElectricityRate: number | null
   defaultWaterRate: number | null
+  electricityPricingType: string | null
+  waterPricingType: string | null
 }
 
 async function loadBuildingsByIds(event: H3Event, ids: string[]): Promise<Map<string, BuildingLite>> {
@@ -33,7 +40,7 @@ async function loadBuildingsByIds(event: H3Event, ids: string[]): Promise<Map<st
   const supabase = await serverSupabaseClient(event)
   const { data, error } = await supabase
     .from('buildings')
-    .select('id, slug, name, default_electricity_rate, default_water_rate')
+    .select('id, slug, name, electricity_pricing_type, default_electricity_rate, water_pricing_type, default_water_rate')
     .in('id', ids)
   if (error) throw createError({ statusCode: 500, message: error.message })
   return new Map(
@@ -43,59 +50,27 @@ async function loadBuildingsByIds(event: H3Event, ids: string[]): Promise<Map<st
         id: b.id,
         slug: b.slug ?? null,
         name: b.name ?? null,
+        electricityPricingType: b.electricity_pricing_type ?? null,
         defaultElectricityRate: b.default_electricity_rate === null ? null : Number(b.default_electricity_rate),
+        waterPricingType: b.water_pricing_type ?? null,
         defaultWaterRate: b.default_water_rate === null ? null : Number(b.default_water_rate),
       },
     ]),
   )
 }
 
-async function loadActiveContractCountForBuilding(
+async function loadBillableContractsForPeriod(
   event: H3Event,
   buildingId: string,
   periodYear: number,
   periodMonth: number,
-): Promise<number> {
-  const supabase = await serverSupabaseClient(event)
-  // Active contracts are those whose start_date <= last day of period and (end_date is null OR end_date >= first day of period) and status = 'active'.
-  const firstDay = new Date(Date.UTC(periodYear, periodMonth - 1, 1))
-  const lastDay = new Date(Date.UTC(periodYear, periodMonth, 0))
-  const firstStr = firstDay.toISOString().slice(0, 10)
-  const lastStr = lastDay.toISOString().slice(0, 10)
-  const { count, error } = await supabase
-    .from('contracts')
-    .select('id', { count: 'exact', head: true })
-    .eq('building_id', buildingId)
-    .lte('start_date', lastStr)
-    .or(`end_date.gte.${firstStr},end_date.is.null`)
-  if (error) throw createError({ statusCode: 500, message: error.message })
-  return count ?? 0
-}
-
-async function loadReadingProgress(
-  event: H3Event,
-  buildingId: string,
-  periodYear: number,
-  periodMonth: number,
-): Promise<{ complete: number; required: number }> {
-  const supabase = await serverSupabaseClient(event)
-  const { data: rooms, error } = await supabase
-    .from('rooms')
-    .select('id, status')
-    .eq('building_id', buildingId)
-  if (error) throw createError({ statusCode: 500, message: error.message })
-  const occupiedRooms = (rooms ?? []).filter(r => r.status === 'occupied')
-  const required = occupiedRooms.length * 2 // electricity + water per occupied room
-  if (occupiedRooms.length === 0) return { complete: 0, required: 0 }
-  const roomIds = occupiedRooms.map(r => r.id)
-  const { data: readings, error: readErr } = await supabase
-    .from('meter_readings')
-    .select('room_id, meter_type')
-    .in('room_id', roomIds)
-    .eq('period_year', periodYear)
-    .eq('period_month', periodMonth)
-  if (readErr) throw createError({ statusCode: 500, message: readErr.message })
-  return { complete: readings?.length ?? 0, required }
+): Promise<BillableContractPeriodRow[]> {
+  return loadBillableContractsInPeriod<BillableContractPeriodRow>(event, {
+    buildingId,
+    periodYear,
+    periodMonth,
+    select: 'id, building_id, room_id, start_date, end_date, status',
+  })
 }
 
 export const BillingPeriodService = {
@@ -137,26 +112,34 @@ export const BillingPeriodService = {
       const paidTotal = activeInvoices.reduce((s, i) => s + i.paidAmount, 0)
       const outstanding = activeInvoices.reduce((s, i) => s + i.balanceAmount, 0)
 
-      const contractCount = await loadActiveContractCountForBuilding(
+      const building = buildingMap.get(period.buildingId)
+      const contracts = await loadBillableContractsForPeriod(
         event,
         period.buildingId,
         period.periodYear,
         period.periodMonth,
       )
-      const reading = await loadReadingProgress(
+      const reading = await loadRequiredReadingProgress(
         event,
-        period.buildingId,
-        period.periodYear,
-        period.periodMonth,
+        {
+          buildingId: period.buildingId,
+          periodId: period.id,
+          periodYear: period.periodYear,
+          periodMonth: period.periodMonth,
+          pricing: {
+            electricity_pricing_type: building?.electricityPricingType ?? null,
+            water_pricing_type: building?.waterPricingType ?? null,
+          },
+          contracts,
+        },
       )
 
-      const building = buildingMap.get(period.buildingId)
       summaries.push({
         period,
         buildingId: period.buildingId,
         buildingSlug: building?.slug ?? null,
         buildingName: building?.name ?? null,
-        contractCount,
+        contractCount: contracts.length,
         invoiceCount: activeInvoices.length,
         readingCompleteCount: reading.complete,
         readingRequiredCount: reading.required,
@@ -246,17 +229,25 @@ export const BillingPeriodService = {
     const paidTotal = activeInvoices.reduce((s, i) => s + i.paidAmount, 0)
     const outstanding = activeInvoices.reduce((s, i) => s + i.balanceAmount, 0)
 
-    const contractCount = await loadActiveContractCountForBuilding(
+    const contracts = await loadBillableContractsForPeriod(
       event,
       period.buildingId,
       period.periodYear,
       period.periodMonth,
     )
-    const reading = await loadReadingProgress(
+    const reading = await loadRequiredReadingProgress(
       event,
-      period.buildingId,
-      period.periodYear,
-      period.periodMonth,
+      {
+        buildingId: period.buildingId,
+        periodId: period.id,
+        periodYear: period.periodYear,
+        periodMonth: period.periodMonth,
+        pricing: {
+          electricity_pricing_type: building?.electricityPricingType ?? null,
+          water_pricing_type: building?.waterPricingType ?? null,
+        },
+        contracts,
+      },
     )
     const auditEvents = await BillingAuditService.listByPeriod(event, user, period.id)
 
@@ -264,7 +255,7 @@ export const BillingPeriodService = {
       period,
       buildingId: period.buildingId,
       buildingName: building?.name ?? null,
-      contractCount,
+      contractCount: contracts.length,
       invoiceCount: activeInvoices.length,
       readingCompleteCount: reading.complete,
       readingRequiredCount: reading.required,

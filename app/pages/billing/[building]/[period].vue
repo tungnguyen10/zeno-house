@@ -371,8 +371,8 @@ async function openPaymentsIntent(intent: Omit<BillingPaymentsIntent, 'id'>) {
           v-else-if="tab === 'issue'"
           :drafts="drafts"
           :loading="draftsLoading"
+          :on-issue="issueWithToast"
           @refresh="loadDrafts"
-          @issue="issueWithToast"
         />
 
         <BillingPaymentsStep
@@ -400,7 +400,7 @@ async function openPaymentsIntent(intent: Omit<BillingPaymentsIntent, 'id'>) {
           :overview="overview"
           :period="period"
           :can-close="canClose"
-          @close-period="closePeriodFromModal"
+          :on-close-period="closePeriodFromModal"
         />
       </UiModal>
 

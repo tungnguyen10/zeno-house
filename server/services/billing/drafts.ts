@@ -16,6 +16,7 @@ import {
 import { BillingPeriodRepository } from '../../repositories/billing/periods'
 import { InvoiceRepository } from '../../repositories/billing/invoices'
 import { BillingUtilityUsageRepository } from '../../repositories/billing/utility-usages'
+import { billingPeriodBounds, loadBillableContractsInPeriod, type BillableContractPeriodRow } from './core'
 import { calculateProratedRent } from './rules'
 
 // ---------------------------------------------------------------------------
@@ -32,7 +33,7 @@ interface BuildingPricing {
   default_water_rate: number | null
 }
 
-interface ContractRow {
+interface ContractRow extends BillableContractPeriodRow {
   id: string
   contract_code: string | null
   building_id: string
@@ -95,12 +96,6 @@ interface TenantRow {
 // Helpers
 // ---------------------------------------------------------------------------
 
-function periodBounds(year: number, month: number): { first: string; last: string } {
-  const first = new Date(Date.UTC(year, month - 1, 1)).toISOString().slice(0, 10)
-  const last = new Date(Date.UTC(year, month, 0)).toISOString().slice(0, 10)
-  return { first, last }
-}
-
 function previousPeriod(year: number, month: number): { year: number; month: number } {
   if (month === 1) return { year: year - 1, month: 12 }
   return { year, month: month - 1 }
@@ -131,7 +126,7 @@ export const BillingDraftService = {
     if (!period) throwNotFound('Không tìm thấy kỳ vận hành')
 
     const supabase = await serverSupabaseClient(event)
-    const { first: firstDay, last: lastDay } = periodBounds(period.periodYear, period.periodMonth)
+    const { first: firstDay, last: lastDay } = billingPeriodBounds(period.periodYear, period.periodMonth)
     const prev = previousPeriod(period.periodYear, period.periodMonth)
 
     // Building pricing config
@@ -151,14 +146,12 @@ export const BillingDraftService = {
     }
 
     // Active contracts for this building/period
-    const { data: contracts, error: cErr } = await supabase
-      .from('contracts')
-      .select('id, contract_code, building_id, room_id, tenant_id, start_date, end_date, monthly_rent, occupant_count, discount_amount, surcharge_amount, payment_day, status')
-      .eq('building_id', period.buildingId)
-      .lte('start_date', lastDay)
-      .or(`end_date.gte.${firstDay},end_date.is.null`)
-    if (cErr) throw createError({ statusCode: 500, message: cErr.message })
-    const activeContracts = (contracts ?? []).filter(c => c.status !== 'terminated') as unknown as ContractRow[]
+    const activeContracts = await loadBillableContractsInPeriod<ContractRow>(event, {
+      buildingId: period.buildingId,
+      periodYear: period.periodYear,
+      periodMonth: period.periodMonth,
+      select: 'id, contract_code, building_id, room_id, tenant_id, start_date, end_date, monthly_rent, occupant_count, discount_amount, surcharge_amount, payment_day, status',
+    })
 
     if (activeContracts.length === 0) {
       return {
