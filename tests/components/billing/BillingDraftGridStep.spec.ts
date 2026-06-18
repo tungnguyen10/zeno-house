@@ -87,20 +87,36 @@ function response(rows: BillingDraftGridRow[] = [
 
 const passthrough = defineComponent({ template: '<div><slot /><slot name="actions" /><slot name="footer" /></div>' })
 const empty = defineComponent({ template: '<div><slot /></div>' })
+const checkboxStub = defineComponent({
+  name: 'UiCheckbox',
+  props: {
+    modelValue: { type: Boolean, default: false },
+    label: { type: String, default: '' },
+  },
+  emits: ['update:modelValue'],
+  template: '<label><input type="checkbox" :checked="modelValue" @change="$emit(\'update:modelValue\', $event.target.checked)">{{ label }}</label>',
+})
+const discrepancyCalloutStub = defineComponent({
+  name: 'BillingDraftDiscrepancyCallout',
+  emits: ['intent:adjustment', 'intent:void-reissue'],
+  template: '<div data-test="discrepancy-callout" />',
+})
 
 function mountGrid(overrides: Partial<{
   response: BillingDraftGridResponse
   period: ReturnType<typeof buildPeriod>
   onSaveReadings: ReturnType<typeof vi.fn>
+  onSaveOverride: ReturnType<typeof vi.fn>
 }> = {}) {
   const onSaveReadings = overrides.onSaveReadings ?? vi.fn()
+  const onSaveOverride = overrides.onSaveOverride ?? vi.fn()
   return mount(BillingDraftGridStep, {
     props: {
       response: overrides.response ?? response(),
       loading: false,
       period: overrides.period ?? buildPeriod(),
       onSaveReadings,
-      onSaveOverride: vi.fn(),
+      onSaveOverride,
     },
     attachTo: document.body,
     global: {
@@ -114,6 +130,7 @@ function mountGrid(overrides: Partial<{
         UiSection: passthrough,
         UiToolbar: passthrough,
         UiButton: defineComponent({ template: '<button type="button"><slot /></button>' }),
+        UiCheckbox: checkboxStub,
         UiStatusBadge: empty,
         UiMetric: empty,
         UiModal: passthrough,
@@ -122,7 +139,7 @@ function mountGrid(overrides: Partial<{
         UiEmptyState: empty,
         UiSkeleton: empty,
         BillingBulkReadingEntryModal: empty,
-        BillingDraftDiscrepancyCallout: empty,
+        BillingDraftDiscrepancyCallout: discrepancyCalloutStub,
       },
     },
   })
@@ -221,6 +238,27 @@ describe('BillingDraftGridStep', () => {
     vi.useRealTimers()
   })
 
+  it('does not auto-save when an edited value matches the stored reading', async () => {
+    vi.useFakeTimers()
+    const onSaveReadings = vi.fn(async () => {})
+    const row = buildRow({
+      electricity: {
+        ...buildRow().electricity!,
+        currentValue: 123,
+      },
+    })
+    const wrapper = mountGrid({ response: response([row]), onSaveReadings })
+    const electricity = wrapper.get('[data-reading-cell="room-1::electricity"] input')
+
+    await electricity.setValue('123')
+    await vi.advanceTimersByTimeAsync(801)
+
+    expect(onSaveReadings).not.toHaveBeenCalled()
+    expect(wrapper.text()).toContain('Mọi thay đổi đã được tự động lưu.')
+    wrapper.unmount()
+    vi.useRealTimers()
+  })
+
   it('shows optimistic utility amount and row total while editing', async () => {
     const wrapper = mountGrid()
     const electricity = wrapper.get('[data-reading-cell="room-1::electricity"] input')
@@ -269,6 +307,36 @@ describe('BillingDraftGridStep', () => {
 
     expect((electricity.element as HTMLInputElement).value).toBe('123')
     expect(wrapper.text()).toContain('Lỗi')
+    wrapper.unmount()
+    vi.useRealTimers()
+  })
+
+  it('preserves failed local values, then clears the row error when editing resumes', async () => {
+    vi.useFakeTimers()
+    const onSaveReadings = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('save failed'))
+      .mockResolvedValue(undefined)
+    const wrapper = mountGrid({ onSaveReadings })
+    const electricity = wrapper.get('[data-reading-cell="room-1::electricity"] input')
+
+    await electricity.setValue('123')
+    await vi.advanceTimersByTimeAsync(801)
+    expect((electricity.element as HTMLInputElement).value).toBe('123')
+    expect(wrapper.text()).toContain('Lỗi')
+
+    await electricity.setValue('124')
+    await wrapper.vm.$nextTick()
+    expect(wrapper.text()).not.toContain('Lỗi')
+
+    await vi.advanceTimersByTimeAsync(801)
+    expect(onSaveReadings).toHaveBeenCalledTimes(2)
+    expect(onSaveReadings).toHaveBeenLastCalledWith(
+      [expect.objectContaining({ room_id: 'room-1', meter_type: 'electricity', reading_value: 124 })],
+      { refresh: false, refreshDrafts: false, silent: true },
+    )
+    expect((electricity.element as HTMLInputElement).value).toBe('124')
+
     wrapper.unmount()
     vi.useRealTimers()
   })
@@ -347,5 +415,91 @@ describe('BillingDraftGridStep', () => {
 
     wrapper.unmount()
     vi.useRealTimers()
+  })
+
+  it('forwards discrepancy intents from expanded rows', async () => {
+    const wrapper = mountGrid({
+      response: response([
+        buildRow({
+          draftTotal: 3_400_000,
+          existingInvoice: {
+            id: 'invoice-1',
+            totalAmount: 3_100_000,
+            paidAmount: 0,
+            status: 'issued',
+          },
+        }),
+      ]),
+    })
+
+    const expandButton = wrapper.findAll('button').find(button => button.text() === '+')
+    expect(expandButton).toBeTruthy()
+    await expandButton!.trigger('click')
+
+    const callout = wrapper.findComponent({ name: 'BillingDraftDiscrepancyCallout' })
+    expect(callout.exists()).toBe(true)
+    callout.vm.$emit('intent:adjustment', {
+      invoiceId: 'invoice-1',
+      amount: -300_000,
+      label: 'Điều chỉnh do override tiêu thụ',
+    })
+    callout.vm.$emit('intent:void-reissue', { invoiceId: 'invoice-1' })
+
+    expect(wrapper.emitted('intent:adjustment')?.[0]).toEqual([
+      {
+        invoiceId: 'invoice-1',
+        amount: -300_000,
+        label: 'Điều chỉnh do override tiêu thụ',
+      },
+    ])
+    expect(wrapper.emitted('intent:void-reissue')?.[0]).toEqual([{ invoiceId: 'invoice-1' }])
+
+    wrapper.unmount()
+  })
+
+  it('submits the same override payload from the row override modal', async () => {
+    const onSaveOverride = vi.fn(async () => {})
+    const row = buildRow({
+      electricity: {
+        ...buildRow().electricity!,
+        currentReadingId: 'curr-e',
+        currentValue: 125,
+      },
+      water: null,
+    })
+    const wrapper = mountGrid({ response: response([row]), onSaveOverride })
+
+    const overrideButton = wrapper.findAll('button').find(button => button.text() === 'Điều chỉnh chỉ số')
+    expect(overrideButton).toBeTruthy()
+    await overrideButton!.trigger('click')
+    await wrapper.vm.$nextTick()
+
+    const modalInputs = wrapper.findAllComponents(UiInput).slice(-6)
+    modalInputs[1]!.vm.$emit('update:modelValue', '150')
+    modalInputs[2]!.vm.$emit('update:modelValue', '130')
+    modalInputs[3]!.vm.$emit('update:modelValue', '10')
+    modalInputs[5]!.vm.$emit('update:modelValue', 'Thay đồng hồ trong kỳ')
+    await wrapper.vm.$nextTick()
+
+    const saveButton = wrapper.findAll('button').find(button => button.text() === 'Lưu điều chỉnh')
+    expect(saveButton).toBeTruthy()
+    await saveButton!.trigger('click')
+
+    expect(onSaveOverride).toHaveBeenCalledTimes(1)
+    expect(onSaveOverride).toHaveBeenCalledWith({
+      room_id: 'room-1',
+      meter_type: 'electricity',
+      previous_reading_id: 'prev-e',
+      previous_reading_value: 100,
+      current_reading_id: 'curr-e',
+      current_reading_value: 150,
+      old_meter_final_value: 130,
+      new_meter_start_value: 10,
+      billable_usage: 170,
+      reason: 'replacement',
+      note: 'Thay đồng hồ trong kỳ',
+    })
+
+    wrapper.unmount()
   })
 })

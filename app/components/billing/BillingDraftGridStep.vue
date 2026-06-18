@@ -1,25 +1,27 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import clsx from 'clsx'
 import type { UiTableColumn } from '~/components/ui/UiTable.vue'
+import BillingDraftGridExpandedRow from '~/components/billing/BillingDraftGridExpandedRow.vue'
+import BillingDraftGridOverrideModal from '~/components/billing/BillingDraftGridOverrideModal.vue'
 import type {
   BillingDraftGridResponse,
   BillingDraftGridRow,
   BillingDraftGridUtilityCell,
-  BillingDraftLine,
   BillingPeriod,
 } from '~/types/billing'
 import type { MeterReadingBulkInput } from '~/utils/validators/meter-readings'
 import type { UtilityUsageOverrideInput } from '~/utils/validators/billing'
 import { formatCurrency } from '~/utils/format/currency'
-import { parsePastedColumn } from '~/utils/billing/clipboard'
 import {
   formatOptimisticUsage,
   optimisticRowDisplay,
   type OptimisticUtilityDisplay,
 } from '~/utils/billing/draft-grid-optimistic'
+import { useBillingDraftGridAutosave } from '~/composables/billing/useBillingDraftGridAutosave'
+import { useBillingDraftGridFilters } from '~/composables/billing/useBillingDraftGridFilters'
+import { useBillingDraftGridNavigation } from '~/composables/billing/useBillingDraftGridNavigation'
 
-type GridFilter = 'needs_action' | 'all' | 'vacant' | 'errors' | 'ready'
 type MeterType = 'electricity' | 'water'
 
 const props = defineProps<{
@@ -52,30 +54,22 @@ const periodEditable = computed(() => {
 // Toolbar state
 // ---------------------------------------------------------------------------
 
-const filter = ref<GridFilter>('needs_action')
 const batchReadingDate = ref<string>('')
-const expandedRowKeys = ref<Set<string>>(new Set())
-const localReadings = ref<Record<string, string>>({})  // unsaved edits — key = `${roomId}::${meterType}`
-const savedReadings = ref<Record<string, string>>({})  // persisted but not yet refreshed from server
-// Merged overlay used for optimistic display: local overrides saved.
-const effectiveReadings = computed(() => ({ ...savedReadings.value, ...localReadings.value }))
-const isSaving = ref(false)
 const bulkEntryOpen = ref(false)
+const overrideOpen = ref(false)
+const overrideRow = ref<BillingDraftGridRow | null>(null)
+const overrideType = ref<MeterType | null>(null)
 
-// Per-row auto-save state ----------------------------------------------------
-type RowSaveState = 'idle' | 'saving' | 'saved' | 'error'
-const rowSaveState = ref<Record<string, RowSaveState>>({})
-const rowSaveError = ref<Record<string, string>>({})
-const pasteHighlight = ref<Set<string>>(new Set())
-const rowSaveTimers: Record<string, ReturnType<typeof setTimeout>> = {}
-const rowSavedFlash: Record<string, ReturnType<typeof setTimeout>> = {}
-const AUTO_SAVE_DEBOUNCE_MS = 800
-const PASTE_HIGHLIGHT_MS = 1500
+const draftGridResponse = computed(() => props.response)
+const draftGridPeriod = computed(() => props.period)
 
-onBeforeUnmount(() => {
-  for (const t of Object.values(rowSaveTimers)) clearTimeout(t)
-  for (const t of Object.values(rowSavedFlash)) clearTimeout(t)
-})
+const {
+  filter,
+  filterTabs,
+  filteredRows,
+  isExpanded,
+  toggleExpand,
+} = useBillingDraftGridFilters(draftGridResponse)
 
 watch(
   () => props.response?.batchReadingDate,
@@ -85,262 +79,34 @@ watch(
   { immediate: true },
 )
 
-// When the grid is refreshed from the server, discard both local and saved
-// overlays so the authoritative server values are shown.
-watch(
-  () => props.response,
-  () => {
-    localReadings.value = {}
-    savedReadings.value = {}
-  },
-)
-
-// ---------------------------------------------------------------------------
-// Filter
-// ---------------------------------------------------------------------------
-
-const filteredRows = computed<BillingDraftGridRow[]>(() => {
-  const rows = props.response?.rows ?? []
-  switch (filter.value) {
-    case 'all':
-      return rows
-    case 'vacant':
-      return rows.filter(r => r.rowType === 'vacant_baseline')
-    case 'errors':
-      return rows.filter(r => r.blockers.length > 0)
-    case 'ready':
-      return rows.filter(r => r.status === 'ready')
-    case 'needs_action':
-    default:
-      return rows.filter((r) => {
-        if (r.rowType === 'vacant_baseline') return false
-        if (r.status === 'paid' || r.status === 'partial' || r.status === 'issued') return false
-        return true
-      })
-  }
+const {
+  effectiveReadings,
+  isSaving,
+  rowSaveError,
+  readingDraftValue,
+  setReadingDraftValue,
+  saveAll,
+  rowSaveStateOf,
+  isCellDirty,
+  dirtyCountValue,
+} = useBillingDraftGridAutosave({
+  response: draftGridResponse,
+  period: draftGridPeriod,
+  periodEditable,
+  batchReadingDate,
+  onSaveReadings: props.onSaveReadings,
 })
 
-const filterTabs: Array<{ key: GridFilter; label: string }> = [
-  { key: 'needs_action', label: 'Cần xử lý' },
-  { key: 'all', label: 'Tất cả' },
-  { key: 'vacant', label: 'Phòng trống' },
-  { key: 'errors', label: 'Có lỗi' },
-  { key: 'ready', label: 'Đã sẵn sàng' },
-]
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function cellKey(row: BillingDraftGridRow, type: MeterType): string {
-  return `${row.roomId}::${type}`
-}
-
-function readingDraftValue(row: BillingDraftGridRow, type: MeterType): string {
-  const key = cellKey(row, type)
-  const local = localReadings.value[key]
-  if (local !== undefined) return local
-  const saved = savedReadings.value[key]
-  if (saved !== undefined) return saved
-  const cell = type === 'electricity' ? row.electricity : row.water
-  if (!cell) return ''
-  return cell.currentValue !== null ? String(cell.currentValue) : ''
-}
-
-function setReadingDraftValue(row: BillingDraftGridRow, type: MeterType, value: string) {
-  localReadings.value[cellKey(row, type)] = value
-  scheduleRowSave(row)
-}
-
-function scheduleRowSave(row: BillingDraftGridRow) {
-  if (!periodEditable.value || !row.editable) return
-  const existing = rowSaveTimers[row.roomId]
-  if (existing) clearTimeout(existing)
-  // Reset transient saved/error markers as the user is editing again.
-  if (rowSaveState.value[row.roomId] === 'saved' || rowSaveState.value[row.roomId] === 'error') {
-    rowSaveState.value[row.roomId] = 'idle'
-    Reflect.deleteProperty(rowSaveError.value, row.roomId)
-  }
-  rowSaveTimers[row.roomId] = setTimeout(() => {
-    void saveRow(row)
-  }, AUTO_SAVE_DEBOUNCE_MS)
-}
-
-function buildRowReadingsPayload(row: BillingDraftGridRow): MeterReadingBulkInput['readings'] {
-  if (!props.period) return []
-  if (!batchReadingDate.value) return []
-  const out: MeterReadingBulkInput['readings'] = []
-  for (const type of ['electricity', 'water'] as MeterType[]) {
-    if (!isCellDirty(row, type)) continue
-    const cell = type === 'electricity' ? row.electricity : row.water
-    if (!cell) continue
-    const localValue = localReadings.value[cellKey(row, type)] ?? ''
-    const trimmed = localValue.trim()
-    if (trimmed === '') continue
-    const numeric = Number(trimmed)
-    if (!Number.isFinite(numeric)) continue
-    out.push({
-      room_id: row.roomId,
-      meter_type: type,
-      period_year: props.period.periodYear,
-      period_month: props.period.periodMonth,
-      reading_type: 'monthly',
-      reading_date: cell.readingDate ?? batchReadingDate.value,
-      reading_value: numeric,
-    })
-  }
-  return out
-}
-
-async function saveRow(row: BillingDraftGridRow) {
-  Reflect.deleteProperty(rowSaveTimers, row.roomId)
-  const payload = buildRowReadingsPayload(row)
-  if (payload.length === 0) {
-    rowSaveState.value[row.roomId] = 'idle'
-    return
-  }
-  rowSaveState.value[row.roomId] = 'saving'
-  Reflect.deleteProperty(rowSaveError.value, row.roomId)
-  try {
-    await props.onSaveReadings(payload, { refresh: false, refreshDrafts: false, silent: true })
-    // Move persisted cells from localReadings → savedReadings so the optimistic
-    // display stays visible until the next explicit grid refresh.
-    for (const item of payload) {
-      const key = `${item.room_id}::${item.meter_type}`
-      savedReadings.value[key] = String(item.reading_value)
-      Reflect.deleteProperty(localReadings.value, key)
-    }
-    rowSaveState.value[row.roomId] = 'saved'
-    if (rowSavedFlash[row.roomId]) clearTimeout(rowSavedFlash[row.roomId])
-    rowSavedFlash[row.roomId] = setTimeout(() => {
-      if (rowSaveState.value[row.roomId] === 'saved') {
-        rowSaveState.value[row.roomId] = 'idle'
-      }
-    }, PASTE_HIGHLIGHT_MS)
-  }
-  catch (err) {
-    rowSaveState.value[row.roomId] = 'error'
-    rowSaveError.value[row.roomId] = err instanceof Error ? err.message : 'Lưu thất bại'
-  }
-}
-
-function rowSaveStateOf(row: BillingDraftGridRow): RowSaveState {
-  return rowSaveState.value[row.roomId] ?? 'idle'
-}
-
-function isPasteHighlighted(row: BillingDraftGridRow, type: MeterType): boolean {
-  return pasteHighlight.value.has(cellKey(row, type))
-}
-
-function editableRowsFor(type: MeterType): BillingDraftGridRow[] {
-  return filteredRows.value.filter((row) => {
-    const cell = type === 'electricity' ? row.electricity : row.water
-    return row.editable && !!cell?.editable
-  })
-}
-
-function editableCellOrder(): Array<{ row: BillingDraftGridRow; type: MeterType }> {
-  const cells: Array<{ row: BillingDraftGridRow; type: MeterType }> = []
-  for (const row of filteredRows.value) {
-    if (!row.editable) continue
-    if (row.electricity?.editable) cells.push({ row, type: 'electricity' })
-    if (row.water?.editable) cells.push({ row, type: 'water' })
-  }
-  return cells
-}
-
-function focusReadingCell(row: BillingDraftGridRow, type: MeterType) {
-  nextTick(() => {
-    const selector = `[data-reading-cell="${row.roomId}::${type}"] input`
-    const input = document.querySelector<HTMLInputElement>(selector)
-    input?.focus()
-    input?.select()
-  })
-}
-
-function handleReadingTab(event: KeyboardEvent, row: BillingDraftGridRow, type: MeterType) {
-  event.preventDefault()
-  const direction = event.shiftKey ? -1 : 1
-  const cells = editableCellOrder()
-  const currentIndex = cells.findIndex(c => c.row.key === row.key && c.type === type)
-  const next = cells[currentIndex + direction]
-  if (next) focusReadingCell(next.row, next.type)
-}
-
-function handleReadingKeydown(event: KeyboardEvent, row: BillingDraftGridRow, type: MeterType) {
-  if (event.key === 'Tab') {
-    handleReadingTab(event, row, type)
-    return
-  }
-  if (event.key === 'Enter') {
-    event.preventDefault()
-    const direction = event.shiftKey ? -1 : 1
-    const rows = editableRowsFor(type)
-    const currentIndex = rows.findIndex(r => r.key === row.key)
-    const nextRow = rows[currentIndex + direction]
-    if (nextRow) focusReadingCell(nextRow, type)
-  }
-}
-
-function handleReadingPaste(event: ClipboardEvent, row: BillingDraftGridRow, type: MeterType) {
-  const text = event.clipboardData?.getData('text/plain') ?? ''
-  const values = parsePastedColumn(text)
-  if (values.length <= 1) return
-  event.preventDefault()
-  const rows = editableRowsFor(type)
-  const startIndex = rows.findIndex(r => r.key === row.key)
-  if (startIndex < 0) return
-  const affected: Array<{ row: BillingDraftGridRow; key: string }> = []
-  values.forEach((value, offset) => {
-    const targetRow = rows[startIndex + offset]
-    if (!targetRow) return
-    const key = cellKey(targetRow, type)
-    setReadingDraftValue(targetRow, type, value)
-    affected.push({ row: targetRow, key })
-  })
-  highlightReadingCells(affected.map(item => item.key))
-}
-
-function highlightReadingCells(keys: string[]) {
-  for (const key of keys) pasteHighlight.value.add(key)
-  pasteHighlight.value = new Set(pasteHighlight.value)
-  setTimeout(() => {
-    for (const key of keys) pasteHighlight.value.delete(key)
-    pasteHighlight.value = new Set(pasteHighlight.value)
-  }, PASTE_HIGHLIGHT_MS)
-}
-
-function isCellDirty(row: BillingDraftGridRow, type: MeterType): boolean {
-  const key = cellKey(row, type)
-  if (!(key in localReadings.value)) return false
-  const local = localReadings.value[key]
-  const cell = type === 'electricity' ? row.electricity : row.water
-  if (!cell) return local !== ''
-  const stored = cell.currentValue !== null ? String(cell.currentValue) : ''
-  return (local ?? '') !== stored
-}
-
-function dirtyCount(): number {
-  let count = 0
-  for (const row of props.response?.rows ?? []) {
-    if (isCellDirty(row, 'electricity')) count += 1
-    if (isCellDirty(row, 'water')) count += 1
-  }
-  return count
-}
-
-const dirtyCountValue = computed(() => dirtyCount())
-
-function isExpanded(row: BillingDraftGridRow): boolean {
-  return expandedRowKeys.value.has(row.key)
-}
-
-function toggleExpand(row: BillingDraftGridRow) {
-  if (expandedRowKeys.value.has(row.key)) expandedRowKeys.value.delete(row.key)
-  else expandedRowKeys.value.add(row.key)
-  // trigger reactivity for Set
-  expandedRowKeys.value = new Set(expandedRowKeys.value)
-}
+const {
+  isPasteHighlighted,
+  handleReadingKeydown,
+  handleReadingPaste,
+  highlightReadingCells,
+  cellKey,
+} = useBillingDraftGridNavigation({
+  filteredRows,
+  setReadingDraftValue,
+})
 
 // ---------------------------------------------------------------------------
 // Status badge mapping
@@ -426,52 +192,6 @@ function previousReadingHint(cell: BillingDraftGridUtilityCell | null): string {
   return `Cũ ${cell.previousValue}`
 }
 
-// ---------------------------------------------------------------------------
-// Toolbar actions
-// ---------------------------------------------------------------------------
-
-async function saveAll() {
-  if (!periodEditable.value) return
-  if (!props.period) return
-  if (!batchReadingDate.value) return
-  const payload: MeterReadingBulkInput['readings'] = []
-  for (const row of props.response?.rows ?? []) {
-    if (!row.editable) continue
-    for (const type of ['electricity', 'water'] as MeterType[]) {
-      if (!isCellDirty(row, type)) continue
-      const cell = type === 'electricity' ? row.electricity : row.water
-      if (!cell) continue
-      const localValue = localReadings.value[cellKey(row, type)] ?? ''
-      const trimmed = localValue.trim()
-      if (trimmed === '') continue
-      const numeric = Number(trimmed)
-      if (!Number.isFinite(numeric)) continue
-      payload.push({
-        room_id: row.roomId,
-        meter_type: type,
-        period_year: props.period.periodYear,
-        period_month: props.period.periodMonth,
-        reading_type: 'monthly',
-        reading_date: cell.readingDate ?? batchReadingDate.value,
-        reading_value: numeric,
-      })
-    }
-  }
-  if (payload.length === 0) return
-  isSaving.value = true
-  try {
-    await props.onSaveReadings(payload, { refresh: false, refreshDrafts: false })
-    // Move all saved entries to savedReadings; server refresh will clear them.
-    for (const item of payload) {
-      const key = `${item.room_id}::${item.meter_type}`
-      savedReadings.value[key] = String(item.reading_value)
-    }
-    localReadings.value = {}
-  } finally {
-    isSaving.value = false
-  }
-}
-
 function applyBulkReadings(updates: Array<{ row: BillingDraftGridRow; type: MeterType; value: string }>) {
   const keys: string[] = []
   for (const update of updates) {
@@ -484,133 +204,8 @@ function applyBulkReadings(updates: Array<{ row: BillingDraftGridRow; type: Mete
 defineExpose({ applyBulkReadings })
 
 // ---------------------------------------------------------------------------
-// Override modal
+// Override modal coordination
 // ---------------------------------------------------------------------------
-
-type OverrideReason = 'normal' | 'replacement' | 'reset' | 'correction' | 'manual_adjustment'
-
-interface MeterFormState {
-  enabled: boolean
-  previousReadingId: string | null
-  previousValue: string
-  currentReadingId: string | null
-  currentValue: string
-  oldMeterFinal: string
-  newMeterStart: string
-  billableUsage: string
-  reason: OverrideReason
-  note: string
-}
-
-function emptyMeterForm(): MeterFormState {
-  return {
-    enabled: false,
-    previousReadingId: null,
-    previousValue: '',
-    currentReadingId: null,
-    currentValue: '',
-    oldMeterFinal: '',
-    newMeterStart: '',
-    billableUsage: '',
-    reason: 'replacement',
-    note: '',
-  }
-}
-
-const overrideOpen = ref(false)
-const overrideRow = ref<BillingDraftGridRow | null>(null)
-const overrideElectricity = ref<MeterFormState>(emptyMeterForm())
-const overrideWater = ref<MeterFormState>(emptyMeterForm())
-const overrideError = ref<string | null>(null)
-const overrideSaving = ref(false)
-
-function toNum(v: string): number | null {
-  if (v.trim() === '') return null
-  const n = Number(v)
-  return Number.isFinite(n) ? n : null
-}
-
-interface BillableResult { value: number | null; missing: string[] }
-
-function computeBillable(form: MeterFormState): BillableResult {
-  const prev = toNum(form.previousValue)
-  const curr = toNum(form.currentValue)
-  const oldFinal = toNum(form.oldMeterFinal)
-  const newStart = toNum(form.newMeterStart)
-  const reason = form.reason
-  const missing: string[] = []
-
-  if (reason === 'manual_adjustment') return { value: null, missing: [] }
-
-  if (prev === null) missing.push('Chỉ số kỳ trước')
-  if (curr === null) missing.push('Chỉ số kỳ này')
-
-  if (reason === 'replacement') {
-    if (oldFinal === null) missing.push('Số cuối đồng hồ cũ')
-    if (newStart === null) missing.push('Số đầu đồng hồ mới')
-    if (missing.length > 0) return { value: null, missing }
-    return { value: (oldFinal! - prev!) + (curr! - newStart!), missing: [] }
-  }
-  if (reason === 'reset') {
-    if (oldFinal === null) missing.push('Số cuối đồng hồ cũ (trước khi nhảy về 0)')
-    if (missing.length > 0) return { value: null, missing }
-    return { value: (oldFinal! - prev!) + curr!, missing: [] }
-  }
-  if (missing.length > 0) return { value: null, missing }
-  return { value: curr! - prev!, missing: [] }
-}
-
-const electricityBillable = computed(() => computeBillable(overrideElectricity.value))
-const waterBillable = computed(() => computeBillable(overrideWater.value))
-
-watch(electricityBillable, (next) => {
-  const f = overrideElectricity.value
-  if (f.reason === 'manual_adjustment') return
-  f.billableUsage = next.value !== null ? String(next.value) : ''
-})
-
-watch(waterBillable, (next) => {
-  const f = overrideWater.value
-  if (f.reason === 'manual_adjustment') return
-  f.billableUsage = next.value !== null ? String(next.value) : ''
-})
-
-watch(() => overrideElectricity.value.reason, (r, prev) => {
-  const f = overrideElectricity.value
-  if (r !== 'replacement' && r !== 'reset') f.oldMeterFinal = ''
-  if (r !== 'replacement') f.newMeterStart = ''
-  if (r === 'manual_adjustment') return
-  if (prev === 'manual_adjustment') {
-    const next = electricityBillable.value
-    f.billableUsage = next.value !== null ? String(next.value) : ''
-  }
-})
-
-watch(() => overrideWater.value.reason, (r, prev) => {
-  const f = overrideWater.value
-  if (r !== 'replacement' && r !== 'reset') f.oldMeterFinal = ''
-  if (r !== 'replacement') f.newMeterStart = ''
-  if (r === 'manual_adjustment') return
-  if (prev === 'manual_adjustment') {
-    const next = waterBillable.value
-    f.billableUsage = next.value !== null ? String(next.value) : ''
-  }
-})
-
-function populateMeterForm(row: BillingDraftGridRow, type: MeterType): MeterFormState {
-  const cell = type === 'electricity' ? row.electricity : row.water
-  const form = emptyMeterForm()
-  if (!cell) return form
-  form.previousReadingId = cell.previousReadingId
-  form.previousValue = cell.previousValue !== null ? String(cell.previousValue) : ''
-  form.currentReadingId = cell.currentReadingId
-  form.currentValue = cell.currentValue !== null ? String(cell.currentValue) : ''
-  form.billableUsage = cell.usage !== null ? String(Math.max(cell.usage, 0)) : ''
-  return form
-}
-
-const electricityRequired = computed(() => !!overrideRow.value?.electricity?.required)
-const waterRequired = computed(() => !!overrideRow.value?.water?.required)
 
 function openOverrideModal(row: BillingDraftGridRow, type?: MeterType) {
   if (!row.editable) return
@@ -618,96 +213,14 @@ function openOverrideModal(row: BillingDraftGridRow, type?: MeterType) {
   const hasWater = !!row.water?.required
   if (!hasElec && !hasWater) return
   overrideRow.value = row
-  if (hasElec) {
-    overrideElectricity.value = populateMeterForm(row, 'electricity')
-    overrideElectricity.value.enabled = type ? type === 'electricity' : !hasWater || true
-  } else {
-    overrideElectricity.value = emptyMeterForm()
-  }
-  if (hasWater) {
-    overrideWater.value = populateMeterForm(row, 'water')
-    overrideWater.value.enabled = type ? type === 'water' : !hasElec || true
-  } else {
-    overrideWater.value = emptyMeterForm()
-  }
-  // If a specific type was requested, leave only that one enabled by default;
-  // otherwise enable both when both are required so the user can adjust together.
-  if (type === 'electricity') overrideWater.value.enabled = false
-  if (type === 'water') overrideElectricity.value.enabled = false
-  if (!type) {
-    if (hasElec) overrideElectricity.value.enabled = true
-    if (hasWater) overrideWater.value.enabled = true
-  }
-  overrideError.value = null
+  overrideType.value = type ?? null
   overrideOpen.value = true
 }
 
 function closeOverrideModal() {
   overrideOpen.value = false
   overrideRow.value = null
-}
-
-function validateForm(form: MeterFormState, label: string): string | null {
-  const billable = Number(form.billableUsage)
-  const prev = Number(form.previousValue)
-  const curr = Number(form.currentValue)
-  if (!Number.isFinite(billable) || billable < 0) return `${label}: tiêu thụ tính tiền phải >= 0`
-  if (!Number.isFinite(prev) || !Number.isFinite(curr)) return `${label}: giá trị chỉ số không hợp lệ`
-  if (form.reason !== 'normal' && form.note.trim().length === 0) return `${label}: cần ghi rõ lý do điều chỉnh`
-  return null
-}
-
-function buildOverridePayload(form: MeterFormState, type: MeterType): UtilityUsageOverrideInput {
-  const oldFinal = form.oldMeterFinal.trim()
-  const newStart = form.newMeterStart.trim()
-  return {
-    room_id: overrideRow.value!.roomId,
-    meter_type: type,
-    previous_reading_id: form.previousReadingId,
-    previous_reading_value: Number(form.previousValue),
-    current_reading_id: form.currentReadingId,
-    current_reading_value: Number(form.currentValue),
-    old_meter_final_value: oldFinal === '' ? null : Number(oldFinal),
-    new_meter_start_value: newStart === '' ? null : Number(newStart),
-    billable_usage: Number(form.billableUsage),
-    reason: form.reason,
-    note: form.note.trim() === '' ? null : form.note.trim(),
-  }
-}
-
-async function submitOverride() {
-  if (!overrideRow.value) return
-  const elec = overrideElectricity.value
-  const water = overrideWater.value
-  const tasks: Array<{ payload: UtilityUsageOverrideInput }> = []
-
-  if (electricityRequired.value && elec.enabled) {
-    const err = validateForm(elec, 'Điện')
-    if (err) { overrideError.value = err; return }
-    tasks.push({ payload: buildOverridePayload(elec, 'electricity') })
-  }
-  if (waterRequired.value && water.enabled) {
-    const err = validateForm(water, 'Nước')
-    if (err) { overrideError.value = err; return }
-    tasks.push({ payload: buildOverridePayload(water, 'water') })
-  }
-  if (tasks.length === 0) {
-    overrideError.value = 'Hãy bật ít nhất một loại đồng hồ để điều chỉnh'
-    return
-  }
-
-  overrideError.value = null
-  overrideSaving.value = true
-  try {
-    for (const task of tasks) {
-      await props.onSaveOverride(task.payload)
-    }
-    closeOverrideModal()
-  } catch (e) {
-    overrideError.value = e instanceof Error ? e.message : 'Lưu thất bại'
-  } finally {
-    overrideSaving.value = false
-  }
+  overrideType.value = null
 }
 
 // ---------------------------------------------------------------------------
@@ -727,26 +240,6 @@ const columns: UiTableColumn<BillingDraftGridRow>[] = [
   { key: 'draft_total', label: 'Tổng nháp', numeric: true, width: 'w-36' },
   { key: 'status', label: 'Trạng thái', width: 'w-32' },
   { key: 'actions', label: '', action: true, width: 'w-32' },
-]
-
-function chargeTypeLabel(t: string) {
-  switch (t) {
-    case 'rent': return 'Tiền thuê'
-    case 'electricity': return 'Điện'
-    case 'water': return 'Nước'
-    case 'service': return 'Dịch vụ'
-    case 'discount': return 'Giảm giá'
-    case 'surcharge': return 'Phụ thu'
-    case 'adjustment': return 'Điều chỉnh'
-    default: return t
-  }
-}
-
-const lineColumns: UiTableColumn<BillingDraftLine>[] = [
-  { key: 'label', label: 'Khoản phí' },
-  { key: 'quantity', label: 'SL', numeric: true, hideOnMobile: true, width: 'w-20', accessor: r => r.quantity },
-  { key: 'unitPrice', label: 'Đơn giá', numeric: true, hideOnMobile: true, width: 'w-32' },
-  { key: 'amount', label: 'Thành tiền', numeric: true, width: 'w-32' },
 ]
 </script>
 
@@ -1034,64 +527,15 @@ const lineColumns: UiTableColumn<BillingDraftLine>[] = [
       </div>
 
       <!-- Expanded row details -->
-      <div
+      <BillingDraftGridExpandedRow
         v-for="row in filteredRows.filter(r => isExpanded(r))"
         :key="`detail-${row.key}`"
-        class="mt-3 rounded-lg border border-dark-border bg-dark-surface p-4 space-y-3"
-      >
-        <div class="flex items-center justify-between">
-          <p class="text-sm font-semibold text-white">
-            Chi tiết phòng {{ row.roomNumber ?? '—' }}
-            <span v-if="row.tenantName" class="text-muted">· {{ row.tenantName }}</span>
-          </p>
-          <UiButton variant="ghost" size="sm" @click="toggleExpand(row)">Đóng</UiButton>
-        </div>
-
-        <UiAlert
-          v-for="b in row.blockers"
-          :key="`b-${b.code}`"
-          severity="danger"
-          :title="b.code"
-        >
-          {{ b.message }}
-        </UiAlert>
-        <UiAlert
-          v-for="w in row.warnings"
-          :key="`w-${w.code}`"
-          severity="warning"
-          :title="w.code"
-        >
-          {{ w.message }}
-        </UiAlert>
-
-        <BillingDraftDiscrepancyCallout
-          v-if="period"
-          :draft="row"
-          :period="period"
-          @intent:adjustment="$emit('intent:adjustment', $event)"
-          @intent:void-reissue="$emit('intent:void-reissue', $event)"
-        />
-
-        <UiTable
-          v-if="row.lines.length > 0"
-          :columns="lineColumns"
-          :rows="[...row.lines].sort((a, b) => a.sortOrder - b.sortOrder)"
-          row-key="sortOrder"
-        >
-          <template #cell-label="{ row: line }">
-            <span class="text-white">
-              {{ chargeTypeLabel((line as BillingDraftLine).chargeType) }}
-              <span class="text-muted">· {{ (line as BillingDraftLine).label }}</span>
-            </span>
-          </template>
-          <template #cell-unitPrice="{ row: line }">
-            {{ formatCurrency((line as BillingDraftLine).unitPrice) }}
-          </template>
-          <template #cell-amount="{ row: line }">
-            {{ formatCurrency((line as BillingDraftLine).amount) }}
-          </template>
-        </UiTable>
-      </div>
+        :row="row"
+        :period="period"
+        @close="toggleExpand(row)"
+        @intent:adjustment="$emit('intent:adjustment', $event)"
+        @intent:void-reissue="$emit('intent:void-reissue', $event)"
+      />
 
       <!-- Totals footer -->
       <div
@@ -1117,183 +561,13 @@ const lineColumns: UiTableColumn<BillingDraftLine>[] = [
       </div>
     </UiSection>
 
-    <!-- Override modal -->
-    <UiModal :open="overrideOpen" title="Điều chỉnh chỉ số" size="lg" @close="closeOverrideModal">
-      <div v-if="overrideRow" class="space-y-4">
-        <p class="text-sm text-muted">
-          Phòng <span class="font-semibold text-white">P{{ overrideRow.roomNumber ?? '—' }}</span>
-          <span v-if="overrideRow.tenantName"> · {{ overrideRow.tenantName }}</span>
-        </p>
-
-        <p v-if="electricityRequired && waterRequired" class="text-xs text-muted">
-          Có thể bật cùng lúc cả hai loại đồng hồ để điều chỉnh trong một thao tác.
-        </p>
-
-        <!-- Electricity panel -->
-        <div
-          v-if="electricityRequired"
-          class="rounded-lg border border-dark-border bg-dark-surface p-3 space-y-3"
-        >
-          <UiCheckbox
-            :model-value="overrideElectricity.enabled"
-            label="Điều chỉnh đồng hồ điện"
-            @update:model-value="overrideElectricity.enabled = $event"
-          />
-
-          <template v-if="overrideElectricity.enabled">
-            <div class="grid grid-cols-2 gap-3">
-              <div class="flex flex-col gap-1">
-                <label class="text-xs text-muted">Chỉ số kỳ trước</label>
-                <UiInput v-model="overrideElectricity.previousValue" type="number" />
-              </div>
-              <div class="flex flex-col gap-1">
-                <label class="text-xs text-muted">Chỉ số kỳ này</label>
-                <UiInput v-model="overrideElectricity.currentValue" type="number" />
-              </div>
-              <div
-                v-if="overrideElectricity.reason === 'replacement' || overrideElectricity.reason === 'reset'"
-                class="flex flex-col gap-1"
-              >
-                <label class="text-xs text-muted">
-                  {{ overrideElectricity.reason === 'reset' ? 'Số cuối trước khi nhảy về 0' : 'Số cuối đồng hồ cũ' }}
-                </label>
-                <UiInput v-model="overrideElectricity.oldMeterFinal" type="number" />
-              </div>
-              <div
-                v-if="overrideElectricity.reason === 'replacement'"
-                class="flex flex-col gap-1"
-              >
-                <label class="text-xs text-muted">Số đầu đồng hồ mới</label>
-                <UiInput v-model="overrideElectricity.newMeterStart" type="number" />
-              </div>
-              <div class="flex flex-col gap-1 col-span-2">
-                <label class="text-xs text-muted">
-                  Tiêu thụ tính tiền (kWh)
-                  <span v-if="overrideElectricity.reason !== 'manual_adjustment'" class="text-muted">(tự tính)</span>
-                </label>
-                <UiInput
-                  v-model="overrideElectricity.billableUsage"
-                  type="number"
-                  :disabled="overrideElectricity.reason !== 'manual_adjustment'"
-                />
-                <p v-if="overrideElectricity.reason !== 'manual_adjustment' && electricityBillable.missing.length > 0" class="text-xs text-warning">
-                  Cần điền: {{ electricityBillable.missing.join(', ') }}
-                </p>
-                <p v-else-if="overrideElectricity.reason !== 'manual_adjustment' && electricityBillable.value !== null && electricityBillable.value < 0" class="text-xs text-error-vivid">
-                  Kết quả âm ({{ electricityBillable.value }}) — kiểm tra lại các chỉ số.
-                </p>
-              </div>
-            </div>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div class="flex flex-col gap-1">
-                <label class="text-xs text-muted">Lý do</label>
-                <UiSelect
-                  v-model="overrideElectricity.reason"
-                  :options="[
-                    { value: 'replacement', label: 'Thay đồng hồ' },
-                    { value: 'reset', label: 'Đồng hồ nhảy về 0' },
-                    { value: 'correction', label: 'Đính chính chỉ số sai' },
-                    { value: 'manual_adjustment', label: 'Điều chỉnh thủ công' },
-                    { value: 'normal', label: 'Bình thường' },
-                  ]"
-                />
-              </div>
-              <div class="flex flex-col gap-1">
-                <label class="text-xs text-muted">Ghi chú</label>
-                <UiInput v-model="overrideElectricity.note" />
-              </div>
-            </div>
-          </template>
-        </div>
-
-        <!-- Water panel -->
-        <div
-          v-if="waterRequired"
-          class="rounded-lg border border-dark-border bg-dark-surface p-3 space-y-3"
-        >
-          <UiCheckbox
-            :model-value="overrideWater.enabled"
-            label="Điều chỉnh đồng hồ nước"
-            @update:model-value="overrideWater.enabled = $event"
-          />
-          <template v-if="overrideWater.enabled">
-            <div class="grid grid-cols-2 gap-3">
-              <div class="flex flex-col gap-1">
-                <label class="text-xs text-muted">Chỉ số kỳ trước</label>
-                <UiInput v-model="overrideWater.previousValue" type="number" />
-              </div>
-              <div class="flex flex-col gap-1">
-                <label class="text-xs text-muted">Chỉ số kỳ này</label>
-                <UiInput v-model="overrideWater.currentValue" type="number" />
-              </div>
-              <div
-                v-if="overrideWater.reason === 'replacement' || overrideWater.reason === 'reset'"
-                class="flex flex-col gap-1"
-              >
-                <label class="text-xs text-muted">
-                  {{ overrideWater.reason === 'reset' ? 'Số cuối trước khi nhảy về 0' : 'Số cuối đồng hồ cũ' }}
-                </label>
-                <UiInput v-model="overrideWater.oldMeterFinal" type="number" />
-              </div>
-              <div
-                v-if="overrideWater.reason === 'replacement'"
-                class="flex flex-col gap-1"
-              >
-                <label class="text-xs text-muted">Số đầu đồng hồ mới</label>
-                <UiInput v-model="overrideWater.newMeterStart" type="number" />
-              </div>
-              <div class="flex flex-col gap-1 col-span-2">
-                <label class="text-xs text-muted">
-                  Tiêu thụ tính tiền (m³)
-                  <span v-if="overrideWater.reason !== 'manual_adjustment'" class="text-muted">(tự tính)</span>
-                </label>
-                <UiInput
-                  v-model="overrideWater.billableUsage"
-                  type="number"
-                  :disabled="overrideWater.reason !== 'manual_adjustment'"
-                />
-                <p v-if="overrideWater.reason !== 'manual_adjustment' && waterBillable.missing.length > 0" class="text-xs text-warning">
-                  Cần điền: {{ waterBillable.missing.join(', ') }}
-                </p>
-                <p v-else-if="overrideWater.reason !== 'manual_adjustment' && waterBillable.value !== null && waterBillable.value < 0" class="text-xs text-error-vivid">
-                  Kết quả âm ({{ waterBillable.value }}) — kiểm tra lại các chỉ số.
-                </p>
-              </div>
-            </div>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div class="flex flex-col gap-1">
-                <label class="text-xs text-muted">Lý do</label>
-                <UiSelect
-                  v-model="overrideWater.reason"
-                  :options="[
-                    { value: 'replacement', label: 'Thay đồng hồ' },
-                    { value: 'reset', label: 'Đồng hồ nhảy về 0' },
-                    { value: 'correction', label: 'Đính chính chỉ số sai' },
-                    { value: 'manual_adjustment', label: 'Điều chỉnh thủ công' },
-                    { value: 'normal', label: 'Bình thường' },
-                  ]"
-                />
-              </div>
-              <div class="flex flex-col gap-1">
-                <label class="text-xs text-muted">Ghi chú</label>
-                <UiInput v-model="overrideWater.note" />
-              </div>
-            </div>
-          </template>
-        </div>
-
-        <UiAlert v-if="overrideError" severity="danger" :title="'Lỗi'">
-          {{ overrideError }}
-        </UiAlert>
-      </div>
-
-      <template #footer>
-        <UiButton variant="ghost" @click="closeOverrideModal">Huỷ</UiButton>
-        <UiButton variant="primary" :disabled="overrideSaving" @click="submitOverride">
-          {{ overrideSaving ? 'Đang lưu...' : 'Lưu điều chỉnh' }}
-        </UiButton>
-      </template>
-    </UiModal>
+    <BillingDraftGridOverrideModal
+      :open="overrideOpen"
+      :row="overrideRow"
+      :initial-type="overrideType"
+      :on-save-override="props.onSaveOverride"
+      @close="closeOverrideModal"
+    />
     <BillingBulkReadingEntryModal
       :open="bulkEntryOpen"
       :rows="filteredRows"
