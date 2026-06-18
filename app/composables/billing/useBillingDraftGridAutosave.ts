@@ -79,6 +79,8 @@ export function useBillingDraftGridAutosave(options: BillingDraftGridAutosaveOpt
     const key = cellKey(row, type)
     if (!(key in localReadings.value)) return false
     const local = localReadings.value[key]
+    const saved = savedReadings.value[key]
+    if (saved !== undefined) return (local ?? '') !== saved
     const cell = type === 'electricity' ? row.electricity : row.water
     if (!cell) return local !== ''
     const stored = cell.currentValue !== null ? String(cell.currentValue) : ''

@@ -294,6 +294,35 @@ describe('BillingDraftGridStep', () => {
     vi.useRealTimers()
   })
 
+  it('can auto-save back to the original prop value after a no-refresh save', async () => {
+    vi.useFakeTimers()
+    const onSaveReadings = vi.fn(async () => {})
+    const row = buildRow({
+      electricity: {
+        ...buildRow().electricity!,
+        currentValue: 123,
+      },
+    })
+    const wrapper = mountGrid({ response: response([row]), onSaveReadings })
+    const electricity = wrapper.get('[data-reading-cell="room-1::electricity"] input')
+
+    await electricity.setValue('124')
+    await vi.advanceTimersByTimeAsync(801)
+    expect(onSaveReadings).toHaveBeenCalledTimes(1)
+
+    await electricity.setValue('123')
+    await vi.advanceTimersByTimeAsync(801)
+
+    expect(onSaveReadings).toHaveBeenCalledTimes(2)
+    expect(onSaveReadings).toHaveBeenLastCalledWith(
+      [expect.objectContaining({ room_id: 'room-1', meter_type: 'electricity', reading_value: 123 })],
+      { refresh: false, refreshDrafts: false, silent: true },
+    )
+
+    wrapper.unmount()
+    vi.useRealTimers()
+  })
+
   it('keeps local input visible when auto-save fails', async () => {
     vi.useFakeTimers()
     const onSaveReadings = vi.fn(async () => {

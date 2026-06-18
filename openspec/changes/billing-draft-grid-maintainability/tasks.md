@@ -32,4 +32,4 @@
 - [x] 5.2 Run billing utility tests for bulk readings and optimistic display
 - [x] 5.3 Run `npm run lint`
 - [x] 5.4 Run `npm run typecheck`
-- [ ] 5.5 Manually smoke desktop and mobile draft-grid workflows
+- [x] 5.5 Manually smoke desktop and mobile draft-grid workflows
