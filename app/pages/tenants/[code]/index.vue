@@ -77,7 +77,7 @@ watchEffect(() => {
       </UiPageHeader>
 
       <div class="rounded-xl border border-dark-border bg-dark-surface p-6 space-y-4">
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <p class="text-xs text-muted mb-1">Số điện thoại</p>
             <p class="text-sm text-white">{{ tenant.phone }}</p>
@@ -111,7 +111,7 @@ watchEffect(() => {
         <!-- CMND/CCCD -->
         <div v-if="tenant.idNumber || tenant.idIssuedDate || tenant.idIssuedPlace" class="pt-3 border-t border-dark-border space-y-3">
           <p class="text-xs font-medium text-muted uppercase tracking-wide">CMND / CCCD</p>
-          <div class="grid grid-cols-2 gap-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div v-if="tenant.idNumber">
               <p class="text-xs text-muted mb-1">Số CMND/CCCD</p>
               <p class="text-sm text-white">{{ tenant.idNumber }}</p>
@@ -130,7 +130,7 @@ watchEffect(() => {
         <!-- Liên hệ khẩn cấp -->
         <div v-if="tenant.emergencyContactName || tenant.emergencyContactPhone" class="pt-3 border-t border-dark-border space-y-3">
           <p class="text-xs font-medium text-muted uppercase tracking-wide">Liên hệ khẩn cấp</p>
-          <div class="grid grid-cols-2 gap-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div v-if="tenant.emergencyContactName">
               <p class="text-xs text-muted mb-1">Tên</p>
               <p class="text-sm text-white">{{ tenant.emergencyContactName }}</p>
@@ -172,24 +172,21 @@ watchEffect(() => {
         </template>
         <div class="rounded-xl border border-dark-border bg-dark-surface p-4">
           <div v-if="tenantContracts.length > 0" class="space-y-2">
-            <NuxtLink
+            <UiListRow
               v-for="contract in tenantContracts"
               :key="contract.id"
               :to="contractPath(contract)"
-              class="flex items-center justify-between rounded-lg border border-dark-border px-3 py-2 hover:border-cyan/40 transition-colors"
+              compact
             >
-              <div>
-                <div class="flex items-center gap-2">
-                  <p class="text-xs font-medium text-white">Phòng {{ contract.room.roomNumber }} — {{ contract.room.buildingName }}</p>
-                  <UiStatusBadge :status="contract.status" />
-                </div>
-                <p class="text-xs text-muted mt-0.5">
-                  {{ new Date(contract.startDate).toLocaleDateString('vi-VN') }} — {{ new Date(contract.endDate).toLocaleDateString('vi-VN') }}
-                  · {{ formatCurrency(contract.monthlyRent) }}/tháng
-                </p>
+              <div class="flex items-center gap-2 flex-wrap">
+                <p class="text-xs font-medium text-white truncate">Phòng {{ contract.room.roomNumber }} — {{ contract.room.buildingName }}</p>
+                <UiStatusBadge :status="contract.status" />
               </div>
-              <span class="text-muted text-xs ml-2">›</span>
-            </NuxtLink>
+              <p class="text-xs text-muted mt-0.5 truncate">
+                {{ new Date(contract.startDate).toLocaleDateString('vi-VN') }} — {{ new Date(contract.endDate).toLocaleDateString('vi-VN') }}
+                · {{ formatCurrency(contract.monthlyRent) }}/tháng
+              </p>
+            </UiListRow>
           </div>
           <p v-else class="text-sm text-muted">Chưa có hợp đồng</p>
         </div>

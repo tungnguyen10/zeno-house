@@ -138,7 +138,7 @@ async function onSubmit(data: BuildingFormData) {
       </div>
 
       <template v-if="enableQuickRooms">
-        <div class="grid grid-cols-2 gap-4 mb-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
           <UiInput
             label="Số lượng phòng"
             type="number"

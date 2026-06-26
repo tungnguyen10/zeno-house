@@ -91,25 +91,34 @@ function onSearch() {
 
     <!-- List -->
     <div v-else class="space-y-2">
-      <NuxtLink
+      <UiListRow
         v-for="tenant in tenants"
         :key="tenant.id"
         :to="`/tenants/${tenant.code}`"
-        class="flex items-center justify-between px-4 py-3 rounded-xl bg-dark-surface border border-dark-border hover:border-cyan/40 transition-colors"
       >
-        <div>
-          <p class="text-sm font-medium text-white">{{ tenant.fullName }}</p>
-          <p class="text-xs text-muted mt-0.5">Tạo {{ new Date(tenant.createdAt).toLocaleDateString('vi-VN') }}</p>
-          <p class="text-xs text-muted mt-0.5">{{ tenant.phone }}{{ tenant.idNumber ? ` · CMND/CCCD: ${tenant.idNumber}` : '' }}</p>
+        <div class="flex items-start gap-3">
+          <div
+            class="hidden sm:flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-cyan/10 text-cyan text-xs font-semibold"
+            aria-hidden="true"
+          >
+            {{ tenant.fullName.charAt(0).toUpperCase() }}
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2 flex-wrap">
+              <p class="text-sm font-medium text-white truncate">{{ tenant.fullName }}</p>
+              <UiBadge :variant="tenant.hasActiveContract ? 'success' : 'neutral'" pill>
+                {{ tenant.hasActiveContract ? 'Có HĐ' : 'Chưa có HĐ' }}
+              </UiBadge>
+            </div>
+            <p class="text-xs text-muted mt-0.5 truncate">
+              {{ tenant.phone }}<template v-if="tenant.idNumber"> · CMND/CCCD: {{ tenant.idNumber }}</template>
+            </p>
+            <p v-if="tenant.activeAssignment" class="text-xs text-muted mt-0.5 truncate">
+              Phòng {{ tenant.activeAssignment.roomNumber }} · {{ tenant.activeAssignment.buildingName }}
+            </p>
+          </div>
         </div>
-        <span class="text-muted text-xs">›</span>
-        <p v-if="tenant.activeAssignment" class="text-xs text-muted">
-          Phòng {{ tenant.activeAssignment.roomNumber }} · {{ tenant.activeAssignment.buildingName }}
-        </p>
-        <UiBadge :variant="tenant.hasActiveContract ? 'success' : 'neutral'" pill>
-          {{ tenant.hasActiveContract ? 'Có HĐ' : 'Chưa có HĐ' }}
-        </UiBadge>
-      </NuxtLink>
+      </UiListRow>
     </div>
 
     <!-- Pagination -->

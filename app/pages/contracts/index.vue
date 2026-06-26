@@ -78,27 +78,23 @@ const statusOptions = [
 
     <!-- List -->
     <div v-else class="space-y-2">
-      <NuxtLink
+      <UiListRow
         v-for="contract in contracts"
         :key="contract.id"
         :to="contractPath(contract)"
-        class="flex items-center justify-between px-4 py-3 rounded-xl bg-dark-surface border border-dark-border hover:border-cyan/40 transition-colors"
       >
-        <div class="min-w-0">
-          <div class="flex items-center gap-2">
-            <p class="text-sm font-medium text-white truncate">
-              Phòng {{ contract.room.roomNumber }} — {{ contract.room.buildingName }}
-            </p>
-            <UiStatusBadge :status="contract.status" />
-          </div>
-          <p class="text-xs text-muted mt-0.5">
-            {{ contract.tenant.fullName }} ·
-            {{ new Date(contract.startDate).toLocaleDateString('vi-VN') }} — {{ new Date(contract.endDate).toLocaleDateString('vi-VN') }}
-            · {{ formatCurrency(contract.monthlyRent) }}/tháng
+        <div class="flex items-center gap-2 flex-wrap">
+          <p class="text-sm font-medium text-white truncate">
+            Phòng {{ contract.room.roomNumber }} — {{ contract.room.buildingName }}
           </p>
+          <UiStatusBadge :status="contract.status" />
         </div>
-        <span class="text-muted text-xs ml-4 shrink-0">›</span>
-      </NuxtLink>
+        <p class="text-xs text-muted mt-0.5 truncate">
+          {{ contract.tenant.fullName }} ·
+          {{ new Date(contract.startDate).toLocaleDateString('vi-VN') }} — {{ new Date(contract.endDate).toLocaleDateString('vi-VN') }}
+          · {{ formatCurrency(contract.monthlyRent) }}/tháng
+        </p>
+      </UiListRow>
     </div>
 
     <!-- Pagination -->

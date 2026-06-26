@@ -10,26 +10,37 @@ defineProps<{
 <template>
   <NuxtLink
     :to="buildingPath(building)"
-    class="block rounded-xl border border-dark-border bg-dark-surface p-5 hover:border-cyan/40 hover:bg-dark-hover transition-colors"
+    class="group block rounded-xl border border-dark-border bg-dark-surface p-5 hover:border-cyan/40 hover:bg-dark-hover transition-colors"
   >
-    <div class="flex items-start justify-between gap-3 mb-3">
-      <h3 class="text-sm font-semibold text-white truncate">{{ building.name }}</h3>
-      <UiStatusBadge :status="building.status" />
+    <div class="flex items-start gap-3 mb-3">
+      <div
+        class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-cyan/10 text-cyan group-hover:bg-cyan/15 transition-colors"
+        aria-hidden="true"
+      >
+        <IconBuilding class="h-5 w-5" />
+      </div>
+      <div class="flex-1 min-w-0">
+        <div class="flex items-start justify-between gap-2">
+          <h3 class="text-sm font-semibold text-white truncate">{{ building.name }}</h3>
+          <UiStatusBadge :status="building.status" />
+        </div>
+        <p class="text-xs text-muted truncate mt-0.5">{{ building.address }}</p>
+      </div>
     </div>
 
-    <p class="text-xs text-muted truncate mb-4">{{ building.address }}</p>
-
-    <div class="flex items-center gap-1 text-xs text-muted">
-      <svg class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 3.75h.008v.008h-.008v-.008Zm0 3h.008v.008h-.008v-.008Zm0 3h.008v.008h-.008v-.008Z" />
-      </svg>
-      <span>{{ building.totalRooms }} phòng</span>
+    <div class="flex items-center gap-3 text-xs text-muted">
+      <span class="inline-flex items-center gap-1">
+        <IconDoor class="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+        {{ building.totalRooms }} phòng
+      </span>
+      <span class="inline-flex items-center gap-1">
+        <span class="h-1 w-1 rounded-full bg-dark-border" aria-hidden="true" />
+        {{ building.serviceSummary.activeCount }} dịch vụ
+      </span>
     </div>
-    <p class="mt-3 truncate text-xs text-muted">
-      {{ building.serviceSummary.activeCount }} dịch vụ
-      <template v-if="building.serviceSummary.activeNames.length">
-        · {{ building.serviceSummary.activeNames.slice(0, 3).join(' · ') }}
-      </template>
+    <p v-if="building.serviceSummary.activeNames.length" class="mt-2 truncate text-xs text-muted">
+      {{ building.serviceSummary.activeNames.slice(0, 3).join(' · ') }}
     </p>
   </NuxtLink>
 </template>
+

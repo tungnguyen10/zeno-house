@@ -105,7 +105,7 @@ if (error.value?.statusCode === 404) {
       </UiPageHeader>
 
       <div class="rounded-xl border border-dark-border bg-dark-surface p-6 space-y-4">
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <p class="text-xs text-muted mb-1">Trạng thái</p>
             <UiStatusBadge :status="room.status" />
@@ -178,24 +178,21 @@ if (error.value?.statusCode === 404) {
         </template>
         <div class="rounded-xl border border-dark-border bg-dark-surface p-4">
           <div v-if="roomContracts.length > 0" class="space-y-2">
-            <NuxtLink
+            <UiListRow
               v-for="contract in roomContracts"
               :key="contract.id"
               :to="contractPath(contract)"
-              class="flex items-center justify-between rounded-lg border border-dark-border px-3 py-2 hover:border-cyan/40 transition-colors"
+              compact
             >
-              <div>
-                <div class="flex items-center gap-2">
-                  <p class="text-xs font-medium text-white">{{ contract.tenant.fullName }}</p>
-                  <UiStatusBadge :status="contract.status" />
-                </div>
-                <p class="text-xs text-muted mt-0.5">
-                  {{ new Date(contract.startDate).toLocaleDateString('vi-VN') }} — {{ new Date(contract.endDate).toLocaleDateString('vi-VN') }}
-                  · {{ formatCurrency(contract.monthlyRent) }}/tháng
-                </p>
+              <div class="flex items-center gap-2 flex-wrap">
+                <p class="text-xs font-medium text-white truncate">{{ contract.tenant.fullName }}</p>
+                <UiStatusBadge :status="contract.status" />
               </div>
-              <span class="text-muted text-xs ml-2">›</span>
-            </NuxtLink>
+              <p class="text-xs text-muted mt-0.5 truncate">
+                {{ new Date(contract.startDate).toLocaleDateString('vi-VN') }} — {{ new Date(contract.endDate).toLocaleDateString('vi-VN') }}
+                · {{ formatCurrency(contract.monthlyRent) }}/tháng
+              </p>
+            </UiListRow>
           </div>
           <p v-else class="text-sm text-muted">Chưa có hợp đồng</p>
         </div>

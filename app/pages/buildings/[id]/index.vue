@@ -76,7 +76,7 @@ async function toggleBuildingService(serviceId: string, isActive: boolean) {
       </UiPageHeader>
 
       <div class="rounded-xl border border-dark-border bg-dark-surface p-6 space-y-4 mt-6">
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <p class="text-xs text-muted mb-1">Địa chỉ</p>
             <p class="text-sm text-white">{{ building.address }}</p>
@@ -106,7 +106,7 @@ async function toggleBuildingService(serviceId: string, isActive: boolean) {
         class="rounded-xl border border-dark-border bg-dark-surface p-6 mt-4"
       >
         <h3 class="text-sm font-semibold text-white mb-4">Chủ sở hữu</h3>
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div v-if="building.ownerName">
             <p class="text-xs text-muted mb-1">Tên chủ nhà</p>
             <p class="text-sm text-white">{{ building.ownerName }}</p>
@@ -125,7 +125,7 @@ async function toggleBuildingService(serviceId: string, isActive: boolean) {
       <!-- Billing config -->
       <div class="rounded-xl border border-dark-border bg-dark-surface p-6 mt-4">
         <h3 class="text-sm font-semibold text-white mb-4">Cấu hình tính phí</h3>
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <p class="text-xs text-muted mb-1">Tính tiền điện</p>
             <p class="text-sm text-white capitalize">
@@ -193,7 +193,7 @@ async function toggleBuildingService(serviceId: string, isActive: boolean) {
         class="rounded-xl border border-dark-border bg-dark-surface p-6 mt-4"
       >
         <h3 class="text-sm font-semibold text-white mb-4">Lịch vận hành</h3>
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div v-if="building.meterReadingDay">
             <p class="text-xs text-muted mb-1">Ngày chốt số</p>
             <p class="text-sm text-white">{{ building.meterReadingDay }}</p>

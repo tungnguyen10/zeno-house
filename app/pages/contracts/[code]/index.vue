@@ -229,7 +229,7 @@ watchEffect(() => {
       </UiPageHeader>
 
       <div class="rounded-xl border border-dark-border bg-dark-surface p-6 space-y-4">
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <p class="text-xs text-muted mb-1">Ngày bắt đầu</p>
             <p class="text-sm text-white">{{ new Date(contract.startDate).toLocaleDateString('vi-VN') }}</p>
