@@ -12,7 +12,13 @@ export const RoomService = {
     filters: RoomFilters,
   ): Promise<{ items: Room[]; total: number }> {
     if (!can(user, 'rooms.read')) throwForbidden('Không có quyền xem danh sách phòng')
-    return RoomRepository.findAll(event, filters)
+    let buildingId = filters.buildingId
+    if (buildingId) {
+      const building = await BuildingRepository.findByIdentifier(event, buildingId)
+      if (!building) throwNotFound('Không tìm thấy tòa nhà')
+      buildingId = building.id
+    }
+    return RoomRepository.findAll(event, { ...filters, buildingId })
   },
 
   async get(event: H3Event, user: AuthUser, id: string): Promise<Room> {
@@ -43,15 +49,15 @@ export const RoomService = {
 
   async update(event: H3Event, user: AuthUser, id: string, input: RoomUpdateInput): Promise<Room> {
     if (!can(user, 'rooms.update')) throwForbidden('Không có quyền cập nhật phòng')
-    const existing = await RoomRepository.findById(event, id)
+    const existing = await RoomRepository.findByIdentifier(event, id)
     if (!existing) throwNotFound('Không tìm thấy phòng')
-    return RoomRepository.update(event, id, input)
+    return RoomRepository.update(event, existing.id, input)
   },
 
   async remove(event: H3Event, user: AuthUser, id: string): Promise<void> {
     if (!can(user, 'rooms.delete')) throwForbidden('Không có quyền xoá phòng')
-    const existing = await RoomRepository.findById(event, id)
+    const existing = await RoomRepository.findByIdentifier(event, id)
     if (!existing) throwNotFound('Không tìm thấy phòng')
-    return RoomRepository.remove(event, id)
+    return RoomRepository.remove(event, existing.id)
   },
 }

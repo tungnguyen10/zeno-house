@@ -3,6 +3,7 @@ import type { AuthUser } from '~/types/auth'
 import type { Tenant } from '~/types/tenants'
 import type { TenantCreateInput, TenantUpdateInput } from '~/utils/validators/tenants'
 import { TenantRepository, type TenantFilters } from '../../repositories/tenants'
+import { BuildingRepository } from '../../repositories/buildings'
 
 export const TenantService = {
   async list(
@@ -11,7 +12,13 @@ export const TenantService = {
     filters: TenantFilters,
   ): Promise<{ items: Tenant[]; total: number }> {
     if (!can(user, 'tenants.read')) throwForbidden('Không có quyền xem danh sách khách thuê')
-    return TenantRepository.findAll(event, filters)
+    let buildingId = filters.building_id
+    if (buildingId) {
+      const building = await BuildingRepository.findByIdentifier(event, buildingId)
+      if (!building) throwNotFound('Không tìm thấy tòa nhà')
+      buildingId = building.id
+    }
+    return TenantRepository.findAll(event, { ...filters, building_id: buildingId })
   },
 
   async get(event: H3Event, user: AuthUser, id: string): Promise<Tenant> {
@@ -32,19 +39,19 @@ export const TenantService = {
 
   async update(event: H3Event, user: AuthUser, id: string, input: TenantUpdateInput): Promise<Tenant> {
     if (!can(user, 'tenants.update')) throwForbidden('Không có quyền cập nhật khách thuê')
-    const existing = await TenantRepository.findById(event, id)
+    const existing = await TenantRepository.findByIdentifier(event, id)
     if (!existing) throwNotFound('Không tìm thấy khách thuê')
     if (input.id_number) {
-      const conflict = await TenantRepository.findByIdNumber(event, input.id_number, id)
+      const conflict = await TenantRepository.findByIdNumber(event, input.id_number, existing.id)
       if (conflict) throwConflict('Số CMND/CCCD đã tồn tại')
     }
-    return TenantRepository.update(event, id, input)
+    return TenantRepository.update(event, existing.id, input)
   },
 
   async remove(event: H3Event, user: AuthUser, id: string): Promise<void> {
     if (!can(user, 'tenants.delete')) throwForbidden('Không có quyền xoá khách thuê')
-    const existing = await TenantRepository.findById(event, id)
+    const existing = await TenantRepository.findByIdentifier(event, id)
     if (!existing) throwNotFound('Không tìm thấy khách thuê')
-    return TenantRepository.remove(event, id)
+    return TenantRepository.remove(event, existing.id)
   },
 }

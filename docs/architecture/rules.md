@@ -26,6 +26,10 @@
 - List endpoints for primary resources should support filtering and pagination when the UI needs it.
 - Do not return raw DB rows. Map through `app/utils/mappers/**`.
 - Standard error codes: `UNAUTHENTICATED`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION_ERROR`, `CONFLICT`.
+- Entities that expose a slug `code` (`buildings`, `rooms`, `tenants`, `contracts.contract_code`, `billing_invoices.invoice_code`) must accept BOTH UUID and code at every public boundary. Frontend routes pass slugs in URLs and query filters.
+  - Resolve via `*Repository.findByIdentifier(event, value)` (built on `isUuid()`), then use `existing.id` (UUID) for all downstream repository calls — never pass the raw input through to `.eq('<uuid_column>', value)`.
+  - This applies to route params (`[id]`), query filters (`building_id`, `room_id`, `tenant_id`, `contract_id`), and request bodies. Lookups by UUID-only (`findById`) are reserved for identifiers that originated from an API response, not user input.
+  - Entities without a slug (`billing_periods`, `meter_readings`, `contract_payments/occupants/renewals/services`, `building_services`) accept UUID only.
 
 ## 3. Component Rules
 

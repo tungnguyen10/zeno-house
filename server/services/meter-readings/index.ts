@@ -4,6 +4,8 @@ import type { AuthUser } from '~/types/auth'
 import type { MeterReading, RoomMeterStatus } from '~/types/meter-readings'
 import type { MeterReadingCreateInput, MeterReadingBulkInput, MeterReadingUpdateInput } from '~/utils/validators/meter-readings'
 import { MeterReadingRepository } from '../../repositories/meter-readings'
+import { BuildingRepository } from '../../repositories/buildings'
+import { RoomRepository } from '../../repositories/rooms'
 
 export interface MeterReadingFilters {
   room_id?: string
@@ -16,13 +18,28 @@ export interface MeterReadingFilters {
 export const MeterReadingService = {
   async list(event: H3Event, _user: AuthUser, filters: MeterReadingFilters): Promise<MeterReading[]> {
     if (!can(_user, 'meter-readings.read')) throwForbidden('Không có quyền xem chỉ số đồng hồ')
-    if (filters.room_id) {
-      return MeterReadingRepository.findByRoom(event, filters.room_id, {
+
+    let roomId = filters.room_id
+    if (roomId) {
+      const room = await RoomRepository.findByIdentifier(event, roomId)
+      if (!room) throwNotFound('Không tìm thấy phòng')
+      roomId = room.id
+    }
+
+    let buildingId = filters.building_id
+    if (buildingId) {
+      const building = await BuildingRepository.findByIdentifier(event, buildingId)
+      if (!building) throwNotFound('Không tìm thấy tòa nhà')
+      buildingId = building.id
+    }
+
+    if (roomId) {
+      return MeterReadingRepository.findByRoom(event, roomId, {
         period_year: filters.period_year,
         period_month: filters.period_month,
       })
     }
-    return MeterReadingRepository.findAll(event, filters)
+    return MeterReadingRepository.findAll(event, { ...filters, building_id: buildingId })
   },
 
   async getBuildingStatus(
@@ -33,7 +50,9 @@ export const MeterReadingService = {
     periodMonth: number,
   ): Promise<RoomMeterStatus[]> {
     if (!can(_user, 'meter-readings.read')) throwForbidden('Không có quyền xem chỉ số đồng hồ')
-    return MeterReadingRepository.findBuildingRoomsStatus(event, buildingId, periodYear, periodMonth)
+    const building = await BuildingRepository.findByIdentifier(event, buildingId)
+    if (!building) throwNotFound('Không tìm thấy tòa nhà')
+    return MeterReadingRepository.findBuildingRoomsStatus(event, building.id, periodYear, periodMonth)
   },
 
   async create(

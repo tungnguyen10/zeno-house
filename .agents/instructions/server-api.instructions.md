@@ -226,3 +226,55 @@ server/api/
 │   └── [id].delete.ts    → DELETE /api/buildings/:id
 └── me.get.ts             → GET /api/me
 ```
+
+## Slug vs UUID resolution
+
+Các entity có slug `code` — `buildings`, `rooms`, `tenants`, `contracts` (contract_code), `billing_invoices` (invoice_code) — frontend luôn truyền slug qua URL (`[code]`, `[id]` của buildings) và query filter (`building_id`, `room_id`, `tenant_id`, `contract_id`). Postgres sẽ throw `invalid input syntax for type uuid` nếu slug bị đẩy thẳng vào `.eq('<uuid_column>', value)`.
+
+**Quy tắc**: ở tầng service, mọi `id` nhận từ route param / query filter / request body (đối với các entity trên) phải resolve qua `*Repository.findByIdentifier(event, value)` trước, rồi dùng `existing.id` (UUID) cho mọi call repo tiếp theo.
+
+### ✓ Đúng
+
+```ts
+// server/services/rooms/index.ts
+async update(event, user, id, input) {
+  const existing = await RoomRepository.findByIdentifier(event, id)  // ← UUID hoặc code đều OK
+  if (!existing) throwNotFound('Không tìm thấy phòng')
+  return RoomRepository.update(event, existing.id, input)            // ← dùng UUID đã resolve
+}
+
+// server/services/contracts/index.ts — list filter
+async list(event, user, filters) {
+  let buildingId = filters.building_id
+  if (buildingId) {
+    const building = await BuildingRepository.findByIdentifier(event, buildingId)
+    if (!building) throwNotFound('Building not found')
+    buildingId = building.id
+  }
+  return ContractRepository.findAll(event, { ...filters, building_id: buildingId })
+}
+```
+
+### ✗ Sai
+
+```ts
+// ✗ findById chỉ accept UUID — slug sẽ 500
+const existing = await RoomRepository.findById(event, id)
+
+// ✗ pass-through raw slug vào filter — repository sẽ .eq('room_id', 'zhpn-b201') trên UUID column
+if (filters.room_id) query = query.eq('room_id', filters.room_id)
+
+// ✗ dùng raw contractId cho sub-resource sau khi đã có existing
+const contract = await ContractRepository.findById(event, contractId)  // findById ở contracts là alias findByIdentifier — OK
+return ContractPaymentRepository.listByContract(event, contractId)     // ← phải là contract.id
+```
+
+### Entity không có slug
+
+`billing_periods`, `meter_readings`, `contract_payments/occupants/renewals/services`, `building_services` — chỉ accept UUID. Có thể dùng `findById` trực tiếp.
+
+### Audit checklist
+
+Khi thêm endpoint mới hoặc review:
+- `grep -r "Repository\.findById\(event,\s*id\)" server/services` — bắt update/remove dùng UUID-only lookup cho input có thể là slug
+- `grep -r "\.eq\('(building|room|tenant|contract)_id'" server/repositories` — bắt filter pass-through không resolve ở service

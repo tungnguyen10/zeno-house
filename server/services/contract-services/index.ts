@@ -4,11 +4,14 @@ import type { ContractService } from '~/types/contract-services'
 import type { ContractServiceUpdateInput } from '~/utils/validators/contract-services'
 import { ContractServiceRepository } from '../../repositories/contract-services'
 import { BuildingRepository } from '../../repositories/buildings'
+import { ContractRepository } from '../../repositories/contracts'
 
 export const ContractServiceService = {
   async list(event: H3Event, _user: AuthUser, contractId: string): Promise<ContractService[]> {
     if (!can(_user, 'contract-services.read')) throwForbidden('Không có quyền xem dịch vụ hợp đồng')
-    return ContractServiceRepository.findByContract(event, contractId)
+    const contract = await ContractRepository.findById(event, contractId)
+    if (!contract) throwNotFound('Không tìm thấy hợp đồng')
+    return ContractServiceRepository.findByContract(event, contract.id)
   },
 
   async listByBuilding(event: H3Event, _user: AuthUser, buildingId: string): Promise<ContractService[]> {
