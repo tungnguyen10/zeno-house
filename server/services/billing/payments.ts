@@ -1,4 +1,5 @@
 import type { H3Event } from 'h3'
+import { serverSupabaseClient } from '#supabase/server'
 import type { AuthUser } from '~/types/auth'
 import type { Invoice, InvoicePayment } from '~/types/billing'
 import { BILLING_AUDIT_ACTIONS } from '~/utils/constants/billing'
@@ -6,6 +7,7 @@ import type {
   BulkPaymentsBodyInput,
   InvoicePaymentCreateInput,
 } from '~/utils/validators/billing'
+import { mapInvoicePayment } from '~/utils/mappers/billing'
 import { InvoiceRepository } from '../../repositories/billing/invoices'
 import { InvoicePaymentRepository } from '../../repositories/billing/payments'
 import { BillingPeriodRepository } from '../../repositories/billing/periods'
@@ -14,13 +16,20 @@ import { BillingPeriodService } from './periods'
 import { BillingDisplayResolver } from './display'
 import { calculateInvoicePaymentStatus } from './rules'
 
-interface BulkPaymentRollback {
-  paymentId: string
-  invoiceId: string
-  beforePaid: number
-  beforeBalance: number
-  beforeStatus: Invoice['status']
-  beforePaidAt: string | null
+interface BulkPaymentRpcErrorDetails {
+  failed_index?: number
+  failed_reason?: string
+}
+
+function parseBulkPaymentRpcDetails(raw: unknown): BulkPaymentRpcErrorDetails {
+  if (typeof raw !== 'string' || raw.length === 0) return {}
+  try {
+    const parsed = JSON.parse(raw) as BulkPaymentRpcErrorDetails
+    return parsed ?? {}
+  }
+  catch {
+    return {}
+  }
 }
 
 export interface BulkPaymentsResult {
@@ -115,10 +124,15 @@ export const InvoicePaymentService = {
   },
 
   /**
-   * Record a batch of payments transactionally. All-or-nothing: any failure
-   * rolls back already-inserted payments and restores the affected invoice
-   * totals to their pre-batch state. A single `payments.bulk_recorded` audit
-   * event is appended on success.
+   * Record a batch of payments transactionally.
+   *
+   * Delegates the whole write — payment inserts, invoice total recompute,
+   * affected-period transitions (`issued -> collecting`), and the single
+   * `payments.bulk_recorded` audit event — to the
+   * `public.record_bulk_payments` PL/pgSQL function. The function raises
+   * P0001 on the first failing row with `{ failed_index, failed_reason }` in
+   * the exception DETAIL; we map that back into the existing CONFLICT
+   * envelope so the API contract is unchanged.
    */
   async recordBatch(
     event: H3Event,
@@ -130,144 +144,50 @@ export const InvoicePaymentService = {
     const items = body.payments
     if (items.length === 0) throwValidationError('Cần ít nhất 1 dòng thanh toán')
 
-    const rollback: BulkPaymentRollback[] = []
-    const created: InvoicePayment[] = []
-    const invoiceIds = new Set<string>()
-    const periodIds = new Set<string>()
-    let totalAmount = 0
+    const payload = items.map(item => ({
+      invoice_id: item.invoice_id,
+      amount: item.amount,
+      payment_date: item.payment_date,
+      payment_method: item.payment_method ?? null,
+      note: item.note ?? null,
+      reference: item.reference ?? null,
+    }))
 
-    const undo = async () => {
-      for (const entry of [...rollback].reverse()) {
-        try {
-          await InvoiceRepository.updatePaymentTotals(
-            event,
-            entry.invoiceId,
-            entry.beforePaid,
-            entry.beforeBalance,
-            entry.beforeStatus,
-            entry.beforePaidAt,
-          )
-        }
-        catch {
-          // best-effort
-        }
-        try {
-          await InvoicePaymentRepository.deleteById(event, entry.paymentId)
-        }
-        catch {
-          // best-effort
-        }
-      }
-    }
-
-    for (let i = 0; i < items.length; i++) {
-      const item = items[i]!
-      try {
-        const invoice = await InvoiceRepository.findById(event, item.invoice_id)
-        if (!invoice) throwNotFound('Không tìm thấy hoá đơn')
-        if (invoice.status === 'void') throwConflict('Hoá đơn đã huỷ — không thể ghi nhận thanh toán')
-        if (item.amount > invoice.balanceAmount) {
-          throwValidationError('Số tiền vượt quá công nợ còn lại của hoá đơn', {
-            invoice_id: invoice.id,
-            balance: invoice.balanceAmount,
-            amount: item.amount,
-          })
-        }
-        const period = await BillingPeriodRepository.findById(event, invoice.billingPeriodId)
-        if (period?.status === 'closed') throwConflict('Kỳ đã chốt — không thể ghi nhận thanh toán mới')
-        periodIds.add(invoice.billingPeriodId)
-
-        const composedNote = item.reference?.trim()
-          ? `[${item.reference.trim()}] ${item.note?.trim() ?? ''}`.trim()
-          : (item.note?.trim() || null)
-
-        const paymentInput: InvoicePaymentCreateInput = {
-          amount: item.amount,
-          paid_at: item.payment_date,
-          payment_method: item.payment_method ?? null,
-          note: composedNote || null,
-        }
-
-        const payment = await InvoicePaymentRepository.insert(
-          event,
-          item.invoice_id,
-          user.id ?? null,
-          paymentInput,
-        )
-
-        try {
-          const next = calculateInvoicePaymentStatus(invoice, item.amount)
-          const paidAt = next.balanceAmount <= 0 ? item.payment_date : null
-          await InvoiceRepository.updatePaymentTotals(
-            event,
-            item.invoice_id,
-            next.paidAmount,
-            next.balanceAmount,
-            next.status,
-            paidAt,
-          )
-          rollback.push({
-            paymentId: payment.id,
-            invoiceId: item.invoice_id,
-            beforePaid: invoice.paidAmount,
-            beforeBalance: invoice.balanceAmount,
-            beforeStatus: invoice.status,
-            beforePaidAt: invoice.paidAt,
-          })
-          created.push(payment)
-          invoiceIds.add(item.invoice_id)
-          totalAmount += item.amount
-        }
-        catch (err) {
-          await InvoicePaymentRepository.deleteById(event, payment.id).catch(() => {})
-          throw err
-        }
-      }
-      catch (err) {
-        await undo()
-        const e = err as { data?: { error?: { message?: string } }; message?: string }
-        const message = e.data?.error?.message ?? e.message ?? 'Lỗi ghi thanh toán'
-        throw createError({
-          statusCode: 409,
-          data: {
-            error: {
-              code: 'CONFLICT',
-              message: `Lỗi tại dòng ${i + 1}: ${message}`,
-              details: { failed_index: i, failed_reason: message },
-            },
-          },
-        })
-      }
-    }
-
-    // Advance period status for any periods that were `issued` to `collecting`.
-    for (const periodId of periodIds) {
-      const period = await BillingPeriodRepository.findById(event, periodId)
-      if (period && period.status === 'issued') {
-        await BillingPeriodService.advanceStatus(event, user, periodId, 'collecting')
-      }
-    }
-
-    const auditPeriodId = periodIds.size === 1 ? [...periodIds][0]! : null
-    await BillingAuditService.append(event, user, {
-      billing_period_id: auditPeriodId,
-      action: BILLING_AUDIT_ACTIONS.PAYMENTS_BULK_RECORDED,
-      entity_type: 'billing_period',
-      entity_id: auditPeriodId,
-      metadata: {
-        count: created.length,
-        total_amount: totalAmount,
-        invoice_ids: [...invoiceIds],
-      },
+    const client = await serverSupabaseClient(event)
+    const { data, error } = await client.rpc('record_bulk_payments', {
+      p_actor_id: user.id ?? null,
+      p_payments: payload,
     })
 
+    if (error) {
+      const details = parseBulkPaymentRpcDetails((error as { details?: unknown }).details)
+      const failedIndex = typeof details.failed_index === 'number' ? details.failed_index : 0
+      const failedReason = details.failed_reason ?? error.message ?? 'Lỗi ghi thanh toán'
+      throw createError({
+        statusCode: 409,
+        data: {
+          error: {
+            code: 'CONFLICT',
+            message: `Lỗi tại dòng ${failedIndex + 1}: ${failedReason}`,
+            details: { failed_index: failedIndex, failed_reason: failedReason },
+          },
+        },
+      })
+    }
+
+    const inserted: InvoicePayment[] = ((data as Array<Record<string, unknown>> | null) ?? []).map(
+      row => mapInvoicePayment(row as never),
+    )
+    const invoiceIds = [...new Set(inserted.map(p => p.invoiceId))]
+    const totalAmount = inserted.reduce((sum, p) => sum + p.amount, 0)
+
     const resolver = new BillingDisplayResolver(event)
-    const enriched = await resolver.enrichPayments(created)
+    const enriched = await resolver.enrichPayments(inserted)
 
     return {
-      count: created.length,
+      count: inserted.length,
       totalAmount,
-      invoiceIds: [...invoiceIds],
+      invoiceIds,
       payments: enriched,
     }
   },

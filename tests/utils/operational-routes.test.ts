@@ -4,6 +4,7 @@ import {
   buildingPath,
   contractPath,
   invoicePath,
+  pendingOperationPath,
   roomPath,
   tenantPath,
 } from '../../app/utils/routes/operational'
@@ -28,5 +29,21 @@ describe('operational route helpers', () => {
     expect(invoicePath({ id: 'invoice-id', invoiceCode: 'inv-2026-05-0001' })).toBe('/billing/invoices/inv-2026-05-0001')
     expect(invoicePath({ id: 'invoice-id' })).toBe('/billing/invoices/invoice-id')
     expect(tenantPath({ code: 'nva-2026-0001' })).toBe('/tenants/nva-2026-0001')
+  })
+
+  it('pendingOperationPath builds billing workspace link from period token', () => {
+    const item = {
+      building: { id: 'b1', slug: 'toa-a', name: 'Toa A' },
+      period: '2026-06',
+    }
+    expect(pendingOperationPath(item)).toBe('/billing/toa-a/2026-06')
+  })
+
+  it('pendingOperationPath falls back to building id when slug missing', () => {
+    const item = {
+      building: { id: 'b1' },
+      period: '2026-12',
+    }
+    expect(pendingOperationPath(item)).toBe('/billing/b1/2026-12')
   })
 })

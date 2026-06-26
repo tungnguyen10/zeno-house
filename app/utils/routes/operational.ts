@@ -73,6 +73,18 @@ export function billingWorkspacePath(
   return `/billing/${buildingRouteSegment(building)}/${periodYear}-${String(periodMonth).padStart(2, '0')}`
 }
 
+export interface PendingOperationLike {
+  building: BuildingRouteSubject
+  period: string
+}
+
+export function pendingOperationPath(item: PendingOperationLike): string {
+  const [yearStr, monthStr] = item.period.split('-')
+  const year = Number(yearStr)
+  const month = Number(monthStr)
+  return billingWorkspacePath(item.building, year, month)
+}
+
 export function contractPath(contract: ContractRouteSubject): string {
   return `/contracts/${contract.slug || contract.contractCode || contract.code || contract.id}`
 }

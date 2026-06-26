@@ -50,6 +50,19 @@ async function buildUniqueContractCode(event: H3Event, buildingCode: string, sta
 }
 
 export const ContractRepository = {
+  async allocateContractCode(event: H3Event, buildingId: string, startDate: string): Promise<string> {
+    const client = await serverSupabaseClient(event)
+    const { data: buildingRow, error: buildingError } = await client
+      .from('buildings')
+      .select('code')
+      .eq('id', buildingId)
+      .single()
+    if (buildingError || !buildingRow) {
+      throw createError({ statusCode: 500, message: 'Cannot resolve building code for contract' })
+    }
+    return buildUniqueContractCode(event, buildingRow.code, startDate)
+  },
+
   async findAll(
     event: H3Event,
     filters: ContractFilters = {},
@@ -129,17 +142,7 @@ export const ContractRepository = {
       throw createError({ statusCode: 500, message: 'building_id is required on insert (resolve from room before calling repository)' })
     }
 
-    // Resolve building code for contract code generation
-    const { data: buildingRow, error: buildingError } = await client
-      .from('buildings')
-      .select('code')
-      .eq('id', input.building_id)
-      .single()
-    if (buildingError || !buildingRow) {
-      throw createError({ statusCode: 500, message: 'Cannot resolve building code for contract' })
-    }
-
-    const contractCode = await buildUniqueContractCode(event, buildingRow.code, input.start_date)
+    const contractCode = await this.allocateContractCode(event, input.building_id, input.start_date)
     const { data, error } = await client
       .from('contracts')
       .insert({

@@ -123,3 +123,19 @@ The draft grid SHALL surface a discrepancy callout when a draft total differs ma
 #### Scenario: Both CTAs hidden when period closed
 - **WHEN** the period status is `closed`
 - **THEN** the callout still renders the discrepancy text but hides both CTAs and explains that the period is closed
+
+### Requirement: Billing actor display enrichment
+Billing read DTOs SHALL resolve billing actor and payment recorder display values when user display data is available.
+
+#### Scenario: Audit actor name resolved
+- **WHEN** an audit event has an actor id that exists in the configured user display source
+- **THEN** the audit DTO includes `actorName` and `actorEmail` for UI rendering
+
+#### Scenario: Payment recorder name resolved
+- **WHEN** an invoice payment has a recorded-by user that exists in the configured user display source
+- **THEN** the payment DTO includes `recordedByName`
+
+#### Scenario: Missing actor falls back safely
+- **WHEN** an actor id cannot be resolved
+- **THEN** the API keeps the raw actor id and returns null display fields without throwing
+

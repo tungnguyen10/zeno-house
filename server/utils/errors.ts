@@ -25,3 +25,28 @@ export function throwConflict(message = 'Xung đột dữ liệu'): never {
     data: { error: { code: 'CONFLICT', message } },
   })
 }
+
+export function throwInternal(originalError: unknown, context?: string): never {
+  const fields: Record<string, unknown> = {}
+  if (originalError instanceof Error) {
+    fields.message = originalError.message
+  }
+  if (originalError && typeof originalError === 'object') {
+    const obj = originalError as Record<string, unknown>
+    for (const key of ['message', 'code', 'details', 'hint'] as const) {
+      if (key in obj && obj[key] !== undefined) fields[key] = obj[key]
+    }
+  }
+  console.error('[INTERNAL]', context ?? '(no context)', fields, originalError)
+
+  throw createError({
+    statusCode: 500,
+    data: {
+      error: {
+        code: 'INTERNAL',
+        message: 'Lỗi hệ thống, vui lòng thử lại.',
+        details: context ? { context } : undefined,
+      },
+    },
+  })
+}

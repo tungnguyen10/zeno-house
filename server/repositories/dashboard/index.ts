@@ -10,8 +10,23 @@ function periodToken(year: number, month: number): string {
   return `${year}-${String(month).padStart(2, '0')}`
 }
 
+function sixMonthWindowStart(year: number, month: number): { startYear: number; startMonth: number } {
+  // Window covers the last 6 months including the current month
+  let startMonth = month - 5
+  let startYear = year
+  while (startMonth <= 0) {
+    startMonth += 12
+    startYear -= 1
+  }
+  return { startYear, startMonth }
+}
+
+const ROOMS_LIMIT = 2000
+const BILLING_PERIODS_LIMIT = 500
+const INVOICES_LIMIT = 2000
+
 export const DashboardRepository = {
-  async getSummary(event: H3Event): Promise<DashboardSummary> {
+  async getSummary(event: H3Event): Promise<{ summary: DashboardSummary; generatedAt: string }> {
     const client = await serverSupabaseClient(event)
 
     const now = new Date()
@@ -22,6 +37,7 @@ export const DashboardRepository = {
     const expiringSoon = new Date(now)
     expiringSoon.setDate(expiringSoon.getDate() + 30)
     const expiringSoonDate = expiringSoon.toISOString().slice(0, 10)
+    const { startYear, startMonth } = sixMonthWindowStart(currentYear, currentMonth)
 
     const [
       buildingsResult,
@@ -32,8 +48,8 @@ export const DashboardRepository = {
       periodsResult,
       invoicesResult,
     ] = await Promise.all([
-      client.from('buildings').select('*', { count: 'exact', head: true }),
-      client.from('rooms').select('id, status, building_id'),
+      client.from('buildings').select('id, slug, name').order('name', { ascending: true }),
+      client.from('rooms').select('id, status, building_id').limit(ROOMS_LIMIT),
       client.from('tenants').select('*', { count: 'exact', head: true }),
       client.from('contracts').select('*', { count: 'exact', head: true }).eq('status', 'active'),
       client
@@ -42,25 +58,38 @@ export const DashboardRepository = {
         .eq('status', 'active')
         .gte('end_date', today)
         .lte('end_date', expiringSoonDate),
-      client.from('billing_periods').select('id, building_id, period_year, period_month, status'),
-      client.from('invoices').select('billing_period_id, building_id:billing_periods(building_id, period_year, period_month), total_amount, paid_amount, balance_amount, status, due_date'),
+      client
+        .from('billing_periods')
+        .select('id, building_id, period_year, period_month, status')
+        .limit(BILLING_PERIODS_LIMIT),
+      client
+        .from('invoices')
+        .select(
+          'billing_period_id, billing_periods!inner(building_id, period_year, period_month), total_amount, paid_amount, balance_amount, status, due_date',
+        )
+        .or(
+          `period_year.gt.${startYear},and(period_year.eq.${startYear},period_month.gte.${startMonth})`,
+          { foreignTable: 'billing_periods' },
+        )
+        .limit(INVOICES_LIMIT),
     ])
 
-    if (buildingsResult.error) throw createError({ statusCode: 500, message: buildingsResult.error.message })
-    if (roomsResult.error) throw createError({ statusCode: 500, message: roomsResult.error.message })
-    if (tenantsResult.error) throw createError({ statusCode: 500, message: tenantsResult.error.message })
-    if (activeContractsResult.error) throw createError({ statusCode: 500, message: activeContractsResult.error.message })
-    if (expiringContractsResult.error) throw createError({ statusCode: 500, message: expiringContractsResult.error.message })
-    if (periodsResult.error) throw createError({ statusCode: 500, message: periodsResult.error.message })
-    if (invoicesResult.error) throw createError({ statusCode: 500, message: invoicesResult.error.message })
+    if (buildingsResult.error) throwInternal(buildingsResult.error, 'dashboard.repository.buildings')
+    if (roomsResult.error) throwInternal(roomsResult.error, 'dashboard.repository.rooms')
+    if (tenantsResult.error) throwInternal(tenantsResult.error, 'dashboard.repository.tenants')
+    if (activeContractsResult.error) throwInternal(activeContractsResult.error, 'dashboard.repository.activeContracts')
+    if (expiringContractsResult.error) throwInternal(expiringContractsResult.error, 'dashboard.repository.expiringContracts')
+    if (periodsResult.error) throwInternal(periodsResult.error, 'dashboard.repository.billingPeriods')
+    if (invoicesResult.error) throwInternal(invoicesResult.error, 'dashboard.repository.invoices')
 
-    const { data: buildingRows, error: buildingRowsError } = await client
-      .from('buildings')
-      .select('id, slug, name')
-      .order('name', { ascending: true })
-    if (buildingRowsError) throw createError({ statusCode: 500, message: buildingRowsError.message })
-
+    const buildings = buildingsResult.data ?? []
     const allRooms = roomsResult.data ?? []
+    const allPeriods = periodsResult.data ?? []
+    const allInvoices = invoicesResult.data ?? []
+
+    if (allRooms.length === ROOMS_LIMIT) console.warn('[dashboard] limit hit: rooms')
+    if (allPeriods.length === BILLING_PERIODS_LIMIT) console.warn('[dashboard] limit hit: billing_periods')
+    if (allInvoices.length === INVOICES_LIMIT) console.warn('[dashboard] limit hit: invoices')
 
     // Aggregate global room stats
     const roomStats: BuildingRoomStats = allRooms.reduce((acc, room) => {
@@ -84,7 +113,6 @@ export const DashboardRepository = {
       else if (room.status === 'maintenance') stats.maintenance++
     }
 
-    const buildings = buildingRows ?? []
     const buildingBreakdown = buildings.map((b) => ({
       id: b.id,
       slug: b.slug,
@@ -93,11 +121,11 @@ export const DashboardRepository = {
     }))
 
     const currentPeriodIds = new Set(
-      (periodsResult.data ?? [])
+      allPeriods
         .filter(p => p.period_year === currentYear && p.period_month === currentMonth)
         .map(p => p.id),
     )
-    const periodById = new Map((periodsResult.data ?? []).map(p => [p.id, p]))
+    const periodById = new Map(allPeriods.map(p => [p.id, p]))
     const buildingById = new Map(buildings.map(b => [b.id, b]))
 
     let invoiceTotal = 0
@@ -106,7 +134,7 @@ export const DashboardRepository = {
     let overdueAmount = 0
     const trendByPeriod = new Map<string, { period: string; invoiceTotal: number; paidAmount: number; outstandingAmount: number }>()
 
-    for (const invoice of invoicesResult.data ?? []) {
+    for (const invoice of allInvoices) {
       if (invoice.status === 'void') continue
       const period = periodById.get(invoice.billing_period_id)
       if (!period) continue
@@ -128,39 +156,33 @@ export const DashboardRepository = {
     }
 
     const pendingOperations: DashboardSummary['pendingOperations'] = []
-    for (const period of periodsResult.data ?? []) {
+    for (const period of allPeriods) {
       if (period.period_year !== currentYear || period.period_month !== currentMonth) continue
       const building = buildingById.get(period.building_id)
       if (!building) continue
-      const href = `/billing/${building.slug}/${currentPeriod}`
+      const buildingRef = { id: building.id, slug: building.slug, name: building.name }
       if (period.status === 'draft' || period.status === 'readings') {
         pendingOperations.push({
           type: 'missing_readings',
-          buildingId: building.id,
-          buildingSlug: building.slug,
-          buildingName: building.name,
+          building: buildingRef,
           period: currentPeriod,
           count: 1,
           severity: 'warning',
-          href,
         })
       }
       if (period.status === 'review') {
         pendingOperations.push({
           type: 'unissued_invoices',
-          buildingId: building.id,
-          buildingSlug: building.slug,
-          buildingName: building.name,
+          building: buildingRef,
           period: currentPeriod,
           count: 1,
           severity: 'info',
-          href,
         })
       }
     }
 
     for (const building of buildings) {
-      const overdueCount = (invoicesResult.data ?? []).filter((invoice) => {
+      const overdueCount = allInvoices.filter((invoice) => {
         const period = periodById.get(invoice.billing_period_id)
         return period?.building_id === building.id
           && invoice.status !== 'void'
@@ -170,19 +192,16 @@ export const DashboardRepository = {
       if (overdueCount > 0) {
         pendingOperations.push({
           type: 'overdue_invoices',
-          buildingId: building.id,
-          buildingSlug: building.slug,
-          buildingName: building.name,
+          building: { id: building.id, slug: building.slug, name: building.name },
           period: currentPeriod,
           count: overdueCount,
           severity: 'danger',
-          href: `/billing/${building.slug}/${currentPeriod}`,
         })
       }
     }
 
-    return {
-      buildings: { total: buildingsResult.count ?? 0 },
+    const summary: DashboardSummary = {
+      buildings: { total: buildings.length },
       rooms: roomStats,
       tenants: { total: tenantsResult.count ?? 0 },
       contracts: {
@@ -204,5 +223,7 @@ export const DashboardRepository = {
         .slice(-6),
       pendingOperations,
     }
+
+    return { summary, generatedAt: new Date().toISOString() }
   },
 }

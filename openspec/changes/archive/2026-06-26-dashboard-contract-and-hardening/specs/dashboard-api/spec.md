@@ -1,7 +1,5 @@
-## Purpose
+## MODIFIED Requirements
 
-API spec cho dashboard summary endpoint. Trả về aggregate stats toàn hệ thống trong 1 request.
-## Requirements
 ### Requirement: Dashboard summary endpoint
 `GET /api/dashboard/summary` SHALL return aggregate operational stats for the entire system in a single response. Response SHALL follow the standard envelope `{ data, meta }` where `meta.generatedAt` is an ISO 8601 timestamp produced after all Supabase queries complete. Response shape SHALL be:
 ```ts
@@ -84,4 +82,3 @@ The endpoint SHALL require authentication and SHALL gate access by capability `d
 #### Scenario: Invoice window is bounded
 - **WHEN** the system has more than 6 months of billing data
 - **THEN** the `invoices` query SHALL be constrained to billing periods within the last 6 months relative to current period
-

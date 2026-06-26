@@ -23,8 +23,8 @@ const { filters, periods, isLoading, refresh, openPeriod } = useBillingPeriodLis
 })
 
 const debtFilter = ref<'all' | 'has_debt'>('all')
-watchEffect(() => {
-  filters.has_debt = debtFilter.value === 'has_debt' ? true : undefined
+watch(debtFilter, (value) => {
+  filters.has_debt = value === 'has_debt' ? true : undefined
 })
 
 const buildingOptions = computed(() => [

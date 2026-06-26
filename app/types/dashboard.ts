@@ -1,8 +1,18 @@
+import type { ApiSuccess } from './api'
+
 export interface BuildingRoomStats {
   total: number
   available: number
   occupied: number
   maintenance: number
+}
+
+export interface PendingOperation {
+  type: 'missing_readings' | 'unissued_invoices' | 'overdue_invoices'
+  building: { id: string; slug: string; name: string }
+  period: string
+  count: number
+  severity: 'info' | 'warning' | 'danger'
 }
 
 export interface DashboardSummary {
@@ -31,14 +41,11 @@ export interface DashboardSummary {
     paidAmount: number
     outstandingAmount: number
   }>
-  pendingOperations: Array<{
-    type: 'missing_readings' | 'unissued_invoices' | 'overdue_invoices'
-    buildingId: string
-    buildingSlug: string
-    buildingName: string
-    period: string
-    count: number
-    severity: 'info' | 'warning' | 'danger'
-    href: string
-  }>
+  pendingOperations: PendingOperation[]
 }
+
+export interface DashboardSummaryMeta extends Record<string, unknown> {
+  generatedAt: string
+}
+
+export type DashboardSummaryResponse = ApiSuccess<DashboardSummary, DashboardSummaryMeta>

@@ -66,7 +66,21 @@ F0.2.5.9  Contract Renewal Model                    ✅  archived: 2026-05-17-co
 F0.2.5.10 Cleanup & Billing Readiness               ✅  archived: 2026-06-10-cleanup-billing-readiness
 ```
 
+## Phased Foundation: v0.3 — Iteration & Polish
 
+```
+F0.3.1   Operational Design System              ✅  archived: 2026-06-11-operational-design-system
+F0.3.2   Adopt Operational Design System        ✅  archived: 2026-06-11-adopt-operational-design-system
+F0.3.3   Billing Readability & Polish           ✅  archived: 2026-06-12-billing-readability-and-polish
+F0.3.4   Billing Test Baseline                  ✅  archived: 2026-06-13-billing-test-baseline
+F0.3.5   Billing Power Features                 ✅  archived: 2026-06-14-billing-power-features
+F0.3.6   Building Filter (Tenants/Contracts)    ✅  archived: 2026-06-14-building-filter-tenants-contracts
+F0.3.7   Monthly Operations Workspace           ✅  archived: 2026-06-14-monthly-operations-workspace
+F0.3.8   Dashboard Building/Tenant UX           ✅  archived: 2026-06-15-dashboard-building-tenant-ux
+F0.3.9   Bulk Meter Reading Entry               ✅  archived: 2026-06-17-add-bulk-meter-reading-entry
+F0.3.10  Entity Slug Codes                      ✅  archived: 2026-06-17-entity-slug-codes
+F0.3.11  Dashboard Contract & Hardening         ✅  archived: 2026-06-26-dashboard-contract-and-hardening
+```
 
 ## Data Flow
 

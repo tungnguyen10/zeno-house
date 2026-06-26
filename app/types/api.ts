@@ -4,10 +4,11 @@ export type ErrorCode =
   | 'NOT_FOUND'
   | 'VALIDATION_ERROR'
   | 'CONFLICT'
+  | 'INTERNAL'
 
-export type ApiSuccess<T> = {
+export type ApiSuccess<T, M extends Record<string, unknown> = Record<string, unknown>> = {
   data: T
-  meta?: Record<string, unknown>
+  meta?: M
 }
 
 export type ApiError = {

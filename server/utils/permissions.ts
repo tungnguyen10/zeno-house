@@ -29,6 +29,7 @@ const PERMISSIONS: Record<UserRole, Set<string>> = {
     'billing.write',
     'billing.close',
     'billing.unissue',
+    'dashboard.read',
   ]),
   manager: new Set([
     'buildings.read',
@@ -44,6 +45,7 @@ const PERMISSIONS: Record<UserRole, Set<string>> = {
     'contract-services.write',
     'billing.read',
     'billing.write',
+    'dashboard.read',
   ]),
 }
 

@@ -181,3 +181,34 @@ The CI test step SHALL enforce minimum coverage thresholds on billing service co
 #### Scenario: Coverage failure fails CI
 - **WHEN** coverage drops below the configured threshold for billing services
 - **THEN** the test step exits non-zero and the CI build fails
+
+### Requirement: Billing consistency regression coverage
+The billing test suite SHALL cover shared billable-contract eligibility, required-reading progress, actor enrichment, and async confirmation behavior.
+
+#### Scenario: Eligibility helper covered
+- **WHEN** billing service tests run
+- **THEN** they assert which contract statuses are included or excluded for a selected period
+
+#### Scenario: Reading progress helper covered
+- **WHEN** billing service tests run for meter-based, fixed, and per-person utility pricing
+- **THEN** they assert required and complete reading counts match the shared helper behavior
+
+#### Scenario: Confirmation behavior covered
+- **WHEN** component tests simulate failed issue or close mutations
+- **THEN** they assert modal and selection state are not cleared prematurely
+
+### Requirement: Draft grid refactor regression coverage
+The billing test suite SHALL protect draft-grid behavior that is moved into composables or child components.
+
+#### Scenario: Extracted autosave covered
+- **WHEN** autosave state is extracted from the draft-grid component
+- **THEN** tests cover dirty cell detection, saved-state persistence without refresh, and save failure preserving local values
+
+#### Scenario: Extracted navigation covered
+- **WHEN** keyboard navigation or focused-cell paste logic is extracted
+- **THEN** tests cover Tab, Enter, Shift modifiers, downstream paste, and read-only row skipping
+
+#### Scenario: Extracted override and expanded row covered
+- **WHEN** override or expanded-row rendering is extracted
+- **THEN** tests cover override payload construction and discrepancy intent emission
+

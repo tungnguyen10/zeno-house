@@ -1,6 +1,7 @@
 import type { H3Event } from 'h3'
 import { serverSupabaseClient } from '#supabase/server'
 import type { AuthUser } from '~/types/auth'
+import type { Database } from '~/types/database.types'
 import type {
   Invoice,
   InvoiceCharge,
@@ -20,9 +21,9 @@ import { InvoicePaymentRepository } from '../../repositories/billing/payments'
 import { assertReason } from '../../utils/billing/reason'
 import { BillingAuditService } from './audit'
 import { BillingDraftService } from './drafts'
-import { BillingPeriodService } from './periods'
 import { BillingDisplayResolver } from './display'
 import { validateAdjustment } from './rules'
+import { mapInvoice } from '~/utils/mappers/billing'
 
 export const InvoiceService = {
   async list(event: H3Event, user: AuthUser, billingPeriodId: string): Promise<Invoice[]> {
@@ -55,6 +56,11 @@ export const InvoiceService = {
    * server-side first so the invoice snapshot reflects fresh data and any
    * blockers are re-checked. Skips contracts that have an existing non-void
    * invoice in the period.
+   *
+   * The DB write is delegated to the `public.issue_period_invoices` PL/pgSQL
+   * function so all invoices + charges + invoice-code allocation + period
+   * status transition + audit events commit in a single transaction. Any
+   * failure aborts the entire batch (no partial commits).
    */
   async issueInvoices(
     event: H3Event,
@@ -78,7 +84,6 @@ export const InvoiceService = {
     )
 
     if (candidates.length === 0) {
-      // Audit the issue attempt with no result so blockers stay traceable.
       await BillingAuditService.append(event, user, {
         billing_period_id: period.id,
         action: BILLING_AUDIT_ACTIONS.ISSUE_ATTEMPTED,
@@ -95,56 +100,58 @@ export const InvoiceService = {
     }
 
     const issuedAt = new Date().toISOString()
-    const issuedInvoices: Invoice[] = []
+    const draftsPayload = candidates.map(draft => ({
+      contract_id: draft.contractId,
+      room_id: draft.roomId,
+      tenant_id: draft.tenantId,
+      subtotal: draft.subtotalAmount,
+      discount: draft.discountAmount,
+      surcharge: draft.surchargeAmount,
+      total: draft.totalAmount,
+      notes: null,
+      lines: draft.lines.map((l, idx) => ({
+        charge_type: l.chargeType,
+        label: l.label,
+        source_type: l.sourceType,
+        source_id: l.sourceId,
+        quantity: l.quantity,
+        unit_price: l.unitPrice,
+        amount: l.amount,
+        metadata: l.metadata ?? {},
+        sort_order: l.sortOrder ?? idx,
+      })),
+    }))
 
-    for (const draft of candidates) {
-      const { invoice } = await InvoiceRepository.issueOne(
-        event,
-        {
-          billing_period_id: period.id,
-          contract_id: draft.contractId,
-          room_id: draft.roomId,
-          tenant_id: draft.tenantId,
-          due_date: input.due_date ?? null,
-          issued_at: issuedAt,
-          subtotal: draft.subtotalAmount,
-          discount: draft.discountAmount,
-          surcharge: draft.surchargeAmount,
-          total: draft.totalAmount,
-          notes: null,
+    const client = await serverSupabaseClient(event)
+    // Cast args: supabase typegen does not reflect SQL DEFAULT NULL on params,
+    // and the recursive `Json` type rejects `Record<string, unknown>` metadata.
+    const args = {
+      p_period_id: period.id,
+      p_actor_id: user.id ?? null,
+      p_due_date: input.due_date ?? null,
+      p_issued_at: issuedAt,
+      p_requested_contract_ids: input.contract_ids ?? null,
+      p_drafts: draftsPayload,
+    } as unknown as Database['public']['Functions']['issue_period_invoices']['Args']
+    const { data, error } = await client.rpc('issue_period_invoices', args)
+    if (error) {
+      // Closed-period guard collisions surface here as CONFLICT; everything
+      // else is a 500.
+      const status = error.code === 'P0001' ? 409 : 500
+      throw createError({
+        statusCode: status,
+        data: {
+          error: {
+            code: status === 409 ? 'CONFLICT' : 'INTERNAL',
+            message: error.message,
+          },
         },
-        draft.lines.map(l => ({
-          charge_type: l.chargeType,
-          label: l.label,
-          source_type: l.sourceType,
-          source_id: l.sourceId,
-          quantity: l.quantity,
-          unit_price: l.unitPrice,
-          amount: l.amount,
-          metadata: l.metadata,
-          sort_order: l.sortOrder,
-        })),
-      )
-      issuedInvoices.push(invoice)
+      })
     }
 
-    // Move period to `issued` if it was in an earlier status.
-    if (period.status !== 'issued' && period.status !== 'collecting') {
-      await BillingPeriodService.advanceStatus(event, user, period.id, 'issued')
-    }
-
-    await BillingAuditService.append(event, user, {
-      billing_period_id: period.id,
-      action: BILLING_AUDIT_ACTIONS.INVOICES_ISSUED,
-      entity_type: 'billing_period',
-      entity_id: period.id,
-      metadata: {
-        issued_count: issuedInvoices.length,
-        invoice_ids: issuedInvoices.map(i => i.id),
-        requested_contract_ids: input.contract_ids ?? null,
-        due_date: input.due_date ?? null,
-      },
-    })
+    const issuedInvoices = ((data as Array<Record<string, unknown>> | null) ?? []).map(row =>
+      mapInvoice(row as never),
+    )
 
     return {
       issuedCount: issuedInvoices.length,
@@ -360,7 +367,6 @@ export const InvoiceService = {
       .single()
     if (updErr) throw createError({ statusCode: 500, message: updErr.message })
 
-    const { mapInvoice } = await import('~/utils/mappers/billing')
     const updated = mapInvoice(updRow)
 
     await BillingAuditService.append(event, user, {

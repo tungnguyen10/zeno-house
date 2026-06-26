@@ -15,6 +15,13 @@ const append = vi.fn()
 const calculateDraft = vi.fn()
 const enrichInvoices = vi.fn(async invoices => invoices)
 const enrichPayments = vi.fn(async payments => payments)
+const rpcMock = vi.fn()
+
+vi.mock('#supabase/server', () => ({
+  serverSupabaseClient: vi.fn(async () => ({
+    rpc: rpcMock,
+  })),
+}))
 
 vi.mock('../../../server/repositories/billing/invoices', () => ({
   InvoiceRepository: {
@@ -102,8 +109,8 @@ describe('InvoiceService invoice lifecycle methods', () => {
     }))
   })
 
-  it('issues only ready drafts and preserves invoice charge calculation metadata', async () => {
-    findPeriodById.mockResolvedValue(buildPeriod({ id: 'period-1', status: 'issued' }))
+  it('forwards issuable drafts to issue_period_invoices and returns the issued rows', async () => {
+    findPeriodById.mockResolvedValue(buildPeriod({ id: 'period-1', status: 'review' }))
     const issued = buildInvoice({ id: 'invoice-issued', totalAmount: 1_720_000 })
     calculateDraft.mockResolvedValue({
       totals: {
@@ -172,7 +179,35 @@ describe('InvoiceService invoice lifecycle methods', () => {
         },
       ],
     })
-    issueOne.mockResolvedValue({ invoice: issued, charges: [] })
+    rpcMock.mockResolvedValueOnce({
+      data: [{
+        id: issued.id,
+        invoice_code: issued.invoiceCode,
+        billing_period_id: issued.billingPeriodId,
+        contract_id: issued.contractId,
+        room_id: issued.roomId,
+        tenant_id: issued.tenantId,
+        status: 'issued',
+        due_date: '2026-06-05',
+        issued_at: issued.issuedAt,
+        paid_at: null,
+        voided_at: null,
+        voided_by: null,
+        void_reason: null,
+        superseded_by_invoice_id: null,
+        supersedes_invoice_id: null,
+        subtotal_amount: 1_820_000,
+        discount_amount: 100_000,
+        surcharge_amount: 0,
+        total_amount: 1_720_000,
+        paid_amount: 0,
+        balance_amount: 1_720_000,
+        notes: null,
+        created_at: issued.createdAt,
+        updated_at: issued.updatedAt,
+      }],
+      error: null,
+    })
     const { InvoiceService } = await import('../../../server/services/billing/invoices')
 
     const result = await InvoiceService.issueInvoices(
@@ -183,33 +218,40 @@ describe('InvoiceService invoice lifecycle methods', () => {
     )
 
     expect(result.issuedCount).toBe(1)
-    expect(issueOne).toHaveBeenCalledTimes(1)
-    expect(issueOne).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({
+    // The TS issueOne loop is gone; only the RPC is called.
+    expect(issueOne).not.toHaveBeenCalled()
+    expect(rpcMock).toHaveBeenCalledTimes(1)
+    const [fnName, args] = rpcMock.mock.calls[0]!
+    expect(fnName).toBe('issue_period_invoices')
+    expect(args).toMatchObject({
+      p_period_id: 'period-1',
+      p_actor_id: 'user-1',
+      p_due_date: '2026-06-05',
+      p_drafts: [expect.objectContaining({
         contract_id: 'contract-ready',
         total: 1_720_000,
-      }),
-      [expect.objectContaining({
-        charge_type: 'electricity',
-        source_type: 'override',
-        source_id: 'override-1',
-        quantity: 35,
-        metadata: expect.objectContaining({
-          source: 'usage_override',
-          previous_reading_value: 100,
-          current_reading_value: 5,
-          old_meter_final_value: 130,
-          new_meter_start_value: 0,
-          billable_usage: 35,
-          pricing_type: 'per_kwh',
-        }),
+        lines: [expect.objectContaining({
+          charge_type: 'electricity',
+          source_type: 'override',
+          source_id: 'override-1',
+          quantity: 35,
+          metadata: expect.objectContaining({
+            source: 'usage_override',
+            previous_reading_value: 100,
+            current_reading_value: 5,
+            billable_usage: 35,
+            pricing_type: 'per_kwh',
+          }),
+        })],
       })],
+    })
+    // `invoices.issued` audit is now emitted inside the RPC, NOT by the
+    // service — make sure we don't double-write it from TS.
+    expect(append).not.toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      expect.objectContaining({ action: 'invoices.issued' }),
     )
-    expect(append).toHaveBeenCalledWith(expect.anything(), expect.anything(), expect.objectContaining({
-      action: 'invoices.issued',
-      metadata: expect.objectContaining({ issued_count: 1, invoice_ids: ['invoice-issued'] }),
-    }))
   })
 
   it('audits an issue attempt and creates no invoices when all drafts are blocked or already issued', async () => {
@@ -314,5 +356,71 @@ describe('InvoiceService invoice lifecycle methods', () => {
         replacement_for_invoice_id: voided.id,
       }),
     }))
+  })
+
+  // After the RPC hardening, a charge-write failure inside the PL/pgSQL
+  // function aborts the whole transaction. The service only sees an error
+  // envelope; no invoices are returned, no `invoices.issued` audit fires from
+  // TS, and the issuable count is preserved for retry.
+  it('aborts the whole batch and writes no success audit when issue_period_invoices fails', async () => {
+    findPeriodById.mockResolvedValue(buildPeriod({ id: 'period-1', status: 'review' }))
+    const buildDraft = (contractId: string, totalAmount: number) => ({
+      contractId,
+      roomId: `room-${contractId}`,
+      tenantId: `tenant-${contractId}`,
+      subtotalAmount: totalAmount,
+      discountAmount: 0,
+      surchargeAmount: 0,
+      totalAmount,
+      blockers: [],
+      existingInvoiceId: null,
+      lines: [{
+        chargeType: 'rent',
+        label: 'Rent',
+        sourceType: null,
+        sourceId: null,
+        quantity: 1,
+        unitPrice: totalAmount,
+        amount: totalAmount,
+        sortOrder: 0,
+        metadata: {},
+      }],
+    })
+    calculateDraft.mockResolvedValue({
+      totals: { blockedDraftCount: 0, issuableDraftCount: 3 },
+      drafts: [
+        buildDraft('contract-1', 1_000_000),
+        buildDraft('contract-2', 2_000_000),
+        buildDraft('contract-3', 3_000_000),
+      ],
+    })
+
+    rpcMock.mockResolvedValueOnce({
+      data: null,
+      error: { code: 'P0001', message: 'invoice line sum does not match declared total for contract contract-3' },
+    })
+
+    const { InvoiceService } = await import('../../../server/services/billing/invoices')
+
+    await expect(
+      InvoiceService.issueInvoices(
+        {} as never,
+        { id: 'user-1' } as never,
+        'period-1',
+        { due_date: '2026-06-05' },
+      ),
+    ).rejects.toMatchObject({
+      statusCode: 409,
+      data: { error: { code: 'CONFLICT' } },
+    })
+
+    // RPC was called exactly once with all three drafts (atomic batch).
+    expect(rpcMock).toHaveBeenCalledTimes(1)
+    expect((rpcMock.mock.calls[0]![1] as { p_drafts: unknown[] }).p_drafts).toHaveLength(3)
+
+    // No TS-side audit append — both `invoices.issued` and the period status
+    // transition audit are now inside the RPC and never fire on a failed
+    // transaction.
+    expect(append).not.toHaveBeenCalled()
   })
 })

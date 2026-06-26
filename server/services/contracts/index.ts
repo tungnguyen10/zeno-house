@@ -7,6 +7,7 @@ import { ContractServiceService } from '../contract-services'
 import { ContractOccupantRepository } from '../../repositories/contract-occupants'
 import { RoomRepository } from '../../repositories/rooms'
 import { BuildingRepository } from '../../repositories/buildings'
+import { TenantRepository } from '../../repositories/tenants'
 
 export const ContractService = {
   async list(
@@ -15,13 +16,34 @@ export const ContractService = {
     filters: ContractFilters,
   ): Promise<{ items: ContractWithDetails[]; total: number }> {
     if (!can(user, 'contracts.read')) throwForbidden('Không có quyền xem danh sách hợp đồng')
+
     let buildingId = filters.building_id
     if (buildingId) {
       const building = await BuildingRepository.findByIdentifier(event, buildingId)
       if (!building) throwNotFound('Building not found')
       buildingId = building.id
     }
-    return ContractRepository.findAll(event, { ...filters, building_id: buildingId })
+
+    let roomId = filters.room_id
+    if (roomId) {
+      const room = await RoomRepository.findByIdentifier(event, roomId)
+      if (!room) throwNotFound('Room not found')
+      roomId = room.id
+    }
+
+    let tenantId = filters.tenant_id
+    if (tenantId) {
+      const tenant = await TenantRepository.findByIdentifier(event, tenantId)
+      if (!tenant) throwNotFound('Tenant not found')
+      tenantId = tenant.id
+    }
+
+    return ContractRepository.findAll(event, {
+      ...filters,
+      building_id: buildingId,
+      room_id: roomId,
+      tenant_id: tenantId,
+    })
   },
 
   async get(event: H3Event, user: AuthUser, id: string): Promise<ContractWithDetails> {

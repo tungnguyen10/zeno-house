@@ -271,7 +271,7 @@ export type Database = {
         Insert: {
           address: string
           billing_generation_day?: number | null
-          code?: string
+          code: string
           created_at?: string
           default_electricity_rate?: number | null
           default_water_rate?: number | null
@@ -285,7 +285,7 @@ export type Database = {
           owner_name?: string | null
           owner_phone?: string | null
           payment_due_day?: number | null
-          slug?: string
+          slug: string
           status?: string
           updated_at?: string
           water_pricing_type?: string
@@ -548,7 +548,7 @@ export type Database = {
         }
         Insert: {
           building_id: string
-          contract_code?: string
+          contract_code: string
           created_at?: string
           deposit?: number
           discount_amount?: number
@@ -753,7 +753,7 @@ export type Database = {
           discount_amount?: number
           due_date?: string | null
           id?: string
-          invoice_code?: string
+          invoice_code: string
           issued_at?: string | null
           notes?: string | null
           paid_amount?: number
@@ -944,14 +944,14 @@ export type Database = {
         Insert: {
           area?: number | null
           building_id: string
-          code?: string
+          code: string
           created_at?: string
           description?: string | null
           floor?: number
           id?: string
           monthly_rent?: number
           room_number: string
-          slug?: string
+          slug: string
           status?: string
           updated_at?: string
         }
@@ -1036,7 +1036,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          code?: string
+          code: string
           created_at?: string
           date_of_birth?: string | null
           email?: string | null
@@ -1080,7 +1080,70 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      issue_period_invoices: {
+        Args: {
+          p_actor_id: string
+          p_drafts: Json
+          p_due_date: string
+          p_issued_at: string
+          p_period_id: string
+          p_requested_contract_ids: string[]
+        }
+        Returns: {
+          balance_amount: number
+          billing_period_id: string
+          contract_id: string
+          created_at: string
+          discount_amount: number
+          due_date: string | null
+          id: string
+          invoice_code: string
+          issued_at: string | null
+          notes: string | null
+          paid_amount: number
+          paid_at: string | null
+          room_id: string
+          status: string
+          subtotal_amount: number
+          superseded_by_invoice_id: string | null
+          supersedes_invoice_id: string | null
+          surcharge_amount: number
+          tenant_id: string
+          total_amount: number
+          updated_at: string
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "invoices"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      record_bulk_payments: {
+        Args: { p_actor_id: string; p_payments: Json }
+        Returns: {
+          amount: number
+          created_at: string
+          id: string
+          invoice_id: string
+          note: string | null
+          paid_at: string
+          payment_method: string | null
+          recorded_by: string | null
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "invoice_payments"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      slugify_text: { Args: { input: string }; Returns: string }
+      unaccent: { Args: { "": string }; Returns: string }
     }
     Enums: {
       utility_type: "electricity" | "water"

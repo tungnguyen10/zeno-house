@@ -42,3 +42,47 @@ describe('billing runtime SQL RLS', () => {
     expect(sql).not.toContain('billing_audit_events_manager_delete')
   })
 })
+
+const rpcSql = readFileSync(
+  resolve(process.cwd(), 'supabase/migrations/20260626000000_billing_transaction_rpcs.sql'),
+  'utf8',
+)
+
+describe('billing transaction RPCs SQL', () => {
+  it('defines issue_period_invoices with advisory lock + invariant + audit', () => {
+    expect(rpcSql).toMatch(/CREATE OR REPLACE FUNCTION public\.issue_period_invoices/)
+    expect(rpcSql).toMatch(/RETURNS SETOF public\.invoices/)
+    expect(rpcSql).toMatch(/pg_advisory_xact_lock\s*\(\s*hashtextextended/)
+    // Per-draft sum invariant
+    expect(rpcSql).toMatch(/invoice line sum .* does not match declared total/)
+    // Period status + invoices.issued audit
+    expect(rpcSql).toContain("'period.status_changed'")
+    expect(rpcSql).toContain("'invoices.issued'")
+    // Closed period guard
+    expect(rpcSql).toMatch(/billing period .* is closed/)
+  })
+
+  it('defines record_bulk_payments with row lock + structured failure details + bulk audit', () => {
+    expect(rpcSql).toMatch(/CREATE OR REPLACE FUNCTION public\.record_bulk_payments/)
+    expect(rpcSql).toMatch(/RETURNS SETOF public\.invoice_payments/)
+    // Row-level lock to make read-modify-write race-free
+    expect(rpcSql).toMatch(/FROM public\.invoices[\s\S]*FOR UPDATE/)
+    // Structured exceptions carry failed_index / failed_reason so the service
+    // can map back to the CONFLICT envelope.
+    expect(rpcSql).toContain("'failed_index'")
+    expect(rpcSql).toContain("'failed_reason'")
+    expect(rpcSql).toMatch(/ERRCODE\s*=\s*'P0001'/)
+    // Period transition + single bulk audit
+    expect(rpcSql).toContain("'period.status_changed'")
+    expect(rpcSql).toContain("'payments.bulk_recorded'")
+    // Overpayment, void, closed-period guards
+    expect(rpcSql).toMatch(/amount % exceeds balance/)
+    expect(rpcSql).toMatch(/invoice .* is void/)
+    expect(rpcSql).toMatch(/period of invoice .* is closed/)
+  })
+
+  it('grants execute on both functions to authenticated', () => {
+    expect(rpcSql).toMatch(/GRANT EXECUTE ON FUNCTION public\.issue_period_invoices.*TO authenticated/)
+    expect(rpcSql).toMatch(/GRANT EXECUTE ON FUNCTION public\.record_bulk_payments.*TO authenticated/)
+  })
+})

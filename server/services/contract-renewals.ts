@@ -83,9 +83,15 @@ export const ContractRenewalService = {
 
     // Now insert successor as active. If this fails, roll the old contract back to `active`
     // so the room is not left orphaned without an active contract.
+    const newContractCode = await ContractRepository.allocateContractCode(
+      event,
+      contract.buildingId,
+      contract.endDate,
+    )
     const { data: newContractData, error: insertError } = await client
       .from('contracts')
       .insert({
+        contract_code: newContractCode,
         room_id: contract.roomId,
         tenant_id: contract.tenantId,
         building_id: contract.buildingId,

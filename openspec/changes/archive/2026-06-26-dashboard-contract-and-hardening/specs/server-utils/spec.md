@@ -1,45 +1,4 @@
-## Purpose
-Defines shared server utility behavior for typed errors, authenticated users, and permission checks.
-
-## Requirements
-
-### Requirement: Typed error throwing helpers
-`server/utils/errors.ts` SHALL export `throwForbidden(message?)`, `throwNotFound(message?)`, `throwValidationError(message?, details?)`, `throwConflict(message?)`. Mỗi helper SHALL throw `createError` với đúng HTTP status code và `{ error: { code, message } }` shape.
-
-#### Scenario: throwForbidden ném 403
-- **WHEN** `throwForbidden()` được gọi
-- **THEN** thrown error có statusCode 403 và `error.code === 'FORBIDDEN'`
-
-#### Scenario: throwNotFound ném 404
-- **WHEN** `throwNotFound()` được gọi
-- **THEN** thrown error có statusCode 404 và `error.code === 'NOT_FOUND'`
-
-#### Scenario: throwValidationError ném 422 với details
-- **WHEN** `throwValidationError('Dữ liệu không hợp lệ', zodError.flatten())` được gọi
-- **THEN** thrown error có statusCode 422, `error.code === 'VALIDATION_ERROR'`, và `error.details` chứa Zod flatten output
-
-#### Scenario: throwConflict ném 409
-- **WHEN** `throwConflict()` được gọi
-- **THEN** thrown error có statusCode 409 và `error.code === 'CONFLICT'`
-
-#### Scenario: Custom message
-- **WHEN** helper được gọi với custom message string
-- **THEN** `error.message` là custom string đó, không phải default message
-
----
-
-### Requirement: `requireAuth()` trả về AuthUser
-`server/utils/auth.ts` `requireAuth(event)` SHALL là async function, gọi `serverSupabaseUser(event)`, và trả về `AuthUser`. Nếu user null, SHALL throw 401 với `UNAUTHENTICATED` code.
-
-#### Scenario: Authenticated request
-- **WHEN** request có valid Supabase session cookie
-- **THEN** `requireAuth(event)` resolve với `AuthUser` object (không throw)
-
-#### Scenario: Unauthenticated request
-- **WHEN** request không có session hoặc session hết hạn
-- **THEN** `requireAuth(event)` throw error với statusCode 401 và `error.code === 'UNAUTHENTICATED'`
-
----
+## MODIFIED Requirements
 
 ### Requirement: `can()` permission check
 `server/utils/permissions.ts` SHALL export `can(user: AuthUser, capability: string): boolean`. Permission được xác định bởi `user.app_metadata.role` mapping sang tập capabilities. Admin có toàn quyền, manager có subset. Capability `dashboard.read` SHALL được cấp cho cả `admin` và `manager`.
@@ -71,6 +30,8 @@ Defines shared server utility behavior for typed errors, authenticated users, an
 #### Scenario: User không có role không có dashboard.read
 - **WHEN** `user.app_metadata.role` là `null` và `can(user, 'dashboard.read')` được gọi
 - **THEN** return `false`
+
+## ADDED Requirements
 
 ### Requirement: `throwInternal()` error helper
 `server/utils/errors.ts` SHALL export `throwInternal(originalError: unknown, context?: string): never` that throws a Nuxt error with statusCode 500 and body shaped as `{ error: { code: 'INTERNAL', message: 'Lỗi hệ thống, vui lòng thử lại.', details?: { context } } }`. The function SHALL log the original error (including any Supabase-specific fields like `message`, `code`, `details`, `hint`) to the server console for debugging. The function SHALL NOT include the original error message in the response body.
