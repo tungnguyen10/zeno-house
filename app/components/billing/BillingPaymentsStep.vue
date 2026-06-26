@@ -93,11 +93,11 @@ const columns: UiTableColumn<Invoice>[] = [
   { key: 'select', label: '', width: 'w-10' },
   { key: 'tenant', label: 'Hợp đồng' },
   { key: 'status', label: 'Trạng thái', width: 'w-32' },
-  { key: 'totalAmount', label: 'Tổng tiền', numeric: true, hideOnMobile: true },
-  { key: 'paidAmount', label: 'Đã thu', numeric: true, hideOnMobile: true },
-  { key: 'balanceAmount', label: 'Còn lại', numeric: true },
-  { key: 'dueDate', label: 'Hạn', hideOnMobile: true, width: 'w-28' },
-  { key: 'actions', label: '', action: true, width: 'w-44' },
+  { key: 'totalAmount', label: 'Tổng tiền', numeric: true, hideOnMobile: true, width: 'w-28' },
+  { key: 'paidAmount', label: 'Đã thu', numeric: true, hideOnMobile: true, width: 'w-28' },
+  { key: 'balanceAmount', label: 'Còn lại', numeric: true, width: 'w-28' },
+  { key: 'dueDate', label: 'Hạn', hideOnMobile: true, width: 'w-20' },
+  { key: 'actions', label: '', action: true, width: 'w-36' },
 ]
 
 const voidedColumns: UiTableColumn<Invoice>[] = [
@@ -415,6 +415,9 @@ watch(
 
       <UiToolbar>
         <UiSelect v-model="filterStatus" :options="filterOptions" class="w-44" />
+        <span class="text-xs text-muted">
+          {{ filteredInvoices.length }} / {{ activeInvoices.length }} hoá đơn
+        </span>
         <template #actions>
           <UiButton
             v-if="bulkCandidates.length > 0 && !periodIsClosed"
@@ -443,37 +446,39 @@ watch(
           />
         </template>
         <template #cell-tenant="{ row }">
-          <UiButton variant="ghost" size="sm" class="!px-0 !py-0 !h-auto text-left" @click="openDetail(row)">
-            <span class="block">
-              <span class="block text-white text-sm">{{ invoiceDisplay(row).title }}</span>
-              <span class="block text-xs text-muted">{{ invoiceDisplay(row).subtitle }}</span>
+          <button
+            type="button"
+            class="group flex min-w-0 max-w-full flex-col items-start text-left"
+            @click.stop="openDetail(row)"
+          >
+            <span class="block truncate text-sm font-medium text-white group-hover:text-cyan">
+              {{ invoiceDisplay(row).title }}
             </span>
-          </UiButton>
+            <span class="block truncate text-xs text-muted">{{ invoiceDisplay(row).subtitle }}</span>
+          </button>
         </template>
         <template #cell-status="{ row }">
           <UiStatusBadge :status="row.status" context="invoice" />
         </template>
         <template #cell-totalAmount="{ row }">{{ formatCurrency(row.totalAmount) }}</template>
-        <template #cell-paidAmount="{ row }">{{ formatCurrency(row.paidAmount) }}</template>
+        <template #cell-paidAmount="{ row }">
+          <span :class="row.paidAmount === 0 ? 'text-muted' : ''">{{ formatCurrency(row.paidAmount) }}</span>
+        </template>
         <template #cell-balanceAmount="{ row }">
-          <span :class="row.balanceAmount > 0 ? 'text-error-vivid' : 'text-success-neon'">
+          <span :class="row.balanceAmount > 0 ? 'text-error-vivid font-medium' : 'text-success-neon'">
             {{ formatCurrency(row.balanceAmount) }}
           </span>
         </template>
-        <template #cell-dueDate="{ row }">{{ row.dueDate ?? '—' }}</template>
+        <template #cell-dueDate="{ row }">
+          <span :class="row.dueDate ? '' : 'text-muted'">{{ row.dueDate ?? '—' }}</span>
+        </template>
         <template #cell-actions="{ row }">
-          <div class="flex items-center justify-end gap-1">
-            <NuxtLink
-              :to="invoicePath(row)"
-              class="inline-flex h-8 items-center justify-center rounded-md px-3 text-xs font-medium text-muted transition hover:bg-dark-hover hover:text-white"
-              @click.stop
-            >
-              Mở
-            </NuxtLink>
+          <div class="flex items-center justify-end gap-1 whitespace-nowrap">
             <UiButton
               v-if="row.status === 'issued' || row.status === 'partial' || row.status === 'overdue'"
               size="sm"
-              variant="secondary"
+              variant="primary"
+              class="whitespace-nowrap"
               :disabled="periodIsClosed"
               @click.stop="startPayment(row)"
             >
@@ -483,6 +488,7 @@ watch(
               v-if="row.status === 'issued' && row.paidAmount === 0"
               size="sm"
               variant="ghost"
+              class="whitespace-nowrap"
               :disabled="periodIsClosed"
               @click.stop="startVoid(row)"
             >
@@ -492,6 +498,7 @@ watch(
               v-if="row.status === 'paid' || row.status === 'partial'"
               size="sm"
               variant="ghost"
+              class="whitespace-nowrap"
               :disabled="periodIsClosed"
               @click.stop="startAdjustment(row)"
             >
@@ -534,8 +541,13 @@ watch(
       </UiTable>
     </UiSection>
 
-    <!-- Detail / payments history modal -->
-    <UiModal :open="!!selectedInvoice && !showPaymentModal && !showVoidModal && !showAdjustmentModal" title="Chi tiết hoá đơn" size="lg" @close="closeDetail">
+    <!-- Detail / payments history drawer -->
+    <UiDrawer
+      :model-value="!!selectedInvoice && !showPaymentModal && !showVoidModal && !showAdjustmentModal"
+      title="Chi tiết hoá đơn"
+      width="w-full sm:w-[480px]"
+      @update:model-value="(open) => { if (!open) closeDetail() }"
+    >
       <div class="space-y-4">
         <UiAlert v-if="detailError" severity="danger">{{ detailError }}</UiAlert>
         <div v-if="detailLoading">
@@ -543,24 +555,10 @@ watch(
         </div>
         <template v-else-if="selectedInvoice">
           <UiSection title="Khoản phí" description="Snapshot tại thời điểm phát hành — không bị ảnh hưởng khi giá thay đổi sau này.">
-            <UiTable
-              :rows="selectedInvoice.charges"
-              :columns="[
-                { key: 'label', label: 'Khoản phí' },
-                { key: 'quantity', label: 'SL', numeric: true, hideOnMobile: true, width: 'w-20' },
-                { key: 'unitPrice', label: 'Đơn giá', numeric: true, hideOnMobile: true },
-                { key: 'amount', label: 'Thành tiền', numeric: true },
-              ]"
-              row-key="id"
-            >
-              <template #cell-label="{ row }">
-                <UiStatusBadge :status="row.chargeType" context="correction" />
-                <span class="ml-2">{{ row.label }}</span>
-              </template>
-              <template #cell-quantity="{ row }">{{ row.quantity }}</template>
-              <template #cell-unitPrice="{ row }">{{ formatCurrency(row.unitPrice) }}</template>
-              <template #cell-amount="{ row }">{{ formatCurrency(row.amount) }}</template>
-            </UiTable>
+            <BillingChargeBreakdown
+              :lines="selectedInvoice.charges"
+              :total-amount="selectedInvoice.invoice.totalAmount"
+            />
           </UiSection>
 
           <UiSection title="Lịch sử thanh toán">
@@ -586,9 +584,18 @@ watch(
         </template>
       </div>
       <template #footer>
-        <UiButton variant="secondary" @click="closeDetail">Đóng</UiButton>
+        <div class="flex items-center justify-between gap-3">
+          <NuxtLink
+            v-if="selectedInvoice"
+            :to="invoicePath(selectedInvoice.invoice)"
+            class="inline-flex h-8 items-center justify-center rounded-md px-3 text-xs font-medium text-muted transition hover:bg-dark-hover hover:text-white"
+          >
+            Mở trang chi tiết
+          </NuxtLink>
+          <UiButton variant="secondary" @click="closeDetail">Đóng</UiButton>
+        </div>
       </template>
-    </UiModal>
+    </UiDrawer>
 
     <!-- Record payment -->
     <UiModal :open="showPaymentModal" title="Ghi nhận thanh toán" @close="showPaymentModal = false">

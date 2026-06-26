@@ -57,6 +57,8 @@ function statusLabel(s: string) {
   }
 }
 
+type QueueKey = 'needsReadings' | 'readyToReview' | 'issuedCollecting' | 'hasDebt' | 'closed'
+
 const queueGroups = computed(() => {
   const list = periods.value
   const needsReadings = list.filter(p =>
@@ -70,25 +72,51 @@ const queueGroups = computed(() => {
   return { needsReadings, readyToReview, issuedCollecting, hasDebt, closed }
 })
 
-const queueMetrics = computed(() => [
-  { label: 'Cần nhập chỉ số', value: queueGroups.value.needsReadings.length, tone: 'warning' as const },
-  { label: 'Soát chờ phát hành', value: queueGroups.value.readyToReview.length, tone: 'accent' as const },
-  { label: 'Đang thu', value: queueGroups.value.issuedCollecting.length, tone: 'default' as const },
-  { label: 'Còn công nợ', value: queueGroups.value.hasDebt.length, tone: 'danger' as const },
-  { label: 'Đã chốt', value: queueGroups.value.closed.length, tone: 'success' as const },
+const queueMetrics = computed<Array<{ key: QueueKey; label: string; shortLabel: string; value: number; tone: 'warning' | 'accent' | 'default' | 'danger' | 'success' }>>(() => [
+  { key: 'needsReadings', label: 'Cần nhập chỉ số', shortLabel: 'Nhập chỉ số', value: queueGroups.value.needsReadings.length, tone: 'warning' },
+  { key: 'readyToReview', label: 'Soát chờ phát hành', shortLabel: 'Chờ phát hành', value: queueGroups.value.readyToReview.length, tone: 'accent' },
+  { key: 'issuedCollecting', label: 'Đang thu', shortLabel: 'Đang thu', value: queueGroups.value.issuedCollecting.length, tone: 'default' },
+  { key: 'hasDebt', label: 'Còn công nợ', shortLabel: 'Công nợ', value: queueGroups.value.hasDebt.length, tone: 'danger' },
+  { key: 'closed', label: 'Đã chốt', shortLabel: 'Đã chốt', value: queueGroups.value.closed.length, tone: 'success' },
 ])
+
+const activeQueue = ref<QueueKey | null>(null)
+function toggleQueue(key: QueueKey) {
+  activeQueue.value = activeQueue.value === key ? null : key
+}
+
+const displayedPeriods = computed(() => {
+  if (!activeQueue.value) return periods.value
+  return queueGroups.value[activeQueue.value]
+})
+
+const QUEUE_CHIP_TONE: Record<'warning' | 'accent' | 'default' | 'danger' | 'success', { value: string; ring: string; dot: string }> = {
+  warning: { value: 'text-warning', ring: 'ring-warning/40 border-warning/60', dot: 'bg-warning' },
+  accent: { value: 'text-cyan', ring: 'ring-cyan/40 border-cyan/60', dot: 'bg-cyan' },
+  default: { value: 'text-white', ring: 'ring-white/20 border-white/30', dot: 'bg-white/60' },
+  danger: { value: 'text-error-vivid', ring: 'ring-error/40 border-error/60', dot: 'bg-error-vivid' },
+  success: { value: 'text-success-neon', ring: 'ring-success-neon/40 border-success-neon/60', dot: 'bg-success-neon' },
+}
 
 const columns: UiTableColumn<BillingPeriodSummary>[] = [
   { key: 'building', label: 'Tòa nhà' },
-  { key: 'period', label: 'Kỳ', width: 'w-24' },
+  { key: 'period', label: 'Kỳ', width: 'w-20' },
   { key: 'status', label: 'Trạng thái', width: 'w-32' },
-  { key: 'reading', label: 'Chỉ số', numeric: true, hideOnMobile: true },
-  { key: 'invoiceCount', label: 'Hoá đơn', numeric: true, hideOnMobile: true },
-  { key: 'issuedTotal', label: 'Phát hành', numeric: true, hideOnMobile: true },
-  { key: 'paidTotal', label: 'Đã thu', numeric: true, hideOnMobile: true },
-  { key: 'outstanding', label: 'Công nợ', numeric: true },
-  { key: 'open', label: '', action: true, width: 'w-28' },
+  { key: 'reading', label: 'Chỉ số', numeric: true, hideOnMobile: true, width: 'w-20' },
+  { key: 'invoiceCount', label: 'Hoá đơn', numeric: true, hideOnMobile: true, width: 'w-20' },
+  { key: 'collection', label: 'Tiến độ thu', hideOnMobile: true, width: 'w-56' },
+  { key: 'outstanding', label: 'Công nợ', numeric: true, width: 'w-32' },
+  { key: 'open', label: '', action: true, width: 'w-8' },
 ]
+
+function collectionRatio(row: BillingPeriodSummary): number {
+  if (row.issuedTotal <= 0) return 0
+  return Math.max(0, Math.min(1, row.paidTotal / row.issuedTotal))
+}
+
+function isClosed(row: BillingPeriodSummary): boolean {
+  return row.period.status === 'closed'
+}
 
 const showOpenModal = ref(false)
 const openForm = reactive({
@@ -160,15 +188,33 @@ function periodLabel(row: BillingPeriodSummary): string {
       </template>
     </UiPageHeader>
 
-    <div class="grid grid-cols-2 gap-3 md:grid-cols-5">
-      <UiMetric
+    <div class="-mx-6 flex gap-2 overflow-x-auto px-6 pb-1 md:mx-0 md:grid md:grid-cols-5 md:px-0 md:pb-0">
+      <button
         v-for="m in queueMetrics"
-        :key="m.label"
-        :label="m.label"
-        :value="m.value"
-        :tone="m.tone"
-        :loading="isLoading"
-      />
+        :key="m.key"
+        type="button"
+        :aria-pressed="activeQueue === m.key"
+        :class="[
+          'group flex shrink-0 snap-start flex-col gap-1 rounded-xl border bg-dark-surface px-4 py-3 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan/40 min-w-[10rem] md:min-w-0 md:shrink',
+          activeQueue === m.key
+            ? `${QUEUE_CHIP_TONE[m.tone].ring} ring-2`
+            : 'border-dark-border hover:border-dark-hover hover:bg-dark-hover/40',
+        ]"
+        @click="toggleQueue(m.key)"
+      >
+        <span class="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-muted">
+          <span :class="['h-1.5 w-1.5 rounded-full shrink-0', QUEUE_CHIP_TONE[m.tone].dot]" />
+          <span class="whitespace-nowrap md:hidden">{{ m.shortLabel }}</span>
+          <span class="hidden whitespace-nowrap md:inline">{{ m.label }}</span>
+        </span>
+        <UiSkeleton v-if="isLoading" class="h-7 w-12" />
+        <span
+          v-else
+          :class="['text-2xl font-semibold tabular-nums leading-none', QUEUE_CHIP_TONE[m.tone].value]"
+        >
+          {{ m.value }}
+        </span>
+      </button>
     </div>
 
     <UiToolbar>
@@ -176,45 +222,165 @@ function periodLabel(row: BillingPeriodSummary): string {
         v-model="filters.building_id"
         :options="buildingOptions"
         :disabled="buildingsLoading"
-        class="w-48"
+        class="w-full sm:w-48"
       />
-      <UiSelect v-model="filters.period_year" :options="yearOptions" class="w-28" />
-      <UiSelect v-model="filters.status" :options="statusOptions" class="w-44" />
-      <UiSelect v-model="debtFilter" :options="debtOptions" class="w-36" />
+      <UiSelect v-model="filters.period_year" :options="yearOptions" class="w-full sm:w-28" />
+      <UiSelect v-model="filters.status" :options="statusOptions" class="w-full sm:w-44" />
+      <UiSelect v-model="debtFilter" :options="debtOptions" class="w-full sm:w-36" />
       <template #actions>
         <UiButton variant="secondary" @click="refresh()">Làm mới</UiButton>
       </template>
     </UiToolbar>
 
+    <p v-if="activeQueue" class="-mt-1 flex items-center gap-2 text-xs text-muted">
+      <span>Lọc nhanh:</span>
+      <button
+        type="button"
+        class="inline-flex items-center gap-1 rounded-full border border-dark-border bg-dark-surface px-2 py-0.5 text-white hover:bg-dark-hover"
+        @click="activeQueue = null"
+      >
+        {{ queueMetrics.find(m => m.key === activeQueue)?.label }}
+        <span aria-hidden="true">×</span>
+      </button>
+    </p>
+
+    <!-- Mobile: card list -->
+    <div class="space-y-2 md:hidden">
+      <template v-if="isLoading">
+        <UiSkeleton v-for="n in 4" :key="`m-skel-${n}`" class="h-24 w-full rounded-xl" />
+      </template>
+      <UiEmptyState
+        v-else-if="displayedPeriods.length === 0"
+        title="Không có kỳ nào khớp bộ lọc"
+        description="Bỏ filter hoặc mở kỳ mới cho tòa nhà cần xử lý."
+      />
+      <button
+        v-for="row in displayedPeriods"
+        v-else
+        :key="row.period.id"
+        type="button"
+        class="flex w-full flex-col gap-2 rounded-xl border border-dark-border bg-dark-surface p-3 text-left transition hover:bg-dark-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan/40"
+        @click="gotoWorkspace(row)"
+      >
+        <div class="flex items-start justify-between gap-2">
+          <div class="min-w-0">
+            <p :class="['truncate text-sm', isClosed(row) ? 'text-muted' : 'font-medium text-white']">
+              {{ row.buildingName ?? '—' }}
+            </p>
+            <p class="text-xs tabular-nums text-muted">Kỳ {{ periodLabel(row) }}</p>
+          </div>
+          <UiStatusBadge :status="row.period.status" context="period" />
+        </div>
+
+        <div v-if="row.issuedTotal > 0" class="flex flex-col gap-1">
+          <div class="flex items-baseline justify-between gap-2 text-xs tabular-nums">
+            <span :class="isClosed(row) ? 'text-muted' : 'text-white'">
+              Đã thu {{ formatCurrency(row.paidTotal) }}
+            </span>
+            <span class="text-muted">/ {{ formatCurrency(row.issuedTotal) }}</span>
+          </div>
+          <div class="h-1 overflow-hidden rounded-full bg-dark-border">
+            <div
+              :class="[
+                'h-full rounded-full transition-all',
+                collectionRatio(row) >= 1
+                  ? 'bg-success-neon'
+                  : row.outstandingBalance > 0 && !isClosed(row)
+                    ? 'bg-cyan'
+                    : 'bg-muted/40',
+              ]"
+              :style="{ width: `${Math.max(2, collectionRatio(row) * 100)}%` }"
+            />
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between gap-2 text-xs">
+          <div class="flex items-center gap-3 text-muted">
+            <span>Chỉ số <span class="text-white tabular-nums">{{ readingProgress(row) }}</span></span>
+            <span>HĐ <span class="text-white tabular-nums">{{ row.invoiceCount }}</span></span>
+          </div>
+          <span
+            v-if="row.outstandingBalance > 0"
+            :class="['font-semibold tabular-nums', isClosed(row) ? 'text-muted' : 'text-error-vivid']"
+          >
+            Nợ {{ formatCurrency(row.outstandingBalance) }}
+          </span>
+        </div>
+      </button>
+    </div>
+
+    <!-- Desktop: table -->
     <UiTable
-      :rows="periods"
+      class="hidden md:block"
+      :rows="displayedPeriods"
       :columns="columns"
       :loading="isLoading"
-      empty-title="Chưa có kỳ vận hành nào"
-      empty-description="Mở kỳ mới cho tòa nhà cần xử lý."
+      empty-title="Không có kỳ nào khớp bộ lọc"
+      empty-description="Bỏ filter hoặc mở kỳ mới cho tòa nhà cần xử lý."
       row-clickable
       @row-click="gotoWorkspace"
     >
       <template #cell-building="{ row }">
-        <span class="text-white">{{ row.buildingName ?? '—' }}</span>
+        <span :class="isClosed(row) ? 'text-muted' : 'font-medium text-white'">
+          {{ row.buildingName ?? '—' }}
+        </span>
       </template>
       <template #cell-period="{ row }">
-        <span class="tabular-nums">{{ periodLabel(row) }}</span>
+        <span :class="['tabular-nums', isClosed(row) ? 'text-muted' : 'text-white']">
+          {{ periodLabel(row) }}
+        </span>
       </template>
       <template #cell-status="{ row }">
         <UiStatusBadge :status="row.period.status" context="period" />
       </template>
-      <template #cell-reading="{ row }">{{ readingProgress(row) }}</template>
-      <template #cell-invoiceCount="{ row }">{{ row.invoiceCount }}</template>
-      <template #cell-issuedTotal="{ row }">{{ formatCurrency(row.issuedTotal) }}</template>
-      <template #cell-paidTotal="{ row }">{{ formatCurrency(row.paidTotal) }}</template>
+      <template #cell-reading="{ row }">
+        <span :class="isClosed(row) ? 'text-muted' : ''">{{ readingProgress(row) }}</span>
+      </template>
+      <template #cell-invoiceCount="{ row }">
+        <span :class="isClosed(row) ? 'text-muted' : ''">{{ row.invoiceCount }}</span>
+      </template>
+      <template #cell-collection="{ row }">
+        <div v-if="row.issuedTotal > 0" class="flex flex-col gap-1">
+          <div class="flex items-baseline justify-between gap-2 text-xs tabular-nums">
+            <span :class="isClosed(row) ? 'text-muted' : 'text-white'">
+              {{ formatCurrency(row.paidTotal) }}
+            </span>
+            <span class="text-muted">/ {{ formatCurrency(row.issuedTotal) }}</span>
+          </div>
+          <div class="h-1 overflow-hidden rounded-full bg-dark-border">
+            <div
+              :class="[
+                'h-full rounded-full transition-all',
+                collectionRatio(row) >= 1
+                  ? 'bg-success-neon'
+                  : row.outstandingBalance > 0 && !isClosed(row)
+                    ? 'bg-cyan'
+                    : 'bg-muted/40',
+              ]"
+              :style="{ width: `${Math.max(2, collectionRatio(row) * 100)}%` }"
+            />
+          </div>
+        </div>
+        <span v-else class="text-xs text-muted">—</span>
+      </template>
       <template #cell-outstanding="{ row }">
-        <span :class="row.outstandingBalance > 0 ? 'text-error-vivid' : ''">
+        <span
+          v-if="row.outstandingBalance > 0"
+          :class="['font-semibold', isClosed(row) ? 'text-muted' : 'text-error-vivid']"
+        >
           {{ formatCurrency(row.outstandingBalance) }}
         </span>
+        <span v-else class="text-muted">—</span>
       </template>
       <template #cell-open="{ row }">
-        <UiButton size="sm" variant="secondary" @click.stop="gotoWorkspace(row)">Mở</UiButton>
+        <button
+          type="button"
+          class="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted transition hover:bg-dark-hover hover:text-white"
+          :aria-label="`Mở kỳ ${periodLabel(row)} ${row.buildingName ?? ''}`"
+          @click.stop="gotoWorkspace(row)"
+        >
+          <IconChevronRight class="h-4 w-4" />
+        </button>
       </template>
     </UiTable>
 
