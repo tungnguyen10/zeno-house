@@ -38,6 +38,12 @@ const allSelected = computed(() => {
   return issuableDrafts.value.length > 0 && issuableDrafts.value.every(d => selected.value.has(d.contractId))
 })
 
+const someSelected = computed(() => {
+  if (issuableDrafts.value.length === 0) return false
+  const count = issuableDrafts.value.reduce((acc, d) => acc + (selected.value.has(d.contractId) ? 1 : 0), 0)
+  return count > 0 && count < issuableDrafts.value.length
+})
+
 function toggleAll() {
   if (allSelected.value) {
     selected.value = new Set()
@@ -125,6 +131,15 @@ const columns: UiTableColumn<BillingDraftInvoice>[] = [
           empty-title="Không có hoá đơn nào sẵn sàng phát hành"
           empty-description="Hoặc tất cả đều đã phát hành, hoặc đang bị blocker."
         >
+          <template #header-select>
+            <UiCheckbox
+              :model-value="allSelected"
+              :indeterminate="someSelected"
+              :disabled="issuableDrafts.length === 0"
+              aria-label="Chọn tất cả hợp đồng để phát hành"
+              @update:model-value="toggleAll"
+            />
+          </template>
           <template #cell-select="{ row }">
             <UiCheckbox
               :model-value="selected.has(row.contractId)"

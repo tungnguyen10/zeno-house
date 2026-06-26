@@ -268,6 +268,12 @@ async function openPaymentsIntent(intent: Omit<BillingPaymentsIntent, 'id'>) {
     ...intent,
   }
 }
+
+function openPrintWindow(payload: { keys: string[] }) {
+  if (payload.keys.length === 0) return
+  const url = `/billing/print/${buildingParam}/${periodToken}?keys=${encodeURIComponent(payload.keys.join(','))}`
+  window.open(url, '_blank', 'noopener')
+}
 </script>
 
 <template>
@@ -365,6 +371,7 @@ async function openPaymentsIntent(intent: Omit<BillingPaymentsIntent, 'id'>) {
           @refresh="async () => { await loadGrid(); await loadOverview() }"
           @intent:adjustment="openPaymentsIntent({ type: 'adjustment', ...$event })"
           @intent:void-reissue="openPaymentsIntent({ type: 'void-reissue', ...$event })"
+          @intent:print="openPrintWindow"
         />
 
         <BillingIssueStep

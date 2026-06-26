@@ -92,7 +92,9 @@ function getCellValue(row: TRow, col: UiTableColumn<TRow>): unknown {
               'font-medium',
             )"
           >
-            <span :class="col.action ? 'sr-only' : ''">{{ col.label ?? '' }}</span>
+            <slot :name="`header-${col.key}`" :column="col">
+              <span :class="col.action ? 'sr-only' : ''">{{ col.label ?? '' }}</span>
+            </slot>
           </th>
         </tr>
       </thead>

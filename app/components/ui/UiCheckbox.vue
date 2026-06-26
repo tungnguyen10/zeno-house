@@ -10,9 +10,14 @@ const props = withDefaults(defineProps<{
   error?: string
   disabled?: boolean
   id?: string
+  /** Render a partial / mixed state (e.g. "select all" header with some rows selected). */
+  indeterminate?: boolean
+  /** Accessible label when no visible `label` is rendered. */
+  ariaLabel?: string
 }>(), {
   modelValue: false,
   disabled: false,
+  indeterminate: false,
 })
 
 const emit = defineEmits<{
@@ -24,10 +29,10 @@ const checkboxId = computed(() => props.id ?? generatedId)
 
 const boxClass = computed(() =>
   clsx(
-    'h-4 w-4 rounded border bg-dark-surface text-cyan',
+    'h-4 w-4 rounded border bg-dark-surface text-cyan accent-cyan',
     'focus:outline-none focus:ring-2 focus:ring-offset-0 focus:ring-cyan/40',
     props.error ? 'border-error/50' : 'border-dark-border',
-    props.disabled && 'opacity-50 cursor-not-allowed',
+    props.disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer',
   ),
 )
 </script>
@@ -42,8 +47,10 @@ const boxClass = computed(() =>
         :id="checkboxId"
         type="checkbox"
         :checked="modelValue"
+        :indeterminate.prop="indeterminate"
         :disabled="disabled"
         :aria-invalid="!!error"
+        :aria-label="ariaLabel"
         :aria-describedby="error ? `${checkboxId}-error` : hint ? `${checkboxId}-hint` : undefined"
         :class="boxClass"
         @change="emit('update:modelValue', ($event.target as HTMLInputElement).checked)"

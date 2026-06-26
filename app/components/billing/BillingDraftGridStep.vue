@@ -35,10 +35,11 @@ const props = defineProps<{
   onSaveOverride: (input: UtilityUsageOverrideInput) => Promise<void>
 }>()
 
-defineEmits<{
+const emit = defineEmits<{
   (e: 'refresh'): void
   (e: 'intent:adjustment', payload: { invoiceId: string; amount: number; label: string }): void
   (e: 'intent:void-reissue', payload: { invoiceId: string }): void
+  (e: 'intent:print', payload: { keys: string[] }): void
 }>()
 
 // ---------------------------------------------------------------------------
@@ -71,7 +72,22 @@ const {
   isDetailOpen,
   toggleDetail,
   closeDetail,
+  selectedCount,
+  selectedRows,
+  allVisibleSelected,
+  someVisibleSelected,
+  isSelectable,
+  isSelected,
+  toggleSelect,
+  selectAllVisible,
+  toggleSelectAllVisible,
+  clearSelection,
 } = useBillingDraftGridFilters(draftGridResponse)
+
+function requestPrint() {
+  if (selectedCount.value === 0) return
+  emit('intent:print', { keys: selectedRows.value.map(row => row.key) })
+}
 
 watch(
   () => props.response?.batchReadingDate,
@@ -230,6 +246,7 @@ function closeOverrideModal() {
 // ---------------------------------------------------------------------------
 
 const columns: UiTableColumn<BillingDraftGridRow>[] = [
+  { key: 'select', label: '', action: true, width: 'w-10' },
   { key: 'room', label: 'Phòng & khách thuê' },
   { key: 'electricity_input', label: 'Điện mới', numeric: true, width: 'w-32' },
   { key: 'water_input', label: 'Nước mới', numeric: true, width: 'w-32' },
@@ -323,6 +340,28 @@ const columns: UiTableColumn<BillingDraftGridRow>[] = [
         </UiButton>
       </div>
 
+      <!-- Selection action bar -->
+      <div
+        v-if="selectedCount > 0"
+        class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-cyan/40 bg-cyan/5 px-3 py-2 text-sm"
+      >
+        <p class="text-white">
+          Đã chọn <span class="font-semibold tabular-nums">{{ selectedCount }}</span> phiếu
+          <button
+            v-if="!allVisibleSelected"
+            type="button"
+            class="ml-2 text-xs text-cyan hover:underline"
+            @click="selectAllVisible"
+          >
+            Chọn tất cả trong lọc
+          </button>
+        </p>
+        <div class="flex items-center gap-2">
+          <UiButton variant="ghost" size="sm" @click="clearSelection">Bỏ chọn</UiButton>
+          <UiButton variant="primary" size="sm" @click="requestPrint">In phiếu</UiButton>
+        </div>
+      </div>
+
       <!-- Loading -->
       <div v-if="loading" class="space-y-3">
         <UiSkeleton class="h-24 w-full" />
@@ -347,6 +386,24 @@ const columns: UiTableColumn<BillingDraftGridRow>[] = [
         :empty-description="'Đổi bộ lọc để xem các dòng khác.'"
         class="hidden md:block"
       >
+        <template #header-select>
+          <UiCheckbox
+            :model-value="allVisibleSelected"
+            :indeterminate="someVisibleSelected"
+            aria-label="Chọn tất cả phòng để in"
+            @update:model-value="toggleSelectAllVisible"
+          />
+        </template>
+
+        <template #cell-select="{ row }">
+          <UiCheckbox
+            v-if="isSelectable(row as BillingDraftGridRow)"
+            :model-value="isSelected(row as BillingDraftGridRow)"
+            :aria-label="`Chọn phòng ${(row as BillingDraftGridRow).roomNumber ?? ''} để in`"
+            @update:model-value="toggleSelect(row as BillingDraftGridRow)"
+          />
+        </template>
+
         <template #cell-room="{ row }">
           <div class="flex items-start gap-2">
             <button

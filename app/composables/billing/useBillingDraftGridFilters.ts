@@ -59,6 +59,73 @@ export function useBillingDraftGridFilters(response: ComputedRef<BillingDraftGri
     else openDetail(row)
   }
 
+  // ---------------------------------------------------------------------------
+  // Multi-row selection (for batch actions like print)
+  // ---------------------------------------------------------------------------
+
+  const selectedKeys = ref<Set<string>>(new Set())
+
+  function isSelectable(row: BillingDraftGridRow): boolean {
+    return row.rowType === 'billable_contract' && row.lines.length > 0
+  }
+
+  const selectedRows = computed<BillingDraftGridRow[]>(() => {
+    const rows = response.value?.rows ?? []
+    return rows.filter(row => selectedKeys.value.has(row.key) && isSelectable(row))
+  })
+
+  const selectedCount = computed(() => selectedRows.value.length)
+
+  const allVisibleSelected = computed(() => {
+    const eligible = filteredRows.value.filter(isSelectable)
+    if (eligible.length === 0) return false
+    return eligible.every(row => selectedKeys.value.has(row.key))
+  })
+
+  const someVisibleSelected = computed(() => {
+    const eligible = filteredRows.value.filter(isSelectable)
+    if (eligible.length === 0) return false
+    const selectedCount = eligible.reduce((acc, row) => acc + (selectedKeys.value.has(row.key) ? 1 : 0), 0)
+    return selectedCount > 0 && selectedCount < eligible.length
+  })
+
+  function isSelected(row: BillingDraftGridRow): boolean {
+    return selectedKeys.value.has(row.key)
+  }
+
+  function toggleSelect(row: BillingDraftGridRow) {
+    if (!isSelectable(row)) return
+    const next = new Set(selectedKeys.value)
+    if (next.has(row.key)) next.delete(row.key)
+    else next.add(row.key)
+    selectedKeys.value = next
+  }
+
+  function selectAllVisible() {
+    const next = new Set(selectedKeys.value)
+    for (const row of filteredRows.value) {
+      if (isSelectable(row)) next.add(row.key)
+    }
+    selectedKeys.value = next
+  }
+
+  function toggleSelectAllVisible() {
+    if (allVisibleSelected.value) {
+      const next = new Set(selectedKeys.value)
+      for (const row of filteredRows.value) {
+        if (isSelectable(row)) next.delete(row.key)
+      }
+      selectedKeys.value = next
+    }
+    else {
+      selectAllVisible()
+    }
+  }
+
+  function clearSelection() {
+    selectedKeys.value = new Set()
+  }
+
   return {
     filter,
     filterTabs: billingDraftGridFilterTabs,
@@ -69,5 +136,17 @@ export function useBillingDraftGridFilters(response: ComputedRef<BillingDraftGri
     openDetail,
     closeDetail,
     toggleDetail,
+    // selection
+    selectedKeys,
+    selectedRows,
+    selectedCount,
+    allVisibleSelected,
+    someVisibleSelected,
+    isSelectable,
+    isSelected,
+    toggleSelect,
+    selectAllVisible,
+    toggleSelectAllVisible,
+    clearSelection,
   }
 }
