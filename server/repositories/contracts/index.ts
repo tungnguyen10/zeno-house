@@ -1,5 +1,6 @@
 import { serverSupabaseClient } from '#supabase/server'
 import type { H3Event } from 'h3'
+import type { Database } from '~/types/database.types'
 import type { Contract, ContractWithDetails } from '~/types/contracts'
 import type { ContractCreateInput, ContractUpdateInput } from '~/utils/validators/contracts'
 import { mapContract, mapContractWithDetails } from '~/utils/mappers/contracts'
@@ -137,6 +138,9 @@ export const ContractRepository = {
   },
 
   async insert(event: H3Event, input: ContractCreateInput): Promise<ContractWithDetails> {
+    // Retained for the contract-renewal flow which inserts contracts directly
+    // (without handover meter readings). New-contract creates go through
+    // `createWithHandover` so the contract + handover readings commit atomically.
     const client = await serverSupabaseClient(event)
     if (!input.building_id) {
       throw createError({ statusCode: 500, message: 'building_id is required on insert (resolve from room before calling repository)' })
@@ -166,6 +170,64 @@ export const ContractRepository = {
 
     if (error) throw createError({ statusCode: 500, message: error.message })
     return mapContractWithDetails(data as Parameters<typeof mapContractWithDetails>[0])
+  },
+
+  async createWithHandover(
+    event: H3Event,
+    input: ContractCreateInput & { building_id: string },
+    recordedBy: string | null,
+  ): Promise<ContractWithDetails> {
+    const client = await serverSupabaseClient(event)
+
+    const readingDate = input.handover_reading_date && input.handover_reading_date.length > 0
+      ? input.handover_reading_date
+      : input.start_date
+
+    // Supabase typegen does not reflect SQL `DEFAULT NULL` on params, so the
+    // generated Args type rejects null for `p_payment_day`, `p_notes`, and
+    // `p_recorded_by`. Mirror the cast pattern used by `issue_period_invoices`.
+    const args = {
+      p_room_id: input.room_id,
+      p_tenant_id: input.tenant_id,
+      p_building_id: input.building_id,
+      p_start_date: input.start_date,
+      p_end_date: input.end_date,
+      p_monthly_rent: input.monthly_rent,
+      p_deposit: input.deposit ?? 0,
+      p_payment_day: input.payment_day ?? null,
+      p_occupant_count: input.occupant_count ?? 1,
+      p_discount_amount: input.discount_amount ?? 0,
+      p_surcharge_amount: input.surcharge_amount ?? 0,
+      p_status: input.status ?? 'active',
+      p_notes: input.notes ?? null,
+      p_handover_electricity_reading: input.handover_electricity_reading,
+      p_handover_water_reading: input.handover_water_reading,
+      p_handover_reading_date: readingDate,
+      p_recorded_by: recordedBy,
+    } as unknown as Database['public']['Functions']['create_contract_with_handover']['Args']
+
+    const { data, error } = await client.rpc('create_contract_with_handover', args)
+    if (error) {
+      // 23505 (unique violation) and P0001 (raised in RPC) both indicate a
+      // business conflict the admin can act on; everything else is a 500.
+      const isConflict = (error as { code?: string }).code === '23505'
+        || (error as { code?: string }).code === 'P0001'
+      const statusCode = isConflict ? 409 : 500
+      throw createError({
+        statusCode,
+        data: { error: { code: isConflict ? 'CONFLICT' : 'INTERNAL', message: error.message } },
+      })
+    }
+
+    const rows = (data as Array<{ id: string }> | null) ?? []
+    if (rows.length === 0) {
+      throw createError({ statusCode: 500, message: 'create_contract_with_handover returned no rows' })
+    }
+    const created = await this.findByIdentifier(event, rows[0]!.id)
+    if (!created) {
+      throw createError({ statusCode: 500, message: 'Contract was inserted but cannot be re-read' })
+    }
+    return created
   },
 
   async update(event: H3Event, id: string, input: ContractUpdateInput): Promise<ContractWithDetails> {

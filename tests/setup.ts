@@ -1,4 +1,33 @@
 import { vi } from 'vitest'
+import {
+  computed,
+  isRef,
+  nextTick,
+  onBeforeMount,
+  onBeforeUnmount,
+  onMounted,
+  onUnmounted,
+  reactive,
+  readonly,
+  ref,
+  shallowRef,
+  toRaw,
+  toRef,
+  toRefs,
+  unref,
+  watch,
+  watchEffect,
+} from 'vue'
+
+// Nuxt auto-imports these into Vue SFCs at build-time. In vitest we don't run
+// the Nuxt build, so we expose the same identifiers on globalThis. Components
+// that import explicitly are unaffected (the import wins over the global).
+for (const [name, fn] of Object.entries({
+  computed, isRef, nextTick, onBeforeMount, onBeforeUnmount, onMounted, onUnmounted,
+  reactive, readonly, ref, shallowRef, toRaw, toRef, toRefs, unref, watch, watchEffect,
+})) {
+  vi.stubGlobal(name, fn)
+}
 
 function appError(statusCode: number, code: string, message: string, details?: unknown): Error {
   const error = new Error(message) as Error & { statusCode: number; data: unknown }

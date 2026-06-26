@@ -300,7 +300,7 @@ export function calculateDraftRule(input: DraftRuleInput): DraftRuleResult {
       sourceId: contract.id,
       quantity: 1,
       unitPrice: contract.discountAmount ?? 0,
-      amount: contract.discountAmount ?? 0,
+      amount: -(contract.discountAmount ?? 0),
       metadata: {},
       sortOrder: 90,
     })
@@ -322,7 +322,7 @@ export function calculateDraftRule(input: DraftRuleInput): DraftRuleResult {
   const subtotalAmount = lines
     .filter(l => l.chargeType !== 'discount' && l.chargeType !== 'surcharge')
     .reduce((sum, line) => sum + line.amount, 0)
-  const discountAmount = lines.filter(l => l.chargeType === 'discount').reduce((sum, line) => sum + line.amount, 0)
+  const discountAmount = -lines.filter(l => l.chargeType === 'discount').reduce((sum, line) => sum + line.amount, 0)
   const surchargeAmount = lines.filter(l => l.chargeType === 'surcharge').reduce((sum, line) => sum + line.amount, 0)
   return {
     lines,

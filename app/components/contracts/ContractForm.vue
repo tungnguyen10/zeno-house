@@ -4,6 +4,7 @@ import type { Tenant } from '~/types/tenants'
 import type { Building } from '~/types/buildings'
 import type { ApiSuccess } from '~/types/api'
 import type { ContractWithDetails } from '~/types/contracts'
+import type { MeterReading } from '~/types/meter-readings'
 import { formatCurrency } from '~/utils/format/currency'
 
 export interface ContractFormData {
@@ -19,6 +20,9 @@ export interface ContractFormData {
   surcharge_amount: string
   status: 'active' | 'expired' | 'terminated'
   notes: string
+  handover_electricity_reading: string
+  handover_water_reading: string
+  handover_reading_date: string
 }
 
 const props = withDefaults(defineProps<{
@@ -27,10 +31,12 @@ const props = withDefaults(defineProps<{
   errors?: Record<string, string[]>
   apiError?: string | null
   excludeContractId?: string
+  showHandover?: boolean
 }>(), {
   loading: false,
   errors: () => ({}),
   apiError: null,
+  showHandover: false,
 })
 
 const emit = defineEmits<{
@@ -118,6 +124,53 @@ function onRoomSelect(room: Room | null) {
 function onTenantSelect(tenant: Tenant | null) {
   update('tenant_id', tenant?.id ?? '')
 }
+
+// ─── Handover meter readings (create flow only) ──────────────────────────────
+const handoverRoomId = computed(() => props.showHandover ? props.modelValue.room_id : '')
+
+const { data: latestReadingsData, refresh: refreshLatestReadings } = useFetch<
+  ApiSuccess<{ electricity: MeterReading | null; water: MeterReading | null }>
+>('/api/meter-readings/latest', {
+  query: computed(() => ({ room_id: handoverRoomId.value })),
+  immediate: false,
+  watch: false,
+})
+
+const previousElectricity = computed(() => latestReadingsData.value?.data?.electricity ?? null)
+const previousWater = computed(() => latestReadingsData.value?.data?.water ?? null)
+
+watch(handoverRoomId, async (roomId) => {
+  if (!roomId) {
+    latestReadingsData.value = undefined
+    return
+  }
+  await refreshLatestReadings()
+  // Pre-fill empty inputs with the latest reading values — user can adjust.
+  const updates: Partial<ContractFormData> = {}
+  if (props.modelValue.handover_electricity_reading === '' && previousElectricity.value) {
+    updates.handover_electricity_reading = String(previousElectricity.value.readingValue)
+  }
+  if (props.modelValue.handover_water_reading === '' && previousWater.value) {
+    updates.handover_water_reading = String(previousWater.value.readingValue)
+  }
+  if (Object.keys(updates).length > 0) {
+    emit('update:modelValue', { ...props.modelValue, ...updates })
+  }
+}, { immediate: true })
+
+const electricityWarning = computed(() => {
+  const ref = previousElectricity.value
+  const current = Number(props.modelValue.handover_electricity_reading)
+  if (!ref || !Number.isFinite(current) || props.modelValue.handover_electricity_reading === '') return null
+  return current < ref.readingValue ? 'Số mới thấp hơn số cũ. Đồng hồ vừa được thay?' : null
+})
+
+const waterWarning = computed(() => {
+  const ref = previousWater.value
+  const current = Number(props.modelValue.handover_water_reading)
+  if (!ref || !Number.isFinite(current) || props.modelValue.handover_water_reading === '') return null
+  return current < ref.readingValue ? 'Số mới thấp hơn số cũ. Đồng hồ vừa được thay?' : null
+})
 
 function onSubmit() {
   emit('submit', props.modelValue)
@@ -263,6 +316,70 @@ function onSubmit() {
       :disabled="loading"
       @update:model-value="update('status', String($event) as 'active' | 'expired' | 'terminated')"
     />
+
+    <!-- Handover meter readings (create only) -->
+    <section v-if="showHandover" class="space-y-3 rounded-lg border border-dark-border bg-dark-hover/30 p-4">
+      <div>
+        <p class="text-sm font-semibold text-white">Số bàn giao đầu vào</p>
+        <p class="text-xs text-muted mt-0.5">Đọc số điện và nước tại thời điểm bàn giao phòng cho khách thuê.</p>
+      </div>
+
+      <div class="grid grid-cols-2 gap-4">
+        <div class="flex flex-col gap-1">
+          <UiInput
+            label="Số điện (kWh)"
+            type="number"
+            :model-value="modelValue.handover_electricity_reading"
+            :error="errors.handover_electricity_reading?.[0]"
+            :disabled="loading"
+            required
+            placeholder="0"
+            @update:model-value="update('handover_electricity_reading', $event)"
+          />
+          <p v-if="previousElectricity" class="text-xs text-muted">
+            Số cũ: {{ previousElectricity.readingValue }} kWh (đọc {{ new Date(previousElectricity.readingDate).toLocaleDateString('vi-VN') }})
+          </p>
+          <p v-else-if="modelValue.room_id" class="text-xs text-muted">
+            Chưa có số trước đó cho phòng này.
+          </p>
+          <p v-if="electricityWarning" class="text-xs text-amber-400">
+            {{ electricityWarning }}
+          </p>
+        </div>
+
+        <div class="flex flex-col gap-1">
+          <UiInput
+            label="Số nước (m³)"
+            type="number"
+            :model-value="modelValue.handover_water_reading"
+            :error="errors.handover_water_reading?.[0]"
+            :disabled="loading"
+            required
+            placeholder="0"
+            @update:model-value="update('handover_water_reading', $event)"
+          />
+          <p v-if="previousWater" class="text-xs text-muted">
+            Số cũ: {{ previousWater.readingValue }} m³ (đọc {{ new Date(previousWater.readingDate).toLocaleDateString('vi-VN') }})
+          </p>
+          <p v-else-if="modelValue.room_id" class="text-xs text-muted">
+            Chưa có số trước đó cho phòng này.
+          </p>
+          <p v-if="waterWarning" class="text-xs text-amber-400">
+            {{ waterWarning }}
+          </p>
+        </div>
+      </div>
+
+      <UiInput
+        label="Ngày đọc số"
+        type="date"
+        :model-value="modelValue.handover_reading_date"
+        :error="errors.handover_reading_date?.[0]"
+        :disabled="loading"
+        @update:model-value="update('handover_reading_date', $event)"
+      />
+      <p class="text-xs text-muted">Mặc định lấy theo ngày bắt đầu hợp đồng nếu để trống.</p>
+    </section>
 
     <!-- notes -->
     <UiTextarea

@@ -42,6 +42,20 @@ Terminating or expiring a contract releases the room back to available unless th
 
 These side effects belong in the service layer, not in UI code.
 
+## Handover Readings On Create
+
+Creating a new contract is the moment the room is handed over to the tenant. The create flow requires:
+
+- `handover_electricity_reading` (kWh)
+- `handover_water_reading` (m³)
+- `handover_reading_date` (optional, defaults to `start_date`)
+
+The server inserts the contract and the two `handover_in` meter readings in one Postgres function (`create_contract_with_handover`) so a contract row is never created without its baseline meter values.
+
+The form pre-fills the two inputs with the latest reading per meter type (handover or monthly, whichever is newest). A soft amber warning appears when the user enters a value lower than the previous reading — submit is not blocked, since meter replacement legitimately resets the count.
+
+Renewals (extend or new_contract mode) intentionally do not capture handover readings. The successor uses the predecessor's last reading as the baseline; collecting new readings would invent gaps.
+
 ## Contract Detail Surface
 
 The detail page includes:

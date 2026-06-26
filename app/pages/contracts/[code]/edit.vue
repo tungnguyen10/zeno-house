@@ -32,6 +32,9 @@ const formData = ref<ContractFormData>({
   surcharge_amount: String(contract.value?.surchargeAmount ?? '0'),
   status: (contract.value?.status === 'renewed' ? 'expired' : contract.value?.status) ?? 'active',
   notes: contract.value?.notes ?? '',
+  handover_electricity_reading: '',
+  handover_water_reading: '',
+  handover_reading_date: '',
 })
 
 async function onSubmit(data: ContractFormData) {

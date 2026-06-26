@@ -224,4 +224,34 @@ export const MeterReadingRepository = {
     if (error) throw createError({ statusCode: 500, message: error.message })
     return data ? mapMeterReading(data) : null
   },
+
+  async findLatestByRoom(
+    event: H3Event,
+    roomId: string,
+    options: { beforeDate?: string } = {},
+  ): Promise<{ electricity: MeterReading | null; water: MeterReading | null }> {
+    const client = await serverSupabaseClient(event)
+    const out: { electricity: MeterReading | null; water: MeterReading | null } = {
+      electricity: null,
+      water: null,
+    }
+    for (const meterType of METER_TYPES) {
+      let query = client
+        .from('meter_readings')
+        .select('*')
+        .eq('room_id', roomId)
+        .eq('meter_type', meterType)
+        .order('period_year', { ascending: false })
+        .order('period_month', { ascending: false })
+        .order('reading_date', { ascending: false })
+        .limit(1)
+      if (options.beforeDate) {
+        query = query.lt('reading_date', options.beforeDate)
+      }
+      const { data, error } = await query.maybeSingle()
+      if (error) throw createError({ statusCode: 500, message: error.message })
+      out[meterType] = data ? mapMeterReading(data) : null
+    }
+    return out
+  },
 }

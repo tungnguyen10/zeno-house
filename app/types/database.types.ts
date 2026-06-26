@@ -1080,6 +1080,55 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_contract_with_handover: {
+        Args: {
+          p_building_id: string
+          p_deposit: number
+          p_discount_amount: number
+          p_end_date: string
+          p_handover_electricity_reading: number
+          p_handover_reading_date: string
+          p_handover_water_reading: number
+          p_monthly_rent: number
+          p_notes: string
+          p_occupant_count: number
+          p_payment_day: number
+          p_recorded_by: string
+          p_room_id: string
+          p_start_date: string
+          p_status: string
+          p_surcharge_amount: number
+          p_tenant_id: string
+        }
+        Returns: {
+          building_id: string
+          contract_code: string
+          created_at: string
+          deposit: number
+          discount_amount: number
+          end_date: string
+          id: string
+          monthly_rent: number
+          notes: string | null
+          occupant_count: number
+          original_end_date: string | null
+          payment_day: number | null
+          previous_contract_id: string | null
+          renewal_count: number
+          room_id: string
+          start_date: string
+          status: string
+          surcharge_amount: number
+          tenant_id: string
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "contracts"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       issue_period_invoices: {
         Args: {
           p_actor_id: string

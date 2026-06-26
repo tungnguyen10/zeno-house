@@ -14,6 +14,9 @@ export const contractCreateSchema = z.object({
   surcharge_amount: z.number().min(0, 'Phụ thu không được âm').optional().default(0),
   status: z.enum(['active', 'expired', 'terminated']).optional().default('active'),
   notes: z.string().max(500, 'Ghi chú quá dài').nullable().optional(),
+  handover_electricity_reading: z.number().min(0, 'Số điện không được âm'),
+  handover_water_reading: z.number().min(0, 'Số nước không được âm'),
+  handover_reading_date: z.string().min(1).optional(),
 }).refine(
   (data) => new Date(data.end_date) > new Date(data.start_date),
   { message: 'Ngày kết thúc phải sau ngày bắt đầu', path: ['end_date'] },

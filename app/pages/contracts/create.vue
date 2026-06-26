@@ -28,6 +28,9 @@ const formData = ref<ContractFormData>({
   surcharge_amount: '0',
   status: 'active',
   notes: '',
+  handover_electricity_reading: '',
+  handover_water_reading: '',
+  handover_reading_date: '',
 })
 
 // ─── Pending occupants (local, submitted after contract is created) ──────────
@@ -87,6 +90,9 @@ async function onSubmit(data: ContractFormData) {
     surcharge_amount: data.surcharge_amount ? Number(data.surcharge_amount) : 0,
     status: data.status,
     notes: data.notes || null,
+    handover_electricity_reading: Number(data.handover_electricity_reading),
+    handover_water_reading: Number(data.handover_water_reading),
+    handover_reading_date: data.handover_reading_date || undefined,
   })
   if (!created) return
 
@@ -144,6 +150,7 @@ async function onSubmit(data: ContractFormData) {
               :loading="isLoading"
               :errors="errors"
               :api-error="apiError"
+              show-handover
               @submit="onSubmit"
               @cancel="navigateTo('/contracts')"
             />

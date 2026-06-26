@@ -55,6 +55,18 @@ export const MeterReadingService = {
     return MeterReadingRepository.findBuildingRoomsStatus(event, building.id, periodYear, periodMonth)
   },
 
+  async getLatestByRoom(
+    event: H3Event,
+    _user: AuthUser,
+    roomId: string,
+    options: { beforeDate?: string } = {},
+  ): Promise<{ electricity: MeterReading | null; water: MeterReading | null }> {
+    if (!can(_user, 'meter-readings.read')) throwForbidden('Không có quyền xem chỉ số đồng hồ')
+    const room = await RoomRepository.findByIdentifier(event, roomId)
+    if (!room) throwNotFound('Không tìm thấy phòng')
+    return MeterReadingRepository.findLatestByRoom(event, room.id, options)
+  },
+
   async create(
     event: H3Event,
     _user: AuthUser,

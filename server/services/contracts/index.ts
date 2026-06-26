@@ -80,11 +80,15 @@ export const ContractService = {
       throwConflict(`Phòng "${room.roomNumber}" chưa được đặt giá thuê. Vui lòng cập nhật giá phòng trước khi tạo hợp đồng.`)
     }
 
-    const contract = await ContractRepository.insert(event, {
-      ...input,
-      monthly_rent: resolvedRent,
-      building_id: input.building_id ?? room.buildingId,
-    })
+    const contract = await ContractRepository.createWithHandover(
+      event,
+      {
+        ...input,
+        monthly_rent: resolvedRent,
+        building_id: input.building_id ?? room.buildingId,
+      },
+      user.id ?? null,
+    )
 
     // Best-effort: clone active building_services → contract_services
     const buildingId = input.building_id ?? room.buildingId

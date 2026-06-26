@@ -605,7 +605,10 @@ export const BillingDraftService = {
         serviceSort += 1
       }
 
-      // 5) Discount and surcharge
+      // 5) Discount and surcharge.
+      // Discount line carries a negative amount so SUM(line.amount) == total_amount
+      // (the invariant enforced by issue_period_invoices). The aggregate
+      // `discountAmount` returned by this service stays positive.
       if (contract.discount_amount > 0) {
         lines.push({
           chargeType: 'discount',
@@ -614,7 +617,7 @@ export const BillingDraftService = {
           sourceId: contract.id,
           quantity: 1,
           unitPrice: contract.discount_amount,
-          amount: contract.discount_amount,
+          amount: -contract.discount_amount,
           metadata: {},
           sortOrder: 90,
         })
@@ -637,7 +640,7 @@ export const BillingDraftService = {
       const subtotal = lines
         .filter(l => l.chargeType !== 'discount' && l.chargeType !== 'surcharge')
         .reduce((s, l) => s + l.amount, 0)
-      const discountAmt = lines
+      const discountAmt = -lines
         .filter(l => l.chargeType === 'discount')
         .reduce((s, l) => s + l.amount, 0)
       const surchargeAmt = lines

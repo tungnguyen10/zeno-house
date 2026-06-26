@@ -67,6 +67,7 @@ Routes:
 API:
 
 - `GET /api/meter-readings`
+- `GET /api/meter-readings/latest?room_id=...` — latest reading per meter type for a room; returns `{ electricity, water }` (each may be `null`). Used by the contract create form to pre-fill the handover inputs.
 - `POST /api/meter-readings`
 - `PATCH /api/meter-readings/[id]`
 - `GET /api/meter-readings/bulk`
@@ -90,6 +91,8 @@ Reading types:
 - `monthly`
 - `handover_in`
 - `handover_out`
+
+Contract create writes one `handover_in` row per meter type (electricity + water) atomically with the contract via the `create_contract_with_handover` Postgres function — see [`contracts.md`](./contracts.md#handover-readings-on-create). Renewals do not write handover rows; the successor inherits the predecessor's last reading as its baseline.
 
 ## Billing Interaction
 
