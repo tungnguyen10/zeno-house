@@ -105,13 +105,6 @@ const columns: UiTableColumn<BillingDraftInvoice>[] = [
       </div>
 
       <template v-else>
-        <div class="grid grid-cols-2 gap-3 md:grid-cols-4">
-          <UiMetric :label="'Có thể phát hành'" :value="issuableDrafts.length" tone="accent" />
-          <UiMetric :label="'Bị blocker'" :value="blockedDrafts.length" :tone="blockedDrafts.length > 0 ? 'danger' : 'default'" />
-          <UiMetric :label="'Đã phát hành (bỏ qua)'" :value="skippedDrafts.length" tone="default" />
-          <UiMetric :label="'Tổng dự kiến'" :value="formatCurrency(drafts?.totals.draftTotal ?? 0)" tone="success" />
-        </div>
-
         <UiAlert v-if="submitError" severity="danger">{{ submitError }}</UiAlert>
         <UiAlert v-if="lastResult" severity="success">
           Đã phát hành {{ lastResult.issuedCount }} hoá đơn.
@@ -120,6 +113,10 @@ const columns: UiTableColumn<BillingDraftInvoice>[] = [
         <UiAlert v-if="blockedDrafts.length > 0" severity="warning" title="Một số hợp đồng đang bị blocker">
           {{ blockedDrafts.length }} hợp đồng chưa thể phát hành. Mở tab “Chỉ số & hoá đơn nháp” để xem chi tiết.
         </UiAlert>
+
+        <p v-if="skippedDrafts.length > 0" class="text-xs text-muted">
+          Đã bỏ qua <span class="text-white tabular-nums">{{ skippedDrafts.length }}</span> hợp đồng đã phát hành kỳ này.
+        </p>
 
         <UiTable
           :rows="issuableDrafts"

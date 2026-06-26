@@ -29,7 +29,7 @@ defineProps<{
         <slot name="actions" />
       </div>
     </header>
-    <div>
+    <div class="space-y-3">
       <slot />
     </div>
   </section>

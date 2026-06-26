@@ -461,7 +461,7 @@ describe('BillingDraftGridStep', () => {
       ]),
     })
 
-    const expandButton = wrapper.findAll('button').find(button => button.text() === '+')
+    const expandButton = wrapper.findAll('button').find(button => button.attributes('aria-label') === 'Xem chi tiết')
     expect(expandButton).toBeTruthy()
     await expandButton!.trigger('click')
 

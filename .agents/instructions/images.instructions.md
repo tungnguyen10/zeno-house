@@ -39,6 +39,7 @@ Icons dùng nuxt-svgo (auto-import). Images static để trong `/public/`. Font 
 | `<IconDatabase />` | `database.svg` | Database |
 | `<IconDocumentText />` | `document-text.svg` | Hợp đồng, tài liệu có nội dung |
 | `<IconDocument />` | `document.svg` | File, tài liệu |
+| `<IconDownload />` | `download.svg` | Tải về, xuất file |
 | `<IconExclamationCircle />` | `exclamation-circle.svg` | Cảnh báo |
 | `<IconEyeOff />` | `eye-off.svg` | Ẩn mật khẩu |
 | `<IconEye />` | `eye.svg` | Hiện mật khẩu, xem |
@@ -57,6 +58,7 @@ Icons dùng nuxt-svgo (auto-import). Images static để trong `/public/`. Font 
 | `<IconMapPin />` | `map-pin.svg` | Địa chỉ, vị trí |
 | `<IconMenu />` | `menu.svg` | Hamburger menu |
 | `<IconMessageCircle />` | `message-circle.svg` | Chat, tin nhắn |
+| `<IconMoreVertical />` | `more-vertical.svg` | Overflow / kebab action menu |
 | `<IconNav />` | `nav.svg` | Navigation |
 | `<IconPencilSquare />` | `pencil-square.svg` | Chỉnh sửa |
 | `<IconPhone />` | `phone.svg` | Điện thoại |

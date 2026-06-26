@@ -407,12 +407,11 @@ watch(
 <template>
   <div class="space-y-4">
     <UiSection title="Thanh toán & Công nợ" description="Theo dõi hoá đơn, ghi nhận thanh toán, huỷ/phát hành lại, điều chỉnh.">
-      <div class="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <UiMetric label="Tổng phát hành" :value="formatCurrency(summary.issuedTotal)" tone="default" />
-        <UiMetric label="Đã thu" :value="formatCurrency(summary.paidTotal)" tone="success" />
-        <UiMetric label="Còn lại" :value="formatCurrency(summary.outstanding)" :tone="summary.outstanding > 0 ? 'danger' : 'default'" />
-        <UiMetric label="Quá hạn" :value="summary.overdueCount" :tone="summary.overdueCount > 0 ? 'warning' : 'default'" />
-      </div>
+      <template v-if="summary.overdueCount > 0" #actions>
+        <span class="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2.5 py-0.5 text-xs font-medium text-amber-300">
+          Quá hạn: {{ summary.overdueCount }}
+        </span>
+      </template>
 
       <UiToolbar>
         <UiSelect v-model="filterStatus" :options="filterOptions" class="w-44" />

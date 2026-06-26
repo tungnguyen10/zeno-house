@@ -13,7 +13,7 @@ export const billingDraftGridFilterTabs: Array<{ key: BillingDraftGridFilter; la
 
 export function useBillingDraftGridFilters(response: ComputedRef<BillingDraftGridResponse | null>) {
   const filter = ref<BillingDraftGridFilter>('needs_action')
-  const expandedRowKeys = ref<Set<string>>(new Set())
+  const detailRowKey = ref<string | null>(null)
 
   const filteredRows = computed<BillingDraftGridRow[]>(() => {
     const rows = response.value?.rows ?? []
@@ -36,22 +36,38 @@ export function useBillingDraftGridFilters(response: ComputedRef<BillingDraftGri
     }
   })
 
-  function isExpanded(row: BillingDraftGridRow): boolean {
-    return expandedRowKeys.value.has(row.key)
+  const detailRow = computed<BillingDraftGridRow | null>(() => {
+    const key = detailRowKey.value
+    if (!key) return null
+    return response.value?.rows.find(row => row.key === key) ?? null
+  })
+
+  function isDetailOpen(row: BillingDraftGridRow): boolean {
+    return detailRowKey.value === row.key
   }
 
-  function toggleExpand(row: BillingDraftGridRow) {
-    if (expandedRowKeys.value.has(row.key)) expandedRowKeys.value.delete(row.key)
-    else expandedRowKeys.value.add(row.key)
-    expandedRowKeys.value = new Set(expandedRowKeys.value)
+  function openDetail(row: BillingDraftGridRow) {
+    detailRowKey.value = row.key
+  }
+
+  function closeDetail() {
+    detailRowKey.value = null
+  }
+
+  function toggleDetail(row: BillingDraftGridRow) {
+    if (detailRowKey.value === row.key) closeDetail()
+    else openDetail(row)
   }
 
   return {
     filter,
     filterTabs: billingDraftGridFilterTabs,
     filteredRows,
-    expandedRowKeys,
-    isExpanded,
-    toggleExpand,
+    detailRow,
+    detailRowKey,
+    isDetailOpen,
+    openDetail,
+    closeDetail,
+    toggleDetail,
   }
 }

@@ -277,19 +277,18 @@ async function openPaymentsIntent(intent: Omit<BillingPaymentsIntent, 'id'>) {
     <template v-if="!resolveError">
       <UiPageHeader
         :title="`Kỳ ${periodLabel()} - ${overview?.buildingName ?? 'Đang tải...'}`"
-        description="Quản lý nhập chỉ số, soát hoá đơn, phát hành, thanh toán và chốt kỳ."
+        :back-to="'/billing'"
+        back-label="Danh sách kỳ"
       >
         <template #actions>
-          <UiStatusBadge v-if="period" :status="period.status" context="period" />
           <div class="relative">
             <UiButton
               variant="ghost"
               size="sm"
-              icon-only
-              aria-label="Thêm hành động"
               @click="actionMenuOpen = !actionMenuOpen"
             >
-              ...
+              <span>Hành động</span>
+              <IconChevronDown class="h-4 w-4 -mr-1" aria-hidden="true" />
             </UiButton>
             <template v-if="actionMenuOpen">
               <div
@@ -306,7 +305,8 @@ async function openPaymentsIntent(intent: Omit<BillingPaymentsIntent, 'id'>) {
                   class="!flex !w-full !justify-start !rounded-none !px-3 !py-2 text-left !text-white hover:!bg-dark-surface"
                   @click="actionMenuOpen = false; auditOpen = true"
                 >
-                  Nhật ký
+                  <IconDocument class="h-4 w-4" aria-hidden="true" />
+                  <span>Nhật ký</span>
                 </UiButton>
                 <UiButton
                   variant="ghost"
@@ -315,7 +315,8 @@ async function openPaymentsIntent(intent: Omit<BillingPaymentsIntent, 'id'>) {
                   :disabled="exportLoading"
                   @click="actionMenuOpen = false; exportPeriodXlsx()"
                 >
-                  {{ exportLoading ? 'Đang xuất…' : 'Xuất Excel' }}
+                  <IconDownload class="h-4 w-4" aria-hidden="true" />
+                  <span>{{ exportLoading ? 'Đang xuất…' : 'Xuất Excel' }}</span>
                 </UiButton>
                 <div class="my-1 h-px bg-dark-border" />
                 <UiButton
@@ -325,7 +326,8 @@ async function openPaymentsIntent(intent: Omit<BillingPaymentsIntent, 'id'>) {
                   :disabled="!canClose || period?.status === 'closed'"
                   @click="actionMenuOpen = false; closeOpen = true"
                 >
-                  Chốt kỳ
+                  <IconCheckCircle class="h-4 w-4" aria-hidden="true" />
+                  <span>Chốt kỳ</span>
                 </UiButton>
                 <UiButton
                   variant="ghost"
@@ -335,14 +337,12 @@ async function openPaymentsIntent(intent: Omit<BillingPaymentsIntent, 'id'>) {
                   :title="period?.status === 'closed' ? 'Kỳ đã chốt nên không thể huỷ phát hành' : (!canUnissue ? 'Bạn không có quyền huỷ phát hành kỳ' : undefined)"
                   @click="actionMenuOpen = false; unissueOpen = true"
                 >
-                  Huỷ phát hành kỳ
+                  <IconXCircle class="h-4 w-4" aria-hidden="true" />
+                  <span>Huỷ phát hành kỳ</span>
                 </UiButton>
               </div>
             </template>
           </div>
-          <NuxtLink to="/billing">
-            <UiButton variant="ghost" size="sm">← Danh sách kỳ</UiButton>
-          </NuxtLink>
         </template>
       </UiPageHeader>
 

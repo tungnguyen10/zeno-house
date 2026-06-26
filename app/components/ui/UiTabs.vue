@@ -48,17 +48,22 @@ function select(tab: UiTabItem) {
       :disabled="tab.disabled"
       @click="select(tab)"
     >
-      {{ tab.label }}
+      <span>{{ tab.label }}</span>
       <span
         v-if="tab.count !== undefined && tab.count !== null"
-        class="rounded-full bg-dark-hover px-1.5 py-0.5 text-xs text-muted"
+        :class="clsx(
+          'rounded-full px-1.5 py-0.5 text-xs font-medium tabular-nums',
+          tab.key === modelValue
+            ? 'bg-cyan/15 text-cyan'
+            : 'bg-dark-hover text-muted',
+        )"
       >
         {{ tab.count }}
       </span>
       <!-- Active indicator -->
       <span
         v-if="tab.key === modelValue"
-        class="absolute inset-x-2 -bottom-px h-0.5 bg-cyan"
+        class="absolute inset-x-0 -bottom-px h-0.5 bg-cyan"
         aria-hidden="true"
       />
     </button>
