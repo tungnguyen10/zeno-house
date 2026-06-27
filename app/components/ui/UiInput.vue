@@ -74,7 +74,7 @@ const inputClass = computed(() =>
     <div :class="wrapperClass">
       <span
         v-if="hasPrefix"
-        class="flex items-center pl-3 pr-1 text-sm text-muted select-none"
+        class="flex items-center pl-3 pr-1 text-sm text-muted select-none whitespace-nowrap"
         aria-hidden="true"
       >
         <slot name="prefix" />
@@ -95,7 +95,7 @@ const inputClass = computed(() =>
 
       <span
         v-if="hasSuffix"
-        class="flex items-center pr-3 pl-1 text-sm text-muted select-none"
+        class="flex items-center pr-3 pl-1 text-sm text-muted select-none whitespace-nowrap"
         aria-hidden="true"
       >
         <slot name="suffix" />

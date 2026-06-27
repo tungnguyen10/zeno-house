@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import type { BuildingFormData } from '~/components/buildings/BuildingForm.vue'
+import { onBeforeRouteLeave } from 'vue-router'
+import { buildingFormToApiPayload, type BuildingFormData } from '~/components/buildings/BuildingForm.vue'
 import { buildingPath } from '~/utils/routes/operational'
 
 const route = useRoute()
@@ -11,29 +12,28 @@ watchEffect(() => {
   if (error.value?.statusCode === 404) navigateTo('/buildings')
 })
 
-const { isLoading, errors, apiError, submitUpdate } = useBuildingForm()
+function emptyForm(): BuildingFormData {
+  return {
+    name: '',
+    address: '',
+    description: '',
+    status: 'active',
+    ownerName: '',
+    ownerPhone: '',
+    ownerEmail: '',
+    electricityPricingType: 'per_kwh',
+    defaultElectricityRate: '',
+    waterPricingType: 'per_m3',
+    defaultWaterRate: '',
+    meterReadingDay: '',
+    billingGenerationDay: '',
+    paymentDueDay: '',
+    gracePeriodDays: '0',
+  }
+}
 
-const formData = ref<BuildingFormData>({
-  name: building.value?.name ?? '',
-  address: building.value?.address ?? '',
-  description: building.value?.description ?? '',
-  status: building.value?.status ?? 'active',
-  ownerName: building.value?.ownerName ?? '',
-  ownerPhone: building.value?.ownerPhone ?? '',
-  ownerEmail: building.value?.ownerEmail ?? '',
-  electricityPricingType: building.value?.electricityPricingType ?? 'per_kwh',
-  defaultElectricityRate: building.value?.defaultElectricityRate?.toString() ?? '',
-  waterPricingType: building.value?.waterPricingType ?? 'per_m3',
-  defaultWaterRate: building.value?.defaultWaterRate?.toString() ?? '',
-  meterReadingDay: building.value?.meterReadingDay?.toString() ?? '',
-  billingGenerationDay: building.value?.billingGenerationDay?.toString() ?? '',
-  paymentDueDay: building.value?.paymentDueDay?.toString() ?? '',
-  gracePeriodDays: building.value?.gracePeriodDays?.toString() ?? '0',
-})
-
-watch(() => building.value, (b) => {
-  if (!b) return
-  formData.value = {
+function buildingToForm(b: NonNullable<typeof building.value>): BuildingFormData {
+  return {
     name: b.name,
     address: b.address,
     description: b.description ?? '',
@@ -50,39 +50,66 @@ watch(() => building.value, (b) => {
     paymentDueDay: b.paymentDueDay?.toString() ?? '',
     gracePeriodDays: b.gracePeriodDays?.toString() ?? '0',
   }
+}
+
+const formData = ref<BuildingFormData>(building.value ? buildingToForm(building.value) : emptyForm())
+
+// Snapshot drives isDirty; refreshed whenever the server data refetches.
+const initialSnapshot = computed<BuildingFormData | null>(() =>
+  building.value ? buildingToForm(building.value) : null,
+)
+
+watch(() => building.value, (b) => {
+  if (!b) return
+  formData.value = buildingToForm(b)
 })
 
-const toNum = (v: string) => v === '' ? null : Number(v)
-const toDay = (v: string) => v === '' ? null : Number(v)
+const {
+  isLoading,
+  errors,
+  apiError,
+  submitUpdate,
+  hasDraft,
+  restoreDraft,
+  clearDraft,
+  isDirty,
+} = useBuildingForm<BuildingFormData>({
+  draftKey: { mode: 'edit', id },
+  formData,
+  initialSnapshot,
+})
 
 async function onSubmit(data: BuildingFormData) {
-  await submitUpdate(id, {
-    name: data.name,
-    address: data.address,
-    description: data.description || null,
-    status: data.status,
-    owner_name: data.ownerName || null,
-    owner_phone: data.ownerPhone || null,
-    owner_email: data.ownerEmail || null,
-    electricity_pricing_type: data.electricityPricingType,
-    default_electricity_rate: toNum(data.defaultElectricityRate),
-    water_pricing_type: data.waterPricingType,
-    default_water_rate: toNum(data.defaultWaterRate),
-    meter_reading_day: toDay(data.meterReadingDay),
-    billing_generation_day: toDay(data.billingGenerationDay),
-    payment_due_day: toDay(data.paymentDueDay),
-    grace_period_days: data.gracePeriodDays === '' ? 0 : Number(data.gracePeriodDays),
-  })
+  await submitUpdate(id, buildingFormToApiPayload(data))
+}
+
+onBeforeRouteLeave((_to, _from, next) => {
+  if (!isDirty.value) return next()
+  const ok = typeof window !== 'undefined'
+    ? window.confirm('Có thay đổi chưa lưu. Bạn có chắc muốn rời trang?')
+    : true
+  return next(ok)
+})
+
+if (import.meta.client) {
+  const handler = (event: BeforeUnloadEvent) => {
+    if (!isDirty.value) return
+    event.preventDefault()
+    event.returnValue = ''
+  }
+  window.addEventListener('beforeunload', handler)
+  onBeforeUnmount(() => window.removeEventListener('beforeunload', handler))
 }
 </script>
 
 <template>
-  <div class="max-w-3xl">
-    <UiPageHeader title="Chỉnh sửa tòa nhà">
-      <NuxtLink :to="building ? buildingPath(building) : `/buildings/${id}`" class="text-sm text-muted hover:text-white transition-colors">
-        ← {{ building?.name ?? 'Chi tiết tòa nhà' }}
-      </NuxtLink>
-    </UiPageHeader>
+  <div>
+    <UiPageHeader
+      :title="building?.name ? `Chỉnh sửa · ${building.name}` : 'Chỉnh sửa tòa nhà'"
+      description="Cập nhật thông tin chung và cấu hình vận hành."
+      :back-to="building ? buildingPath(building) : `/buildings/${id}`"
+      :back-label="building?.name ?? 'Chi tiết tòa nhà'"
+    />
 
     <UiAlert v-if="apiError" severity="danger" class="mb-4">
       {{ apiError }}
@@ -93,8 +120,13 @@ async function onSubmit(data: BuildingFormData) {
         v-model="formData"
         :loading="isLoading"
         :errors="errors"
+        :has-draft="hasDraft"
+        :is-dirty="isDirty"
+        submit-label="Cập nhật"
         @submit="onSubmit"
         @cancel="navigateTo(building ? buildingPath(building) : `/buildings/${id}`)"
+        @restore-draft="restoreDraft"
+        @discard-draft="clearDraft"
       />
     </div>
   </div>

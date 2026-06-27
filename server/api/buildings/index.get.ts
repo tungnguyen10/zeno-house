@@ -1,13 +1,17 @@
 import { BuildingService } from '../../services/buildings'
+import { buildingListQuerySchema } from '~/utils/validators/buildings'
 
 export default defineEventHandler(async (event) => {
   const user = await requireAuth(event)
 
-  const query = getQuery(event)
-  const page = Math.max(1, Number(query.page ?? 1))
-  const limit = Math.min(100, Math.max(1, Number(query.limit ?? 20)))
+  const rawQuery = getQuery(event)
+  const result = buildingListQuerySchema.safeParse(rawQuery)
+  if (!result.success) {
+    throwValidationError('Tham số truy vấn không hợp lệ', result.error.flatten())
+  }
 
-  const { items, total } = await BuildingService.list(event, user, { page, limit })
+  const { page, limit, q, status, sort, order } = result.data
+  const { items, total } = await BuildingService.list(event, user, { page, limit, q, status, sort, order })
 
   return {
     data: items,

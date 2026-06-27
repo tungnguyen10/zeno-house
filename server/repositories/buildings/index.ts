@@ -104,18 +104,69 @@ async function attachServiceSummaries(event: H3Event, buildings: Building[]): Pr
 export const BuildingRepository = {
   async findAll(
     event: H3Event,
-    opts: { page: number; limit: number },
+    opts: {
+      page: number
+      limit: number
+      q?: string
+      status?: ('active' | 'inactive')[]
+      sort?: 'name' | 'created_at' | 'total_rooms'
+      order?: 'asc' | 'desc'
+    },
   ): Promise<{ items: Building[]; total: number }> {
     const client = await serverSupabaseClient(event)
+    const sort = opts.sort ?? 'created_at'
+    const order = opts.order ?? 'desc'
+    const ascending = order === 'asc'
+
+    if (sort === 'total_rooms') {
+      // Computed aggregate cannot be ordered by Postgres directly via PostgREST;
+      // fetch matching rows, sort in memory, then paginate. Buildings table is
+      // small (see design D6), so this is acceptable.
+      let query = client
+        .from('buildings')
+        .select('*, rooms(count)', { count: 'exact' })
+
+      if (opts.q && opts.q.trim()) {
+        const term = opts.q.trim().replace(/[,()]/g, '')
+        query = query.or(
+          `name.ilike.%${term}%,address.ilike.%${term}%,code.ilike.%${term}%`,
+        )
+      }
+      if (opts.status && opts.status.length > 0) {
+        query = query.in('status', opts.status)
+      }
+
+      const { data, error, count } = await query
+      if (error) throw createError({ statusCode: 500, message: error.message })
+
+      const rows = (data as BuildingRow[] ?? []).map(mapBuilding)
+      rows.sort((a, b) => (ascending ? a.totalRooms - b.totalRooms : b.totalRooms - a.totalRooms))
+
+      const from = (opts.page - 1) * opts.limit
+      const slice = rows.slice(from, from + opts.limit)
+      return { items: await attachServiceSummaries(event, slice), total: count ?? rows.length }
+    }
+
     const from = (opts.page - 1) * opts.limit
     const to = from + opts.limit - 1
 
-    const { data, error, count } = await client
+    let query = client
       .from('buildings')
       .select('*, rooms(count)', { count: 'exact' })
-      .order('created_at', { ascending: false })
-      .range(from, to)
 
+    if (opts.q && opts.q.trim()) {
+      const term = opts.q.trim().replace(/[,()]/g, '')
+      query = query.or(
+        `name.ilike.%${term}%,address.ilike.%${term}%,code.ilike.%${term}%`,
+      )
+    }
+    if (opts.status && opts.status.length > 0) {
+      query = query.in('status', opts.status)
+    }
+
+    query = query.order(sort, { ascending }).range(from, to)
+
+    const { data, error, count } = await query
     if (error) throw createError({ statusCode: 500, message: error.message })
     const items = (data as BuildingRow[] ?? []).map(mapBuilding)
     return { items: await attachServiceSummaries(event, items), total: count ?? 0 }
@@ -238,5 +289,40 @@ export const BuildingRepository = {
     const client = await serverSupabaseClient(event)
     const { error } = await client.from('buildings').delete().eq('id', id)
     if (error) throw createError({ statusCode: 500, message: error.message })
+  },
+
+  async countRoomsForBuilding(event: H3Event, buildingId: string): Promise<number> {
+    const client = await serverSupabaseClient(event)
+    const { count, error } = await client
+      .from('rooms')
+      .select('id', { count: 'exact', head: true })
+      .eq('building_id', buildingId)
+    if (error) throw createError({ statusCode: 500, message: error.message })
+    return count ?? 0
+  },
+
+  async countActiveContractsForBuilding(event: H3Event, buildingId: string): Promise<number> {
+    const client = await serverSupabaseClient(event)
+    const { count, error } = await client
+      .from('contracts')
+      .select('id', { count: 'exact', head: true })
+      .eq('building_id', buildingId)
+      .eq('status', 'active')
+    if (error) throw createError({ statusCode: 500, message: error.message })
+    return count ?? 0
+  },
+
+  async softArchive(event: H3Event, id: string): Promise<Building> {
+    const client = await serverSupabaseClient(event)
+    const { data, error } = await client
+      .from('buildings')
+      .update({ status: 'inactive' })
+      .eq('id', id)
+      .select('*, rooms(count)')
+      .single()
+
+    if (error) throw createError({ statusCode: 500, message: error.message })
+    const [building] = await attachServiceSummaries(event, [mapBuilding(data as BuildingRow)])
+    return building!
   },
 }

@@ -29,12 +29,13 @@ async function onSubmit(data: RoomFormData) {
 </script>
 
 <template>
-  <div class="">
-    <UiPageHeader title="Thêm phòng mới">
-      <NuxtLink to="/rooms" class="text-sm text-muted hover:text-white transition-colors">
-        ← Danh sách phòng
-      </NuxtLink>
-    </UiPageHeader>
+  <div>
+    <UiPageHeader
+      title="Thêm phòng mới"
+      description="Khai báo thông tin phòng. Có thể chỉnh sửa sau khi tạo."
+      :back-to="'/rooms'"
+      back-label="Danh sách phòng"
+    />
 
     <UiAlert v-if="apiError" severity="danger" class="mb-4">
       {{ apiError }}

@@ -41,12 +41,13 @@ async function onSubmit(data: TenantFormData) {
 </script>
 
 <template>
-  <div class="">
-    <UiPageHeader title="Thêm khách thuê mới">
-      <NuxtLink to="/tenants" class="text-sm text-muted hover:text-white transition-colors">
-        ← Danh sách khách thuê
-      </NuxtLink>
-    </UiPageHeader>
+  <div>
+    <UiPageHeader
+      title="Thêm khách thuê mới"
+      description="Khai báo thông tin khách thuê. Bạn có thể bổ sung chi tiết sau."
+      :back-to="'/tenants'"
+      back-label="Danh sách khách thuê"
+    />
 
     <UiAlert v-if="apiError" severity="danger" class="mb-4">
       {{ apiError }}

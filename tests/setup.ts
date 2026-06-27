@@ -14,6 +14,7 @@ import {
   toRaw,
   toRef,
   toRefs,
+  toValue,
   unref,
   watch,
   watchEffect,
@@ -24,7 +25,7 @@ import {
 // that import explicitly are unaffected (the import wins over the global).
 for (const [name, fn] of Object.entries({
   computed, isRef, nextTick, onBeforeMount, onBeforeUnmount, onMounted, onUnmounted,
-  reactive, readonly, ref, shallowRef, toRaw, toRef, toRefs, unref, watch, watchEffect,
+  reactive, readonly, ref, shallowRef, toRaw, toRef, toRefs, toValue, unref, watch, watchEffect,
 })) {
   vi.stubGlobal(name, fn)
 }

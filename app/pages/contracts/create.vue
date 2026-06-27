@@ -117,12 +117,13 @@ async function onSubmit(data: ContractFormData) {
 </script>
 
 <template>
-  <div class="">
-    <UiPageHeader title="Thêm hợp đồng mới">
-      <NuxtLink to="/contracts" class="text-sm text-muted hover:text-white transition-colors">
-        ← Danh sách hợp đồng
-      </NuxtLink>
-    </UiPageHeader>
+  <div>
+    <UiPageHeader
+      title="Thêm hợp đồng mới"
+      description="Khai báo hợp đồng, thêm người ở chung và cấu hình dịch vụ — từng bước."
+      :back-to="'/contracts'"
+      back-label="Danh sách hợp đồng"
+    />
 
     <!-- ── Two-step layout ──────────────────────────────────────────────── -->
     <div>

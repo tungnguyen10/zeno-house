@@ -33,11 +33,12 @@ Routes:
 
 API:
 
-- `GET /api/buildings`
+- `GET /api/buildings` — supports `page`, `limit`, `q`, `status` (multi), `sort` (`name`/`created_at`/`total_rooms`), `order` (`asc`/`desc`)
 - `POST /api/buildings`
 - `GET /api/buildings/[id]`
 - `PATCH /api/buildings/[id]`
-- `DELETE /api/buildings/[id]`
+- `DELETE /api/buildings/[id]` — returns `204` when empty; `409 CONFLICT` with `{ rooms, activeContracts }` details when not. Pass `?force=true` to soft-archive (`status=inactive`) and receive `200` with the building DTO.
+- `POST /api/buildings/bulk` — body `{ action: 'archive' | 'activate' | 'delete', ids: string[] }`. Returns `{ succeeded: string[], failed: { id, reason }[] }`. Errors per item are caught and reported, not thrown.
 - `GET /api/buildings/[id]/rooms/[room]`
 
 Buildings own:
@@ -50,6 +51,29 @@ Buildings own:
 - monthly billing periods
 
 Readable building routes use `slug` when available and fall back to id.
+
+### List page behaviour
+
+- Toolbar exposes search (250ms debounce), status chips, sort, and order. All filter state mirrors the URL `?q=…&status=…&sort=…&order=…&page=…`.
+- Admin can switch to selection mode to bulk archive/activate/delete. A "Chọn cả trang" checkbox toggles every building on the current page; the per-card checkbox toggles a single row.
+- Delete requires a checkbox acknowledgement and only succeeds for buildings with no rooms and no active contracts.
+- After bulk actions a toast summarises the result; if any items were skipped, an inline warning surfaces a "Xem chi tiết" button that opens a modal listing each failure with a human-readable reason.
+- Empty states distinguish "no data" from "filtered to empty" (the latter offers a "Xoá bộ lọc" action).
+
+### Detail page
+
+- Hero shows name, code, status pill, address and three quick stats: rooms, occupied, services.
+- Sections `#overview`, `#services`, `#operations`, `#danger-zone` (admin-only).
+- Operations section exposes three shortcuts: "Xem phòng (N)" (rooms list filtered to this building), "Xem hợp đồng", and "Đọc đồng hồ tháng này" (links to `/buildings/[id]/meter-readings`).
+- `DELETE` returning `409` shows an alert with a "Lưu trữ thay vì xoá" shortcut that re-issues `DELETE /api/buildings/[id]?force=true`.
+
+### Form
+
+- Four numbered card sections (basic, owner, billing defaults, schedule); the create page extends the form with a fifth "Tạo phòng nhanh" section via the `extras` slot so the same desktop footer / mobile sticky save bar drives the entire flow.
+- Inline blur validation runs the create schema per field — errors appear on blur and clear as soon as the value becomes valid. Submit reveals every remaining error in a summary at the top with click-to-focus.
+- Draft autosaved to `localStorage` (`building-form:create` or `building-form:edit:<id>`); the form shows a restore banner when a draft exists and clears it on successful submit.
+- Dirty-state guard via `onBeforeRouteLeave` and `beforeunload` prompts before discarding changes.
+- Mobile shows a sticky save bar with safe-area-inset padding.
 
 ## Rooms
 
