@@ -78,6 +78,6 @@
 - [x] 11.1 Run `pnpm typecheck` and fix any new type errors
 - [x] 11.2 Run `pnpm lint` and fix issues
 - [x] 11.3 Run `pnpm test` — all new + existing tests pass
-- [ ] 11.4 Manually verify on dev server: search/filter/sort/bulk on list, hero stats on detail, sticky save + dirty guard + draft on form, 409 conflict path, new edit route
+- [x] 11.4 Manually verify on dev server: search/filter/sort/bulk on list, hero stats on detail, sticky save + dirty guard + draft on form, 409 conflict path, new edit route
 - [x] 11.5 Update `docs/features/property-operations.md` (or relevant docs) about tenants overhaul behaviour changes
 - [x] 11.6 Run `openspec validate tenants-overhaul --strict` and resolve any errors before archive

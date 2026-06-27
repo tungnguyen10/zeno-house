@@ -7,7 +7,7 @@
 ## 2. Database migration
 
 - [x] 2.1 Create `supabase/migrations/<ts>_rooms_add_archived_status.sql` that drops the existing `rooms_status_check` constraint and re-adds it with `('available','occupied','maintenance','archived')`
-- [ ] 2.2 Run `supabase db reset` (local) and `pnpm gen:types` to refresh `app/types/database.types.ts`
+- [x] 2.2 Run `supabase db reset` (local) and `pnpm gen:types` to refresh `app/types/database.types.ts`
 
 ## 3. Repository layer
 
@@ -76,6 +76,6 @@
 - [x] 11.1 Run `pnpm typecheck` and fix any new type errors
 - [x] 11.2 Run `pnpm lint` and fix issues
 - [x] 11.3 Run `pnpm test` — all new + existing tests pass
-- [ ] 11.4 Manually verify on dev server: search/filter/sort/bulk on list, hero stats on detail, sticky save + dirty guard + draft on form, 409 conflict path
+- [x] 11.4 Manually verify on dev server: search/filter/sort/bulk on list, hero stats on detail, sticky save + dirty guard + draft on form, 409 conflict path
 - [x] 11.5 Update `docs/features/property-operations.md` (or add short note) about rooms overhaul behaviour changes
 - [x] 11.6 Run `openspec validate rooms-overhaul --strict` and resolve any errors before archive
