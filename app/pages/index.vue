@@ -26,12 +26,6 @@ const absoluteLabel = computed(() =>
   meta.value?.generatedAt ? formatTimeHHmm(meta.value.generatedAt) : '',
 )
 
-const occupancyPercent = computed(() => {
-  const rooms = summary.value?.rooms
-  if (!rooms || rooms.total === 0) return 0
-  return Math.round((rooms.occupied / rooms.total) * 100)
-})
-
 async function handleRefresh() {
   await refresh()
   tick.value = Date.now()
@@ -93,56 +87,23 @@ async function handleRefresh() {
 
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:col-span-7">
           <UiSection title="Phòng">
-            <UiSkeleton v-if="isLoading" class="h-28 rounded-xl" />
-            <template v-else-if="summary">
-              <div class="flex flex-col gap-1">
-                <p class="text-xs uppercase tracking-wide text-muted">Occupancy</p>
-                <p class="text-2xl font-semibold tabular-nums text-cyan">{{ occupancyPercent }}%</p>
-                <p class="text-xs text-muted">
-                  {{ summary.rooms.occupied }}/{{ summary.rooms.total }} đang thuê
-                </p>
-              </div>
-              <div class="mt-3 grid grid-cols-3 gap-2 text-xs">
-                <div>
-                  <span class="text-muted">Trống</span>
-                  <p class="font-semibold tabular-nums text-success-neon">{{ summary.rooms.available }}</p>
-                </div>
-                <div>
-                  <span class="text-muted">Bảo trì</span>
-                  <p class="font-semibold tabular-nums text-warning">{{ summary.rooms.maintenance }}</p>
-                </div>
-                <div>
-                  <span class="text-muted">Tổng tòa</span>
-                  <p class="font-semibold tabular-nums text-white">{{ summary.buildings.total }}</p>
-                </div>
-              </div>
-            </template>
+            <UiSkeleton v-if="isLoading" class="h-40 rounded-xl" />
+            <DashboardRoomsSummaryCard
+              v-else-if="summary"
+              :rooms="summary.rooms"
+              :building-count="summary.buildings.total"
+            />
           </UiSection>
 
           <UiSection title="Hợp đồng">
-            <UiSkeleton v-if="isLoading" class="h-28 rounded-xl" />
-            <template v-else-if="summary">
-              <div class="flex flex-col gap-1">
-                <p class="text-xs uppercase tracking-wide text-muted">Active</p>
-                <p class="text-2xl font-semibold tabular-nums text-white">{{ summary.contracts.active }}</p>
-                <p class="text-xs text-muted">{{ summary.tenants.total }} khách thuê</p>
-              </div>
-              <div class="mt-3 grid grid-cols-2 gap-2 text-xs">
-                <div>
-                  <span class="text-muted">Hết hạn ≤30 ngày</span>
-                  <p class="font-semibold tabular-nums text-warning">{{ summary.contracts.expiringSoon }}</p>
-                </div>
-                <div>
-                  <span class="text-muted">≤7 ngày (urgent)</span>
-                  <p
-                    class="font-semibold tabular-nums"
-                    :class="summary.contracts.expiringUrgent > 0 ? 'text-error-vivid' : 'text-muted'"
-                  >
-                    {{ summary.contracts.expiringUrgent }}
-                  </p>
-                </div>
-              </div>
-            </template>
+            <UiSkeleton v-if="isLoading" class="h-40 rounded-xl" />
+            <DashboardContractsSummaryCard
+              v-else-if="summary"
+              :active="summary.contracts.active"
+              :expiring-soon="summary.contracts.expiringSoon"
+              :expiring-urgent="summary.contracts.expiringUrgent"
+              :tenant-count="summary.tenants.total"
+            />
           </UiSection>
         </div>
       </div>
@@ -155,7 +116,7 @@ async function handleRefresh() {
 
       <!-- Detail: occupancy by building + pending operations -->
       <div class="grid grid-cols-1 gap-6 xl:grid-cols-2">
-        <UiSection title="Occupancy theo tòa">
+        <UiSection title="Tỷ lệ phòng theo tòa">
           <div v-if="isLoading" class="space-y-3">
             <UiSkeleton v-for="i in 3" :key="i" class="h-16 rounded-lg" />
           </div>

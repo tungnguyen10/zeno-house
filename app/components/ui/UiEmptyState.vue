@@ -1,23 +1,57 @@
 <script setup lang="ts">
-defineProps<{
-  title: string
-  description?: string
-}>()
+type EmptyVariant = 'default' | 'success' | 'search'
+type EmptySize = 'sm' | 'md'
+
+const props = withDefaults(
+  defineProps<{
+    title: string
+    description?: string
+    variant?: EmptyVariant
+    size?: EmptySize
+  }>(),
+  {
+    variant: 'default',
+    size: 'md',
+  },
+)
+
+const containerClass = computed(() =>
+  props.size === 'sm' ? 'py-6 px-4' : 'py-12 px-4',
+)
+
+const iconWrapperSize = computed(() =>
+  props.size === 'sm' ? 'h-9 w-9' : 'h-11 w-11',
+)
+
+const iconWrapperTone = computed(() => {
+  switch (props.variant) {
+    case 'success': return 'bg-success-neon/10 ring-success-neon/25'
+    default: return 'bg-dark-surface ring-dark-border'
+  }
+})
+
+const iconSizeClass = computed(() => (props.size === 'sm' ? 'h-4 w-4' : 'h-5 w-5'))
+
+const iconTone = computed(() =>
+  props.variant === 'success' ? 'text-success-neon' : 'text-muted',
+)
+
+const iconSpacing = computed(() => (props.size === 'sm' ? 'mb-3' : 'mb-4'))
 </script>
 
 <template>
-  <div class="flex flex-col items-center justify-center py-12 px-4 text-center">
-    <!-- Icon placeholder -->
-    <div class="flex h-12 w-12 items-center justify-center rounded-full bg-dark-hover mb-4">
-      <svg class="h-6 w-6 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 13.5h3.86a2.25 2.25 0 0 1 2.012 1.244l.256.512a2.25 2.25 0 0 0 2.013 1.244h3.218a2.25 2.25 0 0 0 2.013-1.244l.256-.512a2.25 2.25 0 0 1 2.013-1.244h3.859m-19.5.338V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18v-4.162c0-.224-.034-.447-.1-.661L19.24 5.338a2.25 2.25 0 0 0-2.15-1.588H6.911a2.25 2.25 0 0 0-2.15 1.588L2.35 13.177a2.25 2.25 0 0 0-.1.661Z" />
-      </svg>
+  <div :class="['flex flex-col items-center justify-center text-center', containerClass]">
+    <div :class="['flex items-center justify-center rounded-full ring-1', iconWrapperSize, iconWrapperTone, iconSpacing]">
+      <slot name="icon">
+        <IconCheckCircle v-if="variant === 'success'" :class="[iconSizeClass, iconTone]" aria-hidden="true" />
+        <IconSearch v-else-if="variant === 'search'" :class="[iconSizeClass, iconTone]" aria-hidden="true" />
+        <IconLayers v-else :class="[iconSizeClass, iconTone]" aria-hidden="true" />
+      </slot>
     </div>
 
-    <h3 class="text-sm font-semibold text-white mb-1">{{ title }}</h3>
-    <p v-if="description" class="text-sm text-muted max-w-sm">{{ description }}</p>
+    <h3 class="text-sm font-semibold text-white">{{ title }}</h3>
+    <p v-if="description" class="mt-1 max-w-sm text-sm text-muted">{{ description }}</p>
 
-    <!-- Action slot -->
     <div v-if="$slots.action" class="mt-4">
       <slot name="action" />
     </div>

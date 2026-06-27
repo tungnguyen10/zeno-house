@@ -571,7 +571,7 @@ function dismissAlert(key: string) {
 
     <!-- Empty / Skeleton -->
     <UiSection title="UiEmptyState / UiSkeleton" description="Helper components.">
-      <div class="grid gap-4 md:grid-cols-2">
+      <div class="grid gap-4 md:grid-cols-3">
         <div class="rounded-xl border border-dark-border bg-dark-surface">
           <UiEmptyState
             title="Chưa có hợp đồng nào"
@@ -582,7 +582,22 @@ function dismissAlert(key: string) {
             </template>
           </UiEmptyState>
         </div>
-        <div class="rounded-xl border border-dark-border bg-dark-surface p-6 space-y-3">
+        <div class="rounded-xl border border-dark-border bg-dark-surface">
+          <UiEmptyState
+            variant="success"
+            title="Không có việc tồn"
+            description="Mọi kỳ vận hành đã ổn."
+          />
+        </div>
+        <div class="rounded-xl border border-dark-border bg-dark-surface">
+          <UiEmptyState
+            variant="search"
+            size="sm"
+            title="Không tìm thấy kết quả"
+            description="Thử bỏ bớt bộ lọc hoặc đổi từ khoá."
+          />
+        </div>
+        <div class="rounded-xl border border-dark-border bg-dark-surface p-6 space-y-3 md:col-span-3">
           <p class="text-xs uppercase tracking-wide text-muted">Skeletons</p>
           <UiSkeleton class="h-5 w-2/3" />
           <UiSkeleton class="h-4 w-full" />

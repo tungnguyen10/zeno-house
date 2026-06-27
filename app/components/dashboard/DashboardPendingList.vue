@@ -29,8 +29,9 @@ function severityDotClass(severity: PendingOperation['severity']): string {
 <template>
   <UiEmptyState
     v-if="!items.length"
+    variant="success"
     title="Không có việc tồn"
-    description="Các kỳ vận hành hiện không có cảnh báo cần xử lý."
+    description="Mọi kỳ vận hành đã ổn. Quay lại sau khi có cảnh báo mới."
   />
   <div v-else class="overflow-hidden rounded-xl border border-dark-border bg-dark-surface">
     <NuxtLink
