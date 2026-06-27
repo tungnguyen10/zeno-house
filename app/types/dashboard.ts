@@ -13,13 +13,29 @@ export interface PendingOperation {
   period: string
   count: number
   severity: 'info' | 'warning' | 'danger'
+  amount?: number
+}
+
+export interface BillingTrendEntry {
+  period: string
+  invoiceTotal: number
+  paidAmount: number
+  outstandingAmount: number
+  overdueAmount: number
+}
+
+export interface BuildingBreakdownEntry {
+  id: string
+  slug: string
+  name: string
+  rooms: BuildingRoomStats
 }
 
 export interface DashboardSummary {
   buildings: { total: number }
   rooms: BuildingRoomStats
   tenants: { total: number }
-  contracts: { active: number; expiringSoon: number }
+  contracts: { active: number; expiringSoon: number; expiringUrgent: number }
   billing: {
     currentMonth: {
       period: string
@@ -27,20 +43,11 @@ export interface DashboardSummary {
       paidAmount: number
       outstandingAmount: number
       overdueAmount: number
+      collectionRate: number
     }
   }
-  buildingBreakdown: Array<{
-    id: string
-    slug: string
-    name: string
-    rooms: BuildingRoomStats
-  }>
-  billingTrend: Array<{
-    period: string
-    invoiceTotal: number
-    paidAmount: number
-    outstandingAmount: number
-  }>
+  buildingBreakdown: BuildingBreakdownEntry[]
+  billingTrend: BillingTrendEntry[]
   pendingOperations: PendingOperation[]
 }
 

@@ -1,7 +1,5 @@
-## Purpose
+## MODIFIED Requirements
 
-UI spec cho dashboard page (`/`). Hiển thị stat cards, collection hero, per-building occupancy, billing trend, và pending operations.
-## Requirements
 ### Requirement: Dashboard stat cards
 The `/` page SHALL display operational KPI cards for room occupancy, contract status, and current-month billing health. The primary metric for rooms SHALL be the occupancy ratio rendered as a percentage (`occupied / total`), accompanied by per-status counts (available, occupied, maintenance) in a caption. The primary metric for contracts SHALL be the active count, accompanied by `expiringSoon` (≤30 days) and `expiringUrgent` (≤7 days) tiers. Current-month billing health SHALL be expressed primarily through a "collection rate" visual (see "Dashboard collection hero") rather than a numeric strip. KPI cards SHALL use the existing operational card style and SHALL show loading skeletons while data is fetching.
 
@@ -51,13 +49,6 @@ The `/` page SHALL display per-building occupancy as horizontal stacked bars whe
 - **WHEN** `buildingBreakdown` is an empty array
 - **THEN** the occupancy list renders a `UiEmptyState` block with a hint to add buildings; no rows are rendered
 
-### Requirement: AppStatCard component
-`AppStatCard` SHALL be a shell component at `app/components/app/AppStatCard.vue`. Props: `title` (string), `value` (string | number), `description` (optional string). Renders a card with dark surface background matching existing card styles.
-
-#### Scenario: Renders title and value
-- **WHEN** AppStatCard receives title="Tòa nhà" value=5
-- **THEN** displays "Tòa nhà" label and "5" as prominent value
-
 ### Requirement: Dashboard revenue and debt chart
 The `/` page SHALL display a stacked column chart for the most recent billing periods (up to 6) showing three layers per period: `Đã thu` (paid), `Chưa thu trong hạn` (`outstandingAmount - overdueAmount`), and `Quá hạn` (`overdueAmount`). The chart SHALL be implemented with Chart.js (registered via the chart client plugin) and SHALL derive all colors, grid lines, and tooltip styling from the shared `useChartTheme()` composable.
 
@@ -96,21 +87,6 @@ The `/` page SHALL render `pendingOperations` in the order provided by the API (
 - **WHEN** `pendingOperations` is empty
 - **THEN** the section renders `UiEmptyState` with a positive empty-state message
 
-### Requirement: Dashboard error state
-The `/` page SHALL display an error state when `useDashboardSummary()` returns a non-null `error`. The error state SHALL contain a user-friendly message and a "Thử lại" button that calls `refresh()`. When in error state the page SHALL NOT render stale data and SHALL NOT show the loading skeleton.
-
-#### Scenario: API returns 500
-- **WHEN** GET /api/dashboard/summary returns 500
-- **THEN** page shows error message "Không tải được dữ liệu dashboard. Vui lòng thử lại." and a "Thử lại" button
-
-#### Scenario: Retry refreshes data
-- **WHEN** user clicks "Thử lại" while in error state
-- **THEN** `refresh()` is called; if successful, page transitions from error state back to data state
-
-#### Scenario: User without dashboard.read sees forbidden state
-- **WHEN** authenticated user without `dashboard.read` lands on `/`
-- **THEN** page shows a forbidden message and SHALL NOT show partial data
-
 ### Requirement: Dashboard data freshness indicator
 The `/` page SHALL display a relative time label sourced from `meta.generatedAt`, accompanied by a refresh button that calls `useDashboardSummary().refresh()`. The relative label SHALL re-render on a client-side interval (at most every 30 seconds) without re-fetching dashboard data. The label SHALL include the absolute time as a `title` attribute for hover/tooltip access.
 
@@ -138,6 +114,28 @@ The `/` page SHALL display a relative time label sourced from `meta.generatedAt`
 - **WHEN** the user hovers the relative label
 - **THEN** the `title` attribute exposes the absolute `HH:mm` time
 
+### Requirement: AppStatCard component
+`AppStatCard` SHALL be a shell component at `app/components/app/AppStatCard.vue`. Props: `title` (string), `value` (string | number), `description` (optional string). Renders a card with dark surface background matching existing card styles.
+
+#### Scenario: Renders title and value
+- **WHEN** AppStatCard receives title="Tòa nhà" value=5
+- **THEN** displays "Tòa nhà" label and "5" as prominent value
+
+### Requirement: Dashboard error state
+The `/` page SHALL display an error state when `useDashboardSummary()` returns a non-null `error`. The error state SHALL contain a user-friendly message and a "Thử lại" button that calls `refresh()`. When in error state the page SHALL NOT render stale data and SHALL NOT show the loading skeleton.
+
+#### Scenario: API returns 500
+- **WHEN** GET /api/dashboard/summary returns 500
+- **THEN** page shows error message "Không tải được dữ liệu dashboard. Vui lòng thử lại." and a "Thử lại" button
+
+#### Scenario: Retry refreshes data
+- **WHEN** user clicks "Thử lại" while in error state
+- **THEN** `refresh()` is called; if successful, page transitions from error state back to data state
+
+#### Scenario: User without dashboard.read sees forbidden state
+- **WHEN** authenticated user without `dashboard.read` lands on `/`
+- **THEN** page shows a forbidden message and SHALL NOT show partial data
+
 ### Requirement: Pending operations link built client-side
 The pending operations list on `/` SHALL build navigation links on the client from the `building` object and `period` returned by the API, using helpers in `app/utils/routes/operational.ts`. The page SHALL NOT consume any `href` field from the API payload.
 
@@ -149,3 +147,12 @@ The pending operations list on `/` SHALL build navigation links on the client fr
 - **WHEN** the page renders `pendingOperations`
 - **THEN** no rendering code reads a `href` property from the items
 
+## REMOVED Requirements
+
+### Requirement: Building occupancy table
+**Reason**: Replaced by "Building occupancy bars use per-row ratio" — the previous table-based requirement allowed normalize-by-max bars, which was misleading. The new requirement specifies per-row 100%-width stacked bars and an explicit occupancy percent per row, which supersedes the table format.
+
+**Migration**: The list/bar implementation moves into a dedicated `app/components/dashboard/DashboardOccupancyList.vue`. Routing via `buildingPath()` is preserved.
+
+### Requirement: Dashboard occupancy chart
+**Reason**: Subsumed by "Building occupancy bars use per-row ratio". The previous requirement only said "segmented or grouped visual bars" without constraining the normalization, leaving room for the misleading cross-row scaling that exists today.

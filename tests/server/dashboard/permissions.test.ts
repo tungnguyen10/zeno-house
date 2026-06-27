@@ -10,7 +10,7 @@ vi.mock('../../../server/repositories/dashboard', () => ({
         buildings: { total: 0 },
         rooms: { total: 0, available: 0, occupied: 0, maintenance: 0 },
         tenants: { total: 0 },
-        contracts: { active: 0, expiringSoon: 0 },
+        contracts: { active: 0, expiringSoon: 0, expiringUrgent: 0 },
         billing: {
           currentMonth: {
             period: '2026-06',
@@ -18,6 +18,7 @@ vi.mock('../../../server/repositories/dashboard', () => ({
             paidAmount: 0,
             outstandingAmount: 0,
             overdueAmount: 0,
+            collectionRate: 0,
           },
         },
         buildingBreakdown: [],

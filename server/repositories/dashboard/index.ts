@@ -1,6 +1,6 @@
 import { serverSupabaseClient } from '#supabase/server'
 import type { H3Event } from 'h3'
-import type { DashboardSummary, BuildingRoomStats } from '~/types/dashboard'
+import type { DashboardSummary, BuildingRoomStats, PendingOperation } from '~/types/dashboard'
 
 function emptyRoomStats(): BuildingRoomStats {
   return { total: 0, available: 0, occupied: 0, maintenance: 0 }
@@ -21,6 +21,12 @@ function sixMonthWindowStart(year: number, month: number): { startYear: number; 
   return { startYear, startMonth }
 }
 
+const SEVERITY_WEIGHT: Record<PendingOperation['severity'], number> = {
+  danger: 3,
+  warning: 2,
+  info: 1,
+}
+
 const ROOMS_LIMIT = 2000
 const BILLING_PERIODS_LIMIT = 500
 const INVOICES_LIMIT = 2000
@@ -37,6 +43,9 @@ export const DashboardRepository = {
     const expiringSoon = new Date(now)
     expiringSoon.setDate(expiringSoon.getDate() + 30)
     const expiringSoonDate = expiringSoon.toISOString().slice(0, 10)
+    const expiringUrgent = new Date(now)
+    expiringUrgent.setDate(expiringUrgent.getDate() + 7)
+    const expiringUrgentDate = expiringUrgent.toISOString().slice(0, 10)
     const { startYear, startMonth } = sixMonthWindowStart(currentYear, currentMonth)
 
     const [
@@ -45,6 +54,7 @@ export const DashboardRepository = {
       tenantsResult,
       activeContractsResult,
       expiringContractsResult,
+      expiringUrgentContractsResult,
       periodsResult,
       invoicesResult,
     ] = await Promise.all([
@@ -58,6 +68,12 @@ export const DashboardRepository = {
         .eq('status', 'active')
         .gte('end_date', today)
         .lte('end_date', expiringSoonDate),
+      client
+        .from('contracts')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'active')
+        .gte('end_date', today)
+        .lte('end_date', expiringUrgentDate),
       client
         .from('billing_periods')
         .select('id, building_id, period_year, period_month, status')
@@ -79,6 +95,7 @@ export const DashboardRepository = {
     if (tenantsResult.error) throwInternal(tenantsResult.error, 'dashboard.repository.tenants')
     if (activeContractsResult.error) throwInternal(activeContractsResult.error, 'dashboard.repository.activeContracts')
     if (expiringContractsResult.error) throwInternal(expiringContractsResult.error, 'dashboard.repository.expiringContracts')
+    if (expiringUrgentContractsResult.error) throwInternal(expiringUrgentContractsResult.error, 'dashboard.repository.expiringUrgentContracts')
     if (periodsResult.error) throwInternal(periodsResult.error, 'dashboard.repository.billingPeriods')
     if (invoicesResult.error) throwInternal(invoicesResult.error, 'dashboard.repository.invoices')
 
@@ -132,28 +149,40 @@ export const DashboardRepository = {
     let paidAmount = 0
     let outstandingAmount = 0
     let overdueAmount = 0
-    const trendByPeriod = new Map<string, { period: string; invoiceTotal: number; paidAmount: number; outstandingAmount: number }>()
+    const trendByPeriod = new Map<string, { period: string; invoiceTotal: number; paidAmount: number; outstandingAmount: number; overdueAmount: number }>()
+    const overdueAmountByBuilding = new Map<string, number>()
 
     for (const invoice of allInvoices) {
       if (invoice.status === 'void') continue
       const period = periodById.get(invoice.billing_period_id)
       if (!period) continue
       const token = periodToken(period.period_year, period.period_month)
-      const trend = trendByPeriod.get(token) ?? { period: token, invoiceTotal: 0, paidAmount: 0, outstandingAmount: 0 }
+      const trend = trendByPeriod.get(token) ?? { period: token, invoiceTotal: 0, paidAmount: 0, outstandingAmount: 0, overdueAmount: 0 }
+      const balance = Number(invoice.balance_amount ?? 0)
+      const isOverdue = balance > 0 && Boolean(invoice.due_date && invoice.due_date < today)
+
       trend.invoiceTotal += Number(invoice.total_amount ?? 0)
       trend.paidAmount += Number(invoice.paid_amount ?? 0)
-      trend.outstandingAmount += Number(invoice.balance_amount ?? 0)
+      trend.outstandingAmount += balance
+      if (isOverdue) trend.overdueAmount += balance
       trendByPeriod.set(token, trend)
+
+      if (isOverdue) {
+        const accum = overdueAmountByBuilding.get(period.building_id) ?? 0
+        overdueAmountByBuilding.set(period.building_id, accum + balance)
+      }
 
       if (currentPeriodIds.has(invoice.billing_period_id)) {
         invoiceTotal += Number(invoice.total_amount ?? 0)
         paidAmount += Number(invoice.paid_amount ?? 0)
-        outstandingAmount += Number(invoice.balance_amount ?? 0)
-        if (invoice.due_date && invoice.due_date < today) {
-          overdueAmount += Number(invoice.balance_amount ?? 0)
-        }
+        outstandingAmount += balance
+        if (isOverdue) overdueAmount += balance
       }
     }
+
+    const collectionRate = invoiceTotal === 0
+      ? 0
+      : Math.round((paidAmount / invoiceTotal) * 10000) / 10000
 
     const pendingOperations: DashboardSummary['pendingOperations'] = []
     for (const period of allPeriods) {
@@ -196,9 +225,20 @@ export const DashboardRepository = {
           period: currentPeriod,
           count: overdueCount,
           severity: 'danger',
+          amount: overdueAmountByBuilding.get(building.id) ?? 0,
         })
       }
     }
+
+    pendingOperations.sort((a, b) => {
+      const sev = SEVERITY_WEIGHT[b.severity] - SEVERITY_WEIGHT[a.severity]
+      if (sev !== 0) return sev
+      const amt = (b.amount ?? 0) - (a.amount ?? 0)
+      if (amt !== 0) return amt
+      const per = b.period.localeCompare(a.period)
+      if (per !== 0) return per
+      return a.building.name.localeCompare(b.building.name)
+    })
 
     const summary: DashboardSummary = {
       buildings: { total: buildings.length },
@@ -207,6 +247,7 @@ export const DashboardRepository = {
       contracts: {
         active: activeContractsResult.count ?? 0,
         expiringSoon: expiringContractsResult.count ?? 0,
+        expiringUrgent: expiringUrgentContractsResult.count ?? 0,
       },
       billing: {
         currentMonth: {
@@ -215,6 +256,7 @@ export const DashboardRepository = {
           paidAmount,
           outstandingAmount,
           overdueAmount,
+          collectionRate,
         },
       },
       buildingBreakdown,

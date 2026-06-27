@@ -23,7 +23,7 @@ const userInitial = computed(() => {
 </script>
 
 <template>
-  <header class="flex h-16 shrink-0 items-center gap-4 border-b border-dark-border bg-dark-card px-4 sm:px-6">
+  <header class="sticky top-0 z-10 flex h-16 shrink-0 items-center gap-3 border-b border-dark-border bg-dark-card/95 px-4 backdrop-blur sm:px-6">
     <!-- Hamburger button — mobile only -->
     <UiButton
       variant="ghost"
@@ -32,25 +32,25 @@ const userInitial = computed(() => {
       aria-label="Mở sidebar"
       @click="emit('toggleSidebar')"
     >
-      <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-        <path fill-rule="evenodd" d="M2 4.75A.75.75 0 0 1 2.75 4h14.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 4.75ZM2 10a.75.75 0 0 1 .75-.75h14.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 10Zm0 5.25a.75.75 0 0 1 .75-.75h14.5a.75.75 0 0 1 0 1.5H2.75a.75.75 0 0 1-.75-.75Z" clip-rule="evenodd" />
-      </svg>
+      <IconMenu class="h-5 w-5" aria-hidden="true" />
     </UiButton>
 
     <!-- Page title -->
     <div class="flex-1 min-w-0">
-      <h1 class="text-base font-semibold text-white truncate">
+      <h1 class="truncate text-base font-semibold text-white sm:text-lg">
         {{ pageTitle }}
       </h1>
     </div>
 
-    <!-- Right actions — user info + logout -->
-    <div class="flex items-center gap-3">
-      <span class="hidden text-sm text-muted sm:block truncate max-w-[160px]">
-        {{ authStore.user?.email }}
-      </span>
-      <div class="flex h-8 w-8 items-center justify-center rounded-full bg-cyan/20" aria-hidden="true">
-        <span class="text-xs font-semibold text-cyan">{{ userInitial }}</span>
+    <!-- Right actions — user pill + logout -->
+    <div class="flex items-center gap-2">
+      <div class="flex items-center gap-2 rounded-full border border-dark-border bg-dark-surface/60 py-1 pl-1 pr-1 sm:pr-3">
+        <div class="flex h-7 w-7 items-center justify-center rounded-full bg-cyan/20" aria-hidden="true">
+          <span class="text-xs font-semibold text-cyan">{{ userInitial }}</span>
+        </div>
+        <span class="hidden max-w-[180px] truncate text-sm text-white sm:block">
+          {{ authStore.user?.email }}
+        </span>
       </div>
       <UiButton
         variant="ghost"

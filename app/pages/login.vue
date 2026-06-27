@@ -37,12 +37,9 @@ async function handleSubmit() {
 <template>
   <div>
     <!-- Logo -->
-    <div class="mb-8 text-center">
-      <div class="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-cyan mb-3">
-        <span class="text-base font-bold text-dark-deep">Z</span>
-      </div>
-      <h1 class="text-xl font-semibold text-white">Zeno House</h1>
-      <p class="mt-1 text-sm text-muted">Đăng nhập vào tài khoản của bạn</p>
+    <div class="mb-8 flex flex-col items-center text-center">
+      <IconLogo class="h-10 w-auto text-white mb-3" aria-label="Zeno House" />
+      <p class="text-sm text-muted">Đăng nhập vào tài khoản của bạn</p>
     </div>
 
     <!-- Form -->

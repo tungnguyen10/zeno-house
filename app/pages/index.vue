@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { formatCurrency } from '~/utils/format/currency'
+import { useIntervalFn } from '@vueuse/core'
 import { formatTimeHHmm } from '~/utils/format/time'
-import { buildingPath, pendingOperationPath } from '~/utils/routes/operational'
+import { formatRelativeTime } from '~/utils/format/relative-time'
 
 definePageMeta({
   title: 'Dashboard',
@@ -12,40 +12,29 @@ const { summary, meta, isLoading, error, errorCode, refresh } = useDashboardSumm
 const isForbidden = computed(() => errorCode.value === 'FORBIDDEN')
 const hasError = computed(() => Boolean(error.value) && !isForbidden.value)
 
-const generatedAtLabel = computed(() => {
+const tick = ref(Date.now())
+useIntervalFn(() => { tick.value = Date.now() }, 30_000)
+
+const relativeLabel = computed(() => {
   if (!meta.value?.generatedAt) return ''
-  return formatTimeHHmm(meta.value.generatedAt)
+  // reference tick so label refreshes on the interval
+  void tick.value
+  return formatRelativeTime(meta.value.generatedAt, new Date())
 })
 
-const maxRooms = computed(() =>
-  Math.max(1, ...(summary.value?.buildingBreakdown ?? []).map(building => building.rooms.total)),
+const absoluteLabel = computed(() =>
+  meta.value?.generatedAt ? formatTimeHHmm(meta.value.generatedAt) : '',
 )
 
-const maxTrend = computed(() =>
-  Math.max(
-    1,
-    ...(summary.value?.billingTrend ?? []).map(row => Math.max(row.paidAmount, row.outstandingAmount)),
-  ),
-)
-
-function operationLabel(type: string): string {
-  switch (type) {
-    case 'missing_readings': return 'Chưa chốt số'
-    case 'unissued_invoices': return 'Chưa phát hành'
-    case 'overdue_invoices': return 'Quá hạn'
-    default: return type
-  }
-}
-
-function severityVariant(severity: string): 'neutral' | 'accent' | 'success' | 'warning' | 'danger' {
-  if (severity === 'danger') return 'danger'
-  if (severity === 'warning') return 'warning'
-  if (severity === 'info') return 'accent'
-  return 'neutral'
-}
+const occupancyPercent = computed(() => {
+  const rooms = summary.value?.rooms
+  if (!rooms || rooms.total === 0) return 0
+  return Math.round((rooms.occupied / rooms.total) * 100)
+})
 
 async function handleRefresh() {
   await refresh()
+  tick.value = Date.now()
 }
 </script>
 
@@ -54,8 +43,12 @@ async function handleRefresh() {
     <UiPageHeader title="Dashboard" description="Tổng quan vận hành nhà cho thuê">
       <template #actions>
         <div class="flex items-center gap-3">
-          <span v-if="generatedAtLabel" class="text-xs text-muted">
-            Cập nhật lúc {{ generatedAtLabel }}
+          <span
+            v-if="relativeLabel"
+            :title="absoluteLabel"
+            class="text-xs text-muted"
+          >
+            {{ relativeLabel }}
           </span>
           <UiButton
             variant="ghost"
@@ -85,126 +78,97 @@ async function handleRefresh() {
     </UiAlert>
 
     <template v-else>
-      <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <template v-if="isLoading">
-          <UiSkeleton v-for="i in 3" :key="i" class="h-36 rounded-xl" />
-        </template>
-        <template v-else-if="summary">
+      <!-- Hero row: Collection donut + KPI strip -->
+      <div class="grid grid-cols-1 gap-4 lg:grid-cols-12">
+        <UiSection class="lg:col-span-5">
+          <UiSkeleton v-if="isLoading" class="h-64 rounded-xl" />
+          <DashboardCollectionDonut
+            v-else-if="summary"
+            :collection-rate="summary.billing.currentMonth.collectionRate"
+            :paid-amount="summary.billing.currentMonth.paidAmount"
+            :invoice-total="summary.billing.currentMonth.invoiceTotal"
+            :outstanding-amount="summary.billing.currentMonth.outstandingAmount"
+          />
+        </UiSection>
+
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:col-span-7">
           <UiSection title="Phòng">
-            <div class="grid grid-cols-3 gap-3">
-              <UiMetric label="Trống" :value="summary.rooms.available" tone="success" />
-              <UiMetric label="Đang thuê" :value="summary.rooms.occupied" tone="accent" />
-              <UiMetric label="Bảo trì" :value="summary.rooms.maintenance" tone="warning" />
-            </div>
+            <UiSkeleton v-if="isLoading" class="h-28 rounded-xl" />
+            <template v-else-if="summary">
+              <div class="flex flex-col gap-1">
+                <p class="text-xs uppercase tracking-wide text-muted">Occupancy</p>
+                <p class="text-2xl font-semibold tabular-nums text-cyan">{{ occupancyPercent }}%</p>
+                <p class="text-xs text-muted">
+                  {{ summary.rooms.occupied }}/{{ summary.rooms.total }} đang thuê
+                </p>
+              </div>
+              <div class="mt-3 grid grid-cols-3 gap-2 text-xs">
+                <div>
+                  <span class="text-muted">Trống</span>
+                  <p class="font-semibold tabular-nums text-success-neon">{{ summary.rooms.available }}</p>
+                </div>
+                <div>
+                  <span class="text-muted">Bảo trì</span>
+                  <p class="font-semibold tabular-nums text-warning">{{ summary.rooms.maintenance }}</p>
+                </div>
+                <div>
+                  <span class="text-muted">Tổng tòa</span>
+                  <p class="font-semibold tabular-nums text-white">{{ summary.buildings.total }}</p>
+                </div>
+              </div>
+            </template>
           </UiSection>
 
           <UiSection title="Hợp đồng">
-            <div class="grid grid-cols-2 gap-3">
-              <UiMetric label="Active" :value="summary.contracts.active" tone="accent" />
-              <UiMetric label="Sắp hết hạn" :value="summary.contracts.expiringSoon" tone="warning" />
-            </div>
-          </UiSection>
-
-          <UiSection :title="`Billing ${summary.billing.currentMonth.period}`">
-            <div class="grid grid-cols-1 gap-3">
-              <UiMetric label="Phát hành" :value="formatCurrency(summary.billing.currentMonth.invoiceTotal)" tone="accent" />
-              <div class="grid grid-cols-2 gap-3">
-                <UiMetric label="Đã thu" :value="formatCurrency(summary.billing.currentMonth.paidAmount)" tone="success" />
-                <UiMetric label="Còn nợ" :value="formatCurrency(summary.billing.currentMonth.outstandingAmount)" tone="danger" />
+            <UiSkeleton v-if="isLoading" class="h-28 rounded-xl" />
+            <template v-else-if="summary">
+              <div class="flex flex-col gap-1">
+                <p class="text-xs uppercase tracking-wide text-muted">Active</p>
+                <p class="text-2xl font-semibold tabular-nums text-white">{{ summary.contracts.active }}</p>
+                <p class="text-xs text-muted">{{ summary.tenants.total }} khách thuê</p>
               </div>
-            </div>
-          </UiSection>
-        </template>
-      </div>
-
-      <div class="grid grid-cols-1 gap-6 xl:grid-cols-2">
-        <UiSection title="Tỷ lệ phòng theo tòa">
-          <div v-if="isLoading" class="space-y-3">
-            <UiSkeleton v-for="i in 4" :key="i" class="h-12 rounded-lg" />
-          </div>
-          <UiEmptyState
-            v-else-if="!summary?.buildingBreakdown.length"
-            title="Chưa có tòa nhà"
-            description="Thêm tòa nhà để xem tỷ lệ phòng."
-          />
-          <div v-else class="space-y-4">
-            <NuxtLink
-              v-for="building in summary.buildingBreakdown"
-              :key="building.id"
-              :to="buildingPath(building)"
-              class="block rounded-lg border border-dark-border bg-dark-surface p-4 hover:border-cyan/40"
-            >
-              <div class="mb-3 flex items-center justify-between gap-3">
-                <span class="text-sm font-medium text-white">{{ building.name }}</span>
-                <span class="text-xs text-muted">{{ building.rooms.total }} phòng</span>
-              </div>
-              <div class="flex h-3 overflow-hidden rounded-full bg-dark-border">
-                <div class="bg-success-neon" :style="{ width: `${(building.rooms.available / maxRooms) * 100}%` }" />
-                <div class="bg-cyan" :style="{ width: `${(building.rooms.occupied / maxRooms) * 100}%` }" />
-                <div class="bg-warning" :style="{ width: `${(building.rooms.maintenance / maxRooms) * 100}%` }" />
-              </div>
-              <div class="mt-2 flex gap-4 text-xs text-muted">
-                <span>Trống {{ building.rooms.available }}</span>
-                <span>Thuê {{ building.rooms.occupied }}</span>
-                <span>Bảo trì {{ building.rooms.maintenance }}</span>
-              </div>
-            </NuxtLink>
-          </div>
-        </UiSection>
-
-        <UiSection title="Thu và công nợ theo tháng">
-          <div v-if="isLoading" class="space-y-3">
-            <UiSkeleton v-for="i in 4" :key="i" class="h-12 rounded-lg" />
-          </div>
-          <UiEmptyState
-            v-else-if="!summary?.billingTrend.length"
-            title="Chưa có dữ liệu billing"
-            description="Khi phát hành hóa đơn, biểu đồ sẽ hiển thị tại đây."
-          />
-          <div v-else class="space-y-4">
-            <div v-for="row in summary.billingTrend" :key="row.period">
-              <div class="mb-2 flex items-center justify-between gap-3 text-xs">
-                <span class="font-medium text-white">{{ row.period }}</span>
-                <span class="text-muted">{{ formatCurrency(row.paidAmount) }} / {{ formatCurrency(row.outstandingAmount) }}</span>
-              </div>
-              <div class="grid grid-cols-[5rem_1fr] items-center gap-3">
-                <span class="text-xs text-success-neon">Đã thu</span>
-                <div class="h-2 rounded-full bg-dark-border">
-                  <div class="h-2 rounded-full bg-success-neon" :style="{ width: `${(row.paidAmount / maxTrend) * 100}%` }" />
+              <div class="mt-3 grid grid-cols-2 gap-2 text-xs">
+                <div>
+                  <span class="text-muted">Hết hạn ≤30 ngày</span>
+                  <p class="font-semibold tabular-nums text-warning">{{ summary.contracts.expiringSoon }}</p>
                 </div>
-                <span class="text-xs text-error-vivid">Còn nợ</span>
-                <div class="h-2 rounded-full bg-dark-border">
-                  <div class="h-2 rounded-full bg-error" :style="{ width: `${(row.outstandingAmount / maxTrend) * 100}%` }" />
+                <div>
+                  <span class="text-muted">≤7 ngày (urgent)</span>
+                  <p
+                    class="font-semibold tabular-nums"
+                    :class="summary.contracts.expiringUrgent > 0 ? 'text-error-vivid' : 'text-muted'"
+                  >
+                    {{ summary.contracts.expiringUrgent }}
+                  </p>
                 </div>
               </div>
-            </div>
-          </div>
-        </UiSection>
+            </template>
+          </UiSection>
+        </div>
       </div>
 
-      <UiSection title="Việc cần xử lý">
-        <div v-if="isLoading" class="space-y-2">
-          <UiSkeleton v-for="i in 3" :key="i" class="h-12 rounded-lg" />
-        </div>
-        <UiEmptyState
-          v-else-if="!summary?.pendingOperations.length"
-          title="Không có việc tồn"
-          description="Các kỳ vận hành hiện không có cảnh báo cần xử lý."
-        />
-        <div v-else class="divide-y divide-dark-border rounded-xl border border-dark-border bg-dark-surface">
-          <NuxtLink
-            v-for="item in summary.pendingOperations"
-            :key="`${item.type}-${item.building.id}-${item.period}`"
-            :to="pendingOperationPath(item)"
-            class="grid grid-cols-1 gap-2 px-4 py-3 hover:bg-dark-hover md:grid-cols-[10rem_1fr_7rem_5rem]"
-          >
-            <UiBadge :variant="severityVariant(item.severity)" pill>{{ operationLabel(item.type) }}</UiBadge>
-            <span class="text-sm text-white">{{ item.building.name }}</span>
-            <span class="text-sm text-muted">{{ item.period }}</span>
-            <span class="text-sm text-muted md:text-right">{{ item.count }}</span>
-          </NuxtLink>
-        </div>
+      <!-- Trend chart -->
+      <UiSection title="Thu / Công nợ 6 kỳ gần nhất">
+        <UiSkeleton v-if="isLoading" class="h-64 rounded-xl" />
+        <DashboardBillingTrendChart v-else-if="summary" :trend="summary.billingTrend" />
       </UiSection>
+
+      <!-- Detail: occupancy by building + pending operations -->
+      <div class="grid grid-cols-1 gap-6 xl:grid-cols-2">
+        <UiSection title="Occupancy theo tòa">
+          <div v-if="isLoading" class="space-y-3">
+            <UiSkeleton v-for="i in 3" :key="i" class="h-16 rounded-lg" />
+          </div>
+          <DashboardOccupancyList v-else-if="summary" :buildings="summary.buildingBreakdown" />
+        </UiSection>
+
+        <UiSection title="Việc cần xử lý">
+          <div v-if="isLoading" class="space-y-2">
+            <UiSkeleton v-for="i in 3" :key="i" class="h-12 rounded-lg" />
+          </div>
+          <DashboardPendingList v-else-if="summary" :items="summary.pendingOperations" />
+        </UiSection>
+      </div>
     </template>
   </div>
 </template>

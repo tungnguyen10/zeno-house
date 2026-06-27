@@ -12,7 +12,7 @@ describe('dashboard summary shape', () => {
       buildings: { total: 0 },
       rooms: { total: 0, available: 0, occupied: 0, maintenance: 0 },
       tenants: { total: 0 },
-      contracts: { active: 0, expiringSoon: 0 },
+      contracts: { active: 0, expiringSoon: 0, expiringUrgent: 0 },
       billing: {
         currentMonth: {
           period: '2026-06',
@@ -20,6 +20,7 @@ describe('dashboard summary shape', () => {
           paidAmount: 0,
           outstandingAmount: 0,
           overdueAmount: 0,
+          collectionRate: 0,
         },
       },
       buildingBreakdown: [],
@@ -28,7 +29,9 @@ describe('dashboard summary shape', () => {
     }
 
     expect(summary.contracts.expiringSoon).toBe(0)
+    expect(summary.contracts.expiringUrgent).toBe(0)
     expect(summary.billing.currentMonth.outstandingAmount).toBe(0)
+    expect(summary.billing.currentMonth.collectionRate).toBe(0)
     expect(summary.pendingOperations).toEqual([])
   })
 
@@ -54,7 +57,7 @@ describe('dashboard summary shape', () => {
         buildings: { total: 0 },
         rooms: { total: 0, available: 0, occupied: 0, maintenance: 0 },
         tenants: { total: 0 },
-        contracts: { active: 0, expiringSoon: 0 },
+        contracts: { active: 0, expiringSoon: 0, expiringUrgent: 0 },
         billing: {
           currentMonth: {
             period: '2026-06',
@@ -62,6 +65,7 @@ describe('dashboard summary shape', () => {
             paidAmount: 0,
             outstandingAmount: 0,
             overdueAmount: 0,
+            collectionRate: 0,
           },
         },
         buildingBreakdown: [],
