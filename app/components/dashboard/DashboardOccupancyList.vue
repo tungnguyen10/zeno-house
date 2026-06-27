@@ -76,7 +76,7 @@ const rows = computed<Row[]>(() =>
         <div class="truncate text-sm font-medium text-white">{{ row.name }}</div>
         <div class="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted">
           <span>
-            <span class="tabular-nums text-white">{{ row.occupied }}</span>/<span class="tabular-nums">{{ row.total }}</span> đang thuê
+            <span class="tabular-nums text-white">{{ row.occupied }}</span>/<span class="tabular-nums">{{ row.total }}</span> {{ row.total === 0 ? 'phòng' : 'đang thuê' }}
           </span>
           <template v-if="row.available > 0">
             <span class="text-dark-border" aria-hidden="true">·</span>

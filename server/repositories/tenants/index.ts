@@ -1,6 +1,6 @@
 import { serverSupabaseClient } from '#supabase/server'
 import type { H3Event } from 'h3'
-import type { Tenant } from '~/types/tenants'
+import type { Tenant, TenantStatus } from '~/types/tenants'
 import type { TenantCreateInput, TenantUpdateInput } from '~/utils/validators/tenants'
 import { mapTenant } from '~/utils/mappers/tenants'
 import { isUuid } from '~/utils/format/slug'
@@ -10,6 +10,9 @@ export interface TenantFilters {
   q?: string
   building_id?: string
   contract_state?: 'with_contract' | 'without_contract'
+  status?: TenantStatus[]
+  sort?: 'full_name' | 'created_at' | 'code'
+  order?: 'asc' | 'desc'
   page?: number
   limit?: number
   available?: boolean
@@ -114,11 +117,14 @@ export const TenantRepository = {
     const limit = filters.limit ?? 20
     const from = (page - 1) * limit
     const to = from + limit - 1
+    const sort = filters.sort ?? 'full_name'
+    const order = filters.order ?? 'asc'
+    const ascending = order === 'asc'
 
     let query = client
       .from('tenants')
       .select('*', { count: 'exact' })
-      .order('full_name', { ascending: true })
+      .order(sort, { ascending })
       .range(from, to)
 
     const activeAssignments = await loadActiveAssignments(event)
@@ -155,7 +161,17 @@ export const TenantRepository = {
     }
 
     if (filters.q) {
-      query = query.or(`full_name.ilike.%${filters.q}%,phone.ilike.%${filters.q}%`)
+      const term = filters.q.trim().replace(/[,()]/g, '')
+      query = query.or(
+        `full_name.ilike.%${term}%,phone.ilike.%${term}%,email.ilike.%${term}%,id_number.ilike.%${term}%,code.ilike.%${term}%`,
+      )
+    }
+
+    if (filters.status && filters.status.length > 0) {
+      query = query.in('status', filters.status)
+    }
+    else {
+      query = query.neq('status', 'archived')
     }
 
     if (filters.contract_state === 'with_contract') {
@@ -295,5 +311,53 @@ export const TenantRepository = {
 
     if (error) throw createError({ statusCode: 500, message: error.message })
     return data ? mapTenant(data) : null
+  },
+
+  async countActiveContractsForTenant(event: H3Event, tenantId: string): Promise<number> {
+    const client = await serverSupabaseClient(event)
+    const { count, error } = await client
+      .from('contracts')
+      .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId)
+      .eq('status', 'active')
+    if (error) throw createError({ statusCode: 500, message: error.message })
+    return count ?? 0
+  },
+
+  async countActiveOccupanciesForTenant(event: H3Event, tenantId: string): Promise<number> {
+    const client = await serverSupabaseClient(event)
+    const { count, error } = await client
+      .from('contract_occupants')
+      .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId)
+      .is('move_out_date', null)
+    if (error) throw createError({ statusCode: 500, message: error.message })
+    return count ?? 0
+  },
+
+  async softArchive(event: H3Event, id: string): Promise<Tenant> {
+    const client = await serverSupabaseClient(event)
+    const { data, error } = await client
+      .from('tenants')
+      .update({ status: 'archived' })
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (error) throw createError({ statusCode: 500, message: error.message })
+    return mapTenant(data)
+  },
+
+  async setStatus(event: H3Event, id: string, status: TenantStatus): Promise<Tenant> {
+    const client = await serverSupabaseClient(event)
+    const { data, error } = await client
+      .from('tenants')
+      .update({ status })
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (error) throw createError({ statusCode: 500, message: error.message })
+    return mapTenant(data)
   },
 }

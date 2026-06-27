@@ -1,3 +1,5 @@
+export type TenantStatus = 'active' | 'archived'
+
 export interface Tenant {
   id: string
   code: string
@@ -14,6 +16,7 @@ export interface Tenant {
   emergencyContactPhone: string | null
   permanentAddress: string | null
   notes: string | null
+  status: TenantStatus
   hasActiveContract?: boolean
   activeAssignment?: {
     contractId: string

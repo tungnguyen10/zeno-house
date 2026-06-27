@@ -1,11 +1,29 @@
 <script setup lang="ts">
 import type { Building } from '~/types/buildings'
 import type { ApiSuccess } from '~/types/api'
+import type { TenantBulkAction, TenantBulkResult } from '~/composables/tenants/useTenantBulkActions'
 
 definePageMeta({ title: 'Khách thuê' })
 
 const authStore = useAuthStore()
-const { tenants, total, totalPages, page, isLoading, error, q, buildingFilter, contractStateFilter } = useTenantList()
+const toast = useToast()
+const {
+  tenants,
+  total,
+  totalPages,
+  page,
+  q,
+  buildingFilter,
+  contractStateFilter,
+  status,
+  sort,
+  order,
+  hasActiveFilters,
+  resetFilters,
+  isLoading,
+  error,
+  refresh,
+} = useTenantList()
 
 const { data: buildingsData } = await useFetch<ApiSuccess<Building[]> & { meta: { total: number } }>(
   '/api/buildings',
@@ -17,19 +35,82 @@ const buildingOptions = computed(() =>
     label: building.name,
   })),
 )
-const contractStateOptions = [
-  { value: 'with_contract', label: 'Có HĐ' },
-  { value: 'without_contract', label: 'Chưa có HĐ' },
-]
 
-const searchInput = ref('')
-let searchTimer: ReturnType<typeof setTimeout> | null = null
+const bulk = useTenantBulkActions()
 
-function onSearch() {
-  if (searchTimer) clearTimeout(searchTimer)
-  searchTimer = setTimeout(() => {
-    q.value = searchInput.value || undefined
-  }, 300)
+const selectionMode = ref(false)
+
+function toggleSelectionMode() {
+  selectionMode.value = !selectionMode.value
+  if (!selectionMode.value) bulk.clear()
+}
+
+function onToggleSelect(id: string) {
+  bulk.toggle(id)
+}
+
+const allOnPageSelected = computed(() => {
+  if (tenants.value.length === 0) return false
+  return tenants.value.every(t => bulk.selectedIds.value.includes(t.id))
+})
+
+const someOnPageSelected = computed(() =>
+  tenants.value.some(t => bulk.selectedIds.value.includes(t.id)),
+)
+
+function toggleAllOnPage(checked: boolean) {
+  if (checked) {
+    const merged = new Set([...bulk.selectedIds.value, ...tenants.value.map(t => t.id)])
+    bulk.selectAll([...merged])
+  }
+  else {
+    const pageIds = new Set(tenants.value.map(t => t.id))
+    bulk.selectAll(bulk.selectedIds.value.filter(id => !pageIds.has(id)))
+  }
+}
+
+const failureModalOpen = ref(false)
+const lastFailures = ref<TenantBulkResult['failed']>([])
+const lastFailureAction = ref<TenantBulkAction | null>(null)
+
+const reasonLabels: Record<string, string> = {
+  has_active_contracts: 'Còn hợp đồng đang hoạt động',
+  has_active_occupancies: 'Đang đồng cư trong hợp đồng',
+  not_found: 'Không tìm thấy',
+  conflict: 'Xung đột dữ liệu',
+}
+
+const failuresWithName = computed(() => {
+  const map = new Map(tenants.value.map(t => [t.id, t.fullName]))
+  return lastFailures.value.map(f => ({
+    id: f.id,
+    name: map.get(f.id) ?? f.id,
+    reason: reasonLabels[f.reason] ?? f.reason,
+  }))
+})
+
+const lastActionVerb = computed(() =>
+  lastFailureAction.value === 'archive'
+    ? 'lưu trữ'
+    : lastFailureAction.value === 'activate'
+      ? 'kích hoạt'
+      : 'xoá',
+)
+
+async function onBulkDone(result: TenantBulkResult, action: TenantBulkAction) {
+  const verb = action === 'archive' ? 'lưu trữ' : action === 'activate' ? 'kích hoạt' : 'xoá'
+  const succeeded = result.succeeded.length
+  const failed = result.failed.length
+
+  lastFailures.value = result.failed
+  lastFailureAction.value = action
+
+  if (succeeded > 0 && failed === 0) toast.success(`Đã ${verb} ${succeeded} khách thuê`)
+  else if (succeeded > 0 && failed > 0) toast.info(`Đã ${verb} ${succeeded} khách, ${failed} bị bỏ qua`)
+  else if (failed > 0) toast.error(`Không thể ${verb}. ${failed} bị bỏ qua`)
+
+  bulk.clear()
+  await refresh()
 }
 </script>
 
@@ -37,46 +118,69 @@ function onSearch() {
   <div>
     <UiPageHeader title="Khách thuê" :description="`${total} khách thuê`">
       <template #actions>
-        <NuxtLink v-if="authStore.isAdmin" to="/tenants/create">
-          <UiButton>Thêm khách thuê</UiButton>
-        </NuxtLink>
+        <div class="flex items-center gap-2">
+          <UiButton
+            v-if="authStore.isAdmin"
+            variant="secondary"
+            size="sm"
+            @click="toggleSelectionMode"
+          >
+            {{ selectionMode ? 'Thoát chọn' : 'Chọn nhiều' }}
+          </UiButton>
+          <NuxtLink v-if="authStore.isAdmin" to="/tenants/create">
+            <UiButton>Thêm khách thuê</UiButton>
+          </NuxtLink>
+        </div>
       </template>
     </UiPageHeader>
 
-    <!-- Filters -->
-    <UiToolbar class="mb-6 flex-wrap">
-      <UiSelect
-        v-model="buildingFilter"
-        :options="buildingOptions"
-        placeholder="Tất cả tòa nhà"
-        class="w-full sm:w-64"
-      />
-      <UiSelect
-        v-model="contractStateFilter"
-        :options="contractStateOptions"
-        placeholder="Tất cả HĐ"
-        class="w-full sm:w-40"
-      />
-      <UiInput
-        v-model="searchInput"
-        type="text"
-        placeholder="Tìm theo tên hoặc số điện thoại..."
-        class="w-full max-w-sm"
-        @update:model-value="onSearch"
-      />
-    </UiToolbar>
+    <TenantListToolbar
+      v-model:q="q"
+      v-model:building-filter="buildingFilter"
+      v-model:contract-state-filter="contractStateFilter"
+      v-model:status="status"
+      v-model:sort="sort"
+      v-model:order="order"
+      :building-options="buildingOptions"
+      :has-active-filters="hasActiveFilters"
+      class="mb-4"
+      @reset="resetFilters"
+    />
 
-    <!-- Loading -->
+    <UiAlert v-if="lastFailures.length > 0" severity="warning" class="mb-4">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <span class="text-sm">
+          {{ lastFailures.length }} khách bị bỏ qua trong lần {{ lastActionVerb }} gần nhất.
+        </span>
+        <div class="flex items-center gap-2">
+          <UiButton size="sm" variant="secondary" @click="failureModalOpen = true">Xem chi tiết</UiButton>
+          <UiButton size="sm" variant="ghost" @click="lastFailures = []">Đóng</UiButton>
+        </div>
+      </div>
+    </UiAlert>
+
     <div v-if="isLoading" class="space-y-3">
       <UiSkeleton v-for="n in 5" :key="n" class="h-16 rounded-xl" />
     </div>
 
-    <!-- Error -->
     <UiAlert v-else-if="error" severity="danger">
-      Không thể tải danh sách khách thuê. Vui lòng thử lại.
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <span>Không thể tải danh sách khách thuê.</span>
+        <UiButton variant="secondary" size="sm" @click="refresh()">Thử lại</UiButton>
+      </div>
     </UiAlert>
 
-    <!-- Empty -->
+    <UiEmptyState
+      v-else-if="tenants.length === 0 && hasActiveFilters"
+      variant="search"
+      title="Không tìm thấy khách thuê phù hợp"
+      description="Thử bỏ bớt bộ lọc hoặc thay đổi từ khoá tìm kiếm."
+    >
+      <template #action>
+        <UiButton variant="secondary" @click="resetFilters">Xoá bộ lọc</UiButton>
+      </template>
+    </UiEmptyState>
+
     <UiEmptyState
       v-else-if="tenants.length === 0"
       title="Chưa có khách thuê nào"
@@ -89,45 +193,108 @@ function onSearch() {
       </template>
     </UiEmptyState>
 
-    <!-- List -->
-    <div v-else class="space-y-2">
-      <UiListRow
-        v-for="tenant in tenants"
-        :key="tenant.id"
-        :to="`/tenants/${tenant.code}`"
+    <template v-else>
+      <div
+        v-if="selectionMode && authStore.isAdmin"
+        class="mb-3 flex items-center justify-between gap-3 rounded-lg border border-dark-border bg-dark-deep/40 px-3 py-2"
       >
-        <div class="flex items-start gap-3">
-          <div
-            class="hidden sm:flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-cyan/10 text-cyan text-xs font-semibold"
-            aria-hidden="true"
-          >
-            {{ tenant.fullName.charAt(0).toUpperCase() }}
-          </div>
-          <div class="flex-1 min-w-0">
-            <div class="flex items-center gap-2 flex-wrap">
-              <p class="text-sm font-medium text-white truncate">{{ tenant.fullName }}</p>
-              <UiBadge :variant="tenant.hasActiveContract ? 'success' : 'neutral'" pill>
-                {{ tenant.hasActiveContract ? 'Có HĐ' : 'Chưa có HĐ' }}
-              </UiBadge>
-            </div>
-            <p class="text-xs text-muted mt-0.5 truncate">
-              {{ tenant.phone }}<template v-if="tenant.idNumber"> · CMND/CCCD: {{ tenant.idNumber }}</template>
-            </p>
-            <p v-if="tenant.activeAssignment" class="text-xs text-muted mt-0.5 truncate">
-              Phòng {{ tenant.activeAssignment.roomNumber }} · {{ tenant.activeAssignment.buildingName }}
-            </p>
-          </div>
-        </div>
-      </UiListRow>
-    </div>
-
-    <!-- Pagination -->
-    <div v-if="totalPages > 1" class="flex items-center justify-between mt-6 pt-4 border-t border-dark-border">
-      <p class="text-sm text-muted">Trang {{ page }} / {{ totalPages }}</p>
-      <div class="flex gap-2">
-        <UiButton variant="secondary" size="sm" :disabled="page <= 1" @click="page--">← Trước</UiButton>
-        <UiButton variant="secondary" size="sm" :disabled="page >= totalPages" @click="page++">Tiếp →</UiButton>
+        <UiCheckbox
+          :model-value="allOnPageSelected"
+          :indeterminate="someOnPageSelected && !allOnPageSelected"
+          :label="`Chọn cả trang (${tenants.length})`"
+          @update:model-value="toggleAllOnPage"
+        />
+        <span class="text-xs text-muted">{{ bulk.selectedIds.value.length }} đã chọn tổng cộng</span>
       </div>
-    </div>
+
+      <div class="space-y-2">
+        <div
+          v-for="tenant in tenants"
+          :key="tenant.id"
+          class="flex items-stretch gap-2"
+        >
+          <label
+            v-if="selectionMode && authStore.isAdmin"
+            class="flex items-center pl-1"
+          >
+            <UiCheckbox
+              :model-value="bulk.selectedIds.value.includes(tenant.id)"
+              :aria-label="`Chọn ${tenant.fullName}`"
+              @update:model-value="onToggleSelect(tenant.id)"
+            />
+          </label>
+          <UiListRow
+            :to="`/tenants/${tenant.code}`"
+            class="flex-1"
+          >
+            <div class="flex items-start gap-3">
+              <div
+                class="hidden sm:flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-cyan/10 text-cyan text-xs font-semibold"
+                aria-hidden="true"
+              >
+                {{ tenant.fullName.charAt(0).toUpperCase() }}
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <p class="text-sm font-medium text-white truncate">{{ tenant.fullName }}</p>
+                  <UiBadge :variant="tenant.hasActiveContract ? 'success' : 'neutral'" pill>
+                    {{ tenant.hasActiveContract ? 'Có HĐ' : 'Chưa có HĐ' }}
+                  </UiBadge>
+                  <UiBadge v-if="tenant.status === 'archived'" variant="warning" pill>
+                    Đã lưu trữ
+                  </UiBadge>
+                </div>
+                <p class="text-xs text-muted mt-0.5 truncate">
+                  {{ tenant.phone }}<template v-if="tenant.idNumber"> · CMND/CCCD: {{ tenant.idNumber }}</template>
+                </p>
+                <p v-if="tenant.activeAssignment" class="text-xs text-muted mt-0.5 truncate">
+                  Phòng {{ tenant.activeAssignment.roomNumber }} · {{ tenant.activeAssignment.buildingName }}
+                </p>
+              </div>
+            </div>
+          </UiListRow>
+        </div>
+      </div>
+
+      <div v-if="totalPages > 1" class="flex items-center justify-between mt-6 pt-4 border-t border-dark-border">
+        <p class="text-sm text-muted">Trang {{ page }} / {{ totalPages }}</p>
+        <div class="flex gap-2">
+          <UiButton variant="secondary" size="sm" :disabled="page <= 1" @click="page--">← Trước</UiButton>
+          <UiButton variant="secondary" size="sm" :disabled="page >= totalPages" @click="page++">Tiếp →</UiButton>
+        </div>
+      </div>
+    </template>
+
+    <TenantBulkActionsBar
+      v-if="selectionMode && authStore.isAdmin && bulk.selectedIds.value.length > 0"
+      :selected-ids="bulk.selectedIds.value"
+      :tenants="tenants"
+      :run-action="bulk.runAction"
+      :is-running="bulk.isRunning.value"
+      class="mt-6"
+      @clear="bulk.clear"
+      @done="onBulkDone"
+    />
+
+    <UiModal
+      :open="failureModalOpen"
+      :title="`Chi tiết ${failuresWithName.length} khách bị bỏ qua`"
+      size="lg"
+      @close="failureModalOpen = false"
+    >
+      <ul class="space-y-2 text-sm">
+        <li
+          v-for="row in failuresWithName"
+          :key="row.id"
+          class="flex items-start justify-between gap-3 rounded-lg border border-dark-border bg-dark-deep/40 px-3 py-2"
+        >
+          <span class="font-medium text-white">{{ row.name }}</span>
+          <span class="text-xs text-muted">{{ row.reason }}</span>
+        </li>
+      </ul>
+      <template #footer>
+        <UiButton variant="secondary" @click="failureModalOpen = false">Đóng</UiButton>
+      </template>
+    </UiModal>
   </div>
 </template>

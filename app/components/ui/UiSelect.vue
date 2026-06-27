@@ -31,6 +31,7 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits<{
   (e: 'update:modelValue', value: string | number | null): void
+  (e: 'blur', event: FocusEvent): void
 }>()
 
 const generatedId = useId()
@@ -81,6 +82,7 @@ const selectClass = computed(() =>
         :aria-describedby="error ? `${selectId}-error` : hint ? `${selectId}-hint` : undefined"
         :class="selectClass"
         @change="onChange"
+        @blur="emit('blur', $event)"
       >
         <option v-if="placeholder" value="" :disabled="required">
           {{ placeholder }}

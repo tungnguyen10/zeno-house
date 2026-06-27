@@ -5,6 +5,9 @@ import BuildingListToolbar from '../../../app/components/buildings/BuildingListT
 import BuildingDetailHero from '../../../app/components/buildings/BuildingDetailHero.vue'
 import BuildingBulkActionsBar from '../../../app/components/buildings/BuildingBulkActionsBar.vue'
 import BuildingCard from '../../../app/components/buildings/BuildingCard.vue'
+import UiSearchInput from '../../../app/components/ui/UiSearchInput.vue'
+import UiFilterChips from '../../../app/components/ui/UiFilterChips.vue'
+import UiSortControl from '../../../app/components/ui/UiSortControl.vue'
 import type { Building } from '../../../app/types/buildings'
 import type { BuildingBulkResult } from '../../../app/composables/buildings/useBuildingBulkActions'
 
@@ -30,6 +33,9 @@ const stubs = {
       return () => h('div', { 'data-test': 'toolbar' }, [slots.default?.(), slots.actions?.()])
     },
   }),
+  UiSearchInput,
+  UiFilterChips,
+  UiSortControl,
   UiButton: defineComponent({
     props: ['variant', 'disabled', 'iconOnly', 'ariaLabel', 'size'],
     emits: ['click'],

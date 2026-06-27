@@ -26,6 +26,7 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits<{
   (e: 'update:modelValue', value: string): void
+  (e: 'blur', event: FocusEvent): void
 }>()
 
 // Stable id: prefer prop, else Vue's SSR-safe useId so the same instance keeps the same id
@@ -91,6 +92,7 @@ const inputClass = computed(() =>
         :aria-describedby="error ? `${inputId}-error` : hint ? `${inputId}-hint` : undefined"
         :class="inputClass"
         @input="emit('update:modelValue', ($event.target as HTMLInputElement).value)"
+        @blur="emit('blur', $event)"
       >
 
       <span

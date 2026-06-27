@@ -1033,6 +1033,7 @@ export type Database = {
           occupation: string | null
           permanent_address: string | null
           phone: string
+          status: string
           updated_at: string
         }
         Insert: {
@@ -1052,6 +1053,7 @@ export type Database = {
           occupation?: string | null
           permanent_address?: string | null
           phone: string
+          status?: string
           updated_at?: string
         }
         Update: {
@@ -1071,6 +1073,7 @@ export type Database = {
           occupation?: string | null
           permanent_address?: string | null
           phone?: string
+          status?: string
           updated_at?: string
         }
         Relationships: []

@@ -1,16 +1,19 @@
 import { serverSupabaseClient } from '#supabase/server'
 import type { H3Event } from 'h3'
-import type { Room } from '~/types/rooms'
+import type { Room, RoomStatus } from '~/types/rooms'
 import type { RoomCreateInput, RoomUpdateInput } from '~/utils/validators/rooms'
 import { mapRoom } from '~/utils/mappers/rooms'
 import { isUuid, slugifyName } from '~/utils/format/slug'
 
 export interface RoomFilters {
   buildingId?: string
-  status?: string
+  status?: RoomStatus[]
   floor?: number
   page?: number
   limit?: number
+  q?: string
+  sort?: 'room_number' | 'floor' | 'monthly_rent' | 'created_at'
+  order?: 'asc' | 'desc'
 }
 
 export const RoomRepository = {
@@ -23,17 +26,33 @@ export const RoomRepository = {
     const limit = filters.limit ?? 20
     const from = (page - 1) * limit
     const to = from + limit - 1
+    const sort = filters.sort ?? 'floor'
+    const order = filters.order ?? 'asc'
+    const ascending = order === 'asc'
 
     let query = client
       .from('rooms')
       .select('*', { count: 'exact' })
-      .order('floor', { ascending: true })
-      .order('room_number', { ascending: true })
-      .range(from, to)
 
     if (filters.buildingId) query = query.eq('building_id', filters.buildingId)
-    if (filters.status) query = query.eq('status', filters.status)
+    if (filters.status && filters.status.length > 0) {
+      query = query.in('status', filters.status)
+    }
+    else {
+      query = query.not('status', 'eq', 'archived')
+    }
     if (filters.floor !== undefined) query = query.eq('floor', filters.floor)
+    if (filters.q && filters.q.trim()) {
+      const term = filters.q.trim().replace(/[,()]/g, '')
+      query = query.or(
+        `room_number.ilike.%${term}%,code.ilike.%${term}%,description.ilike.%${term}%`,
+      )
+    }
+
+    query = query.order(sort, { ascending })
+    if (sort !== 'room_number') query = query.order('room_number', { ascending: true })
+    if (sort !== 'floor') query = query.order('floor', { ascending: true })
+    query = query.range(from, to)
 
     const { data, error, count } = await query
 
@@ -140,6 +159,40 @@ export const RoomRepository = {
     const client = await serverSupabaseClient(event)
     const { error } = await client.from('rooms').delete().eq('id', id)
     if (error) throw createError({ statusCode: 500, message: error.message })
+  },
+
+  async countActiveContractsForRoom(event: H3Event, roomId: string): Promise<number> {
+    const client = await serverSupabaseClient(event)
+    const { count, error } = await client
+      .from('contracts')
+      .select('id', { count: 'exact', head: true })
+      .eq('room_id', roomId)
+      .eq('status', 'active')
+    if (error) throw createError({ statusCode: 500, message: error.message })
+    return count ?? 0
+  },
+
+  async countMeterReadingsForRoom(event: H3Event, roomId: string): Promise<number> {
+    const client = await serverSupabaseClient(event)
+    const { count, error } = await client
+      .from('meter_readings')
+      .select('id', { count: 'exact', head: true })
+      .eq('room_id', roomId)
+    if (error) throw createError({ statusCode: 500, message: error.message })
+    return count ?? 0
+  },
+
+  async softArchive(event: H3Event, id: string): Promise<Room> {
+    const client = await serverSupabaseClient(event)
+    const { data, error } = await client
+      .from('rooms')
+      .update({ status: 'archived' })
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (error) throw createError({ statusCode: 500, message: error.message })
+    return mapRoom(data)
   },
 
   async findByIdentifier(event: H3Event, identifier: string): Promise<Room | null> {

@@ -1,7 +1,8 @@
 import type { Tables } from '~/types/database.types'
-import type { Tenant } from '~/types/tenants'
+import type { Tenant, TenantStatus } from '~/types/tenants'
 
 export function mapTenant(row: Tables<'tenants'>): Tenant {
+  const status: TenantStatus = row.status === 'archived' ? 'archived' : 'active'
   return {
     id: row.id,
     code: row.code,
@@ -18,6 +19,7 @@ export function mapTenant(row: Tables<'tenants'>): Tenant {
     emergencyContactPhone: row.emergency_contact_phone,
     permanentAddress: row.permanent_address,
     notes: row.notes,
+    status,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }

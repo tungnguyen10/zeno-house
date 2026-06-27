@@ -87,19 +87,40 @@ Routes:
 
 API:
 
-- `GET /api/rooms`
+- `GET /api/rooms` — supports `page`, `limit`, `q`, `building_id`, `floor`, `status` (multi), `sort` (`room_number`/`floor`/`monthly_rent`/`created_at`), `order` (`asc`/`desc`). When `status` is omitted, archived rooms are excluded by default.
 - `POST /api/rooms`
 - `GET /api/rooms/[id]`
 - `PATCH /api/rooms/[id]`
-- `DELETE /api/rooms/[id]`
+- `DELETE /api/rooms/[id]` — returns `204` when no blockers exist; returns `409 CONFLICT` with `{ activeContracts, meterReadings }` when the room has active contracts or historical meter readings. Pass `?force=true` to soft-archive (`status=archived`) and receive `200` with the room DTO.
+- `POST /api/rooms/bulk` — body `{ action: 'archive' | 'activate' | 'set_maintenance' | 'delete', ids: string[] }`. Returns `{ succeeded: string[], failed: { id, reason }[] }` with per-room failures.
 
 Room statuses:
 
 - `available`
 - `occupied`
 - `maintenance`
+- `archived`
 
 Contracts drive occupancy state. Creating an active contract occupies the room. Terminating or expiring a contract releases it unless the room is in maintenance.
+
+### List page behaviour
+
+- Toolbar exposes search, status chips, building filter, floor filter, sort, and order. Filter state mirrors the URL and resets `page=1` when changed.
+- Admin can switch to selection mode to bulk mark rooms available, set maintenance, archive, or delete. Delete requires acknowledgement and applies the same safe-delete checks as single delete.
+- Empty states distinguish filtered-empty from no-data; API errors include a retry action.
+
+### Detail page
+
+- Hero shows room identity, code, status, building link, active-contract state, occupant count, and meter-device count inferred from latest readings.
+- Sections `#overview`, `#active-contract`, `#meter-readings`, `#contracts-history`, `#danger-zone` (admin-only).
+- `DELETE` returning `409` shows an alert with blocker counts and a "Lưu trữ thay vì xoá" shortcut that re-issues `DELETE /api/rooms/[id]?force=true`.
+
+### Form
+
+- Four numbered sections: location, status, rent/area, description.
+- Inline blur validation and submit error summary match the buildings form pattern.
+- Draft autosaves to `localStorage` (`room-form:create:<building_id|none>` or `room-form:edit:<id>`) and can be restored, dismissed, or deleted from the banner.
+- Dirty-state guard via `onBeforeRouteLeave` and `beforeunload`; mobile shows a sticky save bar with safe-area-inset padding.
 
 ## Tenants
 
@@ -107,16 +128,17 @@ Routes:
 
 - `/tenants`
 - `/tenants/create`
-- `/tenants/[id]`
-- `/tenants/[id]/edit`
+- `/tenants/[code]`
+- `/tenants/[code]/edit`
 
 API:
 
-- `GET /api/tenants`
+- `GET /api/tenants` — supports `q` (multi-field), `building_id`, `contract_state` (`with_contract`/`without_contract`), `status[]` (defaults to `active`; pass `status[]=archived` or `status[]=all` to include archived), `sort` (`full_name`/`created_at`/`updated_at`), `order` (`asc`/`desc`).
 - `POST /api/tenants`
 - `GET /api/tenants/[id]`
 - `PATCH /api/tenants/[id]`
-- `DELETE /api/tenants/[id]`
+- `DELETE /api/tenants/[id]` — returns `409 CONFLICT` with `details.activeContracts` and `details.activeOccupancies` when blocked. Pass `?force=true` to soft-archive instead (returns archived tenant).
+- `POST /api/tenants/bulk` — body `{ action: 'archive' | 'activate' | 'delete', ids: string[] }` returns `{ succeeded: string[], failed: { id, reason }[] }`. Reasons: `has_active_contracts`, `has_active_occupancies`, `not_found`, `conflict`.
 
 Tenant records include:
 
@@ -125,8 +147,13 @@ Tenant records include:
 - occupation
 - identity issue date/place
 - emergency contact name/phone
+- status (`active` / `archived`)
 
-Tenant detail shows current active contract and contract history.
+UX notes:
+
+- List page (`/tenants`): toolbar wraps debounced search, building filter, contract-state filter, status chips, sort dropdown, and order toggle. Filters sync to URL query so the view is shareable. Admins can toggle a selection mode that exposes per-row checkboxes plus a `TenantBulkActionsBar` for archive/activate/delete. Failures are surfaced inline with a "Xem chi tiết" modal listing each blocked tenant.
+- Detail page (`/tenants/[code]`): renders a `TenantDetailHero` with status badge, contact chips (phone `tel:`, email `mailto:`, ID number), and three stat tiles (active contracts, current room, occupancies). Sections use anchor ids `#personal`, `#id-document`, `#emergency`, `#contracts`, `#danger-zone`. The danger-zone section is hidden for managers. When delete returns 409, the page shows a warning alert summarising blockers with a "Lưu trữ thay vì xoá" button that calls `DELETE` with `?force=true`.
+- Form (`TenantForm`): four numbered sections (Personal / ID document / Emergency contact / Notes), inline blur validation, submit error summary with click-to-focus, draft autosave to `localStorage` (`tenant-form:create` or `tenant-form:edit:<id>`), restore/dismiss banner, dirty-state guard via `onBeforeRouteLeave` + `beforeunload`, mobile sticky save bar with safe-area-inset padding.
 
 ## Implementation Files
 

@@ -2,18 +2,19 @@
 import type { Building } from '~/types/buildings'
 import type { ContractWithDetails } from '~/types/contracts'
 import type { ApiSuccess } from '~/types/api'
+import type { MeterReading } from '~/types/meter-readings'
 import type { Room } from '~/types/rooms'
 import { formatCurrency } from '~/utils/format/currency'
-import { contractPath, roomEditPath, roomPath } from '~/utils/routes/operational'
+import { buildingPath, contractPath, roomEditPath, roomPath } from '~/utils/routes/operational'
 import { isUuid } from '~/utils/format/slug'
 
 definePageMeta({ title: 'Chi tiết phòng' })
 
 const route = useRoute()
 const authStore = useAuthStore()
+const toast = useToast()
 const id = route.params.code as string
 
-// Redirect UUID-based URLs to code-based canonical URL
 if (isUuid(id)) {
   const { data: redirectData } = await useFetch<ApiSuccess<Room>>(`/api/rooms/${id}`)
   if (redirectData.value?.data) {
@@ -23,21 +24,33 @@ if (isUuid(id)) {
 
 const { room, isLoading, error, refresh: refreshRoom } = useRoomDetail(id)
 
-// Fetch building for display context — only after room is known
 const buildingId = computed(() => room.value?.buildingId ?? '')
-const { data: buildingData } = await useFetch<ApiSuccess<Building>>(
-  computed(() => `/api/buildings/${buildingId.value}`),
-  { immediate: false, watch: [buildingId] },
+const { data: buildingData, refresh: refreshBuilding } = await useFetch<ApiSuccess<Building>>(
+  computed(() => buildingId.value ? `/api/buildings/${buildingId.value}` : '/api/buildings/__missing'),
+  { immediate: false },
 )
+watch(buildingId, () => {
+  if (buildingId.value) refreshBuilding()
+}, { immediate: true })
 const building = computed(() => buildingData.value?.data ?? null)
 
-// Contracts
 const { data: contractsData, refresh: refreshContracts } = await useFetch<ApiSuccess<ContractWithDetails[]> & { meta: { total: number } }>(
   '/api/contracts',
   { query: { room_id: id, limit: 50 } },
 )
 const roomContracts = computed(() => contractsData.value?.data ?? [])
 const activeContract = computed(() => roomContracts.value.find(c => c.status === 'active') ?? null)
+const occupantCount = computed(() => activeContract.value?.occupantCount ?? 0)
+
+const { data: latestReadingsData } = await useFetch<ApiSuccess<{ electricity: MeterReading | null; water: MeterReading | null }>>(
+  '/api/meter-readings/latest',
+  { query: { room_id: id } },
+)
+const meterDeviceCount = computed(() => {
+  const readings = latestReadingsData.value?.data
+  if (!readings) return 0
+  return Number(Boolean(readings.electricity)) + Number(Boolean(readings.water))
+})
 
 const showDeleteModal = ref(false)
 const isDeleting = ref(false)
@@ -45,15 +58,56 @@ const isDeleting = ref(false)
 const showTerminateModal = ref(false)
 const isTerminating = ref(false)
 
+interface ConflictDetails {
+  activeContracts?: number
+  meterReadings?: number
+}
+
+const conflictDetails = ref<ConflictDetails | null>(null)
+
 async function confirmDelete() {
   isDeleting.value = true
+  conflictDetails.value = null
   try {
     await $fetch(`/api/rooms/${id}`, { method: 'DELETE' })
+    showDeleteModal.value = false
     await navigateTo('/rooms')
+  }
+  catch (e: unknown) {
+    const err = e as {
+      statusCode?: number
+      data?: { error?: { code?: string; details?: ConflictDetails } }
+    }
+    if (err?.statusCode === 409 || err?.data?.error?.code === 'CONFLICT') {
+      conflictDetails.value = err.data?.error?.details ?? {}
+      showDeleteModal.value = false
+    }
+    else {
+      toast.error('Không thể xoá phòng. Vui lòng thử lại.')
+    }
   }
   finally {
     isDeleting.value = false
-    showDeleteModal.value = false
+  }
+}
+
+async function archiveInstead() {
+  if (!room.value) return
+  isDeleting.value = true
+  try {
+    await $fetch(`/api/rooms/${id}`, {
+      method: 'DELETE',
+      query: { force: true },
+    })
+    toast.success(`Đã lưu trữ phòng ${room.value.roomNumber}`)
+    conflictDetails.value = null
+    await refreshRoom()
+  }
+  catch {
+    toast.error('Không thể lưu trữ phòng.')
+  }
+  finally {
+    isDeleting.value = false
   }
 }
 
@@ -73,6 +127,11 @@ async function confirmTerminate() {
   }
 }
 
+const meterReadingsPath = computed(() => {
+  if (!building.value || !room.value) return '/billing'
+  return `${buildingPath(building.value)}/meter-readings?room_id=${room.value.code}`
+})
+
 if (error.value?.statusCode === 404) {
   await navigateTo('/rooms')
 }
@@ -80,18 +139,15 @@ if (error.value?.statusCode === 404) {
 
 <template>
   <div>
-    <!-- Loading -->
     <div v-if="isLoading" class="space-y-4">
       <UiSkeleton class="h-8 w-64 rounded-lg" />
       <UiSkeleton class="h-48 rounded-xl" />
     </div>
 
-    <!-- Error -->
     <UiAlert v-else-if="error && error.statusCode !== 404" severity="danger">
       Không thể tải thông tin phòng.
     </UiAlert>
 
-    <!-- Detail -->
     <template v-else-if="room">
       <UiPageHeader :title="`Phòng ${room.roomNumber}`" :description="building?.name">
         <template #actions>
@@ -99,107 +155,201 @@ if (error.value?.statusCode === 404) {
             <NuxtLink :to="roomEditPath(room)">
               <UiButton variant="secondary" size="sm">Chỉnh sửa</UiButton>
             </NuxtLink>
-            <UiButton variant="danger" size="sm" @click="showDeleteModal = true">Xoá</UiButton>
           </div>
         </template>
       </UiPageHeader>
 
-      <div class="rounded-xl border border-dark-border bg-dark-surface p-6 space-y-4">
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <UiAlert
+        v-if="conflictDetails"
+        severity="warning"
+        class="mt-6"
+        data-test="delete-conflict-alert"
+      >
+        <div class="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p class="text-xs text-muted mb-1">Trạng thái</p>
-            <UiStatusBadge :status="room.status" />
-          </div>
-          <div>
-            <p class="text-xs text-muted mb-1">Tầng</p>
-            <p class="text-sm text-white">{{ room.floor }}</p>
-          </div>
-          <div>
-            <p class="text-xs text-muted mb-1">Giá thuê / tháng</p>
-            <p class="text-sm text-white font-medium">{{ formatCurrency(activeContract?.monthlyRent ?? room.monthlyRent) }}</p>
-            <p v-if="activeContract && activeContract.monthlyRent !== room.monthlyRent" class="text-xs text-muted mt-0.5">
-              Theo hợp đồng đang hiệu lực
+            <p class="text-sm font-medium text-white">Không thể xoá phòng này</p>
+            <p class="mt-1 text-xs text-muted">
+              <template v-if="conflictDetails.activeContracts">
+                Còn {{ conflictDetails.activeContracts }} hợp đồng đang hoạt động.
+              </template>
+              <template v-if="conflictDetails.meterReadings">
+                Còn {{ conflictDetails.meterReadings }} chỉ số đồng hồ.
+              </template>
+              Bạn có thể lưu trữ phòng thay vì xoá vĩnh viễn.
             </p>
           </div>
+          <div class="flex items-center gap-2">
+            <UiButton variant="secondary" size="sm" :loading="isDeleting" @click="archiveInstead">
+              Lưu trữ thay vì xoá
+            </UiButton>
+            <UiButton variant="ghost" size="sm" @click="conflictDetails = null">Đóng</UiButton>
+          </div>
+        </div>
+      </UiAlert>
+
+      <div class="mt-6">
+        <RoomDetailHero
+          :room="room"
+          :building="building"
+          :active-contract="activeContract"
+          :occupant-count="occupantCount"
+          :meter-device-count="meterDeviceCount"
+        />
+      </div>
+
+      <section id="overview" class="mt-6 rounded-xl border border-dark-border bg-dark-surface p-6">
+        <header class="mb-4">
+          <h3 class="text-sm font-semibold text-white">Tổng quan</h3>
+          <p class="mt-0.5 text-xs text-muted">Thông tin định danh, giá chuẩn và vị trí của phòng.</p>
+        </header>
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div>
+            <p class="mb-1 text-xs text-muted">Tòa nhà</p>
+            <NuxtLink v-if="building" :to="buildingPath(building)" class="text-sm text-cyan hover:underline">
+              Tòa nhà: {{ building.name }}
+            </NuxtLink>
+            <p v-else class="text-sm text-white">{{ room.buildingId }}</p>
+          </div>
+          <div>
+            <p class="mb-1 text-xs text-muted">Giá chuẩn</p>
+            <p class="text-sm font-medium text-white">{{ formatCurrency(room.monthlyRent) }}/tháng</p>
+          </div>
+          <div>
+            <p class="mb-1 text-xs text-muted">Tầng</p>
+            <p class="text-sm text-white">{{ room.floor }}</p>
+          </div>
           <div v-if="room.area">
-            <p class="text-xs text-muted mb-1">Diện tích</p>
+            <p class="mb-1 text-xs text-muted">Diện tích</p>
             <p class="text-sm text-white">{{ room.area }} m²</p>
           </div>
           <div>
-            <p class="text-xs text-muted mb-1">Ngày tạo</p>
+            <p class="mb-1 text-xs text-muted">Ngày tạo</p>
             <p class="text-sm text-white">{{ new Date(room.createdAt).toLocaleDateString('vi-VN') }}</p>
           </div>
         </div>
-        <div v-if="room.description">
-          <p class="text-xs text-muted mb-1">Mô tả</p>
+        <div v-if="room.description" class="mt-4">
+          <p class="mb-1 text-xs text-muted">Mô tả</p>
           <p class="text-sm text-white">{{ room.description }}</p>
         </div>
-      </div>
+      </section>
 
-      <!-- Occupancy section -->
-      <UiSection title="Khách thuê hiện tại" class="mt-6">
-        <template v-if="authStore.isAdmin" #actions>
-          <UiButton
-            v-if="!activeContract && room.status !== 'maintenance'"
-            size="sm"
-            @click="navigateTo(`/contracts/create?room_id=${id}`)"
-          >
-            Giao phòng
-          </UiButton>
-          <UiButton
-            v-else-if="activeContract"
-            variant="danger"
-            size="sm"
-            @click="showTerminateModal = true"
-          >
-            Thu phòng
-          </UiButton>
-        </template>
-        <div class="rounded-xl border border-dark-border bg-dark-surface p-4">
-          <div v-if="activeContract">
-            <div class="text-sm text-white">
-              <NuxtLink :to="`/tenants/${activeContract.tenant.code}`" class="font-medium hover:text-cyan transition-colors">
-                {{ activeContract.tenant.fullName }}
-              </NuxtLink>
-            </div>
-            <p class="text-sm text-muted mt-0.5">{{ activeContract.tenant.phone }}</p>
-            <p class="text-xs text-muted mt-1">Từ ngày {{ new Date(activeContract.startDate).toLocaleDateString('vi-VN') }}</p>
+      <section id="active-contract" class="mt-4 rounded-xl border border-dark-border bg-dark-surface p-6">
+        <header class="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h3 class="text-sm font-semibold text-white">Hợp đồng hiện tại</h3>
+            <p class="mt-0.5 text-xs text-muted">Trạng thái thuê và thao tác bàn giao/thu phòng.</p>
           </div>
-          <p v-else class="text-sm text-muted">Phòng trống</p>
-        </div>
-      </UiSection>
-
-      <!-- Contracts section -->
-      <UiSection title="Hợp đồng" class="mt-6">
-        <template v-if="authStore.isAdmin" #actions>
-          <NuxtLink to="/contracts/create" class="text-xs text-cyan hover:underline">
-            + Thêm
-          </NuxtLink>
-        </template>
-        <div class="rounded-xl border border-dark-border bg-dark-surface p-4">
-          <div v-if="roomContracts.length > 0" class="space-y-2">
-            <UiListRow
-              v-for="contract in roomContracts"
-              :key="contract.id"
-              :to="contractPath(contract)"
-              compact
+          <div v-if="authStore.isAdmin" class="flex items-center gap-2">
+            <UiButton
+              v-if="!activeContract && room.status !== 'maintenance'"
+              size="sm"
+              @click="navigateTo(`/contracts/create?room_id=${room.code}`)"
             >
-              <div class="flex items-center gap-2 flex-wrap">
-                <p class="text-xs font-medium text-white truncate">{{ contract.tenant.fullName }}</p>
-                <UiStatusBadge :status="contract.status" />
-              </div>
-              <p class="text-xs text-muted mt-0.5 truncate">
-                {{ new Date(contract.startDate).toLocaleDateString('vi-VN') }} — {{ new Date(contract.endDate).toLocaleDateString('vi-VN') }}
-                · {{ formatCurrency(contract.monthlyRent) }}/tháng
-              </p>
-            </UiListRow>
+              Giao phòng
+            </UiButton>
+            <UiButton
+              v-else-if="activeContract"
+              variant="danger"
+              size="sm"
+              @click="showTerminateModal = true"
+            >
+              Thu phòng
+            </UiButton>
           </div>
-          <p v-else class="text-sm text-muted">Chưa có hợp đồng</p>
+        </header>
+
+        <div v-if="activeContract" class="rounded-lg border border-dark-border bg-dark-deep/40 p-4">
+          <NuxtLink :to="contractPath(activeContract)" class="text-sm font-medium text-white hover:text-cyan">
+            {{ activeContract.contractCode }}
+          </NuxtLink>
+          <p class="mt-1 text-sm text-muted">
+            {{ activeContract.tenant.fullName }} · {{ activeContract.tenant.phone }}
+          </p>
+          <p class="mt-1 text-xs text-muted">
+            {{ new Date(activeContract.startDate).toLocaleDateString('vi-VN') }}
+            -
+            {{ new Date(activeContract.endDate).toLocaleDateString('vi-VN') }}
+            · {{ formatCurrency(activeContract.monthlyRent) }}/tháng
+          </p>
         </div>
-      </UiSection>
+        <p v-else class="text-sm text-muted">Phòng đang trống.</p>
+      </section>
+
+      <section id="meter-readings" class="mt-4 rounded-xl border border-dark-border bg-dark-surface p-6">
+        <header class="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h3 class="text-sm font-semibold text-white">Chỉ số đồng hồ</h3>
+            <p class="mt-0.5 text-xs text-muted">Đi tới workspace vận hành tháng để nhập điện, nước.</p>
+          </div>
+          <NuxtLink :to="meterReadingsPath">
+            <UiButton variant="secondary" size="sm">Nhập chỉ số tháng này</UiButton>
+          </NuxtLink>
+        </header>
+
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div class="rounded-lg border border-dark-border bg-dark-deep/40 p-4">
+            <p class="text-xs text-muted">Điện gần nhất</p>
+            <p class="mt-1 text-sm text-white">
+              {{ latestReadingsData?.data?.electricity ? `${latestReadingsData.data.electricity.readingValue.toLocaleString('vi-VN')} kWh` : 'Chưa có dữ liệu' }}
+            </p>
+          </div>
+          <div class="rounded-lg border border-dark-border bg-dark-deep/40 p-4">
+            <p class="text-xs text-muted">Nước gần nhất</p>
+            <p class="mt-1 text-sm text-white">
+              {{ latestReadingsData?.data?.water ? `${latestReadingsData.data.water.readingValue.toLocaleString('vi-VN')} m³` : 'Chưa có dữ liệu' }}
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section id="contracts-history" class="mt-4 rounded-xl border border-dark-border bg-dark-surface p-6">
+        <header class="mb-4">
+          <h3 class="text-sm font-semibold text-white">Lịch sử hợp đồng</h3>
+          <p class="mt-0.5 text-xs text-muted">Tất cả hợp đồng đã từng gắn với phòng này.</p>
+        </header>
+        <div v-if="roomContracts.length > 0" class="divide-y divide-dark-border rounded-lg border border-dark-border bg-dark-deep/30">
+          <UiListRow
+            v-for="contract in roomContracts"
+            :key="contract.id"
+            :to="contractPath(contract)"
+            compact
+          >
+            <div class="flex flex-wrap items-center gap-2">
+              <p class="truncate text-xs font-medium text-white">{{ contract.tenant.fullName }}</p>
+              <UiStatusBadge :status="contract.status" />
+            </div>
+            <p class="mt-0.5 truncate text-xs text-muted">
+              {{ new Date(contract.startDate).toLocaleDateString('vi-VN') }} -
+              {{ new Date(contract.endDate).toLocaleDateString('vi-VN') }}
+              · {{ formatCurrency(contract.monthlyRent) }}/tháng
+            </p>
+          </UiListRow>
+        </div>
+        <p v-else class="text-sm text-muted">Chưa có hợp đồng.</p>
+      </section>
+
+      <section
+        v-if="authStore.isAdmin"
+        id="danger-zone"
+        class="mt-4 rounded-xl border border-error/30 bg-error/5 p-6"
+      >
+        <h3 class="mb-2 text-sm font-semibold text-error">Vùng nguy hiểm</h3>
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <p class="text-xs text-muted">
+            Xoá phòng chỉ thực hiện được khi không còn hợp đồng đang hoạt động và chưa có chỉ số đồng hồ.
+          </p>
+          <div class="flex items-center gap-2">
+            <NuxtLink :to="roomEditPath(room)">
+              <UiButton variant="secondary" size="sm">Chỉnh sửa</UiButton>
+            </NuxtLink>
+            <UiButton variant="danger" size="sm" @click="showDeleteModal = true">
+              Xoá phòng
+            </UiButton>
+          </div>
+        </div>
+      </section>
     </template>
 
-    <!-- Delete modal -->
     <UiConfirmModal
       :open="showDeleteModal"
       title="Xác nhận xoá"
@@ -209,7 +359,6 @@ if (error.value?.statusCode === 404) {
       @cancel="showDeleteModal = false"
     />
 
-    <!-- Terminate contract confirm modal -->
     <UiConfirmModal
       :open="showTerminateModal"
       title="Xác nhận thu phòng"

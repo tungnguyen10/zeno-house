@@ -30,6 +30,7 @@ export const ENTITY_STATUSES: Record<string, StatusDef> = {
   vacant: { label: 'Trống', variant: 'success' },
   occupied: { label: 'Đã có người thuê', variant: 'accent' },
   maintenance: { label: 'Đang bảo trì', variant: 'warning' },
+  archived: { label: 'Đã lưu trữ', variant: 'neutral' },
 }
 
 /**

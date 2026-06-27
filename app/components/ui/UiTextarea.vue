@@ -28,6 +28,7 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits<{
   (e: 'update:modelValue', value: string): void
+  (e: 'blur', event: FocusEvent): void
 }>()
 
 const generatedId = useId()
@@ -73,6 +74,7 @@ const textareaClass = computed(() =>
       :aria-describedby="error ? `${textareaId}-error` : hint ? `${textareaId}-hint` : undefined"
       :class="textareaClass"
       @input="emit('update:modelValue', ($event.target as HTMLTextAreaElement).value)"
+      @blur="emit('blur', $event)"
     />
 
     <p v-if="error" :id="`${textareaId}-error`" class="text-xs text-error" role="alert">

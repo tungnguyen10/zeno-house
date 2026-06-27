@@ -1,7 +1,10 @@
 <script setup lang="ts">
+import { onBeforeRouteLeave } from 'vue-router'
 import type { ApiSuccess } from '~/types/api'
 import type { Tenant } from '~/types/tenants'
-import type { TenantFormData } from '~/components/tenants/TenantForm.vue'
+import { tenantFormToApiPayload, type TenantFormData } from '~/components/tenants/TenantForm.vue'
+import { tenantPath } from '~/utils/routes/operational'
+import { isUuid } from '~/utils/format/slug'
 
 definePageMeta({ title: 'Chỉnh sửa khách thuê' })
 
@@ -16,9 +19,12 @@ if (error.value?.statusCode === 404) {
 
 const tenant = computed(() => data.value?.data ?? null)
 
-const { isLoading, errors, apiError, submitUpdate } = useTenantForm()
+// Redirect UUID-based URL to canonical code-based URL
+if (tenant.value && isUuid(id) && tenant.value.code) {
+  await navigateTo(`${tenantPath(tenant.value)}/edit`, { replace: true })
+}
 
-const formData = ref<TenantFormData>({
+const initialFormData: TenantFormData = {
   full_name: tenant.value?.fullName ?? '',
   phone: tenant.value?.phone ?? '',
   email: tenant.value?.email ?? '',
@@ -32,29 +38,51 @@ const formData = ref<TenantFormData>({
   id_issued_place: tenant.value?.idIssuedPlace ?? '',
   emergency_contact_name: tenant.value?.emergencyContactName ?? '',
   emergency_contact_phone: tenant.value?.emergencyContactPhone ?? '',
+}
+
+const formData = ref<TenantFormData>({ ...initialFormData })
+const initialSnapshot = ref<TenantFormData>({ ...initialFormData })
+
+const {
+  isLoading,
+  errors,
+  apiError,
+  submitUpdate,
+  hasDraft,
+  restoreDraft,
+  clearDraft,
+  isDirty,
+} = useTenantForm<TenantFormData>({
+  draftKey: tenant.value ? { mode: 'edit', id: tenant.value.id } : null,
+  formData,
+  initialSnapshot,
 })
 
 async function onSubmit(data: TenantFormData) {
-  await submitUpdate(id, {
-    full_name: data.full_name || undefined,
-    phone: data.phone || undefined,
-    email: data.email || null,
-    id_number: data.id_number || null,
-    date_of_birth: data.date_of_birth || null,
-    permanent_address: data.permanent_address || null,
-    notes: data.notes || null,
-    gender: (data.gender as 'male' | 'female' | 'other' | null) || null,
-    occupation: data.occupation || null,
-    id_issued_date: data.id_issued_date || null,
-    id_issued_place: data.id_issued_place || null,
-    emergency_contact_name: data.emergency_contact_name || null,
-    emergency_contact_phone: data.emergency_contact_phone || null,
-  })
+  await submitUpdate(id, tenantFormToApiPayload(data))
+}
+
+onBeforeRouteLeave((_to, _from, next) => {
+  if (!isDirty.value) return next()
+  const ok = typeof window !== 'undefined'
+    ? window.confirm('Có thay đổi chưa lưu. Bạn có chắc muốn rời trang?')
+    : true
+  return next(ok)
+})
+
+if (import.meta.client) {
+  const handler = (event: BeforeUnloadEvent) => {
+    if (!isDirty.value) return
+    event.preventDefault()
+    event.returnValue = ''
+  }
+  window.addEventListener('beforeunload', handler)
+  onBeforeUnmount(() => window.removeEventListener('beforeunload', handler))
 }
 </script>
 
 <template>
-  <div class="">
+  <div>
     <UiPageHeader title="Chỉnh sửa khách thuê">
       <NuxtLink :to="`/tenants/${id}`" class="text-sm text-muted hover:text-white transition-colors">
         ← {{ tenant?.fullName ?? 'Khách thuê' }}
@@ -70,8 +98,12 @@ async function onSubmit(data: TenantFormData) {
         v-model="formData"
         :loading="isLoading"
         :errors="errors"
+        :has-draft="hasDraft"
+        :is-dirty="isDirty"
         @submit="onSubmit"
         @cancel="navigateTo(`/tenants/${id}`)"
+        @restore-draft="restoreDraft"
+        @discard-draft="clearDraft"
       />
     </div>
   </div>

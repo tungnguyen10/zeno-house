@@ -1,5 +1,14 @@
 import { z } from 'zod'
 
+export const tenantStatusSchema = z.enum(['active', 'archived'])
+export const tenantSortFieldSchema = z.enum(['full_name', 'created_at', 'code'])
+export const tenantSortOrderSchema = z.enum(['asc', 'desc'])
+
+const toArray = <T>(value: T | T[] | undefined): T[] | undefined => {
+  if (value === undefined) return undefined
+  return Array.isArray(value) ? value : [value]
+}
+
 export const tenantCreateSchema = z.object({
   full_name: z.string().min(1, 'Họ tên không được trống').max(100, 'Họ tên quá dài'),
   phone: z.string().min(1, 'Số điện thoại không được trống').max(20, 'Số điện thoại quá dài'),
@@ -20,3 +29,40 @@ export const tenantUpdateSchema = tenantCreateSchema.partial()
 
 export type TenantCreateInput = z.infer<typeof tenantCreateSchema>
 export type TenantUpdateInput = z.infer<typeof tenantUpdateSchema>
+
+export const tenantListQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).optional().default(1),
+  limit: z.coerce.number().int().min(1).max(100).optional().default(20),
+  q: z.preprocess(
+    v => (typeof v === 'string' && v.trim() === '' ? undefined : v),
+    z.string().trim().min(1).max(100).optional(),
+  ),
+  building_id: z.preprocess(
+    v => (typeof v === 'string' && v.trim() === '' ? undefined : v),
+    z.string().trim().min(1).optional(),
+  ),
+  contract_state: z.preprocess(
+    v => (v === '' || v === undefined ? undefined : v),
+    z.enum(['with_contract', 'without_contract']).optional(),
+  ),
+  status: z.preprocess(toArray, z.array(tenantStatusSchema).min(1).optional()),
+  sort: tenantSortFieldSchema.optional().default('full_name'),
+  order: tenantSortOrderSchema.optional().default('asc'),
+  available: z.preprocess(
+    v => (v === 'true' || v === true ? true : v === 'false' || v === false ? false : undefined),
+    z.boolean().optional(),
+  ),
+  excludeContractId: z.preprocess(
+    v => (typeof v === 'string' && v.trim() === '' ? undefined : v),
+    z.string().trim().min(1).optional(),
+  ),
+})
+
+export type TenantListQuery = z.infer<typeof tenantListQuerySchema>
+
+export const tenantBulkActionSchema = z.object({
+  action: z.enum(['archive', 'activate', 'delete']),
+  ids: z.array(z.string().min(1)).min(1, 'Cần chọn ít nhất một khách thuê'),
+})
+
+export type TenantBulkActionInput = z.infer<typeof tenantBulkActionSchema>

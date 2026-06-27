@@ -1,4 +1,4 @@
-export type RoomStatus = 'available' | 'occupied' | 'maintenance'
+export type RoomStatus = 'available' | 'occupied' | 'maintenance' | 'archived'
 
 export interface Room {
   id: string
