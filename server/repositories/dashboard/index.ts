@@ -1,24 +1,69 @@
 import { serverSupabaseClient } from '#supabase/server'
 import type { H3Event } from 'h3'
-import type { DashboardSummary, BuildingRoomStats, PendingOperation } from '~/types/dashboard'
+import type { DashboardSummary, BuildingRoomStats, PendingOperation, RevenueCategoryKey, RevenueCategoryAmounts } from '~/types/dashboard'
 
 function emptyRoomStats(): BuildingRoomStats {
   return { total: 0, available: 0, occupied: 0, maintenance: 0 }
+}
+
+function emptyCategoryAmounts(): RevenueCategoryAmounts {
+  return { rent: 0, electricity: 0, water: 0, service: 0, other: 0 }
+}
+
+function bucketCharge(chargeType: string): RevenueCategoryKey {
+  switch (chargeType) {
+    case 'rent': return 'rent'
+    case 'electricity': return 'electricity'
+    case 'water': return 'water'
+    case 'service': return 'service'
+    default: return 'other'
+  }
 }
 
 function periodToken(year: number, month: number): string {
   return `${year}-${String(month).padStart(2, '0')}`
 }
 
-function sixMonthWindowStart(year: number, month: number): { startYear: number; startMonth: number } {
-  // Window covers the last 6 months including the current month
-  let startMonth = month - 5
-  let startYear = year
-  while (startMonth <= 0) {
-    startMonth += 12
-    startYear -= 1
+const TREND_WINDOW_MONTHS = 12
+
+function trendWindowStart(year: number, _month: number): { startYear: number; startMonth: number } {
+  // Window covers the calendar year (Jan–Dec) of the current year
+  return { startYear: year, startMonth: 1 }
+}
+
+type TrendBucket = {
+  period: string
+  invoiceTotal: number
+  paidAmount: number
+  outstandingAmount: number
+  overdueAmount: number
+  categories: RevenueCategoryAmounts
+  byBuilding: Record<string, { invoiceTotal: number; paidAmount: number; categories: RevenueCategoryAmounts }>
+}
+
+function buildFullTrend(buckets: Map<string, TrendBucket>, currentYear: number, currentMonth: number): TrendBucket[] {
+  const { startYear, startMonth } = trendWindowStart(currentYear, currentMonth)
+  const out: TrendBucket[] = []
+  let year = startYear
+  let month = startMonth
+  for (let i = 0; i < TREND_WINDOW_MONTHS; i++) {
+    const token = periodToken(year, month)
+    out.push(buckets.get(token) ?? {
+      period: token,
+      invoiceTotal: 0,
+      paidAmount: 0,
+      outstandingAmount: 0,
+      overdueAmount: 0,
+      categories: emptyCategoryAmounts(),
+      byBuilding: {},
+    })
+    month += 1
+    if (month > 12) {
+      month = 1
+      year += 1
+    }
   }
-  return { startYear, startMonth }
+  return out
 }
 
 const SEVERITY_WEIGHT: Record<PendingOperation['severity'], number> = {
@@ -46,7 +91,7 @@ export const DashboardRepository = {
     const expiringUrgent = new Date(now)
     expiringUrgent.setDate(expiringUrgent.getDate() + 7)
     const expiringUrgentDate = expiringUrgent.toISOString().slice(0, 10)
-    const { startYear, startMonth } = sixMonthWindowStart(currentYear, currentMonth)
+    const { startYear, startMonth } = trendWindowStart(currentYear, currentMonth)
 
     const [
       buildingsResult,
@@ -81,7 +126,7 @@ export const DashboardRepository = {
       client
         .from('invoices')
         .select(
-          'billing_period_id, billing_periods!inner(building_id, period_year, period_month), total_amount, paid_amount, balance_amount, status, due_date',
+          'billing_period_id, billing_periods!inner(building_id, period_year, period_month), total_amount, paid_amount, balance_amount, status, due_date, invoice_charges(charge_type, amount)',
         )
         .or(
           `period_year.gt.${startYear},and(period_year.eq.${startYear},period_month.gte.${startMonth})`,
@@ -149,23 +194,62 @@ export const DashboardRepository = {
     let paidAmount = 0
     let outstandingAmount = 0
     let overdueAmount = 0
-    const trendByPeriod = new Map<string, { period: string; invoiceTotal: number; paidAmount: number; outstandingAmount: number; overdueAmount: number }>()
+    let windowIssuedTotal = 0
+    let windowPaidTotal = 0
+    const trendByPeriod = new Map<string, TrendBucket>()
     const overdueAmountByBuilding = new Map<string, number>()
+    const revenueByCategory = new Map<RevenueCategoryKey, number>()
+    const windowStartToken = startYear * 12 + startMonth
+    const windowEndToken = windowStartToken + TREND_WINDOW_MONTHS - 1
 
     for (const invoice of allInvoices) {
       if (invoice.status === 'void') continue
       const period = periodById.get(invoice.billing_period_id)
       if (!period) continue
+      const periodTokenNum = period.period_year * 12 + period.period_month
+      if (periodTokenNum < windowStartToken || periodTokenNum > windowEndToken) continue
       const token = periodToken(period.period_year, period.period_month)
-      const trend = trendByPeriod.get(token) ?? { period: token, invoiceTotal: 0, paidAmount: 0, outstandingAmount: 0, overdueAmount: 0 }
+      const trend = trendByPeriod.get(token) ?? {
+        period: token,
+        invoiceTotal: 0,
+        paidAmount: 0,
+        outstandingAmount: 0,
+        overdueAmount: 0,
+        categories: emptyCategoryAmounts(),
+        byBuilding: {},
+      }
+      const total = Number(invoice.total_amount ?? 0)
+      const paid = Number(invoice.paid_amount ?? 0)
       const balance = Number(invoice.balance_amount ?? 0)
       const isOverdue = balance > 0 && Boolean(invoice.due_date && invoice.due_date < today)
 
-      trend.invoiceTotal += Number(invoice.total_amount ?? 0)
-      trend.paidAmount += Number(invoice.paid_amount ?? 0)
+      trend.invoiceTotal += total
+      trend.paidAmount += paid
       trend.outstandingAmount += balance
       if (isOverdue) trend.overdueAmount += balance
+
+      const buildingBucket = trend.byBuilding[period.building_id] ?? {
+        invoiceTotal: 0,
+        paidAmount: 0,
+        categories: emptyCategoryAmounts(),
+      }
+      buildingBucket.invoiceTotal += total
+      buildingBucket.paidAmount += paid
+      trend.byBuilding[period.building_id] = buildingBucket
+
       trendByPeriod.set(token, trend)
+
+      windowIssuedTotal += total
+      windowPaidTotal += paid
+
+      const charges = (invoice as { invoice_charges?: { charge_type: string; amount: number | string }[] }).invoice_charges ?? []
+      for (const charge of charges) {
+        const key = bucketCharge(charge.charge_type)
+        const amount = Number(charge.amount ?? 0)
+        revenueByCategory.set(key, (revenueByCategory.get(key) ?? 0) + amount)
+        trend.categories[key] += amount
+        buildingBucket.categories[key] += amount
+      }
 
       if (isOverdue) {
         const accum = overdueAmountByBuilding.get(period.building_id) ?? 0
@@ -173,12 +257,17 @@ export const DashboardRepository = {
       }
 
       if (currentPeriodIds.has(invoice.billing_period_id)) {
-        invoiceTotal += Number(invoice.total_amount ?? 0)
-        paidAmount += Number(invoice.paid_amount ?? 0)
+        invoiceTotal += total
+        paidAmount += paid
         outstandingAmount += balance
         if (isOverdue) overdueAmount += balance
       }
     }
+
+    const categoryOrder: RevenueCategoryKey[] = ['rent', 'electricity', 'water', 'service', 'other']
+    const revenueCategories = categoryOrder
+      .map((key) => ({ key, amount: revenueByCategory.get(key) ?? 0 }))
+      .filter(entry => entry.amount > 0)
 
     const collectionRate = invoiceTotal === 0
       ? 0
@@ -260,9 +349,12 @@ export const DashboardRepository = {
         },
       },
       buildingBreakdown,
-      billingTrend: [...trendByPeriod.values()]
-        .sort((a, b) => a.period.localeCompare(b.period))
-        .slice(-6),
+      billingTrend: buildFullTrend(trendByPeriod, currentYear, currentMonth),
+      revenueBreakdown: {
+        totalIssued: windowIssuedTotal,
+        totalPaid: windowPaidTotal,
+        categories: revenueCategories,
+      },
       pendingOperations,
     }
 

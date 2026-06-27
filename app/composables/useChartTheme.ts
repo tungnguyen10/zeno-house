@@ -70,7 +70,36 @@ export function useChartTheme() {
     },
   }
 
-  return { palette: dashboardChartPalette, donutOptions, stackedColumnOptions }
+  const stackedAreaOptions: ChartOptions<'line'> = {
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: { duration: animationDuration },
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+      legend: { display: false },
+      tooltip: baseTooltip,
+    },
+    elements: {
+      line: { tension: 0, borderWidth: 1.5, cubicInterpolationMode: 'monotone' },
+      point: { radius: 0, hoverRadius: 4, hitRadius: 12 },
+    },
+    scales: {
+      x: {
+        grid: { display: false },
+        ticks: { color: dashboardChartPalette.muted, font: { size: 11 } },
+        border: { color: dashboardChartPalette.darkBorder },
+      },
+      y: {
+        stacked: true,
+        beginAtZero: true,
+        grid: { color: dashboardChartPalette.darkBorder },
+        ticks: { color: dashboardChartPalette.muted, font: { size: 11 } },
+        border: { display: false },
+      },
+    },
+  }
+
+  return { palette: dashboardChartPalette, donutOptions, stackedColumnOptions, stackedAreaOptions }
 }
 
 export type ChartCenterTextPluginOptions = {

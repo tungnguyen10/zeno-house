@@ -23,6 +23,7 @@ vi.mock('../../../server/repositories/dashboard', () => ({
         },
         buildingBreakdown: [],
         billingTrend: [],
+        revenueBreakdown: { totalIssued: 0, totalPaid: 0, categories: [] },
         pendingOperations: [],
       },
       generatedAt: '2026-06-25T10:00:00.000Z',

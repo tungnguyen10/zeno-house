@@ -5,11 +5,11 @@ import DashboardBillingTrendChart from '../../app/components/dashboard/Dashboard
 import type { BillingTrendEntry } from '../../app/types/dashboard'
 
 vi.mock('vue-chartjs', () => ({
-  Bar: defineComponent({
+  Line: defineComponent({
     props: ['data', 'options'],
     setup(props) {
       const labelsAttr = JSON.stringify(props.data?.datasets?.map((d: { label?: string }) => d.label) ?? [])
-      return () => h('div', { 'data-test': 'bar', 'data-labels': labelsAttr })
+      return () => h('div', { 'data-test': 'line', 'data-labels': labelsAttr })
     },
   }),
 }))
@@ -31,24 +31,35 @@ function mountChart(trend: BillingTrendEntry[]) {
   })
 }
 
+function entry(period: string, categories: Partial<BillingTrendEntry['categories']>): BillingTrendEntry {
+  const filled = { rent: 0, electricity: 0, water: 0, service: 0, other: 0, ...categories }
+  const invoiceTotal = Object.values(filled).reduce((sum, n) => sum + n, 0)
+  return {
+    period,
+    invoiceTotal,
+    paidAmount: invoiceTotal,
+    outstandingAmount: 0,
+    overdueAmount: 0,
+    categories: filled,
+    byBuilding: {},
+  }
+}
+
 describe('DashboardBillingTrendChart', () => {
-  it('renders empty state when trend is empty', () => {
+  it('renders empty state when trend has no revenue', () => {
     const wrapper = mountChart([])
     expect(wrapper.find('[data-test="empty"]').exists()).toBe(true)
-    expect(wrapper.find('[data-test="bar"]').exists()).toBe(false)
+    expect(wrapper.find('[data-test="line"]').exists()).toBe(false)
   })
 
-  it('renders three stacked datasets when trend has data', () => {
+  it('renders only categories that have data, in canonical order', () => {
     const wrapper = mountChart([
-      { period: '2026-04', paidAmount: 1_000_000, outstandingAmount: 500_000, overdueAmount: 200_000, invoiceCount: 4 },
-      { period: '2026-05', paidAmount: 1_500_000, outstandingAmount: 700_000, overdueAmount: 100_000, invoiceCount: 5 },
+      entry('2026-04', { rent: 1_000_000, electricity: 400_000, water: 100_000 }),
+      entry('2026-05', { rent: 1_200_000, electricity: 500_000, water: 150_000 }),
     ])
-    const bar = wrapper.find('[data-test="bar"]')
-    expect(bar.exists()).toBe(true)
-    const labels = JSON.parse(bar.attributes('data-labels') || '[]')
-    expect(labels).toEqual(['Đã thu', 'Chưa thu trong hạn', 'Quá hạn'])
-    const text = wrapper.text()
-    expect(text).toContain('Đã thu')
-    expect(text).toContain('Quá hạn')
+    const chart = wrapper.find('[data-test="line"]')
+    expect(chart.exists()).toBe(true)
+    const labels = JSON.parse(chart.attributes('data-labels') || '[]')
+    expect(labels).toEqual(['Tiền phòng', 'Điện', 'Nước'])
   })
 })

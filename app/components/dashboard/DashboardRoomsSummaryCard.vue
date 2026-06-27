@@ -59,7 +59,7 @@ const segments = computed(() => {
       </span>
     </div>
 
-    <div class="mt-auto border-t border-dark-border pt-3 text-xs text-muted">
+    <div class="mt-3 border-t border-dark-border pt-3 text-xs text-muted sm:mt-auto">
       <span class="tabular-nums text-white">{{ buildingCount }}</span> tòa nhà ·
       <span class="tabular-nums text-white">{{ rooms.total }}</span> phòng quản lý
     </div>

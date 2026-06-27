@@ -5,7 +5,11 @@ import {
   CategoryScale,
   Chart,
   DoughnutController,
+  Filler,
+  LineController,
+  LineElement,
   LinearScale,
+  PointElement,
   Tooltip,
 } from 'chart.js'
 
@@ -14,6 +18,10 @@ Chart.register(
   ArcElement,
   BarController,
   BarElement,
+  LineController,
+  LineElement,
+  PointElement,
+  Filler,
   CategoryScale,
   LinearScale,
   Tooltip,

@@ -26,7 +26,7 @@ defineProps<{
 </script>
 
 <template>
-  <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between mb-6">
+  <div class="flex items-start justify-between gap-3 mb-6">
     <div class="min-w-0">
       <NuxtLink
         v-if="backTo"

@@ -22,7 +22,7 @@ const isUrgent = computed(() => props.expiringUrgent > 0)
       </p>
     </div>
 
-    <div class="flex-1" />
+    <div class="hidden sm:block sm:flex-1" />
 
     <div
       v-if="hasExpiring"

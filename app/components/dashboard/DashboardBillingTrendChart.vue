@@ -1,47 +1,48 @@
 <script setup lang="ts">
 import type { ChartData, ChartOptions, TooltipItem } from 'chart.js'
-import { Bar } from 'vue-chartjs'
-import type { BillingTrendEntry } from '~/types/dashboard'
+import { Line } from 'vue-chartjs'
+import type { BillingTrendEntry, RevenueCategoryKey } from '~/types/dashboard'
 import { useChartTheme } from '~/composables/useChartTheme'
 import { formatCurrency, formatCurrencyCompact } from '~/utils/format/currency'
+import {
+  REVENUE_CATEGORY_COLOR,
+  REVENUE_CATEGORY_LABEL,
+  REVENUE_CATEGORY_ORDER,
+} from '~/utils/constants/revenue-categories'
 
 const props = defineProps<{
   trend: BillingTrendEntry[]
 }>()
 
-const { stackedColumnOptions, palette } = useChartTheme()
+const { stackedAreaOptions } = useChartTheme()
 
-const hasData = computed(() => props.trend.length > 0)
+const hasData = computed(() => props.trend.some(row => row.invoiceTotal > 0))
 
-const chartData = computed<ChartData<'bar'>>(() => ({
+function withAlpha(hex: string, alpha: number): string {
+  const value = Math.round(alpha * 255).toString(16).padStart(2, '0')
+  return `${hex}${value}`
+}
+
+const visibleCategories = computed<RevenueCategoryKey[]>(() =>
+  REVENUE_CATEGORY_ORDER.filter(key => props.trend.some(row => (row.categories?.[key] ?? 0) > 0)),
+)
+
+const chartData = computed<ChartData<'line'>>(() => ({
   labels: props.trend.map(row => row.period),
-  datasets: [
-    {
-      label: 'Đã thu',
-      data: props.trend.map(row => row.paidAmount),
-      backgroundColor: palette.successNeon,
-      borderRadius: { topLeft: 0, topRight: 0, bottomLeft: 4, bottomRight: 4 },
-      stack: 'stack0',
-    },
-    {
-      label: 'Chưa thu trong hạn',
-      data: props.trend.map(row => Math.max(0, row.outstandingAmount - row.overdueAmount)),
-      backgroundColor: palette.warning,
-      borderRadius: 0,
-      stack: 'stack0',
-    },
-    {
-      label: 'Quá hạn',
-      data: props.trend.map(row => row.overdueAmount),
-      backgroundColor: palette.errorVivid,
-      borderRadius: { topLeft: 4, topRight: 4, bottomLeft: 0, bottomRight: 0 },
-      stack: 'stack0',
-    },
-  ],
+  datasets: visibleCategories.value.map(key => ({
+    label: REVENUE_CATEGORY_LABEL[key],
+    data: props.trend.map(row => row.categories?.[key] ?? 0),
+    borderColor: REVENUE_CATEGORY_COLOR[key],
+    backgroundColor: withAlpha(REVENUE_CATEGORY_COLOR[key], 0.35),
+    pointBackgroundColor: REVENUE_CATEGORY_COLOR[key],
+    pointBorderColor: REVENUE_CATEGORY_COLOR[key],
+    fill: true,
+    stack: 'revenue',
+  })),
 }))
 
-const chartOptions = computed<ChartOptions<'bar'>>(() => {
-  const base = stackedColumnOptions
+const chartOptions = computed<ChartOptions<'line'>>(() => {
+  const base = stackedAreaOptions
   return {
     ...base,
     scales: {
@@ -59,37 +60,29 @@ const chartOptions = computed<ChartOptions<'bar'>>(() => {
       tooltip: {
         ...base.plugins?.tooltip,
         callbacks: {
-          label: (ctx: TooltipItem<'bar'>) => ` ${ctx.dataset.label}: ${formatCurrency(Number(ctx.parsed.y))}`,
+          label: (ctx: TooltipItem<'line'>) => ` ${ctx.dataset.label}: ${formatCurrency(Number(ctx.parsed.y))}`,
+          footer: (items: TooltipItem<'line'>[]) => {
+            const total = items.reduce((sum, item) => sum + Number(item.parsed.y), 0)
+            return `Tổng: ${formatCurrency(total)}`
+          },
         },
       },
     },
   }
 })
-
-const legendItems = computed(() => [
-  { label: 'Đã thu', color: palette.successNeon },
-  { label: 'Chưa thu trong hạn', color: palette.warning },
-  { label: 'Quá hạn', color: palette.errorVivid },
-])
 </script>
 
 <template>
   <div class="flex h-full flex-col">
-    <div class="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted">
-      <span v-for="item in legendItems" :key="item.label" class="inline-flex items-center gap-1.5">
-        <span class="inline-block h-2.5 w-2.5 rounded-sm" :style="{ background: item.color }" />
-        {{ item.label }}
-      </span>
-    </div>
     <div class="flex-1">
       <UiEmptyState
         v-if="!hasData"
-        title="Chưa có dữ liệu billing"
+        title="Chưa có dữ liệu doanh thu"
         description="Khi phát hành hóa đơn, biểu đồ sẽ hiển thị tại đây."
       />
       <ClientOnly v-else>
         <div class="relative h-64 w-full">
-          <Bar :data="chartData" :options="chartOptions" />
+          <Line :data="chartData" :options="chartOptions" />
         </div>
         <template #fallback>
           <div class="h-64 w-full animate-pulse rounded-xl bg-dark-border/50" />
@@ -98,3 +91,4 @@ const legendItems = computed(() => [
     </div>
   </div>
 </template>
+

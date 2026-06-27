@@ -16,12 +16,35 @@ export interface PendingOperation {
   amount?: number
 }
 
+export type RevenueCategoryKey = 'rent' | 'electricity' | 'water' | 'service' | 'other'
+
+export type RevenueCategoryAmounts = Record<RevenueCategoryKey, number>
+
+export interface BillingTrendBuildingEntry {
+  invoiceTotal: number
+  paidAmount: number
+  categories: RevenueCategoryAmounts
+}
+
 export interface BillingTrendEntry {
   period: string
   invoiceTotal: number
   paidAmount: number
   outstandingAmount: number
   overdueAmount: number
+  categories: RevenueCategoryAmounts
+  byBuilding: Record<string, BillingTrendBuildingEntry>
+}
+
+export interface RevenueCategoryEntry {
+  key: RevenueCategoryKey
+  amount: number
+}
+
+export interface RevenueBreakdown {
+  totalIssued: number
+  totalPaid: number
+  categories: RevenueCategoryEntry[]
 }
 
 export interface BuildingBreakdownEntry {
@@ -48,6 +71,7 @@ export interface DashboardSummary {
   }
   buildingBreakdown: BuildingBreakdownEntry[]
   billingTrend: BillingTrendEntry[]
+  revenueBreakdown: RevenueBreakdown
   pendingOperations: PendingOperation[]
 }
 
