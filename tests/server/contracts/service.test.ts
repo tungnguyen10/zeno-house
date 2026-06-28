@@ -85,11 +85,11 @@ describe('ContractService code lookup', () => {
     const result = await ContractService.list(
       {} as never,
       { id: 'user-1' } as never,
-      { building_id: 'toa-a', status: 'active' },
+      { building_id: 'toa-a', status: ['active'] },
     )
 
     expect(mocks.findBuildingByIdentifier).toHaveBeenCalledWith(expect.anything(), 'toa-a')
-    expect(mocks.findAll).toHaveBeenCalledWith(expect.anything(), { building_id: 'building-1', status: 'active' })
+    expect(mocks.findAll).toHaveBeenCalledWith(expect.anything(), { building_id: 'building-1', status: ['active'] })
     expect(result.total).toBe(1)
   })
 

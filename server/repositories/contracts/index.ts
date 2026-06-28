@@ -1,7 +1,7 @@
 import { serverSupabaseClient } from '#supabase/server'
 import type { H3Event } from 'h3'
 import type { Database } from '~/types/database.types'
-import type { Contract, ContractWithDetails } from '~/types/contracts'
+import type { Contract, ContractStatus, ContractWithDetails } from '~/types/contracts'
 import type { ContractCreateInput, ContractUpdateInput } from '~/utils/validators/contracts'
 import { mapContract, mapContractWithDetails } from '~/utils/mappers/contracts'
 import { isUuid } from '~/utils/format/slug'
@@ -10,7 +10,10 @@ export interface ContractFilters {
   room_id?: string
   tenant_id?: string
   building_id?: string
-  status?: string
+  status?: ContractStatus[]
+  q?: string
+  sort?: 'start_date' | 'end_date' | 'created_at' | 'monthly_rent'
+  order?: 'asc' | 'desc'
   page?: number
   limit?: number
 }
@@ -73,17 +76,45 @@ export const ContractRepository = {
     const limit = filters.limit ?? 20
     const from = (page - 1) * limit
     const to = from + limit - 1
+    const sort = filters.sort ?? 'created_at'
+    const order = filters.order ?? 'desc'
+    const ascending = order === 'asc'
 
     let query = client
       .from('contracts')
       .select(DETAIL_SELECT, { count: 'exact' })
-      .order('created_at', { ascending: false })
-      .range(from, to)
 
     if (filters.room_id) query = query.eq('room_id', filters.room_id)
     if (filters.tenant_id) query = query.eq('tenant_id', filters.tenant_id)
     if (filters.building_id) query = query.eq('building_id', filters.building_id)
-    if (filters.status) query = query.eq('status', filters.status)
+    if (filters.status && filters.status.length > 0) {
+      query = query.in('status', filters.status)
+    }
+    if (filters.q && filters.q.trim()) {
+      const term = filters.q.trim().replace(/[,()]/g, '')
+      // Search across contract_code (local) + tenants.full_name + rooms.room_number.
+      // PostgREST `.or()` across embedded tables is unreliable, so we resolve
+      // matching tenant/room IDs first then OR-filter the parent rows on FK.
+      const [tenantsRes, roomsRes] = await Promise.all([
+        client.from('tenants').select('id').ilike('full_name', `%${term}%`),
+        client.from('rooms').select('id').ilike('room_number', `%${term}%`),
+      ])
+      if (tenantsRes.error) throw createError({ statusCode: 500, message: tenantsRes.error.message })
+      if (roomsRes.error) throw createError({ statusCode: 500, message: roomsRes.error.message })
+
+      const tenantIds = (tenantsRes.data ?? []).map(row => row.id)
+      const roomIds = (roomsRes.data ?? []).map(row => row.id)
+
+      const orParts = [`contract_code.ilike.%${term}%`]
+      if (tenantIds.length > 0) orParts.push(`tenant_id.in.(${tenantIds.join(',')})`)
+      if (roomIds.length > 0) orParts.push(`room_id.in.(${roomIds.join(',')})`)
+
+      query = query.or(orParts.join(','))
+    }
+
+    query = query.order(sort, { ascending })
+    if (sort !== 'created_at') query = query.order('created_at', { ascending: false })
+    query = query.range(from, to)
 
     const { data, error, count } = await query
     if (error) throw createError({ statusCode: 500, message: error.message })

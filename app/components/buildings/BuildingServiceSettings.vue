@@ -72,7 +72,7 @@ const columns: UiTableColumn<ServiceCatalogItem>[] = [
         type="number"
         :model-value="String(getService(row.id)?.defaultAmount ?? 0)"
         class="w-32 text-right"
-        @update:model-value="(v) => handleAmountInput(row.id, v as string)"
+        @change="(v) => handleAmountInput(row.id, v as string)"
       />
     </template>
 

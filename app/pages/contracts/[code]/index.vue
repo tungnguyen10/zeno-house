@@ -27,6 +27,53 @@ const { renewals, isLoading: renewalsLoading, renew } = useContractRenewals(id)
 const { occupants, isLoading: occupantsLoading, addOccupant, moveOut, removeOccupant } = useContractOccupants(id)
 const { services: contractServices, isLoading: servicesLoading, updateService: updateContractService } = useContractServices(id)
 
+function formatDate(value: string | Date) {
+  return new Date(value).toLocaleDateString('vi-VN')
+}
+
+const activeOccupantCount = computed(
+  () => occupants.value.filter(o => !o.moveOutDate).length + 1,
+)
+
+type LifecycleTone = 'default' | 'warning' | 'danger' | 'muted'
+const lifecycle = computed<{ percent: number, label: string, tone: LifecycleTone } | null>(() => {
+  if (!contract.value) return null
+  const c = contract.value
+  if (c.status === 'terminated') return { percent: 100, label: 'Đã kết thúc trước hạn', tone: 'danger' }
+  if (c.status === 'renewed') return { percent: 100, label: 'Đã gia hạn', tone: 'muted' }
+
+  const start = new Date(c.startDate).getTime()
+  const end = new Date(c.endDate).getTime()
+  const now = Date.now()
+  const total = end - start
+  const elapsed = now - start
+  const percent = total <= 0 ? 100 : Math.max(0, Math.min(100, (elapsed / total) * 100))
+  const day = 24 * 60 * 60 * 1000
+  const remainingDays = Math.ceil((end - now) / day)
+
+  if (remainingDays <= 0) return { percent: 100, label: 'Đã hết hạn', tone: 'warning' }
+  if (remainingDays <= 30) return { percent, label: `Còn ${remainingDays} ngày`, tone: 'warning' }
+  const monthsRemaining = Math.round(remainingDays / 30)
+  return {
+    percent,
+    label: monthsRemaining === 1 ? 'Còn 1 tháng' : `Còn ${monthsRemaining} tháng`,
+    tone: 'default',
+  }
+})
+
+const lifecycleBarClass: Record<LifecycleTone, string> = {
+  default: 'bg-cyan',
+  warning: 'bg-warning',
+  danger: 'bg-error-vivid',
+  muted: 'bg-dark-hover',
+}
+const lifecycleTextClass: Record<LifecycleTone, string> = {
+  default: 'text-white',
+  warning: 'text-warning',
+  danger: 'text-error-vivid',
+  muted: 'text-muted',
+}
+
 const showPaymentForm = ref(false)
 const isAddingPayment = ref(false)
 const paymentApiError = ref<string | null>(null)
@@ -205,10 +252,18 @@ watchEffect(() => {
 
     <!-- Detail -->
     <template v-else-if="contract">
-      <UiPageHeader title="Hợp đồng">
-        <div class="flex items-center gap-2 mt-1">
+      <UiPageHeader :title="`Phòng ${contract.room.roomNumber}`">
+        <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5">
           <UiStatusBadge :status="contract.status" />
+          <span class="text-xs text-muted">Tầng {{ contract.room.floor }} — {{ contract.room.buildingName }}</span>
           <span class="text-xs text-muted font-mono">{{ contract.contractCode }}</span>
+        </div>
+        <div class="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1 text-sm">
+          <NuxtLink :to="`/tenants/${contract.tenant.id}`" class="text-white hover:text-cyan transition-colors">
+            {{ contract.tenant.fullName }}
+          </NuxtLink>
+          <span class="text-muted">·</span>
+          <span class="text-muted tabular-nums">{{ contract.tenant.phone }}</span>
         </div>
         <template #actions>
           <div v-if="authStore.isAdmin" class="flex gap-2 shrink-0 flex-wrap justify-end">
@@ -228,63 +283,59 @@ watchEffect(() => {
         </template>
       </UiPageHeader>
 
-      <div class="rounded-xl border border-dark-border bg-dark-surface p-6 space-y-4">
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <p class="text-xs text-muted mb-1">Ngày bắt đầu</p>
-            <p class="text-sm text-white">{{ new Date(contract.startDate).toLocaleDateString('vi-VN') }}</p>
-          </div>
-          <div>
-            <p class="text-xs text-muted mb-1">Ngày kết thúc</p>
-            <p class="text-sm text-white">{{ new Date(contract.endDate).toLocaleDateString('vi-VN') }}</p>
-            <p v-if="contract.originalEndDate && contract.originalEndDate !== contract.endDate" class="text-xs text-muted mt-0.5">
-              Nguyên bản: {{ new Date(contract.originalEndDate).toLocaleDateString('vi-VN') }}
+      <div class="rounded-xl border border-dark-border bg-dark-surface p-6 space-y-5">
+        <!-- Lifecycle ribbon -->
+        <div v-if="lifecycle">
+          <div class="flex items-end justify-between text-xs mb-2">
+            <div>
+              <p class="text-muted uppercase tracking-wide">Bắt đầu</p>
+              <p class="text-white tabular-nums mt-0.5">{{ formatDate(contract.startDate) }}</p>
+            </div>
+            <p :class="['text-sm font-medium tabular-nums', lifecycleTextClass[lifecycle.tone]]">
+              {{ lifecycle.label }}
             </p>
+            <div class="text-right">
+              <p class="text-muted uppercase tracking-wide">Kết thúc</p>
+              <p class="text-white tabular-nums mt-0.5">{{ formatDate(contract.endDate) }}</p>
+              <p
+                v-if="contract.originalEndDate && contract.originalEndDate !== contract.endDate"
+                class="text-muted tabular-nums mt-0.5"
+              >
+                gốc {{ formatDate(contract.originalEndDate) }}
+              </p>
+            </div>
           </div>
-          <div>
-            <p class="text-xs text-muted mb-1">Giá thuê / tháng</p>
-            <p class="text-sm text-white font-medium">{{ formatCurrency(contract.monthlyRent) }}</p>
-          </div>
-          <div>
-            <p class="text-xs text-muted mb-1">Tiền đặt cọc</p>
-            <p class="text-sm text-white">{{ formatCurrency(contract.deposit) }}</p>
-          </div>
-          <div>
-            <p class="text-xs text-muted mb-1">Ngày tạo</p>
-            <p class="text-sm text-white">{{ new Date(contract.createdAt).toLocaleDateString('vi-VN') }}</p>
+          <div class="relative h-1.5 rounded-full bg-dark-border overflow-hidden">
+            <div
+              :class="['absolute inset-y-0 left-0 rounded-full transition-[width]', lifecycleBarClass[lifecycle.tone]]"
+              :style="{ width: `${lifecycle.percent}%` }"
+            />
           </div>
         </div>
-        <div v-if="contract.notes">
-          <p class="text-xs text-muted mb-1">Ghi chú</p>
+
+        <!-- KPI strip -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+          <div class="space-y-1">
+            <p class="text-xs uppercase tracking-wide text-muted">Giá thuê / tháng</p>
+            <p class="text-xl font-semibold text-white tabular-nums">{{ formatCurrency(contract.monthlyRent) }}</p>
+          </div>
+          <div class="space-y-1 sm:border-l sm:border-dark-border sm:pl-4">
+            <p class="text-xs uppercase tracking-wide text-muted">Tiền đặt cọc</p>
+            <p class="text-xl font-semibold text-white tabular-nums">{{ formatCurrency(contract.deposit) }}</p>
+          </div>
+          <div class="space-y-1 sm:border-l sm:border-dark-border sm:pl-4">
+            <p class="text-xs uppercase tracking-wide text-muted">Người ở</p>
+            <p class="text-xl font-semibold text-white tabular-nums">
+              {{ activeOccupantCount }}<span class="text-sm text-muted font-normal">/{{ contract.occupantCount }}</span>
+            </p>
+          </div>
+        </div>
+
+        <div v-if="contract.notes" class="pt-4 border-t border-dark-border">
+          <p class="text-xs uppercase tracking-wide text-muted mb-1">Ghi chú</p>
           <p class="text-sm text-white">{{ contract.notes }}</p>
         </div>
       </div>
-
-      <!-- Room section -->
-      <UiSection title="Phòng" class="mt-6">
-        <div class="rounded-xl border border-dark-border bg-dark-surface p-4">
-          <NuxtLink
-            :to="`/rooms/${contract.room.id}`"
-            class="text-sm font-medium text-white hover:text-cyan transition-colors"
-          >
-            Phòng {{ contract.room.roomNumber }}
-          </NuxtLink>
-          <p class="text-sm text-muted mt-0.5">Tầng {{ contract.room.floor }} — {{ contract.room.buildingName }}</p>
-        </div>
-      </UiSection>
-
-      <!-- Tenant section -->
-      <UiSection title="Khách thuê" class="mt-6">
-        <div class="rounded-xl border border-dark-border bg-dark-surface p-4">
-          <NuxtLink
-            :to="`/tenants/${contract.tenant.id}`"
-            class="text-sm font-medium text-white hover:text-cyan transition-colors"
-          >
-            {{ contract.tenant.fullName }}
-          </NuxtLink>
-          <p class="text-sm text-muted mt-0.5">{{ contract.tenant.phone }}</p>
-        </div>
-      </UiSection>
 
       <!-- Occupants section -->
       <UiSection title="Người ở" class="mt-6">

@@ -103,7 +103,7 @@ function handleToggle(service: ContractService) {
                   :model-value="String(getService(row.contractId, item.id)!.amount)"
                   :disabled="!getService(row.contractId, item.id)!.isEnabled"
                   class="w-20 text-center"
-                  @update:model-value="(v) => handleAmountInput(getService(row.contractId, item.id)!, v as string)"
+                  @change="(v) => handleAmountInput(getService(row.contractId, item.id)!, v as string)"
                 />
                 <!-- Quantity input -->
                 <UiInput
@@ -112,7 +112,7 @@ function handleToggle(service: ContractService) {
                   :model-value="String(getService(row.contractId, item.id)!.quantity)"
                   :disabled="!getService(row.contractId, item.id)!.isEnabled"
                   class="w-12 text-center"
-                  @update:model-value="(v) => handleQuantityInput(getService(row.contractId, item.id)!, v as string)"
+                  @change="(v) => handleQuantityInput(getService(row.contractId, item.id)!, v as string)"
                 />
               </div>
             </template>

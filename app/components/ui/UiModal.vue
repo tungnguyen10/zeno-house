@@ -16,7 +16,7 @@ const emit = defineEmits<{
 
 const panelClass = computed(() =>
   clsx(
-    'relative z-10 w-full rounded-2xl bg-dark-card shadow-xl',
+    'relative z-10 flex w-full max-h-[calc(100vh-2rem)] flex-col rounded-2xl bg-dark-card shadow-xl',
     {
       'max-w-md': props.size === 'sm',
       'max-w-lg': props.size === 'md',
@@ -65,7 +65,7 @@ function onAfterEnter(el: Element) {
         <!-- Dialog panel -->
         <div :class="panelClass">
           <!-- Header -->
-          <div class="flex items-center justify-between border-b border-dark-border px-6 py-4">
+          <div class="flex shrink-0 items-center justify-between border-b border-dark-border px-6 py-4">
             <h2 class="text-base font-semibold text-white">
               {{ title }}
             </h2>
@@ -82,14 +82,14 @@ function onAfterEnter(el: Element) {
           </div>
 
           <!-- Body -->
-          <div class="px-6 py-4">
+          <div class="flex-1 overflow-y-auto px-6 py-4">
             <slot />
           </div>
 
           <!-- Footer -->
           <div
             v-if="$slots.footer"
-            class="flex flex-col-reverse gap-2 border-t border-dark-border px-6 py-4 sm:flex-row sm:justify-end sm:gap-3"
+            class="flex shrink-0 flex-col-reverse gap-2 border-t border-dark-border px-6 py-4 sm:flex-row sm:justify-end sm:gap-3"
           >
             <slot name="footer" />
           </div>

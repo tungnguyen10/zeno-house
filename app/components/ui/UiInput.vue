@@ -26,6 +26,7 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits<{
   (e: 'update:modelValue', value: string): void
+  (e: 'change', value: string): void
   (e: 'blur', event: FocusEvent): void
 }>()
 
@@ -92,6 +93,7 @@ const inputClass = computed(() =>
         :aria-describedby="error ? `${inputId}-error` : hint ? `${inputId}-hint` : undefined"
         :class="inputClass"
         @input="emit('update:modelValue', ($event.target as HTMLInputElement).value)"
+        @change="emit('change', ($event.target as HTMLInputElement).value)"
         @blur="emit('blur', $event)"
       >
 

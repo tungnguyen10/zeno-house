@@ -1,26 +1,26 @@
 ## 1. Validators & types
 
-- [ ] 1.1 Add `contractListQuerySchema` (page, limit, q, building_id, room_id, tenant_id, status[], sort, order, defaults) and inferred type `ContractListQuery` in `app/utils/validators/contracts.ts`
+- [x] 1.1 Add `contractListQuerySchema` (page, limit, q, building_id, room_id, tenant_id, status[], sort, order, defaults) and inferred type `ContractListQuery` in `app/utils/validators/contracts.ts`
 - [ ] 1.2 Add `contractBulkActionSchema` (action enum: `terminate | delete`, ids min 1, reason optional) and inferred type `ContractBulkActionInput` in the same file
-- [ ] 1.3 Confirm `ContractStatus` covers `'active' | 'expired' | 'terminated' | 'renewed'` in `app/types/contracts.ts`; no DB change
+- [x] 1.3 Confirm `ContractStatus` covers `'active' | 'expired' | 'terminated' | 'renewed'` in `app/types/contracts.ts`; no DB change
 
 ## 2. Repository layer
 
-- [ ] 2.1 Extend `ContractRepository.findAll` to accept `{ q?, status?, sort?, order? }`; build `.or` ilike on `contract_code` + foreign-table on `tenants.full_name` / `rooms.room_number`, `.in` on status, `.order` by sort field
+- [x] 2.1 Extend `ContractRepository.findAll` to accept `{ q?, status?, sort?, order? }`; build `.or` ilike on `contract_code` + foreign-table on `tenants.full_name` / `rooms.room_number`, `.in` on status, `.order` by sort field
 - [ ] 2.2 Add `countBillingPeriodsForContract(contractId)` returning `number`
 - [ ] 2.3 Add `countPaidInvoicesForContract(contractId)` returning `number` (status `paid` or `partial`)
 - [ ] 2.4 Add `countNonHandoverMeterReadingsForContract(contractId)` returning `number` (type not `handover_in`/`handover_out`)
 
 ## 3. Service layer
 
-- [ ] 3.1 Update `ContractService.list` to forward new filter/sort options to repository; re-check `contracts.read`
+- [x] 3.1 Update `ContractService.list` to forward new filter/sort options to repository; re-check `contracts.read`
 - [ ] 3.2 Update `ContractService.remove(event, user, id, { force })` to enforce conflict matrix: active status (#1), billing periods (#2), paid invoices (#3), non-handover meter readings (#4); aggregate violations into single CONFLICT details object
 - [ ] 3.3 When `force=true`, terminate first if active, then re-check #2/#3/#4 (still hard-block on history) before cascade-deleting sub-resources + contract row
 - [ ] 3.4 Add `ContractService.bulkAction(event, user, { action, ids, reason? })` iterating per id, catching errors, returning `{ succeeded, failed: [{ id, reason }] }`; permission re-check upfront. `terminate` reuses existing terminate logic per id.
 
 ## 4. Server API endpoints
 
-- [ ] 4.1 Update `server/api/contracts/index.get.ts` to validate query with `contractListQuerySchema`, pass options to service, keep envelope
+- [x] 4.1 Update `server/api/contracts/index.get.ts` to validate query with `contractListQuerySchema`, pass options to service, keep envelope
 - [ ] 4.2 Update `server/api/contracts/[id].delete.ts`: read `?force` from query, call service with options; map `CONFLICT` error to 409 response with aggregated `details`
 - [ ] 4.3 When `?force=true` and history checks pass, response is 200 + `{ data }` containing the terminated/deleted contract DTO
 - [ ] 4.4 Create `server/api/contracts/bulk.post.ts`: auth guard (admin), validate body, call service, return 200 with `{ data: { succeeded, failed } }`
@@ -38,14 +38,14 @@
 
 ## 6. Composables
 
-- [ ] 6.1 Extend `useContractList` with refs `q`, `status`, `sort`, `order`, `roomFilter`, `tenantFilter`; two-way sync with `useRoute().query`; reset `page=1` on filter change
+- [x] 6.1 Extend `useContractList` with refs `q`, `status`, `sort`, `order`, `roomFilter`, `tenantFilter`; two-way sync with `useRoute().query`; reset `page=1` on filter change
 - [ ] 6.2 Extend `useContractForm`: add `isDirty` computed; `hasDraft`, `restoreDraft()`, `clearDraft()`; integrate `localStorage` persistence with `useDebounceFn(500)`; clear on submit success; draft payload includes `draftVersion` + wizard state (currentStep, pendingOccupants, selectedServices) for create form
 - [ ] 6.3 Create `app/composables/contracts/useContractBulkActions.ts` with `selectedIds`, `isSelected`, `toggle`, `selectAll`, `clear`, `runAction(action, opts?)` calling `POST /api/contracts/bulk`
 - [ ] 6.4 Composable tests: `useContractForm` (dirty + draft restore + version mismatch + clear + wizard restore), `useContractBulkActions` (toggle/selectAll/clear/runAction shape)
 
 ## 7. UI components — new
 
-- [ ] 7.1 Create `app/components/contracts/ContractListToolbar.vue`: search input (debounced), status filter chips, building selector, sort dropdown, order toggle
+- [x] 7.1 Create `app/components/contracts/ContractListToolbar.vue`: search input (debounced), status filter chips, building selector, sort dropdown, order toggle
 - [ ] 7.2 Create `app/components/contracts/ContractBulkActionsBar.vue`: shows selected count, action buttons (terminate with reason input modal, delete with strong opt-in modal); uses `useContractBulkActions`; emits `done` after action
 - [ ] 7.3 Create `app/components/contracts/ContractDetailHero.vue`: hero header with code + status pill + breadcrumb (building → room → tenant) + 4 quick stat tiles (tenant link / room link / months elapsed / paid + deposit) + action buttons (Gia hạn / Kết thúc sớm) when active
 - [ ] 7.4 Create `app/components/contracts/ContractWizardSteps.vue`: 3-step progress indicator (Hợp đồng / Khách ở cùng / Dịch vụ) with check marks for completed steps and highlight for current; emits `change` when user clicks a completed step

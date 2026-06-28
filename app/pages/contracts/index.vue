@@ -7,7 +7,22 @@ import { contractPath } from '~/utils/routes/operational'
 definePageMeta({ title: 'Hợp đồng' })
 
 const authStore = useAuthStore()
-const { contracts, total, totalPages, page, statusFilter, buildingFilter, isLoading, error } = useContractList()
+const {
+  contracts,
+  total,
+  totalPages,
+  page,
+  q,
+  buildingFilter,
+  status,
+  sort,
+  order,
+  hasActiveFilters,
+  resetFilters,
+  isLoading,
+  error,
+  refresh,
+} = useContractList()
 
 const { data: buildingsData } = await useFetch<ApiSuccess<Building[]> & { meta: { total: number } }>(
   '/api/buildings',
@@ -19,12 +34,6 @@ const buildingOptions = computed(() =>
     label: building.name,
   })),
 )
-
-const statusOptions = [
-  { value: 'active', label: 'Đang hiệu lực' },
-  { value: 'expired', label: 'Đã hết hạn' },
-  { value: 'terminated', label: 'Đã chấm dứt' },
-]
 </script>
 
 <template>
@@ -37,21 +46,17 @@ const statusOptions = [
       </template>
     </UiPageHeader>
 
-    <!-- Filters -->
-    <UiToolbar class="mb-6 flex-wrap">
-      <UiSelect
-        v-model="buildingFilter"
-        :options="buildingOptions"
-        placeholder="Tất cả tòa nhà"
-        class="w-full sm:w-64"
-      />
-      <UiSelect
-        v-model="statusFilter"
-        :options="statusOptions"
-        placeholder="Tất cả trạng thái"
-        class="w-full sm:w-56"
-      />
-    </UiToolbar>
+    <ContractListToolbar
+      v-model:q="q"
+      v-model:building-filter="buildingFilter"
+      v-model:status="status"
+      v-model:sort="sort"
+      v-model:order="order"
+      :building-options="buildingOptions"
+      :has-active-filters="hasActiveFilters"
+      class="mb-4"
+      @reset="resetFilters"
+    />
 
     <!-- Loading -->
     <div v-if="isLoading" class="space-y-3">
@@ -60,8 +65,23 @@ const statusOptions = [
 
     <!-- Error -->
     <UiAlert v-else-if="error" severity="danger">
-      Không thể tải danh sách hợp đồng. Vui lòng thử lại.
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <span>Không thể tải danh sách hợp đồng.</span>
+        <UiButton variant="secondary" size="sm" @click="refresh()">Thử lại</UiButton>
+      </div>
     </UiAlert>
+
+    <!-- Empty with filters -->
+    <UiEmptyState
+      v-else-if="contracts.length === 0 && hasActiveFilters"
+      variant="search"
+      title="Không tìm thấy hợp đồng phù hợp"
+      description="Thử bỏ bớt bộ lọc hoặc thay đổi từ khoá tìm kiếm."
+    >
+      <template #action>
+        <UiButton variant="secondary" @click="resetFilters">Xoá bộ lọc</UiButton>
+      </template>
+    </UiEmptyState>
 
     <!-- Empty -->
     <UiEmptyState

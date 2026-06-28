@@ -1,5 +1,40 @@
 import { z } from 'zod'
 
+export const contractStatusSchema = z.enum(['active', 'expired', 'terminated', 'renewed'])
+export const contractSortFieldSchema = z.enum(['start_date', 'end_date', 'created_at', 'monthly_rent'])
+export const contractSortOrderSchema = z.enum(['asc', 'desc'])
+
+const toArray = <T>(value: T | T[] | undefined): T[] | undefined => {
+  if (value === undefined) return undefined
+  return Array.isArray(value) ? value : [value]
+}
+
+export const contractListQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).optional().default(1),
+  limit: z.coerce.number().int().min(1).max(200).optional().default(20),
+  q: z.preprocess(
+    v => (typeof v === 'string' && v.trim() === '' ? undefined : v),
+    z.string().trim().min(1).max(100).optional(),
+  ),
+  building_id: z.preprocess(
+    v => (typeof v === 'string' && v.trim() === '' ? undefined : v),
+    z.string().trim().min(1).optional(),
+  ),
+  room_id: z.preprocess(
+    v => (typeof v === 'string' && v.trim() === '' ? undefined : v),
+    z.string().trim().min(1).optional(),
+  ),
+  tenant_id: z.preprocess(
+    v => (typeof v === 'string' && v.trim() === '' ? undefined : v),
+    z.string().trim().min(1).optional(),
+  ),
+  status: z.preprocess(toArray, z.array(contractStatusSchema).min(1).optional()),
+  sort: contractSortFieldSchema.optional().default('created_at'),
+  order: contractSortOrderSchema.optional().default('desc'),
+})
+
+export type ContractListQuery = z.infer<typeof contractListQuerySchema>
+
 export const contractCreateSchema = z.object({
   room_id: z.string().uuid('ID phòng không hợp lệ'),
   tenant_id: z.string().uuid('ID khách thuê không hợp lệ'),

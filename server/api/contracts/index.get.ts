@@ -1,22 +1,28 @@
 import { ContractService } from '../../services/contracts'
+import { contractListQuerySchema } from '~/utils/validators/contracts'
 
 export default defineEventHandler(async (event) => {
   const user = await requireAuth(event)
 
-  const query = getQuery(event)
-  const page = query.page ? Number(query.page) : 1
-  const limit = query.limit ? Number(query.limit) : 20
-
-  const filters = {
-    room_id: query.room_id ? String(query.room_id) : undefined,
-    tenant_id: query.tenant_id ? String(query.tenant_id) : undefined,
-    building_id: query.building_id ? String(query.building_id) : undefined,
-    status: query.status ? String(query.status) : undefined,
-    page,
-    limit,
+  const rawQuery = getQuery(event)
+  const result = contractListQuerySchema.safeParse(rawQuery)
+  if (!result.success) {
+    throwValidationError('Tham số truy vấn không hợp lệ', result.error.flatten())
   }
 
-  const { items, total } = await ContractService.list(event, user, filters)
+  const { page, limit, q, building_id, room_id, tenant_id, status, sort, order } = result.data
+
+  const { items, total } = await ContractService.list(event, user, {
+    page,
+    limit,
+    q,
+    building_id,
+    room_id,
+    tenant_id,
+    status,
+    sort,
+    order,
+  })
 
   return {
     data: items,

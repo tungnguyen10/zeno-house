@@ -3,7 +3,7 @@ import { z } from 'zod'
 const pricingTypeEnum = z.enum(['fixed_per_room', 'per_person', 'per_vehicle'])
 
 export const buildingServiceUpsertSchema = z.object({
-  building_id: z.string().uuid(),
+  building_id: z.string().min(1),
   catalog_id: z.string().uuid(),
   default_amount: z.number().min(0).optional(),
   pricing_type: pricingTypeEnum.nullable().optional(),
