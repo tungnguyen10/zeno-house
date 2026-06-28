@@ -8,14 +8,27 @@ const route = useRoute()
 const id = route.params.id as string
 
 const { building, refresh: refreshBuilding } = useBuildingDetail(id)
-const { services, isLoading: loadingServices, upsertService, updateService, syncToContracts } = useBuildingServices(id)
-const { allServices: contractServices, isLoading: loadingMatrix, updateService: updateContractService, refresh: refreshMatrix } = useBuildingContractServices(id)
+const {
+  services,
+  isLoading: loadingServices,
+  upsertService,
+  updateService,
+  syncToContracts,
+} = useBuildingServices(id)
+const {
+  allServices: contractServices,
+  isLoading: loadingContractServices,
+  updateService: updateContractService,
+  refresh: refreshContractServices,
+} = useBuildingContractServices(id)
 
 const { data: catalogData } = await useFetch<ApiSuccess<ServiceCatalogItem[]>>('/api/service-catalog')
 const catalog = computed(() => catalogData.value?.data ?? [])
 
-// Fetch active contracts for this building (for matrix rows)
-const { data: contractsData } = await useFetch<ApiSuccess<ContractWithDetails[]>>(`/api/contracts?building_id=${id}&status=active&limit=200`)
+const { data: contractsData, refresh: refreshContracts } = await useFetch<ApiSuccess<ContractWithDetails[]>>(
+  '/api/contracts',
+  { query: { building_id: id, status: 'active', limit: 200 } },
+)
 const contractRows = computed(() =>
   (contractsData.value?.data ?? []).map(c => ({
     contractId: c.id,
@@ -24,19 +37,22 @@ const contractRows = computed(() =>
   })),
 )
 
+const activeServiceCount = computed(() => services.value.filter(s => s.isActive).length)
+
 // Building code
 const codeInput = ref('')
 const isCodeLocked = computed(() => (building.value?.totalRooms ?? 0) > 0)
 const isSavingCode = ref(false)
 const codeSaveError = ref<string | null>(null)
 const codeSaveSuccess = ref(false)
+const codeDirty = computed(() => Boolean(codeInput.value) && codeInput.value !== building.value?.code)
 
 watch(() => building.value?.code, (code) => {
   if (code) codeInput.value = code
 }, { immediate: true })
 
 async function handleSaveCode() {
-  if (!codeInput.value || codeInput.value === building.value?.code) return
+  if (!codeDirty.value) return
   isSavingCode.value = true
   codeSaveError.value = null
   codeSaveSuccess.value = false
@@ -55,7 +71,7 @@ async function handleSaveCode() {
   }
 }
 
-// Sync
+// Sync defaults to active contracts
 const isSyncing = ref(false)
 const syncResult = ref<string | null>(null)
 
@@ -63,9 +79,11 @@ async function handleSync() {
   isSyncing.value = true
   syncResult.value = null
   try {
-    const added = await syncToContracts(id)
-    syncResult.value = added > 0 ? `Đã thêm ${added} dịch vụ vào hợp đồng.` : 'Tất cả hợp đồng đã có đủ dịch vụ.'
-    await refreshMatrix()
+    const changes = await syncToContracts(id)
+    syncResult.value = changes > 0
+      ? `Đã cập nhật ${changes} dịch vụ trên hợp đồng.`
+      : 'Hợp đồng đã khớp với cấu hình mặc định.'
+    await Promise.all([refreshContracts(), refreshContractServices()])
   }
   catch {
     syncResult.value = 'Đồng bộ thất bại.'
@@ -78,71 +96,72 @@ async function handleSync() {
 
 async function handleToggle(catalogId: string, isActive: boolean) {
   const existing = services.value.find(s => s.catalogId === catalogId)
-  if (existing) {
-    await updateService(existing.id, { is_active: isActive })
-  }
-  else {
-    await upsertService({ building_id: id, catalog_id: catalogId, is_active: isActive })
-  }
+  if (existing) await updateService(existing.id, { is_active: isActive })
+  else await upsertService({ building_id: id, catalog_id: catalogId, is_active: isActive })
 }
 
 async function handleUpdateAmount(catalogId: string, amount: number) {
   const existing = services.value.find(s => s.catalogId === catalogId)
-  if (existing) {
-    await updateService(existing.id, { default_amount: amount })
-  }
-  else {
-    await upsertService({ building_id: id, catalog_id: catalogId, default_amount: amount })
-  }
+  if (existing) await updateService(existing.id, { default_amount: amount })
+  else await upsertService({ building_id: id, catalog_id: catalogId, default_amount: amount })
 }
 
 async function handleUpdatePricingType(catalogId: string, pricingType: PricingType) {
   const existing = services.value.find(s => s.catalogId === catalogId)
-  if (existing) {
-    await updateService(existing.id, { pricing_type: pricingType })
-  }
-  else {
-    await upsertService({ building_id: id, catalog_id: catalogId, pricing_type: pricingType })
-  }
+  if (existing) await updateService(existing.id, { pricing_type: pricingType })
+  else await upsertService({ building_id: id, catalog_id: catalogId, pricing_type: pricingType })
 }
 </script>
 
 <template>
-  <div>
-    <UiPageHeader title="Cài đặt dịch vụ">
-      <NuxtLink :to="building ? buildingPath(building) : `/buildings/${id}`" class="text-sm text-muted hover:text-white transition-colors">
-        ← {{ building?.name ?? 'Tòa nhà' }}
+  <div class="space-y-8">
+    <UiPageHeader title="Cài đặt dịch vụ" :description="building?.name">
+      <NuxtLink
+        :to="building ? buildingPath(building) : `/buildings/${id}`"
+        class="text-sm text-muted hover:text-white transition-colors"
+      >
+        ← Quay lại tòa nhà
       </NuxtLink>
     </UiPageHeader>
 
     <!-- Building code -->
-    <UiSection title="Building Code" description="Code ngắn dùng trong URL và tên hợp đồng. Không thể đổi sau khi tòa nhà đã có phòng." class="mt-6">
-      <div class="rounded-xl border border-dark-border bg-dark-surface p-6">
-        <div class="flex items-end gap-4">
-          <div class="flex-1">
-            <label class="block text-sm text-muted mb-1">Code</label>
-            <div class="relative">
-              <input
-                v-model="codeInput"
-                type="text"
-                :disabled="isCodeLocked"
-                :title="isCodeLocked ? 'Code không thể đổi sau khi tòa nhà đã có phòng' : undefined"
-                class="w-full rounded-lg border border-dark-border bg-dark-bg px-3 py-2 text-sm font-mono text-white placeholder-muted focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                placeholder="vd: zhpn"
-              >
-            </div>
-            <p v-if="isCodeLocked" class="mt-1 text-xs text-muted">
-              Code đã bị khóa vì tòa nhà có {{ building?.totalRooms }} phòng.
-            </p>
+    <UiSection
+      title="Mã tòa nhà"
+      description="Dùng trong URL và tên hợp đồng. Khóa sau khi tòa nhà đã có phòng."
+    >
+      <div class="rounded-xl border border-dark-border bg-dark-surface p-5">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-end">
+          <label class="flex-1 min-w-0">
+            <span class="mb-1 block text-xs uppercase tracking-wide text-muted">Code</span>
+            <input
+              v-model="codeInput"
+              type="text"
+              :disabled="isCodeLocked"
+              :title="isCodeLocked ? 'Không thể đổi vì tòa nhà đã có phòng' : undefined"
+              class="block w-full rounded-md border border-dark-border bg-dark-bg px-3 py-2 font-mono text-sm text-white placeholder-muted focus:outline-none focus:ring-2 focus:ring-cyan/30 focus:border-cyan/70 disabled:opacity-50 disabled:cursor-not-allowed"
+              placeholder="vd: zhpn"
+            >
+          </label>
+          <div class="flex items-center gap-2 sm:pb-0.5">
+            <UiButton
+              v-if="!isCodeLocked"
+              size="sm"
+              :loading="isSavingCode"
+              :disabled="!codeDirty"
+              @click="handleSaveCode"
+            >
+              Lưu
+            </UiButton>
+            <span
+              v-else
+              class="inline-flex items-center gap-1.5 rounded-md border border-dark-border bg-dark-deep/40 px-2 py-1 text-xs text-muted"
+            >
+              <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                <path fill-rule="evenodd" d="M10 1a4 4 0 0 0-4 4v3H5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2h-1V5a4 4 0 0 0-4-4Zm2 7V5a2 2 0 1 0-4 0v3h4Z" clip-rule="evenodd" />
+              </svg>
+              Đã khóa · {{ building?.totalRooms }} phòng
+            </span>
           </div>
-          <UiButton
-            v-if="!isCodeLocked"
-            :loading="isSavingCode"
-            :disabled="!codeInput || codeInput === building?.code"
-            @click="handleSaveCode"
-          >
-            Lưu
-          </UiButton>
         </div>
         <UiAlert v-if="codeSaveError" severity="danger" class="mt-3">
           {{ codeSaveError }}
@@ -154,8 +173,37 @@ async function handleUpdatePricingType(catalogId: string, pricingType: PricingTy
     </UiSection>
 
     <!-- Building-level defaults -->
-    <UiSection title="Cấu hình mặc định" description="Bật dịch vụ nào sẽ tự động áp dụng vào hợp đồng mới. Đơn giá là giá trị gợi ý — có thể chỉnh trực tiếp trên hợp đồng." class="mt-6">
-      <div class="rounded-xl border border-dark-border bg-dark-surface p-6">
+    <UiSection
+      title="Dịch vụ mặc định"
+      description="Dịch vụ bật ở đây sẽ tự động thêm vào hợp đồng mới. Đơn giá là gợi ý — có thể chỉnh riêng từng phòng bên dưới."
+    >
+      <template #actions>
+        <div class="flex items-center gap-3">
+          <span
+            v-if="syncResult"
+            class="rounded-md bg-green-500/10 px-2 py-1 text-xs text-green-400"
+          >
+            {{ syncResult }}
+          </span>
+          <span
+            v-else-if="activeServiceCount > 0"
+            class="rounded-md bg-cyan/10 px-2 py-1 text-xs text-cyan"
+          >
+            {{ activeServiceCount }} dịch vụ đang bật
+          </span>
+          <UiButton
+            size="sm"
+            variant="secondary"
+            :loading="isSyncing"
+            :disabled="contractRows.length === 0"
+            title="Cập nhật trạng thái bật/tắt dịch vụ trên tất cả hợp đồng active theo cấu hình mặc định. Không ghi đè giá và số lượng đã chỉnh riêng."
+            @click="handleSync"
+          >
+            Đồng bộ xuống {{ contractRows.length }} hợp đồng
+          </UiButton>
+        </div>
+      </template>
+      <div class="rounded-xl border border-dark-border bg-dark-surface p-5">
         <BuildingServiceSettings
           :building-id="id"
           :catalog="catalog"
@@ -168,31 +216,19 @@ async function handleUpdatePricingType(catalogId: string, pricingType: PricingTy
       </div>
     </UiSection>
 
-    <!-- Sync to active contracts -->
-    <UiSection title="Đồng bộ xuống hợp đồng active" description="Thêm dịch vụ còn thiếu vào các hợp đồng đang active — không ghi đè giá đã chỉnh." class="mt-6">
-      <template #actions>
-        <div class="flex items-center gap-3">
-          <span v-if="syncResult" class="text-xs text-green-400">{{ syncResult }}</span>
-          <UiButton size="sm" :loading="isSyncing" @click="handleSync">
-            Đồng bộ
-          </UiButton>
-        </div>
-      </template>
-    </UiSection>
-
-    <!-- Per-contract matrix -->
-    <UiSection title="Dịch vụ theo hợp đồng" class="mt-6">
-      <div class="rounded-xl border border-dark-border bg-dark-surface p-6">
-        <BuildingServicesMatrix
-          :building-id="id"
-          :catalog="services.filter(s => s.isActive).map(s => s.catalog)"
+    <!-- Per-contract overrides -->
+    <UiSection
+      title="Dịch vụ theo phòng"
+      description="Bật/tắt, chỉnh đơn giá và số lượng riêng cho từng phòng. Thay đổi ở đây chỉ ảnh hưởng phòng đó."
+    >
+      <div class="rounded-xl border border-dark-border bg-dark-surface p-5">
+        <BuildingContractServicesList
           :contracts="contractRows"
           :services="contractServices"
-          :loading="loadingMatrix"
+          :loading="loadingContractServices"
           @update="updateContractService"
         />
       </div>
     </UiSection>
   </div>
 </template>
-

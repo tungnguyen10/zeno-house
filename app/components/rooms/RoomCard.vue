@@ -13,6 +13,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   'toggle-select': [id: string]
   'edit': [room: Room]
+  'edit-services': [room: Room]
 }>()
 
 function onCheckboxChange(event: Event) {
@@ -22,6 +23,10 @@ function onCheckboxChange(event: Event) {
 
 function onEdit() {
   emit('edit', props.room)
+}
+
+function onEditServices() {
+  emit('edit-services', props.room)
 }
 
 const to = computed(() => roomPath(props.room))
@@ -93,6 +98,16 @@ const to = computed(() => roomPath(props.room))
       v-if="!selectable"
       class="pointer-events-none absolute inset-x-0 bottom-0 z-10 hidden items-center justify-end gap-1 rounded-b-xl bg-gradient-to-t from-dark-deep/90 via-dark-deep/60 to-transparent p-2 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 md:flex"
     >
+      <button
+        v-if="room.status === 'occupied'"
+        type="button"
+        title="Chỉnh dịch vụ của phòng"
+        :aria-label="`Chỉnh dịch vụ phòng ${room.roomNumber}`"
+        class="pointer-events-auto inline-flex h-7 w-7 items-center justify-center rounded-md border border-dark-border bg-dark-surface text-muted hover:border-cyan/40 hover:text-cyan focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan/40"
+        @click.stop.prevent="onEditServices"
+      >
+        <IconSettings class="h-3.5 w-3.5" aria-hidden="true" />
+      </button>
       <button
         type="button"
         title="Chỉnh sửa nhanh"

@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import type { Building } from '~/types/buildings'
 import type { ContractWithDetails } from '~/types/contracts'
+import type { ContractService } from '~/types/contract-services'
 import type { ApiSuccess } from '~/types/api'
 import type { MeterReading } from '~/types/meter-readings'
 import type { Room } from '~/types/rooms'
+import type { ContractServiceUpdateInput } from '~/utils/validators/contract-services'
 import { formatCurrency } from '~/utils/format/currency'
 import { buildingPath, contractPath, roomEditPath, roomPath } from '~/utils/routes/operational'
 import { isUuid } from '~/utils/format/slug'
@@ -51,6 +53,33 @@ const meterDeviceCount = computed(() => {
   if (!readings) return 0
   return Number(Boolean(readings.electricity)) + Number(Boolean(readings.water))
 })
+
+// Per-contract services (only loads when there's an active contract)
+const activeContractId = computed(() => activeContract.value?.id ?? '')
+const { data: contractServicesData, refresh: refreshContractServices } = await useFetch<ApiSuccess<ContractService[]>>(
+  computed(() => activeContractId.value
+    ? `/api/contract-services?contract_id=${activeContractId.value}`
+    : '/api/contract-services?__skip'),
+  { immediate: false },
+)
+watch(activeContractId, (next) => {
+  if (next) refreshContractServices()
+}, { immediate: true })
+const contractServices = computed(() => contractServicesData.value?.data ?? [])
+const loadingContractServices = computed(() => Boolean(activeContractId.value) && !contractServicesData.value)
+const activeServicesCount = computed(() => contractServices.value.filter(s => s.isEnabled).length)
+const monthlyServicesTotal = computed(() =>
+  contractServices.value
+    .filter(s => s.isEnabled)
+    .reduce((sum, s) => sum + s.amount * s.quantity, 0),
+)
+
+const showServicesModal = ref(false)
+
+async function handleContractServiceUpdate(serviceId: string, input: ContractServiceUpdateInput) {
+  await $fetch(`/api/contract-services/${serviceId}`, { method: 'PATCH', body: input })
+  await refreshContractServices()
+}
 
 const showDeleteModal = ref(false)
 const isDeleting = ref(false)
@@ -237,7 +266,7 @@ if (error.value?.statusCode === 404) {
         <header class="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
             <h3 class="text-sm font-semibold text-white">Hợp đồng hiện tại</h3>
-            <p class="mt-0.5 text-xs text-muted">Trạng thái thuê và thao tác bàn giao/thu phòng.</p>
+            <p class="mt-0.5 text-xs text-muted">Trạng thái thuê và thao tác nhanh.</p>
           </div>
           <div v-if="authStore.isAdmin" class="flex items-center gap-2">
             <UiButton
@@ -259,18 +288,37 @@ if (error.value?.statusCode === 404) {
         </header>
 
         <div v-if="activeContract" class="rounded-lg border border-dark-border bg-dark-deep/40 p-4">
-          <NuxtLink :to="contractPath(activeContract)" class="text-sm font-medium text-white hover:text-cyan">
-            {{ activeContract.contractCode }}
-          </NuxtLink>
-          <p class="mt-1 text-sm text-muted">
-            {{ activeContract.tenant.fullName }} · {{ activeContract.tenant.phone }}
-          </p>
-          <p class="mt-1 text-xs text-muted">
-            {{ new Date(activeContract.startDate).toLocaleDateString('vi-VN') }}
-            -
-            {{ new Date(activeContract.endDate).toLocaleDateString('vi-VN') }}
-            · {{ formatCurrency(activeContract.monthlyRent) }}/tháng
-          </p>
+          <div class="flex flex-wrap items-start justify-between gap-3">
+            <div class="min-w-0">
+              <NuxtLink :to="contractPath(activeContract)" class="text-sm font-medium text-white hover:text-cyan">
+                {{ activeContract.contractCode }}
+              </NuxtLink>
+              <p class="mt-1 text-sm text-muted">
+                {{ activeContract.tenant.fullName }} · {{ activeContract.tenant.phone }}
+              </p>
+              <p class="mt-1 text-xs text-muted">
+                {{ new Date(activeContract.startDate).toLocaleDateString('vi-VN') }}
+                –
+                {{ new Date(activeContract.endDate).toLocaleDateString('vi-VN') }}
+                · {{ formatCurrency(activeContract.monthlyRent) }}/tháng
+              </p>
+            </div>
+            <button
+              type="button"
+              class="shrink-0 rounded-lg border border-dark-border bg-dark-surface px-3 py-2 text-right hover:border-cyan/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan/30"
+              :title="loadingContractServices ? 'Đang tải...' : 'Chỉnh dịch vụ của phòng'"
+              :disabled="loadingContractServices"
+              @click="showServicesModal = true"
+            >
+              <span class="block text-[10px] uppercase tracking-wide text-muted">Dịch vụ / tháng</span>
+              <span class="mt-0.5 block text-sm font-semibold text-white tabular-nums">
+                {{ formatCurrency(monthlyServicesTotal) }}
+              </span>
+              <span class="mt-0.5 block text-[11px] text-cyan">
+                {{ activeServicesCount }} dịch vụ active — chỉnh
+              </span>
+            </button>
+          </div>
         </div>
         <p v-else class="text-sm text-muted">Phòng đang trống.</p>
       </section>
@@ -368,5 +416,44 @@ if (error.value?.statusCode === 404) {
       @confirm="confirmTerminate"
       @cancel="showTerminateModal = false"
     />
+
+    <UiModal
+      :open="showServicesModal && Boolean(activeContract)"
+      size="xl"
+      :title="activeContract
+        ? `Dịch vụ — Phòng ${room?.roomNumber} · ${activeContract.tenant.fullName}`
+        : 'Dịch vụ'"
+      @close="showServicesModal = false"
+    >
+      <div class="space-y-3">
+        <div class="flex flex-wrap items-center justify-between gap-3 text-xs">
+          <p class="text-muted">
+            Thay đổi chỉ ảnh hưởng phòng này. Thêm/bớt loại dịch vụ tại
+            <NuxtLink
+              v-if="building"
+              :to="`${buildingPath(building)}/settings`"
+              class="text-cyan hover:underline"
+              @click="showServicesModal = false"
+            >
+              cài đặt tòa nhà
+            </NuxtLink>
+            <span v-else>cài đặt tòa nhà</span>.
+          </p>
+          <span class="rounded-md bg-cyan/10 px-2 py-1 text-cyan tabular-nums">
+            {{ activeServicesCount }} active · {{ formatCurrency(monthlyServicesTotal) }}/tháng
+          </span>
+        </div>
+        <ContractServicesTab
+          :services="contractServices"
+          :loading="loadingContractServices"
+          @update="handleContractServiceUpdate"
+        />
+      </div>
+      <template #footer>
+        <UiButton variant="secondary" size="sm" @click="showServicesModal = false">
+          Xong
+        </UiButton>
+      </template>
+    </UiModal>
   </div>
 </template>

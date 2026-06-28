@@ -87,16 +87,19 @@ export const ContractServiceRepository = {
   ): Promise<number> {
     const client = await serverSupabaseClient(event)
 
-    // Get all active building services
+    // 1. Get all building services (active + inactive). A catalog missing here
+    //    counts as inactive — same semantics as is_active=false.
     const { data: buildingServices, error: bsError } = await client
       .from('building_services')
-      .select('catalog_id, default_amount')
+      .select('catalog_id, default_amount, is_active')
       .eq('building_id', buildingId)
-      .eq('is_active', true)
 
-    if (bsError || !buildingServices || buildingServices.length === 0) return 0
+    if (bsError) return 0
 
-    // Get all active contracts for this building via rooms join
+    const activeBs = (buildingServices ?? []).filter(s => s.is_active)
+    const enabledCatalogIds = new Set(activeBs.map(s => s.catalog_id))
+
+    // 2. Get active contracts for this building via rooms join
     const { data: contracts, error: cError } = await client
       .from('contracts')
       .select('id, rooms!inner(building_id)')
@@ -104,23 +107,62 @@ export const ContractServiceRepository = {
       .eq('status', 'active')
 
     if (cError || !contracts || contracts.length === 0) return 0
+    const contractIds = contracts.map(c => c.id)
 
-    let added = 0
-    for (const contract of contracts) {
-      const rows = buildingServices.map(bs => ({
-        contract_id: contract.id,
-        catalog_id: bs.catalog_id,
-        amount: bs.default_amount,
-        quantity: 1,
-        is_enabled: true,
-      }))
-      const { error: insertError, count } = await client
-        .from('contract_services')
-        .upsert(rows, { onConflict: 'contract_id,catalog_id', ignoreDuplicates: true })
-        .select()
-      if (!insertError) added += count ?? 0
+    let changes = 0
+
+    // 3. Insert missing active services into each contract (preserves existing rows).
+    if (activeBs.length > 0) {
+      for (const contractId of contractIds) {
+        const rows = activeBs.map(bs => ({
+          contract_id: contractId,
+          catalog_id: bs.catalog_id,
+          amount: bs.default_amount,
+          quantity: 1,
+          is_enabled: true,
+        }))
+        const { error, count } = await client
+          .from('contract_services')
+          .upsert(rows, { onConflict: 'contract_id,catalog_id', ignoreDuplicates: true })
+          .select()
+        if (!error) changes += count ?? 0
+      }
     }
-    return added
+
+    // 4. Reconcile is_enabled on existing rows so contracts mirror building defaults.
+    //    Amount and quantity are preserved.
+    const { data: existing, error: exError } = await client
+      .from('contract_services')
+      .select('id, catalog_id, is_enabled')
+      .in('contract_id', contractIds)
+
+    if (exError) return changes
+
+    const toEnable: string[] = []
+    const toDisable: string[] = []
+    for (const cs of existing ?? []) {
+      const shouldEnable = enabledCatalogIds.has(cs.catalog_id)
+      if (shouldEnable && !cs.is_enabled) toEnable.push(cs.id)
+      else if (!shouldEnable && cs.is_enabled) toDisable.push(cs.id)
+    }
+
+    const now = new Date().toISOString()
+    if (toEnable.length > 0) {
+      const { error } = await client
+        .from('contract_services')
+        .update({ is_enabled: true, updated_at: now })
+        .in('id', toEnable)
+      if (!error) changes += toEnable.length
+    }
+    if (toDisable.length > 0) {
+      const { error } = await client
+        .from('contract_services')
+        .update({ is_enabled: false, updated_at: now })
+        .in('id', toDisable)
+      if (!error) changes += toDisable.length
+    }
+
+    return changes
   },
 
   async findByBuilding(

@@ -2,6 +2,9 @@
 import type { Building } from '~/types/buildings'
 import type { ApiSuccess } from '~/types/api'
 import type { Room } from '~/types/rooms'
+import type { ContractWithDetails } from '~/types/contracts'
+import type { ContractService } from '~/types/contract-services'
+import type { ContractServiceUpdateInput } from '~/utils/validators/contract-services'
 import { roomFormToApiPayload, type RoomFormData } from '~/components/rooms/RoomForm.vue'
 import type { RoomBulkAction, RoomBulkResult } from '~/composables/rooms/useRoomBulkActions'
 
@@ -192,6 +195,58 @@ async function onSubmitEdit(data: RoomFormData) {
   }
 }
 
+// Services drawer --------------------------------------------------------------
+const servicesRoom = ref<Room | null>(null)
+const servicesContract = ref<ContractWithDetails | null>(null)
+const servicesList = ref<ContractService[]>([])
+const servicesLoading = ref(false)
+const servicesError = ref('')
+
+async function onEditServices(room: Room) {
+  servicesRoom.value = room
+  servicesContract.value = null
+  servicesList.value = []
+  servicesError.value = ''
+  servicesLoading.value = true
+  try {
+    const contractsRes = await $fetch<ApiSuccess<ContractWithDetails[]>>('/api/contracts', {
+      query: { room_id: room.id, status: 'active', limit: 1 },
+    })
+    const contract = contractsRes.data?.[0] ?? null
+    servicesContract.value = contract
+    if (!contract) {
+      servicesError.value = 'Phòng này chưa có hợp đồng active.'
+      return
+    }
+    const servicesRes = await $fetch<ApiSuccess<ContractService[]>>(
+      `/api/contract-services?contract_id=${contract.id}`,
+    )
+    servicesList.value = servicesRes.data ?? []
+  }
+  catch {
+    servicesError.value = 'Không thể tải dịch vụ của phòng.'
+  }
+  finally {
+    servicesLoading.value = false
+  }
+}
+
+function closeServices() {
+  servicesRoom.value = null
+  servicesContract.value = null
+  servicesList.value = []
+  servicesError.value = ''
+}
+
+async function onUpdateService(id: string, input: ContractServiceUpdateInput) {
+  await $fetch(`/api/contract-services/${id}`, { method: 'PATCH', body: input })
+  if (!servicesContract.value) return
+  const res = await $fetch<ApiSuccess<ContractService[]>>(
+    `/api/contract-services?contract_id=${servicesContract.value.id}`,
+  )
+  servicesList.value = res.data ?? []
+}
+
 async function onBulkDone(result: RoomBulkResult, action: RoomBulkAction) {
   const verb = action === 'archive'
     ? 'lưu trữ'
@@ -339,6 +394,7 @@ async function onBulkDone(result: RoomBulkResult, action: RoomBulkAction) {
               :selected="bulk.selectedIds.value.includes(room.id)"
               @toggle-select="onToggleSelect"
               @edit="onEditRoom"
+              @edit-services="onEditServices"
             />
           </div>
         </section>
@@ -409,6 +465,30 @@ async function onBulkDone(result: RoomBulkResult, action: RoomBulkAction) {
         @submit="onSubmitEdit"
         @cancel="closeEdit"
       />
+    </UiDrawer>
+
+    <UiDrawer
+      :model-value="servicesRoom !== null"
+      :title="servicesRoom ? `Dịch vụ · Phòng ${servicesRoom.roomNumber}` : 'Dịch vụ của phòng'"
+      width="w-full sm:w-[640px]"
+      @update:model-value="(open) => { if (!open) closeServices() }"
+    >
+      <p v-if="servicesContract" class="mb-4 text-xs text-muted">
+        Hợp đồng <span class="text-white">{{ servicesContract.contractCode }}</span>
+        <span v-if="servicesContract.tenant?.fullName"> · {{ servicesContract.tenant.fullName }}</span>
+      </p>
+      <UiAlert v-if="servicesError" severity="warning" class="mb-4">
+        {{ servicesError }}
+      </UiAlert>
+      <ContractServicesTab
+        v-if="servicesContract"
+        :services="servicesList"
+        :loading="servicesLoading"
+        @update="onUpdateService"
+      />
+      <div v-else-if="servicesLoading" class="space-y-2">
+        <UiSkeleton v-for="n in 4" :key="n" class="h-12 rounded-lg" />
+      </div>
     </UiDrawer>
   </div>
 </template>
