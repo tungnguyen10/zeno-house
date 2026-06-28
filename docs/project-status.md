@@ -1,8 +1,8 @@
 # Zeno House - Project Status
 
-Last reviewed from source: 2026-06-27.
+Last reviewed from source: 2026-06-28.
 
-This file summarizes what the current codebase already handles. It reflects the working tree as read on 2026-06-27, including uncommitted dashboard visualization files currently present in the repo.
+This file summarizes what the current codebase already handles. It reflects the working tree as read on 2026-06-28, including active invoice browse work currently present in the repo.
 
 Zeno House is now an authenticated internal operations app for rental buildings. The implemented surface covers the core landlord workflow from property setup to contract lifecycle, service configuration, meter readings, monthly billing, invoice collection, corrections, period close, and operational dashboard monitoring.
 
@@ -10,14 +10,14 @@ Zeno House is now an authenticated internal operations app for rental buildings.
 
 | Area | Current count / scope |
 | --- | --- |
-| Nuxt pages | 26 Vue page files under `app/pages/**` |
-| Vue components | 62 Vue component files under `app/components/**` |
-| Server API handlers | 67 route handlers under `server/api/**` |
+| Nuxt pages | 27 Vue page files under `app/pages/**` |
+| Vue components | 79 Vue component files under `app/components/**` |
+| Server API handlers | 71 route handlers under `server/api/**` |
 | Supabase migrations | 37 SQL migration files under `supabase/migrations` |
-| Tests | 42 `*.test.ts` / `*.spec.ts` files under `tests/**` |
+| Tests | 57 `*.test.ts` / `*.spec.ts` files under `tests/**` |
 | OpenSpec specs | 50+ capability specs under `openspec/specs/**` |
-| Archived OpenSpec changes | 40 archived changes under `openspec/changes/archive/**` |
-| Active OpenSpec change | `billing-period-header-clean`, 25/27 tasks complete |
+| Archived OpenSpec changes | 45 archived changes under `openspec/changes/archive/**` |
+| Active OpenSpec changes | `simplify-billing-period-workflow` and `contracts-overhaul` |
 
 ## Current Stack
 
@@ -294,6 +294,7 @@ Routes:
 - `/billing/[building]/[period]`
 - `/billing/invoices/[id]`
 - `/billing/print/[building]/[period]`
+- `/invoices`
 
 Period API:
 
@@ -312,6 +313,7 @@ Period API:
 
 Invoice API:
 
+- `GET /api/invoices`
 - `GET /api/billing/invoices/[id]`
 - `GET/POST /api/billing/invoices/[id]/payments`
 - `POST /api/billing/invoices/bulk-payments`
@@ -340,6 +342,20 @@ Implemented billing workspace:
 - copy/paste helpers
 - draft discrepancy callouts
 - adjustment and void/reissue entry points from billing rows
+
+Implemented cross-period invoice browse:
+
+- sidebar entry "Hoá đơn" between contracts and billing
+- `/invoices` page with building, year/month, all-months, status, and tenant search filters
+- URL-synced filter state for share/refresh
+- server-side pagination with default page size 50 and cap 100
+- `GET /api/invoices` server route with auth, Zod validation, role scope, derived overdue status, deterministic sort, and metadata envelope
+- manager scope from `app_metadata.assigned_building_ids` or legacy `building_ids`; managers without assignments receive an empty result set
+- read-only invoice preview drawer using the standard app `UiDrawer` detail pattern
+- mobile invoice cards plus desktop table rendering
+- payment history cards in the mobile drawer and desktop payment table at `md`
+- CTA to copy invoice code and deep-link into the billing period workspace without exposing mutate actions on `/invoices`
+- deep-link handler switches the period workspace to payments and highlights the target invoice
 
 Billing statuses:
 
@@ -425,6 +441,7 @@ Composables mirror product workflows:
 - Tenants: list, detail, form
 - Contracts: list, detail, form, occupants, payments, renewals, services, handover readings
 - Billing: period list, workspace, invoice actions, draft-grid autosave, filters, navigation
+- Invoices: cross-period list, detail lazy-load, URL filter/pagination state
 - Feedback: `useToast`
 - Charts: `useChartTheme`
 
@@ -487,6 +504,8 @@ Current tests cover:
 - slug/code/currency/relative-time utilities
 - billing draft grid and bulk reading UI behavior
 - contract form component behavior
+- invoice browse service scope, URL sync/filter reset, responsive mobile list/drawer, and deep-link helper behavior
+- invoice browse performance guard for 600 service-layer list items under 1s
 
 Useful verification commands:
 
@@ -500,24 +519,25 @@ openspec validate --strict
 
 ## OpenSpec Status
 
-Active change:
+Active changes:
 
-- `billing-period-header-clean`
-- Status: in progress
-- Tasks: 25/27 complete
-- Verified in task file: `npm run typecheck`, `npm run lint`, `npx vitest run`, and `openspec validate billing-period-header-clean --strict`
-- Remaining tasks:
-  - manual smoke on `/billing/<building-slug>/<YYYY>-<MM>`
-  - spot-check unrelated `UiPageHeader` pages
+- `simplify-billing-period-workflow`, 0/38 tasks complete
+- `contracts-overhaul`, 7/50 tasks complete
 
-Important source-vs-task notes for the active change:
+Most recently archived:
 
-- `BillingKpiStrip.vue` currently renders a compact sticky inline/flex strip with 5 metrics. The task/spec text still mentions a 5-tile grid using `grid-cols-2 md:grid-cols-3 lg:grid-cols-5`.
-- The billing period action trigger currently shows `Hành động` + chevron; the task/design text says it should include `IconMoreVertical` as well.
-- `more-vertical.svg` exists and is documented in the icon inventory, but the trigger currently does not use it.
+- `2026-06-28-add-invoices-browse-page`
+- Status: archived after 43/43 tasks completed
+- Verified with `npm run typecheck`, `npm run lint`, full `npm run test`, and `openspec validate add-invoices-browse-page --strict`
+- QA notes:
+  - manager assigned-building scope is covered by service tests, including `assigned_building_ids`, legacy `building_ids`, no-assignment empty result, forbidden out-of-scope building filter, and admin no-scope behavior
+  - smoke coverage is automated for filter/search/page URL sync, drawer read-only behavior, deep-link helper output, mobile list cards, and mobile drawer payment cards
+  - no Playwright/e2e dependency or seeded 3-building x 6-month database fixture exists in the repo; manual browser smoke should be rerun against staging seed data before production release
+  - performance guard currently verifies service-layer processing of 600 invoice rows under 1s; DB-level `EXPLAIN` remains an environment check when staging data is available
 
 Recent archived changes show completed work in these areas:
 
+- cross-period invoice browse page
 - dashboard visualization and polish
 - dashboard contract and hardening
 - billing transaction hardening

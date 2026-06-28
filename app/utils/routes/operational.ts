@@ -73,6 +73,15 @@ export function billingWorkspacePath(
   return `/billing/${buildingRouteSegment(building)}/${periodYear}-${String(periodMonth).padStart(2, '0')}`
 }
 
+export function billingWorkspaceInvoicePath(
+  building: BuildingRouteSubject,
+  periodYear: number,
+  periodMonth: number,
+  invoiceId: string,
+): string {
+  return `${billingWorkspacePath(building, periodYear, periodMonth)}?invoice=${encodeURIComponent(invoiceId)}`
+}
+
 export interface PendingOperationLike {
   building: BuildingRouteSubject
   period: string

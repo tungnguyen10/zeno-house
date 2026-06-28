@@ -11,5 +11,6 @@ export const NAV_ITEMS = [
   { key: 'rooms', label: 'Phòng', to: '/rooms', icon: 'IconDoor' },
   { key: 'tenants', label: 'Khách thuê', to: '/tenants', icon: 'IconUsers' },
   { key: 'contracts', label: 'Hợp đồng', to: '/contracts', icon: 'IconDocumentText' },
+  { key: 'invoices', label: 'Hoá đơn', to: '/invoices', icon: 'IconDocument' },
   { key: 'billing', label: 'Vận hành', to: '/billing', icon: 'IconBriefcase' },
 ] satisfies NavItem[]

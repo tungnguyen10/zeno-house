@@ -14,6 +14,7 @@ Primary route groups:
 - `/rooms/**`: room list/create/detail/edit
 - `/tenants/**`: tenant list/create/detail/edit
 - `/contracts/**`: contract list/create/detail/edit
+- `/invoices`: cross-period invoice browse and read-only preview
 - `/billing/**`: period list, period workspace, invoice detail
 - `/ui-showcase`: design-system showcase
 
@@ -31,7 +32,7 @@ Composables live in `app/composables/**` and mirror product workflows.
 | Rooms | `useRoomList`, `useRoomDetail`, `useRoomForm` |
 | Tenants | `useTenantList`, `useTenantDetail`, `useTenantForm` |
 | Contracts | `useContractList`, `useContractDetail`, `useContractForm`, `useContractOccupants`, `useContractPayments`, `useContractRenewals`, `useContractServices`, `useContractHandoverReadings` |
-| Billing | `useBillingPeriodList`, `useBillingPeriodWorkspace`, `useBillingInvoiceActions` |
+| Billing | `useBillingPeriodList`, `useBillingPeriodWorkspace`, `useBillingInvoiceActions`, `invoices/useInvoiceList`, `invoices/useInvoiceDetail` |
 | Feedback | `useToast` |
 
 Server state belongs here, usually via `useFetch` or `$fetch`. Form state can live in a form composable when it is reused by create/edit screens.
@@ -61,6 +62,7 @@ Use these helpers instead of manually concatenating links for:
 - building settings routes
 - building-scoped room routes
 - billing workspace routes
+- billing workspace invoice deep-links
 - contract routes
 - invoice routes
 - tenant routes

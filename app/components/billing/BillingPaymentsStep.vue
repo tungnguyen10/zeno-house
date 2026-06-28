@@ -7,7 +7,7 @@ import { invoicePath, invoiceRouteSegment } from '~/utils/routes/operational'
 
 export interface BillingPaymentsIntent {
   id: number
-  type: 'adjustment' | 'void-reissue'
+  type: 'adjustment' | 'void-reissue' | 'focus'
   invoiceId: string
   amount?: number
   label?: string
@@ -110,6 +110,32 @@ const voidedColumns: UiTableColumn<Invoice>[] = [
 
 // ---------- Bulk selection ----------
 const selectedIds = ref<Set<string>>(new Set())
+const invoiceRefs = new Map<string, HTMLElement>()
+const highlightedInvoiceId = ref<string | null>(null)
+let highlightTimer: ReturnType<typeof setTimeout> | null = null
+
+function setInvoiceRef(id: string, el: unknown) {
+  const element = el instanceof HTMLElement ? el : null
+  if (element) invoiceRefs.set(id, element)
+  else invoiceRefs.delete(id)
+}
+
+async function focusInvoice(invoiceId: string) {
+  filterStatus.value = 'all'
+  await nextTick()
+  const el = invoiceRefs.get(invoiceId)
+  if (!el) {
+    toast.error('Không tìm thấy hoá đơn để highlight')
+    return
+  }
+  el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  highlightedInvoiceId.value = invoiceId
+  if (highlightTimer) clearTimeout(highlightTimer)
+  highlightTimer = setTimeout(() => {
+    highlightedInvoiceId.value = null
+    highlightTimer = null
+  }, 2000)
+}
 
 function isSelectableForBulk(inv: Invoice): boolean {
   if (periodIsClosed.value) return false
@@ -386,6 +412,10 @@ watch(
       toast.error('Không tìm thấy hoá đơn để xử lý')
       return
     }
+    if (intent.type === 'focus') {
+      focusInvoice(intent.invoiceId)
+      return
+    }
     if (intent.type === 'adjustment') {
       startAdjustment(invoice, {
         amount: intent.amount,
@@ -447,8 +477,12 @@ watch(
         </template>
         <template #cell-tenant="{ row }">
           <button
+            :ref="(el) => setInvoiceRef(row.id, el)"
             type="button"
-            class="group flex min-w-0 max-w-full flex-col items-start text-left"
+            :class="[
+              'group flex min-w-0 max-w-full flex-col items-start rounded-md px-1 py-0.5 text-left transition',
+              highlightedInvoiceId === row.id && 'bg-cyan/10 ring-2 ring-cyan/50',
+            ]"
             @click.stop="openDetail(row)"
           >
             <span class="block truncate text-sm font-medium text-white group-hover:text-cyan">

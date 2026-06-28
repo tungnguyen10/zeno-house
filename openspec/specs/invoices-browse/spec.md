@@ -1,4 +1,7 @@
-## ADDED Requirements
+## Purpose
+Defines the cross-period invoice browse surface for read-only invoice lookup, filtering, preview, and deep-linking into the monthly operations workspace.
+
+## Requirements
 
 ### Requirement: Cross-period invoice browse page
 The system SHALL provide a `/invoices` page that lists all invoices the current user has access to, scoped by role (admin: all; manager: invoices belonging to assigned buildings).
@@ -70,7 +73,7 @@ Mỗi row SHALL hiển thị: invoice code, kỳ (MM/YYYY), building name, room 
 - **THEN** badge có tone error-vivid; status "đã thu" có tone success-neon; "chưa thu" có tone warning; "huỷ" có tone muted
 
 ### Requirement: Read-only drawer preview
-Click vào 1 row SHALL mở drawer (UiDrawer, w-full sm:w-[44rem]) hiển thị chi tiết invoice **read-only**: charges breakdown, payments history, ghi chú. Drawer KHÔNG chứa action sửa (record payment, void, adjust, print).
+Click vào 1 row SHALL mở drawer (`UiDrawer`, `w-full sm:w-[480px]` theo pattern detail drawer hiện có) hiển thị chi tiết invoice **read-only**: charges breakdown, payments history, ghi chú. Drawer KHÔNG chứa action sửa (record payment, void, adjust, print).
 
 #### Scenario: Drawer mở với data đầy đủ
 - **WHEN** user click row INV-2606-014

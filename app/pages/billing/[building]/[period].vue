@@ -25,6 +25,7 @@ if (!buildingParam || !Number.isFinite(periodYear) || !Number.isFinite(periodMon
 const periodId = ref<string>('')
 const resolveError = ref<string | null>(null)
 const resolving = ref(true)
+const toast = useToast()
 
 async function resolvePeriod() {
   resolving.value = true
@@ -37,7 +38,18 @@ async function resolvePeriod() {
     periodId.value = resp.data.id
   }
   catch (err) {
-    const e = err as { data?: { error?: { message?: string } }; statusMessage?: string }
+    const e = err as {
+      status?: number
+      statusCode?: number
+      data?: { error?: { code?: string; message?: string } }
+      statusMessage?: string
+    }
+    const isForbidden = e.status === 403 || e.statusCode === 403 || e.data?.error?.code === 'FORBIDDEN'
+    if (route.query.invoice && isForbidden) {
+      toast.info(e.data?.error?.message ?? 'Không có quyền truy cập kỳ vận hành này')
+      await navigateTo('/invoices')
+      return
+    }
     resolveError.value = e.data?.error?.message ?? e.statusMessage ?? 'Không thể mở kỳ vận hành'
   }
   finally {
@@ -80,7 +92,6 @@ if (periodId.value) await loadOverview()
 const auth = useAuthStore()
 const canClose = computed(() => auth.isAdmin)
 const canUnissue = computed(() => auth.isAdmin)
-const toast = useToast()
 const initialStatus = period.value?.status
 const tab = ref<string>(
   initialStatus === 'issued' || initialStatus === 'collecting' || initialStatus === 'closed'
@@ -96,6 +107,7 @@ const exportLoading = ref(false)
 const actionMenuOpen = ref(false)
 const paymentsIntent = ref<BillingPaymentsIntent | null>(null)
 let paymentsIntentId = 0
+const handledInvoiceQuery = ref<string | null>(null)
 
 const tabs = computed<UiTabItem[]>(() => {
   const status = period.value?.status
@@ -268,6 +280,33 @@ async function openPaymentsIntent(intent: Omit<BillingPaymentsIntent, 'id'>) {
     ...intent,
   }
 }
+
+async function focusInvoiceFromQuery(invoiceId: string) {
+  if (!invoiceId || handledInvoiceQuery.value === invoiceId) return
+  tab.value = 'payments'
+  if (invoices.value.length === 0) await loadInvoices()
+  const invoice = invoices.value.find(item => item.id === invoiceId || item.invoiceCode === invoiceId)
+  if (!invoice) {
+    toast.info('Không tìm thấy hoá đơn trong kỳ này')
+    handledInvoiceQuery.value = invoiceId
+    return
+  }
+  paymentsIntent.value = {
+    id: ++paymentsIntentId,
+    type: 'focus',
+    invoiceId: invoice.id,
+  }
+  handledInvoiceQuery.value = invoiceId
+}
+
+watch(
+  () => route.query.invoice,
+  async (value) => {
+    const invoiceId = typeof value === 'string' ? value : ''
+    if (invoiceId) await focusInvoiceFromQuery(invoiceId)
+  },
+  { immediate: true },
+)
 
 function openPrintWindow(payload: { keys: string[] }) {
   if (payload.keys.length === 0) return

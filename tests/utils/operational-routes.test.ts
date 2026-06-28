@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  billingWorkspaceInvoicePath,
   billingWorkspacePath,
   buildingPath,
   contractPath,
@@ -21,6 +22,7 @@ describe('operational route helpers', () => {
     expect(roomPath({ id: 'room-id', code: 'toa-a101', roomNumber: 'A101', building })).toBe('/rooms/toa-a101')
     expect(roomPath({ id: 'room-id', roomNumber: 'A101', building })).toBe('/buildings/toa-a/rooms/a101')
     expect(billingWorkspacePath(building, 2026, 6)).toBe('/billing/toa-a/2026-06')
+    expect(billingWorkspaceInvoicePath(building, 2026, 6, 'invoice-id')).toBe('/billing/toa-a/2026-06?invoice=invoice-id')
   })
 
   it('uses business code when present and keeps tenant id routes non-PII', () => {

@@ -128,6 +128,7 @@ server/api/*
 
 | Method | Path | Purpose |
 | --- | --- | --- |
+| GET | `/api/invoices` | List invoices across periods with filters and pagination. |
 | GET | `/api/billing/invoices/[id]` | Get invoice with charges and payments. |
 | GET | `/api/billing/invoices/[id]/payments` | List invoice payments. |
 | POST | `/api/billing/invoices/[id]/payments` | Record invoice payment. |

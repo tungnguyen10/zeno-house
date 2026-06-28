@@ -46,7 +46,7 @@ Sidebar nav (`app/utils/constants/navigation.ts`) hiện flat: Dashboard / Tòa 
 
 **Vì sao**:
 - Giữ context list filter — đóng drawer là về list ngay, không phá filter state.
-- Read-only, lượng nội dung vừa phải, drawer 44rem đủ chỗ.
+- Read-only, lượng nội dung vừa phải, dùng drawer detail chuẩn của codebase (`w-full sm:w-[480px]`) để khớp billing/rooms detail surfaces.
 - Page `/invoices/<id>` sẽ trùng vai trò "Mở trong kỳ vận hành" — gây bối rối.
 
 **Alternative**: Nếu sau này cần in invoice từ /invoices → có thể thêm route `/invoices/<id>/print` riêng cho print, không phải drawer.
