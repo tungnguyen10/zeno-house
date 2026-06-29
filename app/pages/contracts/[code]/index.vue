@@ -11,6 +11,7 @@ definePageMeta({ title: 'Chi tiết hợp đồng' })
 
 const route = useRoute()
 const authStore = useAuthStore()
+const toast = useToast()
 const id = route.params.code as string
 
 // Redirect UUID-based URLs to code-based canonical URL
@@ -34,6 +35,7 @@ function formatDate(value: string | Date) {
 const activeOccupantCount = computed(
   () => occupants.value.filter(o => !o.moveOutDate).length + 1,
 )
+const paidAmount = computed(() => payments.value.reduce((sum, payment) => sum + payment.amount, 0))
 
 type LifecycleTone = 'default' | 'warning' | 'danger' | 'muted'
 const lifecycle = computed<{ percent: number, label: string, tone: LifecycleTone } | null>(() => {
@@ -219,16 +221,70 @@ async function handleDeleteOccupant() {
 
 const showDeleteModal = ref(false)
 const isDeleting = ref(false)
+const deleteConflict = ref<Record<string, unknown> | null>(null)
+const showTerminateModal = ref(false)
+const isTerminating = ref(false)
 
-async function confirmDelete() {
+const conflictItems = computed(() => {
+  const details = deleteConflict.value
+  if (!details) return []
+  const items: string[] = []
+  if (details.reason === 'ACTIVE_CONTRACT') items.push('Hợp đồng đang hiệu lực')
+  if (Number(details.issuedBillingPeriods ?? 0) > 0) items.push(`${details.issuedBillingPeriods} kỳ hoá đơn đã phát hành`)
+  if (Number(details.paidPayments ?? 0) > 0) items.push(`${details.paidPayments} khoản thanh toán đã thu`)
+  if (Number(details.nonHandoverMeterReadings ?? 0) > 0) items.push(`${details.nonHandoverMeterReadings} chỉ số ngoài bàn giao`)
+  return items
+})
+
+const onlyActiveConflict = computed(() =>
+  deleteConflict.value?.reason === 'ACTIVE_CONTRACT'
+  && !deleteConflict.value?.issuedBillingPeriods
+  && !deleteConflict.value?.paidPayments
+  && !deleteConflict.value?.nonHandoverMeterReadings,
+)
+
+async function confirmDelete(force = false) {
   isDeleting.value = true
+  deleteConflict.value = null
   try {
-    await $fetch(`/api/contracts/${id}`, { method: 'DELETE' })
+    await $fetch(`/api/contracts/${id}`, {
+      method: 'DELETE',
+      query: force ? { force: true } : undefined,
+    })
     await navigateTo('/contracts')
+  }
+  catch (err: unknown) {
+    const fetchErr = err as { data?: { error?: { code?: string, details?: Record<string, unknown>, message?: string } } }
+    if (fetchErr.data?.error?.code === 'CONFLICT') {
+      deleteConflict.value = fetchErr.data.error.details ?? {}
+      showDeleteModal.value = false
+      return
+    }
+    toast.error(fetchErr.data?.error?.message ?? 'Không thể xoá hợp đồng. Vui lòng thử lại.')
   }
   finally {
     isDeleting.value = false
-    showDeleteModal.value = false
+    if (!deleteConflict.value) showDeleteModal.value = false
+  }
+}
+
+async function confirmTerminate() {
+  if (!contract.value) return
+  isTerminating.value = true
+  try {
+    await $fetch(`/api/contracts/${id}`, {
+      method: 'PATCH',
+      body: { status: 'terminated' },
+    })
+    toast.success('Đã kết thúc hợp đồng')
+    showTerminateModal.value = false
+    await refreshContract()
+  }
+  catch {
+    toast.error('Không thể kết thúc hợp đồng. Vui lòng thử lại.')
+  }
+  finally {
+    isTerminating.value = false
   }
 }
 
@@ -252,38 +308,32 @@ watchEffect(() => {
 
     <!-- Detail -->
     <template v-else-if="contract">
-      <UiPageHeader :title="`Phòng ${contract.room.roomNumber}`">
-        <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5">
-          <UiStatusBadge :status="contract.status" />
-          <span class="text-xs text-muted">Tầng {{ contract.room.floor }} — {{ contract.room.buildingName }}</span>
-          <span class="text-xs text-muted font-mono">{{ contract.contractCode }}</span>
-        </div>
-        <div class="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1 text-sm">
-          <NuxtLink :to="`/tenants/${contract.tenant.id}`" class="text-white hover:text-cyan transition-colors">
-            {{ contract.tenant.fullName }}
-          </NuxtLink>
-          <span class="text-muted">·</span>
-          <span class="text-muted tabular-nums">{{ contract.tenant.phone }}</span>
-        </div>
-        <template #actions>
-          <div v-if="authStore.isAdmin" class="flex gap-2 shrink-0 flex-wrap justify-end">
-            <UiButton
-              v-if="contract.status === 'active' || contract.status === 'expired'"
-              variant="secondary"
-              size="sm"
-              @click="showRenewalForm = !showRenewalForm"
-            >
-              Gia hạn
-            </UiButton>
-            <NuxtLink :to="`${contractPath(contract)}/edit`">
-              <UiButton variant="secondary" size="sm">Chỉnh sửa</UiButton>
-            </NuxtLink>
-            <UiButton variant="danger" size="sm" @click="showDeleteModal = true">Xoá</UiButton>
-          </div>
-        </template>
-      </UiPageHeader>
+      <UiPageHeader
+        title="Chi tiết hợp đồng"
+        :back-to="'/contracts'"
+        back-label="Danh sách hợp đồng"
+      />
 
-      <div class="rounded-xl border border-dark-border bg-dark-surface p-6 space-y-5">
+      <ContractDetailHero
+        :contract="contract"
+        :paid-amount="paidAmount"
+        @renew="showRenewalForm = !showRenewalForm"
+        @terminate="showTerminateModal = true"
+      />
+
+      <nav class="sticky top-0 z-20 mt-4 overflow-x-auto border-y border-dark-border bg-dark-deep/95 py-2 backdrop-blur">
+        <div class="flex min-w-max gap-2 text-sm">
+          <a href="#overview" class="rounded-md px-3 py-1.5 text-muted hover:bg-dark-hover hover:text-white">Tổng quan</a>
+          <a href="#occupants" class="rounded-md px-3 py-1.5 text-muted hover:bg-dark-hover hover:text-white">Người ở</a>
+          <a href="#payments" class="rounded-md px-3 py-1.5 text-muted hover:bg-dark-hover hover:text-white">Thanh toán</a>
+          <a href="#services" class="rounded-md px-3 py-1.5 text-muted hover:bg-dark-hover hover:text-white">Dịch vụ</a>
+          <a href="#renewals" class="rounded-md px-3 py-1.5 text-muted hover:bg-dark-hover hover:text-white">Gia hạn</a>
+          <a href="#meter-readings" class="rounded-md px-3 py-1.5 text-muted hover:bg-dark-hover hover:text-white">Chỉ số</a>
+          <a v-if="authStore.isAdmin" href="#danger-zone" class="rounded-md px-3 py-1.5 text-muted hover:bg-dark-hover hover:text-white">Quản trị</a>
+        </div>
+      </nav>
+
+      <div id="overview" class="mt-6 scroll-mt-20 rounded-xl border border-dark-border bg-dark-surface p-6 space-y-5">
         <!-- Lifecycle ribbon -->
         <div v-if="lifecycle">
           <div class="flex items-end justify-between text-xs mb-2">
@@ -338,7 +388,7 @@ watchEffect(() => {
       </div>
 
       <!-- Occupants section -->
-      <UiSection title="Người ở" class="mt-6">
+      <UiSection id="occupants" title="Người ở" class="mt-6 scroll-mt-20">
         <template #actions>
           <div class="flex items-center gap-2">
             <template v-if="!occupantsLoading">
@@ -445,7 +495,7 @@ watchEffect(() => {
       </UiSection>
 
       <!-- Payments section -->
-      <UiSection title="Thanh toán hợp đồng" description="Ghi nhận đặt cọc, trả trước và các khoản phát sinh khi ký hợp đồng. Không dùng cho thanh toán hóa đơn hàng tháng." class="mt-6">
+      <UiSection id="payments" title="Thanh toán hợp đồng" description="Ghi nhận đặt cọc, trả trước và các khoản phát sinh khi ký hợp đồng. Không dùng cho thanh toán hóa đơn hàng tháng." class="mt-6 scroll-mt-20">
         <template #actions>
           <UiButton
             v-if="authStore.isAdmin && !showPaymentForm"
@@ -534,7 +584,7 @@ watchEffect(() => {
       </UiSection>
 
       <!-- Services section -->
-      <UiSection title="Dịch vụ hàng tháng" class="mt-6">
+      <UiSection id="services" title="Dịch vụ hàng tháng" class="mt-6 scroll-mt-20">
         <div class="rounded-xl border border-dark-border bg-dark-surface p-4">
           <ContractServicesTab
             :services="contractServices"
@@ -545,7 +595,7 @@ watchEffect(() => {
       </UiSection>
 
       <!-- Handover readings section -->
-      <UiSection title="Số bàn giao" class="mt-6">
+      <UiSection id="meter-readings" title="Số bàn giao" class="mt-6 scroll-mt-20">
         <div class="rounded-xl border border-dark-border bg-dark-surface p-4">
           <ContractHandoverReadings
             :contract-id="id"
@@ -558,7 +608,7 @@ watchEffect(() => {
       </UiSection>
 
       <!-- Renewal form inline -->
-      <UiSection v-if="showRenewalForm" title="Gia hạn hợp đồng" class="mt-6">
+      <UiSection v-if="showRenewalForm" title="Gia hạn hợp đồng" class="mt-6 scroll-mt-20">
         <div class="rounded-xl border border-cyan-800 bg-dark-surface p-4">
           <ContractRenewalForm
             :current-end-date="contract.endDate"
@@ -572,7 +622,7 @@ watchEffect(() => {
       </UiSection>
 
       <!-- Renewals history -->
-      <UiSection title="Lịch sử gia hạn" class="mt-6">
+      <UiSection id="renewals" title="Lịch sử gia hạn" class="mt-6 scroll-mt-20">
         <template #actions>
           <span v-if="contract.renewalCount > 0" class="text-xs text-zinc-400">{{ contract.renewalCount }} lần</span>
         </template>
@@ -625,6 +675,64 @@ watchEffect(() => {
         </div>
         </div>
       </UiSection>
+
+      <UiSection
+        v-if="authStore.isAdmin"
+        id="danger-zone"
+        title="Quản trị hợp đồng"
+        description="Các thao tác thay đổi vòng đời hoặc xoá dữ liệu hợp đồng."
+        class="mt-6 scroll-mt-20"
+      >
+        <UiAlert v-if="deleteConflict" severity="danger" class="mb-4">
+          <div class="space-y-3">
+            <div>
+              <p class="text-sm font-medium text-white">Chưa thể xoá hợp đồng</p>
+              <ul class="mt-2 space-y-1 text-sm text-muted">
+                <li v-for="item in conflictItems" :key="item">- {{ item }}</li>
+              </ul>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <UiButton
+                v-if="onlyActiveConflict"
+                size="sm"
+                variant="danger"
+                :loading="isDeleting"
+                @click="confirmDelete(true)"
+              >
+                Kết thúc rồi xoá
+              </UiButton>
+              <UiButton size="sm" variant="secondary" @click="deleteConflict = null">
+                Đã hiểu
+              </UiButton>
+            </div>
+          </div>
+        </UiAlert>
+
+        <div class="flex flex-wrap gap-2">
+          <NuxtLink :to="`${contractPath(contract)}/edit`">
+            <UiButton variant="secondary" size="sm">Chỉnh sửa</UiButton>
+          </NuxtLink>
+          <UiButton
+            v-if="contract.status === 'active' || contract.status === 'expired'"
+            variant="secondary"
+            size="sm"
+            @click="showRenewalForm = !showRenewalForm"
+          >
+            Gia hạn
+          </UiButton>
+          <UiButton
+            v-if="contract.status === 'active'"
+            variant="secondary"
+            size="sm"
+            @click="showTerminateModal = true"
+          >
+            Kết thúc sớm
+          </UiButton>
+          <UiButton variant="danger" size="sm" @click="showDeleteModal = true">
+            Xoá
+          </UiButton>
+        </div>
+      </UiSection>
     </template>
 
     <!-- Move-out modal -->
@@ -664,6 +772,16 @@ watchEffect(() => {
       :loading="isDeleting"
       @confirm="confirmDelete"
       @cancel="showDeleteModal = false"
+    />
+
+    <UiConfirmModal
+      :open="showTerminateModal"
+      title="Kết thúc hợp đồng"
+      message="Hợp đồng sẽ chuyển sang trạng thái đã chấm dứt và giải phóng phòng/khách thuê theo logic hiện có."
+      confirm-label="Kết thúc"
+      :loading="isTerminating"
+      @confirm="confirmTerminate"
+      @cancel="showTerminateModal = false"
     />
 
     <!-- Delete payment modal -->

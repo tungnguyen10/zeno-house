@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { Building } from '~/types/buildings'
 import type { ApiSuccess } from '~/types/api'
+import type { ContractBulkAction, ContractBulkActionResult } from '~/composables/contracts/useContractBulkActions'
 import { formatCurrency } from '~/utils/format/currency'
 import { contractPath } from '~/utils/routes/operational'
 
@@ -23,6 +24,16 @@ const {
   error,
   refresh,
 } = useContractList()
+const toast = useToast()
+const {
+  selectedIds,
+  isSelected,
+  toggle,
+  selectAll,
+  clear,
+  runAction,
+  isRunning,
+} = useContractBulkActions()
 
 const { data: buildingsData } = await useFetch<ApiSuccess<Building[]> & { meta: { total: number } }>(
   '/api/buildings',
@@ -34,6 +45,38 @@ const buildingOptions = computed(() =>
     label: building.name,
   })),
 )
+
+const visibleIds = computed(() => contracts.value.map(contract => contract.id))
+const allVisibleSelected = computed(() =>
+  visibleIds.value.length > 0 && visibleIds.value.every(id => selectedIds.value.includes(id)),
+)
+
+function toggleSelectAll() {
+  if (allVisibleSelected.value) {
+    selectedIds.value = selectedIds.value.filter(id => !visibleIds.value.includes(id))
+  }
+  else {
+    selectAll([...new Set([...selectedIds.value, ...visibleIds.value])])
+  }
+}
+
+function handleBulkDone(result: ContractBulkActionResult, action: ContractBulkAction) {
+  const verb = action === 'terminate' ? 'kết thúc' : 'xoá'
+  if (result.succeeded.length > 0 && result.failed.length === 0) {
+    toast.success(`Đã ${verb} ${result.succeeded.length} hợp đồng`)
+  }
+  else if (result.succeeded.length > 0 && result.failed.length > 0) {
+    toast.info(`Đã ${verb} ${result.succeeded.length} hợp đồng, ${result.failed.length} bị bỏ qua`)
+  }
+  else if (result.failed.length > 0) {
+    toast.error(`Không thể ${verb}. ${result.failed.length} hợp đồng bị bỏ qua`)
+  }
+  refresh()
+}
+
+watch(contracts, () => {
+  selectedIds.value = selectedIds.value.filter(id => visibleIds.value.includes(id))
+})
 </script>
 
 <template>
@@ -98,23 +141,56 @@ const buildingOptions = computed(() =>
 
     <!-- List -->
     <div v-else class="space-y-2">
-      <UiListRow
+      <label v-if="authStore.isAdmin" class="mb-2 flex items-center gap-2 text-sm text-muted">
+        <input
+          type="checkbox"
+          class="h-4 w-4 rounded border-dark-border bg-dark-surface text-cyan focus:ring-cyan/40"
+          :checked="allVisibleSelected"
+          @change="toggleSelectAll"
+        >
+        <span>Chọn tất cả trên trang</span>
+      </label>
+
+      <div
         v-for="contract in contracts"
         :key="contract.id"
-        :to="contractPath(contract)"
+        class="group flex items-center gap-3 rounded-xl border border-dark-border bg-dark-surface px-4 py-3 transition-colors hover:border-cyan/40"
       >
-        <div class="flex items-center gap-2 flex-wrap">
-          <p class="text-sm font-medium text-white truncate">
-            Phòng {{ contract.room.roomNumber }} — {{ contract.room.buildingName }}
+        <input
+          v-if="authStore.isAdmin"
+          type="checkbox"
+          class="h-4 w-4 shrink-0 rounded border-dark-border bg-dark-surface text-cyan focus:ring-cyan/40"
+          :checked="isSelected(contract.id)"
+          :aria-label="`Chọn hợp đồng ${contract.contractCode}`"
+          @change.stop="toggle(contract.id)"
+          @click.stop
+        >
+        <NuxtLink :to="contractPath(contract)" class="min-w-0 flex-1">
+          <div class="flex items-center gap-2 flex-wrap">
+            <p class="text-sm font-medium text-white truncate">
+              Phòng {{ contract.room.roomNumber }} — {{ contract.room.buildingName }}
+            </p>
+            <UiStatusBadge :status="contract.status" />
+            <span class="text-xs text-muted font-mono">{{ contract.contractCode }}</span>
+          </div>
+          <p class="text-xs text-muted mt-0.5 truncate">
+            {{ contract.tenant.fullName }} ·
+            {{ new Date(contract.startDate).toLocaleDateString('vi-VN') }} — {{ new Date(contract.endDate).toLocaleDateString('vi-VN') }}
+            · {{ formatCurrency(contract.monthlyRent) }}/tháng
           </p>
-          <UiStatusBadge :status="contract.status" />
-        </div>
-        <p class="text-xs text-muted mt-0.5 truncate">
-          {{ contract.tenant.fullName }} ·
-          {{ new Date(contract.startDate).toLocaleDateString('vi-VN') }} — {{ new Date(contract.endDate).toLocaleDateString('vi-VN') }}
-          · {{ formatCurrency(contract.monthlyRent) }}/tháng
-        </p>
-      </UiListRow>
+        </NuxtLink>
+        <IconChevronRight class="h-4 w-4 shrink-0 text-muted transition-colors group-hover:text-cyan" aria-hidden="true" />
+      </div>
+
+      <ContractBulkActionsBar
+        v-if="authStore.isAdmin && selectedIds.length > 0"
+        :selected-ids="selectedIds"
+        :contracts="contracts"
+        :run-action="runAction"
+        :is-running="isRunning"
+        @clear="clear"
+        @done="handleBulkDone"
+      />
     </div>
 
     <!-- Pagination -->

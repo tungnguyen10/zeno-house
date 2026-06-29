@@ -35,6 +35,14 @@ export const contractListQuerySchema = z.object({
 
 export type ContractListQuery = z.infer<typeof contractListQuerySchema>
 
+export const contractBulkActionSchema = z.object({
+  action: z.enum(['terminate', 'delete']),
+  ids: z.array(z.string().min(1)).min(1, 'Chọn ít nhất một hợp đồng'),
+  reason: z.string().trim().max(500, 'Lý do quá dài').optional(),
+})
+
+export type ContractBulkActionInput = z.infer<typeof contractBulkActionSchema>
+
 export const contractCreateSchema = z.object({
   room_id: z.string().uuid('ID phòng không hợp lệ'),
   tenant_id: z.string().uuid('ID khách thuê không hợp lệ'),

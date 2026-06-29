@@ -51,36 +51,40 @@ vi.stubGlobal('useFetch', (url: string) => {
 
 // ─── Stubbed UI primitives ──────────────────────────────────────────────────
 const passthroughInput = defineComponent({
-  props: ['modelValue', 'label', 'error', 'type'],
-  emits: ['update:modelValue'],
+  props: ['modelValue', 'label', 'error', 'type', 'id', 'disabled'],
+  emits: ['update:modelValue', 'blur'],
   template: `
     <label>
       <span>{{ label }}</span>
-      <input :type="type ?? 'text'" :value="modelValue" @input="$emit('update:modelValue', $event.target.value)" />
+      <input :id="id" :disabled="disabled" :type="type ?? 'text'" :value="modelValue" @input="$emit('update:modelValue', $event.target.value)" @blur="$emit('blur', $event)" />
       <span v-if="error" class="error">{{ error }}</span>
     </label>
   `,
 })
 
 const passthroughSelect = defineComponent({
-  props: ['modelValue', 'label', 'options'],
+  props: ['modelValue', 'label', 'options', 'id', 'disabled'],
   emits: ['update:modelValue'],
-  template: '<select :value="modelValue" @change="$emit(\'update:modelValue\', $event.target.value)"><option v-for="o in options" :key="o.value" :value="o.value">{{ o.label }}</option></select>',
+  template: '<select :id="id" :disabled="disabled" :value="modelValue" @change="$emit(\'update:modelValue\', $event.target.value)"><option v-for="o in options" :key="o.value" :value="o.value">{{ o.label }}</option></select>',
 })
 
 const passthroughTextarea = defineComponent({
-  props: ['modelValue', 'label'],
-  emits: ['update:modelValue'],
-  template: '<textarea :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" />',
+  props: ['modelValue', 'label', 'id'],
+  emits: ['update:modelValue', 'blur'],
+  template: '<textarea :id="id" :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" @blur="$emit(\'blur\', $event)" />',
 })
 
 const passthroughCombobox = defineComponent({
-  props: ['modelValue', 'options', 'optionKey', 'optionLabel', 'label'],
+  props: ['modelValue', 'options', 'optionKey', 'optionLabel', 'label', 'id', 'disabled'],
   emits: ['update:modelValue'],
-  template: '<div class="combobox"><span>{{ label }}</span></div>',
+  template: '<div class="combobox"><button :id="id" type="button" :disabled="disabled">{{ label }}</button></div>',
 })
 
-const UiButton = defineComponent({ template: '<button type="submit"><slot /></button>' })
+const UiButton = defineComponent({
+  props: ['type', 'disabled'],
+  emits: ['click'],
+  template: '<button :type="type ?? \'submit\'" :disabled="disabled" @click="$emit(\'click\')"><slot /></button>',
+})
 const UiAlert = defineComponent({ template: '<div><slot /></div>' })
 
 function buildForm(overrides: Partial<ContractFormData> = {}): ContractFormData {
@@ -104,9 +108,9 @@ function buildForm(overrides: Partial<ContractFormData> = {}): ContractFormData 
   }
 }
 
-function mountForm(modelValue: ContractFormData, showHandover = true) {
+function mountForm(modelValue: ContractFormData, showHandover = true, extraProps: Record<string, unknown> = {}) {
   return mount(ContractForm, {
-    props: { modelValue, showHandover },
+    props: { modelValue, showHandover, ...extraProps },
     global: {
       stubs: {
         UiInput: passthroughInput,
@@ -161,5 +165,51 @@ describe('ContractForm — handover meter readings', () => {
     await flushPromises()
 
     expect(wrapper.text()).not.toContain('Số bàn giao đầu vào')
+  })
+})
+
+describe('ContractForm — overhaul UI', () => {
+  it('renders four numbered edit sections', async () => {
+    const wrapper = mountForm(buildForm({ room_id: 'room-1', tenant_id: 'tenant-1' }), false)
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('Quan hệ')
+    expect(wrapper.text()).toContain('Thời hạn & Giá')
+    expect(wrapper.text()).toContain('Điều khoản')
+    expect(wrapper.text()).toContain('Trạng thái & Ghi chú')
+  })
+
+  it('disables room and tenant pickers when editing an active contract', async () => {
+    const wrapper = mountForm(buildForm({ room_id: 'room-1', tenant_id: 'tenant-1', status: 'active' }), false)
+    await flushPromises()
+
+    const relationButtons = wrapper.findAll('.combobox button')
+    expect(relationButtons).toHaveLength(2)
+    expect(relationButtons[0]!.attributes('disabled')).toBeDefined()
+    expect(relationButtons[1]!.attributes('disabled')).toBeDefined()
+    expect(wrapper.text()).toContain('Hợp đồng đang chạy')
+  })
+
+  it('shows error summary after invalid submit', async () => {
+    const wrapper = mountForm(buildForm({ start_date: '', monthly_rent: '' }), true)
+    await flushPromises()
+
+    await wrapper.find('form').trigger('submit.prevent')
+
+    expect(wrapper.text()).toContain('Có')
+    expect(wrapper.text()).toContain('Ngày bắt đầu')
+    expect(wrapper.text()).toContain('Giá thuê / tháng')
+  })
+
+  it('shows draft restore alert and mobile sticky bar', async () => {
+    const wrapper = mountForm(buildForm(), true, {
+      hasDraft: true,
+      draftSavedAt: '2026-06-29T00:00:00.000Z',
+    })
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('Có bản nháp chưa lưu')
+    expect(wrapper.text()).toContain('Khôi phục')
+    expect(wrapper.find('.fixed.inset-x-0.bottom-0').exists()).toBe(true)
   })
 })

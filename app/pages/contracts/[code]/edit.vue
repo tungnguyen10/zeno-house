@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { onBeforeRouteLeave } from 'vue-router'
 import type { ApiSuccess } from '~/types/api'
 import type { ContractWithDetails } from '~/types/contracts'
 import type { ContractFormData } from '~/components/contracts/ContractForm.vue'
@@ -17,8 +18,6 @@ if (error.value?.statusCode === 404) {
 
 const contract = computed(() => data.value?.data ?? null)
 
-const { isLoading, errors, apiError, submitUpdate } = useContractForm()
-
 const formData = ref<ContractFormData>({
   room_id: contract.value?.roomId ?? '',
   tenant_id: contract.value?.tenantId ?? '',
@@ -35,6 +34,43 @@ const formData = ref<ContractFormData>({
   handover_electricity_reading: '',
   handover_water_reading: '',
   handover_reading_date: '',
+})
+const initialSnapshot = computed<ContractFormData | null>(() => contract.value
+  ? {
+      room_id: contract.value.roomId,
+      tenant_id: contract.value.tenantId,
+      start_date: contract.value.startDate,
+      end_date: contract.value.endDate,
+      monthly_rent: String(contract.value.monthlyRent ?? ''),
+      deposit: String(contract.value.deposit ?? ''),
+      payment_day: contract.value.paymentDay != null ? String(contract.value.paymentDay) : '',
+      occupant_count: String(contract.value.occupantCount ?? '1'),
+      discount_amount: String(contract.value.discountAmount ?? '0'),
+      surcharge_amount: String(contract.value.surchargeAmount ?? '0'),
+      status: (contract.value.status === 'renewed' ? 'expired' : contract.value.status) as ContractFormData['status'],
+      notes: contract.value.notes ?? '',
+      handover_electricity_reading: '',
+      handover_water_reading: '',
+      handover_reading_date: '',
+    }
+  : null)
+
+const {
+  isLoading,
+  errors,
+  apiError,
+  submitUpdate,
+  hasDraft,
+  draftSavedAt,
+  draftError,
+  isDraftVersionMismatch,
+  restoreDraft,
+  clearDraft,
+  isDirty,
+} = useContractForm<ContractFormData>({
+  draftKey: { mode: 'edit', id },
+  formData,
+  initialSnapshot,
 })
 
 async function onSubmit(data: ContractFormData) {
@@ -56,6 +92,24 @@ async function onSubmit(data: ContractFormData) {
     await navigateTo(contractPath(updated))
   }
 }
+
+onBeforeRouteLeave((_to, _from, next) => {
+  if (!isDirty.value) return next()
+  const ok = typeof window !== 'undefined'
+    ? window.confirm('Có thay đổi chưa lưu. Bạn có chắc muốn rời trang?')
+    : true
+  return next(ok)
+})
+
+if (import.meta.client) {
+  const handler = (event: BeforeUnloadEvent) => {
+    if (!isDirty.value) return
+    event.preventDefault()
+    event.returnValue = ''
+  }
+  window.addEventListener('beforeunload', handler)
+  onBeforeUnmount(() => window.removeEventListener('beforeunload', handler))
+}
 </script>
 
 <template>
@@ -73,8 +127,15 @@ async function onSubmit(data: ContractFormData) {
         :loading="isLoading"
         :errors="errors"
         :api-error="apiError"
+        :has-draft="hasDraft"
+        :draft-saved-at="draftSavedAt"
+        :draft-error="draftError"
+        :is-draft-version-mismatch="isDraftVersionMismatch"
+        :is-dirty="isDirty"
         @submit="onSubmit"
         @cancel="navigateTo(contract ? contractPath(contract) : `/contracts/${id}`)"
+        @restore-draft="restoreDraft"
+        @clear-draft="clearDraft"
       />
     </div>
   </div>

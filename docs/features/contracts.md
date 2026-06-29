@@ -4,10 +4,10 @@ Contracts are the central operational entity connecting buildings, rooms, tenant
 
 ## User Routes
 
-- `/contracts`: contract list.
-- `/contracts/create`: create wizard.
-- `/contracts/[id]`: contract detail.
-- `/contracts/[id]/edit`: contract edit.
+- `/contracts`: contract list with URL-synced search, filters, sorting, pagination, and admin bulk actions.
+- `/contracts/create`: three-step create wizard.
+- `/contracts/[id]`: contract detail with hero stats, section anchors, and admin danger zone.
+- `/contracts/[id]/edit`: sectioned contract edit form with dirty guard and draft autosave.
 
 `/contracts/create` can be pre-filled with `?room_id=...`.
 
@@ -33,6 +33,20 @@ Statuses:
 - `active`
 - `expired`
 - `terminated`
+- `renewed`
+
+## List Search, Sort, And Bulk Actions
+
+`GET /api/contracts` validates query params with Zod before invoking the service. Supported query state:
+
+- `page`, `limit`
+- `q` searching contract code, tenant name, and room number
+- `building_id`, `room_id`, `tenant_id`
+- multi-value `status`
+- `sort`: `created_at`, `start_date`, `end_date`, `monthly_rent`
+- `order`: `asc`, `desc`
+
+The list page keeps these controls in the URL so filtered views can be shared. Admin users can select rows, terminate multiple contracts with an optional reason, or bulk-delete contracts that pass the safe-delete checks.
 
 ## Occupancy Side Effects
 
@@ -60,6 +74,8 @@ Renewals (extend or new_contract mode) intentionally do not capture handover rea
 
 The detail page includes:
 
+- hero header with contract code, status, building / room / tenant breadcrumb, and quick stats
+- sticky section navigation
 - core contract information
 - room and tenant links
 - occupants/roommates
@@ -67,6 +83,33 @@ The detail page includes:
 - renewals
 - contract services
 - handover readings
+- admin-only danger zone for edit, renew, terminate, and delete
+
+Delete conflicts are displayed as a checklist of blockers. If the only blocker is `ACTIVE_CONTRACT`, admins can use "Kết thúc rồi xoá", which calls `DELETE ?force=true`. Billing, paid payment, and non-handover meter-reading history still block deletion.
+
+## Form Drafts And Dirty Guards
+
+The create wizard and edit form use localStorage drafts:
+
+- `contract-form:create`
+- `contract-form:edit:<id>`
+
+Drafts include `draftVersion`, saved timestamp, form data, and create-wizard state (`currentStep`, pending occupants, selected services). A restore alert appears when a compatible draft exists; mismatched versions can only be deleted.
+
+Both create and edit routes protect unsaved changes with route-leave and browser unload guards. Moving between wizard steps does not trigger the guard.
+
+## Safe Delete And Force Delete
+
+Default `DELETE /api/contracts/[id]` is a hard delete only when the contract has no protected history. The service aggregates blockers into a single `409 CONFLICT` details object:
+
+- `reason: ACTIVE_CONTRACT`
+- `issuedBillingPeriods`
+- `paidPayments`
+- `nonHandoverMeterReadings`
+
+`DELETE /api/contracts/[id]?force=true` may terminate an active contract first, then delete only if billing, paid payment, and non-handover meter-reading counts are still zero. Force never destroys billing or meter-reading history.
+
+Bulk operations use `POST /api/contracts/bulk` with `{ action: 'terminate' | 'delete', ids, reason? }` and return per-item partial success.
 
 ## Occupants
 

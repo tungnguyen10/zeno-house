@@ -1,13 +1,64 @@
 import type { H3Event } from 'h3'
 import type { AuthUser } from '~/types/auth'
 import type { ContractWithDetails } from '~/types/contracts'
-import type { ContractCreateInput, ContractUpdateInput } from '~/utils/validators/contracts'
+import type { ContractBulkActionInput, ContractCreateInput, ContractUpdateInput } from '~/utils/validators/contracts'
 import { ContractRepository, type ContractFilters } from '../../repositories/contracts'
 import { ContractServiceService } from '../contract-services'
 import { ContractOccupantRepository } from '../../repositories/contract-occupants'
 import { RoomRepository } from '../../repositories/rooms'
 import { BuildingRepository } from '../../repositories/buildings'
 import { TenantRepository } from '../../repositories/tenants'
+
+interface ContractDeleteConflictDetails {
+  reason?: 'ACTIVE_CONTRACT'
+  issuedBillingPeriods?: number
+  paidPayments?: number
+  nonHandoverMeterReadings?: number
+}
+
+export interface ContractBulkActionResult {
+  succeeded: string[]
+  failed: { id: string; reason: string }[]
+}
+
+function hasDeleteConflicts(details: ContractDeleteConflictDetails): boolean {
+  return Boolean(
+    details.reason
+    || (details.issuedBillingPeriods && details.issuedBillingPeriods > 0)
+    || (details.paidPayments && details.paidPayments > 0)
+    || (details.nonHandoverMeterReadings && details.nonHandoverMeterReadings > 0),
+  )
+}
+
+function throwDeleteConflict(details: ContractDeleteConflictDetails): never {
+  throw createError({
+    statusCode: 409,
+    data: {
+      error: {
+        code: 'CONFLICT',
+        message: 'Hợp đồng còn ràng buộc, không thể xoá',
+        details,
+      },
+    },
+  })
+}
+
+function bulkFailureReason(err: unknown): string {
+  const e = err as {
+    data?: { error?: { code?: string; details?: ContractDeleteConflictDetails } }
+    message?: string
+  }
+  const code = e?.data?.error?.code
+  if (code === 'NOT_FOUND') return 'not_found'
+  if (code !== 'CONFLICT') return e?.message ?? 'error'
+
+  const details = e?.data?.error?.details
+  if (details?.reason === 'ACTIVE_CONTRACT') return 'ACTIVE_CONTRACT'
+  if (details?.issuedBillingPeriods && details.issuedBillingPeriods > 0) return 'has_billing_history'
+  if (details?.paidPayments && details.paidPayments > 0) return 'has_paid_invoices'
+  if (details?.nonHandoverMeterReadings && details.nonHandoverMeterReadings > 0) return 'has_meter_readings'
+  return 'conflict'
+}
 
 export const ContractService = {
   async list(
@@ -144,20 +195,64 @@ export const ContractService = {
     return updated
   },
 
-  async remove(event: H3Event, user: AuthUser, id: string): Promise<void> {
+  async remove(
+    event: H3Event,
+    user: AuthUser,
+    id: string,
+    opts: { force?: boolean } = {},
+  ): Promise<ContractWithDetails | undefined> {
     if (!can(user, 'contracts.delete')) throwForbidden('Không có quyền xoá hợp đồng')
-    const existing = await ContractRepository.findByIdentifier(event, id)
+    let existing = await ContractRepository.findByIdentifier(event, id)
     if (!existing) throwNotFound('Không tìm thấy hợp đồng')
 
-    await ContractRepository.remove(event, existing.id)
+    if (opts.force && existing.status === 'active') {
+      existing = await this.update(event, user, existing.id, { status: 'terminated' })
+    }
 
-    // If the deleted contract was active, release the room (unless under maintenance).
-    // Deleting expired/terminated/renewed contracts must not change room status.
-    if (existing.status === 'active') {
-      const room = await RoomRepository.findById(event, existing.roomId)
-      if (room && room.status !== 'maintenance') {
-        await RoomRepository.update(event, existing.roomId, { status: 'available' })
+    const [issuedBillingPeriods, paidPayments, nonHandoverMeterReadings] = await Promise.all([
+      ContractRepository.countBillingPeriodsForContract(event, existing.id),
+      ContractRepository.countPaidInvoicesForContract(event, existing.id),
+      ContractRepository.countNonHandoverMeterReadingsForContract(event, existing.id),
+    ])
+
+    const details: ContractDeleteConflictDetails = {
+      ...(!opts.force && existing.status === 'active' ? { reason: 'ACTIVE_CONTRACT' as const } : {}),
+      ...(issuedBillingPeriods > 0 ? { issuedBillingPeriods } : {}),
+      ...(paidPayments > 0 ? { paidPayments } : {}),
+      ...(nonHandoverMeterReadings > 0 ? { nonHandoverMeterReadings } : {}),
+    }
+
+    if (hasDeleteConflicts(details)) throwDeleteConflict(details)
+
+    await ContractRepository.removeWithCascade(event, existing)
+    return opts.force ? existing : undefined
+  },
+
+  async bulkAction(
+    event: H3Event,
+    user: AuthUser,
+    input: ContractBulkActionInput,
+  ): Promise<ContractBulkActionResult> {
+    if (!can(user, 'contracts.delete')) throwForbidden('Không có quyền thao tác hàng loạt')
+
+    const succeeded: string[] = []
+    const failed: { id: string; reason: string }[] = []
+
+    for (const id of input.ids) {
+      try {
+        if (input.action === 'terminate') {
+          await this.update(event, user, id, { status: 'terminated' })
+        }
+        else {
+          await this.remove(event, user, id)
+        }
+        succeeded.push(id)
+      }
+      catch (err: unknown) {
+        failed.push({ id, reason: bulkFailureReason(err) })
       }
     }
+
+    return { succeeded, failed }
   },
 }

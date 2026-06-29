@@ -293,4 +293,76 @@ export const ContractRepository = {
     const { error } = await client.from('contracts').delete().eq('id', id)
     if (error) throw createError({ statusCode: 500, message: error.message })
   },
+
+  async removeWithCascade(event: H3Event, contract: ContractWithDetails): Promise<void> {
+    const client = await serverSupabaseClient(event)
+
+    const deletes = [
+      client.from('contract_payments').delete().eq('contract_id', contract.id),
+      client.from('contract_services').delete().eq('contract_id', contract.id),
+      client.from('contract_occupants').delete().eq('contract_id', contract.id),
+      client.from('contract_renewals').delete().eq('contract_id', contract.id),
+      client.from('contract_renewals').delete().eq('new_contract_id', contract.id),
+      client
+        .from('meter_readings')
+        .delete()
+        .eq('room_id', contract.roomId)
+        .in('reading_type', ['handover_in', 'handover_out'])
+        .gte('reading_date', contract.startDate)
+        .lte('reading_date', contract.endDate),
+    ]
+
+    for (const result of await Promise.all(deletes)) {
+      if (result.error) throw createError({ statusCode: 500, message: result.error.message })
+    }
+
+    await this.remove(event, contract.id)
+  },
+
+  async countBillingPeriodsForContract(event: H3Event, contractId: string): Promise<number> {
+    const client = await serverSupabaseClient(event)
+    const { data, error } = await client
+      .from('invoices')
+      .select('billing_period_id')
+      .eq('contract_id', contractId)
+      .neq('status', 'void')
+
+    if (error) throw createError({ statusCode: 500, message: error.message })
+    return new Set((data ?? []).map(row => row.billing_period_id)).size
+  },
+
+  async countPaidInvoicesForContract(event: H3Event, contractId: string): Promise<number> {
+    const client = await serverSupabaseClient(event)
+    const { count, error } = await client
+      .from('invoices')
+      .select('id', { count: 'exact', head: true })
+      .eq('contract_id', contractId)
+      .in('status', ['paid', 'partial'])
+
+    if (error) throw createError({ statusCode: 500, message: error.message })
+    return count ?? 0
+  },
+
+  async countNonHandoverMeterReadingsForContract(event: H3Event, contractId: string): Promise<number> {
+    const client = await serverSupabaseClient(event)
+    const { data: contract, error: contractError } = await client
+      .from('contracts')
+      .select('room_id, start_date, end_date')
+      .eq('id', contractId)
+      .maybeSingle()
+
+    if (contractError) throw createError({ statusCode: 500, message: contractError.message })
+    if (!contract) return 0
+
+    const { count, error } = await client
+      .from('meter_readings')
+      .select('id', { count: 'exact', head: true })
+      .eq('room_id', contract.room_id)
+      .not('reading_type', 'in', '(handover_in,handover_out)')
+      .gte('reading_date', contract.start_date)
+      .lte('reading_date', contract.end_date)
+
+    if (error) throw createError({ statusCode: 500, message: error.message })
+    return count ?? 0
+  },
 }
