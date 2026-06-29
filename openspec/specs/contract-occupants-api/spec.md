@@ -27,6 +27,7 @@ The API SHALL enforce single active occupancy per tenant:
 2. Tenant cannot be the primary tenant on any other active contract
 3. Tenant cannot be an active occupant (no `move_out_date`) in any other contract
 4. Tenant cannot already be an active occupant in this same contract
+5. Adding a roommate cannot push the total active count (primary + roommates) above `contracts.occupant_count`
 
 #### Scenario: Add roommate success
 - **WHEN** admin POSTs a valid occupant payload (tenant_id, move_in_date, billing_counted)
@@ -47,6 +48,10 @@ The API SHALL enforce single active occupancy per tenant:
 #### Scenario: Duplicate active occupant in same contract
 - **WHEN** admin POSTs tenant_id already active in this contract's occupants
 - **THEN** 409 CONFLICT returned
+
+#### Scenario: Occupant count limit reached
+- **WHEN** current active count (primary + roommates) is already equal to `occupant_count`
+- **THEN** 409 CONFLICT: message includes maximum allowed number
 
 ### Requirement: Active occupancy uniqueness enforced at DB level
 The database MUST enforce atomic active occupancy uniqueness with a partial unique index `contract_occupants_active_tenant_unique ON contract_occupants(tenant_id) WHERE move_out_date IS NULL`, including under concurrent requests.

@@ -33,7 +33,10 @@ function formatDate(value: string | Date) {
 }
 
 const activeOccupantCount = computed(
-  () => occupants.value.filter(o => !o.moveOutDate).length + 1,
+  () => occupants.value.filter(o => !o.moveOutDate && o.role === 'roommate').length + 1,
+)
+const isOccupantLimitReached = computed(
+  () => !!contract.value && activeOccupantCount.value >= contract.value.occupantCount,
 )
 const paidAmount = computed(() => payments.value.reduce((sum, payment) => sum + payment.amount, 0))
 
@@ -188,8 +191,9 @@ async function handleAddOccupant(input: import('~/utils/validators/contract-occu
   try {
     await addOccupant(input)
     showOccupantForm.value = false
-  } catch {
-    occupantApiError.value = 'Không thể thêm người ở. Vui lòng thử lại.'
+  } catch (err: unknown) {
+    const fetchErr = err as { data?: { error?: { message?: string } } }
+    occupantApiError.value = fetchErr?.data?.error?.message ?? 'Không thể thêm người ở. Vui lòng thử lại.'
   } finally {
     isAddingOccupant.value = false
   }
@@ -317,9 +321,37 @@ watchEffect(() => {
       <ContractDetailHero
         :contract="contract"
         :paid-amount="paidAmount"
+        :is-admin="authStore.isAdmin"
+        @edit="navigateTo(`${contractPath(contract)}/edit`)"
         @renew="showRenewalForm = !showRenewalForm"
         @terminate="showTerminateModal = true"
+        @delete="showDeleteModal = true"
       />
+
+      <UiAlert v-if="deleteConflict" severity="danger" class="mt-4">
+        <div class="space-y-3">
+          <div>
+            <p class="text-sm font-medium text-white">Chưa thể xoá hợp đồng</p>
+            <ul class="mt-2 space-y-1 text-sm text-muted">
+              <li v-for="item in conflictItems" :key="item">- {{ item }}</li>
+            </ul>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <UiButton
+              v-if="onlyActiveConflict"
+              size="sm"
+              variant="danger"
+              :loading="isDeleting"
+              @click="confirmDelete(true)"
+            >
+              Kết thúc rồi xoá
+            </UiButton>
+            <UiButton size="sm" variant="secondary" @click="deleteConflict = null">
+              Đã hiểu
+            </UiButton>
+          </div>
+        </div>
+      </UiAlert>
 
       <nav class="sticky top-0 z-20 mt-4 overflow-x-auto border-y border-dark-border bg-dark-deep/95 py-2 backdrop-blur">
         <div class="flex min-w-max gap-2 text-sm">
@@ -329,7 +361,6 @@ watchEffect(() => {
           <a href="#services" class="rounded-md px-3 py-1.5 text-muted hover:bg-dark-hover hover:text-white">Dịch vụ</a>
           <a href="#renewals" class="rounded-md px-3 py-1.5 text-muted hover:bg-dark-hover hover:text-white">Gia hạn</a>
           <a href="#meter-readings" class="rounded-md px-3 py-1.5 text-muted hover:bg-dark-hover hover:text-white">Chỉ số</a>
-          <a v-if="authStore.isAdmin" href="#danger-zone" class="rounded-md px-3 py-1.5 text-muted hover:bg-dark-hover hover:text-white">Quản trị</a>
         </div>
       </nav>
 
@@ -392,22 +423,24 @@ watchEffect(() => {
         <template #actions>
           <div class="flex items-center gap-2">
             <template v-if="!occupantsLoading">
-              <!-- +1 for primary tenant -->
               <span
-                v-if="(occupants.filter(o => !o.moveOutDate).length + 1) > contract.occupantCount"
-                class="text-xs text-amber-400 border border-amber-400/40 rounded px-1.5 py-0.5"
-                title="Vượt số người trong hợp đồng"
+                :class="[
+                  'text-xs rounded px-1.5 py-0.5 border',
+                  isOccupantLimitReached
+                    ? 'text-amber-400 border-amber-400/40'
+                    : 'text-muted border-dark-border',
+                ]"
+                :title="isOccupantLimitReached ? 'Đã đạt số người tối đa của hợp đồng' : undefined"
               >
-                {{ occupants.filter(o => !o.moveOutDate).length + 1 }}/{{ contract.occupantCount }} ⚠
-              </span>
-              <span v-else class="text-xs text-muted">
-                {{ occupants.filter(o => !o.moveOutDate).length + 1 }}/{{ contract.occupantCount }}
+                {{ activeOccupantCount }}/{{ contract.occupantCount }}
               </span>
             </template>
             <UiButton
               v-if="authStore.isAdmin && !showOccupantForm"
               variant="secondary"
               size="sm"
+              :disabled="isOccupantLimitReached"
+              :title="isOccupantLimitReached ? 'Đã đạt số người tối đa. Cập nhật hợp đồng để tăng giới hạn.' : undefined"
               @click="showOccupantForm = true"
             >
               + Thêm người ở
@@ -673,64 +706,6 @@ watchEffect(() => {
             </div>
           </div>
         </div>
-        </div>
-      </UiSection>
-
-      <UiSection
-        v-if="authStore.isAdmin"
-        id="danger-zone"
-        title="Quản trị hợp đồng"
-        description="Các thao tác thay đổi vòng đời hoặc xoá dữ liệu hợp đồng."
-        class="mt-6 scroll-mt-20"
-      >
-        <UiAlert v-if="deleteConflict" severity="danger" class="mb-4">
-          <div class="space-y-3">
-            <div>
-              <p class="text-sm font-medium text-white">Chưa thể xoá hợp đồng</p>
-              <ul class="mt-2 space-y-1 text-sm text-muted">
-                <li v-for="item in conflictItems" :key="item">- {{ item }}</li>
-              </ul>
-            </div>
-            <div class="flex flex-wrap gap-2">
-              <UiButton
-                v-if="onlyActiveConflict"
-                size="sm"
-                variant="danger"
-                :loading="isDeleting"
-                @click="confirmDelete(true)"
-              >
-                Kết thúc rồi xoá
-              </UiButton>
-              <UiButton size="sm" variant="secondary" @click="deleteConflict = null">
-                Đã hiểu
-              </UiButton>
-            </div>
-          </div>
-        </UiAlert>
-
-        <div class="flex flex-wrap gap-2">
-          <NuxtLink :to="`${contractPath(contract)}/edit`">
-            <UiButton variant="secondary" size="sm">Chỉnh sửa</UiButton>
-          </NuxtLink>
-          <UiButton
-            v-if="contract.status === 'active' || contract.status === 'expired'"
-            variant="secondary"
-            size="sm"
-            @click="showRenewalForm = !showRenewalForm"
-          >
-            Gia hạn
-          </UiButton>
-          <UiButton
-            v-if="contract.status === 'active'"
-            variant="secondary"
-            size="sm"
-            @click="showTerminateModal = true"
-          >
-            Kết thúc sớm
-          </UiButton>
-          <UiButton variant="danger" size="sm" @click="showDeleteModal = true">
-            Xoá
-          </UiButton>
         </div>
       </UiSection>
     </template>

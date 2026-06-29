@@ -57,22 +57,26 @@ Exposed: `occupants`, `isLoading`, `error`, `addOccupant(input)`, `moveOut(occup
 The `/contracts/:id` page SHALL include a "Người ở" section displaying:
 - Primary tenant at the top with "Người thuê chính" badge
 - Roommates list with name, move_in_date; moved-out occupants shown muted with move_out_date
-- Section header shows `active / occupantCount` counter (e.g. `2/2`). When active count exceeds `contract.occupantCount`, amber badge with `⚠` shown — soft warning, does not block adding more
-- Admin: "Thêm người ở" button opens inline `ContractOccupantForm`
+- Section header shows `active / occupantCount` counter (e.g. `2/2`) where `active` = 1 primary tenant + active roommates (rows where `role='roommate'` and `move_out_date IS NULL`). When `active >= contract.occupantCount`, counter renders in amber and the "Thêm người ở" button is disabled.
+- Admin: "Thêm người ở" button opens inline `ContractOccupantForm`; disabled when occupant limit reached
 - Admin: per-row "Ghi nhận rời" (move-out date prompt) and "Xoá" (confirm modal)
 - Manager: read-only
 
 #### Scenario: Occupant count within limit
-- **WHEN** active occupants ≤ occupantCount
-- **THEN** counter shown in muted style (X/Y)
+- **WHEN** active occupants < occupantCount
+- **THEN** counter shown in muted style (X/Y) and "Thêm người ở" button is enabled
 
-#### Scenario: Occupant count exceeded
-- **WHEN** active occupants > occupantCount
-- **THEN** amber badge with ⚠ shown; adding more is still allowed
+#### Scenario: Occupant count at limit
+- **WHEN** active occupants == occupantCount
+- **THEN** counter shown in amber; "Thêm người ở" button is disabled with tooltip explaining the limit
 
 #### Scenario: Admin adds roommate
 - **WHEN** admin clicks "Thêm người ở" and submits valid form
 - **THEN** new occupant appears in list immediately
+
+#### Scenario: Server rejects roommate that would exceed limit
+- **WHEN** the POST request would push the active count above `occupantCount`
+- **THEN** the API SHALL return 409 `CONFLICT` and the form SHALL render the server message inline (no occupant inserted)
 
 #### Scenario: Admin records move-out
 - **WHEN** admin clicks "Ghi nhận rời" on an active roommate

@@ -33,6 +33,16 @@ export const ContractOccupantService = {
     const existing = await ContractOccupantRepository.findActiveByTenant(event, contract.id, input.tenant_id)
     if (existing) throwConflict('Khách thuê này đã có trong danh sách người ở của hợp đồng này')
 
+    // Block exceeding occupant_count limit (count = primary tenant + active roommates)
+    if (input.role !== 'primary') {
+      const all = await ContractOccupantRepository.listByContract(event, contract.id)
+      const activeRoommates = all.filter(o => !o.moveOutDate && o.role === 'roommate').length
+      const currentTotal = activeRoommates + 1 // +1 for primary tenant
+      if (currentTotal + 1 > contract.occupantCount) {
+        throwConflict(`Hợp đồng chỉ cho phép tối đa ${contract.occupantCount} người ở. Cập nhật hợp đồng nếu muốn tăng số người.`)
+      }
+    }
+
     return ContractOccupantRepository.insert(event, contract.id, input)
   },
 

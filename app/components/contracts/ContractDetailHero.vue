@@ -1,15 +1,20 @@
 <script setup lang="ts">
+import { onClickOutside, onKeyStroke } from '@vueuse/core'
+import clsx from 'clsx'
 import type { ContractWithDetails } from '~/types/contracts'
 import { formatCurrency } from '~/utils/format/currency'
 
 const props = defineProps<{
   contract: ContractWithDetails
   paidAmount?: number
+  isAdmin?: boolean
 }>()
 
 const emit = defineEmits<{
+  edit: []
   renew: []
   terminate: []
+  delete: []
 }>()
 
 function monthDiff(start: string, end = new Date()) {
@@ -19,6 +24,32 @@ function monthDiff(start: string, end = new Date()) {
 
 const monthsElapsed = computed(() => monthDiff(props.contract.startDate))
 const depositBalance = computed(() => Math.max(0, props.contract.deposit - (props.paidAmount ?? 0)))
+
+const canRenew = computed(() => props.contract.status === 'active' || props.contract.status === 'expired')
+const canTerminate = computed(() => props.contract.status === 'active')
+
+const menuOpen = ref(false)
+const menuRef = ref<HTMLElement | null>(null)
+const triggerRef = ref<HTMLElement | null>(null)
+
+function toggleMenu() {
+  menuOpen.value = !menuOpen.value
+}
+function closeMenu() {
+  menuOpen.value = false
+}
+function emitAction(name: 'edit' | 'renew' | 'terminate' | 'delete') {
+  closeMenu()
+  if (name === 'edit') emit('edit')
+  else if (name === 'renew') emit('renew')
+  else if (name === 'terminate') emit('terminate')
+  else emit('delete')
+}
+
+onClickOutside(menuRef, closeMenu, { ignore: [triggerRef] })
+onKeyStroke('Escape', () => {
+  if (menuOpen.value) closeMenu()
+})
 </script>
 
 <template>
@@ -42,13 +73,78 @@ const depositBalance = computed(() => Math.max(0, props.contract.deposit - (prop
         </div>
       </div>
 
-      <div class="flex flex-wrap gap-2">
-        <UiButton v-if="contract.status === 'active'" variant="secondary" size="sm" @click="emit('renew')">
-          Gia hạn
-        </UiButton>
-        <UiButton v-if="contract.status === 'active'" variant="danger" size="sm" @click="emit('terminate')">
-          Kết thúc sớm
-        </UiButton>
+      <div class="relative shrink-0">
+        <button
+          ref="triggerRef"
+          type="button"
+          data-test="hero-actions-trigger"
+          class="inline-flex items-center gap-1.5 rounded-md border border-dark-border bg-dark-surface px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-dark-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dark-border"
+          :aria-expanded="menuOpen"
+          aria-haspopup="menu"
+          @click="toggleMenu"
+        >
+          <IconMoreVertical class="h-3.5 w-3.5" aria-hidden="true" />
+          <span>Quản trị</span>
+          <IconChevronDown
+            :class="clsx('h-3 w-3 transition-transform duration-150', menuOpen && 'rotate-180')"
+            aria-hidden="true"
+          />
+        </button>
+
+        <Transition
+          enter-active-class="transition duration-150 ease-out"
+          enter-from-class="opacity-0 -translate-y-1 scale-95"
+          enter-to-class="opacity-100 translate-y-0 scale-100"
+          leave-active-class="transition duration-100 ease-in"
+          leave-from-class="opacity-100 translate-y-0 scale-100"
+          leave-to-class="opacity-0 -translate-y-1 scale-95"
+        >
+          <div
+            v-if="menuOpen"
+            ref="menuRef"
+            role="menu"
+            data-test="hero-actions-menu"
+            class="absolute right-0 z-30 mt-2 w-52 origin-top-right overflow-hidden rounded-lg border border-dark-border bg-dark-card shadow-xl shadow-black/40"
+          >
+            <button
+              type="button"
+              role="menuitem"
+              class="flex w-full items-center gap-2 px-3 py-2 text-sm text-white transition-colors hover:bg-dark-hover focus-visible:bg-dark-hover focus-visible:outline-none"
+              @click="emitAction('edit')"
+            >
+              Chỉnh sửa
+            </button>
+            <button
+              v-if="canRenew"
+              type="button"
+              role="menuitem"
+              class="flex w-full items-center gap-2 px-3 py-2 text-sm text-white transition-colors hover:bg-dark-hover focus-visible:bg-dark-hover focus-visible:outline-none"
+              @click="emitAction('renew')"
+            >
+              Gia hạn
+            </button>
+            <button
+              v-if="canTerminate"
+              type="button"
+              role="menuitem"
+              class="flex w-full items-center gap-2 px-3 py-2 text-sm text-white transition-colors hover:bg-dark-hover focus-visible:bg-dark-hover focus-visible:outline-none"
+              @click="emitAction('terminate')"
+            >
+              Kết thúc sớm
+            </button>
+            <template v-if="isAdmin">
+              <div class="h-px bg-dark-border" aria-hidden="true" />
+              <button
+                type="button"
+                role="menuitem"
+                class="flex w-full items-center gap-2 px-3 py-2 text-sm text-error transition-colors hover:bg-error/10 focus-visible:bg-error/10 focus-visible:outline-none"
+                @click="emitAction('delete')"
+              >
+                Xoá hợp đồng
+              </button>
+            </template>
+          </div>
+        </Transition>
       </div>
     </div>
 

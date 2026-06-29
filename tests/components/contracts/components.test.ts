@@ -17,6 +17,7 @@ const stubs = {
   IconSearch: iconStub,
   IconArrowUp: iconStub,
   IconChevronDown: iconStub,
+  IconMoreVertical: iconStub,
   UiToolbar: defineComponent({
     setup(_, { slots }) {
       return () => h('div', { 'data-test': 'toolbar' }, [slots.default?.(), slots.actions?.()])
@@ -188,9 +189,9 @@ describe('ContractBulkActionsBar', () => {
 })
 
 describe('ContractDetailHero', () => {
-  it('renders stat tiles and active action buttons', async () => {
+  it('renders stat tiles and exposes lifecycle actions via the Quản trị menu', async () => {
     const wrapper = mount(ContractDetailHero, {
-      props: { contract: buildContract(), paidAmount: 1000000 },
+      props: { contract: buildContract(), paidAmount: 1000000, isAdmin: true },
       global: { stubs },
     })
 
@@ -198,19 +199,37 @@ describe('ContractDetailHero', () => {
     expect(wrapper.text()).toContain('An Tran')
     expect(wrapper.text()).toContain('Phòng A101')
     expect(wrapper.find('[data-test="status"]').attributes('data-status')).toBe('active')
+    expect(wrapper.find('[data-test="hero-actions-menu"]').exists()).toBe(false)
 
-    await wrapper.findAll('button').find(button => button.text().includes('Gia hạn'))!.trigger('click')
+    await wrapper.find('[data-test="hero-actions-trigger"]').trigger('click')
+    expect(wrapper.find('[data-test="hero-actions-menu"]').exists()).toBe(true)
+
+    const menuButtons = wrapper.find('[data-test="hero-actions-menu"]').findAll('button')
+    const renewBtn = menuButtons.find(b => b.text().includes('Gia hạn'))
+    const terminateBtn = menuButtons.find(b => b.text().includes('Kết thúc sớm'))
+    const editBtn = menuButtons.find(b => b.text().includes('Chỉnh sửa'))
+    const deleteBtn = menuButtons.find(b => b.text().includes('Xoá'))
+    expect(renewBtn).toBeDefined()
+    expect(terminateBtn).toBeDefined()
+    expect(editBtn).toBeDefined()
+    expect(deleteBtn).toBeDefined()
+
+    await renewBtn!.trigger('click')
     expect(wrapper.emitted('renew')).toHaveLength(1)
   })
 
-  it('hides active action buttons for terminated contracts', () => {
+  it('omits lifecycle items the contract status disallows and hides Xoá for non-admin', async () => {
     const wrapper = mount(ContractDetailHero, {
-      props: { contract: buildContract({ status: 'terminated' }) },
+      props: { contract: buildContract({ status: 'terminated' }), isAdmin: false },
       global: { stubs },
     })
 
-    expect(wrapper.text()).not.toContain('Gia hạn')
-    expect(wrapper.text()).not.toContain('Kết thúc sớm')
+    await wrapper.find('[data-test="hero-actions-trigger"]').trigger('click')
+    const menu = wrapper.find('[data-test="hero-actions-menu"]')
+    expect(menu.text()).toContain('Chỉnh sửa')
+    expect(menu.text()).not.toContain('Gia hạn')
+    expect(menu.text()).not.toContain('Kết thúc sớm')
+    expect(menu.text()).not.toContain('Xoá')
   })
 })
 
