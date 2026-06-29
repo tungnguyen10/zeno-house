@@ -1,14 +1,9 @@
 export function useAuth() {
   const supabase = useSupabaseClient()
-  const config = useRuntimeConfig()
 
   function getRedirectTo() {
-    const configuredUrl = config.public.siteUrl
-    const origin = typeof configuredUrl === 'string' && configuredUrl.length > 0
-      ? configuredUrl
-      : window.location.origin
-
-    return `${origin.replace(/\/$/, '')}/auth/callback`
+    // Always use current origin so redirect works correctly in both local dev and production
+    return `${window.location.origin}/auth/callback`
   }
 
   async function login(email: string, password: string) {

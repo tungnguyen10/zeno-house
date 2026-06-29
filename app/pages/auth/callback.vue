@@ -3,25 +3,33 @@ definePageMeta({
   layout: 'auth',
 })
 
-const route = useRoute()
-const supabase = useSupabaseClient()
+// @nuxtjs/supabase plugin (enforce: "pre") auto-exchanges the PKCE code
+// via detectSessionInUrl during client initialization. Manually calling
+// exchangeCodeForSession would fail because the verifier is already consumed.
+// Instead, just watch for the session to be populated via onAuthStateChange.
+const user = useSupabaseUser()
 const errorMessage = ref<string | null>(null)
+let timeoutId: ReturnType<typeof setTimeout>
 
-onMounted(async () => {
-  const code = typeof route.query.code === 'string' ? route.query.code : null
-
-  if (!code) {
-    errorMessage.value = 'Không tìm thấy mã xác thực từ Google'
-    return
+watch(user, async (newUser) => {
+  if (newUser) {
+    clearTimeout(timeoutId)
+    await navigateTo('/')
   }
+}, { immediate: true })
 
-  const { error } = await supabase.auth.exchangeCodeForSession(code)
-  if (error) {
-    errorMessage.value = error.message
-    return
+onMounted(() => {
+  if (!user.value) {
+    timeoutId = setTimeout(() => {
+      if (!user.value) {
+        errorMessage.value = 'Đăng nhập thất bại. Vui lòng thử lại.'
+      }
+    }, 8000)
   }
+})
 
-  await navigateTo('/')
+onUnmounted(() => {
+  clearTimeout(timeoutId)
 })
 </script>
 
