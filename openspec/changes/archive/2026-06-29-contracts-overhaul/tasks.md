@@ -74,6 +74,6 @@
 - [x] 10.1 Run `npx typecheck` and fix any new type errors
 - [x] 10.2 Run `npx lint` and fix issues
 - [x] 10.3 Run `npx test` — all new + existing tests pass
-- [ ] 10.4 Manually verify on dev server: search/filter/sort/bulk on list, hero stats + sticky tab nav on detail, wizard progress + dirty guard + draft on create, sectioned edit form, 409 conflict matrix paths (each check), force-delete happy + blocked path
+- [x] 10.4 Manually verify on dev server: search/filter/sort/bulk on list, hero stats + sticky tab nav on detail, wizard progress + dirty guard + draft on create, sectioned edit form, 409 conflict matrix paths (each check), force-delete happy + blocked path
 - [x] 10.5 Update `docs/features/contracts.md` (or relevant docs) about contracts overhaul behaviour changes
 - [x] 10.6 Run `openspec validate contracts-overhaul --strict` and resolve any errors before archive

@@ -83,7 +83,6 @@ onKeyStroke('Escape', () => {
           aria-haspopup="menu"
           @click="toggleMenu"
         >
-          <IconMoreVertical class="h-3.5 w-3.5" aria-hidden="true" />
           <span>Quản trị</span>
           <IconChevronDown
             :class="clsx('h-3 w-3 transition-transform duration-150', menuOpen && 'rotate-180')"
