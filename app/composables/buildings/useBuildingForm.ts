@@ -164,6 +164,7 @@ export function useBuildingForm<T = unknown>(options: UseBuildingFormOptions<T> 
       }
 
       clearDraft()
+      clearNuxtData()
       await navigateTo('/buildings')
     }
     catch (e: unknown) {
@@ -191,6 +192,7 @@ export function useBuildingForm<T = unknown>(options: UseBuildingFormOptions<T> 
         body: result.data,
       })
       clearDraft()
+      clearNuxtData()
       await navigateTo(buildingPath(res.data))
     }
     catch (e: unknown) {

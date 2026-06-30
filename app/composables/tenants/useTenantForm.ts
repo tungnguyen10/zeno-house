@@ -134,6 +134,7 @@ export function useTenantForm<T = unknown>(options: UseTenantFormOptions<T> = {}
         body: result.data,
       })
       clearDraft()
+      clearNuxtData()
       await navigateTo(res.data ? tenantPath(res.data) : '/tenants')
     }
     catch (e: unknown) {
@@ -161,6 +162,7 @@ export function useTenantForm<T = unknown>(options: UseTenantFormOptions<T> = {}
         body: result.data,
       })
       clearDraft()
+      clearNuxtData()
       await navigateTo(res.data ? tenantPath(res.data) : `/tenants/${id}`)
     }
     catch (e: unknown) {

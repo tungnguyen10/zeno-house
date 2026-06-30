@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { onBeforeRouteLeave } from 'vue-router'
 import { buildingFormToApiPayload, type BuildingFormData } from '~/components/buildings/BuildingForm.vue'
 import type { UiTableColumn } from '~/components/ui/UiTable.vue'
 
@@ -98,23 +97,7 @@ async function onSubmit(data: BuildingFormData) {
   } as Parameters<typeof submitCreate>[0])
 }
 
-onBeforeRouteLeave((_to, _from, next) => {
-  if (!isDirty.value) return next()
-  const ok = typeof window !== 'undefined'
-    ? window.confirm('Có thay đổi chưa lưu. Bạn có chắc muốn rời trang?')
-    : true
-  return next(ok)
-})
-
-if (import.meta.client) {
-  const handler = (event: BeforeUnloadEvent) => {
-    if (!isDirty.value) return
-    event.preventDefault()
-    event.returnValue = ''
-  }
-  window.addEventListener('beforeunload', handler)
-  onBeforeUnmount(() => window.removeEventListener('beforeunload', handler))
-}
+const { showLeaveConfirm, confirmLeave, cancelLeave } = useDirtyGuard(isDirty, isLoading)
 </script>
 
 <template>
@@ -226,5 +209,14 @@ if (import.meta.client) {
       </template>
       </BuildingForm>
     </div>
+
+    <UiConfirmModal
+      :open="showLeaveConfirm"
+      title="Rời trang?"
+      message="Có thay đổi chưa lưu. Bạn có chắc muốn rời trang?"
+      confirm-label="Rời trang"
+      @confirm="confirmLeave"
+      @cancel="cancelLeave"
+    />
   </div>
 </template>

@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { onBeforeRouteLeave } from 'vue-router'
 import type { ContractFormData } from '~/components/contracts/ContractForm.vue'
 import type { ContractOccupantAddInput } from '~/utils/validators/contract-occupants'
 import type { Tenant } from '~/types/tenants'
@@ -157,23 +156,7 @@ async function createContract(data: ContractFormData) {
   currentStep.value = 3
 }
 
-onBeforeRouteLeave((_to, _from, next) => {
-  if (!isDirty.value) return next()
-  const ok = typeof window !== 'undefined'
-    ? window.confirm('Có thay đổi chưa lưu. Bạn có chắc muốn rời trang?')
-    : true
-  return next(ok)
-})
-
-if (import.meta.client) {
-  const handler = (event: BeforeUnloadEvent) => {
-    if (!isDirty.value) return
-    event.preventDefault()
-    event.returnValue = ''
-  }
-  window.addEventListener('beforeunload', handler)
-  onBeforeUnmount(() => window.removeEventListener('beforeunload', handler))
-}
+const { showLeaveConfirm, confirmLeave, cancelLeave } = useDirtyGuard(isDirty, isLoading)
 </script>
 
 <template>
@@ -304,5 +287,14 @@ if (import.meta.client) {
         </div>
       </section>
     </div>
+
+    <UiConfirmModal
+      :open="showLeaveConfirm"
+      title="Rời trang?"
+      message="Có thay đổi chưa lưu. Bạn có chắc muốn rời trang?"
+      confirm-label="Rời trang"
+      @confirm="confirmLeave"
+      @cancel="cancelLeave"
+    />
   </div>
 </template>

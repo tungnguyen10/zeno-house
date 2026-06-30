@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { onBeforeRouteLeave } from 'vue-router'
 import type { ApiSuccess } from '~/types/api'
 import type { Room } from '~/types/rooms'
 import { roomFormToApiPayload, type RoomFormData } from '~/components/rooms/RoomForm.vue'
@@ -98,23 +97,7 @@ function onClearDraft() {
   draftDismissed.value = true
 }
 
-onBeforeRouteLeave((_to, _from, next) => {
-  if (!isDirty.value || skipDirtyGuard.value) return next()
-  const ok = typeof window !== 'undefined'
-    ? window.confirm('Có thay đổi chưa lưu. Bạn có chắc muốn rời trang?')
-    : true
-  return next(ok)
-})
-
-if (import.meta.client) {
-  const handler = (event: BeforeUnloadEvent) => {
-    if (!isDirty.value || skipDirtyGuard.value) return
-    event.preventDefault()
-    event.returnValue = ''
-  }
-  window.addEventListener('beforeunload', handler)
-  onBeforeUnmount(() => window.removeEventListener('beforeunload', handler))
-}
+const { showLeaveConfirm, confirmLeave, cancelLeave } = useDirtyGuard(isDirty, skipDirtyGuard)
 </script>
 
 <template>
@@ -146,5 +129,14 @@ if (import.meta.client) {
         @clear-draft="onClearDraft"
       />
     </div>
+
+    <UiConfirmModal
+      :open="showLeaveConfirm"
+      title="Rời trang?"
+      message="Có thay đổi chưa lưu. Bạn có chắc muốn rời trang?"
+      confirm-label="Rời trang"
+      @confirm="confirmLeave"
+      @cancel="cancelLeave"
+    />
   </div>
 </template>

@@ -4,6 +4,7 @@ import type { ApiSuccess } from '~/types/api'
 export function useRoomDetail(id: string) {
   const { data, status, error, refresh } = useFetch<ApiSuccess<Room>>(
     `/api/rooms/${id}`,
+    { getCachedData: (_key, nuxtApp) => nuxtApp.isHydrating ? nuxtApp.payload.data[_key] : undefined },
   )
 
   const room = computed(() => data.value?.data ?? null)

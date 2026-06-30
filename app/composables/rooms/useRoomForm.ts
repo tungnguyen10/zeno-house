@@ -146,6 +146,7 @@ export function useRoomForm<T = unknown>(options: UseRoomFormOptions<T> = {}) {
         body: result.data,
       })
       clearDraft()
+      clearNuxtData()
       await navigateTo('/rooms')
     }
     catch (e: unknown) {
@@ -173,6 +174,7 @@ export function useRoomForm<T = unknown>(options: UseRoomFormOptions<T> = {}) {
         body: result.data,
       })
       clearDraft()
+      clearNuxtData()
       await navigateTo(roomPath(res.data))
     }
     catch (e: unknown) {

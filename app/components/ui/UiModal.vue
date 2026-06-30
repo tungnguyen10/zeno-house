@@ -35,10 +35,14 @@ function onKeydown(event: KeyboardEvent) {
 function onAfterEnter(el: Element) {
   (el as HTMLElement).focus()
 }
+
+// Prevent SSR/client hydration mismatch: don't render Teleport content on server
+const mounted = ref(false)
+onMounted(() => { mounted.value = true })
 </script>
 
 <template>
-  <Teleport to="body">
+  <Teleport v-if="mounted" to="body">
     <Transition
       enter-active-class="transition-opacity duration-200"
       leave-active-class="transition-opacity duration-200"
