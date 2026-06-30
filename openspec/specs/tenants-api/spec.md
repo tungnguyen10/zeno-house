@@ -248,3 +248,9 @@ Each method SHALL re-check permissions using `can(user, capability)`.
 - **WHEN** tenant has no occupancy rows
 - **THEN** the count returns `0`
 
+### Requirement: tenants-api - mutation audit
+Tenant service mutation methods SHALL write audit events to `audit_events`.
+
+#### Scenario: TenantService mutations emit audit events
+- **WHEN** any mutation method on `TenantService` is called
+- **THEN** an audit event is written to `audit_events`

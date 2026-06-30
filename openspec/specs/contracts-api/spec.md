@@ -412,3 +412,9 @@ Each method SHALL re-check permissions using `can(user, capability)`.
 - **WHEN** contract has no paid invoices
 - **THEN** the count returns `0`
 
+### Requirement: contracts-api - mutation audit
+Contract service mutation methods SHALL write audit events to `audit_events`.
+
+#### Scenario: ContractService mutations emit audit events
+- **WHEN** any mutation method on `ContractService` is called
+- **THEN** an audit event is written to `audit_events`

@@ -246,3 +246,9 @@ Each method SHALL re-check permissions using `can(user, capability)` and `throwF
 - **WHEN** building has no rooms or contracts
 - **THEN** the count returns `0`
 
+### Requirement: buildings-api - mutation audit
+Building service mutation methods SHALL write audit events to `audit_events` in addition to existing behavior.
+
+#### Scenario: BuildingService mutations emit audit events
+- **WHEN** any mutation method on `BuildingService` is called
+- **THEN** an audit event is written to `audit_events` (in addition to existing behavior)

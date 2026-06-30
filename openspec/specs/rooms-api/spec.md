@@ -232,3 +232,9 @@ Each method SHALL re-check permissions using `can(user, capability)` and throw F
 - **WHEN** room has no contracts
 - **THEN** the count returns `0`
 
+### Requirement: rooms-api - mutation audit
+Room service mutation methods SHALL write audit events to `audit_events`.
+
+#### Scenario: RoomService mutations emit audit events
+- **WHEN** any mutation method on `RoomService` is called
+- **THEN** an audit event is written to `audit_events`
