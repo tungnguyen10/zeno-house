@@ -8,6 +8,7 @@ import type {
 } from '~/utils/validators/rooms'
 import { RoomRepository, type RoomFilters } from '../../repositories/rooms'
 import { BuildingRepository } from '../../repositories/buildings'
+import { assertBuildingScope, getAssignedBuildingIds } from '../../utils/scope'
 
 export interface RoomBulkResult {
   succeeded: string[]
@@ -22,18 +23,23 @@ export const RoomService = {
   ): Promise<{ items: Room[]; total: number }> {
     if (!can(user, 'rooms.read')) throwForbidden('Không có quyền xem danh sách phòng')
     let buildingId = filters.buildingId
+    const buildingIds = await getAssignedBuildingIds(event, user)
     if (buildingId) {
       const building = await BuildingRepository.findByIdentifier(event, buildingId)
       if (!building) throwNotFound('Không tìm thấy tòa nhà')
+      if (buildingIds && !buildingIds.includes(building.id)) {
+        return { items: [], total: 0 }
+      }
       buildingId = building.id
     }
-    return RoomRepository.findAll(event, { ...filters, buildingId })
+    return RoomRepository.findAll(event, { ...filters, buildingId, buildingIds })
   },
 
   async get(event: H3Event, user: AuthUser, id: string): Promise<Room> {
     if (!can(user, 'rooms.read')) throwForbidden('Không có quyền xem phòng')
     const room = await RoomRepository.findByIdentifier(event, id)
     if (!room) throwNotFound('Không tìm thấy phòng')
+    await assertBuildingScope(event, user, room.buildingId, 'read')
     return room
   },
 
@@ -46,6 +52,7 @@ export const RoomService = {
     if (!can(user, 'rooms.read')) throwForbidden('Không có quyền xem phòng')
     const building = await BuildingRepository.findByIdentifier(event, buildingIdentifier)
     if (!building) throwNotFound('Không tìm thấy tòa nhà')
+    await assertBuildingScope(event, user, building.id, 'read')
     const room = await RoomRepository.findByBuildingAndRoomSlug(event, building.id, roomSlug)
     if (!room) throwNotFound('Không tìm thấy phòng')
     return room
@@ -53,6 +60,7 @@ export const RoomService = {
 
   async create(event: H3Event, user: AuthUser, input: RoomCreateInput): Promise<Room> {
     if (!can(user, 'rooms.create')) throwForbidden('Không có quyền tạo phòng')
+    await assertBuildingScope(event, user, input.building_id, 'write')
     return RoomRepository.insert(event, input)
   },
 
@@ -60,6 +68,7 @@ export const RoomService = {
     if (!can(user, 'rooms.update')) throwForbidden('Không có quyền cập nhật phòng')
     const existing = await RoomRepository.findByIdentifier(event, id)
     if (!existing) throwNotFound('Không tìm thấy phòng')
+    await assertBuildingScope(event, user, existing.buildingId, 'write')
     return RoomRepository.update(event, existing.id, input)
   },
 
@@ -72,6 +81,7 @@ export const RoomService = {
     if (!can(user, 'rooms.delete')) throwForbidden('Không có quyền xoá phòng')
     const existing = await RoomRepository.findByIdentifier(event, id)
     if (!existing) throwNotFound('Không tìm thấy phòng')
+    await assertBuildingScope(event, user, existing.buildingId, 'write')
 
     if (opts.force) {
       return RoomRepository.softArchive(event, existing.id)
@@ -124,12 +134,15 @@ export const RoomService = {
         }
 
         if (input.action === 'archive') {
+          await assertBuildingScope(event, user, existing.buildingId, 'write')
           await RoomRepository.softArchive(event, existing.id)
         }
         else if (input.action === 'activate') {
+          await assertBuildingScope(event, user, existing.buildingId, 'write')
           await RoomRepository.update(event, existing.id, { status: 'available' })
         }
         else if (input.action === 'set_maintenance') {
+          await assertBuildingScope(event, user, existing.buildingId, 'write')
           await RoomRepository.update(event, existing.id, { status: 'maintenance' })
         }
         succeeded.push(id)

@@ -7,6 +7,7 @@ import type {
   BuildingUpdateInput,
 } from '~/utils/validators/buildings'
 import { BuildingRepository } from '../../repositories/buildings'
+import { assertBuildingScope, getAssignedBuildingIds } from '../../utils/scope'
 
 export interface BuildingListOptions {
   page: number
@@ -15,6 +16,7 @@ export interface BuildingListOptions {
   status?: ('active' | 'inactive')[]
   sort?: 'name' | 'created_at' | 'total_rooms'
   order?: 'asc' | 'desc'
+  buildingIds?: string[] | null
 }
 
 export interface BuildingBulkResult {
@@ -29,13 +31,15 @@ export const BuildingService = {
     opts: BuildingListOptions,
   ): Promise<{ items: Building[]; total: number }> {
     if (!can(user, 'buildings.read')) throwForbidden('Không có quyền xem danh sách tòa nhà')
-    return BuildingRepository.findAll(event, opts)
+    const buildingIds = await getAssignedBuildingIds(event, user)
+    return BuildingRepository.findAll(event, { ...opts, buildingIds })
   },
 
   async get(event: H3Event, user: AuthUser, id: string): Promise<Building> {
     if (!can(user, 'buildings.read')) throwForbidden('Không có quyền xem tòa nhà')
     const building = await BuildingRepository.findByIdentifier(event, id)
     if (!building) throwNotFound('Không tìm thấy tòa nhà')
+    await assertBuildingScope(event, user, building.id, 'read')
     return building
   },
 
@@ -57,6 +61,7 @@ export const BuildingService = {
     if (!can(user, 'buildings.update')) throwForbidden('Không có quyền cập nhật tòa nhà')
     const existing = await BuildingRepository.findByIdentifier(event, id)
     if (!existing) throwNotFound('Không tìm thấy tòa nhà')
+    await assertBuildingScope(event, user, existing.id, 'write')
     return BuildingRepository.update(event, existing.id, input)
   },
 
@@ -69,6 +74,7 @@ export const BuildingService = {
     if (!can(user, 'buildings.delete')) throwForbidden('Không có quyền xoá tòa nhà')
     const existing = await BuildingRepository.findByIdentifier(event, id)
     if (!existing) throwNotFound('Không tìm thấy tòa nhà')
+    await assertBuildingScope(event, user, existing.id, 'write')
 
     if (opts.force) {
       return BuildingRepository.softArchive(event, existing.id)

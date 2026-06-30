@@ -111,8 +111,13 @@ export const BuildingRepository = {
       status?: ('active' | 'inactive')[]
       sort?: 'name' | 'created_at' | 'total_rooms'
       order?: 'asc' | 'desc'
+      buildingIds?: string[] | null
     },
   ): Promise<{ items: Building[]; total: number }> {
+    if (opts.buildingIds && opts.buildingIds.length === 0) {
+      return { items: [], total: 0 }
+    }
+
     const client = await serverSupabaseClient(event)
     const sort = opts.sort ?? 'created_at'
     const order = opts.order ?? 'desc'
@@ -134,6 +139,9 @@ export const BuildingRepository = {
       }
       if (opts.status && opts.status.length > 0) {
         query = query.in('status', opts.status)
+      }
+      if (opts.buildingIds) {
+        query = query.in('id', opts.buildingIds)
       }
 
       const { data, error, count } = await query
@@ -162,6 +170,9 @@ export const BuildingRepository = {
     }
     if (opts.status && opts.status.length > 0) {
       query = query.in('status', opts.status)
+    }
+    if (opts.buildingIds) {
+      query = query.in('id', opts.buildingIds)
     }
 
     query = query.order(sort, { ascending }).range(from, to)

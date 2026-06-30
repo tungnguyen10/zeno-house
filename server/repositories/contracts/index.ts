@@ -10,6 +10,7 @@ export interface ContractFilters {
   room_id?: string
   tenant_id?: string
   building_id?: string
+  buildingIds?: string[] | null
   status?: ContractStatus[]
   q?: string
   sort?: 'start_date' | 'end_date' | 'created_at' | 'monthly_rent'
@@ -71,6 +72,10 @@ export const ContractRepository = {
     event: H3Event,
     filters: ContractFilters = {},
   ): Promise<{ items: ContractWithDetails[]; total: number }> {
+    if (filters.buildingIds && filters.buildingIds.length === 0) {
+      return { items: [], total: 0 }
+    }
+
     const client = await serverSupabaseClient(event)
     const page = filters.page ?? 1
     const limit = filters.limit ?? 20
@@ -87,6 +92,7 @@ export const ContractRepository = {
     if (filters.room_id) query = query.eq('room_id', filters.room_id)
     if (filters.tenant_id) query = query.eq('tenant_id', filters.tenant_id)
     if (filters.building_id) query = query.eq('building_id', filters.building_id)
+    else if (filters.buildingIds) query = query.in('building_id', filters.buildingIds)
     if (filters.status && filters.status.length > 0) {
       query = query.in('status', filters.status)
     }

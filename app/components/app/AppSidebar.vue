@@ -21,6 +21,10 @@ const userInitial = computed(() => {
   return email.charAt(0).toUpperCase() || 'U'
 })
 
+const visibleNavItems = computed(() =>
+  _props.navItems.filter(item => !item.adminOnly || authStore.isAdmin),
+)
+
 function isActive(to: string) {
   if (to === '/') return route.path === '/'
   return route.path.startsWith(to)
@@ -58,7 +62,7 @@ function navItemClass(to: string) {
     <!-- Navigation -->
     <nav class="flex-1 overflow-y-auto px-3 py-4" aria-label="Main navigation">
       <ul class="space-y-0.5" role="list">
-        <li v-for="item in navItems" :key="item.key">
+        <li v-for="item in visibleNavItems" :key="item.key">
           <NuxtLink
             :to="item.to"
             :class="navItemClass(item.to)"

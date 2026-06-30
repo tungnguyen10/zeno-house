@@ -7,12 +7,14 @@ import { ContractRenewalRepository } from '../repositories/contract-renewals'
 import { ContractRepository } from '../repositories/contracts'
 import { ContractServiceRepository } from '../repositories/contract-services'
 import { ContractOccupantRepository } from '../repositories/contract-occupants'
+import { assertBuildingScope } from '../utils/scope'
 
 export const ContractRenewalService = {
   async list(event: H3Event, user: AuthUser, contractId: string): Promise<ContractRenewal[]> {
     if (!can(user, 'contracts.read')) throwForbidden('Không có quyền xem lịch sử gia hạn')
     const contract = await ContractRepository.findById(event, contractId)
     if (!contract) throwNotFound('Không tìm thấy hợp đồng')
+    await assertBuildingScope(event, user, contract.buildingId, 'read')
     return ContractRenewalRepository.listByContract(event, contract.id)
   },
 
@@ -21,6 +23,7 @@ export const ContractRenewalService = {
 
     const contract = await ContractRepository.findById(event, contractId)
     if (!contract) throwNotFound('Không tìm thấy hợp đồng')
+    await assertBuildingScope(event, user, contract.buildingId, 'write')
     const resolvedContractId = contract.id
     if (contract.status === 'renewed') throwConflict('Hợp đồng đã được gia hạn thành hợp đồng mới, không thể gia hạn tiếp')
     if (contract.status === 'terminated') throwConflict('Hợp đồng đã chấm dứt, không thể gia hạn')

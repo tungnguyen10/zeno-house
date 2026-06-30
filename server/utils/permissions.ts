@@ -27,6 +27,7 @@ const PERMISSIONS: Record<UserRole, Set<string>> = {
     'contract-services.write',
     'billing.read',
     'billing.write',
+    'billing.corrections',
     'billing.close',
     'billing.unissue',
     'dashboard.read',
@@ -45,6 +46,7 @@ const PERMISSIONS: Record<UserRole, Set<string>> = {
     'contract-services.write',
     'billing.read',
     'billing.write',
+    'billing.corrections',
     'dashboard.read',
   ]),
 }

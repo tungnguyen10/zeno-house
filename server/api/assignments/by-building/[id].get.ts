@@ -1,0 +1,13 @@
+import { AssignmentRepository } from '../../../repositories/assignments'
+import { BuildingRepository } from '../../../repositories/buildings'
+import { assertBuildingScope } from '../../../utils/scope'
+
+export default defineEventHandler(async (event) => {
+  const user = await requireAuth(event)
+  const id = getRouterParam(event, 'id')!
+  const building = await BuildingRepository.findByIdentifier(event, id)
+  if (!building) throwNotFound('Không tìm thấy tòa nhà')
+  await assertBuildingScope(event, user, building.id, 'read')
+
+  return { data: await AssignmentRepository.findManagersByBuilding(event, building.id) }
+})

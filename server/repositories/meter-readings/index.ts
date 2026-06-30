@@ -7,6 +7,7 @@ import { mapMeterReading } from '~/utils/mappers/meter-readings'
 export interface MeterReadingFilters {
   room_id?: string
   building_id?: string
+  buildingIds?: string[] | null
   period_year?: number
   period_month?: number
   meter_type?: string
@@ -38,6 +39,8 @@ export const MeterReadingRepository = {
   },
 
   async findAll(event: H3Event, filters: MeterReadingFilters = {}): Promise<MeterReading[]> {
+    if (filters.buildingIds && filters.buildingIds.length === 0) return []
+
     const client = await serverSupabaseClient(event)
     let query = client
       .from('meter_readings')
@@ -47,6 +50,7 @@ export const MeterReadingRepository = {
 
     if (filters.room_id) query = query.eq('room_id', filters.room_id)
     if (filters.building_id) query = query.eq('building_id', filters.building_id)
+    else if (filters.buildingIds) query = query.in('building_id', filters.buildingIds)
     if (filters.period_year) query = query.eq('period_year', filters.period_year)
     if (filters.period_month) query = query.eq('period_month', filters.period_month)
     if (filters.meter_type) query = query.eq('meter_type', filters.meter_type)

@@ -3,6 +3,7 @@ export interface NavItem {
   label: string
   to: string
   icon: string
+  adminOnly?: boolean
 }
 
 export const NAV_ITEMS = [
@@ -13,4 +14,5 @@ export const NAV_ITEMS = [
   { key: 'contracts', label: 'Hợp đồng', to: '/contracts', icon: 'IconDocumentText' },
   { key: 'invoices', label: 'Hoá đơn', to: '/invoices', icon: 'IconDocument' },
   { key: 'billing', label: 'Vận hành', to: '/billing', icon: 'IconBriefcase' },
+  { key: 'settings', label: 'Settings', to: '/settings/managers', icon: 'IconSettings', adminOnly: true },
 ] satisfies NavItem[]

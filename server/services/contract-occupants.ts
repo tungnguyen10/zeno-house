@@ -4,12 +4,14 @@ import type { ContractOccupant } from '~/types/contract-occupants'
 import type { ContractOccupantAddInput, ContractOccupantMoveOutInput } from '~/utils/validators/contract-occupants'
 import { ContractOccupantRepository } from '../repositories/contract-occupants'
 import { ContractRepository } from '../repositories/contracts'
+import { assertBuildingScope } from '../utils/scope'
 
 export const ContractOccupantService = {
   async list(event: H3Event, user: AuthUser, contractId: string): Promise<ContractOccupant[]> {
     if (!can(user, 'contracts.read')) throwForbidden('Không có quyền xem người ở hợp đồng')
     const contract = await ContractRepository.findById(event, contractId)
     if (!contract) throwNotFound('Không tìm thấy hợp đồng')
+    await assertBuildingScope(event, user, contract.buildingId, 'read')
     return ContractOccupantRepository.listByContract(event, contract.id)
   },
 
@@ -17,6 +19,7 @@ export const ContractOccupantService = {
     if (!can(user, 'contracts.update')) throwForbidden('Không có quyền thêm người ở hợp đồng')
     const contract = await ContractRepository.findById(event, contractId)
     if (!contract) throwNotFound('Không tìm thấy hợp đồng')
+    await assertBuildingScope(event, user, contract.buildingId, 'write')
 
     // Block primary tenant
     if (input.tenant_id === contract.tenantId) throwConflict('Người thuê chính đã là đại diện hợp đồng, không thể thêm vào danh sách người ở')
@@ -50,6 +53,7 @@ export const ContractOccupantService = {
     if (!can(user, 'contracts.delete')) throwForbidden('Chỉ admin mới được ghi nhận rời phòng')
     const contract = await ContractRepository.findById(event, contractId)
     if (!contract) throwNotFound('Không tìm thấy hợp đồng')
+    await assertBuildingScope(event, user, contract.buildingId, 'write')
     const occupant = await ContractOccupantRepository.findById(event, occupantId)
     if (!occupant || occupant.contractId !== contract.id) throwNotFound('Không tìm thấy người ở')
     return ContractOccupantRepository.updateById(event, occupantId, input)
@@ -59,6 +63,7 @@ export const ContractOccupantService = {
     if (!can(user, 'contracts.delete')) throwForbidden('Chỉ admin mới được xoá người ở')
     const contract = await ContractRepository.findById(event, contractId)
     if (!contract) throwNotFound('Không tìm thấy hợp đồng')
+    await assertBuildingScope(event, user, contract.buildingId, 'write')
     const occupant = await ContractOccupantRepository.findById(event, occupantId)
     if (!occupant || occupant.contractId !== contract.id) throwNotFound('Không tìm thấy người ở')
     return ContractOccupantRepository.deleteById(event, occupantId)

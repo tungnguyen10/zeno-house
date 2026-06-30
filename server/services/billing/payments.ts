@@ -15,6 +15,7 @@ import { BillingAuditService } from './audit'
 import { BillingPeriodService } from './periods'
 import { BillingDisplayResolver } from './display'
 import { calculateInvoicePaymentStatus } from './rules'
+import { assertBuildingScope } from '../../utils/scope'
 
 interface BulkPaymentRpcErrorDetails {
   failed_index?: number
@@ -44,6 +45,9 @@ export const InvoicePaymentService = {
     if (!can(user, 'billing.read')) throwForbidden('Không có quyền xem khoản thu')
     const invoice = await InvoiceRepository.findByIdentifier(event, invoiceId)
     if (!invoice) throwNotFound('Không tìm thấy hoá đơn')
+    const period = await BillingPeriodRepository.findById(event, invoice.billingPeriodId)
+    if (!period) throwNotFound('Không tìm thấy kỳ vận hành')
+    await assertBuildingScope(event, user, period.buildingId, 'read')
     const payments = await InvoicePaymentRepository.listByInvoice(event, invoice.id)
     return new BillingDisplayResolver(event).enrichPayments(payments)
   },
@@ -72,6 +76,8 @@ export const InvoicePaymentService = {
     }
 
     const period = await BillingPeriodRepository.findById(event, invoice.billingPeriodId)
+    if (!period) throwNotFound('Không tìm thấy kỳ vận hành')
+    await assertBuildingScope(event, user, period.buildingId, 'write')
     if (period?.status === 'closed') throwConflict('Kỳ đã chốt — không thể ghi nhận thanh toán mới')
 
     const payment = await InvoicePaymentRepository.insert(event, invoice.id, user.id ?? null, input)
@@ -143,6 +149,17 @@ export const InvoicePaymentService = {
 
     const items = body.payments
     if (items.length === 0) throwValidationError('Cần ít nhất 1 dòng thanh toán')
+
+    const scopedPeriodIds = new Set<string>()
+    for (const item of items) {
+      const invoice = await InvoiceRepository.findByIdentifier(event, item.invoice_id)
+      if (!invoice) throwNotFound('Không tìm thấy hoá đơn')
+      if (scopedPeriodIds.has(invoice.billingPeriodId)) continue
+      const period = await BillingPeriodRepository.findById(event, invoice.billingPeriodId)
+      if (!period) throwNotFound('Không tìm thấy kỳ vận hành')
+      await assertBuildingScope(event, user, period.buildingId, 'write')
+      scopedPeriodIds.add(period.id)
+    }
 
     const payload = items.map(item => ({
       invoice_id: item.invoice_id,

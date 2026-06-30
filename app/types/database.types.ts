@@ -1015,6 +1015,44 @@ export type Database = {
         }
         Relationships: []
       }
+      user_building_assignments: {
+        Row: {
+          building_id: string
+          can_delete_master_data: boolean
+          created_at: string
+          created_by: string | null
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          building_id: string
+          can_delete_master_data?: boolean
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          building_id?: string
+          can_delete_master_data?: boolean
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_building_assignments_building_id_fkey"
+            columns: ["building_id"]
+            isOneToOne: false
+            referencedRelation: "buildings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenants: {
         Row: {
           code: string

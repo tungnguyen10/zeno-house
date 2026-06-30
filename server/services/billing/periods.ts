@@ -17,6 +17,7 @@ import { InvoiceRepository } from '../../repositories/billing/invoices'
 import { InvoicePaymentRepository } from '../../repositories/billing/payments'
 import { BuildingRepository } from '../../repositories/buildings'
 import { assertReason } from '../../utils/billing/reason'
+import { assertBuildingScope, getAssignedBuildingIds } from '../../utils/scope'
 import { BillingAuditService } from './audit'
 import {
   loadBillableContractsInPeriod,
@@ -86,14 +87,17 @@ export const BillingPeriodService = {
     if (!can(user, 'billing.read')) throwForbidden('Không có quyền xem kỳ vận hành')
 
     let buildingId = filters.building_id
+    const scopedBuildingIds = await getAssignedBuildingIds(event, user)
     if (buildingId) {
       const building = await BuildingRepository.findByIdentifier(event, buildingId)
       if (!building) throwNotFound('Không tìm thấy tòa nhà')
+      if (scopedBuildingIds && !scopedBuildingIds.includes(building.id)) return []
       buildingId = building.id
     }
 
     const repoFilters: BillingPeriodListFilters = {
       building_id: buildingId,
+      buildingIds: scopedBuildingIds,
       period_year: filters.period_year,
       period_month: filters.period_month,
       status: filters.status,
@@ -168,6 +172,7 @@ export const BillingPeriodService = {
 
     const building = await BuildingRepository.findByIdentifier(event, input.building_id)
     if (!building) throwNotFound('Không tìm thấy tòa nhà')
+    await assertBuildingScope(event, user, building.id, 'write')
 
     const existing = await BillingPeriodRepository.findByBuildingPeriod(
       event,
@@ -204,6 +209,7 @@ export const BillingPeriodService = {
     if (!can(user, 'billing.read')) throwForbidden('Không có quyền xem kỳ vận hành')
     const period = await BillingPeriodRepository.findById(event, id)
     if (!period) throwNotFound('Không tìm thấy kỳ vận hành')
+    await assertBuildingScope(event, user, period.buildingId, 'read')
     return period
   },
 
@@ -219,6 +225,7 @@ export const BillingPeriodService = {
     if (!can(user, 'billing.read')) throwForbidden('Không có quyền xem kỳ vận hành')
     const period = await BillingPeriodRepository.findById(event, id)
     if (!period) throwNotFound('Không tìm thấy kỳ vận hành')
+    await assertBuildingScope(event, user, period.buildingId, 'read')
 
     const buildingMap = await loadBuildingsByIds(event, [period.buildingId])
     const building = buildingMap.get(period.buildingId)
@@ -281,6 +288,7 @@ export const BillingPeriodService = {
 
     const period = await BillingPeriodRepository.findById(event, id)
     if (!period) throwNotFound('Không tìm thấy kỳ vận hành')
+    await assertBuildingScope(event, user, period.buildingId, 'write')
     if (period.status === 'closed') return period
     if (period.status !== 'issued' && period.status !== 'collecting') {
       throwConflict('Chỉ có thể chốt kỳ đã phát hành hoặc đang thu')
@@ -319,6 +327,7 @@ export const BillingPeriodService = {
   ): Promise<BillingPeriod> {
     const period = await BillingPeriodRepository.findById(event, id)
     if (!period) throwNotFound('Không tìm thấy kỳ vận hành')
+    await assertBuildingScope(event, user, period.buildingId, 'write')
     assertPeriodCanTransition(period.status, next)
     if (period.status === next) return period
     const updated = await BillingPeriodRepository.updateStatus(event, period.id, next, {
@@ -353,6 +362,7 @@ export const BillingPeriodService = {
 
     const period = await BillingPeriodRepository.findById(event, id)
     if (!period) throwNotFound('Không tìm thấy kỳ vận hành')
+    await assertBuildingScope(event, user, period.buildingId, 'write')
     if (period.status === 'closed') throwConflict('Kỳ đã chốt — không thể huỷ phát hành')
 
     const invoices = await InvoiceRepository.listByPeriod(event, period.id)

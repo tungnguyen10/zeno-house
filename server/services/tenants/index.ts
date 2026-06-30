@@ -8,6 +8,7 @@ import type {
 } from '~/utils/validators/tenants'
 import { TenantRepository, type TenantFilters } from '../../repositories/tenants'
 import { BuildingRepository } from '../../repositories/buildings'
+import { getAssignedBuildingIds } from '../../utils/scope'
 
 export interface TenantBulkResult {
   succeeded: string[]
@@ -22,18 +23,26 @@ export const TenantService = {
   ): Promise<{ items: Tenant[]; total: number }> {
     if (!can(user, 'tenants.read')) throwForbidden('Không có quyền xem danh sách khách thuê')
     let buildingId = filters.building_id
+    const buildingIds = await getAssignedBuildingIds(event, user)
     if (buildingId) {
       const building = await BuildingRepository.findByIdentifier(event, buildingId)
       if (!building) throwNotFound('Không tìm thấy tòa nhà')
+      if (buildingIds && !buildingIds.includes(building.id)) {
+        return { items: [], total: 0 }
+      }
       buildingId = building.id
     }
-    return TenantRepository.findAll(event, { ...filters, building_id: buildingId })
+    return TenantRepository.findAll(event, { ...filters, building_id: buildingId, buildingIds })
   },
 
   async get(event: H3Event, user: AuthUser, id: string): Promise<Tenant> {
     if (!can(user, 'tenants.read')) throwForbidden('Không có quyền xem khách thuê')
     const tenant = await TenantRepository.findByIdentifier(event, id)
     if (!tenant) throwNotFound('Không tìm thấy khách thuê')
+    const buildingIds = await getAssignedBuildingIds(event, user)
+    if (buildingIds && !await TenantRepository.hasContractInBuildings(event, tenant.id, buildingIds)) {
+      throwNotFound('Không tìm thấy khách thuê')
+    }
     return tenant
   },
 

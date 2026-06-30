@@ -142,6 +142,7 @@ export interface BillingPeriodSummary {
 
 export interface BillingPeriodListFilters {
   building_id?: string
+  buildingIds?: string[] | null
   period_year?: number
   period_month?: number
   status?: BillingPeriodStatus

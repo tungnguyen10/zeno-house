@@ -6,10 +6,12 @@ import type { MeterReadingCreateInput, MeterReadingBulkInput, MeterReadingUpdate
 import { MeterReadingRepository } from '../../repositories/meter-readings'
 import { BuildingRepository } from '../../repositories/buildings'
 import { RoomRepository } from '../../repositories/rooms'
+import { assertBuildingScope, getAssignedBuildingIds } from '../../utils/scope'
 
 export interface MeterReadingFilters {
   room_id?: string
   building_id?: string
+  buildingIds?: string[] | null
   period_year?: number
   period_month?: number
   meter_type?: string
@@ -20,9 +22,11 @@ export const MeterReadingService = {
     if (!can(_user, 'meter-readings.read')) throwForbidden('Không có quyền xem chỉ số đồng hồ')
 
     let roomId = filters.room_id
+    const buildingIds = await getAssignedBuildingIds(event, _user)
     if (roomId) {
       const room = await RoomRepository.findByIdentifier(event, roomId)
       if (!room) throwNotFound('Không tìm thấy phòng')
+      await assertBuildingScope(event, _user, room.buildingId, 'read')
       roomId = room.id
     }
 
@@ -30,6 +34,7 @@ export const MeterReadingService = {
     if (buildingId) {
       const building = await BuildingRepository.findByIdentifier(event, buildingId)
       if (!building) throwNotFound('Không tìm thấy tòa nhà')
+      if (buildingIds && !buildingIds.includes(building.id)) return []
       buildingId = building.id
     }
 
@@ -39,7 +44,7 @@ export const MeterReadingService = {
         period_month: filters.period_month,
       })
     }
-    return MeterReadingRepository.findAll(event, { ...filters, building_id: buildingId })
+    return MeterReadingRepository.findAll(event, { ...filters, building_id: buildingId, buildingIds })
   },
 
   async getBuildingStatus(
@@ -52,6 +57,7 @@ export const MeterReadingService = {
     if (!can(_user, 'meter-readings.read')) throwForbidden('Không có quyền xem chỉ số đồng hồ')
     const building = await BuildingRepository.findByIdentifier(event, buildingId)
     if (!building) throwNotFound('Không tìm thấy tòa nhà')
+    await assertBuildingScope(event, _user, building.id, 'read')
     return MeterReadingRepository.findBuildingRoomsStatus(event, building.id, periodYear, periodMonth)
   },
 
@@ -64,6 +70,7 @@ export const MeterReadingService = {
     if (!can(_user, 'meter-readings.read')) throwForbidden('Không có quyền xem chỉ số đồng hồ')
     const room = await RoomRepository.findByIdentifier(event, roomId)
     if (!room) throwNotFound('Không tìm thấy phòng')
+    await assertBuildingScope(event, _user, room.buildingId, 'read')
     return MeterReadingRepository.findLatestByRoom(event, room.id, options)
   },
 
@@ -82,6 +89,7 @@ export const MeterReadingService = {
       .eq('id', input.room_id)
       .single()
     if (!room) throw createError({ statusCode: 404, message: 'Không tìm thấy phòng' })
+    await assertBuildingScope(event, _user, room.building_id, 'write')
     return MeterReadingRepository.create(event, {
       ...input,
       building_id: room.building_id,
@@ -107,6 +115,10 @@ export const MeterReadingService = {
       .in('id', roomIds)
     if (error) throw createError({ statusCode: 500, message: error.message })
     const roomMap = new Map((rooms ?? []).map(r => [r.id, r.building_id]))
+    const uniqueBuildingIds = [...new Set(roomMap.values())]
+    await Promise.all(uniqueBuildingIds.map(buildingId =>
+      assertBuildingScope(event, _user, buildingId, 'write'),
+    ))
 
     const enriched = input.readings.map(r => {
       const buildingId = roomMap.get(r.room_id)
@@ -126,6 +138,7 @@ export const MeterReadingService = {
     if (!can(_user, 'meter-readings.write')) throwForbidden('Không có quyền sửa chỉ số đồng hồ')
     const existing = await MeterReadingRepository.findById(event, id)
     if (!existing) throw createError({ statusCode: 404, message: 'Không tìm thấy chỉ số' })
+    await assertBuildingScope(event, _user, existing.buildingId, 'write')
     return MeterReadingRepository.update(event, id, input)
   },
 }

@@ -1,0 +1,195 @@
+import { serverSupabaseClient, serverSupabaseServiceRole } from '#supabase/server'
+import type { H3Event } from 'h3'
+import type {
+  AssignmentBuilding,
+  AssignmentCreatePayload,
+  AssignmentManager,
+  AssignmentUpdatePayload,
+  AssignmentWithBuilding,
+  ManagerAssignment,
+  UserBuildingAssignment,
+} from '~/types/assignments'
+import type { Database } from '~/types/database.types'
+
+type AssignmentRow = Database['public']['Tables']['user_building_assignments']['Row']
+
+function mapAssignment(row: AssignmentRow): UserBuildingAssignment {
+  return {
+    id: row.id,
+    user_id: row.user_id,
+    building_id: row.building_id,
+    can_delete_master_data: row.can_delete_master_data,
+    created_by: row.created_by,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+  }
+}
+
+function userName(user: { user_metadata?: Record<string, unknown> | null }): string | null {
+  const metadata = user.user_metadata ?? {}
+  const value = metadata.full_name ?? metadata.name ?? metadata.display_name
+  return typeof value === 'string' && value.trim() ? value.trim() : null
+}
+
+async function listManagers(event: H3Event): Promise<AssignmentManager[]> {
+  const client = serverSupabaseServiceRole<Database>(event)
+  const managers: AssignmentManager[] = []
+  let page = 1
+
+  while (true) {
+    const { data, error } = await client.auth.admin.listUsers({ page, perPage: 100 })
+    if (error) throw createError({ statusCode: 500, message: error.message })
+
+    for (const user of data.users) {
+      if (user.app_metadata?.role !== 'manager') continue
+      managers.push({
+        id: user.id,
+        email: user.email ?? null,
+        name: userName(user),
+      })
+    }
+
+    if (data.users.length < 100) break
+    page++
+  }
+
+  return managers
+}
+
+export const AssignmentRepository = {
+  async findBuildingIdsByUser(event: H3Event, userId: string): Promise<string[]> {
+    const client = await serverSupabaseClient<Database>(event)
+    const { data, error } = await client
+      .from('user_building_assignments')
+      .select('building_id')
+      .eq('user_id', userId)
+
+    if (error) throw createError({ statusCode: 500, message: error.message })
+    return (data ?? []).map(row => row.building_id)
+  },
+
+  async findByUserAndBuilding(
+    event: H3Event,
+    userId: string,
+    buildingId: string,
+  ): Promise<UserBuildingAssignment | null> {
+    const client = await serverSupabaseClient<Database>(event)
+    const { data, error } = await client
+      .from('user_building_assignments')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('building_id', buildingId)
+      .maybeSingle()
+
+    if (error) throw createError({ statusCode: 500, message: error.message })
+    return data ? mapAssignment(data) : null
+  },
+
+  async findAllWithBuildings(event: H3Event): Promise<ManagerAssignment[]> {
+    const [managers, assignments] = await Promise.all([
+      listManagers(event),
+      AssignmentRepository.findAll(event),
+    ])
+
+    const byManager = new Map<string, AssignmentWithBuilding[]>()
+    for (const assignment of assignments) {
+      const items = byManager.get(assignment.user_id) ?? []
+      items.push(assignment)
+      byManager.set(assignment.user_id, items)
+    }
+
+    return managers.map(manager => ({
+      manager,
+      assignments: byManager.get(manager.id) ?? [],
+    }))
+  },
+
+  async findManagersByBuilding(event: H3Event, buildingId: string): Promise<AssignmentManager[]> {
+    const managers = await AssignmentRepository.findAllWithBuildings(event)
+    return managers
+      .filter(row => row.assignments.some(assignment => assignment.building_id === buildingId))
+      .map(row => row.manager)
+  },
+
+  async findAll(event: H3Event): Promise<AssignmentWithBuilding[]> {
+    const client = await serverSupabaseClient<Database>(event)
+    const { data, error } = await client
+      .from('user_building_assignments')
+      .select('*, buildings(id, slug, code, name, address, status)')
+      .order('created_at', { ascending: true })
+
+    if (error) throw createError({ statusCode: 500, message: error.message })
+
+    return (data ?? []).map((row) => {
+      const building = row.buildings as AssignmentBuilding | null
+      return {
+        ...mapAssignment(row),
+        building,
+      }
+    })
+  },
+
+  async insert(
+    event: H3Event,
+    input: AssignmentCreatePayload & { created_by?: string | null },
+  ): Promise<UserBuildingAssignment> {
+    const client = await serverSupabaseClient<Database>(event)
+    const { data, error } = await client
+      .from('user_building_assignments')
+      .insert({
+        user_id: input.user_id,
+        building_id: input.building_id,
+        can_delete_master_data: false,
+        created_by: input.created_by ?? null,
+      })
+      .select('*')
+      .single()
+
+    if (error) {
+      if (error.code === '23505') throwConflict('Manager đã được gán vào tòa nhà này')
+      throw createError({ statusCode: 500, message: error.message })
+    }
+    return mapAssignment(data)
+  },
+
+  async update(
+    event: H3Event,
+    id: string,
+    input: AssignmentUpdatePayload,
+  ): Promise<UserBuildingAssignment> {
+    const client = await serverSupabaseClient<Database>(event)
+    const { data, error } = await client
+      .from('user_building_assignments')
+      .update({ can_delete_master_data: input.can_delete_master_data })
+      .eq('id', id)
+      .select('*')
+      .single()
+
+    if (error) throw createError({ statusCode: 500, message: error.message })
+    return mapAssignment(data)
+  },
+
+  async remove(event: H3Event, id: string): Promise<void> {
+    const client = await serverSupabaseClient<Database>(event)
+    const { error } = await client
+      .from('user_building_assignments')
+      .delete()
+      .eq('id', id)
+
+    if (error) throw createError({ statusCode: 500, message: error.message })
+  },
+
+  async findBuildingsWithoutManager(event: H3Event): Promise<AssignmentBuilding[]> {
+    const client = await serverSupabaseClient<Database>(event)
+    const [{ data: buildings, error: buildingError }, { data: assignments, error: assignmentError }] = await Promise.all([
+      client.from('buildings').select('id, slug, code, name, address, status').order('name'),
+      client.from('user_building_assignments').select('building_id'),
+    ])
+
+    if (buildingError) throw createError({ statusCode: 500, message: buildingError.message })
+    if (assignmentError) throw createError({ statusCode: 500, message: assignmentError.message })
+
+    const assigned = new Set((assignments ?? []).map(row => row.building_id))
+    return (buildings ?? []).filter(building => !assigned.has(building.id))
+  },
+}

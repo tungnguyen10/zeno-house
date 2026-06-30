@@ -7,6 +7,7 @@ import { isUuid, slugifyName } from '~/utils/format/slug'
 
 export interface RoomFilters {
   buildingId?: string
+  buildingIds?: string[] | null
   status?: RoomStatus[]
   floor?: number
   page?: number
@@ -21,6 +22,10 @@ export const RoomRepository = {
     event: H3Event,
     filters: RoomFilters = {},
   ): Promise<{ items: Room[]; total: number }> {
+    if (filters.buildingIds && filters.buildingIds.length === 0) {
+      return { items: [], total: 0 }
+    }
+
     const client = await serverSupabaseClient(event)
     const page = filters.page ?? 1
     const limit = filters.limit ?? 20
@@ -35,6 +40,7 @@ export const RoomRepository = {
       .select('*', { count: 'exact' })
 
     if (filters.buildingId) query = query.eq('building_id', filters.buildingId)
+    else if (filters.buildingIds) query = query.in('building_id', filters.buildingIds)
     if (filters.status && filters.status.length > 0) {
       query = query.in('status', filters.status)
     }

@@ -6,6 +6,8 @@ import { mapBillingPeriod } from '~/utils/mappers/billing'
 
 export const BillingPeriodRepository = {
   async list(event: H3Event, filters: BillingPeriodListFilters): Promise<BillingPeriod[]> {
+    if (filters.buildingIds && filters.buildingIds.length === 0) return []
+
     const client = await serverSupabaseClient(event)
     let query = client
       .from('billing_periods')
@@ -15,6 +17,7 @@ export const BillingPeriodRepository = {
       .order('building_id', { ascending: true })
 
     if (filters.building_id) query = query.eq('building_id', filters.building_id)
+    else if (filters.buildingIds) query = query.in('building_id', filters.buildingIds)
     if (filters.period_year !== undefined) query = query.eq('period_year', filters.period_year)
     if (filters.period_month !== undefined) query = query.eq('period_month', filters.period_month)
     if (filters.status) query = query.eq('status', filters.status)

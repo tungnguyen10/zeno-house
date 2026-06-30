@@ -9,6 +9,7 @@ import { nameInitialsFromFullName } from '~/utils/format/codes'
 export interface TenantFilters {
   q?: string
   building_id?: string
+  buildingIds?: string[] | null
   contract_state?: 'with_contract' | 'without_contract'
   status?: TenantStatus[]
   sort?: 'full_name' | 'created_at' | 'code'
@@ -107,11 +108,43 @@ async function loadActiveAssignments(event: H3Event): Promise<Map<string, Tenant
   return assignments
 }
 
+async function findTenantIdsForBuildings(event: H3Event, buildingIds: string[]): Promise<string[]> {
+  if (buildingIds.length === 0) return []
+
+  const client = await serverSupabaseClient(event)
+  const { data: contracts, error: contractError } = await client
+    .from('contracts')
+    .select('id, tenant_id')
+    .in('building_id', buildingIds)
+
+  if (contractError) throw createError({ statusCode: 500, message: contractError.message })
+
+  const contractIds = (contracts ?? []).map(contract => contract.id)
+  const primaryTenantIds = (contracts ?? []).map(contract => contract.tenant_id)
+  let occupantTenantIds: string[] = []
+
+  if (contractIds.length > 0) {
+    const { data: occupants, error: occupantError } = await client
+      .from('contract_occupants')
+      .select('tenant_id')
+      .in('contract_id', contractIds)
+
+    if (occupantError) throw createError({ statusCode: 500, message: occupantError.message })
+    occupantTenantIds = (occupants ?? []).map(occupant => occupant.tenant_id)
+  }
+
+  return [...new Set([...primaryTenantIds, ...occupantTenantIds])]
+}
+
 export const TenantRepository = {
   async findAll(
     event: H3Event,
     filters: TenantFilters = {},
   ): Promise<{ items: Tenant[]; total: number }> {
+    if (filters.buildingIds && filters.buildingIds.length === 0) {
+      return { items: [], total: 0 }
+    }
+
     const client = await serverSupabaseClient(event)
     const page = filters.page ?? 1
     const limit = filters.limit ?? 20
@@ -130,29 +163,12 @@ export const TenantRepository = {
     const activeAssignments = await loadActiveAssignments(event)
     const occupiedIds = [...activeAssignments.keys()]
 
-    if (filters.building_id) {
-      const { data: contracts, error: contractError } = await client
-        .from('contracts')
-        .select('id, tenant_id')
-        .eq('building_id', filters.building_id)
+    const effectiveBuildingIds = filters.building_id
+      ? [filters.building_id]
+      : filters.buildingIds
 
-      if (contractError) throw createError({ statusCode: 500, message: contractError.message })
-
-      const contractIds = (contracts ?? []).map(contract => contract.id)
-      const primaryTenantIds = (contracts ?? []).map(contract => contract.tenant_id)
-      let occupantTenantIds: string[] = []
-
-      if (contractIds.length > 0) {
-        const { data: occupants, error: occupantError } = await client
-          .from('contract_occupants')
-          .select('tenant_id')
-          .in('contract_id', contractIds)
-
-        if (occupantError) throw createError({ statusCode: 500, message: occupantError.message })
-        occupantTenantIds = (occupants ?? []).map(occupant => occupant.tenant_id)
-      }
-
-      const tenantIds = [...new Set([...primaryTenantIds, ...occupantTenantIds])]
+    if (effectiveBuildingIds) {
+      const tenantIds = await findTenantIdsForBuildings(event, effectiveBuildingIds)
       if (tenantIds.length === 0) {
         return { items: [], total: 0 }
       }
@@ -227,6 +243,15 @@ export const TenantRepository = {
 
     if (error) throw createError({ statusCode: 500, message: error.message })
     return data ? mapTenant(data) : null
+  },
+
+  async hasContractInBuildings(
+    event: H3Event,
+    tenantId: string,
+    buildingIds: string[],
+  ): Promise<boolean> {
+    const tenantIds = await findTenantIdsForBuildings(event, buildingIds)
+    return tenantIds.includes(tenantId)
   },
 
   async findByIdNumber(event: H3Event, idNumber: string, excludeId?: string): Promise<Tenant | null> {

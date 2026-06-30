@@ -77,8 +77,38 @@ const BILLING_PERIODS_LIMIT = 500
 const INVOICES_LIMIT = 2000
 
 export const DashboardRepository = {
-  async getSummary(event: H3Event): Promise<{ summary: DashboardSummary; generatedAt: string }> {
+  async getSummary(
+    event: H3Event,
+    buildingIds?: string[] | null,
+  ): Promise<{ summary: DashboardSummary; generatedAt: string }> {
     const client = await serverSupabaseClient(event)
+    const scopedBuildingIds = buildingIds ?? null
+
+    if (scopedBuildingIds && scopedBuildingIds.length === 0) {
+      return {
+        summary: {
+          buildings: { total: 0 },
+          rooms: emptyRoomStats(),
+          tenants: { total: 0 },
+          contracts: { active: 0, expiringSoon: 0, expiringUrgent: 0 },
+          billing: {
+            currentMonth: {
+              period: periodToken(new Date().getFullYear(), new Date().getMonth() + 1),
+              invoiceTotal: 0,
+              paidAmount: 0,
+              outstandingAmount: 0,
+              overdueAmount: 0,
+              collectionRate: 0,
+            },
+          },
+          buildingBreakdown: [],
+          billingTrend: buildFullTrend(new Map(), new Date().getFullYear(), new Date().getMonth() + 1),
+          revenueBreakdown: { totalIssued: 0, totalPaid: 0, categories: [] },
+          pendingOperations: [],
+        },
+        generatedAt: new Date().toISOString(),
+      }
+    }
 
     const now = new Date()
     const currentYear = now.getFullYear()
@@ -93,50 +123,85 @@ export const DashboardRepository = {
     const expiringUrgentDate = expiringUrgent.toISOString().slice(0, 10)
     const { startYear, startMonth } = trendWindowStart(currentYear, currentMonth)
 
+    let buildingsQuery = client.from('buildings').select('id, slug, name').order('name', { ascending: true })
+    let roomsQuery = client.from('rooms').select('id, status, building_id').limit(ROOMS_LIMIT)
+    let activeContractsQuery = client.from('contracts').select('*', { count: 'exact', head: true }).eq('status', 'active')
+    let expiringContractsQuery = client
+      .from('contracts')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'active')
+      .gte('end_date', today)
+      .lte('end_date', expiringSoonDate)
+    let expiringUrgentContractsQuery = client
+      .from('contracts')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'active')
+      .gte('end_date', today)
+      .lte('end_date', expiringUrgentDate)
+    let periodsQuery = client
+      .from('billing_periods')
+      .select('id, building_id, period_year, period_month, status')
+      .limit(BILLING_PERIODS_LIMIT)
+
+    if (scopedBuildingIds) {
+      buildingsQuery = buildingsQuery.in('id', scopedBuildingIds)
+      roomsQuery = roomsQuery.in('building_id', scopedBuildingIds)
+      activeContractsQuery = activeContractsQuery.in('building_id', scopedBuildingIds)
+      expiringContractsQuery = expiringContractsQuery.in('building_id', scopedBuildingIds)
+      expiringUrgentContractsQuery = expiringUrgentContractsQuery.in('building_id', scopedBuildingIds)
+      periodsQuery = periodsQuery.in('building_id', scopedBuildingIds)
+    }
+
     const [
       buildingsResult,
       roomsResult,
+      tenantContractsResult,
+      tenantOccupantsResult,
       tenantsResult,
       activeContractsResult,
       expiringContractsResult,
       expiringUrgentContractsResult,
       periodsResult,
-      invoicesResult,
     ] = await Promise.all([
-      client.from('buildings').select('id, slug, name').order('name', { ascending: true }),
-      client.from('rooms').select('id, status, building_id').limit(ROOMS_LIMIT),
-      client.from('tenants').select('*', { count: 'exact', head: true }),
-      client.from('contracts').select('*', { count: 'exact', head: true }).eq('status', 'active'),
-      client
-        .from('contracts')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'active')
-        .gte('end_date', today)
-        .lte('end_date', expiringSoonDate),
-      client
-        .from('contracts')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'active')
-        .gte('end_date', today)
-        .lte('end_date', expiringUrgentDate),
-      client
-        .from('billing_periods')
-        .select('id, building_id, period_year, period_month, status')
-        .limit(BILLING_PERIODS_LIMIT),
-      client
-        .from('invoices')
-        .select(
-          'billing_period_id, billing_periods!inner(building_id, period_year, period_month), total_amount, paid_amount, balance_amount, status, due_date, invoice_charges(charge_type, amount)',
-        )
-        .or(
-          `period_year.gt.${startYear},and(period_year.eq.${startYear},period_month.gte.${startMonth})`,
-          { foreignTable: 'billing_periods' },
-        )
-        .limit(INVOICES_LIMIT),
+      buildingsQuery,
+      roomsQuery,
+      scopedBuildingIds
+        ? client.from('contracts').select('id, tenant_id').in('building_id', scopedBuildingIds)
+        : Promise.resolve({ data: [], error: null }),
+      scopedBuildingIds
+        ? client
+            .from('contract_occupants')
+            .select('tenant_id, contracts!inner(building_id)')
+            .in('contracts.building_id', scopedBuildingIds)
+        : Promise.resolve({ data: [], error: null }),
+      scopedBuildingIds
+        ? Promise.resolve({ count: 0, error: null })
+        : client.from('tenants').select('*', { count: 'exact', head: true }),
+      activeContractsQuery,
+      expiringContractsQuery,
+      expiringUrgentContractsQuery,
+      periodsQuery,
     ])
+
+    const scopedPeriodIds = (periodsResult.data ?? []).map(period => period.id)
+    const invoicesResult = scopedPeriodIds.length === 0
+      ? { data: [], error: null }
+      : await client
+          .from('invoices')
+          .select(
+            'billing_period_id, billing_periods!inner(building_id, period_year, period_month), total_amount, paid_amount, balance_amount, status, due_date, invoice_charges(charge_type, amount)',
+          )
+          .in('billing_period_id', scopedPeriodIds)
+          .or(
+            `period_year.gt.${startYear},and(period_year.eq.${startYear},period_month.gte.${startMonth})`,
+            { foreignTable: 'billing_periods' },
+          )
+          .limit(INVOICES_LIMIT)
 
     if (buildingsResult.error) throwInternal(buildingsResult.error, 'dashboard.repository.buildings')
     if (roomsResult.error) throwInternal(roomsResult.error, 'dashboard.repository.rooms')
+    if (tenantContractsResult.error) throwInternal(tenantContractsResult.error, 'dashboard.repository.tenantContracts')
+    if (tenantOccupantsResult.error) throwInternal(tenantOccupantsResult.error, 'dashboard.repository.tenantOccupants')
     if (tenantsResult.error) throwInternal(tenantsResult.error, 'dashboard.repository.tenants')
     if (activeContractsResult.error) throwInternal(activeContractsResult.error, 'dashboard.repository.activeContracts')
     if (expiringContractsResult.error) throwInternal(expiringContractsResult.error, 'dashboard.repository.expiringContracts')
@@ -148,6 +213,12 @@ export const DashboardRepository = {
     const allRooms = roomsResult.data ?? []
     const allPeriods = periodsResult.data ?? []
     const allInvoices = invoicesResult.data ?? []
+    const scopedTenantIds = scopedBuildingIds
+      ? new Set([
+          ...((tenantContractsResult.data ?? []) as { tenant_id: string }[]).map(row => row.tenant_id),
+          ...((tenantOccupantsResult.data ?? []) as { tenant_id: string }[]).map(row => row.tenant_id),
+        ])
+      : null
 
     if (allRooms.length === ROOMS_LIMIT) console.warn('[dashboard] limit hit: rooms')
     if (allPeriods.length === BILLING_PERIODS_LIMIT) console.warn('[dashboard] limit hit: billing_periods')
@@ -332,7 +403,7 @@ export const DashboardRepository = {
     const summary: DashboardSummary = {
       buildings: { total: buildings.length },
       rooms: roomStats,
-      tenants: { total: tenantsResult.count ?? 0 },
+      tenants: { total: scopedTenantIds ? scopedTenantIds.size : tenantsResult.count ?? 0 },
       contracts: {
         active: activeContractsResult.count ?? 0,
         expiringSoon: expiringContractsResult.count ?? 0,

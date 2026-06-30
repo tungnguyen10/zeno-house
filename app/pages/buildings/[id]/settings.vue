@@ -2,10 +2,12 @@
 import type { ApiSuccess } from '~/types/api'
 import type { PricingType, ServiceCatalogItem } from '~/types/service-catalog'
 import type { ContractWithDetails } from '~/types/contracts'
+import type { AssignmentManager } from '~/types/assignments'
 import { buildingPath } from '~/utils/routes/operational'
 
 const route = useRoute()
 const id = route.params.id as string
+const authStore = useAuthStore()
 
 const { building, refresh: refreshBuilding } = useBuildingDetail(id)
 const {
@@ -36,6 +38,11 @@ const contractRows = computed(() =>
     tenantName: c.tenant.fullName,
   })),
 )
+
+const { data: managersData } = await useFetch<ApiSuccess<AssignmentManager[]>>(
+  `/api/assignments/by-building/${id}`,
+)
+const assignedManagers = computed(() => managersData.value?.data ?? [])
 
 const activeServiceCount = computed(() => services.value.filter(s => s.isActive).length)
 
@@ -169,6 +176,31 @@ async function handleUpdatePricingType(catalogId: string, pricingType: PricingTy
         <p v-if="codeSaveSuccess" class="mt-2 text-xs text-green-400">
           Code đã được lưu.
         </p>
+      </div>
+    </UiSection>
+
+    <UiSection
+      title="Managers"
+      description="Những manager đang được phân quyền vào tòa nhà này."
+    >
+      <template v-if="authStore.isAdmin" #actions>
+        <NuxtLink to="/settings/managers" class="text-sm text-cyan hover:text-cyan/80 transition-colors">
+          Quản lý phân quyền
+        </NuxtLink>
+      </template>
+      <div class="rounded-xl border border-dark-border bg-dark-surface p-5">
+        <div v-if="assignedManagers.length === 0" class="text-sm text-muted">
+          Chưa có manager nào được gán.
+        </div>
+        <div v-else class="flex flex-wrap gap-2">
+          <span
+            v-for="manager in assignedManagers"
+            :key="manager.id"
+            class="rounded-md border border-dark-border bg-dark-bg px-3 py-2 text-sm text-white"
+          >
+            {{ manager.name ?? manager.email ?? manager.id }}
+          </span>
+        </div>
       </div>
     </UiSection>
 

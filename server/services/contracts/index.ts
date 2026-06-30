@@ -8,6 +8,7 @@ import { ContractOccupantRepository } from '../../repositories/contract-occupant
 import { RoomRepository } from '../../repositories/rooms'
 import { BuildingRepository } from '../../repositories/buildings'
 import { TenantRepository } from '../../repositories/tenants'
+import { assertBuildingScope, getAssignedBuildingIds } from '../../utils/scope'
 
 interface ContractDeleteConflictDetails {
   reason?: 'ACTIVE_CONTRACT'
@@ -69,9 +70,13 @@ export const ContractService = {
     if (!can(user, 'contracts.read')) throwForbidden('Không có quyền xem danh sách hợp đồng')
 
     let buildingId = filters.building_id
+    const buildingIds = await getAssignedBuildingIds(event, user)
     if (buildingId) {
       const building = await BuildingRepository.findByIdentifier(event, buildingId)
       if (!building) throwNotFound('Building not found')
+      if (buildingIds && !buildingIds.includes(building.id)) {
+        return { items: [], total: 0 }
+      }
       buildingId = building.id
     }
 
@@ -92,6 +97,7 @@ export const ContractService = {
     return ContractRepository.findAll(event, {
       ...filters,
       building_id: buildingId,
+      buildingIds,
       room_id: roomId,
       tenant_id: tenantId,
     })
@@ -101,6 +107,7 @@ export const ContractService = {
     if (!can(user, 'contracts.read')) throwForbidden('Không có quyền xem hợp đồng')
     const contract = await ContractRepository.findByIdentifier(event, id)
     if (!contract) throwNotFound('Không tìm thấy hợp đồng')
+    await assertBuildingScope(event, user, contract.buildingId, 'read')
     return contract
   },
 
@@ -109,6 +116,7 @@ export const ContractService = {
 
     const room = await RoomRepository.findById(event, input.room_id)
     if (!room) throwNotFound('Không tìm thấy phòng')
+    await assertBuildingScope(event, user, room.buildingId, 'write')
     if (room.status === 'maintenance') throwConflict(`Phòng "${room.roomNumber}" đang bảo trì, không thể tạo hợp đồng`)
 
     if (input.status === 'active' || !input.status) {
@@ -158,12 +166,18 @@ export const ContractService = {
     if (!can(user, 'contracts.update')) throwForbidden('Không có quyền cập nhật hợp đồng')
     const existing = await ContractRepository.findByIdentifier(event, id)
     if (!existing) throwNotFound('Không tìm thấy hợp đồng')
+    await assertBuildingScope(event, user, existing.buildingId, 'write')
 
     const newStatus = input.status ?? existing.status
     const newRoomId = input.room_id ?? existing.roomId
     const wasActive = existing.status === 'active'
     const willBeActive = newStatus === 'active'
     const roomChanged = newRoomId !== existing.roomId
+    if (roomChanged) {
+      const newRoom = await RoomRepository.findById(event, newRoomId)
+      if (!newRoom) throwNotFound('Không tìm thấy phòng')
+      await assertBuildingScope(event, user, newRoom.buildingId, 'write')
+    }
 
     if (willBeActive) {
       const conflict = await ContractRepository.findActiveByRoomId(event, newRoomId, existing.id)
@@ -204,6 +218,7 @@ export const ContractService = {
     if (!can(user, 'contracts.delete')) throwForbidden('Không có quyền xoá hợp đồng')
     let existing = await ContractRepository.findByIdentifier(event, id)
     if (!existing) throwNotFound('Không tìm thấy hợp đồng')
+    await assertBuildingScope(event, user, existing.buildingId, 'write')
 
     if (opts.force && existing.status === 'active') {
       existing = await this.update(event, user, existing.id, { status: 'terminated' })

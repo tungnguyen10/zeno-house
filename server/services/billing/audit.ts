@@ -5,6 +5,8 @@ import type { BillingAuditEntityType } from '~/utils/constants/billing'
 import { BillingAuditRepository } from '../../repositories/billing/audit'
 import { formatAuditSummary } from './audit-summary'
 import { BillingDisplayResolver } from './display'
+import { BillingPeriodRepository } from '../../repositories/billing/periods'
+import { assertBuildingScope } from '../../utils/scope'
 
 declare const process: { env?: Record<string, string | undefined> }
 
@@ -45,6 +47,9 @@ export const BillingAuditService = {
     billingPeriodId: string,
   ): Promise<BillingAuditEvent[]> {
     if (!can(user, 'billing.read')) throwForbidden('Không có quyền xem nhật ký vận hành')
+    const billingPeriod = await BillingPeriodRepository.findById(event, billingPeriodId)
+    if (!billingPeriod) throwNotFound('Không tìm thấy kỳ vận hành')
+    await assertBuildingScope(event, user, billingPeriod.buildingId, 'read')
     const events = await BillingAuditRepository.listByPeriod(event, billingPeriodId)
     const resolver = new BillingDisplayResolver(event)
     const period = (await resolver.loadPeriods([billingPeriodId])).get(billingPeriodId)

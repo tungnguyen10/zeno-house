@@ -5,6 +5,18 @@ import type { ContractServiceUpdateInput } from '~/utils/validators/contract-ser
 import { mapContractService } from '~/utils/mappers/contract-services'
 
 export const ContractServiceRepository = {
+  async findById(event: H3Event, id: string): Promise<ContractService | null> {
+    const client = await serverSupabaseClient(event)
+    const { data, error } = await client
+      .from('contract_services')
+      .select('*, service_catalog(*)')
+      .eq('id', id)
+      .maybeSingle()
+
+    if (error) throw createError({ statusCode: 500, message: error.message })
+    return data ? mapContractService(data as Parameters<typeof mapContractService>[0]) : null
+  },
+
   async findByContract(event: H3Event, contractId: string): Promise<ContractService[]> {
     const client = await serverSupabaseClient(event)
     const { data, error } = await client

@@ -24,10 +24,14 @@ import { BillingDraftService } from './drafts'
 import { BillingDisplayResolver } from './display'
 import { validateAdjustment } from './rules'
 import { mapInvoice } from '~/utils/mappers/billing'
+import { assertBuildingScope } from '../../utils/scope'
 
 export const InvoiceService = {
   async list(event: H3Event, user: AuthUser, billingPeriodId: string): Promise<Invoice[]> {
     if (!can(user, 'billing.read')) throwForbidden('Không có quyền xem hoá đơn')
+    const period = await BillingPeriodRepository.findById(event, billingPeriodId)
+    if (!period) throwNotFound('Không tìm thấy kỳ vận hành')
+    await assertBuildingScope(event, user, period.buildingId, 'read')
     const invoices = await InvoiceRepository.listByPeriod(event, billingPeriodId)
     return new BillingDisplayResolver(event).enrichInvoices(invoices)
   },
@@ -40,6 +44,9 @@ export const InvoiceService = {
     if (!can(user, 'billing.read')) throwForbidden('Không có quyền xem hoá đơn')
     const invoice = await InvoiceRepository.findByIdentifier(event, invoiceId)
     if (!invoice) throwNotFound('Không tìm thấy hoá đơn')
+    const period = await BillingPeriodRepository.findById(event, invoice.billingPeriodId)
+    if (!period) throwNotFound('Không tìm thấy kỳ vận hành')
+    await assertBuildingScope(event, user, period.buildingId, 'read')
     const charges = await InvoiceRepository.listCharges(event, invoice.id)
     const payments = await InvoicePaymentRepository.listByInvoice(event, invoice.id)
     const resolver = new BillingDisplayResolver(event)
@@ -72,6 +79,7 @@ export const InvoiceService = {
 
     const period = await BillingPeriodRepository.findById(event, periodId)
     if (!period) throwNotFound('Không tìm thấy kỳ vận hành')
+    await assertBuildingScope(event, user, period.buildingId, 'write')
     if (period.status === 'closed') throwConflict('Kỳ đã chốt — không thể phát hành thêm hoá đơn')
 
     const draftResp = await BillingDraftService.calculateDraft(event, user, periodId)
@@ -169,7 +177,7 @@ export const InvoiceService = {
     invoiceId: string,
     input: VoidInvoiceInput,
   ): Promise<Invoice> {
-    if (!can(user, 'billing.write')) throwForbidden('Không có quyền huỷ hoá đơn')
+    if (!can(user, 'billing.corrections')) throwForbidden('Không có quyền huỷ hoá đơn')
     const reason = assertReason(input.reason, 10)
 
     const invoice = await InvoiceRepository.findByIdentifier(event, invoiceId)
@@ -180,6 +188,8 @@ export const InvoiceService = {
     }
 
     const period = await BillingPeriodRepository.findById(event, invoice.billingPeriodId)
+    if (!period) throwNotFound('Không tìm thấy kỳ vận hành')
+    await assertBuildingScope(event, user, period.buildingId, 'write')
     if (period?.status === 'closed') throwConflict('Kỳ đã chốt — không thể huỷ hoá đơn trực tiếp')
 
     const voided = await InvoiceRepository.voidById(event, invoice.id, user.id ?? null, reason)
@@ -213,7 +223,7 @@ export const InvoiceService = {
     voidedInvoiceId: string,
     input: ReissueInvoiceInput,
   ): Promise<Invoice> {
-    if (!can(user, 'billing.write')) throwForbidden('Không có quyền phát hành lại hoá đơn')
+    if (!can(user, 'billing.corrections')) throwForbidden('Không có quyền phát hành lại hoá đơn')
     const reason = assertReason(input.reason, 10)
 
     const voided = await InvoiceRepository.findByIdentifier(event, voidedInvoiceId)
@@ -222,6 +232,7 @@ export const InvoiceService = {
 
     const period = await BillingPeriodRepository.findById(event, voided.billingPeriodId)
     if (!period) throwNotFound('Không tìm thấy kỳ vận hành của hoá đơn')
+    await assertBuildingScope(event, user, period.buildingId, 'write')
     if (period.status === 'closed') throwConflict('Kỳ đã chốt — không thể phát hành lại')
 
     // Ensure no other active invoice already exists for this contract in this period.
@@ -299,13 +310,15 @@ export const InvoiceService = {
     user: AuthUser,
     input: AdjustmentChargeInput,
   ): Promise<{ invoice: Invoice; charge: InvoiceCharge }> {
-    if (!can(user, 'billing.write')) throwForbidden('Không có quyền tạo điều chỉnh')
+    if (!can(user, 'billing.corrections')) throwForbidden('Không có quyền tạo điều chỉnh')
 
     const target = await InvoiceRepository.findByIdentifier(event, input.target_invoice_id)
     if (!target) throwNotFound('Không tìm thấy hoá đơn đích')
     if (target.status === 'void') throwConflict('Hoá đơn đã huỷ — không thể thêm điều chỉnh')
 
     const period = await BillingPeriodRepository.findById(event, target.billingPeriodId)
+    if (!period) throwNotFound('Không tìm thấy kỳ vận hành')
+    await assertBuildingScope(event, user, period.buildingId, 'write')
     validateAdjustment({
       periodStatus: period?.status,
       invoicePaidAmount: target.paidAmount,

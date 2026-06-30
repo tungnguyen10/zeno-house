@@ -10,5 +10,6 @@ export type AuthUser = User & {
 declare module 'h3' {
   interface H3EventContext {
     user: AuthUser | null
+    __buildingScope?: string[] | null
   }
 }
