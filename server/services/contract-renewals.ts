@@ -8,6 +8,8 @@ import { ContractRepository } from '../repositories/contracts'
 import { ContractServiceRepository } from '../repositories/contract-services'
 import { ContractOccupantRepository } from '../repositories/contract-occupants'
 import { assertBuildingScope } from '../utils/scope'
+import { AuditService } from './audit'
+import { AUDIT_ACTIONS } from '~/utils/constants/audit'
 
 export const ContractRenewalService = {
   async list(event: H3Event, user: AuthUser, contractId: string): Promise<ContractRenewal[]> {
@@ -67,6 +69,14 @@ export const ContractRenewalService = {
         await ContractRenewalRepository.deleteById(event, renewal.id)
         throw createError({ statusCode: 500, message: error.message })
       }
+
+      await AuditService.append(event, user, {
+        building_id: contract.buildingId,
+        action: AUDIT_ACTIONS.CONTRACT_RENEWED,
+        entity_type: 'contract',
+        entity_id: resolvedContractId,
+        metadata: { mode: 'extend', renewal_id: renewal.id, new_end_date: newEndDate, new_monthly_rent: newRent },
+      })
 
       return renewal
     }
@@ -130,7 +140,7 @@ export const ContractRenewalService = {
       contract.endDate,
     )
 
-    return ContractRenewalRepository.insert(event, {
+    const renewal = await ContractRenewalRepository.insert(event, {
       contract_id: resolvedContractId,
       new_contract_id: newContractData.id,
       mode: 'new_contract',
@@ -141,5 +151,15 @@ export const ContractRenewalService = {
       reason: input.reason ?? null,
       created_by: user.id,
     })
+
+    await AuditService.append(event, user, {
+      building_id: contract.buildingId,
+      action: AUDIT_ACTIONS.CONTRACT_RENEWED,
+      entity_type: 'contract',
+      entity_id: resolvedContractId,
+      metadata: { mode: 'new_contract', renewal_id: renewal.id, new_contract_id: newContractData.id, new_end_date: newEndDate, new_monthly_rent: newRent },
+    })
+
+    return renewal
   },
 }

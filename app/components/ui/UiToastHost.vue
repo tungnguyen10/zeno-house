@@ -1,41 +1,98 @@
 <script setup lang="ts">
 const { toasts, dismiss, pause, resume } = useToast()
 
-function toneClass(severity: string) {
-  switch (severity) {
-    case 'success':
-      return 'border-success/40 bg-success/10 text-success-neon'
-    case 'danger':
-      return 'border-error/40 bg-error/10 text-error-vivid'
-    default:
-      return 'border-cyan/40 bg-cyan/10 text-cyan'
-  }
+interface ToneConfig {
+  container: string
+  bar: string
+  icon: string
+}
+
+const toneMap: Record<string, ToneConfig> = {
+  success: {
+    container: 'border-success-neon/25 bg-dark-surface',
+    bar: 'bg-success-neon',
+    icon: 'text-success-neon',
+  },
+  danger: {
+    container: 'border-error-vivid/25 bg-dark-surface',
+    bar: 'bg-error-vivid',
+    icon: 'text-error-vivid',
+  },
+  info: {
+    container: 'border-cyan/25 bg-dark-surface',
+    bar: 'bg-cyan',
+    icon: 'text-cyan',
+  },
+}
+
+function tone(severity: string): ToneConfig {
+  return toneMap[severity] ?? toneMap.info!
 }
 </script>
 
 <template>
   <Teleport to="body">
-    <div class="fixed inset-x-3 bottom-3 z-[70] flex flex-col gap-2 sm:inset-x-auto sm:bottom-auto sm:right-4 sm:top-4 sm:w-96">
+    <div
+      class="fixed inset-x-3 bottom-4 z-[70] flex flex-col-reverse gap-2
+             sm:inset-x-auto sm:bottom-auto sm:right-5 sm:top-5 sm:w-80 sm:flex-col"
+      aria-live="polite"
+      aria-label="Thông báo"
+    >
       <TransitionGroup
-        enter-active-class="transition duration-150"
-        leave-active-class="transition duration-150"
-        enter-from-class="translate-y-2 opacity-0 sm:translate-x-2 sm:translate-y-0"
-        leave-to-class="translate-y-2 opacity-0 sm:translate-x-2 sm:translate-y-0"
+        enter-active-class="transition-all duration-200 ease-out"
+        leave-active-class="transition-all duration-150 ease-in"
+        enter-from-class="opacity-0 translate-y-2 sm:translate-y-0 sm:translate-x-3"
+        leave-to-class="opacity-0 scale-95"
+        move-class="transition-all duration-200"
       >
         <div
           v-for="toast in toasts"
           :key="toast.id"
-          :class="['flex items-start justify-between gap-3 rounded-md border px-3 py-2 shadow-lg backdrop-blur', toneClass(toast.severity)]"
+          :class="[
+            'relative overflow-hidden rounded-lg border shadow-xl',
+            tone(toast.severity).container,
+          ]"
           role="status"
           @mouseenter="pause(toast.id)"
           @mouseleave="resume(toast.id)"
         >
-          <p class="text-sm leading-5 text-white">{{ toast.message }}</p>
-          <UiButton variant="ghost" size="sm" icon-only aria-label="Đóng thông báo" @click="dismiss(toast.id)">
-            ×
-          </UiButton>
+          <!-- Progress bar -->
+          <div
+            :class="['absolute inset-x-0 bottom-0 h-0.5', tone(toast.severity).bar]"
+            style="animation: toast-drain var(--duration, 4s) linear forwards"
+          />
+
+          <!-- Content row -->
+          <div class="flex items-start gap-3 px-4 py-3">
+            <!-- Icon -->
+            <span :class="['mt-px shrink-0', tone(toast.severity).icon]">
+              <IconCheckCircle v-if="toast.severity === 'success'" class="h-4 w-4" aria-hidden="true" />
+              <IconXCircle v-else-if="toast.severity === 'danger'" class="h-4 w-4" aria-hidden="true" />
+              <IconInfoCircle v-else class="h-4 w-4" aria-hidden="true" />
+            </span>
+
+            <!-- Message -->
+            <p class="flex-1 text-sm leading-5 text-white">{{ toast.message }}</p>
+
+            <!-- Dismiss -->
+            <button
+              type="button"
+              class="shrink-0 text-muted transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan/40"
+              aria-label="Đóng thông báo"
+              @click="dismiss(toast.id)"
+            >
+              <IconXCircle class="h-4 w-4" aria-hidden="true" />
+            </button>
+          </div>
         </div>
       </TransitionGroup>
     </div>
   </Teleport>
 </template>
+
+<style scoped>
+@keyframes toast-drain {
+  from { transform: scaleX(1); transform-origin: left }
+  to   { transform: scaleX(0); transform-origin: left }
+}
+</style>

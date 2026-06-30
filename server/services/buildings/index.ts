@@ -8,6 +8,8 @@ import type {
 } from '~/utils/validators/buildings'
 import { BuildingRepository } from '../../repositories/buildings'
 import { assertBuildingScope, getAssignedBuildingIds } from '../../utils/scope'
+import { AuditService } from '../audit'
+import { AUDIT_ACTIONS } from '~/utils/constants/audit'
 
 export interface BuildingListOptions {
   page: number
@@ -49,7 +51,15 @@ export const BuildingService = {
     input: BuildingCreateInput,
   ): Promise<Building> {
     if (!can(user, 'buildings.create')) throwForbidden('Không có quyền tạo tòa nhà')
-    return BuildingRepository.insert(event, input)
+    const result = await BuildingRepository.insert(event, input)
+    await AuditService.append(event, user, {
+      building_id: result.id,
+      action: AUDIT_ACTIONS.BUILDING_CREATED,
+      entity_type: 'building',
+      entity_id: result.id,
+      after_data: result,
+    })
+    return result
   },
 
   async update(
@@ -62,7 +72,16 @@ export const BuildingService = {
     const existing = await BuildingRepository.findByIdentifier(event, id)
     if (!existing) throwNotFound('Không tìm thấy tòa nhà')
     await assertBuildingScope(event, user, existing.id, 'write')
-    return BuildingRepository.update(event, existing.id, input)
+    const updated = await BuildingRepository.update(event, existing.id, input)
+    await AuditService.append(event, user, {
+      building_id: updated.id,
+      action: AUDIT_ACTIONS.BUILDING_UPDATED,
+      entity_type: 'building',
+      entity_id: updated.id,
+      before_data: existing,
+      after_data: updated,
+    })
+    return updated
   },
 
   async remove(
@@ -77,7 +96,16 @@ export const BuildingService = {
     await assertBuildingScope(event, user, existing.id, 'write')
 
     if (opts.force) {
-      return BuildingRepository.softArchive(event, existing.id)
+      const archived = await BuildingRepository.softArchive(event, existing.id)
+      await AuditService.append(event, user, {
+        building_id: existing.id,
+        action: AUDIT_ACTIONS.BUILDING_ARCHIVED,
+        entity_type: 'building',
+        entity_id: existing.id,
+        before_data: existing,
+        after_data: archived,
+      })
+      return archived
     }
 
     const [rooms, activeContracts] = await Promise.all([
@@ -99,6 +127,13 @@ export const BuildingService = {
     }
 
     await BuildingRepository.remove(event, existing.id)
+    await AuditService.append(event, user, {
+      building_id: existing.id,
+      action: AUDIT_ACTIONS.BUILDING_REMOVED,
+      entity_type: 'building',
+      entity_id: existing.id,
+      before_data: existing,
+    })
     return undefined
   },
 
@@ -151,6 +186,20 @@ export const BuildingService = {
         }
       }
     }
+
+    await AuditService.appendBulk(event, user, {
+      building_id: null,
+      entity_type: 'building',
+      aggregate_action: `building.bulk_${input.action}`,
+      items: succeeded.map(id => ({
+        entity_id: id,
+        building_id: id,
+        action: input.action === 'archive' ? AUDIT_ACTIONS.BUILDING_ARCHIVED : AUDIT_ACTIONS.BUILDING_ACTIVATED,
+      })),
+      succeeded,
+      total: input.ids.length,
+      failed: failed.length,
+    })
 
     return { succeeded, failed }
   },

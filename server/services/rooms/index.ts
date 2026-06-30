@@ -9,6 +9,8 @@ import type {
 import { RoomRepository, type RoomFilters } from '../../repositories/rooms'
 import { BuildingRepository } from '../../repositories/buildings'
 import { assertBuildingScope, getAssignedBuildingIds } from '../../utils/scope'
+import { AuditService } from '../audit'
+import { AUDIT_ACTIONS } from '~/utils/constants/audit'
 
 export interface RoomBulkResult {
   succeeded: string[]
@@ -61,7 +63,15 @@ export const RoomService = {
   async create(event: H3Event, user: AuthUser, input: RoomCreateInput): Promise<Room> {
     if (!can(user, 'rooms.create')) throwForbidden('Không có quyền tạo phòng')
     await assertBuildingScope(event, user, input.building_id, 'write')
-    return RoomRepository.insert(event, input)
+    const result = await RoomRepository.insert(event, input)
+    await AuditService.append(event, user, {
+      building_id: result.buildingId,
+      action: AUDIT_ACTIONS.ROOM_CREATED,
+      entity_type: 'room',
+      entity_id: result.id,
+      after_data: result,
+    })
+    return result
   },
 
   async update(event: H3Event, user: AuthUser, id: string, input: RoomUpdateInput): Promise<Room> {
@@ -69,7 +79,16 @@ export const RoomService = {
     const existing = await RoomRepository.findByIdentifier(event, id)
     if (!existing) throwNotFound('Không tìm thấy phòng')
     await assertBuildingScope(event, user, existing.buildingId, 'write')
-    return RoomRepository.update(event, existing.id, input)
+    const updated = await RoomRepository.update(event, existing.id, input)
+    await AuditService.append(event, user, {
+      building_id: updated.buildingId,
+      action: AUDIT_ACTIONS.ROOM_UPDATED,
+      entity_type: 'room',
+      entity_id: updated.id,
+      before_data: existing,
+      after_data: updated,
+    })
+    return updated
   },
 
   async remove(
@@ -84,7 +103,16 @@ export const RoomService = {
     await assertBuildingScope(event, user, existing.buildingId, 'write')
 
     if (opts.force) {
-      return RoomRepository.softArchive(event, existing.id)
+      const archived = await RoomRepository.softArchive(event, existing.id)
+      await AuditService.append(event, user, {
+        building_id: existing.buildingId,
+        action: AUDIT_ACTIONS.ROOM_ARCHIVED,
+        entity_type: 'room',
+        entity_id: existing.id,
+        before_data: existing,
+        after_data: archived,
+      })
+      return archived
     }
 
     const [activeContracts, meterReadings] = await Promise.all([
@@ -106,6 +134,13 @@ export const RoomService = {
     }
 
     await RoomRepository.remove(event, existing.id)
+    await AuditService.append(event, user, {
+      building_id: existing.buildingId,
+      action: AUDIT_ACTIONS.ROOM_REMOVED,
+      entity_type: 'room',
+      entity_id: existing.id,
+      before_data: existing,
+    })
     return undefined
   },
 
@@ -164,6 +199,22 @@ export const RoomService = {
         }
       }
     }
+
+    const bulkActionCode = (
+      input.action === 'archive' ? AUDIT_ACTIONS.ROOM_ARCHIVED
+      : input.action === 'activate' ? AUDIT_ACTIONS.ROOM_ACTIVATED
+      : input.action === 'set_maintenance' ? AUDIT_ACTIONS.ROOM_MAINTENANCE_SET
+      : AUDIT_ACTIONS.ROOM_REMOVED
+    )
+    await AuditService.appendBulk(event, user, {
+      building_id: null,
+      entity_type: 'room',
+      aggregate_action: `room.bulk_${input.action}`,
+      items: succeeded.map(id => ({ entity_id: id, action: bulkActionCode })),
+      succeeded,
+      total: input.ids.length,
+      failed: failed.length,
+    })
 
     return { succeeded, failed }
   },

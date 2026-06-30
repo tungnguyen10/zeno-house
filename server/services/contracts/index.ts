@@ -9,6 +9,8 @@ import { RoomRepository } from '../../repositories/rooms'
 import { BuildingRepository } from '../../repositories/buildings'
 import { TenantRepository } from '../../repositories/tenants'
 import { assertBuildingScope, getAssignedBuildingIds } from '../../utils/scope'
+import { AuditService } from '../audit'
+import { AUDIT_ACTIONS } from '~/utils/constants/audit'
 
 interface ContractDeleteConflictDetails {
   reason?: 'ACTIVE_CONTRACT'
@@ -159,6 +161,14 @@ export const ContractService = {
       await RoomRepository.update(event, input.room_id, { status: 'occupied' })
     }
 
+    await AuditService.append(event, user, {
+      building_id: contract.buildingId,
+      action: AUDIT_ACTIONS.CONTRACT_CREATED,
+      entity_type: 'contract',
+      entity_id: contract.id,
+      after_data: contract,
+    })
+
     return contract
   },
 
@@ -206,6 +216,19 @@ export const ContractService = {
       }
     }
 
+    const auditAction
+      = updated.status === 'terminated' ? AUDIT_ACTIONS.CONTRACT_TERMINATED
+      : updated.status === 'expired' ? AUDIT_ACTIONS.CONTRACT_EXPIRED
+      : AUDIT_ACTIONS.CONTRACT_UPDATED
+    await AuditService.append(event, user, {
+      building_id: updated.buildingId,
+      action: auditAction,
+      entity_type: 'contract',
+      entity_id: updated.id,
+      before_data: existing,
+      after_data: updated,
+    })
+
     return updated
   },
 
@@ -240,6 +263,13 @@ export const ContractService = {
     if (hasDeleteConflicts(details)) throwDeleteConflict(details)
 
     await ContractRepository.removeWithCascade(event, existing)
+    await AuditService.append(event, user, {
+      building_id: existing.buildingId,
+      action: AUDIT_ACTIONS.CONTRACT_REMOVED,
+      entity_type: 'contract',
+      entity_id: existing.id,
+      before_data: existing,
+    })
     return opts.force ? existing : undefined
   },
 
@@ -267,6 +297,19 @@ export const ContractService = {
         failed.push({ id, reason: bulkFailureReason(err) })
       }
     }
+
+    // Note: per-entity audit events are already emitted by update()/remove() above.
+    // Emit aggregate summary for bulk operation visibility.
+    const bulkAction = input.action === 'terminate' ? AUDIT_ACTIONS.CONTRACT_TERMINATED : AUDIT_ACTIONS.CONTRACT_REMOVED
+    await AuditService.appendBulk(event, user, {
+      building_id: null,
+      entity_type: 'contract',
+      aggregate_action: `contract.bulk_${input.action}`,
+      items: succeeded.map(id => ({ entity_id: id, action: bulkAction })),
+      succeeded,
+      total: input.ids.length,
+      failed: failed.length,
+    })
 
     return { succeeded, failed }
   },

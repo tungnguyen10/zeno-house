@@ -5,20 +5,22 @@ An append-only `public.audit_events` table tracks mutations on domain entities.
 
 #### Schema
 - `id` uuid PK
-- `building_id` uuid NOT NULL FK → buildings (RLS anchor, CASCADE delete)
+- `building_id` uuid FK → buildings (nullable — NULL for tenant events without building context; CASCADE delete when set)
 - `actor_id` uuid FK → auth.users (nullable — system actions have no actor)
 - `action` text NOT NULL CHECK length > 0 (e.g. `room.updated`, `contract.terminated`)
 - `entity_type` text NOT NULL CHECK IN ('building','room','tenant','contract','contract_renewal','meter_device')
-- `entity_id` uuid (nullable for bulk/system events)
+- `entity_id` uuid (nullable — null on aggregate bulk events)
+- `correlation_id` uuid (nullable — links per-entity child events to their aggregate parent)
 - `before_data` jsonb (nullable — null on creates)
 - `after_data` jsonb (nullable — null on hard deletes)
 - `metadata` jsonb NOT NULL DEFAULT '{}'
 - `created_at` timestamptz NOT NULL DEFAULT now()
 
 #### Indexes
-- `(building_id, created_at DESC)` — timeline query
+- `(building_id, created_at DESC)` WHERE building_id IS NOT NULL — building timeline query
 - `(entity_type, entity_id, created_at DESC)` — entity detail feed
 - `(actor_id, created_at DESC)` — per-actor query
+- `(correlation_id)` WHERE correlation_id IS NOT NULL — fetch all children of a bulk event
 
 #### Scenario: Append-only RLS
 - **WHEN** an authenticated manager tries to UPDATE or DELETE an audit event
@@ -27,20 +29,50 @@ An append-only `public.audit_events` table tracks mutations on domain entities.
 #### Scenario: Building-scoped manager read
 - **WHEN** a manager queries audit_events
 - **THEN** only events where `building_id IN (user's assigned buildings)` are returned
+- **NOTE** tenant events with `building_id = NULL` are NOT visible to managers; only admins can see them
+
+#### Scenario: Tenant audit with no building context
+- **WHEN** `TenantService.create/update/remove` is called without a known building_id
+- **THEN** the audit event is written with `building_id = NULL`
+- **AND** the event is still queryable by admin via entity_type + entity_id filters
 
 ### Requirement: AUDIT_ACTIONS constants
 A TypeScript `AUDIT_ACTIONS` constant object defines all valid action strings.
 
-Covers: `building.created/updated/removed`, `room.created/updated/archived/removed`, `tenant.created/updated/removed`, `contract.created/updated/terminated/ended/renewed`.
+Covers:
+- `building.created` / `building.updated` / `building.removed`
+- `room.created` / `room.updated` / `room.archived` / `room.activated` / `room.maintenance_set` / `room.removed`
+- `tenant.created` / `tenant.updated` / `tenant.removed`
+- `contract.created` / `contract.updated` / `contract.terminated` / `contract.expired` / `contract.renewed`
+
+**Note**: `contract.terminated` = manual early termination (status → `terminated`). `contract.expired` = natural expiry (status → `expired`). `contract.ended` is NOT used.
 
 ### Requirement: AuditService.append
 `AuditService.append(event, user, input)` appends an audit event. `actor_id` is sourced from `user.id`. If append throws, the error is caught, logged, and NOT re-thrown (audit failure must not break main operation).
+
+### Requirement: AuditService.appendBulk
+`AuditService.appendBulk(event, user, bulkInput)` handles bulk action audit in two steps:
+1. Insert one **aggregate parent event** (`entity_id = null`, `metadata = { action, total, succeeded, failed }`) and capture its `id`.
+2. For each succeeded entity, insert a **per-entity child event** (`entity_id = <id>`, `correlation_id = parent.id`).
+
+All inserts are best-effort (same silent-fail rule). The `correlation_id` field links child events back to the parent aggregate.
+
+#### Scenario: Bulk action audit linkage
+- **WHEN** a bulk action completes (e.g. bulk archive 10 rooms)
+- **THEN** one aggregate event is written with `entity_id = null` and summary metadata
+- **AND** one child event is written per succeeded entity, each carrying `correlation_id = parent.id`
+- **AND** querying by `entity_type + entity_id` returns the per-entity child event with its `correlation_id`
 
 ### Requirement: Domain service audit wiring
 
 #### Scenario: Contract mutation audit
 - **WHEN** `ContractService.create/update/remove/bulkAction` completes successfully
 - **THEN** `AuditService.append` is called with the appropriate action, before/after snapshot
+- **AND** for `update`, the action is derived from the resulting status: `terminated` → `contract.terminated`, `expired` → `contract.expired`, otherwise `contract.updated`
+
+#### Scenario: Contract renewal audit
+- **WHEN** `ContractRenewalService.renew` completes successfully
+- **THEN** `AuditService.append` is called with action `contract.renewed` on the source contract entity
 
 #### Scenario: Room mutation audit
 - **WHEN** `RoomService.create/update/remove/bulkAction` completes successfully
@@ -55,9 +87,24 @@ Covers: `building.created/updated/removed`, `room.created/updated/archived/remov
 - **THEN** `AuditService.append` is called with the appropriate action
 
 ### Requirement: GET /api/audit endpoint
-Returns paginated audit events. Query params: `building_id` (required for manager), `entity_type` (optional filter), `entity_id` (optional filter), `limit` (default 50, max 200).
+Returns paginated audit events.
+
+Query params:
+- `building_id` — required for manager; optional for admin (omit to query all buildings including tenant events with NULL building_id)
+- `entity_type` — optional filter
+- `entity_id` — optional filter
+- `correlation_id` — optional filter (fetch all children of a bulk event)
+- `limit` — default 50, max 200
 
 Response: `{ data: AuditEvent[], meta: { total: number } }`
+
+#### Scenario: Admin queries without building_id
+- **WHEN** an admin calls GET /api/audit without `building_id`
+- **THEN** all audit events are returned (including tenant events with NULL building_id)
+
+#### Scenario: Manager requires building_id
+- **WHEN** a manager calls GET /api/audit without `building_id`
+- **THEN** the API returns VALIDATION_ERROR
 
 ## MODIFIED Requirements
 

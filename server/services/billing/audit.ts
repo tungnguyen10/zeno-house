@@ -86,7 +86,7 @@ export const BillingAuditService = {
         entityLabel: entity.label,
         entitySubLabel: entity.subLabel,
         entityHref: await resolver.entityHref(item.entityType, item.entityId, ctx),
-        summary: formatAuditSummary(item.action, item.metadata),
+        summary: formatAuditSummary(item.action, item.metadata, item.beforeData, item.afterData),
       }
     }))
 

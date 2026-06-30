@@ -283,6 +283,8 @@ export const InvoiceService = {
       action: BILLING_AUDIT_ACTIONS.INVOICE_REISSUED,
       entity_type: 'invoice',
       entity_id: invoice.id,
+      before_data: voided,
+      after_data: invoice,
       metadata: {
         reason,
         replacement_for_invoice_id: voided.id,

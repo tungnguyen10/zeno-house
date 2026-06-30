@@ -40,7 +40,12 @@ function formatCurrency(value: unknown): string | null {
   return `${Math.trunc(amount).toLocaleString('vi-VN')}đ`
 }
 
-export function formatAuditSummary(action: string, metadata: Record<string, unknown> = {}): string {
+export function formatAuditSummary(
+  action: string,
+  metadata: Record<string, unknown> = {},
+  beforeData?: unknown,
+  afterData?: unknown,
+): string {
   const meta = asRecord(metadata)
   switch (action) {
     case 'period.opened':
@@ -56,13 +61,23 @@ export function formatAuditSummary(action: string, metadata: Record<string, unkn
       return parts.join(' ')
     }
     case 'period.status_changed': {
-      const from = stringValue(meta.from) ?? stringValue(asRecord(meta.before).status) ?? stringValue(meta.previous_status) ?? '...'
-      const to = stringValue(meta.to) ?? stringValue(asRecord(meta.after).status) ?? stringValue(meta.next_status) ?? '...'
+      const from = stringValue(meta.from)
+        ?? stringValue(asRecord(meta.before).status)
+        ?? stringValue(meta.previous_status)
+        ?? stringValue(asRecord(beforeData).status)
+        ?? '...'
+      const to = stringValue(meta.to)
+        ?? stringValue(asRecord(meta.after).status)
+        ?? stringValue(meta.next_status)
+        ?? stringValue(asRecord(afterData).status)
+        ?? '...'
       return `Đổi trạng thái: ${from} → ${to}`
     }
     case 'reading.saved': {
       const count = numberValue(meta.count) ?? numberValue(meta.saved_count) ?? 1
-      return `Lưu ${count} chỉ số`
+      const meterType = stringValue(meta.meter_type) ?? stringValue(meta.meterType)
+      const typeLabel = meterType === 'electricity' ? 'điện' : meterType === 'water' ? 'nước' : null
+      return typeLabel ? `Lưu ${count} chỉ số ${typeLabel}` : `Lưu ${count} chỉ số`
     }
     case 'utility.override_saved':
     case 'utility_override.saved': {

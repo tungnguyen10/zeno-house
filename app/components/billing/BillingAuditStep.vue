@@ -38,8 +38,16 @@ function toggleTechnical(id: string) {
   expanded.value = next
 }
 
+function hasTechnicalDetail(row: BillingAuditEvent): boolean {
+  return !!(row.beforeData || row.afterData || Object.keys(row.metadata ?? {}).length > 0)
+}
+
 function technicalJson(row: BillingAuditEvent): string {
-  return JSON.stringify(row.metadata ?? {}, null, 2)
+  const detail: Record<string, unknown> = {}
+  if (row.beforeData !== null && row.beforeData !== undefined) detail.before = row.beforeData
+  if (row.afterData !== null && row.afterData !== undefined) detail.after = row.afterData
+  if (Object.keys(row.metadata ?? {}).length > 0) detail.metadata = row.metadata
+  return JSON.stringify(detail, null, 2)
 }
 </script>
 
@@ -81,6 +89,7 @@ function technicalJson(row: BillingAuditEvent): string {
         <div class="space-y-2">
           <p class="text-sm text-white">{{ row.summary ?? `Hành động: ${row.action}` }}</p>
           <UiButton
+            v-if="hasTechnicalDetail(row)"
             variant="ghost"
             size="sm"
             class="!h-auto !px-0 !py-0 !text-xs !text-muted hover:!text-white"

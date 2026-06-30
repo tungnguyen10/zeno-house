@@ -9,6 +9,8 @@ import type {
 import { TenantRepository, type TenantFilters } from '../../repositories/tenants'
 import { BuildingRepository } from '../../repositories/buildings'
 import { getAssignedBuildingIds } from '../../utils/scope'
+import { AuditService } from '../audit'
+import { AUDIT_ACTIONS } from '~/utils/constants/audit'
 
 export interface TenantBulkResult {
   succeeded: string[]
@@ -52,7 +54,15 @@ export const TenantService = {
       const existing = await TenantRepository.findByIdNumber(event, input.id_number)
       if (existing) throwConflict('Số CMND/CCCD đã tồn tại')
     }
-    return TenantRepository.insert(event, input)
+    const result = await TenantRepository.insert(event, input)
+    await AuditService.append(event, user, {
+      building_id: null,
+      action: AUDIT_ACTIONS.TENANT_CREATED,
+      entity_type: 'tenant',
+      entity_id: result.id,
+      after_data: result,
+    })
+    return result
   },
 
   async update(event: H3Event, user: AuthUser, id: string, input: TenantUpdateInput): Promise<Tenant> {
@@ -63,7 +73,16 @@ export const TenantService = {
       const conflict = await TenantRepository.findByIdNumber(event, input.id_number, existing.id)
       if (conflict) throwConflict('Số CMND/CCCD đã tồn tại')
     }
-    return TenantRepository.update(event, existing.id, input)
+    const updated = await TenantRepository.update(event, existing.id, input)
+    await AuditService.append(event, user, {
+      building_id: null,
+      action: AUDIT_ACTIONS.TENANT_UPDATED,
+      entity_type: 'tenant',
+      entity_id: updated.id,
+      before_data: existing,
+      after_data: updated,
+    })
+    return updated
   },
 
   async remove(
@@ -77,7 +96,16 @@ export const TenantService = {
     if (!existing) throwNotFound('Không tìm thấy khách thuê')
 
     if (opts.force) {
-      return TenantRepository.softArchive(event, existing.id)
+      const archived = await TenantRepository.softArchive(event, existing.id)
+      await AuditService.append(event, user, {
+        building_id: null,
+        action: AUDIT_ACTIONS.TENANT_ARCHIVED,
+        entity_type: 'tenant',
+        entity_id: existing.id,
+        before_data: existing,
+        after_data: archived,
+      })
+      return archived
     }
 
     const [activeContracts, activeOccupancies] = await Promise.all([
@@ -99,6 +127,13 @@ export const TenantService = {
     }
 
     await TenantRepository.remove(event, existing.id)
+    await AuditService.append(event, user, {
+      building_id: null,
+      action: AUDIT_ACTIONS.TENANT_REMOVED,
+      entity_type: 'tenant',
+      entity_id: existing.id,
+      before_data: existing,
+    })
     return undefined
   },
 
@@ -151,6 +186,17 @@ export const TenantService = {
         }
       }
     }
+
+    const bulkActionCode = input.action === 'archive' ? AUDIT_ACTIONS.TENANT_ARCHIVED : AUDIT_ACTIONS.TENANT_REMOVED
+    await AuditService.appendBulk(event, user, {
+      building_id: null,
+      entity_type: 'tenant',
+      aggregate_action: `tenant.bulk_${input.action}`,
+      items: succeeded.map(id => ({ entity_id: id, action: bulkActionCode })),
+      succeeded,
+      total: input.ids.length,
+      failed: failed.length,
+    })
 
     return { succeeded, failed }
   },

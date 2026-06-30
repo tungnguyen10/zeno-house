@@ -15,4 +15,5 @@ export const NAV_ITEMS = [
   { key: 'invoices', label: 'Hoá đơn', to: '/invoices', icon: 'IconDocument' },
   { key: 'billing', label: 'Vận hành', to: '/billing', icon: 'IconBriefcase' },
   { key: 'settings', label: 'Settings', to: '/settings/managers', icon: 'IconSettings', adminOnly: true },
+  { key: 'history', label: 'Audit Log', to: '/settings/history', icon: 'IconClock', adminOnly: true },
 ] satisfies NavItem[]

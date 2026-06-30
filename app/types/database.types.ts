@@ -14,6 +14,56 @@ export type Database = {
   }
   public: {
     Tables: {
+      audit_events: {
+        Row: {
+          id: string
+          building_id: string | null
+          actor_id: string | null
+          action: string
+          entity_type: string
+          entity_id: string | null
+          correlation_id: string | null
+          before_data: Json | null
+          after_data: Json | null
+          metadata: Json
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          building_id?: string | null
+          actor_id?: string | null
+          action: string
+          entity_type: string
+          entity_id?: string | null
+          correlation_id?: string | null
+          before_data?: Json | null
+          after_data?: Json | null
+          metadata?: Json
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          building_id?: string | null
+          actor_id?: string | null
+          action?: string
+          entity_type?: string
+          entity_id?: string | null
+          correlation_id?: string | null
+          before_data?: Json | null
+          after_data?: Json | null
+          metadata?: Json
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_events_building_id_fkey"
+            columns: ["building_id"]
+            isOneToOne: false
+            referencedRelation: "buildings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       billing_audit_events: {
         Row: {
           action: string

@@ -3,9 +3,12 @@ import { serverSupabaseClient } from '#supabase/server'
 import type { AuthUser } from '~/types/auth'
 import type { MeterReading, RoomMeterStatus } from '~/types/meter-readings'
 import type { MeterReadingCreateInput, MeterReadingBulkInput, MeterReadingUpdateInput } from '~/utils/validators/meter-readings'
+import { BILLING_AUDIT_ACTIONS } from '~/utils/constants/billing'
 import { MeterReadingRepository } from '../../repositories/meter-readings'
 import { BuildingRepository } from '../../repositories/buildings'
 import { RoomRepository } from '../../repositories/rooms'
+import { BillingPeriodRepository } from '../../repositories/billing/periods'
+import { BillingAuditService } from '../billing/audit'
 import { assertBuildingScope, getAssignedBuildingIds } from '../../utils/scope'
 
 export interface MeterReadingFilters {
@@ -90,11 +93,26 @@ export const MeterReadingService = {
       .single()
     if (!room) throw createError({ statusCode: 404, message: 'Không tìm thấy phòng' })
     await assertBuildingScope(event, _user, room.building_id, 'write')
-    return MeterReadingRepository.create(event, {
+    const created = await MeterReadingRepository.create(event, {
       ...input,
       building_id: room.building_id,
       recorded_by: userId,
     })
+
+    const period = await BillingPeriodRepository.findByBuildingPeriod(
+      event, room.building_id, input.period_year, input.period_month,
+    )
+    await BillingAuditService.append(event, _user, {
+      billing_period_id: period?.id ?? null,
+      action: BILLING_AUDIT_ACTIONS.READING_SAVED,
+      entity_type: 'meter_reading',
+      entity_id: created.id,
+      before_data: null,
+      after_data: created,
+      metadata: { count: 1, meter_type: created.meterType },
+    })
+
+    return created
   },
 
   async bulkCreate(
@@ -126,7 +144,50 @@ export const MeterReadingService = {
       return { ...r, building_id: buildingId, recorded_by: userId }
     })
 
-    return MeterReadingRepository.bulkUpsert(event, enriched)
+    // Pre-fetch existing readings (for before-snapshot) and run upsert in parallel
+    const conflictKeys = enriched.map(r => ({
+      room_id: r.room_id,
+      meter_type: r.meter_type,
+      period_year: r.period_year,
+      period_month: r.period_month,
+      reading_type: r.reading_type,
+    }))
+    const [beforeMap, saved] = await Promise.all([
+      MeterReadingRepository.findExistingByConflictKeys(event, conflictKeys),
+      MeterReadingRepository.bulkUpsert(event, enriched),
+    ])
+
+    // Resolve unique billing periods in one pass, then append per-reading audit events
+    const uniquePeriodKeys = [...new Set(
+      saved.map(r => `${r.buildingId}:${r.periodYear}:${r.periodMonth}`),
+    )]
+    const periodEntries = await Promise.all(
+      uniquePeriodKeys.map(async (key) => {
+        const [buildingId, year, month] = key.split(':')
+        const p = await BillingPeriodRepository.findByBuildingPeriod(
+          event, buildingId!, Number(year), Number(month),
+        )
+        return [key, p?.id ?? null] as const
+      }),
+    )
+    const periodCache = new Map<string, string | null>(periodEntries)
+
+    await Promise.all(saved.map(async (reading) => {
+      const conflictKey = `${reading.roomId}:${reading.meterType}:${reading.periodYear}:${reading.periodMonth}:${reading.readingType}`
+      const beforeData = beforeMap.get(conflictKey) ?? null
+      const periodCacheKey = `${reading.buildingId}:${reading.periodYear}:${reading.periodMonth}`
+      await BillingAuditService.append(event, _user, {
+        billing_period_id: periodCache.get(periodCacheKey) ?? null,
+        action: BILLING_AUDIT_ACTIONS.READING_SAVED,
+        entity_type: 'meter_reading',
+        entity_id: reading.id,
+        before_data: beforeData,
+        after_data: reading,
+        metadata: { count: 1, meter_type: reading.meterType },
+      })
+    }))
+
+    return saved
   },
 
   async update(
@@ -139,6 +200,21 @@ export const MeterReadingService = {
     const existing = await MeterReadingRepository.findById(event, id)
     if (!existing) throw createError({ statusCode: 404, message: 'Không tìm thấy chỉ số' })
     await assertBuildingScope(event, _user, existing.buildingId, 'write')
-    return MeterReadingRepository.update(event, id, input)
+    const updated = await MeterReadingRepository.update(event, id, input)
+
+    const period = await BillingPeriodRepository.findByBuildingPeriod(
+      event, existing.buildingId, existing.periodYear, existing.periodMonth,
+    )
+    await BillingAuditService.append(event, _user, {
+      billing_period_id: period?.id ?? null,
+      action: BILLING_AUDIT_ACTIONS.READING_SAVED,
+      entity_type: 'meter_reading',
+      entity_id: updated.id,
+      before_data: existing,
+      after_data: updated,
+      metadata: { count: 1, meter_type: updated.meterType },
+    })
+
+    return updated
   },
 }

@@ -165,6 +165,34 @@ export const MeterReadingRepository = {
     return mapMeterReading(data)
   },
 
+  async findExistingByConflictKeys(
+    event: H3Event,
+    keys: Array<{ room_id: string; meter_type: string; period_year: number; period_month: number; reading_type: string }>,
+  ): Promise<Map<string, MeterReading>> {
+    if (keys.length === 0) return new Map()
+    const client = await serverSupabaseClient(event)
+    // Fetch any existing readings that match the upsert conflict key set.
+    // We then key them by "room_id:meter_type:period_year:period_month:reading_type"
+    // so the caller can look up before-snapshots without N individual queries.
+    const roomIds = [...new Set(keys.map(k => k.room_id))]
+    const periodYears = [...new Set(keys.map(k => k.period_year))]
+    const periodMonths = [...new Set(keys.map(k => k.period_month))]
+    const { data, error } = await client
+      .from('meter_readings')
+      .select('*')
+      .in('room_id', roomIds)
+      .in('period_year', periodYears)
+      .in('period_month', periodMonths)
+    if (error) throw createError({ statusCode: 500, message: error.message })
+    const keySet = new Set(keys.map(k => `${k.room_id}:${k.meter_type}:${k.period_year}:${k.period_month}:${k.reading_type}`))
+    const result = new Map<string, MeterReading>()
+    for (const row of data ?? []) {
+      const key = `${row.room_id}:${row.meter_type}:${row.period_year}:${row.period_month}:${row.reading_type}`
+      if (keySet.has(key)) result.set(key, mapMeterReading(row))
+    }
+    return result
+  },
+
   async bulkUpsert(
     event: H3Event,
     readings: Array<MeterReadingCreateInput & { building_id: string; recorded_by?: string | null }>,
