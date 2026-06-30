@@ -1,4 +1,5 @@
 import { vi } from 'vitest'
+import type { AuthUser } from '~/types/auth'
 import { buildContract } from '../../__fixtures__/billing/contract'
 
 const mocks = vi.hoisted(() => ({
@@ -71,6 +72,14 @@ function buildContractWithDetails() {
   }
 }
 
+function user(): AuthUser {
+  return { id: 'user-1', app_metadata: { role: 'admin' } } as AuthUser
+}
+
+function event() {
+  return { context: {} } as never
+}
+
 describe('ContractService code lookup', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -83,13 +92,13 @@ describe('ContractService code lookup', () => {
     const { ContractService } = await import('../../../server/services/contracts')
 
     const result = await ContractService.list(
-      {} as never,
-      { id: 'user-1' } as never,
+      event(),
+      user(),
       { building_id: 'toa-a', status: ['active'] },
     )
 
     expect(mocks.findBuildingByIdentifier).toHaveBeenCalledWith(expect.anything(), 'toa-a')
-    expect(mocks.findAll).toHaveBeenCalledWith(expect.anything(), { building_id: 'building-1', status: ['active'] })
+    expect(mocks.findAll).toHaveBeenCalledWith(expect.anything(), { building_id: 'building-1', buildingIds: null, status: ['active'] })
     expect(result.total).toBe(1)
   })
 
@@ -98,7 +107,7 @@ describe('ContractService code lookup', () => {
     mocks.findByIdentifier.mockResolvedValue(contract)
     const { ContractService } = await import('../../../server/services/contracts')
 
-    const result = await ContractService.get({} as never, { id: 'user-1' } as never, 'hd-2026-0001')
+    const result = await ContractService.get(event(), user(), 'hd-2026-0001')
 
     expect(mocks.findByIdentifier).toHaveBeenCalledWith(expect.anything(), 'hd-2026-0001')
     expect(result.id).toBe(contract.id)
@@ -113,8 +122,8 @@ describe('ContractService code lookup', () => {
     const { ContractService } = await import('../../../server/services/contracts')
 
     const result = await ContractService.update(
-      {} as never,
-      { id: 'user-1' } as never,
+      event(),
+      user(),
       'hd-2026-0001',
       { notes: 'updated' },
     )
@@ -147,8 +156,8 @@ describe('ContractService.create with handover readings', () => {
     const { ContractService } = await import('../../../server/services/contracts')
 
     const result = await ContractService.create(
-      {} as never,
-      { id: 'user-1' } as never,
+      event(),
+      user(),
       {
         room_id: 'room-1',
         tenant_id: 'tenant-1',
@@ -199,8 +208,8 @@ describe('ContractService.create with handover readings', () => {
 
     await expect(
       ContractService.create(
-        {} as never,
-        { id: 'user-1' } as never,
+        event(),
+        user(),
         {
           room_id: 'room-1',
           tenant_id: 'tenant-1',

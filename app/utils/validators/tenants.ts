@@ -63,6 +63,17 @@ export type TenantListQuery = z.infer<typeof tenantListQuerySchema>
 export const tenantBulkActionSchema = z.object({
   action: z.enum(['archive', 'activate', 'delete']),
   ids: z.array(z.string().min(1)).min(1, 'Cần chọn ít nhất một khách thuê'),
+  reason: z.string().trim().min(1, 'Lý do xoá là bắt buộc').max(500, 'Lý do quá dài').optional(),
+  building_id: z.string().uuid('Building không hợp lệ').optional(),
+}).refine(
+  data => data.action !== 'delete' || Boolean(data.reason),
+  { message: 'Lý do xoá là bắt buộc', path: ['reason'] },
+)
+
+export const tenantDeleteSchema = z.object({
+  reason: z.string().trim().min(1, 'Lý do xoá là bắt buộc').max(500, 'Lý do quá dài'),
+  building_id: z.string().uuid('Building không hợp lệ').optional(),
 })
 
 export type TenantBulkActionInput = z.infer<typeof tenantBulkActionSchema>
+export type TenantDeleteInput = z.infer<typeof tenantDeleteSchema>

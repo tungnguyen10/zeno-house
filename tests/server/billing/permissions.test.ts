@@ -25,6 +25,7 @@ describe('billing permission matrix', () => {
 
     expect(can(manager, 'billing.read')).toBe(true)
     expect(can(manager, 'billing.write')).toBe(true)
+    expect(can(manager, 'billing.corrections')).toBe(true)
     expect(can(manager, 'billing.close')).toBe(false)
     expect(can(manager, 'billing.unissue')).toBe(false)
   })

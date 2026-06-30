@@ -4,7 +4,9 @@ import type { BuildingService } from '~/types/building-services'
 import type { BuildingServiceUpsertInput, BuildingServiceUpdateInput } from '~/utils/validators/building-services'
 import { BuildingServiceRepository } from '../../repositories/building-services'
 import { BuildingRepository } from '../../repositories/buildings'
-import { assertBuildingScope } from '../../utils/scope'
+import { assertBuildingScope, canDeleteMasterData } from '../../utils/scope'
+import { AuditService } from '../audit'
+import { AUDIT_ACTIONS } from '~/utils/constants/audit'
 
 export const BuildingServiceService = {
   async list(event: H3Event, _user: AuthUser, buildingId: string): Promise<BuildingService[]> {
@@ -29,5 +31,23 @@ export const BuildingServiceService = {
     if (!existing) throwNotFound('Không tìm thấy dịch vụ tòa nhà')
     await assertBuildingScope(event, _user, existing.buildingId, 'write')
     return BuildingServiceRepository.update(event, id, input)
+  },
+
+  async remove(event: H3Event, user: AuthUser, id: string, opts: { reason: string }): Promise<void> {
+    const existing = await BuildingServiceRepository.findById(event, id)
+    if (!existing) throwNotFound('Không tìm thấy dịch vụ tòa nhà')
+    await assertBuildingScope(event, user, existing.buildingId, 'write')
+    if (!await canDeleteMasterData(event, user, existing.buildingId)) {
+      throwForbidden('Không có quyền xoá dịch vụ trong tòa nhà này')
+    }
+    await BuildingServiceRepository.remove(event, id)
+    await AuditService.append(event, user, {
+      building_id: existing.buildingId,
+      action: AUDIT_ACTIONS.BUILDING_SERVICE_REMOVED,
+      entity_type: 'building_service',
+      entity_id: existing.id,
+      before_data: existing,
+      metadata: { reason: opts.reason },
+    })
   },
 }

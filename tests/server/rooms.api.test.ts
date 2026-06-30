@@ -17,12 +17,21 @@ const buildingRepoMocks = vi.hoisted(() => ({
   findByIdentifier: vi.fn(),
 }))
 
+const assignmentRepoMocks = vi.hoisted(() => ({
+  findBuildingIdsByUser: vi.fn(),
+  findByUserAndBuilding: vi.fn(),
+}))
+
 vi.mock('../../server/repositories/rooms', () => ({
   RoomRepository: roomRepoMocks,
 }))
 
 vi.mock('../../server/repositories/buildings', () => ({
   BuildingRepository: buildingRepoMocks,
+}))
+
+vi.mock('../../server/repositories/assignments', () => ({
+  AssignmentRepository: assignmentRepoMocks,
 }))
 
 const requireAuthMock = vi.hoisted(() => vi.fn())
@@ -113,6 +122,8 @@ async function expectError(promise: Promise<unknown>): Promise<ApiError> {
 beforeEach(() => {
   vi.clearAllMocks()
   buildingRepoMocks.findByIdentifier.mockResolvedValue({ id: 'b-1' })
+  assignmentRepoMocks.findBuildingIdsByUser.mockResolvedValue(['b-1'])
+  assignmentRepoMocks.findByUserAndBuilding.mockResolvedValue(null)
 })
 
 describe('GET /api/rooms', () => {
@@ -180,6 +191,17 @@ describe('GET /api/rooms', () => {
     expect(err.statusCode).toBe(422)
     expect(err.data?.error?.code).toBe('VALIDATION_ERROR')
   })
+
+  it('passes manager assigned building ids into room list filters', async () => {
+    asManager()
+    roomRepoMocks.findAll.mockResolvedValue({ items: [buildRoom({ buildingId: 'b-1' })], total: 1 })
+    const { default: handler } = await import('../../server/api/rooms/index.get')
+
+    await handler(makeEvent({ query: {} }))
+    expect(roomRepoMocks.findAll).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      buildingIds: ['b-1'],
+    }))
+  })
 })
 
 describe('POST /api/rooms', () => {
@@ -240,6 +262,16 @@ describe('GET room detail endpoints', () => {
     const err = await expectError(Promise.resolve(handler(makeEvent({ params: { id: 'missing' } }))))
     expect(err.statusCode).toBe(404)
   })
+
+  it('returns 404 when manager reads a room outside scope', async () => {
+    asManager()
+    assignmentRepoMocks.findBuildingIdsByUser.mockResolvedValue(['b-1'])
+    roomRepoMocks.findByIdentifier.mockResolvedValue(buildRoom({ id: 'r-2', buildingId: 'b-2' }))
+    const { default: handler } = await import('../../server/api/rooms/[id].get')
+
+    const err = await expectError(Promise.resolve(handler(makeEvent({ params: { id: 'r-2' } }))))
+    expect(err.statusCode).toBe(404)
+  })
 })
 
 describe('PATCH /api/rooms/[id]', () => {
@@ -263,6 +295,25 @@ describe('PATCH /api/rooms/[id]', () => {
     const invalid = await expectError(Promise.resolve(handler(makeEvent({ params: { id: 'r-1' }, body: { floor: 0 } }))))
     expect(invalid.statusCode).toBe(422)
   })
+
+  it('returns 403 when manager mutates a room outside scope', async () => {
+    CAPS.manager.add('rooms.update')
+    try {
+      asManager()
+      assignmentRepoMocks.findBuildingIdsByUser.mockResolvedValue(['b-1'])
+      roomRepoMocks.findByIdentifier.mockResolvedValue(buildRoom({ id: 'r-2', buildingId: 'b-2' }))
+      const { default: handler } = await import('../../server/api/rooms/[id].patch')
+
+      const err = await expectError(Promise.resolve(handler(makeEvent({
+        params: { id: 'r-2' },
+        body: { room_number: '202' },
+      }))))
+      expect(err.statusCode).toBe(403)
+    }
+    finally {
+      CAPS.manager.delete('rooms.update')
+    }
+  })
 })
 
 describe('DELETE /api/rooms/[id]', () => {
@@ -273,7 +324,7 @@ describe('DELETE /api/rooms/[id]', () => {
     roomRepoMocks.countMeterReadingsForRoom.mockResolvedValue(0)
     const { default: handler } = await import('../../server/api/rooms/[id].delete')
 
-    const event = makeEvent({ params: { id: 'r-1' } })
+    const event = makeEvent({ params: { id: 'r-1' }, body: { reason: 'cleanup' } })
     await handler(event)
     expect(roomRepoMocks.remove).toHaveBeenCalledWith(expect.anything(), 'r-1')
     expect(event.context.statusCode).toBe(204)
@@ -286,7 +337,7 @@ describe('DELETE /api/rooms/[id]', () => {
     roomRepoMocks.countMeterReadingsForRoom.mockResolvedValue(5)
     const { default: handler } = await import('../../server/api/rooms/[id].delete')
 
-    const err = await expectError(Promise.resolve(handler(makeEvent({ params: { id: 'r-1' } }))))
+    const err = await expectError(Promise.resolve(handler(makeEvent({ params: { id: 'r-1' }, body: { reason: 'cleanup' } }))))
     expect(err.statusCode).toBe(409)
     expect(err.data?.error?.details).toEqual({ activeContracts: 1, meterReadings: 5 })
   })
@@ -297,12 +348,56 @@ describe('DELETE /api/rooms/[id]', () => {
     roomRepoMocks.softArchive.mockResolvedValue(buildRoom({ id: 'r-1', status: 'archived' }))
     const { default: handler } = await import('../../server/api/rooms/[id].delete')
 
-    const res = await handler(makeEvent({ params: { id: 'r-1' }, query: { force: 'true' } })) as { data: Room }
+    const res = await handler(makeEvent({ params: { id: 'r-1' }, query: { force: 'true' }, body: { reason: 'archive' } })) as { data: Room }
     expect(res.data.status).toBe('archived')
 
     asManager()
-    const forbidden = await expectError(Promise.resolve(handler(makeEvent({ params: { id: 'r-1' }, query: { force: 'true' } }))))
+    const forbidden = await expectError(Promise.resolve(handler(makeEvent({ params: { id: 'r-1' }, query: { force: 'true' }, body: { reason: 'archive' } }))))
     expect(forbidden.statusCode).toBe(403)
+  })
+
+  it('lets manager hard-delete only when can_delete_master_data is granted for that building', async () => {
+    asManager()
+    roomRepoMocks.findByIdentifier.mockResolvedValue(buildRoom({ id: 'r-1', buildingId: 'b-1' }))
+    roomRepoMocks.countActiveContractsForRoom.mockResolvedValue(0)
+    roomRepoMocks.countMeterReadingsForRoom.mockResolvedValue(0)
+    const { default: handler } = await import('../../server/api/rooms/[id].delete')
+
+    assignmentRepoMocks.findByUserAndBuilding.mockResolvedValue(null)
+    const denied = await expectError(Promise.resolve(handler(makeEvent({
+      params: { id: 'r-1' },
+      body: { reason: 'cleanup' },
+    }))))
+    expect(denied.statusCode).toBe(403)
+
+    assignmentRepoMocks.findByUserAndBuilding.mockResolvedValue({ can_delete_master_data: true })
+    const event = makeEvent({ params: { id: 'r-1' }, body: { reason: 'cleanup' } })
+    await handler(event)
+    expect(roomRepoMocks.remove).toHaveBeenCalledWith(expect.anything(), 'r-1')
+    expect(event.context.statusCode).toBe(204)
+  })
+
+  it('does not let a destructive flag for one building delete another building', async () => {
+    asManager()
+    assignmentRepoMocks.findBuildingIdsByUser.mockResolvedValue(['b-2'])
+    assignmentRepoMocks.findByUserAndBuilding.mockResolvedValue(null)
+    roomRepoMocks.findByIdentifier.mockResolvedValue(buildRoom({ id: 'r-2', buildingId: 'b-2' }))
+    const { default: handler } = await import('../../server/api/rooms/[id].delete')
+
+    const err = await expectError(Promise.resolve(handler(makeEvent({
+      params: { id: 'r-2' },
+      body: { reason: 'cleanup' },
+    }))))
+    expect(err.statusCode).toBe(403)
+    expect(roomRepoMocks.remove).not.toHaveBeenCalled()
+  })
+
+  it('requires a delete reason', async () => {
+    asAdmin()
+    const { default: handler } = await import('../../server/api/rooms/[id].delete')
+
+    const err = await expectError(Promise.resolve(handler(makeEvent({ params: { id: 'r-1' }, body: {} }))))
+    expect(err.statusCode).toBe(422)
   })
 })
 
@@ -332,7 +427,7 @@ describe('POST /api/rooms/bulk', () => {
     roomRepoMocks.countMeterReadingsForRoom.mockResolvedValue(0)
     const { default: handler } = await import('../../server/api/rooms/bulk.post')
 
-    const res = await handler(makeEvent({ body: { action: 'delete', ids: ['empty-1', 'with-contract', 'missing'] } })) as {
+    const res = await handler(makeEvent({ body: { action: 'delete', ids: ['empty-1', 'with-contract', 'missing'], reason: 'cleanup' } })) as {
       data: { succeeded: string[]; failed: { id: string; reason: string }[] }
     }
 

@@ -1,4 +1,5 @@
 import { vi } from 'vitest'
+import type { AuthUser } from '~/types/auth'
 import { buildInvoice } from '../../__fixtures__/billing/invoice'
 import { buildPeriod } from '../../__fixtures__/billing/period'
 
@@ -16,6 +17,9 @@ const calculateDraft = vi.fn()
 const enrichInvoices = vi.fn(async invoices => invoices)
 const enrichPayments = vi.fn(async payments => payments)
 const rpcMock = vi.fn()
+const assignmentRepoMocks = vi.hoisted(() => ({
+  findBuildingIdsByUser: vi.fn(),
+}))
 
 vi.mock('#supabase/server', () => ({
   serverSupabaseClient: vi.fn(async () => ({
@@ -65,9 +69,26 @@ vi.mock('../../../server/services/billing/display', () => ({
   }),
 }))
 
+vi.mock('../../../server/repositories/assignments', () => ({
+  AssignmentRepository: assignmentRepoMocks,
+}))
+
+function makeUser(role: 'admin' | 'manager' = 'admin'): AuthUser {
+  return {
+    id: 'user-1',
+    app_metadata: { role },
+  } as AuthUser
+}
+
+function event() {
+  return { context: {} } as never
+}
+
 describe('InvoiceService invoice lifecycle methods', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.stubGlobal('can', () => true)
+    assignmentRepoMocks.findBuildingIdsByUser.mockResolvedValue(['building-1'])
     findPeriodById.mockResolvedValue(buildPeriod({ id: 'period-1', status: 'issued' }))
     listCharges.mockResolvedValue([])
     listPaymentsByInvoice.mockResolvedValue([])
@@ -81,8 +102,8 @@ describe('InvoiceService invoice lifecycle methods', () => {
     const { InvoiceService } = await import('../../../server/services/billing/invoices')
 
     const result = await InvoiceService.getWithCharges(
-      {} as never,
-      { id: 'user-1' } as never,
+      event(),
+      makeUser(),
       'inv-2026-05-0001',
     )
 
@@ -99,7 +120,7 @@ describe('InvoiceService invoice lifecycle methods', () => {
     voidById.mockResolvedValue(voided)
     const { InvoiceService } = await import('../../../server/services/billing/invoices')
 
-    const result = await InvoiceService.voidInvoice({} as never, { id: 'user-1' } as never, invoice.id, { reason: 'wrong reading' })
+    const result = await InvoiceService.voidInvoice(event(), makeUser(), invoice.id, { reason: 'wrong reading' })
 
     expect(result.status).toBe('void')
     expect(voidById).toHaveBeenCalledWith(expect.anything(), invoice.id, 'user-1', 'wrong reading')
@@ -107,6 +128,37 @@ describe('InvoiceService invoice lifecycle methods', () => {
       action: 'invoice.voided',
       metadata: expect.objectContaining({ reason: 'wrong reading', total_amount: invoice.totalAmount }),
     }))
+  })
+
+  it('returns 404 when manager reads an invoice whose period building is outside scope', async () => {
+    const invoice = buildInvoice({ id: 'invoice-1', billingPeriodId: 'period-2' })
+    findInvoiceByIdentifier.mockResolvedValue(invoice)
+    findPeriodById.mockResolvedValue(buildPeriod({ id: 'period-2', buildingId: 'building-2' }))
+    const { InvoiceService } = await import('../../../server/services/billing/invoices')
+
+    await expect(InvoiceService.getWithCharges(event(), makeUser('manager'), invoice.id))
+      .rejects.toMatchObject({ statusCode: 404 })
+  })
+
+  it('requires billing.corrections for invoice void', async () => {
+    vi.stubGlobal('can', (_user: AuthUser, capability: string) => capability === 'billing.write')
+    const { InvoiceService } = await import('../../../server/services/billing/invoices')
+
+    await expect(InvoiceService.voidInvoice(event(), makeUser('manager'), 'invoice-1', { reason: 'wrong reading' }))
+      .rejects.toMatchObject({ statusCode: 403 })
+  })
+
+  it('allows manager with billing.corrections to void an assigned invoice', async () => {
+    const invoice = buildInvoice({ id: 'invoice-1', paidAmount: 0, status: 'issued' })
+    const voided = buildInvoice({ ...invoice, status: 'void', voidReason: 'wrong reading' })
+    findInvoiceByIdentifier.mockResolvedValue(invoice)
+    voidById.mockResolvedValue(voided)
+    const { InvoiceService } = await import('../../../server/services/billing/invoices')
+
+    const result = await InvoiceService.voidInvoice(event(), makeUser('manager'), invoice.id, { reason: 'wrong reading' })
+
+    expect(result.status).toBe('void')
+    expect(voidById).toHaveBeenCalledWith(expect.anything(), invoice.id, 'user-1', 'wrong reading')
   })
 
   it('forwards issuable drafts to issue_period_invoices and returns the issued rows', async () => {
@@ -211,8 +263,8 @@ describe('InvoiceService invoice lifecycle methods', () => {
     const { InvoiceService } = await import('../../../server/services/billing/invoices')
 
     const result = await InvoiceService.issueInvoices(
-      {} as never,
-      { id: 'user-1' } as never,
+      event(),
+      makeUser(),
       'period-1',
       { due_date: '2026-06-05' },
     )
@@ -291,8 +343,8 @@ describe('InvoiceService invoice lifecycle methods', () => {
     const { InvoiceService } = await import('../../../server/services/billing/invoices')
 
     const result = await InvoiceService.issueInvoices(
-      {} as never,
-      { id: 'user-1' } as never,
+      event(),
+      makeUser(),
       'period-1',
       { due_date: '2026-06-05' },
     )
@@ -309,7 +361,7 @@ describe('InvoiceService invoice lifecycle methods', () => {
     findInvoiceByIdentifier.mockResolvedValue(buildInvoice({ paidAmount: 100_000, status: 'partial' }))
     const { InvoiceService } = await import('../../../server/services/billing/invoices')
 
-    await expect(InvoiceService.voidInvoice({} as never, { id: 'user-1' } as never, 'invoice-1', { reason: 'wrong reading' }))
+    await expect(InvoiceService.voidInvoice(event(), makeUser(), 'invoice-1', { reason: 'wrong reading' }))
       .rejects.toMatchObject({ statusCode: 409 })
     expect(voidById).not.toHaveBeenCalled()
   })
@@ -336,8 +388,8 @@ describe('InvoiceService invoice lifecycle methods', () => {
     const { InvoiceService } = await import('../../../server/services/billing/invoices')
 
     const result = await InvoiceService.reissueInvoice(
-      {} as never,
-      { id: 'user-1' } as never,
+      event(),
+      makeUser(),
       voided.id,
       { due_date: '2026-06-05', reason: 'wrong reading fixed' },
     )
@@ -404,8 +456,8 @@ describe('InvoiceService invoice lifecycle methods', () => {
 
     await expect(
       InvoiceService.issueInvoices(
-        {} as never,
-        { id: 'user-1' } as never,
+        event(),
+        makeUser(),
         'period-1',
         { due_date: '2026-06-05' },
       ),

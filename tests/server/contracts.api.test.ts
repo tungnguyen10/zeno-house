@@ -29,6 +29,11 @@ const tenantRepoMocks = vi.hoisted(() => ({
   findByIdentifier: vi.fn(),
 }))
 
+const assignmentRepoMocks = vi.hoisted(() => ({
+  findBuildingIdsByUser: vi.fn(),
+  findByUserAndBuilding: vi.fn(),
+}))
+
 const occupantRepoMocks = vi.hoisted(() => ({
   findActiveOccupancyByTenant: vi.fn(),
 }))
@@ -51,6 +56,10 @@ vi.mock('../../server/repositories/rooms', () => ({
 
 vi.mock('../../server/repositories/tenants', () => ({
   TenantRepository: tenantRepoMocks,
+}))
+
+vi.mock('../../server/repositories/assignments', () => ({
+  AssignmentRepository: assignmentRepoMocks,
 }))
 
 vi.mock('../../server/repositories/contract-occupants', () => ({
@@ -207,6 +216,8 @@ beforeEach(() => {
   contractRepoMocks.countBillingPeriodsForContract.mockResolvedValue(0)
   contractRepoMocks.countPaidInvoicesForContract.mockResolvedValue(0)
   contractRepoMocks.countNonHandoverMeterReadingsForContract.mockResolvedValue(0)
+  assignmentRepoMocks.findBuildingIdsByUser.mockResolvedValue(['building-1'])
+  assignmentRepoMocks.findByUserAndBuilding.mockResolvedValue(null)
 })
 
 describe('GET /api/contracts', () => {
@@ -241,6 +252,17 @@ describe('GET /api/contracts', () => {
     const err = await expectError(Promise.resolve(handler(makeEvent({ query: { sort: 'secret' } }))))
     expect(err.statusCode).toBe(422)
     expect(err.data?.error?.code).toBe('VALIDATION_ERROR')
+  })
+
+  it('passes manager assigned building ids into contract list filters', async () => {
+    asManager()
+    contractRepoMocks.findAll.mockResolvedValue({ items: [buildContract({ buildingId: 'building-1' })], total: 1 })
+    const { default: handler } = await import('../../server/api/contracts/index.get')
+
+    await handler(makeEvent({ query: {} }))
+    expect(contractRepoMocks.findAll).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      buildingIds: ['building-1'],
+    }))
   })
 })
 
@@ -281,6 +303,29 @@ describe('POST /api/contracts', () => {
     const forbidden = await expectError(Promise.resolve(handler(makeEvent({ body: validCreateBody }))))
     expect(forbidden.statusCode).toBe(403)
   })
+
+  it('returns 403 when manager creates a contract for an unassigned room', async () => {
+    CAPS.manager.add('contracts.create')
+    try {
+      asManager()
+      assignmentRepoMocks.findBuildingIdsByUser.mockResolvedValue(['other-building'])
+      roomRepoMocks.findById.mockResolvedValue({
+        id: validCreateBody.room_id,
+        roomNumber: 'A101',
+        status: 'available',
+        buildingId: validCreateBody.building_id,
+        monthlyRent: 3_000_000,
+      })
+      const { default: handler } = await import('../../server/api/contracts/index.post')
+
+      const err = await expectError(Promise.resolve(handler(makeEvent({ body: validCreateBody }))))
+      expect(err.statusCode).toBe(403)
+      expect(contractRepoMocks.createWithHandover).not.toHaveBeenCalled()
+    }
+    finally {
+      CAPS.manager.delete('contracts.create')
+    }
+  })
 })
 
 describe('GET /api/contracts/[id]', () => {
@@ -298,6 +343,16 @@ describe('GET /api/contracts/[id]', () => {
     const { default: handler } = await import('../../server/api/contracts/[id].get')
 
     const err = await expectError(Promise.resolve(handler(makeEvent({ params: { id: 'missing' } }))))
+    expect(err.statusCode).toBe(404)
+  })
+
+  it('returns 404 when manager reads contract outside assigned scope', async () => {
+    asManager()
+    assignmentRepoMocks.findBuildingIdsByUser.mockResolvedValue(['other-building'])
+    contractRepoMocks.findByIdentifier.mockResolvedValue(buildContract({ buildingId: 'building-1' }))
+    const { default: handler } = await import('../../server/api/contracts/[id].get')
+
+    const err = await expectError(Promise.resolve(handler(makeEvent({ params: { id: 'contract-1' } }))))
     expect(err.statusCode).toBe(404)
   })
 })
@@ -345,7 +400,7 @@ describe('DELETE /api/contracts/[id]', () => {
     contractRepoMocks.countNonHandoverMeterReadingsForContract.mockResolvedValue(counts[2])
     const { default: handler } = await import('../../server/api/contracts/[id].delete')
 
-    const err = await expectError(Promise.resolve(handler(makeEvent({ params: { id: contract.id } }))))
+    const err = await expectError(Promise.resolve(handler(makeEvent({ params: { id: contract.id }, body: { reason: 'cleanup' } }))))
     expect(err.statusCode).toBe(409)
     expect(err.data?.error?.code).toBe('CONFLICT')
     expect(err.data?.error?.details).toEqual(details)
@@ -356,7 +411,7 @@ describe('DELETE /api/contracts/[id]', () => {
     contractRepoMocks.findByIdentifier.mockResolvedValue(contract)
     const { default: handler } = await import('../../server/api/contracts/[id].delete')
 
-    const event = makeEvent({ params: { id: contract.id } })
+    const event = makeEvent({ params: { id: contract.id }, body: { reason: 'cleanup' } })
     await handler(event)
 
     expect(contractRepoMocks.removeWithCascade).toHaveBeenCalledWith(expect.anything(), contract)
@@ -370,21 +425,28 @@ describe('DELETE /api/contracts/[id]', () => {
     contractRepoMocks.update.mockResolvedValue(terminated)
     const { default: handler } = await import('../../server/api/contracts/[id].delete')
 
-    const res = await handler(makeEvent({ params: { id: active.id }, query: { force: 'true' } })) as { data: ContractWithDetails }
+    const res = await handler(makeEvent({ params: { id: active.id }, query: { force: 'true' }, body: { reason: 'cleanup' } })) as { data: ContractWithDetails }
     expect(contractRepoMocks.update).toHaveBeenCalledWith(expect.anything(), active.id, { status: 'terminated' })
     expect(contractRepoMocks.removeWithCascade).toHaveBeenCalledWith(expect.anything(), terminated)
     expect(res.data.status).toBe('terminated')
 
     contractRepoMocks.removeWithCascade.mockClear()
     contractRepoMocks.countBillingPeriodsForContract.mockResolvedValue(1)
-    const conflict = await expectError(Promise.resolve(handler(makeEvent({ params: { id: active.id }, query: { force: 'true' } }))))
+    const conflict = await expectError(Promise.resolve(handler(makeEvent({ params: { id: active.id }, query: { force: 'true' }, body: { reason: 'cleanup' } }))))
     expect(conflict.statusCode).toBe(409)
     expect(conflict.data?.error?.details).toEqual({ issuedBillingPeriods: 1 })
     expect(contractRepoMocks.removeWithCascade).not.toHaveBeenCalled()
 
     asManager()
-    const forbidden = await expectError(Promise.resolve(handler(makeEvent({ params: { id: active.id }, query: { force: 'true' } }))))
+    const forbidden = await expectError(Promise.resolve(handler(makeEvent({ params: { id: active.id }, query: { force: 'true' }, body: { reason: 'cleanup' } }))))
     expect(forbidden.statusCode).toBe(403)
+  })
+
+  it('requires a delete reason', async () => {
+    const { default: handler } = await import('../../server/api/contracts/[id].delete')
+
+    const err = await expectError(Promise.resolve(handler(makeEvent({ params: { id: 'contract-1' }, body: {} }))))
+    expect(err.statusCode).toBe(422)
   })
 })
 
@@ -412,7 +474,7 @@ describe('POST /api/contracts/bulk', () => {
     contractRepoMocks.countNonHandoverMeterReadingsForContract.mockResolvedValue(0)
     const { default: handler } = await import('../../server/api/contracts/bulk.post')
 
-    const res = await handler(makeEvent({ body: { action: 'delete', ids: ['empty', 'with-billing', 'active', 'missing'] } })) as {
+    const res = await handler(makeEvent({ body: { action: 'delete', ids: ['empty', 'with-billing', 'active', 'missing'], reason: 'cleanup' } })) as {
       data: { succeeded: string[]; failed: { id: string; reason: string }[] }
     }
 

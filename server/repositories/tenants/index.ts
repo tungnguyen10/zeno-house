@@ -360,6 +360,34 @@ export const TenantRepository = {
     return count ?? 0
   },
 
+  async findActiveBuildingIdForTenant(event: H3Event, tenantId: string): Promise<string | null> {
+    const client = await serverSupabaseClient(event)
+
+    const { data: primaryContract, error: primaryError } = await client
+      .from('contracts')
+      .select('building_id')
+      .eq('tenant_id', tenantId)
+      .eq('status', 'active')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    if (primaryError) throw createError({ statusCode: 500, message: primaryError.message })
+    if (primaryContract?.building_id) return primaryContract.building_id
+
+    const { data: occupancy, error: occupancyError } = await client
+      .from('contract_occupants')
+      .select('contracts!inner(building_id)')
+      .eq('tenant_id', tenantId)
+      .is('move_out_date', null)
+      .limit(1)
+      .maybeSingle()
+
+    if (occupancyError) throw createError({ statusCode: 500, message: occupancyError.message })
+    const contract = occupancy?.contracts as { building_id?: string | null } | null | undefined
+    return contract?.building_id ?? null
+  },
+
   async softArchive(event: H3Event, id: string): Promise<Tenant> {
     const client = await serverSupabaseClient(event)
     const { data, error } = await client

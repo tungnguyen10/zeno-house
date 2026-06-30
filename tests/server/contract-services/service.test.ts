@@ -1,4 +1,5 @@
 import { vi } from 'vitest'
+import type { AuthUser } from '~/types/auth'
 
 const mocks = vi.hoisted(() => ({
   findBuildingByIdentifier: vi.fn(),
@@ -19,6 +20,14 @@ vi.mock('../../../server/repositories/contract-services', () => ({
   },
 }))
 
+function user(): AuthUser {
+  return { id: 'user-1', app_metadata: { role: 'admin' } } as AuthUser
+}
+
+function event() {
+  return { context: {} } as never
+}
+
 describe('ContractServiceService building identifier lookup', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -29,7 +38,7 @@ describe('ContractServiceService building identifier lookup', () => {
     mocks.findByBuilding.mockResolvedValue([])
     const { ContractServiceService } = await import('../../../server/services/contract-services')
 
-    const result = await ContractServiceService.listByBuilding({} as never, { id: 'user-1' } as never, 'toa-a')
+    const result = await ContractServiceService.listByBuilding(event(), user(), 'toa-a')
 
     expect(mocks.findBuildingByIdentifier).toHaveBeenCalledWith(expect.anything(), 'toa-a')
     expect(mocks.findByBuilding).toHaveBeenCalledWith(expect.anything(), 'building-1')
@@ -41,7 +50,7 @@ describe('ContractServiceService building identifier lookup', () => {
     mocks.syncFromBuilding.mockResolvedValue(2)
     const { ContractServiceService } = await import('../../../server/services/contract-services')
 
-    const result = await ContractServiceService.syncFromBuilding({} as never, { id: 'user-1' } as never, 'toa-a')
+    const result = await ContractServiceService.syncFromBuilding(event(), user(), 'toa-a')
 
     expect(mocks.findBuildingByIdentifier).toHaveBeenCalledWith(expect.anything(), 'toa-a')
     expect(mocks.syncFromBuilding).toHaveBeenCalledWith(expect.anything(), 'building-1')

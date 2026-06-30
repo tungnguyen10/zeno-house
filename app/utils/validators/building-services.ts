@@ -18,5 +18,10 @@ export const buildingServiceUpdateSchema = z.object({
   sort_order: z.number().int().optional(),
 })
 
+export const buildingServiceDeleteSchema = z.object({
+  reason: z.string().trim().min(1, 'Lý do xoá là bắt buộc').max(500, 'Lý do quá dài'),
+})
+
 export type BuildingServiceUpsertInput = z.infer<typeof buildingServiceUpsertSchema>
 export type BuildingServiceUpdateInput = z.infer<typeof buildingServiceUpdateSchema>
+export type BuildingServiceDeleteInput = z.infer<typeof buildingServiceDeleteSchema>

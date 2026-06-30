@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
+import type { AuthUser } from '~/types/auth'
 
 const mocks = vi.hoisted(() => ({
   findRoomByIdentifier: vi.fn(),
@@ -23,6 +24,14 @@ vi.mock('../../../server/repositories/buildings', () => ({
   },
 }))
 
+function user(): AuthUser {
+  return { id: 'user-1', app_metadata: { role: 'admin' } } as AuthUser
+}
+
+function event() {
+  return { context: {} } as never
+}
+
 describe('MeterReadingService.getLatestByRoom', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -37,8 +46,8 @@ describe('MeterReadingService.getLatestByRoom', () => {
     const { MeterReadingService } = await import('../../../server/services/meter-readings')
 
     const result = await MeterReadingService.getLatestByRoom(
-      {} as never,
-      { id: 'user-1' } as never,
+      event(),
+      user(),
       'room-1',
     )
 
@@ -54,8 +63,8 @@ describe('MeterReadingService.getLatestByRoom', () => {
     const { MeterReadingService } = await import('../../../server/services/meter-readings')
 
     const result = await MeterReadingService.getLatestByRoom(
-      {} as never,
-      { id: 'user-1' } as never,
+      event(),
+      user(),
       'room-1',
     )
 
@@ -68,7 +77,7 @@ describe('MeterReadingService.getLatestByRoom', () => {
     const { MeterReadingService } = await import('../../../server/services/meter-readings')
 
     await expect(
-      MeterReadingService.getLatestByRoom({} as never, { id: 'user-1' } as never, 'missing'),
+      MeterReadingService.getLatestByRoom(event(), user(), 'missing'),
     ).rejects.toThrow()
     expect(mocks.findLatestByRoom).not.toHaveBeenCalled()
   })

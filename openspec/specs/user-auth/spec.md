@@ -1,10 +1,8 @@
 ## Purpose
 Defines user authentication behavior for login and logout using Supabase email and password sessions.
-
 ## Requirements
-
 ### Requirement: Login bằng email và password
-App SHALL cho phép admin user đăng nhập bằng email và password qua Supabase Auth. Form SHALL hiển thị loading state khi đang xử lý và error message khi thất bại.
+App SHALL cho phép admin user đăng nhập bằng email và password qua Supabase Auth. Form SHALL hiển thị loading state khi đang xử lý và error message khi thất bại. Permission model SHALL sử dụng capability set tách biệt theo role, bao gồm `billing.corrections` riêng biệt với `billing.write`.
 
 #### Scenario: Đăng nhập thành công
 - **WHEN** user nhập đúng email và password rồi submit
@@ -22,8 +20,6 @@ App SHALL cho phép admin user đăng nhập bằng email và password qua Supab
 - **WHEN** user để trống email hoặc password rồi submit
 - **THEN** form validate và hiển thị lỗi, không gọi Supabase
 
----
-
 ### Requirement: Logout
 App SHALL cho phép user đăng xuất. Sau khi logout, session SHALL bị xoá và user SHALL được redirect về `/login`.
 
@@ -34,3 +30,19 @@ App SHALL cho phép user đăng xuất. Sau khi logout, session SHALL bị xoá 
 #### Scenario: Sau logout không thể truy cập admin route
 - **WHEN** user đã logout và cố truy cập `/`
 - **THEN** middleware redirect về `/login`
+
+### Requirement: billing.corrections là capability riêng, tách khỏi billing.write
+
+System SHALL dùng capability `billing.corrections` để guard `invoice.void`, `invoice.reissue`, `invoice.adjustment`. `billing.write` SHALL không cover các actions này. Manager SHALL có `billing.corrections` trong default capability set.
+
+#### Scenario: Manager có billing.corrections thực hiện void
+- **WHEN** manager gọi void/reissue/adjustment endpoint
+- **THEN** request được xử lý nếu manager có `billing.corrections` (mặc định là có)
+
+#### Scenario: billing.write không đủ để void invoice
+- **WHEN** user có `billing.write` nhưng không có `billing.corrections` gọi void endpoint
+- **THEN** response là 403 Forbidden
+
+#### Scenario: Manager mặc định có billing.corrections
+- **WHEN** user có role `manager` gọi void/reissue/adjustment
+- **THEN** request không bị chặn do thiếu `billing.corrections`

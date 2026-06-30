@@ -11,6 +11,7 @@ const repoMocks = vi.hoisted(() => ({
   remove: vi.fn(),
   countActiveContractsForTenant: vi.fn(),
   countActiveOccupanciesForTenant: vi.fn(),
+  findActiveBuildingIdForTenant: vi.fn(),
   softArchive: vi.fn(),
   setStatus: vi.fn(),
 }))
@@ -23,8 +24,17 @@ const buildingRepoMocks = vi.hoisted(() => ({
   findByIdentifier: vi.fn(),
 }))
 
+const assignmentRepoMocks = vi.hoisted(() => ({
+  findBuildingIdsByUser: vi.fn(),
+  findByUserAndBuilding: vi.fn(),
+}))
+
 vi.mock('../../server/repositories/buildings', () => ({
   BuildingRepository: buildingRepoMocks,
+}))
+
+vi.mock('../../server/repositories/assignments', () => ({
+  AssignmentRepository: assignmentRepoMocks,
 }))
 
 const requireAuthMock = vi.hoisted(() => vi.fn())
@@ -122,6 +132,9 @@ async function expectError(promise: Promise<unknown>): Promise<ApiError> {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  repoMocks.findActiveBuildingIdForTenant.mockResolvedValue(null)
+  assignmentRepoMocks.findBuildingIdsByUser.mockResolvedValue(['0a8a4dd0-7d6f-4f4e-bc7e-3c5e1b833333'])
+  assignmentRepoMocks.findByUserAndBuilding.mockResolvedValue(null)
 })
 
 // ---------------------------------------------------------------------------
@@ -366,7 +379,7 @@ describe('DELETE /api/tenants/[id]', () => {
     repoMocks.remove.mockResolvedValue(undefined)
     const { default: handler } = await import('../../server/api/tenants/[id].delete')
 
-    const event = makeEvent({ params: { id: 't-1' }, query: {} })
+    const event = makeEvent({ params: { id: 't-1' }, query: {}, body: { reason: 'cleanup' } })
     await handler(event)
     expect((event as MockEvent).context.statusCode).toBe(204)
     expect(repoMocks.remove).toHaveBeenCalledWith(expect.anything(), 't-1')
@@ -379,7 +392,7 @@ describe('DELETE /api/tenants/[id]', () => {
     repoMocks.countActiveOccupanciesForTenant.mockResolvedValue(0)
     const { default: handler } = await import('../../server/api/tenants/[id].delete')
 
-    const err = await expectError(Promise.resolve(handler(makeEvent({ params: { id: 't-2' }, query: {} }))))
+    const err = await expectError(Promise.resolve(handler(makeEvent({ params: { id: 't-2' }, query: {}, body: { reason: 'cleanup' } }))))
     expect(err.statusCode).toBe(409)
     expect(err.data?.error?.code).toBe('CONFLICT')
     expect(err.data?.error?.details).toMatchObject({ activeContracts: 1, activeOccupancies: 0 })
@@ -392,7 +405,7 @@ describe('DELETE /api/tenants/[id]', () => {
     repoMocks.countActiveOccupanciesForTenant.mockResolvedValue(2)
     const { default: handler } = await import('../../server/api/tenants/[id].delete')
 
-    const err = await expectError(Promise.resolve(handler(makeEvent({ params: { id: 't-3' }, query: {} }))))
+    const err = await expectError(Promise.resolve(handler(makeEvent({ params: { id: 't-3' }, query: {}, body: { reason: 'cleanup' } }))))
     expect(err.statusCode).toBe(409)
     expect(err.data?.error?.details).toMatchObject({ activeOccupancies: 2 })
   })
@@ -404,7 +417,7 @@ describe('DELETE /api/tenants/[id]', () => {
     repoMocks.softArchive.mockResolvedValue(archived)
     const { default: handler } = await import('../../server/api/tenants/[id].delete')
 
-    const event = makeEvent({ params: { id: 't-4' }, query: { force: 'true' } })
+    const event = makeEvent({ params: { id: 't-4' }, query: { force: 'true' }, body: { reason: 'archive' } })
     const res = await handler(event) as { data: Tenant }
     expect(res.data.status).toBe('archived')
     expect(repoMocks.softArchive).toHaveBeenCalledWith(expect.anything(), 't-4')
@@ -415,8 +428,20 @@ describe('DELETE /api/tenants/[id]', () => {
     asManager()
     const { default: handler } = await import('../../server/api/tenants/[id].delete')
 
-    const err = await expectError(Promise.resolve(handler(makeEvent({ params: { id: 't-1' }, query: { force: 'true' } }))))
+    const err = await expectError(Promise.resolve(handler(makeEvent({
+      params: { id: 't-1' },
+      query: { force: 'true' },
+      body: { reason: 'archive', building_id: '0a8a4dd0-7d6f-4f4e-bc7e-3c5e1b833333' },
+    }))))
     expect(err.statusCode).toBe(403)
+  })
+
+  it('requires a delete reason', async () => {
+    asAdmin()
+    const { default: handler } = await import('../../server/api/tenants/[id].delete')
+
+    const err = await expectError(Promise.resolve(handler(makeEvent({ params: { id: 't-1' }, body: {} }))))
+    expect(err.statusCode).toBe(422)
   })
 })
 
@@ -471,7 +496,7 @@ describe('POST /api/tenants/bulk', () => {
     repoMocks.remove.mockResolvedValue(undefined)
     const { default: handler } = await import('../../server/api/tenants/bulk.post')
 
-    const res = await handler(makeEvent({ body: { action: 'delete', ids: ['no-history', 'active-contract', 'missing'] } })) as {
+    const res = await handler(makeEvent({ body: { action: 'delete', ids: ['no-history', 'active-contract', 'missing'], reason: 'cleanup' } })) as {
       data: { succeeded: string[]; failed: { id: string; reason: string }[] }
     }
     expect(res.data.succeeded).toEqual(['no-history'])

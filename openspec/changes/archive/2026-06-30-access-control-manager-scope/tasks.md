@@ -64,13 +64,13 @@
 
 ## 6. Destructive Override (Spec 2)
 
-- [ ] 6.1 `server/services/rooms/index.ts` — `remove`: thay `can(user, 'rooms.delete')` thành `canDeleteMasterData(event, user, room.buildingId)`; yêu cầu `reason` field; ghi audit
-- [ ] 6.2 `server/services/tenants/index.ts` — `remove`: tương tự, dùng `canDeleteMasterData` theo building của contract active gần nhất hoặc require `buildingId` explicit
-- [ ] 6.3 `server/services/contracts/index.ts` — `remove`: `canDeleteMasterData(event, user, contract.buildingId)`; yêu cầu `reason`; ghi audit
-- [ ] 6.4 `server/services/building-services/` — hard-delete: `canDeleteMasterData` theo `building_id`
-- [ ] 6.5 `server/services/contract-services.ts` — hard-delete: `canDeleteMasterData` theo building
-- [ ] 6.6 Cập nhật validators: thêm `reason` field (required string) vào delete schemas cho rooms/tenants/contracts
-- [ ] 6.7 Cập nhật API handlers delete (rooms, tenants, contracts): pass `reason` từ request body vào service
+- [x] 6.1 `server/services/rooms/index.ts` — `remove`: thay `can(user, 'rooms.delete')` thành `canDeleteMasterData(event, user, room.buildingId)`; yêu cầu `reason` field; ghi audit
+- [x] 6.2 `server/services/tenants/index.ts` — `remove`: tương tự, dùng `canDeleteMasterData` theo building của contract active gần nhất hoặc require `buildingId` explicit
+- [x] 6.3 `server/services/contracts/index.ts` — `remove`: `canDeleteMasterData(event, user, contract.buildingId)`; yêu cầu `reason`; ghi audit
+- [x] 6.4 `server/services/building-services/` — hard-delete: `canDeleteMasterData` theo `building_id`
+- [x] 6.5 `server/services/contract-services.ts` — hard-delete: `canDeleteMasterData` theo building
+- [x] 6.6 Cập nhật validators: thêm `reason` field (required string) vào delete schemas cho rooms/tenants/contracts
+- [x] 6.7 Cập nhật API handlers delete (rooms, tenants, contracts): pass `reason` từ request body vào service
 
 ## 7. Assignment API (Spec 3 backend)
 
@@ -96,14 +96,14 @@
 
 ## 9. Tests (Spec 1 + Spec 2 cross-building isolation)
 
-- [ ] 9.1 Test scope resolver: admin returns null, manager returns string[], cache hit không query lại
-- [ ] 9.2 Test buildings: manager thấy assigned, không thấy unassigned
-- [ ] 9.3 Test rooms: list filter, detail 404 ngoài scope, mutation 403 ngoài scope
-- [ ] 9.4 Test tenants: list qua contract join, không leak tenant của unassigned building
-- [ ] 9.5 Test contracts: list filter, detail 404, create 403 (unassigned room)
-- [ ] 9.6 Test billing periods: list filter, detail 404, issue 403 ngoài scope
-- [ ] 9.7 Test invoices: detail 404 ngoài scope (2-hop: invoice→period→building)
-- [ ] 9.8 Test destructive override: manager mặc định 403 delete, manager với flag delete thành công + reason required, flag building A không affect building B
-- [ ] 9.9 Test billing.corrections: manager có thể void/reissue/adjustment, billing.write không đủ cho void
-- [ ] 9.10 Test dashboard: manager scope chỉ tính assigned buildings
-- [ ] 9.11 Test API direct call bypass: scope enforced dù không qua UI
+- [x] 9.1 Test scope resolver: admin returns null, manager returns string[], cache hit không query lại
+- [x] 9.2 Test buildings: manager thấy assigned, không thấy unassigned
+- [x] 9.3 Test rooms: list filter, detail 404 ngoài scope, mutation 403 ngoài scope
+- [x] 9.4 Test tenants: list qua contract join, không leak tenant của unassigned building
+- [x] 9.5 Test contracts: list filter, detail 404, create 403 (unassigned room)
+- [x] 9.6 Test billing periods: list filter, detail 404, issue 403 ngoài scope
+- [x] 9.7 Test invoices: detail 404 ngoài scope (2-hop: invoice→period→building)
+- [x] 9.8 Test destructive override: manager mặc định 403 delete, manager với flag delete thành công + reason required, flag building A không affect building B
+- [x] 9.9 Test billing.corrections: manager có thể void/reissue/adjustment, billing.write không đủ cho void
+- [x] 9.10 Test dashboard: manager scope chỉ tính assigned buildings
+- [x] 9.11 Test API direct call bypass: scope enforced dù không qua UI

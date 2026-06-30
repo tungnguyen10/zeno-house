@@ -8,7 +8,7 @@ import type {
 } from '~/utils/validators/tenants'
 import { TenantRepository, type TenantFilters } from '../../repositories/tenants'
 import { BuildingRepository } from '../../repositories/buildings'
-import { getAssignedBuildingIds } from '../../utils/scope'
+import { canDeleteMasterData, getAssignedBuildingIds } from '../../utils/scope'
 import { AuditService } from '../audit'
 import { AUDIT_ACTIONS } from '~/utils/constants/audit'
 
@@ -89,21 +89,29 @@ export const TenantService = {
     event: H3Event,
     user: AuthUser,
     id: string,
-    opts: { force?: boolean } = {},
+    opts: { force?: boolean; reason: string; buildingId?: string } = { reason: '' },
   ): Promise<Tenant | undefined> {
-    if (!can(user, 'tenants.delete')) throwForbidden('Không có quyền xoá khách thuê')
     const existing = await TenantRepository.findByIdentifier(event, id)
     if (!existing) throwNotFound('Không tìm thấy khách thuê')
+    const scopeBuildingId = await TenantRepository.findActiveBuildingIdForTenant(event, existing.id)
+      ?? opts.buildingId
+    if (!scopeBuildingId && user.app_metadata.role !== 'admin') {
+      throwForbidden('Không xác định được tòa nhà để kiểm tra quyền xoá khách thuê')
+    }
+    if (scopeBuildingId && !await canDeleteMasterData(event, user, scopeBuildingId)) {
+      throwForbidden('Không có quyền xoá khách thuê trong tòa nhà này')
+    }
 
     if (opts.force) {
       const archived = await TenantRepository.softArchive(event, existing.id)
       await AuditService.append(event, user, {
-        building_id: null,
+        building_id: scopeBuildingId ?? null,
         action: AUDIT_ACTIONS.TENANT_ARCHIVED,
         entity_type: 'tenant',
         entity_id: existing.id,
         before_data: existing,
         after_data: archived,
+        metadata: { reason: opts.reason },
       })
       return archived
     }
@@ -128,11 +136,12 @@ export const TenantService = {
 
     await TenantRepository.remove(event, existing.id)
     await AuditService.append(event, user, {
-      building_id: null,
+      building_id: scopeBuildingId ?? null,
       action: AUDIT_ACTIONS.TENANT_REMOVED,
       entity_type: 'tenant',
       entity_id: existing.id,
       before_data: existing,
+      metadata: { reason: opts.reason },
     })
     return undefined
   },
@@ -142,7 +151,7 @@ export const TenantService = {
     user: AuthUser,
     input: TenantBulkActionInput,
   ): Promise<TenantBulkResult> {
-    if (!can(user, 'tenants.delete')) throwForbidden('Không có quyền thao tác hàng loạt')
+    if (!can(user, 'tenants.update')) throwForbidden('Không có quyền thao tác hàng loạt')
 
     const succeeded: string[] = []
     const failed: { id: string; reason: string }[] = []
@@ -150,7 +159,10 @@ export const TenantService = {
     for (const id of input.ids) {
       try {
         if (input.action === 'delete') {
-          await TenantService.remove(event, user, id)
+          await TenantService.remove(event, user, id, {
+            reason: input.reason!,
+            buildingId: input.building_id,
+          })
           succeeded.push(id)
           continue
         }

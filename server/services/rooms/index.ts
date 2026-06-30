@@ -8,7 +8,7 @@ import type {
 } from '~/utils/validators/rooms'
 import { RoomRepository, type RoomFilters } from '../../repositories/rooms'
 import { BuildingRepository } from '../../repositories/buildings'
-import { assertBuildingScope, getAssignedBuildingIds } from '../../utils/scope'
+import { assertBuildingScope, canDeleteMasterData, getAssignedBuildingIds } from '../../utils/scope'
 import { AuditService } from '../audit'
 import { AUDIT_ACTIONS } from '~/utils/constants/audit'
 
@@ -95,12 +95,14 @@ export const RoomService = {
     event: H3Event,
     user: AuthUser,
     id: string,
-    opts: { force?: boolean } = {},
+    opts: { force?: boolean; reason: string },
   ): Promise<Room | undefined> {
-    if (!can(user, 'rooms.delete')) throwForbidden('Không có quyền xoá phòng')
     const existing = await RoomRepository.findByIdentifier(event, id)
     if (!existing) throwNotFound('Không tìm thấy phòng')
     await assertBuildingScope(event, user, existing.buildingId, 'write')
+    if (!await canDeleteMasterData(event, user, existing.buildingId)) {
+      throwForbidden('Không có quyền xoá phòng trong tòa nhà này')
+    }
 
     if (opts.force) {
       const archived = await RoomRepository.softArchive(event, existing.id)
@@ -111,6 +113,7 @@ export const RoomService = {
         entity_id: existing.id,
         before_data: existing,
         after_data: archived,
+        metadata: { reason: opts.reason },
       })
       return archived
     }
@@ -140,6 +143,7 @@ export const RoomService = {
       entity_type: 'room',
       entity_id: existing.id,
       before_data: existing,
+      metadata: { reason: opts.reason },
     })
     return undefined
   },
@@ -149,7 +153,7 @@ export const RoomService = {
     user: AuthUser,
     input: RoomBulkActionInput,
   ): Promise<RoomBulkResult> {
-    if (!can(user, 'rooms.delete')) throwForbidden('Không có quyền thao tác hàng loạt')
+    if (!can(user, 'rooms.update')) throwForbidden('Không có quyền thao tác hàng loạt')
 
     const succeeded: string[] = []
     const failed: { id: string; reason: string }[] = []
@@ -157,7 +161,7 @@ export const RoomService = {
     for (const id of input.ids) {
       try {
         if (input.action === 'delete') {
-          await RoomService.remove(event, user, id)
+          await RoomService.remove(event, user, id, { reason: input.reason! })
           succeeded.push(id)
           continue
         }

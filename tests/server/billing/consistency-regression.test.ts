@@ -159,11 +159,12 @@ describe('billing API consistency regression', () => {
       import('../../../server/services/billing/grid'),
     ])
 
-    const user = { id: 'user-1' } as never
-    const [summary] = await BillingPeriodService.list({} as never, user, {})
-    const overview = await BillingPeriodService.getOverview({} as never, user, period.id)
-    const drafts = await BillingDraftService.calculateDraft({} as never, user, period.id)
-    const grid = await BillingDraftGridService.getGrid({} as never, user, period.id)
+    const user = { id: 'user-1', app_metadata: { role: 'admin' } } as never
+    const event = { context: {} } as never
+    const [summary] = await BillingPeriodService.list(event, user, {})
+    const overview = await BillingPeriodService.getOverview(event, user, period.id)
+    const drafts = await BillingDraftService.calculateDraft(event, user, period.id)
+    const grid = await BillingDraftGridService.getGrid(event, user, period.id)
 
     expect(summary).toMatchObject({
       contractCount: 1,

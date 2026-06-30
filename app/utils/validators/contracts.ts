@@ -39,9 +39,18 @@ export const contractBulkActionSchema = z.object({
   action: z.enum(['terminate', 'delete']),
   ids: z.array(z.string().min(1)).min(1, 'Chọn ít nhất một hợp đồng'),
   reason: z.string().trim().max(500, 'Lý do quá dài').optional(),
-})
+}).refine(
+  data => data.action !== 'delete' || Boolean(data.reason?.trim()),
+  { message: 'Lý do xoá là bắt buộc', path: ['reason'] },
+)
 
 export type ContractBulkActionInput = z.infer<typeof contractBulkActionSchema>
+
+export const contractDeleteSchema = z.object({
+  reason: z.string().trim().min(1, 'Lý do xoá là bắt buộc').max(500, 'Lý do quá dài'),
+})
+
+export type ContractDeleteInput = z.infer<typeof contractDeleteSchema>
 
 export const contractCreateSchema = z.object({
   room_id: z.string().uuid('ID phòng không hợp lệ'),

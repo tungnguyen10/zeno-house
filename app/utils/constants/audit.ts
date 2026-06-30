@@ -27,6 +27,10 @@ export const AUDIT_ACTIONS = {
   CONTRACT_EXPIRED: 'contract.expired',
   CONTRACT_RENEWED: 'contract.renewed',
   CONTRACT_REMOVED: 'contract.removed',
+
+  // Services
+  BUILDING_SERVICE_REMOVED: 'building_service.removed',
+  CONTRACT_SERVICE_REMOVED: 'contract_service.removed',
 } as const
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[keyof typeof AUDIT_ACTIONS]
@@ -37,4 +41,6 @@ export type AuditEntityType =
   | 'tenant'
   | 'contract'
   | 'contract_renewal'
+  | 'building_service'
+  | 'contract_service'
   | 'meter_device'

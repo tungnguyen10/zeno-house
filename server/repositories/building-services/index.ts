@@ -68,4 +68,10 @@ export const BuildingServiceRepository = {
     if (!data) throw createError({ statusCode: 404, message: 'Không tìm thấy' })
     return mapBuildingService(data as Parameters<typeof mapBuildingService>[0])
   },
+
+  async remove(event: H3Event, id: string): Promise<void> {
+    const client = await serverSupabaseClient(event)
+    const { error } = await client.from('building_services').delete().eq('id', id)
+    if (error) throw createError({ statusCode: 500, message: error.message })
+  },
 }

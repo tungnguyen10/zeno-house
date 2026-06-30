@@ -8,7 +8,7 @@ import { ContractOccupantRepository } from '../../repositories/contract-occupant
 import { RoomRepository } from '../../repositories/rooms'
 import { BuildingRepository } from '../../repositories/buildings'
 import { TenantRepository } from '../../repositories/tenants'
-import { assertBuildingScope, getAssignedBuildingIds } from '../../utils/scope'
+import { assertBuildingScope, canDeleteMasterData, getAssignedBuildingIds } from '../../utils/scope'
 import { AuditService } from '../audit'
 import { AUDIT_ACTIONS } from '~/utils/constants/audit'
 
@@ -236,12 +236,14 @@ export const ContractService = {
     event: H3Event,
     user: AuthUser,
     id: string,
-    opts: { force?: boolean } = {},
+    opts: { force?: boolean; reason: string },
   ): Promise<ContractWithDetails | undefined> {
-    if (!can(user, 'contracts.delete')) throwForbidden('Không có quyền xoá hợp đồng')
     let existing = await ContractRepository.findByIdentifier(event, id)
     if (!existing) throwNotFound('Không tìm thấy hợp đồng')
     await assertBuildingScope(event, user, existing.buildingId, 'write')
+    if (!await canDeleteMasterData(event, user, existing.buildingId)) {
+      throwForbidden('Không có quyền xoá hợp đồng trong tòa nhà này')
+    }
 
     if (opts.force && existing.status === 'active') {
       existing = await this.update(event, user, existing.id, { status: 'terminated' })
@@ -269,6 +271,7 @@ export const ContractService = {
       entity_type: 'contract',
       entity_id: existing.id,
       before_data: existing,
+      metadata: { reason: opts.reason },
     })
     return opts.force ? existing : undefined
   },
@@ -278,7 +281,7 @@ export const ContractService = {
     user: AuthUser,
     input: ContractBulkActionInput,
   ): Promise<ContractBulkActionResult> {
-    if (!can(user, 'contracts.delete')) throwForbidden('Không có quyền thao tác hàng loạt')
+    if (!can(user, 'contracts.update')) throwForbidden('Không có quyền thao tác hàng loạt')
 
     const succeeded: string[] = []
     const failed: { id: string; reason: string }[] = []
@@ -289,7 +292,7 @@ export const ContractService = {
           await this.update(event, user, id, { status: 'terminated' })
         }
         else {
-          await this.remove(event, user, id)
+          await this.remove(event, user, id, { reason: input.reason! })
         }
         succeeded.push(id)
       }

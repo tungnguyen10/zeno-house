@@ -44,9 +44,18 @@ export const roomListQuerySchema = z.object({
 export const roomBulkActionSchema = z.object({
   action: z.enum(['archive', 'activate', 'set_maintenance', 'delete']),
   ids: z.array(z.string().min(1)).min(1, 'Cần chọn ít nhất một phòng'),
+  reason: z.string().trim().min(1, 'Lý do xoá là bắt buộc').max(500, 'Lý do quá dài').optional(),
+}).refine(
+  data => data.action !== 'delete' || Boolean(data.reason),
+  { message: 'Lý do xoá là bắt buộc', path: ['reason'] },
+)
+
+export const roomDeleteSchema = z.object({
+  reason: z.string().trim().min(1, 'Lý do xoá là bắt buộc').max(500, 'Lý do quá dài'),
 })
 
 export type RoomCreateInput = z.infer<typeof roomCreateSchema>
 export type RoomUpdateInput = z.infer<typeof roomUpdateSchema>
 export type RoomListQuery = z.infer<typeof roomListQuerySchema>
 export type RoomBulkActionInput = z.infer<typeof roomBulkActionSchema>
+export type RoomDeleteInput = z.infer<typeof roomDeleteSchema>

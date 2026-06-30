@@ -197,6 +197,8 @@ function createClientMock(input: {
         let rows = [...input.contracts]
         const buildingId = this.equals.get('building_id')
         if (buildingId) rows = rows.filter(row => row.building_id === buildingId)
+        const buildingIds = this.inValues.get('building_id')
+        if (buildingIds) rows = rows.filter(row => buildingIds.includes(row.building_id))
         const status = this.equals.get('status')
         if (status) rows = rows.filter(row => row.status === status)
         const tenantId = this.equals.get('tenant_id')

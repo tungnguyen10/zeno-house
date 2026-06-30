@@ -5,7 +5,9 @@ import type { ContractServiceUpdateInput } from '~/utils/validators/contract-ser
 import { ContractServiceRepository } from '../../repositories/contract-services'
 import { BuildingRepository } from '../../repositories/buildings'
 import { ContractRepository } from '../../repositories/contracts'
-import { assertBuildingScope } from '../../utils/scope'
+import { assertBuildingScope, canDeleteMasterData } from '../../utils/scope'
+import { AuditService } from '../audit'
+import { AUDIT_ACTIONS } from '~/utils/constants/audit'
 
 export const ContractServiceService = {
   async list(event: H3Event, _user: AuthUser, contractId: string): Promise<ContractService[]> {
@@ -44,5 +46,25 @@ export const ContractServiceService = {
 
   async cloneFromBuilding(event: H3Event, contractId: string, buildingId: string): Promise<void> {
     return ContractServiceRepository.cloneFromBuilding(event, contractId, buildingId)
+  },
+
+  async remove(event: H3Event, user: AuthUser, id: string, opts: { reason: string }): Promise<void> {
+    const existing = await ContractServiceRepository.findById(event, id)
+    if (!existing) throwNotFound('Không tìm thấy dịch vụ hợp đồng')
+    const contract = await ContractRepository.findById(event, existing.contractId)
+    if (!contract) throwNotFound('Không tìm thấy hợp đồng')
+    await assertBuildingScope(event, user, contract.buildingId, 'write')
+    if (!await canDeleteMasterData(event, user, contract.buildingId)) {
+      throwForbidden('Không có quyền xoá dịch vụ trong hợp đồng này')
+    }
+    await ContractServiceRepository.remove(event, id)
+    await AuditService.append(event, user, {
+      building_id: contract.buildingId,
+      action: AUDIT_ACTIONS.CONTRACT_SERVICE_REMOVED,
+      entity_type: 'contract_service',
+      entity_id: existing.id,
+      before_data: existing,
+      metadata: { reason: opts.reason },
+    })
   },
 }

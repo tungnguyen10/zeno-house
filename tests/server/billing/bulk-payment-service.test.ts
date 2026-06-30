@@ -1,8 +1,12 @@
 import { vi } from 'vitest'
-import { buildInvoicePayment } from '../../__fixtures__/billing/invoice'
+import type { AuthUser } from '~/types/auth'
+import { buildInvoice, buildInvoicePayment } from '../../__fixtures__/billing/invoice'
+import { buildPeriod } from '../../__fixtures__/billing/period'
 
 const rpcMock = vi.fn()
 const enrichPayments = vi.fn(async payments => payments)
+const findInvoiceByIdentifier = vi.fn()
+const findPeriodById = vi.fn()
 
 vi.mock('#supabase/server', () => ({
   serverSupabaseClient: vi.fn(async () => ({
@@ -16,6 +20,26 @@ vi.mock('../../../server/services/billing/display', () => ({
   }),
 }))
 
+vi.mock('../../../server/repositories/billing/invoices', () => ({
+  InvoiceRepository: {
+    findByIdentifier: findInvoiceByIdentifier,
+  },
+}))
+
+vi.mock('../../../server/repositories/billing/periods', () => ({
+  BillingPeriodRepository: {
+    findById: findPeriodById,
+  },
+}))
+
+function user(): AuthUser {
+  return { id: 'user-1', app_metadata: { role: 'admin' } } as AuthUser
+}
+
+function event() {
+  return { context: {} } as never
+}
+
 /**
  * Tests for `InvoicePaymentService.recordBatch` after the RPC hardening
  * (`billing-transaction-hardening`). The whole write is delegated to the
@@ -26,6 +50,12 @@ vi.mock('../../../server/services/billing/display', () => ({
 describe('InvoicePaymentService.recordBatch (RPC-backed)', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    findInvoiceByIdentifier.mockImplementation(async (_event, id: string) =>
+      buildInvoice({ id, billingPeriodId: `period-${id}` }),
+    )
+    findPeriodById.mockImplementation(async (_event, id: string) =>
+      buildPeriod({ id, buildingId: 'building-1' }),
+    )
   })
 
   function rowFromPayment(p: ReturnType<typeof buildInvoicePayment>) {
@@ -52,8 +82,8 @@ describe('InvoicePaymentService.recordBatch (RPC-backed)', () => {
     const { InvoicePaymentService } = await import('../../../server/services/billing/payments')
 
     const result = await InvoicePaymentService.recordBatch(
-      {} as never,
-      { id: 'user-1' } as never,
+      event(),
+      user(),
       {
         payments: [
           { invoice_id: 'invoice-1', amount: 1_000_000, payment_date: '2026-06-02', payment_method: 'cash' },
@@ -96,8 +126,8 @@ describe('InvoicePaymentService.recordBatch (RPC-backed)', () => {
 
     await expect(
       InvoicePaymentService.recordBatch(
-        {} as never,
-        { id: 'user-1' } as never,
+        event(),
+        user(),
         {
           payments: [
             { invoice_id: 'invoice-1', amount: 1_000, payment_date: '2026-06-02' },
@@ -132,8 +162,8 @@ describe('InvoicePaymentService.recordBatch (RPC-backed)', () => {
 
     await expect(
       InvoicePaymentService.recordBatch(
-        {} as never,
-        { id: 'user-1' } as never,
+        event(),
+        user(),
         {
           payments: [
             { invoice_id: 'invoice-1', amount: 1_000, payment_date: '2026-06-02' },
@@ -157,8 +187,8 @@ describe('InvoicePaymentService.recordBatch (RPC-backed)', () => {
 
     await expect(
       InvoicePaymentService.recordBatch(
-        {} as never,
-        { id: 'user-1' } as never,
+        event(),
+        user(),
         { payments: [] },
       ),
     ).rejects.toMatchObject({ statusCode: 422 })
@@ -176,8 +206,8 @@ describe('InvoicePaymentService.recordBatch (RPC-backed)', () => {
     const { InvoicePaymentService } = await import('../../../server/services/billing/payments')
 
     const result = await InvoicePaymentService.recordBatch(
-      {} as never,
-      { id: 'user-1' } as never,
+      event(),
+      user(),
       {
         payments: [
           { invoice_id: 'invoice-A', amount: 500_000, payment_date: '2026-06-02' },

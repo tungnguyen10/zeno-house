@@ -14,8 +14,16 @@ const repoMocks = vi.hoisted(() => ({
   softArchive: vi.fn(),
 }))
 
+const assignmentRepoMocks = vi.hoisted(() => ({
+  findBuildingIdsByUser: vi.fn(),
+}))
+
 vi.mock('../../server/repositories/buildings', () => ({
   BuildingRepository: repoMocks,
+}))
+
+vi.mock('../../server/repositories/assignments', () => ({
+  AssignmentRepository: assignmentRepoMocks,
 }))
 
 const requireAuthMock = vi.hoisted(() => vi.fn())
@@ -118,6 +126,7 @@ async function expectError(promise: Promise<unknown>): Promise<ApiError> {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  assignmentRepoMocks.findBuildingIdsByUser.mockResolvedValue(['b-1'])
 })
 
 // ---------------------------------------------------------------------------
@@ -192,6 +201,17 @@ describe('GET /api/buildings', () => {
     expect(err.statusCode).toBe(422)
     expect(err.data?.error?.code).toBe('VALIDATION_ERROR')
   })
+
+  it('passes assigned building ids when manager lists buildings', async () => {
+    asManager()
+    repoMocks.findAll.mockResolvedValue({ items: [buildBuilding({ id: 'b-1' })], total: 1 })
+    const { default: handler } = await import('../../server/api/buildings/index.get')
+
+    await handler(makeEvent({ query: {} }))
+    expect(repoMocks.findAll).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      buildingIds: ['b-1'],
+    }))
+  })
 })
 
 // ---------------------------------------------------------------------------
@@ -260,6 +280,15 @@ describe('GET /api/buildings/[id]', () => {
     const { default: handler } = await import('../../server/api/buildings/[id].get')
 
     const err = await expectError(Promise.resolve(handler(makeEvent({ params: { id: 'missing' } }))))
+    expect(err.statusCode).toBe(404)
+  })
+
+  it('returns 404 when manager reads outside assigned buildings', async () => {
+    asManager()
+    repoMocks.findByIdentifier.mockResolvedValue(buildBuilding({ id: 'b-2' }))
+    const { default: handler } = await import('../../server/api/buildings/[id].get')
+
+    const err = await expectError(Promise.resolve(handler(makeEvent({ params: { id: 'b-2' } }))))
     expect(err.statusCode).toBe(404)
   })
 })

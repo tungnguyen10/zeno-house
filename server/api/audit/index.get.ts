@@ -5,7 +5,16 @@ import type { AuditEntityType } from '~/utils/constants/audit'
 
 const querySchema = z.object({
   building_id: z.string().trim().min(1).optional(),
-  entity_type: z.enum(['building', 'room', 'tenant', 'contract', 'contract_renewal', 'meter_device']).optional(),
+  entity_type: z.enum([
+    'building',
+    'room',
+    'tenant',
+    'contract',
+    'contract_renewal',
+    'building_service',
+    'contract_service',
+    'meter_device',
+  ]).optional(),
   entity_id: z.string().trim().min(1).optional(),
   correlation_id: z.string().trim().min(1).optional(),
   limit: z.coerce.number().int().min(1).max(200).optional().default(50),
