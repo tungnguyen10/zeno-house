@@ -13,34 +13,41 @@ Tách 4 phase để ship dần và dễ revert. Mỗi phase ship được độc
 
 - [ ] A2. Service emit correlation
   - [ ] Helper `server/utils/billing/correlation.ts` export `newCorrelationId()` dùng `uuidv7` (npm `uuidv7`)
-  - [ ] Sửa `server/services/billing/period-issue.ts` (hoặc tương đương) để cả bulk issue và adjacent events nhận chung correlation
-  - [ ] Sửa `server/services/billing/bulk-payments.ts` để parent `payments.bulk_recorded` + children `invoice.payment_recorded` share correlation
-  - [ ] Sửa `server/services/billing/invoice-void.ts` + reissue để 2 events share correlation
+  - [ ] Sửa `server/services/billing/invoices.ts` (issue path — KHÔNG có file `period-issue.ts`) để bulk issue và adjacent events nhận chung correlation
+  - [ ] Sửa `server/services/billing/payments.ts` (KHÔNG có file `bulk-payments.ts`) để parent `payments.bulk_recorded` + children `invoice.payment_recorded` share correlation
+  - [ ] Sửa void + reissue trong `server/services/billing/invoices.ts` để 2 events share correlation
 
 - [ ] A3. Bổ sung action codes mới
   - [ ] Cập nhật `app/utils/constants/billing.ts` `BILLING_AUDIT_ACTIONS` thêm `payment.undone`, `payment.edited`, `invoice.printed`
   - [ ] Cập nhật `server/services/billing/audit-summary.ts` formatter cho 3 code mới
   - [ ] Cập nhật `app/utils/format/billing.ts` (nếu có) icon/label client-side
+  - [ ] Lưu ý: `payment.edited` **không có emit point** trong change này (đã bỏ edit/partial/adjustment flow). Giữ làm **reserved code** (formatter + category map vẫn add cho forward-compat); KHÔNG gắn dạng dead UI trông chờ nó
 
 - [ ] A4. `reading.saved` mang diff
-  - [ ] Sửa `server/services/billing/readings-save.ts` (hoặc tương đương) nhận `previous_value` từ payload hoặc tự fetch trước update
+  - [ ] Xác định nơi emit `reading.saved` hiện tại (`server/services/billing/drafts.ts` hoặc service readings tương đương — KHÔNG có file `readings-save.ts`) và nhận `previous_value` từ payload hoặc tự fetch trước update
   - [ ] Audit metadata schema: `{ previous_value, new_value, unit, reading_date }`
   - [ ] Test integration: save 1 reading → metadata có previous + new
 
 - [ ] A5. `invoice.printed` emit point
-  - [ ] Xác định endpoint print/export hiện tại (PDF / receipt)
-  - [ ] Emit `invoice.printed` ở mọi entry point với metadata `{ invoice_id, format }`
+  - [ ] Xác định print/export hiện tại: server-side (`server/services/billing/export.ts` + `[id]/export.get.ts`) hay client-only (`BillingPrintCard.vue` gọi `window.print()`)
+  - [ ] Nếu server-side → emit `invoice.printed` ngay tại endpoint export
+  - [ ] Nếu client-only → cần ping endpoint mới (vd `POST /api/billing/invoices/[id]/printed`) để emit (không budget sẵn trong design — confirm trước khi làm)
+  - [ ] Emit ở mọi entry point với metadata `{ invoice_id, format }`
 
 - [ ] A6. Audit list API filter/search/page
-  - [ ] Mở rộng `server/api/billing/periods/[periodId]/audit.get.ts` chấp nhận query: `actor`, `category`, `from`, `to`, `q`, `correlation_id`, `cursor`, `limit`
+  - [ ] Mở rộng `server/api/billing/periods/[id]/audit.get.ts` (convention `[id]`, KHÔNG `[periodId]`) chấp nhận query: `actor`, `category`, `from`, `to`, `q`, `correlation_id`, `cursor`, `limit`
   - [ ] Validator Zod ở `app/utils/validators/billing-audit.ts`
   - [ ] Repository helper `server/repositories/billing-audit.ts` build query với index-safe filters
   - [ ] Map category code → action codes theo design D9
   - [ ] Test: filter category=destructive trả về void/undo/reopen/unissue; q="0001" trả về events có invoice_code match
 
-- [ ] A7. Period reopen reason validation
-  - [ ] Kiểm tra `server/api/billing/periods/[id]/reopen.post.ts` đã enforce reason ≥ 10 chars chưa; nếu chưa thì thêm
-  - [ ] Đảm bảo `period.reopened` audit metadata có `reason`
+- [ ] A7. Period reopen flow (closed → collecting) — **BUILD MỚI, không phải verify**
+  - [ ] ⚠️ Premise cũ sai: `period.reopened` chỉ có **constant**, chưa từng emit, KHÔNG có endpoint/service. Archive `2026-06-14-monthly-operations-workspace` đã defer reopen. Xem design D11.
+  - [ ] Service `periods.reopen(periodId, { reason }, user)` trong `server/services/billing/periods.ts` (cạnh `close` / `unissue`): require status `closed`; reason ≥ 10 chữ sau trim; permission `billing.close`; chuyển `closed → collecting`; emit `period.reopened` metadata `{ reason, prior_status, trigger: 'manual' }`
+  - [ ] Endpoint `server/api/billing/periods/[id]/reopen.post.ts` (theo convention `[id]`)
+  - [ ] Validator Zod reason (tái dùng pattern của `unissue`)
+  - [ ] Lỗi: `409 NOT_CLOSED` nếu không `closed`; `400 VALIDATION_ERROR` reason ngắn; `403 FORBIDDEN` thiếu quyền
+  - [ ] Test integration: reopen hợp lệ, reason ngắn bị chặn, không quyền 403, period chưa closed 409
 
 - [ ] A8. QA Phase A
   - [ ] `npx tsc --noEmit` pass
@@ -106,7 +113,7 @@ Tách 4 phase để ship dần và dễ revert. Mỗi phase ship được độc
   - [ ] Error: raise distinct error codes `DRAFT_NOT_READY`, `ALREADY_ISSUED`, `PERIOD_LOCKED`
 
 - [ ] C2. REST endpoint
-  - [ ] `server/api/billing/periods/[periodId]/contracts/[contractId]/issue-and-pay.post.ts`
+  - [ ] `server/api/billing/periods/[id]/issue-and-pay.post.ts` (convention `[id]`; `contract_id` truyền trong body, khớp proposal `periods/<id>/issue-and-pay.post.ts`)
   - [ ] Zod validator `IssueAndPayInputSchema` ở `app/utils/validators/billing-issue-pay.ts`
   - [ ] Service `server/services/billing/issue-and-pay.ts` wrap RPC, map PL/pgSQL errors → API error envelope
   - [ ] Permission guard: `billing.issue` + `billing.payment.write`
@@ -119,18 +126,18 @@ Tách 4 phase để ship dần và dễ revert. Mỗi phase ship được độc
   - [ ] Sau success: grid row update inplace status `PAID`, action area chuyển sang Hoàn tác/In/→ Thu tiền
 
 - [ ] C4. Undo payment
-  - [ ] Endpoint `server/api/billing/invoice-payments/[paymentId].delete.ts`
+  - [ ] Endpoint `server/api/billing/invoices/[id]/payments/[paymentId].delete.ts` (khớp proposal + convention `invoices/[id]/payments.*` đã có; KHÔNG dùng `invoice-payments/[paymentId]`)
   - [ ] Service `server/services/billing/undo-payment.ts`: soft delete (`deleted_at`, `deleted_by`, `delete_reason`), recompute invoice paid_amount/balance/status, emit `payment.undone` audit
-  - [ ] Migration nếu `invoice_payments` chưa có 3 columns soft-delete
-  - [ ] Repository filter mọi query payment phải `where deleted_at is null`
+  - [ ] Migration thêm 3 columns soft-delete trên `invoice_payments` (đã verify: **chưa có** trong `database.types.ts` → chắc chắn cần)
+  - [ ] Blast radius: grep MỌI nơi đọc `invoice_payments` (`server/api/billing/invoices/[id]/payments.get.ts`, `bulk-payments.post.ts`, recompute trong `services/billing/payments.ts`) thêm `.is('deleted_at', null)`
   - [ ] UI row-action "Hoàn tác" trên invoice paid trong PaymentsStep + grid (sau auto-issue success)
   - [ ] Composable `useUndoPayment.ts` — 1 click, toast confirm; optional reason (chưa required MVP)
 
 - [ ] C5. Feature flag
-  - [ ] Runtime config `BILLING_AUTO_ISSUE_ENABLED` ở `nuxt.config.ts` runtimeConfig
-  - [ ] Client expose via `useRuntimeConfig().public` (hoặc qua composable)
+  - [ ] Runtime config `BILLING_AUTO_ISSUE_ENABLED` ở `nuxt.config.ts` — **PHẢI đặt dưới `runtimeConfig.public`** (client cần đọc để gate row-action; private config không tới client → nút không bao giờ render)
+  - [ ] Client đọc qua `useRuntimeConfig().public.billingAutoIssueEnabled`
   - [ ] Default `false`; staging deploy `true` để test ≥ 1 tuần
-  - [ ] Endpoint `issue-and-pay` cũng check flag — flag off → 404 (không phải 503, tránh leak)
+  - [ ] Endpoint `issue-and-pay` cũng check flag (server đọc từ `runtimeConfig.public` hoặc private mirror) — flag off → 404 (không phải 503, tránh leak)
 
 - [ ] C6. QA Phase C
   - [ ] `npx tsc --noEmit` pass

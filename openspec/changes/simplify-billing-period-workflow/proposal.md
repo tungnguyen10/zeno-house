@@ -50,7 +50,7 @@ Chốt 1 mô hình đơn giản: trước chốt kỳ mọi thứ flexible (kể
 - `monthly-operations-workspace`: Lock model đổi sang period-level only; bỏ partial UI và adjustment UI; thêm correction = void+reissue (trước thu) hoặc bù tháng sau (sau thu); audit thêm `payment.undone` / `payment.edited` / `invoice.printed` + before/after metadata + correlation_id.
 - `billing-client`: Period view chỉ còn 2 tab (Soạn kỳ + Thu tiền); bỏ Invoice issue UI riêng → merge vào Draft grid với bulk-select; thêm row-action "Đã thu" trên grid → auto-issue + record; thêm row-action "Hoàn tác" trên invoice PAID; rework Audit drawer (group/filter/search/diff/export).
 - `billing-api`: Thêm RPC `issue_and_pay` + endpoint wrap; thêm endpoint undo payment; mở rộng audit metadata contract; deprecate/lockdown `POST /api/billing/invoices/<id>/adjustments` về backend-only (UI không expose); deprecate UI cho partial flow nhưng giữ endpoint tương thích legacy.
-- `billing-period-unissue`: Reaffirm — `period.reopened` yêu cầu `reason` required; status_changed metadata bao gồm `trigger`.
+- `billing-period-unissue`: **Build reopen flow mới** (`closed → collecting`) — `period.reopened` chỉ tồn tại như action code constant, chưa từng emit; thêm endpoint + service + reason required; status_changed metadata bao gồm `trigger`.
 
 ## Impact
 

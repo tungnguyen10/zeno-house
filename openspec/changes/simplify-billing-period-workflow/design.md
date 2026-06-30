@@ -9,7 +9,9 @@ Lock model hiện tại:
 
 Audit hiện tại (`BillingAuditStep`): bảng flat 4 cột, JSON raw expand, không filter/search/group. Backend `audit-summary.ts` đã hỗ trợ 14 action codes nhưng `payment.undone` / `payment.edited` / `invoice.printed` chưa có. Bulk payment merge thành 1 event tổng, mất chi tiết per-invoice.
 
-Đã có sẵn endpoint `period.unissued` + `period.reopened` action codes — escape hatch cho destructive operations đã tồn tại.
+Escape hatch hiện trạng (đã verify trong code 2026-06-30):
+- `period.unissued`: **đã tồn tại** — `server/api/billing/periods/[id]/unissue.post.ts` + `periods.unissue()`. Áp dụng cho period `issued`/`collecting`, void invoice chưa thu, đưa về `draft`/`collecting`. **Không** mở lại period đã `closed`.
+- `period.reopened`: **CHƯA tồn tại** — chỉ có constant `BILLING_AUDIT_ACTIONS.PERIOD_REOPENED` trong `billing.ts`, **không nơi nào emit**, không có endpoint/service. Archive `2026-06-14-monthly-operations-workspace` đã chủ động defer reopen ("reopening, if implemented"). Lock model của change này ("closed là khoá duy nhất, reopen kèm reason để sửa") **bắt buộc phải build reopen flow** — xem D11.
 
 ## Goals / Non-Goals
 
@@ -113,6 +115,20 @@ Khác (gray):    invoice.issue_attempted, invoice.reissued
 - `void` + `reissue` chia sẻ correlation_id → audit drawer group lại như 1 entry
 - `issue_and_pay`: `invoices.issued` + `invoice.payment_recorded` chia sẻ
 - `payments.bulk_recorded`: 1 parent + N children chia sẻ
+
+### D11. Reopen flow là build mới, không phải verify (sửa premise sai)
+
+**Bối cảnh**: Lock model mới dựa hoàn toàn vào "closed = khoá duy nhất, reopen kèm reason để sửa". Nhưng reopen flow **chưa tồn tại** trong code — chỉ có constant `PERIOD_REOPENED`, không endpoint/service/emit. Archive trước đã defer nó.
+
+**Chọn**: Build reopen như task backend thật trong Phase A (kề `unissue`):
+- Service `periods.reopen(periodId, { reason }, user)`: yêu cầu status `closed`; reason ≥ 10 ký tự (trim); permission `billing.close`; chuyển status `closed → collecting`; emit `period.reopened` với metadata `{ reason, prior_status, trigger: 'manual' }`.
+- Endpoint `server/api/billing/periods/[id]/reopen.post.ts` (theo convention `[id]`, cạnh `close.post.ts` / `unissue.post.ts`).
+- Validator Zod tái dùng pattern reason của `unissue`.
+- Lỗi: `409 NOT_CLOSED` nếu period không phải `closed`; `400 VALIDATION_ERROR` reason ngắn; `403 FORBIDDEN` thiếu quyền.
+
+**Vì sao Phase A**: Phase C ("undo bị chặn khi period closed → phải reopen trước") và các correction flow của `monthly-operations-workspace` đều phụ thuộc reopen tồn tại. Đặt ở A (backend additive, low risk) để các phase sau dựa vào được.
+
+**Prior status**: period không lưu prior status; chốt `closed → collecting` (close chỉ cho phép từ `issued`/`collecting` với outstanding == 0 nên `collecting` là đích an toàn). Spec scenario "or its prior pre-close status" diễn giải = `collecting`.
 
 ## Risks / Trade-offs
 
