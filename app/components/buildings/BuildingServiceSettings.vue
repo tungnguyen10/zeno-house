@@ -61,6 +61,7 @@ const columns: UiTableColumn<ServiceCatalogItem>[] = [
         :model-value="effectivePricingType(row)"
         :options="PRICING_TYPE_OPTIONS"
         density="compact"
+        :aria-label="`Cách tính phí ${row.name}`"
         class="w-44"
         @update:model-value="(value) => emit('updatePricingType', row.id, value as PricingType)"
       />
@@ -86,4 +87,3 @@ const columns: UiTableColumn<ServiceCatalogItem>[] = [
     </template>
   </UiTable>
 </template>
-

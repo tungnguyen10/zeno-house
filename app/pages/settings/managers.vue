@@ -174,6 +174,7 @@ function managerInitials(row: ManagerAssignment): string {
               v-model="selectedBuildingByManager[row.manager.id]"
               :options="availableBuildingOptions(row)"
               density="compact"
+              aria-label="Chọn tòa nhà để gán"
               class="w-56"
             />
             <UiButton

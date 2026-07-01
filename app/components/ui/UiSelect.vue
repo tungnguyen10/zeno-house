@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { useSlots } from 'vue'
+import { useAttrs, useSlots } from 'vue'
 import clsx from 'clsx'
+
+defineOptions({ inheritAttrs: false })
 
 export interface SelectOption {
   value: string | number
@@ -37,8 +39,24 @@ const emit = defineEmits<{
 
 const generatedId = useId()
 const selectId = computed(() => props.id ?? generatedId)
+const attrs = useAttrs()
 const slots = useSlots()
 const hasPrefix = computed(() => !!slots.prefix)
+const rootClass = computed(() => attrs.class)
+const rootStyle = computed(() => attrs.style)
+const triggerAriaLabel = computed(() => {
+  const value = attrs['aria-label']
+  return typeof value === 'string' ? value : undefined
+})
+const triggerAttrs = computed(() => {
+  const {
+    class: _class,
+    style: _style,
+    'aria-label': _ariaLabel,
+    ...rest
+  } = attrs
+  return rest
+})
 
 // ── State ──────────────────────────────────────────────────────────────────
 const isOpen = ref(false)
@@ -49,19 +67,40 @@ const listboxRef = ref<HTMLUListElement | null>(null)
 
 // ── Derived ────────────────────────────────────────────────────────────────
 const selectedOption = computed(() =>
-  props.modelValue === null || props.modelValue === undefined
-    ? null
-    : props.options.find(o => o.value === props.modelValue) ?? null,
+  props.options.find(o => optionMatchesValue(o, props.modelValue)) ?? null,
 )
 
 const displayLabel = computed(() => selectedOption.value?.label ?? '')
+const hasEmptyValueOption = computed(() => props.options.some(o => o.value === ''))
+const hasPlaceholderOption = computed(() => !!props.placeholder && !hasEmptyValueOption.value)
+const canSelectPlaceholder = computed(() => hasPlaceholderOption.value && !props.required)
+const isPlaceholderSelected = computed(() =>
+  selectedOption.value === null
+  && (props.modelValue === null || props.modelValue === undefined || props.modelValue === ''),
+)
 
 // ── Helpers ────────────────────────────────────────────────────────────────
+function optionMatchesValue(option: SelectOption, value: string | number | null | undefined) {
+  if (value === null || value === undefined) return option.value === ''
+  return option.value === value || String(option.value) === String(value)
+}
+
+function enabledPositions() {
+  const positions = props.options
+    .map((option, index) => option.disabled ? null : index)
+    .filter((index): index is number => index !== null)
+  return canSelectPlaceholder.value ? [-1, ...positions] : positions
+}
+
 function openDropdown() {
   if (props.disabled) return
   isOpen.value = true
-  const selectedIndex = props.options.findIndex(o => o.value === props.modelValue)
-  activeIndex.value = selectedIndex >= 0 ? selectedIndex : firstEnabledIndex()
+  const selectedIndex = props.options.findIndex(o => optionMatchesValue(o, props.modelValue))
+  activeIndex.value = selectedIndex >= 0
+    ? selectedIndex
+    : isPlaceholderSelected.value && canSelectPlaceholder.value
+      ? -1
+      : firstEnabledIndex()
   nextTick(scrollActiveIntoView)
 }
 
@@ -82,33 +121,40 @@ function select(option: SelectOption) {
   triggerRef.value?.focus()
 }
 
+function selectPlaceholder() {
+  if (!canSelectPlaceholder.value) return
+  emit('update:modelValue', null)
+  closeDropdown()
+  triggerRef.value?.focus()
+}
+
 function firstEnabledIndex() {
-  return props.options.findIndex(o => !o.disabled)
+  return enabledPositions()[0] ?? -1
 }
 
 function scrollActiveIntoView() {
   const list = listboxRef.value
-  if (!list || activeIndex.value < 0) return
-  const item = list.children[activeIndex.value] as HTMLElement | undefined
+  if (!list) return
+  if (activeIndex.value === -1 && !hasPlaceholderOption.value) return
+  const childIndex = activeIndex.value === -1
+    ? 0
+    : activeIndex.value + (hasPlaceholderOption.value ? 1 : 0)
+  const item = list.children[childIndex] as HTMLElement | undefined
   item?.scrollIntoView({ block: 'nearest' })
 }
 
 function moveActive(step: 1 | -1) {
-  const count = props.options.length
-  if (count === 0) return
-  let next = activeIndex.value
-  for (let i = 0; i < count; i++) {
-    next = (next + step + count) % count
-    if (!props.options[next]?.disabled) {
-      activeIndex.value = next
-      nextTick(scrollActiveIntoView)
-      return
-    }
-  }
+  const positions = enabledPositions()
+  if (positions.length === 0) return
+  const currentPosition = positions.indexOf(activeIndex.value)
+  const basePosition = currentPosition >= 0 ? currentPosition : step === 1 ? -1 : 0
+  const nextPosition = (basePosition + step + positions.length) % positions.length
+  activeIndex.value = positions[nextPosition]!
+  nextTick(scrollActiveIntoView)
 }
 
 function isSelected(option: SelectOption) {
-  return props.modelValue === option.value
+  return optionMatchesValue(option, props.modelValue)
 }
 
 // ── Keyboard ───────────────────────────────────────────────────────────────
@@ -135,7 +181,10 @@ function onKeydown(event: KeyboardEvent) {
     case 'Enter':
     case ' ':
       event.preventDefault()
-      if (activeIndex.value >= 0 && props.options[activeIndex.value]) {
+      if (activeIndex.value === -1) {
+        selectPlaceholder()
+      }
+      else if (props.options[activeIndex.value]) {
         select(props.options[activeIndex.value]!)
       }
       break
@@ -177,7 +226,11 @@ const triggerClass = computed(() =>
 </script>
 
 <template>
-  <div ref="containerRef" class="flex flex-col gap-1.5">
+  <div
+    ref="containerRef"
+    :class="['flex flex-col gap-1.5', rootClass]"
+    :style="rootStyle"
+  >
     <label
       v-if="label"
       :for="selectId"
@@ -197,10 +250,12 @@ const triggerClass = computed(() =>
       </span>
 
       <button
+        v-bind="triggerAttrs"
         :id="selectId"
         ref="triggerRef"
         type="button"
         role="combobox"
+        :aria-label="triggerAriaLabel"
         :aria-expanded="isOpen"
         aria-haspopup="listbox"
         :aria-controls="`${selectId}-listbox`"
@@ -229,9 +284,34 @@ const triggerClass = computed(() =>
         :id="`${selectId}-listbox`"
         ref="listboxRef"
         role="listbox"
-        :aria-label="label"
+        :aria-label="label ?? triggerAriaLabel"
         class="absolute z-50 mt-1 max-h-60 w-full overflow-y-auto rounded-md border border-dark-border bg-dark-card py-1 shadow-lg"
       >
+        <li
+          v-if="hasPlaceholderOption"
+          role="option"
+          :aria-selected="isPlaceholderSelected"
+          :aria-disabled="required"
+          :class="clsx(
+            'flex items-center justify-between px-3 text-sm transition-colors',
+            density === 'compact' ? 'py-1.5 text-xs' : 'py-2',
+            required
+              ? 'cursor-not-allowed text-muted/60'
+              : 'cursor-pointer text-muted',
+            !required && activeIndex === -1 && 'bg-cyan/15',
+            !required && activeIndex !== -1 && 'hover:bg-dark-hover',
+            isPlaceholderSelected && !required && 'text-cyan',
+          )"
+          @mousedown.prevent="selectPlaceholder"
+          @mouseover="!required && (activeIndex = -1)"
+        >
+          <span class="truncate">{{ placeholder }}</span>
+          <IconCheckSmall
+            v-if="isPlaceholderSelected"
+            class="ml-2 h-3 w-3 shrink-0 text-cyan"
+            aria-hidden="true"
+          />
+        </li>
         <li
           v-for="(option, index) in options"
           :key="option.value"

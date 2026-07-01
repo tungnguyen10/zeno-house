@@ -324,6 +324,7 @@ async function submitOverride() {
                   { value: 'manual_adjustment', label: 'Điều chỉnh thủ công' },
                   { value: 'normal', label: 'Bình thường' },
                 ]"
+                aria-label="Lý do điều chỉnh điện"
               />
             </div>
             <div class="flex flex-col gap-1">
@@ -399,6 +400,7 @@ async function submitOverride() {
                   { value: 'manual_adjustment', label: 'Điều chỉnh thủ công' },
                   { value: 'normal', label: 'Bình thường' },
                 ]"
+                aria-label="Lý do điều chỉnh nước"
               />
             </div>
             <div class="flex flex-col gap-1">

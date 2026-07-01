@@ -249,11 +249,13 @@ function clearFilters() {
       <UiSelect
         v-model="buildingId"
         :options="buildingOptions"
+        aria-label="Lọc lịch sử theo tòa nhà"
         class="min-w-48"
       />
       <UiSelect
         v-model="entityType"
         :options="entityTypeOptions"
+        aria-label="Lọc lịch sử theo loại dữ liệu"
         class="min-w-44"
       />
       <UiButton

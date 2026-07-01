@@ -110,6 +110,7 @@ function updateAllMonths(value: boolean) {
               :model-value="periodMonth ?? null"
               :options="monthOptions"
               :disabled="allMonths"
+              placeholder="Tất cả tháng"
               density="compact"
               aria-label="Lọc theo tháng"
               @update:model-value="emit('update:periodMonth', $event === null ? undefined : Number($event))"

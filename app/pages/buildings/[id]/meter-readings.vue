@@ -182,7 +182,12 @@ function formatDate(value: string | null): string {
     <!-- Period selector -->
     <div class="mb-4 flex flex-wrap items-center gap-3">
       <label class="text-sm text-muted">Kỳ:</label>
-      <UiSelect v-model="periodMonth" :options="monthOptions" class="w-36" />
+      <UiSelect
+        v-model="periodMonth"
+        :options="monthOptions"
+        aria-label="Tháng xem chỉ số"
+        class="w-36"
+      />
       <UiInput
         v-model="periodYear"
         type="number"

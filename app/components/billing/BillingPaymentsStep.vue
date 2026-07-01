@@ -482,7 +482,12 @@ watch(
       </template>
 
       <UiToolbar>
-        <UiSelect v-model="filterStatus" :options="filterOptions" class="w-44" />
+        <UiSelect
+          v-model="filterStatus"
+          :options="filterOptions"
+          aria-label="Lọc hóa đơn theo trạng thái"
+          class="w-44"
+        />
         <span class="text-xs text-muted">
           {{ filteredInvoices.length }} / {{ activeInvoices.length }} hoá đơn
         </span>

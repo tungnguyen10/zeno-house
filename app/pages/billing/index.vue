@@ -501,15 +501,26 @@ function periodLabel(row: BillingPeriodSummary): string {
             :options="buildings.map(b => ({ value: b.id, label: b.name }))"
             placeholder="— Chọn tòa nhà —"
             :disabled="buildingsLoading"
+            aria-label="Tòa nhà mở kỳ"
             class="w-full"
           />
         </UiSection>
         <div class="grid grid-cols-2 gap-3">
           <UiSection title="Tháng">
-            <UiSelect v-model="openForm.period_month" :options="monthOptions" class="w-full" />
+            <UiSelect
+              v-model="openForm.period_month"
+              :options="monthOptions"
+              aria-label="Tháng mở kỳ"
+              class="w-full"
+            />
           </UiSection>
           <UiSection title="Năm">
-            <UiSelect v-model="openForm.period_year" :options="yearOptions" class="w-full" />
+            <UiSelect
+              v-model="openForm.period_year"
+              :options="yearOptions"
+              aria-label="Năm mở kỳ"
+              class="w-full"
+            />
           </UiSection>
         </div>
         <UiAlert v-if="openError" severity="danger">{{ openError }}</UiAlert>
