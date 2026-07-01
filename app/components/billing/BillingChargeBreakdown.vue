@@ -15,8 +15,10 @@ const props = withDefaults(defineProps<{
   lines: ChargeBreakdownLine[]
   totalAmount?: number
   totalLabel?: string
+  showAdjustments?: boolean
 }>(), {
   totalLabel: 'Tổng cộng',
+  showAdjustments: false,
 })
 
 type GroupKey = 'rent' | 'utility' | 'service' | 'adjustment'
@@ -72,6 +74,7 @@ const groups = computed<LineGroup[]>(() => {
   const order: GroupKey[] = ['rent', 'utility', 'service', 'adjustment']
   return order
     .filter(key => buckets[key].length > 0)
+    .filter(key => props.showAdjustments || key !== 'adjustment')
     .map<LineGroup>(key => ({
       key,
       title: titles[key],

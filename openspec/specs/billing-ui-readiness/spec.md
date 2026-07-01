@@ -22,11 +22,11 @@ The design system SHALL provide primitives and patterns sufficient to build the 
 
 #### Scenario: Workspace composition
 - **WHEN** the billing workspace is implemented
-- **THEN** it can be composed from `UiPageHeader` (with header overflow button and drawer trigger button), a sticky KPI strip below the header, `UiTabs` for three primary tabs, `UiSection` for tab content, and action surfaces from the design system
+- **THEN** it can be composed from `UiPageHeader` (with header overflow button and drawer trigger button), a sticky KPI strip below the header, `UiTabs` for two primary tabs, `UiSection` for tab content, and action surfaces from the design system
 
 #### Scenario: Workspace primary tabs
 - **WHEN** the billing workspace renders top-level tabs
-- **THEN** there are exactly three tabs in the order: `Chỉ số & hoá đơn nháp`, `Phát hành`, `Thanh toán & công nợ`, and `UiTabs` supports their active/disabled states with reasons
+- **THEN** there are exactly two tabs in the order: `Chỉ số & hoá đơn nháp`, `Thanh toán & công nợ`, and `UiTabs` supports their active/disabled states with reasons
 
 #### Scenario: Sticky KPI strip
 - **WHEN** the billing workspace renders below `UiPageHeader`

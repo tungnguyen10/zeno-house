@@ -133,6 +133,7 @@ export function mapBillingAuditEvent(
     action: row.action,
     entityType: row.entity_type as BillingAuditEntityType,
     entityId: row.entity_id,
+    correlationId: row.correlation_id ?? null,
     beforeData: row.before_data,
     afterData: row.after_data,
     metadata: asMetadata(row.metadata),

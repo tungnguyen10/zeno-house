@@ -425,4 +425,47 @@ export const BillingPeriodService = {
       status: updated.status,
     }
   },
+
+  /**
+   * Reopen a closed period back to `collecting` so corrections can be made
+   * (e.g. undo a payment, fix a reading). Requires `billing.close` and a reason
+   * (≥ 10 chars) that is recorded in the audit trail. The period must currently
+   * be `closed`; any other status is a conflict. `closed_at` is cleared.
+   */
+  async reopen(
+    event: H3Event,
+    user: AuthUser,
+    id: string,
+    reasonInput: string,
+  ): Promise<BillingPeriod> {
+    if (!can(user, 'billing.close')) throwForbidden('Không có quyền mở lại kỳ vận hành')
+    const reason = assertReason(reasonInput, 10)
+
+    const period = await BillingPeriodRepository.findById(event, id)
+    if (!period) throwNotFound('Không tìm thấy kỳ vận hành')
+    await assertBuildingScope(event, user, period.buildingId, 'write')
+    if (period.status !== 'closed') {
+      throwConflict('Kỳ chưa chốt — không thể mở lại')
+    }
+
+    const reopened = await BillingPeriodRepository.updateStatus(event, period.id, 'collecting', {
+      closed_at: null,
+    })
+
+    await BillingAuditService.append(event, user, {
+      billing_period_id: reopened.id,
+      action: BILLING_AUDIT_ACTIONS.PERIOD_REOPENED,
+      entity_type: 'billing_period',
+      entity_id: reopened.id,
+      before_data: period,
+      after_data: reopened,
+      metadata: {
+        reason,
+        prior_status: period.status,
+        trigger: 'manual',
+      },
+    })
+
+    return reopened
+  },
 }

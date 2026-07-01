@@ -33,6 +33,9 @@ export default defineNuxtConfig({
       siteUrl: "", // NUXT_PUBLIC_SITE_URL
       gaId: "", // NUXT_PUBLIC_GA_ID
       turnstileSiteKey: "", // NUXT_PUBLIC_TURNSTILE_SITE_KEY
+      // Feature flag: one-click auto-issue ("Đã thu") on draft rows. Public so
+      // the client can gate the row action; default off until staging-verified.
+      billingAutoIssueEnabled: false, // NUXT_PUBLIC_BILLING_AUTO_ISSUE_ENABLED
     },
   },
 

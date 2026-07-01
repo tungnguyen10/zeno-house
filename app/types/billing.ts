@@ -110,6 +110,7 @@ export interface BillingAuditEvent {
   action: string
   entityType: BillingAuditEntityType
   entityId: string | null
+  correlationId: string | null
   beforeData: unknown
   afterData: unknown
   metadata: Record<string, unknown>

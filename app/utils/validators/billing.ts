@@ -31,6 +31,11 @@ export const billingPeriodUnissueSchema = z.object({
 })
 export type BillingPeriodUnissueInput = z.infer<typeof billingPeriodUnissueSchema>
 
+export const billingPeriodReopenSchema = z.object({
+  reason: z.string().min(1).max(500),
+})
+export type BillingPeriodReopenInput = z.infer<typeof billingPeriodReopenSchema>
+
 // ---------------------------------------------------------------------------
 // Utility usage override
 // ---------------------------------------------------------------------------
@@ -69,6 +74,15 @@ export const issueInvoicesSchema = z.object({
   due_date: z.string().nullable().optional(),
 })
 export type IssueInvoicesInput = z.infer<typeof issueInvoicesSchema>
+
+// ---------------------------------------------------------------------------
+// Invoices printed (client print ping)
+// ---------------------------------------------------------------------------
+
+export const invoicesPrintedSchema = z.object({
+  invoice_ids: z.array(z.string().uuid()).min(1).max(500),
+})
+export type InvoicesPrintedInput = z.infer<typeof invoicesPrintedSchema>
 
 // ---------------------------------------------------------------------------
 // Void invoice

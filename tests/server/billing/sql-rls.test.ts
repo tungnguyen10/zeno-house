@@ -86,3 +86,30 @@ describe('billing transaction RPCs SQL', () => {
     expect(rpcSql).toMatch(/GRANT EXECUTE ON FUNCTION public\.record_bulk_payments.*TO authenticated/)
   })
 })
+
+const issueAndPaySql = readFileSync(
+  resolve(process.cwd(), 'supabase/migrations/20260630140000_issue_and_pay_rpc.sql'),
+  'utf8',
+)
+
+describe('issue_and_pay transaction RPC SQL', () => {
+  it('defines issue_and_pay with advisory lock + period FOR UPDATE returning invoices', () => {
+    expect(issueAndPaySql).toMatch(/CREATE OR REPLACE FUNCTION public\.issue_and_pay/)
+    expect(issueAndPaySql).toMatch(/RETURNS SETOF public\.invoices/)
+    expect(issueAndPaySql).toMatch(/pg_advisory_xact_lock\s*\(\s*hashtextextended/)
+    expect(issueAndPaySql).toMatch(/FROM public\.billing_periods[\s\S]*FOR UPDATE/)
+  })
+
+  it('carries structured error codes for the closed / already-issued / not-ready guards', () => {
+    expect(issueAndPaySql).toContain("'PERIOD_LOCKED'")
+    expect(issueAndPaySql).toContain("'ALREADY_ISSUED'")
+    expect(issueAndPaySql).toContain("'DRAFT_NOT_READY'")
+    expect(issueAndPaySql).toMatch(/ERRCODE\s*=\s*'P0002'/)
+  })
+
+  it('emits issued + payment audit events and grants execute to authenticated', () => {
+    expect(issueAndPaySql).toContain("'invoices.issued'")
+    expect(issueAndPaySql).toContain("'invoice.payment_recorded'")
+    expect(issueAndPaySql).toMatch(/GRANT EXECUTE ON FUNCTION public\.issue_and_pay[\s\S]*TO authenticated/)
+  })
+})

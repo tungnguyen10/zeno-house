@@ -20,6 +20,21 @@ export interface MeterReadingFilters {
   meter_type?: string
 }
 
+/**
+ * Build audit metadata for a `reading.saved` event, carrying the before/after
+ * values so the audit drawer can render an inline diff (e.g. `1500 → 1520`).
+ */
+function readingDiffMeta(before: MeterReading | null, after: MeterReading) {
+  return {
+    count: 1,
+    meter_type: after.meterType,
+    previous_value: before?.readingValue ?? null,
+    new_value: after.readingValue,
+    unit: after.meterType === 'electricity' ? 'kWh' : 'm³',
+    reading_date: after.readingDate,
+  }
+}
+
 export const MeterReadingService = {
   async list(event: H3Event, _user: AuthUser, filters: MeterReadingFilters): Promise<MeterReading[]> {
     if (!can(_user, 'meter-readings.read')) throwForbidden('Không có quyền xem chỉ số đồng hồ')
@@ -109,7 +124,7 @@ export const MeterReadingService = {
       entity_id: created.id,
       before_data: null,
       after_data: created,
-      metadata: { count: 1, meter_type: created.meterType },
+      metadata: readingDiffMeta(null, created),
     })
 
     return created
@@ -183,7 +198,7 @@ export const MeterReadingService = {
         entity_id: reading.id,
         before_data: beforeData,
         after_data: reading,
-        metadata: { count: 1, meter_type: reading.meterType },
+        metadata: readingDiffMeta(beforeData, reading),
       })
     }))
 
@@ -212,7 +227,7 @@ export const MeterReadingService = {
       entity_id: updated.id,
       before_data: existing,
       after_data: updated,
-      metadata: { count: 1, meter_type: updated.meterType },
+      metadata: readingDiffMeta(existing, updated),
     })
 
     return updated

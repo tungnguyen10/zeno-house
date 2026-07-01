@@ -28,4 +28,40 @@ describe('billing audit summary formatter', () => {
   it('falls back for unknown action', () => {
     expect(formatAuditSummary('custom.action', {})).toBe('Hành động: custom.action')
   })
+
+  it('formats the new simplified-workflow action codes', () => {
+    expect(formatAuditSummary('invoice.printed', { format: 'print' })).toBe('In hoá đơn (print)')
+    expect(formatAuditSummary('invoice.printed', {})).toBe('In hoá đơn')
+
+    expect(formatAuditSummary('period.reopened', { reason: 'sửa chỉ số điện' }))
+      .toBe('Mở lại kỳ vận hành — sửa chỉ số điện')
+    expect(formatAuditSummary('period.reopened', {})).toBe('Mở lại kỳ vận hành')
+
+    const undone = formatAuditSummary('payment.undone', { amount: 50_000, reason: 'khách trả nhầm' })
+    expect(undone).toContain('Hoàn tác thu tiền')
+    expect(undone).toContain('khách trả nhầm')
+
+    const edited = formatAuditSummary('payment.edited', { old_amount: 100_000, new_amount: 120_000 })
+    expect(edited).toContain('Sửa khoản thu')
+    expect(edited).toContain('→')
+  })
+
+  it('renders reading.saved with a before/after diff', () => {
+    expect(
+      formatAuditSummary('reading.saved', {
+        meter_type: 'electricity',
+        previous_value: 1500,
+        new_value: 1520,
+        unit: 'kWh',
+      }),
+    ).toBe('Lưu chỉ số điện: 1500 → 1520 kWh (+20)')
+
+    expect(
+      formatAuditSummary('reading.saved', { meter_type: 'water', new_value: 50, unit: 'm³' }),
+    ).toBe('Lưu chỉ số nước: 50 m³')
+
+    expect(
+      formatAuditSummary('reading.saved', { count: 2, meter_type: 'electricity' }),
+    ).toBe('Lưu 2 chỉ số điện')
+  })
 })

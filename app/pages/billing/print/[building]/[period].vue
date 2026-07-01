@@ -63,6 +63,16 @@ const periodLabel = computed(() => {
 })
 
 function triggerPrint() {
+  const invoiceIds = rows.value
+    .map(r => r.invoiceId)
+    .filter((id): id is string => Boolean(id))
+  if (periodId.value && invoiceIds.length > 0) {
+    // Fire-and-forget audit ping; never block printing on it.
+    $fetch(`/api/billing/periods/${periodId.value}/invoices-printed`, {
+      method: 'POST',
+      body: { invoice_ids: invoiceIds },
+    }).catch(() => {})
+  }
   window.print()
 }
 

@@ -8,6 +8,7 @@ import type {
   InvoicePaymentCreateInput,
 } from '~/utils/validators/billing'
 import { mapInvoicePayment } from '~/utils/mappers/billing'
+import { newCorrelationId } from '../../utils/billing/correlation'
 import { InvoiceRepository } from '../../repositories/billing/invoices'
 import { InvoicePaymentRepository } from '../../repositories/billing/payments'
 import { BillingPeriodRepository } from '../../repositories/billing/periods'
@@ -174,6 +175,7 @@ export const InvoicePaymentService = {
     const { data, error } = await client.rpc('record_bulk_payments', {
       p_actor_id: user.id ?? null,
       p_payments: payload,
+      p_correlation_id: newCorrelationId(),
     })
 
     if (error) {

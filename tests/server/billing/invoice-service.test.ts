@@ -13,6 +13,7 @@ const listCharges = vi.fn()
 const listPaymentsByInvoice = vi.fn()
 const findPeriodById = vi.fn()
 const append = vi.fn()
+const findLatestCorrelation = vi.fn()
 const calculateDraft = vi.fn()
 const enrichInvoices = vi.fn(async invoices => invoices)
 const enrichPayments = vi.fn(async payments => payments)
@@ -54,6 +55,12 @@ vi.mock('../../../server/repositories/billing/payments', () => ({
 vi.mock('../../../server/services/billing/audit', () => ({
   BillingAuditService: {
     append,
+  },
+}))
+
+vi.mock('../../../server/repositories/billing/audit', () => ({
+  BillingAuditRepository: {
+    findLatestCorrelation,
   },
 }))
 

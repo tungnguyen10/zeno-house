@@ -76,10 +76,55 @@ export const BILLING_AUDIT_ACTIONS = {
   PAYMENT_RECORDED: 'invoice.payment_recorded',
   PAYMENTS_BULK_RECORDED: 'payments.bulk_recorded',
   PERIOD_UNISSUED: 'period.unissued',
+  // Undo of a recorded payment (soft-delete). Emitted by undoPayment.
+  PAYMENT_UNDONE: 'payment.undone',
+  // Reserved: edit of a recorded payment. No emit point in the simplified
+  // billing flow (edit/partial/adjustment removed); kept for forward-compat so
+  // the formatter + category map can render legacy/future events.
+  PAYMENT_EDITED: 'payment.edited',
+  // Invoice printed/exported as a receipt artifact from the workspace.
+  INVOICE_PRINTED: 'invoice.printed',
 } as const
 
 export type BillingAuditAction =
   (typeof BILLING_AUDIT_ACTIONS)[keyof typeof BILLING_AUDIT_ACTIONS]
+
+/**
+ * Audit categories for the rework drawer (icon + color + filter). See design
+ * D9. Each action maps to exactly one category.
+ */
+export const BILLING_AUDIT_CATEGORIES = ['create', 'edit', 'destructive', 'status', 'other'] as const
+export type BillingAuditCategory = (typeof BILLING_AUDIT_CATEGORIES)[number]
+
+export const BILLING_AUDIT_ACTION_CATEGORY: Record<BillingAuditAction, BillingAuditCategory> = {
+  'invoices.issued': 'create',
+  'invoice.payment_recorded': 'create',
+  'payments.bulk_recorded': 'create',
+  'invoice.printed': 'create',
+  'reading.saved': 'edit',
+  'utility_override.saved': 'edit',
+  'payment.edited': 'edit',
+  'invoice.adjustment_created': 'edit',
+  'invoice.voided': 'destructive',
+  'payment.undone': 'destructive',
+  'period.unissued': 'destructive',
+  'period.opened': 'status',
+  'period.closed': 'status',
+  'period.reopened': 'status',
+  'period.status_changed': 'status',
+  'invoice.issue_attempted': 'other',
+  'invoice.reissued': 'other',
+}
+
+/** Return all action codes belonging to the given categories. */
+export function billingAuditActionsForCategories(
+  categories: BillingAuditCategory[],
+): BillingAuditAction[] {
+  const set = new Set(categories)
+  return (Object.entries(BILLING_AUDIT_ACTION_CATEGORY) as [BillingAuditAction, BillingAuditCategory][])
+    .filter(([, category]) => set.has(category))
+    .map(([action]) => action)
+}
 
 /**
  * Stable codes for blockers/warnings surfaced from draft calculation.

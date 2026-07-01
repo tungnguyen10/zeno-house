@@ -11,6 +11,7 @@ export const InvoicePaymentRepository = {
       .from('invoice_payments')
       .select('*')
       .eq('invoice_id', invoiceId)
+      .is('deleted_at', null)
       .order('paid_at', { ascending: false })
     if (error) throw createError({ statusCode: 500, message: error.message })
     return (data ?? []).map(mapInvoicePayment)
@@ -23,6 +24,7 @@ export const InvoicePaymentRepository = {
       .from('invoice_payments')
       .select('*')
       .in('invoice_id', invoiceIds)
+      .is('deleted_at', null)
       .order('paid_at', { ascending: true })
     if (error) throw createError({ statusCode: 500, message: error.message })
     return (data ?? []).map(mapInvoicePayment)
@@ -34,8 +36,21 @@ export const InvoicePaymentRepository = {
       .from('invoice_payments')
       .select('amount')
       .eq('invoice_id', invoiceId)
+      .is('deleted_at', null)
     if (error) throw createError({ statusCode: 500, message: error.message })
     return (data ?? []).reduce((sum, row) => sum + Number(row.amount), 0)
+  },
+
+  async findById(event: H3Event, id: string): Promise<InvoicePayment | null> {
+    const client = await serverSupabaseClient(event)
+    const { data, error } = await client
+      .from('invoice_payments')
+      .select('*')
+      .eq('id', id)
+      .is('deleted_at', null)
+      .maybeSingle()
+    if (error) throw createError({ statusCode: 500, message: error.message })
+    return data ? mapInvoicePayment(data) : null
   },
 
   async insert(
@@ -64,6 +79,25 @@ export const InvoicePaymentRepository = {
   async deleteById(event: H3Event, id: string): Promise<void> {
     const client = await serverSupabaseClient(event)
     const { error } = await client.from('invoice_payments').delete().eq('id', id)
+    if (error) throw createError({ statusCode: 500, message: error.message })
+  },
+
+  async softDelete(
+    event: H3Event,
+    id: string,
+    deletedBy: string | null,
+    reason: string | null,
+  ): Promise<void> {
+    const client = await serverSupabaseClient(event)
+    const { error } = await client
+      .from('invoice_payments')
+      .update({
+        deleted_at: new Date().toISOString(),
+        deleted_by: deletedBy,
+        delete_reason: reason,
+      })
+      .eq('id', id)
+      .is('deleted_at', null)
     if (error) throw createError({ statusCode: 500, message: error.message })
   },
 }

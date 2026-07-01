@@ -93,18 +93,18 @@ Period list, workspace overview, draft calculation, and draft grid use the same 
 
 ## Workspace UI
 
-The workspace route `/billing/[building]/[period]` has three tabs:
+The workspace route `/billing/[building]/[period]` has **two tabs** (simplified from three in v0.2):
 
-1. Draft grid: enter readings, review blockers, see discrepancy callouts.
-2. Issue: issue eligible draft invoices.
-3. Payments: collect payments, bulk collect, adjust, void/reissue.
+1. **Chỉ số & hoá đơn nháp** (draft-grid): enter readings, review blockers, bulk-issue ready rows, auto-issue-and-collect individual rows (when flag enabled).
+2. **Thanh toán & công nợ** (payments): collect payments, bulk collect, void/reissue, undo individual payments.
 
-Header overflow actions:
+Header overflow actions (`Hành động ▾`):
 
-- audit drawer
+- audit drawer — with recent-24h badge when activity present
 - Excel export
-- close period
-- unissue period
+- close period (`Chốt kỳ`)
+- unissue period (`Huỷ phát hành kỳ`)
+- reopen period (`Mở lại kỳ`) — admin only, from `closed` back to `collecting`
 
 ## Issue Flow
 
@@ -118,6 +118,14 @@ Issuing invoices:
 - advances the period to `issued` when appropriate
 - writes audit metadata
 
+### Bulk Issue
+
+Select multiple `ready` rows in the draft grid → "Phát hành (N)" button issues all selected contracts in one request.
+
+### Auto-Issue and Collect (feature-flagged)
+
+Each `ready` row in the draft grid shows an "Đã thu" button when `NUXT_PUBLIC_BILLING_AUTO_ISSUE_ENABLED=true`. Clicking it opens a modal to confirm payment details, then calls `POST /api/billing/periods/[id]/issue-and-pay` which atomically issues the invoice and records a full payment in one PL/pgSQL transaction (`public.issue_and_pay` RPC). The period advances to `collecting` on first success.
+
 ## Payment Flow
 
 Payment operations live in `server/services/billing/payments.ts`.
@@ -126,12 +134,13 @@ Supported flows:
 
 - single invoice payment
 - bulk payments for selected invoices
+- undo a recorded payment (`DELETE /api/billing/invoices/[id]/payments/[paymentId]`): soft-deletes the payment, recomputes `paid`/`balance`/`status`, emits `payment.undone` audit event. Blocked when period is `closed`.
 
 Payment updates invoice paid amount, balance, and status.
 
 ## Correction Flows
 
-There are three supported correction paths:
+There are two supported correction paths (adjustment flow removed in v0.3 simplification):
 
 ### Void + Reissue
 
@@ -168,6 +177,17 @@ Rules:
 - retains invoices with payments
 - returns period to `draft` when nothing is retained, otherwise `collecting`
 
+## Reopen Flow
+
+Reopening a closed period:
+
+- requires `billing.close`
+- requires a reason with at least 10 characters
+- only allowed from `closed` status
+- transitions `closed → collecting`
+- clears `closed_at`
+- writes `period.reopened` audit event with `{ reason, prior_status, trigger: 'manual' }`
+
 ## Close Flow
 
 Closing a period:
@@ -181,18 +201,43 @@ Closing a period:
 
 `GET /api/billing/periods/[id]/export` returns an Excel workbook for the period. Export is available to users with `billing.read`.
 
+## Audit Drawer
+
+The audit drawer is opened via the `Hành động ▾` menu. It shows the full history of billing actions for the period.
+
+Features:
+
+- **Grouped by time**: today, yesterday, last 7 days, then by calendar month.
+- **Category icons & colors**: create (emerald), edit (amber), destructive (rose), status (sky), other (slate).
+- **Diff view**: `reading.saved`, `payment.undone`, and `utility_override.saved` events render an inline before → after delta.
+- **Correlation grouping**: click "Xem cùng nhóm" on any event to filter to events sharing the same transaction.
+- **Quick open**: `→ Mở` link navigates to the related invoice.
+- **Filter bar**: multi-select actor, category chips, date range, free-text search (300ms debounce), "Chỉ critical" toggle.
+- **Pagination**: "Tải thêm" loads the next page of events via cursor.
+- **CSV export**: client-side, UTF-8 BOM, filename `audit-<period>-<date>.csv`.
+- **Recent badge**: the `Hành động ▾` button shows a count badge for events in the last 24h.
+
+Backed by `GET /api/billing/periods/[id]/audit` (supports actor/category/from/to/q/correlation_id/cursor/limit).
+
 ## Important Files
 
 - Page: `app/pages/billing/[building]/[period].vue`
 - Period list composable: `app/composables/billing/useBillingPeriodList.ts`
 - Workspace composable: `app/composables/billing/useBillingPeriodWorkspace.ts`
+- Audit list composable: `app/composables/billing/useBillingAuditList.ts`
+- Recent audit count composable: `app/composables/billing/useRecentAuditCount.ts`
 - Invoice actions composable: `app/composables/billing/useBillingInvoiceActions.ts`
 - Draft grid: `app/components/billing/BillingDraftGridStep.vue`
 - Payments: `app/components/billing/BillingPaymentsStep.vue`
-- Bulk payment modal: `app/components/billing/BillingBulkPaymentModal.vue`
+- Auto-issue modal: `app/components/billing/BillingAutoIssueModal.vue`
+- Audit drawer: `app/components/billing/BillingAuditDrawer.vue`
+- Audit entry: `app/components/billing/BillingAuditEntry.vue`
 - Unissue modal: `app/components/billing/BillingUnissueModal.vue`
 - Services: `server/services/billing/**`
 - Repositories: `server/repositories/billing/**`
 - Types: `app/types/billing.ts`
 - Constants: `app/utils/constants/billing.ts`
 - Validators: `app/utils/validators/billing.ts`
+- Audit grouping: `app/utils/billing/audit-grouping.ts`
+- Audit category visuals: `app/utils/billing/audit-category.ts`
+- Audit entity link: `app/utils/billing/audit-entity-link.ts`

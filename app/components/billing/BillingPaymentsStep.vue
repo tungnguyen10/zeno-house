@@ -4,6 +4,7 @@ import type { BillingDraftResponse, BillingPeriod, Invoice, InvoicePayment, Invo
 import type { AdjustmentChargeInput, BulkPaymentItemInput, VoidInvoiceInput } from '~/utils/validators/billing'
 import { formatCurrency } from '~/utils/format/currency'
 import { invoicePath, invoiceRouteSegment } from '~/utils/routes/operational'
+import { isPeriodLocked } from '~/utils/billing/lock'
 
 export interface BillingPaymentsIntent {
   id: number
@@ -19,6 +20,7 @@ const props = defineProps<{
   loading: boolean
   intent?: BillingPaymentsIntent | null
   drafts?: BillingDraftResponse | null
+  onUndoPayment?: (invoiceId: string, paymentId: string, reason?: string) => Promise<Invoice | undefined>
 }>()
 
 const emit = defineEmits<{ reload: [] }>()
@@ -26,13 +28,12 @@ const emit = defineEmits<{ reload: [] }>()
 const { createAdjustmentPayload, load, recordPayment, recordBulkPayments, voidInvoice, addAdjustment, listPayments } = useBillingInvoiceActions()
 const toast = useToast()
 
-const periodIsClosed = computed(() => props.period.status === 'closed')
+const periodIsClosed = computed(() => isPeriodLocked(props.period))
 
 const filterStatus = ref<'all' | 'paid' | 'partial' | 'unpaid' | 'overdue'>('all')
 const filterOptions = [
   { value: 'all', label: 'Tất cả' },
   { value: 'unpaid', label: 'Chưa thu' },
-  { value: 'partial', label: 'Một phần' },
   { value: 'paid', label: 'Đã thu' },
   { value: 'overdue', label: 'Quá hạn' },
 ]
@@ -264,8 +265,9 @@ function startPayment(inv: Invoice) {
 
 async function submitPayment() {
   if (!selectedInvoice.value) return
-  if (paymentForm.amount <= 0) {
-    paymentError.value = 'Số tiền phải > 0'
+  const balance = selectedInvoice.value.invoice.balanceAmount
+  if (paymentForm.amount !== balance) {
+    paymentError.value = `Phải thu đủ số còn lại (${formatCurrency(balance)}) — không hỗ trợ thu một phần`
     return
   }
   paymentSubmitting.value = true
@@ -395,6 +397,35 @@ async function submitAdjustment() {
 const detailPayments = ref<InvoicePayment[]>([])
 async function refreshPayments(invoiceId: string) {
   detailPayments.value = await listPayments(invoiceId)
+}
+
+// ---------- Undo payment ----------
+const undoTarget = ref<InvoicePayment | null>(null)
+const undoSubmitting = ref(false)
+
+function startUndoPayment(payment: InvoicePayment) {
+  if (periodIsClosed.value) return
+  undoTarget.value = payment
+}
+
+async function confirmUndoPayment() {
+  if (!props.onUndoPayment || !undoTarget.value || !selectedInvoice.value) return
+  undoSubmitting.value = true
+  try {
+    const result = await props.onUndoPayment(
+      selectedInvoice.value.invoice.id,
+      undoTarget.value.id,
+    )
+    if (result) {
+      undoTarget.value = null
+      selectedInvoice.value = { ...selectedInvoice.value, invoice: result }
+      await refreshPayments(invoiceRouteSegment(result))
+      emit('reload')
+    }
+  }
+  finally {
+    undoSubmitting.value = false
+  }
 }
 
 watch(selectedInvoice, async (next) => {
@@ -528,16 +559,6 @@ watch(
             >
               Huỷ
             </UiButton>
-            <UiButton
-              v-if="row.status === 'paid' || row.status === 'partial'"
-              size="sm"
-              variant="ghost"
-              class="whitespace-nowrap"
-              :disabled="periodIsClosed"
-              @click.stop="startAdjustment(row)"
-            >
-              Điều chỉnh
-            </UiButton>
           </div>
         </template>
       </UiTable>
@@ -604,6 +625,7 @@ watch(
                 { key: 'payment_method', label: 'Hình thức', hideOnMobile: true },
                 { key: 'recorded_by', label: 'Người ghi', hideOnMobile: true },
                 { key: 'note', label: 'Ghi chú', hideOnMobile: true },
+                { key: 'actions', label: '', action: true, width: 'w-28' },
               ]"
               row-key="id"
               empty-title="Chưa có thanh toán nào"
@@ -613,6 +635,18 @@ watch(
               <template #cell-payment_method="{ row }">{{ row.paymentMethod ?? '—' }}</template>
               <template #cell-recorded_by="{ row }">{{ row.recordedByName ?? 'Hệ thống' }}</template>
               <template #cell-note="{ row }">{{ row.note ?? '—' }}</template>
+              <template #cell-actions="{ row }">
+                <div class="flex justify-end">
+                  <UiButton
+                    v-if="onUndoPayment && !periodIsClosed"
+                    variant="ghost"
+                    size="sm"
+                    @click="startUndoPayment(row as InvoicePayment)"
+                  >
+                    Hoàn tác
+                  </UiButton>
+                </div>
+              </template>
             </UiTable>
           </UiSection>
         </template>
@@ -634,8 +668,8 @@ watch(
     <!-- Record payment -->
     <UiModal :open="showPaymentModal" title="Ghi nhận thanh toán" @close="showPaymentModal = false">
       <div class="space-y-3">
-        <UiSection title="Số tiền">
-          <UiInput v-model.number="paymentForm.amount" type="number" min="1" class="w-full" />
+        <UiSection title="Số tiền" description="Thu đủ số còn lại — không hỗ trợ thu một phần.">
+          <UiInput v-model.number="paymentForm.amount" type="number" min="1" class="w-full" disabled />
         </UiSection>
         <UiSection title="Ngày thanh toán">
           <UiInput v-model="paymentForm.paid_at" type="date" class="w-full" />
@@ -736,5 +770,15 @@ watch(
         </div>
       </div>
     </Transition>
+
+    <UiConfirmModal
+      :open="!!undoTarget"
+      title="Hoàn tác thanh toán"
+      :message="undoTarget ? `Hoàn tác khoản thu ${formatCurrency(undoTarget.amount)}? Hoá đơn sẽ được tính lại công nợ.` : ''"
+      confirm-label="Hoàn tác"
+      :loading="undoSubmitting"
+      @confirm="confirmUndoPayment"
+      @cancel="undoTarget = null"
+    />
   </div>
 </template>

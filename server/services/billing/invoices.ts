@@ -19,7 +19,9 @@ import { BillingPeriodRepository } from '../../repositories/billing/periods'
 import { InvoiceRepository } from '../../repositories/billing/invoices'
 import { InvoicePaymentRepository } from '../../repositories/billing/payments'
 import { assertReason } from '../../utils/billing/reason'
+import { newCorrelationId } from '../../utils/billing/correlation'
 import { BillingAuditService } from './audit'
+import { BillingAuditRepository } from '../../repositories/billing/audit'
 import { BillingDraftService } from './drafts'
 import { BillingDisplayResolver } from './display'
 import { validateAdjustment } from './rules'
@@ -140,6 +142,7 @@ export const InvoiceService = {
       p_issued_at: issuedAt,
       p_requested_contract_ids: input.contract_ids ?? null,
       p_drafts: draftsPayload,
+      p_correlation_id: newCorrelationId(),
     } as unknown as Database['public']['Functions']['issue_period_invoices']['Args']
     const { data, error } = await client.rpc('issue_period_invoices', args)
     if (error) {
@@ -199,6 +202,7 @@ export const InvoiceService = {
       action: BILLING_AUDIT_ACTIONS.INVOICE_VOIDED,
       entity_type: 'invoice',
       entity_id: invoice.id,
+      correlation_id: newCorrelationId(),
       before_data: invoice,
       after_data: voided,
       metadata: {
@@ -278,11 +282,21 @@ export const InvoiceService = {
 
     await InvoiceRepository.linkSupersededBy(event, voided.id, invoice.id)
 
+    // Inherit the void event's correlation so void+reissue group together in
+    // the audit drawer; fall back to a fresh id for legacy voids without one.
+    const correlationId =
+      (await BillingAuditRepository.findLatestCorrelation(
+        event,
+        voided.id,
+        BILLING_AUDIT_ACTIONS.INVOICE_VOIDED,
+      )) ?? newCorrelationId()
+
     await BillingAuditService.append(event, user, {
       billing_period_id: period.id,
       action: BILLING_AUDIT_ACTIONS.INVOICE_REISSUED,
       entity_type: 'invoice',
       entity_id: invoice.id,
+      correlation_id: correlationId,
       before_data: voided,
       after_data: invoice,
       metadata: {

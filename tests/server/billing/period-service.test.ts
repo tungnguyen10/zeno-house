@@ -145,3 +145,64 @@ describe('BillingPeriodService.advanceStatus', () => {
     expect(updateStatus).not.toHaveBeenCalled()
   })
 })
+
+describe('BillingPeriodService.reopen', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    assignmentRepoMocks.findBuildingIdsByUser.mockResolvedValue(['building-1'])
+  })
+
+  it('reopens a closed period back to collecting and audits the reason', async () => {
+    const closed = buildPeriod({ id: 'period-1', buildingId: 'building-1', status: 'closed' })
+    const reopened = buildPeriod({ id: 'period-1', buildingId: 'building-1', status: 'collecting' })
+    findById.mockResolvedValue(closed)
+    updateStatus.mockResolvedValue(reopened)
+    const { BillingPeriodService } = await import('../../../server/services/billing/periods')
+
+    const result = await BillingPeriodService.reopen(
+      event(), makeUser('admin'), 'period-1', 'sửa lại chỉ số điện phòng 201',
+    )
+
+    expect(result.status).toBe('collecting')
+    expect(updateStatus).toHaveBeenCalledWith(
+      expect.anything(), 'period-1', 'collecting', { closed_at: null },
+    )
+    expect(append).toHaveBeenCalledWith(expect.anything(), expect.anything(), expect.objectContaining({
+      action: 'period.reopened',
+      metadata: expect.objectContaining({
+        reason: 'sửa lại chỉ số điện phòng 201',
+        prior_status: 'closed',
+        trigger: 'manual',
+      }),
+    }))
+  })
+
+  it('rejects a reason shorter than 10 characters', async () => {
+    const { BillingPeriodService } = await import('../../../server/services/billing/periods')
+
+    await expect(BillingPeriodService.reopen(event(), makeUser('admin'), 'period-1', 'ngắn'))
+      .rejects.toMatchObject({ statusCode: 422 })
+    expect(findById).not.toHaveBeenCalled()
+    expect(updateStatus).not.toHaveBeenCalled()
+  })
+
+  it('returns 409 when the period is not closed', async () => {
+    findById.mockResolvedValue(buildPeriod({ id: 'period-1', buildingId: 'building-1', status: 'collecting' }))
+    const { BillingPeriodService } = await import('../../../server/services/billing/periods')
+
+    await expect(BillingPeriodService.reopen(
+      event(), makeUser('admin'), 'period-1', 'cần mở lại để chỉnh sửa',
+    )).rejects.toMatchObject({ statusCode: 409 })
+    expect(updateStatus).not.toHaveBeenCalled()
+  })
+
+  it('returns 403 when a manager reopens a period outside assigned scope', async () => {
+    findById.mockResolvedValue(buildPeriod({ id: 'period-2', buildingId: 'building-2', status: 'closed' }))
+    const { BillingPeriodService } = await import('../../../server/services/billing/periods')
+
+    await expect(BillingPeriodService.reopen(
+      event(), makeUser('manager'), 'period-2', 'cần mở lại để chỉnh sửa',
+    )).rejects.toMatchObject({ statusCode: 403 })
+    expect(updateStatus).not.toHaveBeenCalled()
+  })
+})

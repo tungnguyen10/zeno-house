@@ -52,6 +52,10 @@ export function formatAuditSummary(
       return 'Mở kỳ vận hành'
     case 'period.closed':
       return 'Chốt kỳ vận hành'
+    case 'period.reopened': {
+      const reason = stringValue(meta.reason)
+      return reason ? `Mở lại kỳ vận hành — ${reason}` : 'Mở lại kỳ vận hành'
+    }
     case 'period.unissued': {
       const voided = numberValue(meta.voided_count) ?? 0
       const retained = numberValue(meta.retained_paid_count) ?? 0
@@ -74,9 +78,22 @@ export function formatAuditSummary(
       return `Đổi trạng thái: ${from} → ${to}`
     }
     case 'reading.saved': {
-      const count = numberValue(meta.count) ?? numberValue(meta.saved_count) ?? 1
       const meterType = stringValue(meta.meter_type) ?? stringValue(meta.meterType)
       const typeLabel = meterType === 'electricity' ? 'điện' : meterType === 'water' ? 'nước' : null
+      const prev = numberValue(meta.previous_value)
+      const next = numberValue(meta.new_value)
+      const unit = stringValue(meta.unit)
+      if (next !== null) {
+        const suffix = unit ? ` ${unit}` : ''
+        const label = typeLabel ? ` ${typeLabel}` : ''
+        if (prev !== null) {
+          const delta = next - prev
+          const sign = delta >= 0 ? '+' : ''
+          return `Lưu chỉ số${label}: ${prev} → ${next}${suffix} (${sign}${delta})`
+        }
+        return `Lưu chỉ số${label}: ${next}${suffix}`
+      }
+      const count = numberValue(meta.count) ?? numberValue(meta.saved_count) ?? 1
       return typeLabel ? `Lưu ${count} chỉ số ${typeLabel}` : `Lưu ${count} chỉ số`
     }
     case 'utility.override_saved':
@@ -123,6 +140,24 @@ export function formatAuditSummary(
       const count = numberValue(meta.count) ?? numberValue(meta.payment_count) ?? 0
       const total = formatCurrency(meta.total_amount) ?? formatCurrency(meta.amount)
       return `Ghi thu hàng loạt ${count} khoản${total ? `, tổng ${total}` : ''}`
+    }
+    case 'payment.undone': {
+      const amount = formatCurrency(meta.amount) ?? formatCurrency(asRecord(beforeData).amount)
+      const reason = stringValue(meta.reason)
+      const parts: string[] = ['Hoàn tác thu tiền']
+      if (amount) parts.push(amount)
+      if (reason) parts.push(`— ${reason}`)
+      return parts.join(' ')
+    }
+    case 'payment.edited': {
+      const oldAmount = formatCurrency(meta.old_amount) ?? formatCurrency(asRecord(beforeData).amount)
+      const newAmount = formatCurrency(meta.new_amount) ?? formatCurrency(asRecord(afterData).amount)
+      if (oldAmount && newAmount) return `Sửa khoản thu ${oldAmount} → ${newAmount}`
+      return 'Sửa khoản thu'
+    }
+    case 'invoice.printed': {
+      const format = stringValue(meta.format)
+      return `In hoá đơn${format ? ` (${format})` : ''}`
     }
     case 'invoice.issue_attempted': {
       const blocked = numberValue(meta.blocked_count) ?? 0

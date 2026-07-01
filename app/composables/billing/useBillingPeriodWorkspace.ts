@@ -14,6 +14,7 @@ import type {
   IssueInvoicesInput,
   UtilityUsageOverrideInput,
 } from '~/utils/validators/billing'
+import type { IssueAndPayInput } from '~/utils/validators/billing-issue-pay'
 import type { MeterReadingBulkInput } from '~/utils/validators/meter-readings'
 
 export interface SaveReadingsOptions {
@@ -185,6 +186,30 @@ export function useBillingPeriodWorkspace(periodId: MaybeRefOrGetter<string>) {
     return resp.data
   }
 
+  /**
+   * Issue a single ready draft and record full payment in one transaction
+   * (feature-flagged auto-issue). Refreshes the dependent sections on success.
+   */
+  async function issueAndPay(input: IssueAndPayInput): Promise<Invoice> {
+    if (!id.value) throw new Error('No period id')
+    const resp = await $fetch<ApiSuccess<Invoice>>(`/api/billing/periods/${id.value}/issue-and-pay`, {
+      method: 'POST',
+      body: input,
+    })
+    await Promise.all([loadOverview(), loadInvoices(), loadGrid(), loadDrafts()])
+    return resp.data
+  }
+
+  /** Undo (soft-delete) a recorded payment and recompute the invoice. */
+  async function undoPayment(invoiceId: string, paymentId: string, reason?: string): Promise<Invoice> {
+    const resp = await $fetch<ApiSuccess<Invoice>>(
+      `/api/billing/invoices/${invoiceId}/payments/${paymentId}`,
+      { method: 'DELETE', body: reason ? { reason } : undefined },
+    )
+    await Promise.all([loadInvoices(), loadOverview(), loadGrid(), loadAudit()])
+    return resp.data
+  }
+
   return {
     id,
     period,
@@ -207,6 +232,8 @@ export function useBillingPeriodWorkspace(periodId: MaybeRefOrGetter<string>) {
     loadUtilityUsages,
     loadAudit,
     issue,
+    issueAndPay,
+    undoPayment,
     close,
     unissue,
     exportXlsx,

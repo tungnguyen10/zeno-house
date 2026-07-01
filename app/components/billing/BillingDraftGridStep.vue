@@ -4,15 +4,20 @@ import clsx from 'clsx'
 import type { UiTableColumn } from '~/components/ui/UiTable.vue'
 import BillingDraftGridExpandedRow from '~/components/billing/BillingDraftGridExpandedRow.vue'
 import BillingDraftGridOverrideModal from '~/components/billing/BillingDraftGridOverrideModal.vue'
+import BillingAutoIssueModal from '~/components/billing/BillingAutoIssueModal.vue'
 import type {
   BillingDraftGridResponse,
   BillingDraftGridRow,
   BillingDraftGridUtilityCell,
   BillingPeriod,
+  Invoice,
+  IssueInvoicesResult,
 } from '~/types/billing'
 import type { MeterReadingBulkInput } from '~/utils/validators/meter-readings'
-import type { UtilityUsageOverrideInput } from '~/utils/validators/billing'
+import type { IssueInvoicesInput, UtilityUsageOverrideInput } from '~/utils/validators/billing'
+import type { IssueAndPayInput } from '~/utils/validators/billing-issue-pay'
 import { formatCurrency } from '~/utils/format/currency'
+import { isPeriodLocked } from '~/utils/billing/lock'
 import {
   formatOptimisticUsage,
   optimisticRowDisplay,
@@ -33,6 +38,8 @@ const props = defineProps<{
     options?: { refresh?: boolean; silent?: boolean; refreshDrafts?: boolean },
   ) => Promise<void>
   onSaveOverride: (input: UtilityUsageOverrideInput) => Promise<void>
+  onIssue?: (input: IssueInvoicesInput) => Promise<IssueInvoicesResult | undefined>
+  onAutoIssue?: (input: IssueAndPayInput) => Promise<Invoice | undefined>
 }>()
 
 const emit = defineEmits<{
@@ -87,6 +94,94 @@ const {
 function requestPrint() {
   if (selectedCount.value === 0) return
   emit('intent:print', { keys: selectedRows.value.map(row => row.key) })
+}
+
+// ---------------------------------------------------------------------------
+// Bulk issue (merged from the former "Phát hành" tab)
+// ---------------------------------------------------------------------------
+
+const issuableSelectedRows = computed<BillingDraftGridRow[]>(() =>
+  selectedRows.value.filter(row => row.status === 'ready' && !!row.contractId && !row.invoiceId),
+)
+const issuableSelectedCount = computed(() => issuableSelectedRows.value.length)
+const issuableSelectedTotal = computed(() =>
+  issuableSelectedRows.value.reduce((sum, row) => sum + (row.draftTotal ?? 0), 0),
+)
+
+const issueConfirmOpen = ref(false)
+const issueSubmitting = ref(false)
+
+function startIssue() {
+  if (issuableSelectedCount.value === 0) return
+  issueConfirmOpen.value = true
+}
+
+async function confirmIssue() {
+  if (!props.onIssue || issuableSelectedCount.value === 0) return
+  issueSubmitting.value = true
+  try {
+    const contractIds = issuableSelectedRows.value
+      .map(row => row.contractId)
+      .filter((id): id is string => !!id)
+    await props.onIssue({ contract_ids: contractIds })
+    issueConfirmOpen.value = false
+    clearSelection()
+    emit('refresh')
+  }
+  finally {
+    issueSubmitting.value = false
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Single-row auto-issue (issue + full payment in one step). Feature-flagged.
+// ---------------------------------------------------------------------------
+
+const autoIssueEnabled = computed(() => useRuntimeConfig().public.billingAutoIssueEnabled === true)
+const periodLocked = computed(() => isPeriodLocked(props.period))
+
+const autoIssueRow = ref<BillingDraftGridRow | null>(null)
+const autoIssueOpen = ref(false)
+const autoIssueSubmitting = ref(false)
+
+function canAutoIssue(row: BillingDraftGridRow): boolean {
+  return autoIssueEnabled.value
+    && !periodLocked.value
+    && row.status === 'ready'
+    && !!row.contractId
+    && !row.invoiceId
+}
+
+function startAutoIssue(row: BillingDraftGridRow) {
+  if (!canAutoIssue(row)) return
+  autoIssueRow.value = row
+  autoIssueOpen.value = true
+}
+
+function closeAutoIssue() {
+  autoIssueOpen.value = false
+  autoIssueRow.value = null
+}
+
+async function submitAutoIssue(payload: { payment_date: string; payment_method: string | null; note: string | null }) {
+  const row = autoIssueRow.value
+  if (!props.onAutoIssue || !row?.contractId) return
+  autoIssueSubmitting.value = true
+  try {
+    const result = await props.onAutoIssue({
+      contract_id: row.contractId,
+      payment_date: payload.payment_date,
+      payment_method: payload.payment_method,
+      note: payload.note,
+    })
+    if (result) {
+      closeAutoIssue()
+      emit('refresh')
+    }
+  }
+  finally {
+    autoIssueSubmitting.value = false
+  }
 }
 
 watch(
@@ -358,7 +453,15 @@ const columns: UiTableColumn<BillingDraftGridRow>[] = [
         </p>
         <div class="flex items-center gap-2">
           <UiButton variant="ghost" size="sm" @click="clearSelection">Bỏ chọn</UiButton>
-          <UiButton variant="primary" size="sm" @click="requestPrint">In phiếu</UiButton>
+          <UiButton variant="secondary" size="sm" @click="requestPrint">In phiếu</UiButton>
+          <UiButton
+            v-if="onIssue && issuableSelectedCount > 0"
+            variant="primary"
+            size="sm"
+            @click="startIssue"
+          >
+            Phát hành ({{ issuableSelectedCount }})
+          </UiButton>
         </div>
       </div>
 
@@ -566,6 +669,14 @@ const columns: UiTableColumn<BillingDraftGridRow>[] = [
             >
               Điều chỉnh chỉ số
             </UiButton>
+            <UiButton
+              v-if="onAutoIssue && canAutoIssue(row as BillingDraftGridRow)"
+              variant="primary"
+              size="sm"
+              @click="startAutoIssue(row as BillingDraftGridRow)"
+            >
+              Đã thu
+            </UiButton>
           </div>
         </template>
       </UiTable>
@@ -630,6 +741,22 @@ const columns: UiTableColumn<BillingDraftGridRow>[] = [
       :rows="filteredRows"
       @close="bulkEntryOpen = false"
       @apply="applyBulkReadings"
+    />
+    <UiConfirmModal
+      :open="issueConfirmOpen"
+      title="Xác nhận phát hành"
+      :message="`Phát hành ${issuableSelectedCount} hoá đơn với tổng giá trị ${formatCurrency(issuableSelectedTotal)}. Hành động này không thể hoàn tác — chỉ có thể huỷ từng hoá đơn riêng lẻ.`"
+      confirm-label="Phát hành"
+      :loading="issueSubmitting"
+      @confirm="confirmIssue"
+      @cancel="issueConfirmOpen = false"
+    />
+    <BillingAutoIssueModal
+      :open="autoIssueOpen"
+      :row="autoIssueRow"
+      :submitting="autoIssueSubmitting"
+      @close="closeAutoIssue"
+      @submit="submitAutoIssue"
     />
   </div>
 </template>

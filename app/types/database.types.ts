@@ -71,6 +71,7 @@ export type Database = {
           after_data: Json | null
           before_data: Json | null
           billing_period_id: string | null
+          correlation_id: string | null
           created_at: string
           entity_id: string | null
           entity_type: string
@@ -83,6 +84,7 @@ export type Database = {
           after_data?: Json | null
           before_data?: Json | null
           billing_period_id?: string | null
+          correlation_id?: string | null
           created_at?: string
           entity_id?: string | null
           entity_type: string
@@ -95,6 +97,7 @@ export type Database = {
           after_data?: Json | null
           before_data?: Json | null
           billing_period_id?: string | null
+          correlation_id?: string | null
           created_at?: string
           entity_id?: string | null
           entity_type?: string
@@ -728,6 +731,9 @@ export type Database = {
         Row: {
           amount: number
           created_at: string
+          delete_reason: string | null
+          deleted_at: string | null
+          deleted_by: string | null
           id: string
           invoice_id: string
           note: string | null
@@ -739,6 +745,9 @@ export type Database = {
         Insert: {
           amount: number
           created_at?: string
+          delete_reason?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           id?: string
           invoice_id: string
           note?: string | null
@@ -750,6 +759,9 @@ export type Database = {
         Update: {
           amount?: number
           created_at?: string
+          delete_reason?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           id?: string
           invoice_id?: string
           note?: string | null
@@ -1220,9 +1232,56 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      issue_and_pay: {
+        Args: {
+          p_actor_id: string
+          p_contract_id: string
+          p_correlation_id?: string
+          p_draft: Json
+          p_due_date: string
+          p_issued_at: string
+          p_note: string
+          p_payment_date: string
+          p_payment_method: string
+          p_period_id: string
+        }
+        Returns: {
+          balance_amount: number
+          billing_period_id: string
+          contract_id: string
+          created_at: string
+          discount_amount: number
+          due_date: string | null
+          id: string
+          invoice_code: string
+          issued_at: string | null
+          notes: string | null
+          paid_amount: number
+          paid_at: string | null
+          room_id: string
+          status: string
+          subtotal_amount: number
+          superseded_by_invoice_id: string | null
+          supersedes_invoice_id: string | null
+          surcharge_amount: number
+          tenant_id: string
+          total_amount: number
+          updated_at: string
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "invoices"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       issue_period_invoices: {
         Args: {
           p_actor_id: string
+          p_correlation_id?: string
           p_drafts: Json
           p_due_date: string
           p_issued_at: string
@@ -1263,7 +1322,7 @@ export type Database = {
         }
       }
       record_bulk_payments: {
-        Args: { p_actor_id: string; p_payments: Json }
+        Args: { p_actor_id: string; p_correlation_id?: string; p_payments: Json }
         Returns: {
           amount: number
           created_at: string

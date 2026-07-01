@@ -2,10 +2,9 @@
 import type { UiTabItem } from '~/components/ui/UiTabs.vue'
 import BillingKpiStrip from '~/components/billing/BillingKpiStrip.vue'
 import BillingDraftGridStep from '~/components/billing/BillingDraftGridStep.vue'
-import BillingIssueStep from '~/components/billing/BillingIssueStep.vue'
 import BillingPaymentsStep from '~/components/billing/BillingPaymentsStep.vue'
 import type { BillingPaymentsIntent } from '~/components/billing/BillingPaymentsStep.vue'
-import BillingAuditStep from '~/components/billing/BillingAuditStep.vue'
+import BillingAuditDrawer from '~/components/billing/BillingAuditDrawer.vue'
 import BillingCloseStep from '~/components/billing/BillingCloseStep.vue'
 import BillingUnissueModal from '~/components/billing/BillingUnissueModal.vue'
 
@@ -67,19 +66,17 @@ const {
   grid,
   invoices,
   utilityUsages,
-  auditEvents,
   overviewLoading,
-  draftsLoading,
   gridLoading,
   invoicesLoading,
-  auditLoading,
   loadOverview,
   loadDrafts,
   loadGrid,
   loadInvoices,
   loadUtilityUsages,
-  loadAudit,
   issue,
+  issueAndPay,
+  undoPayment,
   close,
   unissue,
   exportXlsx,
@@ -87,7 +84,12 @@ const {
   saveUtilityOverride,
 } = workspace
 
-if (periodId.value) await loadOverview()
+const { count: recentAuditCount, load: loadRecentAuditCount } = useRecentAuditCount(periodId)
+
+if (periodId.value) {
+  await loadOverview()
+  void loadRecentAuditCount()
+}
 
 const auth = useAuthStore()
 const canClose = computed(() => auth.isAdmin)
@@ -112,20 +114,12 @@ const handledInvoiceQuery = ref<string | null>(null)
 const tabs = computed<UiTabItem[]>(() => {
   const status = period.value?.status
   const closed = status === 'closed'
-  const issued = status === 'issued' || status === 'collecting' || closed
   return [
     {
       key: 'draft-grid',
       label: 'Chỉ số & hoá đơn nháp',
       count: grid.value?.totals.blockedDraftCount || undefined,
       reason: closed ? 'Kỳ đã chốt' : undefined,
-    },
-    {
-      key: 'issue',
-      label: 'Phát hành',
-      count: drafts.value?.totals.issuableDraftCount ?? undefined,
-      reason: closed ? 'Kỳ đã chốt' : issued ? 'Kỳ đã phát hành' : undefined,
-      disabled: closed,
     },
     { key: 'payments', label: 'Thanh toán & công nợ' },
   ]
@@ -138,12 +132,6 @@ watch(tab, async (current) => {
     if (utilityUsages.value.length === 0) tasks.push(loadUtilityUsages())
     if (tasks.length > 0) await Promise.all(tasks)
   }
-  if (current === 'issue') {
-    // Always refresh drafts — readings/overrides on the grid tab can change
-    // totals; relying on the cached snapshot would show stale numbers here.
-    await loadDrafts()
-    if (invoices.value.length === 0) await loadInvoices()
-  }
   if (current === 'payments') {
     const tasks: Promise<unknown>[] = []
     if (invoices.value.length === 0) tasks.push(loadInvoices())
@@ -153,10 +141,6 @@ watch(tab, async (current) => {
     await Promise.all(tasks)
   }
 }, { immediate: true })
-
-watch(auditOpen, async (open) => {
-  if (open && auditEvents.value.length === 0) await loadAudit()
-})
 
 watch(closeOpen, async (open) => {
   if (open && !drafts.value) await loadDrafts()
@@ -227,8 +211,34 @@ async function issueWithToast(input: Parameters<typeof issue>[0]) {
   }
 }
 
+async function issueAndPayWithToast(input: Parameters<typeof issueAndPay>[0]) {
+  try {
+    const invoice = await issueAndPay(input)
+    toast.success('Đã phát hành & thu đủ')
+    return invoice
+  }
+  catch (err) {
+    const e = err as { data?: { error?: { message?: string } }; message?: string }
+    toast.error(e.data?.error?.message ?? e.message ?? 'Phát hành & thu thất bại')
+    throw err
+  }
+}
+
 async function reloadAfterInvoiceChange() {
   await Promise.all([loadInvoices(), loadOverview(), loadDrafts(), loadGrid()])
+}
+
+async function undoPaymentWithToast(invoiceId: string, paymentId: string, reason?: string) {
+  try {
+    const invoice = await undoPayment(invoiceId, paymentId, reason)
+    toast.success('Đã hoàn tác thanh toán')
+    return invoice
+  }
+  catch (err) {
+    const e = err as { data?: { error?: { message?: string } }; message?: string }
+    toast.error(e.data?.error?.message ?? e.message ?? 'Hoàn tác thanh toán thất bại')
+    throw err
+  }
 }
 
 async function unissuePeriodFromModal(reason: string) {
@@ -326,6 +336,19 @@ function openPrintWindow(payload: { keys: string[] }) {
         back-label="Danh sách kỳ"
       >
         <template #actions>
+          <UiButton
+            v-if="period?.status === 'issued' || period?.status === 'collecting'"
+            variant="primary"
+            size="sm"
+            :disabled="!canClose || (overview?.outstandingBalance ?? 0) > 0"
+            :title="(overview?.outstandingBalance ?? 0) > 0
+              ? 'Còn công nợ chưa thu — không thể chốt kỳ'
+              : (!canClose ? 'Bạn không có quyền chốt kỳ' : undefined)"
+            @click="closeOpen = true"
+          >
+            <IconCheckCircle class="h-4 w-4" aria-hidden="true" />
+            <span>Chốt kỳ</span>
+          </UiButton>
           <div class="relative">
             <UiButton
               variant="ghost"
@@ -352,6 +375,12 @@ function openPrintWindow(payload: { keys: string[] }) {
                 >
                   <IconDocument class="h-4 w-4" aria-hidden="true" />
                   <span>Nhật ký</span>
+                  <span
+                    v-if="recentAuditCount > 0"
+                    class="ml-auto rounded-full bg-cyan/20 px-1.5 py-0.5 text-xs font-medium text-cyan tabular-nums"
+                  >
+                    {{ recentAuditCount }}
+                  </span>
                 </UiButton>
                 <UiButton
                   variant="ghost"
@@ -407,18 +436,12 @@ function openPrintWindow(payload: { keys: string[] }) {
           :period="period"
           :on-save-readings="saveReadingsWithToast"
           :on-save-override="saveUtilityOverrideWithToast"
+          :on-issue="issueWithToast"
+          :on-auto-issue="issueAndPayWithToast"
           @refresh="async () => { await loadGrid(); await loadOverview() }"
           @intent:adjustment="openPaymentsIntent({ type: 'adjustment', ...$event })"
           @intent:void-reissue="openPaymentsIntent({ type: 'void-reissue', ...$event })"
           @intent:print="openPrintWindow"
-        />
-
-        <BillingIssueStep
-          v-else-if="tab === 'issue'"
-          :drafts="drafts"
-          :loading="draftsLoading"
-          :on-issue="issueWithToast"
-          @refresh="loadDrafts"
         />
 
         <BillingPaymentsStep
@@ -428,17 +451,16 @@ function openPrintWindow(payload: { keys: string[] }) {
           :loading="invoicesLoading"
           :intent="paymentsIntent"
           :drafts="drafts"
+          :on-undo-payment="undoPaymentWithToast"
           @reload="reloadAfterInvoiceChange"
         />
       </template>
 
-      <UiDrawer v-model="auditOpen" title="Nhật ký kỳ vận hành" width="w-full sm:w-[44rem]">
-        <BillingAuditStep
-          :events="auditEvents"
-          :loading="auditLoading"
-          @refresh="loadAudit"
-        />
-      </UiDrawer>
+      <BillingAuditDrawer
+        v-model:open="auditOpen"
+        :period-id="periodId"
+        :period-label="`${String(periodMonth).padStart(2, '0')}-${periodYear}`"
+      />
 
       <UiModal :open="closeOpen" title="Chốt kỳ vận hành" size="lg" @close="closeOpen = false">
         <BillingCloseStep

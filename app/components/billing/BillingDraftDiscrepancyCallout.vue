@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { BillingDraftGridRow, BillingPeriod } from '~/types/billing'
 import { formatCurrency } from '~/utils/format/currency'
+import { isPeriodLocked } from '~/utils/billing/lock'
 
 const props = defineProps<{
   draft: BillingDraftGridRow
@@ -22,7 +23,7 @@ const delta = computed(() => {
 })
 
 const visible = computed(() => !!existingInvoice.value && Math.abs(delta.value) >= 1000)
-const periodClosed = computed(() => props.period.status === 'closed')
+const periodClosed = computed(() => isPeriodLocked(props.period))
 const hasPayment = computed(() => (existingInvoice.value?.paidAmount ?? 0) > 0)
 const signedDelta = computed(() => `${delta.value > 0 ? '+' : ''}${formatCurrency(delta.value)}`)
 
