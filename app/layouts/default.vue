@@ -1,14 +1,8 @@
 <script setup lang="ts">
 import clsx from 'clsx'
 
-const sidebarOpen = ref(true)
-
-// Collapse by default on small screens
-onMounted(() => {
-  if (window.innerWidth < 1024) {
-    sidebarOpen.value = false
-  }
-})
+const appStore = useAppStore()
+const { sidebarOpen } = storeToRefs(appStore)
 
 const overlayClass = computed(() =>
   clsx(
@@ -34,18 +28,18 @@ const sidebarClass = computed(() =>
     <div
       :class="overlayClass"
       aria-hidden="true"
-      @click="sidebarOpen = false"
+      @click="appStore.closeSidebar()"
     />
 
     <!-- Sidebar -->
     <AppSidebar
       :class="sidebarClass"
-      @close="sidebarOpen = false"
+      @close="appStore.closeSidebar()"
     />
 
     <!-- Main area -->
     <div class="flex flex-1 flex-col min-w-0 overflow-hidden">
-      <AppHeader @toggle-sidebar="sidebarOpen = !sidebarOpen" />
+      <AppHeader @toggle-sidebar="appStore.toggleSidebar()" />
 
       <!-- Content -->
       <main class="flex-1 overflow-y-auto p-6 bg-dark">

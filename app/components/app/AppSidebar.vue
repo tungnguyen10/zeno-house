@@ -15,6 +15,8 @@ const emit = defineEmits<{
 
 const route = useRoute()
 const authStore = useAuthStore()
+const appStore = useAppStore()
+const { sidebarCollapsed } = storeToRefs(appStore)
 
 const userInitial = computed(() => {
   const email = authStore.user?.email ?? ''
@@ -30,23 +32,84 @@ function isActive(to: string) {
   return route.path.startsWith(to)
 }
 
+const asideClass = computed(() =>
+  clsx(
+    'flex shrink-0 flex-col bg-dark-card border-r border-dark-border h-full',
+    'transition-[width] duration-200',
+    // Mobile drawer is always full width; only the desktop rail collapses.
+    'w-64',
+    sidebarCollapsed.value ? 'lg:w-16' : 'lg:w-64',
+  ),
+)
+
+const headerClass = computed(() =>
+  clsx(
+    'group flex h-16 items-center gap-2 border-b border-dark-border',
+    sidebarCollapsed.value ? 'px-5 lg:px-0' : 'px-5',
+  ),
+)
+
+const logoLinkClass = computed(() =>
+  clsx('flex items-center', sidebarCollapsed.value && 'lg:hidden'),
+)
+
+// Mini logo shows in the collapsed rail; hidden on hover so the toggle takes its place.
+const miniLogoClass = computed(() =>
+  clsx(
+    'hidden',
+    sidebarCollapsed.value && 'lg:flex lg:mx-auto lg:group-hover:hidden',
+  ),
+)
+
+const collapseBtnClass = computed(() =>
+  clsx(
+    'hidden',
+    sidebarCollapsed.value
+      ? 'lg:mx-auto lg:group-hover:flex'
+      : 'lg:flex lg:ml-auto',
+  ),
+)
+
 function navItemClass(to: string) {
   return clsx(
     'group relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150',
+    sidebarCollapsed.value && 'lg:justify-center lg:gap-0 lg:px-0',
     isActive(to)
       ? 'bg-cyan/10 text-cyan'
       : 'text-muted hover:bg-dark-hover hover:text-white',
   )
 }
+
+function labelClass() {
+  return clsx('truncate', sidebarCollapsed.value && 'lg:hidden')
+}
 </script>
 
 <template>
-  <aside class="flex w-64 shrink-0 flex-col bg-dark-card border-r border-dark-border h-full">
+  <aside :class="asideClass">
     <!-- Logo -->
-    <div class="flex h-16 items-center px-5 border-b border-dark-border">
-      <NuxtLink to="/" class="flex items-center" aria-label="Zeno House — Trang chủ">
+    <div :class="headerClass">
+      <NuxtLink to="/" :class="logoLinkClass" aria-label="Zeno House — Trang chủ">
         <IconLogo class="h-7 w-auto text-white" aria-hidden="true" />
       </NuxtLink>
+
+      <!-- Mini logo — desktop rail (hover swaps to the toggle) -->
+      <NuxtLink to="/" :class="miniLogoClass" aria-label="Zeno House — Trang chủ">
+        <IconLogoMini class="h-6 w-auto text-cyan" aria-hidden="true" />
+      </NuxtLink>
+
+      <!-- Collapse toggle — desktop only -->
+      <UiButton
+        variant="ghost"
+        icon-only
+        :class="collapseBtnClass"
+        :aria-label="sidebarCollapsed ? 'Mở rộng sidebar' : 'Thu gọn sidebar'"
+        :aria-pressed="sidebarCollapsed"
+        @click="appStore.toggleCollapsed()"
+      >
+        <IconPanelLeft class="h-5 w-5" aria-hidden="true" />
+      </UiButton>
+
       <!-- Close button on mobile -->
       <UiButton
         variant="ghost"
@@ -66,6 +129,7 @@ function navItemClass(to: string) {
           <NuxtLink
             :to="item.to"
             :class="navItemClass(item.to)"
+            :title="sidebarCollapsed ? item.label : undefined"
             @click="emit('close')"
           >
             <span
@@ -78,7 +142,7 @@ function navItemClass(to: string) {
               class="shrink-0 w-5 h-5 text-current"
               aria-hidden="true"
             />
-            <span>{{ item.label }}</span>
+            <span :class="labelClass()">{{ item.label }}</span>
           </NuxtLink>
         </li>
       </ul>
@@ -86,11 +150,14 @@ function navItemClass(to: string) {
 
     <!-- User info -->
     <div class="border-t border-dark-border px-3 py-4">
-      <div class="flex items-center gap-3 rounded-lg px-3 py-2">
+      <div
+        class="flex items-center gap-3 rounded-lg px-3 py-2"
+        :class="sidebarCollapsed && 'lg:justify-center lg:px-0'"
+      >
         <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-cyan/20" aria-hidden="true">
           <span class="text-xs font-semibold text-cyan">{{ userInitial }}</span>
         </div>
-        <div class="min-w-0 flex-1">
+        <div class="min-w-0 flex-1" :class="sidebarCollapsed && 'lg:hidden'">
           <p class="truncate text-sm font-medium text-white">{{ authStore.user?.email }}</p>
           <p class="truncate text-xs text-muted">{{ authStore.role ?? 'user' }}</p>
         </div>
