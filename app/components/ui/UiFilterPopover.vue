@@ -79,7 +79,7 @@ onKeyStroke('Escape', () => {
         role="dialog"
         :aria-label="ariaLabel"
         :class="clsx(
-          'absolute left-0 z-50 mt-2 origin-top-left overflow-hidden rounded-xl border border-dark-border bg-dark-card p-3 shadow-xl shadow-black/40',
+          'absolute left-0 z-50 mt-2 origin-top-left rounded-xl border border-dark-border bg-dark-card p-3 shadow-xl shadow-black/40',
           panelClass,
         )"
       >

@@ -147,7 +147,7 @@ onKeyStroke('Escape', () => {
       </div>
     </div>
 
-    <dl class="mt-4 grid grid-cols-1 divide-y divide-dark-border overflow-hidden rounded-lg border border-dark-border bg-dark-deep/30 xl:grid-cols-4 xl:divide-x xl:divide-y-0">
+    <dl class="mt-4 grid grid-cols-1 divide-y divide-dark-border overflow-hidden rounded-lg border border-dark-border bg-dark-deep/30 sm:grid-cols-4 sm:divide-x sm:divide-y-0">
       <div class="px-4 py-2.5">
         <dt class="text-xs text-muted">Khách thuê</dt>
         <dd class="mt-0.5 truncate text-sm font-medium text-white">
