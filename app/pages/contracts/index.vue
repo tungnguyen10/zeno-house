@@ -50,6 +50,9 @@ const visibleIds = computed(() => contracts.value.map(contract => contract.id))
 const allVisibleSelected = computed(() =>
   visibleIds.value.length > 0 && visibleIds.value.every(id => selectedIds.value.includes(id)),
 )
+const someVisibleSelected = computed(() =>
+  !allVisibleSelected.value && visibleIds.value.some(id => selectedIds.value.includes(id)),
+)
 
 function toggleSelectAll() {
   if (allVisibleSelected.value) {
@@ -141,30 +144,34 @@ watch(contracts, () => {
 
     <!-- List -->
     <div v-else class="space-y-2">
-      <label v-if="authStore.isAdmin" class="mb-2 flex items-center gap-2 text-sm text-muted">
-        <input
-          type="checkbox"
-          class="h-4 w-4 rounded border-dark-border bg-dark-surface text-cyan focus:ring-cyan/40"
-          :checked="allVisibleSelected"
-          @change="toggleSelectAll"
-        >
-        <span>Chọn tất cả trên trang</span>
-      </label>
+      <div
+        v-if="authStore.isAdmin"
+        class="flex items-center gap-3 rounded-xl border border-transparent px-4 py-1"
+      >
+        <UiCheckbox
+          :model-value="allVisibleSelected"
+          :indeterminate="someVisibleSelected"
+          aria-label="Chọn tất cả hợp đồng trên trang"
+          @update:model-value="toggleSelectAll"
+        />
+        <span class="text-sm text-muted select-none">
+          {{ selectedIds.length > 0 ? `Đã chọn ${selectedIds.length}` : 'Chọn tất cả trên trang' }}
+        </span>
+      </div>
 
       <div
         v-for="contract in contracts"
         :key="contract.id"
         class="group flex items-center gap-3 rounded-xl border border-dark-border bg-dark-surface px-4 py-3 transition-colors hover:border-cyan/40"
       >
-        <input
+        <UiCheckbox
           v-if="authStore.isAdmin"
-          type="checkbox"
-          class="h-4 w-4 shrink-0 rounded border-dark-border bg-dark-surface text-cyan focus:ring-cyan/40"
-          :checked="isSelected(contract.id)"
+          class="shrink-0"
+          :model-value="isSelected(contract.id)"
           :aria-label="`Chọn hợp đồng ${contract.contractCode}`"
-          @change.stop="toggle(contract.id)"
+          @update:model-value="toggle(contract.id)"
           @click.stop
-        >
+        />
         <NuxtLink :to="contractPath(contract)" class="min-w-0 flex-1">
           <div class="flex items-center gap-2 flex-wrap">
             <p class="text-sm font-medium text-white truncate">

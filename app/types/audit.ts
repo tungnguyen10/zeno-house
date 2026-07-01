@@ -12,4 +12,8 @@ export interface AuditEvent {
   afterData: unknown
   metadata: Record<string, unknown>
   createdAt: string
+  actorName?: string | null
+  actorEmail?: string | null
+  entityLabel?: string | null
+  entitySubLabel?: string | null
 }

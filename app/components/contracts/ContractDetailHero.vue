@@ -53,14 +53,14 @@ onKeyStroke('Escape', () => {
 </script>
 
 <template>
-  <section class="rounded-xl border border-dark-border bg-dark-surface p-6">
+  <section class="rounded-xl border border-dark-border bg-dark-surface p-5">
     <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
       <div class="min-w-0">
         <div class="flex flex-wrap items-center gap-2">
-          <h1 class="truncate text-2xl font-semibold text-white">{{ contract.contractCode }}</h1>
+          <h1 class="truncate text-xl font-semibold text-white">{{ contract.contractCode }}</h1>
           <UiStatusBadge :status="contract.status" />
         </div>
-        <div class="mt-2 flex flex-wrap items-center gap-2 text-sm text-muted">
+        <div class="mt-1.5 flex flex-wrap items-center gap-2 text-sm text-muted">
           <span>{{ contract.room.buildingName }}</span>
           <span aria-hidden="true">/</span>
           <NuxtLink :to="`/rooms/${contract.room.code}`" class="text-cyan hover:underline">
@@ -147,28 +147,28 @@ onKeyStroke('Escape', () => {
       </div>
     </div>
 
-    <dl class="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-      <div class="rounded-lg border border-dark-border bg-dark-deep/40 px-4 py-3">
-        <dt class="text-xs uppercase tracking-wide text-muted">Khách thuê</dt>
-        <dd class="mt-1 truncate text-base font-medium text-white">
+    <dl class="mt-4 grid grid-cols-1 divide-y divide-dark-border overflow-hidden rounded-lg border border-dark-border bg-dark-deep/30 xl:grid-cols-4 xl:divide-x xl:divide-y-0">
+      <div class="px-4 py-2.5">
+        <dt class="text-xs text-muted">Khách thuê</dt>
+        <dd class="mt-0.5 truncate text-sm font-medium text-white">
           <NuxtLink :to="`/tenants/${contract.tenant.code}`" class="hover:text-cyan">{{ contract.tenant.fullName }}</NuxtLink>
         </dd>
       </div>
-      <div class="rounded-lg border border-dark-border bg-dark-deep/40 px-4 py-3">
-        <dt class="text-xs uppercase tracking-wide text-muted">Phòng</dt>
-        <dd class="mt-1 truncate text-base font-medium text-white">
+      <div class="px-4 py-2.5">
+        <dt class="text-xs text-muted">Phòng</dt>
+        <dd class="mt-0.5 truncate text-sm font-medium text-white">
           <NuxtLink :to="`/rooms/${contract.room.code}`" class="hover:text-cyan">
             {{ contract.room.buildingName }} - {{ contract.room.roomNumber }}
           </NuxtLink>
         </dd>
       </div>
-      <div class="rounded-lg border border-dark-border bg-dark-deep/40 px-4 py-3">
-        <dt class="text-xs uppercase tracking-wide text-muted">Đã đi qua</dt>
-        <dd class="mt-1 text-2xl font-semibold text-white">{{ monthsElapsed }} tháng</dd>
+      <div class="px-4 py-2.5">
+        <dt class="text-xs text-muted">Đã đi qua</dt>
+        <dd class="mt-0.5 text-base font-semibold text-white">{{ monthsElapsed }} tháng</dd>
       </div>
-      <div class="rounded-lg border border-dark-border bg-dark-deep/40 px-4 py-3">
-        <dt class="text-xs uppercase tracking-wide text-muted">Đã thu / còn cọc</dt>
-        <dd class="mt-1 text-sm font-semibold text-white">
+      <div class="px-4 py-2.5">
+        <dt class="text-xs text-muted">Đã thu / còn cọc</dt>
+        <dd class="mt-0.5 text-sm font-semibold text-white">
           {{ formatCurrency(paidAmount ?? 0) }}
           <span class="text-muted">/ {{ formatCurrency(depositBalance) }}</span>
         </dd>

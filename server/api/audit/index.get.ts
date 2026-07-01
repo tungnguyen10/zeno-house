@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { AuditRepository } from '../../repositories/audit'
 import { BuildingRepository } from '../../repositories/buildings'
+import { enrichAuditEvents } from '../../services/audit-enrichment'
 import type { AuditEntityType } from '~/utils/constants/audit'
 
 const querySchema = z.object({
@@ -59,12 +60,14 @@ export default defineEventHandler(async (event) => {
     }
 
     const { items, total } = await AuditRepository.listByBuilding(event, building.id, opts)
-    return { data: items, meta: { total } }
+    const enriched = await enrichAuditEvents(event, items)
+    return { data: enriched, meta: { total } }
   }
 
   // Admin only: query across all buildings (including tenant events with NULL building_id)
   if (!can(user, 'buildings.delete')) throwForbidden('Không có quyền xem nhật ký toàn hệ thống')
 
   const { items, total } = await AuditRepository.listAll(event, opts)
-  return { data: items, meta: { total } }
+  const enriched = await enrichAuditEvents(event, items)
+  return { data: enriched, meta: { total } }
 })

@@ -99,31 +99,33 @@ function managerInitials(row: ManagerAssignment): string {
     />
 
     <!-- Buildings without manager alert -->
-    <div
+    <UiAlert
       v-if="buildingsWithoutManager.length > 0"
-      class="flex items-start gap-3 rounded-lg border border-amber-500/30 bg-amber-500/8 px-4 py-3"
+      severity="warning"
+      :title="`${buildingsWithoutManager.length} tòa nhà chưa có manager`"
     >
-      <span class="mt-0.5 h-2 w-2 shrink-0 rounded-full bg-amber-400" aria-hidden="true" />
-      <div>
-        <p class="text-sm font-medium text-amber-200">
-          {{ buildingsWithoutManager.length }} tòa nhà chưa có manager
-        </p>
-        <div class="mt-1.5 flex flex-wrap gap-1.5">
-          <span
-            v-for="building in buildingsWithoutManager"
-            :key="building.id"
-            class="rounded border border-amber-500/25 bg-amber-500/10 px-2 py-0.5 text-xs text-amber-100"
-          >
-            {{ building.name }}
-          </span>
-        </div>
+      <div class="mt-2 flex flex-wrap gap-1.5">
+        <span
+          v-for="building in buildingsWithoutManager"
+          :key="building.id"
+          class="inline-flex items-center rounded-md border border-warning/30 bg-warning/5 px-2 py-0.5 text-xs text-warning"
+        >
+          {{ building.name }}
+        </span>
       </div>
-    </div>
+    </UiAlert>
 
     <!-- Loading -->
     <div v-if="isLoading" class="space-y-3">
       <UiSkeleton v-for="i in 3" :key="i" class="h-28 w-full rounded-lg" />
     </div>
+
+    <!-- Empty state -->
+    <UiEmptyState
+      v-else-if="managers.length === 0"
+      title="Chưa có manager nào"
+      description="Mời manager vào hệ thống để bắt đầu phân quyền tòa nhà."
+    />
 
     <!-- Manager list -->
     <div v-else class="space-y-3">
@@ -133,8 +135,8 @@ function managerInitials(row: ManagerAssignment): string {
         class="overflow-hidden rounded-lg border border-dark-border bg-dark-surface"
       >
         <!-- Card header -->
-        <div class="flex items-center justify-between gap-4 border-b border-dark-border px-5 py-4">
-          <div class="flex items-center gap-3 min-w-0">
+        <div class="flex flex-col gap-3 border-b border-dark-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <div class="flex min-w-0 items-center gap-3">
             <!-- Avatar -->
             <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-cyan/15 text-sm font-semibold text-cyan">
               {{ managerInitials(row) }}
@@ -143,19 +145,36 @@ function managerInitials(row: ManagerAssignment): string {
               <p class="truncate text-sm font-semibold text-white">
                 {{ row.manager.name ?? row.manager.email ?? row.manager.id }}
               </p>
-              <p class="text-xs text-muted">
-                {{ row.assignments.length === 0 ? 'Chưa được gán tòa nhà' : `${row.assignments.length} tòa nhà` }}
+              <p v-if="row.manager.name && row.manager.email" class="truncate text-xs text-muted">
+                {{ row.manager.email }}
               </p>
             </div>
+            <UiBadge
+              v-if="row.assignments.length === 0"
+              variant="warning"
+              class="ml-1 shrink-0"
+            >
+              Chưa có tòa nhà
+            </UiBadge>
+            <span
+              v-else
+              class="ml-1 shrink-0 rounded-md border border-dark-border bg-dark-deep/40 px-2 py-0.5 text-xs font-medium text-muted"
+            >
+              {{ row.assignments.length }} tòa nhà
+            </span>
           </div>
 
           <!-- Assign form -->
-          <form class="flex shrink-0 items-center gap-2" @submit.prevent="handleAssign(row)">
+          <form
+            v-if="availableBuildings(row).length > 0"
+            class="flex shrink-0 items-center gap-2"
+            @submit.prevent="handleAssign(row)"
+          >
             <UiSelect
               v-model="selectedBuildingByManager[row.manager.id]"
               :options="availableBuildingOptions(row)"
               density="compact"
-              class="w-48"
+              class="w-56"
             />
             <UiButton
               type="submit"
@@ -163,17 +182,21 @@ function managerInitials(row: ManagerAssignment): string {
               :loading="busyKey === `assign:${row.manager.id}`"
               :disabled="!selectedBuildingByManager[row.manager.id]"
             >
+              <IconPlus class="h-3.5 w-3.5" aria-hidden="true" />
               Gán
             </UiButton>
           </form>
+          <span v-else class="text-xs text-muted">
+            Đã gán tất cả tòa nhà
+          </span>
         </div>
 
         <!-- Assignments list -->
-        <div v-if="row.assignments.length > 0">
-          <div
+        <ul v-if="row.assignments.length > 0" class="divide-y divide-dark-border">
+          <li
             v-for="assignment in row.assignments"
             :key="assignment.id"
-            class="flex items-center gap-4 border-b border-dark-border/50 px-5 py-3 last:border-b-0"
+            class="flex items-center gap-4 px-4 py-2.5"
           >
             <!-- Building info -->
             <div class="min-w-0 flex-1">
@@ -186,15 +209,19 @@ function managerInitials(row: ManagerAssignment): string {
             </div>
 
             <!-- Delete permission toggle -->
-            <div class="flex items-center gap-2.5 shrink-0">
+            <label
+              class="flex shrink-0 items-center gap-2 rounded-md border border-dark-border/60 bg-dark-deep/30 px-2.5 py-1"
+              :class="!busyKey && 'cursor-pointer hover:border-dark-border'"
+            >
               <UiToggle
                 :model-value="assignment.can_delete_master_data"
                 size="sm"
+                aria-label="Cho phép xóa dữ liệu"
                 :disabled="busyKey === `toggle:${assignment.id}`"
                 @update:model-value="handleToggle(assignment.id, $event)"
               />
-              <span class="text-xs text-muted whitespace-nowrap">Cho xóa dữ liệu</span>
-            </div>
+              <span class="whitespace-nowrap text-xs text-muted">Cho xóa dữ liệu</span>
+            </label>
 
             <!-- Unassign -->
             <UiButton
@@ -203,14 +230,16 @@ function managerInitials(row: ManagerAssignment): string {
               :loading="busyKey === `unassign:${assignment.id}`"
               @click="handleUnassign(assignment.id)"
             >
-              Bỏ gán
+              <IconTrash class="h-3.5 w-3.5" aria-hidden="true" />
+              <span class="sr-only sm:not-sr-only">Bỏ gán</span>
             </UiButton>
-          </div>
-        </div>
+          </li>
+        </ul>
 
         <!-- Empty assignments -->
-        <div v-else class="px-5 py-4 text-sm italic text-muted/60">
-          Chưa được gán tòa nhà nào.
+        <div v-else class="flex items-center gap-2 px-4 py-3 text-xs text-muted">
+          <IconAlertCircle class="h-4 w-4 shrink-0 text-warning/70" aria-hidden="true" />
+          <span>Manager này chưa được gán tòa nhà nào.</span>
         </div>
       </div>
     </div>
