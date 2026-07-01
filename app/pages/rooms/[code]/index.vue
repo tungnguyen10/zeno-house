@@ -303,9 +303,10 @@ if (error.value?.statusCode === 404) {
                 · {{ formatCurrency(activeContract.monthlyRent) }}/tháng
               </p>
             </div>
-            <button
-              type="button"
-              class="shrink-0 rounded-lg border border-dark-border bg-dark-surface px-3 py-2 text-right hover:border-cyan/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan/30"
+            <UiButton
+              variant="secondary"
+              size="sm"
+              class="shrink-0 flex-col items-end text-right hover:border-cyan/40"
               :title="loadingContractServices ? 'Đang tải...' : 'Chỉnh dịch vụ của phòng'"
               :disabled="loadingContractServices"
               @click="showServicesModal = true"
@@ -317,7 +318,7 @@ if (error.value?.statusCode === 404) {
               <span class="mt-0.5 block text-[11px] text-cyan">
                 {{ activeServicesCount }} dịch vụ active — chỉnh
               </span>
-            </button>
+            </UiButton>
           </div>
         </div>
         <p v-else class="text-sm text-muted">Phòng đang trống.</p>

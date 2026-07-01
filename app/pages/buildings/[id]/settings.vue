@@ -138,17 +138,15 @@ async function handleUpdatePricingType(catalogId: string, pricingType: PricingTy
     >
       <div class="rounded-xl border border-dark-border bg-dark-surface p-5">
         <div class="flex flex-col gap-3 sm:flex-row sm:items-end">
-          <label class="flex-1 min-w-0">
-            <span class="mb-1 block text-xs uppercase tracking-wide text-muted">Code</span>
-            <input
-              v-model="codeInput"
-              type="text"
-              :disabled="isCodeLocked"
-              :title="isCodeLocked ? 'Không thể đổi vì tòa nhà đã có phòng' : undefined"
-              class="block w-full rounded-md border border-dark-border bg-dark-bg px-3 py-2 font-mono text-sm text-white placeholder-muted focus:outline-none focus:ring-2 focus:ring-cyan/30 focus:border-cyan/70 disabled:opacity-50 disabled:cursor-not-allowed"
-              placeholder="vd: zhpn"
-            >
-          </label>
+          <UiInput
+            v-model="codeInput"
+            label="Code"
+            :disabled="isCodeLocked"
+            :title="isCodeLocked ? 'Không thể đổi vì tòa nhà đã có phòng' : undefined"
+            placeholder="vd: zhpn"
+            input-class="font-mono"
+            class="flex-1 min-w-0"
+          />
           <div class="flex items-center gap-2 sm:pb-0.5">
             <UiButton
               v-if="!isCodeLocked"
@@ -163,9 +161,7 @@ async function handleUpdatePricingType(catalogId: string, pricingType: PricingTy
               v-else
               class="inline-flex items-center gap-1.5 rounded-md border border-dark-border bg-dark-deep/40 px-2 py-1 text-xs text-muted"
             >
-              <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                <path fill-rule="evenodd" d="M10 1a4 4 0 0 0-4 4v3H5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2h-1V5a4 4 0 0 0-4-4Zm2 7V5a2 2 0 1 0-4 0v3h4Z" clip-rule="evenodd" />
-              </svg>
+              <IconLock class="h-3.5 w-3.5" aria-hidden="true" />
               Đã khóa · {{ building?.totalRooms }} phòng
             </span>
           </div>

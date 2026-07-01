@@ -197,13 +197,13 @@ const canSubmit = computed(() => !props.loading && (props.isDirty || props.hasDr
           <p class="text-sm font-medium">Có {{ visibleErrors.length }} lỗi cần sửa</p>
           <ul class="mt-1 space-y-0.5 text-sm">
             <li v-for="err in visibleErrors" :key="err.field">
-              <button
-                type="button"
+              <UiButton
+                unstyled
                 class="underline hover:text-white text-left"
                 @click="focusField(err.id)"
               >
                 {{ err.label }}: {{ err.message }}
-              </button>
+              </UiButton>
             </li>
           </ul>
         </div>

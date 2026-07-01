@@ -48,11 +48,11 @@ function dueLabel(row: InvoiceListItem): string {
         title="Không có hoá đơn"
         description="Đổi tháng / building / mở rộng status"
       />
-      <button
+      <UiButton
         v-for="row in rows"
         v-else
         :key="row.id"
-        type="button"
+        unstyled
         :aria-label="`Mở hoá đơn ${row.invoice_code}`"
         class="w-full rounded-lg border border-dark-border bg-dark-surface p-3 text-left transition hover:bg-dark-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan/40"
         @click="emit('open', row)"
@@ -90,7 +90,7 @@ function dueLabel(row: InvoiceListItem): string {
             </p>
           </div>
         </div>
-      </button>
+      </UiButton>
     </div>
 
     <UiTable

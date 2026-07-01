@@ -368,9 +368,9 @@ const mobileCancelText = computed(() => props.mobileCancelLabel ?? props.cancelL
         <p class="text-sm font-medium text-white">Có {{ visibleErrors.length }} lỗi cần sửa</p>
         <ul class="space-y-1 text-sm">
           <li v-for="err in visibleErrors" :key="err.field">
-            <button type="button" class="text-left underline hover:text-white" @click="focusField(err.id)">
+            <UiButton unstyled class="text-left underline hover:text-white" @click="focusField(err.id)">
               {{ err.label }}: {{ err.message }}
-            </button>
+            </UiButton>
           </li>
         </ul>
       </div>

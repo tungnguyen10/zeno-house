@@ -10,6 +10,7 @@ const props = withDefaults(defineProps<{
   error?: string
   disabled?: boolean
   id?: string
+  labelClass?: string
   /** Render a partial / mixed state (e.g. "select all" header with some rows selected). */
   indeterminate?: boolean
   /** Accessible label when no visible `label` is rendered. */
@@ -57,23 +58,15 @@ const boxClass = computed(() =>
           :class="boxClass"
           @change="emit('update:modelValue', ($event.target as HTMLInputElement).checked)"
         >
-        <svg
+        <IconCheckSmall
           class="pointer-events-none absolute hidden h-3 w-3 text-dark peer-checked:block peer-indeterminate:hidden"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="3"
-          stroke-linecap="round"
-          stroke-linejoin="round"
           aria-hidden="true"
-        >
-          <path d="M5 13l4 4L19 7" />
-        </svg>
+        />
         <span
           class="pointer-events-none absolute hidden h-0.5 w-2 rounded-full bg-dark peer-indeterminate:block"
         />
       </span>
-      <span v-if="label" class="text-sm text-white select-none">{{ label }}</span>
+      <span v-if="label" :class="clsx('text-sm text-white select-none', labelClass)">{{ label }}</span>
     </label>
     <p v-if="error" :id="`${checkboxId}-error`" class="text-xs text-error pl-6" role="alert">
       {{ error }}

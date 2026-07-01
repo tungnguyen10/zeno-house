@@ -116,7 +116,14 @@ const highlightedInvoiceId = ref<string | null>(null)
 let highlightTimer: ReturnType<typeof setTimeout> | null = null
 
 function setInvoiceRef(id: string, el: unknown) {
-  const element = el instanceof HTMLElement ? el : null
+  const maybeComponent = el as { $el?: unknown; el?: unknown } | null
+  const element = el instanceof HTMLElement
+    ? el
+    : maybeComponent?.$el instanceof HTMLElement
+      ? maybeComponent.$el
+      : maybeComponent?.el instanceof HTMLElement
+        ? maybeComponent.el
+        : null
   if (element) invoiceRefs.set(id, element)
   else invoiceRefs.delete(id)
 }
@@ -507,9 +514,9 @@ watch(
           />
         </template>
         <template #cell-tenant="{ row }">
-          <button
+          <UiButton
             :ref="(el) => setInvoiceRef(row.id, el)"
-            type="button"
+            unstyled
             :class="[
               'group flex min-w-0 max-w-full flex-col items-start rounded-md px-1 py-0.5 text-left transition',
               highlightedInvoiceId === row.id && 'bg-cyan/10 ring-2 ring-cyan/50',
@@ -520,7 +527,7 @@ watch(
               {{ invoiceDisplay(row).title }}
             </span>
             <span class="block truncate text-xs text-muted">{{ invoiceDisplay(row).subtitle }}</span>
-          </button>
+          </UiButton>
         </template>
         <template #cell-status="{ row }">
           <UiStatusBadge :status="row.status" context="invoice" />

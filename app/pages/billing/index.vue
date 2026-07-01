@@ -25,14 +25,14 @@ const { filters, periods, isLoading, refresh, openPeriod } = useBillingPeriodLis
   status: initialStatus as BillingPeriodStatus | undefined,
 })
 
-// v-model wrappers so <select value=""> maps cleanly to `undefined` on the filter object.
-const buildingFilter = computed<string>({
+// v-model wrappers so empty selects map cleanly to `undefined` on the filter object.
+const buildingFilter = computed<string | number | null>({
   get: () => filters.building_id ?? '',
-  set: (v) => { filters.building_id = v || undefined },
+  set: (v) => { filters.building_id = typeof v === 'string' && v ? v : undefined },
 })
-const statusFilter = computed<string>({
+const statusFilter = computed<string | number | null>({
   get: () => filters.status ?? '',
-  set: (v) => { filters.status = (v || undefined) as BillingPeriodStatus | undefined },
+  set: (v) => { filters.status = (typeof v === 'string' && v ? v : undefined) as BillingPeriodStatus | undefined },
 })
 
 const yearRange = computed(() => {
@@ -214,10 +214,10 @@ function periodLabel(row: BillingPeriodSummary): string {
     </UiPageHeader>
 
     <div class="-mx-6 flex gap-2 overflow-x-auto px-6 pb-1 md:mx-0 md:grid md:grid-cols-5 md:px-0 md:pb-0">
-      <button
+      <UiButton
         v-for="m in queueMetrics"
         :key="m.key"
-        type="button"
+        unstyled
         :aria-pressed="activeQueue === m.key"
         :class="[
           'group flex shrink-0 snap-start flex-col gap-1 rounded-xl border bg-dark-surface px-4 py-3 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan/40 min-w-[10rem] md:min-w-0 md:shrink',
@@ -239,7 +239,7 @@ function periodLabel(row: BillingPeriodSummary): string {
         >
           {{ m.value }}
         </span>
-      </button>
+      </UiButton>
     </div>
 
     <div
@@ -247,68 +247,53 @@ function periodLabel(row: BillingPeriodSummary): string {
     >
       <div class="flex flex-1 flex-wrap items-center gap-2">
         <!-- Building -->
-        <div class="relative w-full sm:w-56">
-          <IconBuilding
-            class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted"
-            aria-hidden="true"
-          />
-          <select
+        <div class="w-full sm:w-56">
+          <UiSelect
             v-model="buildingFilter"
+            :options="buildings.map(b => ({ value: b.id, label: b.name }))"
+            placeholder="Tất cả tòa nhà"
             :disabled="buildingsLoading"
             aria-label="Tòa nhà"
-            class="block h-9 w-full appearance-none truncate rounded-md border border-dark-border bg-dark-surface pl-9 pr-8 text-sm text-white focus:border-cyan/70 focus:outline-none focus:ring-2 focus:ring-cyan/30 disabled:cursor-not-allowed disabled:text-muted"
+            class="w-full"
           >
-            <option value="">Tất cả tòa nhà</option>
-            <option v-for="b in buildings" :key="b.id" :value="b.id">{{ b.name }}</option>
-          </select>
-          <IconChevronDown
-            class="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted"
-            aria-hidden="true"
-          />
+            <template #prefix>
+              <IconBuilding class="h-4 w-4" />
+            </template>
+          </UiSelect>
         </div>
 
         <!-- Year -->
-        <div class="relative w-full sm:w-28">
-          <IconClock
-            class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted"
-            aria-hidden="true"
-          />
-          <select
-            v-model.number="filters.period_year"
+        <div class="w-full sm:w-28">
+          <UiSelect
+            v-model="filters.period_year"
+            :options="yearOptions"
             aria-label="Năm"
-            class="block h-9 w-full appearance-none rounded-md border border-dark-border bg-dark-surface pl-9 pr-8 text-sm tabular-nums text-white focus:border-cyan/70 focus:outline-none focus:ring-2 focus:ring-cyan/30"
+            class="w-full"
           >
-            <option v-for="y in yearRange" :key="y" :value="y">{{ y }}</option>
-          </select>
-          <IconChevronDown
-            class="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted"
-            aria-hidden="true"
-          />
+            <template #prefix>
+              <IconClock class="h-4 w-4" />
+            </template>
+          </UiSelect>
         </div>
 
         <!-- Status -->
-        <div class="relative w-full sm:w-48">
-          <IconTag
-            class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted"
-            aria-hidden="true"
-          />
-          <select
+        <div class="w-full sm:w-48">
+          <UiSelect
             v-model="statusFilter"
+            :options="BILLING_PERIOD_STATUSES.map(s => ({ value: s, label: statusLabel(s) }))"
+            placeholder="Tất cả trạng thái"
             aria-label="Trạng thái"
-            class="block h-9 w-full appearance-none truncate rounded-md border border-dark-border bg-dark-surface pl-9 pr-8 text-sm text-white focus:border-cyan/70 focus:outline-none focus:ring-2 focus:ring-cyan/30"
+            class="w-full"
           >
-            <option value="">Tất cả trạng thái</option>
-            <option v-for="s in BILLING_PERIOD_STATUSES" :key="s" :value="s">{{ statusLabel(s) }}</option>
-          </select>
-          <IconChevronDown
-            class="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted"
-            aria-hidden="true"
-          />
+            <template #prefix>
+              <IconTag class="h-4 w-4" />
+            </template>
+          </UiSelect>
         </div>
 
         <!-- Debt toggle -->
-        <button
-          type="button"
+        <UiButton
+          unstyled
           :aria-pressed="!!filters.has_debt"
           :class="[
             'inline-flex h-9 items-center gap-1.5 rounded-md border px-3 text-sm transition focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan/30',
@@ -320,37 +305,37 @@ function periodLabel(row: BillingPeriodSummary): string {
         >
           <IconAlertCircle class="h-4 w-4" aria-hidden="true" />
           <span class="whitespace-nowrap">Có công nợ</span>
-        </button>
+        </UiButton>
 
         <!-- Active queue chip -->
-        <button
+        <UiButton
           v-if="activeQueue"
-          type="button"
+          unstyled
           class="inline-flex h-9 items-center gap-1.5 rounded-md border border-cyan/60 bg-cyan/10 px-3 text-sm text-cyan transition hover:bg-cyan/20"
           @click="activeQueue = null"
         >
           <span class="whitespace-nowrap">{{ activeQueueLabel }}</span>
           <IconX class="h-3.5 w-3.5" aria-hidden="true" />
-        </button>
+        </UiButton>
 
         <!-- Clear all -->
-        <button
+        <UiButton
           v-if="hasActiveFilters"
-          type="button"
+          unstyled
           class="inline-flex items-center gap-1 rounded-md px-2 py-1.5 text-xs text-muted transition-colors hover:bg-dark-hover hover:text-white"
           @click="clearFilters"
         >
           <IconX class="h-3.5 w-3.5" aria-hidden="true" />
           Xóa lọc
-        </button>
+        </UiButton>
       </div>
 
       <div class="flex shrink-0 items-center gap-3">
         <span v-if="!isLoading" class="text-xs tabular-nums text-muted">
           {{ displayedPeriods.length }} kỳ
         </span>
-        <button
-          type="button"
+        <UiButton
+          unstyled
           :class="[
             'inline-flex h-9 items-center gap-1.5 rounded-md border border-dark-border px-3 text-sm text-muted transition hover:bg-dark-hover hover:text-white',
             isLoading && 'pointer-events-none opacity-50',
@@ -363,7 +348,7 @@ function periodLabel(row: BillingPeriodSummary): string {
             aria-hidden="true"
           />
           <span class="hidden sm:inline">Làm mới</span>
-        </button>
+        </UiButton>
       </div>
     </div>
 
@@ -377,11 +362,11 @@ function periodLabel(row: BillingPeriodSummary): string {
         title="Không có kỳ nào khớp bộ lọc"
         description="Bỏ filter hoặc mở kỳ mới cho tòa nhà cần xử lý."
       />
-      <button
+      <UiButton
         v-for="row in displayedPeriods"
         v-else
         :key="row.period.id"
-        type="button"
+        unstyled
         class="flex w-full flex-col gap-2 rounded-xl border border-dark-border bg-dark-surface p-3 text-left transition hover:bg-dark-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan/40"
         @click="gotoWorkspace(row)"
       >
@@ -429,7 +414,7 @@ function periodLabel(row: BillingPeriodSummary): string {
             Nợ {{ formatCurrency(row.outstandingBalance) }}
           </span>
         </div>
-      </button>
+      </UiButton>
     </div>
 
     <!-- Desktop: table -->
@@ -496,14 +481,15 @@ function periodLabel(row: BillingPeriodSummary): string {
         <span v-else class="text-muted">—</span>
       </template>
       <template #cell-open="{ row }">
-        <button
-          type="button"
-          class="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted transition hover:bg-dark-hover hover:text-white"
+        <UiButton
+          variant="ghost"
+          size="sm"
+          icon-only
           :aria-label="`Mở kỳ ${periodLabel(row)} ${row.buildingName ?? ''}`"
           @click.stop="gotoWorkspace(row)"
         >
           <IconChevronRight class="h-4 w-4" />
-        </button>
+        </UiButton>
       </template>
     </UiTable>
 

@@ -104,10 +104,12 @@ async function confirm() {
           :rows="3"
           placeholder="Ví dụ: khách trả phòng trước hạn"
         />
-        <label v-if="pendingAction === 'delete'" class="flex items-start gap-2 text-sm text-muted">
-          <input v-model="deleteAck" type="checkbox" class="mt-1 h-4 w-4 rounded border-dark-border bg-dark-surface text-cyan focus:ring-cyan/40">
-          <span>Tôi hiểu thao tác này không thể hoàn tác và chỉ áp dụng cho hợp đồng không có dữ liệu hoá đơn.</span>
-        </label>
+        <UiCheckbox
+          v-if="pendingAction === 'delete'"
+          v-model="deleteAck"
+          label="Tôi hiểu thao tác này không thể hoàn tác và chỉ áp dụng cho hợp đồng không có dữ liệu hoá đơn."
+          label-class="!text-muted"
+        />
       </div>
     </UiConfirmModal>
   </div>

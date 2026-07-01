@@ -78,14 +78,14 @@ function toggleAll() {
       </div>
       <div class="flex items-center gap-2 text-xs text-muted">
         <span>{{ rows.length }} hợp đồng active</span>
-        <button
+        <UiButton
           v-if="rows.length > 0"
-          type="button"
-          class="rounded-md border border-dark-border px-2 py-1 text-xs text-white hover:bg-dark-hover transition-colors"
+          variant="secondary"
+          size="sm"
           @click="toggleAll"
         >
           {{ allExpanded ? 'Thu gọn tất cả' : 'Mở rộng tất cả' }}
-        </button>
+        </UiButton>
       </div>
     </div>
 
@@ -109,22 +109,18 @@ function toggleAll() {
     <!-- Rows -->
     <ul v-else class="divide-y divide-dark-border overflow-hidden rounded-lg border border-dark-border bg-dark-deep/30">
       <li v-for="row in rows" :key="row.contractId">
-        <button
-          type="button"
+        <UiButton
+          unstyled
           class="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-dark-hover/40 transition-colors focus-visible:outline-none focus-visible:bg-dark-hover/60"
           :aria-expanded="expanded.has(row.contractId)"
           :aria-controls="`svc-${row.contractId}`"
           @click="toggle(row.contractId)"
         >
-          <svg
+          <IconChevronRight
             class="h-4 w-4 shrink-0 text-muted transition-transform"
             :class="expanded.has(row.contractId) && 'rotate-90'"
-            viewBox="0 0 20 20"
-            fill="currentColor"
             aria-hidden="true"
-          >
-            <path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 0 1 .02-1.06L11.168 10 7.23 6.29a.75.75 0 1 1 1.04-1.08l4.5 4.25a.75.75 0 0 1 0 1.08l-4.5 4.25a.75.75 0 0 1-1.06-.02Z" clip-rule="evenodd" />
-          </svg>
+          />
           <div class="min-w-0 flex-1">
             <p class="truncate text-sm font-medium text-white">
               Phòng {{ row.roomNumber }}
@@ -142,7 +138,7 @@ function toggleAll() {
               {{ formatCurrency(row.monthlyTotal) }}
             </span>
           </div>
-        </button>
+        </UiButton>
 
         <div
           v-if="expanded.has(row.contractId)"

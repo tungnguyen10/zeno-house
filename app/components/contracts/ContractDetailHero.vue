@@ -74,9 +74,9 @@ onKeyStroke('Escape', () => {
       </div>
 
       <div class="relative shrink-0">
-        <button
+        <UiButton
           ref="triggerRef"
-          type="button"
+          unstyled
           data-test="hero-actions-trigger"
           class="inline-flex items-center gap-1.5 rounded-md border border-dark-border bg-dark-surface px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-dark-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dark-border"
           :aria-expanded="menuOpen"
@@ -88,7 +88,7 @@ onKeyStroke('Escape', () => {
             :class="clsx('h-3 w-3 transition-transform duration-150', menuOpen && 'rotate-180')"
             aria-hidden="true"
           />
-        </button>
+        </UiButton>
 
         <Transition
           enter-active-class="transition duration-150 ease-out"
@@ -105,42 +105,42 @@ onKeyStroke('Escape', () => {
             data-test="hero-actions-menu"
             class="absolute right-0 z-30 mt-2 w-52 origin-top-right overflow-hidden rounded-lg border border-dark-border bg-dark-card shadow-xl shadow-black/40"
           >
-            <button
-              type="button"
+            <UiButton
+              unstyled
               role="menuitem"
               class="flex w-full items-center gap-2 px-3 py-2 text-sm text-white transition-colors hover:bg-dark-hover focus-visible:bg-dark-hover focus-visible:outline-none"
               @click="emitAction('edit')"
             >
               Chỉnh sửa
-            </button>
-            <button
+            </UiButton>
+            <UiButton
               v-if="canRenew"
-              type="button"
+              unstyled
               role="menuitem"
               class="flex w-full items-center gap-2 px-3 py-2 text-sm text-white transition-colors hover:bg-dark-hover focus-visible:bg-dark-hover focus-visible:outline-none"
               @click="emitAction('renew')"
             >
               Gia hạn
-            </button>
-            <button
+            </UiButton>
+            <UiButton
               v-if="canTerminate"
-              type="button"
+              unstyled
               role="menuitem"
               class="flex w-full items-center gap-2 px-3 py-2 text-sm text-white transition-colors hover:bg-dark-hover focus-visible:bg-dark-hover focus-visible:outline-none"
               @click="emitAction('terminate')"
             >
               Kết thúc sớm
-            </button>
+            </UiButton>
             <template v-if="isAdmin">
               <div class="h-px bg-dark-border" aria-hidden="true" />
-              <button
-                type="button"
+              <UiButton
+                unstyled
                 role="menuitem"
                 class="flex w-full items-center gap-2 px-3 py-2 text-sm text-error transition-colors hover:bg-error/10 focus-visible:bg-error/10 focus-visible:outline-none"
                 @click="emitAction('delete')"
               >
                 Xoá hợp đồng
-              </button>
+              </UiButton>
             </template>
           </div>
         </Transition>

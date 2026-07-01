@@ -196,13 +196,13 @@ const hasActiveFilters = computed(() =>
       <span class="text-amber-300 flex-1 truncate font-mono">
         correlation: {{ filters.correlationId }}
       </span>
-      <button
-        type="button"
+      <UiButton
+        unstyled
         class="text-muted hover:text-white transition-colors"
         @click="$emit('update:filters', { ...filters, correlationId: '' })"
       >
         ✕
-      </button>
+      </UiButton>
     </div>
 
     <!-- Row: actor + date range + critical toggle -->
@@ -221,10 +221,10 @@ const hasActiveFilters = computed(() =>
         <template v-if="actorMenu">
           <div class="fixed inset-0 z-30" aria-hidden="true" @click="actorMenu = false" />
           <div class="absolute left-0 z-40 mt-1 w-56 rounded-lg border border-dark-border bg-dark-card py-1 shadow-lg shadow-black/40">
-            <button
+            <UiButton
               v-for="c in contributors"
               :key="c.id"
-              type="button"
+              unstyled
               class="flex w-full items-center gap-2 px-3 py-2 text-sm text-white hover:bg-dark-surface transition-colors"
               @click="toggleActor(c.id)"
             >
@@ -236,7 +236,7 @@ const hasActiveFilters = computed(() =>
                 aria-hidden="true"
               />
               <span class="truncate">{{ actorLabel(c) }}</span>
-            </button>
+            </UiButton>
           </div>
         </template>
       </div>

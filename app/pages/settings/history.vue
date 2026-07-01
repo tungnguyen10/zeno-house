@@ -256,29 +256,29 @@ function clearFilters() {
         :options="entityTypeOptions"
         class="min-w-44"
       />
-      <button
+      <UiButton
         v-if="hasActiveFilters"
-        type="button"
+        unstyled
         class="inline-flex items-center gap-1 rounded-md px-2 py-1.5 text-xs text-muted transition-colors hover:bg-dark-hover hover:text-white"
         @click="clearFilters"
       >
         <IconX class="h-3.5 w-3.5" aria-hidden="true" />
         Xóa lọc
-      </button>
+      </UiButton>
       <span v-if="!isLoading" class="text-xs text-muted">
         {{ events.length }} / {{ total }} sự kiện
       </span>
 
       <template #actions>
-        <button
-          type="button"
+        <UiButton
+          unstyled
           class="inline-flex items-center gap-1.5 rounded-md border border-dark-border px-3 py-2 text-sm text-muted transition-colors hover:bg-dark-hover hover:text-white"
           :class="{ 'opacity-50 pointer-events-none': isLoading }"
           @click="refresh()"
         >
           <IconRefresh class="h-4 w-4" :class="{ 'animate-spin': isLoading }" aria-hidden="true" />
           Làm mới
-        </button>
+        </UiButton>
       </template>
     </UiToolbar>
 
@@ -320,8 +320,8 @@ function clearFilters() {
             class="border-b border-dark-border last:border-b-0"
           >
             <!-- Main row -->
-            <button
-              type="button"
+            <UiButton
+              unstyled
               class="group flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-dark-hover"
               :class="{ 'bg-dark-hover': expandedId === event.id }"
               @click="toggleExpand(event.id)"
@@ -379,7 +379,7 @@ function clearFilters() {
                   aria-hidden="true"
                 />
               </div>
-            </button>
+            </UiButton>
 
             <!-- Expanded: diff / raw -->
             <div v-if="expandedId === event.id" class="border-t border-dark-border bg-dark-deep px-4 py-4">

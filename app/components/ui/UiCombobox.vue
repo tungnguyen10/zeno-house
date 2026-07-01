@@ -179,17 +179,11 @@ const triggerClass = computed(() =>
         </span>
 
         <span class="flex items-center gap-1 shrink-0 ml-2">
-          <!-- Loading spinner -->
-          <svg
+          <IconSpinner
             v-if="loading"
             class="animate-spin h-4 w-4 text-muted"
-            viewBox="0 0 24 24"
-            fill="none"
             aria-hidden="true"
-          >
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-          </svg>
+          />
 
           <!-- Clear button (only when a value is selected and not disabled/loading) -->
           <button
@@ -200,22 +194,16 @@ const triggerClass = computed(() =>
             tabindex="-1"
             @click.stop="clear"
           >
-            <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-              <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
-            </svg>
+            <IconX class="h-3.5 w-3.5" aria-hidden="true" />
           </button>
 
           <!-- Chevron -->
-          <svg
+          <IconChevronDown
             v-else
             class="h-4 w-4 text-muted transition-transform"
             :class="isOpen ? 'rotate-180' : ''"
-            viewBox="0 0 20 20"
-            fill="currentColor"
             aria-hidden="true"
-          >
-            <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.06l3.71-3.83a.75.75 0 111.08 1.04l-4.25 4.39a.75.75 0 01-1.08 0L5.21 8.27a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
-          </svg>
+          />
         </span>
       </button>
 
@@ -274,15 +262,11 @@ const triggerClass = computed(() =>
           >
             <span>{{ optionLabel(option) }}</span>
             <!-- Checkmark for selected -->
-            <svg
+            <IconCheckSmall
               v-if="isSelected(option)"
               class="h-4 w-4 text-cyan shrink-0"
-              viewBox="0 0 20 20"
-              fill="currentColor"
               aria-hidden="true"
-            >
-              <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clip-rule="evenodd" />
-            </svg>
+            />
           </li>
         </ul>
       </div>

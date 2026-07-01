@@ -100,10 +100,12 @@ async function confirm() {
           <li v-for="name in previewNames" :key="name" class="truncate">• {{ name }}</li>
           <li v-if="extraCount > 0" class="text-muted">…và {{ extraCount }} khách thuê khác</li>
         </ul>
-        <label v-if="pendingAction === 'delete'" class="flex items-start gap-2 text-sm text-muted">
-          <input v-model="deleteAck" type="checkbox" class="mt-1 h-4 w-4 rounded border-dark-border bg-dark-surface text-cyan focus:ring-cyan/40">
-          <span>Tôi hiểu thao tác này không thể hoàn tác.</span>
-        </label>
+        <UiCheckbox
+          v-if="pendingAction === 'delete'"
+          v-model="deleteAck"
+          label="Tôi hiểu thao tác này không thể hoàn tác."
+          label-class="!text-muted"
+        />
       </div>
     </UiConfirmModal>
   </div>

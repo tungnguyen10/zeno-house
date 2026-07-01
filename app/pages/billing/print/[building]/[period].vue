@@ -90,8 +90,8 @@ function goBack() {
         <h1 class="print-toolbar-title">{{ rows.length }} phiếu sẵn sàng in</h1>
       </div>
       <div class="print-toolbar-actions">
-        <button type="button" class="btn-ghost" @click="goBack">Đóng</button>
-        <button type="button" class="btn-primary" :disabled="rows.length === 0" @click="triggerPrint">In ngay</button>
+        <UiButton unstyled class="btn-ghost" @click="goBack">Đóng</UiButton>
+        <UiButton unstyled class="btn-primary" :disabled="rows.length === 0" @click="triggerPrint">In ngay</UiButton>
       </div>
     </header>
 

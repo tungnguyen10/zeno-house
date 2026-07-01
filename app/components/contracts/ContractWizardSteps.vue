@@ -29,8 +29,8 @@ function canVisit(step: number) {
   <nav aria-label="Tiến trình tạo hợp đồng" class="rounded-lg border border-dark-border bg-dark-surface p-3">
     <ol class="grid grid-cols-3 gap-2">
       <li v-for="step in steps" :key="step.value">
-        <button
-          type="button"
+        <UiButton
+          unstyled
           class="flex w-full items-center gap-2 rounded-md border px-3 py-2 text-left text-sm transition-colors"
           :class="[
             step.value === currentStep
@@ -53,7 +53,7 @@ function canVisit(step: number) {
             {{ (completedSteps ?? []).includes(step.value) ? '✓' : step.value }}
           </span>
           <span class="truncate">{{ step.label }}</span>
-        </button>
+        </UiButton>
       </li>
     </ol>
   </nav>

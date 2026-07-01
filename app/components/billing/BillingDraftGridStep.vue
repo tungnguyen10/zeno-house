@@ -392,10 +392,10 @@ const columns: UiTableColumn<BillingDraftGridRow>[] = [
             aria-label="Lọc dòng theo trạng thái"
             class="inline-flex items-center rounded-lg border border-dark-border bg-dark-card p-0.5"
           >
-            <button
+            <UiButton
               v-for="t in filterTabs"
               :key="t.key"
-              type="button"
+              unstyled
               role="tab"
               :aria-selected="filter === t.key"
               :class="clsx(
@@ -407,7 +407,7 @@ const columns: UiTableColumn<BillingDraftGridRow>[] = [
               @click="filter = t.key"
             >
               {{ t.label }}
-            </button>
+            </UiButton>
           </div>
         </template>
       </UiToolbar>
@@ -442,14 +442,14 @@ const columns: UiTableColumn<BillingDraftGridRow>[] = [
       >
         <p class="text-white">
           Đã chọn <span class="font-semibold tabular-nums">{{ selectedCount }}</span> phiếu
-          <button
+          <UiButton
             v-if="!allVisibleSelected"
-            type="button"
+            unstyled
             class="ml-2 text-xs text-cyan hover:underline"
             @click="selectAllVisible"
           >
             Chọn tất cả trong lọc
-          </button>
+          </UiButton>
         </p>
         <div class="flex items-center gap-2">
           <UiButton variant="ghost" size="sm" @click="clearSelection">Bỏ chọn</UiButton>
@@ -509,8 +509,8 @@ const columns: UiTableColumn<BillingDraftGridRow>[] = [
 
         <template #cell-room="{ row }">
           <div class="flex items-start gap-2">
-            <button
-              type="button"
+            <UiButton
+              unstyled
               class="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded text-muted transition-colors hover:bg-dark-hover hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dark-border"
               :aria-label="isDetailOpen(row as BillingDraftGridRow) ? 'Thu gọn chi tiết' : 'Xem chi tiết'"
               :aria-expanded="isDetailOpen(row as BillingDraftGridRow)"
@@ -521,7 +521,7 @@ const columns: UiTableColumn<BillingDraftGridRow>[] = [
                 :class="isDetailOpen(row as BillingDraftGridRow) && 'rotate-90'"
                 aria-hidden="true"
               />
-            </button>
+            </UiButton>
             <div class="flex min-w-0 flex-col leading-tight">
               <span class="text-sm font-semibold text-white">
                 {{ (row as BillingDraftGridRow).roomNumber ?? '—' }}

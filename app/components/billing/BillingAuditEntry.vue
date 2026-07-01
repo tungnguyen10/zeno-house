@@ -28,22 +28,6 @@ function actorLabel(ev: BillingAuditEvent): string {
   return ev.actorName ?? ev.actorEmail ?? (ev.actorId ? 'Người dùng' : 'Hệ thống')
 }
 
-/** Category icon glyph (Heroicons outline 20px, inline SVG paths). */
-const iconPath = computed(() => {
-  switch (category.value) {
-    case 'create':
-      return 'M10 18a8 8 0 100-16 8 8 0 000 16zm.75-11.25a.75.75 0 00-1.5 0v2.5h-2.5a.75.75 0 000 1.5h2.5v2.5a.75.75 0 001.5 0v-2.5h2.5a.75.75 0 000-1.5h-2.5v-2.5z'
-    case 'edit':
-      return 'M2.695 14.762l-1.262 3.155a.5.5 0 00.65.65l3.155-1.262a4 4 0 001.343-.885L17.5 5.502a2.121 2.121 0 00-3-3L3.58 13.42a4 4 0 00-.885 1.342z'
-    case 'destructive':
-      return 'M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z'
-    case 'status':
-      return 'M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z'
-    default:
-      return 'M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9z'
-  }
-})
-
 /**
  * Diff view (D6): detect diff-able actions and render a before → after line.
  */
@@ -111,9 +95,11 @@ function technicalJson(ev: BillingAuditEvent): string {
       :class="['flex-none flex h-7 w-7 items-center justify-center rounded-full mt-0.5', visual.bubbleClass]"
       :title="visual.label"
     >
-      <svg viewBox="0 0 20 20" fill="currentColor" :class="['h-4 w-4', visual.iconClass]" aria-hidden="true">
-        <path :d="iconPath" />
-      </svg>
+      <IconPlus v-if="category === 'create'" :class="['h-4 w-4', visual.iconClass]" aria-hidden="true" />
+      <IconPencilSquare v-else-if="category === 'edit'" :class="['h-4 w-4', visual.iconClass]" aria-hidden="true" />
+      <IconXCircle v-else-if="category === 'destructive'" :class="['h-4 w-4', visual.iconClass]" aria-hidden="true" />
+      <IconCheckCircle v-else-if="category === 'status'" :class="['h-4 w-4', visual.iconClass]" aria-hidden="true" />
+      <IconInfoCircle v-else :class="['h-4 w-4', visual.iconClass]" aria-hidden="true" />
     </div>
 
     <!-- Content -->
@@ -163,15 +149,15 @@ function technicalJson(ev: BillingAuditEvent): string {
         </span>
 
         <!-- Correlation (D7) -->
-        <button
+        <UiButton
           v-if="event.correlationId"
-          type="button"
+          unstyled
           class="text-xs text-muted hover:text-white underline underline-offset-2 transition-colors"
           :title="`Xem cùng correlation: ${event.correlationId}`"
           @click="$emit('filterCorrelation', event.correlationId)"
         >
           Xem cùng nhóm
-        </button>
+        </UiButton>
 
         <!-- Entity quick-open (D8) -->
         <NuxtLink
@@ -183,14 +169,14 @@ function technicalJson(ev: BillingAuditEvent): string {
         </NuxtLink>
 
         <!-- Technical details expand -->
-        <button
+        <UiButton
           v-if="hasTechnicalDetail(event)"
-          type="button"
+          unstyled
           class="text-xs text-muted hover:text-white transition-colors ml-auto"
           @click="expanded = !expanded"
         >
           {{ expanded ? 'Ẩn' : 'Chi tiết kỹ thuật' }}
-        </button>
+        </UiButton>
       </div>
 
       <!-- Technical JSON (collapsible) -->

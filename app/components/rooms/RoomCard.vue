@@ -16,8 +16,7 @@ const emit = defineEmits<{
   'edit-services': [room: Room]
 }>()
 
-function onCheckboxChange(event: Event) {
-  event.stopPropagation()
+function onSelectedChange() {
   emit('toggle-select', props.room.id)
 }
 
@@ -41,20 +40,14 @@ const to = computed(() => roomPath(props.room))
         : 'border-dark-border hover:border-cyan/40 hover:bg-dark-hover',
     ]"
   >
-    <label
+    <UiCheckbox
       v-if="selectable"
       class="absolute left-3 top-3 z-10 flex h-6 w-6 items-center justify-center"
+      :model-value="selected"
+      :aria-label="`Chọn phòng ${room.roomNumber}`"
       @click.stop
-    >
-      <input
-        type="checkbox"
-        :checked="selected"
-        :aria-label="`Chọn phòng ${room.roomNumber}`"
-        class="h-4 w-4 rounded border-dark-border bg-dark-surface text-cyan focus:ring-cyan/40"
-        @click.stop
-        @change="onCheckboxChange"
-      >
-    </label>
+      @update:model-value="onSelectedChange"
+    />
 
     <NuxtLink
       :to="to"
@@ -98,25 +91,29 @@ const to = computed(() => roomPath(props.room))
       v-if="!selectable"
       class="pointer-events-none absolute inset-x-0 bottom-0 z-10 hidden items-center justify-end gap-1 rounded-b-xl bg-gradient-to-t from-dark-deep/90 via-dark-deep/60 to-transparent p-2 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 md:flex"
     >
-      <button
+      <UiButton
         v-if="room.status === 'occupied'"
-        type="button"
+        variant="secondary"
+        size="sm"
+        icon-only
         title="Chỉnh dịch vụ của phòng"
         :aria-label="`Chỉnh dịch vụ phòng ${room.roomNumber}`"
-        class="pointer-events-auto inline-flex h-7 w-7 items-center justify-center rounded-md border border-dark-border bg-dark-surface text-muted hover:border-cyan/40 hover:text-cyan focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan/40"
+        class="pointer-events-auto text-muted hover:border-cyan/40 hover:text-cyan"
         @click.stop.prevent="onEditServices"
       >
         <IconSettings class="h-3.5 w-3.5" aria-hidden="true" />
-      </button>
-      <button
-        type="button"
+      </UiButton>
+      <UiButton
+        variant="secondary"
+        size="sm"
+        icon-only
         title="Chỉnh sửa nhanh"
         :aria-label="`Chỉnh sửa phòng ${room.roomNumber}`"
-        class="pointer-events-auto inline-flex h-7 w-7 items-center justify-center rounded-md border border-dark-border bg-dark-surface text-muted hover:border-cyan/40 hover:text-cyan focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan/40"
+        class="pointer-events-auto text-muted hover:border-cyan/40 hover:text-cyan"
         @click.stop.prevent="onEdit"
       >
         <IconPencilSquare class="h-3.5 w-3.5" aria-hidden="true" />
-      </button>
+      </UiButton>
     </div>
   </div>
 </template>

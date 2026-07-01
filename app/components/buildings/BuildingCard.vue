@@ -12,8 +12,7 @@ const emit = defineEmits<{
   'toggle-select': [id: string]
 }>()
 
-function onCheckboxChange(event: Event) {
-  event.stopPropagation()
+function onSelectedChange() {
   emit('toggle-select', props.building.id)
 }
 
@@ -32,20 +31,14 @@ const meterReadingsPath = computed(() => `${buildingPath(props.building)}/meter-
     ]"
   >
     <!-- Checkbox column (selection mode only) — sits ABOVE the link so clicks don't navigate. -->
-    <label
+    <UiCheckbox
       v-if="selectable"
       class="absolute left-3 top-3 z-10 flex h-6 w-6 items-center justify-center"
+      :model-value="selected"
+      :aria-label="`Chọn ${building.name}`"
       @click.stop
-    >
-      <input
-        type="checkbox"
-        :checked="selected"
-        :aria-label="`Chọn ${building.name}`"
-        class="h-4 w-4 rounded border-dark-border bg-dark-surface text-cyan focus:ring-cyan/40"
-        @click.stop
-        @change="onCheckboxChange"
-      >
-    </label>
+      @update:model-value="onSelectedChange"
+    />
 
     <NuxtLink
       :to="buildingPath(building)"

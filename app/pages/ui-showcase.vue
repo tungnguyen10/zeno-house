@@ -154,10 +154,10 @@ function dismissAlert(key: string) {
           <UiButton loading>Loading</UiButton>
           <UiButton disabled>Disabled</UiButton>
           <UiButton variant="ghost" icon-only aria-label="Tìm kiếm">
-            <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z" clip-rule="evenodd" /></svg>
+            <IconSearch class="h-4 w-4" aria-hidden="true" />
           </UiButton>
           <UiButton variant="secondary" icon-only aria-label="Cài đặt">
-            <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd" /></svg>
+            <IconSettings class="h-4 w-4" aria-hidden="true" />
           </UiButton>
         </div>
       </div>
@@ -409,7 +409,7 @@ function dismissAlert(key: string) {
       <UiToolbar>
         <UiInput placeholder="Tìm phòng..." class="w-full sm:w-64">
           <template #prefix>
-            <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z" clip-rule="evenodd" /></svg>
+            <IconSearch class="h-4 w-4" aria-hidden="true" />
           </template>
         </UiInput>
         <UiSelect :options="selectOptions" placeholder="Tất cả trạng thái" class="w-full sm:w-48" />

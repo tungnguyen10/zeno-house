@@ -1,4 +1,5 @@
 import { vi } from 'vitest'
+import { config } from '@vue/test-utils'
 import {
   computed,
   isRef,
@@ -16,16 +17,25 @@ import {
   toRefs,
   toValue,
   unref,
+  useId,
   watch,
   watchEffect,
 } from 'vue'
+import UiButton from '~/components/ui/UiButton.vue'
+import UiCheckbox from '~/components/ui/UiCheckbox.vue'
+
+config.global.components = {
+  ...config.global.components,
+  UiButton,
+  UiCheckbox,
+}
 
 // Nuxt auto-imports these into Vue SFCs at build-time. In vitest we don't run
 // the Nuxt build, so we expose the same identifiers on globalThis. Components
 // that import explicitly are unaffected (the import wins over the global).
 for (const [name, fn] of Object.entries({
   computed, isRef, nextTick, onBeforeMount, onBeforeUnmount, onMounted, onUnmounted,
-  reactive, readonly, ref, shallowRef, toRaw, toRef, toRefs, toValue, unref, watch, watchEffect,
+  reactive, readonly, ref, shallowRef, toRaw, toRef, toRefs, toValue, unref, useId, watch, watchEffect,
 })) {
   vi.stubGlobal(name, fn)
 }

@@ -12,6 +12,8 @@ const props = withDefaults(defineProps<{
   required?: boolean
   disabled?: boolean
   id?: string
+  inputClass?: string
+  title?: string
   /**
    * `normal` — default form field sizing (py-2).
    * `compact` — dense table-cell / matrix sizing (py-1 text-xs).
@@ -25,8 +27,7 @@ const props = withDefaults(defineProps<{
 })
 
 const emit = defineEmits<{
-  (e: 'update:modelValue', value: string): void
-  (e: 'change', value: string): void
+  (e: 'update:modelValue' | 'change', value: string): void
   (e: 'blur', event: FocusEvent): void
 }>()
 
@@ -58,6 +59,7 @@ const inputClass = computed(() =>
     hasPrefix.value && 'pl-1',
     hasSuffix.value && 'pr-1',
     props.disabled && 'cursor-not-allowed text-muted',
+    props.inputClass,
   ),
 )
 </script>
@@ -89,6 +91,7 @@ const inputClass = computed(() =>
         :placeholder="placeholder"
         :disabled="disabled"
         :required="required"
+        :title="title"
         :aria-invalid="!!error"
         :aria-describedby="error ? `${inputId}-error` : hint ? `${inputId}-hint` : undefined"
         :class="inputClass"
