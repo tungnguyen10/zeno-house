@@ -19,11 +19,13 @@ function userName(user: AuthUserLike): string | null {
 }
 
 function mapManagedUser(user: AuthUserLike): ManagedUser {
+  const createdBy = user.app_metadata?.created_by
   return {
     id: user.id,
     email: user.email ?? null,
     name: userName(user),
     role: (user.app_metadata?.role as UserRole) ?? null as unknown as UserRole,
+    createdBy: typeof createdBy === 'string' ? createdBy : null,
   }
 }
 
@@ -67,14 +69,14 @@ export const UserRepository = {
 
   async create(
     event: H3Event,
-    input: { email: string; password: string; full_name?: string; role: UserRole },
+    input: { email: string; password: string; full_name?: string; role: UserRole; created_by?: string | null },
   ): Promise<ManagedUser> {
     const client = serverSupabaseServiceRole<Database>(event)
     const { data, error } = await client.auth.admin.createUser({
       email: input.email,
       password: input.password,
       email_confirm: true,
-      app_metadata: { role: input.role },
+      app_metadata: { role: input.role, created_by: input.created_by ?? null },
       user_metadata: input.full_name ? { full_name: input.full_name } : {},
     })
 

@@ -34,6 +34,7 @@ const entityTypeOptions = [
   { value: 'room', label: 'Phòng' },
   { value: 'tenant', label: 'Khách thuê' },
   { value: 'contract', label: 'Hợp đồng' },
+  { value: 'user', label: 'Người dùng' },
 ]
 
 const buildingOptions = computed(() => [
@@ -50,6 +51,7 @@ const entityTypeLabels: Record<AuditEntityType | string, string> = {
   meter_device: 'Đồng hồ',
   building_service: 'Dịch vụ tòa',
   contract_service: 'Dịch vụ hợp đồng',
+  user: 'Người dùng',
 }
 
 interface EntityStyle {
@@ -68,6 +70,7 @@ const entityStyles: Record<string, EntityStyle> = {
   meter_device: { icon: 'IconCpu', ring: 'ring-fuchsia-500/30', bg: 'bg-fuchsia-500/15', fg: 'text-fuchsia-300' },
   building_service: { icon: 'IconLayers', ring: 'ring-teal-500/30', bg: 'bg-teal-500/15', fg: 'text-teal-300' },
   contract_service: { icon: 'IconLayers', ring: 'ring-teal-500/30', bg: 'bg-teal-500/15', fg: 'text-teal-300' },
+  user: { icon: 'IconUsers', ring: 'ring-sky-500/30', bg: 'bg-sky-500/15', fg: 'text-sky-300' },
 }
 
 const fallbackStyle: EntityStyle = {
@@ -82,9 +85,9 @@ function styleFor(entityType: string): EntityStyle {
 }
 
 function actionVariant(action: string): 'success' | 'accent' | 'danger' | 'warning' | 'neutral' {
-  if (action.endsWith('.created') || action.endsWith('.activated')) return 'success'
-  if (action.endsWith('.updated') || action.endsWith('.renewed')) return 'accent'
-  if (action.endsWith('.removed') || action.endsWith('.terminated')) return 'danger'
+  if (action.endsWith('.created') || action.endsWith('.activated') || action.endsWith('.assignment_added')) return 'success'
+  if (action.endsWith('.updated') || action.endsWith('.renewed') || action.endsWith('.role_changed')) return 'accent'
+  if (action.endsWith('.removed') || action.endsWith('.terminated') || action.endsWith('.assignment_removed')) return 'danger'
   if (action.endsWith('.archived') || action.endsWith('.maintenance_set') || action.endsWith('.expired')) return 'warning'
   return 'neutral'
 }
@@ -99,6 +102,9 @@ const actionSuffixLabel: Record<string, string> = {
   expired: 'Hết hạn',
   renewed: 'Gia hạn',
   maintenance_set: 'Đặt bảo trì',
+  role_changed: 'Đổi vai trò',
+  assignment_added: 'Gán tòa nhà',
+  assignment_removed: 'Gỡ tòa nhà',
 }
 
 function actionSuffix(action: string): string {

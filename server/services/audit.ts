@@ -10,6 +10,7 @@ export interface AuditAppendOptions {
   action: string
   entity_type: AuditEntityType
   entity_id?: string | null
+  correlation_id?: string | null
   before_data?: unknown
   after_data?: unknown
   metadata?: Record<string, unknown>
@@ -36,6 +37,7 @@ export const AuditService = {
         action: input.action,
         entity_type: input.entity_type,
         entity_id: input.entity_id ?? null,
+        correlation_id: input.correlation_id ?? null,
         before_data: input.before_data,
         after_data: input.after_data,
         metadata: input.metadata,

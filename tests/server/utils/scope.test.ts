@@ -68,6 +68,15 @@ describe('building scope helpers', () => {
     await expect(canDeleteMasterData(event(), manager, 'building-a')).resolves.toBe(true)
   })
 
+  it('grants master-data deletes to owners within their scope regardless of the flag', async () => {
+    assignmentRepoMocks.findBuildingIdsByUser.mockResolvedValue(['building-a'])
+    const { canDeleteMasterData } = await import('../../../server/utils/scope')
+
+    await expect(canDeleteMasterData(event(), user('owner'), 'building-a')).resolves.toBe(true)
+    await expect(canDeleteMasterData(event(), user('owner'), 'building-z')).resolves.toBe(false)
+    expect(assignmentRepoMocks.findByUserAndBuilding).not.toHaveBeenCalled()
+  })
+
   it('resolves owner scope from assignments like manager', async () => {
     assignmentRepoMocks.findBuildingIdsByUser.mockResolvedValue(['building-a'])
     const { getAssignedBuildingIds } = await import('../../../server/utils/scope')

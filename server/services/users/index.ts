@@ -1,13 +1,16 @@
 import type { H3Event } from 'h3'
+import { uuidv7 } from 'uuidv7'
 import type { AuthUser } from '~/types/auth'
 import type { ManagedUser, ManagedUserWithAssignments } from '~/types/users'
 import type { UserCreateInput, UserUpdateInput } from '~/utils/validators/users'
 import type { UserRole } from '~/utils/constants/roles'
 import { ROLES } from '~/utils/constants/roles'
+import { AUDIT_ACTIONS } from '~/utils/constants/audit'
 import { UserRepository } from '../../repositories/users'
 import { AssignmentRepository } from '../../repositories/assignments'
 import { BuildingRepository } from '../../repositories/buildings'
 import { getAssignedBuildingIds, assertBuildingScope } from '../../utils/scope'
+import { AuditService } from '../audit'
 
 const CREATE_CAPABILITY: Record<UserRole, string> = {
   admin: 'users.create.admin',
@@ -19,6 +22,36 @@ const CREATE_CAPABILITY: Record<UserRole, string> = {
 const GLOBAL_MANAGED_ROLES: UserRole[] = [ROLES.OWNER, ROLES.MANAGER]
 /** Roles a scoped manager (owner) can see/manage in user management. */
 const SCOPED_MANAGED_ROLES: UserRole[] = [ROLES.MANAGER]
+
+/**
+ * Emit a user lifecycle audit event, fanned out to one event per associated
+ * building so scoped roles can query it under their building; multi-building
+ * events share a correlation id. A user with no assignments logs one event with
+ * a null building_id (visible to admin's global feed only).
+ */
+async function auditUserLifecycle(
+  event: H3Event,
+  actor: AuthUser,
+  action: string,
+  target: ManagedUser,
+  buildingIds: string[],
+  data: { before?: unknown; after?: unknown; metadata?: Record<string, unknown> },
+): Promise<void> {
+  const correlationId = buildingIds.length > 1 ? uuidv7() : null
+  const targets: (string | null)[] = buildingIds.length > 0 ? buildingIds : [null]
+  for (const buildingId of targets) {
+    await AuditService.append(event, actor, {
+      building_id: buildingId,
+      action,
+      entity_type: 'user',
+      entity_id: target.id,
+      correlation_id: correlationId,
+      before_data: data.before,
+      after_data: data.after,
+      metadata: { ...(data.metadata ?? {}), building_ids: buildingIds },
+    })
+  }
+}
 
 function assertCanManageUsers(actor: AuthUser): void {
   if (!can(actor, 'users.manage.global') && !can(actor, 'users.manage.scoped')) {
@@ -44,15 +77,14 @@ async function assertManagedTarget(
     throwForbidden('Owner chỉ được quản lý manager')
   }
 
+  // Owners may manage managers they created (durable link) or managers assigned
+  // inside their building scope.
+  const createdByActor = target.createdBy === actor.id
   const scope = await getAssignedBuildingIds(event, actor)
-  if (scope === null || scope.length === 0) {
-    throwForbidden('Không có tòa nhà trong phạm vi quản lý')
-  }
-
-  const scopeSet = new Set(scope)
+  const scopeSet = new Set(scope ?? [])
   const assignments = await AssignmentRepository.findByUser(event, target.id)
   const hasInScopeAssignment = assignments.some(assignment => scopeSet.has(assignment.building_id))
-  if (!hasInScopeAssignment) {
+  if (!createdByActor && !hasInScopeAssignment) {
     throwForbidden('Người dùng nằm ngoài phạm vi quản lý')
   }
 
@@ -98,9 +130,12 @@ export const UserManagementService = {
       assignments: byUser.get(user.id) ?? [],
     }))
 
-    // Scoped managers only surface if they have at least one in-scope assignment.
+    // Scoped managers surface when they have an in-scope assignment or were
+    // created by the actor (owners always see the managers they created).
     if (!global) {
-      return result.filter(row => row.assignments.length > 0)
+      return result.filter(
+        row => row.assignments.length > 0 || row.user.createdBy === actor.id,
+      )
     }
     return result
   },
@@ -124,14 +159,6 @@ export const UserManagementService = {
 
     const scoped = !can(actor, 'users.manage.global')
 
-    // Owner-created managers must have at least one building assignment (in scope).
-    if (scoped && input.building_ids.length === 0) {
-      throwValidationError('Phải chọn ít nhất một tòa nhà cho quản lý', {
-        fieldErrors: { building_ids: ['Bắt buộc'] },
-        formErrors: [],
-      })
-    }
-
     // Validate every requested building exists and, for scoped callers, is in scope.
     // Scope check happens before any user creation so mixed-scope requests create nothing.
     const uniqueBuildingIds = [...new Set(input.building_ids)]
@@ -153,6 +180,7 @@ export const UserManagementService = {
       password: input.password,
       full_name: input.full_name,
       role: input.role,
+      created_by: actor.id,
     })
 
     try {
@@ -170,6 +198,11 @@ export const UserManagementService = {
       throw err
     }
 
+    await auditUserLifecycle(event, actor, AUDIT_ACTIONS.USER_CREATED, created, uniqueBuildingIds, {
+      after: created,
+      metadata: { role: created.role, email: created.email },
+    })
+
     return created
   },
 
@@ -180,7 +213,7 @@ export const UserManagementService = {
     input: UserUpdateInput,
   ): Promise<ManagedUser> {
     assertCanManageUsers(actor)
-    await assertManagedTarget(event, actor, id, 'write')
+    const target = await assertManagedTarget(event, actor, id, 'write')
 
     if (input.role === ROLES.ADMIN) {
       throwForbidden('Không thể chuyển người dùng thành admin từ ứng dụng')
@@ -189,12 +222,39 @@ export const UserManagementService = {
       throwForbidden('Owner chỉ được quản lý manager')
     }
 
-    return UserRepository.update(event, id, input)
+    const updated = await UserRepository.update(event, id, input)
+
+    const assignments = await AssignmentRepository.findByUser(event, id)
+    const buildingIds = assignments.map(assignment => assignment.building_id)
+    const roleChanged = Boolean(input.role) && input.role !== target.role
+    await auditUserLifecycle(
+      event,
+      actor,
+      roleChanged ? AUDIT_ACTIONS.USER_ROLE_CHANGED : AUDIT_ACTIONS.USER_UPDATED,
+      updated,
+      buildingIds,
+      {
+        before: target,
+        after: updated,
+        metadata: roleChanged ? { from: target.role, to: updated.role } : undefined,
+      },
+    )
+
+    return updated
   },
 
   async deleteUser(event: H3Event, actor: AuthUser, id: string): Promise<void> {
     assertCanManageUsers(actor)
-    await assertManagedTarget(event, actor, id, 'delete')
+    const target = await assertManagedTarget(event, actor, id, 'delete')
+
+    const assignments = await AssignmentRepository.findByUser(event, id)
+    const buildingIds = assignments.map(assignment => assignment.building_id)
+
     await UserRepository.remove(event, id)
+
+    await auditUserLifecycle(event, actor, AUDIT_ACTIONS.USER_REMOVED, target, buildingIds, {
+      before: target,
+      metadata: { role: target.role, email: target.email },
+    })
   },
 }

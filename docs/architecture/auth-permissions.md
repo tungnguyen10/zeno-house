@@ -109,6 +109,30 @@ flows through `server/api/**` -> service -> repository. The client only uses Sup
 auth. Because RLS is bypassed by the service-role client, every access decision MUST be made
 in a service before the repository runs.
 
+## Master-Data Deletes
+
+Deleting master data (rooms, tenants, contracts, contract services) is gated by
+`canDeleteMasterData(event, user, buildingId)`:
+
+- `admin` may always delete.
+- `owner` may always delete within their assigned building scope. They own the building, so
+  the per-assignment `can_delete_master_data` flag does not apply to them.
+- `manager` may delete only when their assignment for that building has
+  `can_delete_master_data = true` (an explicit per-manager grant from the owner/admin).
+
+## Scoped User Management
+
+Owners manage `manager` users only. A manager is visible to and manageable by an owner when
+either condition holds:
+
+- the manager has a building assignment inside the owner's scope, or
+- the manager's `app_metadata.created_by` equals the owner's id (the owner created them).
+
+Creator identity is recorded durably in `app_metadata.created_by` at creation, in addition to
+`user_building_assignments.created_by` and the `user.created` audit event. Owners may create a
+manager without any building assignment; such a manager stays visible via `created_by` and can
+be assigned buildings later.
+
 ## Billing Permissions
 
 | Capability | Role | Used for |

@@ -22,11 +22,13 @@ const scope = vi.hoisted(() => ({
   getAssignedBuildingIds: vi.fn(),
   assertBuildingScope: vi.fn(),
 }))
+const auditService = vi.hoisted(() => ({ append: vi.fn(), appendBulk: vi.fn() }))
 
 vi.mock('../../../server/repositories/users', () => ({ UserRepository: userRepo }))
 vi.mock('../../../server/repositories/assignments', () => ({ AssignmentRepository: assignmentRepo }))
 vi.mock('../../../server/repositories/buildings', () => ({ BuildingRepository: buildingRepo }))
 vi.mock('../../../server/utils/scope', () => scope)
+vi.mock('../../../server/services/audit', () => ({ AuditService: auditService }))
 
 function user(role: 'admin' | 'owner' | 'manager', id = `${role}-1`): AuthUser {
   return { id, app_metadata: { role } } as AuthUser
@@ -82,6 +84,16 @@ describe('UserManagementService.createUser', () => {
     expect(userRepo.create).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ role: 'manager' }))
   })
 
+  it('audits user.created per assigned building', async () => {
+    const { UserManagementService } = await import('../../../server/services/users')
+    await UserManagementService.createUser(event(), user('admin'), input({ role: 'manager', building_ids: ['b-1'] }))
+    expect(auditService.append).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      expect.objectContaining({ action: 'user.created', entity_type: 'user', entity_id: 'created-1', building_id: 'b-1' }),
+    )
+  })
+
   it('rejects creating an admin even for admin callers (403)', async () => {
     const { UserManagementService } = await import('../../../server/services/users')
     await expect(
@@ -105,12 +117,14 @@ describe('UserManagementService.createUser', () => {
     expect(userRepo.create).toHaveBeenCalled()
   })
 
-  it('rejects owner-created manager without any building (422)', async () => {
+  it('lets owner create a manager without any building and records created_by', async () => {
     const { UserManagementService } = await import('../../../server/services/users')
-    await expect(
-      UserManagementService.createUser(event(), user('owner'), input({ role: 'manager', building_ids: [] })),
-    ).rejects.toMatchObject({ statusCode: 422 })
-    expect(userRepo.create).not.toHaveBeenCalled()
+    await UserManagementService.createUser(event(), user('owner'), input({ role: 'manager', building_ids: [] }))
+    expect(userRepo.create).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ role: 'manager', created_by: 'owner-1' }),
+    )
+    expect(assignmentRepo.insert).not.toHaveBeenCalled()
   })
 
   it('rejects owner-created manager with an out-of-scope building and creates nothing', async () => {
@@ -177,6 +191,19 @@ describe('UserManagementService.listManageData', () => {
     expect(rows).toHaveLength(1)
     expect(rows[0]?.user.id).toBe('m-1')
   })
+
+  it('owner also sees managers they created even without an in-scope assignment', async () => {
+    scope.getAssignedBuildingIds.mockResolvedValue(['b-1'])
+    userRepo.listByRoles.mockResolvedValue([
+      { id: 'm-3', email: null, name: 'M3', role: 'manager', createdBy: 'owner-1' },
+    ])
+    assignmentRepo.findAll.mockResolvedValue([])
+    const { UserManagementService } = await import('../../../server/services/users')
+    const rows = await UserManagementService.listManageData(event(), user('owner'))
+
+    expect(rows).toHaveLength(1)
+    expect(rows[0]?.user.id).toBe('m-3')
+  })
 })
 
 describe('UserManagementService.updateUser/deleteUser', () => {
@@ -200,7 +227,7 @@ describe('UserManagementService.updateUser/deleteUser', () => {
     })
 
     expect(userRepo.update).toHaveBeenCalledWith(expect.anything(), 'o-1', expect.objectContaining({ role: 'owner' }))
-    expect(assignmentRepo.findByUser).not.toHaveBeenCalled()
+    expect(assignmentRepo.findByUser).toHaveBeenCalledWith(expect.anything(), 'o-1')
   })
 
   it('rejects updating an admin target', async () => {
@@ -233,6 +260,30 @@ describe('UserManagementService.updateUser/deleteUser', () => {
     expect(scope.getAssignedBuildingIds).toHaveBeenCalled()
     expect(assignmentRepo.findByUser).toHaveBeenCalledWith(expect.anything(), 'm-1')
     expect(userRepo.update).toHaveBeenCalled()
+    expect(auditService.append).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      expect.objectContaining({ action: 'user.updated', entity_type: 'user', entity_id: 'm-1', building_id: 'b-1' }),
+    )
+  })
+
+  it('audits user.role_changed when the role changes', async () => {
+    userRepo.getById.mockResolvedValue({ id: 'm-1', email: 'm@zeno.test', name: 'Manager', role: 'manager' })
+    userRepo.update.mockResolvedValue({ id: 'm-1', email: 'm@zeno.test', name: 'Manager', role: 'owner' })
+    const { UserManagementService } = await import('../../../server/services/users')
+
+    await UserManagementService.updateUser(event(), user('admin'), 'm-1', { role: 'owner' })
+
+    expect(auditService.append).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      expect.objectContaining({
+        action: 'user.role_changed',
+        entity_type: 'user',
+        entity_id: 'm-1',
+        metadata: expect.objectContaining({ from: 'manager', to: 'owner' }),
+      }),
+    )
   })
 
   it('rejects owner updating a manager outside owner scope', async () => {
@@ -243,6 +294,16 @@ describe('UserManagementService.updateUser/deleteUser', () => {
       UserManagementService.updateUser(event(), user('owner'), 'm-1', { email: 'manager@zeno.test' }),
     ).rejects.toMatchObject({ statusCode: 403 })
     expect(userRepo.update).not.toHaveBeenCalled()
+  })
+
+  it('lets owner update a manager they created even without an assignment', async () => {
+    userRepo.getById.mockResolvedValue({ id: 'm-9', email: 'm9@zeno.test', name: 'Created', role: 'manager', createdBy: 'owner-1' })
+    assignmentRepo.findByUser.mockResolvedValue([])
+    const { UserManagementService } = await import('../../../server/services/users')
+
+    await UserManagementService.updateUser(event(), user('owner'), 'm-9', { full_name: 'Renamed' })
+
+    expect(userRepo.update).toHaveBeenCalled()
   })
 
   it('rejects owner updating an owner target', async () => {
@@ -262,7 +323,12 @@ describe('UserManagementService.updateUser/deleteUser', () => {
     await UserManagementService.deleteUser(event(), user('admin'), 'o-1')
 
     expect(userRepo.remove).toHaveBeenCalledWith(expect.anything(), 'o-1')
-    expect(assignmentRepo.findByUser).not.toHaveBeenCalled()
+    expect(assignmentRepo.findByUser).toHaveBeenCalledWith(expect.anything(), 'o-1')
+    expect(auditService.append).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      expect.objectContaining({ action: 'user.removed', entity_type: 'user', entity_id: 'o-1' }),
+    )
   })
 
   it('lets owner delete a manager assigned only inside owner scope', async () => {

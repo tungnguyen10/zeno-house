@@ -18,12 +18,14 @@ const scope = vi.hoisted(() => ({
   assertBuildingScope: vi.fn(),
 }))
 const usersService = vi.hoisted(() => ({ UserManagementService: { listManageData: vi.fn() } }))
+const auditService = vi.hoisted(() => ({ append: vi.fn(), appendBulk: vi.fn() }))
 
 vi.mock('../../../server/repositories/assignments', () => ({ AssignmentRepository: assignmentRepo }))
 vi.mock('../../../server/repositories/buildings', () => ({ BuildingRepository: buildingRepo }))
 vi.mock('../../../server/repositories/users', () => ({ UserRepository: userRepo }))
 vi.mock('../../../server/utils/scope', () => scope)
 vi.mock('../../../server/services/users', () => usersService)
+vi.mock('../../../server/services/audit', () => ({ AuditService: auditService }))
 
 function user(role: 'admin' | 'owner' | 'manager', id = `${role}-1`): AuthUser {
   return { id, app_metadata: { role } } as AuthUser
@@ -38,13 +40,18 @@ describe('AssignmentService.create', () => {
     buildingRepo.findById.mockResolvedValue({ id: 'b-1', name: 'Toa A' })
     scope.assertBuildingScope.mockResolvedValue(undefined)
     userRepo.getById.mockResolvedValue({ id: 'm-1', role: 'manager' })
-    assignmentRepo.insert.mockResolvedValue({ id: 'a-1' })
+    assignmentRepo.insert.mockResolvedValue({ id: 'a-1', user_id: 'm-1', building_id: 'b-1' })
   })
 
   it('lets admin assign any building', async () => {
     const { AssignmentService } = await import('../../../server/services/assignments')
     await AssignmentService.create(event(), user('admin'), { user_id: 'm-1', building_id: 'b-1' } as never)
     expect(assignmentRepo.insert).toHaveBeenCalled()
+    expect(auditService.append).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      expect.objectContaining({ action: 'user.assignment_added', entity_type: 'user', entity_id: 'm-1', building_id: 'b-1' }),
+    )
   })
 
   it('lets owner assign a manager inside scope', async () => {
@@ -92,6 +99,11 @@ describe('AssignmentService.remove', () => {
     const { AssignmentService } = await import('../../../server/services/assignments')
     await AssignmentService.remove(event(), user('owner'), 'a-1')
     expect(assignmentRepo.remove).toHaveBeenCalledWith(expect.anything(), 'a-1')
+    expect(auditService.append).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      expect.objectContaining({ action: 'user.assignment_removed', entity_type: 'user', entity_id: 'm-1', building_id: 'b-1' }),
+    )
   })
 
   it('forbids owner removing an out-of-scope assignment (403)', async () => {

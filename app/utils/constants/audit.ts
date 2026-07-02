@@ -31,6 +31,14 @@ export const AUDIT_ACTIONS = {
   // Services
   BUILDING_SERVICE_REMOVED: 'building_service.removed',
   CONTRACT_SERVICE_REMOVED: 'contract_service.removed',
+
+  // User / role management
+  USER_CREATED: 'user.created',
+  USER_UPDATED: 'user.updated',
+  USER_ROLE_CHANGED: 'user.role_changed',
+  USER_REMOVED: 'user.removed',
+  USER_ASSIGNMENT_ADDED: 'user.assignment_added',
+  USER_ASSIGNMENT_REMOVED: 'user.assignment_removed',
 } as const
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[keyof typeof AUDIT_ACTIONS]
@@ -44,3 +52,4 @@ export type AuditEntityType =
   | 'building_service'
   | 'contract_service'
   | 'meter_device'
+  | 'user'

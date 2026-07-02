@@ -36,6 +36,8 @@ function fallbackLabel(event: AuditEvent): { label: string | null; sub: string |
     case 'building_service':
     case 'contract_service':
       return { label: pickString(snap, ['name', 'service_name']), sub: null }
+    case 'user':
+      return { label: pickString(snap, ['name', 'full_name', 'email']), sub: pickString(snap, ['email']) }
     default:
       return { label: null, sub: null }
   }
@@ -163,6 +165,25 @@ async function loadEntities(
           sub: t?.full_name ?? null,
         })
       }
+    })())
+  }
+
+  const userIds = [...(buckets.get('user') ?? [])]
+  if (userIds.length > 0) {
+    tasks.push((async () => {
+      await Promise.all(userIds.map(async (id) => {
+        try {
+          const { data, error } = await client.auth.admin.getUserById(id)
+          if (error || !data?.user) return
+          result.set(key('user', id), {
+            label: userDisplayName(data.user) ?? data.user.email ?? null,
+            sub: data.user.email ?? null,
+          })
+        }
+        catch {
+          // User may have been deleted; fall back to the audit snapshot label.
+        }
+      }))
     })())
   }
 

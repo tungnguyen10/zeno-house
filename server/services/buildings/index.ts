@@ -79,6 +79,14 @@ export const BuildingService = {
       // Invalidate the per-request scope cache so a follow-up read in the same
       // request includes the newly created building.
       event.context.__buildingScope = undefined
+
+      await AuditService.append(event, user, {
+        building_id: result.id,
+        action: AUDIT_ACTIONS.USER_ASSIGNMENT_ADDED,
+        entity_type: 'user',
+        entity_id: user.id,
+        metadata: { building_id: result.id, self_assigned: true },
+      })
     }
 
     await AuditService.append(event, user, {

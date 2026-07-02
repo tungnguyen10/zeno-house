@@ -7,6 +7,7 @@ export interface ManagedUser {
   email: string | null
   name: string | null
   role: UserRole
+  createdBy: string | null
 }
 
 /** A managed user together with their building assignments (scoped for owner). */

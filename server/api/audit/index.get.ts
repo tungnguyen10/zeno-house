@@ -15,6 +15,7 @@ const querySchema = z.object({
     'building_service',
     'contract_service',
     'meter_device',
+    'user',
   ]).optional(),
   entity_id: z.string().trim().min(1).optional(),
   correlation_id: z.string().trim().min(1).optional(),

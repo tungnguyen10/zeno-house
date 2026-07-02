@@ -44,6 +44,13 @@ export async function canDeleteMasterData(
 ): Promise<boolean> {
   if (isAdmin(user)) return true
 
+  // Owners fully control master data in buildings within their scope. The
+  // per-assignment `can_delete_master_data` flag is a manager-only grant.
+  if (isOwner(user)) {
+    const buildingIds = await getAssignedBuildingIds(event, user)
+    return buildingIds === null || buildingIds.includes(buildingId)
+  }
+
   const assignment = await AssignmentRepository.findByUserAndBuilding(event, user.id, buildingId)
   return assignment?.can_delete_master_data === true
 }

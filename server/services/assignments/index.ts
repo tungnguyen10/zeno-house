@@ -4,11 +4,13 @@ import type { AssignmentBuilding, UserBuildingAssignment } from '~/types/assignm
 import type { ManagedUserWithAssignments } from '~/types/users'
 import type { AssignmentCreateInput, AssignmentUpdateInput } from '~/utils/validators/assignments'
 import { ROLES } from '~/utils/constants/roles'
+import { AUDIT_ACTIONS } from '~/utils/constants/audit'
 import { AssignmentRepository } from '../../repositories/assignments'
 import { BuildingRepository } from '../../repositories/buildings'
 import { UserRepository } from '../../repositories/users'
 import { getAssignedBuildingIds, assertBuildingScope } from '../../utils/scope'
 import { UserManagementService } from '../users'
+import { AuditService } from '../audit'
 
 function assertCanManageUsers(actor: AuthUser): void {
   if (!can(actor, 'users.manage.global') && !can(actor, 'users.manage.scoped')) {
@@ -61,7 +63,18 @@ export const AssignmentService = {
     await assertBuildingScope(event, actor, input.building_id, 'write')
     await assertManageableTarget(event, actor, input.user_id)
 
-    return AssignmentRepository.insert(event, { ...input, created_by: actor.id })
+    const assignment = await AssignmentRepository.insert(event, { ...input, created_by: actor.id })
+
+    await AuditService.append(event, actor, {
+      building_id: assignment.building_id,
+      action: AUDIT_ACTIONS.USER_ASSIGNMENT_ADDED,
+      entity_type: 'user',
+      entity_id: assignment.user_id,
+      after_data: assignment,
+      metadata: { building_id: assignment.building_id },
+    })
+
+    return assignment
   },
 
   async update(
@@ -89,5 +102,14 @@ export const AssignmentService = {
     await assertManageableTarget(event, actor, existing.user_id)
 
     await AssignmentRepository.remove(event, id)
+
+    await AuditService.append(event, actor, {
+      building_id: existing.building_id,
+      action: AUDIT_ACTIONS.USER_ASSIGNMENT_REMOVED,
+      entity_type: 'user',
+      entity_id: existing.user_id,
+      before_data: existing,
+      metadata: { building_id: existing.building_id },
+    })
   },
 }
