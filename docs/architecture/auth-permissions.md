@@ -11,9 +11,17 @@ The store exposes:
 - `user`
 - `isAuthenticated`
 - `role`
-- `isAdmin`
+- `isAdmin`, `isOwner`, `isManager`
+- `canManageUsers`, `canCreateOwner`, `canManage`
+- `can(capability)` - capability-accurate UI gate backed by the shared capability map
 
 Roles come from `user.app_metadata.role`.
+
+UI action controls (create/edit/delete, bulk selection, billing close/unissue, etc.) are
+gated with `authStore.can('<capability>')` rather than a coarse `isAdmin` flag, so owner and
+manager see exactly the controls their capabilities allow. `authStore.can` reads the shared
+capability map in `app/utils/constants/permissions.ts` (`hasCapability`). This drives
+visibility only; the server remains the authoritative gate.
 
 Supported roles:
 
@@ -57,6 +65,11 @@ API handlers can also call:
 
 Capabilities live in `server/utils/permissions.ts`. `can(user, capability)` is the single
 source of truth; prefer it over direct role checks in business code.
+
+The role-to-capability map is defined once in `app/utils/constants/permissions.ts`
+(`ROLE_CAPABILITIES`, `OWNER_CAPABILITIES`, `hasCapability`) and shared by both sides: the
+server `can()` and the client `authStore.can()` consume the same map, so UI visibility and
+server authorization never drift.
 
 Admin has full operational access plus global user management:
 
@@ -132,6 +145,11 @@ Creator identity is recorded durably in `app_metadata.created_by` at creation, i
 `user_building_assignments.created_by` and the `user.created` audit event. Owners may create a
 manager without any building assignment; such a manager stays visible via `created_by` and can
 be assigned buildings later.
+
+Managers created before creator tracking existed have a null `created_by`. Migration
+`supabase/migrations/20260703000000_backfill_user_created_by.sql` backfills it from the earliest
+`user.created` audit event. Accounts predating `user` audit support have no trail and remain
+visible to their owner only through building assignments.
 
 ## Billing Permissions
 

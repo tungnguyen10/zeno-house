@@ -51,6 +51,23 @@ Owner SHALL be allowed to create, update, delete, close, unissue, correct, and m
 
 ---
 
+### Requirement: Operational UI action controls reflect capabilities
+Internal operational pages SHALL derive action-control visibility from the shared capability map (`app/utils/constants/permissions.ts`) via `authStore.can(capability)`, not from a coarse `isAdmin` flag. Owner SHALL see create/update/delete controls for domain content in scope; manager SHALL see only controls its capabilities allow. Server SHALL remain the authoritative gate; hidden controls SHALL still be enforced server-side.
+
+#### Scenario: Owner sees domain CRUD controls
+- **WHEN** owner opens rooms, tenants, contracts, or billing pages in scope
+- **THEN** create, edit, and delete controls appropriate to owner capabilities are rendered
+
+#### Scenario: Manager sees only capability-permitted controls
+- **WHEN** manager opens a room detail page
+- **THEN** the edit control is rendered (`rooms.update`) while create and delete controls are not
+
+#### Scenario: UI visibility is not authorization
+- **WHEN** a control is hidden for a role
+- **THEN** the corresponding server capability check still rejects the action if called directly
+
+---
+
 ### Requirement: Owner delete building is scoped and safety checked
 Owner SHALL be allowed to delete or archive assigned buildings only through the same safety checks used by building deletion workflows. Owner SHALL NOT bypass conflict checks for operational data.
 

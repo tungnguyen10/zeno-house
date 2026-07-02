@@ -41,7 +41,7 @@ Khi `can_delete_master_data = true` cho building, manager SHALL có thể hard-d
 
 ### Requirement: `can_delete_master_data` không mở khóa billing destructive actions
 
-Flag `can_delete_master_data = true` SHALL NOT cấp quyền `billing.close`, `billing.unissue`, `invoice.void`, `invoice.reissue`, `invoice.adjustment`. Những actions này vẫn theo permission model riêng (`billing.close`/`billing.unissue` admin-only, `billing.corrections` capability).
+Flag `can_delete_master_data = true` SHALL NOT cấp quyền `billing.close`, `billing.unissue`, `invoice.void`, `invoice.reissue`, `invoice.adjustment`. Những actions này vẫn theo permission model riêng (`billing.close`/`billing.unissue` chỉ admin/owner, `billing.corrections` capability).
 
 #### Scenario: Manager có flag thử close billing period
 - **WHEN** manager với `can_delete_master_data = true` gọi `POST /api/billing/periods/:id/close`
@@ -60,6 +60,20 @@ Admin SHALL có thể hard-delete room/tenant/contract/service bất kể `can_d
 #### Scenario: Admin xóa room
 - **WHEN** admin gọi `DELETE /api/rooms/:id` với `{ "reason": "..." }`
 - **THEN** room bị delete, action ghi audit log
+
+---
+
+### Requirement: Owner delete master data trong scope không phụ thuộc flag
+
+Owner SHALL có thể hard-delete room/tenant/contract/service trong building thuộc owner scope bất kể `can_delete_master_data`. Flag `can_delete_master_data` là grant riêng cho manager và SHALL NOT áp dụng cho owner. Owner delete action SHALL được ghi vào audit log.
+
+#### Scenario: Owner xóa room trong scope dù self-assignment không bật flag
+- **WHEN** owner có assignment cho building (mặc định `can_delete_master_data = false`) gọi `DELETE /api/rooms/:id` cho room trong building đó với `{ "reason": "..." }`
+- **THEN** room bị delete, action ghi audit log
+
+#### Scenario: Owner không thể xóa master data ngoài scope
+- **WHEN** owner gọi `DELETE /api/rooms/:id` cho room trong building ngoài owner scope
+- **THEN** response là 403 Forbidden
 
 ---
 

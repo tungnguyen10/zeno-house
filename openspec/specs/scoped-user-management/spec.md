@@ -29,11 +29,11 @@ Admin SHALL have full CRUD for owner and manager users in Settings user manageme
 ---
 
 ### Requirement: Owner manages managers only inside owner scope
-Owner SHALL have CRUD for manager users only inside owner scope. Owner SHALL create, view, update, delete, assign, unassign, and toggle manager assignment settings only for managers/buildings assigned to that owner.
+Owner SHALL have CRUD for manager users only. Owner SHALL create, view, update, delete, assign, unassign, and toggle manager assignment settings for managers they created (`app_metadata.created_by`) or managers assigned to buildings in owner scope. Owner SHALL NOT act on owner users or on managers with neither an owner-scoped assignment nor owner creator provenance.
 
 #### Scenario: Owner sees scoped managers
 - **WHEN** owner opens Settings user management
-- **THEN** page shows only managers assigned to buildings in owner scope
+- **THEN** page shows managers assigned to buildings in owner scope or created by the owner
 
 #### Scenario: Owner creates manager for scoped building
 - **WHEN** owner creates manager and selects one or more buildings in owner scope
@@ -52,7 +52,7 @@ Owner SHALL have CRUD for manager users only inside owner scope. Owner SHALL cre
 - **THEN** the managed auth user is updated server-side
 
 #### Scenario: Owner cannot update manager outside scope
-- **WHEN** owner updates a manager with no owner-scoped assignment
+- **WHEN** owner updates a manager with no owner-scoped assignment and no owner creator provenance
 - **THEN** response is 403 Forbidden
 
 #### Scenario: Owner deletes scoped manager
@@ -78,12 +78,17 @@ Manager SHALL NOT access Settings user management pages or APIs.
 
 ---
 
-### Requirement: Created manager must have immediate building scope
-System SHALL reject owner-created manager users unless at least one selected building belongs to the owner scope. System SHALL NOT leave manager accounts with no assignment from owner-created flows.
+### Requirement: Owner-created manager records creator provenance
+System SHALL record the creating owner on every owner-created manager via `app_metadata.created_by`. Building assignment SHALL be optional at creation; an owner-created manager with no assignment SHALL remain visible to and manageable by its creator through `created_by`. System SHALL still reject assignments to buildings outside owner scope.
 
 #### Scenario: Owner creates manager without building
 - **WHEN** owner submits manager creation without any building assignment
-- **THEN** response is 422 Validation Error
+- **THEN** the manager is created with `app_metadata.created_by` set to the owner id
+- **AND** no `user_building_assignments` row is created
+
+#### Scenario: Owner sees a created manager with no assignment
+- **WHEN** owner creates a manager without a building and reopens Settings user management
+- **THEN** the manager appears in the list via `created_by`
 
 #### Scenario: Owner creates manager with mixed building scope
 - **WHEN** owner submits manager creation with one scoped building and one unscoped building

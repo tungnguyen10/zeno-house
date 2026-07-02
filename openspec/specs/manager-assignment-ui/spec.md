@@ -13,7 +13,7 @@ Trang Settings user management SHALL be accessible to admin and owner, with diff
 
 #### Scenario: Owner truy cập /settings/managers
 - **WHEN** owner navigate đến `/settings/managers`
-- **THEN** page hiển thị managers và assignments thuộc buildings trong owner scope
+- **THEN** page hiển thị managers thuộc buildings trong owner scope hoặc do owner tạo (`created_by`), kèm assignments của họ
 
 #### Scenario: Manager thử truy cập /settings/managers
 - **WHEN** manager navigate đến `/settings/managers`
