@@ -72,6 +72,8 @@ const {
   initialSnapshot,
 })
 
+const skipDirtyGuard = ref(false)
+
 async function onSubmit(data: ContractFormData) {
   const updated = await submitUpdate(id, {
     room_id: data.room_id || undefined,
@@ -88,12 +90,13 @@ async function onSubmit(data: ContractFormData) {
     notes: data.notes || null,
   })
   if (updated) {
+    skipDirtyGuard.value = true
     clearNuxtData()
     await navigateTo(contractPath(updated))
   }
 }
 
-const { showLeaveConfirm, confirmLeave, cancelLeave } = useDirtyGuard(isDirty, isLoading)
+const { showLeaveConfirm, confirmLeave, cancelLeave } = useDirtyGuard(isDirty, skipDirtyGuard)
 </script>
 
 <template>

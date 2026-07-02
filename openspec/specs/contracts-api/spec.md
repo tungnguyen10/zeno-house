@@ -25,6 +25,10 @@ Server-side API for contracts. CRUD endpoints with Zod validation, auth guard, a
 - **WHEN** request has no valid session
 - **THEN** returns 401 UNAUTHENTICATED
 
+#### Scenario: Read permission required
+- **WHEN** user lacks `contracts.read` permission
+- **THEN** returns 403 FORBIDDEN
+
 ### Requirement: Get contract by id endpoint
 `GET /api/contracts/:identifier` SHALL accept either a UUID or a `contract_code` value as the path parameter. When `identifier` is not a UUID, the server SHALL look up by `contract_code` column. Returns a single contract including joined `room` (room_number, floor, building name) and `tenant` (full_name, phone). Returns 404 NOT_FOUND if not found.
 

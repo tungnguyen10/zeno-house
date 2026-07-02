@@ -32,7 +32,7 @@ export type TenantUpdateInput = z.infer<typeof tenantUpdateSchema>
 
 export const tenantListQuerySchema = z.object({
   page: z.coerce.number().int().min(1).optional().default(1),
-  limit: z.coerce.number().int().min(1).max(100).optional().default(20),
+  limit: z.coerce.number().int().min(1).max(200).optional().default(20),
   q: z.preprocess(
     v => (typeof v === 'string' && v.trim() === '' ? undefined : v),
     z.string().trim().min(1).max(100).optional(),
