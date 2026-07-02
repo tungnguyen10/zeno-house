@@ -34,6 +34,13 @@ export const OWNER_CAPABILITIES = [
   'billing.close',
   'billing.unissue',
   'dashboard.read',
+  // Operations report: report read + expense/fixed-cost management.
+  'operations-report.read',
+  'building-expenses.read',
+  'building-expenses.write',
+  'building-expenses.delete',
+  'building-fixed-costs.read',
+  'building-fixed-costs.write',
   // Scoped user management: owner can manage managers inside owner scope.
   'users.manage.scoped',
   'users.create.manager',
@@ -70,6 +77,11 @@ export const ROLE_CAPABILITIES: Record<UserRole, readonly string[]> = {
     'billing.write',
     'billing.corrections',
     'dashboard.read',
+    // Operations report: manager may read reports and create/edit expenses in
+    // scope, but not void expenses or configure fixed costs.
+    'operations-report.read',
+    'building-expenses.read',
+    'building-expenses.write',
   ],
 }
 

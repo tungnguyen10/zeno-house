@@ -32,6 +32,16 @@ export const AUDIT_ACTIONS = {
   BUILDING_SERVICE_REMOVED: 'building_service.removed',
   CONTRACT_SERVICE_REMOVED: 'contract_service.removed',
 
+  // Operations report — expenses
+  BUILDING_EXPENSE_CREATED: 'building_expense.created',
+  BUILDING_EXPENSE_UPDATED: 'building_expense.updated',
+  BUILDING_EXPENSE_VOIDED: 'building_expense.voided',
+
+  // Operations report — fixed costs
+  BUILDING_FIXED_COST_CREATED: 'building_fixed_cost.created',
+  BUILDING_FIXED_COST_UPDATED: 'building_fixed_cost.updated',
+  BUILDING_FIXED_COST_ENDED: 'building_fixed_cost.ended',
+
   // User / role management
   USER_CREATED: 'user.created',
   USER_UPDATED: 'user.updated',
@@ -53,3 +63,5 @@ export type AuditEntityType =
   | 'contract_service'
   | 'meter_device'
   | 'user'
+  | 'building_expense'
+  | 'building_fixed_cost'

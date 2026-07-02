@@ -298,6 +298,124 @@ export type Database = {
           },
         ]
       }
+      building_expenses: {
+        Row: {
+          id: string
+          building_id: string
+          period_year: number
+          period_month: number
+          expense_date: string | null
+          category: string
+          amount: number
+          payee: string | null
+          payment_method: string | null
+          note: string | null
+          created_by: string | null
+          voided_at: string | null
+          voided_by: string | null
+          void_reason: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          building_id: string
+          period_year: number
+          period_month: number
+          expense_date?: string | null
+          category: string
+          amount: number
+          payee?: string | null
+          payment_method?: string | null
+          note?: string | null
+          created_by?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
+          void_reason?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          building_id?: string
+          period_year?: number
+          period_month?: number
+          expense_date?: string | null
+          category?: string
+          amount?: number
+          payee?: string | null
+          payment_method?: string | null
+          note?: string | null
+          created_by?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
+          void_reason?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "building_expenses_building_id_fkey"
+            columns: ["building_id"]
+            isOneToOne: false
+            referencedRelation: "buildings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      building_fixed_costs: {
+        Row: {
+          id: string
+          building_id: string
+          category: string
+          amount: number
+          effective_from_period_year: number
+          effective_from_period_month: number
+          effective_to_period_year: number | null
+          effective_to_period_month: number | null
+          note: string | null
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          building_id: string
+          category?: string
+          amount: number
+          effective_from_period_year: number
+          effective_from_period_month: number
+          effective_to_period_year?: number | null
+          effective_to_period_month?: number | null
+          note?: string | null
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          building_id?: string
+          category?: string
+          amount?: number
+          effective_from_period_year?: number
+          effective_from_period_month?: number
+          effective_to_period_year?: number | null
+          effective_to_period_month?: number | null
+          note?: string | null
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "building_fixed_costs_building_id_fkey"
+            columns: ["building_id"]
+            isOneToOne: false
+            referencedRelation: "buildings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       buildings: {
         Row: {
           address: string

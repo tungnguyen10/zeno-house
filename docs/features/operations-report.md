@@ -376,10 +376,23 @@ Chua nen lam trong MVP:
 - Ke toan double-entry.
 - Tax/VAT.
 
-## Open Questions
+## Open Questions (Da Chot)
 
-- Manager co duoc nhap chi phi khong, hay chi admin?
-- Khoan chi co can bat buoc ly do khi huy khong?
-- Tien thue nha co dinh co can nhieu dong theo lich su hieu luc ngay tu MVP khong? De xuat: co.
-- Chi phi cong an/tam tru chi can tinh vao building, hay can gan voi tenant/occupant de doi soat rieng?
-- Report nen uu tien `/operations-report` tong hop nhieu toa, hay them vao detail building truoc?
+- Manager co duoc nhap chi phi khong? => Co. Manager co `building-expenses.write` cho building duoc gan, nhung khong duoc huy (`building-expenses.delete`) va khong cau hinh fixed cost.
+- Khoan chi co bat buoc ly do khi huy khong? => Co. Void la soft-void, bat buoc `void_reason`.
+- Fixed cost co nhieu dong theo lich su hieu luc tu MVP khong? => Co. `building_fixed_costs` co `effective_from`/`effective_to` theo period, ket thuc bang cach set `effective_to` qua PATCH.
+- Report uu tien page nao? => `/operations-report` tong hop theo building + thang (MVP mot toa mot thang).
+
+## Trang Thai Trien Khai (MVP)
+
+Da ship trong change `add-operations-report`:
+
+- Bang `building_expenses`, `building_fixed_costs` + RLS (admin/owner FOR ALL; manager SELECT/INSERT/UPDATE expense, SELECT fixed cost).
+- Capabilities: `operations-report.read`, `building-expenses.read/write/delete`, `building-fixed-costs.read/write`. Admin + owner co du 6; manager chi co `operations-report.read`, `building-expenses.read`, `building-expenses.write`.
+- API: `GET /api/operations-report`, `GET|POST /api/building-expenses`, `PATCH|DELETE /api/building-expenses/[id]` (DELETE = soft-void, doc `void_reason` tu body), `GET|POST /api/building-fixed-costs`, `PATCH /api/building-fixed-costs/[id]` (end-date qua `effective_to`).
+- Flow: page `/operations-report` -> composable `useOperationsReport`/`useOperationsMutations` -> server API -> service -> repository -> Supabase.
+- Service enforce `can(...)`, `assertBuildingScope(..., 'read'|'write')`, fixed-cost overlap => 409 CONFLICT, audit tren moi mutation.
+- Revenue read-only tu invoice khong void + payment `deleted_at is null`. Chi phi da void bi loai khoi tong va khoi danh sach report.
+- Audit actions: `building_expense.created/updated/voided`, `building_fixed_cost.created/updated/ended`.
+
+Chua lam (nhu MVP scope da neu): approval, upload chung tu, custom category, multi-currency, double-entry, tax/VAT, so sanh nhieu toa cung luc.
