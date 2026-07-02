@@ -24,7 +24,11 @@ const userInitial = computed(() => {
 })
 
 const visibleNavItems = computed(() =>
-  _props.navItems.filter(item => !item.adminOnly || authStore.isAdmin),
+  _props.navItems.filter((item) => {
+    if (item.adminOnly && !authStore.isAdmin) return false
+    if (item.roles && !(authStore.role && item.roles.includes(authStore.role))) return false
+    return true
+  }),
 )
 
 function isActive(to: string) {

@@ -15,6 +15,7 @@ const repoMocks = vi.hoisted(() => ({
 }))
 
 const assignmentRepoMocks = vi.hoisted(() => ({
+  insert: vi.fn(),
   findBuildingIdsByUser: vi.fn(),
 }))
 
@@ -59,6 +60,7 @@ vi.stubGlobal('setResponseStatus', (event: MockEvent, code: number) => {
 // for the buildings.* capabilities. Tests can swap user role via requireAuthMock.
 const CAPS: Record<string, Set<string>> = {
   admin: new Set(['buildings.read', 'buildings.create', 'buildings.update', 'buildings.delete']),
+  owner: new Set(['buildings.read', 'buildings.create', 'buildings.update', 'buildings.delete']),
   manager: new Set(['buildings.read']),
 }
 vi.stubGlobal('can', (user: { app_metadata?: { role?: string } }, capability: string) => {
@@ -88,6 +90,8 @@ function buildBuilding(overrides: Partial<Building> = {}): Building {
     billingGenerationDay: overrides.billingGenerationDay ?? null,
     paymentDueDay: overrides.paymentDueDay ?? null,
     gracePeriodDays: overrides.gracePeriodDays ?? 0,
+    createdBy: overrides.createdBy ?? null,
+    ownerUserId: overrides.ownerUserId ?? null,
     createdAt: overrides.createdAt ?? '2026-06-01T00:00:00.000Z',
     updatedAt: overrides.updatedAt ?? '2026-06-01T00:00:00.000Z',
   }
@@ -109,6 +113,14 @@ function asManager() {
   })
 }
 
+function asOwner() {
+  requireAuthMock.mockResolvedValue({
+    id: 'user-owner',
+    sub: 'user-owner',
+    app_metadata: { role: 'owner' },
+  })
+}
+
 interface ApiError {
   statusCode?: number
   data?: { error?: { code?: string; details?: unknown; message?: string } }
@@ -126,6 +138,7 @@ async function expectError(promise: Promise<unknown>): Promise<ApiError> {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  assignmentRepoMocks.insert.mockResolvedValue({ id: 'assignment-1' })
   assignmentRepoMocks.findBuildingIdsByUser.mockResolvedValue(['b-1'])
 })
 
@@ -212,6 +225,17 @@ describe('GET /api/buildings', () => {
       buildingIds: ['b-1'],
     }))
   })
+
+  it('passes assigned building ids when owner lists buildings', async () => {
+    asOwner()
+    repoMocks.findAll.mockResolvedValue({ items: [buildBuilding({ id: 'b-1' })], total: 1 })
+    const { default: handler } = await import('../../server/api/buildings/index.get')
+
+    await handler(makeEvent({ query: {} }))
+    expect(repoMocks.findAll).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      buildingIds: ['b-1'],
+    }))
+  })
 })
 
 // ---------------------------------------------------------------------------
@@ -247,6 +271,32 @@ describe('POST /api/buildings', () => {
 
     const err = await expectError(Promise.resolve(handler(makeEvent({ body: { name: 'Toa moi', address: '99 Le Loi' } }))))
     expect(err.statusCode).toBe(403)
+  })
+
+  it('allows owner to create and auto-assigns the new building', async () => {
+    asOwner()
+    const building = buildBuilding({ id: 'owner-new', createdBy: 'user-owner', ownerUserId: 'user-owner' })
+    repoMocks.insert.mockResolvedValue(building)
+    const { default: handler } = await import('../../server/api/buildings/index.post')
+
+    const event = makeEvent({ body: { name: 'Toa owner', address: '88 Le Loi' } })
+    const res = await handler(event) as { data: Building }
+
+    expect(res.data).toMatchObject({
+      id: 'owner-new',
+      createdBy: 'user-owner',
+      ownerUserId: 'user-owner',
+    })
+    expect(repoMocks.insert).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      { created_by: 'user-owner', owner_user_id: 'user-owner' },
+    )
+    expect(assignmentRepoMocks.insert).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ user_id: 'user-owner', building_id: 'owner-new' }),
+    )
+    expect((event as MockEvent).context.statusCode).toBe(201)
   })
 })
 
@@ -291,6 +341,15 @@ describe('GET /api/buildings/[id]', () => {
     const err = await expectError(Promise.resolve(handler(makeEvent({ params: { id: 'b-2' } }))))
     expect(err.statusCode).toBe(404)
   })
+
+  it('returns 404 when owner reads outside assigned buildings', async () => {
+    asOwner()
+    repoMocks.findByIdentifier.mockResolvedValue(buildBuilding({ id: 'b-2' }))
+    const { default: handler } = await import('../../server/api/buildings/[id].get')
+
+    const err = await expectError(Promise.resolve(handler(makeEvent({ params: { id: 'b-2' } }))))
+    expect(err.statusCode).toBe(404)
+  })
 })
 
 // ---------------------------------------------------------------------------
@@ -323,6 +382,25 @@ describe('PATCH /api/buildings/[id]', () => {
 
     const err = await expectError(Promise.resolve(handler(makeEvent({ params: { id: 'b-1' }, body: { name: 'a' } }))))
     expect(err.statusCode).toBe(422)
+  })
+
+  it('allows owner to update assigned buildings', async () => {
+    asOwner()
+    repoMocks.findByIdentifier.mockResolvedValue(buildBuilding({ id: 'b-1' }))
+    repoMocks.update.mockResolvedValue(buildBuilding({ id: 'b-1', name: 'Owner edit' }))
+    const { default: handler } = await import('../../server/api/buildings/[id].patch')
+
+    const res = await handler(makeEvent({ params: { id: 'b-1' }, body: { name: 'Owner edit' } })) as { data: Building }
+    expect(res.data.name).toBe('Owner edit')
+  })
+
+  it('forbids owner from updating outside assigned buildings', async () => {
+    asOwner()
+    repoMocks.findByIdentifier.mockResolvedValue(buildBuilding({ id: 'b-2' }))
+    const { default: handler } = await import('../../server/api/buildings/[id].patch')
+
+    const err = await expectError(Promise.resolve(handler(makeEvent({ params: { id: 'b-2' }, body: { name: 'Owner edit' } }))))
+    expect(err.statusCode).toBe(403)
   })
 })
 
@@ -389,6 +467,29 @@ describe('DELETE /api/buildings/[id]', () => {
     const { default: handler } = await import('../../server/api/buildings/[id].delete')
 
     const err = await expectError(Promise.resolve(handler(makeEvent({ params: { id: 'b-1' }, query: { force: 'true' } }))))
+    expect(err.statusCode).toBe(403)
+  })
+
+  it('allows owner to delete an assigned empty building', async () => {
+    asOwner()
+    repoMocks.findByIdentifier.mockResolvedValue(buildBuilding({ id: 'b-1' }))
+    repoMocks.countRoomsForBuilding.mockResolvedValue(0)
+    repoMocks.countActiveContractsForBuilding.mockResolvedValue(0)
+    repoMocks.remove.mockResolvedValue(undefined)
+    const { default: handler } = await import('../../server/api/buildings/[id].delete')
+
+    const event = makeEvent({ params: { id: 'b-1' }, query: {} })
+    await handler(event)
+    expect((event as MockEvent).context.statusCode).toBe(204)
+    expect(repoMocks.remove).toHaveBeenCalledWith(expect.anything(), 'b-1')
+  })
+
+  it('forbids owner from deleting outside assigned buildings', async () => {
+    asOwner()
+    repoMocks.findByIdentifier.mockResolvedValue(buildBuilding({ id: 'b-2' }))
+    const { default: handler } = await import('../../server/api/buildings/[id].delete')
+
+    const err = await expectError(Promise.resolve(handler(makeEvent({ params: { id: 'b-2' }, query: {} }))))
     expect(err.statusCode).toBe(403)
   })
 })

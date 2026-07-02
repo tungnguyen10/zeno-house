@@ -2,9 +2,10 @@ import type {
   AssignmentBuilding,
   AssignmentCreatePayload,
   AssignmentUpdatePayload,
-  ManagerAssignment,
   UserBuildingAssignment,
 } from '~/types/assignments'
+import type { ManagedUser, ManagedUserWithAssignments } from '~/types/users'
+import type { UserCreateInput, UserUpdateInput } from '~/utils/validators/users'
 import type { Building } from '~/types/buildings'
 import type { ApiSuccess } from '~/types/api'
 
@@ -14,7 +15,7 @@ export function useManagerAssignments() {
     status,
     error,
     refresh: refreshAssignments,
-  } = useFetch<ApiSuccess<ManagerAssignment[]>>('/api/assignments')
+  } = useFetch<ApiSuccess<ManagedUserWithAssignments[]>>('/api/assignments')
 
   const {
     data: unassignedData,
@@ -28,13 +29,36 @@ export function useManagerAssignments() {
     query: { limit: 100, sort: 'name', order: 'asc' },
   })
 
-  const managers = computed(() => assignmentsData.value?.data ?? [])
+  const users = computed(() => assignmentsData.value?.data ?? [])
   const buildingsWithoutManager = computed(() => unassignedData.value?.data ?? [])
   const buildings = computed(() => buildingsData.value?.data ?? [])
   const isLoading = computed(() => status.value === 'pending')
 
   async function refresh() {
     await Promise.all([refreshAssignments(), refreshUnassigned(), refreshBuildings()])
+  }
+
+  async function createUser(input: UserCreateInput): Promise<ManagedUser> {
+    const res = await $fetch<ApiSuccess<ManagedUser>>('/api/users', {
+      method: 'POST',
+      body: input,
+    })
+    await refresh()
+    return res.data
+  }
+
+  async function updateUser(id: string, input: UserUpdateInput): Promise<ManagedUser> {
+    const res = await $fetch<ApiSuccess<ManagedUser>>(`/api/users/${id}`, {
+      method: 'PATCH',
+      body: input,
+    })
+    await refresh()
+    return res.data
+  }
+
+  async function deleteUser(id: string): Promise<void> {
+    await $fetch(`/api/users/${id}`, { method: 'DELETE' })
+    await refresh()
   }
 
   async function assign(input: AssignmentCreatePayload): Promise<UserBuildingAssignment> {
@@ -61,12 +85,15 @@ export function useManagerAssignments() {
   }
 
   return {
-    managers,
+    users,
     buildings,
     buildingsWithoutManager,
     isLoading,
     error,
     refresh,
+    createUser,
+    updateUser,
+    deleteUser,
     assign,
     toggle,
     unassign,

@@ -104,14 +104,14 @@ async function onBulkDone(result: BuildingBulkResult, action: BuildingBulkAction
       <template #actions>
         <div class="flex items-center gap-2">
           <UiButton
-            v-if="authStore.isAdmin"
+            v-if="authStore.canManage"
             variant="secondary"
             size="sm"
             @click="toggleSelectionMode"
           >
             {{ selectionMode ? 'Thoát chọn' : 'Chọn nhiều' }}
           </UiButton>
-          <NuxtLink v-if="authStore.isAdmin" to="/buildings/create">
+          <NuxtLink v-if="authStore.canManage" to="/buildings/create">
             <UiButton>Thêm tòa nhà</UiButton>
           </NuxtLink>
         </div>
@@ -169,7 +169,7 @@ async function onBulkDone(result: BuildingBulkResult, action: BuildingBulkAction
       title="Chưa có tòa nhà nào"
       description="Bắt đầu bằng cách thêm tòa nhà đầu tiên của bạn."
     >
-      <template v-if="authStore.isAdmin" #action>
+      <template v-if="authStore.canManage" #action>
         <NuxtLink to="/buildings/create">
           <UiButton>Thêm tòa nhà đầu tiên</UiButton>
         </NuxtLink>
@@ -178,7 +178,7 @@ async function onBulkDone(result: BuildingBulkResult, action: BuildingBulkAction
 
     <template v-else>
       <div
-        v-if="selectionMode && authStore.isAdmin"
+        v-if="selectionMode && authStore.canManage"
         class="mb-3 flex items-center justify-between gap-3 rounded-lg border border-dark-border bg-dark-deep/40 px-3 py-2"
       >
         <UiCheckbox
@@ -195,7 +195,7 @@ async function onBulkDone(result: BuildingBulkResult, action: BuildingBulkAction
           v-for="building in buildings"
           :key="building.id"
           :building="building"
-          :selectable="selectionMode && authStore.isAdmin"
+          :selectable="selectionMode && authStore.canManage"
           :selected="bulk.selectedIds.value.includes(building.id)"
           @toggle-select="onToggleSelect"
         />
@@ -215,7 +215,7 @@ async function onBulkDone(result: BuildingBulkResult, action: BuildingBulkAction
     </template>
 
     <BuildingBulkActionsBar
-      v-if="selectionMode && authStore.isAdmin && bulk.selectedIds.value.length > 0"
+      v-if="selectionMode && authStore.canManage && bulk.selectedIds.value.length > 0"
       :selected-ids="bulk.selectedIds.value"
       :buildings="buildings"
       :run-action="bulk.runAction"

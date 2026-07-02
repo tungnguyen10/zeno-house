@@ -71,3 +71,17 @@ vi.stubGlobal('throwNotFound', (message = 'Not found') => {
 })
 
 vi.stubGlobal('can', () => true)
+
+// Role helpers are auto-imported in server code (server/utils/roles.ts). Provide
+// real implementations here so server code under test resolves roles correctly.
+function roleOfStub(user: { app_metadata?: { role?: string | null } | null } | null | undefined): string | null {
+  return user?.app_metadata?.role ?? null
+}
+vi.stubGlobal('roleOf', roleOfStub)
+vi.stubGlobal('isAdmin', (u: never) => roleOfStub(u) === 'admin')
+vi.stubGlobal('isOwner', (u: never) => roleOfStub(u) === 'owner')
+vi.stubGlobal('isManager', (u: never) => roleOfStub(u) === 'manager')
+vi.stubGlobal('isScopedRole', (u: never) => {
+  const r = roleOfStub(u)
+  return r === 'owner' || r === 'manager'
+})

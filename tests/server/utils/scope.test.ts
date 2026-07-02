@@ -10,7 +10,7 @@ vi.mock('../../../server/repositories/assignments', () => ({
   AssignmentRepository: assignmentRepoMocks,
 }))
 
-function user(role: 'admin' | 'manager', id = `${role}-user`): AuthUser {
+function user(role: 'admin' | 'owner' | 'manager', id = `${role}-user`): AuthUser {
   return {
     id,
     app_metadata: { role },
@@ -66,5 +66,38 @@ describe('building scope helpers', () => {
 
     assignmentRepoMocks.findByUserAndBuilding.mockResolvedValue({ can_delete_master_data: true })
     await expect(canDeleteMasterData(event(), manager, 'building-a')).resolves.toBe(true)
+  })
+
+  it('resolves owner scope from assignments like manager', async () => {
+    assignmentRepoMocks.findBuildingIdsByUser.mockResolvedValue(['building-a'])
+    const { getAssignedBuildingIds } = await import('../../../server/utils/scope')
+
+    await expect(getAssignedBuildingIds(event(), user('owner'))).resolves.toEqual(['building-a'])
+    expect(assignmentRepoMocks.findBuildingIdsByUser).toHaveBeenCalledWith(expect.anything(), 'owner-user')
+  })
+
+  it('returns an empty scope for an owner with no assignments (never global)', async () => {
+    assignmentRepoMocks.findBuildingIdsByUser.mockResolvedValue([])
+    const { getAssignedBuildingIds } = await import('../../../server/utils/scope')
+
+    await expect(getAssignedBuildingIds(event(), user('owner'))).resolves.toEqual([])
+  })
+
+  it('applies owner read 404 and write 403 outside scope', async () => {
+    assignmentRepoMocks.findBuildingIdsByUser.mockResolvedValue(['building-a'])
+    const { assertBuildingScope } = await import('../../../server/utils/scope')
+
+    await expect(assertBuildingScope(event(), user('owner'), 'building-b', 'read'))
+      .rejects.toMatchObject({ statusCode: 404 })
+    await expect(assertBuildingScope(event(), user('owner'), 'building-b', 'write'))
+      .rejects.toMatchObject({ statusCode: 403 })
+  })
+
+  it('allows owner action inside scope', async () => {
+    assignmentRepoMocks.findBuildingIdsByUser.mockResolvedValue(['building-a'])
+    const { assertBuildingScope } = await import('../../../server/utils/scope')
+
+    await expect(assertBuildingScope(event(), user('owner'), 'building-a', 'write'))
+      .resolves.toBeUndefined()
   })
 })

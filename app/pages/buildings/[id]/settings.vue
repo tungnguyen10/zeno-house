@@ -41,6 +41,7 @@ const contractRows = computed(() =>
 
 const { data: managersData } = await useFetch<ApiSuccess<AssignmentManager[]>>(
   `/api/assignments/by-building/${id}`,
+  { immediate: authStore.canManageUsers },
 )
 const assignedManagers = computed(() => managersData.value?.data ?? [])
 
@@ -176,10 +177,11 @@ async function handleUpdatePricingType(catalogId: string, pricingType: PricingTy
     </UiSection>
 
     <UiSection
+      v-if="authStore.canManageUsers"
       title="Managers"
       description="Những manager đang được phân quyền vào tòa nhà này."
     >
-      <template v-if="authStore.isAdmin" #actions>
+      <template #actions>
         <NuxtLink to="/settings/managers" class="text-sm text-cyan hover:text-cyan/80 transition-colors">
           Quản lý phân quyền
         </NuxtLink>

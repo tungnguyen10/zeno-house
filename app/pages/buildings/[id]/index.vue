@@ -114,7 +114,7 @@ const waterLabel = computed(() => {
     <template v-else-if="building">
       <UiPageHeader :title="building.name">
         <template #actions>
-          <div v-if="authStore.isAdmin" class="flex gap-2 shrink-0">
+          <div v-if="authStore.canManage" class="flex gap-2 shrink-0">
             <UiButton
               variant="secondary"
               size="sm"
@@ -200,7 +200,7 @@ const waterLabel = computed(() => {
         <header class="flex items-center justify-between mb-4">
           <h3 class="text-sm font-semibold text-white">Dịch vụ & cấu hình tính phí</h3>
           <UiButton
-            v-if="authStore.isAdmin"
+            v-if="authStore.canManage"
             variant="secondary"
             size="sm"
             @click="navigateTo(buildingSettingsPath(building))"
@@ -246,7 +246,7 @@ const waterLabel = computed(() => {
                 </p>
               </div>
               <UiToggle
-                v-if="authStore.isAdmin"
+                v-if="authStore.canManage"
                 :model-value="service.isActive"
                 :aria-label="`${service.isActive ? 'Tắt' : 'Bật'} ${service.catalog.name}`"
                 :disabled="togglingServiceId === service.id"
@@ -319,7 +319,7 @@ const waterLabel = computed(() => {
 
       <!-- Section: Danger zone (admin only) -->
       <section
-        v-if="authStore.isAdmin"
+        v-if="authStore.canManage"
         id="danger-zone"
         class="mt-4 rounded-xl border border-error/30 bg-error/5 p-6"
       >

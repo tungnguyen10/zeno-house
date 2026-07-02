@@ -38,6 +38,10 @@ export interface Building {
   billingGenerationDay: number | null
   paymentDueDay: number | null
   gracePeriodDays: number
+  // Ownership provenance (non-sensitive identifiers). Access control still comes
+  // from user_building_assignments, not these fields.
+  createdBy: string | null
+  ownerUserId: string | null
   createdAt: string
   updatedAt: string
 }

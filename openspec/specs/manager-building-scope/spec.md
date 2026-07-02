@@ -95,11 +95,15 @@ Khi manager xem tenant detail, contract/payment/invoice history SHALL chỉ gồ
 
 ### Requirement: Scope resolver lazy cache per request
 
-System SHALL query `user_building_assignments` tối đa 1 lần per HTTP request bằng cách cache kết quả vào `event.context`. Gọi lại `getAssignedBuildingIds` trong cùng request SHALL dùng cached value.
+System SHALL query `user_building_assignments` tối đa 1 lần per HTTP request bằng cách cache kết quả vào `event.context`. Gọi lại `getAssignedBuildingIds` trong cùng request SHALL dùng cached value. This cache SHALL apply to scoped roles (`owner` and `manager`).
 
 #### Scenario: Nhiều service calls trong cùng request
 - **WHEN** 1 request trigger nhiều service calls cùng cần scope
 - **THEN** DB chỉ được query đúng 1 lần cho `user_building_assignments`
+
+#### Scenario: Owner scope cache hit
+- **WHEN** one owner request calls scope resolution multiple times
+- **THEN** assignment repository is queried once
 
 ---
 
@@ -138,3 +142,40 @@ Scope enforcement SHALL xảy ra ở service layer, không chỉ ở UI. Gọi A
 #### Scenario: Direct API mutation với valid token nhưng ngoài scope
 - **WHEN** manager gọi trực tiếp `POST /api/billing/periods/:id/issue` (unassigned building) với Bearer token hợp lệ
 - **THEN** response là 403 Forbidden
+
+### Requirement: Owner scope uses user_building_assignments
+System SHALL resolve owner building scope from `user_building_assignments` the same way manager scope is resolved. Admin SHALL remain unscoped.
+
+#### Scenario: Owner sees assigned buildings
+- **WHEN** owner calls `GET /api/buildings`
+- **THEN** response only contains buildings assigned to that owner
+
+#### Scenario: Owner with no assignment sees empty list
+- **WHEN** owner has no `user_building_assignments` and calls `GET /api/buildings`
+- **THEN** response returns an empty list, not global data
+
+#### Scenario: Admin remains unscoped
+- **WHEN** admin scope is resolved
+- **THEN** scope result is `null`
+
+### Requirement: Owner detail outside scope returns 404
+When owner reads detail endpoints for entities outside owner scope, system SHALL return 404 Not Found and SHALL NOT leak existence.
+
+#### Scenario: Owner reads room outside scope
+- **WHEN** owner calls `GET /api/rooms/:id` for a room in an unassigned building
+- **THEN** response is 404 Not Found
+
+#### Scenario: Owner reads invoice outside scope
+- **WHEN** owner calls `GET /api/billing/invoices/:id` for an invoice in an unassigned building
+- **THEN** response is 404 Not Found
+
+### Requirement: Owner mutation outside scope returns 403
+When owner mutates entities outside owner scope, system SHALL return 403 Forbidden.
+
+#### Scenario: Owner updates room outside scope
+- **WHEN** owner calls `PATCH /api/rooms/:id` for a room in an unassigned building
+- **THEN** response is 403 Forbidden
+
+#### Scenario: Owner closes period outside scope
+- **WHEN** owner calls close period endpoint for a period in an unassigned building
+- **THEN** response is 403 Forbidden

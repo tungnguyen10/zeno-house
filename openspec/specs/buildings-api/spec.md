@@ -19,11 +19,16 @@ Defines server API behavior for creating, reading, updating, deleting, and enric
 ---
 
 ### Requirement: POST /api/buildings tạo building mới
-`server/api/buildings/index.post.ts` SHALL require auth, validate body bằng Zod `buildingCreateSchema`, delegate sang service, trả về `ApiSuccess<Building>` với status 201.
+`server/api/buildings/index.post.ts` SHALL require auth, validate body bằng Zod `buildingCreateSchema`, delegate sang service, trả về `ApiSuccess<Building>` với status 201. Admin and owner SHALL be allowed to create buildings. Owner-created buildings SHALL be automatically assigned to the owner.
 
 #### Scenario: Tạo building thành công
 - **WHEN** admin gửi POST /api/buildings với `{ name, address }` hợp lệ
 - **THEN** response 201 với `{ data: Building }` chứa building vừa tạo
+
+#### Scenario: Owner tạo building thành công
+- **WHEN** owner gửi POST /api/buildings với `{ name, address }` hợp lệ
+- **THEN** response 201 với `{ data: Building }` chứa building vừa tạo
+- **AND** owner có assignment vào building đó
 
 #### Scenario: Validation error khi thiếu required fields
 - **WHEN** request body thiếu `name` hoặc `address`
@@ -49,11 +54,19 @@ Defines server API behavior for creating, reading, updating, deleting, and enric
 ---
 
 ### Requirement: PATCH /api/buildings/:id cập nhật building
-`server/api/buildings/[id].patch.ts` SHALL require auth (admin only), validate body bằng Zod `buildingUpdateSchema` (partial), trả về `ApiSuccess<Building>` sau update.
+`server/api/buildings/[id].patch.ts` SHALL require auth, validate body bằng Zod `buildingUpdateSchema` (partial), trả về `ApiSuccess<Building>` sau update. Admin SHALL update any building. Owner SHALL update only buildings in owner scope.
 
 #### Scenario: Cập nhật building thành công
 - **WHEN** admin gửi PATCH /api/buildings/:id với partial data hợp lệ
 - **THEN** response 200 với `{ data: Building }` chứa data đã update
+
+#### Scenario: Owner cập nhật scoped building
+- **WHEN** owner gửi PATCH /api/buildings/:id với partial data hợp lệ cho building trong scope
+- **THEN** response 200 với `{ data: Building }` chứa data đã update
+
+#### Scenario: Owner không thể update ngoài scope
+- **WHEN** owner gửi PATCH /api/buildings/:id cho building ngoài scope
+- **THEN** response 403 với `error.code === 'FORBIDDEN'`
 
 #### Scenario: Manager không thể update
 - **WHEN** user có role 'manager' gửi PATCH
@@ -62,11 +75,19 @@ Defines server API behavior for creating, reading, updating, deleting, and enric
 ---
 
 ### Requirement: DELETE /api/buildings/:id xoá building
-`server/api/buildings/[id].delete.ts` SHALL require auth (admin only), xoá building và trả về 204 No Content.
+`server/api/buildings/[id].delete.ts` SHALL require auth and delete or archive a building only when permission, scope, and safety checks pass. Admin SHALL delete any eligible building. Owner SHALL delete only eligible buildings in owner scope.
 
 #### Scenario: Xoá building thành công
 - **WHEN** admin gửi DELETE /api/buildings/:id
 - **THEN** response 204, building bị xoá khỏi database
+
+#### Scenario: Owner xoá scoped building thành công
+- **WHEN** owner gửi DELETE /api/buildings/:id cho empty building trong scope
+- **THEN** response 204, building bị xoá khỏi database
+
+#### Scenario: Owner không thể xoá ngoài scope
+- **WHEN** owner gửi DELETE /api/buildings/:id cho building ngoài scope
+- **THEN** response 403 với `error.code === 'FORBIDDEN'`
 
 #### Scenario: Manager không thể xoá
 - **WHEN** user có role 'manager' gửi DELETE
@@ -167,7 +188,7 @@ Building list and detail API responses SHALL include `slug` and building service
 - **THEN** response is 204 and the row is removed from the database
 
 ### Requirement: DELETE /api/buildings/:id supports force soft-archive
-`server/api/buildings/[id].delete.ts` SHALL accept query param `?force=true`. When present and the caller is admin, the endpoint SHALL skip the conflict check and instead set `status='inactive'` on the building (soft-archive), returning `200` with `{ data: Building }` (the archived building). The endpoint SHALL NOT hard-delete when `?force=true` is used.
+`server/api/buildings/[id].delete.ts` SHALL accept query param `?force=true`. When present and the caller is admin or an owner inside scope, the endpoint SHALL skip the conflict check and instead set `status='inactive'` on the building (soft-archive), returning `200` with `{ data: Building }` (the archived building). The endpoint SHALL NOT hard-delete when `?force=true` is used.
 
 #### Scenario: Force archives a building with rooms
 - **WHEN** admin sends DELETE `/api/buildings/:id?force=true` on a building with rooms
@@ -180,6 +201,10 @@ Building list and detail API responses SHALL include `slug` and building service
 #### Scenario: Manager cannot force
 - **WHEN** user with role `manager` sends DELETE with `?force=true`
 - **THEN** response is 403 with `error.code === 'FORBIDDEN'`
+
+#### Scenario: Owner force archives a scoped building
+- **WHEN** owner sends DELETE `/api/buildings/:id?force=true` for a building in owner scope
+- **THEN** response is 200 with `{ data }` where `data.status === 'inactive'`
 
 ### Requirement: POST /api/buildings/bulk performs bulk action with per-item result
 `server/api/buildings/bulk.post.ts` SHALL require auth (admin only), validate body with `buildingBulkActionSchema` (`{ action: 'archive' | 'activate' | 'delete', ids: string[] }`), iterate over the IDs applying the action via the service, and return `{ data: { succeeded: string[], failed: { id: string, reason: string }[] } }` with status 200. The endpoint SHALL NOT short-circuit on first failure.
@@ -252,3 +277,14 @@ Building service mutation methods SHALL write audit events to `audit_events` in 
 #### Scenario: BuildingService mutations emit audit events
 - **WHEN** any mutation method on `BuildingService` is called
 - **THEN** an audit event is written to `audit_events` (in addition to existing behavior)
+
+### Requirement: Building responses expose owner provenance
+Building API responses SHALL include owner provenance fields needed by Settings and scoped management, without exposing sensitive auth data.
+
+#### Scenario: Owner-created building response
+- **WHEN** owner creates a building
+- **THEN** response includes non-sensitive owner/creator identifiers needed by the app
+
+#### Scenario: List response includes provenance
+- **WHEN** admin lists buildings
+- **THEN** each building includes owner provenance fields if present

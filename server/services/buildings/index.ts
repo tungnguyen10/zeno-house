@@ -7,6 +7,7 @@ import type {
   BuildingUpdateInput,
 } from '~/utils/validators/buildings'
 import { BuildingRepository } from '../../repositories/buildings'
+import { AssignmentRepository } from '../../repositories/assignments'
 import { assertBuildingScope, getAssignedBuildingIds } from '../../utils/scope'
 import { AuditService } from '../audit'
 import { AUDIT_ACTIONS } from '~/utils/constants/audit'
@@ -51,7 +52,35 @@ export const BuildingService = {
     input: BuildingCreateInput,
   ): Promise<Building> {
     if (!can(user, 'buildings.create')) throwForbidden('Không có quyền tạo tòa nhà')
-    const result = await BuildingRepository.insert(event, input)
+
+    const owner = isOwner(user)
+    // Owner-created buildings record owner provenance; admin-created buildings
+    // record the creator only and stay globally visible (no owner scope).
+    const result = await BuildingRepository.insert(event, input, {
+      created_by: user.id,
+      owner_user_id: owner ? user.id : null,
+    })
+
+    if (owner) {
+      // Auto-assign the new building to the owner in the same workflow so the
+      // owner immediately has scoped access. If the assignment fails, roll back
+      // the building to avoid a partially inaccessible record.
+      try {
+        await AssignmentRepository.insert(event, {
+          user_id: user.id,
+          building_id: result.id,
+          created_by: user.id,
+        })
+      }
+      catch (err) {
+        await BuildingRepository.remove(event, result.id).catch(() => {})
+        throw err
+      }
+      // Invalidate the per-request scope cache so a follow-up read in the same
+      // request includes the newly created building.
+      event.context.__buildingScope = undefined
+    }
+
     await AuditService.append(event, user, {
       building_id: result.id,
       action: AUDIT_ACTIONS.BUILDING_CREATED,

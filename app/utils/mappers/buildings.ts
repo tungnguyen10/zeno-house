@@ -29,6 +29,8 @@ export function mapBuilding(row: BuildingRow): Building {
     billingGenerationDay: row.billing_generation_day,
     paymentDueDay: row.payment_due_day,
     gracePeriodDays: row.grace_period_days,
+    createdBy: row.created_by,
+    ownerUserId: row.owner_user_id,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }

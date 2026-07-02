@@ -212,7 +212,11 @@ export const BuildingRepository = {
     return building ?? null
   },
 
-  async insert(event: H3Event, input: BuildingCreateInput): Promise<Building> {
+  async insert(
+    event: H3Event,
+    input: BuildingCreateInput,
+    provenance: { created_by?: string | null; owner_user_id?: string | null } = {},
+  ): Promise<Building> {
     const client = await serverSupabaseClient(event)
     const slug = await buildUniqueSlug(event, input.slug ?? input.name)
     const code = await buildUniqueCode(event, slug)
@@ -228,6 +232,8 @@ export const BuildingRepository = {
         owner_name: input.owner_name ?? null,
         owner_phone: input.owner_phone ?? null,
         owner_email: input.owner_email ?? null,
+        created_by: provenance.created_by ?? null,
+        owner_user_id: provenance.owner_user_id ?? null,
         electricity_pricing_type: input.electricity_pricing_type ?? 'per_kwh',
         default_electricity_rate: input.default_electricity_rate ?? null,
         water_pricing_type: input.water_pricing_type ?? 'per_m3',

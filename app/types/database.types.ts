@@ -304,6 +304,7 @@ export type Database = {
           billing_generation_day: number | null
           code: string
           created_at: string
+          created_by: string | null
           default_electricity_rate: number | null
           default_water_rate: number | null
           description: string | null
@@ -315,6 +316,7 @@ export type Database = {
           owner_email: string | null
           owner_name: string | null
           owner_phone: string | null
+          owner_user_id: string | null
           payment_due_day: number | null
           slug: string
           status: string
@@ -326,6 +328,7 @@ export type Database = {
           billing_generation_day?: number | null
           code: string
           created_at?: string
+          created_by?: string | null
           default_electricity_rate?: number | null
           default_water_rate?: number | null
           description?: string | null
@@ -337,6 +340,7 @@ export type Database = {
           owner_email?: string | null
           owner_name?: string | null
           owner_phone?: string | null
+          owner_user_id?: string | null
           payment_due_day?: number | null
           slug: string
           status?: string
@@ -348,6 +352,7 @@ export type Database = {
           billing_generation_day?: number | null
           code?: string
           created_at?: string
+          created_by?: string | null
           default_electricity_rate?: number | null
           default_water_rate?: number | null
           description?: string | null
@@ -359,6 +364,7 @@ export type Database = {
           owner_email?: string | null
           owner_name?: string | null
           owner_phone?: string | null
+          owner_user_id?: string | null
           payment_due_day?: number | null
           slug?: string
           status?: string

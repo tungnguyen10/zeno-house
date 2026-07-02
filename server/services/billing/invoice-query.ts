@@ -8,11 +8,7 @@ import type {
 import type { InvoiceStatus } from '~/utils/constants/billing'
 import { BuildingRepository } from '../../repositories/buildings'
 import { CrossPeriodInvoiceRepository } from '../../repositories/invoices'
-
-type AppMetadataWithScope = AuthUser['app_metadata'] & {
-  assigned_building_ids?: unknown
-  building_ids?: unknown
-}
+import { getAssignedBuildingIds } from '../../utils/scope'
 
 function todayInHoChiMinh(): string {
   return new Intl.DateTimeFormat('en-CA', {
@@ -21,17 +17,6 @@ function todayInHoChiMinh(): string {
     month: '2-digit',
     day: '2-digit',
   }).format(new Date())
-}
-
-function assignedBuildingIds(user: AuthUser): string[] {
-  const meta = user.app_metadata as AppMetadataWithScope
-  const raw = Array.isArray(meta.assigned_building_ids)
-    ? meta.assigned_building_ids
-    : Array.isArray(meta.building_ids)
-      ? meta.building_ids
-      : []
-
-  return raw.filter((value): value is string => typeof value === 'string' && value.length > 0)
 }
 
 export function deriveInvoiceListStatus(
@@ -60,9 +45,9 @@ export const InvoiceQueryService = {
     if (!can(user, 'billing.read')) throwForbidden('Không có quyền xem hoá đơn')
     if (query.page_size > 100) throwValidationError('page_size tối đa là 100')
 
-    const assignedIds = user.app_metadata.role === 'manager'
-      ? assignedBuildingIds(user)
-      : undefined
+    // Admin is unscoped (null); owner/manager are scoped to assigned buildings.
+    const buildingScope = await getAssignedBuildingIds(event, user)
+    const assignedIds = buildingScope ?? undefined
 
     let buildingId = query.building_id
     if (buildingId) {

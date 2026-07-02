@@ -20,6 +20,7 @@ BEGIN
     FROM (
       VALUES
         ('admin@zenohouse.test', 'admin', 'Admin Zeno'),
+        ('owner1@zenohouse.test', 'owner', 'Owner 1'),
         ('manager1@zenohouse.test', 'manager', 'Manager 1'),
         ('manager2@zenohouse.test', 'manager', 'Manager 2'),
         ('manager3@zenohouse.test', 'manager', 'Manager 3')
@@ -127,6 +128,33 @@ BEGIN
       'manager3@zenohouse.test'
     )
     ON CONFLICT (user_id, building_id) DO NOTHING;
+
+    -- Scope owner1 to the first building only (demonstrates scoped superuser).
+    INSERT INTO public.user_building_assignments (
+      user_id,
+      building_id,
+      can_delete_master_data,
+      created_by
+    )
+    SELECT
+      owner_user.id,
+      building.id,
+      true,
+      v_admin_id
+    FROM auth.users owner_user
+    CROSS JOIN LATERAL (
+      SELECT id FROM public.buildings ORDER BY created_at ASC LIMIT 1
+    ) AS building
+    WHERE owner_user.email = 'owner1@zenohouse.test'
+    ON CONFLICT (user_id, building_id) DO NOTHING;
+
+    -- Record owner provenance on the owner's scoped building for display.
+    UPDATE public.buildings b
+    SET owner_user_id = owner_user.id
+    FROM auth.users owner_user
+    WHERE owner_user.email = 'owner1@zenohouse.test'
+      AND b.id = (SELECT id FROM public.buildings ORDER BY created_at ASC LIMIT 1)
+      AND b.owner_user_id IS NULL;
   END IF;
 END;
 $$;
@@ -141,6 +169,7 @@ SELECT
 FROM auth.users
 WHERE email IN (
   'admin@zenohouse.test',
+  'owner1@zenohouse.test',
   'manager1@zenohouse.test',
   'manager2@zenohouse.test',
   'manager3@zenohouse.test'

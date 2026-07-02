@@ -8,7 +8,9 @@ export async function getAssignedBuildingIds(
   event: H3Event,
   user: AuthUser,
 ): Promise<string[] | null> {
-  if (user.app_metadata.role === 'admin') return null
+  // Admin is global/unscoped. Owner and manager are scoped to their assignments;
+  // a scoped user with no assignments resolves to an empty list (not global data).
+  if (isAdmin(user)) return null
 
   if (event.context.__buildingScope !== undefined) {
     return event.context.__buildingScope
@@ -40,7 +42,7 @@ export async function canDeleteMasterData(
   user: AuthUser,
   buildingId: string,
 ): Promise<boolean> {
-  if (user.app_metadata.role === 'admin') return true
+  if (isAdmin(user)) return true
 
   const assignment = await AssignmentRepository.findByUserAndBuilding(event, user.id, buildingId)
   return assignment?.can_delete_master_data === true

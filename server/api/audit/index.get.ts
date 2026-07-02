@@ -32,14 +32,17 @@ export default defineEventHandler(async (event) => {
 
   const { building_id, entity_type, entity_id, correlation_id, limit } = result.data
 
-  // Manager must always provide building_id (cannot see global/tenant-only events)
-  if (!can(user, 'buildings.read') || (user.role === 'manager' && !building_id)) {
-    if (!building_id) {
-      throwValidationError('building_id là bắt buộc với manager', {
-        fieldErrors: { building_id: ['Bắt buộc'] },
-        formErrors: [],
-      })
-    }
+  if (!can(user, 'buildings.read')) {
+    throwForbidden('Không có quyền xem nhật ký')
+  }
+
+  // Owner and manager are scoped: they must always target a specific building.
+  const scoped = isScopedRole(user)
+  if (scoped && !building_id) {
+    throwValidationError('building_id là bắt buộc với vai trò giới hạn theo tòa nhà', {
+      fieldErrors: { building_id: ['Bắt buộc'] },
+      formErrors: [],
+    })
   }
 
   const opts = {
@@ -50,11 +53,11 @@ export default defineEventHandler(async (event) => {
   }
 
   if (building_id) {
-    // Resolve and scope-check the building
+    // Resolve and scope-check the building. Scoped roles get 404 for out-of-scope
+    // buildings (read semantics); admin is unscoped.
     const building = await BuildingRepository.findByIdentifier(event, building_id)
     if (!building) throwNotFound('Không tìm thấy tòa nhà')
-    // Manager scope check
-    if (user.role === 'manager') {
+    if (scoped) {
       const { assertBuildingScope } = await import('../../utils/scope')
       await assertBuildingScope(event, user, building.id, 'read')
     }
@@ -64,7 +67,7 @@ export default defineEventHandler(async (event) => {
     return { data: enriched, meta: { total } }
   }
 
-  // Admin only: query across all buildings (including tenant events with NULL building_id)
+  // Global query (admin only): includes tenant events with NULL building_id.
   if (!can(user, 'buildings.delete')) throwForbidden('Không có quyền xem nhật ký toàn hệ thống')
 
   const { items, total } = await AuditRepository.listAll(event, opts)

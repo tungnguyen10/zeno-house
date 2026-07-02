@@ -85,6 +85,18 @@ export const AssignmentRepository = {
     return data ? mapAssignment(data) : null
   },
 
+  async findById(event: H3Event, id: string): Promise<UserBuildingAssignment | null> {
+    const client = await serverSupabaseClient<Database>(event)
+    const { data, error } = await client
+      .from('user_building_assignments')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle()
+
+    if (error) throw createError({ statusCode: 500, message: error.message })
+    return data ? mapAssignment(data) : null
+  },
+
   async findAllWithBuildings(event: H3Event): Promise<ManagerAssignment[]> {
     const [managers, assignments] = await Promise.all([
       listManagers(event),
@@ -111,11 +123,37 @@ export const AssignmentRepository = {
       .map(row => row.manager)
   },
 
-  async findAll(event: H3Event): Promise<AssignmentWithBuilding[]> {
+  async findAll(event: H3Event, buildingIds?: string[] | null): Promise<AssignmentWithBuilding[]> {
     const client = await serverSupabaseClient<Database>(event)
+    let query = client
+      .from('user_building_assignments')
+      .select('*, buildings(id, slug, code, name, address, status)')
+      .order('created_at', { ascending: true })
+
+    if (buildingIds) {
+      if (buildingIds.length === 0) return []
+      query = query.in('building_id', buildingIds)
+    }
+
+    const { data, error } = await query
+
+    if (error) throw createError({ statusCode: 500, message: error.message })
+
+    return (data ?? []).map((row) => {
+      const building = row.buildings as AssignmentBuilding | null
+      return {
+        ...mapAssignment(row),
+        building,
+      }
+    })
+  },
+
+  async findByUser(event: H3Event, userId: string): Promise<AssignmentWithBuilding[]> {
+    const client = serverSupabaseServiceRole<Database>(event)
     const { data, error } = await client
       .from('user_building_assignments')
       .select('*, buildings(id, slug, code, name, address, status)')
+      .eq('user_id', userId)
       .order('created_at', { ascending: true })
 
     if (error) throw createError({ statusCode: 500, message: error.message })
@@ -179,10 +217,21 @@ export const AssignmentRepository = {
     if (error) throw createError({ statusCode: 500, message: error.message })
   },
 
-  async findBuildingsWithoutManager(event: H3Event): Promise<AssignmentBuilding[]> {
+  async findBuildingsWithoutManager(
+    event: H3Event,
+    buildingIds?: string[] | null,
+  ): Promise<AssignmentBuilding[]> {
     const client = await serverSupabaseClient<Database>(event)
+    let buildingQuery = client
+      .from('buildings')
+      .select('id, slug, code, name, address, status')
+      .order('name')
+    if (buildingIds) {
+      if (buildingIds.length === 0) return []
+      buildingQuery = buildingQuery.in('id', buildingIds)
+    }
     const [{ data: buildings, error: buildingError }, { data: assignments, error: assignmentError }] = await Promise.all([
-      client.from('buildings').select('id, slug, code, name, address, status').order('name'),
+      buildingQuery,
       client.from('user_building_assignments').select('building_id'),
     ])
 

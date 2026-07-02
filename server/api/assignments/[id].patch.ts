@@ -1,9 +1,8 @@
-import { AssignmentRepository } from '../../repositories/assignments'
+import { AssignmentService } from '../../services/assignments'
 import { assignmentUpdateSchema } from '~/utils/validators/assignments'
 
 export default defineEventHandler(async (event) => {
   const user = await requireAuth(event)
-  if (user.app_metadata.role !== 'admin') throwForbidden('Chỉ admin được quản lý phân quyền')
 
   const id = getRouterParam(event, 'id')!
   const body = await readBody(event)
@@ -12,5 +11,5 @@ export default defineEventHandler(async (event) => {
     throwValidationError('Dữ liệu phân quyền không hợp lệ', parsed.error.flatten())
   }
 
-  return { data: await AssignmentRepository.update(event, id, parsed.data) }
+  return { data: await AssignmentService.update(event, user, id, parsed.data) }
 })
