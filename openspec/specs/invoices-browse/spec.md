@@ -93,7 +93,7 @@ Drawer SHALL có CTA "Mở trong kỳ vận hành →" mở period view tương 
 #### Scenario: Deep-link mở đúng period và highlight invoice
 - **WHEN** user click "Mở trong kỳ vận hành" cho invoice ID `<inv-id>` thuộc period 2026-06 của building B1
 - **THEN** navigate tới `/billing/<B1-slug>/2026-06?invoice=<inv-id>`
-- **AND** period page tự switch sang tab "Thanh toán & công nợ"
+- **AND** period page tự switch sang tab "Thu tiền & công nợ"
 - **AND** scroll-into-view tới row invoice và highlight 2 giây
 
 #### Scenario: Deep-link với period không tồn tại

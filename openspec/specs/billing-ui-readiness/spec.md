@@ -18,7 +18,7 @@ The design system SHALL provide primitives and patterns sufficient to build `/bi
 - **THEN** it can show status, reading progress, invoice count, issued total, paid total, debt total, and open action without custom row styling
 
 ### Requirement: Billing workspace readiness
-The design system SHALL provide primitives and patterns sufficient to build the Building + Period workspace using a streamlined three-tab information architecture: a sticky KPI strip at the top, three primary work tabs, and overflow surfaces (drawer + header overflow action) for reference and rare actions.
+The design system SHALL provide primitives and patterns sufficient to build the Building + Period workspace using a streamlined two-tab information architecture: a sticky KPI strip at the top, two primary work tabs, and overflow surfaces (drawer + header overflow action) for reference and rare actions.
 
 #### Scenario: Workspace composition
 - **WHEN** the billing workspace is implemented
@@ -26,7 +26,7 @@ The design system SHALL provide primitives and patterns sufficient to build the 
 
 #### Scenario: Workspace primary tabs
 - **WHEN** the billing workspace renders top-level tabs
-- **THEN** there are exactly two tabs in the order: `Chỉ số & hoá đơn nháp`, `Thanh toán & công nợ`, and `UiTabs` supports their active/disabled states with reasons
+- **THEN** there are exactly two tabs in the order: `Soạn kỳ`, `Thu tiền & công nợ`, and `UiTabs` supports their active/disabled states with reasons
 
 #### Scenario: Sticky KPI strip
 - **WHEN** the billing workspace renders below `UiPageHeader`
@@ -200,4 +200,3 @@ Billing UI SHALL use explicit `UiStatusBadge` context for billing period, invoic
 #### Scenario: Correction status
 - **WHEN** a correction, adjustment, replacement, blocked, warning, or corrected state is shown
 - **THEN** the badge or alert uses correction context and the matching semantic variant
-

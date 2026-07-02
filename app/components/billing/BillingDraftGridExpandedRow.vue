@@ -10,7 +10,6 @@ const props = defineProps<{
 
 defineEmits<{
   (e: 'close'): void
-  (e: 'intent:adjustment', payload: { invoiceId: string; amount: number; label: string }): void
   (e: 'intent:void-reissue', payload: { invoiceId: string }): void
 }>()
 
@@ -75,7 +74,6 @@ function formatRate(value: number | null, unit: string): string {
       v-if="period"
       :draft="row"
       :period="period"
-      @intent:adjustment="$emit('intent:adjustment', $event)"
       @intent:void-reissue="$emit('intent:void-reissue', $event)"
     />
 

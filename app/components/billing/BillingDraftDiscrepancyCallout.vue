@@ -9,11 +9,8 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  (e: 'intent:adjustment', payload: { invoiceId: string; amount: number; label: string }): void
   (e: 'intent:void-reissue', payload: { invoiceId: string }): void
 }>()
-
-const correctionLabel = 'Điều chỉnh do override tiêu thụ'
 
 const existingInvoice = computed(() => props.draft.existingInvoice ?? null)
 const draftTotal = computed(() => props.draft.draftTotal ?? 0)
@@ -26,16 +23,6 @@ const visible = computed(() => !!existingInvoice.value && Math.abs(delta.value) 
 const periodClosed = computed(() => isPeriodLocked(props.period))
 const hasPayment = computed(() => (existingInvoice.value?.paidAmount ?? 0) > 0)
 const signedDelta = computed(() => `${delta.value > 0 ? '+' : ''}${formatCurrency(delta.value)}`)
-
-function emitAdjustment() {
-  const invoice = existingInvoice.value
-  if (!invoice || periodClosed.value) return
-  emit('intent:adjustment', {
-    invoiceId: invoice.id,
-    amount: -delta.value,
-    label: correctionLabel,
-  })
-}
 
 function emitVoidReissue() {
   const invoice = existingInvoice.value
@@ -61,25 +48,20 @@ function emitVoidReissue() {
       </p>
 
       <p v-if="periodClosed" class="text-xs">
-        Kỳ đã chốt, không thể tạo điều chỉnh hoặc huỷ hoá đơn từ màn hình này.
+        Kỳ đã chốt, cần mở lại kỳ trước khi sửa hoá đơn.
+      </p>
+      <p v-else-if="hasPayment" class="text-xs">
+        Hoá đơn đã có thanh toán. Hoàn tác khoản thu trong tab Thu tiền & công nợ trước, sau đó huỷ và phát hành lại.
       </p>
 
       <div v-else class="flex flex-wrap items-center gap-2">
-        <UiButton size="sm" variant="primary" @click="emitAdjustment">
-          Tạo điều chỉnh
-        </UiButton>
         <UiButton
           size="sm"
           variant="secondary"
-          :disabled="hasPayment"
-          :title="hasPayment ? 'Hoá đơn đã có thanh toán, dùng Điều chỉnh' : undefined"
           @click="emitVoidReissue"
         >
           Huỷ + Phát hành lại
         </UiButton>
-        <span v-if="hasPayment" class="text-xs">
-          Hoá đơn đã có thanh toán, dùng Điều chỉnh.
-        </span>
       </div>
     </div>
   </UiAlert>

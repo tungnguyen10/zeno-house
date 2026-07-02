@@ -86,37 +86,62 @@ The API SHALL issue invoice snapshots transactionally.
 - **THEN** no partial invoice issue state is left visible as successful
 
 ### Requirement: Invoice payment API
-The API SHALL record monthly payments against invoices.
+The API SHALL record monthly payments against invoices and SHALL support undoing recorded payments. New payment recording requires full balance settlement; legacy partial-paid invoices retain compatibility.
 
 #### Scenario: Payment recorded
-- **WHEN** a valid payment is submitted
+- **WHEN** a valid full-balance payment is submitted to `POST /api/billing/invoices/:id/payments`
 - **THEN** the API creates the payment and updates invoice paid amount, balance amount, and status
+- **AND** invoice status becomes `paid`
 
 #### Scenario: Overpayment rejected
 - **WHEN** a payment would make paid amount greater than invoice total
-- **THEN** the API rejects the request with validation error
+- **THEN** the API rejects the request with 400 VALIDATION_ERROR
+
+#### Scenario: Underpayment from simplified UI rejected
+- **WHEN** a payment less than current balance is submitted with header `X-Billing-Strict-Full: true`
+- **THEN** the API rejects with 400 VALIDATION_ERROR code `PARTIAL_PAYMENT_DISABLED` and message instructing to collect full balance
+
+#### Scenario: Legacy partial payment still accepted
+- **WHEN** the request omits the strict header and amount is less than balance
+- **THEN** the API records the partial payment for backward compatibility with any unmigrated client
+
+#### Scenario: Undo payment
+- **WHEN** an authorized user calls `DELETE /api/billing/invoice-payments/:paymentId` with optional body `{ reason }` and the payment belongs to an invoice in a period whose status is not `closed`
+- **THEN** the API soft-deletes the payment, recomputes invoice paid_amount/balance/status, appends `payment.undone` audit event with `{ before: {amount, paid_amount, status}, after: {paid_amount, status}, reason }`, and returns the updated invoice
+
+#### Scenario: Undo payment on closed period
+- **WHEN** the payment's invoice belongs to a `closed` period
+- **THEN** the API returns 409 CONFLICT with code `PERIOD_LOCKED` and message indicating the period must be reopened
+
+#### Scenario: Undo non-existent or already-deleted payment
+- **WHEN** the payment ID does not exist or `deleted_at` is already set
+- **THEN** the API returns 404 NOT_FOUND
 
 ### Requirement: Invoice correction API
-The API SHALL support controlled invoice corrections.
+The API SHALL support controlled invoice corrections via void+reissue. Direct adjustment of paid invoices via API remains available for backward compatibility but is no longer surfaced in the workspace UI.
 
 #### Scenario: Void unpaid invoice
-- **WHEN** a user with sufficient permission voids an issued invoice with no payments
+- **WHEN** a user with sufficient permission voids an issued invoice with no remaining active payments
 - **THEN** the API marks it void, stores void reason metadata, and appends an audit event
 
 #### Scenario: Reissue replacement invoice
 - **WHEN** a voided invoice needs replacement
-- **THEN** the API issues a new invoice linked to the voided invoice
+- **THEN** the API issues a new invoice linked to the voided invoice, sharing a `correlation_id` with the void event
 
-#### Scenario: Paid invoice adjustment
-- **WHEN** a correction targets an invoice with recorded payments
-- **THEN** the API rejects direct mutation and requires an adjustment charge on a current or future invoice
+#### Scenario: Void with active payments rejected
+- **WHEN** a void targets an invoice with active payments
+- **THEN** the API rejects with 409 CONFLICT and message instructing to undo payments first
 
 #### Scenario: Closed period direct mutation rejected
 - **WHEN** a correction targets a closed period without explicit reopen flow
 - **THEN** the API rejects normal edit, void, or reissue actions
 
+#### Scenario: Adjustment endpoint remains
+- **WHEN** an integration POSTs to the existing adjustment endpoint
+- **THEN** the API still accepts it for backward compatibility, but the workspace UI no longer surfaces this path
+
 ### Requirement: Draft grid read model API
-The API SHALL provide a draft-grid read model for the `Chỉ số & hoá đơn nháp` workspace tab. The endpoint SHALL compose existing period, room, meter reading, utility override, invoice, and draft calculation data without introducing a new repository layer for this optimization.
+The API SHALL provide a draft-grid read model for the `Soạn kỳ` workspace tab. The endpoint SHALL compose existing period, room, meter reading, utility override, invoice, and draft calculation data without introducing a new repository layer for this optimization.
 
 #### Scenario: Draft grid requested
 - **WHEN** the workspace requests the draft grid for a billing period
@@ -275,9 +300,7 @@ Response shape:
 - **THEN** API computes overdue using same rule (status=issued AND due_date < today AND balance > 0)
 
 ### Requirement: Billing audit — meter readings coverage
-**Context**: `billing-api` spec defines audit requirements for billing operations. Meter reading saves MUST be captured.
-
-`MeterReadingService.create`, `bulkCreate`, and `update` SHALL each append a `reading.saved` audit event to `billing_audit_events`.
+The billing API SHALL capture meter reading saves as billing audit events. `MeterReadingService.create`, `bulkCreate`, and `update` SHALL each append a `reading.saved` audit event to `billing_audit_events`.
 
 #### Scenario: Save meter reading emits audit event
 - **WHEN** a meter reading is saved (create or update) via `MeterReadingService`
@@ -290,8 +313,6 @@ Response shape:
   - `metadata.count: 1`
 
 ### Requirement: Billing audit — invoice reissue snapshot
-**Context**: `billing-api` spec requires consistent before/after snapshots on all mutating events.
-
 The `invoice.reissued` audit event SHALL include full before/after snapshots consistent with other invoice mutation events.
 
 #### Scenario: Invoice reissued event has full snapshot
@@ -301,3 +322,92 @@ The `invoice.reissued` audit event SHALL include full before/after snapshots con
   - `after_data`: the new invoice snapshot
   - `metadata` retains existing fields (reason, replacement_for_invoice_id, etc.)
 
+### Requirement: Issue-and-pay combined API
+The API SHALL provide a single endpoint that issues one draft invoice and records its full payment atomically.
+
+#### Scenario: Endpoint shape
+- **WHEN** an authorized user POSTs to `/api/billing/periods/:periodId/issue-and-pay` with body `{ contract_id, payment_date, payment_method, note? }`
+- **THEN** the API invokes the `issue_and_pay` PL/pgSQL function which validates the draft is `ready`, creates the invoice with snapshot lines, creates an `invoice_payments` row for the full balance, sets invoice status to `paid`, and emits `invoices.issued` plus `invoice.payment_recorded` audit events sharing one UUID v7 `correlation_id`
+
+#### Scenario: Atomic on failure
+- **WHEN** any step inside the PL/pgSQL function fails
+- **THEN** the entire transaction rolls back and no invoice row, payment row, or audit event persists
+
+#### Scenario: Blocker rejection
+- **WHEN** the contract's draft has blockers such as missing reading or missing rate
+- **THEN** the API returns 422 with code `DRAFT_NOT_READY` and lists the blockers; nothing is mutated
+
+#### Scenario: Already-issued contract rejection
+- **WHEN** the contract already has an issued invoice for the period
+- **THEN** the API returns 409 with code `ALREADY_ISSUED`
+
+#### Scenario: Concurrency safe
+- **WHEN** two requests for the same contract and period arrive simultaneously
+- **THEN** the function uses an advisory transaction lock so only one transaction completes and the other receives `ALREADY_ISSUED`
+
+#### Scenario: Closed period rejection
+- **WHEN** the period is `closed`
+- **THEN** the API returns 409 with code `PERIOD_LOCKED`
+
+#### Scenario: Permission check
+- **WHEN** the caller lacks both invoice issue and payment write permission
+- **THEN** the API returns 403 FORBIDDEN
+
+### Requirement: Audit list API supports filter, search, pagination
+The audit list endpoint SHALL support server-side filtering, full-text search across metadata, and pagination to power the reworked drawer.
+
+#### Scenario: Endpoint shape
+- **WHEN** the client calls `GET /api/billing/periods/:periodId/audit?actor=&category=&from=&to=&q=&correlation_id=&cursor=&limit=`
+- **THEN** the API returns `{ data: AuditEvent[], meta: { nextCursor?: string, total?: number } }`
+
+#### Scenario: Filter by category
+- **WHEN** the `category` query parameter is provided as one category or a comma-separated combination
+- **THEN** the API maps each category to billing audit action codes and returns only matching events
+
+#### Scenario: Filter by actor
+- **WHEN** `actor` is a profile UUID or comma-separated list of UUIDs
+- **THEN** only events authored by those actors are returned
+
+#### Scenario: Filter by date range
+- **WHEN** `from` and/or `to` are ISO timestamps
+- **THEN** events with `created_at` outside the inclusive range are excluded
+
+#### Scenario: Filter by correlation
+- **WHEN** `correlation_id` is provided
+- **THEN** only events with matching correlation are returned
+
+#### Scenario: Full-text search
+- **WHEN** `q` is provided
+- **THEN** the API performs case-insensitive substring search across tenant name, invoice code, summary text, and key metadata string fields
+
+#### Scenario: Pagination
+- **WHEN** `limit` is unset or greater than 100
+- **THEN** the API caps page size to 100 and returns `meta.nextCursor` when more results exist
+
+#### Scenario: Permission check
+- **WHEN** the caller lacks `billing.read`
+- **THEN** the API returns 403 FORBIDDEN
+
+### Requirement: Audit events carry correlation and structured diffs
+Audit event rows SHALL include a `correlation_id` column and structured metadata supporting before/after diff rendering.
+
+#### Scenario: Schema
+- **WHEN** an audit event is inserted
+- **THEN** the row has columns for id, period id, actor id, action, entity type, entity id, summary, metadata, nullable `correlation_id`, and creation timestamp
+- **AND** `correlation_id` is filled when the event is part of a multi-event atomic operation and NULL otherwise
+
+#### Scenario: Reading saved includes diff
+- **WHEN** a `reading.saved` event is appended
+- **THEN** metadata includes `previous_value`, `new_value`, `unit`, and `reading_date`
+
+#### Scenario: Payment undone includes diff
+- **WHEN** a `payment.undone` event is appended
+- **THEN** metadata includes `before: { amount, paid_amount, status, payment_date, method }`, `after: { paid_amount, status }`, and optional `reason`
+
+#### Scenario: Bulk operations emit parent and children
+- **WHEN** a bulk operation completes, such as `payments.bulk_recorded` or `invoices.issued`
+- **THEN** one parent event is appended with summary metadata and one child event per affected entity, all sharing the same `correlation_id`
+
+#### Scenario: New action codes available
+- **WHEN** the corresponding domain action occurs
+- **THEN** the API and service layer emit one of `payment.undone`, `payment.edited`, or `invoice.printed` in addition to existing billing audit codes

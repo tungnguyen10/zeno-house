@@ -63,29 +63,61 @@ The billing workspace SHALL show draft charges before issue.
 - **THEN** the UI shows the blocker and disables issue for affected invoices
 
 ### Requirement: Invoice issue UI
-The billing workspace SHALL let users issue valid invoices.
+The billing workspace SHALL let users issue valid invoices from within the draft grid tab via bulk selection and a sticky action bar; the separate `Phát hành` tab is removed.
 
-#### Scenario: Issue enabled
-- **WHEN** all draft charges are valid
-- **THEN** the issue action is enabled with confirmation
+#### Scenario: Bulk issue from grid
+- **WHEN** the user selects one or more rows whose status is `ready` in the `Soạn kỳ` tab
+- **THEN** a sticky bottom bar appears showing selected count, total amount, and a primary `Phát hành (N)` action
 
-#### Scenario: Issue disabled
-- **WHEN** blockers exist
-- **THEN** the issue action is disabled
+#### Scenario: Issue confirmation
+- **WHEN** the user clicks `Phát hành (N)`
+- **THEN** a confirmation modal shows the count, total, and warning that issuing is irreversible per-invoice and only voidable individually
+
+#### Scenario: Blockers excluded from selection
+- **WHEN** a row has a blocker
+- **THEN** its row checkbox is disabled with tooltip describing the blocker; bulk select-all only picks rows that are selectable
+
+#### Scenario: Filter pill highlights ready rows
+- **WHEN** the user opens the `Soạn kỳ` tab
+- **THEN** a filter pill `Sẵn sàng phát hành` is available to scope the grid to rows status=`ready`
+
+#### Scenario: Issue tab removed
+- **WHEN** the user opens a billing period workspace
+- **THEN** the tab list contains exactly `Soạn kỳ` and `Thu tiền & công nợ`; no `Phát hành` tab is rendered
 
 ### Requirement: Payment and debt UI
-The billing workspace SHALL support monthly collection tracking.
+The billing workspace `Thu tiền & công nợ` tab SHALL support monthly collection tracking with single-action paid and single-action undo, without partial-payment UI or adjustment UI.
 
-#### Scenario: Record payment
-- **WHEN** the user records a payment for an invoice
-- **THEN** the invoice paid amount and remaining balance update in the workspace
+#### Scenario: Record payment one-click
+- **WHEN** the user clicks `Đã thu` on an issued invoice row
+- **THEN** a compact modal pre-fills amount as full balance, defaults date to today, asks for method and optional note, and submits to record payment
+
+#### Scenario: Bulk payment
+- **WHEN** the user selects multiple unpaid invoices and clicks `Đã thu hết (N)`
+- **THEN** a modal asks for shared date, method, and note; the system records full-balance payments for each selected invoice in one operation and reports per-invoice success/failure
+
+#### Scenario: Undo payment one-click
+- **WHEN** the user clicks `Hoàn tác` on a paid invoice row in an open period
+- **THEN** the payment is soft-deleted, the invoice returns to `issued` status with updated balance, and a toast confirms
+
+#### Scenario: Undo unavailable on closed period
+- **WHEN** the period is `closed`
+- **THEN** the `Hoàn tác` action is hidden or disabled with tooltip indicating the period is locked
+
+#### Scenario: No partial filter pill
+- **WHEN** the user opens the filter
+- **THEN** the available status filters are `Tất cả`, `Chưa thu`, `Đã thu`, and `Quá hạn`; `Một phần` is not presented
+
+#### Scenario: No adjustment action
+- **WHEN** the user opens the row action menu of a paid invoice
+- **THEN** the menu shows `Hoàn tác`, `In`, and `Sao mã`; no adjustment action is available
 
 #### Scenario: Debt list
 - **WHEN** invoices have remaining balances
 - **THEN** the workspace shows outstanding debt by room/tenant
 
 ### Requirement: Correction UI
-The billing workspace SHALL expose correction actions according to invoice and period state.
+The billing workspace SHALL expose correction actions according to invoice and period state with a simplified model: void+reissue for unpaid invoices in open periods, undo+void+reissue for paid invoices in open periods, and reopen for closed periods.
 
 #### Scenario: Pre-issue correction
 - **WHEN** invoices have not been issued
@@ -95,16 +127,88 @@ The billing workspace SHALL expose correction actions according to invoice and p
 - **WHEN** an issued invoice has no payments and the period is not closed
 - **THEN** the UI offers void/reissue with required reason
 
-#### Scenario: Adjustment visible
-- **WHEN** an invoice already has payments or belongs to a closed period
-- **THEN** the UI guides the user to create an adjustment in a current or future open period instead of editing the old invoice
+#### Scenario: Undo + void + reissue for paid in open period
+- **WHEN** a paid invoice in an open period needs correction
+- **THEN** the UI guides the user through undo payment, void invoice, fix source, reissue, and record payment
+- **AND** all operations share one `correlation_id` in the audit log
+
+#### Scenario: Reopen required for closed period
+- **WHEN** a closed period needs correction
+- **THEN** the UI explains the period is closed and prompts the user to reopen with required reason, subject to permission
 
 ### Requirement: Closed period UI
-The billing workspace SHALL represent closed periods as locked.
+The billing workspace SHALL represent closed periods as totally locked across both tabs.
 
-#### Scenario: Period closed
+#### Scenario: Closed period locks both tabs
 - **WHEN** the workspace period is closed
-- **THEN** normal editing actions are disabled and the UI explains the locked state
+- **THEN** `Soạn kỳ` tab readings, overrides, and bulk issue actions are disabled
+- **AND** `Thu tiền & công nợ` tab payment, undo, void, and other write-affecting actions are disabled while read-only views remain available
+
+#### Scenario: Closed banner explains state
+- **WHEN** the workspace shows a closed period
+- **THEN** a non-dismissible banner says "Kỳ đã chốt" with a CTA "Mở lại kỳ" gated by permission
+
+### Requirement: Auto-issue + pay row action
+The `Soạn kỳ` tab SHALL provide an inline `Đã thu` row-action that combines invoice issue and full payment in one atomic operation, gated by a feature flag while in rollout.
+
+#### Scenario: Action visible on ready rows
+- **WHEN** a draft row's status is `ready` and the period is not closed
+- **THEN** the row's action area includes a primary `Đã thu` button in addition to existing detail and override actions
+
+#### Scenario: Modal collects payment details
+- **WHEN** the user clicks `Đã thu` on a ready row
+- **THEN** a compact modal opens with room/tenant context, draft total read-only, date picker defaulting to today, method selector, and optional note; submit triggers the `issue_and_pay` operation
+
+#### Scenario: After success, row reflects paid
+- **WHEN** the operation succeeds
+- **THEN** the grid row updates in place so status changes to paid, draft inputs become read-only, and action area changes to payment follow-up actions
+
+#### Scenario: Feature-flag off
+- **WHEN** the deployment feature flag `BILLING_AUTO_ISSUE_ENABLED` is false
+- **THEN** the `Đã thu` row-action is hidden and users still issue via the bulk path
+
+### Requirement: Audit log drawer rework
+The audit drawer SHALL group events by date, support filtering, search, diff view, and export, replacing the flat-table presentation.
+
+#### Scenario: Group by date
+- **WHEN** the drawer opens
+- **THEN** events are grouped under headers for today, yesterday, last 7 days, then month groups for older events
+
+#### Scenario: Category icons and colors
+- **WHEN** events render in the list
+- **THEN** each event shows an icon and color tone matching its action category: create, edit, destructive, status, or other
+
+#### Scenario: Filter bar
+- **WHEN** the user opens filters
+- **THEN** filters available include actor multi-select, action category chips, date range, and a critical-only toggle
+
+#### Scenario: Free-text search
+- **WHEN** the user types in the search input
+- **THEN** events are filtered server-side with a 300ms debounce by matching tenant name, invoice code, or relevant metadata substrings
+
+#### Scenario: Reading diff view
+- **WHEN** an event is `reading.saved` with `previous_value` and `new_value` in metadata
+- **THEN** the event row renders an inline diff instead of raw JSON
+
+#### Scenario: Correlation grouping
+- **WHEN** events share a `correlation_id`
+- **THEN** clicking "Xem cùng correlation" on any of them filters the list to only events with that correlation
+
+#### Scenario: Quick action open entity
+- **WHEN** an event has an associated invoice, period, or reading entity
+- **THEN** the row includes a quick action that navigates to that entity
+
+#### Scenario: Pagination or virtualization
+- **WHEN** the period has more than 100 audit events
+- **THEN** the drawer paginates or virtualizes the list to remain responsive
+
+#### Scenario: Export CSV
+- **WHEN** the user clicks `Export CSV`
+- **THEN** the drawer downloads a CSV with timestamp, actor email, action, entity type, entity label, summary, correlation id, and compact JSON metadata
+
+#### Scenario: Drawer entry point promoted
+- **WHEN** the user is on the period workspace
+- **THEN** the `Nhật ký` action remains in the `Hành động` menu and a count badge appears on the menu trigger when events exist in the last 24 hours
 
 ### Requirement: Billing UI uses operational design system
 The billing entry page and workspace SHALL be built from the adopted operational design-system primitives and patterns. Billing pages SHALL NOT introduce raw form controls, raw tables, raw alert blocks, or billing-only duplicate primitives unless the exception is documented.
@@ -118,7 +222,7 @@ The billing entry page and workspace SHALL be built from the adopted operational
 - **THEN** the workspace uses `UiPageHeader` (with `backTo`/`backLabel` for back navigation), `UiTabs`, `UiSection`, `UiMetric`, `UiTable`, `UiAlert`, and primitive-backed actions for the end-to-end monthly flow
 
 #### Scenario: Dense editable billing rows
-- **WHEN** readings, charge review, adjustment, or payment rows require editable fields
+- **WHEN** readings, charge review, override, or payment rows require editable fields
 - **THEN** they use compact `UiInput`, `UiSelect`, or `UiTextarea` controls rather than raw inline input classes
 
 #### Scenario: Searchable billing selection
@@ -164,19 +268,15 @@ The sticky KPI strip on a billing period page SHALL surface no more than 5 tiles
 Billing workspace tab summaries SHALL NOT repeat metrics that are already on the sticky KPI strip. Tab-internal cues that remain SHALL be either drill-down metrics specific to that tab or inline text.
 
 #### Scenario: Payments tab has no duplicate summary grid
-- **WHEN** the user opens the Thanh toán & công nợ tab
+- **WHEN** the user opens the Thu tiền & công nợ tab
 - **THEN** the tab does not render its own four-tile summary grid; an inline pill next to the section heading shows the overdue count when it is greater than zero
 
-#### Scenario: Issue tab has no duplicate summary grid
-- **WHEN** the user opens the Phát hành tab
-- **THEN** the tab does not render a multi-tile KPI grid; the issuable count is conveyed by the table and tab badge, the blocker count is surfaced by the existing warning alert when greater than zero, and the skipped count appears as a single inline muted line above the table only when greater than zero
-
 #### Scenario: Grid tab totals are inline
-- **WHEN** the user opens the Chỉ số & hoá đơn nháp tab
+- **WHEN** the user opens the Soạn kỳ tab
 - **THEN** the tab does not repeat strip metrics (Cần đọc, Tổng nháp) and shows the remaining drill-down counts (Sẵn sàng, Có lỗi) as inline text below the section heading
 
 ### Requirement: Billing draft grid workspace tab
-The billing workspace SHALL provide a `Chỉ số & hoá đơn nháp` tab that combines monthly reading entry and draft invoice review into one room-centered grid.
+The billing workspace SHALL provide a `Soạn kỳ` tab that combines monthly reading entry and draft invoice review into one room-centered grid.
 
 #### Scenario: One room row
 - **WHEN** a room has an active billing contract in the selected period
@@ -256,7 +356,7 @@ The billing draft grid SHALL enforce read-only behavior once billing state makes
 
 #### Scenario: Issued invoice row read-only
 - **WHEN** an invoice has been issued for a row
-- **THEN** reading inputs and draft line edits are read-only and corrections must use void/reissue or adjustment flow
+- **THEN** reading inputs and draft line edits are read-only and corrections must use void/reissue or undo+void+reissue flow
 
 #### Scenario: Closed period read-only
 - **WHEN** the period is closed
@@ -288,17 +388,6 @@ The billing draft grid SHALL save changed readings without reloading the full gr
 #### Scenario: Save failure keeps local draft
 - **WHEN** saving readings fails
 - **THEN** the grid keeps the user’s local values visible, marks the affected row with an error state, and does not discard unsaved input by reloading the full grid
-
-### Requirement: Issue remains a separate confirmation tab
-The workspace SHALL keep invoice issuing as a separate `Phát hành` tab for this change, while using the same draft readiness source as the draft grid.
-
-#### Scenario: Issue tab remains
-- **WHEN** all billable rows are ready in `Chỉ số & hoá đơn nháp`
-- **THEN** the user still proceeds to `Phát hành` for final confirmation
-
-#### Scenario: Issue tab reflects draft-grid blockers
-- **WHEN** draft-grid rows have blockers
-- **THEN** the issue tab displays the same blocker state and prevents issuing
 
 ### Requirement: Billing workspace route prefers building slug
 Billing workspace links SHALL prefer building slug and period routes, for example `/billing/toa-a/2026-06`, while existing building UUID period links remain valid.
@@ -370,7 +459,7 @@ The billing draft grid SHALL expose bulk meter-reading entry as part of the exis
 
 #### Scenario: Bulk entry does not bypass issue safeguards
 - **WHEN** bulk readings are applied but blockers or warnings remain
-- **THEN** the issue tab continues to prevent issuing affected invoices according to the authoritative draft readiness rules
+- **THEN** the draft grid bulk issue path continues to prevent issuing affected invoices according to the authoritative draft readiness rules
 
 ### Requirement: Billing confirmation actions preserve state until mutation completes
 Billing confirmation UI SHALL keep modal, loading, selection, and error state accurate until server mutations complete.
@@ -399,7 +488,7 @@ The billing draft grid SHALL preserve existing user-facing reading entry, auto-s
 - **THEN** the same utility usage override payload is submitted and the grid refresh behavior remains unchanged
 
 #### Scenario: Discrepancy intent behavior preserved
-- **WHEN** a draft row has an issued-invoice discrepancy and the user chooses an adjustment or void/reissue action
+- **WHEN** a draft row has an issued-invoice discrepancy and the user chooses a correction or void/reissue action
 - **THEN** the workspace receives the same intent payloads as before the refactor
 
 #### Scenario: Mobile behavior preserved

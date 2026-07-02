@@ -98,7 +98,7 @@ const checkboxStub = defineComponent({
 })
 const discrepancyCalloutStub = defineComponent({
   name: 'BillingDraftDiscrepancyCallout',
-  emits: ['intent:adjustment', 'intent:void-reissue'],
+  emits: ['intent:void-reissue'],
   template: '<div data-test="discrepancy-callout" />',
 })
 
@@ -446,7 +446,7 @@ describe('BillingDraftGridStep', () => {
     vi.useRealTimers()
   })
 
-  it('forwards discrepancy intents from expanded rows', async () => {
+  it('forwards void/reissue discrepancy intents from expanded rows', async () => {
     const wrapper = mountGrid({
       response: response([
         buildRow({
@@ -467,20 +467,9 @@ describe('BillingDraftGridStep', () => {
 
     const callout = wrapper.findComponent({ name: 'BillingDraftDiscrepancyCallout' })
     expect(callout.exists()).toBe(true)
-    callout.vm.$emit('intent:adjustment', {
-      invoiceId: 'invoice-1',
-      amount: -300_000,
-      label: 'Điều chỉnh do override tiêu thụ',
-    })
     callout.vm.$emit('intent:void-reissue', { invoiceId: 'invoice-1' })
 
-    expect(wrapper.emitted('intent:adjustment')?.[0]).toEqual([
-      {
-        invoiceId: 'invoice-1',
-        amount: -300_000,
-        label: 'Điều chỉnh do override tiêu thụ',
-      },
-    ])
+    expect(wrapper.emitted('intent:adjustment')).toBeUndefined()
     expect(wrapper.emitted('intent:void-reissue')?.[0]).toEqual([{ invoiceId: 'invoice-1' }])
 
     wrapper.unmount()

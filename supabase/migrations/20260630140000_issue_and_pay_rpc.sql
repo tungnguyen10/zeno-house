@@ -210,7 +210,7 @@ BEGIN
       v_correlation_id,
       jsonb_build_object('status', v_status_before),
       jsonb_build_object('status', 'collecting'),
-      jsonb_build_object('trigger', 'auto_from_issue_and_pay')
+      jsonb_build_object('trigger', 'auto_from_payment')
     );
   END IF;
 

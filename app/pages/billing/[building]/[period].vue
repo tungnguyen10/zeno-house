@@ -117,11 +117,11 @@ const tabs = computed<UiTabItem[]>(() => {
   return [
     {
       key: 'draft-grid',
-      label: 'Chỉ số & hoá đơn nháp',
+      label: 'Soạn kỳ',
       count: grid.value?.totals.blockedDraftCount || undefined,
       reason: closed ? 'Kỳ đã chốt' : undefined,
     },
-    { key: 'payments', label: 'Thanh toán & công nợ' },
+    { key: 'payments', label: 'Thu tiền & công nợ' },
   ]
 })
 
@@ -439,7 +439,6 @@ function openPrintWindow(payload: { keys: string[] }) {
           :on-issue="issueWithToast"
           :on-auto-issue="issueAndPayWithToast"
           @refresh="async () => { await loadGrid(); await loadOverview() }"
-          @intent:adjustment="openPaymentsIntent({ type: 'adjustment', ...$event })"
           @intent:void-reissue="openPaymentsIntent({ type: 'void-reissue', ...$event })"
           @intent:print="openPrintWindow"
         />

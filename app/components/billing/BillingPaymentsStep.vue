@@ -1,17 +1,15 @@
 <script setup lang="ts">
 import type { UiTableColumn } from '~/components/ui/UiTable.vue'
 import type { BillingDraftResponse, BillingPeriod, Invoice, InvoicePayment, InvoiceWithCharges } from '~/types/billing'
-import type { AdjustmentChargeInput, BulkPaymentItemInput, VoidInvoiceInput } from '~/utils/validators/billing'
+import type { BulkPaymentItemInput, VoidInvoiceInput } from '~/utils/validators/billing'
 import { formatCurrency } from '~/utils/format/currency'
 import { invoicePath, invoiceRouteSegment } from '~/utils/routes/operational'
 import { isPeriodLocked } from '~/utils/billing/lock'
 
 export interface BillingPaymentsIntent {
   id: number
-  type: 'adjustment' | 'void-reissue' | 'focus'
+  type: 'void-reissue' | 'focus'
   invoiceId: string
-  amount?: number
-  label?: string
 }
 
 const props = defineProps<{
@@ -25,7 +23,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{ reload: [] }>()
 
-const { createAdjustmentPayload, load, recordPayment, recordBulkPayments, voidInvoice, addAdjustment, listPayments } = useBillingInvoiceActions()
+const { load, recordPayment, recordBulkPayments, voidInvoice, listPayments } = useBillingInvoiceActions()
 const toast = useToast()
 
 const periodIsClosed = computed(() => isPeriodLocked(props.period))
@@ -63,15 +61,6 @@ const filteredInvoices = computed(() => {
   if (filterStatus.value === 'all') return activeInvoices.value
   return activeInvoices.value.filter(i => deriveBucket(i) === filterStatus.value)
 })
-
-const issuedInvoiceOptions = computed(() =>
-  props.invoices
-    .filter(inv => inv.status !== 'void')
-    .map(inv => ({
-      id: inv.id,
-      label: `${inv.roomNumber ? `P.${inv.roomNumber}` : inv.id.slice(0, 8)} · ${inv.tenantName ?? 'Khách thuê'} · ${formatCurrency(inv.totalAmount)}`,
-    })),
-)
 
 function invoiceDisplay(row: Invoice): { title: string; subtitle: string } {
   const title = [row.tenantName, row.roomNumber ? `P.${row.roomNumber}` : null].filter(Boolean).join(' · ')
@@ -326,7 +315,7 @@ async function submitVoid() {
     await voidInvoice(invoiceRouteSegment(voidTarget.value), { reason: voidForm.reason })
     toast.success('Đã huỷ hoá đơn')
     if (showReissueHintAfterVoid.value) {
-      toast.info('Vào tab Chỉ số & hoá đơn nháp để phát hành lại')
+      toast.info('Vào tab Soạn kỳ để phát hành lại')
     }
     showVoidModal.value = false
     showReissueHintAfterVoid.value = false
@@ -337,66 +326,6 @@ async function submitVoid() {
     toast.error(voidError.value)
   } finally {
     voidSubmitting.value = false
-  }
-}
-
-// ---------- Adjustment ----------
-const showAdjustmentModal = ref(false)
-const adjustmentForm = reactive<{ label: string; amount: number; reason: string; reference_invoice_id: string | null }>(
-  { label: '', amount: 0, reason: '', reference_invoice_id: null },
-)
-const adjustmentSubmitting = ref(false)
-const adjustmentError = ref<string | null>(null)
-const adjustmentTarget = ref<Invoice | null>(null)
-
-const selectedReferenceInvoice = computed({
-  get() {
-    return issuedInvoiceOptions.value.find(option => option.id === adjustmentForm.reference_invoice_id) ?? null
-  },
-  set(option: { id: string; label: string } | null) {
-    adjustmentForm.reference_invoice_id = option?.id ?? null
-  },
-})
-
-function startAdjustment(inv: Invoice, prefill?: { amount?: number; label?: string; referenceInvoiceId?: string | null; reason?: string }) {
-  adjustmentTarget.value = inv
-  adjustmentForm.label = prefill?.label ?? ''
-  adjustmentForm.amount = prefill?.amount ?? 0
-  adjustmentForm.reason = prefill?.reason ?? ''
-  adjustmentForm.reference_invoice_id = prefill?.referenceInvoiceId ?? inv.supersedesInvoiceId
-  adjustmentError.value = null
-  showAdjustmentModal.value = true
-}
-
-async function submitAdjustment() {
-  if (!adjustmentTarget.value) return
-  if (!adjustmentForm.label.trim() || !adjustmentForm.reason.trim()) {
-    adjustmentError.value = 'Cần nhập đầy đủ tên khoản và lý do'
-    return
-  }
-  if (!Number.isFinite(adjustmentForm.amount) || adjustmentForm.amount === 0) {
-    adjustmentError.value = 'Số tiền điều chỉnh phải khác 0'
-    return
-  }
-  adjustmentSubmitting.value = true
-  adjustmentError.value = null
-  try {
-    const payload: Omit<AdjustmentChargeInput, 'target_invoice_id'> = createAdjustmentPayload({
-      label: adjustmentForm.label,
-      amount: adjustmentForm.amount,
-      reason: adjustmentForm.reason,
-      referenceInvoiceId: adjustmentForm.reference_invoice_id,
-    })
-    await addAdjustment(invoiceRouteSegment(adjustmentTarget.value), payload)
-    toast.success('Đã lưu điều chỉnh')
-    showAdjustmentModal.value = false
-    emit('reload')
-  } catch (err) {
-    const e = err as { data?: { error?: { message?: string } } }
-    adjustmentError.value = e.data?.error?.message ?? 'Lưu điều chỉnh thất bại'
-    toast.error(adjustmentError.value)
-  } finally {
-    adjustmentSubmitting.value = false
   }
 }
 
@@ -454,15 +383,6 @@ watch(
       focusInvoice(intent.invoiceId)
       return
     }
-    if (intent.type === 'adjustment') {
-      startAdjustment(invoice, {
-        amount: intent.amount,
-        label: intent.label,
-        reason: intent.label,
-        referenceInvoiceId: intent.invoiceId,
-      })
-      return
-    }
     startVoid(invoice, {
       reason: 'Void for reissue after reading adjustment',
       showReissueHint: true,
@@ -474,7 +394,7 @@ watch(
 
 <template>
   <div class="space-y-4">
-    <UiSection title="Thanh toán & Công nợ" description="Theo dõi hoá đơn, ghi nhận thanh toán, huỷ/phát hành lại, điều chỉnh.">
+    <UiSection title="Thu tiền & công nợ" description="Theo dõi hoá đơn, ghi nhận thanh toán, hoàn tác và huỷ/phát hành lại.">
       <template v-if="summary.overdueCount > 0" #actions>
         <span class="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2.5 py-0.5 text-xs font-medium text-amber-300">
           Quá hạn: {{ summary.overdueCount }}
@@ -508,7 +428,7 @@ watch(
         :columns="columns"
         :loading="loading"
         empty-title="Chưa có hoá đơn"
-        empty-description="Phát hành hoá đơn từ tab “Phát hành”."
+        empty-description="Phát hành hoá đơn từ tab Soạn kỳ."
       >
         <template #cell-select="{ row }">
           <UiCheckbox
@@ -559,7 +479,7 @@ watch(
               :disabled="periodIsClosed"
               @click.stop="startPayment(row)"
             >
-              + Thu
+              Đã thu
             </UiButton>
             <UiButton
               v-if="row.status === 'issued' && row.paidAmount === 0"
@@ -610,7 +530,7 @@ watch(
 
     <!-- Detail / payments history drawer -->
     <UiDrawer
-      :model-value="!!selectedInvoice && !showPaymentModal && !showVoidModal && !showAdjustmentModal"
+      :model-value="!!selectedInvoice && !showPaymentModal && !showVoidModal"
       title="Chi tiết hoá đơn"
       width="w-full sm:w-[480px]"
       @update:model-value="(open) => { if (!open) closeDetail() }"
@@ -712,38 +632,6 @@ watch(
       <template #footer>
         <UiButton variant="secondary" :disabled="voidSubmitting" @click="showVoidModal = false">Huỷ</UiButton>
         <UiButton variant="danger" :loading="voidSubmitting" @click="submitVoid">Huỷ hoá đơn</UiButton>
-      </template>
-    </UiModal>
-
-    <!-- Adjustment -->
-    <UiModal :open="showAdjustmentModal" title="Điều chỉnh hoá đơn" @close="showAdjustmentModal = false">
-      <div class="space-y-3">
-        <p class="text-sm text-muted">Thêm khoản điều chỉnh (cộng hoặc trừ) cho hoá đơn đã phát hành. Số dương = thêm phí; số âm = giảm phí.</p>
-        <UiSection title="Tên khoản">
-          <UiInput v-model="adjustmentForm.label" placeholder="VD: Bù chênh lệch điện tháng trước" class="w-full" />
-        </UiSection>
-        <UiSection title="Số tiền (VND)">
-          <UiInput v-model.number="adjustmentForm.amount" type="number" class="w-full" />
-        </UiSection>
-        <UiSection title="Lý do">
-          <UiInput v-model="adjustmentForm.reason" placeholder="Lý do điều chỉnh..." class="w-full" />
-        </UiSection>
-        <UiSection title="Hoá đơn tham chiếu">
-          <UiCombobox
-            v-model="selectedReferenceInvoice"
-            :options="issuedInvoiceOptions"
-            :option-key="option => option.id"
-            :option-label="option => option.label"
-            placeholder="Không chọn"
-            search-placeholder="Tìm hoá đơn..."
-            empty-message="Không có hoá đơn phù hợp"
-          />
-        </UiSection>
-        <UiAlert v-if="adjustmentError" severity="danger">{{ adjustmentError }}</UiAlert>
-      </div>
-      <template #footer>
-        <UiButton variant="secondary" :disabled="adjustmentSubmitting" @click="showAdjustmentModal = false">Huỷ</UiButton>
-        <UiButton :loading="adjustmentSubmitting" @click="submitAdjustment">Lưu</UiButton>
       </template>
     </UiModal>
 

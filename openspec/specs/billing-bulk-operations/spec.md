@@ -73,7 +73,7 @@ A `POST /api/billing/invoices/bulk-payments` endpoint SHALL record multiple paym
 - **THEN** the request fails with `403 FORBIDDEN`
 
 ### Requirement: Bulk payment recording UI
-The Thanh toán & công nợ tab SHALL allow selecting multiple invoices and recording payments in one modal interaction.
+The Thu tiền & công nợ tab SHALL allow selecting multiple invoices and recording payments in one modal interaction.
 
 #### Scenario: Selectable invoice rows
 - **WHEN** an invoice row has remaining balance greater than zero
@@ -247,4 +247,3 @@ Bulk payment recording SHALL rely on a persistence-layer transaction or equivale
 #### Scenario: Rollback failure is not user-visible as partial success
 - **WHEN** the bulk payment operation fails
 - **THEN** the user never sees a partial success state for that batch
-

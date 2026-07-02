@@ -108,21 +108,17 @@ The draft grid SHALL surface a discrepancy callout when a draft total differs ma
 - **WHEN** the delta is less than 1000 (rounding noise) or no issued invoice exists
 - **THEN** no discrepancy callout is rendered for that row
 
-#### Scenario: Callout offers Adjustment CTA
-- **WHEN** the callout is visible and the period is not closed
-- **THEN** a primary CTA labelled "Tạo điều chỉnh" opens the adjustment modal pre-filled with `reference_invoice_id` set to the issued invoice and `amount` set to the negative of the delta
-
 #### Scenario: Callout offers Void+Reissue CTA when no payments
 - **WHEN** the callout is visible, the period is not closed, and the issued invoice has zero successful payments
 - **THEN** a secondary CTA labelled "Hủy + Phát hành lại" opens the void modal for that invoice and on success surfaces a hint to reissue from the draft tab
 
-#### Scenario: Void+Reissue disabled when payments exist
+#### Scenario: Paid invoice correction guidance
 - **WHEN** the issued invoice has at least one successful payment
-- **THEN** the "Hủy + Phát hành lại" CTA is disabled with a tooltip explaining that paid invoices must be corrected via Adjustment
+- **THEN** the callout explains that the user must undo payment in the payments tab before voiding and reissuing
 
-#### Scenario: Both CTAs hidden when period closed
+#### Scenario: Correction CTA hidden when period closed
 - **WHEN** the period status is `closed`
-- **THEN** the callout still renders the discrepancy text but hides both CTAs and explains that the period is closed
+- **THEN** the callout still renders the discrepancy text but hides correction CTAs and explains that the period must be reopened first
 
 ### Requirement: Billing actor display enrichment
 Billing read DTOs SHALL resolve billing actor and payment recorder display values when user display data is available.
@@ -138,4 +134,3 @@ Billing read DTOs SHALL resolve billing actor and payment recorder display value
 #### Scenario: Missing actor falls back safely
 - **WHEN** an actor id cannot be resolved
 - **THEN** the API keeps the raw actor id and returns null display fields without throwing
-

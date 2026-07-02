@@ -60,7 +60,7 @@ The API SHALL support controlled invoice corrections via void+reissue. Direct ad
 The API SHALL provide a single endpoint that issues one draft invoice and records its full payment atomically.
 
 #### Scenario: Endpoint shape
-- **WHEN** an authorized user POSTs to `/api/billing/periods/:periodId/contracts/:contractId/issue-and-pay` with body `{ payment_date, payment_method, note? }`
+- **WHEN** an authorized user POSTs to `/api/billing/periods/:periodId/issue-and-pay` with body `{ contract_id, payment_date, payment_method, note? }`
 - **THEN** the API invokes the `issue_and_pay` PL/pgSQL function which: validates the draft is `ready`, creates the invoice with snapshot lines, creates `invoice_payments` row for the full balance, sets invoice status to `paid`, and emits `invoices.issued` + `invoice.payment_recorded` audit events sharing one `correlation_id` (UUID v7)
 
 #### Scenario: Atomic on failure

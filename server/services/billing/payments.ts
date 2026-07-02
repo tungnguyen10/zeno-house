@@ -1,4 +1,4 @@
-import type { H3Event } from 'h3'
+import { getHeader, type H3Event } from 'h3'
 import { serverSupabaseClient } from '#supabase/server'
 import type { AuthUser } from '~/types/auth'
 import type { Invoice, InvoicePayment } from '~/types/billing'
@@ -73,6 +73,18 @@ export const InvoicePaymentService = {
       throwValidationError('Số tiền vượt quá công nợ còn lại của hoá đơn', {
         balance: invoice.balanceAmount,
         amount: input.amount,
+      })
+    }
+    const strictFull = getHeader(event, 'x-billing-strict-full') === 'true'
+    if (strictFull && input.amount < invoice.balanceAmount) {
+      throw createError({
+        statusCode: 400,
+        data: {
+          error: {
+            code: 'PARTIAL_PAYMENT_DISABLED',
+            message: 'Luồng thu tiền mới yêu cầu thu đủ số còn lại của hoá đơn',
+          },
+        },
       })
     }
 

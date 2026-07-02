@@ -54,8 +54,8 @@ Tách 4 phase để ship dần và dễ revert. Mỗi phase ship được độc
   - [x] `npx tsc --noEmit` pass
   - [x] `npx eslint` pass trên toàn bộ file thay đổi ở Phase A (cảnh báo `UiInput.vue` là pre-existing, ngoài scope)
   - [x] Unit test cho `audit-summary.ts` code mới (printed/undone/edited/reopened/reading diff) + category mapping; full suite `429 passed`
-  - [ ] ⚠️ MANUAL trước runtime: apply 2 migration trong Supabase dashboard (`20260630120000_add_audit_correlation_id.sql`, `20260630130000_audit_correlation_rpcs.sql`) rồi `supabase gen types`
-  - [ ] Smoke audit list pagination: cần dev server + migration đã apply (manual, sau khi DB ready)
+  - Manual follow-up: apply 2 migration trong Supabase dashboard (`20260630120000_add_audit_correlation_id.sql`, `20260630130000_audit_correlation_rpcs.sql`) rồi `supabase gen types` trước runtime/staging
+  - Manual follow-up: smoke audit list pagination khi dev server + migration đã apply
 
 ## Phase B — Merge tabs (UI re-arrange)
 
@@ -100,9 +100,9 @@ Tách 4 phase để ship dần và dễ revert. Mỗi phase ship được độc
 - [x] B8. QA Phase B
   - [x] `npx tsc --noEmit` pass
   - [x] `npx eslint . --max-warnings 0` pass (changed files)
-  - [ ] Manual smoke: mở period draft → select rows ready → bulk Phát hành → verify status update + audit event
-  - [ ] Manual smoke: mở period closed → all edits disabled
-  - [ ] Visual regression: 2 tabs render đúng KPI strip không trùng
+  - Manual follow-up: mở period draft → select rows ready → bulk Phát hành → verify status update + audit event
+  - Manual follow-up: mở period closed → all edits disabled
+  - Manual follow-up: visual regression 2 tabs render đúng KPI strip không trùng
 
 ## Phase C — Auto-issue on payment (transactional, flagged)
 
@@ -147,7 +147,7 @@ Tách 4 phase để ship dần và dễ revert. Mỗi phase ship được độc
   - [x] Vitest integration `tests/server/billing/issue-and-pay.test.ts`: success, blocker, already-issued, closed-period, RPC error map, not-found
   - [x] Vitest integration `tests/server/billing/undo-payment.test.ts`: success (→issued), partial recompute, payment-not-on-invoice 404, closed-period block
   - [x] SQL assertion test for `issue_and_pay` migration added to `sql-rls.test.ts`
-  - [ ] Manual smoke staging: flow ready row → Đã thu → modal → submit → row PAID → Hoàn tác → row issued lại (requires migrations applied + flag on)
+  - Manual follow-up: smoke staging flow ready row → Đã thu → modal → submit → row PAID → Hoàn tác → row issued lại (requires migrations applied + flag on)
 
 ## Phase D — Audit UI rework (frontend only)
 
@@ -206,9 +206,9 @@ Tách 4 phase để ship dần và dễ revert. Mỗi phase ship được độc
   - [x] `npx tsc --noEmit` pass
   - [x] `npx eslint . --max-warnings 0` pass
   - [x] Vitest component test cho `BillingAuditEntry` diff render + correlation button
-  - [ ] Manual: open drawer trên period có 50+ events → group hiển thị đúng, filter category=destructive lọc đúng, search "0001" tìm đúng invoice
-  - [ ] Export CSV: file mở Excel không vỡ ký tự tiếng Việt (BOM utf-8)
-  - [ ] Performance: drawer mở trên period 500+ events < 500ms first paint
+  - Manual follow-up: open drawer trên period có 50+ events → group hiển thị đúng, filter category=destructive lọc đúng, search "0001" tìm đúng invoice
+  - Manual follow-up: export CSV file mở Excel không vỡ ký tự tiếng Việt (BOM utf-8)
+  - Manual follow-up: performance drawer mở trên period 500+ events < 500ms first paint
 
 ## Final cleanup (sau khi 4 phase ship + ổn định)
 

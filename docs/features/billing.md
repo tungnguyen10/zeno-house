@@ -95,8 +95,8 @@ Period list, workspace overview, draft calculation, and draft grid use the same 
 
 The workspace route `/billing/[building]/[period]` has **two tabs** (simplified from three in v0.2):
 
-1. **Chỉ số & hoá đơn nháp** (draft-grid): enter readings, review blockers, bulk-issue ready rows, auto-issue-and-collect individual rows (when flag enabled).
-2. **Thanh toán & công nợ** (payments): collect payments, bulk collect, void/reissue, undo individual payments.
+1. **Soạn kỳ** (draft-grid): enter readings, review blockers, bulk-issue ready rows, auto-issue-and-collect individual rows (when flag enabled).
+2. **Thu tiền & công nợ** (payments): collect payments, bulk collect, void/reissue, undo individual payments.
 
 Header overflow actions (`Hành động ▾`):
 
@@ -140,7 +140,7 @@ Payment updates invoice paid amount, balance, and status.
 
 ## Correction Flows
 
-There are two supported correction paths (adjustment flow removed in v0.3 simplification):
+There are two supported workspace correction paths. Adjustment APIs remain only for legacy/back-office compatibility and are not exposed in the billing workspace.
 
 ### Void + Reissue
 
@@ -153,16 +153,17 @@ Flow:
 3. Create replacement invoice.
 4. Link replacement to original invoice.
 
-### Adjustment
+### Paid Invoice Correction
 
-Use once collection has started or when replacing the invoice is not appropriate.
+Use when an invoice already has a payment and the period is not closed.
 
-Rules:
+Flow:
 
-- target invoice cannot be void
-- closed period rejects adjustment
-- negative adjustment cannot exceed paid amount
-- large negative adjustments require a reason
+1. Undo the payment.
+2. Void the invoice with reason.
+3. Correct readings or billing inputs.
+4. Reissue the invoice.
+5. Record the payment again.
 
 ### Period Unissue
 

@@ -44,7 +44,6 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'refresh'): void
-  (e: 'intent:adjustment', payload: { invoiceId: string; amount: number; label: string }): void
   (e: 'intent:void-reissue', payload: { invoiceId: string }): void
   (e: 'intent:print', payload: { keys: string[] }): void
 }>()
@@ -357,7 +356,7 @@ const columns: UiTableColumn<BillingDraftGridRow>[] = [
 <template>
   <div class="space-y-4">
     <UiSection
-      title="Chỉ số & hoá đơn nháp"
+      title="Soạn kỳ"
       description="Mỗi phòng một dòng. Nhập chỉ số mới, lưu để tính lại tiền điện/nước và tổng hoá đơn nháp."
     >
       <template #actions>
@@ -713,7 +712,6 @@ const columns: UiTableColumn<BillingDraftGridRow>[] = [
           :row="detailRow"
           :period="period"
           @close="closeDetail"
-          @intent:adjustment="$emit('intent:adjustment', $event)"
           @intent:void-reissue="$emit('intent:void-reissue', $event)"
         />
       </UiDrawer>
