@@ -1,0 +1,4 @@
+interface:
+  display_name: "Zeno House"
+  short_description: "Project context map for Zeno House"
+  default_prompt: "Use $zeno-house to get oriented before changing Zeno House."

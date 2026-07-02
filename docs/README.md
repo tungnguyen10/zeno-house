@@ -4,6 +4,7 @@ This directory contains source-of-truth engineering docs for the current Zeno Ho
 
 ## Start Here
 
+- Agent context map: [agent-context.md](agent-context.md)
 - Project status: [project-status.md](project-status.md)
 - Architecture rules: [architecture/rules.md](architecture/rules.md)
 - Local setup: [development/local-setup.md](development/local-setup.md)
@@ -28,3 +29,5 @@ This directory contains source-of-truth engineering docs for the current Zeno Ho
 ## OpenSpec
 
 OpenSpec specs live in `openspec/specs/**`. Archived implementation changes live in `openspec/changes/archive/**`. Use those files for requirement-level history; use this `docs/**` tree for source-level operating guidance.
+
+When an implementation changes behavior, update the accepted OpenSpec capability spec and the relevant developer doc in the same change. Archived changes are historical context, not an automatic source to replay into main specs.

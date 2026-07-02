@@ -8,7 +8,7 @@ Zeno House uses OpenSpec for structured product and architecture changes.
 - Archived changes: `openspec/changes/archive/**`
 - OpenSpec config: `openspec/config.yaml`
 
-There are currently no active changes in `openspec/changes`.
+Use `openspec list --json` for the current active set. As of 2026-07-02, the active change is `add-owner-scoped-access`.
 
 ## When To Use OpenSpec
 
@@ -47,6 +47,8 @@ When a change lands, update both:
 
 - OpenSpec specs for requirements.
 - `docs/**` for developer-facing operating guidance.
+
+Do not replay archived change deltas into main specs without checking later specs and later archives. Archived deltas can be intentionally superseded by a newer change.
 
 ## Verification
 

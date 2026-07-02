@@ -14,7 +14,7 @@ Nuxt 4 — source app nằm trong `app/`, server nằm trong `server/`, config �
 | `app/layouts/` | App shell và navigation frame |
 | `app/components/ui/` | UI primitives — không chứa domain logic |
 | `app/components/<domain>/` | Domain display blocks — nhận data qua props |
-| `app/components/app/` | Shell pieces: AppSidebar, AppHeader, AppBreadcrumb |
+| `app/components/app/` | Shell pieces: AppSidebar, AppHeader, AppUserMenu, AppStatCard |
 | `app/composables/<domain>/` | Client-side orchestration: list, detail, form, submit |
 | `app/stores/` | Global client state: session, sidebar, notifications |
 | `app/types/` | DTOs, input types, response types |
@@ -30,7 +30,7 @@ Nuxt 4 — source app nằm trong `app/`, server nằm trong `server/`, config �
 | `server/utils/` | Server-side helpers: auth, error mapping |
 | `server/middleware/` | Server middleware (logging, auth context) |
 | `docs/architecture/` | Architecture decisions, rules |
-| `docs/api-contracts/` | API shape documentation |
+| `docs/architecture/api.md` | API shape documentation |
 | `docs/ui-patterns/` | UI pattern documentation |
 
 ## ✓ Cách dùng đúng
@@ -99,7 +99,7 @@ app/stores/buildings.ts với fetchList() ← dùng composable + useFetch thay v
 server/validation/buildings.ts      ← đặt ở app/utils/validators/ để dùng chung
 ```
 
-## Nguyên tắc incremental (v0.1)
+## Nguyên tắc incremental
 
 - Chỉ tạo folder/file khi có feature thật cần dùng
 - Không tạo abstraction khi mới chỉ có 1 nơi dùng

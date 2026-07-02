@@ -1,8 +1,8 @@
 # Zeno House - Project Status
 
-Last reviewed from source: 2026-06-28.
+Last reviewed from source: 2026-07-02.
 
-This file summarizes what the current codebase already handles. It reflects the working tree as read on 2026-06-28, including active invoice browse work currently present in the repo.
+This file summarizes what the current codebase already handles. It reflects the working tree as read on 2026-07-02.
 
 Zeno House is now an authenticated internal operations app for rental buildings. The implemented surface covers the core landlord workflow from property setup to contract lifecycle, service configuration, meter readings, monthly billing, invoice collection, corrections, period close, and operational dashboard monitoring.
 
@@ -10,14 +10,14 @@ Zeno House is now an authenticated internal operations app for rental buildings.
 
 | Area | Current count / scope |
 | --- | --- |
-| Nuxt pages | 27 Vue page files under `app/pages/**` |
-| Vue components | 79 Vue component files under `app/components/**` |
-| Server API handlers | 71 route handlers under `server/api/**` |
-| Supabase migrations | 37 SQL migration files under `supabase/migrations` |
-| Tests | 57 `*.test.ts` / `*.spec.ts` files under `tests/**` |
-| OpenSpec specs | 50+ capability specs under `openspec/specs/**` |
-| Archived OpenSpec changes | 45 archived changes under `openspec/changes/archive/**` |
-| Active OpenSpec changes | `simplify-billing-period-workflow` and `contracts-overhaul` |
+| Nuxt pages | 30 Vue page files under `app/pages/**` |
+| Vue components | 86 Vue component files under `app/components/**` |
+| Server API handlers | 85 route handlers under `server/api/**` |
+| Supabase migrations | 47 SQL migration files under `supabase/migrations` |
+| Tests | 65 `*.test.ts` / `*.spec.ts` files under `tests/**` |
+| OpenSpec specs | 61 capability specs under `openspec/specs/**` |
+| Archived OpenSpec changes | 50 archived changes under `openspec/changes/archive/**` |
+| Active OpenSpec changes | `add-owner-scoped-access` |
 
 ## Current Stack
 
@@ -514,29 +514,28 @@ npm run typecheck
 npm run lint
 npm test
 npm run test:coverage
-openspec validate --strict
+openspec validate --specs
 ```
 
 ## OpenSpec Status
 
 Active changes:
 
-- `simplify-billing-period-workflow`, 0/38 tasks complete
-- `contracts-overhaul`, 7/50 tasks complete
+- `add-owner-scoped-access`, 0/52 tasks complete
 
 Most recently archived:
 
-- `2026-06-28-add-invoices-browse-page`
-- Status: archived after 43/43 tasks completed
-- Verified with `npm run typecheck`, `npm run lint`, full `npm run test`, and `openspec validate add-invoices-browse-page --strict`
-- QA notes:
-  - manager assigned-building scope is covered by service tests, including `assigned_building_ids`, legacy `building_ids`, no-assignment empty result, forbidden out-of-scope building filter, and admin no-scope behavior
-  - smoke coverage is automated for filter/search/page URL sync, drawer read-only behavior, deep-link helper output, mobile list cards, and mobile drawer payment cards
-  - no Playwright/e2e dependency or seeded 3-building x 6-month database fixture exists in the repo; manual browser smoke should be rerun against staging seed data before production release
-  - performance guard currently verifies service-layer processing of 600 invoice rows under 1s; DB-level `EXPLAIN` remains an environment check when staging data is available
+- `2026-07-02-simplify-billing-period-workflow`
+- `2026-06-30-entity-audit-log`
+- `2026-06-30-billing-audit-gaps`
+- `2026-06-30-access-control-manager-scope`
 
 Recent archived changes show completed work in these areas:
 
+- simplified billing period workflow
+- entity audit log
+- billing audit gap coverage
+- manager assignment/scope
 - cross-period invoice browse page
 - dashboard visualization and polish
 - dashboard contract and hardening

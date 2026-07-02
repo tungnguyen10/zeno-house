@@ -1,6 +1,6 @@
 # API Reference
 
-All business APIs live under `server/api/**`.
+All business APIs live under `server/api/**`. This document is an inventory of checked-in route handlers, not a requirements spec. For behavior details, read the relevant service and OpenSpec capability.
 
 ## API Shape
 
@@ -27,115 +27,110 @@ server/api/*
 
 ## Dashboard
 
-| Method | Path | Purpose |
-| --- | --- | --- |
-| GET | `/api/dashboard/summary` | Operational dashboard summary. |
+| Method | Path |
+| --- | --- |
+| GET | `/api/dashboard/summary` |
 
 ## Buildings
 
-| Method | Path | Purpose |
-| --- | --- | --- |
-| GET | `/api/buildings` | List buildings. |
-| POST | `/api/buildings` | Create building. |
-| GET | `/api/buildings/[id]` | Get building detail by id/identifier. |
-| PATCH | `/api/buildings/[id]` | Update building. |
-| DELETE | `/api/buildings/[id]` | Delete building. |
-| GET | `/api/buildings/[id]/rooms/[room]` | Get building-scoped room detail. |
+| Method | Path |
+| --- | --- |
+| GET | `/api/buildings` |
+| POST | `/api/buildings` |
+| GET | `/api/buildings/[id]` |
+| PATCH | `/api/buildings/[id]` |
+| DELETE | `/api/buildings/[id]` |
+| POST | `/api/buildings/bulk` |
+| GET | `/api/buildings/[id]/rooms/[room]` |
 
 ## Rooms
 
-| Method | Path | Purpose |
-| --- | --- | --- |
-| GET | `/api/rooms` | List rooms. |
-| POST | `/api/rooms` | Create room. |
-| GET | `/api/rooms/[id]` | Get room detail. |
-| PATCH | `/api/rooms/[id]` | Update room. |
-| DELETE | `/api/rooms/[id]` | Delete room. |
+| Method | Path |
+| --- | --- |
+| GET | `/api/rooms` |
+| POST | `/api/rooms` |
+| GET | `/api/rooms/[id]` |
+| PATCH | `/api/rooms/[id]` |
+| DELETE | `/api/rooms/[id]` |
+| POST | `/api/rooms/bulk` |
 
 ## Tenants
 
-| Method | Path | Purpose |
-| --- | --- | --- |
-| GET | `/api/tenants` | List tenants. |
-| POST | `/api/tenants` | Create tenant. |
-| GET | `/api/tenants/[id]` | Get tenant detail. |
-| PATCH | `/api/tenants/[id]` | Update tenant. |
-| DELETE | `/api/tenants/[id]` | Delete tenant. |
+| Method | Path |
+| --- | --- |
+| GET | `/api/tenants` |
+| POST | `/api/tenants` |
+| GET | `/api/tenants/[id]` |
+| PATCH | `/api/tenants/[id]` |
+| DELETE | `/api/tenants/[id]` |
+| POST | `/api/tenants/bulk` |
 
 ## Contracts
 
-| Method | Path | Purpose |
-| --- | --- | --- |
-| GET | `/api/contracts` | List contracts. |
-| POST | `/api/contracts` | Create contract. |
-| GET | `/api/contracts/[id]` | Get contract detail. |
-| PATCH | `/api/contracts/[id]` | Update contract. |
-| DELETE | `/api/contracts/[id]` | Delete contract. |
-| GET | `/api/contracts/[id]/occupants` | List contract occupants. |
-| POST | `/api/contracts/[id]/occupants` | Add occupant. |
-| PATCH | `/api/contracts/[id]/occupants/[occupantId]` | Update or move out occupant. |
-| DELETE | `/api/contracts/[id]/occupants/[occupantId]` | Delete occupant. |
-| GET | `/api/contracts/[id]/payments` | List contract payments. |
-| POST | `/api/contracts/[id]/payments` | Add contract payment. |
-| PATCH | `/api/contracts/[id]/payments/[paymentId]` | Update contract payment. |
-| DELETE | `/api/contracts/[id]/payments/[paymentId]` | Delete contract payment. |
-| GET | `/api/contracts/[id]/renewals` | List renewals. |
-| POST | `/api/contracts/[id]/renew` | Renew contract. |
+| Method | Path |
+| --- | --- |
+| GET | `/api/contracts` |
+| POST | `/api/contracts` |
+| GET | `/api/contracts/[id]` |
+| PATCH | `/api/contracts/[id]` |
+| DELETE | `/api/contracts/[id]` |
+| POST | `/api/contracts/bulk` |
+| GET | `/api/contracts/[id]/occupants` |
+| POST | `/api/contracts/[id]/occupants` |
+| GET | `/api/contracts/[id]/payments` |
+| POST | `/api/contracts/[id]/payments` |
+| GET | `/api/contracts/[id]/renewals` |
+| POST | `/api/contracts/[id]/renew` |
 
-## Services
+## Service Catalog And Services
 
-| Method | Path | Purpose |
-| --- | --- | --- |
-| GET | `/api/service-catalog` | List service catalog items. |
-| GET | `/api/building-services` | List building service settings. |
-| POST | `/api/building-services` | Upsert building service settings. |
-| PATCH | `/api/building-services/[id]` | Update building service setting. |
-| GET | `/api/contract-services` | List contract services. |
-| GET | `/api/contract-services/by-building` | List contract services by building context. |
-| PATCH | `/api/contract-services/[id]` | Update contract service. |
-| POST | `/api/contract-services/sync` | Sync missing building services into active contracts. |
+| Method | Path |
+| --- | --- |
+| GET | `/api/service-catalog` |
+| GET | `/api/building-services` |
+| POST | `/api/building-services` |
+| PATCH | `/api/building-services/[id]` |
+| DELETE | `/api/building-services/[id]` |
+| GET | `/api/contract-services` |
+| GET | `/api/contract-services/by-building` |
+| PATCH | `/api/contract-services/[id]` |
+| DELETE | `/api/contract-services/[id]` |
+| POST | `/api/contract-services/sync` |
 
 ## Meter Readings
 
-| Method | Path | Purpose |
-| --- | --- | --- |
-| GET | `/api/meter-readings` | List meter readings. |
-| POST | `/api/meter-readings` | Create meter reading. |
-| PATCH | `/api/meter-readings/[id]` | Update meter reading. |
-| GET | `/api/meter-readings/bulk` | Get bulk meter-reading data. |
-| POST | `/api/meter-readings/bulk` | Bulk upsert readings. |
+| Method | Path |
+| --- | --- |
+| GET | `/api/meter-readings` |
+| POST | `/api/meter-readings` |
+| PATCH | `/api/meter-readings/[id]` |
+| GET | `/api/meter-readings/bulk` |
+| POST | `/api/meter-readings/bulk` |
+| GET | `/api/meter-readings/latest` |
 
-## Billing Periods
+## Billing And Invoices
 
-| Method | Path | Purpose |
-| --- | --- | --- |
-| GET | `/api/billing/periods` | List billing periods with queue metrics. |
-| POST | `/api/billing/periods` | Open or get a building/month period. |
-| GET | `/api/billing/periods/[id]` | Get period detail. |
-| GET | `/api/billing/periods/[id]/overview` | Get workspace KPI overview and audit preview. |
-| GET | `/api/billing/periods/[id]/drafts` | Calculate draft invoices. |
-| GET | `/api/billing/periods/[id]/draft-grid` | Get room-centered draft grid. |
-| GET | `/api/billing/periods/[id]/utility-usages` | List utility usage overrides. |
-| POST | `/api/billing/periods/[id]/utility-usages` | Save utility usage override. |
-| POST | `/api/billing/periods/[id]/issue` | Issue eligible invoices. |
-| GET | `/api/billing/periods/[id]/invoices` | List invoices in period. |
-| GET | `/api/billing/periods/[id]/audit` | List audit events. |
-| GET | `/api/billing/periods/[id]/export` | Export period workbook. |
-| POST | `/api/billing/periods/[id]/close` | Close period. |
-| POST | `/api/billing/periods/[id]/unissue` | Unissue period. |
+| Method | Path |
+| --- | --- |
+| GET | `/api/billing/periods` |
+| POST | `/api/billing/periods` |
+| GET | `/api/billing/invoices/[id]` |
+| POST | `/api/billing/invoices/bulk-payments` |
+| GET | `/api/invoices` |
 
-## Billing Invoices
+Billing behavior is split across services under `server/services/billing/**`. Some period, invoice, payment, audit, issue, close, and correction operations are implemented as service/RPC paths rather than one route per action. Check source before adding or documenting a route.
 
-| Method | Path | Purpose |
-| --- | --- | --- |
-| GET | `/api/invoices` | List invoices across periods with filters and pagination. |
-| GET | `/api/billing/invoices/[id]` | Get invoice with charges and payments. |
-| GET | `/api/billing/invoices/[id]/payments` | List invoice payments. |
-| POST | `/api/billing/invoices/[id]/payments` | Record invoice payment. |
-| POST | `/api/billing/invoices/bulk-payments` | Record multiple payments in one operation. |
-| POST | `/api/billing/invoices/[id]/adjustment` | Add adjustment charge. |
-| POST | `/api/billing/invoices/[id]/void` | Void unpaid invoice with reason. |
-| POST | `/api/billing/invoices/[id]/reissue` | Reissue a voided invoice from fresh draft data. |
+## Manager Assignments And Audit
+
+| Method | Path |
+| --- | --- |
+| GET | `/api/assignments` |
+| POST | `/api/assignments` |
+| PATCH | `/api/assignments/[id]` |
+| DELETE | `/api/assignments/[id]` |
+| GET | `/api/assignments/by-building/[id]` |
+| GET | `/api/assignments/buildings-without-manager` |
+| GET | `/api/audit` |
 
 ## Error Rules
 
