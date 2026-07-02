@@ -4,6 +4,7 @@ const serverSupabaseClient = vi.hoisted(() => vi.fn())
 
 vi.mock('#supabase/server', () => ({
   serverSupabaseClient,
+  serverSupabaseServiceRole: serverSupabaseClient,
 }))
 
 interface TenantRow {

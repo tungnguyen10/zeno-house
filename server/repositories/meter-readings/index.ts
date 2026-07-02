@@ -1,4 +1,4 @@
-import { serverSupabaseClient } from '#supabase/server'
+import { db as serverSupabaseClient } from '../../utils/db'
 import type { H3Event } from 'h3'
 import type { MeterReading, RoomMeterStatus } from '~/types/meter-readings'
 import type { MeterReadingCreateInput, MeterReadingUpdateInput } from '~/utils/validators/meter-readings'

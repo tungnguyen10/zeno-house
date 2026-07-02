@@ -1,4 +1,5 @@
-import { serverSupabaseClient, serverSupabaseServiceRole } from '#supabase/server'
+import { serverSupabaseServiceRole } from '#supabase/server'
+import { db as serverSupabaseClient } from '../../utils/db'
 import type { H3Event } from 'h3'
 import type { Building, BuildingServiceSummary } from '~/types/buildings'
 import type { BuildingCreateInput, BuildingUpdateInput } from '~/utils/validators/buildings'

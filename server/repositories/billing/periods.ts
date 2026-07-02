@@ -1,4 +1,4 @@
-import { serverSupabaseClient } from '#supabase/server'
+import { db as serverSupabaseClient } from '../../utils/db'
 import type { H3Event } from 'h3'
 import type { BillingPeriod, BillingPeriodListFilters } from '~/types/billing'
 import type { BillingPeriodStatus } from '~/utils/constants/billing'

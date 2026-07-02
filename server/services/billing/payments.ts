@@ -1,5 +1,5 @@
 import { getHeader, type H3Event } from 'h3'
-import { serverSupabaseClient } from '#supabase/server'
+import { db as serverSupabaseClient } from '../../utils/db'
 import type { AuthUser } from '~/types/auth'
 import type { Invoice, InvoicePayment } from '~/types/billing'
 import { BILLING_AUDIT_ACTIONS } from '~/utils/constants/billing'

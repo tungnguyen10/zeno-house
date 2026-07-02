@@ -1,5 +1,5 @@
 import type { H3Event } from 'h3'
-import { serverSupabaseClient } from '#supabase/server'
+import { db as serverSupabaseClient } from '../../utils/db'
 import type { AuthUser } from '~/types/auth'
 import type {
   BillingDraftBlocker,
@@ -16,6 +16,7 @@ import {
 import { BillingPeriodRepository } from '../../repositories/billing/periods'
 import { InvoiceRepository } from '../../repositories/billing/invoices'
 import { BillingUtilityUsageRepository } from '../../repositories/billing/utility-usages'
+import { assertBuildingScope } from '../../utils/scope'
 import { billingPeriodBounds, loadBillableContractsInPeriod, type BillableContractPeriodRow } from './core'
 import { calculateProratedRent } from './rules'
 
@@ -124,6 +125,7 @@ export const BillingDraftService = {
 
     const period = await BillingPeriodRepository.findById(event, periodId)
     if (!period) throwNotFound('Không tìm thấy kỳ vận hành')
+    await assertBuildingScope(event, user, period.buildingId, 'read')
 
     const supabase = await serverSupabaseClient(event)
     const { first: firstDay, last: lastDay } = billingPeriodBounds(period.periodYear, period.periodMonth)

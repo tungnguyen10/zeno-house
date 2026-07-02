@@ -4,6 +4,7 @@ const serverSupabaseClient = vi.hoisted(() => vi.fn())
 
 vi.mock('#supabase/server', () => ({
   serverSupabaseClient,
+  serverSupabaseServiceRole: serverSupabaseClient,
 }))
 
 function buildBuildingRow(overrides: Record<string, unknown> = {}) {
@@ -99,7 +100,7 @@ describe('BuildingRepository', () => {
 
   it('does not regenerate slug when updating only the building name', async () => {
     const mock = createClientMock()
-    serverSupabaseClient.mockResolvedValue(mock.client)
+    serverSupabaseClient.mockReturnValue(mock.client)
     const { BuildingRepository } = await import('../../../server/repositories/buildings')
 
     const result = await BuildingRepository.update(
@@ -114,7 +115,7 @@ describe('BuildingRepository', () => {
 
   it('looks up persisted slugs by slug and UUIDs by id', async () => {
     const mock = createClientMock()
-    serverSupabaseClient.mockResolvedValue(mock.client)
+    serverSupabaseClient.mockReturnValue(mock.client)
     const { BuildingRepository } = await import('../../../server/repositories/buildings')
 
     await BuildingRepository.findByIdentifier({} as never, 'toa-a')

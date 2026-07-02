@@ -50,7 +50,7 @@ export const ContractOccupantService = {
   },
 
   async moveOut(event: H3Event, user: AuthUser, contractId: string, occupantId: string, input: ContractOccupantMoveOutInput): Promise<ContractOccupant> {
-    if (!can(user, 'contracts.delete')) throwForbidden('Chỉ admin mới được ghi nhận rời phòng')
+    if (!can(user, 'contracts.delete')) throwForbidden('Chỉ chủ nhà hoặc admin mới được ghi nhận rời phòng')
     const contract = await ContractRepository.findById(event, contractId)
     if (!contract) throwNotFound('Không tìm thấy hợp đồng')
     await assertBuildingScope(event, user, contract.buildingId, 'write')
@@ -60,7 +60,7 @@ export const ContractOccupantService = {
   },
 
   async remove(event: H3Event, user: AuthUser, contractId: string, occupantId: string): Promise<void> {
-    if (!can(user, 'contracts.delete')) throwForbidden('Chỉ admin mới được xoá người ở')
+    if (!can(user, 'contracts.delete')) throwForbidden('Chỉ chủ nhà hoặc admin mới được xoá người ở')
     const contract = await ContractRepository.findById(event, contractId)
     if (!contract) throwNotFound('Không tìm thấy hợp đồng')
     await assertBuildingScope(event, user, contract.buildingId, 'write')

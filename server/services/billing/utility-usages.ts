@@ -6,6 +6,7 @@ import type { UtilityUsageOverrideInput } from '~/utils/validators/billing'
 import { BillingPeriodRepository } from '../../repositories/billing/periods'
 import { BillingUtilityUsageRepository } from '../../repositories/billing/utility-usages'
 import { assertReason } from '../../utils/billing/reason'
+import { assertBuildingScope } from '../../utils/scope'
 import { BillingAuditService } from './audit'
 
 export const BillingUtilityUsageService = {
@@ -15,6 +16,9 @@ export const BillingUtilityUsageService = {
     billingPeriodId: string,
   ): Promise<BillingUtilityUsage[]> {
     if (!can(user, 'billing.read')) throwForbidden('Không có quyền xem điều chỉnh tiêu thụ')
+    const period = await BillingPeriodRepository.findById(event, billingPeriodId)
+    if (!period) throwNotFound('Không tìm thấy kỳ vận hành')
+    await assertBuildingScope(event, user, period.buildingId, 'read')
     return BillingUtilityUsageRepository.listByPeriod(event, billingPeriodId)
   },
 
@@ -37,6 +41,7 @@ export const BillingUtilityUsageService = {
 
     const period = await BillingPeriodRepository.findById(event, billingPeriodId)
     if (!period) throwNotFound('Không tìm thấy kỳ vận hành')
+    await assertBuildingScope(event, user, period.buildingId, 'write')
     if (period.status === 'closed') throwConflict('Kỳ đã chốt, không thể điều chỉnh')
 
     const before = await BillingUtilityUsageRepository.findByPeriodRoomMeter(

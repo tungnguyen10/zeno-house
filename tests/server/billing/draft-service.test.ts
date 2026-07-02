@@ -26,6 +26,7 @@ vi.mock('../../../server/repositories/billing/utility-usages', () => ({
 
 vi.mock('#supabase/server', () => ({
   serverSupabaseClient: vi.fn(async () => createSupabaseMock()),
+  serverSupabaseServiceRole: vi.fn(() => createSupabaseMock()),
 }))
 
 function createQuery(table: string) {
@@ -109,7 +110,7 @@ describe('BillingDraftService.calculateDraft', () => {
   it('calculates production draft rows with prorated rent, utilities, and discount', async () => {
     const { BillingDraftService } = await import('../../../server/services/billing/drafts')
 
-    const result = await BillingDraftService.calculateDraft({} as never, { id: 'user-1' } as never, 'period-1')
+    const result = await BillingDraftService.calculateDraft({} as never, { id: 'user-1', app_metadata: { role: 'admin' } } as never, 'period-1')
 
     expect(result.drafts).toHaveLength(1)
     const [draft] = result.drafts

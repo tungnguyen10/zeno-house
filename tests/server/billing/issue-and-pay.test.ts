@@ -15,6 +15,9 @@ vi.mock('#supabase/server', () => ({
   serverSupabaseClient: vi.fn(async () => ({
     rpc: rpcMock,
   })),
+  serverSupabaseServiceRole: vi.fn(() => ({
+    rpc: rpcMock,
+  })),
 }))
 
 vi.mock('../../../server/repositories/billing/periods', () => ({

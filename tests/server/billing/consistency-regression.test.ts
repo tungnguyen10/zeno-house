@@ -41,7 +41,7 @@ vi.mock('../../../server/services/billing/audit', () => ({
 
 vi.mock('#supabase/server', () => ({
   serverSupabaseClient: vi.fn(async () => createSupabaseMock()),
-  serverSupabaseServiceRole: vi.fn(),
+  serverSupabaseServiceRole: vi.fn(() => createSupabaseMock()),
 }))
 
 interface QueryState {

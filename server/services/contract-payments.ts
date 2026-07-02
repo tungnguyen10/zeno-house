@@ -24,7 +24,7 @@ export const ContractPaymentService = {
   },
 
   async update(event: H3Event, user: AuthUser, contractId: string, paymentId: string, input: ContractPaymentUpdateInput): Promise<ContractPayment> {
-    if (!can(user, 'contracts.delete')) throwForbidden('Chỉ admin mới được sửa thanh toán')
+    if (!can(user, 'contracts.delete')) throwForbidden('Chỉ chủ nhà hoặc admin mới được sửa thanh toán')
     const contract = await ContractRepository.findById(event, contractId)
     if (!contract) throwNotFound('Không tìm thấy hợp đồng')
     await assertBuildingScope(event, user, contract.buildingId, 'write')
@@ -34,7 +34,7 @@ export const ContractPaymentService = {
   },
 
   async remove(event: H3Event, user: AuthUser, contractId: string, paymentId: string): Promise<void> {
-    if (!can(user, 'contracts.delete')) throwForbidden('Chỉ admin mới được xoá thanh toán')
+    if (!can(user, 'contracts.delete')) throwForbidden('Chỉ chủ nhà hoặc admin mới được xoá thanh toán')
     const contract = await ContractRepository.findById(event, contractId)
     if (!contract) throwNotFound('Không tìm thấy hợp đồng')
     await assertBuildingScope(event, user, contract.buildingId, 'write')

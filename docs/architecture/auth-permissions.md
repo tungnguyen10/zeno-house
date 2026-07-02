@@ -17,8 +17,13 @@ Roles come from `user.app_metadata.role`.
 
 Supported roles:
 
-- `admin`
-- `manager`
+- `admin` - global, unscoped access to every building.
+- `owner` - full operational access, scoped to assigned buildings.
+- `manager` - operational read/write, scoped to assigned buildings, no destructive or admin actions.
+
+Scope is resolved from `user_building_assignments`. `admin` is unscoped
+(`getAssignedBuildingIds` returns `null`); `owner` and `manager` are limited to their
+assigned building ids.
 
 ## Route Guards
 
@@ -50,46 +55,79 @@ API handlers can also call:
 
 ## Capability Checks
 
-Capabilities live in `server/utils/permissions.ts`.
+Capabilities live in `server/utils/permissions.ts`. `can(user, capability)` is the single
+source of truth; prefer it over direct role checks in business code.
 
-Admin has full operational access:
+Admin has full operational access plus global user management:
 
-- buildings CRUD
-- rooms CRUD
-- tenants CRUD
-- contracts CRUD
+- every owner capability (see below)
+- `users.manage.global`
+- `users.create.owner`
+
+Owner has full operational access, but limited to assigned buildings:
+
+- buildings/rooms/tenants/contracts CRUD
 - meter readings read/write
 - building services read/write
 - contract services read/write
-- billing read/write/close/unissue
+- billing read/write/corrections/close/unissue
+- dashboard read
+- scoped user management (`users.manage.scoped`, `users.create.manager`)
 
-Manager has operational read/write access but no destructive period admin actions:
+Owner does not have global user management (`users.manage.global`, `users.create.owner`).
+
+Manager has operational read/write access but no destructive or admin actions:
 
 - read buildings, rooms, tenants, contracts
 - update rooms
 - read/write meter readings
 - read/write building and contract services
-- billing read/write
+- billing read/write/corrections
+- dashboard read
 
 Manager does not have:
 
-- entity create/update/delete across every domain
+- entity create/update/delete across domains
 - `billing.close`
 - `billing.unissue`
+- any user management
+
+## Data Access Model
+
+Authorization is authoritative at the service layer, not the database:
+
+- Services own every business rule: they call `can(user, capability)` and, for scoped
+  roles, `assertBuildingScope(event, user, buildingId, mode)` /
+  `getAssignedBuildingIds(event, user)` before reading or writing.
+- Repositories query/persist only. They use the Supabase service-role client via
+  `server/utils/db.ts` (`db(event)`), which bypasses RLS. Repositories never decide access.
+- RLS stays enabled as a deny-by-default safety net. It is not the primary access-control
+  mechanism and is not relied on for per-role scoping.
+
+This is safe because browser code never queries business tables directly; all business data
+flows through `server/api/**` -> service -> repository. The client only uses Supabase for
+auth. Because RLS is bypassed by the service-role client, every access decision MUST be made
+in a service before the repository runs.
 
 ## Billing Permissions
 
 | Capability | Role | Used for |
 | --- | --- | --- |
-| `billing.read` | admin, manager | Periods, overview, drafts, grid, invoices, payments, audit, export. |
-| `billing.write` | admin, manager | Readings, utility overrides, issue, payments, bulk payments, adjustment, void, reissue. |
-| `billing.close` | admin | Close a fully collected issued/collecting period. |
-| `billing.unissue` | admin | Reopen issuance by voiding unpaid invoices and retaining paid ones. |
+| `billing.read` | admin, owner, manager | Periods, overview, drafts, grid, invoices, payments, audit, export. |
+| `billing.write` | admin, owner, manager | Readings, utility overrides, issue, payments, bulk payments, adjustment, void, reissue. |
+| `billing.corrections` | admin, owner, manager | Corrective billing adjustments. |
+| `billing.close` | admin, owner | Close a fully collected issued/collecting period. |
+| `billing.unissue` | admin, owner | Reopen issuance by voiding unpaid invoices and retaining paid ones. |
+
+For scoped roles (owner, manager) every billing capability is additionally constrained to the
+period's building via `assertBuildingScope`.
 
 ## Security Rules
 
 - Never trust UI visibility for authorization.
-- Repeat capability checks in services.
+- Repeat capability checks in services; services are the authoritative gate.
+- Enforce building scope in services for owner/manager; repositories do not scope.
 - Keep authorization claims in `app_metadata`, not user-editable metadata.
 - Do not expose service-role or secret keys to client runtime config.
+- Never query business tables from browser code; go through `server/api/**`.
 - Prefer capability checks over direct role checks in business code.

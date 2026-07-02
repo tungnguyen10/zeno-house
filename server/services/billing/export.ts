@@ -1,6 +1,6 @@
 import type { H3Event } from 'h3'
 import ExcelJS from 'exceljs'
-import { serverSupabaseClient } from '#supabase/server'
+import { db } from '../../utils/db'
 import type { AuthUser } from '~/types/auth'
 import type {
   BillingPeriod,
@@ -122,8 +122,9 @@ export const BillingExportService = {
 
     const period = await BillingPeriodRepository.findById(event, periodId)
     if (!period) throwNotFound('Không tìm thấy kỳ vận hành')
+    await assertBuildingScope(event, user, period.buildingId, 'read')
 
-    const supabase = await serverSupabaseClient(event)
+    const supabase = db(event)
     const { data: buildingRow } = await supabase
       .from('buildings')
       .select('name')
