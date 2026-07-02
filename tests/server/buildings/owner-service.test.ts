@@ -166,4 +166,32 @@ describe('BuildingService owner scoped mutations', () => {
     await expect(BuildingService.remove(event(), user('owner'), 'b-2'))
       .rejects.toMatchObject({ statusCode: 403 })
   })
+
+  it('does not bulk archive buildings outside owner scope', async () => {
+    buildingRepo.findByIdentifier.mockResolvedValue(building({ id: 'b-2' }))
+    const { BuildingService } = await import('../../../server/services/buildings')
+
+    const result = await BuildingService.bulkAction(event(), user('owner'), {
+      action: 'archive',
+      ids: ['b-2'],
+    } as never)
+
+    expect(result.succeeded).toEqual([])
+    expect(result.failed).toEqual([{ id: 'b-2', reason: 'Không có quyền thao tác với tòa nhà này' }])
+    expect(buildingRepo.softArchive).not.toHaveBeenCalled()
+  })
+
+  it('does not bulk activate buildings outside owner scope', async () => {
+    buildingRepo.findByIdentifier.mockResolvedValue(building({ id: 'b-2' }))
+    const { BuildingService } = await import('../../../server/services/buildings')
+
+    const result = await BuildingService.bulkAction(event(), user('owner'), {
+      action: 'activate',
+      ids: ['b-2'],
+    } as never)
+
+    expect(result.succeeded).toEqual([])
+    expect(result.failed).toEqual([{ id: 'b-2', reason: 'Không có quyền thao tác với tòa nhà này' }])
+    expect(buildingRepo.update).not.toHaveBeenCalled()
+  })
 })

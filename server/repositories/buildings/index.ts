@@ -1,4 +1,4 @@
-import { serverSupabaseClient } from '#supabase/server'
+import { serverSupabaseClient, serverSupabaseServiceRole } from '#supabase/server'
 import type { H3Event } from 'h3'
 import type { Building, BuildingServiceSummary } from '~/types/buildings'
 import type { BuildingCreateInput, BuildingUpdateInput } from '~/utils/validators/buildings'
@@ -66,7 +66,7 @@ async function loadServiceSummaries(  event: H3Event,
   buildingIds: string[],
 ): Promise<Map<string, BuildingServiceSummary>> {
   if (buildingIds.length === 0) return new Map()
-  const client = await serverSupabaseClient(event)
+  const client = serverSupabaseServiceRole(event)
   const { data, error } = await client
     .from('building_services')
     .select('building_id, is_active, service_catalog(name)')
@@ -118,7 +118,8 @@ export const BuildingRepository = {
       return { items: [], total: 0 }
     }
 
-    const client = await serverSupabaseClient(event)
+    // Reads are filtered by service-layer scope before reaching repository.
+    const client = serverSupabaseServiceRole(event)
     const sort = opts.sort ?? 'created_at'
     const order = opts.order ?? 'desc'
     const ascending = order === 'asc'
@@ -184,7 +185,8 @@ export const BuildingRepository = {
   },
 
   async findById(event: H3Event, id: string): Promise<Building | null> {
-    const client = await serverSupabaseClient(event)
+    // Reads are filtered by service-layer scope before reaching repository.
+    const client = serverSupabaseServiceRole(event)
     const { data, error } = await client
       .from('buildings')
       .select('*, rooms(count)')
@@ -198,7 +200,8 @@ export const BuildingRepository = {
   },
 
   async findByIdentifier(event: H3Event, identifier: string): Promise<Building | null> {
-    const client = await serverSupabaseClient(event)
+    // Reads are filtered by service-layer scope before reaching repository.
+    const client = serverSupabaseServiceRole(event)
     const column = isUuid(identifier) ? 'id' : 'slug'
     const { data, error } = await client
       .from('buildings')
@@ -217,7 +220,9 @@ export const BuildingRepository = {
     input: BuildingCreateInput,
     provenance: { created_by?: string | null; owner_user_id?: string | null } = {},
   ): Promise<Building> {
-    const client = await serverSupabaseClient(event)
+    // Mutations run through service-role; authorization is enforced in service
+    // layer (capability + building scope checks) to avoid RLS drift issues.
+    const client = serverSupabaseServiceRole(event)
     const slug = await buildUniqueSlug(event, input.slug ?? input.name)
     const code = await buildUniqueCode(event, slug)
     const { data, error } = await client
@@ -252,7 +257,9 @@ export const BuildingRepository = {
   },
 
   async update(event: H3Event, id: string, input: BuildingUpdateInput): Promise<Building> {
-    const client = await serverSupabaseClient(event)
+    // Mutations run through service-role; authorization is enforced in service
+    // layer (capability + building scope checks) to avoid RLS drift issues.
+    const client = serverSupabaseServiceRole(event)
     const slug = input.slug
       ? await buildUniqueSlug(event, input.slug, id)
       : undefined
@@ -303,7 +310,9 @@ export const BuildingRepository = {
   },
 
   async remove(event: H3Event, id: string): Promise<void> {
-    const client = await serverSupabaseClient(event)
+    // Mutations run through service-role; authorization is enforced in service
+    // layer (capability + building scope checks) to avoid RLS drift issues.
+    const client = serverSupabaseServiceRole(event)
     const { error } = await client.from('buildings').delete().eq('id', id)
     if (error) throw createError({ statusCode: 500, message: error.message })
   },
@@ -330,7 +339,9 @@ export const BuildingRepository = {
   },
 
   async softArchive(event: H3Event, id: string): Promise<Building> {
-    const client = await serverSupabaseClient(event)
+    // Mutations run through service-role; authorization is enforced in service
+    // layer (capability + building scope checks) to avoid RLS drift issues.
+    const client = serverSupabaseServiceRole(event)
     const { data, error } = await client
       .from('buildings')
       .update({ status: 'inactive' })

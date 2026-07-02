@@ -58,7 +58,10 @@ async function listManagers(event: H3Event): Promise<AssignmentManager[]> {
 
 export const AssignmentRepository = {
   async findBuildingIdsByUser(event: H3Event, userId: string): Promise<string[]> {
-    const client = await serverSupabaseClient<Database>(event)
+    // Scope resolution is server-authoritative: service layer passes the
+    // authenticated actor id, so we can read via service-role without relying
+    // on table RLS policy state.
+    const client = serverSupabaseServiceRole<Database>(event)
     const { data, error } = await client
       .from('user_building_assignments')
       .select('building_id')
@@ -171,7 +174,9 @@ export const AssignmentRepository = {
     event: H3Event,
     input: AssignmentCreatePayload & { created_by?: string | null },
   ): Promise<UserBuildingAssignment> {
-    const client = await serverSupabaseClient<Database>(event)
+    // Mutations run through service-role; authorization is enforced in service
+    // layer (manage capability + scope + target-role checks).
+    const client = serverSupabaseServiceRole<Database>(event)
     const { data, error } = await client
       .from('user_building_assignments')
       .insert({
@@ -195,7 +200,9 @@ export const AssignmentRepository = {
     id: string,
     input: AssignmentUpdatePayload,
   ): Promise<UserBuildingAssignment> {
-    const client = await serverSupabaseClient<Database>(event)
+    // Mutations run through service-role; authorization is enforced in service
+    // layer (manage capability + scope + target-role checks).
+    const client = serverSupabaseServiceRole<Database>(event)
     const { data, error } = await client
       .from('user_building_assignments')
       .update({ can_delete_master_data: input.can_delete_master_data })
@@ -208,7 +215,9 @@ export const AssignmentRepository = {
   },
 
   async remove(event: H3Event, id: string): Promise<void> {
-    const client = await serverSupabaseClient<Database>(event)
+    // Mutations run through service-role; authorization is enforced in service
+    // layer (manage capability + scope + target-role checks).
+    const client = serverSupabaseServiceRole<Database>(event)
     const { error } = await client
       .from('user_building_assignments')
       .delete()

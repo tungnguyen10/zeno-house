@@ -191,9 +191,11 @@ export const BuildingService = {
         }
 
         if (input.action === 'archive') {
+          await assertBuildingScope(event, user, existing.id, 'write')
           await BuildingRepository.softArchive(event, existing.id)
         }
         else if (input.action === 'activate') {
+          await assertBuildingScope(event, user, existing.id, 'write')
           await BuildingRepository.update(event, existing.id, { status: 'active' })
         }
         succeeded.push(id)
