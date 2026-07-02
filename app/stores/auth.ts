@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ROLES } from '~/utils/constants/roles'
 import type { UserRole } from '~/utils/constants/roles'
+import { hasCapability } from '~/utils/constants/permissions'
 
 export const useAuthStore = defineStore('auth', () => {
   const user = useSupabaseUser()
@@ -27,6 +28,16 @@ export const useAuthStore = defineStore('auth', () => {
    */
   const canManage = computed(() => isAdmin.value || isOwner.value)
 
+  /**
+   * Capability-accurate UI gate. Mirrors the server capability map so controls
+   * are shown only when the current role is actually granted the capability
+   * (e.g. manager has `rooms.update` but not `rooms.create`/`rooms.delete`).
+   * Server remains authoritative — this only drives UI visibility.
+   */
+  function can(capability: string): boolean {
+    return hasCapability(role.value, capability)
+  }
+
   return {
     user,
     isAuthenticated,
@@ -37,5 +48,6 @@ export const useAuthStore = defineStore('auth', () => {
     canManageUsers,
     canCreateOwner,
     canManage,
+    can,
   }
 })

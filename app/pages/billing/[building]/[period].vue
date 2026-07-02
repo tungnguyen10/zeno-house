@@ -92,8 +92,8 @@ if (periodId.value) {
 }
 
 const auth = useAuthStore()
-const canClose = computed(() => auth.isAdmin)
-const canUnissue = computed(() => auth.isAdmin)
+const canClose = computed(() => auth.can('billing.close'))
+const canUnissue = computed(() => auth.can('billing.unissue'))
 const initialStatus = period.value?.status
 const tab = ref<string>(
   initialStatus === 'issued' || initialStatus === 'collecting' || initialStatus === 'closed'

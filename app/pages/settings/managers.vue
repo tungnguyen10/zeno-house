@@ -51,9 +51,9 @@ const roleOptions = computed(() => {
   return options
 })
 
-// Owner-created managers must have at least one building; owners can only assign
-// buildings in their own scope (the buildings list is already server-scoped).
-const requiresBuilding = computed(() => authStore.isOwner || form.role === ROLES.MANAGER)
+// Building assignment is optional. Owners can create managers without a building
+// (the creator is recorded server-side so the manager stays visible/scoped).
+// Owners can only assign buildings in their own scope (the list is server-scoped).
 
 function toggleFormBuilding(id: string) {
   const idx = form.building_ids.indexOf(id)
@@ -76,10 +76,6 @@ function authScopedDefaultRole(): CreatableRole {
 async function handleCreate() {
   if (!form.email || !form.password) {
     toast.error('Cần nhập email và mật khẩu.')
-    return
-  }
-  if (requiresBuilding.value && form.building_ids.length === 0) {
-    toast.error('Chọn ít nhất một tòa nhà.')
     return
   }
   createBusy.value = true
@@ -310,7 +306,7 @@ function managerInitials(row: ManagedUserWithAssignments): string {
 
       <div v-if="buildings.length > 0">
         <p class="mb-1.5 text-xs text-muted">
-          Tòa nhà{{ requiresBuilding ? ' (bắt buộc chọn ít nhất 1)' : '' }}
+          Tòa nhà (tùy chọn)
         </p>
         <div class="flex flex-wrap gap-2">
           <button

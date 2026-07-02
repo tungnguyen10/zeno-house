@@ -115,7 +115,7 @@ watchEffect(() => {
     <template v-else-if="tenant">
       <UiPageHeader :title="tenant.fullName" :description="tenant.phone">
         <template #actions>
-          <div v-if="authStore.isAdmin" class="flex gap-2 shrink-0">
+          <div v-if="authStore.can('tenants.update')" class="flex gap-2 shrink-0">
             <NuxtLink :to="`/tenants/${tenant.code}/edit`">
               <UiButton variant="secondary" size="sm">Chỉnh sửa</UiButton>
             </NuxtLink>
@@ -243,7 +243,7 @@ watchEffect(() => {
       <section id="contracts" class="mt-4 rounded-xl border border-dark-border bg-dark-surface p-6">
         <div class="flex items-center justify-between mb-4">
           <h3 class="text-sm font-semibold text-white">Hợp đồng</h3>
-          <NuxtLink v-if="authStore.isAdmin" to="/contracts/create" class="text-xs text-cyan hover:underline">
+          <NuxtLink v-if="authStore.can('contracts.create')" to="/contracts/create" class="text-xs text-cyan hover:underline">
             + Thêm
           </NuxtLink>
         </div>
@@ -271,7 +271,7 @@ watchEffect(() => {
       </section>
 
       <section
-        v-if="authStore.isAdmin"
+        v-if="authStore.can('tenants.delete')"
         id="danger-zone"
         class="mt-4 rounded-xl border border-error/30 bg-error/5 p-6"
       >

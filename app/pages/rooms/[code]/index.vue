@@ -180,7 +180,7 @@ if (error.value?.statusCode === 404) {
     <template v-else-if="room">
       <UiPageHeader :title="`Phòng ${room.roomNumber}`" :description="building?.name">
         <template #actions>
-          <div v-if="authStore.isAdmin" class="flex gap-2 shrink-0">
+          <div v-if="authStore.can('rooms.update')" class="flex gap-2 shrink-0">
             <NuxtLink :to="roomEditPath(room)">
               <UiButton variant="secondary" size="sm">Chỉnh sửa</UiButton>
             </NuxtLink>
@@ -268,7 +268,7 @@ if (error.value?.statusCode === 404) {
             <h3 class="text-sm font-semibold text-white">Hợp đồng hiện tại</h3>
             <p class="mt-0.5 text-xs text-muted">Trạng thái thuê và thao tác nhanh.</p>
           </div>
-          <div v-if="authStore.isAdmin" class="flex items-center gap-2">
+          <div v-if="authStore.can('contracts.create')" class="flex items-center gap-2">
             <UiButton
               v-if="!activeContract && room.status !== 'maintenance'"
               size="sm"
@@ -378,7 +378,7 @@ if (error.value?.statusCode === 404) {
       </section>
 
       <section
-        v-if="authStore.isAdmin"
+        v-if="authStore.can('rooms.delete')"
         id="danger-zone"
         class="mt-4 rounded-xl border border-error/30 bg-error/5 p-6"
       >

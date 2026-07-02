@@ -321,7 +321,7 @@ watchEffect(() => {
       <ContractDetailHero
         :contract="contract"
         :paid-amount="paidAmount"
-        :is-admin="authStore.isAdmin"
+        :can-manage="authStore.can('contracts.update')"
         @edit="navigateTo(`${contractPath(contract)}/edit`)"
         @renew="showRenewalForm = !showRenewalForm"
         @terminate="showTerminateModal = true"
@@ -436,7 +436,7 @@ watchEffect(() => {
               </span>
             </template>
             <UiButton
-              v-if="authStore.isAdmin && !showOccupantForm"
+              v-if="authStore.can('contracts.update') && !showOccupantForm"
               variant="secondary"
               size="sm"
               :disabled="isOccupantLimitReached"
@@ -502,7 +502,7 @@ watchEffect(() => {
                 </template>
               </p>
             </div>
-              <template v-if="authStore.isAdmin">
+              <template v-if="authStore.can('contracts.update')">
                 <UiButton
                   v-if="!occ.moveOutDate"
                   variant="ghost"
@@ -531,7 +531,7 @@ watchEffect(() => {
       <UiSection id="payments" title="Thanh toán hợp đồng" description="Ghi nhận đặt cọc, trả trước và các khoản phát sinh khi ký hợp đồng. Không dùng cho thanh toán hóa đơn hàng tháng." class="mt-6 scroll-mt-20">
         <template #actions>
           <UiButton
-            v-if="authStore.isAdmin && !showPaymentForm"
+            v-if="authStore.can('contracts.update') && !showPaymentForm"
             variant="secondary"
             size="sm"
             @click="showPaymentForm = true"
@@ -593,7 +593,7 @@ watchEffect(() => {
               </div>
               <div class="flex items-center gap-2 shrink-0 ml-4">
                 <p class="text-sm font-semibold text-cyan">{{ formatCurrency(payment.amount) }}</p>
-                <template v-if="authStore.isAdmin">
+                <template v-if="authStore.can('contracts.update')">
                   <UiButton
                     variant="ghost"
                     size="sm"

@@ -86,7 +86,7 @@ watch(contracts, () => {
   <div>
     <UiPageHeader title="Hợp đồng" :description="`${total} hợp đồng`">
       <template #actions>
-        <NuxtLink v-if="authStore.isAdmin" to="/contracts/create">
+        <NuxtLink v-if="authStore.can('contracts.create')" to="/contracts/create">
           <UiButton>Thêm hợp đồng</UiButton>
         </NuxtLink>
       </template>
@@ -135,7 +135,7 @@ watch(contracts, () => {
       title="Chưa có hợp đồng nào"
       description="Bắt đầu bằng cách tạo hợp đồng đầu tiên."
     >
-      <template v-if="authStore.isAdmin" #action>
+      <template v-if="authStore.can('contracts.create')" #action>
         <NuxtLink to="/contracts/create">
           <UiButton>Thêm hợp đồng đầu tiên</UiButton>
         </NuxtLink>
@@ -145,7 +145,7 @@ watch(contracts, () => {
     <!-- List -->
     <div v-else class="space-y-2">
       <div
-        v-if="authStore.isAdmin"
+        v-if="authStore.can('contracts.delete')"
         class="flex items-center gap-3 rounded-xl border border-transparent px-4 py-1"
       >
         <UiCheckbox
@@ -165,7 +165,7 @@ watch(contracts, () => {
         class="group flex items-center gap-3 rounded-xl border border-dark-border bg-dark-surface px-4 py-3 transition-colors hover:border-cyan/40"
       >
         <UiCheckbox
-          v-if="authStore.isAdmin"
+          v-if="authStore.can('contracts.delete')"
           class="shrink-0"
           :model-value="isSelected(contract.id)"
           :aria-label="`Chọn hợp đồng ${contract.contractCode}`"
@@ -190,7 +190,7 @@ watch(contracts, () => {
       </div>
 
       <ContractBulkActionsBar
-        v-if="authStore.isAdmin && selectedIds.length > 0"
+        v-if="authStore.can('contracts.delete') && selectedIds.length > 0"
         :selected-ids="selectedIds"
         :contracts="contracts"
         :run-action="runAction"

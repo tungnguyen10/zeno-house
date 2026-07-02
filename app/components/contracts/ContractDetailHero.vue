@@ -7,7 +7,7 @@ import { formatCurrency } from '~/utils/format/currency'
 const props = defineProps<{
   contract: ContractWithDetails
   paidAmount?: number
-  isAdmin?: boolean
+  canManage?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -73,7 +73,7 @@ onKeyStroke('Escape', () => {
         </div>
       </div>
 
-      <div class="relative shrink-0">
+      <div v-if="canManage" class="relative shrink-0">
         <UiButton
           ref="triggerRef"
           unstyled
@@ -131,7 +131,7 @@ onKeyStroke('Escape', () => {
             >
               Kết thúc sớm
             </UiButton>
-            <template v-if="isAdmin">
+            <template v-if="canManage">
               <div class="h-px bg-dark-border" aria-hidden="true" />
               <UiButton
                 unstyled

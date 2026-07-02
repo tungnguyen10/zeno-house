@@ -1,0 +1,88 @@
+import { ROLES } from '~/utils/constants/roles'
+import type { UserRole } from '~/utils/constants/roles'
+
+/**
+ * Capabilities granted to the owner role. Owner has full CRUD over domain
+ * content within its assigned scope (the server enforces the building scope).
+ */
+export const OWNER_CAPABILITIES = [
+  'buildings.read',
+  'buildings.create',
+  'buildings.update',
+  'buildings.delete',
+  'rooms.read',
+  'rooms.create',
+  'rooms.update',
+  'rooms.delete',
+  'tenants.read',
+  'tenants.create',
+  'tenants.update',
+  'tenants.delete',
+  'contracts.read',
+  'contracts.create',
+  'contracts.update',
+  'contracts.delete',
+  'meter-readings.read',
+  'meter-readings.write',
+  'building-services.read',
+  'building-services.write',
+  'contract-services.read',
+  'contract-services.write',
+  'billing.read',
+  'billing.write',
+  'billing.corrections',
+  'billing.close',
+  'billing.unissue',
+  'dashboard.read',
+  // Scoped user management: owner can manage managers inside owner scope.
+  'users.manage.scoped',
+  'users.create.manager',
+] as const
+
+/**
+ * Single source of truth for role capabilities, shared by the client (UI
+ * visibility) and the server (authorization). The server remains authoritative;
+ * the client uses this only to decide which controls to render.
+ */
+export const ROLE_CAPABILITIES: Record<UserRole, readonly string[]> = {
+  [ROLES.ADMIN]: [
+    ...OWNER_CAPABILITIES,
+    // Global user management: admin sees/manages everyone.
+    'users.manage.global',
+    'users.create.owner',
+    // Note: `users.create.admin` is intentionally granted to NO role.
+    // Admin accounts are bootstrapped outside the app.
+  ],
+  [ROLES.OWNER]: OWNER_CAPABILITIES,
+  [ROLES.MANAGER]: [
+    'buildings.read',
+    'rooms.read',
+    'rooms.update',
+    'tenants.read',
+    'contracts.read',
+    'meter-readings.read',
+    'meter-readings.write',
+    'building-services.read',
+    'building-services.write',
+    'contract-services.read',
+    'contract-services.write',
+    'billing.read',
+    'billing.write',
+    'billing.corrections',
+    'dashboard.read',
+  ],
+}
+
+export type Capability = (typeof OWNER_CAPABILITIES)[number]
+
+const CAPABILITY_SETS: Record<UserRole, Set<string>> = {
+  [ROLES.ADMIN]: new Set(ROLE_CAPABILITIES[ROLES.ADMIN]),
+  [ROLES.OWNER]: new Set(ROLE_CAPABILITIES[ROLES.OWNER]),
+  [ROLES.MANAGER]: new Set(ROLE_CAPABILITIES[ROLES.MANAGER]),
+}
+
+/** Returns true when the given role is granted the capability. */
+export function hasCapability(role: UserRole | null | undefined, capability: string): boolean {
+  if (!role) return false
+  return CAPABILITY_SETS[role]?.has(capability) ?? false
+}

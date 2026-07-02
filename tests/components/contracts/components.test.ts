@@ -191,7 +191,7 @@ describe('ContractBulkActionsBar', () => {
 describe('ContractDetailHero', () => {
   it('renders stat tiles and exposes lifecycle actions via the Quản trị menu', async () => {
     const wrapper = mount(ContractDetailHero, {
-      props: { contract: buildContract(), paidAmount: 1000000, isAdmin: true },
+      props: { contract: buildContract(), paidAmount: 1000000, canManage: true },
       global: { stubs },
     })
 
@@ -218,9 +218,9 @@ describe('ContractDetailHero', () => {
     expect(wrapper.emitted('renew')).toHaveLength(1)
   })
 
-  it('omits lifecycle items the contract status disallows and hides Xoá for non-admin', async () => {
+  it('omits lifecycle items the contract status disallows for a manager-capable user', async () => {
     const wrapper = mount(ContractDetailHero, {
-      props: { contract: buildContract({ status: 'terminated' }), isAdmin: false },
+      props: { contract: buildContract({ status: 'terminated' }), canManage: true },
       global: { stubs },
     })
 
@@ -229,7 +229,17 @@ describe('ContractDetailHero', () => {
     expect(menu.text()).toContain('Chỉnh sửa')
     expect(menu.text()).not.toContain('Gia hạn')
     expect(menu.text()).not.toContain('Kết thúc sớm')
-    expect(menu.text()).not.toContain('Xoá')
+    expect(menu.text()).toContain('Xoá')
+  })
+
+  it('hides the whole Quản trị menu when the user cannot manage', () => {
+    const wrapper = mount(ContractDetailHero, {
+      props: { contract: buildContract(), canManage: false },
+      global: { stubs },
+    })
+
+    expect(wrapper.find('[data-test="hero-actions-trigger"]').exists()).toBe(false)
+    expect(wrapper.find('[data-test="hero-actions-menu"]').exists()).toBe(false)
   })
 })
 

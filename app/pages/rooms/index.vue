@@ -276,14 +276,14 @@ async function onBulkDone(result: RoomBulkResult, action: RoomBulkAction) {
       <template #actions>
         <div class="flex items-center gap-2">
           <UiButton
-            v-if="authStore.isAdmin"
+            v-if="authStore.can('rooms.delete')"
             variant="secondary"
             size="sm"
             @click="toggleSelectionMode"
           >
             {{ selectionMode ? 'Thoát chọn' : 'Chọn nhiều' }}
           </UiButton>
-          <NuxtLink v-if="authStore.isAdmin" to="/rooms/create">
+          <NuxtLink v-if="authStore.can('rooms.create')" to="/rooms/create">
             <UiButton>Thêm phòng</UiButton>
           </NuxtLink>
         </div>
@@ -343,7 +343,7 @@ async function onBulkDone(result: RoomBulkResult, action: RoomBulkAction) {
       title="Chưa có phòng nào"
       description="Bắt đầu bằng cách thêm phòng đầu tiên."
     >
-      <template v-if="authStore.isAdmin" #action>
+      <template v-if="authStore.can('rooms.create')" #action>
         <NuxtLink to="/rooms/create">
           <UiButton>Thêm phòng đầu tiên</UiButton>
         </NuxtLink>
@@ -352,7 +352,7 @@ async function onBulkDone(result: RoomBulkResult, action: RoomBulkAction) {
 
     <template v-else>
       <div
-        v-if="selectionMode && authStore.isAdmin"
+        v-if="selectionMode && authStore.can('rooms.delete')"
         class="mb-3 flex items-center justify-between gap-3 rounded-lg border border-dark-border bg-dark-deep/40 px-3 py-2"
       >
         <UiCheckbox
@@ -390,7 +390,7 @@ async function onBulkDone(result: RoomBulkResult, action: RoomBulkAction) {
               v-for="room in group.rooms"
               :key="room.id"
               :room="room"
-              :selectable="selectionMode && authStore.isAdmin"
+              :selectable="selectionMode && authStore.can('rooms.delete')"
               :selected="bulk.selectedIds.value.includes(room.id)"
               @toggle-select="onToggleSelect"
               @edit="onEditRoom"
@@ -414,7 +414,7 @@ async function onBulkDone(result: RoomBulkResult, action: RoomBulkAction) {
     </template>
 
     <RoomBulkActionsBar
-      v-if="selectionMode && authStore.isAdmin && bulk.selectedIds.value.length > 0"
+      v-if="selectionMode && authStore.can('rooms.delete') && bulk.selectedIds.value.length > 0"
       :selected-ids="bulk.selectedIds.value"
       :rooms="rooms"
       :run-action="bulk.runAction"
