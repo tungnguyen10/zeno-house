@@ -4,26 +4,26 @@ applyTo: "app/stores/**"
 
 # Pinia Stores
 
-Pinia **chỉ** dùng cho state thật sự global — cần ở nhiều nơi không liên quan, persistent qua route transition. Server state và domain state thuộc về composable.
+Pinia **only** for truly global state — needed across unrelated parts of the app, persistent across route transitions. Server state and domain state belong in composables.
 
-## Phân loại state
+## State Classification
 
-| Loại | Ở đâu | Ví dụ |
-|------|-------|-------|
-| Server state | composable + useFetch | danh sách buildings, chi tiết room |
+| Type | Where | Example |
+|------|-------|--------|
+| Server state | composable + useFetch | buildings list, room detail |
 | Global client state | Pinia store | session, sidebar open/closed, toast queue |
-| Form state | component local hoặc composable | form.name, form.address, errors |
+| Form state | component local or composable | form.name, form.address, errors |
 | Derived state | computed | filteredBuildings, totalActiveRooms |
 
-## Stores trong v0.1
+## Stores in v0.1
 
-| Store | File | Giữ gì |
-|-------|------|--------|
+| Store | File | Holds |
+|-------|------|-------|
 | Auth | `stores/auth.ts` | user, role, isAuthenticated |
 | App UI | `stores/app.ts` | sidebarOpen, activeNav |
 | Notifications | `stores/notifications.ts` | toast queue, notification count |
 
-## ✓ Cách dùng đúng
+## ✓ Correct Usage
 
 **Auth store — session, user, role:**
 ```ts
@@ -96,7 +96,7 @@ export const useNotificationsStore = defineStore('notifications', () => {
 })
 ```
 
-**Dùng store trong component:**
+**Use store in a component:**
 ```vue
 <script setup lang="ts">
 const authStore = useAuthStore()
@@ -108,7 +108,7 @@ const { sidebarOpen } = storeToRefs(appStore)
 </script>
 ```
 
-## ✗ Cách không được dùng
+## ✗ Do Not
 
 ```ts
 // ✗ Đừng dùng Pinia cho server/domain state

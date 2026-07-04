@@ -1,100 +1,100 @@
 ---
-applyTo: "app/**/*.vue, app/**/*.ts"
+applyTo: "app/app.vue, app/layouts/**/*.vue, app/pages/**/*.vue, app/components/**/*.vue"
 ---
 
-# Images và Icons
+# Images and Icons
 
-Icons dùng nuxt-svgo (auto-import). Images static để trong `/public/`. Font Inter tự host.
+Icons use nuxt-svgo (auto-import). Static images go under `/public/`. Font Inter is self-hosted.
 
 ## Icons (nuxt-svgo)
 
-Đặt file `.svg` vào `app/assets/icons/`. Module tự động import với prefix `Icon`.
+Place `.svg` files in `app/assets/icons/`. The module auto-imports them with the `Icon` prefix.
 
-> **Ưu tiên**: Luôn tra bảng inventory bên dưới trước. Chỉ tạo SVG mới khi icon cần dùng **không có** trong danh sách.
+> **Priority**: Always check the inventory table below first. Only create a new SVG when the icon you need is **not** in the list.
 
-**Quy tắc đặt tên file SVG:** `kebab-case.svg` → `<IconPascalCase />`
+**SVG file naming rule:** `kebab-case.svg` → `<IconPascalCase />`
 
 ### Icon inventory (app/assets/icons/)
 
-| Component | File | Gợi ý dùng cho |
+| Component | File | Suggested use |
 |---|---|---|
-| `<IconAlertCircle />` | `alert-circle.svg` | Alert, thông báo lỗi |
-| `<IconArrowLeft />` | `arrow-left.svg` | Quay lại |
-| `<IconArrowRight />` | `arrow-right.svg` | Tiếp theo |
-| `<IconArrowUpRight />` | `arrow-up-right.svg` | Liên kết ngoài |
-| `<IconArrowUp />` | `arrow-up.svg` | Cuộn lên, xu hướng tăng |
+| `<IconAlertCircle />` | `alert-circle.svg` | Alert, error notification |
+| `<IconArrowLeft />` | `arrow-left.svg` | Go back |
+| `<IconArrowRight />` | `arrow-right.svg` | Next |
+| `<IconArrowUpRight />` | `arrow-up-right.svg` | External link |
+| `<IconArrowUp />` | `arrow-up.svg` | Scroll up, upward trend |
 | `<IconBrandDeco />` | `brand-deco.svg` | Brand decoration |
 | `<IconBrand />` | `brand.svg` | Logo variant |
-| `<IconBriefcase />` | `briefcase.svg` | Tòa nhà / khu trọ |
-| `<IconChart />` | `chart.svg` | Dashboard, thống kê |
-| `<IconCheckCircle />` | `check-circle.svg` | Thành công, đã xong |
-| `<IconCheckSmall />` | `check-small.svg` | Checkmark nhỏ |
-| `<IconChevronDown />` | `chevron-down.svg` | Dropdown, mở rộng |
-| `<IconChevronLeft />` | `chevron-left.svg` | Trước |
-| `<IconChevronRight />` | `chevron-right.svg` | Sau, breadcrumb |
-| `<IconClock />` | `clock.svg` | Thời gian, hết hạn |
+| `<IconBriefcase />` | `briefcase.svg` | Building / rental property |
+| `<IconChart />` | `chart.svg` | Dashboard, statistics |
+| `<IconCheckCircle />` | `check-circle.svg` | Success, completed |
+| `<IconCheckSmall />` | `check-small.svg` | Small checkmark |
+| `<IconChevronDown />` | `chevron-down.svg` | Dropdown, expand |
+| `<IconChevronLeft />` | `chevron-left.svg` | Previous |
+| `<IconChevronRight />` | `chevron-right.svg` | Next, breadcrumb |
+| `<IconClock />` | `clock.svg` | Time, expiry |
 | `<IconCloud />` | `cloud.svg` | Cloud |
 | `<IconCode />` | `code.svg` | Developer |
-| `<IconCpu />` | `cpu.svg` | Hệ thống, infra |
+| `<IconCpu />` | `cpu.svg` | System, infra |
 | `<IconDatabase />` | `database.svg` | Database |
-| `<IconDocumentText />` | `document-text.svg` | Hợp đồng, tài liệu có nội dung |
-| `<IconDocument />` | `document.svg` | File, tài liệu |
-| `<IconDownload />` | `download.svg` | Tải về, xuất file |
-| `<IconExclamationCircle />` | `exclamation-circle.svg` | Cảnh báo |
-| `<IconEyeOff />` | `eye-off.svg` | Ẩn mật khẩu |
-| `<IconEye />` | `eye.svg` | Hiện mật khẩu, xem |
+| `<IconDocumentText />` | `document-text.svg` | Contract, document with content |
+| `<IconDocument />` | `document.svg` | File, document |
+| `<IconDownload />` | `download.svg` | Download, export file |
+| `<IconExclamationCircle />` | `exclamation-circle.svg` | Warning |
+| `<IconEyeOff />` | `eye-off.svg` | Hide password |
+| `<IconEye />` | `eye.svg` | Show password, view |
 | `<IconFacebook />` | `facebook.svg` | Facebook |
-| `<IconGlobe />` | `globe.svg` | Website, quốc tế |
-| `<IconGuide />` | `guide.svg` | Hướng dẫn, help |
-| `<IconHeadphone />` | `headphone.svg` | Hỗ trợ, audio |
-| `<IconInfoCircle />` | `info-circle.svg` | Tooltip thông tin |
-| `<IconLayers />` | `layers.svg` | Phòng, tầng lớp |
-| `<IconLink />` | `link.svg` | Liên kết, URL |
+| `<IconGlobe />` | `globe.svg` | Website, international |
+| `<IconGuide />` | `guide.svg` | Guide, help |
+| `<IconHeadphone />` | `headphone.svg` | Support, audio |
+| `<IconInfoCircle />` | `info-circle.svg` | Info tooltip |
+| `<IconLayers />` | `layers.svg` | Room, floor layer |
+| `<IconLink />` | `link.svg` | Link, URL |
 | `<IconLinkedin />` | `linkedin.svg` | LinkedIn |
-| `<IconLock />` | `lock.svg` | Bảo mật, khóa |
-| `<IconLogo />` | `logo.svg` | Logo ứng dụng |
+| `<IconLock />` | `lock.svg` | Security, lock |
+| `<IconLogo />` | `logo.svg` | App logo |
 | `<IconMail />` | `mail.svg` | Email |
-| `<IconMapDir />` | `map-dir.svg` | Chỉ đường |
-| `<IconMapPin />` | `map-pin.svg` | Địa chỉ, vị trí |
+| `<IconMapDir />` | `map-dir.svg` | Directions |
+| `<IconMapPin />` | `map-pin.svg` | Address, location |
 | `<IconMenu />` | `menu.svg` | Hamburger menu |
-| `<IconMessageCircle />` | `message-circle.svg` | Chat, tin nhắn |
+| `<IconMessageCircle />` | `message-circle.svg` | Chat, message |
 | `<IconMoreVertical />` | `more-vertical.svg` | Overflow / kebab action menu |
 | `<IconNav />` | `nav.svg` | Navigation |
-| `<IconPencilSquare />` | `pencil-square.svg` | Chỉnh sửa |
-| `<IconPhone />` | `phone.svg` | Điện thoại |
-| `<IconPhoto />` | `photo.svg` | Ảnh, gallery |
-| `<IconPlay />` | `play.svg` | Phát, video |
-| `<IconPlus />` | `plus.svg` | Thêm mới, tạo |
-| `<IconRefresh />` | `refresh.svg` | Làm mới, reload |
-| `<IconSearch />` | `search.svg` | Tìm kiếm |
-| `<IconSend />` | `send.svg` | Gửi, submit |
+| `<IconPencilSquare />` | `pencil-square.svg` | Edit |
+| `<IconPhone />` | `phone.svg` | Phone |
+| `<IconPhoto />` | `photo.svg` | Image, gallery |
+| `<IconPlay />` | `play.svg` | Play, video |
+| `<IconPlus />` | `plus.svg` | Add, create |
+| `<IconRefresh />` | `refresh.svg` | Refresh, reload |
+| `<IconSearch />` | `search.svg` | Search |
+| `<IconSend />` | `send.svg` | Send, submit |
 | `<IconServer />` | `server.svg` | Server, hosting |
-| `<IconSettings />` | `settings.svg` | Cài đặt |
-| `<IconShield />` | `shield.svg` | Bảo mật, quyền hạn |
+| `<IconSettings />` | `settings.svg` | Settings |
+| `<IconShield />` | `shield.svg` | Security, permissions |
 | `<IconSpinner />` | `spinner.svg` | Loading |
-| `<IconStar />` | `star.svg` | Đánh giá, yêu thích |
-| `<IconTag />` | `tag.svg` | Nhãn, tag |
-| `<IconTrash />` | `trash.svg` | Xóa |
+| `<IconStar />` | `star.svg` | Rating, favourite |
+| `<IconTag />` | `tag.svg` | Label, tag |
+| `<IconTrash />` | `trash.svg` | Delete |
 | `<IconTwitterX />` | `twitter-x.svg` | Twitter / X |
-| `<IconUsers />` | `users.svg` | Khách thuê, nhóm người |
-| `<IconXCircle />` | `x-circle.svg` | Xóa, lỗi |
-| `<IconX />` | `x.svg` | Đóng, dismiss |
+| `<IconUsers />` | `users.svg` | Tenants, group of people |
+| `<IconXCircle />` | `x-circle.svg` | Remove, error |
+| `<IconX />` | `x.svg` | Close, dismiss |
 | `<IconYoutube />` | `youtube.svg` | YouTube |
 | `<IconZalo />` | `zalo.svg` | Zalo |
 
-**Domain mapping gợi ý:**
+**Suggested domain mapping:**
 - Dashboard → `<IconChart />`
-- Tòa nhà (Buildings) → `<IconBriefcase />`
-- Phòng (Rooms) → `<IconLayers />`
-- Khách thuê (Tenants) → `<IconUsers />`
-- Hợp đồng (Contracts) → `<IconDocumentText />`
-- Cài đặt → `<IconSettings />`
+- Buildings → `<IconBriefcase />`
+- Rooms → `<IconLayers />`
+- Tenants → `<IconUsers />`
+- Contracts → `<IconDocumentText />`
+- Settings → `<IconSettings />`
 
-### Thêm icon mới (chỉ khi không có trong danh sách)
+### Adding a new icon (only when not in the list)
 
-1. Tra bảng trên — nếu có icon gần đúng, **dùng luôn**
-2. Nếu thực sự không có: đặt file `kebab-case.svg` vào `app/assets/icons/`
-3. SVG phải dùng `currentColor` để Tailwind text color hoạt động:
+1. Check the table above — if a close enough icon exists, **use it**
+2. If truly missing: place a `kebab-case.svg` file in `app/assets/icons/`
+3. SVG must use `currentColor` so Tailwind text color works:
 
 ```svg
 <!-- ✅ SVG chuẩn -->
@@ -106,7 +106,7 @@ Icons dùng nuxt-svgo (auto-import). Images static để trong `/public/`. Font 
 <svg><path fill="#374151" d="..." /></svg>
 ```
 
-## ✓ Cách dùng đúng
+## ✓ Correct Usage
 
 **Icon trong template:**
 ```vue
@@ -165,7 +165,7 @@ const props = defineProps<{
 <p class="font-sans text-sm text-body">Nội dung</p>
 ```
 
-## ✗ Cách không được dùng
+## ✗ Do Not
 
 ```vue
 <!-- ✗ Đừng dùng <img> cho icon — dùng nuxt-svgo component -->
@@ -189,7 +189,7 @@ import BuildingIcon from '~/assets/icons/building.svg'  // không cần
 <IconBuilding width="20" height="20" />  <!-- dùng class="w-5 h-5" -->
 ```
 
-## Config nuxt-svgo (đã có trong nuxt.config.ts)
+## nuxt-svgo Config (already in nuxt.config.ts)
 
 ```ts
 // nuxt.config.ts — đã configured, không sửa nếu không cần

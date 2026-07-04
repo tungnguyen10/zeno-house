@@ -1,14 +1,14 @@
 ---
-applyTo: "app/**/*.vue, app/**/*.scss"
+applyTo: "app/app.vue, app/layouts/**/*.vue, app/pages/**/*.vue, app/components/**/*.vue, app/assets/scss/**/*.scss"
 ---
 
 # Styling
 
-Dùng Tailwind utility classes. Dùng `clsx` cho conditional/dynamic class. Không inline style.
+Use Tailwind utility classes. Use `clsx` for conditional/dynamic classes. Do not use inline styles.
 
-## ✓ Cách dùng đúng
+## ✓ Correct Usage
 
-**Static classes — viết thẳng trong template:**
+**Static classes — write directly in template:**
 ```vue
 <div class="flex items-center gap-3 px-4 py-2 rounded-lg bg-white border border-gray-200 shadow-sm">
   <IconBuilding class="w-5 h-5 text-gray-400 shrink-0" aria-hidden="true" />
@@ -16,7 +16,7 @@ Dùng Tailwind utility classes. Dùng `clsx` cho conditional/dynamic class. Khô
 </div>
 ```
 
-**Conditional classes — dùng `clsx`:**
+**Conditional classes — use `clsx`:**
 ```vue
 <script setup lang="ts">
 import clsx from 'clsx'
@@ -62,7 +62,7 @@ const buttonClass = computed(() =>
 </template>
 ```
 
-**Status badge — nhiều variant:**
+**Status badge — multiple variants:**
 ```vue
 <script setup lang="ts">
 import clsx from 'clsx'
@@ -92,7 +92,7 @@ const label: Record<BuildingStatus, string> = {
 </template>
 ```
 
-**Multiple class groups tách biệt cho dễ đọc:**
+**Multiple class groups separated for readability:**
 ```vue
 <div
   :class="clsx(
@@ -104,7 +104,7 @@ const label: Record<BuildingStatus, string> = {
 >
 ```
 
-## ✗ Cách không được dùng
+## ✗ Do Not
 
 ```vue
 <!-- ✗ Đừng dùng inline style -->
@@ -134,9 +134,9 @@ const label: Record<BuildingStatus, string> = {
 <div :style="{ color: '#6b7280' }">  <!-- → class="text-gray-500" -->
 ```
 
-## Exceptions — custom CSS trong main.scss
+## Exceptions — custom CSS in main.scss
 
-Chỉ viết custom CSS ở `app/assets/scss/main.scss` cho những thứ Tailwind không express được:
+Only write custom CSS in `app/assets/scss/main.scss` for things Tailwind cannot express:
 
 ```scss
 // app/assets/scss/main.scss
@@ -156,8 +156,8 @@ Chỉ viết custom CSS ở `app/assets/scss/main.scss` cho những thứ Tailwi
 
 ## Responsive
 
-- Mobile-first theo Tailwind convention: `sm:`, `md:`, `lg:`, `xl:`
-- Admin shell: desktop-first về mặt layout, nhưng viết mobile-first về mặt breakpoint
+- Mobile-first per Tailwind convention: `sm:`, `md:`, `lg:`, `xl:`
+- Admin shell: desktop-first in terms of layout, but written mobile-first in terms of breakpoints
 
 ```vue
 <!-- Sidebar collapse trên mobile -->

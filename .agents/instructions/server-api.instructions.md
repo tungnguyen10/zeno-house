@@ -4,10 +4,9 @@ applyTo: "server/**"
 
 # Server API
 
-Pattern bất biến: `server/api` → `server/services` → `server/repositories` → Supabase.
+Required layering: `server/api` → `server/services` → `server/repositories` → Supabase.
 
 ## Data Flow
-
 ```
 page / composable
   └─▶ $fetch('/api/buildings', { method: 'POST', body })
@@ -18,7 +17,7 @@ page / composable
 
 ## Response Envelope
 
-Mọi endpoint phải trả một trong hai shape sau:
+Every endpoint must return one of these two shapes:
 
 ```ts
 // app/types/api.ts
@@ -28,15 +27,15 @@ type ApiError      = { error: { code: string; message: string; details?: unknown
 
 ## Error Codes
 
-| Code | HTTP | Khi nào dùng |
+| Code | HTTP | When to use |
 |------|------|-------------|
-| `UNAUTHENTICATED` | 401 | Chưa đăng nhập hoặc session hết hạn |
-| `FORBIDDEN` | 403 | Đã đăng nhập nhưng không có quyền |
-| `NOT_FOUND` | 404 | Resource không tồn tại |
-| `VALIDATION_ERROR` | 422 | Input không qua Zod schema |
-| `CONFLICT` | 409 | Xung đột trạng thái (duplicate, etc.) |
+| `UNAUTHENTICATED` | 401 | Not logged in or session expired |
+| `FORBIDDEN` | 403 | Logged in but insufficient permission |
+| `NOT_FOUND` | 404 | Resource does not exist |
+| `VALIDATION_ERROR` | 422 | Input failed Zod schema |
+| `CONFLICT` | 409 | State conflict (duplicate, etc.) |
 
-## ✓ Cách dùng đúng
+## ✓ Correct Usage
 
 **API handler — validate → auth → service → envelope:**
 ```ts
@@ -73,7 +72,7 @@ export default defineEventHandler(async (event) => {
 })
 ```
 
-**API handler — GET list với pagination:**
+**API handler — GET list with pagination:**
 ```ts
 // server/api/buildings/index.get.ts
 export default defineEventHandler(async (event) => {
@@ -92,7 +91,7 @@ export default defineEventHandler(async (event) => {
 })
 ```
 
-**Service layer — business logic + permission:**
+**Service layer — business logic and permissions:**
 ```ts
 // server/services/buildings.ts
 import type { H3Event } from 'h3'
@@ -124,7 +123,7 @@ export const BuildingService = {
 }
 ```
 
-**Repository layer — chỉ query, không logic:**
+**Repository layer — query only, no logic:**
 ```ts
 // server/repositories/buildings.ts
 import { serverSupabaseClient } from '#supabase/server'
@@ -180,7 +179,7 @@ export async function requireAuth(event: H3Event) {
 }
 ```
 
-## ✗ Cách không được dùng
+## ✗ Do Not
 
 ```ts
 // ✗ Đừng bỏ qua Zod validation trong API handler
@@ -214,7 +213,7 @@ const { data } = await client.from('buildings').select('*')
 // → const { data, error } = ... ; if (error) throw createError(...)
 ```
 
-## File naming convention
+## File Naming Convention
 
 ```
 server/api/
@@ -227,11 +226,11 @@ server/api/
 └── me.get.ts             → GET /api/me
 ```
 
-## Slug vs UUID resolution
+## Slug vs UUID Resolution
 
-Các entity có slug `code` — `buildings`, `rooms`, `tenants`, `contracts` (contract_code), `billing_invoices` (invoice_code) — frontend luôn truyền slug qua URL (`[code]`, `[id]` của buildings) và query filter (`building_id`, `room_id`, `tenant_id`, `contract_id`). Postgres sẽ throw `invalid input syntax for type uuid` nếu slug bị đẩy thẳng vào `.eq('<uuid_column>', value)`.
+For entities that support code/slug in routes or query filters, the service layer must resolve identifiers via `*Repository.findByIdentifier(event, value)` first, then use `existing.id` (UUID) for all subsequent repository calls. Postgres throws `invalid input syntax for type uuid` if a slug is passed directly to `.eq('<uuid_column>', value)`.
 
-**Quy tắc**: ở tầng service, mọi `id` nhận từ route param / query filter / request body (đối với các entity trên) phải resolve qua `*Repository.findByIdentifier(event, value)` trước, rồi dùng `existing.id` (UUID) cho mọi call repo tiếp theo.
+**Rule**: For `buildings`, `rooms`, `tenants`, `contracts` (contract_code), and `billing_invoices` (invoice_code) — resolve slug to UUID in service before repository calls.
 
 ### ✓ Đúng
 
@@ -255,7 +254,7 @@ async list(event, user, filters) {
 }
 ```
 
-### ✗ Sai
+### ✗ Incorrect
 
 ```ts
 // ✗ findById chỉ accept UUID — slug sẽ 500
@@ -269,12 +268,11 @@ const contract = await ContractRepository.findById(event, contractId)  // findBy
 return ContractPaymentRepository.listByContract(event, contractId)     // ← phải là contract.id
 ```
 
-### Entity không có slug
+### Entities without slug
 
-`billing_periods`, `meter_readings`, `contract_payments/occupants/renewals/services`, `building_services` — chỉ accept UUID. Có thể dùng `findById` trực tiếp.
+`billing_periods`, `meter_readings`, `contract_payments/occupants/renewals/services`, `building_services` — UUID only. Use `findById` directly.
 
 ### Audit checklist
-
-Khi thêm endpoint mới hoặc review:
-- `grep -r "Repository\.findById\(event,\s*id\)" server/services` — bắt update/remove dùng UUID-only lookup cho input có thể là slug
-- `grep -r "\.eq\('(building|room|tenant|contract)_id'" server/repositories` — bắt filter pass-through không resolve ở service
+When adding a new endpoint or reviewing existing ones:
+- `grep -r "Repository\.findById\(event,\s*id\)" server/services` — catch update/remove using UUID-only lookup for inputs that may be a slug
+- `grep -r "\.eq\('(building|room|tenant|contract)_id'" server/repositories` — catch filter pass-through not resolved in service

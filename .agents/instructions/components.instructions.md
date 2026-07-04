@@ -4,19 +4,19 @@ applyTo: "app/components/**"
 
 # Components
 
-Ba lớp component, mỗi lớp có scope và rule riêng. Không được mix.
+Three component layers, each with its own scope and rules. Do not mix layers.
 
-## 3 Lớp
+## Layers
 
-| Lớp | Folder | Prefix | Mục đích |
-|-----|--------|--------|---------|
-| UI primitive | `app/components/ui/` | `Ui` | Generic, không có domain, không gọi API |
-| Domain | `app/components/<domain>/` | Tên domain | Hiển thị data domain, nhận qua props |
+| Layer | Folder | Prefix | Purpose |
+|-----|--------|--------|---------||
+| UI primitive | `app/components/ui/` | `Ui` | Generic, no domain logic, no API calls |
+| Domain | `app/components/<domain>/` | Domain name | Presents domain data received via props |
 | App shell | `app/components/app/` | `App` | Sidebar, Header, Breadcrumb — app-level |
 
-## ✓ Cách dùng đúng
+## ✓ Correct Usage
 
-**UI primitive — generic, typed props, không domain:**
+**UI primitive — generic, typed props, no domain logic:**
 ```vue
 <!-- app/components/ui/UiStatusBadge.vue -->
 <script setup lang="ts">
@@ -31,7 +31,7 @@ const props = defineProps<{
 </template>
 ```
 
-**Domain component — nhận DTO đã map, emit intent rõ ràng:**
+**Domain component — accepts mapped DTO, emits explicit intent events:**
 ```vue
 <!-- app/components/buildings/BuildingCard.vue -->
 <script setup lang="ts">
@@ -50,7 +50,7 @@ const emit = defineEmits<{
 </script>
 ```
 
-**Handle đủ 3 trạng thái trong list/detail:**
+**Handle all 3 states in list/detail screens:**
 ```vue
 <!-- app/pages/buildings/index.vue -->
 <template>
@@ -73,7 +73,7 @@ const emit = defineEmits<{
 </template>
 ```
 
-**App shell component — không chứa domain logic:**
+**App shell component — no domain logic:**
 ```vue
 <!-- app/components/app/AppSidebar.vue -->
 <script setup lang="ts">
@@ -89,7 +89,7 @@ const emit = defineEmits<{
 </script>
 ```
 
-**Props typed rõ ràng, không truyền raw object lớn:**
+**Explicitly typed props, do not pass large raw objects:**
 ```vue
 <!-- ✓ Đúng: chỉ pass field cần thiết -->
 <BuildingCard
@@ -100,7 +100,7 @@ const emit = defineEmits<{
 <UiStatusBadge :status="building.status" />
 ```
 
-## ✗ Cách không được dùng
+## ✗ Do Not
 
 ```vue
 <!-- ✗ Đừng fetch data trong domain component -->
@@ -131,12 +131,12 @@ const emit = defineEmits<{ (e: 'click'): void }>()
 
 ## Single-file vs Folder
 
-| Tình huống | Cách đặt |
+| Case | Convention |
 |---|---|
-| Component đơn giản, tự chứa | Single `.vue` file (e.g., `ui/UiButton.vue`) |
-| Component có sub-components hoặc helper riêng | Folder + `index.vue` + siblings |
+| Simple, self-contained | Single `.vue` file (e.g., `ui/UiButton.vue`) |
+| Has sub-components or local helpers | Folder + `index.vue` + siblings |
 
-> **Anti-pattern**: Tạo folder chỉ chứa `index.vue` duy nhất — không có siblings. Nếu không có file nào khác, dùng single `.vue` file.
+> **Anti-pattern**: Creating a folder that only contains `index.vue` with no siblings. Use a single `.vue` file instead.
 >
 > - ❌ `buildings/BuildingCard/index.vue` — không có siblings
 > - ✅ `buildings/BuildingCard.vue` — single file
@@ -144,9 +144,9 @@ const emit = defineEmits<{ (e: 'click'): void }>()
 
 ## Code Standards
 
-### Dùng `v-for` cho markup lặp lại giống nhau
+### Use `v-for` for repeated markup
 
-Khi render danh sách phần tử có cấu trúc giống nhau (chỉ khác data), dùng `v-for` với data array. Không duplicate template block chỉ khác nhau giá trị.
+When rendering a list of structurally identical elements that differ only in data, use `v-for` with a data array. Do not duplicate template blocks that differ only in values.
 
 ```vue
 <!-- ✅ app/components/app/AppSidebar.vue -->
@@ -165,9 +165,9 @@ Khi render danh sách phần tử có cấu trúc giống nhau (chỉ khác data
 <NuxtLink to="/rooms" :class="...">Phòng</NuxtLink>
 ```
 
-### Dùng `<IconName />` cho tất cả icon
+### Use `<IconName />` for all icons
 
-Không được nhúng raw `<svg>` markup trong template. Đặt file SVG vào `app/assets/icons/` và dùng component được nuxt-svgo auto-import.
+Do not embed raw `<svg>` markup in templates. Place SVG files in `app/assets/icons/` and use the auto-imported components from nuxt-svgo.
 
 ```vue
 <!-- ✅ -->
@@ -180,11 +180,11 @@ Không được nhúng raw `<svg>` markup trong template. Đặt file SVG vào `
 </svg>
 ```
 
-> Exception: Icon placeholder tạm thời trong quá trình dev (khi SVG chưa có) — phải có comment ghi rõ để thay thế sau.
+> Exception: Temporary icon placeholders during development (when the SVG is not yet available) — must include a comment to replace later.
 
-### Không dùng inline `style` cho design values
+### Do not use inline `style` for design values
 
-Màu sắc, gradient, shadow, spacing không được viết dưới dạng `style=""`. Dùng Tailwind class hoặc `<style scoped>` nếu Tailwind không đủ.
+Colors, gradients, shadows, and spacing must not be written as `style=""` attributes. Use Tailwind classes or `<style scoped>` when Tailwind is insufficient.
 
 ```vue
 <!-- ✅ -->
@@ -205,9 +205,9 @@ Màu sắc, gradient, shadow, spacing không được viết dưới dạng `sty
 <div style="background-color: #3b82f6; box-shadow: 0 4px 6px rgba(0,0,0,.1)">...</div>
 ```
 
-### Không dùng CDN URL cho static asset
+### Do not use CDN URLs for static assets
 
-Logo, ảnh placeholder, asset tĩnh phải đặt trong `public/` và dùng root-relative path.
+Logos, placeholder images, and static assets must be stored under `public/` and referenced with root-relative paths.
 
 ```vue
 <!-- ✅ -->
@@ -220,8 +220,8 @@ Logo, ảnh placeholder, asset tĩnh phải đặt trong `public/` và dùng roo
 
 ## Accessibility
 
-- Mọi input phải có `label` (hoặc `aria-label`)
-- Mọi button phải có text hoặc `aria-label` rõ ràng
-- Icon trang trí phải có `aria-hidden="true"`
-- Heading phải theo thứ tự `h1 → h2 → h3`, không nhảy cấp
-- Focus state không được xoá (`outline-none` phải kèm `focus-visible` style thay thế)
+- Every input must have a `label` or `aria-label`
+- Every button must have text or a clear `aria-label`
+- Decorative icons must have `aria-hidden="true"`
+- Headings must follow order `h1 → h2 → h3`, no skipped levels
+- Focus state must not be removed (`outline-none` must be paired with a `focus-visible` replacement style)

@@ -4,20 +4,20 @@ applyTo: "app/types/database.types.ts, server/**/*.ts, app/utils/mappers/**"
 
 # Database Schema
 
-`app/types/database.types.ts` là file **auto-generated** từ Supabase schema. Không sửa tay.
+`app/types/database.types.ts` is an **auto-generated** file from Supabase schema. Do not edit by hand.
 
-## Regenerate types
+## Regenerate Types
 
 ```bash
 npx supabase gen types typescript --project-id alndujothmxhilmvykqs \
   > app/types/database.types.ts
 ```
 
-Chạy lại mỗi khi schema Supabase thay đổi.
+Run again whenever the Supabase schema changes.
 
-## ✓ Cách dùng đúng
+## ✓ Correct Usage
 
-**Dùng `Tables<>`, `TablesInsert<>`, `TablesUpdate<>` cho DB types:**
+**Use `Tables<>`, `TablesInsert<>`, `TablesUpdate<>` for DB types:**
 ```ts
 import type { Tables, TablesInsert, TablesUpdate } from '~/types/database.types'
 
@@ -26,7 +26,7 @@ type BuildingInsert = TablesInsert<'buildings'> // INSERT shape
 type BuildingUpdate = TablesUpdate<'buildings'> // UPDATE shape (tất cả optional)
 ```
 
-**Map DB row → app DTO trong `app/utils/mappers/`:**
+**Map DB row → app DTO in `app/utils/mappers/`:**
 ```ts
 // app/utils/mappers/buildings.ts
 import type { Tables } from '~/types/database.types'
@@ -45,7 +45,7 @@ export function mapBuilding(row: Tables<'buildings'>): Building {
 }
 ```
 
-**App DTO tách biệt hoàn toàn với DB type:**
+**App DTO fully decoupled from DB type:**
 ```ts
 // app/types/buildings.ts — app shape, không phụ thuộc DB column names
 export type BuildingStatus = 'active' | 'inactive'
@@ -67,7 +67,7 @@ export interface BuildingInput {
 }
 ```
 
-**Dùng mapper trong repository:**
+**Use mapper in repository:**
 ```ts
 // server/repositories/buildings.ts
 import { mapBuilding } from '~/utils/mappers/buildings'
@@ -86,7 +86,7 @@ export const BuildingRepository = {
 }
 ```
 
-## ✗ Cách không được dùng
+## ✗ Do Not
 
 ```ts
 // ✗ Không sửa tay database.types.ts — sẽ bị overwrite khi gen lại
@@ -114,7 +114,7 @@ const { data } = await client.from('buildings').select('*')
 // → Phải check error: const { data, error } = ...
 ```
 
-## Enums từ DB
+## Enums from DB
 
 ```ts
 // Lấy enum từ DB types thay vì hardcode string

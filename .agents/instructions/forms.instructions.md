@@ -4,11 +4,11 @@ applyTo: "app/components/**/*.vue, app/pages/**/*.vue, app/composables/**/*.ts, 
 
 # Forms
 
-Form state và validation nằm ở composable hoặc component local — không dùng Pinia. Client validate bằng Zod. Server luôn re-validate độc lập.
+Form state and validation belong in composables or local component state — do not use Pinia. Client validates with Zod. Server always re-validates independently.
 
-## ✓ Cách dùng đúng
+## ✓ Correct Usage
 
-**Định nghĩa schema một lần, dùng ở cả client lẫn server:**
+**Define schema once, use on both client and server:**
 ```ts
 // app/utils/validators/buildings.ts
 import { z } from 'zod'
@@ -22,7 +22,7 @@ export const buildingSchema = z.object({
 export type BuildingInput = z.infer<typeof buildingSchema>
 ```
 
-**Form component — nhận initial, emit submit:**
+**Form component — accepts initial, emits submit:**
 ```vue
 <!-- app/components/buildings/BuildingForm.vue -->
 <script setup lang="ts">
@@ -70,7 +70,7 @@ async function onSubmit() {
 </template>
 ```
 
-**Server re-validate độc lập (không trust client):**
+**Server re-validates independently (do not trust client):**
 ```ts
 // server/api/buildings/index.post.ts
 import { buildingSchema } from '~/utils/validators/buildings'
@@ -99,7 +99,7 @@ export default defineEventHandler(async (event) => {
 })
 ```
 
-**Hiện thị lỗi server xuống form:**
+**Display server errors down to form fields:**
 ```ts
 // app/composables/buildings/useBuildingForm.ts
 async function submit() {
@@ -119,7 +119,7 @@ async function submit() {
 }
 ```
 
-## ✗ Cách không được dùng
+## ✗ Do Not
 
 ```ts
 // ✗ Đừng lưu form state trong Pinia
@@ -154,7 +154,7 @@ errors.value.address = ''
 // → errors.value = {} // clear all trước mỗi lần validate
 ```
 
-## Zod patterns hay dùng trong project
+## Common Zod Patterns in This Project
 
 ```ts
 // Số tiền VND — phải là số nguyên dương

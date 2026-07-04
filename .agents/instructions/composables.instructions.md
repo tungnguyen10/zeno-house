@@ -4,19 +4,19 @@ applyTo: "app/composables/**"
 
 # Composables
 
-Server state và domain orchestration nằm ở composable, không phải Pinia store.
+Server state and domain orchestration belong in composables, not Pinia stores.
 
-## Pattern: 3 composable theo mục đích
+## Pattern: 3 composables by purpose
 
-| Composable | Mục đích | File |
+| Composable | Purpose | Example |
 |-----------|---------|------|
 | `use<Domain>List` | Fetch list, pagination, filter | `useBuildingList.ts` |
 | `use<Domain>Detail` | Fetch single item | `useBuildingDetail.ts` |
 | `use<Domain>Form` | Form state, validation, submit | `useBuildingForm.ts` |
 
-## ✓ Cách dùng đúng
+## ✓ Correct Usage
 
-**List composable — useFetch, typed, expose computed:**
+**List composable — typed useFetch, expose computed:**
 ```ts
 // app/composables/buildings/useBuildingList.ts
 import type { Building } from '~/types/buildings'
@@ -34,7 +34,7 @@ export function useBuildingList() {
 }
 ```
 
-**Detail composable — route param, watch khi id thay đổi:**
+**Detail composable — route param, watch when id changes:**
 ```ts
 // app/composables/buildings/useBuildingDetail.ts
 import type { Building } from '~/types/buildings'
@@ -52,7 +52,7 @@ export function useBuildingDetail(id: MaybeRef<string>) {
 }
 ```
 
-**Form composable — Zod validation, submit với $fetch:**
+**Form composable — Zod validation, submit with $fetch:**
 ```ts
 // app/composables/buildings/useBuildingForm.ts
 import { buildingSchema, type BuildingInput } from '~/utils/validators/buildings'
@@ -94,7 +94,7 @@ export function useBuildingForm(initial?: Partial<BuildingInput>) {
 }
 ```
 
-**Dùng trong page:**
+**Usage in a page:**
 ```vue
 <!-- app/pages/buildings/index.vue -->
 <script setup lang="ts">
@@ -102,7 +102,7 @@ const { buildings, total, status, refresh } = useBuildingList()
 </script>
 ```
 
-## ✗ Cách không được dùng
+## ✗ Do Not
 
 ```ts
 // ✗ Đừng gọi Supabase trực tiếp trong composable
@@ -137,8 +137,8 @@ const data = await $fetch('/api/buildings') // không catch = silent fail
 // → Wrap trong try/catch hoặc dùng useFetch với onResponseError
 ```
 
-## Naming convention
+## Naming Conventions
 
-- Composable phải bắt đầu bằng `use`
-- Tên rõ domain + mục đích: `useBuildingList`, `useBuildingForm`, không phải `useData`
-- Export named function, không export default
+- Composable name must start with `use`
+- Include domain and intent: `useBuildingList`, `useBuildingForm`, not `useData`
+- Export named functions, not default exports

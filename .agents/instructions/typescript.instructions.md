@@ -1,14 +1,14 @@
 ---
-applyTo: "**/*.ts, **/*.vue"
+applyTo: "app/**/*.ts, app/**/*.vue, server/**/*.ts, tests/**/*.ts, scripts/**/*.mjs, nuxt.config.ts, tailwind.config.ts, vitest.config.ts"
 ---
 
 # TypeScript
 
-Strict mode bật. Không dùng `any`. Infer từ Zod. Type API response và composable return.
+Strict mode on. No `any`. Infer from Zod. Type API responses and composable return values.
 
-## ✓ Cách dùng đúng
+## ✓ Correct Usage
 
-**API response types — dùng chung toàn app:**
+**API response types — shared across the app:**
 ```ts
 // app/types/api.ts
 export type ApiSuccess<T> = { data: T; meta?: Record<string, unknown> }
@@ -21,7 +21,7 @@ export type ApiError = {
 }
 ```
 
-**Infer type từ Zod — không viết tay:**
+**Infer type from Zod — do not write types by hand:**
 ```ts
 // app/utils/validators/buildings.ts
 import { z } from 'zod'
@@ -43,7 +43,7 @@ export type BuildingInput = {
 }
 ```
 
-**App DTO types riêng biệt với DB types:**
+**App DTO types decoupled from DB types:**
 ```ts
 // app/types/buildings.ts
 export type BuildingStatus = 'active' | 'inactive'
@@ -61,7 +61,7 @@ export interface Building {
 
 **Typed composable return:**
 ```ts
-// Luôn type explicit return của composable public
+// Always explicitly type the public return of a composable
 export function useBuildingList(): {
   buildings: ComputedRef<Building[]>
   total: ComputedRef<number>
@@ -72,7 +72,7 @@ export function useBuildingList(): {
 }
 ```
 
-**Type guard để narrow unknown:**
+**Type guard to narrow unknown:**
 ```ts
 function isApiError(err: unknown): err is { data: ApiError } {
   return (
@@ -83,7 +83,7 @@ function isApiError(err: unknown): err is { data: ApiError } {
   )
 }
 
-// Dùng:
+// Usage:
 try {
   await $fetch('/api/buildings', { method: 'POST', body })
 } catch (err) {
@@ -107,10 +107,10 @@ export const NAV_ITEMS = [
 ] satisfies NavItem[]
 ```
 
-**Props và emits typed với generics:**
+**Props and emits typed with generics:**
 ```vue
 <script setup lang="ts">
-// ✓ defineProps với TypeScript generic — không dùng runtime options
+// ✓ defineProps with TypeScript generic — do not use runtime options
 const props = defineProps<{
   building: Building
   loading?: boolean
@@ -123,9 +123,9 @@ const emit = defineEmits<{
 </script>
 ```
 
-**`MaybeRef` cho composable nhận cả ref lẫn value:**
+**`MaybeRef` for composables that accept both ref and plain value:**
 ```ts
-// Composable nhận id có thể là Ref<string> hoặc string thuần
+// Composable that accepts id as either Ref<string> or plain string
 export function useBuildingDetail(id: MaybeRef<string>) {
   const url = computed(() => `/api/buildings/${toValue(id)}`)
   const { data } = useFetch<ApiSuccess<Building>>(url)
@@ -133,36 +133,36 @@ export function useBuildingDetail(id: MaybeRef<string>) {
 }
 ```
 
-## ✗ Cách không được dùng
+## ✗ Do Not
 
 ```ts
-// ✗ Không dùng any
+// ✗ Do not use any
 const data: any = await $fetch('/api/buildings')
 const rows: any[] = result.data
 function handleEvent(e: any) { ... }
 
-// ✗ Không cast với 'as' trừ khi đã narrow đúng
+// ✗ Do not cast with 'as' without narrowing properly
 const user = getUser() as AdminUser  // unsafe — narrow với type guard
 
-// ✗ Không dùng non-null assertion (!) mà không chắc chắn
+// ✗ Do not use non-null assertion (!) without certainty
 const id = route.params.id!  // nếu có thể undefined, handle explicit
 
-// ✗ Không suppress TypeScript với @ts-ignore không có giải thích
+// ✗ Do not suppress TypeScript with @ts-ignore without explanation
 // @ts-ignore
 doSomethingRisky()
 
-// ✗ Không dùng Function type (quá rộng)
+// ✗ Do not use the Function type (too broad)
 const handler: Function = () => {}
 // → Dùng: const handler: () => void = () => {}
 
-// ✗ Không dùng object type (quá rộng)
+// ✗ Do not use the object type (too broad)
 function process(data: object) { ... }
 // → Dùng type cụ thể hoặc Record<string, unknown>
 
-// ✗ Không bật typeCheck: false nếu không có lý do
+// ✗ Do not disable typeCheck without a reason
 // nuxt.config.ts
 typescript: { typeCheck: false }
-// → Bật true khi build production để catch lỗi sớm
+// → Enable for production builds to catch errors early
 ```
 
 ## tsconfig.json paths
@@ -178,7 +178,7 @@ typescript: { typeCheck: false }
 }
 ```
 
-Dùng `~/` prefix để import trong `app/`:
+Use `~/` prefix to import within `app/`:
 ```ts
 import type { Building } from '~/types/buildings'
 import { buildingSchema } from '~/utils/validators/buildings'

@@ -1,41 +1,41 @@
 ---
-applyTo: "**"
+applyTo: "app/**, server/**, nuxt.config.ts"
 ---
 
 # Project Structure
 
-Nuxt 4 — source app nằm trong `app/`, server nằm trong `server/`, config ở root.
+Nuxt 4 — app source in `app/`, server code in `server/`, config at repository root.
 
 ## Folder Ownership
 
 | Folder | Owns |
 |--------|------|
 | `app/pages/` | Route definition, route meta, middleware, screen-level orchestration |
-| `app/layouts/` | App shell và navigation frame |
-| `app/components/ui/` | UI primitives — không chứa domain logic |
-| `app/components/<domain>/` | Domain display blocks — nhận data qua props |
+| `app/layouts/` | App shell and navigation frames |
+| `app/components/ui/` | UI primitives — no domain logic |
+| `app/components/<domain>/` | Domain display blocks — receive data via props |
 | `app/components/app/` | Shell pieces: AppSidebar, AppHeader, AppUserMenu, AppStatCard |
 | `app/composables/<domain>/` | Client-side orchestration: list, detail, form, submit |
 | `app/stores/` | Global client state: session, sidebar, notifications |
 | `app/types/` | DTOs, input types, response types |
-| `app/utils/validators/` | Zod schemas dùng chung cho client và server |
+| `app/utils/validators/` | Shared Zod schemas for both client and server |
 | `app/utils/constants/` | Enums, role strings, capability keys |
 | `app/utils/mappers/` | DB row → app DTO transformations |
 | `app/utils/format/` | Format helpers: date, currency, number |
-| `app/assets/icons/` | SVG icons — tự động import qua nuxt-svgo |
+| `app/assets/icons/` | SVG icons — auto-imported via nuxt-svgo |
 | `app/assets/scss/` | Global CSS: Tailwind directives, font-face, scrollbar |
 | `server/api/` | HTTP contract, Zod validation entry point, auth guard |
 | `server/services/` | Business logic, permission re-check |
-| `server/repositories/` | Supabase query only — không có business logic |
+| `server/repositories/` | Supabase query only — no business logic |
 | `server/utils/` | Server-side helpers: auth, error mapping |
 | `server/middleware/` | Server middleware (logging, auth context) |
 | `docs/architecture/` | Architecture decisions, rules |
 | `docs/architecture/api.md` | API shape documentation |
 | `docs/ui-patterns/` | UI pattern documentation |
 
-## ✓ Cách dùng đúng
+## ✓ Correct Usage
 
-**Đặt component theo đúng layer:**
+**Place components in the correct layer:**
 ```
 app/components/
 ├── ui/
@@ -52,7 +52,7 @@ app/components/
     └── BuildingForm.vue
 ```
 
-**Composable theo domain và mục đích:**
+**Composable organized by domain and purpose:**
 ```
 app/composables/
 └── buildings/
@@ -61,7 +61,7 @@ app/composables/
     └── useBuildingForm.ts    ← form state, validation, submit
 ```
 
-**Validator dùng chung cho client + server:**
+**Shared validator for both client and server:**
 ```
 app/utils/validators/
 └── buildings.ts    ← import bởi cả useBuildingForm.ts và server/api/buildings/
@@ -80,7 +80,7 @@ server/
     └── buildings.ts       ← Supabase queries
 ```
 
-## ✗ Cách không được dùng
+## ✗ Do Not
 
 ```
 # ✗ Đừng đặt domain component trong ui/
@@ -99,8 +99,8 @@ app/stores/buildings.ts với fetchList() ← dùng composable + useFetch thay v
 server/validation/buildings.ts      ← đặt ở app/utils/validators/ để dùng chung
 ```
 
-## Nguyên tắc incremental
+## Incremental Principle
 
-- Chỉ tạo folder/file khi có feature thật cần dùng
-- Không tạo abstraction khi mới chỉ có 1 nơi dùng
-- Mỗi bước phải để lại kết quả chạy được hoặc kiểm chứng được
+- Only create folders/files when a real feature requires them
+- Do not create abstractions when there is only one use case
+- Each step must leave a runnable or verifiable result

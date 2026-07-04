@@ -1,12 +1,12 @@
 ---
-applyTo: "app/**/*.ts, app/**/*.vue, server/**/*.ts"
+applyTo: "app/composables/**/*.ts, app/stores/**/*.ts, app/middleware/**/*.ts, app/types/database.types.ts, server/**/*.ts, supabase/**/*.sql, nuxt.config.ts"
 ---
 
 # Supabase
 
-Client-side Supabase **chỉ dùng cho auth**. Business data luôn đi qua `server/api/`.
+Client-side Supabase is for **auth only**. Business data must always go through `server/api/`.
 
-## Rule cứng
+## Hard Rules
 
 ```
 Client (browser)
@@ -19,35 +19,35 @@ Server (server/api, server/services, server/repositories)
   └── serverSupabaseServiceRole(event) ← bypass RLS khi cần ✓
 ```
 
-## Biến môi trường Supabase
+## Supabase Environment Variables
 
-| Biến | Dùng ở | Được module đọc tự động |
+| Variable | Used by | Auto-loaded by module |
 |------|--------|------------------------|
 | `SUPABASE_URL` | `@nuxtjs/supabase` | ✓ auto |
 | `SUPABASE_KEY` | `@nuxtjs/supabase` | ✓ auto (anon key) |
-| `SUPABASE_SECRET_KEY` | server only (bypass RLS) | ✗ dùng thủ công |
-| `SUPABASE_PROJECT_REF` | `supabase gen types` CLI | ✗ chỉ CLI |
+| `SUPABASE_SECRET_KEY` | server only (bypass RLS) | ✗ manual |
+| `SUPABASE_PROJECT_REF` | `supabase gen types` CLI | ✗ CLI only |
 
-## Security model
+## Security Model
 
-### Public — được phép expose
+### Public — safe to expose
 
-| Thứ | Lý do |
+| Item | Reason |
 |---|---|
-| `SUPABASE_URL` (project URL) | Public by design — như Firebase project ID |
-| `SUPABASE_KEY` (anon key) | Dùng trong browser, Supabase tự document là safe |
-| Auth endpoint trong Network tab | Mọi browser auth đều visible — bình thường |
+| `SUPABASE_URL` (project URL) | Public by design — same as Firebase project ID |
+| `SUPABASE_KEY` (anon key) | Used in browser, Supabase documents it as safe |
+| Auth endpoint in Network tab | All browser auth is visible — expected behaviour |
 
-Bảo mật thật sự dựa vào **RLS policies** và **server-side permission checks**, không phải ẩn URL hay key.
+Real security comes from **RLS policies** and **server-side permission checks**, not from hiding the URL or key.
 
-### Secret — KHÔNG BAO GIỜ expose
+### Secret — NEVER expose
 
 **`SUPABASE_SECRET_KEY` (service role key):**
-- Chỉ dùng trong `server/` qua `serverSupabaseServiceRole(event)`
-- Bypass toàn bộ RLS — nếu lộ ra client là lỗ hổng nghiêm trọng
-- Không bao giờ import trong `app/`
-- Không bao giờ trả về trong API response body
-- Không bao giờ log ra console
+- Use only in `server/` via `serverSupabaseServiceRole(event)`
+- Bypasses all RLS — leaking to client is a critical vulnerability
+- Never import in `app/`
+- Never return in API response body
+- Never log to console
 
 ```ts
 // ✗ Tuyệt đối không làm
@@ -63,15 +63,15 @@ return { key: useRuntimeConfig().supabaseSecretKey }
 const admin = await serverSupabaseServiceRole(event)
 ```
 
-### Checklist bảo mật Supabase
+### Supabase Security Checklist
 
-- [ ] `SUPABASE_SECRET_KEY` chỉ có trong `.env`, không bao giờ hardcode
-- [ ] `.env` nằm trong `.gitignore`
-- [ ] Mọi bảng data có `ENABLE ROW LEVEL SECURITY`
-- [ ] Client không gọi `supabase.from(...)` trực tiếp cho business data
-- [ ] `app_metadata` chỉ được set qua service role (server), không phải user
+- [ ] `SUPABASE_SECRET_KEY` only in `.env`, never hardcoded
+- [ ] `.env` listed in `.gitignore`
+- [ ] Every data table has `ENABLE ROW LEVEL SECURITY`
+- [ ] Client does not call `supabase.from(...)` directly for business data
+- [ ] `app_metadata` only set via service role (server), not by the user
 
-## ✓ Cách dùng đúng
+## ✓ Correct Usage
 
 **Client — auth composable:**
 ```ts
@@ -103,7 +103,7 @@ export function useAuth() {
 }
 ```
 
-**Client — type Supabase client với Database:**
+**Client — type Supabase client with Database:**
 ```ts
 import type { Database } from '~/types/database.types'
 
@@ -111,7 +111,7 @@ import type { Database } from '~/types/database.types'
 const client = useSupabaseClient<Database>()
 ```
 
-**Server — repository dùng serverSupabaseClient:**
+**Server — repository using serverSupabaseClient:**
 ```ts
 // server/repositories/buildings.ts
 import { serverSupabaseClient } from '#supabase/server'
@@ -139,7 +139,7 @@ export const BuildingRepository = {
 }
 ```
 
-**Server — dùng service role chỉ khi cần bypass RLS:**
+**Server — use service role only when bypassing RLS:**
 ```ts
 // server/utils/admin.ts
 import { serverSupabaseServiceRole } from '#supabase/server'
@@ -151,7 +151,7 @@ export async function getAdminClient(event: H3Event) {
 }
 ```
 
-**Server — lấy current user để check auth:**
+**Server — get current user for auth check:**
 ```ts
 // server/utils/auth.ts
 import { serverSupabaseUser } from '#supabase/server'
@@ -169,7 +169,7 @@ export async function requireAuth(event: H3Event) {
 }
 ```
 
-**Supabase config trong nuxt.config.ts:**
+**Supabase config in nuxt.config.ts:**
 ```ts
 // nuxt.config.ts — đã configured
 supabase: {
@@ -177,7 +177,7 @@ supabase: {
 }
 ```
 
-## ✗ Cách không được dùng
+## ✗ Do Not
 
 ```ts
 // ✗ Đừng gọi business data trực tiếp từ client
@@ -205,7 +205,7 @@ const client = useSupabaseClient<Database>() // ✓ typed
 
 ## Supabase SQL Files
 
-**Quy tắc:** Mọi thay đổi liên quan đến Supabase data (tạo bảng, RLS, seed, admin setup) đều phải có file `.sql` tương ứng trong `supabase/` để chạy qua Supabase SQL Editor. File phải an toàn trước khi apply.
+**Rule:** Every change related to Supabase data (table creation, RLS, seeds, admin setup) must have a corresponding `.sql` file under `supabase/` to run via the Supabase SQL Editor. The file must be reviewed before applying.
 
 ### Folder structure
 
@@ -222,20 +222,20 @@ migrations/  YYYYMMDD_<kebab-case-description>.sql
 seeds/       <kebab-case-description>.sql
 ```
 
-Ví dụ:
+Examples:
 ```
 supabase/migrations/20260514_create_buildings.sql
 supabase/migrations/20260514_buildings_rls.sql
 supabase/seeds/set_admin_role.sql
 ```
 
-### Migration template (CREATE TABLE + RLS)
+### Migration Template (CREATE TABLE + RLS)
 
-Mọi migration phải:
-- Bọc trong `BEGIN / COMMIT` — nếu có lỗi, tự động rollback toàn bộ
-- `REVOKE ALL FROM public` trước khi `GRANT` cụ thể — deny-by-default
-- `ENABLE ROW LEVEL SECURITY` ngay sau khi tạo bảng — không có RLS = mọi người đọc được
-- Policy dùng `auth.uid()` hoặc `auth.jwt()` — không được dùng `USING (true)` cho bảng chứa data thật
+Every migration must:
+- Wrap in `BEGIN / COMMIT` — rolls back automatically on error
+- `REVOKE ALL FROM public` before explicit `GRANT` — deny-by-default
+- `ENABLE ROW LEVEL SECURITY` immediately after table creation — no RLS means everyone can read
+- Policies must use `auth.uid()` or `auth.jwt()` — never `USING (true)` for tables with real data
 
 ```sql
 -- =============================================================================
@@ -307,12 +307,12 @@ FROM pg_tables
 WHERE schemaname = 'public' AND tablename = '<table_name>';
 ```
 
-### Seed template
+### Seed Template
 
-Seed phải:
-- Bọc trong `BEGIN / COMMIT`
-- Kiểm tra tồn tại trước khi INSERT / UPDATE
-- Không hardcode password hay secret
+Seeds must:
+- Wrap in `BEGIN / COMMIT`
+- Check for existence before INSERT / UPDATE
+- Never hardcode passwords or secrets
 
 ```sql
 -- =============================================================================
@@ -338,16 +338,16 @@ COMMIT;
 SELECT ...;
 ```
 
-### Security checklist — bắt buộc trước khi apply
+### Security Checklist — required before applying
 
-- [ ] Wrapped trong `BEGIN / COMMIT`
-- [ ] `REVOKE ALL FROM public, anon` trước `GRANT`
-- [ ] `ENABLE ROW LEVEL SECURITY` cho mọi bảng data
-- [ ] Policy dùng `auth.uid()` hoặc `auth.jwt()` — không có `USING (true)` cho data thật
-- [ ] Function dùng `SECURITY INVOKER` (không phải `DEFINER`) trừ khi có lý do rõ ràng
-- [ ] Không có dynamic SQL với string concatenation (`EXECUTE 'SELECT ' || user_input`)
-- [ ] Không hardcode secret, token, hay password trong file
-- [ ] Có `SELECT` verify cuối file
+- [ ] Wrapped in `BEGIN / COMMIT`
+- [ ] `REVOKE ALL FROM public, anon` before `GRANT`
+- [ ] `ENABLE ROW LEVEL SECURITY` on every data table
+- [ ] Policies use `auth.uid()` or `auth.jwt()` — no `USING (true)` for real data
+- [ ] Functions use `SECURITY INVOKER` (not `DEFINER`) unless there is a clear reason
+- [ ] No dynamic SQL with string concatenation (`EXECUTE 'SELECT ' || user_input`)
+- [ ] No hardcoded secrets, tokens, or passwords in the file
+- [ ] `SELECT` verify statement at the end of the file
 
 ### ✗ Anti-patterns
 
@@ -369,21 +369,21 @@ EXECUTE 'SELECT * FROM ' || table_name;
 GRANT ALL ON ALL TABLES IN SCHEMA public TO authenticated;
 ```
 
-### Khi nào tạo file nào
+### When to create which file
 
-| Hành động | Folder | Ví dụ |
+| Action | Folder | Example |
 |---|---|---|
-| Tạo bảng mới | `migrations/` | `20260601_create_rooms.sql` |
-| Thêm column / index | `migrations/` | `20260601_rooms_add_floor.sql` |
-| Thêm / sửa RLS policy | `migrations/` | `20260601_rooms_rls.sql` |
-| Tạo DB function / trigger | `migrations/` | `20260601_updated_at_trigger.sql` |
+| Create new table | `migrations/` | `20260601_create_rooms.sql` |
+| Add column / index | `migrations/` | `20260601_rooms_add_floor.sql` |
+| Add / update RLS policy | `migrations/` | `20260601_rooms_rls.sql` |
+| Create DB function / trigger | `migrations/` | `20260601_updated_at_trigger.sql` |
 | Set app_metadata / role | `seeds/` | `set_admin_role.sql` |
-| Seed dữ liệu mẫu | `seeds/` | `seed_buildings.sql` |
+| Seed sample data | `seeds/` | `seed_buildings.sql` |
 
 ### Workflow
 
-1. Tạo `.sql` file cùng lúc với code feature (trong cùng task group)
-2. Tự review theo Security checklist ở trên trước khi apply
-3. Chạy trong **Supabase Dashboard → SQL Editor** (dev project trước)
-4. Verify kết quả bằng `SELECT` cuối file
-5. Apply lên staging/prod theo thứ tự file name (migrations theo ngày)
+1. Create the `.sql` file alongside the code feature (in the same task group)
+2. Self-review against the Security Checklist above before applying
+3. Run in **Supabase Dashboard → SQL Editor** (dev project first)
+4. Verify results using the `SELECT` at the end of the file
+5. Apply to staging/prod in file name order (migrations by date)
