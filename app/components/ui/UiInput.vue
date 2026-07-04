@@ -6,6 +6,7 @@ const props = withDefaults(defineProps<{
   modelValue?: string | number
   label?: string
   type?: string
+  inputmode?: 'text' | 'numeric' | 'decimal' | 'tel' | 'email' | 'url' | 'search' | 'none'
   placeholder?: string
   error?: string
   hint?: string
@@ -87,6 +88,7 @@ const inputClass = computed(() =>
       <input
         :id="inputId"
         :type="type"
+        :inputmode="inputmode"
         :value="modelValue"
         :placeholder="placeholder"
         :disabled="disabled"

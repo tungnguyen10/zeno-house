@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { reactive, ref, watch } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import {
   FIXED_COST_CATEGORIES,
   FIXED_COST_CATEGORY_LABELS,
 } from '~/utils/constants/operations-report'
 import type { FixedCostCategory } from '~/utils/constants/operations-report'
+import { formatCurrency } from '~/utils/format/currency'
 
 const props = defineProps<{
   open: boolean
@@ -33,6 +34,20 @@ const form = reactive({
 })
 
 const error = ref<string | null>(null)
+
+/** Show grouped digits while storing the raw number string in `form.amount`. */
+const amountDisplay = computed<string>({
+  get: () => (form.amount ? Number(form.amount).toLocaleString('vi-VN') : ''),
+  set: (value) => {
+    form.amount = value.replace(/\D/g, '')
+  },
+})
+
+const amountPreview = computed(() => {
+  const value = Number(form.amount)
+  if (!form.amount || Number.isNaN(value) || value <= 0) return undefined
+  return formatCurrency(value)
+})
 
 watch(
   () => props.open,
@@ -78,12 +93,17 @@ function submit() {
       />
 
       <UiInput
-        v-model="form.amount"
-        label="Số tiền / tháng (VND)"
-        type="number"
+        v-model="amountDisplay"
+        label="Số tiền / tháng"
+        type="text"
+        inputmode="numeric"
         placeholder="0"
+        input-class="text-lg font-semibold"
+        :hint="amountPreview"
         required
-      />
+      >
+        <template #suffix>₫</template>
+      </UiInput>
 
       <div class="grid grid-cols-2 gap-3">
         <UiInput

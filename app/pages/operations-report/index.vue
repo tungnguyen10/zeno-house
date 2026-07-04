@@ -2,7 +2,11 @@
 import { computed, ref } from 'vue'
 import { useAuthStore } from '~/stores/auth'
 import type { BuildingExpense } from '~/types/operations-report'
-import { EXPENSE_CATEGORY_LABELS } from '~/utils/constants/operations-report'
+import {
+  EXPENSE_CATEGORIES,
+  EXPENSE_CATEGORY_LABELS,
+  type ExpenseCategory,
+} from '~/utils/constants/operations-report'
 import { formatCurrency } from '~/utils/format/currency'
 import {
   useOperationsMutations,
@@ -50,6 +54,15 @@ const monthOptions = Array.from({ length: 12 }, (_, i) => ({
   label: `Tháng ${i + 1}`,
 }))
 
+const expenseCategory = ref<ExpenseCategory | ''>('')
+const expenseCategoryOptions = computed(() => [
+  { value: '', label: 'Tất cả loại chi' },
+  ...EXPENSE_CATEGORIES.map(category => ({
+    value: category,
+    label: EXPENSE_CATEGORY_LABELS[category],
+  })),
+])
+
 const buildingModel = computed<string | number | null>({
   get: () => buildingId.value ?? '',
   set: (v) => { buildingId.value = typeof v === 'string' && v ? v : null },
@@ -62,8 +75,25 @@ const monthModel = computed<string | number | null>({
   get: () => periodMonth.value,
   set: (v) => { periodMonth.value = Number(v) },
 })
+const expenseCategoryModel = computed<string | number | null>({
+  get: () => expenseCategory.value,
+  set: (v) => {
+    expenseCategory.value =
+      typeof v === 'string' && EXPENSE_CATEGORIES.includes(v as ExpenseCategory)
+        ? (v as ExpenseCategory)
+        : ''
+  },
+})
 
 const metrics = computed(() => report.value?.metrics ?? null)
+const filteredExpenses = computed(() => {
+  const expenses = report.value?.expenses ?? []
+  if (!expenseCategory.value) return expenses
+  return expenses.filter(expense => expense.category === expenseCategory.value)
+})
+const filteredExpenseTotal = computed(() =>
+  filteredExpenses.value.reduce((total, expense) => total + expense.amount, 0),
+)
 
 // --- Expense modal ------------------------------------------------------
 const expenseModalOpen = ref(false)
@@ -165,6 +195,13 @@ function resolveError(err: unknown, fallback: string): string {
 function expenseLabel(category: BuildingExpense['category']) {
   return EXPENSE_CATEGORY_LABELS[category]
 }
+
+/** Color a signed value: green when positive, red when negative. */
+function signedClass(value: number): string {
+  if (value > 0) return 'text-success-neon'
+  if (value < 0) return 'text-error-vivid'
+  return 'text-white'
+}
 </script>
 
 <template>
@@ -185,6 +222,12 @@ function expenseLabel(category: BuildingExpense['category']) {
       />
       <UiSelect v-model="yearModel" label="Năm" :options="yearOptions" class="w-32" />
       <UiSelect v-model="monthModel" label="Tháng" :options="monthOptions" class="w-36" />
+      <UiSelect
+        v-model="expenseCategoryModel"
+        label="Loại chi"
+        :options="expenseCategoryOptions"
+        class="min-w-[190px]"
+      />
     </div>
 
     <UiAlert v-if="forbidden" severity="danger" class="mb-6">
@@ -194,44 +237,48 @@ function expenseLabel(category: BuildingExpense['category']) {
       {{ errorMessage }}
     </UiAlert>
 
-    <div v-if="isLoading" class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      <UiSkeleton v-for="n in 4" :key="n" class="h-28 rounded-2xl" />
+    <div v-if="isLoading" class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <UiSkeleton v-for="n in 4" :key="n" class="h-20 rounded-xl" />
     </div>
 
     <template v-else-if="report && metrics">
-      <!-- KPI cards -->
-      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <AppStatCard
-          title="Doanh thu phát hành"
-          :value="formatCurrency(metrics.issuedRevenue)"
+      <!-- Core KPIs -->
+      <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <UiMetric label="Doanh thu phát hành" :value="formatCurrency(metrics.issuedRevenue)" />
+        <UiMetric label="Đã thu" :value="formatCurrency(metrics.collectedCash)" tone="accent" />
+        <UiMetric
+          label="Công nợ"
+          :value="formatCurrency(metrics.debt)"
+          :tone="metrics.debt > 0 ? 'warning' : 'default'"
         />
-        <AppStatCard title="Đã thu" :value="formatCurrency(metrics.collectedCash)" />
-        <AppStatCard title="Công nợ" :value="formatCurrency(metrics.debt)" />
-        <AppStatCard title="Tổng chi phí" :value="formatCurrency(metrics.totalExpense)" />
-        <AppStatCard
-          title="Lợi nhuận (theo phát hành)"
+        <UiMetric label="Tổng chi phí" :value="formatCurrency(metrics.totalExpense)" />
+      </div>
+
+      <!-- Profit highlight -->
+      <div class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <UiMetric
+          label="Lợi nhuận (theo phát hành)"
           :value="formatCurrency(metrics.profitByRevenue)"
-          description="Doanh thu phát hành − tổng chi phí"
+          :tone="metrics.profitByRevenue >= 0 ? 'success' : 'danger'"
+          caption="Doanh thu phát hành − tổng chi phí"
         />
-        <AppStatCard
-          title="Lợi nhuận (theo tiền thu)"
+        <UiMetric
+          label="Lợi nhuận (theo tiền thu)"
           :value="formatCurrency(metrics.profitByCash)"
-          description="Tiền đã thu − tổng chi phí"
-        />
-        <AppStatCard
-          title="Chi phí cố định"
-          :value="formatCurrency(metrics.fixedCostTotal)"
-        />
-        <AppStatCard
-          title="Chi phí phát sinh"
-          :value="formatCurrency(metrics.monthlyExpenseTotal)"
+          :tone="metrics.profitByCash >= 0 ? 'success' : 'danger'"
+          caption="Tiền đã thu − tổng chi phí"
         />
       </div>
 
       <!-- Utility margins -->
       <div class="mt-8 grid grid-cols-1 gap-4 lg:grid-cols-2">
         <div class="rounded-2xl border border-dark-border bg-dark-surface p-5">
-          <h3 class="text-sm font-semibold text-white">Điện — chênh lệch</h3>
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-semibold text-white">Điện — chênh lệch</h3>
+            <span :class="signedClass(report.electricity.margin)" class="text-sm font-semibold tabular-nums">
+              {{ formatCurrency(report.electricity.margin) }}
+            </span>
+          </div>
           <dl class="mt-3 space-y-1.5 text-sm">
             <div class="flex justify-between">
               <dt class="text-muted">Thu từ khách</dt>
@@ -241,14 +288,15 @@ function expenseLabel(category: BuildingExpense['category']) {
               <dt class="text-muted">Đầu vào</dt>
               <dd class="tabular-nums text-white">{{ formatCurrency(report.electricity.input) }}</dd>
             </div>
-            <div class="flex justify-between border-t border-dark-border pt-1.5 font-semibold">
-              <dt class="text-muted">Chênh lệch</dt>
-              <dd class="tabular-nums text-white">{{ formatCurrency(report.electricity.margin) }}</dd>
-            </div>
           </dl>
         </div>
         <div class="rounded-2xl border border-dark-border bg-dark-surface p-5">
-          <h3 class="text-sm font-semibold text-white">Nước — chênh lệch</h3>
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-semibold text-white">Nước — chênh lệch</h3>
+            <span :class="signedClass(report.water.margin)" class="text-sm font-semibold tabular-nums">
+              {{ formatCurrency(report.water.margin) }}
+            </span>
+          </div>
           <dl class="mt-3 space-y-1.5 text-sm">
             <div class="flex justify-between">
               <dt class="text-muted">Thu từ khách</dt>
@@ -258,16 +306,17 @@ function expenseLabel(category: BuildingExpense['category']) {
               <dt class="text-muted">Đầu vào</dt>
               <dd class="tabular-nums text-white">{{ formatCurrency(report.water.input) }}</dd>
             </div>
-            <div class="flex justify-between border-t border-dark-border pt-1.5 font-semibold">
-              <dt class="text-muted">Chênh lệch</dt>
-              <dd class="tabular-nums text-white">{{ formatCurrency(report.water.margin) }}</dd>
-            </div>
           </dl>
         </div>
       </div>
 
       <!-- Revenue breakdown -->
       <UiSection title="Doanh thu theo loại" class="mt-8">
+        <template #actions>
+          <span class="text-sm font-semibold tabular-nums text-white">
+            {{ formatCurrency(metrics.issuedRevenue) }}
+          </span>
+        </template>
         <div class="rounded-2xl border border-dark-border bg-dark-surface divide-y divide-dark-border">
           <div
             v-for="row in report.revenueByType"
@@ -286,6 +335,9 @@ function expenseLabel(category: BuildingExpense['category']) {
       <!-- Fixed costs -->
       <UiSection title="Chi phí cố định" class="mt-8">
         <template #actions>
+          <span class="text-sm font-semibold tabular-nums text-white">
+            {{ formatCurrency(metrics.fixedCostTotal) }}
+          </span>
           <UiButton
             v-if="canWriteFixedCost"
             size="sm"
@@ -324,6 +376,9 @@ function expenseLabel(category: BuildingExpense['category']) {
       <!-- Expenses -->
       <UiSection title="Chi phí phát sinh trong tháng" class="mt-8">
         <template #actions>
+          <span class="text-sm font-semibold tabular-nums text-white">
+            {{ formatCurrency(expenseCategory ? filteredExpenseTotal : metrics.monthlyExpenseTotal) }}
+          </span>
           <UiButton v-if="canWriteExpense" size="sm" @click="openCreateExpense">
             <IconPlus class="h-4 w-4" aria-hidden="true" />
             Thêm chi phí
@@ -342,7 +397,7 @@ function expenseLabel(category: BuildingExpense['category']) {
             </thead>
             <tbody class="divide-y divide-dark-border">
               <tr
-                v-for="e in report.expenses"
+                v-for="e in filteredExpenses"
                 :key="e.id"
                 :class="{ 'opacity-50': e.voidedAt }"
               >
@@ -381,11 +436,11 @@ function expenseLabel(category: BuildingExpense['category']) {
                   </div>
                 </td>
               </tr>
-              <tr v-if="report.expenses.length === 0">
+              <tr v-if="filteredExpenses.length === 0">
                 <td colspan="5" class="px-5 py-8">
                   <UiEmptyState
-                    title="Chưa có chi phí"
-                    description="Ghi nhận chi phí phát sinh để theo dõi lợi nhuận thực tế."
+                    :title="expenseCategory ? 'Không có chi phí phù hợp' : 'Chưa có chi phí'"
+                    :description="expenseCategory ? 'Đổi loại chi để xem các khoản khác trong tháng.' : 'Ghi nhận chi phí phát sinh để theo dõi lợi nhuận thực tế.'"
                   />
                 </td>
               </tr>
