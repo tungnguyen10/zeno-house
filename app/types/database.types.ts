@@ -310,6 +310,7 @@ export type Database = {
           payee: string | null
           payment_method: string | null
           note: string | null
+          receipt_url: string | null
           created_by: string | null
           voided_at: string | null
           voided_by: string | null
@@ -328,6 +329,7 @@ export type Database = {
           payee?: string | null
           payment_method?: string | null
           note?: string | null
+          receipt_url?: string | null
           created_by?: string | null
           voided_at?: string | null
           voided_by?: string | null
@@ -346,6 +348,7 @@ export type Database = {
           payee?: string | null
           payment_method?: string | null
           note?: string | null
+          receipt_url?: string | null
           created_by?: string | null
           voided_at?: string | null
           voided_by?: string | null

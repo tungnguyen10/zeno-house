@@ -18,6 +18,9 @@ export const EXPENSE_CATEGORIES = [
   'supplies',
   'staff',
   'rent_adjustment',
+  'insurance',
+  'bank_fee',
+  'fire_safety',
   'other',
 ] as const
 export type ExpenseCategory = (typeof EXPENSE_CATEGORIES)[number]
@@ -33,6 +36,9 @@ export const EXPENSE_CATEGORY_LABELS: Record<ExpenseCategory, string> = {
   supplies: 'Vật tư vận hành',
   staff: 'Lương nhân sự',
   rent_adjustment: 'Điều chỉnh tiền thuê',
+  insurance: 'Bảo hiểm',
+  bank_fee: 'Phí ngân hàng',
+  fire_safety: 'PCCC',
   other: 'Khác',
 }
 

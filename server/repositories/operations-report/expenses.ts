@@ -114,4 +114,20 @@ export const BuildingExpenseRepository = {
     if (error) throw createError({ statusCode: 500, message: error.message })
     return mapBuildingExpense(data)
   },
+
+  async updateReceiptPath(
+    event: H3Event,
+    id: string,
+    receiptPath: string | null,
+  ): Promise<BuildingExpense> {
+    const client = await serverSupabaseClient(event)
+    const { data, error } = await client
+      .from('building_expenses')
+      .update({ receipt_url: receiptPath })
+      .eq('id', id)
+      .select()
+      .single()
+    if (error) throw createError({ statusCode: 500, message: error.message })
+    return mapBuildingExpense(data)
+  },
 }

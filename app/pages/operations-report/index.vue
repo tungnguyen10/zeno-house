@@ -29,14 +29,36 @@ const {
   errorMessage,
   forbidden,
   reload,
+  exportXlsx,
 } = useOperationsReport()
 
-const { createExpense, updateExpense, voidExpense, createFixedCost } = useOperationsMutations()
+const {
+  createExpense,
+  updateExpense,
+  voidExpense,
+  uploadExpenseReceipt,
+  removeExpenseReceipt,
+} = useOperationsMutations()
 
 // --- Capability gates ---------------------------------------------------
 const canWriteExpense = computed(() => auth.can('building-expenses.write'))
 const canVoidExpense = computed(() => auth.can('building-expenses.delete'))
-const canWriteFixedCost = computed(() => auth.can('building-fixed-costs.write'))
+const canExportReport = computed(() => auth.can('operations-report.export'))
+const exportLoading = ref(false)
+
+async function exportReportXlsx() {
+  exportLoading.value = true
+  try {
+    await exportXlsx()
+    toast.success('Da xuat file Excel.')
+  }
+  catch (err) {
+    toast.error(resolveError(err, 'Khong xuat duoc Excel.'))
+  }
+  finally {
+    exportLoading.value = false
+  }
+}
 
 // --- Filter options -----------------------------------------------------
 const buildingOptions = computed(() =>
@@ -112,12 +134,16 @@ function openEditExpense(expense: BuildingExpense) {
 async function submitExpense(payload: Record<string, unknown>) {
   savingExpense.value = true
   try {
+    const receiptFile = payload.receipt_file instanceof File ? payload.receipt_file : null
+    delete payload.receipt_file
     if (editingExpense.value) {
       await updateExpense(editingExpense.value.id, payload)
+      if (receiptFile) await uploadExpenseReceipt(editingExpense.value.id, receiptFile)
       toast.success('Đã cập nhật chi phí.')
     }
     else {
-      await createExpense(payload)
+      const created = await createExpense(payload)
+      if (receiptFile) await uploadExpenseReceipt(created.id, receiptFile)
       toast.success('Đã thêm chi phí.')
     }
     expenseModalOpen.value = false
@@ -128,6 +154,17 @@ async function submitExpense(payload: Record<string, unknown>) {
   }
   finally {
     savingExpense.value = false
+  }
+}
+
+async function removeReceipt(expense: BuildingExpense) {
+  try {
+    await removeExpenseReceipt(expense.id)
+    toast.success('Đã xoá biên lai.')
+    reload()
+  }
+  catch (err) {
+    toast.error(resolveError(err, 'Không xoá được biên lai.'))
   }
 }
 
@@ -167,26 +204,6 @@ async function submitVoid() {
   }
 }
 
-// --- Fixed cost modal ---------------------------------------------------
-const fixedCostModalOpen = ref(false)
-const savingFixedCost = ref(false)
-
-async function submitFixedCost(payload: Record<string, unknown>) {
-  savingFixedCost.value = true
-  try {
-    await createFixedCost(payload)
-    toast.success('Đã thêm chi phí cố định.')
-    fixedCostModalOpen.value = false
-    reload()
-  }
-  catch (err) {
-    toast.error(resolveError(err, 'Không lưu được chi phí cố định.'))
-  }
-  finally {
-    savingFixedCost.value = false
-  }
-}
-
 function resolveError(err: unknown, fallback: string): string {
   const body = (err as { data?: { error?: { message?: string } } })?.data
   return body?.error?.message ?? fallback
@@ -209,7 +226,21 @@ function signedClass(value: number): string {
     <UiPageHeader
       title="Báo cáo vận hành"
       description="Doanh thu, chi phí và lợi nhuận theo tòa nhà từng tháng."
-    />
+    >
+      <template #actions>
+        <UiButton
+          v-if="canExportReport"
+          size="sm"
+          variant="secondary"
+          :loading="exportLoading"
+          :disabled="!report || isLoading"
+          @click="exportReportXlsx"
+        >
+          <IconDownload class="h-4 w-4" aria-hidden="true" />
+          Xuất Excel
+        </UiButton>
+      </template>
+    </UiPageHeader>
 
     <!-- Filters -->
     <div class="flex flex-wrap items-end gap-3 mb-6">
@@ -338,14 +369,6 @@ function signedClass(value: number): string {
           <span class="text-sm font-semibold tabular-nums text-white">
             {{ formatCurrency(metrics.fixedCostTotal) }}
           </span>
-          <UiButton
-            v-if="canWriteFixedCost"
-            size="sm"
-            @click="fixedCostModalOpen = true"
-          >
-            <IconPlus class="h-4 w-4" aria-hidden="true" />
-            Thêm
-          </UiButton>
         </template>
         <div class="rounded-2xl border border-dark-border bg-dark-surface divide-y divide-dark-border">
           <div
@@ -391,6 +414,7 @@ function signedClass(value: number): string {
                 <th class="px-5 py-3 font-medium">Loại</th>
                 <th class="px-5 py-3 font-medium">Ngày</th>
                 <th class="px-5 py-3 font-medium">Nhận</th>
+                <th class="px-5 py-3 font-medium">Biên lai</th>
                 <th class="px-5 py-3 text-right font-medium">Số tiền</th>
                 <th class="px-5 py-3 text-right font-medium">Thao tác</th>
               </tr>
@@ -408,6 +432,19 @@ function signedClass(value: number): string {
                 </td>
                 <td class="px-5 py-3 text-muted">{{ e.expenseDate ?? '—' }}</td>
                 <td class="px-5 py-3 text-muted">{{ e.payee ?? '—' }}</td>
+                <td class="px-5 py-3">
+                  <a
+                    v-if="e.receiptSignedUrl"
+                    :href="e.receiptSignedUrl"
+                    target="_blank"
+                    rel="noopener"
+                    class="inline-flex items-center gap-1 text-sm text-cyan hover:text-cyan/80"
+                  >
+                    <IconLink class="h-4 w-4" aria-hidden="true" />
+                    Xem
+                  </a>
+                  <span v-else class="text-muted">—</span>
+                </td>
                 <td class="px-5 py-3 text-right tabular-nums text-white">
                   {{ formatCurrency(e.amount) }}
                 </td>
@@ -424,6 +461,16 @@ function signedClass(value: number): string {
                       <IconPencilSquare class="h-4 w-4" aria-hidden="true" />
                     </UiButton>
                     <UiButton
+                      v-if="canWriteExpense && e.receiptUrl && !e.voidedAt"
+                      size="sm"
+                      variant="ghost"
+                      icon-only
+                      aria-label="Xoá biên lai"
+                      @click="removeReceipt(e)"
+                    >
+                      <IconX class="h-4 w-4" aria-hidden="true" />
+                    </UiButton>
+                    <UiButton
                       v-if="canVoidExpense && !e.voidedAt"
                       size="sm"
                       variant="ghost"
@@ -437,7 +484,7 @@ function signedClass(value: number): string {
                 </td>
               </tr>
               <tr v-if="filteredExpenses.length === 0">
-                <td colspan="5" class="px-5 py-8">
+                <td colspan="6" class="px-5 py-8">
                   <UiEmptyState
                     :title="expenseCategory ? 'Không có chi phí phù hợp' : 'Chưa có chi phí'"
                     :description="expenseCategory ? 'Đổi loại chi để xem các khoản khác trong tháng.' : 'Ghi nhận chi phí phát sinh để theo dõi lợi nhuận thực tế.'"
@@ -461,17 +508,6 @@ function signedClass(value: number): string {
       :submitting="savingExpense"
       @close="expenseModalOpen = false"
       @submit="submitExpense"
-    />
-
-    <OperationsFixedCostModal
-      v-if="buildingId"
-      :open="fixedCostModalOpen"
-      :building-id="buildingId"
-      :period-year="periodYear"
-      :period-month="periodMonth"
-      :submitting="savingFixedCost"
-      @close="fixedCostModalOpen = false"
-      @submit="submitFixedCost"
     />
 
     <UiModal :open="voidModalOpen" title="Hủy chi phí" size="sm" @close="voidModalOpen = false">

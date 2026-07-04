@@ -12,6 +12,7 @@ function user(role: 'admin' | 'owner' | 'manager' | null): AuthUser {
 
 const ALL_CAPS = [
   'operations-report.read',
+  'operations-report.export',
   'building-expenses.read',
   'building-expenses.write',
   'building-expenses.delete',
@@ -34,6 +35,7 @@ describe('operations-report permission matrix', () => {
     const manager = user('manager')
 
     expect(can(manager, 'operations-report.read')).toBe(true)
+    expect(can(manager, 'operations-report.export')).toBe(false)
     expect(can(manager, 'building-expenses.read')).toBe(true)
     expect(can(manager, 'building-expenses.write')).toBe(true)
 

@@ -14,9 +14,9 @@ import {
   type FixedCostCategory,
 } from '~/utils/constants/operations-report'
 import { BuildingRepository } from '../../repositories/buildings'
-import { BuildingExpenseRepository } from '../../repositories/operations-report/expenses'
 import { BuildingFixedCostRepository } from '../../repositories/operations-report/fixed-costs'
 import { OperationsReportRepository } from '../../repositories/operations-report/report'
+import { BuildingExpenseService } from './expenses'
 import { assertBuildingScope } from '../../utils/scope'
 
 const REVENUE_LABELS: Record<string, string> = {
@@ -65,10 +65,10 @@ export const OperationsReportService = {
         query.period_month,
       ),
       BuildingFixedCostRepository.listByBuilding(event, query.building_id),
-      BuildingExpenseRepository.list(event, {
-        buildingId: query.building_id,
-        periodYear: query.period_year,
-        periodMonth: query.period_month,
+      BuildingExpenseService.list(event, user, {
+        building_id: query.building_id,
+        period_year: query.period_year,
+        period_month: query.period_month,
       }),
     ])
 

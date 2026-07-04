@@ -262,15 +262,7 @@ async function unissuePeriodFromModal(reason: string) {
 async function exportPeriodXlsx() {
   exportLoading.value = true
   try {
-    const { blob, fileName } = await exportXlsx()
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = fileName
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
+    await exportXlsx()
     toast.success('Đã xuất file Excel')
   }
   catch (err) {

@@ -166,14 +166,10 @@ export function useBillingPeriodWorkspace(periodId: MaybeRefOrGetter<string>) {
 
   async function exportXlsx(): Promise<{ blob: Blob; fileName: string }> {
     if (!id.value) throw new Error('No period id')
-    const response = await $fetch.raw<Blob>(`/api/billing/periods/${id.value}/export`, {
-      responseType: 'blob',
-    })
-    const blob = response._data as Blob
-    const disposition = response.headers.get('content-disposition') ?? ''
-    const match = disposition.match(/filename="?([^";]+)"?/i)
-    const fileName = match?.[1] ?? `billing-${id.value}.xlsx`
-    return { blob, fileName }
+    return useExportDownload().downloadBlob(
+      `/api/billing/periods/${id.value}/export`,
+      `billing-${id.value}.xlsx`,
+    )
   }
 
   async function saveUtilityOverride(input: UtilityUsageOverrideInput): Promise<BillingUtilityUsage> {

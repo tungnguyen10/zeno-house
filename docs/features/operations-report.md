@@ -395,3 +395,12 @@ Da ship trong change `add-operations-report`:
 - Audit actions: `building_expense.created/updated/voided`, `building_fixed_cost.created/updated/ended`.
 
 Chua lam (nhu MVP scope da neu): approval, upload chung tu, custom category, multi-currency, double-entry, tax/VAT, so sanh nhieu toa cung luc.
+
+## Trang Thai Trien Khai (Receipt/Export)
+
+Da ship trong change `add-expense-receipt-export`:
+
+- Expense co the gan anh bien lai jpeg/png/webp toi 5MB. File nam trong bucket private `expense-receipts`; API chi tra signed URL ngan han.
+- API export Excel `GET /api/operations-report/export` xuat bao cao thang cua mot toa nha. Chi admin/owner co `operations-report.export`; manager khong thay nut export.
+- Category chi phi mo rong them `insurance`, `bank_fee`, `fire_safety`.
+- Quan ly chi phi co dinh duoc chuyen sang `/buildings/[id]/settings`; trang bao cao chi hien chi phi co dinh dang read-only.

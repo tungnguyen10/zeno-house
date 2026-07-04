@@ -3,6 +3,9 @@ import type { ApiSuccess } from '~/types/api'
 import type { PricingType, ServiceCatalogItem } from '~/types/service-catalog'
 import type { ContractWithDetails } from '~/types/contracts'
 import type { AssignmentManager } from '~/types/assignments'
+import type { BuildingFixedCost } from '~/types/operations-report'
+import { FIXED_COST_CATEGORY_LABELS } from '~/utils/constants/operations-report'
+import { formatCurrency } from '~/utils/format/currency'
 import { buildingPath } from '~/utils/routes/operational'
 
 const route = useRoute()
@@ -46,6 +49,80 @@ const { data: managersData } = await useFetch<ApiSuccess<AssignmentManager[]>>(
 const assignedManagers = computed(() => managersData.value?.data ?? [])
 
 const activeServiceCount = computed(() => services.value.filter(s => s.isActive).length)
+const canManageFixedCosts = computed(() => authStore.can('building-fixed-costs.write'))
+const now = new Date()
+const fixedCostPeriodYear = ref(now.getFullYear())
+const fixedCostPeriodMonth = ref(now.getMonth() + 1)
+const fixedCostModalOpen = ref(false)
+const savingFixedCost = ref(false)
+const endFixedCostModalOpen = ref(false)
+const endingFixedCost = ref(false)
+const endFixedCostTarget = ref<BuildingFixedCost | null>(null)
+const endPeriodYear = ref(now.getFullYear())
+const endPeriodMonth = ref(now.getMonth() + 1)
+const fixedCostError = ref<string | null>(null)
+const { createFixedCost } = useOperationsMutations()
+const { data: fixedCostsData, refresh: refreshFixedCosts } = await useFetch<ApiSuccess<BuildingFixedCost[]>>(
+  '/api/building-fixed-costs',
+  {
+    query: { building_id: id },
+    immediate: canManageFixedCosts.value,
+    watch: false,
+  },
+)
+const fixedCosts = computed(() => fixedCostsData.value?.data ?? [])
+
+async function submitFixedCost(payload: Record<string, unknown>) {
+  savingFixedCost.value = true
+  fixedCostError.value = null
+  try {
+    await createFixedCost(payload)
+    fixedCostModalOpen.value = false
+    await refreshFixedCosts()
+  }
+  catch (err) {
+    fixedCostError.value = resolveApiError(err, 'Không lưu được chi phí vận hành.')
+  }
+  finally {
+    savingFixedCost.value = false
+  }
+}
+
+function openEndFixedCost(cost: BuildingFixedCost) {
+  endFixedCostTarget.value = cost
+  endPeriodYear.value = fixedCostPeriodYear.value
+  endPeriodMonth.value = fixedCostPeriodMonth.value
+  fixedCostError.value = null
+  endFixedCostModalOpen.value = true
+}
+
+async function submitEndFixedCost() {
+  if (!endFixedCostTarget.value) return
+  endingFixedCost.value = true
+  fixedCostError.value = null
+  try {
+    await $fetch(`/api/building-fixed-costs/${endFixedCostTarget.value.id}`, {
+      method: 'PATCH',
+      body: {
+        effective_to_period_year: Number(endPeriodYear.value),
+        effective_to_period_month: Number(endPeriodMonth.value),
+      },
+    })
+    endFixedCostModalOpen.value = false
+    await refreshFixedCosts()
+  }
+  catch (err) {
+    fixedCostError.value = resolveApiError(err, 'Không kết thúc được chi phí vận hành.')
+  }
+  finally {
+    endingFixedCost.value = false
+  }
+}
+
+function resolveApiError(err: unknown, fallback: string): string {
+  const msg = (err as { data?: { error?: { message?: string } } })?.data?.error?.message
+  return msg ?? fallback
+}
 
 // Building code
 const codeInput = ref('')
@@ -202,6 +279,61 @@ async function handleUpdatePricingType(catalogId: string, pricingType: PricingTy
       </div>
     </UiSection>
 
+    <UiSection
+      v-if="canManageFixedCosts"
+      title="Chi phí vận hành"
+      description="Quản lý chi phí cố định theo tháng cho báo cáo vận hành."
+    >
+      <template #actions>
+        <UiButton size="sm" @click="fixedCostModalOpen = true">
+          <IconPlus class="h-4 w-4" aria-hidden="true" />
+          Thêm chi phí
+        </UiButton>
+      </template>
+      <div class="rounded-xl border border-dark-border bg-dark-surface p-5">
+        <UiAlert v-if="fixedCostError" severity="danger" class="mb-4">
+          {{ fixedCostError }}
+        </UiAlert>
+        <div v-if="fixedCosts.length === 0" class="text-sm text-muted">
+          Chưa có chi phí vận hành cố định.
+        </div>
+        <div v-else class="divide-y divide-dark-border">
+          <div
+            v-for="cost in fixedCosts"
+            :key="cost.id"
+            class="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between"
+          >
+            <div>
+              <div class="font-medium text-white">
+                {{ FIXED_COST_CATEGORY_LABELS[cost.category] ?? cost.category }}
+              </div>
+              <div class="mt-1 text-xs text-muted">
+                Từ {{ cost.effectiveFromPeriodMonth }}/{{ cost.effectiveFromPeriodYear }}
+                <template v-if="cost.effectiveToPeriodYear">
+                  đến {{ cost.effectiveToPeriodMonth }}/{{ cost.effectiveToPeriodYear }}
+                </template>
+                <template v-else>
+                  · đang áp dụng
+                </template>
+              </div>
+              <p v-if="cost.note" class="mt-1 text-xs text-muted">{{ cost.note }}</p>
+            </div>
+            <div class="flex items-center justify-between gap-3 sm:justify-end">
+              <span class="tabular-nums text-white">{{ formatCurrency(cost.amount) }}</span>
+              <UiButton
+                v-if="!cost.effectiveToPeriodYear"
+                size="sm"
+                variant="secondary"
+                @click="openEndFixedCost(cost)"
+              >
+                Kết thúc
+              </UiButton>
+            </div>
+          </div>
+        </div>
+      </div>
+    </UiSection>
+
     <!-- Building-level defaults -->
     <UiSection
       title="Dịch vụ mặc định"
@@ -260,5 +392,45 @@ async function handleUpdatePricingType(catalogId: string, pricingType: PricingTy
         />
       </div>
     </UiSection>
+
+    <OperationsFixedCostModal
+      :open="fixedCostModalOpen"
+      :building-id="id"
+      :period-year="fixedCostPeriodYear"
+      :period-month="fixedCostPeriodMonth"
+      :submitting="savingFixedCost"
+      @close="fixedCostModalOpen = false"
+      @submit="submitFixedCost"
+    />
+
+    <UiModal
+      :open="endFixedCostModalOpen"
+      title="Kết thúc chi phí vận hành"
+      size="sm"
+      @close="endFixedCostModalOpen = false"
+    >
+      <div class="space-y-4">
+        <p class="text-sm text-muted">
+          Chọn kỳ cuối cùng còn áp dụng chi phí này.
+        </p>
+        <div class="grid grid-cols-2 gap-3">
+          <UiInput v-model="endPeriodYear" label="Năm kết thúc" type="number" />
+          <UiInput v-model="endPeriodMonth" label="Tháng kết thúc" type="number" />
+        </div>
+        <UiAlert v-if="fixedCostError" severity="danger">
+          {{ fixedCostError }}
+        </UiAlert>
+      </div>
+      <template #footer>
+        <div class="flex justify-end gap-2">
+          <UiButton variant="secondary" :disabled="endingFixedCost" @click="endFixedCostModalOpen = false">
+            Đóng
+          </UiButton>
+          <UiButton :loading="endingFixedCost" @click="submitEndFixedCost">
+            Lưu
+          </UiButton>
+        </div>
+      </template>
+    </UiModal>
   </div>
 </template>

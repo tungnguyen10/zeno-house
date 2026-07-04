@@ -143,3 +143,21 @@ Use standardized error codes where possible:
 - `CONFLICT`
 
 Server services should raise domain-specific conflicts rather than letting database errors leak to the UI.
+
+## Operations Report
+
+| Method | Path |
+| --- | --- |
+| GET | `/api/operations-report` |
+| GET | `/api/operations-report/export` |
+| GET | `/api/building-expenses` |
+| POST | `/api/building-expenses` |
+| PATCH | `/api/building-expenses/[id]` |
+| DELETE | `/api/building-expenses/[id]` |
+| POST | `/api/building-expenses/[id]/receipt` |
+| DELETE | `/api/building-expenses/[id]/receipt` |
+| GET | `/api/building-fixed-costs` |
+| POST | `/api/building-fixed-costs` |
+| PATCH | `/api/building-fixed-costs/[id]` |
+
+Operations report export requires `operations-report.export`. Expense receipt routes accept a private image attachment and return the expense DTO with a short-lived signed receipt URL when present.

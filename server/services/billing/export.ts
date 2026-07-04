@@ -1,6 +1,13 @@
 import type { H3Event } from 'h3'
 import ExcelJS from 'exceljs'
 import { db } from '../../utils/db'
+import {
+  MONEY_FORMAT,
+  alignRightCells,
+  styleTableRow as styleExcelTableRow,
+  styleTitleRow,
+  viExportDate,
+} from '../../utils/excel'
 import type { AuthUser } from '~/types/auth'
 import type {
   BillingPeriod,
@@ -12,42 +19,18 @@ import { BillingPeriodRepository } from '../../repositories/billing/periods'
 import { BillingDisplayResolver } from './display'
 import { BillingAuditService } from './audit'
 import { BILLING_AUDIT_ACTIONS } from '~/utils/constants/billing'
+import { slugifyName } from '~/utils/format/slug'
 import { newCorrelationId } from '../../utils/billing/correlation'
 import { assertBuildingScope } from '../../utils/scope'
 
 const TABLE_COLUMN_COUNT = 11
-const TABLE_BORDER: Partial<ExcelJS.Borders> = {
-  top: { style: 'thin' },
-  left: { style: 'thin' },
-  bottom: { style: 'thin' },
-  right: { style: 'thin' },
-}
-
-function slugify(input: string): string {
-  return input
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[đĐ]/g, m => (m === 'đ' ? 'd' : 'D'))
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    || 'building'
-}
 
 function periodSlug(period: BillingPeriod): string {
   return `${period.periodYear}-${String(period.periodMonth).padStart(2, '0')}`
 }
 
-function moneyFormat(): string {
-  return '#,##0'
-}
-
 function viPeriodTitle(period: BillingPeriod): string {
   return `${String(period.periodMonth).padStart(2, '0')}/${period.periodYear}`
-}
-
-function viExportDate(date = new Date()): string {
-  return `Ngày ${String(date.getDate()).padStart(2, '0')} tháng ${String(date.getMonth() + 1).padStart(2, '0')} năm ${date.getFullYear()}`
 }
 
 function metaNumber(meta: Record<string, unknown>, key: string): number | null {
@@ -85,26 +68,12 @@ function chargeTotalsFor(charges: InvoiceCharge[]): Record<ChargeType, number> {
   return totals
 }
 
-function styleTitleRow(row: ExcelJS.Row, size: number) {
-  row.font = { bold: true, size, name: 'Times New Roman' }
-  row.alignment = { horizontal: 'center', vertical: 'middle', shrinkToFit: true }
-}
-
 function styleTableRow(row: ExcelJS.Row, bold = false) {
-  row.font = { bold, size: 14, name: 'Times New Roman' }
-  row.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true, shrinkToFit: true }
-  for (let col = 1; col <= TABLE_COLUMN_COUNT; col++) {
-    const cell = row.getCell(col)
-    cell.border = TABLE_BORDER
-    cell.alignment = row.alignment
-    cell.font = row.font
-  }
+  styleExcelTableRow(row, bold, TABLE_COLUMN_COUNT)
 }
 
 function alignMoneyCells(row: ExcelJS.Row) {
-  for (let col = 5; col <= 10; col++) {
-    row.getCell(col).alignment = { horizontal: 'right', vertical: 'middle', shrinkToFit: true }
-  }
+  alignRightCells(row, 5, 10)
 }
 
 export interface BuildPeriodWorkbookResult {
@@ -130,8 +99,8 @@ export const BillingExportService = {
       .select('name')
       .eq('id', period.buildingId)
       .maybeSingle()
-    const buildingName = (buildingRow?.name as string | null) ?? 'Toà nhà'
-    const buildingSlugValue = slugify(buildingName)
+    const buildingName = (buildingRow?.name as string | null) ?? 'Tòa nhà'
+    const buildingSlugValue = slugifyName(buildingName) || 'building'
 
     const rawInvoices = await InvoiceRepository.listByPeriod(event, period.id)
     const resolver = new BillingDisplayResolver(event)
@@ -159,12 +128,12 @@ export const BillingExportService = {
       { key: 'room', width: 12 },
       { key: 'electricityReading', width: 20 },
       { key: 'waterReading', width: 20 },
-      { key: 'electricityAmount', width: 17, style: { numFmt: moneyFormat() } },
-      { key: 'waterAmount', width: 17, style: { numFmt: moneyFormat() } },
-      { key: 'rentAmount', width: 17, style: { numFmt: moneyFormat() } },
-      { key: 'otherAmount', width: 19, style: { numFmt: moneyFormat() } },
-      { key: 'discountAmount', width: 17, style: { numFmt: moneyFormat() } },
-      { key: 'totalAmount', width: 18, style: { numFmt: moneyFormat() } },
+      { key: 'electricityAmount', width: 17, style: { numFmt: MONEY_FORMAT } },
+      { key: 'waterAmount', width: 17, style: { numFmt: MONEY_FORMAT } },
+      { key: 'rentAmount', width: 17, style: { numFmt: MONEY_FORMAT } },
+      { key: 'otherAmount', width: 19, style: { numFmt: MONEY_FORMAT } },
+      { key: 'discountAmount', width: 17, style: { numFmt: MONEY_FORMAT } },
+      { key: 'totalAmount', width: 18, style: { numFmt: MONEY_FORMAT } },
       { key: 'note', width: 24 },
     ]
 

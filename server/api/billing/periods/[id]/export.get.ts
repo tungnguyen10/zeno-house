@@ -1,4 +1,5 @@
 import { BillingExportService } from '../../../../services/billing/export'
+import { setXlsxResponse } from '../../../../utils/excel'
 
 export default defineEventHandler(async (event) => {
   const user = await requireAuth(event)
@@ -7,11 +8,6 @@ export default defineEventHandler(async (event) => {
 
   const { buffer, fileName } = await BillingExportService.buildPeriodWorkbook(event, user, id!)
 
-  setResponseHeaders(event, {
-    'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    'Content-Disposition': `attachment; filename="${fileName}"`,
-    'Content-Length': String(buffer.length),
-    'Cache-Control': 'no-store',
-  })
+  setXlsxResponse(event, buffer, fileName)
   return buffer
 })

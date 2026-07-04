@@ -41,6 +41,7 @@ const form = reactive({
   payee: '',
   payment_method: '',
   note: '',
+  receipt_file: null as File | null,
 })
 
 const error = ref<string | null>(null)
@@ -72,6 +73,7 @@ watch(
     form.payee = e?.payee ?? ''
     form.payment_method = e?.paymentMethod ?? ''
     form.note = e?.note ?? ''
+    form.receipt_file = null
     // Expand extra fields only when the edited expense already uses them.
     showDetails.value = !!(e?.payee || e?.paymentMethod || e?.note)
   },
@@ -101,7 +103,14 @@ function submit() {
     base.period_month = props.periodMonth
   }
 
+  if (form.receipt_file) base.receipt_file = form.receipt_file
+
   emit('submit', base)
+}
+
+function onReceiptChange(event: Event) {
+  const input = event.target as HTMLInputElement
+  form.receipt_file = input.files?.[0] ?? null
 }
 </script>
 
@@ -139,6 +148,25 @@ function submit() {
         label="Ngày chi"
         type="date"
       />
+
+      <div class="space-y-2">
+        <label class="block text-sm font-medium text-muted" for="expense-receipt">
+          Biên lai
+        </label>
+        <input
+          id="expense-receipt"
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          class="block w-full rounded-md border border-dark-border bg-dark-surface px-3 py-2 text-sm text-white file:mr-3 file:rounded-md file:border-0 file:bg-cyan/15 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-cyan"
+          @change="onReceiptChange"
+        >
+        <p v-if="expense?.receiptSignedUrl && !form.receipt_file" class="text-xs text-muted">
+          Đã có biên lai. Chọn file mới để thay thế.
+        </p>
+        <p v-else-if="form.receipt_file" class="text-xs text-muted">
+          {{ form.receipt_file.name }}
+        </p>
+      </div>
 
       <!-- Optional fields stay collapsed so the common path is 3 fields. -->
       <button

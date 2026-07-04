@@ -164,6 +164,20 @@ visible to their owner only through building assignments.
 For scoped roles (owner, manager) every billing capability is additionally constrained to the
 period's building via `assertBuildingScope`.
 
+## Operations Report Permissions
+
+| Capability | Role | Used for |
+| --- | --- | --- |
+| `operations-report.read` | admin, owner, manager | View the monthly report. |
+| `operations-report.export` | admin, owner | Export the monthly report workbook. |
+| `building-expenses.read` | admin, owner, manager | View monthly expenses and signed receipt links. |
+| `building-expenses.write` | admin, owner, manager | Create/edit expenses and upload/remove receipts in scope. |
+| `building-expenses.delete` | admin, owner | Soft-void expenses. |
+| `building-fixed-costs.read` | admin, owner | List fixed-cost history in building settings. |
+| `building-fixed-costs.write` | admin, owner | Create/end fixed-cost rows in building settings. |
+
+Managers can enter expenses and receipts for assigned buildings, but they cannot export operations workbooks or manage fixed costs.
+
 ## Security Rules
 
 - Never trust UI visibility for authorization.

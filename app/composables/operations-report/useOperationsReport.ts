@@ -58,6 +58,19 @@ export function useOperationsReport() {
     if (buildingId.value) refresh()
   }
 
+  async function exportXlsx(): Promise<{ blob: Blob, fileName: string }> {
+    if (!buildingId.value) throw new Error('No building id')
+    const params = new URLSearchParams({
+      building_id: buildingId.value,
+      period_year: String(periodYear.value),
+      period_month: String(periodMonth.value),
+    })
+    return useExportDownload().downloadBlob(
+      `/api/operations-report/export?${params.toString()}`,
+      `bao-cao-van-hanh-${periodYear.value}-${String(periodMonth.value).padStart(2, '0')}.xlsx`,
+    )
+  }
+
   // Re-fetch whenever a complete filter set is available.
   watch(query, () => reload(), { immediate: true })
 
@@ -72,6 +85,7 @@ export function useOperationsReport() {
     errorCode,
     forbidden,
     reload,
+    exportXlsx,
   }
 }
 
@@ -104,6 +118,23 @@ export function useOperationsMutations() {
     return res.data
   }
 
+  async function uploadExpenseReceipt(id: string, file: File): Promise<BuildingExpense> {
+    const form = new FormData()
+    form.append('receipt', file)
+    const res = await $fetch<ApiSuccess<BuildingExpense>>(`/api/building-expenses/${id}/receipt`, {
+      method: 'POST',
+      body: form,
+    })
+    return res.data
+  }
+
+  async function removeExpenseReceipt(id: string): Promise<BuildingExpense> {
+    const res = await $fetch<ApiSuccess<BuildingExpense>>(`/api/building-expenses/${id}/receipt`, {
+      method: 'DELETE',
+    })
+    return res.data
+  }
+
   async function createFixedCost(payload: Record<string, unknown>): Promise<BuildingFixedCost> {
     const res = await $fetch<ApiSuccess<BuildingFixedCost>>('/api/building-fixed-costs', {
       method: 'POST',
@@ -112,5 +143,12 @@ export function useOperationsMutations() {
     return res.data
   }
 
-  return { createExpense, updateExpense, voidExpense, createFixedCost }
+  return {
+    createExpense,
+    updateExpense,
+    voidExpense,
+    uploadExpenseReceipt,
+    removeExpenseReceipt,
+    createFixedCost,
+  }
 }

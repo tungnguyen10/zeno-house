@@ -16,6 +16,7 @@ Zeno House uses Supabase Postgres. Schema history lives in `supabase/migrations`
 | Service catalog | `20260530200000_service_catalog.sql` through `20260530200005_drop_default_service_fees.sql` |
 | Meter readings | `20260530300000_meter_readings.sql`, `20260530400000_simplify_meter_readings.sql` |
 | Billing runtime | `20260611000000_billing_runtime.sql`, `20260611000001_billing_legacy_cleanup.sql` |
+| Operations report | `20260702173259_add_operations_report.sql`, `20260704000000_expense_receipts_and_export_categories.sql` |
 
 ## Core Tables
 
@@ -75,6 +76,14 @@ Route helpers still fall back to ids when readable identifiers are absent.
 `billing_utility_usages` stores manual usage overrides by period, room, and meter type.
 
 `billing_audit_events` stores append-only operational audit events.
+
+## Operations Report Model
+
+`building_expenses` stores monthly operating expenses and now includes `receipt_url`, which is a private Supabase Storage object path, not a public URL. Accepted categories include electricity/water input, internet, cleaning, repair, admin fees, supplies, staff, rent adjustment, insurance, bank fees, fire-safety costs, and other.
+
+`building_fixed_costs` stores recurring costs with effective period ranges. Fixed-cost management lives in building settings; the operations report reads applicable rows for the selected month.
+
+`expense-receipts` is a private Storage bucket for receipt images. Server services enforce capability and building scope before upload, delete, or signed URL generation.
 
 ## RLS And Security Notes
 

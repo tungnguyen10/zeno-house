@@ -36,6 +36,7 @@ export const OWNER_CAPABILITIES = [
   'dashboard.read',
   // Operations report: report read + expense/fixed-cost management.
   'operations-report.read',
+  'operations-report.export',
   'building-expenses.read',
   'building-expenses.write',
   'building-expenses.delete',

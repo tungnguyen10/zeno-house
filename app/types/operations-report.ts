@@ -16,6 +16,8 @@ export interface BuildingExpense {
   payee: string | null
   paymentMethod: string | null
   note: string | null
+  receiptUrl: string | null
+  receiptSignedUrl: string | null
   createdBy: string | null
   voidedAt: string | null
   voidedBy: string | null

@@ -49,6 +49,8 @@ function expense(overrides: Partial<BuildingExpense> = {}): BuildingExpense {
     voidedAt: null,
     voidedBy: null,
     voidReason: null,
+    receiptUrl: null,
+    receiptSignedUrl: null,
     createdAt: '2026-06-12T00:00:00Z',
     updatedAt: '2026-06-12T00:00:00Z',
     ...overrides,

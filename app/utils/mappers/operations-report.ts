@@ -14,6 +14,8 @@ export function mapBuildingExpense(row: Tables<'building_expenses'>): BuildingEx
     payee: row.payee,
     paymentMethod: row.payment_method,
     note: row.note,
+    receiptUrl: row.receipt_url,
+    receiptSignedUrl: null,
     createdBy: row.created_by,
     voidedAt: row.voided_at,
     voidedBy: row.voided_by,
