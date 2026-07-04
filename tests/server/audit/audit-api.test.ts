@@ -65,6 +65,27 @@ describe('GET /api/audit', () => {
     expect(auditRepo.listByBuilding).toHaveBeenCalled()
   })
 
+  it('forwards entity filters to the repository', async () => {
+    requireAuthMock.mockResolvedValue({ id: 'a', app_metadata: { role: 'admin' } })
+    const { default: handler } = await import('../../../server/api/audit/index.get')
+    await handler(event({
+      building_id: 'b-1',
+      entity_type: 'contract',
+      entity_id: 'contract-1',
+      limit: '25',
+    }))
+    expect(auditRepo.listByBuilding).toHaveBeenCalledWith(
+      expect.anything(),
+      'b-1',
+      {
+        limit: 25,
+        entityType: 'contract',
+        entityId: 'contract-1',
+        correlationId: undefined,
+      },
+    )
+  })
+
   it('returns 404 for owner querying an out-of-scope building', async () => {
     requireAuthMock.mockResolvedValue({ id: 'o', app_metadata: { role: 'owner' } })
     scope.assertBuildingScope.mockRejectedValue(Object.assign(new Error('Not found'), { statusCode: 404 }))

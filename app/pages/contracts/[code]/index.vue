@@ -359,8 +359,8 @@ watchEffect(() => {
           <a href="#occupants" class="rounded-md px-3 py-1.5 text-muted hover:bg-dark-hover hover:text-white">Người ở</a>
           <a href="#payments" class="rounded-md px-3 py-1.5 text-muted hover:bg-dark-hover hover:text-white">Thanh toán</a>
           <a href="#services" class="rounded-md px-3 py-1.5 text-muted hover:bg-dark-hover hover:text-white">Dịch vụ</a>
-          <a href="#renewals" class="rounded-md px-3 py-1.5 text-muted hover:bg-dark-hover hover:text-white">Gia hạn</a>
           <a href="#meter-readings" class="rounded-md px-3 py-1.5 text-muted hover:bg-dark-hover hover:text-white">Chỉ số</a>
+          <a href="#history" class="rounded-md px-3 py-1.5 text-muted hover:bg-dark-hover hover:text-white">Lịch sử</a>
         </div>
       </nav>
 
@@ -654,12 +654,16 @@ watchEffect(() => {
         </div>
       </UiSection>
 
-      <!-- Renewals history -->
-      <UiSection id="renewals" title="Lịch sử gia hạn" class="mt-6 scroll-mt-20">
-        <template #actions>
-          <span v-if="contract.renewalCount > 0" class="text-xs text-zinc-400">{{ contract.renewalCount }} lần</span>
-        </template>
+      <!-- Contract history -->
+      <UiSection id="history" title="Lịch sử" class="mt-6 scroll-mt-20">
         <div class="rounded-xl border border-dark-border bg-dark-surface p-4">
+          <div class="mb-3 flex items-center justify-between gap-3">
+            <div>
+              <p class="text-sm font-medium text-white">Lịch sử gia hạn</p>
+              <p class="mt-0.5 text-xs text-muted">Các lần gia hạn và hợp đồng kế tiếp.</p>
+            </div>
+            <span v-if="contract.renewalCount > 0" class="text-xs text-zinc-400">{{ contract.renewalCount }} lần</span>
+          </div>
 
         <!-- Previous contract link -->
         <div v-if="contract.previousContractId" class="mb-3 text-xs text-zinc-400">
@@ -707,6 +711,11 @@ watchEffect(() => {
           </div>
         </div>
         </div>
+        <ContractAuditHistory
+          class="mt-4"
+          :contract-id="contract.id"
+          :building-id="contract.buildingId"
+        />
       </UiSection>
     </template>
 

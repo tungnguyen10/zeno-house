@@ -301,7 +301,6 @@ DELETE /api/building-expenses/[id]
 GET    /api/building-fixed-costs
 POST   /api/building-fixed-costs
 PATCH  /api/building-fixed-costs/[id]
-DELETE /api/building-fixed-costs/[id]
 ```
 
 Delete nen la soft void, khong hard delete:

@@ -79,7 +79,7 @@ TBD - created by archiving change contracts-overhaul. Update Purpose after archi
 ---
 
 ### Requirement: Contract detail sectioned layout
-`app/pages/contracts/[code]/index.vue` SHALL organize the detail body into sections with anchor IDs (preserving existing tab content): `#overview` (dates, rent, deposit, payment_day, terms), `#occupants` (current + history list with add/move-out actions), `#payments` (list + add), `#services` (list + edit), `#renewals` (history + renew button), `#meter-readings` (link to meter workspace + handover summary), `#danger-zone` (Edit, Terminate, Delete actions). A sticky horizontal tab nav SHALL allow jumping to each section.
+`app/pages/contracts/[code]/index.vue` SHALL organize the detail body into sections with anchor IDs (preserving existing tab content): `#overview` (dates, rent, deposit, payment_day, terms), `#occupants` (current + history list with add/move-out actions), `#payments` (list + add), `#services` (list + edit), `#meter-readings` (link to meter workspace + handover summary), `#history` (renewal history and contract audit history), `#danger-zone` (Edit, Terminate, Delete actions). A sticky horizontal tab nav SHALL allow jumping to each section.
 
 #### Scenario: Sticky tab nav renders
 - **WHEN** detail page loads
@@ -96,6 +96,20 @@ TBD - created by archiving change contracts-overhaul. Update Purpose after archi
 #### Scenario: 409 conflict on delete shows soft-delete option
 - **WHEN** admin clicks Delete and the API responds 409 with details
 - **THEN** an alert displays which checks blocked deletion (active / billing / payment / readings) with specific counts; if only the active-contract check blocks, offer a "Kết thúc rồi xoá" button calling DELETE with `?force=true`
+
+#### Scenario: Contract audit history is visible in context
+- **WHEN** a user opens a contract detail page
+- **THEN** the page shows a single "Lịch sử" section containing renewal history and audit events for `entity_type=contract` and the current contract id
+- **AND** the request includes the contract building id so scoped users remain authorized
+
+#### Scenario: Contract rent diff is readable
+- **WHEN** a contract audit event changes `monthlyRent`
+- **THEN** the history section shows a readable before/after row for "Giá thuê / tháng" using currency formatting
+
+#### Scenario: Technical audit snapshots are admin-only
+- **WHEN** a non-admin user views contract history
+- **THEN** raw `before_data`, `after_data`, and metadata JSON are not rendered
+- **AND** admins can expand an audit row to inspect the raw technical snapshot
 
 ---
 

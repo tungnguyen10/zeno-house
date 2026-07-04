@@ -80,9 +80,10 @@ The detail page includes:
 - room and tenant links
 - occupants/roommates
 - contract payments
-- renewals
+- history section combining renewals and contract-scoped audit events
 - contract services
 - handover readings
+- readable contract term diffs such as monthly rent, dates, deposit, payment day, status, and notes; raw audit snapshots are admin-only
 - admin-only danger zone for edit, renew, terminate, and delete
 
 Delete conflicts are displayed as a checklist of blockers. If the only blocker is `ACTIVE_CONTRACT`, admins can use "Kết thúc rồi xoá", which calls `DELETE ?force=true`. Billing, paid payment, and non-handover meter-reading history still block deletion.
