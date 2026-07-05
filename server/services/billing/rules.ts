@@ -132,7 +132,7 @@ export function calculateTieredAmount(usage: number, brackets: TierBracket[]): {
 }
 
 function utilityLabel(meterType: 'electricity' | 'water', suffix = ''): string {
-  const base = meterType === 'electricity' ? 'Tien dien' : 'Tien nuoc'
+  const base = meterType === 'electricity' ? 'Tiền điện' : 'Tiền nước'
   return suffix ? `${base} (${suffix})` : base
 }
 
@@ -179,7 +179,7 @@ export function calculateDraftRule(input: DraftRuleInput): DraftRuleResult {
 
   lines.push({
     chargeType: 'rent',
-    label: 'Tien phong',
+    label: 'Tiền phòng',
     sourceType: 'contract',
     sourceId: contract.id,
     quantity: rent.billableDays / rent.periodDays,
@@ -198,7 +198,7 @@ export function calculateDraftRule(input: DraftRuleInput): DraftRuleResult {
     if (config.pricingType === 'fixed' || config.pricingType === 'fixed_per_room') {
       lines.push({
         chargeType: meterType,
-        label: utilityLabel(meterType, 'co dinh'),
+        label: utilityLabel(meterType, 'cố định'),
         sourceType: 'building',
         sourceId: null,
         quantity: 1,
@@ -213,7 +213,7 @@ export function calculateDraftRule(input: DraftRuleInput): DraftRuleResult {
       const amount = Math.round(contract.occupantCount * config.rate)
       lines.push({
         chargeType: meterType,
-        label: utilityLabel(meterType, 'theo nguoi'),
+        label: utilityLabel(meterType, 'theo người'),
         sourceType: 'building',
         sourceId: null,
         quantity: contract.occupantCount,
@@ -227,7 +227,7 @@ export function calculateDraftRule(input: DraftRuleInput): DraftRuleResult {
     if (!reading?.current && !reading?.override) {
       blockers.push({
         code: BILLING_BLOCKER_CODES.MISSING_CURRENT_READING,
-        message: meterType === 'electricity' ? 'Thieu chi so dien ky nay' : 'Thieu chi so nuoc ky nay',
+        message: meterType === 'electricity' ? 'Thiếu chỉ số điện kỳ này' : 'Thiếu chỉ số nước kỳ này',
         meta: { room_id: contract.roomId, meter_type: meterType },
       })
       continue
@@ -236,7 +236,7 @@ export function calculateDraftRule(input: DraftRuleInput): DraftRuleResult {
     if (usageResult.usage === null || !usageResult.previous) {
       blockers.push({
         code: BILLING_BLOCKER_CODES.MISSING_PREVIOUS_READING,
-        message: meterType === 'electricity' ? 'Thieu chi so dien ky truoc' : 'Thieu chi so nuoc ky truoc',
+        message: meterType === 'electricity' ? 'Thiếu chỉ số điện kỳ trước' : 'Thiếu chỉ số nước kỳ trước',
         meta: { room_id: contract.roomId, meter_type: meterType },
       })
       continue
@@ -244,7 +244,7 @@ export function calculateDraftRule(input: DraftRuleInput): DraftRuleResult {
     if (usageResult.usage < 0) {
       blockers.push({
         code: BILLING_BLOCKER_CODES.NEGATIVE_CONSUMPTION,
-        message: meterType === 'electricity' ? 'Chi so dien ky nay nho hon ky truoc' : 'Chi so nuoc ky nay nho hon ky truoc',
+        message: meterType === 'electricity' ? 'Chỉ số điện kỳ này nhỏ hơn kỳ trước' : 'Chỉ số nước kỳ này nhỏ hơn kỳ trước',
         meta: { room_id: contract.roomId, meter_type: meterType },
       })
       continue
@@ -252,14 +252,14 @@ export function calculateDraftRule(input: DraftRuleInput): DraftRuleResult {
     if (usageResult.source === 'handover_fallback') {
       warnings.push({
         code: BILLING_WARNING_CODES.HANDOVER_FALLBACK_PREVIOUS,
-        message: 'Su dung chi so ban giao lam chi so ky truoc',
+        message: 'Sử dụng chỉ số bàn giao làm chỉ số kỳ trước',
         meta: { room_id: contract.roomId, meter_type: meterType },
       })
     }
     if (usageResult.source === 'usage_override') {
       warnings.push({
         code: BILLING_WARNING_CODES.USAGE_OVERRIDE_APPLIED,
-        message: `Ap dung dieu chinh tieu thu (${usageResult.override?.reason ?? ''})`,
+        message: `Áp dụng điều chỉnh tiêu thụ (${usageResult.override?.reason ?? ''})`,
         meta: { override_id: usageResult.override?.id },
       })
     }
@@ -295,7 +295,7 @@ export function calculateDraftRule(input: DraftRuleInput): DraftRuleResult {
   if ((contract.discountAmount ?? 0) > 0) {
     lines.push({
       chargeType: 'discount',
-      label: 'Giam gia',
+      label: 'Giảm giá',
       sourceType: 'contract',
       sourceId: contract.id,
       quantity: 1,
@@ -308,7 +308,7 @@ export function calculateDraftRule(input: DraftRuleInput): DraftRuleResult {
   if ((contract.surchargeAmount ?? 0) > 0) {
     lines.push({
       chargeType: 'surcharge',
-      label: 'Phu thu',
+      label: 'Phụ thu',
       sourceType: 'contract',
       sourceId: contract.id,
       quantity: 1,
@@ -354,7 +354,7 @@ export function findUtilityBlockers(input: {
     if (!reading?.currentReadingId) {
       blockers.push({
         code: BILLING_BLOCKER_CODES.MISSING_CURRENT_READING,
-        message: meterType === 'electricity' ? 'Thieu chi so dien' : 'Thieu chi so nuoc',
+        message: meterType === 'electricity' ? 'Thiếu chỉ số điện' : 'Thiếu chỉ số nước',
         meta: { contract_id: input.contractId, room_id: input.roomId, meter_type: meterType },
       })
       continue
@@ -362,7 +362,7 @@ export function findUtilityBlockers(input: {
     if (reading.requiresOverride && !reading.override) {
       blockers.push({
         code: BILLING_BLOCKER_CODES.NEGATIVE_CONSUMPTION,
-        message: 'Can dieu chinh tieu thu truoc khi phat hanh',
+        message: 'Cần điều chỉnh tiêu thụ trước khi phát hành',
         meta: { contract_id: input.contractId, room_id: input.roomId, meter_type: meterType },
       })
       continue
@@ -370,7 +370,7 @@ export function findUtilityBlockers(input: {
     if (reading.override && !reading.override.reason?.trim()) {
       blockers.push({
         code: BILLING_BLOCKER_CODES.MISSING_BILLING_REFERENCE,
-        message: 'Can nhap ly do dieu chinh tieu thu',
+        message: 'Cần nhập lý do điều chỉnh tiêu thụ',
         meta: { contract_id: input.contractId, room_id: input.roomId, meter_type: meterType },
       })
     }
@@ -384,7 +384,7 @@ export function findIssuanceBlockers(inputs: Array<Parameters<typeof findUtility
 
 export function assertPeriodCanTransition(from: BillingPeriod['status'], to: BillingPeriod['status']): void {
   if (from === 'closed' && to !== 'closed') {
-    throwConflict('Ky da chot - khong the doi trang thai')
+    throwConflict('Kỳ đã chốt - không thể đổi trạng thái')
   }
 }
 
@@ -403,9 +403,9 @@ export function validateAdjustment(input: {
   amount: number
   reason: string
 }): void {
-  if (input.periodStatus === 'closed') throwConflict('Ky da chot - khong the tao dieu chinh')
+  if (input.periodStatus === 'closed') throwConflict('Kỳ đã chốt - không thể tạo điều chỉnh')
   if (input.amount < 0 && Math.abs(input.amount) > input.invoicePaidAmount) {
-    throwConflict('Dieu chinh am vuot qua so tien da thu')
+    throwConflict('Điều chỉnh âm vượt quá số tiền đã thu')
   }
   if (input.amount < 0 && Math.abs(input.amount) >= 100_000) {
     assertReason(input.reason, 10)

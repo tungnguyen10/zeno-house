@@ -7,7 +7,7 @@ export default defineEventHandler(async (event) => {
   const form = await readMultipartFormData(event)
   const file = form?.find(part => part.name === 'receipt' && part.data.length > 0)
 
-  if (!file) throwValidationError('Thieu file bien lai')
+  if (!file) throwValidationError('Thiếu file biên lai')
 
   const expense = await BuildingExpenseService.uploadReceipt(event, user, id, {
     filename: file.filename,

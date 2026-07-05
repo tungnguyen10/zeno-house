@@ -1,23 +1,23 @@
-# Bao Cao Van Hanh
+# Báo Cáo Vận Hành
 
-Tai lieu nay ghi lai huong explore cho module **Bao cao van hanh**. Muc tieu la tong hop hieu qua van hanh theo tung toa nha va tung thang, dua tren doanh thu da co tu billing va chi phi van hanh moi can nhap them.
+Tài liệu này ghi lại hướng explore cho module **Báo cáo vận hành**. Mục tiêu là tổng hợp hiệu quả vận hành theo từng tòa nhà và từng tháng, dựa trên doanh thu đã có từ billing và chi phí vận hành mới cần nhập thêm.
 
-## Muc Tieu
+## Mục Tiêu
 
-Bao cao van hanh tra loi cac cau hoi:
+Báo cáo vận hành trả lời các câu hỏi:
 
-- Toa nha nay thang nay phai thu bao nhieu?
-- Da thu tien mat bao nhieu?
-- Con cong no bao nhieu?
-- Tong chi phi van hanh bao nhieu?
-- Lai/lo theo doanh thu va theo tien da thu la bao nhieu?
-- Dien, nuoc thu khach so voi dien, nuoc dau vao chenh lech ra sao?
+- Tòa nhà này tháng này phải thu bao nhiêu?
+- Đã thu tiền mặt bao nhiêu?
+- Còn công nợ bao nhiêu?
+- Tổng chi phí vận hành bao nhiêu?
+- Lãi/lỗ theo doanh thu và theo tiền đã thu là bao nhiêu?
+- Điện, nước thu khách so với điện, nước đầu vào chênh lệch ra sao?
 
-Module nay khong thay the billing workspace. Billing van la nguon tinh tien khach, phat hanh hoa don va ghi nhan thanh toan. Bao cao van hanh chi doc doanh thu tu billing va them lop chi phi cua toa nha.
+Module này không thay thế billing workspace. Billing vẫn là nguồn tính tiền khách, phát hành hóa đơn và ghi nhận thanh toán. Báo cáo vận hành chỉ đọc doanh thu từ billing và thêm lớp chi phí của tòa nhà.
 
-## Nguyen Tac Du Lieu
+## Nguyên Tắc Dữ Liệu
 
-Revenue khong nhap tay. Revenue lay tu billing:
+Revenue không nhập tay. Revenue lấy từ billing:
 
 ```text
 billing_periods(building_id, period_year, period_month)
@@ -25,31 +25,31 @@ billing_periods(building_id, period_year, period_month)
     -> invoice_charges(charge_type, amount)
 ```
 
-Expense la du lieu moi, nhap theo building va theo thang.
+Expense là dữ liệu mới, nhập theo building và theo tháng.
 
 ```text
 Revenue: billing sinh ra
-Expense: nguoi dung nhap
-Report: tong hop revenue + expense
+Expense: người dùng nhập
+Report: tổng hợp revenue + expense
 ```
 
-## Khai Niem
+## Khái Niệm
 
-| Khai niem | Y nghia |
+| Khái niệm | Ý nghĩa |
 | --- | --- |
-| Doanh thu phat hanh | Tong tien tren hoa don da phat hanh, chua tru cong no. |
-| Tien da thu | Tong payment thuc thu tu `invoice_payments`. |
-| Cong no | Tong `balance_amount` cua invoice chua void. |
-| Chi phi co dinh | Khoan lap lai theo thang cua building, vi du tien thue lai toa nha. |
-| Chi phi thang | Khoan chi phat sinh theo building/thang, vi du dien dau vao, nuoc dau vao, sua chua. |
-| Lai theo doanh thu | Doanh thu phat hanh - tong chi. |
-| Lai tien mat | Tien da thu - tong chi. |
+| Doanh thu phát hành | Tổng tiền trên hóa đơn đã phát hành, chưa trừ công nợ. |
+| Tiền đã thu | Tổng payment thực thu từ `invoice_payments`. |
+| Công nợ | Tổng `balance_amount` của invoice chưa void. |
+| Chi phí cố định | Khoản lặp lại theo tháng của building, ví dụ tiền thuê lại tòa nhà. |
+| Chi phí tháng | Khoản chi phát sinh theo building/tháng, ví dụ điện đầu vào, nước đầu vào, sửa chữa. |
+| Lãi theo doanh thu | Doanh thu phát hành - tổng chi. |
+| Lãi tiền mặt | Tiền đã thu - tổng chi. |
 
-## Chi Phi Co Dinh
+## Chi Phí Cố Định
 
-Tien thue lai toa nha/can ho nen la chi phi co dinh co lich su hieu luc, khong nen chi luu mot field tren `buildings`. Ly do: khi gia thue thay doi, bao cao thang cu van phai dung.
+Tiền thuê lại tòa nhà/căn hộ nên là chi phí cố định có lịch sử hiệu lực, không nên chỉ lưu một field trên `buildings`. Lý do: khi giá thuê thay đổi, báo cáo tháng cũ vẫn phải đúng.
 
-De xuat bang:
+Đề xuất bảng:
 
 ```text
 building_fixed_costs
@@ -67,19 +67,19 @@ building_fixed_costs
 - updated_at
 ```
 
-MVP category co dinh:
+MVP category cố định:
 
 ```text
 rent
 ```
 
-Sau nay co the mo rong fixed cost cho internet hop dong dai han, phi quan ly co dinh, luong nhan su co dinh.
+Sau này có thể mở rộng fixed cost cho internet hợp đồng dài hạn, phí quản lý cố định, lương nhân sự cố định.
 
-## Chi Phi Theo Thang
+## Chi Phí Theo Tháng
 
-Chi phi phat sinh theo thang nen luu thanh tung dong expense.
+Chi phí phát sinh theo tháng nên lưu thành từng dòng expense.
 
-De xuat bang:
+Đề xuất bảng:
 
 ```text
 building_expenses
@@ -104,49 +104,49 @@ building_expenses
 Category MVP:
 
 ```text
-electricity_input   tien dien dau vao
-water_input         tien nuoc dau vao
-internet            internet / truyen hinh
-cleaning            ve sinh / rac / tap vu
-repair              sua chua / bao tri
-admin_fee           cong an / tam tru / giay to / hanh chinh
-supplies            vat tu van hanh
-staff               luong nhan su
-rent_adjustment     dieu chinh tien thue nha, neu co
-other               khac
+electricity_input   tiền điện đầu vào
+water_input         tiền nước đầu vào
+internet            internet / truyền hình
+cleaning            vệ sinh / rác / tạp vụ
+repair              sửa chữa / bảo trì
+admin_fee           công an / tạm trú / giấy tờ / hành chính
+supplies            vật tư vận hành
+staff               lương nhân sự
+rent_adjustment     điều chỉnh tiền thuê nhà, nếu có
+other               khác
 ```
 
-## Cong Thuc Bao Cao
+## Công Thức Báo Cáo
 
-Bao cao theo `building_id + period_year + period_month`.
+Báo cáo theo `building_id + period_year + period_month`.
 
 ```text
-Doanh thu phat hanh
+Doanh thu phát hành
 = sum(invoices.total_amount)
   where invoice.status != 'void'
 
-Tien da thu
+Tiền đã thu
 = sum(invoice_payments.amount)
   where invoice_payments.deleted_at is null
   and invoice belongs to building/month
 
-Cong no
+Công nợ
 = sum(invoices.balance_amount)
   where invoice.status != 'void'
 
-Tong chi
-= fixed_costs ap dung trong thang
+Tổng chi
+= fixed_costs áp dụng trong tháng
 + sum(building_expenses.amount)
    where voided_at is null
 
-Lai theo doanh thu
-= Doanh thu phat hanh - Tong chi
+Lãi theo doanh thu
+= Doanh thu phát hành - Tổng chi
 
-Lai tien mat
-= Tien da thu - Tong chi
+Lãi tiền mặt
+= Tiền đã thu - Tổng chi
 ```
 
-Doanh thu theo nhom lay tu `invoice_charges.charge_type`:
+Doanh thu theo nhóm lấy từ `invoice_charges.charge_type`:
 
 ```text
 rent
@@ -159,137 +159,137 @@ adjustment
 other
 ```
 
-Voi hien thi tong quan, discount nen hien la so am hoac dong rieng de nguoi dung thay ro.
+Với hiển thị tổng quan, discount nên hiện là số âm hoặc dòng riêng để người dùng thấy rõ.
 
-## Dien Nuoc Dau Vao Va Dau Ra
+## Điện Nước Đầu Vào Và Đầu Ra
 
-Dien/nuoc la diem quan trong cua can ho dich vu. Bao cao can hien rieng chenh lech dau vao/dau ra:
+Điện/nước là điểm quan trọng của căn hộ dịch vụ. Báo cáo cần hiện riêng chênh lệch đầu vào/đầu ra:
 
 ```text
-Dien thu khach
+Điện thu khách
 = sum(invoice_charges.amount where charge_type = 'electricity')
 
-Dien dau vao
+Điện đầu vào
 = sum(building_expenses.amount where category = 'electricity_input')
 
-Chenh dien
-= Dien thu khach - Dien dau vao
+Chênh điện
+= Điện thu khách - Điện đầu vào
 
-Nuoc thu khach
+Nước thu khách
 = sum(invoice_charges.amount where charge_type = 'water')
 
-Nuoc dau vao
+Nước đầu vào
 = sum(building_expenses.amount where category = 'water_input')
 
-Chenh nuoc
-= Nuoc thu khach - Nuoc dau vao
+Chênh nước
+= Nước thu khách - Nước đầu vào
 ```
 
-Vi du:
+Ví dụ:
 
 ```text
-Dien thu khach:  8,000,000
-Dien dau vao:    6,700,000
-Chenh dien:     +1,300,000
+Điện thu khách:  8,000,000
+Điện đầu vào:    6,700,000
+Chênh điện:     +1,300,000
 
-Nuoc thu khach:  2,300,000
-Nuoc dau vao:    1,800,000
-Chenh nuoc:       +500,000
+Nước thu khách:  2,300,000
+Nước đầu vào:    1,800,000
+Chênh nước:       +500,000
 ```
 
-## UI De Xuat
+## UI Đề Xuất
 
-Menu/page chinh:
+Menu/page chính:
 
 ```text
-Bao cao van hanh
+Báo cáo vận hành
 ```
 
-Mo ta:
+Mô tả:
 
 ```text
-Theo doi doanh thu, chi phi va lai/lo tung toa nha theo thang.
+Theo dõi doanh thu, chi phí và lãi/lỗ từng tòa nhà theo tháng.
 ```
 
-Route co the la:
+Route có thể là:
 
 ```text
 /operations-report
 ```
 
-Hoac neu dat trong detail building:
+Hoặc nếu đặt trong detail building:
 
 ```text
 /buildings/[id]/operations
 ```
 
-MVP nen co page tong hop rieng `/operations-report`, vi admin can so sanh nhieu toa.
+MVP nên có page tổng hợp riêng `/operations-report`, vì admin cần so sánh nhiều tòa.
 
-### Bo Loc
+### Bộ Lọc
 
 - Building
-- Thang/nam
-- Category chi phi
+- Tháng/năm
+- Category chi phí
 
-Manager chi thay building duoc gan. Admin thay tat ca.
+Manager chỉ thấy building được gán. Admin thấy tất cả.
 
-### Tong Quan
+### Tổng Quan
 
 Metric cards:
 
-- Doanh thu phat hanh
-- Tien da thu
-- Cong no
-- Tong chi
-- Lai theo doanh thu
-- Lai tien mat
+- Doanh thu phát hành
+- Tiền đã thu
+- Công nợ
+- Tổng chi
+- Lãi theo doanh thu
+- Lãi tiền mặt
 
 ### Breakdown Thu
 
-Bang/cot:
+Bảng/cột:
 
-- Tien phong
-- Dien thu khach
-- Nuoc thu khach
-- Dich vu
-- Phu thu/khac
-- Giam gia
+- Tiền phòng
+- Điện thu khách
+- Nước thu khách
+- Dịch vụ
+- Phụ thu/khác
+- Giảm giá
 
 ### Breakdown Chi
 
-Bang/cot:
+Bảng/cột:
 
-- Tien thue nha co dinh
-- Dien dau vao
-- Nuoc dau vao
+- Tiền thuê nhà cố định
+- Điện đầu vào
+- Nước đầu vào
 - Internet
-- Ve sinh/rac
-- Sua chua
-- Cong an/hanh chinh
-- Vat tu
-- Khac
+- Vệ sinh/rác
+- Sửa chữa
+- Công an/hành chính
+- Vật tư
+- Khác
 
-### So Chi Phi
+### Sổ Chi Phí
 
-Bang expense entries:
+Bảng expense entries:
 
-- Ngay chi
-- Toa nha
-- Loai chi
-- So tien
-- Tra cho ai
-- Phuong thuc
-- Ghi chu
-- Nguoi nhap
-- Hanh dong: sua / huy
+- Ngày chi
+- Tòa nhà
+- Loại chi
+- Số tiền
+- Trả cho ai
+- Phương thức
+- Ghi chú
+- Người nhập
+- Hành động: sửa / hủy
 
-Nut chinh:
+Nút chính:
 
 ```text
-Them khoan chi
+Thêm khoản chi
 ```
 
-## API De Xuat
+## API Đề Xuất
 
 ```text
 GET    /api/operations-report
@@ -303,16 +303,16 @@ POST   /api/building-fixed-costs
 PATCH  /api/building-fixed-costs/[id]
 ```
 
-Delete nen la soft void, khong hard delete:
+Delete nên là soft void, không hard delete:
 
 ```text
 DELETE /api/building-expenses/[id]
 -> set voided_at, voided_by, void_reason
 ```
 
-## Quyen Va Scope
+## Quyền Và Scope
 
-Capabilities de xuat:
+Capabilities đề xuất:
 
 ```text
 operations-report.read
@@ -325,24 +325,24 @@ building-fixed-costs.write
 
 Admin:
 
-- Xem tat ca building.
-- Cau hinh chi phi co dinh.
-- Them/sua/huy chi phi.
-- Xem lai/lo tong hop.
+- Xem tất cả building.
+- Cấu hình chi phí cố định.
+- Thêm/sửa/hủy chi phí.
+- Xem lãi/lỗ tổng hợp.
 
 Manager:
 
-- Chi xem building duoc gan.
-- Co the them chi phi cho building duoc gan neu duoc cap quyen.
-- Khong duoc cau hinh chi phi co dinh neu khong co permission rieng.
+- Chỉ xem building được gán.
+- Có thể thêm chi phí cho building được gán nếu được cấp quyền.
+- Không được cấu hình chi phí cố định nếu không có permission riêng.
 
-Can dung `getAssignedBuildingIds` va `assertBuildingScope` giong cac module hien co.
+Cần dùng `getAssignedBuildingIds` và `assertBuildingScope` giống các module hiện có.
 
 ## Audit
 
-Expense va fixed cost nen ghi audit master/operations, vi day la du lieu tai chinh.
+Expense và fixed cost nên ghi audit master/operations, vì đây là dữ liệu tài chính.
 
-Action codes de xuat:
+Action codes đề xuất:
 
 ```text
 building_expense.created
@@ -353,54 +353,54 @@ building_fixed_cost.updated
 building_fixed_cost.ended
 ```
 
-Neu muon tach rieng, co the tao `operations_audit_events`. MVP co the reuse audit chung neu phu hop voi model hien tai.
+Nếu muốn tách riêng, có thể tạo `operations_audit_events`. MVP có thể reuse audit chung nếu phù hợp với model hiện tại.
 
 ## MVP Scope
 
-Phase 1 nen lam:
+Phase 1 nên làm:
 
-1. Bang `building_expenses`.
-2. Bang `building_fixed_costs` voi category `rent`.
-3. API CRUD cho fixed costs va expenses.
-4. API `operations-report` tong hop theo building/month.
-5. Page `Bao cao van hanh` voi filters, metric cards, revenue breakdown, expense breakdown, expense table.
+1. Bảng `building_expenses`.
+2. Bảng `building_fixed_costs` với category `rent`.
+3. API CRUD cho fixed costs và expenses.
+4. API `operations-report` tổng hợp theo building/month.
+5. Page `Báo cáo vận hành` với filters, metric cards, revenue breakdown, expense breakdown, expense table.
 6. Manager scope theo building assignment.
 
-Chua nen lam trong MVP:
+Chưa nên làm trong MVP:
 
 - Approval workflow.
-- Upload hoa don/chung tu.
+- Upload hóa đơn/chứng từ.
 - Custom categories.
 - Multi-currency.
-- Ke toan double-entry.
+- Kế toán double-entry.
 - Tax/VAT.
 
-## Open Questions (Da Chot)
+## Câu Hỏi Đã Chốt
 
-- Manager co duoc nhap chi phi khong? => Co. Manager co `building-expenses.write` cho building duoc gan, nhung khong duoc huy (`building-expenses.delete`) va khong cau hinh fixed cost.
-- Khoan chi co bat buoc ly do khi huy khong? => Co. Void la soft-void, bat buoc `void_reason`.
-- Fixed cost co nhieu dong theo lich su hieu luc tu MVP khong? => Co. `building_fixed_costs` co `effective_from`/`effective_to` theo period, ket thuc bang cach set `effective_to` qua PATCH.
-- Report uu tien page nao? => `/operations-report` tong hop theo building + thang (MVP mot toa mot thang).
+- Manager có được nhập chi phí không? => Có. Manager có `building-expenses.write` cho building được gán, nhưng không được hủy (`building-expenses.delete`) và không cấu hình fixed cost.
+- Khoản chi có bắt buộc lý do khi hủy không? => Có. Void là soft-void, bắt buộc `void_reason`.
+- Fixed cost có nhiều dòng theo lịch sử hiệu lực từ MVP không? => Có. `building_fixed_costs` có `effective_from`/`effective_to` theo period, kết thúc bằng cách set `effective_to` qua PATCH.
+- Report ưu tiên page nào? => `/operations-report` tổng hợp theo building + tháng (MVP một tòa một tháng).
 
-## Trang Thai Trien Khai (MVP)
+## Trạng Thái Triển Khai (MVP)
 
-Da ship trong change `add-operations-report`:
+Đã ship trong change `add-operations-report`:
 
-- Bang `building_expenses`, `building_fixed_costs` + RLS (admin/owner FOR ALL; manager SELECT/INSERT/UPDATE expense, SELECT fixed cost).
-- Capabilities: `operations-report.read`, `building-expenses.read/write/delete`, `building-fixed-costs.read/write`. Admin + owner co du 6; manager chi co `operations-report.read`, `building-expenses.read`, `building-expenses.write`.
-- API: `GET /api/operations-report`, `GET|POST /api/building-expenses`, `PATCH|DELETE /api/building-expenses/[id]` (DELETE = soft-void, doc `void_reason` tu body), `GET|POST /api/building-fixed-costs`, `PATCH /api/building-fixed-costs/[id]` (end-date qua `effective_to`).
+- Bảng `building_expenses`, `building_fixed_costs` + RLS (admin/owner FOR ALL; manager SELECT/INSERT/UPDATE expense, SELECT fixed cost).
+- Capabilities: `operations-report.read`, `building-expenses.read/write/delete`, `building-fixed-costs.read/write`. Admin + owner có đủ 6; manager chỉ có `operations-report.read`, `building-expenses.read`, `building-expenses.write`.
+- API: `GET /api/operations-report`, `GET|POST /api/building-expenses`, `PATCH|DELETE /api/building-expenses/[id]` (DELETE = soft-void, đọc `void_reason` từ body), `GET|POST /api/building-fixed-costs`, `PATCH /api/building-fixed-costs/[id]` (end-date qua `effective_to`).
 - Flow: page `/operations-report` -> composable `useOperationsReport`/`useOperationsMutations` -> server API -> service -> repository -> Supabase.
-- Service enforce `can(...)`, `assertBuildingScope(..., 'read'|'write')`, fixed-cost overlap => 409 CONFLICT, audit tren moi mutation.
-- Revenue read-only tu invoice khong void + payment `deleted_at is null`. Chi phi da void bi loai khoi tong va khoi danh sach report.
+- Service enforce `can(...)`, `assertBuildingScope(..., 'read'|'write')`, fixed-cost overlap => 409 CONFLICT, audit trên mọi mutation.
+- Revenue read-only từ invoice không void + payment `deleted_at is null`. Chi phí đã void bị loại khỏi tổng và khỏi danh sách report.
 - Audit actions: `building_expense.created/updated/voided`, `building_fixed_cost.created/updated/ended`.
 
-Chua lam (nhu MVP scope da neu): approval, upload chung tu, custom category, multi-currency, double-entry, tax/VAT, so sanh nhieu toa cung luc.
+Chưa làm (như MVP scope đã nêu): approval, upload chứng từ, custom category, multi-currency, double-entry, tax/VAT, so sánh nhiều tòa cùng lúc.
 
-## Trang Thai Trien Khai (Receipt/Export)
+## Trạng Thái Triển Khai (Receipt/Export)
 
-Da ship trong change `add-expense-receipt-export`:
+Đã ship trong change `add-expense-receipt-export`:
 
-- Expense co the gan anh bien lai jpeg/png/webp toi 5MB. File nam trong bucket private `expense-receipts`; API chi tra signed URL ngan han.
-- API export Excel `GET /api/operations-report/export` xuat bao cao thang cua mot toa nha. Chi admin/owner co `operations-report.export`; manager khong thay nut export.
-- Category chi phi mo rong them `insurance`, `bank_fee`, `fire_safety`.
-- Quan ly chi phi co dinh duoc chuyen sang `/buildings/[id]/settings`; trang bao cao chi hien chi phi co dinh dang read-only.
+- Expense có thể gắn ảnh biên lai jpeg/png/webp tới 5MB. File nằm trong bucket private `expense-receipts`; API chỉ trả signed URL ngắn hạn.
+- API export Excel `GET /api/operations-report/export` xuất báo cáo tháng của một tòa nhà. Chỉ admin/owner có `operations-report.export`; manager không thấy nút export.
+- Category chi phí mở rộng thêm `insurance`, `bank_fee`, `fire_safety`.
+- Quản lý chi phí cố định được chuyển sang `/buildings/[id]/settings`; trang báo cáo chỉ hiện chi phí cố định dạng read-only.

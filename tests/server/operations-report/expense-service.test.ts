@@ -7,8 +7,12 @@ const findExpenseById = vi.fn()
 const insertExpense = vi.fn()
 const updateExpenseById = vi.fn()
 const voidExpenseById = vi.fn()
+const updateReceiptPath = vi.fn()
 const assertBuildingScope = vi.fn()
 const appendAudit = vi.fn()
+const storageUpload = vi.fn()
+const storageRemove = vi.fn()
+const storageCreateSignedUrl = vi.fn()
 
 vi.mock('../../../server/repositories/buildings', () => ({
   BuildingRepository: { findById: findBuildingById },
@@ -20,6 +24,7 @@ vi.mock('../../../server/repositories/operations-report/expenses', () => ({
     insert: insertExpense,
     updateById: updateExpenseById,
     voidById: voidExpenseById,
+    updateReceiptPath,
   },
 }))
 
@@ -29,6 +34,18 @@ vi.mock('../../../server/utils/scope', () => ({
 
 vi.mock('../../../server/services/audit', () => ({
   AuditService: { append: appendAudit },
+}))
+
+vi.mock('../../../server/utils/db', () => ({
+  db: () => ({
+    storage: {
+      from: () => ({
+        upload: storageUpload,
+        remove: storageRemove,
+        createSignedUrl: storageCreateSignedUrl,
+      }),
+    },
+  }),
 }))
 
 const admin = { id: 'admin-1', app_metadata: { role: 'admin' } } as AuthUser
@@ -63,6 +80,9 @@ describe('BuildingExpenseService', () => {
     findBuildingById.mockResolvedValue({ id: 'building-1', name: 'Building 1' })
     assertBuildingScope.mockResolvedValue(undefined)
     appendAudit.mockResolvedValue(undefined)
+    storageUpload.mockResolvedValue({ error: null })
+    storageRemove.mockResolvedValue({ error: null })
+    storageCreateSignedUrl.mockResolvedValue({ data: { signedUrl: 'https://signed.test/receipt' }, error: null })
   })
 
   it('soft-voids an expense with void metadata and audit', async () => {
@@ -121,5 +141,72 @@ describe('BuildingExpenseService', () => {
     ).rejects.toMatchObject({ statusCode: 409 })
     expect(updateExpenseById).not.toHaveBeenCalled()
     expect(appendAudit).not.toHaveBeenCalled()
+  })
+
+  it('uploads a valid receipt after write scope enforcement', async () => {
+    const existing = expense()
+    const updated = expense({ receiptUrl: 'building-1/expense-1/receipt.jpg' })
+    findExpenseById.mockResolvedValue(existing)
+    updateReceiptPath.mockResolvedValue(updated)
+
+    const { BuildingExpenseService } = await import(
+      '../../../server/services/operations-report/expenses'
+    )
+
+    const result = await BuildingExpenseService.uploadReceipt({} as never, admin, 'expense-1', {
+      filename: 'receipt.jpg',
+      type: 'image/jpeg',
+      data: Buffer.from('image-data'),
+    })
+
+    expect(assertBuildingScope).toHaveBeenCalledWith(expect.anything(), admin, 'building-1', 'write')
+    expect(storageUpload).toHaveBeenCalledWith(
+      expect.stringMatching(/^building-1\/expense-1\/.+\.jpg$/),
+      expect.any(Buffer),
+      { contentType: 'image/jpeg', upsert: false },
+    )
+    expect(updateReceiptPath).toHaveBeenCalledWith(
+      expect.anything(),
+      'expense-1',
+      expect.stringMatching(/^building-1\/expense-1\/.+\.jpg$/),
+    )
+    expect(result.receiptSignedUrl).toBe('https://signed.test/receipt')
+  })
+
+  it('rejects invalid receipt content types before storage upload', async () => {
+    findExpenseById.mockResolvedValue(expense())
+
+    const { BuildingExpenseService } = await import(
+      '../../../server/services/operations-report/expenses'
+    )
+
+    await expect(
+      BuildingExpenseService.uploadReceipt({} as never, admin, 'expense-1', {
+        filename: 'receipt.pdf',
+        type: 'application/pdf',
+        data: Buffer.from('pdf'),
+      }),
+    ).rejects.toMatchObject({ statusCode: 422 })
+    expect(storageUpload).not.toHaveBeenCalled()
+    expect(updateReceiptPath).not.toHaveBeenCalled()
+  })
+
+  it('removes a stored receipt after write scope enforcement', async () => {
+    const existing = expense({ receiptUrl: 'building-1/expense-1/old.jpg' })
+    const updated = expense({ receiptUrl: null })
+    findExpenseById.mockResolvedValue(existing)
+    updateReceiptPath.mockResolvedValue(updated)
+
+    const { BuildingExpenseService } = await import(
+      '../../../server/services/operations-report/expenses'
+    )
+
+    const result = await BuildingExpenseService.removeReceipt({} as never, admin, 'expense-1')
+
+    expect(assertBuildingScope).toHaveBeenCalledWith(expect.anything(), admin, 'building-1', 'write')
+    expect(updateReceiptPath).toHaveBeenCalledWith(expect.anything(), 'expense-1', null)
+    expect(storageRemove).toHaveBeenCalledWith(['building-1/expense-1/old.jpg'])
+    expect(result.receiptUrl).toBeNull()
+    expect(result.receiptSignedUrl).toBeNull()
   })
 })

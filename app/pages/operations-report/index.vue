@@ -50,10 +50,10 @@ async function exportReportXlsx() {
   exportLoading.value = true
   try {
     await exportXlsx()
-    toast.success('Da xuat file Excel.')
+    toast.success('Đã xuất file Excel.')
   }
   catch (err) {
-    toast.error(resolveError(err, 'Khong xuat duoc Excel.'))
+    toast.error(resolveError(err, 'Không xuất được Excel.'))
   }
   finally {
     exportLoading.value = false

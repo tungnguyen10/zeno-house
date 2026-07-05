@@ -42,6 +42,8 @@ function fixedCost(overrides: Partial<BuildingFixedCost>): BuildingFixedCost {
     effectiveToPeriodYear: null,
     effectiveToPeriodMonth: null,
     note: null,
+    receiptUrl: null,
+    receiptSignedUrl: null,
     createdBy: null,
     createdAt: '2026-01-01T00:00:00Z',
     updatedAt: '2026-01-01T00:00:00Z',
