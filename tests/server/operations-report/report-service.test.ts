@@ -7,6 +7,7 @@ const findBuildingById = vi.fn()
 const fetchBillingData = vi.fn()
 const listFixedCosts = vi.fn()
 const listExpenses = vi.fn()
+const listActiveAllocations = vi.fn()
 const assertBuildingScope = vi.fn()
 
 vi.mock('../../../server/repositories/buildings', () => ({
@@ -23,6 +24,10 @@ vi.mock('../../../server/repositories/operations-report/fixed-costs', () => ({
 
 vi.mock('../../../server/repositories/operations-report/expenses', () => ({
   BuildingExpenseRepository: { list: listExpenses },
+}))
+
+vi.mock('../../../server/services/operations-report/prepaid-expenses', () => ({
+  PrepaidExpenseService: { listActiveAllocations },
 }))
 
 vi.mock('../../../server/utils/scope', () => ({
@@ -102,6 +107,9 @@ describe('OperationsReportService.getReport', () => {
       expense({ id: 'exp-2', category: 'water_input', amount: 200_000 }),
       expense({ id: 'exp-3', category: 'repair', amount: 300_000 }),
     ])
+    listActiveAllocations.mockResolvedValue([
+      { id: 'prepaid-1', name: 'Internet năm', category: 'internet', monthlyAmount: 250_000 },
+    ])
   })
 
   async function run() {
@@ -126,10 +134,12 @@ describe('OperationsReportService.getReport', () => {
     expect(report.metrics.fixedCostTotal).toBe(10_000_000)
     // Monthly expenses: 900k + 200k + 300k
     expect(report.metrics.monthlyExpenseTotal).toBe(1_400_000)
-    expect(report.metrics.totalExpense).toBe(11_400_000)
+    expect(report.metrics.prepaidAllocationTotal).toBe(250_000)
+    expect(report.metrics.totalExpense).toBe(11_650_000)
 
-    expect(report.metrics.profitByRevenue).toBe(5_000_000 - 11_400_000)
-    expect(report.metrics.profitByCash).toBe(4_000_000 - 11_400_000)
+    expect(report.metrics.profitByRevenue).toBe(5_000_000 - 11_650_000)
+    expect(report.metrics.profitByCash).toBe(4_000_000 - 11_650_000)
+    expect(report.prepaidItems).toHaveLength(1)
   })
 
   it('computes utility margins from revenue vs input expenses', async () => {

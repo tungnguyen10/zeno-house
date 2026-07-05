@@ -33,9 +33,10 @@ const report: OperationsReport = {
     debt: 1_000_000,
     fixedCostTotal: 10_000_000,
     monthlyExpenseTotal: 1_500_000,
-    totalExpense: 11_500_000,
-    profitByRevenue: -6_500_000,
-    profitByCash: -7_500_000,
+    prepaidAllocationTotal: 250_000,
+    totalExpense: 11_750_000,
+    profitByRevenue: -6_750_000,
+    profitByCash: -7_750_000,
   },
   revenueByType: [{ key: 'rent', label: 'Tiền phòng', amount: 5_000_000 }],
   expenseByCategory: [{ key: 'repair', label: 'Sửa chữa / bảo trì', amount: 1_500_000 }],
@@ -78,6 +79,14 @@ const report: OperationsReport = {
       voidReason: null,
       createdAt: '2026-06-15T00:00:00Z',
       updatedAt: '2026-06-15T00:00:00Z',
+    },
+  ],
+  prepaidItems: [
+    {
+      id: 'prepaid-1',
+      name: 'Internet năm',
+      category: 'internet',
+      monthlyAmount: 250_000,
     },
   ],
 }

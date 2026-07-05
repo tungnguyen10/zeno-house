@@ -1,8 +1,14 @@
 import { z } from 'zod'
-import { EXPENSE_CATEGORIES, FIXED_COST_CATEGORIES } from '~/utils/constants/operations-report'
+import {
+  EXPENSE_CATEGORIES,
+  FIXED_COST_CATEGORIES,
+  PREPAID_EXPENSE_STATUSES,
+  RECURRING_EXPENSE_FREQUENCIES,
+} from '~/utils/constants/operations-report'
 
 const periodYear = z.coerce.number().int().min(2000).max(2100)
 const periodMonth = z.coerce.number().int().min(1).max(12)
+const calendarDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Ngày không hợp lệ')
 
 // ---------------------------------------------------------------------------
 // Operations report query
@@ -108,3 +114,68 @@ export const buildingFixedCostUpdateSchema = z
   )
 
 export type BuildingFixedCostUpdateInput = z.infer<typeof buildingFixedCostUpdateSchema>
+
+// ---------------------------------------------------------------------------
+// Recurring expenses
+// ---------------------------------------------------------------------------
+export const recurringExpenseListQuerySchema = z.object({
+  building_id: z.string().uuid('building_id không hợp lệ'),
+})
+
+export type RecurringExpenseListQuery = z.infer<typeof recurringExpenseListQuerySchema>
+
+export const recurringExpenseCreateSchema = z.object({
+  building_id: z.string().uuid('building_id không hợp lệ'),
+  name: z.string().trim().min(1, 'Tên chi phí là bắt buộc').max(200),
+  category: z.enum(EXPENSE_CATEGORIES),
+  frequency: z.enum(RECURRING_EXPENSE_FREQUENCIES),
+  anchor_day: z.coerce.number().int().min(1).max(28),
+  estimated_amount: z.coerce.number().nonnegative('Số tiền không được âm'),
+  is_active: z.boolean().optional(),
+})
+
+export type RecurringExpenseCreateInput = z.infer<typeof recurringExpenseCreateSchema>
+
+export const recurringExpenseUpdateSchema = recurringExpenseCreateSchema
+  .omit({ building_id: true })
+  .partial()
+
+export type RecurringExpenseUpdateInput = z.infer<typeof recurringExpenseUpdateSchema>
+
+export const recurringExpenseActionSchema = z.object({
+  period_year: periodYear.optional(),
+  period_month: periodMonth.optional(),
+})
+
+export type RecurringExpenseActionInput = z.infer<typeof recurringExpenseActionSchema>
+
+// ---------------------------------------------------------------------------
+// Prepaid expenses
+// ---------------------------------------------------------------------------
+export const prepaidExpenseListQuerySchema = z.object({
+  building_id: z.string().uuid('building_id không hợp lệ'),
+})
+
+export type PrepaidExpenseListQuery = z.infer<typeof prepaidExpenseListQuerySchema>
+
+export const prepaidExpenseCreateSchema = z.object({
+  building_id: z.string().uuid('building_id không hợp lệ'),
+  name: z.string().trim().min(1, 'Tên chi phí là bắt buộc').max(200),
+  category: z.enum(EXPENSE_CATEGORIES),
+  total_amount: z.coerce.number().nonnegative('Số tiền không được âm'),
+  total_months: z.coerce.number().int().min(1),
+  start_date: calendarDate,
+  receipt_url: z.string().max(500).nullable().optional(),
+  note: z.string().max(500).nullable().optional(),
+})
+
+export type PrepaidExpenseCreateInput = z.infer<typeof prepaidExpenseCreateSchema>
+
+export const prepaidExpenseUpdateSchema = prepaidExpenseCreateSchema
+  .omit({ building_id: true })
+  .partial()
+  .extend({
+    status: z.enum(PREPAID_EXPENSE_STATUSES).optional(),
+  })
+
+export type PrepaidExpenseUpdateInput = z.infer<typeof prepaidExpenseUpdateSchema>

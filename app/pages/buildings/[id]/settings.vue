@@ -3,8 +3,19 @@ import type { ApiSuccess } from '~/types/api'
 import type { PricingType, ServiceCatalogItem } from '~/types/service-catalog'
 import type { ContractWithDetails } from '~/types/contracts'
 import type { AssignmentManager } from '~/types/assignments'
-import type { BuildingFixedCost } from '~/types/operations-report'
-import { FIXED_COST_CATEGORY_LABELS } from '~/utils/constants/operations-report'
+import type { BuildingFixedCost, PrepaidExpense, RecurringExpense } from '~/types/operations-report'
+import {
+  EXPENSE_CATEGORIES,
+  EXPENSE_CATEGORY_LABELS,
+  FIXED_COST_CATEGORY_LABELS,
+  PREPAID_EXPENSE_STATUS_LABELS,
+  PREPAID_EXPENSE_STATUSES,
+  RECURRING_EXPENSE_FREQUENCIES,
+  RECURRING_EXPENSE_FREQUENCY_LABELS,
+  type ExpenseCategory,
+  type PrepaidExpenseStatus,
+  type RecurringExpenseFrequency,
+} from '~/utils/constants/operations-report'
 import { formatCurrency } from '~/utils/format/currency'
 import { buildingPath } from '~/utils/routes/operational'
 
@@ -50,6 +61,9 @@ const assignedManagers = computed(() => managersData.value?.data ?? [])
 
 const activeServiceCount = computed(() => services.value.filter(s => s.isActive).length)
 const canManageFixedCosts = computed(() => authStore.can('building-fixed-costs.write'))
+const canManageRecurringExpenses = computed(() => authStore.can('recurring-expenses.write'))
+const canManagePrepaidExpenses = computed(() => authStore.can('prepaid-expenses.write'))
+const apiBuildingId = computed(() => building.value?.id ?? '')
 const now = new Date()
 const fixedCostPeriodYear = ref(now.getFullYear())
 const fixedCostPeriodMonth = ref(now.getMonth() + 1)
@@ -65,14 +79,73 @@ const { createFixedCost } = useOperationsMutations()
 const { data: fixedCostsData, refresh: refreshFixedCosts } = await useFetch<ApiSuccess<BuildingFixedCost[]>>(
   '/api/building-fixed-costs',
   {
-    query: { building_id: id },
-    immediate: canManageFixedCosts.value,
+    query: computed(() => ({ building_id: apiBuildingId.value })),
+    immediate: false,
     watch: false,
   },
 )
 const fixedCosts = computed(() => fixedCostsData.value?.data ?? [])
+const expenseCategoryOptions = EXPENSE_CATEGORIES.map(value => ({
+  value,
+  label: EXPENSE_CATEGORY_LABELS[value],
+}))
+const frequencyOptions = RECURRING_EXPENSE_FREQUENCIES.map(value => ({
+  value,
+  label: RECURRING_EXPENSE_FREQUENCY_LABELS[value],
+}))
+const prepaidStatusOptions = PREPAID_EXPENSE_STATUSES.map(value => ({
+  value,
+  label: PREPAID_EXPENSE_STATUS_LABELS[value],
+}))
+const {
+  recurringExpenses,
+  createRecurringExpense,
+  updateRecurringExpense,
+  deleteRecurringExpense,
+} = useRecurringExpenses(apiBuildingId)
+const {
+  prepaidExpenses,
+  createPrepaidExpense,
+  updatePrepaidExpense,
+  deletePrepaidExpense,
+} = usePrepaidExpenses(apiBuildingId)
+const recurringFormOpen = ref(false)
+const editingRecurring = ref<RecurringExpense | null>(null)
+const savingRecurring = ref(false)
+const recurringError = ref<string | null>(null)
+const recurringForm = reactive({
+  name: '',
+  category: 'staff' as ExpenseCategory,
+  frequency: 'monthly' as RecurringExpenseFrequency,
+  anchor_day: now.getDate() > 28 ? 28 : now.getDate(),
+  estimated_amount: '',
+  is_active: true,
+})
+const prepaidFormOpen = ref(false)
+const editingPrepaid = ref<PrepaidExpense | null>(null)
+const savingPrepaid = ref(false)
+const prepaidError = ref<string | null>(null)
+const prepaidForm = reactive({
+  name: '',
+  category: 'internet' as ExpenseCategory,
+  total_amount: '',
+  total_months: 12,
+  start_date: new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1)).toISOString().slice(0, 10),
+  status: 'active' as PrepaidExpenseStatus,
+  receipt_url: '',
+  note: '',
+})
+
+watch(
+  [apiBuildingId, canManageFixedCosts],
+  ([buildingId, canManage]) => {
+    if (buildingId && canManage) refreshFixedCosts()
+  },
+  { immediate: true },
+)
 
 async function submitFixedCost(payload: Record<string, unknown>) {
+  if (!apiBuildingId.value) return
   savingFixedCost.value = true
   fixedCostError.value = null
   try {
@@ -85,6 +158,158 @@ async function submitFixedCost(payload: Record<string, unknown>) {
   }
   finally {
     savingFixedCost.value = false
+  }
+}
+
+function openCreateRecurring() {
+  editingRecurring.value = null
+  recurringError.value = null
+  recurringForm.name = ''
+  recurringForm.category = 'staff'
+  recurringForm.frequency = 'monthly'
+  recurringForm.anchor_day = now.getDate() > 28 ? 28 : now.getDate()
+  recurringForm.estimated_amount = ''
+  recurringForm.is_active = true
+  recurringFormOpen.value = true
+}
+
+function openEditRecurring(item: RecurringExpense) {
+  editingRecurring.value = item
+  recurringError.value = null
+  recurringForm.name = item.name
+  recurringForm.category = item.category
+  recurringForm.frequency = item.frequency
+  recurringForm.anchor_day = item.anchorDay
+  recurringForm.estimated_amount = String(item.estimatedAmount)
+  recurringForm.is_active = item.isActive
+  recurringFormOpen.value = true
+}
+
+async function submitRecurring() {
+  if (!apiBuildingId.value) return
+  const amount = Number(recurringForm.estimated_amount)
+  if (!recurringForm.name.trim() || !Number.isFinite(amount) || amount < 0) {
+    recurringError.value = 'Kiểm tra tên và số tiền dự kiến.'
+    return
+  }
+  savingRecurring.value = true
+  recurringError.value = null
+  try {
+    const payload = {
+      building_id: apiBuildingId.value,
+      name: recurringForm.name.trim(),
+      category: recurringForm.category,
+      frequency: recurringForm.frequency,
+      anchor_day: Number(recurringForm.anchor_day),
+      estimated_amount: amount,
+      is_active: recurringForm.is_active,
+    }
+    if (editingRecurring.value) await updateRecurringExpense(editingRecurring.value.id, payload)
+    else await createRecurringExpense(payload)
+    recurringFormOpen.value = false
+  }
+  catch (err) {
+    recurringError.value = resolveApiError(err, 'Không lưu được nhắc chi phí.')
+  }
+  finally {
+    savingRecurring.value = false
+  }
+}
+
+async function removeRecurring(item: RecurringExpense) {
+  try {
+    await deleteRecurringExpense(item.id)
+  }
+  catch (err) {
+    recurringError.value = resolveApiError(err, 'Không xóa được nhắc chi phí.')
+  }
+}
+
+function openCreatePrepaid() {
+  editingPrepaid.value = null
+  prepaidError.value = null
+  prepaidForm.name = ''
+  prepaidForm.category = 'internet'
+  prepaidForm.total_amount = ''
+  prepaidForm.total_months = 12
+  prepaidForm.start_date = new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1)).toISOString().slice(0, 10)
+  prepaidForm.status = 'active'
+  prepaidForm.receipt_url = ''
+  prepaidForm.note = ''
+  prepaidFormOpen.value = true
+}
+
+function openEditPrepaid(item: PrepaidExpense) {
+  editingPrepaid.value = item
+  prepaidError.value = null
+  prepaidForm.name = item.name
+  prepaidForm.category = item.category
+  prepaidForm.total_amount = String(item.totalAmount)
+  prepaidForm.total_months = item.totalMonths
+  prepaidForm.start_date = item.startDate
+  prepaidForm.status = item.status
+  prepaidForm.receipt_url = item.receiptUrl ?? ''
+  prepaidForm.note = item.note ?? ''
+  prepaidFormOpen.value = true
+}
+
+const prepaidPreview = computed(() => {
+  const total = Number(prepaidForm.total_amount)
+  const months = Number(prepaidForm.total_months)
+  if (!Number.isFinite(total) || !Number.isFinite(months) || months < 1) return null
+  const start = new Date(`${prepaidForm.start_date}T00:00:00Z`)
+  if (Number.isNaN(start.getTime())) return null
+  const end = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + months, start.getUTCDate()))
+  return {
+    monthly: Math.round(total / months),
+    endDate: end.toISOString().slice(0, 10),
+  }
+})
+
+async function submitPrepaid() {
+  if (!apiBuildingId.value) return
+  const total = Number(prepaidForm.total_amount)
+  const months = Number(prepaidForm.total_months)
+  if (!prepaidForm.name.trim() || !Number.isFinite(total) || total < 0 || !Number.isInteger(months) || months < 1) {
+    prepaidError.value = 'Kiểm tra tên, tổng tiền và số tháng.'
+    return
+  }
+  savingPrepaid.value = true
+  prepaidError.value = null
+  try {
+    const payload = {
+      name: prepaidForm.name.trim(),
+      category: prepaidForm.category,
+      total_amount: total,
+      total_months: months,
+      start_date: prepaidForm.start_date,
+      status: prepaidForm.status,
+      receipt_url: prepaidForm.receipt_url.trim() || null,
+      note: prepaidForm.note.trim() || null,
+    }
+    if (editingPrepaid.value) {
+      await updatePrepaidExpense(editingPrepaid.value.id, payload)
+    }
+    else {
+      await createPrepaidExpense({ building_id: apiBuildingId.value, ...payload })
+    }
+    prepaidFormOpen.value = false
+    editingPrepaid.value = null
+  }
+  catch (err) {
+    prepaidError.value = resolveApiError(err, 'Không lưu được chi phí trả trước.')
+  }
+  finally {
+    savingPrepaid.value = false
+  }
+}
+
+async function removePrepaid(item: PrepaidExpense) {
+  try {
+    await deletePrepaidExpense(item.id)
+  }
+  catch (err) {
+    prepaidError.value = resolveApiError(err, 'Không xóa được chi phí trả trước.')
   }
 }
 
@@ -285,7 +510,7 @@ async function handleUpdatePricingType(catalogId: string, pricingType: PricingTy
       description="Quản lý chi phí cố định theo tháng cho báo cáo vận hành."
     >
       <template #actions>
-        <UiButton size="sm" @click="fixedCostModalOpen = true">
+        <UiButton size="sm" :disabled="!apiBuildingId" @click="fixedCostModalOpen = true">
           <IconPlus class="h-4 w-4" aria-hidden="true" />
           Thêm chi phí
         </UiButton>
@@ -327,6 +552,100 @@ async function handleUpdatePricingType(catalogId: string, pricingType: PricingTy
                 @click="openEndFixedCost(cost)"
               >
                 Kết thúc
+              </UiButton>
+            </div>
+          </div>
+        </div>
+      </div>
+    </UiSection>
+
+    <UiSection
+      v-if="canManageRecurringExpenses"
+      title="Nhắc chi phí định kỳ"
+      description="Các khoản chi cần được nhắc lại và ghi nhận thủ công vào báo cáo tháng."
+    >
+      <template #actions>
+        <UiButton size="sm" :disabled="!apiBuildingId" @click="openCreateRecurring">
+          <IconPlus class="h-4 w-4" aria-hidden="true" />
+          Thêm nhắc
+        </UiButton>
+      </template>
+      <div class="rounded-xl border border-dark-border bg-dark-surface p-5">
+        <UiAlert v-if="recurringError" severity="danger" class="mb-4">
+          {{ recurringError }}
+        </UiAlert>
+        <div v-if="recurringExpenses.length === 0" class="text-sm text-muted">
+          Chưa có nhắc chi phí định kỳ.
+        </div>
+        <div v-else class="divide-y divide-dark-border">
+          <div
+            v-for="item in recurringExpenses"
+            :key="item.id"
+            class="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between"
+          >
+            <div>
+              <div class="font-medium text-white">
+                {{ item.name }}
+                <UiBadge v-if="!item.isActive" variant="warning" class="ml-2">Tắt</UiBadge>
+              </div>
+              <div class="mt-1 text-xs text-muted">
+                {{ EXPENSE_CATEGORY_LABELS[item.category] }} ·
+                {{ RECURRING_EXPENSE_FREQUENCY_LABELS[item.frequency] }} ·
+                ngày {{ item.anchorDay }} · nhắc tiếp {{ item.nextReminderAt }}
+              </div>
+            </div>
+            <div class="flex items-center justify-between gap-2 sm:justify-end">
+              <span class="tabular-nums text-white">{{ formatCurrency(item.estimatedAmount) }}</span>
+              <UiButton size="sm" variant="secondary" @click="openEditRecurring(item)">Sửa</UiButton>
+              <UiButton size="sm" variant="ghost" icon-only aria-label="Xóa" @click="removeRecurring(item)">
+                <IconTrash class="h-4 w-4" aria-hidden="true" />
+              </UiButton>
+            </div>
+          </div>
+        </div>
+      </div>
+    </UiSection>
+
+    <UiSection
+      v-if="canManagePrepaidExpenses"
+      title="Chi phí trả trước"
+      description="Khoản trả một lần được phân bổ đều vào các tháng trong kỳ hiệu lực."
+    >
+      <template #actions>
+        <UiButton size="sm" :disabled="!apiBuildingId" @click="openCreatePrepaid">
+          <IconPlus class="h-4 w-4" aria-hidden="true" />
+          Thêm trả trước
+        </UiButton>
+      </template>
+      <div class="rounded-xl border border-dark-border bg-dark-surface p-5">
+        <UiAlert v-if="prepaidError" severity="danger" class="mb-4">
+          {{ prepaidError }}
+        </UiAlert>
+        <div v-if="prepaidExpenses.length === 0" class="text-sm text-muted">
+          Chưa có chi phí trả trước.
+        </div>
+        <div v-else class="divide-y divide-dark-border">
+          <div
+            v-for="item in prepaidExpenses"
+            :key="item.id"
+            class="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between"
+          >
+            <div>
+              <div class="font-medium text-white">
+                {{ item.name }}
+                <UiBadge class="ml-2">{{ PREPAID_EXPENSE_STATUS_LABELS[item.status] }}</UiBadge>
+              </div>
+              <div class="mt-1 text-xs text-muted">
+                {{ EXPENSE_CATEGORY_LABELS[item.category] }} · {{ item.startDate }} đến {{ item.endDate }} ·
+                {{ item.totalMonths }} tháng
+              </div>
+              <p v-if="item.note" class="mt-1 text-xs text-muted">{{ item.note }}</p>
+            </div>
+            <div class="flex items-center justify-between gap-2 sm:justify-end">
+              <span class="tabular-nums text-white">{{ formatCurrency(item.monthlyAmount) }}/tháng</span>
+              <UiButton size="sm" variant="secondary" @click="openEditPrepaid(item)">Sửa</UiButton>
+              <UiButton size="sm" variant="ghost" icon-only aria-label="Xóa" @click="removePrepaid(item)">
+                <IconTrash class="h-4 w-4" aria-hidden="true" />
               </UiButton>
             </div>
           </div>
@@ -395,7 +714,7 @@ async function handleUpdatePricingType(catalogId: string, pricingType: PricingTy
 
     <OperationsFixedCostModal
       :open="fixedCostModalOpen"
-      :building-id="id"
+      :building-id="apiBuildingId"
       :period-year="fixedCostPeriodYear"
       :period-month="fixedCostPeriodMonth"
       :submitting="savingFixedCost"
@@ -429,6 +748,78 @@ async function handleUpdatePricingType(catalogId: string, pricingType: PricingTy
           <UiButton :loading="endingFixedCost" @click="submitEndFixedCost">
             Lưu
           </UiButton>
+        </div>
+      </template>
+    </UiModal>
+
+    <UiModal
+      :open="recurringFormOpen"
+      :title="editingRecurring ? 'Sửa nhắc chi phí' : 'Thêm nhắc chi phí'"
+      size="md"
+      @close="recurringFormOpen = false"
+    >
+      <div class="space-y-4">
+        <UiInput v-model="recurringForm.name" label="Tên chi phí" required />
+        <UiSelect v-model="recurringForm.category" label="Loại chi phí" :options="expenseCategoryOptions" />
+        <div class="grid grid-cols-2 gap-3">
+          <UiSelect v-model="recurringForm.frequency" label="Tần suất" :options="frequencyOptions" />
+          <UiInput v-model.number="recurringForm.anchor_day" label="Ngày nhắc" type="number" min="1" max="28" />
+        </div>
+        <UiInput
+          v-model="recurringForm.estimated_amount"
+          label="Số tiền dự kiến"
+          type="number"
+          min="0"
+          required
+        />
+        <label class="flex items-center gap-2 text-sm text-muted">
+          <input v-model="recurringForm.is_active" type="checkbox" class="h-4 w-4 rounded border-dark-border">
+          Đang bật
+        </label>
+        <UiAlert v-if="recurringError" severity="danger">{{ recurringError }}</UiAlert>
+      </div>
+      <template #footer>
+        <div class="flex justify-end gap-2">
+          <UiButton variant="secondary" :disabled="savingRecurring" @click="recurringFormOpen = false">
+            Đóng
+          </UiButton>
+          <UiButton :loading="savingRecurring" @click="submitRecurring">Lưu</UiButton>
+        </div>
+      </template>
+    </UiModal>
+
+    <UiModal
+      :open="prepaidFormOpen"
+      :title="editingPrepaid ? 'Sửa chi phí trả trước' : 'Thêm chi phí trả trước'"
+      size="md"
+      @close="prepaidFormOpen = false"
+    >
+      <div class="space-y-4">
+        <UiInput v-model="prepaidForm.name" label="Tên chi phí" required />
+        <UiSelect v-model="prepaidForm.category" label="Loại chi phí" :options="expenseCategoryOptions" />
+        <div class="grid grid-cols-2 gap-3">
+          <UiInput v-model="prepaidForm.total_amount" label="Tổng tiền" type="number" min="0" required />
+          <UiInput v-model.number="prepaidForm.total_months" label="Số tháng" type="number" min="1" required />
+        </div>
+        <UiInput v-model="prepaidForm.start_date" label="Ngày bắt đầu" type="date" required />
+        <UiSelect
+          v-if="editingPrepaid"
+          v-model="prepaidForm.status"
+          label="Trạng thái"
+          :options="prepaidStatusOptions"
+        />
+        <UiTextarea v-model="prepaidForm.note" label="Ghi chú" :rows="2" />
+        <div v-if="prepaidPreview" class="rounded-md border border-dark-border bg-dark-bg px-3 py-2 text-sm text-muted">
+          ~{{ formatCurrency(prepaidPreview.monthly) }}/tháng · kết thúc {{ prepaidPreview.endDate }}
+        </div>
+        <UiAlert v-if="prepaidError" severity="danger">{{ prepaidError }}</UiAlert>
+      </div>
+      <template #footer>
+        <div class="flex justify-end gap-2">
+          <UiButton variant="secondary" :disabled="savingPrepaid" @click="prepaidFormOpen = false">
+            Đóng
+          </UiButton>
+          <UiButton :loading="savingPrepaid" @click="submitPrepaid">Lưu</UiButton>
         </div>
       </template>
     </UiModal>

@@ -404,3 +404,13 @@ Chưa làm (như MVP scope đã nêu): approval, upload chứng từ, custom cat
 - API export Excel `GET /api/operations-report/export` xuất báo cáo tháng của một tòa nhà. Chỉ admin/owner có `operations-report.export`; manager không thấy nút export.
 - Category chi phí mở rộng thêm `insurance`, `bank_fee`, `fire_safety`.
 - Quản lý chi phí cố định được chuyển sang `/buildings/[id]/settings`; trang báo cáo chỉ hiện chi phí cố định dạng read-only.
+
+## Trạng Thái Triển Khai (Recurring/Prepaid)
+
+Đã bổ sung trong change `add-recurring-prepaid-expenses`:
+
+- `recurring_expenses` lưu mẫu nhắc chi phí theo tần suất `monthly`, `quarterly`, `biannual`, `yearly`, ngày neo 1-28, số tiền dự kiến và `next_reminder_at`.
+- Manager được xem và ghi nhận nhắc chi phí trong phạm vi được gán nếu có `building-expenses.write`, nhưng không được cấu hình mẫu.
+- `prepaid_expenses` lưu khoản trả trước theo tổng tiền, số tháng, ngày bắt đầu, ngày kết thúc tính toán và số tiền phân bổ tháng. Tháng cuối hấp thụ phần làm tròn.
+- Báo cáo vận hành cộng `prepaidAllocationTotal` vào tổng chi phí và lợi nhuận, đồng thời hiển thị `prepaidItems` thành một section riêng.
+- Export Excel có section "Chi phí trả trước (phân bổ)" thống nhất với màn hình.

@@ -1,6 +1,8 @@
 import type {
   ExpenseCategory,
   FixedCostCategory,
+  PrepaidExpenseStatus,
+  RecurringExpenseFrequency,
   RevenueChargeType,
 } from '~/utils/constants/operations-report'
 
@@ -42,6 +44,60 @@ export interface BuildingFixedCost {
   updatedAt: string
 }
 
+/** A building-scoped recurring expense reminder template. */
+export interface RecurringExpense {
+  id: string
+  buildingId: string
+  name: string
+  category: ExpenseCategory
+  frequency: RecurringExpenseFrequency
+  anchorDay: number
+  estimatedAmount: number
+  isActive: boolean
+  nextReminderAt: string
+  createdBy: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+/** Expense modal prefill returned when acting on a recurring reminder. */
+export interface RecurringExpenseRecordPrefill {
+  buildingId: string
+  periodYear: number
+  periodMonth: number
+  expenseDate: string
+  category: ExpenseCategory
+  amount: number
+  note: string
+}
+
+/** A prepaid expense allocated across a fixed number of covered months. */
+export interface PrepaidExpense {
+  id: string
+  buildingId: string
+  name: string
+  category: ExpenseCategory
+  totalAmount: number
+  totalMonths: number
+  startDate: string
+  endDate: string
+  monthlyAmount: number
+  status: PrepaidExpenseStatus
+  receiptUrl: string | null
+  note: string | null
+  createdBy: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+/** One prepaid monthly allocation contributing to a report period. */
+export interface PrepaidExpenseAllocation {
+  id: string
+  name: string
+  category: ExpenseCategory
+  monthlyAmount: number
+}
+
 /** One value in a keyed breakdown (revenue charge type or expense category). */
 export interface OperationsBreakdownEntry {
   key: string
@@ -67,6 +123,7 @@ export interface OperationsReport {
     debt: number
     fixedCostTotal: number
     monthlyExpenseTotal: number
+    prepaidAllocationTotal: number
     totalExpense: number
     profitByRevenue: number
     profitByCash: number
@@ -78,6 +135,7 @@ export interface OperationsReport {
   water: UtilityMargin
   fixedCosts: BuildingFixedCost[]
   expenses: BuildingExpense[]
+  prepaidItems: PrepaidExpenseAllocation[]
 }
 
 export type RevenueChargeTypeKey = RevenueChargeType

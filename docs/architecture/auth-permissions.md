@@ -175,8 +175,13 @@ period's building via `assertBuildingScope`.
 | `building-expenses.delete` | admin, owner | Soft-void expenses. |
 | `building-fixed-costs.read` | admin, owner | List fixed-cost history in building settings. |
 | `building-fixed-costs.write` | admin, owner | Create/end fixed-cost rows in building settings. |
+| `recurring-expenses.read` | admin, owner, manager | List due/upcoming recurring reminders in assigned buildings. |
+| `recurring-expenses.write` | admin, owner | Configure recurring expense templates. |
+| `recurring-expenses.delete` | admin, owner | Delete recurring expense templates. |
+| `prepaid-expenses.read` | admin, owner | List prepaid expenses in building settings. |
+| `prepaid-expenses.write` | admin, owner | Create, update, or delete prepaid expenses. |
 
-Managers can enter expenses and receipts for assigned buildings, but they cannot export operations workbooks or manage fixed costs.
+Managers can enter expenses and receipts for assigned buildings and may record recurring reminders when they also have `building-expenses.write`. They cannot export operations workbooks or manage fixed costs, recurring templates, or prepaid expenses.
 
 ## Security Rules
 

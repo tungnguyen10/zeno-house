@@ -42,6 +42,18 @@ export const AUDIT_ACTIONS = {
   BUILDING_FIXED_COST_UPDATED: 'building_fixed_cost.updated',
   BUILDING_FIXED_COST_ENDED: 'building_fixed_cost.ended',
 
+  // Operations report — recurring expenses
+  RECURRING_EXPENSE_CREATED: 'recurring_expense.created',
+  RECURRING_EXPENSE_UPDATED: 'recurring_expense.updated',
+  RECURRING_EXPENSE_DELETED: 'recurring_expense.deleted',
+  RECURRING_EXPENSE_RECORDED: 'recurring_expense.recorded',
+  RECURRING_EXPENSE_DISMISSED: 'recurring_expense.dismissed',
+
+  // Operations report — prepaid expenses
+  PREPAID_EXPENSE_CREATED: 'prepaid_expense.created',
+  PREPAID_EXPENSE_UPDATED: 'prepaid_expense.updated',
+  PREPAID_EXPENSE_DELETED: 'prepaid_expense.deleted',
+
   // User / role management
   USER_CREATED: 'user.created',
   USER_UPDATED: 'user.updated',
@@ -65,3 +77,5 @@ export type AuditEntityType =
   | 'user'
   | 'building_expense'
   | 'building_fixed_cost'
+  | 'recurring_expense'
+  | 'prepaid_expense'

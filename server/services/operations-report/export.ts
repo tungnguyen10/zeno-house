@@ -2,7 +2,10 @@ import type { H3Event } from 'h3'
 import ExcelJS from 'exceljs'
 import type { AuthUser } from '~/types/auth'
 import type { OperationsReportQuery } from '~/utils/validators/operations-report'
-import { EXPENSE_CATEGORY_LABELS, FIXED_COST_CATEGORY_LABELS } from '~/utils/constants/operations-report'
+import {
+  EXPENSE_CATEGORY_LABELS,
+  FIXED_COST_CATEGORY_LABELS,
+} from '~/utils/constants/operations-report'
 import { slugifyName } from '~/utils/format/slug'
 import {
   MONEY_FORMAT,
@@ -88,6 +91,7 @@ export const OperationsReportExportService = {
       ['Công nợ', report.metrics.debt],
       ['Tổng chi phí cố định', report.metrics.fixedCostTotal],
       ['Tổng chi phí tháng', report.metrics.monthlyExpenseTotal],
+      ['Chi phí trả trước phân bổ', report.metrics.prepaidAllocationTotal],
       ['Tổng chi phí', report.metrics.totalExpense],
       ['Lợi nhuận theo doanh thu', report.metrics.profitByRevenue],
       ['Lợi nhuận theo tiền thu', report.metrics.profitByCash],
@@ -123,6 +127,21 @@ export const OperationsReportExportService = {
         expense.amount,
         expense.expenseDate ?? '',
         [expense.payee, expense.paymentMethod, expense.note].filter(Boolean).join(' - '),
+      ])
+      row.getCell(3).numFmt = MONEY_FORMAT
+      styleTableRow(row, false, COL_COUNT)
+      alignRightCells(row, 3, 3)
+    })
+
+    sheet.addRow([])
+    addSectionTitle(sheet, 'Chi phí trả trước (phân bổ)')
+    report.prepaidItems.forEach((item, index) => {
+      const row = sheet.addRow([
+        index + 1,
+        item.name,
+        item.monthlyAmount,
+        EXPENSE_CATEGORY_LABELS[item.category] ?? item.category,
+        '',
       ])
       row.getCell(3).numFmt = MONEY_FORMAT
       styleTableRow(row, false, COL_COUNT)

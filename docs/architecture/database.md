@@ -16,7 +16,7 @@ Zeno House uses Supabase Postgres. Schema history lives in `supabase/migrations`
 | Service catalog | `20260530200000_service_catalog.sql` through `20260530200005_drop_default_service_fees.sql` |
 | Meter readings | `20260530300000_meter_readings.sql`, `20260530400000_simplify_meter_readings.sql` |
 | Billing runtime | `20260611000000_billing_runtime.sql`, `20260611000001_billing_legacy_cleanup.sql` |
-| Operations report | `20260702173259_add_operations_report.sql`, `20260704000000_expense_receipts_and_export_categories.sql` |
+| Operations report | `20260702173259_add_operations_report.sql`, `20260704000000_expense_receipts_and_export_categories.sql`, `20260705000000_recurring_and_prepaid_expenses.sql` |
 
 ## Core Tables
 
@@ -82,6 +82,10 @@ Route helpers still fall back to ids when readable identifiers are absent.
 `building_expenses` stores monthly operating expenses and now includes `receipt_url`, which is a private Supabase Storage object path, not a public URL. Accepted categories include electricity/water input, internet, cleaning, repair, admin fees, supplies, staff, rent adjustment, insurance, bank fees, fire-safety costs, and other.
 
 `building_fixed_costs` stores recurring costs with effective period ranges. Fixed-cost management lives in building settings; the operations report reads applicable rows for the selected month.
+
+`recurring_expenses` stores building-scoped reminder templates with frequency, anchor day, estimated amount, active flag, and `next_reminder_at`. Recording or dismissing a reminder advances `next_reminder_at`; recording returns a prefill for a normal `building_expenses` row.
+
+`prepaid_expenses` stores building-scoped lump-sum costs spread across `total_months`. The service computes `end_date` and rounded `monthly_amount`; the final covered month absorbs any rounding remainder so allocations sum to `total_amount`.
 
 `expense-receipts` is a private Storage bucket for receipt images. Server services enforce capability and building scope before upload, delete, or signed URL generation.
 

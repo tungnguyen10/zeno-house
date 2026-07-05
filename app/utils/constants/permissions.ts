@@ -42,6 +42,11 @@ export const OWNER_CAPABILITIES = [
   'building-expenses.delete',
   'building-fixed-costs.read',
   'building-fixed-costs.write',
+  'recurring-expenses.read',
+  'recurring-expenses.write',
+  'recurring-expenses.delete',
+  'prepaid-expenses.read',
+  'prepaid-expenses.write',
   // Scoped user management: owner can manage managers inside owner scope.
   'users.manage.scoped',
   'users.create.manager',
@@ -83,6 +88,7 @@ export const ROLE_CAPABILITIES: Record<UserRole, readonly string[]> = {
     'operations-report.read',
     'building-expenses.read',
     'building-expenses.write',
+    'recurring-expenses.read',
   ],
 }
 

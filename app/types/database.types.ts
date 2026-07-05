@@ -1,4 +1,4 @@
-export type Json =
+﻿export type Json =
   | string
   | number
   | boolean
@@ -16,43 +16,43 @@ export type Database = {
     Tables: {
       audit_events: {
         Row: {
-          id: string
-          building_id: string | null
-          actor_id: string | null
           action: string
-          entity_type: string
-          entity_id: string | null
-          correlation_id: string | null
-          before_data: Json | null
+          actor_id: string | null
           after_data: Json | null
-          metadata: Json
+          before_data: Json | null
+          building_id: string | null
+          correlation_id: string | null
           created_at: string
+          entity_id: string | null
+          entity_type: string
+          id: string
+          metadata: Json
         }
         Insert: {
-          id?: string
-          building_id?: string | null
-          actor_id?: string | null
           action: string
-          entity_type: string
-          entity_id?: string | null
-          correlation_id?: string | null
-          before_data?: Json | null
+          actor_id?: string | null
           after_data?: Json | null
-          metadata?: Json
+          before_data?: Json | null
+          building_id?: string | null
+          correlation_id?: string | null
           created_at?: string
+          entity_id?: string | null
+          entity_type: string
+          id?: string
+          metadata?: Json
         }
         Update: {
-          id?: string
-          building_id?: string | null
-          actor_id?: string | null
           action?: string
-          entity_type?: string
-          entity_id?: string | null
-          correlation_id?: string | null
-          before_data?: Json | null
+          actor_id?: string | null
           after_data?: Json | null
-          metadata?: Json
+          before_data?: Json | null
+          building_id?: string | null
+          correlation_id?: string | null
           created_at?: string
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          metadata?: Json
         }
         Relationships: [
           {
@@ -247,6 +247,127 @@ export type Database = {
           },
         ]
       }
+      building_expenses: {
+        Row: {
+          amount: number
+          building_id: string
+          category: string
+          created_at: string
+          created_by: string | null
+          expense_date: string | null
+          id: string
+          note: string | null
+          payee: string | null
+          payment_method: string | null
+          period_month: number
+          period_year: number
+          receipt_url: string | null
+          updated_at: string
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
+        }
+        Insert: {
+          amount: number
+          building_id: string
+          category: string
+          created_at?: string
+          created_by?: string | null
+          expense_date?: string | null
+          id?: string
+          note?: string | null
+          payee?: string | null
+          payment_method?: string | null
+          period_month: number
+          period_year: number
+          receipt_url?: string | null
+          updated_at?: string
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
+        }
+        Update: {
+          amount?: number
+          building_id?: string
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          expense_date?: string | null
+          id?: string
+          note?: string | null
+          payee?: string | null
+          payment_method?: string | null
+          period_month?: number
+          period_year?: number
+          receipt_url?: string | null
+          updated_at?: string
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "building_expenses_building_id_fkey"
+            columns: ["building_id"]
+            isOneToOne: false
+            referencedRelation: "buildings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      building_fixed_costs: {
+        Row: {
+          amount: number
+          building_id: string
+          category: string
+          created_at: string
+          created_by: string | null
+          effective_from_period_month: number
+          effective_from_period_year: number
+          effective_to_period_month: number | null
+          effective_to_period_year: number | null
+          id: string
+          note: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          building_id: string
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          effective_from_period_month: number
+          effective_from_period_year: number
+          effective_to_period_month?: number | null
+          effective_to_period_year?: number | null
+          id?: string
+          note?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          building_id?: string
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          effective_from_period_month?: number
+          effective_from_period_year?: number
+          effective_to_period_month?: number | null
+          effective_to_period_year?: number | null
+          id?: string
+          note?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "building_fixed_costs_building_id_fkey"
+            columns: ["building_id"]
+            isOneToOne: false
+            referencedRelation: "buildings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       building_services: {
         Row: {
           building_id: string
@@ -294,127 +415,6 @@ export type Database = {
             columns: ["catalog_id"]
             isOneToOne: false
             referencedRelation: "service_catalog"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      building_expenses: {
-        Row: {
-          id: string
-          building_id: string
-          period_year: number
-          period_month: number
-          expense_date: string | null
-          category: string
-          amount: number
-          payee: string | null
-          payment_method: string | null
-          note: string | null
-          receipt_url: string | null
-          created_by: string | null
-          voided_at: string | null
-          voided_by: string | null
-          void_reason: string | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          building_id: string
-          period_year: number
-          period_month: number
-          expense_date?: string | null
-          category: string
-          amount: number
-          payee?: string | null
-          payment_method?: string | null
-          note?: string | null
-          receipt_url?: string | null
-          created_by?: string | null
-          voided_at?: string | null
-          voided_by?: string | null
-          void_reason?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          building_id?: string
-          period_year?: number
-          period_month?: number
-          expense_date?: string | null
-          category?: string
-          amount?: number
-          payee?: string | null
-          payment_method?: string | null
-          note?: string | null
-          receipt_url?: string | null
-          created_by?: string | null
-          voided_at?: string | null
-          voided_by?: string | null
-          void_reason?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "building_expenses_building_id_fkey"
-            columns: ["building_id"]
-            isOneToOne: false
-            referencedRelation: "buildings"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      building_fixed_costs: {
-        Row: {
-          id: string
-          building_id: string
-          category: string
-          amount: number
-          effective_from_period_year: number
-          effective_from_period_month: number
-          effective_to_period_year: number | null
-          effective_to_period_month: number | null
-          note: string | null
-          created_by: string | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          building_id: string
-          category?: string
-          amount: number
-          effective_from_period_year: number
-          effective_from_period_month: number
-          effective_to_period_year?: number | null
-          effective_to_period_month?: number | null
-          note?: string | null
-          created_by?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          building_id?: string
-          category?: string
-          amount?: number
-          effective_from_period_year?: number
-          effective_from_period_month?: number
-          effective_to_period_year?: number | null
-          effective_to_period_month?: number | null
-          note?: string | null
-          created_by?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "building_fixed_costs_building_id_fkey"
-            columns: ["building_id"]
-            isOneToOne: false
-            referencedRelation: "buildings"
             referencedColumns: ["id"]
           },
         ]
@@ -1115,6 +1115,121 @@ export type Database = {
           },
         ]
       }
+      prepaid_expenses: {
+        Row: {
+          building_id: string
+          category: string
+          created_at: string
+          created_by: string | null
+          end_date: string
+          id: string
+          monthly_amount: number
+          name: string
+          note: string | null
+          receipt_url: string | null
+          start_date: string
+          status: string
+          total_amount: number
+          total_months: number
+          updated_at: string
+        }
+        Insert: {
+          building_id: string
+          category: string
+          created_at?: string
+          created_by?: string | null
+          end_date: string
+          id?: string
+          monthly_amount: number
+          name: string
+          note?: string | null
+          receipt_url?: string | null
+          start_date: string
+          status?: string
+          total_amount: number
+          total_months: number
+          updated_at?: string
+        }
+        Update: {
+          building_id?: string
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          end_date?: string
+          id?: string
+          monthly_amount?: number
+          name?: string
+          note?: string | null
+          receipt_url?: string | null
+          start_date?: string
+          status?: string
+          total_amount?: number
+          total_months?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prepaid_expenses_building_id_fkey"
+            columns: ["building_id"]
+            isOneToOne: false
+            referencedRelation: "buildings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recurring_expenses: {
+        Row: {
+          anchor_day: number
+          building_id: string
+          category: string
+          created_at: string
+          created_by: string | null
+          estimated_amount: number
+          frequency: string
+          id: string
+          is_active: boolean
+          name: string
+          next_reminder_at: string
+          updated_at: string
+        }
+        Insert: {
+          anchor_day: number
+          building_id: string
+          category: string
+          created_at?: string
+          created_by?: string | null
+          estimated_amount: number
+          frequency: string
+          id?: string
+          is_active?: boolean
+          name: string
+          next_reminder_at: string
+          updated_at?: string
+        }
+        Update: {
+          anchor_day?: number
+          building_id?: string
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          estimated_amount?: number
+          frequency?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          next_reminder_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recurring_expenses_building_id_fkey"
+            columns: ["building_id"]
+            isOneToOne: false
+            referencedRelation: "buildings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rooms: {
         Row: {
           area: number | null
@@ -1204,44 +1319,6 @@ export type Database = {
         }
         Relationships: []
       }
-      user_building_assignments: {
-        Row: {
-          building_id: string
-          can_delete_master_data: boolean
-          created_at: string
-          created_by: string | null
-          id: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          building_id: string
-          can_delete_master_data?: boolean
-          created_at?: string
-          created_by?: string | null
-          id?: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          building_id?: string
-          can_delete_master_data?: boolean
-          created_at?: string
-          created_by?: string | null
-          id?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "user_building_assignments_building_id_fkey"
-            columns: ["building_id"]
-            isOneToOne: false
-            referencedRelation: "buildings"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       tenants: {
         Row: {
           code: string
@@ -1304,6 +1381,44 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      user_building_assignments: {
+        Row: {
+          building_id: string
+          can_delete_master_data: boolean
+          created_at: string
+          created_by: string | null
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          building_id: string
+          can_delete_master_data?: boolean
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          building_id?: string
+          can_delete_master_data?: boolean
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_building_assignments_building_id_fkey"
+            columns: ["building_id"]
+            isOneToOne: false
+            referencedRelation: "buildings"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
@@ -1448,11 +1563,22 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      owner_has_building_scope: {
+        Args: { p_building_id: string }
+        Returns: boolean
+      }
       record_bulk_payments: {
-        Args: { p_actor_id: string; p_correlation_id?: string; p_payments: Json }
+        Args: {
+          p_actor_id: string
+          p_correlation_id?: string
+          p_payments: Json
+        }
         Returns: {
           amount: number
           created_at: string
+          delete_reason: string | null
+          deleted_at: string | null
+          deleted_by: string | null
           id: string
           invoice_id: string
           note: string | null

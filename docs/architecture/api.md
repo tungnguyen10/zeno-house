@@ -159,5 +159,15 @@ Server services should raise domain-specific conflicts rather than letting datab
 | GET | `/api/building-fixed-costs` |
 | POST | `/api/building-fixed-costs` |
 | PATCH | `/api/building-fixed-costs/[id]` |
+| GET | `/api/recurring-expenses` |
+| POST | `/api/recurring-expenses` |
+| PATCH | `/api/recurring-expenses/[id]` |
+| DELETE | `/api/recurring-expenses/[id]` |
+| POST | `/api/recurring-expenses/[id]/record` |
+| POST | `/api/recurring-expenses/[id]/dismiss` |
+| GET | `/api/prepaid-expenses` |
+| POST | `/api/prepaid-expenses` |
+| PATCH | `/api/prepaid-expenses/[id]` |
+| DELETE | `/api/prepaid-expenses/[id]` |
 
-Operations report export requires `operations-report.export`. Expense receipt routes accept a private image attachment and return the expense DTO with a short-lived signed receipt URL when present.
+Operations report export requires `operations-report.export`. Expense receipt routes accept a private image attachment and return the expense DTO with a short-lived signed receipt URL when present. Recurring expense `record` advances the reminder and returns a prefill payload for the normal building expense form; the actual expense is still created through `/api/building-expenses`. Prepaid expenses are owner/admin configuration records and contribute monthly allocation to `/api/operations-report`.

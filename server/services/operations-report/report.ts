@@ -17,6 +17,7 @@ import { BuildingRepository } from '../../repositories/buildings'
 import { BuildingFixedCostRepository } from '../../repositories/operations-report/fixed-costs'
 import { OperationsReportRepository } from '../../repositories/operations-report/report'
 import { BuildingExpenseService } from './expenses'
+import { PrepaidExpenseService } from './prepaid-expenses'
 import { assertBuildingScope } from '../../utils/scope'
 
 const REVENUE_LABELS: Record<string, string> = {
@@ -57,7 +58,7 @@ export const OperationsReportService = {
 
     const period = ordinal(query.period_year, query.period_month)
 
-    const [billing, allFixedCosts, expenses] = await Promise.all([
+    const [billing, allFixedCosts, expenses, prepaidItems] = await Promise.all([
       OperationsReportRepository.fetchBillingData(
         event,
         query.building_id,
@@ -70,6 +71,12 @@ export const OperationsReportService = {
         period_year: query.period_year,
         period_month: query.period_month,
       }),
+      PrepaidExpenseService.listActiveAllocations(
+        event,
+        query.building_id,
+        query.period_year,
+        query.period_month,
+      ),
     ])
 
     // --- Revenue ---------------------------------------------------------
@@ -119,7 +126,8 @@ export const OperationsReportService = {
       }),
     )
 
-    const totalExpense = fixedCostTotal + monthlyExpenseTotal
+    const prepaidAllocationTotal = prepaidItems.reduce((s, item) => s + item.monthlyAmount, 0)
+    const totalExpense = fixedCostTotal + monthlyExpenseTotal + prepaidAllocationTotal
 
     // --- Utility margins -------------------------------------------------
     const electricityCollected = revenueMap.get('electricity') ?? 0
@@ -137,6 +145,7 @@ export const OperationsReportService = {
         debt,
         fixedCostTotal,
         monthlyExpenseTotal,
+        prepaidAllocationTotal,
         totalExpense,
         profitByRevenue: issuedRevenue - totalExpense,
         profitByCash: collectedCash - totalExpense,
@@ -156,6 +165,7 @@ export const OperationsReportService = {
       },
       fixedCosts: applicableFixedCosts,
       expenses,
+      prepaidItems,
     }
   },
 }

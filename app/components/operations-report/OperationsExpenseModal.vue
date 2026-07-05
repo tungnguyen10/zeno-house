@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
-import type { BuildingExpense } from '~/types/operations-report'
+import type { BuildingExpense, RecurringExpenseRecordPrefill } from '~/types/operations-report'
 import type { ExpenseCategory } from '~/utils/constants/operations-report'
 import {
   EXPENSE_CATEGORIES,
@@ -12,6 +12,7 @@ const props = defineProps<{
   open: boolean
   /** When set, the modal edits this expense; otherwise it creates a new one. */
   expense?: BuildingExpense | null
+  prefill?: RecurringExpenseRecordPrefill | null
   buildingId: string
   periodYear: number
   periodMonth: number
@@ -67,12 +68,13 @@ watch(
     if (!open) return
     error.value = null
     const e = props.expense
-    form.category = e?.category ?? 'other'
-    form.amount = e ? String(e.amount) : ''
-    form.expense_date = e?.expenseDate ?? today()
+    const prefill = props.prefill
+    form.category = e?.category ?? prefill?.category ?? 'other'
+    form.amount = e ? String(e.amount) : prefill ? String(prefill.amount) : ''
+    form.expense_date = e?.expenseDate ?? prefill?.expenseDate ?? today()
     form.payee = e?.payee ?? ''
     form.payment_method = e?.paymentMethod ?? ''
-    form.note = e?.note ?? ''
+    form.note = e?.note ?? prefill?.note ?? ''
     form.receipt_file = null
     // Expand extra fields only when the edited expense already uses them.
     showDetails.value = !!(e?.payee || e?.paymentMethod || e?.note)

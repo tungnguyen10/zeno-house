@@ -1,7 +1,11 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useAuthStore } from '~/stores/auth'
-import type { BuildingExpense } from '~/types/operations-report'
+import type {
+  BuildingExpense,
+  RecurringExpense,
+  RecurringExpenseRecordPrefill,
+} from '~/types/operations-report'
 import {
   EXPENSE_CATEGORIES,
   EXPENSE_CATEGORY_LABELS,
@@ -39,11 +43,18 @@ const {
   uploadExpenseReceipt,
   removeExpenseReceipt,
 } = useOperationsMutations()
+const {
+  upcomingRecurringExpenses,
+  recordRecurringExpense,
+  dismissRecurringExpense,
+  refreshUpcomingRecurringExpenses,
+} = useRecurringExpenses(buildingId)
 
 // --- Capability gates ---------------------------------------------------
 const canWriteExpense = computed(() => auth.can('building-expenses.write'))
 const canVoidExpense = computed(() => auth.can('building-expenses.delete'))
 const canExportReport = computed(() => auth.can('operations-report.export'))
+const canReadRecurring = computed(() => auth.can('recurring-expenses.read'))
 const exportLoading = ref(false)
 
 async function exportReportXlsx() {
@@ -120,15 +131,46 @@ const filteredExpenseTotal = computed(() =>
 // --- Expense modal ------------------------------------------------------
 const expenseModalOpen = ref(false)
 const editingExpense = ref<BuildingExpense | null>(null)
+const expensePrefill = ref<RecurringExpenseRecordPrefill | null>(null)
+const recurringRecordTarget = ref<RecurringExpense | null>(null)
 const savingExpense = ref(false)
 
 function openCreateExpense() {
   editingExpense.value = null
+  expensePrefill.value = null
+  recurringRecordTarget.value = null
   expenseModalOpen.value = true
 }
 function openEditExpense(expense: BuildingExpense) {
   editingExpense.value = expense
+  expensePrefill.value = null
+  recurringRecordTarget.value = null
   expenseModalOpen.value = true
+}
+
+function recordReminder(item: RecurringExpense) {
+  editingExpense.value = null
+  recurringRecordTarget.value = item
+  expensePrefill.value = {
+    buildingId: item.buildingId,
+    periodYear: periodYear.value,
+    periodMonth: periodMonth.value,
+    expenseDate: item.nextReminderAt,
+    category: item.category,
+    amount: item.estimatedAmount,
+    note: item.name,
+  }
+  expenseModalOpen.value = true
+}
+
+async function dismissReminder(item: RecurringExpense) {
+  try {
+    await dismissRecurringExpense(item.id)
+    toast.success('Đã bỏ qua nhắc chi phí.')
+  }
+  catch (err) {
+    toast.error(resolveError(err, 'Không bỏ qua được nhắc chi phí.'))
+  }
 }
 
 async function submitExpense(payload: Record<string, unknown>) {
@@ -143,11 +185,20 @@ async function submitExpense(payload: Record<string, unknown>) {
     }
     else {
       const created = await createExpense(payload)
+      if (recurringRecordTarget.value) {
+        await recordRecurringExpense(recurringRecordTarget.value.id, {
+          period_year: periodYear.value,
+          period_month: periodMonth.value,
+        })
+      }
       if (receiptFile) await uploadExpenseReceipt(created.id, receiptFile)
       toast.success('Đã thêm chi phí.')
     }
     expenseModalOpen.value = false
+    expensePrefill.value = null
+    recurringRecordTarget.value = null
     reload()
+    refreshUpcomingRecurringExpenses()
   }
   catch (err) {
     toast.error(resolveError(err, 'Không lưu được chi phí.'))
@@ -301,6 +352,36 @@ function signedClass(value: number): string {
         />
       </div>
 
+      <UiSection
+        v-if="canReadRecurring && upcomingRecurringExpenses.length > 0"
+        title="Nhắc chi phí sắp đến hạn"
+        class="mt-8"
+      >
+        <div class="rounded-2xl border border-dark-border bg-dark-surface divide-y divide-dark-border">
+          <div
+            v-for="item in upcomingRecurringExpenses"
+            :key="item.id"
+            class="flex flex-col gap-3 px-5 py-3 sm:flex-row sm:items-center sm:justify-between"
+          >
+            <div>
+              <div class="font-medium text-white">{{ item.name }}</div>
+              <div class="mt-1 text-xs text-muted">
+                {{ EXPENSE_CATEGORY_LABELS[item.category] }} · {{ item.nextReminderAt }}
+              </div>
+            </div>
+            <div class="flex items-center justify-between gap-2 sm:justify-end">
+              <span class="tabular-nums text-white">{{ formatCurrency(item.estimatedAmount) }}</span>
+              <UiButton v-if="canWriteExpense" size="sm" @click="recordReminder(item)">
+                Ghi nhận
+              </UiButton>
+              <UiButton size="sm" variant="secondary" @click="dismissReminder(item)">
+                Bỏ qua
+              </UiButton>
+            </div>
+          </div>
+        </div>
+      </UiSection>
+
       <!-- Utility margins -->
       <div class="mt-8 grid grid-cols-1 gap-4 lg:grid-cols-2">
         <div class="rounded-2xl border border-dark-border bg-dark-surface p-5">
@@ -391,6 +472,33 @@ function signedClass(value: number): string {
             <UiEmptyState
               title="Chưa có chi phí cố định"
               description="Thêm tiền thuê nhà để tính lợi nhuận chính xác."
+            />
+          </div>
+        </div>
+      </UiSection>
+
+      <UiSection title="Chi phí trả trước (phân bổ)" class="mt-8">
+        <template #actions>
+          <span class="text-sm font-semibold tabular-nums text-white">
+            {{ formatCurrency(metrics.prepaidAllocationTotal) }}
+          </span>
+        </template>
+        <div class="rounded-2xl border border-dark-border bg-dark-surface divide-y divide-dark-border">
+          <div
+            v-for="item in report.prepaidItems"
+            :key="item.id"
+            class="flex items-center justify-between px-5 py-3 text-sm"
+          >
+            <div>
+              <span class="text-white">{{ item.name }}</span>
+              <span class="ml-2 text-xs text-muted">{{ EXPENSE_CATEGORY_LABELS[item.category] }}</span>
+            </div>
+            <span class="tabular-nums text-white">{{ formatCurrency(item.monthlyAmount) }}</span>
+          </div>
+          <div v-if="report.prepaidItems.length === 0" class="px-5 py-6">
+            <UiEmptyState
+              title="Chưa có chi phí trả trước"
+              description="Các khoản trả trước đang hiệu lực sẽ được phân bổ tại đây."
             />
           </div>
         </div>
@@ -502,6 +610,7 @@ function signedClass(value: number): string {
       v-if="buildingId"
       :open="expenseModalOpen"
       :expense="editingExpense"
+      :prefill="expensePrefill"
       :building-id="buildingId"
       :period-year="periodYear"
       :period-month="periodMonth"

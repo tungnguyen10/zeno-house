@@ -25,6 +25,23 @@ export const EXPENSE_CATEGORIES = [
 ] as const
 export type ExpenseCategory = (typeof EXPENSE_CATEGORIES)[number]
 
+/** Reminder cadence for recurring operating expenses. */
+export const RECURRING_EXPENSE_FREQUENCIES = [
+  'monthly',
+  'quarterly',
+  'biannual',
+  'yearly',
+] as const
+export type RecurringExpenseFrequency = (typeof RECURRING_EXPENSE_FREQUENCIES)[number]
+
+/** Lifecycle for prepaid expenses. */
+export const PREPAID_EXPENSE_STATUSES = [
+  'active',
+  'expired',
+  'cancelled',
+] as const
+export type PrepaidExpenseStatus = (typeof PREPAID_EXPENSE_STATUSES)[number]
+
 /** Human labels (vi) for expense categories. */
 export const EXPENSE_CATEGORY_LABELS: Record<ExpenseCategory, string> = {
   electricity_input: 'Điện đầu vào',
@@ -44,6 +61,19 @@ export const EXPENSE_CATEGORY_LABELS: Record<ExpenseCategory, string> = {
 
 export const FIXED_COST_CATEGORY_LABELS: Record<FixedCostCategory, string> = {
   rent: 'Tiền thuê nhà',
+}
+
+export const RECURRING_EXPENSE_FREQUENCY_LABELS: Record<RecurringExpenseFrequency, string> = {
+  monthly: 'Hàng tháng',
+  quarterly: 'Hàng quý',
+  biannual: 'Mỗi 6 tháng',
+  yearly: 'Hàng năm',
+}
+
+export const PREPAID_EXPENSE_STATUS_LABELS: Record<PrepaidExpenseStatus, string> = {
+  active: 'Đang phân bổ',
+  expired: 'Đã hết hạn',
+  cancelled: 'Đã hủy',
 }
 
 /**
