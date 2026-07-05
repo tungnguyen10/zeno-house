@@ -18,6 +18,7 @@ export interface BuildingExpense {
   payee: string | null
   paymentMethod: string | null
   note: string | null
+  fundedBy: 'direct' | 'reserve_fund'
   receiptUrl: string | null
   receiptSignedUrl: string | null
   createdBy: string | null
@@ -42,6 +43,28 @@ export interface BuildingFixedCost {
   createdBy: string | null
   createdAt: string
   updatedAt: string
+}
+
+export type ReserveFundTransactionType = 'deposit' | 'withdrawal'
+
+export interface ReserveFundTransaction {
+  id: string
+  fundId: string
+  type: ReserveFundTransactionType
+  amount: number
+  date: string
+  linkedExpenseId: string | null
+  note: string | null
+  createdBy: string | null
+  createdAt: string
+}
+
+export interface ReserveFund {
+  id: string
+  buildingId: string
+  balance: number
+  createdAt: string
+  transactions: ReserveFundTransaction[]
 }
 
 /** A building-scoped recurring expense reminder template. */

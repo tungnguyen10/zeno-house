@@ -43,6 +43,7 @@ export const buildingExpenseCreateSchema = z.object({
   payee: z.string().max(200).nullable().optional(),
   payment_method: z.string().max(100).nullable().optional(),
   note: z.string().max(500).nullable().optional(),
+  funded_by: z.enum(['direct', 'reserve_fund']).optional(),
 })
 
 export type BuildingExpenseCreateInput = z.infer<typeof buildingExpenseCreateSchema>
@@ -60,17 +61,32 @@ export const buildingExpenseVoidSchema = z.object({
 export type BuildingExpenseVoidInput = z.infer<typeof buildingExpenseVoidSchema>
 
 // ---------------------------------------------------------------------------
+// Reserve funds
+// ---------------------------------------------------------------------------
+export const reserveFundParamsSchema = z.object({
+  buildingId: z.string().uuid('buildingId không hợp lệ'),
+})
+
+export const reserveFundMovementSchema = z.object({
+  amount: z.coerce.number().positive('Số tiền phải lớn hơn 0'),
+  date: calendarDate,
+  note: z.string().max(500).nullable().optional(),
+})
+
+export type ReserveFundMovementInput = z.infer<typeof reserveFundMovementSchema>
+
+// ---------------------------------------------------------------------------
 // Building fixed costs
 // ---------------------------------------------------------------------------
 export const buildingFixedCostListQuerySchema = z.object({
-  building_id: z.string().uuid('building_id không hợp lệ'),
+  building_id: z.string().min(1, 'building_id không được để trống'),
 })
 
 export type BuildingFixedCostListQuery = z.infer<typeof buildingFixedCostListQuerySchema>
 
 export const buildingFixedCostCreateSchema = z
   .object({
-    building_id: z.string().uuid('building_id không hợp lệ'),
+    building_id: z.string().min(1, 'building_id không được để trống'),
     category: z.enum(FIXED_COST_CATEGORIES).default('rent'),
     amount: z.number().nonnegative('Số tiền không được âm'),
     effective_from_period_year: z.number().int().min(2000).max(2100),

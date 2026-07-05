@@ -3,6 +3,9 @@ import type {
   BuildingExpense,
   BuildingFixedCost,
   PrepaidExpense,
+  ReserveFund,
+  ReserveFundTransaction,
+  ReserveFundTransactionType,
   RecurringExpense,
 } from '~/types/operations-report'
 import type {
@@ -57,6 +60,7 @@ export function mapBuildingExpense(row: Tables<'building_expenses'>): BuildingEx
     payee: row.payee,
     paymentMethod: row.payment_method,
     note: row.note,
+    fundedBy: (row.funded_by ?? 'direct') as 'direct' | 'reserve_fund',
     receiptUrl: row.receipt_url,
     receiptSignedUrl: null,
     createdBy: row.created_by,
@@ -82,6 +86,55 @@ export function mapBuildingFixedCost(row: Tables<'building_fixed_costs'>): Build
     createdBy: row.created_by,
     createdAt: row.created_at ?? '',
     updatedAt: row.updated_at ?? '',
+  }
+}
+
+export interface ReserveFundRow {
+  id: string
+  building_id: string
+  created_at: string | null
+}
+
+export interface ReserveFundTransactionRow {
+  id: string
+  fund_id: string
+  type: string
+  amount: number | string
+  date: string
+  linked_expense_id: string | null
+  note: string | null
+  created_by: string | null
+  created_at: string | null
+}
+
+export function mapReserveFundTransaction(row: ReserveFundTransactionRow): ReserveFundTransaction {
+  return {
+    id: row.id,
+    fundId: row.fund_id,
+    type: row.type as ReserveFundTransactionType,
+    amount: Number(row.amount),
+    date: row.date,
+    linkedExpenseId: row.linked_expense_id,
+    note: row.note,
+    createdBy: row.created_by,
+    createdAt: row.created_at ?? '',
+  }
+}
+
+export function mapReserveFund(
+  row: ReserveFundRow,
+  transactions: ReserveFundTransaction[],
+): ReserveFund {
+  const balance = transactions.reduce(
+    (sum, tx) => sum + (tx.type === 'deposit' ? tx.amount : -tx.amount),
+    0,
+  )
+  return {
+    id: row.id,
+    buildingId: row.building_id,
+    balance,
+    createdAt: row.created_at ?? '',
+    transactions,
   }
 }
 

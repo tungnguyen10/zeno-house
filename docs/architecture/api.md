@@ -169,5 +169,14 @@ Server services should raise domain-specific conflicts rather than letting datab
 | POST | `/api/prepaid-expenses` |
 | PATCH | `/api/prepaid-expenses/[id]` |
 | DELETE | `/api/prepaid-expenses/[id]` |
+| GET | `/api/reserve-funds/[buildingId]` |
+| POST | `/api/reserve-funds/[buildingId]/deposit` |
+| POST | `/api/reserve-funds/[buildingId]/withdraw` |
+| GET | `/api/shared-expenses` |
+| POST | `/api/shared-expenses` |
+| PATCH | `/api/shared-expenses/[id]` |
+| DELETE | `/api/shared-expenses/[id]` |
+| POST | `/api/shared-expenses/[id]/allocate` |
 
 Operations report export requires `operations-report.export`. Expense receipt routes accept a private image attachment and return the expense DTO with a short-lived signed receipt URL when present. Recurring expense `record` advances the reminder and returns a prefill payload for the normal building expense form; the actual expense is still created through `/api/building-expenses`. Prepaid expenses are owner/admin configuration records and contribute monthly allocation to `/api/operations-report`.
+Reserve fund routes are owner/admin only and derive balance from transactions. Shared-expense routes are owner/admin only; allocation materializes normal `building_expenses` rows for the selected period.

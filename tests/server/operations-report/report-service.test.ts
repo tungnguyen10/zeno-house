@@ -68,6 +68,7 @@ function expense(overrides: Partial<BuildingExpense>): BuildingExpense {
     payee: null,
     paymentMethod: null,
     note: null,
+    fundedBy: 'direct',
     createdBy: null,
     voidedAt: null,
     voidedBy: null,

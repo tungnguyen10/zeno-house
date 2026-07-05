@@ -29,7 +29,7 @@ function rangesOverlap(
 }
 
 async function requireBuilding(event: H3Event, buildingId: string) {
-  const building = await BuildingRepository.findById(event, buildingId)
+  const building = await BuildingRepository.findByIdentifier(event, buildingId)
   if (!building) throwNotFound('Không tìm thấy tòa nhà')
   return building
 }
@@ -37,9 +37,9 @@ async function requireBuilding(event: H3Event, buildingId: string) {
 export const BuildingFixedCostService = {
   async list(event: H3Event, user: AuthUser, buildingId: string): Promise<BuildingFixedCost[]> {
     if (!can(user, 'building-fixed-costs.read')) throwForbidden('Không có quyền xem chi phí cố định')
-    await requireBuilding(event, buildingId)
-    await assertBuildingScope(event, user, buildingId, 'read')
-    return BuildingFixedCostRepository.listByBuilding(event, buildingId)
+    const building = await requireBuilding(event, buildingId)
+    await assertBuildingScope(event, user, building.id, 'read')
+    return BuildingFixedCostRepository.listByBuilding(event, building.id)
   },
 
   async create(
@@ -49,10 +49,10 @@ export const BuildingFixedCostService = {
   ): Promise<BuildingFixedCost> {
     if (!can(user, 'building-fixed-costs.write'))
       throwForbidden('Không có quyền cấu hình chi phí cố định')
-    await requireBuilding(event, input.building_id)
-    await assertBuildingScope(event, user, input.building_id, 'write')
+    const building = await requireBuilding(event, input.building_id)
+    await assertBuildingScope(event, user, building.id, 'write')
 
-    await this.assertNoOverlap(event, input.building_id, input.category, {
+    await this.assertNoOverlap(event, building.id, input.category, {
       from: ordinal(input.effective_from_period_year, input.effective_from_period_month),
       to:
         input.effective_to_period_year != null && input.effective_to_period_month != null
@@ -60,7 +60,7 @@ export const BuildingFixedCostService = {
           : null,
     })
 
-    const created = await BuildingFixedCostRepository.insert(event, input, user.id)
+    const created = await BuildingFixedCostRepository.insert(event, { ...input, building_id: building.id }, user.id)
 
     await AuditService.append(event, user, {
       building_id: created.buildingId,

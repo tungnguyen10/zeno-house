@@ -17,6 +17,7 @@ Zeno House uses Supabase Postgres. Schema history lives in `supabase/migrations`
 | Meter readings | `20260530300000_meter_readings.sql`, `20260530400000_simplify_meter_readings.sql` |
 | Billing runtime | `20260611000000_billing_runtime.sql`, `20260611000001_billing_legacy_cleanup.sql` |
 | Operations report | `20260702173259_add_operations_report.sql`, `20260704000000_expense_receipts_and_export_categories.sql`, `20260705000000_recurring_and_prepaid_expenses.sql` |
+| Shared expenses and reserve fund | `20260705010000_shared_expenses_and_reserve_fund.sql` |
 
 ## Core Tables
 
@@ -86,6 +87,10 @@ Route helpers still fall back to ids when readable identifiers are absent.
 `recurring_expenses` stores building-scoped reminder templates with frequency, anchor day, estimated amount, active flag, and `next_reminder_at`. Recording or dismissing a reminder advances `next_reminder_at`; recording returns a prefill for a normal `building_expenses` row.
 
 `prepaid_expenses` stores building-scoped lump-sum costs spread across `total_months`. The service computes `end_date` and rounded `monthly_amount`; the final covered month absorbs any rounding remainder so allocations sum to `total_amount`.
+
+`shared_expenses` stores owner-scoped expense definitions that apply to multiple buildings. `shared_expense_buildings` stores membership. Allocation creates one normal `building_expenses` row per member building for the selected period and tags the row note with a shared-origin marker to guard duplicate allocations.
+
+`reserve_funds` stores one fund per building. `reserve_fund_transactions` is the ledger; balance is derived from deposits minus withdrawals. `building_expenses.funded_by` marks direct versus reserve-funded expenses, and reserve-funded expense voids create a compensating deposit transaction.
 
 `expense-receipts` is a private Storage bucket for receipt images. Server services enforce capability and building scope before upload, delete, or signed URL generation.
 

@@ -14,6 +14,7 @@ import {
   type BuildingExpenseListFilter,
 } from '../../repositories/operations-report/expenses'
 import { AuditService } from '../audit'
+import { ReserveFundService } from './reserve-funds'
 import { db } from '../../utils/db'
 import { assertBuildingScope } from '../../utils/scope'
 
@@ -76,7 +77,9 @@ export const BuildingExpenseService = {
     await requireBuilding(event, input.building_id)
     await assertBuildingScope(event, user, input.building_id, 'write')
 
-    const created = await BuildingExpenseRepository.insert(event, input, user.id)
+    const created = input.funded_by === 'reserve_fund'
+      ? await ReserveFundService.createReserveFundedExpense(event, user, input)
+      : await BuildingExpenseRepository.insert(event, input, user.id)
 
     await AuditService.append(event, user, {
       building_id: created.buildingId,
@@ -128,6 +131,7 @@ export const BuildingExpenseService = {
     if (existing.voidedAt) throwConflict('Khoản chi đã bị hủy')
 
     const voided = await BuildingExpenseRepository.voidById(event, id, user.id, voidReason)
+    await ReserveFundService.reverseExpenseWithdrawal(event, user, voided)
 
     await AuditService.append(event, user, {
       building_id: voided.buildingId,

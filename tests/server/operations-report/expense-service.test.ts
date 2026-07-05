@@ -13,6 +13,7 @@ const appendAudit = vi.fn()
 const storageUpload = vi.fn()
 const storageRemove = vi.fn()
 const storageCreateSignedUrl = vi.fn()
+const reverseExpenseWithdrawal = vi.fn()
 
 vi.mock('../../../server/repositories/buildings', () => ({
   BuildingRepository: { findById: findBuildingById },
@@ -34,6 +35,13 @@ vi.mock('../../../server/utils/scope', () => ({
 
 vi.mock('../../../server/services/audit', () => ({
   AuditService: { append: appendAudit },
+}))
+
+vi.mock('../../../server/services/operations-report/reserve-funds', () => ({
+  ReserveFundService: {
+    createReserveFundedExpense: vi.fn(),
+    reverseExpenseWithdrawal,
+  },
 }))
 
 vi.mock('../../../server/utils/db', () => ({
@@ -62,6 +70,7 @@ function expense(overrides: Partial<BuildingExpense> = {}): BuildingExpense {
     payee: null,
     paymentMethod: null,
     note: null,
+    fundedBy: 'direct',
     createdBy: 'admin-1',
     voidedAt: null,
     voidedBy: null,
@@ -83,6 +92,7 @@ describe('BuildingExpenseService', () => {
     storageUpload.mockResolvedValue({ error: null })
     storageRemove.mockResolvedValue({ error: null })
     storageCreateSignedUrl.mockResolvedValue({ data: { signedUrl: 'https://signed.test/receipt' }, error: null })
+    reverseExpenseWithdrawal.mockResolvedValue(null)
   })
 
   it('soft-voids an expense with void metadata and audit', async () => {

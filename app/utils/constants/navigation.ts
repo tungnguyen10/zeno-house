@@ -19,6 +19,7 @@ export const NAV_ITEMS = [
   { key: 'invoices', label: 'Hoá đơn', to: '/invoices', icon: 'IconDocument' },
   { key: 'billing', label: 'Vận hành', to: '/billing', icon: 'IconBriefcase' },
   { key: 'operations-report', label: 'Báo cáo vận hành', to: '/operations-report', icon: 'IconChart' },
+  { key: 'shared-expenses', label: 'Chi phí dùng chung', to: '/shared-expenses', icon: 'IconLayers', roles: ['admin', 'owner'] },
   // User management is available to admin (global) and owner (scoped), not manager.
   { key: 'settings', label: 'Settings', to: '/settings/managers', icon: 'IconSettings', roles: ['admin', 'owner'] },
   { key: 'history', label: 'Audit Log', to: '/settings/history', icon: 'IconClock', adminOnly: true },

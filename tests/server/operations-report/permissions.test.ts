@@ -23,6 +23,12 @@ const ALL_CAPS = [
   'recurring-expenses.delete',
   'prepaid-expenses.read',
   'prepaid-expenses.write',
+  'shared-expenses.read',
+  'shared-expenses.write',
+  'shared-expenses.allocate',
+  'reserve-fund.read',
+  'reserve-fund.deposit',
+  'reserve-fund.withdraw',
 ] as const
 
 describe('operations-report permission matrix', () => {
@@ -53,6 +59,12 @@ describe('operations-report permission matrix', () => {
     expect(can(manager, 'recurring-expenses.delete')).toBe(false)
     expect(can(manager, 'prepaid-expenses.read')).toBe(false)
     expect(can(manager, 'prepaid-expenses.write')).toBe(false)
+    expect(can(manager, 'shared-expenses.read')).toBe(false)
+    expect(can(manager, 'shared-expenses.write')).toBe(false)
+    expect(can(manager, 'shared-expenses.allocate')).toBe(false)
+    expect(can(manager, 'reserve-fund.read')).toBe(false)
+    expect(can(manager, 'reserve-fund.deposit')).toBe(false)
+    expect(can(manager, 'reserve-fund.withdraw')).toBe(false)
   })
 
   it('denies all operations capabilities when no role is present', () => {

@@ -49,12 +49,21 @@ const {
   dismissRecurringExpense,
   refreshUpcomingRecurringExpenses,
 } = useRecurringExpenses(buildingId)
+const {
+  reserveFund,
+  depositReserveFund,
+  withdrawReserveFund,
+  refreshReserveFund,
+} = useReserveFund(buildingId)
 
 // --- Capability gates ---------------------------------------------------
 const canWriteExpense = computed(() => auth.can('building-expenses.write'))
 const canVoidExpense = computed(() => auth.can('building-expenses.delete'))
 const canExportReport = computed(() => auth.can('operations-report.export'))
 const canReadRecurring = computed(() => auth.can('recurring-expenses.read'))
+const canReadReserveFund = computed(() => auth.can('reserve-fund.read'))
+const canDepositReserveFund = computed(() => auth.can('reserve-fund.deposit'))
+const canWithdrawReserveFund = computed(() => auth.can('reserve-fund.withdraw'))
 const exportLoading = ref(false)
 
 async function exportReportXlsx() {
@@ -134,6 +143,10 @@ const editingExpense = ref<BuildingExpense | null>(null)
 const expensePrefill = ref<RecurringExpenseRecordPrefill | null>(null)
 const recurringRecordTarget = ref<RecurringExpense | null>(null)
 const savingExpense = ref(false)
+const reserveAction = ref<'deposit' | 'withdraw'>('deposit')
+const reserveAmount = ref('')
+const reserveNote = ref('')
+const movingReserve = ref(false)
 
 function openCreateExpense() {
   editingExpense.value = null
@@ -199,12 +212,40 @@ async function submitExpense(payload: Record<string, unknown>) {
     recurringRecordTarget.value = null
     reload()
     refreshUpcomingRecurringExpenses()
+    refreshReserveFund()
   }
   catch (err) {
     toast.error(resolveError(err, 'Không lưu được chi phí.'))
   }
   finally {
     savingExpense.value = false
+  }
+}
+
+async function submitReserveMovement() {
+  const amount = Number(reserveAmount.value)
+  if (!amount || amount <= 0) {
+    toast.error('Số tiền phải lớn hơn 0.')
+    return
+  }
+  movingReserve.value = true
+  try {
+    const payload = {
+      amount,
+      date: new Date().toISOString().slice(0, 10),
+      note: reserveNote.value.trim() || null,
+    }
+    if (reserveAction.value === 'deposit') await depositReserveFund(payload)
+    else await withdrawReserveFund(payload)
+    reserveAmount.value = ''
+    reserveNote.value = ''
+    toast.success('Đã cập nhật quỹ dự phòng.')
+  }
+  catch (err) {
+    toast.error(resolveError(err, 'Không cập nhật được quỹ dự phòng.'))
+  }
+  finally {
+    movingReserve.value = false
   }
 }
 
@@ -382,6 +423,69 @@ function signedClass(value: number): string {
         </div>
       </UiSection>
 
+      <UiSection v-if="canReadReserveFund && reserveFund" title="Quỹ dự phòng" class="mt-8">
+        <template #actions>
+          <span class="text-sm font-semibold tabular-nums text-white">
+            {{ formatCurrency(reserveFund.balance) }}
+          </span>
+        </template>
+        <div class="grid gap-4 lg:grid-cols-[1fr_360px]">
+          <div class="rounded-2xl border border-dark-border bg-dark-surface divide-y divide-dark-border">
+            <div
+              v-for="tx in reserveFund.transactions.slice(0, 5)"
+              :key="tx.id"
+              class="flex items-center justify-between px-5 py-3 text-sm"
+            >
+              <div>
+                <span class="text-white">{{ tx.type === 'deposit' ? 'Nạp quỹ' : 'Rút quỹ' }}</span>
+                <span class="ml-2 text-xs text-muted">{{ tx.date }}</span>
+                <p v-if="tx.note" class="mt-0.5 text-xs text-muted">{{ tx.note }}</p>
+              </div>
+              <span
+                class="tabular-nums"
+                :class="tx.type === 'deposit' ? 'text-success-neon' : 'text-error-vivid'"
+              >
+                {{ tx.type === 'deposit' ? '+' : '-' }}{{ formatCurrency(tx.amount) }}
+              </span>
+            </div>
+            <div v-if="reserveFund.transactions.length === 0" class="px-5 py-6">
+              <UiEmptyState title="Chưa có giao dịch" description="Quỹ dự phòng sẽ ghi nhận các lần nạp và rút." />
+            </div>
+          </div>
+          <form
+            v-if="canDepositReserveFund || canWithdrawReserveFund"
+            class="rounded-2xl border border-dark-border bg-dark-surface p-5 space-y-3"
+            @submit.prevent="submitReserveMovement"
+          >
+            <div class="flex gap-2">
+              <UiButton
+                v-if="canDepositReserveFund"
+                type="button"
+                size="sm"
+                :variant="reserveAction === 'deposit' ? 'primary' : 'secondary'"
+                @click="reserveAction = 'deposit'"
+              >
+                Nạp
+              </UiButton>
+              <UiButton
+                v-if="canWithdrawReserveFund"
+                type="button"
+                size="sm"
+                :variant="reserveAction === 'withdraw' ? 'primary' : 'secondary'"
+                @click="reserveAction = 'withdraw'"
+              >
+                Rút
+              </UiButton>
+            </div>
+            <UiInput v-model="reserveAmount" label="Số tiền" type="number" min="1" />
+            <UiInput v-model="reserveNote" label="Ghi chú" />
+            <UiButton type="submit" size="sm" :loading="movingReserve">
+              Lưu
+            </UiButton>
+          </form>
+        </div>
+      </UiSection>
+
       <!-- Utility margins -->
       <div class="mt-8 grid grid-cols-1 gap-4 lg:grid-cols-2">
         <div class="rounded-2xl border border-dark-border bg-dark-surface p-5">
@@ -536,6 +640,9 @@ function signedClass(value: number): string {
                 <td class="px-5 py-3">
                   <span class="text-white">{{ expenseLabel(e.category) }}</span>
                   <UiBadge v-if="e.voidedAt" class="ml-2" variant="danger">Đã hủy</UiBadge>
+                  <UiBadge v-if="e.fundedBy === 'reserve_fund'" class="ml-2" variant="accent">
+                    Quỹ dự phòng
+                  </UiBadge>
                   <p v-if="e.note" class="text-xs text-muted mt-0.5">{{ e.note }}</p>
                 </td>
                 <td class="px-5 py-3 text-muted">{{ e.expenseDate ?? '—' }}</td>
@@ -614,6 +721,8 @@ function signedClass(value: number): string {
       :building-id="buildingId"
       :period-year="periodYear"
       :period-month="periodMonth"
+      :reserve-balance="reserveFund?.balance ?? 0"
+      :can-use-reserve="canWithdrawReserveFund"
       :submitting="savingExpense"
       @close="expenseModalOpen = false"
       @submit="submitExpense"

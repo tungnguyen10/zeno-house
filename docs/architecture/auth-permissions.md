@@ -180,8 +180,15 @@ period's building via `assertBuildingScope`.
 | `recurring-expenses.delete` | admin, owner | Delete recurring expense templates. |
 | `prepaid-expenses.read` | admin, owner | List prepaid expenses in building settings. |
 | `prepaid-expenses.write` | admin, owner | Create, update, or delete prepaid expenses. |
+| `reserve-fund.read` | admin, owner | View a building reserve fund balance and transactions. |
+| `reserve-fund.deposit` | admin, owner | Add manual reserve fund deposits. |
+| `reserve-fund.withdraw` | admin, owner | Add manual withdrawals and pay expenses from reserve. |
+| `shared-expenses.read` | admin, owner | View owner-scoped shared expense definitions. |
+| `shared-expenses.write` | admin, owner | Create, update, or deactivate shared expenses and membership. |
+| `shared-expenses.allocate` | admin, owner | Allocate shared expenses into building expenses for a period. |
 
 Managers can enter expenses and receipts for assigned buildings and may record recurring reminders when they also have `building-expenses.write`. They cannot export operations workbooks or manage fixed costs, recurring templates, or prepaid expenses.
+Managers also receive no reserve-fund or shared-expense capabilities, so both API access and UI controls are hidden from them.
 
 ## Security Rules
 

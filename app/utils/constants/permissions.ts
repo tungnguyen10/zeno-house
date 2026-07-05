@@ -47,6 +47,12 @@ export const OWNER_CAPABILITIES = [
   'recurring-expenses.delete',
   'prepaid-expenses.read',
   'prepaid-expenses.write',
+  'shared-expenses.read',
+  'shared-expenses.write',
+  'shared-expenses.allocate',
+  'reserve-fund.read',
+  'reserve-fund.deposit',
+  'reserve-fund.withdraw',
   // Scoped user management: owner can manage managers inside owner scope.
   'users.manage.scoped',
   'users.create.manager',

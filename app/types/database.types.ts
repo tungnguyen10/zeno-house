@@ -255,6 +255,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           expense_date: string | null
+          funded_by: string
           id: string
           note: string | null
           payee: string | null
@@ -274,6 +275,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           expense_date?: string | null
+          funded_by?: string
           id?: string
           note?: string | null
           payee?: string | null
@@ -293,6 +295,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           expense_date?: string | null
+          funded_by?: string
           id?: string
           note?: string | null
           payee?: string | null
@@ -1111,6 +1114,158 @@ export type Database = {
             columns: ["room_id"]
             isOneToOne: false
             referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reserve_funds: {
+        Row: {
+          building_id: string
+          created_at: string
+          id: string
+        }
+        Insert: {
+          building_id: string
+          created_at?: string
+          id?: string
+        }
+        Update: {
+          building_id?: string
+          created_at?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reserve_funds_building_id_fkey"
+            columns: ["building_id"]
+            isOneToOne: true
+            referencedRelation: "buildings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reserve_fund_transactions: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string | null
+          date: string
+          fund_id: string
+          id: string
+          linked_expense_id: string | null
+          note: string | null
+          type: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          created_by?: string | null
+          date: string
+          fund_id: string
+          id?: string
+          linked_expense_id?: string | null
+          note?: string | null
+          type: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          date?: string
+          fund_id?: string
+          id?: string
+          linked_expense_id?: string | null
+          note?: string | null
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reserve_fund_transactions_fund_id_fkey"
+            columns: ["fund_id"]
+            isOneToOne: false
+            referencedRelation: "reserve_funds"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reserve_fund_transactions_linked_expense_id_fkey"
+            columns: ["linked_expense_id"]
+            isOneToOne: false
+            referencedRelation: "building_expenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shared_expenses: {
+        Row: {
+          amount: number
+          category: string
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          name: string
+          note: string | null
+          owner_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          category: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          note?: string | null
+          owner_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          note?: string | null
+          owner_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      shared_expense_buildings: {
+        Row: {
+          building_id: string
+          created_at: string
+          id: string
+          shared_expense_id: string
+        }
+        Insert: {
+          building_id: string
+          created_at?: string
+          id?: string
+          shared_expense_id: string
+        }
+        Update: {
+          building_id?: string
+          created_at?: string
+          id?: string
+          shared_expense_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shared_expense_buildings_building_id_fkey"
+            columns: ["building_id"]
+            isOneToOne: false
+            referencedRelation: "buildings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shared_expense_buildings_shared_expense_id_fkey"
+            columns: ["shared_expense_id"]
+            isOneToOne: false
+            referencedRelation: "shared_expenses"
             referencedColumns: ["id"]
           },
         ]

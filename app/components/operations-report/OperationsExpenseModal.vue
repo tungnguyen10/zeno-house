@@ -16,6 +16,8 @@ const props = defineProps<{
   buildingId: string
   periodYear: number
   periodMonth: number
+  reserveBalance?: number
+  canUseReserve?: boolean
   submitting?: boolean
 }>()
 
@@ -43,6 +45,7 @@ const form = reactive({
   payment_method: '',
   note: '',
   receipt_file: null as File | null,
+  funded_by: 'direct' as 'direct' | 'reserve_fund',
 })
 
 const error = ref<string | null>(null)
@@ -61,6 +64,10 @@ const amountPreview = computed(() => {
   if (!form.amount || Number.isNaN(value) || value <= 0) return undefined
   return formatCurrency(value)
 })
+const showReserveToggle = computed(() =>
+  !isEdit.value && props.canUseReserve === true && (props.reserveBalance ?? 0) > 0,
+)
+const reserveRemaining = computed(() => (props.reserveBalance ?? 0) - Number(form.amount || 0))
 
 watch(
   () => props.open,
@@ -76,6 +83,7 @@ watch(
     form.payment_method = e?.paymentMethod ?? ''
     form.note = e?.note ?? prefill?.note ?? ''
     form.receipt_file = null
+    form.funded_by = 'direct'
     // Expand extra fields only when the edited expense already uses them.
     showDetails.value = !!(e?.payee || e?.paymentMethod || e?.note)
   },
@@ -103,6 +111,7 @@ function submit() {
     base.building_id = props.buildingId
     base.period_year = props.periodYear
     base.period_month = props.periodMonth
+    base.funded_by = form.funded_by
   }
 
   if (form.receipt_file) base.receipt_file = form.receipt_file
@@ -203,6 +212,25 @@ function onReceiptChange(event: Event) {
           :rows="2"
         />
       </div>
+
+      <label
+        v-if="showReserveToggle"
+        class="flex items-start gap-3 rounded-md border border-dark-border bg-dark-surface px-3 py-3 text-sm"
+      >
+        <input
+          v-model="form.funded_by"
+          type="checkbox"
+          true-value="reserve_fund"
+          false-value="direct"
+          class="mt-1"
+        >
+        <span>
+          <span class="block font-medium text-white">Lấy từ quỹ</span>
+          <span class="block text-xs text-muted">
+            Còn lại sau: {{ formatCurrency(reserveRemaining) }}
+          </span>
+        </span>
+      </label>
 
       <UiAlert v-if="error" severity="danger">{{ error }}</UiAlert>
     </form>

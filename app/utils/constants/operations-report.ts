@@ -3,10 +3,6 @@
  * revenue charge-type groupings used by the building/month report.
  */
 
-/** Fixed-cost categories. MVP ships `rent` only; kept as a list for later. */
-export const FIXED_COST_CATEGORIES = ['rent'] as const
-export type FixedCostCategory = (typeof FIXED_COST_CATEGORIES)[number]
-
 /** Monthly one-off expense categories. */
 export const EXPENSE_CATEGORIES = [
   'electricity_input',
@@ -24,6 +20,21 @@ export const EXPENSE_CATEGORIES = [
   'other',
 ] as const
 export type ExpenseCategory = (typeof EXPENSE_CATEGORIES)[number]
+
+/** Fixed monthly operating costs (can repeat every month for long periods). */
+export const FIXED_COST_CATEGORIES = [
+  'rent',
+  'internet',
+  'cleaning',
+  'staff',
+  'insurance',
+  'bank_fee',
+  'fire_safety',
+  'admin_fee',
+  'supplies',
+  'other',
+] as const
+export type FixedCostCategory = (typeof FIXED_COST_CATEGORIES)[number]
 
 /** Reminder cadence for recurring operating expenses. */
 export const RECURRING_EXPENSE_FREQUENCIES = [
@@ -61,6 +72,15 @@ export const EXPENSE_CATEGORY_LABELS: Record<ExpenseCategory, string> = {
 
 export const FIXED_COST_CATEGORY_LABELS: Record<FixedCostCategory, string> = {
   rent: 'Tiền thuê nhà',
+  internet: 'Internet / truyền hình',
+  cleaning: 'Vệ sinh / rác',
+  staff: 'Lương nhân sự',
+  insurance: 'Bảo hiểm',
+  bank_fee: 'Phí ngân hàng',
+  fire_safety: 'PCCC',
+  admin_fee: 'Hành chính / giấy tờ',
+  supplies: 'Vật tư vận hành',
+  other: 'Khác',
 }
 
 export const RECURRING_EXPENSE_FREQUENCY_LABELS: Record<RecurringExpenseFrequency, string> = {
