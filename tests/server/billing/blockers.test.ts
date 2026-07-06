@@ -13,7 +13,7 @@ describe('issuance blocker rules', () => {
 
     expect(blockers[0]).toMatchObject({
       code: 'missing_current_reading',
-      message: expect.stringContaining('dien'),
+      message: expect.stringContaining('điện'),
     })
   })
 
@@ -40,7 +40,7 @@ describe('issuance blocker rules', () => {
       },
     ])
 
-    expect(blockers[0]?.message).toContain('ly do')
+    expect(blockers[0]?.message).toContain('lý do')
   })
 
   it('returns empty list when all readings are clear', () => {

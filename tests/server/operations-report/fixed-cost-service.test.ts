@@ -2,7 +2,7 @@ import { vi } from 'vitest'
 import type { AuthUser } from '~/types/auth'
 import type { BuildingFixedCost } from '~/types/operations-report'
 
-const findBuildingById = vi.fn()
+const findBuildingByIdentifier = vi.fn()
 const findFixedCostById = vi.fn()
 const listFixedCosts = vi.fn()
 const insertFixedCost = vi.fn()
@@ -11,7 +11,7 @@ const assertBuildingScope = vi.fn()
 const appendAudit = vi.fn()
 
 vi.mock('../../../server/repositories/buildings', () => ({
-  BuildingRepository: { findById: findBuildingById },
+  BuildingRepository: { findByIdentifier: findBuildingByIdentifier },
 }))
 
 vi.mock('../../../server/repositories/operations-report/fixed-costs', () => ({
@@ -54,7 +54,7 @@ function fixedCost(overrides: Partial<BuildingFixedCost> = {}): BuildingFixedCos
 describe('BuildingFixedCostService', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    findBuildingById.mockResolvedValue({ id: 'building-1', name: 'Building 1' })
+    findBuildingByIdentifier.mockResolvedValue({ id: 'building-1', name: 'Building 1' })
     assertBuildingScope.mockResolvedValue(undefined)
     appendAudit.mockResolvedValue(undefined)
   })
