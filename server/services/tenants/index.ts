@@ -34,7 +34,18 @@ export const TenantService = {
       }
       buildingId = building.id
     }
-    return TenantRepository.findAll(event, { ...filters, building_id: buildingId, buildingIds })
+
+    let includeIds: string[] | undefined
+    if (user.app_metadata.role === 'owner' && buildingIds && !buildingId) {
+      includeIds = await TenantRepository.findCreatedTenantIdsByActor(event, user.id)
+    }
+
+    return TenantRepository.findAll(event, {
+      ...filters,
+      building_id: buildingId,
+      buildingIds,
+      include_ids: includeIds,
+    })
   },
 
   async get(event: H3Event, user: AuthUser, id: string): Promise<Tenant> {
@@ -42,8 +53,15 @@ export const TenantService = {
     const tenant = await TenantRepository.findByIdentifier(event, id)
     if (!tenant) throwNotFound('Không tìm thấy khách thuê')
     const buildingIds = await getAssignedBuildingIds(event, user)
-    if (buildingIds && !await TenantRepository.hasContractInBuildings(event, tenant.id, buildingIds)) {
-      throwNotFound('Không tìm thấy khách thuê')
+    if (buildingIds) {
+      const inScopeByContract = await TenantRepository.hasContractInBuildings(event, tenant.id, buildingIds)
+      if (!inScopeByContract) {
+        const isOwnerCreatedOrphan = user.app_metadata.role === 'owner'
+          && await TenantRepository.wasCreatedByActor(event, tenant.id, user.id)
+        if (!isOwnerCreatedOrphan) {
+          throwNotFound('Không tìm thấy khách thuê')
+        }
+      }
     }
     return tenant
   },

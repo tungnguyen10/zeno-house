@@ -5,7 +5,10 @@ const repoMocks = vi.hoisted(() => ({
   findAll: vi.fn(),
   findByIdentifier: vi.fn(),
   findById: vi.fn(),
+  hasContractInBuildings: vi.fn(),
   findByIdNumber: vi.fn(),
+  findCreatedTenantIdsByActor: vi.fn(),
+  wasCreatedByActor: vi.fn(),
   insert: vi.fn(),
   update: vi.fn(),
   remove: vi.fn(),
@@ -67,6 +70,7 @@ vi.stubGlobal('setResponseStatus', (event: MockEvent, code: number) => {
 
 const CAPS: Record<string, Set<string>> = {
   admin: new Set(['tenants.read', 'tenants.create', 'tenants.update', 'tenants.delete']),
+  owner: new Set(['tenants.read', 'tenants.create', 'tenants.update', 'tenants.delete']),
   manager: new Set(['tenants.read']),
 }
 vi.stubGlobal('can', (user: { app_metadata?: { role?: string } }, capability: string) => {
@@ -115,6 +119,14 @@ function asManager() {
   })
 }
 
+function asOwner() {
+  requireAuthMock.mockResolvedValue({
+    id: 'user-owner',
+    sub: 'user-owner',
+    app_metadata: { role: 'owner' },
+  })
+}
+
 interface ApiError {
   statusCode?: number
   data?: { error?: { code?: string; details?: unknown; message?: string } }
@@ -133,6 +145,8 @@ async function expectError(promise: Promise<unknown>): Promise<ApiError> {
 beforeEach(() => {
   vi.clearAllMocks()
   repoMocks.findActiveBuildingIdForTenant.mockResolvedValue(null)
+  repoMocks.findCreatedTenantIdsByActor.mockResolvedValue([])
+  repoMocks.wasCreatedByActor.mockResolvedValue(false)
   assignmentRepoMocks.findBuildingIdsByUser.mockResolvedValue(['0a8a4dd0-7d6f-4f4e-bc7e-3c5e1b833333'])
   assignmentRepoMocks.findByUserAndBuilding.mockResolvedValue(null)
 })
@@ -217,6 +231,18 @@ describe('GET /api/tenants', () => {
     await handler(makeEvent({ query: {} }))
     const call = repoMocks.findAll.mock.calls[0]?.[1] as { status?: unknown }
     expect(call?.status).toBeUndefined()
+  })
+
+  it('includes owner-created orphan tenant ids for scoped owner list without building filter', async () => {
+    asOwner()
+    repoMocks.findAll.mockResolvedValue({ items: [], total: 0 })
+    repoMocks.findCreatedTenantIdsByActor.mockResolvedValue(['orphan-1'])
+    const { default: handler } = await import('../../server/api/tenants/index.get')
+
+    await handler(makeEvent({ query: {} }))
+
+    expect(repoMocks.findCreatedTenantIdsByActor).toHaveBeenCalledWith(expect.anything(), 'user-owner')
+    expect(repoMocks.findAll).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ include_ids: ['orphan-1'] }))
   })
 
   it('forwards sort by full_name and created_at', async () => {
@@ -330,6 +356,17 @@ describe('GET /api/tenants/[id]', () => {
 
     const err = await expectError(Promise.resolve(handler(makeEvent({ params: { id: 'missing' } }))))
     expect(err.statusCode).toBe(404)
+  })
+
+  it('allows owner to get tenant without in-scope contract when owner created that tenant', async () => {
+    asOwner()
+    repoMocks.findByIdentifier.mockResolvedValue(buildTenant({ id: 't-owner-orphan' }))
+    repoMocks.hasContractInBuildings.mockResolvedValue(false)
+    repoMocks.wasCreatedByActor.mockResolvedValue(true)
+    const { default: handler } = await import('../../server/api/tenants/[id].get')
+
+    const res = await handler(makeEvent({ params: { id: 't-owner-orphan' } })) as { data: Tenant }
+    expect(res.data.id).toBe('t-owner-orphan')
   })
 })
 

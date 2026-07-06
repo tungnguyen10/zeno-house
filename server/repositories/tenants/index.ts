@@ -2,6 +2,7 @@ import { db as serverSupabaseClient } from '../../utils/db'
 import type { H3Event } from 'h3'
 import type { Tenant, TenantStatus } from '~/types/tenants'
 import type { TenantCreateInput, TenantUpdateInput } from '~/utils/validators/tenants'
+import { AUDIT_ACTIONS } from '~/utils/constants/audit'
 import { mapTenant } from '~/utils/mappers/tenants'
 import { isUuid } from '~/utils/format/slug'
 import { nameInitialsFromFullName } from '~/utils/format/codes'
@@ -10,6 +11,7 @@ export interface TenantFilters {
   q?: string
   building_id?: string
   buildingIds?: string[] | null
+  include_ids?: string[]
   contract_state?: 'with_contract' | 'without_contract'
   status?: TenantStatus[]
   sort?: 'full_name' | 'created_at' | 'code'
@@ -169,11 +171,13 @@ export const TenantRepository = {
 
     if (effectiveBuildingIds) {
       const tenantIds = await findTenantIdsForBuildings(event, effectiveBuildingIds)
-      if (tenantIds.length === 0) {
+      const includeIds = !filters.building_id ? (filters.include_ids ?? []) : []
+      const scopedTenantIds = [...new Set([...tenantIds, ...includeIds])]
+      if (scopedTenantIds.length === 0) {
         return { items: [], total: 0 }
       }
 
-      query = query.in('id', tenantIds)
+      query = query.in('id', scopedTenantIds)
     }
 
     if (filters.q) {
@@ -252,6 +256,37 @@ export const TenantRepository = {
   ): Promise<boolean> {
     const tenantIds = await findTenantIdsForBuildings(event, buildingIds)
     return tenantIds.includes(tenantId)
+  },
+
+  async wasCreatedByActor(event: H3Event, tenantId: string, actorId: string): Promise<boolean> {
+    const client = await serverSupabaseClient(event)
+    const { data, error } = await client
+      .from('audit_events')
+      .select('id')
+      .eq('entity_type', 'tenant')
+      .eq('entity_id', tenantId)
+      .eq('action', AUDIT_ACTIONS.TENANT_CREATED)
+      .eq('actor_id', actorId)
+      .limit(1)
+      .maybeSingle()
+
+    if (error) throw createError({ statusCode: 500, message: error.message })
+    return Boolean(data)
+  },
+
+  async findCreatedTenantIdsByActor(event: H3Event, actorId: string): Promise<string[]> {
+    const client = await serverSupabaseClient(event)
+    const { data, error } = await client
+      .from('audit_events')
+      .select('entity_id')
+      .eq('entity_type', 'tenant')
+      .eq('action', AUDIT_ACTIONS.TENANT_CREATED)
+      .eq('actor_id', actorId)
+      .not('entity_id', 'is', null)
+
+    if (error) throw createError({ statusCode: 500, message: error.message })
+
+    return [...new Set((data ?? []).map(row => row.entity_id).filter((id): id is string => Boolean(id)))]
   },
 
   async findByIdNumber(event: H3Event, idNumber: string, excludeId?: string): Promise<Tenant | null> {
