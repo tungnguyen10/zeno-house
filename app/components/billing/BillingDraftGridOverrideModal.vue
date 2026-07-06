@@ -24,6 +24,7 @@ const props = defineProps<{
   row: BillingDraftGridRow | null
   initialType?: MeterType | null
   onSaveOverride: (input: UtilityUsageOverrideInput) => Promise<void>
+  onDeleteOverride: (overrideId: string) => Promise<void>
 }>()
 
 const emit = defineEmits<{
@@ -34,6 +35,7 @@ const overrideElectricity = ref<MeterFormState>(emptyMeterForm())
 const overrideWater = ref<MeterFormState>(emptyMeterForm())
 const overrideError = ref<string | null>(null)
 const overrideSaving = ref(false)
+const overrideDeleting = ref(false)
 
 const electricityRequired = computed(() => !!props.row?.electricity?.required)
 const waterRequired = computed(() => !!props.row?.water?.required)
@@ -180,6 +182,24 @@ function closeOverrideModal() {
   emit('close')
 }
 
+async function deleteOverrideForMeter(type: MeterType) {
+  if (!props.row) return
+  const cell = type === 'electricity' ? props.row.electricity : props.row.water
+  if (!cell?.overrideId) return
+  overrideDeleting.value = true
+  overrideError.value = null
+  try {
+    await props.onDeleteOverride(cell.overrideId)
+    closeOverrideModal()
+  }
+  catch (error) {
+    overrideError.value = error instanceof Error ? error.message : 'Xóa thất bại'
+  }
+  finally {
+    overrideDeleting.value = false
+  }
+}
+
 function validateForm(form: MeterFormState, label: string): string | null {
   const billable = Number(form.billableUsage)
   const prev = Number(form.previousValue)
@@ -262,11 +282,23 @@ async function submitOverride() {
         v-if="electricityRequired"
         class="rounded-lg border border-dark-border bg-dark-surface p-3 space-y-3"
       >
-        <UiCheckbox
-          :model-value="overrideElectricity.enabled"
-          label="Điều chỉnh đồng hồ điện"
-          @update:model-value="overrideElectricity.enabled = $event"
-        />
+        <div class="flex items-center justify-between gap-2">
+          <UiCheckbox
+            :model-value="overrideElectricity.enabled"
+            label="Điều chỉnh đồng hồ điện"
+            @update:model-value="overrideElectricity.enabled = $event"
+          />
+          <UiButton
+            v-if="row?.electricity?.overrideId"
+            variant="ghost"
+            size="sm"
+            class="text-error-vivid shrink-0"
+            :disabled="overrideDeleting"
+            @click="deleteOverrideForMeter('electricity')"
+          >
+            {{ overrideDeleting ? 'Đang xóa...' : 'Xóa điều chỉnh' }}
+          </UiButton>
+        </div>
 
         <template v-if="overrideElectricity.enabled">
           <div class="grid grid-cols-2 gap-3">
@@ -339,11 +371,23 @@ async function submitOverride() {
         v-if="waterRequired"
         class="rounded-lg border border-dark-border bg-dark-surface p-3 space-y-3"
       >
-        <UiCheckbox
-          :model-value="overrideWater.enabled"
-          label="Điều chỉnh đồng hồ nước"
-          @update:model-value="overrideWater.enabled = $event"
-        />
+        <div class="flex items-center justify-between gap-2">
+          <UiCheckbox
+            :model-value="overrideWater.enabled"
+            label="Điều chỉnh đồng hồ nước"
+            @update:model-value="overrideWater.enabled = $event"
+          />
+          <UiButton
+            v-if="row?.water?.overrideId"
+            variant="ghost"
+            size="sm"
+            class="text-error-vivid shrink-0"
+            :disabled="overrideDeleting"
+            @click="deleteOverrideForMeter('water')"
+          >
+            {{ overrideDeleting ? 'Đang xóa...' : 'Xóa điều chỉnh' }}
+          </UiButton>
+        </div>
         <template v-if="overrideWater.enabled">
           <div class="grid grid-cols-2 gap-3">
             <div class="flex flex-col gap-1">

@@ -66,6 +66,7 @@ const {
   grid,
   invoices,
   utilityUsages,
+  unapprovedOverrides,
   overviewLoading,
   gridLoading,
   invoicesLoading,
@@ -82,6 +83,8 @@ const {
   exportXlsx,
   saveReadings,
   saveUtilityOverride,
+  deleteUtilityOverride,
+  approveUtilityOverride,
 } = workspace
 
 const { count: recentAuditCount, load: loadRecentAuditCount } = useRecentAuditCount(periodId)
@@ -194,6 +197,18 @@ async function saveUtilityOverrideWithToast(input: Parameters<typeof saveUtility
   catch (err) {
     const e = err as { data?: { error?: { message?: string } }; message?: string }
     toast.error(e.data?.error?.message ?? e.message ?? 'Lưu ghi đè thất bại')
+    throw err
+  }
+}
+
+async function deleteUtilityOverrideWithToast(overrideId: string) {
+  try {
+    await deleteUtilityOverride(overrideId)
+    toast.success('Đã xóa điều chỉnh chỉ số')
+  }
+  catch (err) {
+    const e = err as { data?: { error?: { message?: string } }; message?: string }
+    toast.error(e.data?.error?.message ?? e.message ?? 'Xóa điều chỉnh thất bại')
     throw err
   }
 }
@@ -426,8 +441,11 @@ function openPrintWindow(payload: { keys: string[] }) {
           :response="grid"
           :loading="gridLoading"
           :period="period"
+          :unapproved-overrides="unapprovedOverrides"
           :on-save-readings="saveReadingsWithToast"
           :on-save-override="saveUtilityOverrideWithToast"
+          :on-delete-override="deleteUtilityOverrideWithToast"
+          :on-approve-override="approveUtilityOverride"
           :on-issue="issueWithToast"
           :on-auto-issue="issueAndPayWithToast"
           @refresh="async () => { await loadGrid(); await loadOverview() }"

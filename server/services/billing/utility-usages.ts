@@ -73,4 +73,75 @@ export const BillingUtilityUsageService = {
 
     return saved
   },
+
+  async deleteOverride(
+    event: H3Event,
+    user: AuthUser,
+    billingPeriodId: string,
+    overrideId: string,
+  ): Promise<void> {
+    if (!can(user, 'billing.write')) throwForbidden('Không có quyền xóa điều chỉnh tiêu thụ')
+
+    const period = await BillingPeriodRepository.findById(event, billingPeriodId)
+    if (!period) throwNotFound('Không tìm thấy kỳ vận hành')
+    await assertBuildingScope(event, user, period.buildingId, 'write')
+    if (period.status === 'closed') throwConflict('Kỳ đã chốt, không thể xóa điều chỉnh')
+
+    const row = await BillingUtilityUsageRepository.findById(event, billingPeriodId, overrideId)
+    if (!row) throwNotFound('Không tìm thấy điều chỉnh tiêu thụ')
+
+    await BillingUtilityUsageRepository.deleteById(event, overrideId)
+
+    await BillingAuditService.append(event, user, {
+      billing_period_id: billingPeriodId,
+      action: BILLING_AUDIT_ACTIONS.UTILITY_OVERRIDE_DELETED,
+      entity_type: 'billing_utility_usage',
+      entity_id: overrideId,
+      before_data: row,
+      after_data: null,
+      metadata: {
+        room_id: row.roomId,
+        meter_type: row.meterType,
+        reason: row.reason,
+      },
+    })
+  },
+
+  async approveOverride(
+    event: H3Event,
+    user: AuthUser,
+    billingPeriodId: string,
+    overrideId: string,
+  ): Promise<BillingUtilityUsage> {
+    if (!can(user, 'billing.write')) throwForbidden('Không có quyền duyệt điều chỉnh tiêu thụ')
+
+    const period = await BillingPeriodRepository.findById(event, billingPeriodId)
+    if (!period) throwNotFound('Không tìm thấy kỳ vận hành')
+    await assertBuildingScope(event, user, period.buildingId, 'write')
+
+    const before = await BillingUtilityUsageRepository.findById(event, billingPeriodId, overrideId)
+    if (!before) throwNotFound('Không tìm thấy điều chỉnh tiêu thụ')
+    if (before.approvedBy) throwConflict('Điều chỉnh này đã được duyệt rồi')
+
+    const approved = await BillingUtilityUsageRepository.approveById(
+      event,
+      overrideId,
+      user.id ?? null,
+    )
+
+    await BillingAuditService.append(event, user, {
+      billing_period_id: billingPeriodId,
+      action: BILLING_AUDIT_ACTIONS.UTILITY_OVERRIDE_APPROVED,
+      entity_type: 'billing_utility_usage',
+      entity_id: overrideId,
+      before_data: before,
+      after_data: approved,
+      metadata: {
+        room_id: approved.roomId,
+        meter_type: approved.meterType,
+      },
+    })
+
+    return approved
+  },
 }

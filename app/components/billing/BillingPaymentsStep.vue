@@ -545,6 +545,7 @@ watch(
             <BillingChargeBreakdown
               :lines="selectedInvoice.charges"
               :total-amount="selectedInvoice.invoice.totalAmount"
+              :show-adjustments="true"
             />
           </UiSection>
 

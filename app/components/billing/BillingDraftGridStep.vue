@@ -12,6 +12,7 @@ import type {
   BillingPeriod,
   Invoice,
   IssueInvoicesResult,
+  BillingUtilityUsage,
 } from '~/types/billing'
 import type { MeterReadingBulkInput } from '~/utils/validators/meter-readings'
 import type { IssueInvoicesInput, UtilityUsageOverrideInput } from '~/utils/validators/billing'
@@ -33,11 +34,14 @@ const props = defineProps<{
   response: BillingDraftGridResponse | null
   loading: boolean
   period: BillingPeriod | null
+  unapprovedOverrides?: BillingUtilityUsage[]
   onSaveReadings: (
     readings: MeterReadingBulkInput['readings'],
     options?: { refresh?: boolean; silent?: boolean; refreshDrafts?: boolean },
   ) => Promise<void>
   onSaveOverride: (input: UtilityUsageOverrideInput) => Promise<void>
+  onDeleteOverride: (overrideId: string) => Promise<void>
+  onApproveOverride?: (overrideId: string) => Promise<BillingUtilityUsage>
   onIssue?: (input: IssueInvoicesInput) => Promise<IssueInvoicesResult | undefined>
   onAutoIssue?: (input: IssueAndPayInput) => Promise<Invoice | undefined>
 }>()
@@ -100,7 +104,7 @@ function requestPrint() {
 // ---------------------------------------------------------------------------
 
 const issuableSelectedRows = computed<BillingDraftGridRow[]>(() =>
-  selectedRows.value.filter(row => row.status === 'ready' && !!row.contractId && !row.invoiceId),
+  selectedRows.value.filter(row => !!row.contractId && !row.invoiceId),
 )
 const issuableSelectedCount = computed(() => issuableSelectedRows.value.length)
 const issuableSelectedTotal = computed(() =>
@@ -109,10 +113,40 @@ const issuableSelectedTotal = computed(() =>
 
 const issueConfirmOpen = ref(false)
 const issueSubmitting = ref(false)
+const approveOverridesOpen = ref(false)
+const approvingOverrides = ref<BillingUtilityUsage[]>([])
+const approvingInProgress = ref(false)
+const overridesToApprove = computed(() => props.unapprovedOverrides ?? [])
 
 function startIssue() {
   if (issuableSelectedCount.value === 0) return
+  // Check for unapproved overrides
+  if (overridesToApprove.value.length > 0) {
+    approvingOverrides.value = overridesToApprove.value
+    approveOverridesOpen.value = true
+    return
+  }
   issueConfirmOpen.value = true
+}
+
+async function approveAllOverrides() {
+  if (!props.onApproveOverride || approvingOverrides.value.length === 0) return
+  approvingInProgress.value = true
+  try {
+    for (const override of approvingOverrides.value) {
+      await props.onApproveOverride(override.id)
+    }
+    approveOverridesOpen.value = false
+    approvingOverrides.value = []
+    // Now show the issue confirm dialog
+    issueConfirmOpen.value = true
+  }
+  catch (err) {
+    console.error('Failed to approve overrides:', err)
+  }
+  finally {
+    approvingInProgress.value = false
+  }
 }
 
 async function confirmIssue() {
@@ -732,6 +766,7 @@ const columns: UiTableColumn<BillingDraftGridRow>[] = [
       :row="overrideRow"
       :initial-type="overrideType"
       :on-save-override="props.onSaveOverride"
+      :on-delete-override="props.onDeleteOverride"
       @close="closeOverrideModal"
     />
     <BillingBulkReadingEntryModal
@@ -740,6 +775,51 @@ const columns: UiTableColumn<BillingDraftGridRow>[] = [
       @close="bulkEntryOpen = false"
       @apply="applyBulkReadings"
     />
+    <UiModal
+      :open="approveOverridesOpen"
+      title="Duyệt các điều chỉnh"
+      size="md"
+      @close="approveOverridesOpen = false"
+    >
+      <div class="space-y-4">
+        <p class="text-sm text-muted">
+          Cần duyệt <span class="font-semibold text-white">{{ approvingOverrides.length }}</span> điều chỉnh trước khi phát hành:
+        </p>
+        <div class="max-h-80 space-y-2 overflow-y-auto">
+          <div
+            v-for="override in approvingOverrides"
+            :key="override.id"
+            class="rounded-lg border border-dark-border bg-dark-card p-3"
+          >
+            <div class="flex items-start justify-between">
+              <div class="min-w-0 flex-1">
+                <p class="text-xs font-medium text-muted">{{ override.meterType === 'electricity' ? 'Điện' : 'Nước' }}</p>
+                <p class="text-sm font-semibold text-white">{{ override.previousReadingValue }} → {{ override.currentReadingValue }}</p>
+                <p class="text-xs text-muted">Tiêu thụ: {{ override.billableUsage }} <span v-if="override.meterType === 'electricity'">kWh</span><span v-else>m³</span></p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="flex gap-2 pt-2">
+          <UiButton
+            variant="secondary"
+            size="sm"
+            :disabled="approvingInProgress"
+            @click="approveOverridesOpen = false"
+          >
+            Huỷ
+          </UiButton>
+          <UiButton
+            variant="primary"
+            size="sm"
+            :loading="approvingInProgress"
+            @click="approveAllOverrides"
+          >
+            Duyệt tất cả & Phát hành
+          </UiButton>
+        </div>
+      </div>
+    </UiModal>
     <UiConfirmModal
       :open="issueConfirmOpen"
       title="Xác nhận phát hành"

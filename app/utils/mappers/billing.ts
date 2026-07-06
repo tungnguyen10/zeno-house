@@ -16,6 +16,11 @@ import type {
   BillingAuditEntityType,
 } from '~/utils/constants/billing'
 
+type BillingUtilityUsageRowWithApproval = Tables<'billing_utility_usages'> & {
+  approved_by?: string | null
+  approved_at?: string | null
+}
+
 function asMetadata(value: unknown): Record<string, unknown> {
   if (value && typeof value === 'object' && !Array.isArray(value)) {
     return value as Record<string, unknown>
@@ -101,25 +106,28 @@ export function mapInvoicePayment(row: Tables<'invoice_payments'>): InvoicePayme
 export function mapBillingUtilityUsage(
   row: Tables<'billing_utility_usages'>,
 ): BillingUtilityUsage {
+  const usageRow = row as BillingUtilityUsageRowWithApproval
   return {
-    id: row.id,
-    billingPeriodId: row.billing_period_id,
-    roomId: row.room_id,
-    meterType: row.meter_type as MeterType,
-    previousReadingId: row.previous_reading_id,
-    previousReadingValue: Number(row.previous_reading_value),
-    currentReadingId: row.current_reading_id,
-    currentReadingValue: Number(row.current_reading_value),
+    id: usageRow.id,
+    billingPeriodId: usageRow.billing_period_id,
+    roomId: usageRow.room_id,
+    meterType: usageRow.meter_type as MeterType,
+    previousReadingId: usageRow.previous_reading_id,
+    previousReadingValue: Number(usageRow.previous_reading_value),
+    currentReadingId: usageRow.current_reading_id,
+    currentReadingValue: Number(usageRow.current_reading_value),
     oldMeterFinalValue:
-      row.old_meter_final_value === null ? null : Number(row.old_meter_final_value),
+      usageRow.old_meter_final_value === null ? null : Number(usageRow.old_meter_final_value),
     newMeterStartValue:
-      row.new_meter_start_value === null ? null : Number(row.new_meter_start_value),
-    billableUsage: Number(row.billable_usage),
-    reason: row.reason as UtilityUsageReason,
-    note: row.note,
-    createdBy: row.created_by,
-    createdAt: row.created_at ?? '',
-    updatedAt: row.updated_at ?? '',
+      usageRow.new_meter_start_value === null ? null : Number(usageRow.new_meter_start_value),
+    billableUsage: Number(usageRow.billable_usage),
+    reason: usageRow.reason as UtilityUsageReason,
+    note: usageRow.note,
+    createdBy: usageRow.created_by,
+    createdAt: usageRow.created_at ?? '',
+    updatedAt: usageRow.updated_at ?? '',
+    approvedBy: usageRow.approved_by ?? null,
+    approvedAt: usageRow.approved_at ?? null,
   }
 }
 

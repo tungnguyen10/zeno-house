@@ -48,6 +48,10 @@ export function useBillingPeriodWorkspace(periodId: MaybeRefOrGetter<string>) {
   const utilityLoading = ref(false)
   const auditLoading = ref(false)
 
+  const unapprovedOverrides = computed(() =>
+    utilityUsages.value.filter(usage => !usage.approvedBy),
+  )
+
   async function loadOverview() {
     if (!id.value) return
     overviewLoading.value = true
@@ -182,6 +186,25 @@ export function useBillingPeriodWorkspace(periodId: MaybeRefOrGetter<string>) {
     return resp.data
   }
 
+  async function deleteUtilityOverride(overrideId: string): Promise<void> {
+    if (!id.value) throw new Error('No period id')
+    await $fetch(`/api/billing/periods/${id.value}/utility-usages`, {
+      method: 'DELETE',
+      body: { override_id: overrideId },
+    })
+    await Promise.all([loadUtilityUsages(), loadDrafts(), loadGrid()])
+  }
+
+  async function approveUtilityOverride(overrideId: string): Promise<BillingUtilityUsage> {
+    if (!id.value) throw new Error('No period id')
+    const resp = await $fetch<ApiSuccess<BillingUtilityUsage>>(
+      `/api/billing/periods/${id.value}/utility-usages/${overrideId}/approve`,
+      { method: 'POST' },
+    )
+    await loadUtilityUsages()
+    return resp.data
+  }
+
   /**
    * Issue a single ready draft and record full payment in one transaction
    * (feature-flagged auto-issue). Refreshes the dependent sections on success.
@@ -214,6 +237,7 @@ export function useBillingPeriodWorkspace(periodId: MaybeRefOrGetter<string>) {
     grid,
     invoices,
     utilityUsages,
+    unapprovedOverrides,
     auditEvents,
     overviewLoading,
     draftsLoading,
@@ -235,5 +259,7 @@ export function useBillingPeriodWorkspace(periodId: MaybeRefOrGetter<string>) {
     exportXlsx,
     saveReadings,
     saveUtilityOverride,
+    deleteUtilityOverride,
+    approveUtilityOverride,
   }
 }

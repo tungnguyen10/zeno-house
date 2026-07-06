@@ -470,6 +470,7 @@ export const BillingDraftService = {
         let occupantCount = periodOccupants.length
         let occupantSource: 'contract_occupants' | 'contract_fallback' = 'contract_occupants'
         if (occupantCount === 0) {
+          // No occupant rows at all — warn and fall back to contract declaration.
           occupantCount = contract.occupant_count
           occupantSource = 'contract_fallback'
           warnings.push({
@@ -477,6 +478,10 @@ export const BillingDraftService = {
             message: 'Dùng số người trên hợp đồng (không có dữ liệu occupants)',
             meta: { contract_id: contract.id, fallback_count: occupantCount },
           })
+        } else if (occupantCount < contract.occupant_count) {
+          // Fewer active occupant rows than declared — use contract count as floor, no warning needed.
+          occupantCount = contract.occupant_count
+          occupantSource = 'contract_fallback'
         }
         const amount = Math.round(occupantCount * waterRate)
         lines.push({

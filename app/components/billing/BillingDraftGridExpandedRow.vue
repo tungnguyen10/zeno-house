@@ -81,6 +81,7 @@ function formatRate(value: number | null, unit: string): string {
       v-if="row.lines.length > 0"
       :lines="row.lines"
       :total-amount="row.draftTotal ?? undefined"
+      :show-adjustments="true"
     >
       <template #line-extra="{ line }">
         <p

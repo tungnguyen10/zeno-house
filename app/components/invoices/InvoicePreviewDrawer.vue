@@ -104,6 +104,7 @@ function paymentMethodLabel(payment: InvoicePayment): string {
           <BillingChargeBreakdown
             :lines="detail.charges"
             :total-amount="detail.invoice.totalAmount"
+            :show-adjustments="true"
           />
         </UiSection>
 

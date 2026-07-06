@@ -12,7 +12,11 @@ import type {
   BillingDraftLine,
   BillingDraftWarning,
 } from '~/types/billing'
-import { BILLING_BLOCKER_CODES, type BillingBlockerCode } from '~/utils/constants/billing'
+import {
+  BILLING_BLOCKER_CODES,
+  BILLING_WARNING_CODES,
+  type BillingBlockerCode,
+} from '~/utils/constants/billing'
 import { BillingPeriodRepository } from '../../repositories/billing/periods'
 import { BillingUtilityUsageRepository } from '../../repositories/billing/utility-usages'
 import { assertBuildingScope } from '../../utils/scope'
@@ -263,7 +267,16 @@ function deriveBillableStatus(draft: BillingDraftInvoice): BillingDraftGridRowSt
     if (onlyMissing) return 'missing_reading'
     return 'blocked'
   }
-  if (draft.warnings.length > 0) return 'warning'
+  if (draft.warnings.length > 0) {
+    // Informational fallbacks should not force a manual review state.
+    // Only actionable warnings (e.g. manual usage overrides) stay in "warning".
+    const hasReviewWarning = draft.warnings.some((w) => {
+      if (w.code === BILLING_WARNING_CODES.OCCUPANT_FALLBACK_TO_CONTRACT) return false
+      if (w.code === BILLING_WARNING_CODES.HANDOVER_FALLBACK_PREVIOUS) return false
+      return true
+    })
+    if (hasReviewWarning) return 'warning'
+  }
   return 'ready'
 }
 

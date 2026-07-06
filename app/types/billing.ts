@@ -101,6 +101,8 @@ export interface BillingUtilityUsage {
   createdBy: string | null
   createdAt: string
   updatedAt: string
+  approvedBy: string | null
+  approvedAt: string | null
 }
 
 export interface BillingAuditEvent {
