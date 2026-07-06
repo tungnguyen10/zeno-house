@@ -1,6 +1,7 @@
 import { vi } from 'vitest'
 import type { AuthUser } from '~/types/auth'
 import type { BuildingExpense } from '~/types/operations-report'
+import { buildingExpenseUpdateSchema } from '~/utils/validators/operations-report'
 
 const findBuildingById = vi.fn()
 const findExpenseById = vi.fn()
@@ -151,6 +152,13 @@ describe('BuildingExpenseService', () => {
     ).rejects.toMatchObject({ statusCode: 409 })
     expect(updateExpenseById).not.toHaveBeenCalled()
     expect(appendAudit).not.toHaveBeenCalled()
+  })
+
+  it('does not accept funding-source changes through the expense update schema', () => {
+    const result = buildingExpenseUpdateSchema.safeParse({ funded_by: 'reserve_fund' })
+
+    expect(result.success).toBe(true)
+    expect(result.data).not.toHaveProperty('funded_by')
   })
 
   it('uploads a valid receipt after write scope enforcement', async () => {

@@ -26,6 +26,10 @@ The system SHALL manage building fixed costs from building settings rather than 
 - **WHEN** a user without `building-fixed-costs.write` opens building settings
 - **THEN** the fixed-cost management controls are not available to them
 
+#### Scenario: Fixed-cost label can be typed or selected
+- **WHEN** an authorized user configures a fixed cost with a typed label or a suggested label
+- **THEN** the system stores that label in the existing fixed-cost note field without requiring a schema migration
+
 ### Requirement: Read-only fixed costs in operations report
 The system SHALL show applicable fixed costs on the operations report without inline management controls.
 
@@ -47,3 +51,32 @@ The system SHALL include active prepaid monthly allocation in operations report 
 #### Scenario: Export includes prepaid
 - **WHEN** the operations report is exported to Excel for a month with active prepaid allocation
 - **THEN** the workbook includes the prepaid section consistent with the on-screen report
+
+### Requirement: One-off expense label entry
+The system SHALL let authorized users choose a suggested label or type a custom label for one-off building expenses while keeping category as the controlled reporting dimension.
+
+#### Scenario: Expense label stored in note
+- **WHEN** an authorized user creates or updates a one-off building expense with a typed or selected label
+- **THEN** the system stores the label in the existing expense note field and preserves the selected category for report grouping
+
+### Requirement: Expense funding source
+The system SHALL mark whether a building expense was paid directly or from the reserve fund.
+
+#### Scenario: Default funding is direct
+- **WHEN** an expense is created without specifying a funding source
+- **THEN** the system stores `funded_by` = `direct`
+
+#### Scenario: Reserve-funded expense marked in report
+- **WHEN** an expense funded from the reserve appears in the operations report
+- **THEN** the report marks it as reserve-funded while still counting it as a building expense
+
+### Requirement: Reserve fund surfaced with the report
+The system SHALL surface reserve fund balance and history alongside the operations report for authorized users.
+
+#### Scenario: Fund panel shown to authorized users
+- **WHEN** a user with `reserve-fund.read` views the operations report for a building
+- **THEN** the page shows the current reserve balance and recent transactions
+
+#### Scenario: Fund panel hidden without capability
+- **WHEN** a user without `reserve-fund.read` views the operations report
+- **THEN** the reserve fund panel is not shown

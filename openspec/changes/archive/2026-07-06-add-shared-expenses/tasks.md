@@ -27,5 +27,5 @@
 
 - [x] 4.1 Update API, database, and auth-permissions docs; add a shared-expenses feature note
 - [x] 4.2 Run `npx openspec validate --specs`
-- [ ] 4.3 Run focused tests and `npm run typecheck`
-- [ ] 4.4 Manually smoke: create a shared expense over two buildings, allocate a period, verify one expense per building in each report, verify re-allocation is guarded, verify manager cannot access
+- [x] 4.3 Run focused tests and `npm run typecheck`
+- [x] 4.4 Manually smoke: create a shared expense over two buildings, allocate a period, verify one expense per building in each report, verify re-allocation is guarded, verify manager cannot access

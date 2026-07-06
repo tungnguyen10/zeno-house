@@ -11,6 +11,10 @@ The system SHALL store building-scoped recurring expense templates with a simple
 - **WHEN** an authorized in-scope user creates a recurring expense with name, category, frequency (`monthly`, `quarterly`, `biannual`, or `yearly`), anchor day (1-28), and estimated amount
 - **THEN** the system stores the template with `created_by` and a computed `next_reminder_at`
 
+#### Scenario: Name can be typed or selected
+- **WHEN** an authorized user creates or updates a recurring expense template with a typed name or a suggested name
+- **THEN** the system stores that value in the existing recurring expense name field
+
 #### Scenario: Update estimated amount
 - **WHEN** an authorized user changes a template's estimated amount
 - **THEN** future reminders use the new estimate and previously recorded expenses are unchanged

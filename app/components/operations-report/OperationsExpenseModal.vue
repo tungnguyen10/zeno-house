@@ -32,6 +32,15 @@ const categoryOptions = EXPENSE_CATEGORIES.map(value => ({
   value,
   label: EXPENSE_CATEGORY_LABELS[value],
 }))
+const noteSuggestions = computed(() => {
+  const current = [props.expense?.note, props.prefill?.note].filter((value): value is string => Boolean(value))
+  const categoryNames = EXPENSE_CATEGORIES.map(category => EXPENSE_CATEGORY_LABELS[category])
+  return [...new Set([...current, ...categoryNames])].filter(Boolean)
+})
+const noteModel = computed<string | null>({
+  get: () => form.note || null,
+  set: value => { form.note = value ?? '' },
+})
 
 function today() {
   return new Date().toISOString().slice(0, 10)
@@ -85,7 +94,7 @@ watch(
     form.receipt_file = null
     form.funded_by = 'direct'
     // Expand extra fields only when the edited expense already uses them.
-    showDetails.value = !!(e?.payee || e?.paymentMethod || e?.note)
+    showDetails.value = !!(e?.payee || e?.paymentMethod)
   },
   { immediate: true },
 )
@@ -154,6 +163,20 @@ function onReceiptChange(event: Event) {
         required
       />
 
+      <UiCombobox
+        v-model="noteModel"
+        label="Tên/Ghi chú chi phí"
+        :options="noteSuggestions"
+        :option-key="name => name"
+        :option-label="name => name"
+        :create-option="name => name"
+        allow-custom
+        custom-option-label="Dùng"
+        placeholder="Chọn mẫu hoặc nhập tên riêng"
+        search-placeholder="Nhập tên chi phí"
+        empty-message="Nhập tên mới để dùng"
+      />
+
       <UiInput
         v-model="form.expense_date"
         label="Ngày chi"
@@ -185,7 +208,7 @@ function onReceiptChange(event: Event) {
         class="flex w-full items-center justify-between rounded-md border border-dark-border bg-dark-surface px-3 py-2 text-sm text-muted transition-colors hover:text-white"
         @click="showDetails = !showDetails"
       >
-        <span>Thêm chi tiết (người nhận, thanh toán, ghi chú)</span>
+        <span>Thêm chi tiết (người nhận, thanh toán)</span>
         <IconChevronDown
           class="h-4 w-4 transition-transform"
           :class="{ 'rotate-180': showDetails }"
@@ -204,12 +227,6 @@ function onReceiptChange(event: Event) {
           v-model="form.payment_method"
           label="Hình thức thanh toán"
           placeholder="Tiền mặt / chuyển khoản"
-        />
-
-        <UiTextarea
-          v-model="form.note"
-          label="Ghi chú"
-          :rows="2"
         />
       </div>
 

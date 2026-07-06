@@ -1,6 +1,7 @@
 import { vi } from 'vitest'
 import type { AuthUser } from '~/types/auth'
 import type { SharedExpense } from '~/types/shared-expenses'
+import { can as realCan } from '../../server/utils/permissions'
 
 const listAll = vi.fn()
 const listByOwner = vi.fn()
@@ -53,6 +54,7 @@ const shared = (overrides: Partial<SharedExpense> = {}): SharedExpense => ({
 describe('SharedExpenseService', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.stubGlobal('can', realCan)
     findById.mockResolvedValue(shared())
     hasAllocation.mockResolvedValue(false)
     assertBuildingScope.mockResolvedValue(undefined)
@@ -99,5 +101,18 @@ describe('SharedExpenseService', () => {
     await expect(
       SharedExpenseService.list({} as never, manager),
     ).rejects.toMatchObject({ statusCode: 403 })
+  })
+
+  it('rejects out-of-scope member buildings before allocation creates expenses', async () => {
+    assertBuildingScope.mockRejectedValueOnce({ statusCode: 403 })
+    const { SharedExpenseService } = await import('../../server/services/shared-expenses')
+
+    await expect(
+      SharedExpenseService.allocate({} as never, owner, 'shared-1', {
+        period_year: 2026,
+        period_month: 7,
+      }),
+    ).rejects.toMatchObject({ statusCode: 403 })
+    expect(insertExpense).not.toHaveBeenCalled()
   })
 })

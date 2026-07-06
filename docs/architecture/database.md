@@ -80,9 +80,9 @@ Route helpers still fall back to ids when readable identifiers are absent.
 
 ## Operations Report Model
 
-`building_expenses` stores monthly operating expenses and now includes `receipt_url`, which is a private Supabase Storage object path, not a public URL. Accepted categories include electricity/water input, internet, cleaning, repair, admin fees, supplies, staff, rent adjustment, insurance, bank fees, fire-safety costs, and other.
+`building_expenses` stores monthly operating expenses and now includes `receipt_url`, which is a private Supabase Storage object path, not a public URL. Accepted categories include electricity/water input, internet, cleaning, repair, admin fees, supplies, staff, rent adjustment, insurance, bank fees, fire-safety costs, and other. User-entered expense labels are stored in `note`; category remains the report grouping key.
 
-`building_fixed_costs` stores recurring costs with effective period ranges. Fixed-cost management lives in building settings; the operations report reads applicable rows for the selected month.
+`building_fixed_costs` stores recurring costs with effective period ranges. Fixed-cost management lives in building settings; the operations report reads applicable rows for the selected month. User-entered fixed-cost labels are stored in `note`.
 
 `recurring_expenses` stores building-scoped reminder templates with frequency, anchor day, estimated amount, active flag, and `next_reminder_at`. Recording or dismissing a reminder advances `next_reminder_at`; recording returns a prefill for a normal `building_expenses` row.
 

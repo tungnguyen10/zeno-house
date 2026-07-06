@@ -7,6 +7,10 @@ The system SHALL let an owner define shared expenses that apply across multiple 
 - **WHEN** an owner creates a shared expense with name, category, amount, and a set of member buildings they control
 - **THEN** the system stores the shared expense scoped to that owner with its building membership
 
+#### Scenario: Name can be typed or selected
+- **WHEN** an owner creates or updates a shared expense with a typed name or a suggested name
+- **THEN** the system stores that value in the existing shared expense name field
+
 #### Scenario: Membership limited to owned buildings
 - **WHEN** an owner adds a building they do not control to a shared expense
 - **THEN** the system rejects the request with a forbidden error

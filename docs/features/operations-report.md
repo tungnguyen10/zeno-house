@@ -75,6 +75,15 @@ rent
 
 Sau này có thể mở rộng fixed cost cho internet hợp đồng dài hạn, phí quản lý cố định, lương nhân sự cố định.
 
+## Nhập Tên Chi Phí
+
+Các form chi phí dùng `UiCombobox` khi người dùng có thể vừa chọn gợi ý vừa nhập tay.
+
+- Chi phí định kỳ và chi phí trả trước đã có field `name`, nên lưu tên chọn/nhập vào `recurring_expenses.name` và `prepaid_expenses.name`.
+- Chi phí vận hành một lần và chi phí cố định không thêm cột `name`; UI hiển thị "Tên/Ghi chú chi phí" và lưu vào field `note` hiện có của `building_expenses` hoặc `building_fixed_costs`.
+- Category vẫn là field controlled dùng cho report/grouping, không bị thay bằng tên nhập tay.
+- Không cần migration cho thay đổi UI này.
+
 ## Chi Phí Theo Tháng
 
 Chi phí phát sinh theo tháng nên lưu thành từng dòng expense.
@@ -410,7 +419,15 @@ Chưa làm (như MVP scope đã nêu): approval, upload chứng từ, custom cat
 Đã bổ sung trong change `add-recurring-prepaid-expenses`:
 
 - `recurring_expenses` lưu mẫu nhắc chi phí theo tần suất `monthly`, `quarterly`, `biannual`, `yearly`, ngày neo 1-28, số tiền dự kiến và `next_reminder_at`.
+- Tên mẫu nhắc chi phí dùng `UiCombobox` để chọn gợi ý hoặc nhập tay, và lưu vào `recurring_expenses.name`.
 - Manager được xem và ghi nhận nhắc chi phí trong phạm vi được gán nếu có `building-expenses.write`, nhưng không được cấu hình mẫu.
 - `prepaid_expenses` lưu khoản trả trước theo tổng tiền, số tháng, ngày bắt đầu, ngày kết thúc tính toán và số tiền phân bổ tháng. Tháng cuối hấp thụ phần làm tròn.
+- Tên chi phí trả trước dùng cùng pattern `UiCombobox` chọn/nhập và lưu vào `prepaid_expenses.name`.
 - Báo cáo vận hành cộng `prepaidAllocationTotal` vào tổng chi phí và lợi nhuận, đồng thời hiển thị `prepaidItems` thành một section riêng.
 - Export Excel có section "Chi phí trả trước (phân bổ)" thống nhất với màn hình.
+
+## Trạng Thái Triển Khai (Shared/Reserve polish)
+
+- Modal thêm/sửa chi phí vận hành một lần dùng `UiCombobox allow-custom` cho "Tên/Ghi chú chi phí" và lưu vào `building_expenses.note`.
+- Modal chi phí cố định trong building settings dùng cùng pattern cho "Tên/Ghi chú chi phí" và lưu vào `building_fixed_costs.note`.
+- Tạo chi phí từ quỹ dự phòng là thao tác hai bước được bọc bởi service compensation: nếu tạo withdrawal thất bại sau khi expense đã được tạo, expense mới tạo bị xóa lại để không còn orphan row. Void một reserve-funded expense đã hoàn tất vẫn dùng compensating deposit để phục hồi balance.

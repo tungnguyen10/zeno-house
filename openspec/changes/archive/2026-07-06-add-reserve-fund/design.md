@@ -30,7 +30,7 @@ Alternatives considered:
 
 ### Expense funding linkage
 
-Add `funded_by` (`direct` | `reserve_fund`, default `direct`) to `building_expenses`. Paying from the reserve is a single service operation that creates the expense and a linked withdrawal atomically (both succeed or neither), setting `funded_by = reserve_fund` and `linked_expense_id`. If atomic multi-write is not available in one call, the service compensates on failure so no orphan expense or orphan transaction remains.
+Add `funded_by` (`direct` | `reserve_fund`, default `direct`) to `building_expenses`. Paying from the reserve is a single service operation that creates the expense and a linked withdrawal atomically (both succeed or neither), setting `funded_by = reserve_fund` and `linked_expense_id`. If atomic multi-write is not available in one call, the service compensates on failure so no orphan expense or orphan transaction remains; specifically, if withdrawal creation fails after the expense row has been created, the service deletes that just-created expense row.
 
 ### Balance guard
 

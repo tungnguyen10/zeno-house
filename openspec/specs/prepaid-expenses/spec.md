@@ -11,6 +11,10 @@ The system SHALL store building-scoped prepaid expenses that spread a total amou
 - **WHEN** an authorized in-scope user creates a prepaid expense with name, category, total amount, total months (>= 1), and start date
 - **THEN** the system stores it with a computed end date, a computed even monthly amount, and status `active`
 
+#### Scenario: Name can be typed or selected
+- **WHEN** an authorized user creates or updates a prepaid expense with a typed name or a suggested name
+- **THEN** the system stores that value in the existing prepaid expense name field
+
 #### Scenario: Rounding preserved
 - **WHEN** the total amount does not divide evenly across the months
 - **THEN** the sum of all monthly allocations equals the total amount, with the remainder absorbed in the final covered month

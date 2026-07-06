@@ -243,7 +243,7 @@ The system SHALL standardize modal and optional drawer surfaces for operational 
 - **THEN** the system may provide `UiDrawer` or side panel with dark surface styling and clear actions
 
 ### Requirement: Searchable select primitive
-The UI primitive system SHALL provide a searchable selection primitive for choosing an item from a list of domain options such as rooms, tenants, contracts, buildings, or invoices. The primitive SHALL support `modelValue`, option identity, option label rendering, `label`, `required`, `disabled`, `loading`, `error`, empty state text, and clear/select behavior.
+The UI primitive system SHALL provide a searchable selection primitive for choosing an item from a list of domain options such as rooms, tenants, contracts, buildings, invoices, or expense labels. The primitive SHALL support `modelValue`, option identity, option label rendering, `label`, `required`, `disabled`, `loading`, `error`, empty state text, and clear/select behavior. It SHALL optionally support custom typed values when the domain allows a choose-or-type workflow.
 
 #### Scenario: Search filters options
 - **WHEN** a user types a query into the searchable select
@@ -264,6 +264,10 @@ The UI primitive system SHALL provide a searchable selection primitive for choos
 #### Scenario: Searchable select supports loading
 - **WHEN** options are loading
 - **THEN** the primitive communicates the loading state and prevents ambiguous selection
+
+#### Scenario: Custom typed option
+- **WHEN** the searchable select is configured to allow custom values and the user types a non-empty query that does not match an existing option
+- **THEN** it presents a create/use option and emits the typed value through the same selection model
 
 ### Requirement: Compact density for form controls
 `UiInput`, `UiSelect`, and `UiTextarea` SHALL support compact density in addition to their default size so editable tables, matrix cells, meter readings, and billing review rows can use primitive controls without custom inline classes.
@@ -301,4 +305,3 @@ The internal primitive showcase SHALL render every public primitive and every ma
 #### Scenario: Compact density showcase
 - **WHEN** compact density is added to form controls
 - **THEN** `/ui-showcase` renders compact input, select, and textarea examples in a dense/table-like context
-

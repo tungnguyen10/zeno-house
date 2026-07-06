@@ -49,7 +49,7 @@ export const buildingExpenseCreateSchema = z.object({
 export type BuildingExpenseCreateInput = z.infer<typeof buildingExpenseCreateSchema>
 
 export const buildingExpenseUpdateSchema = buildingExpenseCreateSchema
-  .omit({ building_id: true })
+  .omit({ building_id: true, funded_by: true })
   .partial()
 
 export type BuildingExpenseUpdateInput = z.infer<typeof buildingExpenseUpdateSchema>

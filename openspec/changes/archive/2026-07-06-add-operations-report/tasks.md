@@ -24,4 +24,4 @@
 - [x] 4.1 Update API, database, auth-permissions, and operations-report docs
 - [x] 4.2 Run `npx.cmd openspec validate --specs`
 - [x] 4.3 Run focused tests and `npm run typecheck`
-- [ ] 4.4 Manually smoke the operations report page/API with scoped building filters
+- [x] 4.4 Manually smoke the operations report page/API with scoped building filters

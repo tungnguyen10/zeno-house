@@ -24,6 +24,12 @@ export interface UiComboboxProps<TOption> {
   required?: boolean
   disabled?: boolean
   loading?: boolean
+  /** Allow selecting the current search query as a new option. */
+  allowCustom?: boolean
+  /** Convert a custom query into the option value emitted by v-model. */
+  createOption?: (query: string) => TOption
+  /** Label prefix for the custom option row. */
+  customOptionLabel?: string
   /** Message shown when no options match the search query. */
   emptyMessage?: string
   id?: string
@@ -34,9 +40,11 @@ const props = withDefaults(defineProps<UiComboboxProps<TOption>>(), {
   required: false,
   disabled: false,
   loading: false,
+  allowCustom: false,
   emptyMessage: 'Không có kết quả',
   placeholder: 'Chọn...',
   searchPlaceholder: 'Tìm kiếm...',
+  customOptionLabel: 'Dùng',
 })
 
 const emit = defineEmits<{
@@ -66,11 +74,24 @@ const filteredOptions = computed(() => {
   )
 })
 
+const trimmedQuery = computed(() => query.value.trim())
+
+const customOption = computed<TOption | null>(() => {
+  if (!props.allowCustom || !props.createOption || !trimmedQuery.value) return null
+  const q = trimmedQuery.value.toLowerCase()
+  const exact = props.options.some(o => props.optionLabel(o).toLowerCase() === q)
+  return exact ? null : props.createOption(trimmedQuery.value)
+})
+
+const optionCount = computed(() =>
+  filteredOptions.value.length + (customOption.value ? 1 : 0),
+)
+
 // ── Helpers ────────────────────────────────────────────────────────────────
 function openDropdown() {
   if (props.disabled || props.loading) return
   isOpen.value = true
-  query.value = ''
+  query.value = selectedLabel.value
   activeIndex.value = -1
   nextTick(() => inputRef.value?.focus())
 }
@@ -84,6 +105,11 @@ function closeDropdown() {
 function select(option: TOption) {
   emit('update:modelValue', option)
   closeDropdown()
+}
+
+function selectCustom() {
+  if (!customOption.value) return
+  select(customOption.value)
 }
 
 function clear() {
@@ -100,7 +126,7 @@ function onKeydown(event: KeyboardEvent) {
   const opts = filteredOptions.value
   if (event.key === 'ArrowDown') {
     event.preventDefault()
-    activeIndex.value = Math.min(activeIndex.value + 1, opts.length - 1)
+    activeIndex.value = Math.min(activeIndex.value + 1, optionCount.value - 1)
   }
   else if (event.key === 'ArrowUp') {
     event.preventDefault()
@@ -110,6 +136,12 @@ function onKeydown(event: KeyboardEvent) {
     event.preventDefault()
     if (activeIndex.value >= 0 && opts[activeIndex.value]) {
       select(opts[activeIndex.value]!)
+    }
+    else if (activeIndex.value === opts.length && customOption.value) {
+      selectCustom()
+    }
+    else if (customOption.value) {
+      selectCustom()
     }
   }
   else if (event.key === 'Escape' || event.key === 'Tab') {
@@ -240,7 +272,7 @@ const triggerClass = computed(() =>
 
           <!-- Empty state -->
           <li
-            v-else-if="filteredOptions.length === 0"
+            v-else-if="filteredOptions.length === 0 && !customOption"
             class="px-3 py-2 text-sm text-muted text-center"
           >
             {{ emptyMessage }}
@@ -267,6 +299,25 @@ const triggerClass = computed(() =>
               class="h-4 w-4 text-cyan shrink-0"
               aria-hidden="true"
             />
+          </li>
+
+          <!-- Custom typed option -->
+          <li
+            v-if="customOption"
+            role="option"
+            :aria-selected="activeIndex === filteredOptions.length"
+            :class="clsx(
+              'flex items-center justify-between gap-3 border-t border-dark-border px-3 py-2 text-sm cursor-pointer transition-colors',
+              activeIndex === filteredOptions.length ? 'bg-cyan/15 text-white' : 'text-white hover:bg-dark-hover',
+            )"
+            @mousedown.prevent="selectCustom"
+            @mouseover="activeIndex = filteredOptions.length"
+          >
+            <span class="min-w-0 truncate">
+              <span class="text-muted">{{ customOptionLabel }}</span>
+              <span class="ml-1 text-white">"{{ trimmedQuery }}"</span>
+            </span>
+            <IconPlus class="h-4 w-4 shrink-0 text-cyan" aria-hidden="true" />
           </li>
         </ul>
       </div>

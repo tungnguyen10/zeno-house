@@ -91,12 +91,7 @@ export const ReserveFundService = {
       })
     }
     catch (error) {
-      await BuildingExpenseRepository.voidById(
-        event,
-        created.id,
-        user.id,
-        'Reserve withdrawal failed',
-      )
+      await BuildingExpenseRepository.deleteById(event, created.id)
       throw error
     }
     return created

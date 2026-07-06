@@ -24,6 +24,9 @@ const categoryOptions = FIXED_COST_CATEGORIES.map(value => ({
   value,
   label: FIXED_COST_CATEGORY_LABELS[value],
 }))
+const noteSuggestions = computed(() =>
+  FIXED_COST_CATEGORIES.map(category => FIXED_COST_CATEGORY_LABELS[category]),
+)
 
 const form = reactive({
   category: 'rent' as FixedCostCategory,
@@ -31,6 +34,10 @@ const form = reactive({
   effective_from_period_year: props.periodYear,
   effective_from_period_month: props.periodMonth,
   note: '',
+})
+const noteModel = computed<string | null>({
+  get: () => form.note || null,
+  set: value => { form.note = value ?? '' },
 })
 
 const error = ref<string | null>(null)
@@ -120,7 +127,19 @@ function submit() {
         />
       </div>
 
-      <UiTextarea v-model="form.note" label="Ghi chú (tuỳ chọn)" :rows="2" />
+      <UiCombobox
+        v-model="noteModel"
+        label="Tên/Ghi chú chi phí"
+        :options="noteSuggestions"
+        :option-key="name => name"
+        :option-label="name => name"
+        :create-option="name => name"
+        allow-custom
+        custom-option-label="Dùng"
+        placeholder="Chọn mẫu hoặc nhập tên riêng"
+        search-placeholder="Nhập tên chi phí"
+        empty-message="Nhập tên mới để dùng"
+      />
 
       <UiAlert v-if="error" severity="danger">{{ error }}</UiAlert>
     </div>

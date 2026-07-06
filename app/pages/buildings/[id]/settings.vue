@@ -121,6 +121,15 @@ const recurringForm = reactive({
   estimated_amount: '',
   is_active: true,
 })
+const recurringNameSuggestions = computed(() => {
+  const existingNames = recurringExpenses.value.map(item => item.name)
+  const categoryNames = EXPENSE_CATEGORIES.map(category => EXPENSE_CATEGORY_LABELS[category])
+  return [...new Set([...existingNames, ...categoryNames])].filter(Boolean)
+})
+const recurringNameModel = computed<string | null>({
+  get: () => recurringForm.name || null,
+  set: value => { recurringForm.name = value ?? '' },
+})
 const prepaidFormOpen = ref(false)
 const editingPrepaid = ref<PrepaidExpense | null>(null)
 const savingPrepaid = ref(false)
@@ -134,6 +143,16 @@ const prepaidForm = reactive({
   status: 'active' as PrepaidExpenseStatus,
   receipt_url: '',
   note: '',
+})
+const prepaidNameSuggestions = computed(() => {
+  const existingNames = prepaidExpenses.value.map(item => item.name)
+  const recurringNames = recurringExpenses.value.map(item => item.name)
+  const categoryNames = EXPENSE_CATEGORIES.map(category => EXPENSE_CATEGORY_LABELS[category])
+  return [...new Set([...existingNames, ...recurringNames, ...categoryNames])].filter(Boolean)
+})
+const prepaidNameModel = computed<string | null>({
+  get: () => prepaidForm.name || null,
+  set: value => { prepaidForm.name = value ?? '' },
 })
 
 watch(
@@ -759,7 +778,20 @@ async function handleUpdatePricingType(catalogId: string, pricingType: PricingTy
       @close="recurringFormOpen = false"
     >
       <div class="space-y-4">
-        <UiInput v-model="recurringForm.name" label="Tên chi phí" required />
+        <UiCombobox
+          v-model="recurringNameModel"
+          label="Tên chi phí"
+          :options="recurringNameSuggestions"
+          :option-key="name => name"
+          :option-label="name => name"
+          :create-option="name => name"
+          allow-custom
+          custom-option-label="Dùng"
+          placeholder="Chọn mẫu hoặc nhập tên riêng"
+          search-placeholder="Nhập tên chi phí"
+          empty-message="Nhập tên mới để dùng"
+          required
+        />
         <UiSelect v-model="recurringForm.category" label="Loại chi phí" :options="expenseCategoryOptions" />
         <div class="grid grid-cols-2 gap-3">
           <UiSelect v-model="recurringForm.frequency" label="Tần suất" :options="frequencyOptions" />
@@ -772,10 +804,7 @@ async function handleUpdatePricingType(catalogId: string, pricingType: PricingTy
           min="0"
           required
         />
-        <label class="flex items-center gap-2 text-sm text-muted">
-          <input v-model="recurringForm.is_active" type="checkbox" class="h-4 w-4 rounded border-dark-border">
-          Đang bật
-        </label>
+        <UiCheckbox v-model="recurringForm.is_active" label="Đang bật" />
         <UiAlert v-if="recurringError" severity="danger">{{ recurringError }}</UiAlert>
       </div>
       <template #footer>
@@ -795,7 +824,20 @@ async function handleUpdatePricingType(catalogId: string, pricingType: PricingTy
       @close="prepaidFormOpen = false"
     >
       <div class="space-y-4">
-        <UiInput v-model="prepaidForm.name" label="Tên chi phí" required />
+        <UiCombobox
+          v-model="prepaidNameModel"
+          label="Tên chi phí"
+          :options="prepaidNameSuggestions"
+          :option-key="name => name"
+          :option-label="name => name"
+          :create-option="name => name"
+          allow-custom
+          custom-option-label="Dùng"
+          placeholder="Chọn mẫu hoặc nhập tên riêng"
+          search-placeholder="Nhập tên chi phí"
+          empty-message="Nhập tên mới để dùng"
+          required
+        />
         <UiSelect v-model="prepaidForm.category" label="Loại chi phí" :options="expenseCategoryOptions" />
         <div class="grid grid-cols-2 gap-3">
           <UiInput v-model="prepaidForm.total_amount" label="Tổng tiền" type="number" min="0" required />

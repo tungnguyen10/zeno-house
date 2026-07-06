@@ -29,5 +29,5 @@
 
 - [x] 4.1 Update operations-report, API, database, and auth-permissions docs
 - [x] 4.2 Run `npx openspec validate --specs`
-- [ ] 4.3 Run focused tests and `npm run typecheck`
-- [ ] 4.4 Manually smoke: deposit to a fund, pay an expense from reserve, verify balance decreases and expense is marked, void it and verify balance restores, verify manager cannot see the fund
+- [x] 4.3 Run focused tests and `npm run typecheck`
+- [x] 4.4 Manually smoke: deposit to a fund, pay an expense from reserve, verify balance decreases and expense is marked, void it and verify balance restores, verify manager cannot see the fund
