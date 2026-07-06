@@ -4,9 +4,11 @@ export interface ServiceCatalogItem {
   id: string
   code: string
   name: string
+  buildingId: string | null
   pricingType: PricingType
   unit: string | null
   description: string | null
   isActive: boolean
+  isCustom: boolean
   sortOrder: number
 }

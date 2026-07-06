@@ -87,6 +87,7 @@ server/api/*
 | Method | Path |
 | --- | --- |
 | GET | `/api/service-catalog` |
+| POST | `/api/service-catalog` |
 | GET | `/api/building-services` |
 | POST | `/api/building-services` |
 | PATCH | `/api/building-services/[id]` |

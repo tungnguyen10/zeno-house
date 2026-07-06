@@ -22,6 +22,7 @@ import { buildingPath } from '~/utils/routes/operational'
 const route = useRoute()
 const id = route.params.id as string
 const authStore = useAuthStore()
+const toast = useToast()
 
 const { building, refresh: refreshBuilding } = useBuildingDetail(id)
 const {
@@ -38,7 +39,10 @@ const {
   refresh: refreshContractServices,
 } = useBuildingContractServices(id)
 
-const { data: catalogData } = await useFetch<ApiSuccess<ServiceCatalogItem[]>>('/api/service-catalog')
+const { data: catalogData, refresh: refreshCatalog } = await useFetch<ApiSuccess<ServiceCatalogItem[]>>(
+  '/api/service-catalog',
+  { query: { building_id: id } },
+)
 const catalog = computed(() => catalogData.value?.data ?? [])
 
 const { data: contractsData, refresh: refreshContracts } = await useFetch<ApiSuccess<ContractWithDetails[]>>(
@@ -60,6 +64,7 @@ const { data: managersData } = await useFetch<ApiSuccess<AssignmentManager[]>>(
 const assignedManagers = computed(() => managersData.value?.data ?? [])
 
 const activeServiceCount = computed(() => services.value.filter(s => s.isActive).length)
+const canManageBuildingServices = computed(() => authStore.can('building-services.write'))
 const canManageFixedCosts = computed(() => authStore.can('building-fixed-costs.write'))
 const canManageRecurringExpenses = computed(() => authStore.can('recurring-expenses.write'))
 const canManagePrepaidExpenses = computed(() => authStore.can('prepaid-expenses.write'))
@@ -154,6 +159,33 @@ const prepaidNameModel = computed<string | null>({
   get: () => prepaidForm.name || null,
   set: value => { prepaidForm.name = value ?? '' },
 })
+const servicePricingOptions: { value: PricingType, label: string }[] = [
+  { value: 'fixed_per_room', label: 'Cố định / phòng' },
+  { value: 'per_person', label: 'Theo người' },
+  { value: 'per_vehicle', label: 'Theo xe' },
+]
+const customServiceModalOpen = ref(false)
+const savingCustomService = ref(false)
+const customServiceError = ref<string | null>(null)
+const customServiceForm = reactive({
+  name: '',
+  pricing_type: 'fixed_per_room' as PricingType,
+  unit: '',
+  default_amount: '',
+  is_active: true,
+  description: '',
+})
+
+function openCustomServiceModal() {
+  customServiceError.value = null
+  customServiceForm.name = ''
+  customServiceForm.pricing_type = 'fixed_per_room'
+  customServiceForm.unit = ''
+  customServiceForm.default_amount = ''
+  customServiceForm.is_active = true
+  customServiceForm.description = ''
+  customServiceModalOpen.value = true
+}
 
 watch(
   [apiBuildingId, canManageFixedCosts],
@@ -320,6 +352,45 @@ async function submitPrepaid() {
   }
   finally {
     savingPrepaid.value = false
+  }
+}
+
+async function submitCustomService() {
+  const amount = customServiceForm.default_amount === '' ? 0 : Number(customServiceForm.default_amount)
+  if (!customServiceForm.name.trim() || !Number.isFinite(amount) || amount < 0) {
+    customServiceError.value = 'Kiểm tra tên dịch vụ và đơn giá mặc định.'
+    return
+  }
+
+  savingCustomService.value = true
+  customServiceError.value = null
+  try {
+    const created = await $fetch<ApiSuccess<ServiceCatalogItem>>('/api/service-catalog', {
+      method: 'POST',
+      body: {
+        building_id: id,
+        name: customServiceForm.name.trim(),
+        pricing_type: customServiceForm.pricing_type,
+        unit: customServiceForm.unit.trim() || null,
+        description: customServiceForm.description.trim() || null,
+      },
+    })
+    await upsertService({
+      building_id: id,
+      catalog_id: created.data.id,
+      default_amount: amount,
+      pricing_type: customServiceForm.pricing_type,
+      is_active: customServiceForm.is_active,
+    })
+    await refreshCatalog()
+    customServiceModalOpen.value = false
+    toast.success('Đã thêm dịch vụ riêng.')
+  }
+  catch (err) {
+    customServiceError.value = resolveApiError(err, 'Không tạo được dịch vụ.')
+  }
+  finally {
+    savingCustomService.value = false
   }
 }
 
@@ -692,6 +763,15 @@ async function handleUpdatePricingType(catalogId: string, pricingType: PricingTy
             {{ activeServiceCount }} dịch vụ đang bật
           </span>
           <UiButton
+            v-if="canManageBuildingServices"
+            size="sm"
+            variant="secondary"
+            @click="openCustomServiceModal"
+          >
+            <IconPlus class="h-4 w-4" aria-hidden="true" />
+            Thêm dịch vụ
+          </UiButton>
+          <UiButton
             size="sm"
             variant="secondary"
             :loading="isSyncing"
@@ -715,6 +795,66 @@ async function handleUpdatePricingType(catalogId: string, pricingType: PricingTy
         />
       </div>
     </UiSection>
+
+    <UiModal
+      :open="customServiceModalOpen"
+      title="Thêm dịch vụ riêng"
+      size="md"
+      @close="customServiceModalOpen = false"
+    >
+      <div class="space-y-4">
+        <UiInput
+          v-model="customServiceForm.name"
+          label="Tên dịch vụ"
+          placeholder="Ví dụ: Giặt sấy"
+          required
+        />
+        <div class="grid gap-3 sm:grid-cols-2">
+          <UiSelect
+            v-model="customServiceForm.pricing_type"
+            label="Loại tính phí"
+            :options="servicePricingOptions"
+          />
+          <UiInput
+            v-model="customServiceForm.unit"
+            label="Đơn vị"
+            placeholder="lần, người, xe..."
+          />
+        </div>
+        <div class="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
+          <UiInput
+            v-model="customServiceForm.default_amount"
+            label="Đơn giá mặc định"
+            type="number"
+            inputmode="decimal"
+            placeholder="0"
+          />
+          <UiToggle
+            v-model="customServiceForm.is_active"
+            label="Kích hoạt ngay"
+            size="sm"
+            class="pb-2"
+          />
+        </div>
+        <UiTextarea
+          v-model="customServiceForm.description"
+          label="Ghi chú"
+          :rows="2"
+          resize="none"
+        />
+        <UiAlert v-if="customServiceError" severity="danger">
+          {{ customServiceError }}
+        </UiAlert>
+      </div>
+      <template #footer>
+        <UiButton variant="secondary" :disabled="savingCustomService" @click="customServiceModalOpen = false">
+          Hủy
+        </UiButton>
+        <UiButton :loading="savingCustomService" @click="submitCustomService">
+          Lưu dịch vụ
+        </UiButton>
+      </template>
+    </UiModal>
 
     <!-- Per-contract overrides -->
     <UiSection

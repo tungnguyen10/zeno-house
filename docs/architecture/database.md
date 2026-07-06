@@ -13,7 +13,7 @@ Zeno House uses Supabase Postgres. Schema history lives in `supabase/migrations`
 | Contracts | `20260515000000_create_contracts.sql`, `20260517000001_contract_commercial_terms.sql`, `20260531000000_contracts_backfill_building_id.sql`, `20260531000001_contracts_payment_day.sql`, `20260615000000_document_codes.sql` |
 | Occupants and renewals | `20260517000002_occupants_and_meter_devices.sql`, `20260517000005_contract_renewals_table.sql`, `20260517000006_occupant_uniqueness.sql` |
 | Contract payments | `20260517000003_contract_payments.sql`, `20260610000000_drop_contract_payments_tenant_id.sql` |
-| Service catalog | `20260530200000_service_catalog.sql` through `20260530200005_drop_default_service_fees.sql` |
+| Service catalog | `20260530200000_service_catalog.sql` through `20260530200005_drop_default_service_fees.sql`, `20260706010000_building_custom_service_catalog.sql` |
 | Meter readings | `20260530300000_meter_readings.sql`, `20260530400000_simplify_meter_readings.sql` |
 | Billing runtime | `20260611000000_billing_runtime.sql`, `20260611000001_billing_legacy_cleanup.sql` |
 | Operations report | `20260702173259_add_operations_report.sql`, `20260704000000_expense_receipts_and_export_categories.sql`, `20260705000000_recurring_and_prepaid_expenses.sql` |
@@ -36,6 +36,8 @@ Services:
 - `service_catalog`
 - `building_services`
 - `contract_services`
+
+`service_catalog.building_id` is nullable. `NULL` rows are global defaults; non-null rows are custom catalog items visible only for that building.
 
 Metering:
 

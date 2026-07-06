@@ -80,14 +80,14 @@ RESTART IDENTITY CASCADE;
 -- -----------------------------------------------------------------------------
 INSERT INTO public.service_catalog (id, code, name, pricing_type, unit, sort_order)
 VALUES
-  ('10000000-0000-4000-8000-000000000001', 'internet', 'Internet', 'fixed_per_room', NULL, 1),
-  ('10000000-0000-4000-8000-000000000002', 'garbage', 'Garbage', 'per_person', 'person', 2),
-  ('10000000-0000-4000-8000-000000000003', 'parking_motorbike', 'Motorbike park', 'per_vehicle', 'bike', 3),
-  ('10000000-0000-4000-8000-000000000004', 'parking_bicycle', 'Bicycle park', 'per_vehicle', 'bike', 4),
-  ('10000000-0000-4000-8000-000000000005', 'cleaning', 'Cleaning', 'fixed_per_room', NULL, 5),
-  ('10000000-0000-4000-8000-000000000006', 'elevator', 'Elevator', 'per_person', 'person', 6),
-  ('10000000-0000-4000-8000-000000000007', 'surcharge', 'Surcharge', 'fixed_per_room', NULL, 7),
-  ('10000000-0000-4000-8000-000000000008', 'other', 'Other', 'fixed_per_room', NULL, 8);
+  ('10000000-0000-4000-8000-000000000001', 'internet', 'Mạng Internet', 'fixed_per_room', NULL, 1),
+  ('10000000-0000-4000-8000-000000000002', 'garbage', 'Phí rác', 'per_person', 'người', 2),
+  ('10000000-0000-4000-8000-000000000003', 'parking_motorbike', 'Gửi xe máy', 'per_vehicle', 'xe', 3),
+  ('10000000-0000-4000-8000-000000000004', 'parking_bicycle', 'Gửi xe đạp', 'per_vehicle', 'xe', 4),
+  ('10000000-0000-4000-8000-000000000005', 'cleaning', 'Vệ sinh', 'fixed_per_room', NULL, 5),
+  ('10000000-0000-4000-8000-000000000006', 'elevator', 'Thang máy', 'per_person', 'người', 6),
+  ('10000000-0000-4000-8000-000000000007', 'surcharge', 'Phụ thu', 'fixed_per_room', NULL, 7),
+  ('10000000-0000-4000-8000-000000000008', 'other', 'Khác', 'fixed_per_room', NULL, 8);
 
 -- -----------------------------------------------------------------------------
 -- Buildings

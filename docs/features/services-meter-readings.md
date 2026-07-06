@@ -7,10 +7,13 @@ Services and meter readings feed contract pricing and monthly billing.
 API:
 
 - `GET /api/service-catalog`
+- `POST /api/service-catalog`
 
-The catalog defines reusable service types such as electricity, water, internet, trash, parking, cleaning, elevator, and security.
+The catalog defines reusable service types such as internet, trash, parking, cleaning, elevator, surcharge, and other.
 
-Catalog records are not edited through the current UI. Building and contract service rows reference catalog records and carry operational pricing settings.
+Global catalog records are seeded by migrations. The building settings UI can create building-scoped custom catalog records when a building needs a service outside the default list. Custom records are visible only when listing the catalog for that building.
+
+Building and contract service rows reference catalog records and carry operational pricing settings.
 
 ## Building Services
 
@@ -29,6 +32,7 @@ Building services define defaults per building:
 - enabled/disabled
 - amount
 - pricing type
+- optional building-specific custom catalog item
 
 These defaults are used when creating or syncing contract services.
 
