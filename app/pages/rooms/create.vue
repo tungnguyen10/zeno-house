@@ -15,7 +15,6 @@ const formData = ref<RoomFormData>({
 
 const initialSnapshot = ref<RoomFormData>({ ...formData.value })
 const draftDismissed = ref(false)
-const skipDirtyGuard = ref(false)
 
 const {
   isLoading,
@@ -36,9 +35,7 @@ const {
 const showDraft = computed(() => hasDraft.value && !draftDismissed.value)
 
 async function onSubmit(data: RoomFormData) {
-  skipDirtyGuard.value = true
   await submitCreate(roomFormToApiPayload(data))
-  skipDirtyGuard.value = false
 }
 
 function onRestoreDraft() {
@@ -55,7 +52,6 @@ function onClearDraft() {
   draftDismissed.value = true
 }
 
-const { showLeaveConfirm, confirmLeave, cancelLeave } = useDirtyGuard(isDirty, skipDirtyGuard)
 </script>
 
 <template>
@@ -87,14 +83,5 @@ const { showLeaveConfirm, confirmLeave, cancelLeave } = useDirtyGuard(isDirty, s
         @clear-draft="onClearDraft"
       />
     </div>
-
-    <UiConfirmModal
-      :open="showLeaveConfirm"
-      title="Rời trang?"
-      message="Có thay đổi chưa lưu. Bạn có chắc muốn rời trang?"
-      confirm-label="Rời trang"
-      @confirm="confirmLeave"
-      @cancel="cancelLeave"
-    />
   </div>
 </template>

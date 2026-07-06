@@ -246,20 +246,20 @@ Building detail SHALL not show a month-specific "Van hanh thang <month>" primary
 - **WHEN** user opens the form on a 1280px viewport
 - **THEN** no fixed bar is rendered; save/cancel appear in the form footer as before
 
-### Requirement: Buildings form dirty-state navigation guard
-`app/pages/buildings/create.vue` and `app/pages/buildings/[id]/edit.vue` SHALL warn the user when navigating away with unsaved changes. The guard SHALL use Vue Router's `onBeforeRouteLeave` for in-app navigation and `window.beforeunload` for tab close/refresh.
+### Requirement: Buildings form navigation behavior with drafts
+`app/pages/buildings/create.vue` and `app/pages/buildings/[id]/edit.vue` SHALL allow users to leave the page immediately even when the form has unsaved changes. The page SHALL NOT show a custom leave-confirm modal and SHALL NOT register a browser unload warning. Unsaved values rely on draft autosave and can be restored on revisit.
 
-#### Scenario: Warn on route navigation when dirty
+#### Scenario: Navigate away while dirty proceeds immediately
 - **WHEN** user edits the name field then clicks a sidebar link
-- **THEN** a confirm dialog appears with "Bạn có thay đổi chưa lưu. Tiếp tục rời trang?"; cancelling keeps the user on the form
+- **THEN** navigation continues without any confirm dialog
 
-#### Scenario: No warning when not dirty
-- **WHEN** user opens the form and navigates away without typing
-- **THEN** no confirm dialog appears
+#### Scenario: Browser tab close does not show unsaved warning
+- **WHEN** user has unsaved changes and closes or reloads the tab
+- **THEN** no native "Leave site?" warning is shown
 
-#### Scenario: Browser tab close warning
-- **WHEN** user has unsaved changes and closes the tab
-- **THEN** the browser's native unload prompt appears
+#### Scenario: Draft remains available after leaving
+- **WHEN** user typed changes, leaves the page, then revisits later
+- **THEN** the draft restore alert is shown and user can restore the saved values
 
 ### Requirement: Buildings form draft autosave to localStorage
 `app/components/buildings/BuildingForm.vue` (via `useBuildingForm`) SHALL autosave the current form values to `localStorage` under a key `building-form:create` or `building-form:edit:<id>` every 500ms after a change. On mount, if a draft exists, the form SHALL show an `UiAlert` info banner offering "Khôi phục bản nháp", "Bỏ qua", "Xoá bản nháp". The draft SHALL be cleared on successful submit.

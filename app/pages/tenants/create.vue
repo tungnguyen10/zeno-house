@@ -35,12 +35,9 @@ const {
   formData,
   initialSnapshot,
 })
-
 async function onSubmit(data: TenantFormData) {
   await submitCreate(tenantFormToApiPayload(data))
 }
-
-const { showLeaveConfirm, confirmLeave, cancelLeave } = useDirtyGuard(isDirty, isLoading)
 </script>
 
 <template>
@@ -69,14 +66,5 @@ const { showLeaveConfirm, confirmLeave, cancelLeave } = useDirtyGuard(isDirty, i
         @discard-draft="clearDraft"
       />
     </div>
-
-    <UiConfirmModal
-      :open="showLeaveConfirm"
-      title="Rời trang?"
-      message="Có thay đổi chưa lưu. Bạn có chắc muốn rời trang?"
-      confirm-label="Rời trang"
-      @confirm="confirmLeave"
-      @cancel="cancelLeave"
-    />
   </div>
 </template>

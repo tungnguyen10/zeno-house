@@ -155,8 +155,6 @@ async function createContract(data: ContractFormData) {
   createdContractId.value = created.id
   currentStep.value = 3
 }
-
-const { showLeaveConfirm, confirmLeave, cancelLeave } = useDirtyGuard(isDirty, isLoading)
 </script>
 
 <template>
@@ -287,14 +285,5 @@ const { showLeaveConfirm, confirmLeave, cancelLeave } = useDirtyGuard(isDirty, i
         </div>
       </section>
     </div>
-
-    <UiConfirmModal
-      :open="showLeaveConfirm"
-      title="Rời trang?"
-      message="Có thay đổi chưa lưu. Bạn có chắc muốn rời trang?"
-      confirm-label="Rời trang"
-      @confirm="confirmLeave"
-      @cancel="cancelLeave"
-    />
   </div>
 </template>

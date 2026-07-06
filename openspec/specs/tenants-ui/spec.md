@@ -155,20 +155,20 @@ TBD - created by archiving change tenants-overhaul. Update Purpose after archive
 
 ---
 
-### Requirement: Tenants form dirty-state guard
-`app/pages/tenants/create.vue` and `app/pages/tenants/[code]/edit.vue` SHALL block navigation away when `useTenantForm().isDirty.value === true` unless the user confirms. The guard SHALL trigger on Vue Router navigation (`onBeforeRouteLeave`) and on browser unload (`beforeunload`).
+### Requirement: Tenants form navigation behavior with drafts
+`app/pages/tenants/create.vue` and `app/pages/tenants/[code]/edit.vue` SHALL allow users to leave the page immediately even when `useTenantForm().isDirty.value === true`. The pages SHALL NOT show a custom leave-confirm modal and SHALL NOT register a browser unload warning. Unsaved values rely on draft autosave and can be restored on revisit.
 
-#### Scenario: Confirm before leaving with unsaved changes
+#### Scenario: Leaving while dirty proceeds immediately
 - **WHEN** user changes a field and clicks the back link
-- **THEN** a confirm dialog appears asking to discard changes; canceling stays on the form
+- **THEN** navigation continues without any confirm dialog
 
-#### Scenario: No confirm when form is clean
+#### Scenario: Clean form navigation still proceeds
 - **WHEN** user navigates away without editing any field
-- **THEN** no confirm appears and navigation proceeds
+- **THEN** navigation proceeds normally
 
-#### Scenario: beforeunload triggers browser native warning
+#### Scenario: Browser reload does not show unsaved warning
 - **WHEN** user tries to reload the page with isDirty=true
-- **THEN** the browser shows its native "Leave site?" warning
+- **THEN** no native "Leave site?" warning is shown
 
 ---
 

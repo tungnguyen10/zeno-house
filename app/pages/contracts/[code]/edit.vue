@@ -72,8 +72,6 @@ const {
   initialSnapshot,
 })
 
-const skipDirtyGuard = ref(false)
-
 async function onSubmit(data: ContractFormData) {
   const updated = await submitUpdate(id, {
     room_id: data.room_id || undefined,
@@ -90,13 +88,10 @@ async function onSubmit(data: ContractFormData) {
     notes: data.notes || null,
   })
   if (updated) {
-    skipDirtyGuard.value = true
     clearNuxtData()
     await navigateTo(contractPath(updated))
   }
 }
-
-const { showLeaveConfirm, confirmLeave, cancelLeave } = useDirtyGuard(isDirty, skipDirtyGuard)
 </script>
 
 <template>
@@ -125,14 +120,5 @@ const { showLeaveConfirm, confirmLeave, cancelLeave } = useDirtyGuard(isDirty, s
         @clear-draft="clearDraft"
       />
     </div>
-
-    <UiConfirmModal
-      :open="showLeaveConfirm"
-      title="Rời trang?"
-      message="Có thay đổi chưa lưu. Bạn có chắc muốn rời trang?"
-      confirm-label="Rời trang"
-      @confirm="confirmLeave"
-      @cancel="cancelLeave"
-    />
   </div>
 </template>

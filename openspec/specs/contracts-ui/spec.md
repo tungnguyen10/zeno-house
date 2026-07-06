@@ -177,20 +177,20 @@ TBD - created by archiving change contracts-overhaul. Update Purpose after archi
 
 ---
 
-### Requirement: Contracts form dirty-state guard
-`app/pages/contracts/create.vue` and `app/pages/contracts/[code]/edit.vue` SHALL block navigation away when `useContractForm().isDirty.value === true` unless the user confirms. The guard SHALL trigger on Vue Router navigation (`onBeforeRouteLeave`) and on browser unload (`beforeunload`). Within-wizard step navigation SHALL NOT trigger the guard (only leaving the wizard route).
+### Requirement: Contracts form navigation behavior with drafts
+`app/pages/contracts/create.vue` and `app/pages/contracts/[code]/edit.vue` SHALL allow users to leave the route immediately even when `useContractForm().isDirty.value === true`. The pages SHALL NOT show a custom leave-confirm modal and SHALL NOT register a browser unload warning. Unsaved values rely on draft autosave and can be restored on revisit. Within-wizard step navigation continues to work without interruption.
 
-#### Scenario: Confirm before leaving with unsaved changes
+#### Scenario: Leaving wizard route while dirty proceeds immediately
 - **WHEN** user changes a field and clicks the back link out of `/contracts/create`
-- **THEN** a confirm dialog appears asking to discard changes; canceling stays on the wizard
+- **THEN** navigation continues without any confirm dialog
 
-#### Scenario: No confirm when navigating within wizard steps
+#### Scenario: Wizard step navigation remains uninterrupted
 - **WHEN** user moves from step 1 to step 2 with the wizard step nav
 - **THEN** no confirm appears; the wizard advances
 
-#### Scenario: beforeunload triggers browser native warning
+#### Scenario: Browser reload does not show unsaved warning
 - **WHEN** user tries to reload the page with isDirty=true
-- **THEN** the browser shows its native "Leave site?" warning
+- **THEN** no native "Leave site?" warning is shown
 
 ---
 

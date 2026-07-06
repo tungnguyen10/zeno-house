@@ -96,8 +96,6 @@ async function onSubmit(data: BuildingFormData) {
       : undefined,
   } as Parameters<typeof submitCreate>[0])
 }
-
-const { showLeaveConfirm, confirmLeave, cancelLeave } = useDirtyGuard(isDirty, isLoading)
 </script>
 
 <template>
@@ -209,14 +207,5 @@ const { showLeaveConfirm, confirmLeave, cancelLeave } = useDirtyGuard(isDirty, i
       </template>
       </BuildingForm>
     </div>
-
-    <UiConfirmModal
-      :open="showLeaveConfirm"
-      title="Rời trang?"
-      message="Có thay đổi chưa lưu. Bạn có chắc muốn rời trang?"
-      confirm-label="Rời trang"
-      @confirm="confirmLeave"
-      @cancel="cancelLeave"
-    />
   </div>
 </template>
