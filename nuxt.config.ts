@@ -30,6 +30,7 @@ export default defineNuxtConfig({
     adminEmail: "", // ADMIN_EMAIL
     turnstileSecretKey: "", // NUXT_TURNSTILE_SECRET_KEY
     operationsReportAutoCloseSecret: "", // NUXT_OPERATIONS_REPORT_AUTO_CLOSE_SECRET
+    operationsReportAutoCloseEnabled: true, // NUXT_OPERATIONS_REPORT_AUTO_CLOSE_ENABLED
     public: {
       siteUrl: "", // NUXT_PUBLIC_SITE_URL
       gaId: "", // NUXT_PUBLIC_GA_ID
