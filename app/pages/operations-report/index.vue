@@ -122,6 +122,29 @@ const expenseCategoryModel = computed<string | number | null>({
 })
 
 const metrics = computed(() => report.value?.metrics ?? null)
+// Merge pass-through utility input/margin into the matching revenue row so the
+// detail renders inline instead of a separate table that repeats the collected
+// amount already shown in the revenue list.
+const revenueRows = computed(() => {
+  const currentReport = report.value
+  if (!currentReport) return []
+
+  const utilityDetail: Record<string, { input: number, margin: number }> = {
+    electricity: {
+      input: currentReport.electricity.input,
+      margin: currentReport.electricity.margin,
+    },
+    water: {
+      input: currentReport.water.input,
+      margin: currentReport.water.margin,
+    },
+  }
+
+  return currentReport.revenueByType.map(row => ({
+    ...row,
+    utility: utilityDetail[row.key] ?? null,
+  }))
+})
 const filteredExpenses = computed(() => {
   const expenses = report.value?.expenses ?? []
   if (!expenseCategory.value) return expenses
@@ -297,21 +320,21 @@ function signedClass(value: number): string {
     </UiPageHeader>
 
     <!-- Filters -->
-    <div class="mb-6 grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:items-end">
+    <div class="mb-4 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
       <UiSelect
         v-model="buildingModel"
-        label="Tòa nhà"
+        aria-label="Tòa nhà"
         :options="buildingOptions"
-        placeholder="Chọn tòa nhà"
+        placeholder="Tòa nhà"
         class="col-span-2 sm:min-w-[200px]"
       />
-      <UiSelect v-model="yearModel" label="Năm" :options="yearOptions" class="sm:w-32" />
-      <UiSelect v-model="monthModel" label="Tháng" :options="monthOptions" class="sm:w-36" />
+      <UiSelect v-model="yearModel" aria-label="Năm" :options="yearOptions" class="sm:w-28" />
+      <UiSelect v-model="monthModel" aria-label="Tháng" :options="monthOptions" class="sm:w-32" />
       <UiSelect
         v-model="expenseCategoryModel"
-        label="Loại chi"
+        aria-label="Loại chi"
         :options="expenseCategoryOptions"
-        class="col-span-2 sm:min-w-[190px]"
+        class="col-span-2 sm:min-w-[170px]"
       />
     </div>
 
@@ -322,25 +345,140 @@ function signedClass(value: number): string {
       {{ errorMessage }}
     </UiAlert>
 
-    <div v-if="isLoading" class="grid grid-cols-2 gap-3 lg:grid-cols-4">
-      <UiSkeleton v-for="n in 4" :key="n" class="h-20 rounded-xl" />
+    <div v-if="isLoading" class="grid grid-cols-2 gap-2 lg:grid-cols-4">
+      <UiSkeleton v-for="n in 4" :key="n" class="h-[72px] rounded-xl" />
     </div>
 
     <template v-else-if="report && metrics">
-      <!-- Core KPIs -->
-      <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <UiMetric label="Doanh thu phát hành" :value="formatCurrency(metrics.issuedRevenue)" />
-        <UiMetric label="Đã thu" :value="formatCurrency(metrics.collectedCash)" tone="accent" />
-        <UiMetric
-          label="Công nợ"
-          :value="formatCurrency(metrics.debt)"
-          :tone="metrics.debt > 0 ? 'warning' : 'default'"
-        />
-        <UiMetric label="Tổng chi phí" :value="formatCurrency(metrics.totalExpense)" />
-      </div>
+      <!-- Financial overview + composition -->
+      <UiSection title="Cơ cấu doanh thu và chi phí">
+        <!-- Core KPIs -->
+        <div class="grid grid-cols-2 gap-2 lg:grid-cols-4">
+          <UiMetric label="Doanh thu phát hành" :value="formatCurrency(metrics.issuedRevenue)" />
+          <UiMetric label="Đã thu" :value="formatCurrency(metrics.collectedCash)" tone="accent" />
+          <UiMetric
+            label="Công nợ"
+            :value="formatCurrency(metrics.debt)"
+            :tone="metrics.debt > 0 ? 'warning' : 'default'"
+          />
+          <UiMetric label="Tổng chi phí" :value="formatCurrency(metrics.totalExpense)" />
+        </div>
+
+        <div class="grid grid-cols-1 gap-2 md:grid-cols-[minmax(0,1.15fr)_minmax(260px,0.85fr)]">
+          <div class="overflow-hidden rounded-xl border border-dark-border bg-dark-surface">
+            <div class="border-b border-dark-border px-3 py-2 sm:px-4">
+              <h3 class="text-sm font-semibold text-white">Doanh thu theo loại</h3>
+            </div>
+
+            <div class="divide-y divide-dark-border">
+              <div
+                v-for="row in revenueRows"
+                :key="row.key"
+                class="px-3 py-2 sm:px-4"
+              >
+                <div class="flex items-center justify-between gap-3 text-sm">
+                  <span class="min-w-0 truncate text-muted">{{ row.label }}</span>
+                  <span class="shrink-0 tabular-nums text-white">{{ formatCurrency(row.amount) }}</span>
+                </div>
+                <p
+                  v-if="row.utility"
+                  class="mt-1 flex items-center gap-x-2 text-xs text-muted"
+                >
+                  <span class="tabular-nums">Đầu vào {{ formatCurrency(row.utility.input) }}</span>
+                  <span aria-hidden="true" class="text-dark-border">·</span>
+                  <span
+                    :class="signedClass(row.utility.margin)"
+                    class="font-medium tabular-nums"
+                  >
+                    Chênh {{ formatCurrency(row.utility.margin) }}
+                  </span>
+                </p>
+              </div>
+              <div v-if="report.revenueByType.length === 0" class="px-5 py-6">
+                <UiEmptyState title="Chưa có doanh thu" description="Kỳ này chưa phát hành hóa đơn." />
+              </div>
+            </div>
+          </div>
+
+          <div class="overflow-hidden rounded-xl border border-dark-border bg-dark-surface">
+            <div class="grid divide-y divide-dark-border">
+              <div>
+                <div class="flex items-center justify-between gap-3 border-b border-dark-border px-3 py-2 sm:px-4">
+                  <h3 class="text-sm font-semibold text-white">Chi phí cố định</h3>
+                  <span class="shrink-0 text-sm font-semibold tabular-nums text-white">
+                    {{ formatCurrency(metrics.fixedCostTotal) }}
+                  </span>
+                </div>
+
+                <div class="divide-y divide-dark-border">
+                  <div
+                    v-for="fc in report.fixedCosts"
+                    :key="fc.id"
+                    class="flex items-start justify-between gap-3 px-3 py-2 text-sm sm:px-4"
+                  >
+                    <div class="min-w-0">
+                      <span class="text-white">Tiền thuê nhà</span>
+                      <p class="mt-0.5 text-xs text-muted">
+                        Từ {{ fc.effectiveFromPeriodMonth }}/{{ fc.effectiveFromPeriodYear }}
+                        <template v-if="fc.effectiveToPeriodYear">
+                          đến {{ fc.effectiveToPeriodMonth }}/{{ fc.effectiveToPeriodYear }}
+                        </template>
+                      </p>
+                    </div>
+                    <span class="shrink-0 tabular-nums text-white">{{ formatCurrency(fc.amount) }}</span>
+                  </div>
+                  <div v-if="report.fixedCosts.length === 0" class="px-5 py-6">
+                    <UiEmptyState
+                      title="Chưa có chi phí cố định"
+                      description="Thêm tiền thuê nhà để tính lợi nhuận chính xác."
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div class="bg-dark-deep/40">
+                <div class="flex items-start justify-between gap-3 border-b border-dark-border px-3 py-2.5 sm:px-4">
+                  <div>
+                    <p class="text-[11px] uppercase tracking-wide text-muted">Phân bổ kỳ này</p>
+                    <h3 class="text-sm font-semibold text-white">Chi phí trả trước</h3>
+                  </div>
+                  <span class="shrink-0 text-sm font-semibold tabular-nums text-white">
+                    {{ formatCurrency(metrics.prepaidAllocationTotal) }}
+                  </span>
+                </div>
+
+                <div class="divide-y divide-dark-border">
+                  <div
+                    v-for="item in report.prepaidItems"
+                    :key="item.id"
+                    class="flex items-start justify-between gap-3 px-3 py-2 text-sm sm:px-4"
+                  >
+                    <div class="min-w-0">
+                      <span class="text-white">{{ item.name }}</span>
+                      <p
+                        v-if="EXPENSE_CATEGORY_LABELS[item.category] !== item.name"
+                        class="mt-0.5 text-xs text-muted"
+                      >
+                        {{ EXPENSE_CATEGORY_LABELS[item.category] }}
+                      </p>
+                    </div>
+                    <span class="shrink-0 tabular-nums text-white">{{ formatCurrency(item.monthlyAmount) }}</span>
+                  </div>
+                  <div v-if="report.prepaidItems.length === 0" class="px-5 py-6">
+                    <UiEmptyState
+                      title="Chưa có chi phí trả trước"
+                      description="Các khoản trả trước đang hiệu lực sẽ được phân bổ tại đây."
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </UiSection>
 
       <!-- Profit highlight -->
-      <div class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div class="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
         <UiMetric
           label="Lợi nhuận (theo phát hành)"
           :value="formatCurrency(metrics.profitByRevenue)"
@@ -358,7 +496,7 @@ function signedClass(value: number): string {
       <UiSection
         v-if="canReadRecurring && upcomingRecurringExpenses.length > 0"
         title="Nhắc chi phí sắp đến hạn"
-        class="mt-8"
+        class="mt-6"
       >
         <div class="rounded-2xl border border-dark-border bg-dark-surface divide-y divide-dark-border">
           <div
@@ -385,8 +523,8 @@ function signedClass(value: number): string {
         </div>
       </UiSection>
 
-      <UiSection v-if="canReadReserveFund && report.reserveFund" title="Quỹ dự phòng" class="mt-8">
-        <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <UiSection v-if="canReadReserveFund && report.reserveFund" title="Quỹ dự phòng" class="mt-6">
+        <div class="grid grid-cols-2 gap-2 lg:grid-cols-4">
           <UiMetric
             label="Tỷ lệ"
             :value="`${report.reserveFund.effectiveRatePercent}%`"
@@ -413,130 +551,8 @@ function signedClass(value: number): string {
         </div>
       </UiSection>
 
-      <!-- Utility margins -->
-      <div class="mt-8 grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-2">
-        <div class="rounded-2xl border border-dark-border bg-dark-surface p-4 sm:p-5">
-          <div class="flex items-center justify-between">
-            <h3 class="text-sm font-semibold text-white">Điện — chênh lệch</h3>
-            <span :class="signedClass(report.electricity.margin)" class="text-sm font-semibold tabular-nums">
-              {{ formatCurrency(report.electricity.margin) }}
-            </span>
-          </div>
-          <dl class="mt-3 space-y-1.5 text-sm">
-            <div class="flex justify-between">
-              <dt class="text-muted">Thu từ khách</dt>
-              <dd class="tabular-nums text-white">{{ formatCurrency(report.electricity.collected) }}</dd>
-            </div>
-            <div class="flex justify-between">
-              <dt class="text-muted">Đầu vào</dt>
-              <dd class="tabular-nums text-white">{{ formatCurrency(report.electricity.input) }}</dd>
-            </div>
-          </dl>
-        </div>
-        <div class="rounded-2xl border border-dark-border bg-dark-surface p-4 sm:p-5">
-          <div class="flex items-center justify-between">
-            <h3 class="text-sm font-semibold text-white">Nước — chênh lệch</h3>
-            <span :class="signedClass(report.water.margin)" class="text-sm font-semibold tabular-nums">
-              {{ formatCurrency(report.water.margin) }}
-            </span>
-          </div>
-          <dl class="mt-3 space-y-1.5 text-sm">
-            <div class="flex justify-between">
-              <dt class="text-muted">Thu từ khách</dt>
-              <dd class="tabular-nums text-white">{{ formatCurrency(report.water.collected) }}</dd>
-            </div>
-            <div class="flex justify-between">
-              <dt class="text-muted">Đầu vào</dt>
-              <dd class="tabular-nums text-white">{{ formatCurrency(report.water.input) }}</dd>
-            </div>
-          </dl>
-        </div>
-      </div>
-
-      <!-- Revenue breakdown -->
-      <UiSection title="Doanh thu theo loại" class="mt-8">
-        <template #actions>
-          <span class="text-sm font-semibold tabular-nums text-white">
-            {{ formatCurrency(metrics.issuedRevenue) }}
-          </span>
-        </template>
-        <div class="rounded-2xl border border-dark-border bg-dark-surface divide-y divide-dark-border">
-          <div
-            v-for="row in report.revenueByType"
-            :key="row.key"
-            class="flex items-center justify-between px-4 py-3 text-sm sm:px-5"
-          >
-            <span class="text-muted">{{ row.label }}</span>
-            <span class="tabular-nums text-white">{{ formatCurrency(row.amount) }}</span>
-          </div>
-          <div v-if="report.revenueByType.length === 0" class="px-5 py-6">
-            <UiEmptyState title="Chưa có doanh thu" description="Kỳ này chưa phát hành hóa đơn." />
-          </div>
-        </div>
-      </UiSection>
-
-      <!-- Fixed costs -->
-      <UiSection title="Chi phí cố định" class="mt-8">
-        <template #actions>
-          <span class="text-sm font-semibold tabular-nums text-white">
-            {{ formatCurrency(metrics.fixedCostTotal) }}
-          </span>
-        </template>
-        <div class="rounded-2xl border border-dark-border bg-dark-surface divide-y divide-dark-border">
-          <div
-            v-for="fc in report.fixedCosts"
-            :key="fc.id"
-            class="flex items-center justify-between px-4 py-3 text-sm sm:px-5"
-          >
-            <div>
-              <span class="text-white">Tiền thuê nhà</span>
-              <span class="ml-2 text-xs text-muted">
-                từ {{ fc.effectiveFromPeriodMonth }}/{{ fc.effectiveFromPeriodYear }}
-                <template v-if="fc.effectiveToPeriodYear">
-                  đến {{ fc.effectiveToPeriodMonth }}/{{ fc.effectiveToPeriodYear }}
-                </template>
-              </span>
-            </div>
-            <span class="tabular-nums text-white">{{ formatCurrency(fc.amount) }}</span>
-          </div>
-          <div v-if="report.fixedCosts.length === 0" class="px-5 py-6">
-            <UiEmptyState
-              title="Chưa có chi phí cố định"
-              description="Thêm tiền thuê nhà để tính lợi nhuận chính xác."
-            />
-          </div>
-        </div>
-      </UiSection>
-
-      <UiSection title="Chi phí trả trước (phân bổ)" class="mt-8">
-        <template #actions>
-          <span class="text-sm font-semibold tabular-nums text-white">
-            {{ formatCurrency(metrics.prepaidAllocationTotal) }}
-          </span>
-        </template>
-        <div class="rounded-2xl border border-dark-border bg-dark-surface divide-y divide-dark-border">
-          <div
-            v-for="item in report.prepaidItems"
-            :key="item.id"
-            class="flex items-center justify-between px-4 py-3 text-sm sm:px-5"
-          >
-            <div>
-              <span class="text-white">{{ item.name }}</span>
-              <span class="ml-2 text-xs text-muted">{{ EXPENSE_CATEGORY_LABELS[item.category] }}</span>
-            </div>
-            <span class="tabular-nums text-white">{{ formatCurrency(item.monthlyAmount) }}</span>
-          </div>
-          <div v-if="report.prepaidItems.length === 0" class="px-5 py-6">
-            <UiEmptyState
-              title="Chưa có chi phí trả trước"
-              description="Các khoản trả trước đang hiệu lực sẽ được phân bổ tại đây."
-            />
-          </div>
-        </div>
-      </UiSection>
-
       <!-- Expenses -->
-      <UiSection title="Chi phí phát sinh trong tháng" class="mt-8">
+      <UiSection title="Chi phí phát sinh trong tháng" class="mt-6">
         <template #actions>
           <span class="text-sm font-semibold tabular-nums text-white">
             {{ formatCurrency(expenseCategory ? filteredExpenseTotal : metrics.monthlyExpenseTotal) }}

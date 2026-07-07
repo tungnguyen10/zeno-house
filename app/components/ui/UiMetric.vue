@@ -24,12 +24,12 @@ const toneClass: Record<string, string> = {
 </script>
 
 <template>
-  <div class="flex flex-col gap-1 rounded-xl border border-dark-border bg-dark-surface px-4 py-3">
+  <div class="flex flex-col gap-0.5 rounded-xl border border-dark-border bg-dark-surface px-3 py-2.5">
     <p class="text-xs uppercase tracking-wide text-muted">{{ label }}</p>
-    <UiSkeleton v-if="loading" class="h-7 w-24" />
+    <UiSkeleton v-if="loading" class="h-6 w-24" />
     <p
       v-else
-      :class="clsx('text-xl font-semibold tabular-nums', toneClass[tone ?? 'default'])"
+      :class="clsx('text-lg font-semibold tabular-nums', toneClass[tone ?? 'default'])"
     >
       {{ value }}
     </p>
