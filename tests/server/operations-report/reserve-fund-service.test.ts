@@ -12,6 +12,7 @@ const voidExpenseDeduction = vi.fn()
 const upsertMonthlyAccrual = vi.fn()
 const listRatesByBuilding = vi.fn()
 const insertRate = vi.fn()
+const assertNoClosedReportsInRange = vi.fn()
 
 vi.mock('../../../server/repositories/buildings', () => ({
   BuildingRepository: { findById: findBuildingById },
@@ -35,6 +36,12 @@ vi.mock('../../../server/repositories/operations-report/expenses', () => ({
   BuildingExpenseRepository: {
     insert: insertExpense,
     deleteById: deleteExpenseById,
+  },
+}))
+
+vi.mock('../../../server/services/operations-report/locks', () => ({
+  OperationsReportLockService: {
+    assertNoClosedReportsInRange,
   },
 }))
 
@@ -91,6 +98,7 @@ describe('ReserveFundService', () => {
     upsertMonthlyAccrual.mockResolvedValue({ id: 'accrual-1' })
     listRatesByBuilding.mockResolvedValue([rate()])
     insertRate.mockResolvedValue(rate())
+    assertNoClosedReportsInRange.mockResolvedValue(undefined)
   })
 
   it('creates a reserve-funded expense and linked deduction without balance validation', async () => {

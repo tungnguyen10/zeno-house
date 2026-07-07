@@ -10,6 +10,7 @@ import { AUDIT_ACTIONS } from '~/utils/constants/audit'
 import { BuildingRepository } from '../../repositories/buildings'
 import { PrepaidExpenseRepository } from '../../repositories/operations-report/prepaid-expenses'
 import { AuditService } from '../audit'
+import { OperationsReportLockService } from './locks'
 import { assertBuildingScope } from '../../utils/scope'
 
 function dateOnly(date: Date): string {
@@ -31,6 +32,25 @@ function parseDate(date: string): Date {
 
 function periodStart(periodYear: number, periodMonth: number): string {
   return dateOnly(utcDate(periodYear, periodMonth - 1, 1))
+}
+
+function prepaidPeriodRange(input: {
+  startDate: string
+  totalMonths: number
+}): {
+  fromYear: number
+  fromMonth: number
+  toYear: number
+  toMonth: number
+} {
+  const start = parseDate(input.startDate)
+  const last = addMonths(start, input.totalMonths - 1)
+  return {
+    fromYear: start.getUTCFullYear(),
+    fromMonth: start.getUTCMonth() + 1,
+    toYear: last.getUTCFullYear(),
+    toMonth: last.getUTCMonth() + 1,
+  }
 }
 
 function today(): string {
@@ -109,6 +129,18 @@ export const PrepaidExpenseService = {
     if (!can(user, 'prepaid-expenses.write')) throwForbidden('Không có quyền cấu hình chi phí trả trước')
     await requireBuilding(event, input.building_id)
     await assertBuildingScope(event, user, input.building_id, 'write')
+    const range = prepaidPeriodRange({
+      startDate: input.start_date,
+      totalMonths: input.total_months,
+    })
+    await OperationsReportLockService.assertNoClosedReportsInRange(
+      event,
+      input.building_id,
+      range.fromYear,
+      range.fromMonth,
+      range.toYear,
+      range.toMonth,
+    )
 
     const created = await PrepaidExpenseRepository.insert(
       event,
@@ -145,6 +177,36 @@ export const PrepaidExpenseService = {
       input.total_amount !== undefined ||
       input.total_months !== undefined ||
       input.start_date !== undefined
+    const changesReportingValue =
+      input.name !== undefined ||
+      input.category !== undefined ||
+      input.total_amount !== undefined ||
+      input.total_months !== undefined ||
+      input.start_date !== undefined ||
+      input.status !== undefined
+    if (changesReportingValue) {
+      const existingRange = prepaidPeriodRange({
+        startDate: existing.startDate,
+        totalMonths: existing.totalMonths,
+      })
+      const nextRange = prepaidPeriodRange({ startDate, totalMonths })
+      await OperationsReportLockService.assertNoClosedReportsInRange(
+        event,
+        existing.buildingId,
+        existingRange.fromYear,
+        existingRange.fromMonth,
+        existingRange.toYear,
+        existingRange.toMonth,
+      )
+      await OperationsReportLockService.assertNoClosedReportsInRange(
+        event,
+        existing.buildingId,
+        nextRange.fromYear,
+        nextRange.fromMonth,
+        nextRange.toYear,
+        nextRange.toMonth,
+      )
+    }
 
     const updated = await PrepaidExpenseRepository.updateById(event, id, {
       ...input,
@@ -172,6 +234,18 @@ export const PrepaidExpenseService = {
     const existing = await PrepaidExpenseRepository.findById(event, id)
     if (!existing) throwNotFound('Không tìm thấy chi phí trả trước')
     await assertBuildingScope(event, user, existing.buildingId, 'write')
+    const range = prepaidPeriodRange({
+      startDate: existing.startDate,
+      totalMonths: existing.totalMonths,
+    })
+    await OperationsReportLockService.assertNoClosedReportsInRange(
+      event,
+      existing.buildingId,
+      range.fromYear,
+      range.fromMonth,
+      range.toYear,
+      range.toMonth,
+    )
     await PrepaidExpenseRepository.deleteById(event, id)
     await AuditService.append(event, user, {
       building_id: existing.buildingId,

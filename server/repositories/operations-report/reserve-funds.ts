@@ -88,7 +88,7 @@ export const ReserveFundRepository = {
       issuedRevenue?: number | null
       note?: string | null
       linkedExpenseId?: string | null
-      createdBy: string
+      createdBy: string | null
     },
   ): Promise<ReserveFundTransaction> {
     const client = await serverSupabaseClient(event)
@@ -202,11 +202,11 @@ export const ReserveFundRepository = {
       buildingId: string
       periodYear: number
       periodMonth: number
-      billingPeriodId: string
+      billingPeriodId: string | null
       amount: number
       reserveRatePercent: number
       issuedRevenue: number
-      createdBy: string
+      createdBy: string | null
     },
   ): Promise<ReserveFundTransaction> {
     const fund = await this.findOrCreateByBuilding(event, input.buildingId)

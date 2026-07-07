@@ -1,6 +1,12 @@
 import type { ApiSuccess } from '~/types/api'
 import type { Building } from '~/types/buildings'
-import type { BuildingExpense, BuildingFixedCost, OperationsReport } from '~/types/operations-report'
+import type {
+  BuildingExpense,
+  BuildingFixedCost,
+  OperationsReport,
+  OperationsReportClosure,
+  ReserveFundTransaction,
+} from '~/types/operations-report'
 
 const GENERIC_ERROR = 'Không tải được báo cáo vận hành. Vui lòng thử lại.'
 
@@ -143,6 +149,49 @@ export function useOperationsMutations() {
     return res.data
   }
 
+  async function closeReport(payload: {
+    building_id: string
+    period_year: number
+    period_month: number
+  }): Promise<OperationsReportClosure> {
+    const res = await $fetch<ApiSuccess<OperationsReportClosure>>('/api/operations-report/close', {
+      method: 'POST',
+      body: payload,
+    })
+    return res.data
+  }
+
+  async function reopenReport(payload: {
+    building_id: string
+    period_year: number
+    period_month: number
+    reason: string
+  }): Promise<OperationsReportClosure> {
+    const res = await $fetch<ApiSuccess<OperationsReportClosure>>('/api/operations-report/reopen', {
+      method: 'POST',
+      body: payload,
+    })
+    return res.data
+  }
+
+  async function refreshReserveAccrual(payload: {
+    building_id: string
+    period_year: number
+    period_month: number
+  }): Promise<ReserveFundTransaction> {
+    const res = await $fetch<ApiSuccess<ReserveFundTransaction>>(
+      `/api/reserve-funds/${payload.building_id}/refresh-accrual`,
+      {
+        method: 'POST',
+        body: {
+          period_year: payload.period_year,
+          period_month: payload.period_month,
+        },
+      },
+    )
+    return res.data
+  }
+
   return {
     createExpense,
     updateExpense,
@@ -150,5 +199,8 @@ export function useOperationsMutations() {
     uploadExpenseReceipt,
     removeExpenseReceipt,
     createFixedCost,
+    closeReport,
+    reopenReport,
+    refreshReserveAccrual,
   }
 }

@@ -53,15 +53,15 @@ The API SHALL list billing periods for the `/billing` management page.
 - **THEN** it can return periods with outstanding invoice balance
 
 ### Requirement: Close period creates reserve accrual
-The billing close flow SHALL create or refresh the building's monthly reserve accrual from issued revenue and the effective reserve rate.
+The billing close flow SHALL create or refresh the building's monthly reserve accrual from current operations profit and the effective reserve rate.
 
 #### Scenario: Close creates monthly reserve accrual
 - **WHEN** an authorized user closes a billing period for a building with an effective reserve rate
 - **THEN** the system records a reserve fund monthly accrual transaction for that building, year, and month
 
-#### Scenario: Accrual uses issued revenue
+#### Scenario: Accrual uses operations profit
 - **WHEN** the monthly accrual is recorded during billing close
-- **THEN** the accrual amount is calculated from non-void issued invoice totals and the effective reserve rate, not from collected cash
+- **THEN** the accrual amount is calculated from `max(issued revenue - report expenses, 0)` and the effective reserve rate, not from collected cash
 
 #### Scenario: Close without rate records zero accrual
 - **WHEN** an authorized user closes a billing period for a building without an effective reserve rate
@@ -70,6 +70,17 @@ The billing close flow SHALL create or refresh the building's monthly reserve ac
 #### Scenario: Reclose refreshes accrual
 - **WHEN** a closed period is reopened and closed again after billing data changes
 - **THEN** the system refreshes the existing reserve accrual transaction for that building/month instead of creating a duplicate
+
+### Requirement: Billing period close remains manual
+The billing API SHALL NOT automatically close billing periods from operations-report close or month-end operations-report auto-close flows.
+
+#### Scenario: Operations report auto-close leaves billing unchanged
+- **WHEN** the operations-report auto-close task runs at month end
+- **THEN** it does not change the status of any billing period
+
+#### Scenario: Operations report manual close leaves billing unchanged
+- **WHEN** an admin closes or reopens an operations report period
+- **THEN** the corresponding billing period status is unchanged
 
 ### Requirement: Workspace overview API
 The API SHALL provide summary data for the monthly operations workspace.

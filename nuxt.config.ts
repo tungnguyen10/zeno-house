@@ -29,6 +29,7 @@ export default defineNuxtConfig({
     resendApiKey: "", // RESEND_API_KEY
     adminEmail: "", // ADMIN_EMAIL
     turnstileSecretKey: "", // NUXT_TURNSTILE_SECRET_KEY
+    operationsReportAutoCloseSecret: "", // NUXT_OPERATIONS_REPORT_AUTO_CLOSE_SECRET
     public: {
       siteUrl: "", // NUXT_PUBLIC_SITE_URL
       gaId: "", // NUXT_PUBLIC_GA_ID
@@ -63,6 +64,15 @@ export default defineNuxtConfig({
   typescript: {
     strict: true,
     typeCheck: true,
+  },
+
+  nitro: {
+    experimental: {
+      tasks: true,
+    },
+    scheduledTasks: {
+      "55 16 * * *": ["operations-report:auto-close"],
+    },
   },
 
   // Auto-import composables từ tất cả subdirectories

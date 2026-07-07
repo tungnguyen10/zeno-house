@@ -13,6 +13,7 @@ const deleteById = vi.fn()
 const assertBuildingScope = vi.fn()
 const appendAudit = vi.fn()
 const canMock = vi.fn()
+const assertNoClosedReportsInRange = vi.fn()
 
 vi.mock('../../../server/repositories/buildings', () => ({
   BuildingRepository: { findById: findBuildingById },
@@ -36,6 +37,12 @@ vi.mock('../../../server/utils/scope', () => ({
 
 vi.mock('../../../server/services/audit', () => ({
   AuditService: { append: appendAudit },
+}))
+
+vi.mock('../../../server/services/operations-report/locks', () => ({
+  OperationsReportLockService: {
+    assertNoClosedReportsInRange,
+  },
 }))
 
 const owner = { id: 'owner-1', app_metadata: { role: 'owner' } } as AuthUser
@@ -81,6 +88,7 @@ describe('PrepaidExpenseService math', () => {
     deleteById.mockResolvedValue(undefined)
     assertBuildingScope.mockResolvedValue(undefined)
     appendAudit.mockResolvedValue(undefined)
+    assertNoClosedReportsInRange.mockResolvedValue(undefined)
   })
 
   it('computes end date and rounded monthly amount', async () => {

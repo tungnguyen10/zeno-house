@@ -302,6 +302,9 @@ Thêm khoản chi
 
 ```text
 GET    /api/operations-report
+POST   /api/operations-report/close
+POST   /api/operations-report/reopen
+GET    /api/operations-report/export
 GET    /api/building-expenses
 POST   /api/building-expenses
 PATCH  /api/building-expenses/[id]
@@ -310,6 +313,8 @@ DELETE /api/building-expenses/[id]
 GET    /api/building-fixed-costs
 POST   /api/building-fixed-costs
 PATCH  /api/building-fixed-costs/[id]
+POST   /api/reserve-funds/[buildingId]/refresh-accrual
+POST   /api/internal/operations-report/auto-close
 ```
 
 Delete nên là soft void, không hard delete:
@@ -325,11 +330,15 @@ Capabilities đề xuất:
 
 ```text
 operations-report.read
+operations-report.export
+operations-report.close
+operations-report.reopen
 building-expenses.read
 building-expenses.write
 building-expenses.delete
 building-fixed-costs.read
 building-fixed-costs.write
+reserve-fund.refresh-accrual
 ```
 
 Admin:
@@ -431,3 +440,16 @@ Chưa làm (như MVP scope đã nêu): approval, upload chứng từ, custom cat
 - Modal thêm/sửa chi phí vận hành một lần dùng `UiCombobox allow-custom` cho "Tên/Ghi chú chi phí" và lưu vào `building_expenses.note`.
 - Modal chi phí cố định trong building settings dùng cùng pattern cho "Tên/Ghi chú chi phí" và lưu vào `building_fixed_costs.note`.
 - Tạo chi phí từ quỹ dự phòng là thao tác hai bước được bọc bởi service compensation: nếu tạo deduction thất bại sau khi expense đã được tạo, expense mới tạo bị xóa lại để không còn orphan row. Void một reserve-funded expense sẽ void linked deduction để khoản chi không còn làm giảm số dư quỹ.
+
+## Trạng Thái Triển Khai (Closure/Reserve accrual)
+
+- `operations_report_periods` lưu trạng thái open/closed riêng cho từng `building_id + period_year + period_month`; thiếu row được hiểu là open.
+- API: `POST /api/operations-report/close` nhận `building_id`, `period_year`, `period_month`; `POST /api/operations-report/reopen` nhận thêm `reason`; `POST /api/reserve-funds/[buildingId]/refresh-accrual` nhận `period_year`, `period_month`.
+- Chỉ admin có `operations-report.close`, `operations-report.reopen`, và `reserve-fund.refresh-accrual`; owner/manager bị 403 và UI không hiện các nút này.
+- Chốt báo cáo thủ công, auto-close cuối tháng, và admin refresh đều upsert cùng một dòng `reserve_fund_transactions.source = monthly_accrual`; không có nhập số quỹ thủ công.
+- Admin refresh dùng để cập nhật latest khi có thêm/bớt chi phí sau billing close nhưng trước khi report được chốt lại.
+- Công thức quỹ là `max(lãi vận hành, 0) * tỷ lệ quỹ`, trong đó lãi vận hành dựa trên doanh thu phát hành trừ chi phí trực tiếp, chi phí cố định, và phân bổ trả trước.
+- Khi báo cáo đã closed, các mutation chi phí ảnh hưởng kỳ đó bị chặn cho tới khi admin mở lại. Sau khi sửa, admin close lại hoặc refresh để cập nhật cùng dòng accrual.
+- Auto-close là Nitro task gọi route internal vào ngày cuối tháng theo `Asia/Ho_Chi_Minh`. Route internal yêu cầu `NUXT_OPERATIONS_REPORT_AUTO_CLOSE_SECRET`; nếu thiếu secret hoặc không phải ngày cuối tháng thì không chốt gì.
+- Không có auto-close billing; billing close giữ nguyên flow và điều kiện hiện tại.
+- Migration `20260707031000_fix_operations_report_periods_shape.sql` vá các DB đã có `operations_report_periods` shape cũ thiếu `close_source` và reload PostgREST schema cache.

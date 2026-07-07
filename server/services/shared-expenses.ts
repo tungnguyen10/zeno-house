@@ -8,6 +8,7 @@ import type {
 } from '~/utils/validators/shared-expenses'
 import { BuildingExpenseRepository } from '../repositories/operations-report/expenses'
 import { SharedExpenseRepository } from '../repositories/shared-expenses'
+import { OperationsReportLockService } from './operations-report/locks'
 import { assertBuildingScope } from '../utils/scope'
 
 function ownerScopeId(user: AuthUser): string {
@@ -92,6 +93,14 @@ export const SharedExpenseService = {
     await assertOwnerOfSharedExpense(expense, user)
     if (expense.buildingIds.length === 0) throwValidationError('Cần ít nhất một tòa nhà để phân bổ')
     await assertEveryBuildingInScope(event, user, expense.buildingIds)
+    for (const buildingId of expense.buildingIds) {
+      await OperationsReportLockService.assertReportOpen(
+        event,
+        buildingId,
+        input.period_year,
+        input.period_month,
+      )
+    }
 
     const alreadyAllocated = await SharedExpenseRepository.hasAllocation(
       event,

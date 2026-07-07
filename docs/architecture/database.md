@@ -16,8 +16,8 @@ Zeno House uses Supabase Postgres. Schema history lives in `supabase/migrations`
 | Service catalog | `20260530200000_service_catalog.sql` through `20260530200005_drop_default_service_fees.sql`, `20260706010000_building_custom_service_catalog.sql` |
 | Meter readings | `20260530300000_meter_readings.sql`, `20260530400000_simplify_meter_readings.sql` |
 | Billing runtime | `20260611000000_billing_runtime.sql`, `20260611000001_billing_legacy_cleanup.sql` |
-| Operations report | `20260702173259_add_operations_report.sql`, `20260704000000_expense_receipts_and_export_categories.sql`, `20260705000000_recurring_and_prepaid_expenses.sql` |
-| Shared expenses and reserve fund | `20260705010000_shared_expenses_and_reserve_fund.sql`, `20260707010000_reserve_fund_auto_accrual.sql` |
+| Operations report | `20260702173259_add_operations_report.sql`, `20260704000000_expense_receipts_and_export_categories.sql`, `20260705000000_recurring_and_prepaid_expenses.sql`, `20260707030000_operations_report_closure.sql`, `20260707031000_fix_operations_report_periods_shape.sql` |
+| Shared expenses and reserve fund | `20260705010000_shared_expenses_and_reserve_fund.sql`, `20260707010000_reserve_fund_auto_accrual.sql`, `20260707020000_fix_reserve_fund_source_constraint.sql` |
 
 ## Core Tables
 
@@ -86,13 +86,17 @@ Route helpers still fall back to ids when readable identifiers are absent.
 
 `building_fixed_costs` stores recurring costs with effective period ranges. Fixed-cost management lives in building settings; the operations report reads applicable rows for the selected month. User-entered fixed-cost labels are stored in `note`.
 
+`operations_report_periods` stores one optional lifecycle row per `(building_id, period_year, period_month)`. Missing rows are treated as open. Admin manual close/reopen and the internal month-end auto-close task update this table; closed periods lock report-affecting expense/config mutations until reopened. The active closure shape uses `status`, `close_source`, `closed_at/by`, and `reopened_at/by/reason`; migration `20260707031000_fix_operations_report_periods_shape.sql` reconciles older local databases that had an earlier `operations_report_periods` shape without `close_source` and reloads the PostgREST schema cache.
+
 `recurring_expenses` stores building-scoped reminder templates with frequency, anchor day, estimated amount, active flag, and `next_reminder_at`. Recording or dismissing a reminder advances `next_reminder_at`; recording returns a prefill for a normal `building_expenses` row.
 
 `prepaid_expenses` stores building-scoped lump-sum costs spread across `total_months`. The service computes `end_date` and rounded `monthly_amount`; the final covered month absorbs any rounding remainder so allocations sum to `total_amount`.
 
 `shared_expenses` stores owner-scoped expense definitions that apply to multiple buildings. `shared_expense_buildings` stores membership. Allocation creates one normal `building_expenses` row per member building for the selected period and tags the row note with a shared-origin marker to guard duplicate allocations.
 
-`building_reserve_fund_rates` stores period-based reserve rate history per building. `reserve_funds` stores one fund per building. `reserve_fund_transactions` is the ledger; active `monthly_accrual` rows increase the fund from issued revenue at billing close, active `expense_deduction` rows decrease it for reserve-funded expenses, and voided deductions no longer affect active balance. `building_expenses.funded_by` marks direct versus reserve-funded expenses. Reserve balances may be negative.
+`building_reserve_fund_rates` stores period-based reserve rate history per building. `reserve_funds` stores one fund per building. `reserve_fund_transactions` is the ledger; active `monthly_accrual` rows increase the fund from non-negative operations profit at billing close, report close, auto-close, or admin refresh; active `expense_deduction` rows decrease it for reserve-funded expenses, and voided deductions no longer affect active balance. `building_expenses.funded_by` marks direct versus reserve-funded expenses. Reserve balances may be negative.
+
+Operations-report close, operations-report auto-close, and admin reserve refresh never close billing periods. Billing period status changes only through billing flows.
 
 `expense-receipts` is a private Storage bucket for receipt images. Server services enforce capability and building scope before upload, delete, or signed URL generation.
 

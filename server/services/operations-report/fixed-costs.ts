@@ -9,6 +9,7 @@ import { AUDIT_ACTIONS } from '~/utils/constants/audit'
 import { BuildingRepository } from '../../repositories/buildings'
 import { BuildingFixedCostRepository } from '../../repositories/operations-report/fixed-costs'
 import { AuditService } from '../audit'
+import { OperationsReportLockService } from './locks'
 import { assertBuildingScope } from '../../utils/scope'
 
 /** period ordinal used for range comparisons (year*12 + month). */
@@ -51,6 +52,14 @@ export const BuildingFixedCostService = {
       throwForbidden('Không có quyền cấu hình chi phí cố định')
     const building = await requireBuilding(event, input.building_id)
     await assertBuildingScope(event, user, building.id, 'write')
+    await OperationsReportLockService.assertNoClosedReportsInRange(
+      event,
+      building.id,
+      input.effective_from_period_year,
+      input.effective_from_period_month,
+      input.effective_to_period_year ?? null,
+      input.effective_to_period_month ?? null,
+    )
 
     await this.assertNoOverlap(event, building.id, input.category, {
       from: ordinal(input.effective_from_period_year, input.effective_from_period_month),
@@ -86,14 +95,42 @@ export const BuildingFixedCostService = {
     await assertBuildingScope(event, user, existing.buildingId, 'write')
 
     // If the effective-to changes, re-check overlap against the other rows.
+    const nextToYear = input.effective_to_period_year !== undefined
+      ? input.effective_to_period_year
+      : existing.effectiveToPeriodYear
+    const nextToMonth = input.effective_to_period_month !== undefined
+      ? input.effective_to_period_month
+      : existing.effectiveToPeriodMonth
     const nextTo =
       input.effective_to_period_year !== undefined || input.effective_to_period_month !== undefined
-        ? input.effective_to_period_year != null && input.effective_to_period_month != null
-          ? ordinal(input.effective_to_period_year, input.effective_to_period_month)
+        ? nextToYear != null && nextToMonth != null
+          ? ordinal(nextToYear, nextToMonth)
           : null
         : existing.effectiveToPeriodYear != null && existing.effectiveToPeriodMonth != null
           ? ordinal(existing.effectiveToPeriodYear, existing.effectiveToPeriodMonth)
           : null
+    const changesReportingValue =
+      input.amount !== undefined ||
+      input.effective_to_period_year !== undefined ||
+      input.effective_to_period_month !== undefined
+    if (changesReportingValue) {
+      await OperationsReportLockService.assertNoClosedReportsInRange(
+        event,
+        existing.buildingId,
+        existing.effectiveFromPeriodYear,
+        existing.effectiveFromPeriodMonth,
+        existing.effectiveToPeriodYear,
+        existing.effectiveToPeriodMonth,
+      )
+      await OperationsReportLockService.assertNoClosedReportsInRange(
+        event,
+        existing.buildingId,
+        existing.effectiveFromPeriodYear,
+        existing.effectiveFromPeriodMonth,
+        nextToYear,
+        nextToMonth,
+      )
+    }
     await this.assertNoOverlap(
       event,
       existing.buildingId,

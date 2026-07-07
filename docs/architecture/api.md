@@ -150,6 +150,8 @@ Server services should raise domain-specific conflicts rather than letting datab
 | Method | Path |
 | --- | --- |
 | GET | `/api/operations-report` |
+| POST | `/api/operations-report/close` |
+| POST | `/api/operations-report/reopen` |
 | GET | `/api/operations-report/export` |
 | GET | `/api/building-expenses` |
 | POST | `/api/building-expenses` |
@@ -171,6 +173,7 @@ Server services should raise domain-specific conflicts rather than letting datab
 | PATCH | `/api/prepaid-expenses/[id]` |
 | DELETE | `/api/prepaid-expenses/[id]` |
 | GET | `/api/reserve-funds/[buildingId]` |
+| POST | `/api/reserve-funds/[buildingId]/refresh-accrual` |
 | GET | `/api/reserve-fund-rates` |
 | POST | `/api/reserve-fund-rates` |
 | PATCH | `/api/reserve-fund-rates/[id]` |
@@ -179,6 +182,7 @@ Server services should raise domain-specific conflicts rather than letting datab
 | PATCH | `/api/shared-expenses/[id]` |
 | DELETE | `/api/shared-expenses/[id]` |
 | POST | `/api/shared-expenses/[id]/allocate` |
+| POST | `/api/internal/operations-report/auto-close` |
 
-Operations report export requires `operations-report.export`. Expense receipt routes accept a private image attachment and return the expense DTO with a short-lived signed receipt URL when present. Recurring expense `record` advances the reminder and returns a prefill payload for the normal building expense form; the actual expense is still created through `/api/building-expenses`. Prepaid expenses are owner/admin configuration records and contribute monthly allocation to `/api/operations-report`.
-One-off building expenses and fixed costs keep using their existing `note` fields for user-entered display labels; recurring expenses, prepaid expenses, and shared expenses use their existing `name` fields. Reserve fund routes are owner/admin only, derive balance from active transactions, and reserve rates are managed through building settings. Shared-expense routes are owner/admin only; allocation materializes normal `building_expenses` rows for the selected period.
+Operations report export requires `operations-report.export`; report close/reopen and reserve accrual refresh are admin-only. Close accepts `building_id`, `period_year`, and `period_month`; reopen also requires `reason`; reserve accrual refresh accepts only the target period and never accepts an amount. Expense receipt routes accept a private image attachment and return the expense DTO with a short-lived signed receipt URL when present. Recurring expense `record` advances the reminder and returns a prefill payload for the normal building expense form; the actual expense is still created through `/api/building-expenses`. Prepaid expenses are owner/admin configuration records and contribute monthly allocation to `/api/operations-report`.
+One-off building expenses and fixed costs keep using their existing `note` fields for user-entered display labels; recurring expenses, prepaid expenses, and shared expenses use their existing `name` fields. Reserve fund routes are owner/admin for read/manage, derive balance from active transactions, and reserve rates are managed through building settings. Shared-expense routes are owner/admin only; allocation materializes normal `building_expenses` rows for the selected period. The internal auto-close route requires `NUXT_OPERATIONS_REPORT_AUTO_CLOSE_SECRET` and is intended for Nitro/platform cron, not browser use.

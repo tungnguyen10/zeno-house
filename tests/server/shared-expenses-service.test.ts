@@ -12,6 +12,7 @@ const deactivateShared = vi.fn()
 const hasAllocation = vi.fn()
 const insertExpense = vi.fn()
 const assertBuildingScope = vi.fn()
+const assertReportOpen = vi.fn()
 
 vi.mock('../../server/repositories/shared-expenses', () => ({
   SharedExpenseRepository: {
@@ -31,6 +32,12 @@ vi.mock('../../server/repositories/operations-report/expenses', () => ({
 
 vi.mock('../../server/utils/scope', () => ({
   assertBuildingScope,
+}))
+
+vi.mock('../../server/services/operations-report/locks', () => ({
+  OperationsReportLockService: {
+    assertReportOpen,
+  },
 }))
 
 const owner = { id: 'owner-1', app_metadata: { role: 'owner' } } as AuthUser
@@ -58,6 +65,7 @@ describe('SharedExpenseService', () => {
     findById.mockResolvedValue(shared())
     hasAllocation.mockResolvedValue(false)
     assertBuildingScope.mockResolvedValue(undefined)
+    assertReportOpen.mockResolvedValue(undefined)
     insertExpense
       .mockResolvedValueOnce({ id: 'expense-1', amount: 500 })
       .mockResolvedValueOnce({ id: 'expense-2', amount: 501 })
@@ -79,6 +87,8 @@ describe('SharedExpenseService', () => {
       building_id: 'building-2',
       amount: 501,
     }), 'owner-1')
+    expect(assertReportOpen).toHaveBeenCalledWith(expect.anything(), 'building-1', 2026, 7)
+    expect(assertReportOpen).toHaveBeenCalledWith(expect.anything(), 'building-2', 2026, 7)
     expect(result.generatedExpenses.map(row => row.amount)).toEqual([500, 501])
   })
 

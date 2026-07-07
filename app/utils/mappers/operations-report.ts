@@ -3,6 +3,7 @@ import type {
   BuildingExpense,
   BuildingFixedCost,
   BuildingReserveFundRate,
+  OperationsReportClosure,
   PrepaidExpense,
   ReserveFund,
   ReserveFundTransaction,
@@ -48,6 +49,66 @@ export interface PrepaidExpenseRow {
   created_by: string | null
   created_at: string | null
   updated_at: string | null
+}
+
+export interface OperationsReportPeriodRow {
+  id: string
+  building_id: string
+  period_year: number
+  period_month: number
+  status: string
+  close_source: string | null
+  closed_at: string | null
+  closed_by: string | null
+  reopened_at: string | null
+  reopened_by: string | null
+  reopen_reason: string | null
+  created_at: string | null
+  updated_at: string | null
+}
+
+export function mapOperationsReportClosure(
+  row: OperationsReportPeriodRow,
+): OperationsReportClosure {
+  return {
+    id: row.id,
+    buildingId: row.building_id,
+    periodYear: row.period_year,
+    periodMonth: row.period_month,
+    status: row.status === 'closed' ? 'closed' : 'open',
+    closeSource: row.close_source === 'manual' || row.close_source === 'auto'
+      ? row.close_source
+      : null,
+    closedAt: row.closed_at,
+    closedBy: row.closed_by,
+    reopenedAt: row.reopened_at,
+    reopenedBy: row.reopened_by,
+    reopenReason: row.reopen_reason,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  }
+}
+
+export function openOperationsReportClosure(input: {
+  buildingId: string
+  periodYear: number
+  periodMonth: number
+}): OperationsReportClosure {
+  return {
+    id: null,
+    buildingId: input.buildingId,
+    periodYear: input.periodYear,
+    periodMonth: input.periodMonth,
+    status: 'open',
+    closeSource: null,
+    closedAt: null,
+    closedBy: null,
+    reopenedAt: null,
+    reopenedBy: null,
+    reopenReason: null,
+    createdAt: null,
+    updatedAt: null,
+  }
 }
 
 export function mapBuildingExpense(row: Tables<'building_expenses'>): BuildingExpense {

@@ -16,6 +16,7 @@ const storageRemove = vi.fn()
 const storageCreateSignedUrl = vi.fn()
 const syncExpenseDeduction = vi.fn()
 const voidExpenseDeduction = vi.fn()
+const assertReportOpen = vi.fn()
 
 vi.mock('../../../server/repositories/buildings', () => ({
   BuildingRepository: { findById: findBuildingById },
@@ -44,6 +45,12 @@ vi.mock('../../../server/services/operations-report/reserve-funds', () => ({
     createReserveFundedExpense: vi.fn(),
     syncExpenseDeduction,
     voidExpenseDeduction,
+  },
+}))
+
+vi.mock('../../../server/services/operations-report/locks', () => ({
+  OperationsReportLockService: {
+    assertReportOpen,
   },
 }))
 
@@ -97,6 +104,7 @@ describe('BuildingExpenseService', () => {
     storageCreateSignedUrl.mockResolvedValue({ data: { signedUrl: 'https://signed.test/receipt' }, error: null })
     syncExpenseDeduction.mockResolvedValue(null)
     voidExpenseDeduction.mockResolvedValue(null)
+    assertReportOpen.mockResolvedValue(undefined)
   })
 
   it('soft-voids an expense with void metadata and audit', async () => {
@@ -129,6 +137,7 @@ describe('BuildingExpenseService', () => {
       'admin-1',
       'duplicate entry',
     )
+    expect(assertReportOpen).toHaveBeenCalledWith(expect.anything(), 'building-1', 2026, 6)
     expect(voidExpenseDeduction).toHaveBeenCalledWith(expect.anything(), admin, voided)
     expect(appendAudit).toHaveBeenCalledWith(
       expect.anything(),

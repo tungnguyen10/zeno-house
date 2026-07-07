@@ -43,6 +43,9 @@ const {
   voidExpense,
   uploadExpenseReceipt,
   removeExpenseReceipt,
+  closeReport,
+  reopenReport,
+  refreshReserveAccrual,
 } = useOperationsMutations()
 const {
   upcomingRecurringExpenses,
@@ -52,13 +55,20 @@ const {
 } = useRecurringExpenses(buildingId)
 
 // --- Capability gates ---------------------------------------------------
-const canWriteExpense = computed(() => auth.can('building-expenses.write'))
-const canVoidExpense = computed(() => auth.can('building-expenses.delete'))
+const isReportClosed = computed(() => report.value?.closure.status === 'closed')
+const canWriteExpense = computed(() => auth.can('building-expenses.write') && !isReportClosed.value)
+const canVoidExpense = computed(() => auth.can('building-expenses.delete') && !isReportClosed.value)
 const canExportReport = computed(() => auth.can('operations-report.export'))
 const canReadRecurring = computed(() => auth.can('recurring-expenses.read'))
 const canReadReserveFund = computed(() => auth.can('reserve-fund.read'))
 const canManageReserveFund = computed(() => auth.can('reserve-fund.manage'))
+const canCloseReport = computed(() => auth.can('operations-report.close'))
+const canReopenReport = computed(() => auth.can('operations-report.reopen'))
+const canRefreshReserveAccrual = computed(() => auth.can('reserve-fund.refresh-accrual'))
 const exportLoading = ref(false)
+const closingReport = ref(false)
+const reopeningReport = ref(false)
+const refreshingReserve = ref(false)
 
 async function exportReportXlsx() {
   exportLoading.value = true
@@ -71,6 +81,62 @@ async function exportReportXlsx() {
   }
   finally {
     exportLoading.value = false
+  }
+}
+
+function reportPeriodPayload() {
+  if (!buildingId.value) throw new Error('No building id')
+  return {
+    building_id: buildingId.value,
+    period_year: periodYear.value,
+    period_month: periodMonth.value,
+  }
+}
+
+async function closeCurrentReport() {
+  closingReport.value = true
+  try {
+    await closeReport(reportPeriodPayload())
+    toast.success('Đã chốt báo cáo vận hành.')
+    await reload()
+  }
+  catch (err) {
+    toast.error(resolveError(err, 'Không chốt được báo cáo vận hành.'))
+  }
+  finally {
+    closingReport.value = false
+  }
+}
+
+async function reopenCurrentReport() {
+  const reason = window.prompt('Lý do mở lại báo cáo vận hành')
+  if (!reason?.trim()) return
+  reopeningReport.value = true
+  try {
+    await reopenReport({ ...reportPeriodPayload(), reason: reason.trim() })
+    toast.success('Đã mở lại báo cáo vận hành.')
+    await reload()
+  }
+  catch (err) {
+    toast.error(resolveError(err, 'Không mở lại được báo cáo vận hành.'))
+  }
+  finally {
+    reopeningReport.value = false
+  }
+}
+
+async function refreshCurrentReserveAccrual() {
+  refreshingReserve.value = true
+  try {
+    await refreshReserveAccrual(reportPeriodPayload())
+    toast.success('Đã cập nhật quỹ dự phòng.')
+    await reload()
+  }
+  catch (err) {
+    toast.error(resolveError(err, 'Không cập nhật được quỹ dự phòng.'))
+  }
+  finally {
+    refreshingReserve.value = false
   }
 }
 
@@ -305,6 +371,44 @@ function signedClass(value: number): string {
       description="Doanh thu, chi phí và lợi nhuận theo tòa nhà từng tháng."
     >
       <template #actions>
+        <UiBadge
+          v-if="report"
+          :variant="isReportClosed ? 'success' : 'warning'"
+        >
+          {{ isReportClosed ? 'Đã chốt báo cáo' : 'Đang mở' }}
+        </UiBadge>
+        <UiButton
+          v-if="canRefreshReserveAccrual && report"
+          size="sm"
+          variant="secondary"
+          :loading="refreshingReserve"
+          :disabled="isLoading"
+          @click="refreshCurrentReserveAccrual"
+        >
+          <IconRefresh class="h-4 w-4" aria-hidden="true" />
+          Cập nhật quỹ
+        </UiButton>
+        <UiButton
+          v-if="canCloseReport && report && !isReportClosed"
+          size="sm"
+          :loading="closingReport"
+          :disabled="isLoading"
+          @click="closeCurrentReport"
+        >
+          <IconLock class="h-4 w-4" aria-hidden="true" />
+          Chốt báo cáo
+        </UiButton>
+        <UiButton
+          v-if="canReopenReport && report && isReportClosed"
+          size="sm"
+          variant="secondary"
+          :loading="reopeningReport"
+          :disabled="isLoading"
+          @click="reopenCurrentReport"
+        >
+          <IconRefresh class="h-4 w-4" aria-hidden="true" />
+          Mở lại
+        </UiButton>
         <UiButton
           v-if="canExportReport"
           size="sm"
@@ -527,7 +631,7 @@ function signedClass(value: number): string {
           <UiMetric
             label="Tiền quỹ tháng"
             :value="formatCurrency(report.reserveFund.monthlyAccrualIsEstimated ? report.reserveFund.monthlyAccrualEstimated : report.reserveFund.monthlyAccrual)"
-            :caption="report.reserveFund.monthlyAccrualIsEstimated ? 'Ước tính (chưa chốt kỳ)' : 'Đã chốt kỳ'"
+            :caption="report.reserveFund.monthlyAccrualIsEstimated ? 'Ước tính (chưa chốt báo cáo)' : 'Đã chốt báo cáo'"
             tone="success"
           />
           <UiMetric

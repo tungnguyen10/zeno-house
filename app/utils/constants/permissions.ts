@@ -56,6 +56,12 @@ export const OWNER_CAPABILITIES = [
   'users.create.manager',
 ] as const
 
+export const ADMIN_ONLY_CAPABILITIES = [
+  'operations-report.close',
+  'operations-report.reopen',
+  'reserve-fund.refresh-accrual',
+] as const
+
 /**
  * Single source of truth for role capabilities, shared by the client (UI
  * visibility) and the server (authorization). The server remains authoritative;
@@ -64,6 +70,7 @@ export const OWNER_CAPABILITIES = [
 export const ROLE_CAPABILITIES: Record<UserRole, readonly string[]> = {
   [ROLES.ADMIN]: [
     ...OWNER_CAPABILITIES,
+    ...ADMIN_ONLY_CAPABILITIES,
     'billing.reopen',
     'billing.unissue',
     // Global user management: admin sees/manages everyone.
@@ -98,7 +105,9 @@ export const ROLE_CAPABILITIES: Record<UserRole, readonly string[]> = {
   ],
 }
 
-export type Capability = (typeof OWNER_CAPABILITIES)[number]
+export type Capability =
+  | (typeof OWNER_CAPABILITIES)[number]
+  | (typeof ADMIN_ONLY_CAPABILITIES)[number]
 
 const CAPABILITY_SETS: Record<UserRole, Set<string>> = {
   [ROLES.ADMIN]: new Set(ROLE_CAPABILITIES[ROLES.ADMIN]),

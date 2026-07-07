@@ -92,3 +92,38 @@ The system SHALL surface reserve fund accrual, deduction, monthly balance, and c
 #### Scenario: Reserve totals follow active expenses
 - **WHEN** a reserve-funded expense is voided
 - **THEN** the operations report excludes that expense's deduction from reserve totals
+
+### Requirement: Operations report period closure
+The system SHALL maintain a close state for each building/month operations report independent of billing period status.
+
+#### Scenario: Report returns closure state
+- **WHEN** the monthly operations report is fetched for a building/month
+- **THEN** the response includes the report closure status, and missing closure rows are treated as open
+
+#### Scenario: Admin closes report
+- **WHEN** an admin closes a building/month operations report
+- **THEN** the system marks that report period closed and refreshes the monthly reserve accrual from latest operations profit
+
+#### Scenario: Admin reopens report
+- **WHEN** an admin reopens a closed operations report with a reason
+- **THEN** the system marks the report period open and allows normal authorized expense edits again
+
+#### Scenario: Non-admin cannot close report
+- **WHEN** an owner or manager attempts to close, reopen, or refresh the report accrual
+- **THEN** the system rejects the action with a forbidden error
+
+#### Scenario: Closed report locks report inputs
+- **WHEN** a report period is closed
+- **THEN** expense mutations and configuration changes that affect that building/month are blocked until admin reopens the report
+
+#### Scenario: Auto-close report at month end
+- **WHEN** the internal auto-close task runs on the last day of a month in `Asia/Ho_Chi_Minh`
+- **THEN** active building reports for that month are closed and reserve accruals are refreshed
+
+#### Scenario: Auto-close skips non-month-end days
+- **WHEN** the internal auto-close task runs on any day that is not the last day of the month in `Asia/Ho_Chi_Minh`
+- **THEN** it does not close any operations report period
+
+#### Scenario: Report close does not close billing
+- **WHEN** an operations report is manually closed, manually reopened, or auto-closed
+- **THEN** no billing period is automatically closed or reopened

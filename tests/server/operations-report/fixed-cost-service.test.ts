@@ -9,6 +9,7 @@ const insertFixedCost = vi.fn()
 const updateFixedCostById = vi.fn()
 const assertBuildingScope = vi.fn()
 const appendAudit = vi.fn()
+const assertNoClosedReportsInRange = vi.fn()
 
 vi.mock('../../../server/repositories/buildings', () => ({
   BuildingRepository: { findByIdentifier: findBuildingByIdentifier },
@@ -29,6 +30,12 @@ vi.mock('../../../server/utils/scope', () => ({
 
 vi.mock('../../../server/services/audit', () => ({
   AuditService: { append: appendAudit },
+}))
+
+vi.mock('../../../server/services/operations-report/locks', () => ({
+  OperationsReportLockService: {
+    assertNoClosedReportsInRange,
+  },
 }))
 
 const owner = { id: 'owner-1', app_metadata: { role: 'owner' } } as AuthUser
@@ -57,6 +64,7 @@ describe('BuildingFixedCostService', () => {
     findBuildingByIdentifier.mockResolvedValue({ id: 'building-1', name: 'Building 1' })
     assertBuildingScope.mockResolvedValue(undefined)
     appendAudit.mockResolvedValue(undefined)
+    assertNoClosedReportsInRange.mockResolvedValue(undefined)
   })
 
   it('rejects overlapping fixed-cost ranges for the same building and category', async () => {

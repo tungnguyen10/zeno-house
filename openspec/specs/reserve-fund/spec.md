@@ -46,8 +46,8 @@ The system SHALL maintain a per-building reserve fund whose balance is derived f
 The system SHALL record reserve fund changes as automatic monthly accrual transactions and linked expense deduction transactions.
 
 #### Scenario: Monthly accrual increases balance
-- **WHEN** a billing period is closed for a building with an effective reserve rate
-- **THEN** the system records one monthly accrual transaction for that building/month based on issued revenue and the effective rate
+- **WHEN** a billing period, operations report close, auto-close, or admin refresh records accrual for a building with an effective reserve rate
+- **THEN** the system records one monthly accrual transaction for that building/month based on non-negative operations profit and the effective rate
 
 #### Scenario: Monthly accrual is idempotent
 - **WHEN** close processing runs more than once for the same building/month
@@ -60,6 +60,22 @@ The system SHALL record reserve fund changes as automatic monthly accrual transa
 #### Scenario: Manual movements are not supported
 - **WHEN** a user views reserve fund controls
 - **THEN** the system does not present manual deposit or manual withdrawal actions
+
+#### Scenario: Admin refreshes monthly accrual
+- **WHEN** an admin refreshes reserve accrual for a building/month
+- **THEN** the system recalculates and upserts that month’s `monthly_accrual` transaction without creating a manual movement
+
+#### Scenario: Refresh after expense changes
+- **WHEN** report-affecting expenses change after billing close for a building/month
+- **THEN** an admin refresh recalculates the latest formula-derived monthly accrual for that same building/month
+
+#### Scenario: Refresh does not accept typed amount
+- **WHEN** an admin refreshes reserve accrual
+- **THEN** the request accepts only the target period and never accepts a user-entered transaction amount
+
+#### Scenario: Non-admin refresh denied
+- **WHEN** an owner or manager attempts to refresh reserve accrual
+- **THEN** the system responds with a forbidden error
 
 ### Requirement: Expense funded from reserve
 The system SHALL let an expense be marked as deducted from the reserve fund without requiring available balance.

@@ -21,6 +21,15 @@ export const operationsReportQuerySchema = z.object({
 
 export type OperationsReportQuery = z.infer<typeof operationsReportQuerySchema>
 
+export const operationsReportCloseSchema = operationsReportQuerySchema
+export type OperationsReportCloseInput = z.infer<typeof operationsReportCloseSchema>
+
+export const operationsReportReopenSchema = operationsReportQuerySchema.extend({
+  reason: z.string().trim().min(1, 'Lý do mở lại là bắt buộc').max(500),
+})
+
+export type OperationsReportReopenInput = z.infer<typeof operationsReportReopenSchema>
+
 // ---------------------------------------------------------------------------
 // Building expenses
 // ---------------------------------------------------------------------------
@@ -66,6 +75,13 @@ export type BuildingExpenseVoidInput = z.infer<typeof buildingExpenseVoidSchema>
 export const reserveFundParamsSchema = z.object({
   buildingId: z.string().uuid('buildingId không hợp lệ'),
 })
+
+export const reserveFundRefreshAccrualSchema = z.object({
+  period_year: periodYear,
+  period_month: periodMonth,
+})
+
+export type ReserveFundRefreshAccrualInput = z.infer<typeof reserveFundRefreshAccrualSchema>
 
 export const reserveFundMovementSchema = z.object({
   amount: z.coerce.number().positive('Số tiền phải lớn hơn 0'),

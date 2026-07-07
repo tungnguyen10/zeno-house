@@ -11,6 +11,10 @@ const listExpenses = vi.fn()
 const listActiveAllocations = vi.fn()
 const getReserveFund = vi.fn()
 const findEffectiveRate = vi.fn()
+const findOrOpenClosure = vi.fn()
+const closeClosure = vi.fn()
+const reopenClosure = vi.fn()
+const recordMonthlyAccrual = vi.fn()
 const assertBuildingScope = vi.fn()
 
 vi.mock('../../../server/repositories/buildings', () => ({
@@ -19,6 +23,14 @@ vi.mock('../../../server/repositories/buildings', () => ({
 
 vi.mock('../../../server/repositories/operations-report/report', () => ({
   OperationsReportRepository: { fetchBillingData },
+}))
+
+vi.mock('../../../server/repositories/operations-report/periods', () => ({
+  OperationsReportPeriodRepository: {
+    findOrOpen: findOrOpenClosure,
+    close: closeClosure,
+    reopen: reopenClosure,
+  },
 }))
 
 vi.mock('../../../server/repositories/operations-report/fixed-costs', () => ({
@@ -37,6 +49,7 @@ vi.mock('../../../server/services/operations-report/reserve-funds', () => ({
   ReserveFundService: {
     get: getReserveFund,
     findEffectiveRate,
+    recordMonthlyAccrual,
   },
 }))
 
@@ -46,6 +59,7 @@ vi.mock('../../../server/utils/scope', () => ({
 
 const admin = { id: 'admin-1', app_metadata: { role: 'admin' } } as AuthUser
 const manager = { id: 'manager-1', app_metadata: { role: 'manager' } } as AuthUser
+const owner = { id: 'owner-1', app_metadata: { role: 'owner' } } as AuthUser
 
 function fixedCost(overrides: Partial<BuildingFixedCost>): BuildingFixedCost {
   return {
@@ -124,6 +138,52 @@ describe('OperationsReportService.getReport', () => {
     listActiveAllocations.mockResolvedValue([
       { id: 'prepaid-1', name: 'Internet năm', category: 'internet', monthlyAmount: 250_000 },
     ])
+    findOrOpenClosure.mockResolvedValue({
+      id: 'closure-1',
+      buildingId: 'building-1',
+      periodYear: 2026,
+      periodMonth: 6,
+      status: 'closed',
+      closeSource: 'manual',
+      closedAt: '2026-06-30T16:55:00Z',
+      closedBy: 'admin-1',
+      reopenedAt: null,
+      reopenedBy: null,
+      reopenReason: null,
+      createdAt: '',
+      updatedAt: '',
+    })
+    closeClosure.mockResolvedValue({
+      id: 'closure-1',
+      buildingId: 'building-1',
+      periodYear: 2026,
+      periodMonth: 6,
+      status: 'closed',
+      closeSource: 'manual',
+      closedAt: '2026-06-30T16:55:00Z',
+      closedBy: 'admin-1',
+      reopenedAt: null,
+      reopenedBy: null,
+      reopenReason: null,
+      createdAt: '',
+      updatedAt: '',
+    })
+    reopenClosure.mockResolvedValue({
+      id: 'closure-1',
+      buildingId: 'building-1',
+      periodYear: 2026,
+      periodMonth: 6,
+      status: 'open',
+      closeSource: null,
+      closedAt: null,
+      closedBy: null,
+      reopenedAt: '2026-06-30T17:00:00Z',
+      reopenedBy: 'admin-1',
+      reopenReason: 'fix expense',
+      createdAt: '',
+      updatedAt: '',
+    })
+    recordMonthlyAccrual.mockResolvedValue({ id: 'accrual-1' })
     findEffectiveRate.mockResolvedValue({ reserveRatePercent: 5 })
     getReserveFund.mockResolvedValue({
       id: 'fund-1',
@@ -202,6 +262,8 @@ describe('OperationsReportService.getReport', () => {
 
     expect(report.metrics.profitByRevenue).toBe(5_000_000 - 11_650_000)
     expect(report.metrics.profitByCash).toBe(4_000_000 - 11_650_000)
+    expect(report.closure.status).toBe('closed')
+    expect(report.billingPeriodStatus).toBe('closed')
     expect(report.prepaidItems).toHaveLength(1)
     expect(report.reserveFund).toEqual({
       effectiveRatePercent: 5,
@@ -268,10 +330,21 @@ describe('OperationsReportService.getReport', () => {
     expect(findEffectiveRate).not.toHaveBeenCalled()
   })
 
-  it('uses estimated monthly accrual when period is reopened', async () => {
-    fetchBillingData.mockResolvedValueOnce({
-      ...billing,
-      periodStatus: 'collecting',
+  it('uses estimated monthly accrual when report is open', async () => {
+    findOrOpenClosure.mockResolvedValueOnce({
+      id: 'closure-1',
+      buildingId: 'building-1',
+      periodYear: 2026,
+      periodMonth: 6,
+      status: 'open',
+      closeSource: null,
+      closedAt: null,
+      closedBy: null,
+      reopenedAt: '2026-06-30T17:00:00Z',
+      reopenedBy: 'admin-1',
+      reopenReason: 'fix expense',
+      createdAt: '',
+      updatedAt: '',
     })
     const { OperationsReportService } = await import(
       '../../../server/services/operations-report/report'
@@ -290,5 +363,78 @@ describe('OperationsReportService.getReport', () => {
       cumulativeBalance: -50_000,
       cumulativeBalanceIsEstimated: false,
     })
+  })
+
+  it('closes report and refreshes reserve accrual from latest operations profit', async () => {
+    const { OperationsReportService } = await import(
+      '../../../server/services/operations-report/report'
+    )
+
+    const closure = await OperationsReportService.close({} as never, admin, {
+      building_id: 'building-1',
+      period_year: 2026,
+      period_month: 6,
+    })
+
+    expect(closure.status).toBe('closed')
+    expect(recordMonthlyAccrual).toHaveBeenCalledWith(expect.anything(), admin, {
+      buildingId: 'building-1',
+      periodYear: 2026,
+      periodMonth: 6,
+      billingPeriodId: 'period-1',
+      issuedRevenue: 5_000_000,
+      issuedProfitByRevenue: 5_000_000 - 11_650_000,
+    })
+    expect(closeClosure).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      closeSource: 'manual',
+      closedBy: 'admin-1',
+    }))
+  })
+
+  it('denies owner manual close and refresh accrual controls', async () => {
+    const { OperationsReportService } = await import(
+      '../../../server/services/operations-report/report'
+    )
+
+    await expect(
+      OperationsReportService.close({} as never, owner, {
+        building_id: 'building-1',
+        period_year: 2026,
+        period_month: 6,
+      }),
+    ).rejects.toMatchObject({ statusCode: 403 })
+
+    await expect(
+      OperationsReportService.refreshReserveAccrual({} as never, owner, {
+        building_id: 'building-1',
+        period_year: 2026,
+        period_month: 6,
+      }),
+    ).rejects.toMatchObject({ statusCode: 403 })
+  })
+
+  it('system close refreshes accrual and marks close source auto', async () => {
+    const { OperationsReportService } = await import(
+      '../../../server/services/operations-report/report'
+    )
+
+    await OperationsReportService.closeSystem({} as never, {
+      building_id: 'building-1',
+      period_year: 2026,
+      period_month: 6,
+    })
+
+    expect(recordMonthlyAccrual).toHaveBeenCalledWith(expect.anything(), null, {
+      buildingId: 'building-1',
+      periodYear: 2026,
+      periodMonth: 6,
+      billingPeriodId: 'period-1',
+      issuedRevenue: 5_000_000,
+      issuedProfitByRevenue: 5_000_000 - 11_650_000,
+    })
+    expect(closeClosure).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      closeSource: 'auto',
+      closedBy: null,
+    }))
   })
 })

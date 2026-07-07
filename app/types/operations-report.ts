@@ -102,6 +102,25 @@ export interface ReserveFundSummary {
   cumulativeBalanceIsEstimated: boolean
 }
 
+export type OperationsReportPeriodStatus = 'open' | 'closed'
+export type OperationsReportCloseSource = 'manual' | 'auto'
+
+export interface OperationsReportClosure {
+  id: string | null
+  buildingId: string
+  periodYear: number
+  periodMonth: number
+  status: OperationsReportPeriodStatus
+  closeSource: OperationsReportCloseSource | null
+  closedAt: string | null
+  closedBy: string | null
+  reopenedAt: string | null
+  reopenedBy: string | null
+  reopenReason: string | null
+  createdAt: string | null
+  updatedAt: string | null
+}
+
 /** A building-scoped recurring expense reminder template. */
 export interface RecurringExpense {
   id: string
@@ -175,6 +194,8 @@ export interface OperationsReport {
   buildingId: string
   periodYear: number
   periodMonth: number
+  billingPeriodStatus: string | null
+  closure: OperationsReportClosure
   metrics: {
     issuedRevenue: number
     collectedCash: number

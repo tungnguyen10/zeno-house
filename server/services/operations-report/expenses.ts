@@ -15,6 +15,7 @@ import {
 } from '../../repositories/operations-report/expenses'
 import { AuditService } from '../audit'
 import { ReserveFundService } from './reserve-funds'
+import { OperationsReportLockService } from './locks'
 import { db } from '../../utils/db'
 import { assertBuildingScope } from '../../utils/scope'
 
@@ -76,6 +77,12 @@ export const BuildingExpenseService = {
     if (!can(user, 'building-expenses.write')) throwForbidden('Không có quyền thêm chi phí')
     await requireBuilding(event, input.building_id)
     await assertBuildingScope(event, user, input.building_id, 'write')
+    await OperationsReportLockService.assertReportOpen(
+      event,
+      input.building_id,
+      input.period_year,
+      input.period_month,
+    )
 
     const created = input.funded_by === 'reserve_fund'
       ? await ReserveFundService.createReserveFundedExpense(event, user, input)
@@ -103,6 +110,18 @@ export const BuildingExpenseService = {
     if (!existing) throwNotFound('Không tìm thấy khoản chi')
     await assertBuildingScope(event, user, existing.buildingId, 'write')
     if (existing.voidedAt) throwConflict('Khoản chi đã bị hủy, không thể sửa')
+    await OperationsReportLockService.assertReportOpen(
+      event,
+      existing.buildingId,
+      existing.periodYear,
+      existing.periodMonth,
+    )
+    await OperationsReportLockService.assertReportOpen(
+      event,
+      existing.buildingId,
+      input.period_year ?? existing.periodYear,
+      input.period_month ?? existing.periodMonth,
+    )
 
     const updated = await BuildingExpenseRepository.updateById(event, id, input)
     if (existing.fundedBy === 'reserve_fund' || updated.fundedBy === 'reserve_fund') {
@@ -132,6 +151,12 @@ export const BuildingExpenseService = {
     if (!existing) throwNotFound('Không tìm thấy khoản chi')
     await assertBuildingScope(event, user, existing.buildingId, 'write')
     if (existing.voidedAt) throwConflict('Khoản chi đã bị hủy')
+    await OperationsReportLockService.assertReportOpen(
+      event,
+      existing.buildingId,
+      existing.periodYear,
+      existing.periodMonth,
+    )
 
     const voided = await BuildingExpenseRepository.voidById(event, id, user.id, voidReason)
     await ReserveFundService.voidExpenseDeduction(event, user, voided)
@@ -160,6 +185,12 @@ export const BuildingExpenseService = {
     if (!existing) throwNotFound('Không tìm thấy khoản chi')
     await assertBuildingScope(event, user, existing.buildingId, 'write')
     if (existing.voidedAt) throwConflict('Khoản chi đã bị hủy')
+    await OperationsReportLockService.assertReportOpen(
+      event,
+      existing.buildingId,
+      existing.periodYear,
+      existing.periodMonth,
+    )
 
     const contentType = file.type ?? ''
     const ext = RECEIPT_EXTENSIONS[contentType]
@@ -186,6 +217,12 @@ export const BuildingExpenseService = {
     if (!existing) throwNotFound('Không tìm thấy khoản chi')
     await assertBuildingScope(event, user, existing.buildingId, 'write')
     if (existing.voidedAt) throwConflict('Khoản chi đã bị hủy')
+    await OperationsReportLockService.assertReportOpen(
+      event,
+      existing.buildingId,
+      existing.periodYear,
+      existing.periodMonth,
+    )
 
     const updated = await BuildingExpenseRepository.updateReceiptPath(event, id, null)
     if (existing.receiptUrl) {

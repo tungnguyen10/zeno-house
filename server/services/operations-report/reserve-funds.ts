@@ -14,6 +14,7 @@ import type {
 import { BuildingRepository } from '../../repositories/buildings'
 import { BuildingExpenseRepository } from '../../repositories/operations-report/expenses'
 import { ReserveFundRepository } from '../../repositories/operations-report/reserve-funds'
+import { OperationsReportLockService } from './locks'
 import { assertBuildingScope } from '../../utils/scope'
 
 function ordinal(year: number, month: number): number {
@@ -65,6 +66,14 @@ export const ReserveFundService = {
     input: ReserveFundRateCreateInput,
   ): Promise<BuildingReserveFundRate> {
     await requireBuildingAccess(event, user, input.building_id, 'reserve-fund.manage', 'write')
+    await OperationsReportLockService.assertNoClosedReportsInRange(
+      event,
+      input.building_id,
+      input.effective_from_period_year,
+      input.effective_from_period_month,
+      input.effective_to_period_year ?? null,
+      input.effective_to_period_month ?? null,
+    )
     await this.assertNoRateOverlap(event, input.building_id, {
       from: ordinal(input.effective_from_period_year, input.effective_from_period_month),
       to:
@@ -85,14 +94,42 @@ export const ReserveFundService = {
     if (!existing) throwNotFound('Không tìm thấy tỷ lệ quỹ dự phòng')
     await requireBuildingAccess(event, user, existing.buildingId, 'reserve-fund.manage', 'write')
 
+    const nextToYear = input.effective_to_period_year !== undefined
+      ? input.effective_to_period_year
+      : existing.effectiveToPeriodYear
+    const nextToMonth = input.effective_to_period_month !== undefined
+      ? input.effective_to_period_month
+      : existing.effectiveToPeriodMonth
     const nextTo =
       input.effective_to_period_year !== undefined || input.effective_to_period_month !== undefined
-        ? input.effective_to_period_year != null && input.effective_to_period_month != null
-          ? ordinal(input.effective_to_period_year, input.effective_to_period_month)
+        ? nextToYear != null && nextToMonth != null
+          ? ordinal(nextToYear, nextToMonth)
           : null
         : existing.effectiveToPeriodYear != null && existing.effectiveToPeriodMonth != null
           ? ordinal(existing.effectiveToPeriodYear, existing.effectiveToPeriodMonth)
           : null
+    const changesReportingValue =
+      input.reserve_rate_percent !== undefined ||
+      input.effective_to_period_year !== undefined ||
+      input.effective_to_period_month !== undefined
+    if (changesReportingValue) {
+      await OperationsReportLockService.assertNoClosedReportsInRange(
+        event,
+        existing.buildingId,
+        existing.effectiveFromPeriodYear,
+        existing.effectiveFromPeriodMonth,
+        existing.effectiveToPeriodYear,
+        existing.effectiveToPeriodMonth,
+      )
+      await OperationsReportLockService.assertNoClosedReportsInRange(
+        event,
+        existing.buildingId,
+        existing.effectiveFromPeriodYear,
+        existing.effectiveFromPeriodMonth,
+        nextToYear,
+        nextToMonth,
+      )
+    }
     await this.assertNoRateOverlap(
       event,
       existing.buildingId,
@@ -183,17 +220,23 @@ export const ReserveFundService = {
 
   async recordMonthlyAccrual(
     event: H3Event,
-    user: AuthUser,
+    user: AuthUser | null,
     input: {
       buildingId: string
       periodYear: number
       periodMonth: number
-      billingPeriodId: string
+      billingPeriodId: string | null
       issuedRevenue: number
       issuedProfitByRevenue: number
     },
   ): Promise<ReserveFundTransaction> {
-    await requireBuildingAccess(event, user, input.buildingId, 'reserve-fund.manage', 'write')
+    if (user) {
+      await requireBuildingAccess(event, user, input.buildingId, 'reserve-fund.manage', 'write')
+    }
+    else {
+      const building = await BuildingRepository.findById(event, input.buildingId)
+      if (!building) throwNotFound('Không tìm thấy tòa nhà')
+    }
     const rate = await this.findEffectiveRate(
       event,
       input.buildingId,
@@ -211,7 +254,7 @@ export const ReserveFundService = {
       issuedRevenue: input.issuedRevenue,
       reserveRatePercent,
       amount,
-      createdBy: user.id,
+      createdBy: user?.id ?? null,
     })
   },
 

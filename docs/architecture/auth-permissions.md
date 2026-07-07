@@ -171,6 +171,8 @@ period's building via `assertBuildingScope`.
 | --- | --- | --- |
 | `operations-report.read` | admin, owner, manager | View the monthly report. |
 | `operations-report.export` | admin, owner | Export the monthly report workbook. |
+| `operations-report.close` | admin | Close an operations report period and refresh reserve accrual. |
+| `operations-report.reopen` | admin | Reopen a closed operations report period with a reason. |
 | `building-expenses.read` | admin, owner, manager | View monthly expenses and signed receipt links. |
 | `building-expenses.write` | admin, owner, manager | Create/edit expenses and upload/remove receipts in scope. |
 | `building-expenses.delete` | admin, owner | Soft-void expenses. |
@@ -183,11 +185,12 @@ period's building via `assertBuildingScope`.
 | `prepaid-expenses.write` | admin, owner | Create, update, or delete prepaid expenses. |
 | `reserve-fund.read` | admin, owner | View reserve summary data in the operations report and reserve fund details. |
 | `reserve-fund.manage` | admin, owner | Manage reserve rate history and create automatic accrual/deduction ledger rows. |
+| `reserve-fund.refresh-accrual` | admin | Manually refresh the formula-derived monthly accrual for a building/month. |
 | `shared-expenses.read` | admin, owner | View owner-scoped shared expense definitions. |
 | `shared-expenses.write` | admin, owner | Create, update, or deactivate shared expenses and membership. |
 | `shared-expenses.allocate` | admin, owner | Allocate shared expenses into building expenses for a period. |
 
-Managers can enter expenses and receipts for assigned buildings and may record recurring reminders when they also have `building-expenses.write`. They cannot export operations workbooks or manage fixed costs, recurring templates, or prepaid expenses.
+Managers can enter expenses and receipts for assigned buildings and may record recurring reminders when they also have `building-expenses.write`. They cannot export operations workbooks or manage fixed costs, recurring templates, or prepaid expenses. Only admins can close/reopen operations report periods or manually refresh reserve accruals.
 Managers also receive no reserve-fund or shared-expense capabilities, so both API access and UI controls are hidden from them.
 
 ## Security Rules
