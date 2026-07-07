@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import clsx from 'clsx'
 import { computed, ref } from 'vue'
 import { useAuthStore } from '~/stores/auth'
 import type {
@@ -296,21 +297,21 @@ function signedClass(value: number): string {
     </UiPageHeader>
 
     <!-- Filters -->
-    <div class="flex flex-wrap items-end gap-3 mb-6">
+    <div class="mb-6 grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:items-end">
       <UiSelect
         v-model="buildingModel"
         label="Tòa nhà"
         :options="buildingOptions"
         placeholder="Chọn tòa nhà"
-        class="min-w-[200px]"
+        class="col-span-2 sm:min-w-[200px]"
       />
-      <UiSelect v-model="yearModel" label="Năm" :options="yearOptions" class="w-32" />
-      <UiSelect v-model="monthModel" label="Tháng" :options="monthOptions" class="w-36" />
+      <UiSelect v-model="yearModel" label="Năm" :options="yearOptions" class="sm:w-32" />
+      <UiSelect v-model="monthModel" label="Tháng" :options="monthOptions" class="sm:w-36" />
       <UiSelect
         v-model="expenseCategoryModel"
         label="Loại chi"
         :options="expenseCategoryOptions"
-        class="min-w-[190px]"
+        class="col-span-2 sm:min-w-[190px]"
       />
     </div>
 
@@ -404,7 +405,7 @@ function signedClass(value: number): string {
             caption="Tiền quỹ − Chi từ quỹ"
           />
           <UiMetric
-            label="Tổng số dư"
+            label="Tổng quỹ tòa nhà"
             :value="formatCurrency(report.reserveFund.cumulativeBalance)"
             :tone="report.reserveFund.cumulativeBalance >= 0 ? 'success' : 'danger'"
             :caption="report.reserveFund.cumulativeBalanceIsEstimated ? 'Ước tính theo kỳ đang mở' : 'Theo số đã chốt'"
@@ -413,8 +414,8 @@ function signedClass(value: number): string {
       </UiSection>
 
       <!-- Utility margins -->
-      <div class="mt-8 grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <div class="rounded-2xl border border-dark-border bg-dark-surface p-5">
+      <div class="mt-8 grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-2">
+        <div class="rounded-2xl border border-dark-border bg-dark-surface p-4 sm:p-5">
           <div class="flex items-center justify-between">
             <h3 class="text-sm font-semibold text-white">Điện — chênh lệch</h3>
             <span :class="signedClass(report.electricity.margin)" class="text-sm font-semibold tabular-nums">
@@ -432,7 +433,7 @@ function signedClass(value: number): string {
             </div>
           </dl>
         </div>
-        <div class="rounded-2xl border border-dark-border bg-dark-surface p-5">
+        <div class="rounded-2xl border border-dark-border bg-dark-surface p-4 sm:p-5">
           <div class="flex items-center justify-between">
             <h3 class="text-sm font-semibold text-white">Nước — chênh lệch</h3>
             <span :class="signedClass(report.water.margin)" class="text-sm font-semibold tabular-nums">
@@ -463,7 +464,7 @@ function signedClass(value: number): string {
           <div
             v-for="row in report.revenueByType"
             :key="row.key"
-            class="flex items-center justify-between px-5 py-3 text-sm"
+            class="flex items-center justify-between px-4 py-3 text-sm sm:px-5"
           >
             <span class="text-muted">{{ row.label }}</span>
             <span class="tabular-nums text-white">{{ formatCurrency(row.amount) }}</span>
@@ -485,7 +486,7 @@ function signedClass(value: number): string {
           <div
             v-for="fc in report.fixedCosts"
             :key="fc.id"
-            class="flex items-center justify-between px-5 py-3 text-sm"
+            class="flex items-center justify-between px-4 py-3 text-sm sm:px-5"
           >
             <div>
               <span class="text-white">Tiền thuê nhà</span>
@@ -517,7 +518,7 @@ function signedClass(value: number): string {
           <div
             v-for="item in report.prepaidItems"
             :key="item.id"
-            class="flex items-center justify-between px-5 py-3 text-sm"
+            class="flex items-center justify-between px-4 py-3 text-sm sm:px-5"
           >
             <div>
               <span class="text-white">{{ item.name }}</span>
@@ -546,7 +547,7 @@ function signedClass(value: number): string {
           </UiButton>
         </template>
         <div class="overflow-hidden rounded-2xl border border-dark-border bg-dark-surface">
-          <table class="w-full text-sm">
+          <table class="hidden w-full text-sm md:table">
             <thead>
               <tr class="border-b border-dark-border text-left text-xs text-muted">
                 <th class="px-5 py-3 font-medium">Loại</th>
@@ -634,6 +635,83 @@ function signedClass(value: number): string {
               </tr>
             </tbody>
           </table>
+
+          <!-- Mobile: card list -->
+          <div class="divide-y divide-dark-border md:hidden">
+            <div
+              v-for="e in filteredExpenses"
+              :key="e.id"
+              :class="clsx('flex flex-col gap-2 p-4', e.voidedAt && 'opacity-50')"
+            >
+              <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                  <div class="flex flex-wrap items-center gap-1.5">
+                    <span class="text-sm font-medium text-white">{{ expenseLabel(e.category) }}</span>
+                    <UiBadge v-if="e.voidedAt" variant="danger">Đã hủy</UiBadge>
+                    <UiBadge v-if="e.fundedBy === 'reserve_fund'" variant="accent">Quỹ dự phòng</UiBadge>
+                  </div>
+                  <p v-if="e.note" class="mt-0.5 text-xs text-muted">{{ e.note }}</p>
+                </div>
+                <span class="shrink-0 text-sm font-semibold tabular-nums text-white">
+                  {{ formatCurrency(e.amount) }}
+                </span>
+              </div>
+              <div class="flex items-center justify-between gap-2">
+                <div class="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
+                  <span>{{ e.expenseDate ?? '—' }}</span>
+                  <span v-if="e.payee" class="truncate">{{ e.payee }}</span>
+                  <a
+                    v-if="e.receiptSignedUrl"
+                    :href="e.receiptSignedUrl"
+                    target="_blank"
+                    rel="noopener"
+                    class="inline-flex items-center gap-1 text-cyan hover:text-cyan/80"
+                  >
+                    <IconLink class="h-3.5 w-3.5" aria-hidden="true" />
+                    Biên lai
+                  </a>
+                </div>
+                <div class="flex shrink-0 items-center gap-1">
+                  <UiButton
+                    v-if="canWriteExpense && !e.voidedAt"
+                    size="sm"
+                    variant="ghost"
+                    icon-only
+                    aria-label="Sửa"
+                    @click="openEditExpense(e)"
+                  >
+                    <IconPencilSquare class="h-4 w-4" aria-hidden="true" />
+                  </UiButton>
+                  <UiButton
+                    v-if="canWriteExpense && e.receiptUrl && !e.voidedAt"
+                    size="sm"
+                    variant="ghost"
+                    icon-only
+                    aria-label="Xoá biên lai"
+                    @click="removeReceipt(e)"
+                  >
+                    <IconX class="h-4 w-4" aria-hidden="true" />
+                  </UiButton>
+                  <UiButton
+                    v-if="canVoidExpense && !e.voidedAt"
+                    size="sm"
+                    variant="ghost"
+                    icon-only
+                    aria-label="Hủy"
+                    @click="openVoid(e)"
+                  >
+                    <IconTrash class="h-4 w-4" aria-hidden="true" />
+                  </UiButton>
+                </div>
+              </div>
+            </div>
+            <div v-if="filteredExpenses.length === 0" class="px-4 py-8">
+              <UiEmptyState
+                :title="expenseCategory ? 'Không có chi phí phù hợp' : 'Chưa có chi phí'"
+                :description="expenseCategory ? 'Đổi loại chi để xem các khoản khác trong tháng.' : 'Ghi nhận chi phí phát sinh để theo dõi lợi nhuận thực tế.'"
+              />
+            </div>
+          </div>
         </div>
       </UiSection>
     </template>
