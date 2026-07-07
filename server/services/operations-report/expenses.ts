@@ -105,6 +105,9 @@ export const BuildingExpenseService = {
     if (existing.voidedAt) throwConflict('Khoản chi đã bị hủy, không thể sửa')
 
     const updated = await BuildingExpenseRepository.updateById(event, id, input)
+    if (existing.fundedBy === 'reserve_fund' || updated.fundedBy === 'reserve_fund') {
+      await ReserveFundService.syncExpenseDeduction(event, user, updated)
+    }
 
     await AuditService.append(event, user, {
       building_id: updated.buildingId,
@@ -131,7 +134,7 @@ export const BuildingExpenseService = {
     if (existing.voidedAt) throwConflict('Khoản chi đã bị hủy')
 
     const voided = await BuildingExpenseRepository.voidById(event, id, user.id, voidReason)
-    await ReserveFundService.reverseExpenseWithdrawal(event, user, voided)
+    await ReserveFundService.voidExpenseDeduction(event, user, voided)
 
     await AuditService.append(event, user, {
       building_id: voided.buildingId,

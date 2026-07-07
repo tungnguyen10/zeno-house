@@ -4,6 +4,8 @@ import type {
   BuildingFixedCost,
   OperationsBreakdownEntry,
   OperationsReport,
+  ReserveFundSummary,
+  ReserveFundTransaction,
 } from '~/types/operations-report'
 import type { OperationsReportQuery } from '~/utils/validators/operations-report'
 import {
@@ -18,6 +20,7 @@ import { BuildingFixedCostRepository } from '../../repositories/operations-repor
 import { OperationsReportRepository } from '../../repositories/operations-report/report'
 import { BuildingExpenseService } from './expenses'
 import { PrepaidExpenseService } from './prepaid-expenses'
+import { ReserveFundService } from './reserve-funds'
 import { assertBuildingScope } from '../../utils/scope'
 
 const REVENUE_LABELS: Record<string, string> = {
@@ -42,6 +45,52 @@ function fixedCostApplies(cost: BuildingFixedCost, period: number): boolean {
       ? ordinal(cost.effectiveToPeriodYear, cost.effectiveToPeriodMonth)
       : null
   return from <= period && (to == null || period <= to)
+}
+
+function sumReserveTransactions(transactions: ReserveFundTransaction[]): number {
+  return transactions.reduce(
+    (sum, tx) => sum + (tx.type === 'deposit' ? tx.amount : -tx.amount),
+    0,
+  )
+}
+
+async function buildReserveSummary(
+  event: H3Event,
+  user: AuthUser,
+  buildingId: string,
+  periodYear: number,
+  periodMonth: number,
+  periodStatus: string | null,
+  issuedRevenue: number,
+  issuedProfitByRevenue: number,
+): Promise<ReserveFundSummary> {
+  const fund = await ReserveFundService.get(event, user, buildingId)
+  const rate = await ReserveFundService.findEffectiveRate(event, buildingId, periodYear, periodMonth)
+  const monthlyTransactions = fund.transactions.filter(
+    tx => tx.periodYear === periodYear && tx.periodMonth === periodMonth && !tx.voidedAt,
+  )
+  const accrual = monthlyTransactions.find(tx => tx.source === 'monthly_accrual')
+  const monthlyDeduction = monthlyTransactions
+    .filter(tx => tx.source === 'expense_deduction')
+    .reduce((sum, tx) => sum + tx.amount, 0)
+  const isClosedPeriod = periodStatus === 'closed'
+  const appliedAccrual = isClosedPeriod ? accrual : null
+  const effectiveRatePercent = accrual?.reserveRatePercent ?? rate?.reserveRatePercent ?? 0
+  const monthlyAccrualEstimated = Math.round((Math.max(issuedProfitByRevenue, 0) * effectiveRatePercent) / 100)
+  const monthlyAccrualIsEstimated = !appliedAccrual
+  const cumulativeBalance = sumReserveTransactions(fund.transactions.filter(tx => !tx.voidedAt))
+  const monthlyAccrual = appliedAccrual?.amount ?? 0
+  return {
+    effectiveRatePercent,
+    issuedRevenue: appliedAccrual?.issuedRevenue ?? issuedRevenue,
+    monthlyAccrual,
+    monthlyAccrualEstimated,
+    monthlyAccrualIsEstimated,
+    monthlyDeduction,
+    monthlyBalance: monthlyAccrual - monthlyDeduction,
+    cumulativeBalance,
+    cumulativeBalanceIsEstimated: false,
+  }
 }
 
 export const OperationsReportService = {
@@ -113,9 +162,12 @@ export const OperationsReportService = {
     )
 
     // --- Monthly expenses ------------------------------------------------
-    const monthlyExpenseTotal = expenses.reduce((s, e) => s + e.amount, 0)
+    // Exclude reserve-funded expenses from operation profit calculation
+    // (they're paid from reserve fund, tracked separately)
+    const directExpenses = expenses.filter(e => e.fundedBy !== 'reserve_fund')
+    const monthlyExpenseTotal = directExpenses.reduce((s, e) => s + e.amount, 0)
     const expenseMap = new Map<string, number>()
-    for (const exp of expenses) {
+    for (const exp of directExpenses) {
       expenseMap.set(exp.category, (expenseMap.get(exp.category) ?? 0) + exp.amount)
     }
     const expenseByCategory: OperationsBreakdownEntry[] = [...expenseMap.entries()].map(
@@ -128,6 +180,18 @@ export const OperationsReportService = {
 
     const prepaidAllocationTotal = prepaidItems.reduce((s, item) => s + item.monthlyAmount, 0)
     const totalExpense = fixedCostTotal + monthlyExpenseTotal + prepaidAllocationTotal
+    const reserveFund = can(user, 'reserve-fund.read')
+      ? await buildReserveSummary(
+          event,
+          user,
+          query.building_id,
+          query.period_year,
+          query.period_month,
+          billing.periodStatus,
+          issuedRevenue,
+          issuedRevenue - totalExpense,
+        )
+      : null
 
     // --- Utility margins -------------------------------------------------
     const electricityCollected = revenueMap.get('electricity') ?? 0
@@ -163,6 +227,7 @@ export const OperationsReportService = {
         input: waterInput,
         margin: waterCollected - waterInput,
       },
+      reserveFund,
       fixedCosts: applicableFixedCosts,
       expenses,
       prepaidItems,

@@ -32,7 +32,6 @@ export const OWNER_CAPABILITIES = [
   'billing.write',
   'billing.corrections',
   'billing.close',
-  'billing.unissue',
   'dashboard.read',
   // Operations report: report read + expense/fixed-cost management.
   'operations-report.read',
@@ -51,8 +50,7 @@ export const OWNER_CAPABILITIES = [
   'shared-expenses.write',
   'shared-expenses.allocate',
   'reserve-fund.read',
-  'reserve-fund.deposit',
-  'reserve-fund.withdraw',
+  'reserve-fund.manage',
   // Scoped user management: owner can manage managers inside owner scope.
   'users.manage.scoped',
   'users.create.manager',
@@ -66,6 +64,8 @@ export const OWNER_CAPABILITIES = [
 export const ROLE_CAPABILITIES: Record<UserRole, readonly string[]> = {
   [ROLES.ADMIN]: [
     ...OWNER_CAPABILITIES,
+    'billing.reopen',
+    'billing.unissue',
     // Global user management: admin sees/manages everyone.
     'users.manage.global',
     'users.create.owner',

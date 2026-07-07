@@ -2,12 +2,15 @@ import { vi } from 'vitest'
 import type { AuthUser } from '~/types/auth'
 import type { BuildingExpense, BuildingFixedCost } from '~/types/operations-report'
 import type { ReportBillingData } from '../../../server/repositories/operations-report/report'
+import { can as realCan } from '../../../server/utils/permissions'
 
 const findBuildingById = vi.fn()
 const fetchBillingData = vi.fn()
 const listFixedCosts = vi.fn()
 const listExpenses = vi.fn()
 const listActiveAllocations = vi.fn()
+const getReserveFund = vi.fn()
+const findEffectiveRate = vi.fn()
 const assertBuildingScope = vi.fn()
 
 vi.mock('../../../server/repositories/buildings', () => ({
@@ -30,11 +33,19 @@ vi.mock('../../../server/services/operations-report/prepaid-expenses', () => ({
   PrepaidExpenseService: { listActiveAllocations },
 }))
 
+vi.mock('../../../server/services/operations-report/reserve-funds', () => ({
+  ReserveFundService: {
+    get: getReserveFund,
+    findEffectiveRate,
+  },
+}))
+
 vi.mock('../../../server/utils/scope', () => ({
   assertBuildingScope,
 }))
 
 const admin = { id: 'admin-1', app_metadata: { role: 'admin' } } as AuthUser
+const manager = { id: 'manager-1', app_metadata: { role: 'manager' } } as AuthUser
 
 function fixedCost(overrides: Partial<BuildingFixedCost>): BuildingFixedCost {
   return {
@@ -81,6 +92,7 @@ function expense(overrides: Partial<BuildingExpense>): BuildingExpense {
 
 const billing: ReportBillingData = {
   periodId: 'period-1',
+  periodStatus: 'closed',
   invoices: [
     {
       id: 'inv-1',
@@ -99,6 +111,7 @@ const billing: ReportBillingData = {
 describe('OperationsReportService.getReport', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.stubGlobal('can', realCan)
     findBuildingById.mockResolvedValue({ id: 'building-1', name: 'Building 1' })
     assertBuildingScope.mockResolvedValue(undefined)
     fetchBillingData.mockResolvedValue(billing)
@@ -111,6 +124,55 @@ describe('OperationsReportService.getReport', () => {
     listActiveAllocations.mockResolvedValue([
       { id: 'prepaid-1', name: 'Internet năm', category: 'internet', monthlyAmount: 250_000 },
     ])
+    findEffectiveRate.mockResolvedValue({ reserveRatePercent: 5 })
+    getReserveFund.mockResolvedValue({
+      id: 'fund-1',
+      buildingId: 'building-1',
+      balance: 100_000,
+      createdAt: '',
+      transactions: [
+        {
+          id: 'accrual-1',
+          fundId: 'fund-1',
+          type: 'deposit',
+          source: 'monthly_accrual',
+          amount: 250_000,
+          date: '2026-06-01',
+          periodYear: 2026,
+          periodMonth: 6,
+          billingPeriodId: 'period-1',
+          reserveRatePercent: 5,
+          issuedRevenue: 5_000_000,
+          linkedExpenseId: null,
+          note: null,
+          createdBy: 'admin-1',
+          voidedAt: null,
+          voidedBy: null,
+          voidReason: null,
+          createdAt: '',
+        },
+        {
+          id: 'deduction-1',
+          fundId: 'fund-1',
+          type: 'withdrawal',
+          source: 'expense_deduction',
+          amount: 300_000,
+          date: '2026-06-10',
+          periodYear: 2026,
+          periodMonth: 6,
+          billingPeriodId: null,
+          reserveRatePercent: null,
+          issuedRevenue: null,
+          linkedExpenseId: 'exp-3',
+          note: null,
+          createdBy: 'admin-1',
+          voidedAt: null,
+          voidedBy: null,
+          voidReason: null,
+          createdAt: '',
+        },
+      ],
+    })
   })
 
   async function run() {
@@ -141,6 +203,17 @@ describe('OperationsReportService.getReport', () => {
     expect(report.metrics.profitByRevenue).toBe(5_000_000 - 11_650_000)
     expect(report.metrics.profitByCash).toBe(4_000_000 - 11_650_000)
     expect(report.prepaidItems).toHaveLength(1)
+    expect(report.reserveFund).toEqual({
+      effectiveRatePercent: 5,
+      issuedRevenue: 5_000_000,
+      monthlyAccrual: 250_000,
+      monthlyAccrualEstimated: 0,
+      monthlyAccrualIsEstimated: false,
+      monthlyDeduction: 300_000,
+      monthlyBalance: -50_000,
+      cumulativeBalance: -50_000,
+      cumulativeBalanceIsEstimated: false,
+    })
   })
 
   it('computes utility margins from revenue vs input expenses', async () => {
@@ -177,5 +250,45 @@ describe('OperationsReportService.getReport', () => {
       'building-1',
       'read',
     )
+  })
+
+  it('does not fetch reserve details when user lacks reserve-fund.read', async () => {
+    const { OperationsReportService } = await import(
+      '../../../server/services/operations-report/report'
+    )
+
+    const report = await OperationsReportService.getReport({} as never, manager, {
+      building_id: 'building-1',
+      period_year: 2026,
+      period_month: 6,
+    })
+
+    expect(report.reserveFund).toBeNull()
+    expect(getReserveFund).not.toHaveBeenCalled()
+    expect(findEffectiveRate).not.toHaveBeenCalled()
+  })
+
+  it('uses estimated monthly accrual when period is reopened', async () => {
+    fetchBillingData.mockResolvedValueOnce({
+      ...billing,
+      periodStatus: 'collecting',
+    })
+    const { OperationsReportService } = await import(
+      '../../../server/services/operations-report/report'
+    )
+
+    const report = await OperationsReportService.getReport({} as never, admin, {
+      building_id: 'building-1',
+      period_year: 2026,
+      period_month: 6,
+    })
+
+    expect(report.reserveFund).toMatchObject({
+      monthlyAccrual: 0,
+      monthlyAccrualEstimated: 0,
+      monthlyAccrualIsEstimated: true,
+      cumulativeBalance: -50_000,
+      cumulativeBalanceIsEstimated: false,
+    })
   })
 })

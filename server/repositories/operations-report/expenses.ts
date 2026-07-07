@@ -87,6 +87,7 @@ export const BuildingExpenseRepository = {
         ...(input.payee !== undefined && { payee: input.payee }),
         ...(input.payment_method !== undefined && { payment_method: input.payment_method }),
         ...(input.note !== undefined && { note: input.note }),
+        ...(input.funded_by !== undefined && { funded_by: input.funded_by }),
       })
       .eq('id', id)
       .select()

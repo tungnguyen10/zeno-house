@@ -1,4 +1,4 @@
-﻿export type Json =
+export type Json =
   | string
   | number
   | boolean
@@ -163,6 +163,8 @@ export type Database = {
       }
       billing_utility_usages: {
         Row: {
+          approved_at: string | null
+          approved_by: string | null
           billable_usage: number
           billing_period_id: string
           created_at: string
@@ -181,6 +183,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
           billable_usage: number
           billing_period_id: string
           created_at?: string
@@ -199,6 +203,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          approved_at?: string | null
+          approved_by?: string | null
           billable_usage?: number
           billing_period_id?: string
           created_at?: string
@@ -371,6 +377,53 @@ export type Database = {
           },
         ]
       }
+      building_reserve_fund_rates: {
+        Row: {
+          building_id: string
+          created_at: string
+          created_by: string | null
+          effective_from_period_month: number
+          effective_from_period_year: number
+          effective_to_period_month: number | null
+          effective_to_period_year: number | null
+          id: string
+          reserve_rate_percent: number
+          updated_at: string
+        }
+        Insert: {
+          building_id: string
+          created_at?: string
+          created_by?: string | null
+          effective_from_period_month: number
+          effective_from_period_year: number
+          effective_to_period_month?: number | null
+          effective_to_period_year?: number | null
+          id?: string
+          reserve_rate_percent: number
+          updated_at?: string
+        }
+        Update: {
+          building_id?: string
+          created_at?: string
+          created_by?: string | null
+          effective_from_period_month?: number
+          effective_from_period_year?: number
+          effective_to_period_month?: number | null
+          effective_to_period_year?: number | null
+          id?: string
+          reserve_rate_percent?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "building_reserve_fund_rates_building_id_fkey"
+            columns: ["building_id"]
+            isOneToOne: false
+            referencedRelation: "buildings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       building_services: {
         Row: {
           building_id: string
@@ -442,6 +495,7 @@ export type Database = {
           owner_phone: string | null
           owner_user_id: string | null
           payment_due_day: number | null
+          reserve_fund_rate_percent: number | null
           slug: string
           status: string
           updated_at: string
@@ -466,6 +520,7 @@ export type Database = {
           owner_phone?: string | null
           owner_user_id?: string | null
           payment_due_day?: number | null
+          reserve_fund_rate_percent?: number | null
           slug: string
           status?: string
           updated_at?: string
@@ -490,6 +545,7 @@ export type Database = {
           owner_phone?: string | null
           owner_user_id?: string | null
           payment_due_day?: number | null
+          reserve_fund_rate_percent?: number | null
           slug?: string
           status?: string
           updated_at?: string
@@ -1118,154 +1174,67 @@ export type Database = {
           },
         ]
       }
-      reserve_funds: {
+      operations_report_periods: {
         Row: {
+          auto_closed: boolean
           building_id: string
+          close_reason: string | null
+          closed_at: string | null
+          closed_by: string | null
           created_at: string
           id: string
-        }
-        Insert: {
-          building_id: string
-          created_at?: string
-          id?: string
-        }
-        Update: {
-          building_id?: string
-          created_at?: string
-          id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "reserve_funds_building_id_fkey"
-            columns: ["building_id"]
-            isOneToOne: true
-            referencedRelation: "buildings"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      reserve_fund_transactions: {
-        Row: {
-          amount: number
-          created_at: string
-          created_by: string | null
-          date: string
-          fund_id: string
-          id: string
-          linked_expense_id: string | null
-          note: string | null
-          type: string
-        }
-        Insert: {
-          amount: number
-          created_at?: string
-          created_by?: string | null
-          date: string
-          fund_id: string
-          id?: string
-          linked_expense_id?: string | null
-          note?: string | null
-          type: string
-        }
-        Update: {
-          amount?: number
-          created_at?: string
-          created_by?: string | null
-          date?: string
-          fund_id?: string
-          id?: string
-          linked_expense_id?: string | null
-          note?: string | null
-          type?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "reserve_fund_transactions_fund_id_fkey"
-            columns: ["fund_id"]
-            isOneToOne: false
-            referencedRelation: "reserve_funds"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "reserve_fund_transactions_linked_expense_id_fkey"
-            columns: ["linked_expense_id"]
-            isOneToOne: false
-            referencedRelation: "building_expenses"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      shared_expenses: {
-        Row: {
-          amount: number
-          category: string
-          created_at: string
-          created_by: string | null
-          id: string
-          is_active: boolean
-          name: string
-          note: string | null
-          owner_id: string
+          period_month: number
+          period_year: number
+          reopen_reason: string | null
+          reopened_at: string | null
+          reopened_by: string | null
+          reserve_allocation_mode: string
+          reserve_allocation_note: string | null
+          status: string
           updated_at: string
         }
         Insert: {
-          amount: number
-          category: string
+          auto_closed?: boolean
+          building_id: string
+          close_reason?: string | null
+          closed_at?: string | null
+          closed_by?: string | null
           created_at?: string
-          created_by?: string | null
           id?: string
-          is_active?: boolean
-          name: string
-          note?: string | null
-          owner_id: string
+          period_month: number
+          period_year: number
+          reopen_reason?: string | null
+          reopened_at?: string | null
+          reopened_by?: string | null
+          reserve_allocation_mode?: string
+          reserve_allocation_note?: string | null
+          status?: string
           updated_at?: string
         }
         Update: {
-          amount?: number
-          category?: string
-          created_at?: string
-          created_by?: string | null
-          id?: string
-          is_active?: boolean
-          name?: string
-          note?: string | null
-          owner_id?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      shared_expense_buildings: {
-        Row: {
-          building_id: string
-          created_at: string
-          id: string
-          shared_expense_id: string
-        }
-        Insert: {
-          building_id: string
-          created_at?: string
-          id?: string
-          shared_expense_id: string
-        }
-        Update: {
+          auto_closed?: boolean
           building_id?: string
+          close_reason?: string | null
+          closed_at?: string | null
+          closed_by?: string | null
           created_at?: string
           id?: string
-          shared_expense_id?: string
+          period_month?: number
+          period_year?: number
+          reopen_reason?: string | null
+          reopened_at?: string | null
+          reopened_by?: string | null
+          reserve_allocation_mode?: string
+          reserve_allocation_note?: string | null
+          status?: string
+          updated_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "shared_expense_buildings_building_id_fkey"
+            foreignKeyName: "operations_report_periods_building_id_fkey"
             columns: ["building_id"]
             isOneToOne: false
             referencedRelation: "buildings"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "shared_expense_buildings_shared_expense_id_fkey"
-            columns: ["shared_expense_id"]
-            isOneToOne: false
-            referencedRelation: "shared_expenses"
             referencedColumns: ["id"]
           },
         ]
@@ -1385,6 +1354,120 @@ export type Database = {
           },
         ]
       }
+      reserve_fund_transactions: {
+        Row: {
+          amount: number
+          billing_period_id: string | null
+          created_at: string
+          created_by: string | null
+          date: string
+          fund_id: string
+          id: string
+          idempotency_key: string | null
+          issued_revenue: number | null
+          linked_expense_id: string | null
+          note: string | null
+          period_month: number | null
+          period_year: number | null
+          reserve_rate_percent: number | null
+          source: string
+          type: string
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
+        }
+        Insert: {
+          amount: number
+          billing_period_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          date: string
+          fund_id: string
+          id?: string
+          idempotency_key?: string | null
+          issued_revenue?: number | null
+          linked_expense_id?: string | null
+          note?: string | null
+          period_month?: number | null
+          period_year?: number | null
+          reserve_rate_percent?: number | null
+          source?: string
+          type: string
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
+        }
+        Update: {
+          amount?: number
+          billing_period_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          date?: string
+          fund_id?: string
+          id?: string
+          idempotency_key?: string | null
+          issued_revenue?: number | null
+          linked_expense_id?: string | null
+          note?: string | null
+          period_month?: number | null
+          period_year?: number | null
+          reserve_rate_percent?: number | null
+          source?: string
+          type?: string
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reserve_fund_transactions_billing_period_id_fkey"
+            columns: ["billing_period_id"]
+            isOneToOne: false
+            referencedRelation: "billing_periods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reserve_fund_transactions_fund_id_fkey"
+            columns: ["fund_id"]
+            isOneToOne: false
+            referencedRelation: "reserve_funds"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reserve_fund_transactions_linked_expense_id_fkey"
+            columns: ["linked_expense_id"]
+            isOneToOne: false
+            referencedRelation: "building_expenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reserve_funds: {
+        Row: {
+          building_id: string
+          created_at: string
+          id: string
+        }
+        Insert: {
+          building_id: string
+          created_at?: string
+          id?: string
+        }
+        Update: {
+          building_id?: string
+          created_at?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reserve_funds_building_id_fkey"
+            columns: ["building_id"]
+            isOneToOne: true
+            referencedRelation: "buildings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rooms: {
         Row: {
           area: number | null
@@ -1440,6 +1523,7 @@ export type Database = {
       }
       service_catalog: {
         Row: {
+          building_id: string | null
           code: string
           created_at: string | null
           description: string | null
@@ -1451,6 +1535,7 @@ export type Database = {
           unit: string | null
         }
         Insert: {
+          building_id?: string | null
           code: string
           created_at?: string | null
           description?: string | null
@@ -1462,6 +1547,7 @@ export type Database = {
           unit?: string | null
         }
         Update: {
+          building_id?: string | null
           code?: string
           created_at?: string | null
           description?: string | null
@@ -1471,6 +1557,89 @@ export type Database = {
           pricing_type?: string
           sort_order?: number
           unit?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_catalog_building_id_fkey"
+            columns: ["building_id"]
+            isOneToOne: false
+            referencedRelation: "buildings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shared_expense_buildings: {
+        Row: {
+          building_id: string
+          created_at: string
+          id: string
+          shared_expense_id: string
+        }
+        Insert: {
+          building_id: string
+          created_at?: string
+          id?: string
+          shared_expense_id: string
+        }
+        Update: {
+          building_id?: string
+          created_at?: string
+          id?: string
+          shared_expense_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shared_expense_buildings_building_id_fkey"
+            columns: ["building_id"]
+            isOneToOne: false
+            referencedRelation: "buildings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shared_expense_buildings_shared_expense_id_fkey"
+            columns: ["shared_expense_id"]
+            isOneToOne: false
+            referencedRelation: "shared_expenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shared_expenses: {
+        Row: {
+          amount: number
+          category: string
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          name: string
+          note: string | null
+          owner_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          category: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          note?: string | null
+          owner_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          note?: string | null
+          owner_id?: string
+          updated_at?: string
         }
         Relationships: []
       }

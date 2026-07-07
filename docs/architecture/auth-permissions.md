@@ -83,7 +83,7 @@ Owner has full operational access, but limited to assigned buildings:
 - meter readings read/write
 - building services read/write
 - contract services read/write
-- billing read/write/corrections/close/unissue
+- billing read/write/corrections/close
 - dashboard read
 - scoped user management (`users.manage.scoped`, `users.create.manager`)
 
@@ -159,7 +159,8 @@ visible to their owner only through building assignments.
 | `billing.write` | admin, owner, manager | Readings, utility overrides, issue, payments, bulk payments, adjustment, void, reissue. |
 | `billing.corrections` | admin, owner, manager | Corrective billing adjustments. |
 | `billing.close` | admin, owner | Close a fully collected issued/collecting period. |
-| `billing.unissue` | admin, owner | Reopen issuance by voiding unpaid invoices and retaining paid ones. |
+| `billing.reopen` | admin | Reopen a closed period back to collecting with a reason. |
+| `billing.unissue` | admin | Reopen issuance by voiding unpaid invoices and retaining paid ones. |
 
 For scoped roles (owner, manager) every billing capability is additionally constrained to the
 period's building via `assertBuildingScope`.
@@ -180,9 +181,8 @@ period's building via `assertBuildingScope`.
 | `recurring-expenses.delete` | admin, owner | Delete recurring expense templates. |
 | `prepaid-expenses.read` | admin, owner | List prepaid expenses in building settings. |
 | `prepaid-expenses.write` | admin, owner | Create, update, or delete prepaid expenses. |
-| `reserve-fund.read` | admin, owner | View a building reserve fund balance and transactions. |
-| `reserve-fund.deposit` | admin, owner | Add manual reserve fund deposits. |
-| `reserve-fund.withdraw` | admin, owner | Add manual withdrawals and pay expenses from reserve. |
+| `reserve-fund.read` | admin, owner | View reserve summary data in the operations report and reserve fund details. |
+| `reserve-fund.manage` | admin, owner | Manage reserve rate history and create automatic accrual/deduction ledger rows. |
 | `shared-expenses.read` | admin, owner | View owner-scoped shared expense definitions. |
 | `shared-expenses.write` | admin, owner | Create, update, or deactivate shared expenses and membership. |
 | `shared-expenses.allocate` | admin, owner | Allocate shared expenses into building expenses for a period. |

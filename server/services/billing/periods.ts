@@ -16,9 +16,13 @@ import { BillingPeriodRepository } from '../../repositories/billing/periods'
 import { InvoiceRepository } from '../../repositories/billing/invoices'
 import { InvoicePaymentRepository } from '../../repositories/billing/payments'
 import { BuildingRepository } from '../../repositories/buildings'
+import { BuildingFixedCostRepository } from '../../repositories/operations-report/fixed-costs'
+import { BuildingExpenseRepository } from '../../repositories/operations-report/expenses'
 import { assertReason } from '../../utils/billing/reason'
 import { assertBuildingScope, getAssignedBuildingIds } from '../../utils/scope'
 import { BillingAuditService } from './audit'
+import { ReserveFundService } from '../operations-report/reserve-funds'
+import { PrepaidExpenseService } from '../operations-report/prepaid-expenses'
 import {
   loadBillableContractsInPeriod,
   loadRequiredReadingProgress,
@@ -34,6 +38,27 @@ interface BuildingLite {
   defaultWaterRate: number | null
   electricityPricingType: string | null
   waterPricingType: string | null
+}
+
+function ordinal(year: number, month: number): number {
+  return year * 12 + month
+}
+
+function fixedCostApplies(
+  cost: {
+    effectiveFromPeriodYear: number
+    effectiveFromPeriodMonth: number
+    effectiveToPeriodYear: number | null
+    effectiveToPeriodMonth: number | null
+  },
+  period: number,
+): boolean {
+  const from = ordinal(cost.effectiveFromPeriodYear, cost.effectiveFromPeriodMonth)
+  const to =
+    cost.effectiveToPeriodYear != null && cost.effectiveToPeriodMonth != null
+      ? ordinal(cost.effectiveToPeriodYear, cost.effectiveToPeriodMonth)
+      : null
+  return from <= period && (to == null || period <= to)
 }
 
 async function loadBuildingsByIds(event: H3Event, ids: string[]): Promise<Map<string, BuildingLite>> {
@@ -302,6 +327,35 @@ export const BillingPeriodService = {
     const closed = await BillingPeriodRepository.updateStatus(event, period.id, 'closed', {
       closed_at: new Date().toISOString(),
     })
+    const invoices = await InvoiceRepository.listByPeriod(event, period.id)
+    const issuedRevenue = invoices
+      .filter(invoice => invoice.status !== 'void')
+      .reduce((sum, invoice) => sum + invoice.totalAmount, 0)
+    const periodOrdinal = ordinal(period.periodYear, period.periodMonth)
+    const allFixedCosts = await BuildingFixedCostRepository.listByBuilding(event, period.buildingId)
+    const fixedCostTotal = allFixedCosts
+      .filter(cost => fixedCostApplies(cost, periodOrdinal))
+      .reduce((sum, cost) => sum + cost.amount, 0)
+    const monthlyExpenseTotal = (await BuildingExpenseRepository.list(event, {
+      buildingId: period.buildingId,
+      periodYear: period.periodYear,
+      periodMonth: period.periodMonth,
+    })).reduce((sum, expense) => sum + expense.amount, 0)
+    const prepaidAllocationTotal = (await PrepaidExpenseService.listActiveAllocations(
+      event,
+      period.buildingId,
+      period.periodYear,
+      period.periodMonth,
+    )).reduce((sum, item) => sum + item.monthlyAmount, 0)
+    const issuedProfitByRevenue = issuedRevenue - (fixedCostTotal + monthlyExpenseTotal + prepaidAllocationTotal)
+    await ReserveFundService.recordMonthlyAccrual(event, user, {
+      buildingId: period.buildingId,
+      periodYear: period.periodYear,
+      periodMonth: period.periodMonth,
+      billingPeriodId: period.id,
+      issuedRevenue,
+      issuedProfitByRevenue,
+    })
 
     await BillingAuditService.append(event, user, {
       billing_period_id: closed.id,
@@ -428,7 +482,7 @@ export const BillingPeriodService = {
 
   /**
    * Reopen a closed period back to `collecting` so corrections can be made
-   * (e.g. undo a payment, fix a reading). Requires `billing.close` and a reason
+    * (e.g. undo a payment, fix a reading). Requires `billing.reopen` and a reason
    * (≥ 10 chars) that is recorded in the audit trail. The period must currently
    * be `closed`; any other status is a conflict. `closed_at` is cleared.
    */
@@ -438,7 +492,7 @@ export const BillingPeriodService = {
     id: string,
     reasonInput: string,
   ): Promise<BillingPeriod> {
-    if (!can(user, 'billing.close')) throwForbidden('Không có quyền mở lại kỳ vận hành')
+    if (!can(user, 'billing.reopen')) throwForbidden('Không có quyền mở lại kỳ vận hành')
     const reason = assertReason(reasonInput, 10)
 
     const period = await BillingPeriodRepository.findById(event, id)

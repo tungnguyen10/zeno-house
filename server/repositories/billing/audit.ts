@@ -113,4 +113,25 @@ export const BillingAuditRepository = {
     if (error) throw createError({ statusCode: 500, message: error.message })
     return data?.correlation_id ?? null
   },
+
+  /**
+   * Check whether a period already has at least one event of a given action.
+   * Used by guard rules that depend on historical workflow steps.
+   */
+  async hasActionForPeriod(
+    event: H3Event,
+    billingPeriodId: string,
+    action: string,
+  ): Promise<boolean> {
+    const client = await serverSupabaseClient(event)
+    const { data, error } = await client
+      .from('billing_audit_events')
+      .select('id')
+      .eq('billing_period_id', billingPeriodId)
+      .eq('action', action)
+      .limit(1)
+      .maybeSingle()
+    if (error) throw createError({ statusCode: 500, message: error.message })
+    return !!data
+  },
 }

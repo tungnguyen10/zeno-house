@@ -1,17 +1,17 @@
 import { vi } from 'vitest'
 import type { AuthUser } from '~/types/auth'
-import type { BuildingExpense, ReserveFund } from '~/types/operations-report'
+import type { BuildingExpense, BuildingReserveFundRate } from '~/types/operations-report'
 import { can as realCan } from '../../../server/utils/permissions'
 
 const findBuildingById = vi.fn()
 const assertBuildingScope = vi.fn()
-const findOrCreateByBuilding = vi.fn()
-const getFundByBuilding = vi.fn()
-const insertTransaction = vi.fn()
 const insertExpense = vi.fn()
-const voidExpenseById = vi.fn()
 const deleteExpenseById = vi.fn()
-const findWithdrawalByExpense = vi.fn()
+const upsertExpenseDeduction = vi.fn()
+const voidExpenseDeduction = vi.fn()
+const upsertMonthlyAccrual = vi.fn()
+const listRatesByBuilding = vi.fn()
+const insertRate = vi.fn()
 
 vi.mock('../../../server/repositories/buildings', () => ({
   BuildingRepository: { findById: findBuildingById },
@@ -23,31 +23,23 @@ vi.mock('../../../server/utils/scope', () => ({
 
 vi.mock('../../../server/repositories/operations-report/reserve-funds', () => ({
   ReserveFundRepository: {
-    findOrCreateByBuilding,
-    getByBuilding: getFundByBuilding,
-    insertTransaction,
-    findWithdrawalByExpense,
+    upsertExpenseDeduction,
+    voidExpenseDeduction,
+    upsertMonthlyAccrual,
+    listRatesByBuilding,
+    insertRate,
   },
 }))
 
 vi.mock('../../../server/repositories/operations-report/expenses', () => ({
   BuildingExpenseRepository: {
     insert: insertExpense,
-    voidById: voidExpenseById,
     deleteById: deleteExpenseById,
   },
 }))
 
 const owner = { id: 'owner-1', app_metadata: { role: 'owner' } } as AuthUser
 const manager = { id: 'manager-1', app_metadata: { role: 'manager' } } as AuthUser
-
-const fund = (balance: number): ReserveFund => ({
-  id: 'fund-1',
-  buildingId: 'building-1',
-  balance,
-  createdAt: '2026-07-05T00:00:00Z',
-  transactions: [],
-})
 
 const expense = (overrides: Partial<BuildingExpense> = {}): BuildingExpense => ({
   id: 'expense-1',
@@ -72,34 +64,36 @@ const expense = (overrides: Partial<BuildingExpense> = {}): BuildingExpense => (
   ...overrides,
 })
 
+const rate = (overrides: Partial<BuildingReserveFundRate> = {}): BuildingReserveFundRate => ({
+  id: 'rate-1',
+  buildingId: 'building-1',
+  reserveRatePercent: 5,
+  effectiveFromPeriodYear: 2026,
+  effectiveFromPeriodMonth: 1,
+  effectiveToPeriodYear: null,
+  effectiveToPeriodMonth: null,
+  createdBy: 'owner-1',
+  createdAt: '',
+  updatedAt: '',
+  ...overrides,
+})
+
 describe('ReserveFundService', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.stubGlobal('can', realCan)
     findBuildingById.mockResolvedValue({ id: 'building-1' })
     assertBuildingScope.mockResolvedValue(undefined)
-    findOrCreateByBuilding.mockResolvedValue({ id: 'fund-1', building_id: 'building-1', created_at: '' })
-    getFundByBuilding.mockResolvedValue(fund(1_000))
-    insertTransaction.mockResolvedValue({ id: 'tx-1' })
     insertExpense.mockResolvedValue(expense())
-    voidExpenseById.mockResolvedValue(expense({ voidedAt: '2026-07-05T00:00:00Z' }))
     deleteExpenseById.mockResolvedValue(undefined)
+    upsertExpenseDeduction.mockResolvedValue({ id: 'tx-1' })
+    voidExpenseDeduction.mockResolvedValue({ id: 'tx-1', voidedAt: '2026-07-05T00:00:00Z' })
+    upsertMonthlyAccrual.mockResolvedValue({ id: 'accrual-1' })
+    listRatesByBuilding.mockResolvedValue([rate()])
+    insertRate.mockResolvedValue(rate())
   })
 
-  it('rejects withdrawals that would make the balance negative', async () => {
-    getFundByBuilding.mockResolvedValue(fund(100))
-    const { ReserveFundService } = await import('../../../server/services/operations-report/reserve-funds')
-
-    await expect(
-      ReserveFundService.withdraw({} as never, owner, 'building-1', {
-        amount: 200,
-        date: '2026-07-05',
-      }),
-    ).rejects.toMatchObject({ statusCode: 422 })
-    expect(insertTransaction).not.toHaveBeenCalled()
-  })
-
-  it('creates a reserve-funded expense and linked withdrawal', async () => {
+  it('creates a reserve-funded expense and linked deduction without balance validation', async () => {
     const { ReserveFundService } = await import('../../../server/services/operations-report/reserve-funds')
 
     await ReserveFundService.createReserveFundedExpense({} as never, owner, {
@@ -116,16 +110,17 @@ describe('ReserveFundService', () => {
     expect(insertExpense).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
       funded_by: 'reserve_fund',
     }), 'owner-1')
-    expect(insertTransaction).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
-      fundId: 'fund-1',
-      type: 'withdrawal',
+    expect(upsertExpenseDeduction).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      buildingId: 'building-1',
+      expenseId: 'expense-1',
       amount: 300,
-      linkedExpenseId: 'expense-1',
+      periodYear: 2026,
+      periodMonth: 7,
     }))
   })
 
-  it('deletes the newly created expense when linked withdrawal creation fails', async () => {
-    insertTransaction.mockRejectedValueOnce(new Error('ledger write failed'))
+  it('deletes the newly created expense when linked deduction creation fails', async () => {
+    upsertExpenseDeduction.mockRejectedValueOnce(new Error('ledger write failed'))
     const { ReserveFundService } = await import('../../../server/services/operations-report/reserve-funds')
 
     await expect(
@@ -141,42 +136,122 @@ describe('ReserveFundService', () => {
       }),
     ).rejects.toThrow('ledger write failed')
     expect(deleteExpenseById).toHaveBeenCalledWith(expect.anything(), 'expense-1')
-    expect(voidExpenseById).not.toHaveBeenCalled()
   })
 
-  it('denies managers access to reserve fund movements', async () => {
+  it('denies managers access to reserve fund management', async () => {
     const { ReserveFundService } = await import('../../../server/services/operations-report/reserve-funds')
 
     await expect(
-      ReserveFundService.withdraw({} as never, manager, 'building-1', {
+      ReserveFundService.createReserveFundedExpense({} as never, manager, {
+        building_id: 'building-1',
+        period_year: 2026,
+        period_month: 7,
+        category: 'repair',
         amount: 100,
-        date: '2026-07-05',
+        funded_by: 'reserve_fund',
       }),
     ).rejects.toMatchObject({ statusCode: 403 })
-    expect(insertTransaction).not.toHaveBeenCalled()
+    expect(upsertExpenseDeduction).not.toHaveBeenCalled()
   })
 
-  it('adds a deposit reversal when voiding a reserve-funded expense', async () => {
-    findWithdrawalByExpense.mockResolvedValue({
-      id: 'withdrawal-1',
-      fundId: 'fund-1',
-      type: 'withdrawal',
-      amount: 300,
-      date: '2026-07-05',
-      linkedExpenseId: 'expense-1',
-      note: null,
-      createdBy: 'owner-1',
-      createdAt: '',
-    })
+  it('voids the linked deduction when a reserve-funded expense is voided', async () => {
     const { ReserveFundService } = await import('../../../server/services/operations-report/reserve-funds')
 
-    await ReserveFundService.reverseExpenseWithdrawal({} as never, owner, expense())
+    await ReserveFundService.voidExpenseDeduction(
+      {} as never,
+      owner,
+      expense({ voidedAt: '2026-07-05T00:00:00Z', voidReason: 'duplicate' }),
+    )
 
-    expect(insertTransaction).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
-      fundId: 'fund-1',
-      type: 'deposit',
-      amount: 300,
-      linkedExpenseId: 'expense-1',
+    expect(voidExpenseDeduction).toHaveBeenCalledWith(
+      expect.anything(),
+      'expense-1',
+      'owner-1',
+      'duplicate',
+    )
+  })
+
+  it('records monthly accrual from issued profit and effective rate', async () => {
+    const { ReserveFundService } = await import('../../../server/services/operations-report/reserve-funds')
+
+    await ReserveFundService.recordMonthlyAccrual({} as never, owner, {
+      buildingId: 'building-1',
+      periodYear: 2026,
+      periodMonth: 7,
+      billingPeriodId: 'period-1',
+      issuedRevenue: 10_000_000,
+      issuedProfitByRevenue: 4_000_000,
+    })
+
+    expect(upsertMonthlyAccrual).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      buildingId: 'building-1',
+      periodYear: 2026,
+      periodMonth: 7,
+      billingPeriodId: 'period-1',
+      issuedRevenue: 10_000_000,
+      reserveRatePercent: 5,
+      amount: 200_000,
     }))
+  })
+
+  it('records zero accrual when issued profit is negative', async () => {
+    const { ReserveFundService } = await import('../../../server/services/operations-report/reserve-funds')
+
+    await ReserveFundService.recordMonthlyAccrual({} as never, owner, {
+      buildingId: 'building-1',
+      periodYear: 2026,
+      periodMonth: 8,
+      billingPeriodId: 'period-2',
+      issuedRevenue: 2_500_000,
+      issuedProfitByRevenue: -1_000_000,
+    })
+
+    expect(upsertMonthlyAccrual).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      buildingId: 'building-1',
+      periodYear: 2026,
+      periodMonth: 8,
+      billingPeriodId: 'period-2',
+      issuedRevenue: 2_500_000,
+      reserveRatePercent: 5,
+      amount: 0,
+    }))
+  })
+
+  it('records zero-rate accrual when no effective reserve rate exists', async () => {
+    listRatesByBuilding.mockResolvedValueOnce([])
+    const { ReserveFundService } = await import('../../../server/services/operations-report/reserve-funds')
+
+    await ReserveFundService.recordMonthlyAccrual({} as never, owner, {
+      buildingId: 'building-1',
+      periodYear: 2026,
+      periodMonth: 8,
+      billingPeriodId: 'period-2',
+      issuedRevenue: 2_500_000,
+      issuedProfitByRevenue: 1_500_000,
+    })
+
+    expect(upsertMonthlyAccrual).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      buildingId: 'building-1',
+      periodYear: 2026,
+      periodMonth: 8,
+      billingPeriodId: 'period-2',
+      issuedRevenue: 2_500_000,
+      reserveRatePercent: 0,
+      amount: 0,
+    }))
+  })
+
+  it('rejects overlapping reserve rate ranges', async () => {
+    const { ReserveFundService } = await import('../../../server/services/operations-report/reserve-funds')
+
+    await expect(
+      ReserveFundService.createRate({} as never, owner, {
+        building_id: 'building-1',
+        reserve_rate_percent: 3,
+        effective_from_period_year: 2026,
+        effective_from_period_month: 7,
+      }),
+    ).rejects.toMatchObject({ statusCode: 409 })
+    expect(insertRate).not.toHaveBeenCalled()
   })
 })

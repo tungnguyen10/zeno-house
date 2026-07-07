@@ -171,8 +171,9 @@ Server services should raise domain-specific conflicts rather than letting datab
 | PATCH | `/api/prepaid-expenses/[id]` |
 | DELETE | `/api/prepaid-expenses/[id]` |
 | GET | `/api/reserve-funds/[buildingId]` |
-| POST | `/api/reserve-funds/[buildingId]/deposit` |
-| POST | `/api/reserve-funds/[buildingId]/withdraw` |
+| GET | `/api/reserve-fund-rates` |
+| POST | `/api/reserve-fund-rates` |
+| PATCH | `/api/reserve-fund-rates/[id]` |
 | GET | `/api/shared-expenses` |
 | POST | `/api/shared-expenses` |
 | PATCH | `/api/shared-expenses/[id]` |
@@ -180,4 +181,4 @@ Server services should raise domain-specific conflicts rather than letting datab
 | POST | `/api/shared-expenses/[id]/allocate` |
 
 Operations report export requires `operations-report.export`. Expense receipt routes accept a private image attachment and return the expense DTO with a short-lived signed receipt URL when present. Recurring expense `record` advances the reminder and returns a prefill payload for the normal building expense form; the actual expense is still created through `/api/building-expenses`. Prepaid expenses are owner/admin configuration records and contribute monthly allocation to `/api/operations-report`.
-One-off building expenses and fixed costs keep using their existing `note` fields for user-entered display labels; recurring expenses, prepaid expenses, and shared expenses use their existing `name` fields. Reserve fund routes are owner/admin only and derive balance from transactions. Shared-expense routes are owner/admin only; allocation materializes normal `building_expenses` rows for the selected period.
+One-off building expenses and fixed costs keep using their existing `note` fields for user-entered display labels; recurring expenses, prepaid expenses, and shared expenses use their existing `name` fields. Reserve fund routes are owner/admin only, derive balance from active transactions, and reserve rates are managed through building settings. Shared-expense routes are owner/admin only; allocation materializes normal `building_expenses` rows for the selected period.

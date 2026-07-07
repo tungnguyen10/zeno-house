@@ -14,7 +14,8 @@ const appendAudit = vi.fn()
 const storageUpload = vi.fn()
 const storageRemove = vi.fn()
 const storageCreateSignedUrl = vi.fn()
-const reverseExpenseWithdrawal = vi.fn()
+const syncExpenseDeduction = vi.fn()
+const voidExpenseDeduction = vi.fn()
 
 vi.mock('../../../server/repositories/buildings', () => ({
   BuildingRepository: { findById: findBuildingById },
@@ -41,7 +42,8 @@ vi.mock('../../../server/services/audit', () => ({
 vi.mock('../../../server/services/operations-report/reserve-funds', () => ({
   ReserveFundService: {
     createReserveFundedExpense: vi.fn(),
-    reverseExpenseWithdrawal,
+    syncExpenseDeduction,
+    voidExpenseDeduction,
   },
 }))
 
@@ -93,7 +95,8 @@ describe('BuildingExpenseService', () => {
     storageUpload.mockResolvedValue({ error: null })
     storageRemove.mockResolvedValue({ error: null })
     storageCreateSignedUrl.mockResolvedValue({ data: { signedUrl: 'https://signed.test/receipt' }, error: null })
-    reverseExpenseWithdrawal.mockResolvedValue(null)
+    syncExpenseDeduction.mockResolvedValue(null)
+    voidExpenseDeduction.mockResolvedValue(null)
   })
 
   it('soft-voids an expense with void metadata and audit', async () => {
@@ -126,6 +129,7 @@ describe('BuildingExpenseService', () => {
       'admin-1',
       'duplicate entry',
     )
+    expect(voidExpenseDeduction).toHaveBeenCalledWith(expect.anything(), admin, voided)
     expect(appendAudit).toHaveBeenCalledWith(
       expect.anything(),
       admin,
@@ -154,11 +158,11 @@ describe('BuildingExpenseService', () => {
     expect(appendAudit).not.toHaveBeenCalled()
   })
 
-  it('does not accept funding-source changes through the expense update schema', () => {
+  it('accepts funding-source changes through the expense update schema', () => {
     const result = buildingExpenseUpdateSchema.safeParse({ funded_by: 'reserve_fund' })
 
     expect(result.success).toBe(true)
-    expect(result.data).not.toHaveProperty('funded_by')
+    expect(result.data).toHaveProperty('funded_by', 'reserve_fund')
   })
 
   it('uploads a valid receipt after write scope enforcement', async () => {

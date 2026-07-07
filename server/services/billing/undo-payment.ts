@@ -15,7 +15,7 @@ export const UndoPaymentService = {
   /**
    * Undo a recorded payment by soft-deleting it, then recompute the invoice's
    * paid/balance/status from the remaining active payments and emit a
-   * `payment.undone` audit event. Blocked when the period is closed.
+    * `payment.undone` audit event. Blocked when the period is closed.
    */
   async undoPayment(
     event: H3Event,

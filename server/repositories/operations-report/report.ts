@@ -16,6 +16,7 @@ export interface ReportInvoice {
 
 export interface ReportBillingData {
   periodId: string | null
+  periodStatus: string | null
   invoices: ReportInvoice[]
 }
 
@@ -29,22 +30,22 @@ type InvoiceRow = {
 
 export const OperationsReportRepository = {
   /** Resolve the billing period id for a building/year/month, if it exists. */
-  async findPeriodId(
+  async findPeriod(
     event: H3Event,
     buildingId: string,
     periodYear: number,
     periodMonth: number,
-  ): Promise<string | null> {
+  ): Promise<{ id: string; status: string } | null> {
     const client = await serverSupabaseClient(event)
     const { data, error } = await client
       .from('billing_periods')
-      .select('id')
+      .select('id, status')
       .eq('building_id', buildingId)
       .eq('period_year', periodYear)
       .eq('period_month', periodMonth)
       .maybeSingle()
     if (error) throw createError({ statusCode: 500, message: error.message })
-    return data?.id ?? null
+    return data ? { id: data.id, status: data.status } : null
   },
 
   /**
@@ -57,8 +58,9 @@ export const OperationsReportRepository = {
     periodYear: number,
     periodMonth: number,
   ): Promise<ReportBillingData> {
-    const periodId = await this.findPeriodId(event, buildingId, periodYear, periodMonth)
-    if (!periodId) return { periodId: null, invoices: [] }
+    const period = await this.findPeriod(event, buildingId, periodYear, periodMonth)
+    if (!period) return { periodId: null, periodStatus: null, invoices: [] }
+    const periodId = period.id
 
     const client = await serverSupabaseClient(event)
     const { data, error } = await client
@@ -87,6 +89,6 @@ export const OperationsReportRepository = {
       }
     })
 
-    return { periodId, invoices }
+    return { periodId, periodStatus: period.status, invoices }
   },
 }

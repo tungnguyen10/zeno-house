@@ -1,8 +1,4 @@
-## Purpose
-
-Define per-building reserve funds, their transaction ledger, and the link between reserve withdrawals and building expenses.
-
-## Requirements
+## ADDED Requirements
 
 ### Requirement: Building reserve rate history
 The system SHALL let authorized users configure a per-building reserve rate with period-based effective history.
@@ -18,6 +14,8 @@ The system SHALL let authorized users configure a per-building reserve rate with
 #### Scenario: Rate settings require capability and scope
 - **WHEN** a user without reserve-fund management capability or building scope attempts to manage reserve rates
 - **THEN** the system responds with a forbidden error
+
+## MODIFIED Requirements
 
 ### Requirement: Reserve fund balance
 The system SHALL maintain a per-building reserve fund whose balance is derived from non-void reserve fund transactions.

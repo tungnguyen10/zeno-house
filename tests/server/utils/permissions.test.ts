@@ -54,9 +54,10 @@ describe('server permissions: owner capabilities', () => {
     expect(can(makeUser('owner'), 'buildings.delete')).toBe(true)
   })
 
-  it('owner has full operational billing rights inside scope', () => {
+  it('owner can close billing periods but cannot reopen or unissue', () => {
     expect(can(makeUser('owner'), 'billing.close')).toBe(true)
-    expect(can(makeUser('owner'), 'billing.unissue')).toBe(true)
+    expect(can(makeUser('owner'), 'billing.reopen')).toBe(false)
+    expect(can(makeUser('owner'), 'billing.unissue')).toBe(false)
     expect(can(makeUser('owner'), 'billing.corrections')).toBe(true)
   })
 

@@ -182,7 +182,7 @@ Rules:
 
 Reopening a closed period:
 
-- requires `billing.close`
+- requires `billing.reopen` (admin only)
 - requires a reason with at least 10 characters
 - only allowed from `closed` status
 - transitions `closed → collecting`

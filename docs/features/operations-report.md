@@ -430,4 +430,4 @@ Chưa làm (như MVP scope đã nêu): approval, upload chứng từ, custom cat
 
 - Modal thêm/sửa chi phí vận hành một lần dùng `UiCombobox allow-custom` cho "Tên/Ghi chú chi phí" và lưu vào `building_expenses.note`.
 - Modal chi phí cố định trong building settings dùng cùng pattern cho "Tên/Ghi chú chi phí" và lưu vào `building_fixed_costs.note`.
-- Tạo chi phí từ quỹ dự phòng là thao tác hai bước được bọc bởi service compensation: nếu tạo withdrawal thất bại sau khi expense đã được tạo, expense mới tạo bị xóa lại để không còn orphan row. Void một reserve-funded expense đã hoàn tất vẫn dùng compensating deposit để phục hồi balance.
+- Tạo chi phí từ quỹ dự phòng là thao tác hai bước được bọc bởi service compensation: nếu tạo deduction thất bại sau khi expense đã được tạo, expense mới tạo bị xóa lại để không còn orphan row. Void một reserve-funded expense sẽ void linked deduction để khoản chi không còn làm giảm số dư quỹ.

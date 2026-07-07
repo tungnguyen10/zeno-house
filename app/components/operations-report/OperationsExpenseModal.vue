@@ -16,7 +16,6 @@ const props = defineProps<{
   buildingId: string
   periodYear: number
   periodMonth: number
-  reserveBalance?: number
   canUseReserve?: boolean
   submitting?: boolean
 }>()
@@ -32,15 +31,6 @@ const categoryOptions = EXPENSE_CATEGORIES.map(value => ({
   value,
   label: EXPENSE_CATEGORY_LABELS[value],
 }))
-const noteSuggestions = computed(() => {
-  const current = [props.expense?.note, props.prefill?.note].filter((value): value is string => Boolean(value))
-  const categoryNames = EXPENSE_CATEGORIES.map(category => EXPENSE_CATEGORY_LABELS[category])
-  return [...new Set([...current, ...categoryNames])].filter(Boolean)
-})
-const noteModel = computed<string | null>({
-  get: () => form.note || null,
-  set: value => { form.note = value ?? '' },
-})
 
 function today() {
   return new Date().toISOString().slice(0, 10)
@@ -73,10 +63,7 @@ const amountPreview = computed(() => {
   if (!form.amount || Number.isNaN(value) || value <= 0) return undefined
   return formatCurrency(value)
 })
-const showReserveToggle = computed(() =>
-  !isEdit.value && props.canUseReserve === true && (props.reserveBalance ?? 0) > 0,
-)
-const reserveRemaining = computed(() => (props.reserveBalance ?? 0) - Number(form.amount || 0))
+const showReserveToggle = computed(() => props.canUseReserve === true)
 
 watch(
   () => props.open,
@@ -92,7 +79,7 @@ watch(
     form.payment_method = e?.paymentMethod ?? ''
     form.note = e?.note ?? prefill?.note ?? ''
     form.receipt_file = null
-    form.funded_by = 'direct'
+    form.funded_by = e?.fundedBy ?? 'direct'
     // Expand extra fields only when the edited expense already uses them.
     showDetails.value = !!(e?.payee || e?.paymentMethod)
   },
@@ -120,8 +107,8 @@ function submit() {
     base.building_id = props.buildingId
     base.period_year = props.periodYear
     base.period_month = props.periodMonth
-    base.funded_by = form.funded_by
   }
+  base.funded_by = form.funded_by
 
   if (form.receipt_file) base.receipt_file = form.receipt_file
 
@@ -163,18 +150,10 @@ function onReceiptChange(event: Event) {
         required
       />
 
-      <UiCombobox
-        v-model="noteModel"
+      <UiInput
+        v-model="form.note"
         label="Tên/Ghi chú chi phí"
-        :options="noteSuggestions"
-        :option-key="name => name"
-        :option-label="name => name"
-        :create-option="name => name"
-        allow-custom
-        custom-option-label="Dùng"
-        placeholder="Chọn mẫu hoặc nhập tên riêng"
-        search-placeholder="Nhập tên chi phí"
-        empty-message="Nhập tên mới để dùng"
+        placeholder="VD: Sửa tường, vệ sinh tập thể..."
       />
 
       <UiInput
@@ -230,24 +209,13 @@ function onReceiptChange(event: Event) {
         />
       </div>
 
-      <label
+      <UiCheckbox
         v-if="showReserveToggle"
-        class="flex items-start gap-3 rounded-md border border-dark-border bg-dark-surface px-3 py-3 text-sm"
-      >
-        <input
-          v-model="form.funded_by"
-          type="checkbox"
-          true-value="reserve_fund"
-          false-value="direct"
-          class="mt-1"
-        >
-        <span>
-          <span class="block font-medium text-white">Lấy từ quỹ</span>
-          <span class="block text-xs text-muted">
-            Còn lại sau: {{ formatCurrency(reserveRemaining) }}
-          </span>
-        </span>
-      </label>
+        :model-value="form.funded_by === 'reserve_fund'"
+        label="Trừ quỹ dự phòng"
+        hint="Khoản chi vẫn được ghi nhận nếu số dư quỹ âm."
+        @update:model-value="form.funded_by = $event ? 'reserve_fund' : 'direct'"
+      />
 
       <UiAlert v-if="error" severity="danger">{{ error }}</UiAlert>
     </form>

@@ -157,6 +157,20 @@ export const OperationsReportExportService = {
     addMoneyRow(sheet, 'Nước đầu vào', report.water.input)
     addMoneyRow(sheet, 'Chênh lệch nước', report.water.margin)
 
+    if (report.reserveFund) {
+      sheet.addRow([])
+      addSectionTitle(sheet, 'Quỹ dự phòng')
+      const rateRow = sheet.addRow(['', 'Tỷ lệ quỹ dự phòng', report.reserveFund.effectiveRatePercent / 100, '', ''])
+      rateRow.getCell(3).numFmt = '0.00%'
+      styleTableRow(rateRow, false, COL_COUNT)
+      alignRightCells(rateRow, 3, 3)
+      addMoneyRow(sheet, 'Doanh thu phát hành', report.reserveFund.issuedRevenue)
+      addMoneyRow(sheet, 'Trích lập trong tháng', report.reserveFund.monthlyAccrual)
+      addMoneyRow(sheet, 'Chi từ quỹ trong tháng', report.reserveFund.monthlyDeduction)
+      addMoneyRow(sheet, 'Số dư tháng', report.reserveFund.monthlyBalance)
+      addMoneyRow(sheet, 'Số dư lũy kế', report.reserveFund.cumulativeBalance)
+    }
+
     const arrayBuffer = await wb.xlsx.writeBuffer()
     const buffer = Buffer.from(arrayBuffer as ArrayBuffer)
     const fileName = `bao-cao-van-hanh-${slugifyName(building.name) || 'building'}-${periodSlug(query)}.xlsx`

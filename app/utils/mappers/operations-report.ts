@@ -2,9 +2,11 @@ import type { Tables } from '~/types/database.types'
 import type {
   BuildingExpense,
   BuildingFixedCost,
+  BuildingReserveFundRate,
   PrepaidExpense,
   ReserveFund,
   ReserveFundTransaction,
+  ReserveFundTransactionSource,
   ReserveFundTransactionType,
   RecurringExpense,
 } from '~/types/operations-report'
@@ -95,16 +97,55 @@ export interface ReserveFundRow {
   created_at: string | null
 }
 
+export interface BuildingReserveFundRateRow {
+  id: string
+  building_id: string
+  reserve_rate_percent: number | string
+  effective_from_period_year: number
+  effective_from_period_month: number
+  effective_to_period_year: number | null
+  effective_to_period_month: number | null
+  created_by: string | null
+  created_at: string | null
+  updated_at: string | null
+}
+
 export interface ReserveFundTransactionRow {
   id: string
   fund_id: string
   type: string
+  source: string | null
   amount: number | string
   date: string
+  period_year: number | null
+  period_month: number | null
+  billing_period_id: string | null
+  reserve_rate_percent: number | string | null
+  issued_revenue: number | string | null
   linked_expense_id: string | null
   note: string | null
   created_by: string | null
+  voided_at: string | null
+  voided_by: string | null
+  void_reason: string | null
   created_at: string | null
+}
+
+export function mapBuildingReserveFundRate(
+  row: BuildingReserveFundRateRow,
+): BuildingReserveFundRate {
+  return {
+    id: row.id,
+    buildingId: row.building_id,
+    reserveRatePercent: Number(row.reserve_rate_percent),
+    effectiveFromPeriodYear: row.effective_from_period_year,
+    effectiveFromPeriodMonth: row.effective_from_period_month,
+    effectiveToPeriodYear: row.effective_to_period_year,
+    effectiveToPeriodMonth: row.effective_to_period_month,
+    createdBy: row.created_by,
+    createdAt: row.created_at ?? '',
+    updatedAt: row.updated_at ?? '',
+  }
 }
 
 export function mapReserveFundTransaction(row: ReserveFundTransactionRow): ReserveFundTransaction {
@@ -112,11 +153,20 @@ export function mapReserveFundTransaction(row: ReserveFundTransactionRow): Reser
     id: row.id,
     fundId: row.fund_id,
     type: row.type as ReserveFundTransactionType,
+    source: (row.source ?? 'manual') as ReserveFundTransactionSource,
     amount: Number(row.amount),
     date: row.date,
+    periodYear: row.period_year,
+    periodMonth: row.period_month,
+    billingPeriodId: row.billing_period_id,
+    reserveRatePercent: row.reserve_rate_percent == null ? null : Number(row.reserve_rate_percent),
+    issuedRevenue: row.issued_revenue == null ? null : Number(row.issued_revenue),
     linkedExpenseId: row.linked_expense_id,
     note: row.note,
     createdBy: row.created_by,
+    voidedAt: row.voided_at,
+    voidedBy: row.voided_by,
+    voidReason: row.void_reason,
     createdAt: row.created_at ?? '',
   }
 }
@@ -126,7 +176,10 @@ export function mapReserveFund(
   transactions: ReserveFundTransaction[],
 ): ReserveFund {
   const balance = transactions.reduce(
-    (sum, tx) => sum + (tx.type === 'deposit' ? tx.amount : -tx.amount),
+    (sum, tx) => {
+      if (tx.voidedAt) return sum
+      return sum + (tx.type === 'deposit' ? tx.amount : -tx.amount)
+    },
     0,
   )
   return {

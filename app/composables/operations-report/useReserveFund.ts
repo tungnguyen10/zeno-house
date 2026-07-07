@@ -13,32 +13,10 @@ export function useReserveFund(buildingId: Ref<string | null>) {
     if (buildingId.value) refresh()
   }, { immediate: true })
 
-  async function deposit(payload: { amount: number, date: string, note?: string | null }) {
-    if (!buildingId.value) throw new Error('No building id')
-    const res = await $fetch<ApiSuccess<ReserveFund>>(`/api/reserve-funds/${buildingId.value}/deposit`, {
-      method: 'POST',
-      body: payload,
-    })
-    await refresh()
-    return res.data
-  }
-
-  async function withdraw(payload: { amount: number, date: string, note?: string | null }) {
-    if (!buildingId.value) throw new Error('No building id')
-    const res = await $fetch<ApiSuccess<ReserveFund>>(`/api/reserve-funds/${buildingId.value}/withdraw`, {
-      method: 'POST',
-      body: payload,
-    })
-    await refresh()
-    return res.data
-  }
-
   return {
     reserveFund: computed(() => data.value?.data ?? null),
     reserveFundLoading: computed(() => status.value === 'pending'),
     reserveFundError: error,
     refreshReserveFund: refresh,
-    depositReserveFund: deposit,
-    withdrawReserveFund: withdraw,
   }
 }

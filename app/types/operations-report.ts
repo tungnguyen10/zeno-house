@@ -46,16 +46,39 @@ export interface BuildingFixedCost {
 }
 
 export type ReserveFundTransactionType = 'deposit' | 'withdrawal'
+export type ReserveFundTransactionSource = 'manual' | 'monthly_accrual' | 'expense_deduction'
+
+export interface BuildingReserveFundRate {
+  id: string
+  buildingId: string
+  reserveRatePercent: number
+  effectiveFromPeriodYear: number
+  effectiveFromPeriodMonth: number
+  effectiveToPeriodYear: number | null
+  effectiveToPeriodMonth: number | null
+  createdBy: string | null
+  createdAt: string
+  updatedAt: string
+}
 
 export interface ReserveFundTransaction {
   id: string
   fundId: string
   type: ReserveFundTransactionType
+  source: ReserveFundTransactionSource
   amount: number
   date: string
+  periodYear: number | null
+  periodMonth: number | null
+  billingPeriodId: string | null
+  reserveRatePercent: number | null
+  issuedRevenue: number | null
   linkedExpenseId: string | null
   note: string | null
   createdBy: string | null
+  voidedAt: string | null
+  voidedBy: string | null
+  voidReason: string | null
   createdAt: string
 }
 
@@ -65,6 +88,18 @@ export interface ReserveFund {
   balance: number
   createdAt: string
   transactions: ReserveFundTransaction[]
+}
+
+export interface ReserveFundSummary {
+  effectiveRatePercent: number
+  issuedRevenue: number
+  monthlyAccrual: number
+  monthlyAccrualEstimated: number
+  monthlyAccrualIsEstimated: boolean
+  monthlyDeduction: number
+  monthlyBalance: number
+  cumulativeBalance: number
+  cumulativeBalanceIsEstimated: boolean
 }
 
 /** A building-scoped recurring expense reminder template. */
@@ -156,6 +191,7 @@ export interface OperationsReport {
   fixedCostByCategory: OperationsBreakdownEntry[]
   electricity: UtilityMargin
   water: UtilityMargin
+  reserveFund: ReserveFundSummary | null
   fixedCosts: BuildingFixedCost[]
   expenses: BuildingExpense[]
   prepaidItems: PrepaidExpenseAllocation[]

@@ -27,6 +27,7 @@ const { load, recordPayment, recordBulkPayments, voidInvoice, listPayments } = u
 const toast = useToast()
 
 const periodIsClosed = computed(() => isPeriodLocked(props.period))
+const canUndoPayment = computed(() => !!props.onUndoPayment && !periodIsClosed.value)
 
 const filterStatus = ref<'all' | 'paid' | 'partial' | 'unpaid' | 'overdue'>('all')
 const filterOptions = [
@@ -336,28 +337,50 @@ async function refreshPayments(invoiceId: string) {
 }
 
 // ---------- Undo payment ----------
-const undoTarget = ref<InvoicePayment | null>(null)
+const undoTarget = ref<{ invoiceId: string; payment: InvoicePayment } | null>(null)
 const undoSubmitting = ref(false)
 
-function startUndoPayment(payment: InvoicePayment) {
+function startUndoPayment(invoiceId: string, payment: InvoicePayment) {
   if (periodIsClosed.value) return
-  undoTarget.value = payment
+  undoTarget.value = { invoiceId, payment }
+}
+
+async function startUndoFromRow(invoice: Invoice) {
+  if (!props.onUndoPayment || periodIsClosed.value) return
+  try {
+    const payments = await listPayments(invoiceRouteSegment(invoice))
+    const latestPayment = payments[0]
+    if (!latestPayment) {
+      toast.error('Không tìm thấy khoản thu để hoàn tác')
+      return
+    }
+    startUndoPayment(invoice.id, latestPayment)
+  }
+  catch (err) {
+    const e = err as { data?: { error?: { message?: string } }; message?: string }
+    toast.error(e.data?.error?.message ?? e.message ?? 'Không tải được lịch sử thanh toán')
+  }
 }
 
 async function confirmUndoPayment() {
-  if (!props.onUndoPayment || !undoTarget.value || !selectedInvoice.value) return
+  if (!props.onUndoPayment || !undoTarget.value) return
   undoSubmitting.value = true
   try {
     const result = await props.onUndoPayment(
-      selectedInvoice.value.invoice.id,
-      undoTarget.value.id,
+      undoTarget.value.invoiceId,
+      undoTarget.value.payment.id,
     )
     if (result) {
       undoTarget.value = null
-      selectedInvoice.value = { ...selectedInvoice.value, invoice: result }
-      await refreshPayments(invoiceRouteSegment(result))
+      if (selectedInvoice.value?.invoice.id === result.id) {
+        selectedInvoice.value = { ...selectedInvoice.value, invoice: result }
+        await refreshPayments(invoiceRouteSegment(result))
+      }
       emit('reload')
     }
+  }
+  catch {
+    // Page-level wrapper already shows API error feedback.
   }
   finally {
     undoSubmitting.value = false
@@ -472,6 +495,16 @@ watch(
         <template #cell-actions="{ row }">
           <div class="flex items-center justify-end gap-1 whitespace-nowrap">
             <UiButton
+              v-if="!periodIsClosed && row.status === 'paid' && onUndoPayment"
+              size="sm"
+              variant="ghost"
+              class="whitespace-nowrap"
+              title="Hoàn tác khoản thu gần nhất của hoá đơn"
+              @click.stop="startUndoFromRow(row)"
+            >
+              Hoàn tác thu
+            </UiButton>
+            <UiButton
               v-if="row.status === 'issued' || row.status === 'partial' || row.status === 'overdue'"
               size="sm"
               variant="primary"
@@ -571,10 +604,10 @@ watch(
               <template #cell-actions="{ row }">
                 <div class="flex justify-end">
                   <UiButton
-                    v-if="onUndoPayment && !periodIsClosed"
+                    v-if="canUndoPayment"
                     variant="ghost"
                     size="sm"
-                    @click="startUndoPayment(row as InvoicePayment)"
+                    @click="startUndoPayment(selectedInvoice.invoice.id, row as InvoicePayment)"
                   >
                     Hoàn tác
                   </UiButton>
@@ -675,7 +708,7 @@ watch(
     <UiConfirmModal
       :open="!!undoTarget"
       title="Hoàn tác thanh toán"
-      :message="undoTarget ? `Hoàn tác khoản thu ${formatCurrency(undoTarget.amount)}? Hoá đơn sẽ được tính lại công nợ.` : ''"
+      :message="undoTarget ? `Hoàn tác khoản thu ${formatCurrency(undoTarget.payment.amount)}? Hoá đơn sẽ được tính lại công nợ.` : ''"
       confirm-label="Hoàn tác"
       :loading="undoSubmitting"
       @confirm="confirmUndoPayment"

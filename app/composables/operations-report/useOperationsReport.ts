@@ -54,8 +54,8 @@ export function useOperationsReport() {
   })
   const forbidden = computed(() => errorCode.value === 'FORBIDDEN')
 
-  function reload() {
-    if (buildingId.value) refresh()
+  async function reload() {
+    if (buildingId.value) await refresh()
   }
 
   async function exportXlsx(): Promise<{ blob: Blob, fileName: string }> {
@@ -72,7 +72,7 @@ export function useOperationsReport() {
   }
 
   // Re-fetch whenever a complete filter set is available.
-  watch(query, () => reload(), { immediate: true })
+  watch(query, () => { void reload() }, { immediate: true })
 
   return {
     buildings,

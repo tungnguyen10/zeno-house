@@ -49,7 +49,7 @@ export const buildingExpenseCreateSchema = z.object({
 export type BuildingExpenseCreateInput = z.infer<typeof buildingExpenseCreateSchema>
 
 export const buildingExpenseUpdateSchema = buildingExpenseCreateSchema
-  .omit({ building_id: true, funded_by: true })
+  .omit({ building_id: true })
   .partial()
 
 export type BuildingExpenseUpdateInput = z.infer<typeof buildingExpenseUpdateSchema>
@@ -74,6 +74,56 @@ export const reserveFundMovementSchema = z.object({
 })
 
 export type ReserveFundMovementInput = z.infer<typeof reserveFundMovementSchema>
+
+export const reserveFundRateListQuerySchema = z.object({
+  building_id: z.string().min(1, 'building_id không được để trống'),
+})
+
+export type ReserveFundRateListQuery = z.infer<typeof reserveFundRateListQuerySchema>
+
+export const reserveFundRateCreateSchema = z
+  .object({
+    building_id: z.string().min(1, 'building_id không được để trống'),
+    reserve_rate_percent: z.coerce.number().min(0).max(100),
+    effective_from_period_year: periodYear,
+    effective_from_period_month: periodMonth,
+    effective_to_period_year: periodYear.nullable().optional(),
+    effective_to_period_month: periodMonth.nullable().optional(),
+  })
+  .refine(
+    d =>
+      (d.effective_to_period_year == null && d.effective_to_period_month == null) ||
+      (d.effective_to_period_year != null && d.effective_to_period_month != null),
+    { message: 'Kỳ kết thúc phải có cả năm và tháng', path: ['effective_to_period_month'] },
+  )
+  .refine(
+    (d) => {
+      if (d.effective_to_period_year == null || d.effective_to_period_month == null) return true
+      const from = d.effective_from_period_year * 12 + d.effective_from_period_month
+      const to = d.effective_to_period_year * 12 + d.effective_to_period_month
+      return to >= from
+    },
+    { message: 'Kỳ kết thúc phải sau hoặc bằng kỳ bắt đầu', path: ['effective_to_period_month'] },
+  )
+
+export type ReserveFundRateCreateInput = z.infer<typeof reserveFundRateCreateSchema>
+
+export const reserveFundRateUpdateSchema = z
+  .object({
+    reserve_rate_percent: z.coerce.number().min(0).max(100).optional(),
+    effective_to_period_year: periodYear.nullable().optional(),
+    effective_to_period_month: periodMonth.nullable().optional(),
+  })
+  .refine(
+    d =>
+      d.effective_to_period_year === undefined ||
+      d.effective_to_period_month === undefined ||
+      (d.effective_to_period_year == null && d.effective_to_period_month == null) ||
+      (d.effective_to_period_year != null && d.effective_to_period_month != null),
+    { message: 'Kỳ kết thúc phải có cả năm và tháng', path: ['effective_to_period_month'] },
+  )
+
+export type ReserveFundRateUpdateInput = z.infer<typeof reserveFundRateUpdateSchema>
 
 // ---------------------------------------------------------------------------
 // Building fixed costs

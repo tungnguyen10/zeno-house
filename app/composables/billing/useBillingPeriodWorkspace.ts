@@ -158,6 +158,17 @@ export function useBillingPeriodWorkspace(periodId: MaybeRefOrGetter<string>) {
     return resp.data
   }
 
+  async function reopen(reason: string): Promise<BillingPeriod> {
+    if (!id.value) throw new Error('No period id')
+    const resp = await $fetch<ApiSuccess<BillingPeriod>>(`/api/billing/periods/${id.value}/reopen`, {
+      method: 'POST',
+      body: { reason },
+    })
+    period.value = resp.data
+    await Promise.all([loadOverview(), loadGrid(), loadDrafts(), loadInvoices(), loadAudit()])
+    return resp.data
+  }
+
   async function unissue(reason: string): Promise<{ voided: number; retained: number; status: BillingPeriod['status'] }> {
     if (!id.value) throw new Error('No period id')
     const resp = await $fetch<ApiSuccess<{ voided: number; retained: number; status: BillingPeriod['status'] }>>(
@@ -255,6 +266,7 @@ export function useBillingPeriodWorkspace(periodId: MaybeRefOrGetter<string>) {
     issueAndPay,
     undoPayment,
     close,
+    reopen,
     unissue,
     exportXlsx,
     saveReadings,

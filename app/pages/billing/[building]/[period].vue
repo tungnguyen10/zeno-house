@@ -79,6 +79,7 @@ const {
   issueAndPay,
   undoPayment,
   close,
+  reopen,
   unissue,
   exportXlsx,
   saveReadings,
@@ -96,6 +97,7 @@ if (periodId.value) {
 
 const auth = useAuthStore()
 const canClose = computed(() => auth.can('billing.close'))
+const canReopen = computed(() => auth.can('billing.reopen'))
 const canUnissue = computed(() => auth.can('billing.unissue'))
 const initialStatus = period.value?.status
 const tab = ref<string>(
@@ -105,6 +107,10 @@ const tab = ref<string>(
 )
 const auditOpen = ref(false)
 const closeOpen = ref(false)
+const reopenOpen = ref(false)
+const reopenReason = ref('')
+const reopenSubmitting = ref(false)
+const reopenError = ref<string | null>(null)
 const unissueOpen = ref(false)
 const unissueSubmitting = ref(false)
 const unissueError = ref<string | null>(null)
@@ -153,6 +159,13 @@ watch(unissueOpen, async (open) => {
   if (open && invoices.value.length === 0) await loadInvoices()
 })
 
+watch(reopenOpen, (open) => {
+  if (!open) {
+    reopenReason.value = ''
+    reopenError.value = null
+  }
+})
+
 function periodLabel(): string {
   return `${String(periodMonth).padStart(2, '0')}/${periodYear}`
 }
@@ -168,6 +181,24 @@ async function closePeriodFromModal() {
     const e = err as { data?: { error?: { message?: string } }; message?: string }
     toast.error(e.data?.error?.message ?? e.message ?? 'Chốt kỳ thất bại')
     throw err
+  }
+}
+
+async function reopenPeriodFromModal() {
+  reopenSubmitting.value = true
+  reopenError.value = null
+  try {
+    await reopen(reopenReason.value)
+    toast.success('Đã mở lại kỳ vận hành')
+    reopenOpen.value = false
+  }
+  catch (err) {
+    const e = err as { data?: { error?: { message?: string } }; message?: string }
+    reopenError.value = e.data?.error?.message ?? e.message ?? 'Mở lại kỳ thất bại'
+    toast.error(reopenError.value)
+  }
+  finally {
+    reopenSubmitting.value = false
   }
 }
 
@@ -413,6 +444,17 @@ function openPrintWindow(payload: { keys: string[] }) {
                 <UiButton
                   variant="ghost"
                   size="sm"
+                  class="!flex !w-full !justify-start !rounded-none !px-3 !py-2 text-left !text-white hover:!bg-dark-surface"
+                  :disabled="!canReopen || period?.status !== 'closed'"
+                  :title="period?.status !== 'closed' ? 'Chỉ mở lại khi kỳ đã chốt' : (!canReopen ? 'Bạn không có quyền mở lại kỳ' : undefined)"
+                  @click="actionMenuOpen = false; reopenOpen = true"
+                >
+                  <IconRefresh class="h-4 w-4" aria-hidden="true" />
+                  <span>Mở lại kỳ</span>
+                </UiButton>
+                <UiButton
+                  variant="ghost"
+                  size="sm"
                   class="!flex !w-full !justify-start !rounded-none !px-3 !py-2 text-left !text-rose-400 hover:!bg-dark-surface"
                   :disabled="!canUnissue || period?.status === 'closed' || period?.status === 'draft'"
                   :title="period?.status === 'closed' ? 'Kỳ đã chốt nên không thể huỷ phát hành' : (!canUnissue ? 'Bạn không có quyền huỷ phát hành kỳ' : undefined)"
@@ -479,6 +521,39 @@ function openPrintWindow(payload: { keys: string[] }) {
           :can-close="canClose"
           :on-close-period="closePeriodFromModal"
         />
+      </UiModal>
+
+      <UiModal :open="reopenOpen" title="Mở lại kỳ vận hành" size="sm" @close="reopenOpen = false">
+        <div class="space-y-3">
+          <p class="text-sm text-muted">
+            Kỳ sẽ chuyển từ trạng thái chốt về đang thu để bạn có thể chỉnh sửa nghiệp vụ liên quan.
+          </p>
+          <UiTextarea
+            v-model="reopenReason"
+            label="Lý do mở lại"
+            :rows="3"
+            placeholder="Nhập tối thiểu 10 ký tự"
+          />
+          <p class="text-xs text-muted text-right">
+            {{ reopenReason.trim().length }}/10 ký tự tối thiểu
+          </p>
+          <UiAlert v-if="reopenError" severity="danger">{{ reopenError }}</UiAlert>
+        </div>
+        <template #footer>
+          <div class="flex justify-end gap-2">
+            <UiButton variant="secondary" :disabled="reopenSubmitting" @click="reopenOpen = false">
+              Đóng
+            </UiButton>
+            <UiButton
+              variant="primary"
+              :loading="reopenSubmitting"
+              :disabled="reopenReason.trim().length < 10"
+              @click="reopenPeriodFromModal"
+            >
+              Mở lại kỳ
+            </UiButton>
+          </div>
+        </template>
       </UiModal>
 
       <BillingUnissueModal

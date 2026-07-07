@@ -49,12 +49,6 @@ const {
   dismissRecurringExpense,
   refreshUpcomingRecurringExpenses,
 } = useRecurringExpenses(buildingId)
-const {
-  reserveFund,
-  depositReserveFund,
-  withdrawReserveFund,
-  refreshReserveFund,
-} = useReserveFund(buildingId)
 
 // --- Capability gates ---------------------------------------------------
 const canWriteExpense = computed(() => auth.can('building-expenses.write'))
@@ -62,8 +56,7 @@ const canVoidExpense = computed(() => auth.can('building-expenses.delete'))
 const canExportReport = computed(() => auth.can('operations-report.export'))
 const canReadRecurring = computed(() => auth.can('recurring-expenses.read'))
 const canReadReserveFund = computed(() => auth.can('reserve-fund.read'))
-const canDepositReserveFund = computed(() => auth.can('reserve-fund.deposit'))
-const canWithdrawReserveFund = computed(() => auth.can('reserve-fund.withdraw'))
+const canManageReserveFund = computed(() => auth.can('reserve-fund.manage'))
 const exportLoading = ref(false)
 
 async function exportReportXlsx() {
@@ -143,10 +136,6 @@ const editingExpense = ref<BuildingExpense | null>(null)
 const expensePrefill = ref<RecurringExpenseRecordPrefill | null>(null)
 const recurringRecordTarget = ref<RecurringExpense | null>(null)
 const savingExpense = ref(false)
-const reserveAction = ref<'deposit' | 'withdraw'>('deposit')
-const reserveAmount = ref('')
-const reserveNote = ref('')
-const movingReserve = ref(false)
 
 function openCreateExpense() {
   editingExpense.value = null
@@ -210,9 +199,8 @@ async function submitExpense(payload: Record<string, unknown>) {
     expenseModalOpen.value = false
     expensePrefill.value = null
     recurringRecordTarget.value = null
-    reload()
-    refreshUpcomingRecurringExpenses()
-    refreshReserveFund()
+    await reload()
+    await refreshUpcomingRecurringExpenses()
   }
   catch (err) {
     toast.error(resolveError(err, 'Không lưu được chi phí.'))
@@ -222,38 +210,11 @@ async function submitExpense(payload: Record<string, unknown>) {
   }
 }
 
-async function submitReserveMovement() {
-  const amount = Number(reserveAmount.value)
-  if (!amount || amount <= 0) {
-    toast.error('Số tiền phải lớn hơn 0.')
-    return
-  }
-  movingReserve.value = true
-  try {
-    const payload = {
-      amount,
-      date: new Date().toISOString().slice(0, 10),
-      note: reserveNote.value.trim() || null,
-    }
-    if (reserveAction.value === 'deposit') await depositReserveFund(payload)
-    else await withdrawReserveFund(payload)
-    reserveAmount.value = ''
-    reserveNote.value = ''
-    toast.success('Đã cập nhật quỹ dự phòng.')
-  }
-  catch (err) {
-    toast.error(resolveError(err, 'Không cập nhật được quỹ dự phòng.'))
-  }
-  finally {
-    movingReserve.value = false
-  }
-}
-
 async function removeReceipt(expense: BuildingExpense) {
   try {
     await removeExpenseReceipt(expense.id)
     toast.success('Đã xoá biên lai.')
-    reload()
+    await reload()
   }
   catch (err) {
     toast.error(resolveError(err, 'Không xoá được biên lai.'))
@@ -286,7 +247,7 @@ async function submitVoid() {
     await voidExpense(voidTarget.value.id, voidReason.value.trim())
     toast.success('Đã hủy chi phí.')
     voidModalOpen.value = false
-    reload()
+    await reload()
   }
   catch (err) {
     voidError.value = resolveError(err, 'Không hủy được chi phí.')
@@ -423,66 +384,31 @@ function signedClass(value: number): string {
         </div>
       </UiSection>
 
-      <UiSection v-if="canReadReserveFund && reserveFund" title="Quỹ dự phòng" class="mt-8">
-        <template #actions>
-          <span class="text-sm font-semibold tabular-nums text-white">
-            {{ formatCurrency(reserveFund.balance) }}
-          </span>
-        </template>
-        <div class="grid gap-4 lg:grid-cols-[1fr_360px]">
-          <div class="rounded-2xl border border-dark-border bg-dark-surface divide-y divide-dark-border">
-            <div
-              v-for="tx in reserveFund.transactions.slice(0, 5)"
-              :key="tx.id"
-              class="flex items-center justify-between px-5 py-3 text-sm"
-            >
-              <div>
-                <span class="text-white">{{ tx.type === 'deposit' ? 'Nạp quỹ' : 'Rút quỹ' }}</span>
-                <span class="ml-2 text-xs text-muted">{{ tx.date }}</span>
-                <p v-if="tx.note" class="mt-0.5 text-xs text-muted">{{ tx.note }}</p>
-              </div>
-              <span
-                class="tabular-nums"
-                :class="tx.type === 'deposit' ? 'text-success-neon' : 'text-error-vivid'"
-              >
-                {{ tx.type === 'deposit' ? '+' : '-' }}{{ formatCurrency(tx.amount) }}
-              </span>
-            </div>
-            <div v-if="reserveFund.transactions.length === 0" class="px-5 py-6">
-              <UiEmptyState title="Chưa có giao dịch" description="Quỹ dự phòng sẽ ghi nhận các lần nạp và rút." />
-            </div>
-          </div>
-          <form
-            v-if="canDepositReserveFund || canWithdrawReserveFund"
-            class="rounded-2xl border border-dark-border bg-dark-surface p-5 space-y-3"
-            @submit.prevent="submitReserveMovement"
-          >
-            <div class="flex gap-2">
-              <UiButton
-                v-if="canDepositReserveFund"
-                type="button"
-                size="sm"
-                :variant="reserveAction === 'deposit' ? 'primary' : 'secondary'"
-                @click="reserveAction = 'deposit'"
-              >
-                Nạp
-              </UiButton>
-              <UiButton
-                v-if="canWithdrawReserveFund"
-                type="button"
-                size="sm"
-                :variant="reserveAction === 'withdraw' ? 'primary' : 'secondary'"
-                @click="reserveAction = 'withdraw'"
-              >
-                Rút
-              </UiButton>
-            </div>
-            <UiInput v-model="reserveAmount" label="Số tiền" type="number" min="1" />
-            <UiInput v-model="reserveNote" label="Ghi chú" />
-            <UiButton type="submit" size="sm" :loading="movingReserve">
-              Lưu
-            </UiButton>
-          </form>
+      <UiSection v-if="canReadReserveFund && report.reserveFund" title="Quỹ dự phòng" class="mt-8">
+        <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <UiMetric
+            label="Tỷ lệ"
+            :value="`${report.reserveFund.effectiveRatePercent}%`"
+            caption="Áp dụng cho kỳ này"
+          />
+          <UiMetric
+            label="Tiền quỹ tháng"
+            :value="formatCurrency(report.reserveFund.monthlyAccrualIsEstimated ? report.reserveFund.monthlyAccrualEstimated : report.reserveFund.monthlyAccrual)"
+            :caption="report.reserveFund.monthlyAccrualIsEstimated ? 'Ước tính (chưa chốt kỳ)' : 'Đã chốt kỳ'"
+            tone="success"
+          />
+          <UiMetric
+            label="Số dư tháng"
+            :value="formatCurrency(report.reserveFund.monthlyBalance)"
+            :tone="report.reserveFund.monthlyBalance >= 0 ? 'success' : 'danger'"
+            caption="Tiền quỹ − Chi từ quỹ"
+          />
+          <UiMetric
+            label="Tổng số dư"
+            :value="formatCurrency(report.reserveFund.cumulativeBalance)"
+            :tone="report.reserveFund.cumulativeBalance >= 0 ? 'success' : 'danger'"
+            :caption="report.reserveFund.cumulativeBalanceIsEstimated ? 'Ước tính theo kỳ đang mở' : 'Theo số đã chốt'"
+          />
         </div>
       </UiSection>
 
@@ -721,8 +647,7 @@ function signedClass(value: number): string {
       :building-id="buildingId"
       :period-year="periodYear"
       :period-month="periodMonth"
-      :reserve-balance="reserveFund?.balance ?? 0"
-      :can-use-reserve="canWithdrawReserveFund"
+      :can-use-reserve="canManageReserveFund"
       :submitting="savingExpense"
       @close="expenseModalOpen = false"
       @submit="submitExpense"

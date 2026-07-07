@@ -3,7 +3,12 @@ import type { ApiSuccess } from '~/types/api'
 import type { PricingType, ServiceCatalogItem } from '~/types/service-catalog'
 import type { ContractWithDetails } from '~/types/contracts'
 import type { AssignmentManager } from '~/types/assignments'
-import type { BuildingFixedCost, PrepaidExpense, RecurringExpense } from '~/types/operations-report'
+import type {
+  BuildingFixedCost,
+  BuildingReserveFundRate,
+  PrepaidExpense,
+  RecurringExpense,
+} from '~/types/operations-report'
 import {
   EXPENSE_CATEGORIES,
   EXPENSE_CATEGORY_LABELS,
@@ -68,6 +73,7 @@ const canManageBuildingServices = computed(() => authStore.can('building-service
 const canManageFixedCosts = computed(() => authStore.can('building-fixed-costs.write'))
 const canManageRecurringExpenses = computed(() => authStore.can('recurring-expenses.write'))
 const canManagePrepaidExpenses = computed(() => authStore.can('prepaid-expenses.write'))
+const canManageReserveFund = computed(() => authStore.can('reserve-fund.manage'))
 const apiBuildingId = computed(() => building.value?.id ?? '')
 const now = new Date()
 const fixedCostPeriodYear = ref(now.getFullYear())
@@ -81,6 +87,28 @@ const endPeriodYear = ref(now.getFullYear())
 const endPeriodMonth = ref(now.getMonth() + 1)
 const fixedCostError = ref<string | null>(null)
 const { createFixedCost } = useOperationsMutations()
+const { data: reserveRatesData, refresh: refreshReserveRates } = await useFetch<ApiSuccess<BuildingReserveFundRate[]>>(
+  '/api/reserve-fund-rates',
+  {
+    query: computed(() => ({ building_id: apiBuildingId.value })),
+    immediate: false,
+    watch: false,
+  },
+)
+const reserveRates = computed(() => reserveRatesData.value?.data ?? [])
+const reserveRateModalOpen = ref(false)
+const savingReserveRate = ref(false)
+const reserveRateError = ref<string | null>(null)
+const reserveRateForm = reactive({
+  reserve_rate_percent: '',
+  effective_from_period_year: now.getFullYear(),
+  effective_from_period_month: now.getMonth() + 1,
+})
+const endReserveRateModalOpen = ref(false)
+const endingReserveRate = ref(false)
+const endReserveRateTarget = ref<BuildingReserveFundRate | null>(null)
+const endReserveRateYear = ref(now.getFullYear())
+const endReserveRateMonth = ref(now.getMonth() + 1)
 const { data: fixedCostsData, refresh: refreshFixedCosts } = await useFetch<ApiSuccess<BuildingFixedCost[]>>(
   '/api/building-fixed-costs',
   {
@@ -194,6 +222,83 @@ watch(
   },
   { immediate: true },
 )
+
+watch(
+  [apiBuildingId, canManageReserveFund],
+  ([buildingId, canManage]) => {
+    if (buildingId && canManage) refreshReserveRates()
+  },
+  { immediate: true },
+)
+
+function openCreateReserveRate() {
+  reserveRateError.value = null
+  reserveRateForm.reserve_rate_percent = ''
+  reserveRateForm.effective_from_period_year = fixedCostPeriodYear.value
+  reserveRateForm.effective_from_period_month = fixedCostPeriodMonth.value
+  reserveRateModalOpen.value = true
+}
+
+async function submitReserveRate() {
+  if (!apiBuildingId.value) return
+  const rate = Number(reserveRateForm.reserve_rate_percent)
+  if (!Number.isFinite(rate) || rate < 0 || rate > 100) {
+    reserveRateError.value = 'Tỷ lệ phải nằm trong khoảng 0 đến 100.'
+    return
+  }
+  savingReserveRate.value = true
+  reserveRateError.value = null
+  try {
+    await $fetch('/api/reserve-fund-rates', {
+      method: 'POST',
+      body: {
+        building_id: apiBuildingId.value,
+        reserve_rate_percent: rate,
+        effective_from_period_year: Number(reserveRateForm.effective_from_period_year),
+        effective_from_period_month: Number(reserveRateForm.effective_from_period_month),
+      },
+    })
+    reserveRateModalOpen.value = false
+    await refreshReserveRates()
+  }
+  catch (err) {
+    reserveRateError.value = resolveApiError(err, 'Không lưu được tỷ lệ quỹ dự phòng.')
+  }
+  finally {
+    savingReserveRate.value = false
+  }
+}
+
+function openEndReserveRate(rate: BuildingReserveFundRate) {
+  endReserveRateTarget.value = rate
+  endReserveRateYear.value = fixedCostPeriodYear.value
+  endReserveRateMonth.value = fixedCostPeriodMonth.value
+  reserveRateError.value = null
+  endReserveRateModalOpen.value = true
+}
+
+async function submitEndReserveRate() {
+  if (!endReserveRateTarget.value) return
+  endingReserveRate.value = true
+  reserveRateError.value = null
+  try {
+    await $fetch(`/api/reserve-fund-rates/${endReserveRateTarget.value.id}`, {
+      method: 'PATCH',
+      body: {
+        effective_to_period_year: Number(endReserveRateYear.value),
+        effective_to_period_month: Number(endReserveRateMonth.value),
+      },
+    })
+    endReserveRateModalOpen.value = false
+    await refreshReserveRates()
+  }
+  catch (err) {
+    reserveRateError.value = resolveApiError(err, 'Không kết thúc được tỷ lệ quỹ dự phòng.')
+  }
+  finally {
+    endingReserveRate.value = false
+  }
+}
 
 async function submitFixedCost(payload: Record<string, unknown>) {
   if (!apiBuildingId.value) return
@@ -650,6 +755,55 @@ async function handleUpdatePricingType(catalogId: string, pricingType: PricingTy
     </UiSection>
 
     <UiSection
+      v-if="canManageReserveFund"
+      title="Tỷ lệ quỹ dự phòng"
+      description="Tỷ lệ trích lập từ doanh thu phát hành khi chốt kỳ vận hành."
+    >
+      <template #actions>
+        <UiButton size="sm" :disabled="!apiBuildingId" @click="openCreateReserveRate">
+          <IconPlus class="h-4 w-4" aria-hidden="true" />
+          Thêm tỷ lệ
+        </UiButton>
+      </template>
+      <div class="rounded-xl border border-dark-border bg-dark-surface p-5">
+        <UiAlert v-if="reserveRateError" severity="danger" class="mb-4">
+          {{ reserveRateError }}
+        </UiAlert>
+        <div v-if="reserveRates.length === 0" class="text-sm text-muted">
+          Chưa có tỷ lệ quỹ dự phòng.
+        </div>
+        <div v-else class="divide-y divide-dark-border">
+          <div
+            v-for="rate in reserveRates"
+            :key="rate.id"
+            class="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between"
+          >
+            <div>
+              <div class="font-medium text-white">
+                {{ rate.reserveRatePercent }}%
+                <UiBadge v-if="!rate.effectiveToPeriodYear" variant="accent" class="ml-2">Đang áp dụng</UiBadge>
+              </div>
+              <div class="mt-1 text-xs text-muted">
+                Từ {{ rate.effectiveFromPeriodMonth }}/{{ rate.effectiveFromPeriodYear }}
+                <template v-if="rate.effectiveToPeriodYear">
+                  đến {{ rate.effectiveToPeriodMonth }}/{{ rate.effectiveToPeriodYear }}
+                </template>
+              </div>
+            </div>
+            <UiButton
+              v-if="!rate.effectiveToPeriodYear"
+              size="sm"
+              variant="secondary"
+              @click="openEndReserveRate(rate)"
+            >
+              Kết thúc
+            </UiButton>
+          </div>
+        </div>
+      </div>
+    </UiSection>
+
+    <UiSection
       v-if="canManageRecurringExpenses"
       title="Nhắc chi phí định kỳ"
       description="Các khoản chi cần được nhắc lại và ghi nhận thủ công vào báo cáo tháng."
@@ -905,6 +1059,80 @@ async function handleUpdatePricingType(catalogId: string, pricingType: PricingTy
             Đóng
           </UiButton>
           <UiButton :loading="endingFixedCost" @click="submitEndFixedCost">
+            Lưu
+          </UiButton>
+        </div>
+      </template>
+    </UiModal>
+
+    <UiModal
+      :open="reserveRateModalOpen"
+      title="Thêm tỷ lệ quỹ dự phòng"
+      size="sm"
+      @close="reserveRateModalOpen = false"
+    >
+      <div class="space-y-4">
+        <UiInput
+          v-model="reserveRateForm.reserve_rate_percent"
+          label="Tỷ lệ (%)"
+          type="number"
+          min="0"
+          max="100"
+          step="0.01"
+          required
+        />
+        <div class="grid grid-cols-2 gap-3">
+          <UiInput
+            v-model.number="reserveRateForm.effective_from_period_year"
+            label="Năm bắt đầu"
+            type="number"
+          />
+          <UiInput
+            v-model.number="reserveRateForm.effective_from_period_month"
+            label="Tháng bắt đầu"
+            type="number"
+            min="1"
+            max="12"
+          />
+        </div>
+        <UiAlert v-if="reserveRateError" severity="danger">
+          {{ reserveRateError }}
+        </UiAlert>
+      </div>
+      <template #footer>
+        <div class="flex justify-end gap-2">
+          <UiButton variant="secondary" :disabled="savingReserveRate" @click="reserveRateModalOpen = false">
+            Đóng
+          </UiButton>
+          <UiButton :loading="savingReserveRate" @click="submitReserveRate">Lưu</UiButton>
+        </div>
+      </template>
+    </UiModal>
+
+    <UiModal
+      :open="endReserveRateModalOpen"
+      title="Kết thúc tỷ lệ quỹ dự phòng"
+      size="sm"
+      @close="endReserveRateModalOpen = false"
+    >
+      <div class="space-y-4">
+        <p class="text-sm text-muted">
+          Chọn kỳ cuối cùng còn áp dụng tỷ lệ này.
+        </p>
+        <div class="grid grid-cols-2 gap-3">
+          <UiInput v-model="endReserveRateYear" label="Năm kết thúc" type="number" />
+          <UiInput v-model="endReserveRateMonth" label="Tháng kết thúc" type="number" min="1" max="12" />
+        </div>
+        <UiAlert v-if="reserveRateError" severity="danger">
+          {{ reserveRateError }}
+        </UiAlert>
+      </div>
+      <template #footer>
+        <div class="flex justify-end gap-2">
+          <UiButton variant="secondary" :disabled="endingReserveRate" @click="endReserveRateModalOpen = false">
+            Đóng
+          </UiButton>
+          <UiButton :loading="endingReserveRate" @click="submitEndReserveRate">
             Lưu
           </UiButton>
         </div>
