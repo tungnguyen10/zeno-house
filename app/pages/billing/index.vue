@@ -35,12 +35,9 @@ const statusFilter = computed<string | number | null>({
   set: (v) => { filters.status = (typeof v === 'string' && v ? v : undefined) as BillingPeriodStatus | undefined },
 })
 
-const yearRange = computed(() => {
-  const y = now.getFullYear()
-  return [y - 1, y, y + 1]
+const { yearOptions, monthOptions } = usePeriodOptions({
+  selectedYear: computed(() => filters.period_year),
 })
-const yearOptions = computed(() => yearRange.value.map(yy => ({ value: yy, label: String(yy) })))
-const monthOptions = Array.from({ length: 12 }, (_, i) => ({ value: i + 1, label: `Tháng ${i + 1}` }))
 
 function statusLabel(s: string) {
   switch (s) {

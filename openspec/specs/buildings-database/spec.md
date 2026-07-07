@@ -83,3 +83,28 @@ The `buildings` table SHALL include a non-null `code` column of type `text`. A u
 - **WHEN** admin PATCHes `code` to a value already used by another building
 - **THEN** returns 409 CONFLICT
 
+---
+
+### Requirement: Buildings store operational start period
+The `buildings` table SHALL include nullable columns `operational_start_year` and `operational_start_month` to represent the first operating month of each building.
+
+#### Scenario: Migration adds operational start columns
+- **WHEN** migration `20260708010000_add_building_operational_start_period.sql` is applied
+- **THEN** `buildings` has nullable `operational_start_year` and `operational_start_month` columns
+
+#### Scenario: Operational month range is constrained
+- **WHEN** `operational_start_month` is provided
+- **THEN** the value must be between 1 and 12
+
+#### Scenario: Operational year range is constrained
+- **WHEN** `operational_start_year` is provided
+- **THEN** the value must be between 2000 and 2100
+
+#### Scenario: Year and month are stored as a pair
+- **WHEN** one of `operational_start_year` or `operational_start_month` is provided without the other
+- **THEN** the row is rejected by the table CHECK constraint
+
+#### Scenario: Types include operational start columns
+- **WHEN** `database.types.ts` is regenerated after migration
+- **THEN** `Tables<'buildings'>` Row/Insert/Update shapes include operational start columns
+

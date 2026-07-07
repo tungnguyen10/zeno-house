@@ -6,7 +6,7 @@ Zeno House uses Supabase Postgres. Schema history lives in `supabase/migrations`
 
 | Area | Migrations |
 | --- | --- |
-| Buildings | `20260514000000_create_buildings.sql`, `20260514000001_fix_buildings_rls.sql`, `20260514000003_buildings_drop_total_rooms.sql`, `20260517000000_building_operational_config.sql`, `20260614000000_add_building_slugs.sql` |
+| Buildings | `20260514000000_create_buildings.sql`, `20260514000001_fix_buildings_rls.sql`, `20260514000003_buildings_drop_total_rooms.sql`, `20260517000000_building_operational_config.sql`, `20260614000000_add_building_slugs.sql`, `20260708010000_add_building_operational_start_period.sql` |
 | Rooms | `20260514000002_create_rooms.sql` |
 | Tenants | `20260514000004_create_tenants.sql`, `20260530100000_tenant_enrichment.sql` |
 | Deprecated room assignments | `20260514000005_create_room_assignments.sql`, `20260530000000_drop_room_assignments.sql` |
@@ -30,6 +30,8 @@ Property and occupancy:
 - `contract_occupants`
 - `contract_payments`
 - `contract_renewals`
+
+`buildings` now includes `operational_start_year` and `operational_start_month` to declare each building's first operating month. The pair is nullable but must be provided together.
 
 Services:
 

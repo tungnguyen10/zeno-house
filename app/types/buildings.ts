@@ -38,6 +38,8 @@ export interface Building {
   billingGenerationDay: number | null
   paymentDueDay: number | null
   gracePeriodDays: number
+  operationalStartYear?: number | null
+  operationalStartMonth?: number | null
   // Ownership provenance (non-sensitive identifiers). Access control still comes
   // from user_building_assignments, not these fields.
   createdBy: string | null
@@ -63,6 +65,8 @@ export interface BuildingInput {
   billingGenerationDay?: number | null
   paymentDueDay?: number | null
   gracePeriodDays?: number
+  operationalStartYear?: number | null
+  operationalStartMonth?: number | null
 }
 
 export type BuildingUpdateInput = Partial<BuildingInput>

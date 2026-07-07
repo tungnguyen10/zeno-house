@@ -17,7 +17,9 @@ const {
   periodMonth,
 } = useBuildingMeterReadings(id)
 
-const monthOptions = Array.from({ length: 12 }, (_, i) => ({ value: i + 1, label: `Tháng ${i + 1}` }))
+const { monthOptions } = usePeriodOptions({
+  selectedYear: periodYear,
+})
 
 interface MeterCell {
   previousValue: number | null

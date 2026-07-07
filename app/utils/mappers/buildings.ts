@@ -1,7 +1,12 @@
 import type { Tables } from '~/types/database.types'
 import type { Building, BuildingStatus, ElectricityPricingType, WaterPricingType } from '~/types/buildings'
 
-export type BuildingRow = Tables<'buildings'> & { rooms: [{ count: number }] }
+export type BuildingRow = Tables<'buildings'>
+  & { rooms: [{ count: number }] }
+  & {
+    operational_start_year?: number | null
+    operational_start_month?: number | null
+  }
 
 export function mapBuilding(row: BuildingRow): Building {
   return {
@@ -29,6 +34,8 @@ export function mapBuilding(row: BuildingRow): Building {
     billingGenerationDay: row.billing_generation_day,
     paymentDueDay: row.payment_due_day,
     gracePeriodDays: row.grace_period_days,
+    operationalStartYear: row.operational_start_year ?? null,
+    operationalStartMonth: row.operational_start_month ?? null,
     createdBy: row.created_by,
     ownerUserId: row.owner_user_id,
     createdAt: row.created_at,

@@ -45,6 +45,7 @@ Buildings own:
 
 - address and display metadata
 - operational config
+- operational start period (`operational_start_year`, `operational_start_month`)
 - utility pricing config
 - rooms
 - building-level service defaults
@@ -70,10 +71,17 @@ Readable building routes use `slug` when available and fall back to id.
 ### Form
 
 - Four numbered card sections (basic, owner, billing defaults, schedule); the create page extends the form with a fifth "Tạo phòng nhanh" section via the `extras` slot so the same desktop footer / mobile sticky save bar drives the entire flow.
+- Schedule section includes optional "Năm bắt đầu" and "Tháng bắt đầu" fields to declare the first operational month of the building.
 - Inline blur validation runs the create schema per field — errors appear on blur and clear as soon as the value becomes valid. Submit reveals every remaining error in a summary at the top with click-to-focus.
 - Draft autosaved to `localStorage` (`building-form:create` or `building-form:edit:<id>`); the form shows a restore banner when a draft exists and clears it on successful submit.
 - Dirty-state guard via `onBeforeRouteLeave` and `beforeunload` prompts before discarding changes.
 - Mobile shows a sticky save bar with safe-area-inset padding.
+
+### Shared period options
+
+- Month/year selectors in billing list, invoice filter, operations report, and building meter readings now use a shared composable `usePeriodOptions`.
+- Default behavior is dynamic currentYear ±1 for years and full 1-12 for months.
+- Operations report applies building operational start constraints on top of shared options and auto-normalizes invalid selections when filters change.
 
 ## Rooms
 

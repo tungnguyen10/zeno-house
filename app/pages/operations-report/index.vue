@@ -144,17 +144,28 @@ async function refreshCurrentReserveAccrual() {
 const buildingOptions = computed(() =>
   buildings.value.map(b => ({ value: b.id, label: b.name })),
 )
-const now = new Date()
-const yearOptions = computed(() =>
-  [now.getFullYear() - 1, now.getFullYear(), now.getFullYear() + 1].map(y => ({
-    value: y,
-    label: String(y),
-  })),
+const selectedBuilding = computed(() =>
+  buildings.value.find(b => b.id === buildingId.value) ?? null,
 )
-const monthOptions = Array.from({ length: 12 }, (_, i) => ({
-  value: i + 1,
-  label: `Tháng ${i + 1}`,
-}))
+const buildingStartPeriod = computed<{ year: number, month: number } | null>(() => {
+  const year = selectedBuilding.value?.operationalStartYear
+  const month = selectedBuilding.value?.operationalStartMonth
+  if (year == null || month == null) return null
+  return {
+    year,
+    month,
+  }
+})
+const {
+  yearOptions,
+  monthOptions,
+  normalizeSelection,
+} = usePeriodOptions({
+  selectedYear: periodYear,
+  minPeriod: buildingStartPeriod,
+})
+
+normalizeSelection(periodYear, periodMonth)
 
 const expenseCategory = ref<ExpenseCategory | ''>('')
 const expenseCategoryOptions = computed(() => [

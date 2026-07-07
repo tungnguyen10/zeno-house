@@ -33,6 +33,7 @@ Composables live in `app/composables/**` and mirror product workflows.
 | Tenants | `useTenantList`, `useTenantDetail`, `useTenantForm` |
 | Contracts | `useContractList`, `useContractDetail`, `useContractForm`, `useContractOccupants`, `useContractPayments`, `useContractRenewals`, `useContractServices`, `useContractHandoverReadings` |
 | Billing | `useBillingPeriodList`, `useBillingPeriodWorkspace`, `useBillingInvoiceActions`, `invoices/useInvoiceList`, `invoices/useInvoiceDetail` |
+| Shared period filters | `usePeriodOptions` |
 | Feedback | `useToast` |
 
 Server state belongs here, usually via `useFetch` or `$fetch`. Form state can live in a form composable when it is reused by create/edit screens.

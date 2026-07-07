@@ -127,3 +127,22 @@ The system SHALL maintain a close state for each building/month operations repor
 #### Scenario: Report close does not close billing
 - **WHEN** an operations report is manually closed, manually reopened, or auto-closed
 - **THEN** no billing period is automatically closed or reopened
+
+### Requirement: Operations report period filter respects building operational start
+The operations report month/year filter SHALL be constrained by each building's configured operational start period when available.
+
+#### Scenario: Start-period year limits selectable years
+- **WHEN** a building has `operational_start_year` set
+- **THEN** the year filter excludes years earlier than that value
+
+#### Scenario: Start-period month limits first year months
+- **WHEN** selected year equals `operational_start_year` and `operational_start_month` exists
+- **THEN** month options start from `operational_start_month` and hide earlier months
+
+#### Scenario: Missing operational start keeps full range
+- **WHEN** a building has no operational start values
+- **THEN** the report filter uses the default shared range (currentYear ±1, months 1-12)
+
+#### Scenario: Invalid selected period is normalized
+- **WHEN** user switches building/year and current month/year selection is no longer valid
+- **THEN** the UI auto-selects the first available valid year/month option

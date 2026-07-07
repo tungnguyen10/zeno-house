@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { buildingFormToApiPayload, type BuildingFormData } from '~/components/buildings/BuildingForm.vue'
+import type { BuildingFormData } from '~/types/building-form'
+import { buildingFormToApiPayload } from '~/utils/mappers/building-form'
 import type { UiTableColumn } from '~/components/ui/UiTable.vue'
 
 interface PreviewRoom {
@@ -24,6 +25,8 @@ const formData = ref<BuildingFormData>({
   billingGenerationDay: '',
   paymentDueDay: '',
   gracePeriodDays: '0',
+  operationalStartYear: '',
+  operationalStartMonth: '',
 })
 
 const initialSnapshot = ref<BuildingFormData>({ ...formData.value })

@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { buildingFormToApiPayload, type BuildingFormData } from '~/components/buildings/BuildingForm.vue'
+import type { BuildingFormData } from '~/types/building-form'
+import { buildingFormToApiPayload } from '~/utils/mappers/building-form'
 import { buildingPath } from '~/utils/routes/operational'
 
 const route = useRoute()
@@ -28,6 +29,8 @@ function emptyForm(): BuildingFormData {
     billingGenerationDay: '',
     paymentDueDay: '',
     gracePeriodDays: '0',
+    operationalStartYear: '',
+    operationalStartMonth: '',
   }
 }
 
@@ -48,6 +51,8 @@ function buildingToForm(b: NonNullable<typeof building.value>): BuildingFormData
     billingGenerationDay: b.billingGenerationDay?.toString() ?? '',
     paymentDueDay: b.paymentDueDay?.toString() ?? '',
     gracePeriodDays: b.gracePeriodDays?.toString() ?? '0',
+    operationalStartYear: b.operationalStartYear?.toString() ?? '',
+    operationalStartMonth: b.operationalStartMonth?.toString() ?? '',
   }
 }
 

@@ -25,14 +25,9 @@ const emit = defineEmits<{
 }>()
 
 const now = new Date()
-const yearOptions = computed(() => {
-  const current = now.getFullYear()
-  return [current - 1, current, current + 1].map(year => ({ value: year, label: String(year) }))
+const { yearOptions, monthOptions } = usePeriodOptions({
+  selectedYear: computed(() => props.periodYear),
 })
-const monthOptions = Array.from({ length: 12 }, (_, idx) => ({
-  value: idx + 1,
-  label: `Tháng ${idx + 1}`,
-}))
 const buildingOptions = computed(() => [
   { value: '', label: 'Tất cả tòa nhà' },
   ...props.buildings.map(building => ({ value: building.id, label: building.name })),

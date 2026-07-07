@@ -288,3 +288,26 @@ Building API responses SHALL include owner provenance fields needed by Settings 
 #### Scenario: List response includes provenance
 - **WHEN** admin lists buildings
 - **THEN** each building includes owner provenance fields if present
+
+### Requirement: Building API supports operational start period
+Building create/update payloads SHALL support optional `operational_start_year` and `operational_start_month`. Responses SHALL expose these fields in building DTOs.
+
+#### Scenario: Create with operational start period
+- **WHEN** admin or owner sends `POST /api/buildings` with both `operational_start_year` and `operational_start_month`
+- **THEN** response is 201 and the created building contains the same operational start period values
+
+#### Scenario: Update operational start period
+- **WHEN** admin or scoped owner sends `PATCH /api/buildings/:id` with both operational start fields
+- **THEN** response is 200 and the updated building returns the new values
+
+#### Scenario: Reject partial operational start payload
+- **WHEN** request includes only one of `operational_start_year` or `operational_start_month`
+- **THEN** response is 422 with `error.code === 'VALIDATION_ERROR'`
+
+#### Scenario: Manager cannot mutate operational start period
+- **WHEN** a manager sends create/update requests containing operational start fields
+- **THEN** response is 403 with `error.code === 'FORBIDDEN'`
+
+#### Scenario: List/detail include operational start period
+- **WHEN** authenticated users read building list or detail
+- **THEN** each building DTO includes `operationalStartYear` and `operationalStartMonth` (nullable)

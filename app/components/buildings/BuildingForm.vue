@@ -1,48 +1,9 @@
-<script lang="ts">
-import { buildingCreateSchema, type BuildingCreateInput } from '~/utils/validators/buildings'
-
-export interface BuildingFormData {
-  name: string
-  address: string
-  description: string
-  status: 'active' | 'inactive'
-  ownerName: string
-  ownerPhone: string
-  ownerEmail: string
-  electricityPricingType: 'per_kwh' | 'fixed' | 'tiered'
-  defaultElectricityRate: string
-  waterPricingType: 'per_m3' | 'per_person' | 'fixed_per_room'
-  defaultWaterRate: string
-  meterReadingDay: string
-  billingGenerationDay: string
-  paymentDueDay: string
-  gracePeriodDays: string
-}
-
-/** Convert UI form data (camelCase, strings) to the API payload (snake_case, typed). */
-export function buildingFormToApiPayload(data: BuildingFormData): BuildingCreateInput {
-  const toNum = (v: string): number | null => v === '' ? null : Number(v)
-  return {
-    name: data.name.trim(),
-    address: data.address.trim(),
-    description: data.description.trim() || null,
-    status: data.status,
-    owner_name: data.ownerName.trim() || null,
-    owner_phone: data.ownerPhone.trim() || null,
-    owner_email: data.ownerEmail.trim() || null,
-    electricity_pricing_type: data.electricityPricingType,
-    default_electricity_rate: toNum(data.defaultElectricityRate),
-    water_pricing_type: data.waterPricingType,
-    default_water_rate: toNum(data.defaultWaterRate),
-    meter_reading_day: toNum(data.meterReadingDay),
-    billing_generation_day: toNum(data.billingGenerationDay),
-    payment_due_day: toNum(data.paymentDueDay),
-    grace_period_days: data.gracePeriodDays === '' ? 0 : Number(data.gracePeriodDays),
-  }
-}
-</script>
-
 <script setup lang="ts">
+import type { BuildingFormData } from '~/types/building-form'
+import { usePeriodOptions } from '~/composables/usePeriodOptions'
+import { buildingFormToApiPayload } from '~/utils/mappers/building-form'
+import { buildingCreateSchema } from '~/utils/validators/buildings'
+
 const props = withDefaults(defineProps<{
   modelValue: BuildingFormData
   /** Server-side errors keyed by snake_case field. */
@@ -101,7 +62,17 @@ const FIELD_META: Record<string, FieldMeta> = {
   billing_generation_day: { id: 'bf-billing-day', label: 'Ngày lập hóa đơn' },
   payment_due_day: { id: 'bf-due-day', label: 'Ngày đến hạn' },
   grace_period_days: { id: 'bf-grace-days', label: 'Số ngày gia hạn' },
+  operational_start_year: { id: 'bf-operational-start-year', label: 'Năm bắt đầu vận hành' },
+  operational_start_month: { id: 'bf-operational-start-month', label: 'Tháng bắt đầu vận hành' },
 }
+
+const { yearOptions: operationalStartYearOptions } = usePeriodOptions({
+  yearWindow: { past: 10, future: 2 },
+})
+const operationalStartMonthOptions = Array.from({ length: 12 }, (_, idx) => ({
+  value: idx + 1,
+  label: `Tháng ${idx + 1}`,
+}))
 
 const localErrors = ref<Record<string, string>>({})
 const touched = ref(new Set<string>())
@@ -381,6 +352,26 @@ const canSubmit = computed(() => !props.loading && (props.isDirty || props.hasDr
         <p class="text-xs text-muted mt-0.5">Các mốc trong tháng cho chốt số, lập hoá đơn và thu tiền.</p>
       </header>
       <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <UiSelect
+          id="bf-operational-start-year"
+          :model-value="modelValue.operationalStartYear"
+          label="Năm bắt đầu"
+          placeholder="Tuỳ chọn"
+          :options="operationalStartYearOptions"
+          :error="errorFor('operational_start_year')"
+          @update:model-value="(v) => update('operationalStartYear', v === null ? '' : String(v))"
+          @blur="onBlur('operational_start_year')"
+        />
+        <UiSelect
+          id="bf-operational-start-month"
+          :model-value="modelValue.operationalStartMonth"
+          label="Tháng bắt đầu"
+          placeholder="Tuỳ chọn"
+          :options="operationalStartMonthOptions"
+          :error="errorFor('operational_start_month')"
+          @update:model-value="(v) => update('operationalStartMonth', v === null ? '' : String(v))"
+          @blur="onBlur('operational_start_month')"
+        />
         <UiInput
           id="bf-meter-reading-day"
           :model-value="modelValue.meterReadingDay"

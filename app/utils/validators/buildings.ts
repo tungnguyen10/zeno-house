@@ -10,7 +10,7 @@ export const serviceFeeDefaultSchema = z.object({
   enabled: z.boolean(),
 })
 
-export const buildingCreateSchema = z.object({
+const buildingBaseSchema = z.object({
   name: z.string().min(2, 'Tên tòa nhà phải có ít nhất 2 ký tự').max(100, 'Tên quá dài'),
   slug: z.string().min(2).max(120).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).optional(),
   address: z.string().min(5, 'Địa chỉ phải có ít nhất 5 ký tự').max(200, 'Địa chỉ quá dài'),
@@ -30,11 +30,40 @@ export const buildingCreateSchema = z.object({
   billing_generation_day: daySchema.nullable().optional(),
   payment_due_day: daySchema.nullable().optional(),
   grace_period_days: z.number().int().min(0).optional().default(0),
+  operational_start_year: z.number().int().min(2000).max(2100).nullable().optional(),
+  operational_start_month: z.number().int().min(1).max(12).nullable().optional(),
 })
 
-export const buildingUpdateSchema = buildingCreateSchema.partial().extend({
+function validateOperationalStartPair(
+  value: { operational_start_year?: number | null; operational_start_month?: number | null },
+  ctx: z.RefinementCtx,
+) {
+  const hasYear = value.operational_start_year != null
+  const hasMonth = value.operational_start_month != null
+
+  if (hasYear === hasMonth) return
+
+  if (!hasYear) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['operational_start_year'],
+      message: 'Năm bắt đầu vận hành là bắt buộc khi đã chọn tháng.',
+    })
+  }
+  if (!hasMonth) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['operational_start_month'],
+      message: 'Tháng bắt đầu vận hành là bắt buộc khi đã chọn năm.',
+    })
+  }
+}
+
+export const buildingCreateSchema = buildingBaseSchema.superRefine(validateOperationalStartPair)
+
+export const buildingUpdateSchema = buildingBaseSchema.partial().extend({
   code: z.string().min(1).max(20).regex(/^[a-z0-9]+$/, 'Code chỉ được chứa chữ thường và số').optional(),
-})
+}).superRefine(validateOperationalStartPair)
 
 export type BuildingCreateInput = z.infer<typeof buildingCreateSchema>
 export type BuildingUpdateInput = z.infer<typeof buildingUpdateSchema>
