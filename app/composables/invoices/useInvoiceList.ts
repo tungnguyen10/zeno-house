@@ -1,6 +1,7 @@
 import type { ApiSuccess } from '~/types/api'
 import type { InvoiceStatus } from '~/utils/constants/billing'
 import type { InvoiceListItem, InvoiceListMeta } from '~/utils/validators/invoices'
+import { useRouteListQuerySync } from '~/composables/useRouteListQuerySync'
 
 const LIST_STATUSES: InvoiceStatus[] = ['issued', 'partial', 'paid', 'overdue', 'void']
 
@@ -36,7 +37,6 @@ function readStatuses(raw: unknown): InvoiceStatus[] {
 
 export function useInvoiceList() {
   const route = useRoute()
-  const router = useRouter()
   const today = currentDateInHoChiMinh()
 
   const buildingId = ref(readString(route.query.building_id))
@@ -45,10 +45,9 @@ export function useInvoiceList() {
   const allMonths = ref(route.query.period_month === undefined ? false : periodMonth.value === undefined)
   const status = ref<InvoiceStatus[]>(readStatuses(route.query.status))
   const tenantSearchInput = ref(readString(route.query.tenant_search))
-  const tenantSearch = ref(tenantSearchInput.value)
   const page = ref(readNumber(route.query.page) ?? 1)
   const pageSize = ref(50)
-  let syncingFromRoute = false
+  const tenantSearch = computed(() => tenantSearchInput.value.trim())
 
   const apiQuery = computed(() => ({
     building_id: buildingId.value || undefined,
@@ -60,57 +59,36 @@ export function useInvoiceList() {
     page_size: pageSize.value,
   }))
 
-  function cleanQuery(): Record<string, string | string[]> {
-    const next: Record<string, string | string[]> = {}
-    if (buildingId.value) next.building_id = buildingId.value
-    if (periodYear.value && (periodYear.value !== today.year || allMonths.value)) {
-      next.period_year = String(periodYear.value)
-    }
-    if (!allMonths.value && periodMonth.value && (
-      periodYear.value !== today.year
-      || periodMonth.value !== today.month
-    )) {
-      next.period_month = String(periodMonth.value)
-    }
-    if (status.value.length > 0) next.status = status.value
-    if (tenantSearch.value) next.tenant_search = tenantSearch.value
-    if (page.value > 1) next.page = String(page.value)
-    return next
-  }
-
-  function replaceRoute(resetPage = false) {
-    if (syncingFromRoute) return
-    if (resetPage) page.value = 1
-    router.replace({ query: cleanQuery() })
-    if (import.meta.client) window.scrollTo({ top: 0, behavior: 'smooth' })
-  }
-
-  watch([buildingId, periodYear, periodMonth, allMonths, status], () => {
-    replaceRoute(true)
-  }, { deep: true })
-
-  watch(page, () => replaceRoute(false))
-
-  watch(tenantSearchInput, (value) => {
-    if (syncingFromRoute) return
-    tenantSearch.value = value.trim()
-    replaceRoute(true)
-  })
-
-  watch(() => route.query, (query) => {
-    syncingFromRoute = true
-    buildingId.value = readString(query.building_id)
-    periodYear.value = readNumber(query.period_year) ?? today.year
-    periodMonth.value = readNumber(query.period_month)
-    allMonths.value = query.period_month === undefined ? false : periodMonth.value === undefined
-    if (!allMonths.value && periodMonth.value === undefined) periodMonth.value = today.month
-    status.value = readStatuses(query.status)
-    tenantSearchInput.value = readString(query.tenant_search)
-    tenantSearch.value = tenantSearchInput.value
-    page.value = readNumber(query.page) ?? 1
-    nextTick(() => {
-      syncingFromRoute = false
-    })
+  const { replaceRoute } = useRouteListQuerySync({
+    page,
+    resetPageOn: [buildingId, periodYear, periodMonth, allMonths, status, tenantSearchInput],
+    syncOn: [page],
+    parseRoute(query) {
+      buildingId.value = readString(query.building_id)
+      periodYear.value = readNumber(query.period_year) ?? today.year
+      periodMonth.value = readNumber(query.period_month)
+      allMonths.value = query.period_month === undefined ? false : periodMonth.value === undefined
+      if (!allMonths.value && periodMonth.value === undefined) periodMonth.value = today.month
+      status.value = readStatuses(query.status)
+      tenantSearchInput.value = readString(query.tenant_search)
+      page.value = readNumber(query.page) ?? 1
+    },
+    buildQuery() {
+      const next: Record<string, string | string[] | undefined> = {}
+      next.building_id = buildingId.value || undefined
+      next.period_year = periodYear.value && (periodYear.value !== today.year || allMonths.value)
+        ? String(periodYear.value)
+        : undefined
+      next.period_month = !allMonths.value && periodMonth.value && (
+        periodYear.value !== today.year || periodMonth.value !== today.month
+      )
+        ? String(periodMonth.value)
+        : undefined
+      next.status = status.value.length > 0 ? status.value : undefined
+      next.tenant_search = tenantSearch.value || undefined
+      next.page = page.value > 1 ? String(page.value) : undefined
+      return next
+    },
   })
 
   const { data, status: fetchStatus, error, refresh } = useFetch<
@@ -164,9 +142,8 @@ export function useInvoiceList() {
     allMonths.value = false
     status.value = []
     tenantSearchInput.value = ''
-    tenantSearch.value = ''
     page.value = 1
-    replaceRoute(false)
+    replaceRoute()
   }
 
   return {

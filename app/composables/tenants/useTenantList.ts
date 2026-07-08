@@ -1,5 +1,6 @@
 import type { Tenant, TenantStatus } from '~/types/tenants'
 import type { ApiSuccess } from '~/types/api'
+import { useRouteListQuerySync } from '~/composables/useRouteListQuerySync'
 
 type SortField = 'full_name' | 'created_at' | 'code'
 type SortOrder = 'asc' | 'desc'
@@ -34,7 +35,6 @@ function readContractState(raw: unknown): ContractState | '' {
 
 export function useTenantList() {
   const route = useRoute()
-  const router = useRouter()
 
   const page = ref(Math.max(1, Number(route.query.page ?? 1) || 1))
   const limit = ref(Math.min(100, Math.max(1, Number(route.query.limit ?? 20) || 20)))
@@ -45,75 +45,53 @@ export function useTenantList() {
   const sort = ref<SortField>(readSortField(route.query.sort))
   const order = ref<SortOrder>(readSortOrder(route.query.order))
 
-  let syncingFromRoute = false
+  useRouteListQuerySync({
+    page,
+    resetPageOn: [q, buildingFilter, contractStateFilter, status, sort, order],
+    syncOn: [page],
+    parseRoute(newQuery) {
+      const newPage = Math.max(1, Number(newQuery.page ?? 1) || 1)
+      const newLimit = Math.min(100, Math.max(1, Number(newQuery.limit ?? 20) || 20))
+      const newQ = typeof newQuery.q === 'string' ? newQuery.q : ''
+      const newBuilding = typeof newQuery.building_id === 'string' ? newQuery.building_id : ''
+      const newContractState = readContractState(newQuery.contract_state)
+      const newStatus = readStatuses(newQuery.status)
+      const newSort = readSortField(newQuery.sort)
+      const newOrder = readSortOrder(newQuery.order)
 
-  function pushToRoute() {
-    const next: Record<string, string | string[] | undefined> = {}
+      if (page.value !== newPage) page.value = newPage
+      if (limit.value !== newLimit) limit.value = newLimit
+      if (q.value !== newQ) q.value = newQ
+      if (buildingFilter.value !== newBuilding) buildingFilter.value = newBuilding
+      if (contractStateFilter.value !== newContractState) contractStateFilter.value = newContractState
+      if (JSON.stringify(status.value) !== JSON.stringify(newStatus)) status.value = newStatus
+      if (sort.value !== newSort) sort.value = newSort
+      if (order.value !== newOrder) order.value = newOrder
+    },
+    buildQuery(query) {
+      const next: Record<string, string | string[] | undefined> = {}
 
-    for (const [k, v] of Object.entries(route.query)) {
-      if (v === null || v === undefined) continue
-      if (Array.isArray(v)) {
-        const filtered = v.filter((item): item is string => typeof item === 'string')
-        if (filtered.length > 0) next[k] = filtered
+      for (const [k, v] of Object.entries(query)) {
+        if (v === null || v === undefined) continue
+        if (Array.isArray(v)) {
+          const filtered = v.filter((item): item is string => typeof item === 'string')
+          if (filtered.length > 0) next[k] = filtered
+        }
+        else if (typeof v === 'string') {
+          next[k] = v
+        }
       }
-      else if (typeof v === 'string') {
-        next[k] = v
-      }
-    }
 
-    next.page = page.value > 1 ? String(page.value) : undefined
-    next.q = q.value ? q.value : undefined
-    next.building_id = buildingFilter.value ? buildingFilter.value : undefined
-    next.contract_state = contractStateFilter.value ? contractStateFilter.value : undefined
-    next.status = status.value.length > 0 ? status.value : undefined
-    next.sort = sort.value !== 'full_name' ? sort.value : undefined
-    next.order = order.value !== 'asc' ? order.value : undefined
+      next.page = page.value > 1 ? String(page.value) : undefined
+      next.q = q.value || undefined
+      next.building_id = buildingFilter.value || undefined
+      next.contract_state = contractStateFilter.value || undefined
+      next.status = status.value.length > 0 ? status.value : undefined
+      next.sort = sort.value !== 'full_name' ? sort.value : undefined
+      next.order = order.value !== 'asc' ? order.value : undefined
 
-    const clean: Record<string, string | string[]> = {}
-    for (const [k, v] of Object.entries(next)) {
-      if (v === undefined) continue
-      clean[k] = v
-    }
-
-    router.replace({ query: clean })
-  }
-
-  watch([q, buildingFilter, contractStateFilter, status, sort, order], () => {
-    if (syncingFromRoute) return
-    if (page.value !== 1) {
-      page.value = 1
-    }
-    pushToRoute()
-  }, { deep: true })
-
-  watch(page, () => {
-    if (syncingFromRoute) return
-    pushToRoute()
-  })
-
-  watch(() => route.query, (newQuery) => {
-    syncingFromRoute = true
-    const newPage = Math.max(1, Number(newQuery.page ?? 1) || 1)
-    const newLimit = Math.min(100, Math.max(1, Number(newQuery.limit ?? 20) || 20))
-    const newQ = typeof newQuery.q === 'string' ? newQuery.q : ''
-    const newBuilding = typeof newQuery.building_id === 'string' ? newQuery.building_id : ''
-    const newContractState = readContractState(newQuery.contract_state)
-    const newStatus = readStatuses(newQuery.status)
-    const newSort = readSortField(newQuery.sort)
-    const newOrder = readSortOrder(newQuery.order)
-
-    if (page.value !== newPage) page.value = newPage
-    if (limit.value !== newLimit) limit.value = newLimit
-    if (q.value !== newQ) q.value = newQ
-    if (buildingFilter.value !== newBuilding) buildingFilter.value = newBuilding
-    if (contractStateFilter.value !== newContractState) contractStateFilter.value = newContractState
-    if (JSON.stringify(status.value) !== JSON.stringify(newStatus)) status.value = newStatus
-    if (sort.value !== newSort) sort.value = newSort
-    if (order.value !== newOrder) order.value = newOrder
-
-    nextTick(() => {
-      syncingFromRoute = false
-    })
+      return next
+    },
   })
 
   const queryParams = computed(() => ({

@@ -264,15 +264,7 @@ function clearFilters() {
         aria-label="Lọc lịch sử theo loại dữ liệu"
         class="min-w-44"
       />
-      <UiButton
-        v-if="hasActiveFilters"
-        unstyled
-        class="inline-flex items-center gap-1 rounded-md px-2 py-1.5 text-xs text-muted transition-colors hover:bg-dark-hover hover:text-white"
-        @click="clearFilters"
-      >
-        <IconX class="h-3.5 w-3.5" aria-hidden="true" />
-        Xóa lọc
-      </UiButton>
+      <UiFilterResetButton v-if="hasActiveFilters" label="Xóa lọc" @click="clearFilters" />
       <span v-if="!isLoading" class="text-xs text-muted">
         {{ events.length }} / {{ total }} sự kiện
       </span>

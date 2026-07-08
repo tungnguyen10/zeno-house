@@ -67,9 +67,7 @@ const activeFilterCount = computed(() => props.status.length)
     />
 
     <template v-if="hasActiveFilters" #actions>
-      <UiButton variant="ghost" size="sm" @click="emit('reset')">
-        Xoá bộ lọc
-      </UiButton>
+      <UiFilterResetButton @click="emit('reset')" />
     </template>
   </UiToolbar>
 </template>

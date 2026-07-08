@@ -198,6 +198,22 @@ const expenseCategoryModel = computed<string | number | null>({
   },
 })
 
+const defaultBuildingId = computed(() => buildings.value[0]?.id ?? null)
+const currentPeriod = new Date()
+const hasActiveFilters = computed(() =>
+  buildingId.value !== defaultBuildingId.value
+  || periodYear.value !== currentPeriod.getFullYear()
+  || periodMonth.value !== currentPeriod.getMonth() + 1
+  || expenseCategory.value !== '',
+)
+
+function resetFilters() {
+  buildingId.value = defaultBuildingId.value
+  periodYear.value = currentPeriod.getFullYear()
+  periodMonth.value = currentPeriod.getMonth() + 1
+  expenseCategory.value = ''
+}
+
 const metrics = computed(() => report.value?.metrics ?? null)
 // Merge pass-through utility input/margin into the matching revenue row so the
 // detail renders inline instead of a separate table that repeats the collected
@@ -450,6 +466,11 @@ function signedClass(value: number): string {
         aria-label="Loại chi"
         :options="expenseCategoryOptions"
         class="col-span-2 sm:min-w-[170px]"
+      />
+      <UiFilterResetButton
+        v-if="hasActiveFilters"
+        class="col-span-2 justify-start sm:col-auto"
+        @click="resetFilters"
       />
     </div>
 

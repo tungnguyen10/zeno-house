@@ -316,15 +316,7 @@ function periodLabel(row: BillingPeriodSummary): string {
         </UiButton>
 
         <!-- Clear all -->
-        <UiButton
-          v-if="hasActiveFilters"
-          unstyled
-          class="inline-flex items-center gap-1 rounded-md px-2 py-1.5 text-xs text-muted transition-colors hover:bg-dark-hover hover:text-white"
-          @click="clearFilters"
-        >
-          <IconX class="h-3.5 w-3.5" aria-hidden="true" />
-          Xóa lọc
-        </UiButton>
+        <UiFilterResetButton v-if="hasActiveFilters" label="Xóa lọc" @click="clearFilters" />
       </div>
 
       <div class="flex shrink-0 items-center gap-3">

@@ -141,14 +141,7 @@ const hasActiveFilters = computed(() =>
         <span v-if="total > 0" class="text-xs text-muted tabular-nums">({{ total }})</span>
       </div>
       <div class="flex items-center gap-2">
-        <UiButton
-          v-if="hasActiveFilters"
-          variant="ghost"
-          size="sm"
-          @click="$emit('reset')"
-        >
-          Xoá bộ lọc
-        </UiButton>
+        <UiFilterResetButton v-if="hasActiveFilters" @click="$emit('reset')" />
         <UiButton
           variant="ghost"
           size="sm"
