@@ -143,6 +143,7 @@ async function onSubmit(data: BuildingFormData) {
               <UiInput
                 label="Số lượng phòng"
                 type="number"
+                number-mode="integer"
                 :model-value="String(quickRoomCount)"
                 @update:model-value="(v) => quickRoomCount = Math.max(1, Number(v) || 1)"
               />
@@ -154,18 +155,21 @@ async function onSubmit(data: BuildingFormData) {
               <UiInput
                 label="Số bắt đầu"
                 type="number"
+                number-mode="integer"
                 :model-value="String(quickRoomNumberStart)"
                 @update:model-value="(v) => quickRoomNumberStart = Number(v) || 0"
               />
               <UiInput
                 label="Giá thuê mặc định (đ)"
                 type="number"
+                number-mode="currency"
                 :model-value="String(quickDefaultRent)"
                 @update:model-value="(v) => quickDefaultRent = Number(v) || 0"
               />
               <UiInput
                 label="Diện tích (m²)"
                 type="number"
+                number-mode="area"
                 placeholder="Tuỳ chọn"
                 :model-value="quickDefaultArea !== null ? String(quickDefaultArea) : ''"
                 @update:model-value="(v) => quickDefaultArea = v === '' ? null : Number(v)"
@@ -186,6 +190,7 @@ async function onSubmit(data: BuildingFormData) {
                     v-if="!quickSamePriceForAll"
                     density="compact"
                     type="number"
+                    number-mode="currency"
                     :model-value="String(row.rent)"
                     @update:model-value="(v) => updatePreviewRent(previewRooms.indexOf(row), Number(v))"
                   />

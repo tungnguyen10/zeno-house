@@ -219,7 +219,7 @@ function resolveError(err: unknown, fallback: string): string {
                 search-placeholder="Nhập tên chi phí"
                 empty-message="Nhập tên mới để dùng"
               />
-              <UiInput v-model="form.amount" label="Số tiền" type="number" min="1">
+              <UiInput v-model="form.amount" label="Số tiền" type="number" number-mode="currency" min="1">
                 <template #suffix>₫</template>
               </UiInput>
             </div>
@@ -275,8 +275,8 @@ function resolveError(err: unknown, fallback: string): string {
           description="Chọn kỳ, sau đó phân bổ từng khoản đang hoạt động."
         >
           <UiToolbar>
-            <UiInput v-model="periodYearModel" label="Năm" type="number" class="w-32" />
-            <UiInput v-model="periodMonthModel" label="Tháng" type="number" min="1" max="12" class="w-32" />
+            <UiInput v-model="periodYearModel" label="Năm" type="number" number-mode="year" class="w-32" />
+            <UiInput v-model="periodMonthModel" label="Tháng" type="number" number-mode="month" min="1" max="12" class="w-32" />
           </UiToolbar>
 
           <UiTable

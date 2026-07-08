@@ -108,6 +108,7 @@ function handleSubmit() {
       v-model="form.new_monthly_rent"
       label="Giá thuê mới (VND)"
       type="number"
+      number-mode="currency"
       :placeholder="`Mặc định: ${formatCurrency(props.currentMonthlyRent)}`"
       :error="fieldErrors.new_monthly_rent"
       :hint="form.mode === 'new_contract' ? undefined : 'Tuỳ chọn — bỏ trống để giữ giá hiện tại'"

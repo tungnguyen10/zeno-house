@@ -65,6 +65,7 @@ const columns: UiTableColumn<ContractService>[] = [
       <UiInput
         density="compact"
         type="number"
+        number-mode="currency"
         :model-value="String(row.amount)"
         class="w-28"
         @update:model-value="(v) => handleAmountInput(row, v as string)"
@@ -75,6 +76,7 @@ const columns: UiTableColumn<ContractService>[] = [
       <UiInput
         density="compact"
         type="number"
+        number-mode="integer"
         :model-value="String(row.quantity)"
         class="w-16"
         @update:model-value="(v) => handleQuantityInput(row, v as string)"

@@ -117,12 +117,14 @@ function submit() {
           v-model="form.effective_from_period_year"
           label="Áp dụng từ năm"
           type="number"
+          number-mode="year"
           required
         />
         <UiInput
           v-model="form.effective_from_period_month"
           label="Áp dụng từ tháng"
           type="number"
+          number-mode="month"
           required
         />
       </div>

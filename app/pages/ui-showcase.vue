@@ -168,10 +168,10 @@ function dismissAlert(key: string) {
       <div class="grid gap-4 md:grid-cols-2">
         <UiInput v-model="inputValue" label="Tên tòa nhà" placeholder="Nhập tên..." required />
         <UiInput v-model="inputWithError" label="Email" placeholder="email@example.com" error="Email không hợp lệ" />
-        <UiInput label="Diện tích" hint="Đơn vị mét vuông" type="number">
+        <UiInput label="Diện tích" hint="Đơn vị mét vuông" type="number" number-mode="area">
           <template #suffix>m²</template>
         </UiInput>
-        <UiInput v-model="inputWithSuffix" label="Giá thuê" type="number">
+        <UiInput v-model="inputWithSuffix" label="Giá thuê" type="number" number-mode="currency">
           <template #prefix>đ</template>
           <template #suffix>/tháng</template>
         </UiInput>
@@ -301,7 +301,7 @@ function dismissAlert(key: string) {
           />
         </template>
         <template #cell-quantity>
-          <UiInput density="compact" type="number" placeholder="0" />
+          <UiInput density="compact" type="number" number-mode="integer" placeholder="0" />
         </template>
         <template #cell-notes="{ row }">
           <UiTextarea
@@ -509,10 +509,10 @@ function dismissAlert(key: string) {
         <div class="grid gap-4 md:grid-cols-2">
           <UiInput label="Mã phòng" placeholder="P101" />
           <UiSelect label="Trạng thái" :options="selectOptions" placeholder="Chọn..." />
-          <UiInput label="Diện tích" type="number">
+          <UiInput label="Diện tích" type="number" number-mode="area">
             <template #suffix>m²</template>
           </UiInput>
-          <UiInput label="Giá thuê" type="number">
+          <UiInput label="Giá thuê" type="number" number-mode="currency">
             <template #prefix>đ</template>
           </UiInput>
         </div>
@@ -527,9 +527,9 @@ function dismissAlert(key: string) {
           Đang điều chỉnh chỉ số đồng hồ. Hành động này được audit lại.
         </UiAlert>
         <div class="grid gap-4 md:grid-cols-3">
-          <UiInput label="Chỉ số cũ" type="number" />
-          <UiInput label="Chỉ số mới" type="number" />
-          <UiInput label="Số đơn vị tính" type="number" />
+          <UiInput label="Chỉ số cũ" type="number" number-mode="meter" />
+          <UiInput label="Chỉ số mới" type="number" number-mode="meter" />
+          <UiInput label="Số đơn vị tính" type="number" number-mode="meter" />
         </div>
         <UiTextarea label="Lý do" :rows="3" class="mt-4" placeholder="Nhập lý do điều chỉnh..." />
         <template #footer>

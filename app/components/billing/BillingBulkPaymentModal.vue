@@ -146,6 +146,7 @@ function submit() {
             <UiInput
               v-model.number="row.amount"
               type="number"
+              number-mode="currency"
               min="0"
               density="compact"
               class="w-28 text-right"

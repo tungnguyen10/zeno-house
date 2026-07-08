@@ -193,6 +193,7 @@ function formatDate(value: string | null): string {
       <UiInput
         v-model="periodYear"
         type="number"
+        number-mode="year"
         min="2020"
         max="2100"
         class="w-24"

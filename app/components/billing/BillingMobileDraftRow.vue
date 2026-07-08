@@ -78,6 +78,7 @@ function formatRate(cell: BillingDraftGridUtilityCell | null): string {
           <UiInput
             v-if="meterCell(row, type)!.editable"
             type="number"
+            number-mode="meter"
             :placeholder="meterUnit(type)"
             :model-value="readingValueOf(row, type)"
             density="compact"

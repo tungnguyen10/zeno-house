@@ -70,6 +70,26 @@ async function onSubmit() {
 </template>
 ```
 
+**Number fields declare intent with `numberMode`:**
+```vue
+<UiInput
+  v-model.number="form.monthlyRent"
+  label="Giá thuê"
+  type="number"
+  number-mode="currency"
+  min="0"
+/>
+
+<UiInput
+  v-model.number="form.currentReading"
+  label="Chỉ số mới"
+  type="number"
+  number-mode="meter"
+/>
+```
+
+Use `currency`, `meter`, `area`, `month`, `year`, `day`, `integer`, `decimal`, or `percent` to describe the domain value. Keep formatted numeric display fields as `type="text"` with `inputmode` when the component formats while typing.
+
 **Server re-validates independently (do not trust client):**
 ```ts
 // server/api/buildings/index.post.ts

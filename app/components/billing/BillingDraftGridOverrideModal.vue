@@ -304,11 +304,11 @@ async function submitOverride() {
           <div class="grid grid-cols-2 gap-3">
             <div class="flex flex-col gap-1">
               <label class="text-xs text-muted">Chỉ số kỳ trước</label>
-              <UiInput v-model="overrideElectricity.previousValue" type="number" />
+              <UiInput v-model="overrideElectricity.previousValue" type="number" number-mode="meter" />
             </div>
             <div class="flex flex-col gap-1">
               <label class="text-xs text-muted">Chỉ số kỳ này</label>
-              <UiInput v-model="overrideElectricity.currentValue" type="number" />
+              <UiInput v-model="overrideElectricity.currentValue" type="number" number-mode="meter" />
             </div>
             <div
               v-if="overrideElectricity.reason === 'replacement' || overrideElectricity.reason === 'reset'"
@@ -317,14 +317,14 @@ async function submitOverride() {
               <label class="text-xs text-muted">
                 {{ overrideElectricity.reason === 'reset' ? 'Số cuối trước khi nhảy về 0' : 'Số cuối đồng hồ cũ' }}
               </label>
-              <UiInput v-model="overrideElectricity.oldMeterFinal" type="number" />
+              <UiInput v-model="overrideElectricity.oldMeterFinal" type="number" number-mode="meter" />
             </div>
             <div
               v-if="overrideElectricity.reason === 'replacement'"
               class="flex flex-col gap-1"
             >
               <label class="text-xs text-muted">Số đầu đồng hồ mới</label>
-              <UiInput v-model="overrideElectricity.newMeterStart" type="number" />
+              <UiInput v-model="overrideElectricity.newMeterStart" type="number" number-mode="meter" />
             </div>
             <div class="flex flex-col gap-1 col-span-2">
               <label class="text-xs text-muted">
@@ -334,6 +334,7 @@ async function submitOverride() {
               <UiInput
                 v-model="overrideElectricity.billableUsage"
                 type="number"
+                number-mode="meter"
                 :disabled="overrideElectricity.reason !== 'manual_adjustment'"
               />
               <p v-if="overrideElectricity.reason !== 'manual_adjustment' && electricityBillable.missing.length > 0" class="text-xs text-warning">
@@ -392,11 +393,11 @@ async function submitOverride() {
           <div class="grid grid-cols-2 gap-3">
             <div class="flex flex-col gap-1">
               <label class="text-xs text-muted">Chỉ số kỳ trước</label>
-              <UiInput v-model="overrideWater.previousValue" type="number" />
+              <UiInput v-model="overrideWater.previousValue" type="number" number-mode="meter" />
             </div>
             <div class="flex flex-col gap-1">
               <label class="text-xs text-muted">Chỉ số kỳ này</label>
-              <UiInput v-model="overrideWater.currentValue" type="number" />
+              <UiInput v-model="overrideWater.currentValue" type="number" number-mode="meter" />
             </div>
             <div
               v-if="overrideWater.reason === 'replacement' || overrideWater.reason === 'reset'"
@@ -405,14 +406,14 @@ async function submitOverride() {
               <label class="text-xs text-muted">
                 {{ overrideWater.reason === 'reset' ? 'Số cuối trước khi nhảy về 0' : 'Số cuối đồng hồ cũ' }}
               </label>
-              <UiInput v-model="overrideWater.oldMeterFinal" type="number" />
+              <UiInput v-model="overrideWater.oldMeterFinal" type="number" number-mode="meter" />
             </div>
             <div
               v-if="overrideWater.reason === 'replacement'"
               class="flex flex-col gap-1"
             >
               <label class="text-xs text-muted">Số đầu đồng hồ mới</label>
-              <UiInput v-model="overrideWater.newMeterStart" type="number" />
+              <UiInput v-model="overrideWater.newMeterStart" type="number" number-mode="meter" />
             </div>
             <div class="flex flex-col gap-1 col-span-2">
               <label class="text-xs text-muted">
@@ -422,6 +423,7 @@ async function submitOverride() {
               <UiInput
                 v-model="overrideWater.billableUsage"
                 type="number"
+                number-mode="meter"
                 :disabled="overrideWater.reason !== 'manual_adjustment'"
               />
               <p v-if="overrideWater.reason !== 'manual_adjustment' && waterBillable.missing.length > 0" class="text-xs text-warning">

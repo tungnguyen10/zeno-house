@@ -145,6 +145,14 @@ Existing domain forms SHALL use UI primitives for text input, number input, sele
 - **WHEN** a migrated form receives an API or workflow error
 - **THEN** it displays the error through `UiAlert` with the appropriate severity
 
+#### Scenario: Number input intent is explicit
+- **WHEN** a migrated form uses `UiInput type="number"`
+- **THEN** the field declares the semantic `numberMode` for its domain value, such as currency, meter, area, month, year, day, integer, decimal, or percent
+
+#### Scenario: Formatted numeric text exception
+- **WHEN** a migrated form needs formatted display while the user types, such as grouped VND text
+- **THEN** it may keep `type="text"` with a suitable `inputmode` and documented parsing behavior instead of using native `type="number"`
+
 ### Requirement: Existing table and matrix adoption
 Existing tabular operational surfaces SHALL use `UiTable` or a documented dense list/table exception. Editable cells SHALL use primitive controls with compact density.
 
@@ -174,3 +182,7 @@ The cleanup implementation SHALL include source scans for raw controls, raw tabl
 #### Scenario: Page primitive scan
 - **WHEN** implementation is complete
 - **THEN** migrated operational pages show adoption of `UiPageHeader`, `UiSection`, `UiToolbar`, `UiAlert`, `UiSkeleton`, or `UiEmptyState` according to their screen type
+
+#### Scenario: Number mode scan
+- **WHEN** implementation is complete
+- **THEN** a scan for `UiInput type="number"` outside `app/components/ui/` has no unexplained matches without a `numberMode`

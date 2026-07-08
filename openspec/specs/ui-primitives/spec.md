@@ -25,8 +25,10 @@ Defines the catalog of generic UI primitives in `app/components/ui/` — buttons
 - **WHEN** UiButton is used without visible text
 - **THEN** it provides an accessible label
 
-### Requirement: UiInput hỗ trợ label và error state
-`UiInput` SHALL nhận `label`, `modelValue`, `error` (string), `hint`, và `required`. SHALL emit `update:modelValue`. SHALL hiển thị error message bên dưới input khi `error` có giá trị. It SHOULD support stable ids and optional prefix/suffix slots for operational values such as currency, unit, and percent.
+### Requirement: UiInput hỗ trợ label, typed input behavior, và field state
+`UiInput` SHALL nhận `label`, `modelValue`, `error` (string), `hint`, và `required`. SHALL emit `update:modelValue`. SHALL hiển thị error message bên dưới input khi `error` có giá trị. It SHOULD support stable ids and optional prefix/suffix slots for operational values such as currency, unit, and percent. `class` and `style` SHALL apply to the root wrapper, while native input attributes such as `name`, `autocomplete`, `min`, `max`, `step`, `pattern`, `inputmode`, `readonly`, and `data-*` SHALL reach the native `<input>`.
+
+`UiInput` SHALL support only the native types used by the product: `text`, `email`, `password`, `tel`, `search`, `url`, `date`, and `number`. For `type="number"`, callers SHALL provide `numberMode` (`integer` | `decimal` | `currency` | `meter` | `area` | `month` | `year` | `day` | `percent`) unless the field intentionally uses a custom text-formatting workflow. Caller-provided `min`, `max`, `step`, and `inputmode` SHALL override primitive defaults. Vue model modifiers `.number` and `.trim` SHALL be honored.
 
 #### Scenario: UiInput hiển thị label
 - **WHEN** UiInput được render với prop `label="Tên tòa nhà"`
@@ -44,8 +46,24 @@ Defines the catalog of generic UI primitives in `app/components/ui/` — buttons
 - **WHEN** UiInput is used for a meter reading, currency, or percentage field
 - **THEN** it can display unit context without custom wrapper markup
 
-### Requirement: UiModal hỗ trợ open/close và title
-`UiModal` SHALL nhận `open` (boolean), `title` (string). SHALL emit `close` khi người dùng click backdrop hoặc nút close. SHALL dùng `<Teleport to="body">` để render ngoài DOM hierarchy.
+#### Scenario: UiInput forwards native attrs
+- **WHEN** UiInput receives native attributes such as `name`, `autocomplete`, `min`, `max`, `step`, `pattern`, `inputmode`, `readonly`, or `data-*`
+- **THEN** those attributes are available on the native input while wrapper `class`/`style` still style the root component
+
+#### Scenario: UiInput number mode defaults
+- **WHEN** UiInput is rendered with `type="number"` and `numberMode="month"`
+- **THEN** it defaults to numeric input mode with `min="1"`, `max="12"`, and `step="1"` unless the caller overrides them
+
+#### Scenario: UiInput model modifiers
+- **WHEN** UiInput is used with `v-model.number` or `v-model.trim`
+- **THEN** emitted values follow Vue modifier semantics instead of always emitting the raw string
+
+#### Scenario: UiInput field state attributes
+- **WHEN** UiInput has an error or is disabled
+- **THEN** the root exposes `data-invalid` or `data-disabled`, the control exposes `aria-invalid`, and helper/error text is wired through `aria-describedby`
+
+### Requirement: UiModal hỗ trợ open/close, accessible title, và focus management
+`UiModal` SHALL nhận `open` (boolean), `title` (string), và optional `ariaLabel`. SHALL emit `close` khi người dùng click backdrop hoặc nút close. SHALL dùng `<Teleport to="body">` để render ngoài DOM hierarchy. Each modal SHALL expose an accessible name through visible `title`/`aria-labelledby` or `ariaLabel`, close on Escape, keep Tab focus inside while open, and restore focus to the previously focused element after close.
 
 #### Scenario: UiModal hiển thị khi open=true
 - **WHEN** UiModal có prop `open="true"`
@@ -62,6 +80,14 @@ Defines the catalog of generic UI primitives in `app/components/ui/` — buttons
 #### Scenario: UiModal emit close khi click nút X
 - **WHEN** người dùng click vào nút đóng (X) của modal
 - **THEN** event `close` được emit
+
+#### Scenario: UiModal accessible name
+- **WHEN** UiModal is rendered with a title or `ariaLabel`
+- **THEN** the dialog has a valid accessible name through `aria-labelledby` or `aria-label`
+
+#### Scenario: UiModal traps and restores focus
+- **WHEN** UiModal is open
+- **THEN** Tab focus remains inside the modal, Escape requests close, and focus returns to the previous focused element after close
 
 ### Requirement: UiStatusBadge hiển thị status với màu sắc tương ứng
 `UiStatusBadge` SHALL nhận `status` string và hiển thị với màu sắc khác nhau theo từng trạng thái. SHALL có label tiếng Việt cho từng status. It SHALL cover core entity statuses and billing statuses, with fallback style for unknown values.
@@ -134,6 +160,10 @@ The system SHALL provide `UiSelect` as the standard select control for forms and
 - **WHEN** `UiSelect` is disabled
 - **THEN** it uses disabled styling and cannot be changed
 
+#### Scenario: Select field state attributes
+- **WHEN** `UiSelect` has an error or is disabled
+- **THEN** it exposes consistent `data-invalid`, `data-disabled`, `aria-invalid`, and `aria-describedby` state wiring
+
 ### Requirement: Textarea primitive
 The system SHALL provide `UiTextarea` as the standard multiline text input.
 
@@ -145,12 +175,20 @@ The system SHALL provide `UiTextarea` as the standard multiline text input.
 - **WHEN** `UiTextarea` receives an error
 - **THEN** it renders an error message and error border consistently with `UiInput`
 
+#### Scenario: Textarea field state attributes
+- **WHEN** `UiTextarea` has an error or is disabled
+- **THEN** it exposes consistent `data-invalid`, `data-disabled`, `aria-invalid`, and `aria-describedby` state wiring
+
 ### Requirement: Boolean controls
 The system SHALL provide `UiCheckbox` and `UiToggle` for boolean choices.
 
 #### Scenario: Checkbox for explicit selection
 - **WHEN** a form needs a persisted true/false field
 - **THEN** it can use `UiCheckbox` with label, disabled state, and error/hint support where needed
+
+#### Scenario: Checkbox field state attributes
+- **WHEN** `UiCheckbox` has an error or is disabled
+- **THEN** it exposes consistent `data-invalid`, `data-disabled`, `aria-invalid`, and `aria-describedby` state wiring
 
 #### Scenario: Toggle for immediate operational switch
 - **WHEN** a settings table needs an on/off switch
@@ -242,6 +280,10 @@ The system SHALL standardize modal and optional drawer surfaces for operational 
 - **WHEN** a workflow needs a dense correction or override form
 - **THEN** the system may provide `UiDrawer` or side panel with dark surface styling and clear actions
 
+#### Scenario: Drawer accessible name and focus
+- **WHEN** `UiDrawer` is open
+- **THEN** it has a visible title or `ariaLabel`, wires `aria-labelledby` when a title exists, closes on Escape, traps Tab focus, and restores previous focus after close
+
 ### Requirement: Searchable select primitive
 The UI primitive system SHALL provide a searchable selection primitive for choosing an item from a list of domain options such as rooms, tenants, contracts, buildings, invoices, or expense labels. The primitive SHALL support `modelValue`, option identity, option label rendering, `label`, `required`, `disabled`, `loading`, `error`, empty state text, and clear/select behavior. It SHALL optionally support custom typed values when the domain allows a choose-or-type workflow.
 
@@ -260,6 +302,14 @@ The UI primitive system SHALL provide a searchable selection primitive for choos
 #### Scenario: Searchable select error state
 - **WHEN** the searchable select receives an error string
 - **THEN** it renders the error message and error border consistently with `UiInput` and `UiSelect`
+
+#### Scenario: Searchable select field state attributes
+- **WHEN** the searchable select has an error or is disabled
+- **THEN** it exposes consistent `data-invalid`, `data-disabled`, `aria-invalid`, and `aria-describedby` state wiring
+
+#### Scenario: Clear action is not nested in trigger
+- **WHEN** the searchable select renders a selected value with a clear action
+- **THEN** the clear action is not nested inside another button and does not open the dropdown when activated
 
 #### Scenario: Searchable select supports loading
 - **WHEN** options are loading

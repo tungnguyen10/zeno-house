@@ -105,6 +105,7 @@ const activeFilterCount = computed(() => {
           <UiInput
             :model-value="floorInput"
             type="number"
+            number-mode="integer"
             placeholder="Mọi tầng"
             density="compact"
             aria-label="Lọc theo tầng"

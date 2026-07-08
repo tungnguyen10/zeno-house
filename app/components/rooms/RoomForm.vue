@@ -241,6 +241,7 @@ const canSubmit = computed(() => !props.loading && (props.isDirty || submitAttem
           label="Tầng"
           placeholder="1"
           type="number"
+          number-mode="integer"
           required
           :disabled="loading"
           :error="errorFor('floor')"
@@ -300,6 +301,7 @@ const canSubmit = computed(() => !props.loading && (props.isDirty || submitAttem
           label="Giá thuê / tháng"
           placeholder="Ví dụ: 3500000"
           type="number"
+          number-mode="currency"
           required
           :disabled="loading"
           :error="errorFor('monthly_rent')"
@@ -315,6 +317,7 @@ const canSubmit = computed(() => !props.loading && (props.isDirty || submitAttem
           label="Diện tích"
           placeholder="Ví dụ: 25.5"
           type="number"
+          number-mode="area"
           :disabled="loading"
           :error="errorFor('area')"
           @update:model-value="update('area', $event)"

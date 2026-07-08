@@ -980,7 +980,7 @@ async function handleUpdatePricingType(catalogId: string, pricingType: PricingTy
             v-model="customServiceForm.default_amount"
             label="Đơn giá mặc định"
             type="number"
-            inputmode="decimal"
+            number-mode="currency"
             placeholder="0"
           />
           <UiToggle
@@ -1046,8 +1046,8 @@ async function handleUpdatePricingType(catalogId: string, pricingType: PricingTy
           Chọn kỳ cuối cùng còn áp dụng chi phí này.
         </p>
         <div class="grid grid-cols-2 gap-3">
-          <UiInput v-model="endPeriodYear" label="Năm kết thúc" type="number" />
-          <UiInput v-model="endPeriodMonth" label="Tháng kết thúc" type="number" />
+          <UiInput v-model="endPeriodYear" label="Năm kết thúc" type="number" number-mode="year" />
+          <UiInput v-model="endPeriodMonth" label="Tháng kết thúc" type="number" number-mode="month" />
         </div>
         <UiAlert v-if="fixedCostError" severity="danger">
           {{ fixedCostError }}
@@ -1076,6 +1076,7 @@ async function handleUpdatePricingType(catalogId: string, pricingType: PricingTy
           v-model="reserveRateForm.reserve_rate_percent"
           label="Tỷ lệ (%)"
           type="number"
+          number-mode="percent"
           min="0"
           max="100"
           step="0.01"
@@ -1086,11 +1087,13 @@ async function handleUpdatePricingType(catalogId: string, pricingType: PricingTy
             v-model.number="reserveRateForm.effective_from_period_year"
             label="Năm bắt đầu"
             type="number"
+            number-mode="year"
           />
           <UiInput
             v-model.number="reserveRateForm.effective_from_period_month"
             label="Tháng bắt đầu"
             type="number"
+            number-mode="month"
             min="1"
             max="12"
           />
@@ -1120,8 +1123,8 @@ async function handleUpdatePricingType(catalogId: string, pricingType: PricingTy
           Chọn kỳ cuối cùng còn áp dụng tỷ lệ này.
         </p>
         <div class="grid grid-cols-2 gap-3">
-          <UiInput v-model="endReserveRateYear" label="Năm kết thúc" type="number" />
-          <UiInput v-model="endReserveRateMonth" label="Tháng kết thúc" type="number" min="1" max="12" />
+          <UiInput v-model="endReserveRateYear" label="Năm kết thúc" type="number" number-mode="year" />
+          <UiInput v-model="endReserveRateMonth" label="Tháng kết thúc" type="number" number-mode="month" min="1" max="12" />
         </div>
         <UiAlert v-if="reserveRateError" severity="danger">
           {{ reserveRateError }}
@@ -1163,12 +1166,13 @@ async function handleUpdatePricingType(catalogId: string, pricingType: PricingTy
         <UiSelect v-model="recurringForm.category" label="Loại chi phí" :options="expenseCategoryOptions" />
         <div class="grid grid-cols-2 gap-3">
           <UiSelect v-model="recurringForm.frequency" label="Tần suất" :options="frequencyOptions" />
-          <UiInput v-model.number="recurringForm.anchor_day" label="Ngày nhắc" type="number" min="1" max="28" />
+          <UiInput v-model.number="recurringForm.anchor_day" label="Ngày nhắc" type="number" number-mode="day" min="1" max="28" />
         </div>
         <UiInput
           v-model="recurringForm.estimated_amount"
           label="Số tiền dự kiến"
           type="number"
+          number-mode="currency"
           min="0"
           required
         />
@@ -1208,8 +1212,8 @@ async function handleUpdatePricingType(catalogId: string, pricingType: PricingTy
         />
         <UiSelect v-model="prepaidForm.category" label="Loại chi phí" :options="expenseCategoryOptions" />
         <div class="grid grid-cols-2 gap-3">
-          <UiInput v-model="prepaidForm.total_amount" label="Tổng tiền" type="number" min="0" required />
-          <UiInput v-model.number="prepaidForm.total_months" label="Số tháng" type="number" min="1" required />
+          <UiInput v-model="prepaidForm.total_amount" label="Tổng tiền" type="number" number-mode="currency" min="0" required />
+          <UiInput v-model.number="prepaidForm.total_months" label="Số tháng" type="number" number-mode="integer" min="1" required />
         </div>
         <UiInput v-model="prepaidForm.start_date" label="Ngày bắt đầu" type="date" required />
         <UiSelect

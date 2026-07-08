@@ -74,6 +74,7 @@ const columns: UiTableColumn<ServiceCatalogItem>[] = [
       <UiInput
         density="compact"
         type="number"
+        number-mode="currency"
         :model-value="String(getService(row.id)?.defaultAmount ?? 0)"
         class="w-32 text-right"
         @change="(v) => handleAmountInput(row.id, v as string)"

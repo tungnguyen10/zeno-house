@@ -635,7 +635,7 @@ watch(
     <UiModal :open="showPaymentModal" title="Ghi nhận thanh toán" @close="showPaymentModal = false">
       <div class="space-y-3">
         <UiSection title="Số tiền" description="Thu đủ số còn lại — không hỗ trợ thu một phần.">
-          <UiInput v-model.number="paymentForm.amount" type="number" min="1" class="w-full" disabled />
+          <UiInput v-model.number="paymentForm.amount" type="number" number-mode="currency" min="1" class="w-full" disabled />
         </UiSection>
         <UiSection title="Ngày thanh toán">
           <UiInput v-model="paymentForm.paid_at" type="date" class="w-full" />

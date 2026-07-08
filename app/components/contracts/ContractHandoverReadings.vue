@@ -125,6 +125,7 @@ const meterTypeLabel: Record<MeterType, string> = { electricity: 'Điện', wate
                   <UiInput
                     density="compact"
                     type="number"
+                    number-mode="meter"
                     :model-value="getRow(meterType, 'handover_in').value"
                     placeholder="0"
                     @update:model-value="(v) => { getRow(meterType, 'handover_in').value = String(v); handleSave(meterType, 'handover_in') }"
@@ -157,6 +158,7 @@ const meterTypeLabel: Record<MeterType, string> = { electricity: 'Điện', wate
                   <UiInput
                     density="compact"
                     type="number"
+                    number-mode="meter"
                     :model-value="getRow(meterType, 'handover_out').value"
                     placeholder="0"
                     @update:model-value="(v) => { getRow(meterType, 'handover_out').value = String(v); handleSave(meterType, 'handover_out') }"

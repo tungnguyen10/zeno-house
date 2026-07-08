@@ -91,3 +91,10 @@ The app is a dense operational tool, not a marketing site.
 - Use design-system tokens from `tailwind.config.ts`.
 - Use `docs/ui-patterns/design-system.md` for component and layout rules.
 - Avoid inline styles unless there is no practical Tailwind or component alternative.
+
+## UI Primitive Contracts
+
+- Use `UiInput`, `UiTextarea`, `UiSelect`, `UiCombobox`, and `UiCheckbox` for form controls instead of hand-written control classes.
+- Every `UiInput type="number"` in domain/page code must declare `numberMode` so keyboard, step, and constraints match the value intent.
+- Keep formatted numeric display fields as `type="text"` with explicit `inputmode` when the component formats while typing.
+- Use `error`/`hint` props for field helper text so primitives can wire `data-invalid`, `aria-invalid`, and `aria-describedby` consistently.

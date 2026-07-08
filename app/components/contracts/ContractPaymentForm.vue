@@ -96,6 +96,7 @@ function handleSubmit() {
       v-model="form.amount"
       label="Số tiền (VND)"
       type="number"
+      number-mode="currency"
       placeholder="ví dụ: 3000000"
       :error="fieldErrors.amount"
       :hint="amountHint"

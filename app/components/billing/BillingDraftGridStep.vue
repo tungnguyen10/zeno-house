@@ -577,6 +577,7 @@ const columns: UiTableColumn<BillingDraftGridRow>[] = [
             <UiInput
               v-if="(row as BillingDraftGridRow).electricity!.editable"
               type="number"
+              number-mode="meter"
               :data-reading-cell="`${(row as BillingDraftGridRow).roomId}::electricity`"
               :model-value="readingDraftValue(row as BillingDraftGridRow, 'electricity')"
               density="compact"
@@ -607,6 +608,7 @@ const columns: UiTableColumn<BillingDraftGridRow>[] = [
             <UiInput
               v-if="(row as BillingDraftGridRow).water!.editable"
               type="number"
+              number-mode="meter"
               :data-reading-cell="`${(row as BillingDraftGridRow).roomId}::water`"
               :model-value="readingDraftValue(row as BillingDraftGridRow, 'water')"
               density="compact"
