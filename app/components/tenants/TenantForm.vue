@@ -72,22 +72,20 @@ const genderOptions = [
   { value: 'other', label: 'Khác' },
 ]
 
-interface FieldMeta { id: string; label: string }
-
-const FIELD_META: Record<string, FieldMeta> = {
-  full_name: { id: 'tf-full-name', label: 'Họ và tên' },
-  phone: { id: 'tf-phone', label: 'Số điện thoại' },
-  email: { id: 'tf-email', label: 'Email' },
-  date_of_birth: { id: 'tf-date-of-birth', label: 'Ngày sinh' },
-  gender: { id: 'tf-gender', label: 'Giới tính' },
-  occupation: { id: 'tf-occupation', label: 'Nghề nghiệp' },
-  permanent_address: { id: 'tf-permanent-address', label: 'Địa chỉ thường trú' },
-  id_number: { id: 'tf-id-number', label: 'Số CMND/CCCD' },
-  id_issued_date: { id: 'tf-id-issued-date', label: 'Ngày cấp' },
-  id_issued_place: { id: 'tf-id-issued-place', label: 'Nơi cấp' },
-  emergency_contact_name: { id: 'tf-emergency-name', label: 'Người liên hệ khẩn cấp' },
-  emergency_contact_phone: { id: 'tf-emergency-phone', label: 'SĐT liên hệ khẩn cấp' },
-  notes: { id: 'tf-notes', label: 'Ghi chú' },
+const FIELD_IDS: Record<string, string> = {
+  full_name: 'tf-full-name',
+  phone: 'tf-phone',
+  email: 'tf-email',
+  date_of_birth: 'tf-date-of-birth',
+  gender: 'tf-gender',
+  occupation: 'tf-occupation',
+  permanent_address: 'tf-permanent-address',
+  id_number: 'tf-id-number',
+  id_issued_date: 'tf-id-issued-date',
+  id_issued_place: 'tf-id-issued-place',
+  emergency_contact_name: 'tf-emergency-name',
+  emergency_contact_phone: 'tf-emergency-phone',
+  notes: 'tf-notes',
 }
 
 const localErrors = ref<Record<string, string>>({})
@@ -132,21 +130,17 @@ function errorFor(snakeField: string): string | undefined {
   return localErrors.value[snakeField] ?? props.errors?.[snakeField]?.[0]
 }
 
-interface VisibleError extends FieldMeta { field: string; message: string }
-
-const visibleErrors = computed<VisibleError[]>(() => {
+const firstInvalidFieldId = computed<string | null>(() => {
   const merged: Record<string, string> = { ...localErrors.value }
   for (const [field, msgs] of Object.entries(props.errors ?? {})) {
     if (msgs?.length && !merged[field]) merged[field] = msgs[0]!
   }
-  const list: VisibleError[] = []
-  for (const [field, message] of Object.entries(merged)) {
+  for (const field of Object.keys(merged)) {
     if (!touched.value.has(field) && !submitAttempted.value) continue
-    const meta = FIELD_META[field]
-    if (!meta) continue
-    list.push({ field, message, ...meta })
+    const id = FIELD_IDS[field]
+    if (id) return id
   }
-  return list
+  return null
 })
 
 function focusField(id: string) {
@@ -160,8 +154,8 @@ async function onSubmit() {
   submitAttempted.value = true
   runValidation()
   await nextTick()
-  if (visibleErrors.value.length > 0) {
-    focusField(visibleErrors.value[0]!.id)
+  if (firstInvalidFieldId.value) {
+    focusField(firstInvalidFieldId.value)
     return
   }
   emit('submit', props.modelValue)
@@ -181,31 +175,6 @@ const canSubmit = computed(() => !props.loading && (props.isDirty || props.hasDr
         <div class="flex items-center gap-2">
           <UiButton size="sm" variant="secondary" @click="emit('restore-draft')">Khôi phục</UiButton>
           <UiButton size="sm" variant="ghost" @click="emit('discard-draft')">Bỏ nháp</UiButton>
-        </div>
-      </div>
-    </UiAlert>
-
-    <UiAlert
-      v-if="visibleErrors.length > 0"
-      severity="danger"
-      data-test="error-summary"
-      role="alert"
-    >
-      <div class="flex items-start gap-2">
-        <IconAlertCircle class="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-        <div class="flex-1">
-          <p class="text-sm font-medium">Có {{ visibleErrors.length }} lỗi cần sửa</p>
-          <ul class="mt-1 space-y-0.5 text-sm">
-            <li v-for="err in visibleErrors" :key="err.field">
-              <UiButton
-                unstyled
-                class="underline hover:text-white text-left"
-                @click="focusField(err.id)"
-              >
-                {{ err.label }}: {{ err.message }}
-              </UiButton>
-            </li>
-          </ul>
         </div>
       </div>
     </UiAlert>

@@ -113,7 +113,7 @@ describe('BuildingForm', () => {
     expect(wrapper.text()).toContain('Tên tòa nhà phải có ít nhất 2 ký tự')
   })
 
-  it('reveals every error after a submit attempt with the error summary', async () => {
+  it('reveals inline errors after a submit attempt', async () => {
     const wrapper = mountForm({
       errors: {
         name: ['Tên tòa nhà phải có ít nhất 2 ký tự'],
@@ -124,11 +124,10 @@ describe('BuildingForm', () => {
     await wrapper.find('form').trigger('submit')
     await nextTick()
 
-    const summary = wrapper.find('[data-test="error-summary"]')
-    expect(summary.exists()).toBe(true)
-    expect(summary.text()).toContain('Có 2 lỗi cần sửa')
-    expect(summary.text()).toContain('Tên tòa nhà')
-    expect(summary.text()).toContain('Địa chỉ')
+    const inlineErrors = wrapper.findAll('[data-test="inline-error"]')
+    expect(inlineErrors.length).toBeGreaterThan(0)
+    expect(wrapper.text()).toContain('Tên tòa nhà phải có ít nhất 2 ký tự')
+    expect(wrapper.text()).toContain('Địa chỉ phải có ít nhất 5 ký tự')
   })
 
   it('does not emit submit while validation errors remain', async () => {

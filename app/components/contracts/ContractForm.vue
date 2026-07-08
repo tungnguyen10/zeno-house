@@ -274,17 +274,17 @@ function errorFor(field: string) {
   return localErrors.value[field] ?? props.errors?.[field]?.[0]
 }
 
-interface VisibleError extends FieldMeta { field: string, message: string }
-
-const visibleErrors = computed<VisibleError[]>(() => {
+const firstInvalidFieldId = computed<string | null>(() => {
   const merged: Record<string, string> = { ...localErrors.value }
   for (const [field, messages] of Object.entries(props.errors ?? {})) {
     if (messages?.length && !merged[field]) merged[field] = messages[0]!
   }
-  return Object.entries(merged)
-    .filter(([field]) => touched.value.has(field) || submitAttempted.value)
-    .map(([field, message]) => ({ field, message, ...FIELD_META[field] }))
-    .filter((item): item is VisibleError => Boolean(item.id))
+  for (const field of Object.keys(merged)) {
+    if (!touched.value.has(field) && !submitAttempted.value) continue
+    const id = FIELD_META[field]?.id
+    if (id) return id
+  }
+  return null
 })
 
 function focusField(id: string) {
@@ -298,8 +298,8 @@ function onSubmit() {
   submitAttempted.value = true
   runValidation()
   nextTick(() => {
-    if (visibleErrors.value.length > 0) {
-      focusField(visibleErrors.value[0]!.id)
+    if (firstInvalidFieldId.value) {
+      focusField(firstInvalidFieldId.value)
       return
     }
     emit('submit', props.modelValue)
@@ -360,19 +360,6 @@ const mobileCancelText = computed(() => props.mobileCancelLabel ?? props.cancelL
             Xoá bản nháp
           </UiButton>
         </div>
-      </div>
-    </UiAlert>
-
-    <UiAlert v-if="visibleErrors.length > 0" severity="danger" data-test="error-summary" role="alert">
-      <div class="space-y-2">
-        <p class="text-sm font-medium text-white">Có {{ visibleErrors.length }} lỗi cần sửa</p>
-        <ul class="space-y-1 text-sm">
-          <li v-for="err in visibleErrors" :key="err.field">
-            <UiButton unstyled class="text-left underline hover:text-white" @click="focusField(err.id)">
-              {{ err.label }}: {{ err.message }}
-            </UiButton>
-          </li>
-        </ul>
       </div>
     </UiAlert>
 

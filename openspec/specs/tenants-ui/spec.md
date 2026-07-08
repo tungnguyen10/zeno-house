@@ -126,15 +126,15 @@ TBD - created by archiving change tenants-overhaul. Update Purpose after archive
 ---
 
 ### Requirement: Tenants form inline validation
-`app/components/tenants/TenantForm.vue` SHALL run field-level Zod validation on `blur` and re-validate on `input` only if the field already has an error. On submit, an error summary banner SHALL appear at the top of the form listing field labels with errors and clicking a summary item SHALL focus the corresponding field.
+`app/components/tenants/TenantForm.vue` SHALL run field-level Zod validation on `blur` and re-validate on `input` only if the field already has an error. On submit, the form SHALL reveal inline errors for every invalid field and SHALL focus the first invalid field.
 
 #### Scenario: Field validates on blur
 - **WHEN** user focuses then leaves the `full_name` field empty
 - **THEN** an inline error message appears under the field and the field gains red border styling
 
-#### Scenario: Error summary on submit failure
+#### Scenario: Inline errors on submit failure
 - **WHEN** user submits the form with full_name and phone missing
-- **THEN** a banner at the top lists "Họ tên", "Số điện thoại" as links, and clicking "Số điện thoại" scrolls to and focuses the phone input
+- **THEN** inline errors are shown under both fields and focus moves to the first invalid input
 
 #### Scenario: Error clears on valid input
 - **WHEN** an inline error is showing for a field and user types a valid value

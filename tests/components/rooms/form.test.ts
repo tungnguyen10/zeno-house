@@ -110,7 +110,7 @@ describe('RoomForm', () => {
     expect(wrapper.text()).toContain('Số phòng không được trống')
   })
 
-  it('shows error summary after submit failure', async () => {
+  it('shows inline errors after submit failure', async () => {
     const wrapper = mountForm({
       modelValue: { ...baseData(), room_number: '', monthly_rent: -1 },
     })
@@ -118,10 +118,10 @@ describe('RoomForm', () => {
     await wrapper.find('form').trigger('submit')
     await nextTick()
 
-    const summary = wrapper.find('[data-test="error-summary"]')
-    expect(summary.exists()).toBe(true)
-    expect(summary.text()).toContain('Số phòng')
-    expect(summary.text()).toContain('Giá thuê')
+    const inlineErrors = wrapper.findAll('[data-test="inline-error"]')
+    expect(inlineErrors.length).toBeGreaterThan(0)
+    expect(wrapper.text()).toContain('Số phòng không được trống')
+    expect(wrapper.text()).toContain('Giá thuê không được âm')
     expect(wrapper.emitted('submit')).toBeUndefined()
   })
 

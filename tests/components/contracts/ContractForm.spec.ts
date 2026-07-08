@@ -190,15 +190,15 @@ describe('ContractForm — overhaul UI', () => {
     expect(wrapper.text()).toContain('Hợp đồng đang chạy')
   })
 
-  it('shows error summary after invalid submit', async () => {
+  it('shows inline errors after invalid submit', async () => {
     const wrapper = mountForm(buildForm({ start_date: '', monthly_rent: '' }), true)
     await flushPromises()
 
     await wrapper.find('form').trigger('submit.prevent')
 
-    expect(wrapper.text()).toContain('Có')
-    expect(wrapper.text()).toContain('Ngày bắt đầu')
-    expect(wrapper.text()).toContain('Giá thuê / tháng')
+    expect(wrapper.text()).toContain('Giá thuê / tháng là bắt buộc')
+    expect(wrapper.text()).toContain('Số điện bàn giao là bắt buộc')
+    expect(wrapper.emitted('submit')).toBeUndefined()
   })
 
   it('shows draft restore alert and mobile sticky bar', async () => {

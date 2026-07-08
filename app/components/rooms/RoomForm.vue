@@ -67,16 +67,14 @@ const statusOptions = [
   { value: 'archived', label: 'Đã lưu trữ' },
 ]
 
-interface FieldMeta { id: string; label: string }
-
-const FIELD_META: Record<string, FieldMeta> = {
-  building_id: { id: 'rf-building', label: 'Tòa nhà' },
-  room_number: { id: 'rf-room-number', label: 'Số phòng' },
-  floor: { id: 'rf-floor', label: 'Tầng' },
-  status: { id: 'rf-status', label: 'Trạng thái' },
-  monthly_rent: { id: 'rf-monthly-rent', label: 'Giá thuê' },
-  area: { id: 'rf-area', label: 'Diện tích' },
-  description: { id: 'rf-description', label: 'Mô tả' },
+const FIELD_IDS: Record<string, string> = {
+  building_id: 'rf-building',
+  room_number: 'rf-room-number',
+  floor: 'rf-floor',
+  status: 'rf-status',
+  monthly_rent: 'rf-monthly-rent',
+  area: 'rf-area',
+  description: 'rf-description',
 }
 
 const localErrors = ref<Record<string, string>>({})
@@ -121,22 +119,18 @@ function errorFor(field: string): string | undefined {
   return localErrors.value[field] ?? props.errors?.[field]?.[0]
 }
 
-interface VisibleError extends FieldMeta { field: string; message: string }
-
-const visibleErrors = computed<VisibleError[]>(() => {
+const firstInvalidFieldId = computed<string | null>(() => {
   const merged: Record<string, string> = { ...localErrors.value }
   for (const [field, msgs] of Object.entries(props.errors ?? {})) {
     if (msgs?.length && !merged[field]) merged[field] = msgs[0]!
   }
 
-  const list: VisibleError[] = []
-  for (const [field, message] of Object.entries(merged)) {
+  for (const field of Object.keys(merged)) {
     if (!touched.value.has(field) && !submitAttempted.value) continue
-    const meta = FIELD_META[field]
-    if (!meta) continue
-    list.push({ field, message, ...meta })
+    const id = FIELD_IDS[field]
+    if (id) return id
   }
-  return list
+  return null
 })
 
 function focusField(id: string) {
@@ -150,8 +144,8 @@ async function onSubmit() {
   submitAttempted.value = true
   runValidation()
   await nextTick()
-  if (visibleErrors.value.length > 0) {
-    focusField(visibleErrors.value[0]!.id)
+  if (firstInvalidFieldId.value) {
+    focusField(firstInvalidFieldId.value)
     return
   }
   emit('submit', props.modelValue)
@@ -181,31 +175,6 @@ const canSubmit = computed(() => !props.loading && (props.isDirty || submitAttem
           <UiButton size="sm" variant="secondary" @click="emit('restore-draft')">Khôi phục</UiButton>
           <UiButton size="sm" variant="ghost" @click="emit('dismiss-draft')">Bỏ qua</UiButton>
           <UiButton size="sm" variant="ghost" @click="emit('clear-draft')">Xoá bản nháp</UiButton>
-        </div>
-      </div>
-    </UiAlert>
-
-    <UiAlert
-      v-if="visibleErrors.length > 0"
-      severity="danger"
-      data-test="error-summary"
-      role="alert"
-    >
-      <div class="flex items-start gap-2">
-        <IconAlertCircle class="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-        <div class="flex-1">
-          <p class="text-sm font-medium">Có {{ visibleErrors.length }} lỗi cần sửa</p>
-          <ul class="mt-1 space-y-0.5 text-sm">
-            <li v-for="err in visibleErrors" :key="err.field">
-              <UiButton
-                unstyled
-                class="text-left underline hover:text-white"
-                @click="focusField(err.id)"
-              >
-                {{ err.label }}: {{ err.message }}
-              </UiButton>
-            </li>
-          </ul>
         </div>
       </div>
     </UiAlert>

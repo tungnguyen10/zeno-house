@@ -115,7 +115,7 @@ describe('TenantForm', () => {
     expect(wrapper.find('[data-test="inline-error"]').exists()).toBe(true)
   })
 
-  it('reveals every error after a submit attempt with the error summary', async () => {
+  it('reveals inline errors after a submit attempt', async () => {
     const wrapper = mountForm({
       errors: {
         full_name: ['Họ tên không được bỏ trống'],
@@ -126,11 +126,10 @@ describe('TenantForm', () => {
     await wrapper.find('form').trigger('submit')
     await nextTick()
 
-    const summary = wrapper.find('[data-test="error-summary"]')
-    expect(summary.exists()).toBe(true)
-    expect(summary.text()).toContain('lỗi cần sửa')
-    expect(summary.text()).toContain('Họ và tên')
-    expect(summary.text()).toContain('Số điện thoại')
+    const inlineErrors = wrapper.findAll('[data-test="inline-error"]')
+    expect(inlineErrors.length).toBeGreaterThan(0)
+    expect(wrapper.text()).toContain('Họ tên không được trống')
+    expect(wrapper.text()).toContain('Số điện thoại không được trống')
   })
 
   it('does not emit submit while validation errors remain', async () => {

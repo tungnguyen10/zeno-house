@@ -42,27 +42,24 @@ const waterPricingOptions = [
   { value: 'fixed_per_room', label: 'Cố định/phòng' },
 ]
 
-interface FieldMeta { id: string; label: string }
-
-/** Snake-case key → field metadata for summary + focus. */
-const FIELD_META: Record<string, FieldMeta> = {
-  name: { id: 'bf-name', label: 'Tên tòa nhà' },
-  address: { id: 'bf-address', label: 'Địa chỉ' },
-  description: { id: 'bf-description', label: 'Mô tả' },
-  status: { id: 'bf-status', label: 'Trạng thái' },
-  owner_name: { id: 'bf-owner-name', label: 'Tên chủ nhà' },
-  owner_phone: { id: 'bf-owner-phone', label: 'SĐT chủ nhà' },
-  owner_email: { id: 'bf-owner-email', label: 'Email chủ nhà' },
-  electricity_pricing_type: { id: 'bf-electricity-pricing', label: 'Cách tính tiền điện' },
-  default_electricity_rate: { id: 'bf-electricity-rate', label: 'Đơn giá điện' },
-  water_pricing_type: { id: 'bf-water-pricing', label: 'Cách tính tiền nước' },
-  default_water_rate: { id: 'bf-water-rate', label: 'Đơn giá nước' },
-  meter_reading_day: { id: 'bf-meter-reading-day', label: 'Ngày chốt số' },
-  billing_generation_day: { id: 'bf-billing-day', label: 'Ngày lập hóa đơn' },
-  payment_due_day: { id: 'bf-due-day', label: 'Ngày đến hạn' },
-  grace_period_days: { id: 'bf-grace-days', label: 'Số ngày gia hạn' },
-  operational_start_year: { id: 'bf-operational-start-period', label: 'Tháng/Năm bắt đầu vận hành' },
-  operational_start_month: { id: 'bf-operational-start-period', label: 'Tháng/Năm bắt đầu vận hành' },
+const FIELD_IDS: Record<string, string> = {
+  name: 'bf-name',
+  address: 'bf-address',
+  description: 'bf-description',
+  status: 'bf-status',
+  owner_name: 'bf-owner-name',
+  owner_phone: 'bf-owner-phone',
+  owner_email: 'bf-owner-email',
+  electricity_pricing_type: 'bf-electricity-pricing',
+  default_electricity_rate: 'bf-electricity-rate',
+  water_pricing_type: 'bf-water-pricing',
+  default_water_rate: 'bf-water-rate',
+  meter_reading_day: 'bf-meter-reading-day',
+  billing_generation_day: 'bf-billing-day',
+  payment_due_day: 'bf-due-day',
+  grace_period_days: 'bf-grace-days',
+  operational_start_year: 'bf-operational-start-period',
+  operational_start_month: 'bf-operational-start-period',
 }
 
 const localErrors = ref<Record<string, string>>({})
@@ -146,21 +143,17 @@ function errorFor(snakeField: string): string | undefined {
   return localErrors.value[snakeField] ?? props.errors?.[snakeField]?.[0]
 }
 
-interface VisibleError extends FieldMeta { field: string; message: string }
-
-const visibleErrors = computed<VisibleError[]>(() => {
+const firstInvalidFieldId = computed<string | null>(() => {
   const merged: Record<string, string> = { ...localErrors.value }
   for (const [field, msgs] of Object.entries(props.errors ?? {})) {
     if (msgs?.length && !merged[field]) merged[field] = msgs[0]!
   }
-  const list: VisibleError[] = []
-  for (const [field, message] of Object.entries(merged)) {
+  for (const field of Object.keys(merged)) {
     if (!touched.value.has(field) && !submitAttempted.value) continue
-    const meta = FIELD_META[field]
-    if (!meta) continue
-    list.push({ field, message, ...meta })
+    const id = FIELD_IDS[field]
+    if (id) return id
   }
-  return list
+  return null
 })
 
 function focusField(id: string) {
@@ -174,8 +167,8 @@ async function onSubmit() {
   submitAttempted.value = true
   runValidation()
   await nextTick()
-  if (visibleErrors.value.length > 0) {
-    focusField(visibleErrors.value[0]!.id)
+  if (firstInvalidFieldId.value) {
+    focusField(firstInvalidFieldId.value)
     return
   }
   emit('submit', props.modelValue)
@@ -199,31 +192,6 @@ const canSubmit = computed(() => !props.loading && (props.isDirty || props.hasDr
         <div class="flex items-center gap-2">
           <UiButton size="sm" variant="secondary" @click="emit('restore-draft')">Khôi phục</UiButton>
           <UiButton size="sm" variant="ghost" @click="emit('discard-draft')">Bỏ nháp</UiButton>
-        </div>
-      </div>
-    </UiAlert>
-
-    <UiAlert
-      v-if="visibleErrors.length > 0"
-      severity="danger"
-      data-test="error-summary"
-      role="alert"
-    >
-      <div class="flex items-start gap-2">
-        <IconAlertCircle class="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-        <div class="flex-1">
-          <p class="text-sm font-medium">Có {{ visibleErrors.length }} lỗi cần sửa</p>
-          <ul class="mt-1 space-y-0.5 text-sm">
-            <li v-for="err in visibleErrors" :key="err.field">
-              <UiButton
-                unstyled
-                class="underline hover:text-white text-left"
-                @click="focusField(err.id)"
-              >
-                {{ err.label }}: {{ err.message }}
-              </UiButton>
-            </li>
-          </ul>
         </div>
       </div>
     </UiAlert>
