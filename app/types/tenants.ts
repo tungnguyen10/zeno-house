@@ -1,5 +1,6 @@
 export type TenantStatus = 'active' | 'archived'
 export type TenantAssignmentRole = 'primary' | 'roommate'
+export type TenantIdImageSide = 'front' | 'back'
 
 export interface Tenant {
   id: string
@@ -13,6 +14,10 @@ export interface Tenant {
   occupation: string | null
   idIssuedDate: string | null
   idIssuedPlace: string | null
+  idCardFrontPath: string | null
+  idCardBackPath: string | null
+  idCardFrontSignedUrl: string | null
+  idCardBackSignedUrl: string | null
   emergencyContactName: string | null
   emergencyContactPhone: string | null
   permanentAddress: string | null

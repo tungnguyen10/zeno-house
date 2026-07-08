@@ -1,5 +1,6 @@
 <script lang="ts">
 import { tenantCreateSchema, type TenantCreateInput } from '~/utils/validators/tenants'
+import type { TenantIdImageSide } from '~/types/tenants'
 
 export interface TenantFormData {
   full_name: string
@@ -50,12 +51,24 @@ const props = withDefaults(defineProps<{
   submitLabel?: string
   hasDraft?: boolean
   isDirty?: boolean
+  idCardFrontSignedUrl?: string | null
+  idCardBackSignedUrl?: string | null
+  idCardFrontFileName?: string | null
+  idCardBackFileName?: string | null
+  idImageLoadingSide?: TenantIdImageSide | null
+  canManageIdImages?: boolean
 }>(), {
   errors: () => ({}),
   loading: false,
   submitLabel: 'Lưu',
   hasDraft: false,
   isDirty: false,
+  idCardFrontSignedUrl: null,
+  idCardBackSignedUrl: null,
+  idCardFrontFileName: null,
+  idCardBackFileName: null,
+  idImageLoadingSide: null,
+  canManageIdImages: true,
 })
 
 const emit = defineEmits<{
@@ -64,6 +77,8 @@ const emit = defineEmits<{
   'cancel': []
   'restore-draft': []
   'discard-draft': []
+  'select-id-image': [payload: { side: TenantIdImageSide, file: File | null }]
+  'remove-id-image': [side: TenantIdImageSide]
 }>()
 
 const genderOptions = [
@@ -162,6 +177,16 @@ async function onSubmit() {
 }
 
 const canSubmit = computed(() => !props.loading && (props.isDirty || props.hasDraft || submitAttempted.value))
+
+function onIdImageChange(side: TenantIdImageSide, event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0] ?? null
+  emit('select-id-image', { side, file })
+}
+
+function removeIdImage(side: TenantIdImageSide) {
+  emit('remove-id-image', side)
+}
 </script>
 
 <template>
@@ -295,6 +320,69 @@ const canSubmit = computed(() => !props.loading && (props.isDirty || props.hasDr
             @update:model-value="(v) => update('id_issued_place', v as string)"
             @blur="onBlur('id_issued_place')"
           />
+        </div>
+
+        <div class="sm:col-span-2 rounded-lg border border-dark-border bg-dark-deep/20 p-4">
+          <div class="flex items-center justify-between gap-2">
+            <h4 class="text-xs font-semibold text-white">Ảnh CCCD</h4>
+            <span class="text-[11px] text-muted">Tối đa 5MB · JPG/PNG/WEBP</span>
+          </div>
+
+          <div class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div class="space-y-2">
+              <label class="block text-xs font-medium text-muted" for="tf-id-front-image">Mặt trước</label>
+              <input
+                id="tf-id-front-image"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                class="block w-full rounded-md border border-dark-border bg-dark-surface px-3 py-2 text-sm text-white file:mr-3 file:rounded-md file:border-0 file:bg-cyan/15 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-cyan"
+                :disabled="loading || !canManageIdImages || idImageLoadingSide === 'front'"
+                @change="onIdImageChange('front', $event)"
+              >
+              <p v-if="idCardFrontFileName" class="text-xs text-muted">{{ idCardFrontFileName }}</p>
+              <p v-else-if="idCardFrontSignedUrl" class="text-xs text-muted">
+                <a :href="idCardFrontSignedUrl" target="_blank" rel="noopener" class="text-cyan hover:underline">Xem ảnh mặt trước</a>
+              </p>
+              <UiButton
+                v-if="canManageIdImages && (idCardFrontSignedUrl || idCardFrontFileName)"
+                type="button"
+                size="sm"
+                variant="ghost"
+                :loading="idImageLoadingSide === 'front'"
+                :disabled="loading"
+                @click="removeIdImage('front')"
+              >
+                Xóa mặt trước
+              </UiButton>
+            </div>
+
+            <div class="space-y-2">
+              <label class="block text-xs font-medium text-muted" for="tf-id-back-image">Mặt sau</label>
+              <input
+                id="tf-id-back-image"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                class="block w-full rounded-md border border-dark-border bg-dark-surface px-3 py-2 text-sm text-white file:mr-3 file:rounded-md file:border-0 file:bg-cyan/15 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-cyan"
+                :disabled="loading || !canManageIdImages || idImageLoadingSide === 'back'"
+                @change="onIdImageChange('back', $event)"
+              >
+              <p v-if="idCardBackFileName" class="text-xs text-muted">{{ idCardBackFileName }}</p>
+              <p v-else-if="idCardBackSignedUrl" class="text-xs text-muted">
+                <a :href="idCardBackSignedUrl" target="_blank" rel="noopener" class="text-cyan hover:underline">Xem ảnh mặt sau</a>
+              </p>
+              <UiButton
+                v-if="canManageIdImages && (idCardBackSignedUrl || idCardBackFileName)"
+                type="button"
+                size="sm"
+                variant="ghost"
+                :loading="idImageLoadingSide === 'back'"
+                :disabled="loading"
+                @click="removeIdImage('back')"
+              >
+                Xóa mặt sau
+              </UiButton>
+            </div>
+          </div>
         </div>
       </div>
     </section>

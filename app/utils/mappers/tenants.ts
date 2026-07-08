@@ -2,6 +2,10 @@ import type { Tables } from '~/types/database.types'
 import type { Tenant, TenantStatus } from '~/types/tenants'
 
 export function mapTenant(row: Tables<'tenants'>): Tenant {
+  const tenantRow = row as Tables<'tenants'> & {
+    id_card_front_path?: string | null
+    id_card_back_path?: string | null
+  }
   const status: TenantStatus = row.status === 'archived' ? 'archived' : 'active'
   return {
     id: row.id,
@@ -15,6 +19,10 @@ export function mapTenant(row: Tables<'tenants'>): Tenant {
     occupation: row.occupation,
     idIssuedDate: row.id_issued_date,
     idIssuedPlace: row.id_issued_place,
+    idCardFrontPath: tenantRow.id_card_front_path ?? null,
+    idCardBackPath: tenantRow.id_card_back_path ?? null,
+    idCardFrontSignedUrl: null,
+    idCardBackSignedUrl: null,
     emergencyContactName: row.emergency_contact_name,
     emergencyContactPhone: row.emergency_contact_phone,
     permanentAddress: row.permanent_address,

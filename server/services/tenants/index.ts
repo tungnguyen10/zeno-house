@@ -1,9 +1,11 @@
 import type { H3Event } from 'h3'
+import { randomUUID } from 'node:crypto'
 import type { AuthUser } from '~/types/auth'
 import type { Tenant } from '~/types/tenants'
 import type {
   TenantBulkActionInput,
   TenantCreateInput,
+  TenantIdImageSideInput,
   TenantUpdateInput,
 } from '~/utils/validators/tenants'
 import { TenantRepository, type TenantFilters } from '../../repositories/tenants'
@@ -11,6 +13,39 @@ import { BuildingRepository } from '../../repositories/buildings'
 import { canDeleteMasterData, getAssignedBuildingIds } from '../../utils/scope'
 import { AuditService } from '../audit'
 import { AUDIT_ACTIONS } from '~/utils/constants/audit'
+import { db } from '../../utils/db'
+import { throwValidationError } from '../../utils/errors'
+
+const TENANT_ID_IMAGE_BUCKET = 'tenant-id-images'
+const MAX_TENANT_ID_IMAGE_BYTES = 5 * 1024 * 1024
+const TENANT_ID_IMAGE_EXTENSIONS: Record<string, string> = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+}
+
+async function signedTenantIdImageUrl(event: H3Event, path: string | null): Promise<string | null> {
+  if (!path) return null
+  const { data, error } = await db(event)
+    .storage
+    .from(TENANT_ID_IMAGE_BUCKET)
+    .createSignedUrl(path, 60 * 5)
+  if (error) throw createError({ statusCode: 500, message: error.message })
+  return data.signedUrl
+}
+
+async function withSignedTenantIdImages(event: H3Event, tenant: Tenant): Promise<Tenant> {
+  const [idCardFrontSignedUrl, idCardBackSignedUrl] = await Promise.all([
+    signedTenantIdImageUrl(event, tenant.idCardFrontPath),
+    signedTenantIdImageUrl(event, tenant.idCardBackPath),
+  ])
+
+  return {
+    ...tenant,
+    idCardFrontSignedUrl,
+    idCardBackSignedUrl,
+  }
+}
 
 export interface TenantBulkResult {
   succeeded: string[]
@@ -64,8 +99,9 @@ export const TenantService = {
       }
     }
     const activeAssignment = await TenantRepository.findActiveAssignmentByTenantId(event, tenant.id)
+    const signedTenant = await withSignedTenantIdImages(event, tenant)
     return {
-      ...tenant,
+      ...signedTenant,
       hasActiveContract: Boolean(activeAssignment),
       activeAssignment,
     }
@@ -85,7 +121,7 @@ export const TenantService = {
       entity_id: result.id,
       after_data: result,
     })
-    return result
+    return withSignedTenantIdImages(event, result)
   },
 
   async update(event: H3Event, user: AuthUser, id: string, input: TenantUpdateInput): Promise<Tenant> {
@@ -105,7 +141,79 @@ export const TenantService = {
       before_data: existing,
       after_data: updated,
     })
-    return updated
+    return withSignedTenantIdImages(event, updated)
+  },
+
+  async uploadIdImage(
+    event: H3Event,
+    user: AuthUser,
+    id: string,
+    side: TenantIdImageSideInput,
+    file: { filename?: string, type?: string, data: Buffer },
+  ): Promise<Tenant> {
+    if (!can(user, 'tenants.update')) throwForbidden('Không có quyền cập nhật khách thuê')
+
+    const existing = await TenantRepository.findByIdentifier(event, id)
+    if (!existing) throwNotFound('Không tìm thấy khách thuê')
+
+    const contentType = file.type ?? ''
+    const ext = TENANT_ID_IMAGE_EXTENSIONS[contentType]
+    if (!ext) throwValidationError('Ảnh CCCD phải là jpeg, png hoặc webp')
+    if (file.data.length > MAX_TENANT_ID_IMAGE_BYTES) {
+      throwValidationError('Ảnh CCCD không được vượt quá 5MB')
+    }
+
+    const path = `${existing.id}/${side}/${randomUUID()}.${ext}`
+    const storage = db(event).storage.from(TENANT_ID_IMAGE_BUCKET)
+    const { error: uploadError } = await storage.upload(path, file.data, {
+      contentType,
+      upsert: false,
+    })
+    if (uploadError) throw createError({ statusCode: 500, message: uploadError.message })
+
+    const updated = await TenantRepository.updateIdImagePath(event, existing.id, side, path)
+    const previousPath = side === 'front' ? existing.idCardFrontPath : existing.idCardBackPath
+    if (previousPath) await storage.remove([previousPath])
+
+    await AuditService.append(event, user, {
+      building_id: null,
+      action: AUDIT_ACTIONS.TENANT_UPDATED,
+      entity_type: 'tenant',
+      entity_id: updated.id,
+      before_data: existing,
+      after_data: updated,
+    })
+
+    return withSignedTenantIdImages(event, updated)
+  },
+
+  async removeIdImage(
+    event: H3Event,
+    user: AuthUser,
+    id: string,
+    side: TenantIdImageSideInput,
+  ): Promise<Tenant> {
+    if (!can(user, 'tenants.update')) throwForbidden('Không có quyền cập nhật khách thuê')
+
+    const existing = await TenantRepository.findByIdentifier(event, id)
+    if (!existing) throwNotFound('Không tìm thấy khách thuê')
+
+    const previousPath = side === 'front' ? existing.idCardFrontPath : existing.idCardBackPath
+    const updated = await TenantRepository.updateIdImagePath(event, existing.id, side, null)
+    if (previousPath) {
+      await db(event).storage.from(TENANT_ID_IMAGE_BUCKET).remove([previousPath])
+    }
+
+    await AuditService.append(event, user, {
+      building_id: null,
+      action: AUDIT_ACTIONS.TENANT_UPDATED,
+      entity_type: 'tenant',
+      entity_id: updated.id,
+      before_data: existing,
+      after_data: updated,
+    })
+
+    return withSignedTenantIdImages(event, updated)
   },
 
   async remove(

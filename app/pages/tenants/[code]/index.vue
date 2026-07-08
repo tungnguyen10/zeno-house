@@ -239,7 +239,7 @@ watchEffect(() => {
       </section>
 
       <section
-        v-if="tenant.idNumber || tenant.idIssuedDate || tenant.idIssuedPlace"
+        v-if="tenant.idNumber || tenant.idIssuedDate || tenant.idIssuedPlace || tenant.idCardFrontSignedUrl || tenant.idCardBackSignedUrl"
         id="id-document"
         class="mt-4 rounded-xl border border-dark-border bg-dark-surface p-6"
       >
@@ -258,6 +258,43 @@ watchEffect(() => {
             <p class="text-sm text-white">{{ tenant.idIssuedPlace }}</p>
           </div>
         </div>
+
+        <div v-if="tenant.idCardFrontSignedUrl || tenant.idCardBackSignedUrl" class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <a
+            v-if="tenant.idCardFrontSignedUrl"
+            :href="tenant.idCardFrontSignedUrl"
+            target="_blank"
+            rel="noopener"
+            class="flex items-center justify-between rounded-lg border border-dark-border bg-dark-deep/30 px-3 py-2 text-sm text-white hover:border-cyan/50"
+          >
+            <span class="inline-flex items-center gap-2">
+              <IconPhoto class="h-4 w-4 text-cyan" aria-hidden="true" />
+              CCCD mặt trước
+            </span>
+            <IconArrowUpRight class="h-4 w-4 text-muted" aria-hidden="true" />
+          </a>
+
+          <a
+            v-if="tenant.idCardBackSignedUrl"
+            :href="tenant.idCardBackSignedUrl"
+            target="_blank"
+            rel="noopener"
+            class="flex items-center justify-between rounded-lg border border-dark-border bg-dark-deep/30 px-3 py-2 text-sm text-white hover:border-cyan/50"
+          >
+            <span class="inline-flex items-center gap-2">
+              <IconPhoto class="h-4 w-4 text-cyan" aria-hidden="true" />
+              CCCD mặt sau
+            </span>
+            <IconArrowUpRight class="h-4 w-4 text-muted" aria-hidden="true" />
+          </a>
+        </div>
+
+        <p
+          v-if="authStore.can('tenants.update')"
+          class="mt-3 text-xs text-muted"
+        >
+          Bạn có thể cập nhật ảnh CCCD ở trang chỉnh sửa khách thuê.
+        </p>
       </section>
 
       <section

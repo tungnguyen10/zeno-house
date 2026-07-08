@@ -44,6 +44,11 @@ interface ContractAssignmentRow {
   } | null
 }
 
+interface TenantIdImagePathUpdate {
+  id_card_front_path?: string | null
+  id_card_back_path?: string | null
+}
+
 async function buildUniqueTenantCode(
   event: H3Event,
   fullName: string,
@@ -335,24 +340,27 @@ export const TenantRepository = {
     const client = await serverSupabaseClient(event)
     const createdAt = new Date().toISOString()
     const code = await buildUniqueTenantCode(event, input.full_name, createdAt)
+    const payload = {
+      code,
+      full_name: input.full_name,
+      phone: input.phone,
+      email: input.email ?? null,
+      id_number: input.id_number ?? null,
+      date_of_birth: input.date_of_birth ?? null,
+      permanent_address: input.permanent_address ?? null,
+      notes: input.notes ?? null,
+      gender: input.gender ?? null,
+      occupation: input.occupation ?? null,
+      id_issued_date: input.id_issued_date ?? null,
+      id_issued_place: input.id_issued_place ?? null,
+      id_card_front_path: null,
+      id_card_back_path: null,
+      emergency_contact_name: input.emergency_contact_name ?? null,
+      emergency_contact_phone: input.emergency_contact_phone ?? null,
+    }
     const { data, error } = await client
       .from('tenants')
-      .insert({
-        code,
-        full_name: input.full_name,
-        phone: input.phone,
-        email: input.email ?? null,
-        id_number: input.id_number ?? null,
-        date_of_birth: input.date_of_birth ?? null,
-        permanent_address: input.permanent_address ?? null,
-        notes: input.notes ?? null,
-        gender: input.gender ?? null,
-        occupation: input.occupation ?? null,
-        id_issued_date: input.id_issued_date ?? null,
-        id_issued_place: input.id_issued_place ?? null,
-        emergency_contact_name: input.emergency_contact_name ?? null,
-        emergency_contact_phone: input.emergency_contact_phone ?? null,
-      })
+      .insert(payload as never)
       .select()
       .single()
 
@@ -379,6 +387,28 @@ export const TenantRepository = {
         ...(input.emergency_contact_name !== undefined && { emergency_contact_name: input.emergency_contact_name }),
         ...(input.emergency_contact_phone !== undefined && { emergency_contact_phone: input.emergency_contact_phone }),
       })
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (error) throw createError({ statusCode: 500, message: error.message })
+    return mapTenant(data)
+  },
+
+  async updateIdImagePath(
+    event: H3Event,
+    id: string,
+    side: 'front' | 'back',
+    path: string | null,
+  ): Promise<Tenant> {
+    const client = await serverSupabaseClient(event)
+    const payload: TenantIdImagePathUpdate = side === 'front'
+      ? { id_card_front_path: path }
+      : { id_card_back_path: path }
+
+    const { data, error } = await client
+      .from('tenants')
+      .update(payload as never)
       .eq('id', id)
       .select()
       .single()

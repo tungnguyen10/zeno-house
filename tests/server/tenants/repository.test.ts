@@ -19,6 +19,8 @@ interface TenantRow {
   occupation: string | null
   id_issued_date: string | null
   id_issued_place: string | null
+  id_card_front_path: string | null
+  id_card_back_path: string | null
   emergency_contact_name: string | null
   emergency_contact_phone: string | null
   permanent_address: string | null
@@ -59,6 +61,8 @@ function buildTenant(overrides: Partial<TenantRow>): TenantRow {
     occupation: null,
     id_issued_date: null,
     id_issued_place: null,
+    id_card_front_path: null,
+    id_card_back_path: null,
     emergency_contact_name: null,
     emergency_contact_phone: null,
     permanent_address: null,

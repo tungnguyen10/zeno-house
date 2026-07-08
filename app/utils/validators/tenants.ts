@@ -1,6 +1,7 @@
 import { z } from 'zod'
 
 export const tenantStatusSchema = z.enum(['active', 'archived'])
+export const tenantIdImageSideSchema = z.enum(['front', 'back'])
 export const tenantSortFieldSchema = z.enum(['full_name', 'created_at', 'code'])
 export const tenantSortOrderSchema = z.enum(['asc', 'desc'])
 
@@ -77,3 +78,4 @@ export const tenantDeleteSchema = z.object({
 
 export type TenantBulkActionInput = z.infer<typeof tenantBulkActionSchema>
 export type TenantDeleteInput = z.infer<typeof tenantDeleteSchema>
+export type TenantIdImageSideInput = z.infer<typeof tenantIdImageSideSchema>

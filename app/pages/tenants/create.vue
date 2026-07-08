@@ -1,7 +1,12 @@
 <script setup lang="ts">
 import { tenantFormToApiPayload, type TenantFormData } from '~/components/tenants/TenantForm.vue'
+import type { TenantIdImageSide } from '~/types/tenants'
+import { tenantPath } from '~/utils/routes/operational'
 
 definePageMeta({ title: 'Thêm khách thuê mới' })
+
+const authStore = useAuthStore()
+const toast = useToast()
 
 const formData = ref<TenantFormData>({
   full_name: '',
@@ -35,8 +40,57 @@ const {
   formData,
   initialSnapshot,
 })
+
+const idImageFiles = ref<Record<TenantIdImageSide, File | null>>({
+  front: null,
+  back: null,
+})
+const idImageLoadingSide = ref<TenantIdImageSide | null>(null)
+
+function onSelectIdImage(payload: { side: TenantIdImageSide, file: File | null }) {
+  idImageFiles.value = {
+    ...idImageFiles.value,
+    [payload.side]: payload.file,
+  }
+}
+
+function onRemoveIdImage(side: TenantIdImageSide) {
+  idImageFiles.value = {
+    ...idImageFiles.value,
+    [side]: null,
+  }
+}
+
+async function uploadIdImage(tenantId: string, side: TenantIdImageSide, file: File) {
+  const form = new FormData()
+  form.append('image', file)
+  await $fetch(`/api/tenants/${tenantId}/id-image`, {
+    method: 'POST',
+    query: { side },
+    body: form,
+  })
+}
+
 async function onSubmit(data: TenantFormData) {
-  await submitCreate(tenantFormToApiPayload(data))
+  const created = await submitCreate(tenantFormToApiPayload(data), { skipRedirect: true })
+  if (!created) return
+
+  for (const side of ['front', 'back'] as const) {
+    const file = idImageFiles.value[side]
+    if (!file) continue
+    try {
+      idImageLoadingSide.value = side
+      await uploadIdImage(created.id, side, file)
+    }
+    catch {
+      toast.error(`Không tải được ảnh CCCD mặt ${side === 'front' ? 'trước' : 'sau'}.`)
+    }
+    finally {
+      idImageLoadingSide.value = null
+    }
+  }
+
+  await navigateTo(tenantPath(created))
 }
 </script>
 
@@ -60,7 +114,13 @@ async function onSubmit(data: TenantFormData) {
         :errors="errors"
         :has-draft="hasDraft"
         :is-dirty="isDirty"
+        :id-card-front-file-name="idImageFiles.front?.name ?? null"
+        :id-card-back-file-name="idImageFiles.back?.name ?? null"
+        :id-image-loading-side="idImageLoadingSide"
+        :can-manage-id-images="authStore.can('tenants.update')"
         @submit="onSubmit"
+        @select-id-image="onSelectIdImage"
+        @remove-id-image="onRemoveIdImage"
         @cancel="navigateTo('/tenants')"
         @restore-draft="restoreDraft"
         @discard-draft="clearDraft"

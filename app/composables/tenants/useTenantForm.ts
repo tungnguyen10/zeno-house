@@ -16,6 +16,10 @@ interface UseTenantFormOptions<T> {
   initialSnapshot?: MaybeRef<T | null>
 }
 
+interface TenantSubmitOptions {
+  skipRedirect?: boolean
+}
+
 function buildStorageKey(key: NonNullable<DraftKey>): string {
   return key.mode === 'create'
     ? 'tenant-form:create'
@@ -118,13 +122,13 @@ export function useTenantForm<T = unknown>(options: UseTenantFormOptions<T> = {}
     apiError.value = null
   }
 
-  async function submitCreate(input: TenantCreateInput) {
+  async function submitCreate(input: TenantCreateInput, options: TenantSubmitOptions = {}): Promise<Tenant | null> {
     clearErrors()
 
     const result = tenantCreateSchema.safeParse(input)
     if (!result.success) {
       errors.value = result.error.flatten().fieldErrors as Record<string, string[]>
-      return
+      return null
     }
 
     isLoading.value = true
@@ -135,24 +139,28 @@ export function useTenantForm<T = unknown>(options: UseTenantFormOptions<T> = {}
       })
       clearDraft()
       clearNuxtData()
-      await navigateTo(res.data ? tenantPath(res.data) : '/tenants')
+      if (!options.skipRedirect) {
+        await navigateTo(res.data ? tenantPath(res.data) : '/tenants')
+      }
+      return res.data ?? null
     }
     catch (e: unknown) {
       const err = e as { data?: { error?: { message?: string } } }
       apiError.value = err?.data?.error?.message ?? 'Đã xảy ra lỗi. Vui lòng thử lại.'
+      return null
     }
     finally {
       isLoading.value = false
     }
   }
 
-  async function submitUpdate(id: string, input: TenantUpdateInput) {
+  async function submitUpdate(id: string, input: TenantUpdateInput, options: TenantSubmitOptions = {}): Promise<Tenant | null> {
     clearErrors()
 
     const result = tenantUpdateSchema.safeParse(input)
     if (!result.success) {
       errors.value = result.error.flatten().fieldErrors as Record<string, string[]>
-      return
+      return null
     }
 
     isLoading.value = true
@@ -163,11 +171,15 @@ export function useTenantForm<T = unknown>(options: UseTenantFormOptions<T> = {}
       })
       clearDraft()
       clearNuxtData()
-      await navigateTo(res.data ? tenantPath(res.data) : `/tenants/${id}`)
+      if (!options.skipRedirect) {
+        await navigateTo(res.data ? tenantPath(res.data) : `/tenants/${id}`)
+      }
+      return res.data ?? null
     }
     catch (e: unknown) {
       const err = e as { data?: { error?: { message?: string } } }
       apiError.value = err?.data?.error?.message ?? 'Đã xảy ra lỗi. Vui lòng thử lại.'
+      return null
     }
     finally {
       isLoading.value = false
