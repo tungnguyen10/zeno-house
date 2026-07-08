@@ -2,6 +2,7 @@
 import type { Building } from '~/types/buildings'
 import type { ApiSuccess } from '~/types/api'
 import type { TenantBulkAction, TenantBulkResult } from '~/composables/tenants/useTenantBulkActions'
+import type { TenantBulkCreateResult } from '~/composables/tenants/useTenantBulkCreate'
 
 definePageMeta({ title: 'Khách thuê' })
 
@@ -37,12 +38,15 @@ const buildingOptions = computed(() =>
 )
 
 const bulk = useTenantBulkActions()
+const bulkCreateOpen = ref(false)
+const actionMenuOpen = ref(false)
 
 const selectionMode = ref(false)
 
 function toggleSelectionMode() {
   selectionMode.value = !selectionMode.value
   if (!selectionMode.value) bulk.clear()
+  actionMenuOpen.value = false
 }
 
 function onToggleSelect(id: string) {
@@ -112,6 +116,31 @@ async function onBulkDone(result: TenantBulkResult, action: TenantBulkAction) {
   bulk.clear()
   await refresh()
 }
+
+async function onBulkCreateDone(result: TenantBulkCreateResult) {
+  const created = result.created.length
+  const failed = result.failed.length
+  if (created > 0 && failed === 0) {
+    toast.success(`Đã thêm ${created} khách thuê`)
+  }
+  else if (created > 0 && failed > 0) {
+    toast.info(`Đã thêm ${created} khách thuê, ${failed} dòng bị bỏ qua`)
+  }
+  else {
+    toast.error('Không có khách thuê nào được tạo. Vui lòng kiểm tra lại dữ liệu.')
+  }
+  await refresh()
+}
+
+function openBulkCreate() {
+  bulkCreateOpen.value = true
+  actionMenuOpen.value = false
+}
+
+async function openCreateTenant() {
+  actionMenuOpen.value = false
+  await navigateTo('/tenants/create')
+}
 </script>
 
 <template>
@@ -119,17 +148,60 @@ async function onBulkDone(result: TenantBulkResult, action: TenantBulkAction) {
     <UiPageHeader title="Khách thuê" :description="`${total} khách thuê`">
       <template #actions>
         <div class="flex items-center gap-2">
-          <UiButton
-            v-if="authStore.can('tenants.delete')"
-            variant="secondary"
-            size="sm"
-            @click="toggleSelectionMode"
+          <div
+            v-if="authStore.can('tenants.create') || authStore.can('tenants.delete')"
+            class="relative"
           >
-            {{ selectionMode ? 'Thoát chọn' : 'Chọn nhiều' }}
-          </UiButton>
-          <NuxtLink v-if="authStore.can('tenants.create')" to="/tenants/create">
-            <UiButton>Thêm khách thuê</UiButton>
-          </NuxtLink>
+            <UiButton
+              variant="ghost"
+              size="sm"
+              @click="actionMenuOpen = !actionMenuOpen"
+            >
+              <span>Hành động</span>
+              <IconChevronDown class="h-4 w-4 -mr-1" aria-hidden="true" />
+            </UiButton>
+            <template v-if="actionMenuOpen">
+              <div
+                class="fixed inset-0 z-30"
+                aria-hidden="true"
+                @click="actionMenuOpen = false"
+              />
+              <div
+                class="absolute right-0 z-40 mt-2 w-64 rounded-lg border border-dark-border bg-dark-card py-1 shadow-lg shadow-black/40"
+              >
+                <UiButton
+                  v-if="authStore.can('tenants.create')"
+                  variant="ghost"
+                  size="sm"
+                  class="!flex !w-full !justify-start !rounded-none !px-3 !py-2 text-left !text-white hover:!bg-dark-surface"
+                  @click="openCreateTenant"
+                >
+                  <IconPlus class="h-4 w-4" aria-hidden="true" />
+                  <span>Thêm khách thuê</span>
+                </UiButton>
+                <UiButton
+                  v-if="authStore.can('tenants.create')"
+                  variant="ghost"
+                  size="sm"
+                  class="!flex !w-full !justify-start !rounded-none !px-3 !py-2 text-left !text-white hover:!bg-dark-surface"
+                  @click="openBulkCreate"
+                >
+                  <IconUsers class="h-4 w-4" aria-hidden="true" />
+                  <span>Thêm nhanh nhiều khách thuê</span>
+                </UiButton>
+                <UiButton
+                  v-if="authStore.can('tenants.delete')"
+                  variant="ghost"
+                  size="sm"
+                  class="!flex !w-full !justify-start !rounded-none !px-3 !py-2 text-left !text-white hover:!bg-dark-surface"
+                  @click="toggleSelectionMode"
+                >
+                  <IconCheckCircle class="h-4 w-4" aria-hidden="true" />
+                  <span>{{ selectionMode ? 'Thoát chọn nhiều' : 'Chọn nhiều khách thuê' }}</span>
+                </UiButton>
+              </div>
+            </template>
+          </div>
         </div>
       </template>
     </UiPageHeader>
@@ -309,5 +381,11 @@ async function onBulkDone(result: TenantBulkResult, action: TenantBulkAction) {
         <UiButton variant="secondary" @click="failureModalOpen = false">Đóng</UiButton>
       </template>
     </UiModal>
+
+    <TenantBulkCreateModal
+      :open="bulkCreateOpen"
+      @close="bulkCreateOpen = false"
+      @done="onBulkCreateDone"
+    />
   </div>
 </template>

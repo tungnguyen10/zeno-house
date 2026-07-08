@@ -579,3 +579,85 @@ describe('POST /api/tenants/bulk', () => {
     expect(err.statusCode).toBe(422)
   })
 })
+
+// ---------------------------------------------------------------------------
+// POST /api/tenants/bulk-create
+// ---------------------------------------------------------------------------
+
+describe('POST /api/tenants/bulk-create', () => {
+  it('creates valid rows and reports validation errors per line', async () => {
+    asAdmin()
+    repoMocks.findByIdNumber.mockResolvedValue(null)
+    repoMocks.insert.mockImplementation((_event: unknown, input: { full_name: string; phone: string }) =>
+      Promise.resolve(buildTenant({
+        id: `new-${input.full_name}`,
+        fullName: input.full_name,
+        phone: input.phone,
+      })),
+    )
+    const { default: handler } = await import('../../server/api/tenants/bulk-create.post')
+
+    const res = await handler(makeEvent({
+      body: {
+        rows: [
+          { line: 2, full_name: 'Nguyen Van A', phone: '0901234567' },
+          { line: 3, full_name: '', phone: '' },
+        ],
+      },
+    })) as {
+      data: {
+        created: Tenant[]
+        failed: Array<{ line: number; reason: string; fieldErrors?: Record<string, string[]> }>
+      }
+      meta: { created: number; failed: number }
+    }
+
+    expect(res.data.created).toHaveLength(1)
+    expect(res.data.failed).toHaveLength(1)
+    expect(res.data.failed[0]).toMatchObject({ line: 3, reason: 'validation_error' })
+    expect(res.meta).toMatchObject({ created: 1, failed: 1 })
+  })
+
+  it('flags duplicate id_number inside the same import file', async () => {
+    asAdmin()
+    repoMocks.findByIdNumber.mockResolvedValue(null)
+    repoMocks.insert.mockResolvedValue(buildTenant({ id: 'new-1' }))
+    const { default: handler } = await import('../../server/api/tenants/bulk-create.post')
+
+    const res = await handler(makeEvent({
+      body: {
+        rows: [
+          { line: 2, full_name: 'Nguyen Van A', phone: '0901234567', id_number: '012345678901' },
+          { line: 3, full_name: 'Tran Thi B', phone: '0901111222', id_number: '012345678901' },
+        ],
+      },
+    })) as {
+      data: {
+        created: Tenant[]
+        failed: Array<{ line: number; reason: string }>
+      }
+    }
+
+    expect(res.data.created).toHaveLength(1)
+    expect(res.data.failed).toEqual([{ line: 3, reason: 'duplicate_in_file', message: 'Số CMND/CCCD bị trùng trong file nhập', fieldErrors: { id_number: ['Số CMND/CCCD bị trùng trong file nhập'] } }])
+  })
+
+  it('forbids managers from bulk-create', async () => {
+    asManager()
+    const { default: handler } = await import('../../server/api/tenants/bulk-create.post')
+
+    const err = await expectError(Promise.resolve(handler(makeEvent({
+      body: { rows: [{ line: 2, full_name: 'Nguyen Van A', phone: '0901234567' }] },
+    }))))
+    expect(err.statusCode).toBe(403)
+  })
+
+  it('rejects empty rows payload with 422', async () => {
+    asAdmin()
+    const { default: handler } = await import('../../server/api/tenants/bulk-create.post')
+
+    const err = await expectError(Promise.resolve(handler(makeEvent({ body: { rows: [] } }))))
+    expect(err.statusCode).toBe(422)
+    expect(err.data?.error?.code).toBe('VALIDATION_ERROR')
+  })
+})

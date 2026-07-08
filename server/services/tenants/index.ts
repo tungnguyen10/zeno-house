@@ -4,10 +4,13 @@ import type { AuthUser } from '~/types/auth'
 import type { Tenant } from '~/types/tenants'
 import type {
   TenantBulkActionInput,
+  TenantBulkCreateInput,
+  TenantBulkCreateRowInput,
   TenantCreateInput,
   TenantIdImageSideInput,
   TenantUpdateInput,
 } from '~/utils/validators/tenants'
+import { tenantCreateSchema } from '~/utils/validators/tenants'
 import { TenantRepository, type TenantFilters } from '../../repositories/tenants'
 import { BuildingRepository } from '../../repositories/buildings'
 import { canDeleteMasterData, getAssignedBuildingIds } from '../../utils/scope'
@@ -50,6 +53,47 @@ async function withSignedTenantIdImages(event: H3Event, tenant: Tenant): Promise
 export interface TenantBulkResult {
   succeeded: string[]
   failed: { id: string; reason: string }[]
+}
+
+export interface TenantBulkCreateFailure {
+  line: number
+  reason: 'validation_error' | 'duplicate_in_file' | 'duplicate_id_number' | 'unexpected_error'
+  message: string
+  fieldErrors?: Record<string, string[]>
+}
+
+export interface TenantBulkCreateResult {
+  created: Tenant[]
+  failed: TenantBulkCreateFailure[]
+}
+
+function normalizeBulkCreateRow(row: TenantBulkCreateRowInput): TenantCreateInput {
+  const trimOrNull = (v: string | null | undefined): string | null => {
+    if (v === null || v === undefined) return null
+    const t = v.trim()
+    return t === '' ? null : t
+  }
+
+  const genderRaw = trimOrNull(row.gender)
+  const gender = genderRaw === 'male' || genderRaw === 'female' || genderRaw === 'other'
+    ? genderRaw
+    : null
+
+  return {
+    full_name: trimOrNull(row.full_name) ?? '',
+    phone: trimOrNull(row.phone) ?? '',
+    email: trimOrNull(row.email),
+    id_number: trimOrNull(row.id_number),
+    date_of_birth: trimOrNull(row.date_of_birth),
+    permanent_address: trimOrNull(row.permanent_address),
+    notes: trimOrNull(row.notes),
+    gender,
+    occupation: trimOrNull(row.occupation),
+    id_issued_date: trimOrNull(row.id_issued_date),
+    id_issued_place: trimOrNull(row.id_issued_place),
+    emergency_contact_name: trimOrNull(row.emergency_contact_name),
+    emergency_contact_phone: trimOrNull(row.emergency_contact_phone),
+  }
 }
 
 export const TenantService = {
@@ -122,6 +166,91 @@ export const TenantService = {
       after_data: result,
     })
     return withSignedTenantIdImages(event, result)
+  },
+
+  async bulkCreate(
+    event: H3Event,
+    user: AuthUser,
+    input: TenantBulkCreateInput,
+  ): Promise<TenantBulkCreateResult> {
+    if (!can(user, 'tenants.create')) throwForbidden('Không có quyền tạo khách thuê')
+
+    const created: Tenant[] = []
+    const failed: TenantBulkCreateFailure[] = []
+    const seenIdNumbers = new Set<string>()
+
+    for (const row of input.rows) {
+      try {
+        const normalized = normalizeBulkCreateRow(row)
+        const parsed = tenantCreateSchema.safeParse(normalized)
+        if (!parsed.success) {
+          failed.push({
+            line: row.line,
+            reason: 'validation_error',
+            message: 'Dữ liệu dòng không hợp lệ',
+            fieldErrors: parsed.error.flatten().fieldErrors,
+          })
+          continue
+        }
+
+        if (parsed.data.id_number) {
+          if (seenIdNumbers.has(parsed.data.id_number)) {
+            failed.push({
+              line: row.line,
+              reason: 'duplicate_in_file',
+              message: 'Số CMND/CCCD bị trùng trong file nhập',
+              fieldErrors: { id_number: ['Số CMND/CCCD bị trùng trong file nhập'] },
+            })
+            continue
+          }
+          seenIdNumbers.add(parsed.data.id_number)
+
+          const existing = await TenantRepository.findByIdNumber(event, parsed.data.id_number)
+          if (existing) {
+            failed.push({
+              line: row.line,
+              reason: 'duplicate_id_number',
+              message: 'Số CMND/CCCD đã tồn tại trong hệ thống',
+              fieldErrors: { id_number: ['Số CMND/CCCD đã tồn tại trong hệ thống'] },
+            })
+            continue
+          }
+        }
+
+        const inserted = await TenantRepository.insert(event, parsed.data)
+        await AuditService.append(event, user, {
+          building_id: null,
+          action: AUDIT_ACTIONS.TENANT_CREATED,
+          entity_type: 'tenant',
+          entity_id: inserted.id,
+          after_data: inserted,
+          metadata: { source: 'bulk_import', line: row.line },
+        })
+
+        created.push(await withSignedTenantIdImages(event, inserted))
+      }
+      catch {
+        failed.push({
+          line: row.line,
+          reason: 'unexpected_error',
+          message: 'Không thể tạo khách thuê ở dòng này',
+        })
+      }
+    }
+
+    if (created.length > 0) {
+      await AuditService.appendBulk(event, user, {
+        building_id: null,
+        entity_type: 'tenant',
+        aggregate_action: 'tenant.bulk_create',
+        items: created.map(tenant => ({ entity_id: tenant.id, action: AUDIT_ACTIONS.TENANT_CREATED })),
+        succeeded: created.map(tenant => tenant.id),
+        total: input.rows.length,
+        failed: failed.length,
+      })
+    }
+
+    return { created, failed }
   },
 
   async update(event: H3Event, user: AuthUser, id: string, input: TenantUpdateInput): Promise<Tenant> {

@@ -71,11 +71,36 @@ export const tenantBulkActionSchema = z.object({
   { message: 'Lý do xoá là bắt buộc', path: ['reason'] },
 )
 
+export const tenantBulkCreateRowSchema = z.object({
+  line: z.number().int().min(2),
+  full_name: z.string().nullable().optional(),
+  phone: z.string().nullable().optional(),
+  email: z.string().nullable().optional(),
+  id_number: z.string().nullable().optional(),
+  date_of_birth: z.string().nullable().optional(),
+  permanent_address: z.string().nullable().optional(),
+  notes: z.string().nullable().optional(),
+  gender: z.string().nullable().optional(),
+  occupation: z.string().nullable().optional(),
+  id_issued_date: z.string().nullable().optional(),
+  id_issued_place: z.string().nullable().optional(),
+  emergency_contact_name: z.string().nullable().optional(),
+  emergency_contact_phone: z.string().nullable().optional(),
+})
+
+export const tenantBulkCreateSchema = z.object({
+  rows: z.array(tenantBulkCreateRowSchema)
+    .min(1, 'Cần ít nhất một dòng dữ liệu')
+    .max(500, 'Tối đa 500 dòng mỗi lần nhập'),
+})
+
 export const tenantDeleteSchema = z.object({
   reason: z.string().trim().min(1, 'Lý do xoá là bắt buộc').max(500, 'Lý do quá dài'),
   building_id: z.string().uuid('Building không hợp lệ').optional(),
 })
 
 export type TenantBulkActionInput = z.infer<typeof tenantBulkActionSchema>
+export type TenantBulkCreateInput = z.infer<typeof tenantBulkCreateSchema>
+export type TenantBulkCreateRowInput = z.infer<typeof tenantBulkCreateRowSchema>
 export type TenantDeleteInput = z.infer<typeof tenantDeleteSchema>
 export type TenantIdImageSideInput = z.infer<typeof tenantIdImageSideSchema>

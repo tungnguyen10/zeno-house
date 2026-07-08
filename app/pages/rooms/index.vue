@@ -70,11 +70,18 @@ const roomsByBuilding = computed(() => {
 })
 
 const bulk = useRoomBulkActions()
+const actionMenuOpen = ref(false)
 const selectionMode = ref(false)
 
 function toggleSelectionMode() {
   selectionMode.value = !selectionMode.value
   if (!selectionMode.value) bulk.clear()
+  actionMenuOpen.value = false
+}
+
+async function openCreateRoom() {
+  actionMenuOpen.value = false
+  await navigateTo('/rooms/create')
 }
 
 function onToggleSelect(id: string) {
@@ -275,17 +282,50 @@ async function onBulkDone(result: RoomBulkResult, action: RoomBulkAction) {
     <UiPageHeader title="Phòng" :description="`${total} phòng`">
       <template #actions>
         <div class="flex items-center gap-2">
-          <UiButton
-            v-if="authStore.can('rooms.delete')"
-            variant="secondary"
-            size="sm"
-            @click="toggleSelectionMode"
+          <div
+            v-if="authStore.can('rooms.create') || authStore.can('rooms.delete')"
+            class="relative"
           >
-            {{ selectionMode ? 'Thoát chọn' : 'Chọn nhiều' }}
-          </UiButton>
-          <NuxtLink v-if="authStore.can('rooms.create')" to="/rooms/create">
-            <UiButton>Thêm phòng</UiButton>
-          </NuxtLink>
+            <UiButton
+              variant="ghost"
+              size="sm"
+              @click="actionMenuOpen = !actionMenuOpen"
+            >
+              <span>Hành động</span>
+              <IconChevronDown class="h-4 w-4 -mr-1" aria-hidden="true" />
+            </UiButton>
+            <template v-if="actionMenuOpen">
+              <div
+                class="fixed inset-0 z-30"
+                aria-hidden="true"
+                @click="actionMenuOpen = false"
+              />
+              <div
+                class="absolute right-0 z-40 mt-2 w-64 rounded-lg border border-dark-border bg-dark-card py-1 shadow-lg shadow-black/40"
+              >
+                <UiButton
+                  v-if="authStore.can('rooms.create')"
+                  variant="ghost"
+                  size="sm"
+                  class="!flex !w-full !justify-start !rounded-none !px-3 !py-2 text-left !text-white hover:!bg-dark-surface"
+                  @click="openCreateRoom"
+                >
+                  <IconPlus class="h-4 w-4" aria-hidden="true" />
+                  <span>Thêm phòng</span>
+                </UiButton>
+                <UiButton
+                  v-if="authStore.can('rooms.delete')"
+                  variant="ghost"
+                  size="sm"
+                  class="!flex !w-full !justify-start !rounded-none !px-3 !py-2 text-left !text-white hover:!bg-dark-surface"
+                  @click="toggleSelectionMode"
+                >
+                  <IconCheckCircle class="h-4 w-4" aria-hidden="true" />
+                  <span>{{ selectionMode ? 'Thoát chọn nhiều' : 'Chọn nhiều phòng' }}</span>
+                </UiButton>
+              </div>
+            </template>
+          </div>
         </div>
       </template>
     </UiPageHeader>
