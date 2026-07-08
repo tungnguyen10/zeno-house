@@ -112,8 +112,11 @@ const operationalStartPeriod = computed({
   },
   set: (value: string) => {
     if (!value) {
-      update('operationalStartYear', '')
-      update('operationalStartMonth', '')
+      emit('update:modelValue', {
+        ...props.modelValue,
+        operationalStartYear: '',
+        operationalStartMonth: '',
+      })
       return
     }
 
@@ -124,8 +127,11 @@ const operationalStartPeriod = computed({
     const month = match[2]
     if (!year || !month) return
 
-    update('operationalStartYear', year)
-    update('operationalStartMonth', String(Number(month)))
+    emit('update:modelValue', {
+      ...props.modelValue,
+      operationalStartYear: year,
+      operationalStartMonth: String(Number(month)),
+    })
   },
 })
 
