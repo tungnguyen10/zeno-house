@@ -95,7 +95,7 @@ The create wizard and edit form use localStorage drafts:
 - `contract-form:create`
 - `contract-form:edit:<id>`
 
-Drafts include `draftVersion`, saved timestamp, form data, and create-wizard state (`currentStep`, pending occupants, selected services). A restore alert appears when a compatible draft exists; mismatched versions can only be deleted.
+Drafts include `draftVersion`, saved timestamp, form data, and create-wizard state (`currentStep`, pending occupants, selected services). Draft presence is evaluated after client mount so SSR/hydration output stays stable. A restore alert appears when a compatible draft exists; mismatched versions can only be deleted.
 
 Both create and edit routes protect unsaved changes with route-leave and browser unload guards. Moving between wizard steps does not trigger the guard.
 

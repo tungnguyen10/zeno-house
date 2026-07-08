@@ -195,11 +195,16 @@ TBD - created by archiving change contracts-overhaul. Update Purpose after archi
 ---
 
 ### Requirement: Contracts form draft autosave with restore alert
-`app/components/contracts/ContractForm.vue` SHALL display a restore alert at the top when `useContractForm().hasDraft.value === true`. The alert SHALL show the draft timestamp and offer three actions: "Khôi phục" (calls `restoreDraft()`), "Bỏ qua" (dismisses alert), "Xoá bản nháp" (calls `clearDraft()`). For the create wizard, restoring SHALL also restore the `currentStep`, pending occupants, and selected services.
+`app/components/contracts/ContractForm.vue` SHALL display a restore alert at the top when `useContractForm().hasDraft.value === true`. Draft presence SHALL be evaluated after client mount so initial SSR and hydration markup stays aligned. The alert SHALL show the draft timestamp and offer three actions: "Khôi phục" (calls `restoreDraft()`), "Bỏ qua" (dismisses alert), "Xoá bản nháp" (calls `clearDraft()`). For the create wizard, restoring SHALL also restore the `currentStep`, pending occupants, and selected services.
 
 #### Scenario: Restore alert shown when draft exists
 - **WHEN** user opens the create wizard and a draft exists in localStorage for the key
 - **THEN** an alert banner appears at the top with the three actions
+
+#### Scenario: Hydration-safe first render
+- **WHEN** server renders contract create/edit form and client hydrates the page
+- **THEN** the initial render does not diverge based on localStorage draft presence
+- **AND** draft alert visibility is computed after mount
 
 #### Scenario: Restore replaces wizard state
 - **WHEN** user clicks "Khôi phục" on a wizard draft saved at step 2 with 2 pending occupants

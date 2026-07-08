@@ -70,6 +70,7 @@ export function useRoomForm<T = unknown>(options: UseRoomFormOptions<T> = {}) {
   const isLoading = ref(false)
   const errors = ref<Record<string, string[]>>({})
   const apiError = ref<string | null>(null)
+  const isDraftHydrated = ref(false)
   const draftVersion = ref(0)
   const storageKey = computed(() => options.draftKey ? buildStorageKey(options.draftKey) : null)
 
@@ -88,6 +89,7 @@ export function useRoomForm<T = unknown>(options: UseRoomFormOptions<T> = {}) {
   })
 
   const draftEnvelope = computed(() => {
+    if (!isDraftHydrated.value) return null
     void draftVersion.value
     return storageKey.value ? safeReadDraft<T>(storageKey.value) : null
   })
@@ -97,6 +99,11 @@ export function useRoomForm<T = unknown>(options: UseRoomFormOptions<T> = {}) {
   function refreshHasDraft() {
     draftVersion.value++
   }
+
+  onMounted(() => {
+    isDraftHydrated.value = true
+    refreshHasDraft()
+  })
 
   if (options.formData) {
     const persist = useDebounceFn(() => {

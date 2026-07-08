@@ -262,7 +262,7 @@ Building detail SHALL not show a month-specific "Van hanh thang <month>" primary
 - **THEN** the draft restore alert is shown and user can restore the saved values
 
 ### Requirement: Buildings form draft autosave to localStorage
-`app/components/buildings/BuildingForm.vue` (via `useBuildingForm`) SHALL autosave the current form values to `localStorage` under a key `building-form:create` or `building-form:edit:<id>` every 500ms after a change. On mount, if a draft exists, the form SHALL show an `UiAlert` info banner offering "Khôi phục bản nháp", "Bỏ qua", "Xoá bản nháp". The draft SHALL be cleared on successful submit.
+`app/components/buildings/BuildingForm.vue` (via `useBuildingForm`) SHALL autosave the current form values to `localStorage` under a key `building-form:create` or `building-form:edit:<id>` every 500ms after a change. After client mount, if a draft exists, the form SHALL show an `UiAlert` info banner offering "Khôi phục bản nháp", "Bỏ qua", "Xoá bản nháp". Initial SSR and client hydration output SHALL stay aligned by not depending on localStorage before mount. The draft SHALL be cleared on successful submit.
 
 #### Scenario: Draft saved while typing
 - **WHEN** user types in the form for more than 500ms
@@ -271,6 +271,11 @@ Building detail SHALL not show a month-specific "Van hanh thang <month>" primary
 #### Scenario: Draft restore prompt on revisit
 - **WHEN** user revisits the form and a draft exists in localStorage
 - **THEN** an alert banner appears with three actions: restore, dismiss, delete draft
+
+#### Scenario: Hydration-safe first render
+- **WHEN** server renders the create/edit form and client starts hydration
+- **THEN** both sides render the same initial markup for the draft banner area
+- **AND** draft detection runs only after client mount
 
 #### Scenario: Draft cleared after successful submit
 - **WHEN** form submits successfully

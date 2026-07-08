@@ -160,11 +160,16 @@ TBD - created by archiving change rooms-overhaul. Update Purpose after archive.
 ---
 
 ### Requirement: Rooms form draft autosave with restore alert
-`app/components/rooms/RoomForm.vue` SHALL display a restore alert at the top when `useRoomForm().hasDraft.value === true`. The alert SHALL show the draft timestamp and offer three actions: "Khôi phục" (calls `restoreDraft()`), "Bỏ qua" (dismisses alert), "Xoá bản nháp" (calls `clearDraft()`).
+`app/components/rooms/RoomForm.vue` SHALL display a restore alert at the top when `useRoomForm().hasDraft.value === true`. Draft presence SHALL be evaluated after client mount so initial SSR and hydration markup stays aligned. The alert SHALL show the draft timestamp and offer three actions: "Khôi phục" (calls `restoreDraft()`), "Bỏ qua" (dismisses alert), "Xoá bản nháp" (calls `clearDraft()`).
 
 #### Scenario: Restore alert shown when draft exists
 - **WHEN** user opens the create form and a draft exists in localStorage for the key
 - **THEN** an alert banner appears at the top with the three actions
+
+#### Scenario: Hydration-safe first render
+- **WHEN** server renders room create/edit form and client hydrates the page
+- **THEN** the initial render does not diverge based on localStorage draft presence
+- **AND** draft alert visibility is computed after mount
 
 #### Scenario: Restore replaces current form values
 - **WHEN** user clicks "Khôi phục"

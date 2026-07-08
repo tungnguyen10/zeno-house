@@ -73,7 +73,7 @@ Readable building routes use `slug` when available and fall back to id.
 - Four numbered card sections (basic, owner, billing defaults, schedule); the create page extends the form with a fifth "Tạo phòng nhanh" section via the `extras` slot so the same desktop footer / mobile sticky save bar drives the entire flow.
 - Schedule section includes optional "Năm bắt đầu" and "Tháng bắt đầu" fields to declare the first operational month of the building.
 - Inline blur validation runs the create schema per field — errors appear on blur and clear as soon as the value becomes valid. Submit reveals remaining errors inline for all invalid fields and focuses the first invalid field.
-- Draft autosaved to `localStorage` (`building-form:create` or `building-form:edit:<id>`); the form shows a restore banner when a draft exists and clears it on successful submit.
+- Draft autosaved to `localStorage` (`building-form:create` or `building-form:edit:<id>`); draft presence is evaluated after client mount so SSR/hydration output stays stable, then the form shows a restore banner when a draft exists and clears it on successful submit.
 - Dirty-state guard via `onBeforeRouteLeave` and `beforeunload` prompts before discarding changes.
 - Mobile shows a sticky save bar with safe-area-inset padding.
 
@@ -127,7 +127,7 @@ Contracts drive occupancy state. Creating an active contract occupies the room. 
 
 - Four numbered sections: location, status, rent/area, description.
 - Inline blur validation and submit-time inline errors match the buildings form pattern.
-- Draft autosaves to `localStorage` (`room-form:create:<building_id|none>` or `room-form:edit:<id>`) and can be restored, dismissed, or deleted from the banner.
+- Draft autosaves to `localStorage` (`room-form:create:<building_id|none>` or `room-form:edit:<id>`) and can be restored, dismissed, or deleted from the banner; draft presence is evaluated after client mount to avoid SSR hydration mismatch.
 - Dirty-state guard via `onBeforeRouteLeave` and `beforeunload`; mobile shows a sticky save bar with safe-area-inset padding.
 
 ## Tenants
@@ -161,7 +161,7 @@ UX notes:
 
 - List page (`/tenants`): toolbar wraps debounced search, building filter, contract-state filter, status chips, sort dropdown, and order toggle. Filters sync to URL query so the view is shareable. Admins can toggle a selection mode that exposes per-row checkboxes plus a `TenantBulkActionsBar` for archive/activate/delete. Failures are surfaced inline with a "Xem chi tiết" modal listing each blocked tenant.
 - Detail page (`/tenants/[code]`): renders a `TenantDetailHero` with status badge, contact chips (phone `tel:`, email `mailto:`, ID number), and three stat tiles (active contracts, current room, occupancies). Sections use anchor ids `#personal`, `#id-document`, `#emergency`, `#contracts`, `#danger-zone`. The danger-zone section is hidden for managers. When delete returns 409, the page shows a warning alert summarising blockers with a "Lưu trữ thay vì xoá" button that calls `DELETE` with `?force=true`.
-- Form (`TenantForm`): four numbered sections (Personal / ID document / Emergency contact / Notes), inline blur validation, submit-time inline errors with first-invalid focus, draft autosave to `localStorage` (`tenant-form:create` or `tenant-form:edit:<id>`), restore/dismiss banner, dirty-state guard via `onBeforeRouteLeave` + `beforeunload`, mobile sticky save bar with safe-area-inset padding.
+- Form (`TenantForm`): four numbered sections (Personal / ID document / Emergency contact / Notes), inline blur validation, submit-time inline errors with first-invalid focus, draft autosave to `localStorage` (`tenant-form:create` or `tenant-form:edit:<id>`), restore/dismiss banner (draft visibility computed after client mount for hydration safety), dirty-state guard via `onBeforeRouteLeave` + `beforeunload`, mobile sticky save bar with safe-area-inset padding.
 
 ## Implementation Files
 

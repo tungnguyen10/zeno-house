@@ -74,7 +74,9 @@ export function useTenantForm<T = unknown>(options: UseTenantFormOptions<T> = {}
     hasDraft.value = window.localStorage.getItem(storageKey) !== null
   }
 
-  if (typeof window !== 'undefined') refreshHasDraft()
+  onMounted(() => {
+    refreshHasDraft()
+  })
 
   const snapshotSerialized = computed(() =>
     options.initialSnapshot ? JSON.stringify(toValue(options.initialSnapshot) ?? null) : null,
