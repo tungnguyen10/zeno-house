@@ -1,9 +1,11 @@
 <script setup lang="ts">
+import { computed, nextTick, ref, useId, watch } from 'vue'
 import clsx from 'clsx'
 
 const props = withDefaults(defineProps<{
   modelValue: boolean
   title?: string
+  ariaLabel?: string
   width?: string
 }>(), {
   width: 'w-96',
@@ -15,6 +17,9 @@ const emit = defineEmits<{
 
 const drawerRef = ref<HTMLElement | null>(null)
 const previousFocus = ref<HTMLElement | null>(null)
+const generatedId = useId()
+const titleId = computed(() => props.title ? `${generatedId}-title` : undefined)
+const accessibleLabel = computed(() => props.title ? undefined : (props.ariaLabel ?? 'Ngăn chi tiết'))
 
 const panelClass = computed(() =>
   clsx(
@@ -34,7 +39,7 @@ function focusableElements(): HTMLElement[] {
     drawerRef.value.querySelectorAll<HTMLElement>(
       'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
     ),
-  ).filter(el => !el.hasAttribute('disabled') && el.offsetParent !== null)
+  ).filter(el => !el.hasAttribute('disabled') && el.getAttribute('aria-hidden') !== 'true')
 }
 
 function onKeydown(event: KeyboardEvent) {
@@ -92,7 +97,8 @@ watch(
         class="fixed inset-0 z-50"
         role="dialog"
         aria-modal="true"
-        :aria-label="title"
+        :aria-labelledby="titleId"
+        :aria-label="accessibleLabel"
         @keydown="onKeydown"
       >
         <div class="absolute inset-0 bg-black/50" aria-hidden="true" @click="close" />
@@ -113,9 +119,11 @@ watch(
             tabindex="-1"
           >
             <header class="flex items-center justify-between border-b border-dark-border px-5 py-4">
-              <slot name="header">
-                <h2 class="text-base font-semibold text-white">{{ title }}</h2>
-              </slot>
+              <div :id="titleId" class="min-w-0">
+                <slot name="header">
+                  <h2 class="text-base font-semibold text-white">{{ title }}</h2>
+                </slot>
+              </div>
               <UiButton variant="ghost" size="sm" icon-only aria-label="Đóng" @click="close">
                 ×
               </UiButton>

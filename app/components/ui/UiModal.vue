@@ -1,9 +1,11 @@
 <script setup lang="ts">
+import { computed, nextTick, onMounted, ref, useId, watch } from 'vue'
 import clsx from 'clsx'
 
 const props = withDefaults(defineProps<{
   open: boolean
   title?: string
+  ariaLabel?: string
   /** Width preset. Defaults to `md` (max-w-lg) for backwards compatibility. */
   size?: 'sm' | 'md' | 'lg' | 'xl'
 }>(), {
@@ -13,6 +15,12 @@ const props = withDefaults(defineProps<{
 const emit = defineEmits<{
   (e: 'close'): void
 }>()
+
+const dialogRef = ref<HTMLElement | null>(null)
+const previousFocus = ref<HTMLElement | null>(null)
+const generatedId = useId()
+const titleId = computed(() => props.title ? `${generatedId}-title` : undefined)
+const accessibleLabel = computed(() => props.title ? undefined : (props.ariaLabel ?? 'Hộp thoại'))
 
 const panelClass = computed(() =>
   clsx(
@@ -26,19 +34,70 @@ const panelClass = computed(() =>
   ),
 )
 
-// Trap focus and handle Escape key
-function onKeydown(event: KeyboardEvent) {
-  if (event.key === 'Escape') emit('close')
+function focusableElements(): HTMLElement[] {
+  if (!dialogRef.value) return []
+  return Array.from(
+    dialogRef.value.querySelectorAll<HTMLElement>(
+      'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
+    ),
+  ).filter(el => !el.hasAttribute('disabled') && el.getAttribute('aria-hidden') !== 'true')
 }
 
-// Auto-focus dialog when opened so keydown events are received
-function onAfterEnter(el: Element) {
-  (el as HTMLElement).focus()
+function focusDialog() {
+  const first = focusableElements()[0]
+  if (first) first.focus()
+  else dialogRef.value?.focus()
+}
+
+function onKeydown(event: KeyboardEvent) {
+  if (event.key === 'Escape') {
+    event.preventDefault()
+    emit('close')
+    return
+  }
+  if (event.key !== 'Tab') return
+
+  const items = focusableElements()
+  if (items.length === 0) {
+    event.preventDefault()
+    dialogRef.value?.focus()
+    return
+  }
+
+  const first = items[0]
+  const last = items[items.length - 1]
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault()
+    last?.focus()
+  }
+  else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault()
+    first?.focus()
+  }
+}
+
+async function onAfterEnter() {
+  await nextTick()
+  focusDialog()
 }
 
 // Prevent SSR/client hydration mismatch: don't render Teleport content on server
 const mounted = ref(false)
 onMounted(() => { mounted.value = true })
+
+watch(
+  () => props.open,
+  async (open) => {
+    if (open) {
+      previousFocus.value = document.activeElement as HTMLElement | null
+      await nextTick()
+      focusDialog()
+    }
+    else {
+      previousFocus.value?.focus?.()
+    }
+  },
+)
 </script>
 
 <template>
@@ -52,11 +111,13 @@ onMounted(() => { mounted.value = true })
     >
       <div
         v-if="open"
+        ref="dialogRef"
         class="fixed inset-0 z-50 flex items-center justify-center p-4"
         role="dialog"
         aria-modal="true"
         tabindex="-1"
-        :aria-label="title"
+        :aria-labelledby="titleId"
+        :aria-label="accessibleLabel"
         @keydown="onKeydown"
       >
         <!-- Backdrop -->
@@ -70,7 +131,7 @@ onMounted(() => { mounted.value = true })
         <div :class="panelClass">
           <!-- Header -->
           <div class="flex shrink-0 items-center justify-between border-b border-dark-border px-6 py-4">
-            <h2 class="text-base font-semibold text-white">
+            <h2 :id="titleId" class="text-base font-semibold text-white">
               {{ title }}
             </h2>
             <button
@@ -79,7 +140,7 @@ onMounted(() => { mounted.value = true })
               aria-label="Đóng"
               @click="emit('close')"
             >
-              <IconX class="h-5 w-5" aria-hidden="true" />
+              <IconX class="size-5" aria-hidden="true" />
             </button>
           </div>
 

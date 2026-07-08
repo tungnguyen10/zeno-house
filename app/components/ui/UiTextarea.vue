@@ -53,7 +53,11 @@ const textareaClass = computed(() =>
 </script>
 
 <template>
-  <div class="flex flex-col gap-1.5">
+  <div
+    class="flex flex-col gap-1.5"
+    :data-invalid="error ? '' : undefined"
+    :data-disabled="disabled ? '' : undefined"
+  >
     <label
       v-if="label"
       :for="textareaId"

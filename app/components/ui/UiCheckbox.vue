@@ -30,7 +30,7 @@ const checkboxId = computed(() => props.id ?? generatedId)
 
 const boxClass = computed(() =>
   clsx(
-    'peer h-4 w-4 appearance-none rounded border bg-dark-surface transition-colors',
+    'peer size-4 appearance-none rounded border bg-dark-surface transition-colors',
     'focus:outline-none focus:ring-2 focus:ring-offset-0 focus:ring-cyan/40',
     'checked:border-cyan checked:bg-cyan indeterminate:border-cyan indeterminate:bg-cyan',
     props.error ? 'border-error/50' : 'border-dark-border',
@@ -40,12 +40,16 @@ const boxClass = computed(() =>
 </script>
 
 <template>
-  <div class="flex flex-col gap-1">
+  <div
+    class="flex flex-col gap-1"
+    :data-invalid="error ? '' : undefined"
+    :data-disabled="disabled ? '' : undefined"
+  >
     <label
       :for="checkboxId"
       :class="clsx('flex items-start gap-2', disabled && 'cursor-not-allowed')"
     >
-      <span class="relative flex h-4 w-4 shrink-0 items-center justify-center">
+      <span class="relative flex size-4 shrink-0 items-center justify-center">
         <input
           :id="checkboxId"
           type="checkbox"
@@ -59,7 +63,7 @@ const boxClass = computed(() =>
           @change="emit('update:modelValue', ($event.target as HTMLInputElement).checked)"
         >
         <IconCheckSmall
-          class="pointer-events-none absolute hidden h-3 w-3 text-dark peer-checked:block peer-indeterminate:hidden"
+          class="pointer-events-none absolute hidden size-3 text-dark peer-checked:block peer-indeterminate:hidden"
           aria-hidden="true"
         />
         <span

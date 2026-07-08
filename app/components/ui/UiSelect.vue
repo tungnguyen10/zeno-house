@@ -230,6 +230,8 @@ const triggerClass = computed(() =>
     ref="containerRef"
     :class="['flex flex-col gap-1.5', rootClass]"
     :style="rootStyle"
+    :data-invalid="error ? '' : undefined"
+    :data-disabled="disabled ? '' : undefined"
   >
     <label
       v-if="label"
@@ -243,7 +245,7 @@ const triggerClass = computed(() =>
     <div class="relative">
       <span
         v-if="hasPrefix"
-        class="pointer-events-none absolute left-3 top-1/2 z-10 flex h-4 w-4 -translate-y-1/2 items-center justify-center text-muted"
+        class="pointer-events-none absolute left-3 top-1/2 z-10 flex size-4 -translate-y-1/2 items-center justify-center text-muted"
         aria-hidden="true"
       >
         <slot name="prefix" />
@@ -274,7 +276,7 @@ const triggerClass = computed(() =>
       </button>
 
       <IconChevronDown
-        class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted transition-transform"
+        class="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted transition-transform"
         :class="isOpen ? 'rotate-180' : ''"
         aria-hidden="true"
       />
@@ -308,7 +310,7 @@ const triggerClass = computed(() =>
           <span class="truncate">{{ placeholder }}</span>
           <IconCheckSmall
             v-if="isPlaceholderSelected"
-            class="ml-2 h-3 w-3 shrink-0 text-cyan"
+            class="ml-2 size-3 shrink-0 text-cyan"
             aria-hidden="true"
           />
         </li>
@@ -334,7 +336,7 @@ const triggerClass = computed(() =>
           <span class="truncate">{{ option.label }}</span>
           <IconCheckSmall
             v-if="isSelected(option)"
-            class="ml-2 h-3 w-3 shrink-0 text-cyan"
+            class="ml-2 size-3 shrink-0 text-cyan"
             aria-hidden="true"
           />
         </li>

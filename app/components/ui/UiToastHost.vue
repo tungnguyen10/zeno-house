@@ -58,17 +58,16 @@ function tone(severity: string): ToneConfig {
         >
           <!-- Progress bar -->
           <div
-            :class="['absolute inset-x-0 bottom-0 h-0.5', tone(toast.severity).bar]"
-            style="animation: toast-drain var(--duration, 4s) linear forwards"
+            :class="['toast-progress absolute inset-x-0 bottom-0 h-0.5', tone(toast.severity).bar]"
           />
 
           <!-- Content row -->
           <div class="flex items-start gap-3 px-4 py-3">
             <!-- Icon -->
             <span :class="['mt-px shrink-0', tone(toast.severity).icon]">
-              <IconCheckCircle v-if="toast.severity === 'success'" class="h-4 w-4" aria-hidden="true" />
-              <IconXCircle v-else-if="toast.severity === 'danger'" class="h-4 w-4" aria-hidden="true" />
-              <IconInfoCircle v-else class="h-4 w-4" aria-hidden="true" />
+              <IconCheckCircle v-if="toast.severity === 'success'" class="size-4" aria-hidden="true" />
+              <IconXCircle v-else-if="toast.severity === 'danger'" class="size-4" aria-hidden="true" />
+              <IconInfoCircle v-else class="size-4" aria-hidden="true" />
             </span>
 
             <!-- Message -->
@@ -81,7 +80,7 @@ function tone(severity: string): ToneConfig {
               aria-label="Đóng thông báo"
               @click="dismiss(toast.id)"
             >
-              <IconXCircle class="h-4 w-4" aria-hidden="true" />
+              <IconXCircle class="size-4" aria-hidden="true" />
             </button>
           </div>
         </div>
@@ -91,6 +90,10 @@ function tone(severity: string): ToneConfig {
 </template>
 
 <style scoped>
+.toast-progress {
+  animation: toast-drain var(--duration, 4s) linear forwards;
+}
+
 @keyframes toast-drain {
   from { transform: scaleX(1); transform-origin: left }
   to   { transform: scaleX(0); transform-origin: left }

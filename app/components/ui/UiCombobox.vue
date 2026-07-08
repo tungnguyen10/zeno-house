@@ -114,6 +114,7 @@ function selectCustom() {
 
 function clear() {
   emit('update:modelValue', null)
+  closeDropdown()
 }
 
 function isSelected(option: TOption) {
@@ -175,10 +176,23 @@ const triggerClass = computed(() =>
       : 'hover:border-dark-border/80',
   ),
 )
+
+const triggerLabelClass = computed(() =>
+  clsx(
+    'min-w-0 truncate',
+    props.modelValue ? 'text-white' : 'text-muted',
+    props.modelValue && !props.disabled && !props.loading && 'pr-7',
+  ),
+)
 </script>
 
 <template>
-  <div ref="containerRef" class="flex flex-col gap-1.5">
+  <div
+    ref="containerRef"
+    class="flex flex-col gap-1.5"
+    :data-invalid="error ? '' : undefined"
+    :data-disabled="disabled ? '' : undefined"
+  >
     <!-- Label -->
     <label
       v-if="label"
@@ -206,37 +220,36 @@ const triggerClass = computed(() =>
         @click="openDropdown"
       >
         <!-- Selected value / placeholder -->
-        <span :class="modelValue ? 'text-white' : 'text-muted'">
+        <span :class="triggerLabelClass">
           {{ modelValue ? selectedLabel : placeholder }}
         </span>
 
         <span class="flex items-center gap-1 shrink-0 ml-2">
           <IconSpinner
             v-if="loading"
-            class="animate-spin h-4 w-4 text-muted"
+            class="size-4 animate-spin text-muted"
             aria-hidden="true"
           />
-
-          <!-- Clear button (only when a value is selected and not disabled/loading) -->
-          <button
-            v-else-if="modelValue && !disabled"
-            type="button"
-            class="rounded p-0.5 text-muted hover:text-white hover:bg-dark-hover transition-colors"
-            :aria-label="`Xóa lựa chọn`"
-            tabindex="-1"
-            @click.stop="clear"
-          >
-            <IconX class="h-3.5 w-3.5" aria-hidden="true" />
-          </button>
 
           <!-- Chevron -->
           <IconChevronDown
             v-else
-            class="h-4 w-4 text-muted transition-transform"
+            class="size-4 text-muted transition-transform"
             :class="isOpen ? 'rotate-180' : ''"
             aria-hidden="true"
           />
         </span>
+      </button>
+
+      <!-- Clear button (kept outside the combobox trigger to avoid nested buttons) -->
+      <button
+        v-if="modelValue && !disabled && !loading"
+        type="button"
+        class="absolute right-8 top-1/2 inline-flex size-6 -translate-y-1/2 items-center justify-center rounded text-muted transition-colors hover:bg-dark-hover hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan/30"
+        aria-label="Xóa lựa chọn"
+        @click.stop.prevent="clear"
+      >
+        <IconX class="size-3.5" aria-hidden="true" />
       </button>
 
       <!-- Dropdown panel -->
@@ -294,11 +307,11 @@ const triggerClass = computed(() =>
           >
             <span>{{ optionLabel(option) }}</span>
             <!-- Checkmark for selected -->
-            <IconCheckSmall
-              v-if="isSelected(option)"
-              class="h-4 w-4 text-cyan shrink-0"
-              aria-hidden="true"
-            />
+          <IconCheckSmall
+            v-if="isSelected(option)"
+            class="size-4 shrink-0 text-cyan"
+            aria-hidden="true"
+          />
           </li>
 
           <!-- Custom typed option -->
@@ -317,7 +330,7 @@ const triggerClass = computed(() =>
               <span class="text-muted">{{ customOptionLabel }}</span>
               <span class="ml-1 text-white">"{{ trimmedQuery }}"</span>
             </span>
-            <IconPlus class="h-4 w-4 shrink-0 text-cyan" aria-hidden="true" />
+            <IconPlus class="size-4 shrink-0 text-cyan" aria-hidden="true" />
           </li>
         </ul>
       </div>

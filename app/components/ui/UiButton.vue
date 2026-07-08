@@ -40,9 +40,9 @@ const buttonClass = computed(() =>
           'px-5 py-2.5 text-sm': props.size === 'lg',
         },
         props.iconOnly && {
-          'h-7 w-7 text-xs': props.size === 'sm',
-          'h-9 w-9 text-sm': props.size === 'md',
-          'h-10 w-10 text-sm': props.size === 'lg',
+          'size-7 text-xs': props.size === 'sm',
+          'size-9 text-sm': props.size === 'md',
+          'size-10 text-sm': props.size === 'lg',
         },
         // Variant
         {
@@ -74,7 +74,7 @@ const buttonClass = computed(() =>
   >
     <IconSpinner
       v-if="loading"
-      class="animate-spin h-4 w-4 shrink-0"
+      class="size-4 shrink-0 animate-spin"
       aria-hidden="true"
     />
     <slot />
