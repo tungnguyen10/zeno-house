@@ -103,10 +103,10 @@ function handleSubmit() {
       required
     />
 
-    <UiInput
+    <UiDatePicker
       v-model="form.paid_at"
       label="Ngày thanh toán"
-      type="date"
+      date-mode="payment"
       :error="fieldErrors.paid_at"
       required
     />

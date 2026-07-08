@@ -90,6 +90,18 @@ async function onSubmit() {
 
 Use `currency`, `meter`, `area`, `month`, `year`, `day`, `integer`, `decimal`, or `percent` to describe the domain value. Keep formatted numeric display fields as `type="text"` with `inputmode` when the component formats while typing.
 
+**Date fields use the calendar picker:**
+```vue
+<UiDatePicker
+  v-model="form.paidAt"
+  label="Ngày thanh toán"
+  date-mode="payment"
+  required
+/>
+```
+
+Use `UiDatePicker` for domain/page date entry instead of `UiInput type="date"`. Keep the model as an ISO `YYYY-MM-DD` string and choose a `date-mode` such as `payment`, `reading`, `period-start`, `period-end`, `past`, `future`, or `operational`.
+
 **Server re-validates independently (do not trust client):**
 ```ts
 // server/api/buildings/index.post.ts

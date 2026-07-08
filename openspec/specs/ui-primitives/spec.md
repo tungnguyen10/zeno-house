@@ -28,7 +28,7 @@ Defines the catalog of generic UI primitives in `app/components/ui/` — buttons
 ### Requirement: UiInput hỗ trợ label, typed input behavior, và field state
 `UiInput` SHALL nhận `label`, `modelValue`, `error` (string), `hint`, và `required`. SHALL emit `update:modelValue`. SHALL hiển thị error message bên dưới input khi `error` có giá trị. It SHOULD support stable ids and optional prefix/suffix slots for operational values such as currency, unit, and percent. `class` and `style` SHALL apply to the root wrapper, while native input attributes such as `name`, `autocomplete`, `min`, `max`, `step`, `pattern`, `inputmode`, `readonly`, and `data-*` SHALL reach the native `<input>`.
 
-`UiInput` SHALL support only the native types used by the product: `text`, `email`, `password`, `tel`, `search`, `url`, `date`, and `number`. For `type="number"`, callers SHALL provide `numberMode` (`integer` | `decimal` | `currency` | `meter` | `area` | `month` | `year` | `day` | `percent`) unless the field intentionally uses a custom text-formatting workflow. Caller-provided `min`, `max`, `step`, and `inputmode` SHALL override primitive defaults. Vue model modifiers `.number` and `.trim` SHALL be honored.
+`UiInput` SHALL support only the native types used by the product: `text`, `email`, `password`, `tel`, `search`, `url`, `date`, and `number`. For `type="number"`, callers SHALL provide `numberMode` (`integer` | `decimal` | `currency` | `meter` | `area` | `month` | `year` | `day` | `percent`) unless the field intentionally uses a custom text-formatting workflow. Caller-provided `min`, `max`, `step`, and `inputmode` SHALL override primitive defaults. Vue model modifiers `.number` and `.trim` SHALL be honored. Domain/page date entry SHOULD use `UiDatePicker` instead of native `UiInput type="date"`.
 
 #### Scenario: UiInput hiển thị label
 - **WHEN** UiInput được render với prop `label="Tên tòa nhà"`
@@ -61,6 +61,25 @@ Defines the catalog of generic UI primitives in `app/components/ui/` — buttons
 #### Scenario: UiInput field state attributes
 - **WHEN** UiInput has an error or is disabled
 - **THEN** the root exposes `data-invalid` or `data-disabled`, the control exposes `aria-invalid`, and helper/error text is wired through `aria-describedby`
+
+### Requirement: UiDatePicker supports calendar date picking
+`UiDatePicker` SHALL provide the standard domain/page date entry control. It SHALL render a button trigger and dark calendar popover, preserve `modelValue` as an ISO `YYYY-MM-DD` string, emit `update:modelValue` and `change`, support `label`, `placeholder`, `error`, `hint`, `required`, `disabled`, compact density, `dateMode`, `minDate`, and `maxDate`, and expose field state consistently with other form primitives.
+
+#### Scenario: Date picker displays selected date
+- **WHEN** UiDatePicker receives `modelValue="2026-07-08"`
+- **THEN** the trigger displays a localized date label while the emitted value remains `2026-07-08`
+
+#### Scenario: Date picker calendar selection
+- **WHEN** a user opens the date picker and selects a date in the calendar
+- **THEN** the picker emits the selected ISO date string and closes the popover
+
+#### Scenario: Date picker constraints
+- **WHEN** UiDatePicker receives `dateMode`, `minDate`, or `maxDate`
+- **THEN** dates outside the effective constraints are disabled unless the caller-provided constraint allows them
+
+#### Scenario: Date picker keyboard and a11y
+- **WHEN** UiDatePicker is open
+- **THEN** it exposes dialog semantics, visible focus, Escape close, and keyboard navigation across calendar days
 
 ### Requirement: UiModal hỗ trợ open/close, accessible title, và focus management
 `UiModal` SHALL nhận `open` (boolean), `title` (string), và optional `ariaLabel`. SHALL emit `close` khi người dùng click backdrop hoặc nút close. SHALL dùng `<Teleport to="body">` để render ngoài DOM hierarchy. Each modal SHALL expose an accessible name through visible `title`/`aria-labelledby` or `ariaLabel`, close on Escape, keep Tab focus inside while open, and restore focus to the previously focused element after close.

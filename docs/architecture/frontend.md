@@ -96,5 +96,6 @@ The app is a dense operational tool, not a marketing site.
 
 - Use `UiInput`, `UiTextarea`, `UiSelect`, `UiCombobox`, and `UiCheckbox` for form controls instead of hand-written control classes.
 - Every `UiInput type="number"` in domain/page code must declare `numberMode` so keyboard, step, and constraints match the value intent.
+- Use `UiDatePicker` for domain/page date fields; keep values as ISO `YYYY-MM-DD` strings and declare `dateMode` for payment, reading, period, past, future, or operational dates.
 - Keep formatted numeric display fields as `type="text"` with explicit `inputmode` when the component formats while typing.
 - Use `error`/`hint` props for field helper text so primitives can wire `data-invalid`, `aria-invalid`, and `aria-describedby` consistently.

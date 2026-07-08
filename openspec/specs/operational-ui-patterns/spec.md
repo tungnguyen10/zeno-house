@@ -127,7 +127,7 @@ Existing operational pages SHALL be migrated to the established page structure w
 - **THEN** it uses `UiPageHeader`, `UiAlert`, and primitive-backed form sections/actions without duplicating raw card/error classes
 
 ### Requirement: Existing form control adoption
-Existing domain forms SHALL use UI primitives for text input, number input, select, textarea, checkbox, toggle, searchable selection, error display, helper text, and form actions.
+Existing domain forms SHALL use UI primitives for text input, number input, date picker, select, textarea, checkbox, toggle, searchable selection, error display, helper text, and form actions.
 
 #### Scenario: Raw select is removed from domain forms
 - **WHEN** a migrated form needs a dropdown choice
@@ -148,6 +148,10 @@ Existing domain forms SHALL use UI primitives for text input, number input, sele
 #### Scenario: Number input intent is explicit
 - **WHEN** a migrated form uses `UiInput type="number"`
 - **THEN** the field declares the semantic `numberMode` for its domain value, such as currency, meter, area, month, year, day, integer, decimal, or percent
+
+#### Scenario: Date entry uses calendar picker
+- **WHEN** a migrated form needs a date value
+- **THEN** it uses `UiDatePicker` with a semantic `dateMode` instead of native `UiInput type="date"`
 
 #### Scenario: Formatted numeric text exception
 - **WHEN** a migrated form needs formatted display while the user types, such as grouped VND text
@@ -186,3 +190,7 @@ The cleanup implementation SHALL include source scans for raw controls, raw tabl
 #### Scenario: Number mode scan
 - **WHEN** implementation is complete
 - **THEN** a scan for `UiInput type="number"` outside `app/components/ui/` has no unexplained matches without a `numberMode`
+
+#### Scenario: Date picker scan
+- **WHEN** implementation is complete
+- **THEN** a scan for `UiInput type="date"` outside `app/components/ui/` has no unexplained matches

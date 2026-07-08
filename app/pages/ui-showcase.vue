@@ -7,6 +7,7 @@ definePageMeta({ title: 'UI Showcase' })
 const inputValue = ref('')
 const inputWithError = ref('')
 const inputWithSuffix = ref('')
+const datePickerValue = ref('2026-07-08')
 const textareaValue = ref('')
 const selectValue = ref<string | null>(null)
 const checkboxValue = ref(false)
@@ -164,10 +165,11 @@ function dismissAlert(key: string) {
     </UiSection>
 
     <!-- Form Inputs -->
-    <UiSection title="UiInput" description="Stable id, prefix/suffix, error, hint.">
+    <UiSection title="UiInput & UiDatePicker" description="Stable id, prefix/suffix, error, hint, calendar date picking.">
       <div class="grid gap-4 md:grid-cols-2">
         <UiInput v-model="inputValue" label="Tên tòa nhà" placeholder="Nhập tên..." required />
         <UiInput v-model="inputWithError" label="Email" placeholder="email@example.com" error="Email không hợp lệ" />
+        <UiDatePicker v-model="datePickerValue" label="Ngày thanh toán" date-mode="payment" />
         <UiInput label="Diện tích" hint="Đơn vị mét vuông" type="number" number-mode="area">
           <template #suffix>m²</template>
         </UiInput>

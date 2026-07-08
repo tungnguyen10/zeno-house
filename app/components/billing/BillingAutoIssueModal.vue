@@ -76,7 +76,7 @@ function submit() {
 
       <div class="space-y-1">
         <label class="text-xs text-muted">Ngày thanh toán</label>
-        <UiInput v-model="form.payment_date" type="date" class="w-full" />
+        <UiDatePicker v-model="form.payment_date" date-mode="payment" class="w-full" />
       </div>
 
       <div class="space-y-1">

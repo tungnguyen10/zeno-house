@@ -400,16 +400,17 @@ const columns: UiTableColumn<BillingDraftGridRow>[] = [
       <!-- Toolbar: batch reading date + filters -->
       <UiToolbar>
         <div class="flex flex-wrap items-center gap-3">
-          <label for="batch-reading-date" class="flex items-center gap-2 text-xs text-muted">
-            Ngày đọc
-            <UiInput
+          <div class="flex items-center gap-2 text-xs text-muted">
+            <span>Ngày đọc</span>
+            <UiDatePicker
               id="batch-reading-date"
               v-model="batchReadingDate"
-              type="date"
+              date-mode="reading"
               class="w-40"
+              aria-label="Ngày đọc"
               :disabled="!periodEditable"
             />
-          </label>
+          </div>
           <UiButton
             v-if="periodEditable"
             variant="ghost"

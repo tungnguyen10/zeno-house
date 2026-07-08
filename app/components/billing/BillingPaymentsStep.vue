@@ -638,7 +638,7 @@ watch(
           <UiInput v-model.number="paymentForm.amount" type="number" number-mode="currency" min="1" class="w-full" disabled />
         </UiSection>
         <UiSection title="Ngày thanh toán">
-          <UiInput v-model="paymentForm.paid_at" type="date" class="w-full" />
+          <UiDatePicker v-model="paymentForm.paid_at" date-mode="payment" class="w-full" />
         </UiSection>
         <UiSection title="Hình thức">
           <UiInput v-model="paymentForm.payment_method" placeholder="cash, bank transfer..." class="w-full" />

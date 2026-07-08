@@ -1215,7 +1215,7 @@ async function handleUpdatePricingType(catalogId: string, pricingType: PricingTy
           <UiInput v-model="prepaidForm.total_amount" label="Tổng tiền" type="number" number-mode="currency" min="0" required />
           <UiInput v-model.number="prepaidForm.total_months" label="Số tháng" type="number" number-mode="integer" min="1" required />
         </div>
-        <UiInput v-model="prepaidForm.start_date" label="Ngày bắt đầu" type="date" required />
+        <UiDatePicker v-model="prepaidForm.start_date" label="Ngày bắt đầu" date-mode="period-start" required />
         <UiSelect
           v-if="editingPrepaid"
           v-model="prepaidForm.status"

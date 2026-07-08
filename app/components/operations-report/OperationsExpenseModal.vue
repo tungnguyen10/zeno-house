@@ -156,10 +156,10 @@ function onReceiptChange(event: Event) {
         placeholder="VD: Sửa tường, vệ sinh tập thể..."
       />
 
-      <UiInput
+      <UiDatePicker
         v-model="form.expense_date"
         label="Ngày chi"
-        type="date"
+        date-mode="operational"
       />
 
       <div class="space-y-2">

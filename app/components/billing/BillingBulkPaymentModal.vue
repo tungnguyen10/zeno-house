@@ -110,7 +110,7 @@ function submit() {
           <UiInput v-model="form.payment_method" placeholder="cash, bank transfer..." class="w-full" />
         </UiSection>
         <UiSection title="Ngày thanh toán">
-          <UiInput v-model="form.payment_date" type="date" class="w-full" />
+          <UiDatePicker v-model="form.payment_date" date-mode="payment" class="w-full" />
         </UiSection>
         <UiSection title="Ghi chú chung">
           <UiInput v-model="form.note" placeholder="Tuỳ chọn" class="w-full" />

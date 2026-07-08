@@ -74,10 +74,10 @@ function handleSubmit() {
     />
 
     <!-- Move-in date -->
-    <UiInput
+    <UiDatePicker
       v-model="form.move_in_date"
       label="Ngày vào ở"
-      type="date"
+      date-mode="period-start"
       required
       :disabled="loading"
       :error="fieldErrors.move_in_date"

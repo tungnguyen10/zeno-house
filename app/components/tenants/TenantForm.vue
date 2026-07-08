@@ -248,10 +248,10 @@ const canSubmit = computed(() => !props.loading && (props.isDirty || props.hasDr
           @update:model-value="(v) => update('email', v as string)"
           @blur="onBlur('email')"
         />
-        <UiInput
+        <UiDatePicker
           id="tf-date-of-birth"
           :model-value="modelValue.date_of_birth"
-          type="date"
+          date-mode="past"
           label="Ngày sinh"
           :error="errorFor('date_of_birth')"
           @update:model-value="(v) => update('date_of_birth', v as string)"
@@ -307,10 +307,10 @@ const canSubmit = computed(() => !props.loading && (props.isDirty || props.hasDr
           @update:model-value="(v) => update('id_number', v as string)"
           @blur="onBlur('id_number')"
         />
-        <UiInput
+        <UiDatePicker
           id="tf-id-issued-date"
           :model-value="modelValue.id_issued_date"
-          type="date"
+          date-mode="past"
           label="Ngày cấp"
           :error="errorFor('id_issued_date')"
           @update:model-value="(v) => update('id_issued_date', v as string)"

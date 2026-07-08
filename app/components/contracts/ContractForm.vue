@@ -441,10 +441,10 @@ const mobileCancelText = computed(() => props.mobileCancelLabel ?? props.cancelL
       </header>
 
       <div class="grid gap-4 md:grid-cols-2">
-        <UiInput
+        <UiDatePicker
           id="contract-start-date"
           label="Ngày bắt đầu"
-          type="date"
+          date-mode="period-start"
           :model-value="modelValue.start_date"
           :error="errorFor('start_date')"
           :disabled="loading"
@@ -453,10 +453,10 @@ const mobileCancelText = computed(() => props.mobileCancelLabel ?? props.cancelL
           @blur="onBlur('start_date')"
         />
 
-        <UiInput
+        <UiDatePicker
           id="contract-end-date"
           label="Ngày kết thúc"
-          type="date"
+          date-mode="period-end"
           :model-value="modelValue.end_date"
           :error="errorFor('end_date')"
           :disabled="loading"
@@ -611,10 +611,10 @@ const mobileCancelText = computed(() => props.mobileCancelLabel ?? props.cancelL
         </div>
       </div>
 
-      <UiInput
+      <UiDatePicker
         id="contract-handover-date"
         label="Ngày đọc số"
-        type="date"
+        date-mode="reading"
         :model-value="modelValue.handover_reading_date"
         :error="errorFor('handover_reading_date')"
         :disabled="loading"

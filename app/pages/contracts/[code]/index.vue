@@ -725,9 +725,9 @@ watchEffect(() => {
         <h2 class="text-sm font-semibold text-white">Ghi nhận ngày rời phòng</h2>
         <div class="flex flex-col gap-1.5">
           <label class="text-sm text-muted">Ngày rời</label>
-          <UiInput
+          <UiDatePicker
             v-model="moveOutDate"
-            type="date"
+            date-mode="period-end"
             class="w-full"
           />
         </div>

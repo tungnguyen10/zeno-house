@@ -96,10 +96,10 @@ function handleSubmit() {
       </p>
     </div>
 
-    <UiInput
+    <UiDatePicker
       v-model="form.new_end_date"
       label="Ngày kết thúc mới"
-      type="date"
+      date-mode="period-end"
       :error="fieldErrors.new_end_date"
       required
     />

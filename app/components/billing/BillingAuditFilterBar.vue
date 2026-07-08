@@ -242,17 +242,17 @@ const hasActiveFilters = computed(() =>
       </div>
 
       <!-- Date from/to (D4) -->
-      <UiInput
+      <UiDatePicker
         :model-value="fromDate"
-        type="date"
+        date-mode="operational"
         placeholder="Từ ngày"
         density="compact"
         aria-label="Từ ngày"
         @update:model-value="fromDate = $event"
       />
-      <UiInput
+      <UiDatePicker
         :model-value="toDate"
-        type="date"
+        date-mode="operational"
         placeholder="Đến ngày"
         density="compact"
         aria-label="Đến ngày"

@@ -138,9 +138,9 @@ const meterTypeLabel: Record<MeterType, string> = { electricity: 'Điện', wate
                   </p>
                 </td>
                 <td class="py-2 pr-3">
-                  <UiInput
+                  <UiDatePicker
                     density="compact"
-                    type="date"
+                    date-mode="reading"
                     :model-value="getRow(meterType, 'handover_in').date"
                     @update:model-value="(v) => { getRow(meterType, 'handover_in').date = String(v); handleSave(meterType, 'handover_in') }"
                   />
@@ -165,9 +165,9 @@ const meterTypeLabel: Record<MeterType, string> = { electricity: 'Điện', wate
                   />
                 </td>
                 <td class="py-2 pr-3">
-                  <UiInput
+                  <UiDatePicker
                     density="compact"
-                    type="date"
+                    date-mode="reading"
                     :model-value="getRow(meterType, 'handover_out').date"
                     @update:model-value="(v) => { getRow(meterType, 'handover_out').date = String(v); handleSave(meterType, 'handover_out') }"
                   />
