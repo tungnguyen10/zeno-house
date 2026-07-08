@@ -17,7 +17,7 @@ const {
   periodMonth,
 } = useBuildingMeterReadings(id)
 
-const { monthOptions } = usePeriodOptions({
+const { monthOptions, yearOptions } = usePeriodOptions({
   selectedYear: periodYear,
 })
 
@@ -152,33 +152,26 @@ function formatDate(value: string | null): string {
 
     <!-- KPI strip -->
     <div class="mb-4 grid grid-cols-2 gap-3 md:grid-cols-4">
-      <div class="rounded-xl border border-dark-border bg-dark-surface px-4 py-3">
-        <p class="text-xs uppercase tracking-wide text-muted">Phòng đang hoạt động</p>
-        <p class="mt-1 text-xl font-semibold tabular-nums text-white">{{ summary.total }}</p>
-      </div>
-      <div class="rounded-xl border border-dark-border bg-dark-surface px-4 py-3">
-        <p class="text-xs uppercase tracking-wide text-muted">Đã chốt</p>
-        <p class="mt-1 text-xl font-semibold tabular-nums text-success-neon">
-          {{ summary.complete }}<span class="text-sm font-normal text-muted">/{{ summary.total }}</span>
-        </p>
-        <p v-if="summary.partial > 0" class="mt-0.5 text-[11px] text-muted">
-          {{ summary.partial }} phòng chỉ chốt 1 đồng hồ
-        </p>
-      </div>
-      <div class="rounded-xl border border-dark-border bg-dark-surface px-4 py-3">
-        <p class="text-xs uppercase tracking-wide text-muted">Tổng tiêu thụ điện</p>
-        <p class="mt-1 text-xl font-semibold tabular-nums text-cyan">
-          {{ formatNumber(summary.electricityUsage) }}
-          <span class="text-sm font-normal text-muted">kWh</span>
-        </p>
-      </div>
-      <div class="rounded-xl border border-dark-border bg-dark-surface px-4 py-3">
-        <p class="text-xs uppercase tracking-wide text-muted">Tổng tiêu thụ nước</p>
-        <p class="mt-1 text-xl font-semibold tabular-nums text-cyan">
-          {{ formatNumber(summary.waterUsage) }}
-          <span class="text-sm font-normal text-muted">m³</span>
-        </p>
-      </div>
+      <UiMetric
+        label="Phòng đang hoạt động"
+        :value="String(summary.total)"
+      />
+      <UiMetric
+        label="Đã chốt"
+        :value="`${summary.complete}/${summary.total}`"
+        tone="success"
+        :caption="summary.partial > 0 ? `${summary.partial} phòng chỉ chốt 1 đồng hồ` : undefined"
+      />
+      <UiMetric
+        label="Tổng tiêu thụ điện"
+        :value="`${formatNumber(summary.electricityUsage)} kWh`"
+        tone="accent"
+      />
+      <UiMetric
+        label="Tổng tiêu thụ nước"
+        :value="`${formatNumber(summary.waterUsage)} m³`"
+        tone="accent"
+      />
     </div>
 
     <!-- Period selector -->
@@ -190,13 +183,11 @@ function formatDate(value: string | null): string {
         aria-label="Tháng xem chỉ số"
         class="w-36"
       />
-      <UiInput
+      <UiSelect
         v-model="periodYear"
-        type="number"
-        number-mode="year"
-        min="2020"
-        max="2100"
-        class="w-24"
+        :options="yearOptions"
+        aria-label="Năm xem chỉ số"
+        class="w-28"
       />
       <span class="text-xs text-muted">{{ periodLabel }}</span>
     </div>

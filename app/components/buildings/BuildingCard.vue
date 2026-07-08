@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Building } from '~/types/buildings'
-import { buildingPath, buildingEditPath, buildingSettingsPath } from '~/utils/routes/operational'
+import { buildingPath, buildingSettingsPath } from '~/utils/routes/operational'
 
 const props = defineProps<{
   building: Building
@@ -10,13 +10,13 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'toggle-select': [id: string]
+  'edit': [building: Building]
 }>()
 
 function onSelectedChange() {
   emit('toggle-select', props.building.id)
 }
 
-const editPath = computed(() => buildingEditPath(props.building))
 const settingsPath = computed(() => buildingSettingsPath(props.building))
 const meterReadingsPath = computed(() => `${buildingPath(props.building)}/meter-readings`)
 </script>
@@ -91,15 +91,15 @@ const meterReadingsPath = computed(() => `${buildingPath(props.building)}/meter-
       v-if="!selectable"
       class="pointer-events-none absolute inset-x-0 bottom-0 z-10 hidden items-center justify-end gap-1 rounded-b-xl bg-gradient-to-t from-dark-deep/90 via-dark-deep/60 to-transparent p-2 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 md:flex"
     >
-      <NuxtLink
-        :to="editPath"
+      <button
+        type="button"
         title="Sửa thông tin"
         aria-label="Sửa thông tin tòa nhà"
         class="pointer-events-auto inline-flex h-7 w-7 items-center justify-center rounded-md border border-dark-border bg-dark-surface text-muted hover:border-cyan/40 hover:text-cyan focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan/40"
-        @click.stop
+        @click.stop="emit('edit', building)"
       >
         <IconPencilSquare class="h-3.5 w-3.5" aria-hidden="true" />
-      </NuxtLink>
+      </button>
       <NuxtLink
         :to="settingsPath"
         title="Cấu hình dịch vụ"

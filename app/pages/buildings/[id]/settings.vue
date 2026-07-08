@@ -616,339 +616,511 @@ async function handleUpdatePricingType(catalogId: string, pricingType: PricingTy
   if (existing) await updateService(existing.id, { pricing_type: pricingType })
   else await upsertService({ building_id: id, catalog_id: catalogId, pricing_type: pricingType })
 }
+
+const activeFixedCostCount = computed(() =>
+  fixedCosts.value.filter(item => !item.effectiveToPeriodYear).length,
+)
+const activeReserveRateCount = computed(() =>
+  reserveRates.value.filter(item => !item.effectiveToPeriodYear).length,
+)
+const activeRecurringExpenseCount = computed(() =>
+  recurringExpenses.value.filter(item => item.isActive).length,
+)
+const activePrepaidExpenseCount = computed(() =>
+  prepaidExpenses.value.filter(item => item.status === 'active').length,
+)
+const activeFinanceRuleCount = computed(() =>
+  activeFixedCostCount.value
+  + activeReserveRateCount.value
+  + activeRecurringExpenseCount.value
+  + activePrepaidExpenseCount.value,
+)
+const canViewFinanceRules = computed(() =>
+  canManageFixedCosts.value
+  || canManageReserveFund.value
+  || canManageRecurringExpenses.value
+  || canManagePrepaidExpenses.value,
+)
+
+interface SettingsSectionNavItem {
+  id: string
+  label: string
+  description: string
+  badge?: string
+  visible: boolean
+}
+
+const settingsSections = computed<SettingsSectionNavItem[]>(() => [
+  {
+    id: 'identity-access',
+    label: 'Định danh và phân quyền',
+    description: 'Code tòa nhà và manager phụ trách',
+    badge: authStore.canManageUsers ? `${assignedManagers.value.length} manager` : undefined,
+    visible: true,
+  },
+  {
+    id: 'finance-rules',
+    label: 'Quy tắc vận hành',
+    description: 'Chi phí cố định, quỹ dự phòng, nhắc chi và trả trước',
+    badge: `${activeFinanceRuleCount.value} mục đang áp dụng`,
+    visible: canViewFinanceRules.value,
+  },
+  {
+    id: 'service-defaults',
+    label: 'Dịch vụ mặc định',
+    description: 'Mẫu dịch vụ áp xuống hợp đồng mới',
+    badge: `${activeServiceCount.value} dịch vụ bật`,
+    visible: true,
+  },
+  {
+    id: 'service-overrides',
+    label: 'Dịch vụ theo phòng',
+    description: 'Tinh chỉnh riêng từng hợp đồng active',
+    badge: `${contractRows.value.length} hợp đồng active`,
+    visible: true,
+  },
+].filter(item => item.visible))
+
+const activeSectionId = computed(() => {
+  const hash = route.hash?.slice(1)
+  if (hash && settingsSections.value.some(section => section.id === hash)) {
+    return hash
+  }
+  return settingsSections.value[0]?.id ?? ''
+})
 </script>
 
 <template>
-  <div class="space-y-8">
-    <UiPageHeader title="Cài đặt dịch vụ" :description="building?.name">
-      <NuxtLink
-        :to="building ? buildingPath(building) : `/buildings/${id}`"
-        class="text-sm text-muted hover:text-white transition-colors"
-      >
-        ← Quay lại tòa nhà
-      </NuxtLink>
-    </UiPageHeader>
+  <div class="space-y-6">
+    <UiPageHeader
+      title="Cài đặt dịch vụ"
+      :description="building?.name"
+      :back-to="building ? buildingPath(building) : `/buildings/${id}`"
+      back-label="Quay lại tòa nhà"
+    />
 
-    <!-- Building code -->
-    <UiSection
-      title="Mã tòa nhà"
-      description="Dùng trong URL và tên hợp đồng. Khóa sau khi tòa nhà đã có phòng."
-    >
-      <div class="rounded-xl border border-dark-border bg-dark-surface p-5">
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-end">
-          <UiInput
-            v-model="codeInput"
-            label="Code"
-            :disabled="isCodeLocked"
-            :title="isCodeLocked ? 'Không thể đổi vì tòa nhà đã có phòng' : undefined"
-            placeholder="vd: zhpn"
-            input-class="font-mono"
-            class="flex-1 min-w-0"
-          />
-          <div class="flex items-center gap-2 sm:pb-0.5">
-            <UiButton
-              v-if="!isCodeLocked"
-              size="sm"
-              :loading="isSavingCode"
-              :disabled="!codeDirty"
-              @click="handleSaveCode"
-            >
-              Lưu
-            </UiButton>
-            <span
-              v-else
-              class="inline-flex items-center gap-1.5 rounded-md border border-dark-border bg-dark-deep/40 px-2 py-1 text-xs text-muted"
-            >
-              <IconLock class="h-3.5 w-3.5" aria-hidden="true" />
-              Đã khóa · {{ building?.totalRooms }} phòng
-            </span>
-          </div>
-        </div>
-        <UiAlert v-if="codeSaveError" severity="danger" class="mt-3">
-          {{ codeSaveError }}
-        </UiAlert>
-        <p v-if="codeSaveSuccess" class="mt-2 text-xs text-green-400">
-          Code đã được lưu.
-        </p>
-      </div>
-    </UiSection>
-
-    <UiSection
-      v-if="authStore.canManageUsers"
-      title="Managers"
-      description="Những manager đang được phân quyền vào tòa nhà này."
-    >
-      <template #actions>
-        <NuxtLink to="/settings/managers" class="text-sm text-cyan hover:text-cyan/80 transition-colors">
-          Quản lý phân quyền
-        </NuxtLink>
-      </template>
-      <div class="rounded-xl border border-dark-border bg-dark-surface p-5">
-        <div v-if="assignedManagers.length === 0" class="text-sm text-muted">
-          Chưa có manager nào được gán.
-        </div>
-        <div v-else class="flex flex-wrap gap-2">
-          <span
-            v-for="manager in assignedManagers"
-            :key="manager.id"
-            class="rounded-md border border-dark-border bg-dark-bg px-3 py-2 text-sm text-white"
-          >
-            {{ manager.name ?? manager.email ?? manager.id }}
-          </span>
-        </div>
-      </div>
-    </UiSection>
-
-    <UiSection
-      v-if="canManageFixedCosts"
-      title="Chi phí vận hành"
-      description="Quản lý chi phí cố định theo tháng cho báo cáo vận hành."
-    >
-      <template #actions>
-        <UiButton size="sm" :disabled="!apiBuildingId" @click="fixedCostModalOpen = true">
-          <IconPlus class="h-4 w-4" aria-hidden="true" />
-          Thêm chi phí
-        </UiButton>
-      </template>
-      <div class="rounded-xl border border-dark-border bg-dark-surface p-5">
-        <UiAlert v-if="fixedCostError" severity="danger" class="mb-4">
-          {{ fixedCostError }}
-        </UiAlert>
-        <div v-if="fixedCosts.length === 0" class="text-sm text-muted">
-          Chưa có chi phí vận hành cố định.
-        </div>
-        <div v-else class="divide-y divide-dark-border">
-          <div
-            v-for="cost in fixedCosts"
-            :key="cost.id"
-            class="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between"
-          >
-            <div>
-              <div class="font-medium text-white">
-                {{ FIXED_COST_CATEGORY_LABELS[cost.category] ?? cost.category }}
-              </div>
-              <div class="mt-1 text-xs text-muted">
-                Từ {{ cost.effectiveFromPeriodMonth }}/{{ cost.effectiveFromPeriodYear }}
-                <template v-if="cost.effectiveToPeriodYear">
-                  đến {{ cost.effectiveToPeriodMonth }}/{{ cost.effectiveToPeriodYear }}
-                </template>
-                <template v-else>
-                  · đang áp dụng
-                </template>
-              </div>
-              <p v-if="cost.note" class="mt-1 text-xs text-muted">{{ cost.note }}</p>
-            </div>
-            <div class="flex items-center justify-between gap-3 sm:justify-end">
-              <span class="tabular-nums text-white">{{ formatCurrency(cost.amount) }}</span>
-              <UiButton
-                v-if="!cost.effectiveToPeriodYear"
-                size="sm"
-                variant="secondary"
-                @click="openEndFixedCost(cost)"
-              >
-                Kết thúc
-              </UiButton>
-            </div>
-          </div>
-        </div>
-      </div>
-    </UiSection>
-
-    <UiSection
-      v-if="canManageReserveFund"
-      title="Tỷ lệ quỹ dự phòng"
-      description="Tỷ lệ trích lập từ doanh thu phát hành khi chốt kỳ vận hành."
-    >
-      <template #actions>
-        <UiButton size="sm" :disabled="!apiBuildingId" @click="openCreateReserveRate">
-          <IconPlus class="h-4 w-4" aria-hidden="true" />
-          Thêm tỷ lệ
-        </UiButton>
-      </template>
-      <div class="rounded-xl border border-dark-border bg-dark-surface p-5">
-        <UiAlert v-if="reserveRateError" severity="danger" class="mb-4">
-          {{ reserveRateError }}
-        </UiAlert>
-        <div v-if="reserveRates.length === 0" class="text-sm text-muted">
-          Chưa có tỷ lệ quỹ dự phòng.
-        </div>
-        <div v-else class="divide-y divide-dark-border">
-          <div
-            v-for="rate in reserveRates"
-            :key="rate.id"
-            class="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between"
-          >
-            <div>
-              <div class="font-medium text-white">
-                {{ rate.reserveRatePercent }}%
-                <UiBadge v-if="!rate.effectiveToPeriodYear" variant="accent" class="ml-2">Đang áp dụng</UiBadge>
-              </div>
-              <div class="mt-1 text-xs text-muted">
-                Từ {{ rate.effectiveFromPeriodMonth }}/{{ rate.effectiveFromPeriodYear }}
-                <template v-if="rate.effectiveToPeriodYear">
-                  đến {{ rate.effectiveToPeriodMonth }}/{{ rate.effectiveToPeriodYear }}
-                </template>
-              </div>
-            </div>
-            <UiButton
-              v-if="!rate.effectiveToPeriodYear"
-              size="sm"
-              variant="secondary"
-              @click="openEndReserveRate(rate)"
-            >
-              Kết thúc
-            </UiButton>
-          </div>
-        </div>
-      </div>
-    </UiSection>
-
-    <UiSection
-      v-if="canManageRecurringExpenses"
-      title="Nhắc chi phí định kỳ"
-      description="Các khoản chi cần được nhắc lại và ghi nhận thủ công vào báo cáo tháng."
-    >
-      <template #actions>
-        <UiButton size="sm" :disabled="!apiBuildingId" @click="openCreateRecurring">
-          <IconPlus class="h-4 w-4" aria-hidden="true" />
-          Thêm nhắc
-        </UiButton>
-      </template>
-      <div class="rounded-xl border border-dark-border bg-dark-surface p-5">
-        <UiAlert v-if="recurringError" severity="danger" class="mb-4">
-          {{ recurringError }}
-        </UiAlert>
-        <div v-if="recurringExpenses.length === 0" class="text-sm text-muted">
-          Chưa có nhắc chi phí định kỳ.
-        </div>
-        <div v-else class="divide-y divide-dark-border">
-          <div
-            v-for="item in recurringExpenses"
-            :key="item.id"
-            class="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between"
-          >
-            <div>
-              <div class="font-medium text-white">
-                {{ item.name }}
-                <UiBadge v-if="!item.isActive" variant="warning" class="ml-2">Tắt</UiBadge>
-              </div>
-              <div class="mt-1 text-xs text-muted">
-                {{ EXPENSE_CATEGORY_LABELS[item.category] }} ·
-                {{ RECURRING_EXPENSE_FREQUENCY_LABELS[item.frequency] }} ·
-                ngày {{ item.anchorDay }} · nhắc tiếp {{ item.nextReminderAt }}
-              </div>
-            </div>
-            <div class="flex items-center justify-between gap-2 sm:justify-end">
-              <span class="tabular-nums text-white">{{ formatCurrency(item.estimatedAmount) }}</span>
-              <UiButton size="sm" variant="secondary" @click="openEditRecurring(item)">Sửa</UiButton>
-              <UiButton size="sm" variant="ghost" icon-only aria-label="Xóa" @click="removeRecurring(item)">
-                <IconTrash class="h-4 w-4" aria-hidden="true" />
-              </UiButton>
-            </div>
-          </div>
-        </div>
-      </div>
-    </UiSection>
-
-    <UiSection
-      v-if="canManagePrepaidExpenses"
-      title="Chi phí trả trước"
-      description="Khoản trả một lần được phân bổ đều vào các tháng trong kỳ hiệu lực."
-    >
-      <template #actions>
-        <UiButton size="sm" :disabled="!apiBuildingId" @click="openCreatePrepaid">
-          <IconPlus class="h-4 w-4" aria-hidden="true" />
-          Thêm trả trước
-        </UiButton>
-      </template>
-      <div class="rounded-xl border border-dark-border bg-dark-surface p-5">
-        <UiAlert v-if="prepaidError" severity="danger" class="mb-4">
-          {{ prepaidError }}
-        </UiAlert>
-        <div v-if="prepaidExpenses.length === 0" class="text-sm text-muted">
-          Chưa có chi phí trả trước.
-        </div>
-        <div v-else class="divide-y divide-dark-border">
-          <div
-            v-for="item in prepaidExpenses"
-            :key="item.id"
-            class="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between"
-          >
-            <div>
-              <div class="font-medium text-white">
-                {{ item.name }}
-                <UiBadge class="ml-2">{{ PREPAID_EXPENSE_STATUS_LABELS[item.status] }}</UiBadge>
-              </div>
-              <div class="mt-1 text-xs text-muted">
-                {{ EXPENSE_CATEGORY_LABELS[item.category] }} · {{ item.startDate }} đến {{ item.endDate }} ·
-                {{ item.totalMonths }} tháng
-              </div>
-              <p v-if="item.note" class="mt-1 text-xs text-muted">{{ item.note }}</p>
-            </div>
-            <div class="flex items-center justify-between gap-2 sm:justify-end">
-              <span class="tabular-nums text-white">{{ formatCurrency(item.monthlyAmount) }}/tháng</span>
-              <UiButton size="sm" variant="secondary" @click="openEditPrepaid(item)">Sửa</UiButton>
-              <UiButton size="sm" variant="ghost" icon-only aria-label="Xóa" @click="removePrepaid(item)">
-                <IconTrash class="h-4 w-4" aria-hidden="true" />
-              </UiButton>
-            </div>
-          </div>
-        </div>
-      </div>
-    </UiSection>
-
-    <!-- Building-level defaults -->
-    <UiSection
-      title="Dịch vụ mặc định"
-      description="Dịch vụ bật ở đây sẽ tự động thêm vào hợp đồng mới. Đơn giá là gợi ý — có thể chỉnh riêng từng phòng bên dưới."
-    >
-      <template #actions>
-        <div class="flex items-center gap-3">
-          <span
-            v-if="syncResult"
-            class="rounded-md bg-green-500/10 px-2 py-1 text-xs text-green-400"
-          >
-            {{ syncResult }}
-          </span>
-          <span
-            v-else-if="activeServiceCount > 0"
-            class="rounded-md bg-cyan/10 px-2 py-1 text-xs text-cyan"
-          >
-            {{ activeServiceCount }} dịch vụ đang bật
-          </span>
-          <UiButton
-            v-if="canManageBuildingServices"
-            size="sm"
-            variant="secondary"
-            @click="openCustomServiceModal"
-          >
-            <IconPlus class="h-4 w-4" aria-hidden="true" />
-            Thêm dịch vụ
-          </UiButton>
-          <UiButton
-            size="sm"
-            variant="secondary"
-            :loading="isSyncing"
-            :disabled="contractRows.length === 0"
-            title="Cập nhật trạng thái bật/tắt dịch vụ trên tất cả hợp đồng active theo cấu hình mặc định. Không ghi đè giá và số lượng đã chỉnh riêng."
-            @click="handleSync"
-          >
-            Đồng bộ xuống {{ contractRows.length }} hợp đồng
-          </UiButton>
-        </div>
-      </template>
-      <div class="rounded-xl border border-dark-border bg-dark-surface p-5">
-        <BuildingServiceSettings
-          :building-id="id"
-          :catalog="catalog"
-          :services="services"
-          :loading="loadingServices"
-          @toggle="handleToggle"
-          @update-amount="handleUpdateAmount"
-          @update-pricing-type="handleUpdatePricingType"
+    <div class="rounded-xl border border-dark-border bg-dark-surface p-4">
+      <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <UiMetric
+          label="Dịch vụ mặc định bật"
+          :value="activeServiceCount"
+          caption="Mẫu áp vào hợp đồng mới"
+          tone="accent"
+        />
+        <UiMetric
+          label="Hợp đồng active"
+          :value="contractRows.length"
+          caption="Có thể đồng bộ từ cấu hình mặc định"
+          tone="default"
+        />
+        <UiMetric
+          label="Quy tắc vận hành"
+          :value="activeFinanceRuleCount"
+          caption="Đang áp dụng theo kỳ"
+          :tone="activeFinanceRuleCount > 0 ? 'success' : 'warning'"
+        />
+        <UiMetric
+          label="Manager phụ trách"
+          :value="assignedManagers.length"
+          caption="Tài khoản đang có quyền"
+          tone="default"
         />
       </div>
-    </UiSection>
+    </div>
+
+    <div class="sticky top-0 z-10 -mx-1 overflow-x-auto border-y border-dark-border bg-dark/95 px-1 py-2 backdrop-blur xl:hidden">
+      <nav class="flex items-center gap-2">
+        <a
+          v-for="section in settingsSections"
+          :key="`mobile-${section.id}`"
+          :href="`#${section.id}`"
+          class="shrink-0 rounded-md border px-2.5 py-1.5 text-xs transition-colors"
+          :class="activeSectionId === section.id
+            ? 'border-cyan/50 bg-cyan/10 text-cyan'
+            : 'border-dark-border bg-dark-surface text-muted hover:text-white'"
+        >
+          {{ section.label }}
+        </a>
+      </nav>
+    </div>
+
+    <div class="grid gap-4 xl:grid-cols-[220px_minmax(0,1fr)]">
+      <aside class="hidden xl:block">
+        <div class="sticky top-4 rounded-xl border border-dark-border bg-dark-surface p-3">
+          <p class="text-xs font-semibold uppercase tracking-wide text-muted">Điều hướng cài đặt</p>
+          <nav class="mt-3 flex flex-col gap-1.5">
+            <a
+              v-for="section in settingsSections"
+              :key="section.id"
+              :href="`#${section.id}`"
+              class="rounded-lg border px-3 py-2 transition-colors"
+              :class="activeSectionId === section.id
+                ? 'border-cyan/40 bg-cyan/10'
+                : 'border-dark-border bg-dark-deep/40 hover:bg-dark-hover/50'"
+            >
+              <p :class="activeSectionId === section.id ? 'text-sm font-medium text-cyan' : 'text-sm font-medium text-white'">
+                {{ section.label }}
+              </p>
+              <p class="mt-0.5 text-xs text-muted">{{ section.description }}</p>
+              <p v-if="section.badge" class="mt-1 text-[11px] text-cyan/90">{{ section.badge }}</p>
+            </a>
+          </nav>
+        </div>
+      </aside>
+
+      <div class="space-y-6">
+        <section id="identity-access" class="scroll-mt-20 space-y-3">
+          <header class="flex items-center justify-between gap-2">
+            <h2 class="text-sm font-semibold text-cyan">Định danh và phân quyền</h2>
+            <UiBadge variant="neutral">{{ assignedManagers.length }} manager</UiBadge>
+          </header>
+
+          <UiSection
+            title="Mã tòa nhà"
+            description="Dùng trong URL và tên hợp đồng. Khóa sau khi tòa nhà đã có phòng."
+          >
+            <UiSurfacePanel density="compact">
+              <div class="flex flex-col gap-3 sm:flex-row sm:items-end">
+                <UiInput
+                  v-model="codeInput"
+                  label="Code"
+                  :disabled="isCodeLocked"
+                  :title="isCodeLocked ? 'Không thể đổi vì tòa nhà đã có phòng' : undefined"
+                  placeholder="vd: zhpn"
+                  input-class="font-mono"
+                  class="flex-1 min-w-0"
+                />
+                <div class="flex items-center gap-2 sm:pb-0.5">
+                  <UiButton
+                    v-if="!isCodeLocked"
+                    size="sm"
+                    :loading="isSavingCode"
+                    :disabled="!codeDirty"
+                    @click="handleSaveCode"
+                  >
+                    Lưu
+                  </UiButton>
+                  <span
+                    v-else
+                    class="inline-flex items-center gap-1.5 rounded-md border border-dark-border bg-dark-deep/40 px-2 py-1 text-xs text-muted"
+                  >
+                    <IconLock class="h-3.5 w-3.5" aria-hidden="true" />
+                    Đã khóa · {{ building?.totalRooms }} phòng
+                  </span>
+                </div>
+              </div>
+              <UiAlert v-if="codeSaveError" severity="danger" class="mt-3">
+                {{ codeSaveError }}
+              </UiAlert>
+              <p v-if="codeSaveSuccess" class="mt-2 text-xs text-green-400">
+                Code đã được lưu.
+              </p>
+            </UiSurfacePanel>
+          </UiSection>
+
+          <UiSection
+            v-if="authStore.canManageUsers"
+            title="Managers"
+            description="Những manager đang được phân quyền vào tòa nhà này."
+          >
+            <template #actions>
+              <NuxtLink to="/settings/managers" class="text-sm text-cyan hover:text-cyan/80 transition-colors">
+                Quản lý phân quyền
+              </NuxtLink>
+            </template>
+            <UiSurfacePanel density="compact">
+              <div v-if="assignedManagers.length === 0" class="text-sm text-muted">
+                Chưa có manager nào được gán.
+              </div>
+              <div v-else class="flex flex-wrap gap-2">
+                <span
+                  v-for="manager in assignedManagers"
+                  :key="manager.id"
+                  class="rounded-md border border-dark-border bg-dark-bg px-3 py-2 text-sm text-white"
+                >
+                  {{ manager.name ?? manager.email ?? manager.id }}
+                </span>
+              </div>
+            </UiSurfacePanel>
+          </UiSection>
+        </section>
+
+        <section v-if="canViewFinanceRules" id="finance-rules" class="scroll-mt-20 space-y-3">
+          <header class="flex items-center justify-between gap-2">
+            <h2 class="text-sm font-semibold text-cyan">Quy tắc vận hành</h2>
+            <UiBadge variant="neutral">{{ activeFinanceRuleCount }} mục</UiBadge>
+          </header>
+
+          <UiSection
+            v-if="canManageFixedCosts"
+            title="Chi phí vận hành"
+            description="Quản lý chi phí cố định theo tháng cho báo cáo vận hành."
+          >
+            <template #actions>
+              <UiButton size="sm" :disabled="!apiBuildingId" @click="fixedCostModalOpen = true">
+                <IconPlus class="h-4 w-4" aria-hidden="true" />
+                Thêm chi phí
+              </UiButton>
+            </template>
+            <UiSurfacePanel density="compact">
+              <UiAlert v-if="fixedCostError" severity="danger" class="mb-4">
+                {{ fixedCostError }}
+              </UiAlert>
+              <div v-if="fixedCosts.length === 0" class="text-sm text-muted">
+                Chưa có chi phí vận hành cố định.
+              </div>
+              <div v-else class="divide-y divide-dark-border">
+                <div
+                  v-for="cost in fixedCosts"
+                  :key="cost.id"
+                  class="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div>
+                    <div class="font-medium text-white">
+                      {{ FIXED_COST_CATEGORY_LABELS[cost.category] ?? cost.category }}
+                    </div>
+                    <div class="mt-1 text-xs text-muted">
+                      Từ {{ cost.effectiveFromPeriodMonth }}/{{ cost.effectiveFromPeriodYear }}
+                      <template v-if="cost.effectiveToPeriodYear">
+                        đến {{ cost.effectiveToPeriodMonth }}/{{ cost.effectiveToPeriodYear }}
+                      </template>
+                      <template v-else>
+                        · đang áp dụng
+                      </template>
+                    </div>
+                    <p v-if="cost.note" class="mt-1 text-xs text-muted">{{ cost.note }}</p>
+                  </div>
+                  <div class="flex items-center justify-between gap-3 sm:justify-end">
+                    <span class="tabular-nums text-white">{{ formatCurrency(cost.amount) }}</span>
+                    <UiButton
+                      v-if="!cost.effectiveToPeriodYear"
+                      size="sm"
+                      variant="secondary"
+                      @click="openEndFixedCost(cost)"
+                    >
+                      Kết thúc
+                    </UiButton>
+                  </div>
+                </div>
+              </div>
+            </UiSurfacePanel>
+          </UiSection>
+
+          <UiSection
+            v-if="canManageReserveFund"
+            title="Tỷ lệ quỹ dự phòng"
+            description="Tỷ lệ trích lập từ doanh thu phát hành khi chốt kỳ vận hành."
+          >
+            <template #actions>
+              <UiButton size="sm" :disabled="!apiBuildingId" @click="openCreateReserveRate">
+                <IconPlus class="h-4 w-4" aria-hidden="true" />
+                Thêm tỷ lệ
+              </UiButton>
+            </template>
+            <UiSurfacePanel density="compact">
+              <UiAlert v-if="reserveRateError" severity="danger" class="mb-4">
+                {{ reserveRateError }}
+              </UiAlert>
+              <div v-if="reserveRates.length === 0" class="text-sm text-muted">
+                Chưa có tỷ lệ quỹ dự phòng.
+              </div>
+              <div v-else class="divide-y divide-dark-border">
+                <div
+                  v-for="rate in reserveRates"
+                  :key="rate.id"
+                  class="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div>
+                    <div class="font-medium text-white">
+                      {{ rate.reserveRatePercent }}%
+                      <UiBadge v-if="!rate.effectiveToPeriodYear" variant="accent" class="ml-2">Đang áp dụng</UiBadge>
+                    </div>
+                    <div class="mt-1 text-xs text-muted">
+                      Từ {{ rate.effectiveFromPeriodMonth }}/{{ rate.effectiveFromPeriodYear }}
+                      <template v-if="rate.effectiveToPeriodYear">
+                        đến {{ rate.effectiveToPeriodMonth }}/{{ rate.effectiveToPeriodYear }}
+                      </template>
+                    </div>
+                  </div>
+                  <UiButton
+                    v-if="!rate.effectiveToPeriodYear"
+                    size="sm"
+                    variant="secondary"
+                    @click="openEndReserveRate(rate)"
+                  >
+                    Kết thúc
+                  </UiButton>
+                </div>
+              </div>
+            </UiSurfacePanel>
+          </UiSection>
+
+          <UiSection
+            v-if="canManageRecurringExpenses"
+            title="Nhắc chi phí định kỳ"
+            description="Các khoản chi cần được nhắc lại và ghi nhận thủ công vào báo cáo tháng."
+          >
+            <template #actions>
+              <UiButton size="sm" :disabled="!apiBuildingId" @click="openCreateRecurring">
+                <IconPlus class="h-4 w-4" aria-hidden="true" />
+                Thêm nhắc
+              </UiButton>
+            </template>
+            <UiSurfacePanel density="compact">
+              <UiAlert v-if="recurringError" severity="danger" class="mb-4">
+                {{ recurringError }}
+              </UiAlert>
+              <div v-if="recurringExpenses.length === 0" class="text-sm text-muted">
+                Chưa có nhắc chi phí định kỳ.
+              </div>
+              <div v-else class="divide-y divide-dark-border">
+                <div
+                  v-for="item in recurringExpenses"
+                  :key="item.id"
+                  class="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div>
+                    <div class="font-medium text-white">
+                      {{ item.name }}
+                      <UiBadge v-if="!item.isActive" variant="warning" class="ml-2">Tắt</UiBadge>
+                    </div>
+                    <div class="mt-1 text-xs text-muted">
+                      {{ EXPENSE_CATEGORY_LABELS[item.category] }} ·
+                      {{ RECURRING_EXPENSE_FREQUENCY_LABELS[item.frequency] }} ·
+                      ngày {{ item.anchorDay }} · nhắc tiếp {{ item.nextReminderAt }}
+                    </div>
+                  </div>
+                  <div class="flex items-center justify-between gap-2 sm:justify-end">
+                    <span class="tabular-nums text-white">{{ formatCurrency(item.estimatedAmount) }}</span>
+                    <UiButton size="sm" variant="secondary" @click="openEditRecurring(item)">Sửa</UiButton>
+                    <UiButton size="sm" variant="ghost" icon-only aria-label="Xóa" @click="removeRecurring(item)">
+                      <IconTrash class="h-4 w-4" aria-hidden="true" />
+                    </UiButton>
+                  </div>
+                </div>
+              </div>
+            </UiSurfacePanel>
+          </UiSection>
+
+          <UiSection
+            v-if="canManagePrepaidExpenses"
+            title="Chi phí trả trước"
+            description="Khoản trả một lần được phân bổ đều vào các tháng trong kỳ hiệu lực."
+          >
+            <template #actions>
+              <UiButton size="sm" :disabled="!apiBuildingId" @click="openCreatePrepaid">
+                <IconPlus class="h-4 w-4" aria-hidden="true" />
+                Thêm trả trước
+              </UiButton>
+            </template>
+            <UiSurfacePanel density="compact">
+              <UiAlert v-if="prepaidError" severity="danger" class="mb-4">
+                {{ prepaidError }}
+              </UiAlert>
+              <div v-if="prepaidExpenses.length === 0" class="text-sm text-muted">
+                Chưa có chi phí trả trước.
+              </div>
+              <div v-else class="divide-y divide-dark-border">
+                <div
+                  v-for="item in prepaidExpenses"
+                  :key="item.id"
+                  class="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div>
+                    <div class="font-medium text-white">
+                      {{ item.name }}
+                      <UiBadge class="ml-2">{{ PREPAID_EXPENSE_STATUS_LABELS[item.status] }}</UiBadge>
+                    </div>
+                    <div class="mt-1 text-xs text-muted">
+                      {{ EXPENSE_CATEGORY_LABELS[item.category] }} · {{ item.startDate }} đến {{ item.endDate }} ·
+                      {{ item.totalMonths }} tháng
+                    </div>
+                    <p v-if="item.note" class="mt-1 text-xs text-muted">{{ item.note }}</p>
+                  </div>
+                  <div class="flex items-center justify-between gap-2 sm:justify-end">
+                    <span class="tabular-nums text-white">{{ formatCurrency(item.monthlyAmount) }}/tháng</span>
+                    <UiButton size="sm" variant="secondary" @click="openEditPrepaid(item)">Sửa</UiButton>
+                    <UiButton size="sm" variant="ghost" icon-only aria-label="Xóa" @click="removePrepaid(item)">
+                      <IconTrash class="h-4 w-4" aria-hidden="true" />
+                    </UiButton>
+                  </div>
+                </div>
+              </div>
+            </UiSurfacePanel>
+          </UiSection>
+        </section>
+
+        <section id="service-defaults" class="scroll-mt-20">
+          <UiSection
+            title="Dịch vụ mặc định"
+            description="Dịch vụ bật ở đây sẽ tự động thêm vào hợp đồng mới. Đơn giá là gợi ý — có thể chỉnh riêng từng phòng bên dưới."
+          >
+            <template #actions>
+              <div class="flex items-center gap-3">
+                <span
+                  v-if="syncResult"
+                  class="rounded-md bg-green-500/10 px-2 py-1 text-xs text-green-400"
+                >
+                  {{ syncResult }}
+                </span>
+                <span
+                  v-else-if="activeServiceCount > 0"
+                  class="rounded-md bg-cyan/10 px-2 py-1 text-xs text-cyan"
+                >
+                  {{ activeServiceCount }} dịch vụ đang bật
+                </span>
+                <UiButton
+                  v-if="canManageBuildingServices"
+                  size="sm"
+                  variant="secondary"
+                  @click="openCustomServiceModal"
+                >
+                  <IconPlus class="h-4 w-4" aria-hidden="true" />
+                  Thêm dịch vụ
+                </UiButton>
+                <UiButton
+                  size="sm"
+                  variant="secondary"
+                  :loading="isSyncing"
+                  :disabled="contractRows.length === 0"
+                  title="Cập nhật trạng thái bật/tắt dịch vụ trên tất cả hợp đồng active theo cấu hình mặc định. Không ghi đè giá và số lượng đã chỉnh riêng."
+                  @click="handleSync"
+                >
+                  Đồng bộ xuống {{ contractRows.length }} hợp đồng
+                </UiButton>
+              </div>
+            </template>
+            <UiSurfacePanel density="compact">
+              <BuildingServiceSettings
+                :building-id="id"
+                :catalog="catalog"
+                :services="services"
+                :loading="loadingServices"
+                @toggle="handleToggle"
+                @update-amount="handleUpdateAmount"
+                @update-pricing-type="handleUpdatePricingType"
+              />
+            </UiSurfacePanel>
+          </UiSection>
+        </section>
+
+        <section id="service-overrides" class="scroll-mt-20">
+          <UiSection
+            title="Dịch vụ theo phòng"
+            description="Bật/tắt, chỉnh đơn giá và số lượng riêng cho từng phòng. Thay đổi ở đây chỉ ảnh hưởng phòng đó."
+          >
+            <UiSurfacePanel density="compact">
+              <BuildingContractServicesList
+                :contracts="contractRows"
+                :services="contractServices"
+                :loading="loadingContractServices"
+                @update="updateContractService"
+              />
+            </UiSurfacePanel>
+          </UiSection>
+        </section>
+      </div>
+    </div>
 
     <UiModal
       :open="customServiceModalOpen"
@@ -1009,21 +1181,6 @@ async function handleUpdatePricingType(catalogId: string, pricingType: PricingTy
         </UiButton>
       </template>
     </UiModal>
-
-    <!-- Per-contract overrides -->
-    <UiSection
-      title="Dịch vụ theo phòng"
-      description="Bật/tắt, chỉnh đơn giá và số lượng riêng cho từng phòng. Thay đổi ở đây chỉ ảnh hưởng phòng đó."
-    >
-      <div class="rounded-xl border border-dark-border bg-dark-surface p-5">
-        <BuildingContractServicesList
-          :contracts="contractRows"
-          :services="contractServices"
-          :loading="loadingContractServices"
-          @update="updateContractService"
-        />
-      </div>
-    </UiSection>
 
     <OperationsFixedCostModal
       :open="fixedCostModalOpen"

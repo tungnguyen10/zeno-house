@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import type { BuildingBulkAction, BuildingBulkResult } from '~/composables/buildings/useBuildingBulkActions'
+import type { Building } from '~/types/buildings'
+import type { BuildingFormData } from '~/types/building-form'
+import { buildingFormToApiPayload } from '~/utils/mappers/building-form'
 
 const authStore = useAuthStore()
 const toast = useToast()
@@ -95,6 +98,75 @@ async function onBulkDone(result: BuildingBulkResult, action: BuildingBulkAction
 
   bulk.clear()
   await refresh()
+}
+
+// Quick edit drawer ----------------------------------------------------
+const editingBuilding = ref<Building | null>(null)
+const editForm = ref<BuildingFormData | null>(null)
+const editLoading = ref(false)
+const editError = ref('')
+const editFieldErrors = ref<Record<string, string[]>>({})
+
+function buildingToForm(b: Building): BuildingFormData {
+  return {
+    name: b.name,
+    address: b.address,
+    description: b.description ?? '',
+    status: b.status,
+    ownerName: b.ownerName ?? '',
+    ownerPhone: b.ownerPhone ?? '',
+    ownerEmail: b.ownerEmail ?? '',
+    electricityPricingType: b.electricityPricingType,
+    defaultElectricityRate: b.defaultElectricityRate != null ? String(b.defaultElectricityRate) : '',
+    waterPricingType: b.waterPricingType,
+    defaultWaterRate: b.defaultWaterRate != null ? String(b.defaultWaterRate) : '',
+    meterReadingDay: b.meterReadingDay != null ? String(b.meterReadingDay) : '',
+    billingGenerationDay: b.billingGenerationDay != null ? String(b.billingGenerationDay) : '',
+    paymentDueDay: b.paymentDueDay != null ? String(b.paymentDueDay) : '',
+    gracePeriodDays: String(b.gracePeriodDays),
+    operationalStartYear: b.operationalStartYear != null ? String(b.operationalStartYear) : '',
+    operationalStartMonth: b.operationalStartMonth != null ? String(b.operationalStartMonth) : '',
+  }
+}
+
+function onEditBuilding(building: Building) {
+  editingBuilding.value = building
+  editForm.value = buildingToForm(building)
+  editError.value = ''
+  editFieldErrors.value = {}
+}
+
+function closeEdit() {
+  editingBuilding.value = null
+  editForm.value = null
+  editError.value = ''
+  editFieldErrors.value = {}
+}
+
+async function onSubmitEdit(data: BuildingFormData) {
+  if (!editingBuilding.value) return
+  editLoading.value = true
+  editError.value = ''
+  editFieldErrors.value = {}
+  try {
+    await $fetch(`/api/buildings/${editingBuilding.value.id}`, {
+      method: 'PATCH',
+      body: buildingFormToApiPayload(data),
+    })
+    toast.success(`Đã cập nhật ${data.name}`)
+    closeEdit()
+    await refresh()
+  }
+  catch (e: unknown) {
+    const err = e as { data?: { error?: { message?: string; details?: { fieldErrors?: Record<string, string[]> } } } }
+    editError.value = err?.data?.error?.message ?? 'Không thể cập nhật tòa nhà. Vui lòng thử lại.'
+    if (err?.data?.error?.details?.fieldErrors) {
+      editFieldErrors.value = err.data.error.details.fieldErrors
+    }
+  }
+  finally {
+    editLoading.value = false
+  }
 }
 </script>
 
@@ -198,6 +270,7 @@ async function onBulkDone(result: BuildingBulkResult, action: BuildingBulkAction
           :selectable="selectionMode && authStore.canManage"
           :selected="bulk.selectedIds.value.includes(building.id)"
           @toggle-select="onToggleSelect"
+          @edit="onEditBuilding"
         />
       </div>
 
@@ -245,5 +318,27 @@ async function onBulkDone(result: BuildingBulkResult, action: BuildingBulkAction
         <UiButton variant="secondary" @click="failureModalOpen = false">Đóng</UiButton>
       </template>
     </UiModal>
+
+    <UiDrawer
+      :model-value="editingBuilding !== null"
+      :title="editingBuilding ? `Chỉnh sửa · ${editingBuilding.name}` : 'Chỉnh sửa tòa nhà'"
+      width="w-full sm:w-[560px]"
+      @update:model-value="(open) => { if (!open) closeEdit() }"
+    >
+      <UiAlert v-if="editError" severity="danger" class="mb-4">
+        {{ editError }}
+      </UiAlert>
+
+      <BuildingForm
+        v-if="editForm"
+        v-model="editForm"
+        :loading="editLoading"
+        :errors="editFieldErrors"
+        :is-dirty="true"
+        submit-label="Cập nhật"
+        @submit="onSubmitEdit"
+        @cancel="closeEdit"
+      />
+    </UiDrawer>
   </div>
 </template>

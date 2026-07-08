@@ -9,7 +9,7 @@ defineProps<{
 </script>
 
 <template>
-  <section class="rounded-xl border border-dark-border bg-dark-surface p-5">
+  <UiSurfacePanel as="section">
     <div class="min-w-0">
       <div class="flex flex-wrap items-center gap-2">
         <h2 class="text-lg font-semibold text-white truncate">{{ building.name }}</h2>
@@ -57,5 +57,5 @@ defineProps<{
         <dd class="mt-0.5 text-base font-semibold text-white">{{ activeServices ?? building.serviceSummary.activeCount }}</dd>
       </div>
     </dl>
-  </section>
+  </UiSurfacePanel>
 </template>

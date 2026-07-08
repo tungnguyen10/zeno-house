@@ -19,7 +19,7 @@ const roomName = computed(() => {
 </script>
 
 <template>
-  <section class="rounded-xl border border-dark-border bg-dark-surface p-5">
+  <UiSurfacePanel as="section">
     <div class="min-w-0">
       <div class="flex flex-wrap items-center gap-2">
         <h2 class="truncate text-lg font-semibold text-white">{{ roomName }}</h2>
@@ -80,5 +80,5 @@ const roomName = computed(() => {
         <dd class="mt-0.5 text-base font-semibold text-white">{{ meterDeviceCount ?? 0 }} đồng hồ</dd>
       </div>
     </dl>
-  </section>
+  </UiSurfacePanel>
 </template>

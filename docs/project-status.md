@@ -2,6 +2,12 @@
 
 Last reviewed from source: 2026-07-02.
 
+UI standardization update: 2026-07-08
+
+- Introduced shared surface wrapper `UiSurfacePanel` in `app/components/ui` to replace repeated dark panel class strings.
+- Adopted compact panel density (`p-4`) for dense settings sections, while keeping default panel density (`p-5`) for hero and summary areas.
+- Applied the wrapper to building settings and multiple detail hero components to reduce visual noise and keep spacing rules centralized.
+
 This file summarizes what the current codebase already handles. It reflects the working tree as read on 2026-07-02.
 
 Zeno House is now an authenticated internal operations app for rental buildings. The implemented surface covers the core landlord workflow from property setup to contract lifecycle, service configuration, meter readings, monthly billing, invoice collection, corrections, period close, and operational dashboard monitoring.

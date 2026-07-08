@@ -53,7 +53,7 @@ onKeyStroke('Escape', () => {
 </script>
 
 <template>
-  <section class="rounded-xl border border-dark-border bg-dark-surface p-5">
+  <UiSurfacePanel as="section">
     <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
       <div class="min-w-0">
         <div class="flex flex-wrap items-center gap-2">
@@ -174,5 +174,5 @@ onKeyStroke('Escape', () => {
         </dd>
       </div>
     </dl>
-  </section>
+  </UiSurfacePanel>
 </template>
