@@ -99,9 +99,21 @@ REST API for managing tenants. Full CRUD with pagination, search by name/phone, 
 ### Requirement: Tenant list response includes active assignment summary
 Tenant list responses SHALL include active contract state and current room/building context for each tenant when available.
 
+When a tenant has active assignment context, the API payload SHALL include:
+- `assignmentRole: 'primary' | 'roommate'` to distinguish contract holder vs roommate occupant.
+- `primaryTenantName: string | null` where roommate records point to the contract holder name.
+
 #### Scenario: Tenant with active assignment returned
 - **WHEN** a returned tenant has active contract participation
 - **THEN** its DTO includes `hasActiveContract: true` and active room/building summary
+
+#### Scenario: Roommate assignment returned
+- **WHEN** a returned tenant is active via `contract_occupants` (not the primary tenant)
+- **THEN** its DTO includes `activeAssignment.assignmentRole === 'roommate'` and `activeAssignment.primaryTenantName` with the contract holder's name
+
+#### Scenario: Primary assignment returned
+- **WHEN** a returned tenant is the primary tenant of the active contract
+- **THEN** its DTO includes `activeAssignment.assignmentRole === 'primary'` and `activeAssignment.primaryTenantName === null`
 
 #### Scenario: Tenant without active assignment returned
 - **WHEN** a returned tenant has no active contract participation

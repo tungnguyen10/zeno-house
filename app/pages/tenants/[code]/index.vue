@@ -30,11 +30,23 @@ const { data: contractsData } = await useFetch<ApiSuccess<ContractWithDetails[]>
 )
 const tenantContracts = computed(() => contractsData.value?.data ?? [])
 const activeContract = computed(() => tenantContracts.value.find(c => c.status === 'active') ?? null)
-const activeContractCount = computed(() => tenantContracts.value.filter(c => c.status === 'active').length)
+const activeContractCount = computed(() => {
+  const count = tenantContracts.value.filter(c => c.status === 'active').length
+  if (count > 0) return count
+  return tenant.value?.hasActiveContract ? 1 : 0
+})
 const occupancyCount = computed(() =>
   tenantContracts.value.reduce((sum, c) => sum + (c.occupantCount ?? 0), 0),
 )
+const isRoommate = computed(() => tenant.value?.activeAssignment?.assignmentRole === 'roommate')
+const roommateContractPath = computed(() =>
+  tenant.value?.activeAssignment ? `/contracts/${tenant.value.activeAssignment.contractId}` : null,
+)
 const currentRoomLabel = computed(() => {
+  if (tenant.value?.activeAssignment) {
+    const assignment = tenant.value.activeAssignment
+    return `Phòng ${assignment.roomNumber} — ${assignment.buildingName}`
+  }
   if (!activeContract.value) return null
   const { room } = activeContract.value
   return `Phòng ${room.roomNumber} — ${room.buildingName}`
@@ -160,6 +172,32 @@ watchEffect(() => {
         />
       </div>
 
+      <UiAlert
+        v-if="isRoommate && tenant.activeAssignment"
+        severity="info"
+        class="mt-4"
+      >
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p class="text-sm font-medium text-white">Khách thuê đang ở chung</p>
+            <p class="mt-1 text-xs text-muted">
+              <template v-if="tenant.activeAssignment.primaryTenantName">
+                Đang ở chung với {{ tenant.activeAssignment.primaryTenantName }} tại
+              </template>
+              Phòng {{ tenant.activeAssignment.roomNumber }} — {{ tenant.activeAssignment.buildingName }}.
+              Cần xoá trạng thái ở chung trước khi thêm hợp đồng mới.
+            </p>
+          </div>
+          <NuxtLink
+            v-if="roommateContractPath"
+            :to="roommateContractPath"
+            class="text-xs text-cyan hover:underline"
+          >
+            Mở hợp đồng hiện tại
+          </NuxtLink>
+        </div>
+      </UiAlert>
+
       <section id="personal" class="mt-6 rounded-xl border border-dark-border bg-dark-surface p-6">
         <h3 class="mb-4 text-sm font-semibold text-white">Thông tin cá nhân</h3>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -243,9 +281,19 @@ watchEffect(() => {
       <section id="contracts" class="mt-4 rounded-xl border border-dark-border bg-dark-surface p-6">
         <div class="flex items-center justify-between mb-4">
           <h3 class="text-sm font-semibold text-white">Hợp đồng</h3>
-          <NuxtLink v-if="authStore.can('contracts.create')" to="/contracts/create" class="text-xs text-cyan hover:underline">
+          <NuxtLink
+            v-if="authStore.can('contracts.create') && !isRoommate"
+            to="/contracts/create"
+            class="text-xs text-cyan hover:underline"
+          >
             + Thêm
           </NuxtLink>
+          <span
+            v-else-if="authStore.can('contracts.create') && isRoommate"
+            class="text-xs text-muted"
+          >
+            Không thể thêm HĐ khi đang ở chung
+          </span>
         </div>
         <div v-if="tenantContracts.length > 0" class="space-y-2">
           <UiListRow

@@ -4,6 +4,7 @@ import type { Tenant } from '../../app/types/tenants'
 const repoMocks = vi.hoisted(() => ({
   findAll: vi.fn(),
   findByIdentifier: vi.fn(),
+  findActiveAssignmentByTenantId: vi.fn(),
   findById: vi.fn(),
   hasContractInBuildings: vi.fn(),
   findByIdNumber: vi.fn(),
@@ -145,6 +146,7 @@ async function expectError(promise: Promise<unknown>): Promise<ApiError> {
 beforeEach(() => {
   vi.clearAllMocks()
   repoMocks.findActiveBuildingIdForTenant.mockResolvedValue(null)
+  repoMocks.findActiveAssignmentByTenantId.mockResolvedValue(null)
   repoMocks.findCreatedTenantIdsByActor.mockResolvedValue([])
   repoMocks.wasCreatedByActor.mockResolvedValue(false)
   assignmentRepoMocks.findBuildingIdsByUser.mockResolvedValue(['0a8a4dd0-7d6f-4f4e-bc7e-3c5e1b833333'])
@@ -330,14 +332,28 @@ describe('POST /api/tenants', () => {
 // ---------------------------------------------------------------------------
 
 describe('GET /api/tenants/[id]', () => {
-  it('returns tenant by id', async () => {
+  it('returns tenant by id with active assignment metadata', async () => {
     asAdmin()
+    const assignment = {
+      contractId: 'contract-1',
+      roomId: 'room-1',
+      roomNumber: 'A101',
+      buildingId: 'building-1',
+      buildingName: 'Toa A',
+      buildingSlug: 'toa-a',
+      assignmentRole: 'roommate' as const,
+      primaryTenantName: 'Le Thi B',
+    }
     repoMocks.findByIdentifier.mockResolvedValue(buildTenant({ id: 't-9' }))
+    repoMocks.findActiveAssignmentByTenantId.mockResolvedValue(assignment)
     const { default: handler } = await import('../../server/api/tenants/[id].get')
 
     const res = await handler(makeEvent({ params: { id: 't-9' } })) as { data: Tenant }
     expect(res.data.id).toBe('t-9')
+    expect(res.data.activeAssignment).toMatchObject(assignment)
+    expect(res.data.hasActiveContract).toBe(true)
     expect(repoMocks.findByIdentifier).toHaveBeenCalledWith(expect.anything(), 't-9')
+    expect(repoMocks.findActiveAssignmentByTenantId).toHaveBeenCalledWith(expect.anything(), 't-9')
   })
 
   it('returns tenant by code', async () => {

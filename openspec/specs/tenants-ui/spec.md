@@ -32,6 +32,25 @@ TBD - created by archiving change tenants-overhaul. Update Purpose after archive
 
 ---
 
+### Requirement: Tenants list roommate indicator
+`app/pages/tenants/index.vue` SHALL keep the existing contract-state badge (`Có HĐ` / `Chưa có HĐ`) and render an additional `Ở chung` badge when the tenant is an active roommate occupant (`activeAssignment.assignmentRole === 'roommate'`).
+
+Roommate rows SHALL also display context text `Ở chung với <primaryTenantName>` when `primaryTenantName` is available.
+
+#### Scenario: Roommate badge appears for active occupant
+- **WHEN** a tenant row has `activeAssignment.assignmentRole = 'roommate'`
+- **THEN** the row shows badges `Có HĐ` and `Ở chung`
+
+#### Scenario: Primary contract holder does not show roommate badge
+- **WHEN** a tenant row has `activeAssignment.assignmentRole = 'primary'`
+- **THEN** the row shows `Có HĐ` without `Ở chung`
+
+#### Scenario: Roommate context text includes contract holder name
+- **WHEN** a roommate row has `activeAssignment.primaryTenantName = 'Nguyễn Văn A'`
+- **THEN** the row displays `Ở chung với Nguyễn Văn A`
+
+---
+
 ### Requirement: Tenants list bulk selection
 `app/pages/tenants/index.vue` SHALL provide bulk selection in the list (checkbox per row, "select all on page" checkbox) for admin users. When at least one tenant is selected, a `TenantBulkActionsBar` SHALL appear with actions: "Khôi phục" (activate), "Lưu trữ" (archive), "Xoá nhiều" (delete). The bar SHALL show the selected count and a "Bỏ chọn" action.
 
@@ -60,6 +79,8 @@ TBD - created by archiving change tenants-overhaul. Update Purpose after archive
 ### Requirement: Tenant detail hero with quick stats
 `app/pages/tenants/[code]/index.vue` SHALL render a hero header containing the tenant `full_name`, `code`, status pill, phone, and email chips, and three quick stat tiles: active contracts count, current room link (if any), occupancy count.
 
+When the tenant is currently a roommate (`activeAssignment.assignmentRole === 'roommate'`), the detail page SHALL show who they are living with and SHALL not show the "+ Thêm" contract action.
+
 #### Scenario: Quick stats render when active
 - **WHEN** detail page loads a tenant with 1 active contract in room A101 and 2 occupancy records
 - **THEN** the hero shows three tiles "1 hợp đồng", room link "A101", "2 lượt ở"
@@ -71,6 +92,14 @@ TBD - created by archiving change tenants-overhaul. Update Purpose after archive
 #### Scenario: Stats render with no current room
 - **WHEN** detail page loads a tenant with no active contract
 - **THEN** the current-room stat shows "Chưa ở phòng nào" without a link
+
+#### Scenario: Roommate detail shows primary tenant context
+- **WHEN** detail page loads a tenant with `activeAssignment.assignmentRole = 'roommate'` and `primaryTenantName = 'Nguyễn Văn A'`
+- **THEN** the page shows context text equivalent to `Đang ở chung với Nguyễn Văn A` and includes room/building information
+
+#### Scenario: Roommate cannot add contract from detail CTA
+- **WHEN** detail page loads a tenant with `activeAssignment.assignmentRole = 'roommate'`
+- **THEN** the contracts section hides the "+ Thêm" action and shows guidance that the roommate relation must be removed first
 
 ---
 

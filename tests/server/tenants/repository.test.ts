@@ -337,17 +337,27 @@ describe('TenantRepository.findAll', () => {
 
     const { TenantRepository } = await import('../../../server/repositories/tenants')
     const result = await TenantRepository.findAll({} as never, { contract_state: 'with_contract' })
+    const assignmentByTenantId = new Map(result.items.map(tenant => [tenant.id, tenant.activeAssignment]))
 
     expect(result.total).toBe(2)
     expect(result.items.map(tenant => tenant.id)).toEqual(['occupant-1', 'primary-1'])
     expect(result.items.every(tenant => tenant.hasActiveContract)).toBe(true)
-    expect(result.items[0]?.activeAssignment).toMatchObject({
+
+    expect(assignmentByTenantId.get('occupant-1')).toMatchObject({
       contractId: 'contract-1',
       roomId: 'room-1',
       roomNumber: 'A101',
       buildingId: 'building-1',
       buildingName: 'Toa A',
       buildingSlug: 'toa-a',
+      assignmentRole: 'roommate',
+      primaryTenantName: 'Binh Nguyen',
+    })
+
+    expect(assignmentByTenantId.get('primary-1')).toMatchObject({
+      contractId: 'contract-1',
+      assignmentRole: 'primary',
+      primaryTenantName: null,
     })
   })
 

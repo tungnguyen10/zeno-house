@@ -180,6 +180,7 @@ export const ContractService = {
 
     const newStatus = input.status ?? existing.status
     const newRoomId = input.room_id ?? existing.roomId
+    const newTenantId = input.tenant_id ?? existing.tenantId
     const wasActive = existing.status === 'active'
     const willBeActive = newStatus === 'active'
     const roomChanged = newRoomId !== existing.roomId
@@ -192,6 +193,12 @@ export const ContractService = {
     if (willBeActive) {
       const conflict = await ContractRepository.findActiveByRoomId(event, newRoomId, existing.id)
       if (conflict) throwConflict('Phòng này đã có hợp đồng đang hiệu lực')
+
+      const primaryConflict = await ContractRepository.findActiveByTenantId(event, newTenantId, existing.id)
+      if (primaryConflict) throwConflict('Khách thuê này đang đứng tên hợp đồng tại phòng khác')
+
+      const occupantConflict = await ContractOccupantRepository.findActiveOccupancyByTenant(event, newTenantId, existing.id)
+      if (occupantConflict) throwConflict('Khách thuê này đang ở theo hợp đồng khác')
     }
 
     const updated = await ContractRepository.update(event, existing.id, input)

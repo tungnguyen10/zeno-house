@@ -132,6 +132,26 @@ describe('ContractService code lookup', () => {
     expect(mocks.update).toHaveBeenCalledWith(expect.anything(), contract.id, { notes: 'updated' })
     expect(result.notes).toBe('updated')
   })
+
+  it('blocks update when new tenant is currently a roommate on another active contract', async () => {
+    const contract = buildContractWithDetails()
+    mocks.findByIdentifier.mockResolvedValue(contract)
+    mocks.findActiveByRoomId.mockResolvedValue(null)
+    mocks.findActiveByTenantId.mockResolvedValue(null)
+    mocks.findActiveOccupancyByTenant.mockResolvedValue({ id: 'occ-1', contractId: 'contract-2' })
+    const { ContractService } = await import('../../../server/services/contracts')
+
+    await expect(
+      ContractService.update(
+        event(),
+        user(),
+        'hd-2026-0001',
+        { tenant_id: 'tenant-roommate' },
+      ),
+    ).rejects.toThrow('Khách thuê này đang ở theo hợp đồng khác')
+
+    expect(mocks.update).not.toHaveBeenCalled()
+  })
 })
 
 describe('ContractService.create with handover readings', () => {

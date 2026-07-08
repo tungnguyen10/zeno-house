@@ -1,4 +1,5 @@
 export type TenantStatus = 'active' | 'archived'
+export type TenantAssignmentRole = 'primary' | 'roommate'
 
 export interface Tenant {
   id: string
@@ -25,6 +26,8 @@ export interface Tenant {
     buildingId: string
     buildingName: string
     buildingSlug: string | null
+    assignmentRole: TenantAssignmentRole
+    primaryTenantName: string | null
   } | null
   createdAt: string
   updatedAt: string

@@ -29,6 +29,19 @@ interface TenantAssignment {
   buildingId: string
   buildingName: string
   buildingSlug: string | null
+  assignmentRole: 'primary' | 'roommate'
+  primaryTenantName: string | null
+}
+
+interface ContractAssignmentRow {
+  id: string
+  tenant_id: string
+  room_id: string
+  building_id: string
+  rooms: {
+    room_number?: string | null
+    buildings?: { name?: string | null; slug?: string | null } | null
+  } | null
 }
 
 async function buildUniqueTenantCode(
@@ -70,6 +83,22 @@ async function loadActiveAssignments(event: H3Event): Promise<Map<string, Tenant
 
   const assignments = new Map<string, TenantAssignment>()
   const activeContracts = contracts ?? []
+  const primaryTenantIds = [...new Set(activeContracts.map(contract => contract.tenant_id))]
+  const primaryTenantNameMap = new Map<string, string>()
+
+  if (primaryTenantIds.length > 0) {
+    const { data: primaryTenants, error: primaryTenantError } = await client
+      .from('tenants')
+      .select('id, full_name')
+      .in('id', primaryTenantIds)
+
+    if (primaryTenantError) throw createError({ statusCode: 500, message: primaryTenantError.message })
+
+    for (const tenant of primaryTenants ?? []) {
+      if (tenant.id && tenant.full_name) primaryTenantNameMap.set(tenant.id, tenant.full_name)
+    }
+  }
+
   for (const contract of activeContracts) {
     const room = contract.rooms as { room_number?: string | null; buildings?: { name?: string | null; slug?: string | null } | null } | null
     assignments.set(contract.tenant_id, {
@@ -79,6 +108,8 @@ async function loadActiveAssignments(event: H3Event): Promise<Map<string, Tenant
       buildingId: contract.building_id,
       buildingName: room?.buildings?.name ?? '',
       buildingSlug: room?.buildings?.slug ?? null,
+      assignmentRole: 'primary',
+      primaryTenantName: null,
     })
   }
 
@@ -104,6 +135,8 @@ async function loadActiveAssignments(event: H3Event): Promise<Map<string, Tenant
       buildingId: contract.building_id,
       buildingName: room?.buildings?.name ?? '',
       buildingSlug: room?.buildings?.slug ?? null,
+      assignmentRole: 'roommate',
+      primaryTenantName: primaryTenantNameMap.get(contract.tenant_id) ?? null,
     })
   }
 
@@ -371,6 +404,68 @@ export const TenantRepository = {
 
     if (error) throw createError({ statusCode: 500, message: error.message })
     return data ? mapTenant(data) : null
+  },
+
+  async findActiveAssignmentByTenantId(event: H3Event, tenantId: string): Promise<TenantAssignment | null> {
+    const client = await serverSupabaseClient(event)
+
+    const { data: primaryContract, error: primaryError } = await client
+      .from('contracts')
+      .select('id, tenant_id, room_id, building_id, rooms(room_number, buildings(name, slug))')
+      .eq('tenant_id', tenantId)
+      .eq('status', 'active')
+      .limit(1)
+      .maybeSingle()
+
+    if (primaryError) throw createError({ statusCode: 500, message: primaryError.message })
+
+    if (primaryContract) {
+      const room = primaryContract.rooms as ContractAssignmentRow['rooms']
+      return {
+        contractId: primaryContract.id,
+        roomId: primaryContract.room_id,
+        roomNumber: room?.room_number ?? '',
+        buildingId: primaryContract.building_id,
+        buildingName: room?.buildings?.name ?? '',
+        buildingSlug: room?.buildings?.slug ?? null,
+        assignmentRole: 'primary',
+        primaryTenantName: null,
+      }
+    }
+
+    const { data: occupancy, error: occupancyError } = await client
+      .from('contract_occupants')
+      .select('contract_id, contracts!inner(id, tenant_id, room_id, building_id, status, rooms(room_number, buildings(name, slug)))')
+      .eq('tenant_id', tenantId)
+      .is('move_out_date', null)
+      .limit(1)
+      .maybeSingle()
+
+    if (occupancyError) throw createError({ statusCode: 500, message: occupancyError.message })
+
+    const contract = occupancy?.contracts as ContractAssignmentRow | null | undefined
+    if (!contract || contract.tenant_id === tenantId) return null
+
+    const { data: primaryTenant, error: primaryTenantError } = await client
+      .from('tenants')
+      .select('full_name')
+      .eq('id', contract.tenant_id)
+      .limit(1)
+      .maybeSingle()
+
+    if (primaryTenantError) throw createError({ statusCode: 500, message: primaryTenantError.message })
+
+    const room = contract.rooms as ContractAssignmentRow['rooms']
+    return {
+      contractId: contract.id,
+      roomId: contract.room_id,
+      roomNumber: room?.room_number ?? '',
+      buildingId: contract.building_id,
+      buildingName: room?.buildings?.name ?? '',
+      buildingSlug: room?.buildings?.slug ?? null,
+      assignmentRole: 'roommate',
+      primaryTenantName: primaryTenant?.full_name ?? null,
+    }
   },
 
   async countActiveContractsForTenant(event: H3Event, tenantId: string): Promise<number> {

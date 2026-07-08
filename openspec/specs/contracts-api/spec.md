@@ -109,6 +109,10 @@ When status is `active` (or omitted), the API SHALL additionally verify:
 ### Requirement: Update contract endpoint
 `PATCH /api/contracts/:id` SHALL update an existing contract. All fields optional (partial update). Business rule: if status changes to `active` and room already has another active contract, return 409 CONFLICT. Returns updated contract. Returns 404 if not found.
 
+When the effective contract is `active` after update, the API SHALL also reject tenant conflicts:
+1. `tenant_id` cannot already be the primary tenant of another active contract (excluding the current contract)
+2. `tenant_id` cannot be an active roommate occupant in another contract (excluding the current contract)
+
 #### Scenario: Update success
 - **WHEN** admin PATCHes valid partial data
 - **THEN** returns updated contract
@@ -120,6 +124,10 @@ When status is `active` (or omitted), the API SHALL additionally verify:
 #### Scenario: Update non-existent contract
 - **WHEN** id does not exist
 - **THEN** returns 404 NOT_FOUND
+
+#### Scenario: Update tenant to active roommate elsewhere
+- **WHEN** admin PATCHes an active contract with `tenant_id` currently active in `contract_occupants` of another contract
+- **THEN** returns 409 CONFLICT with message indicating the tenant is already living under another contract
 
 ### Requirement: Delete contract endpoint
 `DELETE /api/contracts/:id` SHALL delete a contract. Returns 204 on success. Returns 404 if not found. If the deleted contract was active, the service SHALL set the associated room back to `available` unless the room is `maintenance`.

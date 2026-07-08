@@ -240,12 +240,25 @@ async function onBulkDone(result: TenantBulkResult, action: TenantBulkAction) {
                   <UiBadge :variant="tenant.hasActiveContract ? 'success' : 'neutral'" pill>
                     {{ tenant.hasActiveContract ? 'Có HĐ' : 'Chưa có HĐ' }}
                   </UiBadge>
+                  <UiBadge
+                    v-if="tenant.activeAssignment?.assignmentRole === 'roommate'"
+                    variant="accent"
+                    pill
+                  >
+                    Ở chung
+                  </UiBadge>
                   <UiBadge v-if="tenant.status === 'archived'" variant="warning" pill>
                     Đã lưu trữ
                   </UiBadge>
                 </div>
                 <p class="text-xs text-muted mt-0.5 truncate">
                   {{ tenant.phone }}<template v-if="tenant.idNumber"> · CMND/CCCD: {{ tenant.idNumber }}</template>
+                </p>
+                <p
+                  v-if="tenant.activeAssignment?.assignmentRole === 'roommate' && tenant.activeAssignment.primaryTenantName"
+                  class="text-xs text-muted mt-0.5 truncate"
+                >
+                  Ở chung với {{ tenant.activeAssignment.primaryTenantName }}
                 </p>
                 <p v-if="tenant.activeAssignment" class="text-xs text-muted mt-0.5 truncate">
                   Phòng {{ tenant.activeAssignment.roomNumber }} · {{ tenant.activeAssignment.buildingName }}

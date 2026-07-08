@@ -63,7 +63,12 @@ export const TenantService = {
         }
       }
     }
-    return tenant
+    const activeAssignment = await TenantRepository.findActiveAssignmentByTenantId(event, tenant.id)
+    return {
+      ...tenant,
+      hasActiveContract: Boolean(activeAssignment),
+      activeAssignment,
+    }
   },
 
   async create(event: H3Event, user: AuthUser, input: TenantCreateInput): Promise<Tenant> {

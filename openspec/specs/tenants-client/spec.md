@@ -122,6 +122,17 @@ Tenant list rows SHALL show a badge indicating whether the tenant currently has 
 - **WHEN** a tenant has no active contract participation
 - **THEN** the row shows "Chua co HD"
 
+### Requirement: Tenant list roommate tag and context
+Tenant list rows SHALL show a dedicated roommate indicator when the tenant is active as an occupant (not the primary tenant).
+
+#### Scenario: Roommate tag displayed
+- **WHEN** `activeAssignment.assignmentRole === 'roommate'`
+- **THEN** the row shows an additional `Ở chung` tag
+
+#### Scenario: Roommate context with primary tenant name
+- **WHEN** a roommate row contains `activeAssignment.primaryTenantName`
+- **THEN** the row shows `Ở chung với <primaryTenantName>`
+
 ### Requirement: Tenant list active assignment context
 Tenant list rows SHALL show current room and building context when a tenant has active contract participation.
 
