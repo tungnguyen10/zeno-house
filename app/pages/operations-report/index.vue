@@ -450,29 +450,22 @@ function signedClass(value: number): string {
       </template>
     </UiPageHeader>
 
-    <!-- Filters -->
-    <div class="mb-4 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
-      <UiSelect
-        v-model="buildingModel"
-        aria-label="Tòa nhà"
-        :options="buildingOptions"
-        placeholder="Tòa nhà"
-        class="col-span-2 sm:min-w-[200px]"
-      />
-      <UiSelect v-model="yearModel" aria-label="Năm" :options="yearOptions" class="sm:w-28" />
-      <UiSelect v-model="monthModel" aria-label="Tháng" :options="monthOptions" class="sm:w-32" />
-      <UiSelect
-        v-model="expenseCategoryModel"
-        aria-label="Loại chi"
-        :options="expenseCategoryOptions"
-        class="col-span-2 sm:min-w-[170px]"
-      />
-      <UiFilterResetButton
-        v-if="hasActiveFilters"
-        class="col-span-2 justify-start sm:col-auto"
-        @click="resetFilters"
-      />
-    </div>
+    <OperationsReportFilterBar
+      :building-value="buildingModel"
+      :year-value="yearModel"
+      :month-value="monthModel"
+      :expense-category-value="expenseCategoryModel"
+      :building-options="buildingOptions"
+      :year-options="yearOptions"
+      :month-options="monthOptions"
+      :expense-category-options="expenseCategoryOptions"
+      :has-active-filters="hasActiveFilters"
+      @update:building-value="buildingModel = $event"
+      @update:year-value="yearModel = $event"
+      @update:month-value="monthModel = $event"
+      @update:expense-category-value="expenseCategoryModel = $event"
+      @reset="resetFilters"
+    />
 
     <UiAlert v-if="forbidden" severity="danger" class="mb-6">
       Bạn không có quyền xem báo cáo vận hành của tòa nhà này.

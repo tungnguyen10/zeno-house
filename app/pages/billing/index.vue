@@ -25,53 +25,57 @@ const { filters, periods, isLoading, refresh, openPeriod } = useBillingPeriodLis
   status: initialStatus as BillingPeriodStatus | undefined,
 })
 
-// v-model wrappers so empty selects map cleanly to `undefined` on the filter object.
 const buildingFilter = computed<string | number | null>({
   get: () => filters.building_id ?? '',
-  set: (v) => { filters.building_id = typeof v === 'string' && v ? v : undefined },
+  set: (value) => { filters.building_id = typeof value === 'string' && value ? value : undefined },
 })
+
 const statusFilter = computed<string | number | null>({
   get: () => filters.status ?? '',
-  set: (v) => { filters.status = (typeof v === 'string' && v ? v : undefined) as BillingPeriodStatus | undefined },
+  set: (value) => {
+    filters.status = (typeof value === 'string' && value ? value : undefined) as BillingPeriodStatus | undefined
+  },
 })
 
 const { yearOptions, monthOptions } = usePeriodOptions({
   selectedYear: computed(() => filters.period_year),
 })
 
-function statusLabel(s: string) {
-  switch (s) {
+function statusLabel(status: string) {
+  switch (status) {
     case 'draft': return 'Nháp'
     case 'readings': return 'Nhập chỉ số'
     case 'review': return 'Soát hoá đơn'
     case 'issued': return 'Đã phát hành'
     case 'collecting': return 'Đang thu'
     case 'closed': return 'Đã chốt'
-    default: return s
+    default: return status
   }
 }
 
 type QueueKey = 'needsReadings' | 'readyToReview' | 'issuedCollecting' | 'hasDebt' | 'closed'
 
 const queueGroups = computed(() => {
-  const g: Record<QueueKey, BillingPeriodSummary[]> = {
+  const groups: Record<QueueKey, BillingPeriodSummary[]> = {
     needsReadings: [],
     readyToReview: [],
     issuedCollecting: [],
     hasDebt: [],
     closed: [],
   }
-  for (const p of periods.value) {
-    const s = p.period.status
-    if (s === 'draft' || s === 'readings' || (p.readingRequiredCount > 0 && p.readingCompleteCount < p.readingRequiredCount)) {
-      g.needsReadings.push(p)
+
+  for (const period of periods.value) {
+    const status = period.period.status
+    if (status === 'draft' || status === 'readings' || (period.readingRequiredCount > 0 && period.readingCompleteCount < period.readingRequiredCount)) {
+      groups.needsReadings.push(period)
     }
-    if (s === 'review') g.readyToReview.push(p)
-    if (s === 'issued' || s === 'collecting') g.issuedCollecting.push(p)
-    if (p.outstandingBalance > 0) g.hasDebt.push(p)
-    if (s === 'closed') g.closed.push(p)
+    if (status === 'review') groups.readyToReview.push(period)
+    if (status === 'issued' || status === 'collecting') groups.issuedCollecting.push(period)
+    if (period.outstandingBalance > 0) groups.hasDebt.push(period)
+    if (status === 'closed') groups.closed.push(period)
   }
-  return g
+
+  return groups
 })
 
 const queueMetrics = computed<Array<{ key: QueueKey; label: string; shortLabel: string; value: number; tone: 'warning' | 'accent' | 'default' | 'danger' | 'success' }>>(() => [
@@ -83,6 +87,7 @@ const queueMetrics = computed<Array<{ key: QueueKey; label: string; shortLabel: 
 ])
 
 const activeQueue = ref<QueueKey | null>(null)
+
 function toggleQueue(key: QueueKey) {
   activeQueue.value = activeQueue.value === key ? null : key
 }
@@ -93,7 +98,15 @@ const displayedPeriods = computed(() => {
 })
 
 const activeQueueLabel = computed(() =>
-  activeQueue.value ? queueMetrics.value.find(m => m.key === activeQueue.value)?.label : null,
+  activeQueue.value ? queueMetrics.value.find(metric => metric.key === activeQueue.value)?.label : null,
+)
+
+const buildingFilterOptions = computed(() =>
+  buildings.value.map(building => ({ value: building.id, label: building.name })),
+)
+
+const billingStatusOptions = computed(() =>
+  BILLING_PERIOD_STATUSES.map(status => ({ value: status, label: statusLabel(status) })),
 )
 
 const hasActiveFilters = computed(() =>
@@ -112,7 +125,7 @@ function clearFilters() {
   activeQueue.value = null
 }
 
-const QUEUE_CHIP_TONE: Record<'warning' | 'accent' | 'default' | 'danger' | 'success', { value: string; ring: string; dot: string }> = {
+const queueChipTone: Record<'warning' | 'accent' | 'default' | 'danger' | 'success', { value: string; ring: string; dot: string }> = {
   warning: { value: 'text-warning', ring: 'ring-warning/40 border-warning/60', dot: 'bg-warning' },
   accent: { value: 'text-cyan', ring: 'ring-cyan/40 border-cyan/60', dot: 'bg-cyan' },
   default: { value: 'text-white', ring: 'ring-white/20 border-white/30', dot: 'bg-white/60' },
@@ -171,12 +184,14 @@ async function submitOpenPeriod() {
       period_month: openForm.period_month,
     })
     showOpenModal.value = false
-    const building = buildings.value.find(b => b.id === period.buildingId)
+    const building = buildings.value.find(item => item.id === period.buildingId)
     await navigateTo(billingWorkspacePath(building ?? { id: period.buildingId }, period.periodYear, period.periodMonth))
-  } catch (err) {
-    const e = err as { data?: { error?: { message?: string } }; statusMessage?: string }
-    openError.value = e.data?.error?.message ?? e.statusMessage ?? 'Không thể mở kỳ vận hành'
-  } finally {
+  }
+  catch (err) {
+    const error = err as { data?: { error?: { message?: string } }; statusMessage?: string }
+    openError.value = error.data?.error?.message ?? error.statusMessage ?? 'Không thể mở kỳ vận hành'
+  }
+  finally {
     openSubmitting.value = false
   }
 }
@@ -212,136 +227,55 @@ function periodLabel(row: BillingPeriodSummary): string {
 
     <div class="-mx-6 flex gap-2 overflow-x-auto px-6 pb-1 md:mx-0 md:grid md:grid-cols-5 md:px-0 md:pb-0">
       <UiButton
-        v-for="m in queueMetrics"
-        :key="m.key"
+        v-for="metric in queueMetrics"
+        :key="metric.key"
         unstyled
-        :aria-pressed="activeQueue === m.key"
+        :aria-pressed="activeQueue === metric.key"
         :class="[
           'group flex shrink-0 snap-start flex-col gap-1 rounded-xl border bg-dark-surface px-4 py-3 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan/40 min-w-[10rem] md:min-w-0 md:shrink',
-          activeQueue === m.key
-            ? `${QUEUE_CHIP_TONE[m.tone].ring} ring-2`
+          activeQueue === metric.key
+            ? `${queueChipTone[metric.tone].ring} ring-2`
             : 'border-dark-border hover:border-dark-hover hover:bg-dark-hover/40',
         ]"
-        @click="toggleQueue(m.key)"
+        @click="toggleQueue(metric.key)"
       >
         <span class="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-muted">
-          <span :class="['h-1.5 w-1.5 rounded-full shrink-0', QUEUE_CHIP_TONE[m.tone].dot]" />
-          <span class="whitespace-nowrap md:hidden">{{ m.shortLabel }}</span>
-          <span class="hidden whitespace-nowrap md:inline">{{ m.label }}</span>
+          <span :class="['h-1.5 w-1.5 rounded-full shrink-0', queueChipTone[metric.tone].dot]" />
+          <span class="whitespace-nowrap md:hidden">{{ metric.shortLabel }}</span>
+          <span class="hidden whitespace-nowrap md:inline">{{ metric.label }}</span>
         </span>
         <UiSkeleton v-if="isLoading" class="h-7 w-12" />
         <span
           v-else
-          :class="['text-2xl font-semibold tabular-nums leading-none', QUEUE_CHIP_TONE[m.tone].value]"
+          :class="['text-2xl font-semibold tabular-nums leading-none', queueChipTone[metric.tone].value]"
         >
-          {{ m.value }}
+          {{ metric.value }}
         </span>
       </UiButton>
     </div>
 
-    <div
-      class="flex flex-col gap-2 rounded-xl border border-dark-border bg-dark-surface/40 p-2.5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between"
-    >
-      <div class="flex flex-1 flex-wrap items-center gap-2">
-        <!-- Building -->
-        <div class="w-full sm:w-56">
-          <UiSelect
-            v-model="buildingFilter"
-            :options="buildings.map(b => ({ value: b.id, label: b.name }))"
-            placeholder="Tất cả tòa nhà"
-            :disabled="buildingsLoading"
-            aria-label="Tòa nhà"
-            class="w-full"
-          >
-            <template #prefix>
-              <IconBuilding class="h-4 w-4" />
-            </template>
-          </UiSelect>
-        </div>
+    <BillingPeriodFilterBar
+      :building-value="buildingFilter"
+      :year-value="filters.period_year ?? initialYear"
+      :status-value="statusFilter"
+      :building-options="buildingFilterOptions"
+      :year-options="yearOptions"
+      :status-options="billingStatusOptions"
+      :buildings-loading="buildingsLoading"
+      :has-debt="!!filters.has_debt"
+      :active-queue-label="activeQueueLabel"
+      :has-active-filters="hasActiveFilters"
+      :is-loading="isLoading"
+      :period-count="displayedPeriods.length"
+      @update:building-value="buildingFilter = $event"
+      @update:year-value="filters.period_year = $event"
+      @update:status-value="statusFilter = $event"
+      @toggle-debt="filters.has_debt = filters.has_debt ? undefined : true"
+      @clear-queue="activeQueue = null"
+      @reset="clearFilters"
+      @refresh="refresh()"
+    />
 
-        <!-- Year -->
-        <div class="w-full sm:w-28">
-          <UiSelect
-            v-model="filters.period_year"
-            :options="yearOptions"
-            aria-label="Năm"
-            class="w-full"
-          >
-            <template #prefix>
-              <IconClock class="h-4 w-4" />
-            </template>
-          </UiSelect>
-        </div>
-
-        <!-- Status -->
-        <div class="w-full sm:w-48">
-          <UiSelect
-            v-model="statusFilter"
-            :options="BILLING_PERIOD_STATUSES.map(s => ({ value: s, label: statusLabel(s) }))"
-            placeholder="Tất cả trạng thái"
-            aria-label="Trạng thái"
-            class="w-full"
-          >
-            <template #prefix>
-              <IconTag class="h-4 w-4" />
-            </template>
-          </UiSelect>
-        </div>
-
-        <!-- Debt toggle -->
-        <UiButton
-          unstyled
-          :aria-pressed="!!filters.has_debt"
-          :class="[
-            'inline-flex h-9 items-center gap-1.5 rounded-md border px-3 text-sm transition focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan/30',
-            filters.has_debt
-              ? 'border-error/60 bg-error/10 text-error-vivid'
-              : 'border-dark-border bg-dark-surface text-muted hover:border-dark-hover hover:text-white',
-          ]"
-          @click="filters.has_debt = filters.has_debt ? undefined : true"
-        >
-          <IconAlertCircle class="h-4 w-4" aria-hidden="true" />
-          <span class="whitespace-nowrap">Có công nợ</span>
-        </UiButton>
-
-        <!-- Active queue chip -->
-        <UiButton
-          v-if="activeQueue"
-          unstyled
-          class="inline-flex h-9 items-center gap-1.5 rounded-md border border-cyan/60 bg-cyan/10 px-3 text-sm text-cyan transition hover:bg-cyan/20"
-          @click="activeQueue = null"
-        >
-          <span class="whitespace-nowrap">{{ activeQueueLabel }}</span>
-          <IconX class="h-3.5 w-3.5" aria-hidden="true" />
-        </UiButton>
-
-        <!-- Clear all -->
-        <UiFilterResetButton v-if="hasActiveFilters" label="Xóa lọc" @click="clearFilters" />
-      </div>
-
-      <div class="flex shrink-0 items-center gap-3">
-        <span v-if="!isLoading" class="text-xs tabular-nums text-muted">
-          {{ displayedPeriods.length }} kỳ
-        </span>
-        <UiButton
-          unstyled
-          :class="[
-            'inline-flex h-9 items-center gap-1.5 rounded-md border border-dark-border px-3 text-sm text-muted transition hover:bg-dark-hover hover:text-white',
-            isLoading && 'pointer-events-none opacity-50',
-          ]"
-          :aria-label="isLoading ? 'Đang tải' : 'Làm mới danh sách'"
-          @click="refresh()"
-        >
-          <IconRefresh
-            :class="['h-4 w-4', isLoading && 'animate-spin']"
-            aria-hidden="true"
-          />
-          <span class="hidden sm:inline">Làm mới</span>
-        </UiButton>
-      </div>
-    </div>
-
-    <!-- Mobile: card list -->
     <div class="space-y-2 md:hidden">
       <template v-if="isLoading">
         <UiSkeleton v-for="n in 4" :key="`m-skel-${n}`" class="h-24 w-full rounded-xl" />
@@ -406,7 +340,6 @@ function periodLabel(row: BillingPeriodSummary): string {
       </UiButton>
     </div>
 
-    <!-- Desktop: table -->
     <UiTable
       class="hidden md:block"
       :rows="displayedPeriods"
@@ -487,7 +420,7 @@ function periodLabel(row: BillingPeriodSummary): string {
         <UiSection title="Tòa nhà">
           <UiSelect
             v-model="openForm.building_id"
-            :options="buildings.map(b => ({ value: b.id, label: b.name }))"
+            :options="buildings.map(building => ({ value: building.id, label: building.name }))"
             placeholder="— Chọn tòa nhà —"
             :disabled="buildingsLoading"
             aria-label="Tòa nhà mở kỳ"
