@@ -103,7 +103,7 @@ export function useContractForm<T = unknown>(options: UseContractFormOptions<T> 
   const isLoading = ref(false)
   const errors = ref<Record<string, string[]>>({})
   const apiError = ref<string | null>(null)
-  const isDraftHydrated = ref(false)
+  const isDraftHydrated = ref(typeof window !== 'undefined')
   const draftError = ref<string | null>(null)
   const draftVersionTick = ref(0)
   const restoredBaseline = ref<string | null>(null)
@@ -141,6 +141,10 @@ export function useContractForm<T = unknown>(options: UseContractFormOptions<T> 
 
   function refreshDraft() {
     draftVersionTick.value++
+  }
+
+  if (isDraftHydrated.value) {
+    refreshDraft()
   }
 
   onMounted(() => {

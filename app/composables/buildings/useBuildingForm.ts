@@ -81,6 +81,8 @@ export function useBuildingForm<T = unknown>(options: UseBuildingFormOptions<T> 
     hasDraft.value = window.localStorage.getItem(storageKey) !== null
   }
 
+  refreshHasDraft()
+
   onMounted(() => {
     refreshHasDraft()
   })

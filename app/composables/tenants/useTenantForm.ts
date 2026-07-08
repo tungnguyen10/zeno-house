@@ -74,6 +74,8 @@ export function useTenantForm<T = unknown>(options: UseTenantFormOptions<T> = {}
     hasDraft.value = window.localStorage.getItem(storageKey) !== null
   }
 
+  refreshHasDraft()
+
   onMounted(() => {
     refreshHasDraft()
   })

@@ -70,7 +70,7 @@ export function useRoomForm<T = unknown>(options: UseRoomFormOptions<T> = {}) {
   const isLoading = ref(false)
   const errors = ref<Record<string, string[]>>({})
   const apiError = ref<string | null>(null)
-  const isDraftHydrated = ref(false)
+  const isDraftHydrated = ref(typeof window !== 'undefined')
   const draftVersion = ref(0)
   const storageKey = computed(() => options.draftKey ? buildStorageKey(options.draftKey) : null)
 
@@ -98,6 +98,10 @@ export function useRoomForm<T = unknown>(options: UseRoomFormOptions<T> = {}) {
 
   function refreshHasDraft() {
     draftVersion.value++
+  }
+
+  if (isDraftHydrated.value) {
+    refreshHasDraft()
   }
 
   onMounted(() => {
