@@ -87,4 +87,22 @@ describe('UiDatePicker', () => {
     expect(wrapper.emitted('update:modelValue')?.[0]).toEqual([''])
     expect(wrapper.emitted('change')?.[0]).toEqual([''])
   })
+
+  it('supports month picker mode and emits YYYY-MM', async () => {
+    const wrapper = mountDatePicker({
+      modelValue: '2026-07',
+      pickerMode: 'month',
+      label: 'Tháng vận hành',
+    })
+
+    expect(wrapper.get('button#paid-at').text()).toContain('07/2026')
+
+    await wrapper.get('button#paid-at').trigger('click')
+    expect(wrapper.get('[role="dialog"]').text()).toContain('Năm 2026')
+
+    await wrapper.get('button[data-period="2026-09"]').trigger('click')
+
+    expect(wrapper.emitted('update:modelValue')?.[0]).toEqual(['2026-09'])
+    expect(wrapper.emitted('change')?.[0]).toEqual(['2026-09'])
+  })
 })

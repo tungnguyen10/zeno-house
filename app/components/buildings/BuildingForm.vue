@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import type { BuildingFormData } from '~/types/building-form'
-import { usePeriodOptions } from '~/composables/usePeriodOptions'
 import { buildingFormToApiPayload } from '~/utils/mappers/building-form'
 import { buildingCreateSchema } from '~/utils/validators/buildings'
 
@@ -62,17 +61,9 @@ const FIELD_META: Record<string, FieldMeta> = {
   billing_generation_day: { id: 'bf-billing-day', label: 'Ngày lập hóa đơn' },
   payment_due_day: { id: 'bf-due-day', label: 'Ngày đến hạn' },
   grace_period_days: { id: 'bf-grace-days', label: 'Số ngày gia hạn' },
-  operational_start_year: { id: 'bf-operational-start-year', label: 'Năm bắt đầu vận hành' },
-  operational_start_month: { id: 'bf-operational-start-month', label: 'Tháng bắt đầu vận hành' },
+  operational_start_year: { id: 'bf-operational-start-period', label: 'Tháng/Năm bắt đầu vận hành' },
+  operational_start_month: { id: 'bf-operational-start-period', label: 'Tháng/Năm bắt đầu vận hành' },
 }
-
-const { yearOptions: operationalStartYearOptions } = usePeriodOptions({
-  yearWindow: { past: 10, future: 2 },
-})
-const operationalStartMonthOptions = Array.from({ length: 12 }, (_, idx) => ({
-  value: idx + 1,
-  label: `Tháng ${idx + 1}`,
-}))
 
 const localErrors = ref<Record<string, string>>({})
 const touched = ref(new Set<string>())
@@ -109,6 +100,45 @@ watch(() => props.modelValue, () => {
 function onBlur(snakeField: string) {
   markTouched(snakeField)
   runValidation()
+}
+
+const operationalStartPeriod = computed({
+  get: () => {
+    const year = (props.modelValue.operationalStartYear ?? '').trim()
+    const month = (props.modelValue.operationalStartMonth ?? '').trim()
+    if (!year || !month) return ''
+
+    const monthNum = Number(month)
+    if (!Number.isInteger(monthNum) || monthNum < 1 || monthNum > 12) return ''
+
+    return `${year}-${String(monthNum).padStart(2, '0')}`
+  },
+  set: (value: string) => {
+    if (!value) {
+      update('operationalStartYear', '')
+      update('operationalStartMonth', '')
+      return
+    }
+
+    const match = value.match(/^(\d{4})-(0[1-9]|1[0-2])$/)
+    if (!match) return
+
+    const year = match[1]
+    const month = match[2]
+    if (!year || !month) return
+
+    update('operationalStartYear', year)
+    update('operationalStartMonth', String(Number(month)))
+  },
+})
+
+const operationalStartError = computed(() =>
+  errorFor('operational_start_year') ?? errorFor('operational_start_month'),
+)
+
+function onOperationalStartBlur() {
+  onBlur('operational_start_year')
+  onBlur('operational_start_month')
 }
 
 function errorFor(snakeField: string): string | undefined {
@@ -354,25 +384,14 @@ const canSubmit = computed(() => !props.loading && (props.isDirty || props.hasDr
         <p class="text-xs text-muted mt-0.5">Các mốc trong tháng cho chốt số, lập hoá đơn và thu tiền.</p>
       </header>
       <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <UiSelect
-          id="bf-operational-start-year"
-          :model-value="modelValue.operationalStartYear"
-          label="Năm bắt đầu"
-          placeholder="Tuỳ chọn"
-          :options="operationalStartYearOptions"
-          :error="errorFor('operational_start_year')"
-          @update:model-value="(v) => update('operationalStartYear', v === null ? '' : String(v))"
-          @blur="onBlur('operational_start_year')"
-        />
-        <UiSelect
-          id="bf-operational-start-month"
-          :model-value="modelValue.operationalStartMonth"
+        <UiDatePicker
+          id="bf-operational-start-period"
+          v-model="operationalStartPeriod"
           label="Tháng bắt đầu"
           placeholder="Tuỳ chọn"
-          :options="operationalStartMonthOptions"
-          :error="errorFor('operational_start_month')"
-          @update:model-value="(v) => update('operationalStartMonth', v === null ? '' : String(v))"
-          @blur="onBlur('operational_start_month')"
+          picker-mode="month"
+          :error="operationalStartError"
+          @blur="onOperationalStartBlur"
         />
         <UiInput
           id="bf-meter-reading-day"

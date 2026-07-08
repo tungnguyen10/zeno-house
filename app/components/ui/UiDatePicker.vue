@@ -7,6 +7,7 @@ import clsx from 'clsx'
 defineOptions({ inheritAttrs: false })
 
 type DateMode = 'iso' | 'past' | 'future' | 'period-start' | 'period-end' | 'payment' | 'reading' | 'operational'
+type PickerMode = 'date' | 'month'
 
 const props = withDefaults(defineProps<{
   modelValue?: string | null
@@ -20,6 +21,7 @@ const props = withDefaults(defineProps<{
   triggerClass?: string
   density?: 'normal' | 'compact'
   dateMode?: DateMode
+  pickerMode?: PickerMode
   minDate?: string
   maxDate?: string
   clearable?: boolean
@@ -29,6 +31,7 @@ const props = withDefaults(defineProps<{
   disabled: false,
   density: 'normal',
   dateMode: 'iso',
+  pickerMode: 'date',
   clearable: true,
 })
 
@@ -71,9 +74,29 @@ function isIsoDate(value: string | null | undefined) {
   return !!value && /^\d{4}-\d{2}-\d{2}$/.test(value) && dayjs(value).isValid()
 }
 
-const selectedDate = computed(() => isIsoDate(props.modelValue) ? dayjs(props.modelValue) : null)
-const selectedIso = computed(() => selectedDate.value?.format('YYYY-MM-DD') ?? '')
-const displayValue = computed(() => selectedDate.value?.format('DD/MM/YYYY') ?? '')
+function isMonthPeriod(value: string | null | undefined) {
+  return !!value && /^\d{4}-(0[1-9]|1[0-2])$/.test(value)
+}
+
+const isMonthMode = computed(() => props.pickerMode === 'month')
+
+const selectedDate = computed(() => {
+  if (isMonthMode.value) {
+    if (!isMonthPeriod(props.modelValue)) return null
+    return dayjs(`${props.modelValue}-01`)
+  }
+  return isIsoDate(props.modelValue) ? dayjs(props.modelValue) : null
+})
+const selectedValue = computed(() =>
+  isMonthMode.value
+    ? selectedDate.value?.format('YYYY-MM') ?? ''
+    : selectedDate.value?.format('YYYY-MM-DD') ?? '',
+)
+const displayValue = computed(() =>
+  isMonthMode.value
+    ? selectedDate.value?.format('MM/YYYY') ?? ''
+    : selectedDate.value?.format('DD/MM/YYYY') ?? '',
+)
 
 const effectiveMinDate = computed(() => {
   const explicit = props.minDate ?? attrString('min')
@@ -87,15 +110,32 @@ const effectiveMaxDate = computed(() => {
   return props.dateMode === 'past' ? todayIso : undefined
 })
 
+const minPeriod = computed(() => {
+  const value = effectiveMinDate.value
+  if (!value) return undefined
+  if (isMonthPeriod(value)) return value
+  return isIsoDate(value) ? value.slice(0, 7) : undefined
+})
+
+const maxPeriod = computed(() => {
+  const value = effectiveMaxDate.value
+  if (!value) return undefined
+  if (isMonthPeriod(value)) return value
+  return isIsoDate(value) ? value.slice(0, 7) : undefined
+})
+
 const isOpen = ref(false)
 const triggerRef = ref<HTMLButtonElement | null>(null)
 const panelRef = ref<HTMLElement | null>(null)
 const visibleMonth = ref((selectedDate.value ?? dayjs()).startOf('month'))
-const focusedIso = ref(selectedIso.value || todayIso)
+const visibleYear = ref((selectedDate.value ?? dayjs()).year())
+const focusedIso = ref(selectedValue.value || todayIso)
+const focusedPeriod = ref(selectedValue.value || dayjs().format('YYYY-MM'))
 
 const weekDays = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN']
 
 const monthLabel = computed(() => {
+  if (isMonthMode.value) return `Năm ${visibleYear.value}`
   const month = visibleMonth.value.month() + 1
   return `Tháng ${month}/${visibleMonth.value.year()}`
 })
@@ -114,6 +154,7 @@ const triggerClass = computed(() =>
 )
 
 const calendarDays = computed(() => {
+  if (isMonthMode.value) return []
   const start = visibleMonth.value.startOf('month')
   const offset = (start.day() + 6) % 7
   const firstCell = start.subtract(offset, 'day')
@@ -129,14 +170,41 @@ const calendarDays = computed(() => {
       day: date.date(),
       inMonth: date.month() === visibleMonth.value.month(),
       isToday: iso === todayIso,
-      isSelected: iso === selectedIso.value,
+      isSelected: iso === selectedValue.value,
       isFocused: iso === focusedIso.value,
       disabled: (!!min && iso < min) || (!!max && iso > max),
     }
   })
 })
 
+const monthCells = computed(() => {
+  if (!isMonthMode.value) return []
+
+  return Array.from({ length: 12 }, (_, index) => {
+    const period = `${visibleYear.value}-${String(index + 1).padStart(2, '0')}`
+    const min = minPeriod.value
+    const max = maxPeriod.value
+
+    return {
+      value: period,
+      label: `Tháng ${index + 1}`,
+      isSelected: period === selectedValue.value,
+      isFocused: period === focusedPeriod.value,
+      isCurrent: period === dayjs().format('YYYY-MM'),
+      disabled: (!!min && period < min) || (!!max && period > max),
+    }
+  })
+})
+
 function focusDay() {
+  if (isMonthMode.value) {
+    nextTick(() => {
+      const target = panelRef.value?.querySelector<HTMLButtonElement>(`[data-period="${focusedPeriod.value}"]`)
+      target?.focus()
+    })
+    return
+  }
+
   nextTick(() => {
     const target = panelRef.value?.querySelector<HTMLButtonElement>(`[data-date="${focusedIso.value}"]`)
     target?.focus()
@@ -145,8 +213,15 @@ function focusDay() {
 
 function openPicker() {
   if (props.disabled) return
-  visibleMonth.value = (selectedDate.value ?? dayjs()).startOf('month')
-  focusedIso.value = selectedIso.value || todayIso
+  if (isMonthMode.value) {
+    const base = selectedDate.value ?? dayjs()
+    visibleYear.value = base.year()
+    focusedPeriod.value = selectedValue.value || base.format('YYYY-MM')
+  }
+  else {
+    visibleMonth.value = (selectedDate.value ?? dayjs()).startOf('month')
+    focusedIso.value = selectedValue.value || todayIso
+  }
   isOpen.value = true
   focusDay()
 }
@@ -156,9 +231,9 @@ function closePicker({ restoreFocus = true } = {}) {
   if (restoreFocus) nextTick(() => triggerRef.value?.focus())
 }
 
-function selectDate(iso: string) {
-  emit('update:modelValue', iso)
-  emit('change', iso)
+function selectValue(value: string) {
+  emit('update:modelValue', value)
+  emit('change', value)
   closePicker()
 }
 
@@ -169,6 +244,14 @@ function clearDate() {
 }
 
 function shiftFocus(days: number) {
+  if (isMonthMode.value) {
+    const next = dayjs(`${focusedPeriod.value}-01`).add(days, 'month')
+    focusedPeriod.value = next.format('YYYY-MM')
+    visibleYear.value = next.year()
+    focusDay()
+    return
+  }
+
   const next = dayjs(focusedIso.value).add(days, 'day')
   focusedIso.value = next.format('YYYY-MM-DD')
   visibleMonth.value = next.startOf('month')
@@ -176,11 +259,34 @@ function shiftFocus(days: number) {
 }
 
 function changeMonth(months: number) {
+  if (isMonthMode.value) {
+    visibleYear.value += months
+    const focused = dayjs(`${focusedPeriod.value}-01`)
+    const next = focused.year(visibleYear.value)
+    focusedPeriod.value = next.format('YYYY-MM')
+    focusDay()
+    return
+  }
+
   visibleMonth.value = visibleMonth.value.add(months, 'month')
   const focused = dayjs(focusedIso.value)
   if (focused.month() !== visibleMonth.value.month() || focused.year() !== visibleMonth.value.year()) {
     focusedIso.value = visibleMonth.value.date(Math.min(focused.date(), visibleMonth.value.daysInMonth())).format('YYYY-MM-DD')
   }
+  focusDay()
+}
+
+function jumpToToday() {
+  if (isMonthMode.value) {
+    const period = dayjs().format('YYYY-MM')
+    focusedPeriod.value = period
+    visibleYear.value = Number(period.slice(0, 4))
+    focusDay()
+    return
+  }
+
+  focusedIso.value = todayIso
+  visibleMonth.value = dayjs().startOf('month')
   focusDay()
 }
 
@@ -193,16 +299,16 @@ function onGridKeydown(event: KeyboardEvent) {
 
   if (event.key === 'ArrowLeft') {
     event.preventDefault()
-    shiftFocus(-1)
+    shiftFocus(isMonthMode.value ? -1 : -1)
   } else if (event.key === 'ArrowRight') {
     event.preventDefault()
-    shiftFocus(1)
+    shiftFocus(isMonthMode.value ? 1 : 1)
   } else if (event.key === 'ArrowUp') {
     event.preventDefault()
-    shiftFocus(-7)
+    shiftFocus(isMonthMode.value ? -3 : -7)
   } else if (event.key === 'ArrowDown') {
     event.preventDefault()
-    shiftFocus(7)
+    shiftFocus(isMonthMode.value ? 3 : 7)
   } else if (event.key === 'PageUp') {
     event.preventDefault()
     changeMonth(-1)
@@ -211,12 +317,25 @@ function onGridKeydown(event: KeyboardEvent) {
     changeMonth(1)
   } else if (event.key === 'Home') {
     event.preventDefault()
+    if (isMonthMode.value) {
+      focusedPeriod.value = `${visibleYear.value}-01`
+      focusDay()
+      return
+    }
     const date = dayjs(focusedIso.value)
     shiftFocus(-((date.day() + 6) % 7))
   } else if (event.key === 'End') {
     event.preventDefault()
+    if (isMonthMode.value) {
+      focusedPeriod.value = `${visibleYear.value}-12`
+      focusDay()
+      return
+    }
     const date = dayjs(focusedIso.value)
     shiftFocus(6 - ((date.day() + 6) % 7))
+  } else if ((event.key === 'Enter' || event.key === ' ') && isMonthMode.value) {
+    event.preventDefault()
+    selectValue(focusedPeriod.value)
   }
 }
 
@@ -290,7 +409,7 @@ onKeyStroke('Escape', () => {
             variant="ghost"
             size="sm"
             icon-only
-            aria-label="Tháng trước"
+            :aria-label="isMonthMode ? 'Năm trước' : 'Tháng trước'"
             @click="changeMonth(-1)"
           >
             <IconChevronLeft class="size-4" aria-hidden="true" />
@@ -301,43 +420,73 @@ onKeyStroke('Escape', () => {
             variant="ghost"
             size="sm"
             icon-only
-            aria-label="Tháng sau"
+            :aria-label="isMonthMode ? 'Năm sau' : 'Tháng sau'"
             @click="changeMonth(1)"
           >
             <IconChevronRight class="size-4" aria-hidden="true" />
           </UiButton>
         </div>
 
-        <div class="grid grid-cols-7 gap-1 text-center text-[11px] font-medium text-muted" aria-hidden="true">
-          <span v-for="day in weekDays" :key="day">{{ day }}</span>
-        </div>
-        <div class="mt-1 grid grid-cols-7 gap-1">
+        <template v-if="!isMonthMode">
+          <div class="grid grid-cols-7 gap-1 text-center text-[11px] font-medium text-muted" aria-hidden="true">
+            <span v-for="day in weekDays" :key="day">{{ day }}</span>
+          </div>
+          <div class="mt-1 grid grid-cols-7 gap-1">
+            <button
+              v-for="day in calendarDays"
+              :key="day.iso"
+              type="button"
+              :data-date="day.iso"
+              :tabindex="day.isFocused ? 0 : -1"
+              :disabled="day.disabled"
+              :aria-label="dayjs(day.iso).format('DD/MM/YYYY')"
+              :aria-current="day.isToday ? 'date' : undefined"
+              :aria-pressed="day.isSelected"
+              :class="clsx(
+                'flex size-8 items-center justify-center rounded-md text-xs font-medium tabular-nums transition-colors',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan/40',
+                day.isSelected
+                  ? 'bg-cyan text-dark font-semibold'
+                  : day.isToday
+                    ? 'border border-cyan/50 text-cyan'
+                    : day.inMonth
+                      ? 'text-white hover:bg-dark-hover'
+                      : 'text-muted/50 hover:bg-dark-hover/60',
+                day.disabled && 'cursor-not-allowed opacity-30 hover:bg-transparent',
+              )"
+              @focus="focusedIso = day.iso"
+              @click="selectValue(day.iso)"
+            >
+              {{ day.day }}
+            </button>
+          </div>
+        </template>
+
+        <div v-else class="mt-1 grid grid-cols-3 gap-2">
           <button
-            v-for="day in calendarDays"
-            :key="day.iso"
+            v-for="month in monthCells"
+            :key="month.value"
             type="button"
-            :data-date="day.iso"
-            :tabindex="day.isFocused ? 0 : -1"
-            :disabled="day.disabled"
-            :aria-label="dayjs(day.iso).format('DD/MM/YYYY')"
-            :aria-current="day.isToday ? 'date' : undefined"
-            :aria-pressed="day.isSelected"
+            :data-period="month.value"
+            :tabindex="month.isFocused ? 0 : -1"
+            :disabled="month.disabled"
+            :aria-label="month.label"
+            :aria-current="month.isCurrent ? 'date' : undefined"
+            :aria-pressed="month.isSelected"
             :class="clsx(
-              'flex size-8 items-center justify-center rounded-md text-xs font-medium tabular-nums transition-colors',
+              'flex h-9 items-center justify-center rounded-md text-xs font-medium transition-colors',
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan/40',
-              day.isSelected
+              month.isSelected
                 ? 'bg-cyan text-dark font-semibold'
-                : day.isToday
+                : month.isCurrent
                   ? 'border border-cyan/50 text-cyan'
-                  : day.inMonth
-                    ? 'text-white hover:bg-dark-hover'
-                    : 'text-muted/50 hover:bg-dark-hover/60',
-              day.disabled && 'cursor-not-allowed opacity-30 hover:bg-transparent',
+                  : 'text-white hover:bg-dark-hover',
+              month.disabled && 'cursor-not-allowed opacity-30 hover:bg-transparent',
             )"
-            @focus="focusedIso = day.iso"
-            @click="selectDate(day.iso)"
+            @focus="focusedPeriod = month.value"
+            @click="selectValue(month.value)"
           >
-            {{ day.day }}
+            {{ month.label }}
           </button>
         </div>
 
@@ -346,9 +495,9 @@ onKeyStroke('Escape', () => {
             type="button"
             variant="ghost"
             size="sm"
-            @click="() => { focusedIso = todayIso; visibleMonth = dayjs().startOf('month'); focusDay() }"
+            @click="jumpToToday"
           >
-            Hôm nay
+            {{ isMonthMode ? 'Tháng này' : 'Hôm nay' }}
           </UiButton>
           <UiButton
             v-if="clearable && !required && modelValue"
