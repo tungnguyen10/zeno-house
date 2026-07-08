@@ -494,7 +494,7 @@ function signedClass(value: number): string {
         </div>
 
         <div class="grid grid-cols-1 gap-2 md:grid-cols-[minmax(0,1.15fr)_minmax(260px,0.85fr)]">
-          <div class="overflow-hidden rounded-xl border border-dark-border bg-dark-surface">
+          <div class="overflow-hidden rounded-xl border border-dark-border">
             <div class="border-b border-dark-border px-3 py-2 sm:px-4">
               <h3 class="text-sm font-semibold text-white">Doanh thu theo loại</h3>
             </div>
@@ -529,7 +529,7 @@ function signedClass(value: number): string {
             </div>
           </div>
 
-          <div class="overflow-hidden rounded-xl border border-dark-border bg-dark-surface">
+          <div class="overflow-hidden rounded-xl border border-dark-border">
             <div class="grid divide-y divide-dark-border">
               <div>
                 <div class="flex items-center justify-between gap-3 border-b border-dark-border px-3 py-2 sm:px-4">
@@ -565,7 +565,7 @@ function signedClass(value: number): string {
               <div class="">
                 <div class="flex items-start justify-between gap-3 border-b border-dark-border px-3 py-2.5 sm:px-4">
                   <div>
-                    <p class="text-[11px] uppercase tracking-wide text-muted">Phân bổ kỳ này</p>
+                    <p class="text-[10px] font-medium uppercase tracking-widest text-muted">Phân bổ kỳ này</p>
                     <h3 class="text-sm font-semibold text-white">Chi phí trả trước</h3>
                   </div>
                 </div>
