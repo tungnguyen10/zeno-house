@@ -12,7 +12,7 @@ export const ContractOccupantRepository = {
       .select('*, tenants(full_name, phone)')
       .eq('contract_id', contractId)
       .order('move_in_date', { ascending: true })
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'contractOccupants.listByContract')
     return (data ?? []).map(row => mapContractOccupant(row as Parameters<typeof mapContractOccupant>[0]))
   },
 
@@ -23,7 +23,7 @@ export const ContractOccupantRepository = {
       .select('*')
       .eq('id', occupantId)
       .maybeSingle()
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'contractOccupants.findById')
     return data ? mapContractOccupant(data) : null
   },
 
@@ -36,7 +36,7 @@ export const ContractOccupantRepository = {
       .eq('tenant_id', tenantId)
       .is('move_out_date', null)
       .maybeSingle()
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'contractOccupants.findActiveByTenant')
     return data ? mapContractOccupant(data) : null
   },
 
@@ -49,7 +49,7 @@ export const ContractOccupantRepository = {
       .is('move_out_date', null)
     if (excludeContractId) query = query.neq('contract_id', excludeContractId)
     const { data, error } = await query.maybeSingle()
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'contractOccupants.findActiveOccupancyByTenant')
     return data ? mapContractOccupant(data) : null
   },
 
@@ -66,7 +66,7 @@ export const ContractOccupantRepository = {
       })
       .select('*, tenants(full_name, phone)')
       .single()
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'contractOccupants.insert')
     return mapContractOccupant(data as Parameters<typeof mapContractOccupant>[0])
   },
 
@@ -78,7 +78,7 @@ export const ContractOccupantRepository = {
       .eq('id', occupantId)
       .select()
       .single()
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'contractOccupants.updateById')
     return mapContractOccupant(data)
   },
 
@@ -88,7 +88,7 @@ export const ContractOccupantRepository = {
       .from('contract_occupants')
       .delete()
       .eq('id', occupantId)
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'contractOccupants.deleteById')
   },
 
   async cloneActiveToContract(

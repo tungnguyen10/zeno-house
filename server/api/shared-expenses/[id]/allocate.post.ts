@@ -4,11 +4,9 @@ import { sharedExpenseAllocateSchema } from '~/utils/validators/shared-expenses'
 export default defineEventHandler(async (event) => {
   const user = await requireAuth(event)
   const id = getRouterParam(event, 'id')!
-  const body = await readBody(event)
-  const result = sharedExpenseAllocateSchema.safeParse(body)
-  if (!result.success) throwValidationError('Dữ liệu không hợp lệ', result.error.flatten())
+  const input = await parseBody(event, sharedExpenseAllocateSchema)
 
-  const allocation = await SharedExpenseService.allocate(event, user, id, result.data)
+  const allocation = await SharedExpenseService.allocate(event, user, id, input)
   setResponseStatus(event, 201)
   return { data: allocation }
 })

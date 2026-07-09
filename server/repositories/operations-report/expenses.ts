@@ -28,7 +28,7 @@ export const BuildingExpenseRepository = {
     const { data, error } = await query
       .order('expense_date', { ascending: false, nullsFirst: false })
       .order('created_at', { ascending: false })
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'operationsReport.expenses.list')
     return (data ?? []).map(mapBuildingExpense)
   },
 
@@ -39,7 +39,7 @@ export const BuildingExpenseRepository = {
       .select('*')
       .eq('id', id)
       .maybeSingle()
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'operationsReport.expenses.findById')
     return data ? mapBuildingExpense(data) : null
   },
 
@@ -66,7 +66,7 @@ export const BuildingExpenseRepository = {
       })
       .select()
       .single()
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'operationsReport.expenses.insert')
     return mapBuildingExpense(data)
   },
 
@@ -92,7 +92,7 @@ export const BuildingExpenseRepository = {
       .eq('id', id)
       .select()
       .single()
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'operationsReport.expenses.updateById')
     return mapBuildingExpense(data)
   },
 
@@ -113,7 +113,7 @@ export const BuildingExpenseRepository = {
       .eq('id', id)
       .select()
       .single()
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'operationsReport.expenses.voidById')
     return mapBuildingExpense(data)
   },
 
@@ -123,7 +123,7 @@ export const BuildingExpenseRepository = {
       .from('building_expenses')
       .delete()
       .eq('id', id)
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'operationsReport.expenses.deleteById')
   },
 
   async updateReceiptPath(
@@ -138,7 +138,7 @@ export const BuildingExpenseRepository = {
       .eq('id', id)
       .select()
       .single()
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'operationsReport.expenses.updateReceiptPath')
     return mapBuildingExpense(data)
   },
 }

@@ -5,12 +5,8 @@ const syncSchema = z.object({ building_id: z.string().min(1) })
 
 export default defineEventHandler(async (event) => {
   const user = await requireAuth(event)
-  const body = await readBody(event)
-  const result = syncSchema.safeParse(body)
-  if (!result.success) {
-    throwValidationError('building_id là bắt buộc', result.error.flatten())
-  }
+  const input = await parseBody(event, syncSchema, 'building_id là bắt buộc')
 
-  const added = await ContractServiceService.syncFromBuilding(event, user, result.data.building_id)
+  const added = await ContractServiceService.syncFromBuilding(event, user, input.building_id)
   return { data: { added } }
 })

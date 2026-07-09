@@ -42,7 +42,7 @@ export const RecurringExpenseRepository = {
       .eq('building_id', buildingId)
       .order('next_reminder_at', { ascending: true })
       .order('created_at', { ascending: false })
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'operationsReport.recurringExpenses.listByBuilding')
     return ((data ?? []) as RecurringExpenseRow[]).map(mapRecurringExpense)
   },
 
@@ -58,7 +58,7 @@ export const RecurringExpenseRepository = {
       .eq('is_active', true)
       .lte('next_reminder_at', throughDate)
       .order('next_reminder_at', { ascending: true })
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'operationsReport.recurringExpenses.listUpcoming')
     return ((data ?? []) as RecurringExpenseRow[]).map(mapRecurringExpense)
   },
 
@@ -68,7 +68,7 @@ export const RecurringExpenseRepository = {
       .select('*')
       .eq('id', id)
       .maybeSingle()
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'operationsReport.recurringExpenses.findById')
     return data ? mapRecurringExpense(data as RecurringExpenseRow) : null
   },
 
@@ -92,7 +92,7 @@ export const RecurringExpenseRepository = {
       })
       .select()
       .single()
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'operationsReport.recurringExpenses.insert')
     return mapRecurringExpense(data as RecurringExpenseRow)
   },
 
@@ -115,7 +115,7 @@ export const RecurringExpenseRepository = {
       .eq('id', id)
       .select()
       .single()
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'operationsReport.recurringExpenses.updateById')
     return mapRecurringExpense(data as RecurringExpenseRow)
   },
 
@@ -124,6 +124,6 @@ export const RecurringExpenseRepository = {
     const { error } = await table(client, 'recurring_expenses')
       .delete()
       .eq('id', id)
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'operationsReport.recurringExpenses.deleteById')
   },
 }

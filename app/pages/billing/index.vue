@@ -4,6 +4,7 @@ import type { BillingPeriodSummary } from '~/types/billing'
 import { BILLING_PERIOD_STATUSES } from '~/utils/constants/billing'
 import { formatCurrency } from '~/utils/format/currency'
 import { billingWorkspacePath } from '~/utils/routes/operational'
+import { getApiErrorMessage } from '~/utils/api-error'
 
 definePageMeta({ title: 'Vận hành tháng' })
 
@@ -190,8 +191,7 @@ async function submitOpenPeriod() {
     await navigateTo(billingWorkspacePath(building ?? { id: period.buildingId }, period.periodYear, period.periodMonth))
   }
   catch (err) {
-    const error = err as { data?: { error?: { message?: string } }; statusMessage?: string }
-    openError.value = error.data?.error?.message ?? error.statusMessage ?? 'Không thể mở kỳ vận hành'
+    openError.value = getApiErrorMessage(err, 'Không thể mở kỳ vận hành')
   }
   finally {
     openSubmitting.value = false

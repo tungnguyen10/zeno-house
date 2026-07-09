@@ -4,11 +4,8 @@ import { prepaidExpenseListQuerySchema } from '~/utils/validators/operations-rep
 export default defineEventHandler(async (event) => {
   const user = await requireAuth(event)
 
-  const result = prepaidExpenseListQuerySchema.safeParse(getQuery(event))
-  if (!result.success) {
-    throwValidationError('Tham số không hợp lệ', result.error.flatten())
-  }
+  const input = parseQuery(event, prepaidExpenseListQuerySchema, 'Tham số không hợp lệ')
 
-  const data = await PrepaidExpenseService.list(event, user, result.data)
+  const data = await PrepaidExpenseService.list(event, user, input)
   return { data }
 })

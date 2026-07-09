@@ -3,13 +3,9 @@ import { bulkPaymentsBodySchema } from '~/utils/validators/billing'
 
 export default defineEventHandler(async (event) => {
   const user = await requireAuth(event)
-  const body = await readBody(event)
-  const parsed = bulkPaymentsBodySchema.safeParse(body)
-  if (!parsed.success) {
-    throwValidationError('Dữ liệu không hợp lệ', parsed.error.flatten())
-  }
+  const input = await parseBody(event, bulkPaymentsBodySchema)
 
-  const result = await InvoicePaymentService.recordBatch(event, user, parsed.data)
+  const result = await InvoicePaymentService.recordBatch(event, user, input)
   setResponseStatus(event, 201)
   return { data: result }
 })

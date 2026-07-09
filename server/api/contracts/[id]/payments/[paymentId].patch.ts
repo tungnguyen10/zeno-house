@@ -6,12 +6,8 @@ export default defineEventHandler(async (event) => {
   const contractId = getRouterParam(event, 'id')!
   const paymentId = getRouterParam(event, 'paymentId')!
 
-  const body = await readBody(event)
-  const result = contractPaymentUpdateSchema.safeParse(body)
-  if (!result.success) {
-    throwValidationError('Dữ liệu không hợp lệ', result.error.flatten())
-  }
+  const input = await parseBody(event, contractPaymentUpdateSchema)
 
-  const payment = await ContractPaymentService.update(event, user, contractId, paymentId, result.data)
+  const payment = await ContractPaymentService.update(event, user, contractId, paymentId, input)
   return { data: payment }
 })

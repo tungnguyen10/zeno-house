@@ -44,7 +44,7 @@ export const ReserveFundRepository = {
       .select('*')
       .eq('building_id', buildingId)
       .maybeSingle()
-    if (existing.error) throw createError({ statusCode: 500, message: existing.error.message })
+    if (existing.error) throwDbError(existing.error, 'operationsReport.reserveFunds.findOrCreateByBuilding.existing')
     if (existing.data) return existing.data
 
     const created = await client
@@ -52,7 +52,7 @@ export const ReserveFundRepository = {
       .insert({ building_id: buildingId })
       .select()
       .single()
-    if (created.error) throw createError({ statusCode: 500, message: created.error.message })
+    if (created.error) throwDbError(created.error, 'operationsReport.reserveFunds.findOrCreateByBuilding.create')
     return created.data
   },
 
@@ -63,7 +63,7 @@ export const ReserveFundRepository = {
       .eq('fund_id', fundId)
       .order('date', { ascending: false })
       .order('created_at', { ascending: false })
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'operationsReport.reserveFunds.listTransactions')
     return ((data ?? []) as ReserveFundTransactionRow[]).map(mapReserveFundTransaction)
   },
 
@@ -110,7 +110,7 @@ export const ReserveFundRepository = {
       })
       .select()
       .single()
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'operationsReport.reserveFunds.insertTransaction')
     return mapReserveFundTransaction(data as ReserveFundTransactionRow)
   },
 
@@ -125,7 +125,7 @@ export const ReserveFundRepository = {
       .eq('type', 'withdrawal')
       .is('voided_at', null)
       .maybeSingle()
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'operationsReport.reserveFunds.findWithdrawalByExpense')
     return data ? mapReserveFundTransaction(data as ReserveFundTransactionRow) : null
   },
 
@@ -150,7 +150,7 @@ export const ReserveFundRepository = {
       .eq('source', 'expense_deduction')
       .is('voided_at', null)
       .maybeSingle()
-    if (existing.error) throw createError({ statusCode: 500, message: existing.error.message })
+    if (existing.error) throwDbError(existing.error, 'operationsReport.reserveFunds.upsertExpenseDeduction.existing')
 
     const payload = {
       fund_id: fund.id,
@@ -170,7 +170,7 @@ export const ReserveFundRepository = {
       ? table(client, 'reserve_fund_transactions').update(payload).eq('id', existingRow.id)
       : table(client, 'reserve_fund_transactions').insert(payload)
     const { data, error } = await query.select().single()
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'operationsReport.reserveFunds.upsertExpenseDeduction')
     return mapReserveFundTransaction(data as ReserveFundTransactionRow)
   },
 
@@ -192,7 +192,7 @@ export const ReserveFundRepository = {
       .eq('id', existing.id)
       .select()
       .single()
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'operationsReport.reserveFunds.voidExpenseDeduction')
     return mapReserveFundTransaction(data as ReserveFundTransactionRow)
   },
 
@@ -218,7 +218,7 @@ export const ReserveFundRepository = {
       .eq('period_year', input.periodYear)
       .eq('period_month', input.periodMonth)
       .maybeSingle()
-    if (existing.error) throw createError({ statusCode: 500, message: existing.error.message })
+    if (existing.error) throwDbError(existing.error, 'operationsReport.reserveFunds.upsertMonthlyAccrual.existing')
 
     const payload = {
       fund_id: fund.id,
@@ -244,7 +244,7 @@ export const ReserveFundRepository = {
       ? table(client, 'reserve_fund_transactions').update(payload).eq('id', existingRow.id)
       : table(client, 'reserve_fund_transactions').insert(payload)
     const { data, error } = await query.select().single()
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'operationsReport.reserveFunds.upsertMonthlyAccrual')
     return mapReserveFundTransaction(data as ReserveFundTransactionRow)
   },
 
@@ -255,7 +255,7 @@ export const ReserveFundRepository = {
       .eq('building_id', buildingId)
       .order('effective_from_period_year', { ascending: false })
       .order('effective_from_period_month', { ascending: false })
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'operationsReport.reserveFunds.listRatesByBuilding')
     return ((data ?? []) as BuildingReserveFundRateRow[]).map(mapBuildingReserveFundRate)
   },
 
@@ -265,7 +265,7 @@ export const ReserveFundRepository = {
       .select('*')
       .eq('id', id)
       .maybeSingle()
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'operationsReport.reserveFunds.findRateById')
     return data ? mapBuildingReserveFundRate(data as BuildingReserveFundRateRow) : null
   },
 
@@ -287,7 +287,7 @@ export const ReserveFundRepository = {
       })
       .select()
       .single()
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'operationsReport.reserveFunds.insertRate')
     return mapBuildingReserveFundRate(data as BuildingReserveFundRateRow)
   },
 
@@ -312,7 +312,7 @@ export const ReserveFundRepository = {
       .eq('id', id)
       .select()
       .single()
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'operationsReport.reserveFunds.updateRateById')
     return mapBuildingReserveFundRate(data as BuildingReserveFundRateRow)
   },
 }

@@ -2,6 +2,7 @@ import { useDebounceFn } from '@vueuse/core'
 import type { ContractWithDetails } from '~/types/contracts'
 import type { ApiSuccess } from '~/types/api'
 import { contractCreateSchema, contractUpdateSchema } from '~/utils/validators/contracts'
+import { getApiErrorMessage } from '~/utils/api-error'
 import type { ContractCreateInput, ContractUpdateInput } from '~/utils/validators/contracts'
 
 const CONTRACT_DRAFT_VERSION = 1
@@ -221,8 +222,7 @@ export function useContractForm<T = unknown>(options: UseContractFormOptions<T> 
       return response.data
     }
     catch (e: unknown) {
-      const err = e as { data?: { error?: { message?: string } } }
-      apiError.value = err?.data?.error?.message ?? 'Đã xảy ra lỗi. Vui lòng thử lại.'
+      apiError.value = getApiErrorMessage(e)
       return null
     }
     finally {
@@ -249,8 +249,7 @@ export function useContractForm<T = unknown>(options: UseContractFormOptions<T> 
       return response.data
     }
     catch (e: unknown) {
-      const err = e as { data?: { error?: { message?: string } } }
-      apiError.value = err?.data?.error?.message ?? 'Đã xảy ra lỗi. Vui lòng thử lại.'
+      apiError.value = getApiErrorMessage(e)
       return null
     }
     finally {

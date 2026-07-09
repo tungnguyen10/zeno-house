@@ -4,11 +4,8 @@ import { operationsReportQuerySchema } from '~/utils/validators/operations-repor
 export default defineEventHandler(async (event) => {
   const user = await requireAuth(event)
 
-  const result = operationsReportQuerySchema.safeParse(getQuery(event))
-  if (!result.success) {
-    throwValidationError('Tham số không hợp lệ', result.error.flatten())
-  }
+  const input = parseQuery(event, operationsReportQuerySchema, 'Tham số không hợp lệ')
 
-  const report = await OperationsReportService.getReport(event, user, result.data)
+  const report = await OperationsReportService.getReport(event, user, input)
   return { data: report }
 })

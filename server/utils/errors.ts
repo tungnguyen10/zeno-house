@@ -19,11 +19,22 @@ export function throwValidationError(message = 'Dữ liệu không hợp lệ', 
   })
 }
 
-export function throwConflict(message = 'Xung đột dữ liệu'): never {
+export function throwConflict(message = 'Xung đột dữ liệu', details?: unknown): never {
   throw createError({
     statusCode: 409,
-    data: { error: { code: 'CONFLICT', message } },
+    data: { error: { code: 'CONFLICT', message, details } },
   })
+}
+
+/**
+ * Normalize a Supabase/Postgres error into the standard `INTERNAL` envelope.
+ *
+ * Repositories must use this instead of `createError({ statusCode: 500, message: error.message })`
+ * so raw database messages never leak to the client. Delegates to `throwInternal`, which logs the
+ * original error with context and returns a generic user-facing message.
+ */
+export function throwDbError(error: unknown, context?: string): never {
+  throwInternal(error, context)
 }
 
 export function throwInternal(originalError: unknown, context?: string): never {

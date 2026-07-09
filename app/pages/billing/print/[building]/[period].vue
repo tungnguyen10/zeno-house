@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import BillingPrintCard from '~/components/billing/BillingPrintCard.vue'
+import { getApiErrorMessage } from '~/utils/api-error'
 
 definePageMeta({ title: 'In phiếu thu', layout: false })
 
@@ -32,8 +33,7 @@ async function resolvePeriod() {
     periodId.value = resp.data.id
   }
   catch (err) {
-    const e = err as { data?: { error?: { message?: string } }; statusMessage?: string }
-    resolveError.value = e.data?.error?.message ?? e.statusMessage ?? 'Không thể tải kỳ vận hành'
+    resolveError.value = getApiErrorMessage(err, 'Không thể tải kỳ vận hành')
   }
 }
 

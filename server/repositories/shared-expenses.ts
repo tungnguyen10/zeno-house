@@ -13,7 +13,7 @@ async function buildingIdsFor(event: H3Event, sharedExpenseId: string): Promise<
     .from('shared_expense_buildings')
     .select('building_id')
     .eq('shared_expense_id', sharedExpenseId)
-  if (error) throw createError({ statusCode: 500, message: error.message })
+  if (error) throwDbError(error, 'sharedExpenses.buildingIdsFor')
   return (data ?? []).map(row => row.building_id)
 }
 
@@ -29,7 +29,7 @@ export const SharedExpenseRepository = {
       .select('*')
       .eq('owner_id', ownerId)
       .order('created_at', { ascending: false })
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'sharedExpenses.listByOwner')
     return Promise.all(((data ?? []) as SharedExpenseRow[]).map(row => mapWithBuildings(event, row)))
   },
 
@@ -39,7 +39,7 @@ export const SharedExpenseRepository = {
       .from('shared_expenses')
       .select('*')
       .order('created_at', { ascending: false })
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'sharedExpenses.listAll')
     return Promise.all(((data ?? []) as SharedExpenseRow[]).map(row => mapWithBuildings(event, row)))
   },
 
@@ -50,7 +50,7 @@ export const SharedExpenseRepository = {
       .select('*')
       .eq('id', id)
       .maybeSingle()
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'sharedExpenses.findById')
     return data ? mapWithBuildings(event, data as SharedExpenseRow) : null
   },
 
@@ -74,7 +74,7 @@ export const SharedExpenseRepository = {
       })
       .select()
       .single()
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'sharedExpenses.insert')
     await this.replaceBuildings(event, data.id, input.building_ids)
     return mapWithBuildings(event, data as SharedExpenseRow)
   },
@@ -99,12 +99,12 @@ export const SharedExpenseRepository = {
         .eq('id', id)
         .select()
         .single()
-      if (error) throw createError({ statusCode: 500, message: error.message })
+      if (error) throwDbError(error, 'sharedExpenses.update')
       void data
     }
     if (input.building_ids) await this.replaceBuildings(event, id, input.building_ids)
     const refreshed = await this.findById(event, id)
-    if (!refreshed) throw createError({ statusCode: 500, message: 'Shared expense disappeared' })
+    if (!refreshed) throwInternal(new Error('Shared expense disappeared'), 'sharedExpenses.update.reread')
     return refreshed
   },
 
@@ -114,7 +114,7 @@ export const SharedExpenseRepository = {
       .from('shared_expenses')
       .update({ is_active: false })
       .eq('id', id)
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'sharedExpenses.deactivate')
   },
 
   async replaceBuildings(event: H3Event, id: string, buildingIds: string[]): Promise<void> {
@@ -123,10 +123,10 @@ export const SharedExpenseRepository = {
       .from('shared_expense_buildings')
       .delete()
       .eq('shared_expense_id', id)
-    if (removed.error) throw createError({ statusCode: 500, message: removed.error.message })
+    if (removed.error) throwDbError(removed.error, 'sharedExpenses.replaceBuildings.remove')
     const rows = buildingIds.map(building_id => ({ shared_expense_id: id, building_id }))
     const inserted = await client.from('shared_expense_buildings').insert(rows)
-    if (inserted.error) throw createError({ statusCode: 500, message: inserted.error.message })
+    if (inserted.error) throwDbError(inserted.error, 'sharedExpenses.replaceBuildings.insert')
   },
 
   async hasAllocation(
@@ -142,7 +142,7 @@ export const SharedExpenseRepository = {
       .select('id')
       .ilike('note', `%${marker}%`)
       .limit(1)
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'sharedExpenses.hasAllocation')
     return (data ?? []).length > 0
   },
 }

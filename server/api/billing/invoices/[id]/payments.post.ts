@@ -6,13 +6,9 @@ export default defineEventHandler(async (event) => {
   const id = getRouterParam(event, 'id')
   if (!id) throwValidationError('Thiếu mã hoá đơn')
 
-  const body = await readBody(event)
-  const parsed = invoicePaymentCreateSchema.safeParse(body)
-  if (!parsed.success) {
-    throwValidationError('Dữ liệu không hợp lệ', parsed.error.flatten())
-  }
+  const input = await parseBody(event, invoicePaymentCreateSchema)
 
-  const result = await InvoicePaymentService.record(event, user, id!, parsed.data)
+  const result = await InvoicePaymentService.record(event, user, id!, input)
   setResponseStatus(event, 201)
   return { data: result }
 })

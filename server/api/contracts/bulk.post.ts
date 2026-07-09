@@ -4,12 +4,8 @@ import { contractBulkActionSchema } from '~/utils/validators/contracts'
 export default defineEventHandler(async (event) => {
   const user = await requireAuth(event)
 
-  const body = await readBody(event)
-  const result = contractBulkActionSchema.safeParse(body)
-  if (!result.success) {
-    throwValidationError('Dữ liệu không hợp lệ', result.error.flatten())
-  }
+  const input = await parseBody(event, contractBulkActionSchema)
 
-  const data = await ContractService.bulkAction(event, user, result.data)
+  const data = await ContractService.bulkAction(event, user, input)
   return { data }
 })

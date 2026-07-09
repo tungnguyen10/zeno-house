@@ -4,12 +4,8 @@ import { buildingServiceUpsertSchema } from '~/utils/validators/building-service
 export default defineEventHandler(async (event) => {
   const user = await requireAuth(event)
 
-  const body = await readBody(event)
-  const result = buildingServiceUpsertSchema.safeParse(body)
-  if (!result.success) {
-    throwValidationError('Dữ liệu không hợp lệ', result.error.flatten())
-  }
+  const input = await parseBody(event, buildingServiceUpsertSchema)
 
-  const service = await BuildingServiceService.upsert(event, user, result.data)
+  const service = await BuildingServiceService.upsert(event, user, input)
   return { data: service }
 })

@@ -35,6 +35,15 @@ type ApiError      = { error: { code: string; message: string; details?: unknown
 | `VALIDATION_ERROR` | 422 | Input failed Zod schema |
 | `CONFLICT` | 409 | State conflict (duplicate, etc.) |
 
+## Shared Helpers
+
+Use the auto-imported helpers in `server/utils/` instead of hand-rolling validation, pagination, or error envelopes:
+
+- `parseBody(event, schema, message?)` / `parseQuery(event, schema, message?)` — validate and return typed data; on failure they throw `VALIDATION_ERROR` with `error.flatten()` as `details`.
+- `paginated(items, { total, page, limit })` — build `{ data, meta: { total, page, limit, totalPages } }`.
+- `throwForbidden` / `throwNotFound` / `throwValidationError` / `throwConflict(message, details?)` — standard error envelopes.
+- `throwDbError(error, context)` — repository DB errors. Never surface a raw Supabase message to the client; this logs the original error with `context` and returns a generic `INTERNAL` envelope.
+
 ## ✓ Correct Usage
 
 **API handler — validate → auth → service → envelope:**
@@ -42,30 +51,16 @@ type ApiError      = { error: { code: string; message: string; details?: unknown
 // server/api/buildings/index.post.ts
 import { buildingSchema } from '~/utils/validators/buildings'
 import { BuildingService } from '~/server/services/buildings'
-import { requireAuth } from '~/server/utils/auth'
 
 export default defineEventHandler(async (event) => {
   // 1. Auth guard
   const user = await requireAuth(event)
 
-  // 2. Validate input
-  const body = await readBody(event)
-  const result = buildingSchema.safeParse(body)
-  if (!result.success) {
-    throw createError({
-      statusCode: 422,
-      data: {
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: 'Dữ liệu không hợp lệ',
-          details: result.error.flatten(),
-        },
-      },
-    })
-  }
+  // 2. Validate input (throws VALIDATION_ERROR with flattened details on failure)
+  const input = await parseBody(event, buildingSchema)
 
   // 3. Delegate to service
-  const building = await BuildingService.create(event, user, result.data)
+  const building = await BuildingService.create(event, user, input)
 
   // 4. Return envelope
   return { data: building }
@@ -78,16 +73,10 @@ export default defineEventHandler(async (event) => {
 export default defineEventHandler(async (event) => {
   const user = await requireAuth(event)
 
-  const query = getQuery(event)
-  const page = Number(query.page ?? 1)
-  const limit = Number(query.limit ?? 20)
-
+  const { page, limit } = parseQuery(event, buildingListQuerySchema)
   const { items, total } = await BuildingService.list(event, user, { page, limit })
 
-  return {
-    data: items,
-    meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
-  }
+  return paginated(items, { total, page, limit })
 })
 ```
 
@@ -143,7 +132,7 @@ export const BuildingRepository = {
       .order('created_at', { ascending: false })
       .range(from, to)
 
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'buildings.findAll')
     return { items: (data ?? []).map(mapBuilding), total: count ?? 0 }
   },
 
@@ -155,7 +144,7 @@ export const BuildingRepository = {
       .select()
       .single()
 
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'buildings.insert')
     return mapBuilding(data)
   },
 }
@@ -197,6 +186,10 @@ export const BuildingRepository = {
 // ✗ Đừng trả raw DB row ra response
 const { data } = await client.from('buildings').select('*').single()
 return data  // thiếu mapper — expose DB shape
+
+// ✗ Đừng leak raw DB error ra client
+if (error) throw createError({ statusCode: 500, message: error.message })
+// → Dùng: if (error) throwDbError(error, '<repo>.<method>')
 
 // ✗ Đừng dùng inconsistent error shape
 throw createError({ statusCode: 400, message: 'lỗi' })

@@ -4,13 +4,9 @@ import { assignmentCreateSchema } from '~/utils/validators/assignments'
 export default defineEventHandler(async (event) => {
   const user = await requireAuth(event)
 
-  const body = await readBody(event)
-  const parsed = assignmentCreateSchema.safeParse(body)
-  if (!parsed.success) {
-    throwValidationError('Dữ liệu phân quyền không hợp lệ', parsed.error.flatten())
-  }
+  const input = await parseBody(event, assignmentCreateSchema, 'Dữ liệu phân quyền không hợp lệ')
 
-  const assignment = await AssignmentService.create(event, user, parsed.data)
+  const assignment = await AssignmentService.create(event, user, input)
   setResponseStatus(event, 201)
   return { data: assignment }
 })

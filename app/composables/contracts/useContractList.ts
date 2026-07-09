@@ -1,6 +1,13 @@
 import type { ContractStatus, ContractWithDetails } from '~/types/contracts'
 import type { ApiSuccess } from '~/types/api'
-import { useRouteListQuerySync } from '~/composables/useRouteListQuerySync'
+import {
+  copyStringQuery,
+  readQueryEnum,
+  readQueryEnumArray,
+  readQueryNumber,
+  readQueryString,
+  useRouteListQuerySync,
+} from '~/composables/useRouteListQuerySync'
 
 export const CONTRACT_LIST_ASYNC_KEY = 'contracts:list'
 
@@ -15,35 +22,18 @@ const SORT_FIELDS: SortField[] = ['start_date', 'end_date', 'created_at', 'month
 const SORT_ORDERS: SortOrder[] = ['asc', 'desc']
 const STATUSES: ContractStatus[] = ['active', 'expired', 'terminated', 'renewed']
 
-function readStatuses(raw: unknown): ContractStatus[] {
-  const arr = Array.isArray(raw) ? raw : raw == null ? [] : [raw]
-  return arr
-    .map(v => String(v))
-    .filter((v): v is ContractStatus => (STATUSES as string[]).includes(v))
-}
-
-function readSortField(raw: unknown): SortField {
-  const v = typeof raw === 'string' ? raw : ''
-  return (SORT_FIELDS as string[]).includes(v) ? (v as SortField) : 'created_at'
-}
-
-function readSortOrder(raw: unknown): SortOrder {
-  const v = typeof raw === 'string' ? raw : ''
-  return (SORT_ORDERS as string[]).includes(v) ? (v as SortOrder) : 'desc'
-}
-
 export function useContractList() {
   const route = useRoute()
 
-  const page = ref(Math.max(1, Number(route.query.page ?? 1) || 1))
-  const limit = ref(Math.min(100, Math.max(1, Number(route.query.limit ?? 20) || 20)))
-  const q = ref<string>(typeof route.query.q === 'string' ? route.query.q : '')
-  const buildingFilter = ref<string>(typeof route.query.building_id === 'string' ? route.query.building_id : '')
-  const roomFilter = ref<string>(typeof route.query.room_id === 'string' ? route.query.room_id : '')
-  const tenantFilter = ref<string>(typeof route.query.tenant_id === 'string' ? route.query.tenant_id : '')
-  const status = ref<ContractStatus[]>(readStatuses(route.query.status))
-  const sort = ref<SortField>(readSortField(route.query.sort))
-  const order = ref<SortOrder>(readSortOrder(route.query.order))
+  const page = ref(readQueryNumber(route.query.page, { fallback: 1, min: 1 }))
+  const limit = ref(readQueryNumber(route.query.limit, { fallback: 20, min: 1, max: 100 }))
+  const q = ref<string>(readQueryString(route.query.q))
+  const buildingFilter = ref<string>(readQueryString(route.query.building_id))
+  const roomFilter = ref<string>(readQueryString(route.query.room_id))
+  const tenantFilter = ref<string>(readQueryString(route.query.tenant_id))
+  const status = ref<ContractStatus[]>(readQueryEnumArray(route.query.status, STATUSES))
+  const sort = ref<SortField>(readQueryEnum(route.query.sort, SORT_FIELDS, 'created_at'))
+  const order = ref<SortOrder>(readQueryEnum(route.query.order, SORT_ORDERS, 'desc'))
 
   // Backward-compat single-value status filter (kept for callers that still
   // bind a single select). Mirrors into `status` array on change.
@@ -60,15 +50,15 @@ export function useContractList() {
     resetPageOn: [q, buildingFilter, roomFilter, tenantFilter, status, sort, order],
     syncOn: [page],
     parseRoute(newQuery) {
-      const newPage = Math.max(1, Number(newQuery.page ?? 1) || 1)
-      const newLimit = Math.min(100, Math.max(1, Number(newQuery.limit ?? 20) || 20))
-      const newQ = typeof newQuery.q === 'string' ? newQuery.q : ''
-      const newBuilding = typeof newQuery.building_id === 'string' ? newQuery.building_id : ''
-      const newRoom = typeof newQuery.room_id === 'string' ? newQuery.room_id : ''
-      const newTenant = typeof newQuery.tenant_id === 'string' ? newQuery.tenant_id : ''
-      const newStatus = readStatuses(newQuery.status)
-      const newSort = readSortField(newQuery.sort)
-      const newOrder = readSortOrder(newQuery.order)
+      const newPage = readQueryNumber(newQuery.page, { fallback: 1, min: 1 })
+      const newLimit = readQueryNumber(newQuery.limit, { fallback: 20, min: 1, max: 100 })
+      const newQ = readQueryString(newQuery.q)
+      const newBuilding = readQueryString(newQuery.building_id)
+      const newRoom = readQueryString(newQuery.room_id)
+      const newTenant = readQueryString(newQuery.tenant_id)
+      const newStatus = readQueryEnumArray(newQuery.status, STATUSES)
+      const newSort = readQueryEnum(newQuery.sort, SORT_FIELDS, 'created_at')
+      const newOrder = readQueryEnum(newQuery.order, SORT_ORDERS, 'desc')
 
       if (page.value !== newPage) page.value = newPage
       if (limit.value !== newLimit) limit.value = newLimit
@@ -81,18 +71,7 @@ export function useContractList() {
       if (order.value !== newOrder) order.value = newOrder
     },
     buildQuery(query) {
-      const next: Record<string, string | string[] | undefined> = {}
-
-      for (const [k, v] of Object.entries(query)) {
-        if (v === null || v === undefined) continue
-        if (Array.isArray(v)) {
-          const filtered = v.filter((item): item is string => typeof item === 'string')
-          if (filtered.length > 0) next[k] = filtered
-        }
-        else if (typeof v === 'string') {
-          next[k] = v
-        }
-      }
+      const next = copyStringQuery(query)
 
       next.page = page.value > 1 ? String(page.value) : undefined
       next.q = q.value || undefined

@@ -6,12 +6,8 @@ export default defineEventHandler(async (event) => {
   const contractId = getRouterParam(event, 'id')!
   const occupantId = getRouterParam(event, 'occupantId')!
 
-  const body = await readBody(event)
-  const result = contractOccupantMoveOutSchema.safeParse(body)
-  if (!result.success) {
-    throwValidationError('Dữ liệu không hợp lệ', result.error.flatten())
-  }
+  const input = await parseBody(event, contractOccupantMoveOutSchema)
 
-  const occupant = await ContractOccupantService.moveOut(event, user, contractId, occupantId, result.data)
+  const occupant = await ContractOccupantService.moveOut(event, user, contractId, occupantId, input)
   return { data: occupant }
 })

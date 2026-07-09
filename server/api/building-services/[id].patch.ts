@@ -5,12 +5,8 @@ export default defineEventHandler(async (event) => {
   const user = await requireAuth(event)
 
   const id = getRouterParam(event, 'id') as string
-  const body = await readBody(event)
-  const result = buildingServiceUpdateSchema.safeParse(body)
-  if (!result.success) {
-    throwValidationError('Dữ liệu không hợp lệ', result.error.flatten())
-  }
+  const input = await parseBody(event, buildingServiceUpdateSchema)
 
-  const service = await BuildingServiceService.update(event, user, id, result.data)
+  const service = await BuildingServiceService.update(event, user, id, input)
   return { data: service }
 })

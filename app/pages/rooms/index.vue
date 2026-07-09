@@ -8,6 +8,7 @@ import type { ContractServiceUpdateInput } from '~/utils/validators/contract-ser
 import { roomFormToApiPayload, type RoomFormData } from '~/components/rooms/RoomForm.vue'
 import type { RoomBulkAction, RoomBulkResult } from '~/composables/rooms/useRoomBulkActions'
 import { BULK_FAILURE_LABELS_COMMON } from '~/utils/constants/bulk-failure-labels'
+import { getApiErrorDetails, getApiErrorMessage } from '~/utils/api-error'
 
 definePageMeta({ title: 'Phòng' })
 
@@ -191,10 +192,10 @@ async function onSubmitEdit(data: RoomFormData) {
     await refresh()
   }
   catch (e: unknown) {
-    const err = e as { data?: { error?: { message?: string; details?: { fieldErrors?: Record<string, string[]> } } } }
-    editError.value = err?.data?.error?.message ?? 'Không thể cập nhật phòng. Vui lòng thử lại.'
-    if (err?.data?.error?.details?.fieldErrors) {
-      editFieldErrors.value = err.data.error.details.fieldErrors
+    editError.value = getApiErrorMessage(e, 'Không thể cập nhật phòng. Vui lòng thử lại.')
+    const details = getApiErrorDetails<{ fieldErrors?: Record<string, string[]> }>(e)
+    if (details?.fieldErrors) {
+      editFieldErrors.value = details.fieldErrors
     }
   }
   finally {

@@ -6,14 +6,10 @@ export default defineEventHandler(async (event) => {
   const id = getRouterParam(event, 'id')
   if (!id) throwValidationError('Thiếu mã kỳ vận hành')
 
-  const body = await readBody(event)
-  const parsed = invoicesPrintedSchema.safeParse(body)
-  if (!parsed.success) {
-    throwValidationError('Dữ liệu không hợp lệ', parsed.error.flatten())
-  }
+  const input = await parseBody(event, invoicesPrintedSchema)
 
   const result = await BillingExportService.recordInvoicesPrinted(
-    event, user, id!, parsed.data.invoice_ids,
+    event, user, id!, input.invoice_ids,
   )
   return { data: result }
 })

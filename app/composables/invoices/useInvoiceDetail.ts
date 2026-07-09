@@ -1,5 +1,6 @@
 import type { ApiSuccess } from '~/types/api'
 import type { InvoiceWithCharges } from '~/types/billing'
+import { getApiErrorMessage } from '~/utils/api-error'
 
 export function useInvoiceDetail() {
   const detail = ref<InvoiceWithCharges | null>(null)
@@ -16,8 +17,7 @@ export function useInvoiceDetail() {
       return resp.data
     }
     catch (err) {
-      const e = err as { data?: { error?: { message?: string } }; message?: string }
-      error.value = e.data?.error?.message ?? e.message ?? 'Không thể tải hoá đơn'
+      error.value = getApiErrorMessage(err, 'Không thể tải hoá đơn')
       return null
     }
     finally {

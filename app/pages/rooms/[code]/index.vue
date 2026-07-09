@@ -8,6 +8,7 @@ import type { Room } from '~/types/rooms'
 import type { ContractServiceUpdateInput } from '~/utils/validators/contract-services'
 import { formatCurrency } from '~/utils/format/currency'
 import { buildingPath, contractPath, roomEditPath, roomPath } from '~/utils/routes/operational'
+import { getApiErrorCode, getApiErrorDetails, type ApiErrorLike } from '~/utils/api-error'
 import { isUuid } from '~/utils/format/slug'
 
 definePageMeta({ title: 'Chi tiết phòng' })
@@ -122,12 +123,9 @@ async function confirmDelete() {
     await navigateTo('/rooms')
   }
   catch (e: unknown) {
-    const err = e as {
-      statusCode?: number
-      data?: { error?: { code?: string; details?: ConflictDetails } }
-    }
-    if (err?.statusCode === 409 || err?.data?.error?.code === 'CONFLICT') {
-      conflictDetails.value = err.data?.error?.details ?? {}
+    const err = e as ApiErrorLike
+    if (err.statusCode === 409 || getApiErrorCode(err) === 'CONFLICT') {
+      conflictDetails.value = getApiErrorDetails<ConflictDetails>(err) ?? {}
       showDeleteModal.value = false
     }
     else {

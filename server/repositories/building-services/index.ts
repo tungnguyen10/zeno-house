@@ -13,7 +13,7 @@ export const BuildingServiceRepository = {
       .eq('id', id)
       .maybeSingle()
 
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'buildingServices.findById')
     return data ? mapBuildingService(data as Parameters<typeof mapBuildingService>[0]) : null
   },
 
@@ -25,7 +25,7 @@ export const BuildingServiceRepository = {
       .eq('building_id', buildingId)
       .order('sort_order', { ascending: true })
 
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'buildingServices.findByBuilding')
     return (data ?? []).map(row => mapBuildingService(row as Parameters<typeof mapBuildingService>[0]))
   },
 
@@ -47,7 +47,7 @@ export const BuildingServiceRepository = {
       .select('*, service_catalog(*)')
       .single()
 
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'buildingServices.upsert')
     return mapBuildingService(data as Parameters<typeof mapBuildingService>[0])
   },
 
@@ -64,14 +64,14 @@ export const BuildingServiceRepository = {
       .select('*, service_catalog(*)')
       .single()
 
-    if (error) throw createError({ statusCode: 500, message: error.message })
-    if (!data) throw createError({ statusCode: 404, message: 'Không tìm thấy' })
+    if (error) throwDbError(error, 'buildingServices.update')
+    if (!data) throwNotFound('Không tìm thấy')
     return mapBuildingService(data as Parameters<typeof mapBuildingService>[0])
   },
 
   async remove(event: H3Event, id: string): Promise<void> {
     const client = await serverSupabaseClient(event)
     const { error } = await client.from('building_services').delete().eq('id', id)
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'buildingServices.remove')
   },
 }

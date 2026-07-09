@@ -12,7 +12,7 @@ export const ContractPaymentRepository = {
       .select('*')
       .eq('contract_id', contractId)
       .order('paid_at', { ascending: false })
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'contractPayments.listByContract')
     return (data ?? []).map(mapContractPayment)
   },
 
@@ -23,7 +23,7 @@ export const ContractPaymentRepository = {
       .select('*')
       .eq('id', paymentId)
       .maybeSingle()
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'contractPayments.findById')
     return data ? mapContractPayment(data) : null
   },
 
@@ -43,7 +43,7 @@ export const ContractPaymentRepository = {
       })
       .select()
       .single()
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'contractPayments.insert')
     return mapContractPayment(data)
   },
 
@@ -63,7 +63,7 @@ export const ContractPaymentRepository = {
       .eq('id', paymentId)
       .select()
       .single()
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'contractPayments.updateById')
     return mapContractPayment(data)
   },
 
@@ -73,6 +73,6 @@ export const ContractPaymentRepository = {
       .from('contract_payments')
       .delete()
       .eq('id', paymentId)
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'contractPayments.deleteById')
   },
 }

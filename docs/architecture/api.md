@@ -11,6 +11,12 @@ Handlers should:
 3. Call a service.
 4. Return the standard envelope.
 
+Shared helpers in `server/utils/` remove per-handler boilerplate (all auto-imported):
+
+- `parseBody(event, schema, message?)` / `parseQuery(event, schema, message?)` validate and return typed data, throwing `VALIDATION_ERROR` with `error.flatten()` as `details` on failure.
+- `paginated(items, { total, page, limit })` builds the `{ data, meta: { total, page, limit, totalPages } }` envelope.
+- `throwForbidden` / `throwNotFound` / `throwValidationError` / `throwConflict(message, details?)` / `throwDbError(error, context)` raise standardized error envelopes.
+
 ```ts
 type ApiSuccess<T> = { data: T; meta?: Record<string, unknown> }
 type ApiError = { error: { code: string; message: string; details?: unknown } }
@@ -142,8 +148,9 @@ Use standardized error codes where possible:
 - `NOT_FOUND`
 - `VALIDATION_ERROR`
 - `CONFLICT`
+- `INTERNAL`
 
-Server services should raise domain-specific conflicts rather than letting database errors leak to the UI.
+Server services should raise domain-specific conflicts rather than letting database errors leak to the UI. Repositories wrap Supabase failures with `throwDbError(error, context)`, which logs the original error server-side and returns a generic `INTERNAL` envelope — raw DB messages are never sent to the client. Client code reads error fields through `~/utils/api-error` (`getApiErrorMessage` / `getApiErrorCode` / `getApiErrorDetails`), which only trust the `data.error` envelope and fall back to a caller-provided message rather than leaking raw `FetchError` text.
 
 ## Operations Report
 

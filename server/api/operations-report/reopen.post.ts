@@ -3,11 +3,8 @@ import { operationsReportReopenSchema } from '~/utils/validators/operations-repo
 
 export default defineEventHandler(async (event) => {
   const user = await requireAuth(event)
-  const result = operationsReportReopenSchema.safeParse(await readBody(event))
-  if (!result.success) {
-    throwValidationError('Dữ liệu không hợp lệ', result.error.flatten())
-  }
+  const input = await parseBody(event, operationsReportReopenSchema)
 
-  const closure = await OperationsReportService.reopen(event, user, result.data)
+  const closure = await OperationsReportService.reopen(event, user, input)
   return { data: closure }
 })

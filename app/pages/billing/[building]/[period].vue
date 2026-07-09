@@ -7,6 +7,7 @@ import type { BillingPaymentsIntent } from '~/components/billing/BillingPayments
 import BillingAuditDrawer from '~/components/billing/BillingAuditDrawer.vue'
 import BillingCloseStep from '~/components/billing/BillingCloseStep.vue'
 import BillingUnissueModal from '~/components/billing/BillingUnissueModal.vue'
+import { getApiErrorCode, getApiErrorMessage, type ApiErrorLike } from '~/utils/api-error'
 
 definePageMeta({ title: 'Kỳ vận hành' })
 
@@ -37,19 +38,14 @@ async function resolvePeriod() {
     periodId.value = resp.data.id
   }
   catch (err) {
-    const e = err as {
-      status?: number
-      statusCode?: number
-      data?: { error?: { code?: string; message?: string } }
-      statusMessage?: string
-    }
-    const isForbidden = e.status === 403 || e.statusCode === 403 || e.data?.error?.code === 'FORBIDDEN'
+    const e = err as ApiErrorLike & { status?: number }
+    const isForbidden = e.status === 403 || e.statusCode === 403 || getApiErrorCode(err) === 'FORBIDDEN'
     if (route.query.invoice && isForbidden) {
-      toast.info(e.data?.error?.message ?? 'Không có quyền truy cập kỳ vận hành này')
+      toast.info(getApiErrorMessage(err, 'Không có quyền truy cập kỳ vận hành này'))
       await navigateTo('/invoices')
       return
     }
-    resolveError.value = e.data?.error?.message ?? e.statusMessage ?? 'Không thể mở kỳ vận hành'
+    resolveError.value = getApiErrorMessage(err, 'Không thể mở kỳ vận hành')
   }
   finally {
     resolving.value = false
@@ -178,8 +174,7 @@ async function closePeriodFromModal() {
     await loadOverview()
   }
   catch (err) {
-    const e = err as { data?: { error?: { message?: string } }; message?: string }
-    toast.error(e.data?.error?.message ?? e.message ?? 'Chốt kỳ thất bại')
+    toast.error(getApiErrorMessage(err, 'Chốt kỳ thất bại'))
     throw err
   }
 }
@@ -193,8 +188,7 @@ async function reopenPeriodFromModal() {
     reopenOpen.value = false
   }
   catch (err) {
-    const e = err as { data?: { error?: { message?: string } }; message?: string }
-    reopenError.value = e.data?.error?.message ?? e.message ?? 'Mở lại kỳ thất bại'
+    reopenError.value = getApiErrorMessage(err, 'Mở lại kỳ thất bại')
     toast.error(reopenError.value)
   }
   finally {
@@ -214,8 +208,7 @@ async function saveReadingsWithToast(
     if (options?.refreshDrafts ?? options?.refresh ?? true) await loadDrafts()
   }
   catch (err) {
-    const e = err as { data?: { error?: { message?: string } }; message?: string }
-    toast.error(e.data?.error?.message ?? e.message ?? 'Lưu chỉ số thất bại')
+    toast.error(getApiErrorMessage(err, 'Lưu chỉ số thất bại'))
     throw err
   }
 }
@@ -226,8 +219,7 @@ async function saveUtilityOverrideWithToast(input: Parameters<typeof saveUtility
     toast.success('Đã lưu ghi đè chỉ số')
   }
   catch (err) {
-    const e = err as { data?: { error?: { message?: string } }; message?: string }
-    toast.error(e.data?.error?.message ?? e.message ?? 'Lưu ghi đè thất bại')
+    toast.error(getApiErrorMessage(err, 'Lưu ghi đè thất bại'))
     throw err
   }
 }
@@ -238,8 +230,7 @@ async function deleteUtilityOverrideWithToast(overrideId: string) {
     toast.success('Đã xóa điều chỉnh chỉ số')
   }
   catch (err) {
-    const e = err as { data?: { error?: { message?: string } }; message?: string }
-    toast.error(e.data?.error?.message ?? e.message ?? 'Xóa điều chỉnh thất bại')
+    toast.error(getApiErrorMessage(err, 'Xóa điều chỉnh thất bại'))
     throw err
   }
 }
@@ -251,8 +242,7 @@ async function issueWithToast(input: Parameters<typeof issue>[0]) {
     return result
   }
   catch (err) {
-    const e = err as { data?: { error?: { message?: string } }; message?: string }
-    toast.error(e.data?.error?.message ?? e.message ?? 'Phát hành thất bại')
+    toast.error(getApiErrorMessage(err, 'Phát hành thất bại'))
     throw err
   }
 }
@@ -264,8 +254,7 @@ async function issueAndPayWithToast(input: Parameters<typeof issueAndPay>[0]) {
     return invoice
   }
   catch (err) {
-    const e = err as { data?: { error?: { message?: string } }; message?: string }
-    toast.error(e.data?.error?.message ?? e.message ?? 'Phát hành & thu thất bại')
+    toast.error(getApiErrorMessage(err, 'Phát hành & thu thất bại'))
     throw err
   }
 }
@@ -281,8 +270,7 @@ async function undoPaymentWithToast(invoiceId: string, paymentId: string, reason
     return invoice
   }
   catch (err) {
-    const e = err as { data?: { error?: { message?: string } }; message?: string }
-    toast.error(e.data?.error?.message ?? e.message ?? 'Hoàn tác thanh toán thất bại')
+    toast.error(getApiErrorMessage(err, 'Hoàn tác thanh toán thất bại'))
     throw err
   }
 }
@@ -296,8 +284,7 @@ async function unissuePeriodFromModal(reason: string) {
     unissueOpen.value = false
   }
   catch (err) {
-    const e = err as { data?: { error?: { message?: string } }; message?: string }
-    unissueError.value = e.data?.error?.message ?? e.message ?? 'Huỷ phát hành thất bại'
+    unissueError.value = getApiErrorMessage(err, 'Huỷ phát hành thất bại')
     toast.error(unissueError.value)
   }
   finally {
@@ -312,8 +299,7 @@ async function exportPeriodXlsx() {
     toast.success('Đã xuất file Excel')
   }
   catch (err) {
-    const e = err as { data?: { error?: { message?: string } }; message?: string }
-    toast.error(e.data?.error?.message ?? e.message ?? 'Xuất Excel thất bại')
+    toast.error(getApiErrorMessage(err, 'Xuất Excel thất bại'))
   }
   finally {
     exportLoading.value = false

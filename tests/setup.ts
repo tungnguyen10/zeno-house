@@ -24,6 +24,7 @@ import {
 import { useBulkSelection } from '~/composables/useBulkSelection'
 import UiButton from '~/components/ui/UiButton.vue'
 import UiCheckbox from '~/components/ui/UiCheckbox.vue'
+import { ok, paginated, parseBody, parseQuery } from '../server/utils/api'
 
 config.global.components = {
   ...config.global.components,
@@ -56,13 +57,29 @@ vi.stubGlobal('createError', (input: { statusCode?: number; message?: string; da
   return error
 })
 
-vi.stubGlobal('throwConflict', (message = 'Conflict') => {
-  throw appError(409, 'CONFLICT', message)
+vi.stubGlobal('throwConflict', (message = 'Conflict', details?: unknown) => {
+  throw appError(409, 'CONFLICT', message, details)
 })
 
 vi.stubGlobal('throwValidationError', (message = 'Validation error', details?: unknown) => {
   throw appError(422, 'VALIDATION_ERROR', message, details)
 })
+
+vi.stubGlobal('throwInternal', (originalError: unknown, context?: string) => {
+  throw appError(500, 'INTERNAL', 'Lỗi hệ thống, vui lòng thử lại.', context ? { context } : undefined)
+})
+
+vi.stubGlobal('throwDbError', (originalError: unknown, context?: string) => {
+  throw appError(500, 'INTERNAL', 'Lỗi hệ thống, vui lòng thử lại.', context ? { context } : undefined)
+})
+
+// Server request helpers from server/utils/api.ts (auto-imported in Nitro).
+// Expose the real implementations; they resolve readBody/getQuery/throwValidationError
+// against the current globals at call time, so per-test H3 stubs still apply.
+vi.stubGlobal('parseBody', parseBody)
+vi.stubGlobal('parseQuery', parseQuery)
+vi.stubGlobal('ok', ok)
+vi.stubGlobal('paginated', paginated)
 
 vi.stubGlobal('throwForbidden', (message = 'Forbidden') => {
   throw appError(403, 'FORBIDDEN', message)

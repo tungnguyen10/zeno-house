@@ -4,11 +4,8 @@ import { buildingExpenseListQuerySchema } from '~/utils/validators/operations-re
 export default defineEventHandler(async (event) => {
   const user = await requireAuth(event)
 
-  const result = buildingExpenseListQuerySchema.safeParse(getQuery(event))
-  if (!result.success) {
-    throwValidationError('Tham số không hợp lệ', result.error.flatten())
-  }
+  const input = parseQuery(event, buildingExpenseListQuerySchema, 'Tham số không hợp lệ')
 
-  const expenses = await BuildingExpenseService.list(event, user, result.data)
+  const expenses = await BuildingExpenseService.list(event, user, input)
   return { data: expenses }
 })

@@ -19,14 +19,14 @@ async function buildUniqueInvoiceCode(event: H3Event, billingPeriodId: string): 
     .select('period_year, period_month')
     .eq('id', billingPeriodId)
     .single()
-  if (periodError) throw createError({ statusCode: 500, message: periodError.message })
+  if (periodError) throwDbError(periodError, 'billing.invoices.buildUniqueInvoiceCode.period')
 
   const prefix = `inv-${period.period_year}-${String(period.period_month).padStart(2, '0')}`
   const { data, error } = await client
     .from('invoices')
     .select('invoice_code')
     .ilike('invoice_code', `${prefix}-%`)
-  if (error) throw createError({ statusCode: 500, message: error.message })
+  if (error) throwDbError(error, 'billing.invoices.buildUniqueInvoiceCode')
 
   const used = new Set((data ?? []).map(row => row.invoice_code).filter(Boolean))
   let next = Math.max(0, ...(data ?? []).map(row => sequenceFromCode(prefix, row.invoice_code))) + 1
@@ -43,7 +43,7 @@ export const InvoiceRepository = {
       .select('*')
       .eq('billing_period_id', billingPeriodId)
       .order('created_at', { ascending: true })
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'billing.invoices.listByPeriod')
     return (data ?? []).map(mapInvoice)
   },
 
@@ -59,7 +59,7 @@ export const InvoiceRepository = {
       .select('*')
       .eq(column, identifier)
       .maybeSingle()
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'billing.invoices.findByIdentifier')
     return data ? mapInvoice(data) : null
   },
 
@@ -76,7 +76,7 @@ export const InvoiceRepository = {
       .eq('contract_id', contractId)
       .neq('status', 'void')
       .maybeSingle()
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'billing.invoices.findActiveByPeriodContract')
     return data ? mapInvoice(data) : null
   },
 
@@ -122,7 +122,7 @@ export const InvoiceRepository = {
       })
       .select()
       .single()
-    if (invErr) throw createError({ statusCode: 500, message: invErr.message })
+    if (invErr) throwDbError(invErr, 'billing.invoices.issueOne')
 
     let chargeRows: InvoiceCharge[] = []
     if (charges.length > 0) {
@@ -146,7 +146,7 @@ export const InvoiceRepository = {
       if (chErr) {
         // Best-effort rollback: delete the invoice we just created
         await client.from('invoices').delete().eq('id', invoiceRow.id)
-        throw createError({ statusCode: 500, message: chErr.message })
+        throwDbError(chErr, 'billing.invoices.issueOne.charges')
       }
       chargeRows = (chRows ?? []).map(mapInvoiceCharge)
     }
@@ -178,7 +178,7 @@ export const InvoiceRepository = {
         })),
       )
       .select()
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'billing.invoices.addCharges')
     return (data ?? []).map(mapInvoiceCharge)
   },
 
@@ -189,7 +189,7 @@ export const InvoiceRepository = {
       .select('*')
       .eq('invoice_id', invoiceId)
       .order('sort_order', { ascending: true })
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'billing.invoices.listCharges')
     return (data ?? []).map(mapInvoiceCharge)
   },
 
@@ -211,7 +211,7 @@ export const InvoiceRepository = {
       .eq('id', id)
       .select()
       .single()
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'billing.invoices.voidById')
     return mapInvoice(data)
   },
 
@@ -225,7 +225,7 @@ export const InvoiceRepository = {
       .from('invoices')
       .update({ superseded_by_invoice_id: replacementInvoiceId })
       .eq('id', voidedInvoiceId)
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'billing.invoices.linkSupersededBy')
   },
 
   async updatePaymentTotals(
@@ -248,7 +248,7 @@ export const InvoiceRepository = {
       .eq('id', id)
       .select()
       .single()
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'billing.invoices.updatePaymentTotals')
     return mapInvoice(data)
   },
 
@@ -260,7 +260,7 @@ export const InvoiceRepository = {
       .eq('billing_period_id', billingPeriodId)
       .gt('balance_amount', 0)
       .neq('status', 'void')
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'billing.invoices.listOutstandingByPeriod')
     return (data ?? []).map(mapInvoice)
   },
 }

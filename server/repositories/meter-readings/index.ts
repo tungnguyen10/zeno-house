@@ -34,7 +34,7 @@ export const MeterReadingRepository = {
     if (filters.period_month) query = query.eq('period_month', filters.period_month)
 
     const { data, error } = await query
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'meterReadings.findByRoom')
     return (data ?? []).map(mapMeterReading)
   },
 
@@ -56,7 +56,7 @@ export const MeterReadingRepository = {
     if (filters.meter_type) query = query.eq('meter_type', filters.meter_type)
 
     const { data, error } = await query
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'meterReadings.findAll')
     return (data ?? []).map(mapMeterReading)
   },
 
@@ -76,7 +76,7 @@ export const MeterReadingRepository = {
       .order('floor', { ascending: true })
       .order('room_number', { ascending: true })
 
-    if (roomsError) throw createError({ statusCode: 500, message: roomsError.message })
+    if (roomsError) throwDbError(roomsError, 'meterReadings.findBuildingRoomsStatus.rooms')
     if (!rooms || rooms.length === 0) return []
 
     const roomIds = rooms.map(r => r.id)
@@ -110,9 +110,9 @@ export const MeterReadingRepository = {
         .in('room_id', roomIds),
     ])
 
-    if (currentRes.error) throw createError({ statusCode: 500, message: currentRes.error.message })
-    if (prevRes.error) throw createError({ statusCode: 500, message: prevRes.error.message })
-    if (handoverInRes.error) throw createError({ statusCode: 500, message: handoverInRes.error.message })
+    if (currentRes.error) throwDbError(currentRes.error, 'meterReadings.findBuildingRoomsStatus.current')
+    if (prevRes.error) throwDbError(prevRes.error, 'meterReadings.findBuildingRoomsStatus.prev')
+    if (handoverInRes.error) throwDbError(handoverInRes.error, 'meterReadings.findBuildingRoomsStatus.handoverIn')
 
     const currentReadings = currentRes.data ?? []
     const prevReadings = prevRes.data ?? []
@@ -161,7 +161,7 @@ export const MeterReadingRepository = {
       .select()
       .single()
 
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'meterReadings.create')
     return mapMeterReading(data)
   },
 
@@ -183,7 +183,7 @@ export const MeterReadingRepository = {
       .in('room_id', roomIds)
       .in('period_year', periodYears)
       .in('period_month', periodMonths)
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'meterReadings.findExistingByConflictKeys')
     const keySet = new Set(keys.map(k => `${k.room_id}:${k.meter_type}:${k.period_year}:${k.period_month}:${k.reading_type}`))
     const result = new Map<string, MeterReading>()
     for (const row of data ?? []) {
@@ -219,7 +219,7 @@ export const MeterReadingRepository = {
       )
       .select()
 
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'meterReadings.bulkUpsert')
     return (data ?? []).map(mapMeterReading)
   },
 
@@ -241,7 +241,7 @@ export const MeterReadingRepository = {
       .select()
       .single()
 
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'meterReadings.update')
     return mapMeterReading(data)
   },
 
@@ -253,7 +253,7 @@ export const MeterReadingRepository = {
       .eq('id', id)
       .maybeSingle()
 
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'meterReadings.findById')
     return data ? mapMeterReading(data) : null
   },
 
@@ -281,7 +281,7 @@ export const MeterReadingRepository = {
         query = query.lt('reading_date', options.beforeDate)
       }
       const { data, error } = await query.maybeSingle()
-      if (error) throw createError({ statusCode: 500, message: error.message })
+      if (error) throwDbError(error, 'meterReadings.findLatestByRoom')
       out[meterType] = data ? mapMeterReading(data) : null
     }
     return out

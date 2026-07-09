@@ -5,6 +5,7 @@ import type { BuildingFormData } from '~/types/building-form'
 import { BUILDING_LIST_ASYNC_KEY } from '~/composables/buildings/useBuildingList'
 import { BULK_FAILURE_LABELS_COMMON } from '~/utils/constants/bulk-failure-labels'
 import { buildingFormToApiPayload } from '~/utils/mappers/building-form'
+import { getApiErrorDetails, getApiErrorMessage } from '~/utils/api-error'
 
 const authStore = useAuthStore()
 const toast = useToast()
@@ -165,10 +166,10 @@ async function onSubmitEdit(data: BuildingFormData) {
     await refresh()
   }
   catch (e: unknown) {
-    const err = e as { data?: { error?: { message?: string; details?: { fieldErrors?: Record<string, string[]> } } } }
-    editError.value = err?.data?.error?.message ?? 'Không thể cập nhật tòa nhà. Vui lòng thử lại.'
-    if (err?.data?.error?.details?.fieldErrors) {
-      editFieldErrors.value = err.data.error.details.fieldErrors
+    editError.value = getApiErrorMessage(e, 'Không thể cập nhật tòa nhà. Vui lòng thử lại.')
+    const details = getApiErrorDetails<{ fieldErrors?: Record<string, string[]> }>(e)
+    if (details?.fieldErrors) {
+      editFieldErrors.value = details.fieldErrors
     }
   }
   finally {

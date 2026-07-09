@@ -27,7 +27,7 @@ async function buildUniqueSlug(
     if (excludeId) query = query.neq('id', excludeId)
 
     const { data, error } = await query
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'buildings.buildUniqueSlug')
     if (!data || data.length === 0) return candidate
 
     candidate = `${baseSlug}-${suffix}`
@@ -55,7 +55,7 @@ async function buildUniqueCode(
     if (excludeId) query = query.neq('id', excludeId)
 
     const { data, error } = await query
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'buildings.buildUniqueCode')
     if (!data || data.length === 0) return candidate
 
     candidate = `${baseCode}${suffix}`
@@ -73,7 +73,7 @@ async function loadServiceSummaries(  event: H3Event,
     .select('building_id, is_active, service_catalog(name)')
     .in('building_id', buildingIds)
 
-  if (error) throw createError({ statusCode: 500, message: error.message })
+  if (error) throwDbError(error, 'buildings.loadServiceSummaries')
 
   const summaries = new Map<string, BuildingServiceSummary>()
   for (const buildingId of buildingIds) {
@@ -147,7 +147,7 @@ export const BuildingRepository = {
       }
 
       const { data, error, count } = await query
-      if (error) throw createError({ statusCode: 500, message: error.message })
+      if (error) throwDbError(error, 'buildings.findAll')
 
       const rows = (data as BuildingRow[] ?? []).map(mapBuilding)
       rows.sort((a, b) => (ascending ? a.totalRooms - b.totalRooms : b.totalRooms - a.totalRooms))
@@ -180,7 +180,7 @@ export const BuildingRepository = {
     query = query.order(sort, { ascending }).range(from, to)
 
     const { data, error, count } = await query
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'buildings.findAll')
     const items = (data as BuildingRow[] ?? []).map(mapBuilding)
     return { items: await attachServiceSummaries(event, items), total: count ?? 0 }
   },
@@ -194,7 +194,7 @@ export const BuildingRepository = {
       .eq('id', id)
       .maybeSingle()
 
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'buildings.findById')
     if (!data) return null
     const [building] = await attachServiceSummaries(event, [mapBuilding(data as BuildingRow)])
     return building ?? null
@@ -210,7 +210,7 @@ export const BuildingRepository = {
       .eq(column, identifier)
       .maybeSingle()
 
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'buildings.findByIdentifier')
     if (!data) return null
     const [building] = await attachServiceSummaries(event, [mapBuilding(data as BuildingRow)])
     return building ?? null
@@ -255,7 +255,7 @@ export const BuildingRepository = {
       .select('*, rooms(count)')
       .single()
 
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'buildings.insert')
     const [building] = await attachServiceSummaries(event, [mapBuilding(data as BuildingRow)])
     return building!
   },
@@ -276,9 +276,9 @@ export const BuildingRepository = {
         .select('id')
         .eq('building_id', id)
         .limit(1)
-      if (roomsError) throw createError({ statusCode: 500, message: roomsError.message })
+      if (roomsError) throwDbError(roomsError, 'buildings.update.roomsCheck')
       if (roomsCheck && roomsCheck.length > 0) {
-        throw createError({ statusCode: 409, message: 'Building code cannot be changed after rooms have been created' })
+        throwConflict('Building code cannot be changed after rooms have been created')
       }
       newCode = await buildUniqueCode(event, input.code, id)
     }
@@ -312,7 +312,7 @@ export const BuildingRepository = {
       .select('*, rooms(count)')
       .single()
 
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'buildings.update')
     const [building] = await attachServiceSummaries(event, [mapBuilding(data as BuildingRow)])
     return building!
   },
@@ -322,7 +322,7 @@ export const BuildingRepository = {
     // layer (capability + building scope checks) to avoid RLS drift issues.
     const client = serverSupabaseServiceRole(event)
     const { error } = await client.from('buildings').delete().eq('id', id)
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'buildings.remove')
   },
 
   async countRoomsForBuilding(event: H3Event, buildingId: string): Promise<number> {
@@ -331,7 +331,7 @@ export const BuildingRepository = {
       .from('rooms')
       .select('id', { count: 'exact', head: true })
       .eq('building_id', buildingId)
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'buildings.countRoomsForBuilding')
     return count ?? 0
   },
 
@@ -342,7 +342,7 @@ export const BuildingRepository = {
       .select('id', { count: 'exact', head: true })
       .eq('building_id', buildingId)
       .eq('status', 'active')
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'buildings.countActiveContractsForBuilding')
     return count ?? 0
   },
 
@@ -357,7 +357,7 @@ export const BuildingRepository = {
       .select('*, rooms(count)')
       .single()
 
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'buildings.softArchive')
     const [building] = await attachServiceSummaries(event, [mapBuilding(data as BuildingRow)])
     return building!
   },

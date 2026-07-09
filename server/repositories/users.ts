@@ -42,7 +42,7 @@ export const UserRepository = {
 
     while (true) {
       const { data, error } = await client.auth.admin.listUsers({ page, perPage: 100 })
-      if (error) throw createError({ statusCode: 500, message: error.message })
+      if (error) throwDbError(error, 'users.listByRoles')
 
       for (const user of data.users) {
         const role = user.app_metadata?.role as UserRole | undefined
@@ -62,7 +62,7 @@ export const UserRepository = {
     const { data, error } = await client.auth.admin.getUserById(id)
     if (error) {
       if (error.status === 404) return null
-      throw createError({ statusCode: 500, message: error.message })
+      throwDbError(error, 'users.getById')
     }
     return data.user ? mapManagedUser(data.user) : null
   },
@@ -85,7 +85,7 @@ export const UserRepository = {
       if (error.status === 422 || error.code === 'email_exists') {
         throwConflict('Email đã được sử dụng')
       }
-      throw createError({ statusCode: 500, message: error.message })
+      throwDbError(error, 'users.create')
     }
 
     return mapManagedUser(data.user)
@@ -112,7 +112,7 @@ export const UserRepository = {
       if (error.status === 422 || error.code === 'email_exists') {
         throwConflict('Email đã được sử dụng')
       }
-      throw createError({ statusCode: 500, message: error.message })
+      throwDbError(error, 'users.update')
     }
 
     return mapManagedUser(data.user)
@@ -121,6 +121,6 @@ export const UserRepository = {
   async remove(event: H3Event, id: string): Promise<void> {
     const client = serverSupabaseServiceRole<Database>(event)
     const { error } = await client.auth.admin.deleteUser(id)
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'users.remove')
   },
 }

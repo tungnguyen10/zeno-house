@@ -45,7 +45,7 @@ async function buildUniqueContractCode(event: H3Event, buildingCode: string, sta
     .select('contract_code')
     .ilike('contract_code', `${prefix}-%`)
 
-  if (error) throw createError({ statusCode: 500, message: error.message })
+  if (error) throwDbError(error, 'contracts.buildUniqueContractCode')
 
   const used = new Set((data ?? []).map(row => row.contract_code).filter(Boolean))
   let next = Math.max(0, ...(data ?? []).map(row => sequenceFromCode(prefix, row.contract_code))) + 1
@@ -63,7 +63,7 @@ export const ContractRepository = {
       .eq('id', buildingId)
       .single()
     if (buildingError || !buildingRow) {
-      throw createError({ statusCode: 500, message: 'Cannot resolve building code for contract' })
+      throwInternal(buildingError, 'contracts.allocateContractCode')
     }
     return buildUniqueContractCode(event, buildingRow.code, startDate)
   },
@@ -105,8 +105,8 @@ export const ContractRepository = {
         client.from('tenants').select('id').ilike('full_name', `%${term}%`),
         client.from('rooms').select('id').ilike('room_number', `%${term}%`),
       ])
-      if (tenantsRes.error) throw createError({ statusCode: 500, message: tenantsRes.error.message })
-      if (roomsRes.error) throw createError({ statusCode: 500, message: roomsRes.error.message })
+      if (tenantsRes.error) throwDbError(tenantsRes.error, 'contracts.findAll.tenants')
+      if (roomsRes.error) throwDbError(roomsRes.error, 'contracts.findAll.rooms')
 
       const tenantIds = (tenantsRes.data ?? []).map(row => row.id)
       const roomIds = (roomsRes.data ?? []).map(row => row.id)
@@ -123,7 +123,7 @@ export const ContractRepository = {
     query = query.range(from, to)
 
     const { data, error, count } = await query
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'contracts.findAll')
     return {
       items: (data ?? []).map((row) => mapContractWithDetails(row as Parameters<typeof mapContractWithDetails>[0])),
       total: count ?? 0,
@@ -143,7 +143,7 @@ export const ContractRepository = {
       .eq(column, identifier)
       .maybeSingle()
 
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'contracts.findByIdentifier')
     if (!data) return null
     return mapContractWithDetails(data as Parameters<typeof mapContractWithDetails>[0])
   },
@@ -157,7 +157,7 @@ export const ContractRepository = {
       .eq('status', 'active')
     if (excludeId) query = query.neq('id', excludeId)
     const { data, error } = await query.maybeSingle()
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'contracts.findActiveByRoomId')
     return data ? mapContract(data) : null
   },
 
@@ -170,7 +170,7 @@ export const ContractRepository = {
       .eq('status', 'active')
     if (excludeContractId) query = query.neq('id', excludeContractId)
     const { data, error } = await query.maybeSingle()
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'contracts.findActiveByTenantId')
     return data ? mapContract(data) : null
   },
 
@@ -180,7 +180,7 @@ export const ContractRepository = {
     // `createWithHandover` so the contract + handover readings commit atomically.
     const client = await serverSupabaseClient(event)
     if (!input.building_id) {
-      throw createError({ statusCode: 500, message: 'building_id is required on insert (resolve from room before calling repository)' })
+      throwInternal(new Error('building_id is required on insert (resolve from room before calling repository)'), 'contracts.insert.buildingId')
     }
 
     const contractCode = await this.allocateContractCode(event, input.building_id, input.start_date)
@@ -205,7 +205,7 @@ export const ContractRepository = {
       .select(DETAIL_SELECT)
       .single()
 
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'contracts.insert')
     return mapContractWithDetails(data as Parameters<typeof mapContractWithDetails>[0])
   },
 
@@ -249,20 +249,17 @@ export const ContractRepository = {
       // business conflict the admin can act on; everything else is a 500.
       const isConflict = (error as { code?: string }).code === '23505'
         || (error as { code?: string }).code === 'P0001'
-      const statusCode = isConflict ? 409 : 500
-      throw createError({
-        statusCode,
-        data: { error: { code: isConflict ? 'CONFLICT' : 'INTERNAL', message: error.message } },
-      })
+      if (isConflict) throwConflict(error.message)
+      throwDbError(error, 'contracts.createWithHandover')
     }
 
     const rows = (data as Array<{ id: string }> | null) ?? []
     if (rows.length === 0) {
-      throw createError({ statusCode: 500, message: 'create_contract_with_handover returned no rows' })
+      throwInternal(new Error('create_contract_with_handover returned no rows'), 'contracts.createWithHandover')
     }
     const created = await this.findByIdentifier(event, rows[0]!.id)
     if (!created) {
-      throw createError({ statusCode: 500, message: 'Contract was inserted but cannot be re-read' })
+      throwInternal(new Error('Contract was inserted but cannot be re-read'), 'contracts.createWithHandover.reread')
     }
     return created
   },
@@ -290,14 +287,14 @@ export const ContractRepository = {
       .select(DETAIL_SELECT)
       .single()
 
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'contracts.update')
     return mapContractWithDetails(data as Parameters<typeof mapContractWithDetails>[0])
   },
 
   async remove(event: H3Event, id: string): Promise<void> {
     const client = await serverSupabaseClient(event)
     const { error } = await client.from('contracts').delete().eq('id', id)
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'contracts.remove')
   },
 
   async removeWithCascade(event: H3Event, contract: ContractWithDetails): Promise<void> {
@@ -319,7 +316,7 @@ export const ContractRepository = {
     ]
 
     for (const result of await Promise.all(deletes)) {
-      if (result.error) throw createError({ statusCode: 500, message: result.error.message })
+      if (result.error) throwDbError(result.error, 'contracts.removeWithCascade')
     }
 
     await this.remove(event, contract.id)
@@ -333,7 +330,7 @@ export const ContractRepository = {
       .eq('contract_id', contractId)
       .neq('status', 'void')
 
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'contracts.countBillingPeriodsForContract')
     return new Set((data ?? []).map(row => row.billing_period_id)).size
   },
 
@@ -345,7 +342,7 @@ export const ContractRepository = {
       .eq('contract_id', contractId)
       .in('status', ['paid', 'partial'])
 
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'contracts.countPaidInvoicesForContract')
     return count ?? 0
   },
 
@@ -357,7 +354,7 @@ export const ContractRepository = {
       .eq('id', contractId)
       .maybeSingle()
 
-    if (contractError) throw createError({ statusCode: 500, message: contractError.message })
+    if (contractError) throwDbError(contractError, 'contracts.countNonHandoverMeterReadingsForContract.contract')
     if (!contract) return 0
 
     const { count, error } = await client
@@ -368,7 +365,7 @@ export const ContractRepository = {
       .gte('reading_date', contract.start_date)
       .lte('reading_date', contract.end_date)
 
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'contracts.countNonHandoverMeterReadingsForContract')
     return count ?? 0
   },
 }

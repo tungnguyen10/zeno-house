@@ -4,11 +4,8 @@ import { buildingFixedCostListQuerySchema } from '~/utils/validators/operations-
 export default defineEventHandler(async (event) => {
   const user = await requireAuth(event)
 
-  const result = buildingFixedCostListQuerySchema.safeParse(getQuery(event))
-  if (!result.success) {
-    throwValidationError('Tham số không hợp lệ', result.error.flatten())
-  }
+  const input = parseQuery(event, buildingFixedCostListQuerySchema, 'Tham số không hợp lệ')
 
-  const fixedCosts = await BuildingFixedCostService.list(event, user, result.data.building_id)
+  const fixedCosts = await BuildingFixedCostService.list(event, user, input.building_id)
   return { data: fixedCosts }
 })

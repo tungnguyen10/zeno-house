@@ -4,13 +4,9 @@ import { recurringExpenseCreateSchema } from '~/utils/validators/operations-repo
 export default defineEventHandler(async (event) => {
   const user = await requireAuth(event)
 
-  const body = await readBody(event)
-  const result = recurringExpenseCreateSchema.safeParse(body)
-  if (!result.success) {
-    throwValidationError('Dữ liệu không hợp lệ', result.error.flatten())
-  }
+  const input = await parseBody(event, recurringExpenseCreateSchema)
 
-  const data = await RecurringExpenseService.create(event, user, result.data)
+  const data = await RecurringExpenseService.create(event, user, input)
   setResponseStatus(event, 201)
   return { data }
 })

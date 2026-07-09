@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import type { BillingPeriod, BillingWorkspaceOverview } from '~/types/billing'
 import { formatCurrency } from '~/utils/format/currency'
+import { getApiErrorMessage } from '~/utils/api-error'
 
 const props = defineProps<{
   overview: BillingWorkspaceOverview
@@ -34,8 +35,7 @@ async function confirmClose() {
     else emit('closePeriod')
     showConfirm.value = false
   } catch (err) {
-    const e = err as { data?: { error?: { message?: string } } }
-    submitError.value = e.data?.error?.message ?? 'Chốt kỳ thất bại'
+    submitError.value = getApiErrorMessage(err, 'Chốt kỳ thất bại')
   } finally {
     submitting.value = false
   }

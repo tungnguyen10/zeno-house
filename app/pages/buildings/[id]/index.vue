@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { buildingEditPath, buildingSettingsPath } from '~/utils/routes/operational'
+import { getApiErrorCode, getApiErrorDetails, type ApiErrorLike } from '~/utils/api-error'
 
 const route = useRoute()
 const authStore = useAuthStore()
@@ -39,12 +40,9 @@ async function confirmDelete() {
     await navigateTo('/buildings')
   }
   catch (e: unknown) {
-    const err = e as {
-      statusCode?: number
-      data?: { error?: { code?: string; details?: ConflictDetails } }
-    }
-    if (err?.statusCode === 409 || err?.data?.error?.code === 'CONFLICT') {
-      conflictDetails.value = err.data?.error?.details ?? {}
+    const err = e as ApiErrorLike
+    if (err.statusCode === 409 || getApiErrorCode(err) === 'CONFLICT') {
+      conflictDetails.value = getApiErrorDetails<ConflictDetails>(err) ?? {}
       showDeleteModal.value = false
     }
     else {

@@ -7,11 +7,12 @@ import type {
   OperationsReportClosure,
   ReserveFundTransaction,
 } from '~/types/operations-report'
+import type { ApiErrorLike } from '~/utils/api-error'
 
 const GENERIC_ERROR = 'Không tải được báo cáo vận hành. Vui lòng thử lại.'
 
 function extractError(raw: unknown): { code: string | null, message: string | null } {
-  const body = (raw as { data?: { error?: { code?: string, message?: string } } })?.data
+  const body = (raw as ApiErrorLike).data
   return { code: body?.error?.code ?? null, message: body?.error?.message ?? null }
 }
 

@@ -6,12 +6,7 @@ export default defineEventHandler(async (event) => {
   const id = getRouterParam(event, 'id')
   if (!id) throwValidationError('Thiếu mã kỳ vận hành')
 
-  const parsed = billingAuditListQuerySchema.safeParse(getQuery(event))
-  if (!parsed.success) {
-    throwValidationError('Tham số không hợp lệ', parsed.error.flatten())
-  }
-
-  const { actor, category, from, to, q, correlation_id, cursor, limit } = parsed.data
+  const { actor, category, from, to, q, correlation_id, cursor, limit } = parseQuery(event, billingAuditListQuerySchema, 'Tham số không hợp lệ')
   const { items, nextCursor } = await BillingAuditService.listByPeriodFiltered(event, user, id!, {
     actorIds: actor,
     categories: category,

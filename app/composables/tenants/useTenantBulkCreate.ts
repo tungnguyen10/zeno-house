@@ -1,6 +1,7 @@
 import type { ApiSuccess } from '~/types/api'
 import type { Tenant } from '~/types/tenants'
 import { tenantCreateSchema, type TenantBulkCreateRowInput } from '~/utils/validators/tenants'
+import { getApiErrorMessage } from '~/utils/api-error'
 
 export interface TenantBulkCreateFailure {
   line: number
@@ -146,8 +147,7 @@ export function useTenantBulkCreate() {
       parseError.value = response.meta?.parseError ?? null
     }
     catch (error: unknown) {
-      const e = error as { data?: { error?: { message?: string } } }
-      parseError.value = e?.data?.error?.message ?? 'Không thể đọc file. Vui lòng kiểm tra định dạng CSV/XLSX.'
+      parseError.value = getApiErrorMessage(error, 'Không thể đọc file. Vui lòng kiểm tra định dạng CSV/XLSX.')
     }
     finally {
       isParsing.value = false
@@ -167,8 +167,7 @@ export function useTenantBulkCreate() {
       return response.data
     }
     catch (error: unknown) {
-      const e = error as { data?: { error?: { message?: string } } }
-      submitError.value = e?.data?.error?.message ?? 'Không thể nhập danh sách khách thuê.'
+      submitError.value = getApiErrorMessage(error, 'Không thể nhập danh sách khách thuê.')
       return null
     }
     finally {

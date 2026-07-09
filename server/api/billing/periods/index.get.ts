@@ -4,12 +4,8 @@ import { billingPeriodListQuerySchema } from '~/utils/validators/billing'
 export default defineEventHandler(async (event) => {
   const user = await requireAuth(event)
 
-  const raw = getQuery(event)
-  const parsed = billingPeriodListQuerySchema.safeParse(raw)
-  if (!parsed.success) {
-    throwValidationError('Tham số không hợp lệ', parsed.error.flatten())
-  }
+  const input = parseQuery(event, billingPeriodListQuerySchema, 'Tham số không hợp lệ')
 
-  const items = await BillingPeriodService.list(event, user, parsed.data)
+  const items = await BillingPeriodService.list(event, user, input)
   return { data: items, meta: { total: items.length } }
 })

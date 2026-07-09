@@ -34,7 +34,7 @@ export const AuditRepository = {
       })
       .select()
       .single()
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'audit.append')
     return mapAuditEvent(data)
   },
 
@@ -52,7 +52,7 @@ export const AuditRepository = {
       .eq('entity_id', entityId)
       .order('created_at', { ascending: false })
       .limit(opts?.limit ?? 50)
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'audit.listByEntity')
     return (data ?? []).map(mapAuditEvent)
   },
 
@@ -77,7 +77,7 @@ export const AuditRepository = {
     const { data, error, count } = await query
       .order('created_at', { ascending: false })
       .limit(opts?.limit ?? 50)
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'audit.listByBuilding')
     return { items: (data ?? []).map(mapAuditEvent), total: count ?? 0 }
   },
 
@@ -100,7 +100,7 @@ export const AuditRepository = {
     const { data, error, count } = await query
       .order('created_at', { ascending: false })
       .limit(opts?.limit ?? 50)
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'audit.listAll')
     return { items: (data ?? []).map(mapAuditEvent), total: count ?? 0 }
   },
 }

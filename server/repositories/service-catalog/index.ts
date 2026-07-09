@@ -24,7 +24,7 @@ export const ServiceCatalogRepository = {
       .order('sort_order', { ascending: true })
       .order('name', { ascending: true })
 
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'serviceCatalog.findAll')
     return (data ?? []).map(mapServiceCatalog)
   },
 
@@ -37,7 +37,7 @@ export const ServiceCatalogRepository = {
       .eq('name', name)
       .maybeSingle()
 
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'serviceCatalog.findCustomByName')
     return data ? mapServiceCatalog(data) : null
   },
 
@@ -50,7 +50,7 @@ export const ServiceCatalogRepository = {
       .order('sort_order', { ascending: false })
       .limit(1)
 
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'serviceCatalog.nextSortOrder')
     return Number(data?.[0]?.sort_order ?? 0) + 1
   },
 
@@ -76,7 +76,7 @@ export const ServiceCatalogRepository = {
       .select('*')
       .single()
 
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'serviceCatalog.createCustom')
     return mapServiceCatalog(data)
   },
 }

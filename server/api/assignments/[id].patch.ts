@@ -5,11 +5,7 @@ export default defineEventHandler(async (event) => {
   const user = await requireAuth(event)
 
   const id = getRouterParam(event, 'id')!
-  const body = await readBody(event)
-  const parsed = assignmentUpdateSchema.safeParse(body)
-  if (!parsed.success) {
-    throwValidationError('Dữ liệu phân quyền không hợp lệ', parsed.error.flatten())
-  }
+  const input = await parseBody(event, assignmentUpdateSchema, 'Dữ liệu phân quyền không hợp lệ')
 
-  return { data: await AssignmentService.update(event, user, id, parsed.data) }
+  return { data: await AssignmentService.update(event, user, id, input) }
 })

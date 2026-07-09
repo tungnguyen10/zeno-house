@@ -4,11 +4,8 @@ import { reserveFundRateListQuerySchema } from '~/utils/validators/operations-re
 export default defineEventHandler(async (event) => {
   const user = await requireAuth(event)
 
-  const result = reserveFundRateListQuerySchema.safeParse(getQuery(event))
-  if (!result.success) {
-    throwValidationError('Tham số không hợp lệ', result.error.flatten())
-  }
+  const input = parseQuery(event, reserveFundRateListQuerySchema, 'Tham số không hợp lệ')
 
-  const rates = await ReserveFundService.listRates(event, user, result.data.building_id)
+  const rates = await ReserveFundService.listRates(event, user, input.building_id)
   return { data: rates }
 })

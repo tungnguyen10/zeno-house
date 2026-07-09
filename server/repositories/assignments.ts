@@ -39,7 +39,7 @@ async function listManagers(event: H3Event): Promise<AssignmentManager[]> {
 
   while (true) {
     const { data, error } = await client.auth.admin.listUsers({ page, perPage: 100 })
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'assignments.listManagers')
 
     for (const user of data.users) {
       if (user.app_metadata?.role !== 'manager') continue
@@ -68,7 +68,7 @@ export const AssignmentRepository = {
       .select('building_id')
       .eq('user_id', userId)
 
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'assignments.findBuildingIdsByUser')
     return (data ?? []).map(row => row.building_id)
   },
 
@@ -85,7 +85,7 @@ export const AssignmentRepository = {
       .eq('building_id', buildingId)
       .maybeSingle()
 
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'assignments.findByUserAndBuilding')
     return data ? mapAssignment(data) : null
   },
 
@@ -97,7 +97,7 @@ export const AssignmentRepository = {
       .eq('id', id)
       .maybeSingle()
 
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'assignments.findById')
     return data ? mapAssignment(data) : null
   },
 
@@ -141,7 +141,7 @@ export const AssignmentRepository = {
 
     const { data, error } = await query
 
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'assignments.findAll')
 
     return (data ?? []).map((row) => {
       const building = row.buildings as AssignmentBuilding | null
@@ -160,7 +160,7 @@ export const AssignmentRepository = {
       .eq('user_id', userId)
       .order('created_at', { ascending: true })
 
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'assignments.findByUser')
 
     return (data ?? []).map((row) => {
       const building = row.buildings as AssignmentBuilding | null
@@ -191,7 +191,7 @@ export const AssignmentRepository = {
 
     if (error) {
       if (error.code === '23505') throwConflict('Manager đã được gán vào tòa nhà này')
-      throw createError({ statusCode: 500, message: error.message })
+      throwDbError(error, 'assignments.insert')
     }
     return mapAssignment(data)
   },
@@ -211,7 +211,7 @@ export const AssignmentRepository = {
       .select('*')
       .single()
 
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'assignments.update')
     return mapAssignment(data)
   },
 
@@ -224,7 +224,7 @@ export const AssignmentRepository = {
       .delete()
       .eq('id', id)
 
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'assignments.remove')
   },
 
   async findBuildingsWithoutManager(
@@ -245,8 +245,8 @@ export const AssignmentRepository = {
       client.from('user_building_assignments').select('building_id'),
     ])
 
-    if (buildingError) throw createError({ statusCode: 500, message: buildingError.message })
-    if (assignmentError) throw createError({ statusCode: 500, message: assignmentError.message })
+    if (buildingError) throwDbError(buildingError, 'assignments.findBuildingsWithoutManager.buildings')
+    if (assignmentError) throwDbError(assignmentError, 'assignments.findBuildingsWithoutManager.assignments')
 
     const assigned = new Set((assignments ?? []).map(row => row.building_id))
     return (buildings ?? []).filter(building => !assigned.has(building.id))

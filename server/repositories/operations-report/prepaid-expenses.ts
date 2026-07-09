@@ -46,7 +46,7 @@ export const PrepaidExpenseRepository = {
       .eq('building_id', buildingId)
       .order('start_date', { ascending: false })
       .order('created_at', { ascending: false })
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'operationsReport.prepaidExpenses.listByBuilding')
     return ((data ?? []) as PrepaidExpenseRow[]).map(mapPrepaidExpense)
   },
 
@@ -63,7 +63,7 @@ export const PrepaidExpenseRepository = {
       .lte('start_date', periodStart)
       .gt('end_date', periodStart)
       .order('start_date', { ascending: true })
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'operationsReport.prepaidExpenses.listActiveInPeriod')
     return ((data ?? []) as PrepaidExpenseRow[]).map(mapPrepaidExpense)
   },
 
@@ -73,7 +73,7 @@ export const PrepaidExpenseRepository = {
       .select('*')
       .eq('id', id)
       .maybeSingle()
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'operationsReport.prepaidExpenses.findById')
     return data ? mapPrepaidExpense(data as PrepaidExpenseRow) : null
   },
 
@@ -100,7 +100,7 @@ export const PrepaidExpenseRepository = {
       })
       .select()
       .single()
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'operationsReport.prepaidExpenses.insert')
     return mapPrepaidExpense(data as PrepaidExpenseRow)
   },
 
@@ -126,7 +126,7 @@ export const PrepaidExpenseRepository = {
       .eq('id', id)
       .select()
       .single()
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'operationsReport.prepaidExpenses.updateById')
     return mapPrepaidExpense(data as PrepaidExpenseRow)
   },
 
@@ -135,7 +135,7 @@ export const PrepaidExpenseRepository = {
     const { error } = await table(client, 'prepaid_expenses')
       .delete()
       .eq('id', id)
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'operationsReport.prepaidExpenses.deleteById')
   },
 
   async markExpiredBefore(event: H3Event, today: string): Promise<void> {
@@ -144,6 +144,6 @@ export const PrepaidExpenseRepository = {
       .update({ status: 'expired' })
       .eq('status', 'active')
       .lte('end_date', today)
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'operationsReport.prepaidExpenses.markExpiredBefore')
   },
 }

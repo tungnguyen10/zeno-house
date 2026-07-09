@@ -4,13 +4,7 @@ import { roomListQuerySchema } from '~/utils/validators/rooms'
 export default defineEventHandler(async (event) => {
   const user = await requireAuth(event)
 
-  const rawQuery = getQuery(event)
-  const result = roomListQuerySchema.safeParse(rawQuery)
-  if (!result.success) {
-    throwValidationError('Tham số truy vấn không hợp lệ', result.error.flatten())
-  }
-
-  const { page, limit, q, building_id: buildingId, floor, status, sort, order } = result.data
+  const { page, limit, q, building_id: buildingId, floor, status, sort, order } = parseQuery(event, roomListQuerySchema)
   const { items, total } = await RoomService.list(event, user, {
     buildingId,
     status,
@@ -22,8 +16,5 @@ export default defineEventHandler(async (event) => {
     order,
   })
 
-  return {
-    data: items,
-    meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
-  }
+  return paginated(items, { total, page, limit })
 })

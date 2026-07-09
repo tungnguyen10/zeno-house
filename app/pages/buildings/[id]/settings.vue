@@ -3,6 +3,7 @@ import type { ApiSuccess } from '~/types/api'
 import type { PricingType, ServiceCatalogItem } from '~/types/service-catalog'
 import type { ContractWithDetails } from '~/types/contracts'
 import type { AssignmentManager } from '~/types/assignments'
+import { getApiErrorMessage } from '~/utils/api-error'
 import type {
   BuildingFixedCost,
   BuildingReserveFundRate,
@@ -540,8 +541,7 @@ async function submitEndFixedCost() {
 }
 
 function resolveApiError(err: unknown, fallback: string): string {
-  const msg = (err as { data?: { error?: { message?: string } } })?.data?.error?.message
-  return msg ?? fallback
+  return getApiErrorMessage(err, fallback)
 }
 
 // Building code
@@ -568,8 +568,7 @@ async function handleSaveCode() {
     setTimeout(() => { codeSaveSuccess.value = false }, 3000)
   }
   catch (err: unknown) {
-    const msg = (err as { data?: { error?: { message?: string } } })?.data?.error?.message
-    codeSaveError.value = msg ?? 'Không thể lưu code. Vui lòng thử lại.'
+    codeSaveError.value = getApiErrorMessage(err, 'Không thể lưu code. Vui lòng thử lại.')
   }
   finally {
     isSavingCode.value = false

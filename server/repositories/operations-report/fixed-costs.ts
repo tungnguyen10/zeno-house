@@ -16,7 +16,7 @@ export const BuildingFixedCostRepository = {
       .eq('building_id', buildingId)
       .order('effective_from_period_year', { ascending: false })
       .order('effective_from_period_month', { ascending: false })
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'operationsReport.fixedCosts.listByBuilding')
     return (data ?? []).map(mapBuildingFixedCost)
   },
 
@@ -27,7 +27,7 @@ export const BuildingFixedCostRepository = {
       .select('*')
       .eq('id', id)
       .maybeSingle()
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'operationsReport.fixedCosts.findById')
     return data ? mapBuildingFixedCost(data) : null
   },
 
@@ -52,7 +52,7 @@ export const BuildingFixedCostRepository = {
       })
       .select()
       .single()
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'operationsReport.fixedCosts.insert')
     return mapBuildingFixedCost(data)
   },
 
@@ -77,7 +77,7 @@ export const BuildingFixedCostRepository = {
       .eq('id', id)
       .select()
       .single()
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'operationsReport.fixedCosts.updateById')
     return mapBuildingFixedCost(data)
   },
 }

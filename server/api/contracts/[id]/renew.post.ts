@@ -5,13 +5,9 @@ export default defineEventHandler(async (event) => {
   const user = await requireAuth(event)
   const contractId = getRouterParam(event, 'id')!
 
-  const body = await readBody(event)
-  const result = contractRenewSchema.safeParse(body)
-  if (!result.success) {
-    throwValidationError('Dữ liệu không hợp lệ', result.error.flatten())
-  }
+  const input = await parseBody(event, contractRenewSchema)
 
-  const renewal = await ContractRenewalService.renew(event, user, contractId, result.data)
+  const renewal = await ContractRenewalService.renew(event, user, contractId, input)
 
   setResponseStatus(event, 201)
   return { data: renewal }

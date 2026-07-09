@@ -25,7 +25,7 @@ export const ContractRenewalRepository = {
       .select('*')
       .eq('contract_id', contractId)
       .order('created_at', { ascending: false })
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'contractRenewals.listByContract')
     return (data ?? []).map(mapContractRenewal)
   },
 
@@ -41,10 +41,7 @@ export const ContractRenewalRepository = {
       .single()
     if (error) {
       console.error('[ContractRenewalRepository.insert] failed', { input, error })
-      throw createError({
-        statusCode: 500,
-        message: `contract_renewals insert failed: ${error.message}${error.details ? ` — ${error.details}` : ''}${error.hint ? ` (hint: ${error.hint})` : ''}`,
-      })
+      throwDbError(error, 'contractRenewals.insert')
     }
     return mapContractRenewal(data)
   },

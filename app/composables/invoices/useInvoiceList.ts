@@ -1,7 +1,8 @@
 import type { ApiSuccess } from '~/types/api'
 import type { InvoiceStatus } from '~/utils/constants/billing'
 import type { InvoiceListItem, InvoiceListMeta } from '~/utils/validators/invoices'
-import { useRouteListQuerySync } from '~/composables/useRouteListQuerySync'
+import { useRouteListQuerySync, readQueryEnumArray, readQueryString } from '~/composables/useRouteListQuerySync'
+import { getApiErrorCode, getApiErrorMessage } from '~/utils/api-error'
 
 const LIST_STATUSES: InvoiceStatus[] = ['issued', 'partial', 'paid', 'overdue', 'void']
 
@@ -24,27 +25,16 @@ function readNumber(raw: unknown): number | undefined {
   return Number.isFinite(parsed) ? parsed : undefined
 }
 
-function readString(raw: unknown): string {
-  return typeof raw === 'string' ? raw : ''
-}
-
-function readStatuses(raw: unknown): InvoiceStatus[] {
-  const arr = Array.isArray(raw) ? raw : raw ? [raw] : []
-  return arr
-    .map(value => String(value))
-    .filter((value): value is InvoiceStatus => LIST_STATUSES.includes(value as InvoiceStatus))
-}
-
 export function useInvoiceList() {
   const route = useRoute()
   const today = currentDateInHoChiMinh()
 
-  const buildingId = ref(readString(route.query.building_id))
+  const buildingId = ref(readQueryString(route.query.building_id))
   const periodYear = ref(readNumber(route.query.period_year) ?? today.year)
   const periodMonth = ref<number | undefined>(readNumber(route.query.period_month) ?? today.month)
   const allMonths = ref(route.query.period_month === undefined ? false : periodMonth.value === undefined)
-  const status = ref<InvoiceStatus[]>(readStatuses(route.query.status))
-  const tenantSearchInput = ref(readString(route.query.tenant_search))
+  const status = ref<InvoiceStatus[]>(readQueryEnumArray(route.query.status, LIST_STATUSES))
+  const tenantSearchInput = ref(readQueryString(route.query.tenant_search))
   const page = ref(readNumber(route.query.page) ?? 1)
   const pageSize = ref(50)
   const tenantSearch = computed(() => tenantSearchInput.value.trim())
@@ -64,13 +54,13 @@ export function useInvoiceList() {
     resetPageOn: [buildingId, periodYear, periodMonth, allMonths, status, tenantSearchInput],
     syncOn: [page],
     parseRoute(query) {
-      buildingId.value = readString(query.building_id)
+      buildingId.value = readQueryString(query.building_id)
       periodYear.value = readNumber(query.period_year) ?? today.year
       periodMonth.value = readNumber(query.period_month)
       allMonths.value = query.period_month === undefined ? false : periodMonth.value === undefined
       if (!allMonths.value && periodMonth.value === undefined) periodMonth.value = today.month
-      status.value = readStatuses(query.status)
-      tenantSearchInput.value = readString(query.tenant_search)
+      status.value = readQueryEnumArray(query.status, LIST_STATUSES)
+      tenantSearchInput.value = readQueryString(query.tenant_search)
       page.value = readNumber(query.page) ?? 1
     },
     buildQuery() {
@@ -109,14 +99,8 @@ export function useInvoiceList() {
   )
   const isLoading = computed(() => fetchStatus.value === 'pending')
   const isInitialLoading = computed(() => isLoading.value && !data.value)
-  const errorMessage = computed(() => {
-    const err = error.value as { data?: { error?: { message?: string } }; message?: string } | null
-    return err?.data?.error?.message ?? err?.message ?? null
-  })
-  const errorCode = computed(() => {
-    const err = error.value as { data?: { error?: { code?: string } } } | null
-    return err?.data?.error?.code ?? null
-  })
+  const errorMessage = computed(() => getApiErrorMessage(error.value, '') || null)
+  const errorCode = computed(() => getApiErrorCode(error.value) ?? null)
 
   function nextPage() {
     if (page.value < meta.value.total_pages) page.value++

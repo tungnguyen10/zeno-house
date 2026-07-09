@@ -13,7 +13,7 @@ export const InvoicePaymentRepository = {
       .eq('invoice_id', invoiceId)
       .is('deleted_at', null)
       .order('paid_at', { ascending: false })
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'billing.payments.listByInvoice')
     return (data ?? []).map(mapInvoicePayment)
   },
 
@@ -26,7 +26,7 @@ export const InvoicePaymentRepository = {
       .in('invoice_id', invoiceIds)
       .is('deleted_at', null)
       .order('paid_at', { ascending: true })
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'billing.payments.listByInvoiceIds')
     return (data ?? []).map(mapInvoicePayment)
   },
 
@@ -37,7 +37,7 @@ export const InvoicePaymentRepository = {
       .select('amount')
       .eq('invoice_id', invoiceId)
       .is('deleted_at', null)
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'billing.payments.sumByInvoice')
     return (data ?? []).reduce((sum, row) => sum + Number(row.amount), 0)
   },
 
@@ -49,7 +49,7 @@ export const InvoicePaymentRepository = {
       .eq('id', id)
       .is('deleted_at', null)
       .maybeSingle()
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'billing.payments.findById')
     return data ? mapInvoicePayment(data) : null
   },
 
@@ -72,14 +72,14 @@ export const InvoicePaymentRepository = {
       })
       .select()
       .single()
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'billing.payments.insert')
     return mapInvoicePayment(data)
   },
 
   async deleteById(event: H3Event, id: string): Promise<void> {
     const client = await serverSupabaseClient(event)
     const { error } = await client.from('invoice_payments').delete().eq('id', id)
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'billing.payments.deleteById')
   },
 
   async softDelete(
@@ -98,6 +98,6 @@ export const InvoicePaymentRepository = {
       })
       .eq('id', id)
       .is('deleted_at', null)
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'billing.payments.softDelete')
   },
 }

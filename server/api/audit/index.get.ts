@@ -25,13 +25,7 @@ const querySchema = z.object({
 export default defineEventHandler(async (event) => {
   const user = await requireAuth(event)
 
-  const rawQuery = getQuery(event)
-  const result = querySchema.safeParse(rawQuery)
-  if (!result.success) {
-    throwValidationError('Tham số truy vấn không hợp lệ', result.error.flatten())
-  }
-
-  const { building_id, entity_type, entity_id, correlation_id, limit } = result.data
+  const { building_id, entity_type, entity_id, correlation_id, limit } = parseQuery(event, querySchema)
 
   if (!can(user, 'buildings.read')) {
     throwForbidden('Không có quyền xem nhật ký')

@@ -1,5 +1,6 @@
 import type { MeterReading, BulkReadingInput } from '~/types/meter-readings'
 import type { ApiSuccess } from '~/types/api'
+import { getApiErrorMessage } from '~/utils/api-error'
 
 export function useContractHandoverReadings(_contractId: string, roomId: string) {
   const isSaving = ref(false)
@@ -51,8 +52,7 @@ export function useContractHandoverReadings(_contractId: string, roomId: string)
       await refreshReadings()
     }
     catch (e: unknown) {
-      const err = e as { data?: { error?: { message?: string } } }
-      saveError.value = err?.data?.error?.message ?? 'Luu that bai'
+      saveError.value = getApiErrorMessage(e, 'Lưu thất bại')
     }
     finally {
       isSaving.value = false

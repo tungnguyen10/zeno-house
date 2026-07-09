@@ -63,7 +63,7 @@ export const RoomRepository = {
 
     const { data, error, count } = await query
 
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'rooms.findAll')
     return { items: (data ?? []).map(mapRoom), total: count ?? 0 }
   },
 
@@ -76,7 +76,7 @@ export const RoomRepository = {
       .eq('id', id)
       .maybeSingle()
 
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'rooms.findById')
     return data ? mapRoom(data) : null
   },
 
@@ -92,7 +92,7 @@ export const RoomRepository = {
       .select('*')
       .eq('building_id', buildingId)
 
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'rooms.findByBuildingAndRoomSlug')
     const row = (data ?? []).find(room => slugifyName(room.room_number) === roomSlug)
     return row ? mapRoom(row) : null
   },
@@ -111,7 +111,7 @@ export const RoomRepository = {
       .eq('id', input.building_id)
       .single()
     if (buildingError || !buildingRow) {
-      throw createError({ statusCode: 500, message: 'Cannot resolve building code for room' })
+      throwInternal(buildingError, 'rooms.insert.resolveBuildingCode')
     }
     const roomCode = `${buildingRow.code}-${roomSlug}`
 
@@ -133,9 +133,9 @@ export const RoomRepository = {
 
     if (error) {
       if (error.code === '23505') {
-        throw createError({ statusCode: 409, message: `Số phòng "${input.room_number}" đã tồn tại trong tòa nhà này` })
+        throwConflict(`Số phòng "${input.room_number}" đã tồn tại trong tòa nhà này`)
       }
-      throw createError({ statusCode: 500, message: error.message })
+      throwDbError(error, 'rooms.insert')
     }
     return mapRoom(data)
   },
@@ -159,9 +159,9 @@ export const RoomRepository = {
 
     if (error) {
       if (error.code === '23505') {
-        throw createError({ statusCode: 409, message: `Số phòng "${input.room_number}" đã tồn tại trong tòa nhà này` })
+        throwConflict(`Số phòng "${input.room_number}" đã tồn tại trong tòa nhà này`)
       }
-      throw createError({ statusCode: 500, message: error.message })
+      throwDbError(error, 'rooms.update')
     }
     return mapRoom(data)
   },
@@ -170,7 +170,7 @@ export const RoomRepository = {
     // Authorization and scope checks are enforced in RoomService.
     const client = serverSupabaseServiceRole(event)
     const { error } = await client.from('rooms').delete().eq('id', id)
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'rooms.remove')
   },
 
   async countActiveContractsForRoom(event: H3Event, roomId: string): Promise<number> {
@@ -181,7 +181,7 @@ export const RoomRepository = {
       .select('id', { count: 'exact', head: true })
       .eq('room_id', roomId)
       .eq('status', 'active')
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'rooms.countActiveContractsForRoom')
     return count ?? 0
   },
 
@@ -192,7 +192,7 @@ export const RoomRepository = {
       .from('meter_readings')
       .select('id', { count: 'exact', head: true })
       .eq('room_id', roomId)
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'rooms.countMeterReadingsForRoom')
     return count ?? 0
   },
 
@@ -206,7 +206,7 @@ export const RoomRepository = {
       .select()
       .single()
 
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'rooms.softArchive')
     return mapRoom(data)
   },
 
@@ -220,7 +220,7 @@ export const RoomRepository = {
       .eq(column, identifier)
       .maybeSingle()
 
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'rooms.findByIdentifier')
     return data ? mapRoom(data) : null
   },
 }

@@ -4,12 +4,8 @@ import { contractServiceDeleteSchema } from '~/utils/validators/contract-service
 export default defineEventHandler(async (event) => {
   const user = await requireAuth(event)
   const id = getRouterParam(event, 'id') as string
-  const body = await readBody(event)
-  const result = contractServiceDeleteSchema.safeParse(body)
-  if (!result.success) {
-    throwValidationError('Dữ liệu không hợp lệ', result.error.flatten())
-  }
+  const input = await parseBody(event, contractServiceDeleteSchema)
 
-  await ContractServiceService.remove(event, user, id, { reason: result.data.reason })
+  await ContractServiceService.remove(event, user, id, { reason: input.reason })
   setResponseStatus(event, 204)
 })

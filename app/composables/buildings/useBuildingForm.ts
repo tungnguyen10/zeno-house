@@ -1,9 +1,10 @@
-import { useDebounceFn } from '@vueuse/core'
 import type { Building } from '~/types/buildings'
 import type { ApiSuccess } from '~/types/api'
 import { buildingCreateSchema, buildingUpdateSchema } from '~/utils/validators/buildings'
 import type { BuildingCreateInput, BuildingUpdateInput } from '~/utils/validators/buildings'
 import { buildingPath } from '~/utils/routes/operational'
+import { getApiErrorMessage } from '~/utils/api-error'
+import { useLocalFormDraft } from '~/composables/useLocalFormDraft'
 
 interface QuickRoom {
   room_number: string
@@ -33,100 +34,18 @@ function buildStorageKey(key: NonNullable<DraftKey>): string {
     : `building-form:edit:${key.id}`
 }
 
-function safeReadDraft<T>(storageKey: string): T | null {
-  if (typeof window === 'undefined') return null
-  try {
-    const raw = window.localStorage.getItem(storageKey)
-    if (!raw) return null
-    return JSON.parse(raw) as T
-  }
-  catch {
-    return null
-  }
-}
-
-function safeWriteDraft<T>(storageKey: string, value: T): void {
-  if (typeof window === 'undefined') return
-  try {
-    window.localStorage.setItem(storageKey, JSON.stringify(value))
-  }
-  catch {
-    // quota or disabled; ignore
-  }
-}
-
-function safeClearDraft(storageKey: string): void {
-  if (typeof window === 'undefined') return
-  try {
-    window.localStorage.removeItem(storageKey)
-  }
-  catch {
-    // ignore
-  }
-}
-
 export function useBuildingForm<T = unknown>(options: UseBuildingFormOptions<T> = {}) {
   const isLoading = ref(false)
   const errors = ref<Record<string, string[]>>({})
   const apiError = ref<string | null>(null)
 
   const storageKey = options.draftKey ? buildStorageKey(options.draftKey) : null
-  const hasDraft = ref(false)
 
-  function refreshHasDraft() {
-    if (!storageKey || typeof window === 'undefined') {
-      hasDraft.value = false
-      return
-    }
-    hasDraft.value = window.localStorage.getItem(storageKey) !== null
-  }
-
-  refreshHasDraft()
-
-  onMounted(() => {
-    refreshHasDraft()
+  const { hasDraft, isDirty, restoreDraft, clearDraft, refreshHasDraft } = useLocalFormDraft<T>({
+    key: storageKey,
+    formData: options.formData,
+    initialSnapshot: options.initialSnapshot,
   })
-
-  const snapshotSerialized = computed(() =>
-    options.initialSnapshot ? JSON.stringify(toValue(options.initialSnapshot) ?? null) : null,
-  )
-
-  const currentSerialized = computed(() =>
-    options.formData ? JSON.stringify(options.formData.value ?? null) : null,
-  )
-
-  const isDirty = computed(() => {
-    if (!options.formData) return false
-    if (snapshotSerialized.value === null) return false
-    return snapshotSerialized.value !== currentSerialized.value
-  })
-
-  if (storageKey && options.formData) {
-    const persist = useDebounceFn(() => {
-      if (!options.formData) return
-      if (!isDirty.value) return
-      safeWriteDraft(storageKey, options.formData.value)
-      hasDraft.value = true
-    }, 500)
-
-    watch(() => options.formData!.value, () => {
-      persist()
-    }, { deep: true })
-  }
-
-  function restoreDraft(): T | null {
-    if (!storageKey) return null
-    const draft = safeReadDraft<T>(storageKey)
-    if (draft === null) return null
-    if (options.formData) options.formData.value = draft
-    return draft
-  }
-
-  function clearDraft() {
-    if (!storageKey) return
-    safeClearDraft(storageKey)
-    hasDraft.value = false
-  }
 
   function clearErrors() {
     errors.value = {}
@@ -172,8 +91,7 @@ export function useBuildingForm<T = unknown>(options: UseBuildingFormOptions<T> 
       await navigateTo('/buildings')
     }
     catch (e: unknown) {
-      const err = e as { data?: { error?: { message?: string } } }
-      apiError.value = err?.data?.error?.message ?? 'Đã xảy ra lỗi. Vui lòng thử lại.'
+      apiError.value = getApiErrorMessage(e)
     }
     finally {
       isLoading.value = false
@@ -200,8 +118,7 @@ export function useBuildingForm<T = unknown>(options: UseBuildingFormOptions<T> 
       await navigateTo(buildingPath(res.data))
     }
     catch (e: unknown) {
-      const err = e as { data?: { error?: { message?: string } } }
-      apiError.value = err?.data?.error?.message ?? 'Đã xảy ra lỗi. Vui lòng thử lại.'
+      apiError.value = getApiErrorMessage(e)
     }
     finally {
       isLoading.value = false

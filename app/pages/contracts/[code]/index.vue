@@ -5,6 +5,7 @@ import type { ContractRenewInput } from '~/utils/validators/contract-renewals'
 import type { ContractWithDetails } from '~/types/contracts'
 import type { ApiSuccess } from '~/types/api'
 import { contractPath } from '~/utils/routes/operational'
+import { getApiErrorCode, getApiErrorDetails, getApiErrorMessage } from '~/utils/api-error'
 import { isUuid } from '~/utils/format/slug'
 
 definePageMeta({ title: 'Chi tiết hợp đồng' })
@@ -157,18 +158,7 @@ async function handleRenew(input: ContractRenewInput) {
       await refreshContract()
     }
   } catch (err: unknown) {
-    const fetchErr = err as {
-      data?: { error?: { message?: string }, message?: string, statusMessage?: string }
-      statusMessage?: string
-      message?: string
-    }
-    renewalApiError.value
-      = fetchErr?.data?.error?.message
-      ?? fetchErr?.data?.message
-      ?? fetchErr?.data?.statusMessage
-      ?? fetchErr?.statusMessage
-      ?? fetchErr?.message
-      ?? 'Không thể gia hạn hợp đồng. Vui lòng thử lại.'
+    renewalApiError.value = getApiErrorMessage(err, 'Không thể gia hạn hợp đồng. Vui lòng thử lại.')
   } finally {
     isRenewing.value = false
   }
@@ -192,8 +182,7 @@ async function handleAddOccupant(input: import('~/utils/validators/contract-occu
     await addOccupant(input)
     showOccupantForm.value = false
   } catch (err: unknown) {
-    const fetchErr = err as { data?: { error?: { message?: string } } }
-    occupantApiError.value = fetchErr?.data?.error?.message ?? 'Không thể thêm người ở. Vui lòng thử lại.'
+    occupantApiError.value = getApiErrorMessage(err, 'Không thể thêm người ở. Vui lòng thử lại.')
   } finally {
     isAddingOccupant.value = false
   }
@@ -258,13 +247,12 @@ async function confirmDelete(force = false) {
     await navigateTo('/contracts')
   }
   catch (err: unknown) {
-    const fetchErr = err as { data?: { error?: { code?: string, details?: Record<string, unknown>, message?: string } } }
-    if (fetchErr.data?.error?.code === 'CONFLICT') {
-      deleteConflict.value = fetchErr.data.error.details ?? {}
+    if (getApiErrorCode(err) === 'CONFLICT') {
+      deleteConflict.value = getApiErrorDetails<Record<string, unknown>>(err) ?? {}
       showDeleteModal.value = false
       return
     }
-    toast.error(fetchErr.data?.error?.message ?? 'Không thể xoá hợp đồng. Vui lòng thử lại.')
+    toast.error(getApiErrorMessage(err, 'Không thể xoá hợp đồng. Vui lòng thử lại.'))
   }
   finally {
     isDeleting.value = false

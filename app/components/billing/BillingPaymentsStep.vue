@@ -5,6 +5,7 @@ import type { BulkPaymentItemInput, VoidInvoiceInput } from '~/utils/validators/
 import { formatCurrency } from '~/utils/format/currency'
 import { invoicePath, invoiceRouteSegment } from '~/utils/routes/operational'
 import { isPeriodLocked } from '~/utils/billing/lock'
+import { getApiErrorDetails, getApiErrorMessage } from '~/utils/api-error'
 
 export interface BillingPaymentsIntent {
   id: number
@@ -203,12 +204,11 @@ async function submitBulkPayments(payload: BulkPaymentItemInput[]) {
     emit('reload')
   }
   catch (err) {
-    const e = err as { data?: { error?: { message?: string; details?: { failed_index?: number } } } }
-    const failedIndex = e.data?.error?.details?.failed_index
+    const failedIndex = getApiErrorDetails<{ failed_index?: number }>(err)?.failed_index
     if (typeof failedIndex === 'number' && payload[failedIndex]) {
       bulkFailedInvoiceId.value = payload[failedIndex].invoice_id
     }
-    bulkError.value = e.data?.error?.message ?? 'Ghi thu hàng loạt thất bại'
+    bulkError.value = getApiErrorMessage(err, 'Ghi thu hàng loạt thất bại')
     toast.error(bulkError.value)
   }
   finally {
@@ -227,8 +227,7 @@ async function openDetail(inv: Invoice) {
   try {
     selectedInvoice.value = await load(invoiceRouteSegment(inv))
   } catch (err) {
-    const e = err as { data?: { error?: { message?: string } } }
-    detailError.value = e.data?.error?.message ?? 'Không thể tải hoá đơn'
+    detailError.value = getApiErrorMessage(err, 'Không thể tải hoá đơn')
   } finally {
     detailLoading.value = false
   }
@@ -280,8 +279,7 @@ async function submitPayment() {
     showPaymentModal.value = false
     emit('reload')
   } catch (err) {
-    const e = err as { data?: { error?: { message?: string } } }
-    paymentError.value = e.data?.error?.message ?? 'Ghi nhận thất bại'
+    paymentError.value = getApiErrorMessage(err, 'Ghi nhận thất bại')
     toast.error(paymentError.value)
   } finally {
     paymentSubmitting.value = false
@@ -322,8 +320,7 @@ async function submitVoid() {
     showReissueHintAfterVoid.value = false
     emit('reload')
   } catch (err) {
-    const e = err as { data?: { error?: { message?: string } } }
-    voidError.value = e.data?.error?.message ?? 'Huỷ hoá đơn thất bại'
+    voidError.value = getApiErrorMessage(err, 'Huỷ hoá đơn thất bại')
     toast.error(voidError.value)
   } finally {
     voidSubmitting.value = false
@@ -357,8 +354,7 @@ async function startUndoFromRow(invoice: Invoice) {
     startUndoPayment(invoice.id, latestPayment)
   }
   catch (err) {
-    const e = err as { data?: { error?: { message?: string } }; message?: string }
-    toast.error(e.data?.error?.message ?? e.message ?? 'Không tải được lịch sử thanh toán')
+    toast.error(getApiErrorMessage(err, 'Không tải được lịch sử thanh toán'))
   }
 }
 

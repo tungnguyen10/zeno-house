@@ -5,13 +5,9 @@ export default defineEventHandler(async (event) => {
   const user = await requireAuth(event)
   const contractId = getRouterParam(event, 'id')!
 
-  const body = await readBody(event)
-  const result = contractOccupantAddSchema.safeParse(body)
-  if (!result.success) {
-    throwValidationError('Dữ liệu không hợp lệ', result.error.flatten())
-  }
+  const input = await parseBody(event, contractOccupantAddSchema)
 
-  const occupant = await ContractOccupantService.add(event, user, contractId, result.data)
+  const occupant = await ContractOccupantService.add(event, user, contractId, input)
 
   setResponseStatus(event, 201)
   return { data: occupant }

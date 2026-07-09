@@ -3,6 +3,7 @@ import type { ManagedUserWithAssignments } from '~/types/users'
 import { ROLES } from '~/utils/constants/roles'
 import type { CreatableRole } from '~/utils/constants/roles'
 import type { UserUpdateInput } from '~/utils/validators/users'
+import { getApiErrorMessage } from '~/utils/api-error'
 
 definePageMeta({
   middleware: () => {
@@ -91,8 +92,7 @@ async function handleCreate() {
     resetForm()
   }
   catch (err: unknown) {
-    const msg = (err as { data?: { error?: { message?: string } } })?.data?.error?.message ?? 'Không thể tạo người dùng.'
-    toast.error(msg)
+    toast.error(getApiErrorMessage(err, 'Không thể tạo người dùng.'))
   }
   finally {
     createBusy.value = false
@@ -153,8 +153,7 @@ async function handleUpdate() {
     editForm.password = ''
   }
   catch (err: unknown) {
-    const msg = (err as { data?: { error?: { message?: string } } })?.data?.error?.message ?? 'Không thể cập nhật người dùng.'
-    toast.error(msg)
+    toast.error(getApiErrorMessage(err, 'Không thể cập nhật người dùng.'))
   }
   finally {
     editBusy.value = false
@@ -170,8 +169,7 @@ async function handleDelete() {
     deleteTarget.value = null
   }
   catch (err: unknown) {
-    const msg = (err as { data?: { error?: { message?: string } } })?.data?.error?.message ?? 'Không thể xoá người dùng.'
-    toast.error(msg)
+    toast.error(getApiErrorMessage(err, 'Không thể xoá người dùng.'))
   }
   finally {
     deleteBusy.value = false
@@ -216,8 +214,7 @@ async function handleAssign(row: ManagedUserWithAssignments) {
     toast.success('Đã gán vào tòa nhà.')
   }
   catch (err: unknown) {
-    const msg = (err as { data?: { error?: { message?: string } } })?.data?.error?.message ?? 'Không thể gán.'
-    toast.error(msg)
+    toast.error(getApiErrorMessage(err, 'Không thể gán.'))
   }
   finally {
     busyKey.value = null

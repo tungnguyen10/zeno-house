@@ -153,7 +153,7 @@ export const CrossPeriodInvoiceRepository = {
       .order('id', { ascending: false })
       .range(from, to)
 
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'invoices.list')
     return {
       items: ((data ?? []) as InvoiceListRow[]).map(mapInvoiceListRow),
       total: count ?? 0,

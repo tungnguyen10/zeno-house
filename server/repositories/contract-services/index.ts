@@ -13,7 +13,7 @@ export const ContractServiceRepository = {
       .eq('id', id)
       .maybeSingle()
 
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'contractServices.findById')
     return data ? mapContractService(data as Parameters<typeof mapContractService>[0]) : null
   },
 
@@ -25,7 +25,7 @@ export const ContractServiceRepository = {
       .eq('contract_id', contractId)
       .order('catalog_id', { ascending: true })
 
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'contractServices.findByContract')
     return (data ?? []).map(row => mapContractService(row as Parameters<typeof mapContractService>[0]))
   },
 
@@ -199,7 +199,7 @@ export const ContractServiceRepository = {
       .select('*, service_catalog(*)')
       .in('contract_id', contractIds)
 
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'contractServices.findByBuilding')
     return (data ?? []).map(row => mapContractService(row as Parameters<typeof mapContractService>[0]))
   },
 
@@ -216,14 +216,14 @@ export const ContractServiceRepository = {
       .select('*, service_catalog(*)')
       .single()
 
-    if (error) throw createError({ statusCode: 500, message: error.message })
-    if (!data) throw createError({ statusCode: 404, message: 'Không tìm thấy' })
+    if (error) throwDbError(error, 'contractServices.update')
+    if (!data) throwNotFound('Không tìm thấy')
     return mapContractService(data as Parameters<typeof mapContractService>[0])
   },
 
   async remove(event: H3Event, id: string): Promise<void> {
     const client = await serverSupabaseClient(event)
     const { error } = await client.from('contract_services').delete().eq('id', id)
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'contractServices.remove')
   },
 }

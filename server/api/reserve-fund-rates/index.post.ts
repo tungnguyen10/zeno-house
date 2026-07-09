@@ -4,13 +4,9 @@ import { reserveFundRateCreateSchema } from '~/utils/validators/operations-repor
 export default defineEventHandler(async (event) => {
   const user = await requireAuth(event)
 
-  const body = await readBody(event)
-  const result = reserveFundRateCreateSchema.safeParse(body)
-  if (!result.success) {
-    throwValidationError('Dữ liệu không hợp lệ', result.error.flatten())
-  }
+  const input = await parseBody(event, reserveFundRateCreateSchema)
 
-  const rate = await ReserveFundService.createRate(event, user, result.data)
+  const rate = await ReserveFundService.createRate(event, user, input)
   setResponseStatus(event, 201)
   return { data: rate }
 })

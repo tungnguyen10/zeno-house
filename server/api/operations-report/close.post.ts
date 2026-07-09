@@ -3,11 +3,8 @@ import { operationsReportCloseSchema } from '~/utils/validators/operations-repor
 
 export default defineEventHandler(async (event) => {
   const user = await requireAuth(event)
-  const result = operationsReportCloseSchema.safeParse(await readBody(event))
-  if (!result.success) {
-    throwValidationError('Dữ liệu không hợp lệ', result.error.flatten())
-  }
+  const input = await parseBody(event, operationsReportCloseSchema)
 
-  const closure = await OperationsReportService.close(event, user, result.data)
+  const closure = await OperationsReportService.close(event, user, input)
   return { data: closure }
 })

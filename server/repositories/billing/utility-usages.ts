@@ -21,7 +21,7 @@ export const BillingUtilityUsageRepository = {
       .from('billing_utility_usages')
       .select('*')
       .eq('billing_period_id', billingPeriodId)
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'billing.utilityUsages.listByPeriod')
     return (data ?? []).map(mapBillingUtilityUsage)
   },
 
@@ -39,7 +39,7 @@ export const BillingUtilityUsageRepository = {
       .eq('room_id', roomId)
       .eq('meter_type', meterType)
       .maybeSingle()
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'billing.utilityUsages.findByPeriodRoomMeter')
     return data ? mapBillingUtilityUsage(data) : null
   },
 
@@ -73,7 +73,7 @@ export const BillingUtilityUsageRepository = {
       )
       .select()
       .single()
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'billing.utilityUsages.upsert')
     return mapBillingUtilityUsage(data)
   },
 
@@ -85,7 +85,7 @@ export const BillingUtilityUsageRepository = {
       .eq('id', overrideId)
       .eq('billing_period_id', billingPeriodId)
       .maybeSingle()
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'billing.utilityUsages.findById')
     return data ? mapBillingUtilityUsage(data) : null
   },
 
@@ -95,7 +95,7 @@ export const BillingUtilityUsageRepository = {
       .from('billing_utility_usages')
       .delete()
       .eq('id', overrideId)
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'billing.utilityUsages.deleteById')
   },
 
   async approveById(
@@ -116,7 +116,7 @@ export const BillingUtilityUsageRepository = {
       .eq('id', overrideId)
       .select()
       .single()
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'billing.utilityUsages.approveById')
     return mapBillingUtilityUsage(data)
   },
 }

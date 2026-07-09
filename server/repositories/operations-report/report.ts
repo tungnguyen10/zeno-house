@@ -44,7 +44,7 @@ export const OperationsReportRepository = {
       .eq('period_year', periodYear)
       .eq('period_month', periodMonth)
       .maybeSingle()
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'operationsReport.report.findPeriod')
     return data ? { id: data.id, status: data.status } : null
   },
 
@@ -70,7 +70,7 @@ export const OperationsReportRepository = {
       )
       .eq('billing_period_id', periodId)
       .neq('status', 'void')
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'operationsReport.report.fetchBillingData')
 
     const invoices: ReportInvoice[] = ((data ?? []) as InvoiceRow[]).map((row) => {
       const charges = (row.invoice_charges ?? []).map(c => ({

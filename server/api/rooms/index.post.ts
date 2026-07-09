@@ -4,13 +4,9 @@ import { roomCreateSchema } from '~/utils/validators/rooms'
 export default defineEventHandler(async (event) => {
   const user = await requireAuth(event)
 
-  const body = await readBody(event)
-  const result = roomCreateSchema.safeParse(body)
-  if (!result.success) {
-    throwValidationError('Dữ liệu không hợp lệ', result.error.flatten())
-  }
+  const input = await parseBody(event, roomCreateSchema)
 
-  const room = await RoomService.create(event, user, result.data)
+  const room = await RoomService.create(event, user, input)
 
   setResponseStatus(event, 201)
   return { data: room }

@@ -3,11 +3,8 @@ import { serviceCatalogListQuerySchema } from '~/utils/validators/service-catalo
 
 export default defineEventHandler(async (event) => {
   const user = await requireAuth(event)
-  const result = serviceCatalogListQuerySchema.safeParse(getQuery(event))
-  if (!result.success) {
-    throwValidationError('Tham số truy vấn không hợp lệ', result.error.flatten())
-  }
+  const input = parseQuery(event, serviceCatalogListQuerySchema)
 
-  const items = await ServiceCatalogService.list(event, user, result.data.building_id)
+  const items = await ServiceCatalogService.list(event, user, input.building_id)
   return { data: items }
 })

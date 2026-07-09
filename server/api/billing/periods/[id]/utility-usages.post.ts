@@ -6,13 +6,9 @@ export default defineEventHandler(async (event) => {
   const id = getRouterParam(event, 'id')
   if (!id) throwValidationError('Thiếu mã kỳ vận hành')
 
-  const body = await readBody(event)
-  const parsed = utilityUsageOverrideSchema.safeParse(body)
-  if (!parsed.success) {
-    throwValidationError('Dữ liệu không hợp lệ', parsed.error.flatten())
-  }
+  const input = await parseBody(event, utilityUsageOverrideSchema)
 
-  const usage = await BillingUtilityUsageService.saveOverride(event, user, id!, parsed.data)
+  const usage = await BillingUtilityUsageService.saveOverride(event, user, id!, input)
 
   setResponseStatus(event, 201)
   return { data: usage }

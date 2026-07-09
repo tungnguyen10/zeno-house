@@ -10,13 +10,9 @@ export default defineEventHandler(async (event) => {
   const id = getRouterParam(event, 'id')
   if (!id) throwValidationError('Thiếu mã kỳ vận hành')
 
-  const body = await readBody(event)
-  const parsed = schema.safeParse(body)
-  if (!parsed.success) {
-    throwValidationError('Dữ liệu không hợp lệ', parsed.error.flatten())
-  }
+  const input = await parseBody(event, schema)
 
-  await BillingUtilityUsageService.deleteOverride(event, user, id!, parsed.data.override_id)
+  await BillingUtilityUsageService.deleteOverride(event, user, id!, input.override_id)
 
   return { data: null }
 })

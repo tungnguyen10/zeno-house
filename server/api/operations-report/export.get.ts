@@ -5,12 +5,9 @@ import { operationsReportQuerySchema } from '~/utils/validators/operations-repor
 export default defineEventHandler(async (event) => {
   const user = await requireAuth(event)
 
-  const result = operationsReportQuerySchema.safeParse(getQuery(event))
-  if (!result.success) {
-    throwValidationError('Tham số không hợp lệ', result.error.flatten())
-  }
+  const input = parseQuery(event, operationsReportQuerySchema, 'Tham số không hợp lệ')
 
-  const { buffer, fileName } = await OperationsReportExportService.buildWorkbook(event, user, result.data)
+  const { buffer, fileName } = await OperationsReportExportService.buildWorkbook(event, user, input)
   setXlsxResponse(event, buffer, fileName)
   return buffer
 })

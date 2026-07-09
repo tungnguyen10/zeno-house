@@ -4,13 +4,9 @@ import { buildingFixedCostCreateSchema } from '~/utils/validators/operations-rep
 export default defineEventHandler(async (event) => {
   const user = await requireAuth(event)
 
-  const body = await readBody(event)
-  const result = buildingFixedCostCreateSchema.safeParse(body)
-  if (!result.success) {
-    throwValidationError('Dữ liệu không hợp lệ', result.error.flatten())
-  }
+  const input = await parseBody(event, buildingFixedCostCreateSchema)
 
-  const fixedCost = await BuildingFixedCostService.create(event, user, result.data)
+  const fixedCost = await BuildingFixedCostService.create(event, user, input)
 
   setResponseStatus(event, 201)
   return { data: fixedCost }

@@ -64,7 +64,7 @@ async function buildUniqueTenantCode(
     .select('code')
     .ilike('code', `${prefix}-%`)
 
-  if (error) throw createError({ statusCode: 500, message: error.message })
+  if (error) throwDbError(error, 'tenants.buildUniqueTenantCode')
 
   const used = new Set((data ?? []).map(row => row.code).filter(Boolean))
   let next = (data ?? []).reduce((max, row) => {
@@ -84,7 +84,7 @@ async function loadActiveAssignments(event: H3Event): Promise<Map<string, Tenant
     .select('id, tenant_id, room_id, building_id, rooms(room_number, buildings(name, slug))')
     .eq('status', 'active')
 
-  if (contractError) throw createError({ statusCode: 500, message: contractError.message })
+  if (contractError) throwDbError(contractError, 'tenants.loadActiveAssignments.contracts')
 
   const assignments = new Map<string, TenantAssignment>()
   const activeContracts = contracts ?? []
@@ -97,7 +97,7 @@ async function loadActiveAssignments(event: H3Event): Promise<Map<string, Tenant
       .select('id, full_name')
       .in('id', primaryTenantIds)
 
-    if (primaryTenantError) throw createError({ statusCode: 500, message: primaryTenantError.message })
+    if (primaryTenantError) throwDbError(primaryTenantError, 'tenants.loadActiveAssignments.primaryTenants')
 
     for (const tenant of primaryTenants ?? []) {
       if (tenant.id && tenant.full_name) primaryTenantNameMap.set(tenant.id, tenant.full_name)
@@ -126,7 +126,7 @@ async function loadActiveAssignments(event: H3Event): Promise<Map<string, Tenant
     .is('move_out_date', null)
     .in('contract_id', activeContracts.map(contract => contract.id))
 
-  if (occupantError) throw createError({ statusCode: 500, message: occupantError.message })
+  if (occupantError) throwDbError(occupantError, 'tenants.loadActiveAssignments.occupants')
 
   const contractById = new Map(activeContracts.map(contract => [contract.id, contract]))
   for (const occupant of occupants ?? []) {
@@ -157,7 +157,7 @@ async function findTenantIdsForBuildings(event: H3Event, buildingIds: string[]):
     .select('id, tenant_id')
     .in('building_id', buildingIds)
 
-  if (contractError) throw createError({ statusCode: 500, message: contractError.message })
+  if (contractError) throwDbError(contractError, 'tenants.findTenantIdsForBuildings.contracts')
 
   const contractIds = (contracts ?? []).map(contract => contract.id)
   const primaryTenantIds = (contracts ?? []).map(contract => contract.tenant_id)
@@ -169,7 +169,7 @@ async function findTenantIdsForBuildings(event: H3Event, buildingIds: string[]):
       .select('tenant_id')
       .in('contract_id', contractIds)
 
-    if (occupantError) throw createError({ statusCode: 500, message: occupantError.message })
+    if (occupantError) throwDbError(occupantError, 'tenants.findTenantIdsForBuildings.occupants')
     occupantTenantIds = (occupants ?? []).map(occupant => occupant.tenant_id)
   }
 
@@ -260,7 +260,7 @@ export const TenantRepository = {
     }
 
     const { data, error, count } = await query
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'tenants.findAll')
     return {
       items: (data ?? []).map((row) => {
         const tenant = mapTenant(row)
@@ -283,7 +283,7 @@ export const TenantRepository = {
       .eq('id', id)
       .maybeSingle()
 
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'tenants.findById')
     return data ? mapTenant(data) : null
   },
 
@@ -308,7 +308,7 @@ export const TenantRepository = {
       .limit(1)
       .maybeSingle()
 
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'tenants.wasCreatedByActor')
     return Boolean(data)
   },
 
@@ -322,7 +322,7 @@ export const TenantRepository = {
       .eq('actor_id', actorId)
       .not('entity_id', 'is', null)
 
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'tenants.findCreatedTenantIdsByActor')
 
     return [...new Set((data ?? []).map(row => row.entity_id).filter((id): id is string => Boolean(id)))]
   },
@@ -332,7 +332,7 @@ export const TenantRepository = {
     let query = client.from('tenants').select('*').eq('id_number', idNumber)
     if (excludeId) query = query.neq('id', excludeId)
     const { data, error } = await query.maybeSingle()
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'tenants.findByIdNumber')
     return data ? mapTenant(data) : null
   },
 
@@ -341,7 +341,7 @@ export const TenantRepository = {
     let query = client.from('tenants').select('*').eq('phone', phone)
     if (excludeId) query = query.neq('id', excludeId)
     const { data, error } = await query.maybeSingle()
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'tenants.findByPhone')
     return data ? mapTenant(data) : null
   },
 
@@ -373,7 +373,7 @@ export const TenantRepository = {
       .select()
       .single()
 
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'tenants.insert')
     return mapTenant(data)
   },
 
@@ -400,7 +400,7 @@ export const TenantRepository = {
       .select()
       .single()
 
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'tenants.update')
     return mapTenant(data)
   },
 
@@ -422,14 +422,14 @@ export const TenantRepository = {
       .select()
       .single()
 
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'tenants.updateIdImagePath')
     return mapTenant(data)
   },
 
   async remove(event: H3Event, id: string): Promise<void> {
     const client = await serverSupabaseClient(event)
     const { error } = await client.from('tenants').delete().eq('id', id)
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'tenants.remove')
   },
 
   async findByIdentifier(event: H3Event, identifier: string): Promise<Tenant | null> {
@@ -441,7 +441,7 @@ export const TenantRepository = {
       .eq(column, identifier)
       .maybeSingle()
 
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'tenants.findByIdentifier')
     return data ? mapTenant(data) : null
   },
 
@@ -456,7 +456,7 @@ export const TenantRepository = {
       .limit(1)
       .maybeSingle()
 
-    if (primaryError) throw createError({ statusCode: 500, message: primaryError.message })
+    if (primaryError) throwDbError(primaryError, 'tenants.findActiveAssignmentByTenantId.primary')
 
     if (primaryContract) {
       const room = primaryContract.rooms as ContractAssignmentRow['rooms']
@@ -480,7 +480,7 @@ export const TenantRepository = {
       .limit(1)
       .maybeSingle()
 
-    if (occupancyError) throw createError({ statusCode: 500, message: occupancyError.message })
+    if (occupancyError) throwDbError(occupancyError, 'tenants.findActiveAssignmentByTenantId.occupancy')
 
     const contract = occupancy?.contracts as ContractAssignmentRow | null | undefined
     if (!contract || contract.tenant_id === tenantId) return null
@@ -492,7 +492,7 @@ export const TenantRepository = {
       .limit(1)
       .maybeSingle()
 
-    if (primaryTenantError) throw createError({ statusCode: 500, message: primaryTenantError.message })
+    if (primaryTenantError) throwDbError(primaryTenantError, 'tenants.findActiveAssignmentByTenantId.primaryTenant')
 
     const room = contract.rooms as ContractAssignmentRow['rooms']
     return {
@@ -514,7 +514,7 @@ export const TenantRepository = {
       .select('id', { count: 'exact', head: true })
       .eq('tenant_id', tenantId)
       .eq('status', 'active')
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'tenants.countActiveContractsForTenant')
     return count ?? 0
   },
 
@@ -525,7 +525,7 @@ export const TenantRepository = {
       .select('id', { count: 'exact', head: true })
       .eq('tenant_id', tenantId)
       .is('move_out_date', null)
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'tenants.countActiveOccupanciesForTenant')
     return count ?? 0
   },
 
@@ -541,7 +541,7 @@ export const TenantRepository = {
       .limit(1)
       .maybeSingle()
 
-    if (primaryError) throw createError({ statusCode: 500, message: primaryError.message })
+    if (primaryError) throwDbError(primaryError, 'tenants.findActiveBuildingIdForTenant.primary')
     if (primaryContract?.building_id) return primaryContract.building_id
 
     const { data: occupancy, error: occupancyError } = await client
@@ -552,7 +552,7 @@ export const TenantRepository = {
       .limit(1)
       .maybeSingle()
 
-    if (occupancyError) throw createError({ statusCode: 500, message: occupancyError.message })
+    if (occupancyError) throwDbError(occupancyError, 'tenants.findActiveBuildingIdForTenant.occupancy')
     const contract = occupancy?.contracts as { building_id?: string | null } | null | undefined
     return contract?.building_id ?? null
   },
@@ -566,7 +566,7 @@ export const TenantRepository = {
       .select()
       .single()
 
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'tenants.softArchive')
     return mapTenant(data)
   },
 
@@ -579,7 +579,7 @@ export const TenantRepository = {
       .select()
       .single()
 
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'tenants.setStatus')
     return mapTenant(data)
   },
 }

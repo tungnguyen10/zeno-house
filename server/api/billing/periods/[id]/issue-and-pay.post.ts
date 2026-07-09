@@ -14,12 +14,8 @@ export default defineEventHandler(async (event) => {
   const id = getRouterParam(event, 'id')
   if (!id) throwValidationError('Thiếu mã kỳ vận hành')
 
-  const body = await readBody(event)
-  const parsed = issueAndPaySchema.safeParse(body)
-  if (!parsed.success) {
-    throwValidationError('Dữ liệu không hợp lệ', parsed.error.flatten())
-  }
+  const input = await parseBody(event, issueAndPaySchema)
 
-  const invoice = await IssueAndPayService.issueAndPay(event, user, id!, parsed.data)
+  const invoice = await IssueAndPayService.issueAndPay(event, user, id!, input)
   return { data: invoice }
 })

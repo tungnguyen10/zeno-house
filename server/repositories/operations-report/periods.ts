@@ -51,7 +51,7 @@ export const OperationsReportPeriodRepository = {
       .eq('period_year', periodYear)
       .eq('period_month', periodMonth)
       .maybeSingle()
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'operationsReport.periods.find')
     return data ? mapRow(data) : null
   },
 
@@ -98,7 +98,7 @@ export const OperationsReportPeriodRepository = {
       }, { onConflict: 'building_id,period_year,period_month' })
       .select()
       .single()
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'operationsReport.periods.close')
     return mapRow(data)
   },
 
@@ -131,7 +131,7 @@ export const OperationsReportPeriodRepository = {
       .eq('id', existing.id)
       .select()
       .single()
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'operationsReport.periods.reopen')
     return mapRow(data)
   },
 
@@ -155,7 +155,7 @@ export const OperationsReportPeriodRepository = {
       .eq('status', 'closed')
       .lte('period_year', Math.floor(toOrdinal / 12))
       .gte('period_year', Math.floor(fromOrdinal / 12) - 1)
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'operationsReport.periods.listClosedInRange')
     return ((data ?? []) as OperationsReportPeriodRow[])
       .map(mapOperationsReportClosure)
       .filter(period => {

@@ -34,7 +34,7 @@ export const BillingAuditRepository = {
       })
       .select()
       .single()
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'billing.audit.append')
     return mapBillingAuditEvent(data)
   },
 
@@ -48,7 +48,7 @@ export const BillingAuditRepository = {
       .select('*')
       .eq('billing_period_id', billingPeriodId)
       .order('created_at', { ascending: false })
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'billing.audit.listByPeriod')
     return (data ?? []).map(mapBillingAuditEvent)
   },
 
@@ -86,7 +86,7 @@ export const BillingAuditRepository = {
     if (filters.correlationId) query = query.eq('correlation_id', filters.correlationId)
     query = query.order('created_at', { ascending: false }).limit(filters.max ?? 1000)
     const { data, error } = await query
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'billing.audit.listByPeriodFiltered')
     return (data ?? []).map(mapBillingAuditEvent)
   },
 
@@ -110,7 +110,7 @@ export const BillingAuditRepository = {
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle()
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'billing.audit.findLatestCorrelation')
     return data?.correlation_id ?? null
   },
 
@@ -131,7 +131,7 @@ export const BillingAuditRepository = {
       .eq('action', action)
       .limit(1)
       .maybeSingle()
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'billing.audit.hasActionForPeriod')
     return !!data
   },
 }

@@ -23,7 +23,7 @@ export const BillingPeriodRepository = {
     if (filters.status) query = query.eq('status', filters.status)
 
     const { data, error } = await query
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'billing.periods.list')
     return (data ?? []).map(mapBillingPeriod)
   },
 
@@ -34,7 +34,7 @@ export const BillingPeriodRepository = {
       .select('*')
       .eq('id', id)
       .maybeSingle()
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'billing.periods.findById')
     return data ? mapBillingPeriod(data) : null
   },
 
@@ -52,7 +52,7 @@ export const BillingPeriodRepository = {
       .eq('period_year', periodYear)
       .eq('period_month', periodMonth)
       .maybeSingle()
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'billing.periods.findByBuildingPeriod')
     return data ? mapBillingPeriod(data) : null
   },
 
@@ -71,7 +71,7 @@ export const BillingPeriodRepository = {
       })
       .select()
       .single()
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'billing.periods.insert')
     return mapBillingPeriod(data)
   },
 
@@ -92,7 +92,7 @@ export const BillingPeriodRepository = {
       .eq('id', id)
       .select()
       .single()
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'billing.periods.updateStatus')
     return mapBillingPeriod(data)
   },
 }

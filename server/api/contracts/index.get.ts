@@ -4,13 +4,7 @@ import { contractListQuerySchema } from '~/utils/validators/contracts'
 export default defineEventHandler(async (event) => {
   const user = await requireAuth(event)
 
-  const rawQuery = getQuery(event)
-  const result = contractListQuerySchema.safeParse(rawQuery)
-  if (!result.success) {
-    throwValidationError('Tham số truy vấn không hợp lệ', result.error.flatten())
-  }
-
-  const { page, limit, q, building_id, room_id, tenant_id, status, sort, order } = result.data
+  const { page, limit, q, building_id, room_id, tenant_id, status, sort, order } = parseQuery(event, contractListQuerySchema)
 
   const { items, total } = await ContractService.list(event, user, {
     page,
@@ -24,8 +18,5 @@ export default defineEventHandler(async (event) => {
     order,
   })
 
-  return {
-    data: items,
-    meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
-  }
+  return paginated(items, { total, page, limit })
 })

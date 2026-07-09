@@ -3,6 +3,7 @@ import type { UiTableColumn } from '~/components/ui/UiTable.vue'
 import type { ApiSuccess } from '~/types/api'
 import type { Building } from '~/types/buildings'
 import type { SharedExpense } from '~/types/shared-expenses'
+import { getApiErrorMessage } from '~/utils/api-error'
 import {
   EXPENSE_CATEGORIES,
   EXPENSE_CATEGORY_LABELS,
@@ -178,8 +179,7 @@ async function deactivate(item: SharedExpense) {
 }
 
 function resolveError(err: unknown, fallback: string): string {
-  const body = (err as { data?: { error?: { message?: string } } })?.data
-  return body?.error?.message ?? fallback
+  return getApiErrorMessage(err, fallback)
 }
 </script>
 

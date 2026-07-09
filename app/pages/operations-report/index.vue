@@ -2,6 +2,7 @@
 import clsx from 'clsx'
 import { computed, ref } from 'vue'
 import { useAuthStore } from '~/stores/auth'
+import { getApiErrorMessage } from '~/utils/api-error'
 import type {
   BuildingExpense,
   RecurringExpense,
@@ -375,8 +376,7 @@ async function submitVoid() {
 }
 
 function resolveError(err: unknown, fallback: string): string {
-  const body = (err as { data?: { error?: { message?: string } } })?.data
-  return body?.error?.message ?? fallback
+  return getApiErrorMessage(err, fallback)
 }
 
 function expenseLabel(category: BuildingExpense['category']) {

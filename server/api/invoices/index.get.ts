@@ -3,10 +3,7 @@ import { InvoiceQueryService } from '../../services/billing/invoice-query'
 
 export default defineEventHandler(async (event) => {
   const user = await requireAuth(event)
-  const parsed = invoiceListQuerySchema.safeParse(getQuery(event))
-  if (!parsed.success) {
-    throwValidationError('Bộ lọc hoá đơn không hợp lệ', parsed.error.flatten())
-  }
+  const input = parseQuery(event, invoiceListQuerySchema, 'Bộ lọc hoá đơn không hợp lệ')
 
-  return InvoiceQueryService.list(event, user, parsed.data)
+  return InvoiceQueryService.list(event, user, input)
 })
