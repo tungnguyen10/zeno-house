@@ -184,6 +184,14 @@ Tenant list rows SHALL show current room and building context when a tenant has 
 - **WHEN** user types continuously for 1 second
 - **THEN** localStorage is written at most a few times (debounced 500ms), and the final saved value matches the latest input
 
+### Requirement: Shared helper implementations keep tenant form behavior stable
+Tenant client behavior SHALL allow internal implementation via shared helpers (query-sync readers, draft persistence wrappers), while URL/filter behavior and tenant draft semantics in this spec are preserved.
+
+#### Scenario: Shared draft helper preserves tenant key contract
+- **WHEN** tenant form uses shared draft utility internally
+- **THEN** key format remains `tenant-form:create` or `tenant-form:edit:<id>`
+- **AND** restore/clear behavior remains unchanged
+
 ---
 
 ### Requirement: useTenantBulkActions composable

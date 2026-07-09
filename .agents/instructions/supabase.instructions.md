@@ -132,7 +132,7 @@ export const BuildingRepository = {
         data: { error: { code: 'NOT_FOUND', message: 'Không tìm thấy tòa nhà' } },
       })
     }
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'buildings.findById')
 
     return mapBuilding(data)
   },

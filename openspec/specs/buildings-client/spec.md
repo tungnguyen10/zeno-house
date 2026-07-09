@@ -131,6 +131,14 @@ Defines client-side building DTOs, validators, mappers, composables, and form be
 - **WHEN** user types continuously for 1 second
 - **THEN** localStorage is written at most a few times (debounced 500ms), and the final saved value matches the latest input
 
+### Requirement: Shared helper implementations keep building form behavior stable
+Building client behavior SHALL allow internal implementation via shared helpers (for example query-sync readers or local draft persistence wrappers), while public behavior, key format, debounce timing, and restore semantics defined by this spec remain unchanged.
+
+#### Scenario: Shared draft helper preserves key contract
+- **WHEN** building form uses shared draft utility internally
+- **THEN** key format remains `building-form:create` or `building-form:edit:<id>`
+- **AND** restore/clear behavior stays identical to this spec
+
 ### Requirement: useBuildingBulkActions composable
 `app/composables/buildings/useBuildingBulkActions.ts` SHALL expose `selectedIds: Ref<string[]>`, `isSelected(id): boolean`, `toggle(id)`, `selectAll(ids: string[])`, `clear()`, and `runAction(action: 'archive' | 'activate' | 'delete'): Promise<{ succeeded: string[]; failed: { id: string; reason: string }[] }>`. `runAction` SHALL call `POST /api/buildings/bulk` and return the parsed response; on success it SHALL clear selection.
 

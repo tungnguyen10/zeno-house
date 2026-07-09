@@ -80,7 +80,7 @@ export const BuildingRepository = {
       .select('*')
       .order('created_at', { ascending: false })
 
-    if (error) throw createError({ statusCode: 500, message: error.message })
+    if (error) throwDbError(error, 'buildings.findAll')
     return data.map(mapBuilding)  // ← luôn map trước khi return
   },
 }

@@ -47,6 +47,13 @@ The page SHALL persist filter state vào URL query params (`building_id`, `perio
 - **WHEN** user áp filter rồi refresh trang
 - **THEN** filter state restore từ URL, không reset về default
 
+### Requirement: Query-sync implementation may use shared helpers
+Invoice browse SHALL preserve URL query compatibility when using shared query parsing/sync utilities, with documented keys and behavior in this spec unchanged.
+
+#### Scenario: Shared parser preserves query compatibility
+- **WHEN** invoices browse switches to shared query helper implementation
+- **THEN** existing query keys (`building_id`, `period_year`, `period_month`, `status`, `tenant_search`, `page`) continue to work without behavior regression
+
 ### Requirement: Server-side pagination
 The page SHALL paginate server-side với default `page_size=50`, tối đa 100. Pagination controls cho phép jump page và hiển thị tổng số kết quả.
 

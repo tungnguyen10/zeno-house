@@ -40,6 +40,7 @@ type ApiError      = { error: { code: string; message: string; details?: unknown
 Use the auto-imported helpers in `server/utils/` instead of hand-rolling validation, pagination, or error envelopes:
 
 - `parseBody(event, schema, message?)` / `parseQuery(event, schema, message?)` — validate and return typed data; on failure they throw `VALIDATION_ERROR` with `error.flatten()` as `details`.
+- `ok(data, meta?)` / `paginated(items, { total, page, limit })` — build standard success envelopes.
 - `paginated(items, { total, page, limit })` — build `{ data, meta: { total, page, limit, totalPages } }`.
 - `throwForbidden` / `throwNotFound` / `throwValidationError` / `throwConflict(message, details?)` — standard error envelopes.
 - `throwDbError(error, context)` — repository DB errors. Never surface a raw Supabase message to the client; this logs the original error with `context` and returns a generic `INTERNAL` envelope.
@@ -188,7 +189,7 @@ const { data } = await client.from('buildings').select('*').single()
 return data  // thiếu mapper — expose DB shape
 
 // ✗ Đừng leak raw DB error ra client
-if (error) throw createError({ statusCode: 500, message: error.message })
+if (error) throwDbError(error, 'buildings.findAll')
 // → Dùng: if (error) throwDbError(error, '<repo>.<method>')
 
 // ✗ Đừng dùng inconsistent error shape
@@ -203,7 +204,7 @@ export default defineEventHandler(async (event) => {
 
 // ✗ Đừng tạo endpoint mà không có error handling cho Supabase error
 const { data } = await client.from('buildings').select('*')
-// → const { data, error } = ... ; if (error) throw createError(...)
+// → const { data, error } = ... ; if (error) throwDbError(error, '<repo>.<method>')
 ```
 
 ## File Naming Convention

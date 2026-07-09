@@ -172,6 +172,14 @@ The room detail UI SHALL be reachable from existing UUID room URLs and from buil
 - **WHEN** user types continuously for 1 second
 - **THEN** localStorage is written at most a few times (debounced 500ms), and the final saved value matches the latest input
 
+### Requirement: Shared helper implementations keep room form behavior stable
+Room client behavior SHALL allow internal implementation via shared helpers (query-sync readers, draft persistence wrappers), while route-query contract and room draft semantics in this spec remain unchanged.
+
+#### Scenario: Shared draft helper preserves room envelope semantics
+- **WHEN** room form uses shared draft utility internally
+- **THEN** stored payload keeps room-compatible draft shape and restore timestamp behavior
+- **AND** key contract stays `room-form:create:<buildingId|none>` or `room-form:edit:<id>`
+
 ---
 
 ### Requirement: useRoomBulkActions composable

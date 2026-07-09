@@ -223,6 +223,13 @@ Contract routes SHALL NOT use tenant-name-derived slugs.
 - **WHEN** `restoreDraft()` is called and the stored `draftVersion` differs from the current code version
 - **THEN** an alert is shown indicating "Bản nháp cũ không tương thích" and `restoreDraft()` does not overwrite formData
 
+### Requirement: Contract draft workflow remains wizard-aware
+Contract draft behavior SHALL remain wizard-aware and versioned (including `currentStep`, pending occupants, selected services, and `draftVersion`) even if other domains use a shared draft helper internally.
+
+#### Scenario: Contract draft keeps bespoke wizard payload
+- **WHEN** contracts code is refactored for shared infrastructure
+- **THEN** draft payload still preserves wizard-specific fields and version checks required by this spec
+
 ---
 
 ### Requirement: useContractBulkActions composable

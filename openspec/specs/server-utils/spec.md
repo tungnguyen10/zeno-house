@@ -4,7 +4,7 @@ Defines shared server utility behavior for typed errors, authenticated users, an
 ## Requirements
 
 ### Requirement: Typed error throwing helpers
-`server/utils/errors.ts` SHALL export `throwForbidden(message?)`, `throwNotFound(message?)`, `throwValidationError(message?, details?)`, `throwConflict(message?)`. Mỗi helper SHALL throw `createError` với đúng HTTP status code và `{ error: { code, message } }` shape.
+`server/utils/errors.ts` SHALL export `throwForbidden(message?)`, `throwNotFound(message?)`, `throwValidationError(message?, details?)`, `throwConflict(message?, details?)`. Mỗi helper SHALL throw `createError` với đúng HTTP status code và `{ error: { code, message } }` shape.
 
 #### Scenario: throwForbidden ném 403
 - **WHEN** `throwForbidden()` được gọi
@@ -21,6 +21,10 @@ Defines shared server utility behavior for typed errors, authenticated users, an
 #### Scenario: throwConflict ném 409
 - **WHEN** `throwConflict()` được gọi
 - **THEN** thrown error có statusCode 409 và `error.code === 'CONFLICT'`
+
+#### Scenario: throwConflict includes details when provided
+- **WHEN** `throwConflict('Đã tồn tại', { field: 'code' })` được gọi
+- **THEN** thrown error có `statusCode = 409`, `error.code === 'CONFLICT'`, và `error.details.field === 'code'`
 
 #### Scenario: Custom message
 - **WHEN** helper được gọi với custom message string
@@ -114,6 +118,39 @@ Defines shared server utility behavior for typed errors, authenticated users, an
 #### Scenario: Does not leak raw message to client
 - **WHEN** `throwInternal(new Error('SQL syntax error near table foo'))` is called and the response is observed by a client
 - **THEN** the response body does NOT contain the string `'SQL syntax error near table foo'`
+
+### Requirement: `throwDbError()` normalizes repository failures
+`server/utils/errors.ts` SHALL export `throwDbError(error: unknown, context: string): never` for repository-level Supabase failures. The helper SHALL delegate to `throwInternal(error, context)` so the response stays in the `INTERNAL` envelope while the original DB error is logged server-side.
+
+#### Scenario: DB errors return INTERNAL envelope
+- **WHEN** repository code calls `throwDbError(supabaseError, 'buildings.findAll')`
+- **THEN** client receives status 500 with `error.code === 'INTERNAL'` and generic message
+- **AND** raw `supabaseError.message` is not present in response body
+
+#### Scenario: DB context is preserved for server logs
+- **WHEN** `throwDbError` is called with context `contracts.insert`
+- **THEN** server logs include context `contracts.insert` for debugging
+
+### Requirement: API parse and response helpers
+`server/utils/api.ts` SHALL export `parseBody(event, schema, message?)`, `parseQuery(event, schema, message?)`, `ok(data, meta?)`, and `paginated(items, { total, page, limit })` to enforce consistent handler behavior.
+
+#### Scenario: parseBody throws VALIDATION_ERROR with flatten details
+- **WHEN** `parseBody(event, schema)` receives invalid body
+- **THEN** it throws 422 with `error.code === 'VALIDATION_ERROR'`
+- **AND** `error.details` equals `zodError.flatten()` shape (`fieldErrors`, `formErrors`)
+
+#### Scenario: parseQuery throws VALIDATION_ERROR with flatten details
+- **WHEN** `parseQuery(event, schema)` receives invalid query params
+- **THEN** it throws 422 with `error.code === 'VALIDATION_ERROR'`
+- **AND** `error.details` keeps `zodError.flatten()` output
+
+#### Scenario: ok returns standard success envelope
+- **WHEN** handler returns `ok({ id: 'b1' })`
+- **THEN** response shape is `{ data: { id: 'b1' } }`
+
+#### Scenario: paginated returns computed totalPages
+- **WHEN** handler returns `paginated(items, { total: 45, page: 2, limit: 20 })`
+- **THEN** response has `meta.totalPages === 3`
 
 ### Requirement: Role helpers read app_metadata only
 Server role helpers SHALL read `user.app_metadata.role` and SHALL NOT use top-level `user.role` or `user_metadata` for authorization.
