@@ -2,6 +2,7 @@
 import type { RoomMeterStatus } from '~/types/meter-readings'
 import type { UiTableColumn } from '~/components/ui/UiTable.vue'
 import { buildingPath, billingWorkspacePath } from '~/utils/routes/operational'
+import { formatPeriodString, parsePeriodString } from '~/utils/format/period'
 
 definePageMeta({ title: 'Chỉ số đồng hồ' })
 
@@ -17,8 +18,15 @@ const {
   periodMonth,
 } = useBuildingMeterReadings(id)
 
-const { monthOptions, yearOptions } = usePeriodOptions({
-  selectedYear: periodYear,
+const periodModel = computed<string>({
+  get: () => formatPeriodString(periodYear.value, periodMonth.value),
+  set: (v) => {
+    const parsed = parsePeriodString(v)
+    if (parsed) {
+      periodYear.value = parsed.year
+      periodMonth.value = parsed.month
+    }
+  },
 })
 
 interface MeterCell {
@@ -117,10 +125,6 @@ const billingHref = computed(() =>
 const backHref = computed(() => (building.value ? buildingPath(building.value) : `/buildings/${id}`))
 const backLabel = computed(() => building.value?.name ?? 'Tòa nhà')
 
-const periodLabel = computed(
-  () => `Tháng ${String(periodMonth.value).padStart(2, '0')}/${periodYear.value}`,
-)
-
 function formatNumber(value: number | null): string {
   return value !== null ? value.toLocaleString('vi-VN') : '—'
 }
@@ -176,20 +180,14 @@ function formatDate(value: string | null): string {
 
     <!-- Period selector -->
     <div class="mb-4 flex flex-wrap items-center gap-3">
-      <label class="text-sm text-muted">Kỳ:</label>
-      <UiSelect
-        v-model="periodMonth"
-        :options="monthOptions"
-        aria-label="Tháng xem chỉ số"
-        class="w-36"
+      <UiDatePicker
+        v-model="periodModel"
+        label="Kỳ"
+        picker-mode="month"
+        aria-label="Kỳ xem chỉ số"
+        class="w-44"
+        :clearable="false"
       />
-      <UiSelect
-        v-model="periodYear"
-        :options="yearOptions"
-        aria-label="Năm xem chỉ số"
-        class="w-28"
-      />
-      <span class="text-xs text-muted">{{ periodLabel }}</span>
     </div>
 
     <!-- Desktop table -->

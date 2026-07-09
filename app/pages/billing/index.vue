@@ -5,6 +5,7 @@ import { BILLING_PERIOD_STATUSES } from '~/utils/constants/billing'
 import { formatCurrency } from '~/utils/format/currency'
 import { billingWorkspacePath } from '~/utils/routes/operational'
 import { getApiErrorMessage } from '~/utils/api-error'
+import { formatPeriodString, parsePeriodString } from '~/utils/format/period'
 
 definePageMeta({ title: 'Vận hành tháng' })
 
@@ -38,7 +39,7 @@ const statusFilter = computed<string | number | null>({
   },
 })
 
-const { yearOptions, monthOptions } = usePeriodOptions({
+const { yearOptions } = usePeriodOptions({
   selectedYear: computed(() => filters.period_year),
 })
 
@@ -158,8 +159,7 @@ function isClosed(row: BillingPeriodSummary): boolean {
 const showOpenModal = ref(false)
 const openForm = reactive({
   building_id: '',
-  period_year: now.getFullYear(),
-  period_month: now.getMonth() + 1,
+  period: formatPeriodString(now.getFullYear(), now.getMonth() + 1),
 })
 const openSubmitting = ref(false)
 const openError = ref<string | null>(null)
@@ -167,8 +167,9 @@ const openError = ref<string | null>(null)
 function startOpenPeriod() {
   actionMenuOpen.value = false
   openForm.building_id = filters.building_id ?? ''
-  openForm.period_year = filters.period_year ?? now.getFullYear()
-  openForm.period_month = filters.period_month ?? now.getMonth() + 1
+  const year = filters.period_year ?? now.getFullYear()
+  const month = filters.period_month ?? now.getMonth() + 1
+  openForm.period = formatPeriodString(year, month)
   openError.value = null
   showOpenModal.value = true
 }
@@ -178,13 +179,18 @@ async function submitOpenPeriod() {
     openError.value = 'Vui lòng chọn tòa nhà'
     return
   }
+  const parsed = parsePeriodString(openForm.period)
+  if (!parsed) {
+    openError.value = 'Vui lòng chọn kỳ vận hành'
+    return
+  }
   openSubmitting.value = true
   openError.value = null
   try {
     const period = await openPeriod({
       building_id: openForm.building_id,
-      period_year: openForm.period_year,
-      period_month: openForm.period_month,
+      period_year: parsed.year,
+      period_month: parsed.month,
     })
     showOpenModal.value = false
     const building = buildings.value.find(item => item.id === period.buildingId)
@@ -458,24 +464,12 @@ function periodLabel(row: BillingPeriodSummary): string {
             class="w-full"
           />
         </UiSection>
-        <div class="grid grid-cols-2 gap-3">
-          <UiSection title="Tháng">
-            <UiSelect
-              v-model="openForm.period_month"
-              :options="monthOptions"
-              aria-label="Tháng mở kỳ"
-              class="w-full"
-            />
-          </UiSection>
-          <UiSection title="Năm">
-            <UiSelect
-              v-model="openForm.period_year"
-              :options="yearOptions"
-              aria-label="Năm mở kỳ"
-              class="w-full"
-            />
-          </UiSection>
-        </div>
+        <UiDatePicker
+          v-model="openForm.period"
+          label="Kỳ vận hành"
+          picker-mode="month"
+          required
+        />
         <UiAlert v-if="openError" severity="danger">{{ openError }}</UiAlert>
       </div>
       <template #footer>
