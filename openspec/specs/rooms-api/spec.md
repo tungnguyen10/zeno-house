@@ -160,7 +160,7 @@ Room read APIs SHALL support lookup by UUID id and by building identifier plus r
 ---
 
 ### Requirement: POST /api/rooms/bulk performs bulk action with per-item result
-`server/api/rooms/bulk.post.ts` SHALL require admin auth, validate body with `roomBulkActionSchema` (`{ action: 'archive' | 'activate' | 'set_maintenance' | 'delete', ids: string[] }`), iterate over the IDs applying the action via the service, and return `{ data: { succeeded: string[], failed: { id: string, reason: string }[] } }` with status 200. The endpoint SHALL NOT short-circuit on first failure.
+`server/api/rooms/bulk.post.ts` SHALL require admin auth, validate body with `roomBulkActionSchema` (`{ action: 'archive' | 'activate' | 'set_maintenance' | 'delete', ids: string[], reason?: string }`), iterate over the IDs applying the action via the service, and return `{ data: { succeeded: string[], failed: { id: string, reason: string }[] } }` with status 200. The endpoint SHALL NOT short-circuit on first failure. `reason` SHALL be required when `action='delete'`.
 
 #### Scenario: Bulk archive succeeds
 - **WHEN** admin posts `{ action: 'archive', ids: ['a','b'] }`
@@ -185,6 +185,10 @@ Room read APIs SHALL support lookup by UUID id and by building identifier plus r
 #### Scenario: Validation error on empty ids
 - **WHEN** body is `{ action: 'archive', ids: [] }`
 - **THEN** response is 422 with `error.code === 'VALIDATION_ERROR'`
+
+#### Scenario: Validation error when bulk delete reason is missing
+- **WHEN** body is `{ action: 'delete', ids: ['a'] }`
+- **THEN** response is 422 with `error.code === 'VALIDATION_ERROR'` and an error on `reason`
 
 ---
 

@@ -59,6 +59,7 @@ Readable building routes use `slug` when available and fall back to id.
 - Admin can switch to selection mode to bulk archive/activate/delete. A "Chọn cả trang" checkbox toggles every building on the current page; the per-card checkbox toggles a single row.
 - Delete requires a checkbox acknowledgement and only succeeds for buildings with no rooms and no active contracts.
 - After bulk actions a toast summarises the result; if any items were skipped, an inline warning surfaces a "Xem chi tiết" button that opens a modal listing each failure with a human-readable reason.
+- After bulk actions, the page clears selection in the `onDone` handler and refreshes the keyed list (`buildings:list`) so filtered views render the latest server state immediately.
 - Empty states distinguish "no data" from "filtered to empty" (the latter offers a "Xoá bộ lọc" action).
 
 ### Detail page
@@ -114,13 +115,15 @@ Contracts drive occupancy state. Creating an active contract occupies the room. 
 ### List page behaviour
 
 - Toolbar exposes search, status chips, building filter, floor filter, sort, and order. Filter state mirrors the URL and resets `page=1` when changed.
-- Admin can switch to selection mode to bulk mark rooms available, set maintenance, archive, or delete. Delete requires acknowledgement and applies the same safe-delete checks as single delete.
+- Admin can switch to selection mode to bulk mark rooms available, set maintenance, archive, or delete. Bulk delete requires both acknowledgement and a non-empty reason, and applies the same safe-delete checks as single delete.
+- After bulk actions, the page clears selection in the `onDone` handler and refreshes the keyed list (`rooms:list`) so the current filtered result always shows the latest server state.
 - Empty states distinguish filtered-empty from no-data; API errors include a retry action.
 
 ### Detail page
 
 - Hero shows room identity, code, status, building link, active-contract state, occupant count, and meter-device count inferred from latest readings.
 - Sections `#overview`, `#active-contract`, `#meter-readings`, `#contracts-history`, `#danger-zone` (admin-only).
+- Delete/archive confirmations in danger zone require a non-empty reason before submitting.
 - `DELETE` returning `409` shows an alert with blocker counts and a "Lưu trữ thay vì xoá" shortcut that re-issues `DELETE /api/rooms/[id]?force=true`.
 
 ### Form
@@ -145,8 +148,8 @@ API:
 - `POST /api/tenants`
 - `GET /api/tenants/[id]`
 - `PATCH /api/tenants/[id]`
-- `DELETE /api/tenants/[id]` — returns `409 CONFLICT` with `details.activeContracts` and `details.activeOccupancies` when blocked. Pass `?force=true` to soft-archive instead (returns archived tenant).
-- `POST /api/tenants/bulk` — body `{ action: 'archive' | 'activate' | 'delete', ids: string[] }` returns `{ succeeded: string[], failed: { id, reason }[] }`. Reasons: `has_active_contracts`, `has_active_occupancies`, `not_found`, `conflict`.
+- `DELETE /api/tenants/[id]` — returns `409 CONFLICT` with `details.activeContracts` and `details.activeOccupancies` when blocked. Pass `?force=true` to soft-archive instead (returns archived tenant). For owner users, when tenant has no active-building scope, delete is still allowed if the tenant row was created by that owner.
+- `POST /api/tenants/bulk` — body `{ action: 'archive' | 'activate' | 'delete', ids: string[], reason?: string }` returns `{ succeeded: string[], failed: { id, reason }[] }`. `reason` is required when `action='delete'`. Reasons: `has_active_contracts`, `has_active_occupancies`, `not_found`, `conflict`, `forbidden`.
 
 Tenant records include:
 
@@ -159,8 +162,8 @@ Tenant records include:
 
 UX notes:
 
-- List page (`/tenants`): toolbar wraps debounced search, building filter, contract-state filter, status chips, sort dropdown, and order toggle. Filters sync to URL query so the view is shareable. Admins can toggle a selection mode that exposes per-row checkboxes plus a `TenantBulkActionsBar` for archive/activate/delete. Failures are surfaced inline with a "Xem chi tiết" modal listing each blocked tenant.
-- Detail page (`/tenants/[code]`): renders a `TenantDetailHero` with status badge, contact chips (phone `tel:`, email `mailto:`, ID number), and three stat tiles (active contracts, current room, occupancies). Sections use anchor ids `#personal`, `#id-document`, `#emergency`, `#contracts`, `#danger-zone`. The danger-zone section is hidden for managers. When delete returns 409, the page shows a warning alert summarising blockers with a "Lưu trữ thay vì xoá" button that calls `DELETE` with `?force=true`.
+- List page (`/tenants`): toolbar wraps debounced search, building filter, contract-state filter, status chips, sort dropdown, and order toggle. Filters sync to URL query so the view is shareable. Admins can toggle a selection mode that exposes per-row checkboxes plus a `TenantBulkActionsBar` for archive/activate/delete. Bulk delete requires a non-empty reason. Failures are surfaced inline with a "Xem chi tiết" modal listing each blocked tenant. After bulk actions, the page clears selection in the `onDone` handler and refreshes the keyed list (`tenants:list`) so filtered data is immediately up to date.
+- Detail page (`/tenants/[code]`): renders a `TenantDetailHero` with status badge, contact chips (phone `tel:`, email `mailto:`, ID number), and three stat tiles (active contracts, current room, occupancies). Sections use anchor ids `#personal`, `#id-document`, `#emergency`, `#contracts`, `#danger-zone`. The danger-zone section is hidden for managers. Delete/archive confirmations require a non-empty reason. When delete returns 409, the page shows a warning alert summarising blockers with a "Lưu trữ thay vì xoá" button that calls `DELETE` with `?force=true`.
 - Form (`TenantForm`): four numbered sections (Personal / ID document / Emergency contact / Notes), inline blur validation, submit-time inline errors with first-invalid focus, draft autosave to `localStorage` (`tenant-form:create` or `tenant-form:edit:<id>`), restore/dismiss banner (draft visibility computed after client mount for hydration safety), dirty-state guard via `onBeforeRouteLeave` + `beforeunload`, mobile sticky save bar with safe-area-inset padding.
 
 ## Implementation Files

@@ -356,7 +356,7 @@ If all checks pass, the endpoint SHALL cascade-delete sub-resources (occupants, 
 ---
 
 ### Requirement: POST /api/contracts/bulk performs bulk action with per-item result
-`server/api/contracts/bulk.post.ts` SHALL require admin auth, validate body with `contractBulkActionSchema` (`{ action: 'terminate' | 'delete', ids: string[], reason?: string }`), iterate over the IDs applying the action via the service, and return `{ data: { succeeded: string[], failed: { id: string, reason: string }[] } }` with status 200. The endpoint SHALL NOT short-circuit on first failure.
+`server/api/contracts/bulk.post.ts` SHALL require admin auth, validate body with `contractBulkActionSchema` (`{ action: 'terminate' | 'delete', ids: string[], reason?: string }`), iterate over the IDs applying the action via the service, and return `{ data: { succeeded: string[], failed: { id: string, reason: string }[] } }` with status 200. The endpoint SHALL NOT short-circuit on first failure. `reason` SHALL be required when `action='delete'`.
 
 #### Scenario: Bulk terminate
 - **WHEN** admin posts `{ action: 'terminate', ids: ['a','b'] }` for 2 active contracts
@@ -373,6 +373,10 @@ If all checks pass, the endpoint SHALL cascade-delete sub-resources (occupants, 
 #### Scenario: Validation error on empty ids
 - **WHEN** body is `{ action: 'terminate', ids: [] }`
 - **THEN** response is 422 with `error.code === 'VALIDATION_ERROR'`
+
+#### Scenario: Validation error when bulk delete reason is missing
+- **WHEN** body is `{ action: 'delete', ids: ['a'] }`
+- **THEN** response is 422 with `error.code === 'VALIDATION_ERROR'` and an error on `reason`
 
 #### Scenario: Invalid action rejected
 - **WHEN** body is `{ action: 'renew', ids: ['a'] }`

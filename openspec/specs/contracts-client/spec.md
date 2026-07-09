@@ -233,7 +233,7 @@ Contract draft behavior SHALL remain wizard-aware and versioned (including `curr
 ---
 
 ### Requirement: useContractBulkActions composable
-`app/composables/contracts/useContractBulkActions.ts` SHALL expose `selectedIds: Ref<string[]>`, `isSelected(id): boolean`, `toggle(id)`, `selectAll(ids: string[])`, `clear()`, and `runAction(action: 'terminate' | 'delete', opts?: { reason?: string }): Promise<{ succeeded: string[]; failed: { id: string; reason: string }[] }>`. `runAction` SHALL call `POST /api/contracts/bulk` and return the parsed response; on success it SHALL clear selection.
+`app/composables/contracts/useContractBulkActions.ts` SHALL compose shared selection state via `useBulkSelection()` and expose `selectedIds: Ref<string[]>`, `isSelected(id): boolean`, `toggle(id)`, `selectAll(ids: string[])`, `clear()`, and `runAction(action: 'terminate' | 'delete', opts?: { reason?: string }): Promise<{ succeeded: string[]; failed: { id: string; reason: string }[] }>`. `runAction` SHALL call `POST /api/contracts/bulk`, normalize `reason` with trim semantics, and return the parsed response. `runAction` SHALL NOT clear selection; callers clear in page-level `onDone` handling after toast + refresh.
 
 #### Scenario: Toggle adds and removes IDs
 - **WHEN** consumer calls `toggle('id-1')` then `toggle('id-1')`
@@ -247,14 +247,14 @@ Contract draft behavior SHALL remain wizard-aware and versioned (including `curr
 - **WHEN** `runAction('delete')` is called with 3 IDs and 1 fails
 - **THEN** the promise resolves with `{ succeeded: [...], failed: [{ id, reason }] }`
 
-#### Scenario: Selection clears after successful action
+#### Scenario: Selection is cleared by caller after result handling
 - **WHEN** `runAction('terminate')` resolves
-- **THEN** `selectedIds.value === []`
+- **THEN** selection remains unchanged until caller invokes `clear()`
 
 ---
 
 ### Requirement: Contracts validators include list-query and bulk-action schemas
-`app/utils/validators/contracts.ts` SHALL export `contractListQuerySchema` (page, limit, q, building_id, room_id, tenant_id, status[], sort, order — all optional with defaults) and `contractBulkActionSchema` (action enum, ids min 1, reason optional). Both schemas SHALL be shared between client (URL parse, request body) and server (validation entry).
+`app/utils/validators/contracts.ts` SHALL export `contractListQuerySchema` (page, limit, q, building_id, room_id, tenant_id, status[], sort, order — all optional with defaults) and `contractBulkActionSchema` (action enum, ids min 1, optional `reason` that is required when `action='delete'`). Both schemas SHALL be shared between client (URL parse, request body) and server (validation entry).
 
 #### Scenario: contractListQuerySchema parses URL-shaped data
 - **WHEN** `contractListQuerySchema.safeParse({ q: 'x', status: ['active'], sort: 'start_date', order: 'desc' })` is called
@@ -271,4 +271,8 @@ Contract draft behavior SHALL remain wizard-aware and versioned (including `curr
 #### Scenario: contractBulkActionSchema rejects invalid action
 - **WHEN** `contractBulkActionSchema.safeParse({ action: 'renew', ids: ['x'] })` is called
 - **THEN** `success === false` with error on `action`
+
+#### Scenario: contractBulkActionSchema requires reason for delete
+- **WHEN** `contractBulkActionSchema.safeParse({ action: 'delete', ids: ['x'] })` is called
+- **THEN** `success === false` with error on `reason`
 

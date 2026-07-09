@@ -47,6 +47,7 @@ Statuses:
 - `order`: `asc`, `desc`
 
 The list page keeps these controls in the URL so filtered views can be shared. Admin users can select rows, terminate multiple contracts with an optional reason, or bulk-delete contracts that pass the safe-delete checks.
+Bulk delete requires a non-empty reason and a strong opt-in acknowledgement. After bulk actions finish, the list page clears selection in its `onDone` handler and refreshes the keyed list (`contracts:list`) so the filtered view shows the latest server state immediately.
 
 ## Occupancy Side Effects
 

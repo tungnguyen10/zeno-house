@@ -183,6 +183,10 @@ Building detail SHALL not show a month-specific "Van hanh thang <month>" primary
 - **WHEN** bulk delete returns `{ succeeded: [a,b], failed: [{id:c, reason:'has_active_contracts'}] }`
 - **THEN** a toast summarizes "Đã xoá 2 toà, 1 toà bị bỏ qua" and a "Xem chi tiết" link opens a modal listing failures
 
+#### Scenario: Bulk action refreshes latest filtered list
+- **WHEN** any bulk action completes (full success or partial success)
+- **THEN** the page clears selected ids and refetches the keyed building list so current filters render latest data from server
+
 ### Requirement: Building detail hero with quick stats
 `app/pages/buildings/[id]/index.vue` SHALL render a hero header containing the building name, code, status pill, address line, and three quick stat tiles: total rooms, occupied rooms, active services. Stats SHALL be derived from existing building DTO + room/contract counts available in the detail response.
 

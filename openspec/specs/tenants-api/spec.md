@@ -71,7 +71,7 @@ REST API for managing tenants. Full CRUD with pagination, search by name/phone, 
 - **THEN** returns 404 NOT_FOUND
 
 ### Requirement: Delete tenant endpoint
-`DELETE /api/tenants/:id` SHALL delete a tenant. Returns 204 on success. Returns 404 if not found.
+`DELETE /api/tenants/:id` SHALL delete a tenant. Returns 204 on success. Returns 404 if not found. When active-building scope cannot be derived, owner users SHALL still be allowed to delete a tenant if they created that tenant row (`created_by` equals caller id).
 
 #### Scenario: Delete success
 - **WHEN** admin DELETEs existing tenant
@@ -80,6 +80,14 @@ REST API for managing tenants. Full CRUD with pagination, search by name/phone, 
 #### Scenario: Delete non-existent
 - **WHEN** id does not exist
 - **THEN** returns 404 NOT_FOUND
+
+#### Scenario: Owner can delete owner-created orphan tenant
+- **WHEN** owner deletes a tenant with no active-building scope and `tenant.created_by` equals the owner id
+- **THEN** response is 204 and tenant is deleted
+
+#### Scenario: Owner cannot delete orphan tenant created by another user
+- **WHEN** owner deletes a tenant with no active-building scope and `tenant.created_by` does not equal the owner id
+- **THEN** response is 403 FORBIDDEN
 
 ### Requirement: List tenants supports contract-state filter
 `GET /api/tenants` SHALL support `contract_state` query param with values `with_contract` and `without_contract`. Contract state SHALL be based on active contracts where the tenant is either the primary tenant or an active occupant.
@@ -192,7 +200,7 @@ When a tenant has active assignment context, the API payload SHALL include:
 ---
 
 ### Requirement: POST /api/tenants/bulk performs bulk action with per-item result
-`server/api/tenants/bulk.post.ts` SHALL require admin auth, validate body with `tenantBulkActionSchema` (`{ action: 'archive' | 'activate' | 'delete', ids: string[] }`), iterate over the IDs applying the action via the service, and return `{ data: { succeeded: string[], failed: { id: string, reason: string }[] } }` with status 200. The endpoint SHALL NOT short-circuit on first failure.
+`server/api/tenants/bulk.post.ts` SHALL require admin auth, validate body with `tenantBulkActionSchema` (`{ action: 'archive' | 'activate' | 'delete', ids: string[], reason?: string }`), iterate over the IDs applying the action via the service, and return `{ data: { succeeded: string[], failed: { id: string, reason: string }[] } }` with status 200. The endpoint SHALL NOT short-circuit on first failure. `reason` SHALL be required when `action='delete'`.
 
 #### Scenario: Bulk archive succeeds
 - **WHEN** admin posts `{ action: 'archive', ids: ['a','b'] }`
@@ -214,6 +222,10 @@ When a tenant has active assignment context, the API payload SHALL include:
 - **WHEN** body is `{ action: 'archive', ids: [] }`
 - **THEN** response is 422 with `error.code === 'VALIDATION_ERROR'`
 
+#### Scenario: Validation error when bulk delete reason is missing
+- **WHEN** body is `{ action: 'delete', ids: ['a'] }`
+- **THEN** response is 422 with `error.code === 'VALIDATION_ERROR'` and an error on `reason`
+
 ---
 
 ### Requirement: Tenants service supports filter/sort/bulk/safe-delete
@@ -230,6 +242,10 @@ Each method SHALL re-check permissions using `can(user, capability)`.
 #### Scenario: remove with force re-checks admin permission
 - **WHEN** `TenantService.remove(event, user, id, { force: true })` is called with non-admin user
 - **THEN** the service throws FORBIDDEN before any DB write
+
+#### Scenario: remove allows owner-created orphan delete
+- **WHEN** `TenantService.remove(event, ownerUser, id, { force: false })` is called and tenant has no derived active-building scope but `tenant.created_by === ownerUser.id`
+- **THEN** the service allows delete instead of throwing FORBIDDEN
 
 #### Scenario: bulkAction continues past per-item failures
 - **WHEN** `TenantService.bulkAction(event, user, { action:'delete', ids:['a','b'] })` and `a` throws conflict

@@ -45,7 +45,8 @@ TBD - created by archiving change contracts-overhaul. Update Purpose after archi
 
 #### Scenario: Bulk delete confirmation with strong opt-in
 - **WHEN** admin clicks "Xoá nhiều"
-- **THEN** the confirm modal lists contract codes (max 10 + "...và X khác"), includes a checkbox "Tôi hiểu thao tác này không thể hoàn tác và chỉ áp dụng cho hợp đồng không có dữ liệu hoá đơn", and the delete button is disabled until the checkbox is checked
+- **THEN** the confirm modal lists contract codes (max 10 + "...và X khác"), includes a reason textarea and a checkbox "Tôi hiểu thao tác này không thể hoàn tác và chỉ áp dụng cho hợp đồng không có dữ liệu hoá đơn"
+- **AND** the delete button is disabled until both the checkbox is checked and reason is non-empty
 
 #### Scenario: Manager does not see bulk selection
 - **WHEN** user with role `manager` opens `/contracts`
@@ -54,6 +55,10 @@ TBD - created by archiving change contracts-overhaul. Update Purpose after archi
 #### Scenario: Partial-success result toast
 - **WHEN** bulk delete returns `{ succeeded: ['a'], failed: [{id:'b', reason:'has_billing_history'}, {id:'c', reason:'ACTIVE_CONTRACT'}] }`
 - **THEN** a toast summarizes "Đã xoá 1 hợp đồng, 2 bị bỏ qua" and a "Xem chi tiết" link opens a modal listing failures with reason labels
+
+#### Scenario: Bulk action refreshes latest filtered list
+- **WHEN** any bulk action completes (full success or partial success)
+- **THEN** the page clears selected ids and refetches the keyed contract list so current filters render latest data from server
 
 ---
 

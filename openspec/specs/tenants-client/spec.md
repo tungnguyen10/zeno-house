@@ -195,7 +195,7 @@ Tenant client behavior SHALL allow internal implementation via shared helpers (q
 ---
 
 ### Requirement: useTenantBulkActions composable
-`app/composables/tenants/useTenantBulkActions.ts` SHALL expose `selectedIds: Ref<string[]>`, `isSelected(id): boolean`, `toggle(id)`, `selectAll(ids: string[])`, `clear()`, and `runAction(action: 'archive' | 'activate' | 'delete'): Promise<{ succeeded: string[]; failed: { id: string; reason: string }[] }>`. `runAction` SHALL call `POST /api/tenants/bulk` and return the parsed response; on success it SHALL clear selection.
+`app/composables/tenants/useTenantBulkActions.ts` SHALL compose shared selection state via `useBulkSelection()` and expose `selectedIds: Ref<string[]>`, `isSelected(id): boolean`, `toggle(id)`, `selectAll(ids: string[])`, `clear()`, and `runAction(action: 'archive' | 'activate' | 'delete', opts?: { reason?: string }): Promise<{ succeeded: string[]; failed: { id: string; reason: string }[] }>`. `runAction` SHALL call `POST /api/tenants/bulk` and return the parsed response. `runAction` SHALL NOT clear selection; callers clear in page-level `onDone` handling after toast + refresh.
 
 #### Scenario: Toggle adds and removes IDs
 - **WHEN** consumer calls `toggle('id-1')` then `toggle('id-1')`
@@ -209,14 +209,14 @@ Tenant client behavior SHALL allow internal implementation via shared helpers (q
 - **WHEN** `runAction('delete')` is called with 3 IDs and 1 fails
 - **THEN** the promise resolves with `{ succeeded: [...], failed: [{ id, reason }] }`
 
-#### Scenario: Selection clears after successful action
+#### Scenario: Selection is cleared by caller after result handling
 - **WHEN** `runAction('archive')` resolves
-- **THEN** `selectedIds.value === []`
+- **THEN** selection remains unchanged until caller invokes `clear()`
 
 ---
 
 ### Requirement: Tenants validators include list-query and bulk-action schemas
-`app/utils/validators/tenants.ts` SHALL export `tenantListQuerySchema` (page, limit, q, status[], building_id, contract_state, sort, order, available, excludeContractId — all optional with defaults) and `tenantBulkActionSchema` (action enum, ids min 1). Both schemas SHALL be shared between client (URL parse, request body) and server (validation entry).
+`app/utils/validators/tenants.ts` SHALL export `tenantListQuerySchema` (page, limit, q, status[], building_id, contract_state, sort, order, available, excludeContractId — all optional with defaults) and `tenantBulkActionSchema` (action enum, ids min 1, optional `reason` that is required when `action='delete'`). Both schemas SHALL be shared between client (URL parse, request body) and server (validation entry).
 
 #### Scenario: tenantListQuerySchema parses URL-shaped data
 - **WHEN** `tenantListQuerySchema.safeParse({ q: 'x', status: ['active'], sort: 'full_name', order: 'asc' })` is called
@@ -233,4 +233,8 @@ Tenant client behavior SHALL allow internal implementation via shared helpers (q
 #### Scenario: tenantBulkActionSchema rejects invalid action
 - **WHEN** `tenantBulkActionSchema.safeParse({ action: 'wipe', ids: ['x'] })` is called
 - **THEN** `success === false` with error on `action`
+
+#### Scenario: tenantBulkActionSchema requires reason for delete
+- **WHEN** `tenantBulkActionSchema.safeParse({ action: 'delete', ids: ['x'] })` is called
+- **THEN** `success === false` with error on `reason`
 

@@ -183,7 +183,7 @@ Room client behavior SHALL allow internal implementation via shared helpers (que
 ---
 
 ### Requirement: useRoomBulkActions composable
-`app/composables/rooms/useRoomBulkActions.ts` SHALL expose `selectedIds: Ref<string[]>`, `isSelected(id): boolean`, `toggle(id)`, `selectAll(ids: string[])`, `clear()`, and `runAction(action: 'archive' | 'activate' | 'set_maintenance' | 'delete'): Promise<{ succeeded: string[]; failed: { id: string; reason: string }[] }>`. `runAction` SHALL call `POST /api/rooms/bulk` and return the parsed response; on success it SHALL clear selection.
+`app/composables/rooms/useRoomBulkActions.ts` SHALL compose shared selection state via `useBulkSelection()` and expose `selectedIds: Ref<string[]>`, `isSelected(id): boolean`, `toggle(id)`, `selectAll(ids: string[])`, `clear()`, and `runAction(action: 'archive' | 'activate' | 'set_maintenance' | 'delete', opts?: { reason?: string }): Promise<{ succeeded: string[]; failed: { id: string; reason: string }[] }>`. `runAction` SHALL call `POST /api/rooms/bulk` and return the parsed response. `runAction` SHALL NOT clear selection; callers clear in page-level `onDone` handling after toast + refresh.
 
 #### Scenario: Toggle adds and removes IDs
 - **WHEN** consumer calls `toggle('id-1')` then `toggle('id-1')`
@@ -197,14 +197,14 @@ Room client behavior SHALL allow internal implementation via shared helpers (que
 - **WHEN** `runAction('delete')` is called with 3 IDs and 1 fails
 - **THEN** the promise resolves with `{ succeeded: [...], failed: [{ id, reason }] }`
 
-#### Scenario: Selection clears after successful action
+#### Scenario: Selection is cleared by caller after result handling
 - **WHEN** `runAction('archive')` resolves
-- **THEN** `selectedIds.value === []`
+- **THEN** selection remains unchanged until caller invokes `clear()`
 
 ---
 
 ### Requirement: Rooms validators include list-query and bulk-action schemas
-`app/utils/validators/rooms.ts` SHALL export `roomListQuerySchema` (page, limit, q, status[], building_id, floor, sort, order — all optional with defaults) and `roomBulkActionSchema` (action enum, ids min 1). Both schemas SHALL be shared between client (URL parse, request body) and server (validation entry).
+`app/utils/validators/rooms.ts` SHALL export `roomListQuerySchema` (page, limit, q, status[], building_id, floor, sort, order — all optional with defaults) and `roomBulkActionSchema` (action enum, ids min 1, optional `reason` that is required when `action='delete'`). Both schemas SHALL be shared between client (URL parse, request body) and server (validation entry).
 
 #### Scenario: roomListQuerySchema parses URL-shaped data
 - **WHEN** `roomListQuerySchema.safeParse({ q: 'x', status: ['available'], sort: 'room_number', order: 'asc' })` is called
@@ -221,4 +221,8 @@ Room client behavior SHALL allow internal implementation via shared helpers (que
 #### Scenario: roomBulkActionSchema rejects invalid action
 - **WHEN** `roomBulkActionSchema.safeParse({ action: 'wipe', ids: ['x'] })` is called
 - **THEN** `success === false` with error on `action`
+
+#### Scenario: roomBulkActionSchema requires reason for delete
+- **WHEN** `roomBulkActionSchema.safeParse({ action: 'delete', ids: ['x'] })` is called
+- **THEN** `success === false` with error on `reason`
 

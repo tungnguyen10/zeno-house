@@ -45,7 +45,8 @@ TBD - created by archiving change rooms-overhaul. Update Purpose after archive.
 
 #### Scenario: Bulk delete confirmation with strong opt-in
 - **WHEN** admin clicks "Xoá nhiều"
-- **THEN** the confirm modal lists room numbers (max 10 + "...và X khác"), includes a checkbox "Tôi hiểu thao tác này không thể hoàn tác", and the delete button is disabled until the checkbox is checked
+- **THEN** the confirm modal lists room numbers (max 10 + "...và X khác"), includes a reason textarea and a checkbox "Tôi hiểu thao tác này không thể hoàn tác"
+- **AND** the delete button is disabled until both the checkbox is checked and reason is non-empty
 
 #### Scenario: Manager does not see bulk selection
 - **WHEN** user with role `manager` opens `/rooms`
@@ -54,6 +55,10 @@ TBD - created by archiving change rooms-overhaul. Update Purpose after archive.
 #### Scenario: Partial-success result toast
 - **WHEN** bulk delete returns `{ succeeded: ['a','b'], failed: [{id:'c', reason:'has_active_contracts'}] }`
 - **THEN** a toast summarizes "Đã xoá 2 phòng, 1 phòng bị bỏ qua" and a "Xem chi tiết" link opens a modal listing failures
+
+#### Scenario: Bulk action refreshes latest filtered list
+- **WHEN** any bulk action completes (full success or partial success)
+- **THEN** the page clears selected ids and refetches the keyed room list so current filters render latest data from server
 
 ---
 
@@ -96,6 +101,10 @@ TBD - created by archiving change rooms-overhaul. Update Purpose after archive.
 #### Scenario: 409 conflict on delete shows soft-archive option
 - **WHEN** admin clicks Delete and the API responds 409 with `{ activeContracts, meterReadings }`
 - **THEN** an alert displays the counts and offers a "Lưu trữ thay vì xoá" button that calls DELETE with `?force=true`
+
+#### Scenario: Danger-zone delete requires reason
+- **WHEN** admin opens the delete/archive confirmation in danger zone
+- **THEN** submit stays disabled until a non-empty reason is entered
 
 ---
 
