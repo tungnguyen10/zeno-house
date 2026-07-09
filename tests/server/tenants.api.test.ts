@@ -522,6 +522,37 @@ describe('DELETE /api/tenants/[id]', () => {
     expect(err.statusCode).toBe(403)
   })
 
+  it('allows owner to hard-delete an orphan tenant they created', async () => {
+    asOwner()
+    repoMocks.findByIdentifier.mockResolvedValue(buildTenant({ id: 't-owner-orphan' }))
+    repoMocks.findActiveBuildingIdForTenant.mockResolvedValue(null)
+    repoMocks.wasCreatedByActor.mockResolvedValue(true)
+    repoMocks.countActiveContractsForTenant.mockResolvedValue(0)
+    repoMocks.countActiveOccupanciesForTenant.mockResolvedValue(0)
+    repoMocks.remove.mockResolvedValue(undefined)
+    const { default: handler } = await import('../../server/api/tenants/[id].delete')
+
+    const event = makeEvent({ params: { id: 't-owner-orphan' }, body: { reason: 'cleanup' } })
+    await handler(event)
+    expect((event as MockEvent).context.statusCode).toBe(204)
+    expect(repoMocks.wasCreatedByActor).toHaveBeenCalledWith(expect.anything(), 't-owner-orphan', 'user-owner')
+    expect(repoMocks.remove).toHaveBeenCalledWith(expect.anything(), 't-owner-orphan')
+  })
+
+  it('forbids owner from hard-deleting orphan tenant created by another actor', async () => {
+    asOwner()
+    repoMocks.findByIdentifier.mockResolvedValue(buildTenant({ id: 't-owner-forbidden' }))
+    repoMocks.findActiveBuildingIdForTenant.mockResolvedValue(null)
+    repoMocks.wasCreatedByActor.mockResolvedValue(false)
+    const { default: handler } = await import('../../server/api/tenants/[id].delete')
+
+    const err = await expectError(Promise.resolve(handler(makeEvent({
+      params: { id: 't-owner-forbidden' },
+      body: { reason: 'cleanup' },
+    }))))
+    expect(err.statusCode).toBe(403)
+  })
+
   it('requires a delete reason', async () => {
     asAdmin()
     const { default: handler } = await import('../../server/api/tenants/[id].delete')
@@ -590,6 +621,41 @@ describe('POST /api/tenants/bulk', () => {
       { id: 'active-contract', reason: 'has_active_contracts' },
       { id: 'missing', reason: 'not_found' },
     ]))
+  })
+
+  it('maps forbidden when owner deletes orphan tenant created by another actor', async () => {
+    asOwner()
+    repoMocks.findByIdentifier.mockResolvedValue(buildTenant({ id: 'orphan-foreign' }))
+    repoMocks.findActiveBuildingIdForTenant.mockResolvedValue(null)
+    repoMocks.wasCreatedByActor.mockResolvedValue(false)
+    const { default: handler } = await import('../../server/api/tenants/bulk.post')
+
+    const res = await handler(makeEvent({
+      body: { action: 'delete', ids: ['orphan-foreign'], reason: 'cleanup' },
+    })) as {
+      data: { succeeded: string[]; failed: { id: string; reason: string }[] }
+    }
+    expect(res.data.succeeded).toEqual([])
+    expect(res.data.failed).toEqual([{ id: 'orphan-foreign', reason: 'forbidden' }])
+  })
+
+  it('allows owner bulk delete for orphan tenant they created', async () => {
+    asOwner()
+    repoMocks.findByIdentifier.mockResolvedValue(buildTenant({ id: 'orphan-owned' }))
+    repoMocks.findActiveBuildingIdForTenant.mockResolvedValue(null)
+    repoMocks.wasCreatedByActor.mockResolvedValue(true)
+    repoMocks.countActiveContractsForTenant.mockResolvedValue(0)
+    repoMocks.countActiveOccupanciesForTenant.mockResolvedValue(0)
+    repoMocks.remove.mockResolvedValue(undefined)
+    const { default: handler } = await import('../../server/api/tenants/bulk.post')
+
+    const res = await handler(makeEvent({
+      body: { action: 'delete', ids: ['orphan-owned'], reason: 'cleanup' },
+    })) as {
+      data: { succeeded: string[]; failed: { id: string; reason: string }[] }
+    }
+    expect(res.data.succeeded).toEqual(['orphan-owned'])
+    expect(res.data.failed).toEqual([])
   })
 
   it('forbids managers from bulk actions', async () => {

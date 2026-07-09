@@ -84,6 +84,17 @@ const stubs = {
         : null
     },
   }),
+  UiTextarea: defineComponent({
+    props: ['modelValue'],
+    emits: ['update:modelValue'],
+    setup(props, { emit }) {
+      return () => h('textarea', {
+        'data-test': 'textarea',
+        value: props.modelValue,
+        onInput: (e: Event) => emit('update:modelValue', (e.target as HTMLTextAreaElement).value),
+      })
+    },
+  }),
   NuxtLink: defineComponent({
     props: ['to'],
     setup(_, { slots }) { return () => h('a', {}, slots.default?.()) },
@@ -300,5 +311,25 @@ describe('TenantBulkActionsBar', () => {
     const del = wrapper.findAll('button').find(b => b.text().includes('Xoá nhiều'))!
     await del.trigger('click')
     expect(wrapper.find('input[type="checkbox"]').exists()).toBe(true)
+  })
+
+  it('requires reason before running delete action', async () => {
+    const runAction = vi.fn(async (): Promise<TenantBulkResult> => ({ succeeded: ['a'], failed: [] }))
+    const tenants = [buildTenant({ id: 'a', fullName: 'Khách A' })]
+    const wrapper = mount(TenantBulkActionsBar, {
+      props: { selectedIds: ['a'], tenants, runAction, isRunning: false },
+      global: { stubs },
+    })
+
+    const del = wrapper.findAll('button').find(b => b.text().includes('Xoá nhiều'))!
+    await del.trigger('click')
+
+    await wrapper.find('input[type="checkbox"]').setValue(true)
+    await wrapper.find('[data-test="confirm"]').trigger('click')
+    expect(runAction).not.toHaveBeenCalled()
+
+    await wrapper.find('[data-test="textarea"]').setValue('Nhập trùng hồ sơ')
+    await wrapper.find('[data-test="confirm"]').trigger('click')
+    expect(runAction).toHaveBeenCalledWith('delete', { reason: 'Nhập trùng hồ sơ' })
   })
 })

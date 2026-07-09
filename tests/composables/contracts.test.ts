@@ -2,7 +2,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { nextTick, ref } from 'vue'
 
 const fetchMock = vi.hoisted(() => vi.fn())
+const clearNuxtDataMock = vi.hoisted(() => vi.fn())
 vi.stubGlobal('$fetch', fetchMock)
+vi.stubGlobal('clearNuxtData', clearNuxtDataMock)
 
 interface ContractFormShape {
   room_id: string
@@ -156,7 +158,7 @@ describe('useContractBulkActions', () => {
     expect(selectedIds.value).toEqual([])
   })
 
-  it('runAction posts selected ids, returns result, and clears selection', async () => {
+  it('runAction posts selected ids, returns result, and keeps selection until caller clears', async () => {
     fetchMock.mockResolvedValue({ data: { succeeded: ['a'], failed: [{ id: 'b', reason: 'ACTIVE_CONTRACT' }] } })
     const { useContractBulkActions } = await import('../../app/composables/contracts/useContractBulkActions')
     const { selectedIds, selectAll, runAction } = useContractBulkActions()
@@ -165,10 +167,20 @@ describe('useContractBulkActions', () => {
     const result = await runAction('delete', { reason: 'cleanup' })
 
     expect(result).toEqual({ succeeded: ['a'], failed: [{ id: 'b', reason: 'ACTIVE_CONTRACT' }] })
-    expect(selectedIds.value).toEqual([])
+    expect(selectedIds.value).toEqual(['a', 'b'])
     expect(fetchMock).toHaveBeenCalledWith('/api/contracts/bulk', expect.objectContaining({
       method: 'POST',
       body: { action: 'delete', ids: ['a', 'b'], reason: 'cleanup' },
     }))
+  })
+})
+
+describe('useContractList helpers', () => {
+  it('invalidateContractListCache clears contract list async data key', async () => {
+    const { invalidateContractListCache, CONTRACT_LIST_ASYNC_KEY } = await import('../../app/composables/contracts/useContractList')
+
+    invalidateContractListCache()
+
+    expect(clearNuxtDataMock).toHaveBeenCalledWith(CONTRACT_LIST_ASYNC_KEY)
   })
 })

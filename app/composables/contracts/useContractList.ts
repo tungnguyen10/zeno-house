@@ -2,6 +2,12 @@ import type { ContractStatus, ContractWithDetails } from '~/types/contracts'
 import type { ApiSuccess } from '~/types/api'
 import { useRouteListQuerySync } from '~/composables/useRouteListQuerySync'
 
+export const CONTRACT_LIST_ASYNC_KEY = 'contracts:list'
+
+export function invalidateContractListCache() {
+  clearNuxtData(CONTRACT_LIST_ASYNC_KEY)
+}
+
 type SortField = 'start_date' | 'end_date' | 'created_at' | 'monthly_rent'
 type SortOrder = 'asc' | 'desc'
 
@@ -116,6 +122,7 @@ export function useContractList() {
   const { data, status: fetchStatus, error, refresh } = useFetch<
     ApiSuccess<ContractWithDetails[]> & { meta: { total: number; page: number; limit: number; totalPages: number } }
   >('/api/contracts', {
+    key: CONTRACT_LIST_ASYNC_KEY,
     query: queryParams,
     watch: [page, limit, q, buildingFilter, roomFilter, tenantFilter, status, sort, order],
   })

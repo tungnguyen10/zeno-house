@@ -2,6 +2,12 @@ import type { Room, RoomStatus } from '~/types/rooms'
 import type { ApiSuccess } from '~/types/api'
 import { useRouteListQuerySync } from '~/composables/useRouteListQuerySync'
 
+export const ROOM_LIST_ASYNC_KEY = 'rooms:list'
+
+export function invalidateRoomListCache() {
+  clearNuxtData(ROOM_LIST_ASYNC_KEY)
+}
+
 type SortField = 'room_number' | 'floor' | 'monthly_rent' | 'created_at'
 type SortOrder = 'asc' | 'desc'
 
@@ -95,6 +101,7 @@ export function useRoomList() {
   const { data, status: fetchStatus, error, refresh } = useFetch<
     ApiSuccess<Room[]> & { meta: { total: number; page: number; limit: number; totalPages: number } }
   >('/api/rooms', {
+    key: ROOM_LIST_ASYNC_KEY,
     query: { building_id: buildingId, status, floor, page, limit, q, sort, order },
     watch: [buildingId, status, floor, page, limit, q, sort, order],
   })

@@ -198,8 +198,11 @@ export const RoomService = {
         else if (code === 'NOT_FOUND') {
           failed.push({ id, reason: 'not_found' })
         }
+        else if (code === 'FORBIDDEN') {
+          failed.push({ id, reason: 'forbidden' })
+        }
         else {
-          failed.push({ id, reason: e?.message ?? 'error' })
+          failed.push({ id, reason: e?.message || 'error' })
         }
       }
     }

@@ -65,6 +65,7 @@ const stubs = {
     emits: ['update:modelValue'],
     setup(props, { emit }) {
       return () => h('textarea', {
+        'data-test': 'textarea',
         value: props.modelValue,
         'aria-label': props.label,
         onInput: (event: Event) => emit('update:modelValue', (event.target as HTMLTextAreaElement).value),
@@ -185,6 +186,30 @@ describe('ContractBulkActionsBar', () => {
 
     expect(runAction).toHaveBeenCalledWith('terminate', { reason: 'Khách trả phòng' })
     expect(wrapper.emitted('done')?.[0]?.[1]).toBe('terminate')
+  })
+
+  it('requires reason and ack before running delete action', async () => {
+    const runAction = vi.fn(async (): Promise<ContractBulkActionResult> => ({ succeeded: ['c-1'], failed: [] }))
+    const wrapper = mount(ContractBulkActionsBar, {
+      props: { selectedIds: ['c-1'], contracts: [buildContract()], runAction },
+      global: { stubs },
+    })
+
+    await wrapper.findAll('button').find(b => b.text().includes('Xoá'))!.trigger('click')
+
+    // No ack and no reason — should not call runAction
+    await wrapper.find('[data-test="confirm"]').trigger('click')
+    expect(runAction).not.toHaveBeenCalled()
+
+    // Ack checked but still no reason — should not call runAction
+    await wrapper.find('input[type="checkbox"]').setValue(true)
+    await wrapper.find('[data-test="confirm"]').trigger('click')
+    expect(runAction).not.toHaveBeenCalled()
+
+    // Both ack and reason filled — should call runAction
+    await wrapper.find('[data-test="textarea"]').setValue('Hợp đồng nhập sai thông tin')
+    await wrapper.find('[data-test="confirm"]').trigger('click')
+    expect(runAction).toHaveBeenCalledWith('delete', { reason: 'Hợp đồng nhập sai thông tin' })
   })
 })
 

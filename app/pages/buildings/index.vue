@@ -2,6 +2,8 @@
 import type { BuildingBulkAction, BuildingBulkResult } from '~/composables/buildings/useBuildingBulkActions'
 import type { Building } from '~/types/buildings'
 import type { BuildingFormData } from '~/types/building-form'
+import { BUILDING_LIST_ASYNC_KEY } from '~/composables/buildings/useBuildingList'
+import { BULK_FAILURE_LABELS_COMMON } from '~/utils/constants/bulk-failure-labels'
 import { buildingFormToApiPayload } from '~/utils/mappers/building-form'
 
 const authStore = useAuthStore()
@@ -68,10 +70,8 @@ const lastFailures = ref<BuildingBulkResult['failed']>([])
 const lastFailureAction = ref<BuildingBulkAction | null>(null)
 
 const reasonLabels: Record<string, string> = {
+  ...BULK_FAILURE_LABELS_COMMON,
   has_rooms: 'Còn phòng',
-  has_active_contracts: 'Còn hợp đồng đang hoạt động',
-  not_found: 'Không tìm thấy',
-  conflict: 'Xung đột dữ liệu',
 }
 
 const failuresWithName = computed(() => {
@@ -104,7 +104,7 @@ async function onBulkDone(result: BuildingBulkResult, action: BuildingBulkAction
   else if (failed > 0) toast.error(`Không thể ${verb}. ${failed} toà bị bỏ qua`)
 
   bulk.clear()
-  await refresh()
+  await refreshNuxtData(BUILDING_LIST_ASYNC_KEY)
 }
 
 // Quick edit drawer ----------------------------------------------------

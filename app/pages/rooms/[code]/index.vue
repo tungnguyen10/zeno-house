@@ -83,6 +83,8 @@ async function handleContractServiceUpdate(serviceId: string, input: ContractSer
 
 const showDeleteModal = ref(false)
 const isDeleting = ref(false)
+const deleteReason = ref('')
+const deleteReasonError = ref('')
 
 const showTerminateModal = ref(false)
 const isTerminating = ref(false)
@@ -94,11 +96,28 @@ interface ConflictDetails {
 
 const conflictDetails = ref<ConflictDetails | null>(null)
 
+function openDeleteModal() {
+  deleteReason.value = ''
+  deleteReasonError.value = ''
+  showDeleteModal.value = true
+}
+
 async function confirmDelete() {
+  const reason = deleteReason.value.trim()
+  if (!reason) {
+    deleteReasonError.value = 'Lý do xoá là bắt buộc.'
+    return
+  }
+
+  deleteReasonError.value = ''
   isDeleting.value = true
   conflictDetails.value = null
   try {
-    await $fetch(`/api/rooms/${id}`, { method: 'DELETE' })
+    await $fetch(`/api/rooms/${id}`, {
+      method: 'DELETE',
+      body: { reason },
+    })
+    invalidateRoomListCache()
     showDeleteModal.value = false
     await navigateTo('/rooms')
   }
@@ -122,12 +141,20 @@ async function confirmDelete() {
 
 async function archiveInstead() {
   if (!room.value) return
+  const reason = deleteReason.value.trim()
+  if (!reason) {
+    toast.error('Thiếu lý do xoá. Vui lòng thử lại thao tác xoá.')
+    return
+  }
+
   isDeleting.value = true
   try {
     await $fetch(`/api/rooms/${id}`, {
       method: 'DELETE',
       query: { force: true },
+      body: { reason },
     })
+    invalidateRoomListCache()
     toast.success(`Đã lưu trữ phòng ${room.value.roomNumber}`)
     conflictDetails.value = null
     await refreshRoom()
@@ -391,7 +418,7 @@ if (error.value?.statusCode === 404) {
             <NuxtLink :to="roomEditPath(room)">
               <UiButton variant="secondary" size="sm">Chỉnh sửa</UiButton>
             </NuxtLink>
-            <UiButton variant="danger" size="sm" @click="showDeleteModal = true">
+            <UiButton variant="danger" size="sm" @click="openDeleteModal">
               Xoá phòng
             </UiButton>
           </div>
@@ -406,7 +433,22 @@ if (error.value?.statusCode === 404) {
       :loading="isDeleting"
       @confirm="confirmDelete"
       @cancel="showDeleteModal = false"
-    />
+    >
+      <div class="space-y-3">
+        <p class="text-sm text-muted">
+          Bạn có chắc muốn xoá phòng {{ room?.roomNumber ?? '' }}{{ building ? ` (${building.name})` : '' }}?
+          Hành động này không thể hoàn tác.
+        </p>
+        <UiTextarea
+          v-model="deleteReason"
+          label="Lý do xoá"
+          :rows="3"
+          placeholder="Ví dụ: tạo trùng phòng do thao tác nhầm"
+          :error="deleteReasonError"
+          @update:model-value="deleteReasonError = ''"
+        />
+      </div>
+    </UiConfirmModal>
 
     <UiConfirmModal
       :open="showTerminateModal"

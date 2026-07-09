@@ -2,7 +2,9 @@ import { vi, describe, it, expect, beforeEach } from 'vitest'
 import { nextTick, ref } from 'vue'
 
 const fetchMock = vi.hoisted(() => vi.fn())
+const clearNuxtDataMock = vi.hoisted(() => vi.fn())
 vi.stubGlobal('$fetch', fetchMock)
+vi.stubGlobal('clearNuxtData', clearNuxtDataMock)
 vi.stubGlobal('navigateTo', vi.fn(async () => {}))
 
 interface FormShape {
@@ -130,7 +132,7 @@ describe('useRoomBulkActions', () => {
     expect(selectedIds.value).toEqual([])
   })
 
-  it('runAction returns shape and clears selection on success', async () => {
+  it('runAction returns shape and keeps selection until caller clears', async () => {
     fetchMock.mockResolvedValue({
       data: { succeeded: ['a'], failed: [{ id: 'b', reason: 'has_meter_readings' }] },
     })
@@ -138,13 +140,23 @@ describe('useRoomBulkActions', () => {
     const { selectedIds, selectAll, runAction } = useRoomBulkActions()
 
     selectAll(['a', 'b'])
-    const result = await runAction('delete')
+    const result = await runAction('delete', { reason: 'Dữ liệu trùng' })
     expect(result.succeeded).toEqual(['a'])
     expect(result.failed).toEqual([{ id: 'b', reason: 'has_meter_readings' }])
-    expect(selectedIds.value).toEqual([])
+    expect(selectedIds.value).toEqual(['a', 'b'])
     expect(fetchMock).toHaveBeenCalledWith('/api/rooms/bulk', expect.objectContaining({
       method: 'POST',
-      body: { action: 'delete', ids: ['a', 'b'] },
+      body: { action: 'delete', ids: ['a', 'b'], reason: 'Dữ liệu trùng' },
     }))
+  })
+})
+
+describe('useRoomList helpers', () => {
+  it('invalidateRoomListCache clears room list async data key', async () => {
+    const { invalidateRoomListCache, ROOM_LIST_ASYNC_KEY } = await import('../../app/composables/rooms/useRoomList')
+
+    invalidateRoomListCache()
+
+    expect(clearNuxtDataMock).toHaveBeenCalledWith(ROOM_LIST_ASYNC_KEY)
   })
 })

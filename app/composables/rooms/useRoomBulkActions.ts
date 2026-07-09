@@ -7,6 +7,10 @@ export interface RoomBulkResult {
   failed: { id: string; reason: string }[]
 }
 
+interface RoomBulkActionOptions {
+  reason?: string
+}
+
 export function useRoomBulkActions() {
   const selectedIds = ref<string[]>([])
   const isRunning = ref(false)
@@ -32,18 +36,23 @@ export function useRoomBulkActions() {
     selectedIds.value = []
   }
 
-  async function runAction(action: RoomBulkAction): Promise<RoomBulkResult> {
+  async function runAction(action: RoomBulkAction, options: RoomBulkActionOptions = {}): Promise<RoomBulkResult> {
     if (selectedIds.value.length === 0) {
       return { succeeded: [], failed: [] }
     }
+
+    const reason = options.reason?.trim()
 
     isRunning.value = true
     try {
       const res = await $fetch<ApiSuccess<RoomBulkResult>>('/api/rooms/bulk', {
         method: 'POST',
-        body: { action, ids: selectedIds.value },
+        body: {
+          action,
+          ids: selectedIds.value,
+          reason: reason || undefined,
+        },
       })
-      clear()
       return res.data
     }
     finally {

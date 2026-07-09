@@ -42,7 +42,6 @@ export function useBuildingBulkActions() {
         method: 'POST',
         body: { action, ids: selectedIds.value },
       })
-      clear()
       return res.data
     }
     finally {

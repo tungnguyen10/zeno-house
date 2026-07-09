@@ -53,7 +53,12 @@ const currentRoomLabel = computed(() => {
 })
 
 const showDeleteModal = ref(false)
+const showArchiveModal = ref(false)
 const isDeleting = ref(false)
+const deleteReason = ref('')
+const deleteReasonError = ref('')
+const archiveReason = ref('')
+const archiveReasonError = ref('')
 
 interface ConflictDetails {
   activeContracts?: number
@@ -62,11 +67,34 @@ interface ConflictDetails {
 
 const conflictDetails = ref<ConflictDetails | null>(null)
 
+function openDeleteModal() {
+  deleteReason.value = ''
+  deleteReasonError.value = ''
+  showDeleteModal.value = true
+}
+
+function openArchiveModal() {
+  archiveReason.value = ''
+  archiveReasonError.value = ''
+  showArchiveModal.value = true
+}
+
 async function confirmDelete() {
+  const reason = deleteReason.value.trim()
+  if (!reason) {
+    deleteReasonError.value = 'Lý do xoá là bắt buộc.'
+    return
+  }
+
+  deleteReasonError.value = ''
   isDeleting.value = true
   conflictDetails.value = null
   try {
-    await $fetch(`/api/tenants/${id}`, { method: 'DELETE' })
+    await $fetch(`/api/tenants/${id}`, {
+      method: 'DELETE',
+      body: { reason },
+    })
+    invalidateTenantListCache()
     showDeleteModal.value = false
     await navigateTo('/tenants')
   }
@@ -90,12 +118,51 @@ async function confirmDelete() {
 
 async function archiveInstead() {
   if (!tenant.value) return
+  const reason = deleteReason.value.trim()
+  if (!reason) {
+    toast.error('Thiếu lý do xoá. Vui lòng thử lại thao tác xoá.')
+    return
+  }
+
   isDeleting.value = true
   try {
     await $fetch(`/api/tenants/${id}`, {
       method: 'DELETE',
       query: { force: true },
+      body: { reason },
     })
+    invalidateTenantListCache()
+    toast.success(`Đã lưu trữ khách thuê ${tenant.value.fullName}`)
+    conflictDetails.value = null
+    await refresh()
+  }
+  catch {
+    toast.error('Không thể lưu trữ khách thuê.')
+  }
+  finally {
+    isDeleting.value = false
+  }
+}
+
+async function confirmArchive() {
+  if (!tenant.value) return
+
+  const reason = archiveReason.value.trim()
+  if (!reason) {
+    archiveReasonError.value = 'Lý do lưu trữ là bắt buộc.'
+    return
+  }
+
+  archiveReasonError.value = ''
+  isDeleting.value = true
+  try {
+    await $fetch(`/api/tenants/${id}`, {
+      method: 'DELETE',
+      query: { force: true },
+      body: { reason },
+    })
+    invalidateTenantListCache()
+    showArchiveModal.value = false
     toast.success(`Đã lưu trữ khách thuê ${tenant.value.fullName}`)
     conflictDetails.value = null
     await refresh()
@@ -366,10 +433,10 @@ watchEffect(() => {
             Xoá khách thuê chỉ thực hiện được khi không còn hợp đồng đang hoạt động và không còn đồng cư trong hợp đồng nào.
           </p>
           <div class="flex items-center gap-2">
-            <UiButton variant="secondary" size="sm" :loading="isDeleting" @click="archiveInstead">
+            <UiButton variant="secondary" size="sm" :loading="isDeleting" @click="openArchiveModal">
               Lưu trữ
             </UiButton>
-            <UiButton variant="danger" size="sm" @click="showDeleteModal = true">
+            <UiButton variant="danger" size="sm" @click="openDeleteModal">
               Xoá khách thuê
             </UiButton>
           </div>
@@ -384,6 +451,44 @@ watchEffect(() => {
       :loading="isDeleting"
       @confirm="confirmDelete"
       @cancel="showDeleteModal = false"
-    />
+    >
+      <div class="space-y-3">
+        <p class="text-sm text-muted">
+          Bạn có chắc muốn xoá khách thuê {{ tenant?.fullName ?? '' }}? Hành động này không thể hoàn tác.
+        </p>
+        <UiTextarea
+          v-model="deleteReason"
+          label="Lý do xoá"
+          :rows="3"
+          placeholder="Ví dụ: tạo trùng hồ sơ do thao tác nhầm"
+          :error="deleteReasonError"
+          @update:model-value="deleteReasonError = ''"
+        />
+      </div>
+    </UiConfirmModal>
+
+    <UiConfirmModal
+      :open="showArchiveModal"
+      title="Xác nhận lưu trữ"
+      :message="`Bạn có chắc muốn lưu trữ khách thuê ${tenant?.fullName ?? ''}?`"
+      confirm-label="Lưu trữ"
+      :loading="isDeleting"
+      @confirm="confirmArchive"
+      @cancel="showArchiveModal = false"
+    >
+      <div class="space-y-3">
+        <p class="text-sm text-muted">
+          Bạn có chắc muốn lưu trữ khách thuê {{ tenant?.fullName ?? '' }}?
+        </p>
+        <UiTextarea
+          v-model="archiveReason"
+          label="Lý do lưu trữ"
+          :rows="3"
+          placeholder="Ví dụ: khách đã rời đi, cần lưu hồ sơ"
+          :error="archiveReasonError"
+          @update:model-value="archiveReasonError = ''"
+        />
+      </div>
+    </UiConfirmModal>
   </div>
 </template>

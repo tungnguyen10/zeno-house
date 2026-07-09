@@ -106,6 +106,17 @@ const stubs = {
         : null
     },
   }),
+  UiTextarea: defineComponent({
+    props: ['modelValue'],
+    emits: ['update:modelValue'],
+    setup(props, { emit }) {
+      return () => h('textarea', {
+        'data-test': 'textarea',
+        value: props.modelValue,
+        onInput: (e: Event) => emit('update:modelValue', (e.target as HTMLTextAreaElement).value),
+      })
+    },
+  }),
   NuxtLink: defineComponent({
     props: ['to'],
     setup(_, { slots }) { return () => h('a', {}, slots.default?.()) },
@@ -216,6 +227,25 @@ describe('RoomBulkActionsBar', () => {
     await archive.trigger('click')
     expect(wrapper.find('[data-test="confirm-modal"]').exists()).toBe(true)
     expect(wrapper.text()).toContain('Phòng 101')
+  })
+
+  it('requires reason before running delete action', async () => {
+    const runAction = vi.fn(async (): Promise<RoomBulkResult> => ({ succeeded: ['r-1'], failed: [] }))
+    const wrapper = mount(RoomBulkActionsBar, {
+      props: { selectedIds: ['r-1'], rooms: [buildRoom()], runAction, isRunning: false },
+      global: { stubs },
+    })
+
+    const del = wrapper.findAll('button').find(b => b.text().includes('Xoá nhiều'))!
+    await del.trigger('click')
+
+    await wrapper.find('input[type="checkbox"]').setValue(true)
+    await wrapper.find('[data-test="confirm"]').trigger('click')
+    expect(runAction).not.toHaveBeenCalled()
+
+    await wrapper.find('[data-test="textarea"]').setValue('Dữ liệu phòng bị nhập trùng')
+    await wrapper.find('[data-test="confirm"]').trigger('click')
+    expect(runAction).toHaveBeenCalledWith('delete', { reason: 'Dữ liệu phòng bị nhập trùng' })
   })
 })
 

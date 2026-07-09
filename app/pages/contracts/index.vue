@@ -2,6 +2,7 @@
 import type { Building } from '~/types/buildings'
 import type { ApiSuccess } from '~/types/api'
 import type { ContractBulkAction, ContractBulkActionResult } from '~/composables/contracts/useContractBulkActions'
+import { CONTRACT_LIST_ASYNC_KEY } from '~/composables/contracts/useContractList'
 import { formatCurrency } from '~/utils/format/currency'
 import { contractPath } from '~/utils/routes/operational'
 
@@ -70,7 +71,7 @@ function toggleSelectAll() {
   }
 }
 
-function handleBulkDone(result: ContractBulkActionResult, action: ContractBulkAction) {
+async function handleBulkDone(result: ContractBulkActionResult, action: ContractBulkAction) {
   const verb = action === 'terminate' ? 'kết thúc' : 'xoá'
   if (result.succeeded.length > 0 && result.failed.length === 0) {
     toast.success(`Đã ${verb} ${result.succeeded.length} hợp đồng`)
@@ -81,7 +82,8 @@ function handleBulkDone(result: ContractBulkActionResult, action: ContractBulkAc
   else if (result.failed.length > 0) {
     toast.error(`Không thể ${verb}. ${result.failed.length} hợp đồng bị bỏ qua`)
   }
-  refresh()
+  clear()
+  await refreshNuxtData(CONTRACT_LIST_ASYNC_KEY)
 }
 
 watch(contracts, () => {

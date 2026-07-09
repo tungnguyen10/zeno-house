@@ -2,6 +2,7 @@
 import type { Building } from '~/types/buildings'
 import type { ApiSuccess } from '~/types/api'
 import type { TenantBulkAction, TenantBulkResult } from '~/composables/tenants/useTenantBulkActions'
+import { BULK_FAILURE_LABELS_COMMON } from '~/utils/constants/bulk-failure-labels'
 import type { TenantBulkCreateResult, TenantBulkCreateFailure } from '~/composables/tenants/useTenantBulkCreate'
 
 definePageMeta({ title: 'Khách thuê' })
@@ -80,10 +81,9 @@ const bulkCreateFailuresModalOpen = ref(false)
 const lastBulkCreateFailures = ref<TenantBulkCreateFailure[]>([])
 
 const reasonLabels: Record<string, string> = {
-  has_active_contracts: 'Còn hợp đồng đang hoạt động',
+  ...BULK_FAILURE_LABELS_COMMON,
   has_active_occupancies: 'Đang đồng cư trong hợp đồng',
-  not_found: 'Không tìm thấy',
-  conflict: 'Xung đột dữ liệu',
+  forbidden: 'Không có quyền xoá khách thuê này',
 }
 
 const bulkCreateReasonLabels: Record<string, string> = {
@@ -125,7 +125,7 @@ async function onBulkDone(result: TenantBulkResult, action: TenantBulkAction) {
   else if (failed > 0) toast.error(`Không thể ${verb}. ${failed} bị bỏ qua`)
 
   bulk.clear()
-  await refresh()
+  await refreshNuxtData(TENANT_LIST_ASYNC_KEY)
 }
 
 async function onBulkCreateDone(result: TenantBulkCreateResult) {

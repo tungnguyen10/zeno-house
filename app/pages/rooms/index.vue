@@ -7,6 +7,7 @@ import type { ContractService } from '~/types/contract-services'
 import type { ContractServiceUpdateInput } from '~/utils/validators/contract-services'
 import { roomFormToApiPayload, type RoomFormData } from '~/components/rooms/RoomForm.vue'
 import type { RoomBulkAction, RoomBulkResult } from '~/composables/rooms/useRoomBulkActions'
+import { BULK_FAILURE_LABELS_COMMON } from '~/utils/constants/bulk-failure-labels'
 
 definePageMeta({ title: 'Phòng' })
 
@@ -113,10 +114,9 @@ const lastFailures = ref<RoomBulkResult['failed']>([])
 const lastFailureAction = ref<RoomBulkAction | null>(null)
 
 const reasonLabels: Record<string, string> = {
-  has_active_contracts: 'Còn hợp đồng đang hoạt động',
+  ...BULK_FAILURE_LABELS_COMMON,
   has_meter_readings: 'Đã có chỉ số đồng hồ',
-  not_found: 'Không tìm thấy',
-  conflict: 'Xung đột dữ liệu',
+  forbidden: 'Không có quyền xoá phòng này',
 }
 
 const failuresWithName = computed(() => {
@@ -273,7 +273,7 @@ async function onBulkDone(result: RoomBulkResult, action: RoomBulkAction) {
   else if (failed > 0) toast.error(`Không thể ${verb}. ${failed} phòng bị bỏ qua`)
 
   bulk.clear()
-  await refresh()
+  await refreshNuxtData(ROOM_LIST_ASYNC_KEY)
 }
 </script>
 

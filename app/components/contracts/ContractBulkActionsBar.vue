@@ -28,6 +28,7 @@ const pendingAction = ref<ContractBulkAction | null>(null)
 const confirmOpen = ref(false)
 const deleteAck = ref(false)
 const reason = ref('')
+const reasonError = ref('')
 
 const actionLabels: Record<ContractBulkAction, string> = {
   terminate: 'Kết thúc',
@@ -43,17 +44,26 @@ function open(action: ContractBulkAction) {
   pendingAction.value = action
   deleteAck.value = false
   reason.value = ''
+  reasonError.value = ''
   confirmOpen.value = true
 }
 
 function cancel() {
   confirmOpen.value = false
   pendingAction.value = null
+  reasonError.value = ''
 }
 
 async function confirm() {
   if (!pendingAction.value) return
-  if (pendingAction.value === 'delete' && !deleteAck.value) return
+  if (pendingAction.value === 'delete') {
+    if (!deleteAck.value) return
+    if (!reason.value.trim()) {
+      reasonError.value = 'Lý do xoá là bắt buộc.'
+      return
+    }
+    reasonError.value = ''
+  }
   const action = pendingAction.value
   const result = await props.runAction(action, { reason: reason.value.trim() || undefined })
   confirmOpen.value = false
@@ -109,6 +119,15 @@ async function confirm() {
           v-model="deleteAck"
           label="Tôi hiểu thao tác này không thể hoàn tác và chỉ áp dụng cho hợp đồng không có dữ liệu hoá đơn."
           label-class="!text-muted"
+        />
+        <UiTextarea
+          v-if="pendingAction === 'delete'"
+          v-model="reason"
+          label="Lý do xoá"
+          :rows="3"
+          placeholder="Ví dụ: hợp đồng được nhập sai thông tin"
+          :error="reasonError"
+          @update:model-value="reasonError = ''"
         />
       </div>
     </UiConfirmModal>

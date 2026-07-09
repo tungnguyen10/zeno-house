@@ -5,7 +5,7 @@ import type { RoomBulkAction, RoomBulkResult } from '~/composables/rooms/useRoom
 const props = defineProps<{
   selectedIds: string[]
   rooms: Room[]
-  runAction: (action: RoomBulkAction) => Promise<RoomBulkResult>
+  runAction: (action: RoomBulkAction, opts?: { reason?: string }) => Promise<RoomBulkResult>
   isRunning?: boolean
 }>()
 
@@ -27,16 +27,21 @@ const extraCount = computed(() => Math.max(0, selectedRooms.value.length - 10))
 const pendingAction = ref<RoomBulkAction | null>(null)
 const confirmOpen = ref(false)
 const deleteAck = ref(false)
+const reason = ref('')
+const reasonError = ref('')
 
 function open(action: RoomBulkAction) {
   pendingAction.value = action
   deleteAck.value = false
+  reason.value = ''
+  reasonError.value = ''
   confirmOpen.value = true
 }
 
 function cancel() {
   confirmOpen.value = false
   pendingAction.value = null
+  reasonError.value = ''
 }
 
 const actionLabels: Record<RoomBulkAction, string> = {
@@ -55,9 +60,20 @@ const actionDescriptions: Record<RoomBulkAction, string> = {
 
 async function confirm() {
   if (!pendingAction.value) return
-  if (pendingAction.value === 'delete' && !deleteAck.value) return
+  if (pendingAction.value === 'delete') {
+    const value = reason.value.trim()
+    if (!deleteAck.value) return
+    if (!value) {
+      reasonError.value = 'Lý do xoá là bắt buộc.'
+      return
+    }
+    reasonError.value = ''
+  }
+
   const action = pendingAction.value
-  const result = await props.runAction(action)
+  const result = await props.runAction(action, {
+    reason: action === 'delete' ? reason.value.trim() : undefined,
+  })
   confirmOpen.value = false
   pendingAction.value = null
   emit('done', result, action)
@@ -110,6 +126,15 @@ async function confirm() {
           v-model="deleteAck"
           label="Tôi hiểu thao tác này không thể hoàn tác."
           label-class="!text-muted"
+        />
+        <UiTextarea
+          v-if="pendingAction === 'delete'"
+          v-model="reason"
+          label="Lý do xoá"
+          :rows="3"
+          placeholder="Ví dụ: nhập trùng dữ liệu do thao tác nhầm"
+          :error="reasonError"
+          @update:model-value="reasonError = ''"
         />
       </div>
     </UiConfirmModal>

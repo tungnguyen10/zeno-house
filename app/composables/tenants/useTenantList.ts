@@ -2,6 +2,12 @@ import type { Tenant, TenantStatus } from '~/types/tenants'
 import type { ApiSuccess } from '~/types/api'
 import { useRouteListQuerySync } from '~/composables/useRouteListQuerySync'
 
+export const TENANT_LIST_ASYNC_KEY = 'tenants:list'
+
+export function invalidateTenantListCache() {
+  clearNuxtData(TENANT_LIST_ASYNC_KEY)
+}
+
 type SortField = 'full_name' | 'created_at' | 'code'
 type SortOrder = 'asc' | 'desc'
 type ContractState = 'with_contract' | 'without_contract'
@@ -108,6 +114,7 @@ export function useTenantList() {
   const { data, status: fetchStatus, error, refresh } = useFetch<
     ApiSuccess<Tenant[]> & { meta: { total: number; page: number; limit: number; totalPages: number } }
   >('/api/tenants', {
+    key: TENANT_LIST_ASYNC_KEY,
     query: queryParams,
     watch: [page, limit, q, buildingFilter, contractStateFilter, status, sort, order],
   })

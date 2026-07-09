@@ -7,6 +7,10 @@ export interface TenantBulkResult {
   failed: { id: string; reason: string }[]
 }
 
+interface TenantBulkActionOptions {
+  reason?: string
+}
+
 export function useTenantBulkActions() {
   const selectedIds = ref<string[]>([])
   const isRunning = ref(false)
@@ -32,17 +36,23 @@ export function useTenantBulkActions() {
     selectedIds.value = []
   }
 
-  async function runAction(action: TenantBulkAction): Promise<TenantBulkResult> {
+  async function runAction(action: TenantBulkAction, options: TenantBulkActionOptions = {}): Promise<TenantBulkResult> {
     if (selectedIds.value.length === 0) {
       return { succeeded: [], failed: [] }
     }
+
+    const reason = options.reason?.trim()
+
     isRunning.value = true
     try {
       const res = await $fetch<ApiSuccess<TenantBulkResult>>('/api/tenants/bulk', {
         method: 'POST',
-        body: { action, ids: selectedIds.value },
+        body: {
+          action,
+          ids: selectedIds.value,
+          reason: reason || undefined,
+        },
       })
-      clear()
       return res.data
     }
     finally {

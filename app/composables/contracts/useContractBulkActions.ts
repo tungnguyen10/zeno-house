@@ -45,7 +45,6 @@ export function useContractBulkActions() {
           ...(opts.reason ? { reason: opts.reason } : {}),
         },
       })
-      clear()
       return response.data
     }
     finally {

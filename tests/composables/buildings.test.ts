@@ -3,7 +3,9 @@ import { nextTick, ref } from 'vue'
 
 // $fetch is auto-imported in Nuxt; tests stub it as a global
 const fetchMock = vi.hoisted(() => vi.fn())
+const clearNuxtDataMock = vi.hoisted(() => vi.fn())
 vi.stubGlobal('$fetch', fetchMock)
+vi.stubGlobal('clearNuxtData', clearNuxtDataMock)
 vi.stubGlobal('navigateTo', vi.fn(async () => {}))
 
 interface FormShape {
@@ -152,7 +154,7 @@ describe('useBuildingBulkActions', () => {
     expect(selectedIds.value).toEqual([])
   })
 
-  it('runAction returns shape and clears selection on success', async () => {
+  it('runAction returns shape and keeps selection until caller clears', async () => {
     fetchMock.mockResolvedValue({
       data: { succeeded: ['a'], failed: [{ id: 'b', reason: 'has_rooms' }] },
     })
@@ -163,7 +165,7 @@ describe('useBuildingBulkActions', () => {
     const result = await runAction('delete')
     expect(result.succeeded).toEqual(['a'])
     expect(result.failed).toEqual([{ id: 'b', reason: 'has_rooms' }])
-    expect(selectedIds.value).toEqual([])
+    expect(selectedIds.value).toEqual(['a', 'b'])
     expect(fetchMock).toHaveBeenCalledWith('/api/buildings/bulk', expect.objectContaining({
       method: 'POST',
       body: { action: 'delete', ids: ['a', 'b'] },
@@ -176,5 +178,15 @@ describe('useBuildingBulkActions', () => {
     const result = await runAction('archive')
     expect(result).toEqual({ succeeded: [], failed: [] })
     expect(fetchMock).not.toHaveBeenCalled()
+  })
+})
+
+describe('useBuildingList helpers', () => {
+  it('invalidateBuildingListCache clears building list async data key', async () => {
+    const { invalidateBuildingListCache, BUILDING_LIST_ASYNC_KEY } = await import('../../app/composables/buildings/useBuildingList')
+
+    invalidateBuildingListCache()
+
+    expect(clearNuxtDataMock).toHaveBeenCalledWith(BUILDING_LIST_ASYNC_KEY)
   })
 })

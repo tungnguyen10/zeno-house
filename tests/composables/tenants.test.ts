@@ -2,7 +2,9 @@ import { vi, describe, it, expect, beforeEach } from 'vitest'
 import { nextTick, ref } from 'vue'
 
 const fetchMock = vi.hoisted(() => vi.fn())
+const clearNuxtDataMock = vi.hoisted(() => vi.fn())
 vi.stubGlobal('$fetch', fetchMock)
+vi.stubGlobal('clearNuxtData', clearNuxtDataMock)
 vi.stubGlobal('navigateTo', vi.fn(async () => {}))
 
 interface FormShape {
@@ -147,7 +149,7 @@ describe('useTenantBulkActions', () => {
     expect(selectedIds.value).toEqual([])
   })
 
-  it('runAction returns shape and clears selection on success', async () => {
+  it('runAction returns shape and keeps selection until caller clears', async () => {
     fetchMock.mockResolvedValue({
       data: { succeeded: ['a'], failed: [{ id: 'b', reason: 'has_active_contracts' }] },
     })
@@ -155,13 +157,13 @@ describe('useTenantBulkActions', () => {
     const { selectedIds, selectAll, runAction } = useTenantBulkActions()
 
     selectAll(['a', 'b'])
-    const result = await runAction('delete')
+    const result = await runAction('delete', { reason: 'Nhập trùng hồ sơ' })
     expect(result.succeeded).toEqual(['a'])
     expect(result.failed).toEqual([{ id: 'b', reason: 'has_active_contracts' }])
-    expect(selectedIds.value).toEqual([])
+    expect(selectedIds.value).toEqual(['a', 'b'])
     expect(fetchMock).toHaveBeenCalledWith('/api/tenants/bulk', expect.objectContaining({
       method: 'POST',
-      body: { action: 'delete', ids: ['a', 'b'] },
+      body: { action: 'delete', ids: ['a', 'b'], reason: 'Nhập trùng hồ sơ' },
     }))
   })
 
@@ -171,5 +173,15 @@ describe('useTenantBulkActions', () => {
     const result = await runAction('archive')
     expect(result).toEqual({ succeeded: [], failed: [] })
     expect(fetchMock).not.toHaveBeenCalled()
+  })
+})
+
+describe('useTenantList helpers', () => {
+  it('invalidateTenantListCache clears tenant list async data key', async () => {
+    const { invalidateTenantListCache, TENANT_LIST_ASYNC_KEY } = await import('../../app/composables/tenants/useTenantList')
+
+    invalidateTenantListCache()
+
+    expect(clearNuxtDataMock).toHaveBeenCalledWith(TENANT_LIST_ASYNC_KEY)
   })
 })

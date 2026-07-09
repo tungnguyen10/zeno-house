@@ -2,6 +2,12 @@ import type { Building, BuildingStatus } from '~/types/buildings'
 import type { ApiSuccess } from '~/types/api'
 import { useRouteListQuerySync } from '~/composables/useRouteListQuerySync'
 
+export const BUILDING_LIST_ASYNC_KEY = 'buildings:list'
+
+export function invalidateBuildingListCache() {
+  clearNuxtData(BUILDING_LIST_ASYNC_KEY)
+}
+
 type SortField = 'name' | 'created_at' | 'total_rooms'
 type SortOrder = 'asc' | 'desc'
 
@@ -82,6 +88,7 @@ export function useBuildingList() {
   const { data, status: fetchStatus, error, refresh } = useFetch<
     ApiSuccess<Building[]> & { meta: { total: number; page: number; limit: number; totalPages: number } }
   >('/api/buildings', {
+    key: BUILDING_LIST_ASYNC_KEY,
     query: { page, limit, q, status, sort, order },
     watch: [page, limit, q, status, sort, order],
   })

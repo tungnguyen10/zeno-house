@@ -385,7 +385,11 @@ export const TenantService = {
     const scopeBuildingId = await TenantRepository.findActiveBuildingIdForTenant(event, existing.id)
       ?? opts.buildingId
     if (!scopeBuildingId && user.app_metadata.role !== 'admin') {
-      throwForbidden('Không xác định được tòa nhà để kiểm tra quyền xoá khách thuê')
+      const isOwnerCreatedOrphan = user.app_metadata.role === 'owner'
+        && await TenantRepository.wasCreatedByActor(event, existing.id, user.id)
+      if (!isOwnerCreatedOrphan) {
+        throwForbidden('Không xác định được tòa nhà để kiểm tra quyền xoá khách thuê')
+      }
     }
     if (scopeBuildingId && !await canDeleteMasterData(event, user, scopeBuildingId)) {
       throwForbidden('Không có quyền xoá khách thuê trong tòa nhà này')
@@ -482,8 +486,11 @@ export const TenantService = {
         else if (code === 'NOT_FOUND') {
           failed.push({ id, reason: 'not_found' })
         }
+        else if (code === 'FORBIDDEN') {
+          failed.push({ id, reason: 'forbidden' })
+        }
         else {
-          failed.push({ id, reason: e?.message ?? 'error' })
+          failed.push({ id, reason: e?.message || 'error' })
         }
       }
     }
