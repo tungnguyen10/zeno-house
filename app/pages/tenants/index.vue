@@ -2,7 +2,7 @@
 import type { Building } from '~/types/buildings'
 import type { ApiSuccess } from '~/types/api'
 import type { TenantBulkAction, TenantBulkResult } from '~/composables/tenants/useTenantBulkActions'
-import type { TenantBulkCreateResult } from '~/composables/tenants/useTenantBulkCreate'
+import type { TenantBulkCreateResult, TenantBulkCreateFailure } from '~/composables/tenants/useTenantBulkCreate'
 
 definePageMeta({ title: 'Khách thuê' })
 
@@ -76,12 +76,23 @@ function toggleAllOnPage(checked: boolean) {
 const failureModalOpen = ref(false)
 const lastFailures = ref<TenantBulkResult['failed']>([])
 const lastFailureAction = ref<TenantBulkAction | null>(null)
+const bulkCreateFailuresModalOpen = ref(false)
+const lastBulkCreateFailures = ref<TenantBulkCreateFailure[]>([])
 
 const reasonLabels: Record<string, string> = {
   has_active_contracts: 'Còn hợp đồng đang hoạt động',
   has_active_occupancies: 'Đang đồng cư trong hợp đồng',
   not_found: 'Không tìm thấy',
   conflict: 'Xung đột dữ liệu',
+}
+
+const bulkCreateReasonLabels: Record<string, string> = {
+  validation_error: 'Dữ liệu không hợp lệ',
+  duplicate_in_file: 'Trùng lặp trong file',
+  duplicate_id_number: 'Số CMND/CCCD đã tồn tại',
+  duplicate_phone_in_file: 'Số điện thoại trùng trong file',
+  duplicate_phone: 'Số điện thoại đã tồn tại',
+  unexpected_error: 'Lỗi không xác định',
 }
 
 const failuresWithName = computed(() => {
@@ -120,6 +131,7 @@ async function onBulkDone(result: TenantBulkResult, action: TenantBulkAction) {
 async function onBulkCreateDone(result: TenantBulkCreateResult) {
   const created = result.created.length
   const failed = result.failed.length
+  lastBulkCreateFailures.value = result.failed
   if (created > 0 && failed === 0) {
     toast.success(`Đã thêm ${created} khách thuê`)
   }
@@ -227,6 +239,18 @@ async function openCreateTenant() {
         <div class="flex items-center gap-2">
           <UiButton size="sm" variant="secondary" @click="failureModalOpen = true">Xem chi tiết</UiButton>
           <UiButton size="sm" variant="ghost" @click="lastFailures = []">Đóng</UiButton>
+        </div>
+      </div>
+    </UiAlert>
+
+    <UiAlert v-if="lastBulkCreateFailures.length > 0" severity="warning" class="mb-4">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <span class="text-sm">
+          {{ lastBulkCreateFailures.length }} dòng bị bỏ qua trong lần nhập gần nhất.
+        </span>
+        <div class="flex items-center gap-2">
+          <UiButton size="sm" variant="secondary" @click="bulkCreateFailuresModalOpen = true">Xem chi tiết</UiButton>
+          <UiButton size="sm" variant="ghost" @click="lastBulkCreateFailures = []">Đóng</UiButton>
         </div>
       </div>
     </UiAlert>
@@ -379,6 +403,35 @@ async function openCreateTenant() {
       </ul>
       <template #footer>
         <UiButton variant="secondary" @click="failureModalOpen = false">Đóng</UiButton>
+      </template>
+    </UiModal>
+
+    <UiModal
+      :open="bulkCreateFailuresModalOpen"
+      :title="`Chi tiết ${lastBulkCreateFailures.length} dòng bị bỏ qua`"
+      size="lg"
+      @close="bulkCreateFailuresModalOpen = false"
+    >
+      <ul class="space-y-2 text-sm">
+        <li
+          v-for="row in lastBulkCreateFailures"
+          :key="row.line"
+          class="flex flex-col gap-1 rounded-lg border border-dark-border bg-dark-deep/40 px-3 py-2"
+        >
+          <div class="flex items-start justify-between gap-3">
+            <span class="font-medium text-white">Dòng {{ row.line }}</span>
+            <span class="text-xs text-rose-300 font-medium">{{ bulkCreateReasonLabels[row.reason] ?? row.reason }}</span>
+          </div>
+          <p class="text-xs text-muted">{{ row.message }}</p>
+          <ul v-if="row.fieldErrors && Object.keys(row.fieldErrors).length > 0" class="text-xs text-rose-200 ml-2 mt-1">
+            <li v-for="(errors, field) in row.fieldErrors" :key="field">
+              <strong>{{ field }}:</strong> {{ (errors as string[]).join(', ') }}
+            </li>
+          </ul>
+        </li>
+      </ul>
+      <template #footer>
+        <UiButton variant="secondary" @click="bulkCreateFailuresModalOpen = false">Đóng</UiButton>
       </template>
     </UiModal>
 

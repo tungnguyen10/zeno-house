@@ -57,7 +57,7 @@ export interface TenantBulkResult {
 
 export interface TenantBulkCreateFailure {
   line: number
-  reason: 'validation_error' | 'duplicate_in_file' | 'duplicate_id_number' | 'unexpected_error'
+  reason: 'validation_error' | 'duplicate_in_file' | 'duplicate_id_number' | 'duplicate_phone_in_file' | 'duplicate_phone' | 'unexpected_error'
   message: string
   fieldErrors?: Record<string, string[]>
 }
@@ -153,6 +153,8 @@ export const TenantService = {
 
   async create(event: H3Event, user: AuthUser, input: TenantCreateInput): Promise<Tenant> {
     if (!can(user, 'tenants.create')) throwForbidden('Không có quyền tạo khách thuê')
+    const duplicatePhone = await TenantRepository.findByPhone(event, input.phone)
+    if (duplicatePhone) throwConflict('Số điện thoại đã tồn tại')
     if (input.id_number) {
       const existing = await TenantRepository.findByIdNumber(event, input.id_number)
       if (existing) throwConflict('Số CMND/CCCD đã tồn tại')
@@ -178,6 +180,7 @@ export const TenantService = {
     const created: Tenant[] = []
     const failed: TenantBulkCreateFailure[] = []
     const seenIdNumbers = new Set<string>()
+    const seenPhones = new Set<string>()
 
     for (const row of input.rows) {
       try {
@@ -189,6 +192,28 @@ export const TenantService = {
             reason: 'validation_error',
             message: 'Dữ liệu dòng không hợp lệ',
             fieldErrors: parsed.error.flatten().fieldErrors,
+          })
+          continue
+        }
+
+        if (seenPhones.has(parsed.data.phone)) {
+          failed.push({
+            line: row.line,
+            reason: 'duplicate_phone_in_file',
+            message: 'Số điện thoại bị trùng trong file nhập',
+            fieldErrors: { phone: ['Số điện thoại bị trùng trong file nhập'] },
+          })
+          continue
+        }
+        seenPhones.add(parsed.data.phone)
+
+        const existingPhone = await TenantRepository.findByPhone(event, parsed.data.phone)
+        if (existingPhone) {
+          failed.push({
+            line: row.line,
+            reason: 'duplicate_phone',
+            message: 'Số điện thoại đã tồn tại trong hệ thống',
+            fieldErrors: { phone: ['Số điện thoại đã tồn tại trong hệ thống'] },
           })
           continue
         }
@@ -257,6 +282,10 @@ export const TenantService = {
     if (!can(user, 'tenants.update')) throwForbidden('Không có quyền cập nhật khách thuê')
     const existing = await TenantRepository.findByIdentifier(event, id)
     if (!existing) throwNotFound('Không tìm thấy khách thuê')
+    if (input.phone !== undefined) {
+      const conflictPhone = await TenantRepository.findByPhone(event, input.phone, existing.id)
+      if (conflictPhone) throwConflict('Số điện thoại đã tồn tại')
+    }
     if (input.id_number) {
       const conflict = await TenantRepository.findByIdNumber(event, input.id_number, existing.id)
       if (conflict) throwConflict('Số CMND/CCCD đã tồn tại')

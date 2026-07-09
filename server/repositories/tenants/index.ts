@@ -336,6 +336,15 @@ export const TenantRepository = {
     return data ? mapTenant(data) : null
   },
 
+  async findByPhone(event: H3Event, phone: string, excludeId?: string): Promise<Tenant | null> {
+    const client = await serverSupabaseClient(event)
+    let query = client.from('tenants').select('*').eq('phone', phone)
+    if (excludeId) query = query.neq('id', excludeId)
+    const { data, error } = await query.maybeSingle()
+    if (error) throw createError({ statusCode: 500, message: error.message })
+    return data ? mapTenant(data) : null
+  },
+
   async insert(event: H3Event, input: TenantCreateInput): Promise<Tenant> {
     const client = await serverSupabaseClient(event)
     const createdAt = new Date().toISOString()

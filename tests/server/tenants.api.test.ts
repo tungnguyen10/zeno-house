@@ -8,6 +8,7 @@ const repoMocks = vi.hoisted(() => ({
   findById: vi.fn(),
   hasContractInBuildings: vi.fn(),
   findByIdNumber: vi.fn(),
+  findByPhone: vi.fn(),
   findCreatedTenantIdsByActor: vi.fn(),
   wasCreatedByActor: vi.fn(),
   insert: vi.fn(),
@@ -149,6 +150,8 @@ async function expectError(promise: Promise<unknown>): Promise<ApiError> {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  repoMocks.findByPhone.mockResolvedValue(null)
+  repoMocks.findByIdNumber.mockResolvedValue(null)
   repoMocks.findActiveBuildingIdForTenant.mockResolvedValue(null)
   repoMocks.findActiveAssignmentByTenantId.mockResolvedValue(null)
   repoMocks.findCreatedTenantIdsByActor.mockResolvedValue([])
@@ -329,6 +332,18 @@ describe('POST /api/tenants', () => {
     expect(err.statusCode).toBe(409)
     expect(err.data?.error?.code).toBe('CONFLICT')
   })
+
+  it('rejects duplicate phone with 409', async () => {
+    asAdmin()
+    repoMocks.findByPhone.mockResolvedValue(buildTenant({ id: 'existing' }))
+    const { default: handler } = await import('../../server/api/tenants/index.post')
+
+    const err = await expectError(Promise.resolve(handler(makeEvent({
+      body: { full_name: 'Nguyen Van A', phone: '0901234567' },
+    }))))
+    expect(err.statusCode).toBe(409)
+    expect(err.data?.error?.code).toBe('CONFLICT')
+  })
 })
 
 // ---------------------------------------------------------------------------
@@ -420,6 +435,20 @@ describe('PATCH /api/tenants/[id]', () => {
 
     const err = await expectError(Promise.resolve(handler(makeEvent({ params: { id: 't-1' }, body: { phone: 'a'.repeat(50) } }))))
     expect(err.statusCode).toBe(422)
+  })
+
+  it('rejects duplicate phone with 409', async () => {
+    asAdmin()
+    repoMocks.findByIdentifier.mockResolvedValue(buildTenant({ id: 't-1' }))
+    repoMocks.findByPhone.mockResolvedValue(buildTenant({ id: 't-2' }))
+    const { default: handler } = await import('../../server/api/tenants/[id].patch')
+
+    const err = await expectError(Promise.resolve(handler(makeEvent({
+      params: { id: 't-1' },
+      body: { phone: '0909999888' },
+    }))))
+    expect(err.statusCode).toBe(409)
+    expect(err.data?.error?.code).toBe('CONFLICT')
   })
 })
 
@@ -587,7 +616,6 @@ describe('POST /api/tenants/bulk', () => {
 describe('POST /api/tenants/bulk-create', () => {
   it('creates valid rows and reports validation errors per line', async () => {
     asAdmin()
-    repoMocks.findByIdNumber.mockResolvedValue(null)
     repoMocks.insert.mockImplementation((_event: unknown, input: { full_name: string; phone: string }) =>
       Promise.resolve(buildTenant({
         id: `new-${input.full_name}`,
@@ -620,7 +648,6 @@ describe('POST /api/tenants/bulk-create', () => {
 
   it('flags duplicate id_number inside the same import file', async () => {
     asAdmin()
-    repoMocks.findByIdNumber.mockResolvedValue(null)
     repoMocks.insert.mockResolvedValue(buildTenant({ id: 'new-1' }))
     const { default: handler } = await import('../../server/api/tenants/bulk-create.post')
 
@@ -640,6 +667,55 @@ describe('POST /api/tenants/bulk-create', () => {
 
     expect(res.data.created).toHaveLength(1)
     expect(res.data.failed).toEqual([{ line: 3, reason: 'duplicate_in_file', message: 'Số CMND/CCCD bị trùng trong file nhập', fieldErrors: { id_number: ['Số CMND/CCCD bị trùng trong file nhập'] } }])
+  })
+
+  it('flags duplicate phone inside the same import file and blocks only later row', async () => {
+    asAdmin()
+    repoMocks.insert.mockResolvedValue(buildTenant({ id: 'new-1' }))
+    const { default: handler } = await import('../../server/api/tenants/bulk-create.post')
+
+    const res = await handler(makeEvent({
+      body: {
+        rows: [
+          { line: 2, full_name: 'Nguyen Van A', phone: '0901234567' },
+          { line: 3, full_name: 'Tran Thi B', phone: '0901234567' },
+        ],
+      },
+    })) as {
+      data: {
+        created: Tenant[]
+        failed: Array<{ line: number; reason: string }>
+      }
+    }
+
+    expect(res.data.created).toHaveLength(1)
+    expect(res.data.failed).toEqual([{ line: 3, reason: 'duplicate_phone_in_file', message: 'Số điện thoại bị trùng trong file nhập', fieldErrors: { phone: ['Số điện thoại bị trùng trong file nhập'] } }])
+  })
+
+  it('flags phone already existing in system during bulk import', async () => {
+    asAdmin()
+    repoMocks.findByPhone.mockImplementation((_event: unknown, phone: string) =>
+      Promise.resolve(phone === '0901234567' ? buildTenant({ id: 'existing' }) : null),
+    )
+    repoMocks.insert.mockResolvedValue(buildTenant({ id: 'new-2' }))
+    const { default: handler } = await import('../../server/api/tenants/bulk-create.post')
+
+    const res = await handler(makeEvent({
+      body: {
+        rows: [
+          { line: 2, full_name: 'Nguyen Van A', phone: '0901234567' },
+          { line: 3, full_name: 'Tran Thi B', phone: '0901111222' },
+        ],
+      },
+    })) as {
+      data: {
+        created: Tenant[]
+        failed: Array<{ line: number; reason: string }>
+      }
+    }
+
+    expect(res.data.created).toHaveLength(1)
+    expect(res.data.failed).toEqual([{ line: 2, reason: 'duplicate_phone', message: 'Số điện thoại đã tồn tại trong hệ thống', fieldErrors: { phone: ['Số điện thoại đã tồn tại trong hệ thống'] } }])
   })
 
   it('forbids managers from bulk-create', async () => {

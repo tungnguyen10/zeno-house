@@ -4,7 +4,7 @@ import { tenantCreateSchema, type TenantBulkCreateRowInput } from '~/utils/valid
 
 export interface TenantBulkCreateFailure {
   line: number
-  reason: 'validation_error' | 'duplicate_in_file' | 'duplicate_id_number' | 'unexpected_error'
+  reason: 'validation_error' | 'duplicate_in_file' | 'duplicate_id_number' | 'duplicate_phone_in_file' | 'duplicate_phone' | 'unexpected_error'
   message: string
   fieldErrors?: Record<string, string[]>
 }
@@ -55,23 +55,36 @@ export function useTenantBulkCreate() {
   const isSubmitting = ref(false)
 
   const previewRows = computed<TenantBulkPreviewRow[]>(() => {
-    const duplicates = new Set<string>()
-    const seen = new Set<string>()
+    const duplicateIdNumbers = new Set<string>()
+    const seenIdNumbers = new Set<string>()
+    const duplicatePhones = new Set<string>()
+    const seenPhones = new Set<string>()
 
     for (const row of rows.value) {
       const id = normalizeCell(row.id_number)
-      if (!id) continue
-      if (seen.has(id)) duplicates.add(id)
-      else seen.add(id)
+      if (id) {
+        if (seenIdNumbers.has(id)) duplicateIdNumbers.add(id)
+        else seenIdNumbers.add(id)
+      }
+
+      const phone = normalizeCell(row.phone)
+      if (phone) {
+        if (seenPhones.has(phone)) duplicatePhones.add(phone)
+        else seenPhones.add(phone)
+      }
     }
 
     return rows.value.map((row) => {
       const normalized = normalizePreviewRow(row)
       const validation = tenantCreateSchema.safeParse(normalized)
       const fieldErrors = validation.success ? {} : validation.error.flatten().fieldErrors
-      if (normalized.id_number && duplicates.has(normalized.id_number)) {
+      if (normalized.id_number && duplicateIdNumbers.has(normalized.id_number)) {
         const existing = fieldErrors.id_number ?? []
         fieldErrors.id_number = [...existing, 'Số CMND/CCCD bị trùng trong file nhập']
+      }
+      if (normalized.phone && duplicatePhones.has(normalized.phone)) {
+        const existing = fieldErrors.phone ?? []
+        fieldErrors.phone = [...existing, 'Số điện thoại bị trùng trong file nhập']
       }
 
       const issues = Object.entries(fieldErrors)
