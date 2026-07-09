@@ -124,36 +124,6 @@ describe('useBuildingForm — dirty + draft persistence', () => {
 })
 
 describe('useBuildingBulkActions', () => {
-  it('toggle adds then removes ids', async () => {
-    const { useBuildingBulkActions } = await import('../../app/composables/buildings/useBuildingBulkActions')
-    const { selectedIds, isSelected, toggle } = useBuildingBulkActions()
-
-    toggle('a')
-    toggle('b')
-    expect(selectedIds.value).toEqual(['a', 'b'])
-    expect(isSelected('a')).toBe(true)
-
-    toggle('a')
-    expect(selectedIds.value).toEqual(['b'])
-    expect(isSelected('a')).toBe(false)
-  })
-
-  it('selectAll replaces selection', async () => {
-    const { useBuildingBulkActions } = await import('../../app/composables/buildings/useBuildingBulkActions')
-    const { selectedIds, toggle, selectAll } = useBuildingBulkActions()
-    toggle('x')
-    selectAll(['a', 'b', 'c'])
-    expect(selectedIds.value).toEqual(['a', 'b', 'c'])
-  })
-
-  it('clear empties the selection', async () => {
-    const { useBuildingBulkActions } = await import('../../app/composables/buildings/useBuildingBulkActions')
-    const { selectedIds, selectAll, clear } = useBuildingBulkActions()
-    selectAll(['a', 'b'])
-    clear()
-    expect(selectedIds.value).toEqual([])
-  })
-
   it('runAction returns shape and keeps selection until caller clears', async () => {
     fetchMock.mockResolvedValue({
       data: { succeeded: ['a'], failed: [{ id: 'b', reason: 'has_rooms' }] },

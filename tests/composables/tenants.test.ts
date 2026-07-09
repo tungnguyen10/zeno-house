@@ -119,36 +119,6 @@ describe('useTenantForm — dirty + draft persistence', () => {
 })
 
 describe('useTenantBulkActions', () => {
-  it('toggle adds then removes ids', async () => {
-    const { useTenantBulkActions } = await import('../../app/composables/tenants/useTenantBulkActions')
-    const { selectedIds, isSelected, toggle } = useTenantBulkActions()
-
-    toggle('a')
-    toggle('b')
-    expect(selectedIds.value).toEqual(['a', 'b'])
-    expect(isSelected('a')).toBe(true)
-
-    toggle('a')
-    expect(selectedIds.value).toEqual(['b'])
-    expect(isSelected('a')).toBe(false)
-  })
-
-  it('selectAll replaces selection', async () => {
-    const { useTenantBulkActions } = await import('../../app/composables/tenants/useTenantBulkActions')
-    const { selectedIds, toggle, selectAll } = useTenantBulkActions()
-    toggle('x')
-    selectAll(['a', 'b', 'c'])
-    expect(selectedIds.value).toEqual(['a', 'b', 'c'])
-  })
-
-  it('clear empties the selection', async () => {
-    const { useTenantBulkActions } = await import('../../app/composables/tenants/useTenantBulkActions')
-    const { selectedIds, selectAll, clear } = useTenantBulkActions()
-    selectAll(['a', 'b'])
-    clear()
-    expect(selectedIds.value).toEqual([])
-  })
-
   it('runAction returns shape and keeps selection until caller clears', async () => {
     fetchMock.mockResolvedValue({
       data: { succeeded: ['a'], failed: [{ id: 'b', reason: 'has_active_contracts' }] },

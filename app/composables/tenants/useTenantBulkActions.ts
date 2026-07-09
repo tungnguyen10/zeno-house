@@ -7,36 +7,10 @@ export interface TenantBulkResult {
   failed: { id: string; reason: string }[]
 }
 
-interface TenantBulkActionOptions {
-  reason?: string
-}
-
 export function useTenantBulkActions() {
-  const selectedIds = ref<string[]>([])
-  const isRunning = ref(false)
+  const { selectedIds, isRunning, isSelected, toggle, selectAll, clear } = useBulkSelection()
 
-  function isSelected(id: string) {
-    return selectedIds.value.includes(id)
-  }
-
-  function toggle(id: string) {
-    if (isSelected(id)) {
-      selectedIds.value = selectedIds.value.filter(x => x !== id)
-    }
-    else {
-      selectedIds.value = [...selectedIds.value, id]
-    }
-  }
-
-  function selectAll(ids: string[]) {
-    selectedIds.value = [...ids]
-  }
-
-  function clear() {
-    selectedIds.value = []
-  }
-
-  async function runAction(action: TenantBulkAction, options: TenantBulkActionOptions = {}): Promise<TenantBulkResult> {
+  async function runAction(action: TenantBulkAction, options: { reason?: string } = {}): Promise<TenantBulkResult> {
     if (selectedIds.value.length === 0) {
       return { succeeded: [], failed: [] }
     }

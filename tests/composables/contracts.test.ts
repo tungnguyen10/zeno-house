@@ -138,26 +138,6 @@ describe('useContractForm - dirty + draft persistence', () => {
 })
 
 describe('useContractBulkActions', () => {
-  it('toggle adds and removes ids', async () => {
-    const { useContractBulkActions } = await import('../../app/composables/contracts/useContractBulkActions')
-    const { selectedIds, isSelected, toggle } = useContractBulkActions()
-
-    toggle('a')
-    toggle('a')
-    expect(selectedIds.value).toEqual([])
-    expect(isSelected('a')).toBe(false)
-  })
-
-  it('selectAll replaces selection and clear empties it', async () => {
-    const { useContractBulkActions } = await import('../../app/composables/contracts/useContractBulkActions')
-    const { selectedIds, selectAll, clear } = useContractBulkActions()
-
-    selectAll(['a', 'b', 'c'])
-    expect(selectedIds.value).toEqual(['a', 'b', 'c'])
-    clear()
-    expect(selectedIds.value).toEqual([])
-  })
-
   it('runAction posts selected ids, returns result, and keeps selection until caller clears', async () => {
     fetchMock.mockResolvedValue({ data: { succeeded: ['a'], failed: [{ id: 'b', reason: 'ACTIVE_CONTRACT' }] } })
     const { useContractBulkActions } = await import('../../app/composables/contracts/useContractBulkActions')

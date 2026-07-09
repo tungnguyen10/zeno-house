@@ -21,6 +21,7 @@ import {
   watch,
   watchEffect,
 } from 'vue'
+import { useBulkSelection } from '~/composables/useBulkSelection'
 import UiButton from '~/components/ui/UiButton.vue'
 import UiCheckbox from '~/components/ui/UiCheckbox.vue'
 
@@ -36,6 +37,7 @@ config.global.components = {
 for (const [name, fn] of Object.entries({
   computed, isRef, nextTick, onBeforeMount, onBeforeUnmount, onMounted, onUnmounted,
   reactive, readonly, ref, shallowRef, toRaw, toRef, toRefs, toValue, unref, useId, watch, watchEffect,
+  useBulkSelection,
 })) {
   vi.stubGlobal(name, fn)
 }

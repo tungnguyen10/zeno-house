@@ -108,30 +108,6 @@ describe('useRoomForm - dirty + draft persistence', () => {
 })
 
 describe('useRoomBulkActions', () => {
-  it('toggle adds then removes ids', async () => {
-    const { useRoomBulkActions } = await import('../../app/composables/rooms/useRoomBulkActions')
-    const { selectedIds, isSelected, toggle } = useRoomBulkActions()
-
-    toggle('a')
-    toggle('b')
-    expect(selectedIds.value).toEqual(['a', 'b'])
-    expect(isSelected('a')).toBe(true)
-
-    toggle('a')
-    expect(selectedIds.value).toEqual(['b'])
-    expect(isSelected('a')).toBe(false)
-  })
-
-  it('selectAll replaces selection and clear empties it', async () => {
-    const { useRoomBulkActions } = await import('../../app/composables/rooms/useRoomBulkActions')
-    const { selectedIds, toggle, selectAll, clear } = useRoomBulkActions()
-    toggle('x')
-    selectAll(['a', 'b', 'c'])
-    expect(selectedIds.value).toEqual(['a', 'b', 'c'])
-    clear()
-    expect(selectedIds.value).toEqual([])
-  })
-
   it('runAction returns shape and keeps selection until caller clears', async () => {
     fetchMock.mockResolvedValue({
       data: { succeeded: ['a'], failed: [{ id: 'b', reason: 'has_meter_readings' }] },

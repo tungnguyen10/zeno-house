@@ -8,32 +8,15 @@ export interface ContractBulkActionResult {
 }
 
 export function useContractBulkActions() {
-  const selectedIds = ref<string[]>([])
-  const isRunning = ref(false)
-
-  function isSelected(id: string): boolean {
-    return selectedIds.value.includes(id)
-  }
-
-  function toggle(id: string) {
-    selectedIds.value = isSelected(id)
-      ? selectedIds.value.filter(item => item !== id)
-      : [...selectedIds.value, id]
-  }
-
-  function selectAll(ids: string[]) {
-    selectedIds.value = [...ids]
-  }
-
-  function clear() {
-    selectedIds.value = []
-  }
+  const { selectedIds, isRunning, isSelected, toggle, selectAll, clear } = useBulkSelection()
 
   async function runAction(
     action: ContractBulkAction,
     opts: { reason?: string } = {},
   ): Promise<ContractBulkActionResult> {
     if (selectedIds.value.length === 0) return { succeeded: [], failed: [] }
+
+    const reason = opts.reason?.trim()
 
     isRunning.value = true
     try {
@@ -42,7 +25,7 @@ export function useContractBulkActions() {
         body: {
           action,
           ids: selectedIds.value,
-          ...(opts.reason ? { reason: opts.reason } : {}),
+          reason: reason || undefined,
         },
       })
       return response.data

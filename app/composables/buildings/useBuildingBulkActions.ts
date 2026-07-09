@@ -8,29 +8,7 @@ export interface BuildingBulkResult {
 }
 
 export function useBuildingBulkActions() {
-  const selectedIds = ref<string[]>([])
-  const isRunning = ref(false)
-
-  function isSelected(id: string) {
-    return selectedIds.value.includes(id)
-  }
-
-  function toggle(id: string) {
-    if (isSelected(id)) {
-      selectedIds.value = selectedIds.value.filter(x => x !== id)
-    }
-    else {
-      selectedIds.value = [...selectedIds.value, id]
-    }
-  }
-
-  function selectAll(ids: string[]) {
-    selectedIds.value = [...ids]
-  }
-
-  function clear() {
-    selectedIds.value = []
-  }
+  const { selectedIds, isRunning, isSelected, toggle, selectAll, clear } = useBulkSelection()
 
   async function runAction(action: BuildingBulkAction): Promise<BuildingBulkResult> {
     if (selectedIds.value.length === 0) {
