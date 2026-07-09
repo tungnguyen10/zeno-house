@@ -64,6 +64,7 @@ const activeIndex = ref(-1)
 const containerRef = ref<HTMLElement | null>(null)
 const triggerRef = ref<HTMLButtonElement | null>(null)
 const listboxRef = ref<HTMLUListElement | null>(null)
+const dropdownStyle = ref<Record<string, string>>({})
 
 // ── Derived ────────────────────────────────────────────────────────────────
 const selectedOption = computed(() =>
@@ -101,7 +102,10 @@ function openDropdown() {
     : isPlaceholderSelected.value && canSelectPlaceholder.value
       ? -1
       : firstEnabledIndex()
-  nextTick(scrollActiveIntoView)
+  nextTick(() => {
+    updateDropdownPosition()
+    scrollActiveIntoView()
+  })
 }
 
 function closeDropdown() {
@@ -112,6 +116,22 @@ function closeDropdown() {
 function toggleDropdown() {
   if (isOpen.value) closeDropdown()
   else openDropdown()
+}
+
+function updateDropdownPosition() {
+  const trigger = triggerRef.value
+  if (!trigger) return
+
+  const rect = trigger.getBoundingClientRect()
+  const spaceBelow = window.innerHeight - rect.bottom - 8
+  const maxHeight = Math.max(100, Math.min(240, spaceBelow))
+
+  dropdownStyle.value = {
+    left: `${rect.left}px`,
+    top: `${rect.bottom + 4}px`,
+    width: `${rect.width}px`,
+    maxHeight: `${maxHeight}px`,
+  }
 }
 
 function select(option: SelectOption) {
@@ -200,13 +220,33 @@ function onKeydown(event: KeyboardEvent) {
 
 // ── Click-outside ──────────────────────────────────────────────────────────
 function onDocumentClick(event: MouseEvent) {
-  if (containerRef.value && !containerRef.value.contains(event.target as Node)) {
+  const target = event.target as Node
+  if (containerRef.value?.contains(target)) return
+  if (listboxRef.value?.contains(target)) return
+  if (isOpen.value) {
     closeDropdown()
   }
 }
 
 onMounted(() => document.addEventListener('mousedown', onDocumentClick))
 onBeforeUnmount(() => document.removeEventListener('mousedown', onDocumentClick))
+
+watch(isOpen, (open) => {
+  if (open) {
+    window.addEventListener('resize', updateDropdownPosition)
+    window.addEventListener('scroll', updateDropdownPosition, true)
+    nextTick(updateDropdownPosition)
+    return
+  }
+
+  window.removeEventListener('resize', updateDropdownPosition)
+  window.removeEventListener('scroll', updateDropdownPosition, true)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', updateDropdownPosition)
+  window.removeEventListener('scroll', updateDropdownPosition, true)
+})
 
 // ── Styles ─────────────────────────────────────────────────────────────────
 const triggerClass = computed(() =>
@@ -281,66 +321,69 @@ const triggerClass = computed(() =>
         aria-hidden="true"
       />
 
-      <ul
-        v-if="isOpen"
-        :id="`${selectId}-listbox`"
-        ref="listboxRef"
-        role="listbox"
-        :aria-label="label ?? triggerAriaLabel"
-        class="absolute z-50 mt-1 max-h-60 w-full overflow-y-auto rounded-md border border-dark-border bg-dark-card py-1 shadow-lg"
-      >
-        <li
-          v-if="hasPlaceholderOption"
-          role="option"
-          :aria-selected="isPlaceholderSelected"
-          :aria-disabled="required"
-          :class="clsx(
-            'flex items-center justify-between px-3 text-sm transition-colors',
-            density === 'compact' ? 'py-1.5 text-xs' : 'py-2',
-            required
-              ? 'cursor-not-allowed text-muted/60'
-              : 'cursor-pointer text-muted',
-            !required && activeIndex === -1 && 'bg-cyan/15',
-            !required && activeIndex !== -1 && 'hover:bg-dark-hover',
-            isPlaceholderSelected && !required && 'text-cyan',
-          )"
-          @mousedown.prevent="selectPlaceholder"
-          @mouseover="!required && (activeIndex = -1)"
+      <Teleport to="body">
+        <ul
+          v-if="isOpen"
+          :id="`${selectId}-listbox`"
+          ref="listboxRef"
+          role="listbox"
+          :aria-label="label ?? triggerAriaLabel"
+          :style="dropdownStyle"
+          class="fixed z-[70] overflow-y-auto rounded-md border border-dark-border bg-dark-card py-1 shadow-lg"
         >
-          <span class="truncate">{{ placeholder }}</span>
-          <IconCheckSmall
-            v-if="isPlaceholderSelected"
-            class="ml-2 size-3 shrink-0 text-cyan"
-            aria-hidden="true"
-          />
-        </li>
-        <li
-          v-for="(option, index) in options"
-          :key="option.value"
-          role="option"
-          :aria-selected="isSelected(option)"
-          :aria-disabled="option.disabled"
-          :class="clsx(
-            'flex items-center justify-between px-3 text-sm transition-colors',
-            density === 'compact' ? 'py-1.5 text-xs' : 'py-2',
-            option.disabled
-              ? 'cursor-not-allowed text-muted/60'
-              : 'cursor-pointer text-white',
-            !option.disabled && index === activeIndex && 'bg-cyan/15',
-            !option.disabled && index !== activeIndex && 'hover:bg-dark-hover',
-            isSelected(option) && !option.disabled && 'text-cyan',
-          )"
-          @mousedown.prevent="select(option)"
-          @mouseover="!option.disabled && (activeIndex = index)"
-        >
-          <span class="truncate">{{ option.label }}</span>
-          <IconCheckSmall
-            v-if="isSelected(option)"
-            class="ml-2 size-3 shrink-0 text-cyan"
-            aria-hidden="true"
-          />
-        </li>
-      </ul>
+          <li
+            v-if="hasPlaceholderOption"
+            role="option"
+            :aria-selected="isPlaceholderSelected"
+            :aria-disabled="required"
+            :class="clsx(
+              'flex items-center justify-between px-3 text-sm transition-colors',
+              density === 'compact' ? 'py-1.5 text-xs' : 'py-2',
+              required
+                ? 'cursor-not-allowed text-muted/60'
+                : 'cursor-pointer text-muted',
+              !required && activeIndex === -1 && 'bg-cyan/15',
+              !required && activeIndex !== -1 && 'hover:bg-dark-hover',
+              isPlaceholderSelected && !required && 'text-cyan',
+            )"
+            @mousedown.prevent="selectPlaceholder"
+            @mouseover="!required && (activeIndex = -1)"
+          >
+            <span class="truncate">{{ placeholder }}</span>
+            <IconCheckSmall
+              v-if="isPlaceholderSelected"
+              class="ml-2 size-3 shrink-0 text-cyan"
+              aria-hidden="true"
+            />
+          </li>
+          <li
+            v-for="(option, index) in options"
+            :key="option.value"
+            role="option"
+            :aria-selected="isSelected(option)"
+            :aria-disabled="option.disabled"
+            :class="clsx(
+              'flex items-center justify-between px-3 text-sm transition-colors',
+              density === 'compact' ? 'py-1.5 text-xs' : 'py-2',
+              option.disabled
+                ? 'cursor-not-allowed text-muted/60'
+                : 'cursor-pointer text-white',
+              !option.disabled && index === activeIndex && 'bg-cyan/15',
+              !option.disabled && index !== activeIndex && 'hover:bg-dark-hover',
+              isSelected(option) && !option.disabled && 'text-cyan',
+            )"
+            @mousedown.prevent="select(option)"
+            @mouseover="!option.disabled && (activeIndex = index)"
+          >
+            <span class="truncate">{{ option.label }}</span>
+            <IconCheckSmall
+              v-if="isSelected(option)"
+              class="ml-2 size-3 shrink-0 text-cyan"
+              aria-hidden="true"
+            />
+          </li>
+        </ul>
+      </Teleport>
     </div>
 
     <p v-if="error" :id="`${selectId}-error`" class="text-xs text-error" role="alert">
