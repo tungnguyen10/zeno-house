@@ -144,17 +144,21 @@ export const OperationsReportPeriodRepository = {
     toMonth: number | null,
   ): Promise<OperationsReportClosure[]> {
     const fromOrdinal = ordinal(fromYear, fromMonth)
-    const toOrdinal = toYear != null && toMonth != null
+    const hasUpperBound = toYear != null && toMonth != null
+    const toOrdinal = hasUpperBound
       ? ordinal(toYear, toMonth)
       : Number.MAX_SAFE_INTEGER
 
     const client = await serverSupabaseClient(event)
-    const { data, error } = await table(client, 'operations_report_periods')
+    let query = table(client, 'operations_report_periods')
       .select('*')
       .eq('building_id', buildingId)
       .eq('status', 'closed')
-      .lte('period_year', Math.floor(toOrdinal / 12))
-      .gte('period_year', Math.floor(fromOrdinal / 12) - 1)
+      .gte('period_year', fromYear)
+    if (hasUpperBound) {
+      query = query.lte('period_year', toYear)
+    }
+    const { data, error } = await query
     if (error) throwDbError(error, 'operationsReport.periods.listClosedInRange')
     return ((data ?? []) as OperationsReportPeriodRow[])
       .map(mapOperationsReportClosure)

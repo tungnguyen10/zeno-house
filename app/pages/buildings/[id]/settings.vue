@@ -23,6 +23,7 @@ import {
   type RecurringExpenseFrequency,
 } from '~/utils/constants/operations-report'
 import { formatCurrency } from '~/utils/format/currency'
+import { formatPeriodString, parsePeriodString } from '~/utils/format/period'
 import { buildingPath } from '~/utils/routes/operational'
 
 const route = useRoute()
@@ -84,8 +85,7 @@ const savingFixedCost = ref(false)
 const endFixedCostModalOpen = ref(false)
 const endingFixedCost = ref(false)
 const endFixedCostTarget = ref<BuildingFixedCost | null>(null)
-const endPeriodYear = ref(now.getFullYear())
-const endPeriodMonth = ref(now.getMonth() + 1)
+const endFixedCostPeriod = ref(formatPeriodString(now.getFullYear(), now.getMonth() + 1))
 const fixedCostError = ref<string | null>(null)
 const { createFixedCost } = useOperationsMutations()
 const { data: reserveRatesData, refresh: refreshReserveRates } = await useFetch<ApiSuccess<BuildingReserveFundRate[]>>(
@@ -102,14 +102,12 @@ const savingReserveRate = ref(false)
 const reserveRateError = ref<string | null>(null)
 const reserveRateForm = reactive({
   reserve_rate_percent: '',
-  effective_from_period_year: now.getFullYear(),
-  effective_from_period_month: now.getMonth() + 1,
+  effective_from_period: formatPeriodString(now.getFullYear(), now.getMonth() + 1),
 })
 const endReserveRateModalOpen = ref(false)
 const endingReserveRate = ref(false)
 const endReserveRateTarget = ref<BuildingReserveFundRate | null>(null)
-const endReserveRateYear = ref(now.getFullYear())
-const endReserveRateMonth = ref(now.getMonth() + 1)
+const endReserveRatePeriod = ref(formatPeriodString(now.getFullYear(), now.getMonth() + 1))
 const { data: fixedCostsData, refresh: refreshFixedCosts } = await useFetch<ApiSuccess<BuildingFixedCost[]>>(
   '/api/building-fixed-costs',
   {
@@ -235,8 +233,10 @@ watch(
 function openCreateReserveRate() {
   reserveRateError.value = null
   reserveRateForm.reserve_rate_percent = ''
-  reserveRateForm.effective_from_period_year = fixedCostPeriodYear.value
-  reserveRateForm.effective_from_period_month = fixedCostPeriodMonth.value
+  reserveRateForm.effective_from_period = formatPeriodString(
+    fixedCostPeriodYear.value,
+    fixedCostPeriodMonth.value,
+  )
   reserveRateModalOpen.value = true
 }
 
@@ -247,6 +247,11 @@ async function submitReserveRate() {
     reserveRateError.value = 'Tỷ lệ phải nằm trong khoảng 0 đến 100.'
     return
   }
+  const period = parsePeriodString(reserveRateForm.effective_from_period)
+  if (!period) {
+    reserveRateError.value = 'Chọn tháng bắt đầu áp dụng.'
+    return
+  }
   savingReserveRate.value = true
   reserveRateError.value = null
   try {
@@ -255,8 +260,8 @@ async function submitReserveRate() {
       body: {
         building_id: apiBuildingId.value,
         reserve_rate_percent: rate,
-        effective_from_period_year: Number(reserveRateForm.effective_from_period_year),
-        effective_from_period_month: Number(reserveRateForm.effective_from_period_month),
+        effective_from_period_year: period.year,
+        effective_from_period_month: period.month,
       },
     })
     reserveRateModalOpen.value = false
@@ -272,22 +277,29 @@ async function submitReserveRate() {
 
 function openEndReserveRate(rate: BuildingReserveFundRate) {
   endReserveRateTarget.value = rate
-  endReserveRateYear.value = fixedCostPeriodYear.value
-  endReserveRateMonth.value = fixedCostPeriodMonth.value
+  endReserveRatePeriod.value = formatPeriodString(
+    fixedCostPeriodYear.value,
+    fixedCostPeriodMonth.value,
+  )
   reserveRateError.value = null
   endReserveRateModalOpen.value = true
 }
 
 async function submitEndReserveRate() {
   if (!endReserveRateTarget.value) return
+  const period = parsePeriodString(endReserveRatePeriod.value)
+  if (!period) {
+    reserveRateError.value = 'Chọn tháng kết thúc.'
+    return
+  }
   endingReserveRate.value = true
   reserveRateError.value = null
   try {
     await $fetch(`/api/reserve-fund-rates/${endReserveRateTarget.value.id}`, {
       method: 'PATCH',
       body: {
-        effective_to_period_year: Number(endReserveRateYear.value),
-        effective_to_period_month: Number(endReserveRateMonth.value),
+        effective_to_period_year: period.year,
+        effective_to_period_month: period.month,
       },
     })
     endReserveRateModalOpen.value = false
@@ -511,22 +523,29 @@ async function removePrepaid(item: PrepaidExpense) {
 
 function openEndFixedCost(cost: BuildingFixedCost) {
   endFixedCostTarget.value = cost
-  endPeriodYear.value = fixedCostPeriodYear.value
-  endPeriodMonth.value = fixedCostPeriodMonth.value
+  endFixedCostPeriod.value = formatPeriodString(
+    fixedCostPeriodYear.value,
+    fixedCostPeriodMonth.value,
+  )
   fixedCostError.value = null
   endFixedCostModalOpen.value = true
 }
 
 async function submitEndFixedCost() {
   if (!endFixedCostTarget.value) return
+  const period = parsePeriodString(endFixedCostPeriod.value)
+  if (!period) {
+    fixedCostError.value = 'Chọn tháng kết thúc.'
+    return
+  }
   endingFixedCost.value = true
   fixedCostError.value = null
   try {
     await $fetch(`/api/building-fixed-costs/${endFixedCostTarget.value.id}`, {
       method: 'PATCH',
       body: {
-        effective_to_period_year: Number(endPeriodYear.value),
-        effective_to_period_month: Number(endPeriodMonth.value),
+        effective_to_period_year: period.year,
+        effective_to_period_month: period.month,
       },
     })
     endFixedCostModalOpen.value = false
@@ -1201,10 +1220,12 @@ const activeSectionId = computed(() => {
         <p class="text-sm text-muted">
           Chọn kỳ cuối cùng còn áp dụng chi phí này.
         </p>
-        <div class="grid grid-cols-2 gap-3">
-          <UiInput v-model="endPeriodYear" label="Năm kết thúc" type="number" number-mode="year" />
-          <UiInput v-model="endPeriodMonth" label="Tháng kết thúc" type="number" number-mode="month" />
-        </div>
+        <UiDatePicker
+          v-model="endFixedCostPeriod"
+          label="Tháng kết thúc"
+          picker-mode="month"
+          required
+        />
         <UiAlert v-if="fixedCostError" severity="danger">
           {{ fixedCostError }}
         </UiAlert>
@@ -1238,22 +1259,12 @@ const activeSectionId = computed(() => {
           step="0.01"
           required
         />
-        <div class="grid grid-cols-2 gap-3">
-          <UiInput
-            v-model.number="reserveRateForm.effective_from_period_year"
-            label="Năm bắt đầu"
-            type="number"
-            number-mode="year"
-          />
-          <UiInput
-            v-model.number="reserveRateForm.effective_from_period_month"
-            label="Tháng bắt đầu"
-            type="number"
-            number-mode="month"
-            min="1"
-            max="12"
-          />
-        </div>
+        <UiDatePicker
+          v-model="reserveRateForm.effective_from_period"
+          label="Tháng bắt đầu áp dụng"
+          picker-mode="month"
+          required
+        />
         <UiAlert v-if="reserveRateError" severity="danger">
           {{ reserveRateError }}
         </UiAlert>
@@ -1278,10 +1289,12 @@ const activeSectionId = computed(() => {
         <p class="text-sm text-muted">
           Chọn kỳ cuối cùng còn áp dụng tỷ lệ này.
         </p>
-        <div class="grid grid-cols-2 gap-3">
-          <UiInput v-model="endReserveRateYear" label="Năm kết thúc" type="number" number-mode="year" />
-          <UiInput v-model="endReserveRateMonth" label="Tháng kết thúc" type="number" number-mode="month" min="1" max="12" />
-        </div>
+        <UiDatePicker
+          v-model="endReserveRatePeriod"
+          label="Tháng kết thúc"
+          picker-mode="month"
+          required
+        />
         <UiAlert v-if="reserveRateError" severity="danger">
           {{ reserveRateError }}
         </UiAlert>

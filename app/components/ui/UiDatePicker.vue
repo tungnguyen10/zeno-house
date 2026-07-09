@@ -1,5 +1,15 @@
 <script setup lang="ts">
-import { computed, nextTick, ref, useAttrs, useId, type StyleValue } from 'vue'
+import {
+  computed,
+  nextTick,
+  onBeforeUnmount,
+  ref,
+  useAttrs,
+  useId,
+  watch,
+  type CSSProperties,
+  type StyleValue,
+} from 'vue'
 import { onClickOutside, onKeyStroke } from '@vueuse/core'
 import dayjs from 'dayjs'
 import clsx from 'clsx'
@@ -127,6 +137,56 @@ const maxPeriod = computed(() => {
 const isOpen = ref(false)
 const triggerRef = ref<HTMLButtonElement | null>(null)
 const panelRef = ref<HTMLElement | null>(null)
+const panelStyle = ref<CSSProperties>({})
+const PANEL_WIDTH = 288 // matches w-72 utility
+const PANEL_MAX_HEIGHT = 360 // approximate popover height for flip decision
+
+function updatePanelPosition() {
+  const trigger = triggerRef.value
+  if (!trigger || typeof window === 'undefined') return
+
+  const rect = trigger.getBoundingClientRect()
+  const viewportWidth = window.innerWidth
+  const viewportHeight = window.innerHeight
+  const spaceBelow = viewportHeight - rect.bottom - 8
+  const spaceAbove = rect.top - 8
+
+  // Flip above the trigger if there's not enough space below.
+  const flipAbove = spaceBelow < PANEL_MAX_HEIGHT && spaceAbove > spaceBelow
+  const top = flipAbove
+    ? Math.max(8, rect.top - 8 - PANEL_MAX_HEIGHT)
+    : rect.bottom + 8
+
+  // Keep the panel within the viewport horizontally.
+  let left = rect.left
+  if (left + PANEL_WIDTH + 8 > viewportWidth) {
+    left = Math.max(8, viewportWidth - PANEL_WIDTH - 8)
+  }
+
+  panelStyle.value = {
+    top: `${top}px`,
+    left: `${left}px`,
+    width: `${PANEL_WIDTH}px`,
+    maxHeight: `${Math.min(PANEL_MAX_HEIGHT, viewportHeight - 16)}px`,
+  }
+}
+
+watch(isOpen, (open) => {
+  if (open) {
+    nextTick(updatePanelPosition)
+    window.addEventListener('resize', updatePanelPosition)
+    window.addEventListener('scroll', updatePanelPosition, true)
+    return
+  }
+  window.removeEventListener('resize', updatePanelPosition)
+  window.removeEventListener('scroll', updatePanelPosition, true)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', updatePanelPosition)
+  window.removeEventListener('scroll', updatePanelPosition, true)
+})
+
 const visibleMonth = ref((selectedDate.value ?? dayjs()).startOf('month'))
 const visibleYear = ref((selectedDate.value ?? dayjs()).year())
 const focusedIso = ref(selectedValue.value || todayIso)
@@ -200,14 +260,14 @@ function focusDay() {
   if (isMonthMode.value) {
     nextTick(() => {
       const target = panelRef.value?.querySelector<HTMLButtonElement>(`[data-period="${focusedPeriod.value}"]`)
-      target?.focus()
+      target?.focus({ preventScroll: true })
     })
     return
   }
 
   nextTick(() => {
     const target = panelRef.value?.querySelector<HTMLButtonElement>(`[data-date="${focusedIso.value}"]`)
-    target?.focus()
+    target?.focus({ preventScroll: true })
   })
 }
 
@@ -386,23 +446,25 @@ onKeyStroke('Escape', () => {
       <IconCalendar class="size-4 shrink-0 text-muted" aria-hidden="true" />
     </button>
 
-    <Transition
-      enter-active-class="transition duration-150 ease-out"
-      enter-from-class="opacity-0 -translate-y-1 scale-95"
-      enter-to-class="opacity-100 translate-y-0 scale-100"
-      leave-active-class="transition duration-100 ease-in"
-      leave-from-class="opacity-100 translate-y-0 scale-100"
-      leave-to-class="opacity-0 -translate-y-1 scale-95"
-    >
-      <div
-        v-if="isOpen"
-        :id="panelId"
-        ref="panelRef"
-        role="dialog"
-        :aria-label="label ?? placeholder"
-        class="absolute left-0 top-full z-50 mt-2 w-72 origin-top-left rounded-xl border border-dark-border bg-dark-card p-3 shadow-xl shadow-black/40"
-        @keydown="onGridKeydown"
+    <Teleport to="body">
+      <Transition
+        enter-active-class="transition duration-150 ease-out"
+        enter-from-class="opacity-0 -translate-y-1 scale-95"
+        enter-to-class="opacity-100 translate-y-0 scale-100"
+        leave-active-class="transition duration-100 ease-in"
+        leave-from-class="opacity-100 translate-y-0 scale-100"
+        leave-to-class="opacity-0 -translate-y-1 scale-95"
       >
+        <div
+          v-if="isOpen"
+          :id="panelId"
+          ref="panelRef"
+          role="dialog"
+          :aria-label="label ?? placeholder"
+          :style="panelStyle"
+          class="fixed z-[70] origin-top-left overflow-y-auto rounded-xl border border-dark-border bg-dark-card p-3 shadow-xl shadow-black/40"
+          @keydown="onGridKeydown"
+        >
         <div class="mb-3 flex items-center justify-between gap-2">
           <UiButton
             type="button"
@@ -509,8 +571,9 @@ onKeyStroke('Escape', () => {
             Xoá
           </UiButton>
         </div>
-      </div>
-    </Transition>
+        </div>
+      </Transition>
+    </Teleport>
 
     <p v-if="hint && !error" :id="`${pickerId}-hint`" class="text-xs text-muted">
       {{ hint }}

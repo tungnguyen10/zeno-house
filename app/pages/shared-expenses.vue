@@ -10,6 +10,7 @@ import {
   type ExpenseCategory,
 } from '~/utils/constants/operations-report'
 import { formatCurrency } from '~/utils/format/currency'
+import { formatPeriodString, parsePeriodString } from '~/utils/format/period'
 
 definePageMeta({ title: 'Chi phí dùng chung' })
 
@@ -44,13 +45,14 @@ const periodYear = ref(new Date().getFullYear())
 const periodMonth = ref(new Date().getMonth() + 1)
 const busy = ref(false)
 
-const periodYearModel = computed<string | number>({
-  get: () => periodYear.value,
-  set: value => { periodYear.value = Number(value) },
-})
-const periodMonthModel = computed<string | number>({
-  get: () => periodMonth.value,
-  set: value => { periodMonth.value = Number(value) },
+const periodModel = computed<string>({
+  get: () => formatPeriodString(periodYear.value, periodMonth.value),
+  set: (value) => {
+    const parsed = parsePeriodString(value)
+    if (!parsed) return
+    periodYear.value = parsed.year
+    periodMonth.value = parsed.month
+  },
 })
 
 const categoryOptions = EXPENSE_CATEGORIES.map(value => ({
@@ -275,8 +277,12 @@ function resolveError(err: unknown, fallback: string): string {
           description="Chọn kỳ, sau đó phân bổ từng khoản đang hoạt động."
         >
           <UiToolbar>
-            <UiInput v-model="periodYearModel" label="Năm" type="number" number-mode="year" class="w-32" />
-            <UiInput v-model="periodMonthModel" label="Tháng" type="number" number-mode="month" min="1" max="12" class="w-32" />
+            <UiDatePicker
+              v-model="periodModel"
+              label="Kỳ phân bổ"
+              picker-mode="month"
+              class="w-full sm:w-48"
+            />
           </UiToolbar>
 
           <UiTable

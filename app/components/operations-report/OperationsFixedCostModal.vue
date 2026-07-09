@@ -6,6 +6,7 @@ import {
 } from '~/utils/constants/operations-report'
 import type { FixedCostCategory } from '~/utils/constants/operations-report'
 import { formatCurrency } from '~/utils/format/currency'
+import { formatPeriodString, parsePeriodString } from '~/utils/format/period'
 
 const props = defineProps<{
   open: boolean
@@ -31,8 +32,7 @@ const noteSuggestions = computed(() =>
 const form = reactive({
   category: 'rent' as FixedCostCategory,
   amount: '',
-  effective_from_period_year: props.periodYear,
-  effective_from_period_month: props.periodMonth,
+  effective_from_period: formatPeriodString(props.periodYear, props.periodMonth),
   note: '',
 })
 const noteModel = computed<string | null>({
@@ -63,8 +63,7 @@ watch(
     error.value = null
     form.category = 'rent'
     form.amount = ''
-    form.effective_from_period_year = props.periodYear
-    form.effective_from_period_month = props.periodMonth
+    form.effective_from_period = formatPeriodString(props.periodYear, props.periodMonth)
     form.note = ''
   },
   { immediate: true },
@@ -77,13 +76,18 @@ function submit() {
     error.value = 'Số tiền không hợp lệ.'
     return
   }
+  const period = parsePeriodString(form.effective_from_period)
+  if (!period) {
+    error.value = 'Chọn tháng áp dụng.'
+    return
+  }
 
   emit('submit', {
     building_id: props.buildingId,
     category: form.category,
     amount,
-    effective_from_period_year: Number(form.effective_from_period_year),
-    effective_from_period_month: Number(form.effective_from_period_month),
+    effective_from_period_year: period.year,
+    effective_from_period_month: period.month,
     note: form.note.trim() || null,
   })
 }
@@ -112,22 +116,12 @@ function submit() {
         <template #suffix>₫</template>
       </UiInput>
 
-      <div class="grid grid-cols-2 gap-3">
-        <UiInput
-          v-model="form.effective_from_period_year"
-          label="Áp dụng từ năm"
-          type="number"
-          number-mode="year"
-          required
-        />
-        <UiInput
-          v-model="form.effective_from_period_month"
-          label="Áp dụng từ tháng"
-          type="number"
-          number-mode="month"
-          required
-        />
-      </div>
+      <UiDatePicker
+        v-model="form.effective_from_period"
+        label="Áp dụng từ tháng"
+        picker-mode="month"
+        required
+      />
 
       <UiCombobox
         v-model="noteModel"

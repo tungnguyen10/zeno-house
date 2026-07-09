@@ -23,6 +23,15 @@ function mountDatePicker(props: Record<string, unknown> = {}, attrs: Record<stri
   })
 }
 
+/** Panel is teleported to body; query it directly from the document. */
+function panel(): HTMLElement | null {
+  return document.body.querySelector<HTMLElement>('[role="dialog"]')
+}
+
+function panelButton(selector: string): HTMLButtonElement | null {
+  return document.body.querySelector<HTMLButtonElement>(selector)
+}
+
 afterEach(() => {
   document.body.innerHTML = ''
 })
@@ -48,13 +57,15 @@ describe('UiDatePicker', () => {
     const wrapper = mountDatePicker()
 
     await wrapper.get('button#paid-at').trigger('click')
-    expect(wrapper.get('[role="dialog"]').text()).toContain('Tháng 7/2026')
+    expect(panel()?.textContent ?? '').toContain('Tháng 7/2026')
 
-    await wrapper.get('button[data-date="2026-07-15"]').trigger('click')
+    const day = panelButton('button[data-date="2026-07-15"]')
+    day?.click()
+    await wrapper.vm.$nextTick()
 
     expect(wrapper.emitted('update:modelValue')?.[0]).toEqual(['2026-07-15'])
     expect(wrapper.emitted('change')?.[0]).toEqual(['2026-07-15'])
-    expect(wrapper.find('[role="dialog"]').exists()).toBe(false)
+    expect(panel()).toBeNull()
   })
 
   it('applies date mode constraints and caller overrides', async () => {
@@ -64,7 +75,8 @@ describe('UiDatePicker', () => {
     })
     await future.get('button#paid-at').trigger('click')
     const yesterday = dayjs().subtract(1, 'day').format('YYYY-MM-DD')
-    expect(future.get(`button[data-date="${yesterday}"]`).attributes('disabled')).toBeDefined()
+    expect(panelButton(`button[data-date="${yesterday}"]`)?.hasAttribute('disabled')).toBe(true)
+    future.unmount()
 
     const custom = mountDatePicker({
       modelValue: '2026-07-15',
@@ -72,17 +84,19 @@ describe('UiDatePicker', () => {
       minDate: '2026-07-10',
     })
     await custom.get('button#paid-at').trigger('click')
-    expect(custom.get('button[data-date="2026-07-09"]').attributes('disabled')).toBeDefined()
-    expect(custom.get('button[data-date="2026-07-10"]').attributes('disabled')).toBeUndefined()
+    expect(panelButton('button[data-date="2026-07-09"]')?.hasAttribute('disabled')).toBe(true)
+    expect(panelButton('button[data-date="2026-07-10"]')?.hasAttribute('disabled')).toBe(false)
   })
 
   it('clears optional values', async () => {
     const wrapper = mountDatePicker({ required: false })
 
     await wrapper.get('button#paid-at').trigger('click')
-    const clear = wrapper.findAll('button').find(button => button.text() === 'Xoá')
+    const buttons = Array.from(document.body.querySelectorAll<HTMLButtonElement>('button'))
+    const clear = buttons.find(button => button.textContent?.trim() === 'Xoá')
     expect(clear).toBeTruthy()
-    await clear!.trigger('click')
+    clear!.click()
+    await wrapper.vm.$nextTick()
 
     expect(wrapper.emitted('update:modelValue')?.[0]).toEqual([''])
     expect(wrapper.emitted('change')?.[0]).toEqual([''])
@@ -98,9 +112,10 @@ describe('UiDatePicker', () => {
     expect(wrapper.get('button#paid-at').text()).toContain('07/2026')
 
     await wrapper.get('button#paid-at').trigger('click')
-    expect(wrapper.get('[role="dialog"]').text()).toContain('Năm 2026')
+    expect(panel()?.textContent ?? '').toContain('Năm 2026')
 
-    await wrapper.get('button[data-period="2026-09"]').trigger('click')
+    panelButton('button[data-period="2026-09"]')?.click()
+    await wrapper.vm.$nextTick()
 
     expect(wrapper.emitted('update:modelValue')?.[0]).toEqual(['2026-09'])
     expect(wrapper.emitted('change')?.[0]).toEqual(['2026-09'])
