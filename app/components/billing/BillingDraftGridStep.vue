@@ -64,7 +64,9 @@ const emit = defineEmits<{
 
 const periodEditable = computed(() => {
   const status = props.period?.status
-  return status !== 'issued' && status !== 'collecting' && status !== 'closed'
+  // Keep client gating aligned with server grid row editability:
+  // editing is allowed until the period is closed.
+  return status !== 'closed'
 })
 
 // ---------------------------------------------------------------------------
