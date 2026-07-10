@@ -22,5 +22,10 @@ export function useContractServices(contractId: MaybeRef<string>) {
     await refresh()
   }
 
-  return { services, isLoading, error, refresh, updateService }
+  async function removeService(id: string, reason: string) {
+    await $fetch(`/api/contract-services/${id}`, { method: 'DELETE', body: { reason } })
+    await refresh()
+  }
+
+  return { services, isLoading, error, refresh, updateService, removeService }
 }

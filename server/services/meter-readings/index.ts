@@ -159,6 +159,38 @@ export const MeterReadingService = {
       return { ...r, building_id: buildingId, recorded_by: userId }
     })
 
+    // Validate handover_out readings: value must be >= corresponding handover_in
+    const handoverOuts = enriched.filter(r => r.reading_type === 'handover_out')
+    if (handoverOuts.length > 0) {
+      // Check against any handover_in submitted in the same request first
+      const handoverInsInRequest = new Map(
+        enriched
+          .filter(r => r.reading_type === 'handover_in')
+          .map(r => [`${r.room_id}:${r.meter_type}`, r.reading_value]),
+      )
+      // Then fetch latest existing handover_in from DB for each affected room
+      const outRoomIds = [...new Set(handoverOuts.map(r => r.room_id))]
+      const { data: existingIns } = await supabase
+        .from('meter_readings')
+        .select('room_id, meter_type, reading_value')
+        .eq('reading_type', 'handover_in')
+        .in('room_id', outRoomIds)
+        .order('created_at', { ascending: false })
+      const handoverInMap = new Map<string, number>()
+      for (const row of existingIns ?? []) {
+        const key = `${row.room_id}:${row.meter_type}`
+        if (!handoverInMap.has(key)) handoverInMap.set(key, row.reading_value as number)
+      }
+      for (const out of handoverOuts) {
+        const key = `${out.room_id}:${out.meter_type}`
+        const inValue = handoverInsInRequest.get(key) ?? handoverInMap.get(key)
+        if (inValue !== undefined && out.reading_value < inValue) {
+          const label = out.meter_type === 'electricity' ? 'điện' : 'nước'
+          throwValidationError(`Chỉ số ${label} bàn giao ra (${out.reading_value}) không thể nhỏ hơn chỉ số nhận phòng (${inValue})`)
+        }
+      }
+    }
+
     // Pre-fetch existing readings (for before-snapshot) and run upsert in parallel
     const conflictKeys = enriched.map(r => ({
       room_id: r.room_id,

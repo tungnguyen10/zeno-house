@@ -69,6 +69,8 @@ The server inserts the contract and the two `handover_in` meter readings in one 
 
 The form pre-fills the two inputs with the latest reading per meter type (handover or monthly, whichever is newest). A soft amber warning appears when the user enters a value lower than the previous reading — submit is not blocked, since meter replacement legitimately resets the count.
 
+Handover-out readings submitted via `/api/meter-readings/bulk` are validated server-side: if the `handover_out` value is less than the most recent `handover_in` for the same room and meter type, the server rejects the save with a `VALIDATION_ERROR`.
+
 Renewals (extend or new_contract mode) intentionally do not capture handover readings. The successor uses the predecessor's last reading as the baseline; collecting new readings would invent gaps.
 
 ## Contract Detail Surface
@@ -119,8 +121,8 @@ Occupants are managed through nested contract APIs:
 
 - `GET /api/contracts/[id]/occupants`
 - `POST /api/contracts/[id]/occupants`
-- `PATCH /api/contracts/[id]/occupants/[occupantId]`
-- `DELETE /api/contracts/[id]/occupants/[occupantId]`
+- `PATCH /api/contracts/[id]/occupants/[occupantId]` — records move-out date (requires `contracts.update`)
+- `DELETE /api/contracts/[id]/occupants/[occupantId]` — removes occupant record (requires `contracts.delete`)
 
 Occupant data also influences water billing when the building uses per-person pricing. Billing falls back to `contract.occupant_count` when counted occupant rows are unavailable.
 
@@ -160,6 +162,8 @@ Contract services can then override:
 - quantity
 - notes
 
+Contract services can be removed from the detail page. Deletion requires a non-empty reason and is gated on `contracts.delete`. The detail page `ContractServicesTab` renders a delete button per row when the user has this capability.
+
 Building settings can sync missing service rows into active contracts for the building.
 
 ## Handover Readings
@@ -178,6 +182,11 @@ Monthly billing can use handover-in as a fallback previous reading when prior mo
 - Occupant form: `app/components/contracts/ContractOccupantForm.vue`
 - Payment form: `app/components/contracts/ContractPaymentForm.vue`
 - Renewal form: `app/components/contracts/ContractRenewalForm.vue`
+- Detail overview panel: `app/components/contracts/ContractOverviewPanel.vue`
+- Detail occupants section: `app/components/contracts/ContractOccupantsSection.vue`
+- Detail payments section: `app/components/contracts/ContractPaymentsSection.vue`
+- Renewal history list: `app/components/contracts/ContractRenewalHistoryList.vue`
+- Payment/renewal label constants: `app/utils/constants/contracts.ts`
 - Handover readings: `app/components/contracts/ContractHandoverReadings.vue`
 - Contract service: `server/services/contracts/index.ts`
 - Contract repository: `server/repositories/contracts/index.ts`

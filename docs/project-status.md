@@ -8,6 +8,19 @@ UI standardization update: 2026-07-08
 - Adopted compact panel density (`p-4`) for dense settings sections, while keeping default panel density (`p-5`) for hero and summary areas.
 - Applied the wrapper to building settings and multiple detail hero components to reduce visual noise and keep spacing rules centralized.
 
+Contracts feature code quality update: 2026-07-10
+
+- Fixed permission semantics: `contract-occupants.moveOut()` and `contract-payments.update()` now correctly gate on `contracts.update` instead of `contracts.delete`.
+- Added server-side validation in `MeterReadingService.bulkCreate()`: `handover_out` readings must be >= the corresponding `handover_in` value; violating saves are rejected with a descriptive error.
+- Added delete-service UI to the contract detail page: `ContractServicesTab` exposes a delete column (gated on `contracts.delete`), `useContractServices` exposes `removeService`, and the detail page renders a confirmation modal with a required reason field.
+- Extracted `formatViDate()` to `app/utils/format/time.ts` as a shared locale-aware date formatter.
+- Created `app/utils/constants/contracts.ts` with `CONTRACT_PAYMENT_TYPE_LABELS` and `CONTRACT_RENEWAL_MODE_LABELS`, replacing duplicate inline records.
+- Refactored `app/pages/contracts/[code]/index.vue` from ~760 lines to ~355 lines by extracting four sub-components:
+  - `ContractOverviewPanel.vue` — lifecycle ribbon, KPI strip, notes panel
+  - `ContractOccupantsSection.vue` — occupants list, add form, move-out and delete modals
+  - `ContractPaymentsSection.vue` — payments list, inline edit, add form, delete modal
+  - `ContractRenewalHistoryList.vue` — renewal history cards, read-only
+
 Billing component refactor update: 2026-07-10
 
 - Removed unused `BillingAuditStep.vue` and standardized audit UI around `BillingAuditDrawer.vue`.
@@ -26,7 +39,7 @@ Zeno House is now an authenticated internal operations app for rental buildings.
 | Area | Current count / scope |
 | --- | --- |
 | Nuxt pages | 30 Vue page files under `app/pages/**` |
-| Vue components | 86 Vue component files under `app/components/**` |
+| Vue components | 90 Vue component files under `app/components/**` |
 | Server API handlers | 85 route handlers under `server/api/**` |
 | Supabase migrations | 47 SQL migration files under `supabase/migrations` |
 | Tests | 65 `*.test.ts` / `*.spec.ts` files under `tests/**` |

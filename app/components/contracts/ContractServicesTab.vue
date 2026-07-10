@@ -3,13 +3,15 @@ import type { ContractService } from '~/types/contract-services'
 import type { ContractServiceUpdateInput } from '~/utils/validators/contract-services'
 import type { UiTableColumn } from '~/components/ui/UiTable.vue'
 
-defineProps<{
+const props = defineProps<{
   services: ContractService[]
   loading?: boolean
+  canDelete?: boolean
 }>()
 
 const emit = defineEmits<{
   (e: 'update', id: string, data: ContractServiceUpdateInput): void
+  (e: 'delete', id: string): void
 }>()
 
 function subtotal(s: ContractService): number {
@@ -39,14 +41,15 @@ function handleNotesInput(s: ContractService, value: string) {
   emit('update', s.id, { notes })
 }
 
-const columns: UiTableColumn<ContractService>[] = [
+const columns = computed<UiTableColumn<ContractService>[]>(() => [
   { key: 'name', label: 'Dịch vụ' },
   { key: 'amount', label: 'Đơn giá', numeric: true, width: 'w-36' },
   { key: 'quantity', label: 'Số lượng', numeric: true, width: 'w-24' },
   { key: 'subtotal', label: 'Thành tiền', numeric: true },
   { key: 'toggle', label: 'Bật/Tắt', width: 'w-24' },
   { key: 'notes', label: 'Ghi chú' },
-]
+  ...(props.canDelete ? [{ key: 'actions', label: '', width: 'w-12' } as UiTableColumn<ContractService>] : []),
+])
 </script>
 
 <template>
@@ -108,6 +111,19 @@ const columns: UiTableColumn<ContractService>[] = [
         placeholder="Ghi chú..."
         @update:model-value="(v) => handleNotesInput(row, v as string)"
       />
+    </template>
+
+    <template v-if="canDelete" #cell-actions="{ row }">
+      <div class="flex justify-center">
+        <UiButton
+          unstyled
+          class="rounded p-1 text-muted transition-colors hover:bg-error/10 hover:text-error focus-visible:outline-none"
+          :aria-label="`Xoá dịch vụ ${row.catalog.name}`"
+          @click="emit('delete', row.id)"
+        >
+          <IconTrash class="h-4 w-4" aria-hidden="true" />
+        </UiButton>
+      </div>
     </template>
   </UiTable>
 </template>

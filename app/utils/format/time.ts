@@ -1,3 +1,10 @@
+export function formatViDate(value: string | Date | null | undefined): string {
+  if (!value) return ''
+  const date = typeof value === 'string' ? new Date(value) : value
+  if (Number.isNaN(date.getTime())) return ''
+  return date.toLocaleDateString('vi-VN')
+}
+
 export function formatTimeHHmm(input: string | Date | null | undefined): string {
   if (!input) return ''
   const date = typeof input === 'string' ? new Date(input) : input

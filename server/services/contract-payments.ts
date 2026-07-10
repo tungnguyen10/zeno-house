@@ -24,7 +24,7 @@ export const ContractPaymentService = {
   },
 
   async update(event: H3Event, user: AuthUser, contractId: string, paymentId: string, input: ContractPaymentUpdateInput): Promise<ContractPayment> {
-    if (!can(user, 'contracts.delete')) throwForbidden('Chỉ chủ nhà hoặc admin mới được sửa thanh toán')
+    if (!can(user, 'contracts.update')) throwForbidden('Không có quyền sửa thanh toán hợp đồng')
     const contract = await ContractRepository.findById(event, contractId)
     if (!contract) throwNotFound('Không tìm thấy hợp đồng')
     await assertBuildingScope(event, user, contract.buildingId, 'write')
