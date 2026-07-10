@@ -60,6 +60,7 @@ function handleFilterCorrelation(id: string) {
           :filters="filters"
           :total="total"
           :loading="loading"
+          :has-more="hasMore"
           :contributors="contributors"
           :period-label="periodLabel"
           :events="events"

@@ -1,6 +1,6 @@
 # Zeno House - Project Status
 
-Last reviewed from source: 2026-07-02.
+Last reviewed from source: 2026-07-10.
 
 UI standardization update: 2026-07-08
 
@@ -8,7 +8,16 @@ UI standardization update: 2026-07-08
 - Adopted compact panel density (`p-4`) for dense settings sections, while keeping default panel density (`p-5`) for hero and summary areas.
 - Applied the wrapper to building settings and multiple detail hero components to reduce visual noise and keep spacing rules centralized.
 
-This file summarizes what the current codebase already handles. It reflects the working tree as read on 2026-07-02.
+Billing component refactor update: 2026-07-10
+
+- Removed unused `BillingAuditStep.vue` and standardized audit UI around `BillingAuditDrawer.vue`.
+- Extracted duplicated billing presentation logic into reusable utilities:
+  - `app/utils/billing/meter-display.ts`
+  - `app/utils/billing/charge-groups.ts`
+  - `app/utils/billing/audit-display.ts`
+- Updated audit CSV UX: export is disabled while cursor pagination still has more pages.
+
+This file summarizes what the current codebase already handles. It reflects the working tree as read on 2026-07-10.
 
 Zeno House is now an authenticated internal operations app for rental buildings. The implemented surface covers the core landlord workflow from property setup to contract lifecycle, service configuration, meter readings, monthly billing, invoice collection, corrections, period close, and operational dashboard monitoring.
 
@@ -80,10 +89,11 @@ Readable operational identifiers are first-class. Public route/query/body bounda
 - Login uses `app/pages/login.vue` plus guest-only middleware.
 - Server API auth is normalized by `server/middleware/01.auth.ts`.
 - Global auth/session state lives in `app/stores/auth.ts`.
-- Supported roles are `admin` and `manager`.
+- Supported roles are `admin`, `owner`, and `manager`.
 - Capability checks live in `server/utils/permissions.ts`.
-- `admin` has full operational access, including billing close/unissue.
-- `manager` has read/write operations for day-to-day work, but cannot close or unissue billing periods and does not have broad entity create/update/delete rights.
+- `admin` has global access and admin-only billing actions (`billing.reopen`, `billing.unissue`).
+- `owner` has full operational access within assigned building scope, including `billing.close`.
+- `manager` has day-to-day read/write operations in assigned scope, but cannot close, reopen, or unissue billing periods.
 
 ### Dashboard
 
@@ -310,11 +320,15 @@ Period API:
 - `GET /api/billing/periods/[id]/drafts`
 - `GET /api/billing/periods/[id]/draft-grid`
 - `GET/POST /api/billing/periods/[id]/utility-usages`
+- `DELETE /api/billing/periods/[id]/utility-usages`
+- `POST /api/billing/periods/[id]/utility-usages/[override_id]/approve`
 - `POST /api/billing/periods/[id]/issue`
+- `POST /api/billing/periods/[id]/issue-and-pay`
 - `GET /api/billing/periods/[id]/invoices`
 - `GET /api/billing/periods/[id]/audit`
 - `GET /api/billing/periods/[id]/export`
 - `POST /api/billing/periods/[id]/close`
+- `POST /api/billing/periods/[id]/reopen`
 - `POST /api/billing/periods/[id]/unissue`
 
 Invoice API:
@@ -322,6 +336,7 @@ Invoice API:
 - `GET /api/invoices`
 - `GET /api/billing/invoices/[id]`
 - `GET/POST /api/billing/invoices/[id]/payments`
+- `DELETE /api/billing/invoices/[id]/payments/[paymentId]`
 - `POST /api/billing/invoices/bulk-payments`
 - `POST /api/billing/invoices/[id]/adjustment`
 - `POST /api/billing/invoices/[id]/void`
@@ -334,7 +349,6 @@ Implemented billing workspace:
 - workspace overview
 - sticky compact KPI strip
 - draft grid tab
-- issue tab
 - payments/debt tab
 - audit drawer
 - Excel export
@@ -345,6 +359,7 @@ Implemented billing workspace:
 - mobile draft-row component
 - bulk reading entry modal
 - optimistic draft-grid helpers
+- extracted shared billing UI-core helpers (`meter-display`, `charge-groups`, `audit-display`)
 - copy/paste helpers
 - draft discrepancy callouts
 - adjustment and void/reissue entry points from billing rows

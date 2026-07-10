@@ -2,6 +2,14 @@
 import type { BillingAuditEvent } from '~/types/billing'
 import { auditCategoryForAction, auditCategoryVisual } from '~/utils/billing/audit-category'
 import { auditEntityLink } from '~/utils/billing/audit-entity-link'
+import {
+  formatAuditTime,
+  auditActorLabel,
+  hasAuditTechnicalDetail,
+  auditTechnicalJson,
+  formatDiffVal,
+  buildAuditDiff,
+} from '~/utils/billing/audit-display'
 
 const props = defineProps<{
   event: BillingAuditEvent
@@ -14,78 +22,8 @@ defineEmits<{
 const category = computed(() => auditCategoryForAction(props.event.action))
 const visual = computed(() => auditCategoryVisual(category.value))
 const entityLink = computed(() => auditEntityLink(props.event))
-
-function formatTime(iso: string): string {
-  try {
-    return new Date(iso).toLocaleString('vi-VN', { hour12: false })
-  }
-  catch {
-    return iso
-  }
-}
-
-function actorLabel(ev: BillingAuditEvent): string {
-  return ev.actorName ?? ev.actorEmail ?? (ev.actorId ? 'Người dùng' : 'Hệ thống')
-}
-
-/**
- * Diff view (D6): detect diff-able actions and render a before → after line.
- */
-interface DiffView {
-  label: string
-  before: string | number | null
-  after: string | number | null
-  delta?: string | number | null
-}
-
-function formatDiffVal(v: unknown): string {
-  if (v === null || v === undefined) return '—'
-  if (typeof v === 'number') return v.toLocaleString('vi-VN')
-  return String(v)
-}
-
-const diff = computed((): DiffView | null => {
-  const { action, metadata, beforeData, afterData } = props.event
-  const before = beforeData as Record<string, unknown> | null
-  const after = afterData as Record<string, unknown> | null
-  const meta = metadata as Record<string, unknown>
-
-  if (action === 'reading.saved') {
-    const prev = meta?.previous_value ?? before?.value_kwh ?? null
-    const next = meta?.new_value ?? after?.value_kwh ?? null
-    const delta = (typeof next === 'number' && typeof prev === 'number')
-      ? next - prev
-      : null
-    return { label: 'Chỉ số', before: prev as number | null, after: next as number | null, delta }
-  }
-
-  if (action === 'payment.undone') {
-    const amount = meta?.amount ?? (before as Record<string, unknown> | null)?.amount ?? null
-    return { label: 'Thanh toán', before: amount as number | null, after: 0 }
-  }
-
-  if (action === 'utility_override.saved') {
-    const prev = before?.total_amount ?? null
-    const next = after?.total_amount ?? null
-    return { label: 'Chi phí dịch vụ', before: prev as number | null, after: next as number | null }
-  }
-
-  return null
-})
-
+const diff = computed(() => buildAuditDiff(props.event))
 const expanded = ref(false)
-
-function hasTechnicalDetail(ev: BillingAuditEvent): boolean {
-  return !!(ev.beforeData || ev.afterData || Object.keys(ev.metadata ?? {}).length > 0)
-}
-
-function technicalJson(ev: BillingAuditEvent): string {
-  const detail: Record<string, unknown> = {}
-  if (ev.beforeData !== null && ev.beforeData !== undefined) detail.before = ev.beforeData
-  if (ev.afterData !== null && ev.afterData !== undefined) detail.after = ev.afterData
-  if (Object.keys(ev.metadata ?? {}).length > 0) detail.metadata = ev.metadata
-  return JSON.stringify(detail, null, 2)
-}
 </script>
 
 <template>
@@ -110,13 +48,13 @@ function technicalJson(ev: BillingAuditEvent): string {
           {{ event.summary ?? event.action }}
         </p>
         <time class="flex-none text-xs text-muted tabular-nums whitespace-nowrap mt-0.5">
-          {{ formatTime(event.createdAt) }}
+          {{ formatAuditTime(event.createdAt) }}
         </time>
       </div>
 
       <!-- Actor + entity -->
       <div class="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted">
-        <span :title="event.actorEmail ?? undefined">{{ actorLabel(event) }}</span>
+        <span :title="event.actorEmail ?? undefined">{{ auditActorLabel(event) }}</span>
         <NuxtLink
           v-if="entityLink"
           :to="entityLink"
@@ -170,7 +108,7 @@ function technicalJson(ev: BillingAuditEvent): string {
 
         <!-- Technical details expand -->
         <UiButton
-          v-if="hasTechnicalDetail(event)"
+          v-if="hasAuditTechnicalDetail(event)"
           unstyled
           class="text-xs text-muted hover:text-white transition-colors ml-auto"
           @click="expanded = !expanded"
@@ -183,7 +121,7 @@ function technicalJson(ev: BillingAuditEvent): string {
       <pre
         v-if="expanded"
         class="mt-2 rounded bg-dark-surface text-xs text-muted p-2 overflow-x-auto whitespace-pre-wrap break-all"
-      >{{ technicalJson(event) }}</pre>
+      >{{ auditTechnicalJson(event) }}</pre>
     </div>
   </div>
 </template>

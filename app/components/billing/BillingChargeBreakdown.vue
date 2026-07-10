@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed } from 'vue'
 import { formatCurrency } from '~/utils/format/currency'
+import { groupChargeLines, chargeLineLabel } from '~/utils/billing/charge-groups'
+import { chargeTypeUnit, formatViNumber } from '~/utils/billing/meter-display'
 
 export interface ChargeBreakdownLine {
   chargeType: string
@@ -21,70 +22,12 @@ const props = withDefaults(defineProps<{
   showAdjustments: false,
 })
 
-type GroupKey = 'rent' | 'utility' | 'service' | 'adjustment'
-
-interface LineGroup {
-  key: GroupKey
-  title: string
-  lines: ChargeBreakdownLine[]
-  subtotal: number
-}
-
-const sortedLines = computed(() =>
-  [...props.lines].sort((a, b) => a.sortOrder - b.sortOrder),
+const groups = computed(() =>
+  groupChargeLines(props.lines, { showAdjustments: props.showAdjustments }),
 )
 
-const groups = computed<LineGroup[]>(() => {
-  const buckets: Record<GroupKey, ChargeBreakdownLine[]> = {
-    rent: [],
-    utility: [],
-    service: [],
-    adjustment: [],
-  }
-
-  for (const line of sortedLines.value) {
-    switch (line.chargeType) {
-      case 'rent':
-        buckets.rent.push(line)
-        break
-      case 'electricity':
-      case 'water':
-        buckets.utility.push(line)
-        break
-      case 'service':
-        buckets.service.push(line)
-        break
-      case 'discount':
-      case 'surcharge':
-      case 'adjustment':
-        buckets.adjustment.push(line)
-        break
-      default:
-        buckets.service.push(line)
-    }
-  }
-
-  const titles: Record<GroupKey, string> = {
-    rent: 'Tiền phòng',
-    utility: 'Tiện ích',
-    service: 'Dịch vụ',
-    adjustment: 'Điều chỉnh',
-  }
-
-  const order: GroupKey[] = ['rent', 'utility', 'service', 'adjustment']
-  return order
-    .filter(key => buckets[key].length > 0)
-    .filter(key => props.showAdjustments || key !== 'adjustment')
-    .map<LineGroup>(key => ({
-      key,
-      title: titles[key],
-      lines: buckets[key],
-      subtotal: buckets[key].reduce((sum, line) => sum + line.amount, 0),
-    }))
-})
-
 const total = computed(() =>
-  props.totalAmount ?? sortedLines.value.reduce((sum, line) => sum + line.amount, 0),
+  props.totalAmount ?? props.lines.reduce((sum, line) => sum + line.amount, 0),
 )
 
 const hasAdjustments = computed(() => groups.value.some(g => g.key === 'adjustment'))
@@ -94,41 +37,21 @@ const subtotalBeforeAdjustment = computed(() =>
     .reduce((sum, g) => sum + g.subtotal, 0),
 )
 
-function lineLabel(line: ChargeBreakdownLine): string {
-  if (line.chargeType === 'rent') return 'Tiền thuê tháng'
-  if (line.chargeType === 'electricity') return 'Điện'
-  if (line.chargeType === 'water') return 'Nước'
-  if (line.chargeType === 'discount') return line.label || 'Giảm giá'
-  if (line.chargeType === 'surcharge') return line.label || 'Phụ thu'
-  if (line.chargeType === 'adjustment') return line.label || 'Điều chỉnh'
-  return line.label
-}
-
 function amountTone(line: ChargeBreakdownLine): string {
   if (line.amount < 0 || line.chargeType === 'discount') return 'text-emerald-300'
   return 'text-white'
 }
 
-function unitFor(line: ChargeBreakdownLine): string {
-  if (line.chargeType === 'electricity') return 'kWh'
-  if (line.chargeType === 'water') return 'm³'
-  return ''
-}
-
-function formatNumber(value: number): string {
-  return new Intl.NumberFormat('vi-VN').format(value)
-}
-
 function lineHint(line: ChargeBreakdownLine): string | null {
-  const unit = unitFor(line)
+  const unit = chargeTypeUnit(line.chargeType)
   if (line.chargeType === 'electricity' || line.chargeType === 'water') {
-    return `${formatNumber(line.quantity)} ${unit} × ${formatCurrency(line.unitPrice)}/${unit}`
+    return `${formatViNumber(line.quantity)} ${unit} × ${formatCurrency(line.unitPrice)}/${unit}`
   }
   if (line.chargeType === 'rent' && line.quantity !== 1) {
-    return `${formatNumber(line.quantity)} × ${formatCurrency(line.unitPrice)}`
+    return `${formatViNumber(line.quantity)} × ${formatCurrency(line.unitPrice)}`
   }
   if (line.chargeType === 'service' && line.quantity > 1) {
-    return `${formatNumber(line.quantity)} × ${formatCurrency(line.unitPrice)}`
+    return `${formatViNumber(line.quantity)} × ${formatCurrency(line.unitPrice)}`
   }
   return null
 }
@@ -152,7 +75,7 @@ function lineHint(line: ChargeBreakdownLine): string | null {
           class="flex items-baseline justify-between gap-3"
         >
           <div class="min-w-0 flex-1">
-            <p class="text-sm text-white">{{ lineLabel(line) }}</p>
+            <p class="text-sm text-white">{{ chargeLineLabel(line.chargeType, line.label) }}</p>
             <slot name="line-extra" :line="line">
               <p
                 v-if="lineHint(line)"

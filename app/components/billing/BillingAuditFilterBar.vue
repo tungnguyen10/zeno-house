@@ -8,6 +8,8 @@ const props = defineProps<{
   filters: BillingAuditFilters
   total: number
   loading: boolean
+  /** Whether more pages are available (cursor pagination). Used to warn before export. */
+  hasMore?: boolean
   /** Period contributors (actor filter). */
   contributors?: { id: string; name: string | null; email: string | null }[]
   /** Period slug or display label used for CSV filename. */
@@ -29,19 +31,20 @@ const selectedCategories = computed({
   set: (v: BillingAuditCategory[]) => emit('update:filters', { ...props.filters, categories: v }),
 })
 
-// ── Critical toggle (D4): destructive + status.reopened + period.unissued ──
+// ── Critical toggle: destructive + status (includes period.reopened, period.closed) ──
+// Uses categories ['destructive', 'status'] so period.reopened (category: status) is included.
 const criticalActions = new Set(['invoice.voided', 'payment.undone', 'period.unissued', 'period.reopened'])
 const criticalOnly = computed({
   get: () =>
     props.filters.categories.includes('destructive')
+    && props.filters.categories.includes('status')
     && !props.filters.categories.includes('create')
     && !props.filters.categories.includes('edit')
-    && !props.filters.categories.includes('status')
     && !props.filters.categories.includes('other'),
   set: (v: boolean) => {
     emit('update:filters', {
       ...props.filters,
-      categories: v ? (['destructive'] as BillingAuditCategory[]) : [],
+      categories: v ? (['destructive', 'status'] as BillingAuditCategory[]) : [],
     })
   },
 })
@@ -145,8 +148,8 @@ const hasActiveFilters = computed(() =>
         <UiButton
           variant="ghost"
           size="sm"
-          :disabled="events.length === 0"
-          title="Xuất CSV"
+          :disabled="events.length === 0 || hasMore"
+          :title="hasMore ? 'Tải hết dữ liệu trước khi xuất — vẫn còn trang tiếp' : 'Xuất CSV'"
           @click="exportCsv"
         >
           <IconDownload class="h-4 w-4" aria-hidden="true" />

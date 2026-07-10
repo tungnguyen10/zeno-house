@@ -213,9 +213,9 @@ Features:
 - **Diff view**: `reading.saved`, `payment.undone`, and `utility_override.saved` events render an inline before → after delta.
 - **Correlation grouping**: click "Xem cùng nhóm" on any event to filter to events sharing the same transaction.
 - **Quick open**: `→ Mở` link navigates to the related invoice.
-- **Filter bar**: multi-select actor, category chips, date range, free-text search (300ms debounce), "Chỉ critical" toggle.
+- **Filter bar**: multi-select actor, category chips, date range, free-text search (300ms debounce), "Chỉ critical" toggle (`destructive` + `status`).
 - **Pagination**: "Tải thêm" loads the next page of events via cursor.
-- **CSV export**: client-side, UTF-8 BOM, filename `audit-<period>-<date>.csv`.
+- **CSV export**: client-side, UTF-8 BOM, filename `audit-<period>-<date>.csv`; disabled while there are more cursor pages to avoid partial export.
 - **Recent badge**: the `Hành động ▾` button shows a count badge for events in the last 24h.
 
 Backed by `GET /api/billing/periods/[id]/audit` (supports actor/category/from/to/q/correlation_id/cursor/limit).
@@ -242,3 +242,6 @@ Backed by `GET /api/billing/periods/[id]/audit` (supports actor/category/from/to
 - Audit grouping: `app/utils/billing/audit-grouping.ts`
 - Audit category visuals: `app/utils/billing/audit-category.ts`
 - Audit entity link: `app/utils/billing/audit-entity-link.ts`
+- Audit display helpers: `app/utils/billing/audit-display.ts`
+- Charge grouping helpers: `app/utils/billing/charge-groups.ts`
+- Meter display helpers: `app/utils/billing/meter-display.ts`

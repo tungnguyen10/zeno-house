@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed } from 'vue'
 import type { BillingDraftGridRow, BillingDraftGridUtilityCell, BillingDraftLine, BillingPeriod } from '~/types/billing'
 import { formatCurrency } from '~/utils/format/currency'
+import { meterCellForLine, chargeTypeUnit, formatViNumber, formatMeterReading, formatMeterRate } from '~/utils/billing/meter-display'
+import { groupChargeLines, chargeLineLabel, formatPeriodLabel } from '~/utils/billing/charge-groups'
 
 const props = defineProps<{
   row: BillingDraftGridRow
@@ -9,110 +10,21 @@ const props = defineProps<{
   buildingName?: string | null
 }>()
 
-type GroupKey = 'rent' | 'utility' | 'service' | 'adjustment'
-
-interface LineGroup {
-  key: GroupKey
-  title: string
-  lines: BillingDraftLine[]
-  subtotal: number
-}
-
-const sortedLines = computed<BillingDraftLine[]>(() =>
-  [...props.row.lines].sort((a, b) => a.sortOrder - b.sortOrder),
-)
-
-const groups = computed<LineGroup[]>(() => {
-  const buckets: Record<GroupKey, BillingDraftLine[]> = {
-    rent: [],
-    utility: [],
-    service: [],
-    adjustment: [],
-  }
-
-  for (const line of sortedLines.value) {
-    switch (line.chargeType) {
-      case 'rent':
-        buckets.rent.push(line)
-        break
-      case 'electricity':
-      case 'water':
-        buckets.utility.push(line)
-        break
-      case 'service':
-        buckets.service.push(line)
-        break
-      case 'discount':
-      case 'surcharge':
-      case 'adjustment':
-        buckets.adjustment.push(line)
-        break
-      default:
-        buckets.service.push(line)
-    }
-  }
-
-  const titles: Record<GroupKey, string> = {
-    rent: 'Tiền phòng',
-    utility: 'Tiện ích',
-    service: 'Dịch vụ',
-    adjustment: 'Điều chỉnh',
-  }
-
-  const order: GroupKey[] = ['rent', 'utility', 'service', 'adjustment']
-  return order
-    .filter(key => buckets[key].length > 0)
-    .map<LineGroup>(key => ({
-      key,
-      title: titles[key],
-      lines: buckets[key],
-      subtotal: buckets[key].reduce((sum, line) => sum + line.amount, 0),
-    }))
-})
+const groups = computed(() => groupChargeLines(props.row.lines))
 
 const totalAmount = computed(() =>
-  props.row.draftTotal ?? sortedLines.value.reduce((sum, line) => sum + line.amount, 0),
+  props.row.draftTotal ?? props.row.lines.reduce((sum, line) => sum + line.amount, 0),
 )
 
-const periodLabel = computed(() => {
-  if (!props.period) return null
-  const month = String(props.period.periodMonth).padStart(2, '0')
-  return `${month}/${props.period.periodYear}`
-})
+const periodLabel = computed(() => formatPeriodLabel(props.period))
 
+// Thin wrappers that close over props.row / simplify chargeType cast in template.
 function meterCell(line: BillingDraftLine): BillingDraftGridUtilityCell | null {
-  if (line.chargeType === 'electricity') return props.row.electricity
-  if (line.chargeType === 'water') return props.row.water
-  return null
+  return meterCellForLine(props.row, line.chargeType)
 }
 
 function unitFor(line: BillingDraftLine): string {
-  if (line.chargeType === 'electricity') return 'kWh'
-  if (line.chargeType === 'water') return 'm³'
-  return ''
-}
-
-function formatNumber(value: number): string {
-  return new Intl.NumberFormat('vi-VN').format(value)
-}
-
-function formatReading(value: number | null): string {
-  return value === null ? '—' : formatNumber(value)
-}
-
-function formatRate(value: number | null, unit: string): string {
-  if (value === null) return '—'
-  return unit ? `${formatCurrency(value)}/${unit}` : formatCurrency(value)
-}
-
-function lineLabel(line: BillingDraftLine): string {
-  if (line.chargeType === 'rent') return 'Tiền thuê tháng'
-  if (line.chargeType === 'electricity') return 'Điện'
-  if (line.chargeType === 'water') return 'Nước'
-  if (line.chargeType === 'discount') return line.label || 'Giảm giá'
-  if (line.chargeType === 'surcharge') return line.label || 'Phụ thu'
-  if (line.chargeType === 'adjustment') return line.label || 'Điều chỉnh'
-  return line.label
+  return chargeTypeUnit(line.chargeType)
 }
 </script>
 
@@ -144,12 +56,12 @@ function lineLabel(line: BillingDraftLine): string {
           >
             <div class="bill-line-main">
               <span class="bill-line-label">
-                {{ lineLabel(line) }}
+                {{ chargeLineLabel(line.chargeType, line.label) }}
                 <span
                   v-if="line.chargeType === 'service' && line.quantity > 1"
                   class="bill-line-mult"
                 >
-                  × {{ formatNumber(line.quantity) }}
+                  × {{ formatViNumber(line.quantity) }}
                 </span>
               </span>
               <span
@@ -157,11 +69,11 @@ function lineLabel(line: BillingDraftLine): string {
                 class="bill-line-detail"
               >
                 <template v-if="meterCell(line)!.previousValue !== null || meterCell(line)!.currentValue !== null">
-                  {{ formatReading(meterCell(line)!.previousValue) }}
-                  → {{ formatReading(meterCell(line)!.currentValue) }} ·
+                  {{ formatMeterReading(meterCell(line)!.previousValue) }}
+                  → {{ formatMeterReading(meterCell(line)!.currentValue) }} ·
                 </template>
-                {{ formatNumber(line.quantity) }} {{ unitFor(line) }}
-                × {{ formatRate(line.unitPrice, unitFor(line)) }}
+                {{ formatViNumber(line.quantity) }} {{ unitFor(line) }}
+                × {{ formatMeterRate(line.unitPrice, unitFor(line)) }}
               </span>
             </div>
             <span class="bill-line-amount">{{ formatCurrency(line.amount) }}</span>

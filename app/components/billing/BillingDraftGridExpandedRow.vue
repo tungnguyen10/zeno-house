@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed } from 'vue'
 import type { BillingDraftGridRow, BillingDraftGridUtilityCell, BillingDraftLine, BillingPeriod } from '~/types/billing'
+import { meterCellForLine, chargeTypeUnit, formatViNumber, formatMeterReading, formatMeterRate } from '~/utils/billing/meter-display'
+import { formatPeriodLabel } from '~/utils/billing/charge-groups'
 import { formatCurrency } from '~/utils/format/currency'
 
 const props = defineProps<{
@@ -13,35 +14,15 @@ defineEmits<{
   (e: 'intent:void-reissue', payload: { invoiceId: string }): void
 }>()
 
-const periodLabel = computed(() => {
-  if (!props.period) return null
-  const month = String(props.period.periodMonth).padStart(2, '0')
-  return `${month}/${props.period.periodYear}`
-})
+const periodLabel = computed(() => formatPeriodLabel(props.period))
 
+// Thin wrappers that close over props.row / simplify chargeType cast in template.
 function meterCell(line: BillingDraftLine): BillingDraftGridUtilityCell | null {
-  if (line.chargeType === 'electricity') return props.row.electricity
-  if (line.chargeType === 'water') return props.row.water
-  return null
+  return meterCellForLine(props.row, line.chargeType)
 }
 
 function unitFor(line: BillingDraftLine): string {
-  if (line.chargeType === 'electricity') return 'kWh'
-  if (line.chargeType === 'water') return 'm³'
-  return ''
-}
-
-function formatNumber(value: number): string {
-  return new Intl.NumberFormat('vi-VN').format(value)
-}
-
-function formatReading(value: number | null): string {
-  return value === null ? '—' : formatNumber(value)
-}
-
-function formatRate(value: number | null, unit: string): string {
-  if (value === null) return '—'
-  return unit ? `${formatCurrency(value)}/${unit}` : formatCurrency(value)
+  return chargeTypeUnit(line.chargeType)
 }
 </script>
 
@@ -89,26 +70,26 @@ function formatRate(value: number | null, unit: string): string {
           class="mt-0.5 text-xs text-muted tabular-nums"
         >
           <template v-if="meterCell(line as BillingDraftLine)!.previousValue !== null || meterCell(line as BillingDraftLine)!.currentValue !== null">
-            {{ formatReading(meterCell(line as BillingDraftLine)!.previousValue) }}
+            {{ formatMeterReading(meterCell(line as BillingDraftLine)!.previousValue) }}
             <span class="opacity-60">→</span>
-            {{ formatReading(meterCell(line as BillingDraftLine)!.currentValue) }}
+            {{ formatMeterReading(meterCell(line as BillingDraftLine)!.currentValue) }}
             <span class="opacity-60">·</span>
           </template>
-          {{ formatNumber(line.quantity) }} {{ unitFor(line as BillingDraftLine) }}
+          {{ formatViNumber(line.quantity) }} {{ unitFor(line as BillingDraftLine) }}
           <span class="opacity-60">×</span>
-          {{ formatRate(line.unitPrice, unitFor(line as BillingDraftLine)) }}
+          {{ formatMeterRate(line.unitPrice, unitFor(line as BillingDraftLine)) }}
         </p>
         <p
           v-else-if="line.chargeType === 'rent' && line.quantity !== 1"
           class="mt-0.5 text-xs text-muted tabular-nums"
         >
-          {{ formatNumber(line.quantity) }} × {{ formatCurrency(line.unitPrice) }}
+          {{ formatViNumber(line.quantity) }} × {{ formatCurrency(line.unitPrice) }}
         </p>
         <p
           v-else-if="line.chargeType === 'service' && line.quantity > 1"
           class="mt-0.5 text-xs text-muted tabular-nums"
         >
-          {{ formatNumber(line.quantity) }} × {{ formatCurrency(line.unitPrice) }}
+          {{ formatViNumber(line.quantity) }} × {{ formatCurrency(line.unitPrice) }}
         </p>
       </template>
     </BillingChargeBreakdown>

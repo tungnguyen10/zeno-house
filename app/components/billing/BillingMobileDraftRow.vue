@@ -2,6 +2,7 @@
 import clsx from 'clsx'
 import type { BillingDraftGridRow, BillingDraftGridUtilityCell } from '~/types/billing'
 import { formatCurrency as formatCurrencyValue } from '~/utils/format/currency'
+import { meterUnit, meterLabel } from '~/utils/billing/meter-display'
 
 type MeterType = 'electricity' | 'water'
 
@@ -20,14 +21,6 @@ const emit = defineEmits<{
   (e: 'blur', payload: { row: BillingDraftGridRow; type: MeterType }): void
   (e: 'override', row: BillingDraftGridRow): void
 }>()
-
-function meterUnit(type: MeterType): string {
-  return type === 'electricity' ? 'kWh' : 'm³'
-}
-
-function meterLabel(type: MeterType): string {
-  return type === 'electricity' ? 'Điện' : 'Nước'
-}
 
 function meterCell(row: BillingDraftGridRow, type: MeterType): BillingDraftGridUtilityCell | null {
   return type === 'electricity' ? row.electricity : row.water
