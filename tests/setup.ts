@@ -91,6 +91,8 @@ vi.stubGlobal('throwNotFound', (message = 'Not found') => {
 
 vi.stubGlobal('can', () => true)
 
+vi.stubGlobal('useToast', () => ({ success: vi.fn(), info: vi.fn(), error: vi.fn() }))
+
 // Role helpers are auto-imported in server code (server/utils/roles.ts). Provide
 // real implementations here so server code under test resolves roles correctly.
 function roleOfStub(user: { app_metadata?: { role?: string | null } | null } | null | undefined): string | null {
