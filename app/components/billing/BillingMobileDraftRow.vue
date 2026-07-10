@@ -17,6 +17,7 @@ const emit = defineEmits<{
   (e: 'update', payload: { row: BillingDraftGridRow; type: MeterType; value: string }): void
   (e: 'paste', payload: { event: ClipboardEvent; row: BillingDraftGridRow; type: MeterType }): void
   (e: 'keydown', payload: { event: KeyboardEvent; row: BillingDraftGridRow; type: MeterType }): void
+  (e: 'blur', payload: { row: BillingDraftGridRow; type: MeterType }): void
   (e: 'override', row: BillingDraftGridRow): void
 }>()
 
@@ -84,12 +85,12 @@ function formatRate(cell: BillingDraftGridUtilityCell | null): string {
             density="compact"
             class="flex-1"
             :class="clsx(
-              isCellDirty(row, type) && 'ring-2 ring-blue-500',
               isPasteHighlighted(row, type) && 'bg-amber-100/40',
             )"
             @update:model-value="emit('update', { row, type, value: String($event ?? '') })"
             @keydown="emit('keydown', { event: $event, row, type })"
             @paste="emit('paste', { event: $event, row, type })"
+            @blur="emit('blur', { row, type })"
           />
           <span v-else class="flex-1 text-sm text-white tabular-nums">
             {{ meterCell(row, type)!.currentValue ?? '—' }}
@@ -98,7 +99,18 @@ function formatRate(cell: BillingDraftGridUtilityCell | null): string {
             {{ formatCurrency(meterCell(row, type)!.amount) }}
           </span>
         </div>
-        <p class="text-[11px] text-muted pl-12">
+        <p class="flex items-center gap-1.5 text-[11px] text-muted pl-12">
+          <span
+            aria-hidden="true"
+            :class="clsx(
+              'inline-block h-1.5 w-1.5 shrink-0 rounded-full transition-all',
+              saveStateOf(row) === 'saving' ? 'bg-cyan/70 animate-pulse' :
+              saveStateOf(row) === 'saved' ? 'bg-emerald-400' :
+              saveStateOf(row) === 'error' ? 'bg-rose-400' :
+              isCellDirty(row, type) ? 'bg-amber-400/60' :
+              'opacity-0',
+            )"
+          />
           Cũ
           <span class="text-white tabular-nums">
             {{ meterCell(row, type)!.previousValue ?? '—' }}

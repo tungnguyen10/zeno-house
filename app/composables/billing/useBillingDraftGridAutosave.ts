@@ -14,10 +14,14 @@ export interface BillingDraftGridAutosaveOptions {
     readings: MeterReadingBulkInput['readings'],
     options?: { refresh?: boolean; silent?: boolean; refreshDrafts?: boolean },
   ) => Promise<void>
+  /** Called after all dirty cells are saved and the grid has been idle. Receives the number of readings persisted. */
+  onAllSaved?: (savedCount: number) => void
 }
 
-const AUTO_SAVE_DEBOUNCE_MS = 800
+const AUTO_SAVE_DEBOUNCE_MS = 500
 const SAVED_FLASH_MS = 1500
+// Delay before silently reloading the full grid after all rows are saved.
+const IDLE_REFRESH_DELAY_MS = 300
 
 function cellKey(row: BillingDraftGridRow, type: MeterType): string {
   return `${row.roomId}::${type}`
@@ -32,10 +36,14 @@ export function useBillingDraftGridAutosave(options: BillingDraftGridAutosaveOpt
   const rowSaveError = ref<Record<string, string>>({})
   const rowSaveTimers: Record<string, ReturnType<typeof setTimeout>> = {}
   const rowSavedFlash: Record<string, ReturnType<typeof setTimeout>> = {}
+  let idleRefreshTimer: ReturnType<typeof setTimeout> | null = null
+  // Accumulates the count of readings saved since the last onAllSaved call.
+  let pendingSavedCount = 0
 
   onBeforeUnmount(() => {
     for (const timer of Object.values(rowSaveTimers)) clearTimeout(timer)
     for (const timer of Object.values(rowSavedFlash)) clearTimeout(timer)
+    if (idleRefreshTimer) clearTimeout(idleRefreshTimer)
   })
 
   watch(
@@ -124,23 +132,56 @@ export function useBillingDraftGridAutosave(options: BillingDraftGridAutosaveOpt
     Reflect.deleteProperty(rowSaveError.value, row.roomId)
     try {
       await options.onSaveReadings(payload, { refresh: false, refreshDrafts: false, silent: true })
+      // Only remove a key from localReadings if the user hasn't typed a new value since
+      // we snapshot'd the payload. If they have, leave the new local value intact so
+      // scheduleRowSave fires the next save and the displayed value doesn't flicker.
+      let hasPendingLocal = false
       for (const item of payload) {
         const key = `${item.room_id}::${item.meter_type}`
         savedReadings.value[key] = String(item.reading_value)
-        Reflect.deleteProperty(localReadings.value, key)
-      }
-      rowSaveState.value[row.roomId] = 'saved'
-      if (rowSavedFlash[row.roomId]) clearTimeout(rowSavedFlash[row.roomId])
-      rowSavedFlash[row.roomId] = setTimeout(() => {
-        if (rowSaveState.value[row.roomId] === 'saved') {
-          rowSaveState.value[row.roomId] = 'idle'
+        const currentLocal = localReadings.value[key]
+        if (currentLocal === undefined || currentLocal === String(item.reading_value)) {
+          Reflect.deleteProperty(localReadings.value, key)
+        } else {
+          hasPendingLocal = true
         }
-      }, SAVED_FLASH_MS)
+      }
+      pendingSavedCount += payload.length
+      if (!hasPendingLocal) {
+        rowSaveState.value[row.roomId] = 'saved'
+        if (rowSavedFlash[row.roomId]) clearTimeout(rowSavedFlash[row.roomId])
+        rowSavedFlash[row.roomId] = setTimeout(() => {
+          if (rowSaveState.value[row.roomId] === 'saved') {
+            rowSaveState.value[row.roomId] = 'idle'
+          }
+        }, SAVED_FLASH_MS)
+        if (dirtyCountValue.value === 0 && options.onAllSaved) {
+          if (idleRefreshTimer) clearTimeout(idleRefreshTimer)
+          const countToReport = pendingSavedCount
+          pendingSavedCount = 0
+          idleRefreshTimer = setTimeout(() => {
+            idleRefreshTimer = null
+            if (dirtyCountValue.value === 0) options.onAllSaved?.(countToReport)
+          }, IDLE_REFRESH_DELAY_MS)
+        }
+      } else {
+        rowSaveState.value[row.roomId] = 'idle'
+      }
     }
     catch (err) {
       rowSaveState.value[row.roomId] = 'error'
       rowSaveError.value[row.roomId] = err instanceof Error ? err.message : 'Lưu thất bại'
     }
+  }
+
+  /** Save a row immediately, bypassing the debounce timer. */
+  async function saveRowNow(row: BillingDraftGridRow) {
+    const existing = rowSaveTimers[row.roomId]
+    if (existing) {
+      clearTimeout(existing)
+      Reflect.deleteProperty(rowSaveTimers, row.roomId)
+    }
+    await saveRow(row)
   }
 
   async function saveAll() {
@@ -161,6 +202,7 @@ export function useBillingDraftGridAutosave(options: BillingDraftGridAutosaveOpt
         savedReadings.value[key] = String(item.reading_value)
       }
       localReadings.value = {}
+      options.onAllSaved?.(payload.length)
     }
     finally {
       isSaving.value = false
@@ -192,6 +234,7 @@ export function useBillingDraftGridAutosave(options: BillingDraftGridAutosaveOpt
     scheduleRowSave,
     buildRowReadingsPayload,
     saveRow,
+    saveRowNow,
     saveAll,
     rowSaveStateOf,
     isCellDirty,

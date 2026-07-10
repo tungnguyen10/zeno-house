@@ -1,5 +1,5 @@
 import { computed, ref, type ComputedRef } from 'vue'
-import type { BillingDraftGridResponse, BillingDraftGridRow } from '~/types/billing'
+import type { BillingDraftGridRow } from '~/types/billing'
 
 export type BillingDraftGridFilter = 'needs_action' | 'all' | 'vacant' | 'errors' | 'ready'
 
@@ -11,24 +11,23 @@ export const billingDraftGridFilterTabs: Array<{ key: BillingDraftGridFilter; la
   { key: 'ready', label: 'Đã sẵn sàng' },
 ]
 
-export function useBillingDraftGridFilters(response: ComputedRef<BillingDraftGridResponse | null>) {
+export function useBillingDraftGridFilters(rows: ComputedRef<BillingDraftGridRow[]>) {
   const filter = ref<BillingDraftGridFilter>('needs_action')
   const detailRowKey = ref<string | null>(null)
 
   const filteredRows = computed<BillingDraftGridRow[]>(() => {
-    const rows = response.value?.rows ?? []
     switch (filter.value) {
       case 'all':
-        return rows
+        return rows.value
       case 'vacant':
-        return rows.filter(row => row.rowType === 'vacant_baseline')
+        return rows.value.filter(row => row.rowType === 'vacant_baseline')
       case 'errors':
-        return rows.filter(row => row.blockers.length > 0)
+        return rows.value.filter(row => row.status === 'blocked' || row.status === 'missing_reading' || row.status === 'warning')
       case 'ready':
-        return rows.filter(row => row.status === 'ready')
+        return rows.value.filter(row => row.status === 'ready')
       case 'needs_action':
       default:
-        return rows.filter((row) => {
+        return rows.value.filter((row) => {
           if (row.rowType === 'vacant_baseline') return false
           if (row.status === 'paid' || row.status === 'partial' || row.status === 'issued') return false
           return true
@@ -39,7 +38,7 @@ export function useBillingDraftGridFilters(response: ComputedRef<BillingDraftGri
   const detailRow = computed<BillingDraftGridRow | null>(() => {
     const key = detailRowKey.value
     if (!key) return null
-    return response.value?.rows.find(row => row.key === key) ?? null
+    return rows.value.find(row => row.key === key) ?? null
   })
 
   function isDetailOpen(row: BillingDraftGridRow): boolean {
@@ -70,8 +69,7 @@ export function useBillingDraftGridFilters(response: ComputedRef<BillingDraftGri
   }
 
   const selectedRows = computed<BillingDraftGridRow[]>(() => {
-    const rows = response.value?.rows ?? []
-    return rows.filter(row => selectedKeys.value.has(row.key) && isSelectable(row))
+    return rows.value.filter(row => selectedKeys.value.has(row.key) && isSelectable(row))
   })
 
   const selectedCount = computed(() => selectedRows.value.length)

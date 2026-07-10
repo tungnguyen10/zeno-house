@@ -9,6 +9,7 @@ import type {
   BillingDraftGridResponse,
   BillingDraftGridRow,
   BillingDraftGridUtilityCell,
+  BillingDraftGridRowStatus,
   BillingPeriod,
   Invoice,
   IssueInvoicesResult,
@@ -20,8 +21,13 @@ import type { IssueAndPayInput } from '~/utils/validators/billing-issue-pay'
 import { formatCurrency } from '~/utils/format/currency'
 import { isPeriodLocked } from '~/utils/billing/lock'
 import {
+  BILLING_BLOCKER_CODES,
+  BILLING_WARNING_CODES,
+} from '~/utils/constants/billing'
+import {
   formatOptimisticUsage,
   optimisticRowDisplay,
+  type OptimisticRowDisplay,
   type OptimisticUtilityDisplay,
 } from '~/utils/billing/draft-grid-optimistic'
 import { useBillingDraftGridAutosave } from '~/composables/billing/useBillingDraftGridAutosave'
@@ -74,6 +80,12 @@ const overrideType = ref<MeterType | null>(null)
 const draftGridResponse = computed(() => props.response)
 const draftGridPeriod = computed(() => props.period)
 
+// displayedRows is a computed derived from displayGridRowMap (defined later — safe because
+// computed callbacks are lazy and only evaluated after setup() completes).
+const displayedRows = computed<BillingDraftGridRow[]>(() =>
+  (props.response?.rows ?? []).map(row => displayGridRowMap.value.get(row.key) ?? row),
+)
+
 const {
   filter,
   filterTabs,
@@ -92,11 +104,50 @@ const {
   selectAllVisible,
   toggleSelectAllVisible,
   clearSelection,
-} = useBillingDraftGridFilters(draftGridResponse)
+} = useBillingDraftGridFilters(displayedRows)
 
 function requestPrint() {
   if (selectedCount.value === 0) return
   emit('intent:print', { keys: selectedRows.value.map(row => row.key) })
+}
+
+const readingBlockerCodes = new Set<string>([
+  BILLING_BLOCKER_CODES.MISSING_CURRENT_READING,
+  BILLING_BLOCKER_CODES.MISSING_PREVIOUS_READING,
+  BILLING_BLOCKER_CODES.NEGATIVE_CONSUMPTION,
+])
+
+function utilityReadiness(display: OptimisticUtilityDisplay): 'ready' | 'warning' | 'missing' {
+  const cell = display.cell
+  if (!cell || !cell.required || cell.source === 'fixed' || cell.source === 'per_person' || cell.source === 'not_applicable') {
+    return 'ready'
+  }
+  // Server has already flagged this reading as negative — treat as warning even before user re-enters
+  if (cell.blockerCode === BILLING_BLOCKER_CODES.NEGATIVE_CONSUMPTION) return 'warning'
+  if (display.status === 'warning') return 'warning'
+  if (display.status === 'invalid' || display.status === 'empty' || display.status === 'unsupported') return 'missing'
+  if (cell.previousValue === null || display.currentValue === null) return 'missing'
+  return 'ready'
+}
+
+function deriveOptimisticStatus(
+  row: BillingDraftGridRow,
+  electricityDisplay: OptimisticUtilityDisplay,
+  waterDisplay: OptimisticUtilityDisplay,
+): BillingDraftGridRowStatus {
+  if (row.invoiceStatus === 'paid') return 'paid'
+  if (row.invoiceStatus === 'partial') return 'partial'
+  if (row.invoiceStatus === 'issued' || row.invoiceStatus === 'overdue') return 'issued'
+  if (row.rowType === 'vacant_baseline') return 'baseline'
+  if (row.blockers.some(blocker => !readingBlockerCodes.has(blocker.code))) return 'blocked'
+
+  const electricityState = utilityReadiness(electricityDisplay)
+  const waterState = utilityReadiness(waterDisplay)
+
+  if (electricityState === 'warning' || waterState === 'warning') return 'warning'
+  if (electricityState === 'missing' || waterState === 'missing') return 'missing_reading'
+  if (row.warnings.some(warning => warning.code === BILLING_WARNING_CODES.USAGE_OVERRIDE_APPLIED)) return 'warning'
+  return 'ready'
 }
 
 // ---------------------------------------------------------------------------
@@ -225,6 +276,8 @@ watch(
   { immediate: true },
 )
 
+const toast = useToast()
+
 const {
   effectiveReadings,
   isSaving,
@@ -232,6 +285,7 @@ const {
   readingDraftValue,
   setReadingDraftValue,
   saveAll,
+  saveRowNow,
   rowSaveStateOf,
   isCellDirty,
   dirtyCountValue,
@@ -241,6 +295,10 @@ const {
   periodEditable,
   batchReadingDate,
   onSaveReadings: props.onSaveReadings,
+  onAllSaved: (count) => {
+    if (count > 0) toast.success(`Đã lưu ${count} chỉ số`)
+    emit('refresh')
+  },
 })
 
 const {
@@ -281,11 +339,21 @@ function statusBadgeFor(row: BillingDraftGridRow): { status: string; context: 'p
 }
 
 // ---------------------------------------------------------------------------
-// Cell formatting
+// Cell formatting — single-pass optimistic derivation per row
 // ---------------------------------------------------------------------------
 
-function rowDisplay(row: BillingDraftGridRow) {
-  return optimisticRowDisplay(row, effectiveReadings.value)
+// One `optimisticRowDisplay` call per row per reactive update.
+// Both the row-map (status/amounts) and the display helpers (labels) read from here.
+const displayMetaMap = computed<Map<string, OptimisticRowDisplay>>(() => {
+  const map = new Map<string, OptimisticRowDisplay>()
+  for (const row of props.response?.rows ?? []) {
+    map.set(row.key, optimisticRowDisplay(row, effectiveReadings.value))
+  }
+  return map
+})
+
+function rowDisplay(row: BillingDraftGridRow): OptimisticRowDisplay {
+  return displayMetaMap.value.get(row.key) ?? optimisticRowDisplay(row, effectiveReadings.value)
 }
 
 function utilityDisplay(row: BillingDraftGridRow, type: MeterType): OptimisticUtilityDisplay {
@@ -304,9 +372,10 @@ function displayDraftTotal(row: BillingDraftGridRow): number | null {
 const displayGridRowMap = computed<Map<string, BillingDraftGridRow>>(() => {
   const map = new Map<string, BillingDraftGridRow>()
   for (const row of props.response?.rows ?? []) {
-    const display = optimisticRowDisplay(row, effectiveReadings.value)
-    map.set(row.roomId, {
+    const display = displayMetaMap.value.get(row.key)!
+    map.set(row.key, {
       ...row,
+      status: deriveOptimisticStatus(row, display.electricity, display.water),
       draftTotal: display.draftTotal,
       electricity: row.electricity
         ? {
@@ -329,8 +398,22 @@ const displayGridRowMap = computed<Map<string, BillingDraftGridRow>>(() => {
   return map
 })
 
+const displayedTotals = computed(() => {
+  return displayedRows.value.reduce(
+    (totals, row) => {
+      if (row.status === 'ready') totals.readyDraftCount += 1
+      if (row.status === 'blocked' || row.status === 'missing_reading') totals.blockedDraftCount += 1
+      if (row.rowType !== 'vacant_baseline' && row.status !== 'paid' && row.status !== 'partial' && row.status !== 'issued') {
+        totals.draftTotal += row.draftTotal ?? 0
+      }
+      return totals
+    },
+    { readyDraftCount: 0, blockedDraftCount: 0, draftTotal: 0 },
+  )
+})
+
 function displayGridRow(row: BillingDraftGridRow): BillingDraftGridRow {
-  return displayGridRowMap.value.get(row.roomId) ?? row
+  return displayGridRowMap.value.get(row.key) ?? row
 }
 
 function previousReadingHint(cell: BillingDraftGridUtilityCell | null): string {
@@ -348,6 +431,10 @@ function applyBulkReadings(updates: Array<{ row: BillingDraftGridRow; type: Mete
 }
 
 defineExpose({ applyBulkReadings })
+
+function handleReadingBlur(row: BillingDraftGridRow) {
+  void saveRowNow(row)
+}
 
 // ---------------------------------------------------------------------------
 // Override modal coordination
@@ -584,18 +671,29 @@ const columns: UiTableColumn<BillingDraftGridRow>[] = [
               density="compact"
               class="w-28"
               :class="clsx(
-                isCellDirty(row as BillingDraftGridRow, 'electricity') && 'ring-2 ring-blue-500',
                 isPasteHighlighted(row as BillingDraftGridRow, 'electricity') && 'bg-amber-100/40',
               )"
               @update:model-value="setReadingDraftValue(row as BillingDraftGridRow, 'electricity', String($event ?? ''))"
               @keydown="handleReadingKeydown($event, row as BillingDraftGridRow, 'electricity')"
               @paste="handleReadingPaste($event, row as BillingDraftGridRow, 'electricity')"
+              @blur="handleReadingBlur(row as BillingDraftGridRow)"
             />
             <span v-else class="text-sm text-white tabular-nums">
               {{ (row as BillingDraftGridRow).electricity!.currentValue ?? '—' }}
             </span>
-            <p class="text-[10px] leading-none text-muted tabular-nums">
-              {{ previousReadingHint((row as BillingDraftGridRow).electricity) }}
+            <p class="flex items-center justify-end gap-1.5 text-[10px] leading-none tabular-nums">
+              <span
+                aria-hidden="true"
+                :class="clsx(
+                  'inline-block h-1.5 w-1.5 shrink-0 rounded-full transition-all',
+                  rowSaveStateOf(row as BillingDraftGridRow) === 'saving' ? 'bg-cyan/70 animate-pulse' :
+                  rowSaveStateOf(row as BillingDraftGridRow) === 'saved' ? 'bg-emerald-400' :
+                  rowSaveStateOf(row as BillingDraftGridRow) === 'error' ? 'bg-rose-400' :
+                  isCellDirty(row as BillingDraftGridRow, 'electricity') ? 'bg-amber-400/60' :
+                  'opacity-0',
+                )"
+              />
+              <span class="text-muted">{{ previousReadingHint((row as BillingDraftGridRow).electricity) }}</span>
             </p>
           </div>
           <span v-else class="text-xs text-muted">—</span>
@@ -615,18 +713,29 @@ const columns: UiTableColumn<BillingDraftGridRow>[] = [
               density="compact"
               class="w-28"
               :class="clsx(
-                isCellDirty(row as BillingDraftGridRow, 'water') && 'ring-2 ring-blue-500',
                 isPasteHighlighted(row as BillingDraftGridRow, 'water') && 'bg-amber-100/40',
               )"
               @update:model-value="setReadingDraftValue(row as BillingDraftGridRow, 'water', String($event ?? ''))"
               @keydown="handleReadingKeydown($event, row as BillingDraftGridRow, 'water')"
               @paste="handleReadingPaste($event, row as BillingDraftGridRow, 'water')"
+              @blur="handleReadingBlur(row as BillingDraftGridRow)"
             />
             <span v-else class="text-sm text-white tabular-nums">
               {{ (row as BillingDraftGridRow).water!.currentValue ?? '—' }}
             </span>
-            <p class="text-[10px] leading-none text-muted tabular-nums">
-              {{ previousReadingHint((row as BillingDraftGridRow).water) }}
+            <p class="flex items-center justify-end gap-1.5 text-[10px] leading-none tabular-nums">
+              <span
+                aria-hidden="true"
+                :class="clsx(
+                  'inline-block h-1.5 w-1.5 shrink-0 rounded-full transition-all',
+                  rowSaveStateOf(row as BillingDraftGridRow) === 'saving' ? 'bg-cyan/70 animate-pulse' :
+                  rowSaveStateOf(row as BillingDraftGridRow) === 'saved' ? 'bg-emerald-400' :
+                  rowSaveStateOf(row as BillingDraftGridRow) === 'error' ? 'bg-rose-400' :
+                  isCellDirty(row as BillingDraftGridRow, 'water') ? 'bg-amber-400/60' :
+                  'opacity-0',
+                )"
+              />
+              <span class="text-muted">{{ previousReadingHint((row as BillingDraftGridRow).water) }}</span>
             </p>
           </div>
           <span v-else class="text-xs text-muted">—</span>
@@ -734,6 +843,7 @@ const columns: UiTableColumn<BillingDraftGridRow>[] = [
           @keydown="handleReadingKeydown($event.event, $event.row, $event.type)"
           @paste="handleReadingPaste($event.event, $event.row, $event.type)"
           @override="openOverrideModal($event)"
+          @blur="handleReadingBlur($event.row)"
         />
       </div>
 
@@ -755,12 +865,12 @@ const columns: UiTableColumn<BillingDraftGridRow>[] = [
 
       <!-- Inline summary -->
       <p
-        v-if="response && (response.totals.readyDraftCount > 0 || response.totals.blockedDraftCount > 0)"
+        v-if="displayedTotals.readyDraftCount > 0 || displayedTotals.blockedDraftCount > 0"
         class="mt-4 text-xs text-muted"
       >
-        <span>Sẵn sàng: <span class="text-emerald-400 tabular-nums">{{ response.totals.readyDraftCount }}</span></span>
+        <span>Sẵn sàng: <span class="text-emerald-400 tabular-nums">{{ displayedTotals.readyDraftCount }}</span></span>
         <span class="mx-2 text-dark-border">·</span>
-        <span>Có lỗi: <span :class="response.totals.blockedDraftCount > 0 ? 'text-rose-400 tabular-nums' : 'text-white tabular-nums'">{{ response.totals.blockedDraftCount }}</span></span>
+        <span>Có lỗi: <span :class="displayedTotals.blockedDraftCount > 0 ? 'text-rose-400 tabular-nums' : 'text-white tabular-nums'">{{ displayedTotals.blockedDraftCount }}</span></span>
       </p>
     </UiSection>
 
