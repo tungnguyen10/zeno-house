@@ -26,7 +26,7 @@ const resolveError = ref<string | null>(null)
 
 async function resolvePeriod() {
   try {
-    const resp = await $fetch<{ data: { id: string } }>('/api/billing/periods', {
+    const resp = await apiFetch<{ data: { id: string } }>('/api/billing/periods', {
       method: 'POST',
       body: { building_id: buildingParam, period_year: periodYear, period_month: periodMonth },
     })
@@ -68,7 +68,7 @@ function triggerPrint() {
     .filter((id): id is string => Boolean(id))
   if (periodId.value && invoiceIds.length > 0) {
     // Fire-and-forget audit ping; never block printing on it.
-    $fetch(`/api/billing/periods/${periodId.value}/invoices-printed`, {
+    apiFetch(`/api/billing/periods/${periodId.value}/invoices-printed`, {
       method: 'POST',
       body: { invoice_ids: invoiceIds },
     }).catch(() => {})

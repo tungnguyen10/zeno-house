@@ -5,8 +5,9 @@ import { BILLING_AUDIT_CATEGORIES } from '~/utils/constants/billing'
  * Query schema for `GET /api/billing/periods/:id/audit`. Supports server-side
  * filtering, full-text search, and cursor pagination for the rework drawer.
  *
- * `actor` and `category` accept comma-separated values. `cursor` is an opaque
- * ISO timestamp marking the last item of the previous page (created_at).
+ * `actor` and `category` accept comma-separated values. New cursors combine
+ * the last row's ISO timestamp and UUID; timestamp-only cursors remain valid
+ * for backward compatibility.
  */
 export const billingAuditListQuerySchema = z.object({
   actor: z
@@ -23,7 +24,11 @@ export const billingAuditListQuerySchema = z.object({
   to: z.string().datetime({ offset: true }).optional(),
   q: z.string().trim().min(1).max(200).optional(),
   correlation_id: z.string().uuid().optional(),
-  cursor: z.string().datetime({ offset: true }).optional(),
+  cursor: z.string().max(100).refine((value) => {
+    const [createdAt, id, ...rest] = value.split('|')
+    if (rest.length > 0 || !z.string().datetime({ offset: true }).safeParse(createdAt).success) return false
+    return id === undefined || z.string().uuid().safeParse(id).success
+  }, 'Cursor không hợp lệ').optional(),
   limit: z.coerce.number().int().min(1).max(100).optional(),
 })
 

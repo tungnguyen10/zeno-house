@@ -18,6 +18,7 @@ import { ReserveFundService } from './reserve-funds'
 import { OperationsReportLockService } from './locks'
 import { db } from '../../utils/db'
 import { assertBuildingScope } from '../../utils/scope'
+import { invalidateOperationsReport } from './cache'
 
 const RECEIPT_BUCKET = 'expense-receipts'
 const MAX_RECEIPT_BYTES = 5 * 1024 * 1024
@@ -96,6 +97,7 @@ export const BuildingExpenseService = {
       after_data: created,
     })
 
+    invalidateOperationsReport(created.buildingId)
     return withSignedReceipt(event, created)
   },
 
@@ -137,6 +139,8 @@ export const BuildingExpenseService = {
       after_data: updated,
     })
 
+    invalidateOperationsReport(existing.buildingId)
+    if (updated.buildingId !== existing.buildingId) invalidateOperationsReport(updated.buildingId)
     return withSignedReceipt(event, updated)
   },
 
@@ -171,6 +175,7 @@ export const BuildingExpenseService = {
       metadata: { void_reason: voidReason },
     })
 
+    invalidateOperationsReport(voided.buildingId)
     return withSignedReceipt(event, voided)
   },
 

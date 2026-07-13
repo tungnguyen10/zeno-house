@@ -255,7 +255,7 @@ async function submitReserveRate() {
   savingReserveRate.value = true
   reserveRateError.value = null
   try {
-    await $fetch('/api/reserve-fund-rates', {
+    await apiFetch('/api/reserve-fund-rates', {
       method: 'POST',
       body: {
         building_id: apiBuildingId.value,
@@ -295,7 +295,7 @@ async function submitEndReserveRate() {
   endingReserveRate.value = true
   reserveRateError.value = null
   try {
-    await $fetch(`/api/reserve-fund-rates/${endReserveRateTarget.value.id}`, {
+    await apiFetch(`/api/reserve-fund-rates/${endReserveRateTarget.value.id}`, {
       method: 'PATCH',
       body: {
         effective_to_period_year: period.year,
@@ -483,7 +483,7 @@ async function submitCustomService() {
   savingCustomService.value = true
   customServiceError.value = null
   try {
-    const created = await $fetch<ApiSuccess<ServiceCatalogItem>>('/api/service-catalog', {
+    const created = await apiFetch<ApiSuccess<ServiceCatalogItem>>('/api/service-catalog', {
       method: 'POST',
       body: {
         building_id: id,
@@ -541,7 +541,7 @@ async function submitEndFixedCost() {
   endingFixedCost.value = true
   fixedCostError.value = null
   try {
-    await $fetch(`/api/building-fixed-costs/${endFixedCostTarget.value.id}`, {
+    await apiFetch(`/api/building-fixed-costs/${endFixedCostTarget.value.id}`, {
       method: 'PATCH',
       body: {
         effective_to_period_year: period.year,
@@ -581,7 +581,7 @@ async function handleSaveCode() {
   codeSaveError.value = null
   codeSaveSuccess.value = false
   try {
-    await $fetch(`/api/buildings/${id}`, { method: 'PATCH', body: { code: codeInput.value } })
+    await apiFetch(`/api/buildings/${id}`, { method: 'PATCH', body: { code: codeInput.value } })
     await refreshBuilding()
     codeSaveSuccess.value = true
     setTimeout(() => { codeSaveSuccess.value = false }, 3000)

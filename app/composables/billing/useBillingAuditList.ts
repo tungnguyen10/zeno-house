@@ -40,6 +40,7 @@ export function useBillingAuditList(periodId: MaybeRefOrGetter<string>) {
   const nextCursor = ref<string | null>(null)
 
   const hasMore = computed(() => !!nextCursor.value)
+  const latestFilterRequest = createLatestApiRequest()
 
   function buildParams(cursor?: string | null): Record<string, string> {
     const p: Record<string, string> = {}
@@ -57,7 +58,7 @@ export function useBillingAuditList(periodId: MaybeRefOrGetter<string>) {
     if (!id.value) return
     loading.value = true
     try {
-      const resp = await $fetch<ApiSuccess<BillingAuditEvent[], AuditListMeta>>(
+      const resp = await latestFilterRequest<ApiSuccess<BillingAuditEvent[], AuditListMeta>>(
         `/api/billing/periods/${id.value}/audit`,
         { params: buildParams() },
       )
@@ -74,7 +75,7 @@ export function useBillingAuditList(periodId: MaybeRefOrGetter<string>) {
     if (!id.value || !nextCursor.value || loadingMore.value) return
     loadingMore.value = true
     try {
-      const resp = await $fetch<ApiSuccess<BillingAuditEvent[], AuditListMeta>>(
+      const resp = await apiFetch<ApiSuccess<BillingAuditEvent[], AuditListMeta>>(
         `/api/billing/periods/${id.value}/audit`,
         { params: buildParams(nextCursor.value) },
       )

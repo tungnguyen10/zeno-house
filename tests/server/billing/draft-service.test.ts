@@ -4,6 +4,7 @@ import { buildPeriod } from '../../__fixtures__/billing/period'
 const listByPeriod = vi.fn()
 const listInvoicesByPeriod = vi.fn()
 const findPeriodById = vi.fn()
+const loadSnapshot = vi.fn()
 let meterReadingCall = 0
 
 vi.mock('../../../server/repositories/billing/periods', () => ({
@@ -22,6 +23,9 @@ vi.mock('../../../server/repositories/billing/utility-usages', () => ({
   BillingUtilityUsageRepository: {
     listByPeriod,
   },
+}))
+vi.mock('../../../server/repositories/billing/snapshot', () => ({
+  BillingSnapshotRepository: { load: loadSnapshot },
 }))
 
 vi.mock('#supabase/server', () => ({
@@ -105,6 +109,22 @@ describe('BillingDraftService.calculateDraft', () => {
     findPeriodById.mockResolvedValue(buildPeriod({ id: 'period-1', buildingId: 'building-1', periodYear: 2026, periodMonth: 5 }))
     listByPeriod.mockResolvedValue([])
     listInvoicesByPeriod.mockResolvedValue([])
+    loadSnapshot.mockResolvedValue({
+      building: resolveTable('buildings'),
+      contracts: resolveTable('contracts'),
+      services: [],
+      occupants: [],
+      readings: [
+        { id: 'current-electricity', room_id: 'room-1', meter_type: 'electricity', reading_type: 'monthly', period_year: 2026, period_month: 5, reading_value: 125 },
+        { id: 'current-water', room_id: 'room-1', meter_type: 'water', reading_type: 'monthly', period_year: 2026, period_month: 5, reading_value: 18 },
+        { id: 'previous-electricity', room_id: 'room-1', meter_type: 'electricity', reading_type: 'monthly', period_year: 2026, period_month: 4, reading_value: 100 },
+        { id: 'previous-water', room_id: 'room-1', meter_type: 'water', reading_type: 'monthly', period_year: 2026, period_month: 4, reading_value: 10 },
+      ],
+      overrides: [],
+      invoices: [],
+      rooms: resolveTable('rooms'),
+      tenants: resolveTable('tenants'),
+    })
   })
 
   it('calculates production draft rows with prorated rent, utilities, and discount', async () => {

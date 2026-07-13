@@ -7,6 +7,7 @@ import type {
   RoomUpdateInput,
 } from '~/utils/validators/rooms'
 import { RoomRepository, type RoomFilters } from '../../repositories/rooms'
+import { BulkActionRepository } from '../../repositories/bulk-actions'
 import { BuildingRepository } from '../../repositories/buildings'
 import { assertBuildingScope, canDeleteMasterData, getAssignedBuildingIds } from '../../utils/scope'
 import { AuditService } from '../audit'
@@ -158,32 +159,55 @@ export const RoomService = {
     const succeeded: string[] = []
     const failed: { id: string; reason: string }[] = []
 
-    for (const id of input.ids) {
-      try {
-        if (input.action === 'delete') {
-          await RoomService.remove(event, user, id, { reason: input.reason! })
-          succeeded.push(id)
-          continue
-        }
-
-        const existing = await RoomRepository.findByIdentifier(event, id)
-        if (!existing) {
+    if (input.action !== 'delete') {
+      const scopes = await BulkActionRepository.resolveBuildingScopes(event, 'room', input.ids)
+      const scopeAccess = new Map<string, boolean>()
+      const allowed: string[] = []
+      for (const id of input.ids) {
+        const buildingId = scopes.get(id)
+        if (!buildingId) {
           failed.push({ id, reason: 'not_found' })
           continue
         }
+        let permitted = scopeAccess.get(buildingId)
+        if (permitted === undefined) {
+          try {
+            await assertBuildingScope(event, user, buildingId, 'write')
+            permitted = true
+          }
+          catch {
+            permitted = false
+          }
+          scopeAccess.set(buildingId, permitted)
+        }
+        if (permitted) allowed.push(id)
+        else failed.push({ id, reason: 'forbidden' })
+      }
+      const rows = await BulkActionRepository.execute(event, 'room', input.action, allowed)
+      for (const row of rows) {
+        if (row.succeeded) succeeded.push(row.id)
+        else failed.push({ id: row.id, reason: row.reason ?? 'error' })
+      }
+      const bulkActionCode = input.action === 'archive'
+        ? AUDIT_ACTIONS.ROOM_ARCHIVED
+        : input.action === 'activate'
+          ? AUDIT_ACTIONS.ROOM_ACTIVATED
+          : AUDIT_ACTIONS.ROOM_MAINTENANCE_SET
+      await AuditService.appendBulk(event, user, {
+        building_id: null,
+        entity_type: 'room',
+        aggregate_action: `room.bulk_${input.action}`,
+        items: succeeded.map(id => ({ entity_id: id, action: bulkActionCode })),
+        succeeded,
+        total: input.ids.length,
+        failed: failed.length,
+      })
+      return { succeeded, failed }
+    }
 
-        if (input.action === 'archive') {
-          await assertBuildingScope(event, user, existing.buildingId, 'write')
-          await RoomRepository.softArchive(event, existing.id)
-        }
-        else if (input.action === 'activate') {
-          await assertBuildingScope(event, user, existing.buildingId, 'write')
-          await RoomRepository.update(event, existing.id, { status: 'available' })
-        }
-        else if (input.action === 'set_maintenance') {
-          await assertBuildingScope(event, user, existing.buildingId, 'write')
-          await RoomRepository.update(event, existing.id, { status: 'maintenance' })
-        }
+    for (const id of input.ids) {
+      try {
+        await RoomService.remove(event, user, id, { reason: input.reason! })
         succeeded.push(id)
       }
       catch (err: unknown) {
@@ -207,12 +231,7 @@ export const RoomService = {
       }
     }
 
-    const bulkActionCode = (
-      input.action === 'archive' ? AUDIT_ACTIONS.ROOM_ARCHIVED
-      : input.action === 'activate' ? AUDIT_ACTIONS.ROOM_ACTIVATED
-      : input.action === 'set_maintenance' ? AUDIT_ACTIONS.ROOM_MAINTENANCE_SET
-      : AUDIT_ACTIONS.ROOM_REMOVED
-    )
+    const bulkActionCode = AUDIT_ACTIONS.ROOM_REMOVED
     await AuditService.appendBulk(event, user, {
       building_id: null,
       entity_type: 'room',

@@ -39,7 +39,7 @@ export function useManagerAssignments() {
   }
 
   async function createUser(input: UserCreateInput): Promise<ManagedUser> {
-    const res = await $fetch<ApiSuccess<ManagedUser>>('/api/users', {
+    const res = await apiFetch<ApiSuccess<ManagedUser>>('/api/users', {
       method: 'POST',
       body: input,
     })
@@ -48,7 +48,7 @@ export function useManagerAssignments() {
   }
 
   async function updateUser(id: string, input: UserUpdateInput): Promise<ManagedUser> {
-    const res = await $fetch<ApiSuccess<ManagedUser>>(`/api/users/${id}`, {
+    const res = await apiFetch<ApiSuccess<ManagedUser>>(`/api/users/${id}`, {
       method: 'PATCH',
       body: input,
     })
@@ -57,12 +57,12 @@ export function useManagerAssignments() {
   }
 
   async function deleteUser(id: string): Promise<void> {
-    await $fetch(`/api/users/${id}`, { method: 'DELETE' })
+    await apiFetch(`/api/users/${id}`, { method: 'DELETE' })
     await refresh()
   }
 
   async function assign(input: AssignmentCreatePayload): Promise<UserBuildingAssignment> {
-    const res = await $fetch<ApiSuccess<UserBuildingAssignment>>('/api/assignments', {
+    const res = await apiFetch<ApiSuccess<UserBuildingAssignment>>('/api/assignments', {
       method: 'POST',
       body: input,
     })
@@ -71,7 +71,7 @@ export function useManagerAssignments() {
   }
 
   async function toggle(id: string, input: AssignmentUpdatePayload): Promise<UserBuildingAssignment> {
-    const res = await $fetch<ApiSuccess<UserBuildingAssignment>>(`/api/assignments/${id}`, {
+    const res = await apiFetch<ApiSuccess<UserBuildingAssignment>>(`/api/assignments/${id}`, {
       method: 'PATCH',
       body: input,
     })
@@ -80,7 +80,7 @@ export function useManagerAssignments() {
   }
 
   async function unassign(id: string): Promise<void> {
-    await $fetch(`/api/assignments/${id}`, { method: 'DELETE' })
+    await apiFetch(`/api/assignments/${id}`, { method: 'DELETE' })
     await refresh()
   }
 

@@ -17,6 +17,26 @@ export interface AuditAppendInput {
 }
 
 export const AuditRepository = {
+  async appendMany(event: H3Event, inputs: AuditAppendInput[]): Promise<AuditEvent[]> {
+    if (inputs.length === 0) return []
+    const client = await serverSupabaseClient(event)
+    const { data, error } = await client
+      .from('audit_events')
+      .insert(inputs.map(input => ({
+        building_id: input.building_id,
+        actor_id: input.actor_id,
+        action: input.action,
+        entity_type: input.entity_type,
+        entity_id: input.entity_id ?? null,
+        correlation_id: input.correlation_id ?? null,
+        before_data: (input.before_data ?? null) as never,
+        after_data: (input.after_data ?? null) as never,
+        metadata: (input.metadata ?? {}) as never,
+      })))
+      .select()
+    if (error) throwDbError(error, 'audit.appendMany')
+    return (data ?? []).map(mapAuditEvent)
+  },
   async append(event: H3Event, input: AuditAppendInput): Promise<AuditEvent> {
     const client = await serverSupabaseClient(event)
     const { data, error } = await client

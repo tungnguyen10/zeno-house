@@ -22,13 +22,16 @@ import {
   type FixedCostCategory,
 } from '~/utils/constants/operations-report'
 import { BuildingRepository } from '../../repositories/buildings'
-import { BuildingExpenseRepository } from '../../repositories/operations-report/expenses'
-import { BuildingFixedCostRepository } from '../../repositories/operations-report/fixed-costs'
 import { OperationsReportPeriodRepository } from '../../repositories/operations-report/periods'
 import { OperationsReportRepository } from '../../repositories/operations-report/report'
-import { PrepaidExpenseService } from './prepaid-expenses'
 import { ReserveFundService } from './reserve-funds'
 import { assertBuildingScope } from '../../utils/scope'
+import {
+  cacheOperationsReport,
+  getCachedOperationsReport,
+  invalidateOperationsReport,
+  operationsReportCacheKey,
+} from './cache'
 
 const REVENUE_LABELS: Record<string, string> = {
   rent: 'Tiền phòng',
@@ -62,18 +65,15 @@ function sumReserveTransactions(transactions: ReserveFundTransaction[]): number 
 }
 
 async function buildReserveSummary(
-  event: H3Event,
-  user: AuthUser,
-  buildingId: string,
+  transactions: ReserveFundTransaction[],
+  effectiveRate: number,
   periodYear: number,
   periodMonth: number,
   closure: OperationsReportClosure,
   issuedRevenue: number,
   issuedProfitByRevenue: number,
 ): Promise<ReserveFundSummary> {
-  const fund = await ReserveFundService.get(event, user, buildingId)
-  const rate = await ReserveFundService.findEffectiveRate(event, buildingId, periodYear, periodMonth)
-  const monthlyTransactions = fund.transactions.filter(
+  const monthlyTransactions = transactions.filter(
     tx => tx.periodYear === periodYear && tx.periodMonth === periodMonth && !tx.voidedAt,
   )
   const accrual = monthlyTransactions.find(tx => tx.source === 'monthly_accrual')
@@ -82,10 +82,10 @@ async function buildReserveSummary(
     .reduce((sum, tx) => sum + tx.amount, 0)
   const isClosedReport = closure.status === 'closed'
   const appliedAccrual = isClosedReport ? accrual : null
-  const effectiveRatePercent = accrual?.reserveRatePercent ?? rate?.reserveRatePercent ?? 0
+  const effectiveRatePercent = accrual?.reserveRatePercent ?? effectiveRate
   const monthlyAccrualEstimated = Math.round((Math.max(issuedProfitByRevenue, 0) * effectiveRatePercent) / 100)
   const monthlyAccrualIsEstimated = !appliedAccrual
-  const cumulativeBalance = sumReserveTransactions(fund.transactions.filter(tx => !tx.voidedAt))
+  const cumulativeBalance = sumReserveTransactions(transactions.filter(tx => !tx.voidedAt))
   const monthlyAccrual = appliedAccrual?.amount ?? 0
   return {
     effectiveRatePercent,
@@ -122,32 +122,10 @@ async function buildReportSnapshot(
   profitByRevenue: number
 }> {
   const period = ordinal(query.period_year, query.period_month)
-  const [billing, allFixedCosts, expenses, prepaidItems, closure] = await Promise.all([
-    OperationsReportRepository.fetchBillingData(
-      event,
-      query.building_id,
-      query.period_year,
-      query.period_month,
-    ),
-    BuildingFixedCostRepository.listByBuilding(event, query.building_id),
-    BuildingExpenseRepository.list(event, {
-      buildingId: query.building_id,
-      periodYear: query.period_year,
-      periodMonth: query.period_month,
-    }),
-    PrepaidExpenseService.listActiveAllocations(
-      event,
-      query.building_id,
-      query.period_year,
-      query.period_month,
-    ),
-    OperationsReportPeriodRepository.findOrOpen(
-      event,
-      query.building_id,
-      query.period_year,
-      query.period_month,
-    ),
-  ])
+  const snapshot = await OperationsReportRepository.fetchSnapshot(
+    event, query.building_id, query.period_year, query.period_month,
+  )
+  const { billing, fixedCosts: allFixedCosts, expenses, prepaidItems, closure } = snapshot
 
   const issuedRevenue = billing.invoices.reduce((sum, inv) => sum + inv.totalAmount, 0)
   const fixedCostTotal = allFixedCosts
@@ -211,34 +189,22 @@ export const OperationsReportService = {
 
     await assertBuildingReadable(event, user, query.building_id, 'read')
 
+    const includeReserveFund = can(user, 'reserve-fund.read')
+    const cacheKey = operationsReportCacheKey(
+      query.building_id,
+      query.period_year,
+      query.period_month,
+      includeReserveFund,
+    )
+    const cached = getCachedOperationsReport(cacheKey)
+    if (cached) return cached
+
     const period = ordinal(query.period_year, query.period_month)
 
-    const [billing, allFixedCosts, expenses, prepaidItems, closure] = await Promise.all([
-      OperationsReportRepository.fetchBillingData(
-        event,
-        query.building_id,
-        query.period_year,
-        query.period_month,
-      ),
-      BuildingFixedCostRepository.listByBuilding(event, query.building_id),
-      BuildingExpenseRepository.list(event, {
-        buildingId: query.building_id,
-        periodYear: query.period_year,
-        periodMonth: query.period_month,
-      }),
-      PrepaidExpenseService.listActiveAllocations(
-        event,
-        query.building_id,
-        query.period_year,
-        query.period_month,
-      ),
-      OperationsReportPeriodRepository.findOrOpen(
-        event,
-        query.building_id,
-        query.period_year,
-        query.period_month,
-      ),
-    ])
+    const snapshot = await OperationsReportRepository.fetchSnapshot(
+      event, query.building_id, query.period_year, query.period_month,
+    )
+    const { billing, fixedCosts: allFixedCosts, expenses, prepaidItems, closure } = snapshot
 
     // --- Revenue ---------------------------------------------------------
     const issuedRevenue = billing.invoices.reduce((s, inv) => s + inv.totalAmount, 0)
@@ -292,11 +258,10 @@ export const OperationsReportService = {
 
     const prepaidAllocationTotal = prepaidItems.reduce((s, item) => s + item.monthlyAmount, 0)
     const totalExpense = fixedCostTotal + monthlyExpenseTotal + prepaidAllocationTotal
-    const reserveFund = can(user, 'reserve-fund.read')
+    const reserveFund = includeReserveFund
       ? await buildReserveSummary(
-          event,
-          user,
-          query.building_id,
+          snapshot.reserveTransactions,
+          snapshot.reserveRate?.reserveRatePercent ?? 0,
           query.period_year,
           query.period_month,
           closure,
@@ -311,7 +276,7 @@ export const OperationsReportService = {
     const waterCollected = revenueMap.get('water') ?? 0
     const waterInput = expenseMap.get('water_input') ?? 0
 
-    return {
+    const report: OperationsReport = {
       buildingId: query.building_id,
       periodYear: query.period_year,
       periodMonth: query.period_month,
@@ -346,6 +311,8 @@ export const OperationsReportService = {
       expenses,
       prepaidItems,
     }
+    cacheOperationsReport(cacheKey, report)
+    return report
   },
 
   async refreshReserveAccrual(
@@ -358,7 +325,7 @@ export const OperationsReportService = {
     }
     await assertBuildingReadable(event, user, query.building_id, 'write')
     const snapshot = await buildReportSnapshot(event, query)
-    return ReserveFundService.recordMonthlyAccrual(event, user, {
+    const transaction = await ReserveFundService.recordMonthlyAccrual(event, user, {
       buildingId: query.building_id,
       periodYear: query.period_year,
       periodMonth: query.period_month,
@@ -366,6 +333,8 @@ export const OperationsReportService = {
       issuedRevenue: snapshot.issuedRevenue,
       issuedProfitByRevenue: snapshot.profitByRevenue,
     })
+    invalidateOperationsReport(query.building_id)
+    return transaction
   },
 
   async close(
@@ -373,14 +342,18 @@ export const OperationsReportService = {
     user: AuthUser,
     input: OperationsReportCloseInput,
   ): Promise<OperationsReportClosure> {
-    return closeReportPeriod(event, user, input, 'manual')
+    const closure = await closeReportPeriod(event, user, input, 'manual')
+    invalidateOperationsReport(input.building_id)
+    return closure
   },
 
   async closeSystem(
     event: H3Event,
     input: OperationsReportCloseInput,
   ): Promise<OperationsReportClosure> {
-    return closeReportPeriod(event, null, input, 'auto')
+    const closure = await closeReportPeriod(event, null, input, 'auto')
+    invalidateOperationsReport(input.building_id)
+    return closure
   },
 
   async reopen(
@@ -390,12 +363,14 @@ export const OperationsReportService = {
   ): Promise<OperationsReportClosure> {
     if (!can(user, 'operations-report.reopen')) throwForbidden('Không có quyền mở lại báo cáo vận hành')
     await assertBuildingReadable(event, user, input.building_id, 'write')
-    return OperationsReportPeriodRepository.reopen(event, {
+    const closure = await OperationsReportPeriodRepository.reopen(event, {
       buildingId: input.building_id,
       periodYear: input.period_year,
       periodMonth: input.period_month,
       reopenedBy: user.id,
       reason: input.reason,
     })
+    invalidateOperationsReport(input.building_id)
+    return closure
   },
 }

@@ -1,6 +1,5 @@
-import { serverSupabaseServiceRole } from '#supabase/server'
+import { db as serverSupabaseClient } from '../utils/db'
 import type { H3Event } from 'h3'
-import type { Database } from '~/types/database.types'
 import type { ManagedUser } from '~/types/users'
 import type { UserRole } from '~/utils/constants/roles'
 import type { UserUpdateInput } from '~/utils/validators/users'
@@ -35,7 +34,7 @@ function mapManagedUser(user: AuthUserLike): ManagedUser {
  */
 export const UserRepository = {
   async listByRoles(event: H3Event, roles: UserRole[]): Promise<ManagedUser[]> {
-    const client = serverSupabaseServiceRole<Database>(event)
+    const client = serverSupabaseClient(event)
     const wanted = new Set(roles)
     const users: ManagedUser[] = []
     let page = 1
@@ -58,7 +57,7 @@ export const UserRepository = {
   },
 
   async getById(event: H3Event, id: string): Promise<ManagedUser | null> {
-    const client = serverSupabaseServiceRole<Database>(event)
+    const client = serverSupabaseClient(event)
     const { data, error } = await client.auth.admin.getUserById(id)
     if (error) {
       if (error.status === 404) return null
@@ -71,7 +70,7 @@ export const UserRepository = {
     event: H3Event,
     input: { email: string; password: string; full_name?: string; role: UserRole; created_by?: string | null },
   ): Promise<ManagedUser> {
-    const client = serverSupabaseServiceRole<Database>(event)
+    const client = serverSupabaseClient(event)
     const { data, error } = await client.auth.admin.createUser({
       email: input.email,
       password: input.password,
@@ -92,7 +91,7 @@ export const UserRepository = {
   },
 
   async update(event: H3Event, id: string, input: UserUpdateInput): Promise<ManagedUser> {
-    const client = serverSupabaseServiceRole<Database>(event)
+    const client = serverSupabaseClient(event)
     const attributes: {
       email?: string
       password?: string
@@ -119,7 +118,7 @@ export const UserRepository = {
   },
 
   async remove(event: H3Event, id: string): Promise<void> {
-    const client = serverSupabaseServiceRole<Database>(event)
+    const client = serverSupabaseClient(event)
     const { error } = await client.auth.admin.deleteUser(id)
     if (error) throwDbError(error, 'users.remove')
   },

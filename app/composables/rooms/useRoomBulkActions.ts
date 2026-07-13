@@ -19,7 +19,7 @@ export function useRoomBulkActions() {
 
     isRunning.value = true
     try {
-      const res = await $fetch<ApiSuccess<RoomBulkResult>>('/api/rooms/bulk', {
+      const res = await apiFetch<ApiSuccess<RoomBulkResult>>('/api/rooms/bulk', {
         method: 'POST',
         body: {
           action,

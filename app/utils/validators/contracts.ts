@@ -11,7 +11,7 @@ const toArray = <T>(value: T | T[] | undefined): T[] | undefined => {
 
 export const contractListQuerySchema = z.object({
   page: z.coerce.number().int().min(1).optional().default(1),
-  limit: z.coerce.number().int().min(1).max(1000).optional().default(20),
+  limit: z.coerce.number().int().min(1).max(200).optional().default(20),
   q: z.preprocess(
     v => (typeof v === 'string' && v.trim() === '' ? undefined : v),
     z.string().trim().min(1).max(100).optional(),

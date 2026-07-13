@@ -12,7 +12,7 @@ export function useInvoiceDetail() {
     isLoading.value = true
     error.value = null
     try {
-      const resp = await $fetch<ApiSuccess<InvoiceWithCharges>>(`/api/billing/invoices/${invoiceId}`)
+      const resp = await apiFetch<ApiSuccess<InvoiceWithCharges>>(`/api/billing/invoices/${invoiceId}`)
       detail.value = resp.data
       return resp.data
     }

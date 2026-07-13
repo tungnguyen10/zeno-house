@@ -1,5 +1,4 @@
 import type { H3Event } from 'h3'
-import { db as serverSupabaseClient } from '../../utils/db'
 import type { AuthUser } from '~/types/auth'
 import type {
   BillingDraftBlocker,
@@ -14,10 +13,10 @@ import {
   BILLING_WARNING_CODES,
 } from '~/utils/constants/billing'
 import { BillingPeriodRepository } from '../../repositories/billing/periods'
-import { InvoiceRepository } from '../../repositories/billing/invoices'
-import { BillingUtilityUsageRepository } from '../../repositories/billing/utility-usages'
+import { BillingSnapshotRepository } from '../../repositories/billing/snapshot'
+import type { BillingPeriodInputSnapshot } from '../../repositories/billing/snapshot'
 import { assertBuildingScope } from '../../utils/scope'
-import { billingPeriodBounds, loadBillableContractsInPeriod, type BillableContractPeriodRow } from './core'
+import { billingPeriodBounds, type BillableContractPeriodRow } from './core'
 import { calculateProratedRent } from './rules'
 
 // ---------------------------------------------------------------------------
@@ -120,24 +119,20 @@ export const BillingDraftService = {
     event: H3Event,
     user: AuthUser,
     periodId: string,
+    preloaded?: { period: BillingPeriod, snapshot: BillingPeriodInputSnapshot },
   ): Promise<BillingDraftResponse> {
     if (!can(user, 'billing.read')) throwForbidden('Không có quyền xem dự thảo')
 
-    const period = await BillingPeriodRepository.findById(event, periodId)
+    const period = preloaded?.period ?? await BillingPeriodRepository.findById(event, periodId)
     if (!period) throwNotFound('Không tìm thấy kỳ vận hành')
     await assertBuildingScope(event, user, period.buildingId, 'read')
 
-    const supabase = await serverSupabaseClient(event)
     const { first: firstDay, last: lastDay } = billingPeriodBounds(period.periodYear, period.periodMonth)
     const prev = previousPeriod(period.periodYear, period.periodMonth)
+    const snapshot = preloaded?.snapshot ?? await BillingSnapshotRepository.load(event, period.id)
 
     // Building pricing config
-    const { data: building, error: bErr } = await supabase
-      .from('buildings')
-      .select('id, name, electricity_pricing_type, default_electricity_rate, water_pricing_type, default_water_rate')
-      .eq('id', period.buildingId)
-      .single()
-    if (bErr) throw createError({ statusCode: 500, message: bErr.message })
+    const building = snapshot.building
     const buildingCfg: BuildingPricing = {
       id: building.id,
       name: building.name,
@@ -148,12 +143,13 @@ export const BillingDraftService = {
     }
 
     // Active contracts for this building/period
-    const activeContracts = await loadBillableContractsInPeriod<ContractRow>(event, {
-      buildingId: period.buildingId,
-      periodYear: period.periodYear,
-      periodMonth: period.periodMonth,
-      select: 'id, contract_code, building_id, room_id, tenant_id, start_date, end_date, monthly_rent, occupant_count, discount_amount, surcharge_amount, payment_day, status',
-    })
+    const activeContracts = snapshot.contracts.map(contract => ({
+      ...contract,
+      monthly_rent: Number(contract.monthly_rent),
+      deposit: Number(contract.deposit),
+      discount_amount: Number(contract.discount_amount),
+      surcharge_amount: Number(contract.surcharge_amount),
+    })) as unknown as ContractRow[]
 
     if (activeContracts.length === 0) {
       return {
@@ -163,17 +159,13 @@ export const BillingDraftService = {
       }
     }
 
-    const contractIds = activeContracts.map(c => c.id)
     const roomIds = [...new Set(activeContracts.map(c => c.room_id))]
-    const tenantIds = [...new Set(activeContracts.map(c => c.tenant_id))]
-
     // Contract services
-    const { data: services, error: sErr } = await supabase
-      .from('contract_services')
-      .select('id, contract_id, catalog_id, amount, quantity, is_enabled, service_catalog(id, code, name, pricing_type)')
-      .in('contract_id', contractIds)
-      .eq('is_enabled', true)
-    if (sErr) throw createError({ statusCode: 500, message: sErr.message })
+    const services = snapshot.services.map(service => ({
+      ...service,
+      amount: Number(service.amount),
+      quantity: Number(service.quantity),
+    }))
     const servicesByContract = new Map<string, ContractServiceRow[]>()
     for (const s of (services ?? []) as unknown as ContractServiceRow[]) {
       const list = servicesByContract.get(s.contract_id) ?? []
@@ -182,11 +174,7 @@ export const BillingDraftService = {
     }
 
     // Contract occupants
-    const { data: occupants, error: oErr } = await supabase
-      .from('contract_occupants')
-      .select('id, contract_id, move_in_date, move_out_date, billing_counted')
-      .in('contract_id', contractIds)
-    if (oErr) throw createError({ statusCode: 500, message: oErr.message })
+    const occupants = snapshot.occupants
     const occupantsByContract = new Map<string, ContractOccupantRow[]>()
     for (const o of (occupants ?? []) as ContractOccupantRow[]) {
       const list = occupantsByContract.get(o.contract_id) ?? []
@@ -194,33 +182,15 @@ export const BillingDraftService = {
       occupantsByContract.set(o.contract_id, list)
     }
 
-    // Current period readings
-    const { data: currentReadings, error: rErr } = await supabase
-      .from('meter_readings')
-      .select('id, room_id, meter_type, reading_type, period_year, period_month, reading_value')
-      .in('room_id', roomIds)
-      .eq('period_year', period.periodYear)
-      .eq('period_month', period.periodMonth)
-      .eq('reading_type', 'monthly')
-    if (rErr) throw createError({ statusCode: 500, message: rErr.message })
-
-    // Previous period readings (monthly)
-    const { data: prevReadings, error: prErr } = await supabase
-      .from('meter_readings')
-      .select('id, room_id, meter_type, reading_type, period_year, period_month, reading_value')
-      .in('room_id', roomIds)
-      .eq('period_year', prev.year)
-      .eq('period_month', prev.month)
-      .eq('reading_type', 'monthly')
-    if (prErr) throw createError({ statusCode: 500, message: prErr.message })
-
-    // Handover_in readings (per room+meter, latest before period)
-    const { data: handoverReadings, error: hErr } = await supabase
-      .from('meter_readings')
-      .select('id, room_id, meter_type, reading_type, period_year, period_month, reading_value')
-      .in('room_id', roomIds)
-      .eq('reading_type', 'handover_in')
-    if (hErr) throw createError({ statusCode: 500, message: hErr.message })
+    const snapshotReadings = snapshot.readings.map(reading => ({
+      ...reading,
+      reading_value: Number(reading.reading_value),
+    })) as unknown as MeterReadingRow[]
+    const currentReadings = snapshotReadings.filter(reading => reading.reading_type === 'monthly'
+      && reading.period_year === period.periodYear && reading.period_month === period.periodMonth)
+    const prevReadings = snapshotReadings.filter(reading => reading.reading_type === 'monthly'
+      && reading.period_year === prev.year && reading.period_month === prev.month)
+    const handoverReadings = snapshotReadings.filter(reading => reading.reading_type === 'handover_in')
 
     const indexByRoomMeter = (rows: MeterReadingRow[]) => {
       const m = new Map<string, MeterReadingRow>()
@@ -232,28 +202,22 @@ export const BillingDraftService = {
     const handoverByRoomMeter = indexByRoomMeter((handoverReadings ?? []) as MeterReadingRow[])
 
     // Utility usage overrides for this period
-    const overrides = await BillingUtilityUsageRepository.listByPeriod(event, period.id)
+    const overrides = snapshot.overrides
     const overrideByRoomMeter = new Map<string, (typeof overrides)[number]>()
     for (const ov of overrides) overrideByRoomMeter.set(`${ov.roomId}::${ov.meterType}`, ov)
 
     // Existing invoices for this period (active = non-void)
-    const existingInvoices = await InvoiceRepository.listByPeriod(event, period.id)
+    const existingInvoices = snapshot.invoices
     const activeInvoiceByContract = new Map<string, (typeof existingInvoices)[number]>()
     for (const inv of existingInvoices) {
       if (inv.status !== 'void') activeInvoiceByContract.set(inv.contractId, inv)
     }
 
     // Rooms + tenants for display
-    const { data: rooms } = await supabase
-      .from('rooms')
-      .select('id, room_number')
-      .in('id', roomIds)
+    const rooms = snapshot.rooms.filter(room => roomIds.includes(room.id))
     const roomById = new Map<string, RoomRow>(((rooms ?? []) as RoomRow[]).map(r => [r.id, r]))
 
-    const { data: tenants } = await supabase
-      .from('tenants')
-      .select('id, full_name')
-      .in('id', tenantIds)
+    const tenants = snapshot.tenants
     const tenantById = new Map<string, TenantRow>(((tenants ?? []) as TenantRow[]).map(t => [t.id, t]))
 
     // ----- Build a draft invoice per active contract -----

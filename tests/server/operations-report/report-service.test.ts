@@ -5,7 +5,7 @@ import type { ReportBillingData } from '../../../server/repositories/operations-
 import { can as realCan } from '../../../server/utils/permissions'
 
 const findBuildingById = vi.fn()
-const fetchBillingData = vi.fn()
+const fetchSnapshot = vi.fn()
 const listFixedCosts = vi.fn()
 const listExpenses = vi.fn()
 const listActiveAllocations = vi.fn()
@@ -22,7 +22,7 @@ vi.mock('../../../server/repositories/buildings', () => ({
 }))
 
 vi.mock('../../../server/repositories/operations-report/report', () => ({
-  OperationsReportRepository: { fetchBillingData },
+  OperationsReportRepository: { fetchSnapshot },
 }))
 
 vi.mock('../../../server/repositories/operations-report/periods', () => ({
@@ -123,12 +123,13 @@ const billing: ReportBillingData = {
 }
 
 describe('OperationsReportService.getReport', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks()
+    const { clearOperationsReportCache } = await import('../../../server/services/operations-report/cache')
+    clearOperationsReportCache()
     vi.stubGlobal('can', realCan)
     findBuildingById.mockResolvedValue({ id: 'building-1', name: 'Building 1' })
     assertBuildingScope.mockResolvedValue(undefined)
-    fetchBillingData.mockResolvedValue(billing)
     listFixedCosts.mockResolvedValue([fixedCost({})])
     listExpenses.mockResolvedValue([
       expense({ category: 'electricity_input', amount: 900_000 }),
@@ -233,6 +234,19 @@ describe('OperationsReportService.getReport', () => {
         },
       ],
     })
+    fetchSnapshot.mockImplementation(async () => {
+      const fund = await getReserveFund()
+      const rate = await findEffectiveRate()
+      return {
+        billing,
+        fixedCosts: await listFixedCosts(),
+        expenses: await listExpenses(),
+        prepaidItems: await listActiveAllocations(),
+        closure: await findOrOpenClosure(),
+        reserveTransactions: fund.transactions,
+        reserveRate: rate,
+      }
+    })
   })
 
   async function run() {
@@ -278,6 +292,14 @@ describe('OperationsReportService.getReport', () => {
     })
   })
 
+  it('reuses a scoped closed-period report snapshot', async () => {
+    const first = await run()
+    const second = await run()
+
+    expect(second).toBe(first)
+    expect(fetchSnapshot).toHaveBeenCalledTimes(1)
+  })
+
   it('computes utility margins from revenue vs input expenses', async () => {
     const report = await run()
 
@@ -314,7 +336,7 @@ describe('OperationsReportService.getReport', () => {
     )
   })
 
-  it('does not fetch reserve details when user lacks reserve-fund.read', async () => {
+  it('does not expose reserve details when user lacks reserve-fund.read', async () => {
     const { OperationsReportService } = await import(
       '../../../server/services/operations-report/report'
     )
@@ -326,8 +348,6 @@ describe('OperationsReportService.getReport', () => {
     })
 
     expect(report.reserveFund).toBeNull()
-    expect(getReserveFund).not.toHaveBeenCalled()
-    expect(findEffectiveRate).not.toHaveBeenCalled()
   })
 
   it('uses estimated monthly accrual when report is open', async () => {

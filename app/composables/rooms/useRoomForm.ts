@@ -53,7 +53,7 @@ export function useRoomForm<T = unknown>(options: UseRoomFormOptions<T> = {}) {
 
     isLoading.value = true
     try {
-      await $fetch<ApiSuccess<Room>>('/api/rooms', {
+      await apiFetch<ApiSuccess<Room>>('/api/rooms', {
         method: 'POST',
         body: result.data,
       })
@@ -80,7 +80,7 @@ export function useRoomForm<T = unknown>(options: UseRoomFormOptions<T> = {}) {
 
     isLoading.value = true
     try {
-      const res = await $fetch<ApiSuccess<Room>>(`/api/rooms/${id}`, {
+      const res = await apiFetch<ApiSuccess<Room>>(`/api/rooms/${id}`, {
         method: 'PATCH',
         body: result.data,
       })

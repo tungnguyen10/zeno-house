@@ -135,7 +135,7 @@ async function createContract(data: ContractFormData) {
   if (pendingOccupants.value.length > 0) {
     const results = await Promise.allSettled(
       pendingOccupants.value.map(occupant =>
-        $fetch(`/api/contracts/${created.id}/occupants`, {
+        apiFetch(`/api/contracts/${created.id}/occupants`, {
           method: 'POST',
           body: {
             tenant_id: occupant.tenant_id,

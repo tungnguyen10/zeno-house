@@ -92,10 +92,11 @@ export const AuditService = {
       return
     }
 
-    for (const item of opts.items) {
-      if (!opts.succeeded.includes(item.entity_id)) continue
-      try {
-        await AuditRepository.append(event, {
+    const succeeded = new Set(opts.succeeded)
+    try {
+      await AuditRepository.appendMany(
+        event,
+        opts.items.filter(item => succeeded.has(item.entity_id)).map(item => ({
           building_id: item.building_id !== undefined ? item.building_id : opts.building_id,
           actor_id: user.id ?? null,
           action: item.action,
@@ -104,12 +105,12 @@ export const AuditService = {
           correlation_id: parentId,
           before_data: item.before_data,
           after_data: item.after_data,
-        })
-      }
-      catch (err) {
-        if (process.env?.NODE_ENV !== 'production') {
-          console.error(`[AuditService] appendBulk child ${item.entity_id} failed (silent):`, err)
-        }
+        })),
+      )
+    }
+    catch (err) {
+      if (process.env?.NODE_ENV !== 'production') {
+        console.error('[AuditService] appendBulk children failed (silent):', err)
       }
     }
   },

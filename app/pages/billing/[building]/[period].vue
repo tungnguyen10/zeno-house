@@ -33,7 +33,7 @@ async function resolvePeriod() {
   resolving.value = true
   resolveError.value = null
   try {
-    const resp = await $fetch<{ data: BillingPeriod }>('/api/billing/periods', {
+    const resp = await apiFetch<{ data: BillingPeriod }>('/api/billing/periods', {
       method: 'POST',
       body: { building_id: buildingParam, period_year: periodYear, period_month: periodMonth },
     })

@@ -1,5 +1,4 @@
 import type { H3Event } from 'h3'
-import { db as serverSupabaseClient } from '../../utils/db'
 import type { AuthUser } from '~/types/auth'
 import type {
   BillingDraftBlocker,
@@ -18,8 +17,7 @@ import {
   type BillingBlockerCode,
 } from '~/utils/constants/billing'
 import { BillingPeriodRepository } from '../../repositories/billing/periods'
-import { BillingUtilityUsageRepository } from '../../repositories/billing/utility-usages'
-import { InvoiceRepository } from '../../repositories/billing/invoices'
+import { BillingSnapshotRepository } from '../../repositories/billing/snapshot'
 import { assertBuildingScope } from '../../utils/scope'
 import { calculateRequiredReadingProgress } from './core'
 import { BillingDraftService } from './drafts'
@@ -298,16 +296,11 @@ export const BillingDraftGridService = {
     if (!period) throwNotFound('Không tìm thấy kỳ vận hành')
     await assertBuildingScope(event, user, period.buildingId, 'read')
 
-    const supabase = await serverSupabaseClient(event)
     const prev = previousPeriod(period.periodYear, period.periodMonth)
+    const snapshot = await BillingSnapshotRepository.load(event, period.id)
 
     // Building pricing config
-    const { data: building, error: bErr } = await supabase
-      .from('buildings')
-      .select('name, electricity_pricing_type, default_electricity_rate, water_pricing_type, default_water_rate')
-      .eq('id', period.buildingId)
-      .single()
-    if (bErr) throw createError({ statusCode: 500, message: bErr.message })
+    const building = snapshot.building
     const pricing: BuildingPricing = {
       name: building.name ?? null,
       electricity_pricing_type: building.electricity_pricing_type ?? null,
@@ -317,39 +310,22 @@ export const BillingDraftGridService = {
     }
 
     // Rooms in building (including vacant)
-    const { data: roomData, error: rErr } = await supabase
-      .from('rooms')
-      .select('id, room_number, floor, status')
-      .eq('building_id', period.buildingId)
-      .order('room_number', { ascending: true })
-    if (rErr) throw createError({ statusCode: 500, message: rErr.message })
-    const rooms: RoomRow[] = (roomData ?? []) as RoomRow[]
-    const roomIds = rooms.map(r => r.id)
+    const rooms = snapshot.rooms as RoomRow[]
 
     // Current period readings (need reading_date for the cell display)
-    const { data: currentData, error: cErr } = await supabase
-      .from('meter_readings')
-      .select('id, room_id, meter_type, reading_value, reading_date')
-      .in('room_id', roomIds.length > 0 ? roomIds : ['00000000-0000-0000-0000-000000000000'])
-      .eq('period_year', period.periodYear)
-      .eq('period_month', period.periodMonth)
-      .eq('reading_type', 'monthly')
-    if (cErr) throw createError({ statusCode: 500, message: cErr.message })
-    const currentByKey = indexByRoomMeter((currentData ?? []) as MeterReadingRow[])
+    const currentData = snapshot.readings.filter(reading => reading.reading_type === 'monthly'
+      && reading.period_year === period.periodYear && reading.period_month === period.periodMonth)
+      .map(reading => ({ ...reading, reading_value: Number(reading.reading_value) })) as MeterReadingRow[]
+    const currentByKey = indexByRoomMeter(currentData)
 
     // Previous period readings
-    const { data: prevData, error: pErr } = await supabase
-      .from('meter_readings')
-      .select('id, room_id, meter_type, reading_value, reading_date')
-      .in('room_id', roomIds.length > 0 ? roomIds : ['00000000-0000-0000-0000-000000000000'])
-      .eq('period_year', prev.year)
-      .eq('period_month', prev.month)
-      .eq('reading_type', 'monthly')
-    if (pErr) throw createError({ statusCode: 500, message: pErr.message })
-    const prevByKey = indexByRoomMeter((prevData ?? []) as MeterReadingRow[])
+    const prevData = snapshot.readings.filter(reading => reading.reading_type === 'monthly'
+      && reading.period_year === prev.year && reading.period_month === prev.month)
+      .map(reading => ({ ...reading, reading_value: Number(reading.reading_value) })) as MeterReadingRow[]
+    const prevByKey = indexByRoomMeter(prevData)
 
     // Draft (reuses existing draft service end-to-end)
-    const draftResp = await BillingDraftService.calculateDraft(event, user, periodId)
+    const draftResp = await BillingDraftService.calculateDraft(event, user, periodId, { period, snapshot })
     const draftByContract = new Map<string, BillingDraftInvoice>()
     const draftByRoom = new Map<string, BillingDraftInvoice>()
     for (const d of draftResp.drafts) {
@@ -367,11 +343,11 @@ export const BillingDraftGridService = {
 
     // Override metadata for warnings (used directly by draft service, but we may need
     // it for cells where the draft has no electricity/water line — currently not the case).
-    const usageOverrides = await BillingUtilityUsageRepository.listByPeriod(event, period.id)
+    const usageOverrides = snapshot.overrides
     const sharedReadingProgress = calculateRequiredReadingProgress({
       contracts: draftResp.drafts.map(draft => ({ room_id: draft.roomId })),
       pricing,
-      readings: (currentData ?? []) as Array<{ room_id: string; meter_type: 'electricity' | 'water' }>,
+      readings: currentData,
       overrides: usageOverrides.map(override => ({
         roomId: override.roomId,
         meterType: override.meterType,
@@ -466,10 +442,8 @@ export const BillingDraftGridService = {
       }
     }
 
-    const [invoices, auditEvents] = await Promise.all([
-      InvoiceRepository.listByPeriod(event, period.id),
-      BillingAuditService.listByPeriod(event, user, period.id),
-    ])
+    const invoices = snapshot.invoices
+    const auditEvents = await BillingAuditService.listByPeriod(event, user, period.id)
     const activeInvoices = invoices.filter(invoice => invoice.status !== 'void')
     const issuedTotal = activeInvoices.reduce((sum, invoice) => sum + invoice.totalAmount, 0)
     const paidTotal = activeInvoices.reduce((sum, invoice) => sum + invoice.paidAmount, 0)

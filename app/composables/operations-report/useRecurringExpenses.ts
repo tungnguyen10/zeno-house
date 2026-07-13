@@ -29,7 +29,7 @@ export function useRecurringExpenses(buildingId: MaybeRef<string | null | undefi
   }, { immediate: true })
 
   async function createRecurringExpense(payload: Record<string, unknown>): Promise<RecurringExpense> {
-    const res = await $fetch<ApiSuccess<RecurringExpense>>('/api/recurring-expenses', {
+    const res = await apiFetch<ApiSuccess<RecurringExpense>>('/api/recurring-expenses', {
       method: 'POST',
       body: payload,
     })
@@ -41,7 +41,7 @@ export function useRecurringExpenses(buildingId: MaybeRef<string | null | undefi
     id: string,
     payload: Record<string, unknown>,
   ): Promise<RecurringExpense> {
-    const res = await $fetch<ApiSuccess<RecurringExpense>>(`/api/recurring-expenses/${id}`, {
+    const res = await apiFetch<ApiSuccess<RecurringExpense>>(`/api/recurring-expenses/${id}`, {
       method: 'PATCH',
       body: payload,
     })
@@ -50,7 +50,7 @@ export function useRecurringExpenses(buildingId: MaybeRef<string | null | undefi
   }
 
   async function deleteRecurringExpense(id: string): Promise<void> {
-    await $fetch(`/api/recurring-expenses/${id}`, { method: 'DELETE' })
+    await apiFetch(`/api/recurring-expenses/${id}`, { method: 'DELETE' })
     await Promise.all([refresh(), refreshUpcoming()])
   }
 
@@ -58,7 +58,7 @@ export function useRecurringExpenses(buildingId: MaybeRef<string | null | undefi
     id: string,
     payload: Record<string, unknown> = {},
   ): Promise<{ recurringExpense: RecurringExpense, prefill: RecurringExpenseRecordPrefill }> {
-    const res = await $fetch<ApiSuccess<{
+    const res = await apiFetch<ApiSuccess<{
       recurringExpense: RecurringExpense
       prefill: RecurringExpenseRecordPrefill
     }>>(`/api/recurring-expenses/${id}/record`, {
@@ -70,7 +70,7 @@ export function useRecurringExpenses(buildingId: MaybeRef<string | null | undefi
   }
 
   async function dismissRecurringExpense(id: string): Promise<RecurringExpense> {
-    const res = await $fetch<ApiSuccess<RecurringExpense>>(`/api/recurring-expenses/${id}/dismiss`, {
+    const res = await apiFetch<ApiSuccess<RecurringExpense>>(`/api/recurring-expenses/${id}/dismiss`, {
       method: 'POST',
     })
     await Promise.all([refresh(), refreshUpcoming()])

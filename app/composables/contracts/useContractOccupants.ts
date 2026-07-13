@@ -11,7 +11,7 @@ export function useContractOccupants(contractId: MaybeRef<string>) {
     isLoading.value = true
     error.value = null
     try {
-      const res = await $fetch<ApiSuccess<ContractOccupant[]>>(
+      const res = await apiFetch<ApiSuccess<ContractOccupant[]>>(
         `/api/contracts/${toValue(contractId)}/occupants`,
       )
       occupants.value = res.data
@@ -23,7 +23,7 @@ export function useContractOccupants(contractId: MaybeRef<string>) {
   }
 
   async function addOccupant(input: ContractOccupantAddInput): Promise<ContractOccupant> {
-    const res = await $fetch<ApiSuccess<ContractOccupant>>(
+    const res = await apiFetch<ApiSuccess<ContractOccupant>>(
       `/api/contracts/${toValue(contractId)}/occupants`,
       { method: 'POST', body: input },
     )
@@ -32,7 +32,7 @@ export function useContractOccupants(contractId: MaybeRef<string>) {
   }
 
   async function moveOut(occupantId: string, input: ContractOccupantMoveOutInput): Promise<void> {
-    const res = await $fetch<ApiSuccess<ContractOccupant>>(
+    const res = await apiFetch<ApiSuccess<ContractOccupant>>(
       `/api/contracts/${toValue(contractId)}/occupants/${occupantId}`,
       { method: 'PATCH', body: input },
     )
@@ -41,7 +41,7 @@ export function useContractOccupants(contractId: MaybeRef<string>) {
   }
 
   async function removeOccupant(occupantId: string): Promise<void> {
-    await $fetch(
+    await apiFetch(
       `/api/contracts/${toValue(contractId)}/occupants/${occupantId}`,
       { method: 'DELETE' },
     )

@@ -92,6 +92,10 @@ vi.stubGlobal('throwNotFound', (message = 'Not found') => {
 vi.stubGlobal('can', () => true)
 
 vi.stubGlobal('useToast', () => ({ success: vi.fn(), info: vi.fn(), error: vi.fn() }))
+vi.stubGlobal('apiFetch', (...args: unknown[]) => (globalThis as { $fetch: (...values: unknown[]) => unknown }).$fetch(...args))
+vi.stubGlobal('createLatestApiRequest', () => (...args: unknown[]) => (
+  globalThis as { apiFetch: (...values: unknown[]) => unknown }
+).apiFetch(...args))
 
 // Role helpers are auto-imported in server code (server/utils/roles.ts). Provide
 // real implementations here so server code under test resolves roles correctly.

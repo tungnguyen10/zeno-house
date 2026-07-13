@@ -138,7 +138,7 @@ export function useTenantBulkCreate() {
         return
       }
 
-      const response = await $fetch<{ data: TenantBulkCreateRowInput[]; meta: { parseError: string | null } }>(
+      const response = await apiFetch<{ data: TenantBulkCreateRowInput[]; meta: { parseError: string | null } }>(
         '/api/tenants/parse-import',
         { method: 'POST', body: { filename: file.name, content } },
       )
@@ -160,7 +160,7 @@ export function useTenantBulkCreate() {
 
     isSubmitting.value = true
     try {
-      const response = await $fetch<ApiSuccess<TenantBulkCreateResult>>('/api/tenants/bulk-create', {
+      const response = await apiFetch<ApiSuccess<TenantBulkCreateResult>>('/api/tenants/bulk-create', {
         method: 'POST',
         body: { rows: rows.value },
       })

@@ -3,13 +3,24 @@ import type { AuthUser } from '~/types/auth'
 import type { BillingAuditEvent } from '~/types/billing'
 import type { BillingAuditCategory, BillingAuditEntityType } from '~/utils/constants/billing'
 import { billingAuditActionsForCategories } from '~/utils/constants/billing'
-import { BillingAuditRepository } from '../../repositories/billing/audit'
+import { BillingAuditRepository, encodeBillingAuditCursor } from '../../repositories/billing/audit'
 import { formatAuditSummary } from './audit-summary'
 import { BillingDisplayResolver } from './display'
 import { BillingPeriodRepository } from '../../repositories/billing/periods'
 import { assertBuildingScope } from '../../utils/scope'
 
 declare const process: { env?: Record<string, string | undefined> }
+
+export interface BillingAuditAppendOptions {
+  billing_period_id: string | null
+  action: string
+  entity_type: BillingAuditEntityType
+  entity_id?: string | null
+  correlation_id?: string | null
+  before_data?: unknown
+  after_data?: unknown
+  metadata?: Record<string, unknown>
+}
 
 /**
  * Enrich raw audit rows with resolved actor names, entity labels/links, and a
@@ -72,43 +83,32 @@ async function enrichAuditEvents(
 }
 
 /**
- * Apply case-insensitive substring search across resolved/metadata string
- * fields (tenant/room label, invoice code, summary, and metadata note/reason).
- */
-function matchesQuery(item: BillingAuditEvent, q: string): boolean {
-  const haystacks: (string | null | undefined)[] = [
-    item.actorName,
-    item.actorEmail,
-    item.entityLabel,
-    item.entitySubLabel,
-    item.summary,
-    item.action,
-    typeof item.metadata.note === 'string' ? item.metadata.note : null,
-    typeof item.metadata.reason === 'string' ? item.metadata.reason : null,
-    typeof item.metadata.invoice_code === 'string' ? item.metadata.invoice_code : null,
-  ]
-  return haystacks.some(value => value != null && value.toLowerCase().includes(q))
-}
-
-/**
  * Append a billing audit event. Callers (the other billing services) should
  * use this helper rather than calling the repository directly so the actor id
  * is consistently sourced from the authenticated user.
  */
 export const BillingAuditService = {
+  async appendMany(
+    event: H3Event,
+    user: AuthUser,
+    inputs: BillingAuditAppendOptions[],
+  ): Promise<BillingAuditEvent[]> {
+    return BillingAuditRepository.appendMany(event, inputs.map(input => ({
+      billing_period_id: input.billing_period_id,
+      actor_id: user.id ?? null,
+      action: input.action,
+      entity_type: input.entity_type,
+      entity_id: input.entity_id ?? null,
+      correlation_id: input.correlation_id ?? null,
+      before_data: input.before_data,
+      after_data: input.after_data,
+      metadata: input.metadata,
+    })))
+  },
   async append(
     event: H3Event,
     user: AuthUser,
-    input: {
-      billing_period_id: string | null
-      action: string
-      entity_type: BillingAuditEntityType
-      entity_id?: string | null
-      correlation_id?: string | null
-      before_data?: unknown
-      after_data?: unknown
-      metadata?: Record<string, unknown>
-    },
+    input: BillingAuditAppendOptions,
   ): Promise<BillingAuditEvent> {
     return BillingAuditRepository.append(event, {
       billing_period_id: input.billing_period_id,
@@ -137,10 +137,8 @@ export const BillingAuditService = {
   },
 
   /**
-   * Filtered + searchable + paginated audit list for the rework drawer.
-   * Index-safe filters (actor, category→action, date range, correlation) run at
-   * the DB; free-text search and cursor pagination run after enrichment since
-   * they target resolved fields. Returns at most 100 items per page.
+   * Filtered + searchable + paginated audit list for the rework drawer. SQL
+   * filters and paginates before display enrichment. Returns at most 100 rows.
    */
   async listByPeriodFiltered(
     event: H3Event,
@@ -172,23 +170,21 @@ export const BillingAuditService = {
       from: query.from,
       to: query.to,
       correlationId: query.correlationId,
+      cursor: query.cursor,
+      limit: query.limit,
+      q: query.q,
     })
-    let enriched = await enrichAuditEvents(event, billingPeriodId, rows)
-
-    if (query.q) {
-      const needle = query.q.toLowerCase()
-      enriched = enriched.filter(item => matchesQuery(item, needle))
-    }
-
-    // Rows arrive ordered created_at desc from the DB; preserve that order.
-    if (query.cursor) {
-      enriched = enriched.filter(item => item.createdAt < query.cursor!)
-    }
-
     const limit = Math.min(query.limit ?? 100, 100)
-    const page = enriched.slice(0, limit)
-    const nextCursor = enriched.length > limit ? page[page.length - 1]?.createdAt ?? null : null
+    const pageRows = rows.slice(0, limit)
+    const enriched = await enrichAuditEvents(
+      event,
+      billingPeriodId,
+      pageRows,
+    )
+    const nextCursor = rows.length > limit && enriched.length > 0
+      ? encodeBillingAuditCursor(enriched[enriched.length - 1]!)
+      : null
 
-    return { items: page, nextCursor }
+    return { items: enriched, nextCursor }
   },
 }

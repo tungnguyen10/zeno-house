@@ -15,7 +15,7 @@ export function usePrepaidExpenses(buildingId: MaybeRef<string | null | undefine
   }, { immediate: true })
 
   async function createPrepaidExpense(payload: Record<string, unknown>): Promise<PrepaidExpense> {
-    const res = await $fetch<ApiSuccess<PrepaidExpense>>('/api/prepaid-expenses', {
+    const res = await apiFetch<ApiSuccess<PrepaidExpense>>('/api/prepaid-expenses', {
       method: 'POST',
       body: payload,
     })
@@ -27,7 +27,7 @@ export function usePrepaidExpenses(buildingId: MaybeRef<string | null | undefine
     id: string,
     payload: Record<string, unknown>,
   ): Promise<PrepaidExpense> {
-    const res = await $fetch<ApiSuccess<PrepaidExpense>>(`/api/prepaid-expenses/${id}`, {
+    const res = await apiFetch<ApiSuccess<PrepaidExpense>>(`/api/prepaid-expenses/${id}`, {
       method: 'PATCH',
       body: payload,
     })
@@ -36,7 +36,7 @@ export function usePrepaidExpenses(buildingId: MaybeRef<string | null | undefine
   }
 
   async function deletePrepaidExpense(id: string): Promise<void> {
-    await $fetch(`/api/prepaid-expenses/${id}`, { method: 'DELETE' })
+    await apiFetch(`/api/prepaid-expenses/${id}`, { method: 'DELETE' })
     await refresh()
   }
 

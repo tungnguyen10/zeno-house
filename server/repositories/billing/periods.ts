@@ -5,6 +5,17 @@ import type { BillingPeriodStatus } from '~/utils/constants/billing'
 import { mapBillingPeriod } from '~/utils/mappers/billing'
 
 export const BillingPeriodRepository = {
+  async findManyByIds(event: H3Event, ids: string[]): Promise<BillingPeriod[]> {
+    const unique = [...new Set(ids)]
+    if (unique.length === 0) return []
+    const client = await serverSupabaseClient(event)
+    const { data, error } = await client
+      .from('billing_periods')
+      .select('*')
+      .in('id', unique)
+    if (error) throwDbError(error, 'billing.periods.findManyByIds')
+    return (data ?? []).map(mapBillingPeriod)
+  },
   async list(event: H3Event, filters: BillingPeriodListFilters): Promise<BillingPeriod[]> {
     if (filters.buildingIds && filters.buildingIds.length === 0) return []
 
@@ -54,6 +65,29 @@ export const BillingPeriodRepository = {
       .maybeSingle()
     if (error) throwDbError(error, 'billing.periods.findByBuildingPeriod')
     return data ? mapBillingPeriod(data) : null
+  },
+
+  async findByBuildingPeriods(
+    event: H3Event,
+    keys: Array<{ buildingId: string; periodYear: number; periodMonth: number }>,
+  ): Promise<Map<string, BillingPeriod>> {
+    if (keys.length === 0) return new Map()
+    const buildingIds = [...new Set(keys.map(key => key.buildingId))]
+    const periodYears = [...new Set(keys.map(key => key.periodYear))]
+    const periodMonths = [...new Set(keys.map(key => key.periodMonth))]
+    const requested = new Set(keys.map(key => `${key.buildingId}:${key.periodYear}:${key.periodMonth}`))
+    const client = await serverSupabaseClient(event)
+    const { data, error } = await client
+      .from('billing_periods')
+      .select('*')
+      .in('building_id', buildingIds)
+      .in('period_year', periodYears)
+      .in('period_month', periodMonths)
+    if (error) throwDbError(error, 'billing.periods.findByBuildingPeriods')
+    const periods = (data ?? []).map(mapBillingPeriod)
+    return new Map(periods
+      .filter(period => requested.has(`${period.buildingId}:${period.periodYear}:${period.periodMonth}`))
+      .map(period => [`${period.buildingId}:${period.periodYear}:${period.periodMonth}`, period]))
   },
 
   async insert(

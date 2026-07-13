@@ -1,6 +1,6 @@
 import { db as serverSupabaseClient } from '../utils/db'
 import type { H3Event } from 'h3'
-import type { SharedExpense } from '~/types/shared-expenses'
+import type { SharedExpense, SharedExpenseAllocationResult } from '~/types/shared-expenses'
 import type {
   SharedExpenseCreateInput,
   SharedExpenseUpdateInput,
@@ -22,6 +22,38 @@ async function mapWithBuildings(event: H3Event, row: SharedExpenseRow): Promise<
 }
 
 export const SharedExpenseRepository = {
+  async allocate(
+    event: H3Event,
+    sharedExpenseId: string,
+    periodYear: number,
+    periodMonth: number,
+    actorId: string,
+  ): Promise<SharedExpenseAllocationResult['generatedExpenses']> {
+    const client = await serverSupabaseClient(event)
+    const rpc = client.rpc as unknown as (
+      name: string,
+      args: Record<string, unknown>,
+    ) => PromiseLike<{
+      data: Array<{ building_id: string, expense_id: string, amount: number | string }> | null
+      error: { code?: string, message: string } | null
+    }>
+    const { data, error } = await rpc('allocate_shared_expense', {
+      p_shared_expense_id: sharedExpenseId,
+      p_period_year: periodYear,
+      p_period_month: periodMonth,
+      p_actor_id: actorId,
+    })
+    if (error) {
+      if (error.code === '23505') throwConflict('Kỳ này đã được phân bổ')
+      if (error.code === 'P0001') throwConflict('Không thể phân bổ vào kỳ đã chốt')
+      throwDbError(error, 'sharedExpenses.allocate')
+    }
+    return (data ?? []).map(row => ({
+      buildingId: row.building_id,
+      expenseId: row.expense_id,
+      amount: Number(row.amount),
+    }))
+  },
   async listByOwner(event: H3Event, ownerId: string): Promise<SharedExpense[]> {
     const client = await serverSupabaseClient(event)
     const { data, error } = await client

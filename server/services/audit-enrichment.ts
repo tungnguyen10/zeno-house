@@ -1,4 +1,3 @@
-import { serverSupabaseServiceRole } from '#supabase/server'
 import { db as serverSupabaseClient } from '../utils/db'
 import type { H3Event } from 'h3'
 import type { AuditEvent } from '~/types/audit'
@@ -59,7 +58,7 @@ async function loadActors(
   const result = new Map<string, { name: string | null; email: string | null }>()
   if (ids.length === 0) return result
   try {
-    const client = serverSupabaseServiceRole<Database>(event)
+    const client = serverSupabaseClient(event)
     await Promise.all(ids.map(async (id) => {
       const { data, error } = await client.auth.admin.getUserById(id)
       if (error || !data?.user) {

@@ -41,6 +41,7 @@ const occupantRepoMocks = vi.hoisted(() => ({
 const contractServicesMocks = vi.hoisted(() => ({
   cloneFromBuilding: vi.fn(),
 }))
+const bulkRepoMocks = vi.hoisted(() => ({ resolveBuildingScopes: vi.fn(), execute: vi.fn() }))
 
 vi.mock('../../server/repositories/contracts', () => ({
   ContractRepository: contractRepoMocks,
@@ -69,6 +70,7 @@ vi.mock('../../server/repositories/contract-occupants', () => ({
 vi.mock('../../server/services/contract-services', () => ({
   ContractServiceService: contractServicesMocks,
 }))
+vi.mock('../../server/repositories/bulk-actions', () => ({ BulkActionRepository: bulkRepoMocks }))
 
 const requireAuthMock = vi.hoisted(() => vi.fn())
 
@@ -218,6 +220,12 @@ beforeEach(() => {
   contractRepoMocks.countNonHandoverMeterReadingsForContract.mockResolvedValue(0)
   assignmentRepoMocks.findBuildingIdsByUser.mockResolvedValue(['building-1'])
   assignmentRepoMocks.findByUserAndBuilding.mockResolvedValue(null)
+  bulkRepoMocks.resolveBuildingScopes.mockImplementation((_event, _entity, ids: string[]) =>
+    Promise.resolve(new Map(ids.map(id => [id, 'building-1']))),
+  )
+  bulkRepoMocks.execute.mockImplementation((_event, _entity, _action, ids: string[]) =>
+    Promise.resolve(ids.map(id => ({ id, succeeded: true, reason: null }))),
+  )
 })
 
 describe('GET /api/contracts', () => {
@@ -461,7 +469,7 @@ describe('POST /api/contracts/bulk', () => {
     }
 
     expect(res.data).toEqual({ succeeded: ['a', 'b'], failed: [] })
-    expect(contractRepoMocks.update).toHaveBeenCalledTimes(2)
+    expect(bulkRepoMocks.execute).toHaveBeenCalledWith(expect.anything(), 'contract', 'terminate', ['a', 'b'])
   })
 
   it('returns mixed delete results with normalized reasons', async () => {

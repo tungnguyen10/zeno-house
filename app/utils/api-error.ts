@@ -1,7 +1,7 @@
 import type { ErrorCode } from '~/types/api'
 
 /**
- * Shape of errors thrown by `$fetch`/`useFetch` against our API. The standard envelope lives under
+ * Shape of errors thrown by `apiFetch`/`useFetch` against our API. The standard envelope lives under
  * `data.error`, but Nuxt/H3 also expose top-level `message`/`statusMessage`/`statusCode`.
  */
 export interface ApiErrorLike {

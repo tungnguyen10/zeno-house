@@ -64,7 +64,7 @@ export function useBuildingForm<T = unknown>(options: UseBuildingFormOptions<T> 
 
     isLoading.value = true
     try {
-      const res = await $fetch<ApiSuccess<Building>>('/api/buildings', {
+      const res = await apiFetch<ApiSuccess<Building>>('/api/buildings', {
         method: 'POST',
         body: result.data,
       })
@@ -72,7 +72,7 @@ export function useBuildingForm<T = unknown>(options: UseBuildingFormOptions<T> 
       if (quickRooms?.length && res.data?.id) {
         const buildingId = res.data.id
         await Promise.all(quickRooms.map(room =>
-          $fetch('/api/rooms', {
+          apiFetch('/api/rooms', {
             method: 'POST',
             body: {
               building_id: buildingId,
@@ -109,7 +109,7 @@ export function useBuildingForm<T = unknown>(options: UseBuildingFormOptions<T> 
 
     isLoading.value = true
     try {
-      const res = await $fetch<ApiSuccess<Building>>(`/api/buildings/${id}`, {
+      const res = await apiFetch<ApiSuccess<Building>>(`/api/buildings/${id}`, {
         method: 'PATCH',
         body: result.data,
       })

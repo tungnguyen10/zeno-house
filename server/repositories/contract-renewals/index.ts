@@ -1,7 +1,5 @@
-import { serverSupabaseServiceRole } from '#supabase/server'
 import { db as serverSupabaseClient } from '../../utils/db'
 import type { H3Event } from 'h3'
-import type { Database } from '~/types/database.types'
 import type { ContractRenewal } from '~/types/contract-renewals'
 import { mapContractRenewal } from '~/utils/mappers/contract-renewals'
 
@@ -33,7 +31,7 @@ export const ContractRenewalRepository = {
     // Use service-role: server is the only writer for renewal logs, and permission was
     // already verified at the service entry (`can(user, 'contracts.update')`).
     // RLS on contract_renewals stays strict as defense-in-depth for any direct client access.
-    const client = serverSupabaseServiceRole<Database>(event)
+    const client = serverSupabaseClient(event)
     const { data, error } = await client
       .from('contract_renewals')
       .insert(input)
@@ -49,7 +47,7 @@ export const ContractRenewalRepository = {
   async deleteById(event: H3Event, id: string): Promise<void> {
     // Best-effort cleanup used to roll back a log row when a follow-up write fails.
     // Uses service-role to mirror `insert()` and bypass RLS.
-    const client = serverSupabaseServiceRole<Database>(event)
+    const client = serverSupabaseClient(event)
     const { error } = await client.from('contract_renewals').delete().eq('id', id)
     if (error) {
       console.error('[ContractRenewalRepository.deleteById] rollback failed', { id, error })

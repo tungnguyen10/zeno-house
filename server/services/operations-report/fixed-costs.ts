@@ -11,6 +11,7 @@ import { BuildingFixedCostRepository } from '../../repositories/operations-repor
 import { AuditService } from '../audit'
 import { OperationsReportLockService } from './locks'
 import { assertBuildingScope } from '../../utils/scope'
+import { invalidateOperationsReport } from './cache'
 
 /** period ordinal used for range comparisons (year*12 + month). */
 function ordinal(year: number, month: number): number {
@@ -79,6 +80,7 @@ export const BuildingFixedCostService = {
       after_data: created,
     })
 
+    invalidateOperationsReport(created.buildingId)
     return created
   },
 
@@ -157,6 +159,7 @@ export const BuildingFixedCostService = {
       after_data: updated,
     })
 
+    invalidateOperationsReport(updated.buildingId)
     return updated
   },
 

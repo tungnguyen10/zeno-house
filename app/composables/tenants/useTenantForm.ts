@@ -56,7 +56,7 @@ export function useTenantForm<T = unknown>(options: UseTenantFormOptions<T> = {}
 
     isLoading.value = true
     try {
-      const res = await $fetch<ApiSuccess<Tenant>>('/api/tenants', {
+      const res = await apiFetch<ApiSuccess<Tenant>>('/api/tenants', {
         method: 'POST',
         body: result.data,
       })
@@ -87,7 +87,7 @@ export function useTenantForm<T = unknown>(options: UseTenantFormOptions<T> = {}
 
     isLoading.value = true
     try {
-      const res = await $fetch<ApiSuccess<Tenant>>(`/api/tenants/${id}`, {
+      const res = await apiFetch<ApiSuccess<Tenant>>(`/api/tenants/${id}`, {
         method: 'PATCH',
         body: result.data,
       })

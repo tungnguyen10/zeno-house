@@ -6,9 +6,9 @@ import type {
   SharedExpenseCreateInput,
   SharedExpenseUpdateInput,
 } from '~/utils/validators/shared-expenses'
-import { BuildingExpenseRepository } from '../repositories/operations-report/expenses'
 import { SharedExpenseRepository } from '../repositories/shared-expenses'
 import { OperationsReportLockService } from './operations-report/locks'
+import { invalidateOperationsReport } from './operations-report/cache'
 import { assertBuildingScope } from '../utils/scope'
 
 function ownerScopeId(user: AuthUser): string {
@@ -28,15 +28,6 @@ async function assertEveryBuildingInScope(
   for (const buildingId of buildingIds) {
     await assertBuildingScope(event, user, buildingId, 'write')
   }
-}
-
-function splitEvenly(amount: number, count: number): number[] {
-  if (count <= 0) return []
-  const base = Math.floor(amount / count)
-  const shares = Array.from({ length: count }, () => base)
-  const last = shares.length - 1
-  shares[last] = (shares[last] ?? 0) + amount - base * count
-  return shares
 }
 
 export const SharedExpenseService = {
@@ -102,36 +93,14 @@ export const SharedExpenseService = {
       )
     }
 
-    const alreadyAllocated = await SharedExpenseRepository.hasAllocation(
+    const generatedExpenses = await SharedExpenseRepository.allocate(
       event,
       id,
       input.period_year,
       input.period_month,
+      user.id,
     )
-    if (alreadyAllocated) throwConflict('Kỳ này đã được phân bổ')
-
-    const marker = `[shared:${id}:${input.period_year}-${String(input.period_month).padStart(2, '0')}]`
-    const shares = splitEvenly(expense.amount, expense.buildingIds.length)
-    const generatedExpenses = []
-    for (const [index, buildingId] of expense.buildingIds.entries()) {
-      const created = await BuildingExpenseRepository.insert(event, {
-        building_id: buildingId,
-        period_year: input.period_year,
-        period_month: input.period_month,
-        expense_date: null,
-        category: expense.category,
-        amount: shares[index]!,
-        note: `${marker} ${expense.name}`,
-        payee: null,
-        payment_method: null,
-        funded_by: 'direct',
-      }, user.id)
-      generatedExpenses.push({
-        buildingId,
-        expenseId: created.id,
-        amount: created.amount,
-      })
-    }
+    for (const buildingId of expense.buildingIds) invalidateOperationsReport(buildingId)
 
     return {
       sharedExpenseId: id,

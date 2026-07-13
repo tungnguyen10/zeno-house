@@ -99,7 +99,7 @@ export function useOperationsReport() {
 /** Standalone helpers for expense/fixed-cost mutations used by the report page. */
 export function useOperationsMutations() {
   async function createExpense(payload: Record<string, unknown>): Promise<BuildingExpense> {
-    const res = await $fetch<ApiSuccess<BuildingExpense>>('/api/building-expenses', {
+    const res = await apiFetch<ApiSuccess<BuildingExpense>>('/api/building-expenses', {
       method: 'POST',
       body: payload,
     })
@@ -110,7 +110,7 @@ export function useOperationsMutations() {
     id: string,
     payload: Record<string, unknown>,
   ): Promise<BuildingExpense> {
-    const res = await $fetch<ApiSuccess<BuildingExpense>>(`/api/building-expenses/${id}`, {
+    const res = await apiFetch<ApiSuccess<BuildingExpense>>(`/api/building-expenses/${id}`, {
       method: 'PATCH',
       body: payload,
     })
@@ -118,7 +118,7 @@ export function useOperationsMutations() {
   }
 
   async function voidExpense(id: string, voidReason: string): Promise<BuildingExpense> {
-    const res = await $fetch<ApiSuccess<BuildingExpense>>(`/api/building-expenses/${id}`, {
+    const res = await apiFetch<ApiSuccess<BuildingExpense>>(`/api/building-expenses/${id}`, {
       method: 'DELETE',
       body: { void_reason: voidReason },
     })
@@ -128,7 +128,7 @@ export function useOperationsMutations() {
   async function uploadExpenseReceipt(id: string, file: File): Promise<BuildingExpense> {
     const form = new FormData()
     form.append('receipt', file)
-    const res = await $fetch<ApiSuccess<BuildingExpense>>(`/api/building-expenses/${id}/receipt`, {
+    const res = await apiFetch<ApiSuccess<BuildingExpense>>(`/api/building-expenses/${id}/receipt`, {
       method: 'POST',
       body: form,
     })
@@ -136,14 +136,14 @@ export function useOperationsMutations() {
   }
 
   async function removeExpenseReceipt(id: string): Promise<BuildingExpense> {
-    const res = await $fetch<ApiSuccess<BuildingExpense>>(`/api/building-expenses/${id}/receipt`, {
+    const res = await apiFetch<ApiSuccess<BuildingExpense>>(`/api/building-expenses/${id}/receipt`, {
       method: 'DELETE',
     })
     return res.data
   }
 
   async function createFixedCost(payload: Record<string, unknown>): Promise<BuildingFixedCost> {
-    const res = await $fetch<ApiSuccess<BuildingFixedCost>>('/api/building-fixed-costs', {
+    const res = await apiFetch<ApiSuccess<BuildingFixedCost>>('/api/building-fixed-costs', {
       method: 'POST',
       body: payload,
     })
@@ -155,7 +155,7 @@ export function useOperationsMutations() {
     period_year: number
     period_month: number
   }): Promise<OperationsReportClosure> {
-    const res = await $fetch<ApiSuccess<OperationsReportClosure>>('/api/operations-report/close', {
+    const res = await apiFetch<ApiSuccess<OperationsReportClosure>>('/api/operations-report/close', {
       method: 'POST',
       body: payload,
     })
@@ -168,7 +168,7 @@ export function useOperationsMutations() {
     period_month: number
     reason: string
   }): Promise<OperationsReportClosure> {
-    const res = await $fetch<ApiSuccess<OperationsReportClosure>>('/api/operations-report/reopen', {
+    const res = await apiFetch<ApiSuccess<OperationsReportClosure>>('/api/operations-report/reopen', {
       method: 'POST',
       body: payload,
     })
@@ -180,7 +180,7 @@ export function useOperationsMutations() {
     period_year: number
     period_month: number
   }): Promise<ReserveFundTransaction> {
-    const res = await $fetch<ApiSuccess<ReserveFundTransaction>>(
+    const res = await apiFetch<ApiSuccess<ReserveFundTransaction>>(
       `/api/reserve-funds/${payload.building_id}/refresh-accrual`,
       {
         method: 'POST',

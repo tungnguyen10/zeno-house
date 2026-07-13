@@ -8,6 +8,7 @@ const listInvoicesByPeriod = vi.fn()
 const listInvoicesByPeriods = vi.fn()
 const listUtilityUsagesByPeriod = vi.fn()
 const listUtilityUsagesByPeriods = vi.fn()
+const loadSnapshot = vi.fn()
 
 vi.mock('../../../server/repositories/billing/periods', () => ({
   BillingPeriodRepository: {
@@ -28,6 +29,9 @@ vi.mock('../../../server/repositories/billing/utility-usages', () => ({
     listByPeriod: listUtilityUsagesByPeriod,
     listByPeriods: listUtilityUsagesByPeriods,
   },
+}))
+vi.mock('../../../server/repositories/billing/snapshot', () => ({
+  BillingSnapshotRepository: { load: loadSnapshot },
 }))
 
 vi.mock('../../../server/repositories/buildings', () => ({
@@ -157,6 +161,20 @@ describe('billing API consistency regression', () => {
     listInvoicesByPeriods.mockResolvedValue([])
     listUtilityUsagesByPeriod.mockResolvedValue([])
     listUtilityUsagesByPeriods.mockResolvedValue([])
+    loadSnapshot.mockResolvedValue({
+      building: resolveTable('buildings', { eq: { id: 'building-1' } }),
+      contracts: [resolveTable('contracts', { eq: {} })[0]],
+      services: [],
+      occupants: [],
+      readings: [
+        { id: 'prev-electricity', room_id: 'room-1', meter_type: 'electricity', reading_type: 'monthly', period_year: 2026, period_month: 4, reading_value: 100, reading_date: '2026-04-30' },
+        { id: 'current-electricity', room_id: 'room-1', meter_type: 'electricity', reading_type: 'monthly', period_year: 2026, period_month: 5, reading_value: 125, reading_date: '2026-05-31' },
+      ],
+      overrides: [],
+      invoices: [],
+      rooms: resolveTable('rooms', { eq: {} }),
+      tenants: resolveTable('tenants', { eq: {} }),
+    })
   })
 
   it('keeps period list, overview, drafts, and draft grid aligned for one fixture', async () => {

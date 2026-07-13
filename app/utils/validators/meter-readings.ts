@@ -13,7 +13,7 @@ export const meterReadingCreateSchema = z.object({
 })
 
 export const meterReadingBulkSchema = z.object({
-  readings: z.array(meterReadingCreateSchema).min(1),
+  readings: z.array(meterReadingCreateSchema).min(1).max(500, 'Tối đa 500 chỉ số trong một lần lưu'),
 })
 
 export const meterReadingUpdateSchema = meterReadingCreateSchema.partial()

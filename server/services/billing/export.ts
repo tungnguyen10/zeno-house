@@ -106,12 +106,9 @@ export const BillingExportService = {
     const resolver = new BillingDisplayResolver(event)
     const invoices = await resolver.enrichInvoices(rawInvoices)
 
-    const chargesByInvoice = new Map<string, InvoiceCharge[]>()
-    await Promise.all(
-      invoices.map(async ({ id }) => {
-        const charges = await InvoiceRepository.listCharges(event, id)
-        chargesByInvoice.set(id, charges)
-      }),
+    const chargesByInvoice = await InvoiceRepository.listChargesByInvoiceIds(
+      event,
+      invoices.map(invoice => invoice.id),
     )
 
     const wb = new ExcelJS.Workbook()

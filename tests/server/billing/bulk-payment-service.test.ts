@@ -5,8 +5,8 @@ import { buildPeriod } from '../../__fixtures__/billing/period'
 
 const rpcMock = vi.fn()
 const enrichPayments = vi.fn(async payments => payments)
-const findInvoiceByIdentifier = vi.fn()
-const findPeriodById = vi.fn()
+const findManyInvoices = vi.fn()
+const findManyPeriods = vi.fn()
 
 vi.mock('#supabase/server', () => ({
   serverSupabaseClient: vi.fn(async () => ({
@@ -25,13 +25,13 @@ vi.mock('../../../server/services/billing/display', () => ({
 
 vi.mock('../../../server/repositories/billing/invoices', () => ({
   InvoiceRepository: {
-    findByIdentifier: findInvoiceByIdentifier,
+    findManyByIdentifiers: findManyInvoices,
   },
 }))
 
 vi.mock('../../../server/repositories/billing/periods', () => ({
   BillingPeriodRepository: {
-    findById: findPeriodById,
+    findManyByIds: findManyPeriods,
   },
 }))
 
@@ -53,11 +53,11 @@ function event() {
 describe('InvoicePaymentService.recordBatch (RPC-backed)', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    findInvoiceByIdentifier.mockImplementation(async (_event, id: string) =>
-      buildInvoice({ id, billingPeriodId: `period-${id}` }),
+    findManyInvoices.mockImplementation(async (_event, ids: string[]) =>
+      ids.map(id => buildInvoice({ id, invoiceCode: id, billingPeriodId: `period-${id}` })),
     )
-    findPeriodById.mockImplementation(async (_event, id: string) =>
-      buildPeriod({ id, buildingId: 'building-1' }),
+    findManyPeriods.mockImplementation(async (_event, ids: string[]) =>
+      ids.map(id => buildPeriod({ id, buildingId: 'building-1' })),
     )
   })
 

@@ -17,6 +17,7 @@ import { BillingPeriodService } from './periods'
 import { BillingDisplayResolver } from './display'
 import { calculateInvoicePaymentStatus } from './rules'
 import { assertBuildingScope } from '../../utils/scope'
+import { invalidateOperationsReport } from '../operations-report/cache'
 
 interface BulkPaymentRpcErrorDetails {
   failed_index?: number
@@ -163,16 +164,32 @@ export const InvoicePaymentService = {
     const items = body.payments
     if (items.length === 0) throwValidationError('Cần ít nhất 1 dòng thanh toán')
 
-    const scopedPeriodIds = new Set<string>()
-    for (const item of items) {
-      const invoice = await InvoiceRepository.findByIdentifier(event, item.invoice_id)
-      if (!invoice) throwNotFound('Không tìm thấy hoá đơn')
-      if (scopedPeriodIds.has(invoice.billingPeriodId)) continue
-      const period = await BillingPeriodRepository.findById(event, invoice.billingPeriodId)
-      if (!period) throwNotFound('Không tìm thấy kỳ vận hành')
-      await assertBuildingScope(event, user, period.buildingId, 'write')
-      scopedPeriodIds.add(period.id)
+    const invoices = await InvoiceRepository.findManyByIdentifiers(
+      event,
+      items.map(item => item.invoice_id),
+    )
+    const invoiceByIdentifier = new Map<string, Invoice>()
+    for (const invoice of invoices) {
+      invoiceByIdentifier.set(invoice.id, invoice)
+      if (invoice.invoiceCode) invoiceByIdentifier.set(invoice.invoiceCode, invoice)
     }
+    for (const item of items) {
+      if (!invoiceByIdentifier.has(item.invoice_id)) throwNotFound('Không tìm thấy hoá đơn')
+    }
+
+    const periods = await BillingPeriodRepository.findManyByIds(
+      event,
+      invoices.map(invoice => invoice.billingPeriodId),
+    )
+    const periodById = new Map(periods.map(period => [period.id, period]))
+    for (const invoice of invoices) {
+      if (!periodById.has(invoice.billingPeriodId)) throwNotFound('Không tìm thấy kỳ vận hành')
+    }
+    await Promise.all(
+      [...new Set(periods.map(period => period.buildingId))].map(buildingId =>
+        assertBuildingScope(event, user, buildingId, 'write'),
+      ),
+    )
 
     const payload = items.map(item => ({
       invoice_id: item.invoice_id,
@@ -214,6 +231,9 @@ export const InvoicePaymentService = {
 
     const resolver = new BillingDisplayResolver(event)
     const enriched = await resolver.enrichPayments(inserted)
+    for (const buildingId of new Set(periods.map(period => period.buildingId))) {
+      invalidateOperationsReport(buildingId)
+    }
 
     return {
       count: inserted.length,

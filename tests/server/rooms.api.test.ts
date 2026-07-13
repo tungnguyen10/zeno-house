@@ -21,6 +21,7 @@ const assignmentRepoMocks = vi.hoisted(() => ({
   findBuildingIdsByUser: vi.fn(),
   findByUserAndBuilding: vi.fn(),
 }))
+const bulkRepoMocks = vi.hoisted(() => ({ resolveBuildingScopes: vi.fn(), execute: vi.fn() }))
 
 vi.mock('../../server/repositories/rooms', () => ({
   RoomRepository: roomRepoMocks,
@@ -33,6 +34,7 @@ vi.mock('../../server/repositories/buildings', () => ({
 vi.mock('../../server/repositories/assignments', () => ({
   AssignmentRepository: assignmentRepoMocks,
 }))
+vi.mock('../../server/repositories/bulk-actions', () => ({ BulkActionRepository: bulkRepoMocks }))
 
 const requireAuthMock = vi.hoisted(() => vi.fn())
 
@@ -124,6 +126,12 @@ beforeEach(() => {
   buildingRepoMocks.findByIdentifier.mockResolvedValue({ id: 'b-1' })
   assignmentRepoMocks.findBuildingIdsByUser.mockResolvedValue(['b-1'])
   assignmentRepoMocks.findByUserAndBuilding.mockResolvedValue(null)
+  bulkRepoMocks.resolveBuildingScopes.mockImplementation((_event, _entity, ids: string[]) =>
+    Promise.resolve(new Map(ids.map(id => [id, 'b-1']))),
+  )
+  bulkRepoMocks.execute.mockImplementation((_event, _entity, _action, ids: string[]) =>
+    Promise.resolve(ids.map(id => ({ id, succeeded: true, reason: null }))),
+  )
 })
 
 describe('GET /api/rooms', () => {
@@ -408,13 +416,13 @@ describe('POST /api/rooms/bulk', () => {
     const { default: handler } = await import('../../server/api/rooms/bulk.post')
 
     await handler(makeEvent({ body: { action: 'archive', ids: ['r-1'] } }))
-    expect(roomRepoMocks.softArchive).toHaveBeenCalled()
+    expect(bulkRepoMocks.execute).toHaveBeenCalledWith(expect.anything(), 'room', 'archive', ['r-1'])
 
     await handler(makeEvent({ body: { action: 'activate', ids: ['r-1'] } }))
-    expect(roomRepoMocks.update).toHaveBeenCalledWith(expect.anything(), 'r-1', { status: 'available' })
+    expect(bulkRepoMocks.execute).toHaveBeenCalledWith(expect.anything(), 'room', 'activate', ['r-1'])
 
     await handler(makeEvent({ body: { action: 'set_maintenance', ids: ['r-1'] } }))
-    expect(roomRepoMocks.update).toHaveBeenCalledWith(expect.anything(), 'r-1', { status: 'maintenance' })
+    expect(bulkRepoMocks.execute).toHaveBeenCalledWith(expect.anything(), 'room', 'set_maintenance', ['r-1'])
   })
 
   it('returns mixed result reasons for delete', async () => {

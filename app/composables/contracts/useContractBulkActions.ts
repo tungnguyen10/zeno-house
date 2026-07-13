@@ -20,7 +20,7 @@ export function useContractBulkActions() {
 
     isRunning.value = true
     try {
-      const response = await $fetch<ApiSuccess<ContractBulkActionResult>>('/api/contracts/bulk', {
+      const response = await apiFetch<ApiSuccess<ContractBulkActionResult>>('/api/contracts/bulk', {
         method: 'POST',
         body: {
           action,

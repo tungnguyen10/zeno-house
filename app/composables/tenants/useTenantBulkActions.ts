@@ -19,7 +19,7 @@ export function useTenantBulkActions() {
 
     isRunning.value = true
     try {
-      const res = await $fetch<ApiSuccess<TenantBulkResult>>('/api/tenants/bulk', {
+      const res = await apiFetch<ApiSuccess<TenantBulkResult>>('/api/tenants/bulk', {
         method: 'POST',
         body: {
           action,

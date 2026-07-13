@@ -29,7 +29,7 @@ const { data: overview } = await useAsyncData(
   async () => {
     const periodId = invoice.value?.billingPeriodId
     if (!periodId) return null
-    const resp = await $fetch<ApiSuccess<BillingWorkspaceOverview>>(`/api/billing/periods/${periodId}/overview`)
+    const resp = await apiFetch<ApiSuccess<BillingWorkspaceOverview>>(`/api/billing/periods/${periodId}/overview`)
     return resp.data
   },
   { watch: [invoice] },

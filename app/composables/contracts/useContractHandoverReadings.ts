@@ -45,7 +45,7 @@ export function useContractHandoverReadings(_contractId: string, roomId: string)
         reading_date: readingDate,
         reading_value: readingValue,
       }
-      await $fetch('/api/meter-readings/bulk', {
+      await apiFetch('/api/meter-readings/bulk', {
         method: 'POST',
         body: { readings: [input] },
       })

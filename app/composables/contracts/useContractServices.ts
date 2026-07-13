@@ -18,12 +18,12 @@ export function useContractServices(contractId: MaybeRef<string>) {
   const isLoading = computed(() => status.value === 'pending')
 
   async function updateService(id: string, input: ContractServiceUpdateInput) {
-    await $fetch(`/api/contract-services/${id}`, { method: 'PATCH', body: input })
+    await apiFetch(`/api/contract-services/${id}`, { method: 'PATCH', body: input })
     await refresh()
   }
 
   async function removeService(id: string, reason: string) {
-    await $fetch(`/api/contract-services/${id}`, { method: 'DELETE', body: { reason } })
+    await apiFetch(`/api/contract-services/${id}`, { method: 'DELETE', body: { reason } })
     await refresh()
   }
 

@@ -19,11 +19,15 @@ const repoMocks = vi.hoisted(() => ({
   findActiveBuildingIdForTenant: vi.fn(),
   softArchive: vi.fn(),
   setStatus: vi.fn(),
+  findExistingIdentifiers: vi.fn(),
+  insertMany: vi.fn(),
 }))
+const bulkRepoMocks = vi.hoisted(() => ({ execute: vi.fn() }))
 
 vi.mock('../../server/repositories/tenants', () => ({
   TenantRepository: repoMocks,
 }))
+vi.mock('../../server/repositories/bulk-actions', () => ({ BulkActionRepository: bulkRepoMocks }))
 
 const buildingRepoMocks = vi.hoisted(() => ({
   findByIdentifier: vi.fn(),
@@ -158,6 +162,13 @@ beforeEach(() => {
   repoMocks.wasCreatedByActor.mockResolvedValue(false)
   assignmentRepoMocks.findBuildingIdsByUser.mockResolvedValue(['0a8a4dd0-7d6f-4f4e-bc7e-3c5e1b833333'])
   assignmentRepoMocks.findByUserAndBuilding.mockResolvedValue(null)
+  bulkRepoMocks.execute.mockImplementation((_event, _entity, _action, ids: string[]) =>
+    Promise.resolve(ids.map(id => ({ id, succeeded: true, reason: null }))),
+  )
+  repoMocks.findExistingIdentifiers.mockResolvedValue({ phones: new Set(), idNumbers: new Set() })
+  repoMocks.insertMany.mockImplementation(async (_event, inputs: Array<{ full_name: string, phone: string }>) =>
+    Promise.all(inputs.map(input => repoMocks.insert(_event, input))),
+  )
 })
 
 // ---------------------------------------------------------------------------
@@ -582,7 +593,7 @@ describe('POST /api/tenants/bulk', () => {
     }
     expect(res.data.succeeded).toEqual(['a', 'b'])
     expect(res.data.failed).toEqual([])
-    expect(repoMocks.setStatus).toHaveBeenCalledTimes(2)
+    expect(bulkRepoMocks.execute).toHaveBeenCalledWith(expect.anything(), 'tenant', 'archive', ['a', 'b'])
   })
 
   it('activate flips status to active', async () => {
@@ -597,7 +608,7 @@ describe('POST /api/tenants/bulk', () => {
       data: { succeeded: string[]; failed: { id: string; reason: string }[] }
     }
     expect(res.data.succeeded).toEqual(['a'])
-    expect(repoMocks.setStatus).toHaveBeenCalledWith(expect.anything(), 'a', 'active')
+    expect(bulkRepoMocks.execute).toHaveBeenCalledWith(expect.anything(), 'tenant', 'activate', ['a'])
   })
 
   it('delete action reports mixed results without short-circuiting', async () => {
@@ -760,9 +771,7 @@ describe('POST /api/tenants/bulk-create', () => {
 
   it('flags phone already existing in system during bulk import', async () => {
     asAdmin()
-    repoMocks.findByPhone.mockImplementation((_event: unknown, phone: string) =>
-      Promise.resolve(phone === '0901234567' ? buildTenant({ id: 'existing' }) : null),
-    )
+    repoMocks.findExistingIdentifiers.mockResolvedValue({ phones: new Set(['0901234567']), idNumbers: new Set() })
     repoMocks.insert.mockResolvedValue(buildTenant({ id: 'new-2' }))
     const { default: handler } = await import('../../server/api/tenants/bulk-create.post')
 

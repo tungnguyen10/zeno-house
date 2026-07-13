@@ -1,6 +1,6 @@
-import { db as serverSupabaseClient } from '../../utils/db'
 import type { H3Event } from 'h3'
 import type { DashboardSummary, BuildingRoomStats, PendingOperation, RevenueCategoryKey, RevenueCategoryAmounts } from '~/types/dashboard'
+import { db } from '../../utils/db'
 
 function emptyRoomStats(): BuildingRoomStats {
   return { total: 0, available: 0, occupied: 0, maintenance: 0 }
@@ -41,6 +41,25 @@ type TrendBucket = {
   byBuilding: Record<string, { invoiceTotal: number; paidAmount: number; categories: RevenueCategoryAmounts }>
 }
 
+interface DashboardSourceSnapshot {
+  buildings: Array<{ id: string, slug: string, name: string }>
+  rooms: Array<{ id: string, status: string, building_id: string }>
+  tenant_count: number
+  active_contract_count: number
+  expiring_contract_count: number
+  urgent_contract_count: number
+  periods: Array<{ id: string, building_id: string, period_year: number, period_month: number, status: string }>
+  invoices: Array<{
+    billing_period_id: string
+    total_amount: number | string
+    paid_amount: number | string
+    balance_amount: number | string
+    status: string
+    due_date: string | null
+    invoice_charges: Array<{ charge_type: string, amount: number | string }>
+  }>
+}
+
 function buildFullTrend(buckets: Map<string, TrendBucket>, currentYear: number, currentMonth: number): TrendBucket[] {
   const { startYear, startMonth } = trendWindowStart(currentYear, currentMonth)
   const out: TrendBucket[] = []
@@ -72,16 +91,12 @@ const SEVERITY_WEIGHT: Record<PendingOperation['severity'], number> = {
   info: 1,
 }
 
-const ROOMS_LIMIT = 2000
-const BILLING_PERIODS_LIMIT = 500
-const INVOICES_LIMIT = 2000
-
 export const DashboardRepository = {
   async getSummary(
     event: H3Event,
     buildingIds?: string[] | null,
   ): Promise<{ summary: DashboardSummary; generatedAt: string }> {
-    const client = await serverSupabaseClient(event)
+    const client = db(event)
     const scopedBuildingIds = buildingIds ?? null
 
     if (scopedBuildingIds && scopedBuildingIds.length === 0) {
@@ -123,106 +138,20 @@ export const DashboardRepository = {
     const expiringUrgentDate = expiringUrgent.toISOString().slice(0, 10)
     const { startYear, startMonth } = trendWindowStart(currentYear, currentMonth)
 
-    let buildingsQuery = client.from('buildings').select('id, slug, name').order('name', { ascending: true })
-    let roomsQuery = client.from('rooms').select('id, status, building_id').limit(ROOMS_LIMIT)
-    let activeContractsQuery = client.from('contracts').select('*', { count: 'exact', head: true }).eq('status', 'active')
-    let expiringContractsQuery = client
-      .from('contracts')
-      .select('*', { count: 'exact', head: true })
-      .eq('status', 'active')
-      .gte('end_date', today)
-      .lte('end_date', expiringSoonDate)
-    let expiringUrgentContractsQuery = client
-      .from('contracts')
-      .select('*', { count: 'exact', head: true })
-      .eq('status', 'active')
-      .gte('end_date', today)
-      .lte('end_date', expiringUrgentDate)
-    let periodsQuery = client
-      .from('billing_periods')
-      .select('id, building_id, period_year, period_month, status')
-      .limit(BILLING_PERIODS_LIMIT)
-
-    if (scopedBuildingIds) {
-      buildingsQuery = buildingsQuery.in('id', scopedBuildingIds)
-      roomsQuery = roomsQuery.in('building_id', scopedBuildingIds)
-      activeContractsQuery = activeContractsQuery.in('building_id', scopedBuildingIds)
-      expiringContractsQuery = expiringContractsQuery.in('building_id', scopedBuildingIds)
-      expiringUrgentContractsQuery = expiringUrgentContractsQuery.in('building_id', scopedBuildingIds)
-      periodsQuery = periodsQuery.in('building_id', scopedBuildingIds)
-    }
-
-    const [
-      buildingsResult,
-      roomsResult,
-      tenantContractsResult,
-      tenantOccupantsResult,
-      tenantsResult,
-      activeContractsResult,
-      expiringContractsResult,
-      expiringUrgentContractsResult,
-      periodsResult,
-    ] = await Promise.all([
-      buildingsQuery,
-      roomsQuery,
-      scopedBuildingIds
-        ? client.from('contracts').select('id, tenant_id').in('building_id', scopedBuildingIds)
-        : Promise.resolve({ data: [], error: null }),
-      scopedBuildingIds
-        ? client
-            .from('contract_occupants')
-            .select('tenant_id, contracts!inner(building_id)')
-            .in('contracts.building_id', scopedBuildingIds)
-        : Promise.resolve({ data: [], error: null }),
-      scopedBuildingIds
-        ? Promise.resolve({ count: 0, error: null })
-        : client.from('tenants').select('*', { count: 'exact', head: true }),
-      activeContractsQuery,
-      expiringContractsQuery,
-      expiringUrgentContractsQuery,
-      periodsQuery,
-    ])
-
-    const scopedPeriodIds = (periodsResult.data ?? []).map(period => period.id)
-    const invoicesResult = scopedPeriodIds.length === 0
-      ? { data: [], error: null }
-      : await client
-          .from('invoices')
-          .select(
-            'billing_period_id, billing_periods!inner(building_id, period_year, period_month), total_amount, paid_amount, balance_amount, status, due_date, invoice_charges(charge_type, amount)',
-          )
-          .in('billing_period_id', scopedPeriodIds)
-          .or(
-            `period_year.gt.${startYear},and(period_year.eq.${startYear},period_month.gte.${startMonth})`,
-            { foreignTable: 'billing_periods' },
-          )
-          .limit(INVOICES_LIMIT)
-
-    if (buildingsResult.error) throwInternal(buildingsResult.error, 'dashboard.repository.buildings')
-    if (roomsResult.error) throwInternal(roomsResult.error, 'dashboard.repository.rooms')
-    if (tenantContractsResult.error) throwInternal(tenantContractsResult.error, 'dashboard.repository.tenantContracts')
-    if (tenantOccupantsResult.error) throwInternal(tenantOccupantsResult.error, 'dashboard.repository.tenantOccupants')
-    if (tenantsResult.error) throwInternal(tenantsResult.error, 'dashboard.repository.tenants')
-    if (activeContractsResult.error) throwInternal(activeContractsResult.error, 'dashboard.repository.activeContracts')
-    if (expiringContractsResult.error) throwInternal(expiringContractsResult.error, 'dashboard.repository.expiringContracts')
-    if (expiringUrgentContractsResult.error) throwInternal(expiringUrgentContractsResult.error, 'dashboard.repository.expiringUrgentContracts')
-    if (periodsResult.error) throwInternal(periodsResult.error, 'dashboard.repository.billingPeriods')
-    if (invoicesResult.error) throwInternal(invoicesResult.error, 'dashboard.repository.invoices')
-
-    const buildings = buildingsResult.data ?? []
-    const allRooms = roomsResult.data ?? []
-    const allPeriods = periodsResult.data ?? []
-    const allInvoices = invoicesResult.data ?? []
-    const scopedTenantIds = scopedBuildingIds
-      ? new Set([
-          ...((tenantContractsResult.data ?? []) as { tenant_id: string }[]).map(row => row.tenant_id),
-          ...((tenantOccupantsResult.data ?? []) as { tenant_id: string }[]).map(row => row.tenant_id),
-        ])
-      : null
-
-    if (allRooms.length === ROOMS_LIMIT) console.warn('[dashboard] limit hit: rooms')
-    if (allPeriods.length === BILLING_PERIODS_LIMIT) console.warn('[dashboard] limit hit: billing_periods')
-    if (allInvoices.length === INVOICES_LIMIT) console.warn('[dashboard] limit hit: invoices')
+    const { data, error } = await client.rpc('dashboard_source_snapshot' as never, {
+      p_building_ids: scopedBuildingIds,
+      p_current_year: currentYear,
+      p_current_month: currentMonth,
+      p_today: today,
+      p_expiring_soon: expiringSoonDate,
+      p_expiring_urgent: expiringUrgentDate,
+    } as never)
+    if (error) throwInternal(error, 'dashboard.repository.snapshot')
+    const snapshot = data as unknown as DashboardSourceSnapshot
+    const buildings = snapshot.buildings ?? []
+    const allRooms = snapshot.rooms ?? []
+    const allPeriods = snapshot.periods ?? []
+    const allInvoices = snapshot.invoices ?? []
 
     // Aggregate global room stats
     const roomStats: BuildingRoomStats = allRooms.reduce((acc, room) => {
@@ -403,11 +332,11 @@ export const DashboardRepository = {
     const summary: DashboardSummary = {
       buildings: { total: buildings.length },
       rooms: roomStats,
-      tenants: { total: scopedTenantIds ? scopedTenantIds.size : tenantsResult.count ?? 0 },
+      tenants: { total: Number(snapshot.tenant_count ?? 0) },
       contracts: {
-        active: activeContractsResult.count ?? 0,
-        expiringSoon: expiringContractsResult.count ?? 0,
-        expiringUrgent: expiringUrgentContractsResult.count ?? 0,
+        active: Number(snapshot.active_contract_count ?? 0),
+        expiringSoon: Number(snapshot.expiring_contract_count ?? 0),
+        expiringUrgent: Number(snapshot.urgent_contract_count ?? 0),
       },
       billing: {
         currentMonth: {

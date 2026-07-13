@@ -12,17 +12,17 @@ export function useBuildingServices(buildingId: MaybeRef<string>) {
   const isLoading = computed(() => status.value === 'pending')
 
   async function upsertService(input: BuildingServiceUpsertInput) {
-    await $fetch('/api/building-services', { method: 'POST', body: input })
+    await apiFetch('/api/building-services', { method: 'POST', body: input })
     await refresh()
   }
 
   async function updateService(id: string, input: BuildingServiceUpdateInput) {
-    await $fetch(`/api/building-services/${id}`, { method: 'PATCH', body: input })
+    await apiFetch(`/api/building-services/${id}`, { method: 'PATCH', body: input })
     await refresh()
   }
 
   async function syncToContracts(buildingId: string): Promise<number> {
-    const res = await $fetch<ApiSuccess<{ added: number }>>('/api/contract-services/sync', {
+    const res = await apiFetch<ApiSuccess<{ added: number }>>('/api/contract-services/sync', {
       method: 'POST',
       body: { building_id: buildingId },
     })

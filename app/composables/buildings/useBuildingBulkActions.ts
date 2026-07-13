@@ -16,7 +16,7 @@ export function useBuildingBulkActions() {
     }
     isRunning.value = true
     try {
-      const res = await $fetch<ApiSuccess<BuildingBulkResult>>('/api/buildings/bulk', {
+      const res = await apiFetch<ApiSuccess<BuildingBulkResult>>('/api/buildings/bulk', {
         method: 'POST',
         body: { action, ids: selectedIds.value },
       })

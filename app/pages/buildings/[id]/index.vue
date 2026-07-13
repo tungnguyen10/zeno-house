@@ -35,7 +35,7 @@ async function confirmDelete() {
   isDeleting.value = true
   conflictDetails.value = null
   try {
-    await $fetch(`/api/buildings/${id}`, { method: 'DELETE' })
+    await apiFetch(`/api/buildings/${id}`, { method: 'DELETE' })
     showDeleteModal.value = false
     await navigateTo('/buildings')
   }
@@ -58,7 +58,7 @@ async function archiveInstead() {
   if (!building.value) return
   isDeleting.value = true
   try {
-    await $fetch(`/api/buildings/${id}`, {
+    await apiFetch(`/api/buildings/${id}`, {
       method: 'DELETE',
       query: { force: true },
     })

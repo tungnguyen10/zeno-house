@@ -31,7 +31,7 @@ export function useBillingPeriodList(initial: BillingPeriodListFilters = {}) {
   const isLoading = computed(() => status.value === 'pending')
 
   async function openPeriod(input: { building_id: string; period_year: number; period_month: number }): Promise<BillingPeriod> {
-    const resp = await $fetch<ApiSuccess<BillingPeriod>>('/api/billing/periods', {
+    const resp = await apiFetch<ApiSuccess<BillingPeriod>>('/api/billing/periods', {
       method: 'POST',
       body: input,
     })

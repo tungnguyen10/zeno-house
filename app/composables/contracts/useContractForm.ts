@@ -214,7 +214,7 @@ export function useContractForm<T = unknown>(options: UseContractFormOptions<T> 
 
     isLoading.value = true
     try {
-      const response = await $fetch<ApiSuccess<ContractWithDetails>>('/api/contracts', {
+      const response = await apiFetch<ApiSuccess<ContractWithDetails>>('/api/contracts', {
         method: 'POST',
         body: result.data,
       })
@@ -241,7 +241,7 @@ export function useContractForm<T = unknown>(options: UseContractFormOptions<T> 
 
     isLoading.value = true
     try {
-      const response = await $fetch<ApiSuccess<ContractWithDetails>>(`/api/contracts/${id}`, {
+      const response = await apiFetch<ApiSuccess<ContractWithDetails>>(`/api/contracts/${id}`, {
         method: 'PATCH',
         body: result.data,
       })

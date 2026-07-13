@@ -36,6 +36,24 @@ async function buildUniqueInvoiceCode(event: H3Event, billingPeriodId: string): 
 }
 
 export const InvoiceRepository = {
+  async findManyByIdentifiers(event: H3Event, identifiers: string[]): Promise<Invoice[]> {
+    const unique = [...new Set(identifiers)]
+    if (unique.length === 0) return []
+    const ids = unique.filter(isUuid)
+    const codes = unique.filter(identifier => !isUuid(identifier))
+    const client = await serverSupabaseClient(event)
+    const [byId, byCode] = await Promise.all([
+      ids.length > 0
+        ? client.from('invoices').select('*').in('id', ids)
+        : Promise.resolve({ data: [], error: null }),
+      codes.length > 0
+        ? client.from('invoices').select('*').in('invoice_code', codes)
+        : Promise.resolve({ data: [], error: null }),
+    ])
+    if (byId.error) throwDbError(byId.error, 'billing.invoices.findManyByIdentifiers.ids')
+    if (byCode.error) throwDbError(byCode.error, 'billing.invoices.findManyByIdentifiers.codes')
+    return [...(byId.data ?? []), ...(byCode.data ?? [])].map(mapInvoice)
+  },
   async listByPeriods(event: H3Event, billingPeriodIds: string[]): Promise<Invoice[]> {
     if (billingPeriodIds.length === 0) return []
     const client = await serverSupabaseClient(event)
@@ -57,6 +75,31 @@ export const InvoiceRepository = {
       .order('created_at', { ascending: true })
     if (error) throwDbError(error, 'billing.invoices.listByPeriod')
     return (data ?? []).map(mapInvoice)
+  },
+
+  async listChargesByInvoiceIds(
+    event: H3Event,
+    invoiceIds: string[],
+  ): Promise<Map<string, InvoiceCharge[]>> {
+    const grouped = new Map<string, InvoiceCharge[]>()
+    for (const invoiceId of invoiceIds) grouped.set(invoiceId, [])
+    if (invoiceIds.length === 0) return grouped
+
+    const client = await serverSupabaseClient(event)
+    const { data, error } = await client
+      .from('invoice_charges')
+      .select('id, invoice_id, charge_type, label, source_type, source_id, quantity, unit_price, amount, metadata, sort_order, created_at')
+      .in('invoice_id', invoiceIds)
+      .order('sort_order', { ascending: true })
+    if (error) throwDbError(error, 'billing.invoices.listChargesByInvoiceIds')
+
+    for (const row of data ?? []) {
+      const charge = mapInvoiceCharge(row)
+      const charges = grouped.get(charge.invoiceId) ?? []
+      charges.push(charge)
+      grouped.set(charge.invoiceId, charges)
+    }
+    return grouped
   },
 
   async findById(event: H3Event, id: string): Promise<Invoice | null> {

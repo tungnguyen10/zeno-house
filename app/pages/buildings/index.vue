@@ -157,7 +157,7 @@ async function onSubmitEdit(data: BuildingFormData) {
   editError.value = ''
   editFieldErrors.value = {}
   try {
-    await $fetch(`/api/buildings/${editingBuilding.value.id}`, {
+    await apiFetch(`/api/buildings/${editingBuilding.value.id}`, {
       method: 'PATCH',
       body: buildingFormToApiPayload(data),
     })

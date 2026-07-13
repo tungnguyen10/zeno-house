@@ -3,6 +3,7 @@ import type { AuthUser } from '~/types/auth'
 import type { ContractWithDetails } from '~/types/contracts'
 import type { ContractBulkActionInput, ContractCreateInput, ContractUpdateInput } from '~/utils/validators/contracts'
 import { ContractRepository, type ContractFilters } from '../../repositories/contracts'
+import { BulkActionRepository } from '../../repositories/bulk-actions'
 import { ContractServiceService } from '../contract-services'
 import { ContractOccupantRepository } from '../../repositories/contract-occupants'
 import { RoomRepository } from '../../repositories/rooms'
@@ -293,14 +294,50 @@ export const ContractService = {
     const succeeded: string[] = []
     const failed: { id: string; reason: string }[] = []
 
+    if (input.action === 'terminate') {
+      const scopes = await BulkActionRepository.resolveBuildingScopes(event, 'contract', input.ids)
+      const scopeAccess = new Map<string, boolean>()
+      const allowed: string[] = []
+      for (const id of input.ids) {
+        const buildingId = scopes.get(id)
+        if (!buildingId) {
+          failed.push({ id, reason: 'not_found' })
+          continue
+        }
+        let permitted = scopeAccess.get(buildingId)
+        if (permitted === undefined) {
+          try {
+            await assertBuildingScope(event, user, buildingId, 'write')
+            permitted = true
+          }
+          catch {
+            permitted = false
+          }
+          scopeAccess.set(buildingId, permitted)
+        }
+        if (permitted) allowed.push(id)
+        else failed.push({ id, reason: 'forbidden' })
+      }
+      const rows = await BulkActionRepository.execute(event, 'contract', 'terminate', allowed)
+      for (const row of rows) {
+        if (row.succeeded) succeeded.push(row.id)
+        else failed.push({ id: row.id, reason: row.reason ?? 'error' })
+      }
+      await AuditService.appendBulk(event, user, {
+        building_id: null,
+        entity_type: 'contract',
+        aggregate_action: 'contract.bulk_terminate',
+        items: succeeded.map(id => ({ entity_id: id, action: AUDIT_ACTIONS.CONTRACT_TERMINATED })),
+        succeeded,
+        total: input.ids.length,
+        failed: failed.length,
+      })
+      return { succeeded, failed }
+    }
+
     for (const id of input.ids) {
       try {
-        if (input.action === 'terminate') {
-          await this.update(event, user, id, { status: 'terminated' })
-        }
-        else {
-          await this.remove(event, user, id, { reason: input.reason! })
-        }
+        await this.remove(event, user, id, { reason: input.reason! })
         succeeded.push(id)
       }
       catch (err: unknown) {
@@ -310,7 +347,7 @@ export const ContractService = {
 
     // Note: per-entity audit events are already emitted by update()/remove() above.
     // Emit aggregate summary for bulk operation visibility.
-    const bulkAction = input.action === 'terminate' ? AUDIT_ACTIONS.CONTRACT_TERMINATED : AUDIT_ACTIONS.CONTRACT_REMOVED
+    const bulkAction = AUDIT_ACTIONS.CONTRACT_REMOVED
     await AuditService.appendBulk(event, user, {
       building_id: null,
       entity_type: 'contract',

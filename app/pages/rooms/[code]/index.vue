@@ -78,7 +78,7 @@ const monthlyServicesTotal = computed(() =>
 const showServicesModal = ref(false)
 
 async function handleContractServiceUpdate(serviceId: string, input: ContractServiceUpdateInput) {
-  await $fetch(`/api/contract-services/${serviceId}`, { method: 'PATCH', body: input })
+  await apiFetch(`/api/contract-services/${serviceId}`, { method: 'PATCH', body: input })
   await refreshContractServices()
 }
 
@@ -114,7 +114,7 @@ async function confirmDelete() {
   isDeleting.value = true
   conflictDetails.value = null
   try {
-    await $fetch(`/api/rooms/${id}`, {
+    await apiFetch(`/api/rooms/${id}`, {
       method: 'DELETE',
       body: { reason },
     })
@@ -147,7 +147,7 @@ async function archiveInstead() {
 
   isDeleting.value = true
   try {
-    await $fetch(`/api/rooms/${id}`, {
+    await apiFetch(`/api/rooms/${id}`, {
       method: 'DELETE',
       query: { force: true },
       body: { reason },
@@ -169,7 +169,7 @@ async function confirmTerminate() {
   if (!activeContract.value) return
   isTerminating.value = true
   try {
-    await $fetch(`/api/contracts/${activeContract.value.id}`, {
+    await apiFetch(`/api/contracts/${activeContract.value.id}`, {
       method: 'PATCH',
       body: { status: 'terminated' },
     })

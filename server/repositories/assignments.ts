@@ -1,4 +1,3 @@
-import { serverSupabaseServiceRole } from '#supabase/server'
 import { db as serverSupabaseClient } from '../utils/db'
 import type { H3Event } from 'h3'
 import type {
@@ -33,7 +32,7 @@ function userName(user: { user_metadata?: Record<string, unknown> | null }): str
 }
 
 async function listManagers(event: H3Event): Promise<AssignmentManager[]> {
-  const client = serverSupabaseServiceRole<Database>(event)
+  const client = serverSupabaseClient(event)
   const managers: AssignmentManager[] = []
   let page = 1
 
@@ -62,7 +61,7 @@ export const AssignmentRepository = {
     // Scope resolution is server-authoritative: service layer passes the
     // authenticated actor id, so we can read via service-role without relying
     // on table RLS policy state.
-    const client = serverSupabaseServiceRole<Database>(event)
+    const client = serverSupabaseClient(event)
     const { data, error } = await client
       .from('user_building_assignments')
       .select('building_id')
@@ -153,7 +152,7 @@ export const AssignmentRepository = {
   },
 
   async findByUser(event: H3Event, userId: string): Promise<AssignmentWithBuilding[]> {
-    const client = serverSupabaseServiceRole<Database>(event)
+    const client = serverSupabaseClient(event)
     const { data, error } = await client
       .from('user_building_assignments')
       .select('*, buildings(id, slug, code, name, address, status)')
@@ -177,7 +176,7 @@ export const AssignmentRepository = {
   ): Promise<UserBuildingAssignment> {
     // Mutations run through service-role; authorization is enforced in service
     // layer (manage capability + scope + target-role checks).
-    const client = serverSupabaseServiceRole<Database>(event)
+    const client = serverSupabaseClient(event)
     const { data, error } = await client
       .from('user_building_assignments')
       .insert({
@@ -203,7 +202,7 @@ export const AssignmentRepository = {
   ): Promise<UserBuildingAssignment> {
     // Mutations run through service-role; authorization is enforced in service
     // layer (manage capability + scope + target-role checks).
-    const client = serverSupabaseServiceRole<Database>(event)
+    const client = serverSupabaseClient(event)
     const { data, error } = await client
       .from('user_building_assignments')
       .update({ can_delete_master_data: input.can_delete_master_data })
@@ -218,7 +217,7 @@ export const AssignmentRepository = {
   async remove(event: H3Event, id: string): Promise<void> {
     // Mutations run through service-role; authorization is enforced in service
     // layer (manage capability + scope + target-role checks).
-    const client = serverSupabaseServiceRole<Database>(event)
+    const client = serverSupabaseClient(event)
     const { error } = await client
       .from('user_building_assignments')
       .delete()

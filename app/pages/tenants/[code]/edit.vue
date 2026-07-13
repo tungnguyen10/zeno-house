@@ -111,7 +111,7 @@ function onRemoveIdImage(side: TenantIdImageSide) {
 async function uploadIdImage(tenantId: string, side: TenantIdImageSide, file: File): Promise<Tenant> {
   const form = new FormData()
   form.append('image', file)
-  const response = await $fetch<ApiSuccess<Tenant>>(`/api/tenants/${tenantId}/id-image`, {
+  const response = await apiFetch<ApiSuccess<Tenant>>(`/api/tenants/${tenantId}/id-image`, {
     method: 'POST',
     query: { side },
     body: form,
@@ -120,7 +120,7 @@ async function uploadIdImage(tenantId: string, side: TenantIdImageSide, file: Fi
 }
 
 async function removeIdImage(tenantId: string, side: TenantIdImageSide): Promise<Tenant> {
-  const response = await $fetch<ApiSuccess<Tenant>>(`/api/tenants/${tenantId}/id-image`, {
+  const response = await apiFetch<ApiSuccess<Tenant>>(`/api/tenants/${tenantId}/id-image`, {
     method: 'DELETE',
     query: { side },
   })

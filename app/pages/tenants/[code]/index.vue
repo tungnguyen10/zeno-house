@@ -91,7 +91,7 @@ async function confirmDelete() {
   isDeleting.value = true
   conflictDetails.value = null
   try {
-    await $fetch(`/api/tenants/${id}`, {
+    await apiFetch(`/api/tenants/${id}`, {
       method: 'DELETE',
       body: { reason },
     })
@@ -124,7 +124,7 @@ async function archiveInstead() {
 
   isDeleting.value = true
   try {
-    await $fetch(`/api/tenants/${id}`, {
+    await apiFetch(`/api/tenants/${id}`, {
       method: 'DELETE',
       query: { force: true },
       body: { reason },
@@ -154,7 +154,7 @@ async function confirmArchive() {
   archiveReasonError.value = ''
   isDeleting.value = true
   try {
-    await $fetch(`/api/tenants/${id}`, {
+    await apiFetch(`/api/tenants/${id}`, {
       method: 'DELETE',
       query: { force: true },
       body: { reason },

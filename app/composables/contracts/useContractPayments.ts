@@ -11,7 +11,7 @@ export function useContractPayments(contractId: MaybeRef<string>) {
     isLoading.value = true
     error.value = null
     try {
-      const res = await $fetch<ApiSuccess<ContractPayment[]>>(
+      const res = await apiFetch<ApiSuccess<ContractPayment[]>>(
         `/api/contracts/${toValue(contractId)}/payments`,
       )
       payments.value = res.data
@@ -23,7 +23,7 @@ export function useContractPayments(contractId: MaybeRef<string>) {
   }
 
   async function addPayment(input: ContractPaymentCreateInput): Promise<ContractPayment> {
-    const res = await $fetch<ApiSuccess<ContractPayment>>(
+    const res = await apiFetch<ApiSuccess<ContractPayment>>(
       `/api/contracts/${toValue(contractId)}/payments`,
       { method: 'POST', body: input },
     )
@@ -32,7 +32,7 @@ export function useContractPayments(contractId: MaybeRef<string>) {
   }
 
   async function updatePayment(paymentId: string, input: ContractPaymentUpdateInput): Promise<ContractPayment> {
-    const res = await $fetch<ApiSuccess<ContractPayment>>(
+    const res = await apiFetch<ApiSuccess<ContractPayment>>(
       `/api/contracts/${toValue(contractId)}/payments/${paymentId}`,
       { method: 'PATCH', body: input },
     )
@@ -41,7 +41,7 @@ export function useContractPayments(contractId: MaybeRef<string>) {
   }
 
   async function removePayment(paymentId: string): Promise<void> {
-    await $fetch(
+    await apiFetch(
       `/api/contracts/${toValue(contractId)}/payments/${paymentId}`,
       { method: 'DELETE' },
     )

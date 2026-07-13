@@ -12,7 +12,7 @@ export function useBuildingContractServices(buildingId: MaybeRef<string>) {
   const isLoading = computed(() => status.value === 'pending')
 
   async function updateService(id: string, input: ContractServiceUpdateInput) {
-    await $fetch(`/api/contract-services/${id}`, { method: 'PATCH', body: input })
+    await apiFetch(`/api/contract-services/${id}`, { method: 'PATCH', body: input })
     await refresh()
   }
 

@@ -11,7 +11,7 @@ export function useContractRenewals(contractId: MaybeRef<string>) {
     isLoading.value = true
     error.value = null
     try {
-      const res = await $fetch<ApiSuccess<ContractRenewal[]>>(
+      const res = await apiFetch<ApiSuccess<ContractRenewal[]>>(
         `/api/contracts/${toValue(contractId)}/renewals`,
       )
       renewals.value = res.data
@@ -23,7 +23,7 @@ export function useContractRenewals(contractId: MaybeRef<string>) {
   }
 
   async function renew(input: ContractRenewInput): Promise<ContractRenewal> {
-    const res = await $fetch<ApiSuccess<ContractRenewal>>(
+    const res = await apiFetch<ApiSuccess<ContractRenewal>>(
       `/api/contracts/${toValue(contractId)}/renew`,
       { method: 'POST', body: input },
     )

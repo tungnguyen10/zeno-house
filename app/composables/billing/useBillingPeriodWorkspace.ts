@@ -56,7 +56,7 @@ export function useBillingPeriodWorkspace(periodId: MaybeRefOrGetter<string>) {
     if (!id.value) return
     overviewLoading.value = true
     try {
-      const resp = await $fetch<ApiSuccess<BillingWorkspaceOverview>>(`/api/billing/periods/${id.value}/overview`)
+      const resp = await apiFetch<ApiSuccess<BillingWorkspaceOverview>>(`/api/billing/periods/${id.value}/overview`)
       overview.value = resp.data
       period.value = resp.data.period
     } finally {
@@ -68,7 +68,7 @@ export function useBillingPeriodWorkspace(periodId: MaybeRefOrGetter<string>) {
     if (!id.value) return
     draftsLoading.value = true
     try {
-      const resp = await $fetch<ApiSuccess<BillingDraftResponse>>(`/api/billing/periods/${id.value}/drafts`)
+      const resp = await apiFetch<ApiSuccess<BillingDraftResponse>>(`/api/billing/periods/${id.value}/drafts`)
       drafts.value = resp.data
     } finally {
       draftsLoading.value = false
@@ -79,7 +79,7 @@ export function useBillingPeriodWorkspace(periodId: MaybeRefOrGetter<string>) {
     if (!id.value) return
     gridLoading.value = true
     try {
-      const resp = await $fetch<ApiSuccess<BillingDraftGridResponse>>(`/api/billing/periods/${id.value}/draft-grid`)
+      const resp = await apiFetch<ApiSuccess<BillingDraftGridResponse>>(`/api/billing/periods/${id.value}/draft-grid`)
       grid.value = resp.data
       // Merged response includes the workspace overview; sync it so callers
       // can rely on a single grid fetch instead of two parallel requests.
@@ -97,7 +97,7 @@ export function useBillingPeriodWorkspace(periodId: MaybeRefOrGetter<string>) {
     options: SaveReadingsOptions = {},
   ): Promise<MeterReading[]> {
     if (readings.length === 0) return []
-    const resp = await $fetch<ApiSuccess<MeterReading[]>>(`/api/meter-readings/bulk`, {
+    const resp = await apiFetch<ApiSuccess<MeterReading[]>>(`/api/meter-readings/bulk`, {
       method: 'POST',
       body: { readings },
     })
@@ -109,7 +109,7 @@ export function useBillingPeriodWorkspace(periodId: MaybeRefOrGetter<string>) {
     if (!id.value) return
     invoicesLoading.value = true
     try {
-      const resp = await $fetch<ApiSuccess<Invoice[]>>(`/api/billing/periods/${id.value}/invoices`)
+      const resp = await apiFetch<ApiSuccess<Invoice[]>>(`/api/billing/periods/${id.value}/invoices`)
       invoices.value = resp.data
     } finally {
       invoicesLoading.value = false
@@ -120,7 +120,7 @@ export function useBillingPeriodWorkspace(periodId: MaybeRefOrGetter<string>) {
     if (!id.value) return
     utilityLoading.value = true
     try {
-      const resp = await $fetch<ApiSuccess<BillingUtilityUsage[]>>(`/api/billing/periods/${id.value}/utility-usages`)
+      const resp = await apiFetch<ApiSuccess<BillingUtilityUsage[]>>(`/api/billing/periods/${id.value}/utility-usages`)
       utilityUsages.value = resp.data
     } finally {
       utilityLoading.value = false
@@ -131,7 +131,7 @@ export function useBillingPeriodWorkspace(periodId: MaybeRefOrGetter<string>) {
     if (!id.value) return
     auditLoading.value = true
     try {
-      const resp = await $fetch<ApiSuccess<BillingAuditEvent[]>>(`/api/billing/periods/${id.value}/audit`)
+      const resp = await apiFetch<ApiSuccess<BillingAuditEvent[]>>(`/api/billing/periods/${id.value}/audit`)
       auditEvents.value = resp.data
     } finally {
       auditLoading.value = false
@@ -140,17 +140,17 @@ export function useBillingPeriodWorkspace(periodId: MaybeRefOrGetter<string>) {
 
   async function issue(input: IssueInvoicesInput): Promise<IssueInvoicesResult> {
     if (!id.value) throw new Error('No period id')
-    const resp = await $fetch<ApiSuccess<IssueInvoicesResult>>(`/api/billing/periods/${id.value}/issue`, {
+    const resp = await apiFetch<ApiSuccess<IssueInvoicesResult>>(`/api/billing/periods/${id.value}/issue`, {
       method: 'POST',
       body: input,
     })
-    await Promise.all([loadOverview(), loadInvoices(), loadDrafts(), loadGrid()])
+    await Promise.all([loadInvoices(), loadGrid()])
     return resp.data
   }
 
   async function close(): Promise<BillingPeriod> {
     if (!id.value) throw new Error('No period id')
-    const resp = await $fetch<ApiSuccess<BillingPeriod>>(`/api/billing/periods/${id.value}/close`, {
+    const resp = await apiFetch<ApiSuccess<BillingPeriod>>(`/api/billing/periods/${id.value}/close`, {
       method: 'POST',
     })
     period.value = resp.data
@@ -160,22 +160,22 @@ export function useBillingPeriodWorkspace(periodId: MaybeRefOrGetter<string>) {
 
   async function reopen(reason: string): Promise<BillingPeriod> {
     if (!id.value) throw new Error('No period id')
-    const resp = await $fetch<ApiSuccess<BillingPeriod>>(`/api/billing/periods/${id.value}/reopen`, {
+    const resp = await apiFetch<ApiSuccess<BillingPeriod>>(`/api/billing/periods/${id.value}/reopen`, {
       method: 'POST',
       body: { reason },
     })
     period.value = resp.data
-    await Promise.all([loadOverview(), loadGrid(), loadDrafts(), loadInvoices(), loadAudit()])
+    await Promise.all([loadGrid(), loadInvoices(), loadAudit()])
     return resp.data
   }
 
   async function unissue(reason: string): Promise<{ voided: number; retained: number; status: BillingPeriod['status'] }> {
     if (!id.value) throw new Error('No period id')
-    const resp = await $fetch<ApiSuccess<{ voided: number; retained: number; status: BillingPeriod['status'] }>>(
+    const resp = await apiFetch<ApiSuccess<{ voided: number; retained: number; status: BillingPeriod['status'] }>>(
       `/api/billing/periods/${id.value}/unissue`,
       { method: 'POST', body: { reason } },
     )
-    await Promise.all([loadInvoices(), loadGrid(), loadDrafts(), loadAudit()])
+    await Promise.all([loadInvoices(), loadGrid(), loadAudit()])
     return resp.data
   }
 
@@ -189,26 +189,31 @@ export function useBillingPeriodWorkspace(periodId: MaybeRefOrGetter<string>) {
 
   async function saveUtilityOverride(input: UtilityUsageOverrideInput): Promise<BillingUtilityUsage> {
     if (!id.value) throw new Error('No period id')
-    const resp = await $fetch<ApiSuccess<BillingUtilityUsage>>(`/api/billing/periods/${id.value}/utility-usages`, {
+    const resp = await apiFetch<ApiSuccess<BillingUtilityUsage>>(`/api/billing/periods/${id.value}/utility-usages`, {
       method: 'POST',
       body: input,
     })
-    await Promise.all([loadUtilityUsages(), loadDrafts(), loadGrid()])
+    utilityUsages.value = [
+      ...utilityUsages.value.filter(usage => usage.id !== resp.data.id),
+      resp.data,
+    ]
+    await loadGrid()
     return resp.data
   }
 
   async function deleteUtilityOverride(overrideId: string): Promise<void> {
     if (!id.value) throw new Error('No period id')
-    await $fetch(`/api/billing/periods/${id.value}/utility-usages`, {
+    await apiFetch(`/api/billing/periods/${id.value}/utility-usages`, {
       method: 'DELETE',
       body: { override_id: overrideId },
     })
-    await Promise.all([loadUtilityUsages(), loadDrafts(), loadGrid()])
+    utilityUsages.value = utilityUsages.value.filter(usage => usage.id !== overrideId)
+    await loadGrid()
   }
 
   async function approveUtilityOverride(overrideId: string): Promise<BillingUtilityUsage> {
     if (!id.value) throw new Error('No period id')
-    const resp = await $fetch<ApiSuccess<BillingUtilityUsage>>(
+    const resp = await apiFetch<ApiSuccess<BillingUtilityUsage>>(
       `/api/billing/periods/${id.value}/utility-usages/${overrideId}/approve`,
       { method: 'POST' },
     )
@@ -222,21 +227,21 @@ export function useBillingPeriodWorkspace(periodId: MaybeRefOrGetter<string>) {
    */
   async function issueAndPay(input: IssueAndPayInput): Promise<Invoice> {
     if (!id.value) throw new Error('No period id')
-    const resp = await $fetch<ApiSuccess<Invoice>>(`/api/billing/periods/${id.value}/issue-and-pay`, {
+    const resp = await apiFetch<ApiSuccess<Invoice>>(`/api/billing/periods/${id.value}/issue-and-pay`, {
       method: 'POST',
       body: input,
     })
-    await Promise.all([loadOverview(), loadInvoices(), loadGrid(), loadDrafts()])
+    await Promise.all([loadInvoices(), loadGrid()])
     return resp.data
   }
 
   /** Undo (soft-delete) a recorded payment and recompute the invoice. */
   async function undoPayment(invoiceId: string, paymentId: string, reason?: string): Promise<Invoice> {
-    const resp = await $fetch<ApiSuccess<Invoice>>(
+    const resp = await apiFetch<ApiSuccess<Invoice>>(
       `/api/billing/invoices/${invoiceId}/payments/${paymentId}`,
       { method: 'DELETE', body: reason ? { reason } : undefined },
     )
-    await Promise.all([loadInvoices(), loadOverview(), loadGrid(), loadAudit()])
+    await Promise.all([loadInvoices(), loadGrid(), loadAudit()])
     return resp.data
   }
 

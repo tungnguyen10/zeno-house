@@ -1,6 +1,6 @@
 # API Reference
 
-All business APIs live under `server/api/**`. This document is an inventory of checked-in route handlers, not a requirements spec. For behavior details, read the relevant service and OpenSpec capability.
+All business APIs live under `server/api/**`. The generated, complete 131-route inventory and its pagination/cache/performance contract live in [`docs/api-inventory.md`](../api-inventory.md). Regenerate it with `node scripts/generate-api-inventory.mjs` whenever handlers change.
 
 ## API Shape
 
@@ -30,6 +30,10 @@ server/api/*
   -> server/repositories/*
   -> Supabase
 ```
+
+Initial SSR reads use `useFetch` so Nuxt payload hydration prevents a duplicate browser request. Imperative reads and mutations use the shared `apiFetch` wrapper, which supplies a 15-second timeout, an `x-request-id`, no automatic retry, explicit in-flight dedupe keys, and superseded-request cancellation through `createLatestApiRequest`.
+
+Every API response includes `x-request-id` and `Server-Timing`. Slow GET requests above 500 ms and mutations above 1 second emit structured diagnostics containing route, status, duration, response bytes, and application database round trips.
 
 ## Dashboard
 

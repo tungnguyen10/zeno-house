@@ -9,8 +9,7 @@ const findById = vi.fn()
 const insertShared = vi.fn()
 const updateShared = vi.fn()
 const deactivateShared = vi.fn()
-const hasAllocation = vi.fn()
-const insertExpense = vi.fn()
+const allocateShared = vi.fn()
 const assertBuildingScope = vi.fn()
 const assertReportOpen = vi.fn()
 
@@ -22,12 +21,8 @@ vi.mock('../../server/repositories/shared-expenses', () => ({
     insert: insertShared,
     update: updateShared,
     deactivate: deactivateShared,
-    hasAllocation,
+    allocate: allocateShared,
   },
-}))
-
-vi.mock('../../server/repositories/operations-report/expenses', () => ({
-  BuildingExpenseRepository: { insert: insertExpense },
 }))
 
 vi.mock('../../server/utils/scope', () => ({
@@ -63,12 +58,12 @@ describe('SharedExpenseService', () => {
     vi.clearAllMocks()
     vi.stubGlobal('can', realCan)
     findById.mockResolvedValue(shared())
-    hasAllocation.mockResolvedValue(false)
     assertBuildingScope.mockResolvedValue(undefined)
     assertReportOpen.mockResolvedValue(undefined)
-    insertExpense
-      .mockResolvedValueOnce({ id: 'expense-1', amount: 500 })
-      .mockResolvedValueOnce({ id: 'expense-2', amount: 501 })
+    allocateShared.mockResolvedValue([
+      { buildingId: 'building-1', expenseId: 'expense-1', amount: 500 },
+      { buildingId: 'building-2', expenseId: 'expense-2', amount: 501 },
+    ])
   })
 
   it('splits allocation evenly and absorbs rounding remainder into the last building', async () => {
@@ -79,21 +74,16 @@ describe('SharedExpenseService', () => {
       period_month: 7,
     })
 
-    expect(insertExpense).toHaveBeenNthCalledWith(1, expect.anything(), expect.objectContaining({
-      building_id: 'building-1',
-      amount: 500,
-    }), 'owner-1')
-    expect(insertExpense).toHaveBeenNthCalledWith(2, expect.anything(), expect.objectContaining({
-      building_id: 'building-2',
-      amount: 501,
-    }), 'owner-1')
+    expect(allocateShared).toHaveBeenCalledWith(
+      expect.anything(), 'shared-1', 2026, 7, 'owner-1',
+    )
     expect(assertReportOpen).toHaveBeenCalledWith(expect.anything(), 'building-1', 2026, 7)
     expect(assertReportOpen).toHaveBeenCalledWith(expect.anything(), 'building-2', 2026, 7)
     expect(result.generatedExpenses.map(row => row.amount)).toEqual([500, 501])
   })
 
   it('rejects duplicate allocation for the same period', async () => {
-    hasAllocation.mockResolvedValue(true)
+    allocateShared.mockRejectedValue({ statusCode: 409 })
     const { SharedExpenseService } = await import('../../server/services/shared-expenses')
 
     await expect(
@@ -102,7 +92,7 @@ describe('SharedExpenseService', () => {
         period_month: 7,
       }),
     ).rejects.toMatchObject({ statusCode: 409 })
-    expect(insertExpense).not.toHaveBeenCalled()
+    expect(allocateShared).toHaveBeenCalledTimes(1)
   })
 
   it('denies managers', async () => {
@@ -123,6 +113,6 @@ describe('SharedExpenseService', () => {
         period_month: 7,
       }),
     ).rejects.toMatchObject({ statusCode: 403 })
-    expect(insertExpense).not.toHaveBeenCalled()
+    expect(allocateShared).not.toHaveBeenCalled()
   })
 })

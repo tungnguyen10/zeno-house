@@ -49,6 +49,12 @@ interface TenantIdImagePathUpdate {
   id_card_back_path?: string | null
 }
 
+function sequenceFromTenantCode(prefix: string, code: string): number {
+  if (!code.startsWith(`${prefix}-`)) return 0
+  const sequence = Number(code.slice(prefix.length + 1))
+  return Number.isInteger(sequence) ? sequence : 0
+}
+
 async function buildUniqueTenantCode(
   event: H3Event,
   fullName: string,
@@ -177,6 +183,74 @@ async function findTenantIdsForBuildings(event: H3Event, buildingIds: string[]):
 }
 
 export const TenantRepository = {
+  async findExistingIdentifiers(
+    event: H3Event,
+    phones: string[],
+    idNumbers: string[],
+  ): Promise<{ phones: Set<string>, idNumbers: Set<string> }> {
+    const client = await serverSupabaseClient(event)
+    const [phoneResult, idResult] = await Promise.all([
+      phones.length > 0
+        ? client.from('tenants').select('phone').in('phone', [...new Set(phones)])
+        : Promise.resolve({ data: [], error: null }),
+      idNumbers.length > 0
+        ? client.from('tenants').select('id_number').in('id_number', [...new Set(idNumbers)])
+        : Promise.resolve({ data: [], error: null }),
+    ])
+    if (phoneResult.error) throwDbError(phoneResult.error, 'tenants.findExistingIdentifiers.phones')
+    if (idResult.error) throwDbError(idResult.error, 'tenants.findExistingIdentifiers.idNumbers')
+    return {
+      phones: new Set((phoneResult.data ?? []).map(row => row.phone)),
+      idNumbers: new Set((idResult.data ?? []).map(row => row.id_number).filter((value): value is string => Boolean(value))),
+    }
+  },
+
+  async insertMany(event: H3Event, inputs: TenantCreateInput[]): Promise<Tenant[]> {
+    if (inputs.length === 0) return []
+    const client = await serverSupabaseClient(event)
+    const createdAt = new Date().toISOString()
+    const year = new Date(createdAt).getUTCFullYear()
+    const { data: existingCodes, error: codeError } = await client
+      .from('tenants')
+      .select('code')
+      .like('code', `%-${year}-%`)
+    if (codeError) throwDbError(codeError, 'tenants.insertMany.codes')
+
+    const nextByPrefix = new Map<string, number>()
+    for (const row of existingCodes ?? []) {
+      if (!row.code) continue
+      const prefix = row.code.replace(/-\d+$/, '')
+      const sequence = sequenceFromTenantCode(prefix, row.code)
+      nextByPrefix.set(prefix, Math.max(nextByPrefix.get(prefix) ?? 0, sequence + 1))
+    }
+    const payloads = inputs.map((input) => {
+      const initials = nameInitialsFromFullName(input.full_name) || 'kh'
+      const prefix = `${initials}-${year}`
+      const next = nextByPrefix.get(prefix) ?? 1
+      nextByPrefix.set(prefix, next + 1)
+      return {
+        code: `${prefix}-${String(next).padStart(4, '0')}`,
+        full_name: input.full_name,
+        phone: input.phone,
+        email: input.email ?? null,
+        id_number: input.id_number ?? null,
+        date_of_birth: input.date_of_birth ?? null,
+        permanent_address: input.permanent_address ?? null,
+        notes: input.notes ?? null,
+        gender: input.gender ?? null,
+        occupation: input.occupation ?? null,
+        id_issued_date: input.id_issued_date ?? null,
+        id_issued_place: input.id_issued_place ?? null,
+        id_card_front_path: null,
+        id_card_back_path: null,
+        emergency_contact_name: input.emergency_contact_name ?? null,
+        emergency_contact_phone: input.emergency_contact_phone ?? null,
+      }
+    })
+    const { data, error } = await client.from('tenants').insert(payloads as never).select()
+    if (error) throwDbError(error, 'tenants.insertMany')
+    return (data ?? []).map(mapTenant)
+  },
   async findAll(
     event: H3Event,
     filters: TenantFilters = {},

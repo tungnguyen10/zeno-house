@@ -16,7 +16,41 @@ export interface AuditAppendInput {
   metadata?: Record<string, unknown>
 }
 
+export function decodeBillingAuditCursor(cursor?: string): { createdAt: string | null; id: string | null } {
+  if (!cursor) return { createdAt: null, id: null }
+  const separator = cursor.lastIndexOf('|')
+  if (separator === -1) return { createdAt: cursor, id: null }
+  return {
+    createdAt: cursor.slice(0, separator),
+    id: cursor.slice(separator + 1) || null,
+  }
+}
+
+export function encodeBillingAuditCursor(row: BillingAuditEvent): string {
+  return `${row.createdAt}|${row.id}`
+}
+
 export const BillingAuditRepository = {
+  async appendMany(event: H3Event, inputs: AuditAppendInput[]): Promise<BillingAuditEvent[]> {
+    if (inputs.length === 0) return []
+    const client = await serverSupabaseClient(event)
+    const { data, error } = await client
+      .from('billing_audit_events')
+      .insert(inputs.map(input => ({
+        billing_period_id: input.billing_period_id,
+        actor_id: input.actor_id,
+        action: input.action,
+        entity_type: input.entity_type,
+        entity_id: input.entity_id ?? null,
+        correlation_id: input.correlation_id ?? null,
+        before_data: (input.before_data ?? null) as never,
+        after_data: (input.after_data ?? null) as never,
+        metadata: (input.metadata ?? {}) as never,
+      })))
+      .select()
+    if (error) throwDbError(error, 'billing.audit.appendMany')
+    return (data ?? []).map(mapBillingAuditEvent)
+  },
   async append(event: H3Event, input: AuditAppendInput): Promise<BillingAuditEvent> {
     const client = await serverSupabaseClient(event)
     const { data, error } = await client
@@ -52,12 +86,7 @@ export const BillingAuditRepository = {
     return (data ?? []).map(mapBillingAuditEvent)
   },
 
-  /**
-   * List events for a period with index-safe DB-level filters applied
-   * (actor, action, created_at range, correlation). Free-text search (`q`) and
-   * cursor/limit pagination are applied by the service after enrichment, since
-   * they target resolved fields (tenant name, invoice code, summary).
-   */
+  /** Apply every filter plus stable `(created_at, id)` cursor pagination in SQL. */
   async listByPeriodFiltered(
     event: H3Event,
     billingPeriodId: string,
@@ -67,27 +96,28 @@ export const BillingAuditRepository = {
       from?: string
       to?: string
       correlationId?: string
-      max?: number
+      cursor?: string
+      limit?: number
+      q?: string
     },
   ): Promise<BillingAuditEvent[]> {
-    const client = await serverSupabaseClient(event)
-    let query = client
-      .from('billing_audit_events')
-      .select('*')
-      .eq('billing_period_id', billingPeriodId)
-    if (filters.actorIds && filters.actorIds.length > 0) {
-      query = query.in('actor_id', filters.actorIds)
-    }
-    if (filters.actions && filters.actions.length > 0) {
-      query = query.in('action', filters.actions)
-    }
-    if (filters.from) query = query.gte('created_at', filters.from)
-    if (filters.to) query = query.lte('created_at', filters.to)
-    if (filters.correlationId) query = query.eq('correlation_id', filters.correlationId)
-    query = query.order('created_at', { ascending: false }).limit(filters.max ?? 1000)
-    const { data, error } = await query
-    if (error) throwDbError(error, 'billing.audit.listByPeriodFiltered')
-    return (data ?? []).map(mapBillingAuditEvent)
+    const limit = Math.min(filters.limit ?? 100, 100)
+    const cursor = decodeBillingAuditCursor(filters.cursor)
+    const client = serverSupabaseClient(event)
+    const { data, error } = await client.rpc('billing_audit_search_page' as never, {
+      p_period_id: billingPeriodId,
+      p_actor_ids: filters.actorIds ?? null,
+      p_actions: filters.actions ?? null,
+      p_from: filters.from ?? null,
+      p_to: filters.to ?? null,
+      p_correlation_id: filters.correlationId ?? null,
+      p_cursor: cursor.createdAt,
+      p_cursor_id: cursor.id,
+      p_query: filters.q ?? null,
+      p_limit: limit,
+    } as never)
+    if (error) throwDbError(error, 'billing.audit.searchPage')
+    return ((data ?? []) as unknown as Parameters<typeof mapBillingAuditEvent>[0][]).map(mapBillingAuditEvent)
   },
 
   /**

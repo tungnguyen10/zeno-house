@@ -15,7 +15,7 @@ export function useRecentAuditCount(periodId: MaybeRefOrGetter<string>) {
     if (!id.value || loaded.value) return
     const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
     try {
-      const resp = await $fetch<ApiSuccess<BillingAuditEvent[]>>(
+      const resp = await apiFetch<ApiSuccess<BillingAuditEvent[]>>(
         `/api/billing/periods/${id.value}/audit`,
         { params: { from: since, limit: '100' } },
       )

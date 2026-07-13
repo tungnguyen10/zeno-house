@@ -64,7 +64,7 @@ function onRemoveIdImage(side: TenantIdImageSide) {
 async function uploadIdImage(tenantId: string, side: TenantIdImageSide, file: File) {
   const form = new FormData()
   form.append('image', file)
-  await $fetch(`/api/tenants/${tenantId}/id-image`, {
+  await apiFetch(`/api/tenants/${tenantId}/id-image`, {
     method: 'POST',
     query: { side },
     body: form,

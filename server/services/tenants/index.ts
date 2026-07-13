@@ -12,6 +12,7 @@ import type {
 } from '~/utils/validators/tenants'
 import { tenantCreateSchema } from '~/utils/validators/tenants'
 import { TenantRepository, type TenantFilters } from '../../repositories/tenants'
+import { BulkActionRepository } from '../../repositories/bulk-actions'
 import { BuildingRepository } from '../../repositories/buildings'
 import { canDeleteMasterData, getAssignedBuildingIds } from '../../utils/scope'
 import { AuditService } from '../audit'
@@ -181,85 +182,77 @@ export const TenantService = {
     const failed: TenantBulkCreateFailure[] = []
     const seenIdNumbers = new Set<string>()
     const seenPhones = new Set<string>()
+    const valid: Array<{ line: number, data: TenantCreateInput }> = []
 
     for (const row of input.rows) {
-      try {
-        const normalized = normalizeBulkCreateRow(row)
-        const parsed = tenantCreateSchema.safeParse(normalized)
-        if (!parsed.success) {
-          failed.push({
-            line: row.line,
-            reason: 'validation_error',
-            message: 'Dữ liệu dòng không hợp lệ',
-            fieldErrors: parsed.error.flatten().fieldErrors,
-          })
-          continue
-        }
-
-        if (seenPhones.has(parsed.data.phone)) {
-          failed.push({
-            line: row.line,
-            reason: 'duplicate_phone_in_file',
-            message: 'Số điện thoại bị trùng trong file nhập',
-            fieldErrors: { phone: ['Số điện thoại bị trùng trong file nhập'] },
-          })
-          continue
-        }
-        seenPhones.add(parsed.data.phone)
-
-        const existingPhone = await TenantRepository.findByPhone(event, parsed.data.phone)
-        if (existingPhone) {
-          failed.push({
-            line: row.line,
-            reason: 'duplicate_phone',
-            message: 'Số điện thoại đã tồn tại trong hệ thống',
-            fieldErrors: { phone: ['Số điện thoại đã tồn tại trong hệ thống'] },
-          })
-          continue
-        }
-
-        if (parsed.data.id_number) {
-          if (seenIdNumbers.has(parsed.data.id_number)) {
-            failed.push({
-              line: row.line,
-              reason: 'duplicate_in_file',
-              message: 'Số CMND/CCCD bị trùng trong file nhập',
-              fieldErrors: { id_number: ['Số CMND/CCCD bị trùng trong file nhập'] },
-            })
-            continue
-          }
-          seenIdNumbers.add(parsed.data.id_number)
-
-          const existing = await TenantRepository.findByIdNumber(event, parsed.data.id_number)
-          if (existing) {
-            failed.push({
-              line: row.line,
-              reason: 'duplicate_id_number',
-              message: 'Số CMND/CCCD đã tồn tại trong hệ thống',
-              fieldErrors: { id_number: ['Số CMND/CCCD đã tồn tại trong hệ thống'] },
-            })
-            continue
-          }
-        }
-
-        const inserted = await TenantRepository.insert(event, parsed.data)
-        await AuditService.append(event, user, {
-          building_id: null,
-          action: AUDIT_ACTIONS.TENANT_CREATED,
-          entity_type: 'tenant',
-          entity_id: inserted.id,
-          after_data: inserted,
-          metadata: { source: 'bulk_import', line: row.line },
-        })
-
-        created.push(await withSignedTenantIdImages(event, inserted))
-      }
-      catch {
+      const parsed = tenantCreateSchema.safeParse(normalizeBulkCreateRow(row))
+      if (!parsed.success) {
         failed.push({
           line: row.line,
-          reason: 'unexpected_error',
-          message: 'Không thể tạo khách thuê ở dòng này',
+          reason: 'validation_error',
+          message: 'Dữ liệu dòng không hợp lệ',
+          fieldErrors: parsed.error.flatten().fieldErrors,
         })
+        continue
+      }
+      if (seenPhones.has(parsed.data.phone)) {
+        failed.push({
+          line: row.line,
+          reason: 'duplicate_phone_in_file',
+          message: 'Số điện thoại bị trùng trong file nhập',
+          fieldErrors: { phone: ['Số điện thoại bị trùng trong file nhập'] },
+        })
+        continue
+      }
+      seenPhones.add(parsed.data.phone)
+      if (parsed.data.id_number && seenIdNumbers.has(parsed.data.id_number)) {
+        failed.push({
+          line: row.line,
+          reason: 'duplicate_in_file',
+          message: 'Số CMND/CCCD bị trùng trong file nhập',
+          fieldErrors: { id_number: ['Số CMND/CCCD bị trùng trong file nhập'] },
+        })
+        continue
+      }
+      if (parsed.data.id_number) seenIdNumbers.add(parsed.data.id_number)
+      valid.push({ line: row.line, data: parsed.data })
+    }
+
+    const existing = await TenantRepository.findExistingIdentifiers(
+      event,
+      valid.map(item => item.data.phone),
+      valid.flatMap(item => item.data.id_number ? [item.data.id_number] : []),
+    )
+    const insertable = valid.filter((item) => {
+      if (existing.phones.has(item.data.phone)) {
+        failed.push({
+          line: item.line,
+          reason: 'duplicate_phone',
+          message: 'Số điện thoại đã tồn tại trong hệ thống',
+          fieldErrors: { phone: ['Số điện thoại đã tồn tại trong hệ thống'] },
+        })
+        return false
+      }
+      if (item.data.id_number && existing.idNumbers.has(item.data.id_number)) {
+        failed.push({
+          line: item.line,
+          reason: 'duplicate_id_number',
+          message: 'Số CMND/CCCD đã tồn tại trong hệ thống',
+          fieldErrors: { id_number: ['Số CMND/CCCD đã tồn tại trong hệ thống'] },
+        })
+        return false
+      }
+      return true
+    })
+
+    if (insertable.length > 0) {
+      try {
+        created.push(...await TenantRepository.insertMany(event, insertable.map(item => item.data)))
+      }
+      catch {
+        for (const item of insertable) {
+          failed.push({ line: item.line, reason: 'unexpected_error', message: 'Không thể tạo khách thuê ở dòng này' })
+        }
       }
     }
 
@@ -449,29 +442,33 @@ export const TenantService = {
     const succeeded: string[] = []
     const failed: { id: string; reason: string }[] = []
 
+    if (input.action !== 'delete') {
+      const rows = await BulkActionRepository.execute(event, 'tenant', input.action, input.ids)
+      for (const row of rows) {
+        if (row.succeeded) succeeded.push(row.id)
+        else failed.push({ id: row.id, reason: row.reason ?? 'error' })
+      }
+      const bulkActionCode = input.action === 'archive'
+        ? AUDIT_ACTIONS.TENANT_ARCHIVED
+        : AUDIT_ACTIONS.TENANT_REMOVED
+      await AuditService.appendBulk(event, user, {
+        building_id: null,
+        entity_type: 'tenant',
+        aggregate_action: `tenant.bulk_${input.action}`,
+        items: succeeded.map(id => ({ entity_id: id, action: bulkActionCode })),
+        succeeded,
+        total: input.ids.length,
+        failed: failed.length,
+      })
+      return { succeeded, failed }
+    }
+
     for (const id of input.ids) {
       try {
-        if (input.action === 'delete') {
-          await TenantService.remove(event, user, id, {
-            reason: input.reason!,
-            buildingId: input.building_id,
-          })
-          succeeded.push(id)
-          continue
-        }
-
-        const existing = await TenantRepository.findByIdentifier(event, id)
-        if (!existing) {
-          failed.push({ id, reason: 'not_found' })
-          continue
-        }
-
-        if (input.action === 'archive') {
-          await TenantRepository.setStatus(event, existing.id, 'archived')
-        }
-        else if (input.action === 'activate') {
-          await TenantRepository.setStatus(event, existing.id, 'active')
-        }
+        await TenantService.remove(event, user, id, {
+          reason: input.reason!,
+          buildingId: input.building_id,
+        })
         succeeded.push(id)
       }
       catch (err: unknown) {
@@ -495,7 +492,7 @@ export const TenantService = {
       }
     }
 
-    const bulkActionCode = input.action === 'archive' ? AUDIT_ACTIONS.TENANT_ARCHIVED : AUDIT_ACTIONS.TENANT_REMOVED
+    const bulkActionCode = AUDIT_ACTIONS.TENANT_REMOVED
     await AuditService.appendBulk(event, user, {
       building_id: null,
       entity_type: 'tenant',

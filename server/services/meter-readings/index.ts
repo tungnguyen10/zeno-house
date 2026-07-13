@@ -204,34 +204,33 @@ export const MeterReadingService = {
       MeterReadingRepository.bulkUpsert(event, enriched),
     ])
 
-    // Resolve unique billing periods in one pass, then append per-reading audit events
-    const uniquePeriodKeys = [...new Set(
-      saved.map(r => `${r.buildingId}:${r.periodYear}:${r.periodMonth}`),
-    )]
-    const periodEntries = await Promise.all(
-      uniquePeriodKeys.map(async (key) => {
-        const [buildingId, year, month] = key.split(':')
-        const p = await BillingPeriodRepository.findByBuildingPeriod(
-          event, buildingId!, Number(year), Number(month),
-        )
-        return [key, p?.id ?? null] as const
-      }),
+    // Resolve all affected billing periods in one bounded query before
+    // appending the corresponding audit rows.
+    const periodCache = await BillingPeriodRepository.findByBuildingPeriods(
+      event,
+      [...new Map(saved.map(reading => {
+        const key = `${reading.buildingId}:${reading.periodYear}:${reading.periodMonth}`
+        return [key, {
+          buildingId: reading.buildingId,
+          periodYear: reading.periodYear,
+          periodMonth: reading.periodMonth,
+        }]
+      })).values()],
     )
-    const periodCache = new Map<string, string | null>(periodEntries)
 
-    await Promise.all(saved.map(async (reading) => {
+    await BillingAuditService.appendMany(event, _user, saved.map((reading) => {
       const conflictKey = `${reading.roomId}:${reading.meterType}:${reading.periodYear}:${reading.periodMonth}:${reading.readingType}`
       const beforeData = beforeMap.get(conflictKey) ?? null
       const periodCacheKey = `${reading.buildingId}:${reading.periodYear}:${reading.periodMonth}`
-      await BillingAuditService.append(event, _user, {
-        billing_period_id: periodCache.get(periodCacheKey) ?? null,
+      return {
+        billing_period_id: periodCache.get(periodCacheKey)?.id ?? null,
         action: BILLING_AUDIT_ACTIONS.READING_SAVED,
         entity_type: 'meter_reading',
         entity_id: reading.id,
         before_data: beforeData,
         after_data: reading,
         metadata: readingDiffMeta(beforeData, reading),
-      })
+      }
     }))
 
     return saved

@@ -12,6 +12,7 @@ import { PrepaidExpenseRepository } from '../../repositories/operations-report/p
 import { AuditService } from '../audit'
 import { OperationsReportLockService } from './locks'
 import { assertBuildingScope } from '../../utils/scope'
+import { invalidateOperationsReport } from './cache'
 
 function dateOnly(date: Date): string {
   return date.toISOString().slice(0, 10)
@@ -156,6 +157,7 @@ export const PrepaidExpenseService = {
       after_data: created,
     })
 
+    invalidateOperationsReport(created.buildingId)
     return created
   },
 
@@ -226,6 +228,7 @@ export const PrepaidExpenseService = {
       after_data: updated,
     })
 
+    invalidateOperationsReport(updated.buildingId)
     return updated
   },
 
@@ -254,5 +257,6 @@ export const PrepaidExpenseService = {
       entity_id: existing.id,
       before_data: existing,
     })
+    invalidateOperationsReport(existing.buildingId)
   },
 }

@@ -176,7 +176,7 @@ async function onSubmitEdit(data: RoomFormData) {
   editError.value = ''
   editFieldErrors.value = {}
   try {
-    await $fetch(`/api/rooms/${editingRoom.value.id}`, {
+    await apiFetch(`/api/rooms/${editingRoom.value.id}`, {
       method: 'PATCH',
       body: {
         room_number: payload.room_number,
@@ -217,7 +217,7 @@ async function onEditServices(room: Room) {
   servicesError.value = ''
   servicesLoading.value = true
   try {
-    const contractsRes = await $fetch<ApiSuccess<ContractWithDetails[]>>('/api/contracts', {
+    const contractsRes = await apiFetch<ApiSuccess<ContractWithDetails[]>>('/api/contracts', {
       query: { room_id: room.id, status: 'active', limit: 1 },
     })
     const contract = contractsRes.data?.[0] ?? null
@@ -226,7 +226,7 @@ async function onEditServices(room: Room) {
       servicesError.value = 'Phòng này chưa có hợp đồng active.'
       return
     }
-    const servicesRes = await $fetch<ApiSuccess<ContractService[]>>(
+    const servicesRes = await apiFetch<ApiSuccess<ContractService[]>>(
       `/api/contract-services?contract_id=${contract.id}`,
     )
     servicesList.value = servicesRes.data ?? []
@@ -247,9 +247,9 @@ function closeServices() {
 }
 
 async function onUpdateService(id: string, input: ContractServiceUpdateInput) {
-  await $fetch(`/api/contract-services/${id}`, { method: 'PATCH', body: input })
+  await apiFetch(`/api/contract-services/${id}`, { method: 'PATCH', body: input })
   if (!servicesContract.value) return
-  const res = await $fetch<ApiSuccess<ContractService[]>>(
+  const res = await apiFetch<ApiSuccess<ContractService[]>>(
     `/api/contract-services?contract_id=${servicesContract.value.id}`,
   )
   servicesList.value = res.data ?? []

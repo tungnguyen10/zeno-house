@@ -4,7 +4,7 @@ import type { AuthUser } from '~/types/auth'
 
 const periodFindById = vi.fn()
 const invoiceListByPeriod = vi.fn()
-const invoiceListCharges = vi.fn()
+const invoiceListChargesByInvoiceIds = vi.fn()
 const enrichInvoices = vi.fn()
 const appendAudit = vi.fn()
 const assertBuildingScope = vi.fn()
@@ -21,7 +21,7 @@ vi.mock('../../../server/repositories/billing/periods', () => ({
 vi.mock('../../../server/repositories/billing/invoices', () => ({
   InvoiceRepository: {
     listByPeriod: invoiceListByPeriod,
-    listCharges: invoiceListCharges,
+    listChargesByInvoiceIds: invoiceListChargesByInvoiceIds,
   },
 }))
 
@@ -71,15 +71,16 @@ describe('BillingExportService', () => {
         totalAmount: 2_500_000,
       },
     ])
-    invoiceListCharges.mockResolvedValue([
-      { chargeType: 'rent', amount: 2_000_000, metadata: {} },
+    invoiceListChargesByInvoiceIds.mockResolvedValue(new Map([['invoice-1', [
+      { invoiceId: 'invoice-1', chargeType: 'rent', amount: 2_000_000, metadata: {} },
       {
+        invoiceId: 'invoice-1',
         chargeType: 'electricity',
         amount: 300_000,
         metadata: { previous_reading_value: 10, current_reading_value: 30 },
       },
-      { chargeType: 'water', amount: 200_000, metadata: {} },
-    ])
+      { invoiceId: 'invoice-1', chargeType: 'water', amount: 200_000, metadata: {} },
+    ]]]))
     assertBuildingScope.mockResolvedValue(undefined)
     appendAudit.mockResolvedValue(undefined)
   })
@@ -107,5 +108,34 @@ describe('BillingExportService', () => {
     await workbook.xlsx.load(result.buffer)
     expect(workbook.worksheets).toHaveLength(1)
     expect(workbook.worksheets[0]?.rowCount).toBeGreaterThan(4)
+    expect(invoiceListChargesByInvoiceIds).toHaveBeenCalledTimes(1)
+    expect(invoiceListChargesByInvoiceIds).toHaveBeenCalledWith(expect.anything(), ['invoice-1'])
+  })
+
+  it('batch-loads charges once as the invoice count grows', async () => {
+    invoiceListByPeriod.mockResolvedValue([
+      { id: 'invoice-1' },
+      { id: 'invoice-2' },
+      { id: 'invoice-3' },
+    ])
+    enrichInvoices.mockResolvedValue([
+      { id: 'invoice-1', status: 'issued', roomNumber: '101', totalAmount: 2_500_000 },
+      { id: 'invoice-2', status: 'issued', roomNumber: '102', totalAmount: 2_600_000 },
+      { id: 'invoice-3', status: 'issued', roomNumber: '103', totalAmount: 2_700_000 },
+    ])
+    invoiceListChargesByInvoiceIds.mockResolvedValue(new Map([
+      ['invoice-1', []],
+      ['invoice-2', []],
+      ['invoice-3', []],
+    ]))
+
+    const { BillingExportService } = await import('../../../server/services/billing/export')
+    await BillingExportService.buildPeriodWorkbook({} as never, admin, 'period-1')
+
+    expect(invoiceListChargesByInvoiceIds).toHaveBeenCalledTimes(1)
+    expect(invoiceListChargesByInvoiceIds).toHaveBeenCalledWith(
+      expect.anything(),
+      ['invoice-1', 'invoice-2', 'invoice-3'],
+    )
   })
 })

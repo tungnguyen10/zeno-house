@@ -1,7 +1,5 @@
 import type { H3Event } from 'h3'
-import { serverSupabaseServiceRole } from '#supabase/server'
 import { db as serverSupabaseClient } from '../../utils/db'
-import type { Database } from '~/types/database.types'
 import type { BillingAuditEntityType } from '~/utils/constants/billing'
 
 type MaybeId = string | null | undefined
@@ -105,17 +103,31 @@ export class BillingDisplayResolver {
       this.countQuery('auth.users')
       const found = new Set<string>()
       try {
-        const client = serverSupabaseServiceRole<Database>(this.event)
-        await Promise.all(missing.map(async (id) => {
-          const { data, error } = await client.auth.admin.getUserById(id)
-          if (error || !data?.user) return
-          found.add(id)
-          this.actors.set(id, {
-            id,
-            name: userDisplayName(data.user),
-            email: data.user.email ?? null,
-          })
-        }))
+        const client = serverSupabaseClient(this.event)
+        const admin = client.auth.admin
+        if (typeof admin.listUsers === 'function') {
+          const { data, error } = await admin.listUsers({ page: 1, perPage: 1000 })
+          if (!error) {
+            const wanted = new Set(missing)
+            for (const actor of data.users) {
+              if (!wanted.has(actor.id)) continue
+              found.add(actor.id)
+              this.actors.set(actor.id, {
+                id: actor.id,
+                name: userDisplayName(actor),
+                email: actor.email ?? null,
+              })
+            }
+          }
+        }
+        else {
+          await Promise.all(missing.map(async (id) => {
+            const { data, error } = await admin.getUserById(id)
+            if (error || !data.user) return
+            found.add(id)
+            this.actors.set(id, { id, name: userDisplayName(data.user), email: data.user.email ?? null })
+          }))
+        }
       } catch {
         // Keep billing read DTOs available even when Auth admin lookup is not
         // configured for the runtime or unit test environment.

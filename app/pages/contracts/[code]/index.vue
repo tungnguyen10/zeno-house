@@ -87,7 +87,7 @@ async function confirmDelete(force = false) {
   isDeleting.value = true
   deleteConflict.value = null
   try {
-    await $fetch(`/api/contracts/${id}`, {
+    await apiFetch(`/api/contracts/${id}`, {
       method: 'DELETE',
       query: force ? { force: true } : undefined,
     })
@@ -111,7 +111,7 @@ async function confirmTerminate() {
   if (!contract.value) return
   isTerminating.value = true
   try {
-    await $fetch(`/api/contracts/${id}`, {
+    await apiFetch(`/api/contracts/${id}`, {
       method: 'PATCH',
       body: { status: 'terminated' },
     })
