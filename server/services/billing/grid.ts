@@ -19,10 +19,11 @@ import {
 } from '~/utils/constants/billing'
 import { BillingPeriodRepository } from '../../repositories/billing/periods'
 import { BillingUtilityUsageRepository } from '../../repositories/billing/utility-usages'
+import { InvoiceRepository } from '../../repositories/billing/invoices'
 import { assertBuildingScope } from '../../utils/scope'
 import { calculateRequiredReadingProgress } from './core'
 import { BillingDraftService } from './drafts'
-import { BillingPeriodService } from './periods'
+import { BillingAuditService } from './audit'
 
 // ---------------------------------------------------------------------------
 // Types for source rows
@@ -44,6 +45,7 @@ interface MeterReadingRow {
 }
 
 interface BuildingPricing {
+  name: string | null
   electricity_pricing_type: string | null
   default_electricity_rate: number | null
   water_pricing_type: string | null
@@ -302,11 +304,12 @@ export const BillingDraftGridService = {
     // Building pricing config
     const { data: building, error: bErr } = await supabase
       .from('buildings')
-      .select('electricity_pricing_type, default_electricity_rate, water_pricing_type, default_water_rate')
+      .select('name, electricity_pricing_type, default_electricity_rate, water_pricing_type, default_water_rate')
       .eq('id', period.buildingId)
       .single()
     if (bErr) throw createError({ statusCode: 500, message: bErr.message })
     const pricing: BuildingPricing = {
+      name: building.name ?? null,
       electricity_pricing_type: building.electricity_pricing_type ?? null,
       default_electricity_rate: building.default_electricity_rate === null ? null : Number(building.default_electricity_rate),
       water_pricing_type: building.water_pricing_type ?? null,
@@ -463,6 +466,15 @@ export const BillingDraftGridService = {
       }
     }
 
+    const [invoices, auditEvents] = await Promise.all([
+      InvoiceRepository.listByPeriod(event, period.id),
+      BillingAuditService.listByPeriod(event, user, period.id),
+    ])
+    const activeInvoices = invoices.filter(invoice => invoice.status !== 'void')
+    const issuedTotal = activeInvoices.reduce((sum, invoice) => sum + invoice.totalAmount, 0)
+    const paidTotal = activeInvoices.reduce((sum, invoice) => sum + invoice.paidAmount, 0)
+    const outstandingBalance = activeInvoices.reduce((sum, invoice) => sum + invoice.balanceAmount, 0)
+
     return {
       period,
       batchReadingDate,
@@ -474,7 +486,20 @@ export const BillingDraftGridService = {
         blockedDraftCount,
         draftTotal: draftTotalSum,
       },
-      overview: await BillingPeriodService.getOverview(event, user, period.id),
+      overview: {
+        period,
+        buildingId: period.buildingId,
+        buildingName: pricing.name,
+        contractCount: draftResp.drafts.length,
+        invoiceCount: activeInvoices.length,
+        readingCompleteCount: completeReadingCount,
+        readingRequiredCount: requiredReadingCount,
+        draftTotal: 0,
+        issuedTotal,
+        paidTotal,
+        outstandingBalance,
+        auditEvents,
+      },
     }
   },
 }

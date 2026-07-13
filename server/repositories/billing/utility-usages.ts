@@ -12,6 +12,20 @@ type UtilityUsageApprovalUpdate = {
 }
 
 export const BillingUtilityUsageRepository = {
+  async listByPeriods(
+    event: H3Event,
+    billingPeriodIds: string[],
+  ): Promise<BillingUtilityUsage[]> {
+    if (billingPeriodIds.length === 0) return []
+    const client = await serverSupabaseClient(event)
+    const { data, error } = await client
+      .from('billing_utility_usages')
+      .select('*')
+      .in('billing_period_id', billingPeriodIds)
+    if (error) throwDbError(error, 'billing.utilityUsages.listByPeriods')
+    return (data ?? []).map(mapBillingUtilityUsage)
+  },
+
   async listByPeriod(
     event: H3Event,
     billingPeriodId: string,

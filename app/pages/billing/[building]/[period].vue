@@ -7,6 +7,7 @@ import type { BillingPaymentsIntent } from '~/components/billing/BillingPayments
 import BillingAuditDrawer from '~/components/billing/BillingAuditDrawer.vue'
 import BillingCloseStep from '~/components/billing/BillingCloseStep.vue'
 import BillingUnissueModal from '~/components/billing/BillingUnissueModal.vue'
+import type { BillingPeriod } from '~/types/billing'
 import { getApiErrorCode, getApiErrorMessage, type ApiErrorLike } from '~/utils/api-error'
 
 definePageMeta({ title: 'Kỳ vận hành' })
@@ -23,6 +24,7 @@ if (!buildingParam || !Number.isFinite(periodYear) || !Number.isFinite(periodMon
 }
 
 const periodId = ref<string>('')
+const resolvedPeriod = ref<BillingPeriod | null>(null)
 const resolveError = ref<string | null>(null)
 const resolving = ref(true)
 const toast = useToast()
@@ -31,11 +33,12 @@ async function resolvePeriod() {
   resolving.value = true
   resolveError.value = null
   try {
-    const resp = await $fetch<{ data: { id: string } }>('/api/billing/periods', {
+    const resp = await $fetch<{ data: BillingPeriod }>('/api/billing/periods', {
       method: 'POST',
       body: { building_id: buildingParam, period_year: periodYear, period_month: periodMonth },
     })
     periodId.value = resp.data.id
+    resolvedPeriod.value = resp.data
   }
   catch (err) {
     const e = err as ApiErrorLike & { status?: number }
@@ -84,10 +87,11 @@ const {
   approveUtilityOverride,
 } = workspace
 
+period.value = resolvedPeriod.value
+
 const { count: recentAuditCount, load: loadRecentAuditCount } = useRecentAuditCount(periodId)
 
 if (periodId.value) {
-  await loadOverview()
   void loadRecentAuditCount()
 }
 
@@ -139,6 +143,7 @@ watch(tab, async (current) => {
   }
   if (current === 'payments') {
     const tasks: Promise<unknown>[] = []
+    if (!overview.value) tasks.push(loadOverview())
     if (invoices.value.length === 0) tasks.push(loadInvoices())
     // Drafts power the reissue preview. Refresh so the modal reflects the
     // latest readings/overrides, not whatever was loaded earlier.

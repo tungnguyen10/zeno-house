@@ -24,6 +24,8 @@ import { BillingAuditService } from './audit'
 import { ReserveFundService } from '../operations-report/reserve-funds'
 import { PrepaidExpenseService } from '../operations-report/prepaid-expenses'
 import {
+  calculateRequiredReadingProgress,
+  loadBatchedPeriodInputs,
   loadBillableContractsInPeriod,
   loadRequiredReadingProgress,
   type BillableContractPeriodRow,
@@ -133,35 +135,42 @@ export const BillingPeriodService = {
     const buildingIds = [...new Set(periods.map(p => p.buildingId))]
     const buildingMap = await loadBuildingsByIds(event, buildingIds)
 
+    const pricingByBuilding = new Map(
+      [...buildingMap.entries()].map(([id, building]) => [id, {
+        electricity_pricing_type: building.electricityPricingType,
+        water_pricing_type: building.waterPricingType,
+      }]),
+    )
+    const [allInvoices, batchedInputs] = await Promise.all([
+      InvoiceRepository.listByPeriods(event, periods.map(period => period.id)),
+      loadBatchedPeriodInputs(event, periods, pricingByBuilding),
+    ])
+    const invoicesByPeriod = new Map<string, typeof allInvoices>()
+    for (const invoice of allInvoices) {
+      const list = invoicesByPeriod.get(invoice.billingPeriodId) ?? []
+      list.push(invoice)
+      invoicesByPeriod.set(invoice.billingPeriodId, list)
+    }
+
     const summaries: BillingPeriodSummary[] = []
     for (const period of periods) {
-      const invoices = await InvoiceRepository.listByPeriod(event, period.id)
+      const invoices = invoicesByPeriod.get(period.id) ?? []
       const activeInvoices = invoices.filter(i => i.status !== 'void')
       const issuedTotal = activeInvoices.reduce((s, i) => s + i.totalAmount, 0)
       const paidTotal = activeInvoices.reduce((s, i) => s + i.paidAmount, 0)
       const outstanding = activeInvoices.reduce((s, i) => s + i.balanceAmount, 0)
 
       const building = buildingMap.get(period.buildingId)
-      const contracts = await loadBillableContractsForPeriod(
-        event,
-        period.buildingId,
-        period.periodYear,
-        period.periodMonth,
-      )
-      const reading = await loadRequiredReadingProgress(
-        event,
-        {
-          buildingId: period.buildingId,
-          periodId: period.id,
-          periodYear: period.periodYear,
-          periodMonth: period.periodMonth,
-          pricing: {
-            electricity_pricing_type: building?.electricityPricingType ?? null,
-            water_pricing_type: building?.waterPricingType ?? null,
-          },
-          contracts,
+      const contracts = batchedInputs.contractsByPeriod.get(period.id) ?? []
+      const reading = calculateRequiredReadingProgress({
+        contracts,
+        pricing: pricingByBuilding.get(period.buildingId) ?? {
+          electricity_pricing_type: null,
+          water_pricing_type: null,
         },
-      )
+        readings: batchedInputs.readingsByPeriod.get(period.id) ?? [],
+        overrides: batchedInputs.overridesByPeriod.get(period.id) ?? [],
+      })
 
       summaries.push({
         period,

@@ -36,6 +36,18 @@ async function buildUniqueInvoiceCode(event: H3Event, billingPeriodId: string): 
 }
 
 export const InvoiceRepository = {
+  async listByPeriods(event: H3Event, billingPeriodIds: string[]): Promise<Invoice[]> {
+    if (billingPeriodIds.length === 0) return []
+    const client = await serverSupabaseClient(event)
+    const { data, error } = await client
+      .from('invoices')
+      .select('*')
+      .in('billing_period_id', billingPeriodIds)
+      .order('created_at', { ascending: true })
+    if (error) throwDbError(error, 'billing.invoices.listByPeriods')
+    return (data ?? []).map(mapInvoice)
+  },
+
   async listByPeriod(event: H3Event, billingPeriodId: string): Promise<Invoice[]> {
     const client = await serverSupabaseClient(event)
     const { data, error } = await client

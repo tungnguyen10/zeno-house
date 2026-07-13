@@ -5,7 +5,9 @@ const period = buildPeriod({ id: 'period-1', buildingId: 'building-1', periodYea
 const listPeriods = vi.fn()
 const findPeriodById = vi.fn()
 const listInvoicesByPeriod = vi.fn()
+const listInvoicesByPeriods = vi.fn()
 const listUtilityUsagesByPeriod = vi.fn()
+const listUtilityUsagesByPeriods = vi.fn()
 
 vi.mock('../../../server/repositories/billing/periods', () => ({
   BillingPeriodRepository: {
@@ -17,12 +19,14 @@ vi.mock('../../../server/repositories/billing/periods', () => ({
 vi.mock('../../../server/repositories/billing/invoices', () => ({
   InvoiceRepository: {
     listByPeriod: listInvoicesByPeriod,
+    listByPeriods: listInvoicesByPeriods,
   },
 }))
 
 vi.mock('../../../server/repositories/billing/utility-usages', () => ({
   BillingUtilityUsageRepository: {
     listByPeriod: listUtilityUsagesByPeriod,
+    listByPeriods: listUtilityUsagesByPeriods,
   },
 }))
 
@@ -57,6 +61,7 @@ function createQuery(table: string) {
       return query
     }),
     lte: vi.fn(() => query),
+    gte: vi.fn(() => query),
     or: vi.fn(() => query),
     in: vi.fn(() => query),
     order: vi.fn(() => query),
@@ -149,7 +154,9 @@ describe('billing API consistency regression', () => {
     listPeriods.mockResolvedValue([period])
     findPeriodById.mockResolvedValue(period)
     listInvoicesByPeriod.mockResolvedValue([])
+    listInvoicesByPeriods.mockResolvedValue([])
     listUtilityUsagesByPeriod.mockResolvedValue([])
+    listUtilityUsagesByPeriods.mockResolvedValue([])
   })
 
   it('keeps period list, overview, drafts, and draft grid aligned for one fixture', async () => {
@@ -191,5 +198,29 @@ describe('billing API consistency regression', () => {
       readingCompleteCount: 1,
       readingRequiredCount: 1,
     })
+  })
+
+  it('batch-loads invoices and utility overrides once for multiple periods', async () => {
+    const secondPeriod = buildPeriod({
+      id: 'period-2',
+      buildingId: 'building-1',
+      periodYear: 2026,
+      periodMonth: 6,
+    })
+    listPeriods.mockResolvedValue([period, secondPeriod])
+    const { BillingPeriodService } = await import('../../../server/services/billing/periods')
+
+    const result = await BillingPeriodService.list(
+      { context: {} } as never,
+      { id: 'user-1', app_metadata: { role: 'admin' } } as never,
+      {},
+    )
+
+    expect(result).toHaveLength(2)
+    expect(listInvoicesByPeriods).toHaveBeenCalledTimes(1)
+    expect(listInvoicesByPeriods).toHaveBeenCalledWith(expect.anything(), ['period-1', 'period-2'])
+    expect(listUtilityUsagesByPeriods).toHaveBeenCalledTimes(1)
+    expect(listInvoicesByPeriod).not.toHaveBeenCalled()
+    expect(listUtilityUsagesByPeriod).not.toHaveBeenCalled()
   })
 })

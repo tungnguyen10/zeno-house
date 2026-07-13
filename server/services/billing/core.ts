@@ -1,6 +1,7 @@
 import type { H3Event } from 'h3'
 import { db as serverSupabaseClient } from '../../utils/db'
 import { BillingUtilityUsageRepository } from '../../repositories/billing/utility-usages'
+import type { BillingPeriod } from '~/types/billing'
 
 export type BillableContractStatus = 'active' | 'expired' | 'renewed' | string
 export type RequiredMeterType = 'electricity' | 'water'
@@ -27,6 +28,12 @@ export interface ReadingProgressReading {
 export interface ReadingProgressOverride {
   roomId: string
   meterType: RequiredMeterType
+}
+
+export interface BatchedPeriodInputs {
+  contractsByPeriod: Map<string, BillableContractPeriodRow[]>
+  readingsByPeriod: Map<string, ReadingProgressReading[]>
+  overridesByPeriod: Map<string, ReadingProgressOverride[]>
 }
 
 export function billingPeriodBounds(year: number, month: number): { first: string; last: string } {
@@ -168,4 +175,79 @@ export async function loadRequiredReadingProgress(
       meterType: override.meterType,
     })),
   })
+}
+
+/** Load all inputs needed by the period queue in a fixed number of queries. */
+export async function loadBatchedPeriodInputs(
+  event: H3Event,
+  periods: BillingPeriod[],
+  pricingByBuilding: Map<string, BillingPricingRules>,
+): Promise<BatchedPeriodInputs> {
+  const contractsByPeriod = new Map<string, BillableContractPeriodRow[]>()
+  const readingsByPeriod = new Map<string, ReadingProgressReading[]>()
+  const overridesByPeriod = new Map<string, ReadingProgressOverride[]>()
+  if (periods.length === 0) return { contractsByPeriod, readingsByPeriod, overridesByPeriod }
+
+  const supabase = await serverSupabaseClient(event)
+  const buildingIds = [...new Set(periods.map(period => period.buildingId))]
+  const bounds = periods.map(period => billingPeriodBounds(period.periodYear, period.periodMonth))
+  const earliest = bounds.reduce((value, bound) => bound.first < value ? bound.first : value, bounds[0]!.first)
+  const latest = bounds.reduce((value, bound) => bound.last > value ? bound.last : value, bounds[0]!.last)
+
+  const [{ data: contractData, error: contractError }, overrides] = await Promise.all([
+    supabase
+      .from('contracts')
+      .select('id, building_id, room_id, start_date, end_date, status')
+      .in('building_id', buildingIds)
+      .lte('start_date', latest)
+      .or(`end_date.gte.${earliest},end_date.is.null`),
+    BillingUtilityUsageRepository.listByPeriods(event, periods.map(period => period.id)),
+  ])
+  if (contractError) throw createError({ statusCode: 500, message: contractError.message })
+
+  const contracts = (contractData ?? []) as BillableContractPeriodRow[]
+  for (const period of periods) {
+    contractsByPeriod.set(period.id, contracts.filter(contract =>
+      isBillableContractInPeriod(contract, period.buildingId, period.periodYear, period.periodMonth),
+    ))
+  }
+  for (const override of overrides) {
+    const list = overridesByPeriod.get(override.billingPeriodId) ?? []
+    list.push({ roomId: override.roomId, meterType: override.meterType })
+    overridesByPeriod.set(override.billingPeriodId, list)
+  }
+
+  const roomIds = [...new Set(contracts.map(contract => contract.room_id))]
+  const meterTypes = [...new Set(periods.flatMap(period =>
+    requiredMeterTypesForPricing(pricingByBuilding.get(period.buildingId) ?? {
+      electricity_pricing_type: null,
+      water_pricing_type: null,
+    }),
+  ))]
+  if (roomIds.length === 0 || meterTypes.length === 0) {
+    return { contractsByPeriod, readingsByPeriod, overridesByPeriod }
+  }
+
+  const years = periods.map(period => period.periodYear)
+  const { data: readingData, error: readingError } = await supabase
+    .from('meter_readings')
+    .select('room_id, meter_type, period_year, period_month')
+    .in('room_id', roomIds)
+    .gte('period_year', Math.min(...years))
+    .lte('period_year', Math.max(...years))
+    .eq('reading_type', 'monthly')
+    .in('meter_type', meterTypes)
+  if (readingError) throw createError({ statusCode: 500, message: readingError.message })
+
+  const readings = (readingData ?? []) as Array<ReadingProgressReading & { period_year: number, period_month: number }>
+  for (const period of periods) {
+    const roomSet = new Set((contractsByPeriod.get(period.id) ?? []).map(contract => contract.room_id))
+    readingsByPeriod.set(period.id, readings.filter(reading =>
+      reading.period_year === period.periodYear
+      && reading.period_month === period.periodMonth
+      && roomSet.has(reading.room_id),
+    ))
+  }
+
+  return { contractsByPeriod, readingsByPeriod, overridesByPeriod }
 }

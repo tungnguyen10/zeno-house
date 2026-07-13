@@ -10,6 +10,7 @@ const insert = vi.fn()
 const updateStatus = vi.fn()
 const listOutstandingByPeriod = vi.fn()
 const listInvoicesByPeriod = vi.fn()
+const listInvoicesByPeriods = vi.fn()
 const listFixedCostsByBuilding = vi.fn()
 const listExpenses = vi.fn()
 const listActiveAllocations = vi.fn()
@@ -40,6 +41,7 @@ vi.mock('../../../server/repositories/billing/invoices', () => ({
   InvoiceRepository: {
     listOutstandingByPeriod,
     listByPeriod: listInvoicesByPeriod,
+    listByPeriods: listInvoicesByPeriods,
   },
 }))
 
