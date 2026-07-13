@@ -1,5 +1,5 @@
 {
-    "dotenv.enableAutocloaking": false,
+    "dotenv.enableAutocloaking": true,
     "chat.tools.terminal.autoApprove": {
         "npx openspec": true
     }
