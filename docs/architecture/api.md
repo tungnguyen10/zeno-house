@@ -55,6 +55,17 @@ chat UI
 - All tool execution is server-side and must enforce capability and building scope checks.
 - Mutating tools require explicit confirmation and idempotency.
 
+### Mutation Plan Contract
+
+Mutating actions must follow a plan-then-commit pattern:
+
+1. `plan`: validate intent and produce a deterministic mutation preview.
+2. `confirm`: execute only when client sends explicit confirmation and the matching idempotency key.
+
+For update flows, mutation arguments must include an optimistic locking token (`updated_at` or `version`) so concurrent edits fail with `CONFLICT` rather than silent overwrite.
+
+Audit writes for confirmed mutations must commit in the same transaction as the domain mutation.
+
 ### Chat Envelope
 
 `POST /api/ai/chat` follows the shared envelope and may stream partial assistant output.
@@ -73,6 +84,12 @@ Streaming responses must preserve `x-request-id` for correlation with tool execu
 5. Server executes domain service.
 6. Tool result is returned to the model for the next step or final answer.
 
+### Tool Loop Safety
+
+- Each `/api/ai/chat` request must enforce a max tool loop limit (recommended default: 8).
+- Requests that exceed the loop limit must terminate with a structured `CONFLICT` or `VALIDATION_ERROR` response and an actionable message.
+- Consecutive mutation tools in one turn should be restricted by policy unless each mutation has independent confirmation.
+
 ### Agent-Specific Error Semantics
 
 In addition to standard API codes, agent handlers should normalize these states using existing codes:
@@ -82,6 +99,29 @@ In addition to standard API codes, agent handlers should normalize these states 
 - stale conversation or optimistic lock conflict: `CONFLICT`
 - unknown/unregistered tool request: `VALIDATION_ERROR`
 - missing authenticated session: `UNAUTHENTICATED`
+
+### Structured Agent Error Model
+
+Agent handlers should preserve the common envelope while normalizing `error.details` for machine handling:
+
+```ts
+type AgentErrorDetails = {
+  category:
+    | 'TOOL_VALIDATION'
+    | 'TOOL_NOT_ALLOWED'
+    | 'CONFIRMATION_REQUIRED'
+    | 'IDEMPOTENCY_REPLAY'
+    | 'OPTIMISTIC_LOCK_CONFLICT'
+    | 'LOOP_LIMIT_EXCEEDED'
+    | 'INTERNAL_TOOL_FAILURE'
+  toolName?: string
+  retryable: boolean
+  conversationId?: string
+  requestId?: string
+}
+```
+
+This model keeps UI and telemetry behavior consistent while still returning the top-level API error code (`VALIDATION_ERROR`, `FORBIDDEN`, `CONFLICT`, `INTERNAL`, or `UNAUTHENTICATED`).
 
 ## Dashboard
 

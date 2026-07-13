@@ -95,8 +95,12 @@
 - Agent and LLM runtime must not access the database directly.
 - Agent actions must route through whitelisted internal tools exposed by `server/api/**` and service orchestrators.
 - Prompt text is untrusted input and cannot bypass server-side capability checks, scope checks, or status transitions.
+- Mutating workflows must use a two-step mutation plan: preview/plan first, explicit confirm second.
 - Every mutating tool requires an explicit confirmation signal and a server-generated idempotency key.
+- Mutating tools that update existing records must enforce optimistic locking with a version token (for example `updated_at` or explicit `version`) and return `CONFLICT` on mismatch.
+- Mutating tool execution and audit persistence must be transactional: either both commit or both roll back.
 - Every mutating tool call must write audit metadata with actor, target entity, and before/after or operation summary.
 - Conversation state for multi-step agent workflows must persist server-side per user/session and include staleness tracking for draft data.
 - Tool gateway policy is deny-by-default: tools not explicitly registered are unavailable to the agent.
+- Tool execution loops must be bounded per request and per conversation turn to prevent runaway tool-calling.
 - The internal agent surface does not provide web search, URL browsing, or external side-effect tools.
