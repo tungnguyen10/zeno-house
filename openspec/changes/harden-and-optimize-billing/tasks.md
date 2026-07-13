@@ -25,6 +25,6 @@
 - [x] 4.1 Inventory all list APIs and add bounded pagination/cursors, DTO projections, and optional-count behavior without breaking current consumers
 - [x] 4.2 Add shared Nuxt API-fetch defaults for timeout, request ID, normalized errors, dedupe, debounce, and superseded-request cancellation
 - [x] 4.3 Apply scope-safe caching and invalidation to stable catalogs/configuration and immutable closed-period data
-- [ ] 4.4 Run `EXPLAIN (ANALYZE, BUFFERS)` on hot RPC/query paths and add only evidence-backed composite or partial indexes
+- [x] 4.4 Run `EXPLAIN (ANALYZE, BUFFERS)` on hot RPC/query paths and add only evidence-backed composite or partial indexes
 - [x] 4.5 Update API and architecture documentation with all checked-in routes and performance/cache/pagination contracts
 - [ ] 4.6 Run full OpenSpec validation, typecheck, tests, lint, migration/security checks, and final performance comparison

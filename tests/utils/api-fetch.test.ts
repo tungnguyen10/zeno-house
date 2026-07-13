@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { apiFetch } from '../../app/utils/api-fetch'
+import { apiFetch, createLatestApiRequest } from '../../app/utils/api-fetch'
 
 describe('apiFetch', () => {
   beforeEach(() => {
@@ -34,5 +34,25 @@ describe('apiFetch', () => {
       timeout: 15_000,
       headers: expect.any(Headers),
     }))
+  })
+
+  it('aborts a superseded request so it cannot win a newer search', async () => {
+    const resolvers: Array<(value: { data: string }) => void> = []
+    const fetchMock = vi.fn((_request: string, options: { signal?: AbortSignal }) => new Promise<{ data: string }>((resolve, reject) => {
+      options.signal?.addEventListener('abort', () => {
+        reject(Object.assign(new Error('aborted'), { name: 'AbortError' }))
+      })
+      resolvers.push(resolve)
+    }))
+    vi.stubGlobal('$fetch', fetchMock)
+    const latest = createLatestApiRequest()
+
+    const stale = latest<{ data: string }>('/api/audit?q=old')
+    const current = latest<{ data: string }>('/api/audit?q=new')
+    resolvers[1]!({ data: 'newest' })
+
+    await expect(stale).rejects.toMatchObject({ name: 'AbortError' })
+    await expect(current).resolves.toEqual({ data: 'newest' })
+    expect(fetchMock.mock.calls[0]?.[1].signal.aborted).toBe(true)
   })
 })
