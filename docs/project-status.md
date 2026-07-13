@@ -1,6 +1,20 @@
 # Zeno House - Project Status
 
-Last reviewed from source: 2026-07-10.
+Last reviewed from source: 2026-07-13.
+
+Internal AI agent platform planning update: 2026-07-13
+
+- Product direction is now agent-first for high-frequency internal workflows, starting with billing operations as the pilot wave.
+- Planned architecture is `Chat UI -> Agent API -> Internal Tool Gateway -> Domain Service -> Database`.
+- The model layer is intent orchestration only; permissions, scope, validation, transactions, and billing/operations rules remain in server services.
+- Guardrails are defined as architecture rules: no web search tools, deny-by-default tool registry, explicit confirm-before-write, and idempotent mutation execution.
+- Rollout strategy is wave-based rather than big-bang:
+  - Wave 1: Billing period + meter input + draft + issue flow
+  - Wave 2: Property CRUD workflows
+  - Wave 3: Operations report and recurring/shared expense workflows
+  - Wave 4: Invoice collection/reconciliation workflows
+  - Wave 5: Admin and assignment workflows
+- Current state: planning in progress; implementation not yet marked production-ready.
 
 UI standardization update: 2026-07-08
 
@@ -92,6 +106,28 @@ type ApiError = {
 ```
 
 Readable operational identifiers are first-class. Public route/query/body boundaries can accept UUIDs or readable codes/slugs where supported, then services/repositories resolve them back to UUIDs before doing persistence work.
+
+## Internal AI Agent Platform (Planned)
+
+The planned agent platform extends existing architecture rather than replacing it.
+
+```text
+chat UI
+  -> server/api/ai/chat
+  -> internal tool gateway (whitelist + policy + validation)
+  -> server/services/*
+  -> server/repositories/*
+  -> Supabase
+```
+
+Planned guardrails for all domains:
+
+- no direct model access to database queries
+- no web search or external browsing tools
+- explicit confirmation for mutating tools
+- idempotency keys for retried mutation requests
+- server-side capability and building-scope enforcement for every tool
+- audit trace for each mutating tool execution
 
 ## Product Surface
 

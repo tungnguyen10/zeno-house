@@ -35,6 +35,54 @@ Initial SSR reads use `useFetch` so Nuxt payload hydration prevents a duplicate 
 
 Every API response includes `x-request-id` and `Server-Timing`. Slow GET requests above 500 ms and mutations above 1 second emit structured diagnostics containing route, status, duration, response bytes, and application database round trips.
 
+## Internal AI Agent API Contract
+
+The internal AI assistant uses the same server-mediated architecture as the rest of the product:
+
+```text
+chat UI
+  -> /api/ai/chat
+  -> internal tool gateway (whitelist + schema validation + policy)
+  -> domain service
+  -> repository
+  -> Supabase
+```
+
+### Agent Runtime Boundaries
+
+- The model may interpret intent and request tool calls.
+- The model cannot query business tables directly.
+- All tool execution is server-side and must enforce capability and building scope checks.
+- Mutating tools require explicit confirmation and idempotency.
+
+### Chat Envelope
+
+`POST /api/ai/chat` follows the shared envelope and may stream partial assistant output.
+
+- Success: `{ data: { message, toolCalls?, toolResults?, conversationId }, meta? }`
+- Error: `{ error: { code, message, details? } }`
+
+Streaming responses must preserve `x-request-id` for correlation with tool execution logs.
+
+### Tool Call Lifecycle
+
+1. Client sends user message and current conversation ID.
+2. Server sends model messages plus allowed tool definitions.
+3. Model returns either final text or tool call requests.
+4. Tool gateway validates tool name, schema, confirmation policy, and capability/scope.
+5. Server executes domain service.
+6. Tool result is returned to the model for the next step or final answer.
+
+### Agent-Specific Error Semantics
+
+In addition to standard API codes, agent handlers should normalize these states using existing codes:
+
+- validation failure in tool arguments: `VALIDATION_ERROR`
+- permission or scope violation: `FORBIDDEN`
+- stale conversation or optimistic lock conflict: `CONFLICT`
+- unknown/unregistered tool request: `VALIDATION_ERROR`
+- missing authenticated session: `UNAUTHENTICATED`
+
 ## Dashboard
 
 | Method | Path |

@@ -54,6 +54,7 @@ npm run test:coverage
 - Service catalog: default service definitions, building overrides, and contract-level service sync.
 - Meter readings: monthly and handover readings for electricity/water, including bulk entry.
 - Monthly operations: billing periods, draft grid, invoice issue, payments, bulk payments, adjustment, void/reissue, unissue, Excel export, audit drawer, invoice detail.
+- Internal AI agent platform (planned): chat-driven workflow orchestration through whitelisted internal tools, starting with billing as the pilot domain.
 
 ## Architecture
 
@@ -73,6 +74,18 @@ Client code does not query Supabase directly for business data. API responses us
 type ApiSuccess<T> = { data: T; meta?: Record<string, unknown> }
 type ApiError = { error: { code: string; message: string; details?: unknown } }
 ```
+
+Planned internal AI workflows follow the same server-mediated pattern:
+
+```text
+chat UI
+  -> server/api/ai/chat
+  -> internal tool gateway (whitelist + validation + policy)
+  -> service (business rules + permissions)
+  -> repository (Supabase queries)
+```
+
+The model layer is limited to intent parsing and tool selection. Permission checks, scope enforcement, confirmations for mutating actions, and idempotent writes remain server-side.
 
 ## Key Docs
 

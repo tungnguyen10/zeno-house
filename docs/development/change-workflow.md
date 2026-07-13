@@ -21,8 +21,16 @@ Use OpenSpec when a change affects:
 - permissions
 - multi-file workflows
 - billing or financial behavior
+- internal AI agent behavior, tool policy, or permission boundaries
 
 Small docs-only fixes and tiny implementation corrections do not always need a proposal, but keep specs updated when behavior changes.
+
+Internal AI agent work should be treated as behavior work when it changes:
+
+- tool availability or tool-call policy
+- confirm-before-write rules
+- role/capability or scope enforcement paths
+- conversation state transitions for multi-step workflows
 
 ## Typical Flow
 
@@ -31,6 +39,8 @@ Small docs-only fixes and tiny implementation corrections do not always need a p
 3. Implement code against the accepted artifacts.
 4. Verify implementation against tasks and specs.
 5. Archive the change after completion.
+
+For internal AI agent changes, include explicit verification that prompt content cannot bypass server-side checks.
 
 ## Source Docs Vs OpenSpec
 
@@ -47,6 +57,12 @@ When a change lands, update both:
 
 - OpenSpec specs for requirements.
 - `docs/**` for developer-facing operating guidance.
+
+For internal AI agent platform changes, also update architecture/API docs for:
+
+- runtime boundaries (model vs tool gateway vs service)
+- mutation confirmation and idempotency requirements
+- rollout state by domain wave (pilot vs enabled)
 
 Do not replay archived change deltas into main specs without checking later specs and later archives. Archived deltas can be intentionally superseded by a newer change.
 
