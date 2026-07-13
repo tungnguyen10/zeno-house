@@ -88,7 +88,7 @@ const endFixedCostTarget = ref<BuildingFixedCost | null>(null)
 const endFixedCostPeriod = ref(formatPeriodString(now.getFullYear(), now.getMonth() + 1))
 const fixedCostError = ref<string | null>(null)
 const { createFixedCost } = useOperationsMutations()
-const { data: reserveRatesData, refresh: refreshReserveRates } = await useFetch<ApiSuccess<BuildingReserveFundRate[]>>(
+const { data: reserveRatesData, status: reserveRatesStatus, refresh: refreshReserveRates } = await useFetch<ApiSuccess<BuildingReserveFundRate[]>>(
   '/api/reserve-fund-rates',
   {
     query: computed(() => ({ building_id: apiBuildingId.value })),
@@ -97,6 +97,7 @@ const { data: reserveRatesData, refresh: refreshReserveRates } = await useFetch<
   },
 )
 const reserveRates = computed(() => reserveRatesData.value?.data ?? [])
+const isLoadingReserveRates = computed(() => reserveRatesStatus.value === 'pending')
 const reserveRateModalOpen = ref(false)
 const savingReserveRate = ref(false)
 const reserveRateError = ref<string | null>(null)
@@ -108,7 +109,7 @@ const endReserveRateModalOpen = ref(false)
 const endingReserveRate = ref(false)
 const endReserveRateTarget = ref<BuildingReserveFundRate | null>(null)
 const endReserveRatePeriod = ref(formatPeriodString(now.getFullYear(), now.getMonth() + 1))
-const { data: fixedCostsData, refresh: refreshFixedCosts } = await useFetch<ApiSuccess<BuildingFixedCost[]>>(
+const { data: fixedCostsData, status: fixedCostsStatus, refresh: refreshFixedCosts } = await useFetch<ApiSuccess<BuildingFixedCost[]>>(
   '/api/building-fixed-costs',
   {
     query: computed(() => ({ building_id: apiBuildingId.value })),
@@ -117,6 +118,7 @@ const { data: fixedCostsData, refresh: refreshFixedCosts } = await useFetch<ApiS
   },
 )
 const fixedCosts = computed(() => fixedCostsData.value?.data ?? [])
+const isLoadingFixedCosts = computed(() => fixedCostsStatus.value === 'pending')
 const expenseCategoryOptions = EXPENSE_CATEGORIES.map(value => ({
   value,
   label: EXPENSE_CATEGORY_LABELS[value],
@@ -131,12 +133,14 @@ const prepaidStatusOptions = PREPAID_EXPENSE_STATUSES.map(value => ({
 }))
 const {
   recurringExpenses,
+  isLoadingRecurringExpenses,
   createRecurringExpense,
   updateRecurringExpense,
   deleteRecurringExpense,
 } = useRecurringExpenses(apiBuildingId)
 const {
   prepaidExpenses,
+  isLoadingPrepaidExpenses,
   createPrepaidExpense,
   updatePrepaidExpense,
   deletePrepaidExpense,
@@ -884,7 +888,10 @@ const activeSectionId = computed(() => {
               <UiAlert v-if="fixedCostError" severity="danger" class="mb-4">
                 {{ fixedCostError }}
               </UiAlert>
-              <div v-if="fixedCosts.length === 0" class="text-sm text-muted">
+              <div v-if="isLoadingFixedCosts" class="space-y-2">
+                <UiSkeleton v-for="i in 3" :key="i" class="h-14 rounded-lg" />
+              </div>
+              <div v-else-if="fixedCosts.length === 0" class="text-sm text-muted">
                 Chưa có chi phí vận hành cố định.
               </div>
               <div v-else class="divide-y divide-dark-border">
@@ -939,7 +946,10 @@ const activeSectionId = computed(() => {
               <UiAlert v-if="reserveRateError" severity="danger" class="mb-4">
                 {{ reserveRateError }}
               </UiAlert>
-              <div v-if="reserveRates.length === 0" class="text-sm text-muted">
+              <div v-if="isLoadingReserveRates" class="space-y-2">
+                <UiSkeleton v-for="i in 3" :key="i" class="h-14 rounded-lg" />
+              </div>
+              <div v-else-if="reserveRates.length === 0" class="text-sm text-muted">
                 Chưa có tỷ lệ quỹ dự phòng.
               </div>
               <div v-else class="divide-y divide-dark-border">
@@ -988,7 +998,10 @@ const activeSectionId = computed(() => {
               <UiAlert v-if="recurringError" severity="danger" class="mb-4">
                 {{ recurringError }}
               </UiAlert>
-              <div v-if="recurringExpenses.length === 0" class="text-sm text-muted">
+              <div v-if="isLoadingRecurringExpenses" class="space-y-2">
+                <UiSkeleton v-for="i in 3" :key="i" class="h-14 rounded-lg" />
+              </div>
+              <div v-else-if="recurringExpenses.length === 0" class="text-sm text-muted">
                 Chưa có nhắc chi phí định kỳ.
               </div>
               <div v-else class="divide-y divide-dark-border">
@@ -1035,7 +1048,10 @@ const activeSectionId = computed(() => {
               <UiAlert v-if="prepaidError" severity="danger" class="mb-4">
                 {{ prepaidError }}
               </UiAlert>
-              <div v-if="prepaidExpenses.length === 0" class="text-sm text-muted">
+              <div v-if="isLoadingPrepaidExpenses" class="space-y-2">
+                <UiSkeleton v-for="i in 3" :key="i" class="h-14 rounded-lg" />
+              </div>
+              <div v-else-if="prepaidExpenses.length === 0" class="text-sm text-muted">
                 Chưa có chi phí trả trước.
               </div>
               <div v-else class="divide-y divide-dark-border">

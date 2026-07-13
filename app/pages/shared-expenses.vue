@@ -18,6 +18,7 @@ const auth = useAuthStore()
 const toast = useToast()
 const {
   sharedExpenses,
+  sharedExpensesLoading,
   createSharedExpense,
   updateSharedExpense,
   removeSharedExpense,
@@ -288,6 +289,8 @@ function resolveError(err: unknown, fallback: string): string {
           <UiTable
             :rows="sharedExpenses"
             :columns="sharedExpenseColumns"
+            :loading="sharedExpensesLoading"
+            :loading-rows="4"
             empty-title="Chưa có chi phí dùng chung"
             empty-description="Tạo khoản đầu tiên để phân bổ cho nhiều tòa nhà."
             caption="Danh sách chi phí dùng chung"

@@ -26,7 +26,7 @@ const emit = defineEmits<{
   'reset': []
 }>()
 
-const { data: buildingsData } = useFetch<ApiSuccess<Building[]> & { meta: { total: number } }>(
+const { data: buildingsData, status: buildingsStatus } = useFetch<ApiSuccess<Building[]> & { meta: { total: number } }>(
   '/api/buildings',
   { query: { limit: 100 } },
 )
@@ -96,6 +96,7 @@ const activeFilterCount = computed(() => {
             :options="buildingOptions"
             density="compact"
             aria-label="Lọc theo tòa nhà"
+            :disabled="buildingsStatus === 'pending'"
             @update:model-value="onBuildingChange"
           />
         </label>

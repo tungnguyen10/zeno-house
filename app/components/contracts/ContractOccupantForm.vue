@@ -25,12 +25,13 @@ const form = reactive({
 const fieldErrors = ref<Record<string, string>>({})
 
 // Tenant search — pre-load available tenants; UiCombobox handles client-side filtering
-const { data: tenantsData } = useFetch<ApiSuccess<Tenant[]>>('/api/tenants', {
+const { data: tenantsData, status: tenantsStatus } = useFetch<ApiSuccess<Tenant[]>>('/api/tenants', {
   query: computed(() => ({
     limit: 200,
     available: props.available ? true : undefined,
   })),
 })
+const tenantsLoading = computed(() => tenantsStatus.value === 'pending')
 const filteredTenants = computed(() => {
   const excluded = new Set(props.excludeTenantIds ?? [])
   return (tenantsData.value?.data ?? []).filter(t => !excluded.has(t.id))
@@ -67,6 +68,7 @@ function handleSubmit() {
       placeholder="Tìm và chọn khách thuê..."
       search-placeholder="Tìm theo tên hoặc số điện thoại..."
       required
+      :loading="tenantsLoading"
       :disabled="loading"
       :error="fieldErrors.tenant_id"
       empty-message="Không tìm thấy khách thuê nào"
