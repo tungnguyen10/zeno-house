@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, ref, useId, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, useId, watch } from 'vue'
 import clsx from 'clsx'
 
 const props = withDefaults(defineProps<{
@@ -17,6 +17,9 @@ const emit = defineEmits<{
 
 const drawerRef = ref<HTMLElement | null>(null)
 const previousFocus = ref<HTMLElement | null>(null)
+// Keep body teleports out of SSR so their anchors cannot conflict with other
+// teleported UI (for example, the global toast host) during hydration.
+const mounted = ref(false)
 const generatedId = useId()
 const titleId = computed(() => props.title ? `${generatedId}-title` : undefined)
 const accessibleLabel = computed(() => props.title ? undefined : (props.ariaLabel ?? 'Ngăn chi tiết'))
@@ -32,6 +35,8 @@ const panelClass = computed(() =>
 function close() {
   emit('update:modelValue', false)
 }
+
+onMounted(() => { mounted.value = true })
 
 function focusableElements(): HTMLElement[] {
   if (!drawerRef.value) return []
@@ -85,7 +90,7 @@ watch(
 </script>
 
 <template>
-  <Teleport to="body">
+  <Teleport v-if="mounted" to="body">
     <Transition
       enter-active-class="transition-opacity duration-200"
       leave-active-class="transition-opacity duration-200"

@@ -1,20 +1,34 @@
 # Zeno House - Project Status
 
-Last reviewed from source: 2026-07-13.
+Last reviewed from source: 2026-07-14.
 
-Internal AI agent platform planning update: 2026-07-13
+Internal AI agent platform implementation update: 2026-07-14
 
-- Product direction is now agent-first for high-frequency internal workflows, starting with billing operations as the pilot wave.
-- Planned architecture is `Chat UI -> Agent API -> Internal Tool Gateway -> Domain Service -> Database`.
-- The model layer is intent orchestration only; permissions, scope, validation, transactions, and billing/operations rules remain in server services.
-- Guardrails are defined as architecture rules: no web search tools, deny-by-default tool registry, explicit confirm-before-write, and idempotent mutation execution.
-- Rollout strategy is wave-based rather than big-bang:
-  - Wave 1: Billing period + meter input + draft + issue flow
-  - Wave 2: Property CRUD workflows
-  - Wave 3: Operations report and recurring/shared expense workflows
-  - Wave 4: Invoice collection/reconciliation workflows
-  - Wave 5: Admin and assignment workflows
-- Current state: planning in progress; implementation not yet marked production-ready.
+- AI chat MVP is implemented end-to-end:
+  - Chat widget UI is mounted in the default layout.
+  - Client streaming composable is implemented with API error handling.
+  - Authenticated server endpoint is implemented at `POST /api/ai/chat`.
+  - Tool-enabled AI service is implemented with capability-gated tool exposure.
+- Current architecture in code is `Chat UI -> /api/ai/chat -> AI service tools -> domain services -> repositories/database`.
+- Implemented tool set:
+  - `get_user_context`
+  - `get_meter_status`
+  - `get_billing_period_overview`
+  - `open_billing_period` (explicit confirmation + idempotency key required)
+- Guardrails implemented in code:
+  - `requireAuth` at API boundary
+  - Zod validation for chat payload and tool inputs
+  - capability-based tool gating
+  - confirm-before-write for mutating tool
+  - no web browsing/external search instruction in system prompt
+- Current state: functional internal MVP, not production-ready yet.
+
+AI implementation backlog (next)
+
+- Add test coverage for API/service/composable/UI AI flows.
+- Wire tool-call telemetry into the chat debug panel.
+- Add OpenSpec change/spec for AI assistant scope and verification gates.
+- Run final verification for AI scope (`npm run typecheck`, `npm test`, `npm run lint`) plus prompt regression checks.
 
 UI standardization update: 2026-07-08
 
@@ -59,7 +73,7 @@ Zeno House is now an authenticated internal operations app for rental buildings.
 | Tests | 65 `*.test.ts` / `*.spec.ts` files under `tests/**` |
 | OpenSpec specs | 61 capability specs under `openspec/specs/**` |
 | Archived OpenSpec changes | 50 archived changes under `openspec/changes/archive/**` |
-| Active OpenSpec changes | `add-owner-scoped-access` |
+| Active OpenSpec changes | `harden-and-optimize-billing` |
 
 ## Current Stack
 
@@ -107,9 +121,9 @@ type ApiError = {
 
 Readable operational identifiers are first-class. Public route/query/body boundaries can accept UUIDs or readable codes/slugs where supported, then services/repositories resolve them back to UUIDs before doing persistence work.
 
-## Internal AI Agent Platform (Planned)
+## Internal AI Agent Platform (Implemented MVP)
 
-The planned agent platform extends existing architecture rather than replacing it.
+The implemented AI assistant extends existing architecture rather than replacing it.
 
 ```text
 chat UI
@@ -120,7 +134,7 @@ chat UI
   -> Supabase
 ```
 
-Planned guardrails for all domains:
+Current guardrails for all domains:
 
 - no direct model access to database queries
 - no web search or external browsing tools

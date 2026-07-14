@@ -46,6 +46,7 @@ const sidebarClass = computed(() =>
         <slot />
       </main>
     </div>
+    <AppAiDevChat />
     <UiToastHost />
   </div>
 </template>

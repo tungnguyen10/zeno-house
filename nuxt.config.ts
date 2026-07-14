@@ -27,6 +27,13 @@ export default defineNuxtConfig({
   // Runtime config — NUXT_* env vars are auto-mapped
   runtimeConfig: {
     resendApiKey: "", // RESEND_API_KEY
+    aiProvider: "groq", // NUXT_AI_PROVIDER (groq | google)
+    aiGroqApiKey: "", // NUXT_AI_GROQ_API_KEY
+    aiGoogleApiKey: "", // NUXT_AI_GOOGLE_API_KEY
+    aiModel: "", // NUXT_AI_MODEL
+    aiModelFallback: "", // NUXT_AI_MODEL_FALLBACK
+    aiMaxSteps: 8, // NUXT_AI_MAX_STEPS
+    aiMaxOutputTokens: 1200, // NUXT_AI_MAX_OUTPUT_TOKENS
     adminEmail: "", // ADMIN_EMAIL
     turnstileSecretKey: "", // NUXT_TURNSTILE_SECRET_KEY
     operationsReportAutoCloseSecret: "", // NUXT_OPERATIONS_REPORT_AUTO_CLOSE_SECRET
@@ -35,6 +42,7 @@ export default defineNuxtConfig({
       siteUrl: "", // NUXT_PUBLIC_SITE_URL
       gaId: "", // NUXT_PUBLIC_GA_ID
       turnstileSiteKey: "", // NUXT_PUBLIC_TURNSTILE_SITE_KEY
+      aiDevChatEnabled: false, // NUXT_PUBLIC_AI_DEV_CHAT_ENABLED
       // Feature flag: one-click auto-issue ("Đã thu") on draft rows. Public so
       // the client can gate the row action; default off until staging-verified.
       billingAutoIssueEnabled: false, // NUXT_PUBLIC_BILLING_AUTO_ISSUE_ENABLED

@@ -1,6 +1,10 @@
 {
-    "dotenv.enableAutocloaking": true,
+    "dotenv.enableAutocloaking": false,
     "chat.tools.terminal.autoApprove": {
-        "npx openspec": true
+        "npx openspec": true,
+        "/^node -e \"const g = require\\('\\./node_modules/ai/package\\.json'\\); console\\.log\\('version:', g\\.version\\); console\\.log\\('peerDeps:', JSON\\.stringify\\(g\\.peerDependencies\\)\\); console\\.log\\('deps \\(partial\\):', Object\\.entries\\(g\\.dependencies \\|\\| \\{\\}\\)\\.slice\\(0,10\\)\\.map\\(\\(\\[k,v\\]\\) => k\\+': '\\+v\\)\\.join\\(', '\\)\\)\"$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
     }
 }

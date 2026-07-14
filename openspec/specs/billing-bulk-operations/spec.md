@@ -1,9 +1,7 @@
 ## Purpose
 
 Defines bulk-operation behavior for billing workflows, including spreadsheet-style meter entry, debounced draft saving, keyboard navigation, mobile draft rows, and bulk payment recording.
-
 ## Requirements
-
 ### Requirement: Bulk meter reading paste
 The billing draft grid SHALL accept clipboard paste of multi-row meter readings into a focused new-reading cell and propagate values down the column, while the dedicated bulk-entry modal SHALL handle multi-column and room-number input.
 
@@ -247,3 +245,15 @@ Bulk payment recording SHALL rely on a persistence-layer transaction or equivale
 #### Scenario: Rollback failure is not user-visible as partial success
 - **WHEN** the bulk payment operation fails
 - **THEN** the user never sees a partial success state for that batch
+
+### Requirement: Bulk persistence is set-based and preserves domain semantics
+Bulk APIs SHALL validate inputs before persistence and use bounded set-based database operations; financial bulk operations MUST execute atomically while non-financial operations SHALL preserve their documented per-item result semantics.
+
+#### Scenario: Financial batch contains an invalid item
+- **WHEN** one item in a bulk payment transaction fails validation or persistence
+- **THEN** no payment or invoice total from that batch is committed
+
+#### Scenario: Large non-financial batch
+- **WHEN** a supported room, tenant, contract, meter-reading, or shared-expense batch grows in item count
+- **THEN** database round trips do not grow linearly with item count
+

@@ -1,9 +1,7 @@
 ## Purpose
 
 Defines the billing period Excel export contract for producing a landlord/accounting-friendly collection workbook.
-
 ## Requirements
-
 ### Requirement: Period Excel export endpoint
 A `GET /api/billing/periods/:id/export` endpoint SHALL return an `.xlsx` workbook containing a single collection sheet for the billing period.
 
@@ -45,3 +43,11 @@ The billing workspace SHALL expose an export action that downloads the period wo
 #### Scenario: Export progress feedback
 - **WHEN** the user clicks the export action
 - **THEN** the UI provides loading feedback until the download begins or fails, and surfaces a toast on failure
+
+### Requirement: Billing export batches invoice relations
+The billing period export SHALL load invoice charges and display dependencies in bounded batch queries rather than issuing a database query per invoice.
+
+#### Scenario: Export many invoices
+- **WHEN** a period export contains an increasing number of invoices
+- **THEN** the number of application database round trips used to load charges remains constant
+

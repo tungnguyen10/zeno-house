@@ -1,9 +1,7 @@
 ## Purpose
 
 Define monthly operations report expense-category and fixed-cost management behavior.
-
 ## Requirements
-
 ### Requirement: Extended expense categories
 The system SHALL support the expense categories `insurance`, `bank_fee`, and `fire_safety` in addition to the existing categories.
 
@@ -146,3 +144,15 @@ The operations report month/year filter SHALL be constrained by each building's 
 #### Scenario: Invalid selected period is normalized
 - **WHEN** user switches building/year and current month/year selection is no longer valid
 - **THEN** the UI auto-selects the first available valid year/month option
+
+### Requirement: Operations reports use a consistent aggregate snapshot
+The operations report API SHALL derive billing, expense, prepaid, closure, and reserve values from one consistent period snapshot and SHALL preserve current report formulas and DTOs.
+
+#### Scenario: Load an open report
+- **WHEN** an authorized user requests an open period report
+- **THEN** the report uses a short-lived scope-safe cache and reflects invalidation after relevant mutations
+
+#### Scenario: Load a closed report
+- **WHEN** an authorized user requests a closed period report whose version has not changed
+- **THEN** the server may reuse the versioned cached snapshot without recomputing it
+

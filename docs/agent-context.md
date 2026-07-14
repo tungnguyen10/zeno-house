@@ -45,11 +45,25 @@ When a task changes behavior, update code, specs, and developer docs together un
 
 ## Active OpenSpec State
 
-Run `openspec list --json` for the current source of truth. As of 2026-07-02, the active change is:
+Run `openspec list --json` for the current source of truth before planning implementation. Do not hardcode active change IDs in this file because they can drift quickly.
 
-- `add-owner-scoped-access`
+Current snapshot at review time (2026-07-14):
+
+- `harden-and-optimize-billing`
 
 Do not assume archived changes still need syncing. Check current specs first.
+
+## AI Implementation Snapshot
+
+Implemented AI chat surfaces:
+
+- `app/components/app/AppAiDevChat.vue`
+- `app/composables/useAiChat.ts`
+- `server/api/ai/chat.post.ts`
+- `server/services/ai/chat.ts`
+- `app/utils/validators/ai.ts`
+
+Current maturity: internal MVP is available end-to-end, but not production-ready yet.
 
 ## Core Architecture Invariants
 

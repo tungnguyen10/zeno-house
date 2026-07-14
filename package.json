@@ -18,11 +18,14 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "@ai-sdk/google": "^4.0.12",
+    "@ai-sdk/groq": "^4.0.8",
     "@nuxt/eslint": "^1.15.2",
     "@nuxtjs/supabase": "^2.0.4",
     "@pinia/nuxt": "^0.11.3",
     "@vueuse/motion": "^3.0.3",
     "@vueuse/nuxt": "^14.2.1",
+    "ai": "^7.0.22",
     "chart.js": "^4.5.1",
     "clsx": "^2.1.1",
     "dayjs": "^1.11.20",
