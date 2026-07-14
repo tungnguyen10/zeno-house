@@ -19,15 +19,23 @@ Billing API endpoints SHALL require authenticated users and explicit billing cap
 - **THEN** the system returns 403 FORBIDDEN
 
 ### Requirement: Open or get billing period
-The API SHALL open or retrieve a billing period by building and `YYYY-MM`.
+The API SHALL open or retrieve a billing period by building and `YYYY-MM`, SHALL commit a newly created period and its `period.opened` audit event atomically, and SHALL treat retries or concurrent opens as an idempotent retrieval of the authoritative period.
 
 #### Scenario: Period exists
 - **WHEN** the API receives building_id and period for an existing period
-- **THEN** it returns the existing billing period
+- **THEN** it returns the existing billing period without appending another opened audit event
 
 #### Scenario: Period does not exist
 - **WHEN** the API receives building_id and period for a new period
-- **THEN** it creates and returns a billing period with status `draft`
+- **THEN** it atomically creates a draft billing period and exactly one `period.opened` audit event
+
+#### Scenario: Concurrent period opens
+- **WHEN** two authorized requests open the same building, year, and month concurrently
+- **THEN** both resolve to one authoritative period and no duplicate audit event is created
+
+#### Scenario: Audit insert fails
+- **WHEN** the creation audit cannot be inserted in the transaction
+- **THEN** the new billing period is rolled back and the operation fails without partial success
 
 ### Requirement: List billing periods
 The API SHALL list billing periods for the `/billing` management page.
@@ -90,11 +98,15 @@ The API SHALL provide summary data for the monthly operations workspace.
 - **THEN** the API returns period status, contract count, reading completion, draft total, issued total, paid total, and outstanding balance
 
 ### Requirement: Draft charges API
-The API SHALL provide draft invoice previews before issue.
+The API SHALL provide server-authoritative draft invoice previews before issue and SHALL make the same scoped calculation available to the AI read tool with a deterministic derived explanation.
 
 #### Scenario: Draft charges requested
-- **WHEN** the workspace requests draft charges
+- **WHEN** the workspace or AI tool requests draft charges for an accessible period
 - **THEN** the API returns per-contract draft invoices with line items, totals, warnings, and blockers
+
+#### Scenario: AI explanation requested
+- **WHEN** the AI tool receives the draft response
+- **THEN** it derives summary counts, totals, blocker/warning groups, and next-step categories from the server response without recalculating charge amounts
 
 #### Scenario: Utility override used
 - **WHEN** a period-scoped utility usage override exists for a room and meter type
@@ -148,27 +160,35 @@ The API SHALL record monthly payments against invoices and SHALL support undoing
 - **THEN** the API returns 404 NOT_FOUND
 
 ### Requirement: Invoice correction API
-The API SHALL support controlled invoice corrections via void+reissue. Direct adjustment of paid invoices via API remains available for backward compatibility but is no longer surfaced in the workspace UI.
+The API SHALL support controlled invoice corrections through versioned, atomic void, reissue, and adjustment operations. Direct adjustment of paid invoices via API remains available for backward compatibility but is not surfaced in the workspace UI.
 
 #### Scenario: Void unpaid invoice
-- **WHEN** a user with sufficient permission voids an issued invoice with no remaining active payments
-- **THEN** the API marks it void, stores void reason metadata, and appends an audit event
+- **WHEN** a user with sufficient permission voids an issued invoice with no active payments and the expected invoice version matches
+- **THEN** the invoice status change and `invoice.voided` audit event commit in one transaction with a correlation ID
 
 #### Scenario: Reissue replacement invoice
-- **WHEN** a voided invoice needs replacement
-- **THEN** the API issues a new invoice linked to the voided invoice, sharing a `correlation_id` with the void event
+- **WHEN** a voided invoice has a ready fresh draft and no active replacement
+- **THEN** the replacement invoice, charge snapshots, supersession links, and `invoice.reissued` audit event commit in one transaction sharing the prior void correlation when available
 
 #### Scenario: Void with active payments rejected
 - **WHEN** a void targets an invoice with active payments
-- **THEN** the API rejects with 409 CONFLICT and message instructing to undo payments first
+- **THEN** the API rejects with 409 CONFLICT and instructs the operator to use the explicit payment/correction workflow
+
+#### Scenario: Paid adjustment is atomic
+- **WHEN** an authorized caller adds a valid adjustment to a partial or paid invoice using the current expected version
+- **THEN** the adjustment charge, recomputed invoice totals/status, and audit event commit atomically
+
+#### Scenario: Correction version is stale
+- **WHEN** the invoice, replacement state, payment state, or bound draft changes after the caller previewed it
+- **THEN** the API returns 409 CONFLICT and leaves invoice, charge, link, payment, and audit state unchanged
 
 #### Scenario: Closed period direct mutation rejected
-- **WHEN** a correction targets a closed period without explicit reopen flow
-- **THEN** the API rejects normal edit, void, or reissue actions
+- **WHEN** a correction targets a closed period without an explicitly supported correction rule
+- **THEN** the API rejects void, reissue, or adjustment and persists no change
 
 #### Scenario: Adjustment endpoint remains
 - **WHEN** an integration POSTs to the existing adjustment endpoint
-- **THEN** the API still accepts it for backward compatibility, but the workspace UI no longer surfaces this path
+- **THEN** the API continues to accept valid input through the same atomic service contract while the workspace UI does not surface this path
 
 ### Requirement: Draft grid read model API
 The API SHALL provide a draft-grid read model for the `Soạn kỳ` workspace tab. The endpoint SHALL compose existing period, room, meter reading, utility override, invoice, and draft calculation data without introducing a new repository layer for this optimization.
@@ -330,17 +350,15 @@ Response shape:
 - **THEN** API computes overdue using same rule (status=issued AND due_date < today AND balance > 0)
 
 ### Requirement: Billing audit — meter readings coverage
-The billing API SHALL capture meter reading saves as billing audit events. `MeterReadingService.create`, `bulkCreate`, and `update` SHALL each append a `reading.saved` audit event to `billing_audit_events`.
+The billing API SHALL capture meter reading saves as billing audit events. `MeterReadingService.create`, `bulkCreate`, and `update` SHALL persist each reading change and its corresponding `reading.saved` audit event in the same database transaction.
 
 #### Scenario: Save meter reading emits audit event
-- **WHEN** a meter reading is saved (create or update) via `MeterReadingService`
-- **THEN** a `reading.saved` audit event is appended to `billing_audit_events` with:
-  - `entity_type: 'meter_reading'`
-  - `entity_id: <reading_id>`
-  - `billing_period_id: <period_id>` (nullable if no billing period exists for that month)
-  - `before_data: null` (new reading) or previous reading snapshot (update)
-  - `after_data`: saved reading snapshot
-  - `metadata.count: 1`
+- **WHEN** a meter reading is saved by `MeterReadingService`
+- **THEN** the committed `reading.saved` audit event includes `entity_type: 'meter_reading'`, the reading ID, nullable matching billing period ID, before/after snapshots, and `metadata.count: 1`
+
+#### Scenario: Audit persistence fails
+- **WHEN** the transaction cannot insert a required `reading.saved` audit event
+- **THEN** its reading mutation and every other row in the same batch are rolled back
 
 ### Requirement: Billing audit — invoice reissue snapshot
 The `invoice.reissued` audit event SHALL include full before/after snapshots consistent with other invoice mutation events.
@@ -455,4 +473,34 @@ The billing audit API SHALL apply indexed filters, cursor ordering, and page lim
 #### Scenario: Search a large audit period
 - **WHEN** a period contains more events than the requested page limit and the user supplies filters or search text
 - **THEN** only the matching page is enriched and the next cursor continues without duplicate or missing events
+
+### Requirement: Utility usage override writes are atomic, locked, and versioned
+The billing service SHALL persist utility usage override saves and their audit events atomically, SHALL compare the expected existing override version or absence, and SHALL reject override mutations for a closed period or a room with a non-void invoice in that period.
+
+#### Scenario: New override is saved
+- **WHEN** an authorized direct API or confirmed AI action saves an override where no override was expected and the room is editable
+- **THEN** the override and one `utility_override.saved` audit event commit together
+
+#### Scenario: Existing override is updated
+- **WHEN** the caller supplies the current override `updated_at` version
+- **THEN** the override and its before/after audit snapshot update atomically
+
+#### Scenario: Override version is stale
+- **WHEN** the stored override is absent or has a different version than expected
+- **THEN** the service returns 409 CONFLICT and persists no override or audit change
+
+#### Scenario: Override is billing-locked
+- **WHEN** the period is closed or the room has a non-void invoice in that period
+- **THEN** save and delete paths reject the mutation and preserve existing billing data
+
+### Requirement: Invoice issue operation is idempotent by server operation key
+The invoice issue transaction SHALL accept a server-owned operation key, SHALL return the prior authoritative issue result when that key is replayed, and SHALL preserve the one-active-invoice-per-period-and-contract invariant under concurrent requests.
+
+#### Scenario: Operation key is replayed
+- **WHEN** a completed issue transaction is called again with the same operation key
+- **THEN** it returns the invoices created by the first call without duplicating invoices, charges, period transitions, or audits
+
+#### Scenario: Concurrent issue targets overlap
+- **WHEN** concurrent issue operations target the same period and contract
+- **THEN** at most one active invoice is committed and the losing operation resolves without partial financial state
 

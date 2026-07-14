@@ -6,7 +6,7 @@ import { buildPeriod } from '../../__fixtures__/billing/period'
 const list = vi.fn()
 const findById = vi.fn()
 const findByBuildingPeriod = vi.fn()
-const insert = vi.fn()
+const openOrGetWithAudit = vi.fn()
 const updateStatus = vi.fn()
 const listOutstandingByPeriod = vi.fn()
 const listInvoicesByPeriod = vi.fn()
@@ -26,7 +26,7 @@ vi.mock('../../../server/repositories/billing/periods', () => ({
     list,
     findById,
     findByBuildingPeriod,
-    insert,
+    openOrGetWithAudit,
     updateStatus,
   },
 }))
@@ -109,8 +109,7 @@ describe('BillingPeriodService.advanceStatus', () => {
   it('opens a period by building slug through id-or-slug lookup', async () => {
     const created = buildPeriod({ buildingId: 'building-1', periodYear: 2026, periodMonth: 6 })
     findBuildingByIdentifier.mockResolvedValue({ id: 'building-1', slug: 'toa-a' })
-    findByBuildingPeriod.mockResolvedValue(null)
-    insert.mockResolvedValue(created)
+    openOrGetWithAudit.mockResolvedValue({ period: created, created: true })
     const { BillingPeriodService } = await import('../../../server/services/billing/periods')
 
     const result = await BillingPeriodService.openOrGet(
@@ -120,8 +119,13 @@ describe('BillingPeriodService.advanceStatus', () => {
     )
 
     expect(findBuildingByIdentifier).toHaveBeenCalledWith(expect.anything(), 'toa-a')
-    expect(findByBuildingPeriod).toHaveBeenCalledWith(expect.anything(), 'building-1', 2026, 6)
-    expect(insert).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ building_id: 'building-1' }))
+    expect(openOrGetWithAudit).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      building_id: 'building-1',
+      period_year: 2026,
+      period_month: 6,
+      actor_id: 'admin-user',
+      source: 'api',
+    }))
     expect(result.id).toBe(created.id)
   })
 
@@ -134,7 +138,7 @@ describe('BillingPeriodService.advanceStatus', () => {
       makeUser('manager'),
       { building_id: 'toa-b', period_year: 2026, period_month: 6 },
     )).rejects.toMatchObject({ statusCode: 403 })
-    expect(insert).not.toHaveBeenCalled()
+    expect(openOrGetWithAudit).not.toHaveBeenCalled()
   })
 
   it('returns 404 when manager reads a period outside assigned scope', async () => {

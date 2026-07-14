@@ -18,6 +18,19 @@ export interface RoomFilters {
 }
 
 export const RoomRepository = {
+  async listByBuilding(event: H3Event, buildingId: string): Promise<Room[]> {
+    const client = serverSupabaseClient(event)
+    const { data, error } = await client
+      .from('rooms')
+      .select('*')
+      .eq('building_id', buildingId)
+      .neq('status', 'archived')
+      .order('floor', { ascending: true })
+      .order('room_number', { ascending: true })
+    if (error) throwDbError(error, 'rooms.listByBuilding')
+    return (data ?? []).map(mapRoom)
+  },
+
   async findAll(
     event: H3Event,
     filters: RoomFilters = {},

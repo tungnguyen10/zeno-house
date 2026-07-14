@@ -16,8 +16,19 @@ export const meterReadingBulkSchema = z.object({
   readings: z.array(meterReadingCreateSchema).min(1).max(500, 'Tối đa 500 chỉ số trong một lần lưu'),
 })
 
-export const meterReadingUpdateSchema = meterReadingCreateSchema.partial()
+export const meterReadingUpdateSchema = meterReadingCreateSchema.pick({
+  reading_date: true,
+  reading_value: true,
+  is_estimated: true,
+  notes: true,
+}).partial().extend({
+  expected_updated_at: z.string().datetime({ offset: true }),
+})
 
 export type MeterReadingCreateInput = z.infer<typeof meterReadingCreateSchema>
 export type MeterReadingBulkInput = z.infer<typeof meterReadingBulkSchema>
 export type MeterReadingUpdateInput = z.infer<typeof meterReadingUpdateSchema>
+
+export type MeterReadingAtomicInput = MeterReadingCreateInput & {
+  expected_updated_at: string | null
+}

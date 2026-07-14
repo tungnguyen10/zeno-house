@@ -26,6 +26,11 @@ export interface BillingPeriod {
   updatedAt: string
 }
 
+export interface BillingPeriodOpenResult {
+  period: BillingPeriod
+  created: boolean
+}
+
 export interface Invoice {
   id: string
   invoiceCode: string

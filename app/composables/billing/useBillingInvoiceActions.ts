@@ -27,6 +27,7 @@ export function useBillingInvoiceActions() {
   function createAdjustmentPayload(input: {
     label: string
     amount: number
+    expectedUpdatedAt: string
     reason?: string | null
     referenceInvoiceId?: string | null
   }): Omit<AdjustmentChargeInput, 'target_invoice_id'> {
@@ -35,6 +36,7 @@ export function useBillingInvoiceActions() {
       amount: Math.trunc(input.amount),
       reason: input.reason?.trim() || input.label,
       reference_invoice_id: input.referenceInvoiceId ?? null,
+      expected_updated_at: input.expectedUpdatedAt,
     }
   }
 

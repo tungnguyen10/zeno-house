@@ -288,7 +288,7 @@ async function submitPayment() {
 
 // ---------- Void invoice ----------
 const showVoidModal = ref(false)
-const voidForm = reactive<VoidInvoiceInput>({ reason: '' })
+const voidForm = reactive<VoidInvoiceInput>({ reason: '', expected_updated_at: '' })
 const voidSubmitting = ref(false)
 const voidError = ref<string | null>(null)
 const voidTarget = ref<Invoice | null>(null)
@@ -297,6 +297,7 @@ const showReissueHintAfterVoid = ref(false)
 function startVoid(inv: Invoice, options?: { reason?: string; showReissueHint?: boolean }) {
   voidTarget.value = inv
   voidForm.reason = options?.reason ?? ''
+  voidForm.expected_updated_at = inv.updatedAt
   voidError.value = null
   showReissueHintAfterVoid.value = !!options?.showReissueHint
   showVoidModal.value = true
@@ -311,7 +312,7 @@ async function submitVoid() {
   voidSubmitting.value = true
   voidError.value = null
   try {
-    await voidInvoice(invoiceRouteSegment(voidTarget.value), { reason: voidForm.reason })
+    await voidInvoice(invoiceRouteSegment(voidTarget.value), { ...voidForm })
     toast.success('Đã huỷ hoá đơn')
     if (showReissueHintAfterVoid.value) {
       toast.info('Vào tab Soạn kỳ để phát hành lại')

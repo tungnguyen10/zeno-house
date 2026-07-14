@@ -5,6 +5,79 @@ import type { InvoiceStatus } from '~/utils/constants/billing'
 import { mapInvoice, mapInvoiceCharge } from '~/utils/mappers/billing'
 import { isUuid } from '~/utils/format/slug'
 import type { ChargeInput } from '~/utils/validators/billing'
+import type { Database, Tables } from '~/types/database.types'
+
+export interface InvoiceIssueRpcInput {
+  periodId: string
+  actorId: string | null
+  dueDate: string | null
+  issuedAt: string
+  requestedContractIds: string[] | null
+  drafts: Array<Record<string, unknown>>
+  operationId: string
+}
+
+export interface InvoiceReissueRpcInput {
+  invoiceId: string
+  expectedUpdatedAt: string
+  actorId: string | null
+  dueDate: string | null
+  issuedAt: string
+  notes: string | null
+  reason: string
+  draft: Record<string, unknown>
+  correlationId: string
+}
+
+export interface InvoiceAdjustmentRpcInput {
+  invoiceId: string
+  expectedUpdatedAt: string
+  actorId: string | null
+  label: string
+  amount: number
+  reason: string
+  referenceInvoiceId: string | null
+  correlationId: string
+}
+
+function invoiceRpcMessage(error: unknown): string {
+  return error && typeof error === 'object' && typeof (error as { message?: unknown }).message === 'string'
+    ? (error as { message: string }).message.toUpperCase()
+    : ''
+}
+
+export function throwInvoiceRpcError(error: unknown): never {
+  const message = invoiceRpcMessage(error)
+  if (message.includes('INVOICE_VERSION_CONFLICT')) {
+    throwConflict('Hoá đơn đã thay đổi. Vui lòng tải lại dữ liệu.', {
+      category: 'OPTIMISTIC_LOCK_CONFLICT', retryable: true,
+    })
+  }
+  if (message.includes('BILLING_PERIOD_LOCKED')) {
+    throwConflict('Kỳ đã chốt, không thể thay đổi hoá đơn.')
+  }
+  if (message.includes('INVOICE_HAS_ACTIVE_PAYMENTS')) {
+    throwConflict('Hoá đơn đã có khoản thu đang hiệu lực. Hãy dùng luồng điều chỉnh phù hợp.')
+  }
+  if (message.includes('INVOICE_ALREADY_ISSUED') || message.includes('INVOICE_ACTIVE_REPLACEMENT_EXISTS')) {
+    throwConflict('Đã có hoá đơn hiệu lực cho hợp đồng trong kỳ này.')
+  }
+  if (message.includes('INVOICE_ALREADY_VOID') || message.includes('INVOICE_NOT_VOID')) {
+    throwConflict('Trạng thái hoá đơn không còn phù hợp với thao tác này.')
+  }
+  if (message.includes('INVOICE_NOT_FOUND') || message.includes('INVOICE_REFERENCE_NOT_FOUND')) {
+    throwNotFound('Không tìm thấy hoá đơn')
+  }
+  if (
+    message.includes('INVOICE_REASON_REQUIRED')
+    || message.includes('INVOICE_DRAFT_')
+    || message.includes('INVOICE_LINE_TOTAL_MISMATCH')
+    || message.includes('INVOICE_ADJUSTMENT_')
+  ) {
+    throwValidationError('Dữ liệu thao tác hoá đơn không hợp lệ.')
+  }
+  throwDbError(error, 'billing.invoices.atomicOperation')
+}
 
 function sequenceFromCode(prefix: string, code: string | null): number {
   if (!code?.startsWith(`${prefix}-`)) return 0
@@ -36,6 +109,91 @@ async function buildUniqueInvoiceCode(event: H3Event, billingPeriodId: string): 
 }
 
 export const InvoiceRepository = {
+  async issuePeriodWithAudit(event: H3Event, input: InvoiceIssueRpcInput): Promise<Invoice[]> {
+    const client = await serverSupabaseClient(event)
+    const args = {
+      p_period_id: input.periodId,
+      p_actor_id: input.actorId,
+      p_due_date: input.dueDate,
+      p_issued_at: input.issuedAt,
+      p_requested_contract_ids: input.requestedContractIds,
+      p_drafts: input.drafts,
+      p_correlation_id: input.operationId,
+    } as unknown as Database['public']['Functions']['issue_period_invoices']['Args']
+    const { data, error } = await client.rpc('issue_period_invoices', args)
+    if (error) throwInvoiceRpcError(error)
+    return ((data ?? []) as Tables<'invoices'>[]).map(mapInvoice)
+  },
+
+  async voidWithAudit(
+    event: H3Event,
+    input: {
+      invoiceId: string
+      expectedUpdatedAt: string
+      actorId: string | null
+      reason: string
+      correlationId: string
+    },
+  ): Promise<Invoice> {
+    const client = await serverSupabaseClient(event)
+    const { data, error } = await client.rpc('void_invoice_with_audit', {
+      p_invoice_id: input.invoiceId,
+      p_expected_updated_at: input.expectedUpdatedAt,
+      p_actor_id: input.actorId as string,
+      p_reason: input.reason,
+      p_correlation_id: input.correlationId,
+    })
+    if (error) throwInvoiceRpcError(error)
+    const row = ((data ?? []) as Tables<'invoices'>[])[0]
+    if (!row) throwInternal(new Error('Empty invoice void result'), 'billing.invoices.voidWithAudit')
+    return mapInvoice(row)
+  },
+
+  async reissueWithAudit(event: H3Event, input: InvoiceReissueRpcInput): Promise<Invoice> {
+    const client = await serverSupabaseClient(event)
+    const { data, error } = await client.rpc('reissue_invoice_with_audit', {
+      p_voided_invoice_id: input.invoiceId,
+      p_expected_updated_at: input.expectedUpdatedAt,
+      p_actor_id: input.actorId as string,
+      p_due_date: input.dueDate as string,
+      p_issued_at: input.issuedAt,
+      p_notes: input.notes as string,
+      p_reason: input.reason,
+      p_draft: input.draft as Database['public']['Functions']['reissue_invoice_with_audit']['Args']['p_draft'],
+      p_correlation_id: input.correlationId,
+    })
+    if (error) throwInvoiceRpcError(error)
+    const row = ((data ?? []) as Tables<'invoices'>[])[0]
+    if (!row) throwInternal(new Error('Empty invoice reissue result'), 'billing.invoices.reissueWithAudit')
+    return mapInvoice(row)
+  },
+
+  async addAdjustmentWithAudit(
+    event: H3Event,
+    input: InvoiceAdjustmentRpcInput,
+  ): Promise<{ invoice: Invoice; charge: InvoiceCharge }> {
+    const client = await serverSupabaseClient(event)
+    const { data, error } = await client.rpc('add_invoice_adjustment_with_audit', {
+      p_invoice_id: input.invoiceId,
+      p_expected_updated_at: input.expectedUpdatedAt,
+      p_actor_id: input.actorId as string,
+      p_label: input.label,
+      p_amount: input.amount,
+      p_reason: input.reason,
+      p_reference_invoice_id: input.referenceInvoiceId as string,
+      p_correlation_id: input.correlationId,
+    })
+    if (error) throwInvoiceRpcError(error)
+    const result = data as unknown as {
+      invoice?: Tables<'invoices'>
+      charge?: Tables<'invoice_charges'>
+    } | null
+    if (!result?.invoice || !result.charge) {
+      throwInternal(new Error('Invalid invoice adjustment result'), 'billing.invoices.addAdjustmentWithAudit')
+    }
+    return { invoice: mapInvoice(result.invoice), charge: mapInvoiceCharge(result.charge) }
+  },
+
   async findManyByIdentifiers(event: H3Event, identifiers: string[]): Promise<Invoice[]> {
     const unique = [...new Set(identifiers)]
     if (unique.length === 0) return []

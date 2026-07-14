@@ -1,13 +1,16 @@
 # API Inventory And Performance Contracts
 
 Generated from checked-in handlers by `node scripts/generate-api-inventory.mjs`.
-Route count: **132**.
+Route count: **136**.
 
 All business routes require server-side authorization unless explicitly documented as an internal-secret route. Initial reads use Nuxt `useFetch`; imperative reads and mutations use `apiFetch` with a 15-second timeout, request ID, no automatic mutation retry, and normalized server envelopes.
 
 | Method | Route | Pagination | Cache / invalidation | Budget |
 | --- | --- | --- | --- | --- |
-| POST | `/api/ai/chat` | n/a | no long cache | p95 <= 1200ms |
+| POST | `/api/ai/actions/[id]/cancel` | n/a | invalidate affected domain | p95 ≤ 250ms |
+| POST | `/api/ai/actions/[id]/confirm` | n/a | invalidate affected domain | p95 ≤ 250ms |
+| POST | `/api/ai/chat` | n/a | invalidate affected domain | p95 ≤ 250ms |
+| GET | `/api/ai/conversations/[id]` | n/a | request/DTO policy | p95 ≤ 250ms |
 | DELETE | `/api/assignments/[id]` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | PATCH | `/api/assignments/[id]` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | GET | `/api/assignments/buildings-without-manager` | n/a | request/DTO policy | p95 ≤ 250ms |
@@ -84,6 +87,7 @@ All business routes require server-side authorization unless explicitly document
 | GET | `/api/contracts` | bounded | request/DTO policy | p95 ≤ 400ms |
 | POST | `/api/contracts` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | GET | `/api/dashboard/summary` | n/a | 20s scoped | p95 ≤ 800ms |
+| POST | `/api/internal/ai/retention-cleanup` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | POST | `/api/internal/operations-report/auto-close` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | GET | `/api/invoices` | bounded | request/DTO policy | p95 ≤ 400ms |
 | PATCH | `/api/meter-readings/[id]` | n/a | no long cache | p95 ≤ 250ms |

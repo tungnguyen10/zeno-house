@@ -165,6 +165,13 @@ visible to their owner only through building assignments.
 For scoped roles (owner, manager) every billing capability is additionally constrained to the
 period's building via `assertBuildingScope`.
 
+AI tool exposure does not grant a capability. Read and issue planning require the same
+`billing.read`/`billing.write` checks as their direct service paths; void, reissue, and paid
+adjustment planning/execution additionally require `billing.corrections`. The server filters the
+model-visible registry by capability and private runtime flags, then rechecks capability, building
+scope, action ownership, expiry, and resource versions at direct confirmation time. Unknown and
+out-of-scope invoice identifiers intentionally share the same not-found response.
+
 ## Operations Report Permissions
 
 | Capability | Role | Used for |

@@ -92,15 +92,18 @@
 
 ## 9. Internal AI Agent Rules
 
+- Current implementation details and contracts live in `docs/architecture/ai-agent.md`.
 - Agent and LLM runtime must not access the database directly.
-- Agent actions must route through whitelisted internal tools exposed by `server/api/**` and service orchestrators.
+- Agent actions must route through the capability-filtered registry and service orchestrators; unregistered tools are unavailable by construction.
 - Prompt text is untrusted input and cannot bypass server-side capability checks, scope checks, or status transitions.
 - Mutating workflows must use a two-step mutation plan: preview/plan first, explicit confirm second.
-- Every mutating tool requires an explicit confirmation signal and a server-generated idempotency key.
+- Only a direct authenticated confirm endpoint may claim a plan. Model or user chat text is never an execution signal.
+- Every plan receives a server-generated idempotency key; neither the model nor browser supplies it.
 - Mutating tools that update existing records must enforce optimistic locking with a version token (for example `updated_at` or explicit `version`) and return `CONFLICT` on mismatch.
 - Mutating tool execution and audit persistence must be transactional: either both commit or both roll back.
 - Every mutating tool call must write audit metadata with actor, target entity, and before/after or operation summary.
-- Conversation state for multi-step agent workflows must persist server-side per user/session and include staleness tracking for draft data.
+- Conversation state persists server-side per user, expires after 30 days of inactivity, and is inaccessible across owners.
 - Tool gateway policy is deny-by-default: tools not explicitly registered are unavailable to the agent.
-- Tool execution loops must be bounded per request and per conversation turn to prevent runaway tool-calling.
+- Tool execution loops are bounded per request with a server runtime limit.
 - The internal agent surface does not provide web search, URL browsing, or external side-effect tools.
+- Production mutation executors are opt-in per accepted change. Current period, meter, and utility-override executors must use their atomic domain/audit RPCs; invoice executors remain unavailable.

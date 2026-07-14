@@ -5,10 +5,11 @@ import { buildPeriod } from '../../__fixtures__/billing/period'
 
 const findInvoiceById = vi.fn()
 const findInvoiceByIdentifier = vi.fn()
-const voidById = vi.fn()
+const voidWithAudit = vi.fn()
 const findActiveByPeriodContract = vi.fn()
-const issueOne = vi.fn()
-const linkSupersededBy = vi.fn()
+const issuePeriodWithAudit = vi.fn()
+const reissueWithAudit = vi.fn()
+const addAdjustmentWithAudit = vi.fn()
 const listCharges = vi.fn()
 const listPaymentsByInvoice = vi.fn()
 const findPeriodById = vi.fn()
@@ -17,28 +18,19 @@ const findLatestCorrelation = vi.fn()
 const calculateDraft = vi.fn()
 const enrichInvoices = vi.fn(async invoices => invoices)
 const enrichPayments = vi.fn(async payments => payments)
-const rpcMock = vi.fn()
 const assignmentRepoMocks = vi.hoisted(() => ({
   findBuildingIdsByUser: vi.fn(),
-}))
-
-vi.mock('#supabase/server', () => ({
-  serverSupabaseClient: vi.fn(async () => ({
-    rpc: rpcMock,
-  })),
-  serverSupabaseServiceRole: vi.fn(() => ({
-    rpc: rpcMock,
-  })),
 }))
 
 vi.mock('../../../server/repositories/billing/invoices', () => ({
   InvoiceRepository: {
     findById: findInvoiceById,
     findByIdentifier: findInvoiceByIdentifier,
-    voidById,
+    voidWithAudit,
     findActiveByPeriodContract,
-    issueOne,
-    linkSupersededBy,
+    issuePeriodWithAudit,
+    reissueWithAudit,
+    addAdjustmentWithAudit,
     listCharges,
   },
 }))
@@ -127,17 +119,19 @@ describe('InvoiceService invoice lifecycle methods', () => {
     const invoice = buildInvoice({ id: 'invoice-1', paidAmount: 0, status: 'issued' })
     const voided = buildInvoice({ ...invoice, status: 'void', voidReason: 'wrong reading' })
     findInvoiceByIdentifier.mockResolvedValue(invoice)
-    voidById.mockResolvedValue(voided)
+    voidWithAudit.mockResolvedValue(voided)
     const { InvoiceService } = await import('../../../server/services/billing/invoices')
 
-    const result = await InvoiceService.voidInvoice(event(), makeUser(), invoice.id, { reason: 'wrong reading' })
+    const result = await InvoiceService.voidInvoice(event(), makeUser(), invoice.id, {
+      reason: 'wrong reading', expected_updated_at: invoice.updatedAt,
+    })
 
     expect(result.status).toBe('void')
-    expect(voidById).toHaveBeenCalledWith(expect.anything(), invoice.id, 'user-1', 'wrong reading')
-    expect(append).toHaveBeenCalledWith(expect.anything(), expect.anything(), expect.objectContaining({
-      action: 'invoice.voided',
-      metadata: expect.objectContaining({ reason: 'wrong reading', total_amount: invoice.totalAmount }),
+    expect(voidWithAudit).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      invoiceId: invoice.id, actorId: 'user-1', reason: 'wrong reading',
+      expectedUpdatedAt: invoice.updatedAt,
     }))
+    expect(append).not.toHaveBeenCalled()
   })
 
   it('returns 404 when manager reads an invoice whose period building is outside scope', async () => {
@@ -154,7 +148,9 @@ describe('InvoiceService invoice lifecycle methods', () => {
     vi.stubGlobal('can', (_user: AuthUser, capability: string) => capability === 'billing.write')
     const { InvoiceService } = await import('../../../server/services/billing/invoices')
 
-    await expect(InvoiceService.voidInvoice(event(), makeUser('manager'), 'invoice-1', { reason: 'wrong reading' }))
+    await expect(InvoiceService.voidInvoice(event(), makeUser('manager'), 'invoice-1', {
+      reason: 'wrong reading', expected_updated_at: '2026-07-14T00:00:00.000Z',
+    }))
       .rejects.toMatchObject({ statusCode: 403 })
   })
 
@@ -162,13 +158,15 @@ describe('InvoiceService invoice lifecycle methods', () => {
     const invoice = buildInvoice({ id: 'invoice-1', paidAmount: 0, status: 'issued' })
     const voided = buildInvoice({ ...invoice, status: 'void', voidReason: 'wrong reading' })
     findInvoiceByIdentifier.mockResolvedValue(invoice)
-    voidById.mockResolvedValue(voided)
+    voidWithAudit.mockResolvedValue(voided)
     const { InvoiceService } = await import('../../../server/services/billing/invoices')
 
-    const result = await InvoiceService.voidInvoice(event(), makeUser('manager'), invoice.id, { reason: 'wrong reading' })
+    const result = await InvoiceService.voidInvoice(event(), makeUser('manager'), invoice.id, {
+      reason: 'wrong reading', expected_updated_at: invoice.updatedAt,
+    })
 
     expect(result.status).toBe('void')
-    expect(voidById).toHaveBeenCalledWith(expect.anything(), invoice.id, 'user-1', 'wrong reading')
+    expect(voidWithAudit).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ invoiceId: invoice.id }))
   })
 
   it('forwards issuable drafts to issue_period_invoices and returns the issued rows', async () => {
@@ -241,35 +239,7 @@ describe('InvoiceService invoice lifecycle methods', () => {
         },
       ],
     })
-    rpcMock.mockResolvedValueOnce({
-      data: [{
-        id: issued.id,
-        invoice_code: issued.invoiceCode,
-        billing_period_id: issued.billingPeriodId,
-        contract_id: issued.contractId,
-        room_id: issued.roomId,
-        tenant_id: issued.tenantId,
-        status: 'issued',
-        due_date: '2026-06-05',
-        issued_at: issued.issuedAt,
-        paid_at: null,
-        voided_at: null,
-        voided_by: null,
-        void_reason: null,
-        superseded_by_invoice_id: null,
-        supersedes_invoice_id: null,
-        subtotal_amount: 1_820_000,
-        discount_amount: 100_000,
-        surcharge_amount: 0,
-        total_amount: 1_720_000,
-        paid_amount: 0,
-        balance_amount: 1_720_000,
-        notes: null,
-        created_at: issued.createdAt,
-        updated_at: issued.updatedAt,
-      }],
-      error: null,
-    })
+    issuePeriodWithAudit.mockResolvedValueOnce([issued])
     const { InvoiceService } = await import('../../../server/services/billing/invoices')
 
     const result = await InvoiceService.issueInvoices(
@@ -280,16 +250,12 @@ describe('InvoiceService invoice lifecycle methods', () => {
     )
 
     expect(result.issuedCount).toBe(1)
-    // The TS issueOne loop is gone; only the RPC is called.
-    expect(issueOne).not.toHaveBeenCalled()
-    expect(rpcMock).toHaveBeenCalledTimes(1)
-    const [fnName, args] = rpcMock.mock.calls[0]!
-    expect(fnName).toBe('issue_period_invoices')
-    expect(args).toMatchObject({
-      p_period_id: 'period-1',
-      p_actor_id: 'user-1',
-      p_due_date: '2026-06-05',
-      p_drafts: [expect.objectContaining({
+    expect(issuePeriodWithAudit).toHaveBeenCalledTimes(1)
+    expect(issuePeriodWithAudit).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      periodId: 'period-1',
+      actorId: 'user-1',
+      dueDate: '2026-06-05',
+      drafts: [expect.objectContaining({
         contract_id: 'contract-ready',
         total: 1_720_000,
         lines: [expect.objectContaining({
@@ -306,7 +272,7 @@ describe('InvoiceService invoice lifecycle methods', () => {
           }),
         })],
       })],
-    })
+    }))
     // `invoices.issued` audit is now emitted inside the RPC, NOT by the
     // service — make sure we don't double-write it from TS.
     expect(append).not.toHaveBeenCalledWith(
@@ -360,7 +326,7 @@ describe('InvoiceService invoice lifecycle methods', () => {
     )
 
     expect(result).toEqual({ issuedCount: 0, invoices: [] })
-    expect(issueOne).not.toHaveBeenCalled()
+    expect(issuePeriodWithAudit).not.toHaveBeenCalled()
     expect(append).toHaveBeenCalledWith(expect.anything(), expect.anything(), expect.objectContaining({
       action: 'invoice.issue_attempted',
       metadata: expect.objectContaining({ blocked_count: 1, issuable_count: 0, issued: 0 }),
@@ -371,9 +337,11 @@ describe('InvoiceService invoice lifecycle methods', () => {
     findInvoiceByIdentifier.mockResolvedValue(buildInvoice({ paidAmount: 100_000, status: 'partial' }))
     const { InvoiceService } = await import('../../../server/services/billing/invoices')
 
-    await expect(InvoiceService.voidInvoice(event(), makeUser(), 'invoice-1', { reason: 'wrong reading' }))
+    await expect(InvoiceService.voidInvoice(event(), makeUser(), 'invoice-1', {
+      reason: 'wrong reading', expected_updated_at: '2026-07-14T00:00:00.000Z',
+    }))
       .rejects.toMatchObject({ statusCode: 409 })
-    expect(voidById).not.toHaveBeenCalled()
+    expect(voidWithAudit).not.toHaveBeenCalled()
   })
 
   it('reissues a voided invoice and links the replacement to the original invoice', async () => {
@@ -381,6 +349,7 @@ describe('InvoiceService invoice lifecycle methods', () => {
     const replacement = buildInvoice({ id: 'invoice-new', supersedesInvoiceId: voided.id })
     findInvoiceByIdentifier.mockResolvedValue(voided)
     findActiveByPeriodContract.mockResolvedValue(null)
+    findLatestCorrelation.mockResolvedValue('00000000-0000-4000-8000-000000000009')
     calculateDraft.mockResolvedValue({
       drafts: [{
         contractId: voided.contractId,
@@ -394,30 +363,53 @@ describe('InvoiceService invoice lifecycle methods', () => {
         lines: [],
       }],
     })
-    issueOne.mockResolvedValue({ invoice: replacement, charges: [] })
+    reissueWithAudit.mockResolvedValue(replacement)
     const { InvoiceService } = await import('../../../server/services/billing/invoices')
 
     const result = await InvoiceService.reissueInvoice(
       event(),
       makeUser(),
       voided.id,
-      { due_date: '2026-06-05', reason: 'wrong reading fixed' },
+      {
+        due_date: '2026-06-05', reason: 'wrong reading fixed',
+        expected_updated_at: voided.updatedAt,
+      },
     )
 
     expect(result.id).toBe(replacement.id)
-    expect(issueOne).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({ supersedes_invoice_id: voided.id }),
-      [],
-    )
-    expect(linkSupersededBy).toHaveBeenCalledWith(expect.anything(), voided.id, replacement.id)
-    expect(append).toHaveBeenCalledWith(expect.anything(), expect.anything(), expect.objectContaining({
-      action: 'invoice.reissued',
-      metadata: expect.objectContaining({
-        reason: 'wrong reading fixed',
-        replacement_for_invoice_id: voided.id,
-      }),
+    expect(reissueWithAudit).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      invoiceId: voided.id,
+      expectedUpdatedAt: voided.updatedAt,
+      reason: 'wrong reading fixed',
+      correlationId: '00000000-0000-4000-8000-000000000009',
     }))
+    expect(append).not.toHaveBeenCalled()
+  })
+
+  it('routes paid invoice adjustments through the atomic repository contract', async () => {
+    const target = buildInvoice({ id: 'invoice-paid', status: 'paid', paidAmount: 1_000_000, balanceAmount: 0 })
+    const updated = buildInvoice({ ...target, totalAmount: 1_100_000, balanceAmount: 100_000, status: 'partial' })
+    const charge = { id: 'charge-adjustment', invoiceId: target.id, amount: 100_000 }
+    findInvoiceByIdentifier.mockResolvedValue(target)
+    addAdjustmentWithAudit.mockResolvedValue({ invoice: updated, charge })
+    const { InvoiceService } = await import('../../../server/services/billing/invoices')
+
+    const result = await InvoiceService.addAdjustment(event(), makeUser(), {
+      target_invoice_id: target.id,
+      label: 'Điều chỉnh tiền điện',
+      amount: 100_000,
+      reason: 'Bổ sung chênh lệch chỉ số',
+      reference_invoice_id: null,
+      expected_updated_at: target.updatedAt,
+    })
+
+    expect(result.invoice.id).toBe(target.id)
+    expect(addAdjustmentWithAudit).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      invoiceId: target.id,
+      expectedUpdatedAt: target.updatedAt,
+      amount: 100_000,
+    }))
+    expect(append).not.toHaveBeenCalled()
   })
 
   // After the RPC hardening, a charge-write failure inside the PL/pgSQL
@@ -457,10 +449,10 @@ describe('InvoiceService invoice lifecycle methods', () => {
       ],
     })
 
-    rpcMock.mockResolvedValueOnce({
-      data: null,
-      error: { code: 'P0001', message: 'invoice line sum does not match declared total for contract contract-3' },
-    })
+    issuePeriodWithAudit.mockRejectedValueOnce(Object.assign(new Error('INVOICE_LINE_TOTAL_MISMATCH'), {
+      statusCode: 400,
+      data: { error: { code: 'VALIDATION_ERROR' } },
+    }))
 
     const { InvoiceService } = await import('../../../server/services/billing/invoices')
 
@@ -471,14 +463,11 @@ describe('InvoiceService invoice lifecycle methods', () => {
         'period-1',
         { due_date: '2026-06-05' },
       ),
-    ).rejects.toMatchObject({
-      statusCode: 409,
-      data: { error: { code: 'CONFLICT' } },
-    })
+    ).rejects.toMatchObject({ statusCode: 400 })
 
     // RPC was called exactly once with all three drafts (atomic batch).
-    expect(rpcMock).toHaveBeenCalledTimes(1)
-    expect((rpcMock.mock.calls[0]![1] as { p_drafts: unknown[] }).p_drafts).toHaveLength(3)
+    expect(issuePeriodWithAudit).toHaveBeenCalledTimes(1)
+    expect((issuePeriodWithAudit.mock.calls[0]![1] as { drafts: unknown[] }).drafts).toHaveLength(3)
 
     // No TS-side audit append — both `invoices.issued` and the period status
     // transition audit are now inside the RPC and never fire on a failed

@@ -189,9 +189,11 @@ export function useBillingPeriodWorkspace(periodId: MaybeRefOrGetter<string>) {
 
   async function saveUtilityOverride(input: UtilityUsageOverrideInput): Promise<BillingUtilityUsage> {
     if (!id.value) throw new Error('No period id')
+    const existing = utilityUsages.value.find(usage =>
+      usage.roomId === input.room_id && usage.meterType === input.meter_type)
     const resp = await apiFetch<ApiSuccess<BillingUtilityUsage>>(`/api/billing/periods/${id.value}/utility-usages`, {
       method: 'POST',
-      body: input,
+      body: { ...input, expected_updated_at: existing?.updatedAt ?? null },
     })
     utilityUsages.value = [
       ...utilityUsages.value.filter(usage => usage.id !== resp.data.id),

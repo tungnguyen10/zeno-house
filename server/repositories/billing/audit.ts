@@ -1,8 +1,36 @@
 import { db as serverSupabaseClient } from '../../utils/db'
 import type { H3Event } from 'h3'
+import type { PostgrestError } from '@supabase/supabase-js'
+import type { Tables } from '~/types/database.types'
 import type { BillingAuditEvent } from '~/types/billing'
 import type { BillingAuditEntityType } from '~/utils/constants/billing'
 import { mapBillingAuditEvent } from '~/utils/mappers/billing'
+
+function isBillingAuditSearchRpcUnavailable(_error: PostgrestError): boolean {
+  // Always fall back to the inline query when the RPC call fails for any reason.
+  // The function is a pure SELECT equivalent to the fallback; the inline path handles
+  // any environment where the RPC is absent, has a mismatched signature, has wrong
+  // grants, or raises a runtime error.
+  return true
+}
+
+function rowMatchesAuditQuery(row: Tables<'billing_audit_events'>, q?: string): boolean {
+  if (!q) return true
+  const term = q.trim().toLowerCase()
+  if (!term) return true
+
+  const searchable = [
+    row.action,
+    row.entity_type,
+    row.entity_id ?? '',
+    row.correlation_id ?? '',
+    JSON.stringify(row.metadata ?? {}),
+    JSON.stringify(row.before_data ?? null),
+    JSON.stringify(row.after_data ?? null),
+  ]
+
+  return searchable.some(value => value.toLowerCase().includes(term))
+}
 
 export interface AuditAppendInput {
   billing_period_id: string | null
@@ -103,7 +131,7 @@ export const BillingAuditRepository = {
   ): Promise<BillingAuditEvent[]> {
     const limit = Math.min(filters.limit ?? 100, 100)
     const cursor = decodeBillingAuditCursor(filters.cursor)
-    const client = serverSupabaseClient(event)
+    const client = await serverSupabaseClient(event)
     const { data, error } = await client.rpc('billing_audit_search_page' as never, {
       p_period_id: billingPeriodId,
       p_actor_ids: filters.actorIds ?? null,
@@ -116,7 +144,60 @@ export const BillingAuditRepository = {
       p_query: filters.q ?? null,
       p_limit: limit,
     } as never)
-    if (error) throwDbError(error, 'billing.audit.searchPage')
+    if (error) {
+      if (!isBillingAuditSearchRpcUnavailable(error)) {
+        throwDbError(error, 'billing.audit.searchPage')
+      }
+
+      console.warn('[billing.audit.searchPage] Falling back to inline query', {
+        code: error.code,
+        message: error.message,
+      })
+
+      let query = client
+        .from('billing_audit_events')
+        .select('*')
+        .eq('billing_period_id', billingPeriodId)
+
+      if (filters.actorIds && filters.actorIds.length > 0) {
+        query = query.in('actor_id', filters.actorIds)
+      }
+      if (filters.actions && filters.actions.length > 0) {
+        query = query.in('action', filters.actions)
+      }
+      if (filters.from) {
+        query = query.gte('created_at', filters.from)
+      }
+      if (filters.to) {
+        query = query.lte('created_at', filters.to)
+      }
+      if (filters.correlationId) {
+        query = query.eq('correlation_id', filters.correlationId)
+      }
+
+      if (cursor.createdAt) {
+        if (cursor.id) {
+          query = query.or(`created_at.lt.${cursor.createdAt},and(created_at.eq.${cursor.createdAt},id.lt.${cursor.id})`)
+        }
+        else {
+          query = query.lt('created_at', cursor.createdAt)
+        }
+      }
+
+      const fetchLimit = filters.q ? Math.min(Math.max((limit + 1) * 5, 250), 1000) : limit + 1
+      const { data: fallbackData, error: fallbackError } = await query
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: false })
+        .limit(fetchLimit)
+
+      if (fallbackError) throwDbError(error, 'billing.audit.searchPage')
+
+      const filteredRows = ((fallbackData ?? []) as Tables<'billing_audit_events'>[])
+        .filter(row => rowMatchesAuditQuery(row, filters.q))
+        .slice(0, limit + 1)
+
+      return filteredRows.map(mapBillingAuditEvent)
+    }
     return ((data ?? []) as unknown as Parameters<typeof mapBillingAuditEvent>[0][]).map(mapBillingAuditEvent)
   },
 

@@ -4,6 +4,7 @@ import type { AuthUser } from '~/types/auth'
 import type {
   BillingPeriod,
   BillingPeriodListFilters,
+  BillingPeriodOpenResult,
   BillingPeriodSummary,
   BillingWorkspaceOverview,
 } from '~/types/billing'
@@ -40,6 +41,35 @@ interface BuildingLite {
   defaultWaterRate: number | null
   electricityPricingType: string | null
   waterPricingType: string | null
+}
+
+interface BillingPeriodOpenContext {
+  source?: 'api' | 'ai'
+  actionPlanId?: string | null
+  idempotencyKey?: string | null
+}
+
+async function openOrGetPeriod(
+  event: H3Event,
+  user: AuthUser,
+  input: BillingPeriodOpenInput,
+  context: BillingPeriodOpenContext = {},
+): Promise<BillingPeriodOpenResult> {
+  if (!can(user, 'billing.write')) throwForbidden('Không có quyền tạo kỳ vận hành')
+
+  const building = await BuildingRepository.findByIdentifier(event, input.building_id)
+  if (!building) throwNotFound('Không tìm thấy tòa nhà')
+  await assertBuildingScope(event, user, building.id, 'write')
+
+  return BillingPeriodRepository.openOrGetWithAudit(event, {
+    building_id: building.id,
+    period_year: input.period_year,
+    period_month: input.period_month,
+    actor_id: user.id,
+    source: context.source ?? 'api',
+    action_plan_id: context.actionPlanId ?? null,
+    idempotency_key: context.idempotencyKey ?? null,
+  })
 }
 
 function ordinal(year: number, month: number): number {
@@ -202,37 +232,16 @@ export const BillingPeriodService = {
     user: AuthUser,
     input: BillingPeriodOpenInput,
   ): Promise<BillingPeriod> {
-    if (!can(user, 'billing.write')) throwForbidden('Không có quyền tạo kỳ vận hành')
+    return (await openOrGetPeriod(event, user, input)).period
+  },
 
-    const building = await BuildingRepository.findByIdentifier(event, input.building_id)
-    if (!building) throwNotFound('Không tìm thấy tòa nhà')
-    await assertBuildingScope(event, user, building.id, 'write')
-
-    const existing = await BillingPeriodRepository.findByBuildingPeriod(
-      event,
-      building.id,
-      input.period_year,
-      input.period_month,
-    )
-    if (existing) return existing
-
-    const created = await BillingPeriodRepository.insert(event, {
-      building_id: building.id,
-      period_year: input.period_year,
-      period_month: input.period_month,
-      opened_by: user.id ?? null,
-    })
-
-    await BillingAuditService.append(event, user, {
-      billing_period_id: created.id,
-      action: BILLING_AUDIT_ACTIONS.PERIOD_OPENED,
-      entity_type: 'billing_period',
-      entity_id: created.id,
-      after_data: created,
-      metadata: { building_id: created.buildingId, period_year: created.periodYear, period_month: created.periodMonth },
-    })
-
-    return created
+  async openOrGetWithResult(
+    event: H3Event,
+    user: AuthUser,
+    input: BillingPeriodOpenInput,
+    context: BillingPeriodOpenContext = {},
+  ): Promise<BillingPeriodOpenResult> {
+    return openOrGetPeriod(event, user, input, context)
   },
 
   async getById(

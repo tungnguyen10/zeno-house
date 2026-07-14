@@ -4,6 +4,7 @@ import type { BillingUtilityUsage } from '~/types/billing'
 import type { MeterType } from '~/utils/constants/billing'
 import { mapBillingUtilityUsage } from '~/utils/mappers/billing'
 import type { UtilityUsageOverrideInput } from '~/utils/validators/billing'
+import type { Tables } from '~/types/database.types'
 
 type UtilityUsageApprovalUpdate = {
   approved_by: string
@@ -11,7 +12,64 @@ type UtilityUsageApprovalUpdate = {
   updated_at: string
 }
 
+function utilityRpcMessage(error: unknown): string {
+  return error && typeof error === 'object' && typeof (error as { message?: unknown }).message === 'string'
+    ? (error as { message: string }).message
+    : ''
+}
+
+export function throwUtilityUsageRpcError(error: unknown): never {
+  const message = utilityRpcMessage(error)
+  if (message.includes('UTILITY_OVERRIDE_VERSION_CONFLICT')) {
+    throwConflict('Điều chỉnh tiêu thụ đã thay đổi. Vui lòng tải lại dữ liệu.', {
+      category: 'OPTIMISTIC_LOCK_CONFLICT', retryable: true,
+    })
+  }
+  if (message.includes('BILLING_PERIOD_LOCKED')) {
+    throwConflict('Kỳ đã chốt, không thể điều chỉnh tiêu thụ.', {
+      category: 'OPTIMISTIC_LOCK_CONFLICT', retryable: true,
+    })
+  }
+  if (message.includes('BILLING_INVOICE_LOCKED')) {
+    throwConflict('Phòng đã có hóa đơn đang hiệu lực, không thể điều chỉnh tiêu thụ.', {
+      category: 'OPTIMISTIC_LOCK_CONFLICT', retryable: true,
+    })
+  }
+  if (message.includes('UTILITY_OVERRIDE_')) throwValidationError('Dữ liệu điều chỉnh tiêu thụ không hợp lệ.')
+  throwDbError(error, 'billing.utilityUsages.saveWithAudit')
+}
+
 export const BillingUtilityUsageRepository = {
+  async saveWithAudit(
+    event: H3Event,
+    billingPeriodId: string,
+    actorId: string,
+    input: UtilityUsageOverrideInput,
+    operation: {
+      source: 'api' | 'ai'
+      action_plan_id?: string | null
+      idempotency_key?: string | null
+    },
+  ): Promise<BillingUtilityUsage> {
+    const client = await serverSupabaseClient(event)
+    const { expected_updated_at, ...override } = input
+    const { data, error } = await client.rpc('save_utility_usage_override_with_audit', {
+      p_billing_period_id: billingPeriodId,
+      p_override: override,
+      // PostgREST accepts SQL NULL here, but generated function args do not model
+      // nullable parameters. A null value means this is the initial override.
+      p_expected_updated_at: (expected_updated_at ?? null) as string,
+      p_actor_id: actorId,
+      p_source: operation.source,
+      p_action_plan_id: operation.action_plan_id ?? undefined,
+      p_idempotency_key: operation.idempotency_key ?? undefined,
+    })
+    if (error) throwUtilityUsageRpcError(error)
+    const row = ((data ?? []) as unknown as Tables<'billing_utility_usages'>[])[0]
+    if (!row) throwInternal(new Error('Empty utility override save result'), 'billing.utilityUsages.saveWithAudit')
+    return mapBillingUtilityUsage(row)
+  },
+
   async listByPeriods(
     event: H3Event,
     billingPeriodIds: string[],
@@ -125,8 +183,7 @@ export const BillingUtilityUsageRepository = {
     }
     const { data, error } = await client
       .from('billing_utility_usages')
-      // New columns are added by migration and may lag in generated DB types.
-      .update(updatePayload as never)
+      .update(updatePayload)
       .eq('id', overrideId)
       .select()
       .single()

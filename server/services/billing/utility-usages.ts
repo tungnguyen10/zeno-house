@@ -1,13 +1,35 @@
 import type { H3Event } from 'h3'
 import type { AuthUser } from '~/types/auth'
-import type { BillingUtilityUsage } from '~/types/billing'
+import type { BillingPeriod, BillingUtilityUsage } from '~/types/billing'
 import { BILLING_AUDIT_ACTIONS } from '~/utils/constants/billing'
 import type { UtilityUsageOverrideInput } from '~/utils/validators/billing'
 import { BillingPeriodRepository } from '../../repositories/billing/periods'
 import { BillingUtilityUsageRepository } from '../../repositories/billing/utility-usages'
+import { InvoiceRepository } from '../../repositories/billing/invoices'
+import { RoomRepository } from '../../repositories/rooms'
 import { assertReason } from '../../utils/billing/reason'
 import { assertBuildingScope } from '../../utils/scope'
 import { BillingAuditService } from './audit'
+
+interface UtilityUsageOperationContext {
+  source: 'api' | 'ai'
+  actionPlanId?: string
+  idempotencyKey?: string
+}
+
+async function assertUtilityUsageEditable(
+  event: H3Event,
+  period: BillingPeriod,
+  roomId: string,
+): Promise<void> {
+  if (period.status === 'closed') throwConflict('Kỳ đã chốt, không thể điều chỉnh')
+  const room = await RoomRepository.findById(event, roomId)
+  if (!room || room.buildingId !== period.buildingId) throwValidationError('Phòng không thuộc kỳ vận hành')
+  const invoices = await InvoiceRepository.listByPeriod(event, period.id)
+  if (invoices.some(invoice => invoice.roomId === roomId && invoice.status !== 'void')) {
+    throwConflict('Phòng đã có hóa đơn đang hiệu lực, không thể điều chỉnh')
+  }
+}
 
 export const BillingUtilityUsageService = {
   async list(
@@ -32,6 +54,7 @@ export const BillingUtilityUsageService = {
     user: AuthUser,
     billingPeriodId: string,
     input: UtilityUsageOverrideInput,
+    operation: UtilityUsageOperationContext = { source: 'api' },
   ): Promise<BillingUtilityUsage> {
     if (!can(user, 'billing.write')) throwForbidden('Không có quyền điều chỉnh tiêu thụ')
 
@@ -42,7 +65,7 @@ export const BillingUtilityUsageService = {
     const period = await BillingPeriodRepository.findById(event, billingPeriodId)
     if (!period) throwNotFound('Không tìm thấy kỳ vận hành')
     await assertBuildingScope(event, user, period.buildingId, 'write')
-    if (period.status === 'closed') throwConflict('Kỳ đã chốt, không thể điều chỉnh')
+    await assertUtilityUsageEditable(event, period, input.room_id)
 
     const before = await BillingUtilityUsageRepository.findByPeriodRoomMeter(
       event,
@@ -50,26 +73,20 @@ export const BillingUtilityUsageService = {
       input.room_id,
       input.meter_type,
     )
-    const saved = await BillingUtilityUsageRepository.upsert(
+    const expectedUpdatedAt = input.expected_updated_at === undefined
+      ? before?.updatedAt ?? null
+      : input.expected_updated_at
+    const saved = await BillingUtilityUsageRepository.saveWithAudit(
       event,
       billingPeriodId,
-      user.id ?? null,
-      input,
-    )
-
-    await BillingAuditService.append(event, user, {
-      billing_period_id: billingPeriodId,
-      action: BILLING_AUDIT_ACTIONS.UTILITY_OVERRIDE_SAVED,
-      entity_type: 'billing_utility_usage',
-      entity_id: saved.id,
-      before_data: before,
-      after_data: saved,
-      metadata: {
-        room_id: saved.roomId,
-        meter_type: saved.meterType,
-        reason: saved.reason,
+      user.id,
+      { ...input, expected_updated_at: expectedUpdatedAt },
+      {
+        source: operation.source,
+        action_plan_id: operation.actionPlanId,
+        idempotency_key: operation.idempotencyKey,
       },
-    })
+    )
 
     return saved
   },
@@ -85,10 +102,9 @@ export const BillingUtilityUsageService = {
     const period = await BillingPeriodRepository.findById(event, billingPeriodId)
     if (!period) throwNotFound('Không tìm thấy kỳ vận hành')
     await assertBuildingScope(event, user, period.buildingId, 'write')
-    if (period.status === 'closed') throwConflict('Kỳ đã chốt, không thể xóa điều chỉnh')
-
     const row = await BillingUtilityUsageRepository.findById(event, billingPeriodId, overrideId)
     if (!row) throwNotFound('Không tìm thấy điều chỉnh tiêu thụ')
+    await assertUtilityUsageEditable(event, period, row.roomId)
 
     await BillingUtilityUsageRepository.deleteById(event, overrideId)
 
@@ -121,6 +137,7 @@ export const BillingUtilityUsageService = {
 
     const before = await BillingUtilityUsageRepository.findById(event, billingPeriodId, overrideId)
     if (!before) throwNotFound('Không tìm thấy điều chỉnh tiêu thụ')
+    await assertUtilityUsageEditable(event, period, before.roomId)
     if (before.approvedBy) throwConflict('Điều chỉnh này đã được duyệt rồi')
 
     const approved = await BillingUtilityUsageRepository.approveById(

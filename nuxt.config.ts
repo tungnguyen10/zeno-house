@@ -34,6 +34,23 @@ export default defineNuxtConfig({
     aiModelFallback: "", // NUXT_AI_MODEL_FALLBACK
     aiMaxSteps: 8, // NUXT_AI_MAX_STEPS
     aiMaxOutputTokens: 1200, // NUXT_AI_MAX_OUTPUT_TOKENS
+    aiChatEnabled: process.env.NODE_ENV !== "production", // NUXT_AI_CHAT_ENABLED
+    aiReadToolsEnabled: process.env.NODE_ENV !== "production", // NUXT_AI_READ_TOOLS_ENABLED
+    aiMutationPlanningEnabled: process.env.NODE_ENV !== "production", // NUXT_AI_MUTATION_PLANNING_ENABLED
+    aiMutationExecutionEnabled: process.env.NODE_ENV !== "production", // NUXT_AI_MUTATION_EXECUTION_ENABLED
+    aiInvoiceIssueEnabled: process.env.NODE_ENV !== "production", // NUXT_AI_INVOICE_ISSUE_ENABLED
+    aiInvoiceVoidEnabled: process.env.NODE_ENV !== "production", // NUXT_AI_INVOICE_VOID_ENABLED
+    aiInvoiceReissueEnabled: process.env.NODE_ENV !== "production", // NUXT_AI_INVOICE_REISSUE_ENABLED
+    aiInvoiceAdjustmentEnabled: process.env.NODE_ENV !== "production", // NUXT_AI_INVOICE_ADJUSTMENT_ENABLED
+    aiProviderTimeoutMs: 30_000, // NUXT_AI_PROVIDER_TIMEOUT_MS
+    aiChatRateLimit: 20, // NUXT_AI_CHAT_RATE_LIMIT
+    aiActionRateLimit: 30, // NUXT_AI_ACTION_RATE_LIMIT
+    aiRateWindowSeconds: 60, // NUXT_AI_RATE_WINDOW_SECONDS
+    aiCircuitFailureThreshold: 5, // NUXT_AI_CIRCUIT_FAILURE_THRESHOLD
+    aiCircuitCooldownMs: 60_000, // NUXT_AI_CIRCUIT_COOLDOWN_MS
+    aiRetentionCleanupEnabled: true, // NUXT_AI_RETENTION_CLEANUP_ENABLED
+    aiRetentionCleanupBatchSize: 500, // NUXT_AI_RETENTION_CLEANUP_BATCH_SIZE
+    aiRetentionCleanupSecret: "", // NUXT_AI_RETENTION_CLEANUP_SECRET
     adminEmail: "", // ADMIN_EMAIL
     turnstileSecretKey: "", // NUXT_TURNSTILE_SECRET_KEY
     operationsReportAutoCloseSecret: "", // NUXT_OPERATIONS_REPORT_AUTO_CLOSE_SECRET
@@ -81,6 +98,7 @@ export default defineNuxtConfig({
     },
     scheduledTasks: {
       "55 16 * * *": ["operations-report:auto-close"],
+      "20 17 * * *": ["ai:retention-cleanup"],
     },
   },
 

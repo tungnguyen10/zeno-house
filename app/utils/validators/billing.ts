@@ -40,8 +40,7 @@ export type BillingPeriodReopenInput = z.infer<typeof billingPeriodReopenSchema>
 // Utility usage override
 // ---------------------------------------------------------------------------
 
-export const utilityUsageOverrideSchema = z
-  .object({
+export const utilityUsageOverrideBaseSchema = z.object({
     room_id: z.string().uuid(),
     meter_type: z.enum(METER_TYPES),
     previous_reading_id: z.string().uuid().nullable().optional(),
@@ -53,7 +52,10 @@ export const utilityUsageOverrideSchema = z
     billable_usage: z.number().min(0),
     reason: z.enum(UTILITY_USAGE_REASONS),
     note: z.string().max(500).nullable().optional(),
+    expected_updated_at: z.string().datetime({ offset: true }).nullable().optional(),
   })
+
+export const utilityUsageOverrideSchema = utilityUsageOverrideBaseSchema
   .refine(
     v =>
       v.reason !== 'normal' || v.note === null || v.note === undefined || v.note.length >= 0,
@@ -90,6 +92,7 @@ export type InvoicesPrintedInput = z.infer<typeof invoicesPrintedSchema>
 
 export const voidInvoiceSchema = z.object({
   reason: z.string().min(1, 'Cần nhập lý do huỷ').max(500),
+  expected_updated_at: z.string().datetime({ offset: true }),
 })
 export type VoidInvoiceInput = z.infer<typeof voidInvoiceSchema>
 
@@ -101,6 +104,7 @@ export const reissueInvoiceSchema = z.object({
   reason: z.string().min(1, 'Cần nhập lý do phát hành lại').max(500),
   due_date: z.string().nullable().optional(),
   notes: z.string().max(500).nullable().optional(),
+  expected_updated_at: z.string().datetime({ offset: true }),
 })
 export type ReissueInvoiceInput = z.infer<typeof reissueInvoiceSchema>
 
@@ -114,6 +118,7 @@ export const adjustmentChargeSchema = z.object({
   amount: z.number().int(),
   reason: z.string().min(1).max(500),
   reference_invoice_id: z.string().uuid().nullable().optional(),
+  expected_updated_at: z.string().datetime({ offset: true }),
 })
 export type AdjustmentChargeInput = z.infer<typeof adjustmentChargeSchema>
 

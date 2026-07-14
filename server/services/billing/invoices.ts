@@ -1,7 +1,5 @@
 import type { H3Event } from 'h3'
-import { db as serverSupabaseClient } from '../../utils/db'
 import type { AuthUser } from '~/types/auth'
-import type { Database } from '~/types/database.types'
 import type {
   Invoice,
   InvoiceCharge,
@@ -25,7 +23,6 @@ import { BillingAuditRepository } from '../../repositories/billing/audit'
 import { BillingDraftService } from './drafts'
 import { BillingDisplayResolver } from './display'
 import { validateAdjustment } from './rules'
-import { mapInvoice } from '~/utils/mappers/billing'
 import { assertBuildingScope } from '../../utils/scope'
 
 export const InvoiceService = {
@@ -76,6 +73,7 @@ export const InvoiceService = {
     user: AuthUser,
     periodId: string,
     input: IssueInvoicesInput,
+    operation: { operationId?: string } = {},
   ): Promise<IssueInvoicesResult> {
     if (!can(user, 'billing.write')) throwForbidden('Không có quyền phát hành hoá đơn')
 
@@ -132,37 +130,15 @@ export const InvoiceService = {
       })),
     }))
 
-    const client = await serverSupabaseClient(event)
-    // Cast args: supabase typegen does not reflect SQL DEFAULT NULL on params,
-    // and the recursive `Json` type rejects `Record<string, unknown>` metadata.
-    const args = {
-      p_period_id: period.id,
-      p_actor_id: user.id ?? null,
-      p_due_date: input.due_date ?? null,
-      p_issued_at: issuedAt,
-      p_requested_contract_ids: input.contract_ids ?? null,
-      p_drafts: draftsPayload,
-      p_correlation_id: newCorrelationId(),
-    } as unknown as Database['public']['Functions']['issue_period_invoices']['Args']
-    const { data, error } = await client.rpc('issue_period_invoices', args)
-    if (error) {
-      // Closed-period guard collisions surface here as CONFLICT; everything
-      // else is a 500.
-      const status = error.code === 'P0001' ? 409 : 500
-      throw createError({
-        statusCode: status,
-        data: {
-          error: {
-            code: status === 409 ? 'CONFLICT' : 'INTERNAL',
-            message: error.message,
-          },
-        },
-      })
-    }
-
-    const issuedInvoices = ((data as Array<Record<string, unknown>> | null) ?? []).map(row =>
-      mapInvoice(row as never),
-    )
+    const issuedInvoices = await InvoiceRepository.issuePeriodWithAudit(event, {
+      periodId: period.id,
+      actorId: user.id ?? null,
+      dueDate: input.due_date ?? null,
+      issuedAt,
+      requestedContractIds: input.contract_ids ?? null,
+      drafts: draftsPayload,
+      operationId: operation.operationId ?? newCorrelationId(),
+    })
 
     return {
       issuedCount: issuedInvoices.length,
@@ -179,6 +155,7 @@ export const InvoiceService = {
     user: AuthUser,
     invoiceId: string,
     input: VoidInvoiceInput,
+    operation: { correlationId?: string } = {},
   ): Promise<Invoice> {
     if (!can(user, 'billing.corrections')) throwForbidden('Không có quyền huỷ hoá đơn')
     const reason = assertReason(input.reason, 10)
@@ -195,21 +172,12 @@ export const InvoiceService = {
     await assertBuildingScope(event, user, period.buildingId, 'write')
     if (period?.status === 'closed') throwConflict('Kỳ đã chốt — không thể huỷ hoá đơn trực tiếp')
 
-    const voided = await InvoiceRepository.voidById(event, invoice.id, user.id ?? null, reason)
-
-    await BillingAuditService.append(event, user, {
-      billing_period_id: invoice.billingPeriodId,
-      action: BILLING_AUDIT_ACTIONS.INVOICE_VOIDED,
-      entity_type: 'invoice',
-      entity_id: invoice.id,
-      correlation_id: newCorrelationId(),
-      before_data: invoice,
-      after_data: voided,
-      metadata: {
-        reason,
-        total_amount: invoice.totalAmount,
-        contract_id: invoice.contractId,
-      },
+    const voided = await InvoiceRepository.voidWithAudit(event, {
+      invoiceId: invoice.id,
+      expectedUpdatedAt: input.expected_updated_at,
+      actorId: user.id ?? null,
+      reason,
+      correlationId: operation.correlationId ?? newCorrelationId(),
     })
 
     const [enriched] = await new BillingDisplayResolver(event).enrichInvoices([voided])
@@ -226,6 +194,7 @@ export const InvoiceService = {
     user: AuthUser,
     voidedInvoiceId: string,
     input: ReissueInvoiceInput,
+    operation: { correlationId?: string } = {},
   ): Promise<Invoice> {
     if (!can(user, 'billing.corrections')) throwForbidden('Không có quyền phát hành lại hoá đơn')
     const reason = assertReason(input.reason, 10)
@@ -250,62 +219,43 @@ export const InvoiceService = {
       throwConflict('Còn cảnh báo chặn — không thể phát hành lại')
     }
 
-    const issuedAt = new Date().toISOString()
-    const { invoice } = await InvoiceRepository.issueOne(
-      event,
-      {
-        billing_period_id: period.id,
-        contract_id: draft.contractId,
-        room_id: draft.roomId,
-        tenant_id: draft.tenantId,
-        due_date: input.due_date ?? null,
-        issued_at: issuedAt,
-        subtotal: draft.subtotalAmount,
-        discount: draft.discountAmount,
-        surcharge: draft.surchargeAmount,
-        total: draft.totalAmount,
-        notes: input.notes ?? null,
-        supersedes_invoice_id: voided.id,
-      },
-      draft.lines.map(l => ({
-        charge_type: l.chargeType,
-        label: l.label,
-        source_type: l.sourceType,
-        source_id: l.sourceId,
-        quantity: l.quantity,
-        unit_price: l.unitPrice,
-        amount: l.amount,
-        metadata: l.metadata,
-        sort_order: l.sortOrder,
-      })),
-    )
-
-    await InvoiceRepository.linkSupersededBy(event, voided.id, invoice.id)
-
     // Inherit the void event's correlation so void+reissue group together in
     // the audit drawer; fall back to a fresh id for legacy voids without one.
     const correlationId =
-      (await BillingAuditRepository.findLatestCorrelation(
+      operation.correlationId ?? (await BillingAuditRepository.findLatestCorrelation(
         event,
         voided.id,
         BILLING_AUDIT_ACTIONS.INVOICE_VOIDED,
       )) ?? newCorrelationId()
 
-    await BillingAuditService.append(event, user, {
-      billing_period_id: period.id,
-      action: BILLING_AUDIT_ACTIONS.INVOICE_REISSUED,
-      entity_type: 'invoice',
-      entity_id: invoice.id,
-      correlation_id: correlationId,
-      before_data: voided,
-      after_data: invoice,
-      metadata: {
-        reason,
-        replacement_for_invoice_id: voided.id,
-        contract_id: voided.contractId,
-        old_total_amount: voided.totalAmount,
-        new_total_amount: invoice.totalAmount,
-        void_reason: voided.voidReason,
+    const invoice = await InvoiceRepository.reissueWithAudit(event, {
+      invoiceId: voided.id,
+      expectedUpdatedAt: input.expected_updated_at,
+      actorId: user.id ?? null,
+      dueDate: input.due_date ?? null,
+      issuedAt: new Date().toISOString(),
+      notes: input.notes ?? null,
+      reason,
+      correlationId,
+      draft: {
+        contract_id: draft.contractId,
+        room_id: draft.roomId,
+        tenant_id: draft.tenantId,
+        subtotal: draft.subtotalAmount,
+        discount: draft.discountAmount,
+        surcharge: draft.surchargeAmount,
+        total: draft.totalAmount,
+        lines: draft.lines.map(l => ({
+          charge_type: l.chargeType,
+          label: l.label,
+          source_type: l.sourceType,
+          source_id: l.sourceId,
+          quantity: l.quantity,
+          unit_price: l.unitPrice,
+          amount: l.amount,
+          metadata: l.metadata,
+          sort_order: l.sortOrder,
+        })),
       },
     })
 
@@ -325,6 +275,7 @@ export const InvoiceService = {
     event: H3Event,
     user: AuthUser,
     input: AdjustmentChargeInput,
+    operation: { correlationId?: string } = {},
   ): Promise<{ invoice: Invoice; charge: InvoiceCharge }> {
     if (!can(user, 'billing.corrections')) throwForbidden('Không có quyền tạo điều chỉnh')
 
@@ -342,76 +293,15 @@ export const InvoiceService = {
       reason: input.reason,
     })
 
-    // Build the charge row.
-    const existingCharges = await InvoiceRepository.listCharges(event, target.id)
-    const nextSort = existingCharges.length > 0
-      ? Math.max(...existingCharges.map(c => c.sortOrder)) + 1
-      : 100
-
-    const charges = await InvoiceRepository.addCharges(event, target.id, [
-      {
-        charge_type: 'adjustment',
-        label: input.label,
-        source_type: 'adjustment',
-        source_id: input.reference_invoice_id ?? null,
-        quantity: 1,
-        unit_price: input.amount,
-        amount: input.amount,
-        metadata: {
-          reason: input.reason,
-          reference_invoice_id: input.reference_invoice_id ?? null,
-          target_invoice_id: target.id,
-        },
-        sort_order: nextSort,
-      },
-    ])
-    const charge = charges[0]
-    if (!charge) throw createError({ statusCode: 500, message: 'Không tạo được dòng điều chỉnh' })
-
-    // Recompute totals and status. We've already rejected void invoices above,
-    // so target.status is one of draft/issued/partial/paid/overdue here.
-    const newSubtotal = target.subtotalAmount + (input.amount > 0 ? input.amount : 0)
-    const newSurcharge = target.surchargeAmount
-    // Treat adjustment as line-level: total changes directly by adjustment amount.
-    const newTotal = target.totalAmount + input.amount
-    const newBalance = newTotal - target.paidAmount
-    let newStatus: Invoice['status'] = target.status
-    if (newBalance <= 0) newStatus = 'paid'
-    else if (target.paidAmount > 0) newStatus = 'partial'
-
-    // Update invoice using a low-level supabase update because the totals are
-    // not paid_amount; reuse the repo's payment-aware updater is unsuitable.
-    const supabase = await serverSupabaseClient(event)
-    const { data: updRow, error: updErr } = await supabase
-      .from('invoices')
-      .update({
-        subtotal_amount: newSubtotal,
-        surcharge_amount: newSurcharge,
-        total_amount: newTotal,
-        balance_amount: newBalance,
-        status: newStatus,
-      })
-      .eq('id', target.id)
-      .select()
-      .single()
-    if (updErr) throw createError({ statusCode: 500, message: updErr.message })
-
-    const updated = mapInvoice(updRow)
-
-    await BillingAuditService.append(event, user, {
-      billing_period_id: target.billingPeriodId,
-      action: BILLING_AUDIT_ACTIONS.ADJUSTMENT_CREATED,
-      entity_type: 'invoice_charge',
-      entity_id: charge.id,
-      before_data: target,
-      after_data: updated,
-      metadata: {
-        target_invoice_id: target.id,
-        reference_invoice_id: input.reference_invoice_id ?? null,
-        label: input.label,
-        amount: input.amount,
-        reason: input.reason,
-      },
+    const { invoice: updated, charge } = await InvoiceRepository.addAdjustmentWithAudit(event, {
+      invoiceId: target.id,
+      expectedUpdatedAt: input.expected_updated_at,
+      actorId: user.id ?? null,
+      label: input.label,
+      amount: input.amount,
+      reason: input.reason,
+      referenceInvoiceId: input.reference_invoice_id ?? null,
+      correlationId: operation.correlationId ?? newCorrelationId(),
     })
 
     const [enriched] = await new BillingDisplayResolver(event).enrichInvoices([updated])

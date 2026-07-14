@@ -14,6 +14,185 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_action_plans: {
+        Row: {
+          action_type: string
+          building_id: string | null
+          confirmed_at: string | null
+          conversation_id: string
+          created_at: string
+          error: Json | null
+          executed_at: string | null
+          expires_at: string
+          id: string
+          idempotency_key: string
+          normalized_payload: Json
+          payload_hash: string
+          preview: Json
+          resource_versions: Json
+          result: Json | null
+          status: string
+          summary: string
+          title: string
+          updated_at: string
+          user_id: string
+          warnings: Json
+        }
+        Insert: {
+          action_type: string
+          building_id?: string | null
+          confirmed_at?: string | null
+          conversation_id: string
+          created_at?: string
+          error?: Json | null
+          executed_at?: string | null
+          expires_at?: string
+          id?: string
+          idempotency_key?: string
+          normalized_payload: Json
+          payload_hash: string
+          preview?: Json
+          resource_versions?: Json
+          result?: Json | null
+          status?: string
+          summary: string
+          title: string
+          updated_at?: string
+          user_id: string
+          warnings?: Json
+        }
+        Update: {
+          action_type?: string
+          building_id?: string | null
+          confirmed_at?: string | null
+          conversation_id?: string
+          created_at?: string
+          error?: Json | null
+          executed_at?: string | null
+          expires_at?: string
+          id?: string
+          idempotency_key?: string
+          normalized_payload?: Json
+          payload_hash?: string
+          preview?: Json
+          resource_versions?: Json
+          result?: Json | null
+          status?: string
+          summary?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+          warnings?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_action_plans_building_id_fkey"
+            columns: ["building_id"]
+            isOneToOne: false
+            referencedRelation: "buildings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_action_plans_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "ai_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_conversations: {
+        Row: {
+          created_at: string
+          expires_at: string
+          id: string
+          status: string
+          title: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          status?: string
+          title?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          status?: string
+          title?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      ai_messages: {
+        Row: {
+          content: string
+          conversation_id: string
+          created_at: string
+          id: string
+          metadata: Json
+          role: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          conversation_id: string
+          created_at?: string
+          id?: string
+          metadata?: Json
+          role: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          metadata?: Json
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "ai_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_rate_limit_buckets: {
+        Row: {
+          expires_at: string
+          request_count: number
+          scope: string
+          subject_hash: string
+          window_started: string
+        }
+        Insert: {
+          expires_at: string
+          request_count?: number
+          scope: string
+          subject_hash: string
+          window_started: string
+        }
+        Update: {
+          expires_at?: string
+          request_count?: number
+          scope?: string
+          subject_hash?: string
+          window_started?: string
+        }
+        Relationships: []
+      }
       audit_events: {
         Row: {
           action: string
@@ -490,6 +669,8 @@ export type Database = {
           id: string
           meter_reading_day: number | null
           name: string
+          operational_start_month: number | null
+          operational_start_year: number | null
           owner_email: string | null
           owner_name: string | null
           owner_phone: string | null
@@ -515,6 +696,8 @@ export type Database = {
           id?: string
           meter_reading_day?: number | null
           name: string
+          operational_start_month?: number | null
+          operational_start_year?: number | null
           owner_email?: string | null
           owner_name?: string | null
           owner_phone?: string | null
@@ -540,6 +723,8 @@ export type Database = {
           id?: string
           meter_reading_day?: number | null
           name?: string
+          operational_start_month?: number | null
+          operational_start_year?: number | null
           owner_email?: string | null
           owner_name?: string | null
           owner_phone?: string | null
@@ -1179,6 +1364,7 @@ export type Database = {
           auto_closed: boolean
           building_id: string
           close_reason: string | null
+          close_source: string | null
           closed_at: string | null
           closed_by: string | null
           created_at: string
@@ -1197,6 +1383,7 @@ export type Database = {
           auto_closed?: boolean
           building_id: string
           close_reason?: string | null
+          close_source?: string | null
           closed_at?: string | null
           closed_by?: string | null
           created_at?: string
@@ -1215,6 +1402,7 @@ export type Database = {
           auto_closed?: boolean
           building_id?: string
           close_reason?: string | null
+          close_source?: string | null
           closed_at?: string | null
           closed_by?: string | null
           created_at?: string
@@ -1654,6 +1842,8 @@ export type Database = {
           full_name: string
           gender: string | null
           id: string
+          id_card_back_path: string | null
+          id_card_front_path: string | null
           id_issued_date: string | null
           id_issued_place: string | null
           id_number: string | null
@@ -1674,6 +1864,8 @@ export type Database = {
           full_name: string
           gender?: string | null
           id?: string
+          id_card_back_path?: string | null
+          id_card_front_path?: string | null
           id_issued_date?: string | null
           id_issued_place?: string | null
           id_number?: string | null
@@ -1694,6 +1886,8 @@ export type Database = {
           full_name?: string
           gender?: string | null
           id?: string
+          id_card_back_path?: string | null
+          id_card_front_path?: string | null
           id_issued_date?: string | null
           id_issued_place?: string | null
           id_number?: string | null
@@ -1749,6 +1943,195 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_invoice_adjustment_with_audit: {
+        Args: {
+          p_actor_id: string
+          p_amount: number
+          p_correlation_id: string
+          p_expected_updated_at: string
+          p_invoice_id: string
+          p_label: string
+          p_reason: string
+          p_reference_invoice_id: string
+        }
+        Returns: Json
+      }
+      allocate_shared_expense: {
+        Args: {
+          p_actor_id: string
+          p_period_month: number
+          p_period_year: number
+          p_shared_expense_id: string
+        }
+        Returns: {
+          amount: number
+          building_id: string
+          expense_id: string
+        }[]
+      }
+      billing_audit_search_page: {
+        Args: {
+          p_actions: string[]
+          p_actor_ids: string[]
+          p_correlation_id: string
+          p_cursor: string
+          p_cursor_id: string
+          p_from: string
+          p_limit: number
+          p_period_id: string
+          p_query: string
+          p_to: string
+        }
+        Returns: {
+          action: string
+          actor_id: string | null
+          after_data: Json | null
+          before_data: Json | null
+          billing_period_id: string | null
+          correlation_id: string | null
+          created_at: string
+          entity_id: string | null
+          entity_type: string
+          id: string
+          metadata: Json
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "billing_audit_events"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      billing_period_input_snapshot: {
+        Args: { p_period_id: string }
+        Returns: Json
+      }
+      bulk_master_data_action: {
+        Args: { p_action: string; p_entity: string; p_ids: string[] }
+        Returns: {
+          id: string
+          reason: string
+          succeeded: boolean
+        }[]
+      }
+      cancel_ai_action_plan: {
+        Args: { p_plan_id: string; p_user_id: string }
+        Returns: {
+          action_type: string
+          building_id: string | null
+          confirmed_at: string | null
+          conversation_id: string
+          created_at: string
+          error: Json | null
+          executed_at: string | null
+          expires_at: string
+          id: string
+          idempotency_key: string
+          normalized_payload: Json
+          payload_hash: string
+          preview: Json
+          resource_versions: Json
+          result: Json | null
+          status: string
+          summary: string
+          title: string
+          updated_at: string
+          user_id: string
+          warnings: Json
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "ai_action_plans"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      claim_ai_action_plan: {
+        Args: { p_plan_id: string; p_user_id: string }
+        Returns: {
+          action_type: string
+          building_id: string | null
+          confirmed_at: string | null
+          conversation_id: string
+          created_at: string
+          error: Json | null
+          executed_at: string | null
+          expires_at: string
+          id: string
+          idempotency_key: string
+          normalized_payload: Json
+          payload_hash: string
+          preview: Json
+          resource_versions: Json
+          result: Json | null
+          status: string
+          summary: string
+          title: string
+          updated_at: string
+          user_id: string
+          warnings: Json
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "ai_action_plans"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      cleanup_expired_ai_conversations: {
+        Args: { p_limit?: number }
+        Returns: number
+      }
+      cleanup_expired_ai_rate_limits: {
+        Args: { p_limit?: number }
+        Returns: number
+      }
+      complete_ai_action_plan: {
+        Args: { p_plan_id: string; p_result: Json; p_user_id: string }
+        Returns: {
+          action_type: string
+          building_id: string | null
+          confirmed_at: string | null
+          conversation_id: string
+          created_at: string
+          error: Json | null
+          executed_at: string | null
+          expires_at: string
+          id: string
+          idempotency_key: string
+          normalized_payload: Json
+          payload_hash: string
+          preview: Json
+          resource_versions: Json
+          result: Json | null
+          status: string
+          summary: string
+          title: string
+          updated_at: string
+          user_id: string
+          warnings: Json
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "ai_action_plans"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      consume_ai_rate_limit: {
+        Args: {
+          p_limit: number
+          p_now?: string
+          p_scope: string
+          p_subject_hash: string
+          p_window_seconds: number
+        }
+        Returns: {
+          allowed: boolean
+          remaining: number
+          retry_after_seconds: number
+        }[]
+      }
       create_contract_with_handover: {
         Args: {
           p_building_id: string
@@ -1794,6 +2177,49 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "contracts"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      dashboard_source_snapshot: {
+        Args: {
+          p_building_ids: string[]
+          p_current_month: number
+          p_current_year: number
+          p_expiring_soon: string
+          p_expiring_urgent: string
+          p_today: string
+        }
+        Returns: Json
+      }
+      fail_ai_action_plan: {
+        Args: { p_error: Json; p_plan_id: string; p_user_id: string }
+        Returns: {
+          action_type: string
+          building_id: string | null
+          confirmed_at: string | null
+          conversation_id: string
+          created_at: string
+          error: Json | null
+          executed_at: string | null
+          expires_at: string
+          id: string
+          idempotency_key: string
+          normalized_payload: Json
+          payload_hash: string
+          preview: Json
+          resource_versions: Json
+          result: Json | null
+          status: string
+          summary: string
+          title: string
+          updated_at: string
+          user_id: string
+          warnings: Json
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "ai_action_plans"
           isOneToOne: false
           isSetofReturn: true
         }
@@ -1887,6 +2313,70 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      mark_ai_action_plan_stale: {
+        Args: { p_error: Json; p_plan_id: string; p_user_id: string }
+        Returns: {
+          action_type: string
+          building_id: string | null
+          confirmed_at: string | null
+          conversation_id: string
+          created_at: string
+          error: Json | null
+          executed_at: string | null
+          expires_at: string
+          id: string
+          idempotency_key: string
+          normalized_payload: Json
+          payload_hash: string
+          preview: Json
+          resource_versions: Json
+          result: Json | null
+          status: string
+          summary: string
+          title: string
+          updated_at: string
+          user_id: string
+          warnings: Json
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "ai_action_plans"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      open_or_get_billing_period_with_audit: {
+        Args: {
+          p_action_plan_id?: string
+          p_actor_id: string
+          p_building_id: string
+          p_idempotency_key?: string
+          p_period_month: number
+          p_period_year: number
+          p_source?: string
+        }
+        Returns: {
+          building_id: string
+          closed_at: string
+          created: boolean
+          created_at: string
+          id: string
+          issued_at: string
+          opened_by: string
+          period_month: number
+          period_year: number
+          status: string
+          updated_at: string
+        }[]
+      }
+      operations_report_snapshot: {
+        Args: {
+          p_building_id: string
+          p_period_month: number
+          p_period_year: number
+        }
+        Returns: Json
+      }
       owner_has_building_scope: {
         Args: { p_building_id: string }
         Returns: boolean
@@ -1918,8 +2408,168 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      reissue_invoice_with_audit: {
+        Args: {
+          p_actor_id: string
+          p_correlation_id: string
+          p_draft: Json
+          p_due_date: string
+          p_expected_updated_at: string
+          p_issued_at: string
+          p_notes: string
+          p_reason: string
+          p_voided_invoice_id: string
+        }
+        Returns: {
+          balance_amount: number
+          billing_period_id: string
+          contract_id: string
+          created_at: string
+          discount_amount: number
+          due_date: string | null
+          id: string
+          invoice_code: string
+          issued_at: string | null
+          notes: string | null
+          paid_amount: number
+          paid_at: string | null
+          room_id: string
+          status: string
+          subtotal_amount: number
+          superseded_by_invoice_id: string | null
+          supersedes_invoice_id: string | null
+          surcharge_amount: number
+          tenant_id: string
+          total_amount: number
+          updated_at: string
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "invoices"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      save_meter_readings_with_audit: {
+        Args: {
+          p_action_plan_id?: string
+          p_actor_id: string
+          p_idempotency_key?: string
+          p_readings: Json
+          p_source?: string
+        }
+        Returns: {
+          adjustment_reason: string | null
+          building_id: string
+          consumption: number | null
+          created_at: string | null
+          id: string
+          is_adjusted: boolean
+          is_estimated: boolean
+          meter_type: string
+          new_reading: number | null
+          notes: string | null
+          old_reading: number | null
+          period_month: number
+          period_year: number
+          reading_date: string
+          reading_type: string
+          reading_value: number
+          recorded_by: string | null
+          room_id: string
+          updated_at: string | null
+          updated_by: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "meter_readings"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      save_utility_usage_override_with_audit: {
+        Args: {
+          p_action_plan_id?: string
+          p_actor_id: string
+          p_billing_period_id: string
+          p_expected_updated_at: string
+          p_idempotency_key?: string
+          p_override: Json
+          p_source?: string
+        }
+        Returns: {
+          approved_at: string | null
+          approved_by: string | null
+          billable_usage: number
+          billing_period_id: string
+          created_at: string
+          created_by: string | null
+          current_reading_id: string | null
+          current_reading_value: number
+          id: string
+          meter_type: string
+          new_meter_start_value: number | null
+          note: string | null
+          old_meter_final_value: number | null
+          previous_reading_id: string | null
+          previous_reading_value: number
+          reason: string
+          room_id: string
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "billing_utility_usages"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       slugify_text: { Args: { input: string }; Returns: string }
       unaccent: { Args: { "": string }; Returns: string }
+      void_invoice_with_audit: {
+        Args: {
+          p_actor_id: string
+          p_correlation_id: string
+          p_expected_updated_at: string
+          p_invoice_id: string
+          p_reason: string
+        }
+        Returns: {
+          balance_amount: number
+          billing_period_id: string
+          contract_id: string
+          created_at: string
+          discount_amount: number
+          due_date: string | null
+          id: string
+          invoice_code: string
+          issued_at: string | null
+          notes: string | null
+          paid_amount: number
+          paid_at: string | null
+          room_id: string
+          status: string
+          subtotal_amount: number
+          superseded_by_invoice_id: string | null
+          supersedes_invoice_id: string | null
+          surcharge_amount: number
+          tenant_id: string
+          total_amount: number
+          updated_at: string
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "invoices"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
     }
     Enums: {
       utility_type: "electricity" | "water"

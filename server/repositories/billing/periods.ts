@@ -1,10 +1,38 @@
 import { db as serverSupabaseClient } from '../../utils/db'
 import type { H3Event } from 'h3'
-import type { BillingPeriod, BillingPeriodListFilters } from '~/types/billing'
+import type { BillingPeriod, BillingPeriodListFilters, BillingPeriodOpenResult } from '~/types/billing'
 import type { BillingPeriodStatus } from '~/utils/constants/billing'
 import { mapBillingPeriod } from '~/utils/mappers/billing'
 
 export const BillingPeriodRepository = {
+  async openOrGetWithAudit(event: H3Event, input: {
+    building_id: string
+    period_year: number
+    period_month: number
+    actor_id: string
+    source: 'api' | 'ai'
+    action_plan_id?: string | null
+    idempotency_key?: string | null
+  }): Promise<BillingPeriodOpenResult> {
+    const client = await serverSupabaseClient(event)
+    const { data, error } = await client.rpc('open_or_get_billing_period_with_audit', {
+      p_building_id: input.building_id,
+      p_period_year: input.period_year,
+      p_period_month: input.period_month,
+      p_actor_id: input.actor_id,
+      p_source: input.source,
+      ...(input.action_plan_id && { p_action_plan_id: input.action_plan_id }),
+      ...(input.idempotency_key && { p_idempotency_key: input.idempotency_key }),
+    })
+    if (error) throwDbError(error, 'billing.periods.openOrGetWithAudit')
+    const row = data?.[0]
+    if (!row) throwInternal(new Error('Empty period open result'), 'billing.periods.openOrGetWithAudit')
+    return {
+      period: mapBillingPeriod(row),
+      created: row.created === true,
+    }
+  },
+
   async findManyByIds(event: H3Event, ids: string[]): Promise<BillingPeriod[]> {
     const unique = [...new Set(ids)]
     if (unique.length === 0) return []

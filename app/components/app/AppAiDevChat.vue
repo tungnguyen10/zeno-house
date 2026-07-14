@@ -13,6 +13,7 @@ const enabled = computed(() =>
 const {
   conversationId,
   messages,
+  actionPlans,
   prompt,
   sending,
   canSend,
@@ -21,8 +22,13 @@ const {
   errorCode,
   errorDetails,
   send,
+  resume,
+  confirmAction,
+  cancelAction,
   clearChat,
 } = useAiChat()
+
+onMounted(() => resume())
 
 const toolCallsLabel = computed(() => {
   if (lastToolCalls.value.length === 0) return 'No tool call'
@@ -150,6 +156,14 @@ function onClose() {
               {{ message.content }}
             </div>
           </div>
+
+          <AppAiActionCard
+            v-for="plan in actionPlans"
+            :key="plan.id"
+            :plan="plan"
+            @confirm="confirmAction"
+            @cancel="cancelAction"
+          />
 
           <!-- Typing indicator -->
           <div v-if="sending" class="flex justify-start">

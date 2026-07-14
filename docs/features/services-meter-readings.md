@@ -109,6 +109,16 @@ Billing draft calculation uses:
 
 Negative consumption blocks issuing until corrected through an override.
 
+## AI Import And Correction
+
+The internal assistant can preview a delimited meter block pasted in the current user message. The model never copies numeric rows into tool arguments: the server reloads the owned stored message and parses it deterministically.
+
+Supported input has a header containing `room`/`phòng` and at least one electricity/water column, with tab, comma, or semicolon delimiters. Exact room UUID, code, slug, or room number resolution occurs only inside the selected scoped building. Preview returns line-specific blockers and warnings; an action card is created only when the normalized payload is commit-ready.
+
+Confirmation commits the exact previewed payload through `save_meter_readings_with_audit`. The same RPC backs direct create, bulk, and PATCH service paths, so all reading rows and `reading.saved` audits commit or roll back together. PATCH requires `expected_updated_at`; stale writes return 409 instead of overwriting newer data.
+
+Monthly reading writes are blocked when the matching billing period is closed or the room already has a non-void invoice. The checks run in services and again inside the transaction. Contract handover readings remain outside monthly billing locks.
+
 ## Implementation Files
 
 Service catalog:

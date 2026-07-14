@@ -4,31 +4,54 @@ Last reviewed from source: 2026-07-14.
 
 Internal AI agent platform implementation update: 2026-07-14
 
-- AI chat MVP is implemented end-to-end:
+- AI foundation is implemented in the current working tree:
   - Chat widget UI is mounted in the default layout.
-  - Client streaming composable is implemented with API error handling.
+  - Client parses typed, fragmented SSE and can resume an owned server conversation.
   - Authenticated server endpoint is implemented at `POST /api/ai/chat`.
-  - Tool-enabled AI service is implemented with capability-gated tool exposure.
+  - Conversations, messages, and action plans use server-owned persistence with a 30-day expiry boundary.
+  - Action cards call direct authenticated confirm/cancel endpoints.
+  - Capability-filtered tool policy, lifecycle telemetry, compare-and-set claims, replay, expiry, and optimistic-lock error contracts are implemented.
 - Current architecture in code is `Chat UI -> /api/ai/chat -> AI service tools -> domain services -> repositories/database`.
 - Implemented tool set:
   - `get_user_context`
+  - `list_buildings`
   - `get_meter_status`
   - `get_billing_period_overview`
-  - `open_billing_period` (explicit confirmation + idempotency key required)
+  - `calculate_billing_draft`
+  - `plan_open_billing_period`
+  - `preview_meter_import`
+  - `plan_meter_reading_update`
+  - `plan_utility_usage_override`
+  - `plan_invoice_issue`
+  - `plan_void_invoice`
+  - `plan_reissue_invoice`
+  - `plan_paid_invoice_adjustment`
 - Guardrails implemented in code:
   - `requireAuth` at API boundary
   - Zod validation for chat payload and tool inputs
-  - capability-based tool gating
-  - confirm-before-write for mutating tool
+  - capability-based deny-by-default tool gating
+  - server-generated action idempotency keys
+  - user ownership, building-scope hook, expiry, and compare-and-set action claims
+  - model/user chat text cannot confirm an action
+  - scoped UUID/slug/exact-name building resolution with explicit ambiguity handling
+  - atomic, idempotent period creation plus `period.opened` audit through one RPC
+  - deterministic meter parsing from the owned stored message; the model cannot submit reconstructed rows
+  - atomic meter/audit and utility-override/audit RPCs with period/invoice locks and optimistic versions
+  - direct meter and override APIs share the same transactional domain paths as AI confirmation
+  - read-only draft calculation and deterministic explanation through the existing billing engine
+  - canonical invoice issue snapshots with stale-preview rejection and idempotent atomic issue
+  - versioned void, reissue, and explicit paid-invoice adjustment plans using shared service transaction paths
+  - private production-safe chat/tool/action kill switches, distributed per-user rate limits, provider timeout/circuit controls, and daily bounded retention cleanup
+  - stored conversation content and business labels are treated as untrusted data; prompt-injection regressions cover policy override and fabricated financial authority
   - no web browsing/external search instruction in system prompt
-- Current state: functional internal MVP, not production-ready yet.
+- Current state: all four planned code waves are implemented, remotely verified, accepted, and archived. Production AI flags default off pending an explicit rollout decision.
 
-AI implementation backlog (next)
+AI implementation sequence
 
-- Add test coverage for API/service/composable/UI AI flows.
-- Wire tool-call telemetry into the chat debug panel.
-- Add OpenSpec change/spec for AI assistant scope and verification gates.
-- Run final verification for AI scope (`npm run typecheck`, `npm test`, `npm run lint`) plus prompt regression checks.
+- Foundation is archived and accepted.
+- Billing-period operations are implemented, verified, and archived.
+- Meter/draft operations are implemented, remotely verified, archived, and accepted.
+- Invoice operations and production hardening are implemented, remotely verified, archived, and accepted.
 
 UI standardization update: 2026-07-08
 
@@ -66,14 +89,14 @@ Zeno House is now an authenticated internal operations app for rental buildings.
 
 | Area | Current count / scope |
 | --- | --- |
-| Nuxt pages | 30 Vue page files under `app/pages/**` |
-| Vue components | 90 Vue component files under `app/components/**` |
-| Server API handlers | 85 route handlers under `server/api/**` |
-| Supabase migrations | 47 SQL migration files under `supabase/migrations` |
-| Tests | 65 `*.test.ts` / `*.spec.ts` files under `tests/**` |
-| OpenSpec specs | 61 capability specs under `openspec/specs/**` |
-| Archived OpenSpec changes | 50 archived changes under `openspec/changes/archive/**` |
-| Active OpenSpec changes | `harden-and-optimize-billing` |
+| Nuxt pages | 32 Vue page files under `app/pages/**` |
+| Vue components | 100 Vue component files under `app/components/**` |
+| Server API handlers | 136 route handlers under `server/api/**` |
+| Supabase migrations | 72 SQL migration files under `supabase/migrations` |
+| Tests | 137 `*.test.ts` / `*.spec.ts` files under `tests/**` |
+| OpenSpec specs | 76 capability specs under `openspec/specs/**` |
+| Archived OpenSpec changes | 63 archived changes under `openspec/changes/archive/**` |
+| Active OpenSpec changes | none |
 
 ## Current Stack
 
@@ -121,7 +144,7 @@ type ApiError = {
 
 Readable operational identifiers are first-class. Public route/query/body boundaries can accept UUIDs or readable codes/slugs where supported, then services/repositories resolve them back to UUIDs before doing persistence work.
 
-## Internal AI Agent Platform (Implemented MVP)
+## Internal AI Agent Platform (Foundation)
 
 The implemented AI assistant extends existing architecture rather than replacing it.
 
@@ -134,14 +157,20 @@ chat UI
   -> Supabase
 ```
 
-Current guardrails for all domains:
+Current foundation guardrails:
 
 - no direct model access to database queries
 - no web search or external browsing tools
-- explicit confirmation for mutating tools
-- idempotency keys for retried mutation requests
-- server-side capability and building-scope enforcement for every tool
-- audit trace for each mutating tool execution
+- server-owned conversation history and expiry
+- capability-filtered, deny-by-default read and planning tools
+- direct action confirmation endpoints and server-generated idempotency contract
+- compare-and-set lifecycle and optimistic-lock conflict contract
+- registered period, meter, and override executors backed by atomic domain/audit persistence
+- deterministic stored-message meter parsing and server-authoritative draft explanation
+- canonical invoice issue preview plus versioned void, reissue, and paid-adjustment executors
+- private production-safe runtime flags, rate limiting, provider timeout/circuit controls, and scheduled bounded retention cleanup
+
+See `docs/architecture/ai-agent.md` for the canonical runtime and action lifecycle contract.
 
 ## Product Surface
 
@@ -511,6 +540,9 @@ Important database functions/RPCs:
 - `issue_period_invoices`
 - `record_bulk_payments`
 - `create_contract_with_handover`
+- `open_or_get_billing_period_with_audit`
+- `save_meter_readings_with_audit`
+- `save_utility_usage_override_with_audit`
 
 RLS is enabled across exposed public tables in migrations as a safety net. Application writes still go through Nuxt server services and capability checks.
 

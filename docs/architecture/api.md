@@ -37,91 +37,9 @@ Every API response includes `x-request-id` and `Server-Timing`. Slow GET request
 
 ## Internal AI Agent API Contract
 
-The internal AI assistant uses the same server-mediated architecture as the rest of the product:
+The AI routes follow the same authenticated API → service → repository boundary. The chat response is typed SSE rather than the standard JSON success envelope. Conversation/action endpoints use `{ data, meta? }`.
 
-```text
-chat UI
-  -> /api/ai/chat
-  -> internal tool gateway (whitelist + schema validation + policy)
-  -> domain service
-  -> repository
-  -> Supabase
-```
-
-### Agent Runtime Boundaries
-
-- The model may interpret intent and request tool calls.
-- The model cannot query business tables directly.
-- All tool execution is server-side and must enforce capability and building scope checks.
-- Mutating tools require explicit confirmation and idempotency.
-
-### Mutation Plan Contract
-
-Mutating actions must follow a plan-then-commit pattern:
-
-1. `plan`: validate intent and produce a deterministic mutation preview.
-2. `confirm`: execute only when client sends explicit confirmation and the matching idempotency key.
-
-For update flows, mutation arguments must include an optimistic locking token (`updated_at` or `version`) so concurrent edits fail with `CONFLICT` rather than silent overwrite.
-
-Audit writes for confirmed mutations must commit in the same transaction as the domain mutation.
-
-### Chat Envelope
-
-`POST /api/ai/chat` follows the shared envelope and may stream partial assistant output.
-
-- Success: `{ data: { message, toolCalls?, toolResults?, conversationId }, meta? }`
-- Error: `{ error: { code, message, details? } }`
-
-Streaming responses must preserve `x-request-id` for correlation with tool execution logs.
-
-### Tool Call Lifecycle
-
-1. Client sends user message and current conversation ID.
-2. Server sends model messages plus allowed tool definitions.
-3. Model returns either final text or tool call requests.
-4. Tool gateway validates tool name, schema, confirmation policy, and capability/scope.
-5. Server executes domain service.
-6. Tool result is returned to the model for the next step or final answer.
-
-### Tool Loop Safety
-
-- Each `/api/ai/chat` request must enforce a max tool loop limit (recommended default: 8).
-- Requests that exceed the loop limit must terminate with a structured `CONFLICT` or `VALIDATION_ERROR` response and an actionable message.
-- Consecutive mutation tools in one turn should be restricted by policy unless each mutation has independent confirmation.
-
-### Agent-Specific Error Semantics
-
-In addition to standard API codes, agent handlers should normalize these states using existing codes:
-
-- validation failure in tool arguments: `VALIDATION_ERROR`
-- permission or scope violation: `FORBIDDEN`
-- stale conversation or optimistic lock conflict: `CONFLICT`
-- unknown/unregistered tool request: `VALIDATION_ERROR`
-- missing authenticated session: `UNAUTHENTICATED`
-
-### Structured Agent Error Model
-
-Agent handlers should preserve the common envelope while normalizing `error.details` for machine handling:
-
-```ts
-type AgentErrorDetails = {
-  category:
-    | 'TOOL_VALIDATION'
-    | 'TOOL_NOT_ALLOWED'
-    | 'CONFIRMATION_REQUIRED'
-    | 'IDEMPOTENCY_REPLAY'
-    | 'OPTIMISTIC_LOCK_CONFLICT'
-    | 'LOOP_LIMIT_EXCEEDED'
-    | 'INTERNAL_TOOL_FAILURE'
-  toolName?: string
-  retryable: boolean
-  conversationId?: string
-  requestId?: string
-}
-```
-
-This model keeps UI and telemetry behavior consistent while still returning the top-level API error code (`VALIDATION_ERROR`, `FORBIDDEN`, `CONFLICT`, `INTERNAL`, or `UNAUTHENTICATED`).
+The current runtime exposes scoped context, meter status, billing overview/draft reads, and planning tools for period opening, meter import/correction, and utility overrides. Direct-confirmed executors are registered only for those implemented mutations. Server-owned action plans, deterministic stored-message parsing, atomic domain/audit RPCs, optimistic versions, structured errors, retention, streaming, and telemetry contracts are documented in [`docs/architecture/ai-agent.md`](./ai-agent.md).
 
 ## Dashboard
 

@@ -29,6 +29,7 @@ Read only what matches the task:
 | Auth/permissions | `docs/architecture/auth-permissions.md` | `server/utils/permissions.ts`, `server/utils/scope.ts` |
 | Database/Supabase | `docs/architecture/database.md` | migrations under `supabase/migrations/**` |
 | Billing | `docs/features/billing.md` | `openspec/specs/billing-*`, `server/services/billing/**` |
+| AI assistant | `docs/architecture/ai-agent.md` | active AI OpenSpec task, then `server/services/ai/**` |
 | Contracts/occupancy | `docs/features/contracts.md` | `openspec/specs/contracts-*`, `contract-occupants-*` |
 | Property CRUD | `docs/features/property-operations.md` | `buildings-*`, `rooms-*`, `tenants-*` specs |
 | Services/meters | `docs/features/services-meter-readings.md` | `meter-readings-api`, service specs |
@@ -49,21 +50,23 @@ Run `openspec list --json` for the current source of truth before planning imple
 
 Current snapshot at review time (2026-07-14):
 
-- `harden-and-optimize-billing`
+- No active changes.
 
 Do not assume archived changes still need syncing. Check current specs first.
 
 ## AI Implementation Snapshot
 
-Implemented AI chat surfaces:
+Implemented AI foundation surfaces:
 
 - `app/components/app/AppAiDevChat.vue`
+- `app/components/app/AppAiActionCard.vue`
 - `app/composables/useAiChat.ts`
-- `server/api/ai/chat.post.ts`
-- `server/services/ai/chat.ts`
-- `app/utils/validators/ai.ts`
+- `server/api/ai/**`
+- `server/services/ai/**`
+- `server/repositories/ai/**`
+- `app/types/ai.ts`, `app/utils/mappers/ai.ts`, `app/utils/validators/ai.ts`
 
-Current maturity: internal MVP is available end-to-end, but not production-ready yet.
+Current maturity: server-owned foundation plus scoped period opening, deterministic meter import/correction, read-only draft explanation, utility override, invoice issue, and invoice correction plan/confirm paths. Private server kill switches, distributed user rate limits, provider timeout/circuit controls, prompt-injection regressions, and scheduled retention cleanup are implemented and remotely verified. All four sequential AI changes are archived; production flags remain off until an explicit rollout decision.
 
 ## Core Architecture Invariants
 

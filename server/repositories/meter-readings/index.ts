@@ -1,8 +1,9 @@
 import { db as serverSupabaseClient } from '../../utils/db'
 import type { H3Event } from 'h3'
 import type { MeterReading, RoomMeterStatus } from '~/types/meter-readings'
-import type { MeterReadingCreateInput, MeterReadingUpdateInput } from '~/utils/validators/meter-readings'
+import type { MeterReadingAtomicInput, MeterReadingCreateInput, MeterReadingUpdateInput } from '~/utils/validators/meter-readings'
 import { mapMeterReading } from '~/utils/mappers/meter-readings'
+import type { Tables } from '~/types/database.types'
 
 export interface MeterReadingFilters {
   room_id?: string
@@ -15,7 +16,58 @@ export interface MeterReadingFilters {
 
 const METER_TYPES = ['electricity', 'water'] as const
 
+function rpcErrorMessage(error: unknown): string {
+  return error && typeof error === 'object' && typeof (error as { message?: unknown }).message === 'string'
+    ? (error as { message: string }).message
+    : ''
+}
+
+export function throwMeterReadingRpcError(error: unknown): never {
+  const message = rpcErrorMessage(error)
+  if (message.includes('METER_VERSION_CONFLICT')) {
+    throwConflict('Chỉ số đã thay đổi. Vui lòng tải lại dữ liệu.', {
+      category: 'OPTIMISTIC_LOCK_CONFLICT', retryable: true,
+    })
+  }
+  if (message.includes('BILLING_PERIOD_LOCKED')) {
+    throwConflict('Kỳ đã chốt, không thể sửa chỉ số.', {
+      category: 'OPTIMISTIC_LOCK_CONFLICT', retryable: true,
+    })
+  }
+  if (message.includes('BILLING_INVOICE_LOCKED')) {
+    throwConflict('Phòng đã có hóa đơn đang hiệu lực, không thể sửa chỉ số.', {
+      category: 'OPTIMISTIC_LOCK_CONFLICT', retryable: true,
+    })
+  }
+  if (message.includes('METER_')) {
+    throwValidationError('Dữ liệu chỉ số không hợp lệ.')
+  }
+  throwDbError(error, 'meterReadings.saveWithAudit')
+}
+
 export const MeterReadingRepository = {
+  async saveWithAudit(
+    event: H3Event,
+    readings: MeterReadingAtomicInput[],
+    input: {
+      actor_id: string
+      source: 'api' | 'ai'
+      action_plan_id?: string | null
+      idempotency_key?: string | null
+    },
+  ): Promise<MeterReading[]> {
+    const client = await serverSupabaseClient(event)
+    const { data, error } = await client.rpc('save_meter_readings_with_audit', {
+      p_readings: readings,
+      p_actor_id: input.actor_id,
+      p_source: input.source,
+      p_action_plan_id: input.action_plan_id ?? undefined,
+      p_idempotency_key: input.idempotency_key ?? undefined,
+    })
+    if (error) throwMeterReadingRpcError(error)
+    return ((data ?? []) as unknown as Tables<'meter_readings'>[]).map(mapMeterReading)
+  },
+
   async findByRoom(
     event: H3Event,
     roomId: string,
@@ -230,9 +282,6 @@ export const MeterReadingRepository = {
       .update({
         ...(input.reading_date !== undefined && { reading_date: input.reading_date }),
         ...(input.reading_value !== undefined && { reading_value: input.reading_value }),
-        ...(input.reading_type !== undefined && { reading_type: input.reading_type }),
-        ...(input.period_year !== undefined && { period_year: input.period_year }),
-        ...(input.period_month !== undefined && { period_month: input.period_month }),
         ...(input.is_estimated !== undefined && { is_estimated: input.is_estimated }),
         ...(input.notes !== undefined && { notes: input.notes }),
         updated_at: new Date().toISOString(),

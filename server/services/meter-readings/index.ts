@@ -2,13 +2,11 @@ import type { H3Event } from 'h3'
 import { db as serverSupabaseClient } from '../../utils/db'
 import type { AuthUser } from '~/types/auth'
 import type { MeterReading, RoomMeterStatus } from '~/types/meter-readings'
-import type { MeterReadingCreateInput, MeterReadingBulkInput, MeterReadingUpdateInput } from '~/utils/validators/meter-readings'
-import { BILLING_AUDIT_ACTIONS } from '~/utils/constants/billing'
+import type { MeterReadingAtomicInput, MeterReadingCreateInput, MeterReadingBulkInput, MeterReadingUpdateInput } from '~/utils/validators/meter-readings'
+import type { AiMeterImportPayload } from '~/utils/validators/ai'
 import { MeterReadingRepository } from '../../repositories/meter-readings'
 import { BuildingRepository } from '../../repositories/buildings'
 import { RoomRepository } from '../../repositories/rooms'
-import { BillingPeriodRepository } from '../../repositories/billing/periods'
-import { BillingAuditService } from '../billing/audit'
 import { assertBuildingScope, getAssignedBuildingIds } from '../../utils/scope'
 
 export interface MeterReadingFilters {
@@ -20,19 +18,10 @@ export interface MeterReadingFilters {
   meter_type?: string
 }
 
-/**
- * Build audit metadata for a `reading.saved` event, carrying the before/after
- * values so the audit drawer can render an inline diff (e.g. `1500 → 1520`).
- */
-function readingDiffMeta(before: MeterReading | null, after: MeterReading) {
-  return {
-    count: 1,
-    meter_type: after.meterType,
-    previous_value: before?.readingValue ?? null,
-    new_value: after.readingValue,
-    unit: after.meterType === 'electricity' ? 'kWh' : 'm³',
-    reading_date: after.readingDate,
-  }
+interface MeterReadingOperationContext {
+  source: 'api' | 'ai'
+  actionPlanId?: string
+  idempotencyKey?: string
 }
 
 export const MeterReadingService = {
@@ -108,25 +97,20 @@ export const MeterReadingService = {
       .single()
     if (!room) throw createError({ statusCode: 404, message: 'Không tìm thấy phòng' })
     await assertBuildingScope(event, _user, room.building_id, 'write')
-    const created = await MeterReadingRepository.create(event, {
+    const key = {
+      room_id: input.room_id,
+      meter_type: input.meter_type,
+      period_year: input.period_year,
+      period_month: input.period_month,
+      reading_type: input.reading_type,
+    }
+    const existing = await MeterReadingRepository.findExistingByConflictKeys(event, [key])
+    if (existing.size > 0) throwConflict('Chỉ số của phòng trong kỳ này đã tồn tại.')
+    const [created] = await MeterReadingRepository.saveWithAudit(event, [{
       ...input,
-      building_id: room.building_id,
-      recorded_by: userId,
-    })
-
-    const period = await BillingPeriodRepository.findByBuildingPeriod(
-      event, room.building_id, input.period_year, input.period_month,
-    )
-    await BillingAuditService.append(event, _user, {
-      billing_period_id: period?.id ?? null,
-      action: BILLING_AUDIT_ACTIONS.READING_SAVED,
-      entity_type: 'meter_reading',
-      entity_id: created.id,
-      before_data: null,
-      after_data: created,
-      metadata: readingDiffMeta(null, created),
-    })
-
+      expected_updated_at: null,
+    }], { actor_id: userId, source: 'api' })
+    if (!created) throwInternal(new Error('Empty meter reading save result'), 'meterReadings.create')
     return created
   },
 
@@ -191,7 +175,8 @@ export const MeterReadingService = {
       }
     }
 
-    // Pre-fetch existing readings (for before-snapshot) and run upsert in parallel
+    // Capture optimistic versions before the atomic RPC. The RPC locks and
+    // compares them again before writing any row.
     const conflictKeys = enriched.map(r => ({
       room_id: r.room_id,
       meter_type: r.meter_type,
@@ -199,41 +184,23 @@ export const MeterReadingService = {
       period_month: r.period_month,
       reading_type: r.reading_type,
     }))
-    const [beforeMap, saved] = await Promise.all([
-      MeterReadingRepository.findExistingByConflictKeys(event, conflictKeys),
-      MeterReadingRepository.bulkUpsert(event, enriched),
-    ])
-
-    // Resolve all affected billing periods in one bounded query before
-    // appending the corresponding audit rows.
-    const periodCache = await BillingPeriodRepository.findByBuildingPeriods(
-      event,
-      [...new Map(saved.map(reading => {
-        const key = `${reading.buildingId}:${reading.periodYear}:${reading.periodMonth}`
-        return [key, {
-          buildingId: reading.buildingId,
-          periodYear: reading.periodYear,
-          periodMonth: reading.periodMonth,
-        }]
-      })).values()],
-    )
-
-    await BillingAuditService.appendMany(event, _user, saved.map((reading) => {
-      const conflictKey = `${reading.roomId}:${reading.meterType}:${reading.periodYear}:${reading.periodMonth}:${reading.readingType}`
-      const beforeData = beforeMap.get(conflictKey) ?? null
-      const periodCacheKey = `${reading.buildingId}:${reading.periodYear}:${reading.periodMonth}`
+    const beforeMap = await MeterReadingRepository.findExistingByConflictKeys(event, conflictKeys)
+    const atomicReadings: MeterReadingAtomicInput[] = enriched.map((reading) => {
+      const key = `${reading.room_id}:${reading.meter_type}:${reading.period_year}:${reading.period_month}:${reading.reading_type}`
       return {
-        billing_period_id: periodCache.get(periodCacheKey)?.id ?? null,
-        action: BILLING_AUDIT_ACTIONS.READING_SAVED,
-        entity_type: 'meter_reading',
-        entity_id: reading.id,
-        before_data: beforeData,
-        after_data: reading,
-        metadata: readingDiffMeta(beforeData, reading),
+        room_id: reading.room_id,
+        meter_type: reading.meter_type,
+        period_year: reading.period_year,
+        period_month: reading.period_month,
+        reading_type: reading.reading_type,
+        reading_date: reading.reading_date,
+        reading_value: reading.reading_value,
+        is_estimated: reading.is_estimated,
+        notes: reading.notes,
+        expected_updated_at: beforeMap.get(key)?.updatedAt ?? null,
       }
-    }))
-
-    return saved
+    })
+    return MeterReadingRepository.saveWithAudit(event, atomicReadings, { actor_id: userId, source: 'api' })
   },
 
   async update(
@@ -241,26 +208,60 @@ export const MeterReadingService = {
     _user: AuthUser,
     id: string,
     input: MeterReadingUpdateInput,
+    operation: MeterReadingOperationContext = { source: 'api' },
   ): Promise<MeterReading> {
     if (!can(_user, 'meter-readings.write')) throwForbidden('Không có quyền sửa chỉ số đồng hồ')
     const existing = await MeterReadingRepository.findById(event, id)
     if (!existing) throw createError({ statusCode: 404, message: 'Không tìm thấy chỉ số' })
     await assertBuildingScope(event, _user, existing.buildingId, 'write')
-    const updated = await MeterReadingRepository.update(event, id, input)
-
-    const period = await BillingPeriodRepository.findByBuildingPeriod(
-      event, existing.buildingId, existing.periodYear, existing.periodMonth,
-    )
-    await BillingAuditService.append(event, _user, {
-      billing_period_id: period?.id ?? null,
-      action: BILLING_AUDIT_ACTIONS.READING_SAVED,
-      entity_type: 'meter_reading',
-      entity_id: updated.id,
-      before_data: existing,
-      after_data: updated,
-      metadata: readingDiffMeta(existing, updated),
+    const [updated] = await MeterReadingRepository.saveWithAudit(event, [{
+      room_id: existing.roomId,
+      meter_type: existing.meterType,
+      period_year: existing.periodYear,
+      period_month: existing.periodMonth,
+      reading_type: existing.readingType,
+      reading_date: input.reading_date ?? existing.readingDate,
+      reading_value: input.reading_value ?? existing.readingValue,
+      is_estimated: input.is_estimated ?? existing.isEstimated,
+      notes: input.notes === undefined ? existing.notes : input.notes,
+      expected_updated_at: input.expected_updated_at,
+    }], {
+      actor_id: _user.id,
+      source: operation.source,
+      action_plan_id: operation.actionPlanId,
+      idempotency_key: operation.idempotencyKey,
     })
-
+    if (!updated) throwInternal(new Error('Empty meter reading update result'), 'meterReadings.update')
     return updated
+  },
+
+  async commitMonthlyImport(
+    event: H3Event,
+    user: AuthUser,
+    input: AiMeterImportPayload,
+    operation: MeterReadingOperationContext,
+  ): Promise<MeterReading[]> {
+    if (!can(user, 'meter-readings.write')) throwForbidden('Không có quyền nhập chỉ số đồng hồ')
+    await assertBuildingScope(event, user, input.building_id, 'write')
+    const rooms = await RoomRepository.listByBuilding(event, input.building_id)
+    const validRoomIds = new Set(rooms.map(room => room.id))
+    if (input.readings.some(reading => !validRoomIds.has(reading.room_id))) {
+      throwValidationError('Dữ liệu chỉ số chứa phòng không thuộc tòa nhà đã chọn.')
+    }
+    return MeterReadingRepository.saveWithAudit(event, input.readings.map(reading => ({
+      room_id: reading.room_id,
+      meter_type: reading.meter_type,
+      period_year: input.period_year,
+      period_month: input.period_month,
+      reading_type: 'monthly',
+      reading_date: input.reading_date,
+      reading_value: reading.reading_value,
+      expected_updated_at: reading.expected_updated_at,
+    })), {
+      actor_id: user.id,
+      source: operation.source,
+      action_plan_id: operation.actionPlanId,
+      idempotency_key: operation.idempotencyKey,
+    })
   },
 }
