@@ -33,6 +33,10 @@ Keep other entry files thin and reference this file instead of duplicating rules
 
 ## Non-Negotiables
 
+- Read the project context and task-matching source before choosing tooling or setup steps.
+- Ask for explicit approval before installing any local/system dependency or starting a local
+  container/runtime. Do not assume local Postgres is required; database work uses the configured
+  Supabase cloud workflow unless project documentation says otherwise.
 - Client business data goes through `server/api/**`; do not call Supabase table queries from browser code.
 - Standard flow: page/component -> composable -> server API -> service -> repository -> Supabase.
 - Services own business rules, permissions, and audit side effects. Repositories query/persist only.

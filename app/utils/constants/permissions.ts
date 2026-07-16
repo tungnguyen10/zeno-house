@@ -62,6 +62,17 @@ export const ADMIN_ONLY_CAPABILITIES = [
   'reserve-fund.refresh-accrual',
 ] as const
 
+export const TENANT_CAPABILITIES = [
+  'tenant.profile.read',
+  'tenant.profile.update',
+  'tenant.contract.read',
+  'tenant.invoices.read',
+  'tenant.documents.read',
+  'tenant.documents.write',
+  'tenant.requests.read',
+  'tenant.requests.write',
+] as const
+
 /**
  * Single source of truth for role capabilities, shared by the client (UI
  * visibility) and the server (authorization). The server remains authoritative;
@@ -103,16 +114,19 @@ export const ROLE_CAPABILITIES: Record<UserRole, readonly string[]> = {
     'building-expenses.write',
     'recurring-expenses.read',
   ],
+  [ROLES.TENANT]: TENANT_CAPABILITIES,
 }
 
 export type Capability =
   | (typeof OWNER_CAPABILITIES)[number]
   | (typeof ADMIN_ONLY_CAPABILITIES)[number]
+  | (typeof TENANT_CAPABILITIES)[number]
 
 const CAPABILITY_SETS: Record<UserRole, Set<string>> = {
   [ROLES.ADMIN]: new Set(ROLE_CAPABILITIES[ROLES.ADMIN]),
   [ROLES.OWNER]: new Set(ROLE_CAPABILITIES[ROLES.OWNER]),
   [ROLES.MANAGER]: new Set(ROLE_CAPABILITIES[ROLES.MANAGER]),
+  [ROLES.TENANT]: new Set(ROLE_CAPABILITIES[ROLES.TENANT]),
 }
 
 /** Returns true when the given role is granted the capability. */

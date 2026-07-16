@@ -5,12 +5,18 @@ const assignmentRepoMocks = vi.hoisted(() => ({
   findBuildingIdsByUser: vi.fn(),
   findByUserAndBuilding: vi.fn(),
 }))
+const tenantLinkRepoMocks = vi.hoisted(() => ({
+  getTenantIdForAuthUser: vi.fn(),
+}))
 
 vi.mock('../../../server/repositories/assignments', () => ({
   AssignmentRepository: assignmentRepoMocks,
 }))
+vi.mock('../../../server/repositories/tenant-portal/links', () => ({
+  getTenantIdForAuthUser: tenantLinkRepoMocks.getTenantIdForAuthUser,
+}))
 
-function user(role: 'admin' | 'owner' | 'manager', id = `${role}-user`): AuthUser {
+function user(role: 'admin' | 'owner' | 'manager' | 'tenant', id = `${role}-user`): AuthUser {
   return {
     id,
     app_metadata: { role },
@@ -108,5 +114,50 @@ describe('building scope helpers', () => {
 
     await expect(assertBuildingScope(event(), user('owner'), 'building-a', 'write'))
       .resolves.toBeUndefined()
+  })
+})
+
+describe('tenant scope resolver', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('returns the tenant linked to the authenticated user', async () => {
+    tenantLinkRepoMocks.getTenantIdForAuthUser.mockResolvedValue('tenant-a')
+    const requestEvent = event()
+    const tenantUser = user('tenant', 'auth-user-a')
+    const { resolveTenantId } = await import('../../../server/utils/scope')
+
+    await expect(resolveTenantId(requestEvent, tenantUser)).resolves.toBe('tenant-a')
+    expect(tenantLinkRepoMocks.getTenantIdForAuthUser)
+      .toHaveBeenCalledWith(requestEvent, 'auth-user-a')
+  })
+
+  it.each([
+    ['missing', null],
+    ['disabled', null],
+  ])('uses the same not-found response for a %s link', async (_state, repositoryResult) => {
+    tenantLinkRepoMocks.getTenantIdForAuthUser.mockResolvedValue(repositoryResult)
+    const { resolveTenantId } = await import('../../../server/utils/scope')
+
+    await expect(resolveTenantId(event(), user('tenant'))).rejects.toMatchObject({
+      statusCode: 404,
+      data: { error: { code: 'NOT_FOUND' } },
+    })
+  })
+
+  it('ignores tenant identifiers supplied by the client', async () => {
+    tenantLinkRepoMocks.getTenantIdForAuthUser.mockResolvedValue('linked-tenant')
+    const requestEvent = {
+      context: {},
+      query: { tenant_id: 'query-tenant' },
+      body: { tenant_id: 'body-tenant' },
+    } as never
+    const { resolveTenantId } = await import('../../../server/utils/scope')
+
+    await expect(resolveTenantId(requestEvent, user('tenant', 'auth-user')))
+      .resolves.toBe('linked-tenant')
+    expect(tenantLinkRepoMocks.getTenantIdForAuthUser)
+      .toHaveBeenCalledWith(requestEvent, 'auth-user')
   })
 })

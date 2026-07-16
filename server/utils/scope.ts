@@ -1,8 +1,15 @@
 import type { H3Event } from 'h3'
 import type { AuthUser } from '~/types/auth'
 import { AssignmentRepository } from '../repositories/assignments'
+import { getTenantIdForAuthUser } from '../repositories/tenant-portal/links'
 
 export type ScopeMode = 'read' | 'write'
+
+export async function resolveTenantId(event: H3Event, user: AuthUser): Promise<string> {
+  const tenantId = await getTenantIdForAuthUser(event, user.id)
+  if (!tenantId) throwNotFound('Không tìm thấy')
+  return tenantId
+}
 
 export async function getAssignedBuildingIds(
   event: H3Event,

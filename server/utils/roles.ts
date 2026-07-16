@@ -24,6 +24,10 @@ export function isManager(user: AuthUser): boolean {
   return roleOf(user) === ROLES.MANAGER
 }
 
+export function isTenant(user: AuthUser): boolean {
+  return roleOf(user) === ROLES.TENANT
+}
+
 /** True for roles whose access is limited to assigned buildings (owner, manager). */
 export function isScopedRole(user: AuthUser): boolean {
   const role = roleOf(user)

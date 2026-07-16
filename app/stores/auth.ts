@@ -15,6 +15,7 @@ export const useAuthStore = defineStore('auth', () => {
   const isAdmin = computed(() => role.value === ROLES.ADMIN)
   const isOwner = computed(() => role.value === ROLES.OWNER)
   const isManager = computed(() => role.value === ROLES.MANAGER)
+  const isTenant = computed(() => role.value === ROLES.TENANT)
 
   /** Roles that can access Settings user management (admin global, owner scoped). */
   const canManageUsers = computed(() => isAdmin.value || isOwner.value)
@@ -45,6 +46,7 @@ export const useAuthStore = defineStore('auth', () => {
     isAdmin,
     isOwner,
     isManager,
+    isTenant,
     canManageUsers,
     canCreateOwner,
     canManage,

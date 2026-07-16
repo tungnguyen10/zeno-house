@@ -1,7 +1,10 @@
-export type ApiNamespace = 'internal' | 'portal'
+export type ApiNamespace = 'internal' | 'tenant'
 
 export function classifyApiNamespace(path: string): ApiNamespace | null {
-  if (path === '/api/portal' || path.startsWith('/api/portal/')) return 'portal'
-  if (path === '/api' || path.startsWith('/api/')) return 'internal'
+  const queryIndex = path.indexOf('?')
+  const pathname = queryIndex === -1 ? path : path.slice(0, queryIndex)
+
+  if (pathname === '/api/tenant' || pathname.startsWith('/api/tenant/')) return 'tenant'
+  if (pathname === '/api' || pathname.startsWith('/api/')) return 'internal'
   return null
 }

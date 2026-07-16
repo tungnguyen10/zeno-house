@@ -11,7 +11,7 @@ The store exposes:
 - `user`
 - `isAuthenticated`
 - `role`
-- `isAdmin`, `isOwner`, `isManager`
+- `isAdmin`, `isOwner`, `isManager`, `isTenant`
 - `canManageUsers`, `canCreateOwner`, `canManage`
 - `can(capability)` - capability-accurate UI gate backed by the shared capability map
 
@@ -28,11 +28,12 @@ Supported roles:
 - `admin` - global, unscoped access to every building.
 - `owner` - full operational access, scoped to assigned buildings.
 - `manager` - operational read/write, scoped to assigned buildings, no destructive or admin actions.
+- `tenant` - isolated tenant-portal access, scoped to the tenant record linked to the authenticated user.
 
-The `/portal` namespace is reserved for the future `tenant` role. Tenant business behavior and
-capabilities are not part of the current role model yet.
+Tenant capabilities use a separate `tenant.*` namespace (profile, contract, invoices,
+documents, and requests). They intentionally share no internal capability strings.
 
-Scope is resolved from `user_building_assignments`. `admin` is unscoped
+Internal building scope is resolved from `user_building_assignments`. `admin` is unscoped
 (`getAssignedBuildingIds` returns `null`); `owner` and `manager` are limited to their
 assigned building ids.
 
@@ -51,7 +52,7 @@ concern and is never evaluated in route middleware.
 Authenticated app pages use two namespaces:
 
 - `/dashboard/**` for `admin`, `owner`, and `manager` operations.
-- `/portal/**` reserved for the future `tenant` experience.
+- `/portal/**` for the `tenant` experience.
 
 `app/utils/auth-redirect.ts` is the single landing-route decision. Legacy top-level operational
 paths are redirected to their `/dashboard` equivalents by `app/middleware/legacy-dashboard.global.ts`.
@@ -70,9 +71,11 @@ Server middleware:
 - `server/middleware/02.namespace.ts`
 
 It runs for `/api/**`, reads Supabase JWT claims, normalizes `sub` into `user.id`, and stores the result on `event.context.user`.
-The namespace middleware classifies `/api/portal/**` as `portal` and other `/api/**` routes as
-`internal`. This is intentionally classification-only until the tenant role and tenant APIs are
-introduced; services remain the current authorization boundary.
+The namespace middleware classifies `/api/tenant/**` as `tenant` and other `/api/**` routes as
+`internal`. It actively rejects tenant JWTs on internal APIs and internal-role JWTs on tenant
+APIs. Both mismatch directions use the same not-found response so the guard does not reveal
+whether a route or resource exists. Unauthenticated requests continue to the endpoint's normal
+auth check.
 
 API handlers can also call:
 
@@ -126,7 +129,7 @@ Manager does not have:
 
 ## Data Access Model
 
-Authorization is authoritative at the service layer, not the database:
+Authorization is authoritative at the service layer, with RLS as a direct-access safety net:
 
 - Services own every business rule: they call `can(user, capability)` and, for scoped
   roles, `assertBuildingScope(event, user, buildingId, mode)` /
@@ -135,6 +138,16 @@ Authorization is authoritative at the service layer, not the database:
   `server/utils/db.ts` (`db(event)`), which bypasses RLS. Repositories never decide access.
 - RLS stays enabled as a deny-by-default safety net. It is not the primary access-control
   mechanism and is not relied on for per-role scoping.
+
+Internal building scope and tenant self-scope are separate mechanisms:
+
+- `admin`, `owner`, and `manager` use `user_building_assignments` through
+  `getAssignedBuildingIds` / `assertBuildingScope`.
+- `tenant` uses the active one-to-one `tenant_user_links` row through `resolveTenantId`.
+  Missing or disabled links resolve to the same not-found response. Client-supplied tenant ids
+  are never used to establish tenant identity.
+- Tenant self-select RLS policies on `tenants`, `contracts`, and `invoices` also resolve identity
+  through `tenant_user_links`, `auth.uid()`, and an active link.
 
 This is safe because browser code never queries business tables directly; all business data
 flows through `server/api/**` -> service -> repository. The client only uses Supabase for
@@ -224,6 +237,7 @@ Managers also receive no reserve-fund or shared-expense capabilities, so both AP
 - Never trust UI visibility for authorization.
 - Repeat capability checks in services; services are the authoritative gate.
 - Enforce building scope in services for owner/manager; repositories do not scope.
+- Resolve tenant identity from `tenant_user_links`; never trust a tenant id from the client.
 - Keep authorization claims in `app_metadata`, not user-editable metadata.
 - Do not expose service-role or secret keys to client runtime config.
 - Never query business tables from browser code; go through `server/api/**`.

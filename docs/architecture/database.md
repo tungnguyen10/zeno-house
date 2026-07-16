@@ -9,6 +9,7 @@ Zeno House uses Supabase Postgres. Schema history lives in `supabase/migrations`
 | Buildings | `20260514000000_create_buildings.sql`, `20260514000001_fix_buildings_rls.sql`, `20260514000003_buildings_drop_total_rooms.sql`, `20260517000000_building_operational_config.sql`, `20260614000000_add_building_slugs.sql`, `20260708010000_add_building_operational_start_period.sql` |
 | Rooms | `20260514000002_create_rooms.sql` |
 | Tenants | `20260514000004_create_tenants.sql`, `20260530100000_tenant_enrichment.sql` |
+| Tenant identity | `20260716083605_add_tenant_identity_foundation.sql` |
 | Deprecated room assignments | `20260514000005_create_room_assignments.sql`, `20260530000000_drop_room_assignments.sql` |
 | Contracts | `20260515000000_create_contracts.sql`, `20260517000001_contract_commercial_terms.sql`, `20260531000000_contracts_backfill_building_id.sql`, `20260531000001_contracts_payment_day.sql`, `20260615000000_document_codes.sql` |
 | Occupants and renewals | `20260517000002_occupants_and_meter_devices.sql`, `20260517000005_contract_renewals_table.sql`, `20260517000006_occupant_uniqueness.sql` |
@@ -26,12 +27,16 @@ Property and occupancy:
 - `buildings`
 - `rooms`
 - `tenants`
+- `tenant_user_links`
 - `contracts`
 - `contract_occupants`
 - `contract_payments`
 - `contract_renewals`
 
 `buildings` now includes `operational_start_year` and `operational_start_month` to declare each building's first operating month. The pair is nullable but must be provided together.
+
+`tenant_user_links` maps one Supabase Auth user to one tenant record. Only an `active` link
+establishes tenant self-scope; unique constraints on both ids enforce the one-to-one mapping.
 
 Services:
 
@@ -109,15 +114,20 @@ Operations-report close, operations-report auto-close, and admin reserve refresh
 - Do not use user-editable metadata for authorization decisions.
 - The app's business operations go through Nuxt server services and capability checks.
 - RLS remains a safety net for direct authenticated access.
+- Tenant self-read policies on `tenant_user_links`, `tenants`, `contracts`, and `invoices`
+  resolve identity through `auth.uid()` and an active `tenant_user_links` row.
 
 ## Changing The Schema
 
 When changing schema:
 
 1. Check current migrations and the target table shape first.
-2. Iterate against a database using SQL tooling.
-3. Create a clean migration with Supabase CLI when the shape is settled.
-4. Regenerate `app/types/database.types.ts` after applying schema changes.
+2. Prepare reviewable SQL, including data impact, verification queries, and rollback notes.
+3. Apply the SQL manually in Supabase Dashboard SQL Editor. Do not rely on `supabase db push`.
+4. Regenerate `app/types/database.types.ts` from the configured Supabase cloud project after
+   applying schema changes.
 5. Update mappers, validators, API docs, and tests in the same change.
 
-Do not invent migration timestamps manually when using the Supabase CLI workflow. Use the CLI migration command for new migration files.
+Do not invent migration timestamps manually when using the Supabase CLI workflow. Use the CLI
+migration command for new migration files. Generating or applying schema changes must follow the
+manual Dashboard change-control requirement above and does not require a local Postgres container.

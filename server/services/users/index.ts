@@ -12,7 +12,7 @@ import { BuildingRepository } from '../../repositories/buildings'
 import { getAssignedBuildingIds, assertBuildingScope } from '../../utils/scope'
 import { AuditService } from '../audit'
 
-const CREATE_CAPABILITY: Record<UserRole, string> = {
+const CREATE_CAPABILITY: Record<UserCreateInput['role'], string> = {
   admin: 'users.create.admin',
   owner: 'users.create.owner',
   manager: 'users.create.manager',

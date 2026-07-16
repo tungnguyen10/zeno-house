@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import type { AuthUser } from '~/types/auth'
+import { TENANT_CAPABILITIES } from '~/utils/constants/permissions'
+import { CREATABLE_ROLES } from '~/utils/constants/roles'
 import { can } from '../../../server/utils/permissions'
+import { isScopedRole, isTenant } from '../../../server/utils/roles'
 
-function makeUser(role: 'admin' | 'owner' | 'manager' | null): AuthUser {
+function makeUser(role: 'admin' | 'owner' | 'manager' | 'tenant' | null): AuthUser {
   return {
     app_metadata: { role },
   } as AuthUser
@@ -93,5 +96,40 @@ describe('server permissions: user-management capabilities', () => {
     expect(can(makeUser('manager'), 'users.manage.global')).toBe(false)
     expect(can(makeUser('manager'), 'users.manage.scoped')).toBe(false)
     expect(can(makeUser('manager'), 'users.create.manager')).toBe(false)
+  })
+})
+
+describe('server permissions: tenant isolation', () => {
+  it('does not expose tenant through app-creatable roles', () => {
+    expect(CREATABLE_ROLES).toEqual(['owner', 'manager'])
+    expect(CREATABLE_ROLES).not.toContain('tenant')
+  })
+
+  it('grants tenant capabilities only to tenant users', () => {
+    const tenant = makeUser('tenant')
+
+    for (const capability of TENANT_CAPABILITIES) {
+      expect(capability).toMatch(/^tenant\./)
+      expect(can(tenant, capability)).toBe(true)
+      expect(can(makeUser('admin'), capability)).toBe(false)
+      expect(can(makeUser('owner'), capability)).toBe(false)
+      expect(can(makeUser('manager'), capability)).toBe(false)
+    }
+  })
+
+  it('does not grant internal capabilities to tenant users', () => {
+    const tenant = makeUser('tenant')
+
+    expect(can(tenant, 'tenants.read')).toBe(false)
+    expect(can(tenant, 'contracts.read')).toBe(false)
+    expect(can(tenant, 'billing.read')).toBe(false)
+    expect(can(tenant, 'users.manage.scoped')).toBe(false)
+  })
+
+  it('recognizes tenant without treating it as building-scoped', () => {
+    const tenant = makeUser('tenant')
+
+    expect(isTenant(tenant)).toBe(true)
+    expect(isScopedRole(tenant)).toBe(false)
   })
 })
