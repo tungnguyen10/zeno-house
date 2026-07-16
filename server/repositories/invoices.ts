@@ -2,11 +2,13 @@ import { db as serverSupabaseClient } from '../utils/db'
 import type { H3Event } from 'h3'
 import type { InvoiceListItem, InvoiceListQuery } from '~/utils/validators/invoices'
 import type { InvoiceStatus } from '~/utils/constants/billing'
+import { isUuid } from '~/utils/format/slug'
 
 type InvoiceListRow = Record<string, unknown>
 
 export interface InvoiceListScope {
   buildingIds?: string[]
+  tenantId?: string
 }
 
 export interface InvoiceListRepositoryFilter extends InvoiceListQuery {
@@ -43,7 +45,35 @@ function invoiceStatusFilter(statuses: InvoiceStatus[], today: string): string |
   return parts.join(',')
 }
 
-function mapInvoiceListRow(row: InvoiceListRow): InvoiceListItem {
+const INVOICE_LIST_SELECT = `
+  id,
+  invoice_code,
+  billing_period_id,
+  contract_id,
+  room_id,
+  tenant_id,
+  status,
+  total_amount,
+  paid_amount,
+  balance_amount,
+  due_date,
+  issued_at,
+  voided_at,
+  void_reason,
+  notes,
+  billing_periods!inner(
+    id,
+    building_id,
+    period_year,
+    period_month,
+    buildings(id, name, slug)
+  ),
+  rooms(id, room_number),
+  contracts(id, contract_code),
+  tenants!inner(id, full_name, phone)
+`
+
+export function mapInvoiceListRow(row: InvoiceListRow): InvoiceListItem {
   const period = relationObject(row.billing_periods)
   const building = relationObject(period?.buildings)
   const room = relationObject(row.rooms)
@@ -94,33 +124,11 @@ export const CrossPeriodInvoiceRepository = {
 
     let query = client
       .from('invoices')
-      .select(`
-        id,
-        invoice_code,
-        billing_period_id,
-        contract_id,
-        room_id,
-        tenant_id,
-        status,
-        total_amount,
-        paid_amount,
-        balance_amount,
-        due_date,
-        issued_at,
-        voided_at,
-        void_reason,
-        notes,
-        billing_periods!inner(
-          id,
-          building_id,
-          period_year,
-          period_month,
-          buildings(id, name, slug)
-        ),
-        rooms(id, room_number),
-        contracts(id, contract_code),
-        tenants!inner(id, full_name, phone)
-      `, { count: 'exact' })
+      .select(INVOICE_LIST_SELECT, { count: 'exact' })
+
+    if (scope.tenantId) {
+      query = query.eq('tenant_id', scope.tenantId)
+    }
 
     if (filter.building_id) {
       query = query.eq('billing_periods.building_id', filter.building_id)
@@ -158,5 +166,24 @@ export const CrossPeriodInvoiceRepository = {
       items: ((data ?? []) as InvoiceListRow[]).map(mapInvoiceListRow),
       total: count ?? 0,
     }
+  },
+
+  async findCrossPeriodById(
+    event: H3Event,
+    id: string,
+    scope: Pick<InvoiceListScope, 'tenantId'> = {},
+  ): Promise<InvoiceListItem | null> {
+    const client = await serverSupabaseClient(event)
+    const column = isUuid(id) ? 'id' : 'invoice_code'
+    let query = client
+      .from('invoices')
+      .select(INVOICE_LIST_SELECT)
+      .eq(column, id)
+
+    if (scope.tenantId) query = query.eq('tenant_id', scope.tenantId)
+
+    const { data, error } = await query.maybeSingle()
+    if (error) throwDbError(error, 'invoices.findCrossPeriodById')
+    return data ? mapInvoiceListRow(data as InvoiceListRow) : null
   },
 }
