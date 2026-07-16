@@ -1,4 +1,9 @@
-## ADDED Requirements
+## Purpose
+
+Defines private tenant document storage, tenant-linked Storage policies, self-scoped document
+APIs, and the shared front/back identity-image slots used by internal and Tenant Portal actors.
+
+## Requirements
 
 ### Requirement: Tenant document buckets stay private
 Tenant document buckets SHALL be private (`public = false`). Tenant access to document objects SHALL be provided only through short-lived server-generated signed URLs. The system SHALL never return a public URL for tenant documents.
@@ -44,3 +49,33 @@ The system SHALL expose `GET /api/tenant/documents`, `POST /api/tenant/documents
 #### Scenario: Delete own document only
 - **WHEN** a tenant deletes a document id that belongs to another tenant
 - **THEN** the request is denied with a consistent not-found/forbidden response
+
+---
+
+### Requirement: Identity-image slots are shared across actors
+Admin, owner, and tenant updates to a tenant's front/back identity images SHALL use the same
+`tenant-id-images` bucket, `${tenant.id}/${side}/...` path convention, and existing
+`id_card_front_path` / `id_card_back_path` columns. The system SHALL NOT create separate identity
+copies based on which actor uploaded the image. Tenant Portal SHALL expose self-scoped read,
+upload, and delete endpoints for these slots; it SHALL resolve the tenant from the authenticated
+user, accept only `front|back`, and accept only JPEG, PNG, or WebP images up to 5 MB.
+
+#### Scenario: Tenant fills an empty identity slot
+- **WHEN** admin or owner has not uploaded one side and the linked tenant uploads it
+- **THEN** the corresponding existing tenant identity path column points to the tenant upload
+
+#### Scenario: Tenant replaces an admin-uploaded image
+- **WHEN** the linked tenant replaces an existing front or back image
+- **THEN** the same slot points to the replacement and the superseded object is removed
+
+#### Scenario: Cross-tenant identity mutation is denied
+- **WHEN** a tenant attempts to read, replace, or remove another tenant's identity image
+- **THEN** the operation is denied without revealing whether that image exists
+
+#### Scenario: Identity image access stays private
+- **WHEN** a tenant reads an identity image
+- **THEN** the system returns a five-minute signed URL and never a public URL
+
+#### Scenario: Invalid identity upload is rejected
+- **WHEN** a tenant submits an unsupported side, MIME type, or image larger than 5 MB
+- **THEN** the request is rejected before any identity slot or Storage object is mutated

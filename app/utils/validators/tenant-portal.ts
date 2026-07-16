@@ -1,4 +1,31 @@
 import { z } from 'zod'
+import { tenantIdImageSideSchema } from './tenants'
+
+export const TENANT_DOCUMENT_MAX_BYTES = 5 * 1024 * 1024
+export const TENANT_DOCUMENT_MIME_TYPES = [
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'application/pdf',
+] as const
+
+export const tenantDocumentUploadSchema = z.object({
+  name: z.string().trim().min(1).max(255),
+  mimeType: z.enum(TENANT_DOCUMENT_MIME_TYPES),
+  size: z.number().int().positive().max(TENANT_DOCUMENT_MAX_BYTES),
+})
+
+export const tenantIdentityImageSideSchema = tenantIdImageSideSchema
+export const TENANT_IDENTITY_IMAGE_MIME_TYPES = [
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+] as const
+
+export const tenantIdentityImageUploadSchema = z.object({
+  mimeType: z.enum(TENANT_IDENTITY_IMAGE_MIME_TYPES),
+  size: z.number().int().positive().max(TENANT_DOCUMENT_MAX_BYTES),
+})
 
 export const tenantProfileUpdateSchema = z.object({
   phone: z.string().trim().min(1).max(20).optional(),
@@ -17,3 +44,5 @@ export const tenantInvoiceListQuerySchema = z.object({
 
 export type TenantProfileUpdateInput = z.infer<typeof tenantProfileUpdateSchema>
 export type TenantInvoiceListQuery = z.infer<typeof tenantInvoiceListQuerySchema>
+export type TenantDocumentUploadMetadata = z.infer<typeof tenantDocumentUploadSchema>
+export type TenantIdentityImageSide = z.infer<typeof tenantIdentityImageSideSchema>

@@ -10,11 +10,15 @@ The repo already uses private Supabase Storage buckets with server-generated sig
 - Correct, link-based storage policy that matches the existing `tenant.id`-keyed paths.
 - Keep buckets private; expose files only via short-lived signed URLs.
 - Self-scoped list/upload/delete document API.
+- Self-scoped front/back identity API that reads and updates the same slots as internal actors.
+- Separate storage by document type: identity images in `tenant-id-images`, free-form files in
+  `tenant-documents`.
 - Strict mime/size validation and a mobile-friendly UX contract.
 
 **Non-Goals:**
 - Making any bucket public.
 - Internal (admin/owner/manager) document workflows — unchanged.
+- Portal page/component implementation; this change provides the API contract for that UI.
 - Support-request attachments (handled in the support-requests change, reusing this pattern).
 
 ## Decisions
@@ -37,7 +41,8 @@ create policy tenant_documents_self_select
   );
 ```
 
-Insert/delete policies use the same predicate with `with check`. Admin retains full access via the existing admin policy.
+Insert uses the same predicate in `with check`; select and delete use it in `using`. Admin retains
+full access via the existing admin policy.
 
 ### D2 — Private buckets + signed URLs only
 
@@ -49,8 +54,26 @@ Buckets stay `public = false`. The API returns short-lived signed URLs (same 5-m
 
 ### D4 — Bucket choice
 
-Reuse `tenant-id-images` for ID documents and, if additional document types are needed, add a dedicated `tenant-documents` bucket keyed by `tenant_id`. Both use the link-based policy. Decision recorded here so the migration is explicit.
+Use buckets by document type, not by uploader:
 
-### D5 — Mobile upload UX contract
+- `tenant-id-images` remains the canonical store for the two identity slots. Admin, owner, and
+  tenant workflows all use `${tenant.id}/${side}/${uuid}.${ext}` and update the same tenant row
+  columns. Tenant access is self-scoped through `tenant_user_links`; tenants may read, insert,
+  replace, and delete only their linked tenant's identity paths.
+- `tenant-documents` stores free-form tenant uploads such as PDFs and later attachments.
+
+This keeps the existing identity paths stable while avoiding duplicate copies based on actor.
+Because the first tenant-documents migration has already been applied, identity self-access is
+added through a forward migration rather than rewriting migration history.
+
+### D5 — Tenant identity-image API
+
+`GET /api/tenant/id-images`, `POST /api/tenant/id-images/[side]`, and
+`DELETE /api/tenant/id-images/[side]` resolve the caller's tenant id server-side. `side` is limited
+to `front|back`; the server builds the path, validates image MIME/size, updates the existing path
+column, removes a superseded object, appends the tenant audit event, and returns only five-minute
+signed URLs.
+
+### D6 — Mobile upload UX contract
 
 The UX (implemented in the portal UI change) must show progress, allow retry on flaky mobile networks, and surface clear type/size errors before upload. This change defines the server contract those UX behaviors rely on.

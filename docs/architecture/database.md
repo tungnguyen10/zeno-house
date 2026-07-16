@@ -9,7 +9,8 @@ Zeno House uses Supabase Postgres. Schema history lives in `supabase/migrations`
 | Buildings | `20260514000000_create_buildings.sql`, `20260514000001_fix_buildings_rls.sql`, `20260514000003_buildings_drop_total_rooms.sql`, `20260517000000_building_operational_config.sql`, `20260614000000_add_building_slugs.sql`, `20260708010000_add_building_operational_start_period.sql` |
 | Rooms | `20260514000002_create_rooms.sql` |
 | Tenants | `20260514000004_create_tenants.sql`, `20260530100000_tenant_enrichment.sql` |
-| Tenant identity | `20260716083605_add_tenant_identity_foundation.sql` |
+| Tenant identity | `20260708020000_tenant_id_images.sql`, `20260716083605_add_tenant_identity_foundation.sql`, `20260717001405_tenant_self_identity_images.sql` |
+| Tenant documents | `20260716233954_add_tenant_documents.sql` |
 | Deprecated room assignments | `20260514000005_create_room_assignments.sql`, `20260530000000_drop_room_assignments.sql` |
 | Contracts | `20260515000000_create_contracts.sql`, `20260517000001_contract_commercial_terms.sql`, `20260531000000_contracts_backfill_building_id.sql`, `20260531000001_contracts_payment_day.sql`, `20260615000000_document_codes.sql` |
 | Occupants and renewals | `20260517000002_occupants_and_meter_devices.sql`, `20260517000005_contract_renewals_table.sql`, `20260517000006_occupant_uniqueness.sql` |
@@ -106,6 +107,16 @@ Route helpers still fall back to ids when readable identifiers are absent.
 Operations-report close, operations-report auto-close, and admin reserve refresh never close billing periods. Billing period status changes only through billing flows.
 
 `expense-receipts` is a private Storage bucket for receipt images. Server services enforce capability and building scope before upload, delete, or signed URL generation.
+
+`tenant-documents` is a private Storage bucket for tenant-owned JPEG, PNG, WebP, and PDF files up
+to 5 MB. Object paths start with the resolved tenant record id. Storage policies join that segment
+to an active `tenant_user_links` row, while server APIs return only five-minute signed URLs.
+
+`tenant-id-images` remains the canonical private bucket for both internal and tenant self-service
+identity uploads. Admin/owner and tenant flows share `${tenant_id}/front/...` and
+`${tenant_id}/back/...`; the existing tenant path columns identify the current object for each slot.
+Tenant policies match only an active linked tenant id, and API responses expose signed URLs rather
+than raw paths or public URLs.
 
 ## RLS And Security Notes
 

@@ -12,6 +12,20 @@ export interface TenantProfile {
   notes: string | null
 }
 
+export interface TenantDocument {
+  id: string
+  name: string
+  mimeType: string
+  size: number
+  createdAt: string
+  signedUrl: string
+}
+
+export interface TenantIdentityImages {
+  frontSignedUrl: string | null
+  backSignedUrl: string | null
+}
+
 export interface TenantContractSummary {
   id: string
   contractCode: string

@@ -81,6 +81,24 @@ The current runtime exposes scoped context, meter status, billing overview/draft
 | DELETE | `/api/tenants/[id]` |
 | POST | `/api/tenants/bulk` |
 
+## Tenant Portal
+
+Tenant portal handlers resolve the authenticated user's active `tenant_user_links` row and never
+accept a tenant id from the client. Document uploads use multipart field `document`, accept JPEG,
+PNG, WebP, or PDF files up to 5 MB, and return five-minute signed URLs from a private bucket.
+Identity-image routes use the existing `tenant-id-images` front/back slots shared with admin and
+owner workflows. Tenant uploads use multipart field `image`, accept JPEG/PNG/WebP up to 5 MB, and
+replace the same `id_card_front_path` or `id_card_back_path` value rather than creating actor-specific copies.
+
+| Method | Path |
+| --- | --- |
+| GET | `/api/tenant/documents` |
+| POST | `/api/tenant/documents` |
+| DELETE | `/api/tenant/documents/[id]` |
+| GET | `/api/tenant/id-images` |
+| POST | `/api/tenant/id-images/[side]` |
+| DELETE | `/api/tenant/id-images/[side]` |
+
 ## Contracts
 
 | Method | Path |
