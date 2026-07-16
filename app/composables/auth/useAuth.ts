@@ -1,3 +1,5 @@
+import { getRedirectByRole } from '~/utils/auth-redirect'
+
 export function useAuth() {
   const supabase = useSupabaseClient()
 
@@ -7,9 +9,10 @@ export function useAuth() {
   }
 
   async function login(email: string, password: string) {
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) throw error
-    await navigateTo('/')
+    const role = data.user?.app_metadata?.role as string | null | undefined
+    await navigateTo(getRedirectByRole(role))
   }
 
   async function loginWithGoogle() {

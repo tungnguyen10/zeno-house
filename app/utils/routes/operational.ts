@@ -36,7 +36,7 @@ export function buildingRouteSegment(building: BuildingRouteSubject): string {
 }
 
 export function buildingPath(building: BuildingRouteSubject): string {
-  return `/buildings/${buildingRouteSegment(building)}`
+  return `/dashboard/buildings/${buildingRouteSegment(building)}`
 }
 
 export function buildingEditPath(building: BuildingRouteSubject): string {
@@ -53,12 +53,12 @@ export function roomRouteSegment(room: RoomRouteSubject): string {
 
 export function roomPath(room: RoomRouteSubject): string {
   if (room.code) {
-    return `/rooms/${room.code}`
+    return `/dashboard/rooms/${room.code}`
   }
   if (room.building) {
     return `${buildingPath(room.building)}/rooms/${roomRouteSegment(room)}`
   }
-  return `/rooms/${room.id}`
+  return `/dashboard/rooms/${room.id}`
 }
 
 export function roomEditPath(room: RoomRouteSubject): string {
@@ -70,7 +70,7 @@ export function billingWorkspacePath(
   periodYear: number,
   periodMonth: number,
 ): string {
-  return `/billing/${buildingRouteSegment(building)}/${periodYear}-${String(periodMonth).padStart(2, '0')}`
+  return `/dashboard/billing/${buildingRouteSegment(building)}/${periodYear}-${String(periodMonth).padStart(2, '0')}`
 }
 
 export function billingWorkspaceInvoicePath(
@@ -95,7 +95,7 @@ export function pendingOperationPath(item: PendingOperationLike): string {
 }
 
 export function contractPath(contract: ContractRouteSubject): string {
-  return `/contracts/${contract.slug || contract.contractCode || contract.code || contract.id}`
+  return `/dashboard/contracts/${contract.slug || contract.contractCode || contract.code || contract.id}`
 }
 
 export function invoiceRouteSegment(invoice: InvoiceRouteSubject): string {
@@ -103,9 +103,9 @@ export function invoiceRouteSegment(invoice: InvoiceRouteSubject): string {
 }
 
 export function invoicePath(invoice: InvoiceRouteSubject): string {
-  return `/billing/invoices/${invoiceRouteSegment(invoice)}`
+  return `/dashboard/billing/invoices/${invoiceRouteSegment(invoice)}`
 }
 
 export function tenantPath(tenant: TenantRouteSubject): string {
-  return `/tenants/${tenant.code}`
+  return `/dashboard/tenants/${tenant.code}`
 }

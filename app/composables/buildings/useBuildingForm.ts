@@ -88,7 +88,7 @@ export function useBuildingForm<T = unknown>(options: UseBuildingFormOptions<T> 
 
       clearDraft()
       clearNuxtData()
-      await navigateTo('/buildings')
+      await navigateTo('/dashboard/buildings')
     }
     catch (e: unknown) {
       apiError.value = getApiErrorMessage(e)

@@ -56,7 +56,7 @@ const roomName = computed(() => {
           <span class="text-base font-semibold text-white">{{ activeContract ? 'Đang thuê' : 'Trống' }}</span>
           <NuxtLink
             v-if="!activeContract"
-            :to="`/contracts/create?room_id=${room.code}`"
+            :to="`/dashboard/contracts/create?room_id=${room.code}`"
             class="text-xs text-cyan hover:underline"
           >
             Giao phòng

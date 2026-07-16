@@ -63,11 +63,11 @@ onKeyStroke('Escape', () => {
         <div class="mt-1.5 flex flex-wrap items-center gap-2 text-sm text-muted">
           <span>{{ contract.room.buildingName }}</span>
           <span aria-hidden="true">/</span>
-          <NuxtLink :to="`/rooms/${contract.room.code}`" class="text-cyan hover:underline">
+          <NuxtLink :to="`/dashboard/rooms/${contract.room.code}`" class="text-cyan hover:underline">
             Phòng {{ contract.room.roomNumber }}
           </NuxtLink>
           <span aria-hidden="true">/</span>
-          <NuxtLink :to="`/tenants/${contract.tenant.code}`" class="text-cyan hover:underline">
+          <NuxtLink :to="`/dashboard/tenants/${contract.tenant.code}`" class="text-cyan hover:underline">
             {{ contract.tenant.fullName }}
           </NuxtLink>
         </div>
@@ -151,13 +151,13 @@ onKeyStroke('Escape', () => {
       <div class="px-4 py-2.5">
         <dt class="text-xs text-muted">Khách thuê</dt>
         <dd class="mt-0.5 truncate text-sm font-medium text-white">
-          <NuxtLink :to="`/tenants/${contract.tenant.code}`" class="hover:text-cyan">{{ contract.tenant.fullName }}</NuxtLink>
+          <NuxtLink :to="`/dashboard/tenants/${contract.tenant.code}`" class="hover:text-cyan">{{ contract.tenant.fullName }}</NuxtLink>
         </dd>
       </div>
       <div class="px-4 py-2.5">
         <dt class="text-xs text-muted">Phòng</dt>
         <dd class="mt-0.5 truncate text-sm font-medium text-white">
-          <NuxtLink :to="`/rooms/${contract.room.code}`" class="hover:text-cyan">
+          <NuxtLink :to="`/dashboard/rooms/${contract.room.code}`" class="hover:text-cyan">
             {{ contract.room.buildingName }} - {{ contract.room.roomNumber }}
           </NuxtLink>
         </dd>

@@ -29,6 +29,9 @@ Supported roles:
 - `owner` - full operational access, scoped to assigned buildings.
 - `manager` - operational read/write, scoped to assigned buildings, no destructive or admin actions.
 
+The `/portal` namespace is reserved for the future `tenant` role. Tenant business behavior and
+capabilities are not part of the current role model yet.
+
 Scope is resolved from `user_building_assignments`. `admin` is unscoped
 (`getAssignedBuildingIds` returns `null`); `owner` and `manager` are limited to their
 assigned building ids.
@@ -39,21 +42,37 @@ Global authenticated route guard:
 
 - `app/middleware/auth.global.ts`
 
-It allows `/login`, checks `useSupabaseUser()`, and falls back to `auth.getSession()` to cover the timing gap after sign-in.
+It keeps `/login` and `/auth/callback` public, checks `useSupabaseUser()`, and falls back to
+`auth.getSession()` to cover the timing gap after sign-in. Once a user is resolved, it enforces
+the client namespace matrix: `tenant` is locked to `/portal`, while every non-tenant role is
+redirected out of `/portal` through `getRedirectByRole`. Building scope remains a service-layer
+concern and is never evaluated in route middleware.
+
+Authenticated app pages use two namespaces:
+
+- `/dashboard/**` for `admin`, `owner`, and `manager` operations.
+- `/portal/**` reserved for the future `tenant` experience.
+
+`app/utils/auth-redirect.ts` is the single landing-route decision. Legacy top-level operational
+paths are redirected to their `/dashboard` equivalents by `app/middleware/legacy-dashboard.global.ts`.
 
 Guest-only login redirect:
 
 - `app/middleware/guest.ts`
 
-It redirects authenticated users away from login to `/`.
+It redirects authenticated users away from login through `getRedirectByRole`.
 
 ## Server Auth
 
 Server middleware:
 
 - `server/middleware/01.auth.ts`
+- `server/middleware/02.namespace.ts`
 
 It runs for `/api/**`, reads Supabase JWT claims, normalizes `sub` into `user.id`, and stores the result on `event.context.user`.
+The namespace middleware classifies `/api/portal/**` as `portal` and other `/api/**` routes as
+`internal`. This is intentionally classification-only until the tenant role and tenant APIs are
+introduced; services remain the current authorization boundary.
 
 API handlers can also call:
 

@@ -23,7 +23,7 @@ defineProps<{
 
     <div v-if="previousContractId" class="mb-3 text-xs text-zinc-400">
       Hợp đồng trước:
-      <NuxtLink :to="`/contracts/${previousContractId}`" class="text-cyan hover:text-white transition-colors font-mono ml-1">
+      <NuxtLink :to="`/dashboard/contracts/${previousContractId}`" class="text-cyan hover:text-white transition-colors font-mono ml-1">
         {{ previousContractId.slice(0, 8) }}...
       </NuxtLink>
     </div>
@@ -56,7 +56,7 @@ defineProps<{
             <p class="text-xs text-muted">{{ new Date(renewal.createdAt).toLocaleDateString('vi-VN') }}</p>
             <NuxtLink
               v-if="renewal.newContractId"
-              :to="`/contracts/${renewal.newContractId}`"
+              :to="`/dashboard/contracts/${renewal.newContractId}`"
               class="text-xs text-cyan hover:text-white transition-colors mt-0.5 block"
             >
               Xem hợp đồng mới →

@@ -33,7 +33,8 @@ const stubs = {
   }),
 }
 
-function mountSidebar(role: 'admin' | 'owner' | 'manager') {
+function mountSidebar(role: 'admin' | 'owner' | 'manager', path = '/') {
+  vi.stubGlobal('useRoute', () => ({ path }))
   vi.stubGlobal('useAuthStore', () => ({
     isAdmin: role === 'admin',
     role,
@@ -46,7 +47,6 @@ function mountSidebar(role: 'admin' | 'owner' | 'manager') {
 describe('AppSidebar role visibility', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.stubGlobal('useRoute', () => ({ path: '/' }))
     vi.stubGlobal('useAppStore', () => ({ sidebarCollapsed: false, toggleCollapsed: vi.fn() }))
     vi.stubGlobal('storeToRefs', () => ({ sidebarCollapsed: ref(false) }))
   })
@@ -61,5 +61,21 @@ describe('AppSidebar role visibility', () => {
 
   it('hides Settings user management from manager', () => {
     expect(mountSidebar('manager').text()).not.toContain('Settings')
+  })
+
+  it('marks only Buildings active on the buildings route', () => {
+    const wrapper = mountSidebar('admin', '/dashboard/buildings')
+    const dashboard = wrapper.get('a[href="/dashboard"]')
+    const buildings = wrapper.get('a[href="/dashboard/buildings"]')
+
+    expect(dashboard.classes()).not.toContain('bg-cyan/10')
+    expect(buildings.classes()).toContain('bg-cyan/10')
+  })
+
+  it('links both sidebar logos directly to the dashboard namespace', () => {
+    const logoLinks = mountSidebar('admin').findAll('a[aria-label="Zeno House — Trang chủ"]')
+
+    expect(logoLinks).toHaveLength(2)
+    expect(logoLinks.every(link => link.attributes('href') === '/dashboard')).toBe(true)
   })
 })

@@ -59,7 +59,7 @@ export function useRoomForm<T = unknown>(options: UseRoomFormOptions<T> = {}) {
       })
       clearDraft()
       clearNuxtData()
-      await navigateTo('/rooms')
+      await navigateTo('/dashboard/rooms')
     }
     catch (e: unknown) {
       apiError.value = getApiErrorMessage(e)

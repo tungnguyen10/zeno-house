@@ -32,8 +32,8 @@ const visibleNavItems = computed(() =>
 )
 
 function isActive(to: string) {
-  if (to === '/') return route.path === '/'
-  return route.path.startsWith(to)
+  if (to === '/dashboard') return route.path === to
+  return route.path === to || route.path.startsWith(`${to}/`)
 }
 
 const asideClass = computed(() =>
@@ -93,12 +93,12 @@ function labelClass() {
   <aside :class="asideClass">
     <!-- Logo -->
     <div :class="headerClass">
-      <NuxtLink to="/" :class="logoLinkClass" aria-label="Zeno House — Trang chủ">
+      <NuxtLink to="/dashboard" :class="logoLinkClass" aria-label="Zeno House — Trang chủ">
         <IconLogo class="h-7 w-auto text-white" aria-hidden="true" />
       </NuxtLink>
 
       <!-- Mini logo — desktop rail (hover swaps to the toggle) -->
-      <NuxtLink to="/" :class="miniLogoClass" aria-label="Zeno House — Trang chủ">
+      <NuxtLink to="/dashboard" :class="miniLogoClass" aria-label="Zeno House — Trang chủ">
         <IconLogoMini class="h-6 w-auto text-cyan" aria-hidden="true" />
       </NuxtLink>
 

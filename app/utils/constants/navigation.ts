@@ -11,18 +11,18 @@ export interface NavItem {
 }
 
 export const NAV_ITEMS = [
-  { key: 'dashboard', label: 'Dashboard', to: '/', icon: 'IconChart' },
-  { key: 'buildings', label: 'Tòa nhà', to: '/buildings', icon: 'IconBuilding' },
-  { key: 'rooms', label: 'Phòng', to: '/rooms', icon: 'IconDoor' },
-  { key: 'tenants', label: 'Khách thuê', to: '/tenants', icon: 'IconUsers' },
-  { key: 'contracts', label: 'Hợp đồng', to: '/contracts', icon: 'IconDocumentText' },
-  { key: 'invoices', label: 'Hoá đơn', to: '/invoices', icon: 'IconDocument' },
-  { key: 'billing', label: 'Vận hành', to: '/billing', icon: 'IconBriefcase' },
-  { key: 'operations-report', label: 'Báo cáo vận hành', to: '/operations-report', icon: 'IconChart' },
-  { key: 'shared-expenses', label: 'Chi phí dùng chung', to: '/shared-expenses', icon: 'IconLayers', roles: ['admin', 'owner'] },
+  { key: 'dashboard', label: 'Dashboard', to: '/dashboard', icon: 'IconChart' },
+  { key: 'buildings', label: 'Tòa nhà', to: '/dashboard/buildings', icon: 'IconBuilding' },
+  { key: 'rooms', label: 'Phòng', to: '/dashboard/rooms', icon: 'IconDoor' },
+  { key: 'tenants', label: 'Khách thuê', to: '/dashboard/tenants', icon: 'IconUsers' },
+  { key: 'contracts', label: 'Hợp đồng', to: '/dashboard/contracts', icon: 'IconDocumentText' },
+  { key: 'invoices', label: 'Hoá đơn', to: '/dashboard/invoices', icon: 'IconDocument' },
+  { key: 'billing', label: 'Vận hành', to: '/dashboard/billing', icon: 'IconBriefcase' },
+  { key: 'operations-report', label: 'Báo cáo vận hành', to: '/dashboard/operations-report', icon: 'IconChart' },
+  { key: 'shared-expenses', label: 'Chi phí dùng chung', to: '/dashboard/shared-expenses', icon: 'IconLayers', roles: ['admin', 'owner'] },
   // User management is available to admin (global) and owner (scoped), not manager.
-  { key: 'settings', label: 'Settings', to: '/settings/managers', icon: 'IconSettings', roles: ['admin', 'owner'] },
-  { key: 'history', label: 'Audit Log', to: '/settings/history', icon: 'IconClock', adminOnly: true },
+  { key: 'settings', label: 'Settings', to: '/dashboard/settings/managers', icon: 'IconSettings', roles: ['admin', 'owner'] },
+  { key: 'history', label: 'Audit Log', to: '/dashboard/settings/history', icon: 'IconClock', adminOnly: true },
 ] satisfies NavItem[]
 
 /**

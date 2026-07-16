@@ -63,7 +63,7 @@ export function useTenantForm<T = unknown>(options: UseTenantFormOptions<T> = {}
       clearDraft()
       clearNuxtData()
       if (!options.skipRedirect) {
-        await navigateTo(res.data ? tenantPath(res.data) : '/tenants')
+        await navigateTo(res.data ? tenantPath(res.data) : '/dashboard/tenants')
       }
       return res.data ?? null
     }
@@ -94,7 +94,7 @@ export function useTenantForm<T = unknown>(options: UseTenantFormOptions<T> = {}
       clearDraft()
       clearNuxtData()
       if (!options.skipRedirect) {
-        await navigateTo(res.data ? tenantPath(res.data) : `/tenants/${id}`)
+        await navigateTo(res.data ? tenantPath(res.data) : `/dashboard/tenants/${id}`)
       }
       return res.data ?? null
     }

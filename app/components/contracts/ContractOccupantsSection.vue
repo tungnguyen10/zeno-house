@@ -126,7 +126,7 @@ async function handleDeleteOccupant() {
         <span class="text-cyan text-xs font-bold">{{ contract.tenant.fullName.charAt(0).toUpperCase() }}</span>
       </div>
       <div class="min-w-0 flex-1">
-        <NuxtLink :to="`/tenants/${contract.tenant.id}`" class="text-sm font-medium text-white hover:text-cyan transition-colors">
+        <NuxtLink :to="`/dashboard/tenants/${contract.tenant.id}`" class="text-sm font-medium text-white hover:text-cyan transition-colors">
           {{ contract.tenant.fullName }}
         </NuxtLink>
         <p class="text-xs text-muted mt-0.5">{{ contract.tenant.phone }}</p>

@@ -1,6 +1,9 @@
+import { getRedirectByRole } from '~/utils/auth-redirect'
+
 export default defineNuxtRouteMiddleware(() => {
   const user = useSupabaseUser()
   if (user.value) {
-    return navigateTo('/')
+    const role = user.value.app_metadata?.role as string | null | undefined
+    return navigateTo(getRedirectByRole(role))
   }
 })

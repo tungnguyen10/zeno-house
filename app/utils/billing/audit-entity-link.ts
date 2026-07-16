@@ -11,7 +11,7 @@ export function auditEntityLink(event: BillingAuditEvent): string | null {
 
   switch (event.entityType) {
     case 'invoice':
-      return `/billing/invoices/${event.entityId}`
+      return `/dashboard/billing/invoices/${event.entityId}`
     default:
       return null
   }

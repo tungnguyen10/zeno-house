@@ -33,7 +33,7 @@ defineProps<{
           <span class="text-base font-semibold text-white">{{ building.totalRooms }}</span>
           <NuxtLink
             v-if="building.totalRooms === 0"
-            :to="`/rooms?building=${building.slug}`"
+            :to="`/dashboard/rooms?building=${building.slug}`"
             class="text-xs text-cyan hover:underline"
           >
             Thêm phòng
