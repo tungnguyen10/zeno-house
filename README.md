@@ -54,7 +54,7 @@ npm run test:coverage
 - Service catalog: default service definitions, building overrides, and contract-level service sync.
 - Meter readings: monthly and handover readings for electricity/water, including bulk entry.
 - Monthly operations: billing periods, draft grid, invoice issue, payments, bulk payments, adjustment, void/reissue, unissue, Excel export, audit drawer, invoice detail.
-- Internal AI agent platform (planned): chat-driven workflow orchestration through whitelisted internal tools, starting with billing as the pilot domain.
+- Internal AI billing assistant: feature-flagged chat-driven period opening, meter operations, draft explanation, invoice issue, and invoice correction through whitelisted internal tools.
 
 ## Architecture
 
@@ -75,7 +75,7 @@ type ApiSuccess<T> = { data: T; meta?: Record<string, unknown> }
 type ApiError = { error: { code: string; message: string; details?: unknown } }
 ```
 
-Planned internal AI workflows follow the same server-mediated pattern:
+The internal AI billing assistant follows the same server-mediated pattern:
 
 ```text
 chat UI
@@ -87,6 +87,8 @@ chat UI
 
 The model layer is limited to intent parsing and tool selection. Permission checks, scope enforcement, confirmations for mutating actions, and idempotent writes remain server-side.
 
+The feature is disabled by default in production until an explicit rollout enables the required private server flags. Operators can follow the [AI billing assistant user guide](docs/features/ai-billing-assistant.md); architecture, safety controls, and rollout configuration are documented in [AI Agent Architecture](docs/architecture/ai-agent.md).
+
 ## Key Docs
 
 - Docs index: `docs/README.md`
@@ -97,6 +99,8 @@ The model layer is limited to intent parsing and tool selection. Permission chec
 - Database and migrations: `docs/architecture/database.md`
 - Auth and permissions: `docs/architecture/auth-permissions.md`
 - Billing feature guide: `docs/features/billing.md`
+- AI billing assistant user guide: `docs/features/ai-billing-assistant.md`
+- AI architecture and rollout controls: `docs/architecture/ai-agent.md`
 - Contracts feature guide: `docs/features/contracts.md`
 - Property operations guide: `docs/features/property-operations.md`
 - Services and meter readings guide: `docs/features/services-meter-readings.md`

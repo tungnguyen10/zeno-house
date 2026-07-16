@@ -20,6 +20,7 @@ This directory contains source-of-truth engineering docs for the current Zeno Ho
 
 ## Feature Docs
 
+- AI billing assistant user guide: [features/ai-billing-assistant.md](features/ai-billing-assistant.md)
 - Billing and monthly operations: [features/billing.md](features/billing.md)
 - Contracts and occupancy: [features/contracts.md](features/contracts.md)
 - Property operations: [features/property-operations.md](features/property-operations.md)
