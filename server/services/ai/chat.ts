@@ -23,6 +23,7 @@ interface ProviderConfig {
   modelPrimary: string
   maxSteps: number
   maxOutputTokens: number
+  maxContextMessages: number
 }
 
 function resolveConfig(runtime: ReturnType<typeof useRuntimeConfig>): ProviderConfig {
@@ -33,6 +34,7 @@ function resolveConfig(runtime: ReturnType<typeof useRuntimeConfig>): ProviderCo
     modelPrimary: (runtime.aiModel as string) || 'llama-3.3-70b-versatile',
     maxSteps: Number(runtime.aiMaxSteps ?? 8),
     maxOutputTokens: Number(runtime.aiMaxOutputTokens ?? 1200),
+    maxContextMessages: Number(runtime.aiMaxContextMessages ?? 20),
   }
 }
 
@@ -127,7 +129,7 @@ export async function streamAiChat(
   const result = streamText({
     model: buildModel(config),
     system: buildSystemPrompt(),
-    messages: history.map(message => ({ role: message.role, content: message.content })),
+    messages: history.slice(-config.maxContextMessages).map(message => ({ role: message.role, content: message.content })),
     ...(Object.keys(tools).length > 0 && { tools, stopWhen: isStepCount(config.maxSteps) }),
     maxOutputTokens: config.maxOutputTokens,
     abortSignal: AbortSignal.timeout(runtimePolicy.providerTimeoutMs),

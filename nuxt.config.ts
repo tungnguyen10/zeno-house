@@ -48,6 +48,7 @@ export default defineNuxtConfig({
     aiRateWindowSeconds: 60, // NUXT_AI_RATE_WINDOW_SECONDS
     aiCircuitFailureThreshold: 5, // NUXT_AI_CIRCUIT_FAILURE_THRESHOLD
     aiCircuitCooldownMs: 60_000, // NUXT_AI_CIRCUIT_COOLDOWN_MS
+    aiMaxContextMessages: 20, // NUXT_AI_MAX_CONTEXT_MESSAGES
     aiRetentionCleanupEnabled: true, // NUXT_AI_RETENTION_CLEANUP_ENABLED
     aiRetentionCleanupBatchSize: 500, // NUXT_AI_RETENTION_CLEANUP_BATCH_SIZE
     aiRetentionCleanupSecret: "", // NUXT_AI_RETENTION_CLEANUP_SECRET
