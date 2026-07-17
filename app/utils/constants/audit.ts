@@ -20,6 +20,13 @@ export const AUDIT_ACTIONS = {
   TENANT_ARCHIVED: 'tenant.archived',
   TENANT_REMOVED: 'tenant.removed',
 
+  // Tenant portal account provisioning
+  TENANT_ACCOUNT_PROVISIONED: 'tenant.account.provisioned',
+  TENANT_ACCOUNT_DISABLED: 'tenant.account.disabled',
+  TENANT_ACCOUNT_ENABLED: 'tenant.account.enabled',
+  TENANT_ACCOUNT_PASSWORD_RESET: 'tenant.account.password_reset',
+  TENANT_ACCOUNT_REVOKED: 'tenant.account.revoked',
+
   // Contract
   CONTRACT_CREATED: 'contract.created',
   CONTRACT_UPDATED: 'contract.updated',

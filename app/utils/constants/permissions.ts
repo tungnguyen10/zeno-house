@@ -54,6 +54,9 @@ export const OWNER_CAPABILITIES = [
   // Scoped user management: owner can manage managers inside owner scope.
   'users.manage.scoped',
   'users.create.manager',
+  // Tenant portal account provisioning for existing tenants (owner is scoped to
+  // assigned buildings; the service layer enforces the scope).
+  'tenant.account.provision',
 ] as const
 
 export const ADMIN_ONLY_CAPABILITIES = [

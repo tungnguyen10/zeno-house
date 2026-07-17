@@ -2,9 +2,7 @@
 
 Defines the isolated tenant authentication role, tenant-only capabilities, auth-user linkage,
 server-side tenant scope resolution, and direct-read RLS baseline.
-
 ## Requirements
-
 ### Requirement: Tenant role exists and is isolated
 System SHALL support `tenant` as a Supabase Auth `app_metadata.role` value, isolated from internal roles. The `tenant` role SHALL NOT be creatable through internal user-management APIs (`CREATABLE_ROLES` remains `owner | manager`). Tenant role claims SHALL be written only via a service-role/Edge path, never from client or user-editable metadata.
 
@@ -32,17 +30,15 @@ The system SHALL define a `TENANT_CAPABILITIES` set (profile read/update, contra
 ---
 
 ### Requirement: Auth-user to tenant linkage
-The system SHALL persist an explicit link between a Supabase auth user and a `tenants` record in a `tenant_user_links` table with FKs to `auth.users` and `public.tenants`, a `status`, and uniqueness (`unique(auth_user_id)`, `unique(tenant_id)` for MVP). RLS SHALL be enabled.
+The system SHALL persist an explicit link between a Supabase auth user and a `tenants` record in a `tenant_user_links` table with FKs to `auth.users` and `public.tenants`, a `status`, and uniqueness (`unique(auth_user_id)`, `unique(tenant_id)` for MVP). RLS SHALL be enabled. Link rows SHALL be created and mutated only through a service-role provisioning path (operated by `admin`/`owner`), never through `/api/users` and never with a client-supplied tenant identifier.
 
 #### Scenario: One login maps to one tenant
 - **WHEN** a link row exists for an auth user
 - **THEN** exactly one `tenant_id` resolves for that user
 
-#### Scenario: Disabled link denies access
-- **WHEN** a link row has `status <> 'active'`
-- **THEN** tenant resolution fails
-
----
+#### Scenario: Links written only via service-role provisioning
+- **WHEN** a `tenant_user_links` row is created or changed
+- **THEN** the write occurs through the service-role provisioning path, not through internal user-management APIs
 
 ### Requirement: Tenant self-scope resolver
 The system SHALL provide `resolveTenantId(event, user)` that returns the tenant id from `tenant_user_links` for the authenticated user and throws a consistent forbidden/not-found when the link is missing or disabled. Tenant server code SHALL derive `tenant_id` only from this resolver and SHALL ignore any client-supplied tenant identifier.
@@ -71,3 +67,4 @@ Tenant-readable tables (`tenants`, `contracts`, `invoices`) SHALL be deny-by-def
 #### Scenario: Tenant self-read scoped by link
 - **WHEN** a tenant self-select policy evaluates
 - **THEN** it matches rows only through the caller's `tenant_user_links` mapping
+

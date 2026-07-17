@@ -3,6 +3,9 @@ import withNuxt from './.nuxt/eslint.config.mjs'
 
 export default withNuxt(
   {
+    ignores: ['app/service-worker/**'],
+  },
+  {
     rules: {
       // Vue — TypeScript đã handle default values, không cần rule này
       'vue/require-default-prop': 'off',

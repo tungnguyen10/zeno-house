@@ -18,6 +18,7 @@ export default defineNuxtConfig({
     "@nuxt/eslint",
     "@nuxtjs/tailwindcss",
     "@nuxtjs/supabase",
+    "@vite-pwa/nuxt",
   ],
 
   tailwindcss: {
@@ -70,7 +71,7 @@ export default defineNuxtConfig({
   app: {
     head: {
       charset: "utf-8",
-      viewport: "width=device-width, initial-scale=1",
+      viewport: "width=device-width, initial-scale=1, viewport-fit=cover",
       title: "Zeno House",
       titleTemplate: "%s | Zeno House",
       meta: [
@@ -83,8 +84,16 @@ export default defineNuxtConfig({
         { property: "og:site_name", content: "Zeno House" },
         { property: "og:locale", content: "vi_VN" },
         { name: "robots", content: "index, follow" },
+        // PWA / installed app metadata (Android + iOS).
+        { name: "mobile-web-app-capable", content: "yes" },
+        { name: "apple-mobile-web-app-capable", content: "yes" },
+        { name: "apple-mobile-web-app-status-bar-style", content: "default" },
+        { name: "apple-mobile-web-app-title", content: "Zeno" },
       ],
-      link: [{ rel: "icon", type: "image/x-icon", href: "/favicon.ico" }],
+      link: [
+        { rel: "icon", type: "image/x-icon", href: "/favicon.ico" },
+        { rel: "apple-touch-icon", href: "/icons/apple-touch-icon.png" },
+      ],
     },
   },
 
@@ -120,5 +129,48 @@ export default defineNuxtConfig({
   },
   supabase: {
     redirect: false,
+  },
+
+  pwa: {
+    // Single installable PWA for the whole app on one domain. Install once,
+    // then `getRedirectByRole` routes the user to /portal or /dashboard.
+    registerType: "autoUpdate",
+    // Custom SW so authenticated SSR pages + /api/tenant/** payloads (including
+    // signed URLs) are NEVER cached; only static assets + offline shell are.
+    strategies: "injectManifest",
+    srcDir: "service-worker",
+    filename: "sw.ts",
+    injectManifest: {
+      globPatterns: ["**/*.{js,css,svg,png,ico,woff2}", "offline.html"],
+    },
+    manifest: {
+      name: "Zeno House",
+      short_name: "Zeno",
+      description: "Cổng thông tin người thuê Zeno House",
+      lang: "vi",
+      display: "standalone",
+      orientation: "portrait",
+      start_url: "/",
+      scope: "/",
+      theme_color: "#0b59db",
+      background_color: "#f2f5fa",
+      icons: [
+        { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+        { src: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
+        {
+          src: "/icons/maskable-512.png",
+          sizes: "512x512",
+          type: "image/png",
+          purpose: "maskable",
+        },
+      ],
+    },
+    client: {
+      // We present our own dismissible install prompt (PortalInstallPrompt).
+      installPrompt: false,
+    },
+    devOptions: {
+      enabled: false,
+    },
   },
 });

@@ -361,6 +361,23 @@ export const TenantRepository = {
     return data ? mapTenant(data) : null
   },
 
+  async findByIds(event: H3Event, ids: string[]): Promise<Tenant[]> {
+    if (ids.length === 0) return []
+    const client = await serverSupabaseClient(event)
+    const { data, error } = await client
+      .from('tenants')
+      .select('*')
+      .in('id', [...new Set(ids)])
+
+    if (error) throwDbError(error, 'tenants.findByIds')
+    return (data ?? []).map(mapTenant)
+  },
+
+  /** Public wrapper over the building→tenant resolver for scope filtering. */
+  async findTenantIdsForBuildings(event: H3Event, buildingIds: string[]): Promise<string[]> {
+    return findTenantIdsForBuildings(event, buildingIds)
+  },
+
   async hasContractInBuildings(
     event: H3Event,
     tenantId: string,

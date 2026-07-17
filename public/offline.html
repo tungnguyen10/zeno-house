@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Ngoại tuyến | Zeno House</title>
+    <meta name="theme-color" content="#0b59db" />
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body {
+        min-height: 100dvh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #f2f5fa;
+        color: #0b1422;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        padding: env(safe-area-inset-top) 24px env(safe-area-inset-bottom);
+      }
+      .card { text-align: center; max-width: 20rem; }
+      .badge {
+        width: 64px; height: 64px; margin: 0 auto 20px;
+        border-radius: 20px; display: flex; align-items: center; justify-content: center;
+        background: #eef1ff; color: #0b59db;
+      }
+      h1 { font-size: 1.25rem; font-weight: 700; margin-bottom: 8px; }
+      p { font-size: 0.9rem; color: #6e7070; line-height: 1.5; margin-bottom: 24px; }
+      button {
+        min-height: 44px; padding: 0 24px; border: none; border-radius: 12px;
+        background: #0b59db; color: #fff; font-size: 0.9rem; font-weight: 600; cursor: pointer;
+      }
+      button:active { background: #0a4fc4; }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <div class="badge" aria-hidden="true">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 3l18 18" />
+          <path d="M8.5 8.02A5 5 0 0 0 7 17h9.5" />
+          <path d="M20.5 15.5A4 4 0 0 0 18 8h-1.26a7 7 0 0 0-3.9-4.5" />
+        </svg>
+      </div>
+      <h1>Bạn đang ngoại tuyến</h1>
+      <p>Không có kết nối mạng. Vui lòng kiểm tra kết nối và thử lại.</p>
+      <button type="button" onclick="location.reload()">Thử lại</button>
+    </div>
+  </body>
+</html>
