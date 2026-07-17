@@ -14,7 +14,7 @@ The system SHALL persist tenant-authored support requests in a `support_requests
 ---
 
 ### Requirement: Tenant self-scoped support request API
-`GET /api/tenant/requests` SHALL return only the caller's requests in timeline order. `POST /api/tenant/requests` SHALL create a request for the caller, deriving `tenant_id` via `resolveTenantId` and building/contract context server-side, and SHALL support an optional attachment stored via the private tenant document pattern.
+`GET /api/tenant/requests` SHALL return only the caller's requests in timeline order. `POST /api/tenant/requests` SHALL create a request for the caller, deriving `tenant_id` via `resolveTenantId` and building/contract context server-side, gated by the existing `tenant.requests.read`/`tenant.requests.write` capabilities. An optional attachment SHALL be stored in the existing private `tenant-documents` bucket using its `tenant_user_links`-scoped policy, with the path built server-side and reads returned as short-lived signed URLs.
 
 #### Scenario: List own requests
 - **WHEN** a tenant calls `GET /api/tenant/requests`
@@ -24,9 +24,13 @@ The system SHALL persist tenant-authored support requests in a `support_requests
 - **WHEN** a tenant creates a request
 - **THEN** building/contract context is derived server-side and any client-declared context is ignored
 
-#### Scenario: Optional attachment stored privately
+#### Scenario: Optional attachment stored in tenant-documents
 - **WHEN** a tenant attaches a file to a request
-- **THEN** the file is stored in a private bucket and read back via a signed URL
+- **THEN** the file is stored in the private `tenant-documents` bucket under the tenant's server-built path and read back via a signed URL
+
+#### Scenario: Cross-tenant attachment access denied
+- **WHEN** a tenant references or requests an attachment outside their linked tenant scope
+- **THEN** access is denied by the `tenant_user_links`-scoped storage policy
 
 ---
 

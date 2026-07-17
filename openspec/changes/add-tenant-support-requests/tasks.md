@@ -14,19 +14,20 @@
 ## 3. Repository + Service
 
 - [ ] 3.1 Add `server/repositories/tenant-portal/requests.ts` (self-scoped list/create; building-scoped operator list).
-- [ ] 3.2 Add `server/services/tenant-portal/requests.ts` — resolve tenant id, recheck `tenant.requests.read`/`write`, derive building/contract context, append audit.
-- [ ] 3.3 Add the building-scoped internal read hook using `getAssignedBuildingIds`.
+- [ ] 3.2 Add `server/services/tenant-portal/requests.ts` — resolve tenant id, recheck `tenant.requests.read`/`tenant.requests.write`, derive building/contract context, append audit.
+- [ ] 3.3 Store optional attachments in the existing `tenant-documents` bucket, building the path server-side from the resolved tenant id and returning signed URLs (reuse the archived documents convention; no new bucket/policy).
+- [ ] 3.4 Add the building-scoped internal read hook using `getAssignedBuildingIds`.
 
 ## 4. API Routes
 
 - [ ] 4.1 `GET /api/tenant/requests` — caller's requests (timeline order).
-- [ ] 4.2 `POST /api/tenant/requests` — create with optional attachment (tenant-documents pattern).
+- [ ] 4.2 `POST /api/tenant/requests` — create with optional attachment stored in `tenant-documents`.
 
 ## 5. Tests
 
 - [ ] 5.1 Self-scope: tenant sees only own requests; context derived server-side.
 - [ ] 5.2 Operator read hook returns only requests for assigned buildings; admin unscoped.
-- [ ] 5.3 Attachment stored privately; reads return signed URLs.
+- [ ] 5.3 Attachment stored in `tenant-documents` under the tenant's path; reads return signed URLs; cross-tenant access denied.
 - [ ] 5.4 Audit events emitted on create.
 
 ## 6. Verification
