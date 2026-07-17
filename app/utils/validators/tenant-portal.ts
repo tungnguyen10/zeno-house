@@ -15,6 +15,12 @@ export const tenantDocumentUploadSchema = z.object({
   size: z.number().int().positive().max(TENANT_DOCUMENT_MAX_BYTES),
 })
 
+export const tenantSupportRequestCreateSchema = z.object({
+  title: z.string().trim().min(1).max(200),
+  description: z.string().trim().min(1).max(5000),
+  attachment: tenantDocumentUploadSchema.optional(),
+})
+
 export const tenantIdentityImageSideSchema = tenantIdImageSideSchema
 export const TENANT_IDENTITY_IMAGE_MIME_TYPES = [
   'image/jpeg',
@@ -45,4 +51,5 @@ export const tenantInvoiceListQuerySchema = z.object({
 export type TenantProfileUpdateInput = z.infer<typeof tenantProfileUpdateSchema>
 export type TenantInvoiceListQuery = z.infer<typeof tenantInvoiceListQuerySchema>
 export type TenantDocumentUploadMetadata = z.infer<typeof tenantDocumentUploadSchema>
+export type TenantSupportRequestCreateInput = z.infer<typeof tenantSupportRequestCreateSchema>
 export type TenantIdentityImageSide = z.infer<typeof tenantIdentityImageSideSchema>

@@ -1,5 +1,9 @@
 <script setup lang="ts">
-import type { TenantRequestStatus } from '~/composables/tenant-portal/usePortalRequests'
+import type { TenantSupportRequestStatus } from '~/types/tenant-portal'
+import {
+  TENANT_DOCUMENT_MAX_BYTES,
+  TENANT_DOCUMENT_MIME_TYPES,
+} from '~/utils/validators/tenant-portal'
 
 definePageMeta({
   layout: 'tenant',
@@ -12,38 +16,57 @@ setChrome({ title: 'Yêu cầu', back: null })
 const { requests, status, error, refresh, submit, submitting } = usePortalRequests()
 const toast = usePortalToast()
 
-const STATUS_LABELS: Record<TenantRequestStatus, string> = {
-  open: 'Đang chờ',
+const STATUS_LABELS: Record<TenantSupportRequestStatus, string> = {
+  new: 'Mới gửi',
   in_progress: 'Đang xử lý',
   resolved: 'Đã xử lý',
-  closed: 'Đã đóng',
 }
 
-const STATUS_CLASS: Record<TenantRequestStatus, string> = {
-  open: 'bg-warning/15 text-warning',
+const STATUS_CLASS: Record<TenantSupportRequestStatus, string> = {
+  new: 'bg-warning/15 text-warning',
   in_progress: 'bg-theme/10 text-theme',
   resolved: 'bg-success/15 text-success',
-  closed: 'bg-smoke text-body',
 }
 
-const CATEGORIES = [
-  { value: 'maintenance', label: 'Sửa chữa' },
-  { value: 'billing', label: 'Hoá đơn' },
-  { value: 'contract', label: 'Hợp đồng' },
-  { value: 'other', label: 'Khác' },
-]
-
 const sheetOpen = ref(false)
-const form = reactive({ title: '', category: 'maintenance', description: '' })
+const attachmentInput = ref<HTMLInputElement | null>(null)
+const attachment = ref<File | null>(null)
+const form = reactive({ title: '', description: '' })
 const formErrors = reactive({ title: '', description: '' })
+const attachmentError = ref('')
 
 function openSheet() {
   form.title = ''
-  form.category = 'maintenance'
   form.description = ''
   formErrors.title = ''
   formErrors.description = ''
+  attachment.value = null
+  attachmentError.value = ''
+  if (attachmentInput.value) attachmentInput.value.value = ''
   sheetOpen.value = true
+}
+
+function onAttachmentChange(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0] ?? null
+  attachmentError.value = ''
+  if (!file) {
+    attachment.value = null
+    return
+  }
+  if (!TENANT_DOCUMENT_MIME_TYPES.includes(
+    file.type as (typeof TENANT_DOCUMENT_MIME_TYPES)[number],
+  )) {
+    attachment.value = null
+    attachmentError.value = 'Tệp phải là ảnh JPEG, PNG, WebP hoặc PDF.'
+    return
+  }
+  if (file.size > TENANT_DOCUMENT_MAX_BYTES) {
+    attachment.value = null
+    attachmentError.value = 'Tệp không được vượt quá 5MB.'
+    return
+  }
+  attachment.value = file
 }
 
 async function onSubmit() {
@@ -53,8 +76,8 @@ async function onSubmit() {
 
   const ok = await submit({
     title: form.title.trim(),
-    category: form.category,
     description: form.description.trim(),
+    attachment: attachment.value ?? undefined,
   })
   if (ok) {
     sheetOpen.value = false
@@ -108,6 +131,16 @@ async function onSubmit() {
               <div class="min-w-0">
                 <p class="truncate text-sm font-semibold text-title">{{ request.title }}</p>
                 <p class="mt-1 line-clamp-2 text-xs text-body">{{ request.description }}</p>
+                <a
+                  v-if="request.attachmentSignedUrl"
+                  :href="request.attachmentSignedUrl"
+                  target="_blank"
+                  rel="noopener"
+                  class="mt-2 inline-flex items-center gap-1 text-xs font-medium text-theme"
+                >
+                  <IconDocumentText class="h-4 w-4" aria-hidden="true" />
+                  Xem tệp đính kèm
+                </a>
                 <p class="mt-2 text-xs text-body">{{ request.createdAt }}</p>
               </div>
               <span
@@ -131,24 +164,6 @@ async function onSubmit() {
           :error="formErrors.title"
         />
 
-        <div class="space-y-1.5">
-          <span class="text-sm font-medium text-title">Loại yêu cầu</span>
-          <div class="flex flex-wrap gap-2">
-            <button
-              v-for="category in CATEGORIES"
-              :key="category.value"
-              type="button"
-              class="rounded-full border px-3 py-1.5 text-sm font-medium transition-colors"
-              :class="form.category === category.value
-                ? 'border-theme bg-theme/10 text-theme'
-                : 'border-border-light bg-white text-body'"
-              @click="form.category = category.value"
-            >
-              {{ category.label }}
-            </button>
-          </div>
-        </div>
-
         <PortalTextField
           v-model="form.description"
           label="Mô tả"
@@ -157,6 +172,26 @@ async function onSubmit() {
           placeholder="Mô tả chi tiết vấn đề của bạn"
           :error="formErrors.description"
         />
+
+        <div class="space-y-1.5">
+          <span class="text-sm font-medium text-title">Tệp đính kèm (không bắt buộc)</span>
+          <label
+            class="flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border border-border-light bg-white px-3 py-2.5 text-sm text-body transition-colors hover:border-theme/40"
+          >
+            <IconDocumentText class="h-5 w-5 shrink-0 text-theme" aria-hidden="true" />
+            <span class="min-w-0 flex-1 truncate">
+              {{ attachment?.name ?? 'Chọn ảnh hoặc PDF, tối đa 5MB' }}
+            </span>
+            <input
+              ref="attachmentInput"
+              type="file"
+              accept="image/jpeg,image/png,image/webp,application/pdf"
+              class="sr-only"
+              @change="onAttachmentChange"
+            >
+          </label>
+          <p v-if="attachmentError" class="text-xs text-error">{{ attachmentError }}</p>
+        </div>
 
         <PortalButton type="submit" block size="lg" :loading="submitting">Gửi yêu cầu</PortalButton>
       </form>

@@ -89,6 +89,9 @@ PNG, WebP, or PDF files up to 5 MB, and return five-minute signed URLs from a pr
 Identity-image routes use the existing `tenant-id-images` front/back slots shared with admin and
 owner workflows. Tenant uploads use multipart field `image`, accept JPEG/PNG/WebP up to 5 MB, and
 replace the same `id_card_front_path` or `id_card_back_path` value rather than creating actor-specific copies.
+Support requests accept JSON title/description when no file is present, or multipart fields `title`,
+`description`, and optional `attachment`. Attachments reuse the private `tenant-documents` bucket;
+the server derives tenant/building/contract context and returns five-minute signed URLs.
 
 | Method | Path |
 | --- | --- |
@@ -98,6 +101,8 @@ replace the same `id_card_front_path` or `id_card_back_path` value rather than c
 | GET | `/api/tenant/id-images` |
 | POST | `/api/tenant/id-images/[side]` |
 | DELETE | `/api/tenant/id-images/[side]` |
+| GET | `/api/tenant/requests` |
+| POST | `/api/tenant/requests` |
 
 ## Contracts
 

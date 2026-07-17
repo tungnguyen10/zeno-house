@@ -26,6 +26,7 @@ export const AUDIT_ACTIONS = {
   TENANT_ACCOUNT_ENABLED: 'tenant.account.enabled',
   TENANT_ACCOUNT_PASSWORD_RESET: 'tenant.account.password_reset',
   TENANT_ACCOUNT_REVOKED: 'tenant.account.revoked',
+  SUPPORT_REQUEST_CREATED: 'support_request.created',
 
   // Contract
   CONTRACT_CREATED: 'contract.created',
@@ -86,3 +87,4 @@ export type AuditEntityType =
   | 'building_fixed_cost'
   | 'recurring_expense'
   | 'prepaid_expense'
+  | 'support_request'

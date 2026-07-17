@@ -11,6 +11,7 @@ Zeno House uses Supabase Postgres. Schema history lives in `supabase/migrations`
 | Tenants | `20260514000004_create_tenants.sql`, `20260530100000_tenant_enrichment.sql` |
 | Tenant identity | `20260708020000_tenant_id_images.sql`, `20260716083605_add_tenant_identity_foundation.sql`, `20260717001405_tenant_self_identity_images.sql` |
 | Tenant documents | `20260716233954_add_tenant_documents.sql` |
+| Tenant support requests | `20260717171947_add_tenant_support_requests.sql`, `20260717221849_harden_support_request_attachment_scope.sql` |
 | Deprecated room assignments | `20260514000005_create_room_assignments.sql`, `20260530000000_drop_room_assignments.sql` |
 | Contracts | `20260515000000_create_contracts.sql`, `20260517000001_contract_commercial_terms.sql`, `20260531000000_contracts_backfill_building_id.sql`, `20260531000001_contracts_payment_day.sql`, `20260615000000_document_codes.sql` |
 | Occupants and renewals | `20260517000002_occupants_and_meter_devices.sql`, `20260517000005_contract_renewals_table.sql`, `20260517000006_occupant_uniqueness.sql` |
@@ -29,6 +30,7 @@ Property and occupancy:
 - `rooms`
 - `tenants`
 - `tenant_user_links`
+- `support_requests`
 - `contracts`
 - `contract_occupants`
 - `contract_payments`
@@ -38,6 +40,12 @@ Property and occupancy:
 
 `tenant_user_links` maps one Supabase Auth user to one tenant record. Only an `active` link
 establishes tenant self-scope; unique constraints on both ids enforce the one-to-one mapping.
+
+`support_requests` stores tenant-authored issues with server-derived tenant, active-contract, and
+building context. Status is limited to `new`, `in_progress`, or `resolved`; optional attachment
+paths point into the tenant-prefixed area of the existing private `tenant-documents` bucket.
+Tenant RLS is self-scoped through active `tenant_user_links`; owner/manager reads are scoped through
+`user_building_assignments`, while admin reads are unscoped.
 
 Services:
 

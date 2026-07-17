@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ref } from 'vue'
-import type { TenantProfile } from '~/types/tenant-portal'
+import type { TenantProfile, TenantSupportRequest } from '~/types/tenant-portal'
 
 const fetchMock = vi.hoisted(() => vi.fn())
 const uploadMock = vi.hoisted(() => vi.fn())
@@ -113,5 +113,68 @@ describe('usePortalProfile', () => {
     expect(ok).toBe(false)
     expect(profile.value?.phone).toBe(baseProfile.phone)
     expect(apiError.value).toBeTruthy()
+  })
+})
+
+describe('usePortalRequests', () => {
+  const request: TenantSupportRequest = {
+    id: 'r1',
+    tenantId: 't1',
+    buildingId: 'b1',
+    contractId: 'c1',
+    title: 'Vòi nước bị rò rỉ',
+    description: 'Nước rò dưới bồn rửa.',
+    status: 'new',
+    attachmentSignedUrl: null,
+    createdAt: '2026-07-17T10:00:00.000Z',
+    updatedAt: '2026-07-17T10:00:00.000Z',
+  }
+
+  it('submits JSON without obsolete category or context fields', async () => {
+    fetchData = { data: [] }
+    fetchMock.mockResolvedValue({ data: request })
+    const { usePortalRequests } = await import(
+      '../../app/composables/tenant-portal/usePortalRequests'
+    )
+    const { submit } = usePortalRequests()
+
+    await expect(submit({
+      title: 'Vòi nước bị rò rỉ',
+      description: 'Nước rò dưới bồn rửa.',
+    })).resolves.toBe(true)
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/tenant/requests',
+      expect.objectContaining({
+        method: 'POST',
+        body: {
+          title: 'Vòi nước bị rò rỉ',
+          description: 'Nước rò dưới bồn rửa.',
+        },
+      }),
+    )
+  })
+
+  it('submits an optional attachment as multipart form data', async () => {
+    fetchData = { data: [] }
+    uploadMock.mockResolvedValue({ data: request })
+    const { usePortalRequests } = await import(
+      '../../app/composables/tenant-portal/usePortalRequests'
+    )
+    const { submit } = usePortalRequests()
+    const attachment = new File(['photo'], 'photo.jpg', { type: 'image/jpeg' })
+
+    await expect(submit({
+      title: 'Vòi nước bị rò rỉ',
+      description: 'Nước rò dưới bồn rửa.',
+      attachment,
+    })).resolves.toBe(true)
+
+    const [url, form] = uploadMock.mock.calls[0]!
+    expect(url).toBe('/api/tenant/requests')
+    expect(form).toBeInstanceOf(FormData)
+    expect((form as FormData).get('title')).toBe('Vòi nước bị rò rỉ')
+    expect((form as FormData).get('description')).toBe('Nước rò dưới bồn rửa.')
+    expect((form as FormData).get('attachment')).toBeInstanceOf(File)
   })
 })

@@ -2,12 +2,14 @@ import { describe, expect, it } from 'vitest'
 import {
   tenantInvoiceListQuerySchema,
   tenantProfileUpdateSchema,
+  tenantSupportRequestCreateSchema,
 } from '~/utils/validators/tenant-portal'
 import {
   mapTenantContractSummary,
   mapTenantInvoiceDetail,
   mapTenantInvoiceListItem,
   mapTenantProfile,
+  mapTenantSupportRequest,
 } from '~/utils/mappers/tenant-portal'
 
 describe('tenant portal validators', () => {
@@ -34,6 +36,42 @@ describe('tenant portal validators', () => {
   it('normalizes invoice pagination defaults and bounds', () => {
     expect(tenantInvoiceListQuerySchema.parse({})).toEqual({ page: 1, page_size: 20 })
     expect(tenantInvoiceListQuerySchema.safeParse({ page_size: 101 }).success).toBe(false)
+  })
+
+  it('accepts support request content and strips client-declared context', () => {
+    expect(tenantSupportRequestCreateSchema.parse({
+      title: '  Leaking tap  ',
+      description: '  Water is leaking under the sink.  ',
+      tenant_id: 'other-tenant',
+      building_id: 'other-building',
+      contract_id: 'other-contract',
+      status: 'resolved',
+      attachment: {
+        name: 'photo.jpg',
+        mimeType: 'image/jpeg',
+        size: 1024,
+      },
+    })).toEqual({
+      title: 'Leaking tap',
+      description: 'Water is leaking under the sink.',
+      attachment: {
+        name: 'photo.jpg',
+        mimeType: 'image/jpeg',
+        size: 1024,
+      },
+    })
+  })
+
+  it('rejects empty support request content and invalid attachment metadata', () => {
+    expect(tenantSupportRequestCreateSchema.safeParse({
+      title: ' ',
+      description: 'Details',
+    }).success).toBe(false)
+    expect(tenantSupportRequestCreateSchema.safeParse({
+      title: 'Issue',
+      description: 'Details',
+      attachment: { name: 'bad.txt', mimeType: 'text/plain', size: 10 },
+    }).success).toBe(false)
   })
 })
 
@@ -141,5 +179,31 @@ describe('tenant portal mappers', () => {
       amount: 5000000,
       sortOrder: 0,
     }])
+  })
+
+  it('maps a support request with server-derived context and a signed attachment URL', () => {
+    expect(mapTenantSupportRequest({
+      id: 'request-1',
+      tenant_id: 'tenant-1',
+      building_id: 'building-1',
+      contract_id: 'contract-1',
+      title: 'Leaking tap',
+      description: 'Water is leaking under the sink.',
+      status: 'new',
+      attachment_path: 'tenant-1/requests/request-1/photo.jpg',
+      created_at: '2026-07-17T10:00:00.000Z',
+      updated_at: '2026-07-17T10:00:00.000Z',
+    }, 'https://signed.test/photo')).toEqual({
+      id: 'request-1',
+      tenantId: 'tenant-1',
+      buildingId: 'building-1',
+      contractId: 'contract-1',
+      title: 'Leaking tap',
+      description: 'Water is leaking under the sink.',
+      status: 'new',
+      attachmentSignedUrl: 'https://signed.test/photo',
+      createdAt: '2026-07-17T10:00:00.000Z',
+      updatedAt: '2026-07-17T10:00:00.000Z',
+    })
   })
 })

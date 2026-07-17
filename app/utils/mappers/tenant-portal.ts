@@ -1,5 +1,13 @@
-import type { TenantContractSummary, TenantInvoiceDetail, TenantInvoiceListItem, TenantProfile } from '~/types/tenant-portal'
+import type {
+  TenantContractSummary,
+  TenantInvoiceDetail,
+  TenantInvoiceListItem,
+  TenantProfile,
+  TenantSupportRequest,
+  TenantSupportRequestStatus,
+} from '~/types/tenant-portal'
 import type { ContractStatus } from '~/types/contracts'
+import type { Tables } from '~/types/database.types'
 import type { InvoiceListItem } from '~/utils/validators/invoices'
 
 interface TenantProfileRow {
@@ -37,6 +45,8 @@ interface TenantInvoiceChargeRow {
   amount: number
   sort_order: number
 }
+
+export type TenantSupportRequestRow = Tables<'support_requests'>
 
 export function mapTenantProfile(row: TenantProfileRow): TenantProfile {
   return {
@@ -106,5 +116,23 @@ export function mapTenantInvoiceDetail(
       amount: charge.amount,
       sortOrder: charge.sort_order,
     })),
+  }
+}
+
+export function mapTenantSupportRequest(
+  row: TenantSupportRequestRow,
+  attachmentSignedUrl: string | null = null,
+): TenantSupportRequest {
+  return {
+    id: row.id,
+    tenantId: row.tenant_id,
+    buildingId: row.building_id,
+    contractId: row.contract_id,
+    title: row.title,
+    description: row.description,
+    status: row.status as TenantSupportRequestStatus,
+    attachmentSignedUrl,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
   }
 }

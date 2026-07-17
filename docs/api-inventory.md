@@ -1,7 +1,7 @@
 # API Inventory And Performance Contracts
 
 Generated from checked-in handlers by `node scripts/generate-api-inventory.mjs`.
-Route count: **147**.
+Route count: **155**.
 
 All business routes require server-side authorization unless explicitly documented as an internal-secret route. Initial reads use Nuxt `useFetch`; imperative reads and mutations use `apiFetch` with a 15-second timeout, request ID, no automatic mutation retry, and normalized server envelopes.
 
@@ -130,6 +130,7 @@ All business routes require server-side authorization unless explicitly document
 | POST | `/api/shared-expenses/[id]/allocate` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | GET | `/api/shared-expenses` | domain-bounded | request/DTO policy | p95 ≤ 400ms |
 | POST | `/api/shared-expenses` | n/a | invalidate affected domain | p95 ≤ 250ms |
+| GET | `/api/tenant-accounts` | domain-bounded | request/DTO policy | p95 ≤ 400ms |
 | GET | `/api/tenant/contract` | n/a | request/DTO policy | p95 ≤ 250ms |
 | DELETE | `/api/tenant/documents/[id]` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | GET | `/api/tenant/documents` | domain-bounded | request/DTO policy | p95 ≤ 400ms |
@@ -141,9 +142,16 @@ All business routes require server-side authorization unless explicitly document
 | GET | `/api/tenant/invoices` | domain-bounded | request/DTO policy | p95 ≤ 400ms |
 | GET | `/api/tenant/me` | n/a | request/DTO policy | p95 ≤ 250ms |
 | PATCH | `/api/tenant/me` | n/a | invalidate affected domain | p95 ≤ 250ms |
+| GET | `/api/tenant/requests` | domain-bounded | request/DTO policy | p95 ≤ 400ms |
+| POST | `/api/tenant/requests` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | DELETE | `/api/tenants/[id]` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | GET | `/api/tenants/[id]` | n/a | request/DTO policy | p95 ≤ 250ms |
 | PATCH | `/api/tenants/[id]` | n/a | invalidate affected domain | p95 ≤ 250ms |
+| DELETE | `/api/tenants/[id]/account` | n/a | invalidate affected domain | p95 ≤ 250ms |
+| GET | `/api/tenants/[id]/account` | domain-bounded | request/DTO policy | p95 ≤ 400ms |
+| PATCH | `/api/tenants/[id]/account` | n/a | invalidate affected domain | p95 ≤ 250ms |
+| POST | `/api/tenants/[id]/account` | n/a | invalidate affected domain | p95 ≤ 250ms |
+| POST | `/api/tenants/[id]/account/reset-password` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | DELETE | `/api/tenants/[id]/id-image` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | POST | `/api/tenants/[id]/id-image` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | POST | `/api/tenants/bulk-create` | n/a | invalidate affected domain | p95 ≤ 250ms |

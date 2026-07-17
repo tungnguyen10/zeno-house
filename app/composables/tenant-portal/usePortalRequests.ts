@@ -1,5 +1,7 @@
 import type { ApiSuccess } from '~/types/api'
+import type { TenantSupportRequest } from '~/types/tenant-portal'
 import { getApiErrorMessage } from '~/utils/api-error'
+import { uploadWithProgress } from '~/utils/upload'
 
 /**
  * Tenant support requests. Consumes `/api/tenant/requests`, which is delivered
@@ -7,22 +9,10 @@ import { getApiErrorMessage } from '~/utils/api-error'
  * ships, `useFetch` surfaces the error and the page renders its error state —
  * no placeholder data is fabricated.
  */
-export type TenantRequestStatus = 'open' | 'in_progress' | 'resolved' | 'closed'
-
-export interface TenantSupportRequest {
-  id: string
-  title: string
-  category: string
-  status: TenantRequestStatus
-  description: string
-  createdAt: string
-  attachmentSignedUrl: string | null
-}
-
 export interface TenantSupportRequestCreateInput {
   title: string
-  category: string
   description: string
+  attachment?: File
 }
 
 export function usePortalRequests() {
@@ -39,10 +29,22 @@ export function usePortalRequests() {
     apiError.value = null
     submitting.value = true
     try {
-      await apiFetch<ApiSuccess<TenantSupportRequest>>('/api/tenant/requests', {
-        method: 'POST',
-        body: input,
-      })
+      if (input.attachment) {
+        const form = new FormData()
+        form.append('title', input.title)
+        form.append('description', input.description)
+        form.append('attachment', input.attachment, input.attachment.name)
+        await uploadWithProgress<ApiSuccess<TenantSupportRequest>>(
+          '/api/tenant/requests',
+          form,
+        )
+      }
+      else {
+        await apiFetch<ApiSuccess<TenantSupportRequest>>('/api/tenant/requests', {
+          method: 'POST',
+          body: { title: input.title, description: input.description },
+        })
+      }
       await refresh()
       return true
     }

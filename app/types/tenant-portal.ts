@@ -26,6 +26,21 @@ export interface TenantIdentityImages {
   backSignedUrl: string | null
 }
 
+export type TenantSupportRequestStatus = 'new' | 'in_progress' | 'resolved'
+
+export interface TenantSupportRequest {
+  id: string
+  tenantId: string
+  buildingId: string
+  contractId: string
+  title: string
+  description: string
+  status: TenantSupportRequestStatus
+  attachmentSignedUrl: string | null
+  createdAt: string
+  updatedAt: string
+}
+
 export interface TenantContractSummary {
   id: string
   contractCode: string

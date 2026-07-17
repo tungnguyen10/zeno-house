@@ -1831,6 +1831,67 @@ export type Database = {
         }
         Relationships: []
       }
+      support_requests: {
+        Row: {
+          attachment_path: string | null
+          building_id: string
+          contract_id: string
+          created_at: string
+          description: string
+          id: string
+          status: string
+          tenant_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          attachment_path?: string | null
+          building_id: string
+          contract_id: string
+          created_at?: string
+          description: string
+          id?: string
+          status?: string
+          tenant_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          attachment_path?: string | null
+          building_id?: string
+          contract_id?: string
+          created_at?: string
+          description?: string
+          id?: string
+          status?: string
+          tenant_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_requests_building_id_fkey"
+            columns: ["building_id"]
+            isOneToOne: false
+            referencedRelation: "buildings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_requests_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_requests_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenant_user_links: {
         Row: {
           auth_user_id: string
