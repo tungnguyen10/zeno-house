@@ -1,6 +1,6 @@
 ---
 name: zeno-house
-description: Project orientation and context-routing for the Zeno House Nuxt/Supabase app. Use when Codex is asked to work in this repository, update docs/specs/instructions, understand product behavior, choose which project files to read first, or avoid wasting context on unrelated docs.
+description: Use when working in the Zeno House Nuxt/Supabase repository, including product behavior, architecture, UI, API, database, auth, docs, specs, instructions, or project file routing.
 ---
 
 # Zeno House
@@ -14,6 +14,17 @@ Use this skill to get oriented quickly before changing Zeno House. Keep context 
 3. If implementation guidance is needed, read the matching `docs/architecture/*` or `docs/features/*` file.
 4. Inspect source files only after choosing the narrow area.
 5. Update code, specs, and docs together when behavior changes.
+
+## UI Work
+
+For every user-visible UI change, read `references/ui-polish-workflow.md` before editing. This includes pages, layouts, components, shared styling, responsive behavior, visual states, accessibility presentation, UI copy, and design-system work.
+
+The workflow requires both design skills at the depth appropriate to the change:
+
+- **REQUIRED SUB-SKILL:** Use `frontend-design` for design judgment.
+- **REQUIRED SUB-SKILL:** Use `hallmark` for anti-slop critique and final polish.
+
+Read each selected skill's complete `SKILL.md`, then load only task-relevant references. Zeno House requirements, design-system rules, primitives, and frontend architecture override generic design-skill defaults.
 
 ## Context Routing
 

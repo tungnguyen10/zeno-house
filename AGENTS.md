@@ -6,7 +6,7 @@ Keep other entry files thin and reference this file instead of duplicating rules
 ## Fast Read Order
 
 - Read `docs/agent-context.md` first for project map and task routing.
-- Read only one task-matching deep source:
+- Read only the task-matching deep sources needed for the current scope:
    - architecture: `docs/architecture/rules.md`
    - frontend/UI: `docs/architecture/frontend.md`, `docs/ui-patterns/design-system.md`
    - server/API: `docs/architecture/api.md`
@@ -15,6 +15,15 @@ Keep other entry files thin and reference this file instead of duplicating rules
    - feature behavior: `docs/features/*.md`
    - requirement behavior: `openspec/specs/<capability>/spec.md`
 - For OpenSpec workflow tasks, use matching `.agents/skills/openspec-*` skill.
+
+## UI Quality Gate
+
+- Every user-visible UI change must follow `.agents/skills/zeno-house/references/ui-polish-workflow.md`; do not ship a functional-but-unpolished first pass for later redesign.
+- Use `frontend-design` for hierarchy, composition, density, interaction, and copy judgment. Use Hallmark for anti-slop critique, affected states, responsiveness, restraint, and final polish.
+- Resolve conflicts in this order: explicit user requirements -> accepted behavior -> Zeno House design system and primitives -> frontend architecture/instructions -> `frontend-design` -> Hallmark -> model defaults.
+- Generic design skills must not introduce a parallel theme, font system, token set, root `tokens.css`, `design.md`, `.hallmark/*`, CSS stamps, or new reusable primitives unless the user explicitly approves a design-system change.
+- Match exploration depth to scope, but keep the quality bar constant. A narrow UI edit preserves the current direction and polishes affected states; a new surface or redesign gets a full direction and visual verification pass.
+- When a material optimization needs a product/design-system decision, explain the problem, recommendation, affected surfaces, benefit, cost, and fallback, then ask one focused question.
 
 ## Context Budget
 

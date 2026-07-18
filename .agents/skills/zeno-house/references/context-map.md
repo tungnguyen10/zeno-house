@@ -13,7 +13,7 @@ Load this reference only when project orientation or file routing is needed.
 | Task | Read |
 | --- | --- |
 | Architecture rule | `docs/architecture/rules.md` |
-| Frontend/UI | `docs/architecture/frontend.md`, `docs/ui-patterns/design-system.md` |
+| Frontend/UI | `references/ui-polish-workflow.md`, `docs/architecture/frontend.md`, `docs/ui-patterns/design-system.md`; use `frontend-design` + Hallmark |
 | Component conventions | `.agents/instructions/components.instructions.md` |
 | Composables | `.agents/instructions/composables.instructions.md` |
 | Forms/validators | `.agents/instructions/forms.instructions.md` |
@@ -36,13 +36,7 @@ Load this reference only when project orientation or file routing is needed.
 
 ## Current OpenSpec State
 
-As of 2026-07-02:
-
-- active change: `add-owner-scoped-access`
-- accepted specs: 61 capability specs
-- archived changes: 50 archived changes
-
-Refresh this with:
+Do not store active-change names or inventory counts here; they drift. Refresh the current state with:
 
 ```bash
 openspec list --json
@@ -73,4 +67,4 @@ openspec list --specs
 - Do not trust inventory counts in prose unless recently refreshed.
 - Do not edit `app/types/database.types.ts` manually.
 - Do not use `meter_devices` as current design; readings are room+meter-type scoped.
-- Do not assume managers have owner-wide access; check the active `add-owner-scoped-access` change and current permission utilities.
+- Do not assume managers have owner-wide access; check current accepted specs, active changes, and permission utilities.

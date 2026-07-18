@@ -24,7 +24,7 @@ Read only what matches the task:
 | Any code change | `AGENTS.md`, this file | relevant source files |
 | Feature behavior | `openspec/specs/<capability>/spec.md` | `docs/features/*.md` if current UI/domain context is needed |
 | New/changed requirement | `docs/development/change-workflow.md` | OpenSpec change under `openspec/changes/<name>` |
-| Frontend/UI | `docs/architecture/frontend.md` | `docs/ui-patterns/design-system.md`, `.agents/instructions/components.instructions.md` |
+| Frontend/UI | `.agents/skills/zeno-house/references/ui-polish-workflow.md` | `docs/architecture/frontend.md`, `docs/ui-patterns/design-system.md`, applicable `.agents/instructions/**`; use `frontend-design` + Hallmark |
 | Server/API | `docs/architecture/api.md` | `docs/architecture/rules.md`, relevant `server/services/**` |
 | Auth/permissions | `docs/architecture/auth-permissions.md` | `server/utils/permissions.ts`, `server/utils/scope.ts` |
 | Database/Supabase | `docs/architecture/database.md` | migrations under `supabase/migrations/**` |
