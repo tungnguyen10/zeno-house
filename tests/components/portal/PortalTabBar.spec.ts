@@ -39,7 +39,7 @@ describe('PortalTabBar', () => {
   it('uses ≥44px touch targets on every tab', () => {
     const wrapper = mountTabBar()
     for (const link of wrapper.findAll('a')) {
-      expect(link.classes()).toContain('min-h-[56px]')
+      expect(link.classes()).toContain('min-h-[64px]')
     }
   })
 
@@ -52,7 +52,7 @@ describe('PortalTabBar', () => {
     expect(active.attributes('aria-current')).toBe('page')
     // Home tab is exact-match only, so it must NOT be active here.
     const home = links[0]!
-    expect(home.classes()).toContain('text-body')
+    expect(home.classes()).toContain('text-muted')
     expect(home.attributes('aria-current')).toBeUndefined()
   })
 

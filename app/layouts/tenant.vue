@@ -21,5 +21,9 @@
     </div>
     <PortalToastHost />
     <PortalInstallPrompt />
+    <!-- Stable, portal-scoped mount point for overlays (bottom sheets). Lives in
+         the layout so it survives page transitions, and sits inside
+         `.portal-shell` so teleported overlays inherit the portal tokens. -->
+    <div id="portal-overlay-root" />
   </div>
 </template>

@@ -1,12 +1,22 @@
 import type { ContractStatus } from '~/types/contracts'
 import type { InvoiceStatus } from '~/utils/constants/billing'
 
+export type TenantGender = 'male' | 'female' | 'other'
+
 export interface TenantProfile {
   id: string
   code: string
+  status: string
   fullName: string
   phone: string
   email: string | null
+  gender: TenantGender | null
+  dateOfBirth: string | null
+  occupation: string | null
+  permanentAddress: string | null
+  idNumber: string | null
+  idIssuedDate: string | null
+  idIssuedPlace: string | null
   emergencyContactName: string | null
   emergencyContactPhone: string | null
   notes: string | null

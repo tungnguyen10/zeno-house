@@ -2,7 +2,7 @@
 import clsx from 'clsx'
 
 const props = withDefaults(defineProps<{
-  modelValue?: string
+  modelValue?: string | null
   label?: string
   placeholder?: string
   error?: string
@@ -54,7 +54,7 @@ const textareaClass = computed(() =>
 
 <template>
   <div
-    class="flex flex-col gap-1.5"
+    class="ui-field flex flex-col gap-1.5"
     :data-invalid="error ? '' : undefined"
     :data-disabled="disabled ? '' : undefined"
   >
@@ -69,7 +69,7 @@ const textareaClass = computed(() =>
 
     <textarea
       :id="textareaId"
-      :value="modelValue"
+      :value="modelValue ?? ''"
       :placeholder="placeholder"
       :disabled="disabled"
       :required="required"

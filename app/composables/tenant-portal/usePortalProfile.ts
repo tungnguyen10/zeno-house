@@ -8,8 +8,16 @@ import { getApiErrorMessage } from '~/utils/api-error'
 function applyOptimistic(profile: TenantProfile, input: TenantProfileUpdateInput): TenantProfile {
   return {
     ...profile,
+    ...(input.full_name !== undefined ? { fullName: input.full_name } : {}),
     ...(input.phone !== undefined ? { phone: input.phone } : {}),
     ...(input.email !== undefined ? { email: input.email } : {}),
+    ...(input.gender !== undefined ? { gender: input.gender } : {}),
+    ...(input.date_of_birth !== undefined ? { dateOfBirth: input.date_of_birth } : {}),
+    ...(input.occupation !== undefined ? { occupation: input.occupation } : {}),
+    ...(input.permanent_address !== undefined ? { permanentAddress: input.permanent_address } : {}),
+    ...(input.id_number !== undefined ? { idNumber: input.id_number } : {}),
+    ...(input.id_issued_date !== undefined ? { idIssuedDate: input.id_issued_date } : {}),
+    ...(input.id_issued_place !== undefined ? { idIssuedPlace: input.id_issued_place } : {}),
     ...(input.emergency_contact_name !== undefined
       ? { emergencyContactName: input.emergency_contact_name }
       : {}),

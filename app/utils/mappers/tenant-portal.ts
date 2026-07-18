@@ -13,9 +13,17 @@ import type { InvoiceListItem } from '~/utils/validators/invoices'
 interface TenantProfileRow {
   id: string
   code: string
+  status: string
   full_name: string
   phone: string
   email: string | null
+  gender: string | null
+  date_of_birth: string | null
+  occupation: string | null
+  permanent_address: string | null
+  id_number: string | null
+  id_issued_date: string | null
+  id_issued_place: string | null
   emergency_contact_name: string | null
   emergency_contact_phone: string | null
   notes: string | null
@@ -52,9 +60,17 @@ export function mapTenantProfile(row: TenantProfileRow): TenantProfile {
   return {
     id: row.id,
     code: row.code,
+    status: row.status,
     fullName: row.full_name,
     phone: row.phone,
     email: row.email,
+    gender: (row.gender as TenantProfile['gender']) ?? null,
+    dateOfBirth: row.date_of_birth,
+    occupation: row.occupation,
+    permanentAddress: row.permanent_address,
+    idNumber: row.id_number,
+    idIssuedDate: row.id_issued_date,
+    idIssuedPlace: row.id_issued_place,
     emergencyContactName: row.emergency_contact_name,
     emergencyContactPhone: row.emergency_contact_phone,
     notes: row.notes,

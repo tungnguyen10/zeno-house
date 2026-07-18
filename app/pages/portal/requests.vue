@@ -139,17 +139,16 @@ async function onSubmit() {
 
     <PortalBottomSheet v-model="sheetOpen" title="Gửi yêu cầu">
       <form class="space-y-4 py-1" @submit.prevent="onSubmit">
-        <PortalTextField
+        <UiInput
           v-model="form.title"
           label="Tiêu đề"
           placeholder="Ví dụ: Vòi nước bị rò rỉ"
           :error="formErrors.title"
         />
 
-        <PortalTextField
+        <UiTextarea
           v-model="form.description"
           label="Mô tả"
-          textarea
           :rows="4"
           placeholder="Mô tả chi tiết vấn đề của bạn"
           :error="formErrors.description"

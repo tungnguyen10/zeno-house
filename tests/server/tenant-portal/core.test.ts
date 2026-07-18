@@ -13,18 +13,23 @@ import {
 } from '~/utils/mappers/tenant-portal'
 
 describe('tenant portal validators', () => {
-  it('keeps only profile contact fields', () => {
+  it('keeps whitelisted profile fields and strips protected columns', () => {
     const result = tenantProfileUpdateSchema.parse({
+      full_name: 'Nguyen Van A',
       phone: '0901234567',
       email: 'tenant@example.com',
-      status: 'archived',
+      gender: 'male',
       id_number: '012345678901',
+      status: 'archived',
       tenant_id: 'another-tenant',
     })
 
     expect(result).toEqual({
+      full_name: 'Nguyen Van A',
       phone: '0901234567',
       email: 'tenant@example.com',
+      gender: 'male',
+      id_number: '012345678901',
     })
   })
 
@@ -80,9 +85,17 @@ describe('tenant portal mappers', () => {
     const profile = mapTenantProfile({
       id: 'tenant-1',
       code: 'T-001',
+      status: 'active',
       full_name: 'Nguyen Van A',
       phone: '0901234567',
       email: 'tenant@example.com',
+      gender: 'male',
+      date_of_birth: '1990-01-01',
+      occupation: 'Engineer',
+      permanent_address: '12 Le Loi, HCM',
+      id_number: '012345678901',
+      id_issued_date: '2018-05-20',
+      id_issued_place: 'Cuc Canh sat QLHC',
       emergency_contact_name: 'Tran Thi B',
       emergency_contact_phone: '0907654321',
       notes: 'Call after 5pm',
@@ -91,9 +104,17 @@ describe('tenant portal mappers', () => {
     expect(profile).toEqual({
       id: 'tenant-1',
       code: 'T-001',
+      status: 'active',
       fullName: 'Nguyen Van A',
       phone: '0901234567',
       email: 'tenant@example.com',
+      gender: 'male',
+      dateOfBirth: '1990-01-01',
+      occupation: 'Engineer',
+      permanentAddress: '12 Le Loi, HCM',
+      idNumber: '012345678901',
+      idIssuedDate: '2018-05-20',
+      idIssuedPlace: 'Cuc Canh sat QLHC',
       emergencyContactName: 'Tran Thi B',
       emergencyContactPhone: '0907654321',
       notes: 'Call after 5pm',

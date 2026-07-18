@@ -13,8 +13,10 @@ describe('portal requests refreshed UI', () => {
     expect(page).toContain('portal-type-caption')
   })
 
-  it('routes text and multiline fields through PortalTextField with unified errors', () => {
-    expect(page.match(/<PortalTextField/g)).toHaveLength(2)
+  it('routes text and multiline fields through the shared Ui* form primitives with unified errors', () => {
+    expect(page.match(/<UiInput/g)).toHaveLength(1)
+    expect(page.match(/<UiTextarea/g)).toHaveLength(1)
+    expect(page).not.toContain('<PortalTextField')
     expect(page).toContain(':error="formErrors.title"')
     expect(page).toContain(':error="formErrors.description"')
     expect(page.match(/<input/g)).toHaveLength(1)

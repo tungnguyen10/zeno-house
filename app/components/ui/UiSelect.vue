@@ -268,7 +268,7 @@ const triggerClass = computed(() =>
 <template>
   <div
     ref="containerRef"
-    :class="['flex flex-col gap-1.5', rootClass]"
+    :class="['ui-field flex flex-col gap-1.5', rootClass]"
     :style="rootStyle"
     :data-invalid="error ? '' : undefined"
     :data-disabled="disabled ? '' : undefined"

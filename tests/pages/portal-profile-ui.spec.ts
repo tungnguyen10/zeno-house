@@ -13,10 +13,22 @@ describe('portal profile refreshed UI', () => {
     expect(page).toContain('variant="card"')
   })
 
-  it('routes all editable text through PortalTextField', () => {
-    expect(page.match(/<PortalTextField/g)).toHaveLength(5)
+  it('separates a read-only view state from an inline edit state', () => {
+    expect(page).toContain('mode === \'view\'')
+    expect(page).toContain('@click="openEdit"')
+    expect(page).toContain('@click="cancelEdit"')
+    expect(page).toContain('@submit.prevent="onSave"')
+  })
+
+  it('routes every editable field through PortalTextField', () => {
+    expect(page.match(/<PortalTextField/g)).toHaveLength(12)
     expect(page.match(/<input/g)).toHaveLength(1)
     expect(page).toContain('type="file"')
+  })
+
+  it('offers gender as an accessible segmented control', () => {
+    expect(page).toContain('GENDER_OPTIONS')
+    expect(page).toContain(':aria-pressed="form.gender === option.value"')
   })
 
   it('uses semantic upload progress without inline presentation styles', () => {

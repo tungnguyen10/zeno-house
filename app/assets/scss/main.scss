@@ -267,6 +267,41 @@ input[type='number'] {
 .portal-shell .focus-visible\:ring-theme\/20:focus-visible,
 .portal-shell .focus-within\:ring-theme\/20:focus-within { --tw-ring-color: rgb(0 229 255 / 0.2); }
 
+/* ──────────────────────────────────────────────────────────────
+   Shared admin form primitives (UiInput / UiTextarea / UiSelect) reused
+   on portal surfaces. Admin keeps its dark tokens untouched; these overrides
+   only resolve inside `.portal-shell` via the `.ui-field` marker, so neither
+   theme leaks into the other. Colors are already near-identical (same border,
+   cyan accent, and muted); the portal only needs a softer surface, the
+   native-app radius, and a comfortable touch target.
+   ────────────────────────────────────────────────────────────── */
+.portal-shell .ui-field .rounded-md { border-radius: 0.75rem; }
+.portal-shell .ui-field input,
+.portal-shell .ui-field [role='combobox'] { min-height: 44px; }
+
+.portal-shell .ui-field .bg-dark-surface { background-color: var(--portal-surface); }
+.portal-shell .ui-field .bg-dark-hover { background-color: var(--portal-surface-muted); }
+.portal-shell .ui-field .border-dark-border { border-color: var(--portal-border); }
+.portal-shell .ui-field .text-white { color: var(--portal-title); }
+.portal-shell .ui-field .text-muted { color: var(--portal-muted); }
+.portal-shell .ui-field label.text-muted { color: var(--portal-title); }
+.portal-shell .ui-field .placeholder-muted::placeholder { color: var(--portal-muted); }
+
+/* Focus (admin cyan → portal accent) */
+.portal-shell .ui-field .focus\:border-cyan\/70:focus,
+.portal-shell .ui-field .focus-within\:border-cyan\/70:focus-within { border-color: var(--portal-accent); }
+.portal-shell .ui-field .focus\:ring-cyan\/30:focus,
+.portal-shell .ui-field .focus-within\:ring-cyan\/30:focus-within { --tw-ring-color: rgb(0 229 255 / 0.3); }
+.portal-shell .ui-field .hover\:border-dark-border\/80:hover { border-color: var(--portal-border); }
+
+/* Error state (admin red → portal danger) */
+.portal-shell .ui-field .text-error { color: var(--portal-danger-ink); }
+.portal-shell .ui-field .border-error\/50 { border-color: rgb(255 69 58 / 0.5); }
+.portal-shell .ui-field .focus\:border-error\/60:focus,
+.portal-shell .ui-field .focus-within\:border-error\/60:focus-within { border-color: rgb(255 69 58 / 0.6); }
+.portal-shell .ui-field .focus\:ring-error\/30:focus,
+.portal-shell .ui-field .focus-within\:ring-error\/30:focus-within { --tw-ring-color: rgb(255 69 58 / 0.3); }
+
 /* Native-like route transitions. Content slides horizontally; the shell
    (header + tab bar) stays fixed. Respect reduced-motion. */
 .portal-page-enter-active,

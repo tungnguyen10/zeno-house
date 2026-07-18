@@ -19,19 +19,24 @@ function isActive(tab: PortalNavItem): boolean {
       <li v-for="tab in tabs" :key="tab.key" class="flex-1">
         <NuxtLink
           :to="tab.to"
-          class="relative flex min-h-[56px] flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1.5 text-[11px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-theme/40"
-          :class="isActive(tab) ? 'text-theme' : 'text-body'"
+          class="flex min-h-[64px] flex-col items-center justify-center gap-1 px-1 pb-2 pt-3 text-[12px] transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-theme/40 motion-reduce:transition-none"
+          :class="isActive(tab) ? 'text-theme' : 'text-muted'"
           :aria-current="isActive(tab) ? 'page' : undefined"
         >
-          <span
-            :data-active-indicator="isActive(tab) ? '' : undefined"
-            class="flex h-7 min-w-10 items-center justify-center rounded-full transition-colors"
-            :class="isActive(tab) ? 'bg-smoke-blue' : 'bg-transparent'"
-            aria-hidden="true"
-          >
-            <component :is="tab.icon" class="h-5 w-5" />
+          <span class="relative flex h-9 w-[56px] items-center justify-center">
+            <span
+              :data-active-indicator="isActive(tab) ? '' : undefined"
+              class="absolute inset-0 rounded-full transition-colors duration-200 motion-reduce:transition-none"
+              :class="isActive(tab) ? 'bg-smoke-blue' : 'bg-transparent'"
+              aria-hidden="true"
+            />
+            <component
+              :is="tab.icon"
+              class="relative h-6 w-6"
+              aria-hidden="true"
+            />
           </span>
-          <span class="whitespace-nowrap">{{ tab.label }}</span>
+          <span class="whitespace-nowrap" :class="isActive(tab) ? 'font-semibold' : 'font-medium'">{{ tab.label }}</span>
         </NuxtLink>
       </li>
     </ul>
