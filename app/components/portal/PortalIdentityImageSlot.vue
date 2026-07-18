@@ -43,7 +43,7 @@ function onChange(event: Event) {
 
 <template>
   <div class="space-y-2">
-    <p class="text-sm font-medium text-title">{{ label }}</p>
+    <p class="portal-type-label text-title">{{ label }}</p>
     <div class="relative aspect-[3/2] overflow-hidden rounded-2xl border border-border-light bg-smoke">
       <img
         v-if="signedUrl"
@@ -54,7 +54,7 @@ function onChange(event: Event) {
       <button
         v-else
         type="button"
-        class="flex h-full w-full flex-col items-center justify-center gap-2 text-body transition-colors hover:bg-smoke-blue"
+        class="flex h-full w-full flex-col items-center justify-center gap-2 text-body transition-colors hover:bg-smoke-blue focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-theme/40"
         @click="pick"
       >
         <IconPhoto class="h-7 w-7" aria-hidden="true" />
@@ -66,7 +66,10 @@ function onChange(event: Event) {
         class="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-white/80"
       >
         <IconSpinner class="h-6 w-6 animate-spin text-theme motion-reduce:animate-none" aria-hidden="true" />
-        <span class="text-xs font-medium text-title">Đang tải {{ progress }}%</span>
+        <span class="portal-type-caption font-medium text-title">Đang tải {{ progress }}%</span>
+        <progress class="portal-progress max-w-32" :value="progress" max="100">
+          {{ progress }}%
+        </progress>
       </div>
     </div>
 

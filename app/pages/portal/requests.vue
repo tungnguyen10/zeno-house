@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import type { TenantSupportRequestStatus } from '~/types/tenant-portal'
 import {
   TENANT_DOCUMENT_MAX_BYTES,
   TENANT_DOCUMENT_MIME_TYPES,
@@ -15,18 +14,6 @@ setChrome({ title: 'Yêu cầu', back: null })
 
 const { requests, status, error, refresh, submit, submitting } = usePortalRequests()
 const toast = usePortalToast()
-
-const STATUS_LABELS: Record<TenantSupportRequestStatus, string> = {
-  new: 'Mới gửi',
-  in_progress: 'Đang xử lý',
-  resolved: 'Đã xử lý',
-}
-
-const STATUS_CLASS: Record<TenantSupportRequestStatus, string> = {
-  new: 'bg-warning/15 text-warning',
-  in_progress: 'bg-theme/10 text-theme',
-  resolved: 'bg-success/15 text-success',
-}
 
 const sheetOpen = ref(false)
 const attachmentInput = ref<HTMLInputElement | null>(null)
@@ -99,9 +86,9 @@ async function onSubmit() {
     </Teleport>
 
     <PortalPullToRefresh :on-refresh="refresh">
-      <div class="space-y-3 px-4 py-4">
+      <div class="space-y-3 px-4 py-5">
         <template v-if="status === 'pending'">
-          <PortalSkeleton v-for="n in 3" :key="n" class="h-24 w-full" />
+          <PortalSkeleton v-for="n in 3" :key="n" variant="card" />
         </template>
 
         <PortalEmptyState
@@ -129,26 +116,21 @@ async function onSubmit() {
           <PortalCard v-for="request in requests" :key="request.id">
             <div class="flex items-start justify-between gap-3">
               <div class="min-w-0">
-                <p class="truncate text-sm font-semibold text-title">{{ request.title }}</p>
-                <p class="mt-1 line-clamp-2 text-xs text-body">{{ request.description }}</p>
+                <p class="portal-type-heading truncate text-title">{{ request.title }}</p>
+                <p class="portal-type-body mt-1 line-clamp-2 text-body">{{ request.description }}</p>
                 <a
                   v-if="request.attachmentSignedUrl"
                   :href="request.attachmentSignedUrl"
                   target="_blank"
                   rel="noopener"
-                  class="mt-2 inline-flex items-center gap-1 text-xs font-medium text-theme"
+                  class="portal-type-label mt-2 inline-flex items-center gap-1 rounded-md text-theme focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme/40"
                 >
                   <IconDocumentText class="h-4 w-4" aria-hidden="true" />
                   Xem tệp đính kèm
                 </a>
-                <p class="mt-2 text-xs text-body">{{ request.createdAt }}</p>
+                <p class="portal-type-caption mt-2 text-body">{{ request.createdAt }}</p>
               </div>
-              <span
-                class="inline-flex shrink-0 items-center rounded-full px-2.5 py-0.5 text-xs font-semibold"
-                :class="STATUS_CLASS[request.status]"
-              >
-                {{ STATUS_LABELS[request.status] }}
-              </span>
+              <PortalRequestStatusBadge :status="request.status" />
             </div>
           </PortalCard>
         </template>
@@ -174,9 +156,10 @@ async function onSubmit() {
         />
 
         <div class="space-y-1.5">
-          <span class="text-sm font-medium text-title">Tệp đính kèm (không bắt buộc)</span>
+          <span class="portal-type-label text-title">Tệp đính kèm (không bắt buộc)</span>
           <label
-            class="flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border border-border-light bg-white px-3 py-2.5 text-sm text-body transition-colors hover:border-theme/40"
+            class="flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border border-border-light bg-white px-3 py-2.5 text-sm text-body transition-colors hover:border-theme/40 focus-within:border-theme focus-within:outline-none focus-within:ring-2 focus-within:ring-theme/20"
+            :class="attachmentError ? 'border-portal-danger focus-within:border-portal-danger focus-within:ring-portal-danger/20' : undefined"
           >
             <IconDocumentText class="h-5 w-5 shrink-0 text-theme" aria-hidden="true" />
             <span class="min-w-0 flex-1 truncate">
@@ -187,10 +170,14 @@ async function onSubmit() {
               type="file"
               accept="image/jpeg,image/png,image/webp,application/pdf"
               class="sr-only"
+              :aria-invalid="attachmentError ? 'true' : undefined"
+              :aria-describedby="attachmentError ? 'request-attachment-error' : undefined"
               @change="onAttachmentChange"
             >
           </label>
-          <p v-if="attachmentError" class="text-xs text-error">{{ attachmentError }}</p>
+          <p v-if="attachmentError" id="request-attachment-error" class="portal-type-caption text-portal-danger">
+            {{ attachmentError }}
+          </p>
         </div>
 
         <PortalButton type="submit" block size="lg" :loading="submitting">Gửi yêu cầu</PortalButton>

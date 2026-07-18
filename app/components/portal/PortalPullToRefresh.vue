@@ -76,7 +76,6 @@ const indicatorStyle = computed(() => ({
 
 const contentStyle = computed(() => ({
   transform: pull.value ? `translateY(${pull.value}px)` : undefined,
-  transition: active.value ? 'none' : 'transform 220ms ease',
 }))
 
 const spinnerStyle = computed(() =>
@@ -106,7 +105,10 @@ const spinnerStyle = computed(() =>
         />
       </span>
     </div>
-    <div :style="contentStyle">
+    <div
+      :class="!active && 'transition-transform duration-[220ms] [transition-timing-function:cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none'"
+      :style="contentStyle"
+    >
       <slot />
     </div>
   </div>

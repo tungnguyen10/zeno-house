@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { formatCurrencyCompact } from '../../app/utils/format/currency'
+import { formatCurrencyCompact, formatCurrencyNumber } from '../../app/utils/format/currency'
+
+describe('formatCurrencyNumber', () => {
+  it('formats the VND figure without baking the currency unit into it', () => {
+    expect(formatCurrencyNumber(1_250_000)).toBe('1.250.000')
+  })
+})
 
 describe('formatCurrencyCompact', () => {
   it('returns plain digits for amounts < 1000', () => {

@@ -64,8 +64,8 @@ const sheetStyle = computed(() =>
 <template>
   <Teleport to="body">
     <Transition
-      enter-active-class="transition-opacity duration-200"
-      leave-active-class="transition-opacity duration-200"
+      enter-active-class="transition-opacity duration-200 motion-reduce:transition-none"
+      leave-active-class="transition-opacity duration-200 motion-reduce:transition-none"
       enter-from-class="opacity-0"
       leave-to-class="opacity-0"
     >
@@ -78,15 +78,15 @@ const sheetStyle = computed(() =>
     </Transition>
 
     <Transition
-      enter-active-class="transition-transform duration-300 ease-out motion-reduce:transition-none"
-      leave-active-class="transition-transform duration-200 ease-in motion-reduce:transition-none"
+      enter-active-class="transition-transform duration-300 [transition-timing-function:cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none"
+      leave-active-class="transition-transform duration-200 [transition-timing-function:cubic-bezier(0.32,0,0.67,0)] motion-reduce:transition-none"
       enter-from-class="translate-y-full"
       leave-to-class="translate-y-full"
     >
       <div
         v-if="modelValue"
         class="portal-safe-bottom fixed inset-x-0 bottom-0 z-[76] rounded-t-3xl bg-white shadow-2xl"
-        :class="{ 'transition-transform duration-200': !dragging }"
+        :class="{ 'transition-transform duration-200 [transition-timing-function:cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none': !dragging }"
         :style="sheetStyle"
         role="dialog"
         aria-modal="true"
@@ -104,7 +104,7 @@ const sheetStyle = computed(() =>
           <h2 class="text-lg font-semibold text-title">{{ title }}</h2>
           <button
             type="button"
-            class="flex h-9 w-9 items-center justify-center rounded-full text-body transition-colors hover:bg-smoke"
+            class="flex h-11 w-11 items-center justify-center rounded-full text-body hover:bg-smoke focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme/40"
             aria-label="Đóng"
             @click="close"
           >

@@ -19,8 +19,8 @@ const InvoicesPage = (await import('../../app/pages/portal/invoices/index.vue'))
 
 const stubs = {
   PortalPullToRefresh: { props: ['onRefresh'], template: '<div><slot /></div>' },
-  PortalSkeleton: { template: '<div class="skeleton" />' },
-  PortalCard: { template: '<div class="card"><slot /></div>' },
+  PortalSkeleton: { props: ['variant'], template: '<div class="skeleton" :data-variant="variant" />' },
+  PortalCard: { props: ['accent'], template: '<div class="card" :data-accent="accent"><slot /></div>' },
   PortalEmptyState: {
     props: ['title', 'description', 'tone', 'actionLabel'],
     template: '<div class="empty" :data-tone="tone">{{ title }}</div>',
@@ -70,6 +70,7 @@ describe('portal invoices page — states', () => {
     invoicesState.status.value = 'pending'
     const wrapper = mountPage()
     expect(wrapper.findAll('.skeleton').length).toBeGreaterThan(0)
+    expect(wrapper.findAll('[data-variant="statement"]')).toHaveLength(4)
     expect(wrapper.find('.empty').exists()).toBe(false)
   })
 
@@ -91,5 +92,8 @@ describe('portal invoices page — states', () => {
     const wrapper = mountPage()
     expect(wrapper.findAll('.card')).toHaveLength(2)
     expect(wrapper.findAll('.badge')).toHaveLength(2)
+    expect(wrapper.findAll('.card').map(card => card.attributes('data-accent'))).toEqual(['due', 'paid'])
+    expect(wrapper.findAll('.portal-money')).toHaveLength(2)
+    expect(wrapper.findAll('.portal-money-unit').every(unit => unit.text() === '₫')).toBe(true)
   })
 })

@@ -17,14 +17,20 @@ const emit = defineEmits<{
 const iconWrapperClass = computed(() =>
   clsx(
     'mb-4 flex h-14 w-14 items-center justify-center rounded-2xl',
-    props.tone === 'error' ? 'bg-error/10 text-error' : 'bg-smoke-blue text-theme',
+    props.tone === 'error'
+      ? 'bg-portal-danger/10 text-portal-danger'
+      : 'bg-smoke-blue text-theme',
   ),
 )
 </script>
 
 <template>
-  <div class="flex flex-col items-center justify-center px-6 py-12 text-center">
-    <div :class="iconWrapperClass">
+  <div
+    class="flex flex-col items-center justify-center px-6 py-12 text-center"
+    :data-tone="tone"
+    :role="tone === 'error' ? 'alert' : undefined"
+  >
+    <div data-icon :class="iconWrapperClass">
       <slot name="icon">
         <IconAlertCircle v-if="tone === 'error'" class="h-6 w-6" aria-hidden="true" />
         <IconLayers v-else class="h-6 w-6" aria-hidden="true" />

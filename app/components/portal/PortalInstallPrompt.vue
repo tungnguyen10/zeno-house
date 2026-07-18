@@ -26,8 +26,8 @@ async function onInstall() {
   <div>
     <Teleport to="body">
       <Transition
-        enter-active-class="transition-all duration-300 ease-out"
-        leave-active-class="transition-all duration-200 ease-in"
+        enter-active-class="transition-[opacity,transform] duration-300 [transition-timing-function:cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none"
+        leave-active-class="transition-[opacity,transform] duration-200 [transition-timing-function:cubic-bezier(0.32,0,0.67,0)] motion-reduce:transition-none"
         enter-from-class="opacity-0 translate-y-4"
         leave-to-class="opacity-0 translate-y-4"
       >
@@ -46,7 +46,7 @@ async function onInstall() {
             <PortalButton size="sm" @click="onInstall">Cài đặt</PortalButton>
             <button
               type="button"
-              class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-body transition-colors hover:bg-smoke"
+              class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-body hover:bg-smoke focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme/40"
               aria-label="Bỏ qua"
               @click="dismiss"
             >

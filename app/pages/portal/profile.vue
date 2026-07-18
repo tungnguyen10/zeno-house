@@ -138,10 +138,10 @@ async function onLogout() {
       <PortalButton v-if="profile" variant="ghost" size="sm" @click="openEdit">Sửa</PortalButton>
     </Teleport>
 
-    <div class="space-y-5 px-4 py-4">
+    <div class="space-y-5 px-4 py-5">
       <!-- Profile -->
       <section class="space-y-2">
-        <PortalSkeleton v-if="profileStatus === 'pending'" class="h-40 w-full" />
+        <PortalSkeleton v-if="profileStatus === 'pending'" variant="statement" class="h-40" />
         <PortalEmptyState
           v-else-if="profileError || !profile"
           tone="error"
@@ -155,30 +155,30 @@ async function onLogout() {
               <IconUser class="h-7 w-7" aria-hidden="true" />
             </span>
             <div class="min-w-0">
-              <p class="truncate text-lg font-bold text-title">{{ profile.fullName }}</p>
-              <p class="truncate text-xs text-body">Mã: {{ profile.code }}</p>
+              <p class="portal-type-heading truncate text-title">{{ profile.fullName }}</p>
+              <p class="portal-type-caption truncate text-body">Mã: {{ profile.code }}</p>
             </div>
           </div>
-          <dl class="mt-4 space-y-3 border-t border-border-light pt-4">
-            <div class="flex items-center justify-between gap-3">
-              <dt class="text-sm text-body">Số điện thoại</dt>
-              <dd class="text-sm font-medium text-title">{{ profile.phone || '—' }}</dd>
+          <dl class="mt-4 divide-y divide-border-light border-t border-border-light">
+            <div class="flex items-center justify-between gap-3 py-3">
+              <dt class="portal-type-body text-body">Số điện thoại</dt>
+              <dd class="portal-type-body text-right font-medium text-title">{{ profile.phone || '—' }}</dd>
             </div>
-            <div class="flex items-center justify-between gap-3">
-              <dt class="text-sm text-body">Email</dt>
-              <dd class="truncate text-sm font-medium text-title">{{ profile.email || '—' }}</dd>
+            <div class="flex items-center justify-between gap-3 py-3">
+              <dt class="portal-type-body text-body">Email</dt>
+              <dd class="portal-type-body min-w-0 truncate text-right font-medium text-title">{{ profile.email || '—' }}</dd>
             </div>
-            <div class="flex items-center justify-between gap-3">
-              <dt class="text-sm text-body">Liên hệ khẩn cấp</dt>
-              <dd class="truncate text-sm font-medium text-title">{{ profile.emergencyContactName || '—' }}</dd>
+            <div class="flex items-center justify-between gap-3 py-3">
+              <dt class="portal-type-body text-body">Liên hệ khẩn cấp</dt>
+              <dd class="portal-type-body min-w-0 truncate text-right font-medium text-title">{{ profile.emergencyContactName || '—' }}</dd>
             </div>
-            <div class="flex items-center justify-between gap-3">
-              <dt class="text-sm text-body">SĐT khẩn cấp</dt>
-              <dd class="text-sm font-medium text-title">{{ profile.emergencyContactPhone || '—' }}</dd>
+            <div class="flex items-center justify-between gap-3 py-3">
+              <dt class="portal-type-body text-body">SĐT khẩn cấp</dt>
+              <dd class="portal-type-body text-right font-medium text-title">{{ profile.emergencyContactPhone || '—' }}</dd>
             </div>
-            <div v-if="profile.notes">
-              <dt class="text-sm text-body">Ghi chú</dt>
-              <dd class="mt-1 whitespace-pre-line text-sm text-title">{{ profile.notes }}</dd>
+            <div v-if="profile.notes" class="py-3">
+              <dt class="portal-type-body text-body">Ghi chú</dt>
+              <dd class="portal-type-body mt-1 whitespace-pre-line text-title">{{ profile.notes }}</dd>
             </div>
           </dl>
         </PortalCard>
@@ -186,7 +186,7 @@ async function onLogout() {
 
       <!-- Identity images -->
       <section class="space-y-3">
-        <h3 class="px-1 text-sm font-semibold text-title">Ảnh định danh (CCCD)</h3>
+        <h3 class="portal-type-heading px-1 text-title">Ảnh định danh (CCCD)</h3>
         <PortalCard class="grid grid-cols-1 gap-4">
           <PortalIdentityImageSlot
             label="Mặt trước"
@@ -212,7 +212,7 @@ async function onLogout() {
       <!-- Documents -->
       <section class="space-y-3">
         <div class="flex items-center justify-between px-1">
-          <h3 class="text-sm font-semibold text-title">Tài liệu</h3>
+          <h3 class="portal-type-heading text-title">Tài liệu</h3>
           <PortalButton variant="ghost" size="sm" :loading="docs.uploading.value" @click="pickDocument">
             <IconPlus class="h-4 w-4" aria-hidden="true" />
             Tải lên
@@ -220,13 +220,13 @@ async function onLogout() {
         </div>
 
         <div v-if="docs.uploading.value" class="px-1">
-          <div class="h-1.5 w-full overflow-hidden rounded-full bg-smoke">
-            <div class="h-full rounded-full bg-theme transition-all" :style="{ width: `${docs.progress.value}%` }" />
-          </div>
-          <p class="mt-1 text-xs text-body">Đang tải lên {{ docs.progress.value }}%</p>
+          <progress class="portal-progress" :value="docs.progress.value" max="100">
+            {{ docs.progress.value }}%
+          </progress>
+          <p class="portal-type-caption mt-1 text-body">Đang tải lên {{ docs.progress.value }}%</p>
         </div>
 
-        <PortalSkeleton v-if="docs.status.value === 'pending'" class="h-20 w-full" />
+        <PortalSkeleton v-if="docs.status.value === 'pending'" variant="card" class="h-20" />
         <PortalEmptyState
           v-else-if="docs.error.value"
           tone="error"
@@ -235,7 +235,7 @@ async function onLogout() {
           @action="docs.refresh"
         />
         <PortalCard v-else-if="docs.documents.value.length === 0">
-          <p class="text-sm text-body">Chưa có tài liệu nào.</p>
+          <p class="portal-type-body text-body">Chưa có tài liệu nào.</p>
         </PortalCard>
         <PortalCard v-else :padded="false">
           <ul class="divide-y divide-border-light">
@@ -247,13 +247,18 @@ async function onLogout() {
               <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-smoke-blue text-theme">
                 <IconDocumentText class="h-5 w-5" aria-hidden="true" />
               </span>
-              <a :href="document.signedUrl" target="_blank" rel="noopener" class="min-w-0 flex-1">
-                <p class="truncate text-sm font-medium text-title">{{ document.name }}</p>
-                <p class="text-xs text-body">{{ formatBytes(document.size) }}</p>
+              <a
+                :href="document.signedUrl"
+                target="_blank"
+                rel="noopener"
+                class="min-w-0 flex-1 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme/40"
+              >
+                <p class="portal-type-body truncate font-medium text-title">{{ document.name }}</p>
+                <p class="portal-type-caption text-body">{{ formatBytes(document.size) }}</p>
               </a>
               <button
                 type="button"
-                class="flex h-9 w-9 items-center justify-center rounded-full text-body transition-colors hover:bg-error/10 hover:text-error"
+                class="flex h-11 w-11 items-center justify-center rounded-full text-body transition-colors hover:bg-portal-danger/10 hover:text-portal-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-portal-danger/40"
                 aria-label="Xóa tài liệu"
                 @click="onDocumentRemove(document.id)"
               >

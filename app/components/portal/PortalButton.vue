@@ -21,10 +21,16 @@ const props = withDefaults(defineProps<{
   iconOnly: false,
 })
 
+if (props.iconOnly && !props.ariaLabel?.trim()) {
+  throw new Error('PortalButton: ariaLabel is required when iconOnly is true')
+}
+
 // ≥44px touch targets for md/lg per the native-shell touch contract.
 const buttonClass = computed(() =>
   clsx(
-    'inline-flex items-center justify-center gap-2 font-semibold rounded-xl transition-colors select-none',
+    'inline-flex items-center justify-center gap-2 font-semibold rounded-xl transition-transform select-none',
+    '[transition-duration:var(--portal-motion-micro)] [transition-timing-function:var(--portal-ease-out)]',
+    'active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-100',
     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-theme/40',
     props.block && 'w-full',
     !props.iconOnly && {

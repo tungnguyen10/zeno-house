@@ -14,27 +14,40 @@ export default {
       colors: {
         // ── Brand ──────────────────────────────
         theme: {
-          DEFAULT: '#0B59DB',
+          DEFAULT: '#1554F0',
           purple: '#6653E8',
         },
         brand: '#79F4E4',
 
         // ── Text ───────────────────────────────
         title: '#0B1422',
-        body: '#6E7070',
+        body: '#5B6472',
         muted: '#98989D',       // label / secondary text trên dark bg
 
         // ── Backgrounds ────────────────────────
         smoke: {
-          DEFAULT: '#F2F5FA',
-          blue: '#EEF1FF',
+          DEFAULT: '#F4F6FB',
+          blue: '#EAF0FF',
           card: '#F4F6F8',
         },
 
         // ── Borders ────────────────────────────
         border: {
           DEFAULT: '#D5D7DA',
-          light: '#E1E4E5',
+          light: '#E6E9EF',
+        },
+
+        // ── Tenant portal semantics ────────────
+        // Keep admin dark-theme status aliases unchanged; portal components
+        // opt into this customer-facing set explicitly.
+        portal: {
+          muted: '#8A93A3',
+          positive: '#0E9F6E',
+          'positive-ink': '#087A55',
+          warning: '#B7791F',
+          'warning-ink': '#8A5615',
+          danger: '#E02424',
+          'danger-ink': '#B91C1C',
         },
 
         // ── Status ─────────────────────────────

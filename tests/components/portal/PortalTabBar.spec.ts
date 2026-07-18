@@ -55,4 +55,16 @@ describe('PortalTabBar', () => {
     expect(home.classes()).toContain('text-body')
     expect(home.attributes('aria-current')).toBeUndefined()
   })
+
+  it('uses safe-area padding, a quiet active indicator, and keyboard focus affordances', () => {
+    const wrapper = mountTabBar()
+    expect(wrapper.get('nav').classes()).toEqual(expect.arrayContaining([
+      'portal-safe-bottom',
+      'portal-safe-x',
+    ]))
+    expect(wrapper.get('[data-active-indicator]').classes()).toContain('bg-smoke-blue')
+    for (const link of wrapper.findAll('a')) {
+      expect(link.classes()).toContain('focus-visible:ring-2')
+    }
+  })
 })

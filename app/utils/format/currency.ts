@@ -6,6 +6,12 @@ export function formatCurrency(amount: number): string {
   }).format(amount)
 }
 
+export function formatCurrencyNumber(amount: number): string {
+  return new Intl.NumberFormat('vi-VN', {
+    maximumFractionDigits: 0,
+  }).format(amount)
+}
+
 const BILLION = 1_000_000_000
 const MILLION = 1_000_000
 const THOUSAND = 1_000

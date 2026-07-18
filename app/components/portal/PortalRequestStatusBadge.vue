@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import type { InvoiceStatus } from '~/utils/constants/billing'
+import type { TenantSupportRequestStatus } from '~/types/tenant-portal'
 import { PORTAL_STATUS_STYLES } from '~/utils/constants/portal-status'
 
 const props = defineProps<{
-  status: InvoiceStatus
+  status: TenantSupportRequestStatus
 }>()
 
 const style = computed(() => PORTAL_STATUS_STYLES[props.status])
