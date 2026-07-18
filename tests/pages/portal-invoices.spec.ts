@@ -25,7 +25,7 @@ const stubs = {
     props: ['title', 'description', 'tone', 'actionLabel'],
     template: '<div class="empty" :data-tone="tone">{{ title }}</div>',
   },
-  PortalInvoiceStatusBadge: { props: ['status'], template: '<span class="badge">{{ status }}</span>' },
+  PortalStatusBadge: { props: ['status'], template: '<span class="badge">{{ status }}</span>' },
 }
 
 function invoice(overrides: Partial<TenantInvoiceListItem> = {}): TenantInvoiceListItem {
@@ -70,7 +70,7 @@ describe('portal invoices page — states', () => {
     invoicesState.status.value = 'pending'
     const wrapper = mountPage()
     expect(wrapper.findAll('.skeleton').length).toBeGreaterThan(0)
-    expect(wrapper.findAll('[data-variant="statement"]')).toHaveLength(4)
+    expect(wrapper.findAll('[data-variant="statement"]')).toHaveLength(6)
     expect(wrapper.find('.empty').exists()).toBe(false)
   })
 

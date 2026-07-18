@@ -29,7 +29,7 @@ const STATUS_CLASS: Record<ContractStatus, string> = {
 
 <template>
   <PortalPullToRefresh :on-refresh="refresh">
-    <div class="space-y-5 px-4 py-5">
+    <div class="mx-auto w-full max-w-2xl space-y-5 px-4 py-5 lg:px-8 lg:py-8">
       <template v-if="status === 'pending'">
         <PortalSkeleton variant="statement" />
         <PortalSkeleton variant="card" class="h-40" />

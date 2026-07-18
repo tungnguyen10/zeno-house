@@ -44,7 +44,7 @@ const buttonClass = computed(() =>
       'size-[52px] text-base': props.size === 'lg',
     },
     {
-      'bg-theme text-white hover:bg-theme/90 active:bg-theme/95': props.variant === 'primary',
+      'bg-theme text-[color:var(--portal-bg)] hover:bg-theme/90 active:bg-theme/95': props.variant === 'primary',
       'bg-white text-title border border-border-light hover:bg-smoke active:bg-smoke':
         props.variant === 'secondary',
       'bg-transparent text-theme hover:bg-smoke-blue active:bg-smoke-blue': props.variant === 'ghost',

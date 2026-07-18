@@ -6,8 +6,8 @@ const page = readFileSync(resolve('app/pages/portal/requests.vue'), 'utf8')
 
 describe('portal requests refreshed UI', () => {
   it('uses the shared page rhythm, list status badge, and card skeletons', () => {
-    expect(page).toContain('space-y-3 px-4 py-5')
-    expect(page).toContain('<PortalRequestStatusBadge :status="request.status" />')
+    expect(page).toContain('px-4 py-5 lg:px-8 lg:py-8')
+    expect(page).toContain('<PortalStatusBadge :status="request.status" />')
     expect(page).toContain('variant="card"')
     expect(page).toContain('portal-type-heading')
     expect(page).toContain('portal-type-caption')

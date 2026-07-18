@@ -138,7 +138,7 @@ async function onLogout() {
       <PortalButton v-if="profile" variant="ghost" size="sm" @click="openEdit">Sửa</PortalButton>
     </Teleport>
 
-    <div class="space-y-5 px-4 py-5">
+    <div class="mx-auto w-full max-w-2xl space-y-5 px-4 py-5 lg:px-8 lg:py-8">
       <!-- Profile -->
       <section class="space-y-2">
         <PortalSkeleton v-if="profileStatus === 'pending'" variant="statement" class="h-40" />

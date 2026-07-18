@@ -86,10 +86,10 @@ async function onSubmit() {
     </Teleport>
 
     <PortalPullToRefresh :on-refresh="refresh">
-      <div class="space-y-3 px-4 py-5">
-        <template v-if="status === 'pending'">
-          <PortalSkeleton v-for="n in 3" :key="n" variant="card" />
-        </template>
+      <div class="px-4 py-5 lg:px-8 lg:py-8">
+        <div v-if="status === 'pending'" class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          <PortalSkeleton v-for="n in 6" :key="n" variant="card" />
+        </div>
 
         <PortalEmptyState
           v-else-if="error"
@@ -112,7 +112,7 @@ async function onSubmit() {
           </template>
         </PortalEmptyState>
 
-        <template v-else>
+        <div v-else class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           <PortalCard v-for="request in requests" :key="request.id">
             <div class="flex items-start justify-between gap-3">
               <div class="min-w-0">
@@ -130,10 +130,10 @@ async function onSubmit() {
                 </a>
                 <p class="portal-type-caption mt-2 text-body">{{ request.createdAt }}</p>
               </div>
-              <PortalRequestStatusBadge :status="request.status" />
+              <PortalStatusBadge :status="request.status" />
             </div>
           </PortalCard>
-        </template>
+        </div>
       </div>
     </PortalPullToRefresh>
 

@@ -81,32 +81,34 @@ input[type='number'] {
 }
 
 /* ──────────────────────────────────────────────────────────────
-   Tenant portal — customer-facing identity + native app shell.
-   Distinct from the internal dark operational theme: light, friendly,
-   rounded. Tokens are scoped to `.portal-shell` so they never leak
-   into the internal app.
+   Tenant portal — customer-facing native app shell.
+   Shares the internal dark operational palette (see `dark.*` + `cyan`
+   in tailwind.config.ts) but keeps a rounded, native-app feel. Tokens
+   are scoped to `.portal-shell` so they never leak into the admin app.
    ────────────────────────────────────────────────────────────── */
 .portal-shell {
-  /* Calm, statement-led customer palette. */
-  --portal-bg: #f4f6fb;
-  --portal-surface: #ffffff;
-  --portal-surface-muted: #eaf0ff;
-  --portal-accent: #1554f0;
-  --portal-accent-soft: #eaf0ff;
-  --portal-title: #0b1422;
-  --portal-body: #5b6472;
-  --portal-muted: #8a93a3;
-  --portal-border: #e6e9ef;
-  --portal-positive: #0e9f6e;
-  --portal-positive-ink: #087a55;
-  --portal-warning: #b7791f;
-  --portal-warning-ink: #8a5615;
-  --portal-danger: #e02424;
-  --portal-danger-ink: #b91c1c;
+  /* Dark operational palette, aligned with the internal dashboard. */
+  --portal-bg: #1a1b1d;
+  /* Desktop-only gutter behind the centered mobile app frame. */
+  --portal-backdrop: #101113;
+  --portal-surface: #242528;
+  --portal-surface-muted: #2c2c2e;
+  --portal-accent: #00e5ff;
+  --portal-accent-soft: rgb(0 229 255 / 0.12);
+  --portal-title: #ffffff;
+  --portal-body: #c7c9ce;
+  --portal-muted: #98989d;
+  --portal-border: #2c2c2e;
+  --portal-positive: #32d74b;
+  --portal-positive-ink: #32d74b;
+  --portal-warning: #ffb539;
+  --portal-warning-ink: #ffb539;
+  --portal-danger: #ff453a;
+  --portal-danger-ink: #ff6b6b;
 
   /* One resting surface and one raised overlay — no extra shadow tiers. */
-  --portal-elevation-resting: 0 1px 2px rgb(11 20 34 / 0.04), 0 4px 12px rgb(11 20 34 / 0.03);
-  --portal-elevation-raised: 0 18px 48px rgb(11 20 34 / 0.16);
+  --portal-elevation-resting: 0 1px 2px rgb(0 0 0 / 0.4), 0 4px 12px rgb(0 0 0 / 0.3);
+  --portal-elevation-raised: 0 18px 48px rgb(0 0 0 / 0.55);
 
   /* Restrained native-shell motion: quick press feedback, short navigation. */
   --portal-motion-micro: 120ms;
@@ -115,7 +117,7 @@ input[type='number'] {
   --portal-ease-in: cubic-bezier(0.32, 0, 0.67, 0);
 
   min-height: 100dvh;
-  background: var(--portal-bg);
+  background: var(--portal-backdrop);
   color: var(--portal-title);
 
   /* Safe-area insets exposed as variables for header/tab-bar padding. */
@@ -210,6 +212,60 @@ input[type='number'] {
   padding-left: env(safe-area-inset-left);
   padding-right: env(safe-area-inset-right);
 }
+
+/* ──────────────────────────────────────────────────────────────
+   Dark-theme bridge. The portal templates were authored against light
+   Tailwind aliases (bg-white, text-title, text-theme, …). These scoped
+   rules repoint those exact utilities to the dark portal tokens so the
+   whole surface flips as one reversible change without rewriting every
+   template. Scoped to `.portal-shell`, so the admin theme is untouched.
+   ────────────────────────────────────────────────────────────── */
+
+/* Focus-ring offset gap follows the dark canvas, not white. */
+.portal-shell *,
+.portal-shell *::before,
+.portal-shell *::after {
+  --tw-ring-offset-color: var(--portal-bg);
+}
+
+/* Surfaces */
+.portal-shell .bg-white { background-color: var(--portal-surface); }
+.portal-shell .bg-white\/80 { background-color: rgb(36 37 40 / 0.8); }
+.portal-shell .bg-smoke,
+.portal-shell .hover\:bg-smoke:hover,
+.portal-shell .active\:bg-smoke:active { background-color: var(--portal-surface-muted); }
+.portal-shell .bg-smoke-card { background-color: var(--portal-surface-muted); }
+.portal-shell .bg-smoke-blue,
+.portal-shell .hover\:bg-smoke-blue:hover,
+.portal-shell .active\:bg-smoke-blue:active { background-color: var(--portal-accent-soft); }
+.portal-shell .bg-border { background-color: #3a3a3c; }
+
+/* Accent fills (cyan) */
+.portal-shell .bg-theme { background-color: var(--portal-accent); }
+.portal-shell .bg-theme\/10 { background-color: rgb(0 229 255 / 0.1); }
+.portal-shell .hover\:bg-theme\/90:hover { background-color: rgb(0 229 255 / 0.9); }
+.portal-shell .active\:bg-theme\/95:active { background-color: rgb(0 229 255 / 0.95); }
+
+/* Text */
+.portal-shell .text-title,
+.portal-shell .hover\:text-title:hover { color: var(--portal-title); }
+.portal-shell .text-body { color: var(--portal-body); }
+.portal-shell .text-theme { color: var(--portal-accent); }
+
+/* Borders / dividers */
+.portal-shell .border-border-light { border-color: var(--portal-border); }
+.portal-shell .divide-border-light > :not([hidden]) ~ :not([hidden]) { border-color: var(--portal-border); }
+.portal-shell .border-theme,
+.portal-shell .focus\:border-theme:focus,
+.portal-shell .focus-within\:border-theme:focus-within { border-color: var(--portal-accent); }
+.portal-shell .border-theme\/30 { border-color: rgb(0 229 255 / 0.3); }
+.portal-shell .border-theme\/40,
+.portal-shell .hover\:border-theme\/40:hover { border-color: rgb(0 229 255 / 0.4); }
+
+/* Focus rings */
+.portal-shell .focus-visible\:ring-theme\/40:focus-visible { --tw-ring-color: rgb(0 229 255 / 0.4); }
+.portal-shell .focus-visible\:ring-theme\/20:focus-visible,
+.portal-shell .focus-within\:ring-theme\/20:focus-within { --tw-ring-color: rgb(0 229 255 / 0.2); }
 
 /* Native-like route transitions. Content slides horizontally; the shell
    (header + tab bar) stays fixed. Respect reduced-motion. */

@@ -38,16 +38,16 @@ export default {
         },
 
         // ── Tenant portal semantics ────────────
-        // Keep admin dark-theme status aliases unchanged; portal components
-        // opt into this customer-facing set explicitly.
+        // Portal shares the internal dark theme; these status aliases use
+        // vivid, dark-surface-friendly values and are opted into explicitly.
         portal: {
-          muted: '#8A93A3',
-          positive: '#0E9F6E',
-          'positive-ink': '#087A55',
-          warning: '#B7791F',
-          'warning-ink': '#8A5615',
-          danger: '#E02424',
-          'danger-ink': '#B91C1C',
+          muted: '#98989D',
+          positive: '#32D74B',
+          'positive-ink': '#32D74B',
+          warning: '#FFB539',
+          'warning-ink': '#FFB539',
+          danger: '#FF453A',
+          'danger-ink': '#FF6B6B',
         },
 
         // ── Status ─────────────────────────────

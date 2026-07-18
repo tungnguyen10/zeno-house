@@ -9,7 +9,7 @@ describe('portal invoice detail refreshed UI', () => {
     expect(page).toContain(':accent="portalInvoiceStatementAccent(invoice.status)"')
     expect(page).toContain('formatCurrencyNumber(invoice.balanceAmount)')
     expect(page).toContain('class="portal-money-unit"')
-    expect(page).toContain('PortalInvoiceStatusBadge')
+    expect(page).toContain('PortalStatusBadge')
   })
 
   it('renders payment totals and charges as divider-led rows instead of group cards', () => {

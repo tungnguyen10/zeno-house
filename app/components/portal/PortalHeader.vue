@@ -23,6 +23,14 @@ function onBack() {
       >
         <IconArrowLeft class="h-5 w-5" aria-hidden="true" />
       </button>
+      <NuxtLink
+        v-else
+        to="/portal"
+        class="-ml-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-smoke active:bg-smoke focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme/40 lg:hidden"
+        aria-label="Zeno House — trang chủ"
+      >
+        <IconLogoMini class="h-7 w-auto" aria-hidden="true" />
+      </NuxtLink>
       <h1 class="portal-type-heading flex-1 truncate px-1 text-title">
         {{ chrome.title }}
       </h1>

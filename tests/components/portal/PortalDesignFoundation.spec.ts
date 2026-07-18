@@ -22,29 +22,30 @@ function contrastRatio(foreground: string, background: string): number {
   return (lighter + 0.05) / (darker + 0.05)
 }
 
-function tintOnWhite(hex: string, opacity = 0.1): string {
+function tintOnSurface(hex: string, surface: string, opacity = 0.1): string {
+  const base = surface.replace('#', '').match(/.{2}/g)!.map(channel => Number.parseInt(channel, 16))
   const channels = hex.replace('#', '').match(/.{2}/g)!
     .map(channel => Number.parseInt(channel, 16))
-    .map(channel => Math.round(channel * opacity + 255 * (1 - opacity)))
+    .map((channel, index) => Math.round(channel * opacity + base[index]! * (1 - opacity)))
   return `#${channels.map(channel => channel.toString(16).padStart(2, '0')).join('')}`
 }
 
 describe('tenant portal design foundation', () => {
   it.each([
-    ['--portal-title', '#0b1422'],
-    ['--portal-body', '#5b6472'],
-    ['--portal-muted', '#8a93a3'],
-    ['--portal-accent', '#1554f0'],
-    ['--portal-accent-soft', '#eaf0ff'],
-    ['--portal-bg', '#f4f6fb'],
-    ['--portal-surface', '#ffffff'],
-    ['--portal-border', '#e6e9ef'],
-    ['--portal-positive', '#0e9f6e'],
-    ['--portal-positive-ink', '#087a55'],
-    ['--portal-warning', '#b7791f'],
-    ['--portal-warning-ink', '#8a5615'],
-    ['--portal-danger', '#e02424'],
-    ['--portal-danger-ink', '#b91c1c'],
+    ['--portal-title', '#ffffff'],
+    ['--portal-body', '#c7c9ce'],
+    ['--portal-muted', '#98989d'],
+    ['--portal-accent', '#00e5ff'],
+    ['--portal-accent-soft', 'rgb(0 229 255 / 0.12)'],
+    ['--portal-bg', '#1a1b1d'],
+    ['--portal-surface', '#242528'],
+    ['--portal-border', '#2c2c2e'],
+    ['--portal-positive', '#32d74b'],
+    ['--portal-positive-ink', '#32d74b'],
+    ['--portal-warning', '#ffb539'],
+    ['--portal-warning-ink', '#ffb539'],
+    ['--portal-danger', '#ff453a'],
+    ['--portal-danger-ink', '#ff6b6b'],
   ])('defines %s as %s', (token, value) => {
     expect(scss).toContain(`${token}: ${value}`)
   })
@@ -68,27 +69,27 @@ describe('tenant portal design foundation', () => {
   it('exposes portal Tailwind color aliases without replacing admin status colors', () => {
     const colors = tailwindConfig.theme.extend.colors
     expect(colors.portal).toMatchObject({
-      muted: '#8A93A3',
-      positive: '#0E9F6E',
-      'positive-ink': '#087A55',
-      warning: '#B7791F',
-      'warning-ink': '#8A5615',
-      danger: '#E02424',
-      'danger-ink': '#B91C1C',
+      muted: '#98989D',
+      positive: '#32D74B',
+      'positive-ink': '#32D74B',
+      warning: '#FFB539',
+      'warning-ink': '#FFB539',
+      danger: '#FF453A',
+      'danger-ink': '#FF6B6B',
     })
     expect(colors.warning).toBe('#FFB539')
   })
 
   it('keeps portal body text at WCAG AA contrast on surface and canvas', () => {
-    expect(contrastRatio('#5B6472', '#FFFFFF')).toBeGreaterThanOrEqual(4.5)
-    expect(contrastRatio('#5B6472', '#F4F6FB')).toBeGreaterThanOrEqual(4.5)
+    expect(contrastRatio('#C7C9CE', '#242528')).toBeGreaterThanOrEqual(4.5)
+    expect(contrastRatio('#C7C9CE', '#1A1B1D')).toBeGreaterThanOrEqual(4.5)
   })
 
   it.each([
-    ['positive ink', '#087A55', '#0E9F6E'],
-    ['warning ink', '#8A5615', '#B7791F'],
-    ['danger ink', '#B91C1C', '#E02424'],
-  ])('keeps %s at WCAG AA contrast on its tinted badge surface', (_name, ink, accent) => {
-    expect(contrastRatio(ink, tintOnWhite(accent))).toBeGreaterThanOrEqual(4.5)
+    ['positive ink', '#32D74B'],
+    ['warning ink', '#FFB539'],
+    ['danger ink', '#FF6B6B'],
+  ])('keeps %s at WCAG AA contrast on its tinted badge surface', (_name, ink) => {
+    expect(contrastRatio(ink, tintOnSurface(ink, '#242528'))).toBeGreaterThanOrEqual(4.5)
   })
 })

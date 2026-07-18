@@ -1,9 +1,8 @@
 <script setup lang="ts">
-import type { TenantSupportRequestStatus } from '~/types/tenant-portal'
-import { PORTAL_STATUS_STYLES } from '~/utils/constants/portal-status'
+import { PORTAL_STATUS_STYLES, type PortalStatus } from '~/utils/constants/portal-status'
 
 const props = defineProps<{
-  status: TenantSupportRequestStatus
+  status: PortalStatus
 }>()
 
 const style = computed(() => PORTAL_STATUS_STYLES[props.status])

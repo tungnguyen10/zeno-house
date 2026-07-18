@@ -15,11 +15,11 @@ const { invoices, status, error, refresh } = usePortalInvoices()
 
 <template>
   <PortalPullToRefresh :on-refresh="refresh">
-    <div class="space-y-3 px-4 py-5">
+    <div class="px-4 py-5 lg:px-8 lg:py-8">
       <!-- Loading -->
-      <template v-if="status === 'pending'">
-        <PortalSkeleton v-for="n in 4" :key="n" variant="statement" />
-      </template>
+      <div v-if="status === 'pending'" class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <PortalSkeleton v-for="n in 6" :key="n" variant="statement" />
+      </div>
 
       <!-- Error -->
       <PortalEmptyState
@@ -39,7 +39,7 @@ const { invoices, status, error, refresh } = usePortalInvoices()
       />
 
       <!-- List -->
-      <template v-else>
+      <div v-else class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         <PortalCard
           v-for="invoice in invoices"
           :key="invoice.id"
@@ -54,7 +54,7 @@ const { invoices, status, error, refresh } = usePortalInvoices()
               </p>
               <p class="portal-type-caption mt-0.5 truncate text-body">{{ invoice.invoiceCode }}</p>
             </div>
-            <PortalInvoiceStatusBadge :status="invoice.status" />
+            <PortalStatusBadge :status="invoice.status" />
           </div>
           <p
             class="portal-money mt-3 text-xl font-bold leading-7"
@@ -64,7 +64,7 @@ const { invoices, status, error, refresh } = usePortalInvoices()
           </p>
           <p v-if="invoice.dueDate" class="portal-type-caption mt-2 text-body">Hạn thanh toán {{ invoice.dueDate }}</p>
         </PortalCard>
-      </template>
+      </div>
     </div>
   </PortalPullToRefresh>
 </template>

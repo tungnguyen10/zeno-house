@@ -1,54 +1,15 @@
-export type ToastSeverity = 'success' | 'danger' | 'info'
+import { createToastController, type ToastItem } from '~/utils/createToastController'
 
-export interface ToastMessage {
-  id: number
-  severity: ToastSeverity
-  message: string
-  remaining: number
-  timer: ReturnType<typeof setTimeout> | null
-}
+export type ToastSeverity = 'success' | 'danger' | 'info'
+export type ToastMessage = ToastItem<ToastSeverity>
 
 const DEFAULT_TIMEOUT = 4000
 
 export function useToast() {
-  const toasts = useState<ToastMessage[]>('ui-toasts', () => [])
-
-  function dismiss(id: number) {
-    const toast = toasts.value.find(item => item.id === id)
-    if (toast?.timer) clearTimeout(toast.timer)
-    toasts.value = toasts.value.filter(item => item.id !== id)
-  }
-
-  function schedule(toast: ToastMessage) {
-    if (toast.timer) clearTimeout(toast.timer)
-    toast.timer = setTimeout(() => dismiss(toast.id), toast.remaining)
-  }
-
-  function push(severity: ToastSeverity, message: string) {
-    const toast: ToastMessage = {
-      id: Date.now() + Math.floor(Math.random() * 1000),
-      severity,
-      message,
-      remaining: DEFAULT_TIMEOUT,
-      timer: null,
-    }
-    toasts.value = [...toasts.value, toast]
-    if (import.meta.client) schedule(toast)
-    return toast.id
-  }
-
-  function pause(id: number) {
-    const toast = toasts.value.find(item => item.id === id)
-    if (!toast?.timer) return
-    clearTimeout(toast.timer)
-    toast.timer = null
-  }
-
-  function resume(id: number) {
-    const toast = toasts.value.find(item => item.id === id)
-    if (!toast || toast.timer) return
-    schedule(toast)
-  }
+  const { toasts, push, dismiss, pause, resume } = createToastController<ToastSeverity>({
+    stateKey: 'ui-toasts',
+    timeout: DEFAULT_TIMEOUT,
+  })
 
   return {
     toasts,

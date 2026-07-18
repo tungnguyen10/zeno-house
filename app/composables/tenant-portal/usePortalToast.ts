@@ -1,41 +1,21 @@
+import { createToastController, type ToastItem } from '~/utils/createToastController'
+
 /**
  * Portal-scoped toast surface. Deliberately separate from the internal
  * `useToast`/`UiToastHost` (different `useState` key and host component) so the
- * customer-facing portal never renders the internal operational toast.
+ * customer-facing portal never renders the internal operational toast. Shares
+ * the queue/timer logic via `createToastController`.
  */
 export type PortalToastSeverity = 'success' | 'error' | 'info'
-
-export interface PortalToast {
-  id: number
-  severity: PortalToastSeverity
-  message: string
-  timer: ReturnType<typeof setTimeout> | null
-}
+export type PortalToast = ToastItem<PortalToastSeverity>
 
 const DEFAULT_TIMEOUT = 3500
 
 export function usePortalToast() {
-  const toasts = useState<PortalToast[]>('portal-toasts', () => [])
-
-  function dismiss(id: number) {
-    const toast = toasts.value.find(item => item.id === id)
-    if (toast?.timer) clearTimeout(toast.timer)
-    toasts.value = toasts.value.filter(item => item.id !== id)
-  }
-
-  function push(severity: PortalToastSeverity, message: string) {
-    const toast: PortalToast = {
-      id: Date.now() + Math.floor(Math.random() * 1000),
-      severity,
-      message,
-      timer: null,
-    }
-    toasts.value = [...toasts.value, toast]
-    if (import.meta.client) {
-      toast.timer = setTimeout(() => dismiss(toast.id), DEFAULT_TIMEOUT)
-    }
-    return toast.id
-  }
+  const { toasts, push, dismiss } = createToastController<PortalToastSeverity>({
+    stateKey: 'portal-toasts',
+    timeout: DEFAULT_TIMEOUT,
+  })
 
   return {
     toasts,

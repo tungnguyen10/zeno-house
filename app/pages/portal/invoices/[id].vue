@@ -47,7 +47,7 @@ const chargeGroups = computed(() =>
             <p class="portal-type-label text-title">Kỳ {{ String(invoice.periodMonth).padStart(2, '0') }}/{{ invoice.periodYear }}</p>
             <p class="portal-type-caption mt-0.5 text-body">{{ invoice.invoiceCode }}</p>
           </div>
-          <PortalInvoiceStatusBadge :status="invoice.status" />
+          <PortalStatusBadge :status="invoice.status" />
         </div>
         <p class="portal-type-caption mt-5 text-body">Còn phải thanh toán</p>
         <p

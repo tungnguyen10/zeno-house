@@ -1,31 +1,18 @@
 <script setup lang="ts">
-interface PortalTab {
-  key: string
-  label: string
-  to: string
-  icon: string
-  exact?: boolean
-}
+import { PORTAL_NAV_ITEMS, type PortalNavItem, isPortalNavActive } from '~/utils/constants/portal-nav'
 
-const tabs: PortalTab[] = [
-  { key: 'home', label: 'Trang chủ', to: '/portal', icon: 'IconHome', exact: true },
-  { key: 'invoices', label: 'Hoá đơn', to: '/portal/invoices', icon: 'IconReceipt' },
-  { key: 'room', label: 'Phòng', to: '/portal/room', icon: 'IconDoor' },
-  { key: 'requests', label: 'Yêu cầu', to: '/portal/requests', icon: 'IconMessageCircle' },
-  { key: 'account', label: 'Tài khoản', to: '/portal/profile', icon: 'IconUser' },
-]
+const tabs = PORTAL_NAV_ITEMS
 
 const route = useRoute()
 
-function isActive(tab: PortalTab): boolean {
-  if (tab.exact) return route.path === tab.to
-  return route.path === tab.to || route.path.startsWith(`${tab.to}/`)
+function isActive(tab: PortalNavItem): boolean {
+  return isPortalNavActive(tab, route.path)
 }
 </script>
 
 <template>
   <nav
-    class="portal-safe-bottom portal-safe-x z-30 shrink-0 border-t border-border-light bg-white"
+    class="portal-safe-bottom portal-safe-x z-30 shrink-0 border-t border-border-light bg-white lg:hidden"
     aria-label="Điều hướng chính"
   >
     <ul class="flex items-stretch">
