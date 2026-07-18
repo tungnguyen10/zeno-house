@@ -25,3 +25,6 @@ logs
 .env.*
 !.env.example
 .continue
+
+# Local agent worktrees
+.worktrees/
