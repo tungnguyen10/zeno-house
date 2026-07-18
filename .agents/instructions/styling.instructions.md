@@ -4,168 +4,96 @@ applyTo: "app/app.vue, app/layouts/**/*.vue, app/pages/**/*.vue, app/components/
 
 # Styling
 
-Use Tailwind utility classes. Use `clsx` for conditional/dynamic classes. Do not use inline styles.
+Follow the repository UI polish workflow in `.agents/skills/zeno-house/references/ui-polish-workflow.md` and the canonical design system in `docs/ui-patterns/design-system.md` before choosing visual styles. For every user-visible UI change, use both `frontend-design` and `hallmark` at the depth required by that workflow.
 
-## ✓ Correct Usage
+The Zeno House design system wins when a skill's general aesthetic guidance conflicts with project tokens, typography, density, primitives, status mappings, or icon conventions.
 
-**Static classes — write directly in template:**
+## Core rules
+
+- Use Tailwind utilities and existing semantic tokens. The admin shell is dark-first with cyan as the sole interaction accent.
+- Reuse existing `Ui*` primitives before composing a new control or surface.
+- Use `clsx` for conditional classes; write static classes directly in the template.
+- Do not use inline styles for colors, spacing, shadows, or other design values.
+- Preserve visible hover, focus, active, disabled, loading, empty, error, and responsive states that apply to the surface.
+- Treat spacing, hierarchy, typography, and interaction feedback as part of correctness, not optional cleanup.
+
+## Correct usage
+
+Static classes:
+
 ```vue
-<div class="flex items-center gap-3 px-4 py-2 rounded-lg bg-white border border-gray-200 shadow-sm">
-  <IconBuilding class="w-5 h-5 text-gray-400 shrink-0" aria-hidden="true" />
-  <span class="text-sm font-medium text-gray-900 truncate">{{ building.name }}</span>
+<div class="flex items-center gap-3 rounded-xl border border-dark-border bg-dark-surface px-4 py-3 shadow-sm">
+  <IconBuilding class="size-5 shrink-0 text-muted" aria-hidden="true" />
+  <span class="truncate text-sm font-medium text-white">{{ building.name }}</span>
 </div>
 ```
 
-**Conditional classes — use `clsx`:**
+Conditional classes:
+
 ```vue
 <script setup lang="ts">
 import clsx from 'clsx'
 
 const props = defineProps<{
-  variant?: 'primary' | 'secondary' | 'danger'
-  size?: 'sm' | 'md' | 'lg'
-  disabled?: boolean
-  loading?: boolean
+  interactive?: boolean
+  selected?: boolean
 }>()
 
-const buttonClass = computed(() =>
+const panelClass = computed(() =>
   clsx(
-    // Base
-    'inline-flex items-center justify-center font-medium rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
-    // Size
-    {
-      'px-3 py-1.5 text-xs': props.size === 'sm',
-      'px-4 py-2 text-sm': !props.size || props.size === 'md',
-      'px-5 py-2.5 text-base': props.size === 'lg',
-    },
-    // Variant
-    {
-      'bg-blue-600 text-white hover:bg-blue-700 focus-visible:ring-blue-500':
-        !props.variant || props.variant === 'primary',
-      'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 focus-visible:ring-gray-400':
-        props.variant === 'secondary',
-      'bg-red-600 text-white hover:bg-red-700 focus-visible:ring-red-500':
-        props.variant === 'danger',
-    },
-    // State
-    {
-      'opacity-50 cursor-not-allowed pointer-events-none': props.disabled || props.loading,
-    },
+    'rounded-xl border bg-dark-surface text-white transition-colors',
+    props.interactive && 'hover:bg-dark-hover',
+    props.selected
+      ? 'border-cyan ring-1 ring-cyan/30'
+      : 'border-dark-border',
   )
 )
 </script>
-
-<template>
-  <button :class="buttonClass" :disabled="disabled || loading">
-    <slot />
-  </button>
-</template>
 ```
 
-**Status badge — multiple variants:**
+Use the existing button and status primitives instead of inventing variants:
+
 ```vue
-<script setup lang="ts">
-import clsx from 'clsx'
-import type { BuildingStatus } from '~/types/buildings'
+<UiButton :loading="isSaving" :disabled="!canSave">
+  Lưu thay đổi
+</UiButton>
 
-const props = defineProps<{ status: BuildingStatus }>()
-
-const badgeClass = computed(() =>
-  clsx('inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium', {
-    'bg-green-100 text-green-800':  props.status === 'active',
-    'bg-gray-100 text-gray-600':    props.status === 'inactive',
-    'bg-yellow-100 text-yellow-800': props.status === 'pending',
-    'bg-red-100 text-red-800':      props.status === 'terminated',
-  })
-)
-
-const label: Record<BuildingStatus, string> = {
-  active: 'Đang hoạt động',
-  inactive: 'Ngừng hoạt động',
-  pending: 'Chờ duyệt',
-  terminated: 'Đã chấm dứt',
-}
-</script>
-
-<template>
-  <span :class="badgeClass">{{ label[status] }}</span>
-</template>
+<UiStatusBadge :status="building.status" />
 ```
 
-**Multiple class groups separated for readability:**
+Status colors must come from `app/utils/constants/statuses.ts`. Do not map domain statuses to ad hoc palette classes in a page or component.
+
+## Do not
+
+- Concatenate class strings manually or use class template literals for conditional styling.
+- remove a focus outline without an equivalent visible `focus-visible` treatment.
+- hardcode HEX/RGB values when a repository token exists.
+- create a parallel theme, typography stack, token file, primitive, or CSS stamp to satisfy generic skill output.
+- repeat panel class bundles across features; use `UiSurfacePanel` or another matching primitive.
+- generalize a new primitive from one isolated use without evidence that the pattern recurs.
+
+## Custom CSS exceptions
+
+Use scoped CSS or `app/assets/scss/main.scss` only when the behavior cannot be expressed clearly with existing Tailwind utilities, such as a browser-specific scrollbar rule, `@font-face`, or a genuinely unsupported layout property. Custom CSS still uses project variables/tokens where available and must not introduce a second visual system.
+
+```scss
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+```
+
+## Responsive behavior
+
+Write mobile-first breakpoints and verify the changed surface at narrow and wide widths. Dense admin workspaces may keep desktop-oriented information architecture, but controls and reading order must remain usable on mobile.
+
 ```vue
 <div
   :class="clsx(
-    'relative flex flex-col',           // layout
-    'rounded-xl border bg-white',       // appearance
-    'p-4 gap-4',                        // spacing
-    { 'ring-2 ring-blue-500': selected } // state
+    'fixed inset-y-0 left-0 z-50 w-64 border-r border-dark-border bg-dark-surface',
+    'transition-transform duration-200',
+    sidebarOpen ? 'translate-x-0' : '-translate-x-full',
+    'lg:static lg:translate-x-0',
   )"
 >
 ```
 
-## ✗ Do Not
-
-```vue
-<!-- ✗ Đừng dùng inline style -->
-<div :style="{ backgroundColor: isActive ? '#22c55e' : '#e5e7eb' }">
-
-<!-- ✗ Đừng nối string class thủ công -->
-<div :class="'base ' + (isActive ? 'active-class' : 'inactive-class')">
-
-<!-- ✗ Đừng dùng class string template literal -->
-<div :class="`flex ${isOpen ? 'block' : 'hidden'}`">
-
-<!-- ✗ Đừng viết CSS custom cho những thứ Tailwind làm được -->
-<style scoped>
-.card {
-  padding: 16px;
-  border-radius: 8px;
-  display: flex;
-}
-/* → dùng: class="p-4 rounded-lg flex" */
-</style>
-
-<!-- ✗ Đừng xoá focus outline mà không thay thế -->
-<button class="focus:outline-none">  <!-- mất accessibility -->
-<!-- → dùng: focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 -->
-
-<!-- ✗ Đừng hardcode màu HEX thay vì dùng Tailwind palette -->
-<div :style="{ color: '#6b7280' }">  <!-- → class="text-gray-500" -->
-```
-
-## Exceptions — custom CSS in main.scss
-
-Only write custom CSS in `app/assets/scss/main.scss` for things Tailwind cannot express:
-
-```scss
-// app/assets/scss/main.scss
-// ✓ Scrollbar utility — Tailwind không có
-.no-scrollbar::-webkit-scrollbar { display: none; }
-.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-
-// ✓ Font-face — phải viết trong CSS
-@font-face {
-  font-family: 'Inter';
-  src: url('/fonts/Inter-VariableFont_opsz,wght.ttf') format('truetype');
-  font-weight: 100 900;
-  font-style: normal;
-  font-display: swap;
-}
-```
-
-## Responsive
-
-- Mobile-first per Tailwind convention: `sm:`, `md:`, `lg:`, `xl:`
-- Admin shell: desktop-first in terms of layout, but written mobile-first in terms of breakpoints
-
-```vue
-<!-- Sidebar collapse trên mobile -->
-<div :class="clsx(
-  'fixed inset-y-0 left-0 z-50',
-  'w-64 bg-white border-r border-gray-200',
-  'transition-transform duration-200',
-  { '-translate-x-full': !sidebarOpen, 'translate-x-0': sidebarOpen },
-  'lg:static lg:translate-x-0'  // luôn visible trên large screen
-)">
-```
+Before completion, inspect the rendered result when tooling is available. Confirm hierarchy, spacing rhythm, typography, token use, interaction states, accessibility, and responsive behavior—not only typecheck success.

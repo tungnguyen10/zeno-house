@@ -237,3 +237,18 @@ Replaces the desktop draft grid on `< md` widths so meter inputs remain accessib
 - Line 1: room and tenant on the left, the editable meter input on the right.
 - Line 2: previous/new reading delta plus computed kWh/m³ rate as muted helper text.
 - Reuse the same dirty-cell highlight, paste highlight, and per-row save indicator as the desktop view by passing helper props (`readingValueOf`, `isCellDirty`, `isPasteHighlighted`, `saveStateOf`).
+
+## 12. Agent UI quality gate
+
+Every user-visible UI change follows `.agents/skills/zeno-house/references/ui-polish-workflow.md`. The agent must read and apply both `frontend-design` and `hallmark` at a scope appropriate to the task, including focused component edits—not only greenfield pages and redesigns.
+
+Those skills improve visual direction and critique; they do not replace this design system. When guidance conflicts, the priority is:
+
+1. Accepted product behavior and accessibility requirements.
+2. This design system, existing `Ui*` primitives, semantic tokens, typography, density, status mappings, and icon conventions.
+3. Repository frontend architecture and instruction files.
+4. Task-specific aesthetic guidance from `frontend-design` and anti-slop critique from `hallmark`.
+
+Do not create a parallel theme, font stack, token file, primitive library, or copied CSS signature merely because a generic design skill proposes one. If a broader visual change would materially improve multiple product surfaces, raise it as an explicit design-system optimization with affected surfaces, benefit, cost, and a compliant fallback before implementation.
+
+UI completion requires checking relevant interaction states and visually inspecting the rendered result when tooling is available. A page that compiles but has weak hierarchy, inconsistent spacing, generic styling, or missing states is not complete.

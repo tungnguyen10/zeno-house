@@ -111,10 +111,10 @@ Place `.svg` files in `app/assets/icons/`. The module auto-imports them with the
 **Icon trong template:**
 ```vue
 <!-- Tòa nhà -->
-<IconBriefcase class="w-5 h-5 text-body" />
+<IconBriefcase class="w-5 h-5 text-muted" />
 
 <!-- Phòng -->
-<IconLayers class="w-4 h-4 text-body" />
+<IconLayers class="w-4 h-4 text-muted" />
 
 <!-- Icon trong navigation item -->
 <component :is="navItem.icon" class="w-5 h-5 shrink-0" />
@@ -162,7 +162,7 @@ const props = defineProps<{
 ```vue
 <!-- Không cần làm gì thêm. Inter tự load qua @font-face trong main.scss -->
 <!-- Tailwind font-sans tự dùng Inter -->
-<p class="font-sans text-sm text-body">Nội dung</p>
+<p class="font-sans text-sm text-muted">Nội dung</p>
 ```
 
 ## ✗ Do Not

@@ -171,7 +171,7 @@ Do not embed raw `<svg>` markup in templates. Place SVG files in `app/assets/ico
 
 ```vue
 <!-- ✅ -->
-<IconBuilding class="w-5 h-5 text-gray-500" aria-hidden="true" />
+<IconBuilding class="w-5 h-5 text-muted" aria-hidden="true" />
 <IconChevronRight class="w-4 h-4" aria-hidden="true" />
 
 <!-- ❌ -->
@@ -188,16 +188,13 @@ Colors, gradients, shadows, and spacing must not be written as `style=""` attrib
 
 ```vue
 <!-- ✅ -->
-<div class="bg-blue-600 shadow-md px-4">...</div>
+<div class="bg-cyan px-4 text-dark shadow-md">...</div>
 
 <!-- ✅ khi Tailwind không đủ -->
-<h2 class="gradient-heading">...</h2>
+<div class="workspace-grid">...</div>
 <style scoped lang="scss">
-.gradient-heading {
-  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
-  background-clip: text;
-  -webkit-background-clip: text;
-  color: transparent;
+.workspace-grid {
+  grid-template-columns: minmax(0, 1fr) auto;
 }
 </style>
 
