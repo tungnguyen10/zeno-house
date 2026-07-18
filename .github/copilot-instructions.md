@@ -8,6 +8,8 @@ Use checked-in project context and treat `AGENTS.md` as the canonical rule sourc
 2. `docs/agent-context.md`
 3. The one architecture, feature, or OpenSpec file that matches the task.
 
+For every user-visible UI change, follow `.agents/skills/zeno-house/references/ui-polish-workflow.md`. Use `frontend-design` for design judgment and Hallmark for anti-slop critique/final polish; the Zeno House design system and existing primitives override generic design defaults.
+
 ## Context Budget
 
 - Work delta-first: read the active `openspec/changes/<change-id>/tasks.md` before broader specs.

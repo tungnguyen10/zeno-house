@@ -92,6 +92,16 @@ The app is a dense operational tool, not a marketing site.
 - Use `docs/ui-patterns/design-system.md` for component and layout rules.
 - Avoid inline styles unless there is no practical Tailwind or component alternative.
 
+### UI Polish Workflow
+
+Every user-visible UI change follows `.agents/skills/zeno-house/references/ui-polish-workflow.md` and ships polished in its first implementation pass.
+
+- Use `frontend-design` for hierarchy, composition, density, interaction emphasis, and copy judgment.
+- Use Hallmark for anti-slop critique, affected states, responsiveness, restraint, and final polish.
+- Keep existing Zeno House tokens, Inter typography, operational density, primitives, status mappings, and icon conventions authoritative over generic skill defaults.
+- Match exploration depth to the change: focused affected-state polish for narrow edits; full direction and visual verification for new surfaces or redesigns.
+- Surface material optimizations for a user decision with the problem, recommendation, affected surfaces, benefit, cost, and fallback.
+
 ## UI Primitive Contracts
 
 - Use `UiInput`, `UiTextarea`, `UiSelect`, `UiCombobox`, and `UiCheckbox` for form controls instead of hand-written control classes.
