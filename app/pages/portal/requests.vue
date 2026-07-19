@@ -148,19 +148,20 @@ async function onSubmit() {
       <section class="space-y-3">
         <h3 class="portal-type-heading px-1 text-title">Thông tin yêu cầu</h3>
         <PortalCard class="space-y-4">
-          <PortalTextField
+          <UiInput
             v-model="form.title"
             label="Tiêu đề"
             placeholder="Ví dụ: Vòi nước bị rò rỉ"
             :error="formErrors.title"
+            required
           />
-          <PortalTextField
+          <UiTextarea
             v-model="form.description"
             label="Mô tả"
-            textarea
             :rows="4"
             placeholder="Mô tả chi tiết vấn đề của bạn"
             :error="formErrors.description"
+            required
           />
         </PortalCard>
       </section>
@@ -169,8 +170,10 @@ async function onSubmit() {
         <h3 class="portal-type-heading px-1 text-title">Tệp đính kèm</h3>
         <PortalCard>
           <label
-            class="flex min-h-12 cursor-pointer items-center gap-3 text-sm text-body"
-            :class="attachmentError ? 'text-portal-danger' : undefined"
+            class="flex min-h-12 cursor-pointer items-center gap-3 rounded-md border border-dark-border px-3 py-2 text-sm text-body focus-within:ring-2 focus-within:ring-theme/30"
+            :class="attachmentError
+              ? 'border-portal-danger text-portal-danger focus-within:ring-portal-danger/30'
+              : 'focus-within:border-theme/70'"
           >
             <IconDocumentText class="h-5 w-5 shrink-0 text-theme" aria-hidden="true" />
             <span class="min-w-0 flex-1 truncate">

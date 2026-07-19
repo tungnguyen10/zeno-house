@@ -85,7 +85,12 @@ function chargeLineUnit(chargeType: string): string | null {
             class="portal-money portal-type-display mt-1"
             :class="`portal-money--${portalInvoiceStatementAccent(invoice.status)}`"
           >
-            <span>{{ formatCurrencyNumber(invoice.balanceAmount > 0 ? invoice.balanceAmount : invoice.totalAmount) }}</span><span class="portal-money-unit">₫</span>
+            <template v-if="invoice.balanceAmount > 0">
+              <span>{{ formatCurrencyNumber(invoice.balanceAmount) }}</span><span class="portal-money-unit">₫</span>
+            </template>
+            <template v-else>
+              <span>{{ formatCurrencyNumber(invoice.totalAmount) }}</span><span class="portal-money-unit">₫</span>
+            </template>
           </p>
         </div>
 

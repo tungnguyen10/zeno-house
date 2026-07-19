@@ -54,7 +54,7 @@ async function refreshAll() {
     <div class="space-y-5 px-4 py-5 lg:px-8 lg:py-8">
       <!-- Identity hero: greeting + room (unified) -->
       <section>
-        <PortalSkeleton v-if="loading" variant="card" class="h-44" />
+        <PortalSkeleton v-if="loading" variant="statement" class="h-44" />
         <PortalCard
           v-else
           :interactive="!!contract"
@@ -130,7 +130,12 @@ async function refreshAll() {
                 class="portal-money portal-type-display mt-0.5"
                 :class="`portal-money--${portalInvoiceStatementAccent(latest.status)}`"
               >
-                <span>{{ formatCurrencyNumber(latest.balanceAmount > 0 ? latest.balanceAmount : latest.totalAmount) }}</span><span class="portal-money-unit">₫</span>
+                <template v-if="latest.balanceAmount > 0">
+                  <span>{{ formatCurrencyNumber(latest.balanceAmount) }}</span><span class="portal-money-unit">₫</span>
+                </template>
+                <template v-else>
+                  <span>{{ formatCurrencyNumber(latest.totalAmount) }}</span><span class="portal-money-unit">₫</span>
+                </template>
               </p>
             </div>
             <PortalStatusBadge :status="latest.status" />
