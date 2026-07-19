@@ -8,6 +8,7 @@ export interface TenantLinkRow {
   authUserId: string
   tenantId: string
   status: TenantLinkStatus
+  approvalClaimToken: string | null
   createdAt: string
 }
 
@@ -16,6 +17,7 @@ interface TenantLinkDbRow {
   auth_user_id: string
   tenant_id: string
   status: TenantLinkStatus
+  approval_claim_token: string | null
   created_at: string
 }
 
@@ -25,11 +27,12 @@ function mapRow(row: TenantLinkDbRow): TenantLinkRow {
     authUserId: row.auth_user_id,
     tenantId: row.tenant_id,
     status: row.status,
+    approvalClaimToken: row.approval_claim_token,
     createdAt: row.created_at,
   }
 }
 
-const COLUMNS = 'id, auth_user_id, tenant_id, status, created_at'
+const COLUMNS = 'id, auth_user_id, tenant_id, status, approval_claim_token, created_at'
 
 /**
  * Write/read helpers for `tenant_user_links`, used by the operator-facing
@@ -71,11 +74,11 @@ export const TenantAccountLinkRepository = {
 
   async create(
     event: H3Event,
-    input: { authUserId: string; tenantId: string },
+    input: { authUserId: string; tenantId: string; approvalClaimToken?: string | null },
   ): Promise<TenantLinkRow> {
     const { data, error } = await db(event)
       .from('tenant_user_links')
-      .insert({ auth_user_id: input.authUserId, tenant_id: input.tenantId, status: 'active' })
+      .insert({ auth_user_id: input.authUserId, tenant_id: input.tenantId, status: 'active', approval_claim_token: input.approvalClaimToken ?? null })
       .select(COLUMNS)
       .single()
 
@@ -85,6 +88,15 @@ export const TenantAccountLinkRepository = {
       throwDbError(error, 'tenantPortal.accountLinks.create')
     }
     return mapRow(data as TenantLinkDbRow)
+  },
+
+  async deleteByApprovalClaim(event: H3Event, approvalClaimToken: string): Promise<void> {
+    const { error } = await db(event)
+      .from('tenant_user_links')
+      .delete()
+      .eq('approval_claim_token', approvalClaimToken)
+
+    if (error) throwDbError(error, 'tenantPortal.accountLinks.deleteByApprovalClaim')
   },
 
   async updateStatus(

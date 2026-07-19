@@ -11,7 +11,12 @@ describe('getRedirectByRole', () => {
     expect(getRedirectByRole(role)).toBe(expected)
   })
 
-  it.each([null, undefined, 'unknown'])('routes missing or unknown role %s to login', (role) => {
+  it.each([null, undefined])('routes missing role %s to pending', (role) => {
+    expect(getRedirectByRole(role)).toBe('/auth/pending')
+  })
+
+  it('routes an unknown non-empty role to login', () => {
+    const role = 'unknown'
     expect(getRedirectByRole(role)).toBe('/login')
   })
 })

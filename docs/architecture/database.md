@@ -21,6 +21,7 @@ Zeno House uses Supabase Postgres. Schema history lives in `supabase/migrations`
 | Billing runtime | `20260611000000_billing_runtime.sql`, `20260611000001_billing_legacy_cleanup.sql` |
 | Operations report | `20260702173259_add_operations_report.sql`, `20260704000000_expense_receipts_and_export_categories.sql`, `20260705000000_recurring_and_prepaid_expenses.sql`, `20260707030000_operations_report_closure.sql`, `20260707031000_fix_operations_report_periods_shape.sql` |
 | Shared expenses and reserve fund | `20260705010000_shared_expenses_and_reserve_fund.sql`, `20260707010000_reserve_fund_auto_accrual.sql`, `20260707020000_fix_reserve_fund_source_constraint.sql` |
+| Pending account approval | `20260718155418_add_pending_account_approval.sql`, `20260719093000_fence_access_request_approval.sql` |
 
 ## Core Tables
 
@@ -31,6 +32,7 @@ Property and occupancy:
 - `tenants`
 - `tenant_user_links`
 - `support_requests`
+- `access_requests`
 - `contracts`
 - `contract_occupants`
 - `contract_payments`
@@ -46,6 +48,14 @@ building context. Status is limited to `new`, `in_progress`, or `resolved`; opti
 paths point into the tenant-prefixed area of the existing private `tenant-documents` bucket.
 Tenant RLS is self-scoped through active `tenant_user_links`; owner/manager reads are scoped through
 `user_building_assignments`, while admin reads are unscoped.
+
+`access_requests` stores one private lifecycle row per Supabase Auth user, including identity
+snapshot, provider, status, decision role/scope, reviewer, rejection reason, and timestamps. An
+`auth.users` trigger inserts only when the new identity has no `app_metadata.role`, so provisioned
+manager/owner/tenant accounts do not enter the queue. RLS is enabled and all table privileges are
+revoked from `anon` and `authenticated`; only service-role repositories may access it. The nullable
+`created_audited_at` marker and its `audit_events` insert are written together by a row-locking
+security-definer function, making the observed-creation audit atomic and idempotent.
 
 Services:
 

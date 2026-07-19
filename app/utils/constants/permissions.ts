@@ -63,6 +63,7 @@ export const ADMIN_ONLY_CAPABILITIES = [
   'operations-report.close',
   'operations-report.reopen',
   'reserve-fund.refresh-accrual',
+  'users.approve.pending',
 ] as const
 
 export const TENANT_CAPABILITIES = [

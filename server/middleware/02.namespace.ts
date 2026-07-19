@@ -13,6 +13,8 @@ export default defineEventHandler((event) => {
   const user = event.context.user
   if (!user) return
 
+  if (apiNamespace === 'auth') return
+
   const role = roleOf(user)
   const allowed = apiNamespace === 'tenant'
     ? role === ROLES.TENANT

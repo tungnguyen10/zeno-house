@@ -32,7 +32,15 @@ describe('route namespace structure', () => {
   })
 
   it('rejects authenticated pages outside the declared namespaces', () => {
-    const publicOrLandingPages = new Set(['auth/callback.vue', 'index.vue', 'login.vue'])
+    const publicOrLandingPages = new Set([
+      'auth/callback.vue',
+      'auth/pending.vue',
+      'auth/reset-password.vue',
+      'forgot-password.vue',
+      'index.vue',
+      'login.vue',
+      'register.vue',
+    ])
     const pageFiles = readdirSync(appPages, { recursive: true })
       .map(path => path.replaceAll('\\', '/'))
       .filter(path => path.endsWith('.vue'))

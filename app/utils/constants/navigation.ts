@@ -23,6 +23,7 @@ export const NAV_ITEMS = [
   // User management is available to admin (global) and owner (scoped), not manager.
   { key: 'settings', label: 'Settings', to: '/dashboard/settings/managers', icon: 'IconSettings', roles: ['admin', 'owner'] },
   { key: 'tenant-accounts', label: 'Tài khoản thuê', to: '/dashboard/settings/tenant-accounts', icon: 'IconUser', roles: ['admin', 'owner'] },
+  { key: 'access-requests', label: 'Yêu cầu truy cập', to: '/dashboard/settings/access-requests', icon: 'IconUser', adminOnly: true },
   { key: 'history', label: 'Audit Log', to: '/dashboard/settings/history', icon: 'IconClock', adminOnly: true },
 ] satisfies NavItem[]
 

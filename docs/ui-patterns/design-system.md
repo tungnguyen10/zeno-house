@@ -175,6 +175,18 @@ Examples:
 
 ## 7. No-go list
 
+### Auth split-layout pattern
+
+Authentication uses the shared `auth.vue` composition: a restrained operational illustration and
+brand statement on desktop, paired with a focused form surface; below the desktop breakpoint the
+illustration becomes a short top band. Use the existing dark surfaces, cyan accent, Inter font,
+spacing scale, and `Ui*` primitives. Keep the scan order Google action → divider → credentials →
+recovery → submit → registration. Password reveal belongs in the `UiInput` suffix with a named
+button and visible focus state. Do not add auth-only tokens, themes, fonts, or duplicate primitives.
+
+The layout must remain usable without horizontal overflow at 320, 375, 414, and 768 pixels, handle
+long emails with truncation/title disclosure where appropriate, and respect reduced motion.
+
 - ✗ Dùng `bg-white`, `text-title`, `text-body` ở admin shell.
 - ✗ Tự viết `<select class="rounded-md ...">` — dùng `UiSelect`.
 - ✗ Dùng native `<datalist>` cho lựa chọn có search/custom — dùng `UiCombobox`.

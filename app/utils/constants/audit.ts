@@ -69,6 +69,9 @@ export const AUDIT_ACTIONS = {
   USER_REMOVED: 'user.removed',
   USER_ASSIGNMENT_ADDED: 'user.assignment_added',
   USER_ASSIGNMENT_REMOVED: 'user.assignment_removed',
+  USER_ACCESS_REQUEST_CREATED: 'user.access_request.created',
+  USER_ACCESS_REQUEST_APPROVED: 'user.access_request.approved',
+  USER_ACCESS_REQUEST_REJECTED: 'user.access_request.rejected',
 } as const
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[keyof typeof AUDIT_ACTIONS]
