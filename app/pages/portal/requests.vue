@@ -10,19 +10,25 @@ definePageMeta({
 })
 
 const { setChrome } = usePortalChrome()
-setChrome({ title: 'Yêu cầu', back: null })
 
 const { requests, status, error, refresh, submit, submitting } = usePortalRequests()
 const toast = usePortalToast()
 
-const sheetOpen = ref(false)
+const mode = ref<'list' | 'create'>('list')
 const attachmentInput = ref<HTMLInputElement | null>(null)
 const attachment = ref<File | null>(null)
 const form = reactive({ title: '', description: '' })
 const formErrors = reactive({ title: '', description: '' })
 const attachmentError = ref('')
 
-function openSheet() {
+watch(mode, (val) => {
+  setChrome(val === 'create'
+    ? { title: 'Yêu cầu mới', back: null }
+    : { title: 'Yêu cầu', back: null },
+  )
+}, { immediate: true })
+
+function openCreate() {
   form.title = ''
   form.description = ''
   formErrors.title = ''
@@ -30,20 +36,19 @@ function openSheet() {
   attachment.value = null
   attachmentError.value = ''
   if (attachmentInput.value) attachmentInput.value.value = ''
-  sheetOpen.value = true
+  mode.value = 'create'
+}
+
+function cancelCreate() {
+  mode.value = 'list'
 }
 
 function onAttachmentChange(event: Event) {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0] ?? null
   attachmentError.value = ''
-  if (!file) {
-    attachment.value = null
-    return
-  }
-  if (!TENANT_DOCUMENT_MIME_TYPES.includes(
-    file.type as (typeof TENANT_DOCUMENT_MIME_TYPES)[number],
-  )) {
+  if (!file) { attachment.value = null; return }
+  if (!TENANT_DOCUMENT_MIME_TYPES.includes(file.type as (typeof TENANT_DOCUMENT_MIME_TYPES)[number])) {
     attachment.value = null
     attachmentError.value = 'Tệp phải là ảnh JPEG, PNG, WebP hoặc PDF.'
     return
@@ -67,7 +72,7 @@ async function onSubmit() {
     attachment: attachment.value ?? undefined,
   })
   if (ok) {
-    sheetOpen.value = false
+    mode.value = 'list'
     toast.success('Đã gửi yêu cầu.')
   }
   else {
@@ -79,13 +84,14 @@ async function onSubmit() {
 <template>
   <div>
     <Teleport to="#portal-header-action">
-      <PortalButton size="sm" @click="openSheet">
+      <PortalButton v-if="mode === 'list'" size="sm" @click="openCreate">
         <IconPlus class="h-4 w-4" aria-hidden="true" />
         Mới
       </PortalButton>
     </Teleport>
 
-    <PortalPullToRefresh :on-refresh="refresh">
+    <!-- List mode -->
+    <PortalPullToRefresh v-if="mode === 'list'" :on-refresh="refresh">
       <div class="px-4 py-5 lg:px-8 lg:py-8">
         <div v-if="status === 'pending'" class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           <PortalSkeleton v-for="n in 6" :key="n" variant="card" />
@@ -105,7 +111,7 @@ async function onSubmit() {
           title="Chưa có yêu cầu"
           description="Gửi yêu cầu hỗ trợ và theo dõi tiến độ tại đây."
           action-label="Tạo yêu cầu"
-          @action="openSheet"
+          @action="openCreate"
         >
           <template #icon>
             <IconMessageCircle class="h-6 w-6" aria-hidden="true" />
@@ -137,28 +143,34 @@ async function onSubmit() {
       </div>
     </PortalPullToRefresh>
 
-    <PortalBottomSheet v-model="sheetOpen" title="Gửi yêu cầu">
-      <form class="space-y-4 py-1" @submit.prevent="onSubmit">
-        <UiInput
-          v-model="form.title"
-          label="Tiêu đề"
-          placeholder="Ví dụ: Vòi nước bị rò rỉ"
-          :error="formErrors.title"
-        />
+    <!-- Create mode -->
+    <form v-else class="mx-auto w-full max-w-2xl space-y-5 px-4 py-5 lg:px-8 lg:py-8" @submit.prevent="onSubmit">
+      <section class="space-y-3">
+        <h3 class="portal-type-heading px-1 text-title">Thông tin yêu cầu</h3>
+        <PortalCard class="space-y-4">
+          <PortalTextField
+            v-model="form.title"
+            label="Tiêu đề"
+            placeholder="Ví dụ: Vòi nước bị rò rỉ"
+            :error="formErrors.title"
+          />
+          <PortalTextField
+            v-model="form.description"
+            label="Mô tả"
+            textarea
+            :rows="4"
+            placeholder="Mô tả chi tiết vấn đề của bạn"
+            :error="formErrors.description"
+          />
+        </PortalCard>
+      </section>
 
-        <UiTextarea
-          v-model="form.description"
-          label="Mô tả"
-          :rows="4"
-          placeholder="Mô tả chi tiết vấn đề của bạn"
-          :error="formErrors.description"
-        />
-
-        <div class="space-y-1.5">
-          <span class="portal-type-label text-title">Tệp đính kèm (không bắt buộc)</span>
+      <section class="space-y-3">
+        <h3 class="portal-type-heading px-1 text-title">Tệp đính kèm</h3>
+        <PortalCard>
           <label
-            class="flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border border-border-light bg-white px-3 py-2.5 text-sm text-body transition-colors hover:border-theme/40 focus-within:border-theme focus-within:outline-none focus-within:ring-2 focus-within:ring-theme/20"
-            :class="attachmentError ? 'border-portal-danger focus-within:border-portal-danger focus-within:ring-portal-danger/20' : undefined"
+            class="flex min-h-12 cursor-pointer items-center gap-3 text-sm text-body"
+            :class="attachmentError ? 'text-portal-danger' : undefined"
           >
             <IconDocumentText class="h-5 w-5 shrink-0 text-theme" aria-hidden="true" />
             <span class="min-w-0 flex-1 truncate">
@@ -174,13 +186,16 @@ async function onSubmit() {
               @change="onAttachmentChange"
             >
           </label>
-          <p v-if="attachmentError" id="request-attachment-error" class="portal-type-caption text-portal-danger">
+          <p v-if="attachmentError" id="request-attachment-error" class="portal-type-caption mt-2 text-portal-danger">
             {{ attachmentError }}
           </p>
-        </div>
+        </PortalCard>
+      </section>
 
-        <PortalButton type="submit" block size="lg" :loading="submitting">Gửi yêu cầu</PortalButton>
-      </form>
-    </PortalBottomSheet>
+      <div class="flex gap-3">
+        <PortalButton variant="secondary" block :disabled="submitting" @click="cancelCreate">Hủy</PortalButton>
+        <PortalButton type="submit" block :loading="submitting">Gửi yêu cầu</PortalButton>
+      </div>
+    </form>
   </div>
 </template>

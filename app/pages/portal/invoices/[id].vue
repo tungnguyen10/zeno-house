@@ -2,6 +2,7 @@
 import { chargeLineLabel, groupChargeLines } from '~/utils/billing/charge-groups'
 import { portalInvoiceStatementAccent } from '~/utils/constants/portal-status'
 import { formatCurrency, formatCurrencyNumber } from '~/utils/format/currency'
+import { formatViDate } from '~/utils/format/time'
 
 definePageMeta({
   layout: 'tenant',
@@ -19,6 +20,12 @@ const { invoice, status, error, refresh } = usePortalInvoiceDetail(id)
 const chargeGroups = computed(() =>
   invoice.value ? groupChargeLines(invoice.value.charges) : [],
 )
+
+function chargeLineUnit(chargeType: string): string | null {
+  if (chargeType === 'electricity') return 'kWh'
+  if (chargeType === 'water') return 'm³'
+  return null
+}
 </script>
 
 <template>
@@ -42,6 +49,7 @@ const chargeGroups = computed(() =>
     <template v-else>
       <!-- Summary -->
       <PortalCard :accent="portalInvoiceStatementAccent(invoice.status)">
+        <!-- Header: period + status -->
         <div class="flex items-start justify-between">
           <div>
             <p class="portal-type-label text-title">Kỳ {{ String(invoice.periodMonth).padStart(2, '0') }}/{{ invoice.periodYear }}</p>
@@ -49,13 +57,39 @@ const chargeGroups = computed(() =>
           </div>
           <PortalStatusBadge :status="invoice.status" />
         </div>
-        <p class="portal-type-caption mt-5 text-body">Còn phải thanh toán</p>
-        <p
-          class="portal-money portal-type-display mt-1"
-          :class="`portal-money--${portalInvoiceStatementAccent(invoice.status)}`"
-        >
-          <span>{{ formatCurrencyNumber(invoice.balanceAmount) }}</span><span class="portal-money-unit">₫</span>
-        </p>
+
+        <!-- Metadata: room/building + dates -->
+        <div class="mt-3 flex flex-wrap gap-x-6 gap-y-2 border-t border-border-light pt-3">
+          <div v-if="invoice.roomNumber || invoice.buildingName">
+            <p class="portal-type-caption text-body">Phòng</p>
+            <p class="portal-type-body mt-0.5 font-medium text-title">
+              {{ [invoice.roomNumber, invoice.buildingName].filter(Boolean).join(' · ') }}
+            </p>
+          </div>
+          <div v-if="invoice.issuedAt">
+            <p class="portal-type-caption text-body">Ngày phát hành</p>
+            <p class="portal-type-body mt-0.5 font-medium text-title">{{ formatViDate(invoice.issuedAt) }}</p>
+          </div>
+          <div v-if="invoice.dueDate">
+            <p class="portal-type-caption text-body">Hạn thanh toán</p>
+            <p class="portal-type-body mt-0.5 font-medium text-title">{{ invoice.dueDate }}</p>
+          </div>
+        </div>
+
+        <!-- Amount: context-aware headline figure -->
+        <div class="mt-4">
+          <p class="portal-type-caption text-body">
+            {{ invoice.balanceAmount > 0 ? 'Còn phải thanh toán' : 'Tổng hoá đơn' }}
+          </p>
+          <p
+            class="portal-money portal-type-display mt-1"
+            :class="`portal-money--${portalInvoiceStatementAccent(invoice.status)}`"
+          >
+            <span>{{ formatCurrencyNumber(invoice.balanceAmount > 0 ? invoice.balanceAmount : invoice.totalAmount) }}</span><span class="portal-money-unit">₫</span>
+          </p>
+        </div>
+
+        <!-- Financial breakdown -->
         <dl class="divide-y divide-border-light mt-4 border-y border-border-light">
           <div class="flex items-center justify-between py-3">
             <dt class="portal-type-body text-body">Tổng cộng</dt>
@@ -65,10 +99,11 @@ const chargeGroups = computed(() =>
             <dt class="portal-type-body text-body">Đã thanh toán</dt>
             <dd class="portal-money text-sm font-semibold text-portal-positive-ink">{{ formatCurrency(invoice.paidAmount) }}</dd>
           </div>
+          <div v-if="invoice.balanceAmount > 0" class="flex items-center justify-between py-3">
+            <dt class="portal-type-body font-medium text-title">Còn lại</dt>
+            <dd class="portal-money text-sm font-bold text-portal-danger-ink">{{ formatCurrency(invoice.balanceAmount) }}</dd>
+          </div>
         </dl>
-        <p v-if="invoice.dueDate" class="portal-type-caption mt-3 text-body">
-          Hạn thanh toán: <span class="font-medium text-title">{{ invoice.dueDate }}</span>
-        </p>
       </PortalCard>
 
       <!-- Charge breakdown -->
@@ -76,21 +111,32 @@ const chargeGroups = computed(() =>
         <h3 class="portal-type-heading px-1 text-title">Chi tiết khoản thu</h3>
         <PortalCard :padded="false">
           <section v-for="group in chargeGroups" :key="group.key" class="border-b border-border-light last:border-b-0">
-            <div class="flex items-center justify-between gap-3 px-4 py-3">
-              <h4 class="portal-type-label text-title">{{ group.title }}</h4>
-              <span class="portal-money text-sm font-semibold text-title">{{ formatCurrency(group.subtotal) }}</span>
+            <!-- Section label: small muted uppercase caption — clearly a category, not an item -->
+            <div class="px-4 pb-1.5 pt-3">
+              <p class="portal-type-caption uppercase tracking-wider text-body opacity-60">{{ group.title }}</p>
             </div>
+            <!-- Line items: primary content, text-title so they pop -->
             <ul class="divide-y divide-border-light border-t border-border-light">
               <li
                 v-for="line in group.lines"
                 :key="line.id"
                 class="flex items-start justify-between gap-4 px-4 py-3"
               >
-                <span class="portal-type-body text-body">{{ chargeLineLabel(line.chargeType, line.label) }}</span>
-                <span class="portal-money shrink-0 text-sm font-medium text-title">{{ formatCurrency(line.amount) }}</span>
+                <div class="min-w-0">
+                  <p class="portal-type-body text-title">{{ chargeLineLabel(line.chargeType, line.label) }}</p>
+                  <p v-if="line.quantity !== 1" class="portal-type-caption mt-0.5 text-body opacity-60">
+                    {{ line.quantity }}<template v-if="chargeLineUnit(line.chargeType)">&nbsp;{{ chargeLineUnit(line.chargeType) }}</template>&nbsp;×&nbsp;{{ formatCurrency(line.unitPrice) }}
+                  </p>
+                </div>
+                <span class="portal-money shrink-0 text-sm font-semibold text-title">{{ formatCurrency(line.amount) }}</span>
               </li>
             </ul>
           </section>
+          <!-- Grand total: heavier treatment, clear closing row -->
+          <div class="flex items-center justify-between gap-3 border-t-2 border-border-light px-4 py-3.5">
+            <span class="portal-type-label text-body">Tổng cộng</span>
+            <span class="portal-money text-base font-bold text-title">{{ formatCurrency(invoice.totalAmount) }}</span>
+          </div>
         </PortalCard>
       </section>
 

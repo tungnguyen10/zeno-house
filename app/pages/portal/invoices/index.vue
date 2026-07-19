@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { portalInvoiceStatementAccent } from '~/utils/constants/portal-status'
-import { formatCurrencyNumber } from '~/utils/format/currency'
+import { formatCurrency, formatCurrencyNumber } from '~/utils/format/currency'
 
 definePageMeta({
   layout: 'tenant',
@@ -52,16 +52,24 @@ const { invoices, status, error, refresh } = usePortalInvoices()
               <p class="portal-type-heading text-title">
                 Kỳ {{ String(invoice.periodMonth).padStart(2, '0') }}/{{ invoice.periodYear }}
               </p>
-              <p class="portal-type-caption mt-0.5 truncate text-body">{{ invoice.invoiceCode }}</p>
+              <p class="portal-type-caption mt-0.5 truncate text-body opacity-60">{{ invoice.invoiceCode }}</p>
             </div>
             <PortalStatusBadge :status="invoice.status" />
           </div>
+          <p class="portal-type-caption mt-3 text-body">
+            {{ invoice.balanceAmount > 0 ? 'Còn phải thanh toán' : 'Tổng hoá đơn' }}
+          </p>
           <p
-            class="portal-money mt-3 text-xl font-bold leading-7"
+            class="portal-money mt-0.5 text-xl font-bold leading-7"
             :class="`portal-money--${portalInvoiceStatementAccent(invoice.status)}`"
           >
-            <span>{{ formatCurrencyNumber(invoice.balanceAmount) }}</span><span class="portal-money-unit">₫</span>
+            <span>{{ formatCurrencyNumber(invoice.balanceAmount > 0 ? invoice.balanceAmount : invoice.totalAmount) }}</span><span class="portal-money-unit">₫</span>
           </p>
+          <div class="mt-2 flex items-center gap-2 border-t border-border-light pt-2">
+            <span class="portal-type-caption text-body">Tổng: <span class="font-medium text-title">{{ formatCurrency(invoice.totalAmount) }}</span></span>
+            <span class="text-border-light" aria-hidden="true">·</span>
+            <span class="portal-type-caption text-body">Đã trả: <span class="font-medium text-portal-positive-ink">{{ formatCurrency(invoice.paidAmount) }}</span></span>
+          </div>
           <p v-if="invoice.dueDate" class="portal-type-caption mt-2 text-body">Hạn thanh toán {{ invoice.dueDate }}</p>
         </PortalCard>
       </div>

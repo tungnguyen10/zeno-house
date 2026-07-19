@@ -237,17 +237,23 @@ function formatBytes(bytes: number): string {
 async function onLogout() {
   await logout()
 }
+
+const initials = computed(() => {
+  const name = profile.value?.fullName?.trim() ?? ''
+  if (!name) return '?'
+  const parts = name.split(/\s+/)
+  if (parts.length === 1) return (parts[0]?.[0] ?? '').toUpperCase()
+  return ((parts[0]?.[0] ?? '') + (parts[parts.length - 1]?.[0] ?? '')).toUpperCase()
+})
+
+const statusColor = computed(() => {
+  if (profile.value?.status === 'active') return 'text-portal-positive-ink'
+  return 'text-body'
+})
 </script>
 
 <template>
   <div>
-    <Teleport to="#portal-header-action">
-      <PortalButton v-if="profile && mode === 'view'" variant="ghost" size="sm" @click="openEdit">
-        <IconPencilSquare class="h-4 w-4" aria-hidden="true" />
-        Sửa
-      </PortalButton>
-    </Teleport>
-
     <div class="mx-auto w-full max-w-2xl space-y-5 px-4 py-5 lg:px-8 lg:py-8">
       <PortalSkeleton v-if="profileStatus === 'pending'" variant="statement" class="h-40" />
       <PortalEmptyState
@@ -261,17 +267,32 @@ async function onLogout() {
       <template v-else>
         <!-- Identity header -->
         <PortalCard>
-          <div class="flex items-center gap-3">
-            <span class="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-smoke-blue text-theme">
-              <IconUser class="h-7 w-7" aria-hidden="true" />
+          <div class="relative flex flex-col items-center py-2 text-center">
+            <!-- Edit icon (top-right, view mode only) -->
+            <button
+              v-if="mode === 'view'"
+              type="button"
+              class="absolute right-0 top-0 flex h-8 w-8 items-center justify-center rounded-lg text-body transition-colors hover:bg-smoke hover:text-title focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme/40"
+              aria-label="Sửa hồ sơ"
+              @click="openEdit"
+            >
+              <IconPencilSquare class="h-4 w-4" aria-hidden="true" />
+            </button>
+
+            <!-- Avatar -->
+            <span class="flex h-20 w-20 items-center justify-center rounded-full bg-smoke-blue portal-type-display font-bold text-theme">
+              {{ initials }}
             </span>
-            <div class="min-w-0 flex-1">
-              <p class="portal-type-heading truncate text-title">{{ profile.fullName }}</p>
-              <p class="portal-type-caption truncate text-body">Mã: {{ profile.code }}</p>
+
+            <!-- Name -->
+            <p class="portal-type-display mt-4 text-title">{{ profile.fullName }}</p>
+
+            <!-- Code + status -->
+            <div class="mt-1.5 flex items-center gap-2">
+              <p class="portal-type-caption text-body">{{ profile.code }}</p>
+              <span class="inline-block h-1 w-1 rounded-full bg-border-light" aria-hidden="true" />
+              <p class="portal-type-caption" :class="statusColor">{{ statusLabel(profile.status) }}</p>
             </div>
-            <span class="portal-type-label shrink-0 rounded-full border border-border-light px-2.5 py-1 text-body">
-              {{ statusLabel(profile.status) }}
-            </span>
           </div>
         </PortalCard>
 

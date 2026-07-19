@@ -85,7 +85,7 @@ const sheetStyle = computed(() =>
     >
       <div
         v-if="modelValue"
-        class="portal-safe-bottom fixed inset-x-0 bottom-0 z-[76] rounded-t-3xl bg-white shadow-2xl"
+        class="portal-shell portal-safe-bottom fixed inset-x-0 bottom-0 z-[76] rounded-t-3xl bg-white shadow-2xl"
         :class="{ 'transition-transform duration-200 [transition-timing-function:cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none': !dragging }"
         :style="sheetStyle"
         role="dialog"
@@ -98,7 +98,7 @@ const sheetStyle = computed(() =>
           @pointerup="onPointerUp"
           @pointercancel="onPointerUp"
         >
-          <span class="h-1.5 w-10 rounded-full bg-border" aria-hidden="true" />
+          <span class="h-1.5 w-10 rounded-full bg-smoke" aria-hidden="true" />
         </div>
         <div class="flex items-center justify-between px-5 pb-1 pt-2">
           <h2 class="text-lg font-semibold text-title">{{ title }}</h2>
