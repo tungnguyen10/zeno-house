@@ -1,12 +1,15 @@
 # API Inventory And Performance Contracts
 
 Generated from checked-in handlers by `node scripts/generate-api-inventory.mjs`.
-Route count: **155**.
+Route count: **159**.
 
 All business routes require server-side authorization unless explicitly documented as an internal-secret route. Initial reads use Nuxt `useFetch`; imperative reads and mutations use `apiFetch` with a 15-second timeout, request ID, no automatic mutation retry, and normalized server envelopes.
 
 | Method | Route | Pagination | Cache / invalidation | Budget |
 | --- | --- | --- | --- | --- |
+| POST | `/api/access-requests/[id]/approve` | n/a | invalidate affected domain | p95 ≤ 250ms |
+| POST | `/api/access-requests/[id]/reject` | n/a | invalidate affected domain | p95 ≤ 250ms |
+| GET | `/api/access-requests` | domain-bounded | request/DTO policy | p95 ≤ 400ms |
 | POST | `/api/ai/actions/[id]/cancel` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | POST | `/api/ai/actions/[id]/confirm` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | POST | `/api/ai/chat` | n/a | invalidate affected domain | p95 ≤ 250ms |
@@ -18,6 +21,7 @@ All business routes require server-side authorization unless explicitly document
 | GET | `/api/assignments` | domain-bounded | request/DTO policy | p95 ≤ 400ms |
 | POST | `/api/assignments` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | GET | `/api/audit` | bounded | request/DTO policy | p95 ≤ 400ms |
+| GET | `/api/auth/access-request/me` | n/a | request/DTO policy | p95 ≤ 250ms |
 | GET | `/api/billing/invoices/[id]` | n/a | request/DTO policy | p95 ≤ 250ms |
 | POST | `/api/billing/invoices/[id]/adjustment` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | GET | `/api/billing/invoices/[id]/payments` | domain-bounded | no long cache | p95 ≤ 400ms |

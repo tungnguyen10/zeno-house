@@ -8,15 +8,11 @@ Pages live in `app/pages/**`.
 
 Primary route groups:
 
-- `/`: dashboard
-- `/login`: auth screen
-- `/buildings/**`: buildings, settings, meter readings, building-scoped room detail
-- `/rooms/**`: room list/create/detail/edit
-- `/tenants/**`: tenant list/create/detail/edit
-- `/contracts/**`: contract list/create/detail/edit
-- `/invoices`: cross-period invoice browse and read-only preview
-- `/billing/**`: period list, period workspace, invoice detail
-- `/ui-showcase`: design-system showcase
+- `/`: role-based landing
+- `/login`, `/register`, `/forgot-password`: guest auth screens
+- `/auth/callback`, `/auth/reset-password`, `/auth/pending`: OAuth, recovery, and pending lifecycle
+- `/dashboard/**`: internal admin/owner/manager operations
+- `/portal/**`: tenant experience
 
 Pages should orchestrate data loading and route-level workflow. They should not contain repository logic or direct Supabase business queries.
 
@@ -26,7 +22,7 @@ Composables live in `app/composables/**` and mirror product workflows.
 
 | Area | Composables |
 | --- | --- |
-| Auth | `auth/useAuth`, `useAuthStore` |
+| Auth | `auth/useAuth`, `useAuthStore`, `useAccessRequests` |
 | Dashboard | `useDashboardSummary` |
 | Buildings | `useBuildingList`, `useBuildingDetail`, `useBuildingForm`, `useBuildingServices`, `useBuildingMeterReadings`, `useBuildingContractServices` |
 | Rooms | `useRoomList`, `useRoomDetail`, `useRoomForm` |
@@ -82,6 +78,15 @@ Current route identifiers prefer readable values where available:
 - Zod validators live in `app/utils/validators/**`.
 
 Do not return raw DB row shapes to the UI. If a new server field is needed by the UI, add it to the relevant type and mapper.
+
+## Auth Composition
+
+All auth pages use `layouts/auth.vue`. Desktop renders a brand/operational-illustration panel beside
+the form; mobile reduces the illustration to a compact top band. The layout and forms reuse the
+existing dark/cyan/Inter tokens and `UiInput`, `UiButton`, `UiAlert`, and related primitives.
+`AuthPasswordField` composes `UiInput` with an accessible suffix toggle; it does not introduce a
+new input primitive. Auth business calls remain in `auth/useAuth`, while the pending queue uses
+the authenticated self-status API rather than browser-side table access.
 
 ## Styling
 

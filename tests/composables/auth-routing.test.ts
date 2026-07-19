@@ -3,6 +3,10 @@ import { ref } from 'vue'
 
 const navigateTo = vi.fn((path: string) => path)
 const signInWithPassword = vi.fn()
+const signUp = vi.fn()
+const resetPasswordForEmail = vi.fn()
+const updateUser = vi.fn()
+const refreshSession = vi.fn()
 const currentUser = ref<Record<string, unknown> | null>(null)
 
 vi.stubGlobal('navigateTo', navigateTo)
@@ -10,6 +14,10 @@ vi.stubGlobal('useSupabaseUser', () => currentUser)
 vi.stubGlobal('useSupabaseClient', () => ({
   auth: {
     signInWithPassword,
+    signUp,
+    resetPasswordForEmail,
+    updateUser,
+    refreshSession,
     signInWithOAuth: vi.fn(),
     signOut: vi.fn(),
   },
@@ -42,12 +50,32 @@ describe('auth landing routes', () => {
     expect(navigateTo).toHaveBeenCalledWith(expected)
   })
 
-  it('routes a successful login with a missing role back to login', async () => {
+  it('routes a successful login with a missing role to pending', async () => {
     signInWithPassword.mockResolvedValue({ data: { user: {} }, error: null })
 
     await useAuth().login('person@example.com', 'secret')
 
-    expect(navigateTo).toHaveBeenCalledWith('/login')
+    expect(navigateTo).toHaveBeenCalledWith('/auth/pending')
+  })
+
+  it('registers without accepting a role and routes an immediate session to pending', async () => {
+    signUp.mockResolvedValue({ data: { session: {}, user: {} }, error: null })
+    const result = await useAuth().register({ full_name: 'A', email: 'a@example.com', password: 'password-123', password_confirmation: 'password-123' }, 'captcha-token')
+    expect(signUp).toHaveBeenCalledWith(expect.objectContaining({
+      email: 'a@example.com',
+      options: expect.objectContaining({ data: { full_name: 'A' }, captchaToken: 'captcha-token' }),
+    }))
+    expect(result.requiresEmailConfirmation).toBe(false)
+    expect(navigateTo).toHaveBeenCalledWith('/auth/pending')
+  })
+
+  it('sends recovery and updates password through Supabase Auth', async () => {
+    resetPasswordForEmail.mockResolvedValue({ error: null })
+    updateUser.mockResolvedValue({ error: null })
+    await useAuth().requestPasswordReset('a@example.com')
+    await useAuth().updatePassword('password-123')
+    expect(resetPasswordForEmail).toHaveBeenCalled()
+    expect(updateUser).toHaveBeenCalledWith({ password: 'password-123' })
   })
 
   it.each([

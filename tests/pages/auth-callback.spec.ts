@@ -31,4 +31,12 @@ describe('auth callback', () => {
     expect(navigateTo).toHaveBeenCalledWith(expected)
     wrapper.unmount()
   })
+
+  it('routes a callback without role to pending', async () => {
+    currentUser.value = { app_metadata: {} }
+    const wrapper = shallowMount(AuthCallback)
+    await flushPromises()
+    expect(navigateTo).toHaveBeenCalledWith('/auth/pending')
+    wrapper.unmount()
+  })
 })

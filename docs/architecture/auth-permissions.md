@@ -17,6 +17,11 @@ The store exposes:
 
 Roles come from `user.app_metadata.role`.
 
+An authenticated identity may temporarily have no role. This is the pending-account state, not
+a fifth role: every capability check continues to deny by default until an admin assigns a role
+and scope. Email signup and previously unprovisioned Google identities enter this state; accounts
+created by the existing provisioning services already carry a role and skip the queue.
+
 UI action controls (create/edit/delete, bulk selection, billing close/unissue, etc.) are
 gated with `authStore.can('<capability>')` rather than a coarse `isAdmin` flag, so owner and
 manager see exactly the controls their capabilities allow. `authStore.can` reads the shared
@@ -43,16 +48,19 @@ Global authenticated route guard:
 
 - `app/middleware/auth.global.ts`
 
-It keeps `/login` and `/auth/callback` public, checks `useSupabaseUser()`, and falls back to
+It keeps `/login`, `/register`, `/forgot-password`, `/auth/callback`, and
+`/auth/reset-password` public, checks `useSupabaseUser()`, and falls back to
 `auth.getSession()` to cover the timing gap after sign-in. Once a user is resolved, it enforces
-the client namespace matrix: `tenant` is locked to `/portal`, while every non-tenant role is
-redirected out of `/portal` through `getRedirectByRole`. Building scope remains a service-layer
-concern and is never evaluated in route middleware.
+the client namespace matrix: missing-role sessions are locked to `/auth/pending`, `tenant` is
+locked to `/portal`, and internal roles are locked to `/dashboard`. Building scope remains a
+service-layer concern and is never evaluated in route middleware.
 
 Authenticated app pages use two namespaces:
 
 - `/dashboard/**` for `admin`, `owner`, and `manager` operations.
 - `/portal/**` for the `tenant` experience.
+- `/auth/pending` for an authenticated identity awaiting or denied access; it is outside both
+  application namespaces and cannot render either application shell.
 
 `app/utils/auth-redirect.ts` is the single landing-route decision. Legacy top-level operational
 paths are redirected to their `/dashboard` equivalents by `app/middleware/legacy-dashboard.global.ts`.
@@ -71,8 +79,10 @@ Server middleware:
 - `server/middleware/02.namespace.ts`
 
 It runs for `/api/**`, reads Supabase JWT claims, normalizes `sub` into `user.id`, and stores the result on `event.context.user`.
-The namespace middleware classifies `/api/tenant/**` as `tenant` and other `/api/**` routes as
-`internal`. It actively rejects tenant JWTs on internal APIs and internal-role JWTs on tenant
+The namespace middleware classifies `/api/tenant/**` as `tenant`, `/api/auth/**` as auth lifecycle,
+and other `/api/**` routes as `internal`. Auth lifecycle routes accept any authenticated JWT but
+still call `requireAuth`; this is the only server namespace available to a missing-role session.
+It actively rejects tenant JWTs on internal APIs and internal-role JWTs on tenant
 APIs. Both mismatch directions use the same not-found response so the guard does not reveal
 whether a route or resource exists. Unauthenticated requests continue to the endpoint's normal
 auth check.
@@ -98,6 +108,23 @@ Admin has full operational access plus global user management:
 - every owner capability (see below)
 - `users.manage.global`
 - `users.create.owner`
+- `users.approve.pending` (admin-only; owner and manager never receive it)
+
+## Pending Account Approval
+
+`GET /api/auth/access-request/me` exposes only the current JWT subject's request. The pending page
+polls it only while the tab is visible, refreshes the Supabase session after approval, and then
+uses `getRedirectByRole`. Rejected requests retain the reason and auth identity but remain terminal
+in v1.
+
+Admin decisions go through the access-request service. Owner/manager approval requires one or more
+valid building assignments; tenant approval requires an existing tenant with no account link;
+admin cannot be granted through this workflow. The service conditionally claims `pending` as
+`processing`, tags that claim and every scope grant with the same unguessable token, writes scope
+first, and updates `app_metadata.role` last. Finalization is fenced by the token. An Auth error
+preserves the processing request and its exact grants because a timed-out write may still commit;
+repeating the same decision fills missing scope and retries or finalizes idempotently. A role-less
+request is never time-reclaimed. Creation, approval, and rejection emit secret-free audit actions.
 
 Owner has full operational access, but limited to assigned buildings:
 

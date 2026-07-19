@@ -33,6 +33,47 @@ function mapManagedUser(user: AuthUserLike): ManagedUser {
  * server-side only; the service-role client bypasses RLS.
  */
 export const UserRepository = {
+  async getAuthAccount(event: H3Event, id: string): Promise<{
+    id: string
+    emailConfirmed: boolean
+    role: UserRole | null
+  } | null> {
+    const client = serverSupabaseClient(event)
+    const { data, error } = await client.auth.admin.getUserById(id)
+    if (error) {
+      if (error.status === 404) return null
+      throwDbError(error, 'users.getAuthAccount')
+    }
+    return data.user
+      ? {
+          id: data.user.id,
+          emailConfirmed: Boolean(data.user.email_confirmed_at),
+          role: (data.user.app_metadata?.role as UserRole | undefined) ?? null,
+        }
+      : null
+  },
+
+  async setAppRole(event: H3Event, id: string, role: UserRole, createdBy: string): Promise<void> {
+    const client = serverSupabaseClient(event)
+    const { data: current, error: getError } = await client.auth.admin.getUserById(id)
+    if (getError || !current.user) throwDbError(getError ?? new Error('User not found'), 'users.setAppRole.get')
+    const { error } = await client.auth.admin.updateUserById(id, {
+      app_metadata: { ...current.user.app_metadata, role, created_by: createdBy },
+    })
+    if (error) throwDbError(error, 'users.setAppRole.update')
+  },
+
+  async clearAppRole(event: H3Event, id: string): Promise<void> {
+    const client = serverSupabaseClient(event)
+    const { data: current, error: getError } = await client.auth.admin.getUserById(id)
+    if (getError || !current.user) throwDbError(getError ?? new Error('User not found'), 'users.clearAppRole.get')
+    const metadata = { ...current.user.app_metadata }
+    delete metadata.role
+    delete metadata.created_by
+    const { error } = await client.auth.admin.updateUserById(id, { app_metadata: metadata })
+    if (error) throwDbError(error, 'users.clearAppRole.update')
+  },
+
   async listByRoles(event: H3Event, roles: UserRole[]): Promise<ManagedUser[]> {
     const client = serverSupabaseClient(event)
     const wanted = new Set(roles)

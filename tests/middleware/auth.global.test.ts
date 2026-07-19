@@ -24,7 +24,7 @@ describe('global auth middleware', () => {
     getSession.mockResolvedValue({ data: { session: null } })
   })
 
-  it.each(['/login', '/auth/callback'])('keeps public route %s open', async (path) => {
+  it.each(['/login', '/register', '/forgot-password', '/auth/callback', '/auth/reset-password'])('keeps public route %s open', async (path) => {
     expect(await authMiddleware({ path } as never, {} as never)).toBeUndefined()
     expect(getSession).not.toHaveBeenCalled()
     expect(navigateTo).not.toHaveBeenCalled()
@@ -71,5 +71,16 @@ describe('global auth middleware', () => {
     currentUser.value = userWithRole('unknown')
 
     expect(await authMiddleware({ path: '/portal' } as never, {} as never)).toBe('/login')
+  })
+
+  it('locks a missing-role session to the pending route', async () => {
+    currentUser.value = { app_metadata: {} }
+    expect(await authMiddleware({ path: '/dashboard' } as never, {} as never)).toBe('/auth/pending')
+    expect(await authMiddleware({ path: '/auth/pending' } as never, {} as never)).toBeUndefined()
+  })
+
+  it('redirects known roles away from pending', async () => {
+    currentUser.value = userWithRole('admin')
+    expect(await authMiddleware({ path: '/auth/pending' } as never, {} as never)).toBe('/dashboard')
   })
 })

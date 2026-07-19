@@ -14,6 +14,71 @@ export type Database = {
   }
   public: {
     Tables: {
+      access_requests: {
+        Row: {
+          approval_claim_token: string | null
+          auth_user_id: string
+          created_at: string
+          created_audited_at: string | null
+          decision_building_ids: string[]
+          decision_role: string | null
+          decision_tenant_id: string | null
+          email: string
+          full_name: string | null
+          id: string
+          provider: string
+          rejection_reason: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          approval_claim_token?: string | null
+          auth_user_id: string
+          created_at?: string
+          created_audited_at?: string | null
+          decision_building_ids?: string[]
+          decision_role?: string | null
+          decision_tenant_id?: string | null
+          email: string
+          full_name?: string | null
+          id?: string
+          provider?: string
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          approval_claim_token?: string | null
+          auth_user_id?: string
+          created_at?: string
+          created_audited_at?: string | null
+          decision_building_ids?: string[]
+          decision_role?: string | null
+          decision_tenant_id?: string | null
+          email?: string
+          full_name?: string | null
+          id?: string
+          provider?: string
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "access_requests_decision_tenant_id_fkey"
+            columns: ["decision_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_action_plans: {
         Row: {
           action_type: string
@@ -1894,6 +1959,7 @@ export type Database = {
       }
       tenant_user_links: {
         Row: {
+          approval_claim_token: string | null
           auth_user_id: string
           created_at: string
           id: string
@@ -1902,6 +1968,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          approval_claim_token?: string | null
           auth_user_id: string
           created_at?: string
           id?: string
@@ -1910,6 +1977,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          approval_claim_token?: string | null
           auth_user_id?: string
           created_at?: string
           id?: string
@@ -1998,6 +2066,7 @@ export type Database = {
       }
       user_building_assignments: {
         Row: {
+          approval_claim_token: string | null
           building_id: string
           can_delete_master_data: boolean
           created_at: string
@@ -2007,6 +2076,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          approval_claim_token?: string | null
           building_id: string
           can_delete_master_data?: boolean
           created_at?: string
@@ -2016,6 +2086,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          approval_claim_token?: string | null
           building_id?: string
           can_delete_master_data?: boolean
           created_at?: string
@@ -2064,6 +2135,10 @@ export type Database = {
           building_id: string
           expense_id: string
         }[]
+      }
+      append_access_request_created_audit: {
+        Args: { p_actor_id: string; p_request_id: string }
+        Returns: boolean
       }
       billing_audit_search_page: {
         Args: {

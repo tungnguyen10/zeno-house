@@ -20,6 +20,7 @@ describe('API namespace classification', () => {
     ['/api/tenant?view=summary', 'tenant'],
     ['/api/tenant/profile', 'tenant'],
     ['/api/tenant/profile?locale=vi', 'tenant'],
+    ['/api/auth/access-request/me', 'auth'],
     ['/login', null],
   ])('classifies %s as %s', (path, expected) => {
     expect(classifyApiNamespace(path)).toBe(expected)
@@ -75,6 +76,15 @@ describe('API namespace classification', () => {
 
     expect(namespaceMiddleware(event)).toBeUndefined()
     expect(event.context.apiNamespace).toBe(expected)
+  })
+
+  it('allows a missing-role session only into the auth API namespace', () => {
+    const authEvent = { path: '/api/auth/access-request/me', context: { user: { app_metadata: {} } } }
+    expect(namespaceMiddleware(authEvent)).toBeUndefined()
+    expect(authEvent.context.apiNamespace).toBe('auth')
+
+    const internalEvent = { path: '/api/buildings', context: { user: { app_metadata: {} } } }
+    expect(() => namespaceMiddleware(internalEvent)).toThrow(expect.objectContaining({ statusCode: 404 }))
   })
 
   it('leaves unauthenticated requests to endpoint authentication', () => {

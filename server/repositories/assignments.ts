@@ -18,6 +18,7 @@ function mapAssignment(row: AssignmentRow): UserBuildingAssignment {
     id: row.id,
     user_id: row.user_id,
     building_id: row.building_id,
+    approval_claim_token: row.approval_claim_token,
     can_delete_master_data: row.can_delete_master_data,
     created_by: row.created_by,
     created_at: row.created_at,
@@ -172,7 +173,7 @@ export const AssignmentRepository = {
 
   async insert(
     event: H3Event,
-    input: AssignmentCreatePayload & { created_by?: string | null },
+    input: AssignmentCreatePayload & { created_by?: string | null; approval_claim_token?: string | null },
   ): Promise<UserBuildingAssignment> {
     // Mutations run through service-role; authorization is enforced in service
     // layer (manage capability + scope + target-role checks).
@@ -184,6 +185,7 @@ export const AssignmentRepository = {
         building_id: input.building_id,
         can_delete_master_data: false,
         created_by: input.created_by ?? null,
+        approval_claim_token: input.approval_claim_token ?? null,
       })
       .select('*')
       .single()
@@ -193,6 +195,15 @@ export const AssignmentRepository = {
       throwDbError(error, 'assignments.insert')
     }
     return mapAssignment(data)
+  },
+
+  async removeByApprovalClaim(event: H3Event, approvalClaimToken: string): Promise<void> {
+    const { error } = await serverSupabaseClient(event)
+      .from('user_building_assignments')
+      .delete()
+      .eq('approval_claim_token', approvalClaimToken)
+
+    if (error) throwDbError(error, 'assignments.removeByApprovalClaim')
   },
 
   async update(

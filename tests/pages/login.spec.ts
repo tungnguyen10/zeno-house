@@ -36,12 +36,28 @@ const UiButtonStub = defineComponent({
   `,
 })
 
+const AuthPasswordFieldStub = defineComponent({
+  props: ['modelValue', 'disabled'],
+  emits: ['update:modelValue'],
+  template: `
+    <input
+      type="password"
+      :value="modelValue"
+      :disabled="disabled"
+      @input="$emit('update:modelValue', $event.target.value)"
+    >
+  `,
+})
+
 function mountLogin() {
   return mount(LoginPage, {
     global: {
       stubs: {
+        AuthPasswordField: AuthPasswordFieldStub,
         IconGoogle: true,
+        IconMail: true,
         IconLogo: true,
+        NuxtLink: { props: ['to'], template: '<a :href="to"><slot /></a>' },
         UiAlert: { template: '<div role="alert"><slot /></div>' },
         UiButton: UiButtonStub,
         UiInput: UiInputStub,

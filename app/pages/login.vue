@@ -51,14 +51,13 @@ async function handleGoogleLogin() {
 
 <template>
   <div>
-    <!-- Logo -->
-    <div class="mb-8 flex flex-col items-center text-center">
-      <IconLogo class="h-10 w-auto text-white mb-3" aria-label="Zeno House" />
-      <p class="text-sm text-muted">Đăng nhập vào tài khoản của bạn</p>
+    <div class="mb-7">
+      <p class="text-xs font-medium uppercase tracking-[0.16em] text-cyan">Chào mừng trở lại</p>
+      <h2 class="mt-2 text-2xl font-semibold text-white">Đăng nhập Zeno House</h2>
+      <p class="mt-2 text-sm leading-6 text-muted">Tiếp tục công việc với tài khoản của bạn.</p>
     </div>
 
-    <!-- Form -->
-    <div class="rounded-2xl border border-dark-border bg-dark-surface p-6 shadow-xl">
+    <div class="rounded-2xl border border-dark-border bg-dark-surface p-5 shadow-xl sm:p-6">
       <UiButton
         class="w-full"
         variant="secondary"
@@ -86,16 +85,23 @@ async function handleGoogleLogin() {
           autocomplete="email"
           :disabled="loading"
           required
-        />
-        <UiInput
+        >
+          <template #prefix><IconMail class="size-4" aria-hidden="true" /></template>
+        </UiInput>
+        <AuthPasswordField
           v-model="password"
           label="Mật khẩu"
-          type="password"
           placeholder="••••••••"
           autocomplete="current-password"
           :disabled="loading"
           required
         />
+
+        <div class="flex justify-end">
+          <NuxtLink to="/forgot-password" class="text-xs font-medium text-cyan hover:text-cyan/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan/40">
+            Quên mật khẩu?
+          </NuxtLink>
+        </div>
 
         <UiAlert v-if="errorMessage" severity="danger" role="alert">
           {{ errorMessage }}
@@ -106,5 +112,10 @@ async function handleGoogleLogin() {
         </UiButton>
       </form>
     </div>
+
+    <p class="mt-6 text-center text-sm text-muted">
+      Chưa có tài khoản?
+      <NuxtLink to="/register" class="font-medium text-cyan hover:text-cyan/80">Đăng ký</NuxtLink>
+    </p>
   </div>
 </template>
