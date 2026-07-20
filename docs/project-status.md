@@ -1,6 +1,13 @@
 # Zeno House - Project Status
 
-Last reviewed from source: 2026-07-14.
+Last reviewed from source: 2026-07-20.
+
+Building invoice payment profile update: 2026-07-20
+
+- Building settings now manage one scoped receiving profile with bank details, an owner-uploaded bank QR, an optional logo, and a constrained transfer-content template; manager access is read-only.
+- Private QR/logo assets use unique append-only Storage paths and are exposed only through short-lived signed URLs.
+- Invoice creation snapshots the current profile transactionally across period issue, issue-and-pay, and reissue. First configuration backfills active legacy invoices once; later edits preserve invoice history.
+- Invoice detail and the two-up A4 print route now show the same issue-time payment snapshot. The print artifact uses a six-column charge table and never substitutes the current building profile for missing historical data.
 
 Internal AI agent platform implementation update: 2026-07-14
 
@@ -436,6 +443,11 @@ Invoice API:
 - `POST /api/billing/invoices/[id]/void`
 - `POST /api/billing/invoices/[id]/reissue`
 
+Building invoice profile API:
+
+- `GET /api/buildings/[id]/invoice-profile`
+- `PUT /api/buildings/[id]/invoice-profile` (multipart bank fields plus private QR/logo uploads)
+
 Implemented billing workspace:
 
 - billing period queue with filters
@@ -450,6 +462,8 @@ Implemented billing workspace:
 - period unissue modal
 - invoice detail page
 - shared issued-invoice print route for single or bulk selection
+- issue-time building payment-profile snapshots in invoice detail and print
+- two-up A4 **Phiếu tính tiền nhà** with bank instructions and owner-uploaded QR
 - mobile draft-row component
 - bulk reading entry modal
 - optimistic draft-grid helpers

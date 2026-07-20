@@ -8,6 +8,7 @@ import type {
   BillingBlockerCode,
   BillingWarningCode,
 } from '~/utils/constants/billing'
+import type { InvoiceProfileDisplay } from '~/types/building-invoice-profile'
 
 // ---------------------------------------------------------------------------
 // Domain DTOs (camelCase, front-end facing)
@@ -247,11 +248,13 @@ export interface InvoiceWithCharges {
   invoice: Invoice
   charges: InvoiceCharge[]
   payments: InvoicePayment[]
+  invoiceProfile: InvoiceProfileDisplay | null
 }
 
 export interface InvoicePrintItem {
   invoice: Invoice
   charges: InvoiceCharge[]
+  invoiceProfile: InvoiceProfileDisplay | null
   period: BillingPeriod
   building: {
     id: string

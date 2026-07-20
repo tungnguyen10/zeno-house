@@ -51,6 +51,15 @@ describe('server permissions: can()', () => {
 })
 
 describe('server permissions: owner capabilities', () => {
+  it('allows owner/admin to manage invoice profiles while manager is read-only', () => {
+    expect(can(makeUser('admin'), 'building-invoice-profile.read')).toBe(true)
+    expect(can(makeUser('admin'), 'building-invoice-profile.write')).toBe(true)
+    expect(can(makeUser('owner'), 'building-invoice-profile.read')).toBe(true)
+    expect(can(makeUser('owner'), 'building-invoice-profile.write')).toBe(true)
+    expect(can(makeUser('manager'), 'building-invoice-profile.read')).toBe(true)
+    expect(can(makeUser('manager'), 'building-invoice-profile.write')).toBe(false)
+  })
+
   it('owner can create/update/delete buildings', () => {
     expect(can(makeUser('owner'), 'buildings.create')).toBe(true)
     expect(can(makeUser('owner'), 'buildings.update')).toBe(true)

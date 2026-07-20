@@ -72,6 +72,7 @@ Metering:
 Billing:
 
 - `billing_periods`
+- `building_invoice_profiles`
 - `invoices`
 - `invoice_charges`
 - `invoice_payments`
@@ -97,6 +98,11 @@ Route helpers still fall back to ids when readable identifiers are absent.
 - one active non-void invoice per `(billing_period_id, contract_id)`
 - linked replacement flow through `supersedes_invoice_id` and `superseded_by_invoice_id`
 - denormalized totals: subtotal, discount, surcharge, total, paid, balance
+- `invoice_profile_snapshot`: nullable, schema-versioned receiving-bank identity captured when the invoice is inserted
+
+`building_invoice_profiles` stores one current receiving profile per building: normalized bank fields, transfer-content template, required QR path, optional logo path, audit actor, and one-time legacy-backfill marker. A `BEFORE INSERT` trigger snapshots the current profile for every invoice creation transaction; missing profiles do not block issuance. The first profile upsert backfills only non-void invoices with a null snapshot, and later edits preserve history.
+
+The private `building-invoice-assets` Storage bucket accepts JPEG, PNG, and WebP objects up to 5 MB. Objects use unique append-only paths because issued snapshots may retain older versions. Browser clients receive only short-lived signed URLs after service-layer permission and building-scope checks.
 
 `invoice_charges` stores the line-item snapshot used to explain totals.
 

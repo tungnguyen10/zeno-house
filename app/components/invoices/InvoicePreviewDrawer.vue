@@ -3,6 +3,7 @@ import type { InvoicePayment } from '~/types/billing'
 import type { InvoiceListItem } from '~/utils/validators/invoices'
 import { formatCurrency } from '~/utils/format/currency'
 import { billingWorkspaceInvoicePath } from '~/utils/routes/operational'
+import InvoicePaymentProfileCard from './InvoicePaymentProfileCard.vue'
 
 const props = defineProps<{
   modelValue: boolean
@@ -107,6 +108,10 @@ function paymentMethodLabel(payment: InvoicePayment): string {
             :total-amount="detail.invoice.totalAmount"
             :show-adjustments="true"
           />
+        </UiSection>
+
+        <UiSection title="Thanh toán theo hóa đơn">
+          <InvoicePaymentProfileCard :profile="detail.invoiceProfile" />
         </UiSection>
 
         <UiSection title="Thanh toán">

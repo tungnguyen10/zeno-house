@@ -10,6 +10,8 @@ import { newCorrelationId } from '../../utils/billing/correlation'
 import { BillingAuditService } from './audit'
 import { BillingDisplayResolver } from './display'
 import { deriveInvoiceListStatus } from './invoice-query'
+import { BuildingInvoiceProfileRepository } from '../../repositories/building-invoice-profiles'
+import { InvoiceProfileDisplayService } from './invoice-profile-display'
 
 interface ResolvedPrintInvoices {
   invoices: Invoice[]
@@ -70,11 +72,16 @@ export const InvoicePrintService = {
     const buildingIds = uniqueInOrder(
       [...periodById.values()].map(period => period.buildingId),
     )
-    const [buildings, chargesByInvoice, enrichedInvoices] = await Promise.all([
+    const [buildings, chargesByInvoice, enrichedInvoices, snapshotsByInvoice] = await Promise.all([
       BuildingRepository.findManyByIds(event, buildingIds),
       InvoiceRepository.listChargesByInvoiceIds(event, invoices.map(invoice => invoice.id)),
       new BillingDisplayResolver(event).enrichInvoices(invoices),
+      BuildingInvoiceProfileRepository.findInvoiceSnapshotsByIds(
+        event,
+        invoices.map(invoice => invoice.id),
+      ),
     ])
+    const profilesByInvoice = await InvoiceProfileDisplayService.resolveMany(event, snapshotsByInvoice)
     const buildingById = new Map(buildings.map(building => [building.id, building]))
 
     return enrichedInvoices.map((invoice) => {
@@ -92,6 +99,7 @@ export const InvoicePrintService = {
           }),
         },
         charges: chargesByInvoice.get(invoice.id) ?? [],
+        invoiceProfile: profilesByInvoice.get(invoice.id) ?? null,
         period,
         building: {
           id: building.id,

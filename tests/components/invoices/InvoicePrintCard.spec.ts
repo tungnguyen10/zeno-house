@@ -21,6 +21,15 @@ function printItem(): InvoicePrintItem {
     }),
     period: buildPeriod({ periodYear: 2026, periodMonth: 6 }),
     building: { id: 'building-1', name: 'Zeno House A', address: '12 Nguyễn Trãi' },
+    invoiceProfile: {
+      bankName: 'Ngân hàng Quốc tế Việt Nam (VIB)',
+      accountHolder: 'NGUYỄN TUẤN ANH',
+      accountNumber: '375675817',
+      transferContent: 'ZHA-101-INV-2606-014-06/2026',
+      qrImageUrl: 'https://signed.example/qr.webp',
+      logoImageUrl: 'https://signed.example/logo.webp',
+      snapshottedAt: '2026-06-01T00:00:00.000Z',
+    },
     charges: [
       {
         id: 'charge-rent', invoiceId: '00000000-0000-4000-8000-000000000001',
@@ -53,17 +62,42 @@ describe('InvoicePrintCard', () => {
       },
     })
 
-    expect(wrapper.text()).toContain('Hóa đơn tháng 06/2026')
+    expect(wrapper.text()).toContain('Phiếu tính tiền nhà tháng 06/2026')
     expect(wrapper.text()).toContain('INV-2606-014')
     expect(wrapper.text()).toContain('Zeno House A')
     expect(wrapper.text()).toContain('12 Nguyễn Trãi')
     expect(wrapper.text()).toContain('Phòng 101')
     expect(wrapper.text()).toContain('Nguyễn Văn An')
-    expect(wrapper.text()).toContain('1.200 → 1.300')
-    expect(wrapper.text()).toContain('100 kWh')
+    expect(wrapper.text()).toContain('Chỉ số cũ')
+    expect(wrapper.text()).toContain('Chỉ số mới')
+    expect(wrapper.text()).toContain('Số lượng')
+    expect(wrapper.text()).toContain('Đơn giá')
+    expect(wrapper.text()).toContain('1.200')
+    expect(wrapper.text()).toContain('1.300')
+    expect(wrapper.text()).toContain('100')
     expect(wrapper.text()).toContain('3.500.000')
     expect(wrapper.text()).toContain('1.000.000')
     expect(wrapper.text()).toContain('2.500.000')
     expect(wrapper.get('[data-test="status"]').text()).toBe('partial')
+    expect(wrapper.get('[data-test="payment-qr"]').attributes('src')).toBe('https://signed.example/qr.webp')
+    expect(wrapper.get('[data-test="building-logo"]').attributes('src')).toBe('https://signed.example/logo.webp')
+    expect(wrapper.text()).toContain('ZHA-101-INV-2606-014-06/2026')
+  })
+
+  it('uses Zeno branding and a neutral instruction when no payment snapshot exists', () => {
+    const item = { ...printItem(), invoiceProfile: null }
+    const wrapper = mount(InvoicePrintCard, {
+      props: { item },
+      global: {
+        stubs: {
+          UiStatusBadge: defineComponent({ template: '<span />' }),
+          IconLogo: defineComponent({ template: '<span data-test="zeno-logo" />' }),
+        },
+      },
+    })
+
+    expect(wrapper.find('[data-test="zeno-logo"]').exists()).toBe(true)
+    expect(wrapper.text()).toContain('Liên hệ quản lý để nhận thông tin thanh toán')
+    expect(wrapper.find('[data-test="payment-qr"]').exists()).toBe(false)
   })
 })

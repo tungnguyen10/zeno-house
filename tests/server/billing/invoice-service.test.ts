@@ -18,6 +18,8 @@ const findLatestCorrelation = vi.fn()
 const calculateDraft = vi.fn()
 const enrichInvoices = vi.fn(async invoices => invoices)
 const enrichPayments = vi.fn(async payments => payments)
+const findInvoiceSnapshots = vi.fn()
+const resolveProfileDisplays = vi.fn()
 const assignmentRepoMocks = vi.hoisted(() => ({
   findBuildingIdsByUser: vi.fn(),
 }))
@@ -75,6 +77,14 @@ vi.mock('../../../server/repositories/assignments', () => ({
   AssignmentRepository: assignmentRepoMocks,
 }))
 
+vi.mock('../../../server/repositories/building-invoice-profiles', () => ({
+  BuildingInvoiceProfileRepository: { findInvoiceSnapshotsByIds: findInvoiceSnapshots },
+}))
+
+vi.mock('../../../server/services/billing/invoice-profile-display', () => ({
+  InvoiceProfileDisplayService: { resolveMany: resolveProfileDisplays },
+}))
+
 function makeUser(role: 'admin' | 'manager' = 'admin'): AuthUser {
   return {
     id: 'user-1',
@@ -94,6 +104,8 @@ describe('InvoiceService invoice lifecycle methods', () => {
     findPeriodById.mockResolvedValue(buildPeriod({ id: 'period-1', status: 'issued' }))
     listCharges.mockResolvedValue([])
     listPaymentsByInvoice.mockResolvedValue([])
+    findInvoiceSnapshots.mockResolvedValue(new Map())
+    resolveProfileDisplays.mockResolvedValue(new Map())
   })
 
   it('loads an invoice by business code and uses the resolved id for child rows', async () => {
@@ -101,6 +113,9 @@ describe('InvoiceService invoice lifecycle methods', () => {
     findInvoiceByIdentifier.mockResolvedValue(invoice)
     listCharges.mockResolvedValue([{ id: 'charge-1' }])
     listPaymentsByInvoice.mockResolvedValue([{ id: 'payment-1' }])
+    resolveProfileDisplays.mockResolvedValue(new Map([
+      ['invoice-1', { bankName: 'VIB', qrImageUrl: 'signed:qr' }],
+    ]))
     const { InvoiceService } = await import('../../../server/services/billing/invoices')
 
     const result = await InvoiceService.getWithCharges(
@@ -113,6 +128,7 @@ describe('InvoiceService invoice lifecycle methods', () => {
     expect(listCharges).toHaveBeenCalledWith(expect.anything(), invoice.id)
     expect(listPaymentsByInvoice).toHaveBeenCalledWith(expect.anything(), invoice.id)
     expect(result.invoice.invoiceCode).toBe('inv-2026-05-0001')
+    expect(result.invoiceProfile).toMatchObject({ bankName: 'VIB', qrImageUrl: 'signed:qr' })
   })
 
   it('voids an issued invoice with no payments and records audit metadata', async () => {

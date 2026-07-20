@@ -24,6 +24,8 @@ import { BillingDraftService } from './drafts'
 import { BillingDisplayResolver } from './display'
 import { validateAdjustment } from './rules'
 import { assertBuildingScope } from '../../utils/scope'
+import { BuildingInvoiceProfileRepository } from '../../repositories/building-invoice-profiles'
+import { InvoiceProfileDisplayService } from './invoice-profile-display'
 
 export const InvoiceService = {
   async list(event: H3Event, user: AuthUser, billingPeriodId: string): Promise<Invoice[]> {
@@ -46,14 +48,19 @@ export const InvoiceService = {
     const period = await BillingPeriodRepository.findById(event, invoice.billingPeriodId)
     if (!period) throwNotFound('Không tìm thấy kỳ vận hành')
     await assertBuildingScope(event, user, period.buildingId, 'read')
-    const charges = await InvoiceRepository.listCharges(event, invoice.id)
-    const payments = await InvoicePaymentRepository.listByInvoice(event, invoice.id)
+    const [charges, payments, snapshots] = await Promise.all([
+      InvoiceRepository.listCharges(event, invoice.id),
+      InvoicePaymentRepository.listByInvoice(event, invoice.id),
+      BuildingInvoiceProfileRepository.findInvoiceSnapshotsByIds(event, [invoice.id]),
+    ])
+    const profiles = await InvoiceProfileDisplayService.resolveMany(event, snapshots)
     const resolver = new BillingDisplayResolver(event)
     const [enrichedInvoice] = await resolver.enrichInvoices([invoice])
     return {
       invoice: enrichedInvoice ?? invoice,
       charges,
       payments: await resolver.enrichPayments(payments),
+      invoiceProfile: profiles.get(invoice.id) ?? null,
     }
   },
 

@@ -220,6 +220,8 @@ visible to their owner only through building assignments.
 | `billing.close` | admin, owner | Close a fully collected issued/collecting period. |
 | `billing.reopen` | admin | Reopen a closed period back to collecting with a reason. |
 | `billing.unissue` | admin | Reopen issuance by voiding unpaid invoices and retaining paid ones. |
+| `building-invoice-profile.read` | admin, owner, manager | View current building receiving instructions and signed image previews in building scope. |
+| `building-invoice-profile.write` | admin, owner | Create or update receiving instructions and private QR/logo assets in building scope. |
 
 For scoped roles (owner, manager) every billing capability is additionally constrained to the
 period's building via `assertBuildingScope`.

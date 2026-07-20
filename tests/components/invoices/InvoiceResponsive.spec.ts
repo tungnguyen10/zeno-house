@@ -129,6 +129,15 @@ beforeEach(() => {
         createdAt: '2026-06-05T00:00:00.000Z',
         updatedAt: '2026-06-05T00:00:00.000Z',
       }],
+      invoiceProfile: {
+        bankName: 'VIB',
+        accountHolder: 'NGUYỄN TUẤN ANH',
+        accountNumber: '375675817',
+        transferContent: 'INV-2606-014-101',
+        qrImageUrl: 'https://signed.example/qr.webp',
+        logoImageUrl: null,
+        snapshottedAt: '2026-06-01T00:00:00.000Z',
+      },
     }),
     isLoading: ref(false),
     error: ref(null),
@@ -222,6 +231,8 @@ describe('InvoicePreviewDrawer responsive layout', () => {
     expect(wrapper.text()).not.toContain('Ghi thanh toán')
     expect(wrapper.text()).not.toContain('Huỷ hoá đơn')
     expect(wrapper.text()).not.toContain('Điều chỉnh')
+    expect(wrapper.text()).toContain('Thông tin chuyển khoản khi phát hành')
+    expect(wrapper.text()).toContain('INV-2606-014-101')
   })
 
   it('emits print intent for one active invoice', async () => {

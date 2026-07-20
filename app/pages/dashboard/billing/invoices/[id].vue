@@ -161,6 +161,13 @@ function dateTimeText(value: string | null | undefined): string {
         </UiTable>
       </UiSection>
 
+      <UiSection
+        title="Thông tin thanh toán trên hóa đơn"
+        description="Dữ liệu được giữ nguyên theo thời điểm phát hành hóa đơn này."
+      >
+        <InvoicePaymentProfileCard :profile="detail.invoiceProfile" />
+      </UiSection>
+
       <UiSection title="Thanh toán">
         <UiTable
           :rows="detail.payments"

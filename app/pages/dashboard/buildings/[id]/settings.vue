@@ -1,6 +1,7 @@
 <script setup lang="ts">
 
 import type { ApiSuccess } from '~/types/api'
+import type { BuildingInvoiceProfileSaveInput } from '~/types/building-invoice-profile'
 import type { PricingType, ServiceCatalogItem } from '~/types/service-catalog'
 import type { ContractWithDetails } from '~/types/contracts'
 import type { AssignmentManager } from '~/types/assignments'
@@ -31,6 +32,25 @@ const route = useRoute()
 const id = route.params.id as string
 const authStore = useAuthStore()
 const toast = useToast()
+
+const {
+  profile: invoiceProfile,
+  loading: loadingInvoiceProfile,
+  saving: savingInvoiceProfile,
+  error: invoiceProfileError,
+  save: saveInvoiceProfile,
+} = useBuildingInvoiceProfile(id)
+const canEditInvoiceProfile = computed(() => authStore.can('building-invoice-profile.write'))
+
+async function handleSaveInvoiceProfile(input: BuildingInvoiceProfileSaveInput) {
+  try {
+    await saveInvoiceProfile(input)
+    toast.success('Đã lưu thông tin nhận diện và thanh toán trên phiếu.')
+  }
+  catch {
+    // The composable exposes the standardized API message beside the form.
+  }
+}
 
 const { building, refresh: refreshBuilding } = useBuildingDetail(id)
 const {
@@ -682,6 +702,13 @@ const settingsSections = computed<SettingsSectionNavItem[]>(() => [
     visible: true,
   },
   {
+    id: 'invoice-profile',
+    label: 'Nhận diện và thanh toán',
+    description: 'Logo, tài khoản nhận tiền và QR trên phiếu',
+    badge: invoiceProfile.value ? 'Đã cấu hình' : 'Chưa hoàn chỉnh',
+    visible: true,
+  },
+  {
     id: 'finance-rules',
     label: 'Quy tắc vận hành',
     description: 'Chi phí cố định, quỹ dự phòng, nhắc chi và trả trước',
@@ -716,7 +743,7 @@ const activeSectionId = computed(() => {
 <template>
   <div class="space-y-6">
     <UiPageHeader
-      title="Cài đặt dịch vụ"
+      title="Cài đặt tòa nhà"
       :description="building?.name"
       :back-to="building ? buildingPath(building) : `/dashboard/buildings/${id}`"
       back-label="Quay lại tòa nhà"
@@ -864,6 +891,31 @@ const activeSectionId = computed(() => {
                   {{ manager.name ?? manager.email ?? manager.id }}
                 </span>
               </div>
+            </UiSurfacePanel>
+          </UiSection>
+        </section>
+
+        <section id="invoice-profile" class="scroll-mt-20 space-y-3">
+          <header class="flex items-center justify-between gap-2">
+            <h2 class="text-sm font-semibold text-cyan">Nhận diện và thanh toán</h2>
+            <UiBadge :variant="invoiceProfile ? 'success' : 'warning'">
+              {{ invoiceProfile ? 'Đã cấu hình' : 'Chưa hoàn chỉnh' }}
+            </UiBadge>
+          </header>
+
+          <UiSection
+            title="Nhận diện & thanh toán trên phiếu"
+            description="Logo, tài khoản nhận tiền và QR được lưu thành snapshot riêng trên từng hóa đơn khi phát hành."
+          >
+            <UiSurfacePanel density="compact">
+              <BuildingInvoiceProfileSettings
+                :profile="invoiceProfile"
+                :can-edit="canEditInvoiceProfile"
+                :loading="loadingInvoiceProfile"
+                :saving="savingInvoiceProfile"
+                :error="invoiceProfileError"
+                @save="handleSaveInvoiceProfile"
+              />
             </UiSurfacePanel>
           </UiSection>
         </section>

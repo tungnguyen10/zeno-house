@@ -5,6 +5,7 @@ export const AUDIT_ACTIONS = {
   BUILDING_ARCHIVED: 'building.archived',
   BUILDING_ACTIVATED: 'building.activated',
   BUILDING_REMOVED: 'building.removed',
+  BUILDING_INVOICE_PROFILE_UPDATED: 'building.invoice_profile.updated',
 
   // Room
   ROOM_CREATED: 'room.created',

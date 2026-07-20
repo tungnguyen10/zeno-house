@@ -58,6 +58,10 @@ The current runtime exposes scoped context, meter status, billing overview/draft
 | DELETE | `/api/buildings/[id]` |
 | POST | `/api/buildings/bulk` |
 | GET | `/api/buildings/[id]/rooms/[room]` |
+| GET | `/api/buildings/[id]/invoice-profile` |
+| PUT | `/api/buildings/[id]/invoice-profile` |
+
+Invoice-profile updates use `multipart/form-data`. The initial save requires complete bank fields and `qr_image`; later saves preserve omitted images and accept `remove_logo=true`. Images are JPEG, PNG, or WebP up to 5 MB. Responses contain short-lived signed URLs and never private Storage paths.
 
 ## Rooms
 
@@ -156,6 +160,8 @@ the server derives tenant/building/contract context and returns five-minute sign
 | POST | `/api/billing/periods` |
 | GET | `/api/billing/invoices/[id]` |
 | POST | `/api/billing/invoices/bulk-payments` |
+| POST | `/api/billing/invoices/print-data` |
+| POST | `/api/billing/invoices/printed` |
 | GET | `/api/invoices` |
 
 Billing behavior is split across services under `server/services/billing/**`. Some period, invoice, payment, audit, issue, close, and correction operations are implemented as service/RPC paths rather than one route per action. Check source before adding or documenting a route.

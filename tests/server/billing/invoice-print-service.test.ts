@@ -11,6 +11,8 @@ const enrichInvoices = vi.fn(async invoices => invoices)
 const assertBuildingScope = vi.fn()
 const appendAudit = vi.fn()
 const newCorrelationId = vi.fn(() => 'print-correlation')
+const findInvoiceSnapshots = vi.fn()
+const resolveProfileDisplays = vi.fn()
 
 vi.mock('../../../server/repositories/billing/invoices', () => ({
   InvoiceRepository: { findManyByIdentifiers, listChargesByInvoiceIds },
@@ -22,6 +24,14 @@ vi.mock('../../../server/repositories/billing/periods', () => ({
 
 vi.mock('../../../server/repositories/buildings', () => ({
   BuildingRepository: { findManyByIds: findManyBuildings },
+}))
+
+vi.mock('../../../server/repositories/building-invoice-profiles', () => ({
+  BuildingInvoiceProfileRepository: { findInvoiceSnapshotsByIds: findInvoiceSnapshots },
+}))
+
+vi.mock('../../../server/services/billing/invoice-profile-display', () => ({
+  InvoiceProfileDisplayService: { resolveMany: resolveProfileDisplays },
 }))
 
 vi.mock('../../../server/services/billing/display', () => ({
@@ -66,6 +76,8 @@ describe('InvoicePrintService', () => {
     vi.stubGlobal('can', () => true)
     assertBuildingScope.mockResolvedValue(undefined)
     appendAudit.mockResolvedValue(undefined)
+    findInvoiceSnapshots.mockResolvedValue(new Map())
+    resolveProfileDisplays.mockResolvedValue(new Map())
   })
 
   it('deduplicates in request order and batch-loads invoice snapshots', async () => {
@@ -84,6 +96,10 @@ describe('InvoicePrintService', () => {
       ['invoice-1', [{ id: 'charge-1', invoiceId: 'invoice-1' }]],
       ['invoice-2', [{ id: 'charge-2', invoiceId: 'invoice-2' }]],
     ]))
+    resolveProfileDisplays.mockResolvedValue(new Map([
+      ['invoice-1', { bankName: 'VIB' }],
+      ['invoice-2', { bankName: 'ACB' }],
+    ]))
     const { InvoicePrintService } = await import('../../../server/services/billing/invoice-print')
 
     const result = await InvoicePrintService.getPrintData(
@@ -96,11 +112,13 @@ describe('InvoicePrintService', () => {
       building: { id: 'building-2', name: 'Nhà Hai' },
       period: { id: 'period-2', periodMonth: 6 },
       charges: [{ id: 'charge-2' }],
+      invoiceProfile: { bankName: 'ACB' },
     })
     expect(findManyByIdentifiers).toHaveBeenCalledTimes(1)
     expect(findManyPeriods).toHaveBeenCalledTimes(1)
     expect(findManyBuildings).toHaveBeenCalledTimes(1)
     expect(listChargesByInvoiceIds).toHaveBeenCalledTimes(1)
+    expect(findInvoiceSnapshots).toHaveBeenCalledWith(expect.anything(), ['invoice-2', 'invoice-1'])
     expect(enrichInvoices).toHaveBeenCalledTimes(1)
     expect(assertBuildingScope).toHaveBeenCalledTimes(2)
   })

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import InvoicePaymentProfileCard from '~/components/invoices/InvoicePaymentProfileCard.vue'
 import type { UiTableColumn } from '~/components/ui/UiTable.vue'
 import type { BillingDraftResponse, BillingPeriod, Invoice, InvoicePayment, InvoiceWithCharges } from '~/types/billing'
 import type { BulkPaymentItemInput, VoidInvoiceInput } from '~/utils/validators/billing'
@@ -273,7 +274,7 @@ function startPayment(inv: Invoice) {
   paymentForm.payment_method = 'cash'
   paymentForm.note = ''
   paymentError.value = null
-  selectedInvoice.value = { invoice: inv, charges: [], payments: [] }
+  selectedInvoice.value = { invoice: inv, charges: [], payments: [], invoiceProfile: null }
   showPaymentModal.value = true
 }
 
@@ -596,6 +597,10 @@ watch(
               :total-amount="selectedInvoice.invoice.totalAmount"
               :show-adjustments="true"
             />
+          </UiSection>
+
+          <UiSection title="Thanh toán theo hóa đơn">
+            <InvoicePaymentProfileCard :profile="selectedInvoice.invoiceProfile" />
           </UiSection>
 
           <UiSection title="Lịch sử thanh toán">

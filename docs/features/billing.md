@@ -231,7 +231,13 @@ Closing a period:
 
 Printing is invoice-centric and available from **Thu tiền & công nợ** and the cross-period `/dashboard/invoices` browser. The shared route `/dashboard/invoices/print?ids=<uuid,...>` accepts one to 100 selected invoices. It renders persisted invoice charges and their issue-time calculation metadata, plus current paid and balance totals; it never recalculates from the draft grid.
 
+Each building can configure **Nhận diện & thanh toán trên phiếu** in building settings. The profile contains bank name, account holder, account number, a transfer-content template, a required owner-uploaded bank QR, and an optional building logo. Owner/admin can update it in building scope; manager access is read-only. Templates support only `{building_code}`, `{room_number}`, `{invoice_code}`, and `{period}`.
+
+Invoice issuance captures a schema-versioned copy of that profile, including the rendered transfer content and immutable private asset paths. A central invoice-insert trigger covers period issue, issue-and-pay, and reissue transactions. A building without a profile can still issue invoices. The first profile save backfills non-void legacy invoices that have no snapshot once; later edits never rewrite historical invoices.
+
 `POST /api/billing/invoices/print-data` loads the complete batch in selection order and rejects the whole request when an invoice is missing, outside building scope, still draft, or void. Active invoices remain printable after a period is closed. `POST /api/billing/invoices/printed` records one `invoice.printed` print-dialog intent event per invoice with its billing period and one correlation ID for the batch. Audit failure does not block the native print dialog.
+
+The print artifact is titled **Phiếu tính tiền nhà tháng MM/YYYY**. It keeps the existing total/paid/balance summary, presents charge snapshots in a six-column table, and shows snapshotted bank instructions with the QR in its footer. Invoice detail surfaces use the same snapshot. When an invoice has no snapshot, both detail and print show a neutral contact-management message and never fall back to the building's current profile.
 
 The `/dashboard/invoices` selection is limited to its current server-paginated page and clears when the result set changes. In **Thu tiền & công nợ**, a mixed selection can still be printed while bulk collection remains disabled unless every selected invoice is outstanding and its period is open.
 
@@ -264,6 +270,8 @@ Backed by `GET /api/billing/periods/[id]/audit` (supports actor/category/from/to
 - Invoice printing composable: `app/composables/invoices/useInvoicePrinting.ts`
 - Shared print page: `app/pages/dashboard/invoices/print.vue`
 - Printable invoice card: `app/components/invoices/InvoicePrintCard.vue`
+- Building invoice profile settings: `app/components/buildings/BuildingInvoiceProfileSettings.vue`
+- Invoice snapshot payment card: `app/components/invoices/InvoicePaymentProfileCard.vue`
 - Draft grid: `app/components/billing/BillingDraftGridStep.vue`
 - Payments: `app/components/billing/BillingPaymentsStep.vue`
 - Auto-issue modal: `app/components/billing/BillingAutoIssueModal.vue`
