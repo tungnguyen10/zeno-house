@@ -96,7 +96,7 @@ function onClose() {
               :title="showDebug ? 'Ẩn debug info' : 'Hiện debug info'"
               @click="showDebug = !showDebug"
             >
-              <IconInfo class="size-3.5" aria-hidden="true" />
+              <IconInfoCircle class="size-3.5" aria-hidden="true" />
             </button>
             <button
               type="button"

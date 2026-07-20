@@ -115,9 +115,8 @@ function submit() {
   emit('submit', base)
 }
 
-function onReceiptChange(event: Event) {
-  const input = event.target as HTMLInputElement
-  form.receipt_file = input.files?.[0] ?? null
+function onReceiptChange(file: File) {
+  form.receipt_file = file
 }
 </script>
 
@@ -162,24 +161,15 @@ function onReceiptChange(event: Event) {
         date-mode="operational"
       />
 
-      <div class="space-y-2">
-        <label class="block text-sm font-medium text-muted" for="expense-receipt">
-          Biên lai
-        </label>
-        <input
-          id="expense-receipt"
-          type="file"
-          accept="image/jpeg,image/png,image/webp"
-          class="block w-full rounded-md border border-dark-border bg-dark-surface px-3 py-2 text-sm text-white file:mr-3 file:rounded-md file:border-0 file:bg-cyan/15 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-cyan"
-          @change="onReceiptChange"
-        >
-        <p v-if="expense?.receiptSignedUrl && !form.receipt_file" class="text-xs text-muted">
-          Đã có biên lai. Chọn file mới để thay thế.
-        </p>
-        <p v-else-if="form.receipt_file" class="text-xs text-muted">
-          {{ form.receipt_file.name }}
-        </p>
-      </div>
+      <UiFileUpload
+        label="Biên lai"
+        accept="image/jpeg,image/png,image/webp"
+        :filename="form.receipt_file?.name ?? null"
+        :preview-url="(expense?.receiptSignedUrl && !form.receipt_file) ? expense.receiptSignedUrl : null"
+        :hint="(expense?.receiptSignedUrl && !form.receipt_file) ? 'Đã có biên lai. Chọn file mới để thay thế.' : undefined"
+        placeholder="Chọn biên lai..."
+        @select="onReceiptChange"
+      />
 
       <!-- Optional fields stay collapsed so the common path is 3 fields. -->
       <button

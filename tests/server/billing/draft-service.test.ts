@@ -150,4 +150,57 @@ describe('BillingDraftService.calculateDraft', () => {
       amount: 120_000,
     })
   })
+
+  it('prorates electricity and water per_person charges by contract start date', async () => {
+    const { BillingDraftService } = await import('../../../server/services/billing/drafts')
+
+    loadSnapshot.mockResolvedValueOnce({
+      building: {
+        id: 'building-1',
+        name: 'Building',
+        electricity_pricing_type: 'per_person',
+        default_electricity_rate: 50_000,
+        water_pricing_type: 'per_person',
+        default_water_rate: 40_000,
+      },
+      contracts: [{
+        id: 'contract-1',
+        building_id: 'building-1',
+        room_id: 'room-1',
+        tenant_id: 'tenant-1',
+        start_date: '2026-05-16', // 16 billable days in May (31-day month)
+        end_date: null,
+        monthly_rent: 3_100_000,
+        occupant_count: 2,
+        discount_amount: 0,
+        surcharge_amount: 0,
+        payment_day: 5,
+        status: 'active',
+      }],
+      services: [],
+      occupants: [],   // fallback to contract.occupant_count = 2
+      readings: [],
+      overrides: [],
+      invoices: [],
+      rooms: [{ id: 'room-1', room_number: '101' }],
+      tenants: [{ id: 'tenant-1', full_name: 'Tenant One' }],
+    })
+
+    const result = await BillingDraftService.calculateDraft({} as never, { id: 'user-1', app_metadata: { role: 'admin' } } as never, 'period-1')
+
+    const [draft] = result.drafts
+    // 16 billable days out of 31 — both charges are prorated
+    expect(draft?.lines.find(line => line.chargeType === 'electricity')).toMatchObject({
+      quantity: 2,
+      unitPrice: 50_000,
+      amount: 51_613, // Math.round(2 * 50_000 * 16 / 31)
+      metadata: { pricing_type: 'per_person', billable_days: 16, period_days: 31 },
+    })
+    expect(draft?.lines.find(line => line.chargeType === 'water')).toMatchObject({
+      quantity: 2,
+      unitPrice: 40_000,
+      amount: 41_290, // Math.round(2 * 40_000 * 16 / 31)
+      metadata: { pricing_type: 'per_person', billable_days: 16, period_days: 31 },
+    })
+  })
 })

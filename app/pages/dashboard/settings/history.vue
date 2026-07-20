@@ -247,7 +247,7 @@ function clearFilters() {
 <template>
   <div class="space-y-5">
     <UiPageHeader
-      title="Audit Log"
+      title="Nhật ký hoạt động"
       description="Lịch sử thay đổi dữ liệu master — ai đã làm gì với tòa nhà, phòng, khách thuê, hợp đồng."
     />
 

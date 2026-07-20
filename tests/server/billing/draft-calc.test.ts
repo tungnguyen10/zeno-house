@@ -103,6 +103,32 @@ describe('billing draft calculation rules', () => {
     expect(fixed.lines.find(line => line.chargeType === 'water')?.amount).toBe(120_000)
   })
 
+  it('prorates electricity per_person by contract start date', () => {
+    // May 2026 = 31 days; contract starts 2026-05-20 → 12 billable days
+    const result = calculateDraftRule({
+      period,
+      contract: buildDraftContract({ occupantCount: 3, startDate: '2026-05-20' }),
+      electricity: buildContractCharges({ electricity: { pricingType: 'per_person', rate: 50_000 } }).electricity,
+    })
+    const line = result.lines.find(l => l.chargeType === 'electricity')
+    expect(line?.amount).toBe(58_065) // Math.round(3 * 50_000 * 12 / 31)
+    expect(line?.metadata.billable_days).toBe(12)
+    expect(line?.metadata.period_days).toBe(31)
+  })
+
+  it('prorates water per_person by contract start date', () => {
+    // May 2026 = 31 days; contract starts 2026-05-20 → 12 billable days
+    const result = calculateDraftRule({
+      period,
+      contract: buildDraftContract({ occupantCount: 4, startDate: '2026-05-20' }),
+      water: buildContractCharges({ water: { pricingType: 'per_person', rate: 40_000 } }).water,
+    })
+    const line = result.lines.find(l => l.chargeType === 'water')
+    expect(line?.amount).toBe(61_935) // Math.round(4 * 40_000 * 12 / 31)
+    expect(line?.metadata.billable_days).toBe(12)
+    expect(line?.metadata.period_days).toBe(31)
+  })
+
   it('uses handover fallback when no previous monthly reading exists', () => {
     const result = calculateDraftRule({
       period,

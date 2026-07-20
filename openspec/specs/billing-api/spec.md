@@ -280,6 +280,10 @@ Billing APIs SHALL calculate required monthly readings from billable contracts a
 - **WHEN** a billable contract belongs to a building with water `per_person` or `fixed_per_room`
 - **THEN** the required reading count does not require a water reading for that contract
 
+#### Scenario: Non-meter electricity does not require electricity reading
+- **WHEN** a billable contract belongs to a building with electricity `per_person` or `fixed`
+- **THEN** the required reading count does not require an electricity reading for that contract
+
 #### Scenario: Utility override counts as complete
 - **WHEN** a required room meter has a saved billing utility usage override for the period
 - **THEN** reading progress treats that meter as complete for period summary and overview purposes

@@ -47,6 +47,65 @@ type ProfileRpc = (
   args: ProfileRpcArgs,
 ) => PromiseLike<{ data: Json | null; error: unknown }>
 
+interface BackfillInvoiceRow {
+  id: string
+  invoice_code: string
+  issued_at: string | null
+  created_at: string | null
+  billing_periods:
+    | { building_id: string; period_year: number; period_month: number }
+    | Array<{ building_id: string; period_year: number; period_month: number }>
+    | null
+  rooms:
+    | { room_number: string | null }
+    | Array<{ room_number: string | null }>
+    | null
+}
+
+function relationRow<T extends Record<string, unknown>>(value: T | T[] | null): T | null {
+  if (Array.isArray(value)) return value[0] ?? null
+  return value
+}
+
+function renderTransferContent(
+  template: string,
+  tokens: { buildingCode: string; roomNumber: string; invoiceCode: string; period: string },
+): string {
+  return template
+    .replaceAll('{building_code}', tokens.buildingCode)
+    .replaceAll('{room_number}', tokens.roomNumber)
+    .replaceAll('{invoice_code}', tokens.invoiceCode)
+    .replaceAll('{period}', tokens.period)
+}
+
+function invoiceSnapshot(
+  row: BackfillInvoiceRow,
+  input: BackfillLegacySnapshotsInput,
+): Json {
+  const period = relationRow(row.billing_periods)
+  const room = relationRow(row.rooms)
+  const issuedAt = row.issued_at ?? row.created_at ?? new Date().toISOString()
+  const periodLabel = period
+    ? `${String(period.period_month).padStart(2, '0')}/${period.period_year}`
+    : ''
+
+  return {
+    schema_version: 1,
+    bank_name: input.bankName,
+    account_holder: input.accountHolder,
+    account_number: input.accountNumber,
+    transfer_content: renderTransferContent(input.transferContentTemplate, {
+      buildingCode: input.buildingCode,
+      roomNumber: room?.room_number ?? '',
+      invoiceCode: row.invoice_code,
+      period: periodLabel,
+    }),
+    qr_image_path: input.qrImagePath,
+    logo_image_path: input.logoImagePath,
+    snapshotted_at: issuedAt,
+  }
+}
+
 function client(event: H3Event): SupabaseClient<ProfileDatabase> {
   return serverSupabaseClient(event) as unknown as SupabaseClient<ProfileDatabase>
 }
@@ -61,6 +120,17 @@ export interface SaveBuildingInvoiceProfileInput {
   qrImagePath: string | null
   logoImagePath: string | null
   removeLogo: boolean
+}
+
+export interface BackfillLegacySnapshotsInput {
+  buildingId: string
+  buildingCode: string
+  bankName: string
+  accountHolder: string
+  accountNumber: string
+  transferContentTemplate: string
+  qrImagePath: string
+  logoImagePath: string | null
 }
 
 export const BuildingInvoiceProfileRepository = {
@@ -115,6 +185,74 @@ export const BuildingInvoiceProfileRepository = {
       throwInternal(new Error('Profile RPC returned no profile'), 'buildingInvoiceProfile.saveWithLegacyBackfill')
     }
     return { profile: result.profile, backfilledCount: Number(result.backfilled_count ?? 0) }
+  },
+
+  async saveDirect(
+    event: H3Event,
+    input: Omit<SaveBuildingInvoiceProfileInput, 'removeLogo'> & {
+      qrImagePath: string
+      logoImagePath: string | null
+    },
+  ): Promise<BuildingInvoiceProfileRow> {
+    const payload = {
+      building_id: input.buildingId,
+      bank_name: input.bankName.trim(),
+      account_holder: input.accountHolder.trim(),
+      account_number: input.accountNumber.trim(),
+      transfer_content_template: input.transferContentTemplate.trim(),
+      qr_image_path: input.qrImagePath.trim(),
+      logo_image_path: input.logoImagePath,
+      updated_by: input.actorId,
+    }
+
+    const { data, error } = await client(event)
+      .from('building_invoice_profiles')
+      .upsert(payload as never, { onConflict: 'building_id' })
+      .select('*')
+      .single()
+
+    if (error) throwDbError(error, 'buildingInvoiceProfile.saveDirect')
+    return data
+  },
+
+  async backfillLegacySnapshots(
+    event: H3Event,
+    input: BackfillLegacySnapshotsInput,
+  ): Promise<number> {
+    const { data, error } = await client(event)
+      .from('invoices')
+      .select(`
+        id,
+        invoice_code,
+        issued_at,
+        created_at,
+        billing_periods!inner(building_id, period_year, period_month),
+        rooms!inner(room_number)
+      ` as '*')
+      .eq('billing_periods.building_id', input.buildingId)
+      .neq('status', 'void')
+      .is('invoice_profile_snapshot', null)
+
+    if (error) throwDbError(error, 'buildingInvoiceProfile.backfillLegacySnapshots.list')
+
+    let backfilledCount = 0
+    for (const row of (data ?? []) as unknown as BackfillInvoiceRow[]) {
+      const { error: updateError } = await client(event)
+        .from('invoices')
+        .update({ invoice_profile_snapshot: invoiceSnapshot(row, input) } as never)
+        .eq('id', row.id)
+
+      if (updateError) throwDbError(updateError, 'buildingInvoiceProfile.backfillLegacySnapshots.update')
+      backfilledCount += 1
+    }
+
+    const { error: markError } = await client(event)
+      .from('building_invoice_profiles')
+      .update({ legacy_backfilled_at: new Date().toISOString() } as never)
+      .eq('building_id', input.buildingId)
+
+    if (markError) throwDbError(markError, 'buildingInvoiceProfile.backfillLegacySnapshots.mark')
+    return backfilledCount
   },
 
   async uploadAsset(

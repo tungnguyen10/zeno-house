@@ -42,16 +42,24 @@ Pure draft calculation logic SHALL be covered by unit tests for rent prorate, di
 - **THEN** the line equals the configured fixed amount regardless of reading
 
 #### Scenario: Electricity per_person
-- **WHEN** the electricity service is `per_person`
-- **THEN** the line equals `unit_price * occupant_count`
+- **WHEN** the electricity service is `per_person` and the contract covers the full period
+- **THEN** the line equals `unit_price * occupant_count` with `billable_days = period_days` in metadata
+- **WHEN** the contract `start_date` falls inside the period
+- **THEN** the line is prorated: `Math.round(occupant_count * rate * billable_days / period_days)`
 
 #### Scenario: Water per_m3
 - **WHEN** the water service is `per_m3`
 - **THEN** the line equals `unit_price * billable_usage_m3`
 
 #### Scenario: Water per_person
-- **WHEN** the water service is `per_person`
-- **THEN** the line equals `unit_price * occupant_count`
+- **WHEN** the water service is `per_person` and the contract covers the full period
+- **THEN** the line equals `unit_price * occupant_count` with `billable_days = period_days` in metadata
+- **WHEN** the contract `start_date` falls inside the period
+- **THEN** the line is prorated: `Math.round(occupant_count * rate * billable_days / period_days)`
+
+#### Scenario: Services prorated
+- **WHEN** a contract has enabled services and `start_date` or `end_date` falls inside the period
+- **THEN** each service charge is prorated by the same `billable_days / period_days` factor as rent, and metadata includes `billable_days` and `period_days`
 
 #### Scenario: Water fixed_per_room
 - **WHEN** the water service is `fixed_per_room`

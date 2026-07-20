@@ -83,13 +83,12 @@ export function daysInPeriod(year: number, month: number): number {
   return new Date(Date.UTC(year, month, 0)).getUTCDate()
 }
 
-export function calculateProratedRent(input: {
-  monthlyRent: number
+export function calculateProratedDays(input: {
   periodYear: number
   periodMonth: number
   startDate?: string
   endDate?: string | null
-}): { amount: number; billableDays: number; periodDays: number } {
+}): { billableDays: number; periodDays: number } {
   const periodDays = daysInPeriod(input.periodYear, input.periodMonth)
   const periodStart = new Date(Date.UTC(input.periodYear, input.periodMonth - 1, 1))
   const periodEnd = new Date(Date.UTC(input.periodYear, input.periodMonth - 1, periodDays))
@@ -97,8 +96,19 @@ export function calculateProratedRent(input: {
   const end = input.endDate ? new Date(`${input.endDate}T00:00:00.000Z`) : periodEnd
   const effectiveStart = start > periodStart ? start : periodStart
   const effectiveEnd = end < periodEnd ? end : periodEnd
-  if (effectiveEnd < effectiveStart) return { amount: 0, billableDays: 0, periodDays }
+  if (effectiveEnd < effectiveStart) return { billableDays: 0, periodDays }
   const billableDays = Math.floor((effectiveEnd.getTime() - effectiveStart.getTime()) / 86_400_000) + 1
+  return { billableDays, periodDays }
+}
+
+export function calculateProratedRent(input: {
+  monthlyRent: number
+  periodYear: number
+  periodMonth: number
+  startDate?: string
+  endDate?: string | null
+}): { amount: number; billableDays: number; periodDays: number } {
+  const { billableDays, periodDays } = calculateProratedDays(input)
   return {
     amount: Math.round(input.monthlyRent * billableDays / periodDays),
     billableDays,
@@ -210,7 +220,13 @@ export function calculateDraftRule(input: DraftRuleInput): DraftRuleResult {
       continue
     }
     if (config.pricingType === 'per_person') {
-      const amount = Math.round(contract.occupantCount * config.rate)
+      const { billableDays, periodDays } = calculateProratedDays({
+        periodYear: period.periodYear,
+        periodMonth: period.periodMonth,
+        startDate: contract.startDate,
+        endDate: contract.endDate,
+      })
+      const amount = Math.round(contract.occupantCount * config.rate * billableDays / periodDays)
       lines.push({
         chargeType: meterType,
         label: utilityLabel(meterType, 'theo người'),
@@ -219,7 +235,13 @@ export function calculateDraftRule(input: DraftRuleInput): DraftRuleResult {
         quantity: contract.occupantCount,
         unitPrice: config.rate,
         amount,
-        metadata: { pricing_type: 'per_person', rate: config.rate, occupant_count: contract.occupantCount },
+        metadata: {
+          pricing_type: 'per_person',
+          rate: config.rate,
+          occupant_count: contract.occupantCount,
+          billable_days: billableDays,
+          period_days: periodDays,
+        },
         sortOrder,
       })
       continue

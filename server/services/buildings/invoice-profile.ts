@@ -25,6 +25,83 @@ export interface SaveBuildingInvoiceProfile {
   removeLogo: boolean
 }
 
+function isMissingInvoiceProfileRpc(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false
+  const record = error as Record<string, unknown>
+  const message = typeof record.message === 'string' ? record.message : ''
+  const details = typeof record.details === 'string' ? record.details : ''
+  const code = typeof record.code === 'string' ? record.code : ''
+
+  return code === 'PGRST202'
+    || code === '42883'
+    || message.includes('upsert_building_invoice_profile')
+    || details.includes('upsert_building_invoice_profile')
+}
+
+async function persistProfileWithFallback(
+  event: H3Event,
+  user: AuthUser,
+  building: Awaited<ReturnType<typeof requireBuilding>>,
+  existing: Awaited<ReturnType<typeof BuildingInvoiceProfileRepository.findByBuildingId>>,
+  input: SaveBuildingInvoiceProfile,
+  uploadedPaths: { qrImagePath: string | null; logoImagePath: string | null },
+): Promise<{ profile: Awaited<ReturnType<typeof BuildingInvoiceProfileRepository.findByBuildingId>>; backfilledCount: number }> {
+  try {
+    return await BuildingInvoiceProfileRepository.saveWithLegacyBackfill(event, {
+      buildingId: building.id,
+      actorId: user.id!,
+      bankName: input.fields.bank_name,
+      accountHolder: input.fields.account_holder,
+      accountNumber: input.fields.account_number,
+      transferContentTemplate: input.fields.transfer_content_template,
+      qrImagePath: uploadedPaths.qrImagePath,
+      logoImagePath: uploadedPaths.logoImagePath,
+      removeLogo: input.removeLogo,
+    })
+  }
+  catch (error) {
+    if (!isMissingInvoiceProfileRpc(error)) throw error
+
+    const qrImagePath = uploadedPaths.qrImagePath ?? existing?.qr_image_path
+    if (!qrImagePath) {
+      throwValidationError('Vui lòng tải ảnh QR ngân hàng khi cấu hình lần đầu')
+    }
+
+    const logoImagePath = input.removeLogo
+      ? null
+      : uploadedPaths.logoImagePath ?? existing?.logo_image_path ?? null
+
+    await BuildingInvoiceProfileRepository.saveDirect(event, {
+      buildingId: building.id,
+      actorId: user.id!,
+      bankName: input.fields.bank_name,
+      accountHolder: input.fields.account_holder,
+      accountNumber: input.fields.account_number,
+      transferContentTemplate: input.fields.transfer_content_template,
+      qrImagePath,
+      logoImagePath,
+    })
+
+    const backfilledCount = existing
+      ? 0
+      : await BuildingInvoiceProfileRepository.backfillLegacySnapshots(event, {
+          buildingId: building.id,
+          buildingCode: building.code,
+          bankName: input.fields.bank_name,
+          accountHolder: input.fields.account_holder,
+          accountNumber: input.fields.account_number,
+          transferContentTemplate: input.fields.transfer_content_template,
+          qrImagePath,
+          logoImagePath,
+        })
+
+    return {
+      profile: await BuildingInvoiceProfileRepository.findByBuildingId(event, building.id),
+      backfilledCount,
+    }
+  }
+}
+
 function validateImage(file: InvoiceProfileImage | undefined, label: string): void {
   if (!file) return
   if (!file.type || !IMAGE_TYPES.has(file.type)) {
@@ -88,7 +165,7 @@ export const BuildingInvoiceProfileService = {
     validateImage(input.logoImage, 'Logo tòa nhà')
 
     const uploadedPaths: string[] = []
-    let saved: Awaited<ReturnType<typeof BuildingInvoiceProfileRepository.saveWithLegacyBackfill>>
+    let saved: { profile: Awaited<ReturnType<typeof BuildingInvoiceProfileRepository.findByBuildingId>>; backfilledCount: number }
     try {
       const qrImagePath = input.qrImage
         ? await BuildingInvoiceProfileRepository.uploadAsset(event, building.id, 'qr', {
@@ -106,16 +183,9 @@ export const BuildingInvoiceProfileService = {
         : null
       if (logoImagePath) uploadedPaths.push(logoImagePath)
 
-      saved = await BuildingInvoiceProfileRepository.saveWithLegacyBackfill(event, {
-        buildingId: building.id,
-        actorId: user.id!,
-        bankName: input.fields.bank_name,
-        accountHolder: input.fields.account_holder,
-        accountNumber: input.fields.account_number,
-        transferContentTemplate: input.fields.transfer_content_template,
+      saved = await persistProfileWithFallback(event, user, building, existing, input, {
         qrImagePath,
         logoImagePath,
-        removeLogo: input.removeLogo,
       })
 
     }

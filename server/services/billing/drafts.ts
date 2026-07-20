@@ -27,7 +27,7 @@ import { calculateProratedRent } from './rules'
 interface BuildingPricing {
   id: string
   name: string
-  electricity_pricing_type: 'per_kwh' | 'fixed' | 'tiered' | null
+  electricity_pricing_type: 'per_kwh' | 'fixed' | 'tiered' | 'per_person' | null
   default_electricity_rate: number | null
   water_pricing_type: 'per_m3' | 'per_person' | 'fixed_per_room' | null
   default_water_rate: number | null
@@ -249,6 +249,8 @@ export const BillingDraftService = {
         startDate: contract.start_date,
         endDate: contract.end_date,
       })
+      // Proration factor reused by per-person charges and services below.
+      const { billableDays, periodDays } = rent
       lines.push({
         chargeType: 'rent',
         label: 'Tiền phòng',
@@ -302,6 +304,43 @@ export const BillingDraftService = {
           unitPrice: elecRate,
           amount: elecRate,
           metadata: { pricing_type: 'fixed', rate: elecRate },
+          sortOrder: 1,
+        })
+      } else if (elecPricing === 'per_person') {
+        const periodElecOccupants = (occupantsByContract.get(contract.id) ?? []).filter(
+          o => o.billing_counted && isOccupantActiveInPeriod(o, firstDay, lastDay),
+        )
+        let elecOccupantCount = periodElecOccupants.length
+        let elecOccupantSource: 'contract_occupants' | 'contract_fallback' = 'contract_occupants'
+        if (elecOccupantCount === 0) {
+          elecOccupantCount = contract.occupant_count
+          elecOccupantSource = 'contract_fallback'
+          warnings.push({
+            code: BILLING_WARNING_CODES.OCCUPANT_FALLBACK_TO_CONTRACT,
+            message: 'Dùng số người trên hợp đồng (không có dữ liệu occupants)',
+            meta: { contract_id: contract.id, fallback_count: elecOccupantCount },
+          })
+        }
+        else if (elecOccupantCount < contract.occupant_count) {
+          elecOccupantCount = contract.occupant_count
+          elecOccupantSource = 'contract_fallback'
+        }
+        lines.push({
+          chargeType: 'electricity',
+          label: 'Tiền điện (theo người)',
+          sourceType: 'building',
+          sourceId: buildingCfg.id,
+          quantity: elecOccupantCount,
+          unitPrice: elecRate,
+          amount: Math.round(elecOccupantCount * elecRate * billableDays / periodDays),
+          metadata: {
+            pricing_type: 'per_person',
+            rate: elecRate,
+            occupant_count: elecOccupantCount,
+            occupant_source: elecOccupantSource,
+            billable_days: billableDays,
+            period_days: periodDays,
+          },
           sortOrder: 1,
         })
       } else {
@@ -447,7 +486,7 @@ export const BillingDraftService = {
           occupantCount = contract.occupant_count
           occupantSource = 'contract_fallback'
         }
-        const amount = Math.round(occupantCount * waterRate)
+        const amount = Math.round(occupantCount * waterRate * billableDays / periodDays)
         lines.push({
           chargeType: 'water',
           label: 'Tiền nước (theo người)',
@@ -461,6 +500,8 @@ export const BillingDraftService = {
             rate: waterRate,
             occupant_count: occupantCount,
             occupant_source: occupantSource,
+            billable_days: billableDays,
+            period_days: periodDays,
           },
           sortOrder: 2,
         })
@@ -556,7 +597,7 @@ export const BillingDraftService = {
       // 4) Services
       let serviceSort = 3
       for (const svc of servicesByContract.get(contract.id) ?? []) {
-        const amount = Math.round(svc.amount * svc.quantity)
+        const amount = Math.round(svc.amount * svc.quantity * billableDays / periodDays)
         lines.push({
           chargeType: 'service',
           label: svc.service_catalog?.name ?? 'Dịch vụ',
@@ -570,6 +611,8 @@ export const BillingDraftService = {
             catalog_id: svc.catalog_id,
             catalog_code: svc.service_catalog?.code,
             pricing_type: svc.service_catalog?.pricing_type,
+            billable_days: billableDays,
+            period_days: periodDays,
           },
           sortOrder: serviceSort,
         })

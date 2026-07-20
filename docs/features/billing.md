@@ -70,8 +70,10 @@ It computes per active contract:
 
 Electricity and water use building pricing config:
 
-- electricity: `per_kwh`, `fixed`, or blocked `tiered`
+- electricity: `per_kwh`, `fixed`, `per_person`, or blocked `tiered`
 - water: `per_m3`, `per_person`, or `fixed_per_room`
+
+All per-person and service charges are prorated by the same contract-date factor as rent (`billableDays / periodDays`). Meter-based charges (per_kwh, per_m3) are not prorated — they reflect actual consumption in the period.
 
 Readings source order:
 
@@ -108,6 +110,7 @@ Period list, workspace overview, draft calculation, and draft grid use the same 
 - electricity requires a current monthly reading only for `per_kwh`
 - water requires a current monthly reading only for `per_m3`
 - `per_person` and `fixed_per_room` water do not add required reading work
+- `per_person` electricity does not add required reading work
 - a saved utility usage override counts as complete for the matching room/meter
 
 ## Workspace UI

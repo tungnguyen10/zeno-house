@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import clsx from 'clsx'
-import { NAV_ITEMS } from '~/utils/constants/navigation'
+import { isNavItemVisible, NAV_ITEMS, NAV_SECTIONS } from '~/utils/constants/navigation'
 import type { NavItem } from '~/utils/constants/navigation'
 
 const _props = withDefaults(defineProps<{
@@ -23,13 +23,19 @@ const userInitial = computed(() => {
   return email.charAt(0).toUpperCase() || 'U'
 })
 
-const visibleNavItems = computed(() =>
-  _props.navItems.filter((item) => {
-    if (item.adminOnly && !authStore.isAdmin) return false
-    if (item.roles && !(authStore.role && item.roles.includes(authStore.role))) return false
-    return true
-  }),
-)
+const visibleNavSections = computed(() => {
+  const items = _props.navItems.filter(item => isNavItemVisible(item, {
+    isAdmin: authStore.isAdmin,
+    role: authStore.role,
+  }))
+
+  return NAV_SECTIONS
+    .map(section => ({
+      ...section,
+      items: items.filter(item => item.section === section.key),
+    }))
+    .filter(section => section.items.length > 0)
+})
 
 function isActive(to: string) {
   if (to === '/dashboard') return route.path === to
@@ -76,16 +82,33 @@ const collapseBtnClass = computed(() =>
 
 function navItemClass(to: string) {
   return clsx(
-    'group relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150',
+    'group relative flex min-h-11 items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium whitespace-nowrap',
+    'transition-colors duration-150 motion-reduce:transition-none',
+    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-cyan/40',
+    'lg:min-h-10',
     sidebarCollapsed.value && 'lg:justify-center lg:gap-0 lg:px-0',
     isActive(to)
-      ? 'bg-cyan/10 text-cyan'
-      : 'text-muted hover:bg-dark-hover hover:text-white',
+      ? 'bg-cyan/10 text-cyan active:bg-cyan/15'
+      : 'text-muted hover:bg-dark-hover hover:text-white active:bg-dark-hover active:text-white',
   )
 }
 
 function labelClass() {
-  return clsx('truncate', sidebarCollapsed.value && 'lg:hidden')
+  return clsx('truncate', sidebarCollapsed.value && 'lg:sr-only')
+}
+
+function sectionClass(index: number) {
+  return clsx(
+    index > 0 && 'mt-4',
+    index > 0 && sidebarCollapsed.value && 'lg:mt-3 lg:border-t lg:border-dark-border lg:pt-3',
+  )
+}
+
+function sectionLabelClass() {
+  return clsx(
+    'mb-1.5 px-3 text-[11px] font-semibold leading-4 text-muted',
+    sidebarCollapsed.value && 'lg:sr-only',
+  )
 }
 </script>
 
@@ -127,29 +150,51 @@ function labelClass() {
     </div>
 
     <!-- Navigation -->
-    <nav class="flex-1 overflow-y-auto px-3 py-4" aria-label="Main navigation">
-      <ul class="space-y-0.5" role="list">
-        <li v-for="item in visibleNavItems" :key="item.key">
-          <NuxtLink
-            :to="item.to"
-            :class="navItemClass(item.to)"
-            :title="sidebarCollapsed ? item.label : undefined"
-            @click="emit('close')"
-          >
-            <span
-              v-if="isActive(item.to)"
-              class="absolute inset-y-1.5 left-0 w-0.5 rounded-full bg-cyan"
-              aria-hidden="true"
-            />
-            <component
-              :is="item.icon"
-              class="shrink-0 w-5 h-5 text-current"
-              aria-hidden="true"
-            />
-            <span :class="labelClass()">{{ item.label }}</span>
-          </NuxtLink>
-        </li>
-      </ul>
+    <nav class="flex-1 overflow-y-auto px-3 py-4" aria-label="Điều hướng chính">
+      <div
+        v-for="(section, sectionIndex) in visibleNavSections"
+        :key="section.key"
+        :class="sectionClass(sectionIndex)"
+        :data-nav-section="section.key"
+      >
+        <p
+          v-if="section.label"
+          :id="`nav-section-${section.key}`"
+          :class="sectionLabelClass()"
+          data-nav-section-label
+        >
+          {{ section.label }}
+        </p>
+
+        <ul
+          class="space-y-0.5"
+          role="list"
+          :aria-label="section.label ? undefined : 'Dashboard'"
+          :aria-labelledby="section.label ? `nav-section-${section.key}` : undefined"
+        >
+          <li v-for="item in section.items" :key="item.key">
+            <NuxtLink
+              :to="item.to"
+              :class="navItemClass(item.to)"
+              :title="sidebarCollapsed ? item.label : undefined"
+              :aria-current="isActive(item.to) ? 'page' : undefined"
+              @click="emit('close')"
+            >
+              <span
+                v-if="isActive(item.to)"
+                class="absolute inset-y-1.5 left-0 w-0.5 rounded-full bg-cyan"
+                aria-hidden="true"
+              />
+              <component
+                :is="item.icon"
+                class="h-5 w-5 shrink-0 text-current"
+                aria-hidden="true"
+              />
+              <span :class="labelClass()" data-nav-label>{{ item.label }}</span>
+            </NuxtLink>
+          </li>
+        </ul>
+      </div>
     </nav>
 
     <!-- User info -->

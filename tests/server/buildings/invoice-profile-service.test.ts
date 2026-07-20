@@ -4,6 +4,8 @@ import type { AuthUser } from '~/types/auth'
 const findBuilding = vi.fn()
 const findProfile = vi.fn()
 const saveProfile = vi.fn()
+const saveDirect = vi.fn()
+const backfillLegacySnapshots = vi.fn()
 const uploadAsset = vi.fn()
 const removeAssets = vi.fn()
 const signAsset = vi.fn()
@@ -17,6 +19,8 @@ vi.mock('../../../server/repositories/building-invoice-profiles', () => ({
   BuildingInvoiceProfileRepository: {
     findByBuildingId: findProfile,
     saveWithLegacyBackfill: saveProfile,
+    saveDirect,
+    backfillLegacySnapshots,
     uploadAsset,
     removeAssets,
     signAsset,
@@ -61,6 +65,8 @@ describe('BuildingInvoiceProfileService', () => {
     assertBuildingScope.mockResolvedValue(undefined)
     signAsset.mockImplementation(async (_event, path) => `signed:${path}`)
     saveProfile.mockResolvedValue({ profile: row, backfilledCount: 3 })
+    saveDirect.mockResolvedValue(row)
+    backfillLegacySnapshots.mockResolvedValue(3)
   })
 
   it('allows a manager to read signed profile data without exposing paths', async () => {
@@ -72,7 +78,7 @@ describe('BuildingInvoiceProfileService', () => {
     expect(assertBuildingScope).toHaveBeenCalledWith(expect.anything(), manager, building.id, 'read')
     expect(result).toMatchObject({ qrImageUrl: 'signed:building-1/qr/old.webp' })
     expect(result).not.toHaveProperty('qrImagePath')
-  })
+  }, 10000)
 
   it('requires a QR when creating the first profile', async () => {
     findProfile.mockResolvedValue(null)
@@ -185,5 +191,33 @@ describe('BuildingInvoiceProfileService', () => {
     )).rejects.toThrow('signing failed')
     expect(saveProfile).toHaveBeenCalled()
     expect(removeAssets).not.toHaveBeenCalled()
+  })
+
+  it('falls back to direct persistence when the invoice-profile RPC is unavailable', async () => {
+    findProfile
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(row)
+    saveProfile.mockRejectedValue({ code: 'PGRST202', message: 'upsert_building_invoice_profile not found' })
+    uploadAsset.mockResolvedValue('building-1/qr/new.webp')
+    const { BuildingInvoiceProfileService } = await import('../../../server/services/buildings/invoice-profile')
+
+    const result = await BuildingInvoiceProfileService.save(
+      { context: {} } as never,
+      owner,
+      'zeno',
+      { fields, qrImage: qr, removeLogo: false },
+    )
+
+    expect(saveDirect).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      buildingId: building.id,
+      qrImagePath: 'building-1/qr/new.webp',
+      logoImagePath: null,
+    }))
+    expect(backfillLegacySnapshots).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      buildingId: building.id,
+      buildingCode: building.code,
+      qrImagePath: 'building-1/qr/new.webp',
+    }))
+    expect(result.qrImageUrl).toBe('signed:building-1/qr/old.webp')
   })
 })

@@ -43,6 +43,24 @@ const stubs = {
       return () => h('button', { disabled: props.disabled, onClick: () => emit('click') }, slots.default?.())
     },
   }),
+  UiFileUpload: defineComponent({
+    props: ['variant', 'accept', 'maxBytes', 'previewUrl', 'previewAlt', 'previewImageClass', 'pickLabel', 'replaceLabel', 'disabled'],
+    emits: ['select', 'validation-error'],
+    setup(props, { emit, slots }) {
+      return () => h('div', { 'data-test': 'file-upload' }, [
+        props.previewUrl
+          ? h('img', { 'data-test': 'upload-preview', src: props.previewUrl, alt: props.previewAlt })
+          : (slots.empty?.() ?? null),
+        h('input', {
+          type: 'file',
+          onChange: (event: Event) => {
+            const file = (event.target as HTMLInputElement).files?.[0]
+            if (file) emit('select', file)
+          },
+        }),
+      ])
+    },
+  }),
   UiSkeleton: defineComponent({ template: '<div data-test="skeleton" />' }),
   UiBadge: defineComponent({ setup(_, { slots }) { return () => h('span', slots.default?.()) } }),
   IconLogo: defineComponent({ template: '<span data-test="zeno-logo" />' }),
@@ -57,7 +75,9 @@ describe('BuildingInvoiceProfileSettings', () => {
 
     expect(wrapper.findAll('input')[0]!.element.value).toBe('VIB')
     expect(wrapper.text()).toContain('Chỉ chủ nhà và admin có thể cập nhật')
-    expect(wrapper.get('[data-test="qr-preview"]').attributes('src')).toContain('qr.webp')
+    // QR previewUrl is passed to UiFileUpload and stub renders it as an img
+    const previewImgs = wrapper.findAll('[data-test="upload-preview"]')
+    expect(previewImgs[0]!.attributes('src')).toContain('qr.webp')
     expect(wrapper.findAll('button').some(button => button.text() === 'Lưu thay đổi')).toBe(false)
   })
 
@@ -73,7 +93,9 @@ describe('BuildingInvoiceProfileSettings', () => {
     await inputs[0]!.setValue(' VIB ')
     await inputs[1]!.setValue(' NGUYỄN TUẤN ANH ')
     await inputs[2]!.setValue(' 375675817 ')
-    const qrInput = wrapper.get('input[type="file"][data-kind="qr"]')
+    // First file input belongs to the QR UiFileUpload stub
+    const fileInputs = wrapper.findAll('input[type="file"]')
+    const qrInput = fileInputs[0]!
     const qrFile = new File(['qr'], 'qr.webp', { type: 'image/webp' })
     Object.defineProperty(qrInput.element, 'files', { value: [qrFile], configurable: true })
     await qrInput.trigger('change')

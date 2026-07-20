@@ -54,17 +54,16 @@ function replaceObjectUrl(target: Ref<string | null>, file: File | null) {
   target.value = file && typeof URL.createObjectURL === 'function' ? URL.createObjectURL(file) : null
 }
 
-function selectImage(kind: 'qr' | 'logo', event: Event) {
-  const file = (event.target as HTMLInputElement).files?.[0] ?? null
-  if (kind === 'qr') {
-    qrImage.value = file
-    replaceObjectUrl(qrObjectUrl, file)
-  }
-  else {
-    logoImage.value = file
-    removeLogo.value = false
-    replaceObjectUrl(logoObjectUrl, file)
-  }
+function onQrSelect(file: File) {
+  qrImage.value = file
+  replaceObjectUrl(qrObjectUrl, file)
+  localError.value = null
+}
+
+function onLogoSelect(file: File) {
+  logoImage.value = file
+  removeLogo.value = false
+  replaceObjectUrl(logoObjectUrl, file)
   localError.value = null
 }
 
@@ -179,14 +178,23 @@ onBeforeUnmount(() => {
               </div>
               <span class="text-xs text-warning">Bắt buộc</span>
             </div>
-            <div class="mt-3 flex min-h-28 items-center justify-center rounded-lg border border-dashed border-dark-border bg-dark p-2">
-              <img v-if="qrPreview" data-test="qr-preview" :src="qrPreview" alt="Ảnh QR ngân hàng hiện tại" class="h-28 w-28 rounded-md bg-white object-contain p-1">
-              <span v-else class="px-3 text-center text-xs text-muted">Chưa có ảnh QR</span>
-            </div>
-            <label v-if="canEdit" class="mt-3 inline-flex min-h-10 w-full cursor-pointer items-center justify-center rounded-md border border-dark-border bg-dark-surface px-3 text-sm font-medium text-white transition-colors hover:bg-dark-hover focus-within:ring-2 focus-within:ring-cyan/40 active:bg-dark-deep">
-              {{ qrPreview ? 'Thay ảnh QR' : 'Tải ảnh QR' }}
-              <input data-kind="qr" type="file" accept="image/jpeg,image/png,image/webp" class="sr-only" @change="selectImage('qr', $event)">
-            </label>
+            <UiFileUpload
+              class="mt-3"
+              variant="image"
+              accept="image/jpeg,image/png,image/webp"
+              :preview-url="qrPreview"
+              preview-alt="Ảnh QR ngân hàng hiện tại"
+              preview-image-class="bg-white p-1"
+              pick-label="Tải ảnh QR"
+              replace-label="Thay ảnh QR"
+              :disabled="!canEdit"
+              @select="onQrSelect"
+              @validation-error="(msg) => localError = msg"
+            >
+              <template #empty>
+                <span class="px-3 text-center text-xs text-muted">Chưa có ảnh QR</span>
+              </template>
+            </UiFileUpload>
           </div>
 
           <div class="rounded-xl border border-dark-border bg-dark-deep/40 p-3">
@@ -194,17 +202,35 @@ onBeforeUnmount(() => {
               <p class="text-sm font-medium text-white">Logo trên phiếu</p>
               <p class="mt-0.5 text-xs text-muted">Tùy chọn · mặc định dùng logo Zeno</p>
             </div>
-            <div class="mt-3 flex min-h-20 items-center justify-center rounded-lg border border-dashed border-dark-border bg-dark p-2">
-              <img v-if="logoPreview" :src="logoPreview" alt="Logo tòa nhà hiện tại" class="h-16 max-w-full object-contain">
-              <IconLogo v-else data-test="zeno-logo" class="h-10 w-auto max-w-28 text-white" aria-label="Logo Zeno mặc định" />
-            </div>
-            <div v-if="canEdit" class="mt-3 grid grid-cols-2 gap-2">
-              <label class="inline-flex min-h-10 cursor-pointer items-center justify-center whitespace-nowrap rounded-md border border-dark-border bg-dark-surface px-3 text-xs font-medium text-white transition-colors hover:bg-dark-hover focus-within:ring-2 focus-within:ring-cyan/40 active:bg-dark-deep">
-                Thay logo
-                <input data-kind="logo" type="file" accept="image/jpeg,image/png,image/webp" class="sr-only" @change="selectImage('logo', $event)">
-              </label>
-              <UiButton class="whitespace-nowrap" size="sm" variant="ghost" @click="resetLogo">Dùng logo Zeno</UiButton>
-            </div>
+            <UiFileUpload
+              class="mt-3"
+              variant="image"
+              accept="image/jpeg,image/png,image/webp"
+              :preview-url="logoPreview"
+              preview-alt="Logo tòa nhà hiện tại"
+              pick-label="Tải logo"
+              replace-label="Thay logo"
+              :disabled="!canEdit"
+              @select="onLogoSelect"
+              @validation-error="(msg) => localError = msg"
+            >
+              <template #empty>
+                <IconLogo
+                  data-test="zeno-logo"
+                  class="h-10 w-auto max-w-28 text-white"
+                  aria-label="Logo Zeno mặc định"
+                />
+              </template>
+            </UiFileUpload>
+            <UiButton
+              v-if="canEdit"
+              class="mt-2 w-full whitespace-nowrap"
+              size="sm"
+              variant="ghost"
+              @click="resetLogo"
+            >
+              Dùng logo Zeno
+            </UiButton>
           </div>
         </div>
       </div>
