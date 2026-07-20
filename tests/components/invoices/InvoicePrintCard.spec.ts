@@ -49,6 +49,45 @@ function printItem(): InvoicePrintItem {
 }
 
 describe('InvoicePrintCard', () => {
+  it('uses a larger payment QR and compact Tailwind footer spacing', () => {
+    const wrapper = mount(InvoicePrintCard, {
+      props: { item: printItem() },
+      global: {
+        stubs: {
+          UiStatusBadge: defineComponent({ template: '<span />' }),
+          IconLogo: defineComponent({ template: '<span />' }),
+        },
+      },
+    })
+
+    expect(wrapper.get('.payment-qr').classes()).toEqual(expect.arrayContaining([
+      'h-[40mm]',
+      'w-[40mm]',
+    ]))
+    expect(wrapper.get('.payment-footer').classes()).toEqual(expect.arrayContaining([
+      'grid-cols-[minmax(0,1fr)_40mm]',
+      'gap-[3mm]',
+      'mt-[1mm]',
+    ]))
+    expect(wrapper.get('.invoice-card').classes()).toContain('pb-[3mm]')
+  })
+
+  it('keeps the debt summary directly attached to the charge table block', () => {
+    const wrapper = mount(InvoicePrintCard, {
+      props: { item: printItem() },
+      global: {
+        stubs: {
+          UiStatusBadge: defineComponent({ template: '<span />' }),
+          IconLogo: defineComponent({ template: '<span />' }),
+        },
+      },
+    })
+
+    const tableWrap = wrapper.get('.invoice-table-wrap')
+    expect(tableWrap.find('.invoice-summary').exists()).toBe(true)
+    expect(tableWrap.element.lastElementChild).toBe(tableWrap.get('.invoice-summary').element)
+  })
+
   it('renders invoice snapshot identity, meter metadata, and debt summary', () => {
     const wrapper = mount(InvoicePrintCard, {
       props: { item: printItem() },
