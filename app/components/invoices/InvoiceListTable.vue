@@ -3,16 +3,20 @@ import type { UiTableColumn } from '~/components/ui/UiTable.vue'
 import type { InvoiceListItem } from '~/utils/validators/invoices'
 import { formatCurrency } from '~/utils/format/currency'
 
-defineProps<{
+withDefaults(defineProps<{
   rows: InvoiceListItem[]
   loading?: boolean
-}>()
+  selectedIds?: Set<string>
+}>(), {
+  selectedIds: () => new Set<string>(),
+})
 
 const emit = defineEmits<{
-  (e: 'open', invoice: InvoiceListItem): void
+  (e: 'open' | 'toggle-select', invoice: InvoiceListItem): void
 }>()
 
 const columns: UiTableColumn<InvoiceListItem>[] = [
+  { key: 'select', label: '', width: 'w-10' },
   { key: 'invoice', label: 'Hoá đơn' },
   { key: 'period', label: 'Kỳ', width: 'w-20', hideOnMobile: true },
   { key: 'building', label: 'Tòa / phòng', hideOnMobile: true },
@@ -48,49 +52,60 @@ function dueLabel(row: InvoiceListItem): string {
         title="Không có hoá đơn"
         description="Đổi tháng / building / mở rộng status"
       />
-      <UiButton
+      <div
         v-for="row in rows"
         v-else
         :key="row.id"
-        unstyled
-        :aria-label="`Mở hoá đơn ${row.invoice_code}`"
-        class="w-full rounded-lg border border-dark-border bg-dark-surface p-3 text-left transition hover:bg-dark-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan/40"
-        @click="emit('open', row)"
+        class="flex items-start gap-3 rounded-lg border border-dark-border bg-dark-surface p-3 transition hover:bg-dark-hover"
       >
-        <div class="flex items-start justify-between gap-3">
-          <div class="min-w-0 flex-1">
-            <p class="truncate text-sm font-medium text-white">{{ row.tenant_name ?? 'Khách thuê' }}</p>
-            <p class="mt-0.5 truncate text-xs text-muted">{{ roomLabel(row) }}</p>
-            <p class="mt-1 truncate text-xs tabular-nums text-muted">{{ row.invoice_code }} · {{ periodLabel(row) }}</p>
-            <p v-if="row.tenant_phone" class="mt-0.5 truncate text-xs tabular-nums text-muted">
-              {{ row.tenant_phone }}
-            </p>
+        <UiCheckbox
+          v-if="row.status !== 'void'"
+          class="mt-0.5 shrink-0"
+          :model-value="selectedIds.has(row.id)"
+          :aria-label="`Chọn hoá đơn ${row.invoice_code}`"
+          @update:model-value="emit('toggle-select', row)"
+        />
+        <UiButton
+          unstyled
+          :aria-label="`Mở hoá đơn ${row.invoice_code}`"
+          class="min-w-0 flex-1 rounded-md text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan/40"
+          @click="emit('open', row)"
+        >
+          <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0 flex-1">
+              <p class="truncate text-sm font-medium text-white">{{ row.tenant_name ?? 'Khách thuê' }}</p>
+              <p class="mt-0.5 truncate text-xs text-muted">{{ roomLabel(row) }}</p>
+              <p class="mt-1 truncate text-xs tabular-nums text-muted">{{ row.invoice_code }} · {{ periodLabel(row) }}</p>
+              <p v-if="row.tenant_phone" class="mt-0.5 truncate text-xs tabular-nums text-muted">
+                {{ row.tenant_phone }}
+              </p>
+            </div>
+            <div class="shrink-0">
+              <UiStatusBadge :status="row.status" context="invoice" />
+            </div>
           </div>
-          <div class="shrink-0">
-            <UiStatusBadge :status="row.status" context="invoice" />
+          <div class="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
+            <div class="min-w-0">
+              <p class="text-muted">Tổng</p>
+              <p class="mt-0.5 truncate text-white tabular-nums">{{ formatCurrency(row.total_amount) }}</p>
+            </div>
+            <div class="min-w-0 text-right">
+              <p class="text-muted">Đã thu</p>
+              <p class="mt-0.5 truncate text-white tabular-nums">{{ formatCurrency(row.paid_amount) }}</p>
+            </div>
+            <div class="min-w-0">
+              <p class="text-muted">Hạn</p>
+              <p class="mt-0.5 truncate text-white tabular-nums">{{ dueLabel(row) }}</p>
+            </div>
+            <div class="min-w-0 text-right">
+              <p class="text-muted">Còn lại</p>
+              <p :class="['mt-0.5 truncate tabular-nums', row.balance_amount > 0 ? 'font-medium text-error-vivid' : 'text-success-neon']">
+                {{ formatCurrency(row.balance_amount) }}
+              </p>
+            </div>
           </div>
-        </div>
-        <div class="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
-          <div class="min-w-0">
-            <p class="text-muted">Tổng</p>
-            <p class="mt-0.5 truncate text-white tabular-nums">{{ formatCurrency(row.total_amount) }}</p>
-          </div>
-          <div class="min-w-0 text-right">
-            <p class="text-muted">Đã thu</p>
-            <p class="mt-0.5 truncate text-white tabular-nums">{{ formatCurrency(row.paid_amount) }}</p>
-          </div>
-          <div class="min-w-0">
-            <p class="text-muted">Hạn</p>
-            <p class="mt-0.5 truncate text-white tabular-nums">{{ dueLabel(row) }}</p>
-          </div>
-          <div class="min-w-0 text-right">
-            <p class="text-muted">Còn lại</p>
-            <p :class="['mt-0.5 truncate tabular-nums', row.balance_amount > 0 ? 'font-medium text-error-vivid' : 'text-success-neon']">
-              {{ formatCurrency(row.balance_amount) }}
-            </p>
-          </div>
-        </div>
-      </UiButton>
+        </UiButton>
+      </div>
     </div>
 
     <UiTable
@@ -104,6 +119,15 @@ function dueLabel(row: InvoiceListItem): string {
       row-clickable
       @row-click="emit('open', $event)"
     >
+      <template #cell-select="{ row }">
+        <UiCheckbox
+          v-if="row.status !== 'void'"
+          :model-value="selectedIds.has(row.id)"
+          :aria-label="`Chọn hoá đơn ${row.invoice_code}`"
+          @update:model-value="emit('toggle-select', row)"
+          @click.stop
+        />
+      </template>
       <template #cell-invoice="{ row }">
         <span class="block truncate font-medium text-white">{{ row.invoice_code }}</span>
         <span class="block truncate text-xs text-muted">{{ row.contract_code ?? row.contract_id }}</span>

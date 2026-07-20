@@ -80,7 +80,7 @@ Mỗi row SHALL hiển thị: invoice code, kỳ (MM/YYYY), building name, room 
 - **THEN** badge có tone error-vivid; status "đã thu" có tone success-neon; "chưa thu" có tone warning; "huỷ" có tone muted
 
 ### Requirement: Read-only drawer preview
-Click vào 1 row SHALL mở drawer (`UiDrawer`, `w-full sm:w-[480px]` theo pattern detail drawer hiện có) hiển thị chi tiết invoice **read-only**: charges breakdown, payments history, ghi chú. Drawer KHÔNG chứa action sửa (record payment, void, adjust, print).
+Click vào 1 row SHALL mở drawer (`UiDrawer`, `w-full sm:w-[480px]` theo pattern detail drawer hiện có) hiển thị chi tiết invoice read-only: charges breakdown, payments history, ghi chú. Drawer SHALL NOT chứa action sửa (`record payment`, `void`, `adjust`) nhưng SHALL cung cấp action read-only **In phiếu** cho invoice còn hiệu lực.
 
 #### Scenario: Drawer mở với data đầy đủ
 - **WHEN** user click row INV-2606-014
@@ -92,7 +92,23 @@ Click vào 1 row SHALL mở drawer (`UiDrawer`, `w-full sm:w-[480px]` theo patte
 
 #### Scenario: Drawer không có action thay đổi
 - **WHEN** user mở drawer của invoice "chưa thu"
-- **THEN** không hiện nút "Ghi thanh toán" / "Huỷ" / "Adjust" — chỉ có nút "Mở trong kỳ vận hành" và "Sao mã"
+- **THEN** không hiện nút "Ghi thanh toán" / "Huỷ" / "Adjust"
+- **AND** có các action read-only "In phiếu", "Mở trong kỳ vận hành" và "Sao mã"
+
+### Requirement: Current-page invoice print selection
+The cross-period invoice browser SHALL support single and bulk printing of non-void invoices from the currently loaded page only.
+
+#### Scenario: Select printable invoices on desktop or mobile
+- **WHEN** the current page contains active and void invoices
+- **THEN** desktop rows and mobile cards expose checkboxes only for active invoices
+
+#### Scenario: Current selection is printed
+- **WHEN** the user selects one or more active invoices and chooses **In phiếu** from the sticky action bar
+- **THEN** the shared invoice print route opens with those invoice IDs
+
+#### Scenario: Browse result changes
+- **WHEN** filters, pagination, or refreshed results replace the current page
+- **THEN** the prior print selection is cleared
 
 ### Requirement: Deep-link to period view
 Drawer SHALL có CTA "Mở trong kỳ vận hành →" mở period view tương ứng với invoice được highlight.

@@ -5,6 +5,7 @@ import {
   buildingPath,
   contractPath,
   invoicePath,
+  invoicePrintPath,
   pendingOperationPath,
   roomPath,
   tenantPath,
@@ -31,6 +32,11 @@ describe('operational route helpers', () => {
     expect(invoicePath({ id: 'invoice-id', invoiceCode: 'inv-2026-05-0001' })).toBe('/dashboard/billing/invoices/inv-2026-05-0001')
     expect(invoicePath({ id: 'invoice-id' })).toBe('/dashboard/billing/invoices/invoice-id')
     expect(tenantPath({ code: 'nva-2026-0001' })).toBe('/dashboard/tenants/nva-2026-0001')
+  })
+
+  it('builds one invoice-centric print route with ordered unique ids', () => {
+    expect(invoicePrintPath(['invoice-2', 'invoice-1', 'invoice-2']))
+      .toBe('/dashboard/invoices/print?ids=invoice-2%2Cinvoice-1')
   })
 
   it('pendingOperationPath builds billing workspace link from period token', () => {

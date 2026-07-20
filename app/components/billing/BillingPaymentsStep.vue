@@ -25,6 +25,7 @@ const props = defineProps<{
 const emit = defineEmits<{ reload: [] }>()
 
 const { load, recordPayment, recordBulkPayments, voidInvoice, listPayments } = useBillingInvoiceActions()
+const { openPrint } = useInvoicePrinting()
 const toast = useToast()
 
 const periodIsClosed = computed(() => isPeriodLocked(props.period))
@@ -136,30 +137,32 @@ async function focusInvoice(invoiceId: string) {
   }, 2000)
 }
 
-function isSelectableForBulk(inv: Invoice): boolean {
+function isSelectableForBulkPayment(inv: Invoice): boolean {
   if (periodIsClosed.value) return false
   if (inv.status === 'void' || inv.status === 'paid') return false
   return inv.balanceAmount > 0
 }
 
-const bulkCandidates = computed(() => filteredInvoices.value.filter(isSelectableForBulk))
+const printableCandidates = computed(() => filteredInvoices.value.filter(inv => inv.status !== 'void'))
 
-const allBulkSelected = computed(() =>
-  bulkCandidates.value.length > 0 && bulkCandidates.value.every(inv => selectedIds.value.has(inv.id)),
+const allVisibleSelected = computed(() =>
+  printableCandidates.value.length > 0 && printableCandidates.value.every(inv => selectedIds.value.has(inv.id)),
 )
 
-function toggleSelect(invoiceId: string) {
+function toggleSelect(invoice: Invoice) {
+  if (invoice.status === 'void') return
+  const invoiceId = invoice.id
   if (selectedIds.value.has(invoiceId)) selectedIds.value.delete(invoiceId)
   else selectedIds.value.add(invoiceId)
   selectedIds.value = new Set(selectedIds.value)
 }
 
 function toggleSelectAll() {
-  if (allBulkSelected.value) {
-    for (const inv of bulkCandidates.value) selectedIds.value.delete(inv.id)
+  if (allVisibleSelected.value) {
+    for (const inv of printableCandidates.value) selectedIds.value.delete(inv.id)
   }
   else {
-    for (const inv of bulkCandidates.value) selectedIds.value.add(inv.id)
+    for (const inv of printableCandidates.value) selectedIds.value.add(inv.id)
   }
   selectedIds.value = new Set(selectedIds.value)
 }
@@ -174,6 +177,21 @@ const selectedInvoicesForBulk = computed<Invoice[]>(() =>
     .filter((inv): inv is Invoice => !!inv),
 )
 
+const bulkPaymentSelectionEligible = computed(() =>
+  selectedInvoicesForBulk.value.length > 0
+  && selectedInvoicesForBulk.value.every(isSelectableForBulkPayment),
+)
+
+const bulkPaymentDisabledReason = computed(() => {
+  if (periodIsClosed.value) return 'Kỳ đã chốt nên không thể ghi thu'
+  if (!bulkPaymentSelectionEligible.value) return 'Chỉ ghi thu hàng loạt khi lựa chọn chỉ gồm hóa đơn còn nợ'
+  return undefined
+})
+
+function printSelection() {
+  openPrint(selectedInvoicesForBulk.value.map(invoice => invoice.id))
+}
+
 // ---------- Bulk modal ----------
 const showBulkModal = ref(false)
 const bulkSubmitting = ref(false)
@@ -181,7 +199,7 @@ const bulkError = ref<string | null>(null)
 const bulkFailedInvoiceId = ref<string | null>(null)
 
 function openBulkModal() {
-  if (selectedInvoicesForBulk.value.length === 0) return
+  if (!bulkPaymentSelectionEligible.value) return
   bulkError.value = null
   bulkFailedInvoiceId.value = null
   showBulkModal.value = true
@@ -433,12 +451,12 @@ watch(
         </span>
         <template #actions>
           <UiButton
-            v-if="bulkCandidates.length > 0 && !periodIsClosed"
+            v-if="printableCandidates.length > 0"
             variant="ghost"
             size="sm"
             @click="toggleSelectAll"
           >
-            {{ allBulkSelected ? 'Bỏ chọn tất cả' : `Chọn tất cả (${bulkCandidates.length})` }}
+            {{ allVisibleSelected ? 'Bỏ chọn tất cả' : `Chọn tất cả (${printableCandidates.length})` }}
           </UiButton>
         </template>
       </UiToolbar>
@@ -452,9 +470,10 @@ watch(
       >
         <template #cell-select="{ row }">
           <UiCheckbox
-            v-if="isSelectableForBulk(row as Invoice)"
+            v-if="(row as Invoice).status !== 'void'"
             :model-value="selectedIds.has((row as Invoice).id)"
-            @update:model-value="toggleSelect((row as Invoice).id)"
+            :aria-label="`Chọn hoá đơn ${(row as Invoice).invoiceCode}`"
+            @update:model-value="toggleSelect(row as Invoice)"
             @click.stop
           />
         </template>
@@ -623,7 +642,16 @@ watch(
           >
             Mở trang chi tiết
           </NuxtLink>
-          <UiButton variant="secondary" @click="closeDetail">Đóng</UiButton>
+          <div class="flex items-center gap-2">
+            <UiButton
+              v-if="selectedInvoice && selectedInvoice.invoice.status !== 'void'"
+              variant="secondary"
+              @click="openPrint([selectedInvoice.invoice.id])"
+            >
+              In phiếu
+            </UiButton>
+            <UiButton variant="secondary" @click="closeDetail">Đóng</UiButton>
+          </div>
         </div>
       </template>
     </UiDrawer>
@@ -688,17 +716,33 @@ watch(
     >
       <div
         v-if="selectedIds.size > 0"
-        class="fixed bottom-4 left-1/2 z-30 -translate-x-1/2 rounded-full border border-dark-border bg-dark-card px-4 py-2 shadow-lg shadow-black/40 backdrop-blur"
+        class="fixed bottom-4 left-1/2 z-30 w-[calc(100%-2rem)] max-w-max -translate-x-1/2 rounded-xl border border-dark-border bg-dark-card px-4 py-2 shadow-lg shadow-black/40 backdrop-blur sm:w-auto"
       >
-        <div class="flex items-center gap-3">
-          <span class="text-sm text-white">
+        <div class="grid grid-cols-2 items-center gap-2 sm:flex sm:gap-3">
+          <span class="col-span-2 text-center text-sm text-white sm:col-auto sm:text-left">
             Đã chọn <span class="font-semibold">{{ selectedIds.size }}</span> hoá đơn
           </span>
-          <UiButton variant="ghost" size="sm" @click="clearSelection">Bỏ chọn</UiButton>
-          <UiButton variant="primary" size="sm" @click="openBulkModal">
+          <UiButton class="whitespace-nowrap" variant="ghost" size="sm" @click="clearSelection">Bỏ chọn</UiButton>
+          <UiButton class="whitespace-nowrap" variant="secondary" size="sm" @click="printSelection">
+            In phiếu
+          </UiButton>
+          <UiButton
+            class="col-span-2 whitespace-nowrap sm:col-auto"
+            variant="primary"
+            size="sm"
+            :disabled="!bulkPaymentSelectionEligible"
+            :title="bulkPaymentDisabledReason"
+            @click="openBulkModal"
+          >
             Ghi thu hàng loạt
           </UiButton>
         </div>
+        <p
+          v-if="bulkPaymentDisabledReason"
+          class="mt-2 text-center text-xs text-warning"
+        >
+          {{ bulkPaymentDisabledReason }}
+        </p>
       </div>
     </Transition>
 

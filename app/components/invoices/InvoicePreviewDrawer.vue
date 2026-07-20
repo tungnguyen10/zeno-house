@@ -11,6 +11,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'update:modelValue', value: boolean): void
+  (e: 'print', invoiceId: string): void
 }>()
 
 const { detail, isLoading, error, load, clear } = useInvoiceDetail()
@@ -161,6 +162,14 @@ function paymentMethodLabel(payment: InvoicePayment): string {
 
     <template #footer>
       <div class="-mx-2 -my-1 grid grid-cols-1 gap-2 sm:mx-0 sm:my-0 sm:flex sm:items-center sm:justify-end">
+        <UiButton
+          v-if="invoice && invoice.status !== 'void'"
+          class="w-full sm:w-auto"
+          variant="secondary"
+          @click="emit('print', invoice.id)"
+        >
+          In phiếu
+        </UiButton>
         <UiButton class="w-full sm:w-auto" @click="openWorkspace">
           <span>Mở trong kỳ</span>
           <IconChevronRight class="h-4 w-4" aria-hidden="true" />

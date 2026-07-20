@@ -401,8 +401,8 @@ Routes:
 - `/billing`
 - `/billing/[building]/[period]`
 - `/billing/invoices/[id]`
-- `/billing/print/[building]/[period]`
-- `/invoices`
+- `/dashboard/invoices`
+- `/dashboard/invoices/print?ids=<uuid,...>`
 
 Period API:
 
@@ -430,6 +430,8 @@ Invoice API:
 - `GET/POST /api/billing/invoices/[id]/payments`
 - `DELETE /api/billing/invoices/[id]/payments/[paymentId]`
 - `POST /api/billing/invoices/bulk-payments`
+- `POST /api/billing/invoices/print-data`
+- `POST /api/billing/invoices/printed`
 - `POST /api/billing/invoices/[id]/adjustment`
 - `POST /api/billing/invoices/[id]/void`
 - `POST /api/billing/invoices/[id]/reissue`
@@ -447,7 +449,7 @@ Implemented billing workspace:
 - close-period modal
 - period unissue modal
 - invoice detail page
-- print route for selected billing rows
+- shared issued-invoice print route for single or bulk selection
 - mobile draft-row component
 - bulk reading entry modal
 - optimistic draft-grid helpers
@@ -459,15 +461,16 @@ Implemented billing workspace:
 Implemented cross-period invoice browse:
 
 - sidebar entry "Hoá đơn" between contracts and billing
-- `/invoices` page with building, year/month, all-months, status, and tenant search filters
+- `/dashboard/invoices` page with building, year/month, all-months, status, and tenant search filters
 - URL-synced filter state for share/refresh
 - server-side pagination with default page size 50 and cap 100
 - `GET /api/invoices` server route with auth, Zod validation, role scope, derived overdue status, deterministic sort, and metadata envelope
+- desktop/mobile current-page selection, sticky bulk print action, and drawer single-print action for non-void invoices
 - manager scope from `app_metadata.assigned_building_ids` or legacy `building_ids`; managers without assignments receive an empty result set
 - read-only invoice preview drawer using the standard app `UiDrawer` detail pattern
 - mobile invoice cards plus desktop table rendering
 - payment history cards in the mobile drawer and desktop payment table at `md`
-- CTA to copy invoice code and deep-link into the billing period workspace without exposing mutate actions on `/invoices`
+- CTA to copy invoice code and deep-link into the billing period workspace without exposing mutate actions on `/dashboard/invoices`
 - deep-link handler switches the period workspace to payments and highlights the target invoice
 
 Billing statuses:
@@ -557,7 +560,7 @@ Composables mirror product workflows:
 - Tenants: list, detail, form
 - Contracts: list, detail, form, occupants, payments, renewals, services, handover readings
 - Billing: period list, workspace, invoice actions, draft-grid autosave, filters, navigation
-- Invoices: cross-period list, detail lazy-load, URL filter/pagination state
+- Invoices: cross-period list, detail lazy-load, URL filter/pagination state, current-page print selection
 - Feedback: `useToast`
 - Charts: `useChartTheme`
 

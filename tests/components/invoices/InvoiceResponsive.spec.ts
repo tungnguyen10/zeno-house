@@ -55,6 +55,11 @@ const stubs = {
     emits: ['click'],
     template: '<button type="button" :disabled="disabled" @click="$emit(\'click\', $event)"><slot /></button>',
   }),
+  UiCheckbox: defineComponent({
+    props: ['modelValue', 'ariaLabel'],
+    emits: ['update:modelValue'],
+    template: '<button type="button" role="checkbox" :aria-label="ariaLabel" :aria-checked="modelValue" @click="$emit(\'update:modelValue\', !modelValue)">select</button>',
+  }),
   UiDrawer: defineComponent({
     props: ['modelValue', 'title', 'width'],
     emits: ['update:modelValue'],
@@ -162,6 +167,21 @@ describe('InvoiceListTable responsive layout', () => {
     await wrapper.get('button[aria-label="Mở hoá đơn INV-2606-014"]').trigger('click')
     expect(wrapper.emitted('open')).toEqual([[row]])
   })
+
+  it('exposes print selection for active rows only without nested mobile buttons', async () => {
+    const active = invoice({ id: 'invoice-active', invoice_code: 'INV-A' })
+    const voided = invoice({ id: 'invoice-void', invoice_code: 'INV-V', status: 'void' })
+    const wrapper = mount(InvoiceListTable, {
+      props: { rows: [active, voided], selectedIds: new Set<string>() },
+      global: { stubs },
+    })
+
+    expect(wrapper.findAll('[role="checkbox"]')).toHaveLength(2)
+    expect(wrapper.findAll('.md\\:hidden button button')).toHaveLength(0)
+    await wrapper.get('[aria-label="Chọn hoá đơn INV-A"]').trigger('click')
+    expect(wrapper.emitted('toggle-select')).toEqual([[active]])
+    expect(wrapper.find('[aria-label="Chọn hoá đơn INV-V"]').exists()).toBe(false)
+  })
 })
 
 describe('InvoicePreviewDrawer responsive layout', () => {
@@ -202,5 +222,18 @@ describe('InvoicePreviewDrawer responsive layout', () => {
     expect(wrapper.text()).not.toContain('Ghi thanh toán')
     expect(wrapper.text()).not.toContain('Huỷ hoá đơn')
     expect(wrapper.text()).not.toContain('Điều chỉnh')
+  })
+
+  it('emits print intent for one active invoice', async () => {
+    const row = invoice()
+    const wrapper = mount(InvoicePreviewDrawer, {
+      props: { modelValue: true, invoice: row },
+      global: { stubs },
+    })
+
+    const printButton = wrapper.findAll('footer button').find(button => button.text() === 'In phiếu')
+    expect(printButton).toBeTruthy()
+    await printButton!.trigger('click')
+    expect(wrapper.emitted('print')).toEqual([[row.id]])
   })
 })

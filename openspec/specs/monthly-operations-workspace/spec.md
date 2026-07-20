@@ -158,8 +158,28 @@ The system SHALL allow a privileged user to close a billing period after collect
 - **THEN** the system requires a `reason` of at least 10 characters
 - **AND** appends a `period.reopened` audit event with reason and actor
 
+### Requirement: Issued invoice printing belongs to collection workflow
+The monthly workspace SHALL expose invoice printing in **Thu tiền & công nợ** and SHALL NOT expose printing from the **Soạn kỳ** draft grid.
+
+#### Scenario: Draft composition has no print action
+- **WHEN** the operator is entering readings or reviewing draft rows in **Soạn kỳ**
+- **THEN** no invoice print action or print-specific selection label is shown
+
+#### Scenario: Collection tab supports single print
+- **WHEN** the operator opens the drawer for an active invoice in **Thu tiền & công nợ**
+- **THEN** the drawer provides **In phiếu** using the shared invoice print route
+
+#### Scenario: Collection tab supports bulk print
+- **WHEN** the operator selects active invoices, including in a closed period
+- **THEN** the sticky action bar allows the selected invoices to be printed
+
+#### Scenario: Mixed selection cannot be bulk paid
+- **WHEN** the print selection includes a paid invoice or another invoice ineligible for bulk payment
+- **THEN** **In phiếu** remains available
+- **AND** **Ghi thu hàng loạt** is disabled with eligibility guidance
+
 ### Requirement: Billing audit history
-The system SHALL append audit events for billing-critical workspace actions with structured, queryable metadata supporting before/after diffs and correlation grouping.
+The system SHALL append audit events for billing-critical workspace actions with structured, queryable metadata supporting before/after diffs and correlation grouping, including print-dialog intent for issued invoice artifacts initiated from invoice surfaces.
 
 #### Scenario: Period action audited
 - **WHEN** a billing period is opened, status-changed, closed, or reopened
@@ -189,9 +209,9 @@ The system SHALL append audit events for billing-critical workspace actions with
 - **WHEN** the user triggers auto-issue-on-payment on a draft row
 - **THEN** the resulting `invoices.issued` event and `invoice.payment_recorded` event share one `correlation_id`
 
-#### Scenario: Print audited
-- **WHEN** an invoice is printed or exported as a receipt artifact from the workspace
-- **THEN** the system appends an `invoice.printed` audit event with actor, invoice ID, and timestamp
+#### Scenario: Print dialog intent audited
+- **WHEN** an operator presses **In ngay** for one or more active invoices from an invoice surface
+- **THEN** the system appends one `invoice.printed` event per invoice with actor, invoice ID, corresponding period ID, timestamp, and a shared batch correlation ID
 
 ### Requirement: Auto-issue on payment
 The system SHALL support a single atomic operation that issues a draft invoice and records its full payment in the same transaction.

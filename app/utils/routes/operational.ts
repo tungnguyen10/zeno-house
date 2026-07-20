@@ -106,6 +106,11 @@ export function invoicePath(invoice: InvoiceRouteSubject): string {
   return `/dashboard/billing/invoices/${invoiceRouteSegment(invoice)}`
 }
 
+export function invoicePrintPath(invoiceIds: string[]): string {
+  const ids = [...new Set(invoiceIds)]
+  return `/dashboard/invoices/print?ids=${encodeURIComponent(ids.join(','))}`
+}
+
 export function tenantPath(tenant: TenantRouteSubject): string {
   return `/dashboard/tenants/${tenant.code}`
 }

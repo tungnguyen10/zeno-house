@@ -102,6 +102,18 @@ async function attachServiceSummaries(event: H3Event, buildings: Building[]): Pr
 }
 
 export const BuildingRepository = {
+  async findManyByIds(event: H3Event, ids: string[]): Promise<Building[]> {
+    const unique = [...new Set(ids)]
+    if (unique.length === 0) return []
+    const client = serverSupabaseClient(event)
+    const { data, error } = await client
+      .from('buildings')
+      .select('*, rooms(count)')
+      .in('id', unique)
+    if (error) throwDbError(error, 'buildings.findManyByIds')
+    return (data as BuildingRow[] ?? []).map(mapBuilding)
+  },
+
   async findAll(
     event: H3Event,
     opts: {

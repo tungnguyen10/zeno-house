@@ -348,11 +348,6 @@ watch(
   { immediate: true },
 )
 
-function openPrintWindow(payload: { keys: string[] }) {
-  if (payload.keys.length === 0) return
-  const url = `/dashboard/billing/print/${buildingParam}/${periodToken}?keys=${encodeURIComponent(payload.keys.join(','))}`
-  window.open(url, '_blank', 'noopener')
-}
 </script>
 
 <template>
@@ -484,7 +479,6 @@ function openPrintWindow(payload: { keys: string[] }) {
           :on-auto-issue="issueAndPayWithToast"
           @refresh="async () => { await loadGrid(); await loadOverview() }"
           @intent:void-reissue="openPaymentsIntent({ type: 'void-reissue', ...$event })"
-          @intent:print="openPrintWindow"
         />
 
         <BillingPaymentsStep

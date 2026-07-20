@@ -55,7 +55,6 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'refresh'): void
   (e: 'intent:void-reissue', payload: { invoiceId: string }): void
-  (e: 'intent:print', payload: { keys: string[] }): void
 }>()
 
 // ---------------------------------------------------------------------------
@@ -107,11 +106,6 @@ const {
   toggleSelectAllVisible,
   clearSelection,
 } = useBillingDraftGridFilters(displayedRows)
-
-function requestPrint() {
-  if (selectedCount.value === 0) return
-  emit('intent:print', { keys: selectedRows.value.map(row => row.key) })
-}
 
 const readingBlockerCodes = new Set<string>([
   BILLING_BLOCKER_CODES.MISSING_CURRENT_READING,
@@ -576,7 +570,6 @@ const columns: UiTableColumn<BillingDraftGridRow>[] = [
         </p>
         <div class="flex items-center gap-2">
           <UiButton variant="ghost" size="sm" @click="clearSelection">Bỏ chọn</UiButton>
-          <UiButton variant="secondary" size="sm" @click="requestPrint">In phiếu</UiButton>
           <UiButton
             v-if="onIssue && issuableSelectedCount > 0"
             variant="primary"
@@ -616,7 +609,7 @@ const columns: UiTableColumn<BillingDraftGridRow>[] = [
           <UiCheckbox
             :model-value="allVisibleSelected"
             :indeterminate="someVisibleSelected"
-            aria-label="Chọn tất cả phòng để in"
+            aria-label="Chọn tất cả phòng"
             @update:model-value="toggleSelectAllVisible"
           />
         </template>
@@ -625,7 +618,7 @@ const columns: UiTableColumn<BillingDraftGridRow>[] = [
           <UiCheckbox
             v-if="isSelectable(row as BillingDraftGridRow)"
             :model-value="isSelected(row as BillingDraftGridRow)"
-            :aria-label="`Chọn phòng ${(row as BillingDraftGridRow).roomNumber ?? ''} để in`"
+            :aria-label="`Chọn phòng ${(row as BillingDraftGridRow).roomNumber ?? ''}`"
             @update:model-value="toggleSelect(row as BillingDraftGridRow)"
           />
         </template>

@@ -30,6 +30,13 @@ const {
 const selectedInvoice = ref<InvoiceListItem | null>(null)
 const drawerOpen = ref(false)
 const toast = useToast()
+const { openPrint } = useInvoicePrinting()
+const {
+  selectedIds,
+  selectedInvoices,
+  toggle: togglePrintSelection,
+  clearSelection,
+} = useInvoicePagePrintSelection(invoices)
 
 const { data: buildingResponse, status: buildingsStatus } = await useFetch<
   ApiSuccess<Building[]> & { meta: { total: number } }
@@ -51,6 +58,10 @@ watch(errorMessage, (message) => {
 function openInvoice(invoice: InvoiceListItem) {
   selectedInvoice.value = invoice
   drawerOpen.value = true
+}
+
+function printSelectedInvoices() {
+  openPrint(selectedInvoices.value.map(invoice => invoice.id))
 }
 </script>
 
@@ -105,7 +116,9 @@ function openInvoice(invoice: InvoiceListItem) {
         <InvoiceListTable
           :rows="invoices"
           :loading="isLoading && invoices.length === 0"
+          :selected-ids="selectedIds"
           @open="openInvoice"
+          @toggle-select="togglePrintSelection"
         />
       </div>
 
@@ -137,6 +150,29 @@ function openInvoice(invoice: InvoiceListItem) {
     <InvoicePreviewDrawer
       v-model="drawerOpen"
       :invoice="selectedInvoice"
+      @print="openPrint([$event])"
     />
+
+    <Transition
+      enter-active-class="transition duration-150 ease-out"
+      enter-from-class="opacity-0 translate-y-2"
+      enter-to-class="opacity-100 translate-y-0"
+      leave-active-class="transition duration-150 ease-in"
+      leave-from-class="opacity-100 translate-y-0"
+      leave-to-class="opacity-0 translate-y-2"
+    >
+      <div
+        v-if="selectedInvoices.length > 0"
+        class="fixed bottom-4 left-1/2 z-30 w-[calc(100%-2rem)] max-w-max -translate-x-1/2 rounded-xl border border-dark-border bg-dark-card px-4 py-2 shadow-lg shadow-black/40 backdrop-blur sm:w-auto sm:rounded-full"
+      >
+        <div class="grid grid-cols-2 items-center gap-2 sm:flex sm:gap-3">
+          <span class="col-span-2 text-center text-sm text-white sm:col-auto sm:text-left">
+            Đã chọn <span class="font-semibold">{{ selectedInvoices.length }}</span> hóa đơn
+          </span>
+          <UiButton class="whitespace-nowrap" variant="ghost" size="sm" @click="clearSelection">Bỏ chọn</UiButton>
+          <UiButton class="whitespace-nowrap" variant="primary" size="sm" @click="printSelectedInvoices">In phiếu</UiButton>
+        </div>
+      </div>
+    </Transition>
   </div>
 </template>

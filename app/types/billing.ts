@@ -249,6 +249,17 @@ export interface InvoiceWithCharges {
   payments: InvoicePayment[]
 }
 
+export interface InvoicePrintItem {
+  invoice: Invoice
+  charges: InvoiceCharge[]
+  period: BillingPeriod
+  building: {
+    id: string
+    name: string
+    address: string
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Draft Grid read model (combines reading entry + draft review into one room
 // centered grid). Composed at the service boundary; not a new repository.

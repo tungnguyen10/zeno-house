@@ -20,7 +20,6 @@ import { BillingDisplayResolver } from './display'
 import { BillingAuditService } from './audit'
 import { BILLING_AUDIT_ACTIONS } from '~/utils/constants/billing'
 import { slugifyName } from '~/utils/format/slug'
-import { newCorrelationId } from '../../utils/billing/correlation'
 import { assertBuildingScope } from '../../utils/scope'
 
 const TABLE_COLUMN_COUNT = 11
@@ -237,46 +236,5 @@ export const BillingExportService = {
     })
 
     return { buffer, fileName }
-  },
-
-  /**
-   * Record that one or more invoices were printed from the client print view
-   * (`window.print()`). Emits one `invoice.printed` audit event per invoice,
-   * sharing a single correlation id so the batch can be grouped in the audit
-   * drawer. Only invoices that actually belong to the period are recorded.
-   */
-  async recordInvoicesPrinted(
-    event: H3Event,
-    user: AuthUser,
-    periodId: string,
-    invoiceIds: string[],
-  ): Promise<{ printed: number }> {
-    if (!can(user, 'billing.read')) throwForbidden('Không có quyền in hoá đơn')
-
-    const period = await BillingPeriodRepository.findById(event, periodId)
-    if (!period) throwNotFound('Không tìm thấy kỳ vận hành')
-    await assertBuildingScope(event, user, period.buildingId, 'read')
-
-    const periodInvoiceIds = new Set(
-      (await InvoiceRepository.listByPeriod(event, period.id)).map(inv => inv.id),
-    )
-    const targets = [...new Set(invoiceIds)].filter(id => periodInvoiceIds.has(id))
-    if (targets.length === 0) return { printed: 0 }
-
-    const correlationId = newCorrelationId()
-    await Promise.all(targets.map(invoiceId =>
-      BillingAuditService.append(event, user, {
-        billing_period_id: period.id,
-        action: BILLING_AUDIT_ACTIONS.INVOICE_PRINTED,
-        entity_type: 'invoice',
-        entity_id: invoiceId,
-        correlation_id: correlationId,
-        before_data: null,
-        after_data: null,
-        metadata: { invoice_id: invoiceId, format: 'print' },
-      }),
-    ))
-
-    return { printed: targets.length }
   },
 }

@@ -25,6 +25,12 @@ export const invoiceListQuerySchema = z.object({
 
 export type InvoiceListQuery = z.infer<typeof invoiceListQuerySchema>
 
+export const invoicePrintRequestSchema = z.object({
+  invoice_ids: z.array(z.string().uuid()).min(1).max(100),
+})
+
+export type InvoicePrintRequest = z.infer<typeof invoicePrintRequestSchema>
+
 export interface InvoiceListItem {
   id: string
   invoice_code: string

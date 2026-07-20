@@ -114,8 +114,8 @@ Period list, workspace overview, draft calculation, and draft grid use the same 
 
 The workspace route `/billing/[building]/[period]` has **two tabs** (simplified from three in v0.2):
 
-1. **Soạn kỳ** (draft-grid): enter readings, review blockers, bulk-issue ready rows, auto-issue-and-collect individual rows (when flag enabled).
-2. **Thu tiền & công nợ** (payments): collect payments, bulk collect, void/reissue, undo individual payments.
+1. **Soạn kỳ** (draft-grid): enter readings, review blockers, bulk-issue ready rows, auto-issue-and-collect individual rows (when flag enabled). Draft rows are not printable.
+2. **Thu tiền & công nợ** (payments): print issued invoices, collect payments, bulk collect, void/reissue, undo individual payments.
 
 Header overflow actions (`Hành động ▾`):
 
@@ -227,6 +227,14 @@ Closing a period:
 
 `GET /api/billing/periods/[id]/export` returns an Excel workbook for the period. Export is available to users with `billing.read`.
 
+## Issued Invoice Printing
+
+Printing is invoice-centric and available from **Thu tiền & công nợ** and the cross-period `/dashboard/invoices` browser. The shared route `/dashboard/invoices/print?ids=<uuid,...>` accepts one to 100 selected invoices. It renders persisted invoice charges and their issue-time calculation metadata, plus current paid and balance totals; it never recalculates from the draft grid.
+
+`POST /api/billing/invoices/print-data` loads the complete batch in selection order and rejects the whole request when an invoice is missing, outside building scope, still draft, or void. Active invoices remain printable after a period is closed. `POST /api/billing/invoices/printed` records one `invoice.printed` print-dialog intent event per invoice with its billing period and one correlation ID for the batch. Audit failure does not block the native print dialog.
+
+The `/dashboard/invoices` selection is limited to its current server-paginated page and clears when the result set changes. In **Thu tiền & công nợ**, a mixed selection can still be printed while bulk collection remains disabled unless every selected invoice is outstanding and its period is open.
+
 ## Audit Drawer
 
 The audit drawer is opened via the `Hành động ▾` menu. It shows the full history of billing actions for the period.
@@ -253,6 +261,9 @@ Backed by `GET /api/billing/periods/[id]/audit` (supports actor/category/from/to
 - Audit list composable: `app/composables/billing/useBillingAuditList.ts`
 - Recent audit count composable: `app/composables/billing/useRecentAuditCount.ts`
 - Invoice actions composable: `app/composables/billing/useBillingInvoiceActions.ts`
+- Invoice printing composable: `app/composables/invoices/useInvoicePrinting.ts`
+- Shared print page: `app/pages/dashboard/invoices/print.vue`
+- Printable invoice card: `app/components/invoices/InvoicePrintCard.vue`
 - Draft grid: `app/components/billing/BillingDraftGridStep.vue`
 - Payments: `app/components/billing/BillingPaymentsStep.vue`
 - Auto-issue modal: `app/components/billing/BillingAutoIssueModal.vue`

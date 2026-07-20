@@ -78,15 +78,6 @@ export const issueInvoicesSchema = z.object({
 export type IssueInvoicesInput = z.infer<typeof issueInvoicesSchema>
 
 // ---------------------------------------------------------------------------
-// Invoices printed (client print ping)
-// ---------------------------------------------------------------------------
-
-export const invoicesPrintedSchema = z.object({
-  invoice_ids: z.array(z.string().uuid()).min(1).max(500),
-})
-export type InvoicesPrintedInput = z.infer<typeof invoicesPrintedSchema>
-
-// ---------------------------------------------------------------------------
 // Void invoice
 // ---------------------------------------------------------------------------
 
