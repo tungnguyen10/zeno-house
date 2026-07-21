@@ -12,10 +12,11 @@ import type {
   ReserveFundRateUpdateInput,
 } from '~/utils/validators/operations-report'
 import { BuildingRepository } from '../../repositories/buildings'
-import { BuildingExpenseRepository } from '../../repositories/operations-report/expenses'
 import { ReserveFundRepository } from '../../repositories/operations-report/reserve-funds'
 import { OperationsReportLockService } from './locks'
 import { assertBuildingScope } from '../../utils/scope'
+import { AuditService } from '../audit'
+import { AUDIT_ACTIONS } from '~/utils/constants/audit'
 
 function ordinal(year: number, month: number): number {
   return year * 12 + month
@@ -81,7 +82,15 @@ export const ReserveFundService = {
           ? ordinal(input.effective_to_period_year, input.effective_to_period_month)
           : null,
     })
-    return ReserveFundRepository.insertRate(event, input, user.id)
+    const created = await ReserveFundRepository.insertRate(event, input, user.id)
+    await AuditService.append(event, user, {
+      building_id: input.building_id,
+      action: AUDIT_ACTIONS.RESERVE_FUND_RATE_CREATED,
+      entity_type: 'reserve_fund_rate',
+      entity_id: created.id,
+      after_data: created,
+    })
+    return created
   },
 
   async updateRate(
@@ -139,7 +148,16 @@ export const ReserveFundService = {
       },
       id,
     )
-    return ReserveFundRepository.updateRateById(event, id, input)
+    const updated = await ReserveFundRepository.updateRateById(event, id, input)
+    await AuditService.append(event, user, {
+      building_id: existing.buildingId,
+      action: AUDIT_ACTIONS.RESERVE_FUND_RATE_UPDATED,
+      entity_type: 'reserve_fund_rate',
+      entity_id: existing.id,
+      before_data: existing,
+      after_data: updated,
+    })
+    return updated
   },
 
   async findEffectiveRate(
@@ -164,22 +182,14 @@ export const ReserveFundService = {
     event: H3Event,
     user: AuthUser,
     input: BuildingExpenseCreateInput,
-  ): Promise<BuildingExpense> {
+  ): Promise<{ expense: BuildingExpense, deduction: ReserveFundTransaction }> {
     await requireBuildingAccess(event, user, input.building_id, 'reserve-fund.manage', 'write')
 
-    const created = await BuildingExpenseRepository.insert(
+    return ReserveFundRepository.createReserveFundedExpenseWithAudit(
       event,
       { ...input, funded_by: 'reserve_fund' },
       user.id,
     )
-    try {
-      await this.syncExpenseDeduction(event, user, created)
-    }
-    catch (error) {
-      await BuildingExpenseRepository.deleteById(event, created.id)
-      throw error
-    }
-    return created
   },
 
   async syncExpenseDeduction(
@@ -255,6 +265,33 @@ export const ReserveFundService = {
       reserveRatePercent,
       amount,
       createdBy: user?.id ?? null,
+    })
+  },
+
+  async refreshAccrualWithAudit(
+    event: H3Event,
+    user: AuthUser,
+    input: {
+      buildingId: string
+      periodYear: number
+      periodMonth: number
+      billingPeriodId: string | null
+      issuedRevenue: number
+      issuedProfitByRevenue: number
+    },
+  ): Promise<ReserveFundTransaction> {
+    const rate = await this.findEffectiveRate(event, input.buildingId, input.periodYear, input.periodMonth)
+    const reserveRatePercent = rate?.reserveRatePercent ?? 0
+    const amount = Math.round((Math.max(input.issuedProfitByRevenue, 0) * reserveRatePercent) / 100)
+    return ReserveFundRepository.refreshAccrualWithAudit(event, {
+      buildingId: input.buildingId,
+      periodYear: input.periodYear,
+      periodMonth: input.periodMonth,
+      billingPeriodId: input.billingPeriodId,
+      issuedRevenue: input.issuedRevenue,
+      reserveRatePercent,
+      amount,
+      actorId: user.id,
     })
   },
 

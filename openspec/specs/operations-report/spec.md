@@ -2,6 +2,32 @@
 
 Define monthly operations report expense-category and fixed-cost management behavior.
 ## Requirements
+
+### Requirement: Operations mutations are visible in entity history
+The system SHALL append entity audit events for expense receipt attachment/removal, shared expense create/update/deactivate/allocation, reserve rate create/update, manual reserve accrual refresh, and report close/auto-close/reopen.
+
+#### Scenario: Derived reserve deduction stays under the expense intent
+- **WHEN** a building expense create, update, or void changes its reserve deduction
+- **THEN** its business-level building-expense event metadata contains the linked reserve deduction snapshot
+- **AND** no redundant low-level audit event is required for the same calculation
+
+#### Scenario: Reserve-funded create is atomic
+- **WHEN** a reserve-funded expense is created
+- **THEN** the expense, reserve deduction, and `building_expense.created` event commit in one transaction
+
+#### Scenario: Atomic report lifecycle
+- **WHEN** close, refresh, or reopen fails while writing audit
+- **THEN** the corresponding closure or accrual mutation is rolled back
+
+#### Scenario: Reopen retains the accrual snapshot
+- **WHEN** an administrator reopens a closed report
+- **THEN** its monthly accrual row is retained but is not applied while the report is open
+- **AND** the reopen audit metadata captures that retained accrual
+
+#### Scenario: Repeated close is safe
+- **WHEN** auto-close retries an already closed report
+- **THEN** the existing close provenance is returned without another audit event
+- **AND** a manual repeated close is rejected
 ### Requirement: Extended expense categories
 The system SHALL support the expense categories `insurance`, `bank_fee`, and `fire_safety` in addition to the existing categories.
 
@@ -155,4 +181,3 @@ The operations report API SHALL derive billing, expense, prepaid, closure, and r
 #### Scenario: Load a closed report
 - **WHEN** an authorized user requests a closed period report whose version has not changed
 - **THEN** the server may reuse the versioned cached snapshot without recomputing it
-

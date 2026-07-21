@@ -10,6 +10,8 @@ import { SharedExpenseRepository } from '../repositories/shared-expenses'
 import { OperationsReportLockService } from './operations-report/locks'
 import { invalidateOperationsReport } from './operations-report/cache'
 import { assertBuildingScope } from '../utils/scope'
+import { AuditService } from './audit'
+import { AUDIT_ACTIONS } from '~/utils/constants/audit'
 
 function ownerScopeId(user: AuthUser): string {
   return isAdmin(user) ? user.id : user.id
@@ -45,7 +47,16 @@ export const SharedExpenseService = {
   ): Promise<SharedExpense> {
     if (!can(user, 'shared-expenses.write')) throwForbidden('Không có quyền tạo chi phí dùng chung')
     await assertEveryBuildingInScope(event, user, input.building_ids)
-    return SharedExpenseRepository.insert(event, ownerScopeId(user), input, user.id)
+    const created = await SharedExpenseRepository.insert(event, ownerScopeId(user), input, user.id)
+    await AuditService.append(event, user, {
+      building_id: null,
+      action: AUDIT_ACTIONS.SHARED_EXPENSE_CREATED,
+      entity_type: 'shared_expense',
+      entity_id: created.id,
+      after_data: created,
+      metadata: { building_ids: created.buildingIds },
+    })
+    return created
   },
 
   async update(
@@ -59,7 +70,17 @@ export const SharedExpenseService = {
     if (!existing) throwNotFound('Không tìm thấy chi phí dùng chung')
     await assertOwnerOfSharedExpense(existing, user)
     if (input.building_ids) await assertEveryBuildingInScope(event, user, input.building_ids)
-    return SharedExpenseRepository.update(event, id, input)
+    const updated = await SharedExpenseRepository.update(event, id, input)
+    await AuditService.append(event, user, {
+      building_id: null,
+      action: AUDIT_ACTIONS.SHARED_EXPENSE_UPDATED,
+      entity_type: 'shared_expense',
+      entity_id: existing.id,
+      before_data: existing,
+      after_data: updated,
+      metadata: { building_ids: updated.buildingIds },
+    })
+    return updated
   },
 
   async remove(event: H3Event, user: AuthUser, id: string): Promise<void> {
@@ -68,6 +89,15 @@ export const SharedExpenseService = {
     if (!existing) throwNotFound('Không tìm thấy chi phí dùng chung')
     await assertOwnerOfSharedExpense(existing, user)
     await SharedExpenseRepository.deactivate(event, id)
+    await AuditService.append(event, user, {
+      building_id: null,
+      action: AUDIT_ACTIONS.SHARED_EXPENSE_DEACTIVATED,
+      entity_type: 'shared_expense',
+      entity_id: existing.id,
+      before_data: existing,
+      after_data: { ...existing, isActive: false },
+      metadata: { building_ids: existing.buildingIds },
+    })
   },
 
   async allocate(

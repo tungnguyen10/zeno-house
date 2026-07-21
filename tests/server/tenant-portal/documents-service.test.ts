@@ -6,6 +6,8 @@ const mocks = vi.hoisted(() => ({
   upload: vi.fn(),
   remove: vi.fn(),
   createSignedUrl: vi.fn(),
+  auditAppend: vi.fn(),
+  findActiveContract: vi.fn(),
 }))
 
 vi.mock('../../../server/utils/scope', () => ({ resolveTenantId: mocks.resolveTenantId }))
@@ -17,6 +19,8 @@ vi.mock('../../../server/repositories/tenant-portal/documents', () => ({
     createSignedUrl: mocks.createSignedUrl,
   },
 }))
+vi.mock('../../../server/services/audit', () => ({ AuditService: { append: mocks.auditAppend } }))
+vi.mock('../../../server/repositories/contracts', () => ({ ContractRepository: { findActiveByTenantId: mocks.findActiveContract } }))
 
 const tenantUser = { id: 'auth-tenant', app_metadata: { role: 'tenant' } } as never
 const internalUser = { id: 'auth-admin', app_metadata: { role: 'admin' } } as never
@@ -40,6 +44,7 @@ describe('TenantDocumentService', () => {
     })
     mocks.remove.mockResolvedValue(undefined)
     mocks.createSignedUrl.mockResolvedValue('https://signed.test/document')
+    mocks.findActiveContract.mockResolvedValue({ buildingId: 'building-1' })
   })
 
   it('lists only the resolved tenant documents with short-lived signed URLs', async () => {
@@ -84,6 +89,13 @@ describe('TenantDocumentService', () => {
       size: data.length,
       signedUrl: 'https://signed.test/document',
     })
+    expect(mocks.auditAppend).toHaveBeenCalledWith(expect.anything(), tenantUser, expect.objectContaining({
+      action: 'tenant_document.uploaded', entity_type: 'tenant_document', entity_id: 'object-2',
+      building_id: 'building-1',
+      after_data: { id: 'object-2', name: 'Giấy tờ.pdf', mime_type: 'application/pdf', size: data.length },
+    }))
+    expect(JSON.stringify(mocks.auditAppend.mock.calls[0])).not.toContain('signed.test')
+    expect(mocks.auditAppend.mock.calls[0]?.[2]).not.toHaveProperty('after_data.data')
   })
 
   it.each([
@@ -115,6 +127,19 @@ describe('TenantDocumentService', () => {
       'other-tenant-object',
     )).rejects.toMatchObject({ statusCode: 404, data: { error: { code: 'NOT_FOUND' } } })
     expect(mocks.remove).not.toHaveBeenCalled()
+  })
+
+  it('audits removal without persisting the storage path', async () => {
+    const { TenantDocumentService } = await import('../../../server/services/tenant-portal/documents')
+
+    await TenantDocumentService.remove({} as never, tenantUser, 'object-1')
+
+    expect(mocks.auditAppend).toHaveBeenCalledWith(expect.anything(), tenantUser, expect.objectContaining({
+      action: 'tenant_document.removed', entity_type: 'tenant_document', entity_id: 'object-1',
+      building_id: 'building-1',
+      before_data: { id: 'object-1', name: 'Existing.pdf', mime_type: 'application/pdf', size: 2048, created_at: existing.createdAt },
+    }))
+    expect(JSON.stringify(mocks.auditAppend.mock.calls[0])).not.toContain(existing.path)
   })
 
   it('rechecks tenant document capabilities before resolving scope', async () => {

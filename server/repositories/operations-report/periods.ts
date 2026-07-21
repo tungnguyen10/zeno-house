@@ -38,6 +38,72 @@ function mapRow(row: unknown): OperationsReportClosure {
 }
 
 export const OperationsReportPeriodRepository = {
+  async closeWithAccrualAndAudit(
+    event: H3Event,
+    input: {
+      buildingId: string
+      periodYear: number
+      periodMonth: number
+      billingPeriodId: string | null
+      issuedRevenue: number
+      reserveRatePercent: number
+      accrualAmount: number
+      closeSource: OperationsReportCloseSource
+      closedBy: string | null
+    },
+  ): Promise<OperationsReportClosure> {
+    const client = await serverSupabaseClient(event)
+    const rpc = (client as unknown as { rpc: (
+      name: string,
+      args: Record<string, unknown>,
+    ) => PromiseLike<{ data: unknown, error: DbError | null }> }).rpc
+    const { data, error } = await rpc('close_operations_report_with_audit', {
+      p_building_id: input.buildingId,
+      p_period_year: input.periodYear,
+      p_period_month: input.periodMonth,
+      p_billing_period_id: input.billingPeriodId,
+      p_issued_revenue: input.issuedRevenue,
+      p_reserve_rate_percent: input.reserveRatePercent,
+      p_accrual_amount: input.accrualAmount,
+      p_close_source: input.closeSource,
+      p_actor_id: input.closedBy,
+    })
+    if (error) {
+      if (error.message.includes('already closed')) throwConflict('Báo cáo vận hành đã được chốt')
+      throwDbError(error, 'operationsReport.periods.closeWithAccrualAndAudit')
+    }
+    return mapRow(data)
+  },
+
+  async reopenWithAudit(
+    event: H3Event,
+    input: {
+      buildingId: string
+      periodYear: number
+      periodMonth: number
+      reopenedBy: string
+      reason: string
+    },
+  ): Promise<OperationsReportClosure> {
+    const client = await serverSupabaseClient(event)
+    const rpc = (client as unknown as { rpc: (
+      name: string,
+      args: Record<string, unknown>,
+    ) => PromiseLike<{ data: unknown, error: DbError | null }> }).rpc
+    const { data, error } = await rpc('reopen_operations_report_with_audit', {
+      p_building_id: input.buildingId,
+      p_period_year: input.periodYear,
+      p_period_month: input.periodMonth,
+      p_actor_id: input.reopenedBy,
+      p_reason: input.reason,
+    })
+    if (error) {
+      if (error.message.includes('not closed')) throwConflict('Báo cáo vận hành chưa chốt')
+      throwDbError(error, 'operationsReport.periods.reopenWithAudit')
+    }
+    return mapRow(data)
+  },
+
   async find(
     event: H3Event,
     buildingId: string,

@@ -14,8 +14,12 @@ const findEffectiveRate = vi.fn()
 const findOrOpenClosure = vi.fn()
 const closeClosure = vi.fn()
 const reopenClosure = vi.fn()
+const closeWithAccrualAndAudit = vi.fn()
+const reopenWithAudit = vi.fn()
 const recordMonthlyAccrual = vi.fn()
+const refreshAccrualWithAudit = vi.fn()
 const assertBuildingScope = vi.fn()
+const appendAudit = vi.fn()
 
 vi.mock('../../../server/repositories/buildings', () => ({
   BuildingRepository: { findById: findBuildingById },
@@ -30,6 +34,8 @@ vi.mock('../../../server/repositories/operations-report/periods', () => ({
     findOrOpen: findOrOpenClosure,
     close: closeClosure,
     reopen: reopenClosure,
+    closeWithAccrualAndAudit,
+    reopenWithAudit,
   },
 }))
 
@@ -50,12 +56,14 @@ vi.mock('../../../server/services/operations-report/reserve-funds', () => ({
     get: getReserveFund,
     findEffectiveRate,
     recordMonthlyAccrual,
+    refreshAccrualWithAudit,
   },
 }))
 
 vi.mock('../../../server/utils/scope', () => ({
   assertBuildingScope,
 }))
+vi.mock('../../../server/services/audit', () => ({ AuditService: { append: appendAudit } }))
 
 const admin = { id: 'admin-1', app_metadata: { role: 'admin' } } as AuthUser
 const manager = { id: 'manager-1', app_metadata: { role: 'manager' } } as AuthUser
@@ -169,6 +177,7 @@ describe('OperationsReportService.getReport', () => {
       createdAt: '',
       updatedAt: '',
     })
+    closeWithAccrualAndAudit.mockImplementation(closeClosure)
     reopenClosure.mockResolvedValue({
       id: 'closure-1',
       buildingId: 'building-1',
@@ -184,7 +193,9 @@ describe('OperationsReportService.getReport', () => {
       createdAt: '',
       updatedAt: '',
     })
+    reopenWithAudit.mockImplementation(reopenClosure)
     recordMonthlyAccrual.mockResolvedValue({ id: 'accrual-1' })
+    refreshAccrualWithAudit.mockResolvedValue({ id: 'accrual-1' })
     findEffectiveRate.mockResolvedValue({ reserveRatePercent: 5 })
     getReserveFund.mockResolvedValue({
       id: 'fund-1',
@@ -397,18 +408,13 @@ describe('OperationsReportService.getReport', () => {
     })
 
     expect(closure.status).toBe('closed')
-    expect(recordMonthlyAccrual).toHaveBeenCalledWith(expect.anything(), admin, {
-      buildingId: 'building-1',
-      periodYear: 2026,
-      periodMonth: 6,
-      billingPeriodId: 'period-1',
-      issuedRevenue: 5_000_000,
-      issuedProfitByRevenue: 5_000_000 - 11_650_000,
-    })
-    expect(closeClosure).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+    expect(recordMonthlyAccrual).not.toHaveBeenCalled()
+    expect(closeWithAccrualAndAudit).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
       closeSource: 'manual',
       closedBy: 'admin-1',
+      issuedRevenue: 5_000_000,
     }))
+    expect(appendAudit).not.toHaveBeenCalled()
   })
 
   it('denies owner manual close and refresh accrual controls', async () => {
@@ -444,17 +450,26 @@ describe('OperationsReportService.getReport', () => {
       period_month: 6,
     })
 
-    expect(recordMonthlyAccrual).toHaveBeenCalledWith(expect.anything(), null, {
-      buildingId: 'building-1',
-      periodYear: 2026,
-      periodMonth: 6,
-      billingPeriodId: 'period-1',
-      issuedRevenue: 5_000_000,
-      issuedProfitByRevenue: 5_000_000 - 11_650_000,
-    })
-    expect(closeClosure).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+    expect(recordMonthlyAccrual).not.toHaveBeenCalled()
+    expect(closeWithAccrualAndAudit).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
       closeSource: 'auto',
       closedBy: null,
     }))
+    expect(appendAudit).not.toHaveBeenCalled()
+  })
+
+  it('audits reserve refresh and report reopen', async () => {
+    const { OperationsReportService } = await import('../../../server/services/operations-report/report')
+
+    await OperationsReportService.refreshReserveAccrual({} as never, admin, {
+      building_id: 'building-1', period_year: 2026, period_month: 6,
+    })
+    await OperationsReportService.reopen({} as never, admin, {
+      building_id: 'building-1', period_year: 2026, period_month: 6, reason: 'fix expense',
+    })
+
+    expect(refreshAccrualWithAudit).toHaveBeenCalled()
+    expect(reopenWithAudit).toHaveBeenCalled()
+    expect(appendAudit).not.toHaveBeenCalled()
   })
 })

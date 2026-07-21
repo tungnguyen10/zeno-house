@@ -17,6 +17,7 @@ const storageCreateSignedUrl = vi.fn()
 const syncExpenseDeduction = vi.fn()
 const voidExpenseDeduction = vi.fn()
 const assertReportOpen = vi.fn()
+const createReserveFundedExpense = vi.fn()
 
 vi.mock('../../../server/repositories/buildings', () => ({
   BuildingRepository: { findById: findBuildingById },
@@ -42,7 +43,7 @@ vi.mock('../../../server/services/audit', () => ({
 
 vi.mock('../../../server/services/operations-report/reserve-funds', () => ({
   ReserveFundService: {
-    createReserveFundedExpense: vi.fn(),
+    createReserveFundedExpense,
     syncExpenseDeduction,
     voidExpenseDeduction,
   },
@@ -174,6 +175,54 @@ describe('BuildingExpenseService', () => {
     expect(result.data).toHaveProperty('funded_by', 'reserve_fund')
   })
 
+  it('includes a changed reserve deduction in update audit metadata', async () => {
+    const existing = expense({ fundedBy: 'reserve_fund' })
+    const updated = expense({ fundedBy: 'reserve_fund', amount: 900_000 })
+    const deduction = { id: 'transaction-1', amount: 900_000, source: 'expense_deduction' }
+    findExpenseById.mockResolvedValue(existing)
+    updateExpenseById.mockResolvedValue(updated)
+    syncExpenseDeduction.mockResolvedValue(deduction)
+    const { BuildingExpenseService } = await import('../../../server/services/operations-report/expenses')
+
+    await BuildingExpenseService.update({} as never, admin, 'expense-1', { amount: 900_000 })
+
+    expect(appendAudit).toHaveBeenCalledWith(expect.anything(), admin, expect.objectContaining({
+      action: 'building_expense.updated',
+      metadata: { reserve_deduction: deduction },
+    }))
+  })
+
+  it('includes the voided reserve deduction in void audit metadata', async () => {
+    const existing = expense({ fundedBy: 'reserve_fund' })
+    const voided = expense({ fundedBy: 'reserve_fund', voidedAt: '2026-06-20T00:00:00Z' })
+    const deduction = { id: 'transaction-1', voidedAt: '2026-06-20T00:00:00Z' }
+    findExpenseById.mockResolvedValue(existing)
+    voidExpenseById.mockResolvedValue(voided)
+    voidExpenseDeduction.mockResolvedValue(deduction)
+    const { BuildingExpenseService } = await import('../../../server/services/operations-report/expenses')
+
+    await BuildingExpenseService.void({} as never, admin, 'expense-1', 'duplicate entry')
+
+    expect(appendAudit).toHaveBeenCalledWith(expect.anything(), admin, expect.objectContaining({
+      action: 'building_expense.voided',
+      metadata: { void_reason: 'duplicate entry', reserve_deduction: deduction },
+    }))
+  })
+
+  it('does not append a second audit event after the atomic reserve-funded create RPC', async () => {
+    const fundedExpense = expense({ fundedBy: 'reserve_fund' })
+    const deduction = { id: 'transaction-1', amount: 750_000, source: 'expense_deduction' }
+    createReserveFundedExpense.mockResolvedValue({ expense: fundedExpense, deduction })
+    const { BuildingExpenseService } = await import('../../../server/services/operations-report/expenses')
+
+    await BuildingExpenseService.create({} as never, admin, {
+      building_id: 'building-1', period_year: 2026, period_month: 6,
+      category: 'repair', amount: 750_000, funded_by: 'reserve_fund',
+    })
+
+    expect(appendAudit).not.toHaveBeenCalled()
+  })
+
   it('uploads a valid receipt after write scope enforcement', async () => {
     const existing = expense()
     const updated = expense({ receiptUrl: 'building-1/expense-1/receipt.jpg' })
@@ -202,6 +251,11 @@ describe('BuildingExpenseService', () => {
       expect.stringMatching(/^building-1\/expense-1\/.+\.jpg$/),
     )
     expect(result.receiptSignedUrl).toBe('https://signed.test/receipt')
+    expect(appendAudit).toHaveBeenCalledWith(expect.anything(), admin, expect.objectContaining({
+      action: 'building_expense.receipt_attached', entity_type: 'building_expense', entity_id: 'expense-1',
+      metadata: { receipt_attached: true },
+    }))
+    expect(JSON.stringify(appendAudit.mock.calls.at(-1))).not.toContain('signed.test')
   })
 
   it('rejects invalid receipt content types before storage upload', async () => {
@@ -239,5 +293,10 @@ describe('BuildingExpenseService', () => {
     expect(storageRemove).toHaveBeenCalledWith(['building-1/expense-1/old.jpg'])
     expect(result.receiptUrl).toBeNull()
     expect(result.receiptSignedUrl).toBeNull()
+    expect(appendAudit).toHaveBeenCalledWith(expect.anything(), admin, expect.objectContaining({
+      action: 'building_expense.receipt_removed', entity_type: 'building_expense', entity_id: 'expense-1',
+      metadata: { receipt_attached: false },
+    }))
+    expect(JSON.stringify(appendAudit.mock.calls.at(-1))).not.toContain('old.jpg')
   })
 })

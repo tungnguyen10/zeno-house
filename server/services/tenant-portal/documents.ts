@@ -14,6 +14,9 @@ import {
 import { throwForbidden, throwNotFound, throwValidationError } from '../../utils/errors'
 import { can } from '../../utils/permissions'
 import { resolveTenantId } from '../../utils/scope'
+import { ContractRepository } from '../../repositories/contracts'
+import { AuditService } from '../audit'
+import { AUDIT_ACTIONS } from '~/utils/constants/audit'
 
 const EXTENSIONS: Record<(typeof TENANT_DOCUMENT_MIME_TYPES)[number], string> = {
   'image/jpeg': 'jpg',
@@ -73,6 +76,7 @@ export const TenantDocumentService = {
     if (!can(user, 'tenant.documents.write')) throwForbidden('Không có quyền tải tài liệu')
     const metadata = validateUpload(file)
     const tenantId = await resolveTenantId(event, user)
+    const contract = await ContractRepository.findActiveByTenantId(event, tenantId)
     const extension = EXTENSIONS[metadata.mimeType]
     const path = `${tenantId}/${randomUUID()}.${extension}`
     const uploaded = await TenantDocumentRepository.upload(event, path, {
@@ -81,7 +85,7 @@ export const TenantDocumentService = {
       data: file.data,
     })
 
-    return {
+    const result = {
       id: uploaded.id,
       name: metadata.name,
       mimeType: metadata.mimeType,
@@ -89,14 +93,43 @@ export const TenantDocumentService = {
       createdAt: new Date().toISOString(),
       signedUrl: await TenantDocumentRepository.createSignedUrl(event, uploaded.path),
     }
+    await AuditService.append(event, user, {
+      building_id: contract?.buildingId ?? null,
+      action: AUDIT_ACTIONS.TENANT_DOCUMENT_UPLOADED,
+      entity_type: 'tenant_document',
+      entity_id: uploaded.id,
+      after_data: {
+        id: uploaded.id,
+        name: metadata.name,
+        mime_type: metadata.mimeType,
+        size: metadata.size,
+      },
+      metadata: { tenant_id: tenantId },
+    })
+    return result
   },
 
   async remove(event: H3Event, user: AuthUser, id: string): Promise<void> {
     if (!can(user, 'tenant.documents.write')) throwForbidden('Không có quyền xóa tài liệu')
     const tenantId = await resolveTenantId(event, user)
+    const contract = await ContractRepository.findActiveByTenantId(event, tenantId)
     const documents = await TenantDocumentRepository.list(event, tenantId)
     const document = documents.find(item => item.id === id)
     if (!document) throwNotFound('Không tìm thấy tài liệu')
     await TenantDocumentRepository.remove(event, document.path)
+    await AuditService.append(event, user, {
+      building_id: contract?.buildingId ?? null,
+      action: AUDIT_ACTIONS.TENANT_DOCUMENT_REMOVED,
+      entity_type: 'tenant_document',
+      entity_id: document.id,
+      before_data: {
+        id: document.id,
+        name: document.name,
+        mime_type: document.mimeType,
+        size: document.size,
+        created_at: document.createdAt,
+      },
+      metadata: { tenant_id: tenantId },
+    })
   },
 }

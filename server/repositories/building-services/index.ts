@@ -5,6 +5,23 @@ import type { BuildingServiceUpsertInput, BuildingServiceUpdateInput } from '~/u
 import { mapBuildingService } from '~/utils/mappers/building-services'
 
 export const BuildingServiceRepository = {
+  async findByBuildingAndCatalog(
+    event: H3Event,
+    buildingId: string,
+    catalogId: string,
+  ): Promise<BuildingService | null> {
+    const client = await serverSupabaseClient(event)
+    const { data, error } = await client
+      .from('building_services')
+      .select('*, service_catalog(*)')
+      .eq('building_id', buildingId)
+      .eq('catalog_id', catalogId)
+      .maybeSingle()
+
+    if (error) throwDbError(error, 'buildingServices.findByBuildingAndCatalog')
+    return data ? mapBuildingService(data as Parameters<typeof mapBuildingService>[0]) : null
+  },
+
   async findById(event: H3Event, id: string): Promise<BuildingService | null> {
     const client = await serverSupabaseClient(event)
     const { data, error } = await client

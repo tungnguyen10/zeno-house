@@ -5,14 +5,16 @@ import { can as realCan } from '../../../server/utils/permissions'
 
 const findBuildingById = vi.fn()
 const assertBuildingScope = vi.fn()
-const insertExpense = vi.fn()
-const deleteExpenseById = vi.fn()
+const createReserveFundedExpenseWithAudit = vi.fn()
 const upsertExpenseDeduction = vi.fn()
 const voidExpenseDeduction = vi.fn()
 const upsertMonthlyAccrual = vi.fn()
 const listRatesByBuilding = vi.fn()
 const insertRate = vi.fn()
+const findRateById = vi.fn()
+const updateRateById = vi.fn()
 const assertNoClosedReportsInRange = vi.fn()
+const appendAudit = vi.fn()
 
 vi.mock('../../../server/repositories/buildings', () => ({
   BuildingRepository: { findById: findBuildingById },
@@ -29,15 +31,12 @@ vi.mock('../../../server/repositories/operations-report/reserve-funds', () => ({
     upsertMonthlyAccrual,
     listRatesByBuilding,
     insertRate,
+    findRateById,
+    updateRateById,
+    createReserveFundedExpenseWithAudit,
   },
 }))
-
-vi.mock('../../../server/repositories/operations-report/expenses', () => ({
-  BuildingExpenseRepository: {
-    insert: insertExpense,
-    deleteById: deleteExpenseById,
-  },
-}))
+vi.mock('../../../server/services/audit', () => ({ AuditService: { append: appendAudit } }))
 
 vi.mock('../../../server/services/operations-report/locks', () => ({
   OperationsReportLockService: {
@@ -91,13 +90,17 @@ describe('ReserveFundService', () => {
     vi.stubGlobal('can', realCan)
     findBuildingById.mockResolvedValue({ id: 'building-1' })
     assertBuildingScope.mockResolvedValue(undefined)
-    insertExpense.mockResolvedValue(expense())
-    deleteExpenseById.mockResolvedValue(undefined)
+    createReserveFundedExpenseWithAudit.mockResolvedValue({
+      expense: expense(),
+      deduction: { id: 'tx-1' },
+    })
     upsertExpenseDeduction.mockResolvedValue({ id: 'tx-1' })
     voidExpenseDeduction.mockResolvedValue({ id: 'tx-1', voidedAt: '2026-07-05T00:00:00Z' })
     upsertMonthlyAccrual.mockResolvedValue({ id: 'accrual-1' })
     listRatesByBuilding.mockResolvedValue([rate()])
     insertRate.mockResolvedValue(rate())
+    findRateById.mockResolvedValue(rate())
+    updateRateById.mockResolvedValue(rate({ reserveRatePercent: 6 }))
     assertNoClosedReportsInRange.mockResolvedValue(undefined)
   })
 
@@ -115,20 +118,14 @@ describe('ReserveFundService', () => {
       funded_by: 'reserve_fund',
     })
 
-    expect(insertExpense).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+    expect(createReserveFundedExpenseWithAudit).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
       funded_by: 'reserve_fund',
     }), 'owner-1')
-    expect(upsertExpenseDeduction).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
-      buildingId: 'building-1',
-      expenseId: 'expense-1',
-      amount: 300,
-      periodYear: 2026,
-      periodMonth: 7,
-    }))
+    expect(upsertExpenseDeduction).not.toHaveBeenCalled()
   })
 
-  it('deletes the newly created expense when linked deduction creation fails', async () => {
-    upsertExpenseDeduction.mockRejectedValueOnce(new Error('ledger write failed'))
+  it('propagates an atomic reserve-funded expense RPC failure', async () => {
+    createReserveFundedExpenseWithAudit.mockRejectedValueOnce(new Error('atomic write failed'))
     const { ReserveFundService } = await import('../../../server/services/operations-report/reserve-funds')
 
     await expect(
@@ -142,8 +139,8 @@ describe('ReserveFundService', () => {
         note: 'repair',
         funded_by: 'reserve_fund',
       }),
-    ).rejects.toThrow('ledger write failed')
-    expect(deleteExpenseById).toHaveBeenCalledWith(expect.anything(), 'expense-1')
+    ).rejects.toThrow('atomic write failed')
+    expect(upsertExpenseDeduction).not.toHaveBeenCalled()
   })
 
   it('denies managers access to reserve fund management', async () => {
@@ -159,7 +156,7 @@ describe('ReserveFundService', () => {
         funded_by: 'reserve_fund',
       }),
     ).rejects.toMatchObject({ statusCode: 403 })
-    expect(upsertExpenseDeduction).not.toHaveBeenCalled()
+    expect(createReserveFundedExpenseWithAudit).not.toHaveBeenCalled()
   })
 
   it('voids the linked deduction when a reserve-funded expense is voided', async () => {
@@ -261,5 +258,24 @@ describe('ReserveFundService', () => {
       }),
     ).rejects.toMatchObject({ statusCode: 409 })
     expect(insertRate).not.toHaveBeenCalled()
+  })
+
+  it('audits reserve rate create and update snapshots', async () => {
+    listRatesByBuilding.mockResolvedValue([])
+    const { ReserveFundService } = await import('../../../server/services/operations-report/reserve-funds')
+
+    await ReserveFundService.createRate({} as never, owner, {
+      building_id: 'building-1', reserve_rate_percent: 5,
+      effective_from_period_year: 2026, effective_from_period_month: 1,
+    })
+    listRatesByBuilding.mockResolvedValue([])
+    await ReserveFundService.updateRate({} as never, owner, 'rate-1', { reserve_rate_percent: 6 })
+
+    expect(appendAudit).toHaveBeenCalledWith(expect.anything(), owner, expect.objectContaining({
+      action: 'reserve_fund_rate.created', entity_type: 'reserve_fund_rate', after_data: expect.objectContaining({ id: 'rate-1' }),
+    }))
+    expect(appendAudit).toHaveBeenCalledWith(expect.anything(), owner, expect.objectContaining({
+      action: 'reserve_fund_rate.updated', before_data: expect.objectContaining({ reserveRatePercent: 5 }), after_data: expect.objectContaining({ reserveRatePercent: 6 }),
+    }))
   })
 })

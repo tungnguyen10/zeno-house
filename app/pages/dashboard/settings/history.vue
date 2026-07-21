@@ -1,9 +1,16 @@
 <script setup lang="ts">
 
-import type { Component } from 'vue'
 import clsx from 'clsx'
-import type { AuditEntityType } from '~/utils/constants/audit'
 import type { AuditEvent } from '~/types/audit'
+import {
+  AUDIT_ENTITY_FILTER_OPTIONS,
+  auditActionLabel,
+  auditActionVariant,
+  auditDiffRows,
+  auditEntityDisplay,
+  auditEntityLabel,
+  auditEntityStyle,
+} from '~/utils/audit/display'
 import { formatRelativeTime } from '~/utils/format/relative-time'
 import { formatDateTimeShort, formatTimeHHmm } from '~/utils/format/time'
 
@@ -21,6 +28,10 @@ const {
   events,
   total,
   isLoading,
+  isLoadingMore,
+  hasMore,
+  loadMore,
+  error,
   refresh,
 } = useAuditHistory()
 
@@ -29,99 +40,12 @@ let nowInterval: ReturnType<typeof setInterval>
 onMounted(() => { nowInterval = setInterval(() => { now.value = new Date() }, 30_000) })
 onUnmounted(() => clearInterval(nowInterval))
 
-const entityTypeOptions = [
-  { value: '', label: 'Tất cả loại entity' },
-  { value: 'building', label: 'Tòa nhà' },
-  { value: 'room', label: 'Phòng' },
-  { value: 'tenant', label: 'Khách thuê' },
-  { value: 'contract', label: 'Hợp đồng' },
-  { value: 'user', label: 'Người dùng' },
-]
+const entityTypeOptions = AUDIT_ENTITY_FILTER_OPTIONS
 
 const buildingOptions = computed(() => [
   { value: '', label: 'Tất cả tòa nhà' },
   ...buildings.value.map(b => ({ value: b.id, label: b.name })),
 ])
-
-const entityTypeLabels: Record<AuditEntityType | string, string> = {
-  building: 'Tòa nhà',
-  room: 'Phòng',
-  tenant: 'Khách thuê',
-  contract: 'Hợp đồng',
-  contract_renewal: 'Gia hạn',
-  meter_device: 'Đồng hồ',
-  building_service: 'Dịch vụ tòa',
-  contract_service: 'Dịch vụ hợp đồng',
-  user: 'Người dùng',
-}
-
-interface EntityStyle {
-  icon: Component | string
-  ring: string
-  bg: string
-  fg: string
-}
-
-const entityStyles: Record<string, EntityStyle> = {
-  building: { icon: 'IconBuilding', ring: 'ring-cyan/30', bg: 'bg-cyan/15', fg: 'text-cyan' },
-  room: { icon: 'IconDoor', ring: 'ring-violet-500/30', bg: 'bg-violet-500/15', fg: 'text-violet-300' },
-  tenant: { icon: 'IconUsers', ring: 'ring-blue-500/30', bg: 'bg-blue-500/15', fg: 'text-blue-300' },
-  contract: { icon: 'IconDocumentText', ring: 'ring-amber-500/30', bg: 'bg-amber-500/15', fg: 'text-amber-300' },
-  contract_renewal: { icon: 'IconRefresh', ring: 'ring-emerald-500/30', bg: 'bg-emerald-500/15', fg: 'text-emerald-300' },
-  meter_device: { icon: 'IconCpu', ring: 'ring-fuchsia-500/30', bg: 'bg-fuchsia-500/15', fg: 'text-fuchsia-300' },
-  building_service: { icon: 'IconLayers', ring: 'ring-teal-500/30', bg: 'bg-teal-500/15', fg: 'text-teal-300' },
-  contract_service: { icon: 'IconLayers', ring: 'ring-teal-500/30', bg: 'bg-teal-500/15', fg: 'text-teal-300' },
-  user: { icon: 'IconUsers', ring: 'ring-sky-500/30', bg: 'bg-sky-500/15', fg: 'text-sky-300' },
-}
-
-const fallbackStyle: EntityStyle = {
-  icon: 'IconInfoCircle',
-  ring: 'ring-dark-border',
-  bg: 'bg-dark-surface',
-  fg: 'text-muted',
-}
-
-function styleFor(entityType: string): EntityStyle {
-  return entityStyles[entityType] ?? fallbackStyle
-}
-
-function actionVariant(action: string): 'success' | 'accent' | 'danger' | 'warning' | 'neutral' {
-  if (action.endsWith('.created') || action.endsWith('.activated') || action.endsWith('.assignment_added')) return 'success'
-  if (action.endsWith('.updated') || action.endsWith('.renewed') || action.endsWith('.role_changed')) return 'accent'
-  if (action.endsWith('.removed') || action.endsWith('.terminated') || action.endsWith('.assignment_removed')) return 'danger'
-  if (action.endsWith('.archived') || action.endsWith('.maintenance_set') || action.endsWith('.expired')) return 'warning'
-  return 'neutral'
-}
-
-const actionSuffixLabel: Record<string, string> = {
-  created: 'Tạo mới',
-  updated: 'Cập nhật',
-  removed: 'Xóa',
-  archived: 'Lưu trữ',
-  activated: 'Kích hoạt',
-  terminated: 'Chấm dứt',
-  expired: 'Hết hạn',
-  renewed: 'Gia hạn',
-  maintenance_set: 'Đặt bảo trì',
-  role_changed: 'Đổi vai trò',
-  assignment_added: 'Gán tòa nhà',
-  assignment_removed: 'Gỡ tòa nhà',
-}
-
-function actionSuffix(action: string): string {
-  return action.split('.').pop() ?? action
-}
-
-function actionLabel(action: string): string {
-  const suffix = actionSuffix(action)
-  return actionSuffixLabel[suffix] ?? suffix
-}
-
-function entityDisplay(event: AuditEvent): string {
-  if (event.entityLabel && event.entityLabel.trim()) return event.entityLabel
-  if (event.entityId) return `#${event.entityId.slice(0, 8)}`
-  return '—'
-}
 
 function actorDisplay(event: AuditEvent): { primary: string; secondary: string | null; isSystem: boolean } {
   if (!event.actorId) return { primary: 'Hệ thống', secondary: null, isSystem: true }
@@ -176,62 +100,6 @@ const groupedEvents = computed<Group[]>(() => {
     .map(key => ({ key, label: bucketLabels[key], events: buckets[key] }))
 })
 
-// Diff detection -------------------------------------------------------
-interface DiffRow {
-  key: string
-  before: unknown
-  after: unknown
-}
-
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
-}
-
-function diffFields(before: unknown, after: unknown): DiffRow[] {
-  if (!isPlainObject(before) && !isPlainObject(after)) return []
-  const b = isPlainObject(before) ? before : {}
-  const a = isPlainObject(after) ? after : {}
-  const keys = new Set([...Object.keys(b), ...Object.keys(a)])
-  const rows: DiffRow[] = []
-  for (const key of keys) {
-    if (JSON.stringify(b[key]) !== JSON.stringify(a[key])) {
-      rows.push({ key, before: b[key], after: a[key] })
-    }
-  }
-  return rows.sort((x, y) => x.key.localeCompare(y.key))
-}
-
-const ISO_DATETIME_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})?$/
-const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/
-
-function formatDateOnly(input: string): string {
-  const [y, m, d] = input.split('-')
-  return `${d}/${m}/${y}`
-}
-
-function formatDateTime(input: string): string {
-  const date = new Date(input)
-  if (Number.isNaN(date.getTime())) return input
-  const day = String(date.getDate()).padStart(2, '0')
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const year = date.getFullYear()
-  const hour = String(date.getHours()).padStart(2, '0')
-  const minute = String(date.getMinutes()).padStart(2, '0')
-  return `${day}/${month}/${year} ${hour}:${minute}`
-}
-
-function formatValue(value: unknown): string {
-  if (value === null || value === undefined) return '—'
-  if (typeof value === 'string') {
-    if (value === '') return '—'
-    if (ISO_DATETIME_RE.test(value)) return formatDateTime(value)
-    if (ISO_DATE_RE.test(value)) return formatDateOnly(value)
-    return value
-  }
-  if (typeof value === 'number' || typeof value === 'boolean') return String(value)
-  return JSON.stringify(value, null, 2)
-}
-
 const expandedId = ref<string | null>(null)
 function toggleExpand(id: string) {
   expandedId.value = expandedId.value === id ? null : id
@@ -248,7 +116,7 @@ function clearFilters() {
   <div class="space-y-5">
     <UiPageHeader
       title="Nhật ký hoạt động"
-      description="Lịch sử thay đổi dữ liệu master — ai đã làm gì với tòa nhà, phòng, khách thuê, hợp đồng."
+      description="Theo dõi thay đổi master data, phân quyền, hợp đồng, vận hành và tenant portal."
     />
 
     <!-- Toolbar -->
@@ -286,6 +154,14 @@ function clearFilters() {
     <!-- Loading skeleton -->
     <div v-if="isLoading" class="space-y-2">
       <UiSkeleton v-for="i in 8" :key="i" class="h-16 w-full" />
+    </div>
+
+    <div v-else-if="error" class="rounded-lg border border-error-vivid/30 bg-error-vivid/5 px-4 py-5 text-sm">
+      <p class="font-medium text-error-vivid">Không thể tải nhật ký hoạt động</p>
+      <p class="mt-1 text-muted">Vui lòng thử lại. Bộ lọc hiện tại vẫn được giữ nguyên.</p>
+      <UiButton variant="secondary" size="sm" class="mt-3" @click="refresh()">
+        Thử lại
+      </UiButton>
     </div>
 
     <!-- Empty state -->
@@ -330,13 +206,13 @@ function clearFilters() {
               <!-- Entity icon avatar -->
               <span
                 class="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full ring-1"
-                :class="[styleFor(event.entityType).bg, styleFor(event.entityType).ring]"
+                :class="[auditEntityStyle(event.entityType).bg, auditEntityStyle(event.entityType).ring]"
                 aria-hidden="true"
               >
                 <component
-                  :is="styleFor(event.entityType).icon"
+                  :is="auditEntityStyle(event.entityType).icon"
                   class="h-4 w-4"
-                  :class="styleFor(event.entityType).fg"
+                  :class="auditEntityStyle(event.entityType).fg"
                 />
               </span>
 
@@ -344,12 +220,12 @@ function clearFilters() {
               <div class="min-w-0 flex-1 space-y-1">
                 <div class="flex flex-wrap items-center gap-2">
                   <span class="text-sm text-white">
-                    <span class="text-muted">{{ actionLabel(event.action).toLowerCase() }} {{ (entityTypeLabels[event.entityType] ?? event.entityType).toLowerCase() }}</span>
-                    <span class="ml-1 font-semibold text-white">{{ entityDisplay(event) }}</span>
+                    <span class="text-muted">{{ auditActionLabel(event.action).toLowerCase() }} {{ auditEntityLabel(event.entityType).toLowerCase() }}</span>
+                    <span class="ml-1 font-semibold text-white">{{ auditEntityDisplay(event) }}</span>
                     <span v-if="event.entitySubLabel" class="ml-1 text-xs text-muted">· {{ event.entitySubLabel }}</span>
                   </span>
-                  <UiBadge :variant="actionVariant(event.action)" size="sm">
-                    {{ actionLabel(event.action) }}
+                  <UiBadge :variant="auditActionVariant(event.action)" size="sm">
+                    {{ auditActionLabel(event.action) }}
                   </UiBadge>
                   <span v-if="event.correlationId" class="rounded-full bg-dark-surface px-1.5 py-0.5 text-[10px] font-medium text-muted">
                     bulk
@@ -384,28 +260,26 @@ function clearFilters() {
 
             <!-- Expanded: diff / raw -->
             <div v-if="expandedId === event.id" class="border-t border-dark-border bg-dark-deep px-4 py-4">
-              <template v-if="diffFields(event.beforeData, event.afterData).length > 0">
+              <template v-if="auditDiffRows(event.beforeData, event.afterData, event.entityType).length > 0">
                 <p class="mb-2 text-xs font-semibold uppercase tracking-wider text-muted">
-                  Thay đổi ({{ diffFields(event.beforeData, event.afterData).length }} trường)
+                  Thay đổi ({{ auditDiffRows(event.beforeData, event.afterData, event.entityType).length }} trường)
                 </p>
                 <div class="overflow-hidden rounded-md border border-dark-border">
                   <div
-                    class="grid gap-2 bg-dark-surface/60 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted"
-                    style="grid-template-columns: 10rem minmax(0, 1fr) minmax(0, 1fr);"
+                    class="audit-diff-grid grid gap-2 bg-dark-surface/60 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted"
                   >
                     <span>Trường</span>
                     <span>Trước</span>
                     <span>Sau</span>
                   </div>
                   <div
-                    v-for="row in diffFields(event.beforeData, event.afterData)"
+                    v-for="row in auditDiffRows(event.beforeData, event.afterData, event.entityType)"
                     :key="row.key"
-                    class="grid items-start gap-2 border-t border-dark-border px-3 py-2 text-xs"
-                    style="grid-template-columns: 10rem minmax(0, 1fr) minmax(0, 1fr);"
+                    class="audit-diff-grid grid items-start gap-2 border-t border-dark-border px-3 py-2 text-xs"
                   >
-                    <span class="truncate font-mono text-white/70">{{ row.key }}</span>
-                    <pre class="min-w-0 whitespace-pre-wrap break-words font-mono text-error-vivid/90">{{ formatValue(row.before) }}</pre>
-                    <pre class="min-w-0 whitespace-pre-wrap break-words font-mono text-success-neon">{{ formatValue(row.after) }}</pre>
+                    <span class="truncate text-white/70">{{ row.label }}</span>
+                    <pre class="min-w-0 whitespace-pre-wrap break-words font-mono text-error-vivid/90">{{ row.beforeText }}</pre>
+                    <pre class="min-w-0 whitespace-pre-wrap break-words font-mono text-success-neon">{{ row.afterText }}</pre>
                   </div>
                 </div>
               </template>
@@ -453,6 +327,30 @@ function clearFilters() {
           </div>
         </div>
       </section>
+
+      <div v-if="hasMore" class="flex justify-center pt-1">
+        <UiButton
+          variant="secondary"
+          :disabled="isLoadingMore"
+          class="min-w-32"
+          @click="loadMore()"
+        >
+          <IconRefresh v-if="isLoadingMore" class="h-4 w-4 animate-spin" aria-hidden="true" />
+          {{ isLoadingMore ? 'Đang tải…' : 'Tải thêm' }}
+        </UiButton>
+      </div>
     </div>
   </div>
 </template>
+
+<style scoped>
+.audit-diff-grid {
+  grid-template-columns: minmax(7rem, 0.75fr) minmax(0, 1fr) minmax(0, 1fr);
+}
+
+@media (min-width: 40rem) {
+  .audit-diff-grid {
+    grid-template-columns: 10rem minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+</style>

@@ -6,6 +6,14 @@ Define the tenant-authored support request model, tenant self-service API, attac
 
 ## Requirements
 
+### Requirement: Support request audit excludes signed attachment access
+The system SHALL audit support request creation with server-derived building scope and safe request fields.
+
+#### Scenario: Attached request audit privacy
+- **WHEN** a support request includes an attachment
+- **THEN** its audit snapshot contains `has_attachment = true`
+- **AND** it does not contain a signed URL, storage path, token, or binary content
+
 ### Requirement: Support request data model with minimal status
 The system SHALL persist tenant-authored support requests in a `support_requests` table with a minimal status lifecycle (`new`, `in_progress`, `resolved`), server-derived `tenant_id`/`building_id`/`contract_id` context, an optional attachment reference, and timestamps. RLS SHALL be enabled.
 

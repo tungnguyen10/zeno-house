@@ -7,6 +7,8 @@ const mocks = vi.hoisted(() => ({
   findContract: vi.fn(),
   listInvoices: vi.fn(),
   findInvoiceDetail: vi.fn(),
+  auditAppend: vi.fn(),
+  findDomainContract: vi.fn(),
 }))
 
 vi.mock('../../../server/utils/scope', () => ({ resolveTenantId: mocks.resolveTenantId }))
@@ -25,6 +27,8 @@ vi.mock('../../../server/repositories/tenant-portal/invoices', () => ({
     findDetail: mocks.findInvoiceDetail,
   },
 }))
+vi.mock('../../../server/services/audit', () => ({ AuditService: { append: mocks.auditAppend } }))
+vi.mock('../../../server/repositories/contracts', () => ({ ContractRepository: { findActiveByTenantId: mocks.findDomainContract } }))
 
 const tenantUser = { id: 'auth-tenant', app_metadata: { role: 'tenant' } } as never
 const internalUser = { id: 'auth-admin', app_metadata: { role: 'admin' } } as never
@@ -36,6 +40,7 @@ describe('tenant portal services', () => {
     mocks.findProfile.mockResolvedValue({ id: 'tenant-1' })
     mocks.updateProfile.mockResolvedValue({ id: 'tenant-1', phone: '0902' })
     mocks.findContract.mockResolvedValue(null)
+    mocks.findDomainContract.mockResolvedValue({ buildingId: 'building-1' })
     mocks.listInvoices.mockResolvedValue({ items: [], total: 0 })
     mocks.findInvoiceDetail.mockResolvedValue(null)
   })
@@ -51,6 +56,11 @@ describe('tenant portal services', () => {
     expect(mocks.resolveTenantId).toHaveBeenCalledTimes(2)
     expect(mocks.findProfile).toHaveBeenCalledWith(expect.anything(), 'tenant-1')
     expect(mocks.updateProfile).toHaveBeenCalledWith(expect.anything(), 'tenant-1', { phone: '0902' })
+    expect(mocks.auditAppend).toHaveBeenCalledWith(expect.anything(), tenantUser, expect.objectContaining({
+      action: 'tenant.profile_updated', entity_type: 'tenant', entity_id: 'tenant-1',
+      building_id: 'building-1',
+      before_data: { id: 'tenant-1' }, after_data: { id: 'tenant-1', phone: '0902' },
+    }))
   })
 
   it('rechecks tenant capabilities and rejects internal roles', async () => {

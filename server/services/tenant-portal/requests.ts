@@ -140,7 +140,17 @@ export const TenantSupportRequestService = {
       action: AUDIT_ACTIONS.SUPPORT_REQUEST_CREATED,
       entity_type: 'support_request',
       entity_id: stored.id,
-      after_data: result,
+      after_data: {
+        id: stored.id,
+        tenant_id: stored.tenant_id,
+        building_id: stored.building_id,
+        contract_id: stored.contract_id,
+        title: stored.title,
+        description: stored.description,
+        status: stored.status,
+        created_at: stored.created_at,
+        has_attachment: Boolean(stored.attachment_path),
+      },
     })
     return result
   },

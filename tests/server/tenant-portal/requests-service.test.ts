@@ -191,10 +191,17 @@ describe('TenantSupportRequestService tenant scope', () => {
   })
 
   it('appends a create audit event with building context', async () => {
+    mocks.create.mockImplementation((_event, input) => Promise.resolve({
+      ...stored,
+      ...input,
+      attachment_path: 'tenant-1/requests/uuid.jpg',
+    }))
     const svc = await service()
 
     await svc.create({} as never, tenant, {
-      title: 'Issue', description: 'Details',
+      title: 'Issue',
+      description: 'Details',
+      attachment: { name: 'Photo.jpg', mimeType: 'image/jpeg', data: Buffer.from('photo') },
     }, '2026-07-17')
 
     expect(mocks.auditAppend).toHaveBeenCalledWith(expect.anything(), tenant, {
@@ -202,8 +209,20 @@ describe('TenantSupportRequestService tenant scope', () => {
       action: 'support_request.created',
       entity_type: 'support_request',
       entity_id: 'request-1',
-      after_data: expect.objectContaining({ id: 'request-1', status: 'new' }),
+      after_data: {
+        id: 'request-1',
+        tenant_id: 'tenant-1',
+        building_id: 'building-1',
+        contract_id: 'contract-1',
+        title: 'Issue',
+        description: 'Details',
+        status: 'new',
+        created_at: '2026-07-17T10:00:00.000Z',
+        has_attachment: true,
+      },
     })
+    expect(JSON.stringify(mocks.auditAppend.mock.calls[0])).not.toContain('signed.test')
+    expect(JSON.stringify(mocks.auditAppend.mock.calls[0])).not.toContain('attachment_path')
   })
 })
 

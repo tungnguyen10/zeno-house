@@ -36,8 +36,8 @@ async function expectError(promise: Promise<unknown>): Promise<{ statusCode?: nu
 describe('GET /api/audit', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    auditRepo.listAll.mockResolvedValue({ items: [], total: 0 })
-    auditRepo.listByBuilding.mockResolvedValue({ items: [], total: 0 })
+    auditRepo.listAll.mockResolvedValue({ items: [], total: 0, nextCursor: null })
+    auditRepo.listByBuilding.mockResolvedValue({ items: [], total: 0, nextCursor: null })
     buildingRepo.findByIdentifier.mockResolvedValue({ id: 'b-1' })
     scope.assertBuildingScope.mockResolvedValue(undefined)
     enrich.enrichAuditEvents.mockResolvedValue([])
@@ -72,6 +72,7 @@ describe('GET /api/audit', () => {
       building_id: 'b-1',
       entity_type: 'contract',
       entity_id: 'contract-1',
+      cursor: '2026-07-21T04:30:00.000Z|event-2',
       limit: '25',
     }))
     expect(auditRepo.listByBuilding).toHaveBeenCalledWith(
@@ -82,8 +83,39 @@ describe('GET /api/audit', () => {
         entityType: 'contract',
         entityId: 'contract-1',
         correlationId: undefined,
+        cursor: '2026-07-21T04:30:00.000Z|event-2',
       },
     )
+  })
+
+  it.each([
+    'building_expense',
+    'recurring_expense',
+    'prepaid_expense',
+    'support_request',
+    'contract_occupant',
+    'contract_payment',
+    'shared_expense',
+    'operations_report_period',
+    'tenant_document',
+  ])('accepts %s as an audit entity filter', async (entityType) => {
+    requireAuthMock.mockResolvedValue({ id: 'a', app_metadata: { role: 'admin' } })
+    const { default: handler } = await import('../../../server/api/audit/index.get')
+    await handler(event({ entity_type: entityType }))
+    expect(auditRepo.listAll).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ entityType }),
+    )
+  })
+
+  it('returns the repository cursor in response metadata', async () => {
+    requireAuthMock.mockResolvedValue({ id: 'a', app_metadata: { role: 'admin' } })
+    auditRepo.listAll.mockResolvedValue({ items: [], total: 80, nextCursor: 'next-page' })
+    const { default: handler } = await import('../../../server/api/audit/index.get')
+    await expect(handler(event({}))).resolves.toEqual({
+      data: [],
+      meta: { total: 80, nextCursor: 'next-page' },
+    })
   })
 
   it('returns 404 for owner querying an out-of-scope building', async () => {

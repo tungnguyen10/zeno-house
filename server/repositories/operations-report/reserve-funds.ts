@@ -1,15 +1,18 @@
 import { db as serverSupabaseClient } from '../../utils/db'
 import type { H3Event } from 'h3'
 import type {
+  BuildingExpense,
   BuildingReserveFundRate,
   ReserveFund,
   ReserveFundTransaction,
 } from '~/types/operations-report'
 import type {
+  BuildingExpenseCreateInput,
   ReserveFundRateCreateInput,
   ReserveFundRateUpdateInput,
 } from '~/utils/validators/operations-report'
 import {
+  mapBuildingExpense,
   mapBuildingReserveFundRate,
   mapReserveFund,
   mapReserveFundTransaction,
@@ -17,6 +20,7 @@ import {
   type ReserveFundRow,
   type ReserveFundTransactionRow,
 } from '~/utils/mappers/operations-report'
+import type { Tables } from '~/types/database.types'
 
 type SupabaseClient = Awaited<ReturnType<typeof serverSupabaseClient>>
 type DbError = { message: string }
@@ -37,6 +41,71 @@ function table(client: SupabaseClient, relation: string): UntypedQuery {
 }
 
 export const ReserveFundRepository = {
+  async createReserveFundedExpenseWithAudit(
+    event: H3Event,
+    input: BuildingExpenseCreateInput,
+    actorId: string,
+  ): Promise<{ expense: BuildingExpense, deduction: ReserveFundTransaction }> {
+    const client = await serverSupabaseClient(event)
+    const rpc = client.rpc as unknown as (
+      name: string,
+      args: Record<string, unknown>,
+    ) => PromiseLike<{ data: unknown, error: DbError | null }>
+    const { data, error } = await rpc('create_reserve_funded_expense_with_audit', {
+      p_building_id: input.building_id,
+      p_period_year: input.period_year,
+      p_period_month: input.period_month,
+      p_expense_date: input.expense_date ?? null,
+      p_category: input.category,
+      p_amount: input.amount,
+      p_payee: input.payee ?? null,
+      p_payment_method: input.payment_method ?? null,
+      p_note: input.note ?? null,
+      p_actor_id: actorId,
+    })
+    if (error) throwDbError(error, 'operationsReport.reserveFunds.createReserveFundedExpenseWithAudit')
+    const result = data as {
+      expense: Tables<'building_expenses'>
+      deduction: ReserveFundTransactionRow
+    }
+    return {
+      expense: mapBuildingExpense(result.expense),
+      deduction: mapReserveFundTransaction(result.deduction),
+    }
+  },
+
+  async refreshAccrualWithAudit(
+    event: H3Event,
+    input: {
+      buildingId: string
+      periodYear: number
+      periodMonth: number
+      billingPeriodId: string | null
+      amount: number
+      reserveRatePercent: number
+      issuedRevenue: number
+      actorId: string
+    },
+  ): Promise<ReserveFundTransaction> {
+    const client = await serverSupabaseClient(event)
+    const rpc = client.rpc as unknown as (
+      name: string,
+      args: Record<string, unknown>,
+    ) => PromiseLike<{ data: unknown, error: DbError | null }>
+    const { data, error } = await rpc('refresh_reserve_accrual_with_audit', {
+      p_building_id: input.buildingId,
+      p_period_year: input.periodYear,
+      p_period_month: input.periodMonth,
+      p_billing_period_id: input.billingPeriodId,
+      p_issued_revenue: input.issuedRevenue,
+      p_reserve_rate_percent: input.reserveRatePercent,
+      p_accrual_amount: input.amount,
+      p_actor_id: input.actorId,
+    })
+    if (error) throwDbError(error, 'operationsReport.reserveFunds.refreshAccrualWithAudit')
+    return mapReserveFundTransaction(data as ReserveFundTransactionRow)
+  },
+
   async findOrCreateByBuilding(event: H3Event, buildingId: string): Promise<ReserveFundRow> {
     const client = await serverSupabaseClient(event)
     const existing = await client

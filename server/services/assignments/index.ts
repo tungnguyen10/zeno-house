@@ -90,7 +90,17 @@ export const AssignmentService = {
     await assertBuildingScope(event, actor, existing.building_id, 'write')
     await assertManageableTarget(event, actor, existing.user_id)
 
-    return AssignmentRepository.update(event, id, input)
+    const updated = await AssignmentRepository.update(event, id, input)
+    await AuditService.append(event, actor, {
+      building_id: existing.building_id,
+      action: AUDIT_ACTIONS.USER_ASSIGNMENT_UPDATED,
+      entity_type: 'user',
+      entity_id: existing.user_id,
+      before_data: existing,
+      after_data: updated,
+      metadata: { assignment_id: existing.id },
+    })
+    return updated
   },
 
   async remove(event: H3Event, actor: AuthUser, id: string): Promise<void> {

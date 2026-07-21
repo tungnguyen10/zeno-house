@@ -5,6 +5,8 @@ import type { ContractPaymentCreateInput, ContractPaymentUpdateInput } from '~/u
 import { ContractPaymentRepository } from '../repositories/contract-payments'
 import { ContractRepository } from '../repositories/contracts'
 import { assertBuildingScope } from '../utils/scope'
+import { AuditService } from './audit'
+import { AUDIT_ACTIONS } from '~/utils/constants/audit'
 
 export const ContractPaymentService = {
   async list(event: H3Event, user: AuthUser, contractId: string): Promise<ContractPayment[]> {
@@ -20,7 +22,16 @@ export const ContractPaymentService = {
     const contract = await ContractRepository.findById(event, contractId)
     if (!contract) throwNotFound('Không tìm thấy hợp đồng')
     await assertBuildingScope(event, user, contract.buildingId, 'write')
-    return ContractPaymentRepository.insert(event, contract.id, input)
+    const created = await ContractPaymentRepository.insert(event, contract.id, input)
+    await AuditService.append(event, user, {
+      building_id: contract.buildingId,
+      action: AUDIT_ACTIONS.CONTRACT_PAYMENT_CREATED,
+      entity_type: 'contract_payment',
+      entity_id: created.id,
+      after_data: created,
+      metadata: { contract_id: contract.id },
+    })
+    return created
   },
 
   async update(event: H3Event, user: AuthUser, contractId: string, paymentId: string, input: ContractPaymentUpdateInput): Promise<ContractPayment> {
@@ -30,7 +41,17 @@ export const ContractPaymentService = {
     await assertBuildingScope(event, user, contract.buildingId, 'write')
     const payment = await ContractPaymentRepository.findById(event, paymentId)
     if (!payment || payment.contractId !== contract.id) throwNotFound('Không tìm thấy thanh toán')
-    return ContractPaymentRepository.updateById(event, paymentId, input)
+    const updated = await ContractPaymentRepository.updateById(event, paymentId, input)
+    await AuditService.append(event, user, {
+      building_id: contract.buildingId,
+      action: AUDIT_ACTIONS.CONTRACT_PAYMENT_UPDATED,
+      entity_type: 'contract_payment',
+      entity_id: payment.id,
+      before_data: payment,
+      after_data: updated,
+      metadata: { contract_id: contract.id },
+    })
+    return updated
   },
 
   async remove(event: H3Event, user: AuthUser, contractId: string, paymentId: string): Promise<void> {
@@ -40,6 +61,14 @@ export const ContractPaymentService = {
     await assertBuildingScope(event, user, contract.buildingId, 'write')
     const payment = await ContractPaymentRepository.findById(event, paymentId)
     if (!payment || payment.contractId !== contract.id) throwNotFound('Không tìm thấy thanh toán')
-    return ContractPaymentRepository.deleteById(event, paymentId)
+    await ContractPaymentRepository.deleteById(event, paymentId)
+    await AuditService.append(event, user, {
+      building_id: contract.buildingId,
+      action: AUDIT_ACTIONS.CONTRACT_PAYMENT_REMOVED,
+      entity_type: 'contract_payment',
+      entity_id: payment.id,
+      before_data: payment,
+      metadata: { contract_id: contract.id },
+    })
   },
 }

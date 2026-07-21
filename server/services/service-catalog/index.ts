@@ -6,6 +6,8 @@ import { ServiceCatalogRepository } from '../../repositories/service-catalog'
 import { BuildingRepository } from '../../repositories/buildings'
 import { assertBuildingScope } from '../../utils/scope'
 import { TtlCache } from '../../utils/ttl-cache'
+import { AuditService } from '../audit'
+import { AUDIT_ACTIONS } from '~/utils/constants/audit'
 
 const catalogCache = new TtlCache<ServiceCatalogItem[]>(250)
 const CATALOG_TTL_MS = 300_000
@@ -49,6 +51,13 @@ export const ServiceCatalogService = {
       sort_order: sortOrder,
     })
     catalogCache.delete(`building:${building.id}`)
+    await AuditService.append(event, user, {
+      building_id: building.id,
+      action: AUDIT_ACTIONS.SERVICE_CATALOG_ITEM_CREATED,
+      entity_type: 'service_catalog_item',
+      entity_id: created.id,
+      after_data: created,
+    })
     return created
   },
 }

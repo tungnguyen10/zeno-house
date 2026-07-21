@@ -37,6 +37,39 @@ function fallbackLabel(event: AuditEvent): { label: string | null; sub: string |
       return { label: pickString(snap, ['name', 'service_name']), sub: null }
     case 'user':
       return { label: pickString(snap, ['name', 'full_name', 'email']), sub: pickString(snap, ['email']) }
+    case 'building_expense':
+    case 'building_fixed_cost':
+    case 'recurring_expense':
+    case 'prepaid_expense':
+      return { label: pickString(snap, ['name', 'note', 'category']), sub: pickString(snap, ['category']) }
+    case 'shared_expense':
+      return { label: pickString(snap, ['name', 'note']), sub: pickString(snap, ['category']) }
+    case 'support_request':
+      return { label: pickString(snap, ['title']), sub: pickString(snap, ['status']) }
+    case 'contract_occupant':
+      return { label: pickString(snap, ['tenantName', 'tenant_name', 'fullName', 'full_name']), sub: pickString(snap, ['role']) }
+    case 'contract_payment':
+      return { label: pickString(snap, ['paymentType', 'payment_type', 'note']), sub: pickString(snap, ['paymentDate', 'payment_date']) }
+    case 'service_catalog_item':
+    case 'tenant_document':
+      return { label: pickString(snap, ['name']), sub: pickString(snap, ['code', 'mime_type']) }
+    case 'reserve_fund_rate': {
+      const rate = snap && typeof snap === 'object'
+        ? (snap as Record<string, unknown>).reserveRatePercent ?? (snap as Record<string, unknown>).reserve_rate_percent
+        : null
+      return { label: rate != null ? `${rate}%` : null, sub: null }
+    }
+    case 'operations_report_period': {
+      const year = snap && typeof snap === 'object'
+        ? (snap as Record<string, unknown>).periodYear ?? (snap as Record<string, unknown>).period_year
+        : null
+      const month = snap && typeof snap === 'object'
+        ? (snap as Record<string, unknown>).periodMonth ?? (snap as Record<string, unknown>).period_month
+        : null
+      return { label: year && month ? `${String(month).padStart(2, '0')}/${year}` : null, sub: pickString(snap, ['status']) }
+    }
+    case 'reserve_fund':
+      return { label: pickString(snap, ['name', 'note']), sub: null }
     default:
       return { label: null, sub: null }
   }
@@ -167,6 +200,75 @@ async function loadEntities(
     })())
   }
 
+  const simpleEntityQueries: Array<{
+    type: string
+    table: string
+    select: string
+    label: (row: Record<string, unknown>) => string | null
+    sub?: (row: Record<string, unknown>) => string | null
+  }> = [
+    { type: 'building_expense', table: 'building_expenses', select: 'id, category, note', label: row => pickString(row, ['note', 'category']), sub: row => pickString(row, ['category']) },
+    { type: 'building_fixed_cost', table: 'building_fixed_costs', select: 'id, category, note', label: row => pickString(row, ['note', 'category']), sub: row => pickString(row, ['category']) },
+    { type: 'recurring_expense', table: 'recurring_expenses', select: 'id, name, category', label: row => pickString(row, ['name']), sub: row => pickString(row, ['category']) },
+    { type: 'prepaid_expense', table: 'prepaid_expenses', select: 'id, name, category', label: row => pickString(row, ['name']), sub: row => pickString(row, ['category']) },
+    { type: 'shared_expense', table: 'shared_expenses', select: 'id, name, category', label: row => pickString(row, ['name']), sub: row => pickString(row, ['category']) },
+    { type: 'support_request', table: 'tenant_support_requests', select: 'id, title, status', label: row => pickString(row, ['title']), sub: row => pickString(row, ['status']) },
+    { type: 'contract_payment', table: 'contract_payments', select: 'id, payment_type, note', label: row => pickString(row, ['note', 'payment_type']), sub: row => pickString(row, ['payment_type']) },
+    { type: 'service_catalog_item', table: 'service_catalog', select: 'id, name, code', label: row => pickString(row, ['name']), sub: row => pickString(row, ['code']) },
+    {
+      type: 'reserve_fund_rate', table: 'building_reserve_fund_rates', select: 'id, reserve_rate_percent',
+      label: row => row.reserve_rate_percent != null ? `${row.reserve_rate_percent}%` : null,
+    },
+    {
+      type: 'operations_report_period', table: 'operations_report_periods', select: 'id, period_year, period_month, status',
+      label: row => row.period_year && row.period_month ? `${String(row.period_month).padStart(2, '0')}/${row.period_year}` : null,
+      sub: row => pickString(row, ['status']),
+    },
+  ]
+
+  for (const config of simpleEntityQueries) {
+    const ids = [...(buckets.get(config.type) ?? [])]
+    if (ids.length === 0) continue
+    tasks.push((async () => {
+      const queryClient = client as unknown as {
+        from: (table: string) => { select: (columns: string) => { in: (column: string, values: string[]) => Promise<{ data: Record<string, unknown>[] | null }> } }
+      }
+      const { data } = await queryClient.from(config.table).select(config.select).in('id', ids)
+      for (const row of data ?? []) {
+        const id = typeof row.id === 'string' ? row.id : null
+        if (!id) continue
+        result.set(key(config.type, id), { label: config.label(row), sub: config.sub?.(row) ?? null })
+      }
+    })())
+  }
+
+  const joinedEntityQueries: Array<{ type: string, table: string, select: string }> = [
+    { type: 'building_service', table: 'building_services', select: 'id, service_catalog(name, code)' },
+    { type: 'contract_service', table: 'contract_services', select: 'id, service_catalog(name, code)' },
+    { type: 'contract_occupant', table: 'contract_occupants', select: 'id, role, tenants(full_name)' },
+    { type: 'reserve_fund', table: 'reserve_funds', select: 'id, buildings(name)' },
+  ]
+  for (const config of joinedEntityQueries) {
+    const ids = [...(buckets.get(config.type) ?? [])]
+    if (ids.length === 0) continue
+    tasks.push((async () => {
+      const queryClient = client as unknown as {
+        from: (table: string) => { select: (columns: string) => { in: (column: string, values: string[]) => Promise<{ data: Record<string, unknown>[] | null }> } }
+      }
+      const { data } = await queryClient.from(config.table).select(config.select).in('id', ids)
+      for (const row of data ?? []) {
+        const id = typeof row.id === 'string' ? row.id : null
+        if (!id) continue
+        const relation = (row.service_catalog ?? row.tenants ?? row.buildings) as Record<string, unknown> | Record<string, unknown>[] | null
+        const related = Array.isArray(relation) ? relation[0] : relation
+        result.set(key(config.type, id), {
+          label: pickString(related, ['name', 'full_name', 'code']),
+          sub: pickString(row, ['role']),
+        })
+      }
+    })())
+  }
+
   const userIds = [...(buckets.get('user') ?? [])]
   if (userIds.length > 0) {
     tasks.push((async () => {
@@ -197,7 +299,10 @@ export async function enrichAuditEvents(event: H3Event, events: AuditEvent[]): P
   const entityBuckets = new Map<string, Set<string>>()
   for (const evt of events) {
     if (evt.actorId) actorIds.add(evt.actorId)
-    if (evt.entityId) {
+    // Snapshots are immutable and remain available after an entity is deleted.
+    // Only hit live entity tables when the event does not already carry a
+    // usable display label.
+    if (evt.entityId && !fallbackLabel(evt).label) {
       const bucket = entityBuckets.get(evt.entityType) ?? new Set<string>()
       bucket.add(evt.entityId)
       entityBuckets.set(evt.entityType, bucket)

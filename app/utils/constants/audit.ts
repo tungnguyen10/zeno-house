@@ -36,15 +36,43 @@ export const AUDIT_ACTIONS = {
   CONTRACT_EXPIRED: 'contract.expired',
   CONTRACT_RENEWED: 'contract.renewed',
   CONTRACT_REMOVED: 'contract.removed',
+  CONTRACT_OCCUPANT_ADDED: 'contract_occupant.added',
+  CONTRACT_OCCUPANT_MOVED_OUT: 'contract_occupant.moved_out',
+  CONTRACT_OCCUPANT_REMOVED: 'contract_occupant.removed',
+  CONTRACT_PAYMENT_CREATED: 'contract_payment.created',
+  CONTRACT_PAYMENT_UPDATED: 'contract_payment.updated',
+  CONTRACT_PAYMENT_REMOVED: 'contract_payment.removed',
 
   // Services
   BUILDING_SERVICE_REMOVED: 'building_service.removed',
+  BUILDING_SERVICE_CREATED: 'building_service.created',
+  BUILDING_SERVICE_UPDATED: 'building_service.updated',
   CONTRACT_SERVICE_REMOVED: 'contract_service.removed',
+  CONTRACT_SERVICE_CREATED: 'contract_service.created',
+  CONTRACT_SERVICE_UPDATED: 'contract_service.updated',
+  CONTRACT_SERVICE_SYNCED: 'contract_service.synced',
+  SERVICE_CATALOG_ITEM_CREATED: 'service_catalog_item.created',
 
   // Operations report — expenses
   BUILDING_EXPENSE_CREATED: 'building_expense.created',
   BUILDING_EXPENSE_UPDATED: 'building_expense.updated',
   BUILDING_EXPENSE_VOIDED: 'building_expense.voided',
+  BUILDING_EXPENSE_RECEIPT_ATTACHED: 'building_expense.receipt_attached',
+  BUILDING_EXPENSE_RECEIPT_REMOVED: 'building_expense.receipt_removed',
+
+  // Operations report — shared expenses
+  SHARED_EXPENSE_CREATED: 'shared_expense.created',
+  SHARED_EXPENSE_UPDATED: 'shared_expense.updated',
+  SHARED_EXPENSE_DEACTIVATED: 'shared_expense.deactivated',
+  SHARED_EXPENSE_ALLOCATED: 'shared_expense.allocated',
+
+  // Operations report — reserve fund and period lifecycle
+  RESERVE_FUND_RATE_CREATED: 'reserve_fund_rate.created',
+  RESERVE_FUND_RATE_UPDATED: 'reserve_fund_rate.updated',
+  RESERVE_FUND_ACCRUAL_REFRESHED: 'reserve_fund.accrual_refreshed',
+  OPERATIONS_REPORT_PERIOD_CLOSED: 'operations_report_period.closed',
+  OPERATIONS_REPORT_PERIOD_AUTO_CLOSED: 'operations_report_period.auto_closed',
+  OPERATIONS_REPORT_PERIOD_REOPENED: 'operations_report_period.reopened',
 
   // Operations report — fixed costs
   BUILDING_FIXED_COST_CREATED: 'building_fixed_cost.created',
@@ -69,26 +97,43 @@ export const AUDIT_ACTIONS = {
   USER_ROLE_CHANGED: 'user.role_changed',
   USER_REMOVED: 'user.removed',
   USER_ASSIGNMENT_ADDED: 'user.assignment_added',
+  USER_ASSIGNMENT_UPDATED: 'user.assignment_updated',
   USER_ASSIGNMENT_REMOVED: 'user.assignment_removed',
   USER_ACCESS_REQUEST_CREATED: 'user.access_request.created',
   USER_ACCESS_REQUEST_APPROVED: 'user.access_request.approved',
   USER_ACCESS_REQUEST_REJECTED: 'user.access_request.rejected',
+
+  // Tenant portal
+  TENANT_PROFILE_UPDATED: 'tenant.profile_updated',
+  TENANT_DOCUMENT_UPLOADED: 'tenant_document.uploaded',
+  TENANT_DOCUMENT_REMOVED: 'tenant_document.removed',
 } as const
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[keyof typeof AUDIT_ACTIONS]
 
-export type AuditEntityType =
-  | 'building'
-  | 'room'
-  | 'tenant'
-  | 'contract'
-  | 'contract_renewal'
-  | 'building_service'
-  | 'contract_service'
-  | 'meter_device'
-  | 'user'
-  | 'building_expense'
-  | 'building_fixed_cost'
-  | 'recurring_expense'
-  | 'prepaid_expense'
-  | 'support_request'
+export const AUDIT_ENTITY_TYPES = [
+  'building',
+  'room',
+  'tenant',
+  'contract',
+  'contract_renewal',
+  'building_service',
+  'contract_service',
+  'meter_device',
+  'user',
+  'building_expense',
+  'building_fixed_cost',
+  'recurring_expense',
+  'prepaid_expense',
+  'support_request',
+  'contract_occupant',
+  'contract_payment',
+  'service_catalog_item',
+  'shared_expense',
+  'reserve_fund',
+  'reserve_fund_rate',
+  'operations_report_period',
+  'tenant_document',
+] as const
+
+export type AuditEntityType = (typeof AUDIT_ENTITY_TYPES)[number]

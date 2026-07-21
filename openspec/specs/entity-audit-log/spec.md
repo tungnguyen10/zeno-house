@@ -1,6 +1,6 @@
 ## Purpose
 
-Tracks append-only audit history for domain entity mutations across buildings, rooms, tenants, and contracts.
+Tracks append-only audit history for master data, permissions, contracts, operations, and tenant portal mutations. Billing audit remains a separate capability.
 
 ## Requirements
 
@@ -12,7 +12,7 @@ The system SHALL store mutations on domain entities in an append-only `public.au
 - `building_id` uuid FK -> buildings (nullable - NULL for tenant events without building context; CASCADE delete when set)
 - `actor_id` uuid FK -> auth.users (nullable - system actions have no actor)
 - `action` text NOT NULL CHECK length > 0 (e.g. `room.updated`, `contract.terminated`)
-- `entity_type` text NOT NULL CHECK IN ('building','room','tenant','contract','contract_renewal','meter_device')
+- `entity_type` text NOT NULL CHECK IN the canonical `AUDIT_ENTITY_TYPES` tuple: `building`, `room`, `tenant`, `contract`, `contract_renewal`, `building_service`, `contract_service`, `meter_device`, `user`, `building_expense`, `building_fixed_cost`, `recurring_expense`, `prepaid_expense`, `support_request`, `contract_occupant`, `contract_payment`, `service_catalog_item`, `shared_expense`, `reserve_fund`, `reserve_fund_rate`, `operations_report_period`, `tenant_document`
 - `entity_id` uuid (nullable - null on aggregate bulk events)
 - `correlation_id` uuid (nullable - links per-entity child events to their aggregate parent)
 - `before_data` jsonb (nullable - null on creates)
@@ -51,13 +51,17 @@ Covers:
 
 **Note**: `contract.terminated` = manual early termination (status -> `terminated`). `contract.expired` = natural expiry (status -> `expired`). `contract.ended` is NOT used.
 
+The constants SHALL also cover assignment updates; building and contract service lifecycle; contract occupants and payments; expense receipts; shared expenses; reserve fund rates and accrual refresh; operations report close/reopen; and tenant profile/document lifecycle.
+
 #### Scenario: Constants expose supported actions
 - **WHEN** domain services need to append audit events for buildings, rooms, tenants, or contracts
 - **THEN** they use action strings from `AUDIT_ACTIONS`
 - **AND** `contract.ended` is not exposed as a valid contract action
 
 ### Requirement: AuditService.append
-`AuditService.append(event, user, input)` SHALL append an audit event. `actor_id` is sourced from `user.id`. If append throws, the error is caught, logged, and NOT re-thrown (audit failure must not break main operation).
+`AuditService.append(event, user, input)` SHALL append an audit event. `actor_id` is sourced from `user.id`, or NULL for a system action. If append throws, the error is caught, logged with action/entity context, and NOT re-thrown (audit failure must not break simple CRUD). Structured error logs SHALL NOT contain snapshots.
+
+Before persistence, audit payloads SHALL recursively remove passwords, access/refresh/storage tokens, sessions, signed URLs, and binary content.
 
 #### Scenario: Append injects actor and fails silent
 - **WHEN** a domain service calls `AuditService.append(event, user, input)`
@@ -110,8 +114,34 @@ Query params:
 - `entity_id` - optional filter
 - `correlation_id` - optional filter (fetch all children of a bulk event)
 - `limit` - default 50, max 200
+- `cursor` - stable opaque position composed from `(created_at, id)`
 
-Response: `{ data: AuditEvent[], meta: { total: number } }`
+Response: `{ data: AuditEvent[], meta: { total: number, nextCursor: string | null } }`
+
+#### Scenario: Stable cursor pagination
+- **WHEN** multiple events share the same `created_at`
+- **THEN** pages are ordered by `created_at DESC, id DESC`
+- **AND** following `nextCursor` neither duplicates nor skips an event
+
+### Requirement: Atomic financial and multi-row audit
+Reserve-funded expense creation, shared-expense allocation, building-to-contract service sync, operations report close, reserve accrual refresh, and report reopen SHALL persist their domain mutation and audit rows in one database transaction. Their RPCs SHALL only be executable by `service_role`.
+
+#### Scenario: Reserve-funded expense creation rolls back as a unit
+- **WHEN** the expense, linked reserve deduction, or audit insert fails
+- **THEN** none of those three rows is committed
+
+#### Scenario: Shared allocation correlation
+- **WHEN** a shared expense is allocated
+- **THEN** one `shared_expense.allocated` parent event and one `building_expense.created` child per generated expense are committed with a shared correlation ID
+- **AND** any failure rolls back both expenses and audit events
+
+#### Scenario: Operations report lifecycle atomicity
+- **WHEN** a report is closed, auto-closed, refreshed, or reopened
+- **THEN** closure/accrual state and its audit event commit together
+- **AND** close metadata contains the accrual snapshot representing the user-level operation
+- **AND** reopening retains the inactive-while-open accrual row and records its snapshot in metadata
+- **AND** retrying an auto-close for an already closed period is a no-op without a duplicate event
+- **AND** manually closing an already closed period is rejected without changing its provenance
 
 #### Scenario: Admin queries without building_id
 - **WHEN** an admin calls GET /api/audit without `building_id`

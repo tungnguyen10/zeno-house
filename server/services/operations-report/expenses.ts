@@ -85,17 +85,21 @@ export const BuildingExpenseService = {
       input.period_month,
     )
 
-    const created = input.funded_by === 'reserve_fund'
+    const reserveResult = input.funded_by === 'reserve_fund'
       ? await ReserveFundService.createReserveFundedExpense(event, user, input)
-      : await BuildingExpenseRepository.insert(event, input, user.id)
+      : null
+    const created = reserveResult?.expense
+      ?? await BuildingExpenseRepository.insert(event, input, user.id)
 
-    await AuditService.append(event, user, {
-      building_id: created.buildingId,
-      action: AUDIT_ACTIONS.BUILDING_EXPENSE_CREATED,
-      entity_type: 'building_expense',
-      entity_id: created.id,
-      after_data: created,
-    })
+    if (!reserveResult) {
+      await AuditService.append(event, user, {
+        building_id: created.buildingId,
+        action: AUDIT_ACTIONS.BUILDING_EXPENSE_CREATED,
+        entity_type: 'building_expense',
+        entity_id: created.id,
+        after_data: created,
+      })
+    }
 
     invalidateOperationsReport(created.buildingId)
     return withSignedReceipt(event, created)
@@ -126,9 +130,9 @@ export const BuildingExpenseService = {
     )
 
     const updated = await BuildingExpenseRepository.updateById(event, id, input)
-    if (existing.fundedBy === 'reserve_fund' || updated.fundedBy === 'reserve_fund') {
-      await ReserveFundService.syncExpenseDeduction(event, user, updated)
-    }
+    const reserveDeduction = existing.fundedBy === 'reserve_fund' || updated.fundedBy === 'reserve_fund'
+      ? await ReserveFundService.syncExpenseDeduction(event, user, updated)
+      : null
 
     await AuditService.append(event, user, {
       building_id: updated.buildingId,
@@ -137,6 +141,7 @@ export const BuildingExpenseService = {
       entity_id: updated.id,
       before_data: existing,
       after_data: updated,
+      metadata: reserveDeduction ? { reserve_deduction: reserveDeduction } : undefined,
     })
 
     invalidateOperationsReport(existing.buildingId)
@@ -163,7 +168,7 @@ export const BuildingExpenseService = {
     )
 
     const voided = await BuildingExpenseRepository.voidById(event, id, user.id, voidReason)
-    await ReserveFundService.voidExpenseDeduction(event, user, voided)
+    const reserveDeduction = await ReserveFundService.voidExpenseDeduction(event, user, voided)
 
     await AuditService.append(event, user, {
       building_id: voided.buildingId,
@@ -172,7 +177,10 @@ export const BuildingExpenseService = {
       entity_id: voided.id,
       before_data: existing,
       after_data: voided,
-      metadata: { void_reason: voidReason },
+      metadata: {
+        void_reason: voidReason,
+        ...(reserveDeduction && { reserve_deduction: reserveDeduction }),
+      },
     })
 
     invalidateOperationsReport(voided.buildingId)
@@ -213,6 +221,14 @@ export const BuildingExpenseService = {
     const updated = await BuildingExpenseRepository.updateReceiptPath(event, id, path)
     if (existing.receiptUrl) await storage.remove([existing.receiptUrl])
 
+    await AuditService.append(event, user, {
+      building_id: existing.buildingId,
+      action: AUDIT_ACTIONS.BUILDING_EXPENSE_RECEIPT_ATTACHED,
+      entity_type: 'building_expense',
+      entity_id: existing.id,
+      metadata: { receipt_attached: true },
+    })
+
     return withSignedReceipt(event, updated)
   },
 
@@ -233,6 +249,14 @@ export const BuildingExpenseService = {
     if (existing.receiptUrl) {
       await db(event).storage.from(RECEIPT_BUCKET).remove([existing.receiptUrl])
     }
+
+    await AuditService.append(event, user, {
+      building_id: existing.buildingId,
+      action: AUDIT_ACTIONS.BUILDING_EXPENSE_RECEIPT_REMOVED,
+      entity_type: 'building_expense',
+      entity_id: existing.id,
+      metadata: { receipt_attached: false },
+    })
 
     return withSignedReceipt(event, updated)
   },

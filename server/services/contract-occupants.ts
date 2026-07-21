@@ -5,6 +5,8 @@ import type { ContractOccupantAddInput, ContractOccupantMoveOutInput } from '~/u
 import { ContractOccupantRepository } from '../repositories/contract-occupants'
 import { ContractRepository } from '../repositories/contracts'
 import { assertBuildingScope } from '../utils/scope'
+import { AuditService } from './audit'
+import { AUDIT_ACTIONS } from '~/utils/constants/audit'
 
 export const ContractOccupantService = {
   async list(event: H3Event, user: AuthUser, contractId: string): Promise<ContractOccupant[]> {
@@ -46,7 +48,16 @@ export const ContractOccupantService = {
       }
     }
 
-    return ContractOccupantRepository.insert(event, contract.id, input)
+    const created = await ContractOccupantRepository.insert(event, contract.id, input)
+    await AuditService.append(event, user, {
+      building_id: contract.buildingId,
+      action: AUDIT_ACTIONS.CONTRACT_OCCUPANT_ADDED,
+      entity_type: 'contract_occupant',
+      entity_id: created.id,
+      after_data: created,
+      metadata: { contract_id: contract.id },
+    })
+    return created
   },
 
   async moveOut(event: H3Event, user: AuthUser, contractId: string, occupantId: string, input: ContractOccupantMoveOutInput): Promise<ContractOccupant> {
@@ -56,7 +67,17 @@ export const ContractOccupantService = {
     await assertBuildingScope(event, user, contract.buildingId, 'write')
     const occupant = await ContractOccupantRepository.findById(event, occupantId)
     if (!occupant || occupant.contractId !== contract.id) throwNotFound('Không tìm thấy người ở')
-    return ContractOccupantRepository.updateById(event, occupantId, input)
+    const updated = await ContractOccupantRepository.updateById(event, occupantId, input)
+    await AuditService.append(event, user, {
+      building_id: contract.buildingId,
+      action: AUDIT_ACTIONS.CONTRACT_OCCUPANT_MOVED_OUT,
+      entity_type: 'contract_occupant',
+      entity_id: occupant.id,
+      before_data: occupant,
+      after_data: updated,
+      metadata: { contract_id: contract.id },
+    })
+    return updated
   },
 
   async remove(event: H3Event, user: AuthUser, contractId: string, occupantId: string): Promise<void> {
@@ -66,6 +87,14 @@ export const ContractOccupantService = {
     await assertBuildingScope(event, user, contract.buildingId, 'write')
     const occupant = await ContractOccupantRepository.findById(event, occupantId)
     if (!occupant || occupant.contractId !== contract.id) throwNotFound('Không tìm thấy người ở')
-    return ContractOccupantRepository.deleteById(event, occupantId)
+    await ContractOccupantRepository.deleteById(event, occupantId)
+    await AuditService.append(event, user, {
+      building_id: contract.buildingId,
+      action: AUDIT_ACTIONS.CONTRACT_OCCUPANT_REMOVED,
+      entity_type: 'contract_occupant',
+      entity_id: occupant.id,
+      before_data: occupant,
+      metadata: { contract_id: contract.id },
+    })
   },
 }

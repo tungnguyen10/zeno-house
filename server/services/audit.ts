@@ -1,9 +1,8 @@
 import type { H3Event } from 'h3'
 import type { AuthUser } from '~/types/auth'
 import type { AuditEntityType } from '~/utils/constants/audit'
+import { Buffer } from 'node:buffer'
 import { AuditRepository } from '../repositories/audit'
-
-declare const process: { env?: Record<string, string | undefined> }
 
 export interface AuditAppendOptions {
   building_id: string | null
@@ -14,6 +13,75 @@ export interface AuditAppendOptions {
   before_data?: unknown
   after_data?: unknown
   metadata?: Record<string, unknown>
+}
+
+function auditErrorCode(error: unknown): string | null {
+  if (!error || typeof error !== 'object') return null
+  const code = (error as { code?: unknown }).code
+  return typeof code === 'string' || typeof code === 'number' ? String(code) : null
+}
+
+function isPrivateAuditKey(key: string): boolean {
+  const normalized = key.replace(/[^a-z0-9]/gi, '').toLowerCase()
+  return normalized.includes('password')
+    || normalized.includes('token')
+    || normalized.includes('session')
+    || normalized.includes('signedurl')
+    || normalized === 'binary'
+}
+
+export function sanitizeAuditPayload(value: unknown, depth = 0): unknown {
+  if (value == null || typeof value === 'number' || typeof value === 'boolean') return value
+  if (typeof value === 'string') {
+    try {
+      const url = new URL(value)
+      const hasCredential = [...url.searchParams.keys()].some((key) => {
+        const normalized = key.replace(/[^a-z0-9]/gi, '').toLowerCase()
+        return normalized.includes('token') || normalized.includes('signature') || normalized.includes('credential')
+      })
+      if (hasCredential) return undefined
+    }
+    catch {
+      // Ordinary strings are not URLs and are safe to preserve.
+    }
+    return value
+  }
+  if (depth >= 12) return '[TRUNCATED]'
+  if (Buffer.isBuffer(value) || ArrayBuffer.isView(value) || value instanceof ArrayBuffer) return undefined
+  if (Array.isArray(value)) {
+    return value
+      .map(item => sanitizeAuditPayload(item, depth + 1))
+      .filter(item => item !== undefined)
+  }
+  if (typeof value !== 'object') return String(value)
+
+  const sanitized: Record<string, unknown> = {}
+  for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
+    if (isPrivateAuditKey(key)) continue
+    const safeChild = sanitizeAuditPayload(child, depth + 1)
+    if (safeChild !== undefined) sanitized[key] = safeChild
+  }
+  return sanitized
+}
+
+function reportAuditFailure(
+  operation: string,
+  context: {
+    action: string
+    entityType: AuditEntityType
+    entityId?: string | null
+    buildingId?: string | null
+  },
+  error: unknown,
+): void {
+  console.error(`[AuditService] ${operation} failed`, {
+    action: context.action,
+    entityType: context.entityType,
+    entityId: context.entityId ?? null,
+    buildingId: context.buildingId ?? null,
+    errorType: error instanceof Error ? error.name : typeof error,
+    errorCode: auditErrorCode(error),
+  })
 }
 
 export interface BulkAuditItem {
@@ -29,24 +97,27 @@ export const AuditService = {
    * Append a single audit event. Errors are caught and logged — never
    * re-thrown so that audit failure cannot break the main operation.
    */
-  async append(event: H3Event, user: AuthUser, input: AuditAppendOptions): Promise<void> {
+  async append(event: H3Event, user: AuthUser | null, input: AuditAppendOptions): Promise<void> {
     try {
       await AuditRepository.append(event, {
         building_id: input.building_id,
-        actor_id: user.id ?? null,
+        actor_id: user?.id ?? null,
         action: input.action,
         entity_type: input.entity_type,
         entity_id: input.entity_id ?? null,
         correlation_id: input.correlation_id ?? null,
-        before_data: input.before_data,
-        after_data: input.after_data,
-        metadata: input.metadata,
+        before_data: sanitizeAuditPayload(input.before_data),
+        after_data: sanitizeAuditPayload(input.after_data),
+        metadata: sanitizeAuditPayload(input.metadata) as Record<string, unknown> | undefined,
       })
     }
     catch (err) {
-      if (process.env?.NODE_ENV !== 'production') {
-        console.error('[AuditService] append failed (silent):', err)
-      }
+      reportAuditFailure('append', {
+        action: input.action,
+        entityType: input.entity_type,
+        entityId: input.entity_id,
+        buildingId: input.building_id,
+      }, err)
     }
   },
 
@@ -86,9 +157,11 @@ export const AuditService = {
       parentId = parent.id
     }
     catch (err) {
-      if (process.env?.NODE_ENV !== 'production') {
-        console.error('[AuditService] appendBulk parent failed (silent):', err)
-      }
+      reportAuditFailure('appendBulk parent', {
+        action: opts.aggregate_action,
+        entityType: opts.entity_type,
+        buildingId: opts.building_id,
+      }, err)
       return
     }
 
@@ -103,15 +176,17 @@ export const AuditService = {
           entity_type: opts.entity_type,
           entity_id: item.entity_id,
           correlation_id: parentId,
-          before_data: item.before_data,
-          after_data: item.after_data,
+          before_data: sanitizeAuditPayload(item.before_data),
+          after_data: sanitizeAuditPayload(item.after_data),
         })),
       )
     }
     catch (err) {
-      if (process.env?.NODE_ENV !== 'production') {
-        console.error('[AuditService] appendBulk children failed (silent):', err)
-      }
+      reportAuditFailure('appendBulk children', {
+        action: opts.aggregate_action,
+        entityType: opts.entity_type,
+        buildingId: opts.building_id,
+      }, err)
     }
   },
 }

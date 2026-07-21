@@ -22,7 +22,17 @@ export const BuildingServiceService = {
     const building = await BuildingRepository.findByIdentifier(event, input.building_id)
     if (!building) throwNotFound('Không tìm thấy tòa nhà')
     await assertBuildingScope(event, _user, building.id, 'write')
-    return BuildingServiceRepository.upsert(event, { ...input, building_id: building.id })
+    const existing = await BuildingServiceRepository.findByBuildingAndCatalog(event, building.id, input.catalog_id)
+    const updated = await BuildingServiceRepository.upsert(event, { ...input, building_id: building.id })
+    await AuditService.append(event, _user, {
+      building_id: building.id,
+      action: existing ? AUDIT_ACTIONS.BUILDING_SERVICE_UPDATED : AUDIT_ACTIONS.BUILDING_SERVICE_CREATED,
+      entity_type: 'building_service',
+      entity_id: updated.id,
+      before_data: existing ?? undefined,
+      after_data: updated,
+    })
+    return updated
   },
 
   async update(event: H3Event, _user: AuthUser, id: string, input: BuildingServiceUpdateInput): Promise<BuildingService> {
@@ -30,7 +40,16 @@ export const BuildingServiceService = {
     const existing = await BuildingServiceRepository.findById(event, id)
     if (!existing) throwNotFound('Không tìm thấy dịch vụ tòa nhà')
     await assertBuildingScope(event, _user, existing.buildingId, 'write')
-    return BuildingServiceRepository.update(event, id, input)
+    const updated = await BuildingServiceRepository.update(event, id, input)
+    await AuditService.append(event, _user, {
+      building_id: existing.buildingId,
+      action: AUDIT_ACTIONS.BUILDING_SERVICE_UPDATED,
+      entity_type: 'building_service',
+      entity_id: existing.id,
+      before_data: existing,
+      after_data: updated,
+    })
+    return updated
   },
 
   async remove(event: H3Event, user: AuthUser, id: string, opts: { reason: string }): Promise<void> {

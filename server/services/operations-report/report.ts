@@ -162,18 +162,19 @@ async function closeReportPeriod(
   }
 
   const snapshot = await buildReportSnapshot(event, query)
-  await ReserveFundService.recordMonthlyAccrual(event, user, {
+  const rate = await ReserveFundService.findEffectiveRate(
+    event, query.building_id, query.period_year, query.period_month,
+  )
+  const reserveRatePercent = rate?.reserveRatePercent ?? 0
+  const accrualAmount = Math.round((Math.max(snapshot.profitByRevenue, 0) * reserveRatePercent) / 100)
+  return OperationsReportPeriodRepository.closeWithAccrualAndAudit(event, {
     buildingId: query.building_id,
     periodYear: query.period_year,
     periodMonth: query.period_month,
     billingPeriodId: snapshot.billing.periodId,
     issuedRevenue: snapshot.issuedRevenue,
-    issuedProfitByRevenue: snapshot.profitByRevenue,
-  })
-  return OperationsReportPeriodRepository.close(event, {
-    buildingId: query.building_id,
-    periodYear: query.period_year,
-    periodMonth: query.period_month,
+    reserveRatePercent,
+    accrualAmount,
     closeSource,
     closedBy: user?.id ?? null,
   })
@@ -325,7 +326,7 @@ export const OperationsReportService = {
     }
     await assertBuildingReadable(event, user, query.building_id, 'write')
     const snapshot = await buildReportSnapshot(event, query)
-    const transaction = await ReserveFundService.recordMonthlyAccrual(event, user, {
+    const transaction = await ReserveFundService.refreshAccrualWithAudit(event, user, {
       buildingId: query.building_id,
       periodYear: query.period_year,
       periodMonth: query.period_month,
@@ -363,7 +364,7 @@ export const OperationsReportService = {
   ): Promise<OperationsReportClosure> {
     if (!can(user, 'operations-report.reopen')) throwForbidden('Không có quyền mở lại báo cáo vận hành')
     await assertBuildingReadable(event, user, input.building_id, 'write')
-    const closure = await OperationsReportPeriodRepository.reopen(event, {
+    const closure = await OperationsReportPeriodRepository.reopenWithAudit(event, {
       buildingId: input.building_id,
       periodYear: input.period_year,
       periodMonth: input.period_month,

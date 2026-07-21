@@ -5,6 +5,14 @@ APIs, and the shared front/back identity-image slots used by internal and Tenant
 
 ## Requirements
 
+### Requirement: Tenant document lifecycle audit is safe
+The system SHALL append `tenant_document.uploaded` and `tenant_document.removed` events after successful storage mutations.
+
+#### Scenario: Document payload privacy
+- **WHEN** a tenant uploads or removes a document
+- **THEN** audit data contains document name, MIME type, size, and stable object ID
+- **AND** it does not contain file bytes, signed URLs, or storage paths
+
 ### Requirement: Tenant document buckets stay private
 Tenant document buckets SHALL be private (`public = false`). Tenant access to document objects SHALL be provided only through short-lived server-generated signed URLs. The system SHALL never return a public URL for tenant documents.
 

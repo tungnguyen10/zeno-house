@@ -90,7 +90,7 @@ describe('AssignmentService.create', () => {
 describe('AssignmentService.remove', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    assignmentRepo.findById.mockResolvedValue({ id: 'a-1', user_id: 'm-1', building_id: 'b-1' })
+    assignmentRepo.findById.mockResolvedValue({ id: 'a-1', user_id: 'm-1', building_id: 'b-1', can_delete_master_data: false })
     scope.assertBuildingScope.mockResolvedValue(undefined)
     userRepo.getById.mockResolvedValue({ id: 'm-1', role: 'manager' })
   })
@@ -125,7 +125,7 @@ describe('AssignmentService.remove', () => {
 describe('AssignmentService.update', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    assignmentRepo.findById.mockResolvedValue({ id: 'a-1', user_id: 'm-1', building_id: 'b-1' })
+    assignmentRepo.findById.mockResolvedValue({ id: 'a-1', user_id: 'm-1', building_id: 'b-1', can_delete_master_data: false })
     assignmentRepo.update.mockResolvedValue({ id: 'a-1', user_id: 'm-1', building_id: 'b-1', can_delete_master_data: true })
     scope.assertBuildingScope.mockResolvedValue(undefined)
     userRepo.getById.mockResolvedValue({ id: 'm-1', role: 'manager' })
@@ -136,6 +136,18 @@ describe('AssignmentService.update', () => {
     await AssignmentService.update(event(), user('owner'), 'a-1', { can_delete_master_data: true } as never)
     expect(scope.assertBuildingScope).toHaveBeenCalledWith(expect.anything(), expect.anything(), 'b-1', 'write')
     expect(assignmentRepo.update).toHaveBeenCalledWith(expect.anything(), 'a-1', { can_delete_master_data: true })
+    expect(auditService.append).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      expect.objectContaining({
+        action: 'user.assignment_updated',
+        entity_type: 'user',
+        entity_id: 'm-1',
+        building_id: 'b-1',
+        before_data: expect.objectContaining({ can_delete_master_data: false }),
+        after_data: expect.objectContaining({ can_delete_master_data: true }),
+      }),
+    )
   })
 
   it('forbids owner toggling an out-of-scope assignment (403)', async () => {

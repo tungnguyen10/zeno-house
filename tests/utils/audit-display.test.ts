@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { auditDiffRows } from '../../app/utils/audit/display'
+import {
+  AUDIT_ENTITY_FILTER_OPTIONS,
+  auditActionLabel,
+  auditActionVariant,
+  auditDiffRows,
+  auditEntityDisplay,
+  auditEntityLabel,
+} from '../../app/utils/audit/display'
+import { AUDIT_ACTIONS } from '../../app/utils/constants/audit'
 
 describe('audit display helpers', () => {
   it('formats contract monthly rent diffs as readable currency rows', () => {
@@ -26,5 +34,30 @@ describe('audit display helpers', () => {
     )
 
     expect(rows).toEqual([])
+  })
+
+  it('covers operations and tenant portal labels and action variants', () => {
+    expect(auditEntityLabel('shared_expense')).toBe('Chi phí dùng chung')
+    expect(auditEntityLabel('tenant_document')).toBe('Tài liệu khách thuê')
+    expect(auditActionLabel('operations_report_period.reopened')).toBe('Mở lại báo cáo')
+    expect(auditActionVariant('operations_report_period.reopened')).toBe('warning')
+    expect(AUDIT_ENTITY_FILTER_OPTIONS.filter(option => option.disabled).map(option => option.label))
+      .toEqual(expect.arrayContaining(['Master data', 'Phân quyền', 'Hợp đồng', 'Vận hành', 'Tenant portal']))
+  })
+
+  it('uses snapshots as a deleted entity label fallback', () => {
+    expect(auditEntityDisplay({
+      entityType: 'shared_expense',
+      entityLabel: null,
+      entityId: '550e8400-e29b-41d4-a716-446655440000',
+      beforeData: { name: 'Bảo vệ tháng 7' },
+      afterData: null,
+    })).toBe('Bảo vệ tháng 7')
+  })
+
+  it('has a Vietnamese display label for every declared audit action', () => {
+    for (const action of Object.values(AUDIT_ACTIONS)) {
+      expect(auditActionLabel(action), action).not.toBe(action.split('.').at(-1))
+    }
   })
 })

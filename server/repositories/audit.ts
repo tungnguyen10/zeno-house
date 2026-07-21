@@ -16,6 +16,28 @@ export interface AuditAppendInput {
   metadata?: Record<string, unknown>
 }
 
+interface AuditListOptions {
+  limit?: number
+  entityType?: AuditEntityType
+  entityId?: string
+  correlationId?: string
+  cursor?: string
+}
+
+export function decodeAuditCursor(cursor?: string): { createdAt: string | null, id: string | null } {
+  if (!cursor) return { createdAt: null, id: null }
+  const separator = cursor.lastIndexOf('|')
+  const createdAt = separator === -1 ? cursor : cursor.slice(0, separator)
+  const id = separator === -1 ? null : cursor.slice(separator + 1) || null
+  if (Number.isNaN(Date.parse(createdAt))) return { createdAt: null, id: null }
+  if (id && !/^[a-z0-9-]+$/i.test(id)) return { createdAt: null, id: null }
+  return { createdAt, id }
+}
+
+export function encodeAuditCursor(row: Pick<AuditEvent, 'createdAt' | 'id'>): string {
+  return `${row.createdAt}|${row.id}`
+}
+
 export const AuditRepository = {
   async appendMany(event: H3Event, inputs: AuditAppendInput[]): Promise<AuditEvent[]> {
     if (inputs.length === 0) return []
@@ -79,48 +101,103 @@ export const AuditRepository = {
   async listByBuilding(
     event: H3Event,
     buildingId: string,
-    opts?: {
-      limit?: number
-      entityType?: AuditEntityType
-      entityId?: string
-      correlationId?: string
-    },
-  ): Promise<{ items: AuditEvent[]; total: number }> {
+    opts?: AuditListOptions,
+  ): Promise<{ items: AuditEvent[], total: number, nextCursor: string | null }> {
     const client = await serverSupabaseClient(event)
+    const limit = opts?.limit ?? 50
+    const cursor = decodeAuditCursor(opts?.cursor)
+    let countQuery = client
+      .from('audit_events')
+      .select('id', { count: 'exact', head: true })
+      .eq('building_id', buildingId)
     let query = client
       .from('audit_events')
-      .select('*', { count: 'exact' })
+      .select('*')
       .eq('building_id', buildingId)
-    if (opts?.entityType) query = query.eq('entity_type', opts.entityType)
-    if (opts?.entityId) query = query.eq('entity_id', opts.entityId)
-    if (opts?.correlationId) query = query.eq('correlation_id', opts.correlationId)
-    const { data, error, count } = await query
-      .order('created_at', { ascending: false })
-      .limit(opts?.limit ?? 50)
+    if (opts?.entityType) {
+      countQuery = countQuery.eq('entity_type', opts.entityType)
+      query = query.eq('entity_type', opts.entityType)
+    }
+    if (opts?.entityId) {
+      countQuery = countQuery.eq('entity_id', opts.entityId)
+      query = query.eq('entity_id', opts.entityId)
+    }
+    if (opts?.correlationId) {
+      countQuery = countQuery.eq('correlation_id', opts.correlationId)
+      query = query.eq('correlation_id', opts.correlationId)
+    }
+    if (cursor.createdAt) {
+      query = cursor.id
+        ? query.or(`created_at.lt.${cursor.createdAt},and(created_at.eq.${cursor.createdAt},id.lt.${cursor.id})`)
+        : query.lt('created_at', cursor.createdAt)
+    }
+    const [{ count, error: countError }, { data, error }] = await Promise.all([
+      countQuery,
+      query
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: false })
+        .limit(limit + 1),
+    ])
+    if (countError) throwDbError(countError, 'audit.listByBuilding.count')
     if (error) throwDbError(error, 'audit.listByBuilding')
-    return { items: (data ?? []).map(mapAuditEvent), total: count ?? 0 }
+    const rows = (data ?? []).map(mapAuditEvent)
+    const items = rows.slice(0, limit)
+    return {
+      items,
+      total: count ?? 0,
+      nextCursor: rows.length > limit && items.length > 0
+        ? encodeAuditCursor(items[items.length - 1]!)
+        : null,
+    }
   },
 
   async listAll(
     event: H3Event,
-    opts?: {
-      limit?: number
-      entityType?: AuditEntityType
-      entityId?: string
-      correlationId?: string
-    },
-  ): Promise<{ items: AuditEvent[]; total: number }> {
+    opts?: AuditListOptions,
+  ): Promise<{ items: AuditEvent[], total: number, nextCursor: string | null }> {
     const client = await serverSupabaseClient(event)
+    const limit = opts?.limit ?? 50
+    const cursor = decodeAuditCursor(opts?.cursor)
+    let countQuery = client
+      .from('audit_events')
+      .select('id', { count: 'exact', head: true })
     let query = client
       .from('audit_events')
-      .select('*', { count: 'exact' })
-    if (opts?.entityType) query = query.eq('entity_type', opts.entityType)
-    if (opts?.entityId) query = query.eq('entity_id', opts.entityId)
-    if (opts?.correlationId) query = query.eq('correlation_id', opts.correlationId)
-    const { data, error, count } = await query
-      .order('created_at', { ascending: false })
-      .limit(opts?.limit ?? 50)
+      .select('*')
+    if (opts?.entityType) {
+      countQuery = countQuery.eq('entity_type', opts.entityType)
+      query = query.eq('entity_type', opts.entityType)
+    }
+    if (opts?.entityId) {
+      countQuery = countQuery.eq('entity_id', opts.entityId)
+      query = query.eq('entity_id', opts.entityId)
+    }
+    if (opts?.correlationId) {
+      countQuery = countQuery.eq('correlation_id', opts.correlationId)
+      query = query.eq('correlation_id', opts.correlationId)
+    }
+    if (cursor.createdAt) {
+      query = cursor.id
+        ? query.or(`created_at.lt.${cursor.createdAt},and(created_at.eq.${cursor.createdAt},id.lt.${cursor.id})`)
+        : query.lt('created_at', cursor.createdAt)
+    }
+    const [{ count, error: countError }, { data, error }] = await Promise.all([
+      countQuery,
+      query
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: false })
+        .limit(limit + 1),
+    ])
+    if (countError) throwDbError(countError, 'audit.listAll.count')
     if (error) throwDbError(error, 'audit.listAll')
-    return { items: (data ?? []).map(mapAuditEvent), total: count ?? 0 }
+    const rows = (data ?? []).map(mapAuditEvent)
+    const items = rows.slice(0, limit)
+    return {
+      items,
+      total: count ?? 0,
+      nextCursor: rows.length > limit && items.length > 0
+        ? encodeAuditCursor(items[items.length - 1]!)
+        : null,
+    }
   },
 }

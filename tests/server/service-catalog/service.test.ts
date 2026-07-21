@@ -16,6 +16,8 @@ const assignmentRepo = vi.hoisted(() => ({
   findBuildingIdsByUser: vi.fn(),
 }))
 
+const auditService = vi.hoisted(() => ({ append: vi.fn() }))
+
 vi.mock('../../../server/repositories/service-catalog', () => ({
   ServiceCatalogRepository: catalogRepo,
 }))
@@ -27,6 +29,8 @@ vi.mock('../../../server/repositories/buildings', () => ({
 vi.mock('../../../server/repositories/assignments', () => ({
   AssignmentRepository: assignmentRepo,
 }))
+
+vi.mock('../../../server/services/audit', () => ({ AuditService: auditService }))
 
 function user(role: 'admin' | 'owner' | 'manager' = 'owner'): AuthUser {
   return { id: `${role}-1`, app_metadata: { role } } as AuthUser
@@ -85,6 +89,17 @@ describe('ServiceCatalogService', () => {
       expect.objectContaining({ building_id: 'building-1', sort_order: 9 }),
     )
     expect(result.isCustom).toBe(true)
+    expect(auditService.append).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ id: 'owner-1' }),
+      expect.objectContaining({
+        building_id: 'building-1',
+        action: 'service_catalog_item.created',
+        entity_type: 'service_catalog_item',
+        entity_id: 'catalog-1',
+        after_data: result,
+      }),
+    )
   })
 
   it('rejects duplicate custom service names in the same building', async () => {

@@ -6,6 +6,14 @@ Define the authenticated, self-scoped API contract for tenant profile access, ac
 
 ## Requirements
 
+### Requirement: Tenant profile updates are audited
+The tenant profile update service SHALL append `tenant.profile_updated` with whitelisted before/after snapshots and the resolved tenant ID.
+
+#### Scenario: Self-service profile audit
+- **WHEN** a tenant successfully updates an allowed profile field
+- **THEN** one audit event identifies the tenant actor and target tenant
+- **AND** client-injected tenant IDs, sessions, and credentials are absent from the payload
+
 ### Requirement: Tenant self-service API namespace
 The system SHALL expose tenant self-service endpoints under `/api/tenant/**`, available only to the `tenant` role. Every endpoint SHALL resolve the caller's tenant via `resolveTenantId(event, user)` and SHALL ignore any client-supplied tenant identifier in body, query, or path. Responses SHALL use the standard `{ data, meta? }` / `{ error }` envelope.
 

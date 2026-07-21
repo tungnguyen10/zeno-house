@@ -33,7 +33,16 @@ export const ContractServiceService = {
     const contract = await ContractRepository.findById(event, existing.contractId)
     if (!contract) throwNotFound('Không tìm thấy hợp đồng')
     await assertBuildingScope(event, _user, contract.buildingId, 'write')
-    return ContractServiceRepository.update(event, id, input)
+    const updated = await ContractServiceRepository.update(event, id, input)
+    await AuditService.append(event, _user, {
+      building_id: contract.buildingId,
+      action: AUDIT_ACTIONS.CONTRACT_SERVICE_UPDATED,
+      entity_type: 'contract_service',
+      entity_id: existing.id,
+      before_data: existing,
+      after_data: updated,
+    })
+    return updated
   },
 
   async syncFromBuilding(event: H3Event, _user: AuthUser, buildingId: string): Promise<number> {
@@ -41,7 +50,7 @@ export const ContractServiceService = {
     const building = await BuildingRepository.findByIdentifier(event, buildingId)
     if (!building) throwNotFound('Building not found')
     await assertBuildingScope(event, _user, building.id, 'write')
-    return ContractServiceRepository.syncFromBuilding(event, building.id)
+    return ContractServiceRepository.syncFromBuilding(event, building.id, _user.id)
   },
 
   async cloneFromBuilding(event: H3Event, contractId: string, buildingId: string): Promise<void> {

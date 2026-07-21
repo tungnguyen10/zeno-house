@@ -12,6 +12,7 @@ const deactivateShared = vi.fn()
 const allocateShared = vi.fn()
 const assertBuildingScope = vi.fn()
 const assertReportOpen = vi.fn()
+const appendAudit = vi.fn()
 
 vi.mock('../../server/repositories/shared-expenses', () => ({
   SharedExpenseRepository: {
@@ -34,6 +35,7 @@ vi.mock('../../server/services/operations-report/locks', () => ({
     assertReportOpen,
   },
 }))
+vi.mock('../../server/services/audit', () => ({ AuditService: { append: appendAudit } }))
 
 const owner = { id: 'owner-1', app_metadata: { role: 'owner' } } as AuthUser
 const manager = { id: 'manager-1', app_metadata: { role: 'manager' } } as AuthUser
@@ -80,6 +82,22 @@ describe('SharedExpenseService', () => {
     expect(assertReportOpen).toHaveBeenCalledWith(expect.anything(), 'building-1', 2026, 7)
     expect(assertReportOpen).toHaveBeenCalledWith(expect.anything(), 'building-2', 2026, 7)
     expect(result.generatedExpenses.map(row => row.amount)).toEqual([500, 501])
+  })
+
+  it('audits create, update and deactivate lifecycle snapshots', async () => {
+    insertShared.mockResolvedValue(shared())
+    updateShared.mockResolvedValue(shared({ amount: 1_500 }))
+    const { SharedExpenseService } = await import('../../server/services/shared-expenses')
+
+    await SharedExpenseService.create({} as never, owner, {
+      name: 'Security', category: 'staff', amount: 1_001, building_ids: ['building-1', 'building-2'],
+    } as never)
+    await SharedExpenseService.update({} as never, owner, 'shared-1', { amount: 1_500 } as never)
+    await SharedExpenseService.remove({} as never, owner, 'shared-1')
+
+    expect(appendAudit).toHaveBeenCalledWith(expect.anything(), owner, expect.objectContaining({ action: 'shared_expense.created', after_data: expect.objectContaining({ id: 'shared-1' }) }))
+    expect(appendAudit).toHaveBeenCalledWith(expect.anything(), owner, expect.objectContaining({ action: 'shared_expense.updated', before_data: expect.objectContaining({ amount: 1_001 }), after_data: expect.objectContaining({ amount: 1_500 }) }))
+    expect(appendAudit).toHaveBeenCalledWith(expect.anything(), owner, expect.objectContaining({ action: 'shared_expense.deactivated', before_data: expect.objectContaining({ id: 'shared-1' }) }))
   })
 
   it('rejects duplicate allocation for the same period', async () => {
