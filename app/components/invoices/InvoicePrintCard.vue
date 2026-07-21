@@ -11,6 +11,11 @@ function dateLabel(value: string | null): string {
   return new Date(value).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })
 }
 
+function dueDateLabel(value: string | null): string {
+  if (!value) return '(Hạn 3 ngày).'
+  return dateLabel(value)
+}
+
 function metadataNumber(line: InvoiceCharge, key: string): number | null {
   const value = line.metadata[key]
   if (typeof value === 'number' && Number.isFinite(value)) return value
@@ -86,7 +91,7 @@ function isMeterLine(line: InvoiceCharge): boolean {
       <div class="flex min-w-0 items-baseline gap-[1.8mm]">
         <dt class="shrink-0 text-[6.8pt] text-slate-500">Phát hành &amp; hạn</dt>
         <dd class="m-0 min-w-0 flex-1 truncate text-[7.7pt] font-medium tabular-nums text-slate-900">
-          {{ dateLabel(item.invoice.issuedAt) }} — {{ dateLabel(item.invoice.dueDate) }}
+          {{ dateLabel(item.invoice.issuedAt) }} — {{ dueDateLabel(item.invoice.dueDate) }}
         </dd>
       </div>
     </dl>
