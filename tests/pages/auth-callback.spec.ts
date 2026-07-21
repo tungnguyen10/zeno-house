@@ -39,4 +39,16 @@ describe('auth callback', () => {
     expect(navigateTo).toHaveBeenCalledWith('/auth/pending')
     wrapper.unmount()
   })
+
+  it('returns a tenant with unfinished onboarding to complete-account', async () => {
+    currentUser.value = {
+      app_metadata: { role: 'tenant', tenant_onboarding: 'google_required' },
+    }
+
+    const wrapper = shallowMount(AuthCallback)
+    await flushPromises()
+
+    expect(navigateTo).toHaveBeenCalledWith('/auth/complete-account')
+    wrapper.unmount()
+  })
 })

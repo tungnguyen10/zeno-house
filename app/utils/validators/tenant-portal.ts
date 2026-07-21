@@ -43,7 +43,6 @@ const isoDateSchema = z
 export const tenantProfileUpdateSchema = z.object({
   full_name: z.string().trim().min(1, 'Họ tên không được trống').max(100, 'Họ tên quá dài').optional(),
   phone: z.string().trim().min(1, 'Số điện thoại không được trống').max(20, 'Số điện thoại quá dài').optional(),
-  email: z.string().trim().email('Email không hợp lệ').nullable().optional(),
   gender: z.enum(['male', 'female', 'other']).nullable().optional(),
   date_of_birth: isoDateSchema,
   occupation: z.string().trim().max(100, 'Nghề nghiệp quá dài').nullable().optional(),

@@ -101,7 +101,6 @@ const mode = ref<'view' | 'edit'>('view')
 const form = reactive({
   full_name: '',
   phone: '',
-  email: '' as string | null,
   gender: null as TenantGender | null,
   date_of_birth: '' as string | null,
   occupation: '' as string | null,
@@ -119,7 +118,6 @@ function openEdit() {
   if (!current) return
   form.full_name = current.fullName ?? ''
   form.phone = current.phone ?? ''
-  form.email = current.email ?? ''
   form.gender = current.gender ?? null
   form.date_of_birth = current.dateOfBirth ?? ''
   form.occupation = current.occupation ?? ''
@@ -150,7 +148,6 @@ async function onSave() {
   const ok = await save({
     full_name: form.full_name.trim(),
     phone: form.phone.trim(),
-    email: normalize(form.email),
     gender: form.gender,
     date_of_birth: normalize(form.date_of_birth),
     occupation: normalize(form.occupation),
@@ -481,14 +478,6 @@ const statusColor = computed(() => {
                 inputmode="tel"
                 autocomplete="tel"
                 :error="fieldErrors.phone?.[0]"
-              />
-              <PortalTextField
-                v-model="form.email"
-                label="Email"
-                type="email"
-                inputmode="email"
-                autocomplete="email"
-                :error="fieldErrors.email?.[0]"
               />
               <PortalTextField
                 v-model="form.permanent_address"

@@ -26,15 +26,19 @@ The system SHALL expose tenant self-service endpoints under `/api/tenant/**`, av
 - **THEN** the server uses the resolver's tenant id and ignores the supplied value
 
 ### Requirement: Tenant profile read and whitelist update
-`GET /api/tenant/me` SHALL return the caller's tenant profile with safe fields only. `PATCH /api/tenant/me` SHALL update only a strict whitelist (`phone`, `email`, `emergency_contact_name`, `emergency_contact_phone`, `notes`) and SHALL reject or ignore any other field, including `status`, `code`, `id_number`, `full_name` policy fields, and linkage fields.
+`GET /api/tenant/me` SHALL return the caller's tenant profile with safe fields only. `PATCH /api/tenant/me` SHALL update only a strict non-credential profile whitelist (`phone`, `emergency_contact_name`, `emergency_contact_phone`, `notes`, and the accepted personal profile fields) and SHALL reject or ignore any other field, including login `email`, `status`, `code`, and linkage fields. The profile email is synchronized only by the tenant onboarding service after Supabase Auth email verification.
 
 #### Scenario: Read own profile
 - **WHEN** a tenant calls `GET /api/tenant/me`
 - **THEN** the response contains the caller's profile safe fields
 
 #### Scenario: Update allowed contact fields
-- **WHEN** a tenant PATCHes `phone` and `email`
+- **WHEN** a tenant PATCHes `phone`
 - **THEN** the update succeeds and returns the updated profile
+
+#### Scenario: Login email is not a profile mutation
+- **WHEN** a tenant PATCH includes `email`
+- **THEN** it is not persisted as a profile edit
 
 #### Scenario: Non-whitelisted field rejected
 - **WHEN** a tenant PATCH includes `status` or `id_number`

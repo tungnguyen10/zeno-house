@@ -34,6 +34,7 @@ describe('route namespace structure', () => {
   it('rejects authenticated pages outside the declared namespaces', () => {
     const publicOrLandingPages = new Set([
       'auth/callback.vue',
+      'auth/complete-account.vue',
       'auth/pending.vue',
       'auth/reset-password.vue',
       'forgot-password.vue',

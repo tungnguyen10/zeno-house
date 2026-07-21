@@ -14,9 +14,24 @@ remain the fallback.
 
 Existing admin/owner provisioning flows create Auth users with `app_metadata.role`; those accounts
 retain their user id, role, building assignments, or tenant link and do not create access requests.
-Supabase automatic identity linking therefore lets a provisioned email add Google without creating
-a second application identity. Any newly created email or Google identity without a role receives
-one pending request and no domain capabilities.
+Tenant accounts additionally begin with the server-owned `tenant_onboarding` state. They must change
+their temporary password, verify the desired Auth email, and link Google before `/portal` or
+`/api/tenant/**` becomes available. The linked identity belongs to the existing Auth user, preserving
+the tenant link and audit history; a new Google identity without a role still enters pending access.
+
+## Tenant First-login Setup
+
+`/auth/complete-account` is an authenticated lifecycle route for tenant accounts in one of three
+states: `password_required`, `email_required`, and `google_required`. Password changes go through
+the server lifecycle service; the client requests the Supabase Auth email confirmation link and the
+service copies the confirmed Auth email into `tenants.email` only after the Auth account reports the
+requested address. Google uses `auth.linkIdentity` so the provider attaches to the existing tenant
+Auth user rather than creating a second identity.
+
+Supabase Dashboard requirements: enable Google, enable **Manual Linking**, add
+`/auth/complete-account` to Redirect URLs, and configure email changes to require confirmation of
+the new email without requiring the potentially incorrect old email. Production must use an SMTP
+configuration that can deliver Auth confirmation messages to tenant addresses.
 
 ## Pending Experience
 

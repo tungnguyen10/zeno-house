@@ -10,7 +10,6 @@ function applyOptimistic(profile: TenantProfile, input: TenantProfileUpdateInput
     ...profile,
     ...(input.full_name !== undefined ? { fullName: input.full_name } : {}),
     ...(input.phone !== undefined ? { phone: input.phone } : {}),
-    ...(input.email !== undefined ? { email: input.email } : {}),
     ...(input.gender !== undefined ? { gender: input.gender } : {}),
     ...(input.date_of_birth !== undefined ? { dateOfBirth: input.date_of_birth } : {}),
     ...(input.occupation !== undefined ? { occupation: input.occupation } : {}),

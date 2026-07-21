@@ -15,6 +15,7 @@ const linkRepo = vi.hoisted(() => ({
 const userRepo = vi.hoisted(() => ({
   create: vi.fn(),
   update: vi.fn(),
+  setTenantOnboardingStage: vi.fn(),
   remove: vi.fn(),
   getById: vi.fn(),
 }))
@@ -67,7 +68,11 @@ describe('TenantAccountService.provision', () => {
 
     expect(userRepo.create).toHaveBeenCalledWith(
       expect.anything(),
-      expect.objectContaining({ email: 'login@example.com', role: 'tenant' }),
+      expect.objectContaining({
+        email: 'login@example.com',
+        role: 'tenant',
+        tenant_onboarding: 'password_required',
+      }),
     )
     expect(linkRepo.create).toHaveBeenCalledWith(
       expect.anything(),
@@ -135,6 +140,7 @@ describe('TenantAccountService lifecycle', () => {
     const svc = await service()
     const cred = await svc.resetPassword(event(), user('admin'), 't-1')
     expect(userRepo.update).toHaveBeenCalledWith(expect.anything(), 'auth-1', expect.objectContaining({ password: expect.any(String) }))
+    expect(userRepo.setTenantOnboardingStage).toHaveBeenCalledWith(expect.anything(), 'auth-1', 'password_required')
     expect(cred.tempPassword).toBeTruthy()
   })
 

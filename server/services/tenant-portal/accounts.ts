@@ -143,6 +143,7 @@ export const TenantAccountService = {
       full_name: tenant.fullName,
       role: ROLES.TENANT,
       created_by: actor.id,
+      tenant_onboarding: 'password_required',
     })
 
     try {
@@ -210,6 +211,7 @@ export const TenantAccountService = {
 
     const tempPassword = generateTempPassword()
     const updated = await UserRepository.update(event, link.authUserId, { password: tempPassword })
+    await UserRepository.setTenantOnboardingStage(event, link.authUserId, 'password_required')
 
     await AuditService.append(event, actor, {
       building_id: null,

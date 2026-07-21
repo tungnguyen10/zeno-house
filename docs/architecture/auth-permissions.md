@@ -55,6 +55,11 @@ the client namespace matrix: missing-role sessions are locked to `/auth/pending`
 locked to `/portal`, and internal roles are locked to `/dashboard`. Building scope remains a
 service-layer concern and is never evaluated in route middleware.
 
+Tenant accounts with a server-owned `app_metadata.tenant_onboarding` stage are instead locked to
+`/auth/complete-account`. The namespace middleware denies `/api/tenant/**` for those staged tenants;
+only `/api/auth/tenant-onboarding/**` can advance lifecycle state. This guard is server-side as well
+as client-side, so changing the browser URL cannot bypass setup.
+
 Authenticated app pages use two namespaces:
 
 - `/dashboard/**` for `admin`, `owner`, and `manager` operations.

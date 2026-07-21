@@ -3,6 +3,7 @@ import type { H3Event } from 'h3'
 import type { ManagedUser } from '~/types/users'
 import type { UserRole } from '~/utils/constants/roles'
 import type { UserUpdateInput } from '~/utils/validators/users'
+import type { TenantOnboardingStage } from '~/utils/tenant-onboarding'
 
 interface AuthUserLike {
   id: string
@@ -35,8 +36,12 @@ function mapManagedUser(user: AuthUserLike): ManagedUser {
 export const UserRepository = {
   async getAuthAccount(event: H3Event, id: string): Promise<{
     id: string
+    email: string | null
     emailConfirmed: boolean
     role: UserRole | null
+    tenantOnboardingStage: TenantOnboardingStage | null
+    tenantOnboardingEmail: string | null
+    identities: Array<{ provider: string, identityData: Record<string, unknown> }>
   } | null> {
     const client = serverSupabaseClient(event)
     const { data, error } = await client.auth.admin.getUserById(id)
@@ -47,8 +52,20 @@ export const UserRepository = {
     return data.user
       ? {
           id: data.user.id,
+          email: data.user.email ?? null,
           emailConfirmed: Boolean(data.user.email_confirmed_at),
           role: (data.user.app_metadata?.role as UserRole | undefined) ?? null,
+          tenantOnboardingStage: typeof data.user.app_metadata?.tenant_onboarding === 'string'
+            && ['password_required', 'email_required', 'google_required'].includes(data.user.app_metadata.tenant_onboarding)
+            ? data.user.app_metadata.tenant_onboarding as TenantOnboardingStage
+            : null,
+          tenantOnboardingEmail: typeof data.user.app_metadata?.tenant_onboarding_email === 'string'
+            ? data.user.app_metadata.tenant_onboarding_email
+            : null,
+          identities: (data.user.identities ?? []).map(identity => ({
+            provider: identity.provider,
+            identityData: (identity.identity_data ?? {}) as Record<string, unknown>,
+          })),
         }
       : null
   },
@@ -109,14 +126,25 @@ export const UserRepository = {
 
   async create(
     event: H3Event,
-    input: { email: string; password: string; full_name?: string; role: UserRole; created_by?: string | null },
+    input: {
+      email: string
+      password: string
+      full_name?: string
+      role: UserRole
+      created_by?: string | null
+      tenant_onboarding?: TenantOnboardingStage
+    },
   ): Promise<ManagedUser> {
     const client = serverSupabaseClient(event)
     const { data, error } = await client.auth.admin.createUser({
       email: input.email,
       password: input.password,
       email_confirm: true,
-      app_metadata: { role: input.role, created_by: input.created_by ?? null },
+      app_metadata: {
+        role: input.role,
+        created_by: input.created_by ?? null,
+        ...(input.tenant_onboarding ? { tenant_onboarding: input.tenant_onboarding } : {}),
+      },
       user_metadata: input.full_name ? { full_name: input.full_name } : {},
     })
 
@@ -129,6 +157,40 @@ export const UserRepository = {
     }
 
     return mapManagedUser(data.user)
+  },
+
+  async setTenantOnboardingStage(
+    event: H3Event,
+    id: string,
+    stage: TenantOnboardingStage | null,
+  ): Promise<void> {
+    const client = serverSupabaseClient(event)
+    const { data: current, error: getError } = await client.auth.admin.getUserById(id)
+    if (getError || !current.user) throwDbError(getError ?? new Error('User not found'), 'users.setTenantOnboardingStage.get')
+
+    const metadata = { ...current.user.app_metadata }
+    if (stage) metadata.tenant_onboarding = stage
+    else delete metadata.tenant_onboarding
+
+    const { error } = await client.auth.admin.updateUserById(id, { app_metadata: metadata })
+    if (error) throwDbError(error, 'users.setTenantOnboardingStage.update')
+  },
+
+  async setTenantOnboardingEmail(
+    event: H3Event,
+    id: string,
+    email: string | null,
+  ): Promise<void> {
+    const client = serverSupabaseClient(event)
+    const { data: current, error: getError } = await client.auth.admin.getUserById(id)
+    if (getError || !current.user) throwDbError(getError ?? new Error('User not found'), 'users.setTenantOnboardingEmail.get')
+
+    const metadata = { ...current.user.app_metadata }
+    if (email) metadata.tenant_onboarding_email = email
+    else delete metadata.tenant_onboarding_email
+
+    const { error } = await client.auth.admin.updateUserById(id, { app_metadata: metadata })
+    if (error) throwDbError(error, 'users.setTenantOnboardingEmail.update')
   },
 
   async update(event: H3Event, id: string, input: UserUpdateInput): Promise<ManagedUser> {

@@ -1,7 +1,9 @@
-import { beforeAll, describe, expect, it, vi } from 'vitest'
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { classifyApiNamespace } from '../../server/utils/api-namespace'
 
 vi.stubGlobal('defineEventHandler', (handler: unknown) => handler)
+const userRepo = vi.hoisted(() => ({ getAuthAccount: vi.fn() }))
+vi.mock('../../server/repositories/users', () => ({ UserRepository: userRepo }))
 
 let namespaceMiddleware: (event: {
   path: string
@@ -10,6 +12,10 @@ let namespaceMiddleware: (event: {
 
 beforeAll(async () => {
   namespaceMiddleware = (await import('../../server/middleware/02.namespace')).default as typeof namespaceMiddleware
+})
+
+beforeEach(() => {
+  userRepo.getAuthAccount.mockResolvedValue({ tenantOnboardingStage: null })
 })
 
 describe('API namespace classification', () => {
@@ -68,13 +74,13 @@ describe('API namespace classification', () => {
     ['/api/buildings', 'owner', 'internal'],
     ['/api/buildings', 'manager', 'internal'],
     ['/api/tenant/profile', 'tenant', 'tenant'],
-  ])('allows %s for a %s user', (path, role, expected) => {
+  ])('allows %s for a %s user', async (path, role, expected) => {
     const event = {
       path,
       context: { user: { app_metadata: { role } } },
     }
 
-    expect(namespaceMiddleware(event)).toBeUndefined()
+    await expect(Promise.resolve(namespaceMiddleware(event))).resolves.toBeUndefined()
     expect(event.context.apiNamespace).toBe(expected)
   })
 
@@ -92,5 +98,24 @@ describe('API namespace classification', () => {
 
     expect(namespaceMiddleware(event)).toBeUndefined()
     expect(event.context.apiNamespace).toBe('tenant')
+  })
+
+  it('rejects a tenant API request while onboarding is incomplete', () => {
+    const event = {
+      path: '/api/tenant/me',
+      context: { user: { app_metadata: { role: 'tenant', tenant_onboarding: 'google_required' } } },
+    }
+
+    expect(() => namespaceMiddleware(event)).toThrow(expect.objectContaining({ statusCode: 403 }))
+  })
+
+  it('rejects a stale tenant token when the authoritative Auth metadata requires onboarding', async () => {
+    userRepo.getAuthAccount.mockResolvedValue({ tenantOnboardingStage: 'password_required' })
+    const event = {
+      path: '/api/tenant/me',
+      context: { user: { id: 'auth-1', app_metadata: { role: 'tenant' } } },
+    }
+
+    await expect(Promise.resolve(namespaceMiddleware(event))).rejects.toMatchObject({ statusCode: 403 })
   })
 })

@@ -31,4 +31,15 @@ export const TenantProfileRepository = {
     if (error) throwDbError(error, 'tenantPortal.profile.updateByTenantId')
     return mapTenantProfile(data)
   },
+
+  async updateLoginEmail(event: H3Event, tenantId: string, email: string): Promise<TenantProfile> {
+    const { data, error } = await db(event)
+      .from('tenants')
+      .update({ email })
+      .eq('id', tenantId)
+      .select(PROFILE_SELECT)
+      .single()
+    if (error) throwDbError(error, 'tenantPortal.profile.updateLoginEmail')
+    return mapTenantProfile(data)
+  },
 }

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { getRedirectByRole } from '~/utils/auth-redirect'
+import { requiresTenantOnboarding } from '~/utils/tenant-onboarding'
 
 definePageMeta({
   layout: 'auth',
@@ -16,6 +17,10 @@ let timeoutId: ReturnType<typeof setTimeout>
 watch(user, async (newUser) => {
   if (newUser) {
     clearTimeout(timeoutId)
+    if (requiresTenantOnboarding(newUser)) {
+      await navigateTo('/auth/complete-account')
+      return
+    }
     const role = newUser.app_metadata?.role as string | null | undefined
     await navigateTo(getRedirectByRole(role))
   }

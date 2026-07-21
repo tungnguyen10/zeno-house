@@ -33,16 +33,35 @@ An `owner` SHALL be able to provision or manage an account only for a tenant tha
 
 ---
 
-### Requirement: One-time temporary credentials
-Provisioning and password reset SHALL generate a server-side random temporary password, confirm the email so the tenant can sign in immediately, and return the email and temporary password exactly once. The temporary password SHALL NOT be stored or returned again.
+### Requirement: One-time temporary credentials and required onboarding
+Provisioning and password reset SHALL generate a server-side random temporary password, confirm the email so the tenant can sign in immediately, return the email and temporary password exactly once, and set a server-controlled `app_metadata.tenant_onboarding = password_required`. The temporary password SHALL NOT be stored or returned again. A tenant with an onboarding state SHALL NOT access portal routes or tenant APIs until all onboarding steps complete.
 
 #### Scenario: Credentials returned once
 - **WHEN** an account is provisioned
 - **THEN** the response includes the email and a one-time temporary password, and subsequent status reads never include the password
 
-#### Scenario: Immediate login
+#### Scenario: Initial login starts onboarding
 - **WHEN** the tenant signs in with the temporary credentials
-- **THEN** the session is accepted and the role redirect routes to `/portal`
+- **THEN** the session is accepted and the tenant is routed to `/auth/complete-account`, not `/portal`
+
+#### Scenario: Reset password restarts onboarding
+- **WHEN** an operator resets a tenant password
+- **THEN** the account returns to `password_required` before it can use portal routes or tenant APIs
+
+### Requirement: Tenant verifies login email and links Google once
+The onboarding flow SHALL require a tenant to replace the temporary password, submit a login email, verify the new email through Supabase Auth, and link a Google identity with the same verified email before clearing `tenant_onboarding`. The verified Auth email SHALL be copied to `tenants.email`; self-service portal profile updates SHALL NOT independently change it.
+
+#### Scenario: Email verified before sync
+- **WHEN** the tenant requests an email change and has not confirmed the Supabase email link
+- **THEN** the portal profile email remains unchanged and onboarding remains blocked
+
+#### Scenario: Google identity proves the same email
+- **WHEN** the confirmed Auth account has a Google identity whose verified email equals the Auth email
+- **THEN** onboarding is cleared and the tenant is routed to `/portal`
+
+#### Scenario: Mismatched Google identity
+- **WHEN** the linked Google identity has a different email
+- **THEN** onboarding remains blocked and no portal access is granted
 
 ---
 
@@ -56,4 +75,3 @@ The system SHALL expose account status (whether a tenant has a link, its email, 
 #### Scenario: Revoke frees the email
 - **WHEN** an operator revokes a tenant account
 - **THEN** the auth user is deleted, the link is removed by cascade, and the email can be provisioned again
-

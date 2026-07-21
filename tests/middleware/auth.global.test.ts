@@ -67,6 +67,13 @@ describe('global auth middleware', () => {
     expect(await authMiddleware({ path: '/portal/profile' } as never, {} as never)).toBeUndefined()
   })
 
+  it('locks an onboarding tenant to the complete-account route', async () => {
+    currentUser.value = { app_metadata: { role: 'tenant', tenant_onboarding: 'password_required' } }
+
+    expect(await authMiddleware({ path: '/portal/profile' } as never, {} as never)).toBe('/auth/complete-account')
+    expect(await authMiddleware({ path: '/auth/complete-account' } as never, {} as never)).toBeUndefined()
+  })
+
   it('routes an unknown authenticated role out of the portal without looping', async () => {
     currentUser.value = userWithRole('unknown')
 

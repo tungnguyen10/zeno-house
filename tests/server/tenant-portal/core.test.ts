@@ -13,7 +13,7 @@ import {
 } from '~/utils/mappers/tenant-portal'
 
 describe('tenant portal validators', () => {
-  it('keeps whitelisted profile fields and strips protected columns', () => {
+  it('keeps non-credential profile fields and strips the login email', () => {
     const result = tenantProfileUpdateSchema.parse({
       full_name: 'Nguyen Van A',
       phone: '0901234567',
@@ -27,7 +27,6 @@ describe('tenant portal validators', () => {
     expect(result).toEqual({
       full_name: 'Nguyen Van A',
       phone: '0901234567',
-      email: 'tenant@example.com',
       gender: 'male',
       id_number: '012345678901',
     })
