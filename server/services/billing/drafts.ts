@@ -17,7 +17,7 @@ import { BillingSnapshotRepository } from '../../repositories/billing/snapshot'
 import type { BillingPeriodInputSnapshot } from '../../repositories/billing/snapshot'
 import { assertBuildingScope } from '../../utils/scope'
 import { billingPeriodBounds, type BillableContractPeriodRow } from './core'
-import { calculateProratedRent } from './rules'
+import { calculateProratedRent, roundUpToThousand } from './rules'
 
 // ---------------------------------------------------------------------------
 // Types describing the source rows we load. Kept local to this service so the
@@ -302,7 +302,7 @@ export const BillingDraftService = {
           sourceId: buildingCfg.id,
           quantity: 1,
           unitPrice: elecRate,
-          amount: elecRate,
+          amount: roundUpToThousand(elecRate),
           metadata: { pricing_type: 'fixed', rate: elecRate },
           sortOrder: 1,
         })
@@ -332,7 +332,7 @@ export const BillingDraftService = {
           sourceId: buildingCfg.id,
           quantity: elecOccupantCount,
           unitPrice: elecRate,
-          amount: Math.round(elecOccupantCount * elecRate * billableDays / periodDays),
+          amount: roundUpToThousand(Math.round(elecOccupantCount * elecRate * billableDays / periodDays)),
           metadata: {
             pricing_type: 'per_person',
             rate: elecRate,
@@ -346,7 +346,7 @@ export const BillingDraftService = {
       } else {
         // per_kwh: needs current+previous (or override)
         if (elecOverride) {
-          const amount = Math.round(elecOverride.billableUsage * elecRate)
+          const amount = roundUpToThousand(Math.round(elecOverride.billableUsage * elecRate))
           lines.push({
             chargeType: 'electricity',
             label: 'Tiền điện',
@@ -398,7 +398,7 @@ export const BillingDraftService = {
                 meta: { room_id: contract.room_id, current: elecCurrent.reading_value, previous: previousRow.reading_value },
               })
             } else {
-              const amount = Math.round(usage * elecRate)
+              const amount = roundUpToThousand(Math.round(usage * elecRate))
               const isHandoverFallback = !elecPrev && !!elecHandover
               if (isHandoverFallback) {
                 warnings.push({
@@ -461,7 +461,7 @@ export const BillingDraftService = {
           sourceId: buildingCfg.id,
           quantity: 1,
           unitPrice: waterRate,
-          amount: waterRate,
+          amount: roundUpToThousand(waterRate),
           metadata: { pricing_type: 'fixed_per_room', rate: waterRate },
           sortOrder: 2,
         })
@@ -486,7 +486,7 @@ export const BillingDraftService = {
           occupantCount = contract.occupant_count
           occupantSource = 'contract_fallback'
         }
-        const amount = Math.round(occupantCount * waterRate * billableDays / periodDays)
+        const amount = roundUpToThousand(Math.round(occupantCount * waterRate * billableDays / periodDays))
         lines.push({
           chargeType: 'water',
           label: 'Tiền nước (theo người)',
@@ -508,7 +508,7 @@ export const BillingDraftService = {
       } else {
         // per_m3
         if (waterOverride) {
-          const amount = Math.round(waterOverride.billableUsage * waterRate)
+          const amount = roundUpToThousand(Math.round(waterOverride.billableUsage * waterRate))
           lines.push({
             chargeType: 'water',
             label: 'Tiền nước',
@@ -560,7 +560,7 @@ export const BillingDraftService = {
                 meta: { room_id: contract.room_id, current: waterCurrent.reading_value, previous: previousRow.reading_value },
               })
             } else {
-              const amount = Math.round(usage * waterRate)
+              const amount = roundUpToThousand(Math.round(usage * waterRate))
               const isHandoverFallback = !waterPrev && !!waterHandover
               if (isHandoverFallback) {
                 warnings.push({
@@ -597,7 +597,7 @@ export const BillingDraftService = {
       // 4) Services
       let serviceSort = 3
       for (const svc of servicesByContract.get(contract.id) ?? []) {
-        const amount = Math.round(svc.amount * svc.quantity * billableDays / periodDays)
+        const amount = roundUpToThousand(Math.round(svc.amount * svc.quantity * billableDays / periodDays))
         lines.push({
           chargeType: 'service',
           label: svc.service_catalog?.name ?? 'Dịch vụ',
@@ -631,7 +631,7 @@ export const BillingDraftService = {
           sourceId: contract.id,
           quantity: 1,
           unitPrice: contract.discount_amount,
-          amount: -contract.discount_amount,
+          amount: roundUpToThousand(-contract.discount_amount),
           metadata: {},
           sortOrder: 90,
         })
@@ -644,7 +644,7 @@ export const BillingDraftService = {
           sourceId: contract.id,
           quantity: 1,
           unitPrice: contract.surcharge_amount,
-          amount: contract.surcharge_amount,
+          amount: roundUpToThousand(contract.surcharge_amount),
           metadata: {},
           sortOrder: 91,
         })

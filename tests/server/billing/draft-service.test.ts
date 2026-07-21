@@ -193,13 +193,13 @@ describe('BillingDraftService.calculateDraft', () => {
     expect(draft?.lines.find(line => line.chargeType === 'electricity')).toMatchObject({
       quantity: 2,
       unitPrice: 50_000,
-      amount: 51_613, // Math.round(2 * 50_000 * 16 / 31)
+      amount: 52_000, // roundUpToThousand(Math.round(2 * 50_000 * 16 / 31))
       metadata: { pricing_type: 'per_person', billable_days: 16, period_days: 31 },
     })
     expect(draft?.lines.find(line => line.chargeType === 'water')).toMatchObject({
       quantity: 2,
       unitPrice: 40_000,
-      amount: 41_290, // Math.round(2 * 40_000 * 16 / 31)
+      amount: 42_000, // roundUpToThousand(Math.round(2 * 40_000 * 16 / 31))
       metadata: { pricing_type: 'per_person', billable_days: 16, period_days: 31 },
     })
   })

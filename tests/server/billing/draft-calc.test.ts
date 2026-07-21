@@ -111,7 +111,7 @@ describe('billing draft calculation rules', () => {
       electricity: buildContractCharges({ electricity: { pricingType: 'per_person', rate: 50_000 } }).electricity,
     })
     const line = result.lines.find(l => l.chargeType === 'electricity')
-    expect(line?.amount).toBe(58_065) // Math.round(3 * 50_000 * 12 / 31)
+    expect(line?.amount).toBe(59_000) // roundUpToThousand(Math.round(3 * 50_000 * 12 / 31))
     expect(line?.metadata.billable_days).toBe(12)
     expect(line?.metadata.period_days).toBe(31)
   })
@@ -124,7 +124,7 @@ describe('billing draft calculation rules', () => {
       water: buildContractCharges({ water: { pricingType: 'per_person', rate: 40_000 } }).water,
     })
     const line = result.lines.find(l => l.chargeType === 'water')
-    expect(line?.amount).toBe(61_935) // Math.round(4 * 40_000 * 12 / 31)
+    expect(line?.amount).toBe(62_000) // roundUpToThousand(Math.round(4 * 40_000 * 12 / 31))
     expect(line?.metadata.billable_days).toBe(12)
     expect(line?.metadata.period_days).toBe(31)
   })

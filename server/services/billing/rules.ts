@@ -83,6 +83,12 @@ export function daysInPeriod(year: number, month: number): number {
   return new Date(Date.UTC(year, month, 0)).getUTCDate()
 }
 
+export function roundUpToThousand(amount: number): number {
+  if (amount === 0) return 0
+  const sign = amount < 0 ? -1 : 1
+  return sign * Math.ceil(Math.abs(amount) / 1000) * 1000
+}
+
 export function calculateProratedDays(input: {
   periodYear: number
   periodMonth: number
@@ -110,7 +116,7 @@ export function calculateProratedRent(input: {
 }): { amount: number; billableDays: number; periodDays: number } {
   const { billableDays, periodDays } = calculateProratedDays(input)
   return {
-    amount: Math.round(input.monthlyRent * billableDays / periodDays),
+    amount: roundUpToThousand(Math.round(input.monthlyRent * billableDays / periodDays)),
     billableDays,
     periodDays,
   }
@@ -138,7 +144,7 @@ export function calculateTieredAmount(usage: number, brackets: TierBracket[]): {
     remaining -= quantity
     from = cap
   }
-  return { amount: total, breakdown }
+  return { amount: roundUpToThousand(total), breakdown }
 }
 
 function utilityLabel(meterType: 'electricity' | 'water', suffix = ''): string {
@@ -213,7 +219,7 @@ export function calculateDraftRule(input: DraftRuleInput): DraftRuleResult {
         sourceId: null,
         quantity: 1,
         unitPrice: config.rate,
-        amount: config.rate,
+        amount: roundUpToThousand(config.rate),
         metadata: { pricing_type: config.pricingType, rate: config.rate },
         sortOrder,
       })
@@ -234,7 +240,7 @@ export function calculateDraftRule(input: DraftRuleInput): DraftRuleResult {
         sourceId: null,
         quantity: contract.occupantCount,
         unitPrice: config.rate,
-        amount,
+        amount: roundUpToThousand(amount),
         metadata: {
           pricing_type: 'per_person',
           rate: config.rate,
@@ -288,7 +294,7 @@ export function calculateDraftRule(input: DraftRuleInput): DraftRuleResult {
     const tiered = config.pricingType === 'tiered'
       ? calculateTieredAmount(usageResult.usage, config.brackets ?? [])
       : null
-    const amount = tiered ? tiered.amount : Math.round(usageResult.usage * config.rate)
+    const amount = tiered ? tiered.amount : roundUpToThousand(Math.round(usageResult.usage * config.rate))
     lines.push({
       chargeType: meterType,
       label: utilityLabel(meterType),
@@ -322,7 +328,7 @@ export function calculateDraftRule(input: DraftRuleInput): DraftRuleResult {
       sourceId: contract.id,
       quantity: 1,
       unitPrice: contract.discountAmount ?? 0,
-      amount: -(contract.discountAmount ?? 0),
+      amount: roundUpToThousand(-(contract.discountAmount ?? 0)),
       metadata: {},
       sortOrder: 90,
     })
@@ -335,7 +341,7 @@ export function calculateDraftRule(input: DraftRuleInput): DraftRuleResult {
       sourceId: contract.id,
       quantity: 1,
       unitPrice: contract.surchargeAmount ?? 0,
-      amount: contract.surchargeAmount ?? 0,
+      amount: roundUpToThousand(contract.surchargeAmount ?? 0),
       metadata: {},
       sortOrder: 91,
     })
