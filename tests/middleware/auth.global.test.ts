@@ -74,6 +74,15 @@ describe('global auth middleware', () => {
     expect(await authMiddleware({ path: '/auth/complete-account' } as never, {} as never)).toBeUndefined()
   })
 
+  it('uses the refreshed session when the reactive onboarding user is stale', async () => {
+    currentUser.value = { app_metadata: { role: 'tenant', tenant_onboarding: 'password_required' } }
+    getSession.mockResolvedValue({ data: { session: { user: userWithRole('tenant') } } })
+
+    expect(await authMiddleware({ path: '/portal' } as never, {} as never)).toBeUndefined()
+    expect(getSession).toHaveBeenCalledOnce()
+    expect(navigateTo).not.toHaveBeenCalled()
+  })
+
   it.each(['email_required', 'google_required'])('ignores the legacy %s stage', async (stage) => {
     currentUser.value = { app_metadata: { role: 'tenant', tenant_onboarding: stage } }
 

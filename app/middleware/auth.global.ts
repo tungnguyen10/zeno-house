@@ -9,16 +9,21 @@ export default defineNuxtRouteMiddleware(async (to) => {
   if (PUBLIC_ROUTES.includes(to.path)) return
 
   const reactiveUser = useSupabaseUser()
-  let role = reactiveUser.value?.app_metadata?.role as string | null | undefined
-  let sessionUser: { app_metadata?: unknown } | null = null
+  let resolvedUser: { app_metadata?: unknown } | null = reactiveUser.value
 
-  if (!reactiveUser.value) {
-    // Covers the timing gap after sign-in before useSupabaseUser() updates.
+  if (!resolvedUser || requiresTenantOnboarding(resolvedUser)) {
+    // Covers timing gaps after sign-in and after onboarding refreshes the session.
+    // The reactive user can briefly retain password_required after the refreshed
+    // session has already cleared it.
     const { data: { session } } = await useSupabaseClient().auth.getSession()
-    if (!session) return navigateTo('/login')
-    sessionUser = session.user
-    role = session.user.app_metadata?.role as string | null | undefined
+    if (!session && !resolvedUser) return navigateTo('/login')
+    if (session) resolvedUser = session.user
   }
+
+  const metadata = resolvedUser?.app_metadata
+  const role = metadata && typeof metadata === 'object'
+    ? (metadata as Record<string, unknown>).role as string | null | undefined
+    : undefined
 
   const isPortalRoute = to.path === '/portal' || to.path.startsWith('/portal/')
   const hasKnownRole = role === 'tenant' || role === 'admin' || role === 'owner' || role === 'manager'
@@ -29,7 +34,6 @@ export default defineNuxtRouteMiddleware(async (to) => {
     return
   }
 
-  const resolvedUser = reactiveUser.value ?? sessionUser
   if (requiresTenantOnboarding(resolvedUser)) {
     if (to.path !== COMPLETE_ACCOUNT_ROUTE) return navigateTo(COMPLETE_ACCOUNT_ROUTE)
     return

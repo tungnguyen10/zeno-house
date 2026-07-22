@@ -161,7 +161,9 @@ export const UserRepository = {
 
     const metadata = { ...current.user.app_metadata }
     if (stage) metadata.tenant_onboarding = stage
-    else delete metadata.tenant_onboarding
+    // Supabase merges app_metadata on update; omitting a key leaves the stored
+    // value untouched. Null explicitly clears the onboarding gate in new JWTs.
+    else metadata.tenant_onboarding = null
 
     const { error } = await client.auth.admin.updateUserById(id, { app_metadata: metadata })
     if (error) throwDbError(error, 'users.setTenantOnboardingStage.update')
@@ -170,6 +172,9 @@ export const UserRepository = {
   async updateCurrentPassword(event: H3Event, password: string): Promise<void> {
     const client = await serverAuthClient(event)
     const { error } = await client.auth.updateUser({ password })
+    if (error?.code === 'same_password') {
+      throwValidationError('Mật khẩu mới phải khác mật khẩu hiện tại')
+    }
     if (error) throwDbError(error, 'users.updateCurrentPassword')
   },
 
