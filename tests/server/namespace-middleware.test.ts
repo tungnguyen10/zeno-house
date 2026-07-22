@@ -103,10 +103,20 @@ describe('API namespace classification', () => {
   it('rejects a tenant API request while onboarding is incomplete', () => {
     const event = {
       path: '/api/tenant/me',
-      context: { user: { app_metadata: { role: 'tenant', tenant_onboarding: 'google_required' } } },
+      context: { user: { app_metadata: { role: 'tenant', tenant_onboarding: 'password_required' } } },
     }
 
     expect(() => namespaceMiddleware(event)).toThrow(expect.objectContaining({ statusCode: 403 }))
+  })
+
+  it.each(['email_required', 'google_required'])('ignores the legacy %s stage in tenant APIs', async (stage) => {
+    userRepo.getAuthAccount.mockResolvedValue({ tenantOnboardingStage: stage })
+    const event = {
+      path: '/api/tenant/me',
+      context: { user: { id: 'auth-1', app_metadata: { role: 'tenant', tenant_onboarding: stage } } },
+    }
+
+    await expect(Promise.resolve(namespaceMiddleware(event))).resolves.toBeUndefined()
   })
 
   it('rejects a stale tenant token when the authoritative Auth metadata requires onboarding', async () => {

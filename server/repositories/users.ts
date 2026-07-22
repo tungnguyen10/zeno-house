@@ -41,8 +41,6 @@ export const UserRepository = {
     emailConfirmed: boolean
     role: UserRole | null
     tenantOnboardingStage: TenantOnboardingStage | null
-    tenantOnboardingEmail: string | null
-    identities: Array<{ provider: string, identityData: Record<string, unknown> }>
   } | null> {
     const client = serverSupabaseClient(event)
     const { data, error } = await client.auth.admin.getUserById(id)
@@ -56,17 +54,9 @@ export const UserRepository = {
           email: data.user.email ?? null,
           emailConfirmed: Boolean(data.user.email_confirmed_at),
           role: (data.user.app_metadata?.role as UserRole | undefined) ?? null,
-          tenantOnboardingStage: typeof data.user.app_metadata?.tenant_onboarding === 'string'
-            && ['password_required', 'email_required', 'google_required'].includes(data.user.app_metadata.tenant_onboarding)
+          tenantOnboardingStage: data.user.app_metadata?.tenant_onboarding === 'password_required'
             ? data.user.app_metadata.tenant_onboarding as TenantOnboardingStage
             : null,
-          tenantOnboardingEmail: typeof data.user.app_metadata?.tenant_onboarding_email === 'string'
-            ? data.user.app_metadata.tenant_onboarding_email
-            : null,
-          identities: (data.user.identities ?? []).map(identity => ({
-            provider: identity.provider,
-            identityData: (identity.identity_data ?? {}) as Record<string, unknown>,
-          })),
         }
       : null
   },
@@ -175,23 +165,6 @@ export const UserRepository = {
 
     const { error } = await client.auth.admin.updateUserById(id, { app_metadata: metadata })
     if (error) throwDbError(error, 'users.setTenantOnboardingStage.update')
-  },
-
-  async setTenantOnboardingEmail(
-    event: H3Event,
-    id: string,
-    email: string | null,
-  ): Promise<void> {
-    const client = serverSupabaseClient(event)
-    const { data: current, error: getError } = await client.auth.admin.getUserById(id)
-    if (getError || !current.user) throwDbError(getError ?? new Error('User not found'), 'users.setTenantOnboardingEmail.get')
-
-    const metadata = { ...current.user.app_metadata }
-    if (email) metadata.tenant_onboarding_email = email
-    else delete metadata.tenant_onboarding_email
-
-    const { error } = await client.auth.admin.updateUserById(id, { app_metadata: metadata })
-    if (error) throwDbError(error, 'users.setTenantOnboardingEmail.update')
   },
 
   async updateCurrentPassword(event: H3Event, password: string): Promise<void> {

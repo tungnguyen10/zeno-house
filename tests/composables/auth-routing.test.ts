@@ -7,7 +7,7 @@ const signUp = vi.fn()
 const resetPasswordForEmail = vi.fn()
 const updateUser = vi.fn()
 const refreshSession = vi.fn()
-const linkIdentity = vi.fn()
+const signInWithOAuth = vi.fn()
 const apiFetch = vi.fn()
 const currentUser = ref<Record<string, unknown> | null>(null)
 
@@ -20,9 +20,8 @@ vi.stubGlobal('useSupabaseClient', () => ({
     signUp,
     resetPasswordForEmail,
     updateUser,
-    linkIdentity,
     refreshSession,
-    signInWithOAuth: vi.fn(),
+    signInWithOAuth,
     signOut: vi.fn(),
   },
 }))
@@ -38,8 +37,8 @@ describe('auth landing routes', () => {
     signInWithPassword.mockReset()
     apiFetch.mockReset()
     updateUser.mockReset()
-    linkIdentity.mockReset()
     refreshSession.mockReset()
+    signInWithOAuth.mockReset()
   })
 
   it.each([
@@ -77,6 +76,17 @@ describe('auth landing routes', () => {
     expect(navigateTo).toHaveBeenCalledWith('/auth/complete-account')
   })
 
+  it('keeps Google as a normal login option', async () => {
+    signInWithOAuth.mockResolvedValue({ error: null })
+
+    await useAuth().loginWithGoogle()
+
+    expect(signInWithOAuth).toHaveBeenCalledWith({
+      provider: 'google',
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
+    })
+  })
+
   it('registers without accepting a role and routes an immediate session to pending', async () => {
     signUp.mockResolvedValue({ data: { session: {}, user: {} }, error: null })
     const result = await useAuth().register({ full_name: 'A', email: 'a@example.com', password: 'password-123', password_confirmation: 'password-123' }, 'captcha-token')
@@ -97,35 +107,20 @@ describe('auth landing routes', () => {
     expect(updateUser).toHaveBeenCalledWith({ password: 'password-123' })
   })
 
-  it('uses the lifecycle APIs and links Google to the existing Auth user', async () => {
+  it('uses only the password lifecycle API for tenant onboarding', async () => {
     apiFetch.mockResolvedValue({})
     refreshSession.mockResolvedValue({ data: { session: {} }, error: null })
-    updateUser.mockResolvedValue({ error: null })
-    linkIdentity.mockResolvedValue({ error: null })
 
     const auth = useAuth()
     await auth.setOnboardingPassword('password-123')
-    await auth.requestOnboardingEmail('tenant@example.com')
-    await auth.confirmOnboardingEmail()
-    await auth.linkGoogleIdentity()
-    await auth.confirmGoogleIdentity()
 
-    expect(apiFetch).toHaveBeenNthCalledWith(1, '/api/auth/tenant-onboarding/password', {
+    expect(apiFetch).toHaveBeenCalledWith('/api/auth/tenant-onboarding/password', {
       method: 'POST', body: { password: 'password-123' },
     })
-    expect(apiFetch).toHaveBeenNthCalledWith(2, '/api/auth/tenant-onboarding/email', {
-      method: 'POST', body: { email: 'tenant@example.com' },
-    })
-    expect(apiFetch).toHaveBeenNthCalledWith(3, '/api/auth/tenant-onboarding/email/confirm', { method: 'POST' })
-    expect(apiFetch).toHaveBeenNthCalledWith(4, '/api/auth/tenant-onboarding/google/confirm', { method: 'POST' })
-    expect(updateUser).toHaveBeenCalledWith(
-      { email: 'tenant@example.com' },
-      { emailRedirectTo: `${window.location.origin}/auth/complete-account` },
-    )
-    expect(linkIdentity).toHaveBeenCalledWith({
-      provider: 'google',
-      options: { redirectTo: `${window.location.origin}/auth/complete-account` },
-    })
+    expect(auth).not.toHaveProperty('requestOnboardingEmail')
+    expect(auth).not.toHaveProperty('confirmOnboardingEmail')
+    expect(auth).not.toHaveProperty('linkGoogleIdentity')
+    expect(auth).not.toHaveProperty('confirmGoogleIdentity')
   })
 
   it('keeps the current Supabase session refreshable after onboarding password change', async () => {
@@ -151,11 +146,11 @@ describe('auth landing routes', () => {
     expect(await guestMiddleware({ path: '/login' } as never, {} as never)).toBe(expected)
   })
 
-  it('keeps a staged tenant on the complete-account route when visiting login', async () => {
+  it('ignores a legacy onboarding stage when visiting login', async () => {
     currentUser.value = {
       app_metadata: { role: 'tenant', tenant_onboarding: 'email_required' },
     }
 
-    expect(await guestMiddleware({ path: '/login' } as never, {} as never)).toBe('/auth/complete-account')
+    expect(await guestMiddleware({ path: '/login' } as never, {} as never)).toBe('/portal')
   })
 })

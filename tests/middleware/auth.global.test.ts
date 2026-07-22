@@ -74,6 +74,12 @@ describe('global auth middleware', () => {
     expect(await authMiddleware({ path: '/auth/complete-account' } as never, {} as never)).toBeUndefined()
   })
 
+  it.each(['email_required', 'google_required'])('ignores the legacy %s stage', async (stage) => {
+    currentUser.value = { app_metadata: { role: 'tenant', tenant_onboarding: stage } }
+
+    expect(await authMiddleware({ path: '/portal/profile' } as never, {} as never)).toBeUndefined()
+  })
+
   it('routes an unknown authenticated role out of the portal without looping', async () => {
     currentUser.value = userWithRole('unknown')
 

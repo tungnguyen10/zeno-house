@@ -64,33 +64,6 @@ export function useAuth() {
     await refreshSession()
   }
 
-  async function requestOnboardingEmail(email: string) {
-    await apiFetch('/api/auth/tenant-onboarding/email', { method: 'POST', body: { email } })
-    const { error } = await supabase.auth.updateUser(
-      { email },
-      { emailRedirectTo: `${window.location.origin}/auth/complete-account` },
-    )
-    if (error) throw error
-  }
-
-  async function confirmOnboardingEmail() {
-    await apiFetch('/api/auth/tenant-onboarding/email/confirm', { method: 'POST' })
-    await refreshSession()
-  }
-
-  async function linkGoogleIdentity() {
-    const { error } = await supabase.auth.linkIdentity({
-      provider: 'google',
-      options: { redirectTo: `${window.location.origin}/auth/complete-account` },
-    })
-    if (error) throw error
-  }
-
-  async function confirmGoogleIdentity() {
-    await apiFetch('/api/auth/tenant-onboarding/google/confirm', { method: 'POST' })
-    await refreshSession()
-  }
-
   async function refreshSession() {
     const { data, error } = await supabase.auth.refreshSession()
     if (error) throw error
@@ -109,10 +82,6 @@ export function useAuth() {
     requestPasswordReset,
     updatePassword,
     setOnboardingPassword,
-    requestOnboardingEmail,
-    confirmOnboardingEmail,
-    linkGoogleIdentity,
-    confirmGoogleIdentity,
     refreshSession,
     logout,
   }

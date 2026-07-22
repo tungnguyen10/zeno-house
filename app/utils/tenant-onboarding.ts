@@ -1,8 +1,4 @@
-export const TENANT_ONBOARDING_STAGES = [
-  'password_required',
-  'email_required',
-  'google_required',
-] as const
+export const TENANT_ONBOARDING_STAGES = ['password_required'] as const
 
 export type TenantOnboardingStage = (typeof TENANT_ONBOARDING_STAGES)[number]
 

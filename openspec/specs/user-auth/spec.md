@@ -9,8 +9,12 @@ App SHALL cho phép authenticated app users đăng nhập bằng email và passw
 - **THEN** session được tạo và user được redirect theo `getRedirectByRole(role)`
 
 #### Scenario: Tenant onboarding overrides portal redirect
-- **WHEN** tenant login thành công và `app_metadata.tenant_onboarding` là `password_required`, `email_required`, hoặc `google_required`
+- **WHEN** tenant login thành công và `app_metadata.tenant_onboarding` là `password_required`
 - **THEN** app redirect tới `/auth/complete-account` và không render `/portal`
+
+#### Scenario: Legacy onboarding metadata does not block portal
+- **WHEN** tenant login thành công và `app_metadata.tenant_onboarding` là `email_required` hoặc `google_required`
+- **THEN** app bỏ qua metadata cũ và redirect tới `/portal`
 
 #### Scenario: Callback redirect theo role
 - **WHEN** OAuth callback hoàn tất và session có `app_metadata.role`

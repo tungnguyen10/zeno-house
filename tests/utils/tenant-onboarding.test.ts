@@ -5,13 +5,20 @@ import {
 } from '~/utils/tenant-onboarding'
 
 describe('tenant onboarding state', () => {
-  it.each(['password_required', 'email_required', 'google_required'] as const)(
-    'recognizes the %s stage only for tenant accounts',
+  it('recognizes password_required only for tenant accounts', () => {
+    const user = { app_metadata: { role: 'tenant', tenant_onboarding: 'password_required' } }
+
+    expect(getTenantOnboardingStage(user)).toBe('password_required')
+    expect(requiresTenantOnboarding(user)).toBe(true)
+  })
+
+  it.each(['email_required', 'google_required'])(
+    'ignores the legacy %s metadata without requiring a data migration',
     (stage) => {
       const user = { app_metadata: { role: 'tenant', tenant_onboarding: stage } }
 
-      expect(getTenantOnboardingStage(user)).toBe(stage)
-      expect(requiresTenantOnboarding(user)).toBe(true)
+      expect(getTenantOnboardingStage(user)).toBeNull()
+      expect(requiresTenantOnboarding(user)).toBe(false)
     },
   )
 

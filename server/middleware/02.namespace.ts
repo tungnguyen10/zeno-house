@@ -23,7 +23,7 @@ export default defineEventHandler((event) => {
   }
   if (apiNamespace === 'tenant' && role === ROLES.TENANT) {
     return UserRepository.getAuthAccount(event, user.id).then((account) => {
-      if (account?.tenantOnboardingStage) {
+      if (account?.tenantOnboardingStage === 'password_required') {
         throwForbidden('Cần hoàn tất thiết lập tài khoản trước khi sử dụng portal')
       }
     })

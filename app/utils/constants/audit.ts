@@ -28,8 +28,6 @@ export const AUDIT_ACTIONS = {
   TENANT_ACCOUNT_PASSWORD_RESET: 'tenant.account.password_reset',
   TENANT_ACCOUNT_REVOKED: 'tenant.account.revoked',
   TENANT_ACCOUNT_PASSWORD_CHANGED: 'tenant.account.password_changed',
-  TENANT_ACCOUNT_EMAIL_CONFIRMED: 'tenant.account.email_confirmed',
-  TENANT_ACCOUNT_GOOGLE_LINKED: 'tenant.account.google_linked',
   SUPPORT_REQUEST_CREATED: 'support_request.created',
 
   // Contract

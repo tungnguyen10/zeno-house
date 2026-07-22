@@ -42,13 +42,23 @@ describe('auth callback', () => {
 
   it('returns a tenant with unfinished onboarding to complete-account', async () => {
     currentUser.value = {
-      app_metadata: { role: 'tenant', tenant_onboarding: 'google_required' },
+      app_metadata: { role: 'tenant', tenant_onboarding: 'password_required' },
     }
 
     const wrapper = shallowMount(AuthCallback)
     await flushPromises()
 
     expect(navigateTo).toHaveBeenCalledWith('/auth/complete-account')
+    wrapper.unmount()
+  })
+
+  it.each(['email_required', 'google_required'])('routes legacy %s metadata to the portal', async (stage) => {
+    currentUser.value = { app_metadata: { role: 'tenant', tenant_onboarding: stage } }
+
+    const wrapper = shallowMount(AuthCallback)
+    await flushPromises()
+
+    expect(navigateTo).toHaveBeenCalledWith('/portal')
     wrapper.unmount()
   })
 })
