@@ -1,5 +1,6 @@
 -- Verifies primary and roommate tenant RLS against the linked Supabase project.
--- Requires one existing room and two auth users without tenant_user_links.
+-- Requires one room without an active contract, one unused billing-period slot,
+-- and two auth users without tenant_user_links.
 -- All fixture rows are created inside this transaction and rolled back.
 
 begin;
@@ -16,6 +17,43 @@ create temporary table tenant_rls_test_context (
 ) on commit drop;
 
 grant select on tenant_rls_test_context to authenticated;
+
+create temporary table tenant_rls_test_fixture (
+  room_id uuid not null,
+  building_id uuid not null,
+  period_year integer not null,
+  period_month integer not null
+) on commit drop;
+
+insert into tenant_rls_test_fixture
+select
+  fixture_room.id,
+  fixture_room.building_id,
+  available_period.period_year,
+  available_period.period_month
+from public.rooms as fixture_room
+cross join lateral (
+  select year_slot.period_year, month_slot.period_month
+  from generate_series(2000, 2100) as year_slot(period_year)
+  cross join generate_series(1, 12) as month_slot(period_month)
+  where not exists (
+    select 1
+    from public.billing_periods as billing_period
+    where billing_period.building_id = fixture_room.building_id
+      and billing_period.period_year = year_slot.period_year
+      and billing_period.period_month = month_slot.period_month
+  )
+  order by year_slot.period_year desc, month_slot.period_month desc
+  limit 1
+) as available_period
+where not exists (
+  select 1
+  from public.contracts as existing
+  where existing.room_id = fixture_room.id
+    and existing.status = 'active'
+)
+order by fixture_room.created_at
+limit 1;
 
 insert into tenant_rls_test_context
 select
@@ -43,8 +81,8 @@ begin
   if not exists (select 1 from tenant_rls_test_context) then
     raise exception 'tenant RLS verification requires two unlinked auth users';
   end if;
-  if not exists (select 1 from public.rooms) then
-    raise exception 'tenant RLS verification requires one room';
+  if not exists (select 1 from tenant_rls_test_fixture) then
+    raise exception 'tenant RLS verification requires one room without an active contract and an unused billing period';
   end if;
 end
 $$;
@@ -73,28 +111,28 @@ insert into public.contracts (
 select
   context.shared_contract_id,
   'RLS-SHARED-' || left(context.shared_contract_id::text, 8),
-  room.building_id,
-  room.id,
+  fixture.building_id,
+  fixture.room_id,
   context.primary_tenant_id,
   (now() at time zone 'Asia/Ho_Chi_Minh')::date - 30,
   (now() at time zone 'Asia/Ho_Chi_Minh')::date + 30,
   1,
   'active'
 from tenant_rls_test_context as context
-cross join lateral (select id, building_id from public.rooms order by created_at limit 1) as room
+cross join tenant_rls_test_fixture as fixture
 union all
 select
   context.other_contract_id,
   'RLS-OTHER-' || left(context.other_contract_id::text, 8),
-  room.building_id,
-  room.id,
+  fixture.building_id,
+  fixture.room_id,
   context.other_tenant_id,
   (now() at time zone 'Asia/Ho_Chi_Minh')::date - 30,
   (now() at time zone 'Asia/Ho_Chi_Minh')::date + 30,
   1,
-  'active'
+  'terminated'
 from tenant_rls_test_context as context
-cross join lateral (select id, building_id from public.rooms order by created_at limit 1) as room;
+cross join tenant_rls_test_fixture as fixture;
 
 insert into public.contract_occupants (
   contract_id, tenant_id, role, move_in_date, move_out_date
@@ -107,12 +145,12 @@ insert into public.billing_periods (
 )
 select
   context.billing_period_id,
-  room.building_id,
-  2099,
-  12,
+  fixture.building_id,
+  fixture.period_year,
+  fixture.period_month,
   'draft'
 from tenant_rls_test_context as context
-cross join lateral (select building_id from public.rooms order by created_at limit 1) as room;
+cross join tenant_rls_test_fixture as fixture;
 
 insert into public.invoices (
   invoice_code, billing_period_id, contract_id, room_id, tenant_id, status
@@ -121,21 +159,21 @@ select
   'RLS-SHARED-' || left(context.shared_contract_id::text, 8),
   context.billing_period_id,
   context.shared_contract_id,
-  room.id,
+  fixture.room_id,
   context.primary_tenant_id,
   'draft'
 from tenant_rls_test_context as context
-cross join lateral (select id from public.rooms order by created_at limit 1) as room
+cross join tenant_rls_test_fixture as fixture
 union all
 select
   'RLS-OTHER-' || left(context.other_contract_id::text, 8),
   context.billing_period_id,
   context.other_contract_id,
-  room.id,
+  fixture.room_id,
   context.other_tenant_id,
   'draft'
 from tenant_rls_test_context as context
-cross join lateral (select id from public.rooms order by created_at limit 1) as room;
+cross join tenant_rls_test_fixture as fixture;
 
 -- Primary tenant retains direct profile, contract, and invoice access.
 select set_config(

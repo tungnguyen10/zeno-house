@@ -6,6 +6,10 @@ const sql = readFileSync(resolve(
   process.cwd(),
   'supabase/migrations/20260722085743_tenant_roommate_portal_access.sql',
 ), 'utf8')
+const verificationSql = readFileSync(resolve(
+  process.cwd(),
+  'supabase/verification/tenant_identity_rls.sql',
+), 'utf8')
 
 function policy(name: string): string {
   const match = sql.match(new RegExp(`create policy ${name}[\\s\\S]*?;`, 'i'))
@@ -56,5 +60,20 @@ describe('tenant roommate portal RLS migration', () => {
       expect(statement).toContain('link.auth_user_id = (select auth.uid())')
       expect(statement).toContain("link.status = 'active'")
     }
+  })
+})
+
+describe('tenant roommate RLS verification fixtures', () => {
+  it('uses a room without an active contract and creates only one active fixture contract', () => {
+    const contractFixtureInsert = verificationSql.match(/insert into public\.contracts[\s\S]*?;/i)?.[0] ?? ''
+
+    expect(verificationSql).toMatch(/from public\.rooms as fixture_room[\s\S]*?where not exists \([\s\S]*?existing\.room_id = fixture_room\.id[\s\S]*?existing\.status = 'active'/i)
+    expect(contractFixtureInsert.match(/^\s*'active'\s*$/gim)).toHaveLength(1)
+    expect(contractFixtureInsert.match(/^\s*'terminated'\s*$/gim)).toHaveLength(1)
+  })
+
+  it('chooses an unused billing period for the fixture building', () => {
+    expect(verificationSql).toContain('generate_series(2000, 2100)')
+    expect(verificationSql).toContain('billing_period.building_id = fixture_room.building_id')
   })
 })
