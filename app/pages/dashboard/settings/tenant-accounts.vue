@@ -271,6 +271,21 @@ const revokeMessage = computed(() =>
             >
               <p class="text-sm font-medium text-white">{{ tenant.fullName }}</p>
               <p class="text-xs text-muted">{{ tenant.code }} · {{ tenant.phone }}</p>
+              <div v-if="tenant.activeAssignment" class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
+                <span>Phòng {{ tenant.activeAssignment.roomNumber }} · {{ tenant.activeAssignment.buildingName }}</span>
+                <span
+                  v-if="tenant.activeAssignment.assignmentRole === 'roommate'"
+                  class="rounded-full bg-cyan/10 px-2 py-0.5 font-medium text-cyan"
+                >
+                  Người ở cùng
+                </span>
+              </div>
+              <p
+                v-if="tenant.activeAssignment?.assignmentRole === 'roommate' && tenant.activeAssignment.primaryTenantName"
+                class="mt-1 text-xs text-muted"
+              >
+                Người đứng hợp đồng: {{ tenant.activeAssignment.primaryTenantName }}
+              </p>
             </li>
           </ul>
         </div>
@@ -278,6 +293,25 @@ const revokeMessage = computed(() =>
         <div v-if="selectedTenant" class="rounded-lg border border-dark-border bg-dark-surface p-3">
           <p class="text-sm font-medium text-white">{{ selectedTenant.fullName }}</p>
           <p class="text-xs text-muted">{{ selectedTenant.code }}</p>
+          <div v-if="selectedTenant.activeAssignment" class="mt-2 border-t border-dark-border pt-2">
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="text-xs text-muted">
+                Phòng {{ selectedTenant.activeAssignment.roomNumber }} · {{ selectedTenant.activeAssignment.buildingName }}
+              </span>
+              <span
+                v-if="selectedTenant.activeAssignment.assignmentRole === 'roommate'"
+                class="rounded-full bg-cyan/10 px-2 py-0.5 text-xs font-medium text-cyan"
+              >
+                Người ở cùng
+              </span>
+            </div>
+            <p
+              v-if="selectedTenant.activeAssignment.assignmentRole === 'roommate' && selectedTenant.activeAssignment.primaryTenantName"
+              class="mt-1 text-xs text-muted"
+            >
+              Người đứng hợp đồng: {{ selectedTenant.activeAssignment.primaryTenantName }}
+            </p>
+          </div>
         </div>
 
         <div>

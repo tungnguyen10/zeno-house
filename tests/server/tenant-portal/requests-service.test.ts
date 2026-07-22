@@ -5,7 +5,7 @@ const mocks = vi.hoisted(() => ({
   resolveTenantId: vi.fn(),
   getAssignedBuildingIds: vi.fn(),
   listByTenantId: vi.fn(),
-  findActiveContractContext: vi.fn(),
+  resolveHousing: vi.fn(),
   create: vi.fn(),
   listByBuildingIds: vi.fn(),
   upload: vi.fn(),
@@ -21,10 +21,12 @@ vi.mock('../../../server/utils/scope', () => ({
 vi.mock('../../../server/repositories/tenant-portal/requests', () => ({
   TenantSupportRequestRepository: {
     listByTenantId: mocks.listByTenantId,
-    findActiveContractContext: mocks.findActiveContractContext,
     create: mocks.create,
     listByBuildingIds: mocks.listByBuildingIds,
   },
+}))
+vi.mock('../../../server/repositories/tenant-portal/housing', () => ({
+  TenantHousingRepository: { resolveActive: mocks.resolveHousing },
 }))
 vi.mock('../../../server/repositories/tenant-portal/documents', () => ({
   TenantDocumentRepository: {
@@ -65,9 +67,13 @@ beforeEach(() => {
   mocks.resolveTenantId.mockResolvedValue('tenant-1')
   mocks.getAssignedBuildingIds.mockResolvedValue(['building-1'])
   mocks.listByTenantId.mockResolvedValue([stored])
-  mocks.findActiveContractContext.mockResolvedValue({
+  mocks.resolveHousing.mockResolvedValue({
     contractId: 'contract-1',
     buildingId: 'building-1',
+    primaryTenantId: 'tenant-primary',
+    assignmentRole: 'roommate',
+    primaryTenantName: 'Primary Tenant',
+    contract: {},
   })
   mocks.create.mockImplementation((_event, input) => Promise.resolve({ ...stored, ...input }))
   mocks.listByBuildingIds.mockResolvedValue([stored])
@@ -131,7 +137,7 @@ describe('TenantSupportRequestService tenant scope', () => {
       attachment_path: 'other-tenant/secret.pdf',
     } as never, '2026-07-17')
 
-    expect(mocks.findActiveContractContext).toHaveBeenCalledWith(
+    expect(mocks.resolveHousing).toHaveBeenCalledWith(
       expect.anything(),
       'tenant-1',
       '2026-07-17',
@@ -169,7 +175,7 @@ describe('TenantSupportRequestService tenant scope', () => {
   })
 
   it('rejects creation when the tenant has no active contract context', async () => {
-    mocks.findActiveContractContext.mockResolvedValue(null)
+    mocks.resolveHousing.mockResolvedValue(null)
     const svc = await service()
 
     await expect(svc.create({} as never, tenant, {

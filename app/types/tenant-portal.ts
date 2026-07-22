@@ -61,6 +61,8 @@ export interface TenantContractSummary {
   monthlyRent: number
   deposit: number
   status: ContractStatus
+  assignmentRole: 'primary' | 'roommate'
+  primaryTenantName: string | null
 }
 
 export interface TenantInvoiceListItem {

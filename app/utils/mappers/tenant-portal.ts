@@ -77,7 +77,11 @@ export function mapTenantProfile(row: TenantProfileRow): TenantProfile {
   }
 }
 
-export function mapTenantContractSummary(row: TenantContractSummaryRow): TenantContractSummary {
+export function mapTenantContractSummary(
+  row: TenantContractSummaryRow,
+  assignmentRole: TenantContractSummary['assignmentRole'] = 'primary',
+  primaryTenantName: string | null = null,
+): TenantContractSummary {
   return {
     id: row.id,
     contractCode: row.contract_code,
@@ -88,6 +92,8 @@ export function mapTenantContractSummary(row: TenantContractSummaryRow): TenantC
     monthlyRent: row.monthly_rent,
     deposit: row.deposit,
     status: row.status as ContractStatus,
+    assignmentRole,
+    primaryTenantName,
   }
 }
 

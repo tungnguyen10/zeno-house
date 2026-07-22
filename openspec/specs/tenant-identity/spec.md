@@ -55,10 +55,29 @@ The system SHALL provide `resolveTenantId(event, user)` that returns the tenant 
 - **WHEN** a request includes a `tenant_id` in body/query
 - **THEN** the resolver value is used and the client value is ignored
 
+### Requirement: Active housing context resolver
+The system SHALL resolve tenant housing context server-side after identity resolution. It SHALL
+prefer a current active contract whose `tenant_id` is the linked tenant; otherwise it SHALL use a
+`contract_occupants` row for that tenant only when move-in has been reached, `move_out_date` is
+null, and the related contract is active and within its date range. The result SHALL include the
+contract, building, primary tenant, assignment role, and primary tenant name.
+
+#### Scenario: Primary contract wins
+- **WHEN** a tenant has both a current primary contract and an occupancy record
+- **THEN** housing context uses the primary contract with `assignmentRole = primary`
+
+#### Scenario: Active roommate resolves shared housing
+- **WHEN** the linked tenant has no current primary contract but is an active occupant
+- **THEN** housing context uses that occupant's contract with `assignmentRole = roommate`
+
+#### Scenario: Inactive occupancy grants no shared context
+- **WHEN** move-in is in the future, move-out is recorded, or the contract is expired or terminated
+- **THEN** no roommate housing context is returned
+
 ---
 
 ### Requirement: Tenant-readable RLS baseline
-Tenant-readable tables (`tenants`, `contracts`, `invoices`) SHALL be deny-by-default for the `tenant` role, granting direct authenticated read only through policies scoped via `tenant_user_links`. The server remains the primary gate; RLS is the non-bypassable safety net.
+Tenant-readable tables (`tenants`, `contract_occupants`, `contracts`, `invoices`) SHALL be deny-by-default for the `tenant` role, granting direct authenticated read only through an active `tenant_user_links` row. A tenant SHALL read only their own profile and occupancy rows. Primary tenants SHALL retain direct contract/invoice history; active roommates SHALL additionally read only the current shared contract and invoices for that contract. The server remains the primary gate; RLS is the non-bypassable safety net.
 
 #### Scenario: Tenant cannot read other tenants' rows directly
 - **WHEN** a `tenant` user attempts a direct authenticated read of a row not linked to them
@@ -68,3 +87,10 @@ Tenant-readable tables (`tenants`, `contracts`, `invoices`) SHALL be deny-by-def
 - **WHEN** a tenant self-select policy evaluates
 - **THEN** it matches rows only through the caller's `tenant_user_links` mapping
 
+#### Scenario: Roommate profile isolation
+- **WHEN** an active roommate can read a shared contract and its invoices
+- **THEN** the primary tenant's profile remains hidden
+
+#### Scenario: Move-out revokes shared direct reads
+- **WHEN** an occupant receives a `move_out_date`
+- **THEN** RLS stops returning the shared contract and invoices immediately

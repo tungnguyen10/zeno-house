@@ -31,4 +31,19 @@ describe('CrossPeriodInvoiceRepository.findCrossPeriodById', () => {
     expect(mock.eq).toHaveBeenNthCalledWith(1, column, identifier)
     expect(mock.eq).toHaveBeenNthCalledWith(2, 'tenant_id', 'tenant-1')
   })
+
+  it('applies a contract scope for roommate invoice detail', async () => {
+    const mock = queryMock()
+    dbMock.mockReturnValue(mock.client)
+    const { CrossPeriodInvoiceRepository } = await import('../../../server/repositories/invoices')
+
+    await CrossPeriodInvoiceRepository.findCrossPeriodById(
+      {} as never,
+      'INV-2026-0001',
+      { contractId: 'contract-shared' },
+    )
+
+    expect(mock.eq).toHaveBeenNthCalledWith(1, 'invoice_code', 'INV-2026-0001')
+    expect(mock.eq).toHaveBeenNthCalledWith(2, 'contract_id', 'contract-shared')
+  })
 })

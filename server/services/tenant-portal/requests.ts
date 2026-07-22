@@ -8,6 +8,7 @@ import type { TENANT_DOCUMENT_MIME_TYPES } from '~/utils/validators/tenant-porta
 import { tenantSupportRequestCreateSchema } from '~/utils/validators/tenant-portal'
 import { TenantDocumentRepository } from '../../repositories/tenant-portal/documents'
 import { TenantSupportRequestRepository } from '../../repositories/tenant-portal/requests'
+import { TenantHousingRepository } from '../../repositories/tenant-portal/housing'
 import { throwConflict, throwForbidden, throwInternal, throwValidationError } from '../../utils/errors'
 import { can } from '../../utils/permissions'
 import { getAssignedBuildingIds, resolveTenantId } from '../../utils/scope'
@@ -99,7 +100,7 @@ export const TenantSupportRequestService = {
     }
     const parsed = parseSubmission(input)
     const tenantId = await resolveTenantId(event, user)
-    const context = await TenantSupportRequestRepository.findActiveContractContext(
+    const context = await TenantHousingRepository.resolveActive(
       event,
       tenantId,
       today,

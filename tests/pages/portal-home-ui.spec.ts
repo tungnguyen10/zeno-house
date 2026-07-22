@@ -22,4 +22,10 @@ describe('portal home refreshed statement UI', () => {
   it('uses the statement skeleton shape while the hero is loading', () => {
     expect(page).toContain('<PortalSkeleton v-if="loading" variant="statement"')
   })
+
+  it('labels roommate access and names the primary tenant', () => {
+    expect(page).toContain("contract.assignmentRole === 'roommate'")
+    expect(page).toContain('Người ở cùng')
+    expect(page).toContain('Người đứng hợp đồng: {{ contract.primaryTenantName }}')
+  })
 })

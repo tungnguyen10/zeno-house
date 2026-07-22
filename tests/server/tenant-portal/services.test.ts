@@ -4,7 +4,7 @@ const mocks = vi.hoisted(() => ({
   resolveTenantId: vi.fn(),
   findProfile: vi.fn(),
   updateProfile: vi.fn(),
-  findContract: vi.fn(),
+  resolveHousing: vi.fn(),
   listInvoices: vi.fn(),
   findInvoiceDetail: vi.fn(),
   auditAppend: vi.fn(),
@@ -18,8 +18,8 @@ vi.mock('../../../server/repositories/tenant-portal/profile', () => ({
     updateByTenantId: mocks.updateProfile,
   },
 }))
-vi.mock('../../../server/repositories/tenant-portal/contract', () => ({
-  TenantContractRepository: { findActiveByTenantId: mocks.findContract },
+vi.mock('../../../server/repositories/tenant-portal/housing', () => ({
+  TenantHousingRepository: { resolveActive: mocks.resolveHousing },
 }))
 vi.mock('../../../server/repositories/tenant-portal/invoices', () => ({
   TenantInvoiceRepository: {
@@ -39,7 +39,7 @@ describe('tenant portal services', () => {
     mocks.resolveTenantId.mockResolvedValue('tenant-1')
     mocks.findProfile.mockResolvedValue({ id: 'tenant-1' })
     mocks.updateProfile.mockResolvedValue({ id: 'tenant-1', phone: '0902' })
-    mocks.findContract.mockResolvedValue(null)
+    mocks.resolveHousing.mockResolvedValue(null)
     mocks.findDomainContract.mockResolvedValue({ buildingId: 'building-1' })
     mocks.listInvoices.mockResolvedValue({ items: [], total: 0 })
     mocks.findInvoiceDetail.mockResolvedValue(null)
@@ -81,17 +81,24 @@ describe('tenant portal services', () => {
       deposit: 10_000_000,
       status: 'active',
     }
-    mocks.findContract.mockResolvedValue(contract)
+    mocks.resolveHousing.mockResolvedValue({
+      contractId: 'contract-1', buildingId: 'building-1', primaryTenantId: 'tenant-1',
+      assignmentRole: 'primary', primaryTenantName: 'Tenant', contract,
+    })
     const { TenantContractService } = await import('../../../server/services/tenant-portal/contract')
 
     const result = await TenantContractService.get({} as never, tenantUser, '2026-07-16')
 
     expect(mocks.resolveTenantId).toHaveBeenCalledWith(expect.anything(), tenantUser)
-    expect(mocks.findContract).toHaveBeenCalledWith(expect.anything(), 'tenant-1', '2026-07-16')
+    expect(mocks.resolveHousing).toHaveBeenCalledWith(expect.anything(), 'tenant-1', '2026-07-16')
     expect(result).toEqual(contract)
   })
 
   it('derives overdue status and paginates only tenant invoices', async () => {
+    mocks.resolveHousing.mockResolvedValue({
+      contractId: 'contract-1', buildingId: 'building-1', primaryTenantId: 'tenant-1',
+      assignmentRole: 'primary', primaryTenantName: 'Tenant', contract: {},
+    })
     mocks.listInvoices.mockResolvedValue({
       total: 1,
       items: [{
@@ -111,9 +118,31 @@ describe('tenant portal services', () => {
       '2026-07-16',
     )
 
-    expect(mocks.listInvoices).toHaveBeenCalledWith(expect.anything(), 'tenant-1', { page: 1, page_size: 20 }, '2026-07-16')
+    expect(mocks.listInvoices).toHaveBeenCalledWith(expect.anything(), { tenantId: 'tenant-1' }, { page: 1, page_size: 20 }, '2026-07-16')
     expect(result.data[0]).toMatchObject({ id: 'invoice-1', status: 'overdue' })
     expect(result.meta).toEqual({ total: 1, page: 1, limit: 20, totalPages: 1 })
+  })
+
+  it('scopes roommate invoices to the resolved shared contract', async () => {
+    mocks.resolveHousing.mockResolvedValue({
+      contractId: 'contract-shared', buildingId: 'building-1', primaryTenantId: 'tenant-primary',
+      assignmentRole: 'roommate', primaryTenantName: 'Primary Tenant', contract: {},
+    })
+    const { TenantInvoiceService } = await import('../../../server/services/tenant-portal/invoices')
+
+    await TenantInvoiceService.list(
+      {} as never,
+      tenantUser,
+      { page: 1, page_size: 20 },
+      '2026-07-16',
+    )
+
+    expect(mocks.listInvoices).toHaveBeenCalledWith(
+      expect.anything(),
+      { contractId: 'contract-shared' },
+      { page: 1, page_size: 20 },
+      '2026-07-16',
+    )
   })
 
   it('uses the same not-found response for missing or cross-tenant invoice detail', async () => {
@@ -121,6 +150,27 @@ describe('tenant portal services', () => {
 
     await expect(TenantInvoiceService.getDetail({} as never, tenantUser, 'invoice-other'))
       .rejects.toMatchObject({ statusCode: 404, data: { error: { code: 'NOT_FOUND' } } })
+  })
+
+  it('uses the shared contract scope for roommate invoice detail', async () => {
+    mocks.resolveHousing.mockResolvedValue({
+      contractId: 'contract-shared', buildingId: 'building-1', primaryTenantId: 'tenant-primary',
+      assignmentRole: 'roommate', primaryTenantName: 'Primary Tenant', contract: {},
+    })
+    const { TenantInvoiceService } = await import('../../../server/services/tenant-portal/invoices')
+
+    await expect(TenantInvoiceService.getDetail(
+      {} as never,
+      tenantUser,
+      'invoice-other',
+      '2026-07-16',
+    )).rejects.toMatchObject({ statusCode: 404 })
+
+    expect(mocks.findInvoiceDetail).toHaveBeenCalledWith(
+      expect.anything(),
+      { contractId: 'contract-shared' },
+      'invoice-other',
+    )
   })
 
   it('returns owned voided invoice detail with void metadata and charge lines', async () => {

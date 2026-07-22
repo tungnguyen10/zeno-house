@@ -51,34 +51,19 @@ describe('tenant portal repositories', () => {
     expect(mock.calls.find(call => call.method === 'update')?.args[0]).toEqual({ phone: '0902' })
   })
 
-  it('filters active contracts by tenant and unexpired end date', async () => {
-    const mock = chain({ data: null, error: null })
-    dbMock.mockReturnValue(mock.client)
-    const { TenantContractRepository } = await import('../../../server/repositories/tenant-portal/contract')
-
-    await TenantContractRepository.findActiveByTenantId({} as never, 'tenant-1', '2026-07-16')
-
-    expect(mock.calls).toEqual(expect.arrayContaining([
-      { method: 'eq', args: ['tenant_id', 'tenant-1'] },
-      { method: 'eq', args: ['status', 'active'] },
-      { method: 'lte', args: ['start_date', '2026-07-16'] },
-      { method: 'gte', args: ['end_date', '2026-07-16'] },
-    ]))
-  })
-
-  it('passes a hard tenant scope to invoice list and detail shaping', async () => {
+  it('passes a server-derived tenant or contract scope to invoice list and detail shaping', async () => {
     listCrossPeriod.mockResolvedValue({ items: [], total: 0 })
     findCrossPeriodById.mockResolvedValue(null)
     const { TenantInvoiceRepository } = await import('../../../server/repositories/tenant-portal/invoices')
 
-    await TenantInvoiceRepository.list({} as never, 'tenant-1', { page: 2, page_size: 10 }, '2026-07-16')
-    await TenantInvoiceRepository.findDetail({} as never, 'tenant-1', 'invoice-1')
+    await TenantInvoiceRepository.list({} as never, { contractId: 'contract-1' }, { page: 2, page_size: 10 }, '2026-07-16')
+    await TenantInvoiceRepository.findDetail({} as never, { contractId: 'contract-1' }, 'invoice-1')
 
     expect(listCrossPeriod).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({ page: 2, page_size: 10, today: '2026-07-16' }),
-      { tenantId: 'tenant-1' },
+      { contractId: 'contract-1' },
     )
-    expect(findCrossPeriodById).toHaveBeenCalledWith(expect.anything(), 'invoice-1', { tenantId: 'tenant-1' })
+    expect(findCrossPeriodById).toHaveBeenCalledWith(expect.anything(), 'invoice-1', { contractId: 'contract-1' })
   })
 })

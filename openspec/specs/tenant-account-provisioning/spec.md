@@ -10,6 +10,10 @@ The system SHALL let `admin` and `owner` provision a Supabase Auth login for an 
 - **WHEN** an admin provisions an account for an existing tenant that has no link
 - **THEN** an auth user is created with `app_metadata.role = 'tenant'` and a `tenant_user_links` row binds it to that tenant
 
+#### Scenario: Operator provisions an active roommate
+- **WHEN** an operator selects a tenant whose active assignment role is `roommate`
+- **THEN** the existing provisioning flow links the Auth user to that roommate's own tenant record and the UI shows their room, role, and primary tenant before confirmation
+
 #### Scenario: Non-authorized role cannot provision
 - **WHEN** a `manager` or `tenant` requests provisioning
 - **THEN** the request is rejected for lack of the `tenant.account.provision` capability
@@ -26,6 +30,10 @@ An `owner` SHALL be able to provision or manage an account only for a tenant tha
 #### Scenario: Owner within scope
 - **WHEN** an owner provisions a tenant that has a contract in an assigned building
 - **THEN** provisioning succeeds
+
+#### Scenario: Roommate inherits provisioning building scope
+- **WHEN** an owner provisions an active occupant of a contract in an assigned building
+- **THEN** the roommate is considered in scope without changing the account API or link model
 
 #### Scenario: Owner out of scope
 - **WHEN** an owner targets a tenant with no contract in any assigned building and not created by the owner

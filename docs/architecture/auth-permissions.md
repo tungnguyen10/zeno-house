@@ -178,9 +178,11 @@ Internal building scope and tenant self-scope are separate mechanisms:
   `getAssignedBuildingIds` / `assertBuildingScope`.
 - `tenant` uses the active one-to-one `tenant_user_links` row through `resolveTenantId`.
   Missing or disabled links resolve to the same not-found response. Client-supplied tenant ids
-  are never used to establish tenant identity.
-- Tenant self-select RLS policies on `tenants`, `contracts`, and `invoices` also resolve identity
-  through `tenant_user_links`, `auth.uid()`, and an active link.
+  are never used to establish tenant identity. Shared housing scope is then resolved from a
+  current primary contract or active `contract_occupants` membership.
+- Tenant self-select RLS policies on `tenants`, `contract_occupants`, `contracts`, and `invoices`
+  also resolve identity through `tenant_user_links`, `auth.uid()`, and an active link. Roommates
+  can read the current shared contract and its invoices but never the primary tenant profile.
 
 This is safe because browser code never queries business tables directly; all business data
 flows through `server/api/**` -> service -> repository. The client only uses Supabase for

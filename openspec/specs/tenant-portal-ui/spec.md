@@ -70,6 +70,10 @@ The portal SHALL provide overview, invoices list, invoice detail, room/contract,
 - **WHEN** a tenant edits their profile
 - **THEN** only whitelisted contact fields are submitted, validated by the shared schema
 
+#### Scenario: Roommate role is explicit
+- **WHEN** the active housing context has `assignmentRole = roommate`
+- **THEN** the overview and room pages label the caller as “Người ở cùng” and show the primary tenant name without implying ownership of the contract
+
 ---
 
 ### Requirement: Identity and document upload bound to agreed storage
@@ -90,4 +94,3 @@ The portal document UI SHALL consume the archived storage convention and SHALL N
 #### Scenario: Signed URLs are not persisted client-side
 - **WHEN** the portal renders a signed URL for an identity image or document
 - **THEN** the URL is treated as ephemeral and is not written to the service-worker cache
-

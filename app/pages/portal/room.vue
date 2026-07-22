@@ -59,8 +59,16 @@ const STATUS_CLASS: Record<ContractStatus, string> = {
             <span class="flex h-12 w-12 items-center justify-center rounded-xl bg-smoke-blue text-theme">
               <IconDoor class="h-6 w-6" aria-hidden="true" />
             </span>
-            <div class="min-w-0">
-              <p class="portal-type-heading text-title">Phòng {{ contract.roomNumber }}</p>
+            <div class="min-w-0 flex-1">
+              <div class="flex flex-wrap items-center gap-2">
+                <p class="portal-type-heading text-title">Phòng {{ contract.roomNumber }}</p>
+                <span
+                  v-if="contract.assignmentRole === 'roommate'"
+                  class="rounded-full bg-theme/10 px-2 py-0.5 portal-type-caption font-semibold text-theme"
+                >
+                  Người ở cùng
+                </span>
+              </div>
               <p class="portal-type-body truncate text-body">{{ contract.buildingName }}</p>
             </div>
           </div>
@@ -73,6 +81,12 @@ const STATUS_CLASS: Record<ContractStatus, string> = {
             </span>
             <span class="portal-type-caption text-body">{{ contract.contractCode }}</span>
           </div>
+          <p
+            v-if="contract.assignmentRole === 'roommate' && contract.primaryTenantName"
+            class="portal-type-caption mt-3 border-t border-border-light pt-3 text-body"
+          >
+            Người đứng hợp đồng: <span class="font-semibold text-title">{{ contract.primaryTenantName }}</span>
+          </p>
         </PortalCard>
 
         <PortalCard :padded="false">

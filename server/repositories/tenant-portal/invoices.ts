@@ -4,6 +4,10 @@ import type { InvoiceListItem } from '~/utils/validators/invoices'
 import { CrossPeriodInvoiceRepository } from '../invoices'
 import { db } from '../../utils/db'
 
+export type TenantInvoiceScope =
+  | { tenantId: string; contractId?: never }
+  | { tenantId?: never; contractId: string }
+
 interface TenantInvoiceChargeRow {
   id: string
   invoice_id: string
@@ -18,7 +22,7 @@ interface TenantInvoiceChargeRow {
 export const TenantInvoiceRepository = {
   async list(
     event: H3Event,
-    tenantId: string,
+    scope: TenantInvoiceScope,
     query: TenantInvoiceListQuery,
     today: string,
   ): Promise<{ items: InvoiceListItem[]; total: number }> {
@@ -26,15 +30,15 @@ export const TenantInvoiceRepository = {
       ...query,
       status: [],
       today,
-    }, { tenantId })
+    }, scope)
   },
 
   async findDetail(
     event: H3Event,
-    tenantId: string,
+    scope: TenantInvoiceScope,
     invoiceId: string,
   ): Promise<{ invoice: InvoiceListItem; charges: TenantInvoiceChargeRow[] } | null> {
-    const invoice = await CrossPeriodInvoiceRepository.findCrossPeriodById(event, invoiceId, { tenantId })
+    const invoice = await CrossPeriodInvoiceRepository.findCrossPeriodById(event, invoiceId, scope)
     if (!invoice) return null
 
     const { data, error } = await db(event)

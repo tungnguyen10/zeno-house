@@ -23,4 +23,11 @@ describe('portal room refreshed UI', () => {
     expect(page).toContain('variant="statement"')
     expect(page).toContain('variant="card"')
   })
+
+  it('explains roommate access without implying contract ownership', () => {
+    expect(page).toContain("contract.assignmentRole === 'roommate'")
+    expect(page).toContain('Người ở cùng')
+    expect(page).toContain('Người đứng hợp đồng')
+    expect(page).toContain('contract.primaryTenantName')
+  })
 })

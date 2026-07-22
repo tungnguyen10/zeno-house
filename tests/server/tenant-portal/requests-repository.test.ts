@@ -49,30 +49,6 @@ describe('TenantSupportRequestRepository', () => {
     expect(query.order).toHaveBeenCalledWith('created_at', { ascending: false })
   })
 
-  it('finds the tenant active contract context for the requested day', async () => {
-    const query = chain({
-      maybeSingle: vi.fn().mockResolvedValue({
-        data: { id: 'contract-1', building_id: 'building-1' },
-        error: null,
-      }),
-    })
-    mocks.from.mockReturnValue(query)
-    const { TenantSupportRequestRepository } = await import(
-      '../../../server/repositories/tenant-portal/requests'
-    )
-
-    await expect(TenantSupportRequestRepository.findActiveContractContext(
-      {} as never,
-      'tenant-1',
-      '2026-07-17',
-    )).resolves.toEqual({ contractId: 'contract-1', buildingId: 'building-1' })
-    expect(mocks.from).toHaveBeenCalledWith('contracts')
-    expect(query.eq).toHaveBeenCalledWith('tenant_id', 'tenant-1')
-    expect(query.eq).toHaveBeenCalledWith('status', 'active')
-    expect(query.lte).toHaveBeenCalledWith('start_date', '2026-07-17')
-    expect(query.gte).toHaveBeenCalledWith('end_date', '2026-07-17')
-  })
-
   it('creates a new request and returns the stored row', async () => {
     const query = chain({ single: vi.fn().mockResolvedValue({ data: row, error: null }) })
     mocks.from.mockReturnValue(query)

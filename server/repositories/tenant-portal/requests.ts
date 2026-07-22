@@ -7,11 +7,6 @@ const COLUMNS = 'id, tenant_id, building_id, contract_id, title, description, st
 
 export type TenantSupportRequestCreateRecord = TablesInsert<'support_requests'>
 
-export interface TenantRequestContractContext {
-  contractId: string
-  buildingId: string
-}
-
 export const TenantSupportRequestRepository = {
   async listByTenantId(
     event: H3Event,
@@ -25,26 +20,6 @@ export const TenantSupportRequestRepository = {
 
     if (error) throwDbError(error, 'tenantPortal.requests.listByTenantId')
     return data ?? []
-  },
-
-  async findActiveContractContext(
-    event: H3Event,
-    tenantId: string,
-    today: string,
-  ): Promise<TenantRequestContractContext | null> {
-    const { data, error } = await db(event)
-      .from('contracts')
-      .select('id, building_id')
-      .eq('tenant_id', tenantId)
-      .eq('status', 'active')
-      .lte('start_date', today)
-      .gte('end_date', today)
-      .order('start_date', { ascending: false })
-      .limit(1)
-      .maybeSingle()
-
-    if (error) throwDbError(error, 'tenantPortal.requests.findActiveContractContext')
-    return data ? { contractId: data.id, buildingId: data.building_id } : null
   },
 
   async create(

@@ -80,8 +80,22 @@ async function refreshAll() {
                 <IconDoor class="h-5 w-5" aria-hidden="true" />
               </span>
               <div class="min-w-0 flex-1">
-                <p class="portal-type-label text-title">Phòng {{ contract.roomNumber }}</p>
+                <div class="flex flex-wrap items-center gap-2">
+                  <p class="portal-type-label text-title">Phòng {{ contract.roomNumber }}</p>
+                  <span
+                    v-if="contract.assignmentRole === 'roommate'"
+                    class="rounded-full bg-theme/10 px-2 py-0.5 portal-type-caption font-semibold text-theme"
+                  >
+                    Người ở cùng
+                  </span>
+                </div>
                 <p class="portal-type-caption truncate text-body">{{ contract.buildingName }}</p>
+                <p
+                  v-if="contract.assignmentRole === 'roommate' && contract.primaryTenantName"
+                  class="portal-type-caption mt-0.5 truncate text-body"
+                >
+                  Người đứng hợp đồng: {{ contract.primaryTenantName }}
+                </p>
               </div>
               <IconChevronRight class="h-4 w-4 shrink-0 text-body" aria-hidden="true" />
             </div>

@@ -9,6 +9,7 @@ type InvoiceListRow = Record<string, unknown>
 export interface InvoiceListScope {
   buildingIds?: string[]
   tenantId?: string
+  contractId?: string
 }
 
 export interface InvoiceListRepositoryFilter extends InvoiceListQuery {
@@ -129,6 +130,9 @@ export const CrossPeriodInvoiceRepository = {
     if (scope.tenantId) {
       query = query.eq('tenant_id', scope.tenantId)
     }
+    if (scope.contractId) {
+      query = query.eq('contract_id', scope.contractId)
+    }
 
     if (filter.building_id) {
       query = query.eq('billing_periods.building_id', filter.building_id)
@@ -171,7 +175,7 @@ export const CrossPeriodInvoiceRepository = {
   async findCrossPeriodById(
     event: H3Event,
     id: string,
-    scope: Pick<InvoiceListScope, 'tenantId'> = {},
+    scope: Pick<InvoiceListScope, 'tenantId' | 'contractId'> = {},
   ): Promise<InvoiceListItem | null> {
     const client = await serverSupabaseClient(event)
     const column = isUuid(id) ? 'id' : 'invoice_code'
@@ -181,6 +185,7 @@ export const CrossPeriodInvoiceRepository = {
       .eq(column, id)
 
     if (scope.tenantId) query = query.eq('tenant_id', scope.tenantId)
+    if (scope.contractId) query = query.eq('contract_id', scope.contractId)
 
     const { data, error } = await query.maybeSingle()
     if (error) throwDbError(error, 'invoices.findCrossPeriodById')

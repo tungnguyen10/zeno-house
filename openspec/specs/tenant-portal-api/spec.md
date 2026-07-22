@@ -26,7 +26,7 @@ The system SHALL expose tenant self-service endpoints under `/api/tenant/**`, av
 - **THEN** the server uses the resolver's tenant id and ignores the supplied value
 
 ### Requirement: Tenant profile read and whitelist update
-`GET /api/tenant/me` SHALL return the caller's tenant profile with safe fields only. `PATCH /api/tenant/me` SHALL update only a strict non-credential profile whitelist (`phone`, `emergency_contact_name`, `emergency_contact_phone`, `notes`, and the accepted personal profile fields) and SHALL reject or ignore any other field, including login `email`, `status`, `code`, and linkage fields. The profile email is synchronized only by the tenant onboarding service after Supabase Auth email verification.
+`GET /api/tenant/me` SHALL return the caller's tenant profile with safe fields only. `PATCH /api/tenant/me` SHALL update only a strict non-credential profile whitelist (`phone`, `emergency_contact_name`, `emergency_contact_phone`, `notes`, and the accepted personal profile fields) and SHALL reject or ignore any other field, including login `email`, `status`, `code`, and linkage fields. Supabase Auth login email and the contact email in `tenants.email` are independent.
 
 #### Scenario: Read own profile
 - **WHEN** a tenant calls `GET /api/tenant/me`
@@ -45,22 +45,34 @@ The system SHALL expose tenant self-service endpoints under `/api/tenant/**`, av
 - **THEN** that field is rejected/ignored and never persisted
 
 ### Requirement: Tenant active contract summary
-`GET /api/tenant/contract` SHALL return the caller's active contract summary (room number, building name, start/end dates, monthly rent, deposit, status). Terminated or expired contracts SHALL be excluded, and the endpoint SHALL never return another tenant's contract.
+`GET /api/tenant/contract` SHALL return the active housing contract summary (room number, building name, start/end dates, monthly rent, deposit, status, `assignmentRole`, and `primaryTenantName`). The server SHALL prefer the caller's current primary contract and otherwise use only a current active roommate occupancy. Terminated, expired, future move-in, and moved-out contexts SHALL be excluded.
 
 #### Scenario: Active contract returned
 - **WHEN** a tenant with an active contract calls the endpoint
-- **THEN** the active contract summary is returned
+- **THEN** the active contract summary is returned with `assignmentRole = primary`
+
+#### Scenario: Active roommate contract returned
+- **WHEN** an active roommate calls the endpoint
+- **THEN** the shared contract is returned with `assignmentRole = roommate` and the primary tenant name
 
 #### Scenario: No active contract
 - **WHEN** the tenant has no active contract
 - **THEN** the endpoint returns an empty/absent result, not another tenant's data
 
 ### Requirement: Tenant invoice list and detail
-`GET /api/tenant/invoices` SHALL return only the caller's invoices, paginated, with derived overdue status. `GET /api/tenant/invoices/[id]` SHALL return one invoice with its charge lines only when it belongs to the caller; otherwise it SHALL return a consistent not-found response that does not leak the existence of another tenant's invoice.
+`GET /api/tenant/invoices` SHALL return paginated invoices with derived overdue status. Primary tenant scope SHALL remain `tenant_id` so historical invoices are retained. Active roommate scope SHALL be the server-resolved current `contract_id`, including invoices issued before move-in. `GET /api/tenant/invoices/[id]` SHALL enforce the same scope before returning charge lines; otherwise it SHALL return a consistent not-found response.
 
 #### Scenario: List own invoices
 - **WHEN** a tenant calls `GET /api/tenant/invoices`
 - **THEN** only invoices whose `tenant_id` equals the resolved tenant are returned
+
+#### Scenario: Roommate lists shared-contract invoices
+- **WHEN** an active roommate calls `GET /api/tenant/invoices`
+- **THEN** only invoices for the resolved shared contract are returned
+
+#### Scenario: Roommate cannot read another contract invoice
+- **WHEN** a roommate requests an invoice outside the resolved shared contract
+- **THEN** the response is the same consistent not-found response
 
 #### Scenario: Overdue status derived
 - **WHEN** an issued invoice is past its due date with a positive balance

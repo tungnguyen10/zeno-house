@@ -130,7 +130,7 @@ describe('tenant portal mappers', () => {
       deposit: 10000000,
       status: 'active',
       rooms: { room_number: 'A101', buildings: { name: 'Zeno One' } },
-    })
+    }, 'roommate', 'Nguyen Van Chinh')
 
     expect(summary).toMatchObject({
       id: 'contract-1',
@@ -140,6 +140,8 @@ describe('tenant portal mappers', () => {
       monthlyRent: 5000000,
       deposit: 10000000,
       status: 'active',
+      assignmentRole: 'roommate',
+      primaryTenantName: 'Nguyen Van Chinh',
     })
   })
 

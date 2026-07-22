@@ -3,7 +3,8 @@ import type { AuthUser } from '~/types/auth'
 import type { TenantInvoiceDetail, TenantInvoiceListItem } from '~/types/tenant-portal'
 import type { TenantInvoiceListQuery } from '~/utils/validators/tenant-portal'
 import { mapTenantInvoiceDetail, mapTenantInvoiceListItem } from '~/utils/mappers/tenant-portal'
-import { TenantInvoiceRepository } from '../../repositories/tenant-portal/invoices'
+import { TenantInvoiceRepository, type TenantInvoiceScope } from '../../repositories/tenant-portal/invoices'
+import { TenantHousingRepository } from '../../repositories/tenant-portal/housing'
 import { deriveInvoiceListStatus } from '../billing/invoice-query'
 import { resolveTenantId } from '../../utils/scope'
 import { can } from '../../utils/permissions'
@@ -18,6 +19,17 @@ function todayInHoChiMinh(): string {
   }).format(new Date())
 }
 
+async function resolveInvoiceScope(
+  event: H3Event,
+  tenantId: string,
+  today: string,
+): Promise<TenantInvoiceScope> {
+  const housing = await TenantHousingRepository.resolveActive(event, tenantId, today)
+  return housing?.assignmentRole === 'roommate'
+    ? { contractId: housing.contractId }
+    : { tenantId }
+}
+
 export const TenantInvoiceService = {
   async list(
     event: H3Event,
@@ -30,7 +42,8 @@ export const TenantInvoiceService = {
   }> {
     if (!can(user, 'tenant.invoices.read')) throwForbidden('Không có quyền xem hoá đơn')
     const id = await resolveTenantId(event, user)
-    const { items, total } = await TenantInvoiceRepository.list(event, id, query, today)
+    const scope = await resolveInvoiceScope(event, id, today)
+    const { items, total } = await TenantInvoiceRepository.list(event, scope, query, today)
     return {
       data: items.map(item => mapTenantInvoiceListItem({
         ...item,
@@ -53,7 +66,8 @@ export const TenantInvoiceService = {
   ): Promise<TenantInvoiceDetail> {
     if (!can(user, 'tenant.invoices.read')) throwForbidden('Không có quyền xem hoá đơn')
     const id = await resolveTenantId(event, user)
-    const detail = await TenantInvoiceRepository.findDetail(event, id, invoiceId)
+    const scope = await resolveInvoiceScope(event, id, today)
+    const detail = await TenantInvoiceRepository.findDetail(event, scope, invoiceId)
     if (!detail) throwNotFound()
     return mapTenantInvoiceDetail({
       ...detail.invoice,
