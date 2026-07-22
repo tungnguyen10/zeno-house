@@ -1,14 +1,10 @@
-import type { ApiSuccess } from '~/types/api'
-import type { TenantContractSummary } from '~/types/tenant-portal'
+import { usePortalBootstrap } from './usePortalBootstrap'
 
 /** Active contract summary for the signed-in tenant. */
 export function usePortalContract() {
-  const { data, status, error, refresh } = useFetch<ApiSuccess<TenantContractSummary | null>>(
-    '/api/tenant/contract',
-    { key: 'portal-contract' },
-  )
+  const { data, status, error, refresh } = usePortalBootstrap()
 
-  const contract = computed(() => data.value?.data ?? null)
+  const contract = computed(() => data.value?.data.contract ?? null)
 
   return { contract, status, error, refresh }
 }

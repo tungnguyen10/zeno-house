@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { ChartData, ChartOptions } from 'chart.js'
+import '~/utils/chart-registration'
 import { Doughnut } from 'vue-chartjs'
 import type { PortalStatementAccent } from '~/utils/constants/portal-status'
 import { useChartTheme } from '~/composables/useChartTheme'

@@ -8,7 +8,6 @@ import type { BillingPaymentsIntent } from '~/components/billing/BillingPayments
 import BillingAuditDrawer from '~/components/billing/BillingAuditDrawer.vue'
 import BillingCloseStep from '~/components/billing/BillingCloseStep.vue'
 import BillingUnissueModal from '~/components/billing/BillingUnissueModal.vue'
-import type { BillingPeriod } from '~/types/billing'
 import { getApiErrorCode, getApiErrorMessage, type ApiErrorLike } from '~/utils/api-error'
 
 definePageMeta({ title: 'Kỳ vận hành' })
@@ -24,41 +23,29 @@ if (!buildingParam || !Number.isFinite(periodYear) || !Number.isFinite(periodMon
   throw createError({ statusCode: 404, statusMessage: 'Kỳ vận hành không hợp lệ' })
 }
 
-const periodId = ref<string>('')
-const resolvedPeriod = ref<BillingPeriod | null>(null)
-const resolveError = ref<string | null>(null)
-const resolving = ref(true)
 const toast = useToast()
+const {
+  data: bootstrapData,
+  status: bootstrapStatus,
+  error: bootstrapError,
+} = await useBillingWorkspaceBootstrap(buildingParam, periodYear, periodMonth)
+const bootstrap = computed(() => bootstrapData.value?.data ?? null)
+const periodId = computed(() => bootstrap.value?.period.id ?? '')
+const resolving = computed(() => bootstrapStatus.value === 'pending')
+const resolveError = computed(() => bootstrapError.value
+  ? getApiErrorMessage(bootstrapError.value, 'Không thể mở kỳ vận hành')
+  : null)
 
-async function resolvePeriod() {
-  resolving.value = true
-  resolveError.value = null
-  try {
-    const resp = await apiFetch<{ data: BillingPeriod }>('/api/billing/periods', {
-      method: 'POST',
-      body: { building_id: buildingParam, period_year: periodYear, period_month: periodMonth },
-    })
-    periodId.value = resp.data.id
-    resolvedPeriod.value = resp.data
-  }
-  catch (err) {
-    const e = err as ApiErrorLike & { status?: number }
-    const isForbidden = e.status === 403 || e.statusCode === 403 || getApiErrorCode(err) === 'FORBIDDEN'
-    if (route.query.invoice && isForbidden) {
-      toast.info(getApiErrorMessage(err, 'Không có quyền truy cập kỳ vận hành này'))
-      await navigateTo('/dashboard/invoices')
-      return
-    }
-    resolveError.value = getApiErrorMessage(err, 'Không thể mở kỳ vận hành')
-  }
-  finally {
-    resolving.value = false
+if (bootstrapError.value && route.query.invoice) {
+  const e = bootstrapError.value as ApiErrorLike & { status?: number }
+  const isForbidden = e.status === 403 || e.statusCode === 403 || getApiErrorCode(e) === 'FORBIDDEN'
+  if (isForbidden) {
+    toast.info(getApiErrorMessage(e, 'Không có quyền truy cập kỳ vận hành này'))
+    await navigateTo('/dashboard/invoices')
   }
 }
 
-await resolvePeriod()
-
-const workspace = useBillingPeriodWorkspace(periodId)
+const workspace = useBillingPeriodWorkspace(periodId, bootstrap)
 const {
   period,
   overview,
@@ -87,8 +74,6 @@ const {
   deleteUtilityOverride,
   approveUtilityOverride,
 } = workspace
-
-period.value = resolvedPeriod.value
 
 const { count: recentAuditCount, load: loadRecentAuditCount } = useRecentAuditCount(periodId)
 
@@ -135,7 +120,9 @@ const tabs = computed<UiTabItem[]>(() => {
   ]
 })
 
-watch(tab, async (current) => {
+watch(tab, async (current, previous) => {
+  if (previous === undefined && bootstrap.value) return
+
   if (current === 'draft-grid') {
     const tasks: Promise<unknown>[] = []
     if (!grid.value) tasks.push(loadGrid())
@@ -146,8 +133,8 @@ watch(tab, async (current) => {
     const tasks: Promise<unknown>[] = []
     if (!overview.value) tasks.push(loadOverview())
     if (invoices.value.length === 0) tasks.push(loadInvoices())
-    // Drafts power the reissue preview. Refresh so the modal reflects the
-    // latest readings/overrides, not whatever was loaded earlier.
+    // Drafts power the reissue preview. Refresh whenever the user enters this
+    // tab after the initial bootstrap.
     tasks.push(loadDrafts())
     await Promise.all(tasks)
   }

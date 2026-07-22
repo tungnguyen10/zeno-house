@@ -4,6 +4,7 @@ import type { ManagedUser } from '~/types/users'
 import type { UserRole } from '~/utils/constants/roles'
 import type { UserUpdateInput } from '~/utils/validators/users'
 import type { TenantOnboardingStage } from '~/utils/tenant-onboarding'
+import type { AuthAccount } from '~/types/auth'
 import { serverSupabaseClient as serverAuthClient } from '#supabase/server'
 
 interface AuthUserLike {
@@ -35,30 +36,38 @@ function mapManagedUser(user: AuthUserLike): ManagedUser {
  * server-side only; the service-role client bypasses RLS.
  */
 export const UserRepository = {
-  async getAuthAccount(event: H3Event, id: string): Promise<{
-    id: string
-    email: string | null
-    emailConfirmed: boolean
-    role: UserRole | null
-    tenantOnboardingStage: TenantOnboardingStage | null
-  } | null> {
-    const client = serverSupabaseClient(event)
-    const { data, error } = await client.auth.admin.getUserById(id)
-    if (error) {
-      if (error.status === 404) return null
-      throwDbError(error, 'users.getAuthAccount')
+  async getAuthAccount(event: H3Event, id: string): Promise<AuthAccount | null> {
+    const cache = event.context.__authAccounts ??= new Map()
+    const existing = cache.get(id)
+    if (existing) return existing
+
+    const lookup = (async () => {
+      const client = serverSupabaseClient(event)
+      const { data, error } = await client.auth.admin.getUserById(id)
+      if (error) {
+        if (error.status === 404) return null
+        throwDbError(error, 'users.getAuthAccount')
+      }
+      return data.user
+        ? {
+            id: data.user.id,
+            email: data.user.email ?? null,
+            emailConfirmed: Boolean(data.user.email_confirmed_at),
+            role: (data.user.app_metadata?.role as UserRole | undefined) ?? null,
+            tenantOnboardingStage: data.user.app_metadata?.tenant_onboarding === 'password_required'
+              ? data.user.app_metadata.tenant_onboarding as TenantOnboardingStage
+              : null,
+          }
+        : null
+    })()
+    cache.set(id, lookup)
+    try {
+      return await lookup
     }
-    return data.user
-      ? {
-          id: data.user.id,
-          email: data.user.email ?? null,
-          emailConfirmed: Boolean(data.user.email_confirmed_at),
-          role: (data.user.app_metadata?.role as UserRole | undefined) ?? null,
-          tenantOnboardingStage: data.user.app_metadata?.tenant_onboarding === 'password_required'
-            ? data.user.app_metadata.tenant_onboarding as TenantOnboardingStage
-            : null,
-        }
-      : null
+    catch (error) {
+      cache.delete(id)
+      throw error
+    }
   },
 
   async setAppRole(event: H3Event, id: string, role: UserRole, createdBy: string): Promise<void> {

@@ -34,6 +34,8 @@ Composables live in `app/composables/**` and mirror product workflows.
 
 Server state belongs here, usually via `useFetch` or `$fetch`. Form state can live in a form composable when it is reused by create/edit screens.
 
+Portal home, building settings, and billing workspace use keyed bootstrap composables for their initial SSR data. Components sharing the same workspace consume that payload instead of starting parallel endpoint waterfalls; mutations continue through their domain APIs and refresh the bootstrap payload when necessary.
+
 ## Component Layer
 
 Component groups:

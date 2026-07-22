@@ -2,13 +2,25 @@ import type { BuildingService } from '~/types/building-services'
 import type { ApiSuccess } from '~/types/api'
 import type { BuildingServiceUpsertInput, BuildingServiceUpdateInput } from '~/utils/validators/building-services'
 
-export function useBuildingServices(buildingId: MaybeRef<string>) {
-  const { data, status, error, refresh } = useFetch<ApiSuccess<BuildingService[]>>(
-    () => `/api/building-services?building_id=${toValue(buildingId)}`,
-    { watch: [() => toValue(buildingId)] },
-  )
+interface BuildingServicesSource {
+  data: Readonly<Ref<BuildingService[]>>
+  status: Readonly<Ref<string>>
+  error: Readonly<Ref<unknown>>
+  refresh: () => Promise<unknown>
+}
 
-  const services = computed(() => data.value?.data ?? [])
+export function useBuildingServices(buildingId: MaybeRef<string>, source?: BuildingServicesSource) {
+  const fetched = source
+    ? null
+    : useFetch<ApiSuccess<BuildingService[]>>(
+        () => `/api/building-services?building_id=${toValue(buildingId)}`,
+        { watch: [() => toValue(buildingId)] },
+      )
+
+  const services = source?.data ?? computed(() => fetched?.data.value?.data ?? [])
+  const status = source?.status ?? fetched!.status
+  const error = source?.error ?? fetched!.error
+  const refresh = source?.refresh ?? fetched!.refresh
   const isLoading = computed(() => status.value === 'pending')
 
   async function upsertService(input: BuildingServiceUpsertInput) {

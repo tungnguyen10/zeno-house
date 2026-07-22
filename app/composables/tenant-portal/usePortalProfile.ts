@@ -3,6 +3,7 @@ import type { TenantProfile } from '~/types/tenant-portal'
 import type { TenantProfileUpdateInput } from '~/utils/validators/tenant-portal'
 import { tenantProfileUpdateSchema } from '~/utils/validators/tenant-portal'
 import { getApiErrorMessage } from '~/utils/api-error'
+import { usePortalBootstrap } from './usePortalBootstrap'
 
 /** Maps the snake_case whitelist input onto the camelCase profile DTO for optimistic display. */
 function applyOptimistic(profile: TenantProfile, input: TenantProfileUpdateInput): TenantProfile {
@@ -28,11 +29,9 @@ function applyOptimistic(profile: TenantProfile, input: TenantProfileUpdateInput
 }
 
 export function usePortalProfile() {
-  const { data, status, error, refresh } = useFetch<ApiSuccess<TenantProfile>>('/api/tenant/me', {
-    key: 'portal-profile',
-  })
+  const { data, status, error, refresh } = usePortalBootstrap()
 
-  const profile = computed(() => data.value?.data ?? null)
+  const profile = computed(() => data.value?.data.profile ?? null)
   const saving = ref(false)
   const fieldErrors = ref<Record<string, string[]>>({})
   const apiError = ref<string | null>(null)
@@ -49,8 +48,14 @@ export function usePortalProfile() {
     }
 
     const previous = data.value
-    if (data.value?.data) {
-      data.value = { ...data.value, data: applyOptimistic(data.value.data, parsed.data) }
+    if (data.value?.data.profile) {
+      data.value = {
+        ...data.value,
+        data: {
+          ...data.value.data,
+          profile: applyOptimistic(data.value.data.profile, parsed.data),
+        },
+      }
     }
 
     saving.value = true
@@ -59,7 +64,9 @@ export function usePortalProfile() {
         method: 'PATCH',
         body: parsed.data,
       })
-      data.value = res
+      if (data.value) {
+        data.value = { ...data.value, data: { ...data.value.data, profile: res.data } }
+      }
       return true
     }
     catch (e: unknown) {

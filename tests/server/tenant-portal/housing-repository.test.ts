@@ -48,6 +48,27 @@ describe('TenantHousingRepository', () => {
     })
   })
 
+  it('memoizes the resolved housing context for one request', async () => {
+    const primary = chain({
+      data: {
+        id: 'contract-primary', tenant_id: 'tenant-1', building_id: 'building-1',
+        contract_code: 'C-1', start_date: '2026-01-01', end_date: '2026-12-31',
+        monthly_rent: 5_000_000, deposit: 10_000_000, status: 'active',
+        tenants: { full_name: 'Nguyễn Văn A' },
+        rooms: { room_number: 'A101', buildings: { name: 'Zeno One' } },
+      },
+      error: null,
+    })
+    dbMock.mockReturnValue(primary.client)
+    const event = { context: {} } as never
+    const { TenantHousingRepository } = await import('../../../server/repositories/tenant-portal/housing')
+
+    await TenantHousingRepository.resolveActive(event, 'tenant-1', '2026-07-22')
+    await TenantHousingRepository.resolveActive(event, 'tenant-1', '2026-07-22')
+
+    expect(primary.client.from).toHaveBeenCalledTimes(1)
+  })
+
   it('falls back to an active, moved-in roommate occupancy', async () => {
     const primary = chain({ data: null, error: null })
     const roommate = chain({

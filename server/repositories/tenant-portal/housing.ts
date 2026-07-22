@@ -73,41 +73,64 @@ function contextFromContract(
   }
 }
 
+async function resolveActiveUncached(
+  event: H3Event,
+  tenantId: string,
+  today: string,
+): Promise<TenantHousingContext | null> {
+  const { data: primary, error: primaryError } = await db(event)
+    .from('contracts')
+    .select(CONTRACT_SELECT)
+    .eq('tenant_id', tenantId)
+    .eq('status', 'active')
+    .lte('start_date', today)
+    .gte('end_date', today)
+    .order('start_date', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (primaryError) throwDbError(primaryError, 'tenantPortal.housing.resolveActive.primary')
+  if (primary) return contextFromContract(primary as unknown as ContractRow, 'primary')
+
+  const { data: occupancy, error: occupancyError } = await db(event)
+    .from('contract_occupants')
+    .select(`contracts!inner(${CONTRACT_SELECT})`)
+    .eq('tenant_id', tenantId)
+    .lte('move_in_date', today)
+    .is('move_out_date', null)
+    .eq('contracts.status', 'active')
+    .lte('contracts.start_date', today)
+    .gte('contracts.end_date', today)
+    .order('move_in_date', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (occupancyError) throwDbError(occupancyError, 'tenantPortal.housing.resolveActive.roommate')
+  const contract = one((occupancy as unknown as OccupancyRow | null)?.contracts ?? null)
+  return contract ? contextFromContract(contract, 'roommate') : null
+}
+
 export const TenantHousingRepository = {
   async resolveActive(
     event: H3Event,
     tenantId: string,
     today: string,
   ): Promise<TenantHousingContext | null> {
-    const { data: primary, error: primaryError } = await db(event)
-      .from('contracts')
-      .select(CONTRACT_SELECT)
-      .eq('tenant_id', tenantId)
-      .eq('status', 'active')
-      .lte('start_date', today)
-      .gte('end_date', today)
-      .order('start_date', { ascending: false })
-      .limit(1)
-      .maybeSingle()
+    const target = event as H3Event & { context?: H3Event['context'] }
+    const context = target.context ?? (target.context = {} as H3Event['context'])
+    const cache = context.__tenantHousing ??= new Map()
+    const key = `${tenantId}:${today}`
+    const existing = cache.get(key)
+    if (existing) return existing
 
-    if (primaryError) throwDbError(primaryError, 'tenantPortal.housing.resolveActive.primary')
-    if (primary) return contextFromContract(primary as unknown as ContractRow, 'primary')
-
-    const { data: occupancy, error: occupancyError } = await db(event)
-      .from('contract_occupants')
-      .select(`contracts!inner(${CONTRACT_SELECT})`)
-      .eq('tenant_id', tenantId)
-      .lte('move_in_date', today)
-      .is('move_out_date', null)
-      .eq('contracts.status', 'active')
-      .lte('contracts.start_date', today)
-      .gte('contracts.end_date', today)
-      .order('move_in_date', { ascending: false })
-      .limit(1)
-      .maybeSingle()
-
-    if (occupancyError) throwDbError(occupancyError, 'tenantPortal.housing.resolveActive.roommate')
-    const contract = one((occupancy as unknown as OccupancyRow | null)?.contracts ?? null)
-    return contract ? contextFromContract(contract, 'roommate') : null
+    const lookup = resolveActiveUncached(event, tenantId, today)
+    cache.set(key, lookup)
+    try {
+      return await lookup
+    }
+    catch (error) {
+      cache.delete(key)
+      throw error
+    }
   },
 }

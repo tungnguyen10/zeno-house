@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   contractGet: vi.fn(),
   invoiceList: vi.fn(),
   invoiceDetail: vi.fn(),
+  bootstrapGet: vi.fn(),
 }))
 
 vi.mock('../../../server/services/tenant-portal/profile', () => ({
@@ -18,6 +19,9 @@ vi.mock('../../../server/services/tenant-portal/contract', () => ({
 }))
 vi.mock('../../../server/services/tenant-portal/invoices', () => ({
   TenantInvoiceService: { list: mocks.invoiceList, getDetail: mocks.invoiceDetail },
+}))
+vi.mock('../../../server/services/tenant-portal/bootstrap', () => ({
+  TenantBootstrapService: { get: mocks.bootstrapGet },
 }))
 
 type MockEvent = { context: { body?: unknown; query?: Record<string, unknown>; params?: Record<string, string> } }
@@ -48,6 +52,7 @@ describe('tenant portal API handlers', () => {
     mocks.contractGet.mockResolvedValue(null)
     mocks.invoiceList.mockResolvedValue({ data: [], meta: { total: 0, page: 1, limit: 20, totalPages: 0 } })
     mocks.invoiceDetail.mockResolvedValue({ id: 'invoice-1', charges: [] })
+    mocks.bootstrapGet.mockResolvedValue({ profile: { id: 'tenant-1' }, contract: null, invoices: [] })
   })
 
   it('requires auth and resolves tenant scope in every handler', async () => {
@@ -99,5 +104,15 @@ describe('tenant portal API handlers', () => {
     await expect(getProfile(event() as never)).resolves.toEqual({ data: { id: 'tenant-1' } })
     await expect(getContract(event() as never)).resolves.toEqual({ data: null })
     await expect(getInvoice(event({ params: { id: 'invoice-1' } }) as never)).resolves.toEqual({ data: { id: 'invoice-1', charges: [] } })
+  })
+
+  it('returns the portal bootstrap payload after resolving self scope once', async () => {
+    const { default: getBootstrap } = await import('../../../server/api/tenant/bootstrap.get')
+
+    await expect(getBootstrap(event() as never)).resolves.toEqual({
+      data: { profile: { id: 'tenant-1' }, contract: null, invoices: [] },
+    })
+    expect(mocks.resolveTenantId).toHaveBeenCalledTimes(1)
+    expect(mocks.bootstrapGet).toHaveBeenCalledWith(expect.anything(), user)
   })
 })

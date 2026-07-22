@@ -32,6 +32,15 @@ export interface BillingPeriodOpenResult {
   created: boolean
 }
 
+export interface BillingWorkspaceBootstrap {
+  period: BillingPeriod
+  grid: BillingDraftGridResponse | null
+  utilityUsages: BillingUtilityUsage[]
+  overview: BillingWorkspaceOverview | null
+  invoices: Invoice[]
+  drafts: BillingDraftResponse | null
+}
+
 export interface Invoice {
   id: string
   invoiceCode: string

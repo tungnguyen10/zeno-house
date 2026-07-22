@@ -89,6 +89,18 @@ export interface TenantInvoiceListItem {
   notes: string | null
 }
 
+export interface TenantPortalBootstrap {
+  profile: TenantProfile | null
+  contract: TenantContractSummary | null
+  invoices: TenantInvoiceListItem[]
+  invoiceMeta: {
+    total: number
+    page: number
+    limit: number
+    totalPages: number
+  }
+}
+
 export interface TenantInvoiceDetail extends TenantInvoiceListItem {
   charges: Array<{
     id: string

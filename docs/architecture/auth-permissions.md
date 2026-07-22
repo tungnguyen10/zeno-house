@@ -97,7 +97,7 @@ API handlers can also call:
 
 - `server/utils/auth.ts` -> `requireAuth(event)`
 
-`requireAuth` throws `UNAUTHENTICATED` when claims are missing.
+`requireAuth` reuses `event.context.user` from middleware and only verifies claims itself when middleware context is absent. It throws `UNAUTHENTICATED` when claims are missing. Building, tenant-housing, tenant-link, and Auth-account lookups are memoized only for the lifetime of the current request; no identity or authorization result is cached across users or requests.
 
 ## Capability Checks
 

@@ -6,7 +6,7 @@ export default defineNuxtConfig({
     compatibilityVersion: 4,
   },
 
-  devtools: { enabled: true },
+  devtools: { enabled: process.env.NODE_ENV !== "production" },
 
   devServer: {
     https: true,
@@ -141,7 +141,7 @@ export default defineNuxtConfig({
     srcDir: "service-worker",
     filename: "sw.ts",
     injectManifest: {
-      globPatterns: ["**/*.{js,css,svg,png,ico,woff2}", "offline.html"],
+      globPatterns: ["offline.html", "icons/*.png", "favicon.ico"],
     },
     manifest: {
       name: "Zeno House",

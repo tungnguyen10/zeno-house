@@ -114,6 +114,7 @@ export const CrossPeriodInvoiceRepository = {
     event: H3Event,
     filter: InvoiceListRepositoryFilter,
     scope: InvoiceListScope = {},
+    options: { exactCount?: boolean } = {},
   ): Promise<{ items: InvoiceListItem[]; total: number }> {
     if (scope.buildingIds && scope.buildingIds.length === 0) {
       return { items: [], total: 0 }
@@ -123,9 +124,10 @@ export const CrossPeriodInvoiceRepository = {
     const from = (filter.page - 1) * filter.page_size
     const to = from + filter.page_size - 1
 
-    let query = client
-      .from('invoices')
-      .select(INVOICE_LIST_SELECT, { count: 'exact' })
+    const invoices = client.from('invoices')
+    let query = options.exactCount === false
+      ? invoices.select(INVOICE_LIST_SELECT)
+      : invoices.select(INVOICE_LIST_SELECT, { count: 'exact' })
 
     if (scope.tenantId) {
       query = query.eq('tenant_id', scope.tenantId)
@@ -166,10 +168,8 @@ export const CrossPeriodInvoiceRepository = {
       .range(from, to)
 
     if (error) throwDbError(error, 'invoices.list')
-    return {
-      items: ((data ?? []) as InvoiceListRow[]).map(mapInvoiceListRow),
-      total: count ?? 0,
-    }
+    const items = ((data ?? []) as InvoiceListRow[]).map(mapInvoiceListRow)
+    return { items, total: options.exactCount === false ? items.length : count ?? 0 }
   },
 
   async findCrossPeriodById(

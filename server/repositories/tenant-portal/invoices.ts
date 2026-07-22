@@ -30,7 +30,7 @@ export const TenantInvoiceRepository = {
       ...query,
       status: [],
       today,
-    }, scope)
+    }, scope, { exactCount: false })
   },
 
   async findDetail(

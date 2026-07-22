@@ -1,17 +1,28 @@
 import type { ApiSuccess } from '~/types/api'
 import type { PrepaidExpense } from '~/types/operations-report'
 
-export function usePrepaidExpenses(buildingId: MaybeRef<string | null | undefined>) {
+interface PrepaidExpensesSource {
+  data: Readonly<Ref<PrepaidExpense[]>>
+  status: Readonly<Ref<string>>
+  refresh: () => Promise<unknown>
+}
+
+export function usePrepaidExpenses(
+  buildingId: MaybeRef<string | null | undefined>,
+  source?: PrepaidExpensesSource,
+) {
   const query = computed(() => ({ building_id: toValue(buildingId) ?? '' }))
   const enabled = computed(() => Boolean(toValue(buildingId)))
 
-  const { data, status, refresh } = useFetch<ApiSuccess<PrepaidExpense[]>>(
-    '/api/prepaid-expenses',
-    { query, immediate: false, watch: false },
+  const fetched = source ? null : useFetch<ApiSuccess<PrepaidExpense[]>>(
+    '/api/prepaid-expenses', { query, immediate: false, watch: false },
   )
+  const data = source?.data ?? computed(() => fetched?.data.value?.data ?? [])
+  const status = source?.status ?? fetched!.status
+  const refresh = source?.refresh ?? fetched!.refresh
 
   watch(enabled, (ready) => {
-    if (ready) refresh()
+    if (ready && !source) refresh()
   }, { immediate: true })
 
   async function createPrepaidExpense(payload: Record<string, unknown>): Promise<PrepaidExpense> {
@@ -41,7 +52,7 @@ export function usePrepaidExpenses(buildingId: MaybeRef<string | null | undefine
   }
 
   return {
-    prepaidExpenses: computed(() => data.value?.data ?? []),
+    prepaidExpenses: source?.data ?? computed(() => data.value),
     isLoadingPrepaidExpenses: computed(() => status.value === 'pending'),
     refreshPrepaidExpenses: refresh,
     createPrepaidExpense,

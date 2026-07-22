@@ -39,14 +39,15 @@ for (const file of files) {
   const hasPagination = method === 'GET'
     && (explicitlyPaginated.has(path) || /page|cursor|limit/.test(source))
   const pagination = hasPagination ? 'bounded' : isList ? 'domain-bounded' : 'n/a'
+  const isBootstrap = path.includes('bootstrap')
   const cache = path === '/api/dashboard/summary'
     ? '20s scoped'
     : path === '/api/operations-report'
       ? '15s open / versioned closed'
       : path.includes('/draft-grid') || path.includes('/meter-readings') || path.includes('/payments')
         ? 'no long cache'
-        : method === 'GET' ? 'request/DTO policy' : 'invalidate affected domain'
-  const budget = path === '/api/dashboard/summary' || path === '/api/operations-report' || path.includes('/draft-grid')
+        : method === 'GET' || isBootstrap ? 'request/DTO policy' : 'invalidate affected domain'
+  const budget = path === '/api/dashboard/summary' || path === '/api/operations-report' || path.includes('/draft-grid') || isBootstrap
     ? 'p95 ≤ 800ms'
     : isList ? 'p95 ≤ 400ms' : 'p95 ≤ 250ms'
   rows.push(`| ${method} | \`${path}\` | ${pagination} | ${cache} | ${budget} |`)

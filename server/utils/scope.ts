@@ -6,7 +6,13 @@ import { getTenantIdForAuthUser } from '../repositories/tenant-portal/links'
 export type ScopeMode = 'read' | 'write'
 
 export async function resolveTenantId(event: H3Event, user: AuthUser): Promise<string> {
-  const tenantId = await getTenantIdForAuthUser(event, user.id)
+  const cache = event.context.__tenantScope ??= new Map()
+  let lookup = cache.get(user.id)
+  if (!lookup) {
+    lookup = getTenantIdForAuthUser(event, user.id)
+    cache.set(user.id, lookup)
+  }
+  const tenantId = await lookup
   if (!tenantId) throwNotFound('Không tìm thấy')
   return tenantId
 }

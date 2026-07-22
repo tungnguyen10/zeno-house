@@ -197,34 +197,61 @@ export const BuildingRepository = {
   },
 
   async findById(event: H3Event, id: string): Promise<Building | null> {
-    // Reads are filtered by service-layer scope before reaching repository.
-    const client = serverSupabaseClient(event)
-    const { data, error } = await client
-      .from('buildings')
-      .select('*, rooms(count)')
-      .eq('id', id)
-      .maybeSingle()
+    const target = event as H3Event & { context?: H3Event['context'] }
+    const context = target.context ?? (target.context = {} as H3Event['context'])
+    const cache = context.__buildingLookups ??= new Map()
+    const cacheKey = `id:${id}`
+    const cached = cache.get(cacheKey)
+    if (cached) return cached
 
-    if (error) throwDbError(error, 'buildings.findById')
-    if (!data) return null
-    const [building] = await attachServiceSummaries(event, [mapBuilding(data as BuildingRow)])
-    return building ?? null
+    // Reads are filtered by service-layer scope before reaching repository.
+    const lookup = (async () => {
+      const client = serverSupabaseClient(event)
+      const { data, error } = await client
+        .from('buildings')
+        .select('*, rooms(count)')
+        .eq('id', id)
+        .maybeSingle()
+
+      if (error) throwDbError(error, 'buildings.findById')
+      if (!data) return null
+      const [building] = await attachServiceSummaries(event, [mapBuilding(data as BuildingRow)])
+      if (building?.slug) cache.set(`slug:${building.slug}`, Promise.resolve(building))
+      return building ?? null
+    })()
+    cache.set(cacheKey, lookup)
+    return lookup
   },
 
   async findByIdentifier(event: H3Event, identifier: string): Promise<Building | null> {
-    // Reads are filtered by service-layer scope before reaching repository.
-    const client = serverSupabaseClient(event)
+    const target = event as H3Event & { context?: H3Event['context'] }
+    const context = target.context ?? (target.context = {} as H3Event['context'])
+    const cache = context.__buildingLookups ??= new Map()
     const column = isUuid(identifier) ? 'id' : 'slug'
-    const { data, error } = await client
-      .from('buildings')
-      .select('*, rooms(count)')
-      .eq(column, identifier)
-      .maybeSingle()
+    const cacheKey = `${column}:${identifier}`
+    const cached = cache.get(cacheKey)
+    if (cached) return cached
 
-    if (error) throwDbError(error, 'buildings.findByIdentifier')
-    if (!data) return null
-    const [building] = await attachServiceSummaries(event, [mapBuilding(data as BuildingRow)])
-    return building ?? null
+    // Reads are filtered by service-layer scope before reaching repository.
+    const lookup = (async () => {
+      const client = serverSupabaseClient(event)
+      const { data, error } = await client
+        .from('buildings')
+        .select('*, rooms(count)')
+        .eq(column, identifier)
+        .maybeSingle()
+
+      if (error) throwDbError(error, 'buildings.findByIdentifier')
+      if (!data) return null
+      const [building] = await attachServiceSummaries(event, [mapBuilding(data as BuildingRow)])
+      if (building) {
+        cache.set(`id:${building.id}`, Promise.resolve(building))
+        if (building.slug) cache.set(`slug:${building.slug}`, Promise.resolve(building))
+      }
+      return building ?? null
+    })()
+    cache.set(cacheKey, lookup)
+    return lookup
   },
 
   async insert(

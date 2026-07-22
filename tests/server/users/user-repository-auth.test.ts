@@ -49,4 +49,17 @@ describe('UserRepository current password update', () => {
       app_metadata: { role: 'tenant', tenant_onboarding: null },
     })
   })
+
+  it('memoizes auth account reads for the lifetime of one request', async () => {
+    getUserById.mockResolvedValue({
+      data: { user: { id: 'auth-1', email: 'tenant@example.com', app_metadata: { role: 'tenant' } } },
+      error: null,
+    })
+    const event = { context: {} } as never
+
+    await UserRepository.getAuthAccount(event, 'auth-1')
+    await UserRepository.getAuthAccount(event, 'auth-1')
+
+    expect(getUserById).toHaveBeenCalledTimes(1)
+  })
 })

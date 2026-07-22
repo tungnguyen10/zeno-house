@@ -3,6 +3,7 @@ import { roleOf } from '../utils/roles'
 import { ROLES } from '../../app/utils/constants/roles'
 import { requiresTenantOnboarding } from '../../app/utils/tenant-onboarding'
 import { UserRepository } from '../repositories/users'
+import { measureApiSegment } from '../utils/performance'
 
 const INTERNAL_ROLES = new Set<string>([ROLES.ADMIN, ROLES.OWNER, ROLES.MANAGER])
 
@@ -22,7 +23,8 @@ export default defineEventHandler((event) => {
     throwForbidden('Cần hoàn tất thiết lập tài khoản trước khi sử dụng portal')
   }
   if (apiNamespace === 'tenant' && role === ROLES.TENANT) {
-    return UserRepository.getAuthAccount(event, user.id).then((account) => {
+    return measureApiSegment(event, 'namespace', async () => {
+      const account = await UserRepository.getAuthAccount(event, user.id)
       if (account?.tenantOnboardingStage === 'password_required') {
         throwForbidden('Cần hoàn tất thiết lập tài khoản trước khi sử dụng portal')
       }

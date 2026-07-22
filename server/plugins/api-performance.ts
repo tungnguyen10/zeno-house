@@ -15,7 +15,14 @@ export default defineNitroPlugin((nitroApp) => {
     setResponseHeader(
       event,
       'server-timing',
-      `app;dur=${result.durationMs.toFixed(1)}, db;desc="round-trips";dur=${result.dbRoundTrips}`,
+      [
+        `app;dur=${result.durationMs.toFixed(1)}`,
+        `auth;dur=${result.timings.auth.toFixed(1)}`,
+        `namespace;dur=${result.timings.namespace.toFixed(1)}`,
+        `db;dur=${result.timings.db.toFixed(1)};desc="${result.dbRoundTrips} round-trips"`,
+        `storage;dur=${result.timings.storage.toFixed(1)};desc="${result.storageRoundTrips} round-trips"`,
+        `external;dur=${result.timings.external.toFixed(1)};desc="${result.externalRoundTrips} round-trips"`,
+      ].join(', '),
     )
 
     const status = event.node.res.statusCode
@@ -28,6 +35,13 @@ export default defineNitroPlugin((nitroApp) => {
       status,
       durationMs: Number(result.durationMs.toFixed(1)),
       dbRoundTrips: result.dbRoundTrips,
+      storageRoundTrips: result.storageRoundTrips,
+      externalRoundTrips: result.externalRoundTrips,
+      timings: Object.fromEntries(
+        Object.entries(result.timings).map(([key, value]) => [key, Number(value.toFixed(1))]),
+      ),
+      region: result.region,
+      coldStart: result.coldStart,
       responseBytes: result.responseBytes,
       slow: result.slow,
     })

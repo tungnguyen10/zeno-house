@@ -10,13 +10,14 @@ vi.stubGlobal('$fetch', fetchMock)
 vi.mock('~/utils/upload', () => ({ uploadWithProgress: uploadMock }))
 
 let fetchData: unknown
-
-vi.stubGlobal('useFetch', () => ({
+const useFetchMock = vi.fn(() => ({
   data: ref(fetchData ?? null),
   status: ref('success'),
   error: ref(null),
   refresh: vi.fn(async () => {}),
 }))
+
+vi.stubGlobal('useFetch', useFetchMock)
 
 const baseProfile: TenantProfile = {
   id: 't1',
@@ -90,7 +91,7 @@ describe('usePortalDocuments', () => {
 
 describe('usePortalProfile', () => {
   it('saves whitelisted fields via PATCH /api/tenant/me and applies the update', async () => {
-    fetchData = { data: baseProfile }
+    fetchData = { data: { profile: baseProfile, contract: null, invoices: [], invoiceMeta: {} } }
     fetchMock.mockResolvedValue({ data: { ...baseProfile, phone: '0999' } })
     const { usePortalProfile } = await import('../../app/composables/tenant-portal/usePortalProfile')
     const { save, profile } = usePortalProfile()
@@ -103,7 +104,7 @@ describe('usePortalProfile', () => {
   })
 
   it('rolls back the optimistic update when the save fails', async () => {
-    fetchData = { data: baseProfile }
+    fetchData = { data: { profile: baseProfile, contract: null, invoices: [], invoiceMeta: {} } }
     fetchMock.mockRejectedValue({ data: { error: { message: 'Lỗi' } } })
     const { usePortalProfile } = await import('../../app/composables/tenant-portal/usePortalProfile')
     const { save, profile, apiError } = usePortalProfile()
@@ -113,6 +114,27 @@ describe('usePortalProfile', () => {
     expect(ok).toBe(false)
     expect(profile.value?.phone).toBe(baseProfile.phone)
     expect(apiError.value).toBeTruthy()
+  })
+})
+
+describe('portal bootstrap data', () => {
+  it('uses one keyed SSR endpoint for profile, contract, and invoices composables', async () => {
+    fetchData = {
+      data: { profile: baseProfile, contract: null, invoices: [], invoiceMeta: { total: 0 } },
+    }
+    const { usePortalProfile } = await import('../../app/composables/tenant-portal/usePortalProfile')
+    const { usePortalContract } = await import('../../app/composables/tenant-portal/usePortalContract')
+    const { usePortalInvoices } = await import('../../app/composables/tenant-portal/usePortalInvoices')
+
+    usePortalProfile()
+    usePortalContract()
+    usePortalInvoices()
+
+    expect(useFetchMock).toHaveBeenCalledTimes(3)
+    for (const call of useFetchMock.mock.calls.slice(-3)) {
+      expect(call[0]).toBe('/api/tenant/bootstrap')
+      expect(call[1]).toMatchObject({ key: 'portal-bootstrap' })
+    }
   })
 })
 

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { ChartData, ChartOptions, TooltipItem } from 'chart.js'
+import '~/utils/chart-registration'
 import { Line } from 'vue-chartjs'
 import type { BillingTrendEntry, RevenueCategoryKey } from '~/types/dashboard'
 import { useChartTheme } from '~/composables/useChartTheme'
@@ -91,4 +92,3 @@ const chartOptions = computed<ChartOptions<'line'>>(() => {
     </div>
   </div>
 </template>
-

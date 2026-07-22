@@ -1,7 +1,7 @@
 # API Inventory And Performance Contracts
 
 Generated from checked-in handlers by `node scripts/generate-api-inventory.mjs`.
-Route count: **162**.
+Route count: **166**.
 
 All business routes require server-side authorization unless explicitly documented as an internal-secret route. Initial reads use Nuxt `useFetch`; imperative reads and mutations use `apiFetch` with a 15-second timeout, request ID, no automatic mutation retry, and normalized server envelopes.
 
@@ -22,6 +22,7 @@ All business routes require server-side authorization unless explicitly document
 | POST | `/api/assignments` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | GET | `/api/audit` | bounded | request/DTO policy | p95 ≤ 400ms |
 | GET | `/api/auth/access-request/me` | n/a | request/DTO policy | p95 ≤ 250ms |
+| POST | `/api/auth/tenant-onboarding/password` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | GET | `/api/billing/invoices/[id]` | n/a | request/DTO policy | p95 ≤ 250ms |
 | POST | `/api/billing/invoices/[id]/adjustment` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | GET | `/api/billing/invoices/[id]/payments` | domain-bounded | no long cache | p95 ≤ 400ms |
@@ -50,6 +51,7 @@ All business routes require server-side authorization unless explicitly document
 | POST | `/api/billing/periods/[id]/utility-usages/[override_id]/approve` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | GET | `/api/billing/periods` | domain-bounded | request/DTO policy | p95 ≤ 400ms |
 | POST | `/api/billing/periods` | n/a | invalidate affected domain | p95 ≤ 250ms |
+| POST | `/api/billing/workspace/bootstrap` | n/a | request/DTO policy | p95 ≤ 800ms |
 | DELETE | `/api/building-expenses/[id]` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | PATCH | `/api/building-expenses/[id]` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | DELETE | `/api/building-expenses/[id]/receipt` | n/a | invalidate affected domain | p95 ≤ 250ms |
@@ -69,6 +71,7 @@ All business routes require server-side authorization unless explicitly document
 | GET | `/api/buildings/[id]/invoice-profile` | domain-bounded | request/DTO policy | p95 ≤ 400ms |
 | PUT | `/api/buildings/[id]/invoice-profile` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | GET | `/api/buildings/[id]/rooms/[room]` | n/a | request/DTO policy | p95 ≤ 250ms |
+| GET | `/api/buildings/[id]/settings-bootstrap` | n/a | request/DTO policy | p95 ≤ 800ms |
 | POST | `/api/buildings/bulk` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | GET | `/api/buildings` | bounded | request/DTO policy | p95 ≤ 400ms |
 | POST | `/api/buildings` | n/a | invalidate affected domain | p95 ≤ 250ms |
@@ -138,6 +141,7 @@ All business routes require server-side authorization unless explicitly document
 | GET | `/api/shared-expenses` | domain-bounded | request/DTO policy | p95 ≤ 400ms |
 | POST | `/api/shared-expenses` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | GET | `/api/tenant-accounts` | domain-bounded | request/DTO policy | p95 ≤ 400ms |
+| GET | `/api/tenant/bootstrap` | n/a | request/DTO policy | p95 ≤ 800ms |
 | GET | `/api/tenant/contract` | n/a | request/DTO policy | p95 ≤ 250ms |
 | DELETE | `/api/tenant/documents/[id]` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | GET | `/api/tenant/documents` | domain-bounded | request/DTO policy | p95 ≤ 400ms |

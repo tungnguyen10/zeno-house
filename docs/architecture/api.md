@@ -1,6 +1,6 @@
 # API Reference
 
-All business APIs live under `server/api/**`. The generated, complete 131-route inventory and its pagination/cache/performance contract live in [`docs/api-inventory.md`](../api-inventory.md). Regenerate it with `node scripts/generate-api-inventory.mjs` whenever handlers change.
+All business APIs live under `server/api/**`. The generated route inventory and its pagination/cache/performance contract live in [`docs/api-inventory.md`](../api-inventory.md). Regenerate it with `node scripts/generate-api-inventory.mjs` whenever handlers change.
 
 ## API Shape
 
@@ -33,7 +33,9 @@ server/api/*
 
 Initial SSR reads use `useFetch` so Nuxt payload hydration prevents a duplicate browser request. Imperative reads and mutations use the shared `apiFetch` wrapper, which supplies a 15-second timeout, an `x-request-id`, no automatic retry, explicit in-flight dedupe keys, and superseded-request cancellation through `createLatestApiRequest`.
 
-Every API response includes `x-request-id` and `Server-Timing`. Slow GET requests above 500 ms and mutations above 1 second emit structured diagnostics containing route, status, duration, response bytes, and application database round trips.
+High-fan-out workspaces use authenticated bootstrap endpoints: `/api/tenant/bootstrap`, `/api/buildings/[id]/settings-bootstrap`, and `/api/billing/workspace/bootstrap`. Their clients use stable Nuxt data keys so one SSR response is reused during hydration. The billing bootstrap is an idempotent POST because opening a missing period is part of the existing workspace contract.
+
+Every API response includes `x-request-id` and `Server-Timing`. Timing is split across auth, namespace, database, Storage, and other Supabase calls. Slow GET requests above 500 ms and mutations above 1 second emit structured diagnostics containing route, status, duration, response bytes, round trips, Vercel region, and cold-start state.
 
 ## Internal AI Agent API Contract
 

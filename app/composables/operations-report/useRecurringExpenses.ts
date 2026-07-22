@@ -4,25 +4,34 @@ import type {
   RecurringExpenseRecordPrefill,
 } from '~/types/operations-report'
 
-export function useRecurringExpenses(buildingId: MaybeRef<string | null | undefined>) {
+interface RecurringExpensesSource {
+  data: Readonly<Ref<RecurringExpense[]>>
+  status: Readonly<Ref<string>>
+  refresh: () => Promise<unknown>
+}
+
+export function useRecurringExpenses(
+  buildingId: MaybeRef<string | null | undefined>,
+  source?: RecurringExpensesSource,
+) {
   const query = computed(() => ({ building_id: toValue(buildingId) ?? '' }))
   const enabled = computed(() => Boolean(toValue(buildingId)))
 
-  const { data, status, refresh } = useFetch<ApiSuccess<RecurringExpense[]>>(
-    '/api/recurring-expenses',
-    { query, immediate: false, watch: false },
+  const fetched = source ? null : useFetch<ApiSuccess<RecurringExpense[]>>(
+    '/api/recurring-expenses', { query, immediate: false, watch: false },
   )
-  const { data: upcomingData, refresh: refreshUpcoming } = useFetch<ApiSuccess<RecurringExpense[]>>(
-    '/api/recurring-expenses',
-    {
-      query: computed(() => ({ ...query.value, upcoming: 'true' })),
-      immediate: false,
-      watch: false,
+  const upcoming = source ? null : useFetch<ApiSuccess<RecurringExpense[]>>(
+    '/api/recurring-expenses', {
+      query: computed(() => ({ ...query.value, upcoming: 'true' })), immediate: false, watch: false,
     },
   )
+  const data = source?.data ?? computed(() => fetched?.data.value?.data ?? [])
+  const status = source?.status ?? fetched!.status
+  const refresh = source?.refresh ?? fetched!.refresh
+  const refreshUpcoming = source?.refresh ?? upcoming!.refresh
 
   watch(enabled, (ready) => {
-    if (ready) {
+    if (ready && !source) {
       refresh()
       refreshUpcoming()
     }
@@ -78,8 +87,8 @@ export function useRecurringExpenses(buildingId: MaybeRef<string | null | undefi
   }
 
   return {
-    recurringExpenses: computed(() => data.value?.data ?? []),
-    upcomingRecurringExpenses: computed(() => upcomingData.value?.data ?? []),
+    recurringExpenses: source?.data ?? computed(() => data.value),
+    upcomingRecurringExpenses: computed(() => source ? [] : upcoming?.data.value?.data ?? []),
     isLoadingRecurringExpenses: computed(() => status.value === 'pending'),
     refreshRecurringExpenses: refresh,
     refreshUpcomingRecurringExpenses: refreshUpcoming,

@@ -3,8 +3,6 @@
 import type { ApiSuccess } from '~/types/api'
 import type { BuildingInvoiceProfileSaveInput } from '~/types/building-invoice-profile'
 import type { PricingType, ServiceCatalogItem } from '~/types/service-catalog'
-import type { ContractWithDetails } from '~/types/contracts'
-import type { AssignmentManager } from '~/types/assignments'
 import { getApiErrorMessage } from '~/utils/api-error'
 import type {
   BuildingFixedCost,
@@ -34,12 +32,37 @@ const authStore = useAuthStore()
 const toast = useToast()
 
 const {
+  data: settingsData,
+  status: settingsStatus,
+  error: settingsLoadError,
+  refresh: refreshSettings,
+} = await useBuildingSettingsBootstrap(id)
+const settings = computed(() => settingsData.value?.data ?? null)
+const building = computed(() => settings.value?.building ?? null)
+const sharedSettingsSource = {
+  status: settingsStatus,
+  error: settingsLoadError,
+  refresh: refreshSettings,
+}
+
+const {
   profile: invoiceProfile,
   loading: loadingInvoiceProfile,
   saving: savingInvoiceProfile,
   error: invoiceProfileError,
   save: saveInvoiceProfile,
-} = useBuildingInvoiceProfile(id)
+} = useBuildingInvoiceProfile(id, {
+  ...sharedSettingsSource,
+  data: computed(() => settings.value?.invoiceProfile ?? null),
+  set: (profile) => {
+    if (settingsData.value) {
+      settingsData.value = {
+        ...settingsData.value,
+        data: { ...settingsData.value.data, invoiceProfile: profile },
+      }
+    }
+  },
+})
 const canEditInvoiceProfile = computed(() => authStore.can('building-invoice-profile.write'))
 
 async function handleSaveInvoiceProfile(input: BuildingInvoiceProfileSaveInput) {
@@ -52,44 +75,37 @@ async function handleSaveInvoiceProfile(input: BuildingInvoiceProfileSaveInput) 
   }
 }
 
-const { building, refresh: refreshBuilding } = useBuildingDetail(id)
+const refreshBuilding = refreshSettings
 const {
   services,
   isLoading: loadingServices,
   upsertService,
   updateService,
   syncToContracts,
-} = useBuildingServices(id)
+} = useBuildingServices(id, {
+  ...sharedSettingsSource,
+  data: computed(() => settings.value?.buildingServices ?? []),
+})
 const {
   allServices: contractServices,
   isLoading: loadingContractServices,
   updateService: updateContractService,
-  refresh: refreshContractServices,
-} = useBuildingContractServices(id)
+} = useBuildingContractServices(id, {
+  ...sharedSettingsSource,
+  data: computed(() => settings.value?.contractServices ?? []),
+})
 
-const { data: catalogData, refresh: refreshCatalog } = await useFetch<ApiSuccess<ServiceCatalogItem[]>>(
-  '/api/service-catalog',
-  { query: { building_id: id } },
-)
-const catalog = computed(() => catalogData.value?.data ?? [])
+const catalog = computed(() => settings.value?.catalog ?? [])
+const refreshCatalog = refreshSettings
 
-const { data: contractsData, refresh: refreshContracts } = await useFetch<ApiSuccess<ContractWithDetails[]>>(
-  '/api/contracts',
-  { query: { building_id: id, status: 'active', limit: 200 } },
-)
 const contractRows = computed(() =>
-  (contractsData.value?.data ?? []).map(c => ({
+  (settings.value?.contracts ?? []).map(c => ({
     contractId: c.id,
     roomNumber: c.room.roomNumber,
     tenantName: c.tenant.fullName,
   })),
 )
-
-const { data: managersData } = await useFetch<ApiSuccess<AssignmentManager[]>>(
-  `/api/assignments/by-building/${id}`,
-  { immediate: authStore.canManageUsers },
-)
-const assignedManagers = computed(() => managersData.value?.data ?? [])
+const assignedManagers = computed(() => settings.value?.managers ?? [])
 
 const activeServiceCount = computed(() => services.value.filter(s => s.isActive).length)
 const canManageBuildingServices = computed(() => authStore.can('building-services.write'))
@@ -109,16 +125,9 @@ const endFixedCostTarget = ref<BuildingFixedCost | null>(null)
 const endFixedCostPeriod = ref(formatPeriodString(now.getFullYear(), now.getMonth() + 1))
 const fixedCostError = ref<string | null>(null)
 const { createFixedCost } = useOperationsMutations()
-const { data: reserveRatesData, status: reserveRatesStatus, refresh: refreshReserveRates } = await useFetch<ApiSuccess<BuildingReserveFundRate[]>>(
-  '/api/reserve-fund-rates',
-  {
-    query: computed(() => ({ building_id: apiBuildingId.value })),
-    immediate: false,
-    watch: false,
-  },
-)
-const reserveRates = computed(() => reserveRatesData.value?.data ?? [])
-const isLoadingReserveRates = computed(() => reserveRatesStatus.value === 'pending')
+const refreshReserveRates = refreshSettings
+const reserveRates = computed(() => settings.value?.reserveRates ?? [])
+const isLoadingReserveRates = computed(() => settingsStatus.value === 'pending')
 const reserveRateModalOpen = ref(false)
 const savingReserveRate = ref(false)
 const reserveRateError = ref<string | null>(null)
@@ -130,16 +139,9 @@ const endReserveRateModalOpen = ref(false)
 const endingReserveRate = ref(false)
 const endReserveRateTarget = ref<BuildingReserveFundRate | null>(null)
 const endReserveRatePeriod = ref(formatPeriodString(now.getFullYear(), now.getMonth() + 1))
-const { data: fixedCostsData, status: fixedCostsStatus, refresh: refreshFixedCosts } = await useFetch<ApiSuccess<BuildingFixedCost[]>>(
-  '/api/building-fixed-costs',
-  {
-    query: computed(() => ({ building_id: apiBuildingId.value })),
-    immediate: false,
-    watch: false,
-  },
-)
-const fixedCosts = computed(() => fixedCostsData.value?.data ?? [])
-const isLoadingFixedCosts = computed(() => fixedCostsStatus.value === 'pending')
+const refreshFixedCosts = refreshSettings
+const fixedCosts = computed(() => settings.value?.fixedCosts ?? [])
+const isLoadingFixedCosts = computed(() => settingsStatus.value === 'pending')
 const expenseCategoryOptions = EXPENSE_CATEGORIES.map(value => ({
   value,
   label: EXPENSE_CATEGORY_LABELS[value],
@@ -158,14 +160,22 @@ const {
   createRecurringExpense,
   updateRecurringExpense,
   deleteRecurringExpense,
-} = useRecurringExpenses(apiBuildingId)
+} = useRecurringExpenses(apiBuildingId, {
+  status: settingsStatus,
+  refresh: refreshSettings,
+  data: computed(() => settings.value?.recurringExpenses ?? []),
+})
 const {
   prepaidExpenses,
   isLoadingPrepaidExpenses,
   createPrepaidExpense,
   updatePrepaidExpense,
   deletePrepaidExpense,
-} = usePrepaidExpenses(apiBuildingId)
+} = usePrepaidExpenses(apiBuildingId, {
+  status: settingsStatus,
+  refresh: refreshSettings,
+  data: computed(() => settings.value?.prepaidExpenses ?? []),
+})
 const recurringFormOpen = ref(false)
 const editingRecurring = ref<RecurringExpense | null>(null)
 const savingRecurring = ref(false)
@@ -238,22 +248,6 @@ function openCustomServiceModal() {
   customServiceForm.description = ''
   customServiceModalOpen.value = true
 }
-
-watch(
-  [apiBuildingId, canManageFixedCosts],
-  ([buildingId, canManage]) => {
-    if (buildingId && canManage) refreshFixedCosts()
-  },
-  { immediate: true },
-)
-
-watch(
-  [apiBuildingId, canManageReserveFund],
-  ([buildingId, canManage]) => {
-    if (buildingId && canManage) refreshReserveRates()
-  },
-  { immediate: true },
-)
 
 function openCreateReserveRate() {
   reserveRateError.value = null
@@ -631,7 +625,7 @@ async function handleSync() {
     syncResult.value = changes > 0
       ? `Đã cập nhật ${changes} dịch vụ trên hợp đồng.`
       : 'Hợp đồng đã khớp với cấu hình mặc định.'
-    await Promise.all([refreshContracts(), refreshContractServices()])
+    await refreshSettings()
   }
   catch {
     syncResult.value = 'Đồng bộ thất bại.'

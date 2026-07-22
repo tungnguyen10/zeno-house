@@ -11,18 +11,20 @@
 /* Inter Variable Font */
 @font-face {
   font-family: 'Inter';
-  src: url('/fonts/Inter-VariableFont_opsz,wght.ttf') format('truetype');
+  src: url('/fonts/Inter-VariableFont_opsz,wght.woff2') format('woff2');
   font-weight: 100 900;
   font-style: normal;
   font-display: swap;
+  unicode-range: U+0000-024F, U+1E00-1EFF, U+20A0-20CF, U+2100-214F, U+2190-21FF, U+25A0-25FF;
 }
 
 @font-face {
   font-family: 'Inter';
-  src: url('/fonts/Inter-Italic-VariableFont_opsz,wght.ttf') format('truetype');
+  src: url('/fonts/Inter-Italic-VariableFont_opsz,wght.woff2') format('woff2');
   font-weight: 100 900;
   font-style: italic;
   font-display: swap;
+  unicode-range: U+0000-024F, U+1E00-1EFF, U+20A0-20CF, U+2100-214F, U+2190-21FF, U+25A0-25FF;
 }
 
 /* Custom scrollbar */

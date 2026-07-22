@@ -8,6 +8,7 @@ import type {
   BillingUtilityUsage,
   BillingAuditEvent,
   IssueInvoicesResult,
+  BillingWorkspaceBootstrap,
 } from '~/types/billing'
 import type { MeterReading } from '~/types/meter-readings'
 import type {
@@ -30,15 +31,19 @@ export interface SaveReadingsOptions {
  * utility overrides, and audit events. Each section is its own request so
  * tabs can refresh independently.
  */
-export function useBillingPeriodWorkspace(periodId: MaybeRefOrGetter<string>) {
+export function useBillingPeriodWorkspace(
+  periodId: MaybeRefOrGetter<string>,
+  initial?: MaybeRefOrGetter<BillingWorkspaceBootstrap | null | undefined>,
+) {
   const id = computed(() => toValue(periodId))
+  const seed = initial ? toValue(initial) : null
 
-  const period = ref<BillingPeriod | null>(null)
-  const overview = ref<BillingWorkspaceOverview | null>(null)
-  const drafts = ref<BillingDraftResponse | null>(null)
-  const grid = ref<BillingDraftGridResponse | null>(null)
-  const invoices = ref<Invoice[]>([])
-  const utilityUsages = ref<BillingUtilityUsage[]>([])
+  const period = ref<BillingPeriod | null>(seed?.period ?? null)
+  const overview = ref<BillingWorkspaceOverview | null>(seed?.overview ?? seed?.grid?.overview ?? null)
+  const drafts = ref<BillingDraftResponse | null>(seed?.drafts ?? null)
+  const grid = ref<BillingDraftGridResponse | null>(seed?.grid ?? null)
+  const invoices = ref<Invoice[]>(seed?.invoices ?? [])
+  const utilityUsages = ref<BillingUtilityUsage[]>(seed?.utilityUsages ?? [])
   const auditEvents = ref<BillingAuditEvent[]>([])
 
   const overviewLoading = ref(false)

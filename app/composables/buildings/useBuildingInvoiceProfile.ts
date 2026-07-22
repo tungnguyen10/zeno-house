@@ -5,16 +5,32 @@ import type {
 } from '~/types/building-invoice-profile'
 import { getApiErrorMessage } from '~/utils/api-error'
 
-export function useBuildingInvoiceProfile(buildingIdentifier: MaybeRef<string>) {
+interface BuildingInvoiceProfileSource {
+  data: Readonly<Ref<BuildingInvoiceProfile | null>>
+  status: Readonly<Ref<string>>
+  error: Readonly<Ref<unknown>>
+  refresh: () => Promise<unknown>
+  set: (profile: BuildingInvoiceProfile) => void
+}
+
+export function useBuildingInvoiceProfile(
+  buildingIdentifier: MaybeRef<string>,
+  source?: BuildingInvoiceProfileSource,
+) {
   const endpoint = () => `/api/buildings/${encodeURIComponent(toValue(buildingIdentifier))}/invoice-profile`
-  const { data, status, error: loadError, refresh } = useFetch<ApiSuccess<BuildingInvoiceProfile | null>>(
-    endpoint,
-    { watch: [() => toValue(buildingIdentifier)] },
-  )
+  const fetched = source
+    ? null
+    : useFetch<ApiSuccess<BuildingInvoiceProfile | null>>(
+        endpoint,
+        { watch: [() => toValue(buildingIdentifier)] },
+      )
+  const status = source?.status ?? fetched!.status
+  const loadError = source?.error ?? fetched!.error
+  const refresh = source?.refresh ?? fetched!.refresh
   const saving = ref(false)
   const saveError = ref<string | null>(null)
 
-  const profile = computed(() => data.value?.data ?? null)
+  const profile = source?.data ?? computed(() => fetched?.data.value?.data ?? null)
   const loading = computed(() => status.value === 'pending')
   const error = computed(() => {
     if (saveError.value) return saveError.value
@@ -40,7 +56,8 @@ export function useBuildingInvoiceProfile(buildingIdentifier: MaybeRef<string>) 
         method: 'PUT',
         body,
       })
-      data.value = response
+      if (source) source.set(response.data)
+      else fetched!.data.value = response
       return response.data
     }
     catch (cause) {

@@ -228,4 +228,5 @@ describe('tenant portal services', () => {
       charges: [{ id: 'charge-1', chargeType: 'rent', amount: 5_000_000 }],
     })
   })
+
 })

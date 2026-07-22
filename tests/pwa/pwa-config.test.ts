@@ -47,7 +47,10 @@ describe('service worker — no authenticated personal data is cached', () => {
 
   it('precaches static assets only (no HTML pages, no api globs)', () => {
     const glob = config.match(/globPatterns:\s*\[(.*?)\]/s)?.[1] ?? ''
-    expect(glob).toContain('js,css,svg,png,ico,woff2')
+    expect(glob).toContain('offline.html')
+    expect(glob).toContain('icons/')
+    expect(glob).not.toContain('**/*.js')
+    expect(glob).not.toContain('**/*.css')
     expect(glob).not.toContain('/api')
     expect(glob).not.toContain('supabase')
   })

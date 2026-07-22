@@ -63,6 +63,7 @@ describe('tenant portal repositories', () => {
       expect.anything(),
       expect.objectContaining({ page: 2, page_size: 10, today: '2026-07-16' }),
       { contractId: 'contract-1' },
+      { exactCount: false },
     )
     expect(findCrossPeriodById).toHaveBeenCalledWith(expect.anything(), 'invoice-1', { contractId: 'contract-1' })
   })

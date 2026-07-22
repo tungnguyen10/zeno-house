@@ -126,4 +126,18 @@ describe('BuildingRepository', () => {
       { table: 'buildings', column: 'id', value: '11111111-1111-4111-8111-111111111111' },
     ])
   })
+
+  it('memoizes the same building lookup for one request', async () => {
+    const mock = createClientMock()
+    serverSupabaseClient.mockReturnValue(mock.client)
+    const event = { context: {} } as never
+    const { BuildingRepository } = await import('../../../server/repositories/buildings')
+
+    await BuildingRepository.findByIdentifier(event, 'toa-a')
+    await BuildingRepository.findByIdentifier(event, 'toa-a')
+
+    expect(mock.calls.eq.filter(call => call.table === 'buildings')).toEqual([
+      { table: 'buildings', column: 'slug', value: 'toa-a' },
+    ])
+  })
 })

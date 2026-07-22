@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { ChartData, ChartOptions, TooltipItem } from 'chart.js'
+import '~/utils/chart-registration'
 import { Line } from 'vue-chartjs'
 import type { TenantInvoiceListItem } from '~/types/tenant-portal'
 import { useChartTheme } from '~/composables/useChartTheme'

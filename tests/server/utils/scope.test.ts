@@ -133,6 +133,18 @@ describe('tenant scope resolver', () => {
       .toHaveBeenCalledWith(requestEvent, 'auth-user-a')
   })
 
+  it('caches tenant identity for the lifetime of one request', async () => {
+    tenantLinkRepoMocks.getTenantIdForAuthUser.mockResolvedValue('tenant-a')
+    const requestEvent = event()
+    const tenantUser = user('tenant', 'auth-user-a')
+    const { resolveTenantId } = await import('../../../server/utils/scope')
+
+    await resolveTenantId(requestEvent, tenantUser)
+    await resolveTenantId(requestEvent, tenantUser)
+
+    expect(tenantLinkRepoMocks.getTenantIdForAuthUser).toHaveBeenCalledTimes(1)
+  })
+
   it.each([
     ['missing', null],
     ['disabled', null],
