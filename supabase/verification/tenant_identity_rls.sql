@@ -1,6 +1,7 @@
 -- Verifies primary and roommate tenant RLS against the linked Supabase project.
--- Requires one room without an active contract, one unused billing-period slot,
--- and two auth users without tenant_user_links.
+-- Requires one room, one unused billing-period slot, and two auth users without
+-- tenant_user_links. An existing active contract is reused transactionally when
+-- available; every fixture mutation is restored by the final rollback.
 -- All fixture rows are created inside this transaction and rolled back.
 
 begin;
@@ -13,7 +14,9 @@ create temporary table tenant_rls_test_context (
   other_tenant_id uuid not null,
   shared_contract_id uuid not null,
   other_contract_id uuid not null,
-  billing_period_id uuid not null
+  billing_period_id uuid not null,
+  shared_invoice_id uuid not null,
+  other_invoice_id uuid not null
 ) on commit drop;
 
 grant select on tenant_rls_test_context to authenticated;
@@ -21,6 +24,8 @@ grant select on tenant_rls_test_context to authenticated;
 create temporary table tenant_rls_test_fixture (
   room_id uuid not null,
   building_id uuid not null,
+  shared_contract_id uuid not null,
+  uses_existing_contract boolean not null,
   period_year integer not null,
   period_month integer not null
 ) on commit drop;
@@ -29,9 +34,19 @@ insert into tenant_rls_test_fixture
 select
   fixture_room.id,
   fixture_room.building_id,
+  coalesce(active_contract.id, gen_random_uuid()),
+  active_contract.id is not null as uses_existing_contract,
   available_period.period_year,
   available_period.period_month
 from public.rooms as fixture_room
+left join lateral (
+  select existing.id
+  from public.contracts as existing
+  where existing.room_id = fixture_room.id
+    and existing.status = 'active'
+  order by existing.created_at desc
+  limit 1
+) as active_contract on true
 cross join lateral (
   select year_slot.period_year, month_slot.period_month
   from generate_series(2000, 2100) as year_slot(period_year)
@@ -46,13 +61,7 @@ cross join lateral (
   order by year_slot.period_year desc, month_slot.period_month desc
   limit 1
 ) as available_period
-where not exists (
-  select 1
-  from public.contracts as existing
-  where existing.room_id = fixture_room.id
-    and existing.status = 'active'
-)
-order by fixture_room.created_at
+order by (active_contract.id is not null) desc, fixture_room.created_at
 limit 1;
 
 insert into tenant_rls_test_context
@@ -61,6 +70,8 @@ select
   candidates.ids[2],
   gen_random_uuid(),
   gen_random_uuid(),
+  gen_random_uuid(),
+  fixture.shared_contract_id,
   gen_random_uuid(),
   gen_random_uuid(),
   gen_random_uuid(),
@@ -74,6 +85,7 @@ from (
     where link.auth_user_id = users.id
   )
 ) as candidates
+cross join tenant_rls_test_fixture as fixture
 where cardinality(candidates.ids) >= 2;
 
 do $$
@@ -82,7 +94,7 @@ begin
     raise exception 'tenant RLS verification requires two unlinked auth users';
   end if;
   if not exists (select 1 from tenant_rls_test_fixture) then
-    raise exception 'tenant RLS verification requires one room without an active contract and an unused billing period';
+    raise exception 'tenant RLS verification requires one room and an unused billing period';
   end if;
 end
 $$;
@@ -104,6 +116,16 @@ union all
 select roommate_auth_user_id, roommate_tenant_id, 'active'
 from tenant_rls_test_context;
 
+update public.contracts as shared_contract
+set
+  tenant_id = context.primary_tenant_id,
+  start_date = (now() at time zone 'Asia/Ho_Chi_Minh')::date - 30,
+  end_date = (now() at time zone 'Asia/Ho_Chi_Minh')::date + 30
+from tenant_rls_test_context as context
+cross join tenant_rls_test_fixture as fixture
+where shared_contract.id = context.shared_contract_id
+  and fixture.uses_existing_contract;
+
 insert into public.contracts (
   id, contract_code, building_id, room_id, tenant_id,
   start_date, end_date, monthly_rent, status
@@ -120,6 +142,7 @@ select
   'active'
 from tenant_rls_test_context as context
 cross join tenant_rls_test_fixture as fixture
+where not fixture.uses_existing_contract
 union all
 select
   context.other_contract_id,
@@ -153,9 +176,10 @@ from tenant_rls_test_context as context
 cross join tenant_rls_test_fixture as fixture;
 
 insert into public.invoices (
-  invoice_code, billing_period_id, contract_id, room_id, tenant_id, status
+  id, invoice_code, billing_period_id, contract_id, room_id, tenant_id, status
 )
 select
+  context.shared_invoice_id,
   'RLS-SHARED-' || left(context.shared_contract_id::text, 8),
   context.billing_period_id,
   context.shared_contract_id,
@@ -166,6 +190,7 @@ from tenant_rls_test_context as context
 cross join tenant_rls_test_fixture as fixture
 union all
 select
+  context.other_invoice_id,
   'RLS-OTHER-' || left(context.other_contract_id::text, 8),
   context.billing_period_id,
   context.other_contract_id,
@@ -198,8 +223,8 @@ begin
   or (select count(*) from public.contracts where id = (
     select shared_contract_id from tenant_rls_test_context
   )) <> 1
-  or (select count(*) from public.invoices where contract_id = (
-    select shared_contract_id from tenant_rls_test_context
+  or (select count(*) from public.invoices where id = (
+    select shared_invoice_id from tenant_rls_test_context
   )) <> 1
   then
     raise exception 'primary tenant RLS verification failed';
@@ -239,12 +264,12 @@ begin
     select 1 from public.contracts
     where id = (select other_contract_id from tenant_rls_test_context)
   )
-  or (select count(*) from public.invoices where contract_id = (
-    select shared_contract_id from tenant_rls_test_context
+  or (select count(*) from public.invoices where id = (
+    select shared_invoice_id from tenant_rls_test_context
   )) <> 1
   or exists (
     select 1 from public.invoices
-    where contract_id = (select other_contract_id from tenant_rls_test_context)
+    where id = (select other_invoice_id from tenant_rls_test_context)
   )
   then
     raise exception 'active roommate RLS verification failed';
@@ -269,7 +294,7 @@ begin
   )
   or exists (
     select 1 from public.invoices
-    where contract_id = (select shared_contract_id from tenant_rls_test_context)
+    where id = (select shared_invoice_id from tenant_rls_test_context)
   )
   then
     raise exception 'future roommate move-in RLS verification failed';
@@ -298,7 +323,7 @@ begin
   )
   or exists (
     select 1 from public.invoices
-    where contract_id = (select shared_contract_id from tenant_rls_test_context)
+    where id = (select shared_invoice_id from tenant_rls_test_context)
   )
   then
     raise exception 'expired roommate contract RLS verification failed';
@@ -324,7 +349,7 @@ begin
   )
   or exists (
     select 1 from public.invoices
-    where contract_id = (select shared_contract_id from tenant_rls_test_context)
+    where id = (select shared_invoice_id from tenant_rls_test_context)
   )
   then
     raise exception 'terminated roommate contract RLS verification failed';
@@ -353,7 +378,7 @@ begin
   )
   or exists (
     select 1 from public.invoices
-    where contract_id = (select shared_contract_id from tenant_rls_test_context)
+    where id = (select shared_invoice_id from tenant_rls_test_context)
   )
   or not exists (
     select 1 from public.tenants
@@ -394,7 +419,7 @@ begin
   )
   or exists (
     select 1 from public.invoices
-    where contract_id = (select shared_contract_id from tenant_rls_test_context)
+    where id = (select shared_invoice_id from tenant_rls_test_context)
   )
   then
     raise exception 'disabled roommate RLS verification failed';

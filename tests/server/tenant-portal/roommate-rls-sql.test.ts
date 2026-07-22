@@ -64,10 +64,13 @@ describe('tenant roommate portal RLS migration', () => {
 })
 
 describe('tenant roommate RLS verification fixtures', () => {
-  it('uses a room without an active contract and creates only one active fixture contract', () => {
+  it('reuses an existing active contract and only creates one when none exists', () => {
     const contractFixtureInsert = verificationSql.match(/insert into public\.contracts[\s\S]*?;/i)?.[0] ?? ''
 
-    expect(verificationSql).toMatch(/from public\.rooms as fixture_room[\s\S]*?where not exists \([\s\S]*?existing\.room_id = fixture_room\.id[\s\S]*?existing\.status = 'active'/i)
+    expect(verificationSql).toContain("and existing.status = 'active'")
+    expect(verificationSql).toContain('active_contract.id is not null as uses_existing_contract')
+    expect(verificationSql).toContain('where not fixture.uses_existing_contract')
+    expect(verificationSql).toMatch(/update public\.contracts as shared_contract[\s\S]*?tenant_id = context\.primary_tenant_id[\s\S]*?fixture\.uses_existing_contract/i)
     expect(contractFixtureInsert.match(/^\s*'active'\s*$/gim)).toHaveLength(1)
     expect(contractFixtureInsert.match(/^\s*'terminated'\s*$/gim)).toHaveLength(1)
   })
@@ -75,5 +78,13 @@ describe('tenant roommate RLS verification fixtures', () => {
   it('chooses an unused billing period for the fixture building', () => {
     expect(verificationSql).toContain('generate_series(2000, 2100)')
     expect(verificationSql).toContain('billing_period.building_id = fixture_room.building_id')
+  })
+
+  it('asserts fixture invoices by id so existing contract history does not affect counts', () => {
+    expect(verificationSql).toContain('shared_invoice_id uuid not null')
+    expect(verificationSql).toContain('other_invoice_id uuid not null')
+    expect(verificationSql).toContain('where id = (select shared_invoice_id from tenant_rls_test_context)')
+    expect(verificationSql).toContain('where id = (select other_invoice_id from tenant_rls_test_context)')
+    expect(verificationSql).not.toMatch(/where contract_id = \(\s*select shared_contract_id from tenant_rls_test_context\)/i)
   })
 })
