@@ -3,6 +3,7 @@ import type { AuthUser } from '~/types/auth'
 
 const userRepo = vi.hoisted(() => ({
   update: vi.fn(),
+  updateCurrentPassword: vi.fn(),
   getAuthAccount: vi.fn(),
   setTenantOnboardingStage: vi.fn(),
   setTenantOnboardingEmail: vi.fn(),
@@ -35,6 +36,7 @@ beforeEach(() => {
   scope.resolveTenantId.mockResolvedValue('tenant-1')
   contractRepo.findActiveByTenantId.mockResolvedValue({ buildingId: 'building-1' })
   userRepo.update.mockResolvedValue({ id: 'auth-1', email: 'tenant@gmail.com' })
+  userRepo.updateCurrentPassword.mockResolvedValue(undefined)
   userRepo.setTenantOnboardingStage.mockResolvedValue(undefined)
   userRepo.setTenantOnboardingEmail.mockResolvedValue(undefined)
   profileRepo.updateLoginEmail.mockResolvedValue({ id: 'tenant-1', email: 'tenant@gmail.com' })
@@ -42,10 +44,11 @@ beforeEach(() => {
 })
 
 describe('TenantOnboardingService', () => {
-  it('moves a tenant from a temporary password to the email step', async () => {
+  it('changes the password through the tenant session before advancing to the email step', async () => {
     await (await service()).setPassword(event(), tenant('password_required'), { password: 'new-password-123' })
 
-    expect(userRepo.update).toHaveBeenCalledWith(expect.anything(), 'auth-1', { password: 'new-password-123' })
+    expect(userRepo.updateCurrentPassword).toHaveBeenCalledWith(expect.anything(), 'new-password-123')
+    expect(userRepo.update).not.toHaveBeenCalled()
     expect(userRepo.setTenantOnboardingStage).toHaveBeenCalledWith(expect.anything(), 'auth-1', 'email_required')
   })
 

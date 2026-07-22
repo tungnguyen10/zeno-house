@@ -4,6 +4,7 @@ import type { ManagedUser } from '~/types/users'
 import type { UserRole } from '~/utils/constants/roles'
 import type { UserUpdateInput } from '~/utils/validators/users'
 import type { TenantOnboardingStage } from '~/utils/tenant-onboarding'
+import { serverSupabaseClient as serverAuthClient } from '#supabase/server'
 
 interface AuthUserLike {
   id: string
@@ -191,6 +192,12 @@ export const UserRepository = {
 
     const { error } = await client.auth.admin.updateUserById(id, { app_metadata: metadata })
     if (error) throwDbError(error, 'users.setTenantOnboardingEmail.update')
+  },
+
+  async updateCurrentPassword(event: H3Event, password: string): Promise<void> {
+    const client = await serverAuthClient(event)
+    const { error } = await client.auth.updateUser({ password })
+    if (error) throwDbError(error, 'users.updateCurrentPassword')
   },
 
   async update(event: H3Event, id: string, input: UserUpdateInput): Promise<ManagedUser> {

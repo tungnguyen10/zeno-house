@@ -27,7 +27,7 @@ async function appendAudit(event: H3Event, user: AuthUser, tenantId: string, act
 export const TenantOnboardingService = {
   async setPassword(event: H3Event, user: AuthUser, input: { password: string }): Promise<void> {
     assertStage(user, 'password_required')
-    await UserRepository.update(event, user.id, { password: input.password })
+    await UserRepository.updateCurrentPassword(event, input.password)
     await UserRepository.setTenantOnboardingStage(event, user.id, 'email_required')
     const tenantId = await resolveTenantId(event, user)
     await appendAudit(event, user, tenantId, AUDIT_ACTIONS.TENANT_ACCOUNT_PASSWORD_CHANGED)

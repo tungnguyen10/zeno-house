@@ -39,6 +39,7 @@ describe('auth landing routes', () => {
     apiFetch.mockReset()
     updateUser.mockReset()
     linkIdentity.mockReset()
+    refreshSession.mockReset()
   })
 
   it.each([
@@ -125,6 +126,18 @@ describe('auth landing routes', () => {
       provider: 'google',
       options: { redirectTo: `${window.location.origin}/auth/complete-account` },
     })
+  })
+
+  it('keeps the current Supabase session refreshable after onboarding password change', async () => {
+    apiFetch.mockResolvedValue({})
+    refreshSession.mockResolvedValue({ data: { session: {} }, error: null })
+
+    await useAuth().setOnboardingPassword('password-123')
+
+    expect(apiFetch).toHaveBeenCalledWith('/api/auth/tenant-onboarding/password', {
+      method: 'POST', body: { password: 'password-123' },
+    })
+    expect(refreshSession).toHaveBeenCalledOnce()
   })
 
   it.each([

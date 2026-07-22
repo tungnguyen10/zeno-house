@@ -33,6 +33,10 @@ Supabase Dashboard requirements: enable Google, enable **Manual Linking**, add
 the new email without requiring the potentially incorrect old email. Production must use an SMTP
 configuration that can deliver Auth confirmation messages to tenant addresses.
 
+Session policy: keep JWT expiry at Supabase's one-hour default. Configure a 24-hour inactivity
+timeout and a seven-day absolute session lifetime in Authentication > Sessions; do not extend JWT
+expiry to 24 hours because refreshed claims and session revocation would take longer to take effect.
+
 ## Pending Experience
 
 A missing-role session can render `/auth/pending` and call only authenticated auth-lifecycle APIs.

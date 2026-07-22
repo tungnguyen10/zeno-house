@@ -44,6 +44,10 @@ Provisioning and password reset SHALL generate a server-side random temporary pa
 - **WHEN** the tenant signs in with the temporary credentials
 - **THEN** the session is accepted and the tenant is routed to `/auth/complete-account`, not `/portal`
 
+#### Scenario: Password step preserves the onboarding session
+- **WHEN** the tenant replaces the temporary password during onboarding
+- **THEN** Supabase updates the password using that tenant's authenticated session, the same session remains refreshable, and onboarding advances to email verification
+
 #### Scenario: Reset password restarts onboarding
 - **WHEN** an operator resets a tenant password
 - **THEN** the account returns to `password_required` before it can use portal routes or tenant APIs
