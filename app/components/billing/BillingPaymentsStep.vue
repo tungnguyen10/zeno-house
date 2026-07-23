@@ -28,6 +28,12 @@ const emit = defineEmits<{ reload: [] }>()
 const { load, recordPayment, recordBulkPayments, voidInvoice, listPayments } = useBillingInvoiceActions()
 const { openPrint } = useInvoicePrinting()
 const toast = useToast()
+const {
+  sending: sendingInvoiceEmail,
+  error: invoiceEmailError,
+  enqueue: enqueueInvoiceEmail,
+} = useInvoiceEmailDelivery()
+const invoiceEmailEnabled = useRuntimeConfig().public.invoiceEmailEnabled === true
 
 const periodIsClosed = computed(() => isPeriodLocked(props.period))
 const canUndoPayment = computed(() => !!props.onUndoPayment && !periodIsClosed.value)
@@ -193,6 +199,37 @@ function printSelection() {
   openPrint(selectedInvoicesForBulk.value.map(invoice => invoice.id))
 }
 
+const showEmailModal = ref(false)
+const bulkEmailSummary = ref<string | null>(null)
+
+async function sendEmailSelection() {
+  if (
+    selectedInvoicesForBulk.value.length === 0
+    || selectedInvoicesForBulk.value.length > 100
+  ) return
+  try {
+    const result = await enqueueInvoiceEmail(
+      selectedInvoicesForBulk.value.map(invoice => invoice.id),
+    )
+    const counts = result.results.reduce((summary, item) => {
+      summary[item.status] += 1
+      return summary
+    }, { queued: 0, already_queued: 0, skipped: 0, failed: 0 })
+    bulkEmailSummary.value = [
+      `Đã xếp hàng ${counts.queued}`,
+      counts.already_queued ? `đã có trong hàng ${counts.already_queued}` : null,
+      counts.skipped ? `bỏ qua ${counts.skipped}` : null,
+      counts.failed ? `không thành công ${counts.failed}` : null,
+    ].filter(Boolean).join(' · ')
+    showEmailModal.value = false
+    clearSelection()
+    toast.success('Đã xử lý danh sách gửi email.')
+  }
+  catch {
+    // Keep the modal open and show the standardized error.
+  }
+}
+
 // ---------- Bulk modal ----------
 const showBulkModal = ref(false)
 const bulkSubmitting = ref(false)
@@ -274,7 +311,13 @@ function startPayment(inv: Invoice) {
   paymentForm.payment_method = 'cash'
   paymentForm.note = ''
   paymentError.value = null
-  selectedInvoice.value = { invoice: inv, charges: [], payments: [], invoiceProfile: null }
+  selectedInvoice.value = {
+    invoice: inv,
+    charges: [],
+    payments: [],
+    invoiceProfile: null,
+    recipientEmail: null,
+  }
   showPaymentModal.value = true
 }
 
@@ -433,6 +476,10 @@ watch(
 
 <template>
   <div class="space-y-4">
+    <UiAlert v-if="bulkEmailSummary" severity="success" dismissible @dismiss="bulkEmailSummary = null">
+      {{ bulkEmailSummary }}
+    </UiAlert>
+
     <UiSection title="Thu tiền & công nợ" description="Theo dõi hoá đơn, ghi nhận thanh toán, hoàn tác và huỷ/phát hành lại.">
       <template v-if="summary.overdueCount > 0" #actions>
         <span class="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2.5 py-0.5 text-xs font-medium text-amber-300">
@@ -710,6 +757,33 @@ watch(
       @submit="submitBulkPayments"
     />
 
+    <UiModal
+      :open="showEmailModal"
+      title="Gửi các hoá đơn đã chọn?"
+      size="sm"
+      @close="showEmailModal = false"
+    >
+      <div class="space-y-3">
+        <p class="text-sm leading-6 text-muted">
+          {{ selectedInvoicesForBulk.length }} hoá đơn đang hiển thị sẽ được xếp hàng gửi đến email liên hệ chính của khách thuê.
+        </p>
+        <UiAlert v-if="selectedInvoicesForBulk.length > 100" severity="warning">
+          Mỗi lần chỉ gửi tối đa 100 hoá đơn.
+        </UiAlert>
+        <UiAlert v-if="invoiceEmailError" severity="danger">{{ invoiceEmailError }}</UiAlert>
+      </div>
+      <template #footer>
+        <UiButton variant="secondary" :disabled="sendingInvoiceEmail" @click="showEmailModal = false">Huỷ</UiButton>
+        <UiButton
+          :loading="sendingInvoiceEmail"
+          :disabled="selectedInvoicesForBulk.length === 0 || selectedInvoicesForBulk.length > 100"
+          @click="sendEmailSelection"
+        >
+          Gửi email ({{ selectedInvoicesForBulk.length }})
+        </UiButton>
+      </template>
+    </UiModal>
+
     <!-- Sticky bulk action bar -->
     <Transition
       enter-active-class="transition duration-150 ease-out"
@@ -730,6 +804,16 @@ watch(
           <UiButton class="whitespace-nowrap" variant="ghost" size="sm" @click="clearSelection">Bỏ chọn</UiButton>
           <UiButton class="whitespace-nowrap" variant="secondary" size="sm" @click="printSelection">
             In phiếu
+          </UiButton>
+          <UiButton
+            v-if="invoiceEmailEnabled"
+            class="col-span-2 whitespace-nowrap sm:col-auto"
+            variant="secondary"
+            size="sm"
+            :disabled="selectedInvoicesForBulk.length > 100"
+            @click="showEmailModal = true"
+          >
+            Gửi email ({{ selectedInvoicesForBulk.length }})
           </UiButton>
           <UiButton
             class="col-span-2 whitespace-nowrap sm:col-auto"

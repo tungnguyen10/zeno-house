@@ -12,6 +12,7 @@ import { ReserveFundService } from '../operations-report/reserve-funds'
 import { ServiceCatalogService } from '../service-catalog'
 import { BuildingService } from './index'
 import { BuildingInvoiceProfileService } from './invoice-profile'
+import { BuildingInvoiceEmailSettingsService } from './invoice-email-settings'
 
 export const BuildingSettingsBootstrapService = {
   async get(
@@ -24,6 +25,7 @@ export const BuildingSettingsBootstrapService = {
 
     const [
       invoiceProfile,
+      invoiceEmailSettings,
       buildingServices,
       contractServices,
       catalog,
@@ -36,6 +38,9 @@ export const BuildingSettingsBootstrapService = {
     ] = await Promise.all([
       can(user, 'building-invoice-profile.read')
         ? BuildingInvoiceProfileService.get(event, user, buildingId)
+        : Promise.resolve(null),
+      can(user, 'invoice-email-settings.read')
+        ? BuildingInvoiceEmailSettingsService.get(event, user, buildingId)
         : Promise.resolve(null),
       BuildingServiceService.list(event, user, buildingId),
       ContractServiceService.listByBuilding(event, user, buildingId),
@@ -66,6 +71,8 @@ export const BuildingSettingsBootstrapService = {
     return {
       building,
       invoiceProfile,
+      invoiceEmailAvailable: useRuntimeConfig(event).public.invoiceEmailEnabled === true,
+      invoiceEmailSettings,
       buildingServices,
       contractServices,
       catalog,

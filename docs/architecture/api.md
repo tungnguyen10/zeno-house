@@ -62,6 +62,8 @@ The current runtime exposes scoped context, meter status, billing overview/draft
 | GET | `/api/buildings/[id]/rooms/[room]` |
 | GET | `/api/buildings/[id]/invoice-profile` |
 | PUT | `/api/buildings/[id]/invoice-profile` |
+| GET | `/api/buildings/[id]/invoice-email-settings` |
+| PUT | `/api/buildings/[id]/invoice-email-settings` |
 
 Invoice-profile updates use `multipart/form-data`. The initial save requires complete bank fields and `qr_image`; later saves preserve omitted images and accept `remove_logo=true`. Images are JPEG, PNG, or WebP up to 5 MB. Responses contain short-lived signed URLs and never private Storage paths.
 
@@ -164,9 +166,18 @@ the server derives tenant/building/contract context and returns five-minute sign
 | POST | `/api/billing/invoices/bulk-payments` |
 | POST | `/api/billing/invoices/print-data` |
 | POST | `/api/billing/invoices/printed` |
+| POST | `/api/billing/invoices/email-deliveries` |
+| GET | `/api/billing/invoices/[id]/email-deliveries` |
 | GET | `/api/invoices` |
 
 Billing behavior is split across services under `server/services/billing/**`. Some period, invoice, payment, audit, issue, close, and correction operations are implemented as service/RPC paths rather than one route per action. Check source before adding or documenting a route.
+
+Invoice-email enqueue accepts one to 100 invoice UUIDs or codes and returns one result per input;
+bulk requests may partially succeed. Delivery history is scoped through the invoice's building and
+returns safe DTOs without private asset paths, worker leases, or idempotency keys. The Resend
+webhook at `POST /api/webhooks/resend` authenticates the raw Svix body. The dispatcher endpoint at
+`POST /api/internal/invoice-email/dispatch` is server-to-server only and requires
+`x-invoice-email-dispatch-secret`; neither endpoint uses session authorization.
 
 ## Manager Assignments And Audit
 

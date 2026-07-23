@@ -19,6 +19,7 @@ Zeno House uses Supabase Postgres. Schema history lives in `supabase/migrations`
 | Service catalog | `20260530200000_service_catalog.sql` through `20260530200005_drop_default_service_fees.sql`, `20260706010000_building_custom_service_catalog.sql` |
 | Meter readings | `20260530300000_meter_readings.sql`, `20260530400000_simplify_meter_readings.sql` |
 | Billing runtime | `20260611000000_billing_runtime.sql`, `20260611000001_billing_legacy_cleanup.sql` |
+| Invoice email delivery | `20260723103000_add_invoice_email_delivery.sql` |
 | Operations report | `20260702173259_add_operations_report.sql`, `20260704000000_expense_receipts_and_export_categories.sql`, `20260705000000_recurring_and_prepaid_expenses.sql`, `20260707030000_operations_report_closure.sql`, `20260707031000_fix_operations_report_periods_shape.sql` |
 | Shared expenses and reserve fund | `20260705010000_shared_expenses_and_reserve_fund.sql`, `20260707010000_reserve_fund_auto_accrual.sql`, `20260707020000_fix_reserve_fund_source_constraint.sql` |
 | Pending account approval | `20260718155418_add_pending_account_approval.sql`, `20260719093000_fence_access_request_approval.sql` |
@@ -84,6 +85,9 @@ Billing:
 - `invoice_payments`
 - `billing_utility_usages`
 - `billing_audit_events`
+- `building_invoice_email_settings`
+- `invoice_email_deliveries`
+- `invoice_email_webhook_events`
 
 ## Identifier Strategy
 
@@ -117,6 +121,20 @@ The private `building-invoice-assets` Storage bucket accepts JPEG, PNG, and WebP
 `billing_utility_usages` stores manual usage overrides by period, room, and meter type.
 
 `billing_audit_events` stores append-only operational audit events.
+
+`building_invoice_email_settings` stores one default-off automatic-send setting per building.
+`invoice_email_deliveries` is the durable outbox and delivery history: it snapshots the normalized
+recipient, source, provider id, attempt/lease state, terminal timestamps, and safe provider error.
+A partial unique index reuses only active queued/processing/accepted work for the same invoice and
+recipient; a later explicit resend after a terminal outcome creates a new delivery.
+
+The invoice `AFTER INSERT` trigger atomically enqueues or records a skipped delivery when building
+auto-send is enabled, so period issue, issue-and-pay, and reissue share the same behavior. Missing
+or malformed tenant email never aborts invoice issuance. `claim_invoice_email_deliveries` uses
+`FOR UPDATE SKIP LOCKED`, batch 20, a ten-minute lease, and a six-attempt cap.
+`apply_invoice_email_webhook_event` atomically deduplicates Svix ids, locks the matched delivery,
+and applies event-time plus terminal precedence. All three tables deny browser roles and are
+accessible only through service-role repositories/functions.
 
 ## Operations Report Model
 

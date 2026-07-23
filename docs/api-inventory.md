@@ -1,7 +1,7 @@
 # API Inventory And Performance Contracts
 
 Generated from checked-in handlers by `node scripts/generate-api-inventory.mjs`.
-Route count: **166**.
+Route count: **172**.
 
 All business routes require server-side authorization unless explicitly documented as an internal-secret route. Initial reads use Nuxt `useFetch`; imperative reads and mutations use `apiFetch` with a 15-second timeout, request ID, no automatic mutation retry, and normalized server envelopes.
 
@@ -25,12 +25,14 @@ All business routes require server-side authorization unless explicitly document
 | POST | `/api/auth/tenant-onboarding/password` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | GET | `/api/billing/invoices/[id]` | n/a | request/DTO policy | p95 ≤ 250ms |
 | POST | `/api/billing/invoices/[id]/adjustment` | n/a | invalidate affected domain | p95 ≤ 250ms |
+| GET | `/api/billing/invoices/[id]/email-deliveries` | n/a | request/DTO policy | p95 ≤ 250ms |
 | GET | `/api/billing/invoices/[id]/payments` | domain-bounded | no long cache | p95 ≤ 400ms |
 | POST | `/api/billing/invoices/[id]/payments` | n/a | no long cache | p95 ≤ 250ms |
 | DELETE | `/api/billing/invoices/[id]/payments/[paymentId]` | n/a | no long cache | p95 ≤ 250ms |
 | POST | `/api/billing/invoices/[id]/reissue` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | POST | `/api/billing/invoices/[id]/void` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | POST | `/api/billing/invoices/bulk-payments` | n/a | invalidate affected domain | p95 ≤ 250ms |
+| POST | `/api/billing/invoices/email-deliveries` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | POST | `/api/billing/invoices/print-data` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | POST | `/api/billing/invoices/printed` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | GET | `/api/billing/periods/[id]/audit` | bounded | request/DTO policy | p95 ≤ 400ms |
@@ -68,6 +70,8 @@ All business routes require server-side authorization unless explicitly document
 | DELETE | `/api/buildings/[id]` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | GET | `/api/buildings/[id]` | n/a | request/DTO policy | p95 ≤ 250ms |
 | PATCH | `/api/buildings/[id]` | n/a | invalidate affected domain | p95 ≤ 250ms |
+| GET | `/api/buildings/[id]/invoice-email-settings` | domain-bounded | request/DTO policy | p95 ≤ 400ms |
+| PUT | `/api/buildings/[id]/invoice-email-settings` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | GET | `/api/buildings/[id]/invoice-profile` | domain-bounded | request/DTO policy | p95 ≤ 400ms |
 | PUT | `/api/buildings/[id]/invoice-profile` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | GET | `/api/buildings/[id]/rooms/[room]` | n/a | request/DTO policy | p95 ≤ 250ms |
@@ -98,6 +102,7 @@ All business routes require server-side authorization unless explicitly document
 | POST | `/api/contracts` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | GET | `/api/dashboard/summary` | n/a | 20s scoped | p95 ≤ 800ms |
 | POST | `/api/internal/ai/retention-cleanup` | n/a | invalidate affected domain | p95 ≤ 250ms |
+| POST | `/api/internal/invoice-email/dispatch` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | POST | `/api/internal/operations-report/auto-close` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | GET | `/api/invoices` | bounded | request/DTO policy | p95 ≤ 400ms |
 | PATCH | `/api/meter-readings/[id]` | n/a | no long cache | p95 ≤ 250ms |
@@ -173,3 +178,4 @@ All business routes require server-side authorization unless explicitly document
 | DELETE | `/api/users/[id]` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | PATCH | `/api/users/[id]` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | POST | `/api/users` | n/a | invalidate affected domain | p95 ≤ 250ms |
+| POST | `/api/webhooks/resend` | n/a | invalidate affected domain | p95 ≤ 250ms |

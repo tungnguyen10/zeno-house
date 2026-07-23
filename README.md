@@ -23,14 +23,20 @@ The Nuxt dev server is configured for HTTPS in `nuxt.config.ts`.
 Required environment values live in `.env` locally and map into Nuxt runtime config:
 
 - Supabase project URL/key values used by `@nuxtjs/supabase`
-- `RESEND_API_KEY`
+- `NUXT_RESEND_API_KEY`
+- `NUXT_RESEND_FROM`
+- `NUXT_RESEND_REPLY_TO` (optional)
+- `NUXT_RESEND_WEBHOOK_SECRET`
+- `NUXT_INVOICE_EMAIL_DISPATCH_SECRET`
+- `NUXT_PUBLIC_INVOICE_EMAIL_ENABLED` (defaults to `false`)
 - `ADMIN_EMAIL`
 - `NUXT_TURNSTILE_SECRET_KEY`
 - `NUXT_PUBLIC_SITE_URL`
 - `NUXT_PUBLIC_GA_ID`
 - `NUXT_PUBLIC_TURNSTILE_SITE_KEY`
 
-Resend, Turnstile, and GA runtime config exist, but product flows currently focus on authenticated operations rather than public marketing or notification surfaces.
+Invoice email delivery remains disabled until the global flag is enabled. Apply the invoice-email
+migration through Supabase SQL Editor and follow the staged rollout guide before enabling it.
 
 ## Scripts
 

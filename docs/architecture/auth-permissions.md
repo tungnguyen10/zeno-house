@@ -230,9 +230,15 @@ visible to their owner only through building assignments.
 | `billing.unissue` | admin | Reopen issuance by voiding unpaid invoices and retaining paid ones. |
 | `building-invoice-profile.read` | admin, owner, manager | View current building receiving instructions and signed image previews in building scope. |
 | `building-invoice-profile.write` | admin, owner | Create or update receiving instructions and private QR/logo assets in building scope. |
+| `invoice-email-settings.read` | admin, owner, manager | View automatic invoice-email state in building scope. |
+| `invoice-email-settings.write` | admin, owner | Enable or disable future automatic invoice emails in building scope. |
 
 For scoped roles (owner, manager) every billing capability is additionally constrained to the
 period's building via `assertBuildingScope`.
+
+Manual single/bulk email enqueue uses `billing.write`; delivery history uses `billing.read`.
+Managers can send within assigned buildings but cannot change automatic-send settings. The global
+feature flag is an additional server-side kill switch and never grants a capability.
 
 AI tool exposure does not grant a capability. Read and issue planning require the same
 `billing.read`/`billing.write` checks as their direct service paths; void, reissue, and paid

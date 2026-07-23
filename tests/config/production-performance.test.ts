@@ -20,6 +20,18 @@ describe('production deployment performance config', () => {
     expect(config).toMatch(/devtools:\s*\{\s*enabled:\s*process\.env\.NODE_ENV\s*!==\s*["']production["']/)
   })
 
+  it('keeps invoice email globally disabled by default and secrets private', () => {
+    const config = readFileSync(resolve(root, 'nuxt.config.ts'), 'utf8')
+
+    expect(config).toMatch(/invoiceEmailEnabled:\s*false/)
+    expect(config).toMatch(/resendFrom:\s*["']["']/)
+    expect(config).toMatch(/resendReplyTo:\s*["']["']/)
+    expect(config).toMatch(/resendWebhookSecret:\s*["']["']/)
+    expect(config).toMatch(/invoiceEmailDispatchSecret:\s*["']["']/)
+    expect(config).not.toMatch(/public:\s*\{[^}]*resendApiKey/s)
+    expect(config).not.toMatch(/public:\s*\{[^}]*resendWebhookSecret/s)
+  })
+
   it('registers Chart.js only inside chart-bearing component chunks', () => {
     expect(existsSync(resolve(root, 'app/plugins/chart.client.ts'))).toBe(false)
     const components = [

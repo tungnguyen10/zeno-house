@@ -8,6 +8,7 @@ This directory contains source-of-truth engineering docs for the current Zeno Ho
 - Project status: [project-status.md](project-status.md)
 - Architecture rules: [architecture/rules.md](architecture/rules.md)
 - Local setup: [development/local-setup.md](development/local-setup.md)
+- Invoice email rollout: [development/invoice-email-rollout.md](development/invoice-email-rollout.md)
 - Testing: [development/testing.md](development/testing.md)
 - Operational design system: [ui-patterns/design-system.md](ui-patterns/design-system.md)
 

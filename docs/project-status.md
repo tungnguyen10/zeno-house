@@ -1,6 +1,20 @@
 # Zeno House - Project Status
 
-Last reviewed from source: 2026-07-20.
+Last reviewed from source: 2026-07-23.
+
+Invoice email delivery implementation update: 2026-07-23
+
+- Manual single/bulk and building-level automatic invoice delivery are implemented behind a
+  global default-off flag; per-building automatic send also defaults off.
+- A durable Supabase outbox covers issue, issue-and-pay, and reissue without coupling invoice
+  commits to Resend availability. Missing recipients are recorded as skipped.
+- The Nitro worker sends escaped Vietnamese HTML plus an A4 PDF, retries with stable idempotency,
+  and records accepted/delivered/failure history through signature-verified atomic webhooks.
+- Building settings, invoice detail, the invoice browser, and the monthly collection step expose
+  scoped controls and delivery outcomes.
+- Production activation still requires applying the SQL migration through Supabase SQL Editor,
+  regenerating database types, configuring a verified sender/webhook/dispatcher, and completing
+  the controlled rollout checklist.
 
 Building invoice payment profile update: 2026-07-20
 

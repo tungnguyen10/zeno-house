@@ -244,6 +244,25 @@ The print artifact is titled **Phiếu tính tiền nhà tháng MM/YYYY**. It ke
 
 The `/dashboard/invoices` selection is limited to its current server-paginated page and clears when the result set changes. In **Thu tiền & công nợ**, a mixed selection can still be printed while bulk collection remains disabled unless every selected invoice is outstanding and its period is open.
 
+## Invoice Email Delivery
+
+When `NUXT_PUBLIC_INVOICE_EMAIL_ENABLED=true`, users with `billing.write` can send one or up to
+100 active invoices from invoice detail, the cross-period invoice browser, or **Thu tiền & công
+nợ**. The server snapshots the tenant's current normalized email into a durable delivery row,
+renders an escaped Vietnamese HTML message and an A4 PDF from persisted invoice charges, current
+collection totals, and the issue-time payment profile, then sends both through Resend. Missing or
+invalid recipient email produces a visible skipped result.
+
+Building settings expose **Tự động gửi khi phát hành**. It defaults off, can be changed only by
+owner/admin, and affects future invoices only. When enabled, the invoice-insert transaction queues
+all issuance paths atomically; provider outages never roll back invoice issuance.
+
+The outbox worker claims at most 20 rows with concurrency three. Retryable failures use delays of
+1 minute, 5 minutes, 30 minutes, 2 hours, and 6 hours for six provider calls total. Every retry
+uses the delivery UUID as the Resend idempotency key. Detail history shows queued, processing,
+accepted, delivered, skipped, failed, bounced, and complained states newest first. Resend webhook
+events are signature-verified, deduplicated, and applied with event-time/terminal precedence.
+
 ## Audit Drawer
 
 The audit drawer is opened via the `Hành động ▾` menu. It shows the full history of billing actions for the period.

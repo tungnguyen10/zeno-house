@@ -285,4 +285,15 @@ export const BuildingInvoiceProfileRepository = {
     if (error) throwDbError(error, 'buildingInvoiceProfile.signAsset')
     return data.signedUrl
   },
+
+  async downloadAsset(event: H3Event, path: string): Promise<{ data: Buffer; contentType: string }> {
+    const { data, error } = await client(event).storage
+      .from(ASSET_BUCKET)
+      .download(path)
+    if (error) throwDbError(error, 'buildingInvoiceProfile.downloadAsset')
+    return {
+      data: Buffer.from(await data.arrayBuffer()),
+      contentType: data.type,
+    }
+  },
 }

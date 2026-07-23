@@ -18,6 +18,7 @@ const findLatestCorrelation = vi.fn()
 const calculateDraft = vi.fn()
 const enrichInvoices = vi.fn(async invoices => invoices)
 const enrichPayments = vi.fn(async payments => payments)
+const loadTenants = vi.fn()
 const findInvoiceSnapshots = vi.fn()
 const resolveProfileDisplays = vi.fn()
 const assignmentRepoMocks = vi.hoisted(() => ({
@@ -69,7 +70,7 @@ vi.mock('../../../server/services/billing/drafts', () => ({
 
 vi.mock('../../../server/services/billing/display', () => ({
   BillingDisplayResolver: vi.fn(function BillingDisplayResolver() {
-    return { enrichInvoices, enrichPayments }
+    return { enrichInvoices, enrichPayments, loadTenants }
   }),
 }))
 
@@ -106,6 +107,9 @@ describe('InvoiceService invoice lifecycle methods', () => {
     listPaymentsByInvoice.mockResolvedValue([])
     findInvoiceSnapshots.mockResolvedValue(new Map())
     resolveProfileDisplays.mockResolvedValue(new Map())
+    loadTenants.mockResolvedValue(new Map([
+      ['tenant-1', { email: 'tenant@example.test' }],
+    ]))
   })
 
   it('loads an invoice by business code and uses the resolved id for child rows', async () => {
@@ -129,6 +133,7 @@ describe('InvoiceService invoice lifecycle methods', () => {
     expect(listPaymentsByInvoice).toHaveBeenCalledWith(expect.anything(), invoice.id)
     expect(result.invoice.invoiceCode).toBe('inv-2026-05-0001')
     expect(result.invoiceProfile).toMatchObject({ bankName: 'VIB', qrImageUrl: 'signed:qr' })
+    expect(result.recipientEmail).toBe('tenant@example.test')
   })
 
   it('voids an issued invoice with no payments and records audit metadata', async () => {

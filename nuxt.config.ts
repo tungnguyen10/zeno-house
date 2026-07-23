@@ -27,7 +27,11 @@ export default defineNuxtConfig({
 
   // Runtime config — NUXT_* env vars are auto-mapped
   runtimeConfig: {
-    resendApiKey: "", // RESEND_API_KEY
+    resendApiKey: "", // NUXT_RESEND_API_KEY
+    resendFrom: "", // NUXT_RESEND_FROM
+    resendReplyTo: "", // NUXT_RESEND_REPLY_TO
+    resendWebhookSecret: "", // NUXT_RESEND_WEBHOOK_SECRET
+    invoiceEmailDispatchSecret: "", // NUXT_INVOICE_EMAIL_DISPATCH_SECRET
     aiProvider: "groq", // NUXT_AI_PROVIDER (groq | google)
     aiGroqApiKey: "", // NUXT_AI_GROQ_API_KEY
     aiGoogleApiKey: "", // NUXT_AI_GOOGLE_API_KEY
@@ -65,6 +69,7 @@ export default defineNuxtConfig({
       // Feature flag: one-click auto-issue ("Đã thu") on draft rows. Public so
       // the client can gate the row action; default off until staging-verified.
       billingAutoIssueEnabled: false, // NUXT_PUBLIC_BILLING_AUTO_ISSUE_ENABLED
+      invoiceEmailEnabled: false, // NUXT_PUBLIC_INVOICE_EMAIL_ENABLED
     },
   },
 
@@ -107,6 +112,7 @@ export default defineNuxtConfig({
       tasks: true,
     },
     scheduledTasks: {
+      "* * * * *": ["invoice-email:dispatch"],
       "55 16 * * *": ["operations-report:auto-close"],
       "20 17 * * *": ["ai:retention-cleanup"],
     },

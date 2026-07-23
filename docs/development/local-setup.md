@@ -29,7 +29,11 @@ Nuxt runtime config is declared in `nuxt.config.ts`.
 
 Private server runtime values:
 
-- `RESEND_API_KEY`
+- `NUXT_RESEND_API_KEY`
+- `NUXT_RESEND_FROM`
+- `NUXT_RESEND_REPLY_TO` (optional)
+- `NUXT_RESEND_WEBHOOK_SECRET`
+- `NUXT_INVOICE_EMAIL_DISPATCH_SECRET`
 - `ADMIN_EMAIL`
 - `NUXT_TURNSTILE_SECRET_KEY`
 
@@ -38,8 +42,12 @@ Public runtime values:
 - `NUXT_PUBLIC_SITE_URL`
 - `NUXT_PUBLIC_GA_ID`
 - `NUXT_PUBLIC_TURNSTILE_SITE_KEY`
+- `NUXT_PUBLIC_INVOICE_EMAIL_ENABLED` (default `false`)
 
 Supabase values are consumed by `@nuxtjs/supabase`; keep service-role or secret keys out of browser-exposed variables.
+For invoice email, use a verified Resend sender in `NUXT_RESEND_FROM`, point the Resend webhook
+at `/api/webhooks/resend`, and never expose the API key, webhook secret, or dispatch secret through
+`NUXT_PUBLIC_*`.
 
 ## Common Commands
 

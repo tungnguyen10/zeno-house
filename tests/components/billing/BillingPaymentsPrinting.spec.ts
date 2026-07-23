@@ -1,5 +1,5 @@
 import { flushPromises, mount } from '@vue/test-utils'
-import { defineComponent, h } from 'vue'
+import { defineComponent, h, ref } from 'vue'
 import BillingPaymentsStep from '../../../app/components/billing/BillingPaymentsStep.vue'
 import { buildInvoice } from '../../__fixtures__/billing/invoice'
 import { buildPeriod } from '../../__fixtures__/billing/period'
@@ -79,6 +79,18 @@ beforeEach(() => {
   vi.clearAllMocks()
   vi.stubGlobal('useToast', () => ({ success: vi.fn(), error: vi.fn(), info: vi.fn() }))
   vi.stubGlobal('useInvoicePrinting', () => ({ openPrint }))
+  vi.stubGlobal('useRuntimeConfig', () => ({
+    public: { invoiceEmailEnabled: false },
+  }))
+  vi.stubGlobal('useInvoiceEmailDelivery', () => ({
+    sending: ref(false),
+    loadingHistory: ref(false),
+    error: ref(null),
+    history: ref([]),
+    enqueue: vi.fn(async () => ({ results: [], queuedCount: 0, failedCount: 0 })),
+    loadHistory: vi.fn(async () => []),
+    clear: vi.fn(),
+  }))
   vi.stubGlobal('useBillingInvoiceActions', () => ({
     load: loadInvoice,
     recordPayment: vi.fn(),

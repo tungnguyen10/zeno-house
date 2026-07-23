@@ -86,6 +86,9 @@ export const BILLING_AUDIT_ACTIONS = {
   PAYMENT_EDITED: 'payment.edited',
   // Invoice printed/exported as a receipt artifact from the workspace.
   INVOICE_PRINTED: 'invoice.printed',
+  INVOICE_EMAIL_QUEUED: 'invoice.email_queued',
+  INVOICE_EMAIL_DELIVERED: 'invoice.email_delivered',
+  INVOICE_EMAIL_FAILED: 'invoice.email_failed',
 } as const
 
 export type BillingAuditAction =
@@ -103,6 +106,9 @@ export const BILLING_AUDIT_ACTION_CATEGORY: Record<BillingAuditAction, BillingAu
   'invoice.payment_recorded': 'create',
   'payments.bulk_recorded': 'create',
   'invoice.printed': 'create',
+  'invoice.email_queued': 'create',
+  'invoice.email_delivered': 'status',
+  'invoice.email_failed': 'status',
   'reading.saved': 'edit',
   'utility_override.saved': 'edit',
   'utility_override.approved': 'edit',

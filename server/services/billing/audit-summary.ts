@@ -159,6 +159,12 @@ export function formatAuditSummary(
       const format = stringValue(meta.format)
       return `In hoá đơn${format ? ` (${format})` : ''}`
     }
+    case 'invoice.email_queued':
+      return 'Xếp hàng gửi hoá đơn qua email'
+    case 'invoice.email_delivered':
+      return 'Đã giao hoá đơn qua email'
+    case 'invoice.email_failed':
+      return 'Gửi hoá đơn qua email thất bại'
     case 'invoice.issue_attempted': {
       const blocked = numberValue(meta.blocked_count) ?? 0
       return `Thử phát hành - ${blocked} hoá đơn bị chặn`

@@ -4,6 +4,11 @@ import type { InvoiceListItem } from '~/utils/validators/invoices'
 import { formatCurrency } from '~/utils/format/currency'
 import { billingWorkspaceInvoicePath } from '~/utils/routes/operational'
 import InvoicePaymentProfileCard from './InvoicePaymentProfileCard.vue'
+import {
+  INVOICE_EMAIL_DELIVERY_STATUS_LABELS,
+  INVOICE_EMAIL_DELIVERY_STATUS_VARIANTS,
+  isActiveInvoiceEmailDeliveryStatus,
+} from '~/utils/constants/invoice-email'
 
 const props = defineProps<{
   modelValue: boolean
@@ -16,13 +21,41 @@ const emit = defineEmits<{
 }>()
 
 const { detail, isLoading, error, load, clear } = useInvoiceDetail()
+const {
+  sending: sendingEmail,
+  loadingHistory,
+  error: emailError,
+  history: emailHistory,
+  enqueue: enqueueEmail,
+  loadHistory,
+  clear: clearEmail,
+} = useInvoiceEmailDelivery()
 const toast = useToast()
+const invoiceEmailEnabled = useRuntimeConfig().public.invoiceEmailEnabled === true
+const activeDelivery = computed(() =>
+  emailHistory.value.find(delivery => isActiveInvoiceEmailDeliveryStatus(delivery.status)),
+)
+const hasPreviousDelivery = computed(() => emailHistory.value.length > 0)
+const canSendEmail = computed(() =>
+  invoiceEmailEnabled
+  && Boolean(detail.value?.recipientEmail)
+  && props.invoice?.status !== 'void'
+  && !activeDelivery.value,
+)
 
 watch(
   () => [props.modelValue, props.invoice?.invoice_code] as const,
   async ([open, code]) => {
-    if (open && code) await load(code)
-    if (!open) clear()
+    if (open && code) {
+      await Promise.all([
+        load(code),
+        invoiceEmailEnabled ? loadHistory(code).catch(() => []) : Promise.resolve([]),
+      ])
+    }
+    if (!open) {
+      clear()
+      clearEmail()
+    }
   },
   { immediate: true },
 )
@@ -59,6 +92,39 @@ function paymentDate(payment: InvoicePayment): string {
 
 function paymentMethodLabel(payment: InvoicePayment): string {
   return payment.paymentMethod ?? '---'
+}
+
+function deliveryDate(value: string): string {
+  return new Intl.DateTimeFormat('vi-VN', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(value))
+}
+
+async function sendEmail() {
+  if (!props.invoice || !canSendEmail.value) return
+  try {
+    const result = await enqueueEmail([props.invoice.id])
+    const item = result.results[0]
+    if (item?.status === 'skipped') {
+      toast.info(item.reason ?? 'Hoá đơn chưa có email người nhận hợp lệ.')
+    }
+    else if (item?.status === 'failed') {
+      toast.error(item.reason ?? 'Không thể xếp hàng gửi hoá đơn.')
+    }
+    else {
+      toast.success(item?.status === 'already_queued'
+        ? 'Hoá đơn đã có trong hàng gửi.'
+        : 'Đã xếp hàng gửi hoá đơn.')
+    }
+    await loadHistory(props.invoice.invoice_code)
+  }
+  catch {
+    // The inline alert exposes the standardized API error.
+  }
 }
 </script>
 
@@ -114,6 +180,63 @@ function paymentMethodLabel(payment: InvoicePayment): string {
           <InvoicePaymentProfileCard :profile="detail.invoiceProfile" />
         </UiSection>
 
+        <UiSection title="Gửi qua email">
+          <div class="space-y-3">
+            <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div class="min-w-0">
+                <p class="text-xs text-muted">Người nhận</p>
+                <p
+                  class="mt-0.5 truncate text-sm text-white"
+                  :title="detail.recipientEmail ?? undefined"
+                >
+                  {{ detail.recipientEmail ?? 'Chưa có email liên hệ' }}
+                </p>
+              </div>
+              <UiBadge v-if="activeDelivery" variant="accent" pill>
+                {{ INVOICE_EMAIL_DELIVERY_STATUS_LABELS[activeDelivery.status] }}
+              </UiBadge>
+            </div>
+
+            <UiAlert v-if="!invoiceEmailEnabled" severity="info">
+              Chức năng gửi email chưa được bật trên hệ thống.
+            </UiAlert>
+            <UiAlert v-else-if="!detail.recipientEmail" severity="warning">
+              Thêm email liên hệ chính cho khách thuê trước khi gửi hoá đơn.
+            </UiAlert>
+            <UiAlert v-if="emailError" severity="danger">{{ emailError }}</UiAlert>
+
+            <div v-if="loadingHistory" class="space-y-2" aria-label="Đang tải lịch sử gửi email">
+              <UiSkeleton v-for="item in 2" :key="item" class="h-12 w-full" />
+            </div>
+            <div v-else-if="emailHistory.length > 0" class="divide-y divide-dark-border border-y border-dark-border">
+              <div
+                v-for="delivery in emailHistory"
+                :key="delivery.id"
+                class="flex items-start justify-between gap-3 py-3"
+              >
+                <div class="min-w-0">
+                  <p class="truncate text-sm text-white" :title="delivery.recipientEmail ?? undefined">
+                    {{ delivery.recipientEmail ?? 'Không có người nhận' }}
+                  </p>
+                  <p class="mt-0.5 text-xs text-muted tabular-nums">
+                    {{ deliveryDate(delivery.createdAt) }} · {{ delivery.source === 'automatic' ? 'Tự động' : 'Thủ công' }}
+                  </p>
+                  <p v-if="delivery.lastErrorMessage" class="mt-1 text-xs text-error-vivid">
+                    {{ delivery.lastErrorMessage }}
+                  </p>
+                </div>
+                <UiBadge
+                  :variant="INVOICE_EMAIL_DELIVERY_STATUS_VARIANTS[delivery.status]"
+                  pill
+                >
+                  {{ INVOICE_EMAIL_DELIVERY_STATUS_LABELS[delivery.status] }}
+                </UiBadge>
+              </div>
+            </div>
+            <p v-else class="text-xs text-muted">Chưa có lần gửi nào.</p>
+          </div>
+        </UiSection>
+
         <UiSection title="Thanh toán">
           <div class="space-y-2 md:hidden">
             <UiEmptyState
@@ -166,7 +289,16 @@ function paymentMethodLabel(payment: InvoicePayment): string {
     </div>
 
     <template #footer>
-      <div class="-mx-2 -my-1 grid grid-cols-1 gap-2 sm:mx-0 sm:my-0 sm:flex sm:items-center sm:justify-end">
+      <div class="-mx-2 -my-1 grid grid-cols-1 gap-2 sm:mx-0 sm:my-0 sm:flex sm:flex-wrap sm:items-center sm:justify-end">
+        <UiButton
+          v-if="invoice && invoice.status !== 'void'"
+          class="w-full whitespace-nowrap sm:w-auto"
+          :loading="sendingEmail"
+          :disabled="!canSendEmail"
+          @click="sendEmail"
+        >
+          {{ activeDelivery ? 'Đang gửi' : hasPreviousDelivery ? 'Gửi lại' : 'Gửi email' }}
+        </UiButton>
         <UiButton
           v-if="invoice && invoice.status !== 'void'"
           class="w-full sm:w-auto"

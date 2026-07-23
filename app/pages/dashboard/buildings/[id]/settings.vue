@@ -64,6 +64,26 @@ const {
   },
 })
 const canEditInvoiceProfile = computed(() => authStore.can('building-invoice-profile.write'))
+const {
+  settings: invoiceEmailSettings,
+  loading: loadingInvoiceEmailSettings,
+  saving: savingInvoiceEmailSettings,
+  error: invoiceEmailSettingsError,
+  update: updateInvoiceEmailSettings,
+} = useBuildingInvoiceEmailSettings(id, {
+  status: settingsStatus,
+  error: settingsLoadError,
+  data: computed(() => settings.value?.invoiceEmailSettings ?? null),
+  set: (emailSettings) => {
+    if (settingsData.value) {
+      settingsData.value = {
+        ...settingsData.value,
+        data: { ...settingsData.value.data, invoiceEmailSettings: emailSettings },
+      }
+    }
+  },
+})
+const canEditInvoiceEmailSettings = computed(() => authStore.can('invoice-email-settings.write'))
 
 async function handleSaveInvoiceProfile(input: BuildingInvoiceProfileSaveInput) {
   try {
@@ -72,6 +92,16 @@ async function handleSaveInvoiceProfile(input: BuildingInvoiceProfileSaveInput) 
   }
   catch {
     // The composable exposes the standardized API message beside the form.
+  }
+}
+
+async function handleSaveInvoiceEmailSettings(enabled: boolean) {
+  try {
+    await updateInvoiceEmailSettings(enabled)
+    toast.success(enabled ? 'Đã bật gửi hoá đơn tự động.' : 'Đã tắt gửi hoá đơn tự động.')
+  }
+  catch {
+    // The composable surfaces the standardized error beside the control.
   }
 }
 
@@ -909,6 +939,22 @@ const activeSectionId = computed(() => {
                 :saving="savingInvoiceProfile"
                 :error="invoiceProfileError"
                 @save="handleSaveInvoiceProfile"
+              />
+            </UiSurfacePanel>
+          </UiSection>
+
+          <UiSection
+            title="Gửi hoá đơn qua email"
+            description="Kiểm soát việc xếp hàng gửi email cho các hoá đơn mới của toà nhà."
+          >
+            <UiSurfacePanel density="compact">
+              <BuildingInvoiceEmailSettings
+                :settings="invoiceEmailSettings"
+                :can-edit="canEditInvoiceEmailSettings"
+                :loading="loadingInvoiceEmailSettings"
+                :saving="savingInvoiceEmailSettings"
+                :error="invoiceEmailSettingsError"
+                @save="handleSaveInvoiceEmailSettings"
               />
             </UiSurfacePanel>
           </UiSection>

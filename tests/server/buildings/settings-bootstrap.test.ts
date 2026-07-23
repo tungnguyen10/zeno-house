@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const mocks = vi.hoisted(() => ({
   buildingGet: vi.fn(),
   invoiceProfileGet: vi.fn(),
+  invoiceEmailSettingsGet: vi.fn(),
   buildingServicesList: vi.fn(),
   contractServicesList: vi.fn(),
   catalogList: vi.fn(),
@@ -17,6 +18,9 @@ const mocks = vi.hoisted(() => ({
 vi.stubGlobal('can', (_user: unknown, capability: string) => !capability.endsWith('.write'))
 vi.mock('../../../server/services/buildings', () => ({ BuildingService: { get: mocks.buildingGet } }))
 vi.mock('../../../server/services/buildings/invoice-profile', () => ({ BuildingInvoiceProfileService: { get: mocks.invoiceProfileGet } }))
+vi.mock('../../../server/services/buildings/invoice-email-settings', () => ({
+  BuildingInvoiceEmailSettingsService: { get: mocks.invoiceEmailSettingsGet },
+}))
 vi.mock('../../../server/services/building-services', () => ({ BuildingServiceService: { list: mocks.buildingServicesList } }))
 vi.mock('../../../server/services/contract-services', () => ({ ContractServiceService: { listByBuilding: mocks.contractServicesList } }))
 vi.mock('../../../server/services/service-catalog', () => ({ ServiceCatalogService: { list: mocks.catalogList } }))
@@ -32,6 +36,13 @@ describe('BuildingSettingsBootstrapService', () => {
     vi.clearAllMocks()
     mocks.buildingGet.mockResolvedValue({ id: 'building-1', slug: 'toa-a' })
     mocks.invoiceProfileGet.mockResolvedValue(null)
+    mocks.invoiceEmailSettingsGet.mockResolvedValue({
+      buildingId: 'building-1',
+      autoSendEnabled: false,
+      featureAvailable: false,
+      updatedAt: null,
+      updatedBy: null,
+    })
     mocks.buildingServicesList.mockResolvedValue([])
     mocks.contractServicesList.mockResolvedValue([])
     mocks.catalogList.mockResolvedValue([])
@@ -41,6 +52,9 @@ describe('BuildingSettingsBootstrapService', () => {
     mocks.reserveRatesList.mockResolvedValue([])
     mocks.recurringList.mockResolvedValue([])
     mocks.prepaidList.mockResolvedValue([])
+    vi.stubGlobal('useRuntimeConfig', () => ({
+      public: { invoiceEmailEnabled: false },
+    }))
   })
 
   it('loads the settings datasets behind one authenticated service call', async () => {
@@ -53,6 +67,12 @@ describe('BuildingSettingsBootstrapService', () => {
     expect(result).toMatchObject({
       building: { id: 'building-1' },
       invoiceProfile: null,
+      invoiceEmailAvailable: false,
+      invoiceEmailSettings: {
+        buildingId: 'building-1',
+        autoSendEnabled: false,
+        featureAvailable: false,
+      },
       buildingServices: [],
       contractServices: [],
       catalog: [],

@@ -258,6 +258,7 @@ export interface InvoiceWithCharges {
   charges: InvoiceCharge[]
   payments: InvoicePayment[]
   invoiceProfile: InvoiceProfileDisplay | null
+  recipientEmail: string | null
 }
 
 export interface InvoicePrintItem {

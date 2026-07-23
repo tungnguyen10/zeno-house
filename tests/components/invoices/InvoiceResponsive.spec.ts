@@ -50,6 +50,10 @@ const stubs = {
   IconChevronRight: defineComponent({ template: '<span />' }),
   IconDocumentText: defineComponent({ template: '<span />' }),
   UiAlert: passthrough,
+  UiBadge: defineComponent({
+    props: ['variant'],
+    template: '<span data-test="badge"><slot /></span>',
+  }),
   UiButton: defineComponent({
     props: ['variant', 'disabled'],
     emits: ['click'],
@@ -138,10 +142,23 @@ beforeEach(() => {
         logoImageUrl: null,
         snapshottedAt: '2026-06-01T00:00:00.000Z',
       },
+      recipientEmail: 'tenant@example.test',
     }),
     isLoading: ref(false),
     error: ref(null),
     load: vi.fn(async () => {}),
+    clear: vi.fn(),
+  }))
+  vi.stubGlobal('useRuntimeConfig', () => ({
+    public: { invoiceEmailEnabled: false },
+  }))
+  vi.stubGlobal('useInvoiceEmailDelivery', () => ({
+    sending: ref(false),
+    loadingHistory: ref(false),
+    error: ref(null),
+    history: ref([]),
+    enqueue: vi.fn(async () => ({ results: [], queuedCount: 0, failedCount: 0 })),
+    loadHistory: vi.fn(async () => []),
     clear: vi.fn(),
   }))
 })

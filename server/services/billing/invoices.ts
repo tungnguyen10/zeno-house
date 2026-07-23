@@ -55,12 +55,16 @@ export const InvoiceService = {
     ])
     const profiles = await InvoiceProfileDisplayService.resolveMany(event, snapshots)
     const resolver = new BillingDisplayResolver(event)
-    const [enrichedInvoice] = await resolver.enrichInvoices([invoice])
+    const [[enrichedInvoice], tenants] = await Promise.all([
+      resolver.enrichInvoices([invoice]),
+      resolver.loadTenants([invoice.tenantId]),
+    ])
     return {
       invoice: enrichedInvoice ?? invoice,
       charges,
       payments: await resolver.enrichPayments(payments),
       invoiceProfile: profiles.get(invoice.id) ?? null,
+      recipientEmail: tenants.get(invoice.tenantId)?.email ?? null,
     }
   },
 

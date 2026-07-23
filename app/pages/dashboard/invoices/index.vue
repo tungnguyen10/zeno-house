@@ -32,6 +32,14 @@ const drawerOpen = ref(false)
 const toast = useToast()
 const { openPrint } = useInvoicePrinting()
 const {
+  sending: sendingEmail,
+  error: invoiceEmailError,
+  enqueue: enqueueInvoiceEmail,
+} = useInvoiceEmailDelivery()
+const invoiceEmailEnabled = useRuntimeConfig().public.invoiceEmailEnabled === true
+const emailConfirmOpen = ref(false)
+const bulkEmailSummary = ref<string | null>(null)
+const {
   selectedIds,
   selectedInvoices,
   toggle: togglePrintSelection,
@@ -62,6 +70,29 @@ function openInvoice(invoice: InvoiceListItem) {
 
 function printSelectedInvoices() {
   openPrint(selectedInvoices.value.map(invoice => invoice.id))
+}
+
+async function sendSelectedInvoices() {
+  if (selectedInvoices.value.length === 0 || selectedInvoices.value.length > 100) return
+  try {
+    const result = await enqueueInvoiceEmail(selectedInvoices.value.map(invoice => invoice.id))
+    const counts = result.results.reduce((summary, item) => {
+      summary[item.status] += 1
+      return summary
+    }, { queued: 0, already_queued: 0, skipped: 0, failed: 0 })
+    bulkEmailSummary.value = [
+      `Đã xếp hàng ${counts.queued}`,
+      counts.already_queued ? `đã có trong hàng ${counts.already_queued}` : null,
+      counts.skipped ? `bỏ qua ${counts.skipped}` : null,
+      counts.failed ? `không thành công ${counts.failed}` : null,
+    ].filter(Boolean).join(' · ')
+    emailConfirmOpen.value = false
+    clearSelection()
+    toast.success('Đã xử lý danh sách gửi email.')
+  }
+  catch {
+    // The modal keeps context and shows the standardized error.
+  }
 }
 </script>
 
@@ -96,6 +127,10 @@ function printSelectedInvoices() {
           <span>{{ errorMessage }}</span>
           <UiButton variant="secondary" size="sm" @click="refresh()">Tải lại</UiButton>
         </div>
+      </UiAlert>
+
+      <UiAlert v-if="bulkEmailSummary" severity="success" dismissible @dismiss="bulkEmailSummary = null">
+        {{ bulkEmailSummary }}
       </UiAlert>
 
       <UiEmptyState
@@ -171,8 +206,45 @@ function printSelectedInvoices() {
           </span>
           <UiButton class="whitespace-nowrap" variant="ghost" size="sm" @click="clearSelection">Bỏ chọn</UiButton>
           <UiButton class="whitespace-nowrap" variant="primary" size="sm" @click="printSelectedInvoices">In phiếu</UiButton>
+          <UiButton
+            v-if="invoiceEmailEnabled"
+            class="col-span-2 whitespace-nowrap sm:col-auto"
+            variant="secondary"
+            size="sm"
+            :disabled="selectedInvoices.length > 100"
+            @click="emailConfirmOpen = true"
+          >
+            Gửi email ({{ selectedInvoices.length }})
+          </UiButton>
         </div>
       </div>
     </Transition>
+
+    <UiModal
+      :open="emailConfirmOpen"
+      title="Gửi các hoá đơn đã chọn?"
+      size="sm"
+      @close="emailConfirmOpen = false"
+    >
+      <div class="space-y-3">
+        <p class="text-sm leading-6 text-muted">
+          {{ selectedInvoices.length }} hoá đơn trên trang hiện tại sẽ được xếp hàng gửi đến email liên hệ chính của từng khách thuê.
+        </p>
+        <UiAlert v-if="selectedInvoices.length > 100" severity="warning">
+          Mỗi lần chỉ gửi tối đa 100 hoá đơn. Hãy giảm số lượng đã chọn.
+        </UiAlert>
+        <UiAlert v-if="invoiceEmailError" severity="danger">{{ invoiceEmailError }}</UiAlert>
+      </div>
+      <template #footer>
+        <UiButton variant="secondary" :disabled="sendingEmail" @click="emailConfirmOpen = false">Huỷ</UiButton>
+        <UiButton
+          :loading="sendingEmail"
+          :disabled="selectedInvoices.length === 0 || selectedInvoices.length > 100"
+          @click="sendSelectedInvoices"
+        >
+          Gửi email ({{ selectedInvoices.length }})
+        </UiButton>
+      </template>
+    </UiModal>
   </div>
 </template>
