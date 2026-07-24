@@ -95,7 +95,7 @@ const rows = computed<Row[]>(() =>
 
       <div
         v-if="row.occupancyPercent !== null"
-        class="col-span-3 flex h-1.5 overflow-hidden rounded-full bg-dark-border sm:col-span-1 sm:h-2"
+        class="col-span-3 flex h-2 overflow-hidden rounded-full bg-dark-border sm:col-span-1"
         role="img"
         :aria-label="`${row.occupancyPercent}% phòng đang thuê`"
       >

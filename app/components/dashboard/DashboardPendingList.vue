@@ -2,6 +2,7 @@
 import type { PendingOperation } from '~/types/dashboard'
 import { pendingOperationPath } from '~/utils/routes/operational'
 import { formatCurrency } from '~/utils/format/currency'
+import { formatPeriodDisplay } from '~/utils/format/period'
 
 defineProps<{
   items: PendingOperation[]
@@ -43,7 +44,7 @@ function severityDotClass(severity: PendingOperation['severity']): string {
       <span class="inline-block h-2 w-2 shrink-0 rounded-full" :class="severityDotClass(item.severity)" aria-hidden="true" />
       <span class="text-xs font-medium text-white">{{ operationLabel(item.type) }}</span>
       <span class="min-w-0 flex-1 truncate text-sm text-white sm:flex-none">{{ item.building.name }}</span>
-      <span class="text-xs text-muted">{{ item.period }}</span>
+      <span class="text-xs text-muted">{{ formatPeriodDisplay(item.period) }}</span>
       <span class="ml-auto text-right text-sm tabular-nums text-muted sm:ml-0">{{ item.count }}</span>
       <span class="text-right text-sm tabular-nums" :class="item.amount && item.amount > 0 ? 'text-error-vivid font-medium' : 'text-muted'">
         {{ item.amount !== undefined ? formatCurrency(item.amount) : '—' }}

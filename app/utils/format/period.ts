@@ -16,3 +16,11 @@ export function parsePeriodString(
   if (!match) return null
   return { year: Number(match[1]), month: Number(match[2]) }
 }
+
+/** Format a `YYYY-MM` period string as "Tháng M/YYYY" (e.g. "Tháng 7/2026"). */
+export function formatPeriodDisplay(period: string | null | undefined): string | null {
+  if (!period) return null
+  const parsed = parsePeriodString(period)
+  if (!parsed) return null
+  return `Tháng ${parsed.month}/${parsed.year}`
+}

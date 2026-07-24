@@ -14,7 +14,7 @@ const isUrgent = computed(() => props.expiringUrgent > 0)
   <div class="flex h-full flex-col">
     <div class="flex items-baseline justify-between gap-3">
       <div>
-        <p class="text-2xl font-semibold tabular-nums text-white">{{ active }}</p>
+        <p class="text-2xl font-semibold tabular-nums text-cyan">{{ active }}</p>
         <p class="mt-0.5 text-xs text-muted">hợp đồng đang hoạt động</p>
       </div>
       <p class="text-xs tabular-nums text-muted">
@@ -22,11 +22,9 @@ const isUrgent = computed(() => props.expiringUrgent > 0)
       </p>
     </div>
 
-    <div class="hidden sm:block sm:flex-1" />
-
     <div
       v-if="hasExpiring"
-      class="mt-4 flex items-start gap-3 rounded-lg px-3 py-2.5"
+      class="mt-4 sm:mt-auto flex items-start gap-3 rounded-lg px-3 py-2.5"
       :class="isUrgent ? 'bg-error-bg' : 'bg-warning/10'"
     >
       <IconAlertCircle
@@ -46,9 +44,9 @@ const isUrgent = computed(() => props.expiringUrgent > 0)
     </div>
     <div
       v-else
-      class="mt-4 flex items-center gap-2 rounded-lg border border-dark-border px-3 py-2.5 text-xs text-muted"
+      class="mt-4 sm:mt-auto flex items-center gap-1.5 text-xs text-muted"
     >
-      <IconCheckCircle class="h-4 w-4 text-success-neon" aria-hidden="true" />
+      <IconCheckCircle class="h-3.5 w-3.5 shrink-0 text-success-neon" aria-hidden="true" />
       Không có hợp đồng sắp hết hạn
     </div>
   </div>

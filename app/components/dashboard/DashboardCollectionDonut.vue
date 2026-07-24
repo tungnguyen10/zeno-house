@@ -4,6 +4,7 @@ import '~/utils/chart-registration'
 import { Doughnut } from 'vue-chartjs'
 import { useChartTheme } from '~/composables/useChartTheme'
 import { formatCurrency } from '~/utils/format/currency'
+import { formatPeriodDisplay } from '~/utils/format/period'
 
 const props = defineProps<{
   collectionRate: number
@@ -32,12 +33,7 @@ const rateColorClass = computed(() => {
   return 'text-error-vivid'
 })
 
-const periodLabel = computed(() => {
-  if (!props.period) return ''
-  const [year, month] = props.period.split('-')
-  if (!year || !month) return props.period
-  return `Tháng ${Number(month)}/${year}`
-})
+const periodLabel = computed(() => formatPeriodDisplay(props.period) ?? '')
 
 const deltaPct = computed<number | null>(() => {
   if (!hasData.value) return null

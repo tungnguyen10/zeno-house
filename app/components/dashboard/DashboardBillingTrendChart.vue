@@ -48,6 +48,17 @@ const chartOptions = computed<ChartOptions<'line'>>(() => {
     ...base,
     scales: {
       ...base.scales,
+      x: {
+        ...base.scales?.x,
+        ticks: {
+          ...base.scales?.x?.ticks,
+          callback: (_: unknown, i: number) => {
+            const period = props.trend[i]?.period ?? ''
+            const month = period.split('-')[1]
+            return month ? `Th.${Number(month)}` : period
+          },
+        },
+      },
       y: {
         ...base.scales?.y,
         ticks: {

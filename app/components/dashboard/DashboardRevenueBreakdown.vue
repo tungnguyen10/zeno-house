@@ -47,23 +47,23 @@ function formatShare(share: number): string {
     <dl class="grid grid-cols-1 gap-y-1.5 sm:grid-cols-3 sm:gap-x-6 sm:gap-y-2">
       <div class="flex items-baseline justify-between gap-3 sm:block sm:min-w-0">
         <dt class="text-xs uppercase tracking-wide text-muted">Tổng doanh thu</dt>
-        <dd class="font-mono text-lg font-semibold tabular-nums text-white sm:mt-1 sm:text-2xl">
+        <dd class="text-lg font-semibold tabular-nums text-white sm:mt-1 sm:text-2xl">
           {{ formatCurrency(breakdown.totalIssued) }}
         </dd>
       </div>
       <div class="flex items-baseline justify-between gap-3 sm:block sm:min-w-0">
         <dt class="text-xs uppercase tracking-wide text-muted">
           Đã thu
-          <span class="ml-1 font-mono text-success-neon">{{ collectionRate }}%</span>
+          <span class="ml-1 tabular-nums text-success-neon">{{ collectionRate }}%</span>
         </dt>
-        <dd class="font-mono text-lg font-semibold tabular-nums text-success-neon sm:mt-1 sm:text-2xl">
+        <dd class="text-lg font-semibold tabular-nums text-success-neon sm:mt-1 sm:text-2xl">
           {{ formatCurrency(breakdown.totalPaid) }}
         </dd>
       </div>
       <div class="flex items-baseline justify-between gap-3 sm:block sm:min-w-0">
         <dt class="text-xs uppercase tracking-wide text-muted">Còn lại</dt>
         <dd
-          class="font-mono text-lg font-semibold tabular-nums sm:mt-1 sm:text-2xl"
+          class="text-lg font-semibold tabular-nums sm:mt-1 sm:text-2xl"
           :class="outstandingAmount > 0 ? 'text-warning' : 'text-muted'"
         >
           {{ formatCurrency(outstandingAmount) }}
@@ -91,8 +91,8 @@ function formatShare(share: number): string {
           :style="{ background: row.color }"
         />
         <span class="min-w-0 truncate text-white">{{ row.label }}</span>
-        <span class="font-mono tabular-nums text-white">{{ formatCurrency(row.amount) }}</span>
-        <span class="text-right font-mono text-xs tabular-nums text-muted">{{ formatShare(row.share) }}</span>
+        <span class="tabular-nums text-white">{{ formatCurrency(row.amount) }}</span>
+        <span class="text-right text-xs tabular-nums text-muted">{{ formatShare(row.share) }}</span>
       </li>
     </ul>
   </div>
