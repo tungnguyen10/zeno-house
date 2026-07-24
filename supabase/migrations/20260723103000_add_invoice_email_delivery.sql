@@ -3,6 +3,38 @@
 
 begin;
 
+do $$
+declare
+  v_missing text[] := array[]::text[];
+begin
+  if to_regclass('public.buildings') is null then
+    v_missing := array_append(v_missing, 'public.buildings');
+  end if;
+  if to_regclass('public.invoices') is null then
+    v_missing := array_append(v_missing, 'public.invoices');
+  end if;
+  if to_regclass('public.billing_periods') is null then
+    v_missing := array_append(v_missing, 'public.billing_periods');
+  end if;
+  if to_regclass('public.tenants') is null then
+    v_missing := array_append(v_missing, 'public.tenants');
+  end if;
+  if to_regclass('public.billing_audit_events') is null then
+    v_missing := array_append(v_missing, 'public.billing_audit_events');
+  end if;
+  if to_regprocedure('public.set_updated_at()') is null then
+    v_missing := array_append(v_missing, 'public.set_updated_at()');
+  end if;
+
+  if coalesce(array_length(v_missing, 1), 0) > 0 then
+    raise exception
+      'Missing prerequisites for 20260723103000_add_invoice_email_delivery: %',
+      array_to_string(v_missing, ', ')
+      using hint = 'Apply earlier migrations in order before running this script.';
+  end if;
+end;
+$$;
+
 create table public.building_invoice_email_settings (
   building_id uuid primary key references public.buildings(id) on delete cascade,
   auto_send_enabled boolean not null default false,

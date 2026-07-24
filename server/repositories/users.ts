@@ -14,6 +14,19 @@ interface AuthUserLike {
   user_metadata?: Record<string, unknown> | null
 }
 
+type UserRemoveResult = 'deleted' | 'deactivated'
+
+function isDeleteBlockedError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false
+  const value = error as { code?: unknown; status?: unknown; message?: unknown }
+  const code = typeof value.code === 'string' ? value.code : null
+  const status = typeof value.status === 'number' ? value.status : null
+  const message = typeof value.message === 'string' ? value.message : ''
+  if (code === 'unexpected_failure') return true
+  if (status === 500 && /database error deleting user/i.test(message)) return true
+  return false
+}
+
 function userName(user: AuthUserLike): string | null {
   const metadata = user.user_metadata ?? {}
   const value = metadata.full_name ?? metadata.name ?? metadata.display_name
@@ -214,9 +227,23 @@ export const UserRepository = {
     return mapManagedUser(data.user)
   },
 
-  async remove(event: H3Event, id: string): Promise<void> {
+  async remove(event: H3Event, id: string): Promise<UserRemoveResult> {
     const client = serverSupabaseClient(event)
     const { error } = await client.auth.admin.deleteUser(id)
-    if (error) throwDbError(error, 'users.remove')
+    if (!error) return 'deleted'
+
+    if (!isDeleteBlockedError(error)) {
+      throwDbError(error, 'users.remove')
+    }
+
+    // Some auth users are referenced by historical/audit rows that intentionally
+    // preserve actor identity. In those cases, hard delete fails; deprovision the
+    // account so it can no longer access the app while references stay intact.
+    await UserRepository.clearAppRole(event, id)
+    const { error: deactivateError } = await client.auth.admin.updateUserById(id, {
+      ban_duration: '876000h',
+    })
+    if (deactivateError) throwDbError(deactivateError, 'users.remove.deactivate')
+    return 'deactivated'
   },
 }

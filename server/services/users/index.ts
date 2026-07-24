@@ -250,11 +250,16 @@ export const UserManagementService = {
     const assignments = await AssignmentRepository.findByUser(event, id)
     const buildingIds = assignments.map(assignment => assignment.building_id)
 
-    await UserRepository.remove(event, id)
+    const removalMode = await UserRepository.remove(event, id)
+    if (removalMode === 'deactivated') {
+      for (const assignment of assignments) {
+        await AssignmentRepository.remove(event, assignment.id)
+      }
+    }
 
     await auditUserLifecycle(event, actor, AUDIT_ACTIONS.USER_REMOVED, target, buildingIds, {
       before: target,
-      metadata: { role: target.role, email: target.email },
+      metadata: { role: target.role, email: target.email, removal_mode: removalMode },
     })
   },
 }

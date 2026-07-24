@@ -9,18 +9,36 @@ begin;
 
 do $$
 declare
+  v_column_exists boolean;
   v_default text;
   v_trigger_count integer;
   v_active_index_count integer;
   v_webhook_constraint_count integer;
 begin
+  select exists (
+    select 1
+      from information_schema.columns
+     where table_schema = 'public'
+       and table_name = 'building_invoice_email_settings'
+       and column_name = 'auto_send_enabled'
+  )
+    into v_column_exists;
+  if not v_column_exists then
+    raise exception
+      'building_invoice_email_settings.auto_send_enabled is missing; apply 20260723103000_add_invoice_email_delivery.sql first';
+  end if;
+
   select column_default
     into v_default
     from information_schema.columns
    where table_schema = 'public'
      and table_name = 'building_invoice_email_settings'
      and column_name = 'auto_send_enabled';
-  if v_default is distinct from 'false'::text then
+  if v_default is null then
+    raise exception
+      'auto_send_enabled default is NULL; run 20260723113000_fix_invoice_email_settings_auto_send_default.sql';
+  end if;
+  if v_default not in ('false', 'false::boolean') then
     raise exception 'auto_send_enabled must default to false, got %', v_default;
   end if;
 
