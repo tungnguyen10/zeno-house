@@ -51,13 +51,11 @@ async function handleGoogleLogin() {
 
 <template>
   <div>
-    <div class="mb-7">
-      <p class="text-xs font-medium uppercase tracking-[0.16em] text-cyan">Chào mừng trở lại</p>
-      <h2 class="mt-2 text-2xl font-semibold text-white">Đăng nhập Zeno House</h2>
-      <p class="mt-2 text-sm leading-6 text-muted">Tiếp tục công việc với tài khoản của bạn.</p>
-    </div>
-
-    <div class="rounded-2xl border border-dark-border bg-dark-surface p-5 shadow-xl sm:p-6">
+    <AuthConsoleCard
+      eyebrow="Chào mừng trở lại"
+      title="Đăng nhập Zeno House"
+      subtitle="Tiếp tục công việc với tài khoản của bạn."
+    >
       <UiButton
         class="w-full"
         variant="secondary"
@@ -111,7 +109,7 @@ async function handleGoogleLogin() {
           Đăng nhập
         </UiButton>
       </form>
-    </div>
+    </AuthConsoleCard>
 
     <p class="mt-6 text-center text-sm text-muted">
       Chưa có tài khoản?

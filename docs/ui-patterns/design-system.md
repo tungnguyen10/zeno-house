@@ -175,14 +175,19 @@ Examples:
 
 ## 7. No-go list
 
-### Auth split-layout pattern
+### Auth console pattern
 
-Authentication uses the shared `auth.vue` composition: a restrained operational illustration and
-brand statement on desktop, paired with a focused form surface; below the desktop breakpoint the
-illustration becomes a short top band. Use the existing dark surfaces, cyan accent, Inter font,
-spacing scale, and `Ui*` primitives. Keep the scan order Google action → divider → credentials →
-recovery → submit → registration. Password reveal belongs in the `UiInput` suffix with a named
-button and visible focus state. Do not add auth-only tokens, themes, fonts, or duplicate primitives.
+Authentication uses the shared `auth.vue` composition: a full-screen operations-console backdrop
+(dot mesh + cyan glow + depth gradient, all static and reduced-motion safe) with a single centered
+column — brand logo on top, an `AuthConsoleCard` in the middle, and a recovery/registration link
+below. `AuthConsoleCard` owns the signature "status rail" (cyan/green status dots plus a
+JetBrains Mono readout `ZENO · HỆ VẬN HÀNH` and a short state word) and the glass surface
+(`bg-dark-surface/85 backdrop-blur-md`). Login, register, and forgot-password all render inside it.
+
+Use the existing dark surfaces, cyan accent, Inter for the form, and the `mono` token for the rail.
+Keep the scan order Google action → divider → credentials → recovery → submit → registration.
+Password reveal belongs in the `UiInput` suffix with a named button and visible focus state.
+Do not add auth-only tokens, themes, fonts, or duplicate primitives.
 
 The layout must remain usable without horizontal overflow at 320, 375, 414, and 768 pixels, handle
 long emails with truncation/title disclosure where appropriate, and respect reduced motion.

@@ -49,12 +49,12 @@ async function handleGoogle() {
 
 <template>
   <div>
-    <div class="mb-7">
-      <p class="text-xs font-medium uppercase tracking-[0.16em] text-cyan">Yêu cầu truy cập</p>
-      <h2 class="mt-2 text-2xl font-semibold text-white">Tạo tài khoản</h2>
-      <p class="mt-2 text-sm leading-6 text-muted">Tài khoản mới cần được admin phê duyệt trước khi sử dụng.</p>
-    </div>
-    <div class="rounded-2xl border border-dark-border bg-dark-surface p-5 shadow-xl sm:p-6">
+    <AuthConsoleCard
+      eyebrow="Yêu cầu truy cập"
+      title="Tạo tài khoản"
+      subtitle="Tài khoản mới cần được admin phê duyệt trước khi sử dụng."
+      status="ĐĂNG KÝ"
+    >
       <UiButton class="w-full" variant="secondary" :loading="googleLoading" :disabled="loading" @click="handleGoogle">
         <IconGoogle v-if="!googleLoading" class="size-4" aria-hidden="true" />
         Tiếp tục với Google
@@ -70,7 +70,7 @@ async function handleGoogle() {
         <UiAlert v-if="successMessage" severity="success">{{ successMessage }}</UiAlert>
         <UiButton type="submit" class="w-full" :loading="loading" :disabled="googleLoading || Boolean(turnstileSiteKey && !captchaToken)">Gửi yêu cầu đăng ký</UiButton>
       </form>
-    </div>
+    </AuthConsoleCard>
     <p class="mt-6 text-center text-sm text-muted">Đã có tài khoản? <NuxtLink to="/login" class="font-medium text-cyan">Đăng nhập</NuxtLink></p>
   </div>
 </template>

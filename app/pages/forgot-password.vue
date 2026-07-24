@@ -21,14 +21,18 @@ async function submit() {
 
 <template>
   <div>
-    <div class="mb-7"><p class="text-xs font-medium uppercase tracking-[0.16em] text-cyan">Khôi phục truy cập</p><h2 class="mt-2 text-2xl font-semibold text-white">Quên mật khẩu?</h2><p class="mt-2 text-sm leading-6 text-muted">Nhập email để nhận liên kết đặt lại mật khẩu.</p></div>
-    <div class="rounded-2xl border border-dark-border bg-dark-surface p-5 shadow-xl sm:p-6">
+    <AuthConsoleCard
+      eyebrow="Khôi phục truy cập"
+      title="Quên mật khẩu?"
+      subtitle="Nhập email để nhận liên kết đặt lại mật khẩu."
+      status="KHÔI PHỤC"
+    >
       <UiAlert v-if="sent" severity="success">Nếu tài khoản tồn tại, hướng dẫn đặt lại mật khẩu đã được gửi.</UiAlert>
       <form v-else class="space-y-4" @submit.prevent="submit">
         <UiInput v-model="email" label="Email" type="email" autocomplete="email" :error="error" :disabled="loading" required />
         <UiButton type="submit" class="w-full" :loading="loading">Gửi liên kết</UiButton>
       </form>
-    </div>
+    </AuthConsoleCard>
     <p class="mt-6 text-center"><NuxtLink to="/login" class="text-sm font-medium text-cyan">Quay lại đăng nhập</NuxtLink></p>
   </div>
 </template>
