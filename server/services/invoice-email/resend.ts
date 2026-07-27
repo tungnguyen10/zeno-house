@@ -33,6 +33,15 @@ function safeProviderMessage(retryable: boolean): string {
     : 'Nhà cung cấp email từ chối yêu cầu gửi'
 }
 
+function toInlineAttachment(asset: NonNullable<ResendInvoiceInput['inlineAssets']>[number]) {
+  return {
+    filename: asset.filename,
+    content: asset.content,
+    contentType: asset.contentType,
+    contentId: asset.cid,
+  }
+}
+
 export const ResendInvoiceAdapter = {
   async send(input: ResendInvoiceInput): Promise<ResendInvoiceResult> {
     try {
@@ -46,7 +55,7 @@ export const ResendInvoiceAdapter = {
         attachments: [{
           filename: input.filename,
           content: input.pdf,
-        }, ...(input.inlineAssets ?? [])],
+        }, ...(input.inlineAssets ?? []).map(toInlineAttachment)],
       }, {
         idempotencyKey: input.idempotencyKey,
       })

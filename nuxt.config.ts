@@ -33,14 +33,14 @@ export default defineNuxtConfig({
     resendFrom: process.env.NUXT_RESEND_FROM  || "", // NUXT_RESEND_FROM
     resendReplyTo: process.env.NUXT_RESEND_REPLY_TO || "", // NUXT_RESEND_REPLY_TO
     resendWebhookSecret: process.env.NUXT_RESEND_WEBHOOK_SECRET || "", // NUXT_RESEND_WEBHOOK_SECRET
-    invoiceEmailDispatchSecret: "", // NUXT_INVOICE_EMAIL_DISPATCH_SECRET
+    invoiceEmailDispatchSecret: process.env.NUXT_INVOICE_EMAIL_DISPATCH_SECRET || "", // NUXT_INVOICE_EMAIL_DISPATCH_SECRET
     aiProvider: process.env.NUXT_AI_PROVIDER || "groq", // NUXT_AI_PROVIDER (groq | google)
     aiGroqApiKey: process.env.NUXT_AI_GROQ_API_KEY || "", // NUXT_AI_GROQ_API_KEY
     aiGoogleApiKey: process.env.NUXT_AI_GOOGLE_API_KEY || "", // NUXT_AI_GOOGLE_API_KEY
     aiModel: process.env.NUXT_AI_MODEL || "", // NUXT_AI_MODEL
     aiModelFallback: process.env.NUXT_AI_MODEL_FALLBACK || "", // NUXT_AI_MODEL_FALLBACK
-    aiMaxSteps: 8, // NUXT_AI_MAX_STEPS
-    aiMaxOutputTokens: 1200, // NUXT_AI_MAX_OUTPUT_TOKENS
+    aiMaxSteps: process.env.NUXT_AI_MAX_STEPS ? parseInt(process.env.NUXT_AI_MAX_STEPS) : 8, // NUXT_AI_MAX_STEPS
+    aiMaxOutputTokens: process.env.NUXT_AI_MAX_OUTPUT_TOKENS ? parseInt(process.env.NUXT_AI_MAX_OUTPUT_TOKENS) : 1200, // NUXT_AI_MAX_OUTPUT_TOKENS
     aiChatEnabled: process.env.NODE_ENV !== "production", // NUXT_AI_CHAT_ENABLED
     aiReadToolsEnabled: process.env.NODE_ENV !== "production", // NUXT_AI_READ_TOOLS_ENABLED
     aiMutationPlanningEnabled: process.env.NODE_ENV !== "production", // NUXT_AI_MUTATION_PLANNING_ENABLED
@@ -58,11 +58,11 @@ export default defineNuxtConfig({
     aiMaxContextMessages: 20, // NUXT_AI_MAX_CONTEXT_MESSAGES
     aiRetentionCleanupEnabled: true, // NUXT_AI_RETENTION_CLEANUP_ENABLED
     aiRetentionCleanupBatchSize: 500, // NUXT_AI_RETENTION_CLEANUP_BATCH_SIZE
-    aiRetentionCleanupSecret: "", // NUXT_AI_RETENTION_CLEANUP_SECRET
-    adminEmail: "", // ADMIN_EMAIL
-    turnstileSecretKey: "", // NUXT_TURNSTILE_SECRET_KEY
-    operationsReportAutoCloseSecret: "", // NUXT_OPERATIONS_REPORT_AUTO_CLOSE_SECRET
-    operationsReportAutoCloseEnabled: true, // NUXT_OPERATIONS_REPORT_AUTO_CLOSE_ENABLED
+    aiRetentionCleanupSecret: process.env.NUXT_AI_RETENTION_CLEANUP_SECRET || "", // NUXT_AI_RETENTION_CLEANUP_SECRET
+    adminEmail: process.env.ADMIN_EMAIL || "", // ADMIN_EMAIL
+    turnstileSecretKey: process.env.NUXT_TURNSTILE_SECRET_KEY || "", // NUXT_TURNSTILE_SECRET_KEY
+    operationsReportAutoCloseSecret: process.env.NUXT_OPERATIONS_REPORT_AUTO_CLOSE_SECRET || "", // NUXT_OPERATIONS_REPORT_AUTO_CLOSE_SECRET
+    operationsReportAutoCloseEnabled: process.env.NUXT_OPERATIONS_REPORT_AUTO_CLOSE_ENABLED === "true", // NUXT_OPERATIONS_REPORT_AUTO_CLOSE_ENABLED
     public: {
       siteUrl: process.env.NUXT_PUBLIC_SITE_URL || "", // NUXT_PUBLIC_SITE_URL
       gaId: process.env.NUXT_PUBLIC_GA_ID || "", // NUXT_PUBLIC_GA_ID

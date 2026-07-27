@@ -93,6 +93,17 @@ describe('invoice email HTML renderer', () => {
     expect(html).toContain('Liên hệ quản lý để nhận thông tin thanh toán')
   })
 
+  it('keeps transfer instructions usable when the QR asset is unavailable', () => {
+    const html = renderInvoiceEmailHtml(documentData(), {
+      font: Buffer.from('font'),
+      logoImage: null,
+      qrImage: null,
+    })
+
+    expect(html).toContain('Nếu email không hiển thị mã QR, vui lòng dùng đúng thông tin chuyển khoản bên cạnh.')
+    expect(html).toContain('Dùng thông tin chuyển khoản để nhập thủ công')
+  })
+
   it('uses the print due-date fallback when an invoice has no explicit due date', () => {
     const html = renderInvoiceEmailHtml(documentData({ dueDate: null }))
 

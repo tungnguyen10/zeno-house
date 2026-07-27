@@ -66,7 +66,7 @@ function paymentInstructions(data: InvoiceDocumentData, assets?: InvoiceDocument
   }
   const qr = assets?.qrImage
     ? `<img class="qr" src="cid:${escapeHtml(assets.qrImage.cid)}" alt="Mã QR chuyển khoản ngân hàng">`
-    : '<p class="qr-fallback">Dùng thông tin chuyển khoản bên cạnh</p>'
+    : '<p class="qr-fallback">Nếu email không hiển thị mã QR, vui lòng dùng đúng thông tin chuyển khoản bên cạnh.</p>'
   return `
     <section class="payment-wrap">
       <dl class="payment">
@@ -75,7 +75,7 @@ function paymentInstructions(data: InvoiceDocumentData, assets?: InvoiceDocument
         <div><dt>Ngân hàng</dt><dd>${escapeHtml(profile.bankName)}</dd></div>
         <div><dt>Nội dung</dt><dd>${escapeHtml(profile.transferContent)}</dd></div>
       </dl>
-      <div class="qr-wrap">${qr}<p>Quét mã để chuyển khoản</p></div>
+      <div class="qr-wrap">${qr}<p>${assets?.qrImage ? 'Quét mã để chuyển khoản' : 'Dùng thông tin chuyển khoản để nhập thủ công'}</p></div>
     </section>
     <p class="payment-note">Vui lòng thanh toán trước hạn thanh toán để tránh những phát sinh chi phí của việc chậm thanh toán.</p>
   `
@@ -101,7 +101,7 @@ export function renderInvoiceEmailHtml(
   `).join('')
   const logo = assets?.logoImage
     ? `<img class="logo" src="cid:${escapeHtml(assets.logoImage.cid)}" alt="Logo ${escapeHtml(data.buildingName)}">`
-    : '<span class="brand-name">Zeno House</span>'
+    : `<span class="brand-name">${escapeHtml(data.buildingName)}</span>`
 
   return `<!doctype html>
 <html lang="vi">

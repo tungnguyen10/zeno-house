@@ -55,7 +55,7 @@ describe('ResendInvoiceAdapter', () => {
           filename: 'invoice-qr.png',
           content: Buffer.from('qr'),
           contentType: 'image/png',
-          cid: 'invoice-qr',
+          contentId: 'invoice-qr',
         },
       ],
     }, {
