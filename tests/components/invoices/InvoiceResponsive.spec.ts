@@ -325,4 +325,69 @@ describe('InvoicePreviewDrawer responsive layout', () => {
     await resendButton!.trigger('click')
     expect(wrapper.find('[data-test="modal"]').text()).toContain('Người nhận có thể nhận thêm một email')
   })
+
+  it('starts a new delivery when the recipient email changed after a previous delivery', async () => {
+    const enqueue = vi.fn(async () => ({ results: [{ status: 'queued' }] }))
+    const resend = vi.fn(async () => ({}))
+    vi.stubGlobal('useRuntimeConfig', () => ({
+      public: { invoiceEmailEnabled: true },
+    }))
+    vi.stubGlobal('useInvoiceDetail', () => ({
+      detail: ref({
+        invoice: { totalAmount: 3_000_000, notes: null },
+        charges: [],
+        payments: [],
+        invoiceProfile: null,
+        recipientEmail: 'new-recipient@example.test',
+      }),
+      isLoading: ref(false),
+      error: ref(null),
+      load: vi.fn(async () => {}),
+      clear: vi.fn(),
+    }))
+    vi.stubGlobal('useInvoiceEmailDelivery', () => ({
+      sending: ref(false),
+      loadingHistory: ref(false),
+      error: ref(null),
+      history: ref([{
+        id: 'delivery-old-recipient',
+        invoiceId: 'invoice-1',
+        buildingId: 'building-1',
+        billingPeriodId: 'period-1',
+        recipientEmail: 'old-recipient@example.test',
+        source: 'manual',
+        status: 'delivered',
+        providerEmailId: 'provider-1',
+        attemptCount: 1,
+        lastErrorCode: null,
+        lastErrorMessage: null,
+        acceptedAt: '2026-06-01T00:00:00.000Z',
+        deliveredAt: '2026-06-01T00:01:00.000Z',
+        failedAt: null,
+        bouncedAt: null,
+        complainedAt: null,
+        skippedAt: null,
+        createdBy: 'user-1',
+        createdAt: '2026-06-01T00:00:00.000Z',
+        updatedAt: '2026-06-01T00:01:00.000Z',
+      }]),
+      enqueue,
+      resend,
+      loadHistory: vi.fn(async () => []),
+      clear: vi.fn(),
+    }))
+
+    const wrapper = mount(InvoicePreviewDrawer, {
+      props: { modelValue: true, invoice: invoice() },
+      global: { stubs },
+    })
+
+    const sendButton = wrapper.findAll('footer button').find(button => button.text() === 'Gửi email')
+    expect(sendButton).toBeTruthy()
+    await sendButton!.trigger('click')
+    await wrapper.vm.$nextTick()
+
+    expect(enqueue).toHaveBeenCalledWith(['invoice-1'])
+    expect(resend).not.toHaveBeenCalled()
+  })
 })

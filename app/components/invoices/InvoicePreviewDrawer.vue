@@ -33,11 +33,23 @@ const {
 } = useInvoiceEmailDelivery()
 const toast = useToast()
 const invoiceEmailEnabled = useRuntimeConfig().public.invoiceEmailEnabled === true
-const latestDelivery = computed(() => emailHistory.value[0] ?? null)
+
+function normalizeRecipient(email: string | null | undefined): string | null {
+  const normalized = email?.trim().toLowerCase()
+  return normalized || null
+}
+
+const currentRecipientDeliveries = computed(() => {
+  const recipient = normalizeRecipient(detail.value?.recipientEmail)
+  return recipient
+    ? emailHistory.value.filter(delivery => normalizeRecipient(delivery.recipientEmail) === recipient)
+    : []
+})
+const latestDelivery = computed(() => currentRecipientDeliveries.value[0] ?? null)
 const inFlightDelivery = computed(() =>
-  emailHistory.value.find(delivery => isInvoiceEmailDeliveryInFlight(delivery.status)),
+  currentRecipientDeliveries.value.find(delivery => isInvoiceEmailDeliveryInFlight(delivery.status)),
 )
-const hasPreviousDelivery = computed(() => emailHistory.value.length > 0)
+const hasPreviousDelivery = computed(() => currentRecipientDeliveries.value.length > 0)
 const resendableDelivery = computed(() => {
   const delivery = latestDelivery.value
   return delivery && ['failed', 'accepted', 'delivered'].includes(delivery.status)
