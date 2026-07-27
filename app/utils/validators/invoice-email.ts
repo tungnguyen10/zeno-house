@@ -12,3 +12,9 @@ export const invoiceEmailEnqueueSchema = z.object({
 }).strict()
 
 export type InvoiceEmailEnqueueInput = z.infer<typeof invoiceEmailEnqueueSchema>
+
+export const invoiceEmailResendSchema = z.object({
+  confirm_duplicate: z.boolean().default(false),
+}).strict()
+
+export type InvoiceEmailResendInput = z.infer<typeof invoiceEmailResendSchema>

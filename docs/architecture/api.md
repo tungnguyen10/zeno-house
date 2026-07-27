@@ -179,6 +179,12 @@ webhook at `POST /api/webhooks/resend` authenticates the raw Svix body. The disp
 `POST /api/internal/invoice-email/dispatch` is server-to-server only and requires
 `x-invoice-email-dispatch-secret`; neither endpoint uses session authorization.
 
+Single-invoice resend uses `POST /api/billing/invoices/[id]/email-deliveries/resend` and requires
+`billing.write` plus building write scope. A previous `failed` delivery can be resent directly.
+Resending an `accepted` or `delivered` delivery requires `confirm_duplicate=true` because the
+recipient may receive another copy. `queued`, `processing`, `bounced`, and `complained` deliveries
+are rejected. A resend creates a new linked delivery and never resets the earlier provider outcome.
+
 ## Manager Assignments And Audit
 
 | Method | Path |

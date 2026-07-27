@@ -35,6 +35,32 @@ export function useInvoiceEmailDelivery() {
     }
   }
 
+  async function resend(
+    invoiceId: string,
+    confirmDuplicate = false,
+  ): Promise<InvoiceEmailDelivery> {
+    if (sending.value) throw new Error('INVOICE_EMAIL_SEND_IN_FLIGHT')
+    sending.value = true
+    error.value = null
+    try {
+      const response = await apiFetch<ApiSuccess<InvoiceEmailDelivery>>(
+        `/api/billing/invoices/${encodeURIComponent(invoiceId)}/email-deliveries/resend`,
+        {
+          method: 'POST',
+          body: { confirm_duplicate: confirmDuplicate },
+        },
+      )
+      return response.data
+    }
+    catch (cause) {
+      error.value = getApiErrorMessage(cause, 'Không thể gửi lại hoá đơn.')
+      throw cause
+    }
+    finally {
+      sending.value = false
+    }
+  }
+
   async function loadHistory(invoiceId: string): Promise<InvoiceEmailDelivery[]> {
     const token = ++historyToken
     loadingHistory.value = true
@@ -64,5 +90,5 @@ export function useInvoiceEmailDelivery() {
     loadingHistory.value = false
   }
 
-  return { sending, loadingHistory, error, history, enqueue, loadHistory, clear }
+  return { sending, loadingHistory, error, history, enqueue, resend, loadHistory, clear }
 }

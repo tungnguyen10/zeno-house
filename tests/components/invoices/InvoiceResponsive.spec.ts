@@ -85,6 +85,19 @@ const stubs = {
     props: ['label', 'value'],
     template: '<div data-test="metric"><span>{{ label }}</span><strong>{{ value }}</strong></div>',
   }),
+  UiModal: defineComponent({
+    props: ['open', 'title'],
+    emits: ['close'],
+    setup(props, { slots }) {
+      return () => props.open
+        ? h('section', { 'data-test': 'modal' }, [
+            h('h2', {}, String(props.title)),
+            slots.default?.(),
+            slots.footer?.(),
+          ])
+        : null
+    },
+  }),
   UiSection: passthrough,
   UiSkeleton: defineComponent({ template: '<div data-test="skeleton" />' }),
   UiStatusBadge: defineComponent({
@@ -158,6 +171,7 @@ beforeEach(() => {
     error: ref(null),
     history: ref([]),
     enqueue: vi.fn(async () => ({ results: [], queuedCount: 0, failedCount: 0 })),
+    resend: vi.fn(async () => ({})),
     loadHistory: vi.fn(async () => []),
     clear: vi.fn(),
   }))
@@ -263,5 +277,52 @@ describe('InvoicePreviewDrawer responsive layout', () => {
     expect(printButton).toBeTruthy()
     await printButton!.trigger('click')
     expect(wrapper.emitted('print')).toEqual([[row.id]])
+  })
+
+  it('distinguishes provider acceptance from an in-flight send and confirms a duplicate resend', async () => {
+    vi.stubGlobal('useRuntimeConfig', () => ({
+      public: { invoiceEmailEnabled: true },
+    }))
+    vi.stubGlobal('useInvoiceEmailDelivery', () => ({
+      sending: ref(false),
+      loadingHistory: ref(false),
+      error: ref(null),
+      history: ref([{
+        id: 'delivery-accepted',
+        invoiceId: 'invoice-1',
+        buildingId: 'building-1',
+        billingPeriodId: 'period-1',
+        recipientEmail: 'tenant@example.test',
+        source: 'manual',
+        status: 'accepted',
+        providerEmailId: 'provider-1',
+        attemptCount: 1,
+        lastErrorCode: null,
+        lastErrorMessage: null,
+        acceptedAt: '2026-06-01T00:00:00.000Z',
+        deliveredAt: null,
+        failedAt: null,
+        bouncedAt: null,
+        complainedAt: null,
+        skippedAt: null,
+        createdBy: 'user-1',
+        createdAt: '2026-06-01T00:00:00.000Z',
+        updatedAt: '2026-06-01T00:00:00.000Z',
+      }]),
+      enqueue: vi.fn(async () => ({ results: [] })),
+      resend: vi.fn(async () => ({})),
+      loadHistory: vi.fn(async () => []),
+      clear: vi.fn(),
+    }))
+    const wrapper = mount(InvoicePreviewDrawer, {
+      props: { modelValue: true, invoice: invoice() },
+      global: { stubs },
+    })
+
+    expect(wrapper.text()).toContain('đang chờ xác nhận giao')
+    const resendButton = wrapper.findAll('footer button').find(button => button.text() === 'Gửi lại email')
+    expect(resendButton).toBeTruthy()
+    await resendButton!.trigger('click')
+    expect(wrapper.find('[data-test="modal"]').text()).toContain('Người nhận có thể nhận thêm một email')
   })
 })

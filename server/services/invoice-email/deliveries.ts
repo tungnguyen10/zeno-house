@@ -5,6 +5,7 @@ import type {
   InvoiceEmailEnqueueItemResult,
   InvoiceEmailEnqueueResult,
 } from '~/types/invoice-email'
+import type { InvoiceEmailResendInput } from '~/utils/validators/invoice-email'
 import { mapInvoiceEmailDelivery } from '~/utils/mappers/invoice-email'
 import { InvoiceRepository } from '../../repositories/billing/invoices'
 import { BillingPeriodRepository } from '../../repositories/billing/periods'
@@ -93,6 +94,34 @@ export const InvoiceEmailDeliveryService = {
     }
 
     return { results }
+  },
+
+  async resend(
+    event: H3Event,
+    user: AuthUser,
+    invoiceIdentifier: string,
+    input: InvoiceEmailResendInput,
+  ): Promise<InvoiceEmailDelivery> {
+    if (!can(user, 'billing.write')) throwForbidden('Không có quyền gửi lại hoá đơn')
+    if (!featureEnabled(event)) {
+      throwConflict('Chức năng gửi hoá đơn qua email chưa được bật trên hệ thống')
+    }
+    if (!user.id) throwForbidden('Không xác định được người gửi')
+
+    const invoice = await InvoiceRepository.findByIdentifier(event, invoiceIdentifier)
+    if (!invoice) throwNotFound('Không tìm thấy hoá đơn')
+    if (invoice.status === 'void' || invoice.status === 'draft') {
+      throwConflict('Hoá đơn không ở trạng thái có thể gửi lại')
+    }
+    const period = await BillingPeriodRepository.findById(event, invoice.billingPeriodId)
+    if (!period) throwNotFound('Không tìm thấy kỳ vận hành')
+    await assertBuildingScope(event, user, period.buildingId, 'write')
+
+    return mapInvoiceEmailDelivery(await InvoiceEmailDeliveryRepository.resend(event, {
+      invoiceId: invoice.id,
+      actorId: user.id,
+      confirmDuplicate: input.confirm_duplicate,
+    }))
   },
 
   async history(

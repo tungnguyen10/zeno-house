@@ -10,9 +10,14 @@ const verificationPath = resolve(
   process.cwd(),
   'supabase/verification/invoice_email_delivery.sql',
 )
+const resendMigrationPath = resolve(
+  process.cwd(),
+  'supabase/migrations/20260727120000_add_invoice_email_resends.sql',
+)
 const migration = readFileSync(migrationPath, 'utf8')
 const sql = migration.toLowerCase()
 const verification = readFileSync(verificationPath, 'utf8').toLowerCase()
+const resendSql = readFileSync(resendMigrationPath, 'utf8').toLowerCase()
 
 describe('invoice email delivery migration', () => {
   it('creates default-off settings and durable delivery/webhook tables', () => {
@@ -77,5 +82,17 @@ describe('invoice email delivery migration', () => {
     expect(verification).toMatch(/period issue,[\s\S]*issue-and-pay, and[\s\S]*reissue/)
     expect(verification).toContain('uq_invoice_email_deliveries_active_recipient')
     expect(verification).toContain('invoice_email_webhook_events_svix_id_key')
+  })
+
+  it('keeps prior provider outcomes while allowing an explicit, linked resend', () => {
+    expect(resendSql).toContain('add column supersedes_delivery_id uuid')
+    expect(resendSql).toContain('add column resend_released_at timestamptz')
+    expect(resendSql).toContain('resend_invoice_email_delivery')
+    expect(resendSql).toContain("v_previous.status in ('accepted', 'delivered') and not p_confirm_duplicate")
+    expect(resendSql).toContain("v_previous.status in ('bounced', 'complained')")
+    expect(resendSql).toContain("v_previous.status in ('queued', 'processing')")
+    expect(resendSql).toContain('supersedes_delivery_id')
+    expect(resendSql).toContain('resend_released_at is null')
+    expect(resendSql).toContain("grant execute on function public.resend_invoice_email_delivery(uuid, uuid, boolean)")
   })
 })

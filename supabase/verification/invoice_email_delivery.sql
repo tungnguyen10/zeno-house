@@ -1,4 +1,5 @@
--- Run after applying 20260723103000_add_invoice_email_delivery.sql in the
+-- Run after applying 20260723103000_add_invoice_email_delivery.sql and
+-- 20260727120000_add_invoice_email_resends.sql in the
 -- Supabase Dashboard SQL Editor. Every assertion runs inside a transaction and
 -- ends with ROLLBACK, so verification does not retain fixture or setting data.
 --
@@ -14,6 +15,7 @@ declare
   v_trigger_count integer;
   v_active_index_count integer;
   v_webhook_constraint_count integer;
+  v_resend_function_count integer;
 begin
   select exists (
     select 1
@@ -77,6 +79,16 @@ begin
   if v_webhook_constraint_count <> 1 then
     raise exception 'invoice_email_webhook_events_svix_id_key missing';
   end if;
+
+  select count(*)
+    into v_resend_function_count
+    from pg_proc
+   where pronamespace = 'public'::regnamespace
+     and proname = 'resend_invoice_email_delivery'
+     and pronargs = 3;
+  if v_resend_function_count <> 1 then
+    raise exception 'resend_invoice_email_delivery(uuid, uuid, boolean) missing';
+  end if;
 end;
 $$;
 
@@ -94,5 +106,8 @@ $$;
 -- 6. Insert the same svix_id twice; assert the second insert raises unique_violation.
 -- 7. Intentionally raise after inserting an invoice and confirm both the invoice
 --    and its automatic delivery/audit writes roll back together.
+-- 8. Resend a failed row and assert a new queued delivery references the prior
+--    UUID. Assert accepted and delivered rows require p_confirm_duplicate=true;
+--    assert bounced and complained rows remain blocked.
 
 rollback;

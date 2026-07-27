@@ -7,7 +7,7 @@ import InvoicePaymentProfileCard from './InvoicePaymentProfileCard.vue'
 import {
   INVOICE_EMAIL_DELIVERY_STATUS_LABELS,
   INVOICE_EMAIL_DELIVERY_STATUS_VARIANTS,
-  isActiveInvoiceEmailDeliveryStatus,
+  isInvoiceEmailDeliveryInFlight,
 } from '~/utils/constants/invoice-email'
 
 const props = defineProps<{
@@ -27,20 +27,36 @@ const {
   error: emailError,
   history: emailHistory,
   enqueue: enqueueEmail,
+  resend: resendEmailDelivery,
   loadHistory,
   clear: clearEmail,
 } = useInvoiceEmailDelivery()
 const toast = useToast()
 const invoiceEmailEnabled = useRuntimeConfig().public.invoiceEmailEnabled === true
-const activeDelivery = computed(() =>
-  emailHistory.value.find(delivery => isActiveInvoiceEmailDeliveryStatus(delivery.status)),
+const latestDelivery = computed(() => emailHistory.value[0] ?? null)
+const inFlightDelivery = computed(() =>
+  emailHistory.value.find(delivery => isInvoiceEmailDeliveryInFlight(delivery.status)),
 )
 const hasPreviousDelivery = computed(() => emailHistory.value.length > 0)
-const canSendEmail = computed(() =>
+const resendableDelivery = computed(() => {
+  const delivery = latestDelivery.value
+  return delivery && ['failed', 'accepted', 'delivered'].includes(delivery.status)
+    ? delivery
+    : null
+})
+const canEmailInvoice = computed(() =>
   invoiceEmailEnabled
   && Boolean(detail.value?.recipientEmail)
   && props.invoice?.status !== 'void'
-  && !activeDelivery.value,
+)
+const canStartEmail = computed(() => canEmailInvoice.value && !hasPreviousDelivery.value)
+const canResendEmail = computed(() =>
+  canEmailInvoice.value && !inFlightDelivery.value && Boolean(resendableDelivery.value),
+)
+const canEmailAction = computed(() => canStartEmail.value || canResendEmail.value)
+const resendConfirmationOpen = ref(false)
+const duplicateConfirmationRequired = computed(() =>
+  resendableDelivery.value?.status === 'accepted' || resendableDelivery.value?.status === 'delivered',
 )
 
 watch(
@@ -105,7 +121,7 @@ function deliveryDate(value: string): string {
 }
 
 async function sendEmail() {
-  if (!props.invoice || !canSendEmail.value) return
+  if (!props.invoice || !canStartEmail.value) return
   try {
     const result = await enqueueEmail([props.invoice.id])
     const item = result.results[0]
@@ -120,6 +136,32 @@ async function sendEmail() {
         ? 'Hoá đơn đã có trong hàng gửi.'
         : 'Đã xếp hàng gửi hoá đơn.')
     }
+    await loadHistory(props.invoice.invoice_code)
+  }
+  catch {
+    // The inline alert exposes the standardized API error.
+  }
+}
+
+function requestEmailAction() {
+  if (!canEmailAction.value) return
+  if (!hasPreviousDelivery.value) {
+    void sendEmail()
+    return
+  }
+  if (duplicateConfirmationRequired.value) {
+    resendConfirmationOpen.value = true
+    return
+  }
+  void resendEmail(false)
+}
+
+async function resendEmail(confirmDuplicate: boolean) {
+  if (!props.invoice || !canResendEmail.value) return
+  try {
+    await resendEmailDelivery(props.invoice.id, confirmDuplicate)
+    resendConfirmationOpen.value = false
+    toast.success('Đã xếp hàng gửi lại hoá đơn.')
     await loadHistory(props.invoice.invoice_code)
   }
   catch {
@@ -192,8 +234,12 @@ async function sendEmail() {
                   {{ detail.recipientEmail ?? 'Chưa có email liên hệ' }}
                 </p>
               </div>
-              <UiBadge v-if="activeDelivery" variant="accent" pill>
-                {{ INVOICE_EMAIL_DELIVERY_STATUS_LABELS[activeDelivery.status] }}
+              <UiBadge
+                v-if="latestDelivery"
+                :variant="INVOICE_EMAIL_DELIVERY_STATUS_VARIANTS[latestDelivery.status]"
+                pill
+              >
+                {{ INVOICE_EMAIL_DELIVERY_STATUS_LABELS[latestDelivery.status] }}
               </UiBadge>
             </div>
 
@@ -202,6 +248,15 @@ async function sendEmail() {
             </UiAlert>
             <UiAlert v-else-if="!detail.recipientEmail" severity="warning">
               Thêm email liên hệ chính cho khách thuê trước khi gửi hoá đơn.
+            </UiAlert>
+            <UiAlert v-else-if="latestDelivery?.status === 'accepted'" severity="info">
+              Nhà cung cấp đã tiếp nhận email và hệ thống đang chờ xác nhận giao. Bạn vẫn có thể gửi lại nếu cần.
+            </UiAlert>
+            <UiAlert
+              v-else-if="latestDelivery?.status === 'bounced' || latestDelivery?.status === 'complained'"
+              severity="warning"
+            >
+              Cập nhật email người nhận trước khi gửi lại hoá đơn.
             </UiAlert>
             <UiAlert v-if="emailError" severity="danger">{{ emailError }}</UiAlert>
 
@@ -294,10 +349,10 @@ async function sendEmail() {
           v-if="invoice && invoice.status !== 'void'"
           class="w-full whitespace-nowrap sm:w-auto"
           :loading="sendingEmail"
-          :disabled="!canSendEmail"
-          @click="sendEmail"
+          :disabled="!canEmailAction"
+          @click="requestEmailAction"
         >
-          {{ activeDelivery ? 'Đang gửi' : hasPreviousDelivery ? 'Gửi lại' : 'Gửi email' }}
+          {{ inFlightDelivery ? 'Đang gửi' : hasPreviousDelivery ? 'Gửi lại email' : 'Gửi email' }}
         </UiButton>
         <UiButton
           v-if="invoice && invoice.status !== 'void'"
@@ -319,4 +374,20 @@ async function sendEmail() {
       </div>
     </template>
   </UiDrawer>
+
+  <UiModal
+    :open="resendConfirmationOpen"
+    title="Gửi lại hoá đơn qua email?"
+    size="sm"
+    @close="resendConfirmationOpen = false"
+  >
+    <p class="text-sm leading-6 text-muted">
+      Nhà cung cấp đã {{ resendableDelivery?.status === 'delivered' ? 'xác nhận giao' : 'tiếp nhận' }} email trước đó.
+      Người nhận có thể nhận thêm một email hoá đơn giống nhau.
+    </p>
+    <template #footer>
+      <UiButton variant="secondary" :disabled="sendingEmail" @click="resendConfirmationOpen = false">Huỷ</UiButton>
+      <UiButton :loading="sendingEmail" @click="resendEmail(true)">Vẫn gửi lại</UiButton>
+    </template>
+  </UiModal>
 </template>

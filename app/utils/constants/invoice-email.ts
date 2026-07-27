@@ -33,6 +33,17 @@ export function isActiveInvoiceEmailDeliveryStatus(
   return activeStatuses.has(status)
 }
 
+const inFlightStatuses = new Set<InvoiceEmailDeliveryStatus>([
+  'queued',
+  'processing',
+])
+
+export function isInvoiceEmailDeliveryInFlight(
+  status: InvoiceEmailDeliveryStatus,
+): boolean {
+  return inFlightStatuses.has(status)
+}
+
 export const INVOICE_EMAIL_DELIVERY_STATUS_LABELS: Record<
   InvoiceEmailDeliveryStatus,
   string

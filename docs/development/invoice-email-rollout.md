@@ -40,6 +40,20 @@ Invoice email has two independent default-off controls:
 8. Repeat with missing/malformed tenant email and simulated provider outage; invoice transactions
    must still commit and delivery rows must be skipped or retained for retry.
 
+## Resend Behavior
+
+- The existing bulk action remains for initial manual sends only and accepts one to 100 invoices.
+- A resend is a single-invoice action. It creates a new delivery linked to the previous attempt and
+   never resets or deletes the prior provider outcome.
+- A `failed` delivery can be resent directly. An `accepted` or `delivered` delivery requires an
+   explicit duplicate-delivery confirmation because the tenant may receive another email.
+- Do not resend `bounced` or `complained` deliveries. Correct the tenant email or review the
+   complaint before attempting a new delivery.
+- `accepted` means Resend accepted the request; it does not mean delivery was confirmed. A webhook
+   `email.delivered` event is required before the UI shows `Đã giao`. Local development needs a
+   public tunnel to receive this event directly; otherwise validate the webhook against the deployed
+   endpoint sharing the same Supabase project.
+
 ## Production Sequence
 
 1. Apply and verify the migration; deploy with the global flag off.

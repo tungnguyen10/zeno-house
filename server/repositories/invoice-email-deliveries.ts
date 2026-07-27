@@ -27,6 +27,10 @@ type EnqueueRpc = (
   name: 'enqueue_invoice_email_delivery',
   args: { p_invoice_id: string; p_actor_id: string },
 ) => RpcResponse<Json>
+type ResendRpc = (
+  name: 'resend_invoice_email_delivery',
+  args: { p_invoice_id: string; p_actor_id: string; p_confirm_duplicate: boolean },
+) => RpcResponse<Json>
 type ClaimRpc = (
   name: 'claim_invoice_email_deliveries',
   args: { p_worker_id: string; p_limit: number },
@@ -43,6 +47,36 @@ type ApplyWebhookRpc = (
 
 function client(event: H3Event): SupabaseClient<DeliveryDatabase> {
   return serverSupabaseClient(event) as unknown as SupabaseClient<DeliveryDatabase>
+}
+
+function resendRpcMessage(error: unknown): string {
+  if (!error || typeof error !== 'object') return ''
+  const message = (error as { message?: unknown }).message
+  return typeof message === 'string' ? message.toUpperCase() : ''
+}
+
+function throwResendRpcError(error: unknown): never {
+  const message = resendRpcMessage(error)
+  if (message.includes('INVOICE_NOT_FOUND')) throwNotFound('Không tìm thấy hoá đơn')
+  if (message.includes('INVOICE_EMAIL_DUPLICATE_CONFIRMATION_REQUIRED')) {
+    throwConflict('Email có thể đã được người nhận nhận. Xác nhận để gửi lại.')
+  }
+  if (message.includes('INVOICE_EMAIL_DELIVERY_ACTIVE')) {
+    throwConflict('Hoá đơn đang có email được xử lý. Vui lòng chờ hoàn tất.')
+  }
+  if (message.includes('INVOICE_EMAIL_RECIPIENT_BLOCKED')) {
+    throwConflict('Email người nhận đã bị trả lại hoặc báo spam. Hãy cập nhật email trước khi gửi lại.')
+  }
+  if (message.includes('INVOICE_EMAIL_RECIPIENT_INVALID')) {
+    throwConflict('Hoá đơn không có email người nhận hợp lệ.')
+  }
+  if (message.includes('INVOICE_EMAIL_NO_PREVIOUS_DELIVERY')) {
+    throwConflict('Chưa có lần gửi trước để gửi lại hoá đơn này.')
+  }
+  if (message.includes('INVOICE_EMAIL_NOT_SENDABLE') || message.includes('INVOICE_EMAIL_RESEND_NOT_ALLOWED')) {
+    throwConflict('Hoá đơn không ở trạng thái có thể gửi lại.')
+  }
+  throwDbError(error, 'invoiceEmailDelivery.resend')
 }
 
 export const InvoiceEmailDeliveryRepository = {
@@ -64,6 +98,24 @@ export const InvoiceEmailDeliveryRepository = {
       throwInternal(new Error('Email enqueue returned no delivery'), 'invoiceEmailDelivery.enqueue')
     }
     return { row: result.delivery, reused: result.reused === true }
+  },
+
+  async resend(
+    event: H3Event,
+    input: { invoiceId: string; actorId: string; confirmDuplicate: boolean },
+  ): Promise<InternalInvoiceEmailDeliveryRow> {
+    const rpc = client(event).rpc as unknown as ResendRpc
+    const { data, error } = await rpc('resend_invoice_email_delivery', {
+      p_invoice_id: input.invoiceId,
+      p_actor_id: input.actorId,
+      p_confirm_duplicate: input.confirmDuplicate,
+    })
+    if (error) throwResendRpcError(error)
+    const result = data as unknown as { delivery?: InternalInvoiceEmailDeliveryRow } | null
+    if (!result?.delivery) {
+      throwInternal(new Error('Email resend returned no delivery'), 'invoiceEmailDelivery.resend')
+    }
+    return result.delivery
   },
 
   async listByInvoiceId(

@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   findPeriods: vi.fn(),
   findPeriod: vi.fn(),
   enqueue: vi.fn(),
+  resend: vi.fn(),
   listHistory: vi.fn(),
   assertBuildingScope: vi.fn(),
 }))
@@ -29,6 +30,7 @@ vi.mock('../../../server/repositories/billing/periods', () => ({
 vi.mock('../../../server/repositories/invoice-email-deliveries', () => ({
   InvoiceEmailDeliveryRepository: {
     enqueue: mocks.enqueue,
+    resend: mocks.resend,
     listByInvoiceId: mocks.listHistory,
   },
 }))
@@ -87,6 +89,7 @@ describe('InvoiceEmailDeliveryService', () => {
     )
     mocks.assertBuildingScope.mockResolvedValue(undefined)
     mocks.enqueue.mockResolvedValue({ row: delivery(), reused: false })
+    mocks.resend.mockResolvedValue(delivery({ id: 'delivery-resend' }))
     mocks.listHistory.mockResolvedValue([])
   })
 
@@ -192,6 +195,38 @@ describe('InvoiceEmailDeliveryService', () => {
       ['INV-1'],
     )).resolves.toMatchObject({
       results: [{ status: 'failed', reason: 'Không thể xếp hàng gửi hoá đơn này' }],
+    })
+  })
+
+  it('resends one scoped invoice with an explicit duplicate confirmation', async () => {
+    const invoice = buildInvoice({
+      id: 'invoice-1',
+      invoiceCode: 'INV-1',
+      billingPeriodId: 'period-1',
+      status: 'issued',
+    })
+    mocks.findInvoice.mockResolvedValue(invoice)
+    const { InvoiceEmailDeliveryService } = await import(
+      '../../../server/services/invoice-email/deliveries'
+    )
+
+    await expect(InvoiceEmailDeliveryService.resend(
+      { context: {} } as never,
+      user,
+      'INV-1',
+      { confirm_duplicate: true },
+    )).resolves.toMatchObject({ id: 'delivery-resend', status: 'queued' })
+
+    expect(mocks.assertBuildingScope).toHaveBeenCalledWith(
+      expect.anything(),
+      user,
+      'building-1',
+      'write',
+    )
+    expect(mocks.resend).toHaveBeenCalledWith(expect.anything(), {
+      invoiceId: 'invoice-1',
+      actorId: user.id,
+      confirmDuplicate: true,
     })
   })
 
