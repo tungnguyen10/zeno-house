@@ -11,6 +11,7 @@ const issuePeriodWithAudit = vi.fn()
 const reissueWithAudit = vi.fn()
 const addAdjustmentWithAudit = vi.fn()
 const listCharges = vi.fn()
+const listByPeriod = vi.fn()
 const listPaymentsByInvoice = vi.fn()
 const findPeriodById = vi.fn()
 const append = vi.fn()
@@ -35,6 +36,7 @@ vi.mock('../../../server/repositories/billing/invoices', () => ({
     reissueWithAudit,
     addAdjustmentWithAudit,
     listCharges,
+    listByPeriod,
   },
 }))
 
@@ -104,6 +106,7 @@ describe('InvoiceService invoice lifecycle methods', () => {
     assignmentRepoMocks.findBuildingIdsByUser.mockResolvedValue(['building-1'])
     findPeriodById.mockResolvedValue(buildPeriod({ id: 'period-1', status: 'issued' }))
     listCharges.mockResolvedValue([])
+    listByPeriod.mockResolvedValue([])
     listPaymentsByInvoice.mockResolvedValue([])
     findInvoiceSnapshots.mockResolvedValue(new Map())
     resolveProfileDisplays.mockResolvedValue(new Map())
@@ -134,6 +137,21 @@ describe('InvoiceService invoice lifecycle methods', () => {
     expect(result.invoice.invoiceCode).toBe('inv-2026-05-0001')
     expect(result.invoiceProfile).toMatchObject({ bankName: 'VIB', qrImageUrl: 'signed:qr' })
     expect(result.recipientEmail).toBe('tenant@example.test')
+  })
+
+  it('sorts period invoices by room number ascending before returning', async () => {
+    const invoices = [
+      buildInvoice({ id: 'inv-3', invoiceCode: 'inv-2026-08-0003', roomNumber: 'P10' }),
+      buildInvoice({ id: 'inv-1', invoiceCode: 'inv-2026-08-0001', roomNumber: 'P2' }),
+      buildInvoice({ id: 'inv-2', invoiceCode: 'inv-2026-08-0002', roomNumber: 'P2' }),
+    ]
+    listByPeriod.mockResolvedValue(invoices)
+    enrichInvoices.mockResolvedValueOnce(invoices)
+    const { InvoiceService } = await import('../../../server/services/billing/invoices')
+
+    const result = await InvoiceService.list(event(), makeUser(), 'period-1')
+
+    expect(result.map(item => item.id)).toEqual(['inv-1', 'inv-2', 'inv-3'])
   })
 
   it('voids an issued invoice with no payments and records audit metadata', async () => {

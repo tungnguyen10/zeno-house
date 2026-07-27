@@ -27,6 +27,21 @@ import { assertBuildingScope } from '../../utils/scope'
 import { BuildingInvoiceProfileRepository } from '../../repositories/building-invoice-profiles'
 import { InvoiceProfileDisplayService } from './invoice-profile-display'
 
+const roomNumberCollator = new Intl.Collator('vi', {
+  numeric: true,
+  sensitivity: 'base',
+})
+
+function compareInvoicesByRoomAsc(a: Invoice, b: Invoice): number {
+  const byRoom = roomNumberCollator.compare(a.roomNumber ?? '', b.roomNumber ?? '')
+  if (byRoom !== 0) return byRoom
+
+  const byCode = roomNumberCollator.compare(a.invoiceCode ?? '', b.invoiceCode ?? '')
+  if (byCode !== 0) return byCode
+
+  return a.id.localeCompare(b.id)
+}
+
 export const InvoiceService = {
   async list(event: H3Event, user: AuthUser, billingPeriodId: string): Promise<Invoice[]> {
     if (!can(user, 'billing.read')) throwForbidden('Không có quyền xem hoá đơn')
@@ -34,7 +49,8 @@ export const InvoiceService = {
     if (!period) throwNotFound('Không tìm thấy kỳ vận hành')
     await assertBuildingScope(event, user, period.buildingId, 'read')
     const invoices = await InvoiceRepository.listByPeriod(event, billingPeriodId)
-    return new BillingDisplayResolver(event).enrichInvoices(invoices)
+    const enriched = await new BillingDisplayResolver(event).enrichInvoices(invoices)
+    return enriched.slice().sort(compareInvoicesByRoomAsc)
   },
 
   async getWithCharges(

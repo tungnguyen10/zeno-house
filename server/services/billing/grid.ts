@@ -34,6 +34,21 @@ interface RoomRow {
   status: string
 }
 
+const roomNumberCollator = new Intl.Collator('vi', {
+  numeric: true,
+  sensitivity: 'base',
+})
+
+function compareRoomRows(a: RoomRow, b: RoomRow): number {
+  const byFloor = (a.floor ?? Number.MAX_SAFE_INTEGER) - (b.floor ?? Number.MAX_SAFE_INTEGER)
+  if (byFloor !== 0) return byFloor
+
+  const byRoomNumber = roomNumberCollator.compare(a.room_number ?? '', b.room_number ?? '')
+  if (byRoomNumber !== 0) return byRoomNumber
+
+  return a.id.localeCompare(b.id)
+}
+
 interface MeterReadingRow {
   id: string
   room_id: string
@@ -310,7 +325,7 @@ export const BillingDraftGridService = {
     }
 
     // Rooms in building (including vacant)
-    const rooms = snapshot.rooms as RoomRow[]
+    const rooms = (snapshot.rooms as RoomRow[]).slice().sort(compareRoomRows)
 
     // Current period readings (need reading_date for the cell display)
     const currentData = snapshot.readings.filter(reading => reading.reading_type === 'monthly'
