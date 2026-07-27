@@ -29,16 +29,16 @@ export default defineNuxtConfig({
 
   // Runtime config — NUXT_* env vars are auto-mapped
   runtimeConfig: {
-    resendApiKey: process.env.RESEND_API_KEY || "", // NUXT_RESEND_API_KEY or legacy RESEND_API_KEY
-    resendFrom: "", // NUXT_RESEND_FROM
-    resendReplyTo: "", // NUXT_RESEND_REPLY_TO
+    resendApiKey: process.env.NUXT_RESEND_API_KEY || "", // NUXT_RESEND_API_KEY
+    resendFrom: process.env.NUXT_RESEND_FROM  || "", // NUXT_RESEND_FROM
+    resendReplyTo: process.env.NUXT_RESEND_REPLY_TO || "", // NUXT_RESEND_REPLY_TO
     resendWebhookSecret: "", // NUXT_RESEND_WEBHOOK_SECRET
-    invoiceEmailDispatchSecret: "", // NUXT_INVOICE_EMAIL_DISPATCH_SECRET
-    aiProvider: "groq", // NUXT_AI_PROVIDER (groq | google)
-    aiGroqApiKey: "", // NUXT_AI_GROQ_API_KEY
-    aiGoogleApiKey: "", // NUXT_AI_GOOGLE_API_KEY
-    aiModel: "", // NUXT_AI_MODEL
-    aiModelFallback: "", // NUXT_AI_MODEL_FALLBACK
+    invoiceEmailDispatchSecret: process.env.NUXT_INVOICE_EMAIL_DISPATCH_SECRET || "", // NUXT_INVOICE_EMAIL_DISPATCH_SECRET
+    aiProvider: process.env.NUXT_AI_PROVIDER || "groq", // NUXT_AI_PROVIDER (groq | google)
+    aiGroqApiKey: process.env.NUXT_AI_GROQ_API_KEY || "", // NUXT_AI_GROQ_API_KEY
+    aiGoogleApiKey: process.env.NUXT_AI_GOOGLE_API_KEY || "", // NUXT_AI_GOOGLE_API_KEY
+    aiModel: process.env.NUXT_AI_MODEL || "", // NUXT_AI_MODEL
+    aiModelFallback: process.env.NUXT_AI_MODEL_FALLBACK || "", // NUXT_AI_MODEL_FALLBACK
     aiMaxSteps: 8, // NUXT_AI_MAX_STEPS
     aiMaxOutputTokens: 1200, // NUXT_AI_MAX_OUTPUT_TOKENS
     aiChatEnabled: process.env.NODE_ENV !== "production", // NUXT_AI_CHAT_ENABLED
@@ -64,14 +64,14 @@ export default defineNuxtConfig({
     operationsReportAutoCloseSecret: "", // NUXT_OPERATIONS_REPORT_AUTO_CLOSE_SECRET
     operationsReportAutoCloseEnabled: true, // NUXT_OPERATIONS_REPORT_AUTO_CLOSE_ENABLED
     public: {
-      siteUrl: "", // NUXT_PUBLIC_SITE_URL
-      gaId: "", // NUXT_PUBLIC_GA_ID
-      turnstileSiteKey: "", // NUXT_PUBLIC_TURNSTILE_SITE_KEY
+      siteUrl: process.env.NUXT_PUBLIC_SITE_URL || "", // NUXT_PUBLIC_SITE_URL
+      gaId: process.env.NUXT_PUBLIC_GA_ID || "", // NUXT_PUBLIC_GA_ID
+      turnstileSiteKey: process.env.NUXT_PUBLIC_TURNSTILE_SITE_KEY || "", // NUXT_PUBLIC_TURNSTILE_SITE_KEY
       aiDevChatEnabled: false, // NUXT_PUBLIC_AI_DEV_CHAT_ENABLED
       // Feature flag: one-click auto-issue ("Đã thu") on draft rows. Public so
       // the client can gate the row action; default off until staging-verified.
       billingAutoIssueEnabled: false, // NUXT_PUBLIC_BILLING_AUTO_ISSUE_ENABLED
-      invoiceEmailEnabled: false, // NUXT_PUBLIC_INVOICE_EMAIL_ENABLED
+      invoiceEmailEnabled: process.env.NUXT_PUBLIC_INVOICE_EMAIL_ENABLED === "true", // NUXT_PUBLIC_INVOICE_EMAIL_ENABLED
     },
   },
 

@@ -23,9 +23,9 @@ describe('production deployment performance config', () => {
   it('keeps invoice email globally disabled by default and secrets private', () => {
     const config = readFileSync(resolve(root, 'nuxt.config.ts'), 'utf8')
 
-    expect(config).toMatch(/invoiceEmailEnabled:\s*false/)
-    expect(config).toMatch(/resendFrom:\s*["']["']/)
-    expect(config).toMatch(/resendReplyTo:\s*["']["']/)
+    expect(config).toMatch(/invoiceEmailEnabled:\s*process\.env\.NUXT_PUBLIC_INVOICE_EMAIL_ENABLED\s*===\s*["']true["']/)
+    expect(config).toMatch(/resendFrom:\s*process\.env\.NUXT_RESEND_FROM\s*\|\|\s*["']["']/)
+    expect(config).toMatch(/resendReplyTo:\s*process\.env\.NUXT_RESEND_REPLY_TO\s*\|\|\s*["']["']/)
     expect(config).toMatch(/resendWebhookSecret:\s*["']["']/)
     expect(config).toMatch(/invoiceEmailDispatchSecret:\s*["']["']/)
     expect(config).not.toMatch(/public:\s*\{[^}]*resendApiKey/s)
