@@ -71,7 +71,7 @@ export default defineNuxtConfig({
       // Feature flag: one-click auto-issue ("Đã thu") on draft rows. Public so
       // the client can gate the row action; default off until staging-verified.
       billingAutoIssueEnabled: false, // NUXT_PUBLIC_BILLING_AUTO_ISSUE_ENABLED
-      invoiceEmailEnabled: true, // NUXT_PUBLIC_INVOICE_EMAIL_ENABLED
+      invoiceEmailEnabled: false, // NUXT_PUBLIC_INVOICE_EMAIL_ENABLED
     },
   },
 

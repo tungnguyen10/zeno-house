@@ -1,4 +1,5 @@
 <script lang="ts">
+import { useObjectUrl } from '@vueuse/core'
 import { tenantCreateSchema, type TenantCreateInput } from '~/utils/validators/tenants'
 import type { TenantIdImageSide } from '~/types/tenants'
 

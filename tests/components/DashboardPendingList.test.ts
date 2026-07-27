@@ -47,7 +47,7 @@ describe('DashboardPendingList', () => {
     const text = wrapper.text()
     expect(text).toContain('Quá hạn')
     expect(text).toContain('Toa A')
-    expect(text).toContain('2026-06')
+    expect(text).toContain('Tháng 6/2026')
     // 12.000.000 ₫ (vi-VN formatting)
     expect(text).toMatch(/12[.\u00a0]000[.\u00a0]000/)
   })
