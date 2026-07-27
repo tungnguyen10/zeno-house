@@ -32,7 +32,7 @@ export default defineNuxtConfig({
     resendApiKey: process.env.NUXT_RESEND_API_KEY || "", // NUXT_RESEND_API_KEY
     resendFrom: process.env.NUXT_RESEND_FROM  || "", // NUXT_RESEND_FROM
     resendReplyTo: process.env.NUXT_RESEND_REPLY_TO || "", // NUXT_RESEND_REPLY_TO
-    resendWebhookSecret: "", // NUXT_RESEND_WEBHOOK_SECRET
+    resendWebhookSecret: process.env.NUXT_RESEND_WEBHOOK_SECRET || "", // NUXT_RESEND_WEBHOOK_SECRET
     invoiceEmailDispatchSecret: "", // NUXT_INVOICE_EMAIL_DISPATCH_SECRET
     aiProvider: process.env.NUXT_AI_PROVIDER || "groq", // NUXT_AI_PROVIDER (groq | google)
     aiGroqApiKey: process.env.NUXT_AI_GROQ_API_KEY || "", // NUXT_AI_GROQ_API_KEY
