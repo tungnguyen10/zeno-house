@@ -27,9 +27,10 @@ describe('production deployment performance config', () => {
     expect(config).toMatch(/resendFrom:\s*process\.env\.NUXT_RESEND_FROM\s*\|\|\s*["']["']/)
     expect(config).toMatch(/resendReplyTo:\s*process\.env\.NUXT_RESEND_REPLY_TO\s*\|\|\s*["']["']/)
     expect(config).toMatch(/resendWebhookSecret:\s*process\.env\.NUXT_RESEND_WEBHOOK_SECRET\s*\|\|\s*["']["']/)
-    expect(config).toMatch(/invoiceEmailDispatchSecret:\s*["']["']/)
+    expect(config).toMatch(/invoiceEmailDispatchSecret:\s*process\.env\.NUXT_INVOICE_EMAIL_DISPATCH_SECRET\s*\|\|\s*["']["']/)
     expect(config).not.toMatch(/public:\s*\{[^}]*resendApiKey/s)
     expect(config).not.toMatch(/public:\s*\{[^}]*resendWebhookSecret/s)
+    expect(config).not.toMatch(/public:\s*\{[^}]*invoiceEmailDispatchSecret/s)
   })
 
   it('registers Chart.js only inside chart-bearing component chunks', () => {
