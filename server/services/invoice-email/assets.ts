@@ -7,6 +7,7 @@ import type {
 import { BuildingInvoiceProfileRepository } from '../../repositories/building-invoice-profiles'
 
 const FONT_KEY = 'invoice-email/Inter[opsz,wght].ttf'
+const DEFAULT_LOGO_KEY = 'invoice-email/zeno-logo.png'
 const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp'])
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024
 
@@ -14,6 +15,17 @@ function extensionFor(contentType: InvoiceDocumentImageAsset['contentType']): st
   if (contentType === 'image/jpeg') return 'jpg'
   if (contentType === 'image/webp') return 'webp'
   return 'png'
+}
+
+async function loadDefaultLogo(invoiceCode: string): Promise<InvoiceDocumentImageAsset | null> {
+  const logo = await useStorage('assets:server').getItemRaw<Buffer>(DEFAULT_LOGO_KEY)
+  if (!logo) return null
+  return {
+    data: Buffer.from(logo),
+    contentType: 'image/png',
+    filename: `hoa-don-${invoiceCode}-logo.png`,
+    cid: 'invoice-building-logo',
+  }
 }
 
 async function downloadOptionalAsset(
@@ -59,7 +71,7 @@ export const InvoiceEmailAssetService = {
         data.paymentProfile?.logoImagePath ?? null,
         `hoa-don-${data.invoiceCode}-logo`,
         'invoice-building-logo',
-      ),
+      ) ?? await loadDefaultLogo(data.invoiceCode),
     }
   },
 }

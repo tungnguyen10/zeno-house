@@ -74,14 +74,6 @@ async function dispatchOne(
     html: renderInvoiceEmailHtml(document, assets),
     filename: invoicePdfFilename(document.invoiceCode),
     pdf,
-    inlineAssets: [assets.logoImage, assets.qrImage]
-      .filter((asset): asset is NonNullable<typeof asset> => asset !== null)
-      .map(asset => ({
-        content: asset.data,
-        contentType: asset.contentType,
-        filename: asset.filename,
-        cid: asset.cid,
-      })),
     idempotencyKey: row.id,
   })
 

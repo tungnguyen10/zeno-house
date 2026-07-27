@@ -66,7 +66,7 @@ describe('invoice email HTML renderer', () => {
     expect(html).toContain('Chỉ số mới')
     expect(html).toContain('100')
     expect(html).toContain('225')
-    expect(html).toContain('Trạng thái')
+    expect(html).toContain('Thu một phần')
   })
 
   it('escapes stored and operator-controlled content', () => {
@@ -110,7 +110,7 @@ describe('invoice email HTML renderer', () => {
     expect(html).toContain('(Hạn 3 ngày).')
   })
 
-  it('references validated logo and QR assets through private CID attachments', () => {
+  it('embeds validated logo and QR assets as inline base64 data URIs', () => {
     const html = renderInvoiceEmailHtml(documentData(), {
       font: Buffer.from('font'),
       logoImage: {
@@ -121,8 +121,9 @@ describe('invoice email HTML renderer', () => {
       },
     })
 
-    expect(html).toContain('cid:invoice-building-logo')
-    expect(html).toContain('cid:invoice-payment-qr')
+    expect(html).toContain(`data:image/png;base64,${Buffer.from('logo').toString('base64')}`)
+    expect(html).toContain(`data:image/png;base64,${Buffer.from('qr').toString('base64')}`)
+    expect(html).not.toContain('cid:')
     expect(html).not.toContain('building/qr/code.png')
   })
 })

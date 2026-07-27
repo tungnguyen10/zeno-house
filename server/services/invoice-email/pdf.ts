@@ -1,8 +1,8 @@
 import PDFDocument from 'pdfkit'
 import { chargeLineLabel } from '~/utils/billing/charge-groups'
 import { formatMeterReading, formatViNumber } from '~/utils/billing/meter-display'
-import type { InvoiceStatus } from '~/utils/constants/billing'
 import type { InvoiceDocumentAssets, InvoiceDocumentData } from '../../types/invoice-email'
+import { invoiceStatusSwatch } from './theme'
 
 const MAX_PDF_BYTES = 10 * 1024 * 1024
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024
@@ -12,9 +12,6 @@ const RIGHT = 553
 const COLUMN_X = [48, 202, 266, 330, 390, 478] as const
 const COLUMN_WIDTH = [148, 58, 58, 54, 82, 69] as const
 const money = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 })
-const STATUS_LABELS: Record<InvoiceStatus, string> = {
-  draft: 'Nháp', issued: 'Đã phát hành', partial: 'Đã thu một phần', paid: 'Đã thanh toán', overdue: 'Quá hạn', void: 'Đã huỷ',
-}
 
 function safeFilenameToken(value: string): string {
   return value.normalize('NFKD').replaceAll(/[^\w.-]+/g, '-').replaceAll(/-+/g, '-').replaceAll(/^-|-$/g, '').toLowerCase()
@@ -67,7 +64,11 @@ function addPageHeader(doc: PDFKit.PDFDocument, data: InvoiceDocumentData, asset
   doc.fillColor('#64748b').fontSize(7).text(data.buildingAddress, 118, 70, { width: 320, align: 'center' })
   doc.roundedRect(458, 39, 95, 18, 3).fill('#0f172a')
   doc.fillColor('#ffffff').fontSize(8).text(data.invoiceCode, 462, 45, { width: 87, align: 'center' })
-  doc.fillColor('#475569').fontSize(8).text(STATUS_LABELS[data.status], 458, 63, { width: 95, align: 'right' })
+  const swatch = invoiceStatusSwatch(data.status)
+  const badgeWidth = Math.min(95, doc.fontSize(8).widthOfString(swatch.label) + 16)
+  const badgeX = RIGHT - badgeWidth
+  doc.roundedRect(badgeX, 62, badgeWidth, 15, 7.5).fillAndStroke(swatch.background, swatch.border)
+  doc.fillColor(swatch.foreground).fontSize(8).text(swatch.label, badgeX, 65.4, { width: badgeWidth, align: 'center' })
   doc.moveTo(LEFT, 88).lineTo(RIGHT, 88).strokeColor('#cbd5e1').stroke()
   doc.fillColor('#64748b').fontSize(8).text('Phòng & khách thuê', LEFT, 99)
   doc.fillColor('#0f172a').fontSize(9).text(`Phòng ${data.roomNumber} · ${data.tenantName}`, 128, 99, { width: 220 })
@@ -119,7 +120,7 @@ function renderCharges(doc: PDFKit.PDFDocument, data: InvoiceDocumentData, asset
 }
 
 function renderFooter(doc: PDFKit.PDFDocument, data: InvoiceDocumentData, assets: InvoiceDocumentAssets) {
-  if (doc.y > 570) {
+  if (doc.y > 548) {
     doc.addPage()
     addPageHeader(doc, data, assets, true)
   }
@@ -131,38 +132,56 @@ function renderFooter(doc: PDFKit.PDFDocument, data: InvoiceDocumentData, assets
   ] as const
   totals.forEach(([label, value], index) => {
     const strong = index === totals.length - 1
+    const isBalance = label === 'Còn lại'
+    const valueColor = strong
+      ? '#0f172a'
+      : isBalance
+        ? (data.balanceAmount > 0 ? '#e11d48' : '#059669')
+        : '#0f172a'
     doc.fillColor(strong ? '#0f172a' : '#64748b').fontSize(strong ? 13 : 9)
       .text(label, 380, start + index * 19, { width: 75 })
+    doc.fillColor(valueColor).fontSize(strong ? 13 : 9)
       .text(money.format(value), 455, start + index * 19, { width: 98, align: 'right' })
   })
   doc.moveTo(380, start + 34).lineTo(RIGHT, start + 34).strokeColor('#0f172a').stroke()
   const paymentY = start + 78
-  doc.fillColor('#0f172a').fontSize(10).text('Thông tin chuyển khoản', LEFT, paymentY)
+  doc.rect(LEFT, paymentY + 4, 14, 1.4).fill('#0f172a')
+  doc.fillColor('#0f172a').fontSize(8).text('THÔNG TIN CHUYỂN KHOẢN', LEFT + 20, paymentY, { characterSpacing: 0.6 })
   if (data.paymentProfile) {
     const profile = data.paymentProfile
     doc.fillColor('#64748b').fontSize(8)
-      .text('Người thụ hưởng', LEFT, paymentY + 18)
-      .text('Số tài khoản', LEFT, paymentY + 34)
-      .text('Ngân hàng', LEFT, paymentY + 50)
-      .text('Nội dung', LEFT, paymentY + 66)
+      .text('Người thụ hưởng', LEFT, paymentY + 20)
+      .text('Số tài khoản', LEFT, paymentY + 36)
+      .text('Ngân hàng', LEFT, paymentY + 52)
+      .text('Nội dung', LEFT, paymentY + 68)
     doc.fillColor('#0f172a').fontSize(9)
-      .text(profile.accountHolder, 118, paymentY + 18, { width: 220 })
-      .text(profile.accountNumber, 118, paymentY + 34, { width: 220 })
-      .text(profile.bankName, 118, paymentY + 50, { width: 220 })
-      .text(profile.transferContent, 118, paymentY + 66, { width: 220 })
-    addOptionalImage(doc, assets.qrImage, 430, paymentY + 13, [92, 92])
+      .text(profile.accountHolder, 118, paymentY + 20, { width: 300 })
+      .text(profile.accountNumber, 118, paymentY + 36, { width: 300 })
+      .text(profile.bankName, 118, paymentY + 52, { width: 300 })
+      .text(profile.transferContent, 118, paymentY + 68, { width: 300 })
+    doc.roundedRect(430, paymentY + 15, 96, 96, 4).fillAndStroke('#ffffff', '#e2e8f0')
+    addOptionalImage(doc, assets.qrImage, 434, paymentY + 19, [88, 88])
+    doc.fillColor('#64748b').fontSize(6.5).text(
+      assets.qrImage ? 'Quét mã để chuyển khoản' : 'Dùng thông tin chuyển khoản',
+      430,
+      paymentY + 114,
+      { width: 96, align: 'center' },
+    )
   }
   else {
-    doc.fillColor('#64748b').fontSize(9).text('Liên hệ quản lý để nhận thông tin thanh toán.', LEFT, paymentY + 20)
+    doc.fillColor('#64748b').fontSize(9).text('Liên hệ quản lý để nhận thông tin thanh toán.', LEFT, paymentY + 22)
   }
-  doc.roundedRect(LEFT, paymentY + 104, 345, 28, 3).fill('#fffbeb')
+  const noteY = paymentY + 122
+  doc.roundedRect(LEFT, noteY, 345, 30, 4).fillAndStroke('#fffbeb', '#fde68a')
+  doc.circle(LEFT + 15, noteY + 15, 5).fill('#f59e0b')
+  doc.fillColor('#ffffff').fontSize(8).text('!', LEFT + 12.5, noteY + 11, { width: 5, align: 'center' })
   doc.fillColor('#92400e').fontSize(7.5).text(
     'Vui lòng thanh toán trước hạn thanh toán để tránh những phát sinh chi phí của việc chậm thanh toán.',
-    LEFT + 8,
-    paymentY + 112,
-    { width: 328 },
+    LEFT + 26,
+    noteY + 8,
+    { width: 310 },
   )
-  if (data.notes) doc.fillColor('#64748b').fontSize(7.5).text(`Ghi chú: ${data.notes}`, LEFT, paymentY + 140, { width: RIGHT - LEFT })
+  if (data.notes) doc.fillColor('#64748b').fontSize(7.5).text(`Ghi chú: ${data.notes}`, LEFT, noteY + 40, { width: RIGHT - LEFT })
 }
 
 export async function renderInvoicePdf(data: InvoiceDocumentData, assets: InvoiceDocumentAssets): Promise<Buffer> {
