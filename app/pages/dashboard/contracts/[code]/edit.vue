@@ -97,11 +97,11 @@ async function onSubmit(data: ContractFormData) {
 
 <template>
   <div class="">
-    <UiPageHeader title="Chỉnh sửa hợp đồng">
-      <NuxtLink :to="contract ? contractPath(contract) : `/dashboard/contracts/${id}`" class="text-sm text-muted hover:text-white transition-colors">
-        ← Chi tiết hợp đồng
-      </NuxtLink>
-    </UiPageHeader>
+    <UiPageHeader
+      title="Chỉnh sửa hợp đồng"
+      :back-to="contract ? contractPath(contract) : `/dashboard/contracts/${id}`"
+      back-label="Chi tiết hợp đồng"
+    />
 
     <div class="rounded-xl border border-dark-border bg-dark-surface p-6">
       <ContractForm

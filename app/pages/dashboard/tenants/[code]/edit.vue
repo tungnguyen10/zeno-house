@@ -158,11 +158,11 @@ async function onSubmit(data: TenantFormData) {
 
 <template>
   <div>
-    <UiPageHeader title="Chỉnh sửa khách thuê">
-      <NuxtLink :to="`/dashboard/tenants/${id}`" class="text-sm text-muted hover:text-white transition-colors">
-        ← {{ tenant?.fullName ?? 'Khách thuê' }}
-      </NuxtLink>
-    </UiPageHeader>
+    <UiPageHeader
+      title="Chỉnh sửa khách thuê"
+      :back-to="`/dashboard/tenants/${id}`"
+      :back-label="tenant?.fullName ?? 'Khách thuê'"
+    />
 
     <UiAlert v-if="apiError" severity="danger" class="mb-4">
       {{ apiError }}

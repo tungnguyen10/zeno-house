@@ -55,11 +55,26 @@ const attrs = useAttrs()
 const rootClass = computed(() => attrs.class)
 const rootStyle = computed(() => attrs.style as StyleValue | undefined)
 
-const inputRef = ref<HTMLInputElement | null>(null)
+const dropZoneRef = ref<HTMLElement | null>(null)
+const { isOverDropZone } = useDropZone(dropZoneRef, {
+  onDrop(files) {
+    if (props.disabled) return
+    const file = files?.[0]
+    if (file) validateAndEmit(file)
+  },
+})
+
+const { open: openDialog, onChange: onDialogChange, reset: resetDialog } = useFileDialog({ multiple: false })
+onDialogChange((files) => {
+  const file = files?.[0]
+  resetDialog()
+  if (!file) return
+  validateAndEmit(file)
+})
+
 const fieldId = useId()
 const labelId = `${fieldId}-label`
 const errorId = `${fieldId}-error`
-const isDragging = ref(false)
 
 const hasExisting = computed(() => !!(props.previewUrl || props.filename))
 
@@ -73,14 +88,14 @@ const acceptedTypes = computed(() => {
 const fileRowClass = computed(() =>
   clsx(
     props.disabled ? 'cursor-not-allowed opacity-50' : 'hover:bg-dark-hover',
-    isDragging.value
+    isOverDropZone.value
       ? 'border-cyan/70 bg-cyan/5'
       : props.error ? 'border-error/60' : 'border-dark-border',
   ),
 )
 
 function pick() {
-  if (!props.disabled) inputRef.value?.click()
+  if (!props.disabled) openDialog({ accept: props.accept !== '*' ? props.accept : undefined })
 }
 
 function validateAndEmit(file: File) {
@@ -95,32 +110,6 @@ function validateAndEmit(file: File) {
     return
   }
   emit('select', file)
-}
-
-function onChange(event: Event) {
-  const target = event.target as HTMLInputElement
-  const file = target.files?.[0]
-  target.value = ''
-  if (!file) return
-  validateAndEmit(file)
-}
-
-function onDragOver(event: DragEvent) {
-  if (props.disabled) return
-  event.preventDefault()
-  isDragging.value = true
-}
-
-function onDragLeave() {
-  isDragging.value = false
-}
-
-function onDrop(event: DragEvent) {
-  event.preventDefault()
-  isDragging.value = false
-  if (props.disabled) return
-  const file = event.dataTransfer?.files?.[0]
-  if (file) validateAndEmit(file)
 }
 </script>
 
@@ -138,11 +127,10 @@ function onDrop(event: DragEvent) {
     <!-- ── Image variant ─────────────────────────────────── -->
     <template v-if="variant === 'image'">
       <div
-        class="relative flex min-h-24 items-center justify-center overflow-hidden rounded-lg border border-dashed bg-dark p-2 transition-colors"
-        :class="isDragging ? 'border-cyan/60 bg-cyan/5' : 'border-dark-border'"
-        @dragover="onDragOver"
-        @dragleave="onDragLeave"
-        @drop="onDrop"
+        ref="dropZoneRef"
+        class="relative flex min-h-24 cursor-pointer items-center justify-center overflow-hidden rounded-lg border border-dashed bg-dark p-2 transition-colors"
+        :class="isOverDropZone ? 'border-cyan/60 bg-cyan/5' : 'border-dark-border'"
+        @click="pick"
       >
         <img
           v-if="previewUrl"
@@ -153,16 +141,17 @@ function onDrop(event: DragEvent) {
         <div v-else class="flex flex-col items-center gap-1.5 text-center">
           <slot name="empty">
             <IconPhoto class="h-6 w-6 text-muted" aria-hidden="true" />
-            <span class="text-xs text-muted">Chưa có ảnh</span>
+            <span class="text-xs text-muted">Kéo thả hoặc nhấn để chọn</span>
           </slot>
         </div>
 
         <div
-          v-if="isDragging"
-          class="absolute inset-0 flex items-center justify-center rounded-lg bg-cyan/10 ring-2 ring-inset ring-cyan/40"
+          v-if="isOverDropZone"
+          class="absolute inset-0 flex flex-col items-center justify-center gap-1.5 rounded-lg bg-cyan/10 ring-2 ring-inset ring-cyan/40"
           aria-hidden="true"
         >
           <IconPhoto class="h-8 w-8 text-cyan" />
+          <span class="text-xs font-medium text-cyan">Thả để tải lên</span>
         </div>
       </div>
 
@@ -182,6 +171,7 @@ function onDrop(event: DragEvent) {
     <!-- ── File variant ──────────────────────────────────── -->
     <div
       v-else
+      ref="dropZoneRef"
       role="button"
       :tabindex="disabled ? -1 : 0"
       :aria-labelledby="label ? labelId : undefined"
@@ -193,9 +183,6 @@ function onDrop(event: DragEvent) {
       @click="pick"
       @keydown.enter.prevent="pick"
       @keydown.space.prevent="pick"
-      @dragover="onDragOver"
-      @dragleave="onDragLeave"
-      @drop="onDrop"
     >
       <slot name="icon">
         <IconDocumentText class="h-4 w-4 shrink-0 text-muted" aria-hidden="true" />
@@ -210,14 +197,5 @@ function onDrop(event: DragEvent) {
 
     <p v-if="hint && !error" class="text-xs text-muted">{{ hint }}</p>
     <p v-if="error" :id="errorId" role="alert" class="text-xs text-error">{{ error }}</p>
-
-    <input
-      ref="inputRef"
-      type="file"
-      :accept="accept !== '*' ? accept : undefined"
-      :disabled="disabled"
-      class="hidden"
-      @change="onChange"
-    >
   </div>
 </template>

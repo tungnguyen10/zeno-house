@@ -93,12 +93,11 @@ function dateTimeText(value: string | null | undefined): string {
     <UiPageHeader
       :title="title"
       :description="invoice ? `${invoice.tenantName ?? 'Khách thuê'}${invoice.roomNumber ? ` - P.${invoice.roomNumber}` : ''}` : 'Đang tải hoá đơn'"
+      :back-to="workspaceHref"
+      :back-label="periodLabel ? `Kỳ ${periodLabel}` : 'Kỳ vận hành'"
     >
       <template #actions>
         <UiStatusBadge v-if="invoice" :status="invoice.status" context="invoice" />
-        <NuxtLink :to="workspaceHref">
-          <UiButton variant="ghost" size="sm">← Kỳ {{ periodLabel || 'vận hành' }}</UiButton>
-        </NuxtLink>
       </template>
     </UiPageHeader>
 

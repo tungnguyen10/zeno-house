@@ -81,6 +81,8 @@ const emit = defineEmits<{
   'remove-id-image': [side: TenantIdImageSide]
 }>()
 
+const ID_ISSUED_PLACE_DEFAULT = 'Cục Cảnh Sát Quản Lý Hành Chính Về Trật Tự Xã Hội'
+
 const genderOptions = [
   { value: 'male', label: 'Nam' },
   { value: 'female', label: 'Nữ' },
@@ -178,13 +180,28 @@ async function onSubmit() {
 
 const canSubmit = computed(() => !props.loading && (props.isDirty || props.hasDraft || submitAttempted.value))
 
-function onIdImageChange(side: TenantIdImageSide, event: Event) {
-  const input = event.target as HTMLInputElement
-  const file = input.files?.[0] ?? null
+// Local preview using VueUse — object URLs are auto-revoked on unmount
+const localIdFrontFile = ref<File | undefined>()
+const localIdBackFile = ref<File | undefined>()
+const localIdFrontUrl = useObjectUrl(localIdFrontFile)
+const localIdBackUrl = useObjectUrl(localIdBackFile)
+
+// Clear local preview once the server-confirmed URL arrives
+watch(() => props.idCardFrontSignedUrl, (url) => { if (url) localIdFrontFile.value = undefined })
+watch(() => props.idCardBackSignedUrl, (url) => { if (url) localIdBackFile.value = undefined })
+
+const idFrontPreviewUrl = computed(() => localIdFrontUrl.value ?? props.idCardFrontSignedUrl ?? null)
+const idBackPreviewUrl = computed(() => localIdBackUrl.value ?? props.idCardBackSignedUrl ?? null)
+
+function onSelectIdImage(side: TenantIdImageSide, file: File) {
+  if (side === 'front') localIdFrontFile.value = file
+  else localIdBackFile.value = file
   emit('select-id-image', { side, file })
 }
 
-function removeIdImage(side: TenantIdImageSide) {
+function onRemoveIdImage(side: TenantIdImageSide) {
+  if (side === 'front') localIdFrontFile.value = undefined
+  else localIdBackFile.value = undefined
   emit('remove-id-image', side)
 }
 </script>
@@ -315,10 +332,10 @@ function removeIdImage(side: TenantIdImageSide) {
             id="tf-id-issued-place"
             :model-value="modelValue.id_issued_place"
             label="Nơi cấp"
-            placeholder="Cục CS ĐKQL cư trú và DLQG về dân cư"
+            :placeholder="ID_ISSUED_PLACE_DEFAULT"
             :error="errorFor('id_issued_place')"
             @update:model-value="(v) => update('id_issued_place', v as string)"
-            @blur="onBlur('id_issued_place')"
+            @blur="() => { onBlur('id_issued_place'); if (!modelValue.id_issued_place?.trim()) update('id_issued_place', ID_ISSUED_PLACE_DEFAULT) }"
           />
         </div>
 
@@ -330,54 +347,50 @@ function removeIdImage(side: TenantIdImageSide) {
 
           <div class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div class="space-y-2">
-              <label class="block text-xs font-medium text-muted" for="tf-id-front-image">Mặt trước</label>
-              <input
-                id="tf-id-front-image"
-                type="file"
+              <UiFileUpload
+                variant="image"
+                label="Mặt trước"
                 accept="image/jpeg,image/png,image/webp"
-                class="block w-full rounded-md border border-dark-border bg-dark-surface px-3 py-2 text-sm text-white file:mr-3 file:rounded-md file:border-0 file:bg-cyan/15 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-cyan"
+                :preview-url="idFrontPreviewUrl"
+                preview-alt="Ảnh CCCD mặt trước"
+                pick-label="Chọn ảnh"
+                replace-label="Thay ảnh"
                 :disabled="loading || !canManageIdImages || idImageLoadingSide === 'front'"
-                @change="onIdImageChange('front', $event)"
-              >
-              <p v-if="idCardFrontFileName" class="text-xs text-muted">{{ idCardFrontFileName }}</p>
-              <p v-else-if="idCardFrontSignedUrl" class="text-xs text-muted">
-                <a :href="idCardFrontSignedUrl" target="_blank" rel="noopener" class="text-cyan hover:underline">Xem ảnh mặt trước</a>
-              </p>
+                @select="(file) => onSelectIdImage('front', file)"
+              />
               <UiButton
-                v-if="canManageIdImages && (idCardFrontSignedUrl || idCardFrontFileName)"
+                v-if="canManageIdImages && (idCardFrontSignedUrl || localIdFrontFile)"
                 type="button"
                 size="sm"
                 variant="ghost"
                 :loading="idImageLoadingSide === 'front'"
                 :disabled="loading"
-                @click="removeIdImage('front')"
+                @click="onRemoveIdImage('front')"
               >
                 Xóa mặt trước
               </UiButton>
             </div>
 
             <div class="space-y-2">
-              <label class="block text-xs font-medium text-muted" for="tf-id-back-image">Mặt sau</label>
-              <input
-                id="tf-id-back-image"
-                type="file"
+              <UiFileUpload
+                variant="image"
+                label="Mặt sau"
                 accept="image/jpeg,image/png,image/webp"
-                class="block w-full rounded-md border border-dark-border bg-dark-surface px-3 py-2 text-sm text-white file:mr-3 file:rounded-md file:border-0 file:bg-cyan/15 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-cyan"
+                :preview-url="idBackPreviewUrl"
+                preview-alt="Ảnh CCCD mặt sau"
+                pick-label="Chọn ảnh"
+                replace-label="Thay ảnh"
                 :disabled="loading || !canManageIdImages || idImageLoadingSide === 'back'"
-                @change="onIdImageChange('back', $event)"
-              >
-              <p v-if="idCardBackFileName" class="text-xs text-muted">{{ idCardBackFileName }}</p>
-              <p v-else-if="idCardBackSignedUrl" class="text-xs text-muted">
-                <a :href="idCardBackSignedUrl" target="_blank" rel="noopener" class="text-cyan hover:underline">Xem ảnh mặt sau</a>
-              </p>
+                @select="(file) => onSelectIdImage('back', file)"
+              />
               <UiButton
-                v-if="canManageIdImages && (idCardBackSignedUrl || idCardBackFileName)"
+                v-if="canManageIdImages && (idCardBackSignedUrl || localIdBackFile)"
                 type="button"
                 size="sm"
                 variant="ghost"
                 :loading="idImageLoadingSide === 'back'"
                 :disabled="loading"
-                @click="removeIdImage('back')"
+                @click="onRemoveIdImage('back')"
               >
                 Xóa mặt sau
               </UiButton>

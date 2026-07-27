@@ -191,7 +191,12 @@ watchEffect(() => {
     </UiAlert>
 
     <template v-else-if="tenant">
-      <UiPageHeader :title="tenant.fullName" :description="tenant.phone">
+      <UiPageHeader
+        :title="tenant.fullName"
+        :description="tenant.phone"
+        :back-to="'/dashboard/tenants'"
+        back-label="Khách thuê"
+      >
         <template #actions>
           <div v-if="authStore.can('tenants.update')" class="flex gap-2 shrink-0">
             <NuxtLink :to="`/dashboard/tenants/${tenant.code}/edit`">
@@ -326,33 +331,43 @@ watchEffect(() => {
         </div>
 
         <div v-if="tenant.idCardFrontSignedUrl || tenant.idCardBackSignedUrl" class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <a
-            v-if="tenant.idCardFrontSignedUrl"
-            :href="tenant.idCardFrontSignedUrl"
-            target="_blank"
-            rel="noopener"
-            class="flex items-center justify-between rounded-lg border border-dark-border bg-dark-deep/30 px-3 py-2 text-sm text-white hover:border-cyan/50"
-          >
-            <span class="inline-flex items-center gap-2">
-              <IconPhoto class="h-4 w-4 text-cyan" aria-hidden="true" />
-              CCCD mặt trước
-            </span>
-            <IconArrowUpRight class="h-4 w-4 text-muted" aria-hidden="true" />
-          </a>
+          <div v-if="tenant.idCardFrontSignedUrl" class="space-y-1.5">
+            <p class="text-xs text-muted">Mặt trước</p>
+            <a
+              :href="tenant.idCardFrontSignedUrl"
+              target="_blank"
+              rel="noopener"
+              class="group relative block overflow-hidden rounded-lg border border-dark-border bg-dark-deep/30 transition-colors hover:border-cyan/50"
+            >
+              <img
+                :src="tenant.idCardFrontSignedUrl"
+                alt="CCCD mặt trước"
+                class="w-full object-cover"
+              >
+              <span class="absolute inset-0 flex items-center justify-center rounded-lg bg-black/0 opacity-0 transition-all group-hover:bg-black/30 group-hover:opacity-100">
+                <IconArrowUpRight class="h-5 w-5 text-white drop-shadow" aria-hidden="true" />
+              </span>
+            </a>
+          </div>
 
-          <a
-            v-if="tenant.idCardBackSignedUrl"
-            :href="tenant.idCardBackSignedUrl"
-            target="_blank"
-            rel="noopener"
-            class="flex items-center justify-between rounded-lg border border-dark-border bg-dark-deep/30 px-3 py-2 text-sm text-white hover:border-cyan/50"
-          >
-            <span class="inline-flex items-center gap-2">
-              <IconPhoto class="h-4 w-4 text-cyan" aria-hidden="true" />
-              CCCD mặt sau
-            </span>
-            <IconArrowUpRight class="h-4 w-4 text-muted" aria-hidden="true" />
-          </a>
+          <div v-if="tenant.idCardBackSignedUrl" class="space-y-1.5">
+            <p class="text-xs text-muted">Mặt sau</p>
+            <a
+              :href="tenant.idCardBackSignedUrl"
+              target="_blank"
+              rel="noopener"
+              class="group relative block overflow-hidden rounded-lg border border-dark-border bg-dark-deep/30 transition-colors hover:border-cyan/50"
+            >
+              <img
+                :src="tenant.idCardBackSignedUrl"
+                alt="CCCD mặt sau"
+                class="w-full object-cover"
+              >
+              <span class="absolute inset-0 flex items-center justify-center rounded-lg bg-black/0 opacity-0 transition-all group-hover:bg-black/30 group-hover:opacity-100">
+                <IconArrowUpRight class="h-5 w-5 text-white drop-shadow" aria-hidden="true" />
+              </span>
+            </a>
+          </div>
         </div>
 
         <p

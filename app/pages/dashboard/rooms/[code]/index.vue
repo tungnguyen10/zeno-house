@@ -204,7 +204,12 @@ if (error.value?.statusCode === 404) {
     </UiAlert>
 
     <template v-else-if="room">
-      <UiPageHeader :title="`Phòng ${room.roomNumber}`" :description="building?.name">
+      <UiPageHeader
+        :title="`Phòng ${room.roomNumber}`"
+        :description="building?.name"
+        :back-to="'/dashboard/rooms'"
+        back-label="Phòng"
+      >
         <template #actions>
           <div v-if="authStore.can('rooms.update')" class="flex gap-2 shrink-0">
             <NuxtLink :to="roomEditPath(room)">

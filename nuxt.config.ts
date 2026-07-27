@@ -19,6 +19,8 @@ export default defineNuxtConfig({
     "@nuxtjs/tailwindcss",
     "@nuxtjs/supabase",
     "@vite-pwa/nuxt",
+    "@vueuse/nuxt",
+    "@nuxt/image",
   ],
 
   tailwindcss: {

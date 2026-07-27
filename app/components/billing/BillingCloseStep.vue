@@ -13,7 +13,6 @@ const props = defineProps<{
 
 const emit = defineEmits<{ closePeriod: [] }>()
 
-const showConfirm = ref(false)
 const submitting = ref(false)
 const submitError = ref<string | null>(null)
 
@@ -33,7 +32,6 @@ async function confirmClose() {
   try {
     if (props.onClosePeriod) await props.onClosePeriod()
     else emit('closePeriod')
-    showConfirm.value = false
   } catch (err) {
     submitError.value = getApiErrorMessage(err, 'Chốt kỳ thất bại')
   } finally {
@@ -43,7 +41,7 @@ async function confirmClose() {
 </script>
 
 <template>
-  <UiSection title="Chốt kỳ vận hành" description="Khoá toàn bộ thao tác trên kỳ. Sau khi chốt, không thể chỉnh chỉ số, phát hành hay huỷ hoá đơn nữa.">
+  <div class="space-y-4">
     <div class="rounded-xl border border-dark-border bg-dark-surface p-4 space-y-3">
       <div class="grid grid-cols-2 gap-3 md:grid-cols-3">
         <div>
@@ -83,21 +81,13 @@ async function confirmClose() {
         <UiButton
           variant="danger"
           :disabled="!canConfirmClose"
-          @click="showConfirm = true"
+          :loading="submitting"
+          @click="confirmClose"
         >
           Chốt kỳ {{ String(period.periodMonth).padStart(2, '0') }}/{{ period.periodYear }}
         </UiButton>
       </div>
     </div>
 
-    <UiConfirmModal
-      :open="showConfirm"
-      title="Xác nhận chốt kỳ"
-      :message="`Sau khi chốt, không thể phát hành thêm hoá đơn, chỉnh chỉ số, hay huỷ/điều chỉnh hoá đơn của kỳ ${String(period.periodMonth).padStart(2, '0')}/${period.periodYear}. Tiếp tục?`"
-      confirm-label="Chốt kỳ"
-      :loading="submitting"
-      @confirm="confirmClose"
-      @cancel="showConfirm = false"
-    />
-  </UiSection>
+  </div>
 </template>

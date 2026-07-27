@@ -111,7 +111,11 @@ const waterLabel = computed(() => {
     </UiAlert>
 
     <template v-else-if="building">
-      <UiPageHeader :title="building.name">
+      <UiPageHeader
+        :title="building.name"
+        :back-to="'/dashboard/buildings'"
+        back-label="Tòa nhà"
+      >
         <template #actions>
           <div v-if="authStore.canManage" class="flex gap-2 shrink-0">
             <UiButton

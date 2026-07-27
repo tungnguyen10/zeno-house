@@ -2,7 +2,6 @@
 import {
   computed,
   nextTick,
-  onBeforeUnmount,
   ref,
   useAttrs,
   useId,
@@ -10,7 +9,7 @@ import {
   type CSSProperties,
   type StyleValue,
 } from 'vue'
-import { onClickOutside, onKeyStroke } from '@vueuse/core'
+import { onClickOutside, onKeyStroke, useEventListener } from '@vueuse/core'
 import dayjs from 'dayjs'
 import clsx from 'clsx'
 
@@ -172,29 +171,33 @@ function updatePanelPosition() {
 }
 
 watch(isOpen, (open) => {
-  if (open) {
-    nextTick(updatePanelPosition)
-    window.addEventListener('resize', updatePanelPosition)
-    window.addEventListener('scroll', updatePanelPosition, true)
-    return
-  }
-  window.removeEventListener('resize', updatePanelPosition)
-  window.removeEventListener('scroll', updatePanelPosition, true)
+  if (open) nextTick(updatePanelPosition)
 })
 
-onBeforeUnmount(() => {
-  window.removeEventListener('resize', updatePanelPosition)
-  window.removeEventListener('scroll', updatePanelPosition, true)
-})
+useEventListener('resize', () => { if (isOpen.value) updatePanelPosition() })
+useEventListener('scroll', () => { if (isOpen.value) updatePanelPosition() }, { capture: true })
 
 const visibleMonth = ref((selectedDate.value ?? dayjs()).startOf('month'))
 const visibleYear = ref((selectedDate.value ?? dayjs()).year())
 const focusedIso = ref(selectedValue.value || todayIso)
 const focusedPeriod = ref(selectedValue.value || dayjs().format('YYYY-MM'))
 
+const viewMode = ref<'calendar' | 'year'>('calendar')
+const yearRangeStart = ref(Math.floor(((selectedDate.value ?? dayjs()).year()) / 12) * 12)
+
+const yearCells = computed(() => {
+  const thisYear = dayjs().year()
+  const curYear = isMonthMode.value ? visibleYear.value : visibleMonth.value.year()
+  return Array.from({ length: 12 }, (_, i) => {
+    const year = yearRangeStart.value + i
+    return { year, isCurrent: year === thisYear, isSelected: year === curYear }
+  })
+})
+
 const weekDays = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN']
 
 const monthLabel = computed(() => {
+  if (viewMode.value === 'year') return `${yearRangeStart.value} – ${yearRangeStart.value + 11}`
   if (isMonthMode.value) return `Năm ${visibleYear.value}`
   const month = visibleMonth.value.month() + 1
   return `Tháng ${month}/${visibleMonth.value.year()}`
@@ -273,6 +276,7 @@ function focusDay() {
 
 function openPicker() {
   if (props.disabled) return
+  viewMode.value = 'calendar'
   if (isMonthMode.value) {
     const base = selectedDate.value ?? dayjs()
     visibleYear.value = base.year()
@@ -289,6 +293,34 @@ function openPicker() {
 function closePicker({ restoreFocus = true } = {}) {
   isOpen.value = false
   if (restoreFocus) nextTick(() => triggerRef.value?.focus())
+}
+
+function toggleYearView() {
+  if (viewMode.value === 'year') {
+    viewMode.value = 'calendar'
+    return
+  }
+  const curYear = isMonthMode.value ? visibleYear.value : visibleMonth.value.year()
+  yearRangeStart.value = Math.floor(curYear / 12) * 12
+  viewMode.value = 'year'
+}
+
+function selectYear(year: number) {
+  if (isMonthMode.value) {
+    visibleYear.value = year
+    const next = dayjs(`${focusedPeriod.value}-01`).year(year)
+    focusedPeriod.value = next.format('YYYY-MM')
+  }
+  else {
+    visibleMonth.value = visibleMonth.value.year(year)
+    focusedIso.value = dayjs(focusedIso.value).year(year).format('YYYY-MM-DD')
+  }
+  viewMode.value = 'calendar'
+  nextTick(focusDay)
+}
+
+function shiftYearRange(amount: number) {
+  yearRangeStart.value += amount
 }
 
 function selectValue(value: string) {
@@ -353,7 +385,14 @@ function jumpToToday() {
 function onGridKeydown(event: KeyboardEvent) {
   if (event.key === 'Escape') {
     event.preventDefault()
+    if (viewMode.value === 'year') { viewMode.value = 'calendar'; return }
     closePicker()
+    return
+  }
+
+  if (viewMode.value === 'year') {
+    if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') { event.preventDefault(); shiftYearRange(-12) }
+    else if (event.key === 'ArrowRight' || event.key === 'ArrowDown') { event.preventDefault(); shiftYearRange(12) }
     return
   }
 
@@ -471,25 +510,52 @@ onKeyStroke('Escape', () => {
             variant="ghost"
             size="sm"
             icon-only
-            :aria-label="isMonthMode ? 'Năm trước' : 'Tháng trước'"
-            @click="changeMonth(-1)"
+            :aria-label="viewMode === 'year' ? 'Khoảng trước' : isMonthMode ? 'Năm trước' : 'Tháng trước'"
+            @click="viewMode === 'year' ? shiftYearRange(-12) : changeMonth(-1)"
           >
             <IconChevronLeft class="size-4" aria-hidden="true" />
           </UiButton>
-          <p class="text-sm font-semibold text-white">{{ monthLabel }}</p>
+          <button
+            type="button"
+            class="flex-1 text-center text-sm font-semibold text-white transition-colors hover:text-cyan focus-visible:outline-none"
+            :aria-label="viewMode === 'year' ? 'Thoát chọn năm' : 'Chọn năm'"
+            @click="toggleYearView"
+          >
+            {{ monthLabel }}
+          </button>
           <UiButton
             type="button"
             variant="ghost"
             size="sm"
             icon-only
-            :aria-label="isMonthMode ? 'Năm sau' : 'Tháng sau'"
-            @click="changeMonth(1)"
+            :aria-label="viewMode === 'year' ? 'Khoảng sau' : isMonthMode ? 'Năm sau' : 'Tháng sau'"
+            @click="viewMode === 'year' ? shiftYearRange(12) : changeMonth(1)"
           >
             <IconChevronRight class="size-4" aria-hidden="true" />
           </UiButton>
         </div>
 
-        <template v-if="!isMonthMode">
+        <div v-if="viewMode === 'year'" class="grid grid-cols-3 gap-2">
+          <button
+            v-for="cell in yearCells"
+            :key="cell.year"
+            type="button"
+            :class="clsx(
+              'flex h-9 items-center justify-center rounded-md text-xs font-medium transition-colors',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan/40',
+              cell.isSelected
+                ? 'bg-cyan text-dark font-semibold'
+                : cell.isCurrent
+                  ? 'border border-cyan/50 text-cyan'
+                  : 'text-white hover:bg-dark-hover',
+            )"
+            @click="selectYear(cell.year)"
+          >
+            {{ cell.year }}
+          </button>
+        </div>
+
+        <template v-else-if="!isMonthMode">
           <div class="grid grid-cols-7 gap-1 text-center text-[11px] font-medium text-muted" aria-hidden="true">
             <span v-for="day in weekDays" :key="day">{{ day }}</span>
           </div>
@@ -524,7 +590,7 @@ onKeyStroke('Escape', () => {
           </div>
         </template>
 
-        <div v-else class="mt-1 grid grid-cols-3 gap-2">
+        <div v-else-if="isMonthMode" class="mt-1 grid grid-cols-3 gap-2">
           <button
             v-for="month in monthCells"
             :key="month.value"
