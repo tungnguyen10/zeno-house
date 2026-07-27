@@ -139,4 +139,24 @@ describe('InvoicePrintCard', () => {
     expect(wrapper.text()).toContain('Liên hệ quản lý để nhận thông tin thanh toán')
     expect(wrapper.find('[data-test="payment-qr"]').exists()).toBe(false)
   })
+
+  it('uses a neutral payment fallback when the snapshotted QR is unavailable', () => {
+    const item = {
+      ...printItem(),
+      invoiceProfile: { ...printItem().invoiceProfile!, qrImageUrl: null },
+    }
+    const wrapper = mount(InvoicePrintCard, {
+      props: { item },
+      global: {
+        stubs: {
+          UiStatusBadge: defineComponent({ template: '<span />' }),
+          IconLogo: defineComponent({ template: '<span />' }),
+        },
+      },
+    })
+
+    expect(wrapper.find('[data-test="payment-qr"]').exists()).toBe(false)
+    expect(wrapper.find('[data-test="payment-qr-fallback"]').exists()).toBe(true)
+    expect(wrapper.text()).toContain('Dùng thông tin chuyển khoản bên trên')
+  })
 })

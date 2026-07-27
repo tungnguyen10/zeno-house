@@ -1,5 +1,8 @@
-## ADDED Requirements
+# invoice-email-delivery Specification
 
+## Purpose
+TBD - created by archiving change add-invoice-email-delivery. Update Purpose after archive.
+## Requirements
 ### Requirement: Building invoice-email settings and feature gates
 The system SHALL store one building-scoped automatic invoice-email setting, SHALL default it to disabled, and SHALL require both the global invoice-email feature flag and the building setting before automatic delivery can occur.
 
@@ -93,11 +96,19 @@ Each dispatched delivery SHALL contain an escaped Vietnamese HTML summary and an
 
 #### Scenario: Private branding assets are available
 - **WHEN** the invoice payment-profile snapshot references a valid private QR or logo object
-- **THEN** the server downloads the exact object for rendering without exposing its storage path to the client or accepting an arbitrary asset URL
+- **THEN** the server downloads the exact object for PDF rendering and as a CID email attachment without exposing its storage path to the client or accepting an arbitrary asset URL
+
+#### Scenario: Email and PDF follow the invoice print artifact
+- **WHEN** the dispatcher renders an issued invoice
+- **THEN** its HTML and PDF include the print artifact's title, identity, status, room/tenant and date metadata, six-column charge data, current totals, and snapshotted payment section while using a responsive email layout
 
 #### Scenario: Payment profile or optional branding is unavailable
 - **WHEN** the invoice lacks a payment-profile snapshot or an optional logo cannot be rendered
 - **THEN** the document uses the established neutral payment or branding fallback and remains sendable
+
+#### Scenario: Snapshotted payment asset is unavailable on invoice detail
+- **WHEN** a stored QR or logo path no longer exists in private Storage
+- **THEN** invoice detail retains the snapshotted payment instructions, renders an asset fallback, and does not fail the invoice API request
 
 #### Scenario: PDF content exceeds one page
 - **WHEN** invoice content cannot fit legibly on one A4 page
@@ -108,27 +119,11 @@ Each dispatched delivery SHALL contain an escaped Vietnamese HTML summary and an
 - **THEN** the delivery fails terminally before calling Resend and records an attachment-size error
 
 ### Requirement: Bounded idempotent delivery dispatcher
-The system SHALL dispatch due deliveries in bounded leases, SHALL prevent duplicate sends with a stable Resend idempotency key, and SHALL retry only transient failures within 24 hours.
+The system SHALL dispatch due deliveries in bounded leases, SHALL prevent duplicate sends with a stable Resend idempotency key, and SHALL retry only transient failures within 24 hours. Supabase Cron SHALL wake the server-owned dispatcher every minute through its existing private endpoint.
 
 #### Scenario: Worker claims due jobs
-- **WHEN** the scheduled worker runs while delivery is enabled
+- **WHEN** Supabase Cron wakes the dispatcher while delivery is enabled
 - **THEN** it atomically claims at most 20 due or stale-leased deliveries and processes at most three provider calls concurrently
-
-#### Scenario: Resend accepts the email
-- **WHEN** Resend returns a successful email ID
-- **THEN** the delivery stores that ID, becomes accepted, clears its lease, and is not dispatched again
-
-#### Scenario: Provider outcome is transient
-- **WHEN** dispatch encounters a network error, HTTP 429, or HTTP 5xx
-- **THEN** the same delivery and idempotency key are retried after 1 minute, 5 minutes, 30 minutes, 2 hours, and 6 hours up to six total provider calls
-
-#### Scenario: Provider outcome is permanent
-- **WHEN** dispatch encounters invalid authentication, sender/domain, recipient, attachment, configuration, or request validation
-- **THEN** the delivery becomes terminally failed without an automatic retry
-
-#### Scenario: Processing lease is abandoned
-- **WHEN** a processing delivery has held its lease for more than 10 minutes without acceptance
-- **THEN** a later worker can reclaim it and reuse the same idempotency key
 
 #### Scenario: Global feature or configuration is unavailable
 - **WHEN** the feature flag is off or required dispatch secrets are absent

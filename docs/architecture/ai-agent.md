@@ -57,7 +57,7 @@ The server owns `ai_conversations`, `ai_messages`, and `ai_action_plans`. A brow
 - A conversation expiry is extended to 30 days when it is touched.
 - Child messages and plans cascade when a conversation is deleted.
 - `cleanup_expired_ai_conversations(limit)` deletes expired conversations in bounded, skip-locked batches.
-- The Nitro task `ai:retention-cleanup` runs daily at 00:20 Asia/Ho_Chi_Minh through the internal secret-protected cleanup endpoint. It also removes expired rate-limit buckets and reports count/duration telemetry only.
+- Supabase Cron runs retention cleanup daily at 00:20 Asia/Ho_Chi_Minh through the internal secret-protected cleanup endpoint. It also removes expired rate-limit buckets and reports count/duration telemetry only.
 
 The AI tables have RLS enabled, but direct `anon` and `authenticated` table access is revoked. Repositories use the existing server service-role client after service-layer ownership checks.
 
@@ -147,7 +147,7 @@ Invoice issue and correction paths use the same service-only transaction contrac
 | `GET` | `/api/ai/conversations/[id]` | Resume an owned, active transcript and its action cards. |
 | `POST` | `/api/ai/actions/[id]/confirm` | Confirm an owned pending plan and dispatch its currently enabled registered executor. |
 | `POST` | `/api/ai/actions/[id]/cancel` | Cancel an owned pending plan. |
-| `POST` | `/api/internal/ai/retention-cleanup` | Secret-protected bounded conversation and rate-bucket cleanup for the scheduled Nitro task. |
+| `POST` | `/api/internal/ai/retention-cleanup` | Secret-protected bounded conversation and rate-bucket cleanup for Supabase Cron. |
 
 ## Source Map
 

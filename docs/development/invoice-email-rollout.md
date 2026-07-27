@@ -18,17 +18,21 @@ Invoice email has two independent default-off controls:
 - Create the Resend webhook for `POST /api/webhooks/resend`, subscribe to `email.sent`,
   `email.delivered`, `email.failed`, `email.bounced`, and `email.complained`, then configure
   `NUXT_RESEND_WEBHOOK_SECRET`.
-- Generate a high-entropy `NUXT_INVOICE_EMAIL_DISPATCH_SECRET`. The scheduled Nitro task calls the
-  secret-protected internal endpoint once per minute and requires `NUXT_PUBLIC_SITE_URL`.
+- Generate a high-entropy `NUXT_INVOICE_EMAIL_DISPATCH_SECRET`, then store the same value as
+  `invoice_email_dispatch_secret` in Supabase Vault. Store the deployed origin as
+  `nitro_scheduler_base_url`; Supabase Cron calls the secret-protected endpoint once per minute.
+- Apply `supabase/migrations/20260727103000_migrate_nitro_schedulers_to_supabase_cron.sql` and run
+  `supabase/verification/nitro_schedulers_pg_cron.sql`. See [Scheduled Workers](./scheduled-workers.md).
 - Keep every secret in server runtime configuration; never commit it or use `NUXT_PUBLIC_*`.
 
 ## Staging Sequence
 
 1. Deploy with the migration applied, global flag off, and every building auto-send off.
-2. Configure provider, webhook, public site URL, and dispatch secret.
+2. Configure provider, webhook, Supabase Vault scheduler values, and dispatch secret.
 3. Turn the global flag on while leaving building auto-send off.
-4. Manually send one controlled invoice. Inspect the HTML and PDF, including Vietnamese text,
-   line-item pagination, optional logo/QR, totals, and issue-time payment instructions.
+4. Manually send one controlled invoice. Inspect the HTML and PDF against the invoice print artifact:
+   title/status, room/tenant/date metadata, six charge columns including meter readings, totals,
+   issue-time payment instructions, PDF pagination, and CID logo/QR fallbacks.
 5. Confirm the row advances from queued/accepted to delivered after the webhook.
 6. Exercise one retryable provider failure and one permanent failure. Confirm bounded retry,
    stable delivery UUID, masked errors, and no duplicate accepted email.

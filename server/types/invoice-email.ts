@@ -1,6 +1,7 @@
-import type { InvoiceStatus } from '~/utils/constants/billing'
+import type { ChargeType, InvoiceStatus } from '~/utils/constants/billing'
 
 export interface InvoiceDocumentCharge {
+  chargeType: ChargeType
   label: string
   quantity: number
   unitPrice: number
@@ -44,8 +45,15 @@ export interface InvoiceDocumentData {
   paymentProfile: InvoiceDocumentPaymentProfile | null
 }
 
+export interface InvoiceDocumentImageAsset {
+  data: Buffer
+  contentType: 'image/jpeg' | 'image/png' | 'image/webp'
+  filename: string
+  cid: string
+}
+
 export interface InvoiceDocumentAssets {
   font: Buffer
-  qrImage: Buffer | null
-  logoImage: Buffer | null
+  qrImage: InvoiceDocumentImageAsset | null
+  logoImage: InvoiceDocumentImageAsset | null
 }

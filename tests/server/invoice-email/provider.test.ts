@@ -20,6 +20,12 @@ const input = {
   filename: 'hoa-don-inv-1.pdf',
   pdf: Buffer.from('%PDF-test'),
   idempotencyKey: 'delivery-1',
+  inlineAssets: [{
+    content: Buffer.from('qr'),
+    contentType: 'image/png' as const,
+    filename: 'invoice-qr.png',
+    cid: 'invoice-qr',
+  }],
 }
 
 describe('ResendInvoiceAdapter', () => {
@@ -43,7 +49,15 @@ describe('ResendInvoiceAdapter', () => {
       subject: input.subject,
       html: input.html,
       replyTo: input.replyTo,
-      attachments: [{ filename: input.filename, content: input.pdf }],
+      attachments: [
+        { filename: input.filename, content: input.pdf },
+        {
+          filename: 'invoice-qr.png',
+          content: Buffer.from('qr'),
+          contentType: 'image/png',
+          cid: 'invoice-qr',
+        },
+      ],
     }, {
       idempotencyKey: 'delivery-1',
     })

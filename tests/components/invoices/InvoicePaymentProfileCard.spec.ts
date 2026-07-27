@@ -32,4 +32,15 @@ describe('InvoicePaymentProfileCard', () => {
     expect(wrapper.text()).toContain('Hóa đơn này chưa lưu thông tin thanh toán')
     expect(wrapper.find('img').exists()).toBe(false)
   })
+
+  it('keeps payment instructions visible when the snapshotted QR is unavailable', () => {
+    const wrapper = mount(InvoicePaymentProfileCard, {
+      props: { profile: { ...profile, qrImageUrl: null } },
+      global: { stubs: { IconLogo: defineComponent({ template: '<span data-test="zeno-logo" />' }) } },
+    })
+
+    expect(wrapper.text()).toContain('NGUYỄN TUẤN ANH')
+    expect(wrapper.text()).toContain('QR chưa khả dụng')
+    expect(wrapper.find('img[alt="Mã QR chuyển khoản ngân hàng"]').exists()).toBe(false)
+  })
 })

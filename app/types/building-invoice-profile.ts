@@ -4,7 +4,7 @@ export interface BuildingInvoiceProfile {
   accountHolder: string
   accountNumber: string
   transferContentTemplate: string
-  qrImageUrl: string
+  qrImageUrl: string | null
   logoImageUrl: string | null
   legacyBackfilledAt: string | null
   createdAt: string
@@ -38,7 +38,7 @@ export interface InvoiceProfileDisplay {
   accountHolder: string
   accountNumber: string
   transferContent: string
-  qrImageUrl: string
+  qrImageUrl: string | null
   logoImageUrl: string | null
   snapshottedAt: string
 }

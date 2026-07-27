@@ -208,13 +208,21 @@ function isMeterLine(line: InvoiceCharge): boolean {
         class="flex flex-col items-center justify-end gap-[.8mm]"
       >
         <img
+          v-if="item.invoiceProfile.qrImageUrl"
           data-test="payment-qr"
           class="payment-qr block h-[40mm] w-[40mm] rounded-[1.5mm] border border-slate-200 bg-white object-contain p-[.8mm]"
           :src="item.invoiceProfile.qrImageUrl"
           alt="Mã QR chuyển khoản ngân hàng"
         >
+        <div
+          v-else
+          data-test="payment-qr-fallback"
+          class="flex h-[40mm] w-[40mm] items-center justify-center rounded-[1.5mm] border border-dashed border-slate-300 bg-slate-50 px-[3mm] text-center text-[7pt] leading-relaxed text-slate-500"
+        >
+          QR chưa khả dụng
+        </div>
         <span class="text-[6pt] italic text-slate-500">
-          Quét mã để chuyển khoản
+          {{ item.invoiceProfile.qrImageUrl ? 'Quét mã để chuyển khoản' : 'Dùng thông tin chuyển khoản bên trên' }}
         </span>
       </div>
     </footer>

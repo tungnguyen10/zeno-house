@@ -55,4 +55,27 @@ describe('InvoiceProfileDisplayService', () => {
     expect(result.get('invoice-2')).toBeNull()
     expect(signAsset).not.toHaveBeenCalled()
   })
+
+  it('keeps payment instructions available when a snapshotted QR object is missing', async () => {
+    signAsset.mockImplementation(async (_event, path) => {
+      if (path === snapshot.qr_image_path) throw new Error('Object not found')
+      return `signed:${path}`
+    })
+    const { InvoiceProfileDisplayService } = await import(
+      '../../../server/services/billing/invoice-profile-display'
+    )
+
+    const result = await InvoiceProfileDisplayService.resolveMany({ context: {} } as never, new Map([
+      ['invoice-1', snapshot],
+    ]))
+
+    expect(result.get('invoice-1')).toMatchObject({
+      bankName: 'VIB',
+      accountHolder: 'NGUYỄN TUẤN ANH',
+      accountNumber: '375675817',
+      transferContent: 'zeno-P04-inv-2026-07-0009-07/2026',
+      qrImageUrl: null,
+      logoImageUrl: 'signed:building-1/logo/shared.webp',
+    })
+  })
 })

@@ -253,6 +253,12 @@ renders an escaped Vietnamese HTML message and an A4 PDF from persisted invoice 
 collection totals, and the issue-time payment profile, then sends both through Resend. Missing or
 invalid recipient email produces a visible skipped result.
 
+The email and attachment follow the issued-invoice print artifact: title, invoice identity and
+status, room/tenant and issue/due details, six charge columns including electricity/water readings,
+current totals, and snapshotted payment instructions. The PDF uses an A4 print hierarchy; the
+email uses a responsive equivalent and embeds valid snapshotted logo/QR assets as private Resend
+CID attachments. Missing or invalid optional assets fall back to payment text without blocking send.
+
 Building settings expose **Tự động gửi khi phát hành**. It defaults off, can be changed only by
 owner/admin, and affects future invoices only. When enabled, the invoice-insert transaction queues
 all issuance paths atomically; provider outages never roll back invoice issuance.

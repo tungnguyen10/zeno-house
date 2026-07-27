@@ -49,6 +49,10 @@ For invoice email, use a verified Resend sender in `NUXT_RESEND_FROM`, point the
 at `/api/webhooks/resend`, and never expose the API key, webhook secret, or dispatch secret through
 `NUXT_PUBLIC_*`.
 
+Scheduled workers do not run automatically in local development. Use an authenticated request to
+the relevant `/api/internal/**` endpoint when testing a worker; production scheduler setup is in
+[Scheduled Workers](./scheduled-workers.md).
+
 ## Common Commands
 
 ```bash

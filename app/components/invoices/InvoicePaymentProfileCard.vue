@@ -38,11 +38,20 @@ defineProps<{ profile: InvoiceProfileDisplay | null }>()
 
     <figure class="mx-auto w-28 sm:mx-0">
       <img
+        v-if="profile.qrImageUrl"
         :src="profile.qrImageUrl"
         alt="Mã QR chuyển khoản ngân hàng"
         class="aspect-square w-28 rounded-lg bg-white object-contain p-1"
       >
-      <figcaption class="mt-1.5 text-center text-[11px] text-muted">Quét để thanh toán</figcaption>
+      <div
+        v-else
+        class="flex aspect-square w-28 items-center justify-center rounded-lg border border-dashed border-dark-border bg-dark-deep/60 px-3 text-center text-xs leading-relaxed text-muted"
+      >
+        QR chưa khả dụng
+      </div>
+      <figcaption class="mt-1.5 text-center text-[11px] text-muted">
+        {{ profile.qrImageUrl ? 'Quét để thanh toán' : 'Dùng thông tin tài khoản bên cạnh' }}
+      </figcaption>
     </figure>
   </div>
 

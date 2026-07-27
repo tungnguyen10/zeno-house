@@ -63,11 +63,12 @@ describe('InvoiceEmailDocumentService', () => {
       address: '12 Nguyễn Huệ',
     }])
     mocks.listCharges.mockResolvedValue([{
+      chargeType: 'electricity',
       label: 'Tiền điện',
       quantity: 125,
       unitPrice: 3_500,
       amount: 437_500,
-      metadata: { previous_reading: 100, current_reading: 225 },
+      metadata: { previous_reading_value: 100, current_reading_value: 225 },
     }])
     mocks.loadTenants.mockResolvedValue(new Map([
       ['tenant-1', { id: 'tenant-1', fullName: 'Nguyễn Văn An' }],
@@ -108,8 +109,9 @@ describe('InvoiceEmailDocumentService', () => {
       paidAmount: 1_000_000,
       balanceAmount: 2_500_000,
       charges: [{
+        chargeType: 'electricity',
         label: 'Tiền điện',
-        metadata: { previous_reading: 100, current_reading: 225 },
+        metadata: { previous_reading_value: 100, current_reading_value: 225 },
       }],
       paymentProfile: {
         bankName: 'VIB',
@@ -117,6 +119,25 @@ describe('InvoiceEmailDocumentService', () => {
         snapshottedAt: '2026-07-20T01:00:00.000Z',
       },
     })
+  })
+
+  it('preserves print charge type and derives the current display status', async () => {
+    mocks.findInvoice.mockResolvedValue(buildInvoice({
+      id: 'invoice-1',
+      status: 'issued',
+      dueDate: '2026-07-01',
+      balanceAmount: 1,
+    }))
+    vi.setSystemTime(new Date('2026-07-27T00:00:00.000Z'))
+    const { InvoiceEmailDocumentService } = await import(
+      '../../../server/services/invoice-email/document'
+    )
+
+    const result = await InvoiceEmailDocumentService.build({ context: {} } as never, 'invoice-1')
+
+    expect(result.status).toBe('overdue')
+    expect(result.charges[0]).toMatchObject({ chargeType: 'electricity' })
+    vi.useRealTimers()
   })
 
   it('rejects void invoices before loading child data', async () => {

@@ -12,6 +12,7 @@
 - [x] 2.3 Implement and test an escaped Vietnamese HTML invoice renderer with global sender/optional reply-to configuration, key totals, due date, and snapshotted payment instructions plus neutral fallbacks.
 - [x] 2.4 Configure a licensed Inter variable TTF as a Nitro server asset and implement a PDFKit A4 renderer with charge overflow continuation, QR/logo private Storage downloads, fallback branding/payment copy, deterministic filename, buffer cleanup, and a 10 MB guard.
 - [x] 2.5 Add renderer tests for Vietnamese glyphs, HTML escaping, snapshot immutability, current paid/balance values, meter and charge content, missing/corrupt assets, multi-page overflow, and attachment limits.
+- [x] 2.6 Align the server document model, responsive HTML email, PDFKit A4 renderer, and optional Resend CID logo/QR attachments with the established `InvoicePrintCard` hierarchy and fallbacks.
 
 ## 3. Settings and manual delivery APIs
 
@@ -25,7 +26,7 @@
 
 - [x] 4.1 Implement a server-only Resend adapter that sends HTML plus the PDF buffer with the delivery UUID as idempotency key, maps accepted IDs and documented provider errors, respects optional global reply-to, and never logs content or unmasked recipient data.
 - [x] 4.2 Implement the batch-20, concurrency-three dispatcher with atomic leases, a 10-minute stale lease, retry delays of 1 minute, 5 minutes, 30 minutes, 2 hours, and 6 hours, six total provider calls, and terminal classification for non-retryable failures.
-- [x] 4.3 Add a secret-protected internal dispatch endpoint and a one-minute Nitro scheduled task; missing config or a disabled global feature flag must preserve queued jobs and return a safe skipped result.
+- [x] 4.3 Add a secret-protected internal dispatch endpoint and a one-minute Supabase Cron wake-up; missing config or a disabled global feature flag must preserve queued jobs and return a safe skipped result.
 - [x] 4.4 Implement `POST /api/webhooks/resend` using raw-body Svix signature verification, unique event persistence, Resend email-ID matching, event-time ordering, terminal precedence, and handling for sent, delivered, failed, bounced, and complained events.
 - [x] 4.5 Append concise `invoice.email_queued`, `invoice.email_delivered`, and `invoice.email_failed` billing audit entries and extend audit category/summary rendering without adding intermediate webhook noise.
 - [x] 4.6 Add provider, dispatcher, internal endpoint, and webhook tests for success, timeouts after provider acceptance, 429/5xx retry, permanent errors, stale claims, concurrent workers, stable idempotency, invalid signatures, duplicates, out-of-order events, bounce/complaint supersession, and masked structured logs.

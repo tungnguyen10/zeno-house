@@ -38,6 +38,10 @@ Required environment values live in `.env` locally and map into Nuxt runtime con
 Invoice email delivery remains disabled until the global flag is enabled. Apply the invoice-email
 migration through Supabase SQL Editor and follow the staged rollout guide before enabling it.
 
+Production scheduler wake-ups use Supabase Cron and Vault; see
+[`docs/development/scheduled-workers.md`](docs/development/scheduled-workers.md). Nitro workers can
+be invoked manually in local development and do not create Vercel Cron jobs.
+
 ## Scripts
 
 ```bash

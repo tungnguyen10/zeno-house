@@ -29,7 +29,7 @@ export default defineNuxtConfig({
 
   // Runtime config — NUXT_* env vars are auto-mapped
   runtimeConfig: {
-    resendApiKey: "", // NUXT_RESEND_API_KEY
+    resendApiKey: process.env.RESEND_API_KEY || "", // NUXT_RESEND_API_KEY or legacy RESEND_API_KEY
     resendFrom: "", // NUXT_RESEND_FROM
     resendReplyTo: "", // NUXT_RESEND_REPLY_TO
     resendWebhookSecret: "", // NUXT_RESEND_WEBHOOK_SECRET
@@ -107,17 +107,6 @@ export default defineNuxtConfig({
   typescript: {
     strict: true,
     typeCheck: true,
-  },
-
-  nitro: {
-    experimental: {
-      tasks: true,
-    },
-    scheduledTasks: {
-      "* * * * *": ["invoice-email:dispatch"],
-      "55 16 * * *": ["operations-report:auto-close"],
-      "20 17 * * *": ["ai:retention-cleanup"],
-    },
   },
 
   // Auto-import composables từ tất cả subdirectories

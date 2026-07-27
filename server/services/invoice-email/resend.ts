@@ -9,6 +9,12 @@ export interface ResendInvoiceInput {
   html: string
   filename: string
   pdf: Buffer
+  inlineAssets?: Array<{
+    content: Buffer
+    contentType: 'image/jpeg' | 'image/png' | 'image/webp'
+    filename: string
+    cid: string
+  }>
   idempotencyKey: string
 }
 
@@ -40,7 +46,7 @@ export const ResendInvoiceAdapter = {
         attachments: [{
           filename: input.filename,
           content: input.pdf,
-        }],
+        }, ...(input.inlineAssets ?? [])],
       }, {
         idempotencyKey: input.idempotencyKey,
       })

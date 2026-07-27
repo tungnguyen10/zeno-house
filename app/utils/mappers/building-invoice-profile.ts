@@ -31,7 +31,7 @@ const storedSnapshotSchema = z.object({
 
 export function mapBuildingInvoiceProfile(
   row: BuildingInvoiceProfileRow,
-  assets: { qrImageUrl: string; logoImageUrl: string | null },
+  assets: { qrImageUrl: string | null; logoImageUrl: string | null },
 ): BuildingInvoiceProfile {
   return {
     buildingId: row.building_id,

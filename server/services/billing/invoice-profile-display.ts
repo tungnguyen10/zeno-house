@@ -3,16 +3,24 @@ import type { InvoiceProfileDisplay } from '~/types/building-invoice-profile'
 import { parseStoredInvoiceProfileSnapshot } from '~/utils/mappers/building-invoice-profile'
 import { BuildingInvoiceProfileRepository } from '../../repositories/building-invoice-profiles'
 
+function isMissingStorageObject(error: unknown): boolean {
+  return error instanceof Error && error.message === 'Object not found'
+}
+
 export const InvoiceProfileDisplayService = {
   async resolveMany(
     event: H3Event,
     snapshotsByInvoiceId: Map<string, unknown>,
   ): Promise<Map<string, InvoiceProfileDisplay | null>> {
-    const signedUrlByPath = new Map<string, Promise<string>>()
+    const signedUrlByPath = new Map<string, Promise<string | null>>()
     const sign = (path: string) => {
       const existing = signedUrlByPath.get(path)
       if (existing) return existing
       const pending = BuildingInvoiceProfileRepository.signAsset(event, path)
+        .catch((error: unknown) => {
+          if (isMissingStorageObject(error)) return null
+          throw error
+        })
       signedUrlByPath.set(path, pending)
       return pending
     }

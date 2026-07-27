@@ -48,9 +48,10 @@ async function dispatchOne(
 
   let document
   let pdf: Buffer
+  let assets
   try {
     document = await InvoiceEmailDocumentService.build(event, row.invoice_id)
-    const assets = await InvoiceEmailAssetService.load(event, document)
+    assets = await InvoiceEmailAssetService.load(event, document)
     pdf = await renderInvoicePdf(document, assets)
   }
   catch {
@@ -70,9 +71,17 @@ async function dispatchOne(
     ...(config.replyTo ? { replyTo: config.replyTo } : {}),
     recipient: row.recipient_email,
     subject: invoiceEmailSubject(document),
-    html: renderInvoiceEmailHtml(document),
+    html: renderInvoiceEmailHtml(document, assets),
     filename: invoicePdfFilename(document.invoiceCode),
     pdf,
+    inlineAssets: [assets.logoImage, assets.qrImage]
+      .filter((asset): asset is NonNullable<typeof asset> => asset !== null)
+      .map(asset => ({
+        content: asset.data,
+        contentType: asset.contentType,
+        filename: asset.filename,
+        cid: asset.cid,
+      })),
     idempotencyKey: row.id,
   })
 

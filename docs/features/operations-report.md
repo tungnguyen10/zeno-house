@@ -450,7 +450,7 @@ Chưa làm (như MVP scope đã nêu): approval, upload chứng từ, custom cat
 - Admin refresh dùng để cập nhật latest khi có thêm/bớt chi phí sau billing close nhưng trước khi report được chốt lại.
 - Công thức quỹ là `max(lãi vận hành, 0) * tỷ lệ quỹ`, trong đó lãi vận hành dựa trên doanh thu phát hành trừ chi phí trực tiếp, chi phí cố định, và phân bổ trả trước.
 - Khi báo cáo đã closed, các mutation chi phí ảnh hưởng kỳ đó bị chặn cho tới khi admin mở lại. Sau khi sửa, admin close lại hoặc refresh để cập nhật cùng dòng accrual.
-- Auto-close là Nitro task gọi route internal vào ngày cuối tháng theo `Asia/Ho_Chi_Minh`. Route internal yêu cầu `NUXT_OPERATIONS_REPORT_AUTO_CLOSE_SECRET`; nếu thiếu secret hoặc không phải ngày cuối tháng thì không chốt gì.
+- Supabase Cron gọi route internal auto-close lúc 16:55 UTC (23:55 `Asia/Ho_Chi_Minh`). Route internal yêu cầu `NUXT_OPERATIONS_REPORT_AUTO_CLOSE_SECRET`; nếu thiếu secret hoặc không phải ngày cuối tháng thì không chốt gì.
 - Có thể tắt tạm auto-close qua runtime env `NUXT_OPERATIONS_REPORT_AUTO_CLOSE_ENABLED=false` (hữu ích cho môi trường dev/local); bật lại bằng `true`.
 - Không có auto-close billing; billing close giữ nguyên flow và điều kiện hiện tại.
 - Migration `20260707031000_fix_operations_report_periods_shape.sql` vá các DB đã có `operations_report_periods` shape cũ thiếu `close_source` và reload PostgREST schema cache.

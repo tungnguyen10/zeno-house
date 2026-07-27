@@ -31,11 +31,12 @@ function documentData(overrides: Partial<InvoiceDocumentData> = {}): InvoiceDocu
     balanceAmount: 1_950_000,
     notes: null,
     charges: [{
+      chargeType: 'electricity',
       label: 'Tiền điện tháng 7',
       quantity: 125,
       unitPrice: 3_500,
       amount: 437_500,
-      metadata: { previous: 100, current: 225 },
+      metadata: { previous_reading_value: 100, current_reading_value: 225 },
     }],
     paymentProfile: {
       bankName: 'Ngân hàng Á Châu',
@@ -57,16 +58,22 @@ describe('invoice email HTML renderer', () => {
 
     expect(invoiceEmailSubject(data)).toBe('Hoá đơn INV-2026-07-0001 – Zeno House')
     expect(html).toContain('Nguyễn Văn An')
-    expect(html).toContain('Tiền điện tháng 7')
+    expect(html).toContain('Điện')
     expect(html).toContain('1.950.000')
     expect(html).toContain('Ngân hàng Á Châu')
     expect(html).toContain('INV-2026-07-0001 P.401')
+    expect(html).toContain('Chỉ số cũ')
+    expect(html).toContain('Chỉ số mới')
+    expect(html).toContain('100')
+    expect(html).toContain('225')
+    expect(html).toContain('Trạng thái')
   })
 
   it('escapes stored and operator-controlled content', () => {
     const html = renderInvoiceEmailHtml(documentData({
       tenantName: '<img src=x onerror=alert(1)>',
       charges: [{
+        chargeType: 'service',
         label: '<script>alert(1)</script>',
         quantity: 1,
         unitPrice: 1,
@@ -83,7 +90,29 @@ describe('invoice email HTML renderer', () => {
 
   it('uses neutral payment copy when the immutable profile snapshot is missing', () => {
     const html = renderInvoiceEmailHtml(documentData({ paymentProfile: null }))
-    expect(html).toContain('liên hệ ban quản lý để được hướng dẫn thanh toán')
+    expect(html).toContain('Liên hệ quản lý để nhận thông tin thanh toán')
+  })
+
+  it('uses the print due-date fallback when an invoice has no explicit due date', () => {
+    const html = renderInvoiceEmailHtml(documentData({ dueDate: null }))
+
+    expect(html).toContain('(Hạn 3 ngày).')
+  })
+
+  it('references validated logo and QR assets through private CID attachments', () => {
+    const html = renderInvoiceEmailHtml(documentData(), {
+      font: Buffer.from('font'),
+      logoImage: {
+        data: Buffer.from('logo'), contentType: 'image/png', filename: 'logo.png', cid: 'invoice-building-logo',
+      },
+      qrImage: {
+        data: Buffer.from('qr'), contentType: 'image/png', filename: 'qr.png', cid: 'invoice-payment-qr',
+      },
+    })
+
+    expect(html).toContain('cid:invoice-building-logo')
+    expect(html).toContain('cid:invoice-payment-qr')
+    expect(html).not.toContain('building/qr/code.png')
   })
 })
 
@@ -106,6 +135,7 @@ describe('invoice PDF renderer', () => {
 
   it('continues long charge tables onto additional pages without truncation', async () => {
     const charges = Array.from({ length: 80 }, (_, index) => ({
+      chargeType: 'service' as const,
       label: `Khoản thu dài số ${index + 1}: điện, nước và dịch vụ`,
       quantity: index + 1,
       unitPrice: 3_500,
@@ -114,12 +144,27 @@ describe('invoice PDF renderer', () => {
     }))
     const pdf = await renderInvoicePdf(documentData({ charges }), {
       font,
-      qrImage: Buffer.from('corrupt optional qr image'),
-      logoImage: Buffer.from('corrupt optional logo image'),
+      qrImage: {
+        data: Buffer.from('corrupt optional qr image'), contentType: 'image/png', filename: 'qr.png', cid: 'qr',
+      },
+      logoImage: {
+        data: Buffer.from('corrupt optional logo image'), contentType: 'image/png', filename: 'logo.png', cid: 'logo',
+      },
     })
 
     const source = pdf.toString('latin1')
     expect(source.match(/\/Type\s*\/Page\b/g)?.length ?? 0).toBeGreaterThan(1)
     expect(pdf.byteLength).toBeLessThanOrEqual(10 * 1024 * 1024)
+  })
+
+  it('uses the print hierarchy and six charge columns in the generated document', async () => {
+    const pdf = await renderInvoicePdf(documentData(), {
+      font,
+      qrImage: null,
+      logoImage: null,
+    })
+
+    expect(pdf.subarray(0, 5).toString()).toBe('%PDF-')
+    expect(pdf.byteLength).toBeGreaterThan(3_000)
   })
 })

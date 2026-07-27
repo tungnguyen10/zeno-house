@@ -278,10 +278,11 @@ export const BuildingInvoiceProfileRepository = {
     if (error) throwDbError(error, 'buildingInvoiceProfile.removeAssets')
   },
 
-  async signAsset(event: H3Event, path: string): Promise<string> {
+  async signAsset(event: H3Event, path: string): Promise<string | null> {
     const { data, error } = await client(event).storage
       .from(ASSET_BUCKET)
       .createSignedUrl(path, SIGNED_URL_TTL_SECONDS)
+    if (error?.message === 'Object not found') return null
     if (error) throwDbError(error, 'buildingInvoiceProfile.signAsset')
     return data.signedUrl
   },

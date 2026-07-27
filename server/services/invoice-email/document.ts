@@ -6,6 +6,7 @@ import { BillingPeriodRepository } from '../../repositories/billing/periods'
 import { BuildingRepository } from '../../repositories/buildings'
 import { BuildingInvoiceProfileRepository } from '../../repositories/building-invoice-profiles'
 import { BillingDisplayResolver } from '../billing/display'
+import { deriveInvoiceListStatus } from '../billing/invoice-query'
 
 export const InvoiceEmailDocumentService = {
   async build(event: H3Event, invoiceId: string): Promise<InvoiceDocumentData> {
@@ -36,7 +37,11 @@ export const InvoiceEmailDocumentService = {
     return {
       invoiceId: invoice.id,
       invoiceCode: invoice.invoiceCode,
-      status: invoice.status,
+      status: deriveInvoiceListStatus({
+        status: invoice.status,
+        due_date: invoice.dueDate,
+        balance_amount: invoice.balanceAmount,
+      }),
       issuedAt: invoice.issuedAt,
       dueDate: invoice.dueDate,
       periodLabel: `${String(period.periodMonth).padStart(2, '0')}/${period.periodYear}`,
@@ -52,6 +57,7 @@ export const InvoiceEmailDocumentService = {
       balanceAmount: invoice.balanceAmount,
       notes: invoice.notes,
       charges: charges.map(charge => ({
+        chargeType: charge.chargeType,
         label: charge.label,
         quantity: charge.quantity,
         unitPrice: charge.unitPrice,
