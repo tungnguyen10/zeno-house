@@ -163,8 +163,10 @@ export const CrossPeriodInvoiceRepository = {
     }
 
     const { data, error, count } = await query
-      .order('issued_at', { ascending: false, nullsFirst: false })
-      .order('id', { ascending: false })
+      .order('room_number', { foreignTable: 'rooms', ascending: true, nullsFirst: false })
+      .order('invoice_code', { ascending: true, nullsFirst: false })
+      .order('issued_at', { ascending: true, nullsFirst: true })
+      .order('id', { ascending: true })
       .range(from, to)
 
     if (error) throwDbError(error, 'invoices.list')
