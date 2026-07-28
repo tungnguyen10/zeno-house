@@ -32,28 +32,31 @@ function tintOnSurface(hex: string, surface: string, opacity = 0.1): string {
 
 describe('tenant portal design foundation', () => {
   it.each([
-    ['--portal-title', '#ffffff'],
-    ['--portal-body', '#c7c9ce'],
-    ['--portal-muted', '#98989d'],
-    ['--portal-accent', '#00e5ff'],
-    ['--portal-accent-soft', 'rgb(0 229 255 / 0.12)'],
-    ['--portal-bg', '#1a1b1d'],
-    ['--portal-surface', '#242528'],
-    ['--portal-border', '#2c2c2e'],
-    ['--portal-positive', '#32d74b'],
-    ['--portal-positive-ink', '#32d74b'],
-    ['--portal-warning', '#ffb539'],
-    ['--portal-warning-ink', '#ffb539'],
-    ['--portal-danger', '#ff453a'],
-    ['--portal-danger-ink', '#ff6b6b'],
-  ])('defines %s as %s', (token, value) => {
+    ['--portal-primary', '#0d9488'],
+    ['--portal-navy', '#1e3a5f'],
+    ['--portal-bg', '#0b1624'],
+    ['--portal-surface', '#14283d'],
+    ['--portal-chrome', '#102a46'],
+    ['--portal-accent', '#2dd4bf'],
+    ['--portal-warning', '#fb923c'],
+  ])('defines the dark-first MapTrack %s token as %s', (token, value) => {
     expect(scss).toContain(`${token}: ${value}`)
   })
 
-  it('defines exactly two portal elevation roles', () => {
-    expect(scss).toMatch(/--portal-elevation-resting:/)
-    expect(scss).toMatch(/--portal-elevation-raised:/)
-    expect(scss.match(/--portal-elevation-/g)).toHaveLength(2)
+  it('defines a light MapTrack override without changing the portal scope', () => {
+    expect(scss).toMatch(/\.portal-shell\[data-theme='light'\]\s*\{/)
+    expect(scss).toContain('--portal-bg: #f8fafc')
+    expect(scss).toContain('--portal-surface: #ffffff')
+    expect(scss).toContain('--portal-chrome: #1e3a5f')
+    expect(scss).toContain('--portal-accent: #0d9488')
+    expect(scss).toContain('--portal-warning: #f97316')
+  })
+
+  it('defines two named portal elevation roles for both appearances', () => {
+    expect([...new Set(scss.match(/--portal-elevation-[\w-]+(?=:\s)/g))]).toEqual([
+      '--portal-elevation-resting',
+      '--portal-elevation-raised',
+    ])
   })
 
   it.each(['display', 'heading', 'label', 'body', 'caption'])(
@@ -66,30 +69,22 @@ describe('tenant portal design foundation', () => {
     expect(scss).toMatch(/\.portal-money-unit\s*\{[^}]*color:\s*var\(--portal-body\)/s)
   })
 
-  it('exposes portal Tailwind color aliases without replacing admin status colors', () => {
+  it('keeps dashboard Tailwind status aliases unchanged', () => {
     const colors = tailwindConfig.theme.extend.colors
-    expect(colors.portal).toMatchObject({
-      muted: '#98989D',
-      positive: '#32D74B',
-      'positive-ink': '#32D74B',
-      warning: '#FFB539',
-      'warning-ink': '#FFB539',
-      danger: '#FF453A',
-      'danger-ink': '#FF6B6B',
-    })
     expect(colors.warning).toBe('#FFB539')
+    expect(colors.cyan).toBe('#00E5FF')
   })
 
-  it('keeps portal body text at WCAG AA contrast on surface and canvas', () => {
-    expect(contrastRatio('#C7C9CE', '#242528')).toBeGreaterThanOrEqual(4.5)
-    expect(contrastRatio('#C7C9CE', '#1A1B1D')).toBeGreaterThanOrEqual(4.5)
+  it('keeps portal body text at WCAG AA contrast in both modes', () => {
+    expect(contrastRatio('#CBD5E1', '#14283D')).toBeGreaterThanOrEqual(4.5)
+    expect(contrastRatio('#475569', '#FFFFFF')).toBeGreaterThanOrEqual(4.5)
   })
 
   it.each([
-    ['positive ink', '#32D74B'],
-    ['warning ink', '#FFB539'],
-    ['danger ink', '#FF6B6B'],
-  ])('keeps %s at WCAG AA contrast on its tinted badge surface', (_name, ink) => {
-    expect(contrastRatio(ink, tintOnSurface(ink, '#242528'))).toBeGreaterThanOrEqual(4.5)
+    ['dark positive ink', '#6EE7B7', '#14283D'],
+    ['dark warning ink', '#FDBA74', '#14283D'],
+    ['dark danger ink', '#FCA5A5', '#14283D'],
+  ])('keeps %s at WCAG AA contrast on its tinted badge surface', (_name, ink, surface) => {
+    expect(contrastRatio(ink, tintOnSurface(ink, surface))).toBeGreaterThanOrEqual(4.5)
   })
 })
