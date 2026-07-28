@@ -17,7 +17,7 @@ desktop rail, and mobile tab bar remain visible. Its page middleware returns a
 The showcase is a vertically scrollable collection of sections:
 
 - Shell navigation: the inherited header, side rail, and tab bar.
-- Actions and fields: `PortalButton` and `PortalTextField` in default, error,
+- Actions and fields: `PortalButton` and `PortalInput` in default, error,
   disabled, and loading states.
 - Information: `PortalCard`, `PortalStatusBadge`, `PortalPaymentRing`, and
   `PortalIdentityImageSlot` with representative portal-safe values.

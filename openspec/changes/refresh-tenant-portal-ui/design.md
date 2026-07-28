@@ -12,7 +12,7 @@ This change is presentation-only. It must not touch composables, server code, ro
 - One deliberate "clean fintech / trustworthy statement" identity expressed as a small, named token system reused everywhere.
 - An explicit portal type scale and a distinctive money/statement treatment as the signature element.
 - Consistent spacing rhythm, card padding, radius, and elevation across all portal components and pages.
-- A single form-field primitive (`PortalTextField`) and a single status→style source of truth for badges.
+- A single form-field primitive (`PortalInput`) and a single status→style source of truth for badges.
 - Refreshed identity applied to all six portal pages with correct loading/empty/error/data states.
 
 **Non-Goals:**
@@ -39,7 +39,7 @@ Add an optional `accent`/`tone` prop to `PortalCard` that renders a thin (3px) s
 - Alternative: per-page bespoke markup — rejected for inconsistency; a heavy colored band/gradient — rejected as noisy.
 
 ### D4 — Single form primitive and single status map
-Route the profile edit and request-create forms through `PortalTextField`, and drive both invoice and request badges from one status→style map so "paid/resolved" = positive, "overdue" = danger, "pending/partial" = warning/accent consistently.
+Route the profile edit and request-create forms through `PortalInput`, and drive both invoice and request badges from one status→style map so "paid/resolved" = positive, "overdue" = danger, "pending/partial" = warning/accent consistently.
 - Rationale: removes duplicated inline `<input>` and conflicting color semantics; aligns with the codebase rule to reuse primitives.
 - Alternative: keep per-page inputs — rejected; it is the main source of the current inconsistency.
 

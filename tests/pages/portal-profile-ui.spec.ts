@@ -20,8 +20,8 @@ describe('portal profile refreshed UI', () => {
     expect(page).toContain('@submit.prevent="onSave"')
   })
 
-  it('routes every editable field through PortalTextField while keeping login email read-only', () => {
-    expect(page.match(/<PortalTextField/g)).toHaveLength(11)
+  it('routes every editable field through PortalInput while keeping login email read-only', () => {
+    expect(page.match(/<PortalInput/g)).toHaveLength(11)
     expect(page).not.toContain('v-model="form.email"')
     expect(page.match(/<input/g)).toHaveLength(1)
     expect(page).toContain('type="file"')

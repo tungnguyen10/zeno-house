@@ -10,7 +10,7 @@
 - [x] 2.1 `PortalCard.vue`: standardize padding/radius/elevation and add optional status `accent` prop rendering the 3px hairline (paid/due/overdue)
 - [x] 2.2 `PortalInvoiceStatusBadge.vue` + request status badge: drive color/label from one shared status-to-style map (positive/warning-accent/danger)
 - [x] 2.3 `PortalButton.vue`: align variants with new primary, ensure `focus-visible` ring, enforce `aria-label` for icon-only buttons
-- [x] 2.4 `PortalTextField.vue`: align focus/error styling with tokens and make it the single form field primitive
+- [x] 2.4 `PortalInput.vue`: align focus/error styling with tokens and make it the single form field primitive
 - [x] 2.5 `PortalEmptyState.vue` + `PortalSkeleton.vue`: clarify empty-vs-error visuals; align skeleton shapes with refreshed layouts
 - [x] 2.6 `PortalHeader.vue` + `PortalTabBar.vue`: refine spacing, active indicator, safe-area padding, and back/close `aria-label`s
 
@@ -20,8 +20,8 @@
 - [x] 3.2 `app/pages/portal/invoices/index.vue`: statement-style rows with tabular amounts, unified status badges, refreshed skeleton/empty
 - [x] 3.3 `app/pages/portal/invoices/[id].vue`: statement summary header; replace nested-card breakdown with divider-separated key-value rows; payment summary + notes
 - [x] 3.4 `app/pages/portal/room.vue`: room/contract card and lease terms as clean divider-separated rows
-- [x] 3.5 `app/pages/portal/requests.vue`: list rows + bottom-sheet create form using `PortalTextField` with unified validation feedback
-- [x] 3.6 `app/pages/portal/profile.vue`: profile edit form via `PortalTextField`; polish identity/document upload slots and logout
+- [x] 3.5 `app/pages/portal/requests.vue`: list rows + bottom-sheet create form using the shared portal field primitive with unified validation feedback
+- [x] 3.6 `app/pages/portal/profile.vue`: profile edit form via `PortalInput`; polish identity/document upload slots and logout
 
 ## 4. Motion & accessibility polish
 

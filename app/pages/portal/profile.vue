@@ -429,7 +429,7 @@ const statusColor = computed(() => {
           <section class="space-y-3">
             <h3 class="portal-type-heading px-1 text-title">Thông tin cá nhân</h3>
             <PortalCard class="space-y-4">
-              <PortalTextField
+              <PortalInput
                 v-model="form.full_name"
                 label="Họ và tên"
                 autocomplete="name"
@@ -453,13 +453,13 @@ const statusColor = computed(() => {
                   </button>
                 </div>
               </div>
-              <PortalTextField
+              <PortalInput
                 v-model="form.date_of_birth"
                 label="Ngày sinh"
                 type="date"
                 :error="fieldErrors.date_of_birth?.[0]"
               />
-              <PortalTextField
+              <PortalInput
                 v-model="form.occupation"
                 label="Nghề nghiệp"
                 :error="fieldErrors.occupation?.[0]"
@@ -471,7 +471,7 @@ const statusColor = computed(() => {
           <section class="space-y-3">
             <h3 class="portal-type-heading px-1 text-title">Liên hệ</h3>
             <PortalCard class="space-y-4">
-              <PortalTextField
+              <PortalInput
                 v-model="form.phone"
                 label="Số điện thoại"
                 type="tel"
@@ -479,7 +479,7 @@ const statusColor = computed(() => {
                 autocomplete="tel"
                 :error="fieldErrors.phone?.[0]"
               />
-              <PortalTextField
+              <PortalInput
                 v-model="form.permanent_address"
                 label="Địa chỉ thường trú"
                 textarea
@@ -493,19 +493,19 @@ const statusColor = computed(() => {
           <section class="space-y-3">
             <h3 class="portal-type-heading px-1 text-title">Giấy tờ tùy thân</h3>
             <PortalCard class="space-y-4">
-              <PortalTextField
+              <PortalInput
                 v-model="form.id_number"
                 label="Số CCCD/CMND"
                 inputmode="numeric"
                 :error="fieldErrors.id_number?.[0]"
               />
-              <PortalTextField
+              <PortalInput
                 v-model="form.id_issued_date"
                 label="Ngày cấp"
                 type="date"
                 :error="fieldErrors.id_issued_date?.[0]"
               />
-              <PortalTextField
+              <PortalInput
                 v-model="form.id_issued_place"
                 label="Nơi cấp"
                 :error="fieldErrors.id_issued_place?.[0]"
@@ -517,12 +517,12 @@ const statusColor = computed(() => {
           <section class="space-y-3">
             <h3 class="portal-type-heading px-1 text-title">Liên hệ khẩn cấp</h3>
             <PortalCard class="space-y-4">
-              <PortalTextField
+              <PortalInput
                 v-model="form.emergency_contact_name"
                 label="Người liên hệ khẩn cấp"
                 :error="fieldErrors.emergency_contact_name?.[0]"
               />
-              <PortalTextField
+              <PortalInput
                 v-model="form.emergency_contact_phone"
                 label="SĐT khẩn cấp"
                 type="tel"
@@ -536,7 +536,7 @@ const statusColor = computed(() => {
           <section class="space-y-3">
             <h3 class="portal-type-heading px-1 text-title">Ghi chú</h3>
             <PortalCard>
-              <PortalTextField
+              <PortalInput
                 v-model="form.notes"
                 label="Ghi chú"
                 textarea

@@ -59,6 +59,11 @@ describe('tenant portal design foundation', () => {
     ])
   })
 
+  it('derives translucent accent borders from the active MapTrack accent token', () => {
+    expect(scss).toMatch(/\.portal-shell \.border-theme\\\/30\s*\{\s*border-color:\s*color-mix\(in srgb, var\(--portal-accent\) 30%, transparent\)/s)
+    expect(scss).toMatch(/\.portal-shell \.border-theme\\\/40[\s\S]*?color-mix\(in srgb, var\(--portal-accent\) 40%, transparent\)/s)
+  })
+
   it.each(['display', 'heading', 'label', 'body', 'caption'])(
     'defines the %s type role',
     role => expect(scss).toContain(`.portal-type-${role}`),
