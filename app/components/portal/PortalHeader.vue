@@ -1,6 +1,13 @@
 <script setup lang="ts">
 const { chrome } = usePortalChrome()
+const { resolvedTheme, toggleTheme } = usePortalTheme()
 const router = useRouter()
+
+const themeActionLabel = computed(() => (
+  resolvedTheme.value === 'dark'
+    ? 'Chuyển sang giao diện sáng'
+    : 'Chuyển sang giao diện tối'
+))
 
 function onBack() {
   if (chrome.value.back) {
@@ -34,6 +41,15 @@ function onBack() {
       <h1 class="portal-type-heading flex-1 truncate px-1 text-title">
         {{ chrome.title }}
       </h1>
+      <button
+        type="button"
+        class="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full text-title transition-colors hover:bg-smoke active:bg-smoke focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme/40"
+        :aria-label="themeActionLabel"
+        @click="toggleTheme"
+      >
+        <IconSun v-if="resolvedTheme === 'dark'" class="h-5 w-5" aria-hidden="true" />
+        <IconMoon v-else class="h-5 w-5" aria-hidden="true" />
+      </button>
       <!-- Single primary action target; pages teleport their action here. -->
       <div id="portal-header-action" class="flex items-center gap-1" />
     </div>
