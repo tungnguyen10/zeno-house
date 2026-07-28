@@ -59,18 +59,18 @@ describe('PortalTabBar', () => {
     const links = wrapper.findAll('a')
     // /portal/invoices → the "Hoá đơn" tab (index 1) is active.
     const active = links[1]!
-    expect(active.classes()).toContain('text-[#c7c9ce]')
-    expect(active.classes()).toContain('bg-dark-hover')
+    expect(active.classes()).toContain('text-[color:var(--portal-body)]')
+    expect(active.classes()).toContain('bg-[color:var(--portal-surface-muted)]')
     expect(active.attributes('aria-current')).toBe('page')
-    expect(wrapper.get('icon-portal-tab-invoices-dark-stub').classes()).toContain('text-cyan')
+    expect(wrapper.get('icon-portal-tab-invoices-dark-stub').classes()).toContain('text-[color:var(--portal-accent)]')
     // Home tab is exact-match only, so it must NOT be active here.
     const home = links[0]!
-    expect(home.classes()).toContain('text-[#c7c9ce]')
-    expect(home.classes()).toContain('[@media(hover:hover)]:hover:bg-dark-hover')
-    expect(home.classes()).toContain('active:bg-dark-deep')
+    expect(home.classes()).toContain('text-[color:var(--portal-body)]')
+    expect(home.classes()).toContain('[@media(hover:hover)]:hover:bg-[color:var(--portal-surface-muted)]')
+    expect(home.classes()).toContain('active:bg-[color:var(--portal-surface-deep)]')
     expect(home.classes()).not.toContain('active:scale-[0.98]')
     expect(home.attributes('aria-current')).toBeUndefined()
-    expect(wrapper.get('icon-portal-tab-home-dark-stub').classes()).toContain('text-muted')
+    expect(wrapper.get('icon-portal-tab-home-dark-stub').classes()).toContain('text-[color:var(--portal-muted)]')
   })
 
   it('uses the Figma mobile rail surface, active emphasis, and keyboard focus affordances', () => {
@@ -79,8 +79,8 @@ describe('PortalTabBar', () => {
       'portal-safe-bottom',
       'portal-safe-x',
       'rounded-t-[20px]',
-      'bg-dark-surface',
-      'border-dark-border',
+      'bg-[color:var(--portal-chrome)]',
+      'border-[color:var(--portal-border)]',
     ]))
     for (const link of wrapper.findAll('a')) {
       expect(link.classes()).toContain('focus-visible:ring-2')
