@@ -14,11 +14,11 @@ function mountTabBar() {
     global: {
       stubs: {
         NuxtLink: NuxtLinkStub,
-        IconHome: true,
-        IconReceipt: true,
-        IconDoor: true,
-        IconMessageCircle: true,
-        IconUser: true,
+        IconPortalTabHomeDark: true,
+        IconPortalTabInvoicesDark: true,
+        IconPortalTabRoomDark: true,
+        IconPortalTabRequestsDark: true,
+        IconPortalTabAccountDark: true,
       },
     },
   })
@@ -36,10 +36,21 @@ describe('PortalTabBar', () => {
     expect(wrapper.text()).toContain('Tài khoản')
   })
 
+  it('uses the five SVG components exported from the Figma dark variant', () => {
+    const wrapper = mountTabBar()
+
+    expect(wrapper.findAll('icon-portal-tab-home-dark-stub')).toHaveLength(1)
+    expect(wrapper.findAll('icon-portal-tab-invoices-dark-stub')).toHaveLength(1)
+    expect(wrapper.findAll('icon-portal-tab-room-dark-stub')).toHaveLength(1)
+    expect(wrapper.findAll('icon-portal-tab-requests-dark-stub')).toHaveLength(1)
+    expect(wrapper.findAll('icon-portal-tab-account-dark-stub')).toHaveLength(1)
+  })
+
   it('uses ≥44px touch targets on every tab', () => {
     const wrapper = mountTabBar()
     for (const link of wrapper.findAll('a')) {
-      expect(link.classes()).toContain('min-h-[64px]')
+      expect(link.classes()).toContain('min-h-[56px]')
+      expect(link.classes()).toContain('max-w-[70px]')
     }
   })
 
@@ -48,21 +59,29 @@ describe('PortalTabBar', () => {
     const links = wrapper.findAll('a')
     // /portal/invoices → the "Hoá đơn" tab (index 1) is active.
     const active = links[1]!
-    expect(active.classes()).toContain('text-theme')
+    expect(active.classes()).toContain('text-[#c7c9ce]')
+    expect(active.classes()).toContain('bg-dark-hover')
     expect(active.attributes('aria-current')).toBe('page')
+    expect(wrapper.get('icon-portal-tab-invoices-dark-stub').classes()).toContain('text-cyan')
     // Home tab is exact-match only, so it must NOT be active here.
     const home = links[0]!
-    expect(home.classes()).toContain('text-muted')
+    expect(home.classes()).toContain('text-[#c7c9ce]')
+    expect(home.classes()).toContain('[@media(hover:hover)]:hover:bg-dark-hover')
+    expect(home.classes()).toContain('active:bg-dark-deep')
+    expect(home.classes()).not.toContain('active:scale-[0.98]')
     expect(home.attributes('aria-current')).toBeUndefined()
+    expect(wrapper.get('icon-portal-tab-home-dark-stub').classes()).toContain('text-muted')
   })
 
-  it('uses safe-area padding, a quiet active indicator, and keyboard focus affordances', () => {
+  it('uses the Figma mobile rail surface, active emphasis, and keyboard focus affordances', () => {
     const wrapper = mountTabBar()
     expect(wrapper.get('nav').classes()).toEqual(expect.arrayContaining([
       'portal-safe-bottom',
       'portal-safe-x',
+      'rounded-t-[20px]',
+      'bg-dark-surface',
+      'border-dark-border',
     ]))
-    expect(wrapper.get('[data-active-indicator]').classes()).toContain('bg-smoke-blue')
     for (const link of wrapper.findAll('a')) {
       expect(link.classes()).toContain('focus-visible:ring-2')
     }
