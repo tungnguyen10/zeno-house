@@ -40,11 +40,11 @@ The portal SHALL present monetary amounts (invoice balances and totals) with a c
 - **THEN** a status-colored accent indicates whether the invoice is paid, due, or overdue
 
 ### Requirement: Unified form control and status semantics
-Portal text and multiline inputs SHALL use the shared `PortalTextField` primitive rather than page-local raw inputs, and invoice and request status badges SHALL derive their color and label from a single status-to-style mapping so equivalent states read consistently (positive for paid/resolved, warning/accent for pending or partial, danger for overdue).
+Portal text and multiline inputs SHALL use the shared `PortalInput` primitive rather than page-local raw inputs, and invoice and request status badges SHALL derive their color and label from a single status-to-style mapping so equivalent states read consistently (positive for paid/resolved, warning/accent for pending or partial, danger for overdue).
 
 #### Scenario: Forms use the shared field primitive
 - **WHEN** a tenant edits their profile or creates a support request
-- **THEN** the form fields render through the shared `PortalTextField` primitive with consistent focus and error styling
+- **THEN** the form fields render through the shared `PortalInput` primitive with consistent focus and error styling
 
 #### Scenario: Status badges are consistent
 - **WHEN** invoice and request statuses are displayed

@@ -8,7 +8,7 @@ The tenant portal works but reads as a set of loosely coordinated screens: typog
 - Establish an explicit portal type scale (display / heading / label / body / caption) and a dedicated money-display treatment (tabular numerals, tightened tracking, muted currency unit, status-colored balance) reused across screens. No new font is added — Inter only.
 - Introduce a reusable "statement" amount presentation with a thin status-colored hairline accent (paid / due / overdue) as the portal's signature element, used on the Home hero, the invoices list rows, and the invoice detail summary.
 - Normalize spacing rhythm, card padding, radius, and elevation across all portal components and pages.
-- Unify form input UX on the shared `PortalTextField` (replace ad-hoc inline `<input>` usage in the profile and requests forms) and unify invoice/request status badges through a single status→style map.
+- Unify form input UX on the shared `PortalInput` (replace ad-hoc inline `<input>` usage in the profile and requests forms) and unify invoice/request status badges through a single status→style map.
 - Refine shared components (`PortalCard`, `PortalButton`, `PortalEmptyState`, `PortalSkeleton`, `PortalHeader`, `PortalTabBar`) and apply the refreshed identity to all six portal pages (overview, invoices list, invoice detail, room, requests, profile).
 - Tighten motion, focus-visible affordances, and text contrast to keep the quality floor (reduced-motion respected, visible keyboard focus, AA-legible body text).
 
@@ -25,7 +25,7 @@ No behavior, data flow, API, routing, or shell architecture changes: pages still
 ## Impact
 
 - Styling/tokens: `app/assets/scss/main.scss` (`.portal-shell` tokens, type-scale/money utilities, transitions), `tailwind.config.ts` (color aliases only; generated `app/types/database.types.ts` untouched).
-- Shared components: `app/components/portal/**` (`PortalCard`, `PortalButton`, `PortalTextField`, `PortalInvoiceStatusBadge`, `PortalEmptyState`, `PortalSkeleton`, `PortalHeader`, `PortalTabBar`).
+- Shared components: `app/components/portal/**` (`PortalCard`, `PortalButton`, `PortalInput`, `PortalChip`, `PortalInvoiceStatusBadge`, `PortalEmptyState`, `PortalSkeleton`, `PortalHeader`, `PortalTabBar`).
 - Pages: `app/pages/portal/index.vue`, `app/pages/portal/invoices/index.vue`, `app/pages/portal/invoices/[id].vue`, `app/pages/portal/room.vue`, `app/pages/portal/requests.vue`, `app/pages/portal/profile.vue`.
 - No changes to `app/composables/tenant-portal/**`, `server/**`, database schema, routing, or the `tenant.vue` shell structure.
 - Risk: visual-only; verified via typecheck, portal component/page tests, lint, and a manual pass across all six pages in loading/empty/error/data states with mobile safe areas and reduced-motion.

@@ -16,10 +16,21 @@ describe('portal component showcase', () => {
   it('composes portal component demos with local fixture state', () => {
     const source = readFileSync(sourcePath, 'utf8')
     for (const component of [
-      'PortalPullToRefresh', 'PortalButton', 'PortalTextField', 'PortalCard',
+      'PortalPullToRefresh', 'PortalButton', 'PortalInput', 'PortalChip', 'PortalCard',
       'PortalStatusBadge', 'PortalPaymentRing', 'PortalIdentityImageSlot',
       'PortalSkeleton', 'PortalSpendingChart', 'PortalEmptyState', 'PortalBottomSheet',
     ]) expect(source).toContain(`<${component}`)
     expect(source).toContain('const invoices: TenantInvoiceListItem[]')
+  })
+
+  it('documents the portal foundation without introducing dashboard tokens', () => {
+    const source = readFileSync(sourcePath, 'utf8')
+
+    for (const heading of ['Color Palette', 'Typography', 'Spacing', 'Inputs', 'Elevation & Depth', 'Chips']) {
+      expect(source).toContain(heading)
+    }
+
+    expect(source).toContain('portal-swatch')
+    expect(source).toContain('portal-elevation-raised')
   })
 })

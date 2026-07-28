@@ -34,7 +34,7 @@ function onInput(event: Event) {
 }
 
 const generatedId = useId()
-const fieldId = computed(() => props.id ?? `portal-field-${generatedId}`)
+const fieldId = computed(() => props.id ?? `portal-input-${generatedId}`)
 const feedbackId = computed(() => props.error
   ? `${fieldId.value}-error`
   : props.hint
@@ -55,7 +55,11 @@ const fieldClass = computed(() =>
 </script>
 
 <template>
-  <div class="block space-y-1.5" :data-invalid="error ? '' : undefined" :data-disabled="disabled ? '' : undefined">
+  <div
+    class="block space-y-1.5"
+    :data-invalid="error ? '' : undefined"
+    :data-disabled="disabled ? '' : undefined"
+  >
     <label :for="fieldId" class="block text-sm font-medium text-title">{{ label }}</label>
     <textarea
       v-if="textarea"
@@ -87,7 +91,7 @@ const fieldClass = computed(() =>
       :class="[fieldClass, 'min-h-[44px]']"
       @input="onInput"
     >
-    <p v-if="error" :id="`${fieldId}-error`" class="text-xs text-portal-danger">{{ error }}</p>
+    <p v-if="error" :id="`${fieldId}-error`" role="alert" class="text-xs text-portal-danger">{{ error }}</p>
     <p v-else-if="hint" :id="`${fieldId}-hint`" class="text-xs text-body">{{ hint }}</p>
   </div>
 </template>

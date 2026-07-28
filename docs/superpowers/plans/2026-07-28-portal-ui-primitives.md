@@ -29,7 +29,7 @@
 
 **Produces:** `PortalInput` with `v-model`, accessible feedback, native input/textarea support, and visible invalid/disabled states.
 
-- [ ] **Step 1: Write the failing component and page-contract tests**
+- [x] **Step 1: Write the failing component and page-contract tests**
 
 ```ts
 expect(wrapper.find('input').attributes('aria-invalid')).toBe('true')
@@ -37,13 +37,13 @@ expect(wrapper.find('p').attributes('id')).toContain('-error')
 expect(page.match(/<PortalInput/g)).toHaveLength(11)
 ```
 
-- [ ] **Step 2: Run the new and modified tests to verify they fail**
+- [x] **Step 2: Run the new and modified tests to verify they fail**
 
 Run: `npx vitest run tests/components/portal/PortalInput.spec.ts tests/pages/portal-profile-ui.spec.ts`
 
 Expected: FAIL because `PortalInput.vue` does not exist and the profile still uses `PortalTextField`.
 
-- [ ] **Step 3: Implement the smallest compatible primitive and update the profile references**
+- [x] **Step 3: Implement the smallest compatible primitive and update the profile references**
 
 ```vue
 <PortalInput
@@ -53,7 +53,7 @@ Expected: FAIL because `PortalInput.vue` does not exist and the profile still us
 />
 ```
 
-- [ ] **Step 4: Re-run the focused tests**
+- [x] **Step 4: Re-run the focused tests**
 
 Run: `npx vitest run tests/components/portal/PortalInput.spec.ts tests/pages/portal-profile-ui.spec.ts`
 
@@ -69,7 +69,7 @@ Expected: PASS.
 
 **Produces:** A typed presentational/interactive chip with five tones and a named `select` event.
 
-- [ ] **Step 1: Write the failing chip tests**
+- [x] **Step 1: Write the failing chip tests**
 
 ```ts
 expect(wrapper.element.tagName).toBe('BUTTON')
@@ -78,13 +78,13 @@ await wrapper.trigger('click')
 expect(wrapper.emitted('select')).toHaveLength(1)
 ```
 
-- [ ] **Step 2: Run the chip test to verify it fails**
+- [x] **Step 2: Run the chip test to verify it fails**
 
 Run: `npx vitest run tests/components/portal/PortalChip.spec.ts`
 
 Expected: FAIL because `PortalChip.vue` does not exist.
 
-- [ ] **Step 3: Implement the chip contract**
+- [x] **Step 3: Implement the chip contract**
 
 ```vue
 <component :is="interactive ? 'button' : 'span'" @click="interactive && emit('select')">
@@ -92,7 +92,7 @@ Expected: FAIL because `PortalChip.vue` does not exist.
 </component>
 ```
 
-- [ ] **Step 4: Re-run the chip test**
+- [x] **Step 4: Re-run the chip test**
 
 Run: `npx vitest run tests/components/portal/PortalChip.spec.ts`
 
@@ -109,7 +109,7 @@ Expected: PASS.
 
 **Produces:** Development-only sections for Color Palette, Typography, Spacing, Inputs, Elevation & Depth, and Chips, with no global style leakage.
 
-- [ ] **Step 1: Write the failing showcase contract test**
+- [x] **Step 1: Write the failing showcase contract test**
 
 ```ts
 for (const heading of ['Color Palette', 'Typography', 'Spacing', 'Inputs', 'Elevation & Depth', 'Chips']) {
@@ -119,13 +119,13 @@ expect(source).toContain('<PortalChip')
 expect(source).toContain('<PortalInput')
 ```
 
-- [ ] **Step 2: Run the showcase test to verify it fails**
+- [x] **Step 2: Run the showcase test to verify it fails**
 
 Run: `npx vitest run tests/pages/portal-ui-showcase.spec.ts`
 
 Expected: FAIL because the new reference sections and primitives are absent.
 
-- [ ] **Step 3: Compose foundation examples and add only portal-scoped helper classes needed for token swatches and spacing bars**
+- [x] **Step 3: Compose foundation examples and add only portal-scoped helper classes needed for token swatches and spacing bars**
 
 ```vue
 <section aria-labelledby="chips-title" class="space-y-3">
@@ -136,7 +136,7 @@ Expected: FAIL because the new reference sections and primitives are absent.
 </section>
 ```
 
-- [ ] **Step 4: Re-run the showcase test**
+- [x] **Step 4: Re-run the showcase test**
 
 Run: `npx vitest run tests/pages/portal-ui-showcase.spec.ts`
 
@@ -147,19 +147,19 @@ Expected: PASS.
 **Files:**
 - Verify only.
 
-- [ ] **Step 1: Run all portal component and changed page tests**
+- [x] **Step 1: Run all portal component and changed page tests**
 
 Run: `npx vitest run tests/components/portal tests/pages/portal-profile-ui.spec.ts tests/pages/portal-ui-showcase.spec.ts`
 
 Expected: PASS.
 
-- [ ] **Step 2: Run static verification**
+- [x] **Step 2: Run static verification**
 
 Run: `npm run typecheck && npm run lint`
 
 Expected: both commands exit 0.
 
-- [ ] **Step 3: Inspect the diff and verify boundaries**
+- [x] **Step 3: Inspect the diff and verify boundaries**
 
 Run: `git diff --check && git diff --name-only`
 
