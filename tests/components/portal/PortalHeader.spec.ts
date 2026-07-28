@@ -9,6 +9,10 @@ vi.stubGlobal('usePortalChrome', () => ({
 vi.stubGlobal('useRouter', () => ({ back: vi.fn() }))
 vi.stubGlobal('navigateTo', vi.fn())
 
+const resolvedTheme = ref<'light' | 'dark'>('dark')
+const toggleTheme = vi.fn()
+vi.stubGlobal('usePortalTheme', () => ({ resolvedTheme, toggleTheme }))
+
 describe('PortalHeader', () => {
   it('keeps safe-area padding and gives the back control an accessible focus state', () => {
     const wrapper = mount(PortalHeader, {
@@ -28,5 +32,22 @@ describe('PortalHeader', () => {
       global: { stubs: { IconArrowLeft: true } },
     })
     expect(wrapper.get('h1').classes()).toContain('portal-type-heading')
+  })
+
+  it('provides a labelled theme control that requests the opposite appearance', async () => {
+    const wrapper = mount(PortalHeader, {
+      global: { stubs: { IconArrowLeft: true, IconSun: true, IconMoon: true } },
+    })
+
+    const control = wrapper.get('[aria-label="Chuyển sang giao diện sáng"]')
+    await control.trigger('click')
+
+    expect(toggleTheme).toHaveBeenCalledOnce()
+    expect(control.classes()).toEqual(expect.arrayContaining([
+      'min-h-[44px]',
+      'min-w-[44px]',
+      'focus-visible:ring-2',
+    ]))
+    expect(wrapper.find('icon-sun-stub').exists()).toBe(true)
   })
 })
