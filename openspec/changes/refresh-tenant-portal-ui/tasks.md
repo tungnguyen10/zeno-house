@@ -38,7 +38,7 @@
 
 ## 6. Action-first home and invoice payment instructions
 
-- [ ] 6.1 Simplify `app/pages/portal/index.vue` into room identity, debt action, and one integrated financial context with explicit loading/error/empty states
-- [ ] 6.2 Extend tenant invoice detail with the immutable payment-profile snapshot after tenant scope is confirmed
-- [ ] 6.3 Add portal-native outstanding, paid-history, void, missing-snapshot, missing-QR, and clipboard-feedback states
+- [x] 6.1 Simplify `app/pages/portal/index.vue` into room identity, debt action, and one integrated financial context with explicit loading/error/empty states
+- [x] 6.2 Extend tenant invoice detail with the immutable payment-profile snapshot after tenant scope is confirmed
+- [x] 6.3 Add portal-native outstanding, paid-history, void, missing-snapshot, missing-QR, and clipboard-feedback states
 - [ ] 6.4 Verify focused tests, specs, typecheck, lint, full regression, and responsive Hallmark polish

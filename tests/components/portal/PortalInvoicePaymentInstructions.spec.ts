@@ -22,12 +22,15 @@ const profile = {
 }
 
 const stubs = {
+  IconAlertCircle: true,
   IconCheckSmall: true,
   IconCopy: true,
+  IconReceipt: true,
+  PortalCard: { template: '<div><slot /></div>' },
   PortalButton: {
-    props: ['ariaLabel'],
+    props: ['ariaLabel', 'loading', 'disabled'],
     emits: ['click'],
-    template: '<button :aria-label="ariaLabel" @click="$emit(\'click\')"><slot /></button>',
+    template: '<button :aria-label="ariaLabel" :aria-busy="loading" :disabled="disabled || loading" @click="$emit(\'click\')"><slot /></button>',
   },
 }
 
@@ -103,6 +106,27 @@ describe('PortalInvoicePaymentInstructions', () => {
       expect(navigator.clipboard.writeText).toHaveBeenCalledWith(profile.accountNumber)
       expect(toast.success).toHaveBeenCalledWith('Đã sao chép số tài khoản')
     })
+    expect(wrapper.find('icon-check-small-stub').exists()).toBe(true)
+  })
+
+  it('prevents duplicate copy actions while the clipboard request is in flight', async () => {
+    let resolveCopy: (() => void) | undefined
+    vi.mocked(navigator.clipboard.writeText).mockImplementationOnce(
+      () => new Promise<void>((resolve) => { resolveCopy = resolve }),
+    )
+    const wrapper = mount(PortalInvoicePaymentInstructions, {
+      props: { profile, amount: 1_500_000, mode: 'outstanding' },
+      global: { stubs },
+    })
+
+    const button = wrapper.get('[aria-label="Sao chép số tài khoản"]')
+    await button.trigger('click')
+
+    expect(button.attributes('disabled')).toBeDefined()
+    expect(button.attributes('aria-busy')).toBe('true')
+
+    resolveCopy?.()
+    await vi.waitFor(() => expect(toast.success).toHaveBeenCalled())
   })
 
   it('reports clipboard failure instead of claiming success', async () => {

@@ -3,22 +3,40 @@ import type { InvoiceProfileDisplay } from '~/types/building-invoice-profile'
 import { usePortalToast } from '~/composables/tenant-portal/usePortalToast'
 import { formatCurrencyNumber } from '~/utils/format/currency'
 
-const props = defineProps<{
+defineProps<{
   profile: InvoiceProfileDisplay | null
   amount: number
   mode: 'outstanding' | 'history'
 }>()
 
 const toast = usePortalToast()
+type CopyField = 'account' | 'content'
+const copying = ref<CopyField | null>(null)
+const copied = ref<CopyField | null>(null)
+let copiedTimer: ReturnType<typeof setTimeout> | undefined
 
-async function copyValue(value: string, successMessage: string) {
+async function copyValue(field: CopyField, value: string, successMessage: string) {
+  if (copying.value) return
+  copying.value = field
+  copied.value = null
   try {
     await navigator.clipboard.writeText(value)
+    copied.value = field
     toast.success(successMessage)
+    if (copiedTimer) clearTimeout(copiedTimer)
+    copiedTimer = setTimeout(() => {
+      copied.value = null
+    }, 2000)
   } catch {
     toast.error('Không thể sao chép. Hãy nhấn giữ để sao chép thủ công.')
+  } finally {
+    copying.value = null
   }
 }
+
+onBeforeUnmount(() => {
+  if (copiedTimer) clearTimeout(copiedTimer)
+})
 </script>
 
 <template>
@@ -78,9 +96,11 @@ async function copyValue(value: string, successMessage: string) {
               icon-only
               aria-label="Sao chép số tài khoản"
               class="shrink-0"
-              @click="copyValue(profile.accountNumber, 'Đã sao chép số tài khoản')"
+              :loading="copying === 'account'"
+              @click="copyValue('account', profile.accountNumber, 'Đã sao chép số tài khoản')"
             >
-              <IconCopy class="size-4" aria-hidden="true" />
+              <IconCheckSmall v-if="copied === 'account'" class="size-4" aria-hidden="true" />
+              <IconCopy v-else-if="copying !== 'account'" class="size-4" aria-hidden="true" />
             </PortalButton>
           </dd>
         </div>
@@ -97,9 +117,11 @@ async function copyValue(value: string, successMessage: string) {
               icon-only
               aria-label="Sao chép nội dung chuyển khoản"
               class="shrink-0"
-              @click="copyValue(profile.transferContent, 'Đã sao chép nội dung chuyển khoản')"
+              :loading="copying === 'content'"
+              @click="copyValue('content', profile.transferContent, 'Đã sao chép nội dung chuyển khoản')"
             >
-              <IconCopy class="size-4" aria-hidden="true" />
+              <IconCheckSmall v-if="copied === 'content'" class="size-4" aria-hidden="true" />
+              <IconCopy v-else-if="copying !== 'content'" class="size-4" aria-hidden="true" />
             </PortalButton>
           </dd>
         </div>
