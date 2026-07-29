@@ -26,6 +26,10 @@ const profile: TenantProfile = {
 }
 
 const stubs = {
+  NuxtLink: {
+    props: ['to'],
+    template: '<a :href="to"><slot /></a>',
+  },
   PortalCard: {
     props: ['padded'],
     template: '<section><slot /></section>',
@@ -82,6 +86,21 @@ describe('PortalProfileDossier', () => {
     expect(wrapper.text()).not.toContain('Hợp đồng')
   })
 
+  it('matches the Figma identity-first account hierarchy', () => {
+    const wrapper = mount(PortalProfileDossier, {
+      props: { profile },
+      global: { stubs },
+    })
+
+    expect(wrapper.get('a[href="/portal/profile/edit"]').text()).toContain('Sửa thông tin')
+    expect(wrapper.text()).toContain('Thông tin cá nhân')
+    expect(wrapper.text()).toContain('Liên hệ')
+    expect(wrapper.text()).toContain('Giấy tờ tùy thân')
+    expect(wrapper.text()).toContain('Liên hệ khẩn cấp')
+    expect(wrapper.text()).toContain('Ghi chú')
+    expect(wrapper.findAll('[data-profile-section]')).toHaveLength(5)
+  })
+
   it('uses an explicit missing-value label', () => {
     const wrapper = mount(PortalProfileDossier, {
       props: {
@@ -117,7 +136,7 @@ describe('PortalProfileDossier', () => {
       global: { stubs },
     })
 
-    expect(wrapper.text()).toContain('Thông tin định danh')
+    expect(wrapper.text()).toContain('Giấy tờ tùy thân')
     expect(wrapper.text()).not.toContain('Liên hệ ban quản lý')
     expect(wrapper.find('input').exists()).toBe(false)
   })

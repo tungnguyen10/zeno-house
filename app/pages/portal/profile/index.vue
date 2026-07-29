@@ -77,17 +77,6 @@ async function onLogout() {
 
 <template>
   <div>
-    <Teleport to="#portal-header-action">
-      <NuxtLink
-        v-if="profileStatus === 'success' && profile"
-        to="/portal/profile/edit"
-        class="inline-flex min-h-11 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-theme px-3 text-sm font-semibold text-[color:var(--portal-bg)] transition-colors hover:bg-theme/90 active:bg-theme/95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme/40 motion-reduce:transition-none"
-      >
-        <IconPencilSquare class="h-4 w-4" aria-hidden="true" />
-        Chỉnh sửa
-      </NuxtLink>
-    </Teleport>
-
     <div class="mx-auto w-full max-w-2xl space-y-5 px-4 py-5 lg:px-8 lg:py-8">
       <div v-if="profileStatus === 'pending'" class="space-y-5">
         <PortalSkeleton variant="statement" class="h-40" />
@@ -108,15 +97,18 @@ async function onLogout() {
         <PortalProfileDossier :profile="profile" />
 
         <section aria-labelledby="profile-identity-images-heading" class="space-y-3">
-          <div class="px-1">
-            <h2 id="profile-identity-images-heading" class="portal-type-heading text-title">
-              Ảnh định danh
-            </h2>
-            <p class="mt-1 portal-type-caption text-body">
-              Ảnh hai mặt CCCD/CMND dùng để đối chiếu hồ sơ.
-            </p>
+          <div class="flex items-start gap-2 px-1">
+            <IconShield class="mt-0.5 h-5 w-5 shrink-0 text-theme" aria-hidden="true" />
+            <div class="min-w-0">
+              <h2 id="profile-identity-images-heading" class="portal-type-heading text-title">
+                Ảnh định danh (CCCD)
+              </h2>
+              <p class="mt-1 portal-type-caption text-body">
+                Ảnh hai mặt CCCD/CMND dùng để đối chiếu hồ sơ.
+              </p>
+            </div>
           </div>
-          <PortalCard class="grid w-full grid-cols-2 gap-2.5 sm:gap-4">
+          <PortalCard class="grid w-full gap-4 md:grid-cols-2">
             <PortalIdentityImageSlot
               label="Mặt trước"
               :signed-url="identity.images.value.frontSignedUrl"
@@ -131,7 +123,8 @@ async function onLogout() {
         </section>
 
         <section aria-labelledby="profile-security-heading" class="space-y-3">
-          <div class="px-1">
+          <div class="flex items-center gap-2 px-1">
+            <IconLock class="h-5 w-5 shrink-0 text-theme" aria-hidden="true" />
             <h2 id="profile-security-heading" class="portal-type-heading text-title">
               Bảo mật
             </h2>
@@ -161,7 +154,8 @@ async function onLogout() {
         </section>
 
         <section aria-labelledby="profile-documents-heading" class="space-y-3">
-          <div class="flex items-center justify-between gap-3 px-1">
+          <div class="flex items-start gap-2 px-1">
+            <IconDocument class="mt-0.5 h-5 w-5 shrink-0 text-theme" aria-hidden="true" />
             <div class="min-w-0">
               <h2 id="profile-documents-heading" class="portal-type-heading text-title">
                 Tài liệu
@@ -170,15 +164,6 @@ async function onLogout() {
                 JPEG, PNG, WebP hoặc PDF, tối đa 5MB.
               </p>
             </div>
-            <PortalButton
-              variant="ghost"
-              size="sm"
-              :loading="docs.uploading.value"
-              @click="pickDocument"
-            >
-              <IconPlus class="h-4 w-4" aria-hidden="true" />
-              Tải lên
-            </PortalButton>
           </div>
 
           <div v-if="docs.uploading.value" class="px-1">
@@ -193,6 +178,16 @@ async function onLogout() {
               Đang tải lên {{ docs.progress.value }}%
             </p>
           </div>
+
+          <PortalButton
+            variant="secondary"
+            block
+            :loading="docs.uploading.value"
+            @click="pickDocument"
+          >
+            <IconPlus class="h-4 w-4" aria-hidden="true" />
+            Tải tài liệu
+          </PortalButton>
 
           <PortalSkeleton
             v-if="docs.status.value === 'pending'"
@@ -259,11 +254,13 @@ async function onLogout() {
           >
         </section>
 
-        <div class="border-t border-border-light pt-5">
-          <PortalButton variant="secondary" block @click="onLogout">
-            <IconLogOut class="h-4 w-4 text-portal-danger" aria-hidden="true" />
-            Đăng xuất
-          </PortalButton>
+        <div class="pt-1">
+          <div class="rounded-xl bg-smoke-blue">
+            <PortalButton variant="ghost" block @click="onLogout">
+              <IconLogOut class="h-4 w-4" aria-hidden="true" />
+              Đăng xuất
+            </PortalButton>
+          </div>
         </div>
       </template>
     </div>

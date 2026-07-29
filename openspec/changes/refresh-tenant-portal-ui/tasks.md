@@ -63,3 +63,8 @@
 - [x] 9.2 Move identity-image controls to profile edit and keep view previews read-only
 - [x] 9.3 Add profile security action and current-password-verified password route
 - [x] 9.4 Verify focused tests, typecheck, lint, OpenSpec, full regression, and affected UI states
+
+## 10. Figma-aligned profile layout
+
+- [x] 10.1 Align `/portal/profile` with the approved centered identity card and icon-led account sections
+- [x] 10.2 Preserve portal light/dark semantic tokens, responsive identity previews, profile actions, and focused regression coverage

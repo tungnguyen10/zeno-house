@@ -77,7 +77,7 @@ The portal SHALL provide overview, invoices list, invoice detail, room/contract,
 - **AND** room, building, contract, and occupancy details are not duplicated
 
 #### Scenario: Dedicated self-service edit screen
-- **WHEN** a tenant chooses `Chỉnh sửa`
+- **WHEN** a tenant chooses `Sửa thông tin`
 - **THEN** the portal opens `/portal/profile/edit`
 - **AND** only the twelve whitelisted self-service fields are editable
 - **AND** the update payload contains only normalized changed fields

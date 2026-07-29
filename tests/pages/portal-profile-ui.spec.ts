@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest'
 
 const viewPage = readFileSync(resolve('app/pages/portal/profile/index.vue'), 'utf8')
 const editPage = readFileSync(resolve('app/pages/portal/profile/edit.vue'), 'utf8')
+const dossier = readFileSync(resolve('app/components/portal/PortalProfileDossier.vue'), 'utf8')
 
 describe('portal profile refreshed UI', () => {
   it('uses the shared page rhythm, type roles, and matching skeletons', () => {
@@ -16,8 +17,8 @@ describe('portal profile refreshed UI', () => {
 
   it('renders the dossier and routes editing to a dedicated screen', () => {
     expect(viewPage).toContain('<PortalProfileDossier :profile="profile"')
-    expect(viewPage).toContain('<Teleport to="#portal-header-action">')
-    expect(viewPage).toContain('to="/portal/profile/edit"')
+    expect(viewPage).not.toContain('<Teleport to="#portal-header-action">')
+    expect(viewPage).not.toContain('to="/portal/profile/edit"')
     expect(viewPage).not.toContain('mode === \'view\'')
     expect(viewPage).not.toContain('@submit.prevent="onSave"')
   })
@@ -28,7 +29,18 @@ describe('portal profile refreshed UI', () => {
     expect(viewPage).not.toContain('onIdentitySelect')
     expect(viewPage).not.toContain('onIdentityRemove')
     expect(viewPage).toContain('docs.documents.value')
+    expect(viewPage).toContain('md:grid-cols-2')
+    expect(viewPage).not.toContain('grid-cols-2 gap-2.5')
     expect(viewPage).toContain('Đăng xuất')
+  })
+
+  it('uses Figma-style icon-led account sections with portal tokens', () => {
+    expect(viewPage).toContain('IconShield')
+    expect(viewPage).toContain('IconLock')
+    expect(viewPage).toContain('IconDocument')
+    expect(viewPage).toContain('text-theme')
+    expect(dossier).toContain('border-border-light')
+    expect(`${viewPage}\n${dossier}`).not.toMatch(/#[0-9a-f]{3,8}/i)
   })
 
   it('uses semantic upload progress without inline presentation styles', () => {
@@ -61,8 +73,8 @@ describe('portal profile refreshed UI', () => {
     expect(editPage).toContain("onIdentitySelect('back', file)")
     expect(editPage).toContain("onIdentityRemove('front')")
     expect(editPage).toContain("onIdentityRemove('back')")
-    expect(editPage).toContain('max-w-60')
-    expect(editPage).toContain('min-[23.4375rem]:grid-cols-2')
+    expect(editPage).toContain('grid-cols-2 gap-2.5')
+    expect(editPage).toContain('sm:gap-3')
   })
 
   it('links profile security to the dedicated password route', () => {
