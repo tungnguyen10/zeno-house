@@ -20,8 +20,8 @@ describe('portal home refreshed statement UI', () => {
     expect(page).toContain('class="portal-money-unit"')
   })
 
-  it('uses the statement skeleton shape while the hero is loading', () => {
-    expect(page).toContain('<PortalSkeleton v-if="loading" variant="statement"')
+  it('matches the room keycard height while the hero is loading', () => {
+    expect(page).toContain('<PortalSkeleton v-if="loading" variant="statement" class="h-56"')
   })
 
   it('labels roommate access and names the primary tenant', () => {
@@ -43,15 +43,41 @@ describe('portal home refreshed statement UI', () => {
     expect(identityGreeting).toBeGreaterThan(roomTitle)
     expect(page).toContain("navigateTo('/portal/room')")
     expect(page).toContain('Chưa có nơi ở đang hoạt động.')
+    expect(page).not.toContain('formattedDate')
   })
 
-  it('places the financial overview before quick actions', () => {
+  it('integrates the financial overview and metrics into one card', () => {
     expect(page).toContain('const financialOverview = computed')
     expect(page).toContain('Bình quân mỗi tháng')
     expect(page).toContain('Tỷ lệ đã thanh toán')
     expect(page).toContain('grid-cols-[minmax(0,1fr)_minmax(0,1fr)]')
     expect(page).toContain('text-[color:var(--portal-positive-ink)]')
-    expect(page.indexOf('Financial overview')).toBeLessThan(page.indexOf('Quick actions'))
+    expect(page).toContain('<!-- Integrated finance metrics -->')
+    expect(page).not.toContain('<!-- Quick actions -->')
+    expect(page).not.toContain("navigateTo('/portal/requests')")
+    expect(page).not.toContain("navigateTo('/portal/profile')")
+  })
+
+  it('turns an outstanding latest invoice into the primary debt action', () => {
+    expect(page).toContain('const latestInvoiceHeading = computed')
+    expect(page).toContain("'Công nợ cần xử lý'")
+    expect(page).toContain("'Hoá đơn mới nhất'")
+    expect(page).toContain('{{ latestInvoiceHeading }}')
+    expect(page).toContain('Xem chi tiết')
+    expect(page).toContain('formatViDate(latest.dueDate)')
+  })
+
+  it('replaces misleading empty content with a retry state when bootstrap fails', () => {
+    expect(page).toContain('error: bootstrapError')
+    expect(page).toContain('v-if="!loading && bootstrapError"')
+    expect(page).toContain('title="Không tải được trang chủ"')
+    expect(page).toContain('action-label="Thử lại"')
+    expect(page.indexOf('v-if="!loading && bootstrapError"')).toBeLessThan(page.indexOf('<!-- Identity hero'))
+  })
+
+  it('uses semantic second-level headings for home sections', () => {
+    expect(page).toContain('<h2 class="portal-type-heading')
+    expect(page).not.toContain('<h3 class="portal-type-heading')
   })
 
   it('records the financial overview behavior in the accepted portal spec', () => {

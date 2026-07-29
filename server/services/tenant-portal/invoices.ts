@@ -5,7 +5,9 @@ import type { TenantInvoiceListQuery } from '~/utils/validators/tenant-portal'
 import { mapTenantInvoiceDetail, mapTenantInvoiceListItem } from '~/utils/mappers/tenant-portal'
 import { TenantInvoiceRepository, type TenantInvoiceScope } from '../../repositories/tenant-portal/invoices'
 import { TenantHousingRepository } from '../../repositories/tenant-portal/housing'
+import { BuildingInvoiceProfileRepository } from '../../repositories/building-invoice-profiles'
 import { deriveInvoiceListStatus } from '../billing/invoice-query'
+import { InvoiceProfileDisplayService } from '../billing/invoice-profile-display'
 import { resolveTenantId } from '../../utils/scope'
 import { can } from '../../utils/permissions'
 import { throwForbidden, throwNotFound } from '../../utils/errors'
@@ -69,9 +71,14 @@ export const TenantInvoiceService = {
     const scope = await resolveInvoiceScope(event, id, today)
     const detail = await TenantInvoiceRepository.findDetail(event, scope, invoiceId)
     if (!detail) throwNotFound()
+    const snapshots = await BuildingInvoiceProfileRepository.findInvoiceSnapshotsByIds(
+      event,
+      [detail.invoice.id],
+    )
+    const profiles = await InvoiceProfileDisplayService.resolveMany(event, snapshots)
     return mapTenantInvoiceDetail({
       ...detail.invoice,
       status: deriveInvoiceListStatus(detail.invoice, today),
-    }, detail.charges)
+    }, detail.charges, profiles.get(detail.invoice.id) ?? null)
   },
 }

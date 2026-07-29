@@ -20,6 +20,12 @@ const { invoice, status, error, refresh } = usePortalInvoiceDetail(id)
 const chargeGroups = computed(() =>
   invoice.value ? groupChargeLines(invoice.value.charges) : [],
 )
+const isVoid = computed(() => invoice.value?.status === 'void')
+const showOutstandingPayment = computed(() => {
+  if (!invoice.value || invoice.value.balanceAmount <= 0) return false
+  return ['issued', 'partial', 'overdue'].includes(invoice.value.status)
+})
+const showPaymentHistory = computed(() => invoice.value?.status === 'paid')
 
 function chargeLineUnit(chargeType: string): string | null {
   if (chargeType === 'electricity') return 'kWh'
@@ -72,7 +78,7 @@ function chargeLineUnit(chargeType: string): string | null {
           </div>
           <div v-if="invoice.dueDate">
             <p class="portal-type-caption text-body">Hạn thanh toán</p>
-            <p class="portal-type-body mt-0.5 font-medium text-title">{{ invoice.dueDate }}</p>
+            <p class="portal-type-body mt-0.5 font-medium text-title">{{ formatViDate(invoice.dueDate) }}</p>
           </div>
         </div>
 
@@ -111,9 +117,32 @@ function chargeLineUnit(chargeType: string): string | null {
         </dl>
       </PortalCard>
 
+      <!-- Void context -->
+      <PortalCard v-if="isVoid">
+        <div class="flex items-start gap-3">
+          <span class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-portal-danger/10 text-portal-danger-ink">
+            <IconAlertCircle class="size-5" aria-hidden="true" />
+          </span>
+          <div class="min-w-0">
+            <h2 class="portal-type-heading text-title">Hoá đơn đã huỷ</h2>
+            <p class="portal-type-caption mt-1 whitespace-pre-line text-body">
+              {{ invoice.voidReason || 'Hoá đơn này không còn hiệu lực thanh toán.' }}
+            </p>
+          </div>
+        </div>
+      </PortalCard>
+
+      <!-- Outstanding payment action -->
+      <PortalInvoicePaymentInstructions
+        v-if="!isVoid && showOutstandingPayment"
+        :profile="invoice.invoiceProfile"
+        :amount="invoice.balanceAmount"
+        mode="outstanding"
+      />
+
       <!-- Charge breakdown -->
       <section v-if="chargeGroups.length" class="space-y-3">
-        <h3 class="portal-type-heading px-1 text-title">Chi tiết khoản thu</h3>
+        <h2 class="portal-type-heading px-1 text-title">Chi tiết khoản thu</h2>
         <PortalCard :padded="false">
           <section v-for="group in chargeGroups" :key="group.key" class="border-b border-border-light last:border-b-0">
             <!-- Section label: small muted uppercase caption — clearly a category, not an item -->
@@ -144,6 +173,14 @@ function chargeLineUnit(chargeType: string): string | null {
           </div>
         </PortalCard>
       </section>
+
+      <!-- Settled payment history -->
+      <PortalInvoicePaymentInstructions
+        v-if="!isVoid && showPaymentHistory"
+        :profile="invoice.invoiceProfile"
+        :amount="invoice.balanceAmount"
+        mode="history"
+      />
 
       <!-- Notes -->
       <PortalCard v-if="invoice.notes">

@@ -6,6 +6,7 @@ import type {
   TenantSupportRequest,
   TenantSupportRequestStatus,
 } from '~/types/tenant-portal'
+import type { InvoiceProfileDisplay } from '~/types/building-invoice-profile'
 import type { ContractStatus } from '~/types/contracts'
 import type { Tables } from '~/types/database.types'
 import type { InvoiceListItem } from '~/utils/validators/invoices'
@@ -126,9 +127,11 @@ export function mapTenantInvoiceListItem(row: InvoiceListItem): TenantInvoiceLis
 export function mapTenantInvoiceDetail(
   row: InvoiceListItem,
   charges: TenantInvoiceChargeRow[],
+  invoiceProfile: InvoiceProfileDisplay | null = null,
 ): TenantInvoiceDetail {
   return {
     ...mapTenantInvoiceListItem(row),
+    invoiceProfile,
     charges: charges.map(charge => ({
       id: charge.id,
       chargeType: charge.charge_type,
