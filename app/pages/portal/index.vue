@@ -60,7 +60,7 @@ async function refreshAll() {
 <template>
   <PortalPullToRefresh :on-refresh="refreshAll">
     <div class="space-y-5 px-4 py-5 lg:px-8 lg:py-8">
-      <!-- Identity hero: greeting + room (unified) -->
+      <!-- Identity hero: room keycard -->
       <section>
         <PortalSkeleton v-if="loading" variant="statement" class="h-44" />
         <PortalCard
@@ -69,27 +69,24 @@ async function refreshAll() {
           class="flex flex-col"
           @click="contract ? navigateTo('/portal/room') : undefined"
         >
-          <!-- Greeting row: avatar + name + date -->
-          <div class="flex items-start gap-3">
-            <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-smoke-blue portal-type-label font-bold text-theme">
-              {{ initials }}
-            </span>
-            <div class="min-w-0 flex-1">
-              <p class="portal-type-caption text-body">{{ greeting }}</p>
-              <p class="portal-type-display mt-0.5 text-title">{{ profile?.fullName ?? 'Người thuê' }}</p>
-            </div>
-            <p class="portal-type-caption shrink-0 pt-0.5 text-right text-body">{{ formattedDate }}</p>
-          </div>
-
           <template v-if="contract">
-            <!-- Room row -->
-            <div class="mt-3 flex items-center gap-3 border-t border-border-light pt-3">
-              <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-smoke-blue text-theme">
-                <IconDoor class="h-5 w-5" aria-hidden="true" />
-              </span>
-              <div class="min-w-0 flex-1">
-                <div class="flex flex-wrap items-center gap-2">
-                  <p class="portal-type-label text-title">Phòng {{ contract.roomNumber }}</p>
+            <!-- Room keycard header -->
+            <div class="flex items-start justify-between gap-3">
+              <p class="portal-type-caption min-w-0 truncate text-body">
+                {{ contract.buildingName }}
+              </p>
+              <p class="portal-type-caption shrink-0 text-right text-body">
+                {{ formattedDate }}
+              </p>
+            </div>
+
+            <div class="mt-2.5 flex items-end justify-between gap-3">
+              <div class="min-w-0">
+                <p class="portal-type-caption text-body">Nơi ở hiện tại</p>
+                <div class="mt-0.5 flex min-w-0 flex-wrap items-center gap-2">
+                  <p class="portal-type-display min-w-0 break-words text-title">
+                    Phòng {{ contract.roomNumber }}
+                  </p>
                   <span
                     v-if="contract.assignmentRole === 'roommate'"
                     class="rounded-full bg-theme/10 px-2 py-0.5 portal-type-caption font-semibold text-theme"
@@ -97,31 +94,61 @@ async function refreshAll() {
                     Người ở cùng
                   </span>
                 </div>
-                <p class="portal-type-caption truncate text-body">{{ contract.buildingName }}</p>
-                <p
-                  v-if="contract.assignmentRole === 'roommate' && contract.primaryTenantName"
-                  class="portal-type-caption mt-0.5 truncate text-body"
-                >
-                  Người đứng hợp đồng: {{ contract.primaryTenantName }}
+              </div>
+              <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-smoke-blue text-theme">
+                <IconDoor class="h-5 w-5" aria-hidden="true" />
+              </span>
+            </div>
+
+            <div class="mt-3 grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-x-4 rounded-xl bg-smoke-card px-3 py-2.5">
+              <div class="min-w-0">
+                <p class="portal-type-caption text-body">Tiền thuê</p>
+                <p class="portal-money mt-0.5 break-words text-sm font-semibold text-title">
+                  {{ formatCurrency(contract.monthlyRent) }}<span class="font-normal text-body">/th</span>
                 </p>
               </div>
-              <IconChevronRight class="h-4 w-4 shrink-0 text-body" aria-hidden="true" />
-            </div>
-            <!-- Contract stats panel -->
-            <div class="mt-2.5 grid grid-cols-2 gap-x-4 rounded-xl bg-smoke-card px-3 py-2.5">
-              <div>
-                <p class="portal-type-caption text-body">Tiền thuê</p>
-                <p class="portal-money mt-0.5 text-sm font-semibold text-title">{{ formatCurrency(contract.monthlyRent) }}<span class="font-normal text-body">/th</span></p>
-              </div>
-              <div>
+              <div class="min-w-0">
                 <p class="portal-type-caption text-body">Hợp đồng</p>
-                <p class="portal-money mt-0.5 text-sm font-semibold text-title">{{ formatViDate(contract.startDate) }} – {{ formatViDate(contract.endDate) }}</p>
+                <p class="portal-money mt-0.5 break-words text-sm font-semibold text-title">
+                  {{ formatViDate(contract.startDate) }} – {{ formatViDate(contract.endDate) }}
+                </p>
               </div>
             </div>
           </template>
 
-          <p v-else class="portal-type-caption mt-3 border-t border-border-light pt-3 text-body">
-            Chưa có hợp đồng đang hoạt động.
+          <p v-if="!contract" class="portal-type-caption text-right text-body">
+            {{ formattedDate }}
+          </p>
+
+          <!-- Room keycard identity footer -->
+          <div
+            class="flex items-center gap-3"
+            :class="contract ? 'mt-3 border-t border-border-light pt-3' : 'mt-2'"
+          >
+            <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-smoke-blue portal-type-label font-bold text-theme">
+              {{ initials }}
+            </span>
+            <div class="min-w-0 flex-1">
+              <p class="portal-type-caption text-body">{{ greeting }}</p>
+              <p class="portal-type-label truncate text-title">
+                {{ profile?.fullName ?? 'Người thuê' }}
+              </p>
+              <p
+                v-if="contract?.assignmentRole === 'roommate' && contract.primaryTenantName"
+                class="portal-type-caption mt-0.5 truncate text-body"
+              >
+                Người đứng hợp đồng: {{ contract.primaryTenantName }}
+              </p>
+            </div>
+            <IconChevronRight
+              v-if="contract"
+              class="h-4 w-4 shrink-0 text-body"
+              aria-hidden="true"
+            />
+          </div>
+
+          <p v-if="!contract" class="portal-type-caption mt-3 border-t border-border-light pt-3 text-body">
+            Chưa có nơi ở đang hoạt động.
           </p>
         </PortalCard>
       </section>
