@@ -94,3 +94,20 @@ The portal document UI SHALL consume the archived storage convention and SHALL N
 #### Scenario: Signed URLs are not persisted client-side
 - **WHEN** the portal renders a signed URL for an identity image or document
 - **THEN** the URL is treated as ephemeral and is not written to the service-worker cache
+
+---
+
+### Requirement: Tenant financial overview
+The portal home SHALL summarize recent invoice activity using existing tenant invoice data and the portal design system.
+
+#### Scenario: Tenant has enough invoice history
+- **WHEN** the tenant has at least two invoices
+- **THEN** the portal home displays up to the six newest invoice periods in chronological order
+- **AND** the chart distinguishes total invoice value from paid value
+- **AND** the home displays average monthly invoice value and the paid ratio
+- **AND** chart colors resolve from the active portal theme
+- **AND** chart animation is disabled when the tenant prefers reduced motion
+
+#### Scenario: Tenant has insufficient invoice history
+- **WHEN** the tenant has fewer than two invoices
+- **THEN** the financial overview is not displayed

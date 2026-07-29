@@ -3,6 +3,7 @@ import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 const page = readFileSync(resolve('app/pages/portal/index.vue'), 'utf8')
+const spec = readFileSync(resolve('openspec/specs/tenant-portal-ui/spec.md'), 'utf8')
 
 describe('portal home refreshed statement UI', () => {
   it('uses the shared portal page and type rhythm', () => {
@@ -27,5 +28,19 @@ describe('portal home refreshed statement UI', () => {
     expect(page).toContain("contract.assignmentRole === 'roommate'")
     expect(page).toContain('Người ở cùng')
     expect(page).toContain('Người đứng hợp đồng: {{ contract.primaryTenantName }}')
+  })
+
+  it('places the financial overview before quick actions', () => {
+    expect(page).toContain('const financialOverview = computed')
+    expect(page).toContain('Bình quân mỗi tháng')
+    expect(page).toContain('Tỷ lệ đã thanh toán')
+    expect(page).toContain('grid-cols-[minmax(0,1fr)_minmax(0,1fr)]')
+    expect(page.indexOf('Financial overview')).toBeLessThan(page.indexOf('Quick actions'))
+  })
+
+  it('records the financial overview behavior in the accepted portal spec', () => {
+    expect(spec).toContain('### Requirement: Tenant financial overview')
+    expect(spec).toContain('up to the six newest invoice periods in chronological order')
+    expect(spec).toContain('chart animation is disabled')
   })
 })
