@@ -4,6 +4,7 @@ import type { TenantGender, TenantProfile } from '~/types/tenant-portal'
 interface DossierRow {
   label: string
   value: string
+  wide?: boolean
 }
 
 const props = defineProps<{
@@ -38,23 +39,27 @@ const statusLabel = computed(() => (
   props.profile.status === 'active' ? 'Đang thuê' : 'Đã lưu trữ'
 ))
 
+const statusTone = computed<'success' | 'neutral'>(() => (
+  props.profile.status === 'active' ? 'success' : 'neutral'
+))
+
 const personalRows = computed<DossierRow[]>(() => [
   {
     label: 'Giới tính',
     value: props.profile.gender ? genderLabels[props.profile.gender] : missing,
   },
   { label: 'Ngày sinh', value: dateOf(props.profile.dateOfBirth) },
-  { label: 'Nghề nghiệp', value: displayValue(props.profile.occupation) },
+  { label: 'Nghề nghiệp', value: displayValue(props.profile.occupation), wide: true },
 ])
 
 const contactRows = computed<DossierRow[]>(() => [
   { label: 'Số điện thoại', value: props.profile.phone },
   { label: 'Email', value: displayValue(props.profile.email) },
-  { label: 'Địa chỉ thường trú', value: displayValue(props.profile.permanentAddress) },
+  { label: 'Địa chỉ thường trú', value: displayValue(props.profile.permanentAddress), wide: true },
 ])
 
 const identityRows = computed<DossierRow[]>(() => [
-  { label: 'Số CCCD/CMND', value: displayValue(props.profile.idNumber) },
+  { label: 'Số CCCD/CMND', value: displayValue(props.profile.idNumber), wide: true },
   { label: 'Ngày cấp', value: dateOf(props.profile.idIssuedDate) },
   { label: 'Nơi cấp', value: displayValue(props.profile.idIssuedPlace) },
 ])
@@ -67,45 +72,41 @@ const emergencyRows = computed<DossierRow[]>(() => [
 
 <template>
   <div class="space-y-5">
-    <PortalCard class="flex flex-col items-center gap-4 px-4 py-5 text-center">
-      <div class="flex flex-col items-center gap-3">
+    <PortalCard :padded="false" class="overflow-hidden">
+      <div class="flex items-start gap-3.5 p-4">
         <span
-          class="flex size-[76px] shrink-0 items-center justify-center rounded-full border border-theme/30 bg-smoke-blue text-xl font-semibold text-theme shadow-[var(--portal-elevation-resting)]"
+          class="flex size-14 shrink-0 items-center justify-center rounded-2xl border border-theme/30 bg-smoke-blue text-lg font-semibold text-theme shadow-[var(--portal-elevation-resting)]"
           aria-hidden="true"
         >
           {{ initials }}
         </span>
-        <div class="min-w-0">
-          <p class="break-words text-xl font-semibold uppercase leading-7 text-title">
+        <div class="min-w-0 flex-1">
+          <p class="break-words text-lg font-semibold leading-6 text-title">
             {{ profile.fullName }}
           </p>
-          <div class="mt-1 flex min-w-0 flex-wrap items-center justify-center gap-x-2 gap-y-1">
-            <span class="portal-type-caption tabular-nums text-body">
-              {{ profile.code }}
-            </span>
-            <span
-              class="size-1.5 shrink-0 rounded-full"
-              :class="profile.status === 'active'
-                ? 'bg-[color:var(--portal-positive)]'
-                : 'bg-[color:var(--portal-muted)]'"
-              aria-hidden="true"
-            />
-            <span
-              class="portal-type-caption font-medium"
-              :class="profile.status === 'active' ? 'text-[color:var(--portal-positive-ink)]' : 'text-body'"
-            >
-              {{ statusLabel }}
-            </span>
-          </div>
+          <p class="mt-0.5 portal-type-caption tabular-nums text-body">
+            {{ profile.code }}
+          </p>
         </div>
+        <PortalChip :tone="statusTone" class="shrink-0">
+          {{ statusLabel }}
+        </PortalChip>
       </div>
 
       <NuxtLink
         to="/portal/profile/edit"
-        class="inline-flex min-h-11 items-center justify-center gap-2 whitespace-nowrap rounded-full border border-border-light bg-white px-4 portal-type-caption font-semibold text-body transition-colors hover:border-theme/40 hover:bg-smoke-blue hover:text-theme active:bg-smoke-blue focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme/40 focus-visible:ring-offset-2 motion-reduce:transition-none"
+        class="flex min-h-14 items-center gap-3 border-t border-border-light px-4 py-3 transition-colors hover:bg-smoke focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-theme/40 motion-reduce:transition-none"
       >
-        <IconPencilSquare class="h-4 w-4" aria-hidden="true" />
-        Sửa thông tin
+        <span
+          class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-smoke-blue text-theme"
+          aria-hidden="true"
+        >
+          <IconPencilSquare class="h-4 w-4" />
+        </span>
+        <span class="min-w-0 flex-1 portal-type-body font-semibold text-title">
+          Sửa thông tin
+        </span>
+        <IconChevronRight class="h-5 w-5 shrink-0 text-body" aria-hidden="true" />
       </NuxtLink>
     </PortalCard>
 
@@ -116,17 +117,18 @@ const emergencyRows = computed<DossierRow[]>(() => [
           Thông tin cá nhân
         </h2>
       </div>
-      <PortalCard :padded="false" class="overflow-hidden">
-        <dl class="divide-y divide-border-light">
+      <PortalCard>
+        <dl class="grid grid-cols-2 gap-2.5">
           <div
             v-for="row in personalRows"
             :key="row.label"
-            class="grid min-w-0 grid-cols-[minmax(6.5rem,38%)_minmax(0,1fr)] gap-3 px-4 py-3"
+            class="min-w-0 rounded-xl border border-border-light bg-smoke px-3.5 py-2.5"
+            :class="row.wide ? 'col-span-2' : ''"
           >
-            <dt class="portal-type-body text-body">
+            <dt class="portal-type-caption text-body">
               {{ row.label }}
             </dt>
-            <dd class="min-w-0 whitespace-pre-line break-words text-right portal-type-body font-medium text-[color:var(--portal-accent-hover)]">
+            <dd class="mt-1 whitespace-pre-line break-words portal-type-body font-semibold text-title">
               {{ row.value }}
             </dd>
           </div>
@@ -141,17 +143,18 @@ const emergencyRows = computed<DossierRow[]>(() => [
           Liên hệ
         </h2>
       </div>
-      <PortalCard :padded="false" class="overflow-hidden">
-        <dl class="divide-y divide-border-light">
+      <PortalCard>
+        <dl class="grid grid-cols-2 gap-2.5">
           <div
             v-for="row in contactRows"
             :key="row.label"
-            class="grid min-w-0 grid-cols-[minmax(6.5rem,38%)_minmax(0,1fr)] gap-3 px-4 py-3"
+            class="min-w-0 rounded-xl border border-border-light bg-smoke px-3.5 py-2.5"
+            :class="row.wide ? 'col-span-2' : ''"
           >
-            <dt class="portal-type-body text-body">
+            <dt class="portal-type-caption text-body">
               {{ row.label }}
             </dt>
-            <dd class="min-w-0 whitespace-pre-line break-words text-right portal-type-body font-medium text-[color:var(--portal-accent-hover)]">
+            <dd class="mt-1 whitespace-pre-line break-words portal-type-body font-semibold text-title">
               {{ row.value }}
             </dd>
           </div>
@@ -166,20 +169,21 @@ const emergencyRows = computed<DossierRow[]>(() => [
           Giấy tờ tùy thân
         </h2>
       </div>
-      <PortalCard :padded="false" class="overflow-hidden">
-        <p class="border-b border-border-light px-4 py-3 portal-type-caption text-body">
+      <PortalCard>
+        <p class="portal-type-caption text-body">
           Thông tin trên giấy tờ tùy thân dùng để đối chiếu hồ sơ.
         </p>
-        <dl class="divide-y divide-border-light">
+        <dl class="mt-3 grid grid-cols-2 gap-2.5">
           <div
             v-for="row in identityRows"
             :key="row.label"
-            class="grid min-w-0 grid-cols-[minmax(6.5rem,38%)_minmax(0,1fr)] gap-3 px-4 py-3"
+            class="min-w-0 rounded-xl border border-border-light bg-smoke px-3.5 py-2.5"
+            :class="row.wide ? 'col-span-2' : ''"
           >
-            <dt class="portal-type-body text-body">
+            <dt class="portal-type-caption text-body">
               {{ row.label }}
             </dt>
-            <dd class="min-w-0 break-words text-right portal-type-body font-medium text-[color:var(--portal-accent-hover)]">
+            <dd class="mt-1 break-words portal-type-body font-semibold text-title">
               {{ row.value }}
             </dd>
           </div>
@@ -194,17 +198,18 @@ const emergencyRows = computed<DossierRow[]>(() => [
           Liên hệ khẩn cấp
         </h2>
       </div>
-      <PortalCard :padded="false" class="overflow-hidden">
-        <dl class="divide-y divide-border-light">
+      <PortalCard>
+        <dl class="grid grid-cols-2 gap-2.5">
           <div
             v-for="row in emergencyRows"
             :key="row.label"
-            class="grid min-w-0 grid-cols-[minmax(6.5rem,38%)_minmax(0,1fr)] gap-3 px-4 py-3"
+            class="min-w-0 rounded-xl border border-border-light bg-smoke px-3.5 py-2.5"
+            :class="row.wide ? 'col-span-2' : ''"
           >
-            <dt class="portal-type-body text-body">
+            <dt class="portal-type-caption text-body">
               {{ row.label }}
             </dt>
-            <dd class="min-w-0 break-words text-right portal-type-body font-medium text-[color:var(--portal-accent-hover)]">
+            <dd class="mt-1 break-words portal-type-body font-semibold text-title">
               {{ row.value }}
             </dd>
           </div>
