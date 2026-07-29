@@ -21,6 +21,11 @@ interface ContractRow {
   end_date: string
   monthly_rent: number
   deposit: number
+  payment_day: number | null
+  occupant_count: number
+  discount_amount: number
+  surcharge_amount: number
+  notes: string | null
   status: string
   tenants: { full_name: string | null } | Array<{ full_name: string | null }> | null
   rooms: {
@@ -45,6 +50,11 @@ const CONTRACT_SELECT = `
   end_date,
   monthly_rent,
   deposit,
+  payment_day,
+  occupant_count,
+  discount_amount,
+  surcharge_amount,
+  notes,
   status,
   tenants(full_name),
   rooms!inner(room_number, buildings!inner(name))

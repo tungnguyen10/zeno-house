@@ -61,6 +61,11 @@ export interface TenantContractSummary {
   endDate: string
   monthlyRent: number
   deposit: number
+  paymentDay: number | null
+  occupantCount: number
+  discountAmount: number
+  surchargeAmount: number
+  notes: string | null
   status: ContractStatus
   assignmentRole: 'primary' | 'roommate'
   primaryTenantName: string | null

@@ -37,6 +37,11 @@ interface TenantContractSummaryRow {
   end_date: string
   monthly_rent: number
   deposit: number
+  payment_day: number | null
+  occupant_count: number
+  discount_amount: number
+  surcharge_amount: number
+  notes: string | null
   status: string
   rooms: {
     room_number: string | null
@@ -92,6 +97,11 @@ export function mapTenantContractSummary(
     endDate: row.end_date,
     monthlyRent: row.monthly_rent,
     deposit: row.deposit,
+    paymentDay: row.payment_day,
+    occupantCount: row.occupant_count,
+    discountAmount: row.discount_amount,
+    surchargeAmount: row.surcharge_amount,
+    notes: row.notes,
     status: row.status as ContractStatus,
     assignmentRole,
     primaryTenantName,
