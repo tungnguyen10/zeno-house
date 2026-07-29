@@ -27,6 +27,7 @@ export const AUDIT_ACTIONS = {
   TENANT_ACCOUNT_ENABLED: 'tenant.account.enabled',
   TENANT_ACCOUNT_PASSWORD_RESET: 'tenant.account.password_reset',
   TENANT_ACCOUNT_REVOKED: 'tenant.account.revoked',
+  TENANT_ACCOUNT_ORPHAN_RECONCILED: 'tenant.account.orphan_reconciled',
   TENANT_ACCOUNT_PASSWORD_CHANGED: 'tenant.account.password_changed',
   SUPPORT_REQUEST_CREATED: 'support_request.created',
 

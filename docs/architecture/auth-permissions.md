@@ -91,7 +91,9 @@ still call `requireAuth`; this is the only server namespace available to a missi
 It actively rejects tenant JWTs on internal APIs and internal-role JWTs on tenant
 APIs. Both mismatch directions use the same not-found response so the guard does not reveal
 whether a route or resource exists. Unauthenticated requests continue to the endpoint's normal
-auth check.
+auth check. Tenant API requests additionally read the authoritative Auth identity for the current
+request and require a non-deleted account whose live role is still `tenant`; a stale access token
+cannot retain business-data access after the role or account is removed.
 
 API handlers can also call:
 
@@ -131,6 +133,8 @@ first, and updates `app_metadata.role` last. Finalization is fenced by the token
 preserves the processing request and its exact grants because a timed-out write may still commit;
 repeating the same decision fills missing scope and retries or finalizes idempotently. A role-less
 request is never time-reclaimed. Creation, approval, and rejection emit secret-free audit actions.
+The idempotent creation event is attributed to the requesting Auth subject, not the admin who
+happens to view the queue first.
 
 Owner has full operational access, but limited to assigned buildings:
 
@@ -183,6 +187,11 @@ Internal building scope and tenant self-scope are separate mechanisms:
 - Tenant self-select RLS policies on `tenants`, `contract_occupants`, `contracts`, and `invoices`
   also resolve identity through `tenant_user_links`, `auth.uid()`, and an active link. Roommates
   can read the current shared contract and its invoices but never the primary tenant profile.
+
+Tenant account revocation is disable-first and reports its physical Auth outcome. A hard delete is
+attempted first. If retained history still references the Auth user, the repository uses
+irreversible Auth soft deletion and removes the portal link explicitly. Admin-only orphan
+reconciliation applies the same rule to tenant-role identities without a link.
 
 This is safe because browser code never queries business tables directly; all business data
 flows through `server/api/**` -> service -> repository. The client only uses Supabase for

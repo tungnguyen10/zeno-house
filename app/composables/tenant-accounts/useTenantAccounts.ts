@@ -2,6 +2,8 @@ import type { ApiSuccess } from '~/types/api'
 import type {
   TenantAccountCredentials,
   TenantAccountListItem,
+  TenantAccountOrphan,
+  TenantAccountRemovalResult,
   TenantAccountStatus,
 } from '~/types/tenant-accounts'
 import type { TenantAccountProvisionInput } from '~/utils/validators/tenant-accounts'
@@ -18,6 +20,9 @@ export function useTenantAccounts() {
   )
 
   const accounts = computed(() => data.value?.data ?? [])
+  const orphans = ref<TenantAccountOrphan[]>([])
+  const orphansLoading = ref(false)
+  const orphansError = ref<unknown>(null)
 
   async function provision(
     tenantId: string,
@@ -44,10 +49,52 @@ export function useTenantAccounts() {
     return res.data
   }
 
-  async function revoke(tenantId: string): Promise<void> {
-    await apiFetch(`/api/tenants/${tenantId}/account`, { method: 'DELETE' })
+  async function revoke(tenantId: string): Promise<TenantAccountRemovalResult> {
+    const res = await apiFetch<ApiSuccess<TenantAccountRemovalResult>>(
+      `/api/tenants/${tenantId}/account`,
+      { method: 'DELETE' },
+    )
     await refresh()
+    return res.data
   }
 
-  return { accounts, status, error, refresh, provision, setStatus, resetPassword, revoke }
+  async function loadOrphans(): Promise<void> {
+    orphansLoading.value = true
+    orphansError.value = null
+    try {
+      const res = await apiFetch<ApiSuccess<TenantAccountOrphan[]>>('/api/tenant-accounts/orphans')
+      orphans.value = res.data
+    }
+    catch (error) {
+      orphansError.value = error
+    }
+    finally {
+      orphansLoading.value = false
+    }
+  }
+
+  async function reconcileOrphan(authUserId: string): Promise<TenantAccountRemovalResult> {
+    const res = await apiFetch<ApiSuccess<TenantAccountRemovalResult>>(
+      `/api/tenant-accounts/orphans/${authUserId}`,
+      { method: 'DELETE' },
+    )
+    await loadOrphans()
+    return res.data
+  }
+
+  return {
+    accounts,
+    status,
+    error,
+    refresh,
+    orphans,
+    orphansLoading,
+    orphansError,
+    loadOrphans,
+    provision,
+    setStatus,
+    resetPassword,
+    revoke,
+    reconcileOrphan,
+  }
 }

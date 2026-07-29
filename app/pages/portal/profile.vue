@@ -18,7 +18,7 @@ setChrome({ title: 'Tài khoản', back: null })
 const toast = usePortalToast()
 const { logout } = useAuth()
 
-const { profile, status: profileStatus, error: profileError, refresh: refreshProfile, save, saving, fieldErrors }
+const { profile, status: profileStatus, error: profileError, refresh: refreshProfile, save, saving, fieldErrors, apiError }
   = usePortalProfile()
 const identity = usePortalIdentityImages()
 const docs = usePortalDocuments()
@@ -105,9 +105,6 @@ const form = reactive({
   date_of_birth: '' as string | null,
   occupation: '' as string | null,
   permanent_address: '' as string | null,
-  id_number: '' as string | null,
-  id_issued_date: '' as string | null,
-  id_issued_place: '' as string | null,
   emergency_contact_name: '' as string | null,
   emergency_contact_phone: '' as string | null,
   notes: '' as string | null,
@@ -116,15 +113,13 @@ const form = reactive({
 function openEdit() {
   const current = profile.value
   if (!current) return
+  apiError.value = null
   form.full_name = current.fullName ?? ''
   form.phone = current.phone ?? ''
   form.gender = current.gender ?? null
   form.date_of_birth = current.dateOfBirth ?? ''
   form.occupation = current.occupation ?? ''
   form.permanent_address = current.permanentAddress ?? ''
-  form.id_number = current.idNumber ?? ''
-  form.id_issued_date = current.idIssuedDate ?? ''
-  form.id_issued_place = current.idIssuedPlace ?? ''
   form.emergency_contact_name = current.emergencyContactName ?? ''
   form.emergency_contact_phone = current.emergencyContactPhone ?? ''
   form.notes = current.notes ?? ''
@@ -132,6 +127,7 @@ function openEdit() {
 }
 
 function cancelEdit() {
+  apiError.value = null
   mode.value = 'view'
 }
 
@@ -152,9 +148,6 @@ async function onSave() {
     date_of_birth: normalize(form.date_of_birth),
     occupation: normalize(form.occupation),
     permanent_address: normalize(form.permanent_address),
-    id_number: normalize(form.id_number),
-    id_issued_date: normalize(form.id_issued_date),
-    id_issued_place: normalize(form.id_issued_place),
     emergency_contact_name: normalize(form.emergency_contact_name),
     emergency_contact_phone: normalize(form.emergency_contact_phone),
     notes: normalize(form.notes),
@@ -492,24 +485,24 @@ const statusColor = computed(() => {
           <!-- Identity -->
           <section class="space-y-3">
             <h3 class="portal-type-heading px-1 text-title">Giấy tờ tùy thân</h3>
-            <PortalCard class="space-y-4">
-              <PortalInput
-                v-model="form.id_number"
-                label="Số CCCD/CMND"
-                inputmode="numeric"
-                :error="fieldErrors.id_number?.[0]"
-              />
-              <PortalInput
-                v-model="form.id_issued_date"
-                label="Ngày cấp"
-                type="date"
-                :error="fieldErrors.id_issued_date?.[0]"
-              />
-              <PortalInput
-                v-model="form.id_issued_place"
-                label="Nơi cấp"
-                :error="fieldErrors.id_issued_place?.[0]"
-              />
+            <PortalCard>
+              <p class="portal-type-caption mb-3 text-body">
+                Thông tin định danh do ban quản lý xác minh. Liên hệ ban quản lý nếu cần điều chỉnh.
+              </p>
+              <dl class="divide-y divide-border-light">
+                <div class="flex items-start justify-between gap-3 py-2.5 first:pt-0">
+                  <dt class="portal-type-body text-body">Số CCCD/CMND</dt>
+                  <dd class="portal-type-body text-right font-medium text-title">{{ profile.idNumber || '—' }}</dd>
+                </div>
+                <div class="flex items-start justify-between gap-3 py-2.5">
+                  <dt class="portal-type-body text-body">Ngày cấp</dt>
+                  <dd class="portal-type-body text-right font-medium text-title">{{ formatDate(profile.idIssuedDate) }}</dd>
+                </div>
+                <div class="flex items-start justify-between gap-3 py-2.5 last:pb-0">
+                  <dt class="portal-type-body text-body">Nơi cấp</dt>
+                  <dd class="portal-type-body max-w-[65%] break-words text-right font-medium text-title">{{ profile.idIssuedPlace || '—' }}</dd>
+                </div>
+              </dl>
             </PortalCard>
           </section>
 
@@ -545,6 +538,14 @@ const statusColor = computed(() => {
               />
             </PortalCard>
           </section>
+
+          <p
+            v-if="apiError"
+            role="alert"
+            class="rounded-xl border border-portal-danger/25 bg-portal-danger/5 px-4 py-3 portal-type-body text-portal-danger"
+          >
+            {{ apiError }}
+          </p>
 
           <div class="flex gap-3">
             <PortalButton variant="secondary" block :disabled="saving" @click="cancelEdit">Hủy</PortalButton>

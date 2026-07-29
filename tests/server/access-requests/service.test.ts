@@ -75,11 +75,10 @@ describe('AccessRequestService', () => {
     expect(result.email).toBe('user@example.com')
   })
 
-  it('delegates trigger-created audit to the atomic database operation', async () => {
+  it('attributes creation audit to the requester even when an admin first views the queue', async () => {
     const accessRequests = await service()
-    await accessRequests.getMine(event(), { id: 'u-1', app_metadata: {} } as AuthUser)
-    await accessRequests.getMine(event(), { id: 'u-1', app_metadata: {} } as AuthUser)
-    expect(requestRepo.appendCreationAuditOnce).toHaveBeenCalledTimes(2)
+    await accessRequests.list(event(), actor('admin'), 'pending')
+    expect(requestRepo.appendCreationAuditOnce).toHaveBeenCalledTimes(1)
     expect(requestRepo.appendCreationAuditOnce).toHaveBeenCalledWith(expect.anything(), 'r-1', 'u-1')
     expect(auditService.append).not.toHaveBeenCalledWith(expect.anything(), expect.anything(), expect.objectContaining({ action: 'user.access_request.created' }))
   })

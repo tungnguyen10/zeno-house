@@ -6,10 +6,10 @@ const page = readFileSync(resolve('app/pages/dashboard/settings/tenant-accounts.
 
 describe('tenant account provisioning roommate context', () => {
   it('shows assignment role, room and primary tenant while choosing an account target', () => {
-    expect(page).toContain('tenant.activeAssignment')
-    expect(page).toContain("tenant.activeAssignment.assignmentRole === 'roommate'")
+    expect(page).toContain('selectedTenant.activeAssignment')
+    expect(page).toContain("selectedTenant.activeAssignment.assignmentRole === 'roommate'")
     expect(page).toContain('Người ở cùng')
-    expect(page).toContain('tenant.activeAssignment.roomNumber')
-    expect(page).toContain('tenant.activeAssignment.primaryTenantName')
+    expect(page).toContain('selectedTenant.activeAssignment.roomNumber')
+    expect(page).toContain('selectedTenant.activeAssignment.primaryTenantName')
   })
 })

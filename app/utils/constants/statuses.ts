@@ -20,6 +20,9 @@ export interface StatusDef {
 export const ENTITY_STATUSES: Record<string, StatusDef> = {
   // Common entity lifecycle
   active: { label: 'Đang hoạt động', variant: 'success' },
+  disabled: { label: 'Đã khóa', variant: 'warning' },
+  missing_auth: { label: 'Thiếu tài khoản Auth', variant: 'danger' },
+  orphaned: { label: 'Tài khoản mồ côi', variant: 'warning' },
   inactive: { label: 'Ngừng hoạt động', variant: 'neutral' },
   pending: { label: 'Chờ duyệt', variant: 'warning' },
   terminated: { label: 'Đã chấm dứt', variant: 'danger' },

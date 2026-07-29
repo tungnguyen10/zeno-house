@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ref } from 'vue'
-import type { TenantProfile, TenantSupportRequest } from '~/types/tenant-portal'
+import type { TenantInvoiceListItem, TenantProfile, TenantSupportRequest } from '~/types/tenant-portal'
 
 const fetchMock = vi.hoisted(() => vi.fn())
 const uploadMock = vi.hoisted(() => vi.fn())
@@ -199,6 +199,36 @@ describe('portal bootstrap data', () => {
 
     expect(latest.value?.periodMonth).toBe(7)
     expect(latest.value?.invoiceCode).toBe('inv-2026-07-0025')
+  })
+
+  it('loads subsequent invoice pages once and resets them on refresh', async () => {
+    const first = { id: 'invoice-1' } as TenantInvoiceListItem
+    const second = { id: 'invoice-2' } as TenantInvoiceListItem
+    fetchData = {
+      data: {
+        profile: baseProfile,
+        contract: null,
+        invoices: [first],
+        invoiceMeta: { total: 2, page: 1, limit: 1, totalPages: 2 },
+      },
+    }
+    fetchMock.mockResolvedValue({
+      data: [second],
+      meta: { total: 2, page: 2, limit: 1, totalPages: 2 },
+    })
+    const { usePortalInvoices } = await import('../../app/composables/tenant-portal/usePortalInvoices')
+    const { invoices, hasMore, loadMore, refresh } = usePortalInvoices()
+
+    await loadMore()
+    expect(fetchMock).toHaveBeenCalledWith('/api/tenant/invoices', {
+      query: { page: 2, page_size: 1 },
+    })
+    expect(invoices.value.map(invoice => invoice.id)).toEqual(['invoice-1', 'invoice-2'])
+    expect(hasMore.value).toBe(false)
+
+    await refresh()
+    expect(invoices.value.map(invoice => invoice.id)).toEqual(['invoice-1'])
+    expect(hasMore.value).toBe(true)
   })
 })
 

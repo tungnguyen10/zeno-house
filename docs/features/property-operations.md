@@ -148,7 +148,7 @@ API:
 - `POST /api/tenants`
 - `GET /api/tenants/[id]`
 - `PATCH /api/tenants/[id]`
-- `DELETE /api/tenants/[id]` — returns `409 CONFLICT` with `details.activeContracts` and `details.activeOccupancies` when blocked. Pass `?force=true` to soft-archive instead (returns archived tenant). For owner users, when tenant has no active-building scope, delete is still allowed if the tenant row was created by that owner.
+- `DELETE /api/tenants/[id]` — returns `409 CONFLICT` with `details.activeContracts`, `details.activeOccupancies`, and `details.portalAccounts` when blocked. Revoke or clean the portal account link before hard-deleting the tenant. Pass `?force=true` to soft-archive instead (returns archived tenant). For owner users, when tenant has no active-building scope, delete is still allowed if the tenant row was created by that owner.
 - `POST /api/tenants/bulk` — body `{ action: 'archive' | 'activate' | 'delete', ids: string[], reason?: string }` returns `{ succeeded: string[], failed: { id, reason }[] }`. `reason` is required when `action='delete'`. Reasons: `has_active_contracts`, `has_active_occupancies`, `not_found`, `conflict`, `forbidden`.
 
 Tenant records include:

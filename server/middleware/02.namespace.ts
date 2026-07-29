@@ -25,6 +25,9 @@ export default defineEventHandler((event) => {
   if (apiNamespace === 'tenant' && role === ROLES.TENANT) {
     return measureApiSegment(event, 'namespace', async () => {
       const account = await UserRepository.getAuthAccount(event, user.id)
+      if (!account || account.deletedAt || account.role !== ROLES.TENANT) {
+        throwNotFound('Không tìm thấy')
+      }
       if (account?.tenantOnboardingStage === 'password_required') {
         throwForbidden('Cần hoàn tất thiết lập tài khoản trước khi sử dụng portal')
       }

@@ -3,6 +3,5 @@ import { TenantAccountService } from '../../../../services/tenant-portal/account
 export default defineEventHandler(async (event) => {
   const user = await requireAuth(event)
   const id = getRouterParam(event, 'id')!
-  await TenantAccountService.revoke(event, user, id)
-  setResponseStatus(event, 204)
+  return { data: await TenantAccountService.revoke(event, user, id) }
 })

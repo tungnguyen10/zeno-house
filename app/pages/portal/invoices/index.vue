@@ -12,7 +12,16 @@ definePageMeta({
 const { setChrome } = usePortalChrome()
 setChrome({ title: 'Hoá đơn', back: null })
 
-const { invoices, status, error, refresh } = usePortalInvoices()
+const {
+  invoices,
+  status,
+  error,
+  refresh,
+  hasMore,
+  loadMore,
+  loadingMore,
+  loadMoreError,
+} = usePortalInvoices()
 const invoiceYearGroups = computed(() => groupTenantInvoicesByYear(invoices.value))
 
 function openInvoice(invoiceId: string) {
@@ -125,6 +134,26 @@ function openInvoice(invoiceId: string) {
             </button>
           </PortalCard>
         </section>
+
+        <p
+          v-if="loadMoreError"
+          role="alert"
+          class="rounded-xl border border-portal-danger/25 bg-portal-danger/5 px-4 py-3 text-center portal-type-body text-portal-danger"
+        >
+          {{ loadMoreError }}
+        </p>
+        <PortalButton
+          v-if="hasMore"
+          variant="secondary"
+          block
+          :loading="loadingMore"
+          @click="loadMore"
+        >
+          Tải thêm hóa đơn
+        </PortalButton>
+        <p v-else class="portal-type-caption text-center text-body opacity-60">
+          Đã hiển thị toàn bộ hóa đơn.
+        </p>
       </div>
     </div>
   </PortalPullToRefresh>

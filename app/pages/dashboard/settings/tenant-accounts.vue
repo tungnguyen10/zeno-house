@@ -1,7 +1,13 @@
 <script setup lang="ts">
+import type { UiTableColumn } from '~/components/ui/UiTable.vue'
 import type { Tenant } from '~/types/tenants'
 import type { ApiSuccess } from '~/types/api'
-import type { TenantAccountCredentials, TenantAccountListItem } from '~/types/tenant-accounts'
+import type {
+  TenantAccountCredentials,
+  TenantAccountListItem,
+  TenantAccountOrphan,
+  TenantAccountRemovalOutcome,
+} from '~/types/tenant-accounts'
 import { getApiErrorMessage } from '~/utils/api-error'
 
 definePageMeta({
@@ -12,58 +18,88 @@ definePageMeta({
 })
 
 const toast = useToast()
-const { accounts, status, error, provision, setStatus, resetPassword, revoke }
+const authStore = useAuthStore()
+const {
+  accounts,
+  status,
+  error,
+  orphans,
+  orphansLoading,
+  orphansError,
+  loadOrphans,
+  provision,
+  setStatus,
+  resetPassword,
+  revoke,
+  reconcileOrphan,
+}
   = useTenantAccounts()
+const canReconcileOrphans = computed(() => authStore.can('users.manage.global'))
+const columns: UiTableColumn<TenantAccountListItem>[] = [
+  { key: 'tenant', label: 'Khách thuê' },
+  { key: 'email', label: 'Email đăng nhập', hideOnMobile: true },
+  { key: 'health', label: 'Liên kết' },
+  { key: 'actions', action: true, width: 'w-80' },
+]
 
 // ── Provision + tenant search ────────────────────────────────────────────────
 const provisionOpen = ref(false)
-const search = ref('')
 const searchResults = ref<Tenant[]>([])
 const searching = ref(false)
 const selectedTenant = ref<Tenant | null>(null)
 const provisionEmail = ref('')
 const provisionBusy = ref(false)
 let searchTimer: ReturnType<typeof setTimeout> | null = null
+let tenantSearchRequestId = 0
 
-watch(search, (query) => {
-  if (selectedTenant.value && query !== selectedTenant.value.fullName) selectedTenant.value = null
+const availableTenants = computed(() => {
+  const linkedIds = new Set(accounts.value.map(account => account.tenantId))
+  return searchResults.value.filter(tenant =>
+    !linkedIds.has(tenant.id) || tenant.id === selectedTenant.value?.id,
+  )
+})
+
+watch(selectedTenant, tenant => {
+  if (tenant) provisionEmail.value = tenant.email ?? ''
+})
+
+function queueTenantSearch(query: string) {
   if (searchTimer) clearTimeout(searchTimer)
   searchTimer = setTimeout(() => runSearch(query), 300)
+}
+
+onBeforeUnmount(() => {
+  if (searchTimer) clearTimeout(searchTimer)
 })
 
 async function runSearch(query: string) {
-  if (!query.trim() || selectedTenant.value) {
-    searchResults.value = []
-    return
-  }
+  const requestId = ++tenantSearchRequestId
   searching.value = true
   try {
     const res = await apiFetch<ApiSuccess<Tenant[]>>('/api/tenants', {
-      query: { q: query, limit: 20 },
+      query: { q: query.trim() || undefined, limit: 20, sort: 'full_name', order: 'asc' },
     })
+    if (requestId !== tenantSearchRequestId) return
     searchResults.value = res.data ?? []
+    if (selectedTenant.value && !searchResults.value.some(tenant => tenant.id === selectedTenant.value?.id)) {
+      searchResults.value.unshift(selectedTenant.value)
+    }
   }
   catch (e) {
+    if (requestId !== tenantSearchRequestId) return
     toast.error(getApiErrorMessage(e))
   }
   finally {
-    searching.value = false
+    if (requestId === tenantSearchRequestId) searching.value = false
   }
 }
 
 function openProvision() {
-  search.value = ''
   searchResults.value = []
   selectedTenant.value = null
   provisionEmail.value = ''
   provisionOpen.value = true
-}
-
-function pickTenant(tenant: Tenant) {
-  selectedTenant.value = tenant
-  provisionEmail.value = tenant.email ?? ''
-  searchResults.value = []
-  search.value = tenant.fullName
+  void runSearch('')
 }
 
 async function handleProvision() {
@@ -99,6 +135,11 @@ function showCredentials(cred: TenantAccountCredentials) {
   credentialsOpen.value = true
 }
 
+function closeCredentials() {
+  credentialsOpen.value = false
+  credentials.value = null
+}
+
 async function copyText(text: string) {
   try {
     await navigator.clipboard.writeText(text)
@@ -113,6 +154,7 @@ async function copyText(text: string) {
 const busyTenantId = ref<string | null>(null)
 
 async function toggleStatus(item: TenantAccountListItem) {
+  if (item.health !== 'linked') return
   busyTenantId.value = item.tenantId
   try {
     await setStatus(item.tenantId, item.status === 'active' ? 'disabled' : 'active')
@@ -130,7 +172,7 @@ const resetTarget = ref<TenantAccountListItem | null>(null)
 const resetBusy = ref(false)
 
 async function confirmReset() {
-  if (!resetTarget.value) return
+  if (!resetTarget.value || resetTarget.value.health !== 'linked') return
   resetBusy.value = true
   try {
     const cred = await resetPassword(resetTarget.value.tenantId)
@@ -153,9 +195,9 @@ async function confirmRevoke() {
   if (!revokeTarget.value) return
   revokeBusy.value = true
   try {
-    await revoke(revokeTarget.value.tenantId)
+    const result = await revoke(revokeTarget.value.tenantId)
     revokeTarget.value = null
-    toast.success('Đã gỡ tài khoản.')
+    toast.success(removalMessage(result.outcome))
   }
   catch (e) {
     toast.error(getApiErrorMessage(e))
@@ -167,9 +209,38 @@ async function confirmRevoke() {
 
 const revokeMessage = computed(() =>
   revokeTarget.value
-    ? `Gỡ tài khoản của ${revokeTarget.value.tenantName}? Tài khoản đăng nhập sẽ bị xoá và email được giải phóng.`
+    ? `Gỡ quyền truy cập portal của ${revokeTarget.value.tenantName}? Quyền truy cập sẽ bị chặn trước. Hệ thống sẽ xóa tài khoản Auth nếu an toàn; nếu còn dữ liệu tham chiếu, tài khoản sẽ được vô hiệu hóa để bảo toàn lịch sử.`
     : '',
 )
+
+function removalMessage(outcome: TenantAccountRemovalOutcome): string {
+  return outcome === 'deleted'
+    ? 'Đã xóa tài khoản Auth và giải phóng email.'
+    : 'Đã vô hiệu hóa tài khoản và gỡ liên kết portal; dữ liệu lịch sử được giữ lại.'
+}
+
+const orphanTarget = ref<TenantAccountOrphan | null>(null)
+const orphanBusy = ref(false)
+
+async function confirmReconcileOrphan() {
+  if (!orphanTarget.value) return
+  orphanBusy.value = true
+  try {
+    const result = await reconcileOrphan(orphanTarget.value.authUserId)
+    orphanTarget.value = null
+    toast.success(removalMessage(result.outcome))
+  }
+  catch (error) {
+    toast.error(getApiErrorMessage(error, 'Không thể xử lý tài khoản mồ côi.'))
+  }
+  finally {
+    orphanBusy.value = false
+  }
+}
+
+onMounted(() => {
+  if (canReconcileOrphans.value) void loadOrphans()
+})
 </script>
 
 <template>
@@ -186,109 +257,117 @@ const revokeMessage = computed(() =>
       </template>
     </UiPageHeader>
 
-    <div v-if="status === 'pending'" class="space-y-2">
-      <UiSkeleton v-for="n in 3" :key="n" class="h-16 w-full" />
-    </div>
+    <UiAlert v-if="error" severity="danger" title="Không tải được danh sách">
+      {{ getApiErrorMessage(error, 'Hãy tải lại trang và thử lại.') }}
+    </UiAlert>
 
-    <UiEmptyState
-      v-else-if="error"
-      title="Không tải được danh sách"
-      description="Đã xảy ra lỗi khi tải danh sách tài khoản."
-    />
+    <UiTable
+      v-else
+      :rows="accounts"
+      :columns="columns"
+      row-key="tenantId"
+      :loading="status === 'pending'"
+      caption="Danh sách tài khoản portal của người thuê"
+      empty-title="Chưa có tài khoản nào"
+      empty-description="Nhấn “Cấp tài khoản” để tạo tài khoản portal cho một khách thuê."
+    >
+      <template #cell-tenant="{ row }">
+        <div class="min-w-40">
+          <p class="font-medium text-white">{{ row.tenantName }}</p>
+          <p class="text-xs text-muted">{{ row.tenantCode }}</p>
+          <p class="mt-1 break-all text-xs text-muted md:hidden">{{ row.email ?? 'Không có email Auth' }}</p>
+        </div>
+      </template>
+      <template #cell-email="{ row }">
+        <span :class="row.email ? 'text-white' : 'text-warning'">{{ row.email ?? 'Không tìm thấy' }}</span>
+      </template>
+      <template #cell-health="{ row }">
+        <UiStatusBadge :status="row.health === 'missing_auth' ? row.health : row.status" />
+      </template>
+      <template #cell-actions="{ row }">
+        <div class="flex min-w-52 flex-wrap items-center justify-end gap-2">
+          <UiButton
+            variant="secondary"
+            size="sm"
+            :loading="busyTenantId === row.tenantId"
+            :disabled="row.health !== 'linked' || busyTenantId === row.tenantId"
+            @click="toggleStatus(row)"
+          >
+            {{ row.status === 'active' ? 'Khóa' : 'Mở lại' }}
+          </UiButton>
+          <UiButton
+            variant="secondary"
+            size="sm"
+            :disabled="row.health !== 'linked'"
+            @click="resetTarget = row"
+          >
+            Đặt lại mật khẩu
+          </UiButton>
+          <UiButton variant="danger" size="sm" @click="revokeTarget = row">
+            {{ row.health === 'missing_auth' ? 'Dọn liên kết' : 'Gỡ' }}
+          </UiButton>
+        </div>
+      </template>
+    </UiTable>
 
-    <UiEmptyState
-      v-else-if="accounts.length === 0"
-      title="Chưa có tài khoản nào"
-      description="Nhấn “Cấp tài khoản” để tạo tài khoản portal cho một khách thuê."
-    />
-
-    <div v-else class="overflow-hidden rounded-xl border border-dark-border">
-      <table class="w-full text-sm">
-        <thead class="bg-dark-surface text-left text-xs text-muted">
-          <tr>
-            <th class="px-4 py-3 font-medium">Khách thuê</th>
-            <th class="px-4 py-3 font-medium">Email đăng nhập</th>
-            <th class="px-4 py-3 font-medium">Trạng thái</th>
-            <th class="px-4 py-3 text-right font-medium">Thao tác</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-dark-border">
-          <tr v-for="item in accounts" :key="item.tenantId" class="hover:bg-dark-hover">
-            <td class="px-4 py-3">
-              <p class="font-medium text-white">{{ item.tenantName }}</p>
-              <p class="text-xs text-muted">{{ item.tenantCode }}</p>
-            </td>
-            <td class="px-4 py-3 text-white">{{ item.email ?? '—' }}</td>
-            <td class="px-4 py-3">
-              <span
-                class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
-                :class="item.status === 'active'
-                  ? 'bg-success-neon/15 text-success-neon'
-                  : 'bg-error/15 text-error'"
-              >
-                {{ item.status === 'active' ? 'Đang hoạt động' : 'Đã khoá' }}
-              </span>
-            </td>
-            <td class="px-4 py-3">
-              <div class="flex items-center justify-end gap-2">
-                <UiButton
-                  variant="secondary"
-                  size="sm"
-                  :loading="busyTenantId === item.tenantId"
-                  @click="toggleStatus(item)"
-                >
-                  {{ item.status === 'active' ? 'Khoá' : 'Mở lại' }}
-                </UiButton>
-                <UiButton variant="secondary" size="sm" @click="resetTarget = item">
-                  Đặt lại mật khẩu
-                </UiButton>
-                <UiButton variant="danger" size="sm" @click="revokeTarget = item">
-                  Gỡ
-                </UiButton>
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+    <section v-if="canReconcileOrphans" class="mt-8 space-y-3" aria-labelledby="orphan-heading">
+      <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h2 id="orphan-heading" class="text-lg font-semibold text-white">Tài khoản Auth mồ côi</h2>
+          <p class="mt-1 text-sm text-muted">Tài khoản mang vai trò tenant nhưng không còn liên kết tới hồ sơ người thuê.</p>
+        </div>
+        <UiButton variant="secondary" size="sm" :loading="orphansLoading" @click="loadOrphans">
+          Kiểm tra lại
+        </UiButton>
+      </div>
+      <UiAlert v-if="orphansError" severity="danger" title="Không thể kiểm tra tài khoản mồ côi">
+        {{ getApiErrorMessage(orphansError, 'Hãy thử lại sau.') }}
+      </UiAlert>
+      <div v-else-if="orphansLoading" class="space-y-2">
+        <UiSkeleton v-for="n in 2" :key="n" class="h-16 w-full" />
+      </div>
+      <UiEmptyState
+        v-else-if="orphans.length === 0"
+        title="Không phát hiện tài khoản mồ côi"
+        description="Mọi tài khoản tenant hiện có đều đang được liên kết."
+      />
+      <div v-else class="space-y-2">
+        <article
+          v-for="orphan in orphans"
+          :key="orphan.authUserId"
+          class="flex flex-col gap-3 rounded-xl border border-warning/30 bg-warning/5 p-4 sm:flex-row sm:items-center sm:justify-between"
+        >
+          <div class="min-w-0">
+            <div class="flex flex-wrap items-center gap-2">
+              <p class="break-all font-medium text-white">{{ orphan.email ?? 'Không có email' }}</p>
+              <UiStatusBadge status="orphaned" />
+            </div>
+            <p class="mt-1 text-xs text-muted">
+              Tạo ngày {{ new Date(orphan.createdAt).toLocaleDateString('vi-VN') }}
+              <span v-if="orphan.lastSignInAt"> · Đăng nhập gần nhất {{ new Date(orphan.lastSignInAt).toLocaleDateString('vi-VN') }}</span>
+            </p>
+          </div>
+          <UiButton variant="danger" size="sm" @click="orphanTarget = orphan">Xử lý tài khoản</UiButton>
+        </article>
+      </div>
+    </section>
 
     <!-- Provision modal -->
     <UiModal :open="provisionOpen" title="Cấp tài khoản người thuê" size="md" @close="provisionOpen = false">
       <div class="space-y-4">
-        <div>
-          <label class="mb-1 block text-sm font-medium text-white">Chọn khách thuê</label>
-          <UiInput v-model="search" placeholder="Tìm theo tên hoặc số điện thoại" />
-          <div v-if="searching" class="mt-2 text-xs text-muted">Đang tìm…</div>
-          <ul
-            v-else-if="searchResults.length"
-            class="mt-2 max-h-56 overflow-y-auto rounded-lg border border-dark-border"
-          >
-            <li
-              v-for="tenant in searchResults"
-              :key="tenant.id"
-              class="cursor-pointer px-3 py-2 hover:bg-dark-hover"
-              @click="pickTenant(tenant)"
-            >
-              <p class="text-sm font-medium text-white">{{ tenant.fullName }}</p>
-              <p class="text-xs text-muted">{{ tenant.code }} · {{ tenant.phone }}</p>
-              <div v-if="tenant.activeAssignment" class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
-                <span>Phòng {{ tenant.activeAssignment.roomNumber }} · {{ tenant.activeAssignment.buildingName }}</span>
-                <span
-                  v-if="tenant.activeAssignment.assignmentRole === 'roommate'"
-                  class="rounded-full bg-cyan/10 px-2 py-0.5 font-medium text-cyan"
-                >
-                  Người ở cùng
-                </span>
-              </div>
-              <p
-                v-if="tenant.activeAssignment?.assignmentRole === 'roommate' && tenant.activeAssignment.primaryTenantName"
-                class="mt-1 text-xs text-muted"
-              >
-                Người đứng hợp đồng: {{ tenant.activeAssignment.primaryTenantName }}
-              </p>
-            </li>
-          </ul>
-        </div>
+        <UiCombobox
+          v-model="selectedTenant"
+          label="Chọn khách thuê"
+          placeholder="Chọn người thuê chưa có tài khoản"
+          search-placeholder="Tìm theo tên, mã, số điện thoại hoặc CCCD"
+          :options="availableTenants"
+          :option-key="tenant => tenant.id"
+          :option-label="tenant => `${tenant.fullName} · ${tenant.code} · ${tenant.phone}`"
+          :loading="searching"
+          remote-search
+          required
+          @search="queueTenantSearch"
+        />
 
         <div v-if="selectedTenant" class="rounded-lg border border-dark-border bg-dark-surface p-3">
           <p class="text-sm font-medium text-white">{{ selectedTenant.fullName }}</p>
@@ -335,7 +414,7 @@ const revokeMessage = computed(() =>
     </UiModal>
 
     <!-- One-time credentials modal -->
-    <UiModal :open="credentialsOpen" title="Thông tin đăng nhập" size="sm" @close="credentialsOpen = false">
+    <UiModal :open="credentialsOpen" title="Thông tin đăng nhập" size="sm" @close="closeCredentials">
       <div v-if="credentials" class="space-y-3">
         <UiAlert severity="warning">
           Mật khẩu tạm chỉ hiển thị một lần. Hãy gửi cho khách thuê và yêu cầu đổi sau khi đăng nhập.
@@ -358,7 +437,7 @@ const revokeMessage = computed(() =>
         </div>
       </div>
       <template #footer>
-        <UiButton variant="primary" @click="credentialsOpen = false">Đã hiểu</UiButton>
+        <UiButton variant="primary" @click="closeCredentials">Đã hiểu</UiButton>
       </template>
     </UiModal>
 
@@ -382,6 +461,18 @@ const revokeMessage = computed(() =>
       :loading="revokeBusy"
       @confirm="confirmRevoke"
       @cancel="revokeTarget = null"
+    />
+
+    <UiConfirmModal
+      :open="orphanTarget !== null"
+      title="Xử lý tài khoản Auth mồ côi"
+      :message="orphanTarget
+        ? `Xử lý ${orphanTarget.email ?? 'tài khoản không có email'}? Hệ thống sẽ xóa Auth user nếu an toàn; nếu còn tham chiếu lịch sử, tài khoản sẽ được vô hiệu hóa.`
+        : ''"
+      confirm-label="Xử lý tài khoản"
+      :loading="orphanBusy"
+      @confirm="confirmReconcileOrphan"
+      @cancel="orphanTarget = null"
     />
   </div>
 </template>

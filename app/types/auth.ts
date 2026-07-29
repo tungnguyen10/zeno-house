@@ -32,4 +32,6 @@ export interface AuthAccount {
   emailConfirmed: boolean
   role: UserRole | null
   tenantOnboardingStage: TenantOnboardingStage | null
+  deletedAt: string | null
+  bannedUntil: string | null
 }

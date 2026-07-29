@@ -23,11 +23,17 @@ const repoMocks = vi.hoisted(() => ({
   insertMany: vi.fn(),
 }))
 const bulkRepoMocks = vi.hoisted(() => ({ execute: vi.fn() }))
+const tenantAccountLinkRepoMocks = vi.hoisted(() => ({
+  getByTenantId: vi.fn(),
+}))
 
 vi.mock('../../server/repositories/tenants', () => ({
   TenantRepository: repoMocks,
 }))
 vi.mock('../../server/repositories/bulk-actions', () => ({ BulkActionRepository: bulkRepoMocks }))
+vi.mock('../../server/repositories/tenant-portal/account-links', () => ({
+  TenantAccountLinkRepository: tenantAccountLinkRepoMocks,
+}))
 
 const buildingRepoMocks = vi.hoisted(() => ({
   findByIdentifier: vi.fn(),
@@ -160,6 +166,7 @@ beforeEach(() => {
   repoMocks.findActiveAssignmentByTenantId.mockResolvedValue(null)
   repoMocks.findCreatedTenantIdsByActor.mockResolvedValue([])
   repoMocks.wasCreatedByActor.mockResolvedValue(false)
+  tenantAccountLinkRepoMocks.getByTenantId.mockResolvedValue(null)
   assignmentRepoMocks.findBuildingIdsByUser.mockResolvedValue(['0a8a4dd0-7d6f-4f4e-bc7e-3c5e1b833333'])
   assignmentRepoMocks.findByUserAndBuilding.mockResolvedValue(null)
   bulkRepoMocks.execute.mockImplementation((_event, _entity, _action, ids: string[]) =>
@@ -505,6 +512,27 @@ describe('DELETE /api/tenants/[id]', () => {
     const err = await expectError(Promise.resolve(handler(makeEvent({ params: { id: 't-3' }, query: {}, body: { reason: 'cleanup' } }))))
     expect(err.statusCode).toBe(409)
     expect(err.data?.error?.details).toMatchObject({ activeOccupancies: 2 })
+  })
+
+  it('returns 409 while a tenant portal account link exists', async () => {
+    asAdmin()
+    repoMocks.findByIdentifier.mockResolvedValue(buildTenant({ id: 't-portal' }))
+    repoMocks.countActiveContractsForTenant.mockResolvedValue(0)
+    repoMocks.countActiveOccupanciesForTenant.mockResolvedValue(0)
+    tenantAccountLinkRepoMocks.getByTenantId.mockResolvedValue({
+      authUserId: 'auth-tenant',
+      tenantId: 't-portal',
+    })
+    const { default: handler } = await import('../../server/api/tenants/[id].delete')
+
+    const err = await expectError(Promise.resolve(handler(makeEvent({
+      params: { id: 't-portal' },
+      query: {},
+      body: { reason: 'cleanup' },
+    }))))
+    expect(err.statusCode).toBe(409)
+    expect(err.data?.error?.details).toMatchObject({ portalAccounts: 1 })
+    expect(repoMocks.remove).not.toHaveBeenCalled()
   })
 
   it('soft-archives and returns 200 with data when force=true', async () => {

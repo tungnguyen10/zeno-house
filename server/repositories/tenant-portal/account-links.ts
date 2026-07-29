@@ -51,6 +51,17 @@ export const TenantAccountLinkRepository = {
     return data ? mapRow(data as TenantLinkDbRow) : null
   },
 
+  async getByAuthUserId(event: H3Event, authUserId: string): Promise<TenantLinkRow | null> {
+    const { data, error } = await db(event)
+      .from('tenant_user_links')
+      .select(COLUMNS)
+      .eq('auth_user_id', authUserId)
+      .maybeSingle()
+
+    if (error) throwDbError(error, 'tenantPortal.accountLinks.getByAuthUserId')
+    return data ? mapRow(data as TenantLinkDbRow) : null
+  },
+
   async listByTenantIds(event: H3Event, tenantIds: string[]): Promise<TenantLinkRow[]> {
     if (tenantIds.length === 0) return []
     const { data, error } = await db(event)

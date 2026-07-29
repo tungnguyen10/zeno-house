@@ -20,9 +20,13 @@ describe('portal profile refreshed UI', () => {
     expect(page).toContain('@submit.prevent="onSave"')
   })
 
-  it('routes every editable field through PortalInput while keeping login email read-only', () => {
-    expect(page.match(/<PortalInput/g)).toHaveLength(11)
+  it('routes self-service fields through PortalInput while keeping login and legal identity read-only', () => {
+    expect(page.match(/<PortalInput/g)).toHaveLength(8)
     expect(page).not.toContain('v-model="form.email"')
+    expect(page).not.toContain('v-model="form.id_number"')
+    expect(page).not.toContain('v-model="form.id_issued_date"')
+    expect(page).not.toContain('v-model="form.id_issued_place"')
+    expect(page).toContain('Thông tin định danh do ban quản lý xác minh')
     expect(page.match(/<input/g)).toHaveLength(1)
     expect(page).toContain('type="file"')
   })

@@ -12,9 +12,21 @@ interface AuthUserLike {
   email?: string | null
   app_metadata?: Record<string, unknown> | null
   user_metadata?: Record<string, unknown> | null
+  deleted_at?: string | null
+  banned_until?: string | null
 }
 
-type UserRemoveResult = 'deleted' | 'deactivated'
+export type UserRemoveResult = 'deleted' | 'deactivated'
+
+export interface AuthIdentitySummary {
+  id: string
+  email: string | null
+  role: UserRole | null
+  createdAt: string
+  lastSignInAt: string | null
+  deletedAt: string | null
+  bannedUntil: string | null
+}
 
 function isDeleteBlockedError(error: unknown): boolean {
   if (!error || typeof error !== 'object') return false
@@ -22,7 +34,7 @@ function isDeleteBlockedError(error: unknown): boolean {
   const code = typeof value.code === 'string' ? value.code : null
   const status = typeof value.status === 'number' ? value.status : null
   const message = typeof value.message === 'string' ? value.message : ''
-  if (code === 'unexpected_failure') return true
+  if (code === 'unexpected_failure' && /database error deleting user/i.test(message)) return true
   if (status === 500 && /database error deleting user/i.test(message)) return true
   return false
 }
@@ -61,17 +73,19 @@ export const UserRepository = {
         if (error.status === 404) return null
         throwDbError(error, 'users.getAuthAccount')
       }
-      return data.user
-        ? {
-            id: data.user.id,
-            email: data.user.email ?? null,
-            emailConfirmed: Boolean(data.user.email_confirmed_at),
-            role: (data.user.app_metadata?.role as UserRole | undefined) ?? null,
-            tenantOnboardingStage: data.user.app_metadata?.tenant_onboarding === 'password_required'
-              ? data.user.app_metadata.tenant_onboarding as TenantOnboardingStage
-              : null,
-          }
-        : null
+      if (!data.user) return null
+      const authUser = data.user as AuthUserLike & typeof data.user
+      return {
+        id: authUser.id,
+        email: authUser.email ?? null,
+        emailConfirmed: Boolean(authUser.email_confirmed_at),
+        role: (authUser.app_metadata?.role as UserRole | undefined) ?? null,
+        tenantOnboardingStage: authUser.app_metadata?.tenant_onboarding === 'password_required'
+          ? authUser.app_metadata.tenant_onboarding as TenantOnboardingStage
+          : null,
+        deletedAt: authUser.deleted_at ?? null,
+        bannedUntil: authUser.banned_until ?? null,
+      }
     })()
     cache.set(id, lookup)
     try {
@@ -97,9 +111,14 @@ export const UserRepository = {
     const client = serverSupabaseClient(event)
     const { data: current, error: getError } = await client.auth.admin.getUserById(id)
     if (getError || !current.user) throwDbError(getError ?? new Error('User not found'), 'users.clearAppRole.get')
-    const metadata = { ...current.user.app_metadata }
-    delete metadata.role
-    delete metadata.created_by
+    // Supabase merges app_metadata updates. Explicit nulls are required to
+    // remove authorization claims from future JWTs.
+    const metadata = {
+      ...current.user.app_metadata,
+      role: null,
+      created_by: null,
+      tenant_onboarding: null,
+    }
     const { error } = await client.auth.admin.updateUserById(id, { app_metadata: metadata })
     if (error) throwDbError(error, 'users.clearAppRole.update')
   },
@@ -118,6 +137,35 @@ export const UserRepository = {
         const role = user.app_metadata?.role as UserRole | undefined
         if (!role || !wanted.has(role)) continue
         users.push(mapManagedUser(user))
+      }
+
+      if (data.users.length < 100) break
+      page++
+    }
+
+    return users
+  },
+
+  async listAuthIdentities(event: H3Event): Promise<AuthIdentitySummary[]> {
+    const client = serverSupabaseClient(event)
+    const users: AuthIdentitySummary[] = []
+    let page = 1
+
+    while (true) {
+      const { data, error } = await client.auth.admin.listUsers({ page, perPage: 100 })
+      if (error) throwDbError(error, 'users.listAuthIdentities')
+
+      for (const user of data.users) {
+        const authUser = user as AuthUserLike & typeof user
+        users.push({
+          id: authUser.id,
+          email: authUser.email ?? null,
+          role: (authUser.app_metadata?.role as UserRole | undefined) ?? null,
+          createdAt: authUser.created_at,
+          lastSignInAt: authUser.last_sign_in_at ?? null,
+          deletedAt: authUser.deleted_at ?? null,
+          bannedUntil: authUser.banned_until ?? null,
+        })
       }
 
       if (data.users.length < 100) break
@@ -236,14 +284,10 @@ export const UserRepository = {
       throwDbError(error, 'users.remove')
     }
 
-    // Some auth users are referenced by historical/audit rows that intentionally
-    // preserve actor identity. In those cases, hard delete fails; deprovision the
-    // account so it can no longer access the app while references stay intact.
-    await UserRepository.clearAppRole(event, id)
-    const { error: deactivateError } = await client.auth.admin.updateUserById(id, {
-      ban_duration: '876000h',
-    })
-    if (deactivateError) throwDbError(deactivateError, 'users.remove.deactivate')
+    // Soft-delete is irreversible, releases the login identity, and keeps the
+    // Auth row needed by any retained foreign keys.
+    const { error: deactivateError } = await client.auth.admin.deleteUser(id, true)
+    if (deactivateError) throwDbError(deactivateError, 'users.remove.softDelete')
     return 'deactivated'
   },
 }

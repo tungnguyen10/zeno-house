@@ -15,7 +15,11 @@ beforeAll(async () => {
 })
 
 beforeEach(() => {
-  userRepo.getAuthAccount.mockResolvedValue({ tenantOnboardingStage: null })
+  userRepo.getAuthAccount.mockResolvedValue({
+    role: 'tenant',
+    deletedAt: null,
+    tenantOnboardingStage: null,
+  })
 })
 
 describe('API namespace classification', () => {
@@ -110,7 +114,11 @@ describe('API namespace classification', () => {
   })
 
   it.each(['email_required', 'google_required'])('ignores the legacy %s stage in tenant APIs', async (stage) => {
-    userRepo.getAuthAccount.mockResolvedValue({ tenantOnboardingStage: stage })
+    userRepo.getAuthAccount.mockResolvedValue({
+      role: 'tenant',
+      deletedAt: null,
+      tenantOnboardingStage: stage,
+    })
     const event = {
       path: '/api/tenant/me',
       context: { user: { id: 'auth-1', app_metadata: { role: 'tenant', tenant_onboarding: stage } } },
@@ -120,12 +128,30 @@ describe('API namespace classification', () => {
   })
 
   it('rejects a stale tenant token when the authoritative Auth metadata requires onboarding', async () => {
-    userRepo.getAuthAccount.mockResolvedValue({ tenantOnboardingStage: 'password_required' })
+    userRepo.getAuthAccount.mockResolvedValue({
+      role: 'tenant',
+      deletedAt: null,
+      tenantOnboardingStage: 'password_required',
+    })
     const event = {
       path: '/api/tenant/me',
       context: { user: { id: 'auth-1', app_metadata: { role: 'tenant' } } },
     }
 
     await expect(Promise.resolve(namespaceMiddleware(event))).rejects.toMatchObject({ statusCode: 403 })
+  })
+
+  it.each([
+    [null, null],
+    [{ role: 'owner', deletedAt: null, tenantOnboardingStage: null }, 'role changed'],
+    [{ role: 'tenant', deletedAt: '2026-07-29T00:00:00.000Z', tenantOnboardingStage: null }, 'deleted'],
+  ])('rejects tenant APIs when the live Auth identity is unavailable (%s)', async (account) => {
+    userRepo.getAuthAccount.mockResolvedValue(account)
+    const event = {
+      path: '/api/tenant/me',
+      context: { user: { id: 'auth-1', app_metadata: { role: 'tenant' } } },
+    }
+
+    await expect(Promise.resolve(namespaceMiddleware(event))).rejects.toMatchObject({ statusCode: 404 })
   })
 })

@@ -2,7 +2,20 @@
 
 The tenant portal supports both the person named on a contract and active roommates. Every login
 still maps one-to-one to its own `tenants` row through `tenant_user_links`; account provisioning,
-temporary-password onboarding, reset, disable, and revoke APIs are unchanged.
+temporary-password onboarding, reset, disable, and revoke remain operator-controlled.
+
+## Account lifecycle
+
+- Disabling the link blocks portal resolution immediately.
+- Revocation disables the link first, attempts a hard Auth-user delete, then falls back to
+  irreversible Supabase soft deletion when historical foreign keys still block physical deletion.
+  The API returns the actual `deleted` or `deactivated` outcome.
+- A linked tenant whose Auth identity is missing or no longer has the tenant role is reported as
+  `missing_auth`. The dangling link can be removed from account settings.
+- Admins can list and reconcile `orphaned` tenant-role Auth identities that have no
+  `tenant_user_links` row. Owners cannot access this global identity inventory.
+- Every tenant API request rechecks the live Auth identity and tenant role, in addition to the
+  active link resolver.
 
 ## Housing context
 
@@ -19,6 +32,8 @@ Overview and room pages display this role so a roommate is not presented as the 
 ## Data boundaries
 
 - Profile, CCCD images, and documents always belong to the linked tenant record.
+- Self-service profile edits are limited to contact and personal preference fields. CCCD number,
+  issue date, and issue place are read-only and remain management-verified fields.
 - Primary tenants read invoices by `tenant_id`, preserving their invoice history.
 - Active roommates read all invoices for the current shared `contract_id`, including invoices
   issued before their move-in date. Invoice detail uses the same server-derived scope.
@@ -28,5 +43,7 @@ Overview and room pages display this role so a roommate is not presented as the 
   access immediately. The portal account remains available for personal profile access.
 
 RLS mirrors these rules as a direct-access safety net. Apply
-`supabase/migrations/20260722085743_tenant_roommate_portal_access.sql` manually through the
-Supabase Dashboard, then run `supabase/verification/tenant_identity_rls.sql`.
+`supabase/migrations/20260722085743_tenant_roommate_portal_access.sql` and
+`supabase/migrations/20260729120000_harden_tenant_account_lifecycle.sql` manually through the
+Supabase Dashboard, then run `supabase/verification/tenant_identity_rls.sql` and
+`supabase/verification/tenant_account_lifecycle.sql`.

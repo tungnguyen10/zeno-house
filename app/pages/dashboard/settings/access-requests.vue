@@ -19,15 +19,16 @@ const { selectedStatus, requests, isLoading, error: listError, approve, reject }
 const { data: buildingsData } = useFetch<ApiSuccess<Building[]>>('/api/buildings', {
   query: { limit: 100, sort: 'name', order: 'asc' },
 })
-const { data: tenantsData } = useFetch<ApiSuccess<Tenant[]>>('/api/tenants', {
-  query: { limit: 100, sort: 'full_name', order: 'asc' },
-})
 const { data: tenantAccountsData } = useFetch<ApiSuccess<TenantAccountListItem[]>>('/api/tenant-accounts')
 const selectedRequest = ref<AccessRequest | null>(null)
+const tenantOptions = ref<Tenant[]>([])
+const tenantSearching = ref(false)
+let tenantSearchTimer: ReturnType<typeof setTimeout> | null = null
+let tenantSearchRequestId = 0
 
 const buildings = computed(() => buildingsData.value?.data ?? [])
 const linkedTenantIds = computed(() => new Set((tenantAccountsData.value?.data ?? []).map(account => account.tenantId)))
-const tenants = computed(() => (tenantsData.value?.data ?? []).filter(tenant =>
+const tenants = computed(() => tenantOptions.value.filter(tenant =>
   !linkedTenantIds.value.has(tenant.id) || tenant.id === selectedRequest.value?.decisionTenantId,
 ))
 const columns: UiTableColumn<AccessRequest>[] = [
@@ -53,18 +54,62 @@ const approvalOpen = ref(false)
 const rejectionOpen = ref(false)
 const selectedRole = ref<ApprovableRole>('manager')
 const selectedBuildingIds = ref<string[]>([])
-const selectedTenantId = ref<string | null>(null)
+const selectedTenant = ref<Tenant | null>(null)
 const rejectionReason = ref('')
 const formError = ref<string | null>(null)
 const busy = ref(false)
 
-function openApproval(request: AccessRequest) {
+async function searchTenants(query = '') {
+  const requestId = ++tenantSearchRequestId
+  tenantSearching.value = true
+  try {
+    const response = await apiFetch<ApiSuccess<Tenant[]>>('/api/tenants', {
+      query: { q: query.trim() || undefined, limit: 20, sort: 'full_name', order: 'asc' },
+    })
+    if (requestId !== tenantSearchRequestId) return
+    tenantOptions.value = response.data
+    if (selectedTenant.value && !tenantOptions.value.some(tenant => tenant.id === selectedTenant.value?.id)) {
+      tenantOptions.value.unshift(selectedTenant.value)
+    }
+  }
+  catch (error) {
+    if (requestId !== tenantSearchRequestId) return
+    formError.value = getApiErrorMessage(error, 'Không thể tìm người thuê.')
+  }
+  finally {
+    if (requestId === tenantSearchRequestId) tenantSearching.value = false
+  }
+}
+
+function queueTenantSearch(query: string) {
+  if (tenantSearchTimer) clearTimeout(tenantSearchTimer)
+  tenantSearchTimer = setTimeout(() => searchTenants(query), 250)
+}
+
+onBeforeUnmount(() => {
+  if (tenantSearchTimer) clearTimeout(tenantSearchTimer)
+})
+
+async function openApproval(request: AccessRequest) {
   selectedRequest.value = request
   selectedRole.value = request.decisionRole ?? 'manager'
   selectedBuildingIds.value = [...request.decisionBuildingIds]
-  selectedTenantId.value = request.decisionTenantId
+  selectedTenant.value = null
   formError.value = null
   approvalOpen.value = true
+  if (request.decisionTenantId) {
+    try {
+      const response = await apiFetch<ApiSuccess<Tenant>>(`/api/tenants/${request.decisionTenantId}`)
+      selectedTenant.value = response.data
+      tenantOptions.value = [response.data]
+    }
+    catch {
+      await searchTenants()
+    }
+  }
+  else {
+    await searchTenants()
+  }
 }
 
 function openRejection(request: AccessRequest) {
@@ -82,7 +127,7 @@ function toggleBuilding(id: string, checked: boolean) {
 
 async function submitApproval() {
   if (!selectedRequest.value) return
-  if (selectedRole.value === 'tenant' && !selectedTenantId.value) {
+  if (selectedRole.value === 'tenant' && !selectedTenant.value) {
     formError.value = 'Hãy chọn người thuê chưa có tài khoản.'
     return
   }
@@ -94,7 +139,7 @@ async function submitApproval() {
   formError.value = null
   try {
     await approve(selectedRequest.value.id, selectedRole.value === 'tenant'
-      ? { role: 'tenant', tenant_id: selectedTenantId.value! }
+      ? { role: 'tenant', tenant_id: selectedTenant.value!.id }
       : { role: selectedRole.value, building_ids: selectedBuildingIds.value })
     approvalOpen.value = false
     toast.success('Đã duyệt và cấp quyền truy cập.')
@@ -193,13 +238,19 @@ function statusLabel(status: AccessRequestStatus) {
             />
           </div>
         </div>
-        <UiSelect
+        <UiCombobox
           v-else
-          v-model="selectedTenantId"
+          v-model="selectedTenant"
           label="Người thuê chưa có tài khoản"
           placeholder="Chọn người thuê"
-          :options="tenants.map(tenant => ({ value: tenant.id, label: `${tenant.fullName} · ${tenant.code}` }))"
+          search-placeholder="Tìm theo tên, mã, số điện thoại hoặc CCCD"
+          :options="tenants"
+          :option-key="tenant => tenant.id"
+          :option-label="tenant => `${tenant.fullName} · ${tenant.code}`"
+          :loading="tenantSearching"
+          remote-search
           required
+          @search="queueTenantSearch"
         />
         <UiAlert v-if="formError" severity="danger" role="alert">{{ formError }}</UiAlert>
       </div>

@@ -9,7 +9,7 @@ Zeno House uses Supabase Postgres. Schema history lives in `supabase/migrations`
 | Buildings | `20260514000000_create_buildings.sql`, `20260514000001_fix_buildings_rls.sql`, `20260514000003_buildings_drop_total_rooms.sql`, `20260517000000_building_operational_config.sql`, `20260614000000_add_building_slugs.sql`, `20260708010000_add_building_operational_start_period.sql` |
 | Rooms | `20260514000002_create_rooms.sql` |
 | Tenants | `20260514000004_create_tenants.sql`, `20260530100000_tenant_enrichment.sql` |
-| Tenant identity | `20260708020000_tenant_id_images.sql`, `20260716083605_add_tenant_identity_foundation.sql`, `20260717001405_tenant_self_identity_images.sql`, `20260722085743_tenant_roommate_portal_access.sql` |
+| Tenant identity | `20260708020000_tenant_id_images.sql`, `20260716083605_add_tenant_identity_foundation.sql`, `20260717001405_tenant_self_identity_images.sql`, `20260722085743_tenant_roommate_portal_access.sql`, `20260729120000_harden_tenant_account_lifecycle.sql` |
 | Tenant documents | `20260716233954_add_tenant_documents.sql` |
 | Tenant support requests | `20260717171947_add_tenant_support_requests.sql`, `20260717221849_harden_support_request_attachment_scope.sql` |
 | Deprecated room assignments | `20260514000005_create_room_assignments.sql`, `20260530000000_drop_room_assignments.sql` |
@@ -43,6 +43,10 @@ Property and occupancy:
 
 `tenant_user_links` maps one Supabase Auth user to one tenant record. Only an `active` link
 establishes tenant self-scope; unique constraints on both ids enforce the one-to-one mapping.
+The lifecycle hardening migration preserves ownership cascades on this table, while converting
+historical actor columns such as `audit_events.actor_id`, `billing_audit_events.actor_id`, and
+`invoice_payments.recorded_by` to nullable `ON DELETE SET NULL`. Historical attribution therefore
+survives account revocation without blocking a hard Auth delete.
 
 Tenant housing context is resolved dynamically without another link table. A current primary
 contract wins; otherwise an active `contract_occupants` row grants shared room, contract, and
@@ -54,7 +58,9 @@ contract, or reaching its end date removes shared access immediately.
 building context. Status is limited to `new`, `in_progress`, or `resolved`; optional attachment
 paths point into the tenant-prefixed area of the existing private `tenant-documents` bucket.
 Tenant RLS is self-scoped through active `tenant_user_links`; owner/manager reads are scoped through
-`user_building_assignments`, while admin reads are unscoped.
+`user_building_assignments`, while admin reads are unscoped. Request creation accepts a current
+primary tenant or active roommate and enforces the same title/description bounds as the server
+validator.
 
 `access_requests` stores one private lifecycle row per Supabase Auth user, including identity
 snapshot, provider, status, decision role/scope, reviewer, rejection reason, and timestamps. An
@@ -176,6 +182,8 @@ than raw paths or public URLs.
 - Tenant self-read policies on `tenant_user_links`, `tenants`, `contract_occupants`, `contracts`,
   and `invoices` resolve identity through `auth.uid()` and an active `tenant_user_links` row.
   Roommate branches additionally require a current active occupancy and contract.
+- Manager safety-net reads of tenants, contracts, occupants, and invoices join
+  `user_building_assignments`; direct browser writes to those business tables are revoked.
 
 ## Changing The Schema
 

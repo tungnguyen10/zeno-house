@@ -71,4 +71,15 @@ describe('UiCombobox', () => {
     expect(wrapper.emitted('update:modelValue')?.at(-1)).toEqual([options[1]])
     expect(wrapper.find('[role="listbox"]').exists()).toBe(false)
   })
+
+  it('emits typed queries instead of filtering server-backed options locally', async () => {
+    const wrapper = mountCombobox(null)
+    await wrapper.setProps({ remoteSearch: true })
+
+    await wrapper.get('[role="combobox"]').trigger('click')
+    await wrapper.get('input[type="text"]').setValue('ngoài trang đầu')
+
+    expect(wrapper.emitted('search')?.at(-1)).toEqual(['ngoài trang đầu'])
+    expect(wrapper.findAll('[role="option"]')).toHaveLength(options.length)
+  })
 })

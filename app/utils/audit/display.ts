@@ -162,6 +162,7 @@ const ACTION_SUFFIX_LABELS: Record<string, string> = {
   google_linked: 'Liên kết Google',
   provisioned: 'Cấp tài khoản',
   revoked: 'Thu hồi tài khoản',
+  orphan_reconciled: 'Xử lý tài khoản mồ côi',
   approved: 'Phê duyệt',
   rejected: 'Từ chối',
 }
@@ -219,7 +220,7 @@ export function auditActionLabel(action: string): string {
 export function auditActionVariant(action: string): StatusVariant {
   if (/(\.created|\.activated|\.added|\.uploaded|\.recorded)$/.test(action)) return 'success'
   if (/(\.updated|\.renewed|\.role_changed|\.synced|\.attached|\.allocated|\.refreshed)$/.test(action)) return 'accent'
-  if (/(\.removed|\.terminated|\.deleted|\.voided|\.deactivated)$/.test(action)) return 'danger'
+  if (/(\.removed|\.terminated|\.deleted|\.voided|\.deactivated|\.orphan_reconciled)$/.test(action)) return 'danger'
   if (/(\.archived|\.maintenance_set|\.expired|\.moved_out|\.dismissed|\.reopened)$/.test(action)) return 'warning'
   return 'neutral'
 }

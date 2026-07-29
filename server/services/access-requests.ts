@@ -20,8 +20,8 @@ async function withVerification(event: H3Event, request: AccessRequest): Promise
   return { ...request, emailVerified: Boolean(account?.emailConfirmed) }
 }
 
-async function auditCreationOnce(event: H3Event, actor: AuthUser, request: AccessRequest): Promise<void> {
-  await AccessRequestRepository.appendCreationAuditOnce(event, request.id, actor.id)
+async function auditCreationOnce(event: H3Event, request: AccessRequest): Promise<void> {
+  await AccessRequestRepository.appendCreationAuditOnce(event, request.id, request.authUserId)
 }
 
 function decisionMatches(request: AccessRequest, input: AccessRequestApprovalInput): boolean {
@@ -55,7 +55,7 @@ export const AccessRequestService = {
   async getMine(event: H3Event, actor: AuthUser): Promise<CurrentAccessRequest> {
     const request = await AccessRequestRepository.findByUserId(event, actor.id)
     if (!request) throwNotFound('Không tìm thấy yêu cầu truy cập')
-    await auditCreationOnce(event, actor, request)
+    await auditCreationOnce(event, request)
     return {
       status: request.status,
       email: request.email,
@@ -67,7 +67,7 @@ export const AccessRequestService = {
   async list(event: H3Event, actor: AuthUser, status?: AccessRequestStatus): Promise<AccessRequest[]> {
     assertCanApprove(actor)
     const requests = await AccessRequestRepository.list(event, status)
-    await Promise.all(requests.map(request => auditCreationOnce(event, actor, request)))
+    await Promise.all(requests.map(request => auditCreationOnce(event, request)))
     return Promise.all(requests.map(request => withVerification(event, request)))
   },
 

@@ -1,7 +1,8 @@
 import { readdir, readFile, writeFile } from 'node:fs/promises'
 import { join, relative } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
-const root = new URL('..', import.meta.url).pathname
+const root = fileURLToPath(new URL('..', import.meta.url))
 const apiRoot = join(root, 'server/api')
 
 async function walk(dir) {
@@ -32,10 +33,11 @@ const explicitlyPaginated = new Set([
 for (const file of files) {
   const source = await readFile(file, 'utf8')
   const { method, path } = routeFor(file)
+  const normalizedFile = file.replace(/\\/g, '/')
   const finalSegment = path.split('/').at(-1)
   const isDynamicDetail = finalSegment?.startsWith('[')
   const isList = method === 'GET' && !isDynamicDetail
-    && (/\/index\.get\.ts$/.test(file) || /\/(audit|invoices|payments|occupants|renewals|utility-usages)\.get\.ts$/.test(file))
+    && (/\/index\.get\.ts$/.test(normalizedFile) || /\/(audit|invoices|payments|occupants|renewals|utility-usages)\.get\.ts$/.test(normalizedFile))
   const hasPagination = method === 'GET'
     && (explicitlyPaginated.has(path) || /page|cursor|limit/.test(source))
   const pagination = hasPagination ? 'bounded' : isList ? 'domain-bounded' : 'n/a'

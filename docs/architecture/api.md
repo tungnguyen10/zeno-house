@@ -100,6 +100,9 @@ replace the same `id_card_front_path` or `id_card_back_path` value rather than c
 Support requests accept JSON title/description when no file is present, or multipart fields `title`,
 `description`, and optional `attachment`. Attachments reuse the private `tenant-documents` bucket;
 the server derives tenant/building/contract context and returns five-minute signed URLs.
+Tenant profile PATCH accepts only the self-service whitelist; legal identity fields remain
+management-controlled. Invoice list pagination uses `page` and `page_size`, and the portal appends
+subsequent pages while preserving refresh/reset and inline retry states.
 
 | Method | Path |
 | --- | --- |
@@ -111,6 +114,23 @@ the server derives tenant/building/contract context and returns five-minute sign
 | DELETE | `/api/tenant/id-images/[side]` |
 | GET | `/api/tenant/requests` |
 | POST | `/api/tenant/requests` |
+
+## Tenant Account Administration
+
+| Method | Path | Access |
+| --- | --- | --- |
+| GET | `/api/tenant-accounts` | admin or scoped owner |
+| GET | `/api/tenant-accounts/orphans` | admin only |
+| DELETE | `/api/tenant-accounts/orphans/[id]` | admin only |
+| GET | `/api/tenants/[id]/account` | admin or scoped owner |
+| POST | `/api/tenants/[id]/account` | admin or scoped owner |
+| PATCH | `/api/tenants/[id]/account` | admin or scoped owner |
+| DELETE | `/api/tenants/[id]/account` | admin or scoped owner |
+| POST | `/api/tenants/[id]/account/reset-password` | admin or scoped owner |
+
+Account deletion returns `{ data: { outcome: 'deleted' | 'deactivated' } }`. `deleted` means the
+Auth identity was physically removed; `deactivated` means access and the portal link were removed
+but the Auth row was retained by irreversible soft deletion for historical referential integrity.
 
 ## Contracts
 

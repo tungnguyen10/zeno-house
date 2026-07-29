@@ -11,6 +11,7 @@ const linkRepo = vi.hoisted(() => ({
   create: vi.fn(),
   updateStatus: vi.fn(),
   deleteByTenantId: vi.fn(),
+  getByAuthUserId: vi.fn(),
 }))
 const userRepo = vi.hoisted(() => ({
   create: vi.fn(),
@@ -18,12 +19,16 @@ const userRepo = vi.hoisted(() => ({
   setTenantOnboardingStage: vi.fn(),
   remove: vi.fn(),
   getById: vi.fn(),
+  getAuthAccount: vi.fn(),
+  listAuthIdentities: vi.fn(),
 }))
 const tenantRepo = vi.hoisted(() => ({
   findById: vi.fn(),
   hasContractInBuildings: vi.fn(),
   wasCreatedByActor: vi.fn(),
   findCreatedTenantIdsByActor: vi.fn(),
+  findTenantIdsForBuildings: vi.fn(),
+  findByIds: vi.fn(),
 }))
 const scope = vi.hoisted(() => ({ getAssignedBuildingIds: vi.fn() }))
 const auditService = vi.hoisted(() => ({ append: vi.fn() }))
@@ -58,7 +63,15 @@ beforeEach(() => {
   userRepo.create.mockResolvedValue({ id: 'auth-1', email: 'login@example.com' })
   linkRepo.create.mockResolvedValue({ id: 'l-1', authUserId: 'auth-1', tenantId: 't-1', status: 'active', createdAt: '' })
   linkRepo.deleteByTenantId.mockResolvedValue(undefined)
-  userRepo.remove.mockResolvedValue(undefined)
+  linkRepo.getByAuthUserId.mockResolvedValue(null)
+  userRepo.remove.mockResolvedValue('deleted')
+  userRepo.getAuthAccount.mockResolvedValue({
+    id: 'auth-1',
+    email: 'login@example.com',
+    role: 'tenant',
+    deletedAt: null,
+  })
+  userRepo.listAuthIdentities.mockResolvedValue([])
 })
 
 describe('TenantAccountService.provision', () => {
@@ -146,7 +159,69 @@ describe('TenantAccountService lifecycle', () => {
 
   it('revokes by deleting the auth user', async () => {
     const svc = await service()
-    await svc.revoke(event(), user('admin'), 't-1')
+    await expect(svc.revoke(event(), user('admin'), 't-1')).resolves.toEqual({ outcome: 'deleted' })
     expect(userRepo.remove).toHaveBeenCalledWith(expect.anything(), 'auth-1')
+    expect(linkRepo.updateStatus).toHaveBeenCalledWith(expect.anything(), 't-1', 'disabled')
+    expect(linkRepo.deleteByTenantId).toHaveBeenCalledWith(expect.anything(), 't-1')
+  })
+
+  it('cleans a dangling link without retrying a missing Auth user', async () => {
+    userRepo.getAuthAccount.mockResolvedValue(null)
+    const svc = await service()
+
+    await expect(svc.revoke(event(), user('admin'), 't-1')).resolves.toEqual({ outcome: 'deactivated' })
+    expect(userRepo.remove).not.toHaveBeenCalled()
+    expect(linkRepo.deleteByTenantId).toHaveBeenCalled()
+  })
+
+  it('reports a linked tenant whose Auth identity disappeared as missing_auth', async () => {
+    linkRepo.listAll.mockResolvedValue([
+      { authUserId: 'missing', tenantId: 't-1', status: 'disabled', createdAt: '2026-01-01' },
+    ])
+    tenantRepo.findByIds.mockResolvedValue([tenant])
+    userRepo.listAuthIdentities.mockResolvedValue([])
+    const svc = await service()
+
+    await expect(svc.list(event(), user('admin'))).resolves.toEqual([
+      expect.objectContaining({
+        authUserId: 'missing',
+        tenantId: 't-1',
+        health: 'missing_auth',
+        email: null,
+      }),
+    ])
+  })
+})
+
+describe('TenantAccountService orphan reconciliation', () => {
+  it('lists unlinked tenant-role identities for admins only', async () => {
+    linkRepo.listAll.mockResolvedValue([
+      { authUserId: 'linked', tenantId: 't-1' },
+    ])
+    userRepo.listAuthIdentities.mockResolvedValue([
+      { id: 'linked', role: 'tenant', deletedAt: null },
+      { id: 'orphan', role: 'tenant', email: 'orphan@example.com', createdAt: '2026-01-01', lastSignInAt: null, deletedAt: null },
+      { id: 'owner', role: 'owner', deletedAt: null },
+    ])
+    const svc = await service()
+
+    await expect(svc.listOrphans(event(), user('admin'))).resolves.toEqual([
+      expect.objectContaining({ authUserId: 'orphan', health: 'orphaned' }),
+    ])
+    await expect(svc.listOrphans(event(), user('owner'))).rejects.toBeTruthy()
+  })
+
+  it('reconciles only a currently unlinked tenant identity', async () => {
+    userRepo.getAuthAccount.mockResolvedValue({
+      id: 'orphan',
+      role: 'tenant',
+      deletedAt: null,
+    })
+    userRepo.remove.mockResolvedValue('deactivated')
+    const svc = await service()
+
+    await expect(svc.reconcileOrphan(event(), user('admin'), 'orphan'))
+      .resolves.toEqual({ outcome: 'deactivated' })
+    expect(userRepo.remove).toHaveBeenCalledWith(expect.anything(), 'orphan')
   })
 })

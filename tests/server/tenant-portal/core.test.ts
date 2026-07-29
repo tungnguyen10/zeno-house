@@ -13,7 +13,7 @@ import {
 } from '~/utils/mappers/tenant-portal'
 
 describe('tenant portal validators', () => {
-  it('keeps non-credential profile fields and strips the login email', () => {
+  it('keeps self-service fields and strips login and legal identity fields', () => {
     const result = tenantProfileUpdateSchema.parse({
       full_name: 'Nguyen Van A',
       phone: '0901234567',
@@ -28,7 +28,6 @@ describe('tenant portal validators', () => {
       full_name: 'Nguyen Van A',
       phone: '0901234567',
       gender: 'male',
-      id_number: '012345678901',
     })
   })
 

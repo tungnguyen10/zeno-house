@@ -24,6 +24,8 @@ export interface UiComboboxProps<TOption> {
   required?: boolean
   disabled?: boolean
   loading?: boolean
+  /** Options are supplied by a server-backed search instead of filtered locally. */
+  remoteSearch?: boolean
   /** Allow selecting the current search query as a new option. */
   allowCustom?: boolean
   /** Convert a custom query into the option value emitted by v-model. */
@@ -40,6 +42,7 @@ const props = withDefaults(defineProps<UiComboboxProps<TOption>>(), {
   required: false,
   disabled: false,
   loading: false,
+  remoteSearch: false,
   allowCustom: false,
   emptyMessage: 'Không có kết quả',
   placeholder: 'Chọn...',
@@ -49,6 +52,7 @@ const props = withDefaults(defineProps<UiComboboxProps<TOption>>(), {
 
 const emit = defineEmits<{
   (e: 'update:modelValue', value: TOption | null): void
+  (e: 'search', query: string): void
 }>()
 
 const generatedId = useId()
@@ -67,11 +71,16 @@ const selectedLabel = computed(() =>
 )
 
 const filteredOptions = computed(() => {
+  if (props.remoteSearch) return props.options
   if (!query.value) return props.options
   const q = query.value.toLowerCase()
   return props.options.filter(o =>
     props.optionLabel(o).toLowerCase().includes(q),
   )
+})
+
+watch(query, value => {
+  if (isOpen.value && props.remoteSearch) emit('search', value)
 })
 
 const trimmedQuery = computed(() => query.value.trim())

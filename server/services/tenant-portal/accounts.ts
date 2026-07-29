@@ -4,6 +4,8 @@ import type { AuthUser } from '~/types/auth'
 import type {
   TenantAccountCredentials,
   TenantAccountListItem,
+  TenantAccountOrphan,
+  TenantAccountRemovalResult,
   TenantAccountState,
 } from '~/types/tenant-accounts'
 import type {
@@ -61,15 +63,24 @@ async function stateFromLink(
 ): Promise<TenantAccountState> {
   const link = await TenantAccountLinkRepository.getByTenantId(event, tenantId)
   if (!link) {
-    return { tenantId, hasAccount: false, email: null, status: null, linkedAt: null }
+    return {
+      tenantId,
+      hasAccount: false,
+      email: null,
+      status: null,
+      linkedAt: null,
+      health: 'none',
+    }
   }
-  const user = await UserRepository.getById(event, link.authUserId)
+  const account = await UserRepository.getAuthAccount(event, link.authUserId)
+  const isHealthy = account?.role === ROLES.TENANT && !account.deletedAt
   return {
     tenantId,
     hasAccount: true,
-    email: user?.email ?? null,
+    email: account?.email ?? null,
     status: link.status,
     linkedAt: link.createdAt,
+    health: isHealthy ? 'linked' : 'missing_auth',
   }
 }
 
@@ -101,27 +112,56 @@ export const TenantAccountService = {
     if (scopedLinks.length === 0) return []
 
     // Bulk-load tenant records and tenant-role auth users once, then join.
-    const [tenants, users] = await Promise.all([
+    const [tenants, identities] = await Promise.all([
       TenantRepository.findByIds(event, scopedLinks.map(link => link.tenantId)),
-      UserRepository.listByRoles(event, [ROLES.TENANT]),
+      UserRepository.listAuthIdentities(event),
     ])
     const tenantMap = new Map(tenants.map(tenant => [tenant.id, tenant]))
-    const emailMap = new Map(users.map(user => [user.id, user.email]))
+    const identityMap = new Map(identities.map(identity => [identity.id, identity]))
 
     const items: TenantAccountListItem[] = []
     for (const link of scopedLinks) {
       const tenant = tenantMap.get(link.tenantId)
       if (!tenant) continue
+      const identity = identityMap.get(link.authUserId)
       items.push({
+        authUserId: link.authUserId,
         tenantId: tenant.id,
         tenantCode: tenant.code,
         tenantName: tenant.fullName,
-        email: emailMap.get(link.authUserId) ?? null,
+        email: identity?.email ?? null,
         status: link.status,
         linkedAt: link.createdAt,
+        health: identity?.role === ROLES.TENANT && !identity.deletedAt ? 'linked' : 'missing_auth',
       })
     }
     return items
+  },
+
+  async listOrphans(event: H3Event, actor: AuthUser): Promise<TenantAccountOrphan[]> {
+    if (!can(actor, 'users.manage.global')) {
+      throwForbidden('Chỉ quản trị viên mới có thể kiểm tra tài khoản mồ côi')
+    }
+
+    const [links, identities] = await Promise.all([
+      TenantAccountLinkRepository.listAll(event),
+      UserRepository.listAuthIdentities(event),
+    ])
+    const linkedAuthIds = new Set(links.map(link => link.authUserId))
+
+    return identities
+      .filter(identity =>
+        identity.role === ROLES.TENANT
+        && !identity.deletedAt
+        && !linkedAuthIds.has(identity.id),
+      )
+      .map(identity => ({
+        authUserId: identity.id,
+        email: identity.email,
+        createdAt: identity.createdAt,
+        lastSignInAt: identity.lastSignInAt,
+        health: 'orphaned' as const,
+      }))
   },
 
   async provision(
@@ -188,13 +228,15 @@ export const TenantAccountService = {
       entity_id: tenantId,
     })
 
-    const user = await UserRepository.getById(event, link.authUserId)
+    const account = await UserRepository.getAuthAccount(event, link.authUserId)
+    const isHealthy = account?.role === ROLES.TENANT && !account.deletedAt
     return {
       tenantId,
       hasAccount: true,
-      email: user?.email ?? null,
+      email: account?.email ?? null,
       status: updated.status,
       linkedAt: updated.createdAt,
+      health: isHealthy ? 'linked' : 'missing_auth',
     }
   },
 
@@ -223,23 +265,72 @@ export const TenantAccountService = {
     return { email: updated.email ?? '', tempPassword }
   },
 
-  async revoke(event: H3Event, actor: AuthUser, tenantId: string): Promise<void> {
+  async revoke(
+    event: H3Event,
+    actor: AuthUser,
+    tenantId: string,
+  ): Promise<TenantAccountRemovalResult> {
     assertCapability(actor)
     await loadTenantInScope(event, actor, tenantId)
 
     const link = await TenantAccountLinkRepository.getByTenantId(event, tenantId)
     if (!link) throwNotFound('Không tìm thấy tài khoản người thuê')
 
-    // Deleting the auth user cascades the tenant_user_links row and invalidates
-    // sessions, freeing the email for re-provisioning.
-    await UserRepository.remove(event, link.authUserId)
-    await TenantAccountLinkRepository.deleteByTenantId(event, tenantId).catch(() => undefined)
+    // Deny portal resolution before starting the non-transactional Auth step.
+    if (link.status !== 'disabled') {
+      await TenantAccountLinkRepository.updateStatus(event, tenantId, 'disabled')
+    }
+
+    const account = await UserRepository.getAuthAccount(event, link.authUserId)
+    const outcome = account && !account.deletedAt
+      ? await UserRepository.remove(event, link.authUserId)
+      : 'deactivated'
+    // Hard-delete cascades this row; soft-delete keeps the Auth row, so make the
+    // link removal explicit. A soft-delete must not report success while a
+    // dangling link remains, even though that link is already disabled.
+    if (outcome === 'deactivated') {
+      await TenantAccountLinkRepository.deleteByTenantId(event, tenantId)
+    }
+    else {
+      await TenantAccountLinkRepository.deleteByTenantId(event, tenantId).catch(() => undefined)
+    }
 
     await AuditService.append(event, actor, {
       building_id: null,
       action: AUDIT_ACTIONS.TENANT_ACCOUNT_REVOKED,
       entity_type: 'tenant',
       entity_id: tenantId,
+      metadata: { auth_user_id: link.authUserId, outcome },
     })
+
+    return { outcome }
+  },
+
+  async reconcileOrphan(
+    event: H3Event,
+    actor: AuthUser,
+    authUserId: string,
+  ): Promise<TenantAccountRemovalResult> {
+    if (!can(actor, 'users.manage.global')) {
+      throwForbidden('Chỉ quản trị viên mới có thể xử lý tài khoản mồ côi')
+    }
+
+    const [account, link] = await Promise.all([
+      UserRepository.getAuthAccount(event, authUserId),
+      TenantAccountLinkRepository.getByAuthUserId(event, authUserId),
+    ])
+    if (!account || account.deletedAt || account.role !== ROLES.TENANT || link) {
+      throwNotFound('Không tìm thấy tài khoản người thuê mồ côi')
+    }
+
+    const outcome = await UserRepository.remove(event, authUserId)
+    await AuditService.append(event, actor, {
+      building_id: null,
+      action: AUDIT_ACTIONS.TENANT_ACCOUNT_ORPHAN_RECONCILED,
+      entity_type: 'user',
+      entity_id: authUserId,
+      metadata: { outcome },
+    })
+    return { outcome }
   },
 }

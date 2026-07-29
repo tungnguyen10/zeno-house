@@ -19,6 +19,7 @@ import { AuditService } from '../audit'
 import { AUDIT_ACTIONS } from '~/utils/constants/audit'
 import { db } from '../../utils/db'
 import { throwValidationError } from '../../utils/errors'
+import { TenantAccountLinkRepository } from '../../repositories/tenant-portal/account-links'
 
 const TENANT_ID_IMAGE_BUCKET = 'tenant-id-images'
 const MAX_TENANT_ID_IMAGE_BYTES = 5 * 1024 * 1024
@@ -402,19 +403,24 @@ export const TenantService = {
       return archived
     }
 
-    const [activeContracts, activeOccupancies] = await Promise.all([
+    const [activeContracts, activeOccupancies, portalAccount] = await Promise.all([
       TenantRepository.countActiveContractsForTenant(event, existing.id),
       TenantRepository.countActiveOccupanciesForTenant(event, existing.id),
+      TenantAccountLinkRepository.getByTenantId(event, existing.id),
     ])
 
-    if (activeContracts > 0 || activeOccupancies > 0) {
+    if (activeContracts > 0 || activeOccupancies > 0 || portalAccount) {
       throw createError({
         statusCode: 409,
         data: {
           error: {
             code: 'CONFLICT',
             message: 'Khách thuê còn ràng buộc, không thể xoá',
-            details: { activeContracts, activeOccupancies },
+            details: {
+              activeContracts,
+              activeOccupancies,
+              portalAccounts: portalAccount ? 1 : 0,
+            },
           },
         },
       })
