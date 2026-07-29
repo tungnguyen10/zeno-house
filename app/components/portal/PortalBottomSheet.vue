@@ -8,6 +8,8 @@ const emit = defineEmits<{
   (e: 'update:modelValue', value: boolean): void
 }>()
 
+const { resolvedTheme } = usePortalTheme()
+
 const dragY = ref(0)
 const dragging = ref(false)
 let startY = 0
@@ -86,6 +88,7 @@ const sheetStyle = computed(() =>
       <div
         v-if="modelValue"
         class="portal-shell portal-safe-bottom fixed inset-x-0 bottom-0 z-[76] rounded-t-3xl bg-white shadow-2xl"
+        :data-theme="resolvedTheme"
         :class="{ 'transition-transform duration-200 [transition-timing-function:cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none': !dragging }"
         :style="sheetStyle"
         role="dialog"

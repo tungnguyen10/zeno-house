@@ -26,6 +26,7 @@
 
 - Create `app/utils/portal-profile.ts`: pure conversion, normalization, diff, and validation helpers for the profile edit form.
 - Create `app/composables/tenant-portal/usePortalUnsavedChanges.ts`: route-leave and browser-unload guard state with a bottom-sheet-friendly interface.
+- Modify `app/components/portal/PortalBottomSheet.vue`: carry the resolved portal theme into teleported sheet content.
 - Create `app/components/portal/PortalProfileDossier.vue`: presentational identity hero and complete textual tenant dossier.
 - Modify `app/pages/portal/profile.vue`: route orchestration, header edit action, dossier, identity images, documents, and logout.
 - Create `app/pages/portal/profile/edit.vue`: dedicated edit form, save flow, sticky actions, and unsaved-change sheet.
@@ -242,6 +243,8 @@ git commit -m "feat(portal): add profile edit model"
 **Files:**
 - Create: `app/composables/tenant-portal/usePortalUnsavedChanges.ts`
 - Create: `tests/composables/portal-unsaved-changes.test.ts`
+- Modify: `app/components/portal/PortalBottomSheet.vue`
+- Create: `tests/components/portal/PortalBottomSheet.spec.ts`
 
 **Interfaces:**
 - Consumes: `Readonly<Ref<boolean>>` dirty state.
