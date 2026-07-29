@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+import { compileScript, compileTemplate, parse } from '@vue/compiler-sfc'
 import { mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
 import type { TenantProfile } from '~/types/tenant-portal'
@@ -34,6 +37,23 @@ const stubs = {
 }
 
 describe('PortalProfileDossier', () => {
+  it('does not compile template helpers to native Object prototype methods', () => {
+    const filename = resolve('app/components/portal/PortalProfileDossier.vue')
+    const source = readFileSync(filename, 'utf8')
+    const { descriptor } = parse(source, { filename })
+    const script = compileScript(descriptor, { id: 'portal-profile-dossier' })
+    const template = compileTemplate({
+      source: descriptor.template?.content ?? '',
+      filename,
+      id: 'portal-profile-dossier',
+      ssr: true,
+      ssrCssVars: descriptor.cssVars,
+      compilerOptions: { bindingMetadata: script.bindings },
+    })
+
+    expect(template.code).not.toContain('_toDisplayString(valueOf(')
+  })
+
   it('renders every tenant profile field without housing data', () => {
     const wrapper = mount(PortalProfileDossier, {
       props: { profile },
@@ -69,6 +89,20 @@ describe('PortalProfileDossier', () => {
           ...profile,
           occupation: null,
           notes: null,
+        },
+      },
+      global: { stubs },
+    })
+
+    expect(wrapper.text()).toContain('Chưa cập nhật')
+  })
+
+  it('renders a missing email without invoking the native valueOf helper', () => {
+    const wrapper = mount(PortalProfileDossier, {
+      props: {
+        profile: {
+          ...profile,
+          email: null,
         },
       },
       global: { stubs },

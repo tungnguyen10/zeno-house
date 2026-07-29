@@ -23,7 +23,7 @@ const genderLabels: Record<TenantGender, string> = {
 
 const missing = 'Chưa cập nhật'
 
-function valueOf(value: string | null | undefined): string {
+function displayValue(value: string | null | undefined): string {
   return value?.trim() || missing
 }
 
@@ -53,36 +53,36 @@ const personalGroups = computed<DossierGroup[]>(() => [
         value: props.profile.gender ? genderLabels[props.profile.gender] : missing,
       },
       { label: 'Ngày sinh', value: dateOf(props.profile.dateOfBirth) },
-      { label: 'Nghề nghiệp', value: valueOf(props.profile.occupation) },
+      { label: 'Nghề nghiệp', value: displayValue(props.profile.occupation) },
     ],
   },
   {
     title: 'Liên hệ',
     rows: [
       { label: 'Số điện thoại', value: props.profile.phone },
-      { label: 'Email', value: valueOf(props.profile.email) },
-      { label: 'Địa chỉ thường trú', value: valueOf(props.profile.permanentAddress) },
+      { label: 'Email', value: displayValue(props.profile.email) },
+      { label: 'Địa chỉ thường trú', value: displayValue(props.profile.permanentAddress) },
     ],
   },
   {
     title: 'Liên hệ khẩn cấp',
     rows: [
-      { label: 'Người liên hệ', value: valueOf(props.profile.emergencyContactName) },
-      { label: 'Số điện thoại', value: valueOf(props.profile.emergencyContactPhone) },
+      { label: 'Người liên hệ', value: displayValue(props.profile.emergencyContactName) },
+      { label: 'Số điện thoại', value: displayValue(props.profile.emergencyContactPhone) },
     ],
   },
   {
     title: 'Ghi chú',
     rows: [
-      { label: 'Nội dung', value: valueOf(props.profile.notes) },
+      { label: 'Nội dung', value: displayValue(props.profile.notes) },
     ],
   },
 ])
 
 const identityRows = computed<DossierRow[]>(() => [
-  { label: 'Số CCCD/CMND', value: valueOf(props.profile.idNumber) },
+  { label: 'Số CCCD/CMND', value: displayValue(props.profile.idNumber) },
   { label: 'Ngày cấp', value: dateOf(props.profile.idIssuedDate) },
-  { label: 'Nơi cấp', value: valueOf(props.profile.idIssuedPlace) },
+  { label: 'Nơi cấp', value: displayValue(props.profile.idIssuedPlace) },
 ])
 </script>
 
@@ -104,7 +104,7 @@ const identityRows = computed<DossierRow[]>(() => [
             {{ profile.code }}
           </p>
           <p class="mt-0.5 break-all portal-type-caption text-body">
-            {{ valueOf(profile.email) }}
+            {{ displayValue(profile.email) }}
           </p>
           <PortalChip
             class="mt-2"

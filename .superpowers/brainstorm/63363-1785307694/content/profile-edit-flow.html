@@ -1,0 +1,231 @@
+<style>
+  .flow-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 18px;
+    margin-top: 24px;
+  }
+  .flow-card {
+    cursor: pointer;
+    border: 1px solid #d9dee8;
+    border-radius: 18px;
+    background: #fff;
+    overflow: hidden;
+    transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+  }
+  .flow-card:hover {
+    border-color: #1554f0;
+    box-shadow: 0 16px 40px rgba(21, 84, 240, .12);
+    transform: translateY(-2px);
+  }
+  .flow-card.selected {
+    border: 2px solid #1554f0;
+    box-shadow: 0 0 0 4px rgba(21, 84, 240, .12);
+  }
+  .phone {
+    position: relative;
+    min-height: 520px;
+    padding: 12px;
+    background: #f4f6fb;
+    color: #0b1422;
+  }
+  .status {
+    height: 16px;
+    margin-bottom: 10px;
+    border-bottom: 1px solid #e6e9ef;
+  }
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 42px;
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .action { color: #1554f0; font-weight: 700; }
+  .avatar {
+    display: grid;
+    place-items: center;
+    width: 58px;
+    height: 58px;
+    margin: 16px auto 10px;
+    border-radius: 50%;
+    background: #eaf0ff;
+    color: #1554f0;
+    font-weight: 800;
+  }
+  .name { text-align: center; font-size: 15px; font-weight: 800; }
+  .meta { text-align: center; color: #8a93a3; font-size: 10px; margin: 4px 0 16px; }
+  .section-title { margin: 14px 2px 7px; color: #5b6472; font-size: 10px; font-weight: 800; }
+  .panel {
+    padding: 5px 11px;
+    border: 1px solid #e6e9ef;
+    border-radius: 13px;
+    background: #fff;
+    box-shadow: 0 5px 16px rgba(11, 20, 34, .04);
+  }
+  .row {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid #eef0f4;
+    font-size: 10px;
+  }
+  .row:last-child { border-bottom: 0; }
+  .row span:first-child { color: #8a93a3; }
+  .field {
+    margin: 9px 0;
+    padding: 9px 10px;
+    border: 1px solid #dfe3ea;
+    border-radius: 10px;
+    color: #5b6472;
+    font-size: 10px;
+  }
+  .sticky {
+    position: absolute;
+    right: 12px;
+    bottom: 12px;
+    left: 12px;
+    display: grid;
+    grid-template-columns: 1fr 1.5fr;
+    gap: 8px;
+    padding: 8px;
+    border: 1px solid #e6e9ef;
+    border-radius: 14px;
+    background: rgba(255,255,255,.96);
+    box-shadow: 0 12px 30px rgba(11, 20, 34, .12);
+  }
+  .button {
+    padding: 10px;
+    border-radius: 9px;
+    background: #edf0f5;
+    text-align: center;
+    font-size: 10px;
+    font-weight: 800;
+  }
+  .button.primary { background: #1554f0; color: #fff; }
+  .sheet-dim {
+    position: absolute;
+    inset: 0;
+    background: rgba(11,20,34,.24);
+  }
+  .sheet {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    height: 76%;
+    padding: 9px 13px 74px;
+    border-radius: 22px 22px 0 0;
+    background: #fff;
+    box-shadow: 0 -14px 40px rgba(11,20,34,.14);
+  }
+  .grabber { width: 38px; height: 4px; margin: 0 auto 12px; border-radius: 9px; background: #d7dbe3; }
+  .card-copy { padding: 15px 16px 17px; }
+  .card-copy h3 { margin: 0 0 5px; font-size: 16px; }
+  .card-copy p { margin: 0; color: #667085; font-size: 13px; line-height: 1.5; }
+  .tag {
+    display: inline-flex;
+    margin-top: 10px;
+    padding: 4px 8px;
+    border-radius: 99px;
+    background: #eaf0ff;
+    color: #1554f0;
+    font-size: 11px;
+    font-weight: 800;
+  }
+  @media (max-width: 900px) {
+    .flow-grid { grid-template-columns: 1fr; }
+  }
+</style>
+
+<h2>Luồng edit profile nào “native” và gọn nhất?</h2>
+<p class="subtitle">Nhấn vào phương án bạn thích. Mình khuyến nghị C vì form có nhiều nhóm thông tin và cần xử lý thay đổi chưa lưu.</p>
+
+<div class="flow-grid">
+  <article class="flow-card" data-choice="a-inline" onclick="toggleSelect(this)">
+    <div class="phone">
+      <div class="status"></div>
+      <div class="topbar"><span>Tài khoản</span><span class="action">Sửa</span></div>
+      <div class="avatar">NT</div>
+      <div class="name">Nguyễn Thanh Tùng</div>
+      <div class="meta">KH-024 · Đang thuê</div>
+      <div class="section-title">THÔNG TIN CÁ NHÂN</div>
+      <div class="panel">
+        <div class="row"><span>Giới tính</span><strong>Nam</strong></div>
+        <div class="row"><span>Ngày sinh</span><strong>12/08/1995</strong></div>
+        <div class="row"><span>Nghề nghiệp</span><strong>Kỹ sư</strong></div>
+      </div>
+      <div class="section-title">LIÊN HỆ</div>
+      <div class="panel">
+        <div class="row"><span>Số điện thoại</span><strong>090 123 4567</strong></div>
+        <div class="row"><span>Email</span><strong>tung@example.com</strong></div>
+      </div>
+    </div>
+    <div class="card-copy">
+      <h3>A · Edit ngay trong trang</h3>
+      <p>Nhấn “Sửa” rồi toàn bộ trang đổi thành form. Ít thay đổi code nhưng ngữ cảnh dễ bị nhảy và nút lưu nằm xa.</p>
+      <span class="tag">Nhanh triển khai</span>
+    </div>
+  </article>
+
+  <article class="flow-card" data-choice="b-sheet" onclick="toggleSelect(this)">
+    <div class="phone">
+      <div class="status"></div>
+      <div class="topbar"><span>Tài khoản</span><span class="action">Sửa</span></div>
+      <div class="avatar">NT</div>
+      <div class="name">Nguyễn Thanh Tùng</div>
+      <div class="meta">KH-024 · Đang thuê</div>
+      <div class="panel">
+        <div class="row"><span>Số điện thoại</span><strong>090 123 4567</strong></div>
+        <div class="row"><span>Địa chỉ</span><strong>Quận 7, TP.HCM</strong></div>
+      </div>
+      <div class="sheet-dim"></div>
+      <div class="sheet">
+        <div class="grabber"></div>
+        <div class="topbar"><span>Chỉnh sửa hồ sơ</span><span class="action">Xong</span></div>
+        <div class="field">Họ và tên</div>
+        <div class="field">Số điện thoại</div>
+        <div class="field">Ngày sinh</div>
+        <div class="field">Nghề nghiệp</div>
+        <div class="field">Địa chỉ thường trú</div>
+        <div class="sticky"><div class="button">Hủy</div><div class="button primary">Lưu thay đổi</div></div>
+      </div>
+    </div>
+    <div class="card-copy">
+      <h3>B · Bottom sheet dài</h3>
+      <p>Giữ trang profile phía sau và tạo cảm giác mobile. Tuy nhiên sheet dài 8–9 trường dễ thành “modal trong trang”.</p>
+      <span class="tag">Giữ ngữ cảnh</span>
+    </div>
+  </article>
+
+  <article class="flow-card" data-choice="c-fullscreen" onclick="toggleSelect(this)">
+    <div class="phone">
+      <div class="status"></div>
+      <div class="topbar"><span>‹ Hồ sơ</span><span>Chỉnh sửa</span><span class="action">Lưu</span></div>
+      <div class="section-title">THÔNG TIN CÁ NHÂN</div>
+      <div class="panel">
+        <div class="field">Họ và tên · Nguyễn Thanh Tùng</div>
+        <div class="field">Giới tính · Nam</div>
+        <div class="field">Ngày sinh · 12/08/1995</div>
+        <div class="field">Nghề nghiệp · Kỹ sư</div>
+      </div>
+      <div class="section-title">LIÊN HỆ</div>
+      <div class="panel">
+        <div class="field">Số điện thoại · 090 123 4567</div>
+        <div class="field">Địa chỉ thường trú</div>
+      </div>
+      <div class="section-title">ĐƯỢC XÁC MINH BỞI BAN QUẢN LÝ</div>
+      <div class="panel">
+        <div class="row"><span>CCCD/CMND</span><strong>•••• 6789</strong></div>
+      </div>
+      <div class="sticky"><div class="button">Hủy</div><div class="button primary">Lưu thay đổi</div></div>
+    </div>
+    <div class="card-copy">
+      <h3>C · Màn hình edit riêng</h3>
+      <p>Header có back/save, action bar luôn thấy, dễ cảnh báo khi rời trang và chia rõ dữ liệu sửa được với dữ liệu xác minh.</p>
+      <span class="tag">Khuyến nghị · Native nhất</span>
+    </div>
+  </article>
+</div>

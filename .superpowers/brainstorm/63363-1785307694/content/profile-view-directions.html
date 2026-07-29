@@ -1,0 +1,297 @@
+<style>
+  .directions {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 18px;
+    margin-top: 24px;
+  }
+  .direction {
+    cursor: pointer;
+    overflow: hidden;
+    border: 1px solid #d9dee8;
+    border-radius: 18px;
+    background: #fff;
+    transition: 160ms ease;
+  }
+  .direction:hover {
+    transform: translateY(-2px);
+    border-color: #1554f0;
+    box-shadow: 0 16px 40px rgba(21, 84, 240, .12);
+  }
+  .direction.selected {
+    border: 2px solid #1554f0;
+    box-shadow: 0 0 0 4px rgba(21, 84, 240, .12);
+  }
+  .screen {
+    min-height: 560px;
+    padding: 14px;
+    background: #f4f6fb;
+    color: #0b1422;
+    font-family: Inter, system-ui, sans-serif;
+  }
+  .bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 38px;
+    font-size: 13px;
+    font-weight: 800;
+  }
+  .edit {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: #1554f0;
+    font-size: 11px;
+  }
+  .hero {
+    padding: 18px 14px 15px;
+    border: 1px solid #e6e9ef;
+    border-radius: 16px;
+    background: #fff;
+    box-shadow: 0 7px 22px rgba(11,20,34,.05);
+  }
+  .hero-row { display: flex; align-items: center; gap: 12px; }
+  .avatar {
+    display: grid;
+    width: 54px;
+    height: 54px;
+    flex: 0 0 auto;
+    place-items: center;
+    border-radius: 50%;
+    background: #eaf0ff;
+    color: #1554f0;
+    font-size: 15px;
+    font-weight: 850;
+  }
+  .name { font-size: 14px; font-weight: 850; }
+  .meta { margin-top: 3px; color: #8a93a3; font-size: 9px; }
+  .status {
+    display: inline-flex;
+    margin-top: 7px;
+    padding: 3px 7px;
+    border-radius: 99px;
+    background: #eaf8f3;
+    color: #0e9f6e;
+    font-size: 8px;
+    font-weight: 800;
+  }
+  .section-label {
+    margin: 15px 3px 7px;
+    color: #5b6472;
+    font-size: 9px;
+    font-weight: 800;
+  }
+  .surface {
+    overflow: hidden;
+    border: 1px solid #e6e9ef;
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: 0 5px 18px rgba(11,20,34,.035);
+  }
+  .pair {
+    display: grid;
+    grid-template-columns: 38% 1fr;
+    gap: 9px;
+    padding: 10px 12px;
+    border-bottom: 1px solid #eef0f4;
+    font-size: 9px;
+  }
+  .pair:last-child { border-bottom: 0; }
+  .pair span { color: #8a93a3; }
+  .pair strong { min-width: 0; text-align: right; overflow-wrap: anywhere; }
+  .verified {
+    margin: 8px 10px 0;
+    padding: 7px 9px;
+    border-radius: 9px;
+    background: #f7f8fa;
+    color: #5b6472;
+    font-size: 8px;
+    line-height: 1.4;
+  }
+  .media-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .media {
+    min-height: 68px;
+    padding: 10px;
+    border: 1px dashed #cfd5df;
+    border-radius: 12px;
+    background: #fff;
+    font-size: 9px;
+  }
+  .logout { margin-top: 16px; text-align: center; color: #e02424; font-size: 10px; font-weight: 750; }
+  .flat {
+    background: #fff;
+    border-top: 1px solid #e6e9ef;
+    border-bottom: 1px solid #e6e9ef;
+  }
+  .settings-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 3px;
+    border-bottom: 1px solid #eef0f4;
+  }
+  .settings-row:last-child { border-bottom: 0; }
+  .icon {
+    display: grid;
+    width: 28px;
+    height: 28px;
+    flex: 0 0 auto;
+    place-items: center;
+    border-radius: 8px;
+    background: #eaf0ff;
+    color: #1554f0;
+    font-size: 10px;
+  }
+  .settings-copy { flex: 1; min-width: 0; }
+  .settings-copy strong { display: block; font-size: 10px; }
+  .settings-copy span { display: block; margin-top: 2px; color: #8a93a3; font-size: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .chev { color: #a8afbb; }
+  .document-head {
+    padding: 20px 4px 14px;
+    border-bottom: 2px solid #0b1422;
+  }
+  .document-head .name { font-size: 19px; letter-spacing: -.025em; }
+  .doc-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 14px;
+  }
+  .doc-item {
+    padding: 11px 0;
+    border-bottom: 1px solid #e6e9ef;
+  }
+  .doc-item span { display: block; color: #8a93a3; font-size: 8px; }
+  .doc-item strong { display: block; margin-top: 4px; font-size: 9px; overflow-wrap: anywhere; }
+  .copy { padding: 15px 16px 17px; }
+  .copy h3 { margin: 0 0 6px; font-size: 16px; }
+  .copy p { margin: 0; color: #667085; font-size: 13px; line-height: 1.5; }
+  .tag {
+    display: inline-flex;
+    margin-top: 10px;
+    padding: 4px 8px;
+    border-radius: 99px;
+    background: #eaf0ff;
+    color: #1554f0;
+    font-size: 11px;
+    font-weight: 800;
+  }
+  @media (max-width: 900px) {
+    .directions { grid-template-columns: 1fr; }
+  }
+</style>
+
+<h2>Chọn hướng redesign cho màn hình Profile</h2>
+<p class="subtitle">Cả ba đều hiển thị đủ hồ sơ cá nhân và dùng màn hình edit riêng. Khác nhau ở hierarchy, độ gọn và cảm giác native.</p>
+
+<div class="directions">
+  <article class="direction" data-choice="a-dossier" onclick="toggleSelect(this)">
+    <div class="screen">
+      <div class="bar"><span>Tài khoản</span><span class="edit">✎ Chỉnh sửa</span></div>
+      <div class="hero">
+        <div class="hero-row">
+          <div class="avatar">NT</div>
+          <div>
+            <div class="name">Nguyễn Thanh Tùng</div>
+            <div class="meta">KH-024 · tung@example.com</div>
+            <span class="status">Đang thuê</span>
+          </div>
+        </div>
+      </div>
+      <div class="section-label">THÔNG TIN CÁ NHÂN</div>
+      <div class="surface">
+        <div class="pair"><span>Điện thoại</span><strong>090 123 4567</strong></div>
+        <div class="pair"><span>Ngày sinh</span><strong>12/08/1995</strong></div>
+        <div class="pair"><span>Giới tính</span><strong>Nam</strong></div>
+        <div class="pair"><span>Nghề nghiệp</span><strong>Kỹ sư</strong></div>
+        <div class="pair"><span>Địa chỉ</span><strong>Quận 7, TP.HCM</strong></div>
+      </div>
+      <div class="section-label">ĐỊNH DANH ĐÃ XÁC MINH</div>
+      <div class="surface">
+        <div class="verified">Các thông tin dưới đây do ban quản lý xác minh.</div>
+        <div class="pair"><span>CCCD/CMND</span><strong>•••• 6789</strong></div>
+        <div class="pair"><span>Ngày cấp</span><strong>10/05/2021</strong></div>
+        <div class="pair"><span>Nơi cấp</span><strong>Cục CSQLHC</strong></div>
+      </div>
+      <div class="section-label">ẢNH ĐỊNH DANH & TÀI LIỆU</div>
+      <div class="media-row"><div class="media">Mặt trước<br><strong>Đã tải lên</strong></div><div class="media">Mặt sau<br><strong>Đã tải lên</strong></div></div>
+      <div class="logout">Đăng xuất</div>
+    </div>
+    <div class="copy">
+      <h3>A · Identity-first dossier</h3>
+      <p>Hai surface chính, ít card, scan nhanh. Phần xác minh và media nằm sau thông tin thường dùng.</p>
+      <span class="tag">Khuyến nghị · Cân bằng nhất</span>
+    </div>
+  </article>
+
+  <article class="direction" data-choice="b-settings" onclick="toggleSelect(this)">
+    <div class="screen">
+      <div class="bar"><span>Tài khoản</span><span class="edit">Chỉnh sửa</span></div>
+      <div class="hero">
+        <div class="hero-row">
+          <div class="avatar">NT</div>
+          <div><div class="name">Nguyễn Thanh Tùng</div><div class="meta">KH-024 · Đang thuê</div></div>
+        </div>
+      </div>
+      <div class="section-label">HỒ SƠ</div>
+      <div class="flat">
+        <div class="settings-row"><div class="icon">●</div><div class="settings-copy"><strong>Thông tin cá nhân</strong><span>Giới tính, ngày sinh, nghề nghiệp</span></div><div class="chev">›</div></div>
+        <div class="settings-row"><div class="icon">☎</div><div class="settings-copy"><strong>Liên hệ</strong><span>Điện thoại, email, địa chỉ</span></div><div class="chev">›</div></div>
+        <div class="settings-row"><div class="icon">ID</div><div class="settings-copy"><strong>Định danh</strong><span>CCCD, ngày cấp, nơi cấp</span></div><div class="chev">›</div></div>
+        <div class="settings-row"><div class="icon">SOS</div><div class="settings-copy"><strong>Liên hệ khẩn cấp</strong><span>Người liên hệ và số điện thoại</span></div><div class="chev">›</div></div>
+        <div class="settings-row"><div class="icon">▣</div><div class="settings-copy"><strong>Ảnh định danh</strong><span>2 mặt CCCD</span></div><div class="chev">›</div></div>
+        <div class="settings-row"><div class="icon">▤</div><div class="settings-copy"><strong>Tài liệu</strong><span>3 tệp đã tải lên</span></div><div class="chev">›</div></div>
+      </div>
+      <div class="section-label">TÀI KHOẢN</div>
+      <div class="flat"><div class="settings-row"><div class="icon">↪</div><div class="settings-copy"><strong style="color:#e02424">Đăng xuất</strong></div></div></div>
+    </div>
+    <div class="copy">
+      <h3>B · Native settings list</h3>
+      <p>Rất giống iOS/Android và gọn ở màn đầu, nhưng phải mở thêm màn/accordion mới thấy đủ dữ liệu.</p>
+      <span class="tag">Gọn nhất · Nhiều thao tác hơn</span>
+    </div>
+  </article>
+
+  <article class="direction" data-choice="c-document" onclick="toggleSelect(this)">
+    <div class="screen" style="background:#fff">
+      <div class="bar"><span>Tài khoản</span><span class="edit">Chỉnh sửa</span></div>
+      <div class="document-head">
+        <div class="meta">HỒ SƠ TENANT · KH-024</div>
+        <div class="name">Nguyễn Thanh Tùng</div>
+        <div class="meta">Đang thuê · Cập nhật gần nhất bởi ban quản lý</div>
+      </div>
+      <div class="section-label">THÔNG TIN CÁ NHÂN</div>
+      <div class="doc-grid">
+        <div class="doc-item"><span>Điện thoại</span><strong>090 123 4567</strong></div>
+        <div class="doc-item"><span>Email</span><strong>tung@example.com</strong></div>
+        <div class="doc-item"><span>Ngày sinh</span><strong>12/08/1995</strong></div>
+        <div class="doc-item"><span>Giới tính</span><strong>Nam</strong></div>
+        <div class="doc-item"><span>Nghề nghiệp</span><strong>Kỹ sư</strong></div>
+        <div class="doc-item"><span>Địa chỉ</span><strong>Quận 7, TP.HCM</strong></div>
+      </div>
+      <div class="section-label">ĐỊNH DANH</div>
+      <div class="doc-grid">
+        <div class="doc-item"><span>CCCD/CMND</span><strong>•••• 6789</strong></div>
+        <div class="doc-item"><span>Ngày cấp</span><strong>10/05/2021</strong></div>
+        <div class="doc-item"><span>Nơi cấp</span><strong>Cục CSQLHC</strong></div>
+      </div>
+      <div class="section-label">LIÊN HỆ KHẨN CẤP</div>
+      <div class="doc-grid">
+        <div class="doc-item"><span>Người liên hệ</span><strong>Nguyễn Văn B</strong></div>
+        <div class="doc-item"><span>Số điện thoại</span><strong>091 234 5678</strong></div>
+      </div>
+      <div class="section-label">TỆP HỒ SƠ</div>
+      <div class="media-row"><div class="media">Ảnh định danh<br><strong>2 / 2</strong></div><div class="media">Tài liệu<br><strong>3 tệp</strong></div></div>
+      <div class="logout">Đăng xuất</div>
+    </div>
+    <div class="copy">
+      <h3>C · Flat profile document</h3>
+      <p>Mật độ cao và nhìn toàn bộ hồ sơ nhanh, nhưng thiên về “hồ sơ web” hơn ứng dụng mobile native.</p>
+      <span class="tag">Đầy đủ nhất · Ít native hơn</span>
+    </div>
+  </article>
+</div>
