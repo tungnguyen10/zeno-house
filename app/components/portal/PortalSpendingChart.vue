@@ -120,7 +120,7 @@ const chartSummary = computed(() => {
           Tổng hóa đơn
         </span>
         <span class="portal-type-caption inline-flex items-center gap-2 text-body">
-          <span class="w-5 border-t-2 border-dashed border-portal-positive" aria-hidden="true" />
+          <span class="w-5 border-t-2 border-dashed border-[color:var(--portal-positive)]" aria-hidden="true" />
           Đã thanh toán
         </span>
       </div>

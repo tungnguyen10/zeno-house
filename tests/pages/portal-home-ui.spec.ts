@@ -35,6 +35,7 @@ describe('portal home refreshed statement UI', () => {
     expect(page).toContain('Bình quân mỗi tháng')
     expect(page).toContain('Tỷ lệ đã thanh toán')
     expect(page).toContain('grid-cols-[minmax(0,1fr)_minmax(0,1fr)]')
+    expect(page).toContain('text-[color:var(--portal-positive-ink)]')
     expect(page.indexOf('Financial overview')).toBeLessThan(page.indexOf('Quick actions'))
   })
 

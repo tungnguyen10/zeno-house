@@ -1,8 +1,15 @@
 import { describe, expect, it, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { defineComponent, h } from 'vue'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import type { TenantInvoiceListItem } from '~/types/tenant-portal'
 import PortalSpendingChart from '~/components/portal/PortalSpendingChart.vue'
+
+const source = readFileSync(
+  resolve('app/components/portal/PortalSpendingChart.vue'),
+  'utf8',
+)
 
 vi.mock('vue-chartjs', () => ({
   Line: defineComponent({
@@ -87,5 +94,10 @@ describe('PortalSpendingChart', () => {
 
     expect(wrapper.text()).toContain('Chưa có dữ liệu')
     expect(wrapper.find('[data-test="line"]').exists()).toBe(false)
+  })
+
+  it('uses the active portal positive token for the paid legend', () => {
+    expect(source).toContain('border-[color:var(--portal-positive)]')
+    expect(source).not.toContain('border-portal-positive')
   })
 })

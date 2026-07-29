@@ -193,7 +193,7 @@ async function refreshAll() {
           </PortalCard>
           <PortalCard class="min-w-0">
             <p class="portal-type-caption text-body">Tỷ lệ đã thanh toán</p>
-            <p class="portal-money mt-1 text-sm font-semibold text-portal-positive-ink sm:text-base">
+            <p class="portal-money mt-1 text-sm font-semibold text-[color:var(--portal-positive-ink)] sm:text-base">
               {{ financialOverview.paidRatio }}%
             </p>
           </PortalCard>
