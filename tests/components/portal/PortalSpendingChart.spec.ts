@@ -12,11 +12,11 @@ const source = readFileSync(
 )
 
 vi.mock('vue-chartjs', () => ({
-  Line: defineComponent({
+  Bar: defineComponent({
     props: ['data', 'options'],
     setup(props) {
       return () => h('div', {
-        'data-test': 'line',
+        'data-test': 'bar',
         'data-datasets': JSON.stringify(props.data?.datasets ?? []),
         'data-animation-duration': String(props.options?.animation?.duration ?? ''),
       })
@@ -70,34 +70,40 @@ function mountChart(invoices: TenantInvoiceListItem[]) {
 }
 
 describe('PortalSpendingChart', () => {
-  it('renders billed and paid series with a text alternative', () => {
+  it('renders one monthly invoice-total bar series with a text alternative', () => {
     const wrapper = mountChart([
       invoice(3, 4_000_000, 3_000_000),
       invoice(2, 3_500_000, 3_500_000),
     ])
     const datasets = JSON.parse(
-      wrapper.get('[data-test="line"]').attributes('data-datasets') ?? '[]',
+      wrapper.get('[data-test="bar"]').attributes('data-datasets') ?? '[]',
     )
 
-    expect(datasets.map((dataset: { label?: string }) => dataset.label))
-      .toEqual(['Tổng hóa đơn', 'Đã thanh toán'])
-    expect(datasets[0].fill).toBe(true)
-    expect(datasets[1].borderDash).toEqual([5, 4])
-    expect(wrapper.text()).toContain('Tổng hóa đơn')
-    expect(wrapper.text()).toContain('Đã thanh toán')
+    expect(datasets).toHaveLength(1)
+    expect(datasets[0]).toMatchObject({
+      label: 'Tổng hóa đơn theo tháng',
+      data: [3_500_000, 4_000_000],
+      borderRadius: 6,
+      borderSkipped: 'bottom',
+      maxBarThickness: 28,
+    })
+    expect(wrapper.text()).toContain('Tổng hóa đơn theo tháng')
+    expect(wrapper.text()).not.toContain('Đã thanh toán')
     expect(wrapper.get('[data-test="chart-summary"]').text())
       .toContain('02/26 đến 03/26')
+    expect(wrapper.get('[data-test="chart-summary"]').text())
+      .toContain('tổng tiền hóa đơn của từng tháng')
   })
 
   it('keeps the empty state when invoice data is unavailable', () => {
     const wrapper = mountChart([])
 
     expect(wrapper.text()).toContain('Chưa có dữ liệu')
-    expect(wrapper.find('[data-test="line"]').exists()).toBe(false)
+    expect(wrapper.find('[data-test="bar"]').exists()).toBe(false)
   })
 
-  it('uses the active portal positive token for the paid legend', () => {
-    expect(source).toContain('border-[color:var(--portal-positive)]')
-    expect(source).not.toContain('border-portal-positive')
+  it('uses the active portal theme token for the monthly-total legend', () => {
+    expect(source).toContain('bg-theme')
+    expect(source).not.toContain('border-[color:var(--portal-positive)]')
   })
 })
