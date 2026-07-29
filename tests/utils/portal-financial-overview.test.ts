@@ -33,11 +33,11 @@ function invoice(
 }
 
 describe('buildPortalFinancialOverview', () => {
-  it('limits newest-first input and returns chronological chart series', () => {
+  it('selects the newest periods and returns them from left to right chronologically', () => {
     const result = buildPortalFinancialOverview([
+      invoice(4, 4_000_000, 4_000_000),
       invoice(6, 6_000_000, 3_000_000),
       invoice(5, 5_000_000, 5_000_000),
-      invoice(4, 4_000_000, 4_000_000),
     ], 2)
 
     expect(result.labels).toEqual(['05/26', '06/26'])

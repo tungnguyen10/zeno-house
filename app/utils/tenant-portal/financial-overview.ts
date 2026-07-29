@@ -13,7 +13,12 @@ export function buildPortalFinancialOverview(
   invoices: TenantInvoiceListItem[],
   limit = 6,
 ): PortalFinancialOverview {
-  const recent = [...invoices].slice(0, limit).reverse()
+  const comparePeriod = (left: TenantInvoiceListItem, right: TenantInvoiceListItem) =>
+    left.periodYear - right.periodYear || left.periodMonth - right.periodMonth
+  const recent = [...invoices]
+    .sort((left, right) => comparePeriod(right, left))
+    .slice(0, limit)
+    .sort(comparePeriod)
   const totalAmount = recent.reduce((sum, item) => sum + item.totalAmount, 0)
   const paidAmount = recent.reduce((sum, item) => sum + item.paidAmount, 0)
 
