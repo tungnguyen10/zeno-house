@@ -88,10 +88,11 @@ const identityRows = computed<DossierRow[]>(() => [
 
 <template>
   <div class="space-y-5">
-    <PortalCard>
-      <div class="flex min-w-0 items-center gap-4">
+    <!-- Membership identity card: accent band + monogram, tenant code, status. -->
+    <PortalCard :padded="false" class="overflow-hidden">
+      <div class="flex items-center gap-4 bg-smoke-blue px-4 py-4">
         <span
-          class="flex size-16 shrink-0 items-center justify-center rounded-full bg-smoke-blue portal-type-heading text-theme"
+          class="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-white portal-type-heading text-theme shadow-[var(--portal-elevation-resting)]"
           aria-hidden="true"
         >
           {{ initials }}
@@ -100,19 +101,22 @@ const identityRows = computed<DossierRow[]>(() => [
           <p class="break-words portal-type-heading text-title">
             {{ profile.fullName }}
           </p>
-          <p class="mt-1 portal-type-caption text-body">
+          <p class="mt-0.5 portal-type-caption tabular-nums text-body">
             {{ profile.code }}
           </p>
-          <p class="mt-0.5 break-all portal-type-caption text-body">
-            {{ displayValue(profile.email) }}
-          </p>
-          <PortalChip
-            class="mt-2"
-            :tone="profile.status === 'active' ? 'success' : 'neutral'"
-          >
-            {{ statusLabel }}
-          </PortalChip>
         </div>
+      </div>
+      <div class="flex items-center justify-between gap-3 border-t border-border-light px-4 py-3">
+        <span class="inline-flex min-w-0 items-center gap-2 portal-type-caption text-body">
+          <IconMail class="h-4 w-4 shrink-0" aria-hidden="true" />
+          <span class="min-w-0 break-all">{{ displayValue(profile.email) }}</span>
+        </span>
+        <PortalChip
+          class="shrink-0"
+          :tone="profile.status === 'active' ? 'success' : 'neutral'"
+        >
+          {{ statusLabel }}
+        </PortalChip>
       </div>
     </PortalCard>
 
@@ -123,20 +127,20 @@ const identityRows = computed<DossierRow[]>(() => [
       >
         Hồ sơ cá nhân
       </h2>
-      <PortalCard :padded="false">
+      <PortalCard :padded="false" class="pb-2">
         <div
           v-for="(group, groupIndex) in personalGroups"
           :key="group.title"
           :class="groupIndex > 0 ? 'border-t border-border-light' : undefined"
         >
-          <h3 class="bg-smoke px-4 py-2 portal-type-label text-body">
+          <h3 class="px-4 pb-1 pt-3.5 portal-type-label uppercase tracking-wider text-body opacity-60">
             {{ group.title }}
           </h3>
           <dl class="divide-y divide-border-light">
             <div
               v-for="row in group.rows"
               :key="row.label"
-              class="grid min-w-0 gap-1 px-4 py-3 sm:grid-cols-[minmax(7rem,40%)_minmax(0,1fr)] sm:gap-4"
+              class="grid min-w-0 gap-0.5 px-4 py-2.5 sm:grid-cols-[minmax(7rem,38%)_minmax(0,1fr)] sm:gap-4"
             >
               <dt class="portal-type-caption text-body">
                 {{ row.label }}
@@ -157,15 +161,16 @@ const identityRows = computed<DossierRow[]>(() => [
       >
         Thông tin định danh
       </h2>
-      <PortalCard :padded="false">
-        <p class="border-b border-border-light bg-smoke px-4 py-3 portal-type-caption text-body">
-          Thông tin trên giấy tờ tùy thân dùng để đối chiếu hồ sơ.
+      <PortalCard :padded="false" class="pb-2">
+        <p class="flex items-start gap-2 px-4 pb-2 pt-4 portal-type-caption text-body">
+          <IconShield class="mt-0.5 h-4 w-4 shrink-0 text-theme" aria-hidden="true" />
+          <span>Thông tin trên giấy tờ tùy thân dùng để đối chiếu hồ sơ.</span>
         </p>
-        <dl class="divide-y divide-border-light">
+        <dl class="divide-y divide-border-light border-t border-border-light">
           <div
             v-for="row in identityRows"
             :key="row.label"
-            class="grid min-w-0 gap-1 px-4 py-3 sm:grid-cols-[minmax(7rem,40%)_minmax(0,1fr)] sm:gap-4"
+            class="grid min-w-0 gap-0.5 px-4 py-2.5 sm:grid-cols-[minmax(7rem,38%)_minmax(0,1fr)] sm:gap-4"
           >
             <dt class="portal-type-caption text-body">
               {{ row.label }}
