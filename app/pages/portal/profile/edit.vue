@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import type { TenantGender } from '~/types/tenant-portal'
 import type { TenantProfileEditForm } from '~/utils/portal-profile'
+import type { TenantIdentityImageSide } from '~/utils/validators/tenant-portal'
 import {
   buildTenantProfileChanges,
   toTenantProfileEditForm,
   validateTenantProfileChanges,
 } from '~/utils/portal-profile'
+import { getApiErrorMessage } from '~/utils/api-error'
 
 definePageMeta({
   layout: 'tenant',
@@ -25,6 +27,7 @@ const {
   saving,
   apiError,
 } = usePortalProfile()
+const identity = usePortalIdentityImages()
 
 const baseline = ref<TenantProfileEditForm | null>(null)
 const form = reactive<TenantProfileEditForm>({
@@ -34,6 +37,9 @@ const form = reactive<TenantProfileEditForm>({
   date_of_birth: '',
   occupation: '',
   permanent_address: '',
+  id_number: '',
+  id_issued_date: '',
+  id_issued_place: '',
   emergency_contact_name: '',
   emergency_contact_phone: '',
   notes: '',
@@ -91,6 +97,26 @@ function visibleError(field: keyof TenantProfileEditForm): string | undefined {
 
 function toggleGender(value: TenantGender) {
   form.gender = form.gender === value ? null : value
+}
+
+async function onIdentitySelect(side: TenantIdentityImageSide, file: File) {
+  try {
+    await identity.upload(side, file)
+    toast.success('Đã cập nhật ảnh định danh.')
+  }
+  catch (error) {
+    toast.error(getApiErrorMessage(error))
+  }
+}
+
+async function onIdentityRemove(side: TenantIdentityImageSide) {
+  try {
+    await identity.remove(side)
+    toast.success('Đã xóa ảnh định danh.')
+  }
+  catch (error) {
+    toast.error(getApiErrorMessage(error))
+  }
 }
 
 async function onSave() {
@@ -238,6 +264,71 @@ function cancelEdit() {
         <PortalCard class="space-y-4">
           <div>
             <h2 class="portal-type-heading text-title">
+              Thông tin định danh
+            </h2>
+            <p class="mt-1 portal-type-caption text-body">
+              Cập nhật đúng theo CCCD/CMND đang sử dụng.
+            </p>
+          </div>
+
+          <PortalInput
+            v-model="form.id_number"
+            label="Số CCCD/CMND"
+            inputmode="numeric"
+            autocomplete="off"
+            :error="visibleError('id_number')"
+            @blur="touchField('id_number')"
+          />
+
+          <PortalInput
+            v-model="form.id_issued_date"
+            label="Ngày cấp"
+            type="date"
+            :error="visibleError('id_issued_date')"
+            @blur="touchField('id_issued_date')"
+          />
+
+          <PortalInput
+            v-model="form.id_issued_place"
+            label="Nơi cấp"
+            autocomplete="off"
+            :error="visibleError('id_issued_place')"
+            @blur="touchField('id_issued_place')"
+          />
+
+          <div class="border-t border-border-light pt-4">
+            <p class="portal-type-label text-title">
+              Ảnh CCCD/CMND
+            </p>
+            <p class="mt-1 portal-type-caption text-body">
+              Chụp rõ đủ bốn góc, tối đa 5MB mỗi ảnh.
+            </p>
+            <div class="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <PortalIdentityImageSlot
+                label="Mặt trước"
+                :signed-url="identity.images.value.frontSignedUrl"
+                :uploading="identity.uploading.value.front"
+                :progress="identity.progress.value.front"
+                @select="file => onIdentitySelect('front', file)"
+                @remove="onIdentityRemove('front')"
+                @error="toast.error"
+              />
+              <PortalIdentityImageSlot
+                label="Mặt sau"
+                :signed-url="identity.images.value.backSignedUrl"
+                :uploading="identity.uploading.value.back"
+                :progress="identity.progress.value.back"
+                @select="file => onIdentitySelect('back', file)"
+                @remove="onIdentityRemove('back')"
+                @error="toast.error"
+              />
+            </div>
+          </div>
+        </PortalCard>
+
+        <PortalCard class="space-y-4">
+          <div>
+            <h2 class="portal-type-heading text-title">
               Liên hệ khẩn cấp
             </h2>
             <p class="mt-1 portal-type-caption text-body">
@@ -294,10 +385,10 @@ function cancelEdit() {
             </span>
             <div class="min-w-0">
               <h2 class="portal-type-label text-title">
-                Thông tin do ban quản lý xác minh
+                Email đăng nhập
               </h2>
               <p class="mt-1 portal-type-caption text-body">
-                Email đăng nhập và thông tin CCCD/CMND không thể sửa tại đây. Hãy liên hệ ban quản lý nếu cần điều chỉnh.
+                Email đăng nhập được quản lý riêng và không thay đổi cùng hồ sơ cá nhân.
               </p>
             </div>
           </div>

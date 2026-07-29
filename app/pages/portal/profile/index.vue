@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import type { TenantIdentityImageSide } from '~/utils/validators/tenant-portal'
 import {
   TENANT_DOCUMENT_MAX_BYTES,
   TENANT_DOCUMENT_MIME_TYPES,
@@ -24,26 +23,6 @@ const {
 } = usePortalProfile()
 const identity = usePortalIdentityImages()
 const docs = usePortalDocuments()
-
-async function onIdentitySelect(side: TenantIdentityImageSide, file: File) {
-  try {
-    await identity.upload(side, file)
-    toast.success('Đã cập nhật ảnh định danh.')
-  }
-  catch (error) {
-    toast.error(getApiErrorMessage(error))
-  }
-}
-
-async function onIdentityRemove(side: TenantIdentityImageSide) {
-  try {
-    await identity.remove(side)
-    toast.success('Đã xóa ảnh định danh.')
-  }
-  catch (error) {
-    toast.error(getApiErrorMessage(error))
-  }
-}
 
 const docInput = ref<HTMLInputElement | null>(null)
 
@@ -141,21 +120,43 @@ async function onLogout() {
             <PortalIdentityImageSlot
               label="Mặt trước"
               :signed-url="identity.images.value.frontSignedUrl"
-              :uploading="identity.uploading.value.front"
-              :progress="identity.progress.value.front"
-              @select="file => onIdentitySelect('front', file)"
-              @remove="onIdentityRemove('front')"
-              @error="toast.error"
+              :editable="false"
             />
             <PortalIdentityImageSlot
               label="Mặt sau"
               :signed-url="identity.images.value.backSignedUrl"
-              :uploading="identity.uploading.value.back"
-              :progress="identity.progress.value.back"
-              @select="file => onIdentitySelect('back', file)"
-              @remove="onIdentityRemove('back')"
-              @error="toast.error"
+              :editable="false"
             />
+          </PortalCard>
+        </section>
+
+        <section aria-labelledby="profile-security-heading" class="space-y-3">
+          <div class="px-1">
+            <h2 id="profile-security-heading" class="portal-type-heading text-title">
+              Bảo mật
+            </h2>
+          </div>
+          <PortalCard :padded="false">
+            <NuxtLink
+              to="/portal/profile/password"
+              class="flex min-h-16 items-center gap-3 rounded-2xl px-4 py-3 transition-colors hover:bg-smoke focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-theme/40 motion-reduce:transition-none"
+            >
+              <span
+                class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-smoke-blue text-theme"
+                aria-hidden="true"
+              >
+                <IconLock class="h-5 w-5" />
+              </span>
+              <span class="min-w-0 flex-1">
+                <span class="block portal-type-body font-semibold text-title">
+                  Đổi mật khẩu
+                </span>
+                <span class="mt-0.5 block portal-type-caption text-body">
+                  Cập nhật mật khẩu đăng nhập của bạn.
+                </span>
+              </span>
+              <IconChevronRight class="h-5 w-5 shrink-0 text-body" aria-hidden="true" />
+            </NuxtLink>
           </PortalCard>
         </section>
 

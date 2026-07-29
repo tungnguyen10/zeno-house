@@ -4,9 +4,11 @@ import { TENANT_DOCUMENT_MAX_BYTES, TENANT_IDENTITY_IMAGE_MIME_TYPES } from '~/u
 withDefaults(defineProps<{
   label: string
   signedUrl: string | null
+  editable?: boolean
   uploading?: boolean
   progress?: number
 }>(), {
+  editable: true,
   uploading: false,
   progress: 0,
 })
@@ -52,7 +54,7 @@ function onChange(event: Event) {
         class="h-full w-full object-cover"
       >
       <button
-        v-else
+        v-else-if="editable"
         type="button"
         class="flex h-full w-full flex-col items-center justify-center gap-2 text-body transition-colors hover:bg-smoke-blue focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-theme/40"
         @click="pick"
@@ -60,9 +62,16 @@ function onChange(event: Event) {
         <IconPhoto class="h-7 w-7" aria-hidden="true" />
         <span class="text-xs font-medium">Chụp hoặc chọn ảnh</span>
       </button>
+      <div
+        v-else
+        class="flex h-full w-full flex-col items-center justify-center gap-2 text-body"
+      >
+        <IconPhoto class="h-7 w-7" aria-hidden="true" />
+        <span class="text-xs font-medium">Chưa có ảnh</span>
+      </div>
 
       <div
-        v-if="uploading"
+        v-if="editable && uploading"
         class="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-white/80"
       >
         <IconSpinner class="h-6 w-6 animate-spin text-theme motion-reduce:animate-none" aria-hidden="true" />
@@ -73,7 +82,7 @@ function onChange(event: Event) {
       </div>
     </div>
 
-    <div v-if="signedUrl && !uploading" class="flex gap-2">
+    <div v-if="editable && signedUrl && !uploading" class="flex gap-2">
       <PortalButton variant="secondary" size="sm" class="flex-1" @click="pick">
         <IconRefresh class="h-4 w-4" aria-hidden="true" />
         Thay ảnh
@@ -85,6 +94,7 @@ function onChange(event: Event) {
     </div>
 
     <input
+      v-if="editable"
       ref="inputRef"
       type="file"
       accept="image/jpeg,image/png,image/webp"

@@ -111,14 +111,14 @@ describe('PortalProfileDossier', () => {
     expect(wrapper.text()).toContain('Chưa cập nhật')
   })
 
-  it('labels verified identity as read-only management data', () => {
+  it('labels identity details without implying management-only editing', () => {
     const wrapper = mount(PortalProfileDossier, {
       props: { profile },
       global: { stubs },
     })
 
-    expect(wrapper.text()).toContain('Định danh đã xác minh')
-    expect(wrapper.text()).toContain('Liên hệ ban quản lý')
+    expect(wrapper.text()).toContain('Thông tin định danh')
+    expect(wrapper.text()).not.toContain('Liên hệ ban quản lý')
     expect(wrapper.find('input').exists()).toBe(false)
   })
 })

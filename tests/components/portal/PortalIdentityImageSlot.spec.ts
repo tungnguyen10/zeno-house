@@ -31,4 +31,34 @@ describe('PortalIdentityImageSlot', () => {
     expect(progress.attributes('value')).toBe('42')
     expect(progress.attributes('max')).toBe('100')
   })
+
+  it('renders an existing image without mutation controls in read-only mode', () => {
+    const wrapper = mount(PortalIdentityImageSlot, {
+      props: {
+        label: 'Mặt trước',
+        signedUrl: '/front.jpg',
+        editable: false,
+      },
+      global: { stubs },
+    })
+
+    expect(wrapper.find('input[type="file"]').exists()).toBe(false)
+    expect(wrapper.find('button').exists()).toBe(false)
+    expect(wrapper.get('img').attributes('src')).toBe('/front.jpg')
+  })
+
+  it('renders a calm empty state without an upload affordance in read-only mode', () => {
+    const wrapper = mount(PortalIdentityImageSlot, {
+      props: {
+        label: 'Mặt sau',
+        signedUrl: null,
+        editable: false,
+      },
+      global: { stubs },
+    })
+
+    expect(wrapper.text()).toContain('Chưa có ảnh')
+    expect(wrapper.find('input[type="file"]').exists()).toBe(false)
+    expect(wrapper.find('button').exists()).toBe(false)
+  })
 })

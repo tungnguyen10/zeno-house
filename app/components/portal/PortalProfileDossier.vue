@@ -155,11 +155,11 @@ const identityRows = computed<DossierRow[]>(() => [
         id="profile-identity-heading"
         class="mb-2 px-1 portal-type-heading text-title"
       >
-        Định danh đã xác minh
+        Thông tin định danh
       </h2>
       <PortalCard :padded="false">
         <p class="border-b border-border-light bg-smoke px-4 py-3 portal-type-caption text-body">
-          Thông tin này do ban quản lý xác minh. Liên hệ ban quản lý nếu cần điều chỉnh.
+          Thông tin trên giấy tờ tùy thân dùng để đối chiếu hồ sơ.
         </p>
         <dl class="divide-y divide-border-light">
           <div

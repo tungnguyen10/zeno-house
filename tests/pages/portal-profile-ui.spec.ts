@@ -22,8 +22,11 @@ describe('portal profile refreshed UI', () => {
     expect(viewPage).not.toContain('@submit.prevent="onSave"')
   })
 
-  it('keeps identity images, documents, and logout on the profile view', () => {
+  it('keeps identity previews read-only while documents remain manageable on the profile view', () => {
     expect(viewPage).toContain('<PortalIdentityImageSlot')
+    expect(viewPage.match(/:editable="false"/g)).toHaveLength(2)
+    expect(viewPage).not.toContain('onIdentitySelect')
+    expect(viewPage).not.toContain('onIdentityRemove')
     expect(viewPage).toContain('docs.documents.value')
     expect(viewPage).toContain('Đăng xuất')
   })
@@ -41,13 +44,28 @@ describe('portal profile refreshed UI', () => {
     expect(viewPage).toContain('@click="onLogout"')
   })
 
-  it('uses a dedicated edit route with the nine whitelisted fields', () => {
+  it('uses a dedicated edit route with all twelve whitelisted fields', () => {
     expect(editPage).toContain("setChrome({ title: 'Chỉnh sửa hồ sơ', back: '/portal/profile' })")
-    expect(editPage.match(/<PortalInput/g)).toHaveLength(8)
+    expect(editPage.match(/<PortalInput/g)).toHaveLength(11)
     expect(editPage).toContain('GENDER_OPTIONS')
     expect(editPage).toContain(':aria-pressed="form.gender === option.value"')
     expect(editPage).not.toContain('v-model="form.email"')
-    expect(editPage).not.toContain('v-model="form.id_number"')
+    expect(editPage).toContain('v-model="form.id_number"')
+    expect(editPage).toContain('v-model="form.id_issued_date"')
+    expect(editPage).toContain('v-model="form.id_issued_place"')
+  })
+
+  it('owns identity-image mutation controls on the edit route', () => {
+    expect(editPage).toContain('usePortalIdentityImages()')
+    expect(editPage).toContain("onIdentitySelect('front', file)")
+    expect(editPage).toContain("onIdentitySelect('back', file)")
+    expect(editPage).toContain("onIdentityRemove('front')")
+    expect(editPage).toContain("onIdentityRemove('back')")
+  })
+
+  it('links profile security to the dedicated password route', () => {
+    expect(viewPage).toContain('to="/portal/profile/password"')
+    expect(viewPage).toContain('Đổi mật khẩu')
   })
 
   it('shares save state between header and sticky actions', () => {
