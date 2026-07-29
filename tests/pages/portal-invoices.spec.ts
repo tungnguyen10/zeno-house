@@ -9,9 +9,10 @@ const invoicesState = {
   error: ref<unknown>(null),
   refresh: vi.fn(async () => {}),
 }
+const navigateToMock = vi.fn()
 
 vi.stubGlobal('definePageMeta', vi.fn())
-vi.stubGlobal('navigateTo', vi.fn())
+vi.stubGlobal('navigateTo', navigateToMock)
 vi.stubGlobal('usePortalChrome', () => ({ chrome: ref({ title: '', back: null }), setChrome: vi.fn() }))
 vi.stubGlobal('usePortalInvoices', () => invoicesState)
 
@@ -20,12 +21,13 @@ const InvoicesPage = (await import('../../app/pages/portal/invoices/index.vue'))
 const stubs = {
   PortalPullToRefresh: { props: ['onRefresh'], template: '<div><slot /></div>' },
   PortalSkeleton: { props: ['variant'], template: '<div class="skeleton" :data-variant="variant" />' },
-  PortalCard: { props: ['accent'], template: '<div class="card" :data-accent="accent"><slot /></div>' },
+  PortalCard: { props: ['padded'], template: '<div class="card"><slot /></div>' },
   PortalEmptyState: {
     props: ['title', 'description', 'tone', 'actionLabel'],
     template: '<div class="empty" :data-tone="tone">{{ title }}</div>',
   },
   PortalStatusBadge: { props: ['status'], template: '<span class="badge">{{ status }}</span>' },
+  IconChevronRight: { template: '<span class="chevron" />' },
 }
 
 function invoice(overrides: Partial<TenantInvoiceListItem> = {}): TenantInvoiceListItem {
@@ -64,13 +66,14 @@ describe('portal invoices page — states', () => {
     invoicesState.invoices.value = []
     invoicesState.status.value = 'success'
     invoicesState.error.value = null
+    navigateToMock.mockClear()
   })
 
   it('shows skeletons while pending', () => {
     invoicesState.status.value = 'pending'
     const wrapper = mountPage()
     expect(wrapper.findAll('.skeleton').length).toBeGreaterThan(0)
-    expect(wrapper.findAll('[data-variant="statement"]')).toHaveLength(6)
+    expect(wrapper.findAll('[data-ledger-skeleton]')).toHaveLength(6)
     expect(wrapper.find('.empty').exists()).toBe(false)
   })
 
@@ -87,13 +90,47 @@ describe('portal invoices page — states', () => {
     expect(wrapper.find('.empty').text()).toContain('Chưa có hoá đơn')
   })
 
-  it('renders one card per invoice with its status badge', () => {
-    invoicesState.invoices.value = [invoice({ id: 'a' }), invoice({ id: 'b', status: 'paid' })]
+  it('groups invoices by year while preserving their backend order', () => {
+    invoicesState.invoices.value = [
+      invoice({ id: 'jul-2026', periodMonth: 7 }),
+      invoice({ id: 'jan-2026', periodMonth: 1 }),
+      invoice({ id: 'dec-2025', periodYear: 2025, periodMonth: 12 }),
+    ]
     const wrapper = mountPage()
+
+    expect(wrapper.findAll('[data-invoice-year]').map(year => year.attributes('data-invoice-year'))).toEqual(['2026', '2025'])
+    expect(wrapper.findAll('[data-invoice-row]').map(row => row.attributes('data-invoice-row'))).toEqual([
+      'jul-2026',
+      'jan-2026',
+      'dec-2025',
+    ])
     expect(wrapper.findAll('.card')).toHaveLength(2)
+  })
+
+  it('renders a polished statement row with formatted due date and payment context', () => {
+    invoicesState.invoices.value = [
+      invoice({ id: 'a', paidAmount: 250_000, balanceAmount: 750_000 }),
+      invoice({ id: 'b', status: 'paid', paidAmount: 1_000_000, balanceAmount: 0 }),
+    ]
+    const wrapper = mountPage()
+
+    expect(wrapper.text()).toContain('Lịch sử hoá đơn')
+    expect(wrapper.text()).toContain('2 hoá đơn')
+    expect(wrapper.text()).toContain('Hạn thanh toán 15/7/2026')
     expect(wrapper.findAll('.badge')).toHaveLength(2)
-    expect(wrapper.findAll('.card').map(card => card.attributes('data-accent'))).toEqual(['due', 'paid'])
     expect(wrapper.findAll('.portal-money')).toHaveLength(2)
     expect(wrapper.findAll('.portal-money-unit').every(unit => unit.text() === '₫')).toBe(true)
+    expect(wrapper.text()).toContain('Đã trả 250.000 ₫')
+  })
+
+  it('makes the whole ledger row the only interactive control', async () => {
+    invoicesState.invoices.value = [invoice()]
+    const wrapper = mountPage()
+    const row = wrapper.get('[data-invoice-row="inv-1"]')
+
+    expect(row.element.tagName).toBe('BUTTON')
+    expect(row.findAll('button')).toHaveLength(0)
+    await row.trigger('click')
+    expect(navigateToMock).toHaveBeenCalledWith('/portal/invoices/inv-1')
   })
 })
