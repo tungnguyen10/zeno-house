@@ -10,8 +10,16 @@ export function groupTenantInvoicesByYear(
 ): TenantInvoiceYearGroup[] {
   const groups: TenantInvoiceYearGroup[] = []
   const groupsByYear = new Map<number, TenantInvoiceYearGroup>()
+  const orderedInvoices = invoices
+    .map((invoice, originalIndex) => ({ invoice, originalIndex }))
+    .sort((left, right) =>
+      right.invoice.periodYear - left.invoice.periodYear
+      || right.invoice.periodMonth - left.invoice.periodMonth
+      || left.originalIndex - right.originalIndex,
+    )
+    .map(({ invoice }) => invoice)
 
-  for (const invoice of invoices) {
+  for (const invoice of orderedInvoices) {
     let group = groupsByYear.get(invoice.periodYear)
 
     if (!group) {

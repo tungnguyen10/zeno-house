@@ -175,11 +175,12 @@ The portal invoice detail SHALL present transfer instructions only from the immu
 ---
 
 ### Requirement: Tenant invoice statement ledger
-The portal invoice history SHALL present invoices as a year-grouped statement ledger while preserving the newest-first order returned by the tenant API. Invoice detail SHALL use a document-like hierarchy with one primary amount and a bounded, accessible payment-progress indicator. These presentation changes SHALL preserve the existing outstanding-payment, paid-history, and void-state ordering.
+The portal invoice history SHALL present invoices as a year-grouped statement ledger sorted by billing period from newest to oldest regardless of tenant API return order. Invoice detail SHALL use a document-like hierarchy with one primary amount and a bounded, accessible payment-progress indicator. These presentation changes SHALL preserve the existing outstanding-payment, paid-history, and void-state ordering.
 
 #### Scenario: Invoice history has multiple years
 - **WHEN** the tenant invoice API returns invoices spanning multiple years
-- **THEN** the portal groups rows by the first-seen year without re-sorting invoices
+- **THEN** the portal sorts rows by `periodYear` descending and then `periodMonth` descending before grouping by year
+- **AND** invoices in the same billing period retain their original relative order
 - **AND** each row shows the billing month, invoice code, locally formatted due date when available, total and paid context, primary amount, and status
 - **AND** the entire row exposes one navigation target to its invoice detail
 

@@ -36,30 +36,31 @@ function invoice(
 }
 
 describe('groupTenantInvoicesByYear', () => {
-  it('groups invoices by year while preserving backend order', () => {
+  it('sorts billing periods latest-first without mutating the input', () => {
     const invoices = [
-      invoice('jul-2026', 2026, 7),
+      invoice('feb-2025', 2025, 2),
       invoice('jan-2026', 2026, 1),
       invoice('dec-2025', 2025, 12),
-      invoice('nov-2025', 2025, 11),
+      invoice('jul-2026', 2026, 7),
     ]
+    const originalOrder = [...invoices]
 
     expect(groupTenantInvoicesByYear(invoices)).toEqual([
-      { year: 2026, invoices: [invoices[0], invoices[1]] },
-      { year: 2025, invoices: [invoices[2], invoices[3]] },
+      { year: 2026, invoices: [invoices[3], invoices[1]] },
+      { year: 2025, invoices: [invoices[2], invoices[0]] },
     ])
+    expect(invoices).toEqual(originalOrder)
   })
 
-  it('does not sort non-contiguous years or their invoices', () => {
+  it('preserves the original relative order for invoices in the same period', () => {
     const invoices = [
-      invoice('first-2025', 2025, 8),
-      invoice('only-2026', 2026, 1),
-      invoice('second-2025', 2025, 2),
+      invoice('jan-2026-a', 2026, 1),
+      invoice('feb-2026', 2026, 2),
+      invoice('jan-2026-b', 2026, 1),
     ]
 
     expect(groupTenantInvoicesByYear(invoices)).toEqual([
-      { year: 2025, invoices: [invoices[0], invoices[2]] },
-      { year: 2026, invoices: [invoices[1]] },
+      { year: 2026, invoices: [invoices[1], invoices[0], invoices[2]] },
     ])
   })
 })

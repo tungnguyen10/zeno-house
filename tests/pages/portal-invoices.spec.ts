@@ -90,9 +90,9 @@ describe('portal invoices page — states', () => {
     expect(wrapper.find('.empty').text()).toContain('Chưa có hoá đơn')
   })
 
-  it('groups invoices by year while preserving their backend order', () => {
+  it('groups invoices by year with the latest billing period first', () => {
     invoicesState.invoices.value = [
-      invoice({ id: 'jul-2026', periodMonth: 7 }),
+      invoice({ id: 'feb-2025', periodYear: 2025, periodMonth: 2 }),
       invoice({ id: 'jan-2026', periodMonth: 1 }),
       invoice({ id: 'dec-2025', periodYear: 2025, periodMonth: 12 }),
     ]
@@ -100,9 +100,9 @@ describe('portal invoices page — states', () => {
 
     expect(wrapper.findAll('[data-invoice-year]').map(year => year.attributes('data-invoice-year'))).toEqual(['2026', '2025'])
     expect(wrapper.findAll('[data-invoice-row]').map(row => row.attributes('data-invoice-row'))).toEqual([
-      'jul-2026',
       'jan-2026',
       'dec-2025',
+      'feb-2025',
     ])
     expect(wrapper.findAll('.card')).toHaveLength(2)
   })

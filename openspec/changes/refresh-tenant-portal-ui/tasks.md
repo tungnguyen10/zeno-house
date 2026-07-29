@@ -45,7 +45,7 @@
 
 ## 7. Statement ledger polish
 
-- [x] 7.1 Present invoice history as year-grouped ledger rows while preserving API order and whole-row navigation
+- [x] 7.1 Present invoice history as latest-first year-grouped ledger rows with stable same-period order and whole-row navigation
 - [x] 7.2 Refine invoice detail into a document hierarchy with one primary amount and accessible payment progress
 - [x] 7.3 Preserve outstanding transfer, paid history, void, loading, empty, and error behavior
 - [x] 7.4 Verify focused tests, specs, typecheck, lint, full regression, and final Hallmark polish
