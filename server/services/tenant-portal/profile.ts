@@ -4,9 +4,10 @@ import type { TenantProfile } from '~/types/tenant-portal'
 import type { TenantProfileUpdateInput } from '~/utils/validators/tenant-portal'
 import { tenantProfileUpdateSchema } from '~/utils/validators/tenant-portal'
 import { TenantProfileRepository } from '../../repositories/tenant-portal/profile'
+import { TenantRepository } from '../../repositories/tenants'
 import { resolveTenantId } from '../../utils/scope'
 import { can } from '../../utils/permissions'
-import { throwForbidden, throwNotFound } from '../../utils/errors'
+import { throwConflict, throwForbidden, throwNotFound } from '../../utils/errors'
 import { AuditService } from '../audit'
 import { AUDIT_ACTIONS } from '~/utils/constants/audit'
 import { ContractRepository } from '../../repositories/contracts'
@@ -28,6 +29,16 @@ export const TenantProfileService = {
     if (!can(user, 'tenant.profile.update')) throwForbidden('Không có quyền cập nhật hồ sơ')
     const id = await resolveTenantId(event, user)
     const whitelisted = tenantProfileUpdateSchema.parse(input)
+    if (whitelisted.id_number) {
+      const conflict = await TenantRepository.findByIdNumber(event, whitelisted.id_number, id)
+      if (conflict) {
+        throwConflict('Số CCCD/CMND đã tồn tại', {
+          fieldErrors: {
+            id_number: ['Số CCCD/CMND đã tồn tại'],
+          },
+        })
+      }
+    }
     const contract = await ContractRepository.findActiveByTenantId(event, id)
     const before = await TenantProfileRepository.findByTenantId(event, id)
     if (!before) throwNotFound()

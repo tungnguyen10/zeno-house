@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
   resolveInvoiceProfiles: vi.fn(),
   auditAppend: vi.fn(),
   findDomainContract: vi.fn(),
+  findTenantByIdNumber: vi.fn(),
 }))
 
 vi.mock('../../../server/utils/scope', () => ({ resolveTenantId: mocks.resolveTenantId }))
@@ -41,6 +42,9 @@ vi.mock('../../../server/services/billing/invoice-profile-display', () => ({
 }))
 vi.mock('../../../server/services/audit', () => ({ AuditService: { append: mocks.auditAppend } }))
 vi.mock('../../../server/repositories/contracts', () => ({ ContractRepository: { findActiveByTenantId: mocks.findDomainContract } }))
+vi.mock('../../../server/repositories/tenants', () => ({
+  TenantRepository: { findByIdNumber: mocks.findTenantByIdNumber },
+}))
 
 const tenantUser = { id: 'auth-tenant', app_metadata: { role: 'tenant' } } as never
 const internalUser = { id: 'auth-admin', app_metadata: { role: 'admin' } } as never
@@ -53,6 +57,7 @@ describe('tenant portal services', () => {
     mocks.updateProfile.mockResolvedValue({ id: 'tenant-1', phone: '0902' })
     mocks.resolveHousing.mockResolvedValue(null)
     mocks.findDomainContract.mockResolvedValue({ buildingId: 'building-1' })
+    mocks.findTenantByIdNumber.mockResolvedValue(null)
     mocks.listInvoices.mockResolvedValue({ items: [], total: 0 })
     mocks.findInvoiceDetail.mockResolvedValue(null)
     mocks.findInvoiceSnapshotsByIds.mockResolvedValue(new Map())
@@ -75,6 +80,34 @@ describe('tenant portal services', () => {
       building_id: 'building-1',
       before_data: { id: 'tenant-1' }, after_data: { id: 'tenant-1', phone: '0902' },
     }))
+  })
+
+  it('rejects an identity number assigned to another tenant', async () => {
+    mocks.findTenantByIdNumber.mockResolvedValue({ id: 'tenant-2' })
+    const { TenantProfileService } = await import('../../../server/services/tenant-portal/profile')
+
+    await expect(TenantProfileService.update({} as never, tenantUser, {
+      id_number: '012345678901',
+    })).rejects.toMatchObject({
+      statusCode: 409,
+      data: {
+        error: {
+          details: {
+            fieldErrors: {
+              id_number: ['Số CCCD/CMND đã tồn tại'],
+            },
+          },
+        },
+      },
+    })
+
+    expect(mocks.findTenantByIdNumber).toHaveBeenCalledWith(
+      expect.anything(),
+      '012345678901',
+      'tenant-1',
+    )
+    expect(mocks.updateProfile).not.toHaveBeenCalled()
+    expect(mocks.auditAppend).not.toHaveBeenCalled()
   })
 
   it('rechecks tenant capabilities and rejects internal roles', async () => {

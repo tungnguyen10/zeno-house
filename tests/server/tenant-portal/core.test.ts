@@ -13,13 +13,15 @@ import {
 } from '~/utils/mappers/tenant-portal'
 
 describe('tenant portal validators', () => {
-  it('keeps self-service fields and strips login and legal identity fields', () => {
+  it('keeps self-service and identity fields while stripping login and linkage fields', () => {
     const result = tenantProfileUpdateSchema.parse({
       full_name: 'Nguyen Van A',
       phone: '0901234567',
       email: 'tenant@example.com',
       gender: 'male',
-      id_number: '012345678901',
+      id_number: ' 012345678901 ',
+      id_issued_date: '2020-01-02',
+      id_issued_place: ' Cục Cảnh sát QLHC về TTXH ',
       status: 'archived',
       tenant_id: 'another-tenant',
     })
@@ -28,6 +30,9 @@ describe('tenant portal validators', () => {
       full_name: 'Nguyen Van A',
       phone: '0901234567',
       gender: 'male',
+      id_number: '012345678901',
+      id_issued_date: '2020-01-02',
+      id_issued_place: 'Cục Cảnh sát QLHC về TTXH',
     })
   })
 

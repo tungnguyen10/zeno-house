@@ -34,6 +34,9 @@ describe('portal profile edit model', () => {
       date_of_birth: '1995-08-12',
       occupation: '',
       permanent_address: 'Quận 7, TP.HCM',
+      id_number: '079095001234',
+      id_issued_date: '2021-05-10',
+      id_issued_place: 'Cục CSQLHC',
       emergency_contact_name: '',
       emergency_contact_phone: '',
       notes: '',
@@ -51,9 +54,15 @@ describe('portal profile edit model', () => {
       ...baseline,
       phone: ' 0999999999 ',
       permanent_address: '   ',
+      id_number: ' 079095009999 ',
+      id_issued_date: '',
+      id_issued_place: ' Cục Cảnh sát QLHC về TTXH ',
     }, baseline)).toEqual({
       phone: '0999999999',
       permanent_address: null,
+      id_number: '079095009999',
+      id_issued_date: null,
+      id_issued_place: 'Cục Cảnh sát QLHC về TTXH',
     })
   })
 

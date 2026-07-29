@@ -9,6 +9,9 @@ export interface TenantProfileEditForm {
   date_of_birth: string
   occupation: string
   permanent_address: string
+  id_number: string
+  id_issued_date: string
+  id_issued_place: string
   emergency_contact_name: string
   emergency_contact_phone: string
   notes: string
@@ -21,6 +24,9 @@ const PROFILE_EDIT_FIELDS = [
   'date_of_birth',
   'occupation',
   'permanent_address',
+  'id_number',
+  'id_issued_date',
+  'id_issued_place',
   'emergency_contact_name',
   'emergency_contact_phone',
   'notes',
@@ -34,6 +40,9 @@ export function toTenantProfileEditForm(profile: TenantProfile): TenantProfileEd
     date_of_birth: profile.dateOfBirth ?? '',
     occupation: profile.occupation ?? '',
     permanent_address: profile.permanentAddress ?? '',
+    id_number: profile.idNumber ?? '',
+    id_issued_date: profile.idIssuedDate ?? '',
+    id_issued_place: profile.idIssuedPlace ?? '',
     emergency_contact_name: profile.emergencyContactName ?? '',
     emergency_contact_phone: profile.emergencyContactPhone ?? '',
     notes: profile.notes ?? '',
@@ -48,6 +57,9 @@ function normalizeProfileEditForm(form: TenantProfileEditForm): TenantProfileUpd
     date_of_birth: form.date_of_birth.trim() || null,
     occupation: form.occupation.trim() || null,
     permanent_address: form.permanent_address.trim() || null,
+    id_number: form.id_number.trim() || null,
+    id_issued_date: form.id_issued_date.trim() || null,
+    id_issued_place: form.id_issued_place.trim() || null,
     emergency_contact_name: form.emergency_contact_name.trim() || null,
     emergency_contact_phone: form.emergency_contact_phone.trim() || null,
     notes: form.notes.trim() || null,

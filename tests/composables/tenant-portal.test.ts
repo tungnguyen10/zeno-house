@@ -129,6 +129,33 @@ describe('usePortalProfile', () => {
       body: { occupation: null },
     })
   })
+
+  it('optimistically maps identity fields onto the profile DTO', async () => {
+    fetchData = { data: { profile: baseProfile, contract: null, invoices: [], invoiceMeta: {} } }
+    fetchMock.mockResolvedValue({
+      data: {
+        ...baseProfile,
+        idNumber: '012345678901',
+        idIssuedDate: '2020-01-02',
+        idIssuedPlace: 'Cục Cảnh sát QLHC về TTXH',
+      },
+    })
+    const { usePortalProfile } = await import('../../app/composables/tenant-portal/usePortalProfile')
+    const { save, profile } = usePortalProfile()
+
+    const pending = save({
+      id_number: '012345678901',
+      id_issued_date: '2020-01-02',
+      id_issued_place: 'Cục Cảnh sát QLHC về TTXH',
+    })
+
+    expect(profile.value).toMatchObject({
+      idNumber: '012345678901',
+      idIssuedDate: '2020-01-02',
+      idIssuedPlace: 'Cục Cảnh sát QLHC về TTXH',
+    })
+    await expect(pending).resolves.toBe(true)
+  })
 })
 
 describe('portal bootstrap data', () => {
