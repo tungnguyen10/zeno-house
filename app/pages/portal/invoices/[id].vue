@@ -3,6 +3,7 @@ import { chargeLineLabel, groupChargeLines } from '~/utils/billing/charge-groups
 import { portalInvoiceStatementAccent } from '~/utils/constants/portal-status'
 import { formatCurrency, formatCurrencyNumber } from '~/utils/format/currency'
 import { formatViDate } from '~/utils/format/time'
+import { tenantInvoicePaymentProgress } from '~/utils/tenant-portal/invoice-statement'
 
 definePageMeta({
   layout: 'tenant',
@@ -20,6 +21,16 @@ const { invoice, status, error, refresh } = usePortalInvoiceDetail(id)
 const chargeGroups = computed(() =>
   invoice.value ? groupChargeLines(invoice.value.charges) : [],
 )
+const paymentProgress = computed(() =>
+  invoice.value
+    ? tenantInvoicePaymentProgress(invoice.value.totalAmount, invoice.value.paidAmount)
+    : 0,
+)
+const paymentProgressClass = computed(() => {
+  if (invoice.value?.status === 'paid') return 'bg-portal-positive'
+  if (invoice.value?.status === 'overdue') return 'bg-portal-danger'
+  return 'bg-theme'
+})
 const isVoid = computed(() => invoice.value?.status === 'void')
 const showOutstandingPayment = computed(() => {
   if (!invoice.value || invoice.value.balanceAmount <= 0) return false
@@ -55,17 +66,20 @@ function chargeLineUnit(chargeType: string): string | null {
     <template v-else>
       <!-- Summary -->
       <PortalCard :accent="portalInvoiceStatementAccent(invoice.status)">
-        <!-- Header: period + status -->
+        <!-- Header: document identity + status -->
         <div class="flex items-start justify-between">
+          <p class="portal-type-label text-body">Thông tin hoá đơn</p>
+          <PortalStatusBadge :status="invoice.status" />
+        </div>
+        <div class="mt-3">
           <div>
-            <p class="portal-type-label text-title">Kỳ {{ String(invoice.periodMonth).padStart(2, '0') }}/{{ invoice.periodYear }}</p>
+            <h1 class="portal-type-title text-title">Kỳ {{ String(invoice.periodMonth).padStart(2, '0') }}/{{ invoice.periodYear }}</h1>
             <p class="portal-type-caption mt-0.5 text-body">{{ invoice.invoiceCode }}</p>
           </div>
-          <PortalStatusBadge :status="invoice.status" />
         </div>
 
         <!-- Metadata: room/building + dates -->
-        <div class="mt-3 flex flex-wrap gap-x-6 gap-y-2 border-t border-border-light pt-3">
+        <div class="mt-4 grid grid-cols-2 gap-x-5 gap-y-3 border-t border-border-light pt-4 sm:grid-cols-3">
           <div v-if="invoice.roomNumber || invoice.buildingName">
             <p class="portal-type-caption text-body">Phòng</p>
             <p class="portal-type-body mt-0.5 font-medium text-title">
@@ -83,7 +97,7 @@ function chargeLineUnit(chargeType: string): string | null {
         </div>
 
         <!-- Amount: context-aware headline figure -->
-        <div class="mt-4">
+        <div class="mt-5">
           <p class="portal-type-caption text-body">
             {{ invoice.balanceAmount > 0 ? 'Còn phải thanh toán' : 'Tổng hoá đơn' }}
           </p>
@@ -100,21 +114,43 @@ function chargeLineUnit(chargeType: string): string | null {
           </p>
         </div>
 
-        <!-- Financial breakdown -->
-        <dl class="divide-y divide-border-light mt-4 border-y border-border-light">
-          <div class="flex items-center justify-between py-3">
-            <dt class="portal-type-body text-body">Tổng cộng</dt>
-            <dd class="portal-money text-sm font-semibold text-title">{{ formatCurrency(invoice.totalAmount) }}</dd>
+        <!-- Payment progress -->
+        <div class="mt-5 border-t border-border-light pt-4">
+          <div class="flex items-center justify-between gap-4">
+            <p class="portal-type-label text-title">Tiến độ thanh toán</p>
+            <p class="portal-type-label tabular-nums text-body">{{ paymentProgress }}%</p>
           </div>
-          <div class="flex items-center justify-between py-3">
-            <dt class="portal-type-body text-body">Đã thanh toán</dt>
-            <dd class="portal-money text-sm font-semibold text-portal-positive-ink">{{ formatCurrency(invoice.paidAmount) }}</dd>
+          <div
+            role="progressbar"
+            aria-label="Tiến độ thanh toán hoá đơn"
+            aria-valuemin="0"
+            aria-valuemax="100"
+            :aria-valuenow="paymentProgress"
+            :aria-valuetext="`${paymentProgress}% đã thanh toán`"
+            class="mt-2 h-2 overflow-hidden rounded-full bg-smoke"
+          >
+            <div
+              class="h-full rounded-full transition-[width] duration-300 motion-reduce:transition-none"
+              :class="paymentProgressClass"
+              :style="{ width: `${paymentProgress}%` }"
+            />
           </div>
-          <div v-if="invoice.balanceAmount > 0" class="flex items-center justify-between py-3">
-            <dt class="portal-type-body font-medium text-title">Còn lại</dt>
-            <dd class="portal-money text-sm font-bold text-portal-danger-ink">{{ formatCurrency(invoice.balanceAmount) }}</dd>
-          </div>
-        </dl>
+
+          <dl class="mt-4 grid grid-cols-2 gap-x-5 gap-y-3">
+            <div>
+              <dt class="portal-type-caption text-body">Tổng cộng</dt>
+              <dd class="portal-money mt-0.5 text-sm font-semibold text-title">{{ formatCurrency(invoice.totalAmount) }}</dd>
+            </div>
+            <div>
+              <dt class="portal-type-caption text-body">Đã thanh toán</dt>
+              <dd class="portal-money mt-0.5 text-sm font-semibold text-portal-positive-ink">{{ formatCurrency(invoice.paidAmount) }}</dd>
+            </div>
+            <div v-if="invoice.balanceAmount > 0" class="col-span-2 border-t border-border-light pt-3">
+              <dt class="portal-type-caption font-medium text-title">Còn lại</dt>
+              <dd class="portal-money mt-0.5 text-base font-bold text-portal-danger-ink">{{ formatCurrency(invoice.balanceAmount) }}</dd>
+            </div>
+          </dl>
+        </div>
       </PortalCard>
 
       <!-- Void context -->

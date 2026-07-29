@@ -12,9 +12,18 @@ describe('portal invoice detail refreshed UI', () => {
     expect(page).toContain('PortalStatusBadge')
   })
 
-  it('renders payment totals and charges as divider-led rows instead of group cards', () => {
-    expect(page).toContain('<dl class="divide-y divide-border-light')
+  it('renders an accessible payment progress rail and compact totals', () => {
+    expect(page).toContain('tenantInvoicePaymentProgress')
+    expect(page).toContain('const paymentProgress = computed')
+    expect(page).toContain('role="progressbar"')
+    expect(page).toContain(':aria-valuenow="paymentProgress"')
+    expect(page).toContain(':style="{ width: `${paymentProgress}%` }"')
+    expect(page).toContain('Tiến độ thanh toán')
     expect(page).toContain('Đã thanh toán')
+    expect(page).toContain('Còn lại')
+  })
+
+  it('renders charges as divider-led rows instead of group cards', () => {
     expect(page).toContain('<section v-for="group in chargeGroups"')
     expect(page).not.toContain('<PortalCard v-for="group in chargeGroups"')
   })
@@ -50,5 +59,12 @@ describe('portal invoice detail refreshed UI', () => {
     expect(page).toContain('<h2 class="portal-type-heading')
     expect(page).not.toContain('<h3 class="portal-type-heading')
     expect(page).toContain('formatViDate(invoice.dueDate)')
+  })
+
+  it('keeps the invoice identity and room context ahead of the primary amount', () => {
+    expect(page).toContain('Thông tin hoá đơn')
+    expect(page).toContain('Phòng')
+    expect(page.indexOf('Thông tin hoá đơn')).toBeLessThan(page.indexOf('<!-- Amount: context-aware headline figure -->'))
+    expect(page.indexOf('<!-- Metadata: room/building + dates -->')).toBeLessThan(page.indexOf('<!-- Amount: context-aware headline figure -->'))
   })
 })
