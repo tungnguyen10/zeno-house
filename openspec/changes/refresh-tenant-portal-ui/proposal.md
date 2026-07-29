@@ -10,10 +10,11 @@ The tenant portal works but reads as a set of loosely coordinated screens: typog
 - Normalize spacing rhythm, card padding, radius, and elevation across all portal components and pages.
 - Unify form input UX on the shared `PortalInput` (replace ad-hoc inline `<input>` usage in the profile and requests forms) and unify invoice/request status badges through a single status→style map.
 - Refine shared components (`PortalCard`, `PortalButton`, `PortalEmptyState`, `PortalSkeleton`, `PortalHeader`, `PortalTabBar`) and apply the refreshed identity to all six portal pages (overview, invoices list, invoice detail, room, requests, profile).
-- Redesign the profile as a complete identity-first personal dossier and move self-service editing to `/portal/profile/edit`, with changed-only whitelist submission and guarded unsaved navigation.
+- Redesign the profile as a complete identity-first personal dossier and move self-service editing, including CCCD details and images, to `/portal/profile/edit`, with changed-only whitelist submission and guarded unsaved navigation.
+- Add a visible profile security action and `/portal/profile/password` flow that verifies the current password before updating Supabase Auth.
 - Tighten motion, focus-visible affordances, and text contrast to keep the quality floor (reduced-motion respected, visible keyboard focus, AA-legible body text).
 
-The profile route gains one dedicated edit child route and focused client-side form/leave-guard helpers. Existing `/api/tenant/**` contracts, server ownership, storage conventions, permissions, database schema, and shell architecture remain unchanged.
+The profile route gains dedicated edit and password sibling routes plus focused client-side form/leave-guard helpers. The existing tenant profile API whitelist is extended with CCCD details and a tenant-scoped password endpoint; server ownership, storage conventions, permissions, database schema, and shell architecture remain unchanged.
 
 ## Capabilities
 
@@ -27,7 +28,7 @@ The profile route gains one dedicated edit child route and focused client-side f
 
 - Styling/tokens: `app/assets/scss/main.scss` (`.portal-shell` tokens, type-scale/money utilities, transitions), `tailwind.config.ts` (color aliases only; generated `app/types/database.types.ts` untouched).
 - Shared components: `app/components/portal/**` (`PortalCard`, `PortalButton`, `PortalInput`, `PortalChip`, `PortalInvoiceStatusBadge`, `PortalEmptyState`, `PortalSkeleton`, `PortalHeader`, `PortalTabBar`).
-- Pages: `app/pages/portal/index.vue`, `app/pages/portal/invoices/index.vue`, `app/pages/portal/invoices/[id].vue`, `app/pages/portal/room.vue`, `app/pages/portal/requests.vue`, `app/pages/portal/profile/index.vue`, `app/pages/portal/profile/edit.vue`.
+- Pages: `app/pages/portal/index.vue`, `app/pages/portal/invoices/index.vue`, `app/pages/portal/invoices/[id].vue`, `app/pages/portal/room.vue`, `app/pages/portal/requests.vue`, `app/pages/portal/profile/index.vue`, `app/pages/portal/profile/edit.vue`, `app/pages/portal/profile/password.vue`.
 - Profile client helpers: `app/utils/portal-profile.ts`, `app/composables/tenant-portal/usePortalUnsavedChanges.ts`, and `app/components/portal/PortalProfileDossier.vue`.
-- No changes to `server/**`, database schema, API contracts, permissions, or the `tenant.vue` shell structure.
+- Server/API: extend `PATCH /api/tenant/me` with three identity fields and add `POST /api/tenant/password`; no database schema, permission, or `tenant.vue` shell changes.
 - Risk: visual and profile-workflow regression; verified via focused form/guard tests, typecheck, portal component/page tests, lint, OpenSpec validation, and a manual pass with mobile safe areas and reduced motion.

@@ -56,3 +56,10 @@
 - [x] 8.2 Add `/portal/profile/edit` with changed-only whitelist submission and shared save state
 - [x] 8.3 Guard dirty navigation with a portal bottom sheet and browser unload protection
 - [ ] 8.4 Verify focused tests, portal regression, typecheck, lint, OpenSpec, responsive widths, and reduced motion
+
+## 9. Tenant identity and password self-service
+
+- [ ] 9.1 Extend the tenant profile whitelist with unique CCCD details and changed-only reconciliation
+- [ ] 9.2 Move identity-image controls to profile edit and keep view previews read-only
+- [ ] 9.3 Add profile security action and current-password-verified password route
+- [ ] 9.4 Verify focused tests, typecheck, lint, OpenSpec, full regression, and affected UI states

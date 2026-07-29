@@ -32,8 +32,8 @@ Overview and room pages display this role so a roommate is not presented as the 
 ## Data boundaries
 
 - Profile, CCCD images, and documents always belong to the linked tenant record.
-- Self-service profile edits are limited to contact and personal preference fields. CCCD number,
-  issue date, and issue place are read-only and remain management-verified fields.
+- Self-service profile edits include contact, personal preference, CCCD/CMND number, issue date, and
+  issue place. CCCD/CMND numbers remain unique across tenants.
 - Primary tenants read invoices by `tenant_id`, preserving their invoice history.
 - Active roommates read all invoices for the current shared `contract_id`, including invoices
   issued before their move-in date. Invoice detail uses the same server-derived scope.
@@ -51,11 +51,17 @@ Supabase Dashboard, then run `supabase/verification/tenant_identity_rls.sql` and
 ## Profile experience
 
 `/portal/profile` is the tenant's complete personal dossier and does not repeat housing or contract
-data. It presents every field already exposed by `TenantProfile`, followed by management-verified
-identity data, identity images, documents, and logout.
+data. It presents every field already exposed by `TenantProfile`, followed by identity data,
+read-only identity-image previews, documents, a security action, and logout.
 
-The tenant edits the nine self-service fields on `/portal/profile/edit`; email, account status,
-tenant code, and verified identity fields remain read-only. The client normalizes optional blank
-values to `null` and sends only changed fields through `PATCH /api/tenant/me`. In-app navigation
-with dirty values requires explicit discard confirmation, while hard refresh and tab close use the
-browser unload guard.
+The tenant edits twelve self-service fields on `/portal/profile/edit`; email, account status, and
+tenant code remain read-only. The same screen owns immediate upload, replacement, and removal of
+front/back identity images, independently from text-form dirty state. The client normalizes optional
+blank values to `null` and sends only changed text fields through `PATCH /api/tenant/me`. In-app
+navigation with dirty values requires explicit discard confirmation, while hard refresh and tab
+close use the browser unload guard.
+
+`/portal/profile` exposes a visible `Đổi mật khẩu` action that opens
+`/portal/profile/password`. The tenant supplies the current password, a new password, and
+confirmation. Supabase Auth verifies the current password, keeps the successful session active, and
+the server appends a credential-free `tenant.account.password_changed` audit event.

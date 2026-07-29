@@ -4,7 +4,7 @@ The tenant portal is an isolated, light-theme, mobile-first PWA under `/portal` 
 
 Today the visual layer was decided per page: heading sizes mix `text-xl`/`text-lg`/`text-sm` without a scale, page containers alternate between `space-y-4`/`space-y-3`, `PortalCard` `padded` is toggled inconsistently, two pages hand-roll `<input>` instead of `PortalTextField`, and invoice vs request status colors overlap in meaning. Body text (`--portal-body: #6e7070`) is borderline for contrast.
 
-This change is presentation-led. The profile workflow adds one dedicated edit route plus focused client-only form and navigation-guard helpers. It must not change server code, API contracts, permissions, database schema, storage conventions, or the shell architecture, and must not add a component library or a new font (Inter only). It must keep the customer-facing identity distinct from the admin dark theme, keep Vietnamese copy correctly accented, use Tailwind + `clsx` (no inline styles), and preserve the quality floor (reduced motion, visible focus, AA-legible body text).
+This change remains presentation-led, while the profile workflow adds dedicated edit and password routes plus focused form, navigation-guard, and tenant API helpers. It extends only the existing self-scoped profile whitelist and adds a tenant-scoped password endpoint; permissions, database schema, storage conventions, and shell architecture remain unchanged. It must not add a component library or a new font (Inter only). It must keep the customer-facing identity distinct from the admin dark theme, keep Vietnamese copy correctly accented, use Tailwind + `clsx` (no inline styles), and preserve the quality floor (reduced motion, visible focus, AA-legible body text).
 
 ## Goals / Non-Goals
 
@@ -14,13 +14,13 @@ This change is presentation-led. The profile workflow adds one dedicated edit ro
 - Consistent spacing rhythm, card padding, radius, and elevation across all portal components and pages.
 - A single form-field primitive (`PortalInput`) and a single status→style source of truth for badges.
 - Refreshed identity applied to all six portal pages with correct loading/empty/error/data states.
-- A complete personal dossier that avoids duplicating housing data, plus a dedicated native-style self-service edit flow.
+- A complete personal dossier that avoids duplicating housing data, plus dedicated native-style identity edit and password-security flows.
 
 **Non-Goals:**
-- No changes to server APIs, database schema, permissions, storage conventions, or the `tenant.vue` shell structure.
+- No database schema, permission, storage-convention, or `tenant.vue` shell changes.
 - No new component library, no new web font, no admin dark-theme changes.
 - No database or schema changes.
-- No new portal features or pages.
+- No unrelated portal features or pages.
 
 ## Decisions
 
@@ -48,9 +48,12 @@ Route the profile edit and request-create forms through `PortalInput`, and drive
 Adopt one page rhythm (`px-4 py-5`, section `space-y-5`, in-section `space-y-3`), standard card `p-4`, card radius `rounded-2xl`, control radius `rounded-xl`, pill `rounded-full`, and only two elevation levels (resting subtle `shadow-sm`, raised for sheets). Replace inconsistent `padded={false}` + manual per-item padding in invoice detail/room with divider-separated key-value rows (no nested-card clutter).
 
 ### D6 — Identity-first profile dossier and dedicated edit route
-Keep `/portal/profile` view-only. Present all fields in the tenant profile DTO in one divider-led dossier, followed by management-verified identity data, identity images, documents, and a quiet logout action. Do not repeat room, building, contract, or occupancy data.
+Keep `/portal/profile` view-only. Present all fields in the tenant profile DTO in one divider-led dossier, followed by identity data, read-only identity images, documents, a visible security action, and a quiet logout action. Do not repeat room, building, contract, or occupancy data.
 
-Move the nine whitelisted fields to `/portal/profile/edit`. Normalize optional blanks to `null`, submit only changed fields, and keep the existing optimistic profile reconciliation. In-app dirty navigation resolves through `PortalBottomSheet`; hard refresh and tab close use `beforeunload`. Both header and sticky save actions share the same validation, disabled, and busy state.
+Move the twelve whitelisted fields and front/back identity-image controls to `/portal/profile/edit`. Normalize optional blanks to `null`, submit only changed text fields, and keep the existing optimistic profile reconciliation. Image mutations remain immediate per side and independent from the text form dirty state. In-app dirty navigation resolves through `PortalBottomSheet`; hard refresh and tab close use `beforeunload`. Both header and sticky save actions share the same validation, disabled, and busy state.
+
+### D7 — Dedicated current-password-verified security flow
+Link `/portal/profile` to `/portal/profile/password`. The screen requires the current password, a new password, and confirmation; the server forwards `current_password` to Supabase Auth, keeps the successful session active, and appends only actor/tenant/building metadata to the audit event. Password values never enter application tables, logs, error details, or audit payloads.
 
 ## Risks / Trade-offs
 
@@ -64,7 +67,7 @@ Move the nine whitelisted fields to `/portal/profile/edit`. Normalize optional b
 
 ## Migration Plan
 
-Presentation-only; ship as a single change. Rollback is a straight revert of the touched SCSS/Tailwind/component/page files with no data or API implications.
+Ship as one self-contained portal change. Rollback is a straight revert of the touched portal UI and tenant API/service files; no database migration is involved.
 
 ## Open Questions
 

@@ -6,6 +6,9 @@ Users can sign in with email/password or Google, register with email/password, a
 recovery. Registration responses are neutral and email confirmation remains controlled by Supabase.
 Recovery uses `/auth/reset-password`, updates the password, signs out the recovery session, and
 returns to login.
+Authenticated tenants can also use `/portal/profile/password`. That flow verifies the current
+password through Supabase Auth, updates to a matching valid new password, keeps the current session
+active, and emits a credential-free password-change audit event.
 When `NUXT_PUBLIC_TURNSTILE_SITE_KEY` is configured, email registration requires the Turnstile
 widget and forwards its token through Supabase Auth signup; otherwise Supabase Auth rate limits
 remain the fallback.

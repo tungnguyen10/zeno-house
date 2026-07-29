@@ -79,8 +79,22 @@ The portal SHALL provide overview, invoices list, invoice detail, room/contract,
 #### Scenario: Dedicated self-service edit screen
 - **WHEN** a tenant chooses `Chỉnh sửa`
 - **THEN** the portal opens `/portal/profile/edit`
-- **AND** only the nine whitelisted self-service fields are editable
+- **AND** only the twelve whitelisted self-service fields are editable
 - **AND** the update payload contains only normalized changed fields
+
+#### Scenario: Tenant updates identity details
+- **WHEN** a tenant submits a unique CCCD/CMND number, issue date, or issue place
+- **THEN** only changed normalized identity fields are persisted and audited
+
+#### Scenario: Identity image controls belong to edit
+- **WHEN** a tenant views `/portal/profile`
+- **THEN** front and back identity images are read-only previews
+- **AND** upload, replace, and remove controls are available only on `/portal/profile/edit`
+
+#### Scenario: Tenant opens password security
+- **WHEN** a tenant chooses `Đổi mật khẩu` from `/portal/profile`
+- **THEN** the portal opens `/portal/profile/password`
+- **AND** requires current password, new password, and confirmation
 
 #### Scenario: Unsaved profile changes
 - **WHEN** a tenant attempts in-app navigation with unsaved profile changes

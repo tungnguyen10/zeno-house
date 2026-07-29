@@ -26,7 +26,7 @@ The system SHALL expose tenant self-service endpoints under `/api/tenant/**`, av
 - **THEN** the server uses the resolver's tenant id and ignores the supplied value
 
 ### Requirement: Tenant profile read and whitelist update
-`GET /api/tenant/me` SHALL return the caller's tenant profile with safe fields only. `PATCH /api/tenant/me` SHALL update only a strict non-credential profile whitelist (`phone`, `emergency_contact_name`, `emergency_contact_phone`, `notes`, and the accepted personal profile fields) and SHALL reject or ignore any other field, including login `email`, `status`, `code`, and linkage fields. Supabase Auth login email and the contact email in `tenants.email` are independent.
+`GET /api/tenant/me` SHALL return the caller's tenant profile with safe fields only. `PATCH /api/tenant/me` SHALL update only a strict non-credential profile whitelist (`full_name`, `phone`, `gender`, `date_of_birth`, `occupation`, `permanent_address`, `emergency_contact_name`, `emergency_contact_phone`, `notes`, `id_number`, `id_issued_date`, and `id_issued_place`) and SHALL reject or ignore any other field, including login `email`, `status`, `code`, and linkage fields. Supabase Auth login email and the contact email in `tenants.email` are independent.
 
 #### Scenario: Read own profile
 - **WHEN** a tenant calls `GET /api/tenant/me`
@@ -36,13 +36,32 @@ The system SHALL expose tenant self-service endpoints under `/api/tenant/**`, av
 - **WHEN** a tenant PATCHes `phone`
 - **THEN** the update succeeds and returns the updated profile
 
+#### Scenario: Update unique identity details
+- **WHEN** a tenant PATCHes a CCCD/CMND number not assigned to another tenant
+- **THEN** the normalized identity fields are persisted and returned
+
+#### Scenario: Duplicate identity number
+- **WHEN** a tenant PATCHes a CCCD/CMND number assigned to another tenant
+- **THEN** the server returns a conflict with a field error for `id_number`
+
 #### Scenario: Login email is not a profile mutation
 - **WHEN** a tenant PATCH includes `email`
 - **THEN** it is not persisted as a profile edit
 
 #### Scenario: Non-whitelisted field rejected
-- **WHEN** a tenant PATCH includes `status` or `id_number`
+- **WHEN** a tenant PATCH includes `status` or a linkage field
 - **THEN** that field is rejected/ignored and never persisted
+
+### Requirement: Tenant password change is verified and audited
+`POST /api/tenant/password` SHALL verify the caller's current password through Supabase Auth before setting a valid new password, SHALL keep the successful current session active, and SHALL append `tenant.account.password_changed` without including any credential values.
+
+#### Scenario: Current password is correct
+- **WHEN** a tenant submits the correct current password and matching valid new passwords
+- **THEN** Supabase Auth updates the password, the current session remains active, and one credential-free audit event is appended
+
+#### Scenario: Current password is incorrect
+- **WHEN** Supabase Auth rejects `current_password`
+- **THEN** the endpoint returns a safe field validation error and does not append a password-change audit event
 
 ### Requirement: Tenant active contract summary
 `GET /api/tenant/contract` SHALL return the active housing contract summary (room number, building name, start/end dates, monthly rent, deposit, status, `assignmentRole`, and `primaryTenantName`). The server SHALL prefer the caller's current primary contract and otherwise use only a current active roommate occupancy. Terminated, expired, future move-in, and moved-out contexts SHALL be excluded.

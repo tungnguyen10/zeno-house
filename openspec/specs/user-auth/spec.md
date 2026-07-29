@@ -59,6 +59,11 @@ App SHALL send recovery email with `resetPasswordForEmail`, SHALL accept the rec
 - **WHEN** a valid recovery session submits matching valid passwords
 - **THEN** Supabase updates the password, signs out the recovery session, and returns the user to login
 
+#### Scenario: Authenticated tenant changes password
+- **WHEN** an authenticated tenant submits their current password and matching valid new passwords from `/portal/profile/password`
+- **THEN** Supabase verifies the current password, updates the password, and keeps the current session active
+- **AND** no credential value is stored in application data or audit payloads
+
 ### Requirement: Password fields support accessible visibility control
 Login, registration, and reset forms SHALL use the shared input primitive and an icon button with an accessible label to toggle password visibility without changing the model value.
 
