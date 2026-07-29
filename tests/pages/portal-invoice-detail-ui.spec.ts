@@ -21,6 +21,7 @@ describe('portal invoice detail refreshed UI', () => {
     expect(page).toContain('Tiến độ thanh toán')
     expect(page).toContain('Đã thanh toán')
     expect(page).toContain('Còn lại')
+    expect(page).not.toContain('transition-[width]')
   })
 
   it('renders charges as divider-led rows instead of group cards', () => {

@@ -73,7 +73,7 @@ function chargeLineUnit(chargeType: string): string | null {
         </div>
         <div class="mt-3">
           <div>
-            <h1 class="portal-type-title text-title">Kỳ {{ String(invoice.periodMonth).padStart(2, '0') }}/{{ invoice.periodYear }}</h1>
+            <h1 class="portal-type-title min-w-0 text-title [overflow-wrap:anywhere]">Kỳ {{ String(invoice.periodMonth).padStart(2, '0') }}/{{ invoice.periodYear }}</h1>
             <p class="portal-type-caption mt-0.5 text-body">{{ invoice.invoiceCode }}</p>
           </div>
         </div>
@@ -130,7 +130,7 @@ function chargeLineUnit(chargeType: string): string | null {
             class="mt-2 h-2 overflow-hidden rounded-full bg-smoke"
           >
             <div
-              class="h-full rounded-full transition-[width] duration-300 motion-reduce:transition-none"
+              class="h-full rounded-full"
               :class="paymentProgressClass"
               :style="{ width: `${paymentProgress}%` }"
             />

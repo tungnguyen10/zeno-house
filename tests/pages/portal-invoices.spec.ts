@@ -133,4 +133,14 @@ describe('portal invoices page — states', () => {
     await row.trigger('click')
     expect(navigateToMock).toHaveBeenCalledWith('/portal/invoices/inv-1')
   })
+
+  it('keeps long statuses in normal flow on narrow screens', () => {
+    invoicesState.invoices.value = [invoice({ status: 'partial' })]
+    const wrapper = mountPage()
+    const status = wrapper.get('[data-invoice-status]')
+
+    expect(status.classes()).toContain('col-start-2')
+    expect(status.classes()).not.toContain('absolute')
+    expect(wrapper.get('[data-invoice-row]').classes()).toContain('active:bg-smoke')
+  })
 })

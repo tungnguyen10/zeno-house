@@ -25,7 +25,7 @@ function openInvoice(invoiceId: string) {
     <div class="space-y-6 px-4 py-5 lg:px-8 lg:py-8">
       <header>
         <p class="portal-type-label text-body">Sao kê</p>
-        <h1 class="portal-type-title mt-1 text-title">Lịch sử hoá đơn</h1>
+        <h1 class="portal-type-title mt-1 min-w-0 text-title [overflow-wrap:anywhere]">Lịch sử hoá đơn</h1>
         <p class="portal-type-body mt-1 text-body">
           <template v-if="status === 'pending'">Đang tải lịch sử thanh toán…</template>
           <template v-else>{{ invoices.length }} hoá đơn theo thứ tự mới nhất</template>
@@ -76,7 +76,7 @@ function openInvoice(invoiceId: string) {
               :key="invoice.id"
               :data-invoice-row="invoice.id"
               type="button"
-              class="group relative block w-full border-b border-border-light px-4 py-4 text-left transition-colors last:border-b-0 hover:bg-smoke/60 focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-cyan motion-reduce:transition-none md:px-5"
+              class="group block w-full border-b border-border-light px-4 py-4 text-left transition-colors last:border-b-0 hover:bg-smoke active:bg-smoke focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-cyan motion-reduce:transition-none md:px-5"
               @click="openInvoice(invoice.id)"
             >
               <div class="grid grid-cols-[3.75rem_minmax(0,1fr)] gap-x-3 md:grid-cols-[5rem_minmax(0,1fr)_minmax(11rem,auto)_auto] md:items-center md:gap-x-5">
@@ -87,7 +87,7 @@ function openInvoice(invoiceId: string) {
                   </p>
                 </div>
 
-                <div class="min-w-0 pr-24 md:pr-0">
+                <div class="min-w-0">
                   <p class="portal-type-label truncate text-title">{{ invoice.invoiceCode }}</p>
                   <p v-if="invoice.dueDate" class="portal-type-caption mt-1 text-body">
                     Hạn thanh toán {{ formatViDate(invoice.dueDate) }}
@@ -99,7 +99,7 @@ function openInvoice(invoiceId: string) {
                   </p>
                 </div>
 
-                <div class="col-span-2 mt-3 flex items-end justify-between gap-3 border-t border-border-light pt-3 md:col-span-1 md:mt-0 md:block md:border-0 md:pt-0 md:text-right">
+                <div class="col-span-2 row-start-3 mt-3 flex items-end justify-between gap-3 border-t border-border-light pt-3 md:col-span-1 md:col-start-auto md:row-start-auto md:mt-0 md:block md:border-0 md:pt-0 md:text-right">
                   <p class="portal-type-caption text-body">
                     {{ invoice.balanceAmount > 0 ? 'Còn phải thanh toán' : 'Tổng hoá đơn' }}
                   </p>
@@ -111,7 +111,10 @@ function openInvoice(invoiceId: string) {
                   </p>
                 </div>
 
-                <div class="absolute right-4 top-4 flex items-center gap-2 md:static md:justify-end">
+                <div
+                  data-invoice-status
+                  class="col-start-2 row-start-2 mt-2 flex min-w-0 items-center gap-2 md:col-start-auto md:row-start-auto md:mt-0 md:justify-end"
+                >
                   <PortalStatusBadge :status="invoice.status" />
                   <IconChevronRight
                     class="size-4 text-body opacity-50 transition-transform group-hover:translate-x-0.5 group-hover:opacity-80 motion-reduce:transition-none"

@@ -42,3 +42,10 @@
 - [x] 6.2 Extend tenant invoice detail with the immutable payment-profile snapshot after tenant scope is confirmed
 - [x] 6.3 Add portal-native outstanding, paid-history, void, missing-snapshot, missing-QR, and clipboard-feedback states
 - [x] 6.4 Verify focused tests, specs, typecheck, lint, full regression, and responsive Hallmark polish
+
+## 7. Statement ledger polish
+
+- [x] 7.1 Present invoice history as year-grouped ledger rows while preserving API order and whole-row navigation
+- [x] 7.2 Refine invoice detail into a document hierarchy with one primary amount and accessible payment progress
+- [x] 7.3 Preserve outstanding transfer, paid history, void, loading, empty, and error behavior
+- [x] 7.4 Verify focused tests, specs, typecheck, lint, full regression, and final Hallmark polish

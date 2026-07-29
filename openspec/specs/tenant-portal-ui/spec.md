@@ -171,3 +171,26 @@ The portal invoice detail SHALL present transfer instructions only from the immu
 - **WHEN** a valid snapshot has bank text fields but its QR asset cannot be signed
 - **THEN** the immutable text fields remain usable
 - **AND** the portal shows `QR chưa khả dụng`
+
+---
+
+### Requirement: Tenant invoice statement ledger
+The portal invoice history SHALL present invoices as a year-grouped statement ledger while preserving the newest-first order returned by the tenant API. Invoice detail SHALL use a document-like hierarchy with one primary amount and a bounded, accessible payment-progress indicator. These presentation changes SHALL preserve the existing outstanding-payment, paid-history, and void-state ordering.
+
+#### Scenario: Invoice history has multiple years
+- **WHEN** the tenant invoice API returns invoices spanning multiple years
+- **THEN** the portal groups rows by the first-seen year without re-sorting invoices
+- **AND** each row shows the billing month, invoice code, locally formatted due date when available, total and paid context, primary amount, and status
+- **AND** the entire row exposes one navigation target to its invoice detail
+
+#### Scenario: Invoice detail shows payment progress
+- **WHEN** a tenant opens an invoice detail
+- **THEN** the summary shows one primary amount
+- **AND** payment progress is computed from paid amount divided by total amount and bounded from 0 to 100 percent
+- **AND** the progress indicator exposes its current value to assistive technology
+
+#### Scenario: Statement detail preserves payment-state ordering
+- **WHEN** an outstanding, paid, or void invoice detail renders
+- **THEN** outstanding transfer instructions remain before charge details
+- **AND** paid payment history remains after charge details
+- **AND** void invoices do not render transfer instructions
