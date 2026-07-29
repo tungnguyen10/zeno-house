@@ -30,6 +30,21 @@ describe('portal home refreshed statement UI', () => {
     expect(page).toContain('Người đứng hợp đồng: {{ contract.primaryTenantName }}')
   })
 
+  it('makes the room the hero anchor and moves identity into the footer', () => {
+    const roomTitle = page.indexOf('Phòng {{ contract.roomNumber }}')
+    const identityGreeting = page.indexOf('{{ greeting }}')
+
+    expect(page).toContain('<!-- Room keycard header -->')
+    expect(page).toContain('<!-- Room keycard identity footer -->')
+    expect(page).toContain(
+      'grid-cols-[minmax(0,1fr)_minmax(0,1fr)]',
+    )
+    expect(roomTitle).toBeGreaterThan(-1)
+    expect(identityGreeting).toBeGreaterThan(roomTitle)
+    expect(page).toContain("navigateTo('/portal/room')")
+    expect(page).toContain('Chưa có nơi ở đang hoạt động.')
+  })
+
   it('places the financial overview before quick actions', () => {
     expect(page).toContain('const financialOverview = computed')
     expect(page).toContain('Bình quân mỗi tháng')
