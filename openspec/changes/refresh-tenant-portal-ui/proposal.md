@@ -27,7 +27,7 @@ The profile route gains one dedicated edit child route and focused client-side f
 
 - Styling/tokens: `app/assets/scss/main.scss` (`.portal-shell` tokens, type-scale/money utilities, transitions), `tailwind.config.ts` (color aliases only; generated `app/types/database.types.ts` untouched).
 - Shared components: `app/components/portal/**` (`PortalCard`, `PortalButton`, `PortalInput`, `PortalChip`, `PortalInvoiceStatusBadge`, `PortalEmptyState`, `PortalSkeleton`, `PortalHeader`, `PortalTabBar`).
-- Pages: `app/pages/portal/index.vue`, `app/pages/portal/invoices/index.vue`, `app/pages/portal/invoices/[id].vue`, `app/pages/portal/room.vue`, `app/pages/portal/requests.vue`, `app/pages/portal/profile.vue`, `app/pages/portal/profile/edit.vue`.
+- Pages: `app/pages/portal/index.vue`, `app/pages/portal/invoices/index.vue`, `app/pages/portal/invoices/[id].vue`, `app/pages/portal/room.vue`, `app/pages/portal/requests.vue`, `app/pages/portal/profile/index.vue`, `app/pages/portal/profile/edit.vue`.
 - Profile client helpers: `app/utils/portal-profile.ts`, `app/composables/tenant-portal/usePortalUnsavedChanges.ts`, and `app/components/portal/PortalProfileDossier.vue`.
 - No changes to `server/**`, database schema, API contracts, permissions, or the `tenant.vue` shell structure.
 - Risk: visual and profile-workflow regression; verified via focused form/guard tests, typecheck, portal component/page tests, lint, OpenSpec validation, and a manual pass with mobile safe areas and reduced motion.

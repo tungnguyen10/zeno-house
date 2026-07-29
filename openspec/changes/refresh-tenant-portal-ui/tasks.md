@@ -21,7 +21,7 @@
 - [x] 3.3 `app/pages/portal/invoices/[id].vue`: statement summary header; replace nested-card breakdown with divider-separated key-value rows; payment summary + notes
 - [x] 3.4 `app/pages/portal/room.vue`: room/contract card and lease terms as clean divider-separated rows
 - [x] 3.5 `app/pages/portal/requests.vue`: list rows + bottom-sheet create form using the shared portal field primitive with unified validation feedback
-- [x] 3.6 `app/pages/portal/profile.vue`: profile edit form via `PortalInput`; polish identity/document upload slots and logout
+- [x] 3.6 `app/pages/portal/profile/index.vue`: profile dossier; polish identity/document upload slots and logout
 
 ## 4. Motion & accessibility polish
 

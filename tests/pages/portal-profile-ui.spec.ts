@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
-const viewPage = readFileSync(resolve('app/pages/portal/profile.vue'), 'utf8')
+const viewPage = readFileSync(resolve('app/pages/portal/profile/index.vue'), 'utf8')
 const editPage = readFileSync(resolve('app/pages/portal/profile/edit.vue'), 'utf8')
 
 describe('portal profile refreshed UI', () => {
