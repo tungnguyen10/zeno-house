@@ -239,11 +239,25 @@ export const UserRepository = {
     if (error) throwDbError(error, 'users.setTenantOnboardingStage.update')
   },
 
-  async updateCurrentPassword(event: H3Event, password: string): Promise<void> {
+  async updateCurrentPassword(
+    event: H3Event,
+    password: string,
+    currentPassword?: string,
+  ): Promise<void> {
     const client = await serverAuthClient(event)
-    const { error } = await client.auth.updateUser({ password })
+    const { error } = await client.auth.updateUser({
+      password,
+      ...(currentPassword ? { current_password: currentPassword } : {}),
+    })
     if (error?.code === 'same_password') {
       throwValidationError('Mật khẩu mới phải khác mật khẩu hiện tại')
+    }
+    if (error?.code === 'invalid_credentials') {
+      throwValidationError('Mật khẩu hiện tại không đúng', {
+        fieldErrors: {
+          current_password: ['Mật khẩu hiện tại không đúng'],
+        },
+      })
     }
     if (error) throwDbError(error, 'users.updateCurrentPassword')
   },

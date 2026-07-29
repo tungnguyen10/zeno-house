@@ -32,6 +32,38 @@ describe('UserRepository current password update', () => {
       })
   })
 
+  it('passes the current password to Supabase Auth for verification', async () => {
+    updateUser.mockResolvedValue({ error: null })
+
+    await UserRepository.updateCurrentPassword(
+      {} as never,
+      'mat-khau-moi',
+      'mat-khau-cu',
+    )
+
+    expect(updateUser).toHaveBeenCalledWith({
+      password: 'mat-khau-moi',
+      current_password: 'mat-khau-cu',
+    })
+  })
+
+  it('maps invalid current credentials to a safe field validation error', async () => {
+    updateUser.mockResolvedValue({ error: { code: 'invalid_credentials', status: 400 } })
+
+    await expect(UserRepository.updateCurrentPassword(
+      {} as never,
+      'mat-khau-moi',
+      'sai-mat-khau',
+    )).rejects.toMatchObject({
+      statusCode: 422,
+      data: {
+        error: {
+          message: 'Mật khẩu hiện tại không đúng',
+        },
+      },
+    })
+  })
+
   it('clears onboarding with null because Supabase merges app metadata', async () => {
     getUserById.mockResolvedValue({
       data: {

@@ -80,6 +80,7 @@ describe('portal profile refreshed UI', () => {
     expect(editPage).toContain('const submitted = ref(false)')
     expect(editPage).toContain('@blur="touchField(\'full_name\')"')
     expect(editPage).toContain('visibleError(\'full_name\')')
+    expect(editPage).toContain('serverFieldErrors.value[field]')
   })
 
   it('guards dirty navigation with a portal bottom sheet', () => {

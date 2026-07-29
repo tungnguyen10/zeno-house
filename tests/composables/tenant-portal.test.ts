@@ -156,6 +156,27 @@ describe('usePortalProfile', () => {
     })
     await expect(pending).resolves.toBe(true)
   })
+
+  it('exposes a duplicate identity number as field feedback', async () => {
+    fetchData = { data: { profile: baseProfile, contract: null, invoices: [], invoiceMeta: {} } }
+    fetchMock.mockRejectedValue({
+      data: {
+        error: {
+          message: 'Số CCCD/CMND đã tồn tại',
+          details: {
+            fieldErrors: {
+              id_number: ['Số CCCD/CMND đã tồn tại'],
+            },
+          },
+        },
+      },
+    })
+    const { usePortalProfile } = await import('../../app/composables/tenant-portal/usePortalProfile')
+    const { save, fieldErrors } = usePortalProfile()
+
+    await expect(save({ id_number: '012345678901' })).resolves.toBe(false)
+    expect(fieldErrors.value.id_number).toEqual(['Số CCCD/CMND đã tồn tại'])
+  })
 })
 
 describe('portal bootstrap data', () => {

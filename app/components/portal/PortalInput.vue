@@ -6,6 +6,7 @@ const props = withDefaults(defineProps<{
   modelValue: string | null
   label: string
   type?: string
+  revealable?: boolean
   textarea?: boolean
   placeholder?: string
   error?: string
@@ -19,6 +20,7 @@ const props = withDefaults(defineProps<{
   required?: boolean
 }>(), {
   type: 'text',
+  revealable: false,
   textarea: false,
   rows: 4,
   disabled: false,
@@ -45,6 +47,15 @@ const feedbackId = computed(() => props.error
   : props.hint
     ? `${fieldId.value}-hint`
     : undefined)
+const passwordVisible = ref(false)
+const canRevealPassword = computed(() => (
+  !props.textarea
+  && props.revealable
+  && props.type === 'password'
+))
+const resolvedType = computed(() => (
+  canRevealPassword.value && passwordVisible.value ? 'text' : props.type
+))
 
 const fieldClass = computed(() =>
   clsx(
@@ -81,23 +92,37 @@ const fieldClass = computed(() =>
       @input="onInput"
       @blur="onBlur"
     />
-    <input
-      v-else
-      :id="fieldId"
-      :name="name"
-      :type="type"
-      :value="modelValue ?? ''"
-      :placeholder="placeholder"
-      :inputmode="inputmode"
-      :autocomplete="autocomplete"
-      :disabled="disabled"
-      :required="required"
-      :aria-invalid="error ? 'true' : undefined"
-      :aria-describedby="feedbackId"
-      :class="[fieldClass, 'min-h-[44px]']"
-      @input="onInput"
-      @blur="onBlur"
-    >
+    <div v-else class="relative">
+      <input
+        :id="fieldId"
+        :name="name"
+        :type="resolvedType"
+        :value="modelValue ?? ''"
+        :placeholder="placeholder"
+        :inputmode="inputmode"
+        :autocomplete="autocomplete"
+        :disabled="disabled"
+        :required="required"
+        :aria-invalid="error ? 'true' : undefined"
+        :aria-describedby="feedbackId"
+        :class="[fieldClass, 'min-h-[44px]', canRevealPassword ? 'pr-12' : undefined]"
+        @input="onInput"
+        @blur="onBlur"
+      >
+      <button
+        v-if="canRevealPassword"
+        type="button"
+        class="absolute inset-y-0 right-0 flex size-11 items-center justify-center rounded-xl text-body transition-colors hover:text-title focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-theme/40 motion-reduce:transition-none"
+        :aria-label="passwordVisible ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'"
+        :aria-controls="fieldId"
+        :aria-pressed="passwordVisible"
+        :disabled="disabled"
+        @click="passwordVisible = !passwordVisible"
+      >
+        <IconEyeOff v-if="passwordVisible" class="h-5 w-5" aria-hidden="true" />
+        <IconEye v-else class="h-5 w-5" aria-hidden="true" />
+      </button>
+    </div>
     <p
       :id="feedbackId"
       data-feedback

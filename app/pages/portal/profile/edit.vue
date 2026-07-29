@@ -25,6 +25,7 @@ const {
   refresh: refreshProfile,
   save,
   saving,
+  fieldErrors: serverFieldErrors,
   apiError,
 } = usePortalProfile()
 const identity = usePortalIdentityImages()
@@ -60,7 +61,7 @@ const changes = computed(() => (
     : null
 ))
 const validation = computed(() => validateTenantProfileChanges(changes.value))
-const fieldErrors = computed(() => validation.value.fieldErrors)
+const clientFieldErrors = computed(() => validation.value.fieldErrors)
 const dirty = computed(() => changes.value !== null)
 const canSave = computed(() => (
   dirty.value
@@ -91,7 +92,7 @@ function touchField(field: keyof TenantProfileEditForm) {
 
 function visibleError(field: keyof TenantProfileEditForm): string | undefined {
   return touched[field] || submitted.value
-    ? fieldErrors.value[field]?.[0]
+    ? clientFieldErrors.value[field]?.[0] ?? serverFieldErrors.value[field]?.[0]
     : undefined
 }
 

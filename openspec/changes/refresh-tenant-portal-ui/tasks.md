@@ -61,5 +61,5 @@
 
 - [x] 9.1 Extend the tenant profile whitelist with unique CCCD details and changed-only reconciliation
 - [x] 9.2 Move identity-image controls to profile edit and keep view previews read-only
-- [ ] 9.3 Add profile security action and current-password-verified password route
+- [x] 9.3 Add profile security action and current-password-verified password route
 - [ ] 9.4 Verify focused tests, typecheck, lint, OpenSpec, full regression, and affected UI states

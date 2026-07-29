@@ -61,4 +61,31 @@ describe('PortalInput', () => {
 
     expect(wrapper.emitted('blur')).toHaveLength(1)
   })
+
+  it('reveals a password without changing its model value', async () => {
+    const wrapper = mount(PortalInput, {
+      props: {
+        modelValue: 'mat-khau-bi-mat',
+        label: 'Mật khẩu',
+        type: 'password',
+        revealable: true,
+      },
+      global: {
+        stubs: {
+          IconEye: true,
+          IconEyeOff: true,
+        },
+      },
+    })
+
+    expect(wrapper.get('input').attributes('type')).toBe('password')
+    const toggle = wrapper.get('button[aria-label="Hiện mật khẩu"]')
+    expect(toggle.classes()).toContain('size-11')
+
+    await toggle.trigger('click')
+
+    expect(wrapper.get('input').attributes('type')).toBe('text')
+    expect(wrapper.get('button').attributes('aria-label')).toBe('Ẩn mật khẩu')
+    expect(wrapper.emitted('update:modelValue')).toBeUndefined()
+  })
 })

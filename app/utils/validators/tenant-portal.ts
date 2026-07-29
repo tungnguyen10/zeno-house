@@ -57,12 +57,39 @@ export const tenantProfileUpdateSchema = z.object({
   message: 'Cần ít nhất một trường hồ sơ hợp lệ',
 })
 
+const tenantPasswordSchema = z
+  .string()
+  .min(8, 'Mật khẩu phải có ít nhất 8 ký tự')
+  .max(72, 'Mật khẩu không được vượt quá 72 ký tự')
+
+export const tenantPasswordChangeSchema = z.object({
+  current_password: tenantPasswordSchema,
+  password: tenantPasswordSchema,
+  password_confirmation: tenantPasswordSchema,
+}).superRefine((input, context) => {
+  if (input.password !== input.password_confirmation) {
+    context.addIssue({
+      code: 'custom',
+      path: ['password_confirmation'],
+      message: 'Mật khẩu xác nhận không khớp',
+    })
+  }
+  if (input.password === input.current_password) {
+    context.addIssue({
+      code: 'custom',
+      path: ['password'],
+      message: 'Mật khẩu mới phải khác mật khẩu hiện tại',
+    })
+  }
+})
+
 export const tenantInvoiceListQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   page_size: z.coerce.number().int().min(1).max(100).default(20),
 })
 
 export type TenantProfileUpdateInput = z.infer<typeof tenantProfileUpdateSchema>
+export type TenantPasswordChangeInput = z.infer<typeof tenantPasswordChangeSchema>
 export type TenantInvoiceListQuery = z.infer<typeof tenantInvoiceListQuerySchema>
 export type TenantDocumentUploadMetadata = z.infer<typeof tenantDocumentUploadSchema>
 export type TenantSupportRequestCreateInput = z.infer<typeof tenantSupportRequestCreateSchema>
