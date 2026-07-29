@@ -103,7 +103,7 @@ The portal home SHALL summarize recent invoice activity using existing tenant in
 #### Scenario: Tenant has enough invoice history
 - **WHEN** the tenant has at least two invoices
 - **THEN** the portal home displays up to the six newest invoice periods in chronological order
-- **AND** the chart distinguishes total invoice value from paid value
+- **AND** the chart displays each period’s total invoice value as one vertical bar
 - **AND** the home displays average monthly invoice value and the paid ratio
 - **AND** chart colors resolve from the active portal theme
 - **AND** chart animation is disabled when the tenant prefers reduced motion

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { ChartData, ChartOptions, TooltipItem } from 'chart.js'
 import '~/utils/chart-registration'
-import { Line } from 'vue-chartjs'
+import { Bar } from 'vue-chartjs'
 import type { TenantInvoiceListItem } from '~/types/tenant-portal'
 import { usePortalChartTheme } from '~/composables/tenant-portal/usePortalChartTheme'
 import { formatCurrency, formatCurrencyCompact } from '~/utils/format/currency'
@@ -22,42 +22,23 @@ const { palette, animationDuration } = usePortalChartTheme()
 
 const hasData = computed(() => overview.value.invoices.length > 0)
 
-const chartData = computed<ChartData<'line'>>(() => ({
+const chartData = computed<ChartData<'bar'>>(() => ({
   labels: overview.value.labels,
   datasets: [
     {
-      label: 'Tổng hóa đơn',
+      label: 'Tổng hóa đơn theo tháng',
       data: overview.value.totalAmounts,
       borderColor: palette.value.accent,
-      borderWidth: 2,
-      backgroundColor: palette.value.accentSoft,
-      fill: true,
-      tension: 0.28,
-      pointBackgroundColor: palette.value.accent,
-      pointBorderColor: palette.value.accent,
-      pointRadius: 3,
-      pointHoverRadius: 5,
-      pointHitRadius: 12,
-    },
-    {
-      label: 'Đã thanh toán',
-      data: overview.value.paidAmounts,
-      borderColor: palette.value.positive,
-      borderWidth: 2,
-      borderDash: [5, 4],
-      backgroundColor: 'transparent',
-      fill: false,
-      tension: 0.28,
-      pointBackgroundColor: palette.value.positive,
-      pointBorderColor: palette.value.positive,
-      pointRadius: 3,
-      pointHoverRadius: 5,
-      pointHitRadius: 12,
+      borderWidth: 0,
+      backgroundColor: palette.value.accent,
+      borderRadius: 6,
+      borderSkipped: 'bottom',
+      maxBarThickness: 28,
     },
   ],
 }))
 
-const chartOptions = computed<ChartOptions<'line'>>(() => ({
+const chartOptions = computed<ChartOptions<'bar'>>(() => ({
   responsive: true,
   maintainAspectRatio: false,
   animation: { duration: animationDuration.value },
@@ -73,7 +54,7 @@ const chartOptions = computed<ChartOptions<'line'>>(() => ({
       padding: 10,
       cornerRadius: 8,
       callbacks: {
-        label: (ctx: TooltipItem<'line'>) =>
+        label: (ctx: TooltipItem<'bar'>) =>
           `${ctx.dataset.label}: ${formatCurrency(Number(ctx.parsed.y))}`,
       },
     },
@@ -104,7 +85,7 @@ const chartSummary = computed(() => {
   const last = overview.value.labels.at(-1)
   if (!first || !last) return ''
 
-  return `${first} đến ${last}: tổng hóa đơn và số tiền đã thanh toán theo từng kỳ.`
+  return `${first} đến ${last}: các cột thể hiện tổng tiền hóa đơn của từng tháng.`
 })
 </script>
 
@@ -112,16 +93,12 @@ const chartSummary = computed(() => {
   <ClientOnly>
     <div v-if="hasData" class="w-full">
       <div aria-hidden="true" :style="{ height: heightPx }">
-        <Line :data="chartData" :options="chartOptions" />
+        <Bar :data="chartData" :options="chartOptions" />
       </div>
       <div class="mt-3 flex flex-wrap gap-x-4 gap-y-2 border-t border-border-light pt-3">
         <span class="portal-type-caption inline-flex items-center gap-2 text-body">
-          <span class="h-0.5 w-5 rounded-full bg-theme" aria-hidden="true" />
-          Tổng hóa đơn
-        </span>
-        <span class="portal-type-caption inline-flex items-center gap-2 text-body">
-          <span class="w-5 border-t-2 border-dashed border-[color:var(--portal-positive)]" aria-hidden="true" />
-          Đã thanh toán
+          <span class="h-4 w-1.5 rounded-sm bg-theme" aria-hidden="true" />
+          Tổng hóa đơn theo tháng
         </span>
       </div>
       <p data-test="chart-summary" class="sr-only">{{ chartSummary }}</p>
