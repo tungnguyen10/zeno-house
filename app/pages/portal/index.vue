@@ -18,7 +18,13 @@ setChrome({ title: 'Zeno House', back: null })
 
 const { profile, status: profileStatus } = usePortalProfile()
 const { contract, status: contractStatus } = usePortalContract()
-const { invoices, latest, status: invoiceStatus, refresh: refreshInvoices } = usePortalInvoices()
+const {
+  invoices,
+  latest,
+  status: invoiceStatus,
+  error: bootstrapError,
+  refresh: refreshInvoices,
+} = usePortalInvoices()
 
 const loading = computed(
   () => profileStatus.value === 'pending'
@@ -28,6 +34,11 @@ const loading = computed(
 const financialOverview = computed(() =>
   buildPortalFinancialOverview(invoices.value, 6),
 )
+const latestInvoiceHeading = computed(() =>
+  latest.value?.balanceAmount && latest.value.balanceAmount > 0
+    ? 'Công nợ cần xử lý'
+    : 'Hoá đơn mới nhất',
+)
 
 const greeting = computed(() => {
   const hour = new Date().getHours()
@@ -35,13 +46,6 @@ const greeting = computed(() => {
   if (hour < 14) return 'Chào buổi trưa'
   if (hour < 18) return 'Chào buổi chiều'
   return 'Chào buổi tối'
-})
-
-const formattedDate = computed(() => {
-  const now = new Date()
-  const weekday = now.toLocaleDateString('vi-VN', { weekday: 'long' })
-  const date = now.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
-  return `${weekday}, ${date}`
 })
 
 const initials = computed(() => {
@@ -60,9 +64,19 @@ async function refreshAll() {
 <template>
   <PortalPullToRefresh :on-refresh="refreshAll">
     <div class="space-y-5 px-4 py-5 lg:px-8 lg:py-8">
+      <PortalEmptyState
+        v-if="!loading && bootstrapError"
+        tone="error"
+        title="Không tải được trang chủ"
+        description="Không thể tải thông tin phòng và hoá đơn. Kiểm tra kết nối rồi thử lại."
+        action-label="Thử lại"
+        @action="refreshAll"
+      />
+
+      <template v-else>
       <!-- Identity hero: room keycard -->
       <section>
-        <PortalSkeleton v-if="loading" variant="statement" class="h-44" />
+        <PortalSkeleton v-if="loading" variant="statement" class="h-56" />
         <PortalCard
           v-else
           :interactive="!!contract"
@@ -71,14 +85,9 @@ async function refreshAll() {
         >
           <template v-if="contract">
             <!-- Room keycard header -->
-            <div class="flex items-start justify-between gap-3">
-              <p class="portal-type-caption min-w-0 truncate text-body">
-                {{ contract.buildingName }}
-              </p>
-              <p class="portal-type-caption shrink-0 text-right text-body">
-                {{ formattedDate }}
-              </p>
-            </div>
+            <p class="portal-type-caption min-w-0 truncate text-body">
+              {{ contract.buildingName }}
+            </p>
 
             <div class="mt-2.5 flex items-end justify-between gap-3">
               <div class="min-w-0">
@@ -116,10 +125,6 @@ async function refreshAll() {
             </div>
           </template>
 
-          <p v-if="!contract" class="portal-type-caption text-right text-body">
-            {{ formattedDate }}
-          </p>
-
           <!-- Room keycard identity footer -->
           <div
             class="flex items-center gap-3"
@@ -156,7 +161,7 @@ async function refreshAll() {
       <!-- Latest invoice -->
       <section class="flex flex-col gap-3">
         <div class="flex items-center justify-between">
-          <h3 class="portal-type-heading text-title">Hoá đơn mới nhất</h3>
+          <h2 class="portal-type-heading text-title">{{ latestInvoiceHeading }}</h2>
           <NuxtLink to="/portal/invoices" class="portal-type-label inline-flex items-center gap-0.5 rounded-md text-theme focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme/40">
             Tất cả<IconChevronRight class="h-3.5 w-3.5" aria-hidden="true" />
           </NuxtLink>
@@ -189,15 +194,25 @@ async function refreshAll() {
             </div>
             <PortalStatusBadge :status="latest.status" />
           </div>
-          <p class="portal-type-caption mt-3 border-t border-border-light pt-3 text-body">
-            Tổng: <span class="portal-money font-semibold text-title">{{ formatCurrency(latest.totalAmount) }}</span>
-            <span class="mx-1.5 opacity-40" aria-hidden="true">·</span>
-            Đã trả: <span class="portal-money font-semibold text-portal-positive-ink">{{ formatCurrency(latest.paidAmount) }}</span>
-            <template v-if="latest.dueDate">
-              <span class="mx-1.5 opacity-40" aria-hidden="true">·</span>
-              Hạn: <span class="font-medium text-title">{{ latest.dueDate }}</span>
-            </template>
+          <p class="portal-type-caption mt-3 text-body">
+            Tổng <span class="portal-money font-semibold text-title">{{ formatCurrency(latest.totalAmount) }}</span>
+            <span class="mx-1 opacity-40" aria-hidden="true">·</span>
+            Đã trả <span class="portal-money font-semibold text-portal-positive-ink">{{ formatCurrency(latest.paidAmount) }}</span>
           </p>
+          <div class="mt-3 flex items-end justify-between gap-3 border-t border-border-light pt-3">
+            <div class="min-w-0">
+              <p class="portal-type-caption text-body">
+                {{ latest.balanceAmount > 0 ? 'Hạn thanh toán' : 'Trạng thái' }}
+              </p>
+              <p class="portal-type-label mt-0.5 truncate text-title">
+                {{ latest.balanceAmount > 0 && latest.dueDate ? formatViDate(latest.dueDate) : 'Đã hoàn tất' }}
+              </p>
+            </div>
+            <span class="portal-type-label inline-flex shrink-0 items-center gap-0.5 whitespace-nowrap text-theme">
+              Xem chi tiết
+              <IconChevronRight class="size-4" aria-hidden="true" />
+            </span>
+          </div>
         </PortalCard>
         <PortalCard v-else>
           <p class="text-sm text-body">Chưa có hoá đơn nào.</p>
@@ -206,52 +221,28 @@ async function refreshAll() {
 
       <!-- Financial overview -->
       <section v-if="!loading && invoices.length >= 2" class="flex flex-col gap-3">
-        <h3 class="portal-type-heading text-title">Tổng quan tài chính</h3>
+        <h2 class="portal-type-heading text-title">Tổng quan tài chính</h2>
         <PortalCard>
           <PortalSpendingChart :invoices="invoices" />
-        </PortalCard>
-        <div class="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-3">
-          <PortalCard class="min-w-0">
+          <!-- Integrated finance metrics -->
+          <div class="mt-4 grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] divide-x divide-border-light border-t border-border-light pt-4">
+            <div class="min-w-0 pr-3">
             <p class="portal-type-caption text-body">Bình quân mỗi tháng</p>
             <p class="portal-money mt-1 whitespace-nowrap text-sm font-semibold text-title sm:text-base">
               {{ formatCurrencyCompact(financialOverview.averageMonthlyAmount) }}
               <span class="portal-money-unit">₫</span>
             </p>
-          </PortalCard>
-          <PortalCard class="min-w-0">
+            </div>
+            <div class="min-w-0 pl-3">
             <p class="portal-type-caption text-body">Tỷ lệ đã thanh toán</p>
             <p class="portal-money mt-1 text-sm font-semibold text-[color:var(--portal-positive-ink)] sm:text-base">
               {{ financialOverview.paidRatio }}%
             </p>
-          </PortalCard>
-        </div>
-      </section>
-
-      <!-- Quick actions -->
-      <section class="grid grid-cols-2 gap-3">
-        <PortalCard interactive @click="navigateTo('/portal/requests')">
-          <div class="flex flex-col gap-3 lg:flex-row lg:items-center">
-            <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-smoke-blue text-theme">
-              <IconMessageCircle class="h-5 w-5" aria-hidden="true" />
-            </span>
-            <div class="min-w-0">
-              <p class="portal-type-heading text-title">Gửi yêu cầu</p>
-              <p class="portal-type-caption text-body">Báo hỏng, hỗ trợ</p>
-            </div>
-          </div>
-        </PortalCard>
-        <PortalCard interactive @click="navigateTo('/portal/profile')">
-          <div class="flex flex-col gap-3 lg:flex-row lg:items-center">
-            <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-smoke-blue text-theme">
-              <IconUser class="h-5 w-5" aria-hidden="true" />
-            </span>
-            <div class="min-w-0">
-              <p class="portal-type-heading text-title">Hồ sơ</p>
-              <p class="portal-type-caption text-body">Thông tin cá nhân</p>
             </div>
           </div>
         </PortalCard>
       </section>
+      </template>
     </div>
   </PortalPullToRefresh>
 </template>
