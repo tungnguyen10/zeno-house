@@ -42,6 +42,12 @@ describe('portal home refreshed statement UI', () => {
   it('records the financial overview behavior in the accepted portal spec', () => {
     expect(spec).toContain('### Requirement: Tenant financial overview')
     expect(spec).toContain('up to the six newest invoice periods in chronological order')
+    expect(spec).toContain(
+      'the chart displays each period’s total invoice value as one vertical bar',
+    )
+    expect(spec).not.toContain(
+      'the chart distinguishes total invoice value from paid value',
+    )
     expect(spec).toContain('chart animation is disabled')
   })
 })
