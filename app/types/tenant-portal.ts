@@ -1,4 +1,5 @@
 import type { ContractStatus } from '~/types/contracts'
+import type { InvoiceProfileDisplay } from '~/types/building-invoice-profile'
 import type { InvoiceStatus } from '~/utils/constants/billing'
 
 export type TenantGender = 'male' | 'female' | 'other'
@@ -102,6 +103,7 @@ export interface TenantPortalBootstrap {
 }
 
 export interface TenantInvoiceDetail extends TenantInvoiceListItem {
+  invoiceProfile: InvoiceProfileDisplay | null
   charges: Array<{
     id: string
     chargeType: string

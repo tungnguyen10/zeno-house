@@ -7,6 +7,8 @@ const mocks = vi.hoisted(() => ({
   resolveHousing: vi.fn(),
   listInvoices: vi.fn(),
   findInvoiceDetail: vi.fn(),
+  findInvoiceSnapshotsByIds: vi.fn(),
+  resolveInvoiceProfiles: vi.fn(),
   auditAppend: vi.fn(),
   findDomainContract: vi.fn(),
 }))
@@ -27,6 +29,16 @@ vi.mock('../../../server/repositories/tenant-portal/invoices', () => ({
     findDetail: mocks.findInvoiceDetail,
   },
 }))
+vi.mock('../../../server/repositories/building-invoice-profiles', () => ({
+  BuildingInvoiceProfileRepository: {
+    findInvoiceSnapshotsByIds: mocks.findInvoiceSnapshotsByIds,
+  },
+}))
+vi.mock('../../../server/services/billing/invoice-profile-display', () => ({
+  InvoiceProfileDisplayService: {
+    resolveMany: mocks.resolveInvoiceProfiles,
+  },
+}))
 vi.mock('../../../server/services/audit', () => ({ AuditService: { append: mocks.auditAppend } }))
 vi.mock('../../../server/repositories/contracts', () => ({ ContractRepository: { findActiveByTenantId: mocks.findDomainContract } }))
 
@@ -43,6 +55,8 @@ describe('tenant portal services', () => {
     mocks.findDomainContract.mockResolvedValue({ buildingId: 'building-1' })
     mocks.listInvoices.mockResolvedValue({ items: [], total: 0 })
     mocks.findInvoiceDetail.mockResolvedValue(null)
+    mocks.findInvoiceSnapshotsByIds.mockResolvedValue(new Map())
+    mocks.resolveInvoiceProfiles.mockResolvedValue(new Map())
   })
 
   it('always resolves self scope and cannot be redirected by an injected tenant id', async () => {
@@ -150,6 +164,8 @@ describe('tenant portal services', () => {
 
     await expect(TenantInvoiceService.getDetail({} as never, tenantUser, 'invoice-other'))
       .rejects.toMatchObject({ statusCode: 404, data: { error: { code: 'NOT_FOUND' } } })
+    expect(mocks.findInvoiceSnapshotsByIds).not.toHaveBeenCalled()
+    expect(mocks.resolveInvoiceProfiles).not.toHaveBeenCalled()
   })
 
   it('uses the shared contract scope for roommate invoice detail', async () => {
@@ -225,8 +241,65 @@ describe('tenant portal services', () => {
       status: 'void',
       voidedAt: '2026-07-05T00:00:00.000Z',
       voidReason: 'Issued in error',
+      invoiceProfile: null,
       charges: [{ id: 'charge-1', chargeType: 'rent', amount: 5_000_000 }],
     })
   })
 
+  it('resolves an owned invoice immutable payment profile after scope succeeds', async () => {
+    const invoice = {
+      id: 'invoice-owned',
+      invoice_code: 'INV-OWNED',
+      billing_period_id: 'period-1',
+      period_year: 2026,
+      period_month: 7,
+      building_id: 'building-1',
+      building_name: 'Zeno One',
+      building_slug: 'zeno-one',
+      room_id: 'room-1',
+      room_number: 'A101',
+      contract_id: 'contract-1',
+      contract_code: 'C-001',
+      tenant_id: 'tenant-1',
+      tenant_name: 'Tenant',
+      total_amount: 5_000_000,
+      paid_amount: 0,
+      balance_amount: 5_000_000,
+      due_date: '2026-07-10',
+      status: 'issued',
+      issued_at: '2026-07-01T00:00:00.000Z',
+      voided_at: null,
+      void_reason: null,
+      notes: null,
+    }
+    const snapshot = { bank_name: 'VCB' }
+    const profile = {
+      bankName: 'VCB',
+      accountHolder: 'ZENO HOUSE',
+      accountNumber: '0123456789',
+      transferContent: 'INV-OWNED A101',
+      qrImageUrl: 'https://signed.example/qr',
+      logoImageUrl: null,
+      snapshottedAt: '2026-07-01T00:00:00.000Z',
+    }
+    mocks.findInvoiceDetail.mockResolvedValue({ invoice, charges: [] })
+    mocks.findInvoiceSnapshotsByIds.mockResolvedValue(new Map([['invoice-owned', snapshot]]))
+    mocks.resolveInvoiceProfiles.mockResolvedValue(new Map([['invoice-owned', profile]]))
+    const { TenantInvoiceService } = await import('../../../server/services/tenant-portal/invoices')
+
+    const result = await TenantInvoiceService.getDetail(
+      {} as never,
+      tenantUser,
+      'invoice-owned',
+      '2026-07-16',
+    )
+
+    expect(mocks.findInvoiceDetail).toHaveBeenCalledBefore(mocks.findInvoiceSnapshotsByIds)
+    expect(mocks.findInvoiceSnapshotsByIds).toHaveBeenCalledWith(expect.anything(), ['invoice-owned'])
+    expect(mocks.resolveInvoiceProfiles).toHaveBeenCalledWith(
+      expect.anything(),
+      new Map([['invoice-owned', snapshot]]),
+    )
+    expect(result.invoiceProfile).toEqual(profile)
+  })
 })
