@@ -47,4 +47,18 @@ describe('PortalInput', () => {
     expect(wrapper.find('textarea').exists()).toBe(true)
     expect(wrapper.find('textarea').attributes('aria-describedby')).toBe(wrapper.find('p').attributes('id'))
   })
+
+  it('reserves feedback space and forwards blur from the control', async () => {
+    const wrapper = mount(PortalInput, {
+      props: { modelValue: '', label: 'Họ và tên' },
+    })
+
+    const feedback = wrapper.get('[data-feedback]')
+    expect(feedback.classes()).toContain('min-h-[1rem]')
+    expect(feedback.attributes('aria-hidden')).toBe('true')
+
+    await wrapper.get('input').trigger('blur')
+
+    expect(wrapper.emitted('blur')).toHaveLength(1)
+  })
 })

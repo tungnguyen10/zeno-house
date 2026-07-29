@@ -57,6 +57,13 @@ describe('portal profile refreshed UI', () => {
     expect(editPage).toContain('portal-safe-bottom')
   })
 
+  it('reveals validation feedback after blur or a save attempt', () => {
+    expect(editPage).toContain('const touched = reactive')
+    expect(editPage).toContain('const submitted = ref(false)')
+    expect(editPage).toContain('@blur="touchField(\'full_name\')"')
+    expect(editPage).toContain('visibleError(\'full_name\')')
+  })
+
   it('guards dirty navigation with a portal bottom sheet', () => {
     expect(editPage).toContain('onBeforeRouteLeave(guard.guardRouteLeave)')
     expect(editPage).toContain("window.addEventListener('beforeunload', guard.onBeforeUnload)")

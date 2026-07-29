@@ -38,6 +38,8 @@ const form = reactive<TenantProfileEditForm>({
   emergency_contact_phone: '',
   notes: '',
 })
+const touched = reactive<Partial<Record<keyof TenantProfileEditForm, boolean>>>({})
+const submitted = ref(false)
 
 watch(profile, (value) => {
   if (!value || baseline.value) return
@@ -77,11 +79,22 @@ const GENDER_OPTIONS: Array<{ value: TenantGender, label: string }> = [
   { value: 'other', label: 'Khác' },
 ]
 
+function touchField(field: keyof TenantProfileEditForm) {
+  touched[field] = true
+}
+
+function visibleError(field: keyof TenantProfileEditForm): string | undefined {
+  return touched[field] || submitted.value
+    ? fieldErrors.value[field]?.[0]
+    : undefined
+}
+
 function toggleGender(value: TenantGender) {
   form.gender = form.gender === value ? null : value
 }
 
 async function onSave() {
+  submitted.value = true
   const input = validation.value.data
   if (!input) return
 
@@ -148,7 +161,8 @@ function cancelEdit() {
             label="Họ và tên"
             autocomplete="name"
             required
-            :error="fieldErrors.full_name?.[0]"
+            :error="visibleError('full_name')"
+            @blur="touchField('full_name')"
           />
 
           <fieldset class="space-y-1.5">
@@ -176,14 +190,16 @@ function cancelEdit() {
             v-model="form.date_of_birth"
             label="Ngày sinh"
             type="date"
-            :error="fieldErrors.date_of_birth?.[0]"
+            :error="visibleError('date_of_birth')"
+            @blur="touchField('date_of_birth')"
           />
 
           <PortalInput
             v-model="form.occupation"
             label="Nghề nghiệp"
             autocomplete="organization-title"
-            :error="fieldErrors.occupation?.[0]"
+            :error="visibleError('occupation')"
+            @blur="touchField('occupation')"
           />
         </PortalCard>
 
@@ -204,7 +220,8 @@ function cancelEdit() {
             inputmode="tel"
             autocomplete="tel"
             required
-            :error="fieldErrors.phone?.[0]"
+            :error="visibleError('phone')"
+            @blur="touchField('phone')"
           />
 
           <PortalInput
@@ -213,7 +230,8 @@ function cancelEdit() {
             textarea
             :rows="3"
             autocomplete="street-address"
-            :error="fieldErrors.permanent_address?.[0]"
+            :error="visibleError('permanent_address')"
+            @blur="touchField('permanent_address')"
           />
         </PortalCard>
 
@@ -231,7 +249,8 @@ function cancelEdit() {
             v-model="form.emergency_contact_name"
             label="Người liên hệ"
             autocomplete="off"
-            :error="fieldErrors.emergency_contact_name?.[0]"
+            :error="visibleError('emergency_contact_name')"
+            @blur="touchField('emergency_contact_name')"
           />
 
           <PortalInput
@@ -240,7 +259,8 @@ function cancelEdit() {
             type="tel"
             inputmode="tel"
             autocomplete="off"
-            :error="fieldErrors.emergency_contact_phone?.[0]"
+            :error="visibleError('emergency_contact_phone')"
+            @blur="touchField('emergency_contact_phone')"
           />
         </PortalCard>
 
@@ -259,7 +279,8 @@ function cancelEdit() {
             label="Nội dung"
             textarea
             :rows="4"
-            :error="fieldErrors.notes?.[0]"
+            :error="visibleError('notes')"
+            @blur="touchField('notes')"
           />
         </PortalCard>
 

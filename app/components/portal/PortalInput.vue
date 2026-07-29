@@ -27,10 +27,15 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits<{
   (e: 'update:modelValue', value: string): void
+  (e: 'blur', event: FocusEvent): void
 }>()
 
 function onInput(event: Event) {
   emit('update:modelValue', (event.target as HTMLInputElement | HTMLTextAreaElement).value)
+}
+
+function onBlur(event: FocusEvent) {
+  emit('blur', event)
 }
 
 const generatedId = useId()
@@ -74,6 +79,7 @@ const fieldClass = computed(() =>
       :aria-describedby="feedbackId"
       :class="[fieldClass, 'py-2.5']"
       @input="onInput"
+      @blur="onBlur"
     />
     <input
       v-else
@@ -90,8 +96,17 @@ const fieldClass = computed(() =>
       :aria-describedby="feedbackId"
       :class="[fieldClass, 'min-h-[44px]']"
       @input="onInput"
+      @blur="onBlur"
     >
-    <p v-if="error" :id="`${fieldId}-error`" role="alert" class="text-xs text-portal-danger">{{ error }}</p>
-    <p v-else-if="hint" :id="`${fieldId}-hint`" class="text-xs text-body">{{ hint }}</p>
+    <p
+      :id="feedbackId"
+      data-feedback
+      :role="error ? 'alert' : undefined"
+      :aria-hidden="!error && !hint ? 'true' : undefined"
+      class="min-h-[1rem] text-xs"
+      :class="error ? 'text-portal-danger' : 'text-body'"
+    >
+      {{ error || hint || '' }}
+    </p>
   </div>
 </template>
