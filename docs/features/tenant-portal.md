@@ -47,3 +47,15 @@ RLS mirrors these rules as a direct-access safety net. Apply
 `supabase/migrations/20260729120000_harden_tenant_account_lifecycle.sql` manually through the
 Supabase Dashboard, then run `supabase/verification/tenant_identity_rls.sql` and
 `supabase/verification/tenant_account_lifecycle.sql`.
+
+## Profile experience
+
+`/portal/profile` is the tenant's complete personal dossier and does not repeat housing or contract
+data. It presents every field already exposed by `TenantProfile`, followed by management-verified
+identity data, identity images, documents, and logout.
+
+The tenant edits the nine self-service fields on `/portal/profile/edit`; email, account status,
+tenant code, and verified identity fields remain read-only. The client normalizes optional blank
+values to `null` and sends only changed fields through `PATCH /api/tenant/me`. In-app navigation
+with dirty values requires explicit discard confirmation, while hard refresh and tab close use the
+browser unload guard.

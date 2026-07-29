@@ -49,3 +49,23 @@ Portal text and multiline inputs SHALL use the shared `PortalInput` primitive ra
 #### Scenario: Status badges are consistent
 - **WHEN** invoice and request statuses are displayed
 - **THEN** equivalent states use the same status-to-style mapping for color and semantics
+
+### Requirement: Complete tenant profile dossier and guarded editing
+The portal SHALL present `/portal/profile` as the complete personal dossier for the authenticated tenant without duplicating room, building, contract, or occupancy information. Self-service editing SHALL use `/portal/profile/edit`, expose only whitelisted fields, submit only normalized changed values, and protect dirty values from accidental navigation.
+
+#### Scenario: Complete personal dossier
+- **WHEN** a tenant opens `/portal/profile`
+- **THEN** the portal shows every field in the tenant profile DTO, identity images, and tenant documents
+- **AND** missing optional values are identified as not yet updated
+- **AND** room, building, contract, and occupancy details are not duplicated
+
+#### Scenario: Dedicated self-service edit screen
+- **WHEN** a tenant chooses `Chỉnh sửa`
+- **THEN** the portal opens `/portal/profile/edit`
+- **AND** only the nine whitelisted self-service fields are editable
+- **AND** the update payload contains only normalized changed fields
+
+#### Scenario: Unsaved profile changes
+- **WHEN** a tenant attempts in-app navigation with unsaved profile changes
+- **THEN** a portal bottom sheet offers to continue editing or discard the changes
+- **AND** closing the sheet preserves the form

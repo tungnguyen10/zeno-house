@@ -49,3 +49,10 @@
 - [x] 7.2 Refine invoice detail into a document hierarchy with one primary amount and accessible payment progress
 - [x] 7.3 Preserve outstanding transfer, paid history, void, loading, empty, and error behavior
 - [x] 7.4 Verify focused tests, specs, typecheck, lint, full regression, and final Hallmark polish
+
+## 8. Tenant profile dossier and dedicated edit flow
+
+- [x] 8.1 Redesign `/portal/profile` as an identity-first dossier without room or contract duplication
+- [x] 8.2 Add `/portal/profile/edit` with changed-only whitelist submission and shared save state
+- [x] 8.3 Guard dirty navigation with a portal bottom sheet and browser unload protection
+- [ ] 8.4 Verify focused tests, portal regression, typecheck, lint, OpenSpec, responsive widths, and reduced motion

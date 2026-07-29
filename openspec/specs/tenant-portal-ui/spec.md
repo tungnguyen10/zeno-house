@@ -70,6 +70,23 @@ The portal SHALL provide overview, invoices list, invoice detail, room/contract,
 - **WHEN** a tenant edits their profile
 - **THEN** only whitelisted contact fields are submitted, validated by the shared schema
 
+#### Scenario: Complete personal dossier
+- **WHEN** a tenant opens `/portal/profile`
+- **THEN** the portal shows every field in the tenant profile DTO, identity images, and tenant documents
+- **AND** missing optional values are identified as not yet updated
+- **AND** room, building, contract, and occupancy details are not duplicated
+
+#### Scenario: Dedicated self-service edit screen
+- **WHEN** a tenant chooses `Chỉnh sửa`
+- **THEN** the portal opens `/portal/profile/edit`
+- **AND** only the nine whitelisted self-service fields are editable
+- **AND** the update payload contains only normalized changed fields
+
+#### Scenario: Unsaved profile changes
+- **WHEN** a tenant attempts in-app navigation with unsaved profile changes
+- **THEN** a portal bottom sheet offers to continue editing or discard the changes
+- **AND** closing the sheet preserves the form
+
 #### Scenario: Roommate role is explicit
 - **WHEN** the active housing context has `assignmentRole = roommate`
 - **THEN** the overview and room pages label the caller as “Người ở cùng” and show the primary tenant name without implying ownership of the contract

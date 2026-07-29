@@ -10,9 +10,10 @@ The tenant portal works but reads as a set of loosely coordinated screens: typog
 - Normalize spacing rhythm, card padding, radius, and elevation across all portal components and pages.
 - Unify form input UX on the shared `PortalInput` (replace ad-hoc inline `<input>` usage in the profile and requests forms) and unify invoice/request status badges through a single status→style map.
 - Refine shared components (`PortalCard`, `PortalButton`, `PortalEmptyState`, `PortalSkeleton`, `PortalHeader`, `PortalTabBar`) and apply the refreshed identity to all six portal pages (overview, invoices list, invoice detail, room, requests, profile).
+- Redesign the profile as a complete identity-first personal dossier and move self-service editing to `/portal/profile/edit`, with changed-only whitelist submission and guarded unsaved navigation.
 - Tighten motion, focus-visible affordances, and text contrast to keep the quality floor (reduced-motion respected, visible keyboard focus, AA-legible body text).
 
-No behavior, data flow, API, routing, or shell architecture changes: pages still consume the existing `/api/tenant/**` composables inside the isolated `tenant.vue` shell. This is a presentation-layer refresh.
+The profile route gains one dedicated edit child route and focused client-side form/leave-guard helpers. Existing `/api/tenant/**` contracts, server ownership, storage conventions, permissions, database schema, and shell architecture remain unchanged.
 
 ## Capabilities
 
@@ -26,6 +27,7 @@ No behavior, data flow, API, routing, or shell architecture changes: pages still
 
 - Styling/tokens: `app/assets/scss/main.scss` (`.portal-shell` tokens, type-scale/money utilities, transitions), `tailwind.config.ts` (color aliases only; generated `app/types/database.types.ts` untouched).
 - Shared components: `app/components/portal/**` (`PortalCard`, `PortalButton`, `PortalInput`, `PortalChip`, `PortalInvoiceStatusBadge`, `PortalEmptyState`, `PortalSkeleton`, `PortalHeader`, `PortalTabBar`).
-- Pages: `app/pages/portal/index.vue`, `app/pages/portal/invoices/index.vue`, `app/pages/portal/invoices/[id].vue`, `app/pages/portal/room.vue`, `app/pages/portal/requests.vue`, `app/pages/portal/profile.vue`.
-- No changes to `app/composables/tenant-portal/**`, `server/**`, database schema, routing, or the `tenant.vue` shell structure.
-- Risk: visual-only; verified via typecheck, portal component/page tests, lint, and a manual pass across all six pages in loading/empty/error/data states with mobile safe areas and reduced-motion.
+- Pages: `app/pages/portal/index.vue`, `app/pages/portal/invoices/index.vue`, `app/pages/portal/invoices/[id].vue`, `app/pages/portal/room.vue`, `app/pages/portal/requests.vue`, `app/pages/portal/profile.vue`, `app/pages/portal/profile/edit.vue`.
+- Profile client helpers: `app/utils/portal-profile.ts`, `app/composables/tenant-portal/usePortalUnsavedChanges.ts`, and `app/components/portal/PortalProfileDossier.vue`.
+- No changes to `server/**`, database schema, API contracts, permissions, or the `tenant.vue` shell structure.
+- Risk: visual and profile-workflow regression; verified via focused form/guard tests, typecheck, portal component/page tests, lint, OpenSpec validation, and a manual pass with mobile safe areas and reduced motion.

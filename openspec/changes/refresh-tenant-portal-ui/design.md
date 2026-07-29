@@ -4,7 +4,7 @@ The tenant portal is an isolated, light-theme, mobile-first PWA under `/portal` 
 
 Today the visual layer was decided per page: heading sizes mix `text-xl`/`text-lg`/`text-sm` without a scale, page containers alternate between `space-y-4`/`space-y-3`, `PortalCard` `padded` is toggled inconsistently, two pages hand-roll `<input>` instead of `PortalTextField`, and invoice vs request status colors overlap in meaning. Body text (`--portal-body: #6e7070`) is borderline for contrast.
 
-This change is presentation-only. It must not touch composables, server code, routing, database, or the shell architecture, and must not add a component library or a new font (Inter only). It must keep the customer-facing identity distinct from the admin dark theme, keep Vietnamese copy correctly accented, use Tailwind + `clsx` (no inline styles), and preserve the quality floor (reduced motion, visible focus, AA-legible body text).
+This change is presentation-led. The profile workflow adds one dedicated edit route plus focused client-only form and navigation-guard helpers. It must not change server code, API contracts, permissions, database schema, storage conventions, or the shell architecture, and must not add a component library or a new font (Inter only). It must keep the customer-facing identity distinct from the admin dark theme, keep Vietnamese copy correctly accented, use Tailwind + `clsx` (no inline styles), and preserve the quality floor (reduced motion, visible focus, AA-legible body text).
 
 ## Goals / Non-Goals
 
@@ -14,9 +14,10 @@ This change is presentation-only. It must not touch composables, server code, ro
 - Consistent spacing rhythm, card padding, radius, and elevation across all portal components and pages.
 - A single form-field primitive (`PortalInput`) and a single status→style source of truth for badges.
 - Refreshed identity applied to all six portal pages with correct loading/empty/error/data states.
+- A complete personal dossier that avoids duplicating housing data, plus a dedicated native-style self-service edit flow.
 
 **Non-Goals:**
-- No changes to data fetching, composables, server APIs, routing, or the `tenant.vue` shell structure.
+- No changes to server APIs, database schema, permissions, storage conventions, or the `tenant.vue` shell structure.
 - No new component library, no new web font, no admin dark-theme changes.
 - No database or schema changes.
 - No new portal features or pages.
@@ -46,6 +47,11 @@ Route the profile edit and request-create forms through `PortalInput`, and drive
 ### D5 — Standardized rhythm and elevation
 Adopt one page rhythm (`px-4 py-5`, section `space-y-5`, in-section `space-y-3`), standard card `p-4`, card radius `rounded-2xl`, control radius `rounded-xl`, pill `rounded-full`, and only two elevation levels (resting subtle `shadow-sm`, raised for sheets). Replace inconsistent `padded={false}` + manual per-item padding in invoice detail/room with divider-separated key-value rows (no nested-card clutter).
 
+### D6 — Identity-first profile dossier and dedicated edit route
+Keep `/portal/profile` view-only. Present all fields in the tenant profile DTO in one divider-led dossier, followed by management-verified identity data, identity images, documents, and a quiet logout action. Do not repeat room, building, contract, or occupancy data.
+
+Move the nine whitelisted fields to `/portal/profile/edit`. Normalize optional blanks to `null`, submit only changed fields, and keep the existing optimistic profile reconciliation. In-app dirty navigation resolves through `PortalBottomSheet`; hard refresh and tab close use `beforeunload`. Both header and sticky save actions share the same validation, disabled, and busy state.
+
 ## Risks / Trade-offs
 
 - [Token value changes ripple to any admin surface that shares an alias like `text-title`/`bg-smoke`] → Values are set on `.portal-shell` scope only; verify no admin page depends on the portal-scoped overrides and run the full test suite + typecheck.
@@ -53,6 +59,8 @@ Adopt one page rhythm (`px-4 py-5`, section `space-y-5`, in-section `space-y-3`)
 - [Skeletons drift from refreshed layouts causing layout shift] → Update `PortalSkeleton` usages alongside each page so placeholder shapes match final content.
 - [Visual regressions across six pages] → Manual browser pass at `/portal` covering loading/empty/error/data on each page, mobile viewport, safe areas, and reduced-motion; keep changes utility-first so diffs stay reviewable.
 - [Over-engineering by extracting premature primitives] → Explicitly defer `PortalAmount`; only promote to a component at a fourth distinct usage.
+- [Tenants lose edits while navigating away] → Guard dirty in-app navigation with a portal bottom sheet and cover hard unload separately.
+- [Teleported sheets lose the active portal theme] → Carry `resolvedTheme` onto the `PortalBottomSheet` dialog root and verify both light and dark modes.
 
 ## Migration Plan
 
