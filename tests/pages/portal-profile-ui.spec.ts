@@ -61,6 +61,8 @@ describe('portal profile refreshed UI', () => {
     expect(editPage).toContain("onIdentitySelect('back', file)")
     expect(editPage).toContain("onIdentityRemove('front')")
     expect(editPage).toContain("onIdentityRemove('back')")
+    expect(editPage).toContain('max-w-60')
+    expect(editPage).toContain('min-[23.4375rem]:grid-cols-2')
   })
 
   it('links profile security to the dedicated password route', () => {
