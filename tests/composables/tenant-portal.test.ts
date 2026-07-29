@@ -136,6 +136,70 @@ describe('portal bootstrap data', () => {
       expect(call[1]).toMatchObject({ key: 'portal-bootstrap' })
     }
   })
+
+  it('picks the latest invoice by billing period even when server order is not newest-first', async () => {
+    fetchData = {
+      data: {
+        profile: baseProfile,
+        contract: null,
+        invoices: [
+          {
+            id: 'inv-jun',
+            invoiceCode: 'inv-2026-06-0041',
+            billingPeriodId: 'period-2026-06',
+            periodYear: 2026,
+            periodMonth: 6,
+            buildingId: 'building-1',
+            buildingName: 'A',
+            buildingSlug: 'a',
+            roomId: 'room-1',
+            roomNumber: 'P5',
+            contractId: 'contract-1',
+            contractCode: 'C-1',
+            totalAmount: 7068000,
+            paidAmount: 7068000,
+            balanceAmount: 0,
+            dueDate: '2026-06-10',
+            status: 'paid',
+            issuedAt: '2026-06-01',
+            voidedAt: null,
+            voidReason: null,
+            notes: null,
+          },
+          {
+            id: 'inv-jul',
+            invoiceCode: 'inv-2026-07-0025',
+            billingPeriodId: 'period-2026-07',
+            periodYear: 2026,
+            periodMonth: 7,
+            buildingId: 'building-1',
+            buildingName: 'A',
+            buildingSlug: 'a',
+            roomId: 'room-1',
+            roomNumber: 'P5',
+            contractId: 'contract-1',
+            contractCode: 'C-1',
+            totalAmount: 6892000,
+            paidAmount: 6892000,
+            balanceAmount: 0,
+            dueDate: '2026-07-10',
+            status: 'paid',
+            issuedAt: '2026-07-01',
+            voidedAt: null,
+            voidReason: null,
+            notes: null,
+          },
+        ],
+        invoiceMeta: { total: 2, page: 1, limit: 20, totalPages: 1 },
+      },
+    }
+
+    const { usePortalInvoices } = await import('../../app/composables/tenant-portal/usePortalInvoices')
+    const { latest } = usePortalInvoices()
+
+    expect(latest.value?.periodMonth).toBe(7)
+    expect(latest.value?.invoiceCode).toBe('inv-2026-07-0025')
+  })
 })
 
 describe('usePortalRequests', () => {
