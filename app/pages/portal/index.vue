@@ -1,7 +1,12 @@
 <script setup lang="ts">
 import { portalInvoiceStatementAccent } from '~/utils/constants/portal-status'
-import { formatCurrency, formatCurrencyNumber } from '~/utils/format/currency'
+import {
+  formatCurrency,
+  formatCurrencyCompact,
+  formatCurrencyNumber,
+} from '~/utils/format/currency'
 import { formatViDate } from '~/utils/format/time'
+import { buildPortalFinancialOverview } from '~/utils/tenant-portal/financial-overview'
 
 definePageMeta({
   layout: 'tenant',
@@ -19,6 +24,9 @@ const loading = computed(
   () => profileStatus.value === 'pending'
     || contractStatus.value === 'pending'
     || invoiceStatus.value === 'pending',
+)
+const financialOverview = computed(() =>
+  buildPortalFinancialOverview(invoices.value, 6),
 )
 
 const greeting = computed(() => {
@@ -169,6 +177,29 @@ async function refreshAll() {
         </PortalCard>
       </section>
 
+      <!-- Financial overview -->
+      <section v-if="!loading && invoices.length >= 2" class="flex flex-col gap-3">
+        <h3 class="portal-type-heading text-title">Tổng quan tài chính</h3>
+        <PortalCard>
+          <PortalSpendingChart :invoices="invoices" />
+        </PortalCard>
+        <div class="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-3">
+          <PortalCard class="min-w-0">
+            <p class="portal-type-caption text-body">Bình quân mỗi tháng</p>
+            <p class="portal-money mt-1 whitespace-nowrap text-sm font-semibold text-title sm:text-base">
+              {{ formatCurrencyCompact(financialOverview.averageMonthlyAmount) }}
+              <span class="portal-money-unit">₫</span>
+            </p>
+          </PortalCard>
+          <PortalCard class="min-w-0">
+            <p class="portal-type-caption text-body">Tỷ lệ đã thanh toán</p>
+            <p class="portal-money mt-1 text-sm font-semibold text-[color:var(--portal-positive-ink)] sm:text-base">
+              {{ financialOverview.paidRatio }}%
+            </p>
+          </PortalCard>
+        </div>
+      </section>
+
       <!-- Quick actions -->
       <section class="grid grid-cols-2 gap-3">
         <PortalCard interactive @click="navigateTo('/portal/requests')">
@@ -191,25 +222,6 @@ async function refreshAll() {
               <p class="portal-type-heading text-title">Hồ sơ</p>
               <p class="portal-type-caption text-body">Thông tin cá nhân</p>
             </div>
-          </div>
-        </PortalCard>
-      </section>
-
-      <!-- Spending trend (visible once at least 2 invoices exist) -->
-      <section v-if="!loading && invoices.length >= 2" class="flex flex-col gap-3">
-        <h3 class="portal-type-heading text-title">Xu hướng chi tiêu</h3>
-        <PortalCard>
-          <PortalSpendingChart :invoices="invoices" />
-          <div class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-border-light pt-2">
-            <span class="inline-flex items-center gap-1.5 portal-type-caption text-body">
-              <span class="inline-block h-2 w-2 rounded-full bg-portal-positive" aria-hidden="true" />Đã thanh toán
-            </span>
-            <span class="inline-flex items-center gap-1.5 portal-type-caption text-body">
-              <span class="inline-block h-2 w-2 rounded-full bg-portal-warning" aria-hidden="true" />Chưa thanh toán
-            </span>
-            <span class="inline-flex items-center gap-1.5 portal-type-caption text-body">
-              <span class="inline-block h-2 w-2 rounded-full bg-portal-danger" aria-hidden="true" />Quá hạn
-            </span>
           </div>
         </PortalCard>
       </section>
