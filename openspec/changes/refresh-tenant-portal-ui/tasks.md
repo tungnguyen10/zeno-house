@@ -35,3 +35,10 @@
 - [x] 5.3 `npm run lint`
 - [ ] 5.4 Manual browser pass at `https://localhost:3000/portal` across all six pages in loading/empty/error/data states, mobile viewport with safe areas, and reduced-motion
 - [x] 5.5 `openspec validate refresh-tenant-portal-ui --strict`
+
+## 6. Action-first home and invoice payment instructions
+
+- [ ] 6.1 Simplify `app/pages/portal/index.vue` into room identity, debt action, and one integrated financial context with explicit loading/error/empty states
+- [ ] 6.2 Extend tenant invoice detail with the immutable payment-profile snapshot after tenant scope is confirmed
+- [ ] 6.3 Add portal-native outstanding, paid-history, void, missing-snapshot, missing-QR, and clipboard-feedback states
+- [ ] 6.4 Verify focused tests, specs, typecheck, lint, full regression, and responsive Hallmark polish

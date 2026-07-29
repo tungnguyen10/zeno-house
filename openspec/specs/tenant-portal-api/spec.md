@@ -60,7 +60,7 @@ The system SHALL expose tenant self-service endpoints under `/api/tenant/**`, av
 - **THEN** the endpoint returns an empty/absent result, not another tenant's data
 
 ### Requirement: Tenant invoice list and detail
-`GET /api/tenant/invoices` SHALL return paginated invoices with derived overdue status. Primary tenant scope SHALL remain `tenant_id` so historical invoices are retained. Active roommate scope SHALL be the server-resolved current `contract_id`, including invoices issued before move-in. `GET /api/tenant/invoices/[id]` SHALL enforce the same scope before returning charge lines; otherwise it SHALL return a consistent not-found response.
+`GET /api/tenant/invoices` SHALL return paginated invoices with derived overdue status. Primary tenant scope SHALL remain `tenant_id` so historical invoices are retained. Active roommate scope SHALL be the server-resolved current `contract_id`, including invoices issued before move-in. `GET /api/tenant/invoices/[id]` SHALL enforce the same scope before returning charge lines and the immutable invoice payment-profile snapshot; otherwise it SHALL return a consistent not-found response. Snapshot asset URLs SHALL be short-lived signed URLs, and the endpoint SHALL return `invoiceProfile = null` when no valid snapshot was stored.
 
 #### Scenario: List own invoices
 - **WHEN** a tenant calls `GET /api/tenant/invoices`
@@ -81,6 +81,17 @@ The system SHALL expose tenant self-service endpoints under `/api/tenant/**`, av
 #### Scenario: Detail ownership enforced
 - **WHEN** a tenant requests an invoice id that belongs to another tenant
 - **THEN** the response is a consistent not-found with no existence leak
+- **AND** no invoice-profile snapshot is read or signed
+
+#### Scenario: Owned detail includes immutable payment instructions
+- **WHEN** a tenant requests one of their own invoices with a valid payment-profile snapshot
+- **THEN** the detail contains the snapshotted bank name, account holder, account number, rendered transfer content, and short-lived signed URLs for available private assets
+- **AND** current building profile data is not substituted
+
+#### Scenario: Owned detail has no valid payment snapshot
+- **WHEN** a tenant requests one of their own invoices whose payment-profile snapshot is missing or invalid
+- **THEN** the detail returns `invoiceProfile = null`
+- **AND** the invoice and charge lines remain readable
 
 #### Scenario: Voided invoice detail
 - **WHEN** a tenant requests one of their own voided invoices
