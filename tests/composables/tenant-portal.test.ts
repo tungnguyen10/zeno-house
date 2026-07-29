@@ -115,6 +115,20 @@ describe('usePortalProfile', () => {
     expect(profile.value?.phone).toBe(baseProfile.phone)
     expect(apiError.value).toBeTruthy()
   })
+
+  it('sends a changed-only whitelist payload through PATCH /api/tenant/me', async () => {
+    fetchData = { data: { profile: baseProfile, contract: null, invoices: [], invoiceMeta: {} } }
+    fetchMock.mockResolvedValue({ data: { ...baseProfile, occupation: null } })
+    const { usePortalProfile } = await import('../../app/composables/tenant-portal/usePortalProfile')
+    const { save } = usePortalProfile()
+
+    await save({ occupation: null })
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/tenant/me', {
+      method: 'PATCH',
+      body: { occupation: null },
+    })
+  })
 })
 
 describe('portal bootstrap data', () => {
