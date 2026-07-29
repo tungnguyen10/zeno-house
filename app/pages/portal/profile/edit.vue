@@ -304,7 +304,7 @@ function cancelEdit() {
             <p class="mt-1 portal-type-caption text-body">
               Ảnh rõ đủ bốn góc, tối đa 5MB.
             </p>
-            <div class="mx-auto mt-3 grid w-full max-w-60 grid-cols-1 gap-3 min-[23.4375rem]:max-w-none min-[23.4375rem]:grid-cols-2">
+            <div class="mt-3 grid w-full grid-cols-2 gap-2.5 sm:gap-3">
               <PortalIdentityImageSlot
                 label="Mặt trước"
                 :signed-url="identity.images.value.frontSignedUrl"

@@ -116,7 +116,7 @@ async function onLogout() {
               Ảnh hai mặt CCCD/CMND dùng để đối chiếu hồ sơ.
             </p>
           </div>
-          <PortalCard class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <PortalCard class="grid w-full grid-cols-2 gap-2.5 sm:gap-4">
             <PortalIdentityImageSlot
               label="Mặt trước"
               :signed-url="identity.images.value.frontSignedUrl"

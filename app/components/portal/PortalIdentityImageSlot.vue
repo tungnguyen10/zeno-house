@@ -44,7 +44,7 @@ function onChange(event: Event) {
 </script>
 
 <template>
-  <div class="space-y-2">
+  <div class="space-y-1.5 sm:space-y-2">
     <p class="portal-type-label text-title">{{ label }}</p>
     <div class="relative aspect-[3/2] overflow-hidden rounded-2xl border border-border-light bg-smoke">
       <img
@@ -56,18 +56,18 @@ function onChange(event: Event) {
       <button
         v-else-if="editable"
         type="button"
-        class="flex h-full w-full flex-col items-center justify-center gap-2 text-body transition-colors hover:bg-smoke-blue focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-theme/40"
+        class="flex h-full w-full flex-col items-center justify-center gap-1.5 px-2 py-2 text-center text-body transition-colors hover:bg-smoke-blue focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-theme/40 sm:gap-2"
         @click="pick"
       >
-        <IconPhoto class="h-7 w-7" aria-hidden="true" />
-        <span class="text-xs font-medium">Chụp hoặc chọn ảnh</span>
+        <IconPhoto class="h-6 w-6 sm:h-7 sm:w-7" aria-hidden="true" />
+        <span class="text-[11px] font-medium leading-4 sm:text-xs">Chụp hoặc chọn ảnh</span>
       </button>
       <div
         v-else
-        class="flex h-full w-full flex-col items-center justify-center gap-2 text-body"
+        class="flex h-full w-full flex-col items-center justify-center gap-1.5 px-2 py-2 text-center text-body sm:gap-2"
       >
-        <IconPhoto class="h-7 w-7" aria-hidden="true" />
-        <span class="text-xs font-medium">Chưa có ảnh</span>
+        <IconPhoto class="h-6 w-6 sm:h-7 sm:w-7" aria-hidden="true" />
+        <span class="text-[11px] font-medium leading-4 sm:text-xs">Chưa có ảnh</span>
       </div>
 
       <div
