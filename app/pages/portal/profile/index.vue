@@ -21,6 +21,7 @@ const {
   error: profileError,
   refresh: refreshProfile,
 } = usePortalProfile()
+const { contract } = usePortalContract()
 const identity = usePortalIdentityImages()
 const docs = usePortalDocuments()
 
@@ -94,7 +95,11 @@ async function onLogout() {
       />
 
       <template v-else>
-        <PortalProfileDossier :profile="profile" />
+        <PortalProfileDossier
+          :profile="profile"
+          :room-number="contract?.roomNumber ?? null"
+          :building-name="contract?.buildingName ?? null"
+        />
 
         <section aria-labelledby="profile-identity-images-heading" class="space-y-3">
           <div class="flex items-start gap-2 px-1">

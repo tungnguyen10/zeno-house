@@ -9,6 +9,8 @@ interface DossierRow {
 
 const props = defineProps<{
   profile: TenantProfile
+  roomNumber?: string | null
+  buildingName?: string | null
 }>()
 
 const genderLabels: Record<TenantGender, string> = {
@@ -35,9 +37,9 @@ const initials = computed(() => {
   return `${words[0]?.[0] ?? ''}${words.at(-1)?.[0] ?? ''}`.toUpperCase()
 })
 
-const statusLabel = computed(() => (
-  props.profile.status === 'active' ? 'Đang thuê' : 'Đã lưu trữ'
-))
+// const statusLabel = computed(() => (
+//   props.profile.status === 'active' ? 'Đang thuê' : 'Đã lưu trữ'
+// ))
 
 const statusTone = computed<'success' | 'neutral'>(() => (
   props.profile.status === 'active' ? 'success' : 'neutral'
@@ -73,12 +75,22 @@ const emergencyRows = computed<DossierRow[]>(() => [
 <template>
   <div class="space-y-5">
     <PortalCard :padded="false" class="overflow-hidden">
-      <div class="flex items-start gap-3.5 p-4">
-        <span
-          class="flex size-14 shrink-0 items-center justify-center rounded-2xl border border-theme/30 bg-smoke-blue text-lg font-semibold text-theme shadow-[var(--portal-elevation-resting)]"
-          aria-hidden="true"
-        >
-          {{ initials }}
+      <div class="flex items-center gap-3.5 p-4">
+        <span class="relative shrink-0">
+          <span
+            class="flex size-14 items-center justify-center rounded-2xl border border-theme/30 bg-smoke-blue text-lg font-semibold text-theme shadow-[var(--portal-elevation-resting)]"
+            aria-hidden="true"
+          >
+            {{ initials }}
+          </span>
+          <span
+            v-if="statusTone === 'success'"
+            class="absolute -bottom-0.5 -right-0.5 size-4"
+            aria-hidden="true"
+          >
+            <span class="absolute inset-0 rounded-full bg-portal-positive/60 motion-safe:animate-ping" />
+            <span class="absolute inset-0 rounded-full border-2 border-[color:var(--portal-surface)] bg-portal-positive" />
+          </span>
         </span>
         <div class="min-w-0 flex-1">
           <p class="break-words text-lg font-semibold leading-6 text-title">
@@ -88,9 +100,28 @@ const emergencyRows = computed<DossierRow[]>(() => [
             {{ profile.code }}
           </p>
         </div>
-        <PortalChip :tone="statusTone" class="shrink-0">
+        <!-- <PortalChip :tone="statusTone" class="shrink-0">
+          <span class="mr-1.5 size-1.5 shrink-0 rounded-full bg-current" aria-hidden="true" />
           {{ statusLabel }}
-        </PortalChip>
+        </PortalChip> -->
+      </div>
+
+      <div
+        v-if="roomNumber"
+        class="flex items-center gap-3 border-t border-border-light px-4 py-3"
+      >
+        <span
+          class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-smoke-blue text-theme"
+          aria-hidden="true"
+        >
+          <IconDoor class="h-5 w-5" />
+        </span>
+        <div class="min-w-0">
+          <p class="portal-type-label uppercase text-body">Đang ở</p>
+          <p class="mt-0.5 truncate portal-type-body font-semibold text-title">
+            Phòng {{ roomNumber }}<span v-if="buildingName" class="font-normal text-body"> · {{ buildingName }}</span>
+          </p>
+        </div>
       </div>
 
       <NuxtLink

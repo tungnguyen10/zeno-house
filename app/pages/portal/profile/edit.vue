@@ -140,7 +140,7 @@ function cancelEdit() {
 
 <template>
   <div>
-    <Teleport to="#portal-header-action">
+    <!-- <Teleport to="#portal-header-action">
       <PortalButton
         v-if="profileStatus === 'success' && profile"
         size="md"
@@ -150,7 +150,7 @@ function cancelEdit() {
       >
         Lưu
       </PortalButton>
-    </Teleport>
+    </Teleport> -->
 
     <div class="mx-auto w-full max-w-2xl px-4 pt-5 lg:px-8 lg:pt-8">
       <div v-if="profileStatus === 'pending'" class="space-y-5 pb-8">
