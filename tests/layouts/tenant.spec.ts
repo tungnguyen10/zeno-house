@@ -5,6 +5,7 @@ import TenantLayout from '~/layouts/tenant.vue'
 
 const initialize = vi.fn()
 vi.stubGlobal('usePortalTheme', () => ({ resolvedTheme: ref('dark'), initialize }))
+vi.stubGlobal('usePortalBootstrap', () => ({ status: ref('success') }))
 
 describe('tenant layout', () => {
   it('applies the resolved appearance only to the portal shell', () => {
@@ -17,6 +18,7 @@ describe('tenant layout', () => {
           PortalTabBar: true,
           PortalToastHost: true,
           PortalInstallPrompt: true,
+          PortalSplash: true,
         },
       },
     })

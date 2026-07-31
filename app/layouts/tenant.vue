@@ -5,7 +5,16 @@
 // It deliberately renders NONE of the internal admin shell.
 const { resolvedTheme, initialize } = usePortalTheme()
 
-onMounted(initialize)
+// Branded loading splash: shown on every portal entry until the shared bootstrap
+// fetch resolves. Consuming the fetch here dedupes with pages via its cache key.
+const { status } = usePortalBootstrap()
+const minDelayElapsed = ref(false)
+const showSplash = computed(() => status.value === 'pending' || !minDelayElapsed.value)
+
+onMounted(() => {
+  initialize()
+  setTimeout(() => { minDelayElapsed.value = true }, 300)
+})
 </script>
 
 <template>
@@ -28,5 +37,13 @@ onMounted(initialize)
          the layout so it survives page transitions, and sits inside
          `.portal-shell` so teleported overlays inherit the portal tokens. -->
     <div id="portal-overlay-root" />
+    <Transition
+      enter-active-class="transition-opacity duration-200"
+      leave-active-class="transition-opacity duration-300"
+      enter-from-class="opacity-0"
+      leave-to-class="opacity-0"
+    >
+      <PortalSplash v-if="showSplash" />
+    </Transition>
   </div>
 </template>
