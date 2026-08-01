@@ -28,7 +28,6 @@
 - `tests/utils/format-period.test.ts`: verify the shared helper at a UTC/Vietnam month boundary.
 - `server/services/operations-report/prepaid-expenses.ts`: calculate Vietnam cancellation month and select physical delete vs effective cancellation.
 - `tests/server/operations-report/prepaid-expense-service.test.ts`: service behavior, audit, scope, and lock regression coverage.
-- `supabase/migrations/*_prepaid_effective_deletion.sql`: CLI-created migration replacing the report snapshot predicate.
 - `supabase/sql-editor/phase-2-report-and-bulk-rpcs.sql`: keep the canonical SQL-editor function source aligned with the migration.
 - `tests/server/operations-report/prepaid-effective-deletion-sql.test.ts`: validate the status-independent date-window predicate and function security.
 - `app/pages/dashboard/buildings/[id]/settings.vue`: confirmation state, modal content, loading/error/success states, and active-only action.
@@ -266,7 +265,6 @@ git commit -m "feat: cancel prepaid expenses by period"
 ### Task 3: Preserve historical allocations in the report snapshot
 
 **Files:**
-- Create via `supabase migration new prepaid_effective_deletion`: `supabase/migrations/*_prepaid_effective_deletion.sql` (the single exact path printed by the CLI)
 - Modify: `supabase/sql-editor/phase-2-report-and-bulk-rpcs.sql`
 - Create: `tests/server/operations-report/prepaid-effective-deletion-sql.test.ts`
 
@@ -274,21 +272,9 @@ git commit -m "feat: cancel prepaid expenses by period"
 - Consumes: existing `public.operations_report_snapshot(uuid, integer, integer)` signature.
 - Produces: the same SECURITY INVOKER RPC and JSON contract with a status-independent prepaid effective window.
 
-- [ ] **Step 1: Check CLI availability before creating the migration**
+- [ ] **Step 1: Add a failing SQL contract test**
 
-Run: `supabase --version`
-
-Expected: a version is printed. If the command is unavailable, request explicit approval before downloading/running the CLI; do not hand-create a timestamped migration.
-
-- [ ] **Step 2: Create the migration with the CLI**
-
-Run: `supabase migration new prepaid_effective_deletion`
-
-Expected: one empty timestamped file ending in `_prepaid_effective_deletion.sql` is created and its exact path is printed.
-
-- [ ] **Step 3: Add a failing SQL contract test**
-
-Read the migration by suffix with `readdirSync`, then assert:
+Read `supabase/sql-editor/phase-2-report-and-bulk-rpcs.sql`, then assert:
 
 ```ts
 expect(sql).toContain('create or replace function public.operations_report_snapshot')
@@ -299,15 +285,15 @@ expect(sql).not.toContain("p.status = 'active'")
 expect(sql).toContain('grant execute on function public.operations_report_snapshot(uuid, integer, integer) to service_role')
 ```
 
-- [ ] **Step 4: Run the SQL test and verify RED**
+- [ ] **Step 2: Run the SQL test and verify RED**
 
 Run: `npm test -- tests/server/operations-report/prepaid-effective-deletion-sql.test.ts`
 
-Expected: test fails because the new migration is empty.
+Expected: test fails because the snapshot still contains `p.status = 'active'`.
 
-- [ ] **Step 5: Replace the RPC in the migration and canonical SQL source**
+- [ ] **Step 3: Update the canonical SQL Editor source**
 
-Copy the complete current `operations_report_snapshot` definition from `supabase/sql-editor/phase-2-report-and-bulk-rpcs.sql` into the migration. In `prepaid_rows`, retain the existing monthly remainder calculation and use exactly:
+In `prepaid_rows`, retain the existing monthly remainder calculation and use exactly:
 
 ```sql
 from public.prepaid_expenses p
@@ -316,32 +302,33 @@ where p.building_id = p_building_id
   and p.end_date > make_date(p_period_year, p_period_month, 1)
 ```
 
-Keep `language sql`, `stable`, `security invoker`, `set search_path = ''`, the existing revoke statements, and the `service_role` execute grant. Apply the same predicate change to `supabase/sql-editor/phase-2-report-and-bulk-rpcs.sql`.
+Keep `language sql`, `stable`, `security invoker`, `set search_path = ''`, the existing revoke statements, and the `service_role` execute grant.
 
-- [ ] **Step 6: Run SQL and snapshot tests and verify GREEN**
+- [ ] **Step 4: Run SQL and snapshot tests and verify GREEN**
 
 Run: `npm test -- tests/server/operations-report/prepaid-effective-deletion-sql.test.ts tests/server/operations-report/snapshot-performance.test.ts`
 
 Expected: both test files pass.
 
-- [ ] **Step 7: Dry-run the linked migration**
+- [ ] **Step 5: Apply the RPC through Supabase SQL Editor**
 
-Run: `supabase db push --linked --dry-run`
+Open the linked project SQL Editor, execute only the `create or replace function public.operations_report_snapshot(...)` statement plus its revoke/grant statements from the canonical file, and confirm the editor reports success.
 
-Expected: only the new prepaid effective-deletion migration is pending. If unrelated pending migrations appear, stop and do not push.
+- [ ] **Step 6: Verify the deployed predicate without mutating business data**
 
-- [ ] **Step 8: Apply and verify the migration**
+Run a read-only SQL verification against the function definition and existing prepaid record:
 
-Run: `supabase db push --linked`
+```sql
+select pg_get_functiondef('public.operations_report_snapshot(uuid, integer, integer)'::regprocedure)
+  not like '%p.status = ''active''%' as status_independent_window;
+```
 
-Then run: `supabase migration list`
+Expected: `status_independent_window = true`. Do not create or modify production rows for verification.
 
-Expected: the new migration version appears in both LOCAL and REMOTE columns. Verify a cancelled test row or equivalent read-only SQL query is included for a month before `end_date` and excluded at/after `end_date`; do not modify production business rows for verification.
-
-- [ ] **Step 9: Commit the SQL change**
+- [ ] **Step 7: Commit the SQL change**
 
 ```bash
-git add supabase/migrations/*_prepaid_effective_deletion.sql supabase/sql-editor/phase-2-report-and-bulk-rpcs.sql tests/server/operations-report/prepaid-effective-deletion-sql.test.ts
+git add supabase/sql-editor/phase-2-report-and-bulk-rpcs.sql tests/server/operations-report/prepaid-effective-deletion-sql.test.ts docs/superpowers/plans/2026-08-01-prepaid-expense-effective-deletion.md
 git commit -m "fix: preserve historical prepaid allocations"
 ```
 

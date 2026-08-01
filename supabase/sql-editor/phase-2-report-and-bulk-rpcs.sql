@@ -70,7 +70,6 @@ as $$
     ) as value
     from public.prepaid_expenses p
     where p.building_id = p_building_id
-      and p.status = 'active'
       and p.start_date <= make_date(p_period_year, p_period_month, 1)
       and p.end_date > make_date(p_period_year, p_period_month, 1)
   ), closure_row as (
