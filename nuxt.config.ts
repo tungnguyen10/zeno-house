@@ -67,7 +67,7 @@ export default defineNuxtConfig({
       siteUrl: process.env.NUXT_PUBLIC_SITE_URL || "", // NUXT_PUBLIC_SITE_URL
       gaId: process.env.NUXT_PUBLIC_GA_ID || "", // NUXT_PUBLIC_GA_ID
       turnstileSiteKey: process.env.NUXT_PUBLIC_TURNSTILE_SITE_KEY || "", // NUXT_PUBLIC_TURNSTILE_SITE_KEY
-      aiDevChatEnabled: false, // NUXT_PUBLIC_AI_DEV_CHAT_ENABLED
+      aiDevChatEnabled: process.env.NUXT_PUBLIC_AI_DEV_CHAT_ENABLED === "true", // NUXT_PUBLIC_AI_DEV_CHAT_ENABLED
       // Feature flag: one-click auto-issue ("Đã thu") on draft rows. Public so
       // the client can gate the row action; default off until staging-verified.
       billingAutoIssueEnabled: false, // NUXT_PUBLIC_BILLING_AUTO_ISSUE_ENABLED
