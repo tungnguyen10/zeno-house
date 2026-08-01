@@ -101,7 +101,6 @@ const unissueOpen = ref(false)
 const unissueSubmitting = ref(false)
 const unissueError = ref<string | null>(null)
 const exportLoading = ref(false)
-const actionMenuOpen = ref(false)
 const paymentsIntent = ref<BillingPaymentsIntent | null>(null)
 let paymentsIntentId = 0
 const handledInvoiceQuery = ref<string | null>(null)
@@ -361,85 +360,57 @@ watch(
             <IconCheckCircle class="h-4 w-4" aria-hidden="true" />
             <span>Chốt kỳ</span>
           </UiButton>
-          <div class="relative">
-            <UiButton
-              variant="ghost"
-              size="sm"
-              @click="actionMenuOpen = !actionMenuOpen"
-            >
-              <span>Hành động</span>
-              <IconChevronDown class="h-4 w-4 -mr-1" aria-hidden="true" />
-            </UiButton>
-            <template v-if="actionMenuOpen">
-              <div
-                class="fixed inset-0 z-30"
-                aria-hidden="true"
-                @click="actionMenuOpen = false"
-              />
-              <div
-                class="absolute right-0 z-40 mt-2 w-56 rounded-lg border border-dark-border bg-dark-card py-1 shadow-lg shadow-black/40"
-              >
-                <UiButton
-                  variant="ghost"
-                  size="sm"
-                  class="!flex !w-full !justify-start !rounded-none !px-3 !py-2 text-left !text-white hover:!bg-dark-surface"
-                  @click="actionMenuOpen = false; auditOpen = true"
-                >
-                  <IconDocument class="h-4 w-4" aria-hidden="true" />
-                  <span>Nhật ký</span>
-                  <span
-                    v-if="recentAuditCount > 0"
-                    class="ml-auto rounded-full bg-cyan/20 px-1.5 py-0.5 text-xs font-medium text-cyan tabular-nums"
-                  >
+          <UiDropdownMenu>
+              <UiDropdownMenuItem @click="auditOpen = true">
+                <template #icon>
+                  <IconDocument class="h-4 w-4 shrink-0" aria-hidden="true" />
+                </template>
+                Nhật ký
+                <template v-if="recentAuditCount > 0" #trailing>
+                  <span class="ml-auto rounded-full bg-cyan/20 px-1.5 py-0.5 text-xs font-medium text-cyan tabular-nums">
                     {{ recentAuditCount }}
                   </span>
-                </UiButton>
-                <UiButton
-                  variant="ghost"
-                  size="sm"
-                  class="!flex !w-full !justify-start !rounded-none !px-3 !py-2 text-left !text-white hover:!bg-dark-surface"
-                  :disabled="exportLoading"
-                  @click="actionMenuOpen = false; exportPeriodXlsx()"
-                >
-                  <IconDownload class="h-4 w-4" aria-hidden="true" />
-                  <span>{{ exportLoading ? 'Đang xuất…' : 'Xuất Excel' }}</span>
-                </UiButton>
-                <div class="my-1 h-px bg-dark-border" />
-                <UiButton
-                  variant="ghost"
-                  size="sm"
-                  class="!flex !w-full !justify-start !rounded-none !px-3 !py-2 text-left !text-white hover:!bg-dark-surface"
-                  :disabled="!canClose || period?.status === 'closed'"
-                  @click="actionMenuOpen = false; closeOpen = true"
-                >
-                  <IconCheckCircle class="h-4 w-4" aria-hidden="true" />
-                  <span>Chốt kỳ</span>
-                </UiButton>
-                <UiButton
-                  variant="ghost"
-                  size="sm"
-                  class="!flex !w-full !justify-start !rounded-none !px-3 !py-2 text-left !text-white hover:!bg-dark-surface"
-                  :disabled="!canReopen || period?.status !== 'closed'"
-                  :title="period?.status !== 'closed' ? 'Chỉ mở lại khi kỳ đã chốt' : (!canReopen ? 'Bạn không có quyền mở lại kỳ' : undefined)"
-                  @click="actionMenuOpen = false; reopenOpen = true"
-                >
-                  <IconRefresh class="h-4 w-4" aria-hidden="true" />
-                  <span>Mở lại kỳ</span>
-                </UiButton>
-                <UiButton
-                  variant="ghost"
-                  size="sm"
-                  class="!flex !w-full !justify-start !rounded-none !px-3 !py-2 text-left !text-rose-400 hover:!bg-dark-surface"
-                  :disabled="!canUnissue || period?.status === 'closed' || period?.status === 'draft'"
-                  :title="period?.status === 'closed' ? 'Kỳ đã chốt nên không thể huỷ phát hành' : (!canUnissue ? 'Bạn không có quyền huỷ phát hành kỳ' : undefined)"
-                  @click="actionMenuOpen = false; unissueOpen = true"
-                >
-                  <IconXCircle class="h-4 w-4" aria-hidden="true" />
-                  <span>Huỷ phát hành kỳ</span>
-                </UiButton>
-              </div>
-            </template>
-          </div>
+                </template>
+              </UiDropdownMenuItem>
+              <UiDropdownMenuItem :disabled="exportLoading" @click="exportPeriodXlsx()">
+                <template #icon>
+                  <IconDownload class="h-4 w-4 shrink-0" aria-hidden="true" />
+                </template>
+                {{ exportLoading ? 'Đang xuất…' : 'Xuất Excel' }}
+              </UiDropdownMenuItem>
+              <div class="my-1 h-px bg-dark-border" />
+              <UiDropdownMenuItem
+                :disabled="!canClose || period?.status === 'closed'"
+                :title="period?.status !== 'closed' ? 'Còn công nợ chưa thu — không thể chốt kỳ' : (!canClose ? 'Bạn không có quyền chốt kỳ' : undefined)"
+                @click="closeOpen = true"
+              >
+                <template #icon>
+                  <IconCheckCircle class="h-4 w-4 shrink-0" aria-hidden="true" />
+                </template>
+                Chốt kỳ
+              </UiDropdownMenuItem>
+              <UiDropdownMenuItem
+                :disabled="!canReopen || period?.status !== 'closed'"
+                :title="period?.status !== 'closed' ? 'Chỉ mở lại khi kỳ đã chốt' : (!canReopen ? 'Bạn không có quyền mở lại kỳ' : undefined)"
+                @click="reopenOpen = true"
+              >
+                <template #icon>
+                  <IconRefresh class="h-4 w-4 shrink-0" aria-hidden="true" />
+                </template>
+                Mở lại kỳ
+              </UiDropdownMenuItem>
+              <UiDropdownMenuItem
+                variant="danger"
+                :disabled="!canUnissue || period?.status === 'closed' || period?.status === 'draft'"
+                :title="period?.status === 'closed' ? 'Kỳ đã chốt nên không thể huỷ phát hành' : (!canUnissue ? 'Bạn không có quyền huỷ phát hành kỳ' : undefined)"
+                @click="unissueOpen = true"
+              >
+                <template #icon>
+                  <IconXCircle class="h-4 w-4 shrink-0" aria-hidden="true" />
+                </template>
+                Huỷ phát hành kỳ
+              </UiDropdownMenuItem>
+            </UiDropdownMenu>
         </template>
       </UiPageHeader>
 

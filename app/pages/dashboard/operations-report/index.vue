@@ -406,17 +406,6 @@ function signedClass(value: number): string {
           {{ isReportClosed ? 'Đã chốt báo cáo' : 'Đang mở' }}
         </UiBadge>
         <UiButton
-          v-if="canRefreshReserveAccrual && report"
-          size="sm"
-          variant="secondary"
-          :loading="refreshingReserve"
-          :disabled="isLoading"
-          @click="refreshCurrentReserveAccrual"
-        >
-          <IconRefresh class="h-4 w-4" aria-hidden="true" />
-          Cập nhật quỹ
-        </UiButton>
-        <UiButton
           v-if="canCloseReport && report && !isReportClosed"
           size="sm"
           :loading="closingReport"
@@ -437,17 +426,30 @@ function signedClass(value: number): string {
           <IconRefresh class="h-4 w-4" aria-hidden="true" />
           Mở lại
         </UiButton>
-        <UiButton
-          v-if="canExportReport"
-          size="sm"
-          variant="secondary"
-          :loading="exportLoading"
-          :disabled="!report || isLoading"
-          @click="exportReportXlsx"
-        >
-          <IconDownload class="h-4 w-4" aria-hidden="true" />
-          Xuất Excel
-        </UiButton>
+        <UiDropdownMenu v-if="(canRefreshReserveAccrual && !!report) || canExportReport">
+          <UiDropdownMenuItem
+            v-if="canRefreshReserveAccrual && report"
+            :loading="refreshingReserve"
+            :disabled="isLoading"
+            @click="refreshCurrentReserveAccrual"
+          >
+            <template #icon>
+              <IconRefresh class="h-4 w-4 shrink-0" aria-hidden="true" />
+            </template>
+            Cập nhật quỹ
+          </UiDropdownMenuItem>
+          <UiDropdownMenuItem
+            v-if="canExportReport"
+            :loading="exportLoading"
+            :disabled="!report || isLoading"
+            @click="exportReportXlsx"
+          >
+            <template #icon>
+              <IconDownload class="h-4 w-4 shrink-0" aria-hidden="true" />
+            </template>
+            Xuất Excel
+          </UiDropdownMenuItem>
+        </UiDropdownMenu>
       </template>
     </UiPageHeader>
 

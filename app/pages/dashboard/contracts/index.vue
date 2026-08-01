@@ -48,10 +48,7 @@ const buildingOptions = computed(() =>
   })),
 )
 
-const actionMenuOpen = ref(false)
-
 async function openCreateContract() {
-  actionMenuOpen.value = false
   await navigateTo('/dashboard/contracts/create')
 }
 
@@ -96,36 +93,14 @@ watch(contracts, () => {
   <div>
     <UiPageHeader title="Hợp đồng" :description="`${total} hợp đồng`">
       <template #actions>
-        <div v-if="authStore.can('contracts.create')" class="relative">
-          <UiButton
-            variant="ghost"
-            size="sm"
-            @click="actionMenuOpen = !actionMenuOpen"
-          >
-            <span>Hành động</span>
-            <IconChevronDown class="h-4 w-4 -mr-1" aria-hidden="true" />
-          </UiButton>
-          <template v-if="actionMenuOpen">
-            <div
-              class="fixed inset-0 z-30"
-              aria-hidden="true"
-              @click="actionMenuOpen = false"
-            />
-            <div
-              class="absolute right-0 z-40 mt-2 w-64 rounded-lg border border-dark-border bg-dark-card py-1 shadow-lg shadow-black/40"
-            >
-              <UiButton
-                variant="ghost"
-                size="sm"
-                class="!flex !w-full !justify-start !rounded-none !px-3 !py-2 text-left !text-white hover:!bg-dark-surface"
-                @click="openCreateContract"
-              >
-                <IconPlus class="h-4 w-4" aria-hidden="true" />
-                <span>Thêm hợp đồng</span>
-              </UiButton>
-            </div>
-          </template>
-        </div>
+        <UiDropdownMenu v-if="authStore.can('contracts.create')">
+          <UiDropdownMenuItem @click="openCreateContract">
+            <template #icon>
+              <IconPlus class="h-4 w-4 shrink-0" aria-hidden="true" />
+            </template>
+            Thêm hợp đồng
+          </UiDropdownMenuItem>
+        </UiDropdownMenu>
       </template>
     </UiPageHeader>
 

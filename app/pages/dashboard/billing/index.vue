@@ -90,7 +90,6 @@ const queueMetrics = computed<Array<{ key: QueueKey; label: string; shortLabel: 
 ])
 
 const activeQueue = ref<QueueKey | null>(null)
-const actionMenuOpen = ref(false)
 
 function toggleQueue(key: QueueKey) {
   activeQueue.value = activeQueue.value === key ? null : key
@@ -166,7 +165,6 @@ const openSubmitting = ref(false)
 const openError = ref<string | null>(null)
 
 function startOpenPeriod() {
-  actionMenuOpen.value = false
   openForm.building_id = filters.building_id ?? ''
   const year = filters.period_year ?? now.getFullYear()
   const month = filters.period_month ?? now.getMonth() + 1
@@ -230,36 +228,14 @@ function periodLabel(row: BillingPeriodSummary): string {
       description="Danh sách các kỳ thanh toán theo tòa nhà — nhập chỉ số, soát phí, phát hành hóa đơn, thu tiền và chốt kỳ."
     >
       <template #actions>
-        <div class="relative">
-          <UiButton
-            variant="ghost"
-            size="sm"
-            @click="actionMenuOpen = !actionMenuOpen"
-          >
-            <span>Hành động</span>
-            <IconChevronDown class="h-4 w-4 -mr-1" aria-hidden="true" />
-          </UiButton>
-          <template v-if="actionMenuOpen">
-            <div
-              class="fixed inset-0 z-30"
-              aria-hidden="true"
-              @click="actionMenuOpen = false"
-            />
-            <div
-              class="absolute right-0 z-40 mt-2 w-64 rounded-lg border border-dark-border bg-dark-card py-1 shadow-lg shadow-black/40"
-            >
-              <UiButton
-                variant="ghost"
-                size="sm"
-                class="!flex !w-full !justify-start !rounded-none !px-3 !py-2 text-left !text-white hover:!bg-dark-surface"
-                @click="startOpenPeriod"
-              >
-                <IconPlus class="h-4 w-4" aria-hidden="true" />
-                <span>Mở kỳ mới</span>
-              </UiButton>
-            </div>
-          </template>
-        </div>
+        <UiDropdownMenu>
+          <UiDropdownMenuItem @click="startOpenPeriod">
+            <template #icon>
+              <IconPlus class="h-4 w-4 shrink-0" aria-hidden="true" />
+            </template>
+            Mở kỳ mới
+          </UiDropdownMenuItem>
+        </UiDropdownMenu>
       </template>
     </UiPageHeader>
 

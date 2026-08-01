@@ -41,14 +41,11 @@ const buildingOptions = computed(() =>
 
 const bulk = useTenantBulkActions()
 const bulkCreateOpen = ref(false)
-const actionMenuOpen = ref(false)
-
 const selectionMode = ref(false)
 
 function toggleSelectionMode() {
   selectionMode.value = !selectionMode.value
   if (!selectionMode.value) bulk.clear()
-  actionMenuOpen.value = false
 }
 
 function onToggleSelect(id: string) {
@@ -147,11 +144,9 @@ async function onBulkCreateDone(result: TenantBulkCreateResult) {
 
 function openBulkCreate() {
   bulkCreateOpen.value = true
-  actionMenuOpen.value = false
 }
 
 async function openCreateTenant() {
-  actionMenuOpen.value = false
   await navigateTo('/dashboard/tenants/create')
 }
 </script>
@@ -160,62 +155,26 @@ async function openCreateTenant() {
   <div>
     <UiPageHeader title="Khách thuê" :description="`${total} khách thuê`">
       <template #actions>
-        <div class="flex items-center gap-2">
-          <div
-            v-if="authStore.can('tenants.create') || authStore.can('tenants.delete')"
-            class="relative"
-          >
-            <UiButton
-              variant="ghost"
-              size="sm"
-              @click="actionMenuOpen = !actionMenuOpen"
-            >
-              <span>Hành động</span>
-              <IconChevronDown class="h-4 w-4 -mr-1" aria-hidden="true" />
-            </UiButton>
-            <template v-if="actionMenuOpen">
-              <div
-                class="fixed inset-0 z-30"
-                aria-hidden="true"
-                @click="actionMenuOpen = false"
-              />
-              <div
-                class="absolute right-0 z-40 mt-2 w-64 rounded-lg border border-dark-border bg-dark-card py-1 shadow-lg shadow-black/40"
-              >
-                <UiButton
-                  v-if="authStore.can('tenants.create')"
-                  variant="ghost"
-                  size="sm"
-                  class="!flex !w-full !justify-start !rounded-none !px-3 !py-2 text-left !text-white hover:!bg-dark-surface"
-                  @click="openCreateTenant"
-                >
-                  <IconPlus class="h-4 w-4" aria-hidden="true" />
-                  <span>Thêm khách thuê</span>
-                </UiButton>
-                <UiButton
-                  v-if="authStore.can('tenants.create')"
-                  variant="ghost"
-                  size="sm"
-                  class="!flex !w-full !justify-start !rounded-none !px-3 !py-2 text-left !text-white hover:!bg-dark-surface"
-                  @click="openBulkCreate"
-                >
-                  <IconUsers class="h-4 w-4" aria-hidden="true" />
-                  <span>Thêm nhanh nhiều khách thuê</span>
-                </UiButton>
-                <UiButton
-                  v-if="authStore.can('tenants.delete')"
-                  variant="ghost"
-                  size="sm"
-                  class="!flex !w-full !justify-start !rounded-none !px-3 !py-2 text-left !text-white hover:!bg-dark-surface"
-                  @click="toggleSelectionMode"
-                >
-                  <IconCheckCircle class="h-4 w-4" aria-hidden="true" />
-                  <span>{{ selectionMode ? 'Thoát chọn nhiều' : 'Chọn nhiều khách thuê' }}</span>
-                </UiButton>
-              </div>
+        <UiDropdownMenu v-if="authStore.can('tenants.create') || authStore.can('tenants.delete')">
+          <UiDropdownMenuItem v-if="authStore.can('tenants.create')" @click="openCreateTenant">
+            <template #icon>
+              <IconPlus class="h-4 w-4 shrink-0" aria-hidden="true" />
             </template>
-          </div>
-        </div>
+            Thêm khách thuê
+          </UiDropdownMenuItem>
+          <UiDropdownMenuItem v-if="authStore.can('tenants.create')" @click="openBulkCreate">
+            <template #icon>
+              <IconUsers class="h-4 w-4 shrink-0" aria-hidden="true" />
+            </template>
+            Thêm nhanh nhiều khách thuê
+          </UiDropdownMenuItem>
+          <UiDropdownMenuItem v-if="authStore.can('tenants.delete')" @click="toggleSelectionMode">
+            <template #icon>
+              <IconCheckCircle class="h-4 w-4 shrink-0" aria-hidden="true" />
+            </template>
+            {{ selectionMode ? 'Thoát chọn nhiều' : 'Chọn nhiều khách thuê' }}
+          </UiDropdownMenuItem>
+        </UiDropdownMenu>
       </template>
     </UiPageHeader>
 

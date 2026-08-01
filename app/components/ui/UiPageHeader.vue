@@ -26,8 +26,8 @@ defineProps<{
 </script>
 
 <template>
-  <div class="flex items-start justify-between gap-3 mb-6">
-    <div class="min-w-0">
+  <div class="flex flex-wrap items-start gap-3 mb-6">
+    <div class="min-w-[12rem] flex-1">
       <NuxtLink
         v-if="backTo"
         :to="backTo"
@@ -40,7 +40,7 @@ defineProps<{
       <p v-if="description" class="text-sm text-muted mt-0.5">{{ description }}</p>
       <slot />
     </div>
-    <div v-if="$slots.actions" class="flex items-center gap-2 shrink-0">
+    <div v-if="$slots.actions" class="flex items-center gap-2 shrink-0 ml-auto">
       <slot name="actions" />
     </div>
   </div>
