@@ -18,27 +18,45 @@ const {
   sending,
   canSend,
   lastModel,
+  lastProvider,
   lastToolCalls,
   errorCode,
   errorDetails,
+  actionErrors,
+  actionBusyId,
   send,
   resume,
   confirmAction,
   cancelAction,
   clearChat,
+  abort,
 } = useAiChat()
 
 onMounted(() => resume())
+onBeforeUnmount(() => abort())
 
 const toolCallsLabel = computed(() => {
   if (lastToolCalls.value.length === 0) return 'No tool call'
   return lastToolCalls.value.map(tool => tool.name).join(', ')
 })
 
+const suggestions = [
+  'Mở kỳ tháng này cho một building của tôi.',
+  'Kiểm tra tiến độ nhập chỉ số điện nước kỳ hiện tại.',
+  'Tính và giải thích billing draft kỳ hiện tại.',
+  'Xem trước và phát hành hóa đơn kỳ hiện tại.',
+]
+
 async function onSend() {
   await send()
   await nextTick()
   messagesEl.value?.scrollTo({ top: messagesEl.value.scrollHeight, behavior: 'smooth' })
+}
+
+async function onSuggestion(text: string) {
+  if (sending.value) return
+  prompt.value = text
+  await onSend()
 }
 
 function onKeydown(e: KeyboardEvent) {
@@ -49,6 +67,7 @@ function onKeydown(e: KeyboardEvent) {
 }
 
 function onClose() {
+  abort()
   open.value = false
 }
 </script>
@@ -84,7 +103,7 @@ function onClose() {
         <div class="flex items-center justify-between border-b border-dark-border px-4 py-3">
           <div class="flex items-center gap-2">
             <span class="size-2 rounded-full bg-cyan" aria-hidden="true" />
-            <span class="text-sm font-semibold text-white">AI Dev Chat</span>
+            <span class="text-sm font-semibold text-white">AI Billing Assistant</span>
           </div>
           <div class="flex items-center gap-1">
             <button
@@ -123,6 +142,7 @@ function onClose() {
           v-if="showDebug"
           class="border-b border-dark-border bg-dark-surface px-3 py-2 text-xs text-muted space-y-0.5"
         >
+          <p><span class="text-white/60">Provider:</span> {{ lastProvider ?? 'N/A' }}</p>
           <p><span class="text-white/60">Model:</span> {{ lastModel ?? 'N/A' }}</p>
           <p><span class="text-white/60">Conv:</span> {{ conversationId ? conversationId.slice(0, 8) + '…' : 'N/A' }}</p>
           <p><span class="text-white/60">Tools:</span> {{ toolCallsLabel }}</p>
@@ -136,31 +156,51 @@ function onClose() {
           class="flex-1 overflow-y-auto px-3 py-3 space-y-2"
           style="min-height: 0;"
         >
-          <p v-if="messages.length === 0" class="text-center text-xs text-muted py-6">
-            Gửi một prompt để bắt đầu.
-          </p>
+          <div v-if="messages.length === 0" class="py-4">
+            <p class="text-center text-xs text-muted">
+              Chào bạn! Tôi có thể giúp vận hành kỳ billing. Bắt đầu với:
+            </p>
+            <ul class="mt-3 space-y-1.5">
+              <li v-for="suggestion in suggestions" :key="suggestion">
+                <button
+                  type="button"
+                  :disabled="sending"
+                  class="w-full rounded-lg border border-dark-border bg-dark-surface px-3 py-2 text-left text-xs text-white/80 transition-colors hover:border-cyan/40 hover:text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-cyan/40 disabled:cursor-not-allowed disabled:opacity-50"
+                  @click="onSuggestion(suggestion)"
+                >
+                  {{ suggestion }}
+                </button>
+              </li>
+            </ul>
+          </div>
 
-          <div
+          <template
             v-for="(message, index) in messages"
             :key="`${message.role}-${index}`"
-            :class="clsx('flex', message.role === 'user' ? 'justify-end' : 'justify-start')"
           >
             <div
-              :class="clsx(
-                'max-w-[85%] rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap leading-relaxed',
-                message.role === 'user'
-                  ? 'rounded-br-sm bg-cyan text-dark-deep'
-                  : 'rounded-bl-sm bg-dark-surface border border-dark-border text-white',
-              )"
+              v-if="message.role === 'user' || message.content.trim()"
+              :class="clsx('flex', message.role === 'user' ? 'justify-end' : 'justify-start')"
             >
-              {{ message.content }}
+              <div
+                :class="clsx(
+                  'max-w-[85%] rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap leading-relaxed',
+                  message.role === 'user'
+                    ? 'rounded-br-sm bg-cyan text-dark-deep'
+                    : 'rounded-bl-sm bg-dark-surface border border-dark-border text-white',
+                )"
+              >
+                {{ message.content }}
+              </div>
             </div>
-          </div>
+          </template>
 
           <AppAiActionCard
             v-for="plan in actionPlans"
             :key="plan.id"
             :plan="plan"
+            :busy="actionBusyId === plan.id"
+            :error="actionErrors[plan.id] ?? null"
             @confirm="confirmAction"
             @cancel="cancelAction"
           />

@@ -2,13 +2,17 @@
 import type { AiActionPlanDto } from '~/types/ai'
 import { formatCurrency } from '~/utils/format/currency'
 
-const props = defineProps<{ plan: AiActionPlanDto }>()
+const props = defineProps<{ plan: AiActionPlanDto; busy?: boolean; error?: string | null }>()
 const emit = defineEmits<{
   confirm: [id: string]
   cancel: [id: string]
 }>()
 
 const pending = computed(() => props.plan.status === 'pending')
+const isExpired = computed(() => {
+  const expiry = Date.parse(props.plan.expiresAt)
+  return Number.isFinite(expiry) && expiry <= Date.now()
+})
 const invoiceAction = computed(() => [
   'issue_invoices',
   'void_invoice',
@@ -67,12 +71,30 @@ const financialRows = computed(() => {
       <li v-for="warning in plan.warnings" :key="warning">{{ warning }}</li>
     </ul>
 
+    <p v-if="pending && isExpired" class="mt-2 rounded bg-amber-500/10 px-2 py-1.5 text-amber-300">
+      Kế hoạch đã hết hạn, hãy yêu cầu trợ lý tạo preview mới.
+    </p>
+
+    <p v-if="error" class="mt-2 rounded bg-red-500/10 px-2 py-1.5 text-red-300" data-testid="action-error">
+      {{ error }}
+    </p>
+
     <div v-if="pending" class="mt-3 flex justify-end gap-2">
-      <button type="button" class="rounded border border-dark-border px-3 py-1.5 text-muted hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan/40" @click="emit('cancel', plan.id)">
+      <button
+        type="button"
+        :disabled="busy"
+        class="rounded border border-dark-border px-3 py-1.5 text-muted hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan/40 disabled:cursor-not-allowed disabled:opacity-40"
+        @click="emit('cancel', plan.id)"
+      >
         Hủy
       </button>
-      <button type="button" class="rounded bg-cyan px-3 py-1.5 font-semibold text-dark-deep hover:bg-cyan/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan/40" @click="emit('confirm', plan.id)">
-        Xác nhận
+      <button
+        type="button"
+        :disabled="busy || isExpired"
+        class="rounded bg-cyan px-3 py-1.5 font-semibold text-dark-deep hover:bg-cyan/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan/40 disabled:cursor-not-allowed disabled:opacity-40"
+        @click="emit('confirm', plan.id)"
+      >
+        {{ busy ? 'Đang xử lý…' : 'Xác nhận' }}
       </button>
     </div>
   </article>

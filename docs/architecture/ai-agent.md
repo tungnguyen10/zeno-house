@@ -71,7 +71,7 @@ type AiStreamEvent =
   | { type: 'tool-status'; tool: string; status: 'started' | 'succeeded' | 'failed'; durationMs?: number }
   | { type: 'action-plan'; plan: AiActionPlanDto }
   | { type: 'error'; error: { code: string; message: string; details?: unknown } }
-  | { type: 'done'; conversationId: string; requestId: string; model: string }
+  | { type: 'done'; conversationId: string; requestId: string; model: string; provider: string }
 ```
 
 The client buffers incomplete SSE frames before parsing JSON. The model stream is split into independent client and persistence branches; closing the browser response does not cancel server-side assistant-message persistence.

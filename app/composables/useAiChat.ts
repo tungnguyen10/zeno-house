@@ -47,6 +47,7 @@ export function useAiChat() {
   const resuming = ref(false)
 
   const lastModel = ref<string | null>(null)
+  const lastProvider = ref<string | null>(null)
   const lastRequestId = ref<string | null>(null)
   const lastToolCalls = ref<ToolCallSummary[]>([])
 
@@ -54,12 +55,32 @@ export function useAiChat() {
   const errorCode = ref<string | null>(null)
   const errorDetails = ref<unknown>(null)
 
+  const actionErrors = ref<Record<string, string>>({})
+  const actionBusyId = ref<string | null>(null)
+
+  const toast = useToast()
+  let controller: AbortController | null = null
+
   const canSend = computed(() => prompt.value.trim().length > 0 && !sending.value)
 
   function upsertPlan(plan: AiActionPlanDto) {
     const index = actionPlans.value.findIndex(item => item.id === plan.id)
     if (index === -1) actionPlans.value.push(plan)
     else actionPlans.value[index] = plan
+  }
+
+  function setActionError(planId: string, message: string | null) {
+    if (message) {
+      actionErrors.value = { ...actionErrors.value, [planId]: message }
+      return
+    }
+    const { [planId]: _omit, ...rest } = actionErrors.value
+    actionErrors.value = rest
+  }
+
+  function abort() {
+    controller?.abort()
+    controller = null
   }
 
   function applyEvent(event: AiStreamEvent, assistantIndex: number) {
@@ -85,6 +106,7 @@ export function useAiChat() {
       conversationId.value = event.conversationId
       lastRequestId.value = event.requestId
       lastModel.value = event.model
+      lastProvider.value = event.provider
       if (import.meta.client) sessionStorage.setItem(STORAGE_KEY, event.conversationId)
     }
   }
@@ -103,11 +125,16 @@ export function useAiChat() {
     messages.value.push({ role: 'assistant', content: '' })
     const assistantIndex = messages.value.length - 1
 
+    controller?.abort()
+    const activeController = new AbortController()
+    controller = activeController
+
     try {
       const response = await fetch('/api/ai/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: conversationId.value ?? undefined, message: content }),
+        signal: activeController.signal,
       })
       if (!response.ok) {
         const err = await response.json().catch(() => ({}))
@@ -131,9 +158,10 @@ export function useAiChat() {
       for (const event of parsed.events) applyEvent(event, assistantIndex)
 
       const final = messages.value[assistantIndex]
-      if (final && !final.content.trim()) final.content = errorMessage.value ? `Lỗi: ${errorMessage.value}` : '(No response)'
+      if (final && !final.content.trim() && errorMessage.value) final.content = `Lỗi: ${errorMessage.value}`
     }
     catch (error) {
+      if (activeController.signal.aborted) return
       errorMessage.value = getApiErrorMessage(error, 'Không thể gọi trợ lý AI.')
       errorCode.value = getApiErrorCode(error) ?? null
       errorDetails.value = getApiErrorDetails(error) ?? null
@@ -141,6 +169,7 @@ export function useAiChat() {
       if (placeholder) placeholder.content = `Lỗi: ${errorMessage.value}`
     }
     finally {
+      if (controller === activeController) controller = null
       sending.value = false
     }
   }
@@ -165,32 +194,64 @@ export function useAiChat() {
   }
 
   async function confirmAction(planId: string) {
-    const response = await $fetch<{ data: AiActionPlanDto }>(`/api/ai/actions/${planId}/confirm`, { method: 'POST' })
-    upsertPlan(response.data)
+    if (actionBusyId.value) return
+    actionBusyId.value = planId
+    setActionError(planId, null)
+    try {
+      const response = await $fetch<{ data: AiActionPlanDto }>(`/api/ai/actions/${planId}/confirm`, { method: 'POST' })
+      upsertPlan(response.data)
+    }
+    catch (error) {
+      const message = getApiErrorMessage(error, 'Không thể xác nhận thao tác.')
+      setActionError(planId, message)
+      toast.error(message)
+    }
+    finally {
+      actionBusyId.value = null
+    }
   }
 
   async function cancelAction(planId: string) {
-    const response = await $fetch<{ data: AiActionPlanDto }>(`/api/ai/actions/${planId}/cancel`, { method: 'POST' })
-    upsertPlan(response.data)
+    if (actionBusyId.value) return
+    actionBusyId.value = planId
+    setActionError(planId, null)
+    try {
+      const response = await $fetch<{ data: AiActionPlanDto }>(`/api/ai/actions/${planId}/cancel`, { method: 'POST' })
+      upsertPlan(response.data)
+    }
+    catch (error) {
+      const message = getApiErrorMessage(error, 'Không thể hủy thao tác.')
+      setActionError(planId, message)
+      toast.error(message)
+    }
+    finally {
+      actionBusyId.value = null
+    }
   }
 
   function clearChat() {
+    abort()
+    sending.value = false
     conversationId.value = null
     messages.value = []
     actionPlans.value = []
     prompt.value = ''
     lastModel.value = null
+    lastProvider.value = null
     lastRequestId.value = null
     lastToolCalls.value = []
     errorMessage.value = null
     errorCode.value = null
     errorDetails.value = null
+    actionErrors.value = {}
+    actionBusyId.value = null
     if (import.meta.client) sessionStorage.removeItem(STORAGE_KEY)
   }
 
   return {
     conversationId, messages, actionPlans, prompt, sending, resuming, canSend,
-    lastModel, lastRequestId, lastToolCalls, errorMessage, errorCode, errorDetails,
-    send, resume, confirmAction, cancelAction, clearChat,
+    lastModel, lastProvider, lastRequestId, lastToolCalls, errorMessage, errorCode, errorDetails,
+    actionErrors, actionBusyId,
+    send, resume, confirmAction, cancelAction, clearChat, abort,
   }
 }

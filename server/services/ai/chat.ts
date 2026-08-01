@@ -1,6 +1,6 @@
 import type { H3Event } from 'h3'
 import { streamText, isStepCount } from 'ai'
-import { createGroq } from '@ai-sdk/groq'
+import { createOpenAICompatible } from '@ai-sdk/openai-compatible'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import type { LanguageModelV4 } from '@ai-sdk/provider'
 import type { AiActionPlanDto, AiStreamEvent } from '~/types/ai'
@@ -18,8 +18,9 @@ import { enforceAiRateLimit } from './rate-limit'
 
 interface ProviderConfig {
   provider: string
-  groqApiKey: string
+  openrouterApiKey: string
   googleApiKey: string
+  siteUrl: string
   modelPrimary: string
   maxSteps: number
   maxOutputTokens: number
@@ -27,11 +28,14 @@ interface ProviderConfig {
 }
 
 function resolveConfig(runtime: ReturnType<typeof useRuntimeConfig>): ProviderConfig {
+  const provider = (runtime.aiProvider as string) || 'openrouter'
+  const defaultModel = provider === 'google' ? 'gemini-2.0-flash' : 'meta-llama/llama-3.3-70b-instruct:free'
   return {
-    provider: (runtime.aiProvider as string) || 'groq',
-    groqApiKey: runtime.aiGroqApiKey as string,
+    provider,
+    openrouterApiKey: runtime.aiOpenrouterApiKey as string,
     googleApiKey: runtime.aiGoogleApiKey as string,
-    modelPrimary: (runtime.aiModel as string) || 'llama-3.3-70b-versatile',
+    siteUrl: (runtime.public?.siteUrl as string) || '',
+    modelPrimary: (runtime.aiModel as string) || defaultModel,
     maxSteps: Number(runtime.aiMaxSteps ?? 8),
     maxOutputTokens: Number(runtime.aiMaxOutputTokens ?? 1200),
     maxContextMessages: Number(runtime.aiMaxContextMessages ?? 20),
@@ -43,8 +47,19 @@ function buildModel(config: ProviderConfig): LanguageModelV4 {
     if (!config.googleApiKey) throw createError({ statusCode: 500, message: 'Thiếu cấu hình NUXT_AI_GOOGLE_API_KEY.' })
     return createGoogleGenerativeAI({ apiKey: config.googleApiKey })(config.modelPrimary)
   }
-  if (!config.groqApiKey) throw createError({ statusCode: 500, message: 'Thiếu cấu hình NUXT_AI_GROQ_API_KEY.' })
-  return createGroq({ apiKey: config.groqApiKey })(config.modelPrimary)
+  if (config.provider !== 'openrouter') {
+    throw createError({ statusCode: 500, message: `Provider AI không hợp lệ: ${config.provider}.` })
+  }
+  if (!config.openrouterApiKey) throw createError({ statusCode: 500, message: 'Thiếu cấu hình NUXT_AI_OPENROUTER_API_KEY.' })
+  return createOpenAICompatible({
+    name: 'openrouter',
+    apiKey: config.openrouterApiKey,
+    baseURL: 'https://openrouter.ai/api/v1',
+    headers: {
+      ...(config.siteUrl && { 'HTTP-Referer': config.siteUrl }),
+      'X-Title': 'Zeno House',
+    },
+  })(config.modelPrimary)
 }
 
 function buildSystemPrompt(): string {
@@ -70,8 +85,27 @@ function encodeSse(event: AiStreamEvent): Uint8Array {
 }
 
 function publicError(error: unknown): AiStreamEvent {
-  const message = error instanceof Error ? error.message : 'Không thể hoàn tất phản hồi AI.'
-  return { type: 'error', error: { code: 'INTERNAL', message } }
+  const raw = error instanceof Error ? error.message : typeof error === 'string' ? error : ''
+  const lower = raw.toLowerCase()
+  if (lower.includes('request too large') || lower.includes('tokens per minute') || lower.includes('tpm') || lower.includes('context length') || lower.includes('maximum context')) {
+    return {
+      type: 'error',
+      error: {
+        code: 'REQUEST_TOO_LARGE',
+        message: 'Yêu cầu vượt giới hạn token của mô hình AI hiện tại. Hãy rút ngắn tin nhắn, xoá hội thoại để bắt đầu lại, hoặc liên hệ admin để nâng giới hạn mô hình.',
+      },
+    }
+  }
+  if (lower.includes('rate limit') || lower.includes('too many requests') || lower.includes('429')) {
+    return {
+      type: 'error',
+      error: {
+        code: 'PROVIDER_RATE_LIMIT',
+        message: 'Trợ lý AI đang bận. Vui lòng chờ vài giây rồi thử lại.',
+      },
+    }
+  }
+  return { type: 'error', error: { code: 'INTERNAL', message: 'Không thể hoàn tất phản hồi AI. Vui lòng thử lại.' } }
 }
 
 function actionPlanFromOutput(output: unknown): AiActionPlanDto | null {
@@ -215,7 +249,7 @@ export async function streamAiChat(
           }
         }
         controller.enqueue(encodeSse({
-          type: 'done', conversationId: conversation.id, requestId, model: config.modelPrimary,
+          type: 'done', conversationId: conversation.id, requestId, model: config.modelPrimary, provider: config.provider,
         }))
       }
       catch (error) {

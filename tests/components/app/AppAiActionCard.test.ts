@@ -48,4 +48,24 @@ describe('AppAiActionCard', () => {
     expect(wrapper.get('[data-testid="invoice-financial-preview"]').text()).toContain('1.100.000')
     expect(wrapper.find('pre').exists()).toBe(false)
   })
+
+  it('disables both actions and labels the confirm button while busy', () => {
+    const wrapper = mount(AppAiActionCard, { props: { plan: plan(), busy: true } })
+    const buttons = wrapper.findAll('button')
+    expect(buttons.every(button => button.attributes('disabled') !== undefined)).toBe(true)
+    expect(wrapper.text()).toContain('Đang xử lý…')
+  })
+
+  it('renders an inline action error when provided', () => {
+    const wrapper = mount(AppAiActionCard, { props: { plan: plan(), error: 'Kế hoạch đã hết hạn.' } })
+    expect(wrapper.get('[data-testid="action-error"]').text()).toContain('Kế hoạch đã hết hạn.')
+  })
+
+  it('blocks confirming an expired pending plan', () => {
+    const expiredPlan = { ...plan(), expiresAt: new Date(Date.now() - 60_000).toISOString() }
+    const wrapper = mount(AppAiActionCard, { props: { plan: expiredPlan } })
+    const confirmButton = wrapper.findAll('button')[1]
+    expect(confirmButton?.attributes('disabled')).toBeDefined()
+    expect(wrapper.text()).toContain('Kế hoạch đã hết hạn, hãy yêu cầu trợ lý tạo preview mới.')
+  })
 })
