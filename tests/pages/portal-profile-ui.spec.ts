@@ -16,7 +16,10 @@ describe('portal profile refreshed UI', () => {
   })
 
   it('renders the dossier and routes editing to a dedicated screen', () => {
-    expect(viewPage).toContain('<PortalProfileDossier :profile="profile"')
+    expect(viewPage).toContain('<PortalProfileDossier')
+    expect(viewPage).toContain(':profile="profile"')
+    expect(viewPage).toContain(':room-number="contract?.roomNumber ?? null"')
+    expect(viewPage).toContain(':building-name="contract?.buildingName ?? null"')
     expect(viewPage).not.toContain('<Teleport to="#portal-header-action">')
     expect(viewPage).not.toContain('to="/portal/profile/edit"')
     expect(viewPage).not.toContain('mode === \'view\'')
