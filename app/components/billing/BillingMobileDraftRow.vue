@@ -8,6 +8,8 @@ type MeterType = 'electricity' | 'water'
 
 defineProps<{
   row: BillingDraftGridRow
+  selectable: boolean
+  selected: boolean
   readingValueOf: (row: BillingDraftGridRow, type: MeterType) => string
   isCellDirty: (row: BillingDraftGridRow, type: MeterType) => boolean
   isPasteHighlighted: (row: BillingDraftGridRow, type: MeterType) => boolean
@@ -19,7 +21,7 @@ const emit = defineEmits<{
   (e: 'paste', payload: { event: ClipboardEvent; row: BillingDraftGridRow; type: MeterType }): void
   (e: 'keydown', payload: { event: KeyboardEvent; row: BillingDraftGridRow; type: MeterType }): void
   (e: 'blur', payload: { row: BillingDraftGridRow; type: MeterType }): void
-  (e: 'override', row: BillingDraftGridRow): void
+  (e: 'override' | 'select', row: BillingDraftGridRow): void
 }>()
 
 function meterCell(row: BillingDraftGridRow, type: MeterType): BillingDraftGridUtilityCell | null {
@@ -38,23 +40,40 @@ function formatRate(cell: BillingDraftGridUtilityCell | null): string {
 
 <template>
   <article
-    class="rounded-lg border border-dark-border bg-dark-surface p-3 space-y-3"
+    :class="clsx(
+      'space-y-3 rounded-lg border p-3',
+      selected ? 'border-cyan/50 bg-cyan/5' : 'border-dark-border bg-dark-surface',
+    )"
     :data-row="row.key"
+    :data-selected="selected || undefined"
   >
-    <header class="flex items-start justify-between gap-2">
-      <div class="min-w-0">
-        <p class="text-sm font-semibold text-white">
-          {{ row.roomNumber ?? '—' }}
-          <template v-if="row.tenantName">
-            <span class="text-muted">·</span>
-            <span class="text-white">{{ row.tenantName }}</span>
-          </template>
-        </p>
-        <p v-if="row.draftTotal !== null" class="text-xs text-muted">
-          Tổng nháp: <span class="text-white tabular-nums">{{ formatCurrency(row.draftTotal) }}</span>
-        </p>
+    <header class="flex items-start justify-between gap-3">
+      <div
+        data-test="mobile-draft-select-cluster"
+        class="flex min-w-0 flex-1 items-start gap-2"
+      >
+        <UiCheckbox
+          v-if="selectable"
+          data-test="mobile-draft-select"
+          class="shrink-0 [&>label]:size-11 [&>label]:items-center [&>label]:justify-center"
+          :model-value="selected"
+          :aria-label="`Chọn phòng ${row.roomNumber ?? ''} để phát hành`"
+          @update:model-value="emit('select', row)"
+        />
+        <div class="min-w-0 pt-0.5">
+          <p class="text-sm font-semibold text-white">
+            {{ row.roomNumber ?? '—' }}
+            <template v-if="row.tenantName">
+              <span class="text-muted">{{ '· ' }}</span>
+              <span class="text-white">{{ row.tenantName }}</span>
+            </template>
+          </p>
+          <p v-if="row.draftTotal !== null" class="text-xs text-muted">
+            Tổng nháp: <span class="text-white tabular-nums">{{ formatCurrency(row.draftTotal) }}</span>
+          </p>
+        </div>
       </div>
-      <div class="shrink-0 text-[11px]">
+      <div class="shrink-0 pt-0.5 text-[11px]">
         <span v-if="saveStateOf(row) === 'saving'" class="text-muted">Đang lưu...</span>
         <span v-else-if="saveStateOf(row) === 'saved'" class="text-emerald-400">Đã lưu ✓</span>
         <span v-else-if="saveStateOf(row) === 'error'" class="text-rose-400">Lỗi</span>

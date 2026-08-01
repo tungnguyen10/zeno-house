@@ -107,6 +107,7 @@ function mountGrid(overrides: Partial<{
   period: ReturnType<typeof buildPeriod>
   onSaveReadings: ReturnType<typeof vi.fn>
   onSaveOverride: ReturnType<typeof vi.fn>
+  onIssue: ReturnType<typeof vi.fn>
 }> = {}) {
   const onSaveReadings = overrides.onSaveReadings ?? vi.fn()
   const onSaveOverride = overrides.onSaveOverride ?? vi.fn()
@@ -117,6 +118,7 @@ function mountGrid(overrides: Partial<{
       period: overrides.period ?? buildPeriod(),
       onSaveReadings,
       onSaveOverride,
+      onIssue: overrides.onIssue,
     },
     attachTo: document.body,
     global: {
@@ -209,6 +211,43 @@ describe('BillingDraftGridStep', () => {
     const mobileRows = wrapper.findAllComponents(BillingMobileDraftRow)
     expect(mobileRows).toHaveLength(2)
     expect(wrapper.find('.md\\:hidden').exists()).toBe(true)
+
+    wrapper.unmount()
+  })
+
+  it('lets mobile users select a ready row and reveal the issue action', async () => {
+    const readyRow = buildRow({
+      status: 'ready',
+      electricity: null,
+      water: null,
+      draftTotal: 3_100_000,
+      lines: [{
+        chargeType: 'rent',
+        label: 'Tiền phòng',
+        sourceType: null,
+        sourceId: null,
+        quantity: 1,
+        unitPrice: 3_100_000,
+        amount: 3_100_000,
+        metadata: {},
+        sortOrder: 0,
+      }],
+    })
+    const wrapper = mountGrid({
+      response: response([readyRow]),
+      onIssue: vi.fn(async () => undefined),
+    })
+    const mobileRow = wrapper.getComponent(BillingMobileDraftRow)
+    const selectionCluster = mobileRow.get('[data-test="mobile-draft-select-cluster"]')
+
+    expect(selectionCluster.find('[data-test="mobile-draft-select"]').exists()).toBe(true)
+    expect(selectionCluster.text()).toContain('101 · Tenant room-1')
+    expect(mobileRow.props('selectable')).toBe(true)
+    expect(mobileRow.props('selected')).toBe(false)
+    await mobileRow.get('[data-test="mobile-draft-select"] input').setValue(true)
+
+    expect(mobileRow.props('selected')).toBe(true)
+    expect(wrapper.text()).toContain('Phát hành (1)')
 
     wrapper.unmount()
   })

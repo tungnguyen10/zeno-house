@@ -555,25 +555,26 @@ const columns: UiTableColumn<BillingDraftGridRow>[] = [
       <!-- Selection action bar -->
       <div
         v-if="selectedCount > 0"
-        class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-cyan/40 bg-cyan/5 px-3 py-2 text-sm"
+        class="fixed inset-x-3 bottom-4 z-30 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-cyan/40 bg-dark-card px-3 py-2 text-sm shadow-lg shadow-black/40 md:static md:z-auto md:bg-cyan/5 md:shadow-none"
       >
         <p class="text-white">
           Đã chọn <span class="font-semibold tabular-nums">{{ selectedCount }}</span> phiếu
           <UiButton
             v-if="!allVisibleSelected"
             unstyled
-            class="ml-2 text-xs text-cyan hover:underline"
+            class="ml-2 whitespace-nowrap text-xs text-cyan hover:underline"
             @click="selectAllVisible"
           >
             Chọn tất cả trong lọc
           </UiButton>
         </p>
         <div class="flex items-center gap-2">
-          <UiButton variant="ghost" size="sm" @click="clearSelection">Bỏ chọn</UiButton>
+          <UiButton variant="ghost" size="sm" class="whitespace-nowrap" @click="clearSelection">Bỏ chọn</UiButton>
           <UiButton
             v-if="onIssue && issuableSelectedCount > 0"
             variant="primary"
             size="sm"
+            class="whitespace-nowrap"
             @click="startIssue"
           >
             Phát hành ({{ issuableSelectedCount }})
@@ -824,12 +825,14 @@ const columns: UiTableColumn<BillingDraftGridRow>[] = [
       <!-- Mobile cards (stacked) -->
       <div
         v-if="!loading && response && filteredRows.length > 0"
-        class="md:hidden space-y-2"
+        :class="clsx('space-y-2 md:hidden', selectedCount > 0 && 'pb-28')"
       >
         <BillingMobileDraftRow
           v-for="row in filteredRows"
           :key="row.key"
           :row="displayGridRow(row)"
+          :selectable="isSelectable(row)"
+          :selected="isSelected(row)"
           :reading-value-of="readingDraftValue"
           :is-cell-dirty="isCellDirty"
           :is-paste-highlighted="isPasteHighlighted"
@@ -838,6 +841,7 @@ const columns: UiTableColumn<BillingDraftGridRow>[] = [
           @keydown="handleReadingKeydown($event.event, $event.row, $event.type)"
           @paste="handleReadingPaste($event.event, $event.row, $event.type)"
           @override="openOverrideModal($event)"
+          @select="toggleSelect($event)"
           @blur="handleReadingBlur($event.row)"
         />
       </div>
