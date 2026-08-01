@@ -23,7 +23,7 @@ import {
   type RecurringExpenseFrequency,
 } from '~/utils/constants/operations-report'
 import { formatCurrency } from '~/utils/format/currency'
-import { formatPeriodString, parsePeriodString } from '~/utils/format/period'
+import { currentVietnamPeriod, formatPeriodString, parsePeriodString } from '~/utils/format/period'
 import { buildingPath } from '~/utils/routes/operational'
 
 const route = useRoute()
@@ -145,6 +145,9 @@ const canManagePrepaidExpenses = computed(() => authStore.can('prepaid-expenses.
 const canManageReserveFund = computed(() => authStore.can('reserve-fund.manage'))
 const apiBuildingId = computed(() => building.value?.id ?? '')
 const now = new Date()
+const prepaidCancellationPeriod = currentVietnamPeriod(now)
+const prepaidCancellationPeriodParts = parsePeriodString(prepaidCancellationPeriod)!
+const prepaidCancellationPeriodLabel = `${String(prepaidCancellationPeriodParts.month).padStart(2, '0')}/${prepaidCancellationPeriodParts.year}`
 const fixedCostPeriodYear = ref(now.getFullYear())
 const fixedCostPeriodMonth = ref(now.getMonth() + 1)
 const fixedCostModalOpen = ref(false)
@@ -231,6 +234,8 @@ const prepaidFormOpen = ref(false)
 const editingPrepaid = ref<PrepaidExpense | null>(null)
 const savingPrepaid = ref(false)
 const prepaidError = ref<string | null>(null)
+const prepaidDeleteTarget = ref<PrepaidExpense | null>(null)
+const deletingPrepaid = ref(false)
 const prepaidForm = reactive({
   name: '',
   category: 'internet' as ExpenseCategory,
@@ -561,12 +566,31 @@ async function submitCustomService() {
   }
 }
 
-async function removePrepaid(item: PrepaidExpense) {
+function openPrepaidDelete(item: PrepaidExpense) {
+  prepaidError.value = null
+  prepaidDeleteTarget.value = item
+}
+
+function closePrepaidDelete() {
+  if (deletingPrepaid.value) return
+  prepaidDeleteTarget.value = null
+}
+
+async function confirmPrepaidDelete() {
+  const target = prepaidDeleteTarget.value
+  if (!target || deletingPrepaid.value) return
+  deletingPrepaid.value = true
+  prepaidError.value = null
   try {
-    await deletePrepaidExpense(item.id)
+    await deletePrepaidExpense(target.id)
+    prepaidDeleteTarget.value = null
+    toast.success(`Đã ngừng phân bổ “${target.name}” từ ${prepaidCancellationPeriodLabel}.`)
   }
   catch (err) {
     prepaidError.value = resolveApiError(err, 'Không xóa được chi phí trả trước.')
+  }
+  finally {
+    deletingPrepaid.value = false
   }
 }
 
@@ -1166,8 +1190,22 @@ const activeSectionId = computed(() => {
                   </div>
                   <div class="flex items-center justify-between gap-2 sm:justify-end">
                     <span class="tabular-nums text-white">{{ formatCurrency(item.monthlyAmount) }}/tháng</span>
-                    <UiButton size="sm" variant="secondary" @click="openEditPrepaid(item)">Sửa</UiButton>
-                    <UiButton size="sm" variant="ghost" icon-only aria-label="Xóa" @click="removePrepaid(item)">
+                    <UiButton
+                      v-if="item.status === 'active'"
+                      size="sm"
+                      variant="secondary"
+                      @click="openEditPrepaid(item)"
+                    >
+                      Sửa
+                    </UiButton>
+                    <UiButton
+                      v-if="item.status === 'active'"
+                      size="sm"
+                      variant="ghost"
+                      icon-only
+                      aria-label="Xóa chi phí trả trước"
+                      @click="openPrepaidDelete(item)"
+                    >
                       <IconTrash class="h-4 w-4" aria-hidden="true" />
                     </UiButton>
                   </div>
@@ -1515,5 +1553,26 @@ const activeSectionId = computed(() => {
         </div>
       </template>
     </UiModal>
+
+    <UiConfirmModal
+      :open="Boolean(prepaidDeleteTarget)"
+      title="Xóa chi phí trả trước?"
+      message=""
+      confirm-label="Xóa và ngừng phân bổ"
+      :loading="deletingPrepaid"
+      @confirm="confirmPrepaidDelete"
+      @cancel="closePrepaidDelete"
+    >
+      <div class="space-y-3">
+        <p class="break-words text-sm text-muted">
+          Bạn sắp ngừng phân bổ “{{ prepaidDeleteTarget?.name }}”.
+          Số liệu các kỳ đã chốt được giữ nguyên. Khoản này sẽ không còn được tính từ
+          {{ prepaidCancellationPeriodLabel }}.
+        </p>
+        <UiAlert v-if="prepaidError" severity="danger">
+          {{ prepaidError }}
+        </UiAlert>
+      </div>
+    </UiConfirmModal>
   </div>
 </template>
