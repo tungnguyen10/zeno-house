@@ -7,6 +7,7 @@ import type {
   PrepaidExpenseUpdateInput,
 } from '~/utils/validators/operations-report'
 import { AUDIT_ACTIONS } from '~/utils/constants/audit'
+import { currentVietnamPeriod } from '~/utils/format/period'
 import { BuildingRepository } from '../../repositories/buildings'
 import { PrepaidExpenseRepository } from '../../repositories/operations-report/prepaid-expenses'
 import { AuditService } from '../audit'
@@ -237,25 +238,40 @@ export const PrepaidExpenseService = {
     const existing = await PrepaidExpenseRepository.findById(event, id)
     if (!existing) throwNotFound('Không tìm thấy chi phí trả trước')
     await assertBuildingScope(event, user, existing.buildingId, 'write')
-    const range = prepaidPeriodRange({
-      startDate: existing.startDate,
-      totalMonths: existing.totalMonths,
-    })
-    await OperationsReportLockService.assertNoClosedReportsInRange(
-      event,
-      existing.buildingId,
-      range.fromYear,
-      range.fromMonth,
-      range.toYear,
-      range.toMonth,
-    )
-    await PrepaidExpenseRepository.deleteById(event, id)
+    const cancellationPeriod = currentVietnamPeriod()
+    const cancellationStart = `${cancellationPeriod}-01`
+    if (existing.status !== 'active' || existing.endDate <= cancellationStart) {
+      throwConflict('Khoản trả trước đã ngừng phân bổ')
+    }
+
+    let afterData: PrepaidExpense | undefined
+    if (existing.startDate >= cancellationStart) {
+      await PrepaidExpenseRepository.deleteById(event, id)
+    }
+    else {
+      const cancellation = parseDate(cancellationStart)
+      const cancellationYear = cancellation.getUTCFullYear()
+      const cancellationMonth = cancellation.getUTCMonth() + 1
+      await OperationsReportLockService.assertNoClosedReportsInRange(
+        event,
+        existing.buildingId,
+        cancellationYear,
+        cancellationMonth,
+        cancellationYear,
+        cancellationMonth,
+      )
+      afterData = await PrepaidExpenseRepository.updateById(event, id, {
+        end_date: cancellationStart,
+        status: 'cancelled',
+      })
+    }
     await AuditService.append(event, user, {
       building_id: existing.buildingId,
       action: AUDIT_ACTIONS.PREPAID_EXPENSE_DELETED,
       entity_type: 'prepaid_expense',
       entity_id: existing.id,
       before_data: existing,
+      ...(afterData && { after_data: afterData }),
     })
     invalidateOperationsReport(existing.buildingId)
   },

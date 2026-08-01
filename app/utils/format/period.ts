@@ -8,6 +8,18 @@ export function formatPeriodString(year: number, month: number): string {
   return `${year}-${String(month).padStart(2, '0')}`
 }
 
+/** Resolve the current `YYYY-MM` period in Vietnam, independent of the host timezone. */
+export function currentVietnamPeriod(at = new Date()): string {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Ho_Chi_Minh',
+    year: 'numeric',
+    month: '2-digit',
+  }).formatToParts(at)
+  const year = parts.find(part => part.type === 'year')!.value
+  const month = parts.find(part => part.type === 'month')!.value
+  return `${year}-${month}`
+}
+
 export function parsePeriodString(
   value: string | null | undefined,
 ): { year: number, month: number } | null {

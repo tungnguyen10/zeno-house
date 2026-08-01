@@ -70,6 +70,10 @@ function prepaid(overrides: Partial<PrepaidExpense> = {}): PrepaidExpense {
 }
 
 describe('PrepaidExpenseService math', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   beforeEach(() => {
     vi.clearAllMocks()
     vi.stubGlobal('can', canMock)
@@ -155,6 +159,8 @@ describe('PrepaidExpenseService math', () => {
   })
 
   it('checks write scope and audits create/update/delete', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-07-31T17:30:00Z'))
     const { PrepaidExpenseService } = await import(
       '../../../server/services/operations-report/prepaid-expenses'
     )
@@ -171,6 +177,10 @@ describe('PrepaidExpenseService math', () => {
       name: 'Internet cập nhật',
       total_amount: 900_000,
     })
+    findById.mockResolvedValueOnce(prepaid({
+      startDate: '2026-08-01',
+      endDate: '2026-11-01',
+    }))
     await PrepaidExpenseService.delete({} as never, owner, 'prepaid-1')
 
     expect(assertBuildingScope).toHaveBeenCalledWith(expect.anything(), owner, 'building-1', 'write')
@@ -193,5 +203,64 @@ describe('PrepaidExpenseService math', () => {
     )
     expect(deleteById).toHaveBeenCalledWith(expect.anything(), 'prepaid-1')
     expect(appendAudit).toHaveBeenCalledTimes(3)
+  })
+
+  it('cancels an allocated prepaid from the current Vietnam month without locking older periods', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-07-31T17:30:00Z'))
+    findById.mockResolvedValue(prepaid({
+      startDate: '2026-06-01',
+      endDate: '2026-12-01',
+    }))
+    updateById.mockResolvedValueOnce(prepaid({
+      startDate: '2026-06-01',
+      endDate: '2026-08-01',
+      status: 'cancelled',
+    }))
+    const { PrepaidExpenseService } = await import(
+      '../../../server/services/operations-report/prepaid-expenses'
+    )
+
+    await PrepaidExpenseService.delete({} as never, owner, 'prepaid-1')
+
+    expect(updateById).toHaveBeenCalledWith(expect.anything(), 'prepaid-1', {
+      end_date: '2026-08-01',
+      status: 'cancelled',
+    })
+    expect(deleteById).not.toHaveBeenCalled()
+    expect(assertNoClosedReportsInRange).toHaveBeenCalledWith(
+      expect.anything(),
+      'building-1',
+      2026,
+      8,
+      2026,
+      8,
+    )
+    expect(appendAudit).toHaveBeenCalledWith(
+      expect.anything(),
+      owner,
+      expect.objectContaining({
+        before_data: expect.objectContaining({ id: 'prepaid-1' }),
+        after_data: expect.objectContaining({ status: 'cancelled', endDate: '2026-08-01' }),
+      }),
+    )
+  })
+
+  it('physically deletes a prepaid that has not started by the current Vietnam month', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-07-31T17:30:00Z'))
+    findById.mockResolvedValue(prepaid({
+      startDate: '2026-09-01',
+      endDate: '2026-12-01',
+    }))
+    const { PrepaidExpenseService } = await import(
+      '../../../server/services/operations-report/prepaid-expenses'
+    )
+
+    await PrepaidExpenseService.delete({} as never, owner, 'prepaid-1')
+
+    expect(deleteById).toHaveBeenCalledWith(expect.anything(), 'prepaid-1')
+    expect(updateById).not.toHaveBeenCalled()
+    expect(assertNoClosedReportsInRange).not.toHaveBeenCalled()
   })
 })
