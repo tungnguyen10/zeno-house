@@ -29,7 +29,7 @@ function dateLabel(value: string | null): string {
 }
 
 function dueDateLabel(value: string | null): string {
-  return value ? dateLabel(value) : '(Hạn 3 ngày).'
+  return value ? dateLabel(value) : '(Hạn 4 ngày).'
 }
 
 function metadataNumber(metadata: Record<string, unknown>, key: string): number | null {

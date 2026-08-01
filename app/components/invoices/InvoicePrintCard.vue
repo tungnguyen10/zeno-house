@@ -12,7 +12,7 @@ function dateLabel(value: string | null): string {
 }
 
 function dueDateLabel(value: string | null): string {
-  if (!value) return '(Hạn 3 ngày).'
+  if (!value) return '(Hạn 4 ngày).'
   return dateLabel(value)
 }
 

@@ -31,7 +31,7 @@ function formatDate(value: string | null): string {
 }
 
 function dueDateLabel(value: string | null): string {
-  return value ? formatDate(value) : '(Hạn 3 ngày).'
+  return value ? formatDate(value) : '(Hạn 4 ngày).'
 }
 
 function metadataNumber(metadata: Record<string, unknown>, key: string): number | null {
