@@ -3,6 +3,25 @@ import type { NitroFetchOptions, NitroFetchRequest } from 'nitropack'
 const DEFAULT_API_TIMEOUT_MS = 15_000
 const inFlightRequests = new Map<string, Promise<unknown>>()
 
+interface StandardApiError {
+  code?: string
+  message?: string
+  details?: unknown
+}
+
+function standardizedErrorOf(error: unknown): StandardApiError | undefined {
+  const candidate = error as {
+    data?: {
+      error?: StandardApiError | boolean
+      data?: { error?: StandardApiError }
+    }
+  }
+  const direct = candidate.data?.error
+  if (direct && typeof direct === 'object' && direct.code) return direct
+  const nested = candidate.data?.data?.error
+  return nested?.code ? nested : undefined
+}
+
 export type ApiFetchOptions = NitroFetchOptions<NitroFetchRequest> & {
   /** Share one in-flight imperative GET. Do not use for mutations. */
   dedupeKey?: string
@@ -31,8 +50,16 @@ export function apiFetch<T>(
     ...fetchOptions,
     headers,
   }) as unknown as Promise<T>).catch((error: unknown) => {
-    const existing = error as { data?: { error?: { code?: string } }, name?: string }
-    if (existing.data?.error?.code || existing.name === 'AbortError') throw error
+    const existing = error as { name?: string }
+    const standardized = standardizedErrorOf(error)
+    if (standardized) {
+      throw {
+        ...(typeof error === 'object' && error !== null ? error : {}),
+        data: { error: standardized },
+        cause: error,
+      }
+    }
+    if (existing.name === 'AbortError') throw error
     throw {
       data: {
         error: {

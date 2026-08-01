@@ -36,6 +36,45 @@ describe('apiFetch', () => {
     }))
   })
 
+  it('preserves a standardized API error nested by Nitro', async () => {
+    const nitroError = {
+      data: {
+        error: true,
+        statusCode: 409,
+        data: {
+          error: {
+            code: 'CONFLICT',
+            message: 'Thay đổi này ảnh hưởng báo cáo vận hành đã chốt',
+          },
+        },
+      },
+    }
+    vi.stubGlobal('$fetch', vi.fn().mockRejectedValue(nitroError))
+
+    await expect(apiFetch('/api/prepaid-expenses/p-1', { method: 'DELETE' }))
+      .rejects.toMatchObject({
+        data: {
+          error: {
+            code: 'CONFLICT',
+            message: 'Thay đổi này ảnh hưởng báo cáo vận hành đã chốt',
+          },
+        },
+      })
+  })
+
+  it('uses the connectivity message only when no API envelope exists', async () => {
+    vi.stubGlobal('$fetch', vi.fn().mockRejectedValue(new TypeError('fetch failed')))
+
+    await expect(apiFetch('/api/example')).rejects.toMatchObject({
+      data: {
+        error: {
+          code: 'INTERNAL',
+          message: 'Yêu cầu mất quá nhiều thời gian hoặc kết nối bị gián đoạn.',
+        },
+      },
+    })
+  })
+
   it('aborts a superseded request so it cannot win a newer search', async () => {
     const resolvers: Array<(value: { data: string }) => void> = []
     const fetchMock = vi.fn((_request: string, options: { signal?: AbortSignal }) => new Promise<{ data: string }>((resolve, reject) => {
