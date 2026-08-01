@@ -140,6 +140,14 @@ The system SHALL maintain a close state for each building/month operations repor
 - **WHEN** a report period is closed
 - **THEN** expense mutations and configuration changes that affect that building/month are blocked until admin reopens the report
 
+#### Scenario: Cancel prepaid without changing closed history
+- **WHEN** a prepaid expense is cancelled from the current open month and it contributed to earlier closed reports
+- **THEN** the earlier reports retain their allocations and the cancellation is not blocked by those earlier closed periods
+
+#### Scenario: Current closed report still blocks prepaid cancellation
+- **WHEN** the current month operations report is already closed
+- **THEN** cancelling a prepaid expense from that month is blocked until an admin reopens the current report
+
 #### Scenario: Auto-close report at month end
 - **WHEN** the internal auto-close task runs on the last day of a month in `Asia/Ho_Chi_Minh`
 - **THEN** active building reports for that month are closed and reserve accruals are refreshed

@@ -584,7 +584,6 @@ async function confirmPrepaidDelete() {
   try {
     await deletePrepaidExpense(target.id)
     prepaidDeleteTarget.value = null
-    toast.success(`Đã ngừng phân bổ “${target.name}” từ ${prepaidCancellationPeriodLabel}.`)
   }
   catch (err) {
     prepaidError.value = resolveApiError(err, 'Không xóa được chi phí trả trước.')

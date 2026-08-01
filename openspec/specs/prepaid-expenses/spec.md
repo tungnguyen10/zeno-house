@@ -31,8 +31,20 @@ The system SHALL store building-scoped prepaid expenses that spread a total amou
 - **WHEN** a non-admin user manages a prepaid expense for a building outside their assignment scope
 - **THEN** the system responds with a forbidden error
 
+#### Scenario: Delete an allocated prepaid expense
+- **WHEN** an authorized user confirms deletion after the prepaid expense has started
+- **THEN** the system preserves allocations before the current `Asia/Ho_Chi_Minh` month, marks the record `cancelled`, and excludes it from the current month onward
+
+#### Scenario: Delete a future prepaid expense
+- **WHEN** an authorized user confirms deletion before its start month
+- **THEN** the system permanently removes the record because no historical allocation exists
+
+#### Scenario: Historical prepaid records are read-only
+- **WHEN** a prepaid expense has status `expired` or `cancelled`
+- **THEN** the management UI retains it for historical reference without edit or delete actions
+
 ### Requirement: Prepaid monthly allocation in reports
-The system SHALL contribute active prepaid monthly allocations to the operations report for covered months.
+The system SHALL contribute prepaid monthly allocations to the operations report for months covered by each record's effective date window, regardless of its current lifecycle status.
 
 #### Scenario: Allocation contributes to a covered month
 - **WHEN** the operations report is generated for a building/month covered by an active prepaid window
@@ -45,3 +57,7 @@ The system SHALL contribute active prepaid monthly allocations to the operations
 #### Scenario: Out-of-window prepaid excluded
 - **WHEN** a prepaid window does not cover the selected month
 - **THEN** its allocation is excluded from that month's report
+
+#### Scenario: Historical status does not remove an in-window allocation
+- **WHEN** an `expired` or `cancelled` prepaid record covered an earlier report month
+- **THEN** that report still includes the allocation according to `start_date <= period start < end_date`
