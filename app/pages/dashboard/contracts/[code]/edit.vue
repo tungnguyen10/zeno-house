@@ -103,7 +103,7 @@ async function onSubmit(data: ContractFormData) {
       back-label="Chi tiết hợp đồng"
     />
 
-    <div class="rounded-xl border border-dark-border bg-dark-surface p-6">
+    <div class="md:rounded-xl md:border md:border-dark-border md:bg-dark-surface md:p-6">
       <ContractForm
         v-model="formData"
         :exclude-contract-id="id"

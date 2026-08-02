@@ -198,7 +198,7 @@ const triggerLabelClass = computed(() =>
 <template>
   <div
     ref="containerRef"
-    class="flex flex-col gap-1.5"
+    class="flex flex-col gap-1.5 min-w-0"
     :data-invalid="error ? '' : undefined"
     :data-disabled="disabled ? '' : undefined"
   >
