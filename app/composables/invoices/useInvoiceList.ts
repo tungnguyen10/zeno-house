@@ -5,6 +5,11 @@ import { useRouteListQuerySync, readQueryEnumArray, readQueryString } from '~/co
 import { getApiErrorCode, getApiErrorMessage } from '~/utils/api-error'
 
 const LIST_STATUSES: InvoiceStatus[] = ['issued', 'partial', 'paid', 'overdue', 'void']
+const DEFAULT_STATUSES: InvoiceStatus[] = ['issued', 'partial', 'paid', 'overdue']
+
+function isDefaultStatuses(s: InvoiceStatus[]): boolean {
+  return s.length === DEFAULT_STATUSES.length && DEFAULT_STATUSES.every(x => s.includes(x))
+}
 
 function currentDateInHoChiMinh(): { year: number; month: number } {
   const parts = new Intl.DateTimeFormat('en-CA', {
@@ -33,7 +38,8 @@ export function useInvoiceList() {
   const periodYear = ref(readNumber(route.query.period_year) ?? today.year)
   const periodMonth = ref<number | undefined>(readNumber(route.query.period_month) ?? today.month)
   const allMonths = ref(route.query.period_month === undefined ? false : periodMonth.value === undefined)
-  const status = ref<InvoiceStatus[]>(readQueryEnumArray(route.query.status, LIST_STATUSES))
+  const initStatus = readQueryEnumArray(route.query.status, LIST_STATUSES)
+  const status = ref<InvoiceStatus[]>(initStatus.length > 0 ? initStatus : [...DEFAULT_STATUSES])
   const tenantSearchInput = ref(readQueryString(route.query.tenant_search))
   const page = ref(readNumber(route.query.page) ?? 1)
   const pageSize = ref(50)
@@ -59,7 +65,8 @@ export function useInvoiceList() {
       periodMonth.value = readNumber(query.period_month)
       allMonths.value = query.period_month === undefined ? false : periodMonth.value === undefined
       if (!allMonths.value && periodMonth.value === undefined) periodMonth.value = today.month
-      status.value = readQueryEnumArray(query.status, LIST_STATUSES)
+      const parsedStatus = readQueryEnumArray(query.status, LIST_STATUSES)
+      status.value = parsedStatus.length > 0 ? parsedStatus : [...DEFAULT_STATUSES]
       tenantSearchInput.value = readQueryString(query.tenant_search)
       page.value = readNumber(query.page) ?? 1
     },
@@ -74,7 +81,7 @@ export function useInvoiceList() {
       )
         ? String(periodMonth.value)
         : undefined
-      next.status = status.value.length > 0 ? status.value : undefined
+      next.status = !isDefaultStatuses(status.value) ? status.value : undefined
       next.tenant_search = tenantSearch.value || undefined
       next.page = page.value > 1 ? String(page.value) : undefined
       return next
@@ -115,7 +122,7 @@ export function useInvoiceList() {
     || periodYear.value !== today.year
     || periodMonth.value !== today.month
     || allMonths.value
-    || status.value.length > 0
+    || !isDefaultStatuses(status.value)
     || Boolean(tenantSearchInput.value),
   )
 
@@ -124,7 +131,7 @@ export function useInvoiceList() {
     periodYear.value = today.year
     periodMonth.value = today.month
     allMonths.value = false
-    status.value = []
+    status.value = [...DEFAULT_STATUSES]
     tenantSearchInput.value = ''
     page.value = 1
     replaceRoute()

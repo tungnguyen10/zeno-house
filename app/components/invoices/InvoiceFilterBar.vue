@@ -47,7 +47,9 @@ const activeFilterCount = computed(() => {
   if (props.allMonths) n++
   if (props.periodYear !== now.getFullYear()) n++
   if (!props.allMonths && props.periodMonth !== now.getMonth() + 1) n++
-  n += props.statuses.length
+  const defaultStatuses = new Set<InvoiceStatus>(['issued', 'partial', 'paid', 'overdue'])
+  const isDefault = props.statuses.length === defaultStatuses.size && props.statuses.every(s => defaultStatuses.has(s))
+  if (!isDefault) n++
   return n
 })
 
