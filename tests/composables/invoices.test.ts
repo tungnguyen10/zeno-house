@@ -146,7 +146,7 @@ describe('useInvoiceList', () => {
     expect(list.buildingId.value).toBe('')
     expect(list.periodYear.value).toBe(2026)
     expect(list.periodMonth.value).toBe(6)
-    expect(list.status.value).toEqual([])
+    expect(list.status.value).toEqual(['issued', 'partial', 'paid', 'overdue'])
     expect(list.tenantSearchInput.value).toBe('')
     expect(list.page.value).toBe(1)
     expect(replaceMock).toHaveBeenLastCalledWith({ query: {} })
