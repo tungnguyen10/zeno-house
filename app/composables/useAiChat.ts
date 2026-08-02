@@ -47,6 +47,7 @@ export function useAiChat() {
   const resuming = ref(false)
 
   const lastModel = ref<string | null>(null)
+  const lastFallbackUsed = ref(false)
   const lastProvider = ref<string | null>(null)
   const lastRequestId = ref<string | null>(null)
   const lastToolCalls = ref<ToolCallSummary[]>([])
@@ -106,6 +107,7 @@ export function useAiChat() {
       conversationId.value = event.conversationId
       lastRequestId.value = event.requestId
       lastModel.value = event.model
+      lastFallbackUsed.value = event.fallbackUsed
       lastProvider.value = event.provider
       if (import.meta.client) sessionStorage.setItem(STORAGE_KEY, event.conversationId)
     }
@@ -237,6 +239,7 @@ export function useAiChat() {
     actionPlans.value = []
     prompt.value = ''
     lastModel.value = null
+    lastFallbackUsed.value = false
     lastProvider.value = null
     lastRequestId.value = null
     lastToolCalls.value = []
@@ -250,7 +253,7 @@ export function useAiChat() {
 
   return {
     conversationId, messages, actionPlans, prompt, sending, resuming, canSend,
-    lastModel, lastProvider, lastRequestId, lastToolCalls, errorMessage, errorCode, errorDetails,
+    lastModel, lastFallbackUsed, lastProvider, lastRequestId, lastToolCalls, errorMessage, errorCode, errorDetails,
     actionErrors, actionBusyId,
     send, resume, confirmAction, cancelAction, clearChat, abort,
   }

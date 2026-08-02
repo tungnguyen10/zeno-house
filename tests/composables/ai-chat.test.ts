@@ -17,7 +17,10 @@ describe('AI SSE parser', () => {
       { type: 'tool-status', tool: 'get_meter_status', status: 'succeeded' },
       { type: 'action-plan', plan: { id: 'plan-1', status: 'pending' } },
       { type: 'error', error: { code: 'CONFLICT', message: 'Stale' } },
-      { type: 'done', conversationId: 'conversation-1', requestId: 'request-1', model: 'model-1' },
+      {
+        type: 'done', conversationId: 'conversation-1', requestId: 'request-1',
+        model: 'fallback-model', requestedModel: 'primary-model', fallbackUsed: true, provider: 'openrouter',
+      },
     ].map(event => `data: ${JSON.stringify(event)}\n\n`).join('')
 
     expect(parseAiSseFrames(source).events.map(event => event.type)).toEqual([

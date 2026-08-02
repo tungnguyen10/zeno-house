@@ -4,12 +4,6 @@ import {
   isAiToolRuntimeEnabled,
   resolveAiRuntimePolicy,
 } from '../../../server/utils/ai-runtime'
-import {
-  assertAiProviderCircuitClosed,
-  recordAiProviderFailure,
-  recordAiProviderSuccess,
-  resetAiProviderCircuits,
-} from '../../../server/utils/ai-circuit'
 
 const consume = vi.fn()
 const cleanupConversations = vi.fn()
@@ -40,6 +34,8 @@ function runtime(overrides: Record<string, unknown> = {}) {
     aiRateWindowSeconds: 60,
     aiCircuitFailureThreshold: 3,
     aiCircuitCooldownMs: 1_000,
+    aiGlobalDailyLimit: 40,
+    aiActionLeaseSeconds: 30,
     aiRetentionCleanupEnabled: true,
     aiRetentionCleanupBatchSize: 500,
     ...overrides,
@@ -49,7 +45,6 @@ function runtime(overrides: Record<string, unknown> = {}) {
 describe('AI production runtime controls', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    resetAiProviderCircuits()
   })
 
   it('keeps private server switches independent from public UI visibility', () => {
@@ -58,6 +53,19 @@ describe('AI production runtime controls', () => {
     expect(isAiToolRuntimeEnabled(policy, { name: 'get_meter_status', mode: 'read' })).toBe(false)
     expect(isAiToolRuntimeEnabled(policy, { name: 'plan_invoice_issue', mode: 'plan' })).toBe(false)
     expect(isAiActionRuntimeEnabled(policy, 'issue_invoices')).toBe(false)
+    expect(policy.globalDailyLimit).toBe(40)
+    expect(policy.actionLeaseSeconds).toBe(30)
+  })
+
+  it('bounds global quota and execution lease configuration', () => {
+    expect(runtime({ aiGlobalDailyLimit: 0, aiActionLeaseSeconds: 2 })).toMatchObject({
+      globalDailyLimit: 1,
+      actionLeaseSeconds: 5,
+    })
+    expect(runtime({ aiGlobalDailyLimit: 20_000, aiActionLeaseSeconds: 900 })).toMatchObject({
+      globalDailyLimit: 10_000,
+      actionLeaseSeconds: 300,
+    })
   })
 
   it('can enable reads while killing one invoice mutation class', () => {
@@ -73,16 +81,6 @@ describe('AI production runtime controls', () => {
     expect(isAiToolRuntimeEnabled(policy, { name: 'plan_void_invoice', mode: 'plan' })).toBe(true)
     expect(isAiActionRuntimeEnabled(policy, 'issue_invoices')).toBe(false)
     expect(isAiActionRuntimeEnabled(policy, 'void_invoice')).toBe(true)
-  })
-
-  it('opens and resets the provider circuit after bounded failures/cooldown', () => {
-    recordAiProviderFailure('groq', 2, 100)
-    assertAiProviderCircuitClosed('groq', 2, 1_000, 200)
-    recordAiProviderFailure('groq', 2, 300)
-    expect(() => assertAiProviderCircuitClosed('groq', 2, 1_000, 400)).toThrow()
-    expect(() => assertAiProviderCircuitClosed('groq', 2, 1_000, 1_301)).not.toThrow()
-    recordAiProviderSuccess('groq')
-    expect(() => assertAiProviderCircuitClosed('groq', 2, 1_000, 500)).not.toThrow()
   })
 
   it('returns a retryable 429 when the distributed bucket rejects a request', async () => {

@@ -26,7 +26,8 @@ Registered mutation executors are `open_billing_period`, `import_meter_readings`
 AppAiDevChat
   -> useAiChat
   -> POST /api/ai/chat
-  -> streamAiChat
+  -> auth + begin_ai_chat_turn RPC
+  -> OpenRouter primary/free fallback
   -> capability-filtered read/planning tool registry
   -> existing domain service
   -> repository
@@ -43,7 +44,7 @@ Building references are resolved by scoped UUID, slug, or exact case-insensitive
 
 For meter paste, the tool schema accepts only building/period/date metadata. `streamAiChat` retains the stored current user-message ID in server-only context, and the planner reloads that owned message before a deterministic delimited parser reads the rows. The model cannot pass raw paste or reconstructed reading arrays. Supported imports require a room header and at least one electricity/water header, use tab/comma/semicolon delimiters, and use `.` for decimal values.
 
-Each request is bounded by `NUXT_AI_MAX_STEPS` (default 8), `NUXT_AI_MAX_OUTPUT_TOKENS` (default 1200), and `NUXT_AI_PROVIDER_TIMEOUT_MS` (default 30 seconds). Provider selection, model credentials, limits, and operation flags remain private server runtime configuration.
+Each request is bounded by `NUXT_AI_MAX_STEPS` (default 8), `NUXT_AI_MAX_OUTPUT_TOKENS` (default 1200), `NUXT_AI_MAX_CONTEXT_MESSAGES` (default 20), `NUXT_AI_MAX_CONTEXT_CHARS` (default 12000), and `NUXT_AI_PROVIDER_TIMEOUT_MS` (default 30 seconds). Only the newest complete messages that fit both context limits are sent. Provider selection, model credentials, limits, and operation flags remain private server runtime configuration.
 
 Conversation content and stored business names or labels are untrusted input. They cannot register tools, broaden capability or building scope, confirm an action, or provide authoritative financial values. Strict tool schemas reject extra fields, while planners and executors reload authoritative data through domain services.
 
@@ -51,6 +52,7 @@ Conversation content and stored business names or labels are untrusted input. Th
 
 The server owns `ai_conversations`, `ai_messages`, and `ai_action_plans`. A browser stores only the opaque conversation UUID used to resume its own transcript.
 
+- `begin_ai_chat_turn` resolves or creates the owned conversation, appends the user message, touches expiry, and returns bounded ordered history in one transaction.
 - Conversations are resolved by both ID and authenticated user ID.
 - Expired or non-active conversations are returned as not found.
 - User and assistant messages are persisted and ordered on the server.
@@ -71,12 +73,12 @@ type AiStreamEvent =
   | { type: 'tool-status'; tool: string; status: 'started' | 'succeeded' | 'failed'; durationMs?: number }
   | { type: 'action-plan'; plan: AiActionPlanDto }
   | { type: 'error'; error: { code: string; message: string; details?: unknown } }
-  | { type: 'done'; conversationId: string; requestId: string; model: string; provider: string }
+  | { type: 'done'; conversationId: string; requestId: string; model: string; requestedModel: string; fallbackUsed: boolean; provider: string }
 ```
 
-The client buffers incomplete SSE frames before parsing JSON. The model stream is split into independent client and persistence branches; closing the browser response does not cancel server-side assistant-message persistence.
+The client buffers incomplete SSE frames before parsing JSON. The model stream is split into independent client and persistence branches, and persistence is registered with `event.waitUntil(...)`; closing the browser response does not cancel server-side assistant-message persistence.
 
-Response headers include `X-Conversation-Id`, `X-Request-Id`, and `X-AI-Model`. AI telemetry records request IDs, conversation IDs, tool/action identifiers, outcome, duration, and normalized error category. It does not record message content or raw tool payloads.
+Response headers include `X-Conversation-Id`, `X-Request-Id`, and `X-AI-Requested-Model`. The terminal event, stored assistant metadata, and telemetry use OpenRouter's actually selected response model and record `fallbackUsed`; the header deliberately identifies only the requested primary. AI telemetry does not record message content or raw tool payloads.
 
 ## Production Runtime Controls
 
@@ -84,6 +86,7 @@ Production defaults keep chat, tool exposure, planning, execution, and every inv
 
 | Control | Environment variable | Default |
 | --- | --- | --- |
+| Provider and free models | `NUXT_AI_PROVIDER`, `NUXT_AI_MODEL`, `NUXT_AI_MODEL_FALLBACK` | `openrouter`, Nemotron free, Gemma free |
 | Chat route | `NUXT_AI_CHAT_ENABLED` | off in production |
 | Read tools | `NUXT_AI_READ_TOOLS_ENABLED` | off in production |
 | Mutation planning | `NUXT_AI_MUTATION_PLANNING_ENABLED` | off in production |
@@ -91,10 +94,13 @@ Production defaults keep chat, tool exposure, planning, execution, and every inv
 | Invoice issue / void / reissue / adjustment | `NUXT_AI_INVOICE_ISSUE_ENABLED`, `NUXT_AI_INVOICE_VOID_ENABLED`, `NUXT_AI_INVOICE_REISSUE_ENABLED`, `NUXT_AI_INVOICE_ADJUSTMENT_ENABLED` | off in production |
 | Chat/action budgets | `NUXT_AI_CHAT_RATE_LIMIT`, `NUXT_AI_ACTION_RATE_LIMIT`, `NUXT_AI_RATE_WINDOW_SECONDS` | 20 / 30 per 60 seconds |
 | Provider timeout | `NUXT_AI_PROVIDER_TIMEOUT_MS` | 30000 ms |
-| Circuit breaker | `NUXT_AI_CIRCUIT_FAILURE_THRESHOLD`, `NUXT_AI_CIRCUIT_COOLDOWN_MS` | 5 failures / 60000 ms |
+| Context | `NUXT_AI_MAX_CONTEXT_MESSAGES`, `NUXT_AI_MAX_CONTEXT_CHARS` | 20 / 12000 |
+| Shared free quota | `NUXT_AI_GLOBAL_DAILY_LIMIT` | 40 requests per UTC day |
+| Distributed circuit | `NUXT_AI_CIRCUIT_FAILURE_THRESHOLD`, `NUXT_AI_CIRCUIT_COOLDOWN_MS` | 5 failures / 60000 ms |
+| Action lease | `NUXT_AI_ACTION_LEASE_SECONDS` | 30 seconds |
 | Cleanup | `NUXT_AI_RETENTION_CLEANUP_ENABLED`, `NUXT_AI_RETENTION_CLEANUP_BATCH_SIZE`, `NUXT_AI_RETENTION_CLEANUP_SECRET` | on / 500 / no secret configured |
 
-Rate limits are enforced per hashed user ID in service-role-only database buckets before chat persistence/provider calls and before action claims. Provider failures open a bounded process-local circuit; an open circuit or timeout fails without exposing prompts or credentials. Public `NUXT_PUBLIC_AI_DEV_CHAT_ENABLED` controls only UI visibility and never enables server behavior.
+Rate limits are enforced per hashed user ID in service-role-only database buckets. A shared UTC-day quota and provider circuit are acquired atomically in Supabase before a model call. OpenRouter receives only the explicit free fallback plus `require_parameters: true`, `allow_fallbacks: true`, and `data_collection: deny`; it never receives a paid fallback. Capacity exhaustion is reported as `PROVIDER_CAPACITY`. Public `NUXT_PUBLIC_AI_DEV_CHAT_ENABLED` controls only UI visibility and never enables server behavior.
 
 Operational kill order is: disable the affected invoice flag, then mutation execution, then planning or all chat if necessary. A disabled executor rejects before claiming the pending plan, so re-enabling does not require repairing an `executing` action. For cleanup failures, verify the private secret and site URL, invoke the internal endpoint with `x-ai-retention-secret`, and inspect count/duration/error-category telemetry; the next daily run safely retries bounded rows.
 
@@ -113,15 +119,15 @@ planner creates server-owned pending plan
   -> durable result or normalized failure
 ```
 
-The browser and model never generate the idempotency key. Each plan receives a server-generated UUID and a canonical payload hash that includes `resource_versions`. Only the direct endpoint `POST /api/ai/actions/[id]/confirm` can claim a pending plan; conversational text cannot confirm it.
+The browser and model never generate the idempotency key. Each plan receives a server-generated UUID and a canonical payload hash that includes `resource_versions`. Confirmation recomputes that hash before claim; a mismatch makes the plan stale without running an executor. Only the direct endpoint `POST /api/ai/actions/[id]/confirm` can claim a plan; conversational text cannot confirm it.
 
-Lifecycle states are `pending`, `executing`, `succeeded`, `cancelled`, `expired`, `stale`, and `failed`. A succeeded confirmation replays its stored result. A lost compare-and-set claim returns a conflict. Meter and override plans persist `updated_at` versions or explicit absence; Postgres compares them while holding row locks. A mismatch returns `OPTIMISTIC_LOCK_CONFLICT`, marks the plan stale, and writes no partial domain or audit state.
+Lifecycle states are `pending`, `executing`, `succeeded`, `cancelled`, `expired`, `stale`, and `failed`. A claim writes a bounded execution lease. Concurrent confirmation during that lease returns a retryable conflict; after expiry the same plan can be reclaimed with its original idempotency key. If the domain commit succeeds but plan completion is uncertain, the plan remains recoverable in `executing`; deterministic business/validation failures alone become `failed` or `stale`. A succeeded confirmation replays its stored result.
 
 The period executor uses the plan idempotency key as audit correlation metadata and calls `open_or_get_billing_period_with_audit`. The RPC uses the unique building/year/month key, commits a new draft period and `period.opened` audit atomically, and returns the existing period without another audit on retries or races.
 
 Meter commits call `save_meter_readings_with_audit`; utility override saves call `save_utility_usage_override_with_audit`. Both RPCs are service-role-only `SECURITY INVOKER` functions. They validate the normalized payload, lock affected state, reject closed periods and rooms with non-void invoices, compare versions, mutate domain rows, and append audits in one transaction. Direct APIs use the same service/RPC paths as AI actions.
 
-Invoice issue and correction paths use the same service-only transaction contracts for direct API and AI confirmation. Issue replay is keyed by the server plan operation ID and atomically writes invoices, charge snapshots, period status, and audit. Void, reissue, and adjustment compare the stored invoice version while holding locks; reissue preserves a correction correlation ID across the void and replacement operations.
+Invoice issue and correction paths use the same service-only transaction contracts for direct API and AI confirmation. Every executor, including reissue, uses the action plan idempotency key. Issue replay atomically writes invoices, charge snapshots, period status, and audit. Void, reissue, and adjustment compare the stored invoice version while holding locks.
 
 ## Meter And Draft Operations
 
@@ -157,10 +163,11 @@ Invoice issue and correction paths use the same service-only transaction contrac
 - API handlers: `server/api/ai/**`
 - Runtime and policy: `server/services/ai/**`, `server/utils/ai-*.ts`
 - Persistence: `server/repositories/ai/**`
-- Migrations: `supabase/migrations/20260714040637_ai_agent_foundation.sql`, `supabase/migrations/20260714044355_ai_billing_period_operations.sql`, `supabase/migrations/20260714055623_ai_meter_and_draft_operations.sql`, `supabase/migrations/20260714063549_ai_invoice_operations.sql`
+- Migrations: the four `20260714...ai_*.sql` migrations plus `supabase/migrations/20260802080015_harden_ai_billing_assistant_flow.sql`
+- Database verification: `supabase/verification/ai_billing_assistant_flow.sql`
 
 ## Verification
 
 Focused coverage lives under `tests/server/ai/**`, `tests/server/meter-readings/**`, `tests/server/billing/**`, `tests/composables/ai-chat.test.ts`, and `tests/components/app/AppAiActionCard.test.ts`. It covers schema security, prompt-injection boundaries, lifecycle compare-and-set behavior, canonical invoice snapshots, parser fidelity, scoped preview classification, exact preview/commit payloads, transactional RPC contracts, stale writes, billing locks, deny-by-default tools, kill switches, rate limits, timeouts/circuit behavior, cleanup retries, fragmented SSE, direct confirmation controls, and disconnect-safe persistence structure.
 
-All four sequential waves are implemented, remotely verified, accepted, and archived. Production AI behavior remains disabled by default pending an explicit feature-flag rollout decision.
+Run `npm run verify:ai-models` before deployment and follow `docs/development/ai-billing-assistant-rollout.md`. Production AI behavior remains disabled by default; applying the additive migration and completing staging smoke checks are explicit rollout steps.

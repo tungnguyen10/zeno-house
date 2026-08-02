@@ -50,6 +50,7 @@ export function mapAiMessage(row: AiMessageRow): AiMessage {
 }
 
 export function mapAiActionPlan(row: AiActionPlanRow): AiActionPlan {
+  const leasedRow = row as AiActionPlanRow & { execution_lease_until?: string | null }
   return {
     id: row.id,
     conversationId: row.conversation_id,
@@ -70,6 +71,7 @@ export function mapAiActionPlan(row: AiActionPlanRow): AiActionPlan {
     expiresAt: row.expires_at,
     confirmedAt: row.confirmed_at,
     executedAt: row.executed_at,
+    executionLeaseUntil: leasedRow.execution_lease_until ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }

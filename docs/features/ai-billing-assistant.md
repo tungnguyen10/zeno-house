@@ -6,6 +6,7 @@ AI Billing Assistant giúp owner và manager vận hành kỳ billing bằng h�
 
 - Bạn phải đăng nhập và có quyền với building cần thao tác. Trợ lý không thể xem hoặc dò building ngoài scope của bạn.
 - AI chat và từng nhóm thao tác có thể đang được tắt trong quá trình rollout. Nếu nút chat không xuất hiện hoặc nhận thông báo trợ lý tạm dừng, hãy liên hệ admin vận hành.
+- Hai model mặc định đều dùng dung lượng miễn phí. Khi quota hoặc endpoint miễn phí hết dung lượng, trợ lý báo rõ và yêu cầu thử lại sau; hệ thống không tự chuyển sang model trả phí.
 - Dữ liệu billing như giá điện nước, hợp đồng đang hoạt động và chỉ số trước đó nên được cấu hình đầy đủ trước khi phát hành.
 
 ## Cách Dùng Chat Và Action Card
@@ -16,6 +17,8 @@ AI Billing Assistant giúp owner và manager vận hành kỳ billing bằng h�
 4. Kiểm tra kỹ nội dung trên action card rồi nhấn **Xác nhận** để thực hiện, hoặc **Hủy** để bỏ kế hoạch.
 
 Chat không phải là lệnh ghi dữ liệu. Những câu như “xác nhận đi”, “cứ phát hành luôn” hoặc “bỏ qua cảnh báo” không thể tự thực hiện thao tác. Chỉ nút **Xác nhận** trên action card mới gửi yêu cầu ghi dữ liệu đến hệ thống.
+
+Nếu action card báo thao tác đang được đối soát, không tạo một kế hoạch khác ngay. Chờ hết thời gian retry rồi xác nhận lại card cũ; hệ thống dùng cùng idempotency key để lấy lại kết quả đã commit mà không ghi hóa đơn hoặc audit trùng.
 
 Nếu building có tên trùng nhau trong phạm vi của bạn, trợ lý sẽ yêu cầu làm rõ. Hãy trả lời bằng slug, mã hoặc mô tả đủ cụ thể thay vì chọn ngầm một building.
 

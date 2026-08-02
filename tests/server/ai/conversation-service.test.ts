@@ -4,6 +4,7 @@ import type { AuthUser } from '~/types/auth'
 import { AiConversationService } from '../../../server/services/ai/conversations'
 
 const mocks = vi.hoisted(() => ({
+  beginTurn: vi.fn(),
   create: vi.fn(),
   findOwnedById: vi.fn(),
   appendMessage: vi.fn(),
@@ -15,6 +16,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('../../../server/repositories/ai/conversations', () => ({
   AiConversationRepository: {
+    beginTurn: mocks.beginTurn,
     create: mocks.create,
     findOwnedById: mocks.findOwnedById,
     appendMessage: mocks.appendMessage,
@@ -45,6 +47,21 @@ function conversation(overrides: Partial<AiConversation> = {}): AiConversation {
 
 describe('AiConversationService', () => {
   beforeEach(() => vi.clearAllMocks())
+
+  it('begins a chat turn atomically through one repository call', async () => {
+    const turn = {
+      conversation: conversation(),
+      userMessage: { id: 'message-1', role: 'user', content: 'Hello' },
+      messages: [{ id: 'message-1', role: 'user', content: 'Hello' }],
+    }
+    mocks.beginTurn.mockResolvedValue(turn)
+    await expect(AiConversationService.beginTurn(event, actor, {
+      conversationId: turn.conversation.id,
+      content: 'Hello',
+      historyLimit: 20,
+    })).resolves.toEqual(turn)
+    expect(mocks.beginTurn).toHaveBeenCalledOnce()
+  })
 
   it('creates server-owned state when no conversation id is supplied', async () => {
     const created = conversation()

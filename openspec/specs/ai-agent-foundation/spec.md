@@ -25,6 +25,28 @@ The system SHALL enable RLS on AI persistence tables and SHALL deny direct `anon
 - **WHEN** an authenticated browser client directly selects, inserts, updates, or deletes an AI persistence row
 - **THEN** Postgres privileges and RLS deny the operation
 
+### Requirement: AI provider routing is free-only and observable
+The system SHALL route production chat through distinct OpenRouter primary and fallback `:free` models verified as zero-priced and tool-capable, SHALL deny paid implicit fallback, and SHALL report the requested model, selected model, and fallback use.
+
+#### Scenario: Primary fails before streaming
+- **WHEN** OpenRouter cannot serve the configured free primary before emitting output
+- **THEN** it may select only the configured free fallback and the terminal event, persistence metadata, and telemetry identify that model with fallback use enabled
+
+#### Scenario: Model release contract is invalid
+- **WHEN** a configured production model is missing, paid, duplicated, or lacks tool support
+- **THEN** release verification fails rather than routing to a paid model
+
+### Requirement: Chat turns are atomic and context-bounded
+The system SHALL atomically resolve or create an owned conversation, append the user message, extend retention, and return ordered bounded history, then SHALL apply both message-count and content-budget limits before provider transmission.
+
+#### Scenario: Owned chat turn begins
+- **WHEN** an authenticated internal user starts or resumes a valid conversation
+- **THEN** one database transaction persists the turn and returns only that user's bounded history
+
+#### Scenario: Context exceeds its content budget
+- **WHEN** history exceeds the configured context budget
+- **THEN** the provider receives the newest complete messages that fit and retains the current user message
+
 ### Requirement: Deny-by-default tool policy
 The agent SHALL expose only explicitly registered tools whose required capability is held by the authenticated user, and the model SHALL have no database, web-browsing, external side-effect, or generic commit tool.
 
@@ -41,7 +63,7 @@ The agent SHALL expose only explicitly registered tools whose required capabilit
 - **THEN** the system stops further tool execution and emits a structured terminal error or completion
 
 ### Requirement: Typed agent event stream
-The AI chat endpoint SHALL stream typed events for assistant text, tool status, action plans, errors, and completion, and SHALL preserve request and conversation correlation identifiers.
+The AI chat endpoint SHALL stream typed events for assistant text, tool status, action plans, errors, and completion, SHALL preserve request and conversation correlation identifiers, and SHALL identify the requested and selected model plus fallback use.
 
 #### Scenario: Text and tool events share a stream
 - **WHEN** the model emits text and invokes an allowed read tool
@@ -90,7 +112,7 @@ The system SHALL allow only the owning authenticated user to confirm or cancel a
 - **THEN** the system returns CONFLICT, marks the plan stale, and performs no mutation
 
 ### Requirement: Idempotent action replay
-The system SHALL generate and durably store the idempotency key for each plan and SHALL return the stored result when a succeeded plan is confirmed again.
+The system SHALL generate and durably store the idempotency key for each plan, verify its canonical payload hash before claim, lease executing plans, recover an expired lease with the same domain idempotency key, and return the stored result when a succeeded plan is confirmed again.
 
 #### Scenario: Successful plan is reconfirmed
 - **WHEN** the owner repeats confirmation for a succeeded plan
@@ -99,6 +121,14 @@ The system SHALL generate and durably store the idempotency key for each plan an
 #### Scenario: Concurrent confirmations race
 - **WHEN** two confirmations attempt to claim the same pending plan concurrently
 - **THEN** at most one confirmation dispatches the executor
+
+#### Scenario: Stored payload was altered
+- **WHEN** a plan's canonical payload and resource-version hash no longer equals its stored hash
+- **THEN** the system marks the plan stale and dispatches no executor
+
+#### Scenario: Domain commit outlives plan completion
+- **WHEN** a domain mutation commits but recording plan success fails
+- **THEN** the plan remains executing and can be reclaimed after lease expiry to replay the result with the same idempotency key
 
 ### Requirement: Foundation does not expose billing mutations
 The foundation wave SHALL retain authorized read tools but SHALL NOT expose direct billing mutation tools until a later domain change implements the action-plan contract.
@@ -133,7 +163,7 @@ The server SHALL enforce independent AI chat, read-tool, mutation-planning, and 
 - **THEN** confirmation fails closed without dispatching the domain mutation
 
 ### Requirement: AI requests and actions are bounded
-The system SHALL apply per-user distributed request and action-confirmation rate limits, provider timeouts, and a bounded provider circuit breaker without logging message content or secrets.
+The system SHALL apply per-user distributed request and action-confirmation rate limits, a global daily chat quota, provider timeouts, and a distributed bounded provider circuit without logging message content or secrets.
 
 #### Scenario: User exceeds request limit
 - **WHEN** an authenticated user exceeds the configured chat request budget for the current window
@@ -144,8 +174,12 @@ The system SHALL apply per-user distributed request and action-confirmation rate
 - **THEN** the model call is aborted, a normalized failure is persisted, and no unconfirmed mutation executes
 
 #### Scenario: Provider circuit is open
-- **WHEN** consecutive provider failures reach the configured threshold during its cooldown
+- **WHEN** consecutive provider failures across application instances reach the configured threshold during its cooldown
 - **THEN** new model calls fail fast while direct authorized action confirmation remains governed by its own switches
+
+#### Scenario: Global free quota is exhausted
+- **WHEN** the configured UTC-day model request budget is consumed
+- **THEN** new model calls fail before provider invocation with a retryable capacity response
 
 ### Requirement: Prompt injection cannot expand tool authority
 The system SHALL treat conversation content and tool-returned labels as untrusted data and SHALL rely on registered schemas, capabilities, scope checks, and direct confirmation rather than model instructions for authorization.
@@ -179,4 +213,3 @@ The system SHALL default production AI mutation exposure to off, SHALL document 
 #### Scenario: Operator disables one mutation class
 - **WHEN** an operator disables invoice mutations during an incident
 - **THEN** invoice plans and confirmations fail closed while unrelated direct billing APIs continue to operate
-

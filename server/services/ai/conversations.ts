@@ -10,6 +10,22 @@ function isExpired(expiresAt: string): boolean {
 }
 
 export const AiConversationService = {
+  async beginTurn(event: H3Event, user: AuthUser, input: {
+    conversationId?: string
+    content: string
+    historyLimit: number
+  }) {
+    const turn = await AiConversationRepository.beginTurn(event, {
+      userId: user.id,
+      conversationId: input.conversationId,
+      content: input.content,
+      historyLimit: input.historyLimit,
+      expiresAt: new Date(Date.now() + 30 * 86_400_000).toISOString(),
+    })
+    if (!turn) throwNotFound('Không tìm thấy hội thoại AI đang hoạt động')
+    return turn
+  },
+
   async resolve(event: H3Event, user: AuthUser, id?: string): Promise<AiConversation> {
     if (!id) return AiConversationRepository.create(event, user.id)
 

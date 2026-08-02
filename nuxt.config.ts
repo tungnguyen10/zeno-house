@@ -37,8 +37,8 @@ export default defineNuxtConfig({
     aiProvider: process.env.NUXT_AI_PROVIDER || "openrouter", // NUXT_AI_PROVIDER (openrouter | google)
     aiOpenrouterApiKey: process.env.NUXT_AI_OPENROUTER_API_KEY || "", // NUXT_AI_OPENROUTER_API_KEY
     aiGoogleApiKey: process.env.NUXT_AI_GOOGLE_API_KEY || "", // NUXT_AI_GOOGLE_API_KEY
-    aiModel: process.env.NUXT_AI_MODEL || "", // NUXT_AI_MODEL
-    aiModelFallback: process.env.NUXT_AI_MODEL_FALLBACK || "", // NUXT_AI_MODEL_FALLBACK
+    aiModel: process.env.NUXT_AI_MODEL || "nvidia/nemotron-3-super-120b-a12b:free", // NUXT_AI_MODEL
+    aiModelFallback: process.env.NUXT_AI_MODEL_FALLBACK || "google/gemma-4-31b-it:free", // NUXT_AI_MODEL_FALLBACK
     aiMaxSteps: process.env.NUXT_AI_MAX_STEPS ? parseInt(process.env.NUXT_AI_MAX_STEPS) : 8, // NUXT_AI_MAX_STEPS
     aiMaxOutputTokens: process.env.NUXT_AI_MAX_OUTPUT_TOKENS ? parseInt(process.env.NUXT_AI_MAX_OUTPUT_TOKENS) : 1200, // NUXT_AI_MAX_OUTPUT_TOKENS
     aiChatEnabled: process.env.NODE_ENV !== "production", // NUXT_AI_CHAT_ENABLED
@@ -56,6 +56,9 @@ export default defineNuxtConfig({
     aiCircuitFailureThreshold: 5, // NUXT_AI_CIRCUIT_FAILURE_THRESHOLD
     aiCircuitCooldownMs: 60_000, // NUXT_AI_CIRCUIT_COOLDOWN_MS
     aiMaxContextMessages: 20, // NUXT_AI_MAX_CONTEXT_MESSAGES
+    aiMaxContextChars: 12_000, // NUXT_AI_MAX_CONTEXT_CHARS
+    aiGlobalDailyLimit: 40, // NUXT_AI_GLOBAL_DAILY_LIMIT
+    aiActionLeaseSeconds: 30, // NUXT_AI_ACTION_LEASE_SECONDS
     aiRetentionCleanupEnabled: true, // NUXT_AI_RETENTION_CLEANUP_ENABLED
     aiRetentionCleanupBatchSize: 500, // NUXT_AI_RETENTION_CLEANUP_BATCH_SIZE
     aiRetentionCleanupSecret: process.env.NUXT_AI_RETENTION_CLEANUP_SECRET || "", // NUXT_AI_RETENTION_CLEANUP_SECRET

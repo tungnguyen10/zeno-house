@@ -23,12 +23,35 @@ function requestId(event: H3Event): string {
 
 function conflictForPlan(plan: AiActionPlan): never {
   const expired = plan.status === 'expired' || Date.parse(plan.expiresAt) <= Date.now()
-  throwAgentError(409, 'CONFLICT', expired ? 'Kế hoạch thao tác đã hết hạn.' : 'Kế hoạch thao tác không còn khả dụng.', {
-    category: expired ? 'ACTION_EXPIRED' : 'ACTION_NOT_EXECUTABLE',
-    retryable: expired,
+  const recovering = plan.status === 'executing'
+  const retryAfterSeconds = recovering && plan.executionLeaseUntil
+    ? Math.max(1, Math.ceil((Date.parse(plan.executionLeaseUntil) - Date.now()) / 1000))
+    : undefined
+  throwAgentError(409, 'CONFLICT', expired
+    ? 'Kế hoạch thao tác đã hết hạn.'
+    : recovering ? 'Thao tác đang được xử lý. Vui lòng thử lại sau.' : 'Kế hoạch thao tác không còn khả dụng.', {
+    category: expired ? 'ACTION_EXPIRED' : recovering ? 'ACTION_RECOVERY_PENDING' : 'ACTION_NOT_EXECUTABLE',
+    retryable: expired || recovering,
+    actionPlanId: plan.id,
+    conversationId: plan.conversationId,
+    ...(retryAfterSeconds !== undefined && { retryAfterSeconds }),
+  })
+}
+
+function recoveryPending(plan: AiActionPlan, retryAfterSeconds: number): never {
+  throwAgentError(409, 'CONFLICT', 'Kết quả thao tác đang được đối soát. Vui lòng thử lại sau.', {
+    category: 'ACTION_RECOVERY_PENDING',
+    retryable: true,
+    retryAfterSeconds,
     actionPlanId: plan.id,
     conversationId: plan.conversationId,
   })
+}
+
+function statusCodeOf(error: unknown): number | null {
+  if (!error || typeof error !== 'object') return null
+  const statusCode = (error as { statusCode?: unknown }).statusCode
+  return typeof statusCode === 'number' ? statusCode : null
 }
 
 export const AiActionService = {
@@ -87,7 +110,19 @@ export const AiActionService = {
       })
       return { plan: existing, replayed: true }
     }
-    if (existing.status !== 'pending' || Date.parse(existing.expiresAt) <= Date.now()) conflictForPlan(existing)
+    if (!['pending', 'executing'].includes(existing.status) || Date.parse(existing.expiresAt) <= Date.now()) {
+      conflictForPlan(existing)
+    }
+
+    if (hashAgentPayload(existing.normalizedPayload, existing.resourceVersions) !== existing.payloadHash) {
+      const failure = { category: 'OPTIMISTIC_LOCK_CONFLICT' as const, retryable: false }
+      await AiActionPlanRepository.markStale(event, existing.id, user.id, failure)
+      throwAgentError(409, 'CONFLICT', 'Nội dung kế hoạch không còn toàn vẹn. Vui lòng tạo lại kế hoạch.', {
+        ...failure,
+        actionPlanId: existing.id,
+        conversationId: existing.conversationId,
+      })
+    }
 
     const executor = executors[existing.actionType]
     if (!executor) {
@@ -105,7 +140,8 @@ export const AiActionService = {
     if (!can(user, executor.requiredCapability)) throwForbidden('Không có quyền xác nhận thao tác này')
     if (existing.buildingId) await assertBuildingScope(event, user, existing.buildingId, 'write')
 
-    const claimed = await AiActionPlanRepository.claim(event, existing.id, user.id)
+    const leaseSeconds = runtimePolicy.actionLeaseSeconds ?? 30
+    const claimed = await AiActionPlanRepository.claim(event, existing.id, user.id, leaseSeconds)
     if (!claimed) {
       const current = await AiActionPlanRepository.findOwnedById(event, existing.id, user.id)
       if (!current) throwNotFound('Không tìm thấy kế hoạch thao tác')
@@ -115,23 +151,17 @@ export const AiActionService = {
 
     const context = { event, user, plan: claimed, idempotencyKey: claimed.idempotencyKey }
     const startedAt = Date.now()
+    let result: unknown
     try {
       await executor.revalidate?.(context)
-      const result = await executor.execute(context)
-      const completed = await AiActionPlanRepository.complete(event, claimed.id, user.id, result)
-      if (!completed) throw new Error('Action plan completion compare-and-set failed')
-      emitAiTelemetry(event, {
-        event: 'ai.action', requestId: requestId(event), conversationId: claimed.conversationId,
-        actionPlanId: claimed.id, actionType: claimed.actionType, outcome: 'succeeded', durationMs: Date.now() - startedAt,
-      })
-      return { plan: completed, replayed: false }
+      result = await executor.execute(context)
     }
     catch (error) {
       const agentDetails = readAgentErrorDetails(error)
       if (agentDetails?.category === 'OPTIMISTIC_LOCK_CONFLICT') {
         await AiActionPlanRepository.markStale(event, claimed.id, user.id, normalizeAgentFailure(error))
       }
-      else {
+      else if (agentDetails?.category === 'TOOL_VALIDATION' || (statusCodeOf(error) ?? 500) < 500) {
         await AiActionPlanRepository.fail(event, claimed.id, user.id, normalizeAgentFailure(error))
       }
       emitAiTelemetry(event, {
@@ -140,7 +170,30 @@ export const AiActionService = {
         durationMs: Date.now() - startedAt,
         errorCategory: agentDetails?.category ?? 'INTERNAL_TOOL_FAILURE',
       })
-      throw error
+      if (agentDetails?.category === 'OPTIMISTIC_LOCK_CONFLICT' || agentDetails?.category === 'TOOL_VALIDATION' || (statusCodeOf(error) ?? 500) < 500) {
+        throw error
+      }
+      recoveryPending(claimed, leaseSeconds)
+    }
+
+    try {
+      const completed = await AiActionPlanRepository.complete(event, claimed.id, user.id, result)
+      if (!completed) recoveryPending(claimed, leaseSeconds)
+      emitAiTelemetry(event, {
+        event: 'ai.action', requestId: requestId(event), conversationId: claimed.conversationId,
+        actionPlanId: claimed.id, actionType: claimed.actionType, outcome: 'succeeded', durationMs: Date.now() - startedAt,
+      })
+      return { plan: completed, replayed: false }
+    }
+    catch (error) {
+      const agentDetails = readAgentErrorDetails(error)
+      if (agentDetails?.category === 'ACTION_RECOVERY_PENDING') throw error
+      emitAiTelemetry(event, {
+        event: 'ai.action', requestId: requestId(event), conversationId: claimed.conversationId,
+        actionPlanId: claimed.id, actionType: claimed.actionType, outcome: 'failed',
+        durationMs: Date.now() - startedAt, errorCategory: 'ACTION_RECOVERY_PENDING',
+      })
+      recoveryPending(claimed, leaseSeconds)
     }
   },
 
