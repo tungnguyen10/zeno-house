@@ -33,7 +33,7 @@ function isMeterLine(line: InvoiceCharge): boolean {
 
 <template>
   <article
-    class="invoice-card group/card relative box-border flex h-auto min-h-[132mm] flex-col overflow-hidden rounded-[2.5mm] border border-slate-200 bg-white pb-[3mm] font-sans text-[8pt] leading-[1.35] text-slate-900 shadow-[0_1px_2px_0_rgba(15,23,42,0.04),0_1px_0_0_rgba(15,23,42,0.02)] [print-color-adjust:exact] [-webkit-print-color-adjust:exact] sm:h-[132mm] sm:min-h-0"
+    class="invoice-card group/card relative box-border flex h-auto min-h-[132mm] flex-col rounded-[2.5mm] border border-slate-200 bg-white pb-[3mm] font-sans text-[8pt] leading-[1.35] text-slate-900 shadow-[0_1px_2px_0_rgba(15,23,42,0.04),0_1px_0_0_rgba(15,23,42,0.02)] [print-color-adjust:exact] [-webkit-print-color-adjust:exact]"
   >
     <!-- Card header (shadcn Card + CardHeader vibe) -->
     <header
@@ -100,7 +100,7 @@ function isMeterLine(line: InvoiceCharge): boolean {
     <div role="separator" aria-hidden="true" class="h-px w-full shrink-0 bg-slate-200" />
 
     <!-- Table + summary (shadcn Table styling: bordered rows, muted-foreground heads) -->
-    <div class="invoice-table-wrap flex min-h-0 flex-1 flex-col px-[6mm] pt-[2mm] sm:px-[7mm]">
+    <div class="invoice-table-wrap flex flex-col px-[6mm] pt-[2mm] sm:px-[7mm]">
       <table
         class="invoice-table w-full table-fixed caption-bottom border-collapse [&_tbody_tr:last-child_td]:border-b-0 [&_td]:border-b [&_td]:border-slate-100 [&_td]:px-[1.4mm] [&_td]:py-[1.1mm] [&_td]:align-middle [&_td]:text-[7.3pt] [&_th]:border-b [&_th]:border-slate-200 [&_th]:bg-transparent [&_th]:px-[1.4mm] [&_th]:pb-[1.2mm] [&_th]:pt-[.4mm] [&_th]:align-bottom [&_th]:text-[6.3pt] [&_th]:font-medium [&_th]:uppercase [&_th]:leading-[1.15] [&_th]:tracking-[.08em] [&_th]:text-slate-500"
       >

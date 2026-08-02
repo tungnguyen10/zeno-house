@@ -24,6 +24,7 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./tests/setup.ts'],
     root,
+    exclude: ['**/node_modules/**', '.worktrees/**'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html'],
