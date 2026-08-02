@@ -38,7 +38,7 @@ export async function verifyConfiguredModels({
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   verifyConfiguredModels()
     .then(({ primary, fallback }) => {
-      console.log(`Verified zero-cost AI routing: ${primary} -> ${fallback}`)
+      process.stdout.write(`Verified zero-cost AI routing: ${primary} -> ${fallback}\n`)
     })
     .catch((error) => {
       console.error(error instanceof Error ? error.message : 'AI model verification failed.')
