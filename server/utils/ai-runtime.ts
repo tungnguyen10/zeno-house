@@ -15,6 +15,8 @@ export interface AiRuntimePolicy {
   rateWindowSeconds: number
   circuitFailureThreshold: number
   circuitCooldownMs: number
+  globalDailyLimit: number
+  actionLeaseSeconds: number
   retentionCleanupEnabled: boolean
   retentionCleanupBatchSize: number
 }
@@ -49,6 +51,8 @@ export function resolveAiRuntimePolicy(runtime: ReturnType<typeof useRuntimeConf
     rateWindowSeconds: boundedNumber(runtime.aiRateWindowSeconds, 60, 10, 3_600),
     circuitFailureThreshold: boundedNumber(runtime.aiCircuitFailureThreshold, 5, 1, 100),
     circuitCooldownMs: boundedNumber(runtime.aiCircuitCooldownMs, 60_000, 1_000, 900_000),
+    globalDailyLimit: boundedNumber(runtime.aiGlobalDailyLimit, 40, 1, 10_000),
+    actionLeaseSeconds: boundedNumber(runtime.aiActionLeaseSeconds, 30, 5, 300),
     retentionCleanupEnabled: booleanValue(runtime.aiRetentionCleanupEnabled, true),
     retentionCleanupBatchSize: boundedNumber(runtime.aiRetentionCleanupBatchSize, 500, 1, 5_000),
   }

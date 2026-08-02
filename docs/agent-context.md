@@ -66,7 +66,7 @@ Implemented AI foundation surfaces:
 - `server/repositories/ai/**`
 - `app/types/ai.ts`, `app/utils/mappers/ai.ts`, `app/utils/validators/ai.ts`
 
-Current maturity: server-owned foundation plus scoped period opening, deterministic meter import/correction, read-only draft explanation, utility override, invoice issue, and invoice correction plan/confirm paths. Private server kill switches, distributed user rate limits, provider timeout/circuit controls, prompt-injection regressions, and scheduled retention cleanup are implemented and remotely verified. All four sequential AI changes are archived; production flags remain off until an explicit rollout decision.
+Current maturity: server-owned foundation plus scoped period opening, deterministic meter import/correction, read-only draft explanation, utility override, invoice issue, and invoice correction plan/confirm paths. Private kill switches, free-only OpenRouter primary/fallback routing, bounded atomic chat turns, distributed user/global limits and circuit state, leased action recovery, prompt-injection regressions, and scheduled retention cleanup are implemented in source. The hardening migration and live staging checks remain explicit rollout steps; production flags stay off until they pass.
 
 ## Core Architecture Invariants
 

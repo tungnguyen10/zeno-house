@@ -2,17 +2,18 @@ import { describe, expect, it } from 'vitest'
 import type { AuthUser } from '~/types/auth'
 import { AI_TOOL_POLICIES, allowedAiToolNames } from '../../../server/services/ai/tools'
 
-function user(role: 'admin' | 'owner' | 'manager' | null): AuthUser {
+function user(role: 'admin' | 'owner' | 'manager' | 'tenant' | null): AuthUser {
   return { id: 'user-1', app_metadata: { role } } as AuthUser
 }
 
 describe('AI tool policy', () => {
   it('is deny-by-default for users without a role', () => {
     expect(allowedAiToolNames(user(null))).toEqual([])
+    expect(allowedAiToolNames(user('tenant'))).toEqual([])
   })
 
-  it('exposes accepted read and planning tools to an authorized role', () => {
-    expect(allowedAiToolNames(user('manager'))).toEqual([
+  it.each(['admin', 'owner', 'manager'] as const)('exposes accepted tools to %s', (role) => {
+    expect(allowedAiToolNames(user(role))).toEqual([
       'get_user_context',
       'list_buildings',
       'get_meter_status',
@@ -27,6 +28,9 @@ describe('AI tool policy', () => {
       'plan_reissue_invoice',
       'plan_paid_invoice_adjustment',
     ])
+  })
+
+  it('keeps the registry limited to explicit planning tools', () => {
     expect(AI_TOOL_POLICIES.filter(policy => policy.mode === 'plan').map(policy => policy.name))
       .toEqual([
         'plan_open_billing_period', 'preview_meter_import', 'plan_meter_reading_update',

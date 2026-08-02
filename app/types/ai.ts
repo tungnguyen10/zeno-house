@@ -15,6 +15,7 @@ export type AgentErrorCategory =
   | 'CONFIRMATION_REQUIRED'
   | 'ACTION_EXPIRED'
   | 'ACTION_NOT_EXECUTABLE'
+  | 'ACTION_RECOVERY_PENDING'
   | 'IDEMPOTENCY_REPLAY'
   | 'OPTIMISTIC_LOCK_CONFLICT'
   | 'LOOP_LIMIT_EXCEEDED'
@@ -28,6 +29,7 @@ export interface AgentErrorDetails {
   conversationId?: string
   requestId?: string
   details?: unknown
+  retryAfterSeconds?: number
 }
 
 export interface AiConversation {
@@ -70,6 +72,7 @@ export interface AiActionPlan {
   expiresAt: string
   confirmedAt: string | null
   executedAt: string | null
+  executionLeaseUntil?: string | null
   createdAt: string
   updatedAt: string
 }
@@ -195,4 +198,12 @@ export type AiStreamEvent =
   | { type: 'tool-status'; tool: string; status: 'started' | 'succeeded' | 'failed'; durationMs?: number }
   | { type: 'action-plan'; plan: AiActionPlanDto }
   | { type: 'error'; error: { code: string; message: string; details?: unknown } }
-  | { type: 'done'; conversationId: string; requestId: string; model: string; provider: string }
+  | {
+    type: 'done'
+    conversationId: string
+    requestId: string
+    model: string
+    requestedModel: string
+    fallbackUsed: boolean
+    provider: string
+  }

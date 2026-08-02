@@ -115,7 +115,7 @@ describe('AI invoice executors', () => {
     }), { correlationId: adjustmentPlan.idempotencyKey })
   })
 
-  it('preserves the stored void correlation when reissuing', async () => {
+  it('uses the action-plan idempotency key when reissuing', async () => {
     const response = draftResponse()
     const hash = hashAgentPayload(buildInvoiceIssueSnapshot(response, [contractId], null), {})
     const invoice = buildInvoice({ id: invoiceId, contractId, billingPeriodId: periodId, status: 'void' })
@@ -131,7 +131,7 @@ describe('AI invoice executors', () => {
     await REISSUE_INVOICE_EXECUTOR.revalidate?.(context)
     await REISSUE_INVOICE_EXECUTOR.execute(context)
     expect(reissueInvoice).toHaveBeenCalledWith(expect.anything(), user, invoiceId, expect.any(Object), {
-      correlationId: '00000000-0000-4000-8000-000000000088',
+      correlationId: action.idempotencyKey,
     })
   })
 })

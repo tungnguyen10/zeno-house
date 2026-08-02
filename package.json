@@ -11,6 +11,7 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "check:patterns": "node scripts/check-error-patterns.mjs",
+    "verify:ai-models": "node scripts/verify-ai-models.mjs",
     "typecheck": "nuxt typecheck",
     "prepare": "husky",
     "test": "vitest run",

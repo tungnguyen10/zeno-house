@@ -3,7 +3,7 @@ import type { AiActionPlan } from '~/types/ai'
 import type { AuthUser } from '~/types/auth'
 import { AiActionService } from '../../../server/services/ai/actions'
 import type { AiActionExecutorRegistry } from '../../../server/services/ai/executors'
-import { throwAgentError } from '../../../server/utils/ai'
+import { hashAgentPayload, throwAgentError } from '../../../server/utils/ai'
 
 const mocks = vi.hoisted(() => ({
   findPlan: vi.fn(),
@@ -44,6 +44,8 @@ const event = {} as never
 const actor = { id: '00000000-0000-4000-8000-000000000001', app_metadata: { role: 'owner' } } as AuthUser
 
 function plan(overrides: Partial<AiActionPlan> = {}): AiActionPlan {
+  const normalizedPayload = overrides.normalizedPayload ?? { value: 1 }
+  const resourceVersions = overrides.resourceVersions ?? { row: 'v1' }
   return {
     id: '00000000-0000-4000-8000-000000000002',
     conversationId: '00000000-0000-4000-8000-000000000003',
@@ -52,11 +54,11 @@ function plan(overrides: Partial<AiActionPlan> = {}): AiActionPlan {
     actionType: 'test_mutation',
     title: 'Test mutation',
     summary: 'Preview only',
-    normalizedPayload: { value: 1 },
-    payloadHash: 'a'.repeat(64),
+    normalizedPayload,
+    payloadHash: hashAgentPayload(normalizedPayload, resourceVersions),
     preview: { value: 1 },
     warnings: [],
-    resourceVersions: { row: 'v1' },
+    resourceVersions,
     idempotencyKey: '00000000-0000-4000-8000-000000000005',
     status: 'pending',
     result: null,
@@ -76,7 +78,7 @@ function registry(execute = vi.fn().mockResolvedValue({ ok: true })): AiActionEx
 
 describe('AiActionService lifecycle', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
+    vi.resetAllMocks()
     vi.stubGlobal('getRequestHeader', vi.fn().mockReturnValue('request-1'))
     mocks.can.mockReturnValue(true)
     mocks.assertScope.mockResolvedValue(undefined)
@@ -116,6 +118,7 @@ describe('AiActionService lifecycle', () => {
     })
     expect(mocks.assertScope).toHaveBeenCalledWith(event, actor, pending.buildingId, 'write')
     expect(execute).toHaveBeenCalledOnce()
+    expect(mocks.claim).toHaveBeenCalledWith(event, pending.id, actor.id, 30)
     expect(execute.mock.calls[0]?.[0]).toMatchObject({ idempotencyKey: pending.idempotencyKey, plan: executing })
     expect(mocks.complete).toHaveBeenCalledWith(event, pending.id, actor.id, { ok: true })
   })
@@ -161,6 +164,75 @@ describe('AiActionService lifecycle', () => {
     await expect(AiActionService.confirm(event, actor, pending.id, registry(execute))).rejects.toMatchObject({ statusCode: 409 })
     expect(mocks.stale).toHaveBeenCalledWith(event, pending.id, actor.id, {
       category: 'OPTIMISTIC_LOCK_CONFLICT', retryable: true,
+    })
+    expect(mocks.fail).not.toHaveBeenCalled()
+  })
+
+  it('marks a tampered payload stale before claiming', async () => {
+    const tampered = plan({ payloadHash: '0'.repeat(64) })
+    mocks.findPlan.mockResolvedValue(tampered)
+    mocks.stale.mockResolvedValue(plan({ status: 'stale' }))
+
+    await expect(AiActionService.confirm(event, actor, tampered.id, registry())).rejects.toMatchObject({
+      statusCode: 409,
+      data: { error: { details: { category: 'OPTIMISTIC_LOCK_CONFLICT' } } },
+    })
+    expect(mocks.claim).not.toHaveBeenCalled()
+  })
+
+  it('rejects an executing plan while its lease is active', async () => {
+    const executing = plan({
+      status: 'executing',
+      executionLeaseUntil: new Date(Date.now() + 30_000).toISOString(),
+    })
+    mocks.findPlan.mockResolvedValue(executing)
+    mocks.claim.mockResolvedValue(null)
+    await expect(AiActionService.confirm(event, actor, executing.id, registry())).rejects.toMatchObject({
+      statusCode: 409,
+      data: { error: { details: { category: 'ACTION_RECOVERY_PENDING', retryable: true } } },
+    })
+  })
+
+  it('reclaims an expired execution lease with the same idempotency key', async () => {
+    const expiredLease = plan({
+      status: 'executing',
+      executionLeaseUntil: new Date(Date.now() - 1_000).toISOString(),
+    })
+    const claimed = plan({ status: 'executing', executionLeaseUntil: new Date(Date.now() + 30_000).toISOString() })
+    const succeeded = plan({ status: 'succeeded', result: { ok: true } })
+    const execute = vi.fn().mockResolvedValue({ ok: true })
+    mocks.findPlan.mockResolvedValue(expiredLease)
+    mocks.claim.mockResolvedValue(claimed)
+    mocks.complete.mockResolvedValue(succeeded)
+
+    await expect(AiActionService.confirm(event, actor, expiredLease.id, registry(execute))).resolves.toEqual({
+      plan: succeeded, replayed: false,
+    })
+    expect(execute.mock.calls[0]?.[0].idempotencyKey).toBe(expiredLease.idempotencyKey)
+  })
+
+  it('leaves ambiguous executor failures executing for leased recovery', async () => {
+    const pending = plan()
+    const executing = plan({ status: 'executing' })
+    mocks.findPlan.mockResolvedValue(pending)
+    mocks.claim.mockResolvedValue(executing)
+    const execute = vi.fn().mockRejectedValue(new Error('connection dropped'))
+
+    await expect(AiActionService.confirm(event, actor, pending.id, registry(execute))).rejects.toBeTruthy()
+    expect(mocks.fail).not.toHaveBeenCalled()
+    expect(mocks.stale).not.toHaveBeenCalled()
+  })
+
+  it('leaves a committed action executing when plan completion fails', async () => {
+    const pending = plan()
+    const executing = plan({ status: 'executing' })
+    mocks.findPlan.mockResolvedValue(pending)
+    mocks.claim.mockResolvedValue(executing)
+    mocks.complete.mockRejectedValue(new Error('completion unavailable'))
+
+    await expect(AiActionService.confirm(event, actor, pending.id, registry())).rejects.toMatchObject({
+      statusCode: 409,
+      data: { error: { details: { category: 'ACTION_RECOVERY_PENDING', retryable: true } } },
     })
     expect(mocks.fail).not.toHaveBeenCalled()
   })

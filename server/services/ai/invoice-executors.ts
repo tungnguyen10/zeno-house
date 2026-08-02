@@ -92,14 +92,14 @@ export const REISSUE_INVOICE_EXECUTOR: AiActionExecutor = {
       stale(plan, 'Dự thảo phát hành lại đã thay đổi. Vui lòng tạo lại kế hoạch.')
     }
   },
-  async execute({ event, user, plan }) {
+  async execute({ event, user, plan, idempotencyKey }) {
     const payload = parseReissue(plan.normalizedPayload)
     return InvoiceService.reissueInvoice(event, user, payload.invoice_id, {
       reason: payload.reason,
       due_date: payload.due_date,
       notes: payload.notes,
       expected_updated_at: payload.expected_updated_at,
-    }, { correlationId: payload.correlation_id })
+    }, { correlationId: idempotencyKey })
   },
 }
 

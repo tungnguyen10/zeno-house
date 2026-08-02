@@ -63,10 +63,19 @@ export const AiActionPlanRepository = {
     return (data ?? []).map(mapAiActionPlan)
   },
 
-  async claim(event: H3Event, id: string, userId: string): Promise<AiActionPlan | null> {
-    const { data, error } = await db(event).rpc('claim_ai_action_plan', { p_plan_id: id, p_user_id: userId })
+  async claim(event: H3Event, id: string, userId: string, leaseSeconds: number): Promise<AiActionPlan | null> {
+    const client = db(event)
+    const rpc = client.rpc.bind(client) as unknown as (name: string, args: Record<string, unknown>) => Promise<{
+      data: unknown
+      error: { message: string } | null
+    }>
+    const { data, error } = await rpc('claim_ai_action_plan', {
+      p_plan_id: id,
+      p_user_id: userId,
+      p_lease_seconds: leaseSeconds,
+    })
     if (error) throwDbError(error, 'ai.actions.claim')
-    return firstPlan(data)
+    return firstPlan(data as AiActionPlanRow[] | null)
   },
 
   async cancel(event: H3Event, id: string, userId: string): Promise<AiActionPlan | null> {

@@ -1,10 +1,42 @@
 import type { H3Event } from 'h3'
 import type { AiConversation, AiMessage, AiMessageRole } from '~/types/ai'
 import type { Json } from '~/types/database.types'
-import { mapAiConversation, mapAiMessage } from '~/utils/mappers/ai'
+import { mapAiConversation, mapAiMessage, type AiConversationRow, type AiMessageRow } from '~/utils/mappers/ai'
 import { db } from '../../utils/db'
 
 export const AiConversationRepository = {
+  async beginTurn(event: H3Event, input: {
+    userId: string
+    conversationId?: string
+    content: string
+    historyLimit: number
+    expiresAt: string
+  }): Promise<{ conversation: AiConversation; userMessage: AiMessage; messages: AiMessage[] } | null> {
+    const client = db(event)
+    const rpc = client.rpc.bind(client) as unknown as (name: string, args: Record<string, unknown>) => Promise<{
+      data: unknown
+      error: { message: string } | null
+    }>
+    const { data, error } = await rpc('begin_ai_chat_turn', {
+      p_user_id: input.userId,
+      p_conversation_id: input.conversationId ?? null,
+      p_content: input.content,
+      p_history_limit: input.historyLimit,
+      p_expires_at: input.expiresAt,
+    })
+    if (error) throwDbError(error, 'ai.conversations.beginTurn')
+    if (!data || typeof data !== 'object' || Array.isArray(data)) return null
+    const result = data as { conversation?: unknown; user_message?: unknown; messages?: unknown }
+    if (!result.conversation || !result.user_message || !Array.isArray(result.messages)) {
+      throwInternal(new Error('Invalid AI chat turn result'), 'ai.conversations.beginTurn')
+    }
+    return {
+      conversation: mapAiConversation(result.conversation as AiConversationRow),
+      userMessage: mapAiMessage(result.user_message as AiMessageRow),
+      messages: result.messages.map(row => mapAiMessage(row as AiMessageRow)),
+    }
+  },
+
   async cleanupExpired(event: H3Event, limit: number): Promise<number> {
     const client = db(event)
     const { data, error } = await client.rpc('cleanup_expired_ai_conversations', { p_limit: limit })

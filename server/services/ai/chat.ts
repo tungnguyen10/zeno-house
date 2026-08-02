@@ -9,40 +9,18 @@ import { AiConversationService } from './conversations'
 import { buildAiTools } from './tools'
 import { emitAiTelemetry } from '../../utils/ai-telemetry'
 import { resolveAiRuntimePolicy } from '../../utils/ai-runtime'
-import {
-  assertAiProviderCircuitClosed,
-  recordAiProviderFailure,
-  recordAiProviderSuccess,
-} from '../../utils/ai-circuit'
 import { enforceAiRateLimit } from './rate-limit'
+import { AiProviderControlService } from './provider-controls'
+import { consumeAiPersistence, registerAiPersistence } from './persistence'
+import {
+  buildOpenRouterProviderOptions,
+  resolveAiProviderConfig,
+  resolveModelRoute,
+  selectBoundedHistory,
+  type AiProviderConfig,
+} from './provider'
 
-interface ProviderConfig {
-  provider: string
-  openrouterApiKey: string
-  googleApiKey: string
-  siteUrl: string
-  modelPrimary: string
-  maxSteps: number
-  maxOutputTokens: number
-  maxContextMessages: number
-}
-
-function resolveConfig(runtime: ReturnType<typeof useRuntimeConfig>): ProviderConfig {
-  const provider = (runtime.aiProvider as string) || 'openrouter'
-  const defaultModel = provider === 'google' ? 'gemini-2.0-flash' : 'meta-llama/llama-3.3-70b-instruct:free'
-  return {
-    provider,
-    openrouterApiKey: runtime.aiOpenrouterApiKey as string,
-    googleApiKey: runtime.aiGoogleApiKey as string,
-    siteUrl: (runtime.public?.siteUrl as string) || '',
-    modelPrimary: (runtime.aiModel as string) || defaultModel,
-    maxSteps: Number(runtime.aiMaxSteps ?? 8),
-    maxOutputTokens: Number(runtime.aiMaxOutputTokens ?? 1200),
-    maxContextMessages: Number(runtime.aiMaxContextMessages ?? 20),
-  }
-}
-
-function buildModel(config: ProviderConfig): LanguageModelV4 {
+function buildModel(config: AiProviderConfig): LanguageModelV4 {
   if (config.provider === 'google') {
     if (!config.googleApiKey) throw createError({ statusCode: 500, message: 'Thiếu cấu hình NUXT_AI_GOOGLE_API_KEY.' })
     return createGoogleGenerativeAI({ apiKey: config.googleApiKey })(config.modelPrimary)
@@ -105,6 +83,15 @@ function publicError(error: unknown): AiStreamEvent {
       },
     }
   }
+  if (lower.includes('no available model') || lower.includes('no available provider') || lower.includes('provider unavailable') || lower.includes('503')) {
+    return {
+      type: 'error',
+      error: {
+        code: 'PROVIDER_CAPACITY',
+        message: 'AI đang hết dung lượng miễn phí. Vui lòng thử lại sau.',
+      },
+    }
+  }
   return { type: 'error', error: { code: 'INTERNAL', message: 'Không thể hoàn tất phản hồi AI. Vui lòng thử lại.' } }
 }
 
@@ -125,7 +112,7 @@ export async function streamAiChat(
   if (!runtimePolicy.chatEnabled) {
     throw createError({ statusCode: 503, message: 'Trợ lý AI hiện đang tạm dừng.' })
   }
-  const config = resolveConfig(runtime)
+  const config = resolveAiProviderConfig(runtime, process.env.NODE_ENV === 'production')
   const requestId = getRequestHeader(event, 'x-request-id') ?? crypto.randomUUID()
   await enforceAiRateLimit(event, {
     userId: user.id,
@@ -133,23 +120,18 @@ export async function streamAiChat(
     requestId,
     policy: runtimePolicy,
   })
-  try {
-    assertAiProviderCircuitClosed(
-      config.provider,
-      runtimePolicy.circuitFailureThreshold,
-      runtimePolicy.circuitCooldownMs,
-    )
-  }
-  catch (error) {
-    emitAiTelemetry(event, {
-      event: 'ai.circuit', requestId, model: config.modelPrimary,
-      outcome: 'rejected', errorCategory: 'CIRCUIT_OPEN',
-    })
-    throw error
-  }
-  const conversation = await AiConversationService.resolve(event, user, input.id)
-  const userMessage = await AiConversationService.appendUserMessage(event, user, conversation, input.message)
-  const history = await AiConversationService.listMessages(event, user, conversation.id)
+  await AiProviderControlService.acquire(event, {
+    provider: config.provider,
+    dailyLimit: runtimePolicy.globalDailyLimit,
+    failureThreshold: runtimePolicy.circuitFailureThreshold,
+    cooldownMs: runtimePolicy.circuitCooldownMs,
+    requestId,
+  })
+  const { conversation, userMessage, messages: history } = await AiConversationService.beginTurn(event, user, {
+    conversationId: input.id,
+    content: input.message,
+    historyLimit: config.maxContextMessages,
+  })
   const tools = buildAiTools({
     event, user, conversationId: conversation.id, currentUserMessageId: userMessage.id, requestId,
     runtimePolicy,
@@ -157,61 +139,70 @@ export async function streamAiChat(
   const startedAt = Date.now()
 
   emitAiTelemetry(event, {
-    event: 'ai.request', requestId, conversationId: conversation.id, model: config.modelPrimary, outcome: 'started',
+    event: 'ai.request', requestId, conversationId: conversation.id, provider: config.provider,
+    model: config.modelPrimary, requestedModel: config.modelPrimary, fallbackUsed: false, outcome: 'started',
   })
 
   const result = streamText({
     model: buildModel(config),
     system: buildSystemPrompt(),
-    messages: history.slice(-config.maxContextMessages).map(message => ({ role: message.role, content: message.content })),
+    messages: selectBoundedHistory(
+      history.map(message => ({ role: message.role, content: message.content })),
+      { maxMessages: config.maxContextMessages, maxChars: config.maxContextChars },
+    ),
     ...(Object.keys(tools).length > 0 && { tools, stopWhen: isStepCount(config.maxSteps) }),
+    ...(config.provider === 'openrouter' && { providerOptions: buildOpenRouterProviderOptions(config) }),
     maxOutputTokens: config.maxOutputTokens,
     abortSignal: AbortSignal.timeout(runtimePolicy.providerTimeoutMs),
   })
 
   const [clientBranch, persistenceBranch] = result.stream.tee()
 
-  void (async () => {
-    let assistantText = ''
-    const toolNames = new Set<string>()
-    let failed = false
-    let aborted = false
-    const reader = persistenceBranch.getReader()
+  const persistencePromise = (async () => {
+    let providerOutcomeRecorded = false
     try {
-      while (true) {
-        const { done, value: part } = await reader.read()
-        if (done) break
-        if (part.type === 'text-delta') assistantText += part.text
-        else if (part.type === 'tool-call') toolNames.add(part.toolName)
-        else if (part.type === 'error' || part.type === 'abort') {
-          failed = true
-          if (part.type === 'abort') aborted = true
-        }
-      }
-      const persistedText = assistantText.trim() || (failed ? 'Không thể hoàn tất phản hồi AI.' : '(No response)')
+      const summary = await consumeAiPersistence(persistenceBranch)
+      const response = await result.response
+      const route = resolveModelRoute(config, response.modelId)
+      await AiProviderControlService.record(event, {
+        provider: config.provider,
+        succeeded: !summary.failed,
+        failureThreshold: runtimePolicy.circuitFailureThreshold,
+      })
+      providerOutcomeRecorded = true
+      const persistedText = summary.text.trim() || (summary.failed ? 'Không thể hoàn tất phản hồi AI.' : '(No response)')
       await AiConversationService.appendAssistantMessage(event, user, conversation.id, persistedText, {
         requestId,
-        model: config.modelPrimary,
-        tools: [...toolNames],
-        failed,
+        model: route.selectedModel,
+        requestedModel: route.requestedModel,
+        fallbackUsed: route.fallbackUsed,
+        tools: summary.tools,
+        failed: summary.failed,
       })
-      if (failed) recordAiProviderFailure(config.provider, runtimePolicy.circuitFailureThreshold)
-      else recordAiProviderSuccess(config.provider)
       emitAiTelemetry(event, {
         event: 'ai.request', requestId, conversationId: conversation.id,
-        model: config.modelPrimary, outcome: failed ? 'failed' : 'succeeded', durationMs: Date.now() - startedAt,
-        ...(aborted && { errorCategory: 'PROVIDER_TIMEOUT' }),
+        provider: config.provider, model: route.selectedModel, requestedModel: route.requestedModel,
+        fallbackUsed: route.fallbackUsed, outcome: summary.failed ? 'failed' : 'succeeded', durationMs: Date.now() - startedAt,
+        ...(summary.aborted && { errorCategory: 'PROVIDER_TIMEOUT' }),
       })
     }
     catch {
-      recordAiProviderFailure(config.provider, runtimePolicy.circuitFailureThreshold)
+      if (!providerOutcomeRecorded) {
+        await AiProviderControlService.record(event, {
+          provider: config.provider,
+          succeeded: false,
+          failureThreshold: runtimePolicy.circuitFailureThreshold,
+        }).catch(() => undefined)
+      }
       emitAiTelemetry(event, {
         event: 'ai.request', requestId, conversationId: conversation.id,
-        model: config.modelPrimary, outcome: 'failed', durationMs: Date.now() - startedAt,
+        provider: config.provider, model: config.modelPrimary, requestedModel: config.modelPrimary,
+        fallbackUsed: false, outcome: 'failed', durationMs: Date.now() - startedAt,
         errorCategory: 'INTERNAL_TOOL_FAILURE',
       })
     }
   })()
+  registerAiPersistence(event, persistencePromise)
 
   const callStartedAt = new Map<string, number>()
   const responseStream = new ReadableStream<Uint8Array>({
@@ -248,8 +239,11 @@ export async function streamAiChat(
             controller.enqueue(encodeSse(publicError(part.error)))
           }
         }
+        const response = await result.response
+        const route = resolveModelRoute(config, response.modelId)
         controller.enqueue(encodeSse({
-          type: 'done', conversationId: conversation.id, requestId, model: config.modelPrimary, provider: config.provider,
+          type: 'done', conversationId: conversation.id, requestId, model: route.selectedModel,
+          requestedModel: route.requestedModel, fallbackUsed: route.fallbackUsed, provider: config.provider,
         }))
       }
       catch (error) {
@@ -266,7 +260,7 @@ export async function streamAiChat(
       'Content-Type': 'text/event-stream; charset=utf-8',
       'Cache-Control': 'no-cache, no-transform',
       'X-Accel-Buffering': 'no',
-      'X-AI-Model': config.modelPrimary,
+      'X-AI-Requested-Model': config.modelPrimary,
       'X-Conversation-Id': conversation.id,
       'X-Request-Id': requestId,
     },

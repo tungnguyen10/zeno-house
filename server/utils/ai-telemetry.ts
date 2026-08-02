@@ -9,7 +9,10 @@ interface AiTelemetryEvent {
   toolName?: string
   actionPlanId?: string
   actionType?: string
+  provider?: string
   model?: string
+  requestedModel?: string
+  fallbackUsed?: boolean
   errorCategory?: string
 }
 
