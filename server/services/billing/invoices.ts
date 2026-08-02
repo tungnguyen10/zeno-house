@@ -334,4 +334,20 @@ export const InvoiceService = {
     const [enriched] = await new BillingDisplayResolver(event).enrichInvoices([updated])
     return { invoice: enriched ?? updated, charge }
   },
+
+  async refreshProfileSnapshot(
+    event: H3Event,
+    user: AuthUser,
+    invoiceId: string,
+  ): Promise<InvoiceWithCharges> {
+    if (!can(user, 'billing.corrections')) throwForbidden('Không có quyền cập nhật thông tin thanh toán')
+    const invoice = await InvoiceRepository.findByIdentifier(event, invoiceId)
+    if (!invoice) throwNotFound('Không tìm thấy hoá đơn')
+    const period = await BillingPeriodRepository.findById(event, invoice.billingPeriodId)
+    if (!period) throwNotFound('Không tìm thấy kỳ vận hành')
+    await assertBuildingScope(event, user, period.buildingId, 'write')
+    const refreshed = await BuildingInvoiceProfileRepository.refreshInvoiceSnapshot(event, invoice.id)
+    if (!refreshed) throwNotFound('Không tìm thấy hồ sơ thanh toán của tòa nhà')
+    return this.getWithCharges(event, user, invoiceId)
+  },
 }

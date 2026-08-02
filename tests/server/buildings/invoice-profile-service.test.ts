@@ -161,7 +161,7 @@ describe('BuildingInvoiceProfileService', () => {
 
     expect(uploadAsset).not.toHaveBeenCalled()
     expect(saveProfile).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
-      qrImagePath: null,
+      qrImagePath: row.qr_image_path,
       logoImagePath: null,
       removeLogo: true,
     }))
@@ -175,7 +175,7 @@ describe('BuildingInvoiceProfileService', () => {
 
     await expect(BuildingInvoiceProfileService.save(
       { context: {} } as never, owner, 'zeno', { fields, qrImage: qr, removeLogo: false },
-    )).rejects.toThrow('db failed')
+    )).rejects.toMatchObject({ statusCode: 500 })
     expect(removeAssets).toHaveBeenCalledWith(expect.anything(), ['building-1/qr/new.webp'])
     expect(removeAssets).not.toHaveBeenCalledWith(expect.anything(), [row.qr_image_path])
   })
@@ -190,7 +190,8 @@ describe('BuildingInvoiceProfileService', () => {
       { context: {} } as never, owner, 'zeno', { fields, qrImage: qr, removeLogo: false },
     )).rejects.toThrow('signing failed')
     expect(saveProfile).toHaveBeenCalled()
-    expect(removeAssets).not.toHaveBeenCalled()
+    // New file is retained (DB already references it); only the superseded old QR may be cleaned.
+    expect(removeAssets).not.toHaveBeenCalledWith(expect.anything(), expect.arrayContaining(['building-1/qr/new.webp']))
   })
 
   it('falls back to direct persistence when the invoice-profile RPC is unavailable', async () => {

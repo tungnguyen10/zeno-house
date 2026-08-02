@@ -179,7 +179,9 @@ export const BuildingInvoiceProfileRepository = {
       p_logo_image_path: input.logoImagePath,
       p_remove_logo: input.removeLogo,
     })
-    if (error) throwDbError(error, 'buildingInvoiceProfile.saveWithLegacyBackfill')
+    // Re-throw the raw Supabase error so the service-layer caller can inspect
+    // the error code/message before deciding to fall back to saveDirect.
+    if (error) throw error
     const result = data as unknown as { profile?: BuildingInvoiceProfileRow; backfilled_count?: number }
     if (!result.profile) {
       throwInternal(new Error('Profile RPC returned no profile'), 'buildingInvoiceProfile.saveWithLegacyBackfill')
@@ -296,5 +298,49 @@ export const BuildingInvoiceProfileRepository = {
       data: Buffer.from(await data.arrayBuffer()),
       contentType: data.type,
     }
+  },
+
+  async refreshInvoiceSnapshot(event: H3Event, invoiceId: string): Promise<boolean> {
+    const { data: raw, error: fetchError } = await client(event)
+      .from('invoices')
+      .select('id, invoice_code, issued_at, created_at, billing_periods!inner(building_id, period_year, period_month), rooms!inner(room_number)' as '*')
+      .eq('id', invoiceId)
+      .maybeSingle()
+    if (fetchError) throwDbError(fetchError, 'buildingInvoiceProfile.refreshSnapshot.invoice')
+    if (!raw) return false
+
+    const row = raw as unknown as BackfillInvoiceRow
+    const period = relationRow(row.billing_periods)
+    if (!period) return false
+
+    const [profileRow, buildingResult] = await Promise.all([
+      this.findByBuildingId(event, period.building_id),
+      serverSupabaseClient(event)
+        .from('buildings')
+        .select('code')
+        .eq('id', period.building_id)
+        .maybeSingle(),
+    ])
+    if (!profileRow) return false
+    if (buildingResult.error) throwDbError(buildingResult.error, 'buildingInvoiceProfile.refreshSnapshot.building')
+    const buildingCode = (buildingResult.data as unknown as { code: string } | null)?.code ?? ''
+
+    const snapshot = invoiceSnapshot(row, {
+      buildingId: period.building_id,
+      buildingCode,
+      bankName: profileRow.bank_name,
+      accountHolder: profileRow.account_holder,
+      accountNumber: profileRow.account_number,
+      transferContentTemplate: profileRow.transfer_content_template,
+      qrImagePath: profileRow.qr_image_path,
+      logoImagePath: profileRow.logo_image_path,
+    })
+
+    const { error: updateError } = await client(event)
+      .from('invoices')
+      .update({ invoice_profile_snapshot: snapshot } as never)
+      .eq('id', invoiceId)
+    if (updateError) throwDbError(updateError, 'buildingInvoiceProfile.refreshSnapshot.update')
+    return true
   },
 }

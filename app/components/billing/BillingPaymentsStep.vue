@@ -25,7 +25,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{ reload: [] }>()
 
-const { load, recordPayment, recordBulkPayments, voidInvoice, listPayments } = useBillingInvoiceActions()
+const { load, recordPayment, recordBulkPayments, voidInvoice, listPayments, refreshProfileSnapshot } = useBillingInvoiceActions()
 const { openPrint } = useInvoicePrinting()
 const toast = useToast()
 const {
@@ -292,6 +292,23 @@ async function openDetail(inv: Invoice) {
 function closeDetail() {
   selectedInvoice.value = null
   detailError.value = null
+}
+
+const profileRefreshing = ref(false)
+
+async function refreshSnapshot() {
+  if (!selectedInvoice.value) return
+  profileRefreshing.value = true
+  try {
+    selectedInvoice.value = await refreshProfileSnapshot(invoiceRouteSegment(selectedInvoice.value.invoice))
+    toast.success('Đã đồng bộ thông tin thanh toán')
+  }
+  catch (err) {
+    toast.error(getApiErrorMessage(err, 'Không thể đồng bộ thông tin thanh toán'))
+  }
+  finally {
+    profileRefreshing.value = false
+  }
 }
 
 // ---------- Record payment ----------
@@ -647,6 +664,16 @@ watch(
           </UiSection>
 
           <UiSection title="Thanh toán theo hóa đơn">
+            <template #actions>
+              <UiButton
+                variant="ghost"
+                size="sm"
+                :loading="profileRefreshing"
+                @click="refreshSnapshot"
+              >
+                Đồng bộ từ tòa nhà
+              </UiButton>
+            </template>
             <InvoicePaymentProfileCard :profile="selectedInvoice.invoiceProfile" />
           </UiSection>
 

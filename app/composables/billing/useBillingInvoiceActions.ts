@@ -90,6 +90,13 @@ export function useBillingInvoiceActions() {
     return resp.data
   }
 
+  async function refreshProfileSnapshot(invoiceId: string): Promise<InvoiceWithCharges> {
+    const resp = await apiFetch<ApiSuccess<InvoiceWithCharges>>(`/api/billing/invoices/${invoiceId}/profile-snapshot`, {
+      method: 'PATCH',
+    })
+    return resp.data
+  }
+
   return {
     createAdjustmentPayload,
     load,
@@ -99,5 +106,6 @@ export function useBillingInvoiceActions() {
     recordPayment,
     recordBulkPayments,
     listPayments,
+    refreshProfileSnapshot,
   }
 }

@@ -46,6 +46,12 @@ async function persistProfileWithFallback(
   input: SaveBuildingInvoiceProfile,
   uploadedPaths: { qrImagePath: string | null; logoImagePath: string | null },
 ): Promise<{ profile: Awaited<ReturnType<typeof BuildingInvoiceProfileRepository.findByBuildingId>>; backfilledCount: number }> {
+  // Resolve the QR path against the existing snapshot so an update that does not
+  // re-upload the QR never sends null into the NOT NULL qr_image_path column.
+  const resolvedQrImagePath = uploadedPaths.qrImagePath ?? existing?.qr_image_path ?? null
+  const resolvedLogoImagePath = input.removeLogo
+    ? null
+    : uploadedPaths.logoImagePath ?? existing?.logo_image_path ?? null
   try {
     return await BuildingInvoiceProfileRepository.saveWithLegacyBackfill(event, {
       buildingId: building.id,
@@ -54,13 +60,13 @@ async function persistProfileWithFallback(
       accountHolder: input.fields.account_holder,
       accountNumber: input.fields.account_number,
       transferContentTemplate: input.fields.transfer_content_template,
-      qrImagePath: uploadedPaths.qrImagePath,
-      logoImagePath: uploadedPaths.logoImagePath,
+      qrImagePath: resolvedQrImagePath,
+      logoImagePath: resolvedLogoImagePath,
       removeLogo: input.removeLogo,
     })
   }
   catch (error) {
-    if (!isMissingInvoiceProfileRpc(error)) throw error
+    if (!isMissingInvoiceProfileRpc(error)) throwDbError(error, 'buildingInvoiceProfile.saveWithLegacyBackfill')
 
     const qrImagePath = uploadedPaths.qrImagePath ?? existing?.qr_image_path
     if (!qrImagePath) {
@@ -165,9 +171,11 @@ export const BuildingInvoiceProfileService = {
     validateImage(input.logoImage, 'Logo tòa nhà')
 
     const uploadedPaths: string[] = []
+    let qrImagePath: string | null = null
+    let logoImagePath: string | null = null
     let saved: { profile: Awaited<ReturnType<typeof BuildingInvoiceProfileRepository.findByBuildingId>>; backfilledCount: number }
     try {
-      const qrImagePath = input.qrImage
+      qrImagePath = input.qrImage
         ? await BuildingInvoiceProfileRepository.uploadAsset(event, building.id, 'qr', {
             type: input.qrImage.type!,
             data: input.qrImage.data,
@@ -175,7 +183,7 @@ export const BuildingInvoiceProfileService = {
         : null
       if (qrImagePath) uploadedPaths.push(qrImagePath)
 
-      const logoImagePath = input.logoImage
+      logoImagePath = input.logoImage
         ? await BuildingInvoiceProfileRepository.uploadAsset(event, building.id, 'logo', {
             type: input.logoImage.type!,
             data: input.logoImage.data,
@@ -199,6 +207,19 @@ export const BuildingInvoiceProfileService = {
         }
       }
       throw error
+    }
+
+    // Best-effort removal of superseded Storage files after successful persistence.
+    const staleAssets: string[] = []
+    if (qrImagePath && existing?.qr_image_path && existing.qr_image_path !== qrImagePath) {
+      staleAssets.push(existing.qr_image_path)
+    }
+    if (existing?.logo_image_path) {
+      const logoReplaced = logoImagePath && existing.logo_image_path !== logoImagePath
+      if (logoReplaced || input.removeLogo) staleAssets.push(existing.logo_image_path)
+    }
+    if (staleAssets.length > 0) {
+      void Promise.resolve(BuildingInvoiceProfileRepository.removeAssets(event, staleAssets)).catch(() => {})
     }
 
     await AuditService.append(event, user, {
