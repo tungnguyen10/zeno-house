@@ -15,6 +15,7 @@ describe('billing audit summary formatter', () => {
       ['invoice.adjustment_created', { label: 'credit', amount: -50_000 }],
       ['payment.recorded', { amount: 50_000, payment_method: 'cash' }],
       ['payments.bulk_recorded', { count: 3 }],
+      ['payments.ai_recorded', { count: 2, total_amount: 1_750_000 }],
       ['invoice.issue_attempted', { blocked_count: 1 }],
     ]
 

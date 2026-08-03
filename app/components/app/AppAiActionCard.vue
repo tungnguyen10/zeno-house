@@ -15,10 +15,12 @@ const isExpired = computed(() => {
 })
 const invoiceAction = computed(() => [
   'issue_invoices',
+  'record_invoice_payments',
   'void_invoice',
   'reissue_invoice',
   'add_invoice_adjustment',
 ].includes(props.plan.actionType))
+const paymentAction = computed(() => props.plan.actionType === 'record_invoice_payments')
 
 function previewNumber(key: string): number | null {
   const value = props.plan.preview[key]
@@ -27,7 +29,9 @@ function previewNumber(key: string): number | null {
 
 const financialRows = computed(() => {
   const rows: Array<{ label: string; value: string }> = []
-  const fields = props.plan.actionType === 'issue_invoices'
+  const fields = props.plan.actionType === 'record_invoice_payments'
+    ? [['Tổng phòng', 'eligibleCount'], ['Tổng ghi thu', 'totalAmount']]
+    : props.plan.actionType === 'issue_invoices'
     ? [['Tổng phát hành', 'totalAmount'], ['Số hoá đơn', 'issuableCount']]
     : props.plan.actionType === 'void_invoice'
       ? [['Giá trị huỷ', 'total_amount']]
@@ -39,10 +43,42 @@ const financialRows = computed(() => {
     if (value === null) continue
     rows.push({
       label: label!,
-      value: key === 'issuableCount' ? String(value) : formatCurrency(value),
+      value: ['issuableCount', 'eligibleCount'].includes(key!) ? String(value) : formatCurrency(value),
     })
   }
   return rows
+})
+
+function previewString(key: string): string | null {
+  const value = props.plan.preview[key]
+  return typeof value === 'string' && value.length > 0 ? value : null
+}
+
+function displayDate(value: string | null): string {
+  if (!value) return '—'
+  const [year, month, day] = value.split('-')
+  return year && month && day ? `${day}/${month}/${year}` : value
+}
+
+function displayPaymentMethod(value: string | null): string {
+  if (!value) return '—'
+  if (value === 'cash') return 'Tiền mặt'
+  if (value === 'bank_transfer') return 'Chuyển khoản'
+  return value
+}
+
+const paymentRows = computed(() => {
+  const value = props.plan.preview.eligible
+  if (!Array.isArray(value)) return []
+  return value.flatMap((item) => {
+    if (!item || typeof item !== 'object') return []
+    const row = item as Record<string, unknown>
+    return [{
+      roomNumber: typeof row.roomNumber === 'string' ? row.roomNumber : '—',
+      invoiceCode: typeof row.invoiceCode === 'string' ? row.invoiceCode : '—',
+      amount: typeof row.amountToCollect === 'number' ? row.amountToCollect : 0,
+    }]
+  })
 })
 </script>
 
@@ -63,9 +99,27 @@ const financialRows = computed(() => {
         <p class="text-[10px] uppercase tracking-wide text-muted">{{ row.label }}</p>
         <p class="mt-0.5 font-semibold tabular-nums text-white">{{ row.value }}</p>
       </div>
+      <div v-if="paymentAction" class="bg-dark-deep px-3 py-2">
+        <p class="text-[10px] uppercase tracking-wide text-muted">Ngày thu</p>
+        <p class="mt-0.5 font-semibold tabular-nums text-white">{{ displayDate(previewString('paymentDate')) }}</p>
+      </div>
+      <div v-if="paymentAction" class="bg-dark-deep px-3 py-2">
+        <p class="text-[10px] uppercase tracking-wide text-muted">Phương thức</p>
+        <p class="mt-0.5 font-semibold text-white">{{ displayPaymentMethod(previewString('paymentMethod')) }}</p>
+      </div>
     </div>
 
-    <pre v-else-if="Object.keys(plan.preview).length" class="mt-2 max-h-32 overflow-auto whitespace-pre-wrap rounded bg-dark-surface p-2 text-[11px] text-white/80">{{ JSON.stringify(plan.preview, null, 2) }}</pre>
+    <ul v-if="paymentAction && paymentRows.length" class="mt-3 divide-y divide-dark-border border-y border-dark-border" data-testid="invoice-payment-list">
+      <li v-for="row in paymentRows" :key="`${row.roomNumber}:${row.invoiceCode}`" class="flex items-center justify-between gap-3 py-2">
+        <span class="min-w-0">
+          <span class="font-medium text-white">Phòng {{ row.roomNumber }}</span>
+          <span class="ml-2 text-muted">{{ row.invoiceCode }}</span>
+        </span>
+        <span class="shrink-0 font-semibold tabular-nums text-white">{{ formatCurrency(row.amount) }}</span>
+      </li>
+    </ul>
+
+    <pre v-if="!invoiceAction && Object.keys(plan.preview).length" class="mt-2 max-h-32 overflow-auto whitespace-pre-wrap rounded bg-dark-surface p-2 text-[11px] text-white/80">{{ JSON.stringify(plan.preview, null, 2) }}</pre>
 
     <ul v-if="plan.warnings.length" class="mt-2 list-disc space-y-1 pl-4 text-amber-300">
       <li v-for="warning in plan.warnings" :key="warning">{{ warning }}</li>

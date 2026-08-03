@@ -14,6 +14,7 @@ import {
   aiToolPlanUtilityUsageOverrideSchema,
   aiToolPlanInvoiceIssueSchema,
   aiToolPlanPaidInvoiceAdjustmentSchema,
+  aiToolPlanRecordInvoicePaymentsSchema,
   aiToolPlanReissueInvoiceSchema,
   aiToolPlanVoidInvoiceSchema,
 } from '~/utils/validators/ai'
@@ -30,6 +31,7 @@ import { summarizeBillingDraft } from './draft-summary'
 import { AiUtilityOverridePlanner } from './utility-override-planner'
 import { AiInvoiceIssuePlanner } from './invoice-issue-planner'
 import { AiInvoiceCorrectionPlanner } from './invoice-correction-planner'
+import { AiInvoicePaymentPlanner } from './invoice-payment-planner'
 import type { AiRuntimePolicy } from '../../utils/ai-runtime'
 import { isAiToolRuntimeEnabled } from '../../utils/ai-runtime'
 
@@ -61,6 +63,7 @@ export const AI_TOOL_POLICIES = Object.freeze([
   { name: 'plan_meter_reading_update', mode: 'plan', requiredCapability: 'meter-readings.write' },
   { name: 'plan_utility_usage_override', mode: 'plan', requiredCapability: 'billing.write' },
   { name: 'plan_invoice_issue', mode: 'plan', requiredCapability: 'billing.write' },
+  { name: 'plan_record_invoice_payments', mode: 'plan', requiredCapability: 'billing.write' },
   { name: 'plan_void_invoice', mode: 'plan', requiredCapability: 'billing.corrections' },
   { name: 'plan_reissue_invoice', mode: 'plan', requiredCapability: 'billing.corrections' },
   { name: 'plan_paid_invoice_adjustment', mode: 'plan', requiredCapability: 'billing.corrections' },
@@ -195,6 +198,16 @@ export function buildAiTools(ctx: AiToolContext) {
         inputSchema: zodSchema(aiToolPlanInvoiceIssueSchema),
         execute: async args => runObserved(ctx, 'plan_invoice_issue', () =>
           AiInvoiceIssuePlanner.plan(ctx.event, ctx.user, ctx.conversationId, args)),
+      }),
+    } : {}),
+    ...(allowed.has('plan_record_invoice_payments') ? {
+      plan_record_invoice_payments: tool({
+        description: 'Plan full-balance collection for exact rooms or all unpaid rooms in one scoped building and period. Never accepts amounts or payment dates and never commits inside chat.',
+        inputSchema: zodSchema(aiToolPlanRecordInvoicePaymentsSchema),
+        execute: async args => runObserved(ctx, 'plan_record_invoice_payments', () =>
+          AiInvoicePaymentPlanner.plan(
+            ctx.event, ctx.user, ctx.conversationId, ctx.currentUserMessageId, args,
+          )),
       }),
     } : {}),
     ...(allowed.has('plan_void_invoice') ? {

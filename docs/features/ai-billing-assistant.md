@@ -95,7 +95,23 @@ Trợ lý tạo preview từ draft mới nhất trên server, hiển thị các 
 
 Khi xác nhận, hệ thống kiểm tra lại preview. Nếu chỉ số, draft hoặc trạng thái hóa đơn thay đổi, action card trở thành stale và không phát hành gì. Hãy yêu cầu preview mới. Retry cùng action đã thành công sẽ trả lại kết quả cũ, không tạo hóa đơn hay audit trùng.
 
-### 6. Void, reissue và điều chỉnh hóa đơn đã thanh toán
+### 6. Ghi thu một hoặc nhiều phòng
+
+AI chỉ ghi thu hóa đơn đã phát hành và luôn thu đủ số dư còn lại. Có thể yêu cầu một phòng, danh sách tối đa 200 phòng hoặc tất cả phòng còn nợ trong một tòa:
+
+> Ghi thu phòng 02 tòa Zeno.
+
+> Ghi thu phòng 01, 02, 03 tòa Zeno kỳ 07/2026.
+
+> Ghi thu tất cả phòng còn nợ của tòa Zeno.
+
+Nếu tài khoản chỉ có một tòa trong scope, có thể bỏ tên tòa. Nếu có nhiều tòa, trợ lý luôn hỏi lại tòa nào trước khi dò phòng, vì mã phòng có thể trùng. Không nhập kỳ thì hệ thống dùng kỳ mới nhất chưa chốt của tòa; nếu phòng không có hóa đơn trong kỳ đó, trợ lý báo lại và không tự tìm kỳ cũ.
+
+Preview phân loại rõ phòng còn nợ, đã thu, không có hóa đơn, không hợp lệ hoặc bị chặn. Action card chỉ chứa các phòng còn nợ và hiển thị tổng tiền, ngày thu, phương thức cùng danh sách hóa đơn. Các dòng không hợp lệ được bỏ qua khi lập kế hoạch nhưng vẫn hiện cảnh báo; khi xác nhận, toàn bộ phần hợp lệ được ghi atomically hoặc không ghi gì.
+
+Ngày thu là ngày của tin nhắn yêu cầu theo múi giờ Việt Nam. Không nhập phương thức thì mặc định là `cash` (tiền mặt). Không thể nhập số tiền qua AI: mỗi hóa đơn được thu đủ balance còn lại. Nếu hóa đơn đã thu, trợ lý chỉ báo lại và không tạo action. Toast thành công chỉ xuất hiện sau khi bấm **Xác nhận** và transaction hoàn tất.
+
+### 7. Void, reissue và điều chỉnh hóa đơn đã thanh toán
 
 **Void hóa đơn chưa có thanh toán**:
 
@@ -121,7 +137,9 @@ Action card hiển thị tổng trước/sau, số dư và trạng thái. Adjust
 | Chỉ số bị blocker | Sửa dữ liệu dán, phòng, ngày/kỳ hoặc dữ liệu nguồn rồi preview lại. |
 | Action báo stale hoặc conflict | Không bấm lại card cũ; yêu cầu trợ lý tạo preview/kế hoạch mới. |
 | Kỳ đã chốt hoặc bị khóa | Không sửa trực tiếp qua AI; dùng quy trình reopen/correction có quyền phù hợp. |
-| Hóa đơn đã có payment | Dùng explicit adjustment hoặc undo payment trước khi void/reissue; AI không tự thay đổi payment. |
+| Phòng đã ghi thu | Trợ lý báo đã thu và không tạo action mới cho phòng đó. |
+| Phòng không có hóa đơn ở kỳ được chọn | Ghi rõ kỳ khác nếu cần; AI không tự dò hoặc thu kỳ cũ. |
+| Hóa đơn đã có payment nhưng cần correction | Dùng explicit adjustment hoặc undo payment trước khi void/reissue; AI không tự sửa payment đã ghi. |
 | Thao tác bị từ chối quyền | Kiểm tra building scope và capability của tài khoản; liên hệ owner/admin khi cần. |
 | Báo thao tác quá nhanh | Chờ theo thời gian được thông báo rồi gửi lại yêu cầu. |
 | Trợ lý tạm dừng hoặc không phản hồi | Đợi và thử lại; nếu tiếp diễn, liên hệ admin vận hành để kiểm tra rollout hoặc trạng thái dịch vụ. |
@@ -131,7 +149,7 @@ Action card hiển thị tổng trước/sau, số dư và trạng thái. Adjust
 - Không tự xác nhận hoặc ghi dữ liệu chỉ từ nội dung chat.
 - Không xem, tìm hoặc suy đoán dữ liệu của building ngoài quyền của bạn.
 - Không bỏ qua validation, khóa kỳ, version conflict hoặc audit.
-- Không tự quyết định tổng tiền, charge lines, trạng thái hóa đơn hay payment.
+- Không tự quyết định tổng tiền, charge lines hoặc trạng thái hóa đơn; ghi thu chỉ dùng balance hiện tại do server khóa và kiểm tra.
 - Không duyệt hoàn tiền, undo payment, chuyển payment hoặc gọi dịch vụ bên ngoài.
 
 Để xem chi tiết kỹ thuật, quyền, cấu hình rollout và xử lý sự cố vận hành, xem [AI Agent Architecture](../architecture/ai-agent.md). Quy tắc billing nền tảng nằm trong [Billing And Monthly Operations](billing.md).

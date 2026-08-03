@@ -42,7 +42,41 @@ export interface BulkPaymentsResult {
   payments: InvoicePayment[]
 }
 
+export interface AiInvoicePaymentsInput {
+  periodId: string
+  payments: Array<{
+    invoiceId: string
+    roomId: string
+    expectedUpdatedAt: string
+    expectedBalanceAmount: number
+  }>
+  paymentDate: string
+  paymentMethod: string
+  note: string | null
+  correlationId: string
+}
+
 export const InvoicePaymentService = {
+  async recordAiBatch(event: H3Event, user: AuthUser, input: AiInvoicePaymentsInput) {
+    if (!can(user, 'billing.write')) throwForbidden('Không có quyền ghi nhận thanh toán')
+    const period = await BillingPeriodRepository.findById(event, input.periodId)
+    if (!period) throwNotFound('Không tìm thấy kỳ vận hành')
+    await assertBuildingScope(event, user, period.buildingId, 'write')
+    if (period.status === 'closed') throwConflict('Kỳ đã chốt — không thể ghi nhận thanh toán mới')
+
+    const result = await InvoicePaymentRepository.recordAiBatchWithAudit(event, {
+      ...input,
+      actorId: user.id,
+    })
+    const resolver = new BillingDisplayResolver(event)
+    const [payments, enrichedInvoices] = await Promise.all([
+      resolver.enrichPayments(result.payments),
+      resolver.enrichInvoices(result.invoices),
+    ])
+    invalidateOperationsReport(period.buildingId)
+    return { ...result, payments, invoices: enrichedInvoices }
+  },
+
   async list(event: H3Event, user: AuthUser, invoiceId: string): Promise<InvoicePayment[]> {
     if (!can(user, 'billing.read')) throwForbidden('Không có quyền xem khoản thu')
     const invoice = await InvoiceRepository.findByIdentifier(event, invoiceId)

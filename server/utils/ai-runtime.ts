@@ -9,6 +9,7 @@ export interface AiRuntimePolicy {
   invoiceVoidEnabled: boolean
   invoiceReissueEnabled: boolean
   invoiceAdjustmentEnabled: boolean
+  invoicePaymentEnabled: boolean
   providerTimeoutMs: number
   chatRateLimit: number
   actionRateLimit: number
@@ -45,6 +46,7 @@ export function resolveAiRuntimePolicy(runtime: ReturnType<typeof useRuntimeConf
     invoiceVoidEnabled: booleanValue(runtime.aiInvoiceVoidEnabled, false),
     invoiceReissueEnabled: booleanValue(runtime.aiInvoiceReissueEnabled, false),
     invoiceAdjustmentEnabled: booleanValue(runtime.aiInvoiceAdjustmentEnabled, false),
+    invoicePaymentEnabled: booleanValue(runtime.aiInvoicePaymentEnabled, false),
     providerTimeoutMs: boundedNumber(runtime.aiProviderTimeoutMs, 30_000, 1_000, 120_000),
     chatRateLimit: boundedNumber(runtime.aiChatRateLimit, 20, 1, 10_000),
     actionRateLimit: boundedNumber(runtime.aiActionRateLimit, 30, 1, 10_000),
@@ -67,6 +69,7 @@ const INVOICE_PLAN_FLAG: Record<string, keyof AiRuntimePolicy> = {
   plan_void_invoice: 'invoiceVoidEnabled',
   plan_reissue_invoice: 'invoiceReissueEnabled',
   plan_paid_invoice_adjustment: 'invoiceAdjustmentEnabled',
+  plan_record_invoice_payments: 'invoicePaymentEnabled',
 }
 
 const INVOICE_ACTION_FLAG: Record<string, keyof AiRuntimePolicy> = {
@@ -74,6 +77,7 @@ const INVOICE_ACTION_FLAG: Record<string, keyof AiRuntimePolicy> = {
   void_invoice: 'invoiceVoidEnabled',
   reissue_invoice: 'invoiceReissueEnabled',
   add_invoice_adjustment: 'invoiceAdjustmentEnabled',
+  record_invoice_payments: 'invoicePaymentEnabled',
 }
 
 export function isAiToolRuntimeEnabled(

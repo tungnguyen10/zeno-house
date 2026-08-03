@@ -136,7 +136,8 @@ export function formatAuditSummary(
       const method = stringValue(meta.payment_method)
       return `Ghi thu ${amount}${method ? ` bằng ${method}` : ''}`
     }
-    case 'payments.bulk_recorded': {
+    case 'payments.bulk_recorded':
+    case 'payments.ai_recorded': {
       const count = numberValue(meta.count) ?? numberValue(meta.payment_count) ?? 0
       const total = formatCurrency(meta.total_amount) ?? formatCurrency(meta.amount)
       return `Ghi thu hàng loạt ${count} khoản${total ? `, tổng ${total}` : ''}`

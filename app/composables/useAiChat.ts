@@ -1,5 +1,6 @@
 import type { AiActionPlanDto, AiConversationTranscript, AiStreamEvent } from '~/types/ai'
 import { getApiErrorCode, getApiErrorDetails, getApiErrorMessage } from '~/utils/api-error'
+import { formatCurrencyNumber } from '~/utils/format/currency'
 
 type ChatRole = 'user' | 'assistant'
 
@@ -36,6 +37,28 @@ export function parseAiSseFrames(buffer: string): { events: AiStreamEvent[]; rem
     }
   }
   return { events, remainder }
+}
+
+export function invoicePaymentConfirmationMessage(
+  plan: AiActionPlanDto,
+  replayed: boolean,
+): string | null {
+  if (plan.actionType !== 'record_invoice_payments') return null
+  if (replayed) return 'Các khoản thu này đã được ghi nhận trước đó.'
+  const result = plan.result && typeof plan.result === 'object'
+    ? plan.result as Record<string, unknown>
+    : {}
+  const count = typeof result.count === 'number' ? result.count : 0
+  const totalAmount = typeof result.totalAmount === 'number' ? result.totalAmount : 0
+  if (count === 1) {
+    const invoices = Array.isArray(result.invoices) ? result.invoices : []
+    const first = invoices[0] && typeof invoices[0] === 'object'
+      ? invoices[0] as Record<string, unknown>
+      : {}
+    const roomNumber = typeof first.roomNumber === 'string' ? first.roomNumber : '—'
+    return `Đã ghi thu phòng ${roomNumber}: ${formatCurrencyNumber(totalAmount)} ₫.`
+  }
+  return `Đã ghi thu ${count} phòng: ${formatCurrencyNumber(totalAmount)} ₫.`
 }
 
 export function useAiChat() {
@@ -200,8 +223,10 @@ export function useAiChat() {
     actionBusyId.value = planId
     setActionError(planId, null)
     try {
-      const response = await $fetch<{ data: AiActionPlanDto }>(`/api/ai/actions/${planId}/confirm`, { method: 'POST' })
+      const response = await $fetch<{ data: AiActionPlanDto; meta?: { replayed?: boolean } }>(`/api/ai/actions/${planId}/confirm`, { method: 'POST' })
       upsertPlan(response.data)
+      const successMessage = invoicePaymentConfirmationMessage(response.data, response.meta?.replayed === true)
+      if (successMessage) toast.success(successMessage)
     }
     catch (error) {
       const message = getApiErrorMessage(error, 'Không thể xác nhận thao tác.')

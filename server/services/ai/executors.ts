@@ -10,6 +10,7 @@ import {
   REISSUE_INVOICE_EXECUTOR,
   VOID_INVOICE_EXECUTOR,
 } from './invoice-executors'
+import { RECORD_INVOICE_PAYMENTS_EXECUTOR } from './invoice-payment-executor'
 
 export interface AiActionExecutionContext {
   event: H3Event
@@ -35,4 +36,5 @@ export const AI_ACTION_EXECUTORS: AiActionExecutorRegistry = Object.freeze({
   void_invoice: VOID_INVOICE_EXECUTOR,
   reissue_invoice: REISSUE_INVOICE_EXECUTOR,
   add_invoice_adjustment: ADD_INVOICE_ADJUSTMENT_EXECUTOR,
+  record_invoice_payments: RECORD_INVOICE_PAYMENTS_EXECUTOR,
 })

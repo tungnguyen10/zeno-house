@@ -7,5 +7,11 @@ export default defineEventHandler(async (event) => {
   const parsed = aiActionIdSchema.safeParse(getRouterParam(event, 'id'))
   if (!parsed.success) throwValidationError('Mã kế hoạch thao tác không hợp lệ')
   const result = await AiActionService.confirm(event, user, parsed.data)
-  return { data: toAiActionPlanDto(result.plan), meta: { replayed: result.replayed } }
+  const domainResult = result.plan.result && typeof result.plan.result === 'object'
+    ? result.plan.result as Record<string, unknown>
+    : null
+  return {
+    data: toAiActionPlanDto(result.plan),
+    meta: { replayed: result.replayed || domainResult?.replayed === true },
+  }
 })

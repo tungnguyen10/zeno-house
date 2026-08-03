@@ -121,6 +121,41 @@ export const aiInvoiceIssuePayloadSchema = z.object({
   snapshot_hash: z.string().regex(/^[a-f0-9]{64}$/),
 }).strict()
 
+const aiInvoicePaymentSelectionSchema = z.discriminatedUnion('mode', [
+  z.object({
+    mode: z.literal('rooms'),
+    room_refs: z.array(z.string().trim().min(1).max(200)).min(1).max(200)
+      .transform(refs => [...new Set(refs)]),
+  }).strict(),
+  z.object({ mode: z.literal('all_unpaid') }).strict(),
+])
+
+export const aiToolPlanRecordInvoicePaymentsSchema = z.object({
+  building_ref: z.string().trim().min(1).max(200).optional(),
+  selection: aiInvoicePaymentSelectionSchema,
+  period_year: z.number().int().min(2000).max(2100).optional(),
+  period_month: z.number().int().min(1).max(12).optional(),
+  payment_method: z.string().trim().min(1).max(100).optional(),
+  note: z.string().trim().max(500).nullable().optional(),
+}).strict().refine(
+  value => (value.period_year === undefined) === (value.period_month === undefined),
+  { message: 'Năm và tháng của kỳ phải được nhập cùng nhau', path: ['period_year'] },
+)
+
+export const aiInvoicePaymentPayloadSchema = z.object({
+  billing_period_id: z.string().uuid(),
+  payments: z.array(z.object({
+    invoice_id: z.string().uuid(),
+    room_id: z.string().uuid(),
+    expected_updated_at: z.string().datetime({ offset: true }),
+    expected_balance_amount: z.number().finite().positive(),
+  }).strict()).min(1).max(200),
+  payment_date: z.string().date(),
+  payment_method: z.string().trim().min(1).max(100),
+  note: z.string().max(500).nullable(),
+  snapshot_hash: z.string().regex(/^[a-f0-9]{64}$/),
+}).strict()
+
 export const aiToolPlanVoidInvoiceSchema = z.object({
   invoice_ref: z.string().trim().min(1).max(200),
   reason: z.string().trim().min(10).max(500),
@@ -177,6 +212,8 @@ export type AiToolPlanUtilityUsageOverrideInput = z.infer<typeof aiToolPlanUtili
 export type AiUtilityUsageOverridePayload = z.infer<typeof aiUtilityUsageOverridePayloadSchema>
 export type AiToolPlanInvoiceIssueInput = z.infer<typeof aiToolPlanInvoiceIssueSchema>
 export type AiInvoiceIssuePayload = z.infer<typeof aiInvoiceIssuePayloadSchema>
+export type AiToolPlanRecordInvoicePaymentsInput = z.infer<typeof aiToolPlanRecordInvoicePaymentsSchema>
+export type AiInvoicePaymentPayload = z.infer<typeof aiInvoicePaymentPayloadSchema>
 export type AiToolPlanVoidInvoiceInput = z.infer<typeof aiToolPlanVoidInvoiceSchema>
 export type AiVoidInvoicePayload = z.infer<typeof aiVoidInvoicePayloadSchema>
 export type AiToolPlanReissueInvoiceInput = z.infer<typeof aiToolPlanReissueInvoiceSchema>

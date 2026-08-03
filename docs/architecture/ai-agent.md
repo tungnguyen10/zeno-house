@@ -16,11 +16,12 @@ The current internal release supports authenticated, server-persisted conversati
 - `plan_meter_reading_update`
 - `plan_utility_usage_override`
 - `plan_invoice_issue`
+- `plan_record_invoice_payments`
 - `plan_void_invoice`
 - `plan_reissue_invoice`
 - `plan_paid_invoice_adjustment`
 
-Registered mutation executors are `open_billing_period`, `import_meter_readings`, `update_meter_reading`, `save_utility_usage_override`, `issue_invoices`, `void_invoice`, `reissue_invoice`, and `add_invoice_adjustment`. They are unreachable from model confirmation text and run only after the owning user confirms a pending action card through the direct endpoint. Production exposure is disabled by default and must be enabled with private server flags.
+Registered mutation executors are `open_billing_period`, `import_meter_readings`, `update_meter_reading`, `save_utility_usage_override`, `issue_invoices`, `record_invoice_payments`, `void_invoice`, `reissue_invoice`, and `add_invoice_adjustment`. They are unreachable from model confirmation text and run only after the owning user confirms a pending action card through the direct endpoint. Production exposure is disabled by default and must be enabled with private server flags.
 
 ```text
 AppAiDevChat
@@ -91,7 +92,7 @@ Production defaults keep chat, tool exposure, planning, execution, and every inv
 | Read tools | `NUXT_AI_READ_TOOLS_ENABLED` | off in production |
 | Mutation planning | `NUXT_AI_MUTATION_PLANNING_ENABLED` | off in production |
 | Confirmed execution | `NUXT_AI_MUTATION_EXECUTION_ENABLED` | off in production |
-| Invoice issue / void / reissue / adjustment | `NUXT_AI_INVOICE_ISSUE_ENABLED`, `NUXT_AI_INVOICE_VOID_ENABLED`, `NUXT_AI_INVOICE_REISSUE_ENABLED`, `NUXT_AI_INVOICE_ADJUSTMENT_ENABLED` | off in production |
+| Invoice issue / payment / void / reissue / adjustment | `NUXT_AI_INVOICE_ISSUE_ENABLED`, `NUXT_AI_INVOICE_PAYMENT_ENABLED`, `NUXT_AI_INVOICE_VOID_ENABLED`, `NUXT_AI_INVOICE_REISSUE_ENABLED`, `NUXT_AI_INVOICE_ADJUSTMENT_ENABLED` | off in production |
 | Chat/action budgets | `NUXT_AI_CHAT_RATE_LIMIT`, `NUXT_AI_ACTION_RATE_LIMIT`, `NUXT_AI_RATE_WINDOW_SECONDS` | 20 / 30 per 60 seconds |
 | Provider timeout | `NUXT_AI_PROVIDER_TIMEOUT_MS` | 30000 ms |
 | Context | `NUXT_AI_MAX_CONTEXT_MESSAGES`, `NUXT_AI_MAX_CONTEXT_CHARS` | 20 / 12000 |
@@ -129,6 +130,8 @@ Meter commits call `save_meter_readings_with_audit`; utility override saves call
 
 Invoice issue and correction paths use the same service-only transaction contracts for direct API and AI confirmation. Every executor, including reissue, uses the action plan idempotency key. Issue replay atomically writes invoices, charge snapshots, period status, and audit. Void, reissue, and adjustment compare the stored invoice version while holding locks.
 
+AI collection uses a separate `record_ai_invoice_payments_with_audit` `SECURITY INVOKER` RPC granted only to `service_role`. The planner first resolves one building and one explicit or newest non-closed period, then classifies exact room references or all unpaid invoices. Amount and payment date are never model fields: confirmation reloads the canonical snapshot, and the RPC locks the period plus sorted invoices, validates the full batch, and takes each amount from the locked `balance_amount`. Payment rows, paid invoice state, the optional `issued → collecting` transition, child audits, and one `payments.ai_recorded` parent audit commit together. The action idempotency key is the correlation ID; retry after an uncertain commit returns the recorded batch without duplicate payments or audits.
+
 ## Meter And Draft Operations
 
 `preview_meter_import` resolves exact room UUID/code/slug/number matches inside one scoped building. It returns line-specific blockers for malformed numbers, unknown/ambiguous rooms, duplicates, missing periods, and billing locks. Warnings cover omitted utility cells, decreasing readings, and unusually large increases. A pending import action is created only when there are normalized rows and no blockers; confirmation commits the exact stored payload without reparsing.
@@ -142,6 +145,8 @@ Invoice issue and correction paths use the same service-only transaction contrac
 ## Invoice Operations
 
 `plan_invoice_issue` takes period and optional contract identifiers only. The server calculates fresh drafts, separates issuable, blocked, and already-issued targets, builds a canonical snapshot of authoritative lines/totals/state, and hashes it. Confirmation recalculates the same snapshot and writes nothing if the hash is stale. A successful retry replays the original issued-invoice result instead of creating duplicates.
+
+`plan_record_invoice_payments` accepts one exact room, an exact room list, or all unpaid invoices in one building and period. Missing building is auto-selected only for a one-building scope; otherwise the assistant requests clarification before room lookup. An omitted period selects the newest non-closed period and never falls back to an older invoice. Planning reports eligible, already-paid, missing, invalid, and blocked targets, and creates a card only for the eligible subset. Confirmation is all-or-nothing for that subset and always records the complete current balance with the user-message date and default `cash` method.
 
 `plan_void_invoice` supports only unpaid invoices in an open period. `plan_reissue_invoice` binds a fresh draft to a voided invoice and rejects an existing active replacement. `plan_paid_invoice_adjustment` creates an explicit charge adjustment with before/after total, balance, and status; it never silently changes or reverses payments. All correction plans require `billing.corrections`, exact scoped invoice resolution, an expected invoice `updated_at`, a reason, and direct confirmation.
 

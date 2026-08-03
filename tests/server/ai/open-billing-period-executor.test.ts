@@ -43,6 +43,7 @@ describe('open billing period executor', () => {
     expect(Object.keys(AI_ACTION_EXECUTORS)).toEqual([
       'open_billing_period', 'import_meter_readings', 'update_meter_reading', 'save_utility_usage_override',
       'issue_invoices', 'void_invoice', 'reissue_invoice', 'add_invoice_adjustment',
+      'record_invoice_payments',
     ])
     expect(AI_ACTION_EXECUTORS.open_billing_period).toBe(OPEN_BILLING_PERIOD_EXECUTOR)
   })
