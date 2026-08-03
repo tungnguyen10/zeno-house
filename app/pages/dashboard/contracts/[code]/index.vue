@@ -327,7 +327,7 @@ watchEffect(() => {
           <textarea
             v-model="deleteServiceReason"
             rows="3"
-            class="w-full rounded-md border border-dark-border bg-dark-deep px-3 py-2 text-sm text-white placeholder-muted resize-none focus:outline-none focus:ring-1 focus:ring-cyan"
+            class="w-full rounded-md border border-dark-border bg-dark-deep px-3 py-2 text-base sm:text-sm text-white placeholder-muted resize-none focus:outline-none focus:ring-1 focus:ring-cyan"
             placeholder="Nhập lý do..."
           />
         </div>

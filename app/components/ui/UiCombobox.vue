@@ -174,7 +174,7 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', onDocumentClick)
 // ── Styles ─────────────────────────────────────────────────────────────────
 const triggerClass = computed(() =>
   clsx(
-    'flex w-full items-center justify-between rounded-md border bg-dark-surface px-3 py-2 text-sm',
+    'flex w-full items-center justify-between rounded-md border bg-dark-surface px-3 py-2 text-base sm:text-sm',
     'transition-colors cursor-pointer select-none',
     'focus:outline-none focus:ring-2 focus:ring-offset-0',
     props.error
@@ -273,7 +273,7 @@ const triggerLabelClass = computed(() =>
             v-model="query"
             type="text"
             :placeholder="searchPlaceholder"
-            class="w-full rounded bg-dark-surface border border-dark-border px-2 py-1.5 text-sm text-white placeholder-muted focus:outline-none focus:border-cyan/70 focus:ring-1 focus:ring-cyan/30"
+            class="w-full rounded bg-dark-surface border border-dark-border px-2 py-1.5 text-base sm:text-sm text-white placeholder-muted focus:outline-none focus:border-cyan/70 focus:ring-1 focus:ring-cyan/30"
             autocomplete="off"
             @keydown="onKeydown"
           >

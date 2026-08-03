@@ -259,7 +259,7 @@ function onClose() {
               rows="1"
               placeholder="Nhập tin nhắn…"
               :disabled="sending"
-              class="flex-1 resize-none rounded-lg border border-dark-border bg-dark-surface px-3 py-2 text-sm text-white placeholder-muted focus:border-cyan/60 focus:outline-none focus:ring-1 focus:ring-cyan/30 disabled:opacity-50"
+              class="flex-1 resize-none rounded-lg border border-dark-border bg-dark-surface px-3 py-2 text-base sm:text-sm text-white placeholder-muted focus:border-cyan/60 focus:outline-none focus:ring-1 focus:ring-cyan/30 disabled:opacity-50"
               style="max-height: 96px; overflow-y: auto;"
               @keydown="onKeydown"
             />

@@ -50,7 +50,7 @@ const inputClass = computed(() =>
     'block w-full rounded-md border border-dark-border bg-dark-surface pl-9 pr-9',
     'text-white placeholder-muted',
     'focus:border-cyan/70 focus:outline-none focus:ring-2 focus:ring-cyan/30',
-    props.density === 'compact' ? 'py-1 text-xs' : 'py-2 text-sm',
+    props.density === 'compact' ? 'py-1 text-sm sm:text-xs' : 'py-2 text-base sm:text-sm',
     props.disabled && 'cursor-not-allowed opacity-60',
   ),
 )

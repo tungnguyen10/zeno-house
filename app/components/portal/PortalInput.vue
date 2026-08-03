@@ -59,7 +59,7 @@ const resolvedType = computed(() => (
 
 const fieldClass = computed(() =>
   clsx(
-    'w-full rounded-xl border bg-white px-3.5 text-sm text-title transition-colors',
+    'w-full rounded-xl border bg-white px-3.5 text-base sm:text-sm text-title transition-colors',
     'placeholder:text-portal-muted focus:outline-none focus:border-theme',
     'focus-visible:ring-2 focus-visible:ring-theme/20',
     props.error
