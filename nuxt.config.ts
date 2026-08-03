@@ -49,6 +49,7 @@ export default defineNuxtConfig({
     aiInvoiceVoidEnabled: process.env.NODE_ENV !== "production", // NUXT_AI_INVOICE_VOID_ENABLED
     aiInvoiceReissueEnabled: process.env.NODE_ENV !== "production", // NUXT_AI_INVOICE_REISSUE_ENABLED
     aiInvoiceAdjustmentEnabled: process.env.NODE_ENV !== "production", // NUXT_AI_INVOICE_ADJUSTMENT_ENABLED
+    aiInvoicePaymentEnabled: process.env.NODE_ENV !== "production", // NUXT_AI_INVOICE_PAYMENT_ENABLED
     aiProviderTimeoutMs: 30_000, // NUXT_AI_PROVIDER_TIMEOUT_MS
     aiChatRateLimit: 20, // NUXT_AI_CHAT_RATE_LIMIT
     aiActionRateLimit: 30, // NUXT_AI_ACTION_RATE_LIMIT

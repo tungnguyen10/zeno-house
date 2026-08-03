@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseAiSseFrames } from '../../app/composables/useAiChat'
+import { invoicePaymentConfirmationMessage, parseAiSseFrames } from '../../app/composables/useAiChat'
 
 describe('AI SSE parser', () => {
   it('keeps fragmented frames until they are complete', () => {
@@ -31,5 +31,31 @@ describe('AI SSE parser', () => {
   it('ignores malformed frames without discarding later valid events', () => {
     const parsed = parseAiSseFrames('data: nope\n\ndata: {"type":"text-delta","text":"ok"}\n\n')
     expect(parsed.events).toEqual([{ type: 'text-delta', text: 'ok' }])
+  })
+})
+
+describe('AI invoice payment confirmation feedback', () => {
+  const paymentPlan = (count: number) => ({
+    id: 'plan-1', actionType: 'record_invoice_payments', status: 'succeeded',
+    result: {
+      count, totalAmount: count === 1 ? 1_000_000 : 5_000_000,
+      invoices: [{ roomNumber: '02' }],
+    },
+  }) as never
+
+  it('formats single and batch payment success messages', () => {
+    expect(invoicePaymentConfirmationMessage(paymentPlan(1), false))
+      .toBe('Đã ghi thu phòng 02: 1.000.000 ₫.')
+    expect(invoicePaymentConfirmationMessage(paymentPlan(5), false))
+      .toBe('Đã ghi thu 5 phòng: 5.000.000 ₫.')
+  })
+
+  it('prioritizes the idempotent replay message', () => {
+    expect(invoicePaymentConfirmationMessage(paymentPlan(1), true))
+      .toBe('Các khoản thu này đã được ghi nhận trước đó.')
+  })
+
+  it('does not create a payment toast for another action type', () => {
+    expect(invoicePaymentConfirmationMessage({ ...paymentPlan(1), actionType: 'issue_invoices' }, false)).toBeNull()
   })
 })

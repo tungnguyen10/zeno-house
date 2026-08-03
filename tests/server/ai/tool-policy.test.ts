@@ -24,6 +24,7 @@ describe('AI tool policy', () => {
       'plan_meter_reading_update',
       'plan_utility_usage_override',
       'plan_invoice_issue',
+      'plan_record_invoice_payments',
       'plan_void_invoice',
       'plan_reissue_invoice',
       'plan_paid_invoice_adjustment',
@@ -34,7 +35,7 @@ describe('AI tool policy', () => {
     expect(AI_TOOL_POLICIES.filter(policy => policy.mode === 'plan').map(policy => policy.name))
       .toEqual([
         'plan_open_billing_period', 'preview_meter_import', 'plan_meter_reading_update',
-        'plan_utility_usage_override', 'plan_invoice_issue', 'plan_void_invoice',
+        'plan_utility_usage_override', 'plan_invoice_issue', 'plan_record_invoice_payments', 'plan_void_invoice',
         'plan_reissue_invoice', 'plan_paid_invoice_adjustment',
       ])
   })

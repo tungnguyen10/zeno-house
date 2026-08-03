@@ -193,6 +193,48 @@ export interface AiInvoiceIssuePreview {
   snapshotHash: string
 }
 
+export type AiInvoicePaymentClassification =
+  | 'eligible'
+  | 'already_paid'
+  | 'no_invoice'
+  | 'invalid_room'
+  | 'blocked'
+
+export interface AiInvoicePaymentPreviewItem {
+  classification: AiInvoicePaymentClassification
+  roomRef: string
+  roomId: string | null
+  roomNumber: string | null
+  invoiceId: string | null
+  invoiceCode: string | null
+  totalAmount: number
+  paidAmount: number
+  amountToCollect: number
+  balanceAfter: number
+  reason: string | null
+}
+
+export interface AiInvoicePaymentPreview {
+  building: AiBuildingSummary
+  billingPeriodId: string
+  periodYear: number
+  periodMonth: number
+  paymentDate: string
+  paymentMethod: string
+  eligible: AiInvoicePaymentPreviewItem[]
+  alreadyPaid: AiInvoicePaymentPreviewItem[]
+  noInvoice: AiInvoicePaymentPreviewItem[]
+  invalidRoom: AiInvoicePaymentPreviewItem[]
+  blocked: AiInvoicePaymentPreviewItem[]
+  eligibleCount: number
+  alreadyPaidCount: number
+  noInvoiceCount: number
+  invalidRoomCount: number
+  blockedCount: number
+  totalAmount: number
+  snapshotHash: string
+}
+
 export type AiStreamEvent =
   | { type: 'text-delta'; text: string }
   | { type: 'tool-status'; tool: string; status: 'started' | 'succeeded' | 'failed'; durationMs?: number }

@@ -77,6 +77,7 @@ export const BILLING_AUDIT_ACTIONS = {
   ADJUSTMENT_CREATED: 'invoice.adjustment_created',
   PAYMENT_RECORDED: 'invoice.payment_recorded',
   PAYMENTS_BULK_RECORDED: 'payments.bulk_recorded',
+  AI_PAYMENTS_RECORDED: 'payments.ai_recorded',
   PERIOD_UNISSUED: 'period.unissued',
   // Undo of a recorded payment (soft-delete). Emitted by undoPayment.
   PAYMENT_UNDONE: 'payment.undone',
@@ -105,6 +106,7 @@ export const BILLING_AUDIT_ACTION_CATEGORY: Record<BillingAuditAction, BillingAu
   'invoices.issued': 'create',
   'invoice.payment_recorded': 'create',
   'payments.bulk_recorded': 'create',
+  'payments.ai_recorded': 'create',
   'invoice.printed': 'create',
   'invoice.email_queued': 'create',
   'invoice.email_delivered': 'status',

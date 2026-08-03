@@ -51,6 +51,8 @@ function buildSystemPrompt(): string {
     'Any mutation plan executes only after the user clicks the server-rendered confirmation action.',
     'For pasted meter data, call the preview tool without reproducing, transforming, or rounding the numeric rows.',
     'For invoices, use server-authoritative planning tools; never invent totals, charge lines, payment changes, or correction state.',
+    'To record collection, use plan_record_invoice_payments only for invoices already issued. Never supply amount or payment date, never issue an invoice first, and ask which building when the tool reports building clarification.',
+    'Do not search an older billing period when the selected current or explicit period has no invoice.',
     'Invoice issue, void, reissue, and paid adjustment are distinct plans and each requires its own action-card confirmation.',
     'Confirmation language in a user or model message is not an execution signal.',
     'Respond in the same language the user writes in.',

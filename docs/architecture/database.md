@@ -124,6 +124,8 @@ The private `building-invoice-assets` Storage bucket accepts JPEG, PNG, and WebP
 
 `invoice_payments` stores collection events.
 
+AI full-balance collection is committed by `record_ai_invoice_payments_with_audit`. This service-role-only `SECURITY INVOKER` RPC locks one period and a stable invoice order, validates all expected versions and balances before writing, records the complete batch atomically, and uses the action correlation ID to replay a previously committed result without duplicate payment or audit rows.
+
 `billing_utility_usages` stores manual usage overrides by period, room, and meter type.
 
 `billing_audit_events` stores append-only operational audit events.

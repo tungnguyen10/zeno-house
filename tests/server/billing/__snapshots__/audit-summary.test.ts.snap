@@ -14,6 +14,7 @@ exports[`billing audit summary formatter > formats documented actions 1`] = `
   "Tạo điều chỉnh credit -50.000đ",
   "Ghi thu 50.000đ bằng cash",
   "Ghi thu hàng loạt 3 khoản",
+  "Ghi thu hàng loạt 2 khoản, tổng 1.750.000đ",
   "Thử phát hành - 1 hoá đơn bị chặn",
 ]
 `;

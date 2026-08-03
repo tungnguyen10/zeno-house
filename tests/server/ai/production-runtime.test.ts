@@ -28,6 +28,7 @@ function runtime(overrides: Record<string, unknown> = {}) {
     aiInvoiceVoidEnabled: false,
     aiInvoiceReissueEnabled: false,
     aiInvoiceAdjustmentEnabled: false,
+    aiInvoicePaymentEnabled: false,
     aiProviderTimeoutMs: 30_000,
     aiChatRateLimit: 20,
     aiActionRateLimit: 30,
@@ -53,6 +54,8 @@ describe('AI production runtime controls', () => {
     expect(isAiToolRuntimeEnabled(policy, { name: 'get_meter_status', mode: 'read' })).toBe(false)
     expect(isAiToolRuntimeEnabled(policy, { name: 'plan_invoice_issue', mode: 'plan' })).toBe(false)
     expect(isAiActionRuntimeEnabled(policy, 'issue_invoices')).toBe(false)
+    expect(isAiToolRuntimeEnabled(policy, { name: 'plan_record_invoice_payments', mode: 'plan' })).toBe(false)
+    expect(isAiActionRuntimeEnabled(policy, 'record_invoice_payments')).toBe(false)
     expect(policy.globalDailyLimit).toBe(40)
     expect(policy.actionLeaseSeconds).toBe(30)
   })
@@ -75,12 +78,25 @@ describe('AI production runtime controls', () => {
       aiMutationExecutionEnabled: 'true',
       aiInvoiceIssueEnabled: 'false',
       aiInvoiceVoidEnabled: 'true',
+      aiInvoicePaymentEnabled: 'true',
     })
     expect(isAiToolRuntimeEnabled(policy, { name: 'get_meter_status', mode: 'read' })).toBe(true)
     expect(isAiToolRuntimeEnabled(policy, { name: 'plan_invoice_issue', mode: 'plan' })).toBe(false)
     expect(isAiToolRuntimeEnabled(policy, { name: 'plan_void_invoice', mode: 'plan' })).toBe(true)
     expect(isAiActionRuntimeEnabled(policy, 'issue_invoices')).toBe(false)
     expect(isAiActionRuntimeEnabled(policy, 'void_invoice')).toBe(true)
+    expect(isAiToolRuntimeEnabled(policy, { name: 'plan_record_invoice_payments', mode: 'plan' })).toBe(true)
+    expect(isAiActionRuntimeEnabled(policy, 'record_invoice_payments')).toBe(true)
+  })
+
+  it('keeps invoice payment planning and execution behind their dedicated switch', () => {
+    const disabled = runtime({
+      aiMutationPlanningEnabled: true,
+      aiMutationExecutionEnabled: true,
+      aiInvoicePaymentEnabled: false,
+    })
+    expect(isAiToolRuntimeEnabled(disabled, { name: 'plan_record_invoice_payments', mode: 'plan' })).toBe(false)
+    expect(isAiActionRuntimeEnabled(disabled, 'record_invoice_payments')).toBe(false)
   })
 
   it('returns a retryable 429 when the distributed bucket rejects a request', async () => {

@@ -49,6 +49,34 @@ describe('AppAiActionCard', () => {
     expect(wrapper.find('pre').exists()).toBe(false)
   })
 
+  it('renders a payment batch summary, invoice list, and skipped warnings without raw JSON', () => {
+    const paymentPlan = {
+      ...plan(),
+      actionType: 'record_invoice_payments',
+      title: 'Ghi thu 2 phòng kỳ 07/2026',
+      preview: {
+        eligibleCount: 2, totalAmount: 1_750_000,
+        paymentDate: '2026-07-05', paymentMethod: 'cash',
+        eligible: [
+          { roomNumber: '01', invoiceCode: 'INV-01', amountToCollect: 1_000_000 },
+          { roomNumber: '03', invoiceCode: 'INV-03', amountToCollect: 750_000 },
+        ],
+        alreadyPaidCount: 1, noInvoiceCount: 1, invalidRoomCount: 0, blockedCount: 0,
+      },
+      warnings: ['Bỏ qua 1 phòng đã ghi thu.', 'Bỏ qua 1 phòng không có hoá đơn trong kỳ.'],
+    }
+    const wrapper = mount(AppAiActionCard, { props: { plan: paymentPlan } })
+    const summary = wrapper.get('[data-testid="invoice-financial-preview"]')
+    expect(summary.text()).toContain('2')
+    expect(summary.text()).toContain('1.750.000')
+    expect(summary.text()).toContain('05/07/2026')
+    expect(summary.text()).toContain('Tiền mặt')
+    expect(wrapper.get('[data-testid="invoice-payment-list"]').text()).toContain('Phòng 01')
+    expect(wrapper.get('[data-testid="invoice-payment-list"]').text()).toContain('INV-03')
+    expect(wrapper.text()).toContain('Bỏ qua 1 phòng đã ghi thu.')
+    expect(wrapper.find('pre').exists()).toBe(false)
+  })
+
   it('disables both actions and labels the confirm button while busy', () => {
     const wrapper = mount(AppAiActionCard, { props: { plan: plan(), busy: true } })
     const buttons = wrapper.findAll('button')
