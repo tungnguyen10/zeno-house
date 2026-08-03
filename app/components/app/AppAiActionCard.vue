@@ -21,6 +21,7 @@ const invoiceAction = computed(() => [
   'add_invoice_adjustment',
 ].includes(props.plan.actionType))
 const paymentAction = computed(() => props.plan.actionType === 'record_invoice_payments')
+const paymentCompleted = computed(() => paymentAction.value && props.plan.status === 'succeeded')
 
 function previewNumber(key: string): number | null {
   const value = props.plan.preview[key]
@@ -94,7 +95,7 @@ const paymentRows = computed(() => {
       </span>
     </div>
 
-    <div v-if="invoiceAction && financialRows.length" class="mt-3 grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-dark-border bg-dark-border" data-testid="invoice-financial-preview">
+    <div v-if="invoiceAction && financialRows.length && !paymentCompleted" class="mt-3 grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-dark-border bg-dark-border" data-testid="invoice-financial-preview">
       <div v-for="row in financialRows" :key="row.label" class="bg-dark-deep px-3 py-2">
         <p class="text-[10px] uppercase tracking-wide text-muted">{{ row.label }}</p>
         <p class="mt-0.5 font-semibold tabular-nums text-white">{{ row.value }}</p>
@@ -109,7 +110,7 @@ const paymentRows = computed(() => {
       </div>
     </div>
 
-    <ul v-if="paymentAction && paymentRows.length" class="mt-3 divide-y divide-dark-border border-y border-dark-border" data-testid="invoice-payment-list">
+    <ul v-if="paymentAction && paymentRows.length && !paymentCompleted" class="mt-3 divide-y divide-dark-border border-y border-dark-border" data-testid="invoice-payment-list">
       <li v-for="row in paymentRows" :key="`${row.roomNumber}:${row.invoiceCode}`" class="flex items-center justify-between gap-3 py-2">
         <span class="min-w-0">
           <span class="font-medium text-white">Phòng {{ row.roomNumber }}</span>
@@ -121,7 +122,11 @@ const paymentRows = computed(() => {
 
     <pre v-if="!invoiceAction && Object.keys(plan.preview).length" class="mt-2 max-h-32 overflow-auto whitespace-pre-wrap rounded bg-dark-surface p-2 text-[11px] text-white/80">{{ JSON.stringify(plan.preview, null, 2) }}</pre>
 
-    <ul v-if="plan.warnings.length" class="mt-2 list-disc space-y-1 pl-4 text-amber-300">
+    <p v-if="paymentCompleted" class="mt-3 border-t border-dark-border pt-2 font-medium text-success-neon" data-testid="invoice-payment-completed">
+      Đã ghi thu thành công.
+    </p>
+
+    <ul v-if="plan.warnings.length && !paymentCompleted" class="mt-2 list-disc space-y-1 pl-4 text-amber-300">
       <li v-for="warning in plan.warnings" :key="warning">{{ warning }}</li>
     </ul>
 

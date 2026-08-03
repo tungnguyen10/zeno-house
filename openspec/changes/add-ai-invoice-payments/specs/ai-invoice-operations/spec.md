@@ -77,7 +77,7 @@ The payment transaction SHALL use the action plan idempotency key as its correla
 - **THEN** database grants deny execution while `service_role` remains allowed
 
 ### Requirement: AI payment actions provide operator feedback
-The action card SHALL show the room count, total collection amount, date, method, eligible invoice list, and skipped-target counts without raw JSON, and the client SHALL show success or replay toast only after successful confirmation.
+While confirmation is pending, the action card SHALL show the room count, total collection amount, date, method, eligible invoice list, and skipped-target counts without raw JSON. After successful confirmation, the card SHALL collapse those details into a compact succeeded state, and the client SHALL show a success or replay toast.
 
 #### Scenario: Single payment succeeds
 - **WHEN** confirmation records one room payment
@@ -86,6 +86,10 @@ The action card SHALL show the room count, total collection amount, date, method
 #### Scenario: Batch payment succeeds
 - **WHEN** confirmation records multiple room payments
 - **THEN** the card becomes succeeded and the toast reports the room count and formatted aggregate amount
+
+#### Scenario: Successful payment details collapse
+- **WHEN** a payment action reaches succeeded state
+- **THEN** the card hides the financial preview, eligible invoice list, and skipped warnings while retaining a compact success record
 
 #### Scenario: Idempotent result is returned
 - **WHEN** confirmation returns `meta.replayed` as true

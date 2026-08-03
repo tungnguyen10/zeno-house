@@ -77,6 +77,33 @@ describe('AppAiActionCard', () => {
     expect(wrapper.find('pre').exists()).toBe(false)
   })
 
+  it('collapses payment details after confirmation succeeds', () => {
+    const paymentPlan = {
+      ...plan('succeeded'),
+      actionType: 'record_invoice_payments',
+      title: 'Ghi thu 2 phòng kỳ 07/2026',
+      preview: {
+        eligibleCount: 2,
+        totalAmount: 1_750_000,
+        paymentDate: '2026-07-05',
+        paymentMethod: 'cash',
+        eligible: [
+          { roomNumber: '01', invoiceCode: 'INV-01', amountToCollect: 1_000_000 },
+          { roomNumber: '03', invoiceCode: 'INV-03', amountToCollect: 750_000 },
+        ],
+      },
+      warnings: ['Bỏ qua 1 phòng đã ghi thu.'],
+    }
+
+    const wrapper = mount(AppAiActionCard, { props: { plan: paymentPlan } })
+
+    expect(wrapper.find('[data-testid="invoice-financial-preview"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="invoice-payment-list"]').exists()).toBe(false)
+    expect(wrapper.text()).not.toContain('Bỏ qua 1 phòng đã ghi thu.')
+    expect(wrapper.get('[data-testid="invoice-payment-completed"]').text()).toBe('Đã ghi thu thành công.')
+    expect(wrapper.findAll('button')).toHaveLength(0)
+  })
+
   it('disables both actions and labels the confirm button while busy', () => {
     const wrapper = mount(AppAiActionCard, { props: { plan: plan(), busy: true } })
     const buttons = wrapper.findAll('button')
