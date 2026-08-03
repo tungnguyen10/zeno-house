@@ -185,6 +185,10 @@ While confirmation is pending, the action card SHALL show the room count, total 
 - **WHEN** a payment action reaches succeeded state
 - **THEN** the card hides the financial preview, eligible invoice list, and skipped warnings while retaining a compact success record
 
+#### Scenario: Later chat turns preserve action position
+- **WHEN** the user sends one or more messages after a payment action is created or completed
+- **THEN** the action card remains attached to the assistant response that created it and does not move below later messages
+
 #### Scenario: Idempotent result is returned
 - **WHEN** confirmation returns `meta.replayed` as true
 - **THEN** the toast states that the collections were recorded previously

@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest'
-import { invoicePaymentConfirmationMessage, parseAiSseFrames } from '../../app/composables/useAiChat'
+import { describe, expect, it, vi } from 'vitest'
+import { invoicePaymentConfirmationMessage, parseAiSseFrames, useAiChat } from '../../app/composables/useAiChat'
 
 describe('AI SSE parser', () => {
   it('keeps fragmented frames until they are complete', () => {
@@ -57,5 +57,36 @@ describe('AI invoice payment confirmation feedback', () => {
 
   it('does not create a payment toast for another action type', () => {
     expect(invoicePaymentConfirmationMessage({ ...paymentPlan(1), actionType: 'issue_invoices' }, false)).toBeNull()
+  })
+})
+
+describe('AI action message association', () => {
+  it('attaches a streamed action plan only to the assistant message for that turn', async () => {
+    vi.stubGlobal('useToast', () => ({ success: vi.fn(), error: vi.fn(), info: vi.fn() }))
+    const actionPlan = {
+      id: 'plan-1', conversationId: 'conversation-1', actionType: 'record_invoice_payments',
+      status: 'pending', title: 'Ghi thu phòng 02', summary: 'Xác nhận ghi thu.',
+      buildingId: 'building-1', preview: {}, warnings: [], expiresAt: '2026-08-03T12:00:00.000Z',
+    }
+    const body = [
+      { type: 'text-delta', text: 'Hãy xác nhận khoản thu.' },
+      { type: 'action-plan', plan: actionPlan },
+      {
+        type: 'done', conversationId: 'conversation-1', requestId: 'request-1',
+        model: 'model', requestedModel: 'model', fallbackUsed: false, provider: 'openrouter',
+      },
+    ].map(event => `data: ${JSON.stringify(event)}\n\n`).join('')
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(body, {
+      status: 200,
+      headers: { 'Content-Type': 'text/event-stream' },
+    })))
+
+    const chat = useAiChat()
+    chat.prompt.value = 'Ghi thu phòng 02.'
+    await chat.send()
+
+    expect(chat.messages.value[0]?.actionPlanIds).toEqual([])
+    expect(chat.messages.value[1]?.actionPlanIds).toEqual(['plan-1'])
+    expect(chat.actionPlansForMessage(chat.messages.value[1]!)).toEqual([actionPlan])
   })
 })

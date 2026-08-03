@@ -17,7 +17,17 @@ describe('AI assistant persistence lifecycle', () => {
       { type: 'tool-call', toolName: 'list_buildings' },
       { type: 'text-delta', text: 'chào' },
     ]))).resolves.toEqual({
-      text: 'Xin chào', tools: ['list_buildings'], failed: false, aborted: false,
+      text: 'Xin chào', tools: ['list_buildings'], actionPlanIds: [], failed: false, aborted: false,
+    })
+  })
+
+  it('collects action plan ids for the persisted assistant message', async () => {
+    await expect(consumeAiPersistence(stream([
+      { type: 'tool-result', output: { actionPlan: { id: 'plan-1' } } },
+      { type: 'tool-result', output: { actionPlan: { id: 'plan-1' } } },
+      { type: 'tool-result', output: { status: 'read_only' } },
+    ]))).resolves.toEqual({
+      text: '', tools: [], actionPlanIds: ['plan-1'], failed: false, aborted: false,
     })
   })
 
@@ -25,7 +35,7 @@ describe('AI assistant persistence lifecycle', () => {
     await expect(consumeAiPersistence(stream([
       { type: 'error', error: new Error('provider') },
       { type: 'abort', reason: 'timeout' },
-    ]))).resolves.toEqual({ text: '', tools: [], failed: true, aborted: true })
+    ]))).resolves.toEqual({ text: '', tools: [], actionPlanIds: [], failed: true, aborted: true })
   })
 
   it('registers persistence with the request lifecycle independently of the client', async () => {

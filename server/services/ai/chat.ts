@@ -179,6 +179,7 @@ export async function streamAiChat(
         requestedModel: route.requestedModel,
         fallbackUsed: route.fallbackUsed,
         tools: summary.tools,
+        actionPlanIds: summary.actionPlanIds,
         failed: summary.failed,
       })
       emitAiTelemetry(event, {

@@ -7,6 +7,7 @@ type ChatRole = 'user' | 'assistant'
 interface ChatMessage {
   role: ChatRole
   content: string
+  actionPlanIds: string[]
 }
 
 interface ToolCallSummary {
@@ -86,11 +87,22 @@ export function useAiChat() {
   let controller: AbortController | null = null
 
   const canSend = computed(() => prompt.value.trim().length > 0 && !sending.value)
+  const actionPlansById = computed(() => new Map(actionPlans.value.map(plan => [plan.id, plan])))
 
   function upsertPlan(plan: AiActionPlanDto) {
     const index = actionPlans.value.findIndex(item => item.id === plan.id)
     if (index === -1) actionPlans.value.push(plan)
     else actionPlans.value[index] = plan
+  }
+
+  function actionPlansForMessage(message: ChatMessage): AiActionPlanDto[] {
+    return message.actionPlanIds.flatMap(id => actionPlansById.value.get(id) ?? [])
+  }
+
+  function attachPlanToMessage(messageIndex: number, planId: string) {
+    const message = messages.value[messageIndex]
+    if (!message || message.actionPlanIds.includes(planId)) return
+    message.actionPlanIds.push(planId)
   }
 
   function setActionError(planId: string, message: string | null) {
@@ -120,6 +132,7 @@ export function useAiChat() {
     }
     else if (event.type === 'action-plan') {
       upsertPlan(event.plan)
+      attachPlanToMessage(assistantIndex, event.plan.id)
     }
     else if (event.type === 'error') {
       errorMessage.value = event.error.message
@@ -144,10 +157,10 @@ export function useAiChat() {
     errorCode.value = null
     errorDetails.value = null
     lastToolCalls.value = []
-    messages.value.push({ role: 'user', content })
+    messages.value.push({ role: 'user', content, actionPlanIds: [] })
     prompt.value = ''
     sending.value = true
-    messages.value.push({ role: 'assistant', content: '' })
+    messages.value.push({ role: 'assistant', content: '', actionPlanIds: [] })
     const assistantIndex = messages.value.length - 1
 
     controller?.abort()
@@ -207,7 +220,16 @@ export function useAiChat() {
     try {
       const response = await $fetch<{ data: AiConversationTranscript }>(`/api/ai/conversations/${storedId}`)
       conversationId.value = response.data.conversation.id
-      messages.value = response.data.messages.map(message => ({ role: message.role, content: message.content }))
+      messages.value = response.data.messages.map((message) => {
+        const storedIds = message.metadata.actionPlanIds
+        return {
+          role: message.role,
+          content: message.content,
+          actionPlanIds: Array.isArray(storedIds)
+            ? storedIds.filter((id): id is string => typeof id === 'string')
+            : [],
+        }
+      })
       actionPlans.value = response.data.actionPlans
     }
     catch {
@@ -279,7 +301,7 @@ export function useAiChat() {
   return {
     conversationId, messages, actionPlans, prompt, sending, resuming, canSend,
     lastModel, lastFallbackUsed, lastProvider, lastRequestId, lastToolCalls, errorMessage, errorCode, errorDetails,
-    actionErrors, actionBusyId,
+    actionErrors, actionBusyId, actionPlansForMessage,
     send, resume, confirmAction, cancelAction, clearChat, abort,
   }
 }

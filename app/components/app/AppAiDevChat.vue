@@ -13,7 +13,6 @@ const enabled = computed(() =>
 const {
   conversationId,
   messages,
-  actionPlans,
   prompt,
   sending,
   canSend,
@@ -24,6 +23,7 @@ const {
   errorDetails,
   actionErrors,
   actionBusyId,
+  actionPlansForMessage,
   send,
   resume,
   confirmAction,
@@ -193,17 +193,17 @@ function onClose() {
                 {{ message.content }}
               </div>
             </div>
-          </template>
 
-          <AppAiActionCard
-            v-for="plan in actionPlans"
-            :key="plan.id"
-            :plan="plan"
-            :busy="actionBusyId === plan.id"
-            :error="actionErrors[plan.id] ?? null"
-            @confirm="confirmAction"
-            @cancel="cancelAction"
-          />
+            <AppAiActionCard
+              v-for="plan in actionPlansForMessage(message)"
+              :key="plan.id"
+              :plan="plan"
+              :busy="actionBusyId === plan.id"
+              :error="actionErrors[plan.id] ?? null"
+              @confirm="confirmAction"
+              @cancel="cancelAction"
+            />
+          </template>
 
           <!-- Typing indicator -->
           <div v-if="sending" class="flex justify-start">
