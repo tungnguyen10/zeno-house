@@ -40,12 +40,35 @@ const toolCallsLabel = computed(() => {
   return lastToolCalls.value.map(tool => tool.name).join(', ')
 })
 
-const suggestions = [
-  'Mở kỳ tháng này cho một building của tôi.',
-  'Kiểm tra tiến độ nhập chỉ số điện nước kỳ hiện tại.',
-  'Tính và giải thích billing draft kỳ hiện tại.',
-  'Xem trước và phát hành hóa đơn kỳ hiện tại.',
-]
+const suggestionGroups = [
+  {
+    label: 'Kỳ billing',
+    suggestions: [
+      { id: 'open-period', text: 'Mở kỳ billing hiện tại.' },
+      { id: 'period-overview', text: 'Xem tổng quan kỳ billing hiện tại.' },
+      { id: 'calculate-draft', text: 'Tính và giải thích billing draft kỳ hiện tại.' },
+    ],
+  },
+  {
+    label: 'Chỉ số',
+    suggestions: [
+      { id: 'meter-status', text: 'Kiểm tra tiến độ nhập chỉ số điện nước kỳ hiện tại.' },
+      { id: 'meter-import', text: 'Tôi muốn nhập hàng loạt chỉ số điện nước; hãy yêu cầu tôi dán dữ liệu.' },
+      { id: 'meter-update', text: 'Sửa một chỉ số điện nước đã nhập.' },
+      { id: 'usage-override', text: 'Điều chỉnh mức tiêu thụ điện nước của một phòng.' },
+    ],
+  },
+  {
+    label: 'Hóa đơn',
+    suggestions: [
+      { id: 'issue-invoices', text: 'Xem trước và phát hành hóa đơn kỳ hiện tại.' },
+      { id: 'record-payments', text: 'Ghi thu các phòng còn nợ kỳ hiện tại.' },
+      { id: 'void-invoice', text: 'Huỷ một hóa đơn chưa ghi thu.' },
+      { id: 'reissue-invoice', text: 'Phát hành lại một hóa đơn đã huỷ.' },
+      { id: 'adjust-paid-invoice', text: 'Điều chỉnh một hóa đơn đã ghi thu hoặc ghi thu một phần.' },
+    ],
+  },
+] as const
 
 async function onSend() {
   await send()
@@ -160,18 +183,31 @@ function onClose() {
             <p class="text-center text-xs text-muted">
               Chào bạn! Tôi có thể giúp vận hành kỳ billing. Bắt đầu với:
             </p>
-            <ul class="mt-3 space-y-1.5">
-              <li v-for="suggestion in suggestions" :key="suggestion">
-                <button
-                  type="button"
-                  :disabled="sending"
-                  class="w-full rounded-lg border border-dark-border bg-dark-surface px-3 py-2 text-left text-xs text-white/80 transition-colors hover:border-cyan/40 hover:text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-cyan/40 disabled:cursor-not-allowed disabled:opacity-50"
-                  @click="onSuggestion(suggestion)"
+            <div class="mt-3 space-y-3">
+              <section
+                v-for="group in suggestionGroups"
+                :key="group.label"
+              >
+                <h3
+                  class="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted"
                 >
-                  {{ suggestion }}
-                </button>
-              </li>
-            </ul>
+                  {{ group.label }}
+                </h3>
+                <ul class="space-y-1.5">
+                  <li v-for="suggestion in group.suggestions" :key="suggestion.id">
+                    <button
+                      type="button"
+                      :disabled="sending"
+                      :data-testid="`ai-suggestion-${suggestion.id}`"
+                      class="w-full rounded-lg border border-dark-border bg-dark-surface px-3 py-2 text-left text-xs text-white/80 transition-colors hover:border-cyan/40 hover:text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-cyan/40 disabled:cursor-not-allowed disabled:opacity-50"
+                      @click="onSuggestion(suggestion.text)"
+                    >
+                      {{ suggestion.text }}
+                    </button>
+                  </li>
+                </ul>
+              </section>
+            </div>
           </div>
 
           <template
