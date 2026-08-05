@@ -28,7 +28,7 @@ AppAiDevChat
   -> useAiChat
   -> POST /api/ai/chat
   -> auth + begin_ai_chat_turn RPC
-  -> OpenRouter primary/free fallback
+  -> OpenRouter configured primary/free fallback
   -> capability-filtered read/planning tool registry
   -> existing domain service
   -> repository
@@ -87,7 +87,8 @@ Production defaults keep chat, tool exposure, planning, execution, and every inv
 
 | Control | Environment variable | Default |
 | --- | --- | --- |
-| Provider and free models | `NUXT_AI_PROVIDER`, `NUXT_AI_MODEL`, `NUXT_AI_MODEL_FALLBACK` | `openrouter`, Nemotron free, Gemma free |
+| Provider and models | `NUXT_AI_PROVIDER`, `NUXT_AI_MODEL`, `NUXT_AI_MODEL_FALLBACK` | `openrouter`, Nemotron free, Gemma free |
+| Paid primary opt-in | `NUXT_AI_ALLOW_PAID_PRIMARY` | off |
 | Chat route | `NUXT_AI_CHAT_ENABLED` | off in production |
 | Read tools | `NUXT_AI_READ_TOOLS_ENABLED` | off in production |
 | Mutation planning | `NUXT_AI_MUTATION_PLANNING_ENABLED` | off in production |
@@ -96,12 +97,12 @@ Production defaults keep chat, tool exposure, planning, execution, and every inv
 | Chat/action budgets | `NUXT_AI_CHAT_RATE_LIMIT`, `NUXT_AI_ACTION_RATE_LIMIT`, `NUXT_AI_RATE_WINDOW_SECONDS` | 20 / 30 per 60 seconds |
 | Provider timeout | `NUXT_AI_PROVIDER_TIMEOUT_MS` | 30000 ms |
 | Context | `NUXT_AI_MAX_CONTEXT_MESSAGES`, `NUXT_AI_MAX_CONTEXT_CHARS` | 20 / 12000 |
-| Shared free quota | `NUXT_AI_GLOBAL_DAILY_LIMIT` | 40 requests per UTC day |
+| Shared daily quota | `NUXT_AI_GLOBAL_DAILY_LIMIT` | 40 requests per UTC day |
 | Distributed circuit | `NUXT_AI_CIRCUIT_FAILURE_THRESHOLD`, `NUXT_AI_CIRCUIT_COOLDOWN_MS` | 5 failures / 60000 ms |
 | Action lease | `NUXT_AI_ACTION_LEASE_SECONDS` | 30 seconds |
 | Cleanup | `NUXT_AI_RETENTION_CLEANUP_ENABLED`, `NUXT_AI_RETENTION_CLEANUP_BATCH_SIZE`, `NUXT_AI_RETENTION_CLEANUP_SECRET` | on / 500 / no secret configured |
 
-Rate limits are enforced per hashed user ID in service-role-only database buckets. A shared UTC-day quota and provider circuit are acquired atomically in Supabase before a model call. OpenRouter receives only the explicit free fallback plus `require_parameters: true`, `allow_fallbacks: true`, and `data_collection: deny`; it never receives a paid fallback. Capacity exhaustion is reported as `PROVIDER_CAPACITY`. Public `NUXT_PUBLIC_AI_DEV_CHAT_ENABLED` controls only UI visibility and never enables server behavior.
+Rate limits are enforced per hashed user ID in service-role-only database buckets. A shared UTC-day quota and provider circuit are acquired atomically in Supabase before a model call. A paid configured primary is rejected unless the private `NUXT_AI_ALLOW_PAID_PRIMARY` opt-in is enabled. OpenRouter receives only the explicit free fallback plus `require_parameters: true`, `allow_fallbacks: true`, and `data_collection: deny`; it never receives a paid fallback. Capacity exhaustion is reported as `PROVIDER_CAPACITY`. Public `NUXT_PUBLIC_AI_DEV_CHAT_ENABLED` controls only UI visibility and never enables server behavior.
 
 Operational kill order is: disable the affected invoice flag, then mutation execution, then planning or all chat if necessary. A disabled executor rejects before claiming the pending plan, so re-enabling does not require repairing an `executing` action. For cleanup failures, verify the private secret and site URL, invoke the internal endpoint with `x-ai-retention-secret`, and inspect count/duration/error-category telemetry; the next daily run safely retries bounded rows.
 

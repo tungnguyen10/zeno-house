@@ -1,19 +1,19 @@
 ## ADDED Requirements
 
-### Requirement: AI provider routing is free-only and observable
-The system SHALL route production AI chat through distinct configured OpenRouter primary and fallback models whose catalog pricing is zero and which support tool calling, SHALL prohibit implicit paid fallback, and SHALL report the model that actually produced the response.
+### Requirement: AI provider routing is cost-controlled and observable
+The system SHALL route production AI chat through distinct configured OpenRouter primary and fallback models that support tool calling, SHALL allow a paid primary only through the private paid-primary opt-in, SHALL require the fallback to be an explicit zero-price `:free` model, SHALL prohibit implicit paid fallback, and SHALL report the model that actually produced the response.
 
 #### Scenario: Primary succeeds
-- **WHEN** the configured free primary completes a chat request
+- **WHEN** the configured free or explicitly opted-in paid primary completes a chat request
 - **THEN** the terminal event, persistence metadata, and telemetry identify the primary model and report that fallback was not used
 
 #### Scenario: Primary fails before streaming
 - **WHEN** OpenRouter cannot use the primary before any response token is emitted
 - **THEN** OpenRouter attempts the configured free fallback and the system reports the selected fallback model
 
-#### Scenario: Free model contract is invalid
-- **WHEN** either configured production model is missing, paid, duplicated, or lacks tool support
-- **THEN** release verification fails and the server does not silently route to a paid model
+#### Scenario: Model cost contract is invalid
+- **WHEN** the primary is paid without explicit opt-in, the fallback is paid, either model is missing or lacks tool support, or the models are duplicated
+- **THEN** release verification fails and the server does not silently route to an unapproved paid model
 
 ### Requirement: Chat turns are atomic and context-bounded
 The system SHALL atomically resolve or create an owned conversation, append its user message, extend retention, and return ordered bounded history, and SHALL apply both message-count and content-budget limits before provider transmission.
@@ -33,7 +33,7 @@ The system SHALL enforce the provider circuit and global daily chat quota using 
 - **WHEN** consecutive provider failures across instances reach the configured threshold
 - **THEN** subsequent chat calls fail fast until the shared cooldown permits a probe
 
-#### Scenario: Free daily quota is exhausted
+#### Scenario: Global daily quota is exhausted
 - **WHEN** the configured global daily chat count is consumed
 - **THEN** further model requests are rejected before provider invocation with a capacity-specific retryable response
 

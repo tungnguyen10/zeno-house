@@ -1,8 +1,9 @@
 ## 1. Provider Routing And Runtime Contract
 
-- [x] 1.1 Add failing tests for free-only config validation, OpenRouter fallback request options, selected-model SSE metadata, and bounded context selection.
+- [x] 1.1 Add failing tests for model-cost config validation, OpenRouter fallback request options, selected-model SSE metadata, and bounded context selection.
 - [x] 1.2 Implement primary/fallback runtime configuration, privacy routing, actual-model reporting, context budgets, and capacity error mapping.
-- [x] 1.3 Add a zero-cost OpenRouter catalog verification script and deployment documentation.
+- [x] 1.3 Add a cost-aware OpenRouter catalog verification script and deployment documentation.
+- [x] 1.4 Add private paid-primary opt-in while preserving the explicit zero-cost fallback contract.
 
 ## 2. Atomic Chat And Distributed Controls
 

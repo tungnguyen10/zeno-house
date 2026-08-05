@@ -1,10 +1,10 @@
 ## Why
 
-The production AI assistant currently ignores its configured fallback model, performs avoidable conversation database round trips, relies on process-local provider circuit state, and can leave an action result ambiguous when a domain mutation commits before the action plan is completed. The rollout also needs an enforceable zero-cost model policy and stronger deployment verification before private production flags are enabled.
+The production AI assistant currently ignores its configured fallback model, performs avoidable conversation database round trips, relies on process-local provider circuit state, and can leave an action result ambiguous when a domain mutation commits before the action plan is completed. The rollout also needs an enforceable model-cost policy and stronger deployment verification before private production flags are enabled.
 
 ## What Changes
 
-- Route OpenRouter requests through one explicitly free primary model and one explicitly free fallback model, record the model actually selected, and fail closed instead of using a paid model.
+- Route OpenRouter requests through one configured primary model and one explicitly free fallback model, require a private opt-in before a paid primary is allowed, record the model actually selected, and fail closed instead of using an unapproved paid model.
 - Atomically begin a chat turn and return bounded owned history in one database RPC.
 - Persist assistant results through the H3 request lifecycle and apply a bounded context budget.
 - Add a distributed provider circuit and global daily chat quota while retaining per-user rate limits.
@@ -19,7 +19,7 @@ None.
 
 ### Modified Capabilities
 
-- `ai-agent-foundation`: Require free-only provider routing with fallback observability, atomic bounded chat turns, distributed provider controls, lifecycle-safe persistence, payload verification, and recoverable idempotent action execution.
+- `ai-agent-foundation`: Require cost-controlled provider routing with paid-primary opt-in and free-fallback observability, atomic bounded chat turns, distributed provider controls, lifecycle-safe persistence, payload verification, and recoverable idempotent action execution.
 
 ## Impact
 

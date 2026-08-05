@@ -8,10 +8,10 @@ The production rollout must remain server-authoritative, service-role database a
 
 **Goals:**
 
-- Enforce a zero-cost OpenRouter primary/fallback pair with observable selected-model routing.
+- Enforce explicit OpenRouter primary/fallback routing with private paid-primary opt-in, a zero-cost fallback, and observable selected-model routing.
 - Reduce chat startup database round trips while preserving ownership and retention rules.
 - Make stream persistence, rate/circuit controls, and confirmed action execution reliable across serverless instances and transient failures.
-- Verify privacy, authorization, database privileges, free pricing, and rollout behavior before production enablement.
+- Verify privacy, authorization, database privileges, configured pricing, paid-primary consent, and rollout behavior before production enablement.
 
 **Non-Goals:**
 
@@ -21,9 +21,9 @@ The production rollout must remain server-authoritative, service-role database a
 
 ## Decisions
 
-1. **Use OpenRouter-native fallback in one request.** The primary is `nvidia/nemotron-3-super-120b-a12b:free` and fallback is `google/gemma-4-31b-it:free`. The OpenAI-compatible provider receives `models`, `require_parameters`, `allow_fallbacks`, and `data_collection: deny`. Application code never retries a response after streaming begins. This is safer than issuing a second SDK request, which could repeat tool calls.
+1. **Use OpenRouter-native fallback in one request.** The default primary is `nvidia/nemotron-3-super-120b-a12b:free` and fallback is `google/gemma-4-31b-it:free`. Production may use a configured paid primary only when `NUXT_AI_ALLOW_PAID_PRIMARY=true`. The OpenAI-compatible provider receives the explicit free fallback through `models` plus `require_parameters`, `allow_fallbacks`, and `data_collection: deny`. Application code never retries a response after streaming begins. This is safer than issuing a second SDK request, which could repeat tool calls.
 
-2. **Fail closed on model cost and capability.** Production runtime validation requires distinct `:free` IDs. A release script queries the OpenRouter catalog and rejects missing models, non-zero prompt/completion pricing, or missing tool support. Catalog failure blocks rollout rather than selecting a paid router.
+2. **Fail closed on model cost and capability.** Production runtime validation requires a distinct explicit `:free` fallback and rejects a paid primary unless the private opt-in is enabled. A release script queries the OpenRouter catalog, requires both models to support tools, always requires zero fallback pricing, and permits non-zero primary pricing only with the same opt-in. Catalog failure blocks rollout rather than selecting an unapproved paid route.
 
 3. **Begin chat turns atomically.** A service-role-only `begin_ai_chat_turn` security-invoker RPC verifies conversation ownership/expiry, creates when needed, appends the user message, extends retention, and returns bounded ordered history. Service code applies the final token/character context budget before provider transmission.
 
@@ -37,7 +37,7 @@ The production rollout must remain server-authoritative, service-role database a
 
 ## Risks / Trade-offs
 
-- **Free endpoints can be rate-limited or removed** → catalog gate, global quota, fallback, kill switches, and a capacity-specific user error; never relax into paid routing.
+- **Provider endpoints can be rate-limited, removed, or billed unexpectedly** → catalog gate, explicit paid-primary opt-in, global quota, free fallback, kill switches, and a capacity-specific user error; never relax into an unapproved paid route.
 - **Privacy filtering can remove all eligible endpoints** → staging smoke test uses the exact data policy and blocks rollout if no endpoint remains.
 - **Leased execution can temporarily show an in-progress card** → return retry timing and allow reconfirmation only after lease expiry; idempotency prevents duplicate domain/audit writes.
 - **A larger RPC increases SQL complexity** → keep it persistence-only, cover ownership/order/privileges with SQL contract and cloud verification.
