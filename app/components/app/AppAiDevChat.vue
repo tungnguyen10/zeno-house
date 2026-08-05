@@ -1,9 +1,14 @@
 <script setup lang="ts">
+import { onClickOutside, onKeyStroke } from '@vueuse/core'
 import clsx from 'clsx'
+import { renderChatMarkdown } from '~/utils/format/chat-markdown'
 
 const open = ref(false)
+const fullscreen = ref(false)
 const showDebug = ref(false)
 const messagesEl = ref<HTMLElement | null>(null)
+const widgetEl = ref<HTMLElement | null>(null)
+const fabEl = ref<HTMLElement | null>(null)
 const runtimeConfig = useRuntimeConfig()
 
 const enabled = computed(() =>
@@ -31,6 +36,11 @@ const {
   clearChat,
   abort,
 } = useAiChat()
+
+onClickOutside(widgetEl, onClose, { ignore: [fabEl] })
+onKeyStroke('Escape', () => {
+  if (open.value) onClose()
+})
 
 onMounted(() => resume())
 onBeforeUnmount(() => abort())
@@ -92,6 +102,11 @@ function onKeydown(e: KeyboardEvent) {
 function onClose() {
   abort()
   open.value = false
+  fullscreen.value = false
+}
+
+function toggleFullscreen() {
+  fullscreen.value = !fullscreen.value
 }
 </script>
 
@@ -99,6 +114,8 @@ function onClose() {
   <div v-if="enabled">
     <!-- FAB -->
     <button
+      v-if="!(open && fullscreen)"
+      ref="fabEl"
       type="button"
       class="fixed bottom-6 right-6 z-50 flex size-12 items-center justify-center rounded-full bg-cyan text-dark-deep shadow-lg transition-transform hover:scale-105 hover:bg-cyan/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan focus-visible:ring-offset-2"
       :aria-label="open ? 'Đóng AI chat' : 'Mở AI chat'"
@@ -119,8 +136,11 @@ function onClose() {
     >
       <div
         v-if="open"
-        class="fixed bottom-[5.5rem] right-6 z-50 flex w-80 flex-col rounded-xl border border-dark-border bg-dark-card shadow-xl"
-        style="max-height: 480px;"
+        ref="widgetEl"
+        :class="clsx(
+          'fixed z-50 flex flex-col rounded-xl border border-dark-border bg-dark-card shadow-xl transition-all duration-200',
+          fullscreen ? 'inset-3 sm:inset-6 lg:inset-12' : 'bottom-[5.5rem] right-6 w-80 max-h-[30rem]',
+        )"
       >
         <!-- Header -->
         <div class="flex items-center justify-between border-b border-dark-border px-4 py-3">
@@ -139,6 +159,16 @@ function onClose() {
               @click="showDebug = !showDebug"
             >
               <IconInfoCircle class="size-3.5" aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              class="flex size-6 items-center justify-center rounded text-muted transition-colors hover:text-white"
+              :title="fullscreen ? 'Thu nhỏ' : 'Phóng to toàn màn hình'"
+              :aria-label="fullscreen ? 'Thu nhỏ AI chat' : 'Phóng to AI chat toàn màn hình'"
+              @click="toggleFullscreen"
+            >
+              <IconMinimize v-if="fullscreen" class="size-3.5" aria-hidden="true" />
+              <IconMaximize v-else class="size-3.5" aria-hidden="true" />
             </button>
             <button
               type="button"
@@ -219,15 +249,16 @@ function onClose() {
               :class="clsx('flex', message.role === 'user' ? 'justify-end' : 'justify-start')"
             >
               <div
-                :class="clsx(
-                  'max-w-[85%] rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap leading-relaxed',
-                  message.role === 'user'
-                    ? 'rounded-br-sm bg-cyan text-dark-deep'
-                    : 'rounded-bl-sm bg-dark-surface border border-dark-border text-white',
-                )"
+                v-if="message.role === 'user'"
+                class="max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-br-sm bg-cyan px-3 py-2 text-sm leading-relaxed text-dark-deep"
               >
                 {{ message.content }}
               </div>
+              <div
+                v-else
+                class="chat-markdown max-w-[85%] rounded-2xl rounded-bl-sm border border-dark-border bg-dark-surface px-3 py-2 text-sm leading-relaxed text-white"
+                v-html="renderChatMarkdown(message.content)"
+              />
             </div>
 
             <AppAiActionCard
@@ -279,3 +310,40 @@ function onClose() {
     </Transition>
   </div>
 </template>
+
+<style scoped lang="scss">
+// Typography for AI reply markup rendered via v-html (raw tags, no class hooks available).
+.chat-markdown {
+  :deep(p + p) { margin-top: 0.5rem; }
+  :deep(strong) { font-weight: 600; }
+  :deep(ul) {
+    margin-top: 0.375rem;
+    padding-left: 1.125rem;
+    list-style: disc;
+  }
+  :deep(li + li) { margin-top: 0.25rem; }
+  :deep(code) {
+    padding: 0.0625rem 0.25rem;
+    border-radius: 0.25rem;
+    background-color: rgb(255 255 255 / 0.08);
+    font-size: 0.8125rem;
+  }
+  :deep(table) {
+    margin-top: 0.5rem;
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8125rem;
+  }
+  :deep(th),
+  :deep(td) {
+    border: 1px solid rgb(255 255 255 / 0.12);
+    padding: 0.25rem 0.5rem;
+    text-align: left;
+    vertical-align: top;
+  }
+  :deep(th) {
+    font-weight: 600;
+    background-color: rgb(255 255 255 / 0.05);
+  }
+}
+</style>
