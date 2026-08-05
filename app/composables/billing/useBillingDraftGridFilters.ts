@@ -65,7 +65,10 @@ export function useBillingDraftGridFilters(rows: ComputedRef<BillingDraftGridRow
   const selectedKeys = ref<Set<string>>(new Set())
 
   function isSelectable(row: BillingDraftGridRow): boolean {
-    return row.rowType === 'billable_contract' && row.lines.length > 0
+    return row.rowType === 'billable_contract'
+      && row.lines.length > 0
+      && !row.invoiceId
+      && row.blockers.length === 0
   }
 
   const selectedRows = computed<BillingDraftGridRow[]>(() => {

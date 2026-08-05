@@ -8,7 +8,10 @@ import { hashAgentPayload, throwAgentError } from '../../utils/ai'
 import { BillingDraftService } from '../billing/drafts'
 import { InvoiceService } from '../billing/invoices'
 import type { AiActionExecutor } from './executors'
-import { buildInvoiceIssueSnapshot } from './invoice-issue-snapshot'
+import {
+  buildInvoiceIssueSnapshot,
+  hashInvoiceIssueSnapshot,
+} from '../billing/invoice-issue-snapshot'
 
 function invalidPayload(message: string, details: unknown): never {
   throwAgentError(422, 'VALIDATION_ERROR', message, {
@@ -55,7 +58,7 @@ export const ISSUE_INVOICES_EXECUTOR: AiActionExecutor = {
     const payload = parseIssue(plan.normalizedPayload)
     const response = await BillingDraftService.calculateDraft(event, user, payload.period_id)
     const snapshot = buildInvoiceIssueSnapshot(response, payload.contract_ids, payload.due_date)
-    const currentHash = hashAgentPayload(snapshot, {})
+    const currentHash = hashInvoiceIssueSnapshot(snapshot)
     if (currentHash !== payload.snapshot_hash || plan.resourceVersions.draft_snapshot !== currentHash) {
       stale(plan, 'Dự thảo phát hành đã thay đổi. Vui lòng tạo lại bản xem trước.')
     }

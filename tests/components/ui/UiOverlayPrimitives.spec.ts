@@ -74,6 +74,19 @@ describe('UiModal', () => {
     await waitForDom()
     expect(document.activeElement).toBe(opener)
   })
+
+  it('supports a full-height mobile document workflow without changing desktop sizing', async () => {
+    mount(UiModal, {
+      attachTo: document.body,
+      props: { open: true, title: 'Preview', size: 'xl', mobileFullscreen: true },
+      global: { stubs: iconStubs },
+    })
+    await waitForDom()
+
+    const dialog = document.querySelector<HTMLElement>('[role="dialog"]')!
+    expect(dialog.className).toContain('p-0')
+    expect(dialog.firstElementChild?.nextElementSibling?.className).toContain('h-dvh')
+  })
 })
 
 describe('UiDrawer', () => {

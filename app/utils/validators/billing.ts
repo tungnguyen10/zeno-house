@@ -71,11 +71,25 @@ export type UtilityUsageOverrideInput = z.infer<typeof utilityUsageOverrideSchem
 // Issue invoices
 // ---------------------------------------------------------------------------
 
-export const issueInvoicesSchema = z.object({
-  contract_ids: z.array(z.string().uuid()).optional(),
-  due_date: z.string().nullable().optional(),
+const issueInvoiceSelectionSchema = z.object({
+  contract_ids: z.array(z.string().uuid()).min(1).max(100),
+  due_date: z.iso.date(),
 })
+
+export const issueInvoicesPreviewSchema = issueInvoiceSelectionSchema.strict()
+export type IssueInvoicesPreviewInput = z.infer<typeof issueInvoicesPreviewSchema>
+
+export const issueInvoicesSchema = issueInvoiceSelectionSchema.extend({
+  snapshot_hash: z.string().regex(/^[a-f0-9]{64}$/),
+  operation_id: z.string().uuid(),
+}).strict()
 export type IssueInvoicesInput = z.infer<typeof issueInvoicesSchema>
+
+/** Internal server-owned payload after preview validation; also shared by the existing AI flow. */
+export interface IssueInvoicesCommitInput {
+  contract_ids?: string[]
+  due_date?: string | null
+}
 
 // ---------------------------------------------------------------------------
 // Void invoice

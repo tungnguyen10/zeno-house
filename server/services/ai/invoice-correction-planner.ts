@@ -16,7 +16,7 @@ import { BillingDraftService } from '../billing/drafts'
 import { InvoiceService } from '../billing/invoices'
 import { validateAdjustment } from '../billing/rules'
 import { AiActionService } from './actions'
-import { buildInvoiceIssueSnapshot } from './invoice-issue-snapshot'
+import { buildInvoiceIssueSnapshot } from '../billing/invoice-issue-snapshot'
 import { hashAgentPayload } from '../../utils/ai'
 
 async function correctionContext(event: H3Event, user: AuthUser, invoiceRef: string) {

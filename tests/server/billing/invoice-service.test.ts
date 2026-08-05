@@ -8,6 +8,7 @@ const findInvoiceByIdentifier = vi.fn()
 const voidWithAudit = vi.fn()
 const findActiveByPeriodContract = vi.fn()
 const issuePeriodWithAudit = vi.fn()
+const findIssueReplay = vi.fn()
 const reissueWithAudit = vi.fn()
 const addAdjustmentWithAudit = vi.fn()
 const listCharges = vi.fn()
@@ -33,6 +34,7 @@ vi.mock('../../../server/repositories/billing/invoices', () => ({
     voidWithAudit,
     findActiveByPeriodContract,
     issuePeriodWithAudit,
+    findIssueReplay,
     reissueWithAudit,
     addAdjustmentWithAudit,
     listCharges,

@@ -63,6 +63,7 @@ const {
   loadInvoices,
   loadUtilityUsages,
   issue,
+  previewIssue,
   issueAndPay,
   undoPayment,
   close,
@@ -433,6 +434,7 @@ watch(
           :on-save-override="saveUtilityOverrideWithToast"
           :on-delete-override="deleteUtilityOverrideWithToast"
           :on-approve-override="approveUtilityOverride"
+          :on-preview-issue="previewIssue"
           :on-issue="issueWithToast"
           :on-auto-issue="issueAndPayWithToast"
           @refresh="async () => { await loadGrid(); await loadOverview() }"

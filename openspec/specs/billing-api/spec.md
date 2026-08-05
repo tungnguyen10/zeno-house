@@ -143,10 +143,27 @@ The API SHALL provide server-authoritative draft invoice previews before issue a
 - **THEN** the API returns a blocker instead of silently calculating electricity charges
 
 ### Requirement: Issue invoices API
-The API SHALL issue invoice snapshots transactionally.
+The API SHALL require a server-authoritative preview before issuing invoice snapshots transactionally.
+
+#### Scenario: Issue preview requested
+- **WHEN** an authorized caller posts contract IDs and one shared due date to `/api/billing/periods/:id/issue-preview`
+- **THEN** the API returns ready draft documents, warnings and exclusions, aggregate counts and total, a canonical `snapshot_hash`, and a server-owned `operation_id`
+- **AND** draft documents identify themselves as drafts and do not claim an allocated invoice code
+
+#### Scenario: Preview snapshot is bound to financial state
+- **WHEN** the preview snapshot is calculated
+- **THEN** its hash binds the period and selected targets, due date, canonical charge lines and totals, blockers and warnings, existing invoice state, and current payment-profile version
+
+#### Scenario: Stale issue confirmation rejected
+- **WHEN** any bound state changes before `/issue` receives the preview's `snapshot_hash` and `operation_id`
+- **THEN** the API returns `409 CONFLICT` and creates no invoice, charge, period transition, or success audit event
+
+#### Scenario: Client financial payload rejected
+- **WHEN** the preview or issue request supplies client-owned charge lines or totals
+- **THEN** strict boundary validation rejects the request
 
 #### Scenario: Issue succeeds
-- **WHEN** draft charges have no blockers
+- **WHEN** draft charges have no blockers and the confirmation matches the current server snapshot
 - **THEN** the API creates invoices and invoice charges in a single logical operation
 
 #### Scenario: Issue fails

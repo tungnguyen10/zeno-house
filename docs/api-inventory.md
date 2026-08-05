@@ -1,7 +1,7 @@
 # API Inventory And Performance Contracts
 
 Generated from checked-in handlers by `node scripts/generate-api-inventory.mjs`.
-Route count: **175**.
+Route count: **178**.
 
 All business routes require server-side authorization unless explicitly documented as an internal-secret route. Initial reads use Nuxt `useFetch`; imperative reads and mutations use `apiFetch` with a 15-second timeout, request ID, no automatic mutation retry, and normalized server envelopes.
 
@@ -30,6 +30,7 @@ All business routes require server-side authorization unless explicitly document
 | GET | `/api/billing/invoices/[id]/payments` | domain-bounded | no long cache | p95 ≤ 400ms |
 | POST | `/api/billing/invoices/[id]/payments` | n/a | no long cache | p95 ≤ 250ms |
 | DELETE | `/api/billing/invoices/[id]/payments/[paymentId]` | n/a | no long cache | p95 ≤ 250ms |
+| PATCH | `/api/billing/invoices/[id]/profile-snapshot` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | POST | `/api/billing/invoices/[id]/reissue` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | POST | `/api/billing/invoices/[id]/void` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | POST | `/api/billing/invoices/bulk-payments` | n/a | invalidate affected domain | p95 ≤ 250ms |
@@ -44,6 +45,7 @@ All business routes require server-side authorization unless explicitly document
 | GET | `/api/billing/periods/[id]` | n/a | request/DTO policy | p95 ≤ 250ms |
 | GET | `/api/billing/periods/[id]/invoices` | domain-bounded | request/DTO policy | p95 ≤ 400ms |
 | POST | `/api/billing/periods/[id]/issue-and-pay` | n/a | invalidate affected domain | p95 ≤ 250ms |
+| POST | `/api/billing/periods/[id]/issue-preview` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | POST | `/api/billing/periods/[id]/issue` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | GET | `/api/billing/periods/[id]/overview` | n/a | request/DTO policy | p95 ≤ 250ms |
 | POST | `/api/billing/periods/[id]/reopen` | n/a | invalidate affected domain | p95 ≤ 250ms |
@@ -161,6 +163,7 @@ All business routes require server-side authorization unless explicitly document
 | GET | `/api/tenant/invoices` | domain-bounded | request/DTO policy | p95 ≤ 400ms |
 | GET | `/api/tenant/me` | n/a | request/DTO policy | p95 ≤ 250ms |
 | PATCH | `/api/tenant/me` | n/a | invalidate affected domain | p95 ≤ 250ms |
+| POST | `/api/tenant/password` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | GET | `/api/tenant/requests` | domain-bounded | request/DTO policy | p95 ≤ 400ms |
 | POST | `/api/tenant/requests` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | DELETE | `/api/tenants/[id]` | n/a | invalidate affected domain | p95 ≤ 250ms |

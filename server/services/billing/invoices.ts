@@ -5,11 +5,12 @@ import type {
   InvoiceCharge,
   InvoiceWithCharges,
   IssueInvoicesResult,
+  BillingDraftResponse,
 } from '~/types/billing'
 import { BILLING_AUDIT_ACTIONS } from '~/utils/constants/billing'
 import type {
   AdjustmentChargeInput,
-  IssueInvoicesInput,
+  IssueInvoicesCommitInput,
   ReissueInvoiceInput,
   VoidInvoiceInput,
 } from '~/utils/validators/billing'
@@ -43,6 +44,24 @@ function compareInvoicesByRoomAsc(a: Invoice, b: Invoice): number {
 }
 
 export const InvoiceService = {
+  async findIssueReplay(
+    event: H3Event,
+    user: AuthUser,
+    periodId: string,
+    operationId: string,
+  ): Promise<IssueInvoicesResult | null> {
+    if (!can(user, 'billing.write')) throwForbidden('Không có quyền phát hành hoá đơn')
+    const period = await BillingPeriodRepository.findById(event, periodId)
+    if (!period) throwNotFound('Không tìm thấy kỳ vận hành')
+    await assertBuildingScope(event, user, period.buildingId, 'write')
+    const invoices = await InvoiceRepository.findIssueReplay(event, periodId, operationId)
+    if (!invoices) return null
+    return {
+      issuedCount: invoices.length,
+      invoices: await new BillingDisplayResolver(event).enrichInvoices(invoices),
+    }
+  },
+
   async list(event: H3Event, user: AuthUser, billingPeriodId: string): Promise<Invoice[]> {
     if (!can(user, 'billing.read')) throwForbidden('Không có quyền xem hoá đơn')
     const period = await BillingPeriodRepository.findById(event, billingPeriodId)
@@ -99,8 +118,8 @@ export const InvoiceService = {
     event: H3Event,
     user: AuthUser,
     periodId: string,
-    input: IssueInvoicesInput,
-    operation: { operationId?: string } = {},
+    input: IssueInvoicesCommitInput,
+    operation: { operationId?: string, draftResponse?: BillingDraftResponse } = {},
   ): Promise<IssueInvoicesResult> {
     if (!can(user, 'billing.write')) throwForbidden('Không có quyền phát hành hoá đơn')
 
@@ -109,7 +128,7 @@ export const InvoiceService = {
     await assertBuildingScope(event, user, period.buildingId, 'write')
     if (period.status === 'closed') throwConflict('Kỳ đã chốt — không thể phát hành thêm hoá đơn')
 
-    const draftResp = await BillingDraftService.calculateDraft(event, user, periodId)
+    const draftResp = operation.draftResponse ?? await BillingDraftService.calculateDraft(event, user, periodId)
 
     const targetContractIds = input.contract_ids ? new Set(input.contract_ids) : null
     const candidates = draftResp.drafts.filter(d =>

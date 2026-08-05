@@ -8,11 +8,13 @@ import type {
   BillingUtilityUsage,
   BillingAuditEvent,
   IssueInvoicesResult,
+  BillingInvoiceIssuePreview,
   BillingWorkspaceBootstrap,
 } from '~/types/billing'
 import type { MeterReading } from '~/types/meter-readings'
 import type {
   IssueInvoicesInput,
+  IssueInvoicesPreviewInput,
   UtilityUsageOverrideInput,
 } from '~/utils/validators/billing'
 import type { IssueAndPayInput } from '~/utils/validators/billing-issue-pay'
@@ -153,6 +155,15 @@ export function useBillingPeriodWorkspace(
     return resp.data
   }
 
+  async function previewIssue(input: IssueInvoicesPreviewInput): Promise<BillingInvoiceIssuePreview> {
+    if (!id.value) throw new Error('No period id')
+    const resp = await apiFetch<ApiSuccess<BillingInvoiceIssuePreview>>(`/api/billing/periods/${id.value}/issue-preview`, {
+      method: 'POST',
+      body: input,
+    })
+    return resp.data
+  }
+
   async function close(): Promise<BillingPeriod> {
     if (!id.value) throw new Error('No period id')
     const resp = await apiFetch<ApiSuccess<BillingPeriod>>(`/api/billing/periods/${id.value}/close`, {
@@ -275,6 +286,7 @@ export function useBillingPeriodWorkspace(
     loadUtilityUsages,
     loadAudit,
     issue,
+    previewIssue,
     issueAndPay,
     undoPayment,
     close,

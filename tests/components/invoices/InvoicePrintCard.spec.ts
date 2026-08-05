@@ -2,6 +2,7 @@ import { mount } from '@vue/test-utils'
 import { defineComponent } from 'vue'
 import InvoicePrintCard from '../../../app/components/invoices/InvoicePrintCard.vue'
 import type { InvoicePrintItem } from '../../../app/types/billing'
+import { toIssuedInvoiceDocument } from '../../../app/utils/billing/invoice-document'
 import { buildInvoice } from '../../__fixtures__/billing/invoice'
 import { buildPeriod } from '../../__fixtures__/billing/period'
 
@@ -51,7 +52,7 @@ function printItem(): InvoicePrintItem {
 describe('InvoicePrintCard', () => {
   it('uses a larger payment QR and compact Tailwind footer spacing', () => {
     const wrapper = mount(InvoicePrintCard, {
-      props: { item: printItem() },
+      props: { item: toIssuedInvoiceDocument(printItem()) },
       global: {
         stubs: {
           UiStatusBadge: defineComponent({ template: '<span />' }),
@@ -74,7 +75,7 @@ describe('InvoicePrintCard', () => {
 
   it('keeps the debt summary directly attached to the charge table block', () => {
     const wrapper = mount(InvoicePrintCard, {
-      props: { item: printItem() },
+      props: { item: toIssuedInvoiceDocument(printItem()) },
       global: {
         stubs: {
           UiStatusBadge: defineComponent({ template: '<span />' }),
@@ -90,7 +91,7 @@ describe('InvoicePrintCard', () => {
 
   it('renders invoice snapshot identity, meter metadata, and debt summary', () => {
     const wrapper = mount(InvoicePrintCard, {
-      props: { item: printItem() },
+      props: { item: toIssuedInvoiceDocument(printItem()) },
       global: {
         stubs: {
           UiStatusBadge: defineComponent({
@@ -124,7 +125,7 @@ describe('InvoicePrintCard', () => {
   })
 
   it('uses Zeno branding and a neutral instruction when no payment snapshot exists', () => {
-    const item = { ...printItem(), invoiceProfile: null }
+    const item = { ...toIssuedInvoiceDocument(printItem()), invoiceProfile: null }
     const wrapper = mount(InvoicePrintCard, {
       props: { item },
       global: {
@@ -142,7 +143,7 @@ describe('InvoicePrintCard', () => {
 
   it('uses a neutral payment fallback when the snapshotted QR is unavailable', () => {
     const item = {
-      ...printItem(),
+      ...toIssuedInvoiceDocument(printItem()),
       invoiceProfile: { ...printItem().invoiceProfile!, qrImageUrl: null },
     }
     const wrapper = mount(InvoicePrintCard, {
@@ -158,5 +159,36 @@ describe('InvoicePrintCard', () => {
     expect(wrapper.find('[data-test="payment-qr"]').exists()).toBe(false)
     expect(wrapper.find('[data-test="payment-qr-fallback"]').exists()).toBe(true)
     expect(wrapper.text()).toContain('Dùng thông tin chuyển khoản bên trên')
+  })
+
+  it('renders a non-printable draft identity without pretending an invoice code exists', () => {
+    const item = {
+      ...toIssuedInvoiceDocument(printItem()),
+      mode: 'draft' as const,
+      invoiceCode: null,
+      status: 'draft' as const,
+      issuedAt: '2026-06-02T00:00:00.000Z',
+      paidAmount: 0,
+      balanceAmount: 3_500_000,
+      invoiceProfile: {
+        ...printItem().invoiceProfile!,
+        transferContent: 'ZHA-101-MÃ CẤP KHI PHÁT HÀNH-06/2026',
+      },
+    }
+    const wrapper = mount(InvoicePrintCard, {
+      props: { item },
+      global: {
+        stubs: {
+          UiStatusBadge: defineComponent({ template: '<span />' }),
+          IconLogo: defineComponent({ template: '<span />' }),
+        },
+      },
+    })
+
+    expect(wrapper.text()).toContain('BẢN NHÁP')
+    expect(wrapper.text()).toContain('Mã cấp khi phát hành')
+    expect(wrapper.text()).toContain('Ngày dự kiến & hạn')
+    expect(wrapper.text()).toContain('MÃ CẤP KHI PHÁT HÀNH')
+    expect(wrapper.find('button').exists()).toBe(false)
   })
 })

@@ -5,7 +5,7 @@ import { aiToolPlanInvoiceIssueSchema } from '../../../app/utils/validators/ai'
 import {
   buildInvoiceIssueSnapshot,
   createInvoiceIssuePreview,
-} from '../../../server/services/ai/invoice-issue-snapshot'
+} from '../../../server/services/billing/invoice-issue-snapshot'
 
 const calculateDraft = vi.fn()
 const createPlan = vi.fn()

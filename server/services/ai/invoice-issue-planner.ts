@@ -6,7 +6,7 @@ import type { AiToolPlanInvoiceIssueInput } from '~/utils/validators/ai'
 import { can } from '../../utils/permissions'
 import { BillingDraftService } from '../billing/drafts'
 import { AiActionService } from './actions'
-import { createInvoiceIssuePreview } from './invoice-issue-snapshot'
+import { createInvoiceIssuePreview } from '../billing/invoice-issue-snapshot'
 
 export type AiInvoiceIssuePlanResult =
   | { status: 'planned'; preview: AiInvoiceIssuePreview; actionPlan: AiActionPlanDto }

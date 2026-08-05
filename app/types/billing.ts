@@ -273,6 +273,61 @@ export interface InvoicePrintItem {
   }
 }
 
+export interface InvoiceDocumentLine {
+  key: string
+  chargeType: ChargeType
+  label: string
+  quantity: number
+  unitPrice: number
+  amount: number
+  metadata: Record<string, unknown>
+  sortOrder: number
+}
+
+export interface InvoiceDocumentItem {
+  mode: 'draft' | 'issued'
+  key: string
+  invoiceCode: string | null
+  status: InvoiceStatus | 'draft'
+  roomNumber: string | null
+  tenantName: string | null
+  issuedAt: string | null
+  dueDate: string | null
+  totalAmount: number
+  paidAmount: number
+  balanceAmount: number
+  charges: InvoiceDocumentLine[]
+  invoiceProfile: InvoiceProfileDisplay | null
+  period: BillingPeriod
+  building: {
+    id: string
+    name: string
+    address: string
+  }
+  warnings: BillingDraftWarning[]
+}
+
+export interface BillingInvoiceIssueExclusion {
+  contractId: string
+  roomNumber: string | null
+  tenantName: string | null
+  reason: 'blocked' | 'already_issued'
+  messages: string[]
+}
+
+export interface BillingInvoiceIssuePreview {
+  periodId: string
+  dueDate: string
+  operationId: string
+  snapshotHash: string
+  issuableCount: number
+  blockedCount: number
+  alreadyIssuedCount: number
+  totalAmount: number
+  items: InvoiceDocumentItem[]
+  exclusions: BillingInvoiceIssueExclusion[]
+}
+
 // ---------------------------------------------------------------------------
 // Draft Grid read model (combines reading entry + draft review into one room
 // centered grid). Composed at the service boundary; not a new repository.

@@ -436,6 +436,7 @@ Period API:
 - `DELETE /api/billing/periods/[id]/utility-usages`
 - `POST /api/billing/periods/[id]/utility-usages/[override_id]/approve`
 - `POST /api/billing/periods/[id]/issue`
+- `POST /api/billing/periods/[id]/issue-preview`
 - `POST /api/billing/periods/[id]/issue-and-pay`
 - `GET /api/billing/periods/[id]/invoices`
 - `GET /api/billing/periods/[id]/audit`

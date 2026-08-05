@@ -133,18 +133,21 @@ Header overflow actions (`Hành động ▾`):
 Issuing invoices:
 
 - requires `billing.write`
-- recomputes drafts server-side
+- requires `POST /api/billing/periods/[id]/issue-preview` before confirmation
+- saves pending reading edits before preview and recomputes drafts server-side
+- binds the selected contracts, shared due date, charge lines/totals, blockers/warnings, existing invoice state, period version, and current payment profile to a canonical `snapshot_hash`
 - skips contracts with existing non-void invoice for the period
 - skips blocked drafts
+- requires the returned `snapshot_hash` and server-owned `operation_id` at `POST /api/billing/periods/[id]/issue`; stale previews return `409 CONFLICT` and write nothing
 - creates invoice and charge snapshots
 - advances the period to `issued` when appropriate
-- writes audit metadata
+- writes audit metadata and replays the prior result when the same operation ID is retried
 
 The AI `plan_invoice_issue` flow accepts a period and optional contract selection, never model-supplied charge lines or totals. The server recalculates drafts, displays issuable/blocked/already-issued rows, and stores a canonical snapshot hash. Confirmation recalculates that snapshot; a changed draft, blocker, or existing-invoice state makes the plan stale and writes nothing. Successful issue writes invoices, charge snapshots, period status, and audit atomically, while retrying the same plan replays its prior result.
 
 ### Bulk Issue
 
-Select multiple `ready` rows in the draft grid → "Phát hành (N)" button issues all selected contracts in one request.
+Select rows without blockers or an existing invoice in the draft grid → **Xem trước & phát hành (N)**. Warnings remain selectable. The responsive modal shows server-rendered **BẢN NHÁP** documents and one shared due date (default: current date in `Asia/Ho_Chi_Minh` plus four days). Changing the due date reloads the preview and hash. Draft documents are review-only and cannot be printed; invoice codes and immutable payment-profile snapshots are created only inside the issue transaction.
 
 ### Auto-Issue and Collect (feature-flagged)
 

@@ -182,6 +182,8 @@ but the Auth row was retained by irreversible soft deletion for historical refer
 | --- | --- |
 | GET | `/api/billing/periods` |
 | POST | `/api/billing/periods` |
+| POST | `/api/billing/periods/[id]/issue-preview` |
+| POST | `/api/billing/periods/[id]/issue` |
 | GET | `/api/billing/invoices/[id]` |
 | POST | `/api/billing/invoices/bulk-payments` |
 | POST | `/api/billing/invoices/print-data` |
@@ -191,6 +193,8 @@ but the Auth row was retained by irreversible soft deletion for historical refer
 | GET | `/api/invoices` |
 
 Billing behavior is split across services under `server/services/billing/**`. Some period, invoice, payment, audit, issue, close, and correction operations are implemented as service/RPC paths rather than one route per action. Check source before adding or documenting a route.
+
+Bulk invoice issue is a two-request protocol. `issue-preview` accepts only contract IDs and a shared due date, then returns server-rendered draft documents, exclusions, a canonical snapshot hash, and a server-owned operation ID. `issue` accepts that selection plus the returned hash and operation ID, recomputes the same canonical state, rejects stale previews with `409 CONFLICT`, and passes only validated server-owned draft lines to the atomic issue transaction. Replaying a completed operation ID returns its original invoices.
 
 Invoice-email enqueue accepts one to 100 invoice UUIDs or codes and returns one result per input;
 bulk requests may partially succeed. Delivery history is scoped through the invoice's building and

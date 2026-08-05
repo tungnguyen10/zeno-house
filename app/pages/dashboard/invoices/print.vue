@@ -2,6 +2,7 @@
 import type { ApiSuccess } from '~/types/api'
 import type { InvoicePrintItem } from '~/types/billing'
 import { getApiErrorMessage } from '~/utils/api-error'
+import { toIssuedInvoiceDocument } from '~/utils/billing/invoice-document'
 
 definePageMeta({ title: 'In hóa đơn', layout: false })
 
@@ -67,7 +68,7 @@ function goBack() {
     <div v-else-if="errorMessage" class="px-6 py-16 text-center text-error-vivid"><p>{{ errorMessage }}</p></div>
     <div v-else-if="items.length === 0" class="px-6 py-16 text-center text-muted"><p>Không có hóa đơn nào để in.</p></div>
     <main v-else class="print-sheet">
-      <InvoicePrintCard v-for="item in items" :key="item.invoice.id" :item="item" />
+      <InvoicePrintCard v-for="item in items" :key="item.invoice.id" :item="toIssuedInvoiceDocument(item)" />
     </main>
   </div>
 </template>

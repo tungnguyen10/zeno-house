@@ -1,5 +1,7 @@
 import { mount, flushPromises } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { buildInvoice } from '../__fixtures__/billing/invoice'
+import { buildPeriod } from '../__fixtures__/billing/period'
 
 const apiFetch = vi.fn()
 const printNow = vi.fn()
@@ -21,7 +23,7 @@ function mountPage() {
       stubs: {
         InvoicePrintCard: {
           props: ['item'],
-          template: '<article data-test="invoice-card">{{ item.invoice.id }}</article>',
+          template: '<article data-test="invoice-card">{{ item.key }}</article>',
         },
         UiButton: {
           props: ['disabled'],
@@ -72,8 +74,14 @@ describe('issued invoice print page', () => {
   it('renders the complete batch and prints its invoice ids', async () => {
     apiFetch.mockResolvedValue({
       data: [
-        { invoice: { id: 'invoice-2' } },
-        { invoice: { id: 'invoice-1' } },
+        {
+          invoice: buildInvoice({ id: 'invoice-2' }), charges: [], invoiceProfile: null,
+          period: buildPeriod(), building: { id: 'building-1', name: 'Zeno', address: '1 Nguyễn Huệ' },
+        },
+        {
+          invoice: buildInvoice({ id: 'invoice-1' }), charges: [], invoiceProfile: null,
+          period: buildPeriod(), building: { id: 'building-1', name: 'Zeno', address: '1 Nguyễn Huệ' },
+        },
       ],
     })
 

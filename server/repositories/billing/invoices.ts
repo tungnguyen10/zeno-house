@@ -109,6 +109,33 @@ async function buildUniqueInvoiceCode(event: H3Event, billingPeriodId: string): 
 }
 
 export const InvoiceRepository = {
+  async findIssueReplay(event: H3Event, periodId: string, operationId: string): Promise<Invoice[] | null> {
+    const client = await serverSupabaseClient(event)
+    const { data: audit, error: auditError } = await client
+      .from('billing_audit_events')
+      .select('metadata')
+      .eq('billing_period_id', periodId)
+      .eq('action', 'invoices.issued')
+      .eq('correlation_id', operationId)
+      .limit(1)
+      .maybeSingle()
+    if (auditError) throwDbError(auditError, 'billing.invoices.findIssueReplay.audit')
+    if (!audit) return null
+
+    const metadata = audit.metadata && typeof audit.metadata === 'object' && !Array.isArray(audit.metadata)
+      ? audit.metadata as Record<string, unknown>
+      : {}
+    const invoiceIds = Array.isArray(metadata.invoice_ids)
+      ? metadata.invoice_ids.filter((value): value is string => typeof value === 'string' && isUuid(value))
+      : []
+    if (invoiceIds.length === 0) return null
+
+    const { data, error } = await client.from('invoices').select('*').in('id', invoiceIds)
+    if (error) throwDbError(error, 'billing.invoices.findIssueReplay.invoices')
+    const byId = new Map((data ?? []).map(row => [row.id, mapInvoice(row)]))
+    return invoiceIds.map(id => byId.get(id)).filter((invoice): invoice is Invoice => !!invoice)
+  },
+
   async issuePeriodWithAudit(event: H3Event, input: InvoiceIssueRpcInput): Promise<Invoice[]> {
     const client = await serverSupabaseClient(event)
     const args = {

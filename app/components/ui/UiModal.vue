@@ -8,6 +8,8 @@ const props = withDefaults(defineProps<{
   ariaLabel?: string
   /** Width preset. Defaults to `md` (max-w-lg) for backwards compatibility. */
   size?: 'sm' | 'md' | 'lg' | 'xl'
+  /** Let document-like workflows use the full mobile viewport while preserving desktop modal sizing. */
+  mobileFullscreen?: boolean
 }>(), {
   size: 'md',
 })
@@ -24,7 +26,8 @@ const accessibleLabel = computed(() => props.title ? undefined : (props.ariaLabe
 
 const panelClass = computed(() =>
   clsx(
-    'relative z-10 flex w-full max-h-[calc(100vh-2rem)] flex-col rounded-2xl bg-dark-card shadow-xl',
+    'relative z-10 flex w-full max-h-[calc(100dvh-2rem)] flex-col rounded-2xl bg-dark-card shadow-xl',
+    props.mobileFullscreen && 'h-dvh max-h-dvh rounded-none sm:h-auto sm:max-h-[calc(100dvh-2rem)] sm:rounded-2xl',
     {
       'max-w-md': props.size === 'sm',
       'max-w-lg': props.size === 'md',
@@ -112,7 +115,7 @@ watch(
       <div
         v-if="open"
         ref="dialogRef"
-        class="fixed inset-0 z-50 flex items-center justify-center p-4"
+        :class="clsx('fixed inset-0 z-50 flex items-center justify-center', mobileFullscreen ? 'p-0 sm:p-4' : 'p-4')"
         role="dialog"
         aria-modal="true"
         tabindex="-1"

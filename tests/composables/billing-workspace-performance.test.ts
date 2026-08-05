@@ -18,6 +18,9 @@ const period = {
 }
 
 function responseFor(url: string) {
+  if (url.endsWith('/issue-preview')) {
+    return { data: { snapshotHash: 'a'.repeat(64), operationId: 'operation-1', items: [] } }
+  }
   if (url.endsWith('/issue')) return { data: { issued: 1, skipped: [] } }
   if (url.endsWith('/utility-usages')) {
     return { data: { id: 'usage-1', approvedBy: null } }
@@ -49,6 +52,21 @@ describe('billing workspace request dependencies', () => {
       '/api/billing/periods/period-1/issue',
       '/api/billing/periods/period-1/invoices',
       '/api/billing/periods/period-1/draft-grid',
+    ])
+  })
+
+  it('loads an issue preview without mutating or reloading workspace state', async () => {
+    const { useBillingPeriodWorkspace } = await import('../../app/composables/billing/useBillingPeriodWorkspace')
+    const workspace = useBillingPeriodWorkspace('period-1')
+
+    const preview = await workspace.previewIssue({
+      contract_ids: ['00000000-0000-4000-8000-000000000001'],
+      due_date: '2026-08-09',
+    })
+
+    expect(preview.snapshotHash).toBe('a'.repeat(64))
+    expect(fetchMock.mock.calls.map(call => call[0])).toEqual([
+      '/api/billing/periods/period-1/issue-preview',
     ])
   })
 

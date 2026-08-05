@@ -13,10 +13,11 @@ import type {
   BillingPeriod,
   Invoice,
   IssueInvoicesResult,
+  BillingInvoiceIssuePreview,
   BillingUtilityUsage,
 } from '~/types/billing'
 import type { MeterReadingBulkInput } from '~/utils/validators/meter-readings'
-import type { IssueInvoicesInput, UtilityUsageOverrideInput } from '~/utils/validators/billing'
+import type { IssueInvoicesInput, IssueInvoicesPreviewInput, UtilityUsageOverrideInput } from '~/utils/validators/billing'
 import type { IssueAndPayInput } from '~/utils/validators/billing-issue-pay'
 import { formatCurrency } from '~/utils/format/currency'
 import { isPeriodLocked } from '~/utils/billing/lock'
@@ -33,6 +34,8 @@ import {
 import { useBillingDraftGridAutosave } from '~/composables/billing/useBillingDraftGridAutosave'
 import { useBillingDraftGridFilters } from '~/composables/billing/useBillingDraftGridFilters'
 import { useBillingDraftGridNavigation } from '~/composables/billing/useBillingDraftGridNavigation'
+import { defaultInvoiceDueDate } from '~/utils/billing/due-date'
+import { getApiErrorCode, getApiErrorDetails, getApiErrorMessage } from '~/utils/api-error'
 
 type MeterType = 'electricity' | 'water'
 
@@ -48,6 +51,7 @@ const props = defineProps<{
   onSaveOverride: (input: UtilityUsageOverrideInput) => Promise<void>
   onDeleteOverride: (overrideId: string) => Promise<void>
   onApproveOverride?: (overrideId: string) => Promise<BillingUtilityUsage>
+  onPreviewIssue?: (input: IssueInvoicesPreviewInput) => Promise<BillingInvoiceIssuePreview>
   onIssue?: (input: IssueInvoicesInput) => Promise<IssueInvoicesResult | undefined>
   onAutoIssue?: (input: IssueAndPayInput) => Promise<Invoice | undefined>
 }>()
@@ -154,18 +158,55 @@ const issuableSelectedRows = computed<BillingDraftGridRow[]>(() =>
   selectedRows.value.filter(row => !!row.contractId && !row.invoiceId),
 )
 const issuableSelectedCount = computed(() => issuableSelectedRows.value.length)
-const issuableSelectedTotal = computed(() =>
-  issuableSelectedRows.value.reduce((sum, row) => sum + (row.draftTotal ?? 0), 0),
-)
-
-const issueConfirmOpen = ref(false)
+const issuePreviewOpen = ref(false)
+const issuePreview = ref<BillingInvoiceIssuePreview | null>(null)
+const issuePreviewLoading = ref(false)
+const issuePreviewError = ref<string | null>(null)
+const issuePreviewStale = ref(false)
+const issueDueDate = ref(defaultInvoiceDueDate())
 const issueSubmitting = ref(false)
 const approveOverridesOpen = ref(false)
 const approvingOverrides = ref<BillingUtilityUsage[]>([])
 const approvingInProgress = ref(false)
 const overridesToApprove = computed(() => props.unapprovedOverrides ?? [])
 
-function startIssue() {
+async function loadIssuePreview() {
+  if (!props.onPreviewIssue || issuableSelectedCount.value === 0) return
+  issuePreviewLoading.value = true
+  issuePreviewError.value = null
+  issuePreviewStale.value = false
+  try {
+    const contractIds = issuableSelectedRows.value
+      .map(row => row.contractId)
+      .filter((id): id is string => !!id)
+    issuePreview.value = await props.onPreviewIssue({ contract_ids: contractIds, due_date: issueDueDate.value })
+  }
+  catch (error) {
+    issuePreview.value = null
+    issuePreviewError.value = getApiErrorMessage(error, 'Không thể tải bản xem trước hóa đơn.')
+  }
+  finally {
+    issuePreviewLoading.value = false
+  }
+}
+
+async function openIssuePreview() {
+  try {
+    await saveAll()
+  }
+  catch {
+    toast.error('Chưa thể lưu hết chỉ số. Sửa lỗi lưu trước khi xem hóa đơn.')
+    return
+  }
+  if (dirtyCountValue.value > 0 || Object.keys(rowSaveError.value).length > 0) {
+    toast.error('Còn chỉ số chưa lưu hoặc đang lỗi. Hoàn tất lưu trước khi xem hóa đơn.')
+    return
+  }
+  issuePreviewOpen.value = true
+  await loadIssuePreview()
+}
+
+async function startIssue() {
   if (issuableSelectedCount.value === 0) return
   // Check for unapproved overrides
   if (overridesToApprove.value.length > 0) {
@@ -173,7 +214,7 @@ function startIssue() {
     approveOverridesOpen.value = true
     return
   }
-  issueConfirmOpen.value = true
+  await openIssuePreview()
 }
 
 async function approveAllOverrides() {
@@ -185,8 +226,7 @@ async function approveAllOverrides() {
     }
     approveOverridesOpen.value = false
     approvingOverrides.value = []
-    // Now show the issue confirm dialog
-    issueConfirmOpen.value = true
+    await openIssuePreview()
   }
   catch (err) {
     console.error('Failed to approve overrides:', err)
@@ -197,20 +237,48 @@ async function approveAllOverrides() {
 }
 
 async function confirmIssue() {
-  if (!props.onIssue || issuableSelectedCount.value === 0) return
+  if (!props.onIssue || !issuePreview.value || issuePreviewStale.value) return
   issueSubmitting.value = true
+  issuePreviewError.value = null
   try {
-    const contractIds = issuableSelectedRows.value
-      .map(row => row.contractId)
-      .filter((id): id is string => !!id)
-    await props.onIssue({ contract_ids: contractIds })
-    issueConfirmOpen.value = false
+    await props.onIssue({
+      contract_ids: issuePreview.value.items.map(item => item.key),
+      due_date: issuePreview.value.dueDate,
+      snapshot_hash: issuePreview.value.snapshotHash,
+      operation_id: issuePreview.value.operationId,
+    })
+    issuePreviewOpen.value = false
+    issuePreview.value = null
     clearSelection()
     emit('refresh')
+  }
+  catch (error) {
+    const details = getApiErrorDetails<{ reason?: string }>(error)
+    if (getApiErrorCode(error) === 'CONFLICT' && details?.reason === 'STALE_ISSUE_PREVIEW') {
+      issuePreviewStale.value = true
+      issuePreviewError.value = 'Dữ liệu kỳ đã thay đổi sau khi xem trước. Tải lại để duyệt số liệu mới trước khi phát hành.'
+    }
+    else {
+      issuePreviewError.value = getApiErrorMessage(error, 'Phát hành hóa đơn thất bại.')
+    }
   }
   finally {
     issueSubmitting.value = false
   }
+}
+
+function closeIssuePreview() {
+  if (issueSubmitting.value) return
+  issuePreviewOpen.value = false
+  issuePreview.value = null
+  issuePreviewError.value = null
+  issuePreviewStale.value = false
+}
+
+async function changeIssueDueDate(value: string) {
+  if (!value || value === issueDueDate.value) return
+  issueDueDate.value = value
+  await loadIssuePreview()
 }
 
 // ---------------------------------------------------------------------------
@@ -571,13 +639,13 @@ const columns: UiTableColumn<BillingDraftGridRow>[] = [
         <div class="flex items-center gap-2">
           <UiButton variant="ghost" size="sm" class="whitespace-nowrap" @click="clearSelection">Bỏ chọn</UiButton>
           <UiButton
-            v-if="onIssue && issuableSelectedCount > 0"
+            v-if="onIssue && onPreviewIssue && issuableSelectedCount > 0"
             variant="primary"
             size="sm"
             class="whitespace-nowrap"
             @click="startIssue"
           >
-            Phát hành ({{ issuableSelectedCount }})
+            Xem trước &amp; phát hành ({{ issuableSelectedCount }})
           </UiButton>
         </div>
       </div>
@@ -681,8 +749,8 @@ const columns: UiTableColumn<BillingDraftGridRow>[] = [
               <span
                 aria-hidden="true"
                 :class="clsx(
-                  'inline-block h-1.5 w-1.5 shrink-0 rounded-full transition-all',
-                  rowSaveStateOf(row as BillingDraftGridRow) === 'saving' ? 'bg-cyan/70 animate-pulse' :
+                  'inline-block h-1.5 w-1.5 shrink-0 rounded-full transition-[background-color,opacity] duration-150',
+                  rowSaveStateOf(row as BillingDraftGridRow) === 'saving' ? 'bg-cyan/70 animate-pulse motion-reduce:animate-none' :
                   rowSaveStateOf(row as BillingDraftGridRow) === 'saved' ? 'bg-emerald-400' :
                   rowSaveStateOf(row as BillingDraftGridRow) === 'error' ? 'bg-rose-400' :
                   isCellDirty(row as BillingDraftGridRow, 'electricity') ? 'bg-amber-400/60' :
@@ -723,8 +791,8 @@ const columns: UiTableColumn<BillingDraftGridRow>[] = [
               <span
                 aria-hidden="true"
                 :class="clsx(
-                  'inline-block h-1.5 w-1.5 shrink-0 rounded-full transition-all',
-                  rowSaveStateOf(row as BillingDraftGridRow) === 'saving' ? 'bg-cyan/70 animate-pulse' :
+                  'inline-block h-1.5 w-1.5 shrink-0 rounded-full transition-[background-color,opacity] duration-150',
+                  rowSaveStateOf(row as BillingDraftGridRow) === 'saving' ? 'bg-cyan/70 animate-pulse motion-reduce:animate-none' :
                   rowSaveStateOf(row as BillingDraftGridRow) === 'saved' ? 'bg-emerald-400' :
                   rowSaveStateOf(row as BillingDraftGridRow) === 'error' ? 'bg-rose-400' :
                   isCellDirty(row as BillingDraftGridRow, 'water') ? 'bg-amber-400/60' :
@@ -932,14 +1000,18 @@ const columns: UiTableColumn<BillingDraftGridRow>[] = [
         </div>
       </div>
     </UiModal>
-    <UiConfirmModal
-      :open="issueConfirmOpen"
-      title="Xác nhận phát hành"
-      :message="`Phát hành ${issuableSelectedCount} hoá đơn với tổng giá trị ${formatCurrency(issuableSelectedTotal)}. Hành động này không thể hoàn tác — chỉ có thể huỷ từng hoá đơn riêng lẻ.`"
-      confirm-label="Phát hành"
-      :loading="issueSubmitting"
+    <BillingInvoiceIssuePreviewModal
+      :open="issuePreviewOpen"
+      :preview="issuePreview"
+      :due-date="issueDueDate"
+      :loading="issuePreviewLoading"
+      :submitting="issueSubmitting"
+      :error="issuePreviewError"
+      :stale="issuePreviewStale"
+      @close="closeIssuePreview"
+      @refresh="loadIssuePreview"
       @confirm="confirmIssue"
-      @cancel="issueConfirmOpen = false"
+      @update:due-date="changeIssueDueDate"
     />
     <BillingAutoIssueModal
       :open="autoIssueOpen"

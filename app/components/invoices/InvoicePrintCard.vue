@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import type { InvoiceCharge, InvoicePrintItem } from '~/types/billing'
+import type { InvoiceDocumentItem, InvoiceDocumentLine } from '~/types/billing'
 import { formatCurrency } from '~/utils/format/currency'
 import { chargeLineLabel, formatPeriodLabel } from '~/utils/billing/charge-groups'
 import { formatMeterReading, formatViNumber } from '~/utils/billing/meter-display'
 
-defineProps<{ item: InvoicePrintItem }>()
+defineProps<{ item: InvoiceDocumentItem }>()
 
 function dateLabel(value: string | null): string {
   if (!value) return '—'
@@ -16,7 +16,7 @@ function dueDateLabel(value: string | null): string {
   return dateLabel(value)
 }
 
-function metadataNumber(line: InvoiceCharge, key: string): number | null {
+function metadataNumber(line: InvoiceDocumentLine, key: string): number | null {
   const value = line.metadata[key]
   if (typeof value === 'number' && Number.isFinite(value)) return value
   if (typeof value === 'string' && value.trim() !== '') {
@@ -26,7 +26,7 @@ function metadataNumber(line: InvoiceCharge, key: string): number | null {
   return null
 }
 
-function isMeterLine(line: InvoiceCharge): boolean {
+function isMeterLine(line: InvoiceDocumentLine): boolean {
   return line.chargeType === 'electricity' || line.chargeType === 'water'
 }
 </script>
@@ -71,9 +71,13 @@ function isMeterLine(line: InvoiceCharge): boolean {
         <span
           class="invoice-code inline-flex items-center whitespace-nowrap rounded-[1mm] border border-transparent bg-slate-900 px-[2mm] py-[.6mm] text-[7.6pt] font-semibold tracking-[.02em] text-white"
         >
-          {{ item.invoice.invoiceCode }}
+          {{ item.mode === 'draft' ? 'Mã cấp khi phát hành' : item.invoiceCode }}
         </span>
-        <UiStatusBadge :status="item.invoice.status" context="invoice" />
+        <span
+          v-if="item.mode === 'draft'"
+          class="inline-flex items-center whitespace-nowrap rounded-[1mm] border border-amber-300 bg-amber-50 px-[2mm] py-[.6mm] text-[6.8pt] font-bold tracking-[.1em] text-amber-900"
+        >BẢN NHÁP</span>
+        <UiStatusBadge v-else :status="item.status" context="invoice" />
       </div>
     </header>
 
@@ -85,13 +89,13 @@ function isMeterLine(line: InvoiceCharge): boolean {
       <div class="flex min-w-0 items-baseline gap-[1.8mm]">
         <dt class="shrink-0 text-[6.8pt] text-slate-500">Phòng &amp; khách thuê</dt>
         <dd class="m-0 min-w-0 flex-1 truncate text-[7.7pt] font-medium text-slate-900">
-          Phòng {{ item.invoice.roomNumber ?? '—' }} · {{ item.invoice.tenantName ?? 'Khách thuê' }}
+          Phòng {{ item.roomNumber ?? '—' }} · {{ item.tenantName ?? 'Khách thuê' }}
         </dd>
       </div>
       <div class="flex min-w-0 items-baseline gap-[1.8mm]">
-        <dt class="shrink-0 text-[6.8pt] text-slate-500">Phát hành &amp; hạn</dt>
+        <dt class="shrink-0 text-[6.8pt] text-slate-500">{{ item.mode === 'draft' ? 'Ngày dự kiến & hạn' : 'Phát hành & hạn' }}</dt>
         <dd class="m-0 min-w-0 flex-1 truncate text-[7.7pt] font-medium tabular-nums text-slate-900">
-          {{ dateLabel(item.invoice.issuedAt) }} — {{ dueDateLabel(item.invoice.dueDate) }}
+          {{ dateLabel(item.issuedAt) }} — {{ dueDateLabel(item.dueDate) }}
         </dd>
       </div>
     </dl>
@@ -115,7 +119,7 @@ function isMeterLine(line: InvoiceCharge): boolean {
           </tr>
         </thead>
         <tbody>
-          <tr v-for="line in item.charges" :key="line.id" class="transition-colors">
+          <tr v-for="line in item.charges" :key="line.key" class="transition-colors">
             <td class="font-medium text-slate-900">{{ chargeLineLabel(line.chargeType, line.label) }}</td>
             <td class="numeric meter-reading text-right tabular-nums text-slate-500">
               {{ isMeterLine(line) ? formatMeterReading(metadataNumber(line, 'previous_reading_value')) : '' }}
@@ -137,16 +141,16 @@ function isMeterLine(line: InvoiceCharge): boolean {
         <div class="flex items-baseline justify-between gap-[4mm]">
           <dt class="text-[7pt] text-slate-500">Đã thu</dt>
           <dd class="m-0 text-[9pt] font-medium tabular-nums text-slate-900">
-            {{ formatCurrency(item.invoice.paidAmount) }}
+            {{ formatCurrency(item.paidAmount) }}
           </dd>
         </div>
         <div class="flex items-baseline justify-between gap-[4mm]">
           <dt class="text-[7pt] text-slate-500">Còn lại</dt>
           <dd
             class="m-0 text-[9pt] font-semibold tabular-nums"
-            :class="item.invoice.balanceAmount > 0 ? 'text-rose-600' : 'text-emerald-600'"
+            :class="item.balanceAmount > 0 ? 'text-rose-600' : 'text-emerald-600'"
           >
-            {{ formatCurrency(item.invoice.balanceAmount) }}
+            {{ formatCurrency(item.balanceAmount) }}
           </dd>
         </div>
         <div
@@ -154,7 +158,7 @@ function isMeterLine(line: InvoiceCharge): boolean {
         >
           <dt class="invoice-balance text-[8pt] font-semibold tracking-[.01em] text-slate-900">Tổng tiền</dt>
           <dd class="m-0 text-[16pt] font-bold leading-none tabular-nums tracking-[-0.02em] text-slate-900">
-            {{ formatCurrency(item.invoice.totalAmount) }}
+            {{ formatCurrency(item.totalAmount) }}
           </dd>
         </div>
       </dl>

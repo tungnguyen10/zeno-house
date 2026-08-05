@@ -101,12 +101,19 @@ const discrepancyCalloutStub = defineComponent({
   emits: ['intent:void-reissue'],
   template: '<div data-test="discrepancy-callout" />',
 })
+const issuePreviewModalStub = defineComponent({
+  name: 'BillingInvoiceIssuePreviewModal',
+  props: ['open', 'preview', 'dueDate', 'error', 'stale'],
+  emits: ['confirm', 'refresh', 'close', 'update:dueDate'],
+  template: '<div v-if="open" data-test="issue-preview-modal"><span>{{ error }}</span><button data-test="confirm-preview" @click="$emit(\'confirm\')">Confirm</button></div>',
+})
 
 function mountGrid(overrides: Partial<{
   response: BillingDraftGridResponse
   period: ReturnType<typeof buildPeriod>
   onSaveReadings: ReturnType<typeof vi.fn>
   onSaveOverride: ReturnType<typeof vi.fn>
+  onPreviewIssue: ReturnType<typeof vi.fn>
   onIssue: ReturnType<typeof vi.fn>
 }> = {}) {
   const onSaveReadings = overrides.onSaveReadings ?? vi.fn()
@@ -118,6 +125,8 @@ function mountGrid(overrides: Partial<{
       period: overrides.period ?? buildPeriod(),
       onSaveReadings,
       onSaveOverride,
+      onDeleteOverride: vi.fn(),
+      onPreviewIssue: overrides.onPreviewIssue,
       onIssue: overrides.onIssue,
     },
     attachTo: document.body,
@@ -142,6 +151,7 @@ function mountGrid(overrides: Partial<{
         UiSkeleton: empty,
         BillingBulkReadingEntryModal: empty,
         BillingDraftDiscrepancyCallout: discrepancyCalloutStub,
+        BillingInvoiceIssuePreviewModal: issuePreviewModalStub,
       },
     },
   })
@@ -235,6 +245,7 @@ describe('BillingDraftGridStep', () => {
     })
     const wrapper = mountGrid({
       response: response([readyRow]),
+      onPreviewIssue: vi.fn(),
       onIssue: vi.fn(async () => undefined),
     })
     const mobileRow = wrapper.getComponent(BillingMobileDraftRow)
@@ -247,7 +258,45 @@ describe('BillingDraftGridStep', () => {
     await mobileRow.get('[data-test="mobile-draft-select"] input').setValue(true)
 
     expect(mobileRow.props('selected')).toBe(true)
-    expect(wrapper.text()).toContain('Phát hành (1)')
+    expect(wrapper.text()).toContain('Xem trước & phát hành (1)')
+
+    wrapper.unmount()
+  })
+
+  it('loads a server preview before issuing and confirms with its snapshot identifiers', async () => {
+    const readyRow = buildRow({
+      status: 'ready', electricity: null, water: null, draftTotal: 3_100_000,
+      lines: [{
+        chargeType: 'rent', label: 'Tiền phòng', sourceType: null, sourceId: null,
+        quantity: 1, unitPrice: 3_100_000, amount: 3_100_000, metadata: {}, sortOrder: 0,
+      }],
+    })
+    const preview = {
+      periodId: 'period-2026-05', dueDate: '2026-08-09', operationId: '00000000-0000-7000-8000-000000000099',
+      snapshotHash: 'a'.repeat(64), issuableCount: 1, blockedCount: 0, alreadyIssuedCount: 0,
+      totalAmount: 3_100_000, items: [{ key: readyRow.contractId }], exclusions: [],
+    }
+    const onPreviewIssue = vi.fn(async () => preview)
+    const onIssue = vi.fn(async () => ({ issuedCount: 1, invoices: [] }))
+    const wrapper = mountGrid({ response: response([readyRow]), onPreviewIssue, onIssue })
+
+    await wrapper.getComponent(BillingMobileDraftRow).get('[data-test="mobile-draft-select"] input').setValue(true)
+    await wrapper.findAll('button').find(button => button.text().includes('Xem trước & phát hành'))!.trigger('click')
+    await vi.waitFor(() => expect(onPreviewIssue).toHaveBeenCalledTimes(1))
+    expect(onPreviewIssue).toHaveBeenCalledWith(expect.objectContaining({
+      contract_ids: [readyRow.contractId],
+      due_date: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+    }))
+
+    await wrapper.get('[data-test="confirm-preview"]').trigger('click')
+    await vi.waitFor(() => expect(onIssue).toHaveBeenCalledTimes(1))
+    expect(onIssue).toHaveBeenCalledWith({
+      contract_ids: [readyRow.contractId],
+      due_date: '2026-08-09',
+      snapshot_hash: 'a'.repeat(64),
+      operation_id: '00000000-0000-7000-8000-000000000099',
+    })
+    expect(wrapper.find('[data-test="issue-preview-modal"]').exists()).toBe(false)
 
     wrapper.unmount()
   })

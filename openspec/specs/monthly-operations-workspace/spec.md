@@ -51,7 +51,29 @@ The system SHALL calculate draft charges from live billing inputs before invoice
 - **AND** draft charge uses the override billable usage instead of raw current minus previous reading
 
 ### Requirement: Issue invoices
-The system SHALL persist issued invoices as snapshots.
+The system SHALL require review of server-rendered draft documents before persisting issued invoices as snapshots.
+
+#### Scenario: Pending readings save before preview
+- **WHEN** the operator selects eligible rows and chooses **Xem trước & phát hành**
+- **THEN** the workspace saves all pending readings before loading the preview
+- **AND** any dirty, invalid, or failed save prevents the preview from opening
+
+#### Scenario: Draft documents reviewed in modal
+- **WHEN** the server returns an issue preview
+- **THEN** a large responsive modal shows the batch summary, shared due date, warnings and exclusions, and each invoice-shaped document marked **BẢN NHÁP**
+- **AND** the modal becomes full-screen on mobile and exposes no print action
+
+#### Scenario: Due date refreshes preview
+- **WHEN** the operator changes the shared due date
+- **THEN** the workspace reloads the server preview and disables confirmation until the new snapshot is ready
+
+#### Scenario: Stale confirmation remains reviewable
+- **WHEN** confirmation returns `409 CONFLICT` because the preview is stale
+- **THEN** the modal remains open, confirmation is disabled, and the operator is prompted to load and review the current preview
+
+#### Scenario: Successful issue refreshes workspace
+- **WHEN** the validated issue transaction succeeds
+- **THEN** the modal closes, selection clears, and the draft grid, overview, and invoice state refresh
 
 #### Scenario: Issue valid invoices
 - **WHEN** all required billing inputs are valid and the user issues invoices
@@ -73,6 +95,10 @@ The system SHALL persist issued invoices as snapshots.
 #### Scenario: Missing input blocks issue
 - **WHEN** a required reading, rate, or supported pricing rule is missing
 - **THEN** the system blocks issue and shows the blocking reason
+
+#### Scenario: Selection excludes blocked and issued rows
+- **WHEN** the operator selects rows for bulk issue
+- **THEN** rows with blockers or an existing invoice are not selectable while warning-only rows remain selectable
 
 ### Requirement: Collect invoice payments
 The system SHALL record monthly collection against invoices. New payments SHALL settle the invoice in full; existing partial-paid invoices created before this change SHALL continue to render correctly until closed.

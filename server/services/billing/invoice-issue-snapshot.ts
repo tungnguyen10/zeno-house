@@ -1,6 +1,26 @@
+import { createHash } from 'node:crypto'
 import type { AiInvoiceIssuePreview, AiInvoiceIssuePreviewItem } from '~/types/ai'
 import type { BillingDraftInvoice, BillingDraftResponse } from '~/types/billing'
-import { hashAgentPayload } from '../../utils/ai'
+
+export interface InvoiceIssueProfileFingerprint {
+  updatedAt: string | null
+  bankName: string
+  accountHolder: string
+  accountNumber: string
+  transferContentTemplate: string
+  qrImagePath: string
+  logoImagePath: string | null
+}
+
+function canonicalize(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(canonicalize)
+  if (!value || typeof value !== 'object') return value
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, nested]) => [key, canonicalize(nested)]),
+  )
+}
 
 function sortedUnique(values: string[]): string[] {
   return [...new Set(values)].sort((a, b) => a.localeCompare(b))
@@ -35,6 +55,7 @@ export function buildInvoiceIssueSnapshot(
   response: BillingDraftResponse,
   contractIds: string[],
   dueDate: string | null,
+  profile: InvoiceIssueProfileFingerprint | null = null,
 ): Record<string, unknown> {
   const targets = new Set(contractIds)
   const drafts = response.drafts
@@ -50,8 +71,12 @@ export function buildInvoiceIssueSnapshot(
       discount: draft.discountAmount,
       surcharge: draft.surchargeAmount,
       total: draft.totalAmount,
-      blockers: draft.blockers.map(blocker => ({ code: blocker.code, meta: blocker.meta ?? {} })),
-      warnings: draft.warnings.map(warning => ({ code: warning.code, meta: warning.meta ?? {} })),
+      blockers: draft.blockers
+        .map(blocker => ({ code: blocker.code, meta: blocker.meta ?? {} }))
+        .sort((a, b) => a.code.localeCompare(b.code)),
+      warnings: draft.warnings
+        .map(warning => ({ code: warning.code, meta: warning.meta ?? {} }))
+        .sort((a, b) => a.code.localeCompare(b.code)),
       lines: [...draft.lines]
         .sort((a, b) => a.sortOrder - b.sortOrder || a.chargeType.localeCompare(b.chargeType))
         .map(line => ({
@@ -67,6 +92,20 @@ export function buildInvoiceIssueSnapshot(
         })),
     }))
 
+  const periodDraftState = response.drafts
+    .map(draft => ({
+      contract_id: draft.contractId,
+      existing_invoice_id: draft.existingInvoiceId,
+      existing_invoice_status: draft.existingInvoiceStatus,
+      blockers: draft.blockers
+        .map(blocker => ({ code: blocker.code, meta: blocker.meta ?? {} }))
+        .sort((a, b) => a.code.localeCompare(b.code)),
+      warnings: draft.warnings
+        .map(warning => ({ code: warning.code, meta: warning.meta ?? {} }))
+        .sort((a, b) => a.code.localeCompare(b.code)),
+    }))
+    .sort((a, b) => a.contract_id.localeCompare(b.contract_id))
+
   return {
     period: {
       id: response.period.id,
@@ -76,22 +115,40 @@ export function buildInvoiceIssueSnapshot(
     },
     due_date: dueDate,
     contract_ids: sortedUnique(contractIds),
+    payment_profile: profile
+      ? {
+          updated_at: profile.updatedAt,
+          bank_name: profile.bankName,
+          account_holder: profile.accountHolder,
+          account_number: profile.accountNumber,
+          transfer_content_template: profile.transferContentTemplate,
+          qr_image_path: profile.qrImagePath,
+          logo_image_path: profile.logoImagePath,
+        }
+      : null,
+    period_draft_state: periodDraftState,
     drafts,
   }
+}
+
+export function hashInvoiceIssueSnapshot(snapshot: Record<string, unknown>): string {
+  return createHash('sha256')
+    .update(JSON.stringify(canonicalize(snapshot)))
+    .digest('hex')
 }
 
 export function createInvoiceIssuePreview(
   response: BillingDraftResponse,
   requestedContractIds: string[] | undefined,
   dueDate: string | null,
+  profile: InvoiceIssueProfileFingerprint | null = null,
 ): { preview: AiInvoiceIssuePreview; targetContractIds: string[] } {
   const selected = selectInvoiceIssueDrafts(response, requestedContractIds)
   const issuableRows = selected.filter(draft => draft.blockers.length === 0 && draft.existingInvoiceId === null)
   const blockedRows = selected.filter(draft => draft.blockers.length > 0)
   const alreadyIssuedRows = selected.filter(draft => draft.existingInvoiceId !== null)
   const targetContractIds = sortedUnique(issuableRows.map(draft => draft.contractId))
-  const snapshot = buildInvoiceIssueSnapshot(response, targetContractIds, dueDate)
-  const snapshotHash = hashAgentPayload(snapshot, {})
+  const snapshot = buildInvoiceIssueSnapshot(response, targetContractIds, dueDate, profile)
 
   return {
     targetContractIds,
@@ -106,7 +163,7 @@ export function createInvoiceIssuePreview(
       blockedCount: blockedRows.length,
       alreadyIssuedCount: alreadyIssuedRows.length,
       totalAmount: issuableRows.reduce((total, draft) => total + draft.totalAmount, 0),
-      snapshotHash,
+      snapshotHash: hashInvoiceIssueSnapshot(snapshot),
     },
   }
 }

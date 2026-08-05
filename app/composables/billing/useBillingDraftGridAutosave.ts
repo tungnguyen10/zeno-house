@@ -36,6 +36,7 @@ export function useBillingDraftGridAutosave(options: BillingDraftGridAutosaveOpt
   const rowSaveError = ref<Record<string, string>>({})
   const rowSaveTimers: Record<string, ReturnType<typeof setTimeout>> = {}
   const rowSavedFlash: Record<string, ReturnType<typeof setTimeout>> = {}
+  const activeRowSaves = new Map<string, Promise<void>>()
   let idleRefreshTimer: ReturnType<typeof setTimeout> | null = null
   // Accumulates the count of readings saved since the last onAllSaved call.
   let pendingSavedCount = 0
@@ -121,7 +122,7 @@ export function useBillingDraftGridAutosave(options: BillingDraftGridAutosaveOpt
     return out
   }
 
-  async function saveRow(row: BillingDraftGridRow) {
+  async function performSaveRow(row: BillingDraftGridRow) {
     Reflect.deleteProperty(rowSaveTimers, row.roomId)
     const payload = buildRowReadingsPayload(row)
     if (payload.length === 0) {
@@ -174,6 +175,16 @@ export function useBillingDraftGridAutosave(options: BillingDraftGridAutosaveOpt
     }
   }
 
+  function saveRow(row: BillingDraftGridRow): Promise<void> {
+    const active = activeRowSaves.get(row.roomId)
+    if (active) return active
+    const operation = performSaveRow(row).finally(() => {
+      if (activeRowSaves.get(row.roomId) === operation) activeRowSaves.delete(row.roomId)
+    })
+    activeRowSaves.set(row.roomId, operation)
+    return operation
+  }
+
   /** Save a row immediately, bypassing the debounce timer. */
   async function saveRowNow(row: BillingDraftGridRow) {
     const existing = rowSaveTimers[row.roomId]
@@ -188,6 +199,7 @@ export function useBillingDraftGridAutosave(options: BillingDraftGridAutosaveOpt
     if (!options.periodEditable.value) return
     if (!options.period.value) return
     if (!options.batchReadingDate.value) return
+    if (activeRowSaves.size > 0) await Promise.allSettled([...activeRowSaves.values()])
     const payload: MeterReadingBulkInput['readings'] = []
     for (const row of options.response.value?.rows ?? []) {
       if (!row.editable) continue
@@ -200,6 +212,8 @@ export function useBillingDraftGridAutosave(options: BillingDraftGridAutosaveOpt
       for (const item of payload) {
         const key = `${item.room_id}::${item.meter_type}`
         savedReadings.value[key] = String(item.reading_value)
+        Reflect.deleteProperty(rowSaveError.value, item.room_id)
+        rowSaveState.value[item.room_id] = 'saved'
       }
       localReadings.value = {}
       options.onAllSaved?.(payload.length)

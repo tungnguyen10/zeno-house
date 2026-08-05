@@ -4,7 +4,10 @@ import type { BillingDraftResponse } from '~/types/billing'
 import { buildInvoice } from '../../__fixtures__/billing/invoice'
 import { buildPeriod } from '../../__fixtures__/billing/period'
 import { hashAgentPayload } from '../../../server/utils/ai'
-import { buildInvoiceIssueSnapshot } from '../../../server/services/ai/invoice-issue-snapshot'
+import {
+  buildInvoiceIssueSnapshot,
+  createInvoiceIssuePreview,
+} from '../../../server/services/billing/invoice-issue-snapshot'
 
 const calculateDraft = vi.fn()
 const issueInvoices = vi.fn()
@@ -58,7 +61,7 @@ describe('AI invoice executors', () => {
 
   it('revalidates issue snapshot and uses the plan idempotency key', async () => {
     const response = draftResponse()
-    const hash = hashAgentPayload(buildInvoiceIssueSnapshot(response, [contractId], null), {})
+    const hash = createInvoiceIssuePreview(response, [contractId], null).preview.snapshotHash
     calculateDraft.mockResolvedValue(response)
     issueInvoices.mockResolvedValue({ issuedCount: 1, invoices: [] })
     const { ISSUE_INVOICES_EXECUTOR } = await import('../../../server/services/ai/invoice-executors')
@@ -75,7 +78,7 @@ describe('AI invoice executors', () => {
 
   it('marks a changed issue preview as an optimistic conflict before write', async () => {
     const original = draftResponse()
-    const hash = hashAgentPayload(buildInvoiceIssueSnapshot(original, [contractId], null), {})
+    const hash = createInvoiceIssuePreview(original, [contractId], null).preview.snapshotHash
     calculateDraft.mockResolvedValue(draftResponse(1_100_000))
     const { ISSUE_INVOICES_EXECUTOR } = await import('../../../server/services/ai/invoice-executors')
     const action = plan('issue_invoices', {
