@@ -64,9 +64,96 @@ function encodeSse(event: AiStreamEvent): Uint8Array {
   return new TextEncoder().encode(`data: ${JSON.stringify(event)}\n\n`)
 }
 
-function publicError(error: unknown): AiStreamEvent {
-  const raw = error instanceof Error ? error.message : typeof error === 'string' ? error : ''
+interface ProviderErrorMeta {
+  statusCode?: number
+  code?: string
+  message?: string
+  details?: unknown
+}
+
+function parseProviderResponseBody(body: unknown): Record<string, unknown> {
+  if (typeof body === 'string') {
+    try {
+      const parsed = JSON.parse(body)
+      return parsed && typeof parsed === 'object' ? parsed as Record<string, unknown> : {}
+    }
+    catch {
+      return {}
+    }
+  }
+  return body && typeof body === 'object' ? body as Record<string, unknown> : {}
+}
+
+function extractProviderErrorMeta(error: unknown): ProviderErrorMeta {
+  const meta: ProviderErrorMeta = {}
+  const visited = new Set<unknown>()
+  const queue: unknown[] = [error]
+
+  while (queue.length > 0) {
+    const current = queue.shift()
+    if (!current || typeof current !== 'object') continue
+    if (visited.has(current)) continue
+    visited.add(current)
+
+    const obj = current as Record<string, unknown>
+
+    if (meta.statusCode === undefined && typeof obj.statusCode === 'number') meta.statusCode = obj.statusCode
+    if (!meta.code && typeof obj.code === 'string') meta.code = obj.code
+    if (!meta.message && typeof obj.message === 'string') meta.message = obj.message
+    if (meta.details === undefined && obj.details !== undefined) meta.details = obj.details
+
+    if ('responseBody' in obj) {
+      const responseBody = parseProviderResponseBody(obj.responseBody)
+      const nestedError = responseBody.error && typeof responseBody.error === 'object'
+        ? responseBody.error as Record<string, unknown>
+        : {}
+      if (!meta.code && typeof nestedError.code === 'string') meta.code = nestedError.code
+      if (!meta.message && typeof nestedError.message === 'string') meta.message = nestedError.message
+      if (meta.details === undefined && nestedError.metadata !== undefined) meta.details = nestedError.metadata
+    }
+
+    const candidates = [obj.cause, obj.error, obj.data, obj.responseBody]
+    for (const candidate of candidates) {
+      if (candidate !== undefined) queue.push(candidate)
+    }
+  }
+
+  if (!meta.message && error instanceof Error) meta.message = error.message
+  return meta
+}
+
+export function normalizeProviderError(error: unknown): AiStreamEvent {
+  const meta = extractProviderErrorMeta(error)
+  const raw = [
+    meta.message,
+    meta.code,
+    error instanceof Error ? error.message : undefined,
+    typeof error === 'string' ? error : undefined,
+  ]
+    .filter((value): value is string => typeof value === 'string' && value.length > 0)
+    .join(' ')
   const lower = raw.toLowerCase()
+
+  if (meta.statusCode === 401 || meta.statusCode === 403 || lower.includes('unauthorized') || lower.includes('invalid api key') || lower.includes('forbidden')) {
+    return {
+      type: 'error',
+      error: {
+        code: 'PROVIDER_AUTH',
+        message: 'Không thể xác thực với nhà cung cấp AI. Vui lòng kiểm tra cấu hình khoá API.',
+      },
+    }
+  }
+
+  if (meta.statusCode === 400 || lower.includes('invalid request') || lower.includes('model not found') || lower.includes('unsupported parameter')) {
+    return {
+      type: 'error',
+      error: {
+        code: 'REQUEST_INVALID',
+        message: 'Yêu cầu AI không hợp lệ với mô hình hiện tại. Vui lòng thử lại hoặc liên hệ quản trị viên.',
+      },
+    }
+  }
+
   if (lower.includes('request too large') || lower.includes('tokens per minute') || lower.includes('tpm') || lower.includes('context length') || lower.includes('maximum context')) {
     return {
       type: 'error',
@@ -94,7 +181,39 @@ function publicError(error: unknown): AiStreamEvent {
       },
     }
   }
+  if (meta.statusCode === 408 || meta.statusCode === 504 || lower.includes('timeout') || lower.includes('timed out') || lower.includes('aborted')) {
+    return {
+      type: 'error',
+      error: {
+        code: 'PROVIDER_TIMEOUT',
+        message: 'Nhà cung cấp AI phản hồi quá chậm. Vui lòng thử lại sau ít phút.',
+      },
+    }
+  }
   return { type: 'error', error: { code: 'INTERNAL', message: 'Không thể hoàn tất phản hồi AI. Vui lòng thử lại.' } }
+}
+
+function throwNormalizedProviderBootstrapError(error: unknown): never {
+  const normalized = normalizeProviderError(error)
+  if (normalized.type !== 'error') {
+    throw createError({
+      statusCode: 500,
+      data: { error: { code: 'INTERNAL', message: 'Không thể hoàn tất phản hồi AI. Vui lòng thử lại.' } },
+    })
+  }
+
+  const statusCode = normalized.error.code === 'REQUEST_TOO_LARGE'
+    ? 413
+    : normalized.error.code === 'REQUEST_INVALID'
+      ? 422
+      : normalized.error.code.startsWith('PROVIDER_')
+        ? 503
+        : 500
+
+  throw createError({
+    statusCode,
+    data: { error: normalized.error },
+  })
 }
 
 function actionPlanFromOutput(output: unknown): AiActionPlanDto | null {
@@ -145,18 +264,24 @@ export async function streamAiChat(
     model: config.modelPrimary, requestedModel: config.modelPrimary, fallbackUsed: false, outcome: 'started',
   })
 
-  const result = streamText({
-    model: buildModel(config),
-    system: buildSystemPrompt(),
-    messages: selectBoundedHistory(
-      history.map(message => ({ role: message.role, content: message.content })),
-      { maxMessages: config.maxContextMessages, maxChars: config.maxContextChars },
-    ),
-    ...(Object.keys(tools).length > 0 && { tools, stopWhen: isStepCount(config.maxSteps) }),
-    ...(config.provider === 'openrouter' && { providerOptions: buildOpenRouterProviderOptions(config) }),
-    maxOutputTokens: config.maxOutputTokens,
-    abortSignal: AbortSignal.timeout(runtimePolicy.providerTimeoutMs),
-  })
+  let result: ReturnType<typeof streamText>
+  try {
+    result = streamText({
+      model: buildModel(config),
+      system: buildSystemPrompt(),
+      messages: selectBoundedHistory(
+        history.map(message => ({ role: message.role, content: message.content })),
+        { maxMessages: config.maxContextMessages, maxChars: config.maxContextChars },
+      ),
+      ...(Object.keys(tools).length > 0 && { tools, stopWhen: isStepCount(config.maxSteps) }),
+      ...(config.provider === 'openrouter' && { providerOptions: buildOpenRouterProviderOptions(config) }),
+      maxOutputTokens: config.maxOutputTokens,
+      abortSignal: AbortSignal.timeout(runtimePolicy.providerTimeoutMs),
+    })
+  }
+  catch (error) {
+    throwNormalizedProviderBootstrapError(error)
+  }
 
   const [clientBranch, persistenceBranch] = result.stream.tee()
 
@@ -239,7 +364,7 @@ export async function streamAiChat(
             }))
           }
           else if (part.type === 'error') {
-            controller.enqueue(encodeSse(publicError(part.error)))
+            controller.enqueue(encodeSse(normalizeProviderError(part.error)))
           }
         }
         const response = await result.response
@@ -250,7 +375,7 @@ export async function streamAiChat(
         }))
       }
       catch (error) {
-        controller.enqueue(encodeSse(publicError(error)))
+        controller.enqueue(encodeSse(normalizeProviderError(error)))
       }
       finally {
         controller.close()
