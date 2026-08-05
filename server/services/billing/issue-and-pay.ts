@@ -95,6 +95,9 @@ export const IssueAndPayService = {
 
     const { data, error } = await client.rpc('issue_and_pay', args)
     if (error) {
+      if (typeof error.message === 'string' && error.message.includes('INVOICE_INCIDENTAL_SNAPSHOT_STALE')) {
+        throwConflict('Khoản phát sinh đã thay đổi. Vui lòng tải lại bản nháp trước khi phát hành.')
+      }
       const details = parseIssueAndPayDetails((error as { details?: unknown }).details)
       const mapped = details.error_code ? ERROR_MAP[details.error_code] : undefined
       const status = mapped?.status ?? (error.code === 'P0002' ? 404 : 500)

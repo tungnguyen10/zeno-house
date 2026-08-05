@@ -3,7 +3,7 @@ import type { AuthUser } from '~/types/auth'
 
 const mocks = vi.hoisted(() => ({
   findPeriod: vi.fn(),
-  findContract: vi.fn(),
+  findScopedContract: vi.fn(),
   listInvoices: vi.fn(),
   assertScope: vi.fn(),
   list: vi.fn(),
@@ -14,7 +14,7 @@ const mocks = vi.hoisted(() => ({
 }))
 
 vi.mock('../../../server/repositories/billing/periods', () => ({ BillingPeriodRepository: { findById: mocks.findPeriod } }))
-vi.mock('../../../server/repositories/contracts', () => ({ ContractRepository: { findById: mocks.findContract } }))
+vi.mock('../../../server/repositories/contracts', () => ({ ContractRepository: { findByIdInBuilding: mocks.findScopedContract } }))
 vi.mock('../../../server/repositories/billing/invoices', () => ({ InvoiceRepository: { listByPeriod: mocks.listInvoices } }))
 vi.mock('../../../server/repositories/billing/incidental-charges', () => ({ BillingIncidentalChargeRepository: {
   listByPeriod: mocks.list,
@@ -60,7 +60,7 @@ describe('BillingIncidentalChargeService', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mocks.findPeriod.mockResolvedValue(period)
-    mocks.findContract.mockResolvedValue(contract)
+    mocks.findScopedContract.mockResolvedValue(contract)
     mocks.listInvoices.mockResolvedValue([])
     mocks.list.mockResolvedValue([charge])
     mocks.findCharge.mockResolvedValue(charge)
@@ -86,18 +86,19 @@ describe('BillingIncidentalChargeService', () => {
     }
     await expect(BillingIncidentalChargeService.create(event, user, period.id, input)).resolves.toEqual(charge)
     expect(mocks.assertScope).toHaveBeenCalledWith(event, user, period.buildingId, 'write')
+    expect(mocks.findScopedContract).toHaveBeenCalledWith(event, contract.id, period.buildingId)
     expect(mocks.create).toHaveBeenCalledWith(event, period.id, user.id, input)
   })
 
   it.each([
     ['closed period', { period: { ...period, status: 'closed' } }],
     ['effective invoice', { invoices: [{ contractId: contract.id, status: 'issued' }] }],
-    ['mismatched building', { contract: { ...contract, buildingId: 'other-building' } }],
+    ['out-of-scope contract', { contract: null }],
     ['non-overlapping contract', { contract: { ...contract, startDate: '2026-09-01' } }],
   ])('blocks create for %s', async (_label, state) => {
     if (state.period) mocks.findPeriod.mockResolvedValue(state.period)
     if (state.invoices) mocks.listInvoices.mockResolvedValue(state.invoices)
-    if (state.contract) mocks.findContract.mockResolvedValue(state.contract)
+    if ('contract' in state) mocks.findScopedContract.mockResolvedValue(state.contract)
     const { BillingIncidentalChargeService } = await import('../../../server/services/billing/incidental-charges')
     await expect(BillingIncidentalChargeService.create(event, user, period.id, {
       contract_id: contract.id, label: charge.label, amount: charge.amount, operation_id: charge.operationId,

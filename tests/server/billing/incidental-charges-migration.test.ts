@@ -14,6 +14,7 @@ describe('billing incidental charges migration', () => {
     expect(sql).toMatch(/amount\s+numeric\(12,0\)[\s\S]*check\s*\(amount > 0 and amount = trunc\(amount\)\)/i)
     expect(sql).toMatch(/check\s*\(length\(btrim\(label\)\) between 1 and 200\)/i)
     expect(sql).toMatch(/operation_id\s+uuid[\s\S]*unique/i)
+    expect(sql).toMatch(/deleted_at\s+timestamptz/i)
     expect(sql).toMatch(/create index[\s\S]*billing_period_id, contract_id/i)
     expect(sql).toMatch(/alter table public\.billing_incidental_charges enable row level security/i)
     expect(sql).toMatch(/grant select on public\.billing_incidental_charges to service_role/i)
@@ -50,6 +51,16 @@ describe('billing incidental charges migration', () => {
     expect(sql).toMatch(/security definer\s+set search_path = ''/i)
     expect(sql).toMatch(/revoke all on function public\.create_billing_incidental_charge_with_audit[\s\S]*from public, anon, authenticated/i)
     expect(sql).toMatch(/grant execute on function public\.create_billing_incidental_charge_with_audit[\s\S]*to service_role/i)
+    expect(sql).toMatch(/update public\.billing_incidental_charges[\s\S]*set deleted_at = pg_catalog\.now\(\)/i)
+    expect(sql).not.toMatch(/delete from public\.billing_incidental_charges/i)
+  })
+
+  it('fences issued invoice snapshots against concurrent incidental mutations', () => {
+    expect(sql).toMatch(/create constraint trigger billing_invoice_incidental_snapshot_current/i)
+    expect(sql).toMatch(/deferrable initially deferred/i)
+    expect(sql).toContain('INVOICE_INCIDENTAL_SNAPSHOT_STALE')
+    expect(sql).toMatch(/new\.action in \('invoices\.issued', 'invoice\.reissued'\)/i)
+    expect(sql).toMatch(/ic\.deleted_at is null/i)
   })
 
   it('documents verification and rollback without editing generated types', () => {

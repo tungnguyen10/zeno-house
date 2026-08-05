@@ -129,7 +129,7 @@ AI full-balance collection is committed by `record_ai_invoice_payments_with_audi
 
 `billing_utility_usages` stores manual usage overrides by period, room, and meter type.
 
-`billing_incidental_charges` stores positive one-off charges for exactly one billing period, contract, and room. It has an idempotent `operation_id`, optimistic `updated_at`, service-role-only reads/RPC writes, and atomic create/update/delete audit functions. Source rows are editable only while the period is not closed and the contract has no non-void invoice in that period; a void invoice permits correction before reissue. Issuance snapshots each row as `invoice_charges.charge_type = 'incidental'`, so later periods do not inherit it.
+`billing_incidental_charges` stores positive one-off charges for exactly one billing period, contract, and room. It has an idempotent `operation_id`, optimistic `updated_at`, service-role-only reads/RPC writes, and atomic create/update/delete audit functions. Deletes remain hidden soft tombstones so retrying the original operation cannot recreate a removed charge. Source rows are editable only while the period is not closed and the contract has no non-void invoice in that period; a void invoice permits correction before reissue. A deferred commit guard compares current active sources with persisted invoice lines, preventing a concurrent source change from issuing stale data. Issuance snapshots each row as `invoice_charges.charge_type = 'incidental'`, so later periods do not inherit it.
 
 `billing_audit_events` stores append-only operational audit events.
 

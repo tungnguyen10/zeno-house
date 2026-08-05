@@ -134,6 +134,18 @@ export const ContractRepository = {
     return this.findByIdentifier(event, id)
   },
 
+  async findByIdInBuilding(event: H3Event, id: string, buildingId: string): Promise<Contract | null> {
+    const client = await serverSupabaseClient(event)
+    const { data, error } = await client
+      .from('contracts')
+      .select('*')
+      .eq('id', id)
+      .eq('building_id', buildingId)
+      .maybeSingle()
+    if (error) throwDbError(error, 'contracts.findByIdInBuilding')
+    return data ? mapContract(data) : null
+  },
+
   async findByIdentifier(event: H3Event, identifier: string): Promise<ContractWithDetails | null> {
     const client = await serverSupabaseClient(event)
     const column = isUuid(identifier) ? 'id' : 'contract_code'

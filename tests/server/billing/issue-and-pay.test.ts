@@ -256,6 +256,22 @@ describe('IssueAndPayService.issueAndPay', () => {
     })
   })
 
+  it('rejects a stale incidental snapshot reported by the deferred database guard', async () => {
+    calculateDraft.mockResolvedValue({
+      totals: { blockedDraftCount: 0, issuableDraftCount: 1 },
+      drafts: [buildReadyDraft()],
+    })
+    rpcMock.mockResolvedValueOnce({
+      data: null,
+      error: { code: 'P0001', message: 'INVOICE_INCIDENTAL_SNAPSHOT_STALE', details: null },
+    })
+
+    const { IssueAndPayService } = await import('../../../server/services/billing/issue-and-pay')
+    await expect(IssueAndPayService.issueAndPay(event(), makeUser(), 'period-1', {
+      contract_id: 'contract-ready', payment_date: '2026-05-31',
+    })).rejects.toMatchObject({ statusCode: 409 })
+  })
+
   it('returns 404 when the period does not exist', async () => {
     findPeriodById.mockResolvedValue(null)
 

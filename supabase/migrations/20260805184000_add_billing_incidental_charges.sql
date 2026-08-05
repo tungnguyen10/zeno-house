@@ -16,7 +16,9 @@ create table public.billing_incidental_charges (
   operation_id      uuid not null unique,
   created_by        uuid references auth.users(id),
   created_at        timestamptz not null default now(),
-  updated_at        timestamptz not null default now()
+  updated_at        timestamptz not null default now(),
+  deleted_at        timestamptz,
+  deleted_by        uuid references auth.users(id)
 );
 
 create index idx_billing_incidental_charges_period_contract
@@ -226,6 +228,7 @@ begin
   select charge.* into v_before
     from public.billing_incidental_charges charge
    where charge.id = p_charge_id
+     and charge.deleted_at is null
    for update;
   if not found then
     raise exception 'INCIDENTAL_CHARGE_NOT_FOUND' using errcode = 'P0002';
@@ -311,6 +314,7 @@ begin
   select charge.* into v_before
     from public.billing_incidental_charges charge
    where charge.id = p_charge_id
+     and charge.deleted_at is null
    for update;
   if not found then
     raise exception 'INCIDENTAL_CHARGE_NOT_FOUND' using errcode = 'P0002';
@@ -330,7 +334,12 @@ begin
     raise exception 'BILLING_INVOICE_LOCKED' using errcode = 'P0001';
   end if;
 
-  delete from public.billing_incidental_charges where id = p_charge_id;
+  -- Keep the operation key as a tombstone so retrying the original create
+  -- remains an idempotent replay even after the visible charge was removed.
+  update public.billing_incidental_charges
+     set deleted_at = pg_catalog.now(),
+         deleted_by = p_actor_id
+   where id = p_charge_id;
 
   insert into public.billing_audit_events (
     billing_period_id, actor_id, action, entity_type, entity_id,
@@ -366,7 +375,95 @@ grant execute on function public.delete_billing_incidental_charge_with_audit(uui
   to service_role;
 
 comment on table public.billing_incidental_charges is
-  'Positive one-off room charges scoped to one contract and billing period; snapshotted at invoice issue.';
+  'Positive one-off room charges scoped to one contract and billing period; deleted rows remain as idempotency tombstones.';
+
+-- Invoice RPCs build their JSON draft before acquiring the period advisory
+-- lock. This deferred audit trigger runs after invoice charge insertion while
+-- that lock is held and compares the persisted snapshot with the current
+-- source set. It closes the calculate-then-lock race for bulk issue, reissue,
+-- and issue-and-pay without duplicating their large transaction functions.
+create or replace function public.validate_billing_incidental_invoice_snapshot()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_invoice_id uuid;
+  v_expected jsonb;
+  v_actual jsonb;
+begin
+  for v_invoice_id in
+    select value::uuid
+      from pg_catalog.jsonb_array_elements_text(
+        case when new.action = 'invoices.issued'
+          then coalesce(new.metadata->'invoice_ids', '[]'::jsonb)
+          else '[]'::jsonb
+        end
+      ) as issued(value)
+    union all
+    select (new.metadata->>'replacement_invoice_id')::uuid
+     where new.action = 'invoice.reissued'
+       and new.metadata ? 'replacement_invoice_id'
+  loop
+    select coalesce(pg_catalog.jsonb_agg(
+      pg_catalog.jsonb_build_object(
+        'id', charge.id,
+        'label', charge.label,
+        'amount', charge.amount,
+        'quantity', 1,
+        'unit_price', charge.amount,
+        'billing_period_id', charge.billing_period_id,
+        'contract_id', charge.contract_id,
+        'room_id', charge.room_id,
+        'note', charge.note
+      ) order by charge.id
+    ), '[]'::jsonb)
+      into v_expected
+      from public.invoices invoice
+      join public.billing_incidental_charges charge
+        on charge.billing_period_id = invoice.billing_period_id
+       and charge.contract_id = invoice.contract_id
+       and charge.deleted_at is null
+     where invoice.id = v_invoice_id;
+
+    select coalesce(pg_catalog.jsonb_agg(
+      pg_catalog.jsonb_build_object(
+        'id', charge.source_id,
+        'label', charge.label,
+        'amount', charge.amount,
+        'quantity', charge.quantity,
+        'unit_price', charge.unit_price,
+        'billing_period_id', charge.metadata->>'billing_period_id',
+        'contract_id', charge.metadata->>'contract_id',
+        'room_id', charge.metadata->>'room_id',
+        'note', charge.metadata->>'note'
+      ) order by charge.source_id
+    ), '[]'::jsonb)
+      into v_actual
+      from public.invoice_charges charge
+     where charge.invoice_id = v_invoice_id
+       and (charge.charge_type = 'incidental'
+         or charge.source_type = 'billing_incidental_charge');
+
+    if v_actual is distinct from v_expected then
+      raise exception 'INVOICE_INCIDENTAL_SNAPSHOT_STALE' using errcode = 'P0001';
+    end if;
+  end loop;
+
+  return new;
+end;
+$$;
+
+revoke all on function public.validate_billing_incidental_invoice_snapshot()
+  from public, anon, authenticated;
+
+create constraint trigger billing_invoice_incidental_snapshot_current
+  after insert on public.billing_audit_events
+  deferrable initially deferred
+  for each row
+  when (new.action in ('invoices.issued', 'invoice.reissued'))
+  execute function public.validate_billing_incidental_invoice_snapshot();
 
 -- Keep draft generation on one consistent input snapshot. This replaces the
 -- production RPC installed through the Phase 3 SQL editor script and adds the
@@ -423,6 +520,7 @@ as $$
       from public.billing_incidental_charges ic
       where ic.billing_period_id = p_period_id
         and ic.contract_id in (select id from contract_ids)
+        and ic.deleted_at is null
     ), '[]'::jsonb),
     'invoices', coalesce((
       select jsonb_agg(to_jsonb(i) order by i.created_at) from public.invoices i where i.billing_period_id = p_period_id

@@ -56,6 +56,11 @@ export function throwInvoiceRpcError(error: unknown): never {
   if (message.includes('BILLING_PERIOD_LOCKED')) {
     throwConflict('Kỳ đã chốt, không thể thay đổi hoá đơn.')
   }
+  if (message.includes('INVOICE_INCIDENTAL_SNAPSHOT_STALE')) {
+    throwConflict('Khoản phát sinh đã thay đổi. Vui lòng xem trước lại trước khi phát hành.', {
+      category: 'OPTIMISTIC_LOCK_CONFLICT', retryable: true,
+    })
+  }
   if (message.includes('INVOICE_HAS_ACTIVE_PAYMENTS')) {
     throwConflict('Hoá đơn đã có khoản thu đang hiệu lực. Hãy dùng luồng điều chỉnh phù hợp.')
   }

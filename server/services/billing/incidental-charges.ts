@@ -63,12 +63,11 @@ export const BillingIncidentalChargeService = {
   ): Promise<BillingIncidentalCharge> {
     if (!can(user, 'billing.write')) throwForbidden('Không có quyền thêm khoản phát sinh')
     const period = await loadPeriod(event, user, billingPeriodId, 'write')
-    const contract = await ContractRepository.findById(event, input.contract_id)
-    if (!contract) throwNotFound('Không tìm thấy hợp đồng')
+    const contract = await ContractRepository.findByIdInBuilding(event, input.contract_id, period.buildingId)
+    if (!contract) throwNotFound('Không tìm thấy hợp đồng trong kỳ vận hành')
     const bounds = periodBounds(period)
     if (
-      contract.buildingId !== period.buildingId
-      || !contract.roomId
+      !contract.roomId
       || contract.status === 'terminated'
       || contract.startDate > bounds.end
       || contract.endDate < bounds.start

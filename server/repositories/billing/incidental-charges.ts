@@ -87,6 +87,7 @@ export const BillingIncidentalChargeRepository = {
       .from('billing_incidental_charges')
       .select('*')
       .eq('billing_period_id', billingPeriodId)
+      .is('deleted_at', null)
       .order('created_at', { ascending: true })
       .order('id', { ascending: true })
     if (error) throwDbError(error, 'billing.incidentalCharges.listByPeriod')
@@ -98,6 +99,7 @@ export const BillingIncidentalChargeRepository = {
       .from('billing_incidental_charges')
       .select('*')
       .eq('id', chargeId)
+      .is('deleted_at', null)
       .maybeSingle()
     if (error) throwDbError(error, 'billing.incidentalCharges.findById')
     return data ? mapBillingIncidentalCharge(data) : null

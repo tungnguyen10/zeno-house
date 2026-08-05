@@ -34,6 +34,8 @@ export interface BillingIncidentalChargeRow {
   created_by: string | null
   created_at: string | null
   updated_at: string | null
+  deleted_at: string | null
+  deleted_by: string | null
 }
 
 function asMetadata(value: unknown): Record<string, unknown> {

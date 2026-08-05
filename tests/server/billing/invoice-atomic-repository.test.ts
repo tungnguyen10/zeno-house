@@ -90,5 +90,16 @@ describe('InvoiceRepository atomic RPCs', () => {
       invoiceId: invoiceRow.id, expectedUpdatedAt: invoiceRow.updated_at, actorId: null,
       reason: 'Đính chính nghiệp vụ', correlationId: '00000000-0000-4000-8000-000000000008',
     })).rejects.toMatchObject({ statusCode: 409 })
+
+    rpc.mockResolvedValueOnce({ data: null, error: { message: 'INVOICE_INCIDENTAL_SNAPSHOT_STALE' } })
+    await expect(InvoiceRepository.issuePeriodWithAudit({ context: {} } as never, {
+      periodId: invoiceRow.billing_period_id, actorId: null, dueDate: null,
+      issuedAt: invoiceRow.issued_at, requestedContractIds: [invoiceRow.contract_id],
+      drafts: [{ contract_id: invoiceRow.contract_id }],
+      operationId: '00000000-0000-4000-8000-000000000009',
+    })).rejects.toMatchObject({
+      statusCode: 409,
+      data: { error: { details: { category: 'OPTIMISTIC_LOCK_CONFLICT' } } },
+    })
   })
 })
