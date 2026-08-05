@@ -39,6 +39,7 @@ export default defineNuxtConfig({
     aiGoogleApiKey: process.env.NUXT_AI_GOOGLE_API_KEY || "", // NUXT_AI_GOOGLE_API_KEY
     aiModel: process.env.NUXT_AI_MODEL || "nvidia/nemotron-3-super-120b-a12b:free", // NUXT_AI_MODEL
     aiModelFallback: process.env.NUXT_AI_MODEL_FALLBACK || "google/gemma-4-31b-it:free", // NUXT_AI_MODEL_FALLBACK
+    aiAllowPaidPrimary: process.env.NUXT_AI_ALLOW_PAID_PRIMARY === "true", // NUXT_AI_ALLOW_PAID_PRIMARY
     aiMaxSteps: process.env.NUXT_AI_MAX_STEPS ? parseInt(process.env.NUXT_AI_MAX_STEPS) : 8, // NUXT_AI_MAX_STEPS
     aiMaxOutputTokens: process.env.NUXT_AI_MAX_OUTPUT_TOKENS ? parseInt(process.env.NUXT_AI_MAX_OUTPUT_TOKENS) : 1200, // NUXT_AI_MAX_OUTPUT_TOKENS
     aiChatEnabled: process.env.NODE_ENV !== "production", // NUXT_AI_CHAT_ENABLED

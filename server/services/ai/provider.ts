@@ -10,6 +10,7 @@ export interface AiProviderConfig {
   siteUrl: string
   modelPrimary: string
   modelFallback: string
+  allowPaidPrimary: boolean
   maxSteps: number
   maxOutputTokens: number
   maxContextMessages: number
@@ -22,6 +23,7 @@ interface RuntimeLike {
   aiGoogleApiKey?: unknown
   aiModel?: unknown
   aiModelFallback?: unknown
+  aiAllowPaidPrimary?: unknown
   aiMaxSteps?: unknown
   aiMaxOutputTokens?: unknown
   aiMaxContextMessages?: unknown
@@ -40,10 +42,14 @@ export function resolveAiProviderConfig(runtime: RuntimeLike, production: boolea
   const modelFallback = typeof runtime.aiModelFallback === 'string' && runtime.aiModelFallback
     ? runtime.aiModelFallback
     : DEFAULT_AI_FALLBACK_MODEL
+  const allowPaidPrimary = runtime.aiAllowPaidPrimary === true
 
   if (provider === 'openrouter') {
-    if (production && (!modelPrimary.endsWith(':free') || !modelFallback.endsWith(':free'))) {
-      throw new Error('Production AI models must use explicit :free variants.')
+    if (production && !modelFallback.endsWith(':free')) {
+      throw new Error('Production AI fallback model must use an explicit :free variant.')
+    }
+    if (production && !allowPaidPrimary && !modelPrimary.endsWith(':free')) {
+      throw new Error('Production AI primary model must use an explicit :free variant unless paid primary is enabled.')
     }
     if (modelPrimary === modelFallback) throw new Error('Primary and fallback AI models must be different.')
   }
@@ -55,6 +61,7 @@ export function resolveAiProviderConfig(runtime: RuntimeLike, production: boolea
     siteUrl: typeof runtime.public?.siteUrl === 'string' ? runtime.public.siteUrl : '',
     modelPrimary,
     modelFallback,
+    allowPaidPrimary,
     maxSteps: positiveInteger(runtime.aiMaxSteps, 8),
     maxOutputTokens: positiveInteger(runtime.aiMaxOutputTokens, 1200),
     maxContextMessages: positiveInteger(runtime.aiMaxContextMessages, 20),

@@ -23,11 +23,30 @@ function runtime(overrides: Record<string, unknown> = {}) {
 }
 
 describe('AI provider routing', () => {
-  it('rejects a paid or duplicate production model', () => {
+  it('rejects a paid production primary without explicit opt-in', () => {
     expect(() => resolveAiProviderConfig(runtime({
       aiModel: 'deepseek/deepseek-v4-flash-0731',
     }), true)).toThrow(/free/i)
+  })
 
+  it('accepts a paid production primary with explicit opt-in', () => {
+    const config = resolveAiProviderConfig(runtime({
+      aiModel: 'deepseek/deepseek-v4-flash-0731',
+      aiAllowPaidPrimary: true,
+    }), true)
+
+    expect(config.modelPrimary).toBe('deepseek/deepseek-v4-flash-0731')
+    expect(config.allowPaidPrimary).toBe(true)
+  })
+
+  it('still rejects a paid production fallback with paid primary opt-in', () => {
+    expect(() => resolveAiProviderConfig(runtime({
+      aiAllowPaidPrimary: true,
+      aiModelFallback: 'deepseek/deepseek-v4-flash-0731',
+    }), true)).toThrow(/fallback.*free/i)
+  })
+
+  it('rejects duplicate production models', () => {
     expect(() => resolveAiProviderConfig(runtime({
       aiModelFallback: 'nvidia/nemotron-3-super-120b-a12b:free',
     }), true)).toThrow(/different|khác/i)
