@@ -910,12 +910,14 @@ const columns: UiTableColumn<BillingDraftGridRow>[] = [
               v-if="canManageIncidental && (row as BillingDraftGridRow).contractId && (row as BillingDraftGridRow).editable"
               variant="ghost"
               size="sm"
-              icon-only
+              class="whitespace-nowrap"
+              :data-test="`desktop-add-incidental-${(row as BillingDraftGridRow).roomId}`"
               :aria-label="`Thêm phát sinh cho phòng ${(row as BillingDraftGridRow).roomNumber ?? ''}`"
               title="Thêm phát sinh"
               @click="openIncidentalModal(row as BillingDraftGridRow)"
             >
               <IconPlus class="h-4 w-4" aria-hidden="true" />
+              Thêm phát sinh
             </UiButton>
             <UiButton
               v-if="((row as BillingDraftGridRow).electricity?.required || (row as BillingDraftGridRow).water?.required) && (row as BillingDraftGridRow).editable"

@@ -233,6 +233,15 @@ describe('BillingDraftGridStep', () => {
     wrapper.unmount()
   })
 
+  it('shows a discoverable desktop label for adding an incidental charge', () => {
+    const wrapper = mountGrid()
+
+    const action = wrapper.get('[data-test="desktop-add-incidental-room-1"]')
+    expect(action.text()).toContain('Thêm phát sinh')
+
+    wrapper.unmount()
+  })
+
   it('lets mobile users select a ready row and reveal the issue action', async () => {
     const readyRow = buildRow({
       status: 'ready',
