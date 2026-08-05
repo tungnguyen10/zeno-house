@@ -59,6 +59,7 @@ function chargeTotalsFor(charges: InvoiceCharge[]): Record<ChargeType, number> {
     electricity: 0,
     water: 0,
     service: 0,
+    incidental: 0,
     discount: 0,
     surcharge: 0,
     adjustment: 0,
@@ -172,7 +173,7 @@ export const BillingExportService = {
     activeInvoices.forEach((inv, index) => {
       const charges = chargesByInvoice.get(inv.id) ?? []
       const chargeTotals = chargeTotalsFor(charges)
-      const otherAmount = chargeTotals.service + chargeTotals.surcharge + chargeTotals.adjustment
+      const otherAmount = chargeTotals.service + chargeTotals.incidental + chargeTotals.surcharge + chargeTotals.adjustment
       const discountAmount = chargeTotals.discount
       totals.electricity += chargeTotals.electricity
       totals.water += chargeTotals.water

@@ -45,6 +45,12 @@ function printItem(): InvoicePrintItem {
         metadata: { previous_reading_value: 1200, current_reading_value: 1300 }, sortOrder: 2,
         createdAt: '2026-06-01T00:00:00.000Z',
       },
+      {
+        id: 'charge-incidental', invoiceId: '00000000-0000-4000-8000-000000000001',
+        chargeType: 'incidental', label: 'Thay khóa cửa', sourceType: 'billing_incidental_charge', sourceId: 'source-1',
+        quantity: 1, unitPrice: 150_000, amount: 150_000, metadata: { note: 'Theo biên bản' }, sortOrder: 80,
+        createdAt: '2026-06-01T00:00:00.000Z',
+      },
     ],
   }
 }
@@ -108,6 +114,7 @@ describe('InvoicePrintCard', () => {
     expect(wrapper.text()).toContain('12 Nguyễn Trãi')
     expect(wrapper.text()).toContain('Phòng 101')
     expect(wrapper.text()).toContain('Nguyễn Văn An')
+    expect(wrapper.text()).toContain('Thay khóa cửa')
     expect(wrapper.text()).toContain('Chỉ số cũ')
     expect(wrapper.text()).toContain('Chỉ số mới')
     expect(wrapper.text()).toContain('Số lượng')

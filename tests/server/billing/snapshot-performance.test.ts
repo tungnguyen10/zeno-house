@@ -17,6 +17,7 @@ describe('BillingSnapshotRepository performance', () => {
         occupants: [],
         readings: [],
         overrides: [],
+        incidental_charges: [],
         invoices: [],
         rooms: [],
         tenants: [],
@@ -32,6 +33,7 @@ describe('BillingSnapshotRepository performance', () => {
     const snapshot = await BillingSnapshotRepository.load(event, 'period-1')
 
     expect(snapshot.contracts).toEqual([])
+    expect(snapshot.incidentalCharges).toEqual([])
     expect(rpc).toHaveBeenCalledTimes(1)
     expect(rpc).toHaveBeenCalledWith('billing_period_input_snapshot', { p_period_id: 'period-1' })
     expect(event.context.apiPerformance.dbRoundTrips).toBe(1)

@@ -252,6 +252,11 @@ describe('InvoiceService invoice lifecycle methods', () => {
                 pricing_type: 'per_kwh',
               },
             },
+            {
+              chargeType: 'incidental', label: 'Thay khóa cửa', sourceType: 'billing_incidental_charge',
+              sourceId: 'incidental-1', quantity: 1, unitPrice: 150_000, amount: 150_000,
+              sortOrder: 80, metadata: { billing_period_id: 'period-1', room_id: 'room-ready' },
+            },
           ],
         },
         {
@@ -299,7 +304,7 @@ describe('InvoiceService invoice lifecycle methods', () => {
       drafts: [expect.objectContaining({
         contract_id: 'contract-ready',
         total: 1_720_000,
-        lines: [expect.objectContaining({
+        lines: expect.arrayContaining([expect.objectContaining({
           charge_type: 'electricity',
           source_type: 'override',
           source_id: 'override-1',
@@ -311,7 +316,11 @@ describe('InvoiceService invoice lifecycle methods', () => {
             billable_usage: 35,
             pricing_type: 'per_kwh',
           }),
-        })],
+        }), expect.objectContaining({
+          charge_type: 'incidental',
+          source_type: 'billing_incidental_charge',
+          source_id: 'incidental-1',
+        })]),
       })],
     }))
     // `invoices.issued` audit is now emitted inside the RPC, NOT by the
@@ -401,7 +410,11 @@ describe('InvoiceService invoice lifecycle methods', () => {
         surchargeAmount: 0,
         totalAmount: 1_000_000,
         blockers: [],
-        lines: [],
+        lines: [{
+          chargeType: 'incidental', label: 'Thay khóa cửa', sourceType: 'billing_incidental_charge',
+          sourceId: 'incidental-1', quantity: 1, unitPrice: 150_000, amount: 150_000,
+          sortOrder: 80, metadata: { billing_period_id: voided.billingPeriodId, room_id: voided.roomId },
+        }],
       }],
     })
     reissueWithAudit.mockResolvedValue(replacement)
@@ -423,6 +436,11 @@ describe('InvoiceService invoice lifecycle methods', () => {
       expectedUpdatedAt: voided.updatedAt,
       reason: 'wrong reading fixed',
       correlationId: '00000000-0000-4000-8000-000000000009',
+      draft: expect.objectContaining({
+        lines: [expect.objectContaining({
+          charge_type: 'incidental', source_type: 'billing_incidental_charge', source_id: 'incidental-1',
+        })],
+      }),
     }))
     expect(append).not.toHaveBeenCalled()
   })

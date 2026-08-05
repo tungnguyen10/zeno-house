@@ -18,7 +18,7 @@ Zeno House uses Supabase Postgres. Schema history lives in `supabase/migrations`
 | Contract payments | `20260517000003_contract_payments.sql`, `20260610000000_drop_contract_payments_tenant_id.sql` |
 | Service catalog | `20260530200000_service_catalog.sql` through `20260530200005_drop_default_service_fees.sql`, `20260706010000_building_custom_service_catalog.sql` |
 | Meter readings | `20260530300000_meter_readings.sql`, `20260530400000_simplify_meter_readings.sql` |
-| Billing runtime | `20260611000000_billing_runtime.sql`, `20260611000001_billing_legacy_cleanup.sql` |
+| Billing runtime | `20260611000000_billing_runtime.sql`, `20260611000001_billing_legacy_cleanup.sql`, `20260805184000_add_billing_incidental_charges.sql` |
 | Invoice email delivery | `20260723103000_add_invoice_email_delivery.sql` |
 | Operations report | `20260702173259_add_operations_report.sql`, `20260704000000_expense_receipts_and_export_categories.sql`, `20260705000000_recurring_and_prepaid_expenses.sql`, `20260707030000_operations_report_closure.sql`, `20260707031000_fix_operations_report_periods_shape.sql` |
 | Shared expenses and reserve fund | `20260705010000_shared_expenses_and_reserve_fund.sql`, `20260707010000_reserve_fund_auto_accrual.sql`, `20260707020000_fix_reserve_fund_source_constraint.sql` |
@@ -90,6 +90,7 @@ Billing:
 - `invoice_charges`
 - `invoice_payments`
 - `billing_utility_usages`
+- `billing_incidental_charges`
 - `billing_audit_events`
 - `building_invoice_email_settings`
 - `invoice_email_deliveries`
@@ -127,6 +128,8 @@ The private `building-invoice-assets` Storage bucket accepts JPEG, PNG, and WebP
 AI full-balance collection is committed by `record_ai_invoice_payments_with_audit`. This service-role-only `SECURITY INVOKER` RPC locks one period and a stable invoice order, validates all expected versions and balances before writing, records the complete batch atomically, and uses the action correlation ID to replay a previously committed result without duplicate payment or audit rows.
 
 `billing_utility_usages` stores manual usage overrides by period, room, and meter type.
+
+`billing_incidental_charges` stores positive one-off charges for exactly one billing period, contract, and room. It has an idempotent `operation_id`, optimistic `updated_at`, service-role-only reads/RPC writes, and atomic create/update/delete audit functions. Source rows are editable only while the period is not closed and the contract has no non-void invoice in that period; a void invoice permits correction before reissue. Issuance snapshots each row as `invoice_charges.charge_type = 'incidental'`, so later periods do not inherit it.
 
 `billing_audit_events` stores append-only operational audit events.
 
@@ -201,3 +204,5 @@ When changing schema:
 Do not invent migration timestamps manually when using the Supabase CLI workflow. Use the CLI
 migration command for new migration files. Generating or applying schema changes must follow the
 manual Dashboard change-control requirement above and does not require a local Postgres container.
+
+For the incidental-charge migration, local Supabase CLI/runtime is not available in this repository checkout. Apply the migration in the configured cloud project, run Supabase database advisors, and then run the documented cloud type-generation command; do not hand-edit `app/types/database.types.ts` before that step.

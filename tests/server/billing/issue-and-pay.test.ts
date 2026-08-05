@@ -152,6 +152,32 @@ describe('IssueAndPayService.issueAndPay', () => {
     expect(result.balanceAmount).toBe(0)
   })
 
+  it('preserves incidental source identity in the issue-and-pay snapshot', async () => {
+    const ready = buildReadyDraft()
+    ready.lines.push({
+      chargeType: 'incidental', label: 'Thay khóa cửa', sourceType: 'billing_incidental_charge',
+      sourceId: 'charge-1', quantity: 1, unitPrice: 150_000, amount: 150_000, sortOrder: 80,
+      metadata: { billing_period_id: 'period-1', room_id: 'room-ready' },
+    })
+    ready.subtotalAmount += 150_000
+    ready.totalAmount += 150_000
+    calculateDraft.mockResolvedValue({ totals: {}, drafts: [ready] })
+    rpcMock.mockResolvedValueOnce({ data: [paidInvoiceRow(ready.totalAmount)], error: null })
+
+    const { IssueAndPayService } = await import('../../../server/services/billing/issue-and-pay')
+    await IssueAndPayService.issueAndPay(event(), makeUser(), 'period-1', {
+      contract_id: 'contract-ready', payment_date: '2026-05-31',
+    })
+
+    expect(rpcMock.mock.calls[0]?.[1]).toMatchObject({
+      p_draft: {
+        lines: expect.arrayContaining([expect.objectContaining({
+          charge_type: 'incidental', source_type: 'billing_incidental_charge', source_id: 'charge-1',
+        })]),
+      },
+    })
+  })
+
   it('rejects when the draft still has blockers', async () => {
     calculateDraft.mockResolvedValue({
       totals: { blockedDraftCount: 1, issuableDraftCount: 0 },

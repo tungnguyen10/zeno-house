@@ -36,6 +36,7 @@ export interface BillingWorkspaceBootstrap {
   period: BillingPeriod
   grid: BillingDraftGridResponse | null
   utilityUsages: BillingUtilityUsage[]
+  incidentalCharges: BillingIncidentalCharge[]
   overview: BillingWorkspaceOverview | null
   invoices: Invoice[]
   drafts: BillingDraftResponse | null
@@ -118,6 +119,20 @@ export interface BillingUtilityUsage {
   updatedAt: string
   approvedBy: string | null
   approvedAt: string | null
+}
+
+export interface BillingIncidentalCharge {
+  id: string
+  billingPeriodId: string
+  contractId: string
+  roomId: string
+  label: string
+  amount: number
+  note: string | null
+  operationId: string
+  createdBy: string | null
+  createdAt: string
+  updatedAt: string
 }
 
 export interface BillingAuditEvent {

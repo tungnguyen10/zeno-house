@@ -6,7 +6,7 @@ import UiCheckbox from '../../../app/components/ui/UiCheckbox.vue'
 import UiInput from '../../../app/components/ui/UiInput.vue'
 import UiTable from '../../../app/components/ui/UiTable.vue'
 import { buildPeriod } from '../../__fixtures__/billing/period'
-import type { BillingDraftGridResponse, BillingDraftGridRow } from '../../../app/types/billing'
+import type { BillingDraftGridResponse, BillingDraftGridRow, BillingIncidentalCharge } from '../../../app/types/billing'
 
 function buildRow(overrides: Partial<BillingDraftGridRow> = {}): BillingDraftGridRow {
   const roomId = overrides.roomId ?? 'room-1'
@@ -115,6 +115,7 @@ function mountGrid(overrides: Partial<{
   onSaveOverride: ReturnType<typeof vi.fn>
   onPreviewIssue: ReturnType<typeof vi.fn>
   onIssue: ReturnType<typeof vi.fn>
+  incidentalCharges: BillingIncidentalCharge[]
 }> = {}) {
   const onSaveReadings = overrides.onSaveReadings ?? vi.fn()
   const onSaveOverride = overrides.onSaveOverride ?? vi.fn()
@@ -123,9 +124,13 @@ function mountGrid(overrides: Partial<{
       response: overrides.response ?? response(),
       loading: false,
       period: overrides.period ?? buildPeriod(),
+      incidentalCharges: overrides.incidentalCharges ?? [],
       onSaveReadings,
       onSaveOverride,
       onDeleteOverride: vi.fn(),
+      onCreateIncidental: vi.fn(),
+      onUpdateIncidental: vi.fn(),
+      onDeleteIncidental: vi.fn(),
       onPreviewIssue: overrides.onPreviewIssue,
       onIssue: overrides.onIssue,
     },
@@ -152,6 +157,7 @@ function mountGrid(overrides: Partial<{
         BillingBulkReadingEntryModal: empty,
         BillingDraftDiscrepancyCallout: discrepancyCalloutStub,
         BillingInvoiceIssuePreviewModal: issuePreviewModalStub,
+        BillingIncidentalChargeModal: empty,
       },
     },
   })
@@ -220,6 +226,8 @@ describe('BillingDraftGridStep', () => {
 
     const mobileRows = wrapper.findAllComponents(BillingMobileDraftRow)
     expect(mobileRows).toHaveLength(2)
+    expect(mobileRows[0]?.text()).toContain('Thêm phát sinh')
+    expect(mobileRows[0]?.text()).toContain('Chi tiết')
     expect(wrapper.find('.md\\:hidden').exists()).toBe(true)
 
     wrapper.unmount()
@@ -484,8 +492,30 @@ describe('BillingDraftGridStep', () => {
     expect(wrapper.find('[data-reading-cell="room-1::electricity"] input').exists()).toBe(false)
     expect(wrapper.find('[data-reading-cell="room-1::water"] input').exists()).toBe(false)
     expect(wrapper.text()).not.toContain('Điều chỉnh chỉ số')
+    expect(wrapper.text()).not.toContain('Thêm phát sinh')
 
     wrapper.unmount()
+  })
+
+  it('keeps saved incidental charges visible but read-only after locking', async () => {
+    const closedRow = buildRow({ editable: false, invoiceId: 'invoice-1', invoiceStatus: 'issued' })
+    const wrapper = mountGrid({
+      period: buildPeriod({ status: 'issued' }),
+      response: response([closedRow]),
+      incidentalCharges: [{
+        id: 'charge-1', billingPeriodId: 'period-1', contractId: closedRow.contractId!, roomId: closedRow.roomId,
+        label: 'Thay khóa cửa', amount: 150_000, note: 'Theo biên bản', operationId: 'operation-1',
+        createdBy: 'user-1', createdAt: '2026-05-20T00:00:00.000Z', updatedAt: '2026-05-20T00:00:00.000Z',
+      }],
+    })
+    await wrapper.findAll('button').find(button => button.text() === 'Tất cả')!.trigger('click')
+    const expandButton = wrapper.findAll('button').find(button => button.attributes('aria-label') === 'Xem chi tiết')
+    await expandButton!.trigger('click')
+
+    expect(wrapper.text()).toContain('Khoản phát sinh kỳ này')
+    expect(wrapper.text()).toContain('Thay khóa cửa')
+    expect(wrapper.text()).toContain('Dùng luồng điều chỉnh hóa đơn')
+    expect(wrapper.find('button[aria-label="Sửa Thay khóa cửa"]').exists()).toBe(false)
   })
 
   it('bulk apply populates cells, highlights them, and schedules row auto-save without full grid reload', async () => {

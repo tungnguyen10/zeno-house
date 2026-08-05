@@ -6,7 +6,7 @@ import { meterUnit, meterLabel } from '~/utils/billing/meter-display'
 
 type MeterType = 'electricity' | 'water'
 
-defineProps<{
+withDefaults(defineProps<{
   row: BillingDraftGridRow
   selectable: boolean
   selected: boolean
@@ -14,14 +14,17 @@ defineProps<{
   isCellDirty: (row: BillingDraftGridRow, type: MeterType) => boolean
   isPasteHighlighted: (row: BillingDraftGridRow, type: MeterType) => boolean
   saveStateOf: (row: BillingDraftGridRow) => 'idle' | 'saving' | 'saved' | 'error'
-}>()
+  canManageIncidental?: boolean
+}>(), {
+  canManageIncidental: true,
+})
 
 const emit = defineEmits<{
   (e: 'update', payload: { row: BillingDraftGridRow; type: MeterType; value: string }): void
   (e: 'paste', payload: { event: ClipboardEvent; row: BillingDraftGridRow; type: MeterType }): void
   (e: 'keydown', payload: { event: KeyboardEvent; row: BillingDraftGridRow; type: MeterType }): void
   (e: 'blur', payload: { row: BillingDraftGridRow; type: MeterType }): void
-  (e: 'override' | 'select', row: BillingDraftGridRow): void
+  (e: 'override' | 'select' | 'detail' | 'add-incidental', row: BillingDraftGridRow): void
 }>()
 
 function meterCell(row: BillingDraftGridRow, type: MeterType): BillingDraftGridUtilityCell | null {
@@ -137,11 +140,25 @@ function formatRate(cell: BillingDraftGridUtilityCell | null): string {
       </template>
     </div>
 
-    <footer
-      v-if="(row.electricity?.required || row.water?.required) && row.editable"
-      class="pt-1"
-    >
-      <UiButton variant="ghost" size="sm" @click="emit('override', row)">
+    <footer class="flex flex-wrap items-center gap-1 border-t border-dark-border pt-2">
+      <UiButton variant="ghost" size="sm" class="min-h-11 whitespace-nowrap" @click="emit('detail', row)">Chi tiết</UiButton>
+      <UiButton
+        v-if="canManageIncidental && row.contractId && row.editable"
+        variant="ghost"
+        size="sm"
+        class="min-h-11 whitespace-nowrap"
+        @click="emit('add-incidental', row)"
+      >
+        <IconPlus class="h-4 w-4" aria-hidden="true" />
+        Thêm phát sinh
+      </UiButton>
+      <UiButton
+        v-if="(row.electricity?.required || row.water?.required) && row.editable"
+        variant="ghost"
+        size="sm"
+        class="min-h-11 whitespace-nowrap"
+        @click="emit('override', row)"
+      >
         Điều chỉnh chỉ số
       </UiButton>
     </footer>

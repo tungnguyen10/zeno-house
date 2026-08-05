@@ -173,6 +173,13 @@ export const BillingDraftService = {
       servicesByContract.set(s.contract_id, list)
     }
 
+    const incidentalChargesByContract = new Map<string, (typeof snapshot.incidentalCharges)[number][]>()
+    for (const charge of snapshot.incidentalCharges ?? []) {
+      const list = incidentalChargesByContract.get(charge.contractId) ?? []
+      list.push(charge)
+      incidentalChargesByContract.set(charge.contractId, list)
+    }
+
     // Contract occupants
     const occupants = snapshot.occupants
     const occupantsByContract = new Map<string, ContractOccupantRow[]>()
@@ -619,7 +626,30 @@ export const BillingDraftService = {
         serviceSort += 1
       }
 
-      // 5) Discount and surcharge.
+      // 5) Period-scoped incidental charges are intentionally not prorated and
+      // remain distinct from the recurring contract surcharge aggregate.
+      let incidentalSort = 80
+      for (const charge of incidentalChargesByContract.get(contract.id) ?? []) {
+        lines.push({
+          chargeType: 'incidental',
+          label: charge.label,
+          sourceType: 'billing_incidental_charge',
+          sourceId: charge.id,
+          quantity: 1,
+          unitPrice: charge.amount,
+          amount: charge.amount,
+          metadata: {
+            billing_period_id: charge.billingPeriodId,
+            contract_id: charge.contractId,
+            room_id: charge.roomId,
+            note: charge.note,
+          },
+          sortOrder: incidentalSort,
+        })
+        incidentalSort += 1
+      }
+
+      // 6) Discount and surcharge.
       // Discount line carries a negative amount so SUM(line.amount) == total_amount
       // (the invariant enforced by issue_period_invoices). The aggregate
       // `discountAmount` returned by this service stays positive.

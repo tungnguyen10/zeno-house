@@ -5,6 +5,7 @@ import type { UiTableColumn } from '~/components/ui/UiTable.vue'
 import BillingDraftGridExpandedRow from '~/components/billing/BillingDraftGridExpandedRow.vue'
 import BillingDraftGridOverrideModal from '~/components/billing/BillingDraftGridOverrideModal.vue'
 import BillingAutoIssueModal from '~/components/billing/BillingAutoIssueModal.vue'
+import BillingIncidentalChargeModal from '~/components/billing/BillingIncidentalChargeModal.vue'
 import type {
   BillingDraftGridResponse,
   BillingDraftGridRow,
@@ -15,9 +16,16 @@ import type {
   IssueInvoicesResult,
   BillingInvoiceIssuePreview,
   BillingUtilityUsage,
+  BillingIncidentalCharge,
 } from '~/types/billing'
 import type { MeterReadingBulkInput } from '~/utils/validators/meter-readings'
-import type { IssueInvoicesInput, IssueInvoicesPreviewInput, UtilityUsageOverrideInput } from '~/utils/validators/billing'
+import type {
+  IncidentalChargeCreateInput,
+  IncidentalChargeUpdateInput,
+  IssueInvoicesInput,
+  IssueInvoicesPreviewInput,
+  UtilityUsageOverrideInput,
+} from '~/utils/validators/billing'
 import type { IssueAndPayInput } from '~/utils/validators/billing-issue-pay'
 import { formatCurrency } from '~/utils/format/currency'
 import { isPeriodLocked } from '~/utils/billing/lock'
@@ -39,11 +47,13 @@ import { getApiErrorCode, getApiErrorDetails, getApiErrorMessage } from '~/utils
 
 type MeterType = 'electricity' | 'water'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   response: BillingDraftGridResponse | null
   loading: boolean
   period: BillingPeriod | null
   unapprovedOverrides?: BillingUtilityUsage[]
+  incidentalCharges?: BillingIncidentalCharge[]
+  canManageIncidental?: boolean
   onSaveReadings: (
     readings: MeterReadingBulkInput['readings'],
     options?: { refresh?: boolean; silent?: boolean; refreshDrafts?: boolean },
@@ -51,10 +61,16 @@ const props = defineProps<{
   onSaveOverride: (input: UtilityUsageOverrideInput) => Promise<void>
   onDeleteOverride: (overrideId: string) => Promise<void>
   onApproveOverride?: (overrideId: string) => Promise<BillingUtilityUsage>
+  onCreateIncidental: (input: IncidentalChargeCreateInput) => Promise<BillingIncidentalCharge>
+  onUpdateIncidental: (chargeId: string, input: IncidentalChargeUpdateInput) => Promise<BillingIncidentalCharge>
+  onDeleteIncidental: (chargeId: string, expectedUpdatedAt: string) => Promise<void>
   onPreviewIssue?: (input: IssueInvoicesPreviewInput) => Promise<BillingInvoiceIssuePreview>
   onIssue?: (input: IssueInvoicesInput) => Promise<IssueInvoicesResult | undefined>
   onAutoIssue?: (input: IssueAndPayInput) => Promise<Invoice | undefined>
-}>()
+}>(), {
+  incidentalCharges: () => [],
+  canManageIncidental: true,
+})
 
 const emit = defineEmits<{
   (e: 'refresh'): void
@@ -81,6 +97,26 @@ const bulkEntryOpen = ref(false)
 const overrideOpen = ref(false)
 const overrideRow = ref<BillingDraftGridRow | null>(null)
 const overrideType = ref<MeterType | null>(null)
+const incidentalOpen = ref(false)
+const incidentalRow = ref<BillingDraftGridRow | null>(null)
+const incidentalCharge = ref<BillingIncidentalCharge | null>(null)
+
+function incidentalChargesFor(row: BillingDraftGridRow): BillingIncidentalCharge[] {
+  return (props.incidentalCharges ?? []).filter(charge => charge.contractId === row.contractId)
+}
+
+function openIncidentalModal(row: BillingDraftGridRow, charge: BillingIncidentalCharge | null = null) {
+  if (!props.canManageIncidental || !row.contractId || !row.editable) return
+  incidentalRow.value = row
+  incidentalCharge.value = charge
+  incidentalOpen.value = true
+}
+
+function closeIncidentalModal() {
+  incidentalOpen.value = false
+  incidentalRow.value = null
+  incidentalCharge.value = null
+}
 
 const draftGridResponse = computed(() => props.response)
 const draftGridPeriod = computed(() => props.period)
@@ -871,6 +907,17 @@ const columns: UiTableColumn<BillingDraftGridRow>[] = [
               Lỗi
             </span>
             <UiButton
+              v-if="canManageIncidental && (row as BillingDraftGridRow).contractId && (row as BillingDraftGridRow).editable"
+              variant="ghost"
+              size="sm"
+              icon-only
+              :aria-label="`Thêm phát sinh cho phòng ${(row as BillingDraftGridRow).roomNumber ?? ''}`"
+              title="Thêm phát sinh"
+              @click="openIncidentalModal(row as BillingDraftGridRow)"
+            >
+              <IconPlus class="h-4 w-4" aria-hidden="true" />
+            </UiButton>
+            <UiButton
               v-if="((row as BillingDraftGridRow).electricity?.required || (row as BillingDraftGridRow).water?.required) && (row as BillingDraftGridRow).editable"
               variant="ghost"
               size="sm"
@@ -905,10 +952,13 @@ const columns: UiTableColumn<BillingDraftGridRow>[] = [
           :is-cell-dirty="isCellDirty"
           :is-paste-highlighted="isPasteHighlighted"
           :save-state-of="rowSaveStateOf"
+          :can-manage-incidental="canManageIncidental"
           @update="setReadingDraftValue($event.row, $event.type, $event.value)"
           @keydown="handleReadingKeydown($event.event, $event.row, $event.type)"
           @paste="handleReadingPaste($event.event, $event.row, $event.type)"
           @override="openOverrideModal($event)"
+          @detail="toggleDetail($event)"
+          @add-incidental="openIncidentalModal($event)"
           @select="toggleSelect($event)"
           @blur="handleReadingBlur($event.row)"
         />
@@ -925,7 +975,11 @@ const columns: UiTableColumn<BillingDraftGridRow>[] = [
           v-if="detailRow"
           :row="detailRow"
           :period="period"
+          :incidental-charges="incidentalChargesFor(detailRow)"
+          :can-manage-incidental="canManageIncidental"
           @close="closeDetail"
+          @add-incidental="openIncidentalModal(detailRow)"
+          @edit-incidental="openIncidentalModal(detailRow, $event)"
           @intent:void-reissue="$emit('intent:void-reissue', $event)"
         />
       </UiDrawer>
@@ -948,6 +1002,15 @@ const columns: UiTableColumn<BillingDraftGridRow>[] = [
       :on-save-override="props.onSaveOverride"
       :on-delete-override="props.onDeleteOverride"
       @close="closeOverrideModal"
+    />
+    <BillingIncidentalChargeModal
+      :open="incidentalOpen"
+      :row="incidentalRow"
+      :charge="incidentalCharge"
+      :on-create="props.onCreateIncidental"
+      :on-update="props.onUpdateIncidental"
+      :on-delete="props.onDeleteIncidental"
+      @close="closeIncidentalModal"
     />
     <BillingBulkReadingEntryModal
       :open="bulkEntryOpen"

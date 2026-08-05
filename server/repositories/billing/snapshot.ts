@@ -1,7 +1,12 @@
 import type { H3Event } from 'h3'
 import type { Tables } from '~/types/database.types'
-import type { BillingUtilityUsage, Invoice } from '~/types/billing'
-import { mapBillingUtilityUsage, mapInvoice } from '~/utils/mappers/billing'
+import type { BillingIncidentalCharge, BillingUtilityUsage, Invoice } from '~/types/billing'
+import {
+  mapBillingIncidentalCharge,
+  mapBillingUtilityUsage,
+  mapInvoice,
+  type BillingIncidentalChargeRow,
+} from '~/utils/mappers/billing'
 import { db } from '../../utils/db'
 
 export interface BillingPeriodInputSnapshot {
@@ -11,13 +16,15 @@ export interface BillingPeriodInputSnapshot {
   occupants: Tables<'contract_occupants'>[]
   readings: Tables<'meter_readings'>[]
   overrides: BillingUtilityUsage[]
+  incidentalCharges: BillingIncidentalCharge[]
   invoices: Invoice[]
   rooms: Tables<'rooms'>[]
   tenants: Tables<'tenants'>[]
 }
 
-type RawSnapshot = Omit<BillingPeriodInputSnapshot, 'overrides' | 'invoices'> & {
+type RawSnapshot = Omit<BillingPeriodInputSnapshot, 'overrides' | 'incidentalCharges' | 'invoices'> & {
   overrides: Tables<'billing_utility_usages'>[]
+  incidental_charges: BillingIncidentalChargeRow[]
   invoices: Tables<'invoices'>[]
 }
 
@@ -32,6 +39,7 @@ export const BillingSnapshotRepository = {
     return {
       ...raw,
       overrides: (raw.overrides ?? []).map(mapBillingUtilityUsage),
+      incidentalCharges: (raw.incidental_charges ?? []).map(mapBillingIncidentalCharge),
       invoices: (raw.invoices ?? []).map(mapInvoice),
     }
   },

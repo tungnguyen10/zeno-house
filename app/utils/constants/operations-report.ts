@@ -105,6 +105,7 @@ export const REVENUE_CHARGE_TYPES = [
   'electricity',
   'water',
   'service',
+  'incidental',
   'discount',
   'surcharge',
   'adjustment',

@@ -1,7 +1,7 @@
 # API Inventory And Performance Contracts
 
 Generated from checked-in handlers by `node scripts/generate-api-inventory.mjs`.
-Route count: **178**.
+Route count: **182**.
 
 All business routes require server-side authorization unless explicitly documented as an internal-secret route. Initial reads use Nuxt `useFetch`; imperative reads and mutations use `apiFetch` with a 15-second timeout, request ID, no automatic mutation retry, and normalized server envelopes.
 
@@ -42,6 +42,10 @@ All business routes require server-side authorization unless explicitly document
 | GET | `/api/billing/periods/[id]/draft-grid` | n/a | no long cache | p95 ≤ 800ms |
 | GET | `/api/billing/periods/[id]/drafts` | n/a | request/DTO policy | p95 ≤ 250ms |
 | GET | `/api/billing/periods/[id]/export` | n/a | request/DTO policy | p95 ≤ 250ms |
+| DELETE | `/api/billing/periods/[id]/incidental-charges/[chargeId]` | n/a | invalidate affected domain | p95 ≤ 250ms |
+| PATCH | `/api/billing/periods/[id]/incidental-charges/[chargeId]` | n/a | invalidate affected domain | p95 ≤ 250ms |
+| GET | `/api/billing/periods/[id]/incidental-charges` | domain-bounded | request/DTO policy | p95 ≤ 400ms |
+| POST | `/api/billing/periods/[id]/incidental-charges` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | GET | `/api/billing/periods/[id]` | n/a | request/DTO policy | p95 ≤ 250ms |
 | GET | `/api/billing/periods/[id]/invoices` | domain-bounded | request/DTO policy | p95 ≤ 400ms |
 | POST | `/api/billing/periods/[id]/issue-and-pay` | n/a | invalidate affected domain | p95 ≤ 250ms |

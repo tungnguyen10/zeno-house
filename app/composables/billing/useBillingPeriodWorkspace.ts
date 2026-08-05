@@ -6,6 +6,7 @@ import type {
   BillingDraftGridResponse,
   Invoice,
   BillingUtilityUsage,
+  BillingIncidentalCharge,
   BillingAuditEvent,
   IssueInvoicesResult,
   BillingInvoiceIssuePreview,
@@ -16,6 +17,8 @@ import type {
   IssueInvoicesInput,
   IssueInvoicesPreviewInput,
   UtilityUsageOverrideInput,
+  IncidentalChargeCreateInput,
+  IncidentalChargeUpdateInput,
 } from '~/utils/validators/billing'
 import type { IssueAndPayInput } from '~/utils/validators/billing-issue-pay'
 import type { MeterReadingBulkInput } from '~/utils/validators/meter-readings'
@@ -46,6 +49,7 @@ export function useBillingPeriodWorkspace(
   const grid = ref<BillingDraftGridResponse | null>(seed?.grid ?? null)
   const invoices = ref<Invoice[]>(seed?.invoices ?? [])
   const utilityUsages = ref<BillingUtilityUsage[]>(seed?.utilityUsages ?? [])
+  const incidentalCharges = ref<BillingIncidentalCharge[]>(seed?.incidentalCharges ?? [])
   const auditEvents = ref<BillingAuditEvent[]>([])
 
   const overviewLoading = ref(false)
@@ -53,6 +57,7 @@ export function useBillingPeriodWorkspace(
   const gridLoading = ref(false)
   const invoicesLoading = ref(false)
   const utilityLoading = ref(false)
+  const incidentalChargesLoading = ref(false)
   const auditLoading = ref(false)
 
   const unapprovedOverrides = computed(() =>
@@ -132,6 +137,55 @@ export function useBillingPeriodWorkspace(
     } finally {
       utilityLoading.value = false
     }
+  }
+
+  async function loadIncidentalCharges() {
+    if (!id.value) return
+    incidentalChargesLoading.value = true
+    try {
+      const resp = await apiFetch<ApiSuccess<BillingIncidentalCharge[]>>(
+        `/api/billing/periods/${id.value}/incidental-charges`,
+      )
+      incidentalCharges.value = resp.data
+    }
+    finally {
+      incidentalChargesLoading.value = false
+    }
+  }
+
+  async function createIncidentalCharge(input: IncidentalChargeCreateInput): Promise<BillingIncidentalCharge> {
+    if (!id.value) throw new Error('No period id')
+    const resp = await apiFetch<ApiSuccess<BillingIncidentalCharge>>(
+      `/api/billing/periods/${id.value}/incidental-charges`,
+      { method: 'POST', body: input },
+    )
+    incidentalCharges.value = [...incidentalCharges.value, resp.data]
+    await loadGrid()
+    return resp.data
+  }
+
+  async function updateIncidentalCharge(
+    chargeId: string,
+    input: IncidentalChargeUpdateInput,
+  ): Promise<BillingIncidentalCharge> {
+    if (!id.value) throw new Error('No period id')
+    const resp = await apiFetch<ApiSuccess<BillingIncidentalCharge>>(
+      `/api/billing/periods/${id.value}/incidental-charges/${chargeId}`,
+      { method: 'PATCH', body: input },
+    )
+    incidentalCharges.value = incidentalCharges.value.map(charge => charge.id === chargeId ? resp.data : charge)
+    await loadGrid()
+    return resp.data
+  }
+
+  async function deleteIncidentalCharge(chargeId: string, expectedUpdatedAt: string): Promise<void> {
+    if (!id.value) throw new Error('No period id')
+    await apiFetch(`/api/billing/periods/${id.value}/incidental-charges/${chargeId}`, {
+      method: 'DELETE',
+      body: { expected_updated_at: expectedUpdatedAt },
+    })
+    incidentalCharges.value = incidentalCharges.value.filter(charge => charge.id !== chargeId)
+    await loadGrid()
   }
 
   async function loadAudit() {
@@ -271,6 +325,7 @@ export function useBillingPeriodWorkspace(
     grid,
     invoices,
     utilityUsages,
+    incidentalCharges,
     unapprovedOverrides,
     auditEvents,
     overviewLoading,
@@ -278,12 +333,14 @@ export function useBillingPeriodWorkspace(
     gridLoading,
     invoicesLoading,
     utilityLoading,
+    incidentalChargesLoading,
     auditLoading,
     loadOverview,
     loadDrafts,
     loadGrid,
     loadInvoices,
     loadUtilityUsages,
+    loadIncidentalCharges,
     loadAudit,
     issue,
     previewIssue,
@@ -297,5 +354,8 @@ export function useBillingPeriodWorkspace(
     saveUtilityOverride,
     deleteUtilityOverride,
     approveUtilityOverride,
+    createIncidentalCharge,
+    updateIncidentalCharge,
+    deleteIncidentalCharge,
   }
 }

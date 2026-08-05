@@ -1,4 +1,4 @@
-export type ChargeGroupKey = 'rent' | 'utility' | 'service' | 'adjustment'
+export type ChargeGroupKey = 'rent' | 'utility' | 'service' | 'incidental' | 'adjustment'
 
 export interface ChargeGroup<T> {
   key: ChargeGroupKey
@@ -17,10 +17,11 @@ const GROUP_TITLES: Record<ChargeGroupKey, string> = {
   rent: 'Tiền phòng',
   utility: 'Tiện ích',
   service: 'Dịch vụ',
+  incidental: 'Khoản phát sinh',
   adjustment: 'Điều chỉnh',
 }
 
-const GROUP_ORDER: ChargeGroupKey[] = ['rent', 'utility', 'service', 'adjustment']
+const GROUP_ORDER: ChargeGroupKey[] = ['rent', 'utility', 'service', 'incidental', 'adjustment']
 
 /**
  * Sort and bucket charge lines into display groups.
@@ -31,7 +32,7 @@ export function groupChargeLines<T extends GroupableLine>(
   options?: { showAdjustments?: boolean },
 ): ChargeGroup<T>[] {
   const { showAdjustments = true } = options ?? {}
-  const buckets: Record<ChargeGroupKey, T[]> = { rent: [], utility: [], service: [], adjustment: [] }
+  const buckets: Record<ChargeGroupKey, T[]> = { rent: [], utility: [], service: [], incidental: [], adjustment: [] }
 
   for (const line of [...lines].sort((a, b) => a.sortOrder - b.sortOrder)) {
     switch (line.chargeType) {
@@ -46,6 +47,9 @@ export function groupChargeLines<T extends GroupableLine>(
       case 'surcharge':
       case 'adjustment':
         buckets.adjustment.push(line)
+        break
+      case 'incidental':
+        buckets.incidental.push(line)
         break
       case 'service':
       default:
@@ -74,6 +78,7 @@ export function chargeLineLabel(chargeType: string, fallbackLabel: string): stri
   if (chargeType === 'water') return 'Nước'
   if (chargeType === 'discount') return fallbackLabel || 'Giảm giá'
   if (chargeType === 'surcharge') return fallbackLabel || 'Phụ thu'
+  if (chargeType === 'incidental') return fallbackLabel || 'Khoản phát sinh'
   if (chargeType === 'adjustment') return fallbackLabel || 'Điều chỉnh'
   return fallbackLabel
 }

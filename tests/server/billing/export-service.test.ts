@@ -68,7 +68,7 @@ describe('BillingExportService', () => {
         id: 'invoice-1',
         status: 'issued',
         roomNumber: '101',
-        totalAmount: 2_500_000,
+        totalAmount: 2_650_000,
       },
     ])
     invoiceListChargesByInvoiceIds.mockResolvedValue(new Map([['invoice-1', [
@@ -80,9 +80,19 @@ describe('BillingExportService', () => {
         metadata: { previous_reading_value: 10, current_reading_value: 30 },
       },
       { invoiceId: 'invoice-1', chargeType: 'water', amount: 200_000, metadata: {} },
+      { invoiceId: 'invoice-1', chargeType: 'incidental', amount: 150_000, metadata: {} },
     ]]]))
     assertBuildingScope.mockResolvedValue(undefined)
     appendAudit.mockResolvedValue(undefined)
+  })
+
+  it('includes incidental charges in the other-service export amount', async () => {
+    const { BillingExportService } = await import('../../../server/services/billing/export')
+    const result = await BillingExportService.buildPeriodWorkbook({} as never, admin, 'period-1')
+    const workbook = new ExcelJS.Workbook()
+    await workbook.xlsx.load(result.buffer)
+
+    expect(workbook.worksheets[0]?.getRow(4).getCell(8).value).toBe(150_000)
   })
 
   it('preserves filename, scope check, audit and workbook shape', async () => {

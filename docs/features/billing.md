@@ -18,6 +18,7 @@ Billing is the highest-risk workflow in the app. It is implemented as a monthly 
 | Charge | Invoice line item. |
 | Payment | Collection event applied to invoice balance. |
 | Utility usage override | Manual billable-usage override for meter issues. |
+| Incidental charge | Positive one-off charge for one contract/room in one billing period. |
 | Audit event | Append-only record of billing actions. |
 
 ## Period Statuses
@@ -65,6 +66,7 @@ It computes per active contract:
 - electricity
 - water
 - enabled contract services
+- period-scoped incidental charges (full value, never prorated)
 - discount
 - surcharge
 
@@ -101,6 +103,10 @@ The AI `calculate_billing_draft` tool calls this same service and derives a dete
 
 Utility override saves use `save_utility_usage_override_with_audit`, which commits the override and `utility_override.saved` audit together with optimistic version/absence checks. Save and delete are blocked for closed periods or rooms with a non-void invoice; approval applies the same billing lock. Direct UI saves include the loaded override `updatedAt`, and AI plans store the same version.
 
+Contract `surcharge_amount` remains a recurring contract term and is recalculated in every applicable month. A row in `billing_incidental_charges` is separate: it belongs to one billing period, contract, and room, contributes its full positive amount to draft subtotal, and becomes an `incidental` invoice-charge snapshot at issue. It is never copied to another period and never included in the recurring surcharge aggregate.
+
+Incidental charges are managed only from **Soạn kỳ** through the room action and **Chi tiết phòng** drawer. Users may create multiple labelled charges, then edit or delete them with `expected_updated_at`. Source writes require `billing.write`, building write scope, an open period, and no non-void invoice for that contract. A void invoice re-enables source editing before reissue; otherwise corrections use the invoice-adjustment flow. Create retries reuse `operation_id`, and create/update/delete audit events commit atomically with the source mutation.
+
 ## Period Queue Metrics
 
 Period list, workspace overview, draft calculation, and draft grid use the same server-side billing core definitions:
@@ -117,7 +123,7 @@ Period list, workspace overview, draft calculation, and draft grid use the same 
 
 The workspace route `/billing/[building]/[period]` has **two tabs** (simplified from three in v0.2):
 
-1. **Soạn kỳ** (draft-grid): enter readings, review blockers, bulk-issue ready rows, auto-issue-and-collect individual rows (when flag enabled). Draft rows are not printable.
+1. **Soạn kỳ** (draft-grid): enter readings, manage one-off room charges, review blockers, bulk-issue ready rows, auto-issue-and-collect individual rows (when flag enabled). Draft rows are not printable.
 2. **Thu tiền & công nợ** (payments): print issued invoices, collect payments, bulk collect, void/reissue, undo individual payments.
 
 Header overflow actions (`Hành động ▾`):
@@ -232,6 +238,8 @@ Closing a period:
 ## Export
 
 `GET /api/billing/periods/[id]/export` returns an Excel workbook for the period. Export is available to users with `billing.read`.
+
+Incidental invoice lines remain individually labelled in invoice detail/print and operations-report revenue. The period workbook includes their amount in **Phụ phí/Dịch vụ** while preserving the invoice total.
 
 ## Issued Invoice Printing
 

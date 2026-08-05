@@ -53,6 +53,7 @@ const {
   grid,
   invoices,
   utilityUsages,
+  incidentalCharges,
   unapprovedOverrides,
   overviewLoading,
   gridLoading,
@@ -62,6 +63,7 @@ const {
   loadGrid,
   loadInvoices,
   loadUtilityUsages,
+  loadIncidentalCharges,
   issue,
   previewIssue,
   issueAndPay,
@@ -74,6 +76,9 @@ const {
   saveUtilityOverride,
   deleteUtilityOverride,
   approveUtilityOverride,
+  createIncidentalCharge,
+  updateIncidentalCharge,
+  deleteIncidentalCharge,
 } = workspace
 
 const { count: recentAuditCount, load: loadRecentAuditCount } = useRecentAuditCount(periodId)
@@ -127,6 +132,7 @@ watch(tab, async (current, previous) => {
     const tasks: Promise<unknown>[] = []
     if (!grid.value) tasks.push(loadGrid())
     if (utilityUsages.value.length === 0) tasks.push(loadUtilityUsages())
+    tasks.push(loadIncidentalCharges())
     if (tasks.length > 0) await Promise.all(tasks)
   }
   if (current === 'payments') {
@@ -430,10 +436,15 @@ watch(
           :loading="gridLoading"
           :period="period"
           :unapproved-overrides="unapprovedOverrides"
+          :incidental-charges="incidentalCharges"
+          :can-manage-incidental="auth.can('billing.write')"
           :on-save-readings="saveReadingsWithToast"
           :on-save-override="saveUtilityOverrideWithToast"
           :on-delete-override="deleteUtilityOverrideWithToast"
           :on-approve-override="approveUtilityOverride"
+          :on-create-incidental="createIncidentalCharge"
+          :on-update-incidental="updateIncidentalCharge"
+          :on-delete-incidental="deleteIncidentalCharge"
           :on-preview-issue="previewIssue"
           :on-issue="issueWithToast"
           :on-auto-issue="issueAndPayWithToast"

@@ -326,6 +326,21 @@ describe('OperationsReportService.getReport', () => {
     })
   })
 
+  it('reports incidental invoice revenue under its own Vietnamese label', async () => {
+    billing.invoices[0]?.charges.push({ chargeType: 'incidental', amount: 150_000 })
+    try {
+      const report = await run()
+      expect(report.revenueByType).toContainEqual({
+        key: 'incidental',
+        label: 'Khoản phát sinh',
+        amount: 150_000,
+      })
+    }
+    finally {
+      billing.invoices[0]?.charges.pop()
+    }
+  })
+
   it('excludes fixed costs that ended before the report period', async () => {
     listFixedCosts.mockResolvedValue([
       fixedCost({ effectiveToPeriodYear: 2026, effectiveToPeriodMonth: 3 }),

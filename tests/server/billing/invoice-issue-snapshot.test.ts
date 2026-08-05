@@ -133,4 +133,35 @@ describe('invoice issue snapshot', () => {
 
     expect(changedHash).not.toBe(firstHash)
   })
+
+  it('invalidates an issue preview when an incidental charge changes', () => {
+    const firstDraft = draft({
+      lines: [
+        ...draft().lines,
+        {
+          chargeType: 'incidental',
+          label: 'Thay khóa cửa',
+          sourceType: 'billing_incidental_charge',
+          sourceId: '00000000-0000-4000-8000-000000000030',
+          quantity: 1,
+          unitPrice: 150_000,
+          amount: 150_000,
+          metadata: { note: 'Theo biên bản bàn giao' },
+          sortOrder: 80,
+        },
+      ],
+      subtotalAmount: 3_150_000,
+      totalAmount: 3_150_000,
+    })
+    const changed = structuredClone(firstDraft)
+    changed.lines[1]!.amount = 200_000
+    changed.lines[1]!.unitPrice = 200_000
+    changed.subtotalAmount = 3_200_000
+    changed.totalAmount = 3_200_000
+
+    const firstHash = createInvoiceIssuePreview(response([firstDraft]), [contractId], '2026-08-09').preview.snapshotHash
+    const changedHash = createInvoiceIssuePreview(response([changed]), [contractId], '2026-08-09').preview.snapshotHash
+
+    expect(changedHash).not.toBe(firstHash)
+  })
 })

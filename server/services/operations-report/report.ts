@@ -38,6 +38,7 @@ const REVENUE_LABELS: Record<string, string> = {
   electricity: 'Điện thu khách',
   water: 'Nước thu khách',
   service: 'Dịch vụ',
+  incidental: 'Khoản phát sinh',
   discount: 'Giảm giá',
   surcharge: 'Phụ thu',
   adjustment: 'Điều chỉnh',

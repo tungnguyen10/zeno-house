@@ -6,6 +6,7 @@ import type {
   InvoicePayment,
   BillingUtilityUsage,
   BillingAuditEvent,
+  BillingIncidentalCharge,
 } from '~/types/billing'
 import type {
   BillingPeriodStatus,
@@ -19,6 +20,20 @@ import type {
 type BillingUtilityUsageRowWithApproval = Tables<'billing_utility_usages'> & {
   approved_by?: string | null
   approved_at?: string | null
+}
+
+export interface BillingIncidentalChargeRow {
+  id: string
+  billing_period_id: string
+  contract_id: string
+  room_id: string
+  label: string
+  amount: number | string
+  note: string | null
+  operation_id: string
+  created_by: string | null
+  created_at: string | null
+  updated_at: string | null
 }
 
 function asMetadata(value: unknown): Record<string, unknown> {
@@ -128,6 +143,24 @@ export function mapBillingUtilityUsage(
     updatedAt: usageRow.updated_at ?? '',
     approvedBy: usageRow.approved_by ?? null,
     approvedAt: usageRow.approved_at ?? null,
+  }
+}
+
+export function mapBillingIncidentalCharge(
+  row: BillingIncidentalChargeRow,
+): BillingIncidentalCharge {
+  return {
+    id: row.id,
+    billingPeriodId: row.billing_period_id,
+    contractId: row.contract_id,
+    roomId: row.room_id,
+    label: row.label,
+    amount: Number(row.amount),
+    note: row.note,
+    operationId: row.operation_id,
+    createdBy: row.created_by,
+    createdAt: row.created_at ?? '',
+    updatedAt: row.updated_at ?? '',
   }
 }
 

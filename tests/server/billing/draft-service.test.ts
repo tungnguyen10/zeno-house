@@ -121,6 +121,7 @@ describe('BillingDraftService.calculateDraft', () => {
         { id: 'previous-water', room_id: 'room-1', meter_type: 'water', reading_type: 'monthly', period_year: 2026, period_month: 4, reading_value: 10 },
       ],
       overrides: [],
+      incidentalCharges: [],
       invoices: [],
       rooms: resolveTable('rooms'),
       tenants: resolveTable('tenants'),
@@ -181,6 +182,7 @@ describe('BillingDraftService.calculateDraft', () => {
       occupants: [],   // fallback to contract.occupant_count = 2
       readings: [],
       overrides: [],
+      incidentalCharges: [],
       invoices: [],
       rooms: [{ id: 'room-1', room_number: '101' }],
       tenants: [{ id: 'tenant-1', full_name: 'Tenant One' }],
@@ -202,5 +204,72 @@ describe('BillingDraftService.calculateDraft', () => {
       amount: 42_000, // roundUpToThousand(Math.round(2 * 40_000 * 16 / 31))
       metadata: { pricing_type: 'per_person', billable_days: 16, period_days: 31 },
     })
+  })
+
+  it('adds incidental charges once in their period without prorating or merging them into contract surcharge', async () => {
+    const { BillingDraftService } = await import('../../../server/services/billing/drafts')
+
+    loadSnapshot.mockResolvedValueOnce({
+      building: resolveTable('buildings'),
+      contracts: [{
+        ...resolveTable('contracts')[0],
+        surcharge_amount: 50_000,
+      }],
+      services: [],
+      occupants: [],
+      readings: [
+        { id: 'current-electricity', room_id: 'room-1', meter_type: 'electricity', reading_type: 'monthly', period_year: 2026, period_month: 5, reading_value: 125 },
+        { id: 'current-water', room_id: 'room-1', meter_type: 'water', reading_type: 'monthly', period_year: 2026, period_month: 5, reading_value: 18 },
+        { id: 'previous-electricity', room_id: 'room-1', meter_type: 'electricity', reading_type: 'monthly', period_year: 2026, period_month: 4, reading_value: 100 },
+        { id: 'previous-water', room_id: 'room-1', meter_type: 'water', reading_type: 'monthly', period_year: 2026, period_month: 4, reading_value: 10 },
+      ],
+      overrides: [],
+      incidentalCharges: [{
+        id: 'charge-1',
+        billingPeriodId: 'period-1',
+        contractId: 'contract-1',
+        roomId: 'room-1',
+        label: 'Thay khóa cửa',
+        amount: 150_000,
+        note: 'Theo biên bản bàn giao',
+        operationId: 'operation-1',
+        createdBy: 'user-1',
+        createdAt: '2026-05-20T00:00:00.000Z',
+        updatedAt: '2026-05-20T00:00:00.000Z',
+      }, {
+        id: 'charge-2', billingPeriodId: 'period-1', contractId: 'contract-1', roomId: 'room-1',
+        label: 'Làm lại thẻ xe', amount: 25_000, note: null, operationId: 'operation-2',
+        createdBy: 'user-1', createdAt: '2026-05-21T00:00:00.000Z', updatedAt: '2026-05-21T00:00:00.000Z',
+      }, {
+        id: 'charge-other', billingPeriodId: 'period-1', contractId: 'contract-other', roomId: 'room-other',
+        label: 'Không thuộc phòng này', amount: 999_000, note: null, operationId: 'operation-other',
+        createdBy: 'user-1', createdAt: '2026-05-21T00:00:00.000Z', updatedAt: '2026-05-21T00:00:00.000Z',
+      }],
+      invoices: [],
+      rooms: resolveTable('rooms'),
+      tenants: resolveTable('tenants'),
+    })
+
+    const result = await BillingDraftService.calculateDraft({} as never, { id: 'user-1', app_metadata: { role: 'admin' } } as never, 'period-1')
+    const [draft] = result.drafts
+
+    expect(draft?.lines.find(line => line.chargeType === 'incidental')).toMatchObject({
+      label: 'Thay khóa cửa',
+      sourceType: 'billing_incidental_charge',
+      sourceId: 'charge-1',
+      quantity: 1,
+      unitPrice: 150_000,
+      amount: 150_000,
+      metadata: {
+        billing_period_id: 'period-1',
+        contract_id: 'contract-1',
+        room_id: 'room-1',
+        note: 'Theo biên bản bàn giao',
+      },
+    })
+    expect(draft?.lines.filter(line => line.chargeType === 'incidental')).toHaveLength(2)
+    expect(draft?.subtotalAmount).toBe(1_995_000)
+    expect(draft?.surchargeAmount).toBe(50_000)
+    expect(draft?.totalAmount).toBe(1_945_000)
   })
 })

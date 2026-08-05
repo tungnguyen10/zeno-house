@@ -4,6 +4,7 @@ const mocks = vi.hoisted(() => ({
   openOrGet: vi.fn(),
   grid: vi.fn(),
   utility: vi.fn(),
+  incidental: vi.fn(),
   overview: vi.fn(),
   invoices: vi.fn(),
   drafts: vi.fn(),
@@ -14,6 +15,7 @@ vi.mock('../../../server/services/billing/periods', () => ({
 }))
 vi.mock('../../../server/services/billing/grid', () => ({ BillingDraftGridService: { getGrid: mocks.grid } }))
 vi.mock('../../../server/services/billing/utility-usages', () => ({ BillingUtilityUsageService: { list: mocks.utility } }))
+vi.mock('../../../server/services/billing/incidental-charges', () => ({ BillingIncidentalChargeService: { list: mocks.incidental } }))
 vi.mock('../../../server/services/billing/invoices', () => ({ InvoiceService: { list: mocks.invoices } }))
 vi.mock('../../../server/services/billing/drafts', () => ({ BillingDraftService: { calculateDraft: mocks.drafts } }))
 
@@ -22,6 +24,7 @@ describe('BillingWorkspaceBootstrapService', () => {
     vi.clearAllMocks()
     mocks.grid.mockResolvedValue({ rows: [] })
     mocks.utility.mockResolvedValue([])
+    mocks.incidental.mockResolvedValue([])
     mocks.overview.mockResolvedValue({ period: { id: 'period-1' } })
     mocks.invoices.mockResolvedValue([])
     mocks.drafts.mockResolvedValue({ invoices: [] })
@@ -38,6 +41,7 @@ describe('BillingWorkspaceBootstrapService', () => {
       period,
       grid: { rows: [] },
       utilityUsages: [],
+      incidentalCharges: [],
       overview: null,
       invoices: [],
       drafts: null,

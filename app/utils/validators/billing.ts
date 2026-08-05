@@ -68,6 +68,39 @@ export const utilityUsageOverrideSchema = utilityUsageOverrideBaseSchema
 export type UtilityUsageOverrideInput = z.infer<typeof utilityUsageOverrideSchema>
 
 // ---------------------------------------------------------------------------
+// Period-scoped incidental charges
+// ---------------------------------------------------------------------------
+
+const incidentalChargeLabelSchema = z.string().trim().min(1, 'Cần nhập tên khoản phát sinh').max(200)
+const incidentalChargeAmountSchema = z.number().int().positive().max(999_999_999_999)
+const incidentalChargeNoteSchema = z.string().trim().max(500).nullable().optional()
+
+export const incidentalChargeCreateSchema = z.object({
+  contract_id: z.string().uuid(),
+  label: incidentalChargeLabelSchema,
+  amount: incidentalChargeAmountSchema,
+  note: incidentalChargeNoteSchema,
+  operation_id: z.string().uuid(),
+}).strict()
+export type IncidentalChargeCreateInput = z.infer<typeof incidentalChargeCreateSchema>
+
+export const incidentalChargeUpdateSchema = z.object({
+  label: incidentalChargeLabelSchema.optional(),
+  amount: incidentalChargeAmountSchema.optional(),
+  note: incidentalChargeNoteSchema,
+  expected_updated_at: z.string().datetime({ offset: true }),
+}).strict().refine(
+  value => value.label !== undefined || value.amount !== undefined || value.note !== undefined,
+  { message: 'Cần ít nhất một thay đổi' },
+)
+export type IncidentalChargeUpdateInput = z.infer<typeof incidentalChargeUpdateSchema>
+
+export const incidentalChargeDeleteSchema = z.object({
+  expected_updated_at: z.string().datetime({ offset: true }),
+}).strict()
+export type IncidentalChargeDeleteInput = z.infer<typeof incidentalChargeDeleteSchema>
+
+// ---------------------------------------------------------------------------
 // Issue invoices
 // ---------------------------------------------------------------------------
 

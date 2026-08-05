@@ -7,6 +7,7 @@ import { BillingDraftGridService } from './grid'
 import { InvoiceService } from './invoices'
 import { BillingPeriodService } from './periods'
 import { BillingUtilityUsageService } from './utility-usages'
+import { BillingIncidentalChargeService } from './incidental-charges'
 
 const COLLECTION_STATUSES = new Set(['issued', 'collecting', 'closed'])
 
@@ -28,20 +29,23 @@ export const BillingWorkspaceBootstrapService = {
         period,
         grid: null,
         utilityUsages: [],
+        incidentalCharges: [],
         overview,
         invoices,
         drafts,
       }
     }
 
-    const [grid, utilityUsages] = await Promise.all([
+    const [grid, utilityUsages, incidentalCharges] = await Promise.all([
       BillingDraftGridService.getGrid(event, user, period.id),
       BillingUtilityUsageService.list(event, user, period.id),
+      BillingIncidentalChargeService.list(event, user, period.id),
     ])
     return {
       period,
       grid,
       utilityUsages,
+      incidentalCharges,
       overview: null,
       invoices: [],
       drafts: null,
