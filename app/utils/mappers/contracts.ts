@@ -2,6 +2,12 @@ import type { Tables } from '~/types/database.types'
 import type { Contract, ContractStatus, ContractWithDetails } from '~/types/contracts'
 
 export function mapContract(row: Tables<'contracts'>): Contract {
+  const dueDay = (row as Tables<'contracts'> & {
+    payment_due_day?: number | null
+    payment_day?: number | null
+  }).payment_due_day
+    ?? (row as Tables<'contracts'> & { payment_day?: number | null }).payment_day
+    ?? null
   return {
     id: row.id,
     contractCode: row.contract_code,
@@ -12,7 +18,7 @@ export function mapContract(row: Tables<'contracts'>): Contract {
     endDate: row.end_date,
     monthlyRent: row.monthly_rent,
     deposit: row.deposit,
-    paymentDay: row.payment_day ?? null,
+    paymentDueDay: dueDay,
     occupantCount: row.occupant_count,
     discountAmount: row.discount_amount,
     surchargeAmount: row.surcharge_amount,

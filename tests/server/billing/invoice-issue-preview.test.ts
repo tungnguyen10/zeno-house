@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { BillingDraftResponse } from '~/types/billing'
 import { buildPeriod } from '../../__fixtures__/billing/period'
 
@@ -40,6 +40,7 @@ function draftResponse(total = 3_200_000): BillingDraftResponse {
     }),
     drafts: [{
       contractId,
+      paymentDueDay: 10,
       roomId: '00000000-0000-4000-8000-000000000002',
       tenantId: '00000000-0000-4000-8000-000000000003',
       contractCode: 'HD-101',
@@ -79,29 +80,40 @@ const profile = {
 describe('BillingInvoiceIssueService', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-08-05T03:00:00.000Z'))
     vi.stubGlobal('can', () => true)
     vi.stubGlobal('throwForbidden', (message: string) => { throw Object.assign(new Error(message), { statusCode: 403 }) })
     vi.stubGlobal('throwConflict', (message: string, details?: unknown) => {
       throw Object.assign(new Error(message), { statusCode: 409, data: { error: { code: 'CONFLICT', message, details } } })
     })
     calculateDraft.mockResolvedValue(draftResponse())
-    findBuilding.mockResolvedValue({ id: buildingId, code: 'ZENO', name: 'Zeno House', address: '1 Nguyễn Huệ' })
+    findBuilding.mockResolvedValue({
+      id: buildingId,
+      code: 'ZENO',
+      name: 'Zeno House',
+      address: '1 Nguyễn Huệ',
+      paymentDueDay: 15,
+      gracePeriodDays: 2,
+    })
     findProfile.mockResolvedValue(profile)
     signAsset.mockImplementation(async (_event, path: string) => `https://signed.test/${path}`)
     issueInvoices.mockResolvedValue({ issuedCount: 1, invoices: [] })
     findIssueReplay.mockResolvedValue(null)
   })
 
+  afterEach(() => vi.useRealTimers())
+
   it('returns print-shaped draft documents with a server-owned operation and profile-bound hash', async () => {
     const { BillingInvoiceIssueService } = await import('../../../server/services/billing/invoice-issue-preview')
     const result = await BillingInvoiceIssueService.preview({} as never, user, periodId, {
       contract_ids: [contractId],
-      due_date: '2026-08-09',
     })
 
     expect(result).toMatchObject({
       periodId,
-      dueDate: '2026-08-09',
+      calculationDate: '2026-08-05',
+      dueDateOverride: null,
       operationId: expect.stringMatching(/^[0-9a-f-]{36}$/),
       snapshotHash: expect.stringMatching(/^[a-f0-9]{64}$/),
       issuableCount: 1,
@@ -111,7 +123,9 @@ describe('BillingInvoiceIssueService', () => {
         invoiceCode: null,
         roomNumber: '101',
         tenantName: 'Nguyễn Văn An',
-        dueDate: '2026-08-09',
+        dueDate: '2026-08-10',
+        gracePeriodDays: 2,
+        overdueDate: '2026-08-12',
         totalAmount: 3_200_000,
         warnings: [{ code: 'handover_fallback_used', message: 'Dùng chỉ số bàn giao' }],
         invoiceProfile: {
@@ -128,7 +142,7 @@ describe('BillingInvoiceIssueService', () => {
     const { BillingInvoiceIssueService } = await import('../../../server/services/billing/invoice-issue-preview')
     await expect(BillingInvoiceIssueService.confirm({} as never, user, periodId, {
       contract_ids: [contractId],
-      due_date: '2026-08-09',
+      due_date_override: '2026-08-09',
       snapshot_hash: 'a'.repeat(64),
       operation_id: operationId,
     })).rejects.toMatchObject({
@@ -142,13 +156,13 @@ describe('BillingInvoiceIssueService', () => {
     const { BillingInvoiceIssueService } = await import('../../../server/services/billing/invoice-issue-preview')
     const preview = await BillingInvoiceIssueService.preview({} as never, user, periodId, {
       contract_ids: [contractId],
-      due_date: '2026-08-09',
+      due_date_override: '2026-08-09',
     })
     calculateDraft.mockClear()
 
     await BillingInvoiceIssueService.confirm({} as never, user, periodId, {
       contract_ids: [contractId],
-      due_date: '2026-08-09',
+      due_date_override: '2026-08-09',
       snapshot_hash: preview.snapshotHash,
       operation_id: operationId,
     })
@@ -156,7 +170,16 @@ describe('BillingInvoiceIssueService', () => {
     expect(calculateDraft).toHaveBeenCalledTimes(1)
     expect(issueInvoices).toHaveBeenCalledWith(expect.anything(), user, periodId, {
       contract_ids: [contractId],
-      due_date: '2026-08-09',
+      due_date_override: '2026-08-09',
+      calculation_date: '2026-08-05',
+      schedules_by_contract: {
+        [contractId]: {
+          dueDate: '2026-08-09',
+          gracePeriodDays: 2,
+          overdueDate: '2026-08-11',
+          source: 'override',
+        },
+      },
     }, {
       operationId,
       draftResponse: expect.objectContaining({ period: expect.objectContaining({ id: periodId }) }),
@@ -169,7 +192,7 @@ describe('BillingInvoiceIssueService', () => {
     const { BillingInvoiceIssueService } = await import('../../../server/services/billing/invoice-issue-preview')
 
     await expect(BillingInvoiceIssueService.confirm({} as never, user, periodId, {
-      contract_ids: [contractId], due_date: '2026-08-09', snapshot_hash: 'a'.repeat(64), operation_id: operationId,
+      contract_ids: [contractId], due_date_override: '2026-08-09', snapshot_hash: 'a'.repeat(64), operation_id: operationId,
     })).resolves.toEqual(prior)
 
     expect(calculateDraft).not.toHaveBeenCalled()

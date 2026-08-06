@@ -117,7 +117,7 @@ export const aiToolPlanInvoiceIssueSchema = z.object({
 export const aiInvoiceIssuePayloadSchema = z.object({
   period_id: z.string().uuid(),
   contract_ids: z.array(z.string().uuid()).min(1).max(500),
-  due_date: z.string().date().nullable(),
+  due_date_override: z.string().date().nullable(),
   snapshot_hash: z.string().regex(/^[a-f0-9]{64}$/),
 }).strict()
 
@@ -177,7 +177,7 @@ export const aiToolPlanReissueInvoiceSchema = z.object({
 export const aiReissueInvoicePayloadSchema = z.object({
   invoice_id: z.string().uuid(),
   reason: z.string().trim().min(10).max(500),
-  due_date: z.string().date().nullable(),
+  due_date_override: z.string().date().nullable(),
   notes: z.string().max(500).nullable(),
   expected_updated_at: z.string().datetime({ offset: true }),
   snapshot_hash: z.string().regex(/^[a-f0-9]{64}$/),

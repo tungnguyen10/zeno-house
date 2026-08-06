@@ -6,6 +6,7 @@ const props = defineProps<{
   open: boolean
   preview: BillingInvoiceIssuePreview | null
   dueDate: string
+  useOverride: boolean
   loading: boolean
   submitting: boolean
   error: string | null
@@ -15,6 +16,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'close' | 'refresh' | 'confirm'): void
   (e: 'update:dueDate', value: string): void
+  (e: 'update:useOverride', value: boolean): void
 }>()
 
 const exclusionsLabel = computed(() => {
@@ -46,15 +48,29 @@ const exclusionsLabel = computed(() => {
               Hóa đơn sau phát hành có thể được hủy/void theo quy trình có lưu vết kiểm toán.
             </p>
           </div>
-          <UiDatePicker
-            :model-value="dueDate"
-            label="Hạn thanh toán chung"
-            date-mode="future"
-            :clearable="false"
-            :disabled="loading || submitting"
-            class="w-full"
-            @update:model-value="emit('update:dueDate', $event)"
-          />
+          <div class="space-y-2">
+            <label class="flex items-center gap-2 text-sm text-white">
+              <UiCheckbox
+                :model-value="useOverride"
+                :disabled="loading || submitting"
+                @update:model-value="emit('update:useOverride', Boolean($event))"
+              />
+              Áp một hạn chung
+            </label>
+            <UiDatePicker
+              v-if="useOverride"
+              :model-value="dueDate"
+              label="Hạn thanh toán chung"
+              date-mode="future"
+              :clearable="false"
+              :disabled="loading || submitting"
+              class="w-full"
+              @update:model-value="emit('update:dueDate', $event)"
+            />
+            <p v-else class="text-xs leading-relaxed text-muted">
+              Hạn được tự tính riêng theo từng hợp đồng và tòa nhà.
+            </p>
+          </div>
         </div>
       </section>
 

@@ -10,6 +10,8 @@ export function toIssuedInvoiceDocument(item: InvoicePrintItem): InvoiceDocument
     tenantName: item.invoice.tenantName ?? null,
     issuedAt: item.invoice.issuedAt,
     dueDate: item.invoice.dueDate,
+    gracePeriodDays: item.invoice.gracePeriodDays,
+    overdueDate: item.invoice.overdueDate,
     totalAmount: item.invoice.totalAmount,
     paidAmount: item.invoice.paidAmount,
     balanceAmount: item.invoice.balanceAmount,

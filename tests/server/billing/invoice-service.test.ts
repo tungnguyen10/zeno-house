@@ -23,6 +23,7 @@ const enrichPayments = vi.fn(async payments => payments)
 const loadTenants = vi.fn()
 const findInvoiceSnapshots = vi.fn()
 const resolveProfileDisplays = vi.fn()
+const findBuildingById = vi.fn()
 const assignmentRepoMocks = vi.hoisted(() => ({
   findBuildingIdsByUser: vi.fn(),
 }))
@@ -86,6 +87,10 @@ vi.mock('../../../server/repositories/building-invoice-profiles', () => ({
   BuildingInvoiceProfileRepository: { findInvoiceSnapshotsByIds: findInvoiceSnapshots },
 }))
 
+vi.mock('../../../server/repositories/buildings', () => ({
+  BuildingRepository: { findById: findBuildingById },
+}))
+
 vi.mock('../../../server/services/billing/invoice-profile-display', () => ({
   InvoiceProfileDisplayService: { resolveMany: resolveProfileDisplays },
 }))
@@ -107,6 +112,7 @@ describe('InvoiceService invoice lifecycle methods', () => {
     vi.stubGlobal('can', () => true)
     assignmentRepoMocks.findBuildingIdsByUser.mockResolvedValue(['building-1'])
     findPeriodById.mockResolvedValue(buildPeriod({ id: 'period-1', status: 'issued' }))
+    findBuildingById.mockResolvedValue({ paymentDueDay: null, gracePeriodDays: 0 })
     listCharges.mockResolvedValue([])
     listByPeriod.mockResolvedValue([])
     listPaymentsByInvoice.mockResolvedValue([])
@@ -292,7 +298,7 @@ describe('InvoiceService invoice lifecycle methods', () => {
       event(),
       makeUser(),
       'period-1',
-      { due_date: '2026-06-05' },
+      { due_date_override: '2026-08-10' },
     )
 
     expect(result.issuedCount).toBe(1)
@@ -300,9 +306,10 @@ describe('InvoiceService invoice lifecycle methods', () => {
     expect(issuePeriodWithAudit).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
       periodId: 'period-1',
       actorId: 'user-1',
-      dueDate: '2026-06-05',
       drafts: [expect.objectContaining({
         contract_id: 'contract-ready',
+        due_date: '2026-08-10',
+        grace_period_days: 0,
         total: 1_720_000,
         lines: expect.arrayContaining([expect.objectContaining({
           charge_type: 'electricity',
@@ -372,7 +379,7 @@ describe('InvoiceService invoice lifecycle methods', () => {
       event(),
       makeUser(),
       'period-1',
-      { due_date: '2026-06-05' },
+      { due_date_override: '2026-08-10' },
     )
 
     expect(result).toEqual({ issuedCount: 0, invoices: [] })
@@ -425,7 +432,7 @@ describe('InvoiceService invoice lifecycle methods', () => {
       makeUser(),
       voided.id,
       {
-        due_date: '2026-06-05', reason: 'wrong reading fixed',
+        due_date_override: '2026-08-31', reason: 'wrong reading fixed',
         expected_updated_at: voided.updatedAt,
       },
     )
@@ -520,7 +527,7 @@ describe('InvoiceService invoice lifecycle methods', () => {
         event(),
         makeUser(),
         'period-1',
-        { due_date: '2026-06-05' },
+        { due_date_override: '2026-08-10' },
       ),
     ).rejects.toMatchObject({ statusCode: 400 })
 

@@ -11,6 +11,7 @@ const invoiceRow = {
   room_id: '00000000-0000-4000-8000-000000000004',
   tenant_id: '00000000-0000-4000-8000-000000000005',
   status: 'issued', due_date: '2026-07-31', issued_at: '2026-07-14T00:00:00.000Z',
+  grace_period_days: 2, overdue_date: '2026-08-02',
   paid_at: null, voided_at: null, voided_by: null, void_reason: null,
   superseded_by_invoice_id: null, supersedes_invoice_id: null,
   subtotal_amount: 1000, discount_amount: 0, surcharge_amount: 0,
@@ -34,10 +35,9 @@ describe('InvoiceRepository atomic RPCs', () => {
     const result = await InvoiceRepository.issuePeriodWithAudit({ context: {} } as never, {
       periodId: invoiceRow.billing_period_id,
       actorId: '00000000-0000-4000-8000-000000000007',
-      dueDate: invoiceRow.due_date,
       issuedAt: invoiceRow.issued_at,
       requestedContractIds: [invoiceRow.contract_id],
-      drafts: [{ contract_id: invoiceRow.contract_id }],
+      drafts: [{ contract_id: invoiceRow.contract_id, due_date: invoiceRow.due_date, grace_period_days: 2 }],
       operationId: '00000000-0000-4000-8000-000000000008',
     })
     expect(result[0]?.id).toBe(invoiceRow.id)
@@ -61,7 +61,7 @@ describe('InvoiceRepository atomic RPCs', () => {
     }
     await InvoiceRepository.voidWithAudit({ context: {} } as never, shared)
     await InvoiceRepository.reissueWithAudit({ context: {} } as never, {
-      ...shared, dueDate: null, issuedAt: invoiceRow.issued_at, notes: null, draft: {},
+      ...shared, dueDate: null, gracePeriodDays: 0, issuedAt: invoiceRow.issued_at, notes: null, draft: {},
     })
     await InvoiceRepository.addAdjustmentWithAudit({ context: {} } as never, {
       ...shared, label: 'Điều chỉnh', amount: 100, referenceInvoiceId: null,
@@ -93,7 +93,7 @@ describe('InvoiceRepository atomic RPCs', () => {
 
     rpc.mockResolvedValueOnce({ data: null, error: { message: 'INVOICE_INCIDENTAL_SNAPSHOT_STALE' } })
     await expect(InvoiceRepository.issuePeriodWithAudit({ context: {} } as never, {
-      periodId: invoiceRow.billing_period_id, actorId: null, dueDate: null,
+      periodId: invoiceRow.billing_period_id, actorId: null,
       issuedAt: invoiceRow.issued_at, requestedContractIds: [invoiceRow.contract_id],
       drafts: [{ contract_id: invoiceRow.contract_id }],
       operationId: '00000000-0000-4000-8000-000000000009',

@@ -207,13 +207,13 @@ export const ContractRepository = {
         end_date: input.end_date,
         monthly_rent: input.monthly_rent,
         deposit: input.deposit ?? 0,
-        payment_day: input.payment_day ?? null,
+        payment_due_day: input.payment_due_day ?? null,
         occupant_count: input.occupant_count ?? 1,
         discount_amount: input.discount_amount ?? 0,
         surcharge_amount: input.surcharge_amount ?? 0,
         status: input.status ?? 'active',
         notes: input.notes ?? null,
-      })
+      } as never)
       .select(DETAIL_SELECT)
       .single()
 
@@ -233,7 +233,7 @@ export const ContractRepository = {
       : input.start_date
 
     // Supabase typegen does not reflect SQL `DEFAULT NULL` on params, so the
-    // generated Args type rejects null for `p_payment_day`, `p_notes`, and
+    // generated Args type rejects null for `p_payment_due_day`, `p_notes`, and
     // `p_recorded_by`. Mirror the cast pattern used by `issue_period_invoices`.
     const args = {
       p_room_id: input.room_id,
@@ -243,7 +243,7 @@ export const ContractRepository = {
       p_end_date: input.end_date,
       p_monthly_rent: input.monthly_rent,
       p_deposit: input.deposit ?? 0,
-      p_payment_day: input.payment_day ?? null,
+      p_payment_due_day: input.payment_due_day ?? null,
       p_occupant_count: input.occupant_count ?? 1,
       p_discount_amount: input.discount_amount ?? 0,
       p_surcharge_amount: input.surcharge_amount ?? 0,
@@ -288,13 +288,13 @@ export const ContractRepository = {
         ...(input.end_date !== undefined && { end_date: input.end_date }),
         ...(input.monthly_rent !== undefined && { monthly_rent: input.monthly_rent }),
         ...(input.deposit !== undefined && { deposit: input.deposit }),
-        ...(input.payment_day !== undefined && { payment_day: input.payment_day }),
+        ...(input.payment_due_day !== undefined && { payment_due_day: input.payment_due_day }),
         ...(input.occupant_count !== undefined && { occupant_count: input.occupant_count }),
         ...(input.discount_amount !== undefined && { discount_amount: input.discount_amount }),
         ...(input.surcharge_amount !== undefined && { surcharge_amount: input.surcharge_amount }),
         ...(input.status !== undefined && { status: input.status }),
         ...(input.notes !== undefined && { notes: input.notes }),
-      })
+      } as never)
       .eq('id', id)
       .select(DETAIL_SELECT)
       .single()

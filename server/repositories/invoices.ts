@@ -41,7 +41,7 @@ function invoiceStatusFilter(statuses: InvoiceStatus[], today: string): string |
     parts.push(`status.in.(${storedStatuses.join(',')})`)
   }
   if (statuses.includes('overdue')) {
-    parts.push(`and(status.eq.issued,due_date.lt.${today},balance_amount.gt.0)`)
+    parts.push(`and(status.eq.issued,overdue_date.lt.${today},balance_amount.gt.0)`)
   }
   return parts.join(',')
 }
@@ -58,6 +58,8 @@ const INVOICE_LIST_SELECT = `
   paid_amount,
   balance_amount,
   due_date,
+  grace_period_days,
+  overdue_date,
   issued_at,
   voided_at,
   void_reason,
@@ -101,6 +103,8 @@ export function mapInvoiceListRow(row: InvoiceListRow): InvoiceListItem {
     paid_amount: numberValue(row.paid_amount),
     balance_amount: numberValue(row.balance_amount),
     due_date: text(row.due_date),
+    grace_period_days: numberValue(row.grace_period_days),
+    overdue_date: text(row.overdue_date),
     status: row.status as InvoiceStatus,
     issued_at: text(row.issued_at),
     voided_at: text(row.voided_at),
@@ -170,7 +174,7 @@ export const CrossPeriodInvoiceRepository = {
       .range(from, to)
 
     if (error) throwDbError(error, 'invoices.list')
-    const items = ((data ?? []) as InvoiceListRow[]).map(mapInvoiceListRow)
+    const items = ((data ?? []) as unknown as InvoiceListRow[]).map(mapInvoiceListRow)
     return { items, total: options.exactCount === false ? items.length : count ?? 0 }
   },
 
@@ -191,6 +195,6 @@ export const CrossPeriodInvoiceRepository = {
 
     const { data, error } = await query.maybeSingle()
     if (error) throwDbError(error, 'invoices.findCrossPeriodById')
-    return data ? mapInvoiceListRow(data as InvoiceListRow) : null
+    return data ? mapInvoiceListRow(data as unknown as InvoiceListRow) : null
   },
 }

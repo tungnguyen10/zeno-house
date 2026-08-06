@@ -141,7 +141,7 @@ Issuing invoices:
 - requires `billing.write`
 - requires `POST /api/billing/periods/[id]/issue-preview` before confirmation
 - saves pending reading edits before preview and recomputes drafts server-side
-- binds the selected contracts, shared due date, charge lines/totals, blockers/warnings, existing invoice state, period version, and current payment profile to a canonical `snapshot_hash`
+- binds the calculation date, optional batch override, contract/building due configuration, resolved due/grace schedule per invoice, charge lines/totals, blockers/warnings, existing invoice state, period version, and current payment profile to a canonical `snapshot_hash`
 - skips contracts with existing non-void invoice for the period
 - skips blocked drafts
 - requires the returned `snapshot_hash` and server-owned `operation_id` at `POST /api/billing/periods/[id]/issue`; stale previews return `409 CONFLICT` and write nothing
@@ -153,7 +153,7 @@ The AI `plan_invoice_issue` flow accepts a period and optional contract selectio
 
 ### Bulk Issue
 
-Select rows without blockers or an existing invoice in the draft grid → **Xem trước & phát hành (N)**. Warnings remain selectable. The responsive modal shows server-rendered **BẢN NHÁP** documents and one shared due date (default: current date in `Asia/Ho_Chi_Minh` plus four days). Changing the due date reloads the preview and hash. Draft documents are review-only and cannot be printed; invoice codes and immutable payment-profile snapshots are created only inside the issue transaction.
+Select rows without blockers or an existing invoice in the draft grid → **Xem trước & phát hành (N)**. Warnings remain selectable. The responsive modal shows server-rendered **BẢN NHÁP** documents with the due date resolved separately for each contract. Resolution order is batch override → contract day → building day → four days after issue; days 29–31 clamp to the last day of short months and never produce an already-overdue new invoice. Enabling **Áp một hạn chung** exposes the shared override picker and reloads the preview/hash. Building grace days are snapshotted separately and determine `overdue_date` without changing the displayed due date. Draft documents are review-only and cannot be printed; invoice codes and immutable due/grace/payment-profile snapshots are created only inside the issue transaction.
 
 ### Auto-Issue and Collect (feature-flagged)
 

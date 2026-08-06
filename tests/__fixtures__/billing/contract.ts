@@ -12,7 +12,7 @@ export function buildContract(overrides: Partial<Contract> = {}): Contract {
     endDate: '2027-05-01',
     monthlyRent: 3_100_000,
     deposit: 3_100_000,
-    paymentDay: 5,
+    paymentDueDay: 5,
     occupantCount: 2,
     discountAmount: 0,
     surchargeAmount: 0,

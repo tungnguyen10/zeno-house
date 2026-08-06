@@ -113,7 +113,7 @@ export const ContractRenewalService = {
         end_date: newEndDate,
         monthly_rent: newRent,
         deposit: contract.deposit,
-        payment_day: contract.paymentDay,
+        payment_due_day: contract.paymentDueDay,
         occupant_count: contract.occupantCount,
         discount_amount: contract.discountAmount,
         surcharge_amount: contract.surchargeAmount,
@@ -121,7 +121,7 @@ export const ContractRenewalService = {
         notes: contract.notes,
         previous_contract_id: resolvedContractId,
         renewal_count: contract.renewalCount + 1,
-      })
+      } as never)
       .select('id')
       .single()
     if (insertError) {

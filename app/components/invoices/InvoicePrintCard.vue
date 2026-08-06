@@ -12,8 +12,15 @@ function dateLabel(value: string | null): string {
 }
 
 function dueDateLabel(value: string | null): string {
-  if (!value) return '(Hạn 4 ngày).'
+  if (!value) return 'Chưa có hạn thanh toán'
   return dateLabel(value)
+}
+
+function isInGrace(item: InvoiceDocumentItem): boolean {
+  const today = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).format(new Date())
+  return Boolean(item.dueDate && item.overdueDate && item.dueDate < today && today <= item.overdueDate)
 }
 
 function metadataNumber(line: InvoiceDocumentLine, key: string): number | null {
@@ -99,6 +106,9 @@ function isMeterLine(line: InvoiceDocumentLine): boolean {
         </dd>
       </div>
     </dl>
+    <p v-if="isInGrace(item)" class="mx-[6mm] mb-[2mm] rounded bg-amber-50 px-[2mm] py-[1mm] text-[7pt] text-amber-900 sm:mx-[7mm]">
+      Đang trong thời gian gia hạn đến {{ dateLabel(item.overdueDate) }}.
+    </p>
 
     <!-- Separator -->
     <div role="separator" aria-hidden="true" class="h-px w-full shrink-0 bg-slate-200" />

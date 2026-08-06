@@ -10,8 +10,10 @@ import { InvoiceService } from '../billing/invoices'
 import type { AiActionExecutor } from './executors'
 import {
   buildInvoiceIssueSnapshot,
-  hashInvoiceIssueSnapshot,
+  createInvoiceIssuePreview,
 } from '../billing/invoice-issue-snapshot'
+import { calculationDateInHoChiMinh, resolveInvoiceDueSchedule } from '../billing/invoice-due-policy'
+import { BuildingRepository } from '../../repositories/buildings'
 
 function invalidPayload(message: string, details: unknown): never {
   throwAgentError(422, 'VALIDATION_ERROR', message, {
@@ -57,8 +59,15 @@ export const ISSUE_INVOICES_EXECUTOR: AiActionExecutor = {
   async revalidate({ event, user, plan }) {
     const payload = parseIssue(plan.normalizedPayload)
     const response = await BillingDraftService.calculateDraft(event, user, payload.period_id)
-    const snapshot = buildInvoiceIssueSnapshot(response, payload.contract_ids, payload.due_date)
-    const currentHash = hashInvoiceIssueSnapshot(snapshot)
+    const building = await BuildingRepository.findById(event, response.period.buildingId)
+    if (!building) throwNotFound('Không tìm thấy tòa nhà')
+    const { preview } = createInvoiceIssuePreview(response, payload.contract_ids, {
+      calculationDate: calculationDateInHoChiMinh(),
+      dueDateOverride: payload.due_date_override,
+      buildingPaymentDueDay: building.paymentDueDay ?? null,
+      gracePeriodDays: building.gracePeriodDays ?? 0,
+    })
+    const currentHash = preview.snapshotHash
     if (currentHash !== payload.snapshot_hash || plan.resourceVersions.draft_snapshot !== currentHash) {
       stale(plan, 'Dự thảo phát hành đã thay đổi. Vui lòng tạo lại bản xem trước.')
     }
@@ -67,7 +76,7 @@ export const ISSUE_INVOICES_EXECUTOR: AiActionExecutor = {
     const payload = parseIssue(plan.normalizedPayload)
     return InvoiceService.issueInvoices(event, user, payload.period_id, {
       contract_ids: payload.contract_ids,
-      due_date: payload.due_date,
+      due_date_override: payload.due_date_override,
     }, { operationId: idempotencyKey })
   },
 }
@@ -89,7 +98,34 @@ export const REISSUE_INVOICE_EXECUTOR: AiActionExecutor = {
     const payload = parseReissue(plan.normalizedPayload)
     const detail = await InvoiceService.getWithCharges(event, user, payload.invoice_id)
     const response = await BillingDraftService.calculateDraft(event, user, detail.invoice.billingPeriodId)
-    const snapshot = buildInvoiceIssueSnapshot(response, [detail.invoice.contractId], payload.due_date)
+    const calculationDate = calculationDateInHoChiMinh()
+    const schedule = payload.due_date_override
+      ? resolveInvoiceDueSchedule({
+          calculationDate,
+          dueDateOverride: payload.due_date_override,
+          contractPaymentDueDay: null,
+          buildingPaymentDueDay: null,
+          gracePeriodDays: detail.invoice.gracePeriodDays,
+        })
+      : detail.invoice.dueDate && detail.invoice.overdueDate
+        ? {
+            dueDate: detail.invoice.dueDate,
+            gracePeriodDays: detail.invoice.gracePeriodDays,
+            overdueDate: detail.invoice.overdueDate,
+            source: 'override' as const,
+          }
+        : undefined
+    const snapshot = buildInvoiceIssueSnapshot(
+      response,
+      [detail.invoice.contractId],
+      {
+        calculationDate,
+        dueDateOverride: payload.due_date_override,
+        buildingPaymentDueDay: null,
+        gracePeriodDays: detail.invoice.gracePeriodDays,
+      },
+      schedule ? { [detail.invoice.contractId]: schedule } : {},
+    )
     const currentHash = hashAgentPayload(snapshot, {})
     if (currentHash !== payload.snapshot_hash || plan.resourceVersions.draft_snapshot !== currentHash) {
       stale(plan, 'Dự thảo phát hành lại đã thay đổi. Vui lòng tạo lại kế hoạch.')
@@ -99,7 +135,7 @@ export const REISSUE_INVOICE_EXECUTOR: AiActionExecutor = {
     const payload = parseReissue(plan.normalizedPayload)
     return InvoiceService.reissueInvoice(event, user, payload.invoice_id, {
       reason: payload.reason,
-      due_date: payload.due_date,
+      due_date_override: payload.due_date_override,
       notes: payload.notes,
       expected_updated_at: payload.expected_updated_at,
     }, { correlationId: idempotencyKey })

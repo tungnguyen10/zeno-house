@@ -15,7 +15,7 @@ export interface ContractFormData {
   end_date: string
   monthly_rent: string
   deposit: string
-  payment_day: string
+  payment_due_day: string
   occupant_count: string
   discount_amount: string
   surcharge_amount: string
@@ -192,7 +192,7 @@ const FIELD_META: Record<string, FieldMeta> = {
   end_date: { id: 'contract-end-date', label: 'Ngày kết thúc' },
   monthly_rent: { id: 'contract-monthly-rent', label: 'Giá thuê / tháng' },
   deposit: { id: 'contract-deposit', label: 'Tiền đặt cọc' },
-  payment_day: { id: 'contract-payment-day', label: 'Ngày thanh toán' },
+  payment_due_day: { id: 'contract-payment-day', label: 'Ngày đến hạn riêng' },
   occupant_count: { id: 'contract-occupant-count', label: 'Số người ở' },
   discount_amount: { id: 'contract-discount', label: 'Giảm giá' },
   surcharge_amount: { id: 'contract-surcharge', label: 'Phụ thu' },
@@ -221,7 +221,7 @@ function toPayload(data: ContractFormData) {
     end_date: data.end_date,
     monthly_rent: Number(data.monthly_rent),
     deposit: data.deposit ? Number(data.deposit) : 0,
-    payment_day: data.payment_day ? Number(data.payment_day) : null,
+    payment_due_day: data.payment_due_day ? Number(data.payment_due_day) : null,
     occupant_count: data.occupant_count ? Number(data.occupant_count) : 1,
     discount_amount: data.discount_amount ? Number(data.discount_amount) : 0,
     surcharge_amount: data.surcharge_amount ? Number(data.surcharge_amount) : 0,
@@ -486,15 +486,15 @@ const mobileCancelText = computed(() => props.mobileCancelLabel ?? props.cancelL
 
         <UiInput
           id="contract-payment-day"
-          label="Ngày thanh toán (ghi đè tòa nhà, 1-31)"
+          label="Ngày đến hạn riêng (1–31)"
           type="number"
           number-mode="day"
-          :model-value="modelValue.payment_day"
-          :error="errorFor('payment_day')"
+          :model-value="modelValue.payment_due_day"
+          :error="errorFor('payment_due_day')"
           :disabled="loading"
           placeholder="Mặc định theo tòa nhà"
-          @update:model-value="update('payment_day', $event)"
-          @blur="onBlur('payment_day')"
+          @update:model-value="update('payment_due_day', $event)"
+          @blur="onBlur('payment_due_day')"
         />
       </div>
     </section>

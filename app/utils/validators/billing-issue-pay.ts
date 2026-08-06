@@ -13,6 +13,6 @@ export const issueAndPaySchema = z.object({
   payment_date: z.string().min(1, 'Cần ngày thanh toán'),
   payment_method: z.string().max(100).nullable().optional(),
   note: z.string().max(500).nullable().optional(),
-  due_date: z.string().nullable().optional(),
+  due_date_override: z.iso.date().nullable().optional(),
 })
 export type IssueAndPayInput = z.infer<typeof issueAndPaySchema>

@@ -10,6 +10,8 @@ export function buildInvoice(overrides: Partial<Invoice> = {}): Invoice {
     tenantId: 'tenant-1',
     status: 'issued',
     dueDate: '2026-06-05',
+    gracePeriodDays: 0,
+    overdueDate: '2026-06-05',
     issuedAt: '2026-05-31T00:00:00.000Z',
     paidAt: null,
     voidedAt: null,

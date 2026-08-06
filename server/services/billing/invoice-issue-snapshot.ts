@@ -1,6 +1,10 @@
 import { createHash } from 'node:crypto'
 import type { AiInvoiceIssuePreview, AiInvoiceIssuePreviewItem } from '~/types/ai'
 import type { BillingDraftInvoice, BillingDraftResponse } from '~/types/billing'
+import {
+  resolveInvoiceDueSchedule,
+  type InvoiceDueSchedule,
+} from './invoice-due-policy'
 
 export interface InvoiceIssueProfileFingerprint {
   updatedAt: string | null
@@ -26,7 +30,14 @@ function sortedUnique(values: string[]): string[] {
   return [...new Set(values)].sort((a, b) => a.localeCompare(b))
 }
 
-function previewItem(draft: BillingDraftInvoice): AiInvoiceIssuePreviewItem {
+export interface InvoiceIssueDueContext {
+  calculationDate: string
+  dueDateOverride?: string | null
+  buildingPaymentDueDay: number | null
+  gracePeriodDays: number
+}
+
+function previewItem(draft: BillingDraftInvoice, schedule?: InvoiceDueSchedule): AiInvoiceIssuePreviewItem {
   return {
     contractId: draft.contractId,
     roomId: draft.roomId,
@@ -34,7 +45,20 @@ function previewItem(draft: BillingDraftInvoice): AiInvoiceIssuePreviewItem {
     totalAmount: draft.totalAmount,
     blockerCodes: sortedUnique(draft.blockers.map(blocker => blocker.code)),
     warningCodes: sortedUnique(draft.warnings.map(warning => warning.code)),
+    dueDate: schedule?.dueDate ?? null,
+    gracePeriodDays: schedule?.gracePeriodDays ?? 0,
+    overdueDate: schedule?.overdueDate ?? null,
   }
+}
+
+function scheduleForDraft(draft: BillingDraftInvoice, context: InvoiceIssueDueContext): InvoiceDueSchedule {
+  return resolveInvoiceDueSchedule({
+    calculationDate: context.calculationDate,
+    dueDateOverride: context.dueDateOverride,
+    contractPaymentDueDay: draft.paymentDueDay ?? null,
+    buildingPaymentDueDay: context.buildingPaymentDueDay,
+    gracePeriodDays: context.gracePeriodDays,
+  })
 }
 
 export function selectInvoiceIssueDrafts(
@@ -54,7 +78,8 @@ export function selectInvoiceIssueDrafts(
 export function buildInvoiceIssueSnapshot(
   response: BillingDraftResponse,
   contractIds: string[],
-  dueDate: string | null,
+  dueContext: InvoiceIssueDueContext,
+  schedulesByContract: Record<string, InvoiceDueSchedule>,
   profile: InvoiceIssueProfileFingerprint | null = null,
 ): Record<string, unknown> {
   const targets = new Set(contractIds)
@@ -63,6 +88,8 @@ export function buildInvoiceIssueSnapshot(
     .sort((a, b) => a.contractId.localeCompare(b.contractId))
     .map(draft => ({
       contract_id: draft.contractId,
+      payment_due_day: draft.paymentDueDay ?? null,
+      schedule: schedulesByContract[draft.contractId] ?? null,
       room_id: draft.roomId,
       tenant_id: draft.tenantId,
       existing_invoice_id: draft.existingInvoiceId,
@@ -113,7 +140,12 @@ export function buildInvoiceIssueSnapshot(
       status: response.period.status,
       updated_at: response.period.updatedAt,
     },
-    due_date: dueDate,
+    due_policy: {
+      calculation_date: dueContext.calculationDate,
+      due_date_override: dueContext.dueDateOverride ?? null,
+      building_payment_due_day: dueContext.buildingPaymentDueDay,
+      grace_period_days: dueContext.gracePeriodDays,
+    },
     contract_ids: sortedUnique(contractIds),
     payment_profile: profile
       ? {
@@ -140,25 +172,36 @@ export function hashInvoiceIssueSnapshot(snapshot: Record<string, unknown>): str
 export function createInvoiceIssuePreview(
   response: BillingDraftResponse,
   requestedContractIds: string[] | undefined,
-  dueDate: string | null,
+  dueContext: InvoiceIssueDueContext,
   profile: InvoiceIssueProfileFingerprint | null = null,
-): { preview: AiInvoiceIssuePreview; targetContractIds: string[] } {
+): {
+  preview: AiInvoiceIssuePreview
+  targetContractIds: string[]
+  schedulesByContract: Record<string, InvoiceDueSchedule>
+} {
   const selected = selectInvoiceIssueDrafts(response, requestedContractIds)
   const issuableRows = selected.filter(draft => draft.blockers.length === 0 && draft.existingInvoiceId === null)
   const blockedRows = selected.filter(draft => draft.blockers.length > 0)
   const alreadyIssuedRows = selected.filter(draft => draft.existingInvoiceId !== null)
   const targetContractIds = sortedUnique(issuableRows.map(draft => draft.contractId))
-  const snapshot = buildInvoiceIssueSnapshot(response, targetContractIds, dueDate, profile)
+  const schedulesByContract = Object.fromEntries(issuableRows.map(draft => [
+    draft.contractId,
+    scheduleForDraft(draft, dueContext),
+  ]))
+  const snapshot = buildInvoiceIssueSnapshot(response, targetContractIds, dueContext, schedulesByContract, profile)
 
   return {
     targetContractIds,
+    schedulesByContract,
     preview: {
       periodId: response.period.id,
-      dueDate,
+      calculationDate: dueContext.calculationDate,
+      dueDateOverride: dueContext.dueDateOverride ?? null,
       requestedContractIds: sortedUnique(requestedContractIds ?? selected.map(draft => draft.contractId)),
-      issuable: issuableRows.map(previewItem).sort((a, b) => a.contractId.localeCompare(b.contractId)),
-      blocked: blockedRows.map(previewItem).sort((a, b) => a.contractId.localeCompare(b.contractId)),
-      alreadyIssued: alreadyIssuedRows.map(previewItem).sort((a, b) => a.contractId.localeCompare(b.contractId)),
+      issuable: issuableRows.map(draft => previewItem(draft, schedulesByContract[draft.contractId]))
+        .sort((a, b) => a.contractId.localeCompare(b.contractId)),
+      blocked: blockedRows.map(draft => previewItem(draft)).sort((a, b) => a.contractId.localeCompare(b.contractId)),
+      alreadyIssued: alreadyIssuedRows.map(draft => previewItem(draft)).sort((a, b) => a.contractId.localeCompare(b.contractId)),
       issuableCount: issuableRows.length,
       blockedCount: blockedRows.length,
       alreadyIssuedCount: alreadyIssuedRows.length,

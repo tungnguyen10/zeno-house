@@ -94,7 +94,7 @@ describe('AI invoice correction planner', () => {
     await AiInvoiceCorrectionPlanner.planReissue(event, user, 'conversation-1', {
       invoice_ref: invoice.id,
       reason: 'Phát hành lại sau đính chính',
-      due_date: '2026-07-31',
+      due_date: '2026-08-31',
     })
     expect(createPlan).toHaveBeenCalledWith(expect.anything(), expect.anything(), expect.objectContaining({
       action_type: 'reissue_invoice',

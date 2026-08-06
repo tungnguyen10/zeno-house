@@ -106,7 +106,7 @@ export type IncidentalChargeDeleteInput = z.infer<typeof incidentalChargeDeleteS
 
 const issueInvoiceSelectionSchema = z.object({
   contract_ids: z.array(z.string().uuid()).min(1).max(100),
-  due_date: z.iso.date(),
+  due_date_override: z.iso.date().nullable().optional(),
 })
 
 export const issueInvoicesPreviewSchema = issueInvoiceSelectionSchema.strict()
@@ -121,7 +121,14 @@ export type IssueInvoicesInput = z.infer<typeof issueInvoicesSchema>
 /** Internal server-owned payload after preview validation; also shared by the existing AI flow. */
 export interface IssueInvoicesCommitInput {
   contract_ids?: string[]
-  due_date?: string | null
+  due_date_override?: string | null
+  calculation_date?: string
+  schedules_by_contract?: Record<string, {
+    dueDate: string
+    gracePeriodDays: number
+    overdueDate: string
+    source: 'override' | 'contract' | 'building' | 'system'
+  }>
 }
 
 // ---------------------------------------------------------------------------
@@ -140,7 +147,7 @@ export type VoidInvoiceInput = z.infer<typeof voidInvoiceSchema>
 
 export const reissueInvoiceSchema = z.object({
   reason: z.string().min(1, 'Cần nhập lý do phát hành lại').max(500),
-  due_date: z.string().nullable().optional(),
+  due_date_override: z.iso.date().nullable().optional(),
   notes: z.string().max(500).nullable().optional(),
   expected_updated_at: z.string().datetime({ offset: true }),
 })

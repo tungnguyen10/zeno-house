@@ -177,11 +177,15 @@ export interface AiInvoiceIssuePreviewItem {
   totalAmount: number
   blockerCodes: string[]
   warningCodes: string[]
+  dueDate: string | null
+  gracePeriodDays: number
+  overdueDate: string | null
 }
 
 export interface AiInvoiceIssuePreview {
   periodId: string
-  dueDate: string | null
+  calculationDate: string
+  dueDateOverride: string | null
   requestedContractIds: string[]
   issuable: AiInvoiceIssuePreviewItem[]
   blocked: AiInvoiceIssuePreviewItem[]

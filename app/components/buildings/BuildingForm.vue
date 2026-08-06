@@ -396,7 +396,7 @@ const canSubmit = computed(() => !props.loading && (props.isDirty || props.hasDr
         <UiInput
           id="bf-due-day"
           :model-value="modelValue.paymentDueDay"
-          label="Đến hạn"
+          label="Ngày đến hạn mặc định"
           type="number"
           number-mode="day"
           placeholder="1–31"
@@ -409,7 +409,7 @@ const canSubmit = computed(() => !props.loading && (props.isDirty || props.hasDr
         <UiInput
           id="bf-grace-days"
           :model-value="modelValue.gracePeriodDays"
-          label="Gia hạn"
+          label="Thời gian gia hạn"
           type="number"
           number-mode="integer"
           placeholder="0"

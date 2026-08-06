@@ -119,7 +119,7 @@ const STATUS_CLASS: Record<ContractStatus, string> = {
             <div class="flex items-center justify-between gap-4 px-4 py-3">
               <dt class="portal-type-body text-body">Ngày thanh toán</dt>
               <dd class="portal-type-body text-right font-medium text-title">
-                {{ contract.paymentDay ? `Ngày ${contract.paymentDay} hằng tháng` : 'Chưa thỏa thuận' }}
+                {{ contract.paymentDueDay ? `Ngày ${contract.paymentDueDay} hằng tháng` : 'Chưa thỏa thuận' }}
               </dd>
             </div>
             <div class="flex items-center justify-between gap-4 px-4 py-3">

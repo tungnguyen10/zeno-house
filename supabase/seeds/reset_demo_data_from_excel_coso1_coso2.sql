@@ -172,7 +172,7 @@ VALUES
 -- -----------------------------------------------------------------------------
 -- Contracts
 -- -----------------------------------------------------------------------------
-INSERT INTO public.contracts (id, contract_code, room_id, tenant_id, building_id, start_date, end_date, monthly_rent, deposit, status, notes, occupant_count, discount_amount, surcharge_amount, payment_day, original_end_date, renewal_count)
+INSERT INTO public.contracts (id, contract_code, room_id, tenant_id, building_id, start_date, end_date, monthly_rent, deposit, status, notes, occupant_count, discount_amount, surcharge_amount, payment_due_day, original_end_date, renewal_count)
 VALUES
   ('50000000-0000-4000-8000-000000001001', 'hd-nttt-2026-0001', '30000000-0000-4000-8000-000000001001', '40000000-0000-4000-8000-000000001001', '20000000-0000-4000-8000-000000000001', '2026-01-01', '2026-12-31', 1800000, 1800000, 'active', 'Seeded from Excel. Latest other fee: 70000 VND.', 1, 0, 0, 5, '2026-12-31', 0),
   ('50000000-0000-4000-8000-000000001002', 'hd-nttt-2026-0002', '30000000-0000-4000-8000-000000001002', '40000000-0000-4000-8000-000000001002', '20000000-0000-4000-8000-000000000001', '2026-01-01', '2026-12-31', 1300000, 1300000, 'active', 'Seeded from Excel. Latest other fee: 45000 VND.', 1, 0, 0, 5, '2026-12-31', 0),

@@ -10,6 +10,6 @@ export interface ContractRenewal {
   oldMonthlyRent: number
   newMonthlyRent: number
   reason: string | null
-  createdBy: string
+  createdBy: string | null
   createdAt: string
 }

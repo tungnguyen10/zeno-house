@@ -143,32 +143,31 @@ The API SHALL provide server-authoritative draft invoice previews before issue a
 - **THEN** the API returns a blocker instead of silently calculating electricity charges
 
 ### Requirement: Issue invoices API
-The API SHALL require a server-authoritative preview before issuing invoice snapshots transactionally.
+The API SHALL require a server-authoritative preview before issuing invoice snapshots transactionally. Preview and confirm SHALL accept selected contract IDs plus optional `due_date_override`; omitting the override SHALL resolve a schedule per invoice from server-owned contract and building state.
 
-#### Scenario: Issue preview requested
-- **WHEN** an authorized caller posts contract IDs and one shared due date to `/api/billing/periods/:id/issue-preview`
-- **THEN** the API returns ready draft documents, warnings and exclusions, aggregate counts and total, a canonical `snapshot_hash`, and a server-owned `operation_id`
-- **AND** draft documents identify themselves as drafts and do not claim an allocated invoice code
+#### Scenario: Automatic issue preview requested
+- **WHEN** an authorized caller posts contract IDs without `due_date_override`
+- **THEN** the API returns draft documents with per-invoice due, grace, and overdue values, `calculation_date`, a canonical snapshot hash, and a server-owned operation ID
 
-#### Scenario: Preview snapshot is bound to financial state
+#### Scenario: Shared override preview requested
+- **WHEN** an authorized caller posts a valid `due_date_override`
+- **THEN** every issuable document uses that due date and the response identifies the shared override
+
+#### Scenario: Preview snapshot binds schedule state
 - **WHEN** the preview snapshot is calculated
-- **THEN** its hash binds the period and selected targets, due date, canonical charge lines and totals, blockers and warnings, existing invoice state, and current payment-profile version
+- **THEN** its hash binds calculation date, override, contract and building due settings, resolved per-invoice schedules, canonical financial state, blockers, warnings, existing invoices, and payment-profile version
 
-#### Scenario: Stale issue confirmation rejected
-- **WHEN** any bound state changes before `/issue` receives the preview's `snapshot_hash` and `operation_id`
-- **THEN** the API returns `409 CONFLICT` and creates no invoice, charge, period transition, or success audit event
+#### Scenario: Schedule becomes stale
+- **WHEN** the local calculation date or any bound contract/building schedule input changes before confirm
+- **THEN** confirm returns `409 CONFLICT` and creates no invoice, charge, period transition, or success audit event
 
-#### Scenario: Client financial payload rejected
-- **WHEN** the preview or issue request supplies client-owned charge lines or totals
+#### Scenario: Per-invoice schedules commit atomically
+- **WHEN** the confirmation matches the preview
+- **THEN** one transaction stores each target invoice with its own server-owned due and grace values plus its charge snapshot
+
+#### Scenario: Client financial or schedule payload is rejected
+- **WHEN** a caller supplies client-owned charge lines, totals, per-invoice dates, or grace durations
 - **THEN** strict boundary validation rejects the request
-
-#### Scenario: Issue succeeds
-- **WHEN** draft charges have no blockers and the confirmation matches the current server snapshot
-- **THEN** the API creates invoices and invoice charges in a single logical operation
-
-#### Scenario: Issue fails
-- **WHEN** any invoice or charge insert fails
-- **THEN** no partial invoice issue state is left visible as successful
 
 ### Requirement: Invoice payment API
 The API SHALL record monthly payments against invoices and SHALL support undoing recorded payments. New payment recording requires full balance settlement; legacy partial-paid invoices retain compatibility.

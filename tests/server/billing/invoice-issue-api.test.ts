@@ -26,7 +26,7 @@ vi.stubGlobal('throwValidationError', (message: string) => {
 
 const selection = {
   contract_ids: ['00000000-0000-4000-8000-000000000001'],
-  due_date: '2026-08-09',
+  due_date_override: '2026-08-09',
 }
 
 describe('invoice issue API', () => {

@@ -51,7 +51,7 @@ function deriveBucket(inv: Invoice): 'paid' | 'partial' | 'unpaid' | 'overdue' |
   if (inv.status === 'void') return 'void'
   if (inv.status === 'paid') return 'paid'
   if (inv.paidAmount > 0 && inv.balanceAmount > 0) return 'partial'
-  if (inv.dueDate && inv.dueDate < today && inv.balanceAmount > 0) return 'overdue'
+  if (inv.overdueDate && inv.overdueDate < today && inv.balanceAmount > 0) return 'overdue'
   return 'unpaid'
 }
 

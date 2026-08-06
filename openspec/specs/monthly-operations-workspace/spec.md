@@ -51,54 +51,31 @@ The system SHALL calculate draft charges from live billing inputs before invoice
 - **AND** draft charge uses the override billable usage instead of raw current minus previous reading
 
 ### Requirement: Issue invoices
-The system SHALL require review of server-rendered draft documents before persisting issued invoices as snapshots.
+The system SHALL review server-rendered draft documents before persisting issued invoice snapshots. Automatic mode SHALL display the resolved schedule on each document, and an explicit batch-override control SHALL allow one shared due date.
 
-#### Scenario: Pending readings save before preview
-- **WHEN** the operator selects eligible rows and chooses **Xem trước & phát hành**
-- **THEN** the workspace saves all pending readings before loading the preview
-- **AND** any dirty, invalid, or failed save prevents the preview from opening
+#### Scenario: Automatic preview
+- **WHEN** the operator previews selected eligible rows without enabling a shared override
+- **THEN** pending readings save first and the modal shows each server-calculated due date while keeping confirmation disabled until preview succeeds
 
-#### Scenario: Draft documents reviewed in modal
-- **WHEN** the server returns an issue preview
-- **THEN** a large responsive modal shows the batch summary, shared due date, warnings and exclusions, and each invoice-shaped document marked **BẢN NHÁP**
-- **AND** the modal becomes full-screen on mobile and exposes no print action
+#### Scenario: Shared override enabled
+- **WHEN** the operator enables “Áp một hạn chung” and selects a valid date
+- **THEN** the workspace reloads preview with `due_date_override` and identifies the override in the batch summary
 
-#### Scenario: Due date refreshes preview
-- **WHEN** the operator changes the shared due date
-- **THEN** the workspace reloads the server preview and disables confirmation until the new snapshot is ready
+#### Scenario: Shared override disabled
+- **WHEN** the operator turns off the override
+- **THEN** the workspace reloads automatic per-invoice schedules and removes the override from confirm payload
 
 #### Scenario: Stale confirmation remains reviewable
-- **WHEN** confirmation returns `409 CONFLICT` because the preview is stale
-- **THEN** the modal remains open, confirmation is disabled, and the operator is prompted to load and review the current preview
+- **WHEN** confirmation returns `409 CONFLICT`
+- **THEN** the modal remains open, confirmation is disabled, and the operator is prompted to load and review current schedules
 
 #### Scenario: Successful issue refreshes workspace
 - **WHEN** the validated issue transaction succeeds
-- **THEN** the modal closes, selection clears, and the draft grid, overview, and invoice state refresh
+- **THEN** the modal closes, selection clears, and draft, overview, and invoice state refresh
 
-#### Scenario: Issue valid invoices
-- **WHEN** all required billing inputs are valid and the user issues invoices
-- **THEN** the system creates `invoices` and `invoice_charges` rows for the period
-- **AND** those persisted rows become the source of truth for the issued amount
-
-#### Scenario: Snapshot survives source edits
-- **WHEN** contract rent, service price, occupant count, or meter readings are edited after invoice issue
-- **THEN** the issued invoice totals and invoice charge calculation metadata remain unchanged
-
-#### Scenario: Utility snapshot includes previous and current values
-- **WHEN** a utility charge is issued
-- **THEN** invoice charge metadata includes previous reading value, current reading value, billable usage, rate, pricing type, and override/replacement details when applicable
-
-#### Scenario: Prevent duplicate invoices
-- **WHEN** a non-void invoice already exists for a contract in a billing period
-- **THEN** issuing again does not create a duplicate non-void invoice
-
-#### Scenario: Missing input blocks issue
-- **WHEN** a required reading, rate, or supported pricing rule is missing
-- **THEN** the system blocks issue and shows the blocking reason
-
-#### Scenario: Selection excludes blocked and issued rows
-- **WHEN** the operator selects rows for bulk issue
-- **THEN** rows with blockers or an existing invoice are not selectable while warning-only rows remain selectable
+#### Scenario: Existing issue protections remain
+- **WHEN** a row is blocked or already has a non-void invoice
+- **THEN** it remains excluded from issuance and no duplicate invoice is created
 
 ### Requirement: Collect invoice payments
 The system SHALL record monthly collection against invoices. New payments SHALL settle the invoice in full; existing partial-paid invoices created before this change SHALL continue to render correctly until closed.

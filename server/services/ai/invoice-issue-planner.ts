@@ -7,6 +7,8 @@ import { can } from '../../utils/permissions'
 import { BillingDraftService } from '../billing/drafts'
 import { AiActionService } from './actions'
 import { createInvoiceIssuePreview } from '../billing/invoice-issue-snapshot'
+import { calculationDateInHoChiMinh } from '../billing/invoice-due-policy'
+import { BuildingRepository } from '../../repositories/buildings'
 
 export type AiInvoiceIssuePlanResult =
   | { status: 'planned'; preview: AiInvoiceIssuePreview; actionPlan: AiActionPlanDto }
@@ -21,11 +23,18 @@ export const AiInvoiceIssuePlanner = {
   ): Promise<AiInvoiceIssuePlanResult> {
     if (!can(user, 'billing.write')) throwForbidden('Không có quyền phát hành hoá đơn')
     const draft = await BillingDraftService.calculateDraft(event, user, input.period_id)
-    const dueDate = input.due_date ?? null
+    const building = await BuildingRepository.findById(event, draft.period.buildingId)
+    if (!building) throwNotFound('Không tìm thấy tòa nhà')
+    const dueDateOverride = input.due_date ?? null
     const { preview, targetContractIds } = createInvoiceIssuePreview(
       draft,
       input.contract_ids,
-      dueDate,
+      {
+        calculationDate: calculationDateInHoChiMinh(),
+        dueDateOverride,
+        buildingPaymentDueDay: building.paymentDueDay ?? null,
+        gracePeriodDays: building.gracePeriodDays ?? 0,
+      },
     )
 
     if (targetContractIds.length === 0) return { status: 'preview_only', preview }
@@ -44,7 +53,7 @@ export const AiInvoiceIssuePlanner = {
       normalized_payload: {
         period_id: draft.period.id,
         contract_ids: targetContractIds,
-        due_date: dueDate,
+        due_date_override: dueDateOverride,
         snapshot_hash: preview.snapshotHash,
       },
       preview: { ...preview },

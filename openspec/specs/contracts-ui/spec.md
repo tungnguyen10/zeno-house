@@ -84,7 +84,7 @@ TBD - created by archiving change contracts-overhaul. Update Purpose after archi
 ---
 
 ### Requirement: Contract detail sectioned layout
-`app/pages/contracts/[code]/index.vue` SHALL organize the detail body into sections with anchor IDs (preserving existing tab content): `#overview` (dates, rent, deposit, payment_day, terms), `#occupants` (current + history list with add/move-out actions), `#payments` (list + add), `#services` (list + edit), `#meter-readings` (link to meter workspace + handover summary), `#history` (renewal history and contract audit history), `#danger-zone` (Edit, Terminate, Delete actions). A sticky horizontal tab nav SHALL allow jumping to each section.
+`app/pages/contracts/[code]/index.vue` SHALL organize the detail body into sections with anchor IDs (preserving existing tab content): `#overview` (dates, rent, deposit, payment_due_day, terms), `#occupants` (current + history list with add/move-out actions), `#payments` (list + add), `#services` (list + edit), `#meter-readings` (link to meter workspace + handover summary), `#history` (renewal history and contract audit history), `#danger-zone` (Edit, Terminate, Delete actions). A sticky horizontal tab nav SHALL allow jumping to each section.
 
 #### Scenario: Sticky tab nav renders
 - **WHEN** detail page loads
@@ -138,7 +138,7 @@ TBD - created by archiving change contracts-overhaul. Update Purpose after archi
 ### Requirement: Contracts edit form sectioned cards with numbered headings
 `app/components/contracts/ContractForm.vue` (in edit mode) SHALL render its field groups as visually distinct cards. Each section SHALL have a numbered badge (1–4), a section title, and a one-line description. Sections SHALL be separated by `border-t border-dark-border` and consistent spacing. The four sections are:
 1. **Quan hệ** — `room`, `tenant` (readonly when `status='active'`).
-2. **Thời hạn & Giá** — `start_date`, `end_date`, `payment_day`, `monthly_rent`, `deposit`.
+2. **Thời hạn & Giá** — `start_date`, `end_date`, `payment_due_day`, `monthly_rent`, `deposit`.
 3. **Điều khoản** — `occupant_count`, `discounts[]`, `surcharges[]`.
 4. **Trạng thái & Ghi chú** — `status` (limited transitions per state machine), `notes`.
 

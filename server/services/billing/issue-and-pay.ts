@@ -10,6 +10,8 @@ import { BillingPeriodRepository } from '../../repositories/billing/periods'
 import { BillingDraftService } from './drafts'
 import { BillingDisplayResolver } from './display'
 import { assertBuildingScope } from '../../utils/scope'
+import { BuildingRepository } from '../../repositories/buildings'
+import { calculationDateInHoChiMinh, resolveInvoiceDueSchedule } from './invoice-due-policy'
 
 interface IssueAndPayErrorDetails {
   error_code?: string
@@ -56,11 +58,23 @@ export const IssueAndPayService = {
     if (!draft) throwNotFound('Không tìm thấy bản nháp cho hợp đồng')
     if (draft.existingInvoiceId !== null) throwConflict('Hợp đồng đã có hoá đơn trong kỳ này')
     if (draft.blockers.length > 0) throwConflict('Bản nháp còn vướng mắc — không thể phát hành')
+    const building = await BuildingRepository.findById(event, period.buildingId)
+    if (!building) throwNotFound('Không tìm thấy tòa nhà')
+    const issuedAt = new Date().toISOString()
+    const schedule = resolveInvoiceDueSchedule({
+      calculationDate: calculationDateInHoChiMinh(new Date(issuedAt)),
+      dueDateOverride: input.due_date_override,
+      contractPaymentDueDay: draft.paymentDueDay,
+      buildingPaymentDueDay: building.paymentDueDay,
+      gracePeriodDays: building.gracePeriodDays ?? 0,
+    })
 
     const draftPayload = {
       contract_id: draft.contractId,
       room_id: draft.roomId,
       tenant_id: draft.tenantId,
+      due_date: schedule.dueDate,
+      grace_period_days: schedule.gracePeriodDays,
       subtotal: draft.subtotalAmount,
       discount: draft.discountAmount,
       surcharge: draft.surchargeAmount,
@@ -84,8 +98,9 @@ export const IssueAndPayService = {
       p_period_id: period.id,
       p_contract_id: input.contract_id,
       p_actor_id: user.id ?? null,
-      p_due_date: input.due_date ?? null,
-      p_issued_at: new Date().toISOString(),
+      p_due_date: schedule.dueDate,
+      p_grace_period_days: schedule.gracePeriodDays,
+      p_issued_at: issuedAt,
       p_payment_date: input.payment_date,
       p_payment_method: input.payment_method ?? null,
       p_note: input.note ?? null,

@@ -95,7 +95,7 @@ function buildForm(overrides: Partial<ContractFormData> = {}): ContractFormData 
     end_date: '2027-06-01',
     monthly_rent: '',
     deposit: '',
-    payment_day: '',
+    payment_due_day: '',
     occupant_count: '1',
     discount_amount: '0',
     surcharge_amount: '0',
