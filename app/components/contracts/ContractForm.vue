@@ -493,6 +493,7 @@ const mobileCancelText = computed(() => props.mobileCancelLabel ?? props.cancelL
           :error="errorFor('payment_due_day')"
           :disabled="loading"
           placeholder="Mặc định theo tòa nhà"
+          hint="Để trống sẽ dùng ngày đến hạn của toà nhà; nếu có giá trị sẽ ưu tiên hơn cấu hình toà nhà."
           @update:model-value="update('payment_due_day', $event)"
           @blur="onBlur('payment_due_day')"
         />

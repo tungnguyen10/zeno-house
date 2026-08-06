@@ -10,7 +10,7 @@ const passThrough = (tag = 'div') => defineComponent({
 })
 
 const inputStub = defineComponent({
-  props: ['modelValue', 'id', 'label', 'error', 'placeholder', 'required', 'disabled'],
+  props: ['modelValue', 'id', 'label', 'error', 'placeholder', 'required', 'disabled', 'hint'],
   emits: ['update:modelValue', 'blur'],
   setup(props, { emit }) {
     return () => h('div', {}, [
@@ -26,6 +26,9 @@ const inputStub = defineComponent({
       }),
       props.error
         ? h('p', { 'data-test': 'inline-error' }, props.error)
+        : null,
+      props.hint
+        ? h('p', { 'data-test': 'hint' }, props.hint)
         : null,
     ])
   },
@@ -98,6 +101,16 @@ describe('BuildingForm', () => {
     expect(html).toContain('Chủ sở hữu')
     expect(html).toContain('Tính phí mặc định')
     expect(html).toContain('Lịch vận hành')
+  })
+
+  it('clarifies which schedule fields are reminder-only vs. billing-affecting', () => {
+    const wrapper = mountForm()
+    const html = wrapper.html()
+    expect(html).toContain('Chỉ ghi chú')
+    expect(html).toContain('Tự động áp dụng')
+    expect(html).toContain('Chốt số (1–31)')
+    expect(html).toContain('Ngày trong tháng để chốt số')
+    expect(html).toContain('Ngày trong tháng dùng làm hạn thanh toán')
   })
 
   it('does not show inline errors until the field is touched', async () => {
