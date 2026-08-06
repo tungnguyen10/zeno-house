@@ -107,7 +107,7 @@ describe('invoice email HTML renderer', () => {
   it('uses the print due-date fallback when an invoice has no explicit due date', () => {
     const html = renderInvoiceEmailHtml(documentData({ dueDate: null }))
 
-    expect(html).toContain('(Hạn 4 ngày).')
+    expect(html).toContain('Chưa có hạn thanh toán')
   })
 
   it('embeds validated logo and QR assets as inline base64 data URIs', () => {

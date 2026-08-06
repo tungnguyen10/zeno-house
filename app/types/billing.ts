@@ -51,6 +51,8 @@ export interface Invoice {
   tenantId: string
   status: InvoiceStatus
   dueDate: string | null
+  gracePeriodDays: number
+  overdueDate: string | null
   issuedAt: string | null
   paidAt: string | null
   voidedAt: string | null
@@ -231,6 +233,7 @@ export interface BillingExistingInvoiceContext {
 
 export interface BillingDraftInvoice {
   contractId: string
+  paymentDueDay?: number | null
   roomId: string
   tenantId: string
   contractCode: string | null
@@ -308,6 +311,8 @@ export interface InvoiceDocumentItem {
   tenantName: string | null
   issuedAt: string | null
   dueDate: string | null
+  gracePeriodDays: number
+  overdueDate: string | null
   totalAmount: number
   paidAmount: number
   balanceAmount: number
@@ -332,7 +337,8 @@ export interface BillingInvoiceIssueExclusion {
 
 export interface BillingInvoiceIssuePreview {
   periodId: string
-  dueDate: string
+  calculationDate: string
+  dueDateOverride: string | null
   operationId: string
   snapshotHash: string
   issuableCount: number

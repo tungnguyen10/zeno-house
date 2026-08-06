@@ -19,31 +19,27 @@ The database SHALL store monthly billing period state in `public.billing_periods
 - **THEN** RLS is enabled and role-based admin/manager policies are present
 
 ### Requirement: Invoices table
-The database SHALL store issued invoice snapshots in `public.invoices`.
+The database SHALL store issued invoice snapshots in `public.invoices`, including `due_date`, `grace_period_days` (non-negative integer default 0), and a stored generated `overdue_date` equal to `due_date + grace_period_days`, in addition to the existing identity, lifecycle, totals, notes, replacement links, and timestamps.
 
-#### Scenario: Invoice schema exists
-- **WHEN** the billing SQL is applied manually in Supabase Dashboard SQL Editor
-- **THEN** `invoices` includes billing_period_id, contract_id, room_id, tenant_id, status, due_date, issued_at, paid_at, voided_at, voided_by, void_reason, superseded_by_invoice_id, supersedes_invoice_id, amount totals, notes, created_at, and updated_at fields
+#### Scenario: Existing invoices preserve overdue behavior
+- **WHEN** the migration is applied to existing invoices
+- **THEN** they receive zero grace and their generated overdue date equals their existing due date
 
-#### Scenario: One active invoice per contract per period
-- **WHEN** a non-void invoice already exists for a contract in a billing period
-- **THEN** the database rejects another non-void invoice for the same billing_period_id and contract_id
+#### Scenario: Null legacy due date remains unknown
+- **WHEN** an existing invoice has a null due date
+- **THEN** its overdue date remains null
 
-#### Scenario: Voided invoice can be replaced
-- **WHEN** an invoice has status `void`
-- **THEN** the database allows a replacement non-void invoice for the same billing_period_id and contract_id
+#### Scenario: New schedule is immutable
+- **WHEN** an invoice is issued with a resolved due date and building grace duration
+- **THEN** both values are stored on the invoice and later building or contract edits do not update them
 
-#### Scenario: Outstanding debt query is indexed
-- **WHEN** invoices have positive balance amounts
-- **THEN** the database has an index that supports querying outstanding balances
+#### Scenario: Overdue query is indexed
+- **WHEN** invoice lists and dashboards filter unpaid invoices by overdue state
+- **THEN** an index supports status, overdue date, balance, and issue ordering
 
-#### Scenario: Voided invoice has reason
-- **WHEN** an invoice status is changed to `void`
-- **THEN** the invoice stores voided_at, voided_by, and void_reason
-
-#### Scenario: Reissue relation stored
-- **WHEN** an invoice is reissued after being voided
-- **THEN** the old and replacement invoices can be linked through superseded/supersedes references
+#### Scenario: Existing invoice uniqueness and replacement rules remain
+- **WHEN** invoices are issued, voided, or replaced
+- **THEN** the existing one-active-invoice and supersession constraints remain in force
 
 ### Requirement: Invoice charges table
 The database SHALL store invoice line items in `public.invoice_charges`.

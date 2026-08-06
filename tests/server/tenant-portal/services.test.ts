@@ -153,7 +153,8 @@ describe('tenant portal services', () => {
         period_year: 2026, period_month: 7, building_id: 'building-1', building_name: 'Zeno',
         room_id: 'room-1', room_number: 'A101', contract_id: 'contract-1', contract_code: 'C-1',
         tenant_id: 'tenant-1', tenant_name: 'Tenant', total_amount: 1000, paid_amount: 0,
-        balance_amount: 1000, due_date: '2026-07-01', status: 'issued', issued_at: '2026-07-01T00:00:00Z',
+        balance_amount: 1000, due_date: '2026-07-01', grace_period_days: 2,
+        overdue_date: '2026-07-03', status: 'issued', issued_at: '2026-07-01T00:00:00Z',
       }],
     })
     const { TenantInvoiceService } = await import('../../../server/services/tenant-portal/invoices')
@@ -243,6 +244,8 @@ describe('tenant portal services', () => {
         paid_amount: 0,
         balance_amount: 0,
         due_date: '2026-07-10',
+        grace_period_days: 0,
+        overdue_date: '2026-07-10',
         status: 'void',
         issued_at: '2026-07-01T00:00:00.000Z',
         voided_at: '2026-07-05T00:00:00.000Z',
@@ -299,6 +302,8 @@ describe('tenant portal services', () => {
       paid_amount: 0,
       balance_amount: 5_000_000,
       due_date: '2026-07-10',
+      grace_period_days: 0,
+      overdue_date: '2026-07-10',
       status: 'issued',
       issued_at: '2026-07-01T00:00:00.000Z',
       voided_at: null,

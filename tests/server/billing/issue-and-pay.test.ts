@@ -7,6 +7,7 @@ const findPeriodById = vi.fn()
 const calculateDraft = vi.fn()
 const enrichInvoices = vi.fn(async (invoices: unknown[]) => invoices)
 const rpcMock = vi.fn()
+const findBuildingById = vi.fn()
 const assignmentRepoMocks = vi.hoisted(() => ({
   findBuildingIdsByUser: vi.fn(),
 }))
@@ -40,6 +41,9 @@ vi.mock('../../../server/services/billing/display', () => ({
 
 vi.mock('../../../server/repositories/assignments', () => ({
   AssignmentRepository: assignmentRepoMocks,
+}))
+vi.mock('../../../server/repositories/buildings', () => ({
+  BuildingRepository: { findById: findBuildingById },
 }))
 
 function makeUser(role: 'admin' | 'manager' = 'admin'): AuthUser {
@@ -91,6 +95,8 @@ function paidInvoiceRow(total = 1_720_000) {
     tenant_id: issued.tenantId,
     status: 'paid',
     due_date: '2026-06-05',
+    grace_period_days: 2,
+    overdue_date: '2026-06-07',
     issued_at: issued.issuedAt,
     paid_at: '2026-05-31',
     voided_at: null,
@@ -116,6 +122,7 @@ describe('IssueAndPayService.issueAndPay', () => {
     vi.stubGlobal('can', () => true)
     assignmentRepoMocks.findBuildingIdsByUser.mockResolvedValue(['building-1'])
     findPeriodById.mockResolvedValue(buildPeriod({ id: 'period-1', status: 'issued' }))
+    findBuildingById.mockResolvedValue({ paymentDueDay: 10, gracePeriodDays: 2 })
   })
 
   it('issues a ready draft and records full payment via the issue_and_pay RPC', async () => {
@@ -141,10 +148,13 @@ describe('IssueAndPayService.issueAndPay', () => {
       p_period_id: 'period-1',
       p_contract_id: 'contract-ready',
       p_actor_id: 'user-1',
+      p_due_date: expect.any(String),
+      p_grace_period_days: 2,
       p_payment_date: '2026-05-31',
       p_payment_method: 'cash',
       p_draft: expect.objectContaining({
         contract_id: 'contract-ready',
+        grace_period_days: 2,
         total: 1_720_000,
       }),
     })

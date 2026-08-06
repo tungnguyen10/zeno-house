@@ -289,7 +289,7 @@ describe('BillingDraftGridStep', () => {
       }],
     })
     const preview = {
-      periodId: 'period-2026-05', dueDate: '2026-08-09', operationId: '00000000-0000-7000-8000-000000000099',
+      periodId: 'period-2026-05', calculationDate: '2026-08-06', dueDateOverride: null, operationId: '00000000-0000-7000-8000-000000000099',
       snapshotHash: 'a'.repeat(64), issuableCount: 1, blockedCount: 0, alreadyIssuedCount: 0,
       totalAmount: 3_100_000, items: [{ key: readyRow.contractId }], exclusions: [],
     }
@@ -302,14 +302,14 @@ describe('BillingDraftGridStep', () => {
     await vi.waitFor(() => expect(onPreviewIssue).toHaveBeenCalledTimes(1))
     expect(onPreviewIssue).toHaveBeenCalledWith(expect.objectContaining({
       contract_ids: [readyRow.contractId],
-      due_date: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+      due_date_override: null,
     }))
 
     await wrapper.get('[data-test="confirm-preview"]').trigger('click')
     await vi.waitFor(() => expect(onIssue).toHaveBeenCalledTimes(1))
     expect(onIssue).toHaveBeenCalledWith({
       contract_ids: [readyRow.contractId],
-      due_date: '2026-08-09',
+      due_date_override: null,
       snapshot_hash: 'a'.repeat(64),
       operation_id: '00000000-0000-7000-8000-000000000099',
     })

@@ -88,6 +88,7 @@ export type Database = {
           created_at: string
           error: Json | null
           executed_at: string | null
+          execution_lease_until: string | null
           expires_at: string
           id: string
           idempotency_key: string
@@ -111,6 +112,7 @@ export type Database = {
           created_at?: string
           error?: Json | null
           executed_at?: string | null
+          execution_lease_until?: string | null
           expires_at?: string
           id?: string
           idempotency_key?: string
@@ -134,6 +136,7 @@ export type Database = {
           created_at?: string
           error?: Json | null
           executed_at?: string | null
+          execution_lease_until?: string | null
           expires_at?: string
           id?: string
           idempotency_key?: string
@@ -196,6 +199,27 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_global_daily_quotas: {
+        Row: {
+          bucket_day: string
+          provider: string
+          request_count: number
+          updated_at: string
+        }
+        Insert: {
+          bucket_day: string
+          provider: string
+          request_count?: number
+          updated_at?: string
+        }
+        Update: {
+          bucket_day?: string
+          provider?: string
+          request_count?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       ai_messages: {
         Row: {
           content: string
@@ -233,6 +257,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      ai_provider_circuits: {
+        Row: {
+          consecutive_failures: number
+          opened_at: string | null
+          probe_lease_until: string | null
+          provider: string
+          updated_at: string
+        }
+        Insert: {
+          consecutive_failures?: number
+          opened_at?: string | null
+          probe_lease_until?: string | null
+          provider: string
+          updated_at?: string
+        }
+        Update: {
+          consecutive_failures?: number
+          opened_at?: string | null
+          probe_lease_until?: string | null
+          provider?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       ai_rate_limit_buckets: {
         Row: {
@@ -354,6 +402,76 @@ export type Database = {
             columns: ["billing_period_id"]
             isOneToOne: false
             referencedRelation: "billing_periods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      billing_incidental_charges: {
+        Row: {
+          amount: number
+          billing_period_id: string
+          contract_id: string
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          deleted_by: string | null
+          id: string
+          label: string
+          note: string | null
+          operation_id: string
+          room_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          billing_period_id: string
+          contract_id: string
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          id?: string
+          label: string
+          note?: string | null
+          operation_id: string
+          room_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          billing_period_id?: string
+          contract_id?: string
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          id?: string
+          label?: string
+          note?: string | null
+          operation_id?: string
+          room_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_incidental_charges_billing_period_id_fkey"
+            columns: ["billing_period_id"]
+            isOneToOne: false
+            referencedRelation: "billing_periods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "billing_incidental_charges_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "billing_incidental_charges_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
             referencedColumns: ["id"]
           },
         ]
@@ -616,6 +734,88 @@ export type Database = {
             foreignKeyName: "building_fixed_costs_building_id_fkey"
             columns: ["building_id"]
             isOneToOne: false
+            referencedRelation: "buildings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      building_invoice_email_settings: {
+        Row: {
+          auto_send_enabled: boolean
+          building_id: string
+          created_at: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          auto_send_enabled?: boolean
+          building_id: string
+          created_at?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          auto_send_enabled?: boolean
+          building_id?: string
+          created_at?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "building_invoice_email_settings_building_id_fkey"
+            columns: ["building_id"]
+            isOneToOne: true
+            referencedRelation: "buildings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      building_invoice_profiles: {
+        Row: {
+          account_holder: string
+          account_number: string
+          bank_name: string
+          building_id: string
+          created_at: string
+          legacy_backfilled_at: string | null
+          logo_image_path: string | null
+          qr_image_path: string
+          transfer_content_template: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          account_holder: string
+          account_number: string
+          bank_name: string
+          building_id: string
+          created_at?: string
+          legacy_backfilled_at?: string | null
+          logo_image_path?: string | null
+          qr_image_path: string
+          transfer_content_template: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          account_holder?: string
+          account_number?: string
+          bank_name?: string
+          building_id?: string
+          created_at?: string
+          legacy_backfilled_at?: string | null
+          logo_image_path?: string | null
+          qr_image_path?: string
+          transfer_content_template?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "building_invoice_profiles_building_id_fkey"
+            columns: ["building_id"]
+            isOneToOne: true
             referencedRelation: "buildings"
             referencedColumns: ["id"]
           },
@@ -908,7 +1108,7 @@ export type Database = {
         Row: {
           contract_id: string
           created_at: string
-          created_by: string
+          created_by: string | null
           id: string
           mode: string
           new_contract_id: string | null
@@ -921,7 +1121,7 @@ export type Database = {
         Insert: {
           contract_id: string
           created_at?: string
-          created_by: string
+          created_by?: string | null
           id?: string
           mode: string
           new_contract_id?: string | null
@@ -934,7 +1134,7 @@ export type Database = {
         Update: {
           contract_id?: string
           created_at?: string
-          created_by?: string
+          created_by?: string | null
           id?: string
           mode?: string
           new_contract_id?: string | null
@@ -1025,7 +1225,7 @@ export type Database = {
           notes: string | null
           occupant_count: number
           original_end_date: string | null
-          payment_day: number | null
+          payment_due_day: number | null
           previous_contract_id: string | null
           renewal_count: number
           room_id: string
@@ -1047,7 +1247,7 @@ export type Database = {
           notes?: string | null
           occupant_count?: number
           original_end_date?: string | null
-          payment_day?: number | null
+          payment_due_day?: number | null
           previous_contract_id?: string | null
           renewal_count?: number
           room_id: string
@@ -1069,7 +1269,7 @@ export type Database = {
           notes?: string | null
           occupant_count?: number
           original_end_date?: string | null
-          payment_day?: number | null
+          payment_due_day?: number | null
           previous_contract_id?: string | null
           renewal_count?: number
           room_id?: string
@@ -1163,6 +1363,155 @@ export type Database = {
           },
         ]
       }
+      invoice_email_deliveries: {
+        Row: {
+          accepted_at: string | null
+          attempt_count: number
+          billing_period_id: string
+          bounced_at: string | null
+          building_id: string
+          complained_at: string | null
+          created_at: string
+          created_by: string | null
+          delivered_at: string | null
+          failed_at: string | null
+          id: string
+          idempotency_key: string
+          invoice_id: string
+          last_error_code: string | null
+          last_error_message: string | null
+          lease_expires_at: string | null
+          locked_by: string | null
+          next_attempt_at: string | null
+          provider_email_id: string | null
+          provider_event_at: string | null
+          recipient_email: string | null
+          resend_released_at: string | null
+          skip_reason: string | null
+          skipped_at: string | null
+          source: string
+          status: string
+          supersedes_delivery_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          attempt_count?: number
+          billing_period_id: string
+          bounced_at?: string | null
+          building_id: string
+          complained_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          delivered_at?: string | null
+          failed_at?: string | null
+          id?: string
+          idempotency_key?: string
+          invoice_id: string
+          last_error_code?: string | null
+          last_error_message?: string | null
+          lease_expires_at?: string | null
+          locked_by?: string | null
+          next_attempt_at?: string | null
+          provider_email_id?: string | null
+          provider_event_at?: string | null
+          recipient_email?: string | null
+          resend_released_at?: string | null
+          skip_reason?: string | null
+          skipped_at?: string | null
+          source: string
+          status: string
+          supersedes_delivery_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          attempt_count?: number
+          billing_period_id?: string
+          bounced_at?: string | null
+          building_id?: string
+          complained_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          delivered_at?: string | null
+          failed_at?: string | null
+          id?: string
+          idempotency_key?: string
+          invoice_id?: string
+          last_error_code?: string | null
+          last_error_message?: string | null
+          lease_expires_at?: string | null
+          locked_by?: string | null
+          next_attempt_at?: string | null
+          provider_email_id?: string | null
+          provider_event_at?: string | null
+          recipient_email?: string | null
+          resend_released_at?: string | null
+          skip_reason?: string | null
+          skipped_at?: string | null
+          source?: string
+          status?: string
+          supersedes_delivery_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_email_deliveries_billing_period_id_fkey"
+            columns: ["billing_period_id"]
+            isOneToOne: false
+            referencedRelation: "billing_periods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_email_deliveries_building_id_fkey"
+            columns: ["building_id"]
+            isOneToOne: false
+            referencedRelation: "buildings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_email_deliveries_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_email_deliveries_supersedes_delivery_id_fkey"
+            columns: ["supersedes_delivery_id"]
+            isOneToOne: false
+            referencedRelation: "invoice_email_deliveries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoice_email_webhook_events: {
+        Row: {
+          event_created_at: string
+          event_type: string
+          id: string
+          provider_email_id: string
+          received_at: string
+          svix_id: string
+        }
+        Insert: {
+          event_created_at: string
+          event_type: string
+          id?: string
+          provider_email_id: string
+          received_at?: string
+          svix_id: string
+        }
+        Update: {
+          event_created_at?: string
+          event_type?: string
+          id?: string
+          provider_email_id?: string
+          received_at?: string
+          svix_id?: string
+        }
+        Relationships: []
+      }
       invoice_payments: {
         Row: {
           amount: number
@@ -1224,10 +1573,13 @@ export type Database = {
           created_at: string
           discount_amount: number
           due_date: string | null
+          grace_period_days: number
           id: string
           invoice_code: string
+          invoice_profile_snapshot: Json | null
           issued_at: string | null
           notes: string | null
+          overdue_date: string | null
           paid_amount: number
           paid_at: string | null
           room_id: string
@@ -1250,10 +1602,13 @@ export type Database = {
           created_at?: string
           discount_amount?: number
           due_date?: string | null
+          grace_period_days?: number
           id?: string
           invoice_code: string
+          invoice_profile_snapshot?: Json | null
           issued_at?: string | null
           notes?: string | null
+          overdue_date?: string | null
           paid_amount?: number
           paid_at?: string | null
           room_id: string
@@ -1276,10 +1631,13 @@ export type Database = {
           created_at?: string
           discount_amount?: number
           due_date?: string | null
+          grace_period_days?: number
           id?: string
           invoice_code?: string
+          invoice_profile_snapshot?: Json | null
           issued_at?: string | null
           notes?: string | null
+          overdue_date?: string | null
           paid_amount?: number
           paid_at?: string | null
           room_id?: string
@@ -2110,6 +2468,20 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      acquire_ai_provider_request: {
+        Args: {
+          p_cooldown_ms: number
+          p_daily_limit: number
+          p_failure_threshold: number
+          p_now?: string
+          p_provider: string
+        }
+        Returns: {
+          allowed: boolean
+          reason: string
+          retry_after_seconds: number
+        }[]
+      }
       add_invoice_adjustment_with_audit: {
         Args: {
           p_actor_id: string
@@ -2139,6 +2511,25 @@ export type Database = {
       append_access_request_created_audit: {
         Args: { p_actor_id: string; p_request_id: string }
         Returns: boolean
+      }
+      apply_invoice_email_webhook_event: {
+        Args: {
+          p_event_created_at: string
+          p_event_type: string
+          p_provider_email_id: string
+          p_svix_id: string
+        }
+        Returns: Json
+      }
+      begin_ai_chat_turn: {
+        Args: {
+          p_content: string
+          p_conversation_id: string
+          p_expires_at: string
+          p_history_limit: number
+          p_user_id: string
+        }
+        Returns: Json
       }
       billing_audit_search_page: {
         Args: {
@@ -2195,6 +2586,7 @@ export type Database = {
           created_at: string
           error: Json | null
           executed_at: string | null
+          execution_lease_until: string | null
           expires_at: string
           id: string
           idempotency_key: string
@@ -2217,34 +2609,112 @@ export type Database = {
           isSetofReturn: true
         }
       }
-      claim_ai_action_plan: {
-        Args: { p_plan_id: string; p_user_id: string }
+      claim_ai_action_plan:
+        | {
+            Args: { p_plan_id: string; p_user_id: string }
+            Returns: {
+              action_type: string
+              building_id: string | null
+              confirmed_at: string | null
+              conversation_id: string
+              created_at: string
+              error: Json | null
+              executed_at: string | null
+              execution_lease_until: string | null
+              expires_at: string
+              id: string
+              idempotency_key: string
+              normalized_payload: Json
+              payload_hash: string
+              preview: Json
+              resource_versions: Json
+              result: Json | null
+              status: string
+              summary: string
+              title: string
+              updated_at: string
+              user_id: string
+              warnings: Json
+            }[]
+            SetofOptions: {
+              from: "*"
+              to: "ai_action_plans"
+              isOneToOne: false
+              isSetofReturn: true
+            }
+          }
+        | {
+            Args: {
+              p_lease_seconds: number
+              p_plan_id: string
+              p_user_id: string
+            }
+            Returns: {
+              action_type: string
+              building_id: string | null
+              confirmed_at: string | null
+              conversation_id: string
+              created_at: string
+              error: Json | null
+              executed_at: string | null
+              execution_lease_until: string | null
+              expires_at: string
+              id: string
+              idempotency_key: string
+              normalized_payload: Json
+              payload_hash: string
+              preview: Json
+              resource_versions: Json
+              result: Json | null
+              status: string
+              summary: string
+              title: string
+              updated_at: string
+              user_id: string
+              warnings: Json
+            }[]
+            SetofOptions: {
+              from: "*"
+              to: "ai_action_plans"
+              isOneToOne: false
+              isSetofReturn: true
+            }
+          }
+      claim_invoice_email_deliveries: {
+        Args: { p_limit?: number; p_worker_id: string }
         Returns: {
-          action_type: string
-          building_id: string | null
-          confirmed_at: string | null
-          conversation_id: string
+          accepted_at: string | null
+          attempt_count: number
+          billing_period_id: string
+          bounced_at: string | null
+          building_id: string
+          complained_at: string | null
           created_at: string
-          error: Json | null
-          executed_at: string | null
-          expires_at: string
+          created_by: string | null
+          delivered_at: string | null
+          failed_at: string | null
           id: string
           idempotency_key: string
-          normalized_payload: Json
-          payload_hash: string
-          preview: Json
-          resource_versions: Json
-          result: Json | null
+          invoice_id: string
+          last_error_code: string | null
+          last_error_message: string | null
+          lease_expires_at: string | null
+          locked_by: string | null
+          next_attempt_at: string | null
+          provider_email_id: string | null
+          provider_event_at: string | null
+          recipient_email: string | null
+          resend_released_at: string | null
+          skip_reason: string | null
+          skipped_at: string | null
+          source: string
           status: string
-          summary: string
-          title: string
+          supersedes_delivery_id: string | null
           updated_at: string
-          user_id: string
-          warnings: Json
         }[]
         SetofOptions: {
           from: "*"
-          to: "ai_action_plans"
+          to: "invoice_email_deliveries"
           isOneToOne: false
           isSetofReturn: true
         }
@@ -2257,6 +2727,20 @@ export type Database = {
         Args: { p_limit?: number }
         Returns: number
       }
+      close_operations_report_with_audit: {
+        Args: {
+          p_accrual_amount: number
+          p_actor_id: string
+          p_billing_period_id: string
+          p_building_id: string
+          p_close_source: string
+          p_issued_revenue: number
+          p_period_month: number
+          p_period_year: number
+          p_reserve_rate_percent: number
+        }
+        Returns: Json
+      }
       complete_ai_action_plan: {
         Args: { p_plan_id: string; p_result: Json; p_user_id: string }
         Returns: {
@@ -2267,6 +2751,7 @@ export type Database = {
           created_at: string
           error: Json | null
           executed_at: string | null
+          execution_lease_until: string | null
           expires_at: string
           id: string
           idempotency_key: string
@@ -2303,6 +2788,38 @@ export type Database = {
           retry_after_seconds: number
         }[]
       }
+      create_billing_incidental_charge_with_audit: {
+        Args: {
+          p_actor_id: string
+          p_amount: number
+          p_billing_period_id: string
+          p_contract_id: string
+          p_label: string
+          p_note: string
+          p_operation_id: string
+        }
+        Returns: {
+          amount: number
+          billing_period_id: string
+          contract_id: string
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          deleted_by: string | null
+          id: string
+          label: string
+          note: string | null
+          operation_id: string
+          room_id: string
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "billing_incidental_charges"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       create_contract_with_handover: {
         Args: {
           p_building_id: string
@@ -2315,7 +2832,7 @@ export type Database = {
           p_monthly_rent: number
           p_notes: string
           p_occupant_count: number
-          p_payment_day: number
+          p_payment_due_day: number
           p_recorded_by: string
           p_room_id: string
           p_start_date: string
@@ -2335,7 +2852,7 @@ export type Database = {
           notes: string | null
           occupant_count: number
           original_end_date: string | null
-          payment_day: number | null
+          payment_due_day: number | null
           previous_contract_id: string | null
           renewal_count: number
           room_id: string
@@ -2352,6 +2869,21 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      create_reserve_funded_expense_with_audit: {
+        Args: {
+          p_actor_id: string
+          p_amount: number
+          p_building_id: string
+          p_category: string
+          p_expense_date: string
+          p_note: string
+          p_payee: string
+          p_payment_method: string
+          p_period_month: number
+          p_period_year: number
+        }
+        Returns: Json
+      }
       dashboard_source_snapshot: {
         Args: {
           p_building_ids: string[]
@@ -2361,6 +2893,39 @@ export type Database = {
           p_expiring_urgent: string
           p_today: string
         }
+        Returns: Json
+      }
+      delete_billing_incidental_charge_with_audit: {
+        Args: {
+          p_actor_id: string
+          p_billing_period_id: string
+          p_charge_id: string
+          p_expected_updated_at: string
+        }
+        Returns: {
+          amount: number
+          billing_period_id: string
+          contract_id: string
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          deleted_by: string | null
+          id: string
+          label: string
+          note: string | null
+          operation_id: string
+          room_id: string
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "billing_incidental_charges"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      enqueue_invoice_email_delivery: {
+        Args: { p_actor_id: string; p_invoice_id: string }
         Returns: Json
       }
       fail_ai_action_plan: {
@@ -2373,6 +2938,7 @@ export type Database = {
           created_at: string
           error: Json | null
           executed_at: string | null
+          execution_lease_until: string | null
           expires_at: string
           id: string
           idempotency_key: string
@@ -2395,7 +2961,65 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      invoice_email_normalize_recipient: {
+        Args: { p_email: string }
+        Returns: string
+      }
+      invoice_profile_template_is_valid: {
+        Args: { p_template: string }
+        Returns: boolean
+      }
       issue_and_pay: {
+        Args: {
+          p_actor_id: string
+          p_contract_id: string
+          p_correlation_id?: string
+          p_draft: Json
+          p_due_date: string
+          p_grace_period_days: number
+          p_issued_at: string
+          p_note: string
+          p_payment_date: string
+          p_payment_method: string
+          p_period_id: string
+        }
+        Returns: {
+          balance_amount: number
+          billing_period_id: string
+          contract_id: string
+          created_at: string
+          discount_amount: number
+          due_date: string | null
+          grace_period_days: number
+          id: string
+          invoice_code: string
+          invoice_profile_snapshot: Json | null
+          issued_at: string | null
+          notes: string | null
+          overdue_date: string | null
+          paid_amount: number
+          paid_at: string | null
+          room_id: string
+          status: string
+          subtotal_amount: number
+          superseded_by_invoice_id: string | null
+          supersedes_invoice_id: string | null
+          surcharge_amount: number
+          tenant_id: string
+          total_amount: number
+          updated_at: string
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "invoices"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      issue_and_pay_legacy: {
         Args: {
           p_actor_id: string
           p_contract_id: string
@@ -2415,10 +3039,13 @@ export type Database = {
           created_at: string
           discount_amount: number
           due_date: string | null
+          grace_period_days: number
           id: string
           invoice_code: string
+          invoice_profile_snapshot: Json | null
           issued_at: string | null
           notes: string | null
+          overdue_date: string | null
           paid_amount: number
           paid_at: string | null
           room_id: string
@@ -2446,6 +3073,51 @@ export type Database = {
           p_actor_id: string
           p_correlation_id?: string
           p_drafts: Json
+          p_issued_at: string
+          p_period_id: string
+          p_requested_contract_ids: string[]
+        }
+        Returns: {
+          balance_amount: number
+          billing_period_id: string
+          contract_id: string
+          created_at: string
+          discount_amount: number
+          due_date: string | null
+          grace_period_days: number
+          id: string
+          invoice_code: string
+          invoice_profile_snapshot: Json | null
+          issued_at: string | null
+          notes: string | null
+          overdue_date: string | null
+          paid_amount: number
+          paid_at: string | null
+          room_id: string
+          status: string
+          subtotal_amount: number
+          superseded_by_invoice_id: string | null
+          supersedes_invoice_id: string | null
+          surcharge_amount: number
+          tenant_id: string
+          total_amount: number
+          updated_at: string
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "invoices"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      issue_period_invoices_legacy: {
+        Args: {
+          p_actor_id: string
+          p_correlation_id?: string
+          p_drafts: Json
           p_due_date: string
           p_issued_at: string
           p_period_id: string
@@ -2458,10 +3130,13 @@ export type Database = {
           created_at: string
           discount_amount: number
           due_date: string | null
+          grace_period_days: number
           id: string
           invoice_code: string
+          invoice_profile_snapshot: Json | null
           issued_at: string | null
           notes: string | null
+          overdue_date: string | null
           paid_amount: number
           paid_at: string | null
           room_id: string
@@ -2494,6 +3169,7 @@ export type Database = {
           created_at: string
           error: Json | null
           executed_at: string | null
+          execution_lease_until: string | null
           expires_at: string
           id: string
           idempotency_key: string
@@ -2552,6 +3228,27 @@ export type Database = {
         Args: { p_building_id: string }
         Returns: boolean
       }
+      record_ai_invoice_payments_with_audit: {
+        Args: {
+          p_actor_id: string
+          p_correlation_id: string
+          p_note: string
+          p_payment_date: string
+          p_payment_method: string
+          p_payments: Json
+          p_period_id: string
+        }
+        Returns: Json
+      }
+      record_ai_provider_outcome: {
+        Args: {
+          p_failure_threshold: number
+          p_now?: string
+          p_provider: string
+          p_succeeded: boolean
+        }
+        Returns: undefined
+      }
       record_bulk_payments: {
         Args: {
           p_actor_id: string
@@ -2579,6 +3276,19 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      refresh_reserve_accrual_with_audit: {
+        Args: {
+          p_accrual_amount: number
+          p_actor_id: string
+          p_billing_period_id: string
+          p_building_id: string
+          p_issued_revenue: number
+          p_period_month: number
+          p_period_year: number
+          p_reserve_rate_percent: number
+        }
+        Returns: Json
+      }
       reissue_invoice_with_audit: {
         Args: {
           p_actor_id: string
@@ -2586,6 +3296,7 @@ export type Database = {
           p_draft: Json
           p_due_date: string
           p_expected_updated_at: string
+          p_grace_period_days: number
           p_issued_at: string
           p_notes: string
           p_reason: string
@@ -2598,10 +3309,13 @@ export type Database = {
           created_at: string
           discount_amount: number
           due_date: string | null
+          grace_period_days: number
           id: string
           invoice_code: string
+          invoice_profile_snapshot: Json | null
           issued_at: string | null
           notes: string | null
+          overdue_date: string | null
           paid_amount: number
           paid_at: string | null
           room_id: string
@@ -2623,6 +3337,82 @@ export type Database = {
           isOneToOne: false
           isSetofReturn: true
         }
+      }
+      reissue_invoice_with_audit_legacy: {
+        Args: {
+          p_actor_id: string
+          p_correlation_id: string
+          p_draft: Json
+          p_due_date: string
+          p_expected_updated_at: string
+          p_issued_at: string
+          p_notes: string
+          p_reason: string
+          p_voided_invoice_id: string
+        }
+        Returns: {
+          balance_amount: number
+          billing_period_id: string
+          contract_id: string
+          created_at: string
+          discount_amount: number
+          due_date: string | null
+          grace_period_days: number
+          id: string
+          invoice_code: string
+          invoice_profile_snapshot: Json | null
+          issued_at: string | null
+          notes: string | null
+          overdue_date: string | null
+          paid_amount: number
+          paid_at: string | null
+          room_id: string
+          status: string
+          subtotal_amount: number
+          superseded_by_invoice_id: string | null
+          supersedes_invoice_id: string | null
+          surcharge_amount: number
+          tenant_id: string
+          total_amount: number
+          updated_at: string
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "invoices"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      render_invoice_profile_snapshot: {
+        Args: {
+          p_building_id: string
+          p_invoice_code: string
+          p_period_id: string
+          p_room_id: string
+          p_snapshotted_at?: string
+        }
+        Returns: Json
+      }
+      reopen_operations_report_with_audit: {
+        Args: {
+          p_actor_id: string
+          p_building_id: string
+          p_period_month: number
+          p_period_year: number
+          p_reason: string
+        }
+        Returns: Json
+      }
+      resend_invoice_email_delivery: {
+        Args: {
+          p_actor_id: string
+          p_confirm_duplicate?: boolean
+          p_invoice_id: string
+        }
+        Returns: Json
       }
       save_meter_readings_with_audit: {
         Args: {
@@ -2699,7 +3489,60 @@ export type Database = {
         }
       }
       slugify_text: { Args: { input: string }; Returns: string }
+      sync_contract_services_from_building: {
+        Args: { p_actor_id: string; p_building_id: string }
+        Returns: {
+          change_action: string
+          change_id: string
+        }[]
+      }
       unaccent: { Args: { "": string }; Returns: string }
+      update_billing_incidental_charge_with_audit: {
+        Args: {
+          p_actor_id: string
+          p_amount: number
+          p_billing_period_id: string
+          p_charge_id: string
+          p_expected_updated_at: string
+          p_label: string
+          p_note: string
+        }
+        Returns: {
+          amount: number
+          billing_period_id: string
+          contract_id: string
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          deleted_by: string | null
+          id: string
+          label: string
+          note: string | null
+          operation_id: string
+          room_id: string
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "billing_incidental_charges"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      upsert_building_invoice_profile: {
+        Args: {
+          p_account_holder: string
+          p_account_number: string
+          p_actor_id: string
+          p_bank_name: string
+          p_building_id: string
+          p_logo_image_path?: string
+          p_qr_image_path?: string
+          p_remove_logo?: boolean
+          p_transfer_content_template: string
+        }
+        Returns: Json
+      }
       void_invoice_with_audit: {
         Args: {
           p_actor_id: string
@@ -2715,10 +3558,13 @@ export type Database = {
           created_at: string
           discount_amount: number
           due_date: string | null
+          grace_period_days: number
           id: string
           invoice_code: string
+          invoice_profile_snapshot: Json | null
           issued_at: string | null
           notes: string | null
+          overdue_date: string | null
           paid_amount: number
           paid_at: string | null
           room_id: string

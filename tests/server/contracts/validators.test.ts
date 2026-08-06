@@ -57,6 +57,27 @@ describe('contractCreateSchema — handover readings', () => {
   })
 })
 
+describe('contract due-day boundary', () => {
+  const validContract = {
+    room_id: '00000000-0000-4000-8000-000000000001',
+    tenant_id: '00000000-0000-4000-8000-000000000002',
+    start_date: '2026-08-01',
+    end_date: '2027-07-31',
+    monthly_rent: 3_000_000,
+    handover_electricity_reading: 10,
+    handover_water_reading: 20,
+  }
+
+  it('accepts payment_due_day and exposes it in parsed input', () => {
+    const result = contractCreateSchema.parse({ ...validContract, payment_due_day: 5 })
+    expect(result.payment_due_day).toBe(5)
+  })
+
+  it('rejects the legacy payment_day field', () => {
+    expect(contractCreateSchema.safeParse({ ...validContract, payment_day: 5 }).success).toBe(false)
+  })
+})
+
 describe('contractUpdateSchema strips handover fields', () => {
   it('does not surface handover fields after parsing', () => {
     const result = contractUpdateSchema.safeParse({

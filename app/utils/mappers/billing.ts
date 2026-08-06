@@ -61,6 +61,10 @@ export function mapBillingPeriod(row: Tables<'billing_periods'>): BillingPeriod 
 }
 
 export function mapInvoice(row: Tables<'invoices'>): Invoice {
+  const schedule = row as Tables<'invoices'> & {
+    grace_period_days?: number | null
+    overdue_date?: string | null
+  }
   return {
     id: row.id,
     invoiceCode: row.invoice_code,
@@ -70,6 +74,8 @@ export function mapInvoice(row: Tables<'invoices'>): Invoice {
     tenantId: row.tenant_id,
     status: row.status as InvoiceStatus,
     dueDate: row.due_date,
+    gracePeriodDays: schedule.grace_period_days ?? 0,
+    overdueDate: schedule.overdue_date ?? row.due_date,
     issuedAt: row.issued_at,
     paidAt: row.paid_at,
     voidedAt: row.voided_at,

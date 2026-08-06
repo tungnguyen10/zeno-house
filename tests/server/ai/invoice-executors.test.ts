@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AiActionPlan } from '~/types/ai'
 import type { BillingDraftResponse } from '~/types/billing'
 import { buildInvoice } from '../../__fixtures__/billing/invoice'
@@ -15,10 +15,14 @@ const voidInvoice = vi.fn()
 const reissueInvoice = vi.fn()
 const addAdjustment = vi.fn()
 const getWithCharges = vi.fn()
+const findBuildingById = vi.fn()
 
 vi.mock('../../../server/services/billing/drafts', () => ({ BillingDraftService: { calculateDraft } }))
 vi.mock('../../../server/services/billing/invoices', () => ({
   InvoiceService: { issueInvoices, voidInvoice, reissueInvoice, addAdjustment, getWithCharges },
+}))
+vi.mock('../../../server/repositories/buildings', () => ({
+  BuildingRepository: { findById: findBuildingById },
 }))
 
 const periodId = '00000000-0000-4000-8000-000000000010'
@@ -57,32 +61,44 @@ function plan(actionType: string, payload: Record<string, unknown>, resourceVers
 }
 
 describe('AI invoice executors', () => {
-  beforeEach(() => vi.clearAllMocks())
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-08-06T02:00:00.000Z'))
+    findBuildingById.mockResolvedValue({ paymentDueDay: 10, gracePeriodDays: 2 })
+  })
+  afterEach(() => vi.useRealTimers())
 
   it('revalidates issue snapshot and uses the plan idempotency key', async () => {
     const response = draftResponse()
-    const hash = createInvoiceIssuePreview(response, [contractId], null).preview.snapshotHash
+    const hash = createInvoiceIssuePreview(response, [contractId], {
+      calculationDate: '2026-08-06', dueDateOverride: null,
+      buildingPaymentDueDay: 10, gracePeriodDays: 2,
+    }).preview.snapshotHash
     calculateDraft.mockResolvedValue(response)
     issueInvoices.mockResolvedValue({ issuedCount: 1, invoices: [] })
     const { ISSUE_INVOICES_EXECUTOR } = await import('../../../server/services/ai/invoice-executors')
     const action = plan('issue_invoices', {
-      period_id: periodId, contract_ids: [contractId], due_date: null, snapshot_hash: hash,
+      period_id: periodId, contract_ids: [contractId], due_date_override: null, snapshot_hash: hash,
     }, { draft_snapshot: hash })
     const context = { event: {} as never, user, plan: action, idempotencyKey: action.idempotencyKey }
     await ISSUE_INVOICES_EXECUTOR.revalidate?.(context)
     await ISSUE_INVOICES_EXECUTOR.execute(context)
     expect(issueInvoices).toHaveBeenCalledWith(expect.anything(), user, periodId, {
-      contract_ids: [contractId], due_date: null,
+      contract_ids: [contractId], due_date_override: null,
     }, { operationId: action.idempotencyKey })
   })
 
   it('marks a changed issue preview as an optimistic conflict before write', async () => {
     const original = draftResponse()
-    const hash = createInvoiceIssuePreview(original, [contractId], null).preview.snapshotHash
+    const hash = createInvoiceIssuePreview(original, [contractId], {
+      calculationDate: '2026-08-06', dueDateOverride: null,
+      buildingPaymentDueDay: 10, gracePeriodDays: 2,
+    }).preview.snapshotHash
     calculateDraft.mockResolvedValue(draftResponse(1_100_000))
     const { ISSUE_INVOICES_EXECUTOR } = await import('../../../server/services/ai/invoice-executors')
     const action = plan('issue_invoices', {
-      period_id: periodId, contract_ids: [contractId], due_date: null, snapshot_hash: hash,
+      period_id: periodId, contract_ids: [contractId], due_date_override: null, snapshot_hash: hash,
     }, { draft_snapshot: hash })
     await expect(ISSUE_INVOICES_EXECUTOR.revalidate?.({
       event: {} as never, user, plan: action, idempotencyKey: action.idempotencyKey,
@@ -120,13 +136,21 @@ describe('AI invoice executors', () => {
 
   it('uses the action-plan idempotency key when reissuing', async () => {
     const response = draftResponse()
-    const hash = hashAgentPayload(buildInvoiceIssueSnapshot(response, [contractId], null), {})
     const invoice = buildInvoice({ id: invoiceId, contractId, billingPeriodId: periodId, status: 'void' })
+    const dueContext = {
+      calculationDate: '2026-08-06', dueDateOverride: null,
+      buildingPaymentDueDay: null, gracePeriodDays: invoice.gracePeriodDays,
+    }
+    const schedules = { [contractId]: {
+      dueDate: invoice.dueDate!, gracePeriodDays: invoice.gracePeriodDays,
+      overdueDate: invoice.overdueDate!, source: 'override' as const,
+    } }
+    const hash = hashAgentPayload(buildInvoiceIssueSnapshot(response, [contractId], dueContext, schedules), {})
     getWithCharges.mockResolvedValue({ invoice, charges: [], payments: [] })
     calculateDraft.mockResolvedValue(response)
     const { REISSUE_INVOICE_EXECUTOR } = await import('../../../server/services/ai/invoice-executors')
     const action = plan('reissue_invoice', {
-      invoice_id: invoiceId, reason: 'Phát hành lại sau đính chính', due_date: null, notes: null,
+      invoice_id: invoiceId, reason: 'Phát hành lại sau đính chính', due_date_override: null, notes: null,
       expected_updated_at: invoice.updatedAt, snapshot_hash: hash,
       correlation_id: '00000000-0000-4000-8000-000000000088',
     }, { draft_snapshot: hash })

@@ -61,7 +61,7 @@ export interface TenantContractSummary {
   endDate: string
   monthlyRent: number
   deposit: number
-  paymentDay: number | null
+  paymentDueDay: number | null
   occupantCount: number
   discountAmount: number
   surchargeAmount: number
@@ -88,6 +88,8 @@ export interface TenantInvoiceListItem {
   paidAmount: number
   balanceAmount: number
   dueDate: string | null
+  gracePeriodDays: number
+  overdueDate: string | null
   status: InvoiceStatus
   issuedAt: string | null
   voidedAt: string | null

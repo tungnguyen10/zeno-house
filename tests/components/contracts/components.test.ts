@@ -104,7 +104,7 @@ function buildContract(overrides: Partial<ContractWithDetails> = {}): ContractWi
     endDate: '2026-12-31',
     monthlyRent: 3000000,
     deposit: 3000000,
-    paymentDay: 5,
+    paymentDueDay: 5,
     occupantCount: 2,
     discountAmount: 0,
     surchargeAmount: 0,

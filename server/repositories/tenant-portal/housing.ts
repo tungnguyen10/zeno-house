@@ -21,7 +21,7 @@ interface ContractRow {
   end_date: string
   monthly_rent: number
   deposit: number
-  payment_day: number | null
+  payment_due_day: number | null
   occupant_count: number
   discount_amount: number
   surcharge_amount: number
@@ -50,7 +50,7 @@ const CONTRACT_SELECT = `
   end_date,
   monthly_rent,
   deposit,
-  payment_day,
+  payment_due_day,
   occupant_count,
   discount_amount,
   surcharge_amount,

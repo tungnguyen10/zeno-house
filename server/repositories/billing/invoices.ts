@@ -10,7 +10,6 @@ import type { Database, Tables } from '~/types/database.types'
 export interface InvoiceIssueRpcInput {
   periodId: string
   actorId: string | null
-  dueDate: string | null
   issuedAt: string
   requestedContractIds: string[] | null
   drafts: Array<Record<string, unknown>>
@@ -22,6 +21,7 @@ export interface InvoiceReissueRpcInput {
   expectedUpdatedAt: string
   actorId: string | null
   dueDate: string | null
+  gracePeriodDays: number
   issuedAt: string
   notes: string | null
   reason: string
@@ -146,7 +146,6 @@ export const InvoiceRepository = {
     const args = {
       p_period_id: input.periodId,
       p_actor_id: input.actorId,
-      p_due_date: input.dueDate,
       p_issued_at: input.issuedAt,
       p_requested_contract_ids: input.requestedContractIds,
       p_drafts: input.drafts,
@@ -188,6 +187,7 @@ export const InvoiceRepository = {
       p_expected_updated_at: input.expectedUpdatedAt,
       p_actor_id: input.actorId as string,
       p_due_date: input.dueDate as string,
+      p_grace_period_days: input.gracePeriodDays,
       p_issued_at: input.issuedAt,
       p_notes: input.notes as string,
       p_reason: input.reason,

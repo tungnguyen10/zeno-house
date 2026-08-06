@@ -29,6 +29,8 @@ export interface InvoiceDocumentData {
   status: InvoiceStatus
   issuedAt: string | null
   dueDate: string | null
+  gracePeriodDays: number
+  overdueDate: string | null
   periodLabel: string
   buildingName: string
   buildingAddress: string

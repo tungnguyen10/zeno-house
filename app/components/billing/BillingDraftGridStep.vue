@@ -200,6 +200,7 @@ const issuePreviewLoading = ref(false)
 const issuePreviewError = ref<string | null>(null)
 const issuePreviewStale = ref(false)
 const issueDueDate = ref(defaultInvoiceDueDate())
+const issueUseOverride = ref(false)
 const issueSubmitting = ref(false)
 const approveOverridesOpen = ref(false)
 const approvingOverrides = ref<BillingUtilityUsage[]>([])
@@ -215,7 +216,10 @@ async function loadIssuePreview() {
     const contractIds = issuableSelectedRows.value
       .map(row => row.contractId)
       .filter((id): id is string => !!id)
-    issuePreview.value = await props.onPreviewIssue({ contract_ids: contractIds, due_date: issueDueDate.value })
+    issuePreview.value = await props.onPreviewIssue({
+      contract_ids: contractIds,
+      due_date_override: issueUseOverride.value ? issueDueDate.value : null,
+    })
   }
   catch (error) {
     issuePreview.value = null
@@ -279,7 +283,7 @@ async function confirmIssue() {
   try {
     await props.onIssue({
       contract_ids: issuePreview.value.items.map(item => item.key),
-      due_date: issuePreview.value.dueDate,
+      due_date_override: issuePreview.value.dueDateOverride,
       snapshot_hash: issuePreview.value.snapshotHash,
       operation_id: issuePreview.value.operationId,
     })
@@ -314,6 +318,12 @@ function closeIssuePreview() {
 async function changeIssueDueDate(value: string) {
   if (!value || value === issueDueDate.value) return
   issueDueDate.value = value
+  await loadIssuePreview()
+}
+
+async function changeIssueOverride(value: boolean) {
+  if (value === issueUseOverride.value) return
+  issueUseOverride.value = value
   await loadIssuePreview()
 }
 
@@ -1069,6 +1079,7 @@ const columns: UiTableColumn<BillingDraftGridRow>[] = [
       :open="issuePreviewOpen"
       :preview="issuePreview"
       :due-date="issueDueDate"
+      :use-override="issueUseOverride"
       :loading="issuePreviewLoading"
       :submitting="issueSubmitting"
       :error="issuePreviewError"
@@ -1077,6 +1088,7 @@ const columns: UiTableColumn<BillingDraftGridRow>[] = [
       @refresh="loadIssuePreview"
       @confirm="confirmIssue"
       @update:due-date="changeIssueDueDate"
+      @update:use-override="changeIssueOverride"
     />
     <BillingAutoIssueModal
       :open="autoIssueOpen"

@@ -10,7 +10,7 @@ export interface Contract {
   endDate: string
   monthlyRent: number
   deposit: number
-  paymentDay: number | null
+  paymentDueDay: number | null
   occupantCount: number
   discountAmount: number
   surchargeAmount: number

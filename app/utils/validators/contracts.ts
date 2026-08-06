@@ -60,7 +60,7 @@ export const contractCreateSchema = z.object({
   end_date: z.string().min(1, 'Ngày kết thúc là bắt buộc'),
   monthly_rent: z.number().min(0, 'Giá thuê không được âm'),
   deposit: z.number().min(0, 'Đặt cọc không được âm').optional().default(0),
-  payment_day: z.number().int().min(1).max(31).nullable().optional(),
+  payment_due_day: z.number().int().min(1).max(31).nullable().optional(),
   occupant_count: z.number().int().min(1, 'Số người ở ít nhất là 1').optional().default(1),
   discount_amount: z.number().min(0, 'Giảm giá không được âm').optional().default(0),
   surcharge_amount: z.number().min(0, 'Phụ thu không được âm').optional().default(0),
@@ -69,7 +69,7 @@ export const contractCreateSchema = z.object({
   handover_electricity_reading: z.number().min(0, 'Số điện không được âm'),
   handover_water_reading: z.number().min(0, 'Số nước không được âm'),
   handover_reading_date: z.string().min(1).optional(),
-}).refine(
+}).strict().refine(
   (data) => new Date(data.end_date) > new Date(data.start_date),
   { message: 'Ngày kết thúc phải sau ngày bắt đầu', path: ['end_date'] },
 )
@@ -82,7 +82,7 @@ export const contractUpdateSchema = z.object({
   end_date: z.string().optional(),
   monthly_rent: z.number().min(0, 'Giá thuê không được âm').optional(),
   deposit: z.number().min(0, 'Đặt cọc không được âm').optional(),
-  payment_day: z.number().int().min(1).max(31).nullable().optional(),
+  payment_due_day: z.number().int().min(1).max(31).nullable().optional(),
   occupant_count: z.number().int().min(1).optional(),
   discount_amount: z.number().min(0).optional(),
   surcharge_amount: z.number().min(0).optional(),

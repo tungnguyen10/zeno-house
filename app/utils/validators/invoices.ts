@@ -51,6 +51,8 @@ export interface InvoiceListItem {
   paid_amount: number
   balance_amount: number
   due_date: string | null
+  grace_period_days: number
+  overdue_date: string | null
   status: InvoiceStatus
   issued_at: string | null
   voided_at?: string | null

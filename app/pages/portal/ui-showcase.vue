@@ -17,8 +17,8 @@ const message = ref('')
 const { success, info } = usePortalToast()
 
 const invoices: TenantInvoiceListItem[] = [
-  { id: 'demo-1', invoiceCode: 'HD-2606-001', billingPeriodId: 'demo', periodYear: 2026, periodMonth: 6, buildingId: 'demo', buildingName: 'Zeno House', buildingSlug: 'zeno', roomId: 'demo', roomNumber: 'A101', contractId: 'demo', contractCode: 'HD-A101', totalAmount: 3200000, paidAmount: 3200000, balanceAmount: 0, dueDate: '2026-06-10', status: 'paid', issuedAt: null, voidedAt: null, voidReason: null, notes: null },
-  { id: 'demo-2', invoiceCode: 'HD-2607-001', billingPeriodId: 'demo', periodYear: 2026, periodMonth: 7, buildingId: 'demo', buildingName: 'Zeno House', buildingSlug: 'zeno', roomId: 'demo', roomNumber: 'A101', contractId: 'demo', contractCode: 'HD-A101', totalAmount: 3300000, paidAmount: 1200000, balanceAmount: 2100000, dueDate: '2026-07-10', status: 'partial', issuedAt: null, voidedAt: null, voidReason: null, notes: null },
+  { id: 'demo-1', invoiceCode: 'HD-2606-001', billingPeriodId: 'demo', periodYear: 2026, periodMonth: 6, buildingId: 'demo', buildingName: 'Zeno House', buildingSlug: 'zeno', roomId: 'demo', roomNumber: 'A101', contractId: 'demo', contractCode: 'HD-A101', totalAmount: 3200000, paidAmount: 3200000, balanceAmount: 0, dueDate: '2026-06-10', gracePeriodDays: 0, overdueDate: '2026-06-10', status: 'paid', issuedAt: null, voidedAt: null, voidReason: null, notes: null },
+  { id: 'demo-2', invoiceCode: 'HD-2607-001', billingPeriodId: 'demo', periodYear: 2026, periodMonth: 7, buildingId: 'demo', buildingName: 'Zeno House', buildingSlug: 'zeno', roomId: 'demo', roomNumber: 'A101', contractId: 'demo', contractCode: 'HD-A101', totalAmount: 3300000, paidAmount: 1200000, balanceAmount: 2100000, dueDate: '2026-07-10', gracePeriodDays: 2, overdueDate: '2026-07-12', status: 'partial', issuedAt: null, voidedAt: null, voidReason: null, notes: null },
 ]
 
 const palette = [

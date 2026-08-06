@@ -107,7 +107,7 @@ function resolveTable(table: string, state: QueryState) {
         occupant_count: 2,
         discount_amount: 0,
         surcharge_amount: 0,
-        payment_day: 5,
+        payment_due_day: 5,
         status: 'active',
       },
       {
@@ -122,7 +122,7 @@ function resolveTable(table: string, state: QueryState) {
         occupant_count: 1,
         discount_amount: 0,
         surcharge_amount: 0,
-        payment_day: 5,
+        payment_due_day: 5,
         status: 'terminated',
       },
     ]

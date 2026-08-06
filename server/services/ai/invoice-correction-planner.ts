@@ -18,6 +18,7 @@ import { validateAdjustment } from '../billing/rules'
 import { AiActionService } from './actions'
 import { buildInvoiceIssueSnapshot } from '../billing/invoice-issue-snapshot'
 import { hashAgentPayload } from '../../utils/ai'
+import { calculationDateInHoChiMinh, resolveInvoiceDueSchedule } from '../billing/invoice-due-policy'
 
 async function correctionContext(event: H3Event, user: AuthUser, invoiceRef: string) {
   if (!can(user, 'billing.corrections')) throwForbidden('Không có quyền đính chính hoá đơn')
@@ -82,8 +83,35 @@ export const AiInvoiceCorrectionPlanner = {
     const draft = draftResponse.drafts.find(row => row.contractId === invoice.contractId)
     if (!draft) throwNotFound('Không tìm thấy dự thảo thay thế')
     if (draft.blockers.length > 0) throwConflict('Dự thảo thay thế còn lỗi chặn')
-    const dueDate = input.due_date ?? null
-    const snapshot = buildInvoiceIssueSnapshot(draftResponse, [invoice.contractId], dueDate)
+    const dueDateOverride = input.due_date ?? null
+    const calculationDate = calculationDateInHoChiMinh()
+    const schedule = dueDateOverride
+      ? resolveInvoiceDueSchedule({
+          calculationDate,
+          dueDateOverride,
+          contractPaymentDueDay: null,
+          buildingPaymentDueDay: null,
+          gracePeriodDays: invoice.gracePeriodDays,
+        })
+      : invoice.dueDate && invoice.overdueDate
+        ? {
+            dueDate: invoice.dueDate,
+            gracePeriodDays: invoice.gracePeriodDays,
+            overdueDate: invoice.overdueDate,
+            source: 'override' as const,
+          }
+        : undefined
+    const snapshot = buildInvoiceIssueSnapshot(
+      draftResponse,
+      [invoice.contractId],
+      {
+        calculationDate,
+        dueDateOverride,
+        buildingPaymentDueDay: null,
+        gracePeriodDays: invoice.gracePeriodDays,
+      },
+      schedule ? { [invoice.contractId]: schedule } : {},
+    )
     const snapshotHash = hashAgentPayload(snapshot, {})
     const correlationId = (await BillingAuditRepository.findLatestCorrelation(
       event,
@@ -99,7 +127,7 @@ export const AiInvoiceCorrectionPlanner = {
       normalized_payload: {
         invoice_id: invoice.id,
         reason: input.reason,
-        due_date: dueDate,
+        due_date_override: dueDateOverride,
         notes: input.notes ?? null,
         expected_updated_at: invoice.updatedAt,
         snapshot_hash: snapshotHash,
@@ -110,7 +138,7 @@ export const AiInvoiceCorrectionPlanner = {
         voided_invoice_code: invoice.invoiceCode,
         old_total_amount: invoice.totalAmount,
         new_total_amount: draft.totalAmount,
-        due_date: dueDate,
+        due_date: schedule?.dueDate ?? null,
         blocker_codes: [],
         warning_codes: draft.warnings.map(warning => warning.code),
         reason: input.reason,

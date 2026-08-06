@@ -352,73 +352,92 @@ const canSubmit = computed(() => !props.loading && (props.isDirty || props.hasDr
     <div class="border-t border-dark-border" />
 
     <!-- Group: Schedule -->
-    <section class="space-y-4">
+    <section class="space-y-5">
       <header>
         <h3 class="text-sm font-semibold text-white">Lịch vận hành</h3>
-        <p class="text-xs text-muted mt-0.5">Các mốc trong tháng cho chốt số, lập hoá đơn và thu tiền.</p>
+        <p class="text-xs text-muted mt-0.5">
+          Chốt số &amp; lập hoá đơn chỉ là mốc nhắc việc; ngày đến hạn &amp; gia hạn quyết định hạn thanh toán hoá đơn.
+        </p>
       </header>
-      <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <UiDatePicker
-          id="bf-operational-start-period"
-          v-model="operationalStartPeriod"
-          label="Tháng bắt đầu"
-          placeholder="Tuỳ chọn"
-          picker-mode="month"
-          :error="operationalStartError"
-          @blur="onOperationalStartBlur"
-        />
-        <UiInput
-          id="bf-meter-reading-day"
-          :model-value="modelValue.meterReadingDay"
-          label="Chốt số"
-          type="number"
-          number-mode="day"
-          placeholder="1–31"
-          :error="errorFor('meter_reading_day')"
-          @update:model-value="(v) => update('meterReadingDay', v as string)"
-          @blur="onBlur('meter_reading_day')"
-        >
-          <template #suffix>ngày</template>
-        </UiInput>
-        <UiInput
-          id="bf-billing-day"
-          :model-value="modelValue.billingGenerationDay"
-          label="Lập hoá đơn"
-          type="number"
-          number-mode="day"
-          placeholder="1–31"
-          :error="errorFor('billing_generation_day')"
-          @update:model-value="(v) => update('billingGenerationDay', v as string)"
-          @blur="onBlur('billing_generation_day')"
-        >
-          <template #suffix>ngày</template>
-        </UiInput>
-        <UiInput
-          id="bf-due-day"
-          :model-value="modelValue.paymentDueDay"
-          label="Đến hạn"
-          type="number"
-          number-mode="day"
-          placeholder="1–31"
-          :error="errorFor('payment_due_day')"
-          @update:model-value="(v) => update('paymentDueDay', v as string)"
-          @blur="onBlur('payment_due_day')"
-        >
-          <template #suffix>ngày</template>
-        </UiInput>
-        <UiInput
-          id="bf-grace-days"
-          :model-value="modelValue.gracePeriodDays"
-          label="Gia hạn"
-          type="number"
-          number-mode="integer"
-          placeholder="0"
-          :error="errorFor('grace_period_days')"
-          @update:model-value="(v) => update('gracePeriodDays', v as string)"
-          @blur="onBlur('grace_period_days')"
-        >
-          <template #suffix>ngày</template>
-        </UiInput>
+
+      <!-- Sub-group: reminder-only dates, no automation reads these -->
+      <div class="space-y-2">
+        <div class="flex items-center gap-2">
+          <span class="text-[10px] font-medium uppercase tracking-wide text-muted">Nhắc lịch</span>
+          <UiBadge variant="neutral" size="sm">Chỉ ghi chú</UiBadge>
+        </div>
+        <div class="grid grid-cols-2 gap-4 lg:grid-cols-3">
+          <UiDatePicker
+            id="bf-operational-start-period"
+            v-model="operationalStartPeriod"
+            label="Tháng bắt đầu"
+            placeholder="Tuỳ chọn"
+            picker-mode="month"
+            hint="Giới hạn kỳ chọn được ở báo cáo và lập hoá đơn."
+            :error="operationalStartError"
+            @blur="onOperationalStartBlur"
+          />
+          <UiInput
+            id="bf-meter-reading-day"
+            :model-value="modelValue.meterReadingDay"
+            label="Chốt số (1–31)"
+            type="number"
+            number-mode="day"
+            placeholder="1–31"
+            hint="Ngày trong tháng để chốt số — chỉ là mốc nhắc lịch, hệ thống không tự động thực hiện."
+            :error="errorFor('meter_reading_day')"
+            @update:model-value="(v) => update('meterReadingDay', v as string)"
+            @blur="onBlur('meter_reading_day')"
+          />
+          <UiInput
+            id="bf-billing-day"
+            :model-value="modelValue.billingGenerationDay"
+            label="Lập hoá đơn (1–31)"
+            type="number"
+            number-mode="day"
+            placeholder="1–31"
+            hint="Ngày trong tháng để lập hoá đơn — chỉ là mốc nhắc lịch, hệ thống không tự động thực hiện."
+            :error="errorFor('billing_generation_day')"
+            @update:model-value="(v) => update('billingGenerationDay', v as string)"
+            @blur="onBlur('billing_generation_day')"
+          />
+        </div>
+      </div>
+
+      <!-- Sub-group: feeds invoice-due-policy resolver directly -->
+      <div class="space-y-2">
+        <div class="flex items-center gap-2">
+          <span class="text-[10px] font-medium uppercase tracking-wide text-muted">Quy tắc tính hạn thanh toán</span>
+          <UiBadge variant="accent" size="sm">Tự động áp dụng</UiBadge>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <UiInput
+            id="bf-due-day"
+            :model-value="modelValue.paymentDueDay"
+            label="Ngày đến hạn mặc định (1–31)"
+            type="number"
+            number-mode="day"
+            placeholder="1–31"
+            hint="Ngày trong tháng dùng làm hạn thanh toán khi hợp đồng không tự đặt riêng."
+            :error="errorFor('payment_due_day')"
+            @update:model-value="(v) => update('paymentDueDay', v as string)"
+            @blur="onBlur('payment_due_day')"
+          />
+          <UiInput
+            id="bf-grace-days"
+            :model-value="modelValue.gracePeriodDays"
+            label="Thời gian gia hạn"
+            type="number"
+            number-mode="integer"
+            placeholder="0"
+            hint="Số ngày trễ hạn trước khi hoá đơn chuyển trạng thái quá hạn."
+            :error="errorFor('grace_period_days')"
+            @update:model-value="(v) => update('gracePeriodDays', v as string)"
+            @blur="onBlur('grace_period_days')"
+          >
+            <template #suffix>ngày</template>
+          </UiInput>
+        </div>
       </div>
     </section>
 

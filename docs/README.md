@@ -2,6 +2,10 @@
 
 This directory contains source-of-truth engineering docs for the current Zeno House codebase.
 
+## User Guide
+
+- End-user how-to guide for internal staff (admin/owner/manager) using `/dashboard`: [user-guide/README.md](user-guide/README.md)
+
 ## Start Here
 
 - Agent context map: [agent-context.md](agent-context.md)

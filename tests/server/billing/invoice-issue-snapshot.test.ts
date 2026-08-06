@@ -16,6 +16,7 @@ function draft(overrides: Partial<BillingDraftInvoice> = {}): BillingDraftInvoic
     roomId: '00000000-0000-4000-8000-000000000002',
     tenantId: '00000000-0000-4000-8000-000000000003',
     contractCode: 'HD-101',
+    paymentDueDay: 10,
     roomNumber: '101',
     tenantName: 'Nguyễn Văn An',
     lines: [{
@@ -71,7 +72,44 @@ function profile(overrides: Partial<InvoiceIssueProfileFingerprint> = {}): Invoi
   }
 }
 
+const dueContext = {
+  calculationDate: '2026-08-05',
+  dueDateOverride: '2026-08-09',
+  buildingPaymentDueDay: 15,
+  gracePeriodDays: 2,
+}
+
 describe('invoice issue snapshot', () => {
+  it('resolves and binds one server-owned schedule per issuable contract', () => {
+    const result = createInvoiceIssuePreview(
+      response([draft()]),
+      [contractId],
+      {
+        calculationDate: '2026-08-05',
+        dueDateOverride: null,
+        buildingPaymentDueDay: 15,
+        gracePeriodDays: 2,
+      },
+    )
+
+    expect(result.preview).toMatchObject({
+      calculationDate: '2026-08-05',
+      dueDateOverride: null,
+      issuable: [{
+        contractId,
+        dueDate: '2026-08-10',
+        gracePeriodDays: 2,
+        overdueDate: '2026-08-12',
+      }],
+    })
+    expect(result.schedulesByContract[contractId]).toEqual({
+      dueDate: '2026-08-10',
+      gracePeriodDays: 2,
+      overdueDate: '2026-08-12',
+      source: 'contract',
+    })
+  })
+
   it('classifies requested drafts and hashes only the exact issuable targets', () => {
     const ready = draft()
     const blocked = draft({
@@ -87,7 +125,7 @@ describe('invoice issue snapshot', () => {
     const result = createInvoiceIssuePreview(
       response([blocked, existing, ready]),
       [blocked.contractId, existing.contractId, ready.contractId],
-      '2026-08-09',
+      dueContext,
       profile(),
     )
 
@@ -97,7 +135,7 @@ describe('invoice issue snapshot', () => {
       blockedCount: 1,
       alreadyIssuedCount: 1,
       totalAmount: 3_000_000,
-      dueDate: '2026-08-09',
+      dueDateOverride: '2026-08-09',
       snapshotHash: expect.stringMatching(/^[a-f0-9]{64}$/),
     })
   })
@@ -108,14 +146,17 @@ describe('invoice issue snapshot', () => {
     reordered.drafts[0]!.lines[0]!.metadata = { nested: { b: 2, a: 1 }, source: 'contract' }
     first.drafts[0]!.lines[0]!.metadata = { source: 'contract', nested: { a: 1, b: 2 } }
 
-    const firstSnapshot = buildInvoiceIssueSnapshot(first, [contractId], '2026-08-09', profile())
-    const reorderedSnapshot = buildInvoiceIssueSnapshot(reordered, [contractId], '2026-08-09', profile())
+    const firstResult = createInvoiceIssuePreview(first, [contractId], dueContext, profile())
+    const reorderedResult = createInvoiceIssuePreview(reordered, [contractId], dueContext, profile())
+    const firstSnapshot = buildInvoiceIssueSnapshot(first, [contractId], dueContext, firstResult.schedulesByContract, profile())
+    const reorderedSnapshot = buildInvoiceIssueSnapshot(reordered, [contractId], dueContext, reorderedResult.schedulesByContract, profile())
     expect(hashInvoiceIssueSnapshot(firstSnapshot)).toBe(hashInvoiceIssueSnapshot(reorderedSnapshot))
 
     const changedProfile = buildInvoiceIssueSnapshot(
       first,
       [contractId],
-      '2026-08-09',
+      dueContext,
+      firstResult.schedulesByContract,
       profile({ updatedAt: '2026-08-05T02:00:00.000Z' }),
     )
     expect(hashInvoiceIssueSnapshot(changedProfile)).not.toBe(hashInvoiceIssueSnapshot(firstSnapshot))
@@ -128,8 +169,8 @@ describe('invoice issue snapshot', () => {
     const changed = structuredClone(first)
     changed.drafts[1]!.blockers = [{ code: 'missing_rate', message: 'Thiếu đơn giá', meta: { meter: 'water' } }]
 
-    const firstHash = createInvoiceIssuePreview(first, [contractId], '2026-08-09').preview.snapshotHash
-    const changedHash = createInvoiceIssuePreview(changed, [contractId], '2026-08-09').preview.snapshotHash
+    const firstHash = createInvoiceIssuePreview(first, [contractId], dueContext).preview.snapshotHash
+    const changedHash = createInvoiceIssuePreview(changed, [contractId], dueContext).preview.snapshotHash
 
     expect(changedHash).not.toBe(firstHash)
   })
@@ -159,8 +200,8 @@ describe('invoice issue snapshot', () => {
     changed.subtotalAmount = 3_200_000
     changed.totalAmount = 3_200_000
 
-    const firstHash = createInvoiceIssuePreview(response([firstDraft]), [contractId], '2026-08-09').preview.snapshotHash
-    const changedHash = createInvoiceIssuePreview(response([changed]), [contractId], '2026-08-09').preview.snapshotHash
+    const firstHash = createInvoiceIssuePreview(response([firstDraft]), [contractId], dueContext).preview.snapshotHash
+    const changedHash = createInvoiceIssuePreview(response([changed]), [contractId], dueContext).preview.snapshotHash
 
     expect(changedHash).not.toBe(firstHash)
   })

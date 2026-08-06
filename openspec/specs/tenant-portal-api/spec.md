@@ -3,9 +3,7 @@
 ## Purpose
 
 Define the authenticated, self-scoped API contract for tenant profile access, active contract summaries, and invoice list/detail reads.
-
 ## Requirements
-
 ### Requirement: Tenant profile updates are audited
 The tenant profile update service SHALL append `tenant.profile_updated` with whitelisted before/after snapshots and the resolved tenant ID.
 
@@ -79,39 +77,20 @@ The system SHALL expose tenant self-service endpoints under `/api/tenant/**`, av
 - **THEN** the endpoint returns an empty/absent result, not another tenant's data
 
 ### Requirement: Tenant invoice list and detail
-`GET /api/tenant/invoices` SHALL return paginated invoices with derived overdue status. Primary tenant scope SHALL remain `tenant_id` so historical invoices are retained. Active roommate scope SHALL be the server-resolved current `contract_id`, including invoices issued before move-in. `GET /api/tenant/invoices/[id]` SHALL enforce the same scope before returning charge lines and the immutable invoice payment-profile snapshot; otherwise it SHALL return a consistent not-found response. Snapshot asset URLs SHALL be short-lived signed URLs, and the endpoint SHALL return `invoiceProfile = null` when no valid snapshot was stored.
+Tenant invoice list and detail endpoints SHALL preserve existing tenant and roommate scope rules and SHALL return immutable `dueDate`, `gracePeriodDays`, and `overdueDate` schedule fields. Derived overdue status SHALL use `overdueDate`, not `dueDate`.
 
-#### Scenario: List own invoices
-- **WHEN** a tenant calls `GET /api/tenant/invoices`
-- **THEN** only invoices whose `tenant_id` equals the resolved tenant are returned
+#### Scenario: Grace interval is not overdue
+- **WHEN** an unpaid issued invoice is past `dueDate` but not past `overdueDate`
+- **THEN** the API keeps its derived status issued and returns both dates
 
-#### Scenario: Roommate lists shared-contract invoices
-- **WHEN** an active roommate calls `GET /api/tenant/invoices`
-- **THEN** only invoices for the resolved shared contract are returned
+#### Scenario: Invoice is overdue after grace
+- **WHEN** an unpaid issued invoice is past `overdueDate`
+- **THEN** the API marks it overdue
 
-#### Scenario: Roommate cannot read another contract invoice
-- **WHEN** a roommate requests an invoice outside the resolved shared contract
-- **THEN** the response is the same consistent not-found response
+#### Scenario: Legacy invoice has no due date
+- **WHEN** an owned legacy invoice has null due and overdue dates
+- **THEN** the API returns both as null without inventing a fallback
 
-#### Scenario: Overdue status derived
-- **WHEN** an issued invoice is past its due date with a positive balance
-- **THEN** the list marks it overdue
-
-#### Scenario: Detail ownership enforced
-- **WHEN** a tenant requests an invoice id that belongs to another tenant
-- **THEN** the response is a consistent not-found with no existence leak
-- **AND** no invoice-profile snapshot is read or signed
-
-#### Scenario: Owned detail includes immutable payment instructions
-- **WHEN** a tenant requests one of their own invoices with a valid payment-profile snapshot
-- **THEN** the detail contains the snapshotted bank name, account holder, account number, rendered transfer content, and short-lived signed URLs for available private assets
-- **AND** current building profile data is not substituted
-
-#### Scenario: Owned detail has no valid payment snapshot
-- **WHEN** a tenant requests one of their own invoices whose payment-profile snapshot is missing or invalid
-- **THEN** the detail returns `invoiceProfile = null`
-- **AND** the invoice and charge lines remain readable
-
-#### Scenario: Voided invoice detail
-- **WHEN** a tenant requests one of their own voided invoices
-- **THEN** the detail returns with void metadata
+#### Scenario: Existing scope and immutable payment instructions remain
+- **WHEN** a tenant or active roommate requests an invoice within their resolved scope
+- **THEN** the API returns only authorized invoice data and the stored payment-profile snapshot without substituting current building data

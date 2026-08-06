@@ -26,7 +26,9 @@ import { BillingDisplayResolver } from './display'
 import { validateAdjustment } from './rules'
 import { assertBuildingScope } from '../../utils/scope'
 import { BuildingInvoiceProfileRepository } from '../../repositories/building-invoice-profiles'
+import { BuildingRepository } from '../../repositories/buildings'
 import { InvoiceProfileDisplayService } from './invoice-profile-display'
+import { calculationDateInHoChiMinh, resolveInvoiceDueSchedule } from './invoice-due-policy'
 
 const roomNumberCollator = new Intl.Collator('vi', {
   numeric: true,
@@ -154,32 +156,48 @@ export const InvoiceService = {
     }
 
     const issuedAt = new Date().toISOString()
-    const draftsPayload = candidates.map(draft => ({
-      contract_id: draft.contractId,
-      room_id: draft.roomId,
-      tenant_id: draft.tenantId,
-      subtotal: draft.subtotalAmount,
-      discount: draft.discountAmount,
-      surcharge: draft.surchargeAmount,
-      total: draft.totalAmount,
-      notes: null,
-      lines: draft.lines.map((l, idx) => ({
-        charge_type: l.chargeType,
-        label: l.label,
-        source_type: l.sourceType,
-        source_id: l.sourceId,
-        quantity: l.quantity,
-        unit_price: l.unitPrice,
-        amount: l.amount,
-        metadata: l.metadata ?? {},
-        sort_order: l.sortOrder ?? idx,
-      })),
-    }))
+    const calculationDate = input.calculation_date ?? calculationDateInHoChiMinh(new Date(issuedAt))
+    const building = input.schedules_by_contract
+      ? null
+      : await BuildingRepository.findById(event, period.buildingId)
+    if (!input.schedules_by_contract && !building) throwNotFound('Không tìm thấy tòa nhà')
+
+    const draftsPayload = candidates.map((draft) => {
+      const schedule = input.schedules_by_contract?.[draft.contractId] ?? resolveInvoiceDueSchedule({
+        calculationDate,
+        dueDateOverride: input.due_date_override,
+        contractPaymentDueDay: draft.paymentDueDay,
+        buildingPaymentDueDay: building?.paymentDueDay,
+        gracePeriodDays: building?.gracePeriodDays ?? 0,
+      })
+      return {
+        contract_id: draft.contractId,
+        room_id: draft.roomId,
+        tenant_id: draft.tenantId,
+        due_date: schedule.dueDate,
+        grace_period_days: schedule.gracePeriodDays,
+        subtotal: draft.subtotalAmount,
+        discount: draft.discountAmount,
+        surcharge: draft.surchargeAmount,
+        total: draft.totalAmount,
+        notes: null,
+        lines: draft.lines.map((l, idx) => ({
+          charge_type: l.chargeType,
+          label: l.label,
+          source_type: l.sourceType,
+          source_id: l.sourceId,
+          quantity: l.quantity,
+          unit_price: l.unitPrice,
+          amount: l.amount,
+          metadata: l.metadata ?? {},
+          sort_order: l.sortOrder ?? idx,
+        })),
+      }
+    })
 
     const issuedInvoices = await InvoiceRepository.issuePeriodWithAudit(event, {
       periodId: period.id,
       actorId: user.id ?? null,
-      dueDate: input.due_date ?? null,
       issuedAt,
       requestedContractIds: input.contract_ids ?? null,
       drafts: draftsPayload,
@@ -274,11 +292,28 @@ export const InvoiceService = {
         BILLING_AUDIT_ACTIONS.INVOICE_VOIDED,
       )) ?? newCorrelationId()
 
+    let dueDate = voided.dueDate
+    let gracePeriodDays = voided.gracePeriodDays
+    if (input.due_date_override) {
+      const building = await BuildingRepository.findById(event, period.buildingId)
+      if (!building) throwNotFound('Không tìm thấy tòa nhà')
+      const schedule = resolveInvoiceDueSchedule({
+        calculationDate: calculationDateInHoChiMinh(),
+        dueDateOverride: input.due_date_override,
+        contractPaymentDueDay: draft.paymentDueDay,
+        buildingPaymentDueDay: building.paymentDueDay,
+        gracePeriodDays: building.gracePeriodDays ?? 0,
+      })
+      dueDate = schedule.dueDate
+      gracePeriodDays = schedule.gracePeriodDays
+    }
+
     const invoice = await InvoiceRepository.reissueWithAudit(event, {
       invoiceId: voided.id,
       expectedUpdatedAt: input.expected_updated_at,
       actorId: user.id ?? null,
-      dueDate: input.due_date ?? null,
+      dueDate,
+      gracePeriodDays,
       issuedAt: new Date().toISOString(),
       notes: input.notes ?? null,
       reason,

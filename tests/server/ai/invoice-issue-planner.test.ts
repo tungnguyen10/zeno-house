@@ -9,6 +9,7 @@ import {
 
 const calculateDraft = vi.fn()
 const createPlan = vi.fn()
+const findBuildingById = vi.fn()
 
 vi.mock('../../../server/services/billing/drafts', () => ({
   BillingDraftService: { calculateDraft },
@@ -16,6 +17,16 @@ vi.mock('../../../server/services/billing/drafts', () => ({
 vi.mock('../../../server/services/ai/actions', () => ({
   AiActionService: { createPlan },
 }))
+vi.mock('../../../server/repositories/buildings', () => ({
+  BuildingRepository: { findById: findBuildingById },
+}))
+
+const dueContext = {
+  calculationDate: '2026-08-06',
+  dueDateOverride: '2026-08-31',
+  buildingPaymentDueDay: 10,
+  gracePeriodDays: 2,
+}
 
 function draft(overrides: Partial<BillingDraftInvoice> = {}): BillingDraftInvoice {
   return {
@@ -54,6 +65,7 @@ describe('AI invoice issue planning', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.stubGlobal('can', () => true)
+    findBuildingById.mockResolvedValue({ paymentDueDay: 10, gracePeriodDays: 2 })
     createPlan.mockResolvedValue({
       id: 'plan-1', conversationId: 'conversation-1', actionType: 'issue_invoices',
       status: 'pending', title: 'Issue', summary: 'Issue', buildingId: 'building-1',
@@ -75,11 +87,12 @@ describe('AI invoice issue planning', () => {
     const first = response([draft()])
     const reordered = structuredClone(first)
     reordered.drafts[0]!.lines[0]!.metadata = { nested: { a: 1, b: 2 }, source: 'contract' }
-    const firstPreview = createInvoiceIssuePreview(first, undefined, '2026-07-31').preview
-    const secondPreview = createInvoiceIssuePreview(reordered, undefined, '2026-07-31').preview
+    const firstPreview = createInvoiceIssuePreview(first, undefined, dueContext).preview
+    const secondPreview = createInvoiceIssuePreview(reordered, undefined, dueContext).preview
     expect(firstPreview.snapshotHash).toBe(secondPreview.snapshotHash)
-    expect(buildInvoiceIssueSnapshot(first, [first.drafts[0]!.contractId], '2026-07-31'))
-      .toEqual(buildInvoiceIssueSnapshot(reordered, [first.drafts[0]!.contractId], '2026-07-31'))
+    const schedules = { [first.drafts[0]!.contractId]: firstPreview.issuable[0]! }
+    expect(buildInvoiceIssueSnapshot(first, [first.drafts[0]!.contractId], dueContext, schedules))
+      .toEqual(buildInvoiceIssueSnapshot(reordered, [first.drafts[0]!.contractId], dueContext, schedules))
   })
 
   it('stores only exact issuable targets and authoritative snapshot hash', async () => {
@@ -95,7 +108,7 @@ describe('AI invoice issue planning', () => {
       { id: 'user-1', app_metadata: { role: 'admin' } } as never,
       'conversation-1', {
       period_id: '00000000-0000-4000-8000-000000000010',
-      due_date: '2026-07-31',
+      due_date: '2026-08-31',
       },
     )
 
@@ -105,7 +118,7 @@ describe('AI invoice issue planning', () => {
       normalized_payload: {
         period_id: '00000000-0000-4000-8000-000000000010',
         contract_ids: [ready.contractId],
-        due_date: '2026-07-31',
+        due_date_override: '2026-08-31',
         snapshot_hash: expect.stringMatching(/^[a-f0-9]{64}$/),
       },
       warnings: ['Loại 1 dự thảo đang có lỗi chặn.'],

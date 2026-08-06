@@ -45,7 +45,7 @@ interface ContractRow extends BillableContractPeriodRow {
   occupant_count: number
   discount_amount: number
   surcharge_amount: number
-  payment_day: number | null
+  payment_due_day: number | null
   status: string
 }
 
@@ -697,6 +697,7 @@ export const BillingDraftService = {
 
       const draft: BillingDraftInvoice = {
         contractId: contract.id,
+        paymentDueDay: contract.payment_due_day,
         roomId: contract.room_id,
         tenantId: contract.tenant_id,
         contractCode: contract.contract_code ?? null,

@@ -20,10 +20,10 @@ function todayInHoChiMinh(): string {
 }
 
 export function deriveInvoiceListStatus(
-  item: Pick<InvoiceListItem, 'status' | 'due_date' | 'balance_amount'>,
+  item: Pick<InvoiceListItem, 'status' | 'overdue_date' | 'balance_amount'>,
   today = todayInHoChiMinh(),
 ): InvoiceStatus {
-  if (item.status === 'issued' && item.due_date && item.due_date < today && item.balance_amount > 0) {
+  if (item.status === 'issued' && item.overdue_date && item.overdue_date < today && item.balance_amount > 0) {
     return 'overdue'
   }
   return item.status

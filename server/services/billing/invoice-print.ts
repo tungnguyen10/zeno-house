@@ -94,7 +94,7 @@ export const InvoicePrintService = {
           ...invoice,
           status: deriveInvoiceListStatus({
             status: invoice.status,
-            due_date: invoice.dueDate,
+            overdue_date: invoice.overdueDate,
             balance_amount: invoice.balanceAmount,
           }),
         },

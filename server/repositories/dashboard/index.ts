@@ -55,7 +55,7 @@ interface DashboardSourceSnapshot {
     paid_amount: number | string
     balance_amount: number | string
     status: string
-    due_date: string | null
+    overdue_date: string | null
     invoice_charges: Array<{ charge_type: string, amount: number | string }>
   }>
 }
@@ -221,7 +221,7 @@ export const DashboardRepository = {
       const total = Number(invoice.total_amount ?? 0)
       const paid = Number(invoice.paid_amount ?? 0)
       const balance = Number(invoice.balance_amount ?? 0)
-      const isOverdue = balance > 0 && Boolean(invoice.due_date && invoice.due_date < today)
+      const isOverdue = balance > 0 && Boolean(invoice.overdue_date && invoice.overdue_date < today)
 
       trend.invoiceTotal += total
       trend.paidAmount += paid
@@ -305,7 +305,7 @@ export const DashboardRepository = {
         return period?.building_id === building.id
           && invoice.status !== 'void'
           && Number(invoice.balance_amount ?? 0) > 0
-          && Boolean(invoice.due_date && invoice.due_date < today)
+          && Boolean(invoice.overdue_date && invoice.overdue_date < today)
       }).length
       if (overdueCount > 0) {
         pendingOperations.push({

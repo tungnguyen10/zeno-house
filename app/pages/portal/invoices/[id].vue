@@ -37,6 +37,15 @@ const showOutstandingPayment = computed(() => {
   return ['issued', 'partial', 'overdue'].includes(invoice.value.status)
 })
 const showPaymentHistory = computed(() => invoice.value?.status === 'paid')
+const today = new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit', day: '2-digit',
+}).format(new Date())
+const isInGrace = computed(() => Boolean(
+  invoice.value?.dueDate
+  && invoice.value.overdueDate
+  && invoice.value.dueDate < today
+  && today <= invoice.value.overdueDate,
+))
 
 function chargeLineUnit(chargeType: string): string | null {
   if (chargeType === 'electricity') return 'kWh'
@@ -94,6 +103,10 @@ function chargeLineUnit(chargeType: string): string | null {
             <p class="portal-type-caption text-body">Hạn thanh toán</p>
             <p class="portal-type-body mt-0.5 font-medium text-title">{{ formatViDate(invoice.dueDate) }}</p>
           </div>
+        </div>
+
+        <div v-if="isInGrace" class="mt-4 rounded-xl border border-amber-300/60 bg-amber-50 px-3 py-2 portal-type-body text-amber-900 dark:border-amber-700/60 dark:bg-amber-950/30 dark:text-amber-200">
+          Đang trong thời gian gia hạn đến {{ formatViDate(invoice.overdueDate!) }}.
         </div>
 
         <!-- Amount: context-aware headline figure -->

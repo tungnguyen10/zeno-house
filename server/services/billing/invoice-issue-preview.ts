@@ -22,6 +22,8 @@ import {
   selectInvoiceIssueDrafts,
   type InvoiceIssueProfileFingerprint,
 } from './invoice-issue-snapshot'
+import { calculationDateInHoChiMinh } from './invoice-due-policy'
+import type { InvoiceDueSchedule } from './invoice-due-policy'
 
 const DRAFT_INVOICE_CODE = 'MÃ CẤP KHI PHÁT HÀNH'
 
@@ -86,7 +88,7 @@ async function buildDocuments(
   event: H3Event,
   state: Awaited<ReturnType<typeof loadIssueState>>,
   drafts: BillingDraftInvoice[],
-  dueDate: string,
+  schedulesByContract: Record<string, InvoiceDueSchedule>,
 ): Promise<InvoiceDocumentItem[]> {
   const { draftResponse, building, profile } = state
   const periodLabel = `${String(draftResponse.period.periodMonth).padStart(2, '0')}/${draftResponse.period.periodYear}`
@@ -99,19 +101,24 @@ async function buildDocuments(
       ])
     : [null, null]
 
-  return drafts.map((draft): InvoiceDocumentItem => ({
-    mode: 'draft',
-    key: draft.contractId,
-    invoiceCode: null,
-    status: 'draft',
-    roomNumber: draft.roomNumber,
-    tenantName: draft.tenantName,
-    issuedAt: new Date().toISOString(),
-    dueDate,
-    totalAmount: draft.totalAmount,
-    paidAmount: 0,
-    balanceAmount: draft.totalAmount,
-    charges: draft.lines.map((line, index) => ({
+  return drafts.map((draft): InvoiceDocumentItem => {
+    const schedule = schedulesByContract[draft.contractId]
+    if (!schedule) throwInternal(new Error('Missing invoice due schedule'), 'billing.issuePreview.documentSchedule')
+    return {
+      mode: 'draft',
+      key: draft.contractId,
+      invoiceCode: null,
+      status: 'draft',
+      roomNumber: draft.roomNumber,
+      tenantName: draft.tenantName,
+      issuedAt: new Date().toISOString(),
+      dueDate: schedule.dueDate,
+      gracePeriodDays: schedule.gracePeriodDays,
+      overdueDate: schedule.overdueDate,
+      totalAmount: draft.totalAmount,
+      paidAmount: 0,
+      balanceAmount: draft.totalAmount,
+      charges: draft.lines.map((line, index) => ({
       key: `${draft.contractId}:${line.sortOrder}:${index}`,
       chargeType: line.chargeType,
       label: line.label,
@@ -120,9 +127,9 @@ async function buildDocuments(
       amount: line.amount,
       metadata: line.metadata,
       sortOrder: line.sortOrder,
-    })),
-    invoiceProfile: profile
-      ? {
+      })),
+      invoiceProfile: profile
+        ? {
           bankName: profile.bank_name,
           accountHolder: profile.account_holder,
           accountNumber: profile.account_number,
@@ -134,16 +141,29 @@ async function buildDocuments(
           qrImageUrl,
           logoImageUrl,
           snapshottedAt: profile.updated_at ?? '',
-        }
-      : null,
-    period: draftResponse.period,
-    building: {
-      id: building.id,
-      name: building.name,
-      address: building.address,
-    },
-    warnings: draft.warnings,
-  }))
+          }
+        : null,
+      period: draftResponse.period,
+      building: {
+        id: building.id,
+        name: building.name,
+        address: building.address,
+      },
+      warnings: draft.warnings,
+    }
+  })
+}
+
+function dueContext(
+  state: Awaited<ReturnType<typeof loadIssueState>>,
+  dueDateOverride?: string | null,
+) {
+  return {
+    calculationDate: calculationDateInHoChiMinh(),
+    dueDateOverride: dueDateOverride ?? null,
+    buildingPaymentDueDay: state.building.paymentDueDay ?? null,
+    gracePeriodDays: state.building.gracePeriodDays ?? 0,
+  }
 }
 
 export const BillingInvoiceIssueService = {
@@ -155,10 +175,11 @@ export const BillingInvoiceIssueService = {
   ): Promise<BillingInvoiceIssuePreview> {
     const state = await loadIssueState(event, user, periodId)
     const fingerprint = profileFingerprint(state.profile)
-    const { preview, targetContractIds } = createInvoiceIssuePreview(
+    const context = dueContext(state, input.due_date_override)
+    const { preview, targetContractIds, schedulesByContract } = createInvoiceIssuePreview(
       state.draftResponse,
       input.contract_ids,
-      input.due_date,
+      context,
       fingerprint,
     )
     const selected = selectInvoiceIssueDrafts(state.draftResponse, input.contract_ids)
@@ -167,14 +188,15 @@ export const BillingInvoiceIssueService = {
 
     return {
       periodId,
-      dueDate: input.due_date,
+      calculationDate: context.calculationDate,
+      dueDateOverride: context.dueDateOverride,
       operationId: newCorrelationId(),
       snapshotHash: preview.snapshotHash,
       issuableCount: preview.issuableCount,
       blockedCount: preview.blockedCount,
       alreadyIssuedCount: preview.alreadyIssuedCount,
       totalAmount: preview.totalAmount,
-      items: await buildDocuments(event, state, issuableDrafts, input.due_date),
+      items: await buildDocuments(event, state, issuableDrafts, schedulesByContract),
       exclusions: excludedDrafts.map(exclusion),
     }
   },
@@ -188,10 +210,11 @@ export const BillingInvoiceIssueService = {
     const replay = await InvoiceService.findIssueReplay(event, user, periodId, input.operation_id)
     if (replay) return replay
     const state = await loadIssueState(event, user, periodId)
-    const { preview, targetContractIds } = createInvoiceIssuePreview(
+    const context = dueContext(state, input.due_date_override)
+    const { preview, targetContractIds, schedulesByContract } = createInvoiceIssuePreview(
       state.draftResponse,
       input.contract_ids,
-      input.due_date,
+      context,
       profileFingerprint(state.profile),
     )
     if (preview.snapshotHash !== input.snapshot_hash) {
@@ -202,7 +225,9 @@ export const BillingInvoiceIssueService = {
 
     return InvoiceService.issueInvoices(event, user, periodId, {
       contract_ids: targetContractIds,
-      due_date: input.due_date,
+      due_date_override: context.dueDateOverride,
+      calculation_date: context.calculationDate,
+      schedules_by_contract: schedulesByContract,
     }, {
       operationId: input.operation_id,
       draftResponse: state.draftResponse,

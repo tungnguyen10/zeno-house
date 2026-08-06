@@ -37,7 +37,7 @@ interface TenantContractSummaryRow {
   end_date: string
   monthly_rent: number
   deposit: number
-  payment_day: number | null
+  payment_due_day: number | null
   occupant_count: number
   discount_amount: number
   surcharge_amount: number
@@ -97,7 +97,7 @@ export function mapTenantContractSummary(
     endDate: row.end_date,
     monthlyRent: row.monthly_rent,
     deposit: row.deposit,
-    paymentDay: row.payment_day,
+    paymentDueDay: row.payment_due_day,
     occupantCount: row.occupant_count,
     discountAmount: row.discount_amount,
     surchargeAmount: row.surcharge_amount,
@@ -126,6 +126,8 @@ export function mapTenantInvoiceListItem(row: InvoiceListItem): TenantInvoiceLis
     paidAmount: row.paid_amount,
     balanceAmount: row.balance_amount,
     dueDate: row.due_date,
+    gracePeriodDays: row.grace_period_days,
+    overdueDate: row.overdue_date,
     status: row.status,
     issuedAt: row.issued_at,
     voidedAt: row.voided_at ?? null,
