@@ -61,6 +61,9 @@ export const OWNER_CAPABILITIES = [
   // Tenant portal account provisioning for existing tenants (owner is scoped to
   // assigned buildings; the service layer enforces the scope).
   'tenant.account.provision',
+  // Self-service account profile (display name, avatar, password) — every
+  // internal role manages their own account.
+  'account.profile.update',
 ] as const
 
 export const ADMIN_ONLY_CAPABILITIES = [
@@ -123,6 +126,7 @@ export const ROLE_CAPABILITIES: Record<UserRole, readonly string[]> = {
     'building-expenses.read',
     'building-expenses.write',
     'recurring-expenses.read',
+    'account.profile.update',
   ],
   [ROLES.TENANT]: TENANT_CAPABILITIES,
 }

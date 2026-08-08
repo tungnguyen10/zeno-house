@@ -15,3 +15,14 @@ export interface ManagedUserWithAssignments {
   user: ManagedUser
   assignments: AssignmentWithBuilding[]
 }
+
+/** The authenticated internal user's own profile (self-service, no admin scope). */
+export interface UserProfile {
+  id: string
+  email: string | null
+  fullName: string | null
+  avatarUrl: string | null
+  hasCustomAvatar: boolean
+  role: UserRole | null
+}
+
