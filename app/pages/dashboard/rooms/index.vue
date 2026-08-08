@@ -22,8 +22,6 @@ const {
   page,
   q,
   status,
-  sort,
-  order,
   buildingId,
   floor,
   hasActiveFilters,
@@ -300,8 +298,6 @@ async function onBulkDone(result: RoomBulkResult, action: RoomBulkAction) {
     <RoomListToolbar
       v-model:q="q"
       v-model:status="status"
-      v-model:sort="sort"
-      v-model:order="order"
       v-model:building-id="buildingId"
       v-model:floor="floor"
       :has-active-filters="hasActiveFilters"

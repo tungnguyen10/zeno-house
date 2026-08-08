@@ -7,7 +7,6 @@ import RoomDetailHero from '../../../app/components/rooms/RoomDetailHero.vue'
 import RoomCard from '../../../app/components/rooms/RoomCard.vue'
 import UiSearchInput from '../../../app/components/ui/UiSearchInput.vue'
 import UiFilterChips from '../../../app/components/ui/UiFilterChips.vue'
-import UiSortControl from '../../../app/components/ui/UiSortControl.vue'
 import type { Room } from '../../../app/types/rooms'
 import type { Building } from '../../../app/types/buildings'
 import type { RoomBulkResult } from '../../../app/composables/rooms/useRoomBulkActions'
@@ -40,7 +39,6 @@ const stubs = {
   }),
   UiSearchInput,
   UiFilterChips,
-  UiSortControl,
   UiInput: defineComponent({
     props: ['modelValue', 'placeholder', 'type'],
     emits: ['update:modelValue'],
@@ -177,7 +175,7 @@ describe('RoomListToolbar', () => {
   it('debounces search input before emitting update:q', async () => {
     vi.useFakeTimers()
     const wrapper = mount(RoomListToolbar, {
-      props: { q: '', status: [], sort: 'floor', order: 'asc' },
+      props: { q: '', status: [] },
       global: { stubs },
     })
 
@@ -194,24 +192,13 @@ describe('RoomListToolbar', () => {
 
   it('toggles a status chip', async () => {
     const wrapper = mount(RoomListToolbar, {
-      props: { q: '', status: [], sort: 'floor', order: 'asc' },
+      props: { q: '', status: [] },
       global: { stubs },
     })
 
     const chip = wrapper.findAll('button').find(b => b.text().includes('Trống'))!
     await chip.trigger('click')
     expect(wrapper.emitted('update:status')).toEqual([[['available']]])
-  })
-
-  it('emits sort change', async () => {
-    const wrapper = mount(RoomListToolbar, {
-      props: { q: '', status: [], sort: 'floor', order: 'asc' },
-      global: { stubs },
-    })
-
-    const selects = wrapper.findAll('[data-test="select"]')
-    await selects[1]!.setValue('monthly_rent')
-    expect(wrapper.emitted('update:sort')).toEqual([['monthly_rent']])
   })
 })
 

@@ -3,8 +3,8 @@
 ## Purpose
 TBD - created by archiving change rooms-overhaul. Update Purpose after archive.
 ## Requirements
-### Requirement: Rooms list toolbar (search/filter/sort)
-`app/pages/rooms/index.vue` SHALL render a `RoomListToolbar` component above the grid containing a debounced search input (250ms), a status filter (multi-select chips for `available`, `occupied`, `maintenance`, `archived`), a building selector (keeps existing), a floor filter, and a sort selector (`room_number`, `floor`, `monthly_rent`, `created_at`) with order toggle. Toolbar state SHALL be reflected in URL query (`?q`, `?status`, `?building_id`, `?floor`, `?sort`, `?order`) and restored from URL on mount.
+### Requirement: Rooms list toolbar (search/filter)
+`app/pages/rooms/index.vue` SHALL render a `RoomListToolbar` component above the grid containing a debounced search input (250ms), a status filter (multi-select chips for `available`, `occupied`, `maintenance`, `archived`), a building selector (keeps existing), and a floor filter. Rooms SHALL be grouped by building and, within a building, ordered by floor by default; there SHALL be no separate sort control since it would duplicate the floor filter. Toolbar state SHALL be reflected in URL query (`?q`, `?status`, `?building_id`, `?floor`) and restored from URL on mount.
 
 #### Scenario: Search filters list by room_number / code / description
 - **WHEN** admin types "a101" in the search box and waits 250ms
@@ -18,16 +18,12 @@ TBD - created by archiving change rooms-overhaul. Update Purpose after archive.
 - **WHEN** admin selects both "Trống" and "Đang ở" chips
 - **THEN** URL gains `?status=available&status=occupied` and the list shows both groups
 
-#### Scenario: Sort selector
-- **WHEN** admin picks "Giá thuê" and toggles to descending
-- **THEN** URL gains `?sort=monthly_rent&order=desc` and the list reorders accordingly
-
 #### Scenario: URL state restored on direct navigation
-- **WHEN** user opens `/rooms?q=b&status=occupied&sort=room_number&order=asc`
+- **WHEN** user opens `/rooms?q=b&status=occupied`
 - **THEN** the toolbar reflects those values and the list fetches with matching query
 
 #### Scenario: Filter change resets pagination
-- **WHEN** user is on page 3 and changes any filter/search/sort
+- **WHEN** user is on page 3 and changes any filter/search
 - **THEN** the URL `?page` resets to `1` before refetching
 
 ---

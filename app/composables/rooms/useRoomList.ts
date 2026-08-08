@@ -33,7 +33,7 @@ export function useRoomList() {
     route.query.floor !== undefined ? Number(route.query.floor) || undefined : undefined,
   )
   const page = ref(readQueryNumber(route.query.page, { fallback: 1, min: 1 }))
-  const limit = ref(readQueryNumber(route.query.limit, { fallback: 20, min: 1, max: 100 }))
+  const limit = ref(readQueryNumber(route.query.limit, { fallback: 200, min: 1, max: 200 }))
   const q = ref<string>(readQueryString(route.query.q))
   const sort = ref<SortField>(readQueryEnum(route.query.sort, SORT_FIELDS, 'floor'))
   const order = ref<SortOrder>(readQueryEnum(route.query.order, SORT_ORDERS, 'asc'))
@@ -46,7 +46,7 @@ export function useRoomList() {
       const newBuildingId = typeof newQuery.building_id === 'string' ? newQuery.building_id : undefined
       const newFloor = newQuery.floor !== undefined ? Number(newQuery.floor) || undefined : undefined
       const newPage = readQueryNumber(newQuery.page, { fallback: 1, min: 1 })
-      const newLimit = readQueryNumber(newQuery.limit, { fallback: 20, min: 1, max: 100 })
+      const newLimit = readQueryNumber(newQuery.limit, { fallback: 200, min: 1, max: 200 })
       const newQ = readQueryString(newQuery.q)
       const newStatus = readQueryEnumArray(newQuery.status, STATUSES)
       const newSort = readQueryEnum(newQuery.sort, SORT_FIELDS, 'floor')
@@ -65,7 +65,7 @@ export function useRoomList() {
       const next = copyStringQuery(query)
 
       next.page = page.value > 1 ? String(page.value) : undefined
-      next.limit = limit.value !== 20 ? String(limit.value) : undefined
+      next.limit = limit.value !== 200 ? String(limit.value) : undefined
       next.q = q.value || undefined
       next.status = status.value.length > 0 ? status.value : undefined
       next.building_id = buildingId.value || undefined
