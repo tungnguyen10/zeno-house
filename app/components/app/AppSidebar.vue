@@ -17,11 +17,7 @@ const route = useRoute()
 const authStore = useAuthStore()
 const appStore = useAppStore()
 const { sidebarCollapsed } = storeToRefs(appStore)
-
-const userInitial = computed(() => {
-  const email = authStore.user?.email ?? ''
-  return email.charAt(0).toUpperCase() || 'U'
-})
+const { userInitial, displayName, avatarUrl, showAvatarImage, onAvatarError } = useCurrentUserProfile()
 
 const visibleNavSections = computed(() => {
   const items = _props.navItems.filter(item => isNavItemVisible(item, {
@@ -199,18 +195,33 @@ function sectionLabelClass() {
 
     <!-- User info -->
     <div class="border-t border-dark-border px-3 py-4">
-      <div
-        class="flex items-center gap-3 rounded-lg px-3 py-2"
+      <NuxtLink
+        to="/dashboard/profile"
+        class="flex items-center gap-3 rounded-lg px-3 py-2 transition-colors hover:bg-dark-hover"
         :class="sidebarCollapsed && 'lg:justify-center lg:px-0'"
+        @click="emit('close')"
       >
-        <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-cyan/20" aria-hidden="true">
+        <img
+          v-if="showAvatarImage"
+          :src="avatarUrl!"
+          alt=""
+          referrerpolicy="no-referrer"
+          class="h-8 w-8 shrink-0 rounded-full object-cover"
+          aria-hidden="true"
+          @error="onAvatarError"
+        >
+        <div
+          v-else
+          class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-cyan/20"
+          aria-hidden="true"
+        >
           <span class="text-xs font-semibold text-cyan">{{ userInitial }}</span>
         </div>
         <div class="min-w-0 flex-1" :class="sidebarCollapsed && 'lg:hidden'">
-          <p class="truncate text-sm font-medium text-white">{{ authStore.user?.email }}</p>
+          <p class="truncate text-sm font-medium text-white">{{ displayName }}</p>
           <p class="truncate text-xs text-muted">{{ authStore.role ?? 'user' }}</p>
         </div>
-      </div>
+      </NuxtLink>
     </div>
   </aside>
 </template>

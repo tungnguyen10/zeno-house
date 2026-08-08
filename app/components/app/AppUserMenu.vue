@@ -4,15 +4,11 @@ import clsx from 'clsx'
 
 const { logout } = useAuth()
 const authStore = useAuthStore()
+const { userInitial, displayName, avatarUrl, showAvatarImage, onAvatarError } = useCurrentUserProfile()
 
 const isOpen = ref(false)
 const menuRef = ref<HTMLElement | null>(null)
 const triggerRef = ref<HTMLElement | null>(null)
-
-const userInitial = computed(() => {
-  const email = authStore.user?.email ?? ''
-  return email.charAt(0).toUpperCase() || 'U'
-})
 
 const roleLabel = computed(() => {
   const r = authStore.role
@@ -50,7 +46,17 @@ onKeyStroke('Escape', () => {
       aria-label="Tài khoản"
       @click="toggle"
     >
+      <img
+        v-if="showAvatarImage"
+        :src="avatarUrl!"
+        alt=""
+        referrerpolicy="no-referrer"
+        class="h-7 w-7 rounded-full object-cover"
+        aria-hidden="true"
+        @error="onAvatarError"
+      >
       <span
+        v-else
         class="flex h-7 w-7 items-center justify-center rounded-full bg-cyan/20 text-xs font-semibold text-cyan"
         aria-hidden="true"
       >
@@ -77,7 +83,17 @@ onKeyStroke('Escape', () => {
         class="absolute right-0 z-50 mt-2 w-64 origin-top-right overflow-hidden rounded-xl border border-dark-border bg-dark-card shadow-xl shadow-black/40"
       >
         <div class="flex items-center gap-3 border-b border-dark-border px-4 py-3">
+          <img
+            v-if="showAvatarImage"
+            :src="avatarUrl!"
+            alt=""
+            referrerpolicy="no-referrer"
+            class="h-9 w-9 shrink-0 rounded-full object-cover"
+            aria-hidden="true"
+            @error="onAvatarError"
+          >
           <span
+            v-else
             class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-cyan/20 text-sm font-semibold text-cyan"
             aria-hidden="true"
           >
@@ -85,12 +101,24 @@ onKeyStroke('Escape', () => {
           </span>
           <div class="min-w-0 flex-1">
             <p class="truncate text-sm font-medium text-white">
-              {{ authStore.user?.email }}
+              {{ displayName }}
             </p>
             <p class="mt-0.5 text-xs text-muted">
               {{ roleLabel }}
             </p>
           </div>
+        </div>
+
+        <div class="border-b border-dark-border py-1">
+          <NuxtLink
+            to="/dashboard/profile"
+            role="menuitem"
+            class="flex w-full items-center gap-3 px-4 py-2 text-sm text-muted transition-colors hover:bg-dark-hover hover:text-white focus-visible:bg-dark-hover focus-visible:text-white focus-visible:outline-none"
+            @click="close"
+          >
+            <IconUser class="h-4 w-4" aria-hidden="true" />
+            <span>Hồ sơ</span>
+          </NuxtLink>
         </div>
 
         <div class="py-1">

@@ -45,6 +45,10 @@ describe('audit display helpers', () => {
       .toEqual(expect.arrayContaining(['Master data', 'Phân quyền', 'Hợp đồng', 'Vận hành', 'Tenant portal']))
   })
 
+  it('labels access-request reconciliation in operational Vietnamese', () => {
+    expect(auditActionLabel('user.access_request.reconciled')).toBe('Đối soát yêu cầu truy cập')
+  })
+
   it('uses snapshots as a deleted entity label fallback', () => {
     expect(auditEntityDisplay({
       entityType: 'shared_expense',

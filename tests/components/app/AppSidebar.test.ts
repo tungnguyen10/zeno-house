@@ -53,6 +53,13 @@ describe('AppSidebar role visibility', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.stubGlobal('useAppStore', () => ({ sidebarCollapsed: false, toggleCollapsed: vi.fn() }))
+    vi.stubGlobal('useCurrentUserProfile', () => ({
+      userInitial: ref('U'),
+      displayName: ref('user@zeno.test'),
+      avatarUrl: ref(null),
+      showAvatarImage: ref(false),
+      onAvatarError: vi.fn(),
+    }))
   })
 
   it('groups admin destinations in the canonical section order', () => {

@@ -29,3 +29,41 @@ export const userUpdateSchema = z.object({
 )
 
 export type UserUpdateInput = z.infer<typeof userUpdateSchema>
+
+/** Self-service profile update — deliberately excludes `email`/`role`/`password`. */
+export const userProfileUpdateSchema = z.object({
+  full_name: z.string().trim().min(1, 'Tên không được để trống').max(120, 'Tên quá dài'),
+})
+
+export type UserProfileUpdateInput = z.infer<typeof userProfileUpdateSchema>
+
+const userPasswordSchema = z
+  .string()
+  .min(8, 'Mật khẩu phải có ít nhất 8 ký tự')
+  .max(72, 'Mật khẩu không được vượt quá 72 ký tự')
+
+export const userPasswordChangeSchema = z.object({
+  current_password: userPasswordSchema,
+  password: userPasswordSchema,
+  password_confirmation: userPasswordSchema,
+}).superRefine((input, context) => {
+  if (input.password !== input.password_confirmation) {
+    context.addIssue({ code: 'custom', path: ['password_confirmation'], message: 'Mật khẩu xác nhận không khớp' })
+  }
+  if (input.password === input.current_password) {
+    context.addIssue({ code: 'custom', path: ['password'], message: 'Mật khẩu mới phải khác mật khẩu hiện tại' })
+  }
+})
+
+export type UserPasswordChangeInput = z.infer<typeof userPasswordChangeSchema>
+
+export const USER_AVATAR_MAX_BYTES = 2 * 1024 * 1024
+export const USER_AVATAR_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const
+
+export const userAvatarUploadSchema = z.object({
+  mimeType: z.enum(USER_AVATAR_MIME_TYPES),
+  size: z.number().int().positive().max(USER_AVATAR_MAX_BYTES),
+})
+
+export type UserAvatarUploadMetadata = z.infer<typeof userAvatarUploadSchema>
+

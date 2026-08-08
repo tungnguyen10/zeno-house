@@ -17,6 +17,9 @@ remain the fallback.
 
 Existing admin/owner provisioning flows create Auth users with `app_metadata.role`; those accounts
 retain their user id, role, building assignments, or tenant link and do not create access requests.
+Supabase Admin Auth inserts the Auth row before applying custom metadata in the same transaction, so
+the database defers pending-request eligibility until transaction end and reads the final persisted
+role. This prevents provisioned accounts from briefly entering the approval queue.
 Tenant accounts additionally begin with the server-owned `tenant_onboarding` state. They must change
 their temporary password before `/portal` or `/api/tenant/**` becomes available. Google remains an
 optional sign-in method; a new Google identity without a role still enters pending access.
@@ -54,3 +57,6 @@ finalization and tag the exact assignments or tenant link created by that decisi
 that processing state because a timed-out write can commit late; choosing “Tiếp tục” with the stored
 decision fills missing scope and retries or finalizes idempotently. Processing is never time-reclaimed.
 Rejection is terminal and keeps both Auth identity and request for audit.
+Deployment reconciliation removes only untouched pending requests whose Auth user already has a
+valid role. It preserves every processing/approved/rejected request and appends a system-attributed
+`user.access_request.reconciled` event before deletion.

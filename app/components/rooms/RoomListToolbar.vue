@@ -3,14 +3,9 @@ import type { Building } from '~/types/buildings'
 import type { RoomStatus } from '~/types/rooms'
 import type { ApiSuccess } from '~/types/api'
 
-type SortField = 'room_number' | 'floor' | 'monthly_rent' | 'created_at'
-type SortOrder = 'asc' | 'desc'
-
 const props = defineProps<{
   q: string
   status: RoomStatus[]
-  sort: SortField
-  order: SortOrder
   buildingId?: string
   floor?: number
   hasActiveFilters?: boolean
@@ -19,8 +14,6 @@ const props = defineProps<{
 const emit = defineEmits<{
   'update:q': [value: string]
   'update:status': [value: RoomStatus[]]
-  'update:sort': [value: SortField]
-  'update:order': [value: SortOrder]
   'update:buildingId': [value: string | undefined]
   'update:floor': [value: number | undefined]
   'reset': []
@@ -58,13 +51,6 @@ const statusOptions: { value: RoomStatus; label: string }[] = [
   { value: 'occupied', label: 'Đang ở' },
   { value: 'maintenance', label: 'Bảo trì' },
   { value: 'archived', label: 'Đã lưu trữ' },
-]
-
-const sortOptions = [
-  { value: 'floor', label: 'Tầng' },
-  { value: 'room_number', label: 'Số phòng' },
-  { value: 'monthly_rent', label: 'Giá thuê' },
-  { value: 'created_at', label: 'Ngày tạo' },
 ]
 
 const activeFilterCount = computed(() => {
@@ -125,15 +111,6 @@ const activeFilterCount = computed(() => {
         </div>
       </div>
     </UiFilterPopover>
-
-    <UiSortControl
-      :model-value="sort"
-      :order="order"
-      :options="sortOptions"
-      class="sm:ml-auto"
-      @update:model-value="emit('update:sort', $event as SortField)"
-      @update:order="emit('update:order', $event)"
-    />
 
     <template v-if="hasActiveFilters" #actions>
       <UiFilterResetButton @click="emit('reset')" />

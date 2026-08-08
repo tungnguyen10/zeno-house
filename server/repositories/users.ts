@@ -56,6 +56,29 @@ function mapManagedUser(user: AuthUserLike): ManagedUser {
   }
 }
 
+export interface OwnProfile {
+  id: string
+  email: string | null
+  fullName: string | null
+  avatarPath: string | null
+  googleAvatarUrl: string | null
+  role: UserRole | null
+}
+
+function mapOwnProfile(user: AuthUserLike): OwnProfile {
+  const metadata = user.user_metadata ?? {}
+  const avatarPath = metadata.avatar_path
+  const googleAvatarUrl = metadata.avatar_url ?? metadata.picture
+  return {
+    id: user.id,
+    email: user.email ?? null,
+    fullName: userName(user),
+    avatarPath: typeof avatarPath === 'string' && avatarPath.length > 0 ? avatarPath : null,
+    googleAvatarUrl: typeof googleAvatarUrl === 'string' && googleAvatarUrl.length > 0 ? googleAvatarUrl : null,
+    role: (user.app_metadata?.role as UserRole | undefined) ?? null,
+  }
+}
+
 /**
  * Auth user management via the Supabase service role. All methods here MUST run
  * server-side only; the service-role client bypasses RLS.
@@ -260,6 +283,29 @@ export const UserRepository = {
       })
     }
     if (error) throwDbError(error, 'users.updateCurrentPassword')
+  },
+
+  /** Fresh self record straight from Auth — never stale like the request JWT. */
+  async getOwnProfile(event: H3Event): Promise<OwnProfile> {
+    const client = await serverAuthClient(event)
+    const { data, error } = await client.auth.getUser()
+    if (error || !data.user) throwDbError(error ?? new Error('User not found'), 'users.getOwnProfile')
+    return mapOwnProfile(data.user)
+  },
+
+  /** Self updateUser merges `data` keys into user_metadata (unlike the admin API, which replaces it). */
+  async updateOwnFullName(event: H3Event, fullName: string): Promise<OwnProfile> {
+    const client = await serverAuthClient(event)
+    const { data, error } = await client.auth.updateUser({ data: { full_name: fullName } })
+    if (error) throwDbError(error, 'users.updateOwnFullName')
+    return mapOwnProfile(data.user)
+  },
+
+  async updateOwnAvatarPath(event: H3Event, avatarPath: string | null): Promise<OwnProfile> {
+    const client = await serverAuthClient(event)
+    const { data, error } = await client.auth.updateUser({ data: { avatar_path: avatarPath } })
+    if (error) throwDbError(error, 'users.updateOwnAvatarPath')
+    return mapOwnProfile(data.user)
   },
 
   async update(event: H3Event, id: string, input: UserUpdateInput): Promise<ManagedUser> {

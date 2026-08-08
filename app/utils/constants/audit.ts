@@ -98,12 +98,15 @@ export const AUDIT_ACTIONS = {
   USER_UPDATED: 'user.updated',
   USER_ROLE_CHANGED: 'user.role_changed',
   USER_REMOVED: 'user.removed',
+  USER_PROFILE_UPDATED: 'user.profile_updated',
+  USER_PASSWORD_CHANGED: 'user.password_changed',
   USER_ASSIGNMENT_ADDED: 'user.assignment_added',
   USER_ASSIGNMENT_UPDATED: 'user.assignment_updated',
   USER_ASSIGNMENT_REMOVED: 'user.assignment_removed',
   USER_ACCESS_REQUEST_CREATED: 'user.access_request.created',
   USER_ACCESS_REQUEST_APPROVED: 'user.access_request.approved',
   USER_ACCESS_REQUEST_REJECTED: 'user.access_request.rejected',
+  USER_ACCESS_REQUEST_RECONCILED: 'user.access_request.reconciled',
 
   // Tenant portal
   TENANT_PROFILE_UPDATED: 'tenant.profile_updated',
