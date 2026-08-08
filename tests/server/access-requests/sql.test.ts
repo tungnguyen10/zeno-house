@@ -10,6 +10,11 @@ const sql = migrationName
   : ''
 const verification = readFileSync(resolve(process.cwd(), 'supabase/verification/pending_account_approval.sql'), 'utf8')
 const fencingSql = readFileSync(resolve(migrationsDir, '20260719093000_fence_access_request_approval.sql'), 'utf8')
+const correctionMigrationName = readdirSync(migrationsDir)
+  .find(name => name.endsWith('_fix_provisioned_access_request_trigger.sql'))
+const correctionSql = correctionMigrationName
+  ? readFileSync(resolve(migrationsDir, correctionMigrationName), 'utf8')
+  : ''
 
 describe('pending account approval migration', () => {
   it('creates one access request per auth user with a constrained lifecycle', () => {
@@ -34,6 +39,28 @@ describe('pending account approval migration', () => {
     expect(sql).toMatch(/on conflict \(auth_user_id\) do nothing/i)
   })
 
+  it('defers eligibility until Auth metadata reaches its final transaction state', () => {
+    expect(correctionMigrationName).toBeTruthy()
+    expect(correctionSql).toMatch(/create constraint trigger auth_user_create_pending_access_request/i)
+    expect(correctionSql).toMatch(/deferrable initially deferred/i)
+    expect(correctionSql).toMatch(/from auth\.users[\s\S]*where auth_user\.id = new\.id/i)
+    expect(correctionSql).toMatch(/current_app_meta_data\s*->>\s*'role'/i)
+    expect(correctionSql).not.toMatch(/if nullif\(new\.raw_app_meta_data\s*->>\s*'role'/i)
+  })
+
+  it('audits and removes only untouched stale pending requests', () => {
+    expect(correctionSql).toContain("'user.access_request.reconciled'")
+    expect(correctionSql).toContain("'provisioned_role_present'")
+    expect(correctionSql).toMatch(/target\.status = 'pending'/i)
+    expect(correctionSql).toMatch(/target\.approval_claim_token is null/i)
+    expect(correctionSql).toMatch(/target\.reviewed_by is null/i)
+    expect(correctionSql).toMatch(/target\.decision_role is null/i)
+    expect(correctionSql).toMatch(/cardinality\(target\.decision_building_ids\) = 0/i)
+    expect(correctionSql).toMatch(/target\.decision_tenant_id is null/i)
+    expect(correctionSql).toMatch(/target\.rejection_reason is null/i)
+    expect(correctionSql).toMatch(/delete from public\.access_requests/i)
+  })
+
   it('keeps the table private behind service role access', () => {
     expect(sql).toMatch(/alter table public\.access_requests enable row level security/i)
     expect(sql).toMatch(/revoke all on table public\.access_requests from anon, authenticated/i)
@@ -55,6 +82,10 @@ describe('pending account approval migration', () => {
     expect(verification).toMatch(/set local role authenticated/i)
     expect(verification).toMatch(/raise exception 'missing-role auth user did not create a pending request'/i)
     expect(verification).toMatch(/raise exception 'authenticated role could read access_requests directly'/i)
+    expect(verification).toMatch(/set constraints auth_user_create_pending_access_request immediate/i)
+    expect(verification).toMatch(/update auth\.users[\s\S]*raw_app_meta_data[\s\S]*role/i)
+    expect(verification).toMatch(/raise exception 'deferred provisioned auth user unexpectedly created a pending request'/i)
+    expect(verification).toMatch(/raise exception 'role-bearing auth user retained an untouched pending request'/i)
     expect(verification).toMatch(/rollback;/i)
   })
 })

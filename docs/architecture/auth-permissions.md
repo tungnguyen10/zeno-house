@@ -136,6 +136,12 @@ request is never time-reclaimed. Creation, approval, and rejection emit secret-f
 The idempotent creation event is attributed to the requesting Auth subject, not the admin who
 happens to view the queue first.
 
+Access-request creation uses a deferred constraint trigger because Supabase Admin Auth inserts
+`auth.users` before applying custom `app_metadata` in the same transaction. At transaction end the
+trigger reads the current Auth row and skips users with a valid application role. The corrective
+migration removes only pristine pending rows for role-bearing users and records
+`user.access_request.reconciled` with an explicit system actor before deletion.
+
 Owner has full operational access, but limited to assigned buildings:
 
 - buildings/rooms/tenants/contracts CRUD

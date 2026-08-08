@@ -29,6 +29,7 @@
     "@vueuse/nuxt": "^14.2.1",
     "ai": "^7.0.22",
     "chart.js": "^4.5.1",
+    "chrome-devtools-mcp": "^1.6.0",
     "clsx": "^2.1.1",
     "dayjs": "^1.11.20",
     "eslint": "^10.3.0",

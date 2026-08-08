@@ -104,6 +104,7 @@ export const AUDIT_ACTIONS = {
   USER_ACCESS_REQUEST_CREATED: 'user.access_request.created',
   USER_ACCESS_REQUEST_APPROVED: 'user.access_request.approved',
   USER_ACCESS_REQUEST_REJECTED: 'user.access_request.rejected',
+  USER_ACCESS_REQUEST_RECONCILED: 'user.access_request.reconciled',
 
   // Tenant portal
   TENANT_PROFILE_UPDATED: 'tenant.profile_updated',

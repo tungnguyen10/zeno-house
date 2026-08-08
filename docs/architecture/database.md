@@ -22,7 +22,7 @@ Zeno House uses Supabase Postgres. Schema history lives in `supabase/migrations`
 | Invoice email delivery | `20260723103000_add_invoice_email_delivery.sql` |
 | Operations report | `20260702173259_add_operations_report.sql`, `20260704000000_expense_receipts_and_export_categories.sql`, `20260705000000_recurring_and_prepaid_expenses.sql`, `20260707030000_operations_report_closure.sql`, `20260707031000_fix_operations_report_periods_shape.sql` |
 | Shared expenses and reserve fund | `20260705010000_shared_expenses_and_reserve_fund.sql`, `20260707010000_reserve_fund_auto_accrual.sql`, `20260707020000_fix_reserve_fund_source_constraint.sql` |
-| Pending account approval | `20260718155418_add_pending_account_approval.sql`, `20260719093000_fence_access_request_approval.sql` |
+| Pending account approval | `20260718155418_add_pending_account_approval.sql`, `20260719093000_fence_access_request_approval.sql`, `20260808034740_fix_provisioned_access_request_trigger.sql` |
 
 ## Core Tables
 
@@ -63,10 +63,14 @@ primary tenant or active roommate and enforces the same title/description bounds
 validator.
 
 `access_requests` stores one private lifecycle row per Supabase Auth user, including identity
-snapshot, provider, status, decision role/scope, reviewer, rejection reason, and timestamps. An
-`auth.users` trigger inserts only when the new identity has no `app_metadata.role`, so provisioned
-manager/owner/tenant accounts do not enter the queue. RLS is enabled and all table privileges are
-revoked from `anon` and `authenticated`; only service-role repositories may access it. The nullable
+snapshot, provider, status, decision role/scope, reviewer, rejection reason, and timestamps. A
+deferred `auth.users` constraint trigger reads the final persisted Auth row at transaction end and
+inserts only when the identity still has no `app_metadata.role`; this accounts for Supabase Admin
+Auth applying custom metadata after the initial insert and keeps provisioned accounts out of the
+queue. The corrective migration reconciles only untouched pending rows for role-bearing users,
+appends `user.access_request.reconciled` with a system actor, and leaves all decided lifecycle rows
+unchanged. RLS is enabled and all table privileges are revoked from `anon` and `authenticated`;
+only service-role repositories may access it. The nullable
 `created_audited_at` marker and its `audit_events` insert are written together by a row-locking
 security-definer function, making the observed-creation audit atomic and idempotent.
 

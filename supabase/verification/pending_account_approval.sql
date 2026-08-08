@@ -50,11 +50,13 @@ $$;
 
 create temporary table pending_account_test_context (
   pending_user_id uuid not null,
-  provisioned_user_id uuid not null
+  oauth_pending_user_id uuid not null,
+  provisioned_user_id uuid not null,
+  deferred_provisioned_user_id uuid not null
 ) on commit drop;
 
 insert into pending_account_test_context
-values (gen_random_uuid(), gen_random_uuid());
+values (gen_random_uuid(), gen_random_uuid(), gen_random_uuid(), gen_random_uuid());
 
 insert into auth.users (
   id, aud, role, email, encrypted_password, email_confirmed_at,
@@ -74,6 +76,19 @@ select
 from pending_account_test_context
 union all
 select
+  oauth_pending_user_id,
+  'authenticated',
+  'authenticated',
+  'oauth-pending-' || oauth_pending_user_id::text || '@verification.invalid',
+  '',
+  now(),
+  jsonb_build_object('provider', 'email', 'providers', array['email']),
+  '{}'::jsonb,
+  now(),
+  now()
+from pending_account_test_context
+union all
+select
   provisioned_user_id,
   'authenticated',
   'authenticated',
@@ -84,7 +99,34 @@ select
   jsonb_build_object('full_name', 'Provisioned Verification'),
   now(),
   now()
+from pending_account_test_context
+union all
+select
+  deferred_provisioned_user_id,
+  'authenticated',
+  'authenticated',
+  'deferred-provisioned-' || deferred_provisioned_user_id::text || '@verification.invalid',
+  '',
+  now(),
+  jsonb_build_object('provider', 'email', 'providers', array['email']),
+  jsonb_build_object('full_name', 'Deferred Provisioned Verification'),
+  now(),
+  now()
 from pending_account_test_context;
+
+-- Supabase Admin Auth inserts the user first, then applies custom app metadata
+-- later in the same transaction. OAuth metadata can also be finalized after
+-- the initial row insert. The deferred trigger must evaluate these final rows.
+update auth.users
+set raw_app_meta_data = raw_app_meta_data || jsonb_build_object('role', 'manager')
+where id = (select deferred_provisioned_user_id from pending_account_test_context);
+
+update auth.users
+set raw_app_meta_data = jsonb_build_object('provider', 'google', 'providers', array['google']),
+    raw_user_meta_data = jsonb_build_object('full_name', 'OAuth Pending Verification')
+where id = (select oauth_pending_user_id from pending_account_test_context);
+
+set constraints auth_user_create_pending_access_request immediate;
 
 do $$
 declare
@@ -106,6 +148,23 @@ begin
     raise exception 'provisioned auth user unexpectedly created a pending request';
   end if;
 
+  if exists (
+    select 1 from public.access_requests
+    where auth_user_id = context.deferred_provisioned_user_id
+  ) then
+    raise exception 'deferred provisioned auth user unexpectedly created a pending request';
+  end if;
+
+  if not exists (
+    select 1 from public.access_requests
+    where auth_user_id = context.oauth_pending_user_id
+      and status = 'pending'
+      and provider = 'google'
+      and full_name = 'OAuth Pending Verification'
+  ) then
+    raise exception 'deferred OAuth metadata was not captured in the pending request';
+  end if;
+
   begin
     insert into public.access_requests (auth_user_id, email)
     values (context.pending_user_id, 'duplicate@verification.invalid');
@@ -122,6 +181,27 @@ begin
   exception when check_violation then
     null;
   end;
+end
+$$;
+
+do $$
+begin
+  if exists (
+    select 1
+    from public.access_requests target
+    join auth.users auth_user on auth_user.id = target.auth_user_id
+    where target.status = 'pending'
+      and target.approval_claim_token is null
+      and target.reviewed_by is null
+      and target.reviewed_at is null
+      and target.decision_role is null
+      and cardinality(target.decision_building_ids) = 0
+      and target.decision_tenant_id is null
+      and target.rejection_reason is null
+      and nullif(auth_user.raw_app_meta_data ->> 'role', '') in ('admin', 'owner', 'manager', 'tenant')
+  ) then
+    raise exception 'role-bearing auth user retained an untouched pending request';
+  end if;
 end
 $$;
 
