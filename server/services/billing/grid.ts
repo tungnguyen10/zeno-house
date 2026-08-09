@@ -18,6 +18,7 @@ import {
 } from '~/utils/constants/billing'
 import { BillingPeriodRepository } from '../../repositories/billing/periods'
 import { BillingSnapshotRepository } from '../../repositories/billing/snapshot'
+import { MeterReadingRepository } from '../../repositories/meter-readings'
 import { assertBuildingScope } from '../../utils/scope'
 import { calculateRequiredReadingProgress } from './core'
 import { BillingDraftService } from './drafts'
@@ -152,6 +153,7 @@ function buildBillableCell(
   currentReading: MeterReadingRow | undefined,
   previousReading: MeterReadingRow | undefined,
   rowEditable: boolean,
+  prevPrevValue: number | null,
 ): BillingDraftGridUtilityCell {
   const line = findUtilityLine(draft.lines, meterType)
   const blockerCode = findUtilityBlocker(draft.blockers, meterType)
@@ -221,6 +223,7 @@ function buildBillableCell(
     currentValue: currValue,
     readingDate: currentReading?.reading_date ?? null,
     usage,
+    previousUsage: prevValue !== null && prevPrevValue !== null ? prevValue - prevPrevValue : null,
     rate: cellRate,
     amount,
     pricingType: pricingType ?? null,
@@ -236,6 +239,7 @@ function buildVacantCell(
   currentReading: MeterReadingRow | undefined,
   previousReading: MeterReadingRow | undefined,
   rowEditable: boolean,
+  prevPrevValue: number | null,
 ): BillingDraftGridUtilityCell {
   const pricingType = meterType === 'electricity'
     ? pricing.electricity_pricing_type
@@ -256,6 +260,7 @@ function buildVacantCell(
     currentValue: currentReading?.reading_value ?? null,
     readingDate: currentReading?.reading_date ?? null,
     usage,
+    previousUsage: previousReading && prevPrevValue !== null ? previousReading.reading_value - prevPrevValue : null,
     rate,
     amount: null,
     pricingType: pricingType ?? null,
@@ -339,6 +344,19 @@ export const BillingDraftGridService = {
       .map(reading => ({ ...reading, reading_value: Number(reading.reading_value) })) as MeterReadingRow[]
     const prevByKey = indexByRoomMeter(prevData)
 
+    // Readings from the period before that, used only to derive the prior period's consumption
+    const prevPrev = previousPeriod(prev.year, prev.month)
+    const prevPrevReadings = await MeterReadingRepository.findAll(event, {
+      building_id: period.buildingId,
+      period_year: prevPrev.year,
+      period_month: prevPrev.month,
+    })
+    const prevPrevByKey = new Map<string, number>()
+    for (const reading of prevPrevReadings) {
+      if (reading.readingType !== 'monthly') continue
+      prevPrevByKey.set(`${reading.roomId}::${reading.meterType}`, reading.readingValue)
+    }
+
     // Draft (reuses existing draft service end-to-end)
     const draftResp = await BillingDraftService.calculateDraft(event, user, periodId, { period, snapshot })
     const draftByContract = new Map<string, BillingDraftInvoice>()
@@ -382,12 +400,14 @@ export const BillingDraftGridService = {
       const elecPrev = prevByKey.get(`${room.id}::electricity`)
       const waterCurrent = currentByKey.get(`${room.id}::water`)
       const waterPrev = prevByKey.get(`${room.id}::water`)
+      const elecPrevPrevValue = prevPrevByKey.get(`${room.id}::electricity`) ?? null
+      const waterPrevPrevValue = prevPrevByKey.get(`${room.id}::water`) ?? null
 
       if (draft) {
         const invoiceIsActive = !!draft.existingInvoiceStatus && draft.existingInvoiceStatus !== 'void'
         const rowEditable = periodEditable && !invoiceIsActive
-        const elecCell = buildBillableCell('electricity', draft, pricing, elecCurrent, elecPrev, rowEditable)
-        const waterCell = buildBillableCell('water', draft, pricing, waterCurrent, waterPrev, rowEditable)
+        const elecCell = buildBillableCell('electricity', draft, pricing, elecCurrent, elecPrev, rowEditable, elecPrevPrevValue)
+        const waterCell = buildBillableCell('water', draft, pricing, waterCurrent, waterPrev, rowEditable, waterPrevPrevValue)
 
         // rentAndService = total - electricity amount - water amount
         const elecAmt = elecCell.amount ?? 0
@@ -425,8 +445,8 @@ export const BillingDraftGridService = {
       } else {
         // Vacant baseline
         const rowEditable = periodEditable
-        const elecCell = buildVacantCell('electricity', pricing, elecCurrent, elecPrev, rowEditable)
-        const waterCell = buildVacantCell('water', pricing, waterCurrent, waterPrev, rowEditable)
+        const elecCell = buildVacantCell('electricity', pricing, elecCurrent, elecPrev, rowEditable, elecPrevPrevValue)
+        const waterCell = buildVacantCell('water', pricing, waterCurrent, waterPrev, rowEditable, waterPrevPrevValue)
 
         const blockers: BillingDraftBlocker[] = []
         const warnings: BillingDraftWarning[] = []

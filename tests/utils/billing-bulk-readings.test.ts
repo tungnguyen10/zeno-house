@@ -33,6 +33,7 @@ function row(overrides: Partial<BillingDraftGridRow> = {}): BillingDraftGridRow 
       currentValue: null,
       readingDate: null,
       usage: null,
+      previousUsage: null,
       rate: 4000,
       amount: null,
       pricingType: 'per_kwh',
@@ -50,6 +51,7 @@ function row(overrides: Partial<BillingDraftGridRow> = {}): BillingDraftGridRow 
       currentValue: null,
       readingDate: null,
       usage: null,
+      previousUsage: null,
       rate: 15000,
       amount: null,
       pricingType: 'per_m3',
@@ -138,12 +140,47 @@ describe('bulk reading parser', () => {
     expect(preview.blockingCount).toBeGreaterThan(0)
   })
 
-  it('marks lower-than-previous values as warnings and accepts them for apply', () => {
+  it('excludes below-previous values from apply and flags the line as rejected', () => {
     const preview = buildBulkReadingPreview('A101 90 9', [row({ roomNumber: 'A101' })])
 
-    expect(preview.warningCount).toBe(2)
-    expect(preview.lines[0]!.cells.electricity.status).toBe('warning')
-    expect(acceptedBulkReadingUpdates(preview)).toHaveLength(2)
+    expect(preview.warningCount).toBe(0)
+    expect(preview.rejectedCount).toBe(2)
+    expect(preview.lines[0]!.cells.electricity.status).toBe('below_previous')
+    expect(preview.lines[0]!.status).toBe('rejected')
+    expect(acceptedBulkReadingUpdates(preview)).toHaveLength(0)
+  })
+
+  it('flags a usage spike above the threshold as a warning but still applies it', () => {
+    const testRow = row({
+      roomNumber: 'A101',
+      electricity: { ...row().electricity!, previousValue: 100, previousUsage: 20 },
+    })
+    const preview = buildBulkReadingPreview('A101 140 -', [testRow])
+
+    expect(preview.lines[0]!.cells.electricity.status).toBe('usage_spike')
+    expect(preview.warningCount).toBe(1)
+    expect(acceptedBulkReadingUpdates(preview)).toEqual([{ row: testRow, type: 'electricity', value: '140' }])
+  })
+
+  it('flags a usage drop below the threshold as a warning but still applies it', () => {
+    const testRow = row({
+      roomNumber: 'A101',
+      electricity: { ...row().electricity!, previousValue: 100, previousUsage: 20 },
+    })
+    const preview = buildBulkReadingPreview('A101 105 -', [testRow])
+
+    expect(preview.lines[0]!.cells.electricity.status).toBe('usage_drop')
+    expect(preview.warningCount).toBe(1)
+    expect(acceptedBulkReadingUpdates(preview)).toEqual([{ row: testRow, type: 'electricity', value: '105' }])
+  })
+
+  it('flags zero consumption as a warning but still applies it', () => {
+    const testRow = row({ roomNumber: 'A101' })
+    const preview = buildBulkReadingPreview('A101 100 -', [testRow])
+
+    expect(preview.lines[0]!.cells.electricity.status).toBe('zero_usage')
+    expect(preview.warningCount).toBe(1)
+    expect(acceptedBulkReadingUpdates(preview)).toEqual([{ row: testRow, type: 'electricity', value: '100' }])
   })
 
   it('parses spreadsheet tabs as columns', () => {

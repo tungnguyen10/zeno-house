@@ -1,13 +1,27 @@
 import type { BillingDraftGridRow, BillingDraftGridUtilityCell } from '~/types/billing'
+import { DEFAULT_USAGE_WARNING_PERCENT, usageWarningRatios } from './bulk-readings'
 
 export type MeterType = 'electricity' | 'water'
+
+function formatReadingNumber(value: number): string {
+  return value.toLocaleString('vi-VN')
+}
+
+function formatUsageNumber(value: number, type: MeterType): string {
+  const unit = type === 'electricity' ? 'kWh' : 'm³'
+  return `${value.toLocaleString('vi-VN')} ${unit}`
+}
 
 export type OptimisticCellStatus =
   | 'stored'
   | 'pending'
   | 'empty'
   | 'invalid'
-  | 'warning'
+  /** Lower than the previous reading — excluded from totals and not saved. */
+  | 'below_previous'
+  | 'usage_spike'
+  | 'usage_drop'
+  | 'zero_usage'
   | 'not_applicable'
   | 'unsupported'
 
@@ -103,8 +117,45 @@ export function optimisticUtilityDisplay(
       currentText: String(numeric),
       usage,
       amount: null,
-      status: 'warning',
-      message: 'Nhỏ hơn chỉ số cũ',
+      status: 'below_previous',
+      message: `Nhỏ hơn chỉ số cũ (mới ${formatReadingNumber(numeric)}, cũ ${formatReadingNumber(cell.previousValue)})`,
+    }
+  }
+  if (usage === 0) {
+    const priorNote = cell.previousUsage !== null ? ` (kỳ trước dùng ${formatUsageNumber(cell.previousUsage, type)})` : ''
+    return {
+      cell,
+      currentValue: numeric,
+      currentText: String(numeric),
+      usage,
+      amount: 0,
+      status: 'zero_usage',
+      message: `Không tiêu thụ kỳ này${priorNote}`,
+    }
+  }
+  if (cell.previousUsage !== null && cell.previousUsage > 0) {
+    const { spikeRatio, dropRatio } = usageWarningRatios(DEFAULT_USAGE_WARNING_PERCENT)
+    if (usage > cell.previousUsage * spikeRatio) {
+      return {
+        cell,
+        currentValue: numeric,
+        currentText: String(numeric),
+        usage,
+        amount: Math.round(usage * cell.rate),
+        status: 'usage_spike',
+        message: `Tăng hơn ${DEFAULT_USAGE_WARNING_PERCENT}% so với kỳ trước (kỳ này ${formatUsageNumber(usage, type)}, kỳ trước ${formatUsageNumber(cell.previousUsage, type)})`,
+      }
+    }
+    if (usage < cell.previousUsage * dropRatio) {
+      return {
+        cell,
+        currentValue: numeric,
+        currentText: String(numeric),
+        usage,
+        amount: Math.round(usage * cell.rate),
+        status: 'usage_drop',
+        message: `Giảm hơn ${DEFAULT_USAGE_WARNING_PERCENT}% so với kỳ trước (kỳ này ${formatUsageNumber(usage, type)}, kỳ trước ${formatUsageNumber(cell.previousUsage, type)})`,
+      }
     }
   }
 
@@ -123,7 +174,14 @@ export function formatOptimisticUsage(display: OptimisticUtilityDisplay): string
   const cell = display.cell
   if (!cell) return '—'
   if (display.status === 'invalid' || display.status === 'empty') return '—'
-  if (display.status === 'warning') return display.message ?? 'Cần kiểm tra'
+  if (
+    display.status === 'below_previous'
+    || display.status === 'usage_spike'
+    || display.status === 'usage_drop'
+    || display.status === 'zero_usage'
+  ) {
+    return display.message ?? 'Cần kiểm tra'
+  }
   if (cell.source === 'fixed') return 'Cố định'
   if (cell.source === 'per_person') return display.usage !== null ? `${display.usage} người` : '—'
   if (cell.source === 'not_applicable') return '—'
@@ -139,8 +197,8 @@ function deriveDraftTotal(
 ): number | null {
   const hasLocal = electricity.status !== 'stored' || water.status !== 'stored'
   if (!hasLocal) return row.draftTotal
-  if (electricity.status === 'invalid' || electricity.status === 'empty' || electricity.status === 'warning') return null
-  if (water.status === 'invalid' || water.status === 'empty' || water.status === 'warning') return null
+  if (electricity.status === 'invalid' || electricity.status === 'empty' || electricity.status === 'below_previous') return null
+  if (water.status === 'invalid' || water.status === 'empty' || water.status === 'below_previous') return null
 
   const electricityAmount = electricity.amount ?? 0
   const waterAmount = water.amount ?? 0

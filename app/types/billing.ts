@@ -384,6 +384,8 @@ export interface BillingDraftGridUtilityCell {
   currentValue: number | null
   readingDate: string | null
   usage: number | null
+  /** Consumption in the prior period (previous reading minus the one before it). Null when unknown. */
+  previousUsage: number | null
   rate: number | null
   amount: number | null
   pricingType: string | null

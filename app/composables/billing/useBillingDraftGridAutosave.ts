@@ -96,10 +96,14 @@ export function useBillingDraftGridAutosave(options: BillingDraftGridAutosaveOpt
     return (local ?? '') !== stored
   }
 
-  function buildRowReadingsPayload(row: BillingDraftGridRow): MeterReadingBulkInput['readings'] {
-    if (!options.period.value) return []
-    if (!options.batchReadingDate.value) return []
-    const out: MeterReadingBulkInput['readings'] = []
+  function buildRowReadingsPayload(row: BillingDraftGridRow): {
+    payload: MeterReadingBulkInput['readings']
+    rejected: boolean
+  } {
+    if (!options.period.value) return { payload: [], rejected: false }
+    if (!options.batchReadingDate.value) return { payload: [], rejected: false }
+    const payload: MeterReadingBulkInput['readings'] = []
+    let rejected = false
     for (const type of ['electricity', 'water'] as MeterType[]) {
       if (!isCellDirty(row, type)) continue
       const cell = type === 'electricity' ? row.electricity : row.water
@@ -109,7 +113,11 @@ export function useBillingDraftGridAutosave(options: BillingDraftGridAutosaveOpt
       if (trimmed === '') continue
       const numeric = Number(trimmed)
       if (!Number.isFinite(numeric)) continue
-      out.push({
+      if (cell.previousValue !== null && numeric < cell.previousValue) {
+        rejected = true
+        continue
+      }
+      payload.push({
         room_id: row.roomId,
         meter_type: type,
         period_year: options.period.value.periodYear,
@@ -119,14 +127,20 @@ export function useBillingDraftGridAutosave(options: BillingDraftGridAutosaveOpt
         reading_value: numeric,
       })
     }
-    return out
+    return { payload, rejected }
   }
 
   async function performSaveRow(row: BillingDraftGridRow) {
     Reflect.deleteProperty(rowSaveTimers, row.roomId)
-    const payload = buildRowReadingsPayload(row)
+    const { payload, rejected } = buildRowReadingsPayload(row)
     if (payload.length === 0) {
-      rowSaveState.value[row.roomId] = 'idle'
+      if (rejected) {
+        rowSaveState.value[row.roomId] = 'error'
+        rowSaveError.value[row.roomId] = 'Chỉ số nhỏ hơn kỳ trước — không thể lưu'
+      }
+      else {
+        rowSaveState.value[row.roomId] = 'idle'
+      }
       return
     }
     rowSaveState.value[row.roomId] = 'saving'
@@ -203,7 +217,12 @@ export function useBillingDraftGridAutosave(options: BillingDraftGridAutosaveOpt
     const payload: MeterReadingBulkInput['readings'] = []
     for (const row of options.response.value?.rows ?? []) {
       if (!row.editable) continue
-      payload.push(...buildRowReadingsPayload(row))
+      const built = buildRowReadingsPayload(row)
+      if (built.rejected) {
+        rowSaveState.value[row.roomId] = 'error'
+        rowSaveError.value[row.roomId] = 'Chỉ số nhỏ hơn kỳ trước — không thể lưu'
+      }
+      payload.push(...built.payload)
     }
     if (payload.length === 0) return
     isSaving.value = true

@@ -30,6 +30,7 @@ function row(overrides: Partial<BillingDraftGridRow> = {}): BillingDraftGridRow 
       currentValue: null,
       readingDate: null,
       usage: null,
+      previousUsage: null,
       rate: 4000,
       amount: null,
       pricingType: 'per_kwh',
@@ -47,6 +48,7 @@ function row(overrides: Partial<BillingDraftGridRow> = {}): BillingDraftGridRow 
       currentValue: null,
       readingDate: null,
       usage: null,
+      previousUsage: null,
       rate: 15000,
       amount: null,
       pricingType: 'per_m3',
@@ -87,12 +89,42 @@ describe('draft grid optimistic display', () => {
     expect(empty.draftTotal).toBeNull()
   })
 
-  it('warns when a local value is lower than previous', () => {
+  it('rejects a value lower than the previous reading and excludes it from the total', () => {
     const display = optimisticRowDisplay(row(), { 'room-1::electricity': '90' })
 
-    expect(display.electricity.status).toBe('warning')
-    expect(formatOptimisticUsage(display.electricity)).toBe('Nhỏ hơn chỉ số cũ')
+    expect(display.electricity.status).toBe('below_previous')
+    expect(formatOptimisticUsage(display.electricity)).toContain('Nhỏ hơn chỉ số cũ')
     expect(display.draftTotal).toBeNull()
+  })
+
+  it('warns on a usage spike above the threshold but still computes an amount', () => {
+    const spikeRow = row({
+      electricity: { ...row().electricity!, previousValue: 100, previousUsage: 20 },
+    })
+    const display = optimisticRowDisplay(spikeRow, { 'room-1::electricity': '140' })
+
+    expect(display.electricity.status).toBe('usage_spike')
+    expect(display.electricity.amount).not.toBeNull()
+    expect(formatOptimisticUsage(display.electricity)).toContain('Tăng hơn 50%')
+  })
+
+  it('warns on a usage drop below the threshold but still computes an amount', () => {
+    const dropRow = row({
+      electricity: { ...row().electricity!, previousValue: 100, previousUsage: 20 },
+    })
+    const display = optimisticRowDisplay(dropRow, { 'room-1::electricity': '105' })
+
+    expect(display.electricity.status).toBe('usage_drop')
+    expect(display.electricity.amount).not.toBeNull()
+    expect(formatOptimisticUsage(display.electricity)).toContain('Giảm hơn 50%')
+  })
+
+  it('warns on zero consumption but still computes an amount', () => {
+    const display = optimisticRowDisplay(row(), { 'room-1::electricity': '100' })
+
+    expect(display.electricity.status).toBe('zero_usage')
+    expect(display.electricity.amount).toBe(0)
+    expect(formatOptimisticUsage(display.electricity)).toContain('Không tiêu thụ')
   })
 
   it('leaves non-meter water behavior unchanged', () => {

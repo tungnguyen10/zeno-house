@@ -160,7 +160,12 @@ function utilityReadiness(display: OptimisticUtilityDisplay): 'ready' | 'warning
   }
   // Server has already flagged this reading as negative — treat as warning even before user re-enters
   if (cell.blockerCode === BILLING_BLOCKER_CODES.NEGATIVE_CONSUMPTION) return 'warning'
-  if (display.status === 'warning') return 'warning'
+  if (
+    display.status === 'below_previous'
+    || display.status === 'usage_spike'
+    || display.status === 'usage_drop'
+    || display.status === 'zero_usage'
+  ) return 'warning'
   if (display.status === 'invalid' || display.status === 'empty' || display.status === 'unsupported') return 'missing'
   if (cell.previousValue === null || display.currentValue === null) return 'missing'
   return 'ready'
@@ -469,6 +474,15 @@ function rowDisplay(row: BillingDraftGridRow): OptimisticRowDisplay {
 function utilityDisplay(row: BillingDraftGridRow, type: MeterType): OptimisticUtilityDisplay {
   const display = rowDisplay(row)
   return type === 'electricity' ? display.electricity : display.water
+}
+
+function readingInputClass(row: BillingDraftGridRow, type: MeterType): string {
+  const status = utilityDisplay(row, type).status
+  return clsx(
+    isPasteHighlighted(row, type) && 'bg-amber-100/40',
+    status === 'below_previous' && 'border-rose-400/70 ring-1 ring-rose-400/40',
+    (status === 'usage_spike' || status === 'usage_drop' || status === 'zero_usage') && 'border-amber-400/70 ring-1 ring-amber-400/40',
+  )
 }
 
 function formatDisplayAmount(display: OptimisticUtilityDisplay): string {
@@ -780,9 +794,7 @@ const columns: UiTableColumn<BillingDraftGridRow>[] = [
               :model-value="readingDraftValue(row as BillingDraftGridRow, 'electricity')"
               density="compact"
               class="w-28"
-              :class="clsx(
-                isPasteHighlighted(row as BillingDraftGridRow, 'electricity') && 'bg-amber-100/40',
-              )"
+              :class="readingInputClass(row as BillingDraftGridRow, 'electricity')"
               @update:model-value="setReadingDraftValue(row as BillingDraftGridRow, 'electricity', String($event ?? ''))"
               @keydown="handleReadingKeydown($event, row as BillingDraftGridRow, 'electricity')"
               @paste="handleReadingPaste($event, row as BillingDraftGridRow, 'electricity')"
@@ -822,9 +834,7 @@ const columns: UiTableColumn<BillingDraftGridRow>[] = [
               :model-value="readingDraftValue(row as BillingDraftGridRow, 'water')"
               density="compact"
               class="w-28"
-              :class="clsx(
-                isPasteHighlighted(row as BillingDraftGridRow, 'water') && 'bg-amber-100/40',
-              )"
+              :class="readingInputClass(row as BillingDraftGridRow, 'water')"
               @update:model-value="setReadingDraftValue(row as BillingDraftGridRow, 'water', String($event ?? ''))"
               @keydown="handleReadingKeydown($event, row as BillingDraftGridRow, 'water')"
               @paste="handleReadingPaste($event, row as BillingDraftGridRow, 'water')"

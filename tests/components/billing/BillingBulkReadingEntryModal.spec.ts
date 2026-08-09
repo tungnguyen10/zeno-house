@@ -30,6 +30,7 @@ function row(overrides: Partial<BillingDraftGridRow> = {}): BillingDraftGridRow 
       currentValue: null,
       readingDate: null,
       usage: null,
+      previousUsage: null,
       rate: 4000,
       amount: null,
       pricingType: 'per_kwh',
@@ -47,6 +48,7 @@ function row(overrides: Partial<BillingDraftGridRow> = {}): BillingDraftGridRow 
       currentValue: null,
       readingDate: null,
       usage: null,
+      previousUsage: null,
       rate: 15000,
       amount: null,
       pricingType: 'per_m3',
@@ -133,6 +135,6 @@ describe('BillingBulkReadingEntryModal', () => {
 
     const buttons = wrapper.findAll('button')
     expect((buttons[buttons.length - 1]!.element as HTMLButtonElement).disabled).toBe(true)
-    expect(wrapper.text()).toContain('Cần kiểm tra lại')
+    expect(wrapper.text()).toContain('Điện: Giá trị không hợp lệ')
   })
 })
