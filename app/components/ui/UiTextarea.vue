@@ -18,6 +18,8 @@ const props = withDefaults(defineProps<{
    * `compact` — dense table-cell sizing (py-1 text-xs).
    */
   density?: 'normal' | 'compact'
+  /** Marks the field so a parent modal/drawer focuses it when opened. */
+  autofocus?: boolean
 }>(), {
   required: false,
   disabled: false,
@@ -76,6 +78,7 @@ const textareaClass = computed(() =>
       :rows="rows"
       :aria-invalid="!!error"
       :aria-describedby="error ? `${textareaId}-error` : hint ? `${textareaId}-hint` : undefined"
+      :data-autofocus="autofocus ? '' : undefined"
       :class="textareaClass"
       @input="emit('update:modelValue', ($event.target as HTMLTextAreaElement).value)"
       @blur="emit('blur', $event)"

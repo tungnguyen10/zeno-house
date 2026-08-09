@@ -100,6 +100,26 @@ function cellTitle(line: BulkReadingPreviewLine, type: MeterType): string {
   return line.cells[type].message
 }
 
+function cellClass(line: BulkReadingPreviewLine, type: MeterType): string {
+  const cell = line.cells[type]
+  return clsx(
+    'inline-flex items-center gap-1 rounded px-1.5 py-0.5 tabular-nums',
+    cell.blocking && 'bg-rose-500/10 font-semibold text-rose-300 ring-1 ring-rose-500/30',
+    !cell.blocking && cell.status === 'warning' && 'bg-amber-500/10 font-semibold text-amber-300 ring-1 ring-amber-500/30',
+  )
+}
+
+function cellHasIssue(line: BulkReadingPreviewLine, type: MeterType): boolean {
+  const cell = line.cells[type]
+  return cell.blocking || cell.status === 'warning'
+}
+
+function cellPreviousText(line: BulkReadingPreviewLine, type: MeterType): string | null {
+  const previous = line.row?.[type]?.previousValue
+  if (previous === null || previous === undefined) return null
+  return `Cũ: ${previous.toLocaleString('vi-VN')}`
+}
+
 function statusClass(line: BulkReadingPreviewLine): string {
   return clsx(
     'text-xs',
@@ -153,6 +173,7 @@ function statusClass(line: BulkReadingPreviewLine): string {
         label="Danh sách chỉ số"
         :rows="8"
         resize="vertical"
+        autofocus
         placeholder="A101 12345 12&#10;A102&#10;A103 - 15"
       />
 
@@ -180,13 +201,35 @@ function statusClass(line: BulkReadingPreviewLine): string {
           {{ (row as BulkReadingPreviewLine).roomNumber ?? (row as BulkReadingPreviewLine).roomToken ?? '—' }}
         </template>
         <template #cell-electricity="{ row }">
-          <span :title="cellTitle(row as BulkReadingPreviewLine, 'electricity')">
-            {{ cellText(row as BulkReadingPreviewLine, 'electricity') }}
+          <span class="inline-flex flex-col items-end gap-0.5">
+            <span
+              :class="cellClass(row as BulkReadingPreviewLine, 'electricity')"
+              :title="cellTitle(row as BulkReadingPreviewLine, 'electricity')"
+            >
+              {{ cellText(row as BulkReadingPreviewLine, 'electricity') }}
+            </span>
+            <span
+              v-if="cellHasIssue(row as BulkReadingPreviewLine, 'electricity') && cellPreviousText(row as BulkReadingPreviewLine, 'electricity')"
+              class="text-[11px] tabular-nums text-muted"
+            >
+              {{ cellPreviousText(row as BulkReadingPreviewLine, 'electricity') }}
+            </span>
           </span>
         </template>
         <template #cell-water="{ row }">
-          <span :title="cellTitle(row as BulkReadingPreviewLine, 'water')">
-            {{ cellText(row as BulkReadingPreviewLine, 'water') }}
+          <span class="inline-flex flex-col items-end gap-0.5">
+            <span
+              :class="cellClass(row as BulkReadingPreviewLine, 'water')"
+              :title="cellTitle(row as BulkReadingPreviewLine, 'water')"
+            >
+              {{ cellText(row as BulkReadingPreviewLine, 'water') }}
+            </span>
+            <span
+              v-if="cellHasIssue(row as BulkReadingPreviewLine, 'water') && cellPreviousText(row as BulkReadingPreviewLine, 'water')"
+              class="text-[11px] tabular-nums text-muted"
+            >
+              {{ cellPreviousText(row as BulkReadingPreviewLine, 'water') }}
+            </span>
           </span>
         </template>
         <template #cell-status="{ row }">
