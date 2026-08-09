@@ -6,6 +6,7 @@ import type { BillingDraftGridRow } from '~/types/billing'
 import {
   acceptedBulkReadingUpdates,
   buildBulkReadingPreview,
+  DEFAULT_USAGE_WARNING_PERCENT,
   type BulkReadingMode,
   type BulkReadingPreviewLine,
   type MeterType,
@@ -23,8 +24,12 @@ const emit = defineEmits<{
 
 const raw = ref('')
 const mode = ref<BulkReadingMode>('auto')
+const usageWarningPercent = ref(DEFAULT_USAGE_WARNING_PERCENT)
 
-const preview = computed(() => buildBulkReadingPreview(raw.value, props.rows, { mode: mode.value }))
+const preview = computed(() => buildBulkReadingPreview(raw.value, props.rows, {
+  mode: mode.value,
+  usageWarningPercent: usageWarningPercent.value,
+}))
 const updates = computed(() => acceptedBulkReadingUpdates(preview.value))
 const canApply = computed(() => updates.value.length > 0 && preview.value.blockingCount === 0)
 
@@ -82,6 +87,7 @@ watch(() => props.open, (open) => {
   if (open) {
     raw.value = ''
     mode.value = 'auto'
+    usageWarningPercent.value = DEFAULT_USAGE_WARNING_PERCENT
   }
 })
 
@@ -100,10 +106,38 @@ function cellTitle(line: BulkReadingPreviewLine, type: MeterType): string {
   return line.cells[type].message
 }
 
+function cellClass(line: BulkReadingPreviewLine, type: MeterType): string {
+  const cell = line.cells[type]
+  const rejected = cell.status === 'below_previous'
+  const warningLike = cell.status === 'warning' || cell.status === 'usage_spike' || cell.status === 'usage_drop' || cell.status === 'zero_usage'
+  return clsx(
+    'inline-flex items-center gap-1 rounded px-1.5 py-0.5 tabular-nums',
+    (cell.blocking || rejected) && 'bg-rose-500/10 font-semibold text-rose-300 ring-1 ring-rose-500/30',
+    !cell.blocking && !rejected && warningLike && 'bg-amber-500/10 font-semibold text-amber-300 ring-1 ring-amber-500/30',
+  )
+}
+
+function cellHasIssue(line: BulkReadingPreviewLine, type: MeterType): boolean {
+  const cell = line.cells[type]
+  return cell.blocking
+    || cell.status === 'below_previous'
+    || cell.status === 'warning'
+    || cell.status === 'usage_spike'
+    || cell.status === 'usage_drop'
+    || cell.status === 'zero_usage'
+}
+
+function cellPreviousText(line: BulkReadingPreviewLine, type: MeterType): string | null {
+  const previous = line.row?.[type]?.previousValue
+  if (previous === null || previous === undefined) return null
+  return `Cũ: ${previous.toLocaleString('vi-VN')}`
+}
+
 function statusClass(line: BulkReadingPreviewLine): string {
   return clsx(
     'text-xs',
     line.status === 'error' && 'text-rose-400',
+    line.status === 'rejected' && 'text-rose-300',
     line.status === 'warning' && 'text-amber-300',
     line.status === 'accepted' && 'text-emerald-300',
     line.status === 'skipped' && 'text-muted',
@@ -133,16 +167,38 @@ function statusClass(line: BulkReadingPreviewLine): string {
         <p class="mt-2 text-xs text-muted">{{ guidance.note }}</p>
       </UiAlert>
 
-      <div class="flex flex-wrap items-center gap-2">
-        <UiButton size="sm" :variant="mode === 'auto' ? 'primary' : 'ghost'" @click="mode = 'auto'">
-          Tự nhận
-        </UiButton>
-        <UiButton size="sm" :variant="mode === 'room' ? 'primary' : 'ghost'" @click="mode = 'room'">
-          Theo tên phòng
-        </UiButton>
-        <UiButton size="sm" :variant="mode === 'ordered' ? 'primary' : 'ghost'" @click="mode = 'ordered'">
-          Theo thứ tự
-        </UiButton>
+      <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
+        <div class="flex items-center gap-1.5">
+          <UiButton size="sm" :variant="mode === 'auto' ? 'primary' : 'ghost'" @click="mode = 'auto'">
+            Tự nhận
+          </UiButton>
+          <UiButton size="sm" :variant="mode === 'room' ? 'primary' : 'ghost'" @click="mode = 'room'">
+            Theo tên phòng
+          </UiButton>
+          <UiButton size="sm" :variant="mode === 'ordered' ? 'primary' : 'ghost'" @click="mode = 'ordered'">
+            Theo thứ tự
+          </UiButton>
+        </div>
+        <span class="hidden h-4 w-px bg-dark-border sm:block" aria-hidden="true" />
+        <label
+          class="flex items-center gap-1.5 text-xs text-muted"
+          title="Áp dụng khi tiêu thụ kỳ này tăng hoặc giảm quá ngưỡng so với kỳ trước"
+        >
+          Cảnh báo lệch tiêu thụ hơn
+          <UiInput
+            v-model.number="usageWarningPercent"
+            type="number"
+            number-mode="integer"
+            min="1"
+            max="200"
+            step="1"
+            density="compact"
+            class="w-16"
+            aria-label="Ngưỡng cảnh báo lệch tiêu thụ (%)"
+          >
+            <template #suffix>%</template>
+          </UiInput>
+        </label>
         <span class="text-xs text-muted">
           Đang đọc: {{ preview.mode === 'room' ? 'theo tên phòng' : 'theo thứ tự đang hiển thị' }}
         </span>
@@ -153,6 +209,7 @@ function statusClass(line: BulkReadingPreviewLine): string {
         label="Danh sách chỉ số"
         :rows="8"
         resize="vertical"
+        autofocus
         placeholder="A101 12345 12&#10;A102&#10;A103 - 15"
       />
 
@@ -160,9 +217,10 @@ function statusClass(line: BulkReadingPreviewLine): string {
         Input có thể bị nhầm giữa tên phòng và chỉ số. Kiểm tra preview hoặc chọn chế độ đọc trước khi áp dụng.
       </UiAlert>
 
-      <div class="grid gap-2 text-xs text-muted sm:grid-cols-3">
+      <div class="grid gap-2 text-xs text-muted sm:grid-cols-4">
         <span>Áp dụng: <strong class="text-white">{{ preview.applyCount }}</strong></span>
         <span>Cảnh báo: <strong class="text-amber-300">{{ preview.warningCount }}</strong></span>
+        <span>Bị loại: <strong class="text-rose-300">{{ preview.rejectedCount }}</strong></span>
         <span>Lỗi: <strong class="text-rose-400">{{ preview.blockingCount }}</strong></span>
       </div>
 
@@ -180,13 +238,35 @@ function statusClass(line: BulkReadingPreviewLine): string {
           {{ (row as BulkReadingPreviewLine).roomNumber ?? (row as BulkReadingPreviewLine).roomToken ?? '—' }}
         </template>
         <template #cell-electricity="{ row }">
-          <span :title="cellTitle(row as BulkReadingPreviewLine, 'electricity')">
-            {{ cellText(row as BulkReadingPreviewLine, 'electricity') }}
+          <span class="inline-flex flex-col items-end gap-0.5">
+            <span
+              :class="cellClass(row as BulkReadingPreviewLine, 'electricity')"
+              :title="cellTitle(row as BulkReadingPreviewLine, 'electricity')"
+            >
+              {{ cellText(row as BulkReadingPreviewLine, 'electricity') }}
+            </span>
+            <span
+              v-if="cellHasIssue(row as BulkReadingPreviewLine, 'electricity') && cellPreviousText(row as BulkReadingPreviewLine, 'electricity')"
+              class="text-[11px] tabular-nums text-muted"
+            >
+              {{ cellPreviousText(row as BulkReadingPreviewLine, 'electricity') }}
+            </span>
           </span>
         </template>
         <template #cell-water="{ row }">
-          <span :title="cellTitle(row as BulkReadingPreviewLine, 'water')">
-            {{ cellText(row as BulkReadingPreviewLine, 'water') }}
+          <span class="inline-flex flex-col items-end gap-0.5">
+            <span
+              :class="cellClass(row as BulkReadingPreviewLine, 'water')"
+              :title="cellTitle(row as BulkReadingPreviewLine, 'water')"
+            >
+              {{ cellText(row as BulkReadingPreviewLine, 'water') }}
+            </span>
+            <span
+              v-if="cellHasIssue(row as BulkReadingPreviewLine, 'water') && cellPreviousText(row as BulkReadingPreviewLine, 'water')"
+              class="text-[11px] tabular-nums text-muted"
+            >
+              {{ cellPreviousText(row as BulkReadingPreviewLine, 'water') }}
+            </span>
           </span>
         </template>
         <template #cell-status="{ row }">

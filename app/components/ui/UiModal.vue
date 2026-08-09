@@ -47,6 +47,11 @@ function focusableElements(): HTMLElement[] {
 }
 
 function focusDialog() {
+  const preferred = dialogRef.value?.querySelector<HTMLElement>('[data-autofocus]:not([disabled])')
+  if (preferred) {
+    preferred.focus()
+    return
+  }
   const first = focusableElements()[0]
   if (first) first.focus()
   else dialogRef.value?.focus()
