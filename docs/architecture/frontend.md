@@ -90,6 +90,20 @@ existing dark/cyan/Inter tokens and `UiInput`, `UiButton`, `UiAlert`, and relate
 new input primitive. Auth business calls remain in `auth/useAuth`, while the pending queue uses
 the authenticated self-status API rather than browser-side table access.
 
+## PWA Launch Splash
+
+The product installs as one PWA with `/` as its start URL, then redirects by role. Android uses
+the platform-generated manifest splash. iOS/iPadOS startup images are generated from
+`pwa-assets.config.ts` with `npm run generate:pwa-splashes` and committed under `public/images/`.
+The generated matrix covers supported iPhone/iPad sizes, both orientations, and light/dark system
+appearance; `pwa/apple-startup.ts` is the shared source for generator names and Nuxt head links.
+
+Native launch imagery uses the portal light (`#f8fafc`) and dark (`#0b1624`) canvases and the same
+centered Zeno wordmark footprint as `PortalSplash`. The tenant layout alone continues the brand
+moment while shared bootstrap is pending, with a 300 ms minimum interval and no extra leave delay.
+Do not mount the portal splash in dashboard or auth layouts. If the wordmark or Apple device matrix
+changes, regenerate assets and run `tests/pwa/pwa-config.test.ts` before committing the PNG output.
+
 ## Styling
 
 The app is a dense operational tool, not a marketing site.

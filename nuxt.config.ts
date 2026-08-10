@@ -1,3 +1,5 @@
+import { appleStartupImages } from './pwa/apple-startup'
+
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   compatibilityDate: "2025-07-15",
@@ -105,6 +107,7 @@ export default defineNuxtConfig({
       link: [
         { rel: "icon", type: "image/x-icon", href: "/favicon.ico" },
         { rel: "apple-touch-icon", href: "/icons/apple-touch-icon.png" },
+        ...appleStartupImages,
       ],
     },
   },
@@ -155,7 +158,7 @@ export default defineNuxtConfig({
       start_url: "/",
       scope: "/",
       theme_color: "#0b59db",
-      background_color: "#f2f5fa",
+      background_color: "#f8fafc",
       icons: [
         { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
         { src: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },

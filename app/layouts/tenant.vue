@@ -37,13 +37,6 @@ onMounted(() => {
          the layout so it survives page transitions, and sits inside
          `.portal-shell` so teleported overlays inherit the portal tokens. -->
     <div id="portal-overlay-root" />
-    <Transition
-      enter-active-class="transition-opacity duration-200"
-      leave-active-class="transition-opacity duration-300"
-      enter-from-class="opacity-0"
-      leave-to-class="opacity-0"
-    >
-      <PortalSplash v-if="showSplash" />
-    </Transition>
+    <PortalSplash v-if="showSplash" />
   </div>
 </template>
