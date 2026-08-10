@@ -78,14 +78,14 @@ const collapseBtnClass = computed(() =>
 
 function navItemClass(to: string) {
   return clsx(
-    'group relative flex min-h-11 items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium whitespace-nowrap',
+    'group relative flex min-h-11 items-center gap-3 rounded-lg border px-3 py-2 text-sm font-medium whitespace-nowrap',
     'transition-colors duration-150 motion-reduce:transition-none',
     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-cyan/40',
     'lg:min-h-10',
     sidebarCollapsed.value && 'lg:justify-center lg:gap-0 lg:px-0',
     isActive(to)
-      ? 'bg-cyan/10 text-cyan active:bg-cyan/15'
-      : 'text-muted hover:bg-dark-hover hover:text-white active:bg-dark-hover active:text-white',
+      ? 'border-cyan/30 bg-cyan/10 text-cyan shadow-sm shadow-cyan/5 active:bg-cyan/15'
+      : 'border-transparent text-muted hover:border-dark-border hover:bg-dark-hover hover:text-white active:bg-dark-hover active:text-white',
   )
 }
 
@@ -194,10 +194,11 @@ function sectionLabelClass() {
     </nav>
 
     <!-- User info -->
-    <div class="border-t border-dark-border px-3 py-4">
+    <div class="px-3 pb-4 pt-2">
       <NuxtLink
         to="/dashboard/profile"
-        class="flex items-center gap-3 rounded-lg px-3 py-2 transition-colors hover:bg-dark-hover"
+        data-sidebar-user
+        class="flex items-center gap-3 rounded-xl border border-dark-border bg-dark-surface/40 px-3 py-2.5 transition-colors hover:border-cyan/20 hover:bg-dark-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-cyan/40"
         :class="sidebarCollapsed && 'lg:justify-center lg:px-0'"
         @click="emit('close')"
       >

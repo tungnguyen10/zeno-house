@@ -50,6 +50,9 @@ describe('DashboardPendingList', () => {
     expect(text).toContain('Tháng 6/2026')
     // 12.000.000 ₫ (vi-VN formatting)
     expect(text).toMatch(/12[.\u00a0]000[.\u00a0]000/)
+    const list = wrapper.get('[data-pending-list]')
+    expect(list.classes()).not.toContain('border-dark-border')
+    expect(list.classes()).not.toContain('bg-dark-surface')
   })
 
   it('renders em-dash when amount is undefined', () => {

@@ -53,7 +53,7 @@ App SHALL add an admin-only navigation item and `/dashboard/settings/access-requ
 ---
 
 ### Requirement: AppSidebar hiển thị navigation items
-AppSidebar SHALL nhận `navItems: NavItem[]` qua props và render các navigation link tới `/dashboard`-based paths theo nhóm tĩnh. `Dashboard` SHALL đứng riêng; các link còn lại SHALL thuộc `Tài sản & cho thuê`, `Tài chính & vận hành`, hoặc `Quản trị`. Section không còn item sau khi lọc theo role SHALL không được render. Item active SHALL được highlight và expose `aria-current="page"`. Label của link SHALL vẫn là accessible name khi desktop sidebar thu gọn. AppSidebar SHALL hiển thị thông tin user đã đăng nhập ở footer: avatar initial, email, và role. AppSidebar SHALL NOT render trong `/portal` namespace.
+AppSidebar SHALL nhận `navItems: NavItem[]` qua props và render các navigation link tới `/dashboard`-based paths theo nhóm tĩnh. `Dashboard` SHALL đứng riêng; các link còn lại SHALL thuộc `Tài sản & cho thuê`, `Tài chính & vận hành`, hoặc `Quản trị`. Section không còn item sau khi lọc theo role SHALL không được render. Item active SHALL được highlight bằng canonical cyan surface/border và expose `aria-current="page"`. Label của link SHALL vẫn là accessible name khi desktop sidebar thu gọn. AppSidebar SHALL hiển thị thông tin user đã đăng nhập trong một footer panel có avatar, email, và role. AppSidebar SHALL NOT render trong `/portal` namespace.
 
 #### Scenario: Sidebar trỏ tới dashboard routes
 - **WHEN** admin layout mount
@@ -97,12 +97,12 @@ AppSidebar SHALL nhận `navItems: NavItem[]` qua props và render các navigati
 
 ---
 
-### Requirement: AppHeader hiển thị title và user info
-AppHeader SHALL hiển thị page title ở trái và user info thật ở phải. User info SHALL bao gồm email của user đã đăng nhập và nút logout.
+### Requirement: AppHeader tích hợp global actions với page header
+Trên desktop, AppHeader SHALL render như một global action rail ở góc phải để page title, description, page actions, pending-operations trigger, và user menu cùng nằm trong dải đầu trang mà không tạo một hàng header trống. Trên mobile, AppHeader SHALL giữ một hàng cao 64px với hamburger và global actions. User menu SHALL expose user info thật và logout action.
 
 #### Scenario: Header hiển thị đúng structure
 - **WHEN** admin layout mount
-- **THEN** header có vùng title bên trái và vùng actions bên phải
+- **THEN** `UiPageHeader` render title/description ở trái và dành đủ khoảng trống cho AppHeader global actions ở phải mà không overlap
 
 #### Scenario: Header có nút toggle sidebar trên mobile
 - **WHEN** viewport nhỏ hơn `lg` breakpoint
@@ -115,6 +115,18 @@ AppHeader SHALL hiển thị page title ở trái và user info thật ở phả
 #### Scenario: Logout từ AppHeader
 - **WHEN** user click nút logout trong AppHeader
 - **THEN** session bị xoá và user được redirect về `/login`
+
+#### Scenario: Pending operations indicator is truthful
+- **WHEN** `pendingOperations` có ít nhất một item
+- **THEN** nút chuông hiển thị chấm trạng thái và popover hiển thị tối đa năm item theo đúng thứ tự API
+
+#### Scenario: No pending operations
+- **WHEN** `pendingOperations` rỗng
+- **THEN** nút chuông không hiển thị chấm trạng thái và popover hiển thị positive empty state
+
+#### Scenario: Pending operations popover is keyboard accessible
+- **WHEN** người dùng mở popover bằng keyboard và nhấn Escape
+- **THEN** popover đóng và focus trở lại nút chuông
 
 ---
 

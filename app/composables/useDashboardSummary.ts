@@ -6,6 +6,7 @@ const GENERIC_ERROR = 'Không tải được dữ liệu dashboard. Vui lòng th
 export function useDashboardSummary() {
   const { data, status, error, refresh } = useFetch<DashboardSummaryResponse>(
     '/api/dashboard/summary',
+    { key: 'dashboard-summary' },
   )
 
   const summary = computed(() => data.value?.data ?? null)

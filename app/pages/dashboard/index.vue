@@ -174,10 +174,12 @@ const previousCollectionRate = computed<number | null>(() => {
     </UiAlert>
 
     <template v-else>
-      <!-- Hero row: Collection donut + KPI strip -->
-      <div class="grid grid-cols-1 gap-4 lg:grid-cols-12 lg:gap-6">
-        <UiSection class="order-2 lg:order-none lg:col-span-4">
-          <UiSkeleton v-if="isLoading" class="h-64 rounded-xl" />
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 lg:gap-6">
+        <UiSurfacePanel
+          data-dashboard-card="collection"
+          class="min-h-52 md:col-span-2 lg:col-span-1"
+        >
+          <UiSkeleton v-if="isLoading" class="h-44 rounded-lg" />
           <DashboardCollectionDonut
             v-else-if="summary"
             :collection-rate="summary.billing.currentMonth.collectionRate"
@@ -188,71 +190,85 @@ const previousCollectionRate = computed<number | null>(() => {
             :period="summary.billing.currentMonth.period"
             :previous-collection-rate="previousCollectionRate"
           />
-        </UiSection>
+        </UiSurfacePanel>
 
-        <div class="order-1 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:order-none lg:col-span-8 lg:gap-6">
-          <UiSection title="Phòng">
-            <UiSkeleton v-if="isLoading" class="h-40 rounded-xl" />
+        <UiSurfacePanel data-dashboard-card="rooms" class="min-h-52">
+          <div class="flex h-full flex-col">
+            <h2 class="mb-3 text-sm font-semibold text-white">Phòng</h2>
+            <UiSkeleton v-if="isLoading" class="h-36 rounded-lg" />
             <DashboardRoomsSummaryCard
               v-else-if="summary"
+              class="flex-1"
               :rooms="summary.rooms"
               :building-count="summary.buildings.total"
             />
-          </UiSection>
+          </div>
+        </UiSurfacePanel>
 
-          <UiSection title="Hợp đồng">
-            <UiSkeleton v-if="isLoading" class="h-40 rounded-xl" />
+        <UiSurfacePanel data-dashboard-card="contracts" class="min-h-52">
+          <div class="flex h-full flex-col">
+            <h2 class="mb-3 text-sm font-semibold text-white">Hợp đồng</h2>
+            <UiSkeleton v-if="isLoading" class="h-36 rounded-lg" />
             <DashboardContractsSummaryCard
               v-else-if="summary"
+              class="flex-1"
               :active="summary.contracts.active"
               :expiring-soon="summary.contracts.expiringSoon"
               :expiring-urgent="summary.contracts.expiringUrgent"
               :tenant-count="summary.tenants.total"
             />
-          </UiSection>
-        </div>
+          </div>
+        </UiSurfacePanel>
       </div>
 
-      <!-- Trend chart -->
-      <UiSection :title="`Doanh thu năm ${trendYear}`">
-        <template v-if="summary && summary.buildingBreakdown.length > 1" #actions>
+      <UiSurfacePanel as="section" data-dashboard-section="revenue">
+        <header class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <h2 class="text-sm font-semibold text-white">Doanh thu năm {{ trendYear }}</h2>
           <UiSelect
+            v-if="summary && summary.buildingBreakdown.length > 1"
             v-model="selectedBuildingId"
             :options="buildingFilterOptions"
             density="compact"
             aria-label="Lọc theo tòa nhà"
-            class="w-56"
+            class="w-full sm:w-56"
           />
-        </template>
+        </header>
         <div v-if="isLoading" class="space-y-4">
           <UiSkeleton class="h-20 rounded-xl" />
-          <UiSkeleton class="h-64 rounded-xl" />
+          <div class="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(15rem,3fr)_minmax(0,7fr)]">
+            <UiSkeleton class="h-48 rounded-lg" />
+            <UiSkeleton class="h-64 rounded-lg" />
+          </div>
         </div>
-        <template v-else-if="summary">
-          <DashboardRevenueBreakdown :breakdown="filteredBreakdown" />
-          <div
-            v-if="filteredBreakdown.totalIssued > 0"
-            class="my-5 border-t border-dark-border"
-          />
-          <DashboardBillingTrendChart :trend="filteredTrend" />
-        </template>
-      </UiSection>
+        <DashboardRevenueOverview
+          v-else-if="summary"
+          :breakdown="filteredBreakdown"
+          :trend="filteredTrend"
+        />
+      </UiSurfacePanel>
 
-      <!-- Detail: occupancy by building + pending operations -->
       <div class="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
-        <UiSection title="Tỷ lệ phòng theo tòa">
+        <UiSurfacePanel as="section" data-dashboard-section="occupancy" density="compact">
+          <h2 class="mb-3 text-sm font-semibold text-white">Tỷ lệ phòng theo tòa</h2>
           <div v-if="isLoading" class="space-y-3">
             <UiSkeleton v-for="i in 3" :key="i" class="h-16 rounded-lg" />
           </div>
           <DashboardOccupancyList v-else-if="summary" :buildings="summary.buildingBreakdown" />
-        </UiSection>
+        </UiSurfacePanel>
 
-        <UiSection title="Việc cần xử lý">
+        <UiSurfacePanel
+          id="pending-operations"
+          as="section"
+          data-dashboard-section="pending"
+          density="compact"
+          class="scroll-mt-20"
+        >
+          <h2 class="mb-3 text-sm font-semibold text-white">Việc cần xử lý</h2>
           <div v-if="isLoading" class="space-y-2">
             <UiSkeleton v-for="i in 3" :key="i" class="h-12 rounded-lg" />
           </div>
           <DashboardPendingList v-else-if="summary" :items="summary.pendingOperations" />
-        </UiSection>
+        </UiSurfacePanel>
       </div>
     </template>
   </div>

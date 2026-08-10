@@ -65,12 +65,12 @@ const rows = computed<Row[]>(() =>
       <IconBuilding class="h-5 w-5 text-muted" aria-hidden="true" />
     </template>
   </UiEmptyState>
-  <div v-else class="overflow-hidden rounded-xl border border-dark-border bg-dark-surface">
+  <div v-else data-occupancy-list class="overflow-hidden">
     <NuxtLink
       v-for="row in rows"
       :key="row.id"
       :to="buildingPath(row)"
-      class="group grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-4 gap-y-2 border-b border-dark-border px-4 py-3 last:border-b-0 hover:bg-dark-hover sm:grid-cols-[minmax(10rem,1.2fr)_minmax(6rem,1fr)_3rem_1rem]"
+      class="group grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-4 gap-y-2 border-b border-dark-border px-2 py-3 last:border-b-0 hover:bg-dark-hover sm:grid-cols-[minmax(10rem,1.2fr)_minmax(6rem,1fr)_3rem_1rem] sm:px-3"
     >
       <div class="min-w-0 col-span-2 sm:col-span-1">
         <div class="truncate text-sm font-medium text-white">{{ row.name }}</div>
