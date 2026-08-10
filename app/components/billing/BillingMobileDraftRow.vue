@@ -159,6 +159,7 @@ function formatRate(cell: BillingDraftGridUtilityCell | null): string {
         class="min-h-11 whitespace-nowrap"
         @click="emit('override', row)"
       >
+        <IconPencilSquare class="h-4 w-4" aria-hidden="true" />
         Điều chỉnh chỉ số
       </UiButton>
     </footer>

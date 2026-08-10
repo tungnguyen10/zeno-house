@@ -105,6 +105,14 @@ function incidentalChargesFor(row: BillingDraftGridRow): BillingIncidentalCharge
   return (props.incidentalCharges ?? []).filter(charge => charge.contractId === row.contractId)
 }
 
+function canAddIncidental(row: BillingDraftGridRow): boolean {
+  return props.canManageIncidental && !!row.contractId && row.editable
+}
+
+function canOverrideReadings(row: BillingDraftGridRow): boolean {
+  return !!(row.electricity?.required || row.water?.required) && row.editable
+}
+
 function openIncidentalModal(row: BillingDraftGridRow, charge: BillingIncidentalCharge | null = null) {
   if (!props.canManageIncidental || !row.contractId || !row.editable) return
   incidentalRow.value = row
@@ -594,7 +602,7 @@ const columns: UiTableColumn<BillingDraftGridRow>[] = [
   { key: 'rent_service', label: 'Phòng & DV', numeric: true, width: 'w-32' },
   { key: 'draft_total', label: 'Tổng nháp', numeric: true, width: 'w-40' },
   { key: 'status', label: 'Trạng thái', width: 'w-32' },
-  { key: 'actions', label: '', action: true, width: 'w-40' },
+  { key: 'actions', label: '', action: true, width: 'w-28' },
 ]
 </script>
 
@@ -909,55 +917,75 @@ const columns: UiTableColumn<BillingDraftGridRow>[] = [
           <div class="flex items-center justify-end gap-2">
             <span
               v-if="rowSaveStateOf(row as BillingDraftGridRow) === 'saving'"
-              class="text-[11px] text-muted"
+              class="whitespace-nowrap text-[11px] text-muted"
             >
               Đang lưu…
             </span>
             <span
               v-else-if="rowSaveStateOf(row as BillingDraftGridRow) === 'saved'"
-              class="text-[11px] text-emerald-400"
+              class="whitespace-nowrap text-[11px] text-emerald-400"
             >
               Đã lưu ✓
             </span>
             <span
               v-else-if="rowSaveStateOf(row as BillingDraftGridRow) === 'error'"
-              class="text-[11px] text-rose-400"
+              class="whitespace-nowrap text-[11px] text-rose-400"
               :title="rowSaveError[(row as BillingDraftGridRow).roomId]"
             >
               Lỗi
             </span>
             <UiButton
-              v-if="canManageIncidental && (row as BillingDraftGridRow).contractId && (row as BillingDraftGridRow).editable"
-              variant="ghost"
-              size="sm"
-              class="whitespace-nowrap"
-              :data-test="`desktop-add-incidental-${(row as BillingDraftGridRow).roomId}`"
-              :aria-label="`Thêm phát sinh cho phòng ${(row as BillingDraftGridRow).roomNumber ?? ''}`"
-              title="Thêm phát sinh"
-              @click="openIncidentalModal(row as BillingDraftGridRow)"
-            >
-              <IconPlus class="h-4 w-4" aria-hidden="true" />
-              Thêm phát sinh
-            </UiButton>
-            <UiButton
-              v-if="((row as BillingDraftGridRow).electricity?.required || (row as BillingDraftGridRow).water?.required) && (row as BillingDraftGridRow).editable"
-              variant="ghost"
-              size="sm"
-              @click="openOverrideModal(row as BillingDraftGridRow)"
-            >
-              Điều chỉnh chỉ số
-            </UiButton>
-            <UiButton
               v-if="onAutoIssue && canAutoIssue(row as BillingDraftGridRow)"
               variant="primary"
               size="sm"
+              class="whitespace-nowrap"
               @click="startAutoIssue(row as BillingDraftGridRow)"
             >
               Đã thu
             </UiButton>
+            <UiDropdownMenu
+              v-if="canAddIncidental(row as BillingDraftGridRow) || canOverrideReadings(row as BillingDraftGridRow)"
+              :aria-label="`Hành động cho phòng ${(row as BillingDraftGridRow).roomNumber ?? ''}`"
+            >
+              <UiDropdownMenuItem
+                v-if="canAddIncidental(row as BillingDraftGridRow)"
+                :data-test="`desktop-add-incidental-${(row as BillingDraftGridRow).roomId}`"
+                @click="openIncidentalModal(row as BillingDraftGridRow)"
+              >
+                <template #icon>
+                  <IconPlus class="h-4 w-4 shrink-0" aria-hidden="true" />
+                </template>
+                Thêm phát sinh
+              </UiDropdownMenuItem>
+              <UiDropdownMenuItem
+                v-if="canOverrideReadings(row as BillingDraftGridRow)"
+                @click="openOverrideModal(row as BillingDraftGridRow)"
+              >
+                <template #icon>
+                  <IconPencilSquare class="h-4 w-4 shrink-0" aria-hidden="true" />
+                </template>
+                Điều chỉnh chỉ số
+              </UiDropdownMenuItem>
+            </UiDropdownMenu>
           </div>
         </template>
       </UiTable>
+
+      <!-- Mobile select-all -->
+      <div
+        v-if="!loading && response && filteredRows.length > 0"
+        class="flex items-center justify-between rounded-lg border border-dark-border bg-dark-surface px-3 py-2 md:hidden"
+      >
+        <UiCheckbox
+          :model-value="allVisibleSelected"
+          :indeterminate="someVisibleSelected"
+          label="Chọn tất cả"
+          class="[&>label]:min-h-11 [&>label]:items-center"
+          aria-label="Chọn tất cả phòng"
+          @update:model-value="toggleSelectAllVisible"
+        />
+        <span v-if="selectedCount > 0" class="text-xs tabular-nums text-muted">Đã chọn {{ selectedCount }}</span>
+      </div>
 
       <!-- Mobile cards (stacked) -->
       <div
