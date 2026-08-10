@@ -235,9 +235,11 @@ describe('BillingDraftGridStep', () => {
     wrapper.unmount()
   })
 
-  it('shows a discoverable desktop label for adding an incidental charge', () => {
+  it('shows a discoverable desktop label for adding an incidental charge', async () => {
     const wrapper = mountGrid()
 
+    const trigger = wrapper.get('[aria-label="Hành động cho phòng 101"]')
+    await trigger.trigger('click')
     const action = wrapper.get('[data-test="desktop-add-incidental-room-1"]')
     expect(action.text()).toContain('Thêm phát sinh')
 
@@ -616,6 +618,8 @@ describe('BillingDraftGridStep', () => {
     })
     const wrapper = mountGrid({ response: response([row]), onSaveOverride })
 
+    const trigger = wrapper.get('[aria-label="Hành động cho phòng 101"]')
+    await trigger.trigger('click')
     const overrideButton = wrapper.findAll('button').find(button => button.text() === 'Điều chỉnh chỉ số')
     expect(overrideButton).toBeTruthy()
     await overrideButton!.trigger('click')
