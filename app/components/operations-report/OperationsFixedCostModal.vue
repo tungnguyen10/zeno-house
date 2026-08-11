@@ -42,14 +42,6 @@ const noteModel = computed<string | null>({
 
 const error = ref<string | null>(null)
 
-/** Show grouped digits while storing the raw number string in `form.amount`. */
-const amountDisplay = computed<string>({
-  get: () => (form.amount ? Number(form.amount).toLocaleString('vi-VN') : ''),
-  set: (value) => {
-    form.amount = value.replace(/\D/g, '')
-  },
-})
-
 const amountPreview = computed(() => {
   const value = Number(form.amount)
   if (!form.amount || Number.isNaN(value) || value <= 0) return undefined
@@ -104,17 +96,15 @@ function submit() {
       />
 
       <UiInput
-        v-model="amountDisplay"
+        v-model="form.amount"
         label="Số tiền / tháng"
-        type="text"
-        inputmode="numeric"
+        type="number"
+        number-mode="currency"
         placeholder="0"
         input-class="text-lg font-semibold"
         :hint="amountPreview"
         required
-      >
-        <template #suffix>₫</template>
-      </UiInput>
+      />
 
       <UiDatePicker
         v-model="form.effective_from_period"

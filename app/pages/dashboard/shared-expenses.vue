@@ -223,9 +223,7 @@ function resolveError(err: unknown, fallback: string): string {
                 search-placeholder="Nhập tên chi phí"
                 empty-message="Nhập tên mới để dùng"
               />
-              <UiInput v-model="form.amount" label="Số tiền" type="number" number-mode="currency" min="1">
-                <template #suffix>₫</template>
-              </UiInput>
+              <UiInput v-model="form.amount" label="Số tiền" type="number" number-mode="currency" min="1" />
             </div>
             <UiSelect v-model="form.category" label="Loại chi phí" :options="categoryOptions" />
             <UiTextarea v-model="form.note" label="Ghi chú" :rows="2" />

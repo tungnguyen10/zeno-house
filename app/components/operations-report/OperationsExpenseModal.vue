@@ -50,14 +50,6 @@ const form = reactive({
 const error = ref<string | null>(null)
 const showDetails = ref(false)
 
-/** Show grouped digits while storing the raw number string in `form.amount`. */
-const amountDisplay = computed<string>({
-  get: () => (form.amount ? Number(form.amount).toLocaleString('vi-VN') : ''),
-  set: (value) => {
-    form.amount = value.replace(/\D/g, '')
-  },
-})
-
 const amountPreview = computed(() => {
   const value = Number(form.amount)
   if (!form.amount || Number.isNaN(value) || value <= 0) return undefined
@@ -130,17 +122,15 @@ function onReceiptChange(file: File) {
     <form class="space-y-4" novalidate @submit.prevent="submit">
       <!-- Amount leads the form: prominent, grouped, and formatted. -->
       <UiInput
-        v-model="amountDisplay"
+        v-model="form.amount"
         label="Số tiền"
-        type="text"
-        inputmode="numeric"
+        type="number"
+        number-mode="currency"
         placeholder="0"
         input-class="text-lg font-semibold"
         :hint="amountPreview"
         required
-      >
-        <template #suffix>₫</template>
-      </UiInput>
+      />
 
       <UiSelect
         v-model="form.category"
