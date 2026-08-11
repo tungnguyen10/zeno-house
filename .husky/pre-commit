@@ -1,1 +1,9 @@
+# GUI git clients (e.g. VS Code's Source Control panel) run hooks without the
+# shell PATH, so nvm-installed node/npx can be missing; load nvm if needed.
+if ! command -v npx >/dev/null 2>&1; then
+  export NVM_DIR="$HOME/.nvm"
+  [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" --no-use
+  command -v nvm >/dev/null 2>&1 && nvm use default >/dev/null 2>&1
+fi
+
 npx lint-staged

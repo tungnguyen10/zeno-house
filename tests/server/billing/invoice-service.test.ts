@@ -109,6 +109,9 @@ function event() {
 describe('InvoiceService invoice lifecycle methods', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    // Pin the clock so hardcoded due-date fixtures below never fall into the past.
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-08-01T00:00:00.000Z'))
     vi.stubGlobal('can', () => true)
     assignmentRepoMocks.findBuildingIdsByUser.mockResolvedValue(['building-1'])
     findPeriodById.mockResolvedValue(buildPeriod({ id: 'period-1', status: 'issued' }))
@@ -121,6 +124,10 @@ describe('InvoiceService invoice lifecycle methods', () => {
     loadTenants.mockResolvedValue(new Map([
       ['tenant-1', { email: 'tenant@example.test' }],
     ]))
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
   it('loads an invoice by business code and uses the resolved id for child rows', async () => {
