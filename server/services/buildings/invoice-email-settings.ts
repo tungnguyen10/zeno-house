@@ -1,4 +1,5 @@
 import type { H3Event } from 'h3'
+import { randomUUID } from 'node:crypto'
 import type { AuthUser } from '~/types/auth'
 import type { BuildingInvoiceEmailSettings } from '~/types/invoice-email'
 import { mapBuildingInvoiceEmailSettings } from '~/utils/mappers/invoice-email'
@@ -54,6 +55,7 @@ export const BuildingInvoiceEmailSettingsService = {
         buildingId: building.id,
         autoSendEnabled,
         updatedBy: user.id,
+        operationId: randomUUID(),
       }),
       enabledGlobally,
     )

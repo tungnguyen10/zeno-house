@@ -43,13 +43,23 @@ export default defineEventHandler(async (event) => {
     // Resolve and scope-check the building. Scoped roles get 404 for out-of-scope
     // buildings (read semantics); admin is unscoped.
     const building = await BuildingRepository.findByIdentifier(event, building_id)
-    if (!building) throwNotFound('Không tìm thấy tòa nhà')
+    const historicalBuildingId = !building
+      && !scoped
+      && can(user, 'buildings.delete')
+      && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(building_id)
+      ? building_id
+      : null
+    if (!building && !historicalBuildingId) throwNotFound('Không tìm thấy tòa nhà')
     if (scoped) {
       const { assertBuildingScope } = await import('../../utils/scope')
-      await assertBuildingScope(event, user, building.id, 'read')
+      await assertBuildingScope(event, user, building!.id, 'read')
     }
 
-    const { items, total, nextCursor } = await AuditRepository.listByBuilding(event, building.id, opts)
+    const { items, total, nextCursor } = await AuditRepository.listByBuilding(
+      event,
+      building?.id ?? historicalBuildingId!,
+      opts,
+    )
     const enriched = await enrichAuditEvents(event, items)
     return { data: enriched, meta: { total, nextCursor } }
   }

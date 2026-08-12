@@ -363,6 +363,17 @@ export const BuildingRepository = {
     if (error) throwDbError(error, 'buildings.remove')
   },
 
+  async removeWithAudit(event: H3Event, id: string, actorId: string, operationId: string): Promise<void> {
+    const client = serverSupabaseClient(event)
+    const { data, error } = await client.rpc('delete_building_with_audit' as never, {
+      p_building_id: id,
+      p_actor_id: actorId,
+      p_operation_id: operationId,
+    } as never)
+    if (error) throwDbError(error, 'buildings.removeWithAudit')
+    if (!data) throwNotFound('Không tìm thấy tòa nhà')
+  },
+
   async countRoomsForBuilding(event: H3Event, buildingId: string): Promise<number> {
     const client = await serverSupabaseClient(event)
     const { count, error } = await client

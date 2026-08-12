@@ -96,7 +96,7 @@ export const RoomService = {
     event: H3Event,
     user: AuthUser,
     id: string,
-    opts: { force?: boolean; reason: string },
+    opts: { force?: boolean; reason: string; emitAudit?: boolean },
   ): Promise<Room | undefined> {
     const existing = await RoomRepository.findByIdentifier(event, id)
     if (!existing) throwNotFound('Không tìm thấy phòng')
@@ -107,7 +107,7 @@ export const RoomService = {
 
     if (opts.force) {
       const archived = await RoomRepository.softArchive(event, existing.id)
-      await AuditService.append(event, user, {
+      if (opts.emitAudit !== false) await AuditService.append(event, user, {
         building_id: existing.buildingId,
         action: AUDIT_ACTIONS.ROOM_ARCHIVED,
         entity_type: 'room',
@@ -138,7 +138,7 @@ export const RoomService = {
     }
 
     await RoomRepository.remove(event, existing.id)
-    await AuditService.append(event, user, {
+    if (opts.emitAudit !== false) await AuditService.append(event, user, {
       building_id: existing.buildingId,
       action: AUDIT_ACTIONS.ROOM_REMOVED,
       entity_type: 'room',
@@ -158,9 +158,10 @@ export const RoomService = {
 
     const succeeded: string[] = []
     const failed: { id: string; reason: string }[] = []
+    const scopes = await BulkActionRepository.resolveBuildingScopes(event, 'room', input.ids)
+    const beforeSnapshots = await BulkActionRepository.resolveSnapshots(event, 'room', input.ids)
 
     if (input.action !== 'delete') {
-      const scopes = await BulkActionRepository.resolveBuildingScopes(event, 'room', input.ids)
       const scopeAccess = new Map<string, boolean>()
       const allowed: string[] = []
       for (const id of input.ids) {
@@ -193,11 +194,18 @@ export const RoomService = {
         : input.action === 'activate'
           ? AUDIT_ACTIONS.ROOM_ACTIVATED
           : AUDIT_ACTIONS.ROOM_MAINTENANCE_SET
+      const afterSnapshots = await BulkActionRepository.resolveSnapshots(event, 'room', succeeded)
       await AuditService.appendBulk(event, user, {
         building_id: null,
         entity_type: 'room',
         aggregate_action: `room.bulk_${input.action}`,
-        items: succeeded.map(id => ({ entity_id: id, action: bulkActionCode })),
+        items: succeeded.map(id => ({
+          entity_id: id,
+          building_id: scopes.get(id) ?? null,
+          action: bulkActionCode,
+          before_data: beforeSnapshots.get(id),
+          after_data: afterSnapshots.get(id),
+        })),
         succeeded,
         total: input.ids.length,
         failed: failed.length,
@@ -207,7 +215,7 @@ export const RoomService = {
 
     for (const id of input.ids) {
       try {
-        await RoomService.remove(event, user, id, { reason: input.reason! })
+        await RoomService.remove(event, user, id, { reason: input.reason!, emitAudit: false })
         succeeded.push(id)
       }
       catch (err: unknown) {
@@ -236,7 +244,7 @@ export const RoomService = {
       building_id: null,
       entity_type: 'room',
       aggregate_action: `room.bulk_${input.action}`,
-      items: succeeded.map(id => ({ entity_id: id, action: bulkActionCode })),
+      items: succeeded.map(id => ({ entity_id: id, building_id: scopes.get(id) ?? null, action: bulkActionCode, before_data: beforeSnapshots.get(id) })),
       succeeded,
       total: input.ids.length,
       failed: failed.length,

@@ -8,6 +8,9 @@ export interface AuditEvent {
   entityType: AuditEntityType
   entityId: string | null
   correlationId: string | null
+  operationId: string | null
+  buildingNameSnapshot: string | null
+  buildingCodeSnapshot: string | null
   beforeData: unknown
   afterData: unknown
   metadata: Record<string, unknown>

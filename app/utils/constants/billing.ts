@@ -95,6 +95,7 @@ export const BILLING_AUDIT_ACTIONS = {
   INVOICE_EMAIL_QUEUED: 'invoice.email_queued',
   INVOICE_EMAIL_DELIVERED: 'invoice.email_delivered',
   INVOICE_EMAIL_FAILED: 'invoice.email_failed',
+  INVOICE_PROFILE_SNAPSHOT_REFRESHED: 'invoice.profile_snapshot.refreshed',
 } as const
 
 export type BillingAuditAction =
@@ -116,6 +117,7 @@ export const BILLING_AUDIT_ACTION_CATEGORY: Record<BillingAuditAction, BillingAu
   'invoice.email_queued': 'create',
   'invoice.email_delivered': 'status',
   'invoice.email_failed': 'status',
+  'invoice.profile_snapshot.refreshed': 'edit',
   'reading.saved': 'edit',
   'utility_override.saved': 'edit',
   'utility_override.approved': 'edit',

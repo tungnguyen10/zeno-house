@@ -1,4 +1,5 @@
 import type { H3Event } from 'h3'
+import { randomUUID } from 'node:crypto'
 import type { AuthUser } from '~/types/auth'
 import type { Building } from '~/types/buildings'
 import type {
@@ -7,6 +8,7 @@ import type {
   BuildingUpdateInput,
 } from '~/utils/validators/buildings'
 import { BuildingRepository } from '../../repositories/buildings'
+import { BulkActionRepository } from '../../repositories/bulk-actions'
 import { AssignmentRepository } from '../../repositories/assignments'
 import { assertBuildingScope, getAssignedBuildingIds } from '../../utils/scope'
 import { AuditService } from '../audit'
@@ -125,7 +127,7 @@ export const BuildingService = {
     event: H3Event,
     user: AuthUser,
     id: string,
-    opts: { force?: boolean } = {},
+    opts: { force?: boolean; emitAudit?: boolean } = {},
   ): Promise<Building | undefined> {
     if (!can(user, 'buildings.delete')) throwForbidden('Không có quyền xoá tòa nhà')
     const existing = await BuildingRepository.findByIdentifier(event, id)
@@ -134,7 +136,7 @@ export const BuildingService = {
 
     if (opts.force) {
       const archived = await BuildingRepository.softArchive(event, existing.id)
-      await AuditService.append(event, user, {
+      if (opts.emitAudit !== false) await AuditService.append(event, user, {
         building_id: existing.id,
         action: AUDIT_ACTIONS.BUILDING_ARCHIVED,
         entity_type: 'building',
@@ -163,14 +165,12 @@ export const BuildingService = {
       })
     }
 
-    await BuildingRepository.remove(event, existing.id)
-    await AuditService.append(event, user, {
-      building_id: existing.id,
-      action: AUDIT_ACTIONS.BUILDING_REMOVED,
-      entity_type: 'building',
-      entity_id: existing.id,
-      before_data: existing,
-    })
+    if (opts.emitAudit === false) {
+      await BuildingRepository.remove(event, existing.id)
+    }
+    else {
+      await BuildingRepository.removeWithAudit(event, existing.id, user.id, randomUUID())
+    }
     return undefined
   },
 
@@ -183,11 +183,12 @@ export const BuildingService = {
 
     const succeeded: string[] = []
     const failed: { id: string; reason: string }[] = []
+    const beforeSnapshots = await BulkActionRepository.resolveSnapshots(event, 'building', input.ids)
 
     for (const id of input.ids) {
       try {
         if (input.action === 'delete') {
-          await BuildingService.remove(event, user, id)
+          await BuildingService.remove(event, user, id, { emitAudit: false })
           succeeded.push(id)
           continue
         }
@@ -226,6 +227,9 @@ export const BuildingService = {
       }
     }
 
+    const afterSnapshots = input.action === 'delete'
+      ? new Map<string, Record<string, unknown>>()
+      : await BulkActionRepository.resolveSnapshots(event, 'building', succeeded)
     await AuditService.appendBulk(event, user, {
       building_id: null,
       entity_type: 'building',
@@ -233,7 +237,9 @@ export const BuildingService = {
       items: succeeded.map(id => ({
         entity_id: id,
         building_id: id,
-        action: input.action === 'archive' ? AUDIT_ACTIONS.BUILDING_ARCHIVED : AUDIT_ACTIONS.BUILDING_ACTIVATED,
+        action: input.action === 'delete' ? AUDIT_ACTIONS.BUILDING_REMOVED : input.action === 'archive' ? AUDIT_ACTIONS.BUILDING_ARCHIVED : AUDIT_ACTIONS.BUILDING_ACTIVATED,
+        before_data: beforeSnapshots.get(id),
+        after_data: afterSnapshots.get(id),
       })),
       succeeded,
       total: input.ids.length,

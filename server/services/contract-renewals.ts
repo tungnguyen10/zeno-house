@@ -1,4 +1,5 @@
 import { db as serverSupabaseClient } from '../utils/db'
+import { randomUUID } from 'node:crypto'
 import type { H3Event } from 'h3'
 import type { AuthUser } from '~/types/auth'
 import type { ContractRenewal } from '~/types/contract-renewals'
@@ -31,6 +32,7 @@ export const ContractRenewalService = {
     if (contract.status === 'terminated') throwConflict('Hợp đồng đã chấm dứt, không thể gia hạn')
 
     const newEndDate = input.new_end_date
+    const correlationId = randomUUID()
     if (newEndDate <= contract.endDate) {
       throwValidationError('Ngày kết thúc mới phải sau ngày kết thúc hiện tại')
     }
@@ -75,6 +77,8 @@ export const ContractRenewalService = {
         action: AUDIT_ACTIONS.CONTRACT_RENEWED,
         entity_type: 'contract',
         entity_id: resolvedContractId,
+        correlation_id: correlationId,
+        before_data: contract,
         metadata: { mode: 'extend', renewal_id: renewal.id, new_end_date: newEndDate, new_monthly_rent: newRent },
       })
 
@@ -157,7 +161,19 @@ export const ContractRenewalService = {
       action: AUDIT_ACTIONS.CONTRACT_RENEWED,
       entity_type: 'contract',
       entity_id: resolvedContractId,
+      correlation_id: correlationId,
+      before_data: contract,
       metadata: { mode: 'new_contract', renewal_id: renewal.id, new_contract_id: newContractData.id, new_end_date: newEndDate, new_monthly_rent: newRent },
+    })
+    const successor = await ContractRepository.findById(event, newContractData.id)
+    await AuditService.append(event, user, {
+      building_id: contract.buildingId,
+      action: AUDIT_ACTIONS.CONTRACT_CREATED,
+      entity_type: 'contract',
+      entity_id: newContractData.id,
+      correlation_id: correlationId,
+      after_data: successor ?? { id: newContractData.id, previousContractId: resolvedContractId },
+      metadata: { source: 'renewal', renewal_id: renewal.id, previous_contract_id: resolvedContractId },
     })
 
     return renewal

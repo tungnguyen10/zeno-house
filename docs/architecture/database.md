@@ -137,6 +137,16 @@ AI full-balance collection is committed by `record_ai_invoice_payments_with_audi
 
 `billing_audit_events` stores append-only operational audit events.
 
+Audit access is server-owned: `anon` and `authenticated` have no table privileges on
+`audit_events`, `billing_audit_events`, or `audit_operations`. Historical
+`audit_events.building_id` is an immutable scope UUID rather than a cascading live-row foreign
+key, while billing events copy building/year/month before their period reference can be cleared.
+Database-local mutations that require audit use explicit service-role RPCs so the domain row and
+event commit together. Auth, private Storage, and email-provider effects first persist an
+idempotent `audit_operations` intent; completion writes the final event once, and stale operations
+are leased by the internal reconciler and retained as `unresolved` when provider state cannot be
+proved safely.
+
 `building_invoice_email_settings` stores one default-off automatic-send setting per building.
 `invoice_email_deliveries` is the durable outbox and delivery history: it snapshots the normalized
 recipient, source, provider id, attempt/lease state, terminal timestamps, and safe provider error.

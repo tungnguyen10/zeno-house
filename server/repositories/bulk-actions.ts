@@ -8,6 +8,17 @@ export interface BulkActionResult {
 }
 
 export const BulkActionRepository = {
+  async resolveSnapshots(
+    event: H3Event,
+    entity: 'building' | 'room' | 'tenant' | 'contract',
+    ids: string[],
+  ): Promise<Map<string, Record<string, unknown>>> {
+    if (ids.length === 0) return new Map()
+    const { data, error } = await db(event).from(`${entity}s`).select('*').in('id', ids)
+    if (error) throwDbError(error, `bulkActions.${entity}.resolveSnapshots`)
+    return new Map(((data ?? []) as unknown as Record<string, unknown>[]).map(row => [String(row.id), row]))
+  },
+
   async resolveBuildingScopes(
     event: H3Event,
     entity: 'room' | 'contract',

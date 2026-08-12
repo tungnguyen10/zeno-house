@@ -33,9 +33,12 @@ describe('AuditService error reporting', () => {
     )).resolves.toBeUndefined()
 
     expect(error).toHaveBeenCalledOnce()
-    const [message, context] = error.mock.calls[0]!
-    expect(message).toBe('[AuditService] append failed')
-    expect(context).toEqual({
+    const [message, payload] = error.mock.calls[0]!
+    expect(message).toBe('[AUDIT_TELEMETRY]')
+    const context = JSON.parse(String(payload))
+    expect(context).toMatchObject({
+      metric: 'audit.append_failed',
+      operation: 'append',
       action: 'tenant.updated',
       entityType: 'tenant',
       entityId: 'tenant-1',
@@ -71,5 +74,26 @@ describe('AuditService error reporting', () => {
       before_data: { name: 'Tenant', nested: {} },
     }))
     expect(JSON.stringify(auditRepository.append.mock.calls[0])).not.toMatch(/secret|token|session-1|binary/)
+  })
+
+  it('removes private storage paths before persistence', async () => {
+    auditRepository.append.mockResolvedValue({ id: 'audit-1' })
+    const { AuditService } = await import('../../../server/services/audit')
+
+    await AuditService.append({ context: {} } as never, { id: 'actor-1' } as never, {
+      building_id: 'building-1',
+      action: 'tenant.updated',
+      entity_type: 'tenant',
+      after_data: {
+        full_name: 'Tenant',
+        id_card_front_path: 'tenant-1/front/private.jpg',
+        receiptUrl: 'building-1/expense/private.webp',
+        nested: { qr_image_path: 'building-1/qr/private.png' },
+      },
+    })
+
+    expect(auditRepository.append).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      after_data: { full_name: 'Tenant', nested: {} },
+    }))
   })
 })
