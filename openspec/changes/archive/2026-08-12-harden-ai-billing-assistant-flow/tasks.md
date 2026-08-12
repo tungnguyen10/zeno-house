@@ -8,7 +8,7 @@
 ## 2. Atomic Chat And Distributed Controls
 
 - [x] 2.1 Add failing SQL/repository/service tests for atomic chat-turn startup, global daily quota, and distributed provider circuit behavior.
-- [ ] 2.2 Create the additive Supabase migration, repositories, generated types, and service integration for chat turns, quota, and circuit state.
+- [x] 2.2 Create the additive Supabase migration, repositories, generated types, and service integration for chat turns, quota, and circuit state.
 - [x] 2.3 Register assistant persistence with `event.waitUntil` and test success, provider failure, and client disconnect behavior.
 
 ## 3. Recoverable Action Execution
@@ -21,4 +21,4 @@
 
 - [x] 4.1 Update SSE/client types, AI architecture, feature and rollout documentation, environment examples, and accepted specification.
 - [x] 4.2 Verify role/capability/building-scope matrices and all AI runtime flags with focused tests.
-- [ ] 4.3 Run OpenSpec validation, AI and database suites, full tests, typecheck, lint, catalog verification, and document staging smoke commands/results.
+- [x] 4.3 Run OpenSpec validation, AI and database suites, full tests, typecheck, lint, catalog verification, and document staging smoke commands/results.

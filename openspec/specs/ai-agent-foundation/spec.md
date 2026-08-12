@@ -25,16 +25,20 @@ The system SHALL enable RLS on AI persistence tables and SHALL deny direct `anon
 - **WHEN** an authenticated browser client directly selects, inserts, updates, or deletes an AI persistence row
 - **THEN** Postgres privileges and RLS deny the operation
 
-### Requirement: AI provider routing is free-only and observable
-The system SHALL route production chat through distinct OpenRouter primary and fallback `:free` models verified as zero-priced and tool-capable, SHALL deny paid implicit fallback, and SHALL report the requested model, selected model, and fallback use.
+### Requirement: AI provider routing is cost-controlled and observable
+The system SHALL route production AI chat through distinct configured OpenRouter primary and fallback models that support tool calling, SHALL allow a paid primary only through the private paid-primary opt-in, SHALL require the fallback to be an explicit zero-price `:free` model, SHALL prohibit implicit paid fallback, and SHALL report the model that actually produced the response.
+
+#### Scenario: Primary succeeds
+- **WHEN** the configured free or explicitly opted-in paid primary completes a chat request
+- **THEN** the terminal event, persistence metadata, and telemetry identify the primary model and report that fallback was not used
 
 #### Scenario: Primary fails before streaming
-- **WHEN** OpenRouter cannot serve the configured free primary before emitting output
-- **THEN** it may select only the configured free fallback and the terminal event, persistence metadata, and telemetry identify that model with fallback use enabled
+- **WHEN** OpenRouter cannot use the primary before any response token is emitted
+- **THEN** OpenRouter attempts the configured free fallback and the system reports the selected fallback model
 
-#### Scenario: Model release contract is invalid
-- **WHEN** a configured production model is missing, paid, duplicated, or lacks tool support
-- **THEN** release verification fails rather than routing to a paid model
+#### Scenario: Model cost contract is invalid
+- **WHEN** the primary is paid without explicit opt-in, the fallback is paid, either model is missing or lacks tool support, or the models are duplicated
+- **THEN** release verification fails and the server does not silently route to an unapproved paid model
 
 ### Requirement: Chat turns are atomic and context-bounded
 The system SHALL atomically resolve or create an owned conversation, append the user message, extend retention, and return ordered bounded history, then SHALL apply both message-count and content-budget limits before provider transmission.
@@ -46,6 +50,17 @@ The system SHALL atomically resolve or create an owned conversation, append the 
 #### Scenario: Context exceeds its content budget
 - **WHEN** history exceeds the configured context budget
 - **THEN** the provider receives the newest complete messages that fit and retains the current user message
+
+### Requirement: Provider controls are distributed
+The system SHALL enforce the provider circuit and global daily chat quota using shared database state while retaining the per-user distributed rate limit.
+
+#### Scenario: Failures occur across serverless instances
+- **WHEN** consecutive provider failures across instances reach the configured threshold
+- **THEN** subsequent chat calls fail fast until the shared cooldown permits a probe
+
+#### Scenario: Global daily quota is exhausted
+- **WHEN** the configured global daily chat count is consumed
+- **THEN** further model requests are rejected before provider invocation with a capacity-specific retryable response
 
 ### Requirement: Deny-by-default tool policy
 The agent SHALL expose only explicitly registered tools whose required capability is held by the authenticated user, and the model SHALL have no database, web-browsing, external side-effect, or generic commit tool.
@@ -63,7 +78,7 @@ The agent SHALL expose only explicitly registered tools whose required capabilit
 - **THEN** the system stops further tool execution and emits a structured terminal error or completion
 
 ### Requirement: Typed agent event stream
-The AI chat endpoint SHALL stream typed events for assistant text, tool status, action plans, errors, and completion, SHALL preserve request and conversation correlation identifiers, and SHALL identify the requested and selected model plus fallback use.
+The AI chat endpoint SHALL stream typed events for assistant text, tool status, action plans, errors, and completion, SHALL preserve request and conversation correlation identifiers, and SHALL identify the requested and actually selected model plus whether fallback was used.
 
 #### Scenario: Text and tool events share a stream
 - **WHEN** the model emits text and invokes an allowed read tool
@@ -75,7 +90,7 @@ The AI chat endpoint SHALL stream typed events for assistant text, tool status, 
 
 #### Scenario: Client disconnects
 - **WHEN** the client disconnects after sending a valid message
-- **THEN** the server continues consuming the model stream and persists the completed assistant message or normalized failure state
+- **THEN** the registered request-lifecycle work continues consuming the model stream and persists the completed assistant message or normalized failure state
 
 ### Requirement: Server-owned action plan lifecycle
 The system SHALL represent every proposed mutation as an owned, expiring action plan with normalized payload, payload hash, preview, resource versions, server-generated idempotency key, and a compare-and-set lifecycle.
@@ -129,6 +144,21 @@ The system SHALL generate and durably store the idempotency key for each plan, v
 #### Scenario: Domain commit outlives plan completion
 - **WHEN** a domain mutation commits but recording plan success fails
 - **THEN** the plan remains executing and can be reclaimed after lease expiry to replay the result with the same idempotency key
+
+### Requirement: Action execution is integrity-checked and recoverable
+The system SHALL verify the canonical stored payload hash before claim and SHALL allow an expired execution lease to retry the same domain operation with the plan's durable idempotency key.
+
+#### Scenario: Stored action payload was altered
+- **WHEN** the canonical payload and resource-version hash does not equal the stored payload hash at confirmation
+- **THEN** the plan becomes stale and no executor is dispatched
+
+#### Scenario: Domain commit outlives plan completion
+- **WHEN** a domain mutation commits but recording the succeeded plan fails
+- **THEN** the plan remains executing and a confirmation after lease expiry replays the domain result with the same idempotency key before completing the plan
+
+#### Scenario: Concurrent confirmation occurs during a lease
+- **WHEN** another confirmation arrives before the active execution lease expires
+- **THEN** it receives a retryable conflict and does not dispatch the executor
 
 ### Requirement: Foundation does not expose billing mutations
 The foundation wave SHALL retain authorized read tools but SHALL NOT expose direct billing mutation tools until a later domain change implements the action-plan contract.

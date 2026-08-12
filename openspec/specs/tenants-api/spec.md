@@ -166,19 +166,23 @@ When a tenant has active assignment context, the API payload SHALL include:
 ---
 
 ### Requirement: DELETE /api/tenants/:id performs safe-delete with conflict check
-`server/api/tenants/[id].delete.ts` SHALL by default check for blocking references before deleting: if the tenant has any active contracts (primary) OR any active occupancies (`contract_occupants.move_out_date IS NULL`), the endpoint SHALL respond `409` with `error.code === 'CONFLICT'` and `error.details === { activeContracts: number, activeOccupancies: number }`. If no blockers, the tenant SHALL be hard-deleted and the endpoint responds `204`.
+`server/api/tenants/[id].delete.ts` SHALL check blocking references before hard-delete. If the tenant has any portal account link, active primary contract, or active occupancy, the endpoint SHALL respond `409 CONFLICT` with blocker counts. A linked account SHALL be explicitly revoked before tenant hard-delete so cascade cannot create an orphan Auth identity. If no blockers exist, the tenant SHALL be hard-deleted and the endpoint SHALL respond `204`.
+
+#### Scenario: Conflict response when portal account exists
+- **WHEN** an operator deletes a tenant with a `tenant_user_links` row
+- **THEN** the response is 409 and identifies the portal account blocker
 
 #### Scenario: Conflict response when active contract exists
-- **WHEN** admin sends DELETE on a tenant who is primary on 1 active contract
-- **THEN** response is 409 with `error.code === 'CONFLICT'` and `error.details.activeContracts === 1`
+- **WHEN** admin deletes a tenant who is primary on one active contract
+- **THEN** the response is 409 with the active-contract count
 
 #### Scenario: Conflict response when active occupant exists
-- **WHEN** admin sends DELETE on a tenant who has 1 active occupancy (no move_out_date)
-- **THEN** response is 409 with `error.details.activeOccupancies === 1`
+- **WHEN** admin deletes a tenant who has one active occupancy
+- **THEN** the response is 409 with the active-occupancy count
 
-#### Scenario: Successful hard-delete when no blockers
-- **WHEN** admin sends DELETE on a tenant with 0 active contracts and 0 active occupancies
-- **THEN** response is 204 and the row is removed from the database
+#### Scenario: Successful hard-delete without blockers
+- **WHEN** admin deletes a tenant with no portal account, active contract, or active occupancy
+- **THEN** the tenant row is removed and the response is 204
 
 ---
 

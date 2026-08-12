@@ -28,27 +28,27 @@ The system SHALL persist tenant-authored support requests in a `support_requests
 ---
 
 ### Requirement: Tenant self-scoped support request API
-`GET /api/tenant/requests` SHALL return only the caller's requests in timeline order. `POST /api/tenant/requests` SHALL create a request for the caller, deriving the requester's own `tenant_id` via `resolveTenantId` and `building_id`/`contract_id` from the active housing context, gated by the existing `tenant.requests.read`/`tenant.requests.write` capabilities. An optional attachment SHALL be stored in the existing private `tenant-documents` bucket using its `tenant_user_links`-scoped policy, with the path built server-side and reads returned as short-lived signed URLs.
+`GET /api/tenant/requests` SHALL return only the caller's requests. `POST /api/tenant/requests` SHALL derive the caller's tenant and current primary-or-roommate housing context server-side. Its RLS insert safety net SHALL accept the same current primary or roommate context, enforce active contract dates and occupancy dates, and reject cross-tenant or stale-contract inserts. Optional attachments remain in the private `tenant-documents` bucket under server-built paths.
 
 #### Scenario: List own requests
-- **WHEN** a tenant calls `GET /api/tenant/requests`
+- **WHEN** a tenant lists requests
 - **THEN** only the caller's requests are returned
 
-#### Scenario: Create derives context server-side
-- **WHEN** a tenant creates a request
-- **THEN** building/contract context is derived server-side and any client-declared context is ignored
+#### Scenario: Primary tenant creates current-contract request
+- **WHEN** a primary tenant creates a request for their current active contract
+- **THEN** server validation and direct-access RLS both accept the derived context
 
 #### Scenario: Roommate request preserves personal ownership
-- **WHEN** an active roommate creates a support request
-- **THEN** the row stores the roommate's own `tenant_id` and the shared housing `contract_id`/`building_id`, while request listing remains scoped to that roommate
+- **WHEN** a current roommate creates a support request
+- **THEN** the row stores the roommate's tenant id and shared contract/building context
 
-#### Scenario: Optional attachment stored in tenant-documents
-- **WHEN** a tenant attaches a file to a request
-- **THEN** the file is stored in the private `tenant-documents` bucket under the tenant's server-built path and read back via a signed URL
+#### Scenario: Stale housing context rejected
+- **WHEN** a tenant attempts an insert for a future, expired, terminated, moved-out, or unrelated contract
+- **THEN** the database rejects it
 
 #### Scenario: Cross-tenant attachment access denied
-- **WHEN** a tenant references or requests an attachment outside their linked tenant scope
-- **THEN** access is denied by the `tenant_user_links`-scoped storage policy
+- **WHEN** a tenant requests an attachment outside linked tenant scope
+- **THEN** access is denied
 
 ---
 
