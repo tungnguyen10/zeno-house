@@ -50,7 +50,8 @@ const inputId = computed(() => props.id ?? generatedId)
 const slots = useSlots()
 const attrs = useAttrs()
 const hasPrefix = computed(() => !!slots.prefix)
-const hasSuffix = computed(() => !!slots.suffix)
+// Currency fields default to a "₫" suffix unless the caller overrides the slot.
+const hasSuffix = computed(() => !!slots.suffix || isCurrencyText.value)
 
 const rootClass = computed(() => attrs.class)
 const rootStyle = computed(() => attrs.style as StyleValue | undefined)
@@ -85,8 +86,14 @@ const defaultAutocomplete = computed(() => {
   }
 })
 
+// Money fields show grouped thousands (vi-VN), which a native number input can't render.
+// Render them as a masked text field instead so every `number-mode="currency"` field looks the same.
+const isCurrencyText = computed(() => props.type === 'number' && props.numberMode === 'currency')
+const effectiveType = computed<UiInputType>(() => (isCurrencyText.value ? 'text' : props.type))
+
 const defaultInputmode = computed<UiInputMode | undefined>(() => {
   if (props.inputmode) return props.inputmode
+  if (isCurrencyText.value) return 'numeric'
   switch (props.type) {
     case 'email': return 'email'
     case 'tel': return 'tel'
@@ -102,13 +109,12 @@ const defaultInputmode = computed<UiInputMode | undefined>(() => {
 })
 
 const defaultStep = computed(() => {
-  if (props.type !== 'number') return undefined
+  if (effectiveType.value !== 'number') return undefined
   switch (props.numberMode) {
     case 'integer':
     case 'month':
     case 'year':
     case 'day':
-    case 'currency':
       return '1'
     case 'decimal':
       return 'any'
@@ -122,13 +128,20 @@ const defaultStep = computed(() => {
 })
 
 const defaultMin = computed(() => {
-  if (props.type !== 'number') return undefined
+  if (effectiveType.value !== 'number') return undefined
   return props.numberMode === 'month' ? '1' : undefined
 })
 
 const defaultMax = computed(() => {
-  if (props.type !== 'number') return undefined
+  if (effectiveType.value !== 'number') return undefined
   return props.numberMode === 'month' ? '12' : undefined
+})
+
+// Grouped display for currency; the emitted model value stays a plain digit string.
+const displayValue = computed(() => {
+  if (!isCurrencyText.value) return props.modelValue ?? ''
+  const digits = String(props.modelValue ?? '').replace(/\D/g, '')
+  return digits ? Number(digits).toLocaleString('vi-VN') : ''
 })
 
 function attrString(name: string) {
@@ -147,6 +160,8 @@ const effectiveAutocomplete = computed<InputHTMLAttributes['autocomplete']>(() =
 
 function normalizedValue(event: Event): string | number {
   const target = event.target as HTMLInputElement
+  if (isCurrencyText.value) return target.value.replace(/\D/g, '')
+
   let value = target.value
   if (props.modelModifiers.trim) value = value.trim()
   if (!props.modelModifiers.number) return value
@@ -216,13 +231,13 @@ const inputClass = computed(() =>
       <input
         v-bind="nativeAttrs"
         :id="inputId"
-        :type="type"
+        :type="effectiveType"
         :inputmode="effectiveInputmode"
         :autocomplete="effectiveAutocomplete"
         :min="attrString('min') ?? defaultMin"
         :max="attrString('max') ?? defaultMax"
         :step="attrString('step') ?? defaultStep"
-        :value="modelValue ?? ''"
+        :value="displayValue"
         :placeholder="placeholder"
         :disabled="disabled"
         :required="required"
@@ -240,7 +255,7 @@ const inputClass = computed(() =>
         class="flex items-center pr-3 pl-1 text-sm text-muted select-none whitespace-nowrap"
         aria-hidden="true"
       >
-        <slot name="suffix" />
+        <slot name="suffix">₫</slot>
       </span>
     </div>
 

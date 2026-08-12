@@ -3,6 +3,13 @@ import clsx from 'clsx'
 
 const appStore = useAppStore()
 const { sidebarOpen } = storeToRefs(appStore)
+const {
+  summary: dashboardSummary,
+  isLoading: isDashboardSummaryLoading,
+  error: dashboardSummaryError,
+  errorCode: dashboardSummaryErrorCode,
+  refresh: refreshDashboardSummary,
+} = useDashboardSummary()
 
 const overlayClass = computed(() =>
   clsx(
@@ -38,11 +45,20 @@ const sidebarClass = computed(() =>
     />
 
     <!-- Main area -->
-    <div class="flex flex-1 flex-col min-w-0 overflow-hidden">
-      <AppHeader @toggle-sidebar="appStore.toggleSidebar()" />
+    <div class="relative flex min-w-0 flex-1 flex-col overflow-hidden">
+      <AppHeader @toggle-sidebar="appStore.toggleSidebar()">
+        <template v-if="dashboardSummaryErrorCode !== 'FORBIDDEN'" #status>
+          <DashboardOperationsPopover
+            :items="dashboardSummary?.pendingOperations ?? []"
+            :loading="isDashboardSummaryLoading"
+            :error="dashboardSummaryError"
+            @refresh="refreshDashboardSummary"
+          />
+        </template>
+      </AppHeader>
 
       <!-- Content -->
-      <main class="flex-1 overflow-y-auto p-6 bg-dark">
+      <main class="flex-1 overflow-y-auto bg-dark p-4 sm:p-6">
         <slot />
       </main>
     </div>

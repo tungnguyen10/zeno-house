@@ -118,6 +118,7 @@ describe('AppSidebar role visibility', () => {
 
     expect(dashboard.classes()).not.toContain('bg-cyan/10')
     expect(buildings.classes()).toContain('bg-cyan/10')
+    expect(buildings.classes()).toContain('border-cyan/30')
     expect(currentLinks).toHaveLength(1)
     expect(currentLinks[0]?.attributes('href')).toBe('/dashboard/buildings')
   })
@@ -150,5 +151,12 @@ describe('AppSidebar role visibility', () => {
 
     expect(logoLinks).toHaveLength(2)
     expect(logoLinks.every(link => link.attributes('href') === '/dashboard')).toBe(true)
+  })
+
+  it('presents the signed-in user inside a distinct footer panel', () => {
+    const footer = mountSidebar('admin').get('[data-sidebar-user]')
+
+    expect(footer.classes()).toContain('rounded-xl')
+    expect(footer.classes()).toContain('border-dark-border')
   })
 })

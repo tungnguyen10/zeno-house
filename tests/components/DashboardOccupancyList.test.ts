@@ -50,6 +50,9 @@ describe('DashboardOccupancyList', () => {
     expect(text).toContain('25%')
     expect(text).toContain('Toa Full')
     expect(text).toContain('Toa Half')
+    const list = wrapper.get('[data-occupancy-list]')
+    expect(list.classes()).not.toContain('border-dark-border')
+    expect(list.classes()).not.toContain('bg-dark-surface')
   })
 
   it('sets bar segment width per row (per-row 100% basis), not normalized cross-row', () => {

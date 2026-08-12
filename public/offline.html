@@ -4,46 +4,306 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>Ngoại tuyến | Zeno House</title>
-    <meta name="theme-color" content="#0b59db" />
+    <meta name="theme-color" content="#0a0f1e" />
     <style>
-      * { box-sizing: border-box; margin: 0; padding: 0; }
+      @font-face {
+        font-family: "Inter";
+        src: url("/fonts/Inter-VariableFont_opsz,wght.woff2") format("woff2");
+        font-weight: 100 900;
+        font-style: normal;
+        font-display: swap;
+      }
+
+      :root {
+        --bg-deep: #0a0f1e;
+        --bg-base: #1a1b1d;
+        --surface: #1e1e1e;
+        --border: #2c2c2e;
+        --text: #f5f6f7;
+        --muted: #8a8f98;
+        --cyan: #00e5ff;
+        --neon: #32d74b;
+        --mono: "JetBrains Mono", "Fira Code", ui-monospace, "SFMono-Regular", monospace;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
       body {
+        position: relative;
         min-height: 100dvh;
         display: flex;
         align-items: center;
         justify-content: center;
-        background: #f2f5fa;
-        color: #0b1422;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        padding: env(safe-area-inset-top) 24px env(safe-area-inset-bottom);
+        padding: calc(env(safe-area-inset-top) + 24px) 20px calc(env(safe-area-inset-bottom) + 24px);
+        color: var(--text);
+        font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background:
+          radial-gradient(120% 90% at 12% 0%, rgba(0, 229, 255, 0.12), transparent 55%),
+          radial-gradient(120% 100% at 88% 100%, rgba(0, 40, 90, 0.55), transparent 60%),
+          linear-gradient(165deg, var(--bg-deep), var(--bg-base));
+        overflow: hidden;
       }
-      .card { text-align: center; max-width: 20rem; }
+
+      /* Static dot mesh, reduced-motion safe (no animation). */
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        background-image: radial-gradient(rgba(148, 163, 184, 0.14) 1px, transparent 1px);
+        background-size: 22px 22px;
+        mask-image: radial-gradient(80% 70% at 50% 40%, #000 40%, transparent 100%);
+        -webkit-mask-image: radial-gradient(80% 70% at 50% 40%, #000 40%, transparent 100%);
+        pointer-events: none;
+        z-index: 0;
+      }
+
+      .card {
+        position: relative;
+        z-index: 1;
+        width: min(100%, 420px);
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        background: rgba(30, 30, 30, 0.85);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        padding: 22px 22px 20px;
+        box-shadow:
+          0 24px 60px rgba(0, 0, 0, 0.5),
+          inset 0 1px 0 rgba(255, 255, 255, 0.04);
+      }
+
+      .rail {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding-bottom: 16px;
+        margin-bottom: 18px;
+        border-bottom: 1px solid var(--border);
+        font-family: var(--mono);
+        font-size: 11px;
+        letter-spacing: 0.12em;
+        color: var(--muted);
+      }
+
+      .dots {
+        display: inline-flex;
+        gap: 5px;
+      }
+
+      .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+      }
+
+      .dot.cyan {
+        background: var(--cyan);
+        box-shadow: 0 0 8px rgba(0, 229, 255, 0.6);
+      }
+
+      .dot.neon {
+        background: var(--neon);
+        box-shadow: 0 0 8px rgba(50, 215, 75, 0.55);
+      }
+
+      .rail .brand {
+        color: #b8bdc6;
+      }
+
+      .rail .state {
+        margin-left: auto;
+        color: var(--cyan);
+      }
+
       .badge {
-        width: 64px; height: 64px; margin: 0 auto 20px;
-        border-radius: 20px; display: flex; align-items: center; justify-content: center;
-        background: #eef1ff; color: #0b59db;
+        width: 68px;
+        height: 68px;
+        margin-bottom: 18px;
+        border-radius: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--cyan);
+        background: linear-gradient(180deg, #242528, #1a1b1d);
+        border: 1px solid var(--border);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
       }
-      h1 { font-size: 1.25rem; font-weight: 700; margin-bottom: 8px; }
-      p { font-size: 0.9rem; color: #6e7070; line-height: 1.5; margin-bottom: 24px; }
-      button {
-        min-height: 44px; padding: 0 24px; border: none; border-radius: 12px;
-        background: #0b59db; color: #fff; font-size: 0.9rem; font-weight: 600; cursor: pointer;
+
+      h1 {
+        font-size: 1.3rem;
+        font-weight: 600;
+        letter-spacing: 0.01em;
+        margin-bottom: 8px;
       }
-      button:active { background: #0a4fc4; }
+
+      p {
+        font-size: 0.92rem;
+        line-height: 1.55;
+        color: var(--muted);
+        margin-bottom: 18px;
+      }
+
+      .meta {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-family: var(--mono);
+        font-size: 0.74rem;
+        letter-spacing: 0.04em;
+        color: var(--muted);
+        margin-bottom: 22px;
+      }
+
+      .meta .pulse {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--muted);
+      }
+
+      .meta[data-online="true"] .pulse {
+        background: var(--neon);
+        box-shadow: 0 0 8px rgba(50, 215, 75, 0.55);
+      }
+
+      .actions {
+        display: flex;
+        gap: 10px;
+      }
+
+      .btn {
+        min-height: 44px;
+        border-radius: 12px;
+        border: 1px solid transparent;
+        padding: 0 16px;
+        font-family: inherit;
+        font-size: 0.92rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: transform 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+      }
+
+      .btn:focus-visible {
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(0, 229, 255, 0.4);
+      }
+
+      .btn-primary {
+        flex: 1 1 auto;
+        background: var(--cyan);
+        color: #03252b;
+      }
+
+      .btn-primary:hover {
+        transform: translateY(-1px);
+        background: #33ecff;
+      }
+
+      .btn-primary:active {
+        transform: translateY(0);
+      }
+
+      .btn-secondary {
+        flex: 0 0 auto;
+        background: transparent;
+        color: var(--text);
+        border-color: var(--border);
+      }
+
+      .btn-secondary:hover {
+        border-color: rgba(0, 229, 255, 0.5);
+        color: var(--cyan);
+      }
+
+      @media (max-width: 380px) {
+        .actions {
+          flex-direction: column;
+        }
+
+        .btn {
+          width: 100%;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          animation: none !important;
+          transition: none !important;
+        }
+      }
     </style>
   </head>
   <body>
-    <div class="card">
+    <main class="card" role="main">
+      <div class="rail">
+        <span class="dots" aria-hidden="true">
+          <span class="dot cyan"></span>
+          <span class="dot neon"></span>
+        </span>
+        <span class="brand">ZENO · HỆ VẬN HÀNH</span>
+        <span class="state">NGOẠI TUYẾN</span>
+      </div>
+
       <div class="badge" aria-hidden="true">
-        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
           <path d="M3 3l18 18" />
           <path d="M8.5 8.02A5 5 0 0 0 7 17h9.5" />
           <path d="M20.5 15.5A4 4 0 0 0 18 8h-1.26a7 7 0 0 0-3.9-4.5" />
         </svg>
       </div>
+
       <h1>Bạn đang ngoại tuyến</h1>
-      <p>Không có kết nối mạng. Vui lòng kiểm tra kết nối và thử lại.</p>
-      <button type="button" onclick="location.reload()">Thử lại</button>
-    </div>
+      <p>Không có kết nối mạng. Ứng dụng vẫn mở được ở chế độ giới hạn — hãy kiểm tra kết nối để đồng bộ dữ liệu mới nhất.</p>
+
+      <div class="meta" id="statusMeta" data-online="false" aria-live="polite">
+        <span class="pulse" aria-hidden="true"></span>
+        <span id="statusText">Đang chờ kết nối lại...</span>
+      </div>
+
+      <div class="actions">
+        <button class="btn btn-primary" type="button" id="retryBtn">Thử kết nối lại</button>
+        <button class="btn btn-secondary" type="button" id="homeBtn">Về trang chủ</button>
+      </div>
+    </main>
+
+    <script>
+      (function () {
+        var meta = document.getElementById("statusMeta");
+        var statusText = document.getElementById("statusText");
+        var retryBtn = document.getElementById("retryBtn");
+        var homeBtn = document.getElementById("homeBtn");
+
+        function render() {
+          var online = navigator.onLine;
+          meta.setAttribute("data-online", String(online));
+          statusText.textContent = online ? "Đã có mạng. Đang tải lại..." : "Đang chờ kết nối lại...";
+        }
+
+        retryBtn.addEventListener("click", function () {
+          render();
+          location.reload();
+        });
+
+        homeBtn.addEventListener("click", function () {
+          location.href = "/";
+        });
+
+        window.addEventListener("online", function () {
+          render();
+          window.setTimeout(function () {
+            location.reload();
+          }, 600);
+        });
+
+        window.addEventListener("offline", render);
+        render();
+      })();
+    </script>
   </body>
 </html>

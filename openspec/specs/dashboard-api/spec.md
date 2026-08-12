@@ -33,7 +33,21 @@ API spec cho dashboard summary endpoint. Trả về aggregate stats toàn hệ t
       paidAmount: number
       outstandingAmount: number
       overdueAmount: number
+      categories: Record<'rent' | 'electricity' | 'water' | 'service' | 'other', number>
+      byBuilding: Record<string, {
+        invoiceTotal: number
+        paidAmount: number
+        categories: Record<'rent' | 'electricity' | 'water' | 'service' | 'other', number>
+      }>
     }>
+    revenueBreakdown: {
+      totalIssued: number
+      totalPaid: number
+      categories: Array<{
+        key: 'rent' | 'electricity' | 'water' | 'service' | 'other'
+        amount: number
+      }>
+    }
     pendingOperations: Array<{
       type: 'missing_readings' | 'unissued_invoices' | 'overdue_invoices'
       building: { id: string; slug: string; name: string }
@@ -46,7 +60,7 @@ API spec cho dashboard summary endpoint. Trả về aggregate stats toàn hệ t
   meta: { generatedAt: string }
 }
 ```
-The endpoint SHALL require authentication and SHALL gate access by capability `dashboard.read`. The endpoint SHALL NOT include any UI route string (e.g., `href`) in the payload — clients build links from the `building` object. The endpoint SHALL apply defensive limits to underlying queries: `rooms` `.limit(2000)`, `billing_periods` `.limit(500)`, `invoices` constrained to the last 6 billing periods relative to current month `.limit(2000)`. Internal errors SHALL be mapped through the standard error envelope with `error.code = 'INTERNAL'` and a generic user-facing message; raw Supabase error messages SHALL NOT be returned to the client.
+The endpoint SHALL require authentication and SHALL gate access by capability `dashboard.read`. The endpoint SHALL NOT include any UI route string (e.g., `href`) in the payload — clients build links from the `building` object. The source snapshot SHALL cover the complete authorized building scope and the 12 calendar months of the current year. Internal errors SHALL be mapped through the standard error envelope with `error.code = 'INTERNAL'` and a generic user-facing message; raw Supabase error messages SHALL NOT be returned to the client.
 
 #### Scenario: Stats returned correctly
 - **WHEN** admin calls GET /api/dashboard/summary
@@ -61,8 +75,12 @@ The endpoint SHALL require authentication and SHALL gate access by capability `d
 - **THEN** `data.buildingBreakdown` array contains one entry per building with `id`, `slug`, `name`, and correct room counts
 
 #### Scenario: Billing trend included with overdue per period
-- **WHEN** billing invoice data exists for recent months
-- **THEN** `data.billingTrend` contains at most 6 entries with `paidAmount`, `outstandingAmount`, `invoiceTotal`, and `overdueAmount` (sum of `balance_amount` for invoices in that period whose `due_date < today` and `balance_amount > 0`, ignoring `status === 'void'`) grouped by period
+- **WHEN** billing invoice data exists in the current calendar year
+- **THEN** `data.billingTrend` contains exactly 12 month buckets, including zero-filled months, with billing totals, revenue `categories`, and per-building `byBuilding` buckets
+
+#### Scenario: Annual revenue breakdown included
+- **WHEN** non-void invoice charges exist in the current calendar year
+- **THEN** `data.revenueBreakdown` returns total issued, total paid, and non-zero category totals in canonical category order
 
 #### Scenario: Collection rate computed for current month
 - **WHEN** current-month invoice total is greater than zero
@@ -94,7 +112,7 @@ The endpoint SHALL require authentication and SHALL gate access by capability `d
 
 #### Scenario: Empty system
 - **WHEN** no data exists
-- **THEN** returns all counts and amounts as 0, `collectionRate` as 0, with empty arrays for `buildingBreakdown`, `billingTrend`, and `pendingOperations`
+- **THEN** returns all counts and amounts as 0, `collectionRate` as 0, 12 zero-filled `billingTrend` buckets, and empty arrays for `buildingBreakdown`, revenue categories, and `pendingOperations`
 
 #### Scenario: Unauthenticated request
 - **WHEN** request has no auth token
@@ -108,9 +126,9 @@ The endpoint SHALL require authentication and SHALL gate access by capability `d
 - **WHEN** an underlying Supabase query throws an error
 - **THEN** returns 500 with `error.code = 'INTERNAL'` and a generic message; raw Supabase error message is NOT included in the response body but IS logged on the server
 
-#### Scenario: Invoice window is bounded
-- **WHEN** the system has more than 6 months of billing data
-- **THEN** the `invoices` query SHALL be constrained to billing periods within the last 6 months relative to current period
+#### Scenario: Invoice window is bounded to the current calendar year
+- **WHEN** the system contains invoice data from multiple years
+- **THEN** dashboard trend and revenue totals include only January through December of the current year
 
 ### Requirement: Dashboard summaries use complete scoped aggregation
 The dashboard summary API SHALL compute metrics for all records in the caller's authorized building scope without relying on fixed application row limits, and SHALL preserve the existing response envelope and DTO.
@@ -122,4 +140,3 @@ The dashboard summary API SHALL compute metrics for all records in the caller's 
 #### Scenario: Repeated scoped request
 - **WHEN** the same resolved scope requests the same current-period summary within the cache window
 - **THEN** the server may reuse the scope-keyed result without changing response data
-
