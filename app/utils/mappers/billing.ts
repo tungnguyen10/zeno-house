@@ -175,6 +175,12 @@ export function mapBillingIncidentalCharge(
 export function mapBillingAuditEvent(
   row: Tables<'billing_audit_events'>,
 ): BillingAuditEvent {
+  const hardened = row as Tables<'billing_audit_events'> & {
+    operation_id?: string | null
+    building_id?: string | null
+    period_year?: number | null
+    period_month?: number | null
+  }
   return {
     id: row.id,
     billingPeriodId: row.billing_period_id,
@@ -183,6 +189,10 @@ export function mapBillingAuditEvent(
     entityType: row.entity_type as BillingAuditEntityType,
     entityId: row.entity_id,
     correlationId: row.correlation_id ?? null,
+    operationId: hardened.operation_id ?? null,
+    buildingId: hardened.building_id ?? null,
+    periodYear: hardened.period_year ?? null,
+    periodMonth: hardened.period_month ?? null,
     beforeData: row.before_data,
     afterData: row.after_data,
     metadata: asMetadata(row.metadata),

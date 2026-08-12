@@ -3,6 +3,13 @@
 ## Purpose
 TBD - created by archiving change add-invoice-email-delivery. Update Purpose after archive.
 ## Requirements
+
+### Requirement: Invoice-email setting mutation audit
+Changing a building's automatic invoice-email setting SHALL atomically persist the setting and append `building.invoice_email_settings.updated` with building scope, actor, and safe before/after values.
+
+#### Scenario: Setting audit fails
+- **WHEN** the required audit event cannot be inserted
+- **THEN** the setting remains unchanged
 ### Requirement: Building invoice-email settings and feature gates
 The system SHALL store one building-scoped automatic invoice-email setting, SHALL default it to disabled, and SHALL require both the global invoice-email feature flag and the building setting before automatic delivery can occur.
 
@@ -166,4 +173,3 @@ The system SHALL expose scoped delivery history for an invoice and SHALL record 
 #### Scenario: Delivery lifecycle is audited
 - **WHEN** a delivery is queued, delivered, or reaches a final failure, bounce, or complaint
 - **THEN** billing audit records `invoice.email_queued`, `invoice.email_delivered`, or `invoice.email_failed` against the invoice with safe source and outcome metadata
-

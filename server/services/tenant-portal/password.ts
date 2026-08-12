@@ -7,7 +7,8 @@ import { ContractRepository } from '../../repositories/contracts'
 import { can } from '../../utils/permissions'
 import { resolveTenantId } from '../../utils/scope'
 import { throwForbidden } from '../../utils/errors'
-import { AuditService } from '../audit'
+import { randomUUID } from 'node:crypto'
+import { AuditOperationService } from '../audit-operations'
 
 export const TenantPasswordService = {
   async change(
@@ -20,18 +21,22 @@ export const TenantPasswordService = {
     }
 
     const tenantId = await resolveTenantId(event, user)
+    const contract = await ContractRepository.findActiveByTenantId(event, tenantId)
+    const operation = await AuditOperationService.begin(event, {
+      idempotencyKey: `tenant-password-change:${tenantId}:${randomUUID()}`,
+      actorId: user.id,
+      buildingId: contract?.buildingId ?? null,
+      action: AUDIT_ACTIONS.TENANT_ACCOUNT_PASSWORD_CHANGED,
+      entityType: 'tenant',
+      entityId: tenantId,
+      intentData: { kind: 'password_change' },
+    })
     await UserRepository.updateCurrentPassword(
       event,
       input.password,
       input.current_password,
     )
 
-    const contract = await ContractRepository.findActiveByTenantId(event, tenantId)
-    await AuditService.append(event, user, {
-      building_id: contract?.buildingId ?? null,
-      action: AUDIT_ACTIONS.TENANT_ACCOUNT_PASSWORD_CHANGED,
-      entity_type: 'tenant',
-      entity_id: tenantId,
-    })
+    await AuditOperationService.complete(event, operation.id, { outcomeData: { auth: 'updated' } })
   },
 }

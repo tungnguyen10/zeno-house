@@ -9,7 +9,9 @@ The system SHALL store mutations on domain entities in an append-only `public.au
 
 #### Schema
 - `id` uuid PK
-- `building_id` uuid FK -> buildings (nullable - NULL for tenant events without building context; CASCADE delete when set)
+- `building_id` uuid immutable historical scope (nullable; no cascading live-building foreign key)
+- `building_name_snapshot` / `building_code_snapshot` safe historical labels (nullable)
+- `operation_id` uuid unique idempotent completion key (nullable)
 - `actor_id` uuid FK -> auth.users (nullable - system actions have no actor)
 - `action` text NOT NULL CHECK length > 0 (e.g. `room.updated`, `contract.terminated`)
 - `entity_type` text NOT NULL CHECK IN the canonical `AUDIT_ENTITY_TYPES` tuple: `building`, `room`, `tenant`, `contract`, `contract_renewal`, `building_service`, `contract_service`, `meter_device`, `user`, `building_expense`, `building_fixed_cost`, `recurring_expense`, `prepaid_expense`, `support_request`, `contract_occupant`, `contract_payment`, `service_catalog_item`, `shared_expense`, `reserve_fund`, `reserve_fund_rate`, `operations_report_period`, `tenant_document`
@@ -30,10 +32,13 @@ The system SHALL store mutations on domain entities in an append-only `public.au
 - **WHEN** an authenticated manager tries to UPDATE or DELETE an audit event
 - **THEN** the operation is denied by RLS
 
-#### Scenario: Building-scoped manager read
-- **WHEN** a manager queries audit_events
-- **THEN** only events where `building_id IN (user's assigned buildings)` are returned
-- **NOTE** tenant events with `building_id = NULL` are NOT visible to managers; only admins can see them
+#### Scenario: Server-owned access
+- **WHEN** an `anon` or `authenticated` client accesses audit_events directly
+- **THEN** table privileges deny the operation and scoped reads remain server-owned
+
+#### Scenario: Building is hard-deleted
+- **WHEN** an authorized hard-delete removes a building
+- **THEN** prior events and one `building.removed` event retain its UUID and safe label snapshot
 
 #### Scenario: Tenant audit with no building context
 - **WHEN** `TenantService.create/update/remove` is called without a known building_id
@@ -59,21 +64,20 @@ The constants SHALL also cover assignment updates; building and contract service
 - **AND** `contract.ended` is not exposed as a valid contract action
 
 ### Requirement: AuditService.append
-`AuditService.append(event, user, input)` SHALL append an audit event. `actor_id` is sourced from `user.id`, or NULL for a system action. If append throws, the error is caught, logged with action/entity context, and NOT re-thrown (audit failure must not break simple CRUD). Structured error logs SHALL NOT contain snapshots.
+Business mutation services SHALL NOT rely on fail-open post-commit audit append. Database-local mutations SHALL use an audited transaction, while cross-system mutations SHALL persist durable intent before the external call. Structured telemetry SHALL NOT contain snapshots.
 
-Before persistence, audit payloads SHALL recursively remove passwords, access/refresh/storage tokens, sessions, signed URLs, and binary content.
+Before persistence, audit payloads SHALL recursively remove passwords, access/refresh/storage tokens, sessions, signed URLs, private Storage paths, and binary content.
 
-#### Scenario: Append injects actor and fails silent
-- **WHEN** a domain service calls `AuditService.append(event, user, input)`
-- **THEN** the appended audit event uses `user.id` as `actor_id`
-- **AND** an audit append failure is logged without breaking the main operation
+#### Scenario: Required database audit fails
+- **WHEN** a required database-local audit insert fails
+- **THEN** its business mutation rolls back
 
 ### Requirement: AuditService.appendBulk
 `AuditService.appendBulk(event, user, bulkInput)` SHALL handle bulk action audit in two steps:
 1. Insert one **aggregate parent event** (`entity_id = null`, `metadata = { action, total, succeeded, failed }`) and capture its `id`.
 2. For each succeeded entity, insert a **per-entity child event** (`entity_id = <id>`, `correlation_id = parent.id`).
 
-All inserts are best-effort (same silent-fail rule). The `correlation_id` field links child events back to the parent aggregate.
+The domain mutation, parent, and children SHALL commit atomically. The `correlation_id` field links child events back to the parent aggregate, each child retains scope and snapshots, and no duplicate standalone child is emitted.
 
 #### Scenario: Bulk action audit linkage
 - **WHEN** a bulk action completes (e.g. bulk archive 10 rooms)
@@ -81,8 +85,14 @@ All inserts are best-effort (same silent-fail rule). The `correlation_id` field 
 - **AND** one child event is written per succeeded entity, each carrying `correlation_id = parent.id`
 - **AND** querying by `entity_type + entity_id` returns the per-entity child event with its `correlation_id`
 
+#### Scenario: Bulk child audit fails
+- **WHEN** any required child audit insert fails
+- **THEN** its corresponding business mutation does not commit without the event
+
 ### Requirement: Domain service audit wiring
 Domain services SHALL append audit events after successful entity mutations.
+
+Tenant activation SHALL use `tenant.activated`; invoice email settings and invoice profile refresh SHALL use canonical actions. Contract room side effects and successor contracts SHALL share the originating correlation identifier.
 
 #### Scenario: Contract mutation audit
 - **WHEN** `ContractService.create/update/remove/bulkAction` completes successfully
@@ -92,6 +102,7 @@ Domain services SHALL append audit events after successful entity mutations.
 #### Scenario: Contract renewal audit
 - **WHEN** `ContractRenewalService.renew` completes successfully
 - **THEN** `AuditService.append` is called with action `contract.renewed` on the source contract entity
+- **AND** a new-contract renewal records correlated `contract.created` for the successor
 
 #### Scenario: Room mutation audit
 - **WHEN** `RoomService.create/update/remove/bulkAction` completes successfully
@@ -104,6 +115,10 @@ Domain services SHALL append audit events after successful entity mutations.
 #### Scenario: Building mutation audit
 - **WHEN** `BuildingService.create/update/remove/bulkAction` completes successfully
 - **THEN** `AuditService.append` is called with the appropriate action
+
+#### Scenario: Tenant bulk activation
+- **WHEN** tenants are activated in bulk
+- **THEN** each successful child uses `tenant.activated` and its historical building scope
 
 ### Requirement: GET /api/audit endpoint
 The API SHALL return paginated audit events from `GET /api/audit`.
@@ -122,6 +137,10 @@ Response: `{ data: AuditEvent[], meta: { total: number, nextCursor: string | nul
 - **WHEN** multiple events share the same `created_at`
 - **THEN** pages are ordered by `created_at DESC, id DESC`
 - **AND** following `nextCursor` neither duplicates nor skips an event
+
+#### Scenario: Admin queries a deleted building
+- **WHEN** admin supplies the valid UUID of a deleted building
+- **THEN** preserved events for that historical scope are returned
 
 ### Requirement: Atomic financial and multi-row audit
 Reserve-funded expense creation, shared-expense allocation, building-to-contract service sync, operations report close, reserve accrual refresh, and report reopen SHALL persist their domain mutation and audit rows in one database transaction. Their RPCs SHALL only be executable by `service_role`.

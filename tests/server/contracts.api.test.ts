@@ -41,7 +41,7 @@ const occupantRepoMocks = vi.hoisted(() => ({
 const contractServicesMocks = vi.hoisted(() => ({
   cloneFromBuilding: vi.fn(),
 }))
-const bulkRepoMocks = vi.hoisted(() => ({ resolveBuildingScopes: vi.fn(), execute: vi.fn() }))
+const bulkRepoMocks = vi.hoisted(() => ({ resolveBuildingScopes: vi.fn(), resolveSnapshots: vi.fn(), execute: vi.fn() }))
 
 vi.mock('../../server/repositories/contracts', () => ({
   ContractRepository: contractRepoMocks,
@@ -223,6 +223,7 @@ beforeEach(() => {
   bulkRepoMocks.resolveBuildingScopes.mockImplementation((_event, _entity, ids: string[]) =>
     Promise.resolve(new Map(ids.map(id => [id, 'building-1']))),
   )
+  bulkRepoMocks.resolveSnapshots.mockResolvedValue(new Map())
   bulkRepoMocks.execute.mockImplementation((_event, _entity, _action, ids: string[]) =>
     Promise.resolve(ids.map(id => ({ id, succeeded: true, reason: null }))),
   )

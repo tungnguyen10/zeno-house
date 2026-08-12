@@ -2,6 +2,17 @@
 
 Server-side API for contracts. CRUD endpoints with Zod validation, auth guard, and 409 CONFLICT protection when a room already has an active contract.
 ## Requirements
+
+### Requirement: Correlated audit for contract side effects
+Contract mutations SHALL preserve entity-level history for derived room occupancy changes and renewal successors using one operation correlation identifier.
+
+#### Scenario: Contract changes room occupancy
+- **WHEN** a contract claims, releases, or reassigns a room
+- **THEN** each changed room receives one correlated `room.updated` event with before/after status
+
+#### Scenario: Renewal creates successor contract
+- **WHEN** new-contract renewal succeeds
+- **THEN** `contract.renewed` on the source and `contract.created` on the successor share the operation correlation
 ### Requirement: List contracts endpoint
 `GET /api/contracts` SHALL return a paginated list of contracts. Query params: `room_id` (optional UUID filter), `tenant_id` (optional UUID filter), `building_id` (optional UUID filter), `status` (optional, one of `active` | `expired` | `terminated`), `page` (default 1), `limit` (default 20). Response: `{ data: Contract[], meta: { total, page, limit, totalPages } }`. Requires authenticated session with admin or manager role.
 

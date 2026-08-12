@@ -9,6 +9,7 @@ const repoMocks = vi.hoisted(() => ({
   insert: vi.fn(),
   update: vi.fn(),
   remove: vi.fn(),
+  removeWithAudit: vi.fn(),
   countRoomsForBuilding: vi.fn(),
   countActiveContractsForBuilding: vi.fn(),
   softArchive: vi.fn(),
@@ -19,6 +20,8 @@ const assignmentRepoMocks = vi.hoisted(() => ({
   findBuildingIdsByUser: vi.fn(),
 }))
 
+const bulkRepoMocks = vi.hoisted(() => ({ resolveSnapshots: vi.fn() }))
+
 vi.mock('../../server/repositories/buildings', () => ({
   BuildingRepository: repoMocks,
 }))
@@ -26,6 +29,8 @@ vi.mock('../../server/repositories/buildings', () => ({
 vi.mock('../../server/repositories/assignments', () => ({
   AssignmentRepository: assignmentRepoMocks,
 }))
+
+vi.mock('../../server/repositories/bulk-actions', () => ({ BulkActionRepository: bulkRepoMocks }))
 
 const requireAuthMock = vi.hoisted(() => vi.fn())
 
@@ -140,6 +145,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   assignmentRepoMocks.insert.mockResolvedValue({ id: 'assignment-1' })
   assignmentRepoMocks.findBuildingIdsByUser.mockResolvedValue(['b-1'])
+  bulkRepoMocks.resolveSnapshots.mockResolvedValue(new Map())
 })
 
 // ---------------------------------------------------------------------------
@@ -414,13 +420,13 @@ describe('DELETE /api/buildings/[id]', () => {
     repoMocks.findByIdentifier.mockResolvedValue(buildBuilding({ id: 'b-1' }))
     repoMocks.countRoomsForBuilding.mockResolvedValue(0)
     repoMocks.countActiveContractsForBuilding.mockResolvedValue(0)
-    repoMocks.remove.mockResolvedValue(undefined)
+    repoMocks.removeWithAudit.mockResolvedValue(undefined)
     const { default: handler } = await import('../../server/api/buildings/[id].delete')
 
     const event = makeEvent({ params: { id: 'b-1' }, query: {} })
     await handler(event)
     expect((event as MockEvent).context.statusCode).toBe(204)
-    expect(repoMocks.remove).toHaveBeenCalledWith(expect.anything(), 'b-1')
+    expect(repoMocks.removeWithAudit).toHaveBeenCalledWith(expect.anything(), 'b-1', 'user-admin', expect.any(String))
   })
 
   it('returns 409 with rooms count when rooms exist', async () => {
@@ -475,13 +481,13 @@ describe('DELETE /api/buildings/[id]', () => {
     repoMocks.findByIdentifier.mockResolvedValue(buildBuilding({ id: 'b-1' }))
     repoMocks.countRoomsForBuilding.mockResolvedValue(0)
     repoMocks.countActiveContractsForBuilding.mockResolvedValue(0)
-    repoMocks.remove.mockResolvedValue(undefined)
+    repoMocks.removeWithAudit.mockResolvedValue(undefined)
     const { default: handler } = await import('../../server/api/buildings/[id].delete')
 
     const event = makeEvent({ params: { id: 'b-1' }, query: {} })
     await handler(event)
     expect((event as MockEvent).context.statusCode).toBe(204)
-    expect(repoMocks.remove).toHaveBeenCalledWith(expect.anything(), 'b-1')
+    expect(repoMocks.removeWithAudit).toHaveBeenCalledWith(expect.anything(), 'b-1', 'user-owner', expect.any(String))
   })
 
   it('forbids owner from deleting outside assigned buildings', async () => {

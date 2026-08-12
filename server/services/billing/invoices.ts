@@ -400,7 +400,12 @@ export const InvoiceService = {
     const period = await BillingPeriodRepository.findById(event, invoice.billingPeriodId)
     if (!period) throwNotFound('Không tìm thấy kỳ vận hành')
     await assertBuildingScope(event, user, period.buildingId, 'write')
-    const refreshed = await BuildingInvoiceProfileRepository.refreshInvoiceSnapshot(event, invoice.id)
+    const refreshed = await BuildingInvoiceProfileRepository.refreshInvoiceSnapshot(
+      event,
+      invoice.id,
+      user.id,
+      newCorrelationId(),
+    )
     if (!refreshed) throwNotFound('Không tìm thấy hồ sơ thanh toán của tòa nhà')
     return this.getWithCharges(event, user, invoiceId)
   },

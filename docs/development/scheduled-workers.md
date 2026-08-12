@@ -24,6 +24,7 @@ matching Nitro runtime configuration, then manually invoking its endpoint before
 | `invoice-email-dispatch-every-minute` | Every minute | `/api/internal/invoice-email/dispatch` |
 | `operations-report-auto-close` | `16:55 UTC` | `/api/internal/operations-report/auto-close` |
 | `ai-retention-cleanup` | `17:20 UTC` | `/api/internal/ai/retention-cleanup` |
+| `audit-operation-reconcile` | Every 5 minutes | `/api/internal/audit/reconcile` |
 
 Inspect `cron.job` for configuration and `cron.job_run_details` for wake-up history. A failed
 `pg_net` wake-up leaves worker state unchanged and the next scheduled run retries.

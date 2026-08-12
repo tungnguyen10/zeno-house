@@ -7,6 +7,7 @@ const buildingRepo = vi.hoisted(() => ({
   findByIdentifier: vi.fn(),
   update: vi.fn(),
   remove: vi.fn(),
+  removeWithAudit: vi.fn(),
   softArchive: vi.fn(),
   countRoomsForBuilding: vi.fn(),
   countActiveContractsForBuilding: vi.fn(),
@@ -18,10 +19,12 @@ const assignmentRepo = vi.hoisted(() => ({
 }))
 
 const auditService = vi.hoisted(() => ({ append: vi.fn(), appendBulk: vi.fn() }))
+const bulkRepo = vi.hoisted(() => ({ resolveSnapshots: vi.fn() }))
 
 vi.mock('../../../server/repositories/buildings', () => ({ BuildingRepository: buildingRepo }))
 vi.mock('../../../server/repositories/assignments', () => ({ AssignmentRepository: assignmentRepo }))
 vi.mock('../../../server/services/audit', () => ({ AuditService: auditService }))
+vi.mock('../../../server/repositories/bulk-actions', () => ({ BulkActionRepository: bulkRepo }))
 
 function user(role: 'admin' | 'owner' | 'manager', id = `${role}-1`): AuthUser {
   return { id, app_metadata: { role } } as AuthUser
@@ -64,6 +67,7 @@ function building(overrides: Partial<Building> = {}): Building {
 describe('BuildingService.create ownership workflow', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    bulkRepo.resolveSnapshots.mockResolvedValue(new Map())
   })
 
   it('auto-assigns owner-created buildings to the owner', async () => {
@@ -116,6 +120,7 @@ describe('BuildingService owner scoped mutations', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     assignmentRepo.findBuildingIdsByUser.mockResolvedValue(['b-1'])
+    bulkRepo.resolveSnapshots.mockResolvedValue(new Map())
   })
 
   it('allows owner to update a building inside scope', async () => {
@@ -145,7 +150,7 @@ describe('BuildingService owner scoped mutations', () => {
     const { BuildingService } = await import('../../../server/services/buildings')
 
     await BuildingService.remove(event(), user('owner'), 'b-1')
-    expect(buildingRepo.remove).toHaveBeenCalledWith(expect.anything(), 'b-1')
+    expect(buildingRepo.removeWithAudit).toHaveBeenCalledWith(expect.anything(), 'b-1', 'owner-1', expect.any(String))
   })
 
   it('keeps conflict checks for owner delete of a building with blockers', async () => {

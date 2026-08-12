@@ -25,6 +25,8 @@ describe('audit action coverage', () => {
       'tenant.profile_updated',
       'tenant_document.uploaded',
       'tenant_document.removed',
+      'tenant.activated',
+      'building.invoice_email_settings.updated',
     ]))
   })
 })

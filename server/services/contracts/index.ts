@@ -1,4 +1,5 @@
 import type { H3Event } from 'h3'
+import { randomUUID } from 'node:crypto'
 import type { AuthUser } from '~/types/auth'
 import type { ContractWithDetails } from '~/types/contracts'
 import type { ContractBulkActionInput, ContractCreateInput, ContractUpdateInput } from '~/utils/validators/contracts'
@@ -158,8 +159,18 @@ export const ContractService = {
       await ContractServiceService.cloneFromBuilding(event, contract.id, buildingId)
     }
 
+    const correlationId = randomUUID()
     if (input.status === 'active' || !input.status) {
-      await RoomRepository.update(event, input.room_id, { status: 'occupied' })
+      const updatedRoom = await RoomRepository.update(event, input.room_id, { status: 'occupied' })
+      await AuditService.append(event, user, {
+        building_id: room.buildingId,
+        action: AUDIT_ACTIONS.ROOM_UPDATED,
+        entity_type: 'room',
+        entity_id: room.id,
+        correlation_id: correlationId,
+        before_data: room,
+        after_data: updatedRoom,
+      })
     }
 
     await AuditService.append(event, user, {
@@ -167,6 +178,7 @@ export const ContractService = {
       action: AUDIT_ACTIONS.CONTRACT_CREATED,
       entity_type: 'contract',
       entity_id: contract.id,
+      correlation_id: correlationId,
       after_data: contract,
     })
 
@@ -185,6 +197,7 @@ export const ContractService = {
     const wasActive = existing.status === 'active'
     const willBeActive = newStatus === 'active'
     const roomChanged = newRoomId !== existing.roomId
+    const correlationId = randomUUID()
     if (roomChanged) {
       const newRoom = await RoomRepository.findById(event, newRoomId)
       if (!newRoom) throwNotFound('Không tìm thấy phòng')
@@ -210,7 +223,16 @@ export const ContractService = {
     if (wasActive && (!willBeActive || roomChanged)) {
       const oldRoom = await RoomRepository.findById(event, existing.roomId)
       if (oldRoom && oldRoom.status !== 'maintenance') {
-        await RoomRepository.update(event, existing.roomId, { status: 'available' })
+        const releasedRoom = await RoomRepository.update(event, existing.roomId, { status: 'available' })
+        await AuditService.append(event, user, {
+          building_id: oldRoom.buildingId,
+          action: AUDIT_ACTIONS.ROOM_UPDATED,
+          entity_type: 'room',
+          entity_id: oldRoom.id,
+          correlation_id: correlationId,
+          before_data: oldRoom,
+          after_data: releasedRoom,
+        })
       }
     }
 
@@ -220,7 +242,16 @@ export const ContractService = {
     if (willBeActive && (!wasActive || roomChanged)) {
       const newRoom = await RoomRepository.findById(event, newRoomId)
       if (newRoom && newRoom.status !== 'maintenance') {
-        await RoomRepository.update(event, newRoomId, { status: 'occupied' })
+        const occupiedRoom = await RoomRepository.update(event, newRoomId, { status: 'occupied' })
+        await AuditService.append(event, user, {
+          building_id: newRoom.buildingId,
+          action: AUDIT_ACTIONS.ROOM_UPDATED,
+          entity_type: 'room',
+          entity_id: newRoom.id,
+          correlation_id: correlationId,
+          before_data: newRoom,
+          after_data: occupiedRoom,
+        })
       }
     }
 
@@ -233,6 +264,7 @@ export const ContractService = {
       action: auditAction,
       entity_type: 'contract',
       entity_id: updated.id,
+      correlation_id: correlationId,
       before_data: existing,
       after_data: updated,
     })
@@ -244,7 +276,7 @@ export const ContractService = {
     event: H3Event,
     user: AuthUser,
     id: string,
-    opts: { force?: boolean; reason: string },
+    opts: { force?: boolean; reason: string; emitAudit?: boolean },
   ): Promise<ContractWithDetails | undefined> {
     let existing = await ContractRepository.findByIdentifier(event, id)
     if (!existing) throwNotFound('Không tìm thấy hợp đồng')
@@ -273,7 +305,7 @@ export const ContractService = {
     if (hasDeleteConflicts(details)) throwDeleteConflict(details)
 
     await ContractRepository.removeWithCascade(event, existing)
-    await AuditService.append(event, user, {
+    if (opts.emitAudit !== false) await AuditService.append(event, user, {
       building_id: existing.buildingId,
       action: AUDIT_ACTIONS.CONTRACT_REMOVED,
       entity_type: 'contract',
@@ -293,9 +325,10 @@ export const ContractService = {
 
     const succeeded: string[] = []
     const failed: { id: string; reason: string }[] = []
+    const scopes = await BulkActionRepository.resolveBuildingScopes(event, 'contract', input.ids)
+    const beforeSnapshots = await BulkActionRepository.resolveSnapshots(event, 'contract', input.ids)
 
     if (input.action === 'terminate') {
-      const scopes = await BulkActionRepository.resolveBuildingScopes(event, 'contract', input.ids)
       const scopeAccess = new Map<string, boolean>()
       const allowed: string[] = []
       for (const id of input.ids) {
@@ -323,11 +356,12 @@ export const ContractService = {
         if (row.succeeded) succeeded.push(row.id)
         else failed.push({ id: row.id, reason: row.reason ?? 'error' })
       }
+      const afterSnapshots = await BulkActionRepository.resolveSnapshots(event, 'contract', succeeded)
       await AuditService.appendBulk(event, user, {
         building_id: null,
         entity_type: 'contract',
         aggregate_action: 'contract.bulk_terminate',
-        items: succeeded.map(id => ({ entity_id: id, action: AUDIT_ACTIONS.CONTRACT_TERMINATED })),
+        items: succeeded.map(id => ({ entity_id: id, building_id: scopes.get(id) ?? null, action: AUDIT_ACTIONS.CONTRACT_TERMINATED, before_data: beforeSnapshots.get(id), after_data: afterSnapshots.get(id) })),
         succeeded,
         total: input.ids.length,
         failed: failed.length,
@@ -337,7 +371,7 @@ export const ContractService = {
 
     for (const id of input.ids) {
       try {
-        await this.remove(event, user, id, { reason: input.reason! })
+        await this.remove(event, user, id, { reason: input.reason!, emitAudit: false })
         succeeded.push(id)
       }
       catch (err: unknown) {
@@ -352,7 +386,7 @@ export const ContractService = {
       building_id: null,
       entity_type: 'contract',
       aggregate_action: `contract.bulk_${input.action}`,
-      items: succeeded.map(id => ({ entity_id: id, action: bulkAction })),
+      items: succeeded.map(id => ({ entity_id: id, building_id: scopes.get(id) ?? null, action: bulkAction, before_data: beforeSnapshots.get(id) })),
       succeeded,
       total: input.ids.length,
       failed: failed.length,

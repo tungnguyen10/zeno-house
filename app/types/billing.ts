@@ -145,6 +145,10 @@ export interface BillingAuditEvent {
   entityType: BillingAuditEntityType
   entityId: string | null
   correlationId: string | null
+  operationId: string | null
+  buildingId: string | null
+  periodYear: number | null
+  periodMonth: number | null
   beforeData: unknown
   afterData: unknown
   metadata: Record<string, unknown>
