@@ -258,6 +258,8 @@ function managerInitials(row: ManagedUserWithAssignments): string {
 
 <template>
   <div class="space-y-6">
+    <AppSettingsSubNav />
+
     <UiPageHeader
       title="Quản lý người dùng"
       :description="authStore.isAdmin

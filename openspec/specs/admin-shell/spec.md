@@ -61,7 +61,7 @@ App SHALL add an admin-only navigation item and `/dashboard/settings/access-requ
 ---
 
 ### Requirement: AppSidebar hiển thị navigation items
-AppSidebar SHALL nhận `navItems: NavItem[]` qua props và render các navigation link tới `/dashboard`-based paths theo nhóm tĩnh. `Dashboard` SHALL đứng riêng; các link còn lại SHALL thuộc `Tài sản & cho thuê`, `Tài chính & vận hành`, hoặc `Quản trị`. Section không còn item sau khi lọc theo role SHALL không được render. Item active SHALL được highlight bằng canonical cyan surface/border và expose `aria-current="page"`. Label của link SHALL vẫn là accessible name khi desktop sidebar thu gọn. AppSidebar SHALL hiển thị thông tin user đã đăng nhập trong một footer panel có avatar, email, và role. AppSidebar SHALL NOT render trong `/portal` namespace.
+AppSidebar SHALL nhận `navItems: NavItem[]` qua props và render các navigation link tới `/dashboard`-based paths theo nhóm tĩnh. `Dashboard` SHALL đứng riêng; các link còn lại SHALL thuộc `Tài sản & cho thuê`, `Tài chính & vận hành`, hoặc một entry point `Quản trị` duy nhất. `Quản trị` SHALL trỏ tới `/dashboard/settings/managers` và chỉ hiển thị cho role `admin`/`owner`; các sub-page (`Tài khoản người thuê`, `Yêu cầu truy cập`, `Nhật ký hoạt động`) SHALL không render item riêng trong sidebar mà được điều hướng qua `AppSettingsSubNav`. Section không còn item sau khi lọc theo role SHALL không được render. Item active SHALL được highlight bằng canonical cyan surface/border và expose `aria-current="page"`. Label của link SHALL vẫn là accessible name khi desktop sidebar thu gọn. AppSidebar SHALL hiển thị thông tin user đã đăng nhập trong một footer panel có avatar, email, và role. AppSidebar SHALL NOT render trong `/portal` namespace.
 
 #### Scenario: Sidebar trỏ tới dashboard routes
 - **WHEN** admin layout mount
@@ -69,11 +69,15 @@ AppSidebar SHALL nhận `navItems: NavItem[]` qua props và render các navigati
 
 #### Scenario: Sidebar nhóm các destination liên quan
 - **WHEN** admin mở sidebar
-- **THEN** `Dashboard` đứng riêng và các section `Tài sản & cho thuê`, `Tài chính & vận hành`, `Quản trị` hiển thị link theo đúng product relationship
+- **THEN** `Dashboard` đứng riêng, section `Tài sản & cho thuê` và `Tài chính & vận hành` hiển thị link theo đúng product relationship, và section `administration` chỉ có một link `Quản trị`
 
 #### Scenario: Empty role section is hidden
-- **WHEN** manager mở sidebar và không có item nào thuộc section `Quản trị`
-- **THEN** section label `Quản trị` không được render
+- **WHEN** manager mở sidebar và không có item nào thuộc section `administration`
+- **THEN** section `administration` không được render
+
+#### Scenario: Settings sub-pages điều hướng qua AppSettingsSubNav
+- **WHEN** admin/owner mở một trang dưới `/dashboard/settings/*`
+- **THEN** `AppSettingsSubNav` hiển thị tab ngang cho các sub-page mà role hiện tại được phép truy cập, ẩn các tab admin-only với owner, và đánh dấu tab hiện tại bằng `aria-current="page"`
 
 #### Scenario: Active nav item được highlight
 - **WHEN** người dùng đang ở route `/dashboard/buildings`

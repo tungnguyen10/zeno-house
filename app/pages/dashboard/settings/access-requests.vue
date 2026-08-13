@@ -180,6 +180,8 @@ function statusLabel(status: AccessRequestStatus) {
 
 <template>
   <div class="space-y-6">
+    <AppSettingsSubNav />
+
     <header class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
       <div>
         <p class="text-xs font-medium uppercase tracking-[0.16em] text-ui-accent">Quyền truy cập</p>

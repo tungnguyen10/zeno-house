@@ -33,7 +33,8 @@ const visibleNavSections = computed(() => {
     .filter(section => section.items.length > 0)
 })
 
-function isActive(to: string) {
+function isActive(item: NavItem) {
+  const to = item.activeMatch ?? item.to
   if (to === '/dashboard') return route.path === to
   return route.path === to || route.path.startsWith(`${to}/`)
 }
@@ -76,14 +77,14 @@ const collapseBtnClass = computed(() =>
   ),
 )
 
-function navItemClass(to: string) {
+function navItemClass(item: NavItem) {
   return clsx(
     'group relative flex min-h-11 items-center gap-3 rounded-lg border px-3 py-2 text-sm font-medium whitespace-nowrap',
     'transition-colors duration-150 motion-reduce:transition-none',
     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ui-accent/40',
     'lg:min-h-10',
     sidebarCollapsed.value && 'lg:justify-center lg:gap-0 lg:px-0',
-    isActive(to)
+    isActive(item)
       ? 'border-ui-accent/30 bg-ui-accent/10 text-ui-accent shadow-sm shadow-ui-accent/5 active:bg-ui-accent/15'
       : 'border-transparent text-ui-muted hover:border-ui-border hover:bg-ui-hover hover:text-ui-primary active:bg-ui-hover active:text-ui-primary',
   )
@@ -171,13 +172,13 @@ function sectionLabelClass() {
           <li v-for="item in section.items" :key="item.key">
             <NuxtLink
               :to="item.to"
-              :class="navItemClass(item.to)"
+              :class="navItemClass(item)"
               :title="sidebarCollapsed ? item.label : undefined"
-              :aria-current="isActive(item.to) ? 'page' : undefined"
+              :aria-current="isActive(item) ? 'page' : undefined"
               @click="emit('close')"
             >
               <span
-                v-if="isActive(item.to)"
+                v-if="isActive(item)"
                 class="absolute inset-y-1.5 left-0 w-0.5 rounded-full bg-ui-accent"
                 aria-hidden="true"
               />

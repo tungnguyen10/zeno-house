@@ -114,6 +114,8 @@ function clearFilters() {
 
 <template>
   <div class="space-y-5">
+    <AppSettingsSubNav />
+
     <UiPageHeader
       title="Nhật ký hoạt động"
       description="Theo dõi thay đổi master data, phân quyền, hợp đồng, vận hành và tenant portal."
