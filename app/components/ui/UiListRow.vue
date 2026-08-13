@@ -22,14 +22,14 @@ const rowClass = computed(() =>
   clsx(
     'group flex items-center gap-3 transition-colors',
     props.compact
-      ? 'rounded-lg border border-dark-border px-3 py-2 hover:border-cyan/40'
-      : 'rounded-xl border border-dark-border bg-dark-surface px-4 py-3 hover:border-cyan/40',
+      ? 'rounded-lg border border-ui-border px-3 py-2 hover:border-ui-accent/40'
+      : 'rounded-xl border border-ui-border bg-ui-surface px-4 py-3 hover:border-ui-accent/40',
   ),
 )
 
 const chevronClass = computed(() =>
   clsx(
-    'shrink-0 text-muted group-hover:text-cyan transition-colors',
+    'shrink-0 text-ui-muted group-hover:text-ui-accent transition-colors',
     props.compact ? 'w-3.5 h-3.5' : 'w-4 h-4',
   ),
 )

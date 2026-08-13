@@ -68,7 +68,7 @@ function onClearDraft() {
       {{ apiError }}
     </UiAlert>
 
-    <div class="rounded-xl border border-dark-border bg-dark-surface p-6">
+    <div class="rounded-xl border border-ui-border bg-ui-surface p-6">
       <RoomForm
         v-model="formData"
         :loading="isLoading"

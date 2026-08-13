@@ -192,7 +192,7 @@ function formatDate(value: string | null): string {
     </div>
 
     <!-- Desktop table -->
-    <div class="hidden rounded-xl border border-dark-border bg-dark-surface md:block">
+    <div class="hidden rounded-xl border border-ui-border bg-ui-surface md:block">
       <UiTable
         :rows="rows"
         :columns="columns"
@@ -202,8 +202,8 @@ function formatDate(value: string | null): string {
       >
         <template #cell-roomNumber="{ row }">
           <div class="flex items-baseline gap-1.5">
-            <span class="font-medium text-white">{{ row.roomNumber }}</span>
-            <span class="text-xs text-muted">T{{ row.floor }}</span>
+            <span class="font-medium text-ui-primary">{{ row.roomNumber }}</span>
+            <span class="text-xs text-ui-muted">T{{ row.floor }}</span>
           </div>
         </template>
 
@@ -211,14 +211,14 @@ function formatDate(value: string | null): string {
           <div class="flex flex-col items-end gap-0.5">
             <span
               class="text-sm tabular-nums"
-              :class="row.electricity.hasReading ? 'text-white' : 'text-muted'"
+              :class="row.electricity.hasReading ? 'text-ui-primary' : 'text-ui-muted'"
             >
               {{ formatNumber(row.electricity.currentValue) }}
             </span>
-            <p class="text-[11px] leading-tight text-muted tabular-nums">
+            <p class="text-[11px] leading-tight text-ui-muted tabular-nums">
               Kỳ trước · {{ formatNumber(row.electricity.previousValue) }}
             </p>
-            <p v-if="row.electricity.consumption !== null" class="text-[11px] leading-tight text-cyan tabular-nums">
+            <p v-if="row.electricity.consumption !== null" class="text-[11px] leading-tight text-ui-accent tabular-nums">
               +{{ formatNumber(row.electricity.consumption) }} kWh
             </p>
           </div>
@@ -228,41 +228,41 @@ function formatDate(value: string | null): string {
           <div class="flex flex-col items-end gap-0.5">
             <span
               class="text-sm tabular-nums"
-              :class="row.water.hasReading ? 'text-white' : 'text-muted'"
+              :class="row.water.hasReading ? 'text-ui-primary' : 'text-ui-muted'"
             >
               {{ formatNumber(row.water.currentValue) }}
             </span>
-            <p class="text-[11px] leading-tight text-muted tabular-nums">
+            <p class="text-[11px] leading-tight text-ui-muted tabular-nums">
               Kỳ trước · {{ formatNumber(row.water.previousValue) }}
             </p>
-            <p v-if="row.water.consumption !== null" class="text-[11px] leading-tight text-cyan tabular-nums">
+            <p v-if="row.water.consumption !== null" class="text-[11px] leading-tight text-ui-accent tabular-nums">
               +{{ formatNumber(row.water.consumption) }} m³
             </p>
           </div>
         </template>
 
         <template #cell-readingDate="{ row }">
-          <span class="text-xs text-muted">{{ formatDate(row.readingDate) }}</span>
+          <span class="text-xs text-ui-muted">{{ formatDate(row.readingDate) }}</span>
         </template>
 
         <template #cell-status="{ row }">
           <span
             v-if="row.isComplete"
-            class="inline-flex items-center gap-1 rounded-full bg-success-neon/10 px-2 py-0.5 text-xs font-medium text-success-neon"
+            class="inline-flex items-center gap-1 rounded-full bg-status-success/10 px-2 py-0.5 text-xs font-medium text-status-success"
           >
-            <span class="h-1.5 w-1.5 rounded-full bg-success-neon" />
+            <span class="h-1.5 w-1.5 rounded-full bg-status-success" />
             Đã chốt
           </span>
           <span
             v-else-if="row.isPartial"
-            class="inline-flex items-center gap-1 rounded-full bg-amber-400/10 px-2 py-0.5 text-xs font-medium text-amber-300"
+            class="inline-flex items-center gap-1 rounded-full bg-status-warning/10 px-2 py-0.5 text-xs font-medium text-status-warning"
           >
-            <span class="h-1.5 w-1.5 rounded-full bg-amber-300" />
+            <span class="h-1.5 w-1.5 rounded-full bg-status-warning" />
             Một phần
           </span>
           <span
             v-else
-            class="inline-flex items-center gap-1 rounded-full bg-dark-hover px-2 py-0.5 text-xs text-muted"
+            class="inline-flex items-center gap-1 rounded-full bg-ui-hover px-2 py-0.5 text-xs text-ui-muted"
           >
             <span class="h-1.5 w-1.5 rounded-full bg-muted/50" />
             Chưa chốt
@@ -280,7 +280,7 @@ function formatDate(value: string | null): string {
       </div>
       <p
         v-else-if="rows.length === 0"
-        class="rounded-xl border border-dark-border bg-dark-surface p-6 text-center text-sm text-muted"
+        class="rounded-xl border border-ui-border bg-ui-surface p-6 text-center text-sm text-ui-muted"
       >
         Chưa có phòng nào đang hoạt động hoặc chưa gắn đồng hồ.
       </p>
@@ -288,61 +288,61 @@ function formatDate(value: string | null): string {
         v-for="row in rows"
         v-else
         :key="row.key"
-        class="rounded-xl border border-dark-border bg-dark-surface p-4"
+        class="rounded-xl border border-ui-border bg-ui-surface p-4"
       >
         <header class="mb-3 flex items-center justify-between">
           <div class="flex items-baseline gap-1.5">
-            <span class="font-medium text-white">{{ row.roomNumber }}</span>
-            <span class="text-xs text-muted">T{{ row.floor }}</span>
+            <span class="font-medium text-ui-primary">{{ row.roomNumber }}</span>
+            <span class="text-xs text-ui-muted">T{{ row.floor }}</span>
           </div>
           <span
             v-if="row.isComplete"
-            class="inline-flex items-center gap-1 rounded-full bg-success-neon/10 px-2 py-0.5 text-[11px] font-medium text-success-neon"
+            class="inline-flex items-center gap-1 rounded-full bg-status-success/10 px-2 py-0.5 text-[11px] font-medium text-status-success"
           >
             Đã chốt
           </span>
           <span
             v-else-if="row.isPartial"
-            class="inline-flex items-center gap-1 rounded-full bg-amber-400/10 px-2 py-0.5 text-[11px] font-medium text-amber-300"
+            class="inline-flex items-center gap-1 rounded-full bg-status-warning/10 px-2 py-0.5 text-[11px] font-medium text-status-warning"
           >
             Một phần
           </span>
           <span
             v-else
-            class="inline-flex items-center gap-1 rounded-full bg-dark-hover px-2 py-0.5 text-[11px] text-muted"
+            class="inline-flex items-center gap-1 rounded-full bg-ui-hover px-2 py-0.5 text-[11px] text-ui-muted"
           >
             Chưa chốt
           </span>
         </header>
         <div class="grid grid-cols-2 gap-3 text-sm">
           <div>
-            <p class="text-[11px] uppercase tracking-wide text-muted">Điện</p>
-            <p class="tabular-nums" :class="row.electricity.hasReading ? 'text-white' : 'text-muted'">
+            <p class="text-[11px] uppercase tracking-wide text-ui-muted">Điện</p>
+            <p class="tabular-nums" :class="row.electricity.hasReading ? 'text-ui-primary' : 'text-ui-muted'">
               {{ formatNumber(row.electricity.currentValue) }}
-              <span class="text-xs text-muted">kWh</span>
+              <span class="text-xs text-ui-muted">kWh</span>
             </p>
-            <p class="text-[11px] text-muted tabular-nums">
+            <p class="text-[11px] text-ui-muted tabular-nums">
               Kỳ trước · {{ formatNumber(row.electricity.previousValue) }}
             </p>
-            <p v-if="row.electricity.consumption !== null" class="text-[11px] text-cyan tabular-nums">
+            <p v-if="row.electricity.consumption !== null" class="text-[11px] text-ui-accent tabular-nums">
               +{{ formatNumber(row.electricity.consumption) }} kWh
             </p>
           </div>
           <div>
-            <p class="text-[11px] uppercase tracking-wide text-muted">Nước</p>
-            <p class="tabular-nums" :class="row.water.hasReading ? 'text-white' : 'text-muted'">
+            <p class="text-[11px] uppercase tracking-wide text-ui-muted">Nước</p>
+            <p class="tabular-nums" :class="row.water.hasReading ? 'text-ui-primary' : 'text-ui-muted'">
               {{ formatNumber(row.water.currentValue) }}
-              <span class="text-xs text-muted">m³</span>
+              <span class="text-xs text-ui-muted">m³</span>
             </p>
-            <p class="text-[11px] text-muted tabular-nums">
+            <p class="text-[11px] text-ui-muted tabular-nums">
               Kỳ trước · {{ formatNumber(row.water.previousValue) }}
             </p>
-            <p v-if="row.water.consumption !== null" class="text-[11px] text-cyan tabular-nums">
+            <p v-if="row.water.consumption !== null" class="text-[11px] text-ui-accent tabular-nums">
               +{{ formatNumber(row.water.consumption) }} m³
             </p>
           </div>
         </div>
-        <footer v-if="row.readingDate" class="mt-3 border-t border-dark-border pt-2 text-[11px] text-muted">
+        <footer v-if="row.readingDate" class="mt-3 border-t border-ui-border pt-2 text-[11px] text-ui-muted">
           Ngày đọc: {{ formatDate(row.readingDate) }}
         </footer>
       </article>

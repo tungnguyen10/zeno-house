@@ -47,7 +47,7 @@ const activeFilterCount = computed(() => props.status.length)
 
     <UiFilterPopover :count="activeFilterCount" aria-label="Bộ lọc tòa nhà">
       <div class="flex flex-col gap-1.5">
-        <span class="text-xs text-muted">Trạng thái</span>
+        <span class="text-xs text-ui-muted">Trạng thái</span>
         <UiFilterChips
           :model-value="status"
           :options="statusOptions"

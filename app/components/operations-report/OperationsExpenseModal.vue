@@ -164,7 +164,7 @@ function onReceiptChange(file: File) {
       <!-- Optional fields stay collapsed so the common path is 3 fields. -->
       <button
         type="button"
-        class="flex w-full items-center justify-between rounded-md border border-dark-border bg-dark-surface px-3 py-2 text-sm text-muted transition-colors hover:text-white"
+        class="flex w-full items-center justify-between rounded-md border border-ui-border bg-ui-surface px-3 py-2 text-sm text-ui-muted transition-colors hover:text-ui-primary"
         @click="showDetails = !showDetails"
       >
         <span>Thêm chi tiết (người nhận, thanh toán)</span>

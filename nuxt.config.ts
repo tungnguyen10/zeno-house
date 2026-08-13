@@ -1,4 +1,5 @@
 import { appleStartupImages } from './pwa/apple-startup'
+import { DASHBOARD_THEME_BOOTSTRAP_SCRIPT } from './app/utils/theme/dashboard-theme-bootstrap'
 
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
@@ -103,6 +104,13 @@ export default defineNuxtConfig({
         { name: "apple-mobile-web-app-capable", content: "yes" },
         { name: "apple-mobile-web-app-status-bar-style", content: "default" },
         { name: "apple-mobile-web-app-title", content: "Zeno" },
+      ],
+      script: [
+        {
+          id: 'dashboard-theme-bootstrap',
+          innerHTML: DASHBOARD_THEME_BOOTSTRAP_SCRIPT,
+          tagPosition: 'head',
+        },
       ],
       link: [
         { rel: "icon", type: "image/x-icon", href: "/favicon.ico" },

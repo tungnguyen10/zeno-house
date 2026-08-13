@@ -300,47 +300,23 @@ export const BuildingInvoiceProfileRepository = {
     }
   },
 
-  async refreshInvoiceSnapshot(event: H3Event, invoiceId: string): Promise<boolean> {
-    const { data: raw, error: fetchError } = await client(event)
-      .from('invoices')
-      .select('id, invoice_code, issued_at, created_at, billing_periods!inner(building_id, period_year, period_month), rooms!inner(room_number)' as '*')
-      .eq('id', invoiceId)
-      .maybeSingle()
-    if (fetchError) throwDbError(fetchError, 'buildingInvoiceProfile.refreshSnapshot.invoice')
-    if (!raw) return false
-
-    const row = raw as unknown as BackfillInvoiceRow
-    const period = relationRow(row.billing_periods)
-    if (!period) return false
-
-    const [profileRow, buildingResult] = await Promise.all([
-      this.findByBuildingId(event, period.building_id),
-      serverSupabaseClient(event)
-        .from('buildings')
-        .select('code')
-        .eq('id', period.building_id)
-        .maybeSingle(),
-    ])
-    if (!profileRow) return false
-    if (buildingResult.error) throwDbError(buildingResult.error, 'buildingInvoiceProfile.refreshSnapshot.building')
-    const buildingCode = (buildingResult.data as unknown as { code: string } | null)?.code ?? ''
-
-    const snapshot = invoiceSnapshot(row, {
-      buildingId: period.building_id,
-      buildingCode,
-      bankName: profileRow.bank_name,
-      accountHolder: profileRow.account_holder,
-      accountNumber: profileRow.account_number,
-      transferContentTemplate: profileRow.transfer_content_template,
-      qrImagePath: profileRow.qr_image_path,
-      logoImagePath: profileRow.logo_image_path,
+  async refreshInvoiceSnapshot(
+    event: H3Event,
+    invoiceId: string,
+    actorId: string,
+    operationId: string,
+  ): Promise<boolean> {
+    type RefreshRpc = (
+      name: 'refresh_invoice_profile_snapshot_with_audit',
+      args: { p_invoice_id: string; p_actor_id: string; p_operation_id: string },
+    ) => PromiseLike<{ data: boolean | null; error: unknown }>
+    const rpc = client(event).rpc as unknown as RefreshRpc
+    const { data, error } = await rpc('refresh_invoice_profile_snapshot_with_audit', {
+      p_invoice_id: invoiceId,
+      p_actor_id: actorId,
+      p_operation_id: operationId,
     })
-
-    const { error: updateError } = await client(event)
-      .from('invoices')
-      .update({ invoice_profile_snapshot: snapshot } as never)
-      .eq('id', invoiceId)
-    if (updateError) throwDbError(updateError, 'buildingInvoiceProfile.refreshSnapshot.update')
-    return true
+    if (error) throwDbError(error, 'buildingInvoiceProfile.refreshSnapshot')
+    return data === true
   },
 }

@@ -5,6 +5,13 @@ Define building-scoped receiving-bank identity, private invoice assets, transfer
 
 ## Requirements
 
+### Requirement: Invoice profile snapshot refresh audit
+Refreshing an invoice payment-profile snapshot SHALL atomically update the invoice and append `invoice.profile_snapshot.refreshed` with building scope, actor, invoice identifier, and safe before/after snapshot metadata.
+
+#### Scenario: Refresh audit fails
+- **WHEN** the audit event cannot be inserted
+- **THEN** the invoice snapshot remains unchanged
+
 ### Requirement: Building invoice profile management
 The system SHALL store one current invoice profile per building containing bank name, account holder, account number, transfer-content template, required QR image, and optional building logo.
 

@@ -40,7 +40,7 @@ onKeyStroke('Escape', () => {
     <UiButton
       ref="triggerRef"
       unstyled
-      class="flex items-center gap-2 rounded-full border border-dark-border bg-dark-surface/60 py-1 pl-1 pr-2 transition-colors hover:bg-dark-hover hover:border-cyan/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan/60"
+      class="flex items-center gap-2 rounded-full border border-ui-border bg-ui-surface/60 py-1 pl-1 pr-2 transition-colors hover:bg-ui-hover hover:border-ui-accent/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-accent/60"
       :aria-expanded="isOpen"
       aria-haspopup="menu"
       aria-label="Tài khoản"
@@ -57,13 +57,13 @@ onKeyStroke('Escape', () => {
       >
       <span
         v-else
-        class="flex h-7 w-7 items-center justify-center rounded-full bg-cyan/20 text-xs font-semibold text-cyan"
+        class="flex h-7 w-7 items-center justify-center rounded-full bg-ui-accent/20 text-xs font-semibold text-ui-accent"
         aria-hidden="true"
       >
         {{ userInitial }}
       </span>
       <IconChevronDown
-        :class="clsx('h-3.5 w-3.5 text-muted transition-transform duration-150', isOpen && 'rotate-180')"
+        :class="clsx('h-3.5 w-3.5 text-ui-muted transition-transform duration-150', isOpen && 'rotate-180')"
         aria-hidden="true"
       />
     </UiButton>
@@ -80,9 +80,9 @@ onKeyStroke('Escape', () => {
         v-if="isOpen"
         ref="menuRef"
         role="menu"
-        class="absolute right-0 z-50 mt-2 w-64 origin-top-right overflow-hidden rounded-xl border border-dark-border bg-dark-card shadow-xl shadow-black/40"
+        class="absolute right-0 z-50 mt-2 w-64 origin-top-right overflow-hidden rounded-xl border border-ui-border bg-ui-chrome shadow-xl shadow-ui-shadow/40"
       >
-        <div class="flex items-center gap-3 border-b border-dark-border px-4 py-3">
+        <div class="flex items-center gap-3 border-b border-ui-border px-4 py-3">
           <img
             v-if="showAvatarImage"
             :src="avatarUrl!"
@@ -94,26 +94,26 @@ onKeyStroke('Escape', () => {
           >
           <span
             v-else
-            class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-cyan/20 text-sm font-semibold text-cyan"
+            class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-ui-accent/20 text-sm font-semibold text-ui-accent"
             aria-hidden="true"
           >
             {{ userInitial }}
           </span>
           <div class="min-w-0 flex-1">
-            <p class="truncate text-sm font-medium text-white">
+            <p class="truncate text-sm font-medium text-ui-primary">
               {{ displayName }}
             </p>
-            <p class="mt-0.5 text-xs text-muted">
+            <p class="mt-0.5 text-xs text-ui-muted">
               {{ roleLabel }}
             </p>
           </div>
         </div>
 
-        <div class="border-b border-dark-border py-1">
+        <div class="border-b border-ui-border py-1">
           <NuxtLink
             to="/dashboard/profile"
             role="menuitem"
-            class="flex w-full items-center gap-3 px-4 py-2 text-sm text-muted transition-colors hover:bg-dark-hover hover:text-white focus-visible:bg-dark-hover focus-visible:text-white focus-visible:outline-none"
+            class="flex w-full items-center gap-3 px-4 py-2 text-sm text-ui-muted transition-colors hover:bg-ui-hover hover:text-ui-primary focus-visible:bg-ui-hover focus-visible:text-ui-primary focus-visible:outline-none"
             @click="close"
           >
             <IconUser class="h-4 w-4" aria-hidden="true" />
@@ -125,7 +125,7 @@ onKeyStroke('Escape', () => {
           <UiButton
             unstyled
             role="menuitem"
-            class="flex w-full items-center gap-3 px-4 py-2 text-sm text-muted transition-colors hover:bg-error/10 hover:text-error focus-visible:bg-error/10 focus-visible:text-error focus-visible:outline-none"
+            class="flex w-full items-center gap-3 px-4 py-2 text-sm text-ui-muted transition-colors hover:bg-status-danger/10 hover:text-status-danger focus-visible:bg-status-danger/10 focus-visible:text-status-danger focus-visible:outline-none"
             @click="handleLogout"
           >
             <IconLogOut class="h-4 w-4" aria-hidden="true" />

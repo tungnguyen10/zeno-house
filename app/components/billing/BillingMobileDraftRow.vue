@@ -45,7 +45,7 @@ function formatRate(cell: BillingDraftGridUtilityCell | null): string {
   <article
     :class="clsx(
       'space-y-3 rounded-lg border p-3',
-      selected ? 'border-cyan/50 bg-cyan/5' : 'border-dark-border bg-dark-surface',
+      selected ? 'border-ui-accent/50 bg-ui-accent/5' : 'border-ui-border bg-ui-surface',
     )"
     :data-row="row.key"
     :data-selected="selected || undefined"
@@ -64,22 +64,22 @@ function formatRate(cell: BillingDraftGridUtilityCell | null): string {
           @update:model-value="emit('select', row)"
         />
         <div class="min-w-0 pt-0.5">
-          <p class="text-sm font-semibold text-white">
+          <p class="text-sm font-semibold text-ui-primary">
             {{ row.roomNumber ?? '—' }}
             <template v-if="row.tenantName">
-              <span class="text-muted">{{ '· ' }}</span>
-              <span class="text-white">{{ row.tenantName }}</span>
+              <span class="text-ui-muted">{{ '· ' }}</span>
+              <span class="text-ui-primary">{{ row.tenantName }}</span>
             </template>
           </p>
-          <p v-if="row.draftTotal !== null" class="text-xs text-muted">
-            Tổng nháp: <span class="text-white tabular-nums">{{ formatCurrency(row.draftTotal) }}</span>
+          <p v-if="row.draftTotal !== null" class="text-xs text-ui-muted">
+            Tổng nháp: <span class="text-ui-primary tabular-nums">{{ formatCurrency(row.draftTotal) }}</span>
           </p>
         </div>
       </div>
       <div class="shrink-0 pt-0.5 text-[11px]">
-        <span v-if="saveStateOf(row) === 'saving'" class="text-muted">Đang lưu...</span>
-        <span v-else-if="saveStateOf(row) === 'saved'" class="text-emerald-400">Đã lưu ✓</span>
-        <span v-else-if="saveStateOf(row) === 'error'" class="text-rose-400">Lỗi</span>
+        <span v-if="saveStateOf(row) === 'saving'" class="text-ui-muted">Đang lưu...</span>
+        <span v-else-if="saveStateOf(row) === 'saved'" class="text-status-success">Đã lưu ✓</span>
+        <span v-else-if="saveStateOf(row) === 'error'" class="text-status-danger">Lỗi</span>
       </div>
     </header>
 
@@ -90,7 +90,7 @@ function formatRate(cell: BillingDraftGridUtilityCell | null): string {
     >
       <template v-if="meterCell(row, type)">
         <div class="flex items-center gap-2">
-          <span class="text-xs text-muted w-10 shrink-0">{{ meterLabel(type) }}</span>
+          <span class="text-xs text-ui-muted w-10 shrink-0">{{ meterLabel(type) }}</span>
           <UiInput
             v-if="meterCell(row, type)!.editable"
             type="number"
@@ -100,39 +100,39 @@ function formatRate(cell: BillingDraftGridUtilityCell | null): string {
             density="compact"
             class="flex-1"
             :class="clsx(
-              isPasteHighlighted(row, type) && 'bg-amber-100/40',
+              isPasteHighlighted(row, type) && 'bg-status-warning/40',
             )"
             @update:model-value="emit('update', { row, type, value: String($event ?? '') })"
             @keydown="emit('keydown', { event: $event, row, type })"
             @paste="emit('paste', { event: $event, row, type })"
             @blur="emit('blur', { row, type })"
           />
-          <span v-else class="flex-1 text-sm text-white tabular-nums">
+          <span v-else class="flex-1 text-sm text-ui-primary tabular-nums">
             {{ meterCell(row, type)!.currentValue ?? '—' }}
           </span>
-          <span class="text-xs text-muted tabular-nums w-20 text-right">
+          <span class="text-xs text-ui-muted tabular-nums w-20 text-right">
             {{ formatCurrency(meterCell(row, type)!.amount) }}
           </span>
         </div>
-        <p class="flex items-center gap-1.5 text-[11px] text-muted pl-12">
+        <p class="flex items-center gap-1.5 text-[11px] text-ui-muted pl-12">
           <span
             aria-hidden="true"
             :class="clsx(
               'inline-block h-1.5 w-1.5 shrink-0 rounded-full transition-all',
-              saveStateOf(row) === 'saving' ? 'bg-cyan/70 animate-pulse' :
-              saveStateOf(row) === 'saved' ? 'bg-emerald-400' :
-              saveStateOf(row) === 'error' ? 'bg-rose-400' :
-              isCellDirty(row, type) ? 'bg-amber-400/60' :
+              saveStateOf(row) === 'saving' ? 'bg-ui-accent/70 animate-pulse' :
+              saveStateOf(row) === 'saved' ? 'bg-status-success' :
+              saveStateOf(row) === 'error' ? 'bg-status-danger' :
+              isCellDirty(row, type) ? 'bg-status-warning/60' :
               'opacity-0',
             )"
           />
           Cũ
-          <span class="text-white tabular-nums">
+          <span class="text-ui-primary tabular-nums">
             {{ meterCell(row, type)!.previousValue ?? '—' }}
           </span>
           →
           Mới
-          <span class="text-white tabular-nums">
+          <span class="text-ui-primary tabular-nums">
             {{ readingValueOf(row, type) || meterCell(row, type)!.currentValue || '—' }}
           </span>
           · {{ meterLabel(type) }} {{ formatRate(meterCell(row, type)) }}
@@ -140,7 +140,7 @@ function formatRate(cell: BillingDraftGridUtilityCell | null): string {
       </template>
     </div>
 
-    <footer class="flex flex-wrap items-center gap-1 border-t border-dark-border pt-2">
+    <footer class="flex flex-wrap items-center gap-1 border-t border-ui-border pt-2">
       <UiButton variant="ghost" size="sm" class="min-h-11 whitespace-nowrap" @click="emit('detail', row)">Chi tiết</UiButton>
       <UiButton
         v-if="canManageIncidental && row.contractId && row.editable"

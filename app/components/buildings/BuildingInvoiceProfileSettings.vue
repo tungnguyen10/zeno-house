@@ -110,12 +110,12 @@ onBeforeUnmount(() => {
     </div>
 
     <template v-else>
-      <div class="flex flex-col gap-2 border-b border-dark-border pb-4 sm:flex-row sm:items-center sm:justify-between">
+      <div class="flex flex-col gap-2 border-b border-ui-border pb-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p class="text-sm font-medium text-white">
+          <p class="text-sm font-medium text-ui-primary">
             {{ isComplete ? 'Đã cấu hình thông tin nhận tiền' : 'Chưa cấu hình thông tin nhận tiền' }}
           </p>
-          <p class="mt-1 text-xs leading-relaxed text-muted">
+          <p class="mt-1 text-xs leading-relaxed text-ui-muted">
             Thông tin được chụp lại khi phát hành hóa đơn. Thay đổi sau này không sửa hóa đơn cũ.
           </p>
         </div>
@@ -164,19 +164,19 @@ onBeforeUnmount(() => {
               required
             />
             <div class="mt-2 flex flex-wrap gap-1.5" aria-label="Biến nội dung chuyển khoản được hỗ trợ">
-              <code v-for="token in ['{building_code}', '{room_number}', '{invoice_code}', '{period}']" :key="token" class="rounded-md bg-dark px-2 py-1 text-[11px] text-cyan">{{ token }}</code>
+              <code v-for="token in ['{building_code}', '{room_number}', '{invoice_code}', '{period}']" :key="token" class="rounded-md bg-ui-canvas px-2 py-1 text-[11px] text-ui-accent">{{ token }}</code>
             </div>
           </div>
         </div>
 
         <div class="grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-1">
-          <div class="rounded-xl border border-dark-border bg-dark-deep/40 p-3">
+          <div class="rounded-xl border border-ui-border bg-ui-deep/40 p-3">
             <div class="flex items-center justify-between gap-2">
               <div>
-                <p class="text-sm font-medium text-white">QR ngân hàng</p>
-                <p class="mt-0.5 text-xs text-muted">JPEG, PNG hoặc WebP · tối đa 5 MB</p>
+                <p class="text-sm font-medium text-ui-primary">QR ngân hàng</p>
+                <p class="mt-0.5 text-xs text-ui-muted">JPEG, PNG hoặc WebP · tối đa 5 MB</p>
               </div>
-              <span class="text-xs text-warning">Bắt buộc</span>
+              <span class="text-xs text-status-warning">Bắt buộc</span>
             </div>
             <UiFileUpload
               class="mt-3"
@@ -192,15 +192,15 @@ onBeforeUnmount(() => {
               @validation-error="(msg) => localError = msg"
             >
               <template #empty>
-                <span class="px-3 text-center text-xs text-muted">Chưa có ảnh QR</span>
+                <span class="px-3 text-center text-xs text-ui-muted">Chưa có ảnh QR</span>
               </template>
             </UiFileUpload>
           </div>
 
-          <div class="rounded-xl border border-dark-border bg-dark-deep/40 p-3">
+          <div class="rounded-xl border border-ui-border bg-ui-deep/40 p-3">
             <div>
-              <p class="text-sm font-medium text-white">Logo trên phiếu</p>
-              <p class="mt-0.5 text-xs text-muted">Tùy chọn · mặc định dùng logo Zeno</p>
+              <p class="text-sm font-medium text-ui-primary">Logo trên phiếu</p>
+              <p class="mt-0.5 text-xs text-ui-muted">Tùy chọn · mặc định dùng logo Zeno</p>
             </div>
             <UiFileUpload
               class="mt-3"
@@ -217,7 +217,7 @@ onBeforeUnmount(() => {
               <template #empty>
                 <IconLogo
                   data-test="zeno-logo"
-                  class="h-10 w-auto max-w-28 text-white"
+                  class="h-10 w-auto max-w-28 text-ui-primary"
                   aria-label="Logo Zeno mặc định"
                 />
               </template>
@@ -235,7 +235,7 @@ onBeforeUnmount(() => {
         </div>
       </div>
 
-      <div v-if="canEdit" class="flex justify-end border-t border-dark-border pt-4">
+      <div v-if="canEdit" class="flex justify-end border-t border-ui-border pt-4">
         <UiButton class="whitespace-nowrap" :loading="saving" :disabled="saving" @click="submit">
           Lưu thay đổi
         </UiButton>

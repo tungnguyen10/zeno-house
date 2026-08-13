@@ -4,8 +4,8 @@
 <linearGradient id="paint0_linear_1090_6125" x1="87.4889" y1="-27.427" x2="87.4889" y2="180.126" gradientUnits="userSpaceOnUse">
 <stop stop-color="#E8AC22"/>
 <stop offset="0.32" stop-color="#F5C41D"/>
-<stop offset="0.68" stop-color="#FCF494"/>
-<stop offset="1" stop-color="#FEF280"/>
+<stop offset="0.68" stop-color="#E9BE44"/>
+<stop offset="1" stop-color="#E9CB6A"/>
 </linearGradient>
 </defs>
 </svg>

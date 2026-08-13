@@ -343,11 +343,11 @@ const mobileCancelText = computed(() => props.mobileCancelLabel ?? props.cancelL
     <UiAlert v-if="draftAlertVisible" severity="info" data-test="draft-banner">
       <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p class="text-sm font-medium text-white">
+          <p class="text-sm font-medium text-ui-primary">
             {{ isDraftVersionMismatch ? 'Bản nháp cũ không tương thích — chỉ có thể xoá' : 'Có bản nháp chưa lưu' }}
           </p>
-          <p v-if="draftError" class="mt-0.5 text-xs text-muted">{{ draftError }}</p>
-          <p v-else-if="draftSavedLabel" class="mt-0.5 text-xs text-muted">Lưu lúc {{ draftSavedLabel }}</p>
+          <p v-if="draftError" class="mt-0.5 text-xs text-ui-muted">{{ draftError }}</p>
+          <p v-else-if="draftSavedLabel" class="mt-0.5 text-xs text-ui-muted">Lưu lúc {{ draftSavedLabel }}</p>
         </div>
         <div class="flex flex-wrap gap-2">
           <UiButton v-if="!isDraftVersionMismatch" type="button" size="sm" variant="secondary" @click="restoreDraft">
@@ -368,14 +368,14 @@ const mobileCancelText = computed(() => props.mobileCancelLabel ?? props.cancelL
     </UiAlert>
 
     <section
-      class="rounded-lg border border-dark-border bg-dark-surface p-5"
+      class="rounded-lg border border-ui-border bg-ui-surface p-5"
       :class="showHandover ? 'space-y-5' : 'space-y-5 border-t-2 border-t-cyan/60'"
     >
       <header v-if="!showHandover" class="flex items-start gap-3">
-        <span class="flex size-7 shrink-0 items-center justify-center rounded-full border border-cyan/30 bg-cyan/10 text-sm font-semibold text-cyan">1</span>
+        <span class="flex size-7 shrink-0 items-center justify-center rounded-full border border-ui-accent/30 bg-ui-accent/10 text-sm font-semibold text-ui-accent">1</span>
         <div>
-          <h3 class="text-sm font-semibold text-white">Quan hệ</h3>
-          <p class="mt-0.5 text-xs text-muted">Phòng và khách thuê gắn với hợp đồng.</p>
+          <h3 class="text-sm font-semibold text-ui-primary">Quan hệ</h3>
+          <p class="mt-0.5 text-xs text-ui-muted">Phòng và khách thuê gắn với hợp đồng.</p>
         </div>
       </header>
 
@@ -413,17 +413,17 @@ const mobileCancelText = computed(() => props.mobileCancelLabel ?? props.cancelL
         />
       </div>
 
-      <p v-if="relationReadonly" class="text-xs text-muted">
+      <p v-if="relationReadonly" class="text-xs text-ui-muted">
         Hợp đồng đang chạy — không thể đổi phòng hoặc khách thuê.
       </p>
     </section>
 
-    <section class="rounded-lg border border-dark-border bg-dark-surface p-5 space-y-5" :class="!showHandover ? 'border-t-2 border-t-cyan/60' : ''">
+    <section class="rounded-lg border border-ui-border bg-ui-surface p-5 space-y-5" :class="!showHandover ? 'border-t-2 border-t-cyan/60' : ''">
       <header v-if="!showHandover" class="flex items-start gap-3">
-        <span class="flex size-7 shrink-0 items-center justify-center rounded-full border border-cyan/30 bg-cyan/10 text-sm font-semibold text-cyan">2</span>
+        <span class="flex size-7 shrink-0 items-center justify-center rounded-full border border-ui-accent/30 bg-ui-accent/10 text-sm font-semibold text-ui-accent">2</span>
         <div>
-          <h3 class="text-sm font-semibold text-white">Thời hạn & Giá</h3>
-          <p class="mt-0.5 text-xs text-muted">Mốc hiệu lực, tiền thuê và lịch thanh toán.</p>
+          <h3 class="text-sm font-semibold text-ui-primary">Thời hạn & Giá</h3>
+          <p class="mt-0.5 text-xs text-ui-muted">Mốc hiệu lực, tiền thuê và lịch thanh toán.</p>
         </div>
       </header>
 
@@ -466,7 +466,7 @@ const mobileCancelText = computed(() => props.mobileCancelLabel ?? props.cancelL
             @update:model-value="update('monthly_rent', $event)"
             @blur="onBlur('monthly_rent')"
           />
-          <p v-if="selectedRoom" class="text-xs text-muted">
+          <p v-if="selectedRoom" class="text-xs text-ui-muted">
             Mặc định lấy theo phòng ({{ formatCurrency(selectedRoom.monthlyRent) }}/tháng) — sửa nếu cần ghi đè.
           </p>
         </div>
@@ -500,12 +500,12 @@ const mobileCancelText = computed(() => props.mobileCancelLabel ?? props.cancelL
       </div>
     </section>
 
-    <section class="rounded-lg border border-dark-border bg-dark-surface p-5 space-y-5" :class="!showHandover ? 'border-t-2 border-t-cyan/60' : ''">
+    <section class="rounded-lg border border-ui-border bg-ui-surface p-5 space-y-5" :class="!showHandover ? 'border-t-2 border-t-cyan/60' : ''">
       <header v-if="!showHandover" class="flex items-start gap-3">
-        <span class="flex size-7 shrink-0 items-center justify-center rounded-full border border-cyan/30 bg-cyan/10 text-sm font-semibold text-cyan">3</span>
+        <span class="flex size-7 shrink-0 items-center justify-center rounded-full border border-ui-accent/30 bg-ui-accent/10 text-sm font-semibold text-ui-accent">3</span>
         <div>
-          <h3 class="text-sm font-semibold text-white">Điều khoản</h3>
-          <p class="mt-0.5 text-xs text-muted">Sức chứa, giảm giá và phụ thu cố định.</p>
+          <h3 class="text-sm font-semibold text-ui-primary">Điều khoản</h3>
+          <p class="mt-0.5 text-xs text-ui-muted">Sức chứa, giảm giá và phụ thu cố định.</p>
         </div>
       </header>
 
@@ -549,10 +549,10 @@ const mobileCancelText = computed(() => props.mobileCancelLabel ?? props.cancelL
       </div>
     </section>
 
-    <section v-if="showHandover" class="space-y-4 rounded-lg border border-dark-border bg-dark-hover/30 p-5">
+    <section v-if="showHandover" class="space-y-4 rounded-lg border border-ui-border bg-ui-hover/30 p-5">
       <div>
-        <p class="text-sm font-semibold text-white">Số bàn giao đầu vào</p>
-        <p class="mt-0.5 text-xs text-muted">Đọc số điện và nước tại thời điểm bàn giao phòng cho khách thuê.</p>
+        <p class="text-sm font-semibold text-ui-primary">Số bàn giao đầu vào</p>
+        <p class="mt-0.5 text-xs text-ui-muted">Đọc số điện và nước tại thời điểm bàn giao phòng cho khách thuê.</p>
       </div>
 
       <div class="grid gap-4 md:grid-cols-2">
@@ -570,11 +570,11 @@ const mobileCancelText = computed(() => props.mobileCancelLabel ?? props.cancelL
             @update:model-value="update('handover_electricity_reading', $event)"
             @blur="onBlur('handover_electricity_reading')"
           />
-          <p v-if="previousElectricity" class="text-xs text-muted">
+          <p v-if="previousElectricity" class="text-xs text-ui-muted">
             Số cũ: {{ previousElectricity.readingValue }} kWh (đọc {{ new Date(previousElectricity.readingDate).toLocaleDateString('vi-VN') }})
           </p>
-          <p v-else-if="modelValue.room_id" class="text-xs text-muted">Chưa có số trước đó cho phòng này.</p>
-          <p v-if="electricityWarning" class="text-xs text-amber-400">{{ electricityWarning }}</p>
+          <p v-else-if="modelValue.room_id" class="text-xs text-ui-muted">Chưa có số trước đó cho phòng này.</p>
+          <p v-if="electricityWarning" class="text-xs text-status-warning">{{ electricityWarning }}</p>
         </div>
 
         <div class="flex flex-col gap-1">
@@ -591,11 +591,11 @@ const mobileCancelText = computed(() => props.mobileCancelLabel ?? props.cancelL
             @update:model-value="update('handover_water_reading', $event)"
             @blur="onBlur('handover_water_reading')"
           />
-          <p v-if="previousWater" class="text-xs text-muted">
+          <p v-if="previousWater" class="text-xs text-ui-muted">
             Số cũ: {{ previousWater.readingValue }} m3 (đọc {{ new Date(previousWater.readingDate).toLocaleDateString('vi-VN') }})
           </p>
-          <p v-else-if="modelValue.room_id" class="text-xs text-muted">Chưa có số trước đó cho phòng này.</p>
-          <p v-if="waterWarning" class="text-xs text-amber-400">{{ waterWarning }}</p>
+          <p v-else-if="modelValue.room_id" class="text-xs text-ui-muted">Chưa có số trước đó cho phòng này.</p>
+          <p v-if="waterWarning" class="text-xs text-status-warning">{{ waterWarning }}</p>
         </div>
       </div>
 
@@ -609,15 +609,15 @@ const mobileCancelText = computed(() => props.mobileCancelLabel ?? props.cancelL
         @update:model-value="update('handover_reading_date', $event)"
         @blur="onBlur('handover_reading_date')"
       />
-      <p class="text-xs text-muted">Mặc định lấy theo ngày bắt đầu hợp đồng nếu để trống.</p>
+      <p class="text-xs text-ui-muted">Mặc định lấy theo ngày bắt đầu hợp đồng nếu để trống.</p>
     </section>
 
-    <section class="rounded-lg border border-dark-border bg-dark-surface p-5 space-y-5" :class="!showHandover ? 'border-t-2 border-t-cyan/60' : ''">
+    <section class="rounded-lg border border-ui-border bg-ui-surface p-5 space-y-5" :class="!showHandover ? 'border-t-2 border-t-cyan/60' : ''">
       <header v-if="!showHandover" class="flex items-start gap-3">
-        <span class="flex size-7 shrink-0 items-center justify-center rounded-full border border-cyan/30 bg-cyan/10 text-sm font-semibold text-cyan">4</span>
+        <span class="flex size-7 shrink-0 items-center justify-center rounded-full border border-ui-accent/30 bg-ui-accent/10 text-sm font-semibold text-ui-accent">4</span>
         <div>
-          <h3 class="text-sm font-semibold text-white">Trạng thái & Ghi chú</h3>
-          <p class="mt-0.5 text-xs text-muted">Vòng đời hợp đồng và ghi chú nội bộ.</p>
+          <h3 class="text-sm font-semibold text-ui-primary">Trạng thái & Ghi chú</h3>
+          <p class="mt-0.5 text-xs text-ui-muted">Vòng đời hợp đồng và ghi chú nội bộ.</p>
         </div>
       </header>
 
@@ -661,7 +661,7 @@ const mobileCancelText = computed(() => props.mobileCancelLabel ?? props.cancelL
       </UiButton>
     </div>
 
-    <div class="fixed inset-x-0 bottom-0 z-40 border-t border-dark-border bg-dark-deep/95 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-lg backdrop-blur md:hidden">
+    <div class="fixed inset-x-0 bottom-0 z-40 border-t border-ui-border bg-ui-deep/95 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-lg backdrop-blur md:hidden">
       <div class="mx-auto flex max-w-screen-sm gap-2">
         <UiButton type="button" variant="secondary" class="flex-1" :disabled="loading" @click="emit('cancel')">
           {{ mobileCancelText }}

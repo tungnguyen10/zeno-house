@@ -57,17 +57,17 @@ onKeyStroke('Escape', () => {
     <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
       <div class="min-w-0">
         <div class="flex flex-wrap items-center gap-2">
-          <h1 class="truncate text-xl font-semibold text-white">{{ contract.contractCode }}</h1>
+          <h1 class="truncate text-xl font-semibold text-ui-primary">{{ contract.contractCode }}</h1>
           <UiStatusBadge :status="contract.status" />
         </div>
-        <div class="mt-1.5 flex flex-wrap items-center gap-2 text-sm text-muted">
+        <div class="mt-1.5 flex flex-wrap items-center gap-2 text-sm text-ui-muted">
           <span>{{ contract.room.buildingName }}</span>
           <span aria-hidden="true">/</span>
-          <NuxtLink :to="`/dashboard/rooms/${contract.room.code}`" class="text-cyan hover:underline">
+          <NuxtLink :to="`/dashboard/rooms/${contract.room.code}`" class="text-ui-accent hover:underline">
             Phòng {{ contract.room.roomNumber }}
           </NuxtLink>
           <span aria-hidden="true">/</span>
-          <NuxtLink :to="`/dashboard/tenants/${contract.tenant.code}`" class="text-cyan hover:underline">
+          <NuxtLink :to="`/dashboard/tenants/${contract.tenant.code}`" class="text-ui-accent hover:underline">
             {{ contract.tenant.fullName }}
           </NuxtLink>
         </div>
@@ -78,7 +78,7 @@ onKeyStroke('Escape', () => {
           ref="triggerRef"
           unstyled
           data-test="hero-actions-trigger"
-          class="inline-flex items-center gap-1.5 rounded-md border border-dark-border bg-dark-surface px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-dark-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dark-border"
+          class="inline-flex items-center gap-1.5 rounded-md border border-ui-border bg-ui-surface px-3 py-1.5 text-xs font-medium text-ui-primary transition-colors hover:bg-ui-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-border-strong"
           :aria-expanded="menuOpen"
           aria-haspopup="menu"
           @click="toggleMenu"
@@ -103,12 +103,12 @@ onKeyStroke('Escape', () => {
             ref="menuRef"
             role="menu"
             data-test="hero-actions-menu"
-            class="absolute right-0 z-30 mt-2 w-52 origin-top-right overflow-hidden rounded-lg border border-dark-border bg-dark-card shadow-xl shadow-black/40"
+            class="absolute right-0 z-30 mt-2 w-52 origin-top-right overflow-hidden rounded-lg border border-ui-border bg-ui-chrome shadow-xl shadow-ui-shadow/40"
           >
             <UiButton
               unstyled
               role="menuitem"
-              class="flex w-full items-center gap-2 px-3 py-2 text-sm text-white transition-colors hover:bg-dark-hover focus-visible:bg-dark-hover focus-visible:outline-none"
+              class="flex w-full items-center gap-2 px-3 py-2 text-sm text-ui-primary transition-colors hover:bg-ui-hover focus-visible:bg-ui-hover focus-visible:outline-none"
               @click="emitAction('edit')"
             >
               Chỉnh sửa
@@ -117,7 +117,7 @@ onKeyStroke('Escape', () => {
               v-if="canRenew"
               unstyled
               role="menuitem"
-              class="flex w-full items-center gap-2 px-3 py-2 text-sm text-white transition-colors hover:bg-dark-hover focus-visible:bg-dark-hover focus-visible:outline-none"
+              class="flex w-full items-center gap-2 px-3 py-2 text-sm text-ui-primary transition-colors hover:bg-ui-hover focus-visible:bg-ui-hover focus-visible:outline-none"
               @click="emitAction('renew')"
             >
               Gia hạn
@@ -126,17 +126,17 @@ onKeyStroke('Escape', () => {
               v-if="canTerminate"
               unstyled
               role="menuitem"
-              class="flex w-full items-center gap-2 px-3 py-2 text-sm text-white transition-colors hover:bg-dark-hover focus-visible:bg-dark-hover focus-visible:outline-none"
+              class="flex w-full items-center gap-2 px-3 py-2 text-sm text-ui-primary transition-colors hover:bg-ui-hover focus-visible:bg-ui-hover focus-visible:outline-none"
               @click="emitAction('terminate')"
             >
               Kết thúc sớm
             </UiButton>
             <template v-if="canManage">
-              <div class="h-px bg-dark-border" aria-hidden="true" />
+              <div class="h-px bg-ui-border" aria-hidden="true" />
               <UiButton
                 unstyled
                 role="menuitem"
-                class="flex w-full items-center gap-2 px-3 py-2 text-sm text-error transition-colors hover:bg-error/10 focus-visible:bg-error/10 focus-visible:outline-none"
+                class="flex w-full items-center gap-2 px-3 py-2 text-sm text-status-danger transition-colors hover:bg-status-danger/10 focus-visible:bg-status-danger/10 focus-visible:outline-none"
                 @click="emitAction('delete')"
               >
                 Xoá hợp đồng
@@ -147,30 +147,30 @@ onKeyStroke('Escape', () => {
       </div>
     </div>
 
-    <dl class="mt-4 grid grid-cols-1 divide-y divide-dark-border overflow-hidden rounded-lg border border-dark-border bg-dark-deep/30 sm:grid-cols-4 sm:divide-x sm:divide-y-0">
+    <dl class="mt-4 grid grid-cols-1 divide-y divide-ui-border overflow-hidden rounded-lg border border-ui-border bg-ui-deep/30 sm:grid-cols-4 sm:divide-x sm:divide-y-0">
       <div class="px-4 py-2.5">
-        <dt class="text-xs text-muted">Khách thuê</dt>
-        <dd class="mt-0.5 truncate text-sm font-medium text-white">
-          <NuxtLink :to="`/dashboard/tenants/${contract.tenant.code}`" class="hover:text-cyan">{{ contract.tenant.fullName }}</NuxtLink>
+        <dt class="text-xs text-ui-muted">Khách thuê</dt>
+        <dd class="mt-0.5 truncate text-sm font-medium text-ui-primary">
+          <NuxtLink :to="`/dashboard/tenants/${contract.tenant.code}`" class="hover:text-ui-accent">{{ contract.tenant.fullName }}</NuxtLink>
         </dd>
       </div>
       <div class="px-4 py-2.5">
-        <dt class="text-xs text-muted">Phòng</dt>
-        <dd class="mt-0.5 truncate text-sm font-medium text-white">
-          <NuxtLink :to="`/dashboard/rooms/${contract.room.code}`" class="hover:text-cyan">
+        <dt class="text-xs text-ui-muted">Phòng</dt>
+        <dd class="mt-0.5 truncate text-sm font-medium text-ui-primary">
+          <NuxtLink :to="`/dashboard/rooms/${contract.room.code}`" class="hover:text-ui-accent">
             {{ contract.room.buildingName }} - {{ contract.room.roomNumber }}
           </NuxtLink>
         </dd>
       </div>
       <div class="px-4 py-2.5">
-        <dt class="text-xs text-muted">Đã đi qua</dt>
-        <dd class="mt-0.5 text-base font-semibold text-white">{{ monthsElapsed }} tháng</dd>
+        <dt class="text-xs text-ui-muted">Đã đi qua</dt>
+        <dd class="mt-0.5 text-base font-semibold text-ui-primary">{{ monthsElapsed }} tháng</dd>
       </div>
       <div class="px-4 py-2.5">
-        <dt class="text-xs text-muted">Đã thu / còn cọc</dt>
-        <dd class="mt-0.5 text-sm font-semibold text-white">
+        <dt class="text-xs text-ui-muted">Đã thu / còn cọc</dt>
+        <dd class="mt-0.5 text-sm font-semibold text-ui-primary">
           {{ formatCurrency(paidAmount ?? 0) }}
-          <span class="text-muted">/ {{ formatCurrency(depositBalance) }}</span>
+          <span class="text-ui-muted">/ {{ formatCurrency(depositBalance) }}</span>
         </dd>
       </div>
     </dl>

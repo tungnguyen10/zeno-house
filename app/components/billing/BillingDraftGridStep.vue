@@ -487,9 +487,9 @@ function utilityDisplay(row: BillingDraftGridRow, type: MeterType): OptimisticUt
 function readingInputClass(row: BillingDraftGridRow, type: MeterType): string {
   const status = utilityDisplay(row, type).status
   return clsx(
-    isPasteHighlighted(row, type) && 'bg-amber-100/40',
-    status === 'below_previous' && 'border-rose-400/70 ring-1 ring-rose-400/40',
-    (status === 'usage_spike' || status === 'usage_drop' || status === 'zero_usage') && 'border-amber-400/70 ring-1 ring-amber-400/40',
+    isPasteHighlighted(row, type) && 'bg-status-warning/40',
+    status === 'below_previous' && 'border-status-danger/70 ring-1 ring-status-danger/40',
+    (status === 'usage_spike' || status === 'usage_drop' || status === 'zero_usage') && 'border-status-warning/70 ring-1 ring-status-warning/40',
   )
 }
 
@@ -619,7 +619,7 @@ const columns: UiTableColumn<BillingDraftGridRow>[] = [
       <!-- Toolbar: batch reading date + filters -->
       <UiToolbar>
         <div class="flex flex-wrap items-center gap-3">
-          <div class="flex items-center gap-2 text-xs text-muted">
+          <div class="flex items-center gap-2 text-xs text-ui-muted">
             <span>Ngày đọc</span>
             <UiDatePicker
               id="batch-reading-date"
@@ -643,7 +643,7 @@ const columns: UiTableColumn<BillingDraftGridRow>[] = [
           <div
             role="tablist"
             aria-label="Lọc dòng theo trạng thái"
-            class="inline-flex items-center rounded-lg border border-dark-border bg-dark-card p-0.5"
+            class="inline-flex items-center rounded-lg border border-ui-border bg-ui-chrome p-0.5"
           >
             <UiButton
               v-for="t in filterTabs"
@@ -652,10 +652,10 @@ const columns: UiTableColumn<BillingDraftGridRow>[] = [
               role="tab"
               :aria-selected="filter === t.key"
               :class="clsx(
-                'rounded-md px-2.5 py-1 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan/30',
+                'rounded-md px-2.5 py-1 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-accent/30',
                 filter === t.key
-                  ? 'bg-dark-hover text-white'
-                  : 'text-muted hover:text-white',
+                  ? 'bg-ui-hover text-ui-primary'
+                  : 'text-ui-muted hover:text-ui-primary',
               )"
               @click="filter = t.key"
             >
@@ -668,11 +668,11 @@ const columns: UiTableColumn<BillingDraftGridRow>[] = [
       <!-- Save bar -->
       <div
         v-if="periodEditable"
-        class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-dark-border bg-dark-surface px-3 py-2"
+        class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-ui-border bg-ui-surface px-3 py-2"
       >
-        <p class="text-sm text-muted">
+        <p class="text-sm text-ui-muted">
           <template v-if="dirtyCountValue > 0">
-            Đang nhập <span class="font-semibold text-white">{{ dirtyCountValue }}</span> chỉ số. Tự động lưu sau khi dừng gõ.
+            Đang nhập <span class="font-semibold text-ui-primary">{{ dirtyCountValue }}</span> chỉ số. Tự động lưu sau khi dừng gõ.
           </template>
           <template v-else>
             Mọi thay đổi đã được tự động lưu.
@@ -691,14 +691,14 @@ const columns: UiTableColumn<BillingDraftGridRow>[] = [
       <!-- Selection action bar -->
       <div
         v-if="selectedCount > 0"
-        class="fixed inset-x-3 bottom-4 z-30 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-cyan/40 bg-dark-card px-3 py-2 text-sm shadow-lg shadow-black/40 md:static md:z-auto md:bg-cyan/5 md:shadow-none"
+        class="fixed inset-x-3 bottom-4 z-30 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-ui-accent/40 bg-ui-chrome px-3 py-2 text-sm shadow-lg shadow-ui-shadow/40 md:static md:z-auto md:bg-ui-accent/5 md:shadow-none"
       >
-        <p class="text-white">
+        <p class="text-ui-primary">
           Đã chọn <span class="font-semibold tabular-nums">{{ selectedCount }}</span> phiếu
           <UiButton
             v-if="!allVisibleSelected"
             unstyled
-            class="ml-2 whitespace-nowrap text-xs text-cyan hover:underline"
+            class="ml-2 whitespace-nowrap text-xs text-ui-accent hover:underline"
             @click="selectAllVisible"
           >
             Chọn tất cả trong lọc
@@ -764,7 +764,7 @@ const columns: UiTableColumn<BillingDraftGridRow>[] = [
           <div class="flex items-start gap-2">
             <UiButton
               unstyled
-              class="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded text-muted transition-colors hover:bg-dark-hover hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dark-border"
+              class="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded text-ui-muted transition-colors hover:bg-ui-hover hover:text-ui-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-border-strong"
               :aria-label="isDetailOpen(row as BillingDraftGridRow) ? 'Thu gọn chi tiết' : 'Xem chi tiết'"
               :aria-expanded="isDetailOpen(row as BillingDraftGridRow)"
               @click="toggleDetail(row as BillingDraftGridRow)"
@@ -776,13 +776,13 @@ const columns: UiTableColumn<BillingDraftGridRow>[] = [
               />
             </UiButton>
             <div class="flex min-w-0 flex-col leading-tight">
-              <span class="text-sm font-semibold text-white">
+              <span class="text-sm font-semibold text-ui-primary">
                 {{ (row as BillingDraftGridRow).roomNumber ?? '—' }}
-                <span v-if="(row as BillingDraftGridRow).floor !== null" class="ml-1 text-xs font-normal text-muted">
+                <span v-if="(row as BillingDraftGridRow).floor !== null" class="ml-1 text-xs font-normal text-ui-muted">
                   · Tầng {{ (row as BillingDraftGridRow).floor }}
                 </span>
               </span>
-              <span class="truncate text-xs text-muted">
+              <span class="truncate text-xs text-ui-muted">
                 {{ (row as BillingDraftGridRow).tenantName ?? 'Chưa có khách' }}
               </span>
             </div>
@@ -808,7 +808,7 @@ const columns: UiTableColumn<BillingDraftGridRow>[] = [
               @paste="handleReadingPaste($event, row as BillingDraftGridRow, 'electricity')"
               @blur="handleReadingBlur(row as BillingDraftGridRow)"
             />
-            <span v-else class="text-sm text-white tabular-nums">
+            <span v-else class="text-sm text-ui-primary tabular-nums">
               {{ (row as BillingDraftGridRow).electricity!.currentValue ?? '—' }}
             </span>
             <p class="flex items-center justify-end gap-1.5 text-[10px] leading-none tabular-nums">
@@ -816,17 +816,17 @@ const columns: UiTableColumn<BillingDraftGridRow>[] = [
                 aria-hidden="true"
                 :class="clsx(
                   'inline-block h-1.5 w-1.5 shrink-0 rounded-full transition-[background-color,opacity] duration-150',
-                  rowSaveStateOf(row as BillingDraftGridRow) === 'saving' ? 'bg-cyan/70 animate-pulse motion-reduce:animate-none' :
-                  rowSaveStateOf(row as BillingDraftGridRow) === 'saved' ? 'bg-emerald-400' :
-                  rowSaveStateOf(row as BillingDraftGridRow) === 'error' ? 'bg-rose-400' :
-                  isCellDirty(row as BillingDraftGridRow, 'electricity') ? 'bg-amber-400/60' :
+                  rowSaveStateOf(row as BillingDraftGridRow) === 'saving' ? 'bg-ui-accent/70 animate-pulse motion-reduce:animate-none' :
+                  rowSaveStateOf(row as BillingDraftGridRow) === 'saved' ? 'bg-status-success' :
+                  rowSaveStateOf(row as BillingDraftGridRow) === 'error' ? 'bg-status-danger' :
+                  isCellDirty(row as BillingDraftGridRow, 'electricity') ? 'bg-status-warning/60' :
                   'opacity-0',
                 )"
               />
-              <span class="text-muted">{{ previousReadingHint((row as BillingDraftGridRow).electricity) }}</span>
+              <span class="text-ui-muted">{{ previousReadingHint((row as BillingDraftGridRow).electricity) }}</span>
             </p>
           </div>
-          <span v-else class="text-xs text-muted">—</span>
+          <span v-else class="text-xs text-ui-muted">—</span>
         </template>
 
         <template #cell-water_input="{ row }">
@@ -848,7 +848,7 @@ const columns: UiTableColumn<BillingDraftGridRow>[] = [
               @paste="handleReadingPaste($event, row as BillingDraftGridRow, 'water')"
               @blur="handleReadingBlur(row as BillingDraftGridRow)"
             />
-            <span v-else class="text-sm text-white tabular-nums">
+            <span v-else class="text-sm text-ui-primary tabular-nums">
               {{ (row as BillingDraftGridRow).water!.currentValue ?? '—' }}
             </span>
             <p class="flex items-center justify-end gap-1.5 text-[10px] leading-none tabular-nums">
@@ -856,25 +856,25 @@ const columns: UiTableColumn<BillingDraftGridRow>[] = [
                 aria-hidden="true"
                 :class="clsx(
                   'inline-block h-1.5 w-1.5 shrink-0 rounded-full transition-[background-color,opacity] duration-150',
-                  rowSaveStateOf(row as BillingDraftGridRow) === 'saving' ? 'bg-cyan/70 animate-pulse motion-reduce:animate-none' :
-                  rowSaveStateOf(row as BillingDraftGridRow) === 'saved' ? 'bg-emerald-400' :
-                  rowSaveStateOf(row as BillingDraftGridRow) === 'error' ? 'bg-rose-400' :
-                  isCellDirty(row as BillingDraftGridRow, 'water') ? 'bg-amber-400/60' :
+                  rowSaveStateOf(row as BillingDraftGridRow) === 'saving' ? 'bg-ui-accent/70 animate-pulse motion-reduce:animate-none' :
+                  rowSaveStateOf(row as BillingDraftGridRow) === 'saved' ? 'bg-status-success' :
+                  rowSaveStateOf(row as BillingDraftGridRow) === 'error' ? 'bg-status-danger' :
+                  isCellDirty(row as BillingDraftGridRow, 'water') ? 'bg-status-warning/60' :
                   'opacity-0',
                 )"
               />
-              <span class="text-muted">{{ previousReadingHint((row as BillingDraftGridRow).water) }}</span>
+              <span class="text-ui-muted">{{ previousReadingHint((row as BillingDraftGridRow).water) }}</span>
             </p>
           </div>
-          <span v-else class="text-xs text-muted">—</span>
+          <span v-else class="text-xs text-ui-muted">—</span>
         </template>
 
         <template #cell-electricity_amount="{ row }">
           <div class="flex flex-col items-end gap-0.5">
-            <span class="text-sm tabular-nums text-white">
+            <span class="text-sm tabular-nums text-ui-primary">
               {{ formatDisplayAmount(utilityDisplay(row as BillingDraftGridRow, 'electricity')) }}
             </span>
-            <span class="text-[10px] text-muted">
+            <span class="text-[10px] text-ui-muted">
               {{ formatOptimisticUsage(utilityDisplay(row as BillingDraftGridRow, 'electricity')) }}
             </span>
           </div>
@@ -882,25 +882,25 @@ const columns: UiTableColumn<BillingDraftGridRow>[] = [
 
         <template #cell-water_amount="{ row }">
           <div class="flex flex-col items-end gap-0.5">
-            <span class="text-sm tabular-nums text-white">
+            <span class="text-sm tabular-nums text-ui-primary">
               {{ formatDisplayAmount(utilityDisplay(row as BillingDraftGridRow, 'water')) }}
             </span>
-            <span class="text-[10px] text-muted">
+            <span class="text-[10px] text-ui-muted">
               {{ formatOptimisticUsage(utilityDisplay(row as BillingDraftGridRow, 'water')) }}
             </span>
           </div>
         </template>
 
         <template #cell-rent_service="{ row }">
-          <span class="text-sm tabular-nums text-white">
+          <span class="text-sm tabular-nums text-ui-primary">
             {{ (row as BillingDraftGridRow).rowType === 'billable_contract' ? formatCurrency((row as BillingDraftGridRow).rentAndServiceTotal) : '—' }}
           </span>
         </template>
 
         <template #cell-draft_total="{ row }">
           <div class="flex items-center justify-end gap-2.5">
-            <span class="hidden h-5 w-[2px] rounded-full bg-cyan/60 md:inline-block" aria-hidden="true" />
-            <span class="text-[15px] font-semibold tabular-nums text-white">
+            <span class="hidden h-5 w-[2px] rounded-full bg-ui-accent/60 md:inline-block" aria-hidden="true" />
+            <span class="text-[15px] font-semibold tabular-nums text-ui-primary">
               {{ displayDraftTotal(row as BillingDraftGridRow) !== null ? formatCurrency(displayDraftTotal(row as BillingDraftGridRow)!) : '—' }}
             </span>
           </div>
@@ -917,19 +917,19 @@ const columns: UiTableColumn<BillingDraftGridRow>[] = [
           <div class="flex items-center justify-end gap-2">
             <span
               v-if="rowSaveStateOf(row as BillingDraftGridRow) === 'saving'"
-              class="whitespace-nowrap text-[11px] text-muted"
+              class="whitespace-nowrap text-[11px] text-ui-muted"
             >
               Đang lưu…
             </span>
             <span
               v-else-if="rowSaveStateOf(row as BillingDraftGridRow) === 'saved'"
-              class="whitespace-nowrap text-[11px] text-emerald-400"
+              class="whitespace-nowrap text-[11px] text-status-success"
             >
               Đã lưu ✓
             </span>
             <span
               v-else-if="rowSaveStateOf(row as BillingDraftGridRow) === 'error'"
-              class="whitespace-nowrap text-[11px] text-rose-400"
+              class="whitespace-nowrap text-[11px] text-status-danger"
               :title="rowSaveError[(row as BillingDraftGridRow).roomId]"
             >
               Lỗi
@@ -974,7 +974,7 @@ const columns: UiTableColumn<BillingDraftGridRow>[] = [
       <!-- Mobile select-all -->
       <div
         v-if="!loading && response && filteredRows.length > 0"
-        class="flex items-center justify-between rounded-lg border border-dark-border bg-dark-surface px-3 py-2 md:hidden"
+        class="flex items-center justify-between rounded-lg border border-ui-border bg-ui-surface px-3 py-2 md:hidden"
       >
         <UiCheckbox
           :model-value="allVisibleSelected"
@@ -984,7 +984,7 @@ const columns: UiTableColumn<BillingDraftGridRow>[] = [
           aria-label="Chọn tất cả phòng"
           @update:model-value="toggleSelectAllVisible"
         />
-        <span v-if="selectedCount > 0" class="text-xs tabular-nums text-muted">Đã chọn {{ selectedCount }}</span>
+        <span v-if="selectedCount > 0" class="text-xs tabular-nums text-ui-muted">Đã chọn {{ selectedCount }}</span>
       </div>
 
       <!-- Mobile cards (stacked) -->
@@ -1037,11 +1037,11 @@ const columns: UiTableColumn<BillingDraftGridRow>[] = [
       <!-- Inline summary -->
       <p
         v-if="displayedTotals.readyDraftCount > 0 || displayedTotals.blockedDraftCount > 0"
-        class="mt-4 text-xs text-muted"
+        class="mt-4 text-xs text-ui-muted"
       >
-        <span>Sẵn sàng: <span class="text-emerald-400 tabular-nums">{{ displayedTotals.readyDraftCount }}</span></span>
+        <span>Sẵn sàng: <span class="text-status-success tabular-nums">{{ displayedTotals.readyDraftCount }}</span></span>
         <span class="mx-2 text-dark-border">·</span>
-        <span>Có lỗi: <span :class="displayedTotals.blockedDraftCount > 0 ? 'text-rose-400 tabular-nums' : 'text-white tabular-nums'">{{ displayedTotals.blockedDraftCount }}</span></span>
+        <span>Có lỗi: <span :class="displayedTotals.blockedDraftCount > 0 ? 'text-status-danger tabular-nums' : 'text-ui-primary tabular-nums'">{{ displayedTotals.blockedDraftCount }}</span></span>
       </p>
     </UiSection>
 
@@ -1075,20 +1075,20 @@ const columns: UiTableColumn<BillingDraftGridRow>[] = [
       @close="approveOverridesOpen = false"
     >
       <div class="space-y-4">
-        <p class="text-sm text-muted">
-          Cần duyệt <span class="font-semibold text-white">{{ approvingOverrides.length }}</span> điều chỉnh trước khi phát hành:
+        <p class="text-sm text-ui-muted">
+          Cần duyệt <span class="font-semibold text-ui-primary">{{ approvingOverrides.length }}</span> điều chỉnh trước khi phát hành:
         </p>
         <div class="max-h-80 space-y-2 overflow-y-auto">
           <div
             v-for="override in approvingOverrides"
             :key="override.id"
-            class="rounded-lg border border-dark-border bg-dark-card p-3"
+            class="rounded-lg border border-ui-border bg-ui-chrome p-3"
           >
             <div class="flex items-start justify-between">
               <div class="min-w-0 flex-1">
-                <p class="text-xs font-medium text-muted">{{ override.meterType === 'electricity' ? 'Điện' : 'Nước' }}</p>
-                <p class="text-sm font-semibold text-white">{{ override.previousReadingValue }} → {{ override.currentReadingValue }}</p>
-                <p class="text-xs text-muted">Tiêu thụ: {{ override.billableUsage }} <span v-if="override.meterType === 'electricity'">kWh</span><span v-else>m³</span></p>
+                <p class="text-xs font-medium text-ui-muted">{{ override.meterType === 'electricity' ? 'Điện' : 'Nước' }}</p>
+                <p class="text-sm font-semibold text-ui-primary">{{ override.previousReadingValue }} → {{ override.currentReadingValue }}</p>
+                <p class="text-xs text-ui-muted">Tiêu thụ: {{ override.billableUsage }} <span v-if="override.meterType === 'electricity'">kWh</span><span v-else>m³</span></p>
               </div>
             </div>
           </div>

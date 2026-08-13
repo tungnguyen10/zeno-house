@@ -180,12 +180,12 @@ const canSubmit = computed(() => !props.loading && (props.isDirty || submitAttem
     </UiAlert>
 
     <section class="space-y-4">
-      <header class="border-t border-dark-border pt-4">
+      <header class="border-t border-ui-border pt-4">
         <div class="flex items-start gap-3">
-          <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-cyan/10 text-sm font-semibold text-cyan">1</span>
+          <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-ui-accent/10 text-sm font-semibold text-ui-accent">1</span>
           <div>
-            <h3 class="text-sm font-semibold text-white">Vị trí</h3>
-            <p class="mt-0.5 text-xs text-muted">Định danh phòng trong một tòa nhà.</p>
+            <h3 class="text-sm font-semibold text-ui-primary">Vị trí</h3>
+            <p class="mt-0.5 text-xs text-ui-muted">Định danh phòng trong một tòa nhà.</p>
           </div>
         </div>
       </header>
@@ -232,12 +232,12 @@ const canSubmit = computed(() => !props.loading && (props.isDirty || submitAttem
     </section>
 
     <section class="space-y-4">
-      <header class="border-t border-dark-border pt-4">
+      <header class="border-t border-ui-border pt-4">
         <div class="flex items-start gap-3">
-          <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-cyan/10 text-sm font-semibold text-cyan">2</span>
+          <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-ui-accent/10 text-sm font-semibold text-ui-accent">2</span>
           <div>
-            <h3 class="text-sm font-semibold text-white">Trạng thái</h3>
-            <p class="mt-0.5 text-xs text-muted">Tình trạng vận hành hiện tại của phòng.</p>
+            <h3 class="text-sm font-semibold text-ui-primary">Trạng thái</h3>
+            <p class="mt-0.5 text-xs text-ui-muted">Tình trạng vận hành hiện tại của phòng.</p>
           </div>
         </div>
       </header>
@@ -254,12 +254,12 @@ const canSubmit = computed(() => !props.loading && (props.isDirty || submitAttem
     </section>
 
     <section class="space-y-4">
-      <header class="border-t border-dark-border pt-4">
+      <header class="border-t border-ui-border pt-4">
         <div class="flex items-start gap-3">
-          <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-cyan/10 text-sm font-semibold text-cyan">3</span>
+          <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-ui-accent/10 text-sm font-semibold text-ui-accent">3</span>
           <div>
-            <h3 class="text-sm font-semibold text-white">Giá thuê & diện tích</h3>
-            <p class="mt-0.5 text-xs text-muted">Giá chuẩn dùng làm mặc định khi tạo hợp đồng mới.</p>
+            <h3 class="text-sm font-semibold text-ui-primary">Giá thuê & diện tích</h3>
+            <p class="mt-0.5 text-xs text-ui-muted">Giá chuẩn dùng làm mặc định khi tạo hợp đồng mới.</p>
           </div>
         </div>
       </header>
@@ -298,12 +298,12 @@ const canSubmit = computed(() => !props.loading && (props.isDirty || submitAttem
     </section>
 
     <section class="space-y-4">
-      <header class="border-t border-dark-border pt-4">
+      <header class="border-t border-ui-border pt-4">
         <div class="flex items-start gap-3">
-          <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-cyan/10 text-sm font-semibold text-cyan">4</span>
+          <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-ui-accent/10 text-sm font-semibold text-ui-accent">4</span>
           <div>
-            <h3 class="text-sm font-semibold text-white">Mô tả</h3>
-            <p class="mt-0.5 text-xs text-muted">Ghi chú nội bộ về đặc điểm hoặc lưu ý của phòng.</p>
+            <h3 class="text-sm font-semibold text-ui-primary">Mô tả</h3>
+            <p class="mt-0.5 text-xs text-ui-muted">Ghi chú nội bộ về đặc điểm hoặc lưu ý của phòng.</p>
           </div>
         </div>
       </header>
@@ -320,7 +320,7 @@ const canSubmit = computed(() => !props.loading && (props.isDirty || submitAttem
       />
     </section>
 
-    <div class="hidden items-center justify-end gap-3 border-t border-dark-border pt-2 md:flex">
+    <div class="hidden items-center justify-end gap-3 border-t border-ui-border pt-2 md:flex">
       <UiButton variant="ghost" type="button" :disabled="loading" @click="emit('cancel')">
         Huỷ
       </UiButton>
@@ -331,7 +331,7 @@ const canSubmit = computed(() => !props.loading && (props.isDirty || submitAttem
 
     <div
       data-test="sticky-save-bar"
-      class="fixed inset-x-0 bottom-0 z-40 border-t border-dark-border bg-dark-deep/95 px-4 pt-3 backdrop-blur md:hidden"
+      class="fixed inset-x-0 bottom-0 z-40 border-t border-ui-border bg-ui-deep/95 px-4 pt-3 backdrop-blur md:hidden"
       :style="{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }"
     >
       <div class="flex items-center gap-2">

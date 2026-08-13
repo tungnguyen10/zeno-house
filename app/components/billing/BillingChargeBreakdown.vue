@@ -38,8 +38,8 @@ const subtotalBeforeAdjustment = computed(() =>
 )
 
 function amountTone(line: ChargeBreakdownLine): string {
-  if (line.amount < 0 || line.chargeType === 'discount') return 'text-emerald-300'
-  return 'text-white'
+  if (line.amount < 0 || line.chargeType === 'discount') return 'text-status-success'
+  return 'text-ui-primary'
 }
 
 function lineHint(line: ChargeBreakdownLine): string | null {
@@ -58,13 +58,13 @@ function lineHint(line: ChargeBreakdownLine): string | null {
 </script>
 
 <template>
-  <div class="overflow-hidden rounded-lg border border-dark-border bg-dark-surface">
+  <div class="overflow-hidden rounded-lg border border-ui-border bg-ui-surface">
     <div
       v-for="(group, groupIndex) in groups"
       :key="group.key"
-      :class="['px-4 py-3', groupIndex > 0 && 'border-t border-dark-border']"
+      :class="['px-4 py-3', groupIndex > 0 && 'border-t border-ui-border']"
     >
-      <p class="mb-2 text-[11px] font-medium uppercase tracking-wider text-muted">
+      <p class="mb-2 text-[11px] font-medium uppercase tracking-wider text-ui-muted">
         {{ group.title }}
       </p>
 
@@ -75,11 +75,11 @@ function lineHint(line: ChargeBreakdownLine): string | null {
           class="flex items-baseline justify-between gap-3"
         >
           <div class="min-w-0 flex-1">
-            <p class="text-sm text-white">{{ chargeLineLabel(line.chargeType, line.label) }}</p>
+            <p class="text-sm text-ui-primary">{{ chargeLineLabel(line.chargeType, line.label) }}</p>
             <slot name="line-extra" :line="line">
               <p
                 v-if="lineHint(line)"
-                class="mt-0.5 text-xs text-muted tabular-nums"
+                class="mt-0.5 text-xs text-ui-muted tabular-nums"
               >
                 {{ lineHint(line) }}
               </p>
@@ -94,15 +94,15 @@ function lineHint(line: ChargeBreakdownLine): string | null {
 
     <div
       v-if="hasAdjustments"
-      class="flex items-baseline justify-between border-t border-dark-border px-4 py-2 text-xs text-muted"
+      class="flex items-baseline justify-between border-t border-ui-border px-4 py-2 text-xs text-ui-muted"
     >
       <span>Tạm tính</span>
       <span class="tabular-nums">{{ formatCurrency(subtotalBeforeAdjustment) }}</span>
     </div>
 
-    <div class="flex items-baseline justify-between border-t border-dark-border bg-dark-card px-4 py-3">
-      <span class="text-xs font-medium uppercase tracking-wider text-muted">{{ totalLabel }}</span>
-      <span class="text-lg font-semibold text-white tabular-nums">
+    <div class="flex items-baseline justify-between border-t border-ui-border bg-ui-chrome px-4 py-3">
+      <span class="text-xs font-medium uppercase tracking-wider text-ui-muted">{{ totalLabel }}</span>
+      <span class="text-lg font-semibold text-ui-primary tabular-nums">
         {{ formatCurrency(total) }}
       </span>
     </div>

@@ -6,6 +6,7 @@ export const AUDIT_ACTIONS = {
   BUILDING_ACTIVATED: 'building.activated',
   BUILDING_REMOVED: 'building.removed',
   BUILDING_INVOICE_PROFILE_UPDATED: 'building.invoice_profile.updated',
+  BUILDING_INVOICE_EMAIL_SETTINGS_UPDATED: 'building.invoice_email_settings.updated',
 
   // Room
   ROOM_CREATED: 'room.created',
@@ -19,6 +20,7 @@ export const AUDIT_ACTIONS = {
   TENANT_CREATED: 'tenant.created',
   TENANT_UPDATED: 'tenant.updated',
   TENANT_ARCHIVED: 'tenant.archived',
+  TENANT_ACTIVATED: 'tenant.activated',
   TENANT_REMOVED: 'tenant.removed',
 
   // Tenant portal account provisioning

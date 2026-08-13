@@ -4,7 +4,7 @@
 
 <template>
   <div
-    class="ui-skeleton rounded-md bg-dark-border"
+    class="ui-skeleton rounded-md bg-ui-border"
     role="status"
     aria-label="Đang tải..."
   />
@@ -24,7 +24,7 @@
   background: linear-gradient(
     90deg,
     transparent 0%,
-    rgba(255, 255, 255, 0.045) 50%,
+    rgb(var(--ui-skeleton) / 0.08) 50%,
     transparent 100%
   );
   animation: ui-skeleton-shimmer 1.6s ease-in-out infinite;
@@ -37,7 +37,7 @@
 @media (prefers-reduced-motion: reduce) {
   .ui-skeleton::after {
     animation: none;
-    background: rgba(255, 255, 255, 0.025);
+    background: rgb(var(--ui-skeleton) / 0.05);
     transform: none;
   }
 }

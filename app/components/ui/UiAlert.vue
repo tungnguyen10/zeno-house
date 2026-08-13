@@ -18,10 +18,10 @@ const emit = defineEmits<{
 }>()
 
 const severityClass: Record<AlertSeverity, string> = {
-  info: 'border-cyan/30 bg-cyan/10 text-cyan',
-  success: 'border-success-neon/30 bg-success-neon/10 text-success-neon',
-  warning: 'border-warning/30 bg-warning/10 text-warning',
-  danger: 'border-error/40 bg-error-bg text-error-vivid',
+  info: 'border-ui-accent/30 bg-ui-accent/10 text-ui-accent',
+  success: 'border-status-success/30 bg-status-success/10 text-status-success',
+  warning: 'border-status-warning/30 bg-status-warning/10 text-status-warning',
+  danger: 'border-status-danger/40 bg-status-danger-surface text-status-danger',
 }
 
 const wrapperClass = computed(() =>
@@ -43,7 +43,7 @@ const wrapperClass = computed(() =>
     <button
       v-if="dismissible"
       type="button"
-      class="shrink-0 -m-1 rounded-md p-1 hover:bg-white/5 transition-colors"
+      class="shrink-0 -m-1 rounded-md p-1 hover:bg-ui-primary/5 transition-colors"
       aria-label="Đóng thông báo"
       @click="emit('dismiss')"
     >

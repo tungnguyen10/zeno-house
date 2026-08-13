@@ -14,7 +14,7 @@ Resolve UI decisions in this order:
 6. Hallmark
 7. Model defaults
 
-Design skills improve execution. They do not replace the Zeno House dark operational design system.
+Design skills improve execution. They do not replace the Zeno House operational design system or its dashboard semantic light/dark theme contract.
 
 ## Scope
 
@@ -39,7 +39,7 @@ Every user-visible change must finish polished. Scope controls exploration depth
 
 ## Hallmark Adaptation
 
-For Zeno House, inherit the existing dark/cyan/Inter system and dense work-tool rhythm. Use Hallmark's critique and component/page reasoning without its standalone catalog rotation or export artifacts.
+For Zeno House, inherit the semantic dashboard palette, cyan/teal identity, Inter typography, and dense work-tool rhythm across light and dark modes. Auth remains dark-first and tenant portal retains its independent theme. Use Hallmark's critique and component/page reasoning without its standalone catalog rotation or export artifacts.
 
 An explicit `hallmark audit`, `hallmark redesign`, or `hallmark study` request may widen the design exploration. It does not authorize a design-system change by itself. Ask before changing canonical tokens, typography, density, primitives, status semantics, icon conventions, or information architecture.
 

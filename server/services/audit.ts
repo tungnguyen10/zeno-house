@@ -3,6 +3,7 @@ import type { AuthUser } from '~/types/auth'
 import type { AuditEntityType } from '~/utils/constants/audit'
 import { Buffer } from 'node:buffer'
 import { AuditRepository } from '../repositories/audit'
+import { reportAuditMetric } from '../utils/audit-telemetry'
 
 export interface AuditAppendOptions {
   building_id: string | null
@@ -27,6 +28,8 @@ function isPrivateAuditKey(key: string): boolean {
     || normalized.includes('token')
     || normalized.includes('session')
     || normalized.includes('signedurl')
+    || normalized.endsWith('path')
+    || normalized.endsWith('url')
     || normalized === 'binary'
 }
 
@@ -74,7 +77,8 @@ function reportAuditFailure(
   },
   error: unknown,
 ): void {
-  console.error(`[AuditService] ${operation} failed`, {
+  reportAuditMetric('audit.append_failed', {
+    operation,
     action: context.action,
     entityType: context.entityType,
     entityId: context.entityId ?? null,

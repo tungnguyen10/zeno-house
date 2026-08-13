@@ -64,7 +64,7 @@
 - Use `clsx` for conditional or dynamic class composition.
 - Avoid inline `style=""`.
 - Custom CSS belongs in `app/assets/scss/main.scss` only when Tailwind cannot express the rule cleanly.
-- Follow `docs/ui-patterns/design-system.md` for dark operational UI patterns.
+- Follow `docs/ui-patterns/design-system.md` for semantic operational dashboard UI patterns.
 
 ## 6. Incremental Principle
 

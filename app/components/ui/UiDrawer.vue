@@ -26,7 +26,7 @@ const accessibleLabel = computed(() => props.title ? undefined : (props.ariaLabe
 
 const panelClass = computed(() =>
   clsx(
-    'fixed inset-y-0 right-0 z-10 flex h-full max-h-full w-full flex-col bg-dark-card shadow-xl',
+    'fixed inset-y-0 right-0 z-10 flex h-full max-h-full w-full flex-col bg-ui-chrome shadow-xl',
     'sm:max-w-full',
     props.width,
   ),
@@ -106,7 +106,7 @@ watch(
         :aria-label="accessibleLabel"
         @keydown="onKeydown"
       >
-        <div class="absolute inset-0 bg-black/50" aria-hidden="true" @click="close" />
+        <div class="absolute inset-0 bg-ui-overlay/50" aria-hidden="true" @click="close" />
 
         <Transition
           appear
@@ -123,10 +123,10 @@ watch(
             :class="panelClass"
             tabindex="-1"
           >
-            <header class="flex items-center justify-between border-b border-dark-border px-5 py-4">
+            <header class="flex items-center justify-between border-b border-ui-border px-5 py-4">
               <div :id="titleId" class="min-w-0">
                 <slot name="header">
-                  <h2 class="text-base font-semibold text-white">{{ title }}</h2>
+                  <h2 class="text-base font-semibold text-ui-primary">{{ title }}</h2>
                 </slot>
               </div>
               <UiButton variant="ghost" size="sm" icon-only aria-label="Đóng" @click="close">
@@ -138,7 +138,7 @@ watch(
               <slot />
             </div>
 
-            <footer v-if="$slots.footer" class="border-t border-dark-border px-5 py-4">
+            <footer v-if="$slots.footer" class="border-t border-ui-border px-5 py-4">
               <slot name="footer" />
             </footer>
           </aside>

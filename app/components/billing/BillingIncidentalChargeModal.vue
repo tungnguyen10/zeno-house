@@ -144,14 +144,14 @@ async function confirmDelete() {
 <template>
   <UiModal :open="open" :title="title" size="md" @close="close">
     <form class="space-y-4" @submit.prevent="submit">
-      <div class="flex items-center justify-between gap-3 rounded-lg border border-dark-border bg-dark-surface px-3 py-2">
+      <div class="flex items-center justify-between gap-3 rounded-lg border border-ui-border bg-ui-surface px-3 py-2">
         <div class="min-w-0">
-          <p class="text-xs text-muted">Áp dụng một lần trong kỳ này</p>
-          <p class="truncate text-sm font-medium text-white">
-            Phòng {{ row?.roomNumber ?? '—' }}<span v-if="row?.tenantName" class="font-normal text-muted"> · {{ row.tenantName }}</span>
+          <p class="text-xs text-ui-muted">Áp dụng một lần trong kỳ này</p>
+          <p class="truncate text-sm font-medium text-ui-primary">
+            Phòng {{ row?.roomNumber ?? '—' }}<span v-if="row?.tenantName" class="font-normal text-ui-muted"> · {{ row.tenantName }}</span>
           </p>
         </div>
-        <span v-if="charge" class="shrink-0 text-sm font-semibold tabular-nums text-white">
+        <span v-if="charge" class="shrink-0 text-sm font-semibold tabular-nums text-ui-primary">
           {{ formatCurrency(charge.amount) }}
         </span>
       </div>

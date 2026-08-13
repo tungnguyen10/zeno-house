@@ -11,7 +11,7 @@ Stack:
 - Nuxt 4 compatibility mode, Vue 3, TypeScript strict
 - Supabase Auth/Postgres through `@nuxtjs/supabase`
 - Pinia for auth/app state; composables for server/workflow state
-- TailwindCSS, operational dark UI, `nuxt-svgo` icons
+- TailwindCSS, semantic light/dark dashboard UI, independent portal theme, `nuxt-svgo` icons
 - Zod validators shared by client/server
 - Vitest for unit, service, repository, and component tests
 

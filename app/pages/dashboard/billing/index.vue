@@ -129,11 +129,11 @@ function clearFilters() {
 }
 
 const queueChipTone: Record<'warning' | 'accent' | 'default' | 'danger' | 'success', { value: string; ring: string; dot: string }> = {
-  warning: { value: 'text-warning', ring: 'ring-warning/40 border-warning/60', dot: 'bg-warning' },
-  accent: { value: 'text-cyan', ring: 'ring-cyan/40 border-cyan/60', dot: 'bg-cyan' },
-  default: { value: 'text-white', ring: 'ring-white/20 border-white/30', dot: 'bg-white/60' },
-  danger: { value: 'text-error-vivid', ring: 'ring-error/40 border-error/60', dot: 'bg-error-vivid' },
-  success: { value: 'text-success-neon', ring: 'ring-success-neon/40 border-success-neon/60', dot: 'bg-success-neon' },
+  warning: { value: 'text-status-warning', ring: 'ring-status-warning/40 border-status-warning/60', dot: 'bg-status-warning' },
+  accent: { value: 'text-ui-accent', ring: 'ring-ui-accent/40 border-ui-accent/60', dot: 'bg-ui-accent' },
+  default: { value: 'text-ui-primary', ring: 'ring-ui-muted/20 border-ui-muted/30', dot: 'bg-ui-muted/60' },
+  danger: { value: 'text-status-danger', ring: 'ring-status-danger/40 border-status-danger/60', dot: 'bg-status-danger' },
+  success: { value: 'text-status-success', ring: 'ring-status-success/40 border-status-success/60', dot: 'bg-status-success' },
 }
 
 const columns: UiTableColumn<BillingPeriodSummary>[] = [
@@ -246,14 +246,14 @@ function periodLabel(row: BillingPeriodSummary): string {
         unstyled
         :aria-pressed="activeQueue === metric.key"
         :class="[
-          'group flex shrink-0 snap-start flex-col gap-1 rounded-xl border bg-dark-surface px-4 py-3 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan/40 min-w-[10rem] md:min-w-0 md:shrink',
+          'group flex shrink-0 snap-start flex-col gap-1 rounded-xl border bg-ui-surface px-4 py-3 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-ui-accent/40 min-w-[10rem] md:min-w-0 md:shrink',
           activeQueue === metric.key
             ? `${queueChipTone[metric.tone].ring} ring-2`
-            : 'border-dark-border hover:border-dark-hover hover:bg-dark-hover/40',
+            : 'border-ui-border hover:border-ui-border-strong hover:bg-ui-hover/40',
         ]"
         @click="toggleQueue(metric.key)"
       >
-        <span class="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-muted">
+        <span class="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-ui-muted">
           <span :class="['h-1.5 w-1.5 rounded-full shrink-0', queueChipTone[metric.tone].dot]" />
           <span class="whitespace-nowrap md:hidden">{{ metric.shortLabel }}</span>
           <span class="hidden whitespace-nowrap md:inline">{{ metric.label }}</span>
@@ -304,34 +304,34 @@ function periodLabel(row: BillingPeriodSummary): string {
         v-else
         :key="row.period.id"
         unstyled
-        class="flex w-full flex-col gap-2 rounded-xl border border-dark-border bg-dark-surface p-3 text-left transition hover:bg-dark-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan/40"
+        class="flex w-full flex-col gap-2 rounded-xl border border-ui-border bg-ui-surface p-3 text-left transition hover:bg-ui-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-ui-accent/40"
         @click="gotoWorkspace(row)"
       >
         <div class="flex items-start justify-between gap-2">
           <div class="min-w-0">
-            <p :class="['truncate text-sm', isClosed(row) ? 'text-muted' : 'font-medium text-white']">
+            <p :class="['truncate text-sm', isClosed(row) ? 'text-ui-muted' : 'font-medium text-ui-primary']">
               {{ row.buildingName ?? '—' }}
             </p>
-            <p class="text-xs tabular-nums text-muted">Kỳ {{ periodLabel(row) }}</p>
+            <p class="text-xs tabular-nums text-ui-muted">Kỳ {{ periodLabel(row) }}</p>
           </div>
           <UiStatusBadge :status="row.period.status" context="period" />
         </div>
 
         <div v-if="row.issuedTotal > 0" class="flex flex-col gap-1">
           <div class="flex items-baseline justify-between gap-2 text-xs tabular-nums">
-            <span :class="isClosed(row) ? 'text-muted' : 'text-white'">
+            <span :class="isClosed(row) ? 'text-ui-muted' : 'text-ui-primary'">
               Đã thu {{ formatCurrency(row.paidTotal) }}
             </span>
-            <span class="text-muted">/ {{ formatCurrency(row.issuedTotal) }}</span>
+            <span class="text-ui-muted">/ {{ formatCurrency(row.issuedTotal) }}</span>
           </div>
-          <div class="h-1 overflow-hidden rounded-full bg-dark-border">
+          <div class="h-1 overflow-hidden rounded-full bg-ui-border">
             <div
               :class="[
                 'h-full rounded-full transition-all',
                 collectionRatio(row) >= 1
-                  ? 'bg-success-neon'
+                  ? 'bg-status-success'
                   : row.outstandingBalance > 0 && !isClosed(row)
-                    ? 'bg-cyan'
+                    ? 'bg-ui-accent'
                     : 'bg-muted/40',
               ]"
               :style="{ width: `${Math.max(2, collectionRatio(row) * 100)}%` }"
@@ -340,13 +340,13 @@ function periodLabel(row: BillingPeriodSummary): string {
         </div>
 
         <div class="flex items-center justify-between gap-2 text-xs">
-          <div class="flex items-center gap-3 text-muted">
-            <span>Chỉ số <span class="text-white tabular-nums">{{ readingProgress(row) }}</span></span>
-            <span>HĐ <span class="text-white tabular-nums">{{ row.invoiceCount }}</span></span>
+          <div class="flex items-center gap-3 text-ui-muted">
+            <span>Chỉ số <span class="text-ui-primary tabular-nums">{{ readingProgress(row) }}</span></span>
+            <span>HĐ <span class="text-ui-primary tabular-nums">{{ row.invoiceCount }}</span></span>
           </div>
           <span
             v-if="row.outstandingBalance > 0"
-            :class="['font-semibold tabular-nums', isClosed(row) ? 'text-muted' : 'text-error-vivid']"
+            :class="['font-semibold tabular-nums', isClosed(row) ? 'text-ui-muted' : 'text-status-danger']"
           >
             Nợ {{ formatCurrency(row.outstandingBalance) }}
           </span>
@@ -365,12 +365,12 @@ function periodLabel(row: BillingPeriodSummary): string {
       @row-click="gotoWorkspace"
     >
       <template #cell-building="{ row }">
-        <span :class="isClosed(row) ? 'text-muted' : 'font-medium text-white'">
+        <span :class="isClosed(row) ? 'text-ui-muted' : 'font-medium text-ui-primary'">
           {{ row.buildingName ?? '—' }}
         </span>
       </template>
       <template #cell-period="{ row }">
-        <span :class="['tabular-nums', isClosed(row) ? 'text-muted' : 'text-white']">
+        <span :class="['tabular-nums', isClosed(row) ? 'text-ui-muted' : 'text-ui-primary']">
           {{ periodLabel(row) }}
         </span>
       </template>
@@ -378,43 +378,43 @@ function periodLabel(row: BillingPeriodSummary): string {
         <UiStatusBadge :status="row.period.status" context="period" />
       </template>
       <template #cell-reading="{ row }">
-        <span :class="isClosed(row) ? 'text-muted' : ''">{{ readingProgress(row) }}</span>
+        <span :class="isClosed(row) ? 'text-ui-muted' : ''">{{ readingProgress(row) }}</span>
       </template>
       <template #cell-invoiceCount="{ row }">
-        <span :class="isClosed(row) ? 'text-muted' : ''">{{ row.invoiceCount }}</span>
+        <span :class="isClosed(row) ? 'text-ui-muted' : ''">{{ row.invoiceCount }}</span>
       </template>
       <template #cell-collection="{ row }">
         <div v-if="row.issuedTotal > 0" class="flex flex-col gap-1">
           <div class="flex items-baseline justify-between gap-2 text-xs tabular-nums">
-            <span :class="isClosed(row) ? 'text-muted' : 'text-white'">
+            <span :class="isClosed(row) ? 'text-ui-muted' : 'text-ui-primary'">
               {{ formatCurrency(row.paidTotal) }}
             </span>
-            <span class="text-muted">/ {{ formatCurrency(row.issuedTotal) }}</span>
+            <span class="text-ui-muted">/ {{ formatCurrency(row.issuedTotal) }}</span>
           </div>
-          <div class="h-1 overflow-hidden rounded-full bg-dark-border">
+          <div class="h-1 overflow-hidden rounded-full bg-ui-border">
             <div
               :class="[
                 'h-full rounded-full transition-all',
                 collectionRatio(row) >= 1
-                  ? 'bg-success-neon'
+                  ? 'bg-status-success'
                   : row.outstandingBalance > 0 && !isClosed(row)
-                    ? 'bg-cyan'
+                    ? 'bg-ui-accent'
                     : 'bg-muted/40',
               ]"
               :style="{ width: `${Math.max(2, collectionRatio(row) * 100)}%` }"
             />
           </div>
         </div>
-        <span v-else class="text-xs text-muted">—</span>
+        <span v-else class="text-xs text-ui-muted">—</span>
       </template>
       <template #cell-outstanding="{ row }">
         <span
           v-if="row.outstandingBalance > 0"
-          :class="['font-semibold', isClosed(row) ? 'text-muted' : 'text-error-vivid']"
+          :class="['font-semibold', isClosed(row) ? 'text-ui-muted' : 'text-status-danger']"
         >
           {{ formatCurrency(row.outstandingBalance) }}
         </span>
-        <span v-else class="text-muted">—</span>
+        <span v-else class="text-ui-muted">—</span>
       </template>
       <template #cell-open="{ row }">
         <UiButton

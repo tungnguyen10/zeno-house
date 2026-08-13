@@ -3,6 +3,7 @@ import clsx from 'clsx'
 
 const appStore = useAppStore()
 const { sidebarOpen } = storeToRefs(appStore)
+const { initialize: initializeDashboardTheme, dispose: disposeDashboardTheme } = useDashboardTheme()
 const {
   summary: dashboardSummary,
   isLoading: isDashboardSummaryLoading,
@@ -11,9 +12,12 @@ const {
   refresh: refreshDashboardSummary,
 } = useDashboardSummary()
 
+initializeDashboardTheme()
+onBeforeUnmount(disposeDashboardTheme)
+
 const overlayClass = computed(() =>
   clsx(
-    'fixed inset-0 z-20 bg-black/40 lg:hidden transition-opacity duration-200',
+    'fixed inset-0 z-20 bg-ui-overlay/40 lg:hidden transition-opacity duration-200',
     sidebarOpen.value ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none',
   )
 )
@@ -30,7 +34,7 @@ const sidebarClass = computed(() =>
 </script>
 
 <template>
-  <div class="flex h-screen bg-dark overflow-hidden">
+  <div class="flex h-screen bg-ui-canvas overflow-hidden">
     <!-- Sidebar overlay — mobile only -->
     <div
       :class="overlayClass"
@@ -58,7 +62,7 @@ const sidebarClass = computed(() =>
       </AppHeader>
 
       <!-- Content -->
-      <main class="flex-1 overflow-y-auto bg-dark p-4 sm:p-6">
+      <main class="flex-1 overflow-y-auto bg-ui-canvas p-4 sm:p-6">
         <slot />
       </main>
     </div>

@@ -36,7 +36,7 @@ function unitFor(line: BillingDraftLine): string {
 <template>
   <div class="space-y-4">
     <!-- Context strip -->
-    <div class="flex items-center justify-between text-xs text-muted">
+    <div class="flex items-center justify-between text-xs text-ui-muted">
       <span v-if="row.tenantName" class="truncate">{{ row.tenantName }}</span>
       <span v-if="periodLabel" class="shrink-0">Kỳ {{ periodLabel }}</span>
     </div>
@@ -74,7 +74,7 @@ function unitFor(line: BillingDraftLine): string {
       <template #line-extra="{ line }">
         <p
           v-if="meterCell(line as BillingDraftLine)"
-          class="mt-0.5 text-xs text-muted tabular-nums"
+          class="mt-0.5 text-xs text-ui-muted tabular-nums"
         >
           <template v-if="meterCell(line as BillingDraftLine)!.previousValue !== null || meterCell(line as BillingDraftLine)!.currentValue !== null">
             {{ formatMeterReading(meterCell(line as BillingDraftLine)!.previousValue) }}
@@ -88,24 +88,24 @@ function unitFor(line: BillingDraftLine): string {
         </p>
         <p
           v-else-if="line.chargeType === 'rent' && line.quantity !== 1"
-          class="mt-0.5 text-xs text-muted tabular-nums"
+          class="mt-0.5 text-xs text-ui-muted tabular-nums"
         >
           {{ formatViNumber(line.quantity) }} × {{ formatCurrency(line.unitPrice) }}
         </p>
         <p
           v-else-if="line.chargeType === 'service' && line.quantity > 1"
-          class="mt-0.5 text-xs text-muted tabular-nums"
+          class="mt-0.5 text-xs text-ui-muted tabular-nums"
         >
           {{ formatViNumber(line.quantity) }} × {{ formatCurrency(line.unitPrice) }}
         </p>
       </template>
     </BillingChargeBreakdown>
 
-    <section class="border-t border-dark-border pt-4" aria-labelledby="incidental-charge-heading">
+    <section class="border-t border-ui-border pt-4" aria-labelledby="incidental-charge-heading">
       <div class="flex items-start justify-between gap-3">
         <div class="min-w-0">
-          <h3 id="incidental-charge-heading" class="text-sm font-semibold text-white">Khoản phát sinh kỳ này</h3>
-          <p class="mt-0.5 text-xs text-muted">Chỉ tính cho phòng này trong kỳ đang xem.</p>
+          <h3 id="incidental-charge-heading" class="text-sm font-semibold text-ui-primary">Khoản phát sinh kỳ này</h3>
+          <p class="mt-0.5 text-xs text-ui-muted">Chỉ tính cho phòng này trong kỳ đang xem.</p>
         </div>
         <UiButton v-if="canManageIncidental && row.editable && row.contractId" variant="ghost" size="sm" class="shrink-0 whitespace-nowrap" @click="$emit('add-incidental')">
           <IconPlus class="h-4 w-4" aria-hidden="true" />
@@ -113,18 +113,18 @@ function unitFor(line: BillingDraftLine): string {
         </UiButton>
       </div>
 
-      <div v-if="incidentalCharges?.length" class="mt-3 divide-y divide-dark-border">
+      <div v-if="incidentalCharges?.length" class="mt-3 divide-y divide-ui-border">
         <div v-for="charge in incidentalCharges" :key="charge.id" class="flex items-start justify-between gap-3 py-3 first:pt-0 last:pb-0">
           <div class="min-w-0">
-            <p class="text-sm font-medium text-white">{{ charge.label }}</p>
-            <p v-if="charge.note" class="mt-0.5 break-words text-xs text-muted">{{ charge.note }}</p>
+            <p class="text-sm font-medium text-ui-primary">{{ charge.label }}</p>
+            <p v-if="charge.note" class="mt-0.5 break-words text-xs text-ui-muted">{{ charge.note }}</p>
           </div>
           <div class="flex shrink-0 items-center gap-2">
-            <span class="text-sm font-semibold tabular-nums text-white">{{ formatCurrency(charge.amount) }}</span>
+            <span class="text-sm font-semibold tabular-nums text-ui-primary">{{ formatCurrency(charge.amount) }}</span>
             <UiButton
               v-if="canManageIncidental && row.editable"
               unstyled
-              class="inline-flex size-9 items-center justify-center rounded-md text-muted transition-colors hover:bg-dark-hover hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan/40"
+              class="inline-flex size-9 items-center justify-center rounded-md text-ui-muted transition-colors hover:bg-ui-hover hover:text-ui-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-accent/40"
               :aria-label="`Sửa ${charge.label}`"
               @click="$emit('edit-incidental', charge)"
             >
@@ -133,7 +133,7 @@ function unitFor(line: BillingDraftLine): string {
           </div>
         </div>
       </div>
-      <p v-else class="mt-3 text-sm text-muted">Chưa có khoản phát sinh trong kỳ này.</p>
+      <p v-else class="mt-3 text-sm text-ui-muted">Chưa có khoản phát sinh trong kỳ này.</p>
 
       <UiAlert v-if="!row.editable && incidentalCharges?.length" class="mt-3" severity="info">
         Hóa đơn đã phát hành hoặc kỳ đã khóa. Dùng luồng điều chỉnh hóa đơn nếu cần thay đổi.

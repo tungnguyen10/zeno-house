@@ -18,24 +18,24 @@ defineProps<{
 const accentBorder: Record<string, string> = {
   default: 'border-l-dark-border',
   accent: 'border-l-cyan',
-  success: 'border-l-success-neon',
+  success: 'border-l-status-success',
   warning: 'border-l-warning',
-  danger: 'border-l-error-vivid',
+  danger: 'border-l-status-danger',
 }
 
 // Value retains semantic color for scannability in ops context.
 const valueColor: Record<string, string> = {
-  default: 'text-white',
-  accent: 'text-cyan',
-  success: 'text-success-neon',
-  warning: 'text-warning',
-  danger: 'text-error-vivid',
+  default: 'text-ui-primary',
+  accent: 'text-ui-accent',
+  success: 'text-status-success',
+  warning: 'text-status-warning',
+  danger: 'text-status-danger',
 }
 </script>
 
 <template>
   <div :class="clsx('flex flex-col gap-1 border-l-2 py-2 pl-3', accentBorder[tone ?? 'default'])">
-    <p class="text-[10px] font-medium uppercase tracking-widest text-muted">{{ label }}</p>
+    <p class="text-[10px] font-medium uppercase tracking-widest text-ui-muted">{{ label }}</p>
     <UiSkeleton v-if="loading" class="h-5 w-20" />
     <p
       v-else
@@ -43,6 +43,6 @@ const valueColor: Record<string, string> = {
     >
       {{ value }}
     </p>
-    <p v-if="caption && !loading" class="text-[10px] text-muted/60">{{ caption }}</p>
+    <p v-if="caption && !loading" class="text-[10px] text-ui-muted/60">{{ caption }}</p>
   </div>
 </template>

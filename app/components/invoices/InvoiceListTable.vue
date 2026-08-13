@@ -56,7 +56,7 @@ function dueLabel(row: InvoiceListItem): string {
         v-for="row in rows"
         v-else
         :key="row.id"
-        class="flex items-start gap-3 rounded-lg border border-dark-border bg-dark-surface p-3 transition hover:bg-dark-hover"
+        class="flex items-start gap-3 rounded-lg border border-ui-border bg-ui-surface p-3 transition hover:bg-ui-hover"
       >
         <UiCheckbox
           v-if="row.status !== 'void'"
@@ -68,15 +68,15 @@ function dueLabel(row: InvoiceListItem): string {
         <UiButton
           unstyled
           :aria-label="`Mở hoá đơn ${row.invoice_code}`"
-          class="min-w-0 flex-1 rounded-md text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan/40"
+          class="min-w-0 flex-1 rounded-md text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-ui-accent/40"
           @click="emit('open', row)"
         >
           <div class="flex items-start justify-between gap-3">
             <div class="min-w-0 flex-1">
-              <p class="truncate text-sm font-medium text-white">{{ row.tenant_name ?? 'Khách thuê' }}</p>
-              <p class="mt-0.5 truncate text-xs text-muted">{{ roomLabel(row) }}</p>
-              <p class="mt-1 truncate text-xs tabular-nums text-muted">{{ row.invoice_code }} · {{ periodLabel(row) }}</p>
-              <p v-if="row.tenant_phone" class="mt-0.5 truncate text-xs tabular-nums text-muted">
+              <p class="truncate text-sm font-medium text-ui-primary">{{ row.tenant_name ?? 'Khách thuê' }}</p>
+              <p class="mt-0.5 truncate text-xs text-ui-muted">{{ roomLabel(row) }}</p>
+              <p class="mt-1 truncate text-xs tabular-nums text-ui-muted">{{ row.invoice_code }} · {{ periodLabel(row) }}</p>
+              <p v-if="row.tenant_phone" class="mt-0.5 truncate text-xs tabular-nums text-ui-muted">
                 {{ row.tenant_phone }}
               </p>
             </div>
@@ -86,20 +86,20 @@ function dueLabel(row: InvoiceListItem): string {
           </div>
           <div class="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
             <div class="min-w-0">
-              <p class="text-muted">Tổng</p>
-              <p class="mt-0.5 truncate text-white tabular-nums">{{ formatCurrency(row.total_amount) }}</p>
+              <p class="text-ui-muted">Tổng</p>
+              <p class="mt-0.5 truncate text-ui-primary tabular-nums">{{ formatCurrency(row.total_amount) }}</p>
             </div>
             <div class="min-w-0 text-right">
-              <p class="text-muted">Đã thu</p>
-              <p class="mt-0.5 truncate text-white tabular-nums">{{ formatCurrency(row.paid_amount) }}</p>
+              <p class="text-ui-muted">Đã thu</p>
+              <p class="mt-0.5 truncate text-ui-primary tabular-nums">{{ formatCurrency(row.paid_amount) }}</p>
             </div>
             <div class="min-w-0">
-              <p class="text-muted">Hạn</p>
-              <p class="mt-0.5 truncate text-white tabular-nums">{{ dueLabel(row) }}</p>
+              <p class="text-ui-muted">Hạn</p>
+              <p class="mt-0.5 truncate text-ui-primary tabular-nums">{{ dueLabel(row) }}</p>
             </div>
             <div class="min-w-0 text-right">
-              <p class="text-muted">Còn lại</p>
-              <p :class="['mt-0.5 truncate tabular-nums', row.balance_amount > 0 ? 'font-medium text-error-vivid' : 'text-success-neon']">
+              <p class="text-ui-muted">Còn lại</p>
+              <p :class="['mt-0.5 truncate tabular-nums', row.balance_amount > 0 ? 'font-medium text-status-danger' : 'text-status-success']">
                 {{ formatCurrency(row.balance_amount) }}
               </p>
             </div>
@@ -129,31 +129,31 @@ function dueLabel(row: InvoiceListItem): string {
         />
       </template>
       <template #cell-invoice="{ row }">
-        <span class="block truncate font-medium text-white">{{ row.invoice_code }}</span>
-        <span class="block truncate text-xs text-muted">{{ row.contract_code ?? row.contract_id }}</span>
+        <span class="block truncate font-medium text-ui-primary">{{ row.invoice_code }}</span>
+        <span class="block truncate text-xs text-ui-muted">{{ row.contract_code ?? row.contract_id }}</span>
       </template>
       <template #cell-period="{ row }">
         <span class="tabular-nums">{{ periodLabel(row) }}</span>
       </template>
       <template #cell-building="{ row }">
-        <span class="block truncate text-white">{{ row.building_name ?? '---' }}</span>
-        <span class="block truncate text-xs text-muted">{{ row.room_number ? `P.${row.room_number}` : row.room_id }}</span>
+        <span class="block truncate text-ui-primary">{{ row.building_name ?? '---' }}</span>
+        <span class="block truncate text-xs text-ui-muted">{{ row.room_number ? `P.${row.room_number}` : row.room_id }}</span>
       </template>
       <template #cell-tenant="{ row }">
-        <span class="block truncate text-white">{{ row.tenant_name ?? '---' }}</span>
-        <span class="block truncate text-xs text-muted">{{ row.tenant_phone ?? '' }}</span>
+        <span class="block truncate text-ui-primary">{{ row.tenant_name ?? '---' }}</span>
+        <span class="block truncate text-xs text-ui-muted">{{ row.tenant_phone ?? '' }}</span>
       </template>
       <template #cell-total_amount="{ row }">{{ formatCurrency(row.total_amount) }}</template>
       <template #cell-paid_amount="{ row }">
-        <span :class="row.paid_amount > 0 ? 'text-white' : 'text-muted'">{{ formatCurrency(row.paid_amount) }}</span>
+        <span :class="row.paid_amount > 0 ? 'text-ui-primary' : 'text-ui-muted'">{{ formatCurrency(row.paid_amount) }}</span>
       </template>
       <template #cell-balance_amount="{ row }">
-        <span :class="row.balance_amount > 0 ? 'font-medium text-error-vivid' : 'text-success-neon'">
+        <span :class="row.balance_amount > 0 ? 'font-medium text-status-danger' : 'text-status-success'">
           {{ formatCurrency(row.balance_amount) }}
         </span>
       </template>
       <template #cell-due_date="{ row }">
-        <span :class="row.due_date ? 'tabular-nums' : 'text-muted'">{{ row.due_date ?? '---' }}</span>
+        <span :class="row.due_date ? 'tabular-nums' : 'text-ui-muted'">{{ row.due_date ?? '---' }}</span>
       </template>
       <template #cell-status="{ row }">
         <UiStatusBadge :status="row.status" context="invoice" />

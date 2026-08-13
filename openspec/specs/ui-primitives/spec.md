@@ -1,13 +1,28 @@
 ## Purpose
 
-Defines the catalog of generic UI primitives in `app/components/ui/` — buttons, inputs, modals, badges, alerts, tables, tabs, layout primitives, feedback states, and confirmation surfaces — so domain pages and workflows can be composed from a stable, dark-themed component vocabulary instead of hand-written markup.
+Defines the catalog of generic UI primitives in `app/components/ui/` — buttons, inputs, modals, badges, alerts, tables, tabs, layout primitives, feedback states, and confirmation surfaces — so domain pages and workflows can be composed from a stable, semantic theme-aware component vocabulary instead of hand-written markup.
 ## Requirements
+### Requirement: Shared primitives consume semantic theme tokens
+All shared `Ui*` primitives used by dashboard routes SHALL consume semantic Tailwind color tokens for surfaces, content, borders, actions, feedback, focus, loading, disabled, error, and success states. They SHALL resolve to the existing dark presentation outside an active light dashboard.
+
+#### Scenario: Primitive renders in light dashboard
+- **WHEN** a shared primitive renders while the dashboard document theme is light
+- **THEN** every theme-sensitive state uses the light semantic values without requiring a theme prop
+
+#### Scenario: Primitive retains dark auth fallback
+- **WHEN** the same primitive renders on an auth route without an active light dashboard theme
+- **THEN** it retains the established dark operational presentation
+
+#### Scenario: Overlay primitive follows dashboard theme
+- **WHEN** a primitive teleports its content to the document body
+- **THEN** the teleported content resolves the active dashboard semantic variables
+
 ### Requirement: UiButton hỗ trợ variant và size
 `UiButton` SHALL hỗ trợ `variant` (`primary` | `secondary` | `danger` | `ghost`) và `size` (`sm` | `md` | `lg`). SHALL support `loading` và `disabled` state. SHALL render `<button>` với đúng type attribute. Icon and icon-only usages SHALL be accessible with visible text or an aria-label.
 
 #### Scenario: UiButton render đúng theo variant
 - **WHEN** UiButton được render với `variant="primary"`
-- **THEN** button có visual style cyan accent consistent with the dark operational theme
+- **THEN** button có visual style accent consistent with the resolved operational theme
 
 #### Scenario: UiButton ghost variant
 - **WHEN** UiButton được render với `variant="ghost"`
@@ -63,7 +78,7 @@ Defines the catalog of generic UI primitives in `app/components/ui/` — buttons
 - **THEN** the root exposes `data-invalid` or `data-disabled`, the control exposes `aria-invalid`, and helper/error text is wired through `aria-describedby`
 
 ### Requirement: UiDatePicker supports calendar date picking
-`UiDatePicker` SHALL provide the standard domain/page date entry control. It SHALL render a button trigger and dark calendar popover, preserve `modelValue` as an ISO `YYYY-MM-DD` string, emit `update:modelValue` and `change`, support `label`, `placeholder`, `error`, `hint`, `required`, `disabled`, compact density, `dateMode`, `minDate`, and `maxDate`, and expose field state consistently with other form primitives.
+`UiDatePicker` SHALL provide the standard domain/page date entry control. It SHALL render a button trigger and theme-aware calendar popover, preserve `modelValue` as an ISO `YYYY-MM-DD` string, emit `update:modelValue` and `change`, support `label`, `placeholder`, `error`, `hint`, `required`, `disabled`, compact density, `dateMode`, `minDate`, and `maxDate`, and expose field state consistently with other form primitives.
 
 #### Scenario: Date picker displays selected date
 - **WHEN** UiDatePicker receives `modelValue="2026-07-08"`
@@ -169,7 +184,7 @@ The system SHALL provide `UiSelect` as the standard select control for forms and
 
 #### Scenario: Select with label and options
 - **WHEN** `UiSelect` is rendered with label and options
-- **THEN** it displays a dark themed select control with label, selected value, and available options
+- **THEN** it displays a theme-aware select control with label, selected value, and available options
 
 #### Scenario: Select error state
 - **WHEN** `UiSelect` receives an error
@@ -211,7 +226,7 @@ The system SHALL provide `UiCheckbox` and `UiToggle` for boolean choices.
 
 #### Scenario: Toggle for immediate operational switch
 - **WHEN** a settings table needs an on/off switch
-- **THEN** it can use `UiToggle` with stable size, dark inactive state, cyan active state, and accessible label
+- **THEN** it can use `UiToggle` with stable size, semantic inactive/accent states, and accessible label
 
 ### Requirement: Generic badge primitive
 The system SHALL provide `UiBadge` for small semantic labels and status markers.
@@ -229,7 +244,7 @@ The system SHALL provide `UiAlert` for inline feedback and blockers.
 
 #### Scenario: Error alert
 - **WHEN** an API or validation error needs to be shown
-- **THEN** `UiAlert` renders a dark themed danger alert with readable text
+- **THEN** `UiAlert` renders a theme-aware danger alert with readable text
 
 #### Scenario: Warning blocker
 - **WHEN** a billing workflow has missing readings or unsupported pricing
@@ -240,7 +255,7 @@ The system SHALL provide `UiTable` for operational data tables.
 
 #### Scenario: Dense table
 - **WHEN** `UiTable` is rendered in dense mode
-- **THEN** it uses compact row height, dark header/body surfaces, dark borders, and readable `text-sm` cells
+- **THEN** it uses compact row height, semantic header/body surfaces and borders, and readable `text-sm` cells in either theme
 
 #### Scenario: Table loading state
 - **WHEN** table data is loading
@@ -297,7 +312,7 @@ The system SHALL standardize modal and optional drawer surfaces for operational 
 
 #### Scenario: Drawer for dense correction forms
 - **WHEN** a workflow needs a dense correction or override form
-- **THEN** the system may provide `UiDrawer` or side panel with dark surface styling and clear actions
+- **THEN** the system may provide `UiDrawer` or side panel with theme-aware surface styling and clear actions
 
 #### Scenario: Drawer accessible name and focus
 - **WHEN** `UiDrawer` is open
@@ -316,7 +331,7 @@ The UI primitive system SHALL provide a searchable selection primitive for choos
 
 #### Scenario: Empty result is visible
 - **WHEN** the searchable select has no matching options for the current query
-- **THEN** it renders a consistent dark themed empty state instead of an unstyled blank dropdown
+- **THEN** it renders a consistent theme-aware empty state instead of an unstyled blank dropdown
 
 #### Scenario: Searchable select error state
 - **WHEN** the searchable select receives an error string
@@ -347,7 +362,7 @@ The UI primitive system SHALL provide a searchable selection primitive for choos
 
 #### Scenario: Compact select in toolbar or table
 - **WHEN** `UiSelect` is rendered with compact density
-- **THEN** it uses reduced height and padding while preserving placeholder, disabled state, option rendering, error state, and dark select arrow styling
+- **THEN** it uses reduced height and padding while preserving placeholder, disabled state, option rendering, error state, and theme-aware select arrow styling
 
 #### Scenario: Compact textarea for dense correction note
 - **WHEN** `UiTextarea` is rendered with compact density

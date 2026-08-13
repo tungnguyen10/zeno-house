@@ -44,10 +44,10 @@ function toggle(value: T) {
       :disabled="disabled"
       :class="[
         'inline-flex h-7 items-center rounded-full border px-3 text-xs font-medium transition-colors',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan/30',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-accent/30',
         isActive(option.value)
-          ? 'border-cyan/40 bg-cyan/10 text-cyan'
-          : 'border-dark-border bg-dark-surface text-muted hover:border-dark-border hover:text-white',
+          ? 'border-ui-accent/40 bg-ui-accent/10 text-ui-accent'
+          : 'border-ui-border bg-ui-surface text-ui-muted hover:border-ui-border hover:text-ui-primary',
         disabled && 'cursor-not-allowed opacity-60',
       ]"
       @click="toggle(option.value)"

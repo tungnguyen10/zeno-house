@@ -26,7 +26,7 @@ const accessibleLabel = computed(() => props.title ? undefined : (props.ariaLabe
 
 const panelClass = computed(() =>
   clsx(
-    'relative z-10 flex w-full max-h-[calc(100dvh-2rem)] flex-col rounded-2xl bg-dark-card shadow-xl',
+    'relative z-10 flex w-full max-h-[calc(100dvh-2rem)] flex-col rounded-2xl bg-ui-chrome shadow-xl',
     props.mobileFullscreen && 'h-dvh max-h-dvh rounded-none sm:h-auto sm:max-h-[calc(100dvh-2rem)] sm:rounded-2xl',
     {
       'max-w-md': props.size === 'sm',
@@ -130,7 +130,7 @@ watch(
       >
         <!-- Backdrop -->
         <div
-          class="absolute inset-0 bg-black/50"
+          class="absolute inset-0 bg-ui-overlay/50"
           aria-hidden="true"
           @click="emit('close')"
         />
@@ -138,13 +138,13 @@ watch(
         <!-- Dialog panel -->
         <div :class="panelClass">
           <!-- Header -->
-          <div class="flex shrink-0 items-center justify-between border-b border-dark-border px-6 py-4">
-            <h2 :id="titleId" class="text-base font-semibold text-white">
+          <div class="flex shrink-0 items-center justify-between border-b border-ui-border px-6 py-4">
+            <h2 :id="titleId" class="text-base font-semibold text-ui-primary">
               {{ title }}
             </h2>
             <button
               type="button"
-              class="rounded-md p-1 text-muted hover:bg-dark-hover hover:text-white transition-colors"
+              class="rounded-md p-1 text-ui-muted hover:bg-ui-hover hover:text-ui-primary transition-colors"
               aria-label="Đóng"
               @click="emit('close')"
             >
@@ -160,7 +160,7 @@ watch(
           <!-- Footer -->
           <div
             v-if="$slots.footer"
-            class="flex shrink-0 flex-col-reverse gap-2 border-t border-dark-border px-6 py-4 sm:flex-row sm:justify-end sm:gap-3"
+            class="flex shrink-0 flex-col-reverse gap-2 border-t border-ui-border px-6 py-4 sm:flex-row sm:justify-end sm:gap-3"
           >
             <slot name="footer" />
           </div>

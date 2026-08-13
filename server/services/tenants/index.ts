@@ -20,6 +20,7 @@ import { AUDIT_ACTIONS } from '~/utils/constants/audit'
 import { db } from '../../utils/db'
 import { throwValidationError } from '../../utils/errors'
 import { TenantAccountLinkRepository } from '../../repositories/tenant-portal/account-links'
+import { AuditOperationService } from '../audit-operations'
 
 const TENANT_ID_IMAGE_BUCKET = 'tenant-id-images'
 const MAX_TENANT_ID_IMAGE_BYTES = 5 * 1024 * 1024
@@ -316,6 +317,15 @@ export const TenantService = {
     }
 
     const path = `${existing.id}/${side}/${randomUUID()}.${ext}`
+    const operation = await AuditOperationService.begin(event, {
+      idempotencyKey: `tenant-id-image-upload:${existing.id}:${side}:${randomUUID()}`,
+      actorId: user.id,
+      buildingId: await TenantRepository.findActiveBuildingIdForTenant(event, existing.id),
+      action: AUDIT_ACTIONS.TENANT_UPDATED,
+      entityType: 'tenant',
+      entityId: existing.id,
+      intentData: { kind: 'tenant_id_image_upload', side, contentType, byteLength: file.data.length },
+    })
     const storage = db(event).storage.from(TENANT_ID_IMAGE_BUCKET)
     const { error: uploadError } = await storage.upload(path, file.data, {
       contentType,
@@ -327,13 +337,11 @@ export const TenantService = {
     const previousPath = side === 'front' ? existing.idCardFrontPath : existing.idCardBackPath
     if (previousPath) await storage.remove([previousPath])
 
-    await AuditService.append(event, user, {
-      building_id: null,
-      action: AUDIT_ACTIONS.TENANT_UPDATED,
-      entity_type: 'tenant',
-      entity_id: updated.id,
-      before_data: existing,
-      after_data: updated,
+    await AuditOperationService.complete(event, operation.id, {
+      outcomeData: { storage: 'uploaded', side },
+      beforeData: existing,
+      afterData: updated,
+      metadata: { kind: 'tenant_id_image_upload', side },
     })
 
     return withSignedTenantIdImages(event, updated)
@@ -351,18 +359,25 @@ export const TenantService = {
     if (!existing) throwNotFound('Không tìm thấy khách thuê')
 
     const previousPath = side === 'front' ? existing.idCardFrontPath : existing.idCardBackPath
+    const operation = await AuditOperationService.begin(event, {
+      idempotencyKey: `tenant-id-image-remove:${existing.id}:${side}:${randomUUID()}`,
+      actorId: user.id,
+      buildingId: await TenantRepository.findActiveBuildingIdForTenant(event, existing.id),
+      action: AUDIT_ACTIONS.TENANT_UPDATED,
+      entityType: 'tenant',
+      entityId: existing.id,
+      intentData: { kind: 'tenant_id_image_remove', side, hadObject: Boolean(previousPath) },
+    })
     const updated = await TenantRepository.updateIdImagePath(event, existing.id, side, null)
     if (previousPath) {
       await db(event).storage.from(TENANT_ID_IMAGE_BUCKET).remove([previousPath])
     }
 
-    await AuditService.append(event, user, {
-      building_id: null,
-      action: AUDIT_ACTIONS.TENANT_UPDATED,
-      entity_type: 'tenant',
-      entity_id: updated.id,
-      before_data: existing,
-      after_data: updated,
+    await AuditOperationService.complete(event, operation.id, {
+      outcomeData: { storage: previousPath ? 'removed' : 'absent', side },
+      beforeData: existing,
+      afterData: updated,
+      metadata: { kind: 'tenant_id_image_remove', side },
     })
 
     return withSignedTenantIdImages(event, updated)
@@ -372,7 +387,7 @@ export const TenantService = {
     event: H3Event,
     user: AuthUser,
     id: string,
-    opts: { force?: boolean; reason: string; buildingId?: string } = { reason: '' },
+    opts: { force?: boolean; reason: string; buildingId?: string; emitAudit?: boolean } = { reason: '' },
   ): Promise<Tenant | undefined> {
     const existing = await TenantRepository.findByIdentifier(event, id)
     if (!existing) throwNotFound('Không tìm thấy khách thuê')
@@ -391,7 +406,7 @@ export const TenantService = {
 
     if (opts.force) {
       const archived = await TenantRepository.softArchive(event, existing.id)
-      await AuditService.append(event, user, {
+      if (opts.emitAudit !== false) await AuditService.append(event, user, {
         building_id: scopeBuildingId ?? null,
         action: AUDIT_ACTIONS.TENANT_ARCHIVED,
         entity_type: 'tenant',
@@ -427,7 +442,7 @@ export const TenantService = {
     }
 
     await TenantRepository.remove(event, existing.id)
-    await AuditService.append(event, user, {
+    if (opts.emitAudit !== false) await AuditService.append(event, user, {
       building_id: scopeBuildingId ?? null,
       action: AUDIT_ACTIONS.TENANT_REMOVED,
       entity_type: 'tenant',
@@ -447,6 +462,11 @@ export const TenantService = {
 
     const succeeded: string[] = []
     const failed: { id: string; reason: string }[] = []
+    const scopes = new Map<string, string | null>(await Promise.all(input.ids.map(async id => [
+      id,
+      await TenantRepository.findActiveBuildingIdForTenant(event, id) ?? input.building_id ?? null,
+    ] as const)))
+    const beforeSnapshots = await BulkActionRepository.resolveSnapshots(event, 'tenant', input.ids)
 
     if (input.action !== 'delete') {
       const rows = await BulkActionRepository.execute(event, 'tenant', input.action, input.ids)
@@ -456,12 +476,15 @@ export const TenantService = {
       }
       const bulkActionCode = input.action === 'archive'
         ? AUDIT_ACTIONS.TENANT_ARCHIVED
-        : AUDIT_ACTIONS.TENANT_REMOVED
+        : input.action === 'activate'
+          ? AUDIT_ACTIONS.TENANT_ACTIVATED
+          : AUDIT_ACTIONS.TENANT_REMOVED
+      const afterSnapshots = await BulkActionRepository.resolveSnapshots(event, 'tenant', succeeded)
       await AuditService.appendBulk(event, user, {
         building_id: null,
         entity_type: 'tenant',
         aggregate_action: `tenant.bulk_${input.action}`,
-        items: succeeded.map(id => ({ entity_id: id, action: bulkActionCode })),
+        items: succeeded.map(id => ({ entity_id: id, building_id: scopes.get(id) ?? null, action: bulkActionCode, before_data: beforeSnapshots.get(id), after_data: afterSnapshots.get(id) })),
         succeeded,
         total: input.ids.length,
         failed: failed.length,
@@ -474,6 +497,7 @@ export const TenantService = {
         await TenantService.remove(event, user, id, {
           reason: input.reason!,
           buildingId: input.building_id,
+          emitAudit: false,
         })
         succeeded.push(id)
       }
@@ -503,7 +527,7 @@ export const TenantService = {
       building_id: null,
       entity_type: 'tenant',
       aggregate_action: `tenant.bulk_${input.action}`,
-      items: succeeded.map(id => ({ entity_id: id, action: bulkActionCode })),
+      items: succeeded.map(id => ({ entity_id: id, building_id: scopes.get(id) ?? null, action: bulkActionCode, before_data: beforeSnapshots.get(id) })),
       succeeded,
       total: input.ids.length,
       failed: failed.length,

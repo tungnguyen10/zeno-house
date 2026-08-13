@@ -115,7 +115,7 @@ async function onSubmit(data: BuildingFormData) {
       {{ apiError }}
     </UiAlert>
 
-    <div class="rounded-xl border border-dark-border bg-dark-surface p-6">
+    <div class="rounded-xl border border-ui-border bg-ui-surface p-6">
       <BuildingForm
       v-model="formData"
       :loading="isLoading"
@@ -129,12 +129,12 @@ async function onSubmit(data: BuildingFormData) {
       @discard-draft="clearDraft"
     >
       <template #extras>
-        <div class="border-t border-dark-border" />
+        <div class="border-t border-ui-border" />
         <section class="space-y-4">
           <header class="flex items-start justify-between gap-3">
             <div>
-              <h3 class="text-sm font-semibold text-white">Tạo phòng nhanh</h3>
-              <p class="text-xs text-muted mt-0.5">Tạo trước một loạt phòng (mã, giá thuê) cùng lúc với toà nhà — tuỳ chọn.</p>
+              <h3 class="text-sm font-semibold text-ui-primary">Tạo phòng nhanh</h3>
+              <p class="text-xs text-ui-muted mt-0.5">Tạo trước một loạt phòng (mã, giá thuê) cùng lúc với toà nhà — tuỳ chọn.</p>
             </div>
             <UiCheckbox v-model="enableQuickRooms" label="Bật" />
           </header>
@@ -181,10 +181,10 @@ async function onSubmit(data: BuildingFormData) {
               <UiAlert v-if="hasDuplicateRoomCodes" severity="warning" class="mb-3">
                 Mã phòng bị trùng. Vui lòng thay đổi tiền tố hoặc số bắt đầu.
               </UiAlert>
-              <p class="mb-2 text-xs text-muted">Xem trước {{ previewRooms.length }} phòng sẽ được tạo:</p>
+              <p class="mb-2 text-xs text-ui-muted">Xem trước {{ previewRooms.length }} phòng sẽ được tạo:</p>
               <UiTable :rows="previewRooms" :columns="previewColumns" row-key="roomNumber">
                 <template #cell-roomNumber="{ row }">
-                  <span class="font-mono text-white">{{ row.roomNumber }}</span>
+                  <span class="font-mono text-ui-primary">{{ row.roomNumber }}</span>
                 </template>
                 <template #cell-rent="{ row }">
                   <UiInput

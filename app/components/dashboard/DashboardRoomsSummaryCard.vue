@@ -26,42 +26,42 @@ const segments = computed(() => {
   <div class="flex h-full flex-col">
     <div class="flex items-baseline justify-between gap-3">
       <div>
-        <p class="text-2xl font-semibold tabular-nums text-cyan">{{ occupancyPercent }}%</p>
-        <p class="mt-0.5 text-xs text-muted">tỷ lệ lấp đầy</p>
+        <p class="text-2xl font-semibold tabular-nums text-ui-accent">{{ occupancyPercent }}%</p>
+        <p class="mt-0.5 text-xs text-ui-muted">tỷ lệ lấp đầy</p>
       </div>
-      <p class="text-xs tabular-nums text-muted">
-        <span class="font-medium text-white">{{ rooms.occupied }}</span> / {{ rooms.total }} phòng
+      <p class="text-xs tabular-nums text-ui-muted">
+        <span class="font-medium text-ui-primary">{{ rooms.occupied }}</span> / {{ rooms.total }} phòng
       </p>
     </div>
 
     <div
-      class="mt-4 flex h-2 overflow-hidden rounded-full bg-dark-border"
+      class="mt-4 flex h-2 overflow-hidden rounded-full bg-ui-border"
       role="img"
       :aria-label="`${occupancyPercent}% phòng đang thuê`"
     >
-      <div class="bg-cyan transition-[width]" :style="{ width: `${segments.occupied}%` }" />
-      <div class="bg-success-neon/80 transition-[width]" :style="{ width: `${segments.available}%` }" />
-      <div class="bg-warning transition-[width]" :style="{ width: `${segments.maintenance}%` }" />
+      <div class="bg-ui-accent transition-[width]" :style="{ width: `${segments.occupied}%` }" />
+      <div class="bg-status-success/80 transition-[width]" :style="{ width: `${segments.available}%` }" />
+      <div class="bg-status-warning transition-[width]" :style="{ width: `${segments.maintenance}%` }" />
     </div>
 
-    <div class="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
+    <div class="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-ui-muted">
       <span class="inline-flex items-center gap-1.5">
-        <span class="inline-block h-2 w-2 rounded-sm bg-cyan" aria-hidden="true" />
-        Đang thuê <span class="tabular-nums text-white">{{ rooms.occupied }}</span>
+        <span class="inline-block h-2 w-2 rounded-sm bg-ui-accent" aria-hidden="true" />
+        Đang thuê <span class="tabular-nums text-ui-primary">{{ rooms.occupied }}</span>
       </span>
       <span class="inline-flex items-center gap-1.5">
-        <span class="inline-block h-2 w-2 rounded-sm bg-success-neon/80" aria-hidden="true" />
-        Trống <span class="tabular-nums text-white">{{ rooms.available }}</span>
+        <span class="inline-block h-2 w-2 rounded-sm bg-status-success/80" aria-hidden="true" />
+        Trống <span class="tabular-nums text-ui-primary">{{ rooms.available }}</span>
       </span>
       <span class="inline-flex items-center gap-1.5">
-        <span class="inline-block h-2 w-2 rounded-sm bg-warning" aria-hidden="true" />
-        Bảo trì <span class="tabular-nums text-white">{{ rooms.maintenance }}</span>
+        <span class="inline-block h-2 w-2 rounded-sm bg-status-warning" aria-hidden="true" />
+        Bảo trì <span class="tabular-nums text-ui-primary">{{ rooms.maintenance }}</span>
       </span>
     </div>
 
-    <div class="mt-3 border-t border-dark-border pt-3 text-xs text-muted sm:mt-auto">
-      <span class="tabular-nums text-white">{{ buildingCount }}</span> tòa nhà ·
-      <span class="tabular-nums text-white">{{ rooms.total }}</span> phòng quản lý
+    <div class="mt-3 border-t border-ui-border pt-3 text-xs text-ui-muted sm:mt-auto">
+      <span class="tabular-nums text-ui-primary">{{ buildingCount }}</span> tòa nhà ·
+      <span class="tabular-nums text-ui-primary">{{ rooms.total }}</span> phòng quản lý
     </div>
   </div>
 </template>

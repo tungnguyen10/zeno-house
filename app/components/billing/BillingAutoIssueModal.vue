@@ -59,37 +59,37 @@ function submit() {
 <template>
   <UiModal :open="open" title="Phát hành & thu" size="md" @close="emit('close')">
     <div v-if="row" class="space-y-4">
-      <p class="text-sm text-muted">
-        Phòng <span class="font-semibold text-white">P{{ row.roomNumber ?? '—' }}</span>
+      <p class="text-sm text-ui-muted">
+        Phòng <span class="font-semibold text-ui-primary">P{{ row.roomNumber ?? '—' }}</span>
         <span v-if="row.tenantName"> · {{ row.tenantName }}</span>
       </p>
 
-      <div class="rounded-lg border border-dark-border bg-dark-surface p-3">
+      <div class="rounded-lg border border-ui-border bg-ui-surface p-3">
         <div class="flex items-center justify-between">
-          <span class="text-xs text-muted">Tổng thu</span>
-          <span class="text-lg font-semibold tabular-nums text-white">{{ formatCurrency(draftTotal) }}</span>
+          <span class="text-xs text-ui-muted">Tổng thu</span>
+          <span class="text-lg font-semibold tabular-nums text-ui-primary">{{ formatCurrency(draftTotal) }}</span>
         </div>
-        <p class="mt-1 text-[11px] text-muted">
+        <p class="mt-1 text-[11px] text-ui-muted">
           Phát hành hoá đơn và ghi nhận đã thu đủ trong một thao tác.
         </p>
       </div>
 
       <div class="space-y-1">
-        <label class="text-xs text-muted">Ngày thanh toán</label>
+        <label class="text-xs text-ui-muted">Ngày thanh toán</label>
         <UiDatePicker v-model="form.payment_date" date-mode="payment" class="w-full" />
       </div>
 
       <div class="space-y-1">
-        <label class="text-xs text-muted">Hình thức</label>
+        <label class="text-xs text-ui-muted">Hình thức</label>
         <UiInput v-model="form.payment_method" placeholder="cash, bank transfer..." class="w-full" />
       </div>
 
       <div class="space-y-1">
-        <label class="text-xs text-muted">Ghi chú (tuỳ chọn)</label>
+        <label class="text-xs text-ui-muted">Ghi chú (tuỳ chọn)</label>
         <UiTextarea v-model="form.note" :rows="2" class="w-full" />
       </div>
 
-      <p v-if="error" class="text-xs text-rose-400">{{ error }}</p>
+      <p v-if="error" class="text-xs text-status-danger">{{ error }}</p>
     </div>
 
     <template #footer>

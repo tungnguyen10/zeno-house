@@ -100,7 +100,7 @@ onKeyStroke('ArrowUp', (event) => {
       ref="triggerRef"
       data-operations-trigger
       unstyled
-      class="relative flex size-11 items-center justify-center rounded-full border border-dark-border bg-dark-surface/70 text-muted transition-colors hover:border-cyan/30 hover:bg-dark-hover hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan/40"
+      class="relative flex size-11 items-center justify-center rounded-full border border-ui-border bg-ui-surface/70 text-ui-muted transition-colors hover:border-ui-accent/30 hover:bg-ui-hover hover:text-ui-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-accent/40"
       aria-label="Mở việc cần xử lý"
       aria-haspopup="dialog"
       :aria-expanded="isOpen"
@@ -112,7 +112,7 @@ onKeyStroke('ArrowUp', (event) => {
       <span
         v-if="!loading && !error && items.length > 0"
         data-operations-indicator
-        class="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-cyan ring-2 ring-dark-surface"
+        class="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-ui-accent ring-2 ring-ui-surface"
         aria-hidden="true"
       />
     </UiButton>
@@ -132,11 +132,11 @@ onKeyStroke('ArrowUp', (event) => {
         role="dialog"
         aria-modal="false"
         aria-label="Việc cần xử lý"
-        class="fixed inset-x-4 top-16 z-50 w-auto origin-top-right overflow-hidden rounded-xl border border-dark-border bg-dark-card shadow-xl shadow-black/40 lg:absolute lg:inset-x-auto lg:right-0 lg:top-full lg:mt-2 lg:w-[22rem]"
+        class="fixed inset-x-4 top-16 z-50 w-auto origin-top-right overflow-hidden rounded-xl border border-ui-border bg-ui-chrome shadow-xl shadow-ui-shadow/40 lg:absolute lg:inset-x-auto lg:right-0 lg:top-full lg:mt-2 lg:w-[22rem]"
       >
-        <header class="border-b border-dark-border px-4 py-3">
-          <p class="text-sm font-semibold text-white">Việc cần xử lý</p>
-          <p class="mt-0.5 text-xs text-muted">Cảnh báo vận hành trong kỳ hiện tại</p>
+        <header class="border-b border-ui-border px-4 py-3">
+          <p class="text-sm font-semibold text-ui-primary">Việc cần xử lý</p>
+          <p class="mt-0.5 text-xs text-ui-muted">Cảnh báo vận hành trong kỳ hiện tại</p>
         </header>
 
         <div v-if="loading" class="space-y-2 p-3" aria-label="Đang tải việc cần xử lý">
@@ -144,7 +144,7 @@ onKeyStroke('ArrowUp', (event) => {
         </div>
 
         <div v-else-if="error" class="space-y-3 p-4 text-sm">
-          <p class="text-error-vivid">{{ error }}</p>
+          <p class="text-status-danger">{{ error }}</p>
           <UiButton
             data-retry-operations
             variant="secondary"
@@ -157,17 +157,17 @@ onKeyStroke('ArrowUp', (event) => {
         </div>
 
         <div v-else-if="!items.length" class="px-4 py-8 text-center">
-          <p class="text-sm font-medium text-white">Không có việc tồn</p>
-          <p class="mt-1 text-xs text-muted">Mọi kỳ vận hành hiện đã ổn.</p>
+          <p class="text-sm font-medium text-ui-primary">Không có việc tồn</p>
+          <p class="mt-1 text-xs text-ui-muted">Mọi kỳ vận hành hiện đã ổn.</p>
         </div>
 
-        <div v-else class="divide-y divide-dark-border">
+        <div v-else class="divide-y divide-ui-border">
           <NuxtLink
             v-for="item in visibleItems"
             :key="`${item.type}-${item.building.id}-${item.period}`"
             data-operation-item
             :to="pendingOperationPath(item)"
-            class="group grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-4 py-3 hover:bg-dark-hover focus-visible:bg-dark-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-cyan/40"
+            class="group grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-4 py-3 hover:bg-ui-hover focus-visible:bg-ui-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ui-accent/40"
             @click="close()"
           >
             <span
@@ -176,14 +176,14 @@ onKeyStroke('ArrowUp', (event) => {
               aria-hidden="true"
             />
             <span class="min-w-0">
-              <span class="block truncate text-sm font-medium text-white">
+              <span class="block truncate text-sm font-medium text-ui-primary">
                 {{ pendingOperationLabel(item.type) }} · {{ item.building.name }}
               </span>
-              <span class="mt-0.5 block text-xs text-muted">
+              <span class="mt-0.5 block text-xs text-ui-muted">
                 {{ formatPeriodDisplay(item.period) }} · {{ item.count }} mục
               </span>
             </span>
-            <span class="flex items-center gap-1 text-xs tabular-nums text-muted group-hover:text-white">
+            <span class="flex items-center gap-1 text-xs tabular-nums text-ui-muted group-hover:text-ui-primary">
               <span v-if="item.amount !== undefined">{{ formatCurrency(item.amount) }}</span>
               <IconChevronRight class="h-4 w-4 shrink-0" aria-hidden="true" />
             </span>
@@ -194,7 +194,7 @@ onKeyStroke('ArrowUp', (event) => {
           v-if="hasMore"
           data-view-all-operations
           to="/dashboard#pending-operations"
-          class="flex min-h-11 items-center justify-center border-t border-dark-border px-4 text-xs font-medium text-cyan hover:bg-dark-hover focus-visible:bg-dark-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-cyan/40"
+          class="flex min-h-11 items-center justify-center border-t border-ui-border px-4 text-xs font-medium text-ui-accent hover:bg-ui-hover focus-visible:bg-ui-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ui-accent/40"
           @click="close()"
         >
           Xem tất cả {{ items.length }} việc cần xử lý

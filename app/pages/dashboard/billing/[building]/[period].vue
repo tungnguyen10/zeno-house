@@ -374,7 +374,7 @@ watch(
                 </template>
                 Nhật ký
                 <template v-if="recentAuditCount > 0" #trailing>
-                  <span class="ml-auto rounded-full bg-cyan/20 px-1.5 py-0.5 text-xs font-medium text-cyan tabular-nums">
+                  <span class="ml-auto rounded-full bg-ui-accent/20 px-1.5 py-0.5 text-xs font-medium text-ui-accent tabular-nums">
                     {{ recentAuditCount }}
                   </span>
                 </template>
@@ -385,7 +385,7 @@ watch(
                 </template>
                 {{ exportLoading ? 'Đang xuất…' : 'Xuất Excel' }}
               </UiDropdownMenuItem>
-              <div class="my-1 h-px bg-dark-border" />
+              <div class="my-1 h-px bg-ui-border" />
               <UiDropdownMenuItem
                 :disabled="!canClose || period?.status === 'closed'"
                 :title="period?.status !== 'closed' ? 'Còn công nợ chưa thu — không thể chốt kỳ' : (!canClose ? 'Bạn không có quyền chốt kỳ' : undefined)"
@@ -482,7 +482,7 @@ watch(
 
       <UiModal :open="reopenOpen" title="Mở lại kỳ vận hành" size="sm" @close="reopenOpen = false">
         <div class="space-y-3">
-          <p class="text-sm text-muted">
+          <p class="text-sm text-ui-muted">
             Kỳ sẽ chuyển từ trạng thái chốt về đang thu để bạn có thể chỉnh sửa nghiệp vụ liên quan.
           </p>
           <UiTextarea
@@ -491,7 +491,7 @@ watch(
             :rows="3"
             placeholder="Nhập tối thiểu 10 ký tự"
           />
-          <p class="text-xs text-muted text-right">
+          <p class="text-xs text-ui-muted text-right">
             {{ reopenReason.trim().length }}/10 ký tự tối thiểu
           </p>
           <UiAlert v-if="reopenError" severity="danger">{{ reopenError }}</UiAlert>

@@ -140,8 +140,8 @@ const waterLabel = computed(() => {
       >
         <div class="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p class="text-sm font-medium text-white">Không thể xoá tòa nhà này</p>
-            <p class="mt-1 text-xs text-muted">
+            <p class="text-sm font-medium text-ui-primary">Không thể xoá tòa nhà này</p>
+            <p class="mt-1 text-xs text-ui-muted">
               <template v-if="conflictDetails.rooms">
                 Còn {{ conflictDetails.rooms }} phòng.
               </template>
@@ -168,40 +168,40 @@ const waterLabel = computed(() => {
       </div>
 
       <!-- Section: Overview -->
-      <section id="overview" class="mt-6 rounded-xl border border-dark-border bg-dark-surface p-6">
-        <h3 class="text-sm font-semibold text-white mb-4">Thông tin tổng quan</h3>
+      <section id="overview" class="mt-6 rounded-xl border border-ui-border bg-ui-surface p-6">
+        <h3 class="text-sm font-semibold text-ui-primary mb-4">Thông tin tổng quan</h3>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <p class="text-xs text-muted mb-1">Địa chỉ</p>
-            <p class="text-sm text-white">{{ building.address }}</p>
+            <p class="text-xs text-ui-muted mb-1">Địa chỉ</p>
+            <p class="text-sm text-ui-primary">{{ building.address }}</p>
           </div>
           <div>
-            <p class="text-xs text-muted mb-1">Ngày tạo</p>
-            <p class="text-sm text-white">{{ new Date(building.createdAt).toLocaleDateString('vi-VN') }}</p>
+            <p class="text-xs text-ui-muted mb-1">Ngày tạo</p>
+            <p class="text-sm text-ui-primary">{{ new Date(building.createdAt).toLocaleDateString('vi-VN') }}</p>
           </div>
           <div v-if="building.ownerName">
-            <p class="text-xs text-muted mb-1">Tên chủ nhà</p>
-            <p class="text-sm text-white">{{ building.ownerName }}</p>
+            <p class="text-xs text-ui-muted mb-1">Tên chủ nhà</p>
+            <p class="text-sm text-ui-primary">{{ building.ownerName }}</p>
           </div>
           <div v-if="building.ownerPhone">
-            <p class="text-xs text-muted mb-1">Số điện thoại</p>
-            <p class="text-sm text-white">{{ building.ownerPhone }}</p>
+            <p class="text-xs text-ui-muted mb-1">Số điện thoại</p>
+            <p class="text-sm text-ui-primary">{{ building.ownerPhone }}</p>
           </div>
           <div v-if="building.ownerEmail">
-            <p class="text-xs text-muted mb-1">Email</p>
-            <p class="text-sm text-white">{{ building.ownerEmail }}</p>
+            <p class="text-xs text-ui-muted mb-1">Email</p>
+            <p class="text-sm text-ui-primary">{{ building.ownerEmail }}</p>
           </div>
         </div>
         <div v-if="building.description" class="mt-4">
-          <p class="text-xs text-muted mb-1">Mô tả</p>
-          <p class="text-sm text-white">{{ building.description }}</p>
+          <p class="text-xs text-ui-muted mb-1">Mô tả</p>
+          <p class="text-sm text-ui-primary">{{ building.description }}</p>
         </div>
       </section>
 
       <!-- Section: Services + Billing -->
-      <section id="services" class="mt-4 rounded-xl border border-dark-border bg-dark-surface p-6">
+      <section id="services" class="mt-4 rounded-xl border border-ui-border bg-ui-surface p-6">
         <header class="flex items-center justify-between mb-4">
-          <h3 class="text-sm font-semibold text-white">Dịch vụ & cấu hình tính phí</h3>
+          <h3 class="text-sm font-semibold text-ui-primary">Dịch vụ & cấu hình tính phí</h3>
           <UiButton
             v-if="authStore.canManage"
             variant="secondary"
@@ -214,37 +214,37 @@ const waterLabel = computed(() => {
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
           <div>
-            <p class="text-xs text-muted mb-1">Tính tiền điện</p>
-            <p class="text-sm text-white">
+            <p class="text-xs text-ui-muted mb-1">Tính tiền điện</p>
+            <p class="text-sm text-ui-primary">
               {{ electricityLabel }}
-              <span v-if="building.defaultElectricityRate" class="text-muted"> — {{ building.defaultElectricityRate.toLocaleString('vi-VN') }}đ</span>
+              <span v-if="building.defaultElectricityRate" class="text-ui-muted"> — {{ building.defaultElectricityRate.toLocaleString('vi-VN') }}đ</span>
             </p>
           </div>
           <div>
-            <p class="text-xs text-muted mb-1">Tính tiền nước</p>
-            <p class="text-sm text-white">
+            <p class="text-xs text-ui-muted mb-1">Tính tiền nước</p>
+            <p class="text-sm text-ui-primary">
               {{ waterLabel }}
-              <span v-if="building.defaultWaterRate" class="text-muted"> — {{ building.defaultWaterRate.toLocaleString('vi-VN') }}đ</span>
+              <span v-if="building.defaultWaterRate" class="text-ui-muted"> — {{ building.defaultWaterRate.toLocaleString('vi-VN') }}đ</span>
             </p>
           </div>
         </div>
 
-        <div class="rounded-lg border border-dark-border bg-dark-deep/30 p-4">
+        <div class="rounded-lg border border-ui-border bg-ui-deep/30 p-4">
           <div v-if="loadingServices" class="space-y-2">
             <UiSkeleton v-for="n in 3" :key="n" class="h-10 rounded-lg" />
           </div>
-          <div v-else-if="buildingServices.length === 0" class="text-sm text-muted">
+          <div v-else-if="buildingServices.length === 0" class="text-sm text-ui-muted">
             Chưa cấu hình dịch vụ.
           </div>
-          <div v-else class="divide-y divide-dark-border">
+          <div v-else class="divide-y divide-ui-border">
             <div
               v-for="service in buildingServices"
               :key="service.id"
               class="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0"
             >
               <div class="min-w-0">
-                <p class="text-sm font-medium text-white truncate">{{ service.catalog.name }}</p>
-                <p class="text-xs text-muted">
+                <p class="text-sm font-medium text-ui-primary truncate">{{ service.catalog.name }}</p>
+                <p class="text-xs text-ui-muted">
                   {{ service.defaultAmount.toLocaleString('vi-VN') }}đ · {{ service.pricingType }}
                 </p>
               </div>
@@ -264,58 +264,58 @@ const waterLabel = computed(() => {
       </section>
 
       <!-- Section: Operations -->
-      <section id="operations" class="mt-4 rounded-xl border border-dark-border bg-dark-surface p-6">
-        <h3 class="text-sm font-semibold text-white mb-4">Vận hành</h3>
+      <section id="operations" class="mt-4 rounded-xl border border-ui-border bg-ui-surface p-6">
+        <h3 class="text-sm font-semibold text-ui-primary mb-4">Vận hành</h3>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
           <div v-if="building.meterReadingDay">
-            <p class="text-xs text-muted mb-1">Ngày chốt số</p>
-            <p class="text-sm text-white">{{ building.meterReadingDay }}</p>
+            <p class="text-xs text-ui-muted mb-1">Ngày chốt số</p>
+            <p class="text-sm text-ui-primary">{{ building.meterReadingDay }}</p>
           </div>
           <div v-if="building.billingGenerationDay">
-            <p class="text-xs text-muted mb-1">Ngày lập hóa đơn</p>
-            <p class="text-sm text-white">{{ building.billingGenerationDay }}</p>
+            <p class="text-xs text-ui-muted mb-1">Ngày lập hóa đơn</p>
+            <p class="text-sm text-ui-primary">{{ building.billingGenerationDay }}</p>
           </div>
           <div v-if="building.paymentDueDay">
-            <p class="text-xs text-muted mb-1">Ngày đến hạn</p>
-            <p class="text-sm text-white">{{ building.paymentDueDay }}</p>
+            <p class="text-xs text-ui-muted mb-1">Ngày đến hạn</p>
+            <p class="text-sm text-ui-primary">{{ building.paymentDueDay }}</p>
           </div>
           <div>
-            <p class="text-xs text-muted mb-1">Số ngày gia hạn</p>
-            <p class="text-sm text-white">{{ building.gracePeriodDays }}</p>
+            <p class="text-xs text-ui-muted mb-1">Số ngày gia hạn</p>
+            <p class="text-sm text-ui-primary">{{ building.gracePeriodDays }}</p>
           </div>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-4 border-t border-dark-border">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-4 border-t border-ui-border">
           <NuxtLink
             :to="`/dashboard/rooms?building=${building.slug}`"
-            class="rounded-lg border border-dark-border bg-dark-deep/40 px-4 py-3 text-sm text-white hover:border-cyan/40 transition-colors"
+            class="rounded-lg border border-ui-border bg-ui-deep/40 px-4 py-3 text-sm text-ui-primary hover:border-ui-accent/40 transition-colors"
           >
             <div class="flex items-center gap-2">
-              <IconDoor class="h-4 w-4 text-cyan" aria-hidden="true" />
+              <IconDoor class="h-4 w-4 text-ui-accent" aria-hidden="true" />
               Xem phòng ({{ building.totalRooms }})
             </div>
-            <p class="mt-1 text-xs text-muted">Quản lý phòng trong tòa</p>
+            <p class="mt-1 text-xs text-ui-muted">Quản lý phòng trong tòa</p>
           </NuxtLink>
           <NuxtLink
             :to="`/dashboard/contracts?building=${building.slug}`"
-            class="rounded-lg border border-dark-border bg-dark-deep/40 px-4 py-3 text-sm text-white hover:border-cyan/40 transition-colors"
+            class="rounded-lg border border-ui-border bg-ui-deep/40 px-4 py-3 text-sm text-ui-primary hover:border-ui-accent/40 transition-colors"
           >
             <div class="flex items-center gap-2">
-              <IconDocumentText class="h-4 w-4 text-cyan" aria-hidden="true" />
+              <IconDocumentText class="h-4 w-4 text-ui-accent" aria-hidden="true" />
               Xem hợp đồng
             </div>
-            <p class="mt-1 text-xs text-muted">Hợp đồng thuê đang hoạt động</p>
+            <p class="mt-1 text-xs text-ui-muted">Hợp đồng thuê đang hoạt động</p>
           </NuxtLink>
           <NuxtLink
             :to="`/dashboard/buildings/${building.slug}/meter-readings`"
-            class="rounded-lg border border-dark-border bg-dark-deep/40 px-4 py-3 text-sm text-white hover:border-cyan/40 transition-colors"
+            class="rounded-lg border border-ui-border bg-ui-deep/40 px-4 py-3 text-sm text-ui-primary hover:border-ui-accent/40 transition-colors"
           >
             <div class="flex items-center gap-2">
-              <IconChart class="h-4 w-4 text-cyan" aria-hidden="true" />
+              <IconChart class="h-4 w-4 text-ui-accent" aria-hidden="true" />
               Đọc đồng hồ tháng này
             </div>
-            <p class="mt-1 text-xs text-muted">Nhập chỉ số điện, nước</p>
+            <p class="mt-1 text-xs text-ui-muted">Nhập chỉ số điện, nước</p>
           </NuxtLink>
         </div>
       </section>
@@ -324,11 +324,11 @@ const waterLabel = computed(() => {
       <section
         v-if="authStore.canManage"
         id="danger-zone"
-        class="mt-4 rounded-xl border border-error/30 bg-error/5 p-6"
+        class="mt-4 rounded-xl border border-status-danger/30 bg-status-danger/5 p-6"
       >
-        <h3 class="text-sm font-semibold text-error mb-2">Vùng nguy hiểm</h3>
+        <h3 class="text-sm font-semibold text-status-danger mb-2">Vùng nguy hiểm</h3>
         <div class="flex flex-wrap items-center justify-between gap-3">
-          <p class="text-xs text-muted">
+          <p class="text-xs text-ui-muted">
             Xoá tòa nhà sẽ xoá vĩnh viễn dữ liệu. Chỉ thực hiện được khi không còn phòng và hợp đồng đang hoạt động.
           </p>
           <UiButton variant="danger" size="sm" @click="showDeleteModal = true">

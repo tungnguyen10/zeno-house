@@ -22,7 +22,7 @@ const repoMocks = vi.hoisted(() => ({
   findExistingIdentifiers: vi.fn(),
   insertMany: vi.fn(),
 }))
-const bulkRepoMocks = vi.hoisted(() => ({ execute: vi.fn() }))
+const bulkRepoMocks = vi.hoisted(() => ({ resolveSnapshots: vi.fn(), execute: vi.fn() }))
 const tenantAccountLinkRepoMocks = vi.hoisted(() => ({
   getByTenantId: vi.fn(),
 }))
@@ -172,6 +172,7 @@ beforeEach(() => {
   bulkRepoMocks.execute.mockImplementation((_event, _entity, _action, ids: string[]) =>
     Promise.resolve(ids.map(id => ({ id, succeeded: true, reason: null }))),
   )
+  bulkRepoMocks.resolveSnapshots.mockResolvedValue(new Map())
   repoMocks.findExistingIdentifiers.mockResolvedValue({ phones: new Set(), idNumbers: new Set() })
   repoMocks.insertMany.mockImplementation(async (_event, inputs: Array<{ full_name: string, phone: string }>) =>
     Promise.all(inputs.map(input => repoMocks.insert(_event, input))),

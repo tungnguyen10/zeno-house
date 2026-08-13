@@ -26,7 +26,7 @@ function canVisit(step: number) {
 </script>
 
 <template>
-  <nav aria-label="Tiến trình tạo hợp đồng" class="rounded-lg border border-dark-border bg-dark-surface p-3">
+  <nav aria-label="Tiến trình tạo hợp đồng" class="rounded-lg border border-ui-border bg-ui-surface p-3">
     <ol class="grid grid-cols-3 gap-2">
       <li v-for="step in steps" :key="step.value">
         <UiButton
@@ -34,10 +34,10 @@ function canVisit(step: number) {
           class="flex w-full items-center gap-2 rounded-md border px-3 py-2 text-left text-sm transition-colors"
           :class="[
             step.value === currentStep
-              ? 'border-cyan/60 bg-cyan/10 text-white'
+              ? 'border-ui-accent/60 bg-ui-accent/10 text-ui-primary'
               : canVisit(step.value)
-                ? 'border-dark-border bg-dark-hover/50 text-white hover:border-cyan/40'
-                : 'border-dark-border bg-dark-deep/40 text-muted',
+                ? 'border-ui-border bg-ui-hover/50 text-ui-primary hover:border-ui-accent/40'
+                : 'border-ui-border bg-ui-deep/40 text-ui-muted',
           ]"
           :disabled="!canVisit(step.value)"
           @click="emit('change', step.value)"
@@ -45,10 +45,10 @@ function canVisit(step: number) {
           <span
             class="flex size-6 shrink-0 items-center justify-center rounded-full border text-xs font-semibold"
             :class="(completedSteps ?? []).includes(step.value)
-              ? 'border-cyan bg-cyan text-dark-deep'
+              ? 'border-ui-accent bg-ui-accent text-ui-on-accent'
               : step.value === currentStep
-                ? 'border-cyan text-cyan'
-                : 'border-dark-border text-muted'"
+                ? 'border-ui-accent text-ui-accent'
+                : 'border-ui-border text-ui-muted'"
           >
             {{ (completedSteps ?? []).includes(step.value) ? '✓' : step.value }}
           </span>

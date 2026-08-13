@@ -19,7 +19,6 @@ function mountTenantLayout() {
         PortalHeader: true,
         PortalTabBar: true,
         PortalToastHost: true,
-        PortalInstallPrompt: true,
         PortalSplash: { template: '<div data-test="portal-splash" />' },
         Transition: false,
       },
@@ -75,6 +74,20 @@ describe('tenant layout', () => {
 
       const layout = readFileSync(resolve(layoutsDirectory, layoutFile), 'utf8')
       expect(layout, `${layoutFile} must not mount the tenant portal splash`).not.toContain('<PortalSplash')
+    }
+  })
+
+  it('mounts the single PWA install host at app scope instead of inside a role layout', () => {
+    const app = readFileSync(resolve('app/app.vue'), 'utf8')
+    const layoutsDirectory = resolve('app/layouts')
+
+    expect(app).toContain('<PortalInstallPrompt />')
+
+    for (const layoutFile of readdirSync(layoutsDirectory)) {
+      if (!layoutFile.endsWith('.vue')) continue
+
+      const layout = readFileSync(resolve(layoutsDirectory, layoutFile), 'utf8')
+      expect(layout, `${layoutFile} must not own the app-wide install host`).not.toContain('<PortalInstallPrompt')
     }
   })
 })

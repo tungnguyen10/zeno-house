@@ -113,6 +113,7 @@ describe('BuildingInvoiceEmailSettingsService', () => {
       buildingId: 'building-1',
       autoSendEnabled: true,
       updatedBy: owner.id,
+      operationId: expect.any(String),
     })
     expect(result).toMatchObject({ autoSendEnabled: true, featureAvailable: true })
   })

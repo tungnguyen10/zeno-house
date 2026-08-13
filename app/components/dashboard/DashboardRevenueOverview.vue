@@ -46,32 +46,32 @@ function formatShare(share: number): string {
   <div class="space-y-5">
     <dl data-revenue-summary class="grid grid-cols-1 gap-y-2 sm:grid-cols-3 sm:gap-x-6">
       <div class="flex min-w-0 items-baseline justify-between gap-3 sm:block">
-        <dt class="text-xs uppercase tracking-wide text-muted">Tổng doanh thu</dt>
-        <dd class="text-lg font-semibold tabular-nums text-white sm:mt-1 sm:text-2xl">
+        <dt class="text-xs uppercase tracking-wide text-ui-muted">Tổng doanh thu</dt>
+        <dd class="text-lg font-semibold tabular-nums text-ui-primary sm:mt-1 sm:text-2xl">
           {{ formatCurrency(breakdown.totalIssued) }}
         </dd>
       </div>
       <div class="flex min-w-0 items-baseline justify-between gap-3 sm:block">
-        <dt class="text-xs uppercase tracking-wide text-muted">
+        <dt class="text-xs uppercase tracking-wide text-ui-muted">
           Đã thu
-          <span class="ml-1 tabular-nums text-success-neon">{{ collectionRate }}%</span>
+          <span class="ml-1 tabular-nums text-status-success">{{ collectionRate }}%</span>
         </dt>
-        <dd class="text-lg font-semibold tabular-nums text-success-neon sm:mt-1 sm:text-2xl">
+        <dd class="text-lg font-semibold tabular-nums text-status-success sm:mt-1 sm:text-2xl">
           {{ formatCurrency(breakdown.totalPaid) }}
         </dd>
       </div>
       <div class="flex min-w-0 items-baseline justify-between gap-3 sm:block">
-        <dt class="text-xs uppercase tracking-wide text-muted">Còn lại</dt>
+        <dt class="text-xs uppercase tracking-wide text-ui-muted">Còn lại</dt>
         <dd
           class="text-lg font-semibold tabular-nums sm:mt-1 sm:text-2xl"
-          :class="outstandingAmount > 0 ? 'text-warning' : 'text-muted'"
+          :class="outstandingAmount > 0 ? 'text-status-warning' : 'text-ui-muted'"
         >
           {{ formatCurrency(outstandingAmount) }}
         </dd>
       </div>
     </dl>
 
-    <div class="flex h-1.5 overflow-hidden rounded-full bg-dark-border" role="img" aria-label="Tỷ trọng doanh thu theo nhóm">
+    <div class="flex h-1.5 overflow-hidden rounded-full bg-ui-border" role="img" aria-label="Tỷ trọng doanh thu theo nhóm">
       <div
         v-for="segment in segments"
         :key="segment.key"
@@ -82,26 +82,26 @@ function formatShare(share: number): string {
 
     <div
       data-revenue-grid
-      class="grid grid-cols-1 gap-5 border-t border-dark-border pt-5 lg:grid-cols-[minmax(15rem,3fr)_minmax(0,7fr)] lg:items-stretch"
+      class="grid grid-cols-1 gap-5 border-t border-ui-border pt-5 lg:grid-cols-[minmax(15rem,3fr)_minmax(0,7fr)] lg:items-stretch"
     >
-      <ul v-if="categoryRows.length" class="divide-y divide-dark-border rounded-lg border border-dark-border">
+      <ul v-if="categoryRows.length" class="divide-y divide-ui-border rounded-lg border border-ui-border">
         <li
           v-for="row in categoryRows"
           :key="row.key"
           class="grid grid-cols-[1rem_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-0.5 px-3 py-2.5 text-sm sm:grid-cols-[1rem_minmax(0,1fr)_auto_3rem]"
         >
           <span class="inline-block h-2.5 w-2.5 rounded-sm" :style="{ background: row.color }" aria-hidden="true" />
-          <span class="min-w-0 truncate text-white">{{ row.label }}</span>
-          <span class="whitespace-nowrap text-xs tabular-nums text-white sm:text-sm">{{ formatCurrency(row.amount) }}</span>
+          <span class="min-w-0 truncate text-ui-primary">{{ row.label }}</span>
+          <span class="whitespace-nowrap text-xs tabular-nums text-ui-primary sm:text-sm">{{ formatCurrency(row.amount) }}</span>
           <span
             :data-category-share="row.key"
-            class="col-start-2 text-xs tabular-nums text-muted sm:col-start-auto sm:text-right"
+            class="col-start-2 text-xs tabular-nums text-ui-muted sm:col-start-auto sm:text-right"
           >
             {{ formatShare(row.share) }}
           </span>
         </li>
       </ul>
-      <div v-else class="flex min-h-36 items-center justify-center rounded-lg border border-dashed border-dark-border px-4 text-center text-xs text-muted">
+      <div v-else class="flex min-h-36 items-center justify-center rounded-lg border border-dashed border-ui-border px-4 text-center text-xs text-ui-muted">
         Chưa có cơ cấu doanh thu trong năm nay.
       </div>
 

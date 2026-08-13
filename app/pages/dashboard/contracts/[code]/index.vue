@@ -183,8 +183,8 @@ watchEffect(() => {
       <UiAlert v-if="deleteConflict" severity="danger" class="mt-4">
         <div class="space-y-3">
           <div>
-            <p class="text-sm font-medium text-white">Chưa thể xoá hợp đồng</p>
-            <ul class="mt-2 space-y-1 text-sm text-muted">
+            <p class="text-sm font-medium text-ui-primary">Chưa thể xoá hợp đồng</p>
+            <ul class="mt-2 space-y-1 text-sm text-ui-muted">
               <li v-for="item in conflictItems" :key="item">- {{ item }}</li>
             </ul>
           </div>
@@ -205,14 +205,14 @@ watchEffect(() => {
         </div>
       </UiAlert>
 
-      <nav class="sticky top-0 z-20 mt-4 overflow-x-auto border-y border-dark-border bg-dark-deep/95 py-2 backdrop-blur">
+      <nav class="sticky top-0 z-20 mt-4 overflow-x-auto border-y border-ui-border bg-ui-deep/95 py-2 backdrop-blur">
         <div class="flex min-w-max gap-2 text-sm">
-          <a href="#overview" class="rounded-md px-3 py-1.5 text-muted hover:bg-dark-hover hover:text-white">Tổng quan</a>
-          <a href="#occupants" class="rounded-md px-3 py-1.5 text-muted hover:bg-dark-hover hover:text-white">Người ở</a>
-          <a href="#payments" class="rounded-md px-3 py-1.5 text-muted hover:bg-dark-hover hover:text-white">Thanh toán</a>
-          <a href="#services" class="rounded-md px-3 py-1.5 text-muted hover:bg-dark-hover hover:text-white">Dịch vụ</a>
-          <a href="#meter-readings" class="rounded-md px-3 py-1.5 text-muted hover:bg-dark-hover hover:text-white">Chỉ số</a>
-          <a href="#history" class="rounded-md px-3 py-1.5 text-muted hover:bg-dark-hover hover:text-white">Lịch sử</a>
+          <a href="#overview" class="rounded-md px-3 py-1.5 text-ui-muted hover:bg-ui-hover hover:text-ui-primary">Tổng quan</a>
+          <a href="#occupants" class="rounded-md px-3 py-1.5 text-ui-muted hover:bg-ui-hover hover:text-ui-primary">Người ở</a>
+          <a href="#payments" class="rounded-md px-3 py-1.5 text-ui-muted hover:bg-ui-hover hover:text-ui-primary">Thanh toán</a>
+          <a href="#services" class="rounded-md px-3 py-1.5 text-ui-muted hover:bg-ui-hover hover:text-ui-primary">Dịch vụ</a>
+          <a href="#meter-readings" class="rounded-md px-3 py-1.5 text-ui-muted hover:bg-ui-hover hover:text-ui-primary">Chỉ số</a>
+          <a href="#history" class="rounded-md px-3 py-1.5 text-ui-muted hover:bg-ui-hover hover:text-ui-primary">Lịch sử</a>
         </div>
       </nav>
 
@@ -242,7 +242,7 @@ watchEffect(() => {
 
       <!-- Services section -->
       <UiSection id="services" title="Dịch vụ hàng tháng" class="mt-6 scroll-mt-20">
-        <div class="rounded-xl border border-dark-border bg-dark-surface p-4">
+        <div class="rounded-xl border border-ui-border bg-ui-surface p-4">
           <ContractServicesTab
             :services="contractServices"
             :loading="servicesLoading"
@@ -255,7 +255,7 @@ watchEffect(() => {
 
       <!-- Handover readings section -->
       <UiSection id="meter-readings" title="Số bàn giao" class="mt-6 scroll-mt-20">
-        <div class="rounded-xl border border-dark-border bg-dark-surface p-4">
+        <div class="rounded-xl border border-ui-border bg-ui-surface p-4">
           <ContractHandoverReadings
             :contract-id="id"
             :room-id="contract.room.id"
@@ -268,7 +268,7 @@ watchEffect(() => {
 
       <!-- Renewal form inline -->
       <UiSection v-if="showRenewalForm" title="Gia hạn hợp đồng" class="mt-6 scroll-mt-20">
-        <div class="rounded-xl border border-cyan-800 bg-dark-surface p-4">
+        <div class="rounded-xl border border-ui-accent/40 bg-ui-surface p-4">
           <ContractRenewalForm
             :current-end-date="contract.endDate"
             :current-monthly-rent="contract.monthlyRent"
@@ -282,7 +282,7 @@ watchEffect(() => {
 
       <!-- Contract history -->
       <UiSection id="history" title="Lịch sử" class="mt-6 scroll-mt-20">
-        <div class="rounded-xl border border-dark-border bg-dark-surface p-4">
+        <div class="rounded-xl border border-ui-border bg-ui-surface p-4">
           <ContractRenewalHistoryList
             :renewals="renewals"
             :is-loading="renewalsLoading"
@@ -319,15 +319,15 @@ watchEffect(() => {
     />
 
     <!-- Delete service modal -->
-    <div v-if="deletingServiceId" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div class="w-full max-w-sm rounded-xl bg-dark-surface border border-dark-border p-6 space-y-4">
-        <h2 class="text-sm font-semibold text-white">Xoá dịch vụ khỏi hợp đồng</h2>
+    <div v-if="deletingServiceId" class="fixed inset-0 z-50 flex items-center justify-center bg-ui-overlay/60 p-4">
+      <div class="w-full max-w-sm rounded-xl bg-ui-surface border border-ui-border p-6 space-y-4">
+        <h2 class="text-sm font-semibold text-ui-primary">Xoá dịch vụ khỏi hợp đồng</h2>
         <div class="flex flex-col gap-1.5">
-          <label class="text-sm text-muted">Lý do xoá <span class="text-error">*</span></label>
+          <label class="text-sm text-ui-muted">Lý do xoá <span class="text-status-danger">*</span></label>
           <textarea
             v-model="deleteServiceReason"
             rows="3"
-            class="w-full rounded-md border border-dark-border bg-dark-deep px-3 py-2 text-base sm:text-sm text-white placeholder-muted resize-none focus:outline-none focus:ring-1 focus:ring-cyan"
+            class="w-full rounded-md border border-ui-border bg-ui-deep px-3 py-2 text-base sm:text-sm text-ui-primary placeholder-ui-muted resize-none focus:outline-none focus:ring-1 focus:ring-ui-accent"
             placeholder="Nhập lý do..."
           />
         </div>

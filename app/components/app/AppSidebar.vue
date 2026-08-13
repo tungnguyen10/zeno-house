@@ -33,14 +33,15 @@ const visibleNavSections = computed(() => {
     .filter(section => section.items.length > 0)
 })
 
-function isActive(to: string) {
+function isActive(item: NavItem) {
+  const to = item.activeMatch ?? item.to
   if (to === '/dashboard') return route.path === to
   return route.path === to || route.path.startsWith(`${to}/`)
 }
 
 const asideClass = computed(() =>
   clsx(
-    'flex shrink-0 flex-col bg-dark-card border-r border-dark-border h-full',
+    'flex shrink-0 flex-col bg-ui-chrome border-r border-ui-border h-full',
     'transition-[width] duration-200',
     // Mobile drawer is always full width; only the desktop rail collapses.
     'w-64',
@@ -50,7 +51,7 @@ const asideClass = computed(() =>
 
 const headerClass = computed(() =>
   clsx(
-    'group flex h-16 items-center gap-2 border-b border-dark-border',
+    'group flex h-16 items-center gap-2 border-b border-ui-border',
     sidebarCollapsed.value ? 'px-5 lg:px-0' : 'px-5',
   ),
 )
@@ -76,16 +77,16 @@ const collapseBtnClass = computed(() =>
   ),
 )
 
-function navItemClass(to: string) {
+function navItemClass(item: NavItem) {
   return clsx(
     'group relative flex min-h-11 items-center gap-3 rounded-lg border px-3 py-2 text-sm font-medium whitespace-nowrap',
     'transition-colors duration-150 motion-reduce:transition-none',
-    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-cyan/40',
+    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ui-accent/40',
     'lg:min-h-10',
     sidebarCollapsed.value && 'lg:justify-center lg:gap-0 lg:px-0',
-    isActive(to)
-      ? 'border-cyan/30 bg-cyan/10 text-cyan shadow-sm shadow-cyan/5 active:bg-cyan/15'
-      : 'border-transparent text-muted hover:border-dark-border hover:bg-dark-hover hover:text-white active:bg-dark-hover active:text-white',
+    isActive(item)
+      ? 'border-ui-accent/30 bg-ui-accent/10 text-ui-accent shadow-sm shadow-ui-accent/5 active:bg-ui-accent/15'
+      : 'border-transparent text-ui-muted hover:border-ui-border hover:bg-ui-hover hover:text-ui-primary active:bg-ui-hover active:text-ui-primary',
   )
 }
 
@@ -96,13 +97,13 @@ function labelClass() {
 function sectionClass(index: number) {
   return clsx(
     index > 0 && 'mt-4',
-    index > 0 && sidebarCollapsed.value && 'lg:mt-3 lg:border-t lg:border-dark-border lg:pt-3',
+    index > 0 && sidebarCollapsed.value && 'lg:mt-3 lg:border-t lg:border-ui-border lg:pt-3',
   )
 }
 
 function sectionLabelClass() {
   return clsx(
-    'mb-1.5 px-3 text-[11px] font-semibold leading-4 text-muted',
+    'mb-1.5 px-3 text-[11px] font-semibold leading-4 text-ui-muted',
     sidebarCollapsed.value && 'lg:sr-only',
   )
 }
@@ -113,12 +114,12 @@ function sectionLabelClass() {
     <!-- Logo -->
     <div :class="headerClass">
       <NuxtLink to="/dashboard" :class="logoLinkClass" aria-label="Zeno House — Trang chủ">
-        <IconLogo class="h-7 w-auto text-white" aria-hidden="true" />
+        <IconLogo class="h-7 w-auto text-ui-primary" aria-hidden="true" />
       </NuxtLink>
 
       <!-- Mini logo — desktop rail (hover swaps to the toggle) -->
       <NuxtLink to="/dashboard" :class="miniLogoClass" aria-label="Zeno House — Trang chủ">
-        <IconLogoMini class="h-6 w-auto text-cyan" aria-hidden="true" />
+        <IconLogoMini class="h-6 w-auto text-ui-accent" aria-hidden="true" />
       </NuxtLink>
 
       <!-- Collapse toggle — desktop only -->
@@ -171,14 +172,14 @@ function sectionLabelClass() {
           <li v-for="item in section.items" :key="item.key">
             <NuxtLink
               :to="item.to"
-              :class="navItemClass(item.to)"
+              :class="navItemClass(item)"
               :title="sidebarCollapsed ? item.label : undefined"
-              :aria-current="isActive(item.to) ? 'page' : undefined"
+              :aria-current="isActive(item) ? 'page' : undefined"
               @click="emit('close')"
             >
               <span
-                v-if="isActive(item.to)"
-                class="absolute inset-y-1.5 left-0 w-0.5 rounded-full bg-cyan"
+                v-if="isActive(item)"
+                class="absolute inset-y-1.5 left-0 w-0.5 rounded-full bg-ui-accent"
                 aria-hidden="true"
               />
               <component
@@ -198,7 +199,7 @@ function sectionLabelClass() {
       <NuxtLink
         to="/dashboard/profile"
         data-sidebar-user
-        class="flex items-center gap-3 rounded-xl border border-dark-border bg-dark-surface/40 px-3 py-2.5 transition-colors hover:border-cyan/20 hover:bg-dark-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-cyan/40"
+        class="flex items-center gap-3 rounded-xl border border-ui-border bg-ui-surface/40 px-3 py-2.5 transition-colors hover:border-ui-accent/20 hover:bg-ui-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ui-accent/40"
         :class="sidebarCollapsed && 'lg:justify-center lg:px-0'"
         @click="emit('close')"
       >
@@ -213,14 +214,14 @@ function sectionLabelClass() {
         >
         <div
           v-else
-          class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-cyan/20"
+          class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-ui-accent/20"
           aria-hidden="true"
         >
-          <span class="text-xs font-semibold text-cyan">{{ userInitial }}</span>
+          <span class="text-xs font-semibold text-ui-accent">{{ userInitial }}</span>
         </div>
         <div class="min-w-0 flex-1" :class="sidebarCollapsed && 'lg:hidden'">
-          <p class="truncate text-sm font-medium text-white">{{ displayName }}</p>
-          <p class="truncate text-xs text-muted">{{ authStore.role ?? 'user' }}</p>
+          <p class="truncate text-sm font-medium text-ui-primary">{{ displayName }}</p>
+          <p class="truncate text-xs text-ui-muted">{{ authStore.role ?? 'user' }}</p>
         </div>
       </NuxtLink>
     </div>

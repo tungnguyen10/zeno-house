@@ -386,9 +386,9 @@ function expenseLabel(category: BuildingExpense['category']) {
 
 /** Color a signed value: green when positive, red when negative. */
 function signedClass(value: number): string {
-  if (value > 0) return 'text-success-neon'
-  if (value < 0) return 'text-error-vivid'
-  return 'text-white'
+  if (value > 0) return 'text-status-success'
+  if (value < 0) return 'text-status-danger'
+  return 'text-ui-primary'
 }
 </script>
 
@@ -497,24 +497,24 @@ function signedClass(value: number): string {
         </div>
 
         <div class="grid grid-cols-1 gap-2 md:grid-cols-[minmax(0,1.15fr)_minmax(260px,0.85fr)]">
-          <div class="overflow-hidden rounded-xl border border-dark-border">
-            <div class="border-b border-dark-border px-3 py-2 sm:px-4">
-              <h3 class="text-sm font-semibold text-white">Doanh thu theo loại</h3>
+          <div class="overflow-hidden rounded-xl border border-ui-border">
+            <div class="border-b border-ui-border px-3 py-2 sm:px-4">
+              <h3 class="text-sm font-semibold text-ui-primary">Doanh thu theo loại</h3>
             </div>
 
-            <div class="divide-y divide-dark-border">
+            <div class="divide-y divide-ui-border">
               <div
                 v-for="row in revenueRows"
                 :key="row.key"
                 class="px-3 py-2 sm:px-4"
               >
                 <div class="flex items-center justify-between gap-3 text-sm">
-                  <span class="min-w-0 truncate text-muted">{{ row.label }}</span>
-                  <span class="shrink-0 tabular-nums text-white">{{ formatCurrency(row.amount) }}</span>
+                  <span class="min-w-0 truncate text-ui-muted">{{ row.label }}</span>
+                  <span class="shrink-0 tabular-nums text-ui-primary">{{ formatCurrency(row.amount) }}</span>
                 </div>
                 <p
                   v-if="row.utility"
-                  class="mt-1 flex items-center gap-x-2 text-xs text-muted"
+                  class="mt-1 flex items-center gap-x-2 text-xs text-ui-muted"
                 >
                   <span class="tabular-nums">Đầu vào {{ formatCurrency(row.utility.input) }}</span>
                   <span aria-hidden="true" class="text-dark-border">·</span>
@@ -532,29 +532,29 @@ function signedClass(value: number): string {
             </div>
           </div>
 
-          <div class="overflow-hidden rounded-xl border border-dark-border">
-            <div class="grid divide-y divide-dark-border">
+          <div class="overflow-hidden rounded-xl border border-ui-border">
+            <div class="grid divide-y divide-ui-border">
               <div>
-                <div class="flex items-center justify-between gap-3 border-b border-dark-border px-3 py-2 sm:px-4">
-                  <h3 class="text-sm font-semibold text-white">Chi phí cố định</h3>
+                <div class="flex items-center justify-between gap-3 border-b border-ui-border px-3 py-2 sm:px-4">
+                  <h3 class="text-sm font-semibold text-ui-primary">Chi phí cố định</h3>
                 </div>
 
-                <div class="divide-y divide-dark-border">
+                <div class="divide-y divide-ui-border">
                   <div
                     v-for="fc in report.fixedCosts"
                     :key="fc.id"
                     class="flex items-start justify-between gap-3 px-3 py-2 text-sm sm:px-4"
                   >
                     <div class="min-w-0">
-                      <span class="text-white">Tiền thuê nhà</span>
-                      <p class="mt-0.5 text-xs text-muted">
+                      <span class="text-ui-primary">Tiền thuê nhà</span>
+                      <p class="mt-0.5 text-xs text-ui-muted">
                         Từ {{ fc.effectiveFromPeriodMonth }}/{{ fc.effectiveFromPeriodYear }}
                         <template v-if="fc.effectiveToPeriodYear">
                           đến {{ fc.effectiveToPeriodMonth }}/{{ fc.effectiveToPeriodYear }}
                         </template>
                       </p>
                     </div>
-                    <span class="shrink-0 tabular-nums text-white">{{ formatCurrency(fc.amount) }}</span>
+                    <span class="shrink-0 tabular-nums text-ui-primary">{{ formatCurrency(fc.amount) }}</span>
                   </div>
                   <div v-if="report.fixedCosts.length === 0" class="px-5 py-6">
                     <UiEmptyState
@@ -566,29 +566,29 @@ function signedClass(value: number): string {
               </div>
 
               <div class="">
-                <div class="flex items-start justify-between gap-3 border-b border-dark-border px-3 py-2.5 sm:px-4">
+                <div class="flex items-start justify-between gap-3 border-b border-ui-border px-3 py-2.5 sm:px-4">
                   <div>
-                    <p class="text-[10px] font-medium uppercase tracking-widest text-muted">Phân bổ kỳ này</p>
-                    <h3 class="text-sm font-semibold text-white">Chi phí trả trước</h3>
+                    <p class="text-[10px] font-medium uppercase tracking-widest text-ui-muted">Phân bổ kỳ này</p>
+                    <h3 class="text-sm font-semibold text-ui-primary">Chi phí trả trước</h3>
                   </div>
                 </div>
 
-                <div class="divide-y divide-dark-border">
+                <div class="divide-y divide-ui-border">
                   <div
                     v-for="item in report.prepaidItems"
                     :key="item.id"
                     class="flex items-start justify-between gap-3 px-3 py-2 text-sm sm:px-4"
                   >
                     <div class="min-w-0">
-                      <span class="text-white">{{ item.name }}</span>
+                      <span class="text-ui-primary">{{ item.name }}</span>
                       <p
                         v-if="EXPENSE_CATEGORY_LABELS[item.category] !== item.name"
-                        class="mt-0.5 text-xs text-muted"
+                        class="mt-0.5 text-xs text-ui-muted"
                       >
                         {{ EXPENSE_CATEGORY_LABELS[item.category] }}
                       </p>
                     </div>
-                    <span class="shrink-0 tabular-nums text-white">{{ formatCurrency(item.monthlyAmount) }}</span>
+                    <span class="shrink-0 tabular-nums text-ui-primary">{{ formatCurrency(item.monthlyAmount) }}</span>
                   </div>
                   <div v-if="report.prepaidItems.length === 0" class="px-5 py-6">
                     <UiEmptyState
@@ -624,20 +624,20 @@ function signedClass(value: number): string {
         title="Nhắc chi phí sắp đến hạn"
         class="mt-6"
       >
-        <div class="rounded-2xl border border-dark-border bg-dark-surface divide-y divide-dark-border">
+        <div class="rounded-2xl border border-ui-border bg-ui-surface divide-y divide-ui-border">
           <div
             v-for="item in upcomingRecurringExpenses"
             :key="item.id"
             class="flex flex-col gap-3 px-5 py-3 sm:flex-row sm:items-center sm:justify-between"
           >
             <div>
-              <div class="font-medium text-white">{{ item.name }}</div>
-              <div class="mt-1 text-xs text-muted">
+              <div class="font-medium text-ui-primary">{{ item.name }}</div>
+              <div class="mt-1 text-xs text-ui-muted">
                 {{ EXPENSE_CATEGORY_LABELS[item.category] }} · {{ item.nextReminderAt }}
               </div>
             </div>
             <div class="flex items-center justify-between gap-2 sm:justify-end">
-              <span class="tabular-nums text-white">{{ formatCurrency(item.estimatedAmount) }}</span>
+              <span class="tabular-nums text-ui-primary">{{ formatCurrency(item.estimatedAmount) }}</span>
               <UiButton v-if="canWriteExpense" size="sm" @click="recordReminder(item)">
                 Ghi nhận
               </UiButton>
@@ -680,7 +680,7 @@ function signedClass(value: number): string {
       <!-- Expenses -->
       <UiSection title="Chi phí phát sinh trong tháng" class="mt-6">
         <template #actions>
-          <span class="text-sm font-semibold tabular-nums text-white">
+          <span class="text-sm font-semibold tabular-nums text-ui-primary">
             {{ formatCurrency(expenseCategory ? filteredExpenseTotal : metrics.monthlyExpenseTotal) }}
           </span>
           <UiButton v-if="canWriteExpense" size="sm" @click="openCreateExpense">
@@ -688,10 +688,10 @@ function signedClass(value: number): string {
             Thêm chi phí
           </UiButton>
         </template>
-        <div class="overflow-hidden rounded-2xl border border-dark-border bg-dark-surface">
+        <div class="overflow-hidden rounded-2xl border border-ui-border bg-ui-surface">
           <table class="hidden w-full text-sm md:table">
             <thead>
-              <tr class="border-b border-dark-border text-left text-xs text-muted">
+              <tr class="border-b border-ui-border text-left text-xs text-ui-muted">
                 <th class="px-5 py-3 font-medium">Loại</th>
                 <th class="px-5 py-3 font-medium">Ngày</th>
                 <th class="px-5 py-3 font-medium">Nhận</th>
@@ -700,36 +700,36 @@ function signedClass(value: number): string {
                 <th class="px-5 py-3 text-right font-medium">Thao tác</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-dark-border">
+            <tbody class="divide-y divide-ui-border">
               <tr
                 v-for="e in filteredExpenses"
                 :key="e.id"
                 :class="{ 'opacity-50': e.voidedAt }"
               >
                 <td class="px-5 py-3">
-                  <span class="text-white">{{ expenseLabel(e.category) }}</span>
+                  <span class="text-ui-primary">{{ expenseLabel(e.category) }}</span>
                   <UiBadge v-if="e.voidedAt" class="ml-2" variant="danger">Đã hủy</UiBadge>
                   <UiBadge v-if="e.fundedBy === 'reserve_fund'" class="ml-2" variant="accent">
                     Quỹ dự phòng
                   </UiBadge>
-                  <p v-if="e.note" class="text-xs text-muted mt-0.5">{{ e.note }}</p>
+                  <p v-if="e.note" class="text-xs text-ui-muted mt-0.5">{{ e.note }}</p>
                 </td>
-                <td class="px-5 py-3 text-muted">{{ e.expenseDate ?? '—' }}</td>
-                <td class="px-5 py-3 text-muted">{{ e.payee ?? '—' }}</td>
+                <td class="px-5 py-3 text-ui-muted">{{ e.expenseDate ?? '—' }}</td>
+                <td class="px-5 py-3 text-ui-muted">{{ e.payee ?? '—' }}</td>
                 <td class="px-5 py-3">
                   <a
                     v-if="e.receiptSignedUrl"
                     :href="e.receiptSignedUrl"
                     target="_blank"
                     rel="noopener"
-                    class="inline-flex items-center gap-1 text-sm text-cyan hover:text-cyan/80"
+                    class="inline-flex items-center gap-1 text-sm text-ui-accent hover:text-ui-accent/80"
                   >
                     <IconLink class="h-4 w-4" aria-hidden="true" />
                     Xem
                   </a>
-                  <span v-else class="text-muted">—</span>
+                  <span v-else class="text-ui-muted">—</span>
                 </td>
-                <td class="px-5 py-3 text-right tabular-nums text-white">
+                <td class="px-5 py-3 text-right tabular-nums text-ui-primary">
                   {{ formatCurrency(e.amount) }}
                 </td>
                 <td class="px-5 py-3">
@@ -779,7 +779,7 @@ function signedClass(value: number): string {
           </table>
 
           <!-- Mobile: card list -->
-          <div class="divide-y divide-dark-border md:hidden">
+          <div class="divide-y divide-ui-border md:hidden">
             <div
               v-for="e in filteredExpenses"
               :key="e.id"
@@ -788,18 +788,18 @@ function signedClass(value: number): string {
               <div class="flex items-start justify-between gap-3">
                 <div class="min-w-0">
                   <div class="flex flex-wrap items-center gap-1.5">
-                    <span class="text-sm font-medium text-white">{{ expenseLabel(e.category) }}</span>
+                    <span class="text-sm font-medium text-ui-primary">{{ expenseLabel(e.category) }}</span>
                     <UiBadge v-if="e.voidedAt" variant="danger">Đã hủy</UiBadge>
                     <UiBadge v-if="e.fundedBy === 'reserve_fund'" variant="accent">Quỹ dự phòng</UiBadge>
                   </div>
-                  <p v-if="e.note" class="mt-0.5 text-xs text-muted">{{ e.note }}</p>
+                  <p v-if="e.note" class="mt-0.5 text-xs text-ui-muted">{{ e.note }}</p>
                 </div>
-                <span class="shrink-0 text-sm font-semibold tabular-nums text-white">
+                <span class="shrink-0 text-sm font-semibold tabular-nums text-ui-primary">
                   {{ formatCurrency(e.amount) }}
                 </span>
               </div>
               <div class="flex items-center justify-between gap-2">
-                <div class="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
+                <div class="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ui-muted">
                   <span>{{ e.expenseDate ?? '—' }}</span>
                   <span v-if="e.payee" class="truncate">{{ e.payee }}</span>
                   <a
@@ -807,7 +807,7 @@ function signedClass(value: number): string {
                     :href="e.receiptSignedUrl"
                     target="_blank"
                     rel="noopener"
-                    class="inline-flex items-center gap-1 text-cyan hover:text-cyan/80"
+                    class="inline-flex items-center gap-1 text-ui-accent hover:text-ui-accent/80"
                   >
                     <IconLink class="h-3.5 w-3.5" aria-hidden="true" />
                     Biên lai
@@ -875,7 +875,7 @@ function signedClass(value: number): string {
 
     <UiModal :open="voidModalOpen" title="Hủy chi phí" size="sm" @close="voidModalOpen = false">
       <div class="space-y-3">
-        <p class="text-sm text-muted">
+        <p class="text-sm text-ui-muted">
           Chi phí sẽ được đánh dấu đã hủy và không tính vào tổng chi phí. Vui lòng nhập lý do.
         </p>
         <UiTextarea v-model="voidReason" label="Lý do hủy" :rows="3" required />

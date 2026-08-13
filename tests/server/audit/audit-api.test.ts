@@ -88,6 +88,22 @@ describe('GET /api/audit', () => {
     )
   })
 
+  it('lets admin query a deleted building by preserved UUID', async () => {
+    requireAuthMock.mockResolvedValue({ id: 'a', app_metadata: { role: 'admin' } })
+    buildingRepo.findByIdentifier.mockResolvedValue(null)
+    const deletedId = '550e8400-e29b-41d4-a716-446655440000'
+    const { default: handler } = await import('../../../server/api/audit/index.get')
+
+    await handler(event({ building_id: deletedId }))
+
+    expect(auditRepo.listByBuilding).toHaveBeenCalledWith(
+      expect.anything(),
+      deletedId,
+      expect.anything(),
+    )
+    expect(scope.assertBuildingScope).not.toHaveBeenCalled()
+  })
+
   it.each([
     'building_expense',
     'recurring_expense',

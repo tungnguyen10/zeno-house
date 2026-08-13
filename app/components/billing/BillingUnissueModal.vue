@@ -48,17 +48,17 @@ function submit() {
       </UiAlert>
 
       <div class="grid grid-cols-2 gap-3">
-        <div class="rounded-lg border border-dark-border bg-dark-surface p-3">
-          <p class="text-xs text-muted">Sẽ huỷ</p>
-          <p class="text-lg font-semibold text-rose-400">{{ willVoid.length }} hoá đơn</p>
-          <p class="text-xs text-muted tabular-nums">
+        <div class="rounded-lg border border-ui-border bg-ui-surface p-3">
+          <p class="text-xs text-ui-muted">Sẽ huỷ</p>
+          <p class="text-lg font-semibold text-status-danger">{{ willVoid.length }} hoá đơn</p>
+          <p class="text-xs text-ui-muted tabular-nums">
             Giá trị {{ formatCurrency(totalToVoid) }}
           </p>
         </div>
-        <div class="rounded-lg border border-dark-border bg-dark-surface p-3">
-          <p class="text-xs text-muted">Giữ lại (đã thu)</p>
-          <p class="text-lg font-semibold text-emerald-400">{{ retained.length }} hoá đơn</p>
-          <p class="text-xs text-muted tabular-nums">
+        <div class="rounded-lg border border-ui-border bg-ui-surface p-3">
+          <p class="text-xs text-ui-muted">Giữ lại (đã thu)</p>
+          <p class="text-lg font-semibold text-status-success">{{ retained.length }} hoá đơn</p>
+          <p class="text-xs text-ui-muted tabular-nums">
             Đã thu {{ formatCurrency(totalRetainedPaid) }}
           </p>
         </div>
@@ -67,8 +67,8 @@ function submit() {
       <UiAlert v-if="errorMessage" severity="danger">{{ errorMessage }}</UiAlert>
 
       <div class="space-y-1">
-        <label for="unissue-reason" class="block text-sm text-white">
-          Lý do huỷ phát hành <span class="text-rose-400">*</span>
+        <label for="unissue-reason" class="block text-sm text-ui-primary">
+          Lý do huỷ phát hành <span class="text-status-danger">*</span>
         </label>
         <UiTextarea
           id="unissue-reason"
@@ -76,7 +76,7 @@ function submit() {
           :rows="3"
           placeholder="Bắt buộc — tối thiểu 10 ký tự. Lý do sẽ được lưu vào nhật ký kỳ và áp dụng cho mọi hoá đơn bị huỷ."
         />
-        <p class="text-xs" :class="reasonValid ? 'text-muted' : 'text-rose-400'">
+        <p class="text-xs" :class="reasonValid ? 'text-ui-muted' : 'text-status-danger'">
           {{ reasonLength }} / 10 ký tự tối thiểu
         </p>
       </div>

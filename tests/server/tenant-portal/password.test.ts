@@ -5,7 +5,8 @@ const mocks = vi.hoisted(() => ({
   resolveTenantId: vi.fn(),
   updateCurrentPassword: vi.fn(),
   findActiveContract: vi.fn(),
-  auditAppend: vi.fn(),
+  auditBegin: vi.fn(),
+  auditComplete: vi.fn(),
 }))
 
 vi.mock('../../../server/utils/scope', () => ({ resolveTenantId: mocks.resolveTenantId }))
@@ -15,8 +16,8 @@ vi.mock('../../../server/repositories/users', () => ({
 vi.mock('../../../server/repositories/contracts', () => ({
   ContractRepository: { findActiveByTenantId: mocks.findActiveContract },
 }))
-vi.mock('../../../server/services/audit', () => ({
-  AuditService: { append: mocks.auditAppend },
+vi.mock('../../../server/services/audit-operations', () => ({
+  AuditOperationService: { begin: mocks.auditBegin, complete: mocks.auditComplete },
 }))
 
 const tenantUser = { id: 'auth-tenant', app_metadata: { role: 'tenant' } } as never
@@ -27,6 +28,7 @@ describe('TenantPasswordService', () => {
     mocks.resolveTenantId.mockResolvedValue('tenant-1')
     mocks.findActiveContract.mockResolvedValue({ buildingId: 'building-1' })
     mocks.updateCurrentPassword.mockResolvedValue(undefined)
+    mocks.auditBegin.mockResolvedValue({ id: 'operation-1' })
   })
 
   it('verifies the current password and appends a credential-free audit event', async () => {
@@ -44,13 +46,15 @@ describe('TenantPasswordService', () => {
       'mat-khau-moi',
       'mat-khau-cu',
     )
-    expect(mocks.auditAppend).toHaveBeenCalledWith(expect.anything(), tenantUser, {
-      building_id: 'building-1',
+    expect(mocks.auditBegin).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      actorId: 'auth-tenant',
+      buildingId: 'building-1',
       action: 'tenant.account.password_changed',
-      entity_type: 'tenant',
-      entity_id: 'tenant-1',
-    })
-    expect(JSON.stringify(mocks.auditAppend.mock.calls)).not.toContain('mat-khau')
+      entityType: 'tenant',
+      entityId: 'tenant-1',
+    }))
+    expect(mocks.auditComplete).toHaveBeenCalledWith(expect.anything(), 'operation-1', { outcomeData: { auth: 'updated' } })
+    expect(JSON.stringify(mocks.auditBegin.mock.calls)).not.toContain('mat-khau')
   })
 
   it('does not audit a rejected password change', async () => {
@@ -63,6 +67,7 @@ describe('TenantPasswordService', () => {
       password_confirmation: 'mat-khau-moi',
     })).rejects.toMatchObject({ statusCode: 422 })
 
-    expect(mocks.auditAppend).not.toHaveBeenCalled()
+    expect(mocks.auditBegin).toHaveBeenCalledOnce()
+    expect(mocks.auditComplete).not.toHaveBeenCalled()
   })
 })

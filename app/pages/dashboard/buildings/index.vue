@@ -257,7 +257,7 @@ async function onSubmitEdit(data: BuildingFormData) {
     <template v-else>
       <div
         v-if="selectionMode && authStore.canManage"
-        class="mb-3 flex items-center justify-between gap-3 rounded-lg border border-dark-border bg-dark-deep/40 px-3 py-2"
+        class="mb-3 flex items-center justify-between gap-3 rounded-lg border border-ui-border bg-ui-deep/40 px-3 py-2"
       >
         <UiCheckbox
           :model-value="allOnPageSelected"
@@ -265,7 +265,7 @@ async function onSubmitEdit(data: BuildingFormData) {
           :label="`Chọn cả trang (${buildings.length})`"
           @update:model-value="toggleAllOnPage"
         />
-        <span class="text-xs text-muted">{{ bulk.selectedIds.value.length }} đã chọn tổng cộng</span>
+        <span class="text-xs text-ui-muted">{{ bulk.selectedIds.value.length }} đã chọn tổng cộng</span>
       </div>
 
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -280,8 +280,8 @@ async function onSubmitEdit(data: BuildingFormData) {
         />
       </div>
 
-      <div v-if="totalPages > 1" class="flex items-center justify-between mt-6 pt-4 border-t border-dark-border">
-        <p class="text-sm text-muted">Trang {{ page }} / {{ totalPages }}</p>
+      <div v-if="totalPages > 1" class="flex items-center justify-between mt-6 pt-4 border-t border-ui-border">
+        <p class="text-sm text-ui-muted">Trang {{ page }} / {{ totalPages }}</p>
         <div class="flex gap-2">
           <UiButton variant="secondary" size="sm" :disabled="page <= 1" @click="page--">
             Trước
@@ -314,10 +314,10 @@ async function onSubmitEdit(data: BuildingFormData) {
         <li
           v-for="row in failuresWithName"
           :key="row.id"
-          class="flex items-start justify-between gap-3 rounded-lg border border-dark-border bg-dark-deep/40 px-3 py-2"
+          class="flex items-start justify-between gap-3 rounded-lg border border-ui-border bg-ui-deep/40 px-3 py-2"
         >
-          <span class="font-medium text-white">{{ row.name }}</span>
-          <span class="text-xs text-muted">{{ row.reason }}</span>
+          <span class="font-medium text-ui-primary">{{ row.name }}</span>
+          <span class="text-xs text-ui-muted">{{ row.reason }}</span>
         </li>
       </ul>
       <template #footer>

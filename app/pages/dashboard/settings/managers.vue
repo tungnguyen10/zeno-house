@@ -258,6 +258,8 @@ function managerInitials(row: ManagedUserWithAssignments): string {
 
 <template>
   <div class="space-y-6">
+    <AppSettingsSubNav />
+
     <UiPageHeader
       title="Quản lý người dùng"
       :description="authStore.isAdmin
@@ -267,10 +269,10 @@ function managerInitials(row: ManagedUserWithAssignments): string {
 
     <!-- Create user -->
     <form
-      class="space-y-4 rounded-lg border border-dark-border bg-dark-surface p-4"
+      class="space-y-4 rounded-lg border border-ui-border bg-ui-surface p-4"
       @submit.prevent="handleCreate"
     >
-      <p class="text-sm font-semibold text-white">
+      <p class="text-sm font-semibold text-ui-primary">
         {{ authStore.canCreateOwner ? 'Tạo owner hoặc quản lý' : 'Tạo quản lý' }}
       </p>
       <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -303,7 +305,7 @@ function managerInitials(row: ManagedUserWithAssignments): string {
       </div>
 
       <div v-if="buildings.length > 0">
-        <p class="mb-1.5 text-xs text-muted">
+        <p class="mb-1.5 text-xs text-ui-muted">
           Tòa nhà (tùy chọn)
         </p>
         <div class="flex flex-wrap gap-2">
@@ -313,8 +315,8 @@ function managerInitials(row: ManagedUserWithAssignments): string {
             type="button"
             class="rounded-md border px-2.5 py-1 text-xs transition-colors"
             :class="form.building_ids.includes(b.id)
-              ? 'border-cyan bg-cyan/15 text-cyan'
-              : 'border-dark-border bg-dark-deep/40 text-muted hover:border-dark-border/80'"
+              ? 'border-ui-accent bg-ui-accent/15 text-ui-accent'
+              : 'border-ui-border bg-ui-deep/40 text-ui-muted hover:border-ui-border/80'"
             @click="toggleFormBuilding(b.id)"
           >
             {{ b.name }}
@@ -340,7 +342,7 @@ function managerInitials(row: ManagedUserWithAssignments): string {
         <span
           v-for="building in buildingsWithoutManager"
           :key="building.id"
-          class="inline-flex items-center rounded-md border border-warning/30 bg-warning/5 px-2 py-0.5 text-xs text-warning"
+          class="inline-flex items-center rounded-md border border-status-warning/30 bg-status-warning/5 px-2 py-0.5 text-xs text-status-warning"
         >
           {{ building.name }}
         </span>
@@ -364,20 +366,20 @@ function managerInitials(row: ManagedUserWithAssignments): string {
       <div
         v-for="row in users"
         :key="row.user.id"
-        class="rounded-lg border border-dark-border bg-dark-surface"
+        class="rounded-lg border border-ui-border bg-ui-surface"
       >
         <!-- Card header -->
-        <div class="flex flex-col gap-3 border-b border-dark-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+        <div class="flex flex-col gap-3 border-b border-ui-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
           <div class="flex min-w-0 items-center gap-3">
             <!-- Avatar -->
-            <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-cyan/15 text-sm font-semibold text-cyan">
+            <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-ui-accent/15 text-sm font-semibold text-ui-accent">
               {{ managerInitials(row) }}
             </span>
             <div class="min-w-0">
-              <p class="truncate text-sm font-semibold text-white">
+              <p class="truncate text-sm font-semibold text-ui-primary">
                 {{ row.user.name ?? row.user.email ?? row.user.id }}
               </p>
-              <p v-if="row.user.name && row.user.email" class="truncate text-xs text-muted">
+              <p v-if="row.user.name && row.user.email" class="truncate text-xs text-ui-muted">
                 {{ row.user.email }}
               </p>
             </div>
@@ -396,7 +398,7 @@ function managerInitials(row: ManagedUserWithAssignments): string {
             </UiBadge>
             <span
               v-else
-              class="ml-1 shrink-0 rounded-md border border-dark-border bg-dark-deep/40 px-2 py-0.5 text-xs font-medium text-muted"
+              class="ml-1 shrink-0 rounded-md border border-ui-border bg-ui-deep/40 px-2 py-0.5 text-xs font-medium text-ui-muted"
             >
               {{ row.assignments.length }} tòa nhà
             </span>
@@ -429,7 +431,7 @@ function managerInitials(row: ManagedUserWithAssignments): string {
                 Gán
               </UiButton>
             </form>
-            <span v-else class="text-xs text-muted">
+            <span v-else class="text-xs text-ui-muted">
               Đã gán tất cả tòa nhà
             </span>
 
@@ -455,7 +457,7 @@ function managerInitials(row: ManagedUserWithAssignments): string {
         </div>
 
         <!-- Assignments list -->
-        <ul v-if="row.assignments.length > 0" class="divide-y divide-dark-border">
+        <ul v-if="row.assignments.length > 0" class="divide-y divide-ui-border">
           <li
             v-for="assignment in row.assignments"
             :key="assignment.id"
@@ -463,10 +465,10 @@ function managerInitials(row: ManagedUserWithAssignments): string {
           >
             <!-- Building info -->
             <div class="min-w-0 flex-1">
-              <p class="truncate text-sm font-medium text-white">
+              <p class="truncate text-sm font-medium text-ui-primary">
                 {{ assignment.building?.name ?? assignment.building_id }}
               </p>
-              <p v-if="assignment.building?.code" class="mt-0.5 font-mono text-xs text-muted">
+              <p v-if="assignment.building?.code" class="mt-0.5 font-mono text-xs text-ui-muted">
                 {{ assignment.building.code }}
               </p>
             </div>
@@ -474,8 +476,8 @@ function managerInitials(row: ManagedUserWithAssignments): string {
             <!-- Delete permission toggle -->
             <label
               v-if="canManageRow(row)"
-              class="flex shrink-0 items-center gap-2 rounded-md border border-dark-border/60 bg-dark-deep/30 px-2.5 py-1"
-              :class="!busyKey && 'cursor-pointer hover:border-dark-border'"
+              class="flex shrink-0 items-center gap-2 rounded-md border border-ui-border/60 bg-ui-deep/30 px-2.5 py-1"
+              :class="!busyKey && 'cursor-pointer hover:border-ui-border'"
             >
               <UiToggle
                 :model-value="assignment.can_delete_master_data"
@@ -484,7 +486,7 @@ function managerInitials(row: ManagedUserWithAssignments): string {
                 :disabled="busyKey === `toggle:${assignment.id}`"
                 @update:model-value="handleToggle(assignment.id, $event)"
               />
-              <span class="whitespace-nowrap text-xs text-muted">Cho xóa dữ liệu</span>
+              <span class="whitespace-nowrap text-xs text-ui-muted">Cho xóa dữ liệu</span>
             </label>
 
             <!-- Unassign -->
@@ -502,8 +504,8 @@ function managerInitials(row: ManagedUserWithAssignments): string {
         </ul>
 
         <!-- Empty assignments -->
-        <div v-else class="flex items-center gap-2 px-4 py-3 text-xs text-muted">
-          <IconAlertCircle class="h-4 w-4 shrink-0 text-warning/70" aria-hidden="true" />
+        <div v-else class="flex items-center gap-2 px-4 py-3 text-xs text-ui-muted">
+          <IconAlertCircle class="h-4 w-4 shrink-0 text-status-warning/70" aria-hidden="true" />
           <span>Người dùng này chưa được gán tòa nhà nào.</span>
         </div>
       </div>

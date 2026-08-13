@@ -4,7 +4,7 @@ Defines the authenticated admin application shell, layouts, navigation, and rout
 ## Requirements
 
 ### Requirement: Default layout wraps admin pages
-App SHALL render internal admin pages với `layouts/default.vue` bao gồm AppSidebar ở trái và AppHeader ở trên, except dedicated print-only routes MAY set `layout: false` so printed output excludes application chrome. Content area ở giữa scroll độc lập. Internal pages SHALL live under the `/dashboard` namespace; navigation and route-level links SHALL target `/dashboard`-based paths, and legacy top-level paths SHALL redirect to their `/dashboard` equivalents.
+App SHALL render internal admin pages với `layouts/default.vue` bao gồm AppSidebar ở trái và AppHeader ở trên, except dedicated print-only routes MAY set `layout: false` so printed output excludes application chrome. Content area ở giữa scroll độc lập. Internal pages SHALL live under the `/dashboard` namespace; navigation and route-level links SHALL target `/dashboard`-based paths, and legacy top-level paths SHALL redirect to their `/dashboard` equivalents. The layout SHALL activate the resolved dashboard color theme for shell content and teleported overlays and SHALL clean up document theme state when it unmounts.
 
 #### Scenario: Admin page sử dụng default layout
 - **WHEN** người dùng truy cập một internal route dưới `/dashboard`
@@ -21,6 +21,14 @@ App SHALL render internal admin pages với `layouts/default.vue` bao gồm AppS
 #### Scenario: Print-only route không render application chrome
 - **WHEN** người dùng mở một dedicated print-only route dưới `/dashboard`
 - **THEN** route vẫn được namespace guard bảo vệ nhưng MAY render với `layout: false` để không hiển thị sidebar và header trong bản in
+
+#### Scenario: Dashboard shell resolves theme
+- **WHEN** an authenticated internal user enters a `/dashboard` route
+- **THEN** the layout activates the stored or system-resolved dashboard theme before interactive content is shown
+
+#### Scenario: Dashboard shell cleans up theme
+- **WHEN** client navigation leaves the default dashboard layout
+- **THEN** dashboard-specific document attributes and listeners are removed
 
 ---
 
@@ -53,7 +61,7 @@ App SHALL add an admin-only navigation item and `/dashboard/settings/access-requ
 ---
 
 ### Requirement: AppSidebar hiển thị navigation items
-AppSidebar SHALL nhận `navItems: NavItem[]` qua props và render các navigation link tới `/dashboard`-based paths theo nhóm tĩnh. `Dashboard` SHALL đứng riêng; các link còn lại SHALL thuộc `Tài sản & cho thuê`, `Tài chính & vận hành`, hoặc `Quản trị`. Section không còn item sau khi lọc theo role SHALL không được render. Item active SHALL được highlight bằng canonical cyan surface/border và expose `aria-current="page"`. Label của link SHALL vẫn là accessible name khi desktop sidebar thu gọn. AppSidebar SHALL hiển thị thông tin user đã đăng nhập trong một footer panel có avatar, email, và role. AppSidebar SHALL NOT render trong `/portal` namespace.
+AppSidebar SHALL nhận `navItems: NavItem[]` qua props và render các navigation link tới `/dashboard`-based paths theo nhóm tĩnh. `Dashboard` SHALL đứng riêng; các link còn lại SHALL thuộc `Tài sản & cho thuê`, `Tài chính & vận hành`, hoặc một entry point `Quản trị` duy nhất. `Quản trị` SHALL trỏ tới `/dashboard/settings/managers` và chỉ hiển thị cho role `admin`/`owner`; các sub-page (`Tài khoản người thuê`, `Yêu cầu truy cập`, `Nhật ký hoạt động`) SHALL không render item riêng trong sidebar mà được điều hướng qua `AppSettingsSubNav`. Section không còn item sau khi lọc theo role SHALL không được render. Item active SHALL được highlight bằng canonical cyan surface/border và expose `aria-current="page"`. Label của link SHALL vẫn là accessible name khi desktop sidebar thu gọn. AppSidebar SHALL hiển thị thông tin user đã đăng nhập trong một footer panel có avatar, email, và role. AppSidebar SHALL NOT render trong `/portal` namespace.
 
 #### Scenario: Sidebar trỏ tới dashboard routes
 - **WHEN** admin layout mount
@@ -61,11 +69,15 @@ AppSidebar SHALL nhận `navItems: NavItem[]` qua props và render các navigati
 
 #### Scenario: Sidebar nhóm các destination liên quan
 - **WHEN** admin mở sidebar
-- **THEN** `Dashboard` đứng riêng và các section `Tài sản & cho thuê`, `Tài chính & vận hành`, `Quản trị` hiển thị link theo đúng product relationship
+- **THEN** `Dashboard` đứng riêng, section `Tài sản & cho thuê` và `Tài chính & vận hành` hiển thị link theo đúng product relationship, và section `administration` chỉ có một link `Quản trị`
 
 #### Scenario: Empty role section is hidden
-- **WHEN** manager mở sidebar và không có item nào thuộc section `Quản trị`
-- **THEN** section label `Quản trị` không được render
+- **WHEN** manager mở sidebar và không có item nào thuộc section `administration`
+- **THEN** section `administration` không được render
+
+#### Scenario: Settings sub-pages điều hướng qua AppSettingsSubNav
+- **WHEN** admin/owner mở một trang dưới `/dashboard/settings/*`
+- **THEN** `AppSettingsSubNav` hiển thị tab ngang cho các sub-page mà role hiện tại được phép truy cập, ẩn các tab admin-only với owner, và đánh dấu tab hiện tại bằng `aria-current="page"`
 
 #### Scenario: Active nav item được highlight
 - **WHEN** người dùng đang ở route `/dashboard/buildings`
@@ -98,7 +110,7 @@ AppSidebar SHALL nhận `navItems: NavItem[]` qua props và render các navigati
 ---
 
 ### Requirement: AppHeader tích hợp global actions với page header
-Trên desktop, AppHeader SHALL render như một global action rail ở góc phải để page title, description, page actions, pending-operations trigger, và user menu cùng nằm trong dải đầu trang mà không tạo một hàng header trống. Trên mobile, AppHeader SHALL giữ một hàng cao 64px với hamburger và global actions. User menu SHALL expose user info thật và logout action.
+Trên desktop, AppHeader SHALL render như một global action rail ở góc phải để page title, description, page actions, pending-operations trigger, theme toggle, và user menu cùng nằm trong dải đầu trang mà không tạo một hàng header trống. Trên mobile, AppHeader SHALL giữ một hàng cao 64px với hamburger và global actions. User menu SHALL expose user info thật và logout action.
 
 #### Scenario: Header hiển thị đúng structure
 - **WHEN** admin layout mount
@@ -107,6 +119,10 @@ Trên desktop, AppHeader SHALL render như một global action rail ở góc ph�
 #### Scenario: Header có nút toggle sidebar trên mobile
 - **WHEN** viewport nhỏ hơn `lg` breakpoint
 - **THEN** header hiển thị hamburger button để toggle sidebar
+
+#### Scenario: Header exposes theme toggle
+- **WHEN** an internal user views any dashboard route
+- **THEN** the global action rail shows an accessible theme toggle immediately before the user menu
 
 #### Scenario: Header hiển thị email user đã đăng nhập
 - **WHEN** user đã login và đang ở admin page

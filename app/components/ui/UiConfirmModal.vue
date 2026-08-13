@@ -19,7 +19,7 @@ const emit = defineEmits<{
 <template>
   <UiModal :open="open" :title="title" @close="emit('cancel')">
     <slot>
-      <p class="text-sm text-muted">{{ message }}</p>
+      <p class="text-sm text-ui-muted">{{ message }}</p>
     </slot>
     <template #footer>
       <UiButton variant="secondary" @click="emit('cancel')">Huỷ</UiButton>

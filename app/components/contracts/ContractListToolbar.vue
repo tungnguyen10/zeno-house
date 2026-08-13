@@ -72,7 +72,7 @@ const activeFilterCount = computed(() => {
 
     <UiFilterPopover :count="activeFilterCount" aria-label="Bộ lọc hợp đồng">
       <div class="flex flex-col gap-3">
-        <label class="flex flex-col gap-1.5 text-xs text-muted">
+        <label class="flex flex-col gap-1.5 text-xs text-ui-muted">
           <span>Tòa nhà</span>
           <UiSelect
             :model-value="buildingFilter"
@@ -84,7 +84,7 @@ const activeFilterCount = computed(() => {
         </label>
 
         <div class="flex flex-col gap-1.5">
-          <span class="text-xs text-muted">Trạng thái</span>
+          <span class="text-xs text-ui-muted">Trạng thái</span>
           <UiFilterChips
             :model-value="status"
             :options="statusOptions"

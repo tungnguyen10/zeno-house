@@ -9,19 +9,19 @@ interface ToneConfig {
 
 const toneMap: Record<string, ToneConfig> = {
   success: {
-    container: 'border-success-neon/25 bg-dark-surface',
-    bar: 'bg-success-neon',
-    icon: 'text-success-neon',
+    container: 'border-status-success/25 bg-ui-surface',
+    bar: 'bg-status-success',
+    icon: 'text-status-success',
   },
   danger: {
-    container: 'border-error-vivid/25 bg-dark-surface',
-    bar: 'bg-error-vivid',
-    icon: 'text-error-vivid',
+    container: 'border-status-danger/25 bg-ui-surface',
+    bar: 'bg-status-danger',
+    icon: 'text-status-danger',
   },
   info: {
-    container: 'border-cyan/25 bg-dark-surface',
-    bar: 'bg-cyan',
-    icon: 'text-cyan',
+    container: 'border-ui-accent/25 bg-ui-surface',
+    bar: 'bg-ui-accent',
+    icon: 'text-ui-accent',
   },
 }
 
@@ -71,12 +71,12 @@ function tone(severity: string): ToneConfig {
             </span>
 
             <!-- Message -->
-            <p class="flex-1 text-sm leading-5 text-white">{{ toast.message }}</p>
+            <p class="flex-1 text-sm leading-5 text-ui-primary">{{ toast.message }}</p>
 
             <!-- Dismiss -->
             <button
               type="button"
-              class="shrink-0 text-muted transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan/40"
+              class="shrink-0 text-ui-muted transition-colors hover:text-ui-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-accent/40"
               aria-label="Đóng thông báo"
               @click="dismiss(toast.id)"
             >

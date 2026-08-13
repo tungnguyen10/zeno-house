@@ -77,7 +77,7 @@ function updateAllMonths(value: boolean) {
 
     <UiFilterPopover :count="activeFilterCount" aria-label="Bộ lọc hoá đơn">
       <div class="flex flex-col gap-3">
-        <label class="flex flex-col gap-1.5 text-xs text-muted">
+        <label class="flex flex-col gap-1.5 text-xs text-ui-muted">
           <span>Tòa nhà</span>
           <UiSelect
             :model-value="buildingId"
@@ -90,7 +90,7 @@ function updateAllMonths(value: boolean) {
         </label>
 
         <div class="grid grid-cols-2 gap-2">
-          <label class="flex flex-col gap-1.5 text-xs text-muted">
+          <label class="flex flex-col gap-1.5 text-xs text-ui-muted">
             <span>Năm</span>
             <UiSelect
               :model-value="periodYear"
@@ -101,7 +101,7 @@ function updateAllMonths(value: boolean) {
             />
           </label>
 
-          <label class="flex flex-col gap-1.5 text-xs text-muted">
+          <label class="flex flex-col gap-1.5 text-xs text-ui-muted">
             <span>Tháng</span>
             <UiSelect
               :model-value="periodMonth ?? null"
@@ -123,7 +123,7 @@ function updateAllMonths(value: boolean) {
         />
 
         <div class="flex flex-col gap-1.5">
-          <span class="text-xs text-muted">Trạng thái</span>
+          <span class="text-xs text-ui-muted">Trạng thái</span>
           <UiFilterChips
             :model-value="statuses"
             :options="statusOptions"

@@ -24,6 +24,7 @@ Composables live in `app/composables/**` and mirror product workflows.
 | --- | --- |
 | Auth | `auth/useAuth`, `useAuthStore`, `useAccessRequests` |
 | Dashboard | `useDashboardSummary` |
+| Dashboard theme | `useDashboardTheme` |
 | Buildings | `useBuildingList`, `useBuildingDetail`, `useBuildingForm`, `useBuildingServices`, `useBuildingMeterReadings`, `useBuildingContractServices` |
 | Rooms | `useRoomList`, `useRoomDetail`, `useRoomForm` |
 | Tenants | `useTenantList`, `useTenantDetail`, `useTenantForm` |
@@ -104,12 +105,31 @@ moment while shared bootstrap is pending, with a 300 ms minimum interval and no 
 Do not mount the portal splash in dashboard or auth layouts. If the wordmark or Apple device matrix
 changes, regenerate assets and run `tests/pwa/pwa-config.test.ts` before committing the PNG output.
 
+## PWA Install Guidance
+
+`PortalInstallPrompt` is the single presentation host for the product-wide PWA and is mounted in
+`app/app.vue`, not in a role-specific layout. Supporting Chromium browsers feed it through the
+captured `beforeinstallprompt` event. iPhone and iPad use the manual install sheet; detection also
+covers iPadOS desktop-class user agents that identify as Mac. Browser-specific copy stays neutral,
+with a Safari fallback when the current iOS browser does not expose Add to Home Screen.
+
+The host remains mounted before authentication so it can capture early browser install events, but
+the banner is gated by `useAuthStore().isAuthenticated`. Login, registration, recovery, onboarding,
+and pending-account screens never show installation UI; authenticated dashboard and portal routes do.
+
+The Apple flow mirrors current platform UI: Share, Add to Home Screen, enable Open as Web App, then
+Add. The prompt stays hidden on first paint, after dismissal for the current app session, and while
+running in standalone mode. `PortalBottomSheet` owns dialog naming, focus containment, Escape close,
+scroll locking, and focus restoration for the manual guide.
+
 ## Styling
 
 The app is a dense operational tool, not a marketing site.
 
 - Use Tailwind utilities.
 - Use design-system tokens from `tailwind.config.ts`.
+- Dashboard UI uses semantic `ui.*` and `status.*` tokens backed by CSS variables. Do not add appearance-specific dark/light utilities to dashboard-bound code.
+- Dashboard theme defaults to the operating system, persists explicit light/dark choices, and is owned by `useDashboardTheme`. Auth keeps its dark treatment and tenant portal keeps its independent `--portal-*` theme contract.
 - Use `docs/ui-patterns/design-system.md` for component and layout rules.
 - Avoid inline styles unless there is no practical Tailwind or component alternative.
 

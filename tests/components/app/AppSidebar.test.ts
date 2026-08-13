@@ -84,26 +84,20 @@ describe('AppSidebar role visibility', () => {
       '/dashboard/shared-expenses',
       '/dashboard/operations-report',
     ])
-    expect(hrefsIn('administration')).toEqual([
-      '/dashboard/settings/managers',
-      '/dashboard/settings/tenant-accounts',
-      '/dashboard/settings/access-requests',
-      '/dashboard/settings/history',
-    ])
+    expect(hrefsIn('administration')).toEqual(['/dashboard/settings/managers'])
     expect(wrapper.get('[data-nav-section="primary"]').find('[data-nav-section-label]').exists()).toBe(false)
+    expect(wrapper.get('[data-nav-section="administration"]').find('[data-nav-section-label]').exists()).toBe(false)
     expect(wrapper.text()).toContain('Tài sản & cho thuê')
     expect(wrapper.text()).toContain('Tài chính & vận hành')
     expect(wrapper.text()).toContain('Quản trị')
   })
 
-  it('shows the role-filtered administration section to owner', () => {
+  it('shows the single administration entry to owner', () => {
     const wrapper = mountSidebar('owner')
     const administration = wrapper.get('[data-nav-section="administration"]')
 
-    expect(administration.text()).toContain('Quản lý người dùng')
-    expect(administration.text()).toContain('Tài khoản người thuê')
-    expect(administration.text()).not.toContain('Yêu cầu truy cập')
-    expect(administration.text()).not.toContain('Nhật ký hoạt động')
+    expect(administration.text()).toContain('Quản trị')
+    expect(administration.findAll('a')).toHaveLength(1)
   })
 
   it('omits the empty administration section for manager', () => {
@@ -116,11 +110,19 @@ describe('AppSidebar role visibility', () => {
     const buildings = wrapper.get('a[href="/dashboard/buildings"]')
     const currentLinks = wrapper.findAll('a[aria-current="page"]')
 
-    expect(dashboard.classes()).not.toContain('bg-cyan/10')
-    expect(buildings.classes()).toContain('bg-cyan/10')
-    expect(buildings.classes()).toContain('border-cyan/30')
+    expect(dashboard.classes()).not.toContain('bg-ui-accent/10')
+    expect(buildings.classes()).toContain('bg-ui-accent/10')
+    expect(buildings.classes()).toContain('border-ui-accent/30')
     expect(currentLinks).toHaveLength(1)
     expect(currentLinks[0]?.attributes('href')).toBe('/dashboard/buildings')
+  })
+
+  it('highlights Quản trị active across every /dashboard/settings sub-page', () => {
+    const wrapper = mountSidebar('admin', '/dashboard/settings/history')
+    const administration = wrapper.get('a[href="/dashboard/settings/managers"]')
+
+    expect(administration.classes()).toContain('bg-ui-accent/10')
+    expect(administration.attributes('aria-current')).toBe('page')
   })
 
   it('keeps collapsed link labels available to assistive technology', () => {
@@ -157,6 +159,6 @@ describe('AppSidebar role visibility', () => {
     const footer = mountSidebar('admin').get('[data-sidebar-user]')
 
     expect(footer.classes()).toContain('rounded-xl')
-    expect(footer.classes()).toContain('border-dark-border')
+    expect(footer.classes()).toContain('border-ui-border')
   })
 })

@@ -26,8 +26,8 @@ function handleClick() {
     :title="title"
     :disabled="disabled || loading"
     :class="[
-      'flex w-full items-center gap-2 px-3 py-2 text-sm text-left whitespace-nowrap hover:bg-dark-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors',
-      variant === 'danger' ? 'text-rose-400' : 'text-white',
+      'flex w-full items-center gap-2 px-3 py-2 text-sm text-left whitespace-nowrap hover:bg-ui-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors',
+      variant === 'danger' ? 'text-status-danger' : 'text-ui-primary',
     ]"
     @click="handleClick"
   >

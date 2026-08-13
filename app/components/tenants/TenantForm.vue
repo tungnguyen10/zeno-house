@@ -225,8 +225,8 @@ function onRemoveIdImage(side: TenantIdImageSide) {
     <!-- 1. Personal -->
     <section class="space-y-4">
       <header>
-        <h3 class="text-sm font-semibold text-white">1. Thông tin cá nhân</h3>
-        <p class="text-xs text-muted mt-0.5">Họ tên, liên hệ và thông tin nhân khẩu.</p>
+        <h3 class="text-sm font-semibold text-ui-primary">1. Thông tin cá nhân</h3>
+        <p class="text-xs text-ui-muted mt-0.5">Họ tên, liên hệ và thông tin nhân khẩu.</p>
       </header>
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <UiInput
@@ -301,13 +301,13 @@ function onRemoveIdImage(side: TenantIdImageSide) {
       </div>
     </section>
 
-    <div class="border-t border-dark-border" />
+    <div class="border-t border-ui-border" />
 
     <!-- 2. ID document -->
     <section class="space-y-4">
       <header>
-        <h3 class="text-sm font-semibold text-white">2. Giấy tờ tuỳ thân</h3>
-        <p class="text-xs text-muted mt-0.5">Thông tin CMND/CCCD để đối chiếu khi ký hợp đồng.</p>
+        <h3 class="text-sm font-semibold text-ui-primary">2. Giấy tờ tuỳ thân</h3>
+        <p class="text-xs text-ui-muted mt-0.5">Thông tin CMND/CCCD để đối chiếu khi ký hợp đồng.</p>
       </header>
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <UiInput
@@ -340,10 +340,10 @@ function onRemoveIdImage(side: TenantIdImageSide) {
           />
         </div>
 
-        <div class="sm:col-span-2 rounded-lg border border-dark-border bg-dark-deep/20 p-4">
+        <div class="sm:col-span-2 rounded-lg border border-ui-border bg-ui-deep/20 p-4">
           <div class="flex items-center justify-between gap-2">
-            <h4 class="text-xs font-semibold text-white">Ảnh CCCD</h4>
-            <span class="text-[11px] text-muted">Tối đa 5MB · JPG/PNG/WEBP</span>
+            <h4 class="text-xs font-semibold text-ui-primary">Ảnh CCCD</h4>
+            <span class="text-[11px] text-ui-muted">Tối đa 5MB · JPG/PNG/WEBP</span>
           </div>
 
           <div class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -401,13 +401,13 @@ function onRemoveIdImage(side: TenantIdImageSide) {
       </div>
     </section>
 
-    <div class="border-t border-dark-border" />
+    <div class="border-t border-ui-border" />
 
     <!-- 3. Emergency contact -->
     <section class="space-y-4">
       <header>
-        <h3 class="text-sm font-semibold text-white">3. Liên hệ khẩn cấp</h3>
-        <p class="text-xs text-muted mt-0.5">Người thân/đại diện liên hệ khi cần.</p>
+        <h3 class="text-sm font-semibold text-ui-primary">3. Liên hệ khẩn cấp</h3>
+        <p class="text-xs text-ui-muted mt-0.5">Người thân/đại diện liên hệ khi cần.</p>
       </header>
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <UiInput
@@ -432,13 +432,13 @@ function onRemoveIdImage(side: TenantIdImageSide) {
       </div>
     </section>
 
-    <div class="border-t border-dark-border" />
+    <div class="border-t border-ui-border" />
 
     <!-- 4. Notes -->
     <section class="space-y-4">
       <header>
-        <h3 class="text-sm font-semibold text-white">4. Ghi chú</h3>
-        <p class="text-xs text-muted mt-0.5">Thông tin nội bộ về khách thuê.</p>
+        <h3 class="text-sm font-semibold text-ui-primary">4. Ghi chú</h3>
+        <p class="text-xs text-ui-muted mt-0.5">Thông tin nội bộ về khách thuê.</p>
       </header>
       <UiTextarea
         id="tf-notes"
@@ -454,7 +454,7 @@ function onRemoveIdImage(side: TenantIdImageSide) {
     </section>
 
     <!-- Desktop footer -->
-    <div class="hidden md:flex items-center justify-end gap-3 pt-2 border-t border-dark-border">
+    <div class="hidden md:flex items-center justify-end gap-3 pt-2 border-t border-ui-border">
       <UiButton variant="ghost" type="button" :disabled="loading" @click="emit('cancel')">
         Huỷ
       </UiButton>
@@ -466,7 +466,7 @@ function onRemoveIdImage(side: TenantIdImageSide) {
     <!-- Mobile sticky save bar -->
     <div
       data-test="sticky-save-bar"
-      class="md:hidden fixed inset-x-0 bottom-0 z-40 border-t border-dark-border bg-dark-deep/95 px-4 pt-3 backdrop-blur"
+      class="md:hidden fixed inset-x-0 bottom-0 z-40 border-t border-ui-border bg-ui-deep/95 px-4 pt-3 backdrop-blur"
       :style="{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }"
     >
       <div class="flex items-center gap-2">

@@ -206,7 +206,7 @@ function resolveError(err: unknown, fallback: string): string {
           description="Chọn các tòa nhà cùng chia khoản này. Phần dư làm tròn nằm ở tòa cuối cùng."
         >
           <form
-            class="rounded-xl border border-dark-border bg-dark-surface p-4 space-y-4"
+            class="rounded-xl border border-ui-border bg-ui-surface p-4 space-y-4"
             @submit.prevent="submit"
           >
             <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
@@ -230,10 +230,10 @@ function resolveError(err: unknown, fallback: string): string {
 
             <div class="space-y-2">
               <div class="flex items-center justify-between gap-3">
-                <span class="text-sm font-medium text-muted">Tòa nhà áp dụng</span>
+                <span class="text-sm font-medium text-ui-muted">Tòa nhà áp dụng</span>
                 <UiBadge variant="accent">{{ form.buildingIds.length }}</UiBadge>
               </div>
-              <div class="max-h-56 space-y-2 overflow-y-auto rounded-md border border-dark-border bg-dark-deep p-3">
+              <div class="max-h-56 space-y-2 overflow-y-auto rounded-md border border-ui-border bg-ui-deep p-3">
                 <UiCheckbox
                   v-for="building in buildings"
                   :key="building.id"
@@ -241,27 +241,27 @@ function resolveError(err: unknown, fallback: string): string {
                   :label="building.name"
                   @update:model-value="setBuildingSelected(building.id, $event)"
                 />
-                <p v-if="buildings.length === 0" class="text-xs text-muted">
+                <p v-if="buildings.length === 0" class="text-xs text-ui-muted">
                   Chưa có tòa nhà trong phạm vi của bạn.
                 </p>
               </div>
             </div>
 
             <div v-if="preview.length > 0" class="space-y-2">
-              <div class="text-sm font-medium text-muted">Xem trước phân bổ</div>
-              <div class="divide-y divide-dark-border text-xs">
+              <div class="text-sm font-medium text-ui-muted">Xem trước phân bổ</div>
+              <div class="divide-y divide-ui-border text-xs">
                 <div
                   v-for="row in preview"
                   :key="row.buildingId"
                   class="flex items-center justify-between gap-3 py-2"
                 >
-                  <span class="truncate text-muted">{{ buildingName(row.buildingId) }}</span>
-                  <span class="shrink-0 tabular-nums text-white">{{ formatCurrency(row.amount) }}</span>
+                  <span class="truncate text-ui-muted">{{ buildingName(row.buildingId) }}</span>
+                  <span class="shrink-0 tabular-nums text-ui-primary">{{ formatCurrency(row.amount) }}</span>
                 </div>
               </div>
             </div>
 
-            <div class="flex justify-end gap-2 border-t border-dark-border pt-4">
+            <div class="flex justify-end gap-2 border-t border-ui-border pt-4">
               <UiButton type="button" variant="secondary" :disabled="busy" @click="resetForm">
                 Hủy
               </UiButton>
@@ -296,13 +296,13 @@ function resolveError(err: unknown, fallback: string): string {
           >
             <template #cell-name="{ row }">
               <div class="min-w-0">
-                <div class="font-medium text-white">{{ row.name }}</div>
-                <p v-if="row.note" class="mt-0.5 max-w-md truncate text-xs text-muted">{{ row.note }}</p>
+                <div class="font-medium text-ui-primary">{{ row.name }}</div>
+                <p v-if="row.note" class="mt-0.5 max-w-md truncate text-xs text-ui-muted">{{ row.note }}</p>
               </div>
             </template>
 
             <template #cell-category="{ row }">
-              <span class="text-muted">{{ EXPENSE_CATEGORY_LABELS[row.category] }}</span>
+              <span class="text-ui-muted">{{ EXPENSE_CATEGORY_LABELS[row.category] }}</span>
             </template>
 
             <template #cell-buildings="{ row }">
@@ -318,7 +318,7 @@ function resolveError(err: unknown, fallback: string): string {
             </template>
 
             <template #cell-amount="{ row }">
-              <span class="tabular-nums text-white">{{ formatCurrency(row.amount) }}</span>
+              <span class="tabular-nums text-ui-primary">{{ formatCurrency(row.amount) }}</span>
             </template>
 
             <template #cell-status="{ row }">

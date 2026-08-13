@@ -174,22 +174,22 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', onDocumentClick)
 // ── Styles ─────────────────────────────────────────────────────────────────
 const triggerClass = computed(() =>
   clsx(
-    'flex w-full items-center justify-between rounded-md border bg-dark-surface px-3 py-2 text-base sm:text-sm',
+    'flex w-full items-center justify-between rounded-md border bg-ui-surface px-3 py-2 text-base sm:text-sm',
     'transition-colors cursor-pointer select-none',
     'focus:outline-none focus:ring-2 focus:ring-offset-0',
     props.error
-      ? 'border-error/50 focus:border-error/60 focus:ring-error/30'
-      : 'border-dark-border focus:border-cyan/70 focus:ring-cyan/30',
+      ? 'border-status-danger/50 focus:border-status-danger/60 focus:ring-status-danger/30'
+      : 'border-ui-border-strong focus:border-ui-accent/70 focus:ring-ui-accent/30',
     props.disabled || props.loading
-      ? 'opacity-50 cursor-not-allowed pointer-events-none bg-dark-hover'
-      : 'hover:border-dark-border/80',
+      ? 'opacity-50 cursor-not-allowed pointer-events-none bg-ui-hover'
+      : 'hover:border-ui-border/80',
   ),
 )
 
 const triggerLabelClass = computed(() =>
   clsx(
     'min-w-0 truncate',
-    props.modelValue ? 'text-white' : 'text-muted',
+    props.modelValue ? 'text-ui-primary' : 'text-ui-muted',
     props.modelValue && !props.disabled && !props.loading && 'pr-7',
   ),
 )
@@ -206,10 +206,10 @@ const triggerLabelClass = computed(() =>
     <label
       v-if="label"
       :for="comboboxId"
-      class="text-sm font-medium text-muted"
+      class="text-sm font-medium text-ui-muted"
     >
       {{ label }}
-      <span v-if="required" class="text-error ml-0.5" aria-hidden="true">*</span>
+      <span v-if="required" class="text-status-danger ml-0.5" aria-hidden="true">*</span>
     </label>
 
     <!-- Trigger button (shows selected value or placeholder) -->
@@ -236,14 +236,14 @@ const triggerLabelClass = computed(() =>
         <span class="flex items-center gap-1 shrink-0 ml-2">
           <IconSpinner
             v-if="loading"
-            class="size-4 animate-spin text-muted"
+            class="size-4 animate-spin text-ui-muted"
             aria-hidden="true"
           />
 
           <!-- Chevron -->
           <IconChevronDown
             v-else
-            class="size-4 text-muted transition-transform"
+            class="size-4 text-ui-muted transition-transform"
             :class="isOpen ? 'rotate-180' : ''"
             aria-hidden="true"
           />
@@ -254,7 +254,7 @@ const triggerLabelClass = computed(() =>
       <button
         v-if="modelValue && !disabled && !loading"
         type="button"
-        class="absolute right-8 top-1/2 inline-flex size-6 -translate-y-1/2 items-center justify-center rounded text-muted transition-colors hover:bg-dark-hover hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan/30"
+        class="absolute right-8 top-1/2 inline-flex size-6 -translate-y-1/2 items-center justify-center rounded text-ui-muted transition-colors hover:bg-ui-hover hover:text-ui-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-accent/30"
         aria-label="Xóa lựa chọn"
         @click.stop.prevent="clear"
       >
@@ -264,16 +264,16 @@ const triggerLabelClass = computed(() =>
       <!-- Dropdown panel -->
       <div
         v-if="isOpen"
-        class="absolute z-50 mt-1 w-full rounded-md border border-dark-border bg-dark-card shadow-lg"
+        class="absolute z-50 mt-1 w-full rounded-md border border-ui-border bg-ui-chrome shadow-lg"
       >
         <!-- Search input -->
-        <div class="p-2 border-b border-dark-border">
+        <div class="p-2 border-b border-ui-border">
           <input
             ref="inputRef"
             v-model="query"
             type="text"
             :placeholder="searchPlaceholder"
-            class="w-full rounded bg-dark-surface border border-dark-border px-2 py-1.5 text-base sm:text-sm text-white placeholder-muted focus:outline-none focus:border-cyan/70 focus:ring-1 focus:ring-cyan/30"
+            class="w-full rounded bg-ui-surface border border-ui-border-strong px-2 py-1.5 text-base sm:text-sm text-ui-primary placeholder-ui-muted focus:outline-none focus:border-ui-accent/70 focus:ring-1 focus:ring-ui-accent/30"
             autocomplete="off"
             @keydown="onKeydown"
           >
@@ -288,14 +288,14 @@ const triggerLabelClass = computed(() =>
           class="max-h-56 overflow-y-auto py-1"
         >
           <!-- Loading state -->
-          <li v-if="loading" class="px-3 py-2 text-sm text-muted">
+          <li v-if="loading" class="px-3 py-2 text-sm text-ui-muted">
             Đang tải...
           </li>
 
           <!-- Empty state -->
           <li
             v-else-if="filteredOptions.length === 0 && !customOption"
-            class="px-3 py-2 text-sm text-muted text-center"
+            class="px-3 py-2 text-sm text-ui-muted text-center"
           >
             {{ emptyMessage }}
           </li>
@@ -308,8 +308,8 @@ const triggerLabelClass = computed(() =>
             :aria-selected="isSelected(option)"
             :class="clsx(
               'flex items-center justify-between px-3 py-2 text-sm cursor-pointer transition-colors',
-              index === activeIndex ? 'bg-cyan/15 text-white' : 'text-white hover:bg-dark-hover',
-              isSelected(option) && 'text-cyan',
+              index === activeIndex ? 'bg-ui-accent/15 text-ui-primary' : 'text-ui-primary hover:bg-ui-hover',
+              isSelected(option) && 'text-ui-accent',
             )"
             @mousedown.prevent="select(option)"
             @mouseover="activeIndex = index"
@@ -318,7 +318,7 @@ const triggerLabelClass = computed(() =>
             <!-- Checkmark for selected -->
           <IconCheckSmall
             v-if="isSelected(option)"
-            class="size-4 shrink-0 text-cyan"
+            class="size-4 shrink-0 text-ui-accent"
             aria-hidden="true"
           />
           </li>
@@ -329,27 +329,27 @@ const triggerLabelClass = computed(() =>
             role="option"
             :aria-selected="activeIndex === filteredOptions.length"
             :class="clsx(
-              'flex items-center justify-between gap-3 border-t border-dark-border px-3 py-2 text-sm cursor-pointer transition-colors',
-              activeIndex === filteredOptions.length ? 'bg-cyan/15 text-white' : 'text-white hover:bg-dark-hover',
+              'flex items-center justify-between gap-3 border-t border-ui-border px-3 py-2 text-sm cursor-pointer transition-colors',
+              activeIndex === filteredOptions.length ? 'bg-ui-accent/15 text-ui-primary' : 'text-ui-primary hover:bg-ui-hover',
             )"
             @mousedown.prevent="selectCustom"
             @mouseover="activeIndex = filteredOptions.length"
           >
             <span class="min-w-0 truncate">
-              <span class="text-muted">{{ customOptionLabel }}</span>
-              <span class="ml-1 text-white">"{{ trimmedQuery }}"</span>
+              <span class="text-ui-muted">{{ customOptionLabel }}</span>
+              <span class="ml-1 text-ui-primary">"{{ trimmedQuery }}"</span>
             </span>
-            <IconPlus class="size-4 shrink-0 text-cyan" aria-hidden="true" />
+            <IconPlus class="size-4 shrink-0 text-ui-accent" aria-hidden="true" />
           </li>
         </ul>
       </div>
     </div>
 
     <!-- Error / hint -->
-    <p v-if="error" :id="`${comboboxId}-error`" class="text-xs text-error" role="alert">
+    <p v-if="error" :id="`${comboboxId}-error`" class="text-xs text-status-danger" role="alert">
       {{ error }}
     </p>
-    <p v-else-if="hint" :id="`${comboboxId}-hint`" class="text-xs text-muted">
+    <p v-else-if="hint" :id="`${comboboxId}-hint`" class="text-xs text-ui-muted">
       {{ hint }}
     </p>
   </div>

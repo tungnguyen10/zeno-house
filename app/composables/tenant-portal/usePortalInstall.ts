@@ -1,3 +1,5 @@
+import { detectPwaInstallEnvironment } from '~/utils/pwa/install-environment'
+
 /**
  * PWA install orchestration for the whole app (offered app-wide; the role
  * redirect decides the landing surface). Captures `beforeinstallprompt` on
@@ -13,7 +15,8 @@ export function usePortalInstall() {
   const deferredPrompt = ref<BeforeInstallPromptEvent | null>(null)
   const canPrompt = ref(false)
   const isStandalone = ref(false)
-  const isIos = ref(false)
+  const isAppleMobile = ref(false)
+  const isSafari = ref(false)
   // Persist dismissal for the session so the prompt does not nag on every page.
   const dismissed = useState('portal-install-dismissed', () => false)
 
@@ -39,8 +42,9 @@ export function usePortalInstall() {
 
   onMounted(() => {
     isStandalone.value = detectStandalone()
-    isIos.value = /iphone|ipad|ipod/i.test(window.navigator.userAgent)
-      && !(window.navigator as unknown as { MSStream?: unknown }).MSStream
+    const environment = detectPwaInstallEnvironment(window.navigator)
+    isAppleMobile.value = environment.isAppleMobile
+    isSafari.value = environment.isSafari
     window.addEventListener('beforeinstallprompt', onBeforeInstallPrompt)
     window.addEventListener('appinstalled', onInstalled)
   })
@@ -69,13 +73,14 @@ export function usePortalInstall() {
   )
   /** iOS never fires `beforeinstallprompt`; offer manual A2HS guidance instead. */
   const showIosGuide = computed(
-    () => isIos.value && !isStandalone.value && !dismissed.value,
+    () => isAppleMobile.value && !isStandalone.value && !dismissed.value,
   )
 
   return {
     canPrompt,
     isStandalone,
-    isIos,
+    isAppleMobile,
+    isSafari,
     dismissed,
     showInstallPrompt,
     showIosGuide,

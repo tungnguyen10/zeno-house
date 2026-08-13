@@ -14,11 +14,11 @@ const props = withDefaults(defineProps<{
 })
 
 const variantClass: Record<StatusVariant, string> = {
-  neutral: 'bg-dark-surface text-muted',
-  accent: 'bg-cyan/10 text-cyan',
-  success: 'bg-success-neon/10 text-success-neon',
-  warning: 'bg-warning/10 text-warning',
-  danger: 'bg-error-bg text-error-vivid',
+  neutral: 'bg-ui-surface text-ui-muted',
+  accent: 'bg-ui-accent/10 text-ui-accent',
+  success: 'bg-status-success/10 text-status-success',
+  warning: 'bg-status-warning/10 text-status-warning',
+  danger: 'bg-status-danger-surface text-status-danger',
 }
 
 const badgeClass = computed(() =>

@@ -205,8 +205,8 @@ const canSubmit = computed(() => !props.loading && (props.isDirty || props.hasDr
     <!-- Group: Basic info -->
     <section class="space-y-4">
       <header>
-        <h3 class="text-sm font-semibold text-white">Thông tin cơ bản</h3>
-        <p class="text-xs text-muted mt-0.5">Tên, địa chỉ và trạng thái hoạt động của toà nhà.</p>
+        <h3 class="text-sm font-semibold text-ui-primary">Thông tin cơ bản</h3>
+        <p class="text-xs text-ui-muted mt-0.5">Tên, địa chỉ và trạng thái hoạt động của toà nhà.</p>
       </header>
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <UiInput
@@ -254,13 +254,13 @@ const canSubmit = computed(() => !props.loading && (props.isDirty || props.hasDr
       </div>
     </section>
 
-    <div class="border-t border-dark-border" />
+    <div class="border-t border-ui-border" />
 
     <!-- Group: Owner contact -->
     <section class="space-y-4">
       <header>
-        <h3 class="text-sm font-semibold text-white">Chủ sở hữu</h3>
-        <p class="text-xs text-muted mt-0.5">Liên hệ chính cho việc vận hành — tất cả đều tuỳ chọn.</p>
+        <h3 class="text-sm font-semibold text-ui-primary">Chủ sở hữu</h3>
+        <p class="text-xs text-ui-muted mt-0.5">Liên hệ chính cho việc vận hành — tất cả đều tuỳ chọn.</p>
       </header>
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <UiInput
@@ -295,13 +295,13 @@ const canSubmit = computed(() => !props.loading && (props.isDirty || props.hasDr
       </div>
     </section>
 
-    <div class="border-t border-dark-border" />
+    <div class="border-t border-ui-border" />
 
     <!-- Group: Billing defaults -->
     <section class="space-y-4">
       <header>
-        <h3 class="text-sm font-semibold text-white">Tính phí mặc định</h3>
-        <p class="text-xs text-muted mt-0.5">Áp dụng cho mọi phòng trong toà — có thể ghi đè ở từng hợp đồng.</p>
+        <h3 class="text-sm font-semibold text-ui-primary">Tính phí mặc định</h3>
+        <p class="text-xs text-ui-muted mt-0.5">Áp dụng cho mọi phòng trong toà — có thể ghi đè ở từng hợp đồng.</p>
       </header>
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <UiSelect
@@ -349,13 +349,13 @@ const canSubmit = computed(() => !props.loading && (props.isDirty || props.hasDr
       </div>
     </section>
 
-    <div class="border-t border-dark-border" />
+    <div class="border-t border-ui-border" />
 
     <!-- Group: Schedule -->
     <section class="space-y-5">
       <header>
-        <h3 class="text-sm font-semibold text-white">Lịch vận hành</h3>
-        <p class="text-xs text-muted mt-0.5">
+        <h3 class="text-sm font-semibold text-ui-primary">Lịch vận hành</h3>
+        <p class="text-xs text-ui-muted mt-0.5">
           Chốt số &amp; lập hoá đơn chỉ là mốc nhắc việc; ngày đến hạn &amp; gia hạn quyết định hạn thanh toán hoá đơn.
         </p>
       </header>
@@ -363,7 +363,7 @@ const canSubmit = computed(() => !props.loading && (props.isDirty || props.hasDr
       <!-- Sub-group: reminder-only dates, no automation reads these -->
       <div class="space-y-2">
         <div class="flex items-center gap-2">
-          <span class="text-[10px] font-medium uppercase tracking-wide text-muted">Nhắc lịch</span>
+          <span class="text-[10px] font-medium uppercase tracking-wide text-ui-muted">Nhắc lịch</span>
           <UiBadge variant="neutral" size="sm">Chỉ ghi chú</UiBadge>
         </div>
         <div class="grid grid-cols-2 gap-4 lg:grid-cols-3">
@@ -407,7 +407,7 @@ const canSubmit = computed(() => !props.loading && (props.isDirty || props.hasDr
       <!-- Sub-group: feeds invoice-due-policy resolver directly -->
       <div class="space-y-2">
         <div class="flex items-center gap-2">
-          <span class="text-[10px] font-medium uppercase tracking-wide text-muted">Quy tắc tính hạn thanh toán</span>
+          <span class="text-[10px] font-medium uppercase tracking-wide text-ui-muted">Quy tắc tính hạn thanh toán</span>
           <UiBadge variant="accent" size="sm">Tự động áp dụng</UiBadge>
         </div>
         <div class="grid grid-cols-2 gap-4">
@@ -445,7 +445,7 @@ const canSubmit = computed(() => !props.loading && (props.isDirty || props.hasDr
     <slot name="extras" />
 
     <!-- Desktop footer -->
-    <div class="hidden md:flex items-center justify-end gap-3 pt-2 border-t border-dark-border">
+    <div class="hidden md:flex items-center justify-end gap-3 pt-2 border-t border-ui-border">
       <UiButton variant="ghost" type="button" :disabled="loading" @click="emit('cancel')">
         Huỷ
       </UiButton>
@@ -457,7 +457,7 @@ const canSubmit = computed(() => !props.loading && (props.isDirty || props.hasDr
     <!-- Mobile sticky save bar -->
     <div
       data-test="sticky-save-bar"
-      class="md:hidden fixed inset-x-0 bottom-0 z-40 border-t border-dark-border bg-dark-deep/95 px-4 pt-3 backdrop-blur"
+      class="md:hidden fixed inset-x-0 bottom-0 z-40 border-t border-ui-border bg-ui-deep/95 px-4 pt-3 backdrop-blur"
       :style="{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }"
     >
       <div class="flex items-center gap-2">

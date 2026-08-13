@@ -8,7 +8,7 @@ const props = defineProps<{
 
 const panelClass = computed(() =>
   clsx(
-    'rounded-xl border border-dark-border bg-dark-surface',
+    'rounded-xl border border-ui-border bg-ui-surface',
     props.density === 'compact' ? 'p-4' : 'p-5',
   ),
 )

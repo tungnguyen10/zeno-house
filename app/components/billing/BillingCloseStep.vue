@@ -44,19 +44,19 @@ async function confirmClose() {
 
 <template>
   <div class="space-y-4">
-    <div class="rounded-xl border border-dark-border bg-dark-surface p-4 space-y-3">
+    <div class="rounded-xl border border-ui-border bg-ui-surface p-4 space-y-3">
       <div class="grid grid-cols-2 gap-3 md:grid-cols-3">
         <div>
-          <p class="text-xs text-muted">Trạng thái</p>
+          <p class="text-xs text-ui-muted">Trạng thái</p>
           <UiStatusBadge :status="period.status" context="period" class="mt-1" />
         </div>
         <div>
-          <p class="text-xs text-muted">Đã thu</p>
-          <p class="text-sm text-success-neon mt-1">{{ formatCurrency(overview.paidTotal) }}</p>
+          <p class="text-xs text-ui-muted">Đã thu</p>
+          <p class="text-sm text-status-success mt-1">{{ formatCurrency(overview.paidTotal) }}</p>
         </div>
         <div>
-          <p class="text-xs text-muted">Còn lại</p>
-          <p :class="['text-sm mt-1', overview.outstandingBalance > 0 ? 'text-error-vivid' : 'text-success-neon']">
+          <p class="text-xs text-ui-muted">Còn lại</p>
+          <p :class="['text-sm mt-1', overview.outstandingBalance > 0 ? 'text-status-danger' : 'text-status-success']">
             {{ formatCurrency(overview.outstandingBalance) }}
           </p>
         </div>
@@ -77,7 +77,7 @@ async function confirmClose() {
       <UiAlert v-if="submitError" severity="danger">{{ submitError }}</UiAlert>
 
       <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between pt-2">
-        <p v-if="blockReasons.length > 0" class="text-xs text-muted">
+        <p v-if="blockReasons.length > 0" class="text-xs text-ui-muted">
           Lý do không thể chốt: {{ blockReasons.join(' · ') }}
         </p>
         <UiButton
