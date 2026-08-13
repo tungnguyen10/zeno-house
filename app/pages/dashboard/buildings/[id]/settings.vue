@@ -796,7 +796,7 @@ const activeSectionId = computed(() => {
       back-label="Quay lại tòa nhà"
     />
 
-    <div class="rounded-xl border border-dark-border bg-dark-surface p-4">
+    <div class="rounded-xl border border-ui-border bg-ui-surface p-4">
       <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <UiMetric
           label="Dịch vụ mặc định bật"
@@ -825,7 +825,7 @@ const activeSectionId = computed(() => {
       </div>
     </div>
 
-    <div class="sticky top-0 z-10 -mx-1 overflow-x-auto border-y border-dark-border bg-dark/95 px-1 py-2 backdrop-blur xl:hidden">
+    <div class="sticky top-0 z-10 -mx-1 overflow-x-auto border-y border-ui-border bg-ui-canvas/95 px-1 py-2 backdrop-blur xl:hidden">
       <nav class="flex items-center gap-2">
         <a
           v-for="section in settingsSections"
@@ -833,8 +833,8 @@ const activeSectionId = computed(() => {
           :href="`#${section.id}`"
           class="shrink-0 rounded-md border px-2.5 py-1.5 text-xs transition-colors"
           :class="activeSectionId === section.id
-            ? 'border-cyan/50 bg-cyan/10 text-cyan'
-            : 'border-dark-border bg-dark-surface text-muted hover:text-white'"
+            ? 'border-ui-accent/50 bg-ui-accent/10 text-ui-accent'
+            : 'border-ui-border bg-ui-surface text-ui-muted hover:text-ui-primary'"
         >
           {{ section.label }}
         </a>
@@ -843,8 +843,8 @@ const activeSectionId = computed(() => {
 
     <div class="grid gap-4 xl:grid-cols-[220px_minmax(0,1fr)]">
       <aside class="hidden xl:block">
-        <div class="sticky top-4 rounded-xl border border-dark-border bg-dark-surface p-3">
-          <p class="text-xs font-semibold uppercase tracking-wide text-muted">Điều hướng cài đặt</p>
+        <div class="sticky top-4 rounded-xl border border-ui-border bg-ui-surface p-3">
+          <p class="text-xs font-semibold uppercase tracking-wide text-ui-muted">Điều hướng cài đặt</p>
           <nav class="mt-3 flex flex-col gap-1.5">
             <a
               v-for="section in settingsSections"
@@ -852,14 +852,14 @@ const activeSectionId = computed(() => {
               :href="`#${section.id}`"
               class="rounded-lg border px-3 py-2 transition-colors"
               :class="activeSectionId === section.id
-                ? 'border-cyan/40 bg-cyan/10'
-                : 'border-dark-border bg-dark-deep/40 hover:bg-dark-hover/50'"
+                ? 'border-ui-accent/40 bg-ui-accent/10'
+                : 'border-ui-border bg-ui-deep/40 hover:bg-ui-hover/50'"
             >
-              <p :class="activeSectionId === section.id ? 'text-sm font-medium text-cyan' : 'text-sm font-medium text-white'">
+              <p :class="activeSectionId === section.id ? 'text-sm font-medium text-ui-accent' : 'text-sm font-medium text-ui-primary'">
                 {{ section.label }}
               </p>
-              <p class="mt-0.5 text-xs text-muted">{{ section.description }}</p>
-              <p v-if="section.badge" class="mt-1 text-[11px] text-cyan/90">{{ section.badge }}</p>
+              <p class="mt-0.5 text-xs text-ui-muted">{{ section.description }}</p>
+              <p v-if="section.badge" class="mt-1 text-[11px] text-ui-accent/90">{{ section.badge }}</p>
             </a>
           </nav>
         </div>
@@ -868,7 +868,7 @@ const activeSectionId = computed(() => {
       <div class="space-y-6">
         <section id="identity-access" class="scroll-mt-20 space-y-3">
           <header class="flex items-center justify-between gap-2">
-            <h2 class="text-sm font-semibold text-cyan">Định danh và phân quyền</h2>
+            <h2 class="text-sm font-semibold text-ui-accent">Định danh và phân quyền</h2>
             <UiBadge variant="neutral">{{ assignedManagers.length }} manager</UiBadge>
           </header>
 
@@ -899,7 +899,7 @@ const activeSectionId = computed(() => {
                   </UiButton>
                   <span
                     v-else
-                    class="inline-flex items-center gap-1.5 rounded-md border border-dark-border bg-dark-deep/40 px-2 py-1 text-xs text-muted"
+                    class="inline-flex items-center gap-1.5 rounded-md border border-ui-border bg-ui-deep/40 px-2 py-1 text-xs text-ui-muted"
                   >
                     <IconLock class="h-3.5 w-3.5" aria-hidden="true" />
                     Đã khóa · {{ building?.totalRooms }} phòng
@@ -909,7 +909,7 @@ const activeSectionId = computed(() => {
               <UiAlert v-if="codeSaveError" severity="danger" class="mt-3">
                 {{ codeSaveError }}
               </UiAlert>
-              <p v-if="codeSaveSuccess" class="mt-2 text-xs text-green-400">
+              <p v-if="codeSaveSuccess" class="mt-2 text-xs text-status-success">
                 Code đã được lưu.
               </p>
             </UiSurfacePanel>
@@ -921,19 +921,19 @@ const activeSectionId = computed(() => {
             description="Những manager đang được phân quyền vào tòa nhà này."
           >
             <template #actions>
-              <NuxtLink to="/dashboard/settings/managers" class="text-sm text-cyan hover:text-cyan/80 transition-colors">
+              <NuxtLink to="/dashboard/settings/managers" class="text-sm text-ui-accent hover:text-ui-accent/80 transition-colors">
                 Quản lý phân quyền
               </NuxtLink>
             </template>
             <UiSurfacePanel density="compact">
-              <div v-if="assignedManagers.length === 0" class="text-sm text-muted">
+              <div v-if="assignedManagers.length === 0" class="text-sm text-ui-muted">
                 Chưa có manager nào được gán.
               </div>
               <div v-else class="flex flex-wrap gap-2">
                 <span
                   v-for="manager in assignedManagers"
                   :key="manager.id"
-                  class="rounded-md border border-dark-border bg-dark-bg px-3 py-2 text-sm text-white"
+                  class="rounded-md border border-ui-border bg-ui-deep px-3 py-2 text-sm text-ui-primary"
                 >
                   {{ manager.name ?? manager.email ?? manager.id }}
                 </span>
@@ -944,7 +944,7 @@ const activeSectionId = computed(() => {
 
         <section id="invoice-profile" class="scroll-mt-20 space-y-3">
           <header class="flex items-center justify-between gap-2">
-            <h2 class="text-sm font-semibold text-cyan">Nhận diện và thanh toán</h2>
+            <h2 class="text-sm font-semibold text-ui-accent">Nhận diện và thanh toán</h2>
             <UiBadge :variant="invoiceProfile ? 'success' : 'warning'">
               {{ invoiceProfile ? 'Đã cấu hình' : 'Chưa hoàn chỉnh' }}
             </UiBadge>
@@ -985,7 +985,7 @@ const activeSectionId = computed(() => {
 
         <section v-if="canViewFinanceRules" id="finance-rules" class="scroll-mt-20 space-y-3">
           <header class="flex items-center justify-between gap-2">
-            <h2 class="text-sm font-semibold text-cyan">Quy tắc vận hành</h2>
+            <h2 class="text-sm font-semibold text-ui-accent">Quy tắc vận hành</h2>
             <UiBadge variant="neutral">{{ activeFinanceRuleCount }} mục</UiBadge>
           </header>
 
@@ -1007,20 +1007,20 @@ const activeSectionId = computed(() => {
               <div v-if="isLoadingFixedCosts" class="space-y-2">
                 <UiSkeleton v-for="i in 3" :key="i" class="h-14 rounded-lg" />
               </div>
-              <div v-else-if="fixedCosts.length === 0" class="text-sm text-muted">
+              <div v-else-if="fixedCosts.length === 0" class="text-sm text-ui-muted">
                 Chưa có chi phí vận hành cố định.
               </div>
-              <div v-else class="divide-y divide-dark-border">
+              <div v-else class="divide-y divide-ui-border">
                 <div
                   v-for="cost in fixedCosts"
                   :key="cost.id"
                   class="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div>
-                    <div class="font-medium text-white">
+                    <div class="font-medium text-ui-primary">
                       {{ FIXED_COST_CATEGORY_LABELS[cost.category] ?? cost.category }}
                     </div>
-                    <div class="mt-1 text-xs text-muted">
+                    <div class="mt-1 text-xs text-ui-muted">
                       Từ {{ cost.effectiveFromPeriodMonth }}/{{ cost.effectiveFromPeriodYear }}
                       <template v-if="cost.effectiveToPeriodYear">
                         đến {{ cost.effectiveToPeriodMonth }}/{{ cost.effectiveToPeriodYear }}
@@ -1029,10 +1029,10 @@ const activeSectionId = computed(() => {
                         · đang áp dụng
                       </template>
                     </div>
-                    <p v-if="cost.note" class="mt-1 text-xs text-muted">{{ cost.note }}</p>
+                    <p v-if="cost.note" class="mt-1 text-xs text-ui-muted">{{ cost.note }}</p>
                   </div>
                   <div class="flex items-center justify-between gap-3 sm:justify-end">
-                    <span class="tabular-nums text-white">{{ formatCurrency(cost.amount) }}</span>
+                    <span class="tabular-nums text-ui-primary">{{ formatCurrency(cost.amount) }}</span>
                     <UiButton
                       v-if="!cost.effectiveToPeriodYear"
                       size="sm"
@@ -1065,21 +1065,21 @@ const activeSectionId = computed(() => {
               <div v-if="isLoadingReserveRates" class="space-y-2">
                 <UiSkeleton v-for="i in 3" :key="i" class="h-14 rounded-lg" />
               </div>
-              <div v-else-if="reserveRates.length === 0" class="text-sm text-muted">
+              <div v-else-if="reserveRates.length === 0" class="text-sm text-ui-muted">
                 Chưa có tỷ lệ quỹ dự phòng.
               </div>
-              <div v-else class="divide-y divide-dark-border">
+              <div v-else class="divide-y divide-ui-border">
                 <div
                   v-for="rate in reserveRates"
                   :key="rate.id"
                   class="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div>
-                    <div class="font-medium text-white">
+                    <div class="font-medium text-ui-primary">
                       {{ rate.reserveRatePercent }}%
                       <UiBadge v-if="!rate.effectiveToPeriodYear" variant="accent" class="ml-2">Đang áp dụng</UiBadge>
                     </div>
-                    <div class="mt-1 text-xs text-muted">
+                    <div class="mt-1 text-xs text-ui-muted">
                       Từ {{ rate.effectiveFromPeriodMonth }}/{{ rate.effectiveFromPeriodYear }}
                       <template v-if="rate.effectiveToPeriodYear">
                         đến {{ rate.effectiveToPeriodMonth }}/{{ rate.effectiveToPeriodYear }}
@@ -1117,28 +1117,28 @@ const activeSectionId = computed(() => {
               <div v-if="isLoadingRecurringExpenses" class="space-y-2">
                 <UiSkeleton v-for="i in 3" :key="i" class="h-14 rounded-lg" />
               </div>
-              <div v-else-if="recurringExpenses.length === 0" class="text-sm text-muted">
+              <div v-else-if="recurringExpenses.length === 0" class="text-sm text-ui-muted">
                 Chưa có nhắc chi phí định kỳ.
               </div>
-              <div v-else class="divide-y divide-dark-border">
+              <div v-else class="divide-y divide-ui-border">
                 <div
                   v-for="item in recurringExpenses"
                   :key="item.id"
                   class="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div>
-                    <div class="font-medium text-white">
+                    <div class="font-medium text-ui-primary">
                       {{ item.name }}
                       <UiBadge v-if="!item.isActive" variant="warning" class="ml-2">Tắt</UiBadge>
                     </div>
-                    <div class="mt-1 text-xs text-muted">
+                    <div class="mt-1 text-xs text-ui-muted">
                       {{ EXPENSE_CATEGORY_LABELS[item.category] }} ·
                       {{ RECURRING_EXPENSE_FREQUENCY_LABELS[item.frequency] }} ·
                       ngày {{ item.anchorDay }} · nhắc tiếp {{ item.nextReminderAt }}
                     </div>
                   </div>
                   <div class="flex items-center justify-between gap-2 sm:justify-end">
-                    <span class="tabular-nums text-white">{{ formatCurrency(item.estimatedAmount) }}</span>
+                    <span class="tabular-nums text-ui-primary">{{ formatCurrency(item.estimatedAmount) }}</span>
                     <UiButton size="sm" variant="secondary" @click="openEditRecurring(item)">Sửa</UiButton>
                     <UiButton size="sm" variant="ghost" icon-only aria-label="Xóa" @click="removeRecurring(item)">
                       <IconTrash class="h-4 w-4" aria-hidden="true" />
@@ -1167,28 +1167,28 @@ const activeSectionId = computed(() => {
               <div v-if="isLoadingPrepaidExpenses" class="space-y-2">
                 <UiSkeleton v-for="i in 3" :key="i" class="h-14 rounded-lg" />
               </div>
-              <div v-else-if="prepaidExpenses.length === 0" class="text-sm text-muted">
+              <div v-else-if="prepaidExpenses.length === 0" class="text-sm text-ui-muted">
                 Chưa có chi phí trả trước.
               </div>
-              <div v-else class="divide-y divide-dark-border">
+              <div v-else class="divide-y divide-ui-border">
                 <div
                   v-for="item in prepaidExpenses"
                   :key="item.id"
                   class="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div>
-                    <div class="font-medium text-white">
+                    <div class="font-medium text-ui-primary">
                       {{ item.name }}
                       <UiBadge class="ml-2">{{ PREPAID_EXPENSE_STATUS_LABELS[item.status] }}</UiBadge>
                     </div>
-                    <div class="mt-1 text-xs text-muted">
+                    <div class="mt-1 text-xs text-ui-muted">
                       {{ EXPENSE_CATEGORY_LABELS[item.category] }} · {{ item.startDate }} đến {{ item.endDate }} ·
                       {{ item.totalMonths }} tháng
                     </div>
-                    <p v-if="item.note" class="mt-1 text-xs text-muted">{{ item.note }}</p>
+                    <p v-if="item.note" class="mt-1 text-xs text-ui-muted">{{ item.note }}</p>
                   </div>
                   <div class="flex items-center justify-between gap-2 sm:justify-end">
-                    <span class="tabular-nums text-white">{{ formatCurrency(item.monthlyAmount) }}/tháng</span>
+                    <span class="tabular-nums text-ui-primary">{{ formatCurrency(item.monthlyAmount) }}/tháng</span>
                     <UiButton
                       v-if="item.status === 'active'"
                       size="sm"
@@ -1223,13 +1223,13 @@ const activeSectionId = computed(() => {
               <div class="flex items-center gap-3">
                 <span
                   v-if="syncResult"
-                  class="rounded-md bg-green-500/10 px-2 py-1 text-xs text-green-400"
+                  class="rounded-md bg-status-success/10 px-2 py-1 text-xs text-status-success"
                 >
                   {{ syncResult }}
                 </span>
                 <span
                   v-else-if="activeServiceCount > 0"
-                  class="rounded-md bg-cyan/10 px-2 py-1 text-xs text-cyan"
+                  class="rounded-md bg-ui-accent/10 px-2 py-1 text-xs text-ui-accent"
                 >
                   {{ activeServiceCount }} dịch vụ đang bật
                 </span>
@@ -1363,7 +1363,7 @@ const activeSectionId = computed(() => {
       @close="endFixedCostModalOpen = false"
     >
       <div class="space-y-4">
-        <p class="text-sm text-muted">
+        <p class="text-sm text-ui-muted">
           Chọn kỳ cuối cùng còn áp dụng chi phí này.
         </p>
         <UiDatePicker
@@ -1432,7 +1432,7 @@ const activeSectionId = computed(() => {
       @close="endReserveRateModalOpen = false"
     >
       <div class="space-y-4">
-        <p class="text-sm text-muted">
+        <p class="text-sm text-ui-muted">
           Chọn kỳ cuối cùng còn áp dụng tỷ lệ này.
         </p>
         <UiDatePicker
@@ -1538,7 +1538,7 @@ const activeSectionId = computed(() => {
           :options="prepaidStatusOptions"
         />
         <UiTextarea v-model="prepaidForm.note" label="Ghi chú" :rows="2" />
-        <div v-if="prepaidPreview" class="rounded-md border border-dark-border bg-dark-bg px-3 py-2 text-sm text-muted">
+        <div v-if="prepaidPreview" class="rounded-md border border-ui-border bg-ui-deep px-3 py-2 text-sm text-ui-muted">
           ~{{ formatCurrency(prepaidPreview.monthly) }}/tháng · kết thúc {{ prepaidPreview.endDate }}
         </div>
         <UiAlert v-if="prepaidError" severity="danger">{{ prepaidError }}</UiAlert>
@@ -1563,7 +1563,7 @@ const activeSectionId = computed(() => {
       @cancel="closePrepaidDelete"
     >
       <div class="space-y-3">
-        <p class="break-words text-sm text-muted">
+        <p class="break-words text-sm text-ui-muted">
           Bạn sắp ngừng phân bổ “{{ prepaidDeleteTarget?.name }}”.
           Số liệu các kỳ đã chốt được giữ nguyên. Khoản này sẽ không còn được tính từ
           {{ prepaidCancellationPeriodLabel }}.

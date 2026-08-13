@@ -16,7 +16,7 @@ const props = defineProps<{
   previousCollectionRate?: number | null
 }>()
 
-const { donutOptions, palette } = useChartTheme()
+const { donutOptions, palette, resolvedTheme } = useChartTheme()
 
 const hasData = computed(() => props.invoiceTotal > 0)
 
@@ -27,10 +27,10 @@ const ratePct = computed(() => Math.round((props.collectionRate || 0) * 100))
 const percentLabel = computed(() => `${ratePct.value}%`)
 
 const rateColorClass = computed(() => {
-  if (!hasData.value) return 'text-muted'
-  if (ratePct.value >= 90) return 'text-success-neon'
-  if (ratePct.value >= 60) return 'text-warning'
-  return 'text-error-vivid'
+  if (!hasData.value) return 'text-ui-muted'
+  if (ratePct.value >= 90) return 'text-status-success'
+  if (ratePct.value >= 60) return 'text-status-warning'
+  return 'text-status-danger'
 })
 
 const periodLabel = computed(() => formatPeriodDisplay(props.period) ?? '')
@@ -50,8 +50,8 @@ const deltaLabel = computed(() => {
 })
 
 const deltaTextClass = computed(() => {
-  if (deltaPct.value == null || deltaPct.value === 0) return 'text-muted'
-  return deltaPct.value > 0 ? 'text-success-neon' : 'text-error-vivid'
+  if (deltaPct.value == null || deltaPct.value === 0) return 'text-ui-muted'
+  return deltaPct.value > 0 ? 'text-status-success' : 'text-status-danger'
 })
 
 function share(amount: number): number {
@@ -70,7 +70,7 @@ const chartData = computed<ChartData<'doughnut'>>(() => {
       datasets: [
         {
           data: [1],
-          backgroundColor: [palette.darkBorder],
+          backgroundColor: [palette.value.border],
           borderWidth: 0,
         },
       ],
@@ -82,8 +82,8 @@ const chartData = computed<ChartData<'doughnut'>>(() => {
     datasets: [
       {
         data: [paid, inGraceAmount.value, overdueAmount.value],
-        backgroundColor: [palette.successNeon, palette.warning, palette.errorVivid],
-        borderColor: palette.darkSurface,
+        backgroundColor: [palette.value.success, palette.value.warning, palette.value.danger],
+        borderColor: palette.value.surface,
         borderWidth: 1,
         borderRadius: 2,
       },
@@ -92,19 +92,19 @@ const chartData = computed<ChartData<'doughnut'>>(() => {
 })
 
 const chartOptions = computed<ChartOptions<'doughnut'>>(() => ({
-  ...donutOptions,
+  ...donutOptions.value,
   rotation: -90,
   circumference: 360,
   cutout: '70%',
   plugins: {
-    ...donutOptions.plugins,
+    ...donutOptions.value.plugins,
     tooltip: hasData.value
       ? {
           enabled: true,
-          backgroundColor: palette.darkSurface,
-          titleColor: palette.white,
-          bodyColor: palette.muted,
-          borderColor: palette.darkBorder,
+          backgroundColor: palette.value.surface,
+          titleColor: palette.value.primary,
+          bodyColor: palette.value.muted,
+          borderColor: palette.value.border,
           borderWidth: 1,
           padding: 10,
           cornerRadius: 8,
@@ -126,16 +126,16 @@ const chartOptions = computed<ChartOptions<'doughnut'>>(() => ({
 <template>
   <div class="flex h-full flex-col">
     <header class="mb-3 flex items-baseline justify-between gap-2">
-      <h3 class="text-sm font-semibold text-white">Tỷ lệ thu tháng này</h3>
-      <span v-if="periodLabel" class="text-xs text-muted tabular-nums">{{ periodLabel }}</span>
+      <h3 class="text-sm font-semibold text-ui-primary">Tỷ lệ thu tháng này</h3>
+      <span v-if="periodLabel" class="text-xs text-ui-muted tabular-nums">{{ periodLabel }}</span>
     </header>
 
     <div class="flex items-center gap-3">
       <div class="relative h-24 w-24 shrink-0 sm:h-28 sm:w-28">
         <ClientOnly>
-          <Doughnut :data="chartData" :options="chartOptions" />
+          <Doughnut :key="resolvedTheme" :data="chartData" :options="chartOptions" />
           <template #fallback>
-            <div class="h-full w-full animate-pulse rounded-full bg-dark-border/50" />
+            <div class="h-full w-full animate-pulse rounded-full bg-ui-border/50" />
           </template>
         </ClientOnly>
         <div class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
@@ -154,26 +154,26 @@ const chartOptions = computed<ChartOptions<'doughnut'>>(() => ({
 
       <dl class="min-w-0 flex-1 space-y-1.5 text-xs">
         <div class="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-2">
-          <span class="h-2 w-2 rounded-full bg-success-neon" aria-hidden="true" />
-          <dt class="truncate text-muted">Đã thu</dt>
-          <dd class="font-semibold tabular-nums text-success-neon">{{ formatCurrency(paidAmount) }}</dd>
+          <span class="h-2 w-2 rounded-full bg-status-success" aria-hidden="true" />
+          <dt class="truncate text-ui-muted">Đã thu</dt>
+          <dd class="font-semibold tabular-nums text-status-success">{{ formatCurrency(paidAmount) }}</dd>
         </div>
         <div class="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-2">
-          <span class="h-2 w-2 rounded-full bg-warning" aria-hidden="true" />
-          <dt class="truncate text-muted">Chưa đến hạn</dt>
+          <span class="h-2 w-2 rounded-full bg-status-warning" aria-hidden="true" />
+          <dt class="truncate text-ui-muted">Chưa đến hạn</dt>
           <dd
             class="font-semibold tabular-nums"
-            :class="inGraceAmount > 0 ? 'text-warning' : 'text-muted'"
+            :class="inGraceAmount > 0 ? 'text-status-warning' : 'text-ui-muted'"
           >
             {{ formatCurrency(inGraceAmount) }}
           </dd>
         </div>
         <div class="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-2">
-          <span class="h-2 w-2 rounded-full bg-error-vivid" aria-hidden="true" />
-          <dt class="truncate text-muted">Quá hạn</dt>
+          <span class="h-2 w-2 rounded-full bg-status-danger" aria-hidden="true" />
+          <dt class="truncate text-ui-muted">Quá hạn</dt>
           <dd
             class="font-semibold tabular-nums"
-            :class="overdueAmount > 0 ? 'text-error-vivid' : 'text-muted'"
+            :class="overdueAmount > 0 ? 'text-status-danger' : 'text-ui-muted'"
           >
             {{ formatCurrency(overdueAmount) }}
           </dd>
@@ -183,18 +183,18 @@ const chartOptions = computed<ChartOptions<'doughnut'>>(() => ({
 
     <div
       v-if="hasData"
-      class="mt-3 flex h-1.5 overflow-hidden rounded-full bg-dark-border"
+      class="mt-3 flex h-1.5 overflow-hidden rounded-full bg-ui-border"
       role="img"
       :aria-label="`Đã thu ${Math.round(paidShare)}%, chưa đến hạn ${Math.round(inGraceShare)}%, quá hạn ${Math.round(overdueShare)}%`"
     >
-      <div class="bg-success-neon transition-[width]" :style="{ width: `${paidShare}%` }" />
-      <div class="bg-warning transition-[width]" :style="{ width: `${inGraceShare}%` }" />
-      <div class="bg-error-vivid transition-[width]" :style="{ width: `${overdueShare}%` }" />
+      <div class="bg-status-success transition-[width]" :style="{ width: `${paidShare}%` }" />
+      <div class="bg-status-warning transition-[width]" :style="{ width: `${inGraceShare}%` }" />
+      <div class="bg-status-danger transition-[width]" :style="{ width: `${overdueShare}%` }" />
     </div>
 
-    <div class="mt-3 flex items-center justify-between gap-3 border-t border-dark-border pt-3 text-xs sm:mt-auto">
-      <span class="text-muted">Tổng phát hành</span>
-      <span class="font-semibold tabular-nums text-white">{{ formatCurrency(invoiceTotal) }}</span>
+    <div class="mt-3 flex items-center justify-between gap-3 border-t border-ui-border pt-3 text-xs sm:mt-auto">
+      <span class="text-ui-muted">Tổng phát hành</span>
+      <span class="font-semibold tabular-nums text-ui-primary">{{ formatCurrency(invoiceTotal) }}</span>
     </div>
   </div>
 </template>

@@ -166,7 +166,7 @@ watch(contracts, () => {
           aria-label="Chọn tất cả hợp đồng trên trang"
           @update:model-value="toggleSelectAll"
         />
-        <span class="text-sm text-muted select-none">
+        <span class="text-sm text-ui-muted select-none">
           {{ selectedIds.length > 0 ? `Đã chọn ${selectedIds.length}` : 'Chọn tất cả trên trang' }}
         </span>
       </div>
@@ -174,7 +174,7 @@ watch(contracts, () => {
       <div
         v-for="contract in contracts"
         :key="contract.id"
-        class="group flex items-center gap-3 rounded-xl border border-dark-border bg-dark-surface px-4 py-3 transition-colors hover:border-cyan/40"
+        class="group flex items-center gap-3 rounded-xl border border-ui-border bg-ui-surface px-4 py-3 transition-colors hover:border-ui-accent/40"
       >
         <UiCheckbox
           v-if="authStore.can('contracts.delete')"
@@ -186,19 +186,19 @@ watch(contracts, () => {
         />
         <NuxtLink :to="contractPath(contract)" class="min-w-0 flex-1">
           <div class="flex items-center gap-2 flex-wrap">
-            <p class="text-sm font-medium text-white truncate">
+            <p class="text-sm font-medium text-ui-primary truncate">
               Phòng {{ contract.room.roomNumber }} — {{ contract.room.buildingName }}
             </p>
             <UiStatusBadge :status="contract.status" />
-            <span class="text-xs text-muted font-mono">{{ contract.contractCode }}</span>
+            <span class="text-xs text-ui-muted font-mono">{{ contract.contractCode }}</span>
           </div>
-          <p class="text-xs text-muted mt-0.5 truncate">
+          <p class="text-xs text-ui-muted mt-0.5 truncate">
             {{ contract.tenant.fullName }} ·
             {{ new Date(contract.startDate).toLocaleDateString('vi-VN') }} — {{ new Date(contract.endDate).toLocaleDateString('vi-VN') }}
             · {{ formatCurrency(contract.monthlyRent) }}/tháng
           </p>
         </NuxtLink>
-        <IconChevronRight class="h-4 w-4 shrink-0 text-muted transition-colors group-hover:text-cyan" aria-hidden="true" />
+        <IconChevronRight class="h-4 w-4 shrink-0 text-ui-muted transition-colors group-hover:text-ui-accent" aria-hidden="true" />
       </div>
 
       <ContractBulkActionsBar
@@ -213,8 +213,8 @@ watch(contracts, () => {
     </div>
 
     <!-- Pagination -->
-    <div v-if="totalPages > 1" class="flex items-center justify-between mt-6 pt-4 border-t border-dark-border">
-      <p class="text-sm text-muted">Trang {{ page }} / {{ totalPages }}</p>
+    <div v-if="totalPages > 1" class="flex items-center justify-between mt-6 pt-4 border-t border-ui-border">
+      <p class="text-sm text-ui-muted">Trang {{ page }} / {{ totalPages }}</p>
       <div class="flex gap-2">
         <UiButton variant="secondary" size="sm" :disabled="page <= 1" @click="page--">← Trước</UiButton>
         <UiButton variant="secondary" size="sm" :disabled="page >= totalPages" @click="page++">Tiếp →</UiButton>

@@ -27,7 +27,7 @@ function select(tab: UiTabItem) {
 </script>
 
 <template>
-  <div role="tablist" class="flex items-center gap-1 border-b border-dark-border overflow-x-auto no-scrollbar">
+  <div role="tablist" class="flex items-center gap-1 border-b border-ui-border overflow-x-auto no-scrollbar">
     <button
       v-for="tab in tabs"
       :key="tab.key"
@@ -39,11 +39,11 @@ function select(tab: UiTabItem) {
       :title="tab.disabled ? tab.reason : undefined"
       :class="clsx(
         'relative inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan/40 rounded-t-md',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-accent/40 rounded-t-md',
         tab.key === modelValue
-          ? 'text-cyan'
-          : 'text-muted hover:text-white',
-        tab.disabled && 'opacity-50 cursor-not-allowed hover:text-muted',
+          ? 'text-ui-accent'
+          : 'text-ui-muted hover:text-ui-primary',
+        tab.disabled && 'opacity-50 cursor-not-allowed hover:text-ui-muted',
       )"
       :disabled="tab.disabled"
       @click="select(tab)"
@@ -54,8 +54,8 @@ function select(tab: UiTabItem) {
         :class="clsx(
           'rounded-full px-1.5 py-0.5 text-xs font-medium tabular-nums',
           tab.key === modelValue
-            ? 'bg-cyan/15 text-cyan'
-            : 'bg-dark-hover text-muted',
+            ? 'bg-ui-accent/15 text-ui-accent'
+            : 'bg-ui-hover text-ui-muted',
         )"
       >
         {{ tab.count }}
@@ -63,7 +63,7 @@ function select(tab: UiTabItem) {
       <!-- Active indicator -->
       <span
         v-if="tab.key === modelValue"
-        class="absolute inset-x-0 -bottom-px h-0.5 bg-cyan"
+        class="absolute inset-x-0 -bottom-px h-0.5 bg-ui-accent"
         aria-hidden="true"
       />
     </button>

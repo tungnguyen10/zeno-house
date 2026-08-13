@@ -124,7 +124,7 @@ Zeno House is now an authenticated internal operations app for rental buildings.
 | Layer | Current implementation |
 | --- | --- |
 | App framework | Nuxt 4 compatibility mode, Vue 3, TypeScript strict |
-| UI | TailwindCSS, operational dark theme, self-hosted Inter, `nuxt-svgo` icons |
+| UI | TailwindCSS, semantic light/dark dashboard theme, independent portal theme, self-hosted Inter, `nuxt-svgo` icons |
 | Charts | Chart.js + `vue-chartjs` for dashboard collection and revenue visuals |
 | State | Pinia for auth/session; composables for server state and workflow state |
 | Backend | Nuxt server routes, service/repository layers, Supabase Postgres/Auth |
@@ -623,7 +623,7 @@ Implemented patterns include:
 - toast feedback
 - bulk-select pattern for invoice payment collection
 - mobile billing draft rows
-- Chart.js dashboard visuals using the dark operational palette
+- Chart.js dashboard visuals using the active semantic operational palette
 
 ## Tests And Verification Surface
 

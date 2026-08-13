@@ -21,10 +21,10 @@ const missingReadingsCount = computed(() => {
 
 type Tone = 'default' | 'success' | 'warning' | 'danger'
 const toneClass: Record<Tone, string> = {
-  default: 'text-white',
-  success: 'text-success-neon',
-  warning: 'text-warning',
-  danger: 'text-error-vivid',
+  default: 'text-ui-primary',
+  success: 'text-status-success',
+  warning: 'text-status-warning',
+  danger: 'text-status-danger',
 }
 
 const metrics = computed<Array<{ label: string; value: string; tone: Tone; caption?: string }>>(() => {
@@ -63,7 +63,7 @@ const metrics = computed<Array<{ label: string; value: string; tone: Tone; capti
 </script>
 
 <template>
-  <div class="sticky top-0 z-20 -mx-1 border-y border-dark-border bg-dark/95 px-3 py-2 backdrop-blur">
+  <div class="sticky top-0 z-20 -mx-1 border-y border-ui-border bg-ui-canvas/95 px-3 py-2 backdrop-blur">
     <div v-if="loading" class="flex gap-4">
       <UiSkeleton v-for="i in 5" :key="i" class="h-5 w-28" />
     </div>
@@ -81,9 +81,9 @@ const metrics = computed<Array<{ label: string; value: string; tone: Tone; capti
           class="hidden text-dark-border md:inline"
           aria-hidden="true"
         >·</span>
-        <dt class="text-[11px] uppercase tracking-wide text-muted">{{ m.label }}</dt>
+        <dt class="text-[11px] uppercase tracking-wide text-ui-muted">{{ m.label }}</dt>
         <dd :class="clsx('font-semibold tabular-nums', toneClass[m.tone])">{{ m.value }}</dd>
-        <dd v-if="m.caption" class="text-xs text-muted">{{ m.caption }}</dd>
+        <dd v-if="m.caption" class="text-xs text-ui-muted">{{ m.caption }}</dd>
       </div>
     </dl>
   </div>

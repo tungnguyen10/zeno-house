@@ -142,7 +142,7 @@ const previousCollectionRate = computed<number | null>(() => {
           <span
             v-if="relativeLabel"
             :title="absoluteLabel"
-            class="text-xs text-muted"
+            class="text-xs text-ui-muted"
           >
             {{ relativeLabel }}
           </span>
@@ -194,7 +194,7 @@ const previousCollectionRate = computed<number | null>(() => {
 
         <UiSurfacePanel data-dashboard-card="rooms" class="min-h-52">
           <div class="flex h-full flex-col">
-            <h2 class="mb-3 text-sm font-semibold text-white">Phòng</h2>
+            <h2 class="mb-3 text-sm font-semibold text-ui-primary">Phòng</h2>
             <UiSkeleton v-if="isLoading" class="h-36 rounded-lg" />
             <DashboardRoomsSummaryCard
               v-else-if="summary"
@@ -207,7 +207,7 @@ const previousCollectionRate = computed<number | null>(() => {
 
         <UiSurfacePanel data-dashboard-card="contracts" class="min-h-52">
           <div class="flex h-full flex-col">
-            <h2 class="mb-3 text-sm font-semibold text-white">Hợp đồng</h2>
+            <h2 class="mb-3 text-sm font-semibold text-ui-primary">Hợp đồng</h2>
             <UiSkeleton v-if="isLoading" class="h-36 rounded-lg" />
             <DashboardContractsSummaryCard
               v-else-if="summary"
@@ -223,7 +223,7 @@ const previousCollectionRate = computed<number | null>(() => {
 
       <UiSurfacePanel as="section" data-dashboard-section="revenue">
         <header class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <h2 class="text-sm font-semibold text-white">Doanh thu năm {{ trendYear }}</h2>
+          <h2 class="text-sm font-semibold text-ui-primary">Doanh thu năm {{ trendYear }}</h2>
           <UiSelect
             v-if="summary && summary.buildingBreakdown.length > 1"
             v-model="selectedBuildingId"
@@ -249,7 +249,7 @@ const previousCollectionRate = computed<number | null>(() => {
 
       <div class="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
         <UiSurfacePanel as="section" data-dashboard-section="occupancy" density="compact">
-          <h2 class="mb-3 text-sm font-semibold text-white">Tỷ lệ phòng theo tòa</h2>
+          <h2 class="mb-3 text-sm font-semibold text-ui-primary">Tỷ lệ phòng theo tòa</h2>
           <div v-if="isLoading" class="space-y-3">
             <UiSkeleton v-for="i in 3" :key="i" class="h-16 rounded-lg" />
           </div>
@@ -263,7 +263,7 @@ const previousCollectionRate = computed<number | null>(() => {
           density="compact"
           class="scroll-mt-20"
         >
-          <h2 class="mb-3 text-sm font-semibold text-white">Việc cần xử lý</h2>
+          <h2 class="mb-3 text-sm font-semibold text-ui-primary">Việc cần xử lý</h2>
           <div v-if="isLoading" class="space-y-2">
             <UiSkeleton v-for="i in 3" :key="i" class="h-12 rounded-lg" />
           </div>

@@ -56,11 +56,11 @@ defineExpose({ refresh })
 </script>
 
 <template>
-  <div class="rounded-xl border border-dark-border bg-dark-surface p-4">
+  <div class="rounded-xl border border-ui-border bg-ui-surface p-4">
     <div class="mb-3 flex items-center justify-between gap-3">
       <div>
-        <p class="text-sm font-medium text-white">Lịch sử thay đổi</p>
-        <p class="mt-0.5 text-xs text-muted">
+        <p class="text-sm font-medium text-ui-primary">Lịch sử thay đổi</p>
+        <p class="mt-0.5 text-xs text-ui-muted">
           <template v-if="!isLoading">{{ events.length }} / {{ total }} sự kiện</template>
           <template v-else>Đang tải lịch sử...</template>
         </p>
@@ -89,27 +89,27 @@ defineExpose({ refresh })
       description="Các thay đổi trên hợp đồng sẽ được hiển thị tại đây."
     />
 
-    <div v-else class="divide-y divide-dark-border overflow-hidden rounded-lg border border-dark-border">
+    <div v-else class="divide-y divide-ui-border overflow-hidden rounded-lg border border-ui-border">
       <article
         v-for="event in events"
         :key="event.id"
-        class="bg-dark-deep"
+        class="bg-ui-deep"
       >
         <button
           type="button"
-          class="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-dark-hover"
+          class="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-ui-hover"
           :class="{ 'cursor-default hover:bg-transparent': !canViewTechnicalJson }"
           @click="toggleExpand(event.id)"
         >
-          <span class="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-cyan" aria-hidden="true" />
+          <span class="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-ui-accent" aria-hidden="true" />
           <span class="min-w-0 flex-1">
             <span class="flex flex-wrap items-center gap-2">
-              <span class="text-sm font-medium text-white">{{ auditActionLabel(event.action) }}</span>
+              <span class="text-sm font-medium text-ui-primary">{{ auditActionLabel(event.action) }}</span>
               <UiBadge :variant="auditActionVariant(event.action)" size="sm">
                 {{ auditActionLabel(event.action) }}
               </UiBadge>
             </span>
-            <span class="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
+            <span class="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ui-muted">
               <span>{{ auditActorLabel(event) }}</span>
               <span :title="formatDateTimeShort(event.createdAt)">
                 {{ formatRelativeTime(event.createdAt, now) }}
@@ -121,31 +121,31 @@ defineExpose({ refresh })
                 :key="row.key"
                 class="grid gap-2 text-xs sm:grid-cols-[9rem_minmax(0,1fr)]"
               >
-                <span class="text-muted">{{ row.label }}</span>
-                <span class="min-w-0 break-words text-white">
-                  <span class="text-error-vivid/90">{{ row.beforeText }}</span>
-                  <span class="px-1.5 text-muted">-&gt;</span>
-                  <span class="text-success-neon">{{ row.afterText }}</span>
+                <span class="text-ui-muted">{{ row.label }}</span>
+                <span class="min-w-0 break-words text-ui-primary">
+                  <span class="text-status-danger/90">{{ row.beforeText }}</span>
+                  <span class="px-1.5 text-ui-muted">-&gt;</span>
+                  <span class="text-status-success">{{ row.afterText }}</span>
                 </span>
               </span>
-              <span v-if="diffRows(event).length > 4" class="text-xs text-muted">
+              <span v-if="diffRows(event).length > 4" class="text-xs text-ui-muted">
                 +{{ diffRows(event).length - 4 }} trường khác
               </span>
             </span>
           </span>
           <span class="shrink-0 text-right">
-            <span class="block text-xs font-medium text-white/80">{{ formatTimeHHmm(event.createdAt) }}</span>
+            <span class="block text-xs font-medium text-ui-primary/80">{{ formatTimeHHmm(event.createdAt) }}</span>
             <IconChevronDown
               v-if="canViewTechnicalJson"
-              class="ml-auto mt-2 h-4 w-4 text-muted transition-transform"
-              :class="{ 'rotate-180 text-white': expandedId === event.id }"
+              class="ml-auto mt-2 h-4 w-4 text-ui-muted transition-transform"
+              :class="{ 'rotate-180 text-ui-primary': expandedId === event.id }"
               aria-hidden="true"
             />
           </span>
         </button>
 
-        <div v-if="canViewTechnicalJson && expandedId === event.id" class="border-t border-dark-border bg-dark-surface px-4 py-3">
-          <pre class="max-h-72 overflow-auto rounded-md border border-dark-border bg-dark-deep p-3 text-xs text-white/70">{{ technicalJson(event) }}</pre>
+        <div v-if="canViewTechnicalJson && expandedId === event.id" class="border-t border-ui-border bg-ui-surface px-4 py-3">
+          <pre class="max-h-72 overflow-auto rounded-md border border-ui-border bg-ui-deep p-3 text-xs text-ui-primary/70">{{ technicalJson(event) }}</pre>
         </div>
       </article>
     </div>

@@ -227,8 +227,8 @@ if (error.value?.statusCode === 404) {
       >
         <div class="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p class="text-sm font-medium text-white">Không thể xoá phòng này</p>
-            <p class="mt-1 text-xs text-muted">
+            <p class="text-sm font-medium text-ui-primary">Không thể xoá phòng này</p>
+            <p class="mt-1 text-xs text-ui-muted">
               <template v-if="conflictDetails.activeContracts">
                 Còn {{ conflictDetails.activeContracts }} hợp đồng đang hoạt động.
               </template>
@@ -257,47 +257,47 @@ if (error.value?.statusCode === 404) {
         />
       </div>
 
-      <section id="overview" class="mt-6 rounded-xl border border-dark-border bg-dark-surface p-6">
+      <section id="overview" class="mt-6 rounded-xl border border-ui-border bg-ui-surface p-6">
         <header class="mb-4">
-          <h3 class="text-sm font-semibold text-white">Tổng quan</h3>
-          <p class="mt-0.5 text-xs text-muted">Thông tin định danh, giá chuẩn và vị trí của phòng.</p>
+          <h3 class="text-sm font-semibold text-ui-primary">Tổng quan</h3>
+          <p class="mt-0.5 text-xs text-ui-muted">Thông tin định danh, giá chuẩn và vị trí của phòng.</p>
         </header>
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <p class="mb-1 text-xs text-muted">Tòa nhà</p>
-            <NuxtLink v-if="building" :to="buildingPath(building)" class="text-sm text-cyan hover:underline">
+            <p class="mb-1 text-xs text-ui-muted">Tòa nhà</p>
+            <NuxtLink v-if="building" :to="buildingPath(building)" class="text-sm text-ui-accent hover:underline">
               Tòa nhà: {{ building.name }}
             </NuxtLink>
-            <p v-else class="text-sm text-white">{{ room.buildingId }}</p>
+            <p v-else class="text-sm text-ui-primary">{{ room.buildingId }}</p>
           </div>
           <div>
-            <p class="mb-1 text-xs text-muted">Giá chuẩn</p>
-            <p class="text-sm font-medium text-white">{{ formatCurrency(room.monthlyRent) }}/tháng</p>
+            <p class="mb-1 text-xs text-ui-muted">Giá chuẩn</p>
+            <p class="text-sm font-medium text-ui-primary">{{ formatCurrency(room.monthlyRent) }}/tháng</p>
           </div>
           <div>
-            <p class="mb-1 text-xs text-muted">Tầng</p>
-            <p class="text-sm text-white">{{ room.floor }}</p>
+            <p class="mb-1 text-xs text-ui-muted">Tầng</p>
+            <p class="text-sm text-ui-primary">{{ room.floor }}</p>
           </div>
           <div v-if="room.area">
-            <p class="mb-1 text-xs text-muted">Diện tích</p>
-            <p class="text-sm text-white">{{ room.area }} m²</p>
+            <p class="mb-1 text-xs text-ui-muted">Diện tích</p>
+            <p class="text-sm text-ui-primary">{{ room.area }} m²</p>
           </div>
           <div>
-            <p class="mb-1 text-xs text-muted">Ngày tạo</p>
-            <p class="text-sm text-white">{{ new Date(room.createdAt).toLocaleDateString('vi-VN') }}</p>
+            <p class="mb-1 text-xs text-ui-muted">Ngày tạo</p>
+            <p class="text-sm text-ui-primary">{{ new Date(room.createdAt).toLocaleDateString('vi-VN') }}</p>
           </div>
         </div>
         <div v-if="room.description" class="mt-4">
-          <p class="mb-1 text-xs text-muted">Mô tả</p>
-          <p class="text-sm text-white">{{ room.description }}</p>
+          <p class="mb-1 text-xs text-ui-muted">Mô tả</p>
+          <p class="text-sm text-ui-primary">{{ room.description }}</p>
         </div>
       </section>
 
-      <section id="active-contract" class="mt-4 rounded-xl border border-dark-border bg-dark-surface p-6">
+      <section id="active-contract" class="mt-4 rounded-xl border border-ui-border bg-ui-surface p-6">
         <header class="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h3 class="text-sm font-semibold text-white">Hợp đồng hiện tại</h3>
-            <p class="mt-0.5 text-xs text-muted">Trạng thái thuê và thao tác nhanh.</p>
+            <h3 class="text-sm font-semibold text-ui-primary">Hợp đồng hiện tại</h3>
+            <p class="mt-0.5 text-xs text-ui-muted">Trạng thái thuê và thao tác nhanh.</p>
           </div>
           <div v-if="authStore.can('contracts.create')" class="flex items-center gap-2">
             <UiButton
@@ -318,16 +318,16 @@ if (error.value?.statusCode === 404) {
           </div>
         </header>
 
-        <div v-if="activeContract" class="rounded-lg border border-dark-border bg-dark-deep/40 p-4">
+        <div v-if="activeContract" class="rounded-lg border border-ui-border bg-ui-deep/40 p-4">
           <div class="flex flex-wrap items-start justify-between gap-3">
             <div class="min-w-0">
-              <NuxtLink :to="contractPath(activeContract)" class="text-sm font-medium text-white hover:text-cyan">
+              <NuxtLink :to="contractPath(activeContract)" class="text-sm font-medium text-ui-primary hover:text-ui-accent">
                 {{ activeContract.contractCode }}
               </NuxtLink>
-              <p class="mt-1 text-sm text-muted">
+              <p class="mt-1 text-sm text-ui-muted">
                 {{ activeContract.tenant.fullName }} · {{ activeContract.tenant.phone }}
               </p>
-              <p class="mt-1 text-xs text-muted">
+              <p class="mt-1 text-xs text-ui-muted">
                 {{ new Date(activeContract.startDate).toLocaleDateString('vi-VN') }}
                 –
                 {{ new Date(activeContract.endDate).toLocaleDateString('vi-VN') }}
@@ -337,29 +337,29 @@ if (error.value?.statusCode === 404) {
             <UiButton
               variant="secondary"
               size="sm"
-              class="shrink-0 flex-col items-end text-right hover:border-cyan/40"
+              class="shrink-0 flex-col items-end text-right hover:border-ui-accent/40"
               :title="loadingContractServices ? 'Đang tải...' : 'Chỉnh dịch vụ của phòng'"
               :disabled="loadingContractServices"
               @click="showServicesModal = true"
             >
-              <span class="block text-[10px] uppercase tracking-wide text-muted">Dịch vụ / tháng</span>
-              <span class="mt-0.5 block text-sm font-semibold text-white tabular-nums">
+              <span class="block text-[10px] uppercase tracking-wide text-ui-muted">Dịch vụ / tháng</span>
+              <span class="mt-0.5 block text-sm font-semibold text-ui-primary tabular-nums">
                 {{ formatCurrency(monthlyServicesTotal) }}
               </span>
-              <span class="mt-0.5 block text-[11px] text-cyan">
+              <span class="mt-0.5 block text-[11px] text-ui-accent">
                 {{ activeServicesCount }} dịch vụ active — chỉnh
               </span>
             </UiButton>
           </div>
         </div>
-        <p v-else class="text-sm text-muted">Phòng đang trống.</p>
+        <p v-else class="text-sm text-ui-muted">Phòng đang trống.</p>
       </section>
 
-      <section id="meter-readings" class="mt-4 rounded-xl border border-dark-border bg-dark-surface p-6">
+      <section id="meter-readings" class="mt-4 rounded-xl border border-ui-border bg-ui-surface p-6">
         <header class="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h3 class="text-sm font-semibold text-white">Chỉ số đồng hồ</h3>
-            <p class="mt-0.5 text-xs text-muted">Đi tới workspace vận hành tháng để nhập điện, nước.</p>
+            <h3 class="text-sm font-semibold text-ui-primary">Chỉ số đồng hồ</h3>
+            <p class="mt-0.5 text-xs text-ui-muted">Đi tới workspace vận hành tháng để nhập điện, nước.</p>
           </div>
           <NuxtLink :to="meterReadingsPath">
             <UiButton variant="secondary" size="sm">Nhập chỉ số tháng này</UiButton>
@@ -367,27 +367,27 @@ if (error.value?.statusCode === 404) {
         </header>
 
         <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div class="rounded-lg border border-dark-border bg-dark-deep/40 p-4">
-            <p class="text-xs text-muted">Điện gần nhất</p>
-            <p class="mt-1 text-sm text-white">
+          <div class="rounded-lg border border-ui-border bg-ui-deep/40 p-4">
+            <p class="text-xs text-ui-muted">Điện gần nhất</p>
+            <p class="mt-1 text-sm text-ui-primary">
               {{ latestReadingsData?.data?.electricity ? `${latestReadingsData.data.electricity.readingValue.toLocaleString('vi-VN')} kWh` : 'Chưa có dữ liệu' }}
             </p>
           </div>
-          <div class="rounded-lg border border-dark-border bg-dark-deep/40 p-4">
-            <p class="text-xs text-muted">Nước gần nhất</p>
-            <p class="mt-1 text-sm text-white">
+          <div class="rounded-lg border border-ui-border bg-ui-deep/40 p-4">
+            <p class="text-xs text-ui-muted">Nước gần nhất</p>
+            <p class="mt-1 text-sm text-ui-primary">
               {{ latestReadingsData?.data?.water ? `${latestReadingsData.data.water.readingValue.toLocaleString('vi-VN')} m³` : 'Chưa có dữ liệu' }}
             </p>
           </div>
         </div>
       </section>
 
-      <section id="contracts-history" class="mt-4 rounded-xl border border-dark-border bg-dark-surface p-6">
+      <section id="contracts-history" class="mt-4 rounded-xl border border-ui-border bg-ui-surface p-6">
         <header class="mb-4">
-          <h3 class="text-sm font-semibold text-white">Lịch sử hợp đồng</h3>
-          <p class="mt-0.5 text-xs text-muted">Tất cả hợp đồng đã từng gắn với phòng này.</p>
+          <h3 class="text-sm font-semibold text-ui-primary">Lịch sử hợp đồng</h3>
+          <p class="mt-0.5 text-xs text-ui-muted">Tất cả hợp đồng đã từng gắn với phòng này.</p>
         </header>
-        <div v-if="roomContracts.length > 0" class="divide-y divide-dark-border rounded-lg border border-dark-border bg-dark-deep/30">
+        <div v-if="roomContracts.length > 0" class="divide-y divide-ui-border rounded-lg border border-ui-border bg-ui-deep/30">
           <UiListRow
             v-for="contract in roomContracts"
             :key="contract.id"
@@ -395,27 +395,27 @@ if (error.value?.statusCode === 404) {
             compact
           >
             <div class="flex flex-wrap items-center gap-2">
-              <p class="truncate text-xs font-medium text-white">{{ contract.tenant.fullName }}</p>
+              <p class="truncate text-xs font-medium text-ui-primary">{{ contract.tenant.fullName }}</p>
               <UiStatusBadge :status="contract.status" />
             </div>
-            <p class="mt-0.5 truncate text-xs text-muted">
+            <p class="mt-0.5 truncate text-xs text-ui-muted">
               {{ new Date(contract.startDate).toLocaleDateString('vi-VN') }} -
               {{ new Date(contract.endDate).toLocaleDateString('vi-VN') }}
               · {{ formatCurrency(contract.monthlyRent) }}/tháng
             </p>
           </UiListRow>
         </div>
-        <p v-else class="text-sm text-muted">Chưa có hợp đồng.</p>
+        <p v-else class="text-sm text-ui-muted">Chưa có hợp đồng.</p>
       </section>
 
       <section
         v-if="authStore.can('rooms.delete')"
         id="danger-zone"
-        class="mt-4 rounded-xl border border-error/30 bg-error/5 p-6"
+        class="mt-4 rounded-xl border border-status-danger/30 bg-status-danger/5 p-6"
       >
-        <h3 class="mb-2 text-sm font-semibold text-error">Vùng nguy hiểm</h3>
+        <h3 class="mb-2 text-sm font-semibold text-status-danger">Vùng nguy hiểm</h3>
         <div class="flex flex-wrap items-center justify-between gap-3">
-          <p class="text-xs text-muted">
+          <p class="text-xs text-ui-muted">
             Xoá phòng chỉ thực hiện được khi không còn hợp đồng đang hoạt động và chưa có chỉ số đồng hồ.
           </p>
           <div class="flex items-center gap-2">
@@ -439,7 +439,7 @@ if (error.value?.statusCode === 404) {
       @cancel="showDeleteModal = false"
     >
       <div class="space-y-3">
-        <p class="text-sm text-muted">
+        <p class="text-sm text-ui-muted">
           Bạn có chắc muốn xoá phòng {{ room?.roomNumber ?? '' }}{{ building ? ` (${building.name})` : '' }}?
           Hành động này không thể hoàn tác.
         </p>
@@ -474,19 +474,19 @@ if (error.value?.statusCode === 404) {
     >
       <div class="space-y-3">
         <div class="flex flex-wrap items-center justify-between gap-3 text-xs">
-          <p class="text-muted">
+          <p class="text-ui-muted">
             Thay đổi chỉ ảnh hưởng phòng này. Thêm/bớt loại dịch vụ tại
             <NuxtLink
               v-if="building"
               :to="`${buildingPath(building)}/settings`"
-              class="text-cyan hover:underline"
+              class="text-ui-accent hover:underline"
               @click="showServicesModal = false"
             >
               cài đặt tòa nhà
             </NuxtLink>
             <span v-else>cài đặt tòa nhà</span>.
           </p>
-          <span class="rounded-md bg-cyan/10 px-2 py-1 text-cyan tabular-nums">
+          <span class="rounded-md bg-ui-accent/10 px-2 py-1 text-ui-accent tabular-nums">
             {{ activeServicesCount }} active · {{ formatCurrency(monthlyServicesTotal) }}/tháng
           </span>
         </div>

@@ -271,8 +271,8 @@ function dismissAlert(key: string) {
           empty-message="Không tìm thấy phòng nào phù hợp"
         />
       </div>
-      <p class="mt-3 text-xs text-muted">
-        Đang chọn: <span class="text-cyan">{{ comboboxSelected ? comboboxSelected.name : '(chưa chọn)' }}</span>
+      <p class="mt-3 text-xs text-ui-muted">
+        Đang chọn: <span class="text-ui-accent">{{ comboboxSelected ? comboboxSelected.name : '(chưa chọn)' }}</span>
       </p>
     </UiSection>
 
@@ -315,22 +315,22 @@ function dismissAlert(key: string) {
             resize="none"
             placeholder="Ghi chú..."
           />
-          <span v-else class="text-muted text-xs">—</span>
+          <span v-else class="text-ui-muted text-xs">—</span>
         </template>
       </UiTable>
-      <p class="mt-2 text-xs text-muted">Compact controls maintain the same focus/error/disabled behavior — only sizing is reduced.</p>
+      <p class="mt-2 text-xs text-ui-muted">Compact controls maintain the same focus/error/disabled behavior — only sizing is reduced.</p>
     </UiSection>
 
     <UiSection title="UiCheckbox / UiToggle" description="Boolean controls.">      <div class="grid gap-4 md:grid-cols-2">
-        <div class="space-y-3 rounded-xl border border-dark-border bg-dark-surface p-4">
-          <p class="text-xs uppercase tracking-wide text-muted">Checkbox</p>
+        <div class="space-y-3 rounded-xl border border-ui-border bg-ui-surface p-4">
+          <p class="text-xs uppercase tracking-wide text-ui-muted">Checkbox</p>
           <UiCheckbox v-model="checkboxValue" label="Đồng ý điều khoản" />
           <UiCheckbox label="Đã chọn (mặc định)" :model-value="true" hint="Có thể click để bỏ chọn (mock)" />
           <UiCheckbox label="Có lỗi" error="Vui lòng đồng ý điều khoản" />
           <UiCheckbox label="Disabled" disabled />
         </div>
-        <div class="space-y-3 rounded-xl border border-dark-border bg-dark-surface p-4">
-          <p class="text-xs uppercase tracking-wide text-muted">Toggle</p>
+        <div class="space-y-3 rounded-xl border border-ui-border bg-ui-surface p-4">
+          <p class="text-xs uppercase tracking-wide text-ui-muted">Toggle</p>
           <UiToggle v-model="toggleValue" label="Bật dịch vụ" />
           <UiToggle label="Toggle off" :model-value="false" />
           <UiToggle size="sm" label="Toggle nhỏ" :model-value="true" />
@@ -353,31 +353,31 @@ function dismissAlert(key: string) {
     <UiSection title="UiStatusBadge" description="Domain status pill — delegates to UiBadge qua status map.">
       <div class="space-y-3">
         <div>
-          <p class="text-xs uppercase tracking-wide text-muted mb-2">Entity statuses</p>
+          <p class="text-xs uppercase tracking-wide text-ui-muted mb-2">Entity statuses</p>
           <div class="flex flex-wrap gap-2">
             <UiStatusBadge v-for="s in entityStatuses" :key="s" :status="s" />
           </div>
         </div>
         <div>
-          <p class="text-xs uppercase tracking-wide text-muted mb-2">Billing period statuses</p>
+          <p class="text-xs uppercase tracking-wide text-ui-muted mb-2">Billing period statuses</p>
           <div class="flex flex-wrap gap-2">
             <UiStatusBadge v-for="s in periodStatuses" :key="s" :status="s" context="period" />
           </div>
         </div>
         <div>
-          <p class="text-xs uppercase tracking-wide text-muted mb-2">Invoice statuses</p>
+          <p class="text-xs uppercase tracking-wide text-ui-muted mb-2">Invoice statuses</p>
           <div class="flex flex-wrap gap-2">
             <UiStatusBadge v-for="s in invoiceStatuses" :key="s" :status="s" context="invoice" />
           </div>
         </div>
         <div>
-          <p class="text-xs uppercase tracking-wide text-muted mb-2">Correction statuses</p>
+          <p class="text-xs uppercase tracking-wide text-ui-muted mb-2">Correction statuses</p>
           <div class="flex flex-wrap gap-2">
             <UiStatusBadge v-for="s in correctionStatuses" :key="s" :status="s" context="correction" />
           </div>
         </div>
-        <div class="rounded-md bg-dark-surface border border-dark-border p-3 text-xs text-muted">
-          Cùng key <code class="text-cyan">issued</code> nhưng context khác →
+        <div class="rounded-md bg-ui-surface border border-ui-border p-3 text-xs text-ui-muted">
+          Cùng key <code class="text-ui-accent">issued</code> nhưng context khác →
           <UiStatusBadge status="issued" context="period" />
           <span class="mx-1">vs</span>
           <UiStatusBadge status="issued" context="invoice" />
@@ -385,7 +385,7 @@ function dismissAlert(key: string) {
           <UiStatusBadge status="issued" />
         </div>
         <div>
-          <p class="text-xs uppercase tracking-wide text-muted mb-2">Unknown fallback</p>
+          <p class="text-xs uppercase tracking-wide text-ui-muted mb-2">Unknown fallback</p>
           <UiStatusBadge status="not-in-map" />
         </div>
       </div>
@@ -401,7 +401,7 @@ function dismissAlert(key: string) {
           <span v-if="!dismissedAlerts.includes('danger')">
             Không thể tải danh sách. Vui lòng thử lại.
           </span>
-          <span v-else class="text-muted">Đã đóng. Reload trang để hiện lại.</span>
+          <span v-else class="text-ui-muted">Đã đóng. Reload trang để hiện lại.</span>
         </UiAlert>
         <UiAlert severity="warning">Alert không có title — vẫn render được nội dung.</UiAlert>
       </div>
@@ -437,8 +437,8 @@ function dismissAlert(key: string) {
     <!-- Tabs -->
     <UiSection title="UiTabs" description="Workspace tab navigation.">
       <UiTabs v-model="activeTab" :tabs="tabs" />
-      <div class="mt-4 rounded-xl border border-dark-border bg-dark-surface p-6">
-        <p class="text-sm text-muted">Tab đang chọn: <span class="text-cyan font-medium">{{ activeTab }}</span></p>
+      <div class="mt-4 rounded-xl border border-ui-border bg-ui-surface p-6">
+        <p class="text-sm text-ui-muted">Tab đang chọn: <span class="text-ui-accent font-medium">{{ activeTab }}</span></p>
       </div>
     </UiSection>
 
@@ -460,7 +460,7 @@ function dismissAlert(key: string) {
         empty-description="Bấm thêm phòng để bắt đầu."
       >
         <template #cell-code="{ row }">
-          <span class="font-mono font-medium text-white">{{ row.code }}</span>
+          <span class="font-mono font-medium text-ui-primary">{{ row.code }}</span>
         </template>
         <template #cell-status="{ row }">
           <UiStatusBadge :status="row.status" />
@@ -494,14 +494,14 @@ function dismissAlert(key: string) {
       </div>
 
       <UiModal :open="modalSm" size="sm" title="Modal nhỏ" @close="modalSm = false">
-        <p class="text-sm text-muted">Modal size sm thích hợp cho confirm ngắn gọn.</p>
+        <p class="text-sm text-ui-muted">Modal size sm thích hợp cho confirm ngắn gọn.</p>
         <template #footer>
           <UiButton variant="secondary" @click="modalSm = false">Đóng</UiButton>
         </template>
       </UiModal>
 
       <UiModal :open="modalMd" size="md" title="Modal trung bình (mặc định)" @close="modalMd = false">
-        <p class="text-sm text-muted">Form vừa với 1 cột — giống UiConfirmModal.</p>
+        <p class="text-sm text-ui-muted">Form vừa với 1 cột — giống UiConfirmModal.</p>
         <template #footer>
           <UiButton variant="secondary" @click="modalMd = false">Huỷ</UiButton>
           <UiButton @click="modalMd = false">Lưu</UiButton>
@@ -561,7 +561,7 @@ function dismissAlert(key: string) {
 
       <UiDrawer v-model="drawerOpen" title="Nhật ký thao tác">
         <div class="space-y-3">
-          <p class="text-sm text-muted">Drawer dùng cho bề mặt tham chiếu như audit log hoặc chi tiết hoá đơn.</p>
+          <p class="text-sm text-ui-muted">Drawer dùng cho bề mặt tham chiếu như audit log hoặc chi tiết hoá đơn.</p>
           <UiAlert severity="info">Backdrop, Esc và nút đóng đều tắt drawer.</UiAlert>
         </div>
         <template #footer>
@@ -575,7 +575,7 @@ function dismissAlert(key: string) {
     <!-- Empty / Skeleton -->
     <UiSection title="UiEmptyState / UiSkeleton" description="Helper components.">
       <div class="grid gap-4 md:grid-cols-3">
-        <div class="rounded-xl border border-dark-border bg-dark-surface">
+        <div class="rounded-xl border border-ui-border bg-ui-surface">
           <UiEmptyState
             title="Chưa có hợp đồng nào"
             description="Tạo hợp đồng đầu tiên để bắt đầu."
@@ -585,14 +585,14 @@ function dismissAlert(key: string) {
             </template>
           </UiEmptyState>
         </div>
-        <div class="rounded-xl border border-dark-border bg-dark-surface">
+        <div class="rounded-xl border border-ui-border bg-ui-surface">
           <UiEmptyState
             variant="success"
             title="Không có việc tồn"
             description="Mọi kỳ vận hành đã ổn."
           />
         </div>
-        <div class="rounded-xl border border-dark-border bg-dark-surface">
+        <div class="rounded-xl border border-ui-border bg-ui-surface">
           <UiEmptyState
             variant="search"
             size="sm"
@@ -600,8 +600,8 @@ function dismissAlert(key: string) {
             description="Thử bỏ bớt bộ lọc hoặc đổi từ khoá."
           />
         </div>
-        <div class="rounded-xl border border-dark-border bg-dark-surface p-6 space-y-3 md:col-span-3">
-          <p class="text-xs uppercase tracking-wide text-muted">Skeletons</p>
+        <div class="rounded-xl border border-ui-border bg-ui-surface p-6 space-y-3 md:col-span-3">
+          <p class="text-xs uppercase tracking-wide text-ui-muted">Skeletons</p>
           <UiSkeleton class="h-5 w-2/3" />
           <UiSkeleton class="h-4 w-full" />
           <UiSkeleton class="h-4 w-5/6" />

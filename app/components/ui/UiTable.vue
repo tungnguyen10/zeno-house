@@ -70,12 +70,12 @@ function getCellValue(row: TRow, col: UiTableColumn<TRow>): unknown {
 </script>
 
 <template>
-  <div class="relative overflow-x-auto rounded-xl border border-dark-border bg-dark-surface">
+  <div class="relative overflow-x-auto rounded-xl border border-ui-border bg-ui-surface">
     <table class="min-w-full text-sm">
       <caption v-if="caption" class="sr-only">{{ caption }}</caption>
       <thead
         :class="clsx(
-          'bg-dark-card text-xs uppercase tracking-wide text-muted',
+          'bg-ui-chrome text-xs uppercase tracking-wide text-ui-muted',
           stickyHeader && 'sticky top-0 z-10',
         )"
       >
@@ -99,7 +99,7 @@ function getCellValue(row: TRow, col: UiTableColumn<TRow>): unknown {
         </tr>
       </thead>
 
-      <tbody class="divide-y divide-dark-border">
+      <tbody class="divide-y divide-ui-border">
         <!-- Loading -->
         <template v-if="loading">
           <tr v-for="n in loadingRows" :key="`loading-${n}`">
@@ -136,7 +136,7 @@ function getCellValue(row: TRow, col: UiTableColumn<TRow>): unknown {
           :key="getRowKey(row)"
           :class="clsx(
             'transition-colors',
-            rowClickable && 'cursor-pointer hover:bg-dark-hover',
+            rowClickable && 'cursor-pointer hover:bg-ui-hover',
           )"
           @click="rowClickable ? emit('rowClick', row) : undefined"
         >
@@ -147,7 +147,7 @@ function getCellValue(row: TRow, col: UiTableColumn<TRow>): unknown {
               cellPadding,
               cellAlign(col),
               col.hideOnMobile && 'hidden md:table-cell',
-              'text-white align-middle',
+              'text-ui-primary align-middle',
             )"
           >
             <slot

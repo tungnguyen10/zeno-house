@@ -174,7 +174,7 @@ async function createContract(data: ContractFormData) {
         @change="goStep"
       />
 
-      <section v-if="currentStep === 1" class="rounded-xl border border-dark-border bg-dark-surface p-6">
+      <section v-if="currentStep === 1" class="rounded-xl border border-ui-border bg-ui-surface p-6">
         <ContractForm
           v-model="formData"
           :loading="isLoading"
@@ -197,23 +197,23 @@ async function createContract(data: ContractFormData) {
         />
       </section>
 
-      <section v-else-if="currentStep === 2" class="rounded-xl border border-dark-border bg-dark-surface p-6">
+      <section v-else-if="currentStep === 2" class="rounded-xl border border-ui-border bg-ui-surface p-6">
         <div class="mb-4 flex items-start justify-between gap-3">
           <div>
             <div class="flex items-center gap-2">
-              <p class="text-sm font-semibold text-white">Người ở chung</p>
+              <p class="text-sm font-semibold text-ui-primary">Người ở chung</p>
               <UiBadge v-if="pendingOccupants.length > 0" variant="accent">{{ pendingOccupants.length }}</UiBadge>
-              <span class="text-xs text-muted italic">tuỳ chọn</span>
+              <span class="text-xs text-ui-muted italic">tuỳ chọn</span>
             </div>
-            <p class="mt-0.5 text-xs text-muted">Thêm ngay hoặc thêm sau trên trang chi tiết.</p>
+            <p class="mt-0.5 text-xs text-ui-muted">Thêm ngay hoặc thêm sau trên trang chi tiết.</p>
           </div>
           <UiButton v-if="!showOccupantForm" variant="secondary" size="sm" @click="showOccupantForm = true">
             Thêm người ở
           </UiButton>
         </div>
 
-        <div class="rounded-xl border border-dark-border bg-dark-deep/30">
-          <div v-if="showOccupantForm" class="border-b border-dark-border p-4">
+        <div class="rounded-xl border border-ui-border bg-ui-deep/30">
+          <div v-if="showOccupantForm" class="border-b border-ui-border p-4">
             <ContractOccupantForm
               :available="true"
               :exclude-tenant-ids="excludeTenantIds"
@@ -226,20 +226,20 @@ async function createContract(data: ContractFormData) {
             <div
               v-for="occupant in pendingOccupants"
               :key="occupant.tenant_id"
-              class="flex items-center gap-3 border-b border-dark-border/50 px-4 py-3.5 last:border-0"
+              class="flex items-center gap-3 border-b border-ui-border/50 px-4 py-3.5 last:border-0"
             >
-              <div class="flex size-8 shrink-0 items-center justify-center rounded-full border border-cyan/20 bg-cyan/10">
-                <span class="text-xs font-bold text-cyan">{{ occupant.tenantName.charAt(0).toUpperCase() }}</span>
+              <div class="flex size-8 shrink-0 items-center justify-center rounded-full border border-ui-accent/20 bg-ui-accent/10">
+                <span class="text-xs font-bold text-ui-accent">{{ occupant.tenantName.charAt(0).toUpperCase() }}</span>
               </div>
               <div class="min-w-0 flex-1">
-                <p class="truncate text-sm font-medium text-white">{{ occupant.tenantName }}</p>
-                <p class="text-xs text-muted">Từ {{ fmtDate(occupant.move_in_date) }}</p>
+                <p class="truncate text-sm font-medium text-ui-primary">{{ occupant.tenantName }}</p>
+                <p class="text-xs text-ui-muted">Từ {{ fmtDate(occupant.move_in_date) }}</p>
               </div>
               <div class="flex shrink-0 items-center gap-2">
                 <span
                   :class="occupant.billing_counted
-                    ? 'border-cyan/20 bg-cyan/10 text-cyan'
-                    : 'border-dark-border bg-dark-hover text-muted'"
+                    ? 'border-ui-accent/20 bg-ui-accent/10 text-ui-accent'
+                    : 'border-ui-border bg-ui-hover text-ui-muted'"
                   class="rounded-full border px-2 py-0.5 text-xs font-medium"
                 >
                   {{ occupant.billing_counted ? 'Tính tiền' : 'Không tính' }}
@@ -252,8 +252,8 @@ async function createContract(data: ContractFormData) {
           </div>
 
           <div v-else-if="!showOccupantForm" class="flex flex-col items-center gap-2 px-4 py-10 text-center">
-            <p class="text-sm font-medium text-white">Chưa có người ở chung</p>
-            <p class="max-w-xs text-xs leading-relaxed text-muted">Có thể thêm sau khi hợp đồng được tạo.</p>
+            <p class="text-sm font-medium text-ui-primary">Chưa có người ở chung</p>
+            <p class="max-w-xs text-xs leading-relaxed text-ui-muted">Có thể thêm sau khi hợp đồng được tạo.</p>
           </div>
         </div>
 
@@ -267,17 +267,17 @@ async function createContract(data: ContractFormData) {
         </div>
       </section>
 
-      <section v-else-if="currentStep === 3 && createdContractId" class="rounded-xl border border-dark-border bg-dark-surface p-6">
+      <section v-else-if="currentStep === 3 && createdContractId" class="rounded-xl border border-ui-border bg-ui-surface p-6">
         <div class="mb-4 flex items-start justify-between gap-3">
           <div>
-            <p class="text-sm font-semibold text-white">Dịch vụ hàng tháng</p>
-            <p class="mt-0.5 text-xs text-muted">Điều chỉnh nếu cần — đã sao chép từ cài đặt tòa nhà.</p>
+            <p class="text-sm font-semibold text-ui-primary">Dịch vụ hàng tháng</p>
+            <p class="mt-0.5 text-xs text-ui-muted">Điều chỉnh nếu cần — đã sao chép từ cài đặt tòa nhà.</p>
           </div>
           <UiButton variant="primary" size="sm" @click="navigateTo(`/dashboard/contracts/${createdContractId}`)">
             Xong
           </UiButton>
         </div>
-        <div class="rounded-xl border border-dark-border bg-dark-deep/30 p-4">
+        <div class="rounded-xl border border-ui-border bg-ui-deep/30 p-4">
           <ContractServicesTab
             :services="contractServices"
             :loading="servicesLoading"

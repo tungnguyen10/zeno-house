@@ -37,19 +37,19 @@ const exclusionsLabel = computed(() => {
     @close="!submitting && emit('close')"
   >
     <div class="space-y-4">
-      <section class="sticky -top-4 z-10 -mx-6 -mt-4 border-b border-dark-border bg-dark-card px-6 py-4" aria-label="Tóm tắt phát hành">
+      <section class="sticky -top-4 z-10 -mx-6 -mt-4 border-b border-ui-border bg-ui-chrome px-6 py-4" aria-label="Tóm tắt phát hành">
         <div class="grid min-w-0 gap-4 sm:grid-cols-[minmax(0,1fr)_15rem] sm:items-end">
           <div class="min-w-0">
-            <p class="text-sm text-muted">Lô đang duyệt</p>
-            <p class="mt-1 text-lg font-semibold tabular-nums text-white">
+            <p class="text-sm text-ui-muted">Lô đang duyệt</p>
+            <p class="mt-1 text-lg font-semibold tabular-nums text-ui-primary">
               {{ preview?.issuableCount ?? 0 }} hóa đơn · {{ formatCurrency(preview?.totalAmount ?? 0) }}
             </p>
-            <p class="mt-1 text-xs leading-relaxed text-muted">
+            <p class="mt-1 text-xs leading-relaxed text-ui-muted">
               Hóa đơn sau phát hành có thể được hủy/void theo quy trình có lưu vết kiểm toán.
             </p>
           </div>
           <div class="space-y-2">
-            <label class="flex items-center gap-2 text-sm text-white">
+            <label class="flex items-center gap-2 text-sm text-ui-primary">
               <UiCheckbox
                 :model-value="useOverride"
                 :disabled="loading || submitting"
@@ -67,7 +67,7 @@ const exclusionsLabel = computed(() => {
               class="w-full"
               @update:model-value="emit('update:dueDate', $event)"
             />
-            <p v-else class="text-xs leading-relaxed text-muted">
+            <p v-else class="text-xs leading-relaxed text-ui-muted">
               Hạn được tự tính riêng theo từng hợp đồng và tòa nhà.
             </p>
           </div>

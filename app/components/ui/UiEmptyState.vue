@@ -25,15 +25,15 @@ const iconWrapperSize = computed(() =>
 
 const iconWrapperTone = computed(() => {
   switch (props.variant) {
-    case 'success': return 'bg-success-neon/10 ring-success-neon/25'
-    default: return 'bg-dark-surface ring-dark-border'
+    case 'success': return 'bg-status-success/10 ring-status-success/25'
+    default: return 'bg-ui-surface ring-ui-border-strong'
   }
 })
 
 const iconSizeClass = computed(() => (props.size === 'sm' ? 'h-4 w-4' : 'h-5 w-5'))
 
 const iconTone = computed(() =>
-  props.variant === 'success' ? 'text-success-neon' : 'text-muted',
+  props.variant === 'success' ? 'text-status-success' : 'text-ui-muted',
 )
 
 const iconSpacing = computed(() => (props.size === 'sm' ? 'mb-3' : 'mb-4'))
@@ -49,8 +49,8 @@ const iconSpacing = computed(() => (props.size === 'sm' ? 'mb-3' : 'mb-4'))
       </slot>
     </div>
 
-    <h3 class="text-sm font-semibold text-white">{{ title }}</h3>
-    <p v-if="description" class="mt-1 max-w-sm text-sm text-muted">{{ description }}</p>
+    <h3 class="text-sm font-semibold text-ui-primary">{{ title }}</h3>
+    <p v-if="description" class="mt-1 max-w-sm text-sm text-ui-muted">{{ description }}</p>
 
     <div v-if="$slots.action" class="mt-4">
       <slot name="action" />

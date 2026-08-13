@@ -252,7 +252,7 @@ async function openCreateTenant() {
     <template v-else>
       <div
         v-if="selectionMode && authStore.can('tenants.delete')"
-        class="mb-3 flex items-center justify-between gap-3 rounded-lg border border-dark-border bg-dark-deep/40 px-3 py-2"
+        class="mb-3 flex items-center justify-between gap-3 rounded-lg border border-ui-border bg-ui-deep/40 px-3 py-2"
       >
         <UiCheckbox
           :model-value="allOnPageSelected"
@@ -260,7 +260,7 @@ async function openCreateTenant() {
           :label="`Chọn cả trang (${tenants.length})`"
           @update:model-value="toggleAllOnPage"
         />
-        <span class="text-xs text-muted">{{ bulk.selectedIds.value.length }} đã chọn tổng cộng</span>
+        <span class="text-xs text-ui-muted">{{ bulk.selectedIds.value.length }} đã chọn tổng cộng</span>
       </div>
 
       <div class="space-y-2">
@@ -285,14 +285,14 @@ async function openCreateTenant() {
           >
             <div class="flex items-start gap-3">
               <div
-                class="hidden sm:flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-cyan/10 text-cyan text-xs font-semibold"
+                class="hidden sm:flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-ui-accent/10 text-ui-accent text-xs font-semibold"
                 aria-hidden="true"
               >
                 {{ tenant.fullName.charAt(0).toUpperCase() }}
               </div>
               <div class="flex-1 min-w-0">
                 <div class="flex items-center gap-2 flex-wrap">
-                  <p class="text-sm font-medium text-white truncate">{{ tenant.fullName }}</p>
+                  <p class="text-sm font-medium text-ui-primary truncate">{{ tenant.fullName }}</p>
                   <UiBadge :variant="tenant.hasActiveContract ? 'success' : 'neutral'" pill>
                     {{ tenant.hasActiveContract ? 'Có HĐ' : 'Chưa có HĐ' }}
                   </UiBadge>
@@ -307,16 +307,16 @@ async function openCreateTenant() {
                     Đã lưu trữ
                   </UiBadge>
                 </div>
-                <p class="text-xs text-muted mt-0.5 truncate">
+                <p class="text-xs text-ui-muted mt-0.5 truncate">
                   {{ tenant.phone }}<template v-if="tenant.idNumber"> · CMND/CCCD: {{ tenant.idNumber }}</template>
                 </p>
                 <p
                   v-if="tenant.activeAssignment?.assignmentRole === 'roommate' && tenant.activeAssignment.primaryTenantName"
-                  class="text-xs text-muted mt-0.5 truncate"
+                  class="text-xs text-ui-muted mt-0.5 truncate"
                 >
                   Ở chung với {{ tenant.activeAssignment.primaryTenantName }}
                 </p>
-                <p v-if="tenant.activeAssignment" class="text-xs text-muted mt-0.5 truncate">
+                <p v-if="tenant.activeAssignment" class="text-xs text-ui-muted mt-0.5 truncate">
                   Phòng {{ tenant.activeAssignment.roomNumber }} · {{ tenant.activeAssignment.buildingName }}
                 </p>
               </div>
@@ -325,8 +325,8 @@ async function openCreateTenant() {
         </div>
       </div>
 
-      <div v-if="totalPages > 1" class="flex items-center justify-between mt-6 pt-4 border-t border-dark-border">
-        <p class="text-sm text-muted">Trang {{ page }} / {{ totalPages }}</p>
+      <div v-if="totalPages > 1" class="flex items-center justify-between mt-6 pt-4 border-t border-ui-border">
+        <p class="text-sm text-ui-muted">Trang {{ page }} / {{ totalPages }}</p>
         <div class="flex gap-2">
           <UiButton variant="secondary" size="sm" :disabled="page <= 1" @click="page--">← Trước</UiButton>
           <UiButton variant="secondary" size="sm" :disabled="page >= totalPages" @click="page++">Tiếp →</UiButton>
@@ -355,10 +355,10 @@ async function openCreateTenant() {
         <li
           v-for="row in failuresWithName"
           :key="row.id"
-          class="flex items-start justify-between gap-3 rounded-lg border border-dark-border bg-dark-deep/40 px-3 py-2"
+          class="flex items-start justify-between gap-3 rounded-lg border border-ui-border bg-ui-deep/40 px-3 py-2"
         >
-          <span class="font-medium text-white">{{ row.name }}</span>
-          <span class="text-xs text-muted">{{ row.reason }}</span>
+          <span class="font-medium text-ui-primary">{{ row.name }}</span>
+          <span class="text-xs text-ui-muted">{{ row.reason }}</span>
         </li>
       </ul>
       <template #footer>
@@ -376,14 +376,14 @@ async function openCreateTenant() {
         <li
           v-for="row in lastBulkCreateFailures"
           :key="row.line"
-          class="flex flex-col gap-1 rounded-lg border border-dark-border bg-dark-deep/40 px-3 py-2"
+          class="flex flex-col gap-1 rounded-lg border border-ui-border bg-ui-deep/40 px-3 py-2"
         >
           <div class="flex items-start justify-between gap-3">
-            <span class="font-medium text-white">Dòng {{ row.line }}</span>
-            <span class="text-xs text-rose-300 font-medium">{{ bulkCreateReasonLabels[row.reason] ?? row.reason }}</span>
+            <span class="font-medium text-ui-primary">Dòng {{ row.line }}</span>
+            <span class="text-xs text-status-danger font-medium">{{ bulkCreateReasonLabels[row.reason] ?? row.reason }}</span>
           </div>
-          <p class="text-xs text-muted">{{ row.message }}</p>
-          <ul v-if="row.fieldErrors && Object.keys(row.fieldErrors).length > 0" class="text-xs text-rose-200 ml-2 mt-1">
+          <p class="text-xs text-ui-muted">{{ row.message }}</p>
+          <ul v-if="row.fieldErrors && Object.keys(row.fieldErrors).length > 0" class="text-xs text-status-danger ml-2 mt-1">
             <li v-for="(errors, field) in row.fieldErrors" :key="field">
               <strong>{{ field }}:</strong> {{ (errors as string[]).join(', ') }}
             </li>

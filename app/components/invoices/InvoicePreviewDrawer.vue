@@ -192,14 +192,14 @@ async function resendEmail(confirmDuplicate: boolean) {
     <template #header>
       <div v-if="invoice" class="min-w-0 pr-2">
         <div class="flex flex-wrap items-center gap-2">
-          <h2 class="min-w-0 break-all text-base font-semibold text-white sm:truncate">{{ invoice.invoice_code }}</h2>
+          <h2 class="min-w-0 break-all text-base font-semibold text-ui-primary sm:truncate">{{ invoice.invoice_code }}</h2>
           <UiStatusBadge :status="invoice.status" context="invoice" />
         </div>
-        <p class="mt-1 truncate text-sm text-muted">
+        <p class="mt-1 truncate text-sm text-ui-muted">
           {{ invoice.tenant_name ?? 'Khách thuê' }} · {{ invoice.room_number ? `P.${invoice.room_number}` : invoice.room_id }}
         </p>
       </div>
-      <h2 v-else class="text-base font-semibold text-white">Chi tiết hoá đơn</h2>
+      <h2 v-else class="text-base font-semibold text-ui-primary">Chi tiết hoá đơn</h2>
     </template>
 
     <div class="-mx-2 -my-1 space-y-3 sm:mx-0 sm:my-0 sm:space-y-4">
@@ -238,9 +238,9 @@ async function resendEmail(confirmDuplicate: boolean) {
           <div class="space-y-3">
             <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div class="min-w-0">
-                <p class="text-xs text-muted">Người nhận</p>
+                <p class="text-xs text-ui-muted">Người nhận</p>
                 <p
-                  class="mt-0.5 truncate text-sm text-white"
+                  class="mt-0.5 truncate text-sm text-ui-primary"
                   :title="detail.recipientEmail ?? undefined"
                 >
                   {{ detail.recipientEmail ?? 'Chưa có email liên hệ' }}
@@ -275,20 +275,20 @@ async function resendEmail(confirmDuplicate: boolean) {
             <div v-if="loadingHistory" class="space-y-2" aria-label="Đang tải lịch sử gửi email">
               <UiSkeleton v-for="item in 2" :key="item" class="h-12 w-full" />
             </div>
-            <div v-else-if="emailHistory.length > 0" class="divide-y divide-dark-border border-y border-dark-border">
+            <div v-else-if="emailHistory.length > 0" class="divide-y divide-ui-border border-y border-ui-border">
               <div
                 v-for="delivery in emailHistory"
                 :key="delivery.id"
                 class="flex items-start justify-between gap-3 py-3"
               >
                 <div class="min-w-0">
-                  <p class="truncate text-sm text-white" :title="delivery.recipientEmail ?? undefined">
+                  <p class="truncate text-sm text-ui-primary" :title="delivery.recipientEmail ?? undefined">
                     {{ delivery.recipientEmail ?? 'Không có người nhận' }}
                   </p>
-                  <p class="mt-0.5 text-xs text-muted tabular-nums">
+                  <p class="mt-0.5 text-xs text-ui-muted tabular-nums">
                     {{ deliveryDate(delivery.createdAt) }} · {{ delivery.source === 'automatic' ? 'Tự động' : 'Thủ công' }}
                   </p>
-                  <p v-if="delivery.lastErrorMessage" class="mt-1 text-xs text-error-vivid">
+                  <p v-if="delivery.lastErrorMessage" class="mt-1 text-xs text-status-danger">
                     {{ delivery.lastErrorMessage }}
                   </p>
                 </div>
@@ -300,7 +300,7 @@ async function resendEmail(confirmDuplicate: boolean) {
                 </UiBadge>
               </div>
             </div>
-            <p v-else class="text-xs text-muted">Chưa có lần gửi nào.</p>
+            <p v-else class="text-xs text-ui-muted">Chưa có lần gửi nào.</p>
           </div>
         </UiSection>
 
@@ -314,16 +314,16 @@ async function resendEmail(confirmDuplicate: boolean) {
               v-for="payment in payments"
               v-else
               :key="payment.id"
-              class="rounded-lg border border-dark-border bg-dark-surface px-3 py-2"
+              class="rounded-lg border border-ui-border bg-ui-surface px-3 py-2"
             >
               <div class="flex items-start justify-between gap-3">
                 <div class="min-w-0">
-                  <p class="text-sm font-medium text-white tabular-nums">{{ paymentDate(payment) }}</p>
-                  <p class="mt-0.5 truncate text-xs text-muted">{{ paymentMethodLabel(payment) }}</p>
+                  <p class="text-sm font-medium text-ui-primary tabular-nums">{{ paymentDate(payment) }}</p>
+                  <p class="mt-0.5 truncate text-xs text-ui-muted">{{ paymentMethodLabel(payment) }}</p>
                 </div>
-                <p class="shrink-0 text-sm font-medium text-white tabular-nums">{{ formatCurrency(payment.amount) }}</p>
+                <p class="shrink-0 text-sm font-medium text-ui-primary tabular-nums">{{ formatCurrency(payment.amount) }}</p>
               </div>
-              <p v-if="payment.recordedByName || payment.note" class="mt-2 truncate text-xs text-muted">
+              <p v-if="payment.recordedByName || payment.note" class="mt-2 truncate text-xs text-ui-muted">
                 {{ payment.recordedByName ?? 'Hệ thống' }}<span v-if="payment.note"> · {{ payment.note }}</span>
               </p>
             </div>
@@ -350,7 +350,7 @@ async function resendEmail(confirmDuplicate: boolean) {
         </UiSection>
 
         <UiSection v-if="detail.invoice.notes" title="Ghi chú">
-          <p class="text-sm text-white">{{ detail.invoice.notes }}</p>
+          <p class="text-sm text-ui-primary">{{ detail.invoice.notes }}</p>
         </UiSection>
       </template>
     </div>
@@ -393,7 +393,7 @@ async function resendEmail(confirmDuplicate: boolean) {
     size="sm"
     @close="resendConfirmationOpen = false"
   >
-    <p class="text-sm leading-6 text-muted">
+    <p class="text-sm leading-6 text-ui-muted">
       Nhà cung cấp đã {{ resendableDelivery?.status === 'delivered' ? 'xác nhận giao' : 'tiếp nhận' }} email trước đó.
       Người nhận có thể nhận thêm một email hoá đơn giống nhau.
     </p>

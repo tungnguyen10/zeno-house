@@ -356,7 +356,7 @@ async function onBulkDone(result: RoomBulkResult, action: RoomBulkAction) {
     <template v-else>
       <div
         v-if="selectionMode && authStore.can('rooms.delete')"
-        class="mb-3 flex items-center justify-between gap-3 rounded-lg border border-dark-border bg-dark-deep/40 px-3 py-2"
+        class="mb-3 flex items-center justify-between gap-3 rounded-lg border border-ui-border bg-ui-deep/40 px-3 py-2"
       >
         <UiCheckbox
           :model-value="allOnPageSelected"
@@ -364,7 +364,7 @@ async function onBulkDone(result: RoomBulkResult, action: RoomBulkAction) {
           :label="`Chọn cả trang (${rooms.length})`"
           @update:model-value="toggleAllOnPage"
         />
-        <span class="text-xs text-muted">{{ bulk.selectedIds.value.length }} đã chọn tổng cộng</span>
+        <span class="text-xs text-ui-muted">{{ bulk.selectedIds.value.length }} đã chọn tổng cộng</span>
       </div>
 
       <div class="space-y-6">
@@ -373,17 +373,17 @@ async function onBulkDone(result: RoomBulkResult, action: RoomBulkAction) {
           :key="group.id"
           :aria-labelledby="`building-group-${group.id}`"
         >
-          <header class="mb-3 flex items-baseline justify-between gap-3 border-b border-dark-border pb-2">
+          <header class="mb-3 flex items-baseline justify-between gap-3 border-b border-ui-border pb-2">
             <h2
               :id="`building-group-${group.id}`"
-              class="text-sm font-semibold uppercase tracking-wide text-white"
+              class="text-sm font-semibold uppercase tracking-wide text-ui-primary"
             >
               {{ group.name }}
             </h2>
-            <p class="text-xs text-muted">
+            <p class="text-xs text-ui-muted">
               {{ group.rooms.length }} phòng
               <span v-if="group.availableCount > 0">
-                · <span class="text-success-neon">{{ group.availableCount }} trống</span>
+                · <span class="text-status-success">{{ group.availableCount }} trống</span>
               </span>
             </p>
           </header>
@@ -403,8 +403,8 @@ async function onBulkDone(result: RoomBulkResult, action: RoomBulkAction) {
         </section>
       </div>
 
-      <div v-if="totalPages > 1" class="mt-6 flex items-center justify-between border-t border-dark-border pt-4">
-        <p class="text-sm text-muted">Trang {{ page }} / {{ totalPages }}</p>
+      <div v-if="totalPages > 1" class="mt-6 flex items-center justify-between border-t border-ui-border pt-4">
+        <p class="text-sm text-ui-muted">Trang {{ page }} / {{ totalPages }}</p>
         <div class="flex gap-2">
           <UiButton variant="secondary" size="sm" :disabled="page <= 1" @click="page--">
             Trước
@@ -437,10 +437,10 @@ async function onBulkDone(result: RoomBulkResult, action: RoomBulkAction) {
         <li
           v-for="row in failuresWithName"
           :key="row.id"
-          class="flex items-start justify-between gap-3 rounded-lg border border-dark-border bg-dark-deep/40 px-3 py-2"
+          class="flex items-start justify-between gap-3 rounded-lg border border-ui-border bg-ui-deep/40 px-3 py-2"
         >
-          <span class="font-medium text-white">{{ row.name }}</span>
-          <span class="text-xs text-muted">{{ row.reason }}</span>
+          <span class="font-medium text-ui-primary">{{ row.name }}</span>
+          <span class="text-xs text-ui-muted">{{ row.reason }}</span>
         </li>
       </ul>
       <template #footer>
@@ -476,8 +476,8 @@ async function onBulkDone(result: RoomBulkResult, action: RoomBulkAction) {
       width="w-full sm:w-[640px]"
       @update:model-value="(open) => { if (!open) closeServices() }"
     >
-      <p v-if="servicesContract" class="mb-4 text-xs text-muted">
-        Hợp đồng <span class="text-white">{{ servicesContract.contractCode }}</span>
+      <p v-if="servicesContract" class="mb-4 text-xs text-ui-muted">
+        Hợp đồng <span class="text-ui-primary">{{ servicesContract.contractCode }}</span>
         <span v-if="servicesContract.tenant?.fullName"> · {{ servicesContract.tenant.fullName }}</span>
       </p>
       <UiAlert v-if="servicesError" severity="warning" class="mb-4">

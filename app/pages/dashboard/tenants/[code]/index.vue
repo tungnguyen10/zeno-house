@@ -214,8 +214,8 @@ watchEffect(() => {
       >
         <div class="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p class="text-sm font-medium text-white">Không thể xoá khách thuê này</p>
-            <p class="mt-1 text-xs text-muted">
+            <p class="text-sm font-medium text-ui-primary">Không thể xoá khách thuê này</p>
+            <p class="mt-1 text-xs text-ui-muted">
               <template v-if="conflictDetails.activeContracts">
                 Còn {{ conflictDetails.activeContracts }} hợp đồng đang hoạt động.
               </template>
@@ -250,8 +250,8 @@ watchEffect(() => {
       >
         <div class="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p class="text-sm font-medium text-white">Khách thuê đang ở chung</p>
-            <p class="mt-1 text-xs text-muted">
+            <p class="text-sm font-medium text-ui-primary">Khách thuê đang ở chung</p>
+            <p class="mt-1 text-xs text-ui-muted">
               <template v-if="tenant.activeAssignment.primaryTenantName">
                 Đang ở chung với {{ tenant.activeAssignment.primaryTenantName }} tại
               </template>
@@ -262,109 +262,109 @@ watchEffect(() => {
           <NuxtLink
             v-if="roommateContractPath"
             :to="roommateContractPath"
-            class="text-xs text-cyan hover:underline"
+            class="text-xs text-ui-accent hover:underline"
           >
             Mở hợp đồng hiện tại
           </NuxtLink>
         </div>
       </UiAlert>
 
-      <section id="personal" class="mt-6 rounded-xl border border-dark-border bg-dark-surface p-6">
-        <h3 class="mb-4 text-sm font-semibold text-white">Thông tin cá nhân</h3>
+      <section id="personal" class="mt-6 rounded-xl border border-ui-border bg-ui-surface p-6">
+        <h3 class="mb-4 text-sm font-semibold text-ui-primary">Thông tin cá nhân</h3>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <p class="text-xs text-muted mb-1">Số điện thoại</p>
-            <p class="text-sm text-white">{{ tenant.phone }}</p>
+            <p class="text-xs text-ui-muted mb-1">Số điện thoại</p>
+            <p class="text-sm text-ui-primary">{{ tenant.phone }}</p>
           </div>
           <div v-if="tenant.email">
-            <p class="text-xs text-muted mb-1">Email</p>
-            <p class="text-sm text-white">{{ tenant.email }}</p>
+            <p class="text-xs text-ui-muted mb-1">Email</p>
+            <p class="text-sm text-ui-primary">{{ tenant.email }}</p>
           </div>
           <div v-if="tenant.gender">
-            <p class="text-xs text-muted mb-1">Giới tính</p>
-            <p class="text-sm text-white">
+            <p class="text-xs text-ui-muted mb-1">Giới tính</p>
+            <p class="text-sm text-ui-primary">
               {{ tenant.gender === 'male' ? 'Nam' : tenant.gender === 'female' ? 'Nữ' : 'Khác' }}
             </p>
           </div>
           <div v-if="tenant.occupation">
-            <p class="text-xs text-muted mb-1">Nghề nghiệp</p>
-            <p class="text-sm text-white">{{ tenant.occupation }}</p>
+            <p class="text-xs text-ui-muted mb-1">Nghề nghiệp</p>
+            <p class="text-sm text-ui-primary">{{ tenant.occupation }}</p>
           </div>
           <div v-if="tenant.dateOfBirth">
-            <p class="text-xs text-muted mb-1">Ngày sinh</p>
-            <p class="text-sm text-white">{{ new Date(tenant.dateOfBirth).toLocaleDateString('vi-VN') }}</p>
+            <p class="text-xs text-ui-muted mb-1">Ngày sinh</p>
+            <p class="text-sm text-ui-primary">{{ new Date(tenant.dateOfBirth).toLocaleDateString('vi-VN') }}</p>
           </div>
           <div>
-            <p class="text-xs text-muted mb-1">Ngày tạo</p>
-            <p class="text-sm text-white">{{ new Date(tenant.createdAt).toLocaleDateString('vi-VN') }}</p>
+            <p class="text-xs text-ui-muted mb-1">Ngày tạo</p>
+            <p class="text-sm text-ui-primary">{{ new Date(tenant.createdAt).toLocaleDateString('vi-VN') }}</p>
           </div>
         </div>
         <div v-if="tenant.permanentAddress" class="mt-4">
-          <p class="text-xs text-muted mb-1">Địa chỉ thường trú</p>
-          <p class="text-sm text-white">{{ tenant.permanentAddress }}</p>
+          <p class="text-xs text-ui-muted mb-1">Địa chỉ thường trú</p>
+          <p class="text-sm text-ui-primary">{{ tenant.permanentAddress }}</p>
         </div>
-        <div v-if="tenant.notes" class="mt-4 pt-4 border-t border-dark-border">
-          <p class="text-xs text-muted mb-1">Ghi chú</p>
-          <p class="text-sm text-white whitespace-pre-wrap">{{ tenant.notes }}</p>
+        <div v-if="tenant.notes" class="mt-4 pt-4 border-t border-ui-border">
+          <p class="text-xs text-ui-muted mb-1">Ghi chú</p>
+          <p class="text-sm text-ui-primary whitespace-pre-wrap">{{ tenant.notes }}</p>
         </div>
       </section>
 
       <section
         v-if="tenant.idNumber || tenant.idIssuedDate || tenant.idIssuedPlace || tenant.idCardFrontSignedUrl || tenant.idCardBackSignedUrl"
         id="id-document"
-        class="mt-4 rounded-xl border border-dark-border bg-dark-surface p-6"
+        class="mt-4 rounded-xl border border-ui-border bg-ui-surface p-6"
       >
-        <h3 class="mb-4 text-sm font-semibold text-white">Giấy tờ tuỳ thân</h3>
+        <h3 class="mb-4 text-sm font-semibold text-ui-primary">Giấy tờ tuỳ thân</h3>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div v-if="tenant.idNumber">
-            <p class="text-xs text-muted mb-1">Số CMND/CCCD</p>
-            <p class="text-sm text-white">{{ tenant.idNumber }}</p>
+            <p class="text-xs text-ui-muted mb-1">Số CMND/CCCD</p>
+            <p class="text-sm text-ui-primary">{{ tenant.idNumber }}</p>
           </div>
           <div v-if="tenant.idIssuedDate">
-            <p class="text-xs text-muted mb-1">Ngày cấp</p>
-            <p class="text-sm text-white">{{ new Date(tenant.idIssuedDate).toLocaleDateString('vi-VN') }}</p>
+            <p class="text-xs text-ui-muted mb-1">Ngày cấp</p>
+            <p class="text-sm text-ui-primary">{{ new Date(tenant.idIssuedDate).toLocaleDateString('vi-VN') }}</p>
           </div>
           <div v-if="tenant.idIssuedPlace">
-            <p class="text-xs text-muted mb-1">Nơi cấp</p>
-            <p class="text-sm text-white">{{ tenant.idIssuedPlace }}</p>
+            <p class="text-xs text-ui-muted mb-1">Nơi cấp</p>
+            <p class="text-sm text-ui-primary">{{ tenant.idIssuedPlace }}</p>
           </div>
         </div>
 
         <div v-if="tenant.idCardFrontSignedUrl || tenant.idCardBackSignedUrl" class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div v-if="tenant.idCardFrontSignedUrl" class="space-y-1.5">
-            <p class="text-xs text-muted">Mặt trước</p>
+            <p class="text-xs text-ui-muted">Mặt trước</p>
             <a
               :href="tenant.idCardFrontSignedUrl"
               target="_blank"
               rel="noopener"
-              class="group relative block overflow-hidden rounded-lg border border-dark-border bg-dark-deep/30 transition-colors hover:border-cyan/50"
+              class="group relative block overflow-hidden rounded-lg border border-ui-border bg-ui-deep/30 transition-colors hover:border-ui-accent/50"
             >
               <img
                 :src="tenant.idCardFrontSignedUrl"
                 alt="CCCD mặt trước"
                 class="w-full object-cover"
               >
-              <span class="absolute inset-0 flex items-center justify-center rounded-lg bg-black/0 opacity-0 transition-all group-hover:bg-black/30 group-hover:opacity-100">
-                <IconArrowUpRight class="h-5 w-5 text-white drop-shadow" aria-hidden="true" />
+              <span class="absolute inset-0 flex items-center justify-center rounded-lg bg-ui-overlay/0 opacity-0 transition-all group-hover:bg-ui-overlay/30 group-hover:opacity-100">
+                <IconArrowUpRight class="h-5 w-5 text-ui-primary drop-shadow" aria-hidden="true" />
               </span>
             </a>
           </div>
 
           <div v-if="tenant.idCardBackSignedUrl" class="space-y-1.5">
-            <p class="text-xs text-muted">Mặt sau</p>
+            <p class="text-xs text-ui-muted">Mặt sau</p>
             <a
               :href="tenant.idCardBackSignedUrl"
               target="_blank"
               rel="noopener"
-              class="group relative block overflow-hidden rounded-lg border border-dark-border bg-dark-deep/30 transition-colors hover:border-cyan/50"
+              class="group relative block overflow-hidden rounded-lg border border-ui-border bg-ui-deep/30 transition-colors hover:border-ui-accent/50"
             >
               <img
                 :src="tenant.idCardBackSignedUrl"
                 alt="CCCD mặt sau"
                 class="w-full object-cover"
               >
-              <span class="absolute inset-0 flex items-center justify-center rounded-lg bg-black/0 opacity-0 transition-all group-hover:bg-black/30 group-hover:opacity-100">
-                <IconArrowUpRight class="h-5 w-5 text-white drop-shadow" aria-hidden="true" />
+              <span class="absolute inset-0 flex items-center justify-center rounded-lg bg-ui-overlay/0 opacity-0 transition-all group-hover:bg-ui-overlay/30 group-hover:opacity-100">
+                <IconArrowUpRight class="h-5 w-5 text-ui-primary drop-shadow" aria-hidden="true" />
               </span>
             </a>
           </div>
@@ -372,7 +372,7 @@ watchEffect(() => {
 
         <p
           v-if="authStore.can('tenants.update')"
-          class="mt-3 text-xs text-muted"
+          class="mt-3 text-xs text-ui-muted"
         >
           Bạn có thể cập nhật ảnh CCCD ở trang chỉnh sửa khách thuê.
         </p>
@@ -381,34 +381,34 @@ watchEffect(() => {
       <section
         v-if="tenant.emergencyContactName || tenant.emergencyContactPhone"
         id="emergency"
-        class="mt-4 rounded-xl border border-dark-border bg-dark-surface p-6"
+        class="mt-4 rounded-xl border border-ui-border bg-ui-surface p-6"
       >
-        <h3 class="mb-4 text-sm font-semibold text-white">Liên hệ khẩn cấp</h3>
+        <h3 class="mb-4 text-sm font-semibold text-ui-primary">Liên hệ khẩn cấp</h3>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div v-if="tenant.emergencyContactName">
-            <p class="text-xs text-muted mb-1">Tên</p>
-            <p class="text-sm text-white">{{ tenant.emergencyContactName }}</p>
+            <p class="text-xs text-ui-muted mb-1">Tên</p>
+            <p class="text-sm text-ui-primary">{{ tenant.emergencyContactName }}</p>
           </div>
           <div v-if="tenant.emergencyContactPhone">
-            <p class="text-xs text-muted mb-1">Số điện thoại</p>
-            <p class="text-sm text-white">{{ tenant.emergencyContactPhone }}</p>
+            <p class="text-xs text-ui-muted mb-1">Số điện thoại</p>
+            <p class="text-sm text-ui-primary">{{ tenant.emergencyContactPhone }}</p>
           </div>
         </div>
       </section>
 
-      <section id="contracts" class="mt-4 rounded-xl border border-dark-border bg-dark-surface p-6">
+      <section id="contracts" class="mt-4 rounded-xl border border-ui-border bg-ui-surface p-6">
         <div class="flex items-center justify-between mb-4">
-          <h3 class="text-sm font-semibold text-white">Hợp đồng</h3>
+          <h3 class="text-sm font-semibold text-ui-primary">Hợp đồng</h3>
           <NuxtLink
             v-if="authStore.can('contracts.create') && !isRoommate"
             to="/dashboard/contracts/create"
-            class="text-xs text-cyan hover:underline"
+            class="text-xs text-ui-accent hover:underline"
           >
             + Thêm
           </NuxtLink>
           <span
             v-else-if="authStore.can('contracts.create') && isRoommate"
-            class="text-xs text-muted"
+            class="text-xs text-ui-muted"
           >
             Không thể thêm HĐ khi đang ở chung
           </span>
@@ -421,29 +421,29 @@ watchEffect(() => {
             compact
           >
             <div class="flex items-center gap-2 flex-wrap">
-              <p class="text-xs font-medium text-white truncate">
+              <p class="text-xs font-medium text-ui-primary truncate">
                 Phòng {{ contract.room.roomNumber }} — {{ contract.room.buildingName }}
               </p>
               <UiStatusBadge :status="contract.status" />
             </div>
-            <p class="text-xs text-muted mt-0.5 truncate">
+            <p class="text-xs text-ui-muted mt-0.5 truncate">
               {{ new Date(contract.startDate).toLocaleDateString('vi-VN') }} —
               {{ new Date(contract.endDate).toLocaleDateString('vi-VN') }}
               · {{ formatCurrency(contract.monthlyRent) }}/tháng
             </p>
           </UiListRow>
         </div>
-        <p v-else class="text-sm text-muted">Chưa có hợp đồng</p>
+        <p v-else class="text-sm text-ui-muted">Chưa có hợp đồng</p>
       </section>
 
       <section
         v-if="authStore.can('tenants.delete')"
         id="danger-zone"
-        class="mt-4 rounded-xl border border-error/30 bg-error/5 p-6"
+        class="mt-4 rounded-xl border border-status-danger/30 bg-status-danger/5 p-6"
       >
-        <h3 class="mb-2 text-sm font-semibold text-error">Vùng nguy hiểm</h3>
+        <h3 class="mb-2 text-sm font-semibold text-status-danger">Vùng nguy hiểm</h3>
         <div class="flex flex-wrap items-center justify-between gap-3">
-          <p class="text-xs text-muted">
+          <p class="text-xs text-ui-muted">
             Xoá khách thuê chỉ thực hiện được khi không còn hợp đồng đang hoạt động và không còn đồng cư trong hợp đồng nào.
           </p>
           <div class="flex items-center gap-2">
@@ -467,7 +467,7 @@ watchEffect(() => {
       @cancel="showDeleteModal = false"
     >
       <div class="space-y-3">
-        <p class="text-sm text-muted">
+        <p class="text-sm text-ui-muted">
           Bạn có chắc muốn xoá khách thuê {{ tenant?.fullName ?? '' }}? Hành động này không thể hoàn tác.
         </p>
         <UiTextarea
@@ -491,7 +491,7 @@ watchEffect(() => {
       @cancel="showArchiveModal = false"
     >
       <div class="space-y-3">
-        <p class="text-sm text-muted">
+        <p class="text-sm text-ui-muted">
           Bạn có chắc muốn lưu trữ khách thuê {{ tenant?.fullName ?? '' }}?
         </p>
         <UiTextarea

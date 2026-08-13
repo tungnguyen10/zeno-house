@@ -142,10 +142,10 @@ async function sendSelectedInvoices() {
       <div v-else class="relative">
         <div
           v-if="isLoading && invoices.length > 0"
-          class="pointer-events-none absolute inset-x-0 top-0 z-10 h-0.5 overflow-hidden rounded-full bg-dark-border"
+          class="pointer-events-none absolute inset-x-0 top-0 z-10 h-0.5 overflow-hidden rounded-full bg-ui-border"
           aria-hidden="true"
         >
-          <div class="h-full w-1/3 animate-pulse rounded-full bg-cyan" />
+          <div class="h-full w-1/3 animate-pulse rounded-full bg-ui-accent" />
         </div>
 
         <InvoiceListTable
@@ -157,7 +157,7 @@ async function sendSelectedInvoices() {
         />
       </div>
 
-      <div class="flex flex-col gap-2 text-sm text-muted sm:flex-row sm:items-center sm:justify-between">
+      <div class="flex flex-col gap-2 text-sm text-ui-muted sm:flex-row sm:items-center sm:justify-between">
         <span>
           Trang {{ meta.page }}/{{ meta.total_pages }} · {{ totalLabel }}
         </span>
@@ -198,10 +198,10 @@ async function sendSelectedInvoices() {
     >
       <div
         v-if="selectedInvoices.length > 0"
-        class="fixed bottom-4 left-1/2 z-30 w-[calc(100%-2rem)] max-w-max -translate-x-1/2 rounded-xl border border-dark-border bg-dark-card px-4 py-2 shadow-lg shadow-black/40 backdrop-blur sm:w-auto sm:rounded-full"
+        class="fixed bottom-4 left-1/2 z-30 w-[calc(100%-2rem)] max-w-max -translate-x-1/2 rounded-xl border border-ui-border bg-ui-chrome px-4 py-2 shadow-lg shadow-ui-shadow/40 backdrop-blur sm:w-auto sm:rounded-full"
       >
         <div class="grid grid-cols-2 items-center gap-2 sm:flex sm:gap-3">
-          <span class="col-span-2 text-center text-sm text-white sm:col-auto sm:text-left">
+          <span class="col-span-2 text-center text-sm text-ui-primary sm:col-auto sm:text-left">
             Đã chọn <span class="font-semibold">{{ selectedInvoices.length }}</span> hóa đơn
           </span>
           <UiButton class="whitespace-nowrap" variant="ghost" size="sm" @click="clearSelection">Bỏ chọn</UiButton>
@@ -227,7 +227,7 @@ async function sendSelectedInvoices() {
       @close="emailConfirmOpen = false"
     >
       <div class="space-y-3">
-        <p class="text-sm leading-6 text-muted">
+        <p class="text-sm leading-6 text-ui-muted">
           {{ selectedInvoices.length }} hoá đơn trên trang hiện tại sẽ được xếp hàng gửi đến email liên hệ chính của từng khách thuê.
         </p>
         <UiAlert v-if="selectedInvoices.length > 100" severity="warning">

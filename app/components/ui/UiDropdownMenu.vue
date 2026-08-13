@@ -35,7 +35,7 @@ onKeyStroke('Escape', () => {
       :aria-expanded="isOpen"
       :aria-label="ariaLabel"
       aria-haspopup="menu"
-      class="inline-flex items-center justify-center font-medium rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-0 size-7 text-xs bg-dark-surface text-white border border-dark-border hover:bg-dark-hover focus-visible:ring-dark-border"
+      class="inline-flex items-center justify-center font-medium rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-0 size-7 text-xs bg-ui-surface text-ui-primary border border-ui-border hover:bg-ui-hover focus-visible:ring-ui-border-strong"
       @click="toggle"
     >
       <IconMoreVertical class="h-4 w-4" aria-hidden="true" />
@@ -52,7 +52,7 @@ onKeyStroke('Escape', () => {
         v-if="isOpen"
         ref="panelRef"
         role="menu"
-        class="absolute right-0 top-full mt-1 z-50 min-w-[10rem] origin-top-right rounded-md border border-dark-border bg-dark-surface shadow-lg py-1"
+        class="absolute right-0 top-full mt-1 z-50 min-w-[10rem] origin-top-right rounded-md border border-ui-border bg-ui-surface shadow-lg py-1"
       >
         <slot />
       </div>

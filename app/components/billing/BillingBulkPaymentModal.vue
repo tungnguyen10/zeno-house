@@ -128,19 +128,19 @@ function submit() {
             <UiCheckbox v-model="row.enabled" />
           </template>
           <template #cell-invoice="{ row }">
-            <span class="block text-white text-sm">
+            <span class="block text-ui-primary text-sm">
               {{ invoiceById.get(row.invoiceId)?.tenantName ?? '---' }}
               <template v-if="invoiceById.get(row.invoiceId)?.roomNumber">
-                <span class="text-muted">·</span>
+                <span class="text-ui-muted">·</span>
                 {{ invoiceById.get(row.invoiceId)!.roomNumber }}
               </template>
             </span>
-            <span class="block text-xs text-muted">
+            <span class="block text-xs text-ui-muted">
               {{ invoiceById.get(row.invoiceId)?.contractCode ?? row.invoiceId.slice(0, 8) }}
             </span>
           </template>
           <template #cell-balance="{ row }">
-            <span class="text-muted">{{ formatCurrency(invoiceById.get(row.invoiceId)?.balanceAmount ?? 0) }}</span>
+            <span class="text-ui-muted">{{ formatCurrency(invoiceById.get(row.invoiceId)?.balanceAmount ?? 0) }}</span>
           </template>
           <template #cell-amount="{ row }">
             <UiInput
@@ -154,9 +154,9 @@ function submit() {
             />
           </template>
         </UiTable>
-        <div class="flex items-center justify-between rounded-md bg-dark-card px-3 py-2 text-sm">
-          <span class="text-muted">{{ enabledCount }} hoá đơn được chọn</span>
-          <span class="tabular-nums font-semibold text-white">{{ formatCurrency(totalAmount) }}</span>
+        <div class="flex items-center justify-between rounded-md bg-ui-chrome px-3 py-2 text-sm">
+          <span class="text-ui-muted">{{ enabledCount }} hoá đơn được chọn</span>
+          <span class="tabular-nums font-semibold text-ui-primary">{{ formatCurrency(totalAmount) }}</span>
         </div>
       </div>
     </div>

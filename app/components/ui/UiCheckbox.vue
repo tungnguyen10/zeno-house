@@ -30,10 +30,10 @@ const checkboxId = computed(() => props.id ?? generatedId)
 
 const boxClass = computed(() =>
   clsx(
-    'peer size-4 appearance-none rounded border bg-dark-surface transition-colors',
-    'focus:outline-none focus:ring-2 focus:ring-offset-0 focus:ring-cyan/40',
-    'checked:border-cyan checked:bg-cyan indeterminate:border-cyan indeterminate:bg-cyan',
-    props.error ? 'border-error/50' : 'border-dark-border',
+    'peer size-4 appearance-none rounded border bg-ui-surface transition-colors',
+    'focus:outline-none focus:ring-2 focus:ring-offset-0 focus:ring-ui-accent/40',
+    'checked:border-ui-accent checked:bg-ui-accent indeterminate:border-ui-accent indeterminate:bg-ui-accent',
+    props.error ? 'border-status-danger/50' : 'border-ui-border-strong',
     props.disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer',
   ),
 )
@@ -63,19 +63,19 @@ const boxClass = computed(() =>
           @change="emit('update:modelValue', ($event.target as HTMLInputElement).checked)"
         >
         <IconCheckSmall
-          class="pointer-events-none absolute hidden size-3 text-dark peer-checked:block peer-indeterminate:hidden"
+          class="pointer-events-none absolute hidden size-3 text-ui-on-accent peer-checked:block peer-indeterminate:hidden"
           aria-hidden="true"
         />
         <span
-          class="pointer-events-none absolute hidden h-0.5 w-2 rounded-full bg-dark peer-indeterminate:block"
+          class="pointer-events-none absolute hidden h-0.5 w-2 rounded-full bg-ui-on-accent peer-indeterminate:block"
         />
       </span>
-      <span v-if="label" :class="clsx('text-sm text-white select-none', labelClass)">{{ label }}</span>
+      <span v-if="label" :class="clsx('text-sm text-ui-primary select-none', labelClass)">{{ label }}</span>
     </label>
-    <p v-if="error" :id="`${checkboxId}-error`" class="text-xs text-error pl-6" role="alert">
+    <p v-if="error" :id="`${checkboxId}-error`" class="text-xs text-status-danger pl-6" role="alert">
       {{ error }}
     </p>
-    <p v-else-if="hint" :id="`${checkboxId}-hint`" class="text-xs text-muted pl-6">
+    <p v-else-if="hint" :id="`${checkboxId}-hint`" class="text-xs text-ui-muted pl-6">
       {{ hint }}
     </p>
   </div>

@@ -46,13 +46,13 @@ const buttonClass = computed(() =>
         },
         // Variant
         {
-          'bg-cyan text-dark-deep hover:bg-cyan/90 focus-visible:ring-cyan':
+          'bg-ui-accent text-ui-on-accent hover:bg-ui-accent/90 focus-visible:ring-ui-accent':
             props.variant === 'primary',
-          'bg-dark-surface text-white border border-dark-border hover:bg-dark-hover focus-visible:ring-dark-border':
+          'bg-ui-surface text-ui-primary border border-ui-border-strong hover:bg-ui-hover focus-visible:ring-ui-border-strong':
             props.variant === 'secondary',
-          'bg-error text-white hover:bg-error/85 focus-visible:ring-error':
+          'bg-status-danger text-status-on-danger hover:bg-status-danger/85 focus-visible:ring-status-danger':
             props.variant === 'danger',
-          'bg-transparent text-muted hover:bg-dark-hover hover:text-white focus-visible:ring-dark-border':
+          'bg-transparent text-ui-muted hover:bg-ui-hover hover:text-ui-primary focus-visible:ring-ui-border-strong':
             props.variant === 'ghost',
         },
         // State

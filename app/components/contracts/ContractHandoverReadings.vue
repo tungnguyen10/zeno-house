@@ -107,20 +107,20 @@ const meterTypeLabel: Record<MeterType, string> = { electricity: 'Điện', wate
       <div class="overflow-x-auto">
         <table class="w-full text-sm">
           <thead>
-            <tr class="border-b border-dark-border">
-              <th class="text-left text-xs text-muted pb-2 pr-3 w-24">Loại</th>
-              <th v-if="showHandoverOut" class="text-left text-xs text-muted pb-2 pr-3 w-16">Chiều</th>
-              <th class="text-right text-xs text-muted pb-2 pr-3 w-36">Chỉ số</th>
-              <th class="text-center text-xs text-muted pb-2 w-36">Ngày đọc</th>
-              <th class="text-xs text-muted pb-2 w-8" />
+            <tr class="border-b border-ui-border">
+              <th class="text-left text-xs text-ui-muted pb-2 pr-3 w-24">Loại</th>
+              <th v-if="showHandoverOut" class="text-left text-xs text-ui-muted pb-2 pr-3 w-16">Chiều</th>
+              <th class="text-right text-xs text-ui-muted pb-2 pr-3 w-36">Chỉ số</th>
+              <th class="text-center text-xs text-ui-muted pb-2 w-36">Ngày đọc</th>
+              <th class="text-xs text-ui-muted pb-2 w-8" />
             </tr>
           </thead>
-          <tbody class="divide-y divide-dark-border">
+          <tbody class="divide-y divide-ui-border">
             <template v-for="meterType in METER_TYPES" :key="meterType">
               <!-- Handover in row -->
               <tr>
-                <td class="py-2 pr-3 text-white font-medium">{{ meterTypeLabel[meterType] }}</td>
-                <td v-if="showHandoverOut" class="py-2 pr-3 text-xs text-muted">Vào</td>
+                <td class="py-2 pr-3 text-ui-primary font-medium">{{ meterTypeLabel[meterType] }}</td>
+                <td v-if="showHandoverOut" class="py-2 pr-3 text-xs text-ui-muted">Vào</td>
                 <td class="py-2 pr-3">
                   <UiInput
                     density="compact"
@@ -132,7 +132,7 @@ const meterTypeLabel: Record<MeterType, string> = { electricity: 'Điện', wate
                   />
                   <p
                     v-if="getRow(meterType, 'handover_in').prefilled && priorReadingFor(meterType)"
-                    class="mt-1 text-[10px] text-muted leading-tight"
+                    class="mt-1 text-[10px] text-ui-muted leading-tight"
                   >
                     Lấy tự động từ số chốt kỳ {{ priorReadingFor(meterType)!.periodMonth }}/{{ priorReadingFor(meterType)!.periodYear }} — chỉnh nếu sai.
                   </p>
@@ -146,14 +146,14 @@ const meterTypeLabel: Record<MeterType, string> = { electricity: 'Điện', wate
                   />
                 </td>
                 <td class="py-2 text-center">
-                  <span v-if="getReadingByType(meterType, 'handover_in')" class="text-xs text-success-neon">✓</span>
+                  <span v-if="getReadingByType(meterType, 'handover_in')" class="text-xs text-status-success">✓</span>
                 </td>
               </tr>
 
               <!-- Handover out row (only for terminated/expired) -->
               <tr v-if="showHandoverOut">
-                <td class="py-2 pr-3 text-white font-medium">{{ meterTypeLabel[meterType] }}</td>
-                <td class="py-2 pr-3 text-xs text-muted">Ra</td>
+                <td class="py-2 pr-3 text-ui-primary font-medium">{{ meterTypeLabel[meterType] }}</td>
+                <td class="py-2 pr-3 text-xs text-ui-muted">Ra</td>
                 <td class="py-2 pr-3">
                   <UiInput
                     density="compact"
@@ -173,7 +173,7 @@ const meterTypeLabel: Record<MeterType, string> = { electricity: 'Điện', wate
                   />
                 </td>
                 <td class="py-2 text-center">
-                  <span v-if="getReadingByType(meterType, 'handover_out')" class="text-xs text-success-neon">✓</span>
+                  <span v-if="getReadingByType(meterType, 'handover_out')" class="text-xs text-status-success">✓</span>
                 </td>
               </tr>
             </template>
@@ -182,7 +182,7 @@ const meterTypeLabel: Record<MeterType, string> = { electricity: 'Điện', wate
       </div>
 
       <UiAlert v-if="saveError" severity="danger" class="mt-2">{{ saveError }}</UiAlert>
-      <p v-if="isSaving" class="text-xs text-muted mt-2">Đang lưu...</p>
+      <p v-if="isSaving" class="text-xs text-ui-muted mt-2">Đang lưu...</p>
     </template>
   </div>
 </template>

@@ -44,38 +44,38 @@ const expanded = ref(false)
     <div class="min-w-0 flex-1 space-y-0.5">
       <!-- Summary line -->
       <div class="flex items-start justify-between gap-2">
-        <p class="text-sm text-white leading-snug">
+        <p class="text-sm text-ui-primary leading-snug">
           {{ event.summary ?? event.action }}
         </p>
-        <time class="flex-none text-xs text-muted tabular-nums whitespace-nowrap mt-0.5">
+        <time class="flex-none text-xs text-ui-muted tabular-nums whitespace-nowrap mt-0.5">
           {{ formatAuditTime(event.createdAt) }}
         </time>
       </div>
 
       <!-- Actor + entity -->
-      <div class="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted">
+      <div class="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-ui-muted">
         <span :title="event.actorEmail ?? undefined">{{ auditActorLabel(event) }}</span>
         <NuxtLink
           v-if="entityLink"
           :to="entityLink"
-          class="text-cyan-400 hover:underline underline-offset-2"
+          class="text-ui-accent hover:underline underline-offset-2"
         >
           {{ event.entityLabel ?? event.entityType }}
-          <span v-if="event.entitySubLabel" class="text-muted ml-1">{{ event.entitySubLabel }}</span>
+          <span v-if="event.entitySubLabel" class="text-ui-muted ml-1">{{ event.entitySubLabel }}</span>
         </NuxtLink>
         <span v-else-if="event.entityLabel">
           {{ event.entityLabel }}
-          <span v-if="event.entitySubLabel" class="text-muted ml-1">{{ event.entitySubLabel }}</span>
+          <span v-if="event.entitySubLabel" class="text-ui-muted ml-1">{{ event.entitySubLabel }}</span>
         </span>
       </div>
 
       <!-- Diff view (D6) -->
-      <div v-if="diff" class="mt-1 flex items-center gap-2 text-xs rounded bg-dark-surface px-2 py-1 font-mono w-fit max-w-full">
-        <span class="text-muted">{{ diff.label }}:</span>
-        <span class="text-rose-300 line-through">{{ formatDiffVal(diff.before) }}</span>
-        <span class="text-muted">→</span>
-        <span class="text-emerald-300">{{ formatDiffVal(diff.after) }}</span>
-        <span v-if="diff.delta != null" class="text-muted">({{ typeof diff.delta === 'number' && diff.delta > 0 ? '+' : '' }}{{ formatDiffVal(diff.delta) }})</span>
+      <div v-if="diff" class="mt-1 flex items-center gap-2 text-xs rounded bg-ui-surface px-2 py-1 font-mono w-fit max-w-full">
+        <span class="text-ui-muted">{{ diff.label }}:</span>
+        <span class="text-status-danger line-through">{{ formatDiffVal(diff.before) }}</span>
+        <span class="text-ui-muted">→</span>
+        <span class="text-status-success">{{ formatDiffVal(diff.after) }}</span>
+        <span v-if="diff.delta != null" class="text-ui-muted">({{ typeof diff.delta === 'number' && diff.delta > 0 ? '+' : '' }}{{ formatDiffVal(diff.delta) }})</span>
       </div>
 
       <!-- Action row: category chip + correlation + entity link + expand -->
@@ -90,7 +90,7 @@ const expanded = ref(false)
         <UiButton
           v-if="event.correlationId"
           unstyled
-          class="text-xs text-muted hover:text-white underline underline-offset-2 transition-colors"
+          class="text-xs text-ui-muted hover:text-ui-primary underline underline-offset-2 transition-colors"
           :title="`Xem cùng correlation: ${event.correlationId}`"
           @click="$emit('filterCorrelation', event.correlationId)"
         >
@@ -101,7 +101,7 @@ const expanded = ref(false)
         <NuxtLink
           v-if="entityLink"
           :to="entityLink"
-          class="text-xs text-muted hover:text-white transition-colors"
+          class="text-xs text-ui-muted hover:text-ui-primary transition-colors"
         >
           → Mở
         </NuxtLink>
@@ -110,7 +110,7 @@ const expanded = ref(false)
         <UiButton
           v-if="hasAuditTechnicalDetail(event)"
           unstyled
-          class="text-xs text-muted hover:text-white transition-colors ml-auto"
+          class="text-xs text-ui-muted hover:text-ui-primary transition-colors ml-auto"
           @click="expanded = !expanded"
         >
           {{ expanded ? 'Ẩn' : 'Chi tiết kỹ thuật' }}
@@ -120,7 +120,7 @@ const expanded = ref(false)
       <!-- Technical JSON (collapsible) -->
       <pre
         v-if="expanded"
-        class="mt-2 rounded bg-dark-surface text-xs text-muted p-2 overflow-x-auto whitespace-pre-wrap break-all"
+        class="mt-2 rounded bg-ui-surface text-xs text-ui-muted p-2 overflow-x-auto whitespace-pre-wrap break-all"
       >{{ auditTechnicalJson(event) }}</pre>
     </div>
   </div>

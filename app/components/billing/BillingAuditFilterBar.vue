@@ -140,8 +140,8 @@ const hasActiveFilters = computed(() =>
     <!-- Header row: title + event count + actions -->
     <div class="flex items-center justify-between gap-2 flex-wrap">
       <div class="flex items-center gap-2">
-        <span class="text-sm font-medium text-white">Nhật ký kỳ vận hành</span>
-        <span v-if="total > 0" class="text-xs text-muted tabular-nums">({{ total }})</span>
+        <span class="text-sm font-medium text-ui-primary">Nhật ký kỳ vận hành</span>
+        <span v-if="total > 0" class="text-xs text-ui-muted tabular-nums">({{ total }})</span>
       </div>
       <div class="flex items-center gap-2">
         <UiFilterResetButton v-if="hasActiveFilters" @click="$emit('reset')" />
@@ -187,14 +187,14 @@ const hasActiveFilters = computed(() =>
     <!-- Correlation filter active indicator -->
     <div
       v-if="filters.correlationId"
-      class="flex items-center gap-2 text-xs rounded bg-amber-500/10 border border-amber-500/30 px-2 py-1.5"
+      class="flex items-center gap-2 text-xs rounded bg-status-warning/10 border border-status-warning/30 px-2 py-1.5"
     >
-      <span class="text-amber-300 flex-1 truncate font-mono">
+      <span class="text-status-warning flex-1 truncate font-mono">
         correlation: {{ filters.correlationId }}
       </span>
       <UiButton
         unstyled
-        class="text-muted hover:text-white transition-colors"
+        class="text-ui-muted hover:text-ui-primary transition-colors"
         @click="$emit('update:filters', { ...filters, correlationId: '' })"
       >
         ✕
@@ -216,18 +216,18 @@ const hasActiveFilters = computed(() =>
         </UiButton>
         <template v-if="actorMenu">
           <div class="fixed inset-0 z-30" aria-hidden="true" @click="actorMenu = false" />
-          <div class="absolute left-0 z-40 mt-1 w-56 rounded-lg border border-dark-border bg-dark-card py-1 shadow-lg shadow-black/40">
+          <div class="absolute left-0 z-40 mt-1 w-56 rounded-lg border border-ui-border bg-ui-chrome py-1 shadow-lg shadow-ui-shadow/40">
             <UiButton
               v-for="c in contributors"
               :key="c.id"
               unstyled
-              class="flex w-full items-center gap-2 px-3 py-2 text-sm text-white hover:bg-dark-surface transition-colors"
+              class="flex w-full items-center gap-2 px-3 py-2 text-sm text-ui-primary hover:bg-ui-surface transition-colors"
               @click="toggleActor(c.id)"
             >
               <span
                 :class="[
-                  'h-3.5 w-3.5 rounded border border-dark-border flex-none transition-colors',
-                  filters.actorIds.includes(c.id) ? 'bg-cyan border-cyan' : '',
+                  'h-3.5 w-3.5 rounded border border-ui-border flex-none transition-colors',
+                  filters.actorIds.includes(c.id) ? 'bg-ui-accent border-ui-accent' : '',
                 ]"
                 aria-hidden="true"
               />

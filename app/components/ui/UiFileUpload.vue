@@ -24,7 +24,7 @@ const props = withDefaults(defineProps<{
   previewUrl?: string | null
   /** Alt text for the preview <img>. Falls back to label. */
   previewAlt?: string
-  /** Extra classes applied to the preview <img> in image mode. E.g. "bg-white p-1" for QR codes. */
+  /** Extra classes applied to the preview <img> in image mode, such as a white QR backing. */
   previewImageClass?: string
   /** Display name of the locally selected file (e.g. file.name). Controls the row label. */
   filename?: string | null
@@ -87,10 +87,10 @@ const acceptedTypes = computed(() => {
 // Cache the file-row border/bg class so it's not re-computed on every render.
 const fileRowClass = computed(() =>
   clsx(
-    props.disabled ? 'cursor-not-allowed opacity-50' : 'hover:bg-dark-hover',
+    props.disabled ? 'cursor-not-allowed opacity-50' : 'hover:bg-ui-hover',
     isOverDropZone.value
-      ? 'border-cyan/70 bg-cyan/5'
-      : props.error ? 'border-error/60' : 'border-dark-border',
+      ? 'border-ui-accent/70 bg-ui-accent/5'
+      : props.error ? 'border-status-danger/60' : 'border-ui-border',
   ),
 )
 
@@ -118,18 +118,18 @@ function validateAndEmit(file: File) {
     <p
       v-if="label"
       :id="labelId"
-      class="text-sm font-medium text-muted"
+      class="text-sm font-medium text-ui-muted"
     >
       {{ label }}
-      <span v-if="required" class="ml-0.5 text-error" aria-hidden="true">*</span>
+      <span v-if="required" class="ml-0.5 text-status-danger" aria-hidden="true">*</span>
     </p>
 
     <!-- ── Image variant ─────────────────────────────────── -->
     <template v-if="variant === 'image'">
       <div
         ref="dropZoneRef"
-        class="relative flex min-h-24 cursor-pointer items-center justify-center overflow-hidden rounded-lg border border-dashed bg-dark p-2 transition-colors"
-        :class="isOverDropZone ? 'border-cyan/60 bg-cyan/5' : 'border-dark-border'"
+        class="relative flex min-h-24 cursor-pointer items-center justify-center overflow-hidden rounded-lg border border-dashed bg-ui-canvas p-2 transition-colors"
+        :class="isOverDropZone ? 'border-ui-accent/60 bg-ui-accent/5' : 'border-ui-border'"
         @click="pick"
       >
         <img
@@ -140,18 +140,18 @@ function validateAndEmit(file: File) {
         >
         <div v-else class="flex flex-col items-center gap-1.5 text-center">
           <slot name="empty">
-            <IconPhoto class="h-6 w-6 text-muted" aria-hidden="true" />
-            <span class="text-xs text-muted">Kéo thả hoặc nhấn để chọn</span>
+            <IconPhoto class="h-6 w-6 text-ui-muted" aria-hidden="true" />
+            <span class="text-xs text-ui-muted">Kéo thả hoặc nhấn để chọn</span>
           </slot>
         </div>
 
         <div
           v-if="isOverDropZone"
-          class="absolute inset-0 flex flex-col items-center justify-center gap-1.5 rounded-lg bg-cyan/10 ring-2 ring-inset ring-cyan/40"
+          class="absolute inset-0 flex flex-col items-center justify-center gap-1.5 rounded-lg bg-ui-accent/10 ring-2 ring-inset ring-ui-accent/40"
           aria-hidden="true"
         >
-          <IconPhoto class="h-8 w-8 text-cyan" />
-          <span class="text-xs font-medium text-cyan">Thả để tải lên</span>
+          <IconPhoto class="h-8 w-8 text-ui-accent" />
+          <span class="text-xs font-medium text-ui-accent">Thả để tải lên</span>
         </div>
       </div>
 
@@ -178,24 +178,24 @@ function validateAndEmit(file: File) {
       :aria-describedby="error ? errorId : undefined"
       :aria-invalid="error ? 'true' : undefined"
       :aria-disabled="disabled"
-      class="flex min-h-10 w-full cursor-pointer items-center gap-3 rounded-md border bg-dark-surface px-3 py-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:ring-cyan/40"
+      class="flex min-h-10 w-full cursor-pointer items-center gap-3 rounded-md border bg-ui-surface px-3 py-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:ring-ui-accent/40"
       :class="fileRowClass"
       @click="pick"
       @keydown.enter.prevent="pick"
       @keydown.space.prevent="pick"
     >
       <slot name="icon">
-        <IconDocumentText class="h-4 w-4 shrink-0 text-muted" aria-hidden="true" />
+        <IconDocumentText class="h-4 w-4 shrink-0 text-ui-muted" aria-hidden="true" />
       </slot>
       <span
         class="min-w-0 flex-1 truncate"
-        :class="filename ? 'text-white' : 'text-muted'"
+        :class="filename ? 'text-ui-primary' : 'text-ui-muted'"
       >
         {{ filename ?? (previewUrl ? 'Đã có file' : (placeholder ?? 'Chọn file...')) }}
       </span>
     </div>
 
-    <p v-if="hint && !error" class="text-xs text-muted">{{ hint }}</p>
-    <p v-if="error" :id="errorId" role="alert" class="text-xs text-error">{{ error }}</p>
+    <p v-if="hint && !error" class="text-xs text-ui-muted">{{ hint }}</p>
+    <p v-if="error" :id="errorId" role="alert" class="text-xs text-status-danger">{{ error }}</p>
   </div>
 </template>

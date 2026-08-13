@@ -54,7 +54,7 @@ const columns: UiTableColumn<ServiceCatalogItem>[] = [
   >
     <template #cell-name="{ row }">
       <div class="flex items-center gap-2">
-        <span class="font-medium text-white">{{ row.name }}</span>
+        <span class="font-medium text-ui-primary">{{ row.name }}</span>
         <UiBadge v-if="row.isCustom" variant="neutral">Riêng</UiBadge>
       </div>
     </template>

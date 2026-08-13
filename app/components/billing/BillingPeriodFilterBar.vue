@@ -28,7 +28,7 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <UiToolbar class="rounded-xl border border-dark-border bg-dark-surface/40 p-2.5">
+  <UiToolbar class="rounded-xl border border-ui-border bg-ui-surface/40 p-2.5">
     <div class="w-full sm:w-56">
       <UiSelect
         :model-value="buildingValue"
@@ -78,10 +78,10 @@ const emit = defineEmits<{
       unstyled
       :aria-pressed="hasDebt"
       :class="[
-        'inline-flex h-9 items-center gap-1.5 rounded-md border px-3 text-sm transition focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan/30',
+        'inline-flex h-9 items-center gap-1.5 rounded-md border px-3 text-sm transition focus:outline-none focus-visible:ring-2 focus-visible:ring-ui-accent/30',
         hasDebt
-          ? 'border-error/60 bg-error/10 text-error-vivid'
-          : 'border-dark-border bg-dark-surface text-muted hover:border-dark-hover hover:text-white',
+          ? 'border-status-danger/60 bg-status-danger/10 text-status-danger'
+          : 'border-ui-border bg-ui-surface text-ui-muted hover:border-ui-border-strong hover:text-ui-primary',
       ]"
       @click="emit('toggleDebt')"
     >
@@ -92,7 +92,7 @@ const emit = defineEmits<{
     <UiButton
       v-if="activeQueueLabel"
       unstyled
-      class="inline-flex h-9 items-center gap-1.5 rounded-md border border-cyan/60 bg-cyan/10 px-3 text-sm text-cyan transition hover:bg-cyan/20"
+      class="inline-flex h-9 items-center gap-1.5 rounded-md border border-ui-accent/60 bg-ui-accent/10 px-3 text-sm text-ui-accent transition hover:bg-ui-accent/20"
       @click="emit('clearQueue')"
     >
       <span class="whitespace-nowrap">{{ activeQueueLabel }}</span>
@@ -101,13 +101,13 @@ const emit = defineEmits<{
 
     <template #actions>
       <UiFilterResetButton v-if="hasActiveFilters" label="Xóa lọc" @click="emit('reset')" />
-      <span v-if="periodCount !== undefined && !isLoading" class="text-xs tabular-nums text-muted">
+      <span v-if="periodCount !== undefined && !isLoading" class="text-xs tabular-nums text-ui-muted">
         {{ periodCount }} kỳ
       </span>
       <UiButton
         unstyled
         :class="[
-          'inline-flex h-9 items-center gap-1.5 rounded-md border border-dark-border px-3 text-sm text-muted transition hover:bg-dark-hover hover:text-white',
+          'inline-flex h-9 items-center gap-1.5 rounded-md border border-ui-border px-3 text-sm text-ui-muted transition hover:bg-ui-hover hover:text-ui-primary',
           isLoading && 'pointer-events-none opacity-50',
         ]"
         :aria-label="isLoading ? 'Đang tải' : 'Làm mới danh sách'"

@@ -116,9 +116,9 @@ describe('AppSidebar role visibility', () => {
     const buildings = wrapper.get('a[href="/dashboard/buildings"]')
     const currentLinks = wrapper.findAll('a[aria-current="page"]')
 
-    expect(dashboard.classes()).not.toContain('bg-cyan/10')
-    expect(buildings.classes()).toContain('bg-cyan/10')
-    expect(buildings.classes()).toContain('border-cyan/30')
+    expect(dashboard.classes()).not.toContain('bg-ui-accent/10')
+    expect(buildings.classes()).toContain('bg-ui-accent/10')
+    expect(buildings.classes()).toContain('border-ui-accent/30')
     expect(currentLinks).toHaveLength(1)
     expect(currentLinks[0]?.attributes('href')).toBe('/dashboard/buildings')
   })
@@ -157,6 +157,6 @@ describe('AppSidebar role visibility', () => {
     const footer = mountSidebar('admin').get('[data-sidebar-user]')
 
     expect(footer.classes()).toContain('rounded-xl')
-    expect(footer.classes()).toContain('border-dark-border')
+    expect(footer.classes()).toContain('border-ui-border')
   })
 })

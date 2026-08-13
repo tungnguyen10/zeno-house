@@ -499,7 +499,7 @@ watch(
 
     <UiSection title="Thu tiền & công nợ" description="Theo dõi hoá đơn, ghi nhận thanh toán, hoàn tác và huỷ/phát hành lại.">
       <template v-if="summary.overdueCount > 0" #actions>
-        <span class="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2.5 py-0.5 text-xs font-medium text-amber-300">
+        <span class="inline-flex items-center gap-1 rounded-full bg-status-warning/10 px-2.5 py-0.5 text-xs font-medium text-status-warning">
           Quá hạn: {{ summary.overdueCount }}
         </span>
       </template>
@@ -511,7 +511,7 @@ watch(
           aria-label="Lọc hóa đơn theo trạng thái"
           class="w-44"
         />
-        <span class="text-xs text-muted">
+        <span class="text-xs text-ui-muted">
           {{ filteredInvoices.length }} / {{ activeInvoices.length }} hoá đơn
         </span>
         <template #actions>
@@ -548,14 +548,14 @@ watch(
             unstyled
             :class="[
               'group flex min-w-0 max-w-full flex-col items-start rounded-md px-1 py-0.5 text-left transition',
-              highlightedInvoiceId === row.id && 'bg-cyan/10 ring-2 ring-cyan/50',
+              highlightedInvoiceId === row.id && 'bg-ui-accent/10 ring-2 ring-ui-accent/50',
             ]"
             @click.stop="openDetail(row)"
           >
-            <span class="block truncate text-sm font-medium text-white group-hover:text-cyan">
+            <span class="block truncate text-sm font-medium text-ui-primary group-hover:text-ui-accent">
               {{ invoiceDisplay(row).title }}
             </span>
-            <span class="block truncate text-xs text-muted">{{ invoiceDisplay(row).subtitle }}</span>
+            <span class="block truncate text-xs text-ui-muted">{{ invoiceDisplay(row).subtitle }}</span>
           </UiButton>
         </template>
         <template #cell-status="{ row }">
@@ -563,15 +563,15 @@ watch(
         </template>
         <template #cell-totalAmount="{ row }">{{ formatCurrency(row.totalAmount) }}</template>
         <template #cell-paidAmount="{ row }">
-          <span :class="row.paidAmount === 0 ? 'text-muted' : ''">{{ formatCurrency(row.paidAmount) }}</span>
+          <span :class="row.paidAmount === 0 ? 'text-ui-muted' : ''">{{ formatCurrency(row.paidAmount) }}</span>
         </template>
         <template #cell-balanceAmount="{ row }">
-          <span :class="row.balanceAmount > 0 ? 'text-error-vivid font-medium' : 'text-success-neon'">
+          <span :class="row.balanceAmount > 0 ? 'text-status-danger font-medium' : 'text-status-success'">
             {{ formatCurrency(row.balanceAmount) }}
           </span>
         </template>
         <template #cell-dueDate="{ row }">
-          <span :class="row.dueDate ? '' : 'text-muted'">{{ row.dueDate ?? '—' }}</span>
+          <span :class="row.dueDate ? '' : 'text-ui-muted'">{{ row.dueDate ?? '—' }}</span>
         </template>
         <template #cell-actions="{ row }">
           <div class="flex items-center justify-end gap-1 whitespace-nowrap">
@@ -617,27 +617,27 @@ watch(
     >
       <UiTable :rows="voidedInvoices" :columns="voidedColumns">
         <template #cell-contract="{ row }">
-          <span class="block text-white text-sm">{{ invoiceDisplay(row).title }}</span>
-          <span class="block text-xs text-muted">{{ invoiceDisplay(row).subtitle }}</span>
+          <span class="block text-ui-primary text-sm">{{ invoiceDisplay(row).title }}</span>
+          <span class="block text-xs text-ui-muted">{{ invoiceDisplay(row).subtitle }}</span>
         </template>
         <template #cell-totalAmount="{ row }">
-          <span class="text-muted line-through">{{ formatCurrency(row.totalAmount) }}</span>
+          <span class="text-ui-muted line-through">{{ formatCurrency(row.totalAmount) }}</span>
         </template>
         <template #cell-voidedAt="{ row }">
-          <span class="text-xs text-muted">{{ row.voidedAt ? new Date(row.voidedAt).toLocaleString('vi-VN') : '---' }}</span>
+          <span class="text-xs text-ui-muted">{{ row.voidedAt ? new Date(row.voidedAt).toLocaleString('vi-VN') : '---' }}</span>
         </template>
         <template #cell-voidReason="{ row }">
-          <span v-if="row.voidReason" class="text-sm text-white">{{ row.voidReason }}</span>
-          <span v-else class="text-muted">---</span>
+          <span v-if="row.voidReason" class="text-sm text-ui-primary">{{ row.voidReason }}</span>
+          <span v-else class="text-ui-muted">---</span>
         </template>
         <template #cell-replacement="{ row }">
           <template v-if="row.supersededByInvoiceId && replacementById.get(row.supersededByInvoiceId)">
-            <span class="text-cyan">
+            <span class="text-ui-accent">
               {{ formatCurrency(replacementById.get(row.supersededByInvoiceId)!.totalAmount) }}
             </span>
-            <span class="text-muted ml-1">(đã phát hành lại)</span>
+            <span class="text-ui-muted ml-1">(đã phát hành lại)</span>
           </template>
-          <span v-else class="text-muted">Chưa phát hành lại</span>
+          <span v-else class="text-ui-muted">Chưa phát hành lại</span>
         </template>
       </UiTable>
     </UiSection>
@@ -717,7 +717,7 @@ watch(
           <NuxtLink
             v-if="selectedInvoice"
             :to="invoicePath(selectedInvoice.invoice)"
-            class="inline-flex h-8 items-center justify-center rounded-md px-3 text-xs font-medium text-muted transition hover:bg-dark-hover hover:text-white"
+            class="inline-flex h-8 items-center justify-center rounded-md px-3 text-xs font-medium text-ui-muted transition hover:bg-ui-hover hover:text-ui-primary"
           >
             Mở trang chi tiết
           </NuxtLink>
@@ -761,7 +761,7 @@ watch(
     <!-- Void -->
     <UiModal :open="showVoidModal" title="Huỷ hoá đơn" @close="showVoidModal = false">
       <div class="space-y-3">
-        <p class="text-sm text-muted">Chỉ có thể huỷ khi chưa có thanh toán nào. Hoá đơn huỷ vẫn lưu lại để truy vết.</p>
+        <p class="text-sm text-ui-muted">Chỉ có thể huỷ khi chưa có thanh toán nào. Hoá đơn huỷ vẫn lưu lại để truy vết.</p>
         <UiSection title="Lý do huỷ">
           <UiInput v-model="voidForm.reason" placeholder="Lý do huỷ hoá đơn..." class="w-full" />
         </UiSection>
@@ -791,7 +791,7 @@ watch(
       @close="showEmailModal = false"
     >
       <div class="space-y-3">
-        <p class="text-sm leading-6 text-muted">
+        <p class="text-sm leading-6 text-ui-muted">
           {{ selectedInvoicesForBulk.length }} hoá đơn đang hiển thị sẽ được xếp hàng gửi đến email liên hệ chính của khách thuê.
         </p>
         <UiAlert v-if="selectedInvoicesForBulk.length > 100" severity="warning">
@@ -822,10 +822,10 @@ watch(
     >
       <div
         v-if="selectedIds.size > 0"
-        class="fixed bottom-4 left-1/2 z-30 w-[calc(100%-2rem)] max-w-max -translate-x-1/2 rounded-xl border border-dark-border bg-dark-card px-4 py-2 shadow-lg shadow-black/40 backdrop-blur sm:w-auto"
+        class="fixed bottom-4 left-1/2 z-30 w-[calc(100%-2rem)] max-w-max -translate-x-1/2 rounded-xl border border-ui-border bg-ui-chrome px-4 py-2 shadow-lg shadow-ui-shadow/40 backdrop-blur sm:w-auto"
       >
         <div class="grid grid-cols-2 items-center gap-2 sm:flex sm:gap-3">
-          <span class="col-span-2 text-center text-sm text-white sm:col-auto sm:text-left">
+          <span class="col-span-2 text-center text-sm text-ui-primary sm:col-auto sm:text-left">
             Đã chọn <span class="font-semibold">{{ selectedIds.size }}</span> hoá đơn
           </span>
           <UiButton class="whitespace-nowrap" variant="ghost" size="sm" @click="clearSelection">Bỏ chọn</UiButton>
@@ -855,7 +855,7 @@ watch(
         </div>
         <p
           v-if="bulkPaymentDisabledReason"
-          class="mt-2 text-center text-xs text-warning"
+          class="mt-2 text-center text-xs text-status-warning"
         >
           {{ bulkPaymentDisabledReason }}
         </p>

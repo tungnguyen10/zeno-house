@@ -24,6 +24,7 @@ Composables live in `app/composables/**` and mirror product workflows.
 | --- | --- |
 | Auth | `auth/useAuth`, `useAuthStore`, `useAccessRequests` |
 | Dashboard | `useDashboardSummary` |
+| Dashboard theme | `useDashboardTheme` |
 | Buildings | `useBuildingList`, `useBuildingDetail`, `useBuildingForm`, `useBuildingServices`, `useBuildingMeterReadings`, `useBuildingContractServices` |
 | Rooms | `useRoomList`, `useRoomDetail`, `useRoomForm` |
 | Tenants | `useTenantList`, `useTenantDetail`, `useTenantForm` |
@@ -127,6 +128,8 @@ The app is a dense operational tool, not a marketing site.
 
 - Use Tailwind utilities.
 - Use design-system tokens from `tailwind.config.ts`.
+- Dashboard UI uses semantic `ui.*` and `status.*` tokens backed by CSS variables. Do not add appearance-specific dark/light utilities to dashboard-bound code.
+- Dashboard theme defaults to the operating system, persists explicit light/dark choices, and is owned by `useDashboardTheme`. Auth keeps its dark treatment and tenant portal keeps its independent `--portal-*` theme contract.
 - Use `docs/ui-patterns/design-system.md` for component and layout rules.
 - Avoid inline styles unless there is no practical Tailwind or component alternative.
 

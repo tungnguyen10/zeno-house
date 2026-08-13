@@ -96,7 +96,7 @@ async function handleDeletePayment() {
         @submit="handleAddPayment"
         @cancel="showPaymentForm = false; paymentApiError = null"
       />
-      <hr class="border-dark-border mb-4">
+      <hr class="border-ui-border mb-4">
     </template>
 
     <!-- Loading -->
@@ -104,13 +104,13 @@ async function handleDeletePayment() {
       <UiSkeleton class="h-10 rounded-lg" />
       <UiSkeleton class="h-10 rounded-lg" />
     </div>
-    <div v-else-if="payments.length === 0" class="text-sm text-muted text-center py-4">
+    <div v-else-if="payments.length === 0" class="text-sm text-ui-muted text-center py-4">
       Chưa có thanh toán nào được ghi nhận.
     </div>
     <div v-else class="space-y-2">
       <template v-for="payment in payments" :key="payment.id">
         <!-- Inline edit form -->
-        <div v-if="editingPayment?.id === payment.id" class="rounded-lg border border-cyan-800 p-4">
+        <div v-if="editingPayment?.id === payment.id" class="rounded-lg border border-ui-accent/40 p-4">
           <ContractPaymentForm
             :initial-data="editingPayment"
             :loading="isUpdatingPayment"
@@ -122,11 +122,11 @@ async function handleDeletePayment() {
         <!-- Payment row -->
         <div
           v-else
-          class="flex items-start justify-between rounded-lg border border-dark-border px-4 py-3"
+          class="flex items-start justify-between rounded-lg border border-ui-border px-4 py-3"
         >
           <div>
-            <p class="text-sm font-medium text-white">{{ CONTRACT_PAYMENT_TYPE_LABELS[payment.paymentType] ?? payment.paymentType }}</p>
-            <p class="text-xs text-muted mt-0.5">
+            <p class="text-sm font-medium text-ui-primary">{{ CONTRACT_PAYMENT_TYPE_LABELS[payment.paymentType] ?? payment.paymentType }}</p>
+            <p class="text-xs text-ui-muted mt-0.5">
               {{ formatViDate(payment.paidAt) }}
               <template v-if="payment.coveredPeriodStart">
                 · Kỳ {{ payment.coveredPeriodStart }}
@@ -136,10 +136,10 @@ async function handleDeletePayment() {
               </template>
               <template v-if="payment.paymentMethod"> · {{ payment.paymentMethod }}</template>
             </p>
-            <p v-if="payment.note" class="text-xs text-zinc-500 mt-0.5 italic">{{ payment.note }}</p>
+            <p v-if="payment.note" class="text-xs text-ui-muted mt-0.5 italic">{{ payment.note }}</p>
           </div>
           <div class="flex items-center gap-2 shrink-0 ml-4">
-            <p class="text-sm font-semibold text-cyan">{{ formatCurrency(payment.amount) }}</p>
+            <p class="text-sm font-semibold text-ui-accent">{{ formatCurrency(payment.amount) }}</p>
             <template v-if="canManage">
               <UiButton
                 variant="ghost"
@@ -151,7 +151,7 @@ async function handleDeletePayment() {
               <UiButton
                 variant="ghost"
                 size="sm"
-                class="text-red-400 hover:text-red-300"
+                class="text-status-danger hover:text-status-danger"
                 @click="deletingPaymentId = payment.id"
               >
                 Xoá

@@ -263,7 +263,7 @@ function onFabClick() {
         v-if="!(open && fullscreen)"
         ref="fabEl"
         type="button"
-        class="fixed z-[60] flex size-12 touch-none select-none items-center justify-center rounded-full bg-cyan text-dark-deep shadow-lg transition-transform hover:scale-105 hover:bg-cyan/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan focus-visible:ring-offset-2"
+        class="fixed z-[60] flex size-12 touch-none select-none items-center justify-center rounded-full bg-ui-accent text-ui-on-accent shadow-lg transition-transform hover:scale-105 hover:bg-ui-accent/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-accent focus-visible:ring-offset-2"
         :style="fabStyle"
         :aria-label="open ? 'Đóng AI chat' : 'Mở AI chat'"
         @click="onFabClick"
@@ -285,23 +285,23 @@ function onFabClick() {
           v-if="open"
           ref="widgetEl"
           :class="clsx(
-            'fixed z-50 flex flex-col rounded-xl border border-dark-border bg-dark-card shadow-xl transition-all duration-200',
+            'fixed z-50 flex flex-col rounded-xl border border-ui-border bg-ui-chrome shadow-xl transition-all duration-200',
             fullscreen ? 'inset-3 sm:inset-6 lg:inset-12' : 'w-80 max-h-[30rem]',
           )"
           :style="fullscreen ? undefined : widgetStyle"
         >
           <!-- Header -->
-          <div class="flex items-center justify-between border-b border-dark-border px-4 py-3">
+          <div class="flex items-center justify-between border-b border-ui-border px-4 py-3">
             <div class="flex items-center gap-2">
-              <span class="size-2 rounded-full bg-cyan" aria-hidden="true" />
-              <span class="text-sm font-semibold text-white">AI Billing Assistant</span>
+              <span class="size-2 rounded-full bg-ui-accent" aria-hidden="true" />
+              <span class="text-sm font-semibold text-ui-primary">AI Billing Assistant</span>
             </div>
             <div class="flex items-center gap-1">
               <button
                 type="button"
                 :class="clsx(
                   'flex size-6 items-center justify-center rounded text-xs transition-colors',
-                  showDebug ? 'text-cyan' : 'text-muted hover:text-white',
+                  showDebug ? 'text-ui-accent' : 'text-ui-muted hover:text-ui-primary',
                 )"
                 :title="showDebug ? 'Ẩn debug info' : 'Hiện debug info'"
                 @click="showDebug = !showDebug"
@@ -310,7 +310,7 @@ function onFabClick() {
               </button>
               <button
                 type="button"
-                class="flex size-6 items-center justify-center rounded text-muted transition-colors hover:text-white"
+                class="flex size-6 items-center justify-center rounded text-ui-muted transition-colors hover:text-ui-primary"
                 :title="fullscreen ? 'Thu nhỏ' : 'Phóng to toàn màn hình'"
                 :aria-label="fullscreen ? 'Thu nhỏ AI chat' : 'Phóng to AI chat toàn màn hình'"
                 @click="toggleFullscreen"
@@ -320,7 +320,7 @@ function onFabClick() {
               </button>
               <button
                 type="button"
-                class="flex size-6 items-center justify-center rounded text-muted transition-colors hover:text-white"
+                class="flex size-6 items-center justify-center rounded text-ui-muted transition-colors hover:text-ui-primary"
                 title="Xóa hội thoại"
                 :disabled="sending"
                 @click="clearChat"
@@ -329,7 +329,7 @@ function onFabClick() {
               </button>
               <button
                 type="button"
-                class="flex size-6 items-center justify-center rounded text-muted transition-colors hover:text-white"
+                class="flex size-6 items-center justify-center rounded text-ui-muted transition-colors hover:text-ui-primary"
                 title="Đóng"
                 @click="onClose"
               >
@@ -341,14 +341,14 @@ function onFabClick() {
           <!-- Debug meta (collapsible) -->
           <div
             v-if="showDebug"
-            class="border-b border-dark-border bg-dark-surface px-3 py-2 text-xs text-muted space-y-0.5"
+            class="border-b border-ui-border bg-ui-surface px-3 py-2 text-xs text-ui-muted space-y-0.5"
           >
-            <p><span class="text-white/60">Provider:</span> {{ lastProvider ?? 'N/A' }}</p>
-            <p><span class="text-white/60">Model:</span> {{ lastModel ?? 'N/A' }}</p>
-            <p><span class="text-white/60">Conv:</span> {{ conversationId ? conversationId.slice(0, 8) + '…' : 'N/A' }}</p>
-            <p><span class="text-white/60">Tools:</span> {{ toolCallsLabel }}</p>
-            <p v-if="errorCode" class="text-red-400"><span class="text-white/60">Error:</span> {{ errorCode }}</p>
-            <p v-if="errorDetails" class="break-all text-red-400/80">{{ typeof errorDetails === 'string' ? errorDetails : JSON.stringify(errorDetails) }}</p>
+            <p><span class="text-ui-primary/60">Provider:</span> {{ lastProvider ?? 'N/A' }}</p>
+            <p><span class="text-ui-primary/60">Model:</span> {{ lastModel ?? 'N/A' }}</p>
+            <p><span class="text-ui-primary/60">Conv:</span> {{ conversationId ? conversationId.slice(0, 8) + '…' : 'N/A' }}</p>
+            <p><span class="text-ui-primary/60">Tools:</span> {{ toolCallsLabel }}</p>
+            <p v-if="errorCode" class="text-status-danger"><span class="text-ui-primary/60">Error:</span> {{ errorCode }}</p>
+            <p v-if="errorDetails" class="break-all text-status-danger">{{ typeof errorDetails === 'string' ? errorDetails : JSON.stringify(errorDetails) }}</p>
           </div>
   
           <!-- Messages -->
@@ -358,7 +358,7 @@ function onFabClick() {
             style="min-height: 0;"
           >
             <div v-if="messages.length === 0" class="py-4">
-              <p class="text-center text-xs text-muted">
+              <p class="text-center text-xs text-ui-muted">
                 Chào bạn! Tôi có thể giúp vận hành kỳ billing. Bắt đầu với:
               </p>
               <div class="mt-3 space-y-3">
@@ -367,7 +367,7 @@ function onFabClick() {
                   :key="group.label"
                 >
                   <h3
-                    class="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted"
+                    class="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-ui-muted"
                   >
                     {{ group.label }}
                   </h3>
@@ -377,7 +377,7 @@ function onFabClick() {
                         type="button"
                         :disabled="sending"
                         :data-testid="`ai-suggestion-${suggestion.id}`"
-                        class="w-full rounded-lg border border-dark-border bg-dark-surface px-3 py-2 text-left text-xs text-white/80 transition-colors hover:border-cyan/40 hover:text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-cyan/40 disabled:cursor-not-allowed disabled:opacity-50"
+                        class="w-full rounded-lg border border-ui-border bg-ui-surface px-3 py-2 text-left text-xs text-ui-primary/80 transition-colors hover:border-ui-accent/40 hover:text-ui-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ui-accent/40 disabled:cursor-not-allowed disabled:opacity-50"
                         @click="onSuggestion(suggestion.text)"
                       >
                         {{ suggestion.text }}
@@ -398,13 +398,13 @@ function onFabClick() {
               >
                 <div
                   v-if="message.role === 'user'"
-                  class="max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-br-sm bg-cyan px-3 py-2 text-sm leading-relaxed text-dark-deep"
+                  class="max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-br-sm bg-ui-accent px-3 py-2 text-sm leading-relaxed text-ui-on-accent"
                 >
                   {{ message.content }}
                 </div>
                 <div
                   v-else
-                  class="chat-markdown max-w-[85%] rounded-2xl rounded-bl-sm border border-dark-border bg-dark-surface px-3 py-2 text-sm leading-relaxed text-white"
+                  class="chat-markdown max-w-[85%] rounded-2xl rounded-bl-sm border border-ui-border bg-ui-surface px-3 py-2 text-sm leading-relaxed text-ui-primary"
                   v-html="renderChatMarkdown(message.content)"
                 />
               </div>
@@ -422,7 +422,7 @@ function onFabClick() {
   
             <!-- Typing indicator -->
             <div v-if="sending" class="flex justify-start">
-              <div class="flex items-center gap-1 rounded-2xl rounded-bl-sm border border-dark-border bg-dark-surface px-3 py-2.5">
+              <div class="flex items-center gap-1 rounded-2xl rounded-bl-sm border border-ui-border bg-ui-surface px-3 py-2.5">
                 <span class="size-1.5 animate-bounce rounded-full bg-muted" style="animation-delay: 0ms" />
                 <span class="size-1.5 animate-bounce rounded-full bg-muted" style="animation-delay: 150ms" />
                 <span class="size-1.5 animate-bounce rounded-full bg-muted" style="animation-delay: 300ms" />
@@ -431,28 +431,28 @@ function onFabClick() {
           </div>
   
           <!-- Input -->
-          <div class="border-t border-dark-border px-3 py-2.5">
+          <div class="border-t border-ui-border px-3 py-2.5">
             <div class="flex items-end gap-2">
               <textarea
                 v-model="prompt"
                 rows="1"
                 placeholder="Nhập tin nhắn…"
                 :disabled="sending"
-                class="flex-1 resize-none rounded-lg border border-dark-border bg-dark-surface px-3 py-2 text-base sm:text-sm text-white placeholder-muted focus:border-cyan/60 focus:outline-none focus:ring-1 focus:ring-cyan/30 disabled:opacity-50"
+                class="flex-1 resize-none rounded-lg border border-ui-border bg-ui-surface px-3 py-2 text-base sm:text-sm text-ui-primary placeholder-ui-muted focus:border-ui-accent/60 focus:outline-none focus:ring-1 focus:ring-ui-accent/30 disabled:opacity-50"
                 style="max-height: 96px; overflow-y: auto;"
                 @keydown="onKeydown"
               />
               <button
                 type="button"
                 :disabled="!canSend"
-                class="flex size-8 shrink-0 items-center justify-center rounded-lg bg-cyan text-dark-deep transition-colors hover:bg-cyan/90 disabled:cursor-not-allowed disabled:opacity-40"
+                class="flex size-8 shrink-0 items-center justify-center rounded-lg bg-ui-accent text-ui-on-accent transition-colors hover:bg-ui-accent/90 disabled:cursor-not-allowed disabled:opacity-40"
                 aria-label="Gửi"
                 @click="onSend"
               >
                 <IconSend class="size-4" aria-hidden="true" />
               </button>
             </div>
-            <p class="mt-1 text-center text-[10px] text-muted/60">Enter gửi · Shift+Enter xuống dòng</p>
+            <p class="mt-1 text-center text-[10px] text-ui-muted/60">Enter gửi · Shift+Enter xuống dòng</p>
           </div>
         </div>
       </Transition>
@@ -474,7 +474,7 @@ function onFabClick() {
   :deep(code) {
     padding: 0.0625rem 0.25rem;
     border-radius: 0.25rem;
-    background-color: rgb(255 255 255 / 0.08);
+    background-color: rgb(var(--ui-primary) / 0.08);
     font-size: 0.8125rem;
   }
   :deep(table) {
@@ -485,14 +485,14 @@ function onFabClick() {
   }
   :deep(th),
   :deep(td) {
-    border: 1px solid rgb(255 255 255 / 0.12);
+    border: 1px solid rgb(var(--ui-primary) / 0.12);
     padding: 0.25rem 0.5rem;
     text-align: left;
     vertical-align: top;
   }
   :deep(th) {
     font-weight: 600;
-    background-color: rgb(255 255 255 / 0.05);
+    background-color: rgb(var(--ui-primary) / 0.05);
   }
 }
 </style>

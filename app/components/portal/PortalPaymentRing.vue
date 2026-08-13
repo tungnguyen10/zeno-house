@@ -3,7 +3,7 @@ import type { ChartData, ChartOptions } from 'chart.js'
 import '~/utils/chart-registration'
 import { Doughnut } from 'vue-chartjs'
 import type { PortalStatementAccent } from '~/utils/constants/portal-status'
-import { useChartTheme } from '~/composables/useChartTheme'
+import { usePortalChartTheme } from '~/composables/tenant-portal/usePortalChartTheme'
 
 const props = defineProps<{
   paidAmount: number
@@ -13,15 +13,16 @@ const props = defineProps<{
   size?: number
 }>()
 
-const { palette } = useChartTheme()
+const { palette } = usePortalChartTheme()
 
-const ACCENT_COLOR: Record<PortalStatementAccent, string> = {
-  paid: palette.successNeon,
-  due: palette.warning,
-  overdue: palette.errorVivid,
-}
-
-const accentColor = computed(() => ACCENT_COLOR[props.accent])
+const accentColor = computed(() => {
+  const colors: Record<PortalStatementAccent, string> = {
+    paid: palette.value.positive,
+    due: palette.value.warning,
+    overdue: palette.value.danger,
+  }
+  return colors[props.accent]
+})
 
 const pct = computed(() =>
   props.totalAmount > 0

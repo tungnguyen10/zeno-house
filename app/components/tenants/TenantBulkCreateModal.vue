@@ -84,7 +84,7 @@ watch(() => props.open, (next) => {
   >
     <div class="space-y-4">
       <UiAlert severity="info">
-        <p class="text-sm text-white">
+        <p class="text-sm text-ui-primary">
           Tải file mẫu, điền dữ liệu rồi nhập lại vào hệ thống. File mẫu chứa đầy đủ tất cả trường của khách thuê.
         </p>
       </UiAlert>
@@ -94,7 +94,7 @@ watch(() => props.open, (next) => {
           <UiButton
             ref="templateTriggerRef"
             unstyled
-            class="inline-flex items-center gap-1.5 rounded-md border border-dark-border bg-dark-surface px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-dark-hover"
+            class="inline-flex items-center gap-1.5 rounded-md border border-ui-border bg-ui-surface px-3 py-2 text-sm font-medium text-ui-primary transition-colors hover:bg-ui-hover"
             :aria-expanded="templateMenuOpen"
             aria-haspopup="menu"
             @click="toggleTemplateMenu"
@@ -118,13 +118,13 @@ watch(() => props.open, (next) => {
               v-if="templateMenuOpen"
               ref="templateMenuRef"
               role="menu"
-              class="absolute left-0 z-30 mt-2 w-52 origin-top-left overflow-hidden rounded-lg border border-dark-border bg-dark-card shadow-xl shadow-black/40"
+              class="absolute left-0 z-30 mt-2 w-52 origin-top-left overflow-hidden rounded-lg border border-ui-border bg-ui-chrome shadow-xl shadow-ui-shadow/40"
             >
               <a
                 role="menuitem"
                 href="/templates/tenant-import-template.csv"
                 download
-                class="flex w-full items-center gap-2 px-3 py-2 text-sm text-white transition-colors hover:bg-dark-hover"
+                class="flex w-full items-center gap-2 px-3 py-2 text-sm text-ui-primary transition-colors hover:bg-ui-hover"
                 @click="templateMenuOpen = false"
               >
                 Tải mẫu CSV
@@ -133,7 +133,7 @@ watch(() => props.open, (next) => {
                 role="menuitem"
                 href="/templates/tenant-import-template.xlsx"
                 download
-                class="flex w-full items-center gap-2 px-3 py-2 text-sm text-white transition-colors hover:bg-dark-hover"
+                class="flex w-full items-center gap-2 px-3 py-2 text-sm text-ui-primary transition-colors hover:bg-ui-hover"
                 @click="templateMenuOpen = false"
               >
                 Tải mẫu XLSX
@@ -144,7 +144,7 @@ watch(() => props.open, (next) => {
 
         <label
           for="tenant-bulk-file"
-          class="inline-flex cursor-pointer items-center gap-2 rounded-md border border-dark-border bg-dark-surface px-3 py-2 text-sm text-white transition-colors hover:bg-dark-hover"
+          class="inline-flex cursor-pointer items-center gap-2 rounded-md border border-ui-border bg-ui-surface px-3 py-2 text-sm text-ui-primary transition-colors hover:bg-ui-hover"
         >
           <IconDocument class="h-4 w-4" aria-hidden="true" />
           <span>Chọn file CSV/XLSX</span>
@@ -157,7 +157,7 @@ watch(() => props.open, (next) => {
           @change="onFileChange"
         >
 
-        <span v-if="fileName" class="text-xs text-muted">Đã chọn: {{ fileName }}</span>
+        <span v-if="fileName" class="text-xs text-ui-muted">Đã chọn: {{ fileName }}</span>
       </div>
 
       <UiAlert v-if="parseError" severity="danger">
@@ -168,15 +168,15 @@ watch(() => props.open, (next) => {
         {{ submitError }}
       </UiAlert>
 
-      <div v-if="totalRows > 0" class="grid grid-cols-1 gap-2 text-xs text-muted sm:grid-cols-3">
-        <span>Tổng dòng: <strong class="text-white">{{ totalRows }}</strong></span>
-        <span>Hợp lệ: <strong class="text-emerald-300">{{ validRows }}</strong></span>
-        <span>Lỗi: <strong class="text-rose-300">{{ invalidRows }}</strong></span>
+      <div v-if="totalRows > 0" class="grid grid-cols-1 gap-2 text-xs text-ui-muted sm:grid-cols-3">
+        <span>Tổng dòng: <strong class="text-ui-primary">{{ totalRows }}</strong></span>
+        <span>Hợp lệ: <strong class="text-status-success">{{ validRows }}</strong></span>
+        <span>Lỗi: <strong class="text-status-danger">{{ invalidRows }}</strong></span>
       </div>
 
-      <div v-if="previewRows.length > 0" class="overflow-x-auto rounded-lg border border-dark-border">
-        <table class="min-w-full divide-y divide-dark-border text-xs">
-          <thead class="bg-dark-surface/70 text-muted">
+      <div v-if="previewRows.length > 0" class="overflow-x-auto rounded-lg border border-ui-border">
+        <table class="min-w-full divide-y divide-ui-border text-xs">
+          <thead class="bg-ui-surface/70 text-ui-muted">
             <tr>
               <th class="px-3 py-2 text-left font-medium">Dòng</th>
               <th class="px-3 py-2 text-left font-medium">Họ tên</th>
@@ -186,23 +186,23 @@ watch(() => props.open, (next) => {
               <th class="px-3 py-2 text-left font-medium">Trạng thái</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-dark-border bg-dark-card/40">
+          <tbody class="divide-y divide-ui-border bg-ui-chrome/40">
             <tr v-for="row in visibleRows" :key="row.line">
-              <td class="px-3 py-2 text-muted">{{ row.line }}</td>
-              <td class="px-3 py-2 text-white">{{ row.full_name ?? '—' }}</td>
-              <td class="px-3 py-2 text-white">{{ row.phone ?? '—' }}</td>
-              <td class="px-3 py-2 text-white">{{ row.email ?? '—' }}</td>
-              <td class="px-3 py-2 text-white">{{ row.id_number ?? '—' }}</td>
+              <td class="px-3 py-2 text-ui-muted">{{ row.line }}</td>
+              <td class="px-3 py-2 text-ui-primary">{{ row.full_name ?? '—' }}</td>
+              <td class="px-3 py-2 text-ui-primary">{{ row.phone ?? '—' }}</td>
+              <td class="px-3 py-2 text-ui-primary">{{ row.email ?? '—' }}</td>
+              <td class="px-3 py-2 text-ui-primary">{{ row.id_number ?? '—' }}</td>
               <td class="px-3 py-2">
                 <span
                   :class="clsx(
                     'inline-flex items-center rounded-full px-2 py-0.5 font-medium',
-                    row.issues.length === 0 ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300',
+                    row.issues.length === 0 ? 'bg-status-success/20 text-status-success' : 'bg-status-danger/20 text-status-danger',
                   )"
                 >
                   {{ row.issues.length === 0 ? 'Hợp lệ' : 'Có lỗi' }}
                 </span>
-                <p v-if="row.issues.length > 0" class="mt-1 text-[11px] text-rose-300">
+                <p v-if="row.issues.length > 0" class="mt-1 text-[11px] text-status-danger">
                   {{ row.issues[0] }}
                 </p>
               </td>
@@ -211,14 +211,14 @@ watch(() => props.open, (next) => {
         </table>
       </div>
 
-      <p v-if="previewRows.length > previewLimit" class="text-xs text-muted">
+      <p v-if="previewRows.length > previewLimit" class="text-xs text-ui-muted">
         Đang hiển thị {{ previewLimit }} dòng đầu tiên để kiểm tra nhanh.
       </p>
 
       <UiAlert severity="info">
-        <p class="text-xs text-muted">
-          Trường bắt buộc khi nhập: <strong class="text-white">Họ và tên</strong> và <strong class="text-white">Số điện thoại</strong>
-          (tương ứng cột <strong class="text-white">full_name</strong> và <strong class="text-white">phone</strong>).
+        <p class="text-xs text-ui-muted">
+          Trường bắt buộc khi nhập: <strong class="text-ui-primary">Họ và tên</strong> và <strong class="text-ui-primary">Số điện thoại</strong>
+          (tương ứng cột <strong class="text-ui-primary">full_name</strong> và <strong class="text-ui-primary">phone</strong>).
           Các trường còn lại là tùy chọn nhưng vẫn có sẵn trong file mẫu để bạn điền đầy đủ khi cần.
         </p>
       </UiAlert>

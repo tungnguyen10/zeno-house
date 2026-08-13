@@ -26,18 +26,18 @@ defineProps<{
 </script>
 
 <template>
-  <div class="mb-6 flex flex-wrap items-start gap-3 lg:pr-32">
+  <div class="mb-6 flex flex-wrap items-start gap-3 lg:pr-44">
     <div class="min-w-[12rem] flex-1">
       <NuxtLink
         v-if="backTo"
         :to="backTo"
-        class="inline-flex items-center gap-1 text-xs text-muted hover:text-white mb-1"
+        class="inline-flex items-center gap-1 text-xs text-ui-muted hover:text-ui-primary mb-1"
       >
         <IconArrowLeft class="w-3.5 h-3.5" aria-hidden="true" />
         {{ backLabel ?? 'Quay lại' }}
       </NuxtLink>
-      <h1 class="text-xl font-semibold text-white">{{ title }}</h1>
-      <p v-if="description" class="text-sm text-muted mt-0.5">{{ description }}</p>
+      <h1 class="text-xl font-semibold text-ui-primary">{{ title }}</h1>
+      <p v-if="description" class="text-sm text-ui-muted mt-0.5">{{ description }}</p>
       <slot />
     </div>
     <div

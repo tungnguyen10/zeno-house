@@ -64,16 +64,16 @@ function handleSubmit() {
     </UiAlert>
 
     <!-- Current term info -->
-    <div class="rounded-md bg-dark-surface border border-dark-border px-4 py-3 text-sm text-muted">
+    <div class="rounded-md bg-ui-surface border border-ui-border px-4 py-3 text-sm text-ui-muted">
       Ngày kết thúc hiện tại:
-      <span class="text-white font-medium">{{ new Date(props.currentEndDate).toLocaleDateString('vi-VN') }}</span>
+      <span class="text-ui-primary font-medium">{{ new Date(props.currentEndDate).toLocaleDateString('vi-VN') }}</span>
       · Giá thuê:
-      <span class="text-white font-medium">{{ formatCurrency(props.currentMonthlyRent) }}</span>
+      <span class="text-ui-primary font-medium">{{ formatCurrency(props.currentMonthlyRent) }}</span>
     </div>
 
     <!-- Mode -->
     <div class="flex flex-col gap-1.5">
-      <span class="text-sm font-medium text-muted">Hình thức gia hạn</span>
+      <span class="text-sm font-medium text-ui-muted">Hình thức gia hạn</span>
       <div class="grid grid-cols-2 gap-2">
         <UiButton
           type="button"
@@ -90,7 +90,7 @@ function handleSubmit() {
           Hợp đồng mới
         </UiButton>
       </div>
-      <p class="text-xs text-muted">
+      <p class="text-xs text-ui-muted">
         <template v-if="form.mode === 'extend'">Gia hạn tại chỗ — cùng hợp đồng, cập nhật ngày kết thúc.</template>
         <template v-else>Tạo hợp đồng kế tiếp — hợp đồng hiện tại chuyển sang trạng thái "đã gia hạn".</template>
       </p>

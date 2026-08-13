@@ -273,13 +273,13 @@ onMounted(() => {
     >
       <template #cell-tenant="{ row }">
         <div class="min-w-40">
-          <p class="font-medium text-white">{{ row.tenantName }}</p>
-          <p class="text-xs text-muted">{{ row.tenantCode }}</p>
-          <p class="mt-1 break-all text-xs text-muted md:hidden">{{ row.email ?? 'Không có email Auth' }}</p>
+          <p class="font-medium text-ui-primary">{{ row.tenantName }}</p>
+          <p class="text-xs text-ui-muted">{{ row.tenantCode }}</p>
+          <p class="mt-1 break-all text-xs text-ui-muted md:hidden">{{ row.email ?? 'Không có email Auth' }}</p>
         </div>
       </template>
       <template #cell-email="{ row }">
-        <span :class="row.email ? 'text-white' : 'text-warning'">{{ row.email ?? 'Không tìm thấy' }}</span>
+        <span :class="row.email ? 'text-ui-primary' : 'text-status-warning'">{{ row.email ?? 'Không tìm thấy' }}</span>
       </template>
       <template #cell-health="{ row }">
         <UiStatusBadge :status="row.health === 'missing_auth' ? row.health : row.status" />
@@ -313,8 +313,8 @@ onMounted(() => {
     <section v-if="canReconcileOrphans" class="mt-8 space-y-3" aria-labelledby="orphan-heading">
       <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h2 id="orphan-heading" class="text-lg font-semibold text-white">Tài khoản Auth mồ côi</h2>
-          <p class="mt-1 text-sm text-muted">Tài khoản mang vai trò tenant nhưng không còn liên kết tới hồ sơ người thuê.</p>
+          <h2 id="orphan-heading" class="text-lg font-semibold text-ui-primary">Tài khoản Auth mồ côi</h2>
+          <p class="mt-1 text-sm text-ui-muted">Tài khoản mang vai trò tenant nhưng không còn liên kết tới hồ sơ người thuê.</p>
         </div>
         <UiButton variant="secondary" size="sm" :loading="orphansLoading" @click="loadOrphans">
           Kiểm tra lại
@@ -335,14 +335,14 @@ onMounted(() => {
         <article
           v-for="orphan in orphans"
           :key="orphan.authUserId"
-          class="flex flex-col gap-3 rounded-xl border border-warning/30 bg-warning/5 p-4 sm:flex-row sm:items-center sm:justify-between"
+          class="flex flex-col gap-3 rounded-xl border border-status-warning/30 bg-status-warning/5 p-4 sm:flex-row sm:items-center sm:justify-between"
         >
           <div class="min-w-0">
             <div class="flex flex-wrap items-center gap-2">
-              <p class="break-all font-medium text-white">{{ orphan.email ?? 'Không có email' }}</p>
+              <p class="break-all font-medium text-ui-primary">{{ orphan.email ?? 'Không có email' }}</p>
               <UiStatusBadge status="orphaned" />
             </div>
-            <p class="mt-1 text-xs text-muted">
+            <p class="mt-1 text-xs text-ui-muted">
               Tạo ngày {{ new Date(orphan.createdAt).toLocaleDateString('vi-VN') }}
               <span v-if="orphan.lastSignInAt"> · Đăng nhập gần nhất {{ new Date(orphan.lastSignInAt).toLocaleDateString('vi-VN') }}</span>
             </p>
@@ -369,24 +369,24 @@ onMounted(() => {
           @search="queueTenantSearch"
         />
 
-        <div v-if="selectedTenant" class="rounded-lg border border-dark-border bg-dark-surface p-3">
-          <p class="text-sm font-medium text-white">{{ selectedTenant.fullName }}</p>
-          <p class="text-xs text-muted">{{ selectedTenant.code }}</p>
-          <div v-if="selectedTenant.activeAssignment" class="mt-2 border-t border-dark-border pt-2">
+        <div v-if="selectedTenant" class="rounded-lg border border-ui-border bg-ui-surface p-3">
+          <p class="text-sm font-medium text-ui-primary">{{ selectedTenant.fullName }}</p>
+          <p class="text-xs text-ui-muted">{{ selectedTenant.code }}</p>
+          <div v-if="selectedTenant.activeAssignment" class="mt-2 border-t border-ui-border pt-2">
             <div class="flex flex-wrap items-center gap-2">
-              <span class="text-xs text-muted">
+              <span class="text-xs text-ui-muted">
                 Phòng {{ selectedTenant.activeAssignment.roomNumber }} · {{ selectedTenant.activeAssignment.buildingName }}
               </span>
               <span
                 v-if="selectedTenant.activeAssignment.assignmentRole === 'roommate'"
-                class="rounded-full bg-cyan/10 px-2 py-0.5 text-xs font-medium text-cyan"
+                class="rounded-full bg-ui-accent/10 px-2 py-0.5 text-xs font-medium text-ui-accent"
               >
                 Người ở cùng
               </span>
             </div>
             <p
               v-if="selectedTenant.activeAssignment.assignmentRole === 'roommate' && selectedTenant.activeAssignment.primaryTenantName"
-              class="mt-1 text-xs text-muted"
+              class="mt-1 text-xs text-ui-muted"
             >
               Người đứng hợp đồng: {{ selectedTenant.activeAssignment.primaryTenantName }}
             </p>
@@ -394,9 +394,9 @@ onMounted(() => {
         </div>
 
         <div>
-          <label class="mb-1 block text-sm font-medium text-white">Email đăng nhập</label>
+          <label class="mb-1 block text-sm font-medium text-ui-primary">Email đăng nhập</label>
           <UiInput v-model="provisionEmail" type="email" placeholder="email@vidu.com" />
-          <p class="mt-1 text-xs text-muted">Mật khẩu tạm sẽ được tạo và hiển thị một lần sau khi cấp.</p>
+          <p class="mt-1 text-xs text-ui-muted">Mật khẩu tạm sẽ được tạo và hiển thị một lần sau khi cấp.</p>
         </div>
       </div>
 
@@ -419,18 +419,18 @@ onMounted(() => {
         <UiAlert severity="warning">
           Mật khẩu tạm chỉ hiển thị một lần. Hãy gửi cho khách thuê và yêu cầu đổi sau khi đăng nhập.
         </UiAlert>
-        <div class="rounded-lg border border-dark-border">
-          <div class="flex items-center justify-between gap-2 border-b border-dark-border px-3 py-2">
+        <div class="rounded-lg border border-ui-border">
+          <div class="flex items-center justify-between gap-2 border-b border-ui-border px-3 py-2">
             <div class="min-w-0">
-              <p class="text-xs text-muted">Email</p>
-              <p class="truncate text-sm text-white">{{ credentials.email }}</p>
+              <p class="text-xs text-ui-muted">Email</p>
+              <p class="truncate text-sm text-ui-primary">{{ credentials.email }}</p>
             </div>
             <UiButton variant="secondary" size="sm" @click="copyText(credentials.email)">Sao chép</UiButton>
           </div>
           <div class="flex items-center justify-between gap-2 px-3 py-2">
             <div class="min-w-0">
-              <p class="text-xs text-muted">Mật khẩu tạm</p>
-              <p class="truncate font-mono text-sm text-white">{{ credentials.tempPassword }}</p>
+              <p class="text-xs text-ui-muted">Mật khẩu tạm</p>
+              <p class="truncate font-mono text-sm text-ui-primary">{{ credentials.tempPassword }}</p>
             </div>
             <UiButton variant="secondary" size="sm" @click="copyText(credentials.tempPassword)">Sao chép</UiButton>
           </div>

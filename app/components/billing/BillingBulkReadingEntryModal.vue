@@ -112,8 +112,8 @@ function cellClass(line: BulkReadingPreviewLine, type: MeterType): string {
   const warningLike = cell.status === 'warning' || cell.status === 'usage_spike' || cell.status === 'usage_drop' || cell.status === 'zero_usage'
   return clsx(
     'inline-flex items-center gap-1 rounded px-1.5 py-0.5 tabular-nums',
-    (cell.blocking || rejected) && 'bg-rose-500/10 font-semibold text-rose-300 ring-1 ring-rose-500/30',
-    !cell.blocking && !rejected && warningLike && 'bg-amber-500/10 font-semibold text-amber-300 ring-1 ring-amber-500/30',
+    (cell.blocking || rejected) && 'bg-status-danger/10 font-semibold text-status-danger ring-1 ring-status-danger/30',
+    !cell.blocking && !rejected && warningLike && 'bg-status-warning/10 font-semibold text-status-warning ring-1 ring-status-warning/30',
   )
 }
 
@@ -136,11 +136,11 @@ function cellPreviousText(line: BulkReadingPreviewLine, type: MeterType): string
 function statusClass(line: BulkReadingPreviewLine): string {
   return clsx(
     'text-xs',
-    line.status === 'error' && 'text-rose-400',
-    line.status === 'rejected' && 'text-rose-300',
-    line.status === 'warning' && 'text-amber-300',
-    line.status === 'accepted' && 'text-emerald-300',
-    line.status === 'skipped' && 'text-muted',
+    line.status === 'error' && 'text-status-danger',
+    line.status === 'rejected' && 'text-status-danger',
+    line.status === 'warning' && 'text-status-warning',
+    line.status === 'accepted' && 'text-status-success',
+    line.status === 'skipped' && 'text-ui-muted',
   )
 }
 </script>
@@ -154,17 +154,17 @@ function statusClass(line: BulkReadingPreviewLine): string {
   >
     <div class="space-y-4">
       <UiAlert severity="info">
-        <p class="text-sm text-white">{{ guidance.title }}</p>
-        <div v-if="guidance.examples.length > 0" class="mt-2 grid gap-1 text-xs text-muted sm:grid-cols-3">
+        <p class="text-sm text-ui-primary">{{ guidance.title }}</p>
+        <div v-if="guidance.examples.length > 0" class="mt-2 grid gap-1 text-xs text-ui-muted sm:grid-cols-3">
           <code
             v-for="example in guidance.examples"
             :key="example"
-            class="rounded border border-dark-border bg-dark-surface px-2 py-1 text-white"
+            class="rounded border border-ui-border bg-ui-surface px-2 py-1 text-ui-primary"
           >
             {{ example }}
           </code>
         </div>
-        <p class="mt-2 text-xs text-muted">{{ guidance.note }}</p>
+        <p class="mt-2 text-xs text-ui-muted">{{ guidance.note }}</p>
       </UiAlert>
 
       <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
@@ -179,9 +179,9 @@ function statusClass(line: BulkReadingPreviewLine): string {
             Theo thứ tự
           </UiButton>
         </div>
-        <span class="hidden h-4 w-px bg-dark-border sm:block" aria-hidden="true" />
+        <span class="hidden h-4 w-px bg-ui-border sm:block" aria-hidden="true" />
         <label
-          class="flex items-center gap-1.5 text-xs text-muted"
+          class="flex items-center gap-1.5 text-xs text-ui-muted"
           title="Áp dụng khi tiêu thụ kỳ này tăng hoặc giảm quá ngưỡng so với kỳ trước"
         >
           Cảnh báo lệch tiêu thụ hơn
@@ -199,7 +199,7 @@ function statusClass(line: BulkReadingPreviewLine): string {
             <template #suffix>%</template>
           </UiInput>
         </label>
-        <span class="text-xs text-muted">
+        <span class="text-xs text-ui-muted">
           Đang đọc: {{ preview.mode === 'room' ? 'theo tên phòng' : 'theo thứ tự đang hiển thị' }}
         </span>
       </div>
@@ -217,11 +217,11 @@ function statusClass(line: BulkReadingPreviewLine): string {
         Input có thể bị nhầm giữa tên phòng và chỉ số. Kiểm tra preview hoặc chọn chế độ đọc trước khi áp dụng.
       </UiAlert>
 
-      <div class="grid gap-2 text-xs text-muted sm:grid-cols-4">
-        <span>Áp dụng: <strong class="text-white">{{ preview.applyCount }}</strong></span>
-        <span>Cảnh báo: <strong class="text-amber-300">{{ preview.warningCount }}</strong></span>
-        <span>Bị loại: <strong class="text-rose-300">{{ preview.rejectedCount }}</strong></span>
-        <span>Lỗi: <strong class="text-rose-400">{{ preview.blockingCount }}</strong></span>
+      <div class="grid gap-2 text-xs text-ui-muted sm:grid-cols-4">
+        <span>Áp dụng: <strong class="text-ui-primary">{{ preview.applyCount }}</strong></span>
+        <span>Cảnh báo: <strong class="text-status-warning">{{ preview.warningCount }}</strong></span>
+        <span>Bị loại: <strong class="text-status-danger">{{ preview.rejectedCount }}</strong></span>
+        <span>Lỗi: <strong class="text-status-danger">{{ preview.blockingCount }}</strong></span>
       </div>
 
       <UiTable
@@ -247,7 +247,7 @@ function statusClass(line: BulkReadingPreviewLine): string {
             </span>
             <span
               v-if="cellHasIssue(row as BulkReadingPreviewLine, 'electricity') && cellPreviousText(row as BulkReadingPreviewLine, 'electricity')"
-              class="text-[11px] tabular-nums text-muted"
+              class="text-[11px] tabular-nums text-ui-muted"
             >
               {{ cellPreviousText(row as BulkReadingPreviewLine, 'electricity') }}
             </span>
@@ -263,7 +263,7 @@ function statusClass(line: BulkReadingPreviewLine): string {
             </span>
             <span
               v-if="cellHasIssue(row as BulkReadingPreviewLine, 'water') && cellPreviousText(row as BulkReadingPreviewLine, 'water')"
-              class="text-[11px] tabular-nums text-muted"
+              class="text-[11px] tabular-nums text-ui-muted"
             >
               {{ cellPreviousText(row as BulkReadingPreviewLine, 'water') }}
             </span>

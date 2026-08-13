@@ -76,7 +76,7 @@ function toggleAll() {
           density="compact"
         />
       </div>
-      <div class="flex items-center gap-2 text-xs text-muted">
+      <div class="flex items-center gap-2 text-xs text-ui-muted">
         <span>{{ rows.length }} hợp đồng active</span>
         <UiButton
           v-if="rows.length > 0"
@@ -107,34 +107,34 @@ function toggleAll() {
     />
 
     <!-- Rows -->
-    <ul v-else class="divide-y divide-dark-border overflow-hidden rounded-lg border border-dark-border bg-dark-deep/30">
+    <ul v-else class="divide-y divide-ui-border overflow-hidden rounded-lg border border-ui-border bg-ui-deep/30">
       <li v-for="row in rows" :key="row.contractId">
         <UiButton
           unstyled
-          class="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-dark-hover/40 transition-colors focus-visible:outline-none focus-visible:bg-dark-hover/60"
+          class="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-ui-hover/40 transition-colors focus-visible:outline-none focus-visible:bg-ui-hover/60"
           :aria-expanded="expanded.has(row.contractId)"
           :aria-controls="`svc-${row.contractId}`"
           @click="toggle(row.contractId)"
         >
           <IconChevronRight
-            class="h-4 w-4 shrink-0 text-muted transition-transform"
+            class="h-4 w-4 shrink-0 text-ui-muted transition-transform"
             :class="expanded.has(row.contractId) && 'rotate-90'"
             aria-hidden="true"
           />
           <div class="min-w-0 flex-1">
-            <p class="truncate text-sm font-medium text-white">
+            <p class="truncate text-sm font-medium text-ui-primary">
               Phòng {{ row.roomNumber }}
-              <span class="text-muted font-normal">· {{ row.tenantName }}</span>
+              <span class="text-ui-muted font-normal">· {{ row.tenantName }}</span>
             </p>
           </div>
           <div class="hidden shrink-0 items-center gap-3 text-xs sm:flex">
             <span
               class="rounded-md px-2 py-0.5"
-              :class="row.activeCount > 0 ? 'bg-cyan/10 text-cyan' : 'bg-dark-card text-muted'"
+              :class="row.activeCount > 0 ? 'bg-ui-accent/10 text-ui-accent' : 'bg-ui-chrome text-ui-muted'"
             >
               {{ row.activeCount }}/{{ row.totalCount }} dịch vụ
             </span>
-            <span class="tabular-nums font-medium text-white min-w-[90px] text-right">
+            <span class="tabular-nums font-medium text-ui-primary min-w-[90px] text-right">
               {{ formatCurrency(row.monthlyTotal) }}
             </span>
           </div>
@@ -143,7 +143,7 @@ function toggleAll() {
         <div
           v-if="expanded.has(row.contractId)"
           :id="`svc-${row.contractId}`"
-          class="border-t border-dark-border bg-dark-surface px-4 py-3"
+          class="border-t border-ui-border bg-ui-surface px-4 py-3"
         >
           <ContractServicesTab
             :services="row.services"

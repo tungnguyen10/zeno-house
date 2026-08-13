@@ -120,25 +120,25 @@ function dateTimeText(value: string | null | undefined): string {
 
       <UiSection title="Thông tin">
         <dl class="grid gap-3 text-sm md:grid-cols-2">
-          <div class="rounded-lg border border-dark-border bg-dark-surface px-3 py-2">
-            <dt class="text-xs uppercase tracking-wide text-muted">Hợp đồng</dt>
+          <div class="rounded-lg border border-ui-border bg-ui-surface px-3 py-2">
+            <dt class="text-xs uppercase tracking-wide text-ui-muted">Hợp đồng</dt>
             <dd class="mt-1">
-              <NuxtLink :to="contractHref" class="text-cyan hover:text-white">
+              <NuxtLink :to="contractHref" class="text-ui-accent hover:text-ui-primary">
                 {{ invoice.contractCode || invoice.contractId }}
               </NuxtLink>
             </dd>
           </div>
-          <div class="rounded-lg border border-dark-border bg-dark-surface px-3 py-2">
-            <dt class="text-xs uppercase tracking-wide text-muted">Phòng</dt>
-            <dd class="mt-1 text-white">{{ invoice.roomNumber ? `P.${invoice.roomNumber}` : invoice.roomId }}</dd>
+          <div class="rounded-lg border border-ui-border bg-ui-surface px-3 py-2">
+            <dt class="text-xs uppercase tracking-wide text-ui-muted">Phòng</dt>
+            <dd class="mt-1 text-ui-primary">{{ invoice.roomNumber ? `P.${invoice.roomNumber}` : invoice.roomId }}</dd>
           </div>
-          <div class="rounded-lg border border-dark-border bg-dark-surface px-3 py-2">
-            <dt class="text-xs uppercase tracking-wide text-muted">Ngày phát hành</dt>
-            <dd class="mt-1 text-white">{{ dateTimeText(invoice.issuedAt) }}</dd>
+          <div class="rounded-lg border border-ui-border bg-ui-surface px-3 py-2">
+            <dt class="text-xs uppercase tracking-wide text-ui-muted">Ngày phát hành</dt>
+            <dd class="mt-1 text-ui-primary">{{ dateTimeText(invoice.issuedAt) }}</dd>
           </div>
-          <div class="rounded-lg border border-dark-border bg-dark-surface px-3 py-2">
-            <dt class="text-xs uppercase tracking-wide text-muted">Thanh toán gần nhất</dt>
-            <dd class="mt-1 text-white">{{ dateTimeText(invoice.paidAt) }}</dd>
+          <div class="rounded-lg border border-ui-border bg-ui-surface px-3 py-2">
+            <dt class="text-xs uppercase tracking-wide text-ui-muted">Thanh toán gần nhất</dt>
+            <dd class="mt-1 text-ui-primary">{{ dateTimeText(invoice.paidAt) }}</dd>
           </div>
         </dl>
       </UiSection>

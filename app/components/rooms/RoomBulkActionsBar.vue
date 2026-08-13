@@ -84,7 +84,7 @@ async function confirm() {
   <div
     role="region"
     aria-label="Thao tác hàng loạt"
-    class="sticky bottom-3 z-30 flex flex-col gap-3 rounded-xl border border-dark-border bg-dark-surface/95 p-3 shadow-lg backdrop-blur sm:flex-row sm:items-center sm:justify-between"
+    class="sticky bottom-3 z-30 flex flex-col gap-3 rounded-xl border border-ui-border bg-ui-surface/95 p-3 shadow-lg backdrop-blur sm:flex-row sm:items-center sm:justify-between"
   >
     <div class="flex items-center gap-3">
       <UiBadge variant="accent">{{ selectedCount }} đã chọn</UiBadge>
@@ -116,16 +116,16 @@ async function confirm() {
       @confirm="confirm"
     >
       <div class="space-y-3">
-        <p class="text-sm text-muted">{{ pendingAction ? actionDescriptions[pendingAction] : '' }}</p>
-        <ul class="space-y-1 text-sm text-white">
+        <p class="text-sm text-ui-muted">{{ pendingAction ? actionDescriptions[pendingAction] : '' }}</p>
+        <ul class="space-y-1 text-sm text-ui-primary">
           <li v-for="name in previewNames" :key="name" class="truncate">• {{ name }}</li>
-          <li v-if="extraCount > 0" class="text-muted">...và {{ extraCount }} phòng khác</li>
+          <li v-if="extraCount > 0" class="text-ui-muted">...và {{ extraCount }} phòng khác</li>
         </ul>
         <UiCheckbox
           v-if="pendingAction === 'delete'"
           v-model="deleteAck"
           label="Tôi hiểu thao tác này không thể hoàn tác."
-          label-class="!text-muted"
+          label-class="!text-ui-muted"
         />
         <UiTextarea
           v-if="pendingAction === 'delete'"

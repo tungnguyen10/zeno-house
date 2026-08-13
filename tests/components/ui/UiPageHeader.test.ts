@@ -15,7 +15,8 @@ describe('UiPageHeader', () => {
       },
     })
 
-    expect(wrapper.classes()).toContain('lg:pr-32')
+    expect(wrapper.classes()).toContain('lg:pr-44')
+    expect(wrapper.classes()).not.toContain('lg:pr-32')
     expect(wrapper.get('h1').text()).toBe('Dashboard')
   })
 

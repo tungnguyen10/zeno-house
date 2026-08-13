@@ -15,7 +15,7 @@ const props = defineProps<{
   trend: BillingTrendEntry[]
 }>()
 
-const { stackedAreaOptions } = useChartTheme()
+const { stackedAreaOptions, resolvedTheme } = useChartTheme()
 
 const hasData = computed(() => props.trend.some(row => row.invoiceTotal > 0))
 
@@ -43,7 +43,7 @@ const chartData = computed<ChartData<'line'>>(() => ({
 }))
 
 const chartOptions = computed<ChartOptions<'line'>>(() => {
-  const base = stackedAreaOptions
+  const base = stackedAreaOptions.value
   return {
     ...base,
     scales: {
@@ -94,10 +94,10 @@ const chartOptions = computed<ChartOptions<'line'>>(() => {
       />
       <ClientOnly v-else>
         <div class="relative h-64 w-full">
-          <Line :data="chartData" :options="chartOptions" />
+          <Line :key="resolvedTheme" :data="chartData" :options="chartOptions" />
         </div>
         <template #fallback>
-          <div class="h-64 w-full animate-pulse rounded-xl bg-dark-border/50" />
+          <div class="h-64 w-full animate-pulse rounded-xl bg-ui-border/50" />
         </template>
       </ClientOnly>
     </div>

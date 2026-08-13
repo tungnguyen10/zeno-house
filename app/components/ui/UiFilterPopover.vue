@@ -43,18 +43,18 @@ onKeyStroke('Escape', () => {
       :aria-label="ariaLabel"
       aria-haspopup="dialog"
       :class="clsx(
-        'inline-flex h-7 items-center gap-1.5 rounded-md border bg-dark-surface px-3 text-xs font-medium transition-colors',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan/30',
+        'inline-flex h-7 items-center gap-1.5 rounded-md border bg-ui-surface px-3 text-xs font-medium transition-colors',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-accent/30',
         count > 0
-          ? 'border-cyan/40 text-white hover:border-cyan/60'
-          : 'border-dark-border text-muted hover:text-white',
+          ? 'border-ui-accent/40 text-ui-primary hover:border-ui-accent/60'
+          : 'border-ui-border text-ui-muted hover:text-ui-primary',
       )"
       @click="toggle"
     >
       <span>{{ label }}</span>
       <span
         v-if="count > 0"
-        class="inline-flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-cyan/20 px-1 text-[10px] font-semibold leading-none text-cyan"
+        class="inline-flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-ui-accent/20 px-1 text-[10px] font-semibold leading-none text-ui-accent"
         aria-hidden="true"
       >
         {{ count }}
@@ -79,7 +79,7 @@ onKeyStroke('Escape', () => {
         role="dialog"
         :aria-label="ariaLabel"
         :class="clsx(
-          'absolute left-0 z-50 mt-2 origin-top-left rounded-xl border border-dark-border bg-dark-card p-3 shadow-xl shadow-black/40',
+          'absolute left-0 z-50 mt-2 origin-top-left rounded-xl border border-ui-border bg-ui-chrome p-3 shadow-xl shadow-ui-shadow/40',
           panelClass,
         )"
       >

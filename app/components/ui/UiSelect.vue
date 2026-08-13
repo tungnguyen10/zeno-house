@@ -251,16 +251,16 @@ onBeforeUnmount(() => {
 // ── Styles ─────────────────────────────────────────────────────────────────
 const triggerClass = computed(() =>
   clsx(
-    'flex w-full items-center justify-between rounded-md border bg-dark-surface pr-9 text-left text-white',
+    'flex w-full items-center justify-between rounded-md border bg-ui-surface pr-9 text-left text-ui-primary',
     'transition-colors focus:outline-none focus:ring-2 focus:ring-offset-0',
     props.density === 'compact' ? 'py-1 text-sm sm:text-xs' : 'py-2 text-base sm:text-sm',
     hasPrefix.value ? 'pl-9' : 'pl-3',
     props.error
-      ? 'border-error/50 focus:border-error/60 focus:ring-error/30'
-      : 'border-dark-border focus:border-cyan/70 focus:ring-cyan/30',
+      ? 'border-status-danger/50 focus:border-status-danger/60 focus:ring-status-danger/30'
+      : 'border-ui-border-strong focus:border-ui-accent/70 focus:ring-ui-accent/30',
     props.disabled
-      ? 'bg-dark-hover text-muted cursor-not-allowed'
-      : 'cursor-pointer hover:border-dark-border/80',
+      ? 'bg-ui-hover text-ui-muted cursor-not-allowed'
+      : 'cursor-pointer hover:border-ui-border/80',
   ),
 )
 </script>
@@ -276,16 +276,16 @@ const triggerClass = computed(() =>
     <label
       v-if="label"
       :for="selectId"
-      class="text-sm font-medium text-muted"
+      class="text-sm font-medium text-ui-muted"
     >
       {{ label }}
-      <span v-if="required" class="text-error ml-0.5" aria-hidden="true">*</span>
+      <span v-if="required" class="text-status-danger ml-0.5" aria-hidden="true">*</span>
     </label>
 
     <div class="relative">
       <span
         v-if="hasPrefix"
-        class="pointer-events-none absolute left-3 top-1/2 z-10 flex size-4 -translate-y-1/2 items-center justify-center text-muted"
+        class="pointer-events-none absolute left-3 top-1/2 z-10 flex size-4 -translate-y-1/2 items-center justify-center text-ui-muted"
         aria-hidden="true"
       >
         <slot name="prefix" />
@@ -310,13 +310,13 @@ const triggerClass = computed(() =>
         @keydown="onKeydown"
         @blur="emit('blur', $event)"
       >
-        <span :class="selectedOption ? 'text-white' : 'text-muted'" class="truncate">
+        <span :class="selectedOption ? 'text-ui-primary' : 'text-ui-muted'" class="truncate">
           {{ selectedOption ? displayLabel : (placeholder ?? '') }}
         </span>
       </button>
 
       <IconChevronDown
-        class="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted transition-transform"
+        class="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-ui-muted transition-transform"
         :class="isOpen ? 'rotate-180' : ''"
         aria-hidden="true"
       />
@@ -329,7 +329,7 @@ const triggerClass = computed(() =>
           role="listbox"
           :aria-label="label ?? triggerAriaLabel"
           :style="dropdownStyle"
-          class="fixed z-[70] overflow-y-auto rounded-md border border-dark-border bg-dark-card py-1 shadow-lg"
+          class="fixed z-[70] overflow-y-auto rounded-md border border-ui-border bg-ui-chrome py-1 shadow-lg"
         >
           <li
             v-if="hasPlaceholderOption"
@@ -340,11 +340,11 @@ const triggerClass = computed(() =>
               'flex items-center justify-between px-3 text-sm transition-colors',
               density === 'compact' ? 'py-1.5 text-xs' : 'py-2',
               required
-                ? 'cursor-not-allowed text-muted/60'
-                : 'cursor-pointer text-muted',
-              !required && activeIndex === -1 && 'bg-cyan/15',
-              !required && activeIndex !== -1 && 'hover:bg-dark-hover',
-              isPlaceholderSelected && !required && 'text-cyan',
+                ? 'cursor-not-allowed text-ui-muted/60'
+                : 'cursor-pointer text-ui-muted',
+              !required && activeIndex === -1 && 'bg-ui-accent/15',
+              !required && activeIndex !== -1 && 'hover:bg-ui-hover',
+              isPlaceholderSelected && !required && 'text-ui-accent',
             )"
             @mousedown.prevent="selectPlaceholder"
             @mouseover="!required && (activeIndex = -1)"
@@ -352,7 +352,7 @@ const triggerClass = computed(() =>
             <span class="truncate">{{ placeholder }}</span>
             <IconCheckSmall
               v-if="isPlaceholderSelected"
-              class="ml-2 size-3 shrink-0 text-cyan"
+              class="ml-2 size-3 shrink-0 text-ui-accent"
               aria-hidden="true"
             />
           </li>
@@ -366,11 +366,11 @@ const triggerClass = computed(() =>
               'flex items-center justify-between px-3 text-sm transition-colors',
               density === 'compact' ? 'py-1.5 text-xs' : 'py-2',
               option.disabled
-                ? 'cursor-not-allowed text-muted/60'
-                : 'cursor-pointer text-white',
-              !option.disabled && index === activeIndex && 'bg-cyan/15',
-              !option.disabled && index !== activeIndex && 'hover:bg-dark-hover',
-              isSelected(option) && !option.disabled && 'text-cyan',
+                ? 'cursor-not-allowed text-ui-muted/60'
+                : 'cursor-pointer text-ui-primary',
+              !option.disabled && index === activeIndex && 'bg-ui-accent/15',
+              !option.disabled && index !== activeIndex && 'hover:bg-ui-hover',
+              isSelected(option) && !option.disabled && 'text-ui-accent',
             )"
             @mousedown.prevent="select(option)"
             @mouseover="!option.disabled && (activeIndex = index)"
@@ -378,7 +378,7 @@ const triggerClass = computed(() =>
             <span class="truncate">{{ option.label }}</span>
             <IconCheckSmall
               v-if="isSelected(option)"
-              class="ml-2 size-3 shrink-0 text-cyan"
+              class="ml-2 size-3 shrink-0 text-ui-accent"
               aria-hidden="true"
             />
           </li>
@@ -386,10 +386,10 @@ const triggerClass = computed(() =>
       </Teleport>
     </div>
 
-    <p v-if="error" :id="`${selectId}-error`" class="text-xs text-error" role="alert">
+    <p v-if="error" :id="`${selectId}-error`" class="text-xs text-status-danger" role="alert">
       {{ error }}
     </p>
-    <p v-else-if="hint" :id="`${selectId}-hint`" class="text-xs text-muted">
+    <p v-else-if="hint" :id="`${selectId}-hint`" class="text-xs text-ui-muted">
       {{ hint }}
     </p>
   </div>

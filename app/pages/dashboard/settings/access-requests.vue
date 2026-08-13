@@ -182,9 +182,9 @@ function statusLabel(status: AccessRequestStatus) {
   <div class="space-y-6">
     <header class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
       <div>
-        <p class="text-xs font-medium uppercase tracking-[0.16em] text-cyan">Quyền truy cập</p>
-        <h1 class="mt-1 text-2xl font-semibold text-white">Yêu cầu tài khoản</h1>
-        <p class="mt-2 max-w-2xl text-sm text-muted">Duyệt danh tính mới và gán đúng vai trò, phạm vi trước khi họ vào hệ thống.</p>
+        <p class="text-xs font-medium uppercase tracking-[0.16em] text-ui-accent">Quyền truy cập</p>
+        <h1 class="mt-1 text-2xl font-semibold text-ui-primary">Yêu cầu tài khoản</h1>
+        <p class="mt-2 max-w-2xl text-sm text-ui-muted">Duyệt danh tính mới và gán đúng vai trò, phạm vi trước khi họ vào hệ thống.</p>
       </div>
       <UiSelect v-model="selectedStatus" class="w-full sm:w-48" label="Trạng thái" :options="statusOptions" />
     </header>
@@ -203,22 +203,22 @@ function statusLabel(status: AccessRequestStatus) {
     >
       <template #cell-identity="{ row }">
         <div class="min-w-0">
-          <p class="truncate font-medium text-white">{{ row.fullName || 'Chưa cung cấp tên' }}</p>
-          <p class="max-w-56 truncate text-xs text-muted" :title="row.email">{{ row.email }}</p>
-          <p v-if="!row.emailVerified" class="mt-1 text-xs text-warning">Email chưa xác minh</p>
+          <p class="truncate font-medium text-ui-primary">{{ row.fullName || 'Chưa cung cấp tên' }}</p>
+          <p class="max-w-56 truncate text-xs text-ui-muted" :title="row.email">{{ row.email }}</p>
+          <p v-if="!row.emailVerified" class="mt-1 text-xs text-status-warning">Email chưa xác minh</p>
         </div>
       </template>
-      <template #cell-provider="{ row }"><span class="capitalize text-muted">{{ row.provider }}</span></template>
-      <template #cell-createdAt="{ row }"><span class="text-muted">{{ new Date(row.createdAt).toLocaleDateString('vi-VN') }}</span></template>
+      <template #cell-provider="{ row }"><span class="capitalize text-ui-muted">{{ row.provider }}</span></template>
+      <template #cell-createdAt="{ row }"><span class="text-ui-muted">{{ new Date(row.createdAt).toLocaleDateString('vi-VN') }}</span></template>
       <template #cell-status="{ row }">
-        <span class="rounded-full border border-dark-border bg-dark-card px-2 py-1 text-xs text-muted">{{ statusLabel(row.status) }}</span>
+        <span class="rounded-full border border-ui-border bg-ui-chrome px-2 py-1 text-xs text-ui-muted">{{ statusLabel(row.status) }}</span>
       </template>
       <template #cell-actions="{ row }">
         <div v-if="row.status === 'pending' || row.status === 'processing'" class="flex justify-end gap-2">
           <UiButton v-if="row.status === 'pending'" size="sm" variant="ghost" @click="openRejection(row)">Từ chối</UiButton>
           <UiButton size="sm" :disabled="!row.emailVerified" @click="openApproval(row)">{{ row.status === 'processing' ? 'Tiếp tục' : 'Duyệt' }}</UiButton>
         </div>
-        <span v-else class="block text-right text-xs text-muted">{{ row.decisionRole || '—' }}</span>
+        <span v-else class="block text-right text-xs text-ui-muted">{{ row.decisionRole || '—' }}</span>
       </template>
     </UiTable>
 
@@ -227,8 +227,8 @@ function statusLabel(status: AccessRequestStatus) {
         <UiAlert severity="info">Role được ghi sau cùng. Nếu Auth gián đoạn, dùng lại đúng quyết định để tiếp tục an toàn.</UiAlert>
         <UiSelect v-model="selectedRole" label="Vai trò" :options="roleOptions" required />
         <div v-if="selectedRole !== 'tenant'" class="space-y-3">
-          <p class="text-sm font-medium text-white">Phạm vi tòa nhà</p>
-          <div class="max-h-48 space-y-2 overflow-y-auto rounded-xl border border-dark-border bg-dark-surface p-3">
+          <p class="text-sm font-medium text-ui-primary">Phạm vi tòa nhà</p>
+          <div class="max-h-48 space-y-2 overflow-y-auto rounded-xl border border-ui-border bg-ui-surface p-3">
             <UiCheckbox
               v-for="building in buildings"
               :key="building.id"

@@ -47,9 +47,9 @@ function onClear() {
 
 const inputClass = computed(() =>
   clsx(
-    'block w-full rounded-md border border-dark-border bg-dark-surface pl-9 pr-9',
-    'text-white placeholder-muted',
-    'focus:border-cyan/70 focus:outline-none focus:ring-2 focus:ring-cyan/30',
+    'block w-full rounded-md border border-ui-border-strong bg-ui-surface pl-9 pr-9',
+    'text-ui-primary placeholder-ui-muted',
+    'focus:border-ui-accent/70 focus:outline-none focus:ring-2 focus:ring-ui-accent/30',
     props.density === 'compact' ? 'py-1 text-sm sm:text-xs' : 'py-2 text-base sm:text-sm',
     props.disabled && 'cursor-not-allowed opacity-60',
   ),
@@ -59,7 +59,7 @@ const inputClass = computed(() =>
 <template>
   <div class="relative w-full">
     <IconSearch
-      class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted"
+      class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ui-muted"
       aria-hidden="true"
     />
     <input
@@ -74,7 +74,7 @@ const inputClass = computed(() =>
     <button
       v-if="local && !disabled"
       type="button"
-      class="absolute right-2 top-1/2 -translate-y-1/2 inline-flex h-5 w-5 items-center justify-center rounded-full text-muted hover:bg-dark-hover hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan/30"
+      class="absolute right-2 top-1/2 -translate-y-1/2 inline-flex h-5 w-5 items-center justify-center rounded-full text-ui-muted hover:bg-ui-hover hover:text-ui-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-accent/30"
       :aria-label="ariaLabel ? `Xoá ${ariaLabel.toLowerCase()}` : 'Xoá tìm kiếm'"
       @click="onClear"
     >

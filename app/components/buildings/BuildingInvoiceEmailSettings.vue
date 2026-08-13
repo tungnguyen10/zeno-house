@@ -46,7 +46,7 @@ function confirmEnable() {
       <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div class="min-w-0">
           <div class="flex flex-wrap items-center gap-2">
-            <h3 class="text-sm font-semibold text-white">Tự động gửi khi phát hành</h3>
+            <h3 class="text-sm font-semibold text-ui-primary">Tự động gửi khi phát hành</h3>
             <UiBadge
               :variant="!featureAvailable ? 'neutral' : enabled ? 'success' : 'warning'"
               pill
@@ -54,7 +54,7 @@ function confirmEnable() {
               {{ !featureAvailable ? 'Chưa mở trên hệ thống' : enabled ? 'Đang bật' : 'Đang tắt' }}
             </UiBadge>
           </div>
-          <p class="mt-1 max-w-2xl text-xs leading-5 text-muted">
+          <p class="mt-1 max-w-2xl text-xs leading-5 text-ui-muted">
             Chỉ áp dụng cho hoá đơn phát hành sau khi bật. Hoá đơn cũ không được gửi bù tự động.
           </p>
         </div>
@@ -73,7 +73,7 @@ function confirmEnable() {
         Bạn có thể xem cấu hình nhưng chỉ chủ sở hữu hoặc quản trị viên mới được thay đổi.
       </UiAlert>
       <UiAlert v-if="error" severity="danger">{{ error }}</UiAlert>
-      <p v-if="saving" class="text-xs text-muted" role="status">Đang lưu thay đổi…</p>
+      <p v-if="saving" class="text-xs text-ui-muted" role="status">Đang lưu thay đổi…</p>
     </template>
 
     <UiModal
@@ -82,7 +82,7 @@ function confirmEnable() {
       size="sm"
       @close="confirmOpen = false"
     >
-      <p class="text-sm leading-6 text-muted">
+      <p class="text-sm leading-6 text-ui-muted">
         Từ lần phát hành tiếp theo, hệ thống sẽ xếp hàng gửi HTML và PDF đến email liên hệ chính của khách thuê. Việc gửi email không làm gián đoạn phát hành hoá đơn.
       </p>
       <template #footer>

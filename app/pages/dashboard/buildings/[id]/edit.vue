@@ -101,7 +101,7 @@ async function onSubmit(data: BuildingFormData) {
       {{ apiError }}
     </UiAlert>
 
-    <div class="rounded-xl border border-dark-border bg-dark-surface p-6">
+    <div class="rounded-xl border border-ui-border bg-ui-surface p-6">
       <BuildingForm
         v-model="formData"
         :loading="isLoading"

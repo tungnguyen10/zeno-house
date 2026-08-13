@@ -85,8 +85,8 @@ async function handleDeleteOccupant() {
             :class="[
               'text-xs rounded px-1.5 py-0.5 border',
               isOccupantLimitReached
-                ? 'text-amber-400 border-amber-400/40'
-                : 'text-muted border-dark-border',
+                ? 'text-status-warning border-status-warning/40'
+                : 'text-ui-muted border-ui-border',
             ]"
             :title="isOccupantLimitReached ? 'Đã đạt số người tối đa của hợp đồng' : undefined"
           >
@@ -107,7 +107,7 @@ async function handleDeleteOccupant() {
     </template>
 
     <!-- Add form -->
-    <div v-if="showOccupantForm" class="mb-4 rounded-lg border border-dark-border p-4">
+    <div v-if="showOccupantForm" class="mb-4 rounded-lg border border-ui-border p-4">
       <ContractOccupantForm
         :exclude-tenant-ids="[
           contract.tenantId,
@@ -121,17 +121,17 @@ async function handleDeleteOccupant() {
     </div>
 
     <!-- Primary tenant -->
-    <div v-if="contract.tenant" class="flex items-center gap-3 rounded-lg border border-dark-border px-4 py-3 mb-2">
-      <div class="size-8 rounded-full bg-cyan/10 flex items-center justify-center shrink-0">
-        <span class="text-cyan text-xs font-bold">{{ contract.tenant.fullName.charAt(0).toUpperCase() }}</span>
+    <div v-if="contract.tenant" class="flex items-center gap-3 rounded-lg border border-ui-border px-4 py-3 mb-2">
+      <div class="size-8 rounded-full bg-ui-accent/10 flex items-center justify-center shrink-0">
+        <span class="text-ui-accent text-xs font-bold">{{ contract.tenant.fullName.charAt(0).toUpperCase() }}</span>
       </div>
       <div class="min-w-0 flex-1">
-        <NuxtLink :to="`/dashboard/tenants/${contract.tenant.id}`" class="text-sm font-medium text-white hover:text-cyan transition-colors">
+        <NuxtLink :to="`/dashboard/tenants/${contract.tenant.id}`" class="text-sm font-medium text-ui-primary hover:text-ui-accent transition-colors">
           {{ contract.tenant.fullName }}
         </NuxtLink>
-        <p class="text-xs text-muted mt-0.5">{{ contract.tenant.phone }}</p>
+        <p class="text-xs text-ui-muted mt-0.5">{{ contract.tenant.phone }}</p>
       </div>
-      <span class="text-xs text-zinc-400 border border-dark-border rounded px-2 py-0.5 shrink-0">Người thuê chính</span>
+      <span class="text-xs text-ui-muted border border-ui-border rounded px-2 py-0.5 shrink-0">Người thuê chính</span>
     </div>
 
     <!-- Roommate list -->
@@ -144,15 +144,15 @@ async function handleDeleteOccupant() {
         :key="occ.id"
         :class="[
           'flex items-center gap-3 rounded-lg border px-4 py-3',
-          occ.moveOutDate ? 'border-dark-border opacity-50' : 'border-dark-border',
+          occ.moveOutDate ? 'border-ui-border opacity-50' : 'border-ui-border',
         ]"
       >
-        <div class="size-8 rounded-full bg-zinc-800 flex items-center justify-center shrink-0">
-          <span class="text-zinc-400 text-xs font-bold">{{ occ.tenantName?.charAt(0).toUpperCase() ?? '?' }}</span>
+        <div class="size-8 rounded-full bg-ui-deep flex items-center justify-center shrink-0">
+          <span class="text-ui-muted text-xs font-bold">{{ occ.tenantName?.charAt(0).toUpperCase() ?? '?' }}</span>
         </div>
         <div class="min-w-0 flex-1">
-          <p class="text-sm font-medium text-white">{{ occ.tenantName ?? occ.tenantId.slice(0, 8) + '…' }}</p>
-          <p class="text-xs text-muted mt-0.5">
+          <p class="text-sm font-medium text-ui-primary">{{ occ.tenantName ?? occ.tenantId.slice(0, 8) + '…' }}</p>
+          <p class="text-xs text-ui-muted mt-0.5">
             <template v-if="occ.tenantPhone">{{ occ.tenantPhone }} · </template>
             Vào {{ formatViDate(occ.moveInDate) }}
             <template v-if="occ.moveOutDate">
@@ -172,25 +172,25 @@ async function handleDeleteOccupant() {
           <UiButton
             variant="ghost"
             size="sm"
-            class="text-red-400 hover:text-red-300"
+            class="text-status-danger hover:text-status-danger"
             @click="deletingOccupantId = occ.id"
           >
             Xoá
           </UiButton>
         </template>
       </div>
-      <p v-if="occupants.filter(o => o.role === 'roommate').length === 0 && !showOccupantForm" class="text-sm text-muted text-center py-3">
+      <p v-if="occupants.filter(o => o.role === 'roommate').length === 0 && !showOccupantForm" class="text-sm text-ui-muted text-center py-3">
         Chưa có người ở chung nào.
       </p>
     </div>
   </UiSection>
 
   <!-- Move-out modal -->
-  <div v-if="moveOutOccupantId" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-    <div class="w-full max-w-sm rounded-xl bg-dark-surface border border-dark-border p-6 space-y-4">
-      <h2 class="text-sm font-semibold text-white">Ghi nhận ngày rời phòng</h2>
+  <div v-if="moveOutOccupantId" class="fixed inset-0 z-50 flex items-center justify-center bg-ui-overlay/60 p-4">
+    <div class="w-full max-w-sm rounded-xl bg-ui-surface border border-ui-border p-6 space-y-4">
+      <h2 class="text-sm font-semibold text-ui-primary">Ghi nhận ngày rời phòng</h2>
       <div class="flex flex-col gap-1.5">
-        <label class="text-sm text-muted">Ngày rời</label>
+        <label class="text-sm text-ui-muted">Ngày rời</label>
         <UiDatePicker
           v-model="moveOutDate"
           date-mode="period-end"

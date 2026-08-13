@@ -180,23 +180,23 @@ function emitChange(event: Event) {
 
 const wrapperClass = computed(() =>
   clsx(
-    'flex w-full items-stretch rounded-md border bg-dark-surface text-white',
+    'flex w-full items-stretch rounded-md border bg-ui-surface text-ui-primary',
     'focus-within:ring-2 focus-within:ring-offset-0',
     props.error
-      ? 'border-error/50 focus-within:border-error/60 focus-within:ring-error/30'
-      : 'border-dark-border focus-within:border-cyan/70 focus-within:ring-cyan/30',
-    props.disabled && 'bg-dark-hover text-muted cursor-not-allowed',
+      ? 'border-status-danger/50 focus-within:border-status-danger/60 focus-within:ring-status-danger/30'
+      : 'border-ui-border-strong focus-within:border-ui-accent/70 focus-within:ring-ui-accent/30',
+    props.disabled && 'bg-ui-hover text-ui-muted cursor-not-allowed',
   ),
 )
 
 const inputClass = computed(() =>
   clsx(
-    'block w-full bg-transparent px-3 text-white placeholder-muted',
+    'block w-full bg-transparent px-3 text-ui-primary placeholder-ui-muted',
     'focus:outline-none',
     props.density === 'compact' ? 'py-1 text-sm sm:text-xs' : 'py-2 text-base sm:text-sm',
     hasPrefix.value && 'pl-1',
     hasSuffix.value && 'pr-1',
-    props.disabled && 'cursor-not-allowed text-muted',
+    props.disabled && 'cursor-not-allowed text-ui-muted',
     props.inputClass,
   ),
 )
@@ -213,16 +213,16 @@ const inputClass = computed(() =>
     <label
       v-if="label"
       :for="inputId"
-      class="text-sm font-medium text-muted"
+      class="text-sm font-medium text-ui-muted"
     >
       {{ label }}
-      <span v-if="required" class="text-error ml-0.5" aria-hidden="true">*</span>
+      <span v-if="required" class="text-status-danger ml-0.5" aria-hidden="true">*</span>
     </label>
 
     <div :class="wrapperClass">
       <span
         v-if="hasPrefix"
-        class="flex items-center pl-3 pr-1 text-sm text-muted select-none whitespace-nowrap"
+        class="flex items-center pl-3 pr-1 text-sm text-ui-muted select-none whitespace-nowrap"
         aria-hidden="true"
       >
         <slot name="prefix" />
@@ -252,17 +252,17 @@ const inputClass = computed(() =>
 
       <span
         v-if="hasSuffix"
-        class="flex items-center pr-3 pl-1 text-sm text-muted select-none whitespace-nowrap"
+        class="flex items-center pr-3 pl-1 text-sm text-ui-muted select-none whitespace-nowrap"
         aria-hidden="true"
       >
         <slot name="suffix">₫</slot>
       </span>
     </div>
 
-    <p v-if="error" :id="`${inputId}-error`" class="text-xs text-error" role="alert">
+    <p v-if="error" :id="`${inputId}-error`" class="text-xs text-status-danger" role="alert">
       {{ error }}
     </p>
-    <p v-else-if="hint" :id="`${inputId}-hint`" class="text-xs text-muted">
+    <p v-else-if="hint" :id="`${inputId}-hint`" class="text-xs text-ui-muted">
       {{ hint }}
     </p>
   </div>

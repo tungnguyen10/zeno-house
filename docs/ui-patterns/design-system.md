@@ -1,13 +1,13 @@
 # Zeno House — Operational Design System
 
-Hệ thống UI cho Zeno House được thiết kế cho **work tool nội bộ** trên dark theme. Tối ưu cho:
+Hệ thống UI cho Zeno House được thiết kế cho **work tool nội bộ** với dashboard light/dark theme. Tối ưu cho:
 
 - scan dữ liệu nhiều dòng nhanh
 - thao tác lặp lại hằng tháng (billing)
 - so sánh số liệu, theo dõi trạng thái queue
 - correction / audit / void / reissue có context rõ ràng
 
-Không phải marketing UI. Không phải dashboard show off. Không có light theme.
+Không phải marketing UI. Không phải dashboard show off. Dashboard dùng semantic token để giữ nguyên thứ bậc, mật độ và status semantics ở cả hai theme. Auth tiếp tục dùng dark fallback; tenant portal tiếp tục dùng hệ `--portal-*` độc lập.
 
 ## 1. Token Map
 
@@ -17,36 +17,37 @@ Token chính thống nằm tại [tailwind.config.ts](../../tailwind.config.ts).
 
 | Vai trò | Token | Khi nào dùng |
 |--------|-------|--------------|
-| Page background | `bg-dark` | Toàn page, bên ngoài shell |
-| Shell / sidebar / header | `bg-dark-card` | App chrome cố định |
-| Content surface | `bg-dark-surface` | Card, panel, table body |
-| Hover row / interactive | `bg-dark-hover` | Row hover, ghost button hover |
-| Divider / border | `border-dark-border` | Tất cả border, separator |
-| Deep accent surface | `bg-dark-deep` | Chỉ dùng khi cần nền tối hơn để tạo contrast |
+| Page background | `bg-ui-canvas` | Toàn page, bên ngoài shell |
+| Shell / sidebar / header | `bg-ui-chrome` | App chrome cố định |
+| Content surface | `bg-ui-surface` | Card, panel, table body |
+| Hover row / interactive | `bg-ui-hover` | Row hover, ghost button hover |
+| Divider / border | `border-ui-border` | Border và separator thông thường |
+| Strong control border | `border-ui-border-strong` | Input, select và control cần định hình rõ |
+| Deep accent surface | `bg-ui-deep` | Chỉ dùng khi cần tăng tương phản trong theme hiện tại |
 
-Không dùng `bg-smoke*`, `bg-white`, `text-title`, `text-body` ở admin shell — đó là token light theme legacy chỉ phục vụ public site (chưa có).
+Không dùng appearance literal như `bg-dark-*`, `bg-white`, `text-white`, `text-muted` hoặc `border-dark-border` trong dashboard. Dùng nhóm `ui.*` và `status.*`; CSS variables sẽ resolve theo theme.
 
 ### Text
 
 | Vai trò | Token |
 |--------|-------|
-| Primary text | `text-white` |
-| Secondary / label / metadata | `text-muted` |
-| Accent / link / active | `text-cyan` |
+| Primary text | `text-ui-primary` |
+| Secondary / label / metadata | `text-ui-muted` |
+| Accent / link / active | `text-ui-accent` |
 
 ### Accent
 
-`cyan` (`#00E5FF`) là accent duy nhất cho action, active state, KPI value. Không dùng `theme` (`#0B59DB`) hoặc `theme-purple` trong admin shell.
+`ui-accent` là accent duy nhất cho action, active state và KPI value. Nó resolve thành cyan `#00E5FF` ở dark mode và teal `#007C91` ở light mode. Không dùng `theme` (`#0B59DB`) hoặc `theme-purple` trong admin shell.
 
 ### Status
 
 | Category | Tailwind class hint | Khi nào |
 |----------|--------------------|--------|
-| Neutral / draft | `bg-dark-surface text-muted` | inactive, draft, không xác định |
-| In-progress / accent | `bg-cyan/10 text-cyan` | active, readings, collecting, processing |
-| Success | `bg-success-neon/10 text-success-neon` | paid, closed, complete, available |
-| Warning | `bg-warning/10 text-warning` | review, partial, replacement, adjustment, expired, maintenance, pending |
-| Danger | `bg-error-bg text-error-vivid` hoặc `bg-error/10 text-error` | overdue, blocked, void, terminated, error |
+| Neutral / draft | `bg-ui-surface text-status-neutral` | inactive, draft, không xác định |
+| In-progress / accent | `bg-ui-accent/10 text-ui-accent` | active, readings, collecting, processing |
+| Success | `bg-status-success/10 text-status-success` | paid, closed, complete, available |
+| Warning | `bg-status-warning/10 text-status-warning` | review, partial, replacement, adjustment, expired, maintenance, pending |
+| Danger | `bg-status-danger-surface text-status-danger` | overdue, blocked, void, terminated, error |
 
 Tham chiếu cụ thể domain → status variant tại [`app/utils/constants/statuses.ts`](../../app/utils/constants/statuses.ts). Page **không** tự nghĩ class màu cho status — luôn map qua constant.
 
@@ -54,11 +55,11 @@ Tham chiếu cụ thể domain → status variant tại [`app/utils/constants/st
 
 | Use case | Class |
 |---------|-------|
-| Page title | `text-xl font-semibold text-white` |
-| Section title (panel / workspace) | `text-sm font-semibold text-white` |
+| Page title | `text-xl font-semibold text-ui-primary` |
+| Section title (panel / workspace) | `text-sm font-semibold text-ui-primary` |
 | Body / table cell | `text-sm` |
-| Helper / hint / metadata | `text-xs text-muted` |
-| Metric value (compact) | `text-xl font-semibold text-white` |
+| Helper / hint / metadata | `text-xs text-ui-muted` |
+| Metric value (compact) | `text-xl font-semibold text-ui-primary` |
 | Metric value (dashboard hero) | tối đa `text-2xl` — chỉ trên `/` dashboard |
 
 Không dùng font scale viewport-based, không dùng `text-3xl+` trong dense workspace. Font: Inter, đã preload qua `app/assets/scss/main.scss`.
@@ -78,17 +79,17 @@ Spacing nguyên tắc:
 - Section: `space-y-6` giữa section, `space-y-4` trong section
 - Table cell padding: dense `px-3 py-2`, comfortable `px-4 py-3`
 
-**Không nested card-trong-card.** Section title + divider thay vì wrap thêm `bg-dark-surface` lồng vào card.
+**Không nested card-trong-card.** Section title + divider thay vì wrap thêm `bg-ui-surface` lồng vào card.
 
 ## 4. Focus
 
 Tất cả interactive primitive phải có visible focus. Convention:
 
 ```
-focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan/40
+focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-accent/40
 ```
 
-Cho destructive button dùng `focus-visible:ring-error`. Không tắt outline mà không thay bằng ring.
+Cho destructive button dùng `focus-visible:ring-status-danger`. Không tắt outline mà không thay bằng ring.
 
 ## 5. Component → Pattern Map
 
@@ -113,7 +114,7 @@ Cho destructive button dùng `focus-visible:ring-error`. Không tắt outline m�
 | Loading rows | `UiSkeleton` (fallback) hoặc table built-in loading |
 | No data | `UiEmptyState` hoặc `UiTable` empty state |
 | Titled content region | `UiSection` |
-| Reusable dark panel surface | `UiSurfacePanel` |
+| Reusable panel surface | `UiSurfacePanel` |
 
 ## 6. Primitive Contracts
 
@@ -140,7 +141,7 @@ Cho destructive button dùng `focus-visible:ring-error`. Không tắt outline m�
 
 Caller-provided `min`, `max`, `step`, and `inputmode` always win over primitive defaults. Keep formatted numeric display fields as `type="text"` with an appropriate `inputmode` when the component formats while typing.
 
-Use `UiDatePicker` instead of native `UiInput type="date"` for domain/page date entry. It renders a dark calendar popover, keeps the model as an ISO `YYYY-MM-DD` string, and supports `dateMode` (`past`, `future`, `period-start`, `period-end`, `payment`, `reading`, `operational`) plus `minDate`/`maxDate`.
+Use `UiDatePicker` instead of native `UiInput type="date"` for domain/page date entry. It renders a theme-aware calendar popover, keeps the model as an ISO `YYYY-MM-DD` string, and supports `dateMode` (`past`, `future`, `period-start`, `period-end`, `payment`, `reading`, `operational`) plus `minDate`/`maxDate`.
 
 ### Overlays and Searchable Select
 
@@ -149,7 +150,7 @@ Use `UiDatePicker` instead of native `UiInput type="date"` for domain/page date 
 
 ### Surface Wrapper (`UiSurfacePanel`)
 
-Use `UiSurfacePanel` when a view needs the repeated shell `rounded-xl border border-dark-border bg-dark-surface`.
+Use `UiSurfacePanel` when a view needs the repeated shell `rounded-xl border border-ui-border bg-ui-surface`.
 
 - Purpose: eliminate duplicated class strings and keep padding/density consistent across pages.
 - Props:
@@ -157,7 +158,7 @@ Use `UiSurfacePanel` when a view needs the repeated shell `rounded-xl border bor
 	- `density`:
 		- `compact` -> `p-4` (preferred for dense settings and list controls)
 		- `default` -> `p-5` (hero blocks and summary cards)
-- Replace direct wrappers like `<div class="rounded-xl border border-dark-border bg-dark-surface p-5">...</div>` with `UiSurfacePanel`.
+- Replace direct wrappers like `<div class="rounded-xl border border-ui-border bg-ui-surface p-5">...</div>` with `UiSurfacePanel`.
 
 Examples:
 
@@ -168,8 +169,8 @@ Examples:
 </UiSurfacePanel>
 
 <UiSurfacePanel as="section">
-	<h2 class="text-lg font-semibold text-white">Tổng quan tòa nhà</h2>
-	<p class="text-sm text-muted">Thông tin vận hành chính</p>
+	<h2 class="text-lg font-semibold text-ui-primary">Tổng quan tòa nhà</h2>
+	<p class="text-sm text-ui-muted">Thông tin vận hành chính</p>
 </UiSurfacePanel>
 ```
 
@@ -192,7 +193,7 @@ Do not add auth-only tokens, themes, fonts, or duplicate primitives.
 The layout must remain usable without horizontal overflow at 320, 375, 414, and 768 pixels, handle
 long emails with truncation/title disclosure where appropriate, and respect reduced motion.
 
-- ✗ Dùng `bg-white`, `text-title`, `text-body` ở admin shell.
+- ✗ Dùng appearance literal (`bg-dark-*`, `bg-white`, `text-white`, `text-muted`) ở dashboard thay cho semantic token.
 - ✗ Tự viết `<select class="rounded-md ...">` — dùng `UiSelect`.
 - ✗ Dùng native `<datalist>` cho lựa chọn có search/custom — dùng `UiCombobox`.
 - ✗ Tự viết `<table>` markup mới — dùng `UiTable`.
@@ -200,7 +201,7 @@ long emails with truncation/title disclosure where appropriate, and respect redu
 - ✗ Dùng native `UiInput type="date"` trong domain/page form — dùng `UiDatePicker`.
 - ✗ Tự nghĩ class màu cho status — map qua `app/utils/constants/statuses.ts`.
 - ✗ Card-trong-card chỉ để có border. Dùng `UiSection` + divider.
-- ✗ Lặp lại chuỗi class panel (`rounded-xl border border-dark-border bg-dark-surface p-*`) ở nhiều file. Dùng `UiSurfacePanel`.
+- ✗ Lặp lại chuỗi class panel (`rounded-xl border border-ui-border bg-ui-surface p-*`) ở nhiều file. Dùng `UiSurfacePanel`.
 - ✗ Dashboard hero typography ở dense workspace.
 - ✗ Tạo primitive cho 1 chỗ dùng. Đợi có 2+ chỗ rồi mới generalize.
 

@@ -81,7 +81,7 @@ async function onAvatarRemove() {
           >
             <template #empty>
               <span
-                class="flex h-16 w-16 items-center justify-center rounded-full bg-cyan/20 text-lg font-semibold text-cyan"
+                class="flex h-16 w-16 items-center justify-center rounded-full bg-ui-accent/20 text-lg font-semibold text-ui-accent"
                 aria-hidden="true"
               >
                 {{ (profile.fullName ?? profile.email ?? 'U').charAt(0).toUpperCase() }}

@@ -6,6 +6,8 @@ export interface PortalChartPalette {
   accent: string
   accentSoft: string
   positive: string
+  warning: string
+  danger: string
   border: string
   surfaceDeep: string
   title: string
@@ -17,6 +19,8 @@ const TRANSPARENT_PALETTE: PortalChartPalette = {
   accent: 'transparent',
   accentSoft: 'transparent',
   positive: 'transparent',
+  warning: 'transparent',
+  danger: 'transparent',
   border: 'transparent',
   surfaceDeep: 'transparent',
   title: 'transparent',
@@ -54,6 +58,8 @@ export function usePortalChartTheme(): {
       accent: read('--portal-accent'),
       accentSoft: read('--portal-accent-soft'),
       positive: read('--portal-positive'),
+      warning: read('--portal-warning'),
+      danger: read('--portal-danger'),
       border: read('--portal-border'),
       surfaceDeep: read('--portal-surface-deep'),
       title: read('--portal-title'),

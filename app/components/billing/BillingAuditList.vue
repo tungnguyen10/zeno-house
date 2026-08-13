@@ -35,14 +35,14 @@ const groups = computed(() => groupAuditEvents(props.events))
     <template v-else>
       <template v-for="group in groups" :key="group.key">
         <!-- Group header -->
-        <div class="sticky top-0 z-10 bg-dark-card/90 backdrop-blur-sm border-b border-dark-border py-1.5 px-1 mb-1">
-          <span class="text-xs font-semibold uppercase tracking-wider text-muted">
+        <div class="sticky top-0 z-10 bg-ui-chrome/90 backdrop-blur-sm border-b border-ui-border py-1.5 px-1 mb-1">
+          <span class="text-xs font-semibold uppercase tracking-wider text-ui-muted">
             {{ group.label }}
           </span>
         </div>
 
         <!-- Entries with dividers -->
-        <div class="divide-y divide-dark-border">
+        <div class="divide-y divide-ui-border">
           <BillingAuditEntry
             v-for="ev in group.events"
             :key="ev.id"

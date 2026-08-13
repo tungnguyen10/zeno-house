@@ -62,7 +62,7 @@ const rows = computed<Row[]>(() =>
     description="Thêm tòa nhà để xem tỷ lệ phòng."
   >
     <template #icon>
-      <IconBuilding class="h-5 w-5 text-muted" aria-hidden="true" />
+      <IconBuilding class="h-5 w-5 text-ui-muted" aria-hidden="true" />
     </template>
   </UiEmptyState>
   <div v-else data-occupancy-list class="overflow-hidden">
@@ -70,24 +70,24 @@ const rows = computed<Row[]>(() =>
       v-for="row in rows"
       :key="row.id"
       :to="buildingPath(row)"
-      class="group grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-4 gap-y-2 border-b border-dark-border px-2 py-3 last:border-b-0 hover:bg-dark-hover sm:grid-cols-[minmax(10rem,1.2fr)_minmax(6rem,1fr)_3rem_1rem] sm:px-3"
+      class="group grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-4 gap-y-2 border-b border-ui-border px-2 py-3 last:border-b-0 hover:bg-ui-hover sm:grid-cols-[minmax(10rem,1.2fr)_minmax(6rem,1fr)_3rem_1rem] sm:px-3"
     >
       <div class="min-w-0 col-span-2 sm:col-span-1">
-        <div class="truncate text-sm font-medium text-white">{{ row.name }}</div>
-        <div class="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted">
+        <div class="truncate text-sm font-medium text-ui-primary">{{ row.name }}</div>
+        <div class="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-ui-muted">
           <span>
-            <span class="tabular-nums text-white">{{ row.occupied }}</span>/<span class="tabular-nums">{{ row.total }}</span> {{ row.total === 0 ? 'phòng' : 'đang thuê' }}
+            <span class="tabular-nums text-ui-primary">{{ row.occupied }}</span>/<span class="tabular-nums">{{ row.total }}</span> {{ row.total === 0 ? 'phòng' : 'đang thuê' }}
           </span>
           <template v-if="row.available > 0">
             <span class="text-dark-border" aria-hidden="true">·</span>
             <span>
-              <span class="tabular-nums text-success-neon">{{ row.available }}</span> trống
+              <span class="tabular-nums text-status-success">{{ row.available }}</span> trống
             </span>
           </template>
           <template v-if="row.maintenance > 0">
             <span class="text-dark-border" aria-hidden="true">·</span>
             <span>
-              <span class="tabular-nums text-warning">{{ row.maintenance }}</span> bảo trì
+              <span class="tabular-nums text-status-warning">{{ row.maintenance }}</span> bảo trì
             </span>
           </template>
         </div>
@@ -95,23 +95,23 @@ const rows = computed<Row[]>(() =>
 
       <div
         v-if="row.occupancyPercent !== null"
-        class="col-span-3 flex h-2 overflow-hidden rounded-full bg-dark-border sm:col-span-1"
+        class="col-span-3 flex h-2 overflow-hidden rounded-full bg-ui-border sm:col-span-1"
         role="img"
         :aria-label="`${row.occupancyPercent}% phòng đang thuê`"
       >
-        <div class="bg-cyan transition-[width]" :style="{ width: `${row.occupiedPercent}%` }" />
-        <div class="bg-success-neon/80 transition-[width]" :style="{ width: `${row.availablePercent}%` }" />
-        <div class="bg-warning transition-[width]" :style="{ width: `${row.maintenancePercent}%` }" />
+        <div class="bg-ui-accent transition-[width]" :style="{ width: `${row.occupiedPercent}%` }" />
+        <div class="bg-status-success/80 transition-[width]" :style="{ width: `${row.availablePercent}%` }" />
+        <div class="bg-status-warning transition-[width]" :style="{ width: `${row.maintenancePercent}%` }" />
       </div>
-      <div v-else class="col-span-3 text-xs text-muted sm:col-span-1">Chưa có phòng</div>
+      <div v-else class="col-span-3 text-xs text-ui-muted sm:col-span-1">Chưa có phòng</div>
 
-      <div class="text-right text-sm font-semibold tabular-nums text-white">
+      <div class="text-right text-sm font-semibold tabular-nums text-ui-primary">
         <template v-if="row.occupancyPercent !== null">{{ row.occupancyPercent }}%</template>
-        <span v-else class="text-muted">—</span>
+        <span v-else class="text-ui-muted">—</span>
       </div>
 
       <IconChevronRight
-        class="h-4 w-4 text-muted transition group-hover:translate-x-0.5 group-hover:text-cyan"
+        class="h-4 w-4 text-ui-muted transition group-hover:translate-x-0.5 group-hover:text-ui-accent"
         aria-hidden="true"
       />
     </NuxtLink>

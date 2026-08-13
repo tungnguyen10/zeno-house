@@ -205,13 +205,13 @@ const monthLabel = computed(() => {
 
 const triggerClass = computed(() =>
   clsx(
-    'flex w-full items-center justify-between gap-2 rounded-md border bg-dark-surface text-left text-white transition-colors',
+    'flex w-full items-center justify-between gap-2 rounded-md border bg-ui-surface text-left text-ui-primary transition-colors',
     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-0',
     props.error
-      ? 'border-error/50 focus-visible:border-error/60 focus-visible:ring-error/30'
-      : 'border-dark-border hover:border-cyan/50 focus-visible:border-cyan/70 focus-visible:ring-cyan/30',
+      ? 'border-status-danger/50 focus-visible:border-status-danger/60 focus-visible:ring-status-danger/30'
+      : 'border-ui-border-strong hover:border-ui-accent/50 focus-visible:border-ui-accent/70 focus-visible:ring-ui-accent/30',
     props.density === 'compact' ? 'min-h-7 px-2 py-1 text-xs' : 'min-h-10 px-3 py-2 text-sm',
-    props.disabled && 'cursor-not-allowed bg-dark-hover text-muted opacity-70',
+    props.disabled && 'cursor-not-allowed bg-ui-hover text-ui-muted opacity-70',
     props.triggerClass,
   ),
 )
@@ -458,10 +458,10 @@ onKeyStroke('Escape', () => {
     <label
       v-if="label"
       :for="pickerId"
-      class="text-sm font-medium text-muted"
+      class="text-sm font-medium text-ui-muted"
     >
       {{ label }}
-      <span v-if="required" class="text-error ml-0.5" aria-hidden="true">*</span>
+      <span v-if="required" class="text-status-danger ml-0.5" aria-hidden="true">*</span>
     </label>
 
     <button
@@ -479,10 +479,10 @@ onKeyStroke('Escape', () => {
       @click="isOpen ? closePicker({ restoreFocus: false }) : openPicker()"
       @blur="emit('blur', $event)"
     >
-      <span :class="displayValue ? 'text-white' : 'text-muted'">
+      <span :class="displayValue ? 'text-ui-primary' : 'text-ui-muted'">
         {{ displayValue || placeholder }}
       </span>
-      <IconCalendar class="size-4 shrink-0 text-muted" aria-hidden="true" />
+      <IconCalendar class="size-4 shrink-0 text-ui-muted" aria-hidden="true" />
     </button>
 
     <Teleport to="body">
@@ -501,7 +501,7 @@ onKeyStroke('Escape', () => {
           role="dialog"
           :aria-label="label ?? placeholder"
           :style="panelStyle"
-          class="fixed z-[70] origin-top-left overflow-y-auto rounded-xl border border-dark-border bg-dark-card p-3 shadow-xl shadow-black/40"
+          class="fixed z-[70] origin-top-left overflow-y-auto rounded-xl border border-ui-border bg-ui-chrome p-3 shadow-xl shadow-ui-shadow/40"
           @keydown="onGridKeydown"
         >
         <div class="mb-3 flex items-center justify-between gap-2">
@@ -517,7 +517,7 @@ onKeyStroke('Escape', () => {
           </UiButton>
           <button
             type="button"
-            class="flex-1 text-center text-sm font-semibold text-white transition-colors hover:text-cyan focus-visible:outline-none"
+            class="flex-1 text-center text-sm font-semibold text-ui-primary transition-colors hover:text-ui-accent focus-visible:outline-none"
             :aria-label="viewMode === 'year' ? 'Thoát chọn năm' : 'Chọn năm'"
             @click="toggleYearView"
           >
@@ -542,12 +542,12 @@ onKeyStroke('Escape', () => {
             type="button"
             :class="clsx(
               'flex h-9 items-center justify-center rounded-md text-xs font-medium transition-colors',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan/40',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-accent/40',
               cell.isSelected
-                ? 'bg-cyan text-dark font-semibold'
+                ? 'bg-ui-accent text-ui-on-accent font-semibold'
                 : cell.isCurrent
-                  ? 'border border-cyan/50 text-cyan'
-                  : 'text-white hover:bg-dark-hover',
+                  ? 'border border-ui-accent/50 text-ui-accent'
+                  : 'text-ui-primary hover:bg-ui-hover',
             )"
             @click="selectYear(cell.year)"
           >
@@ -556,7 +556,7 @@ onKeyStroke('Escape', () => {
         </div>
 
         <template v-else-if="!isMonthMode">
-          <div class="grid grid-cols-7 gap-1 text-center text-[11px] font-medium text-muted" aria-hidden="true">
+          <div class="grid grid-cols-7 gap-1 text-center text-[11px] font-medium text-ui-muted" aria-hidden="true">
             <span v-for="day in weekDays" :key="day">{{ day }}</span>
           </div>
           <div class="mt-1 grid grid-cols-7 gap-1">
@@ -572,14 +572,14 @@ onKeyStroke('Escape', () => {
               :aria-pressed="day.isSelected"
               :class="clsx(
                 'flex size-8 items-center justify-center rounded-md text-xs font-medium tabular-nums transition-colors',
-                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan/40',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-accent/40',
                 day.isSelected
-                  ? 'bg-cyan text-dark font-semibold'
+                  ? 'bg-ui-accent text-ui-on-accent font-semibold'
                   : day.isToday
-                    ? 'border border-cyan/50 text-cyan'
+                    ? 'border border-ui-accent/50 text-ui-accent'
                     : day.inMonth
-                      ? 'text-white hover:bg-dark-hover'
-                      : 'text-muted/50 hover:bg-dark-hover/60',
+                      ? 'text-ui-primary hover:bg-ui-hover'
+                      : 'text-ui-muted/50 hover:bg-ui-hover/60',
                 day.disabled && 'cursor-not-allowed opacity-30 hover:bg-transparent',
               )"
               @focus="focusedIso = day.iso"
@@ -603,12 +603,12 @@ onKeyStroke('Escape', () => {
             :aria-pressed="month.isSelected"
             :class="clsx(
               'flex h-9 items-center justify-center rounded-md text-xs font-medium transition-colors',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan/40',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-accent/40',
               month.isSelected
-                ? 'bg-cyan text-dark font-semibold'
+                ? 'bg-ui-accent text-ui-on-accent font-semibold'
                 : month.isCurrent
-                  ? 'border border-cyan/50 text-cyan'
-                  : 'text-white hover:bg-dark-hover',
+                  ? 'border border-ui-accent/50 text-ui-accent'
+                  : 'text-ui-primary hover:bg-ui-hover',
               month.disabled && 'cursor-not-allowed opacity-30 hover:bg-transparent',
             )"
             @focus="focusedPeriod = month.value"
@@ -618,7 +618,7 @@ onKeyStroke('Escape', () => {
           </button>
         </div>
 
-        <div class="mt-3 flex items-center justify-between border-t border-dark-border pt-3">
+        <div class="mt-3 flex items-center justify-between border-t border-ui-border pt-3">
           <UiButton
             type="button"
             variant="ghost"
@@ -641,10 +641,10 @@ onKeyStroke('Escape', () => {
       </Transition>
     </Teleport>
 
-    <p v-if="hint && !error" :id="`${pickerId}-hint`" class="text-xs text-muted">
+    <p v-if="hint && !error" :id="`${pickerId}-hint`" class="text-xs text-ui-muted">
       {{ hint }}
     </p>
-    <p v-if="error" :id="`${pickerId}-error`" class="text-xs text-error-vivid">
+    <p v-if="error" :id="`${pickerId}-error`" class="text-xs text-status-danger">
       {{ error }}
     </p>
   </div>

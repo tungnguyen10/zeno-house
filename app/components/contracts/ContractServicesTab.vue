@@ -61,7 +61,7 @@ const columns = computed<UiTableColumn<ContractService>[]>(() => [
     empty-description="Chưa có dịch vụ nào được cấu hình cho hợp đồng này"
   >
     <template #cell-name="{ row }">
-      <span :class="[!row.isEnabled && 'opacity-50', 'font-medium text-white']">{{ row.catalog.name }}</span>
+      <span :class="[!row.isEnabled && 'opacity-50', 'font-medium text-ui-primary']">{{ row.catalog.name }}</span>
     </template>
 
     <template #cell-amount="{ row }">
@@ -87,7 +87,7 @@ const columns = computed<UiTableColumn<ContractService>[]>(() => [
     </template>
 
     <template #cell-subtotal="{ row }">
-      <span :class="[!row.isEnabled && 'line-through text-muted', 'font-medium text-white']">
+      <span :class="[!row.isEnabled && 'line-through text-ui-muted', 'font-medium text-ui-primary']">
         {{ subtotal(row).toLocaleString('vi-VN') }}đ
       </span>
     </template>
@@ -117,7 +117,7 @@ const columns = computed<UiTableColumn<ContractService>[]>(() => [
       <div class="flex justify-center">
         <UiButton
           unstyled
-          class="rounded p-1 text-muted transition-colors hover:bg-error/10 hover:text-error focus-visible:outline-none"
+          class="rounded p-1 text-ui-muted transition-colors hover:bg-status-danger/10 hover:text-status-danger focus-visible:outline-none"
           :aria-label="`Xoá dịch vụ ${row.catalog.name}`"
           @click="emit('delete', row.id)"
         >

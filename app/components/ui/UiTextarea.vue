@@ -38,7 +38,7 @@ const textareaId = computed(() => props.id ?? generatedId)
 
 const textareaClass = computed(() =>
   clsx(
-    'block w-full rounded-md border px-3 bg-dark-surface text-white placeholder-muted',
+    'block w-full rounded-md border px-3 bg-ui-surface text-ui-primary placeholder-ui-muted',
     props.density === 'compact' ? 'py-1 text-sm sm:text-xs' : 'py-2 text-base sm:text-sm',
     'focus:outline-none focus:ring-2 focus:ring-offset-0',
     {
@@ -47,9 +47,9 @@ const textareaClass = computed(() =>
       resize: props.resize === 'both',
     },
     props.error
-      ? 'border-error/50 focus:border-error/60 focus:ring-error/30'
-      : 'border-dark-border focus:border-cyan/70 focus:ring-cyan/30',
-    props.disabled && 'bg-dark-hover text-muted cursor-not-allowed',
+      ? 'border-status-danger/50 focus:border-status-danger/60 focus:ring-status-danger/30'
+      : 'border-ui-border-strong focus:border-ui-accent/70 focus:ring-ui-accent/30',
+    props.disabled && 'bg-ui-hover text-ui-muted cursor-not-allowed',
   ),
 )
 </script>
@@ -63,10 +63,10 @@ const textareaClass = computed(() =>
     <label
       v-if="label"
       :for="textareaId"
-      class="text-sm font-medium text-muted"
+      class="text-sm font-medium text-ui-muted"
     >
       {{ label }}
-      <span v-if="required" class="text-error ml-0.5" aria-hidden="true">*</span>
+      <span v-if="required" class="text-status-danger ml-0.5" aria-hidden="true">*</span>
     </label>
 
     <textarea
@@ -84,10 +84,10 @@ const textareaClass = computed(() =>
       @blur="emit('blur', $event)"
     />
 
-    <p v-if="error" :id="`${textareaId}-error`" class="text-xs text-error" role="alert">
+    <p v-if="error" :id="`${textareaId}-error`" class="text-xs text-status-danger" role="alert">
       {{ error }}
     </p>
-    <p v-else-if="hint" :id="`${textareaId}-hint`" class="text-xs text-muted">
+    <p v-else-if="hint" :id="`${textareaId}-hint`" class="text-xs text-ui-muted">
       {{ hint }}
     </p>
   </div>

@@ -2,6 +2,60 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  color-scheme: dark;
+
+  /* Semantic operational theme — dark is the fallback for auth and SSR. */
+  --ui-canvas: 26 27 29;
+  --ui-chrome: 36 37 40;
+  --ui-surface: 30 30 30;
+  --ui-hover: 37 37 37;
+  --ui-deep: 10 15 30;
+  --ui-border: 44 44 46;
+  --ui-border-strong: 85 86 90;
+  --ui-primary: 255 255 255;
+  --ui-muted: 152 152 157;
+  --ui-accent: 0 229 255;
+  --ui-accent-hover: 51 234 255;
+  --ui-on-accent: 10 15 30;
+  --ui-overlay: 0 0 0;
+  --ui-shadow: 0 0 0;
+  --ui-skeleton: 255 255 255;
+  --ui-knob: 255 255 255;
+  --status-neutral: 152 152 157;
+  --status-success: 50 215 75;
+  --status-warning: 255 181 57;
+  --status-danger: 255 107 107;
+  --status-on-danger: 255 255 255;
+  --status-danger-surface: 58 28 28;
+}
+
+html[data-dashboard-theme='light'] {
+  color-scheme: light;
+  --ui-canvas: 244 247 250;
+  --ui-chrome: 255 255 255;
+  --ui-surface: 255 255 255;
+  --ui-hover: 234 241 245;
+  --ui-deep: 229 237 243;
+  --ui-border: 213 224 232;
+  --ui-border-strong: 135 151 165;
+  --ui-primary: 23 33 43;
+  --ui-muted: 91 107 122;
+  --ui-accent: 0 124 145;
+  --ui-accent-hover: 0 99 116;
+  --ui-on-accent: 255 255 255;
+  --ui-overlay: 15 23 42;
+  --ui-shadow: 15 23 42;
+  --ui-skeleton: 23 33 43;
+  --ui-knob: 255 255 255;
+  --status-neutral: 82 98 115;
+  --status-success: 21 128 61;
+  --status-warning: 154 88 0;
+  --status-danger: 185 51 63;
+  --status-on-danger: 255 255 255;
+  --status-danger-surface: 253 236 238;
+}
+
 @layer base {
   html,
   body {
@@ -9,7 +63,9 @@
   }
 
   body {
-    @apply bg-dark text-white font-inter;
+    background-color: rgb(var(--ui-canvas));
+    color: rgb(var(--ui-primary));
+    font-family: Inter, ui-sans-serif, system-ui;
   }
 }
 
@@ -42,12 +98,12 @@
   scrollbar-width: none;
 }
 
-/* Themed scrollbar — dark surface, subtle by default, brighter on hover.
+/* Themed scrollbar — semantic surface, subtle by default, brighter on hover.
    Applied globally so every overflowing region matches the design system
    instead of falling back to the OS default. */
 * {
   scrollbar-width: thin;
-  scrollbar-color: theme('colors.dark.border') transparent;
+  scrollbar-color: rgb(var(--ui-border)) transparent;
 }
 
 *::-webkit-scrollbar {
@@ -60,14 +116,14 @@
 }
 
 *::-webkit-scrollbar-thumb {
-  background-color: theme('colors.dark.border');
+  background-color: rgb(var(--ui-border));
   border-radius: 9999px;
   border: 2px solid transparent;
   background-clip: padding-box;
 }
 
 *::-webkit-scrollbar-thumb:hover {
-  background-color: theme('colors.dark.hover');
+  background-color: rgb(var(--ui-hover));
   background-clip: padding-box;
 }
 
@@ -122,6 +178,30 @@ input[type='number'] {
   --portal-danger: #f87171;
   --portal-danger-ink: #fca5a5;
 
+  /* Shared Ui* primitives resolve through the same semantic Tailwind contract. */
+  --ui-canvas: 11 22 36;
+  --ui-chrome: 16 42 70;
+  --ui-surface: 20 40 61;
+  --ui-hover: 29 53 76;
+  --ui-deep: 14 32 51;
+  --ui-border: 46 73 96;
+  --ui-border-strong: 66 98 126;
+  --ui-primary: 248 250 252;
+  --ui-muted: 148 163 184;
+  --ui-accent: 45 212 191;
+  --ui-accent-hover: 94 234 212;
+  --ui-on-accent: 6 43 40;
+  --ui-overlay: 0 0 0;
+  --ui-shadow: 0 0 0;
+  --ui-skeleton: 248 250 252;
+  --ui-knob: 255 255 255;
+  --status-neutral: 148 163 184;
+  --status-success: 110 231 183;
+  --status-warning: 253 186 116;
+  --status-danger: 252 165 165;
+  --status-on-danger: 255 255 255;
+  --status-danger-surface: 58 28 28;
+
   /* One resting surface and one raised overlay — no extra shadow tiers. */
   --portal-elevation-resting: 0 1px 3px rgb(0 0 0 / 0.18), 0 4px 12px rgb(0 0 0 / 0.14);
   --portal-elevation-raised: 0 18px 48px rgb(0 0 0 / 0.4);
@@ -175,6 +255,28 @@ input[type='number'] {
   --portal-warning-ink: #c2410c;
   --portal-danger: #ef4444;
   --portal-danger-ink: #b91c1c;
+  --ui-canvas: 248 250 252;
+  --ui-chrome: 30 58 95;
+  --ui-surface: 255 255 255;
+  --ui-hover: 240 253 250;
+  --ui-deep: 226 232 240;
+  --ui-border: 219 231 232;
+  --ui-border-strong: 148 163 184;
+  --ui-primary: 16 42 67;
+  --ui-muted: 100 116 139;
+  --ui-accent: 13 148 136;
+  --ui-accent-hover: 15 118 110;
+  --ui-on-accent: 255 255 255;
+  --ui-overlay: 15 23 42;
+  --ui-shadow: 15 23 42;
+  --ui-skeleton: 16 42 67;
+  --ui-knob: 255 255 255;
+  --status-neutral: 100 116 139;
+  --status-success: 4 120 87;
+  --status-warning: 194 65 12;
+  --status-danger: 185 28 28;
+  --status-on-danger: 255 255 255;
+  --status-danger-surface: 254 226 226;
   --portal-elevation-resting: 0 1px 3px rgb(15 23 42 / 0.08), 0 4px 12px rgb(15 23 42 / 0.06);
   --portal-elevation-raised: 0 18px 48px rgb(15 23 42 / 0.14);
 }
