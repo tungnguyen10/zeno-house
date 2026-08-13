@@ -104,6 +104,19 @@ moment while shared bootstrap is pending, with a 300 ms minimum interval and no 
 Do not mount the portal splash in dashboard or auth layouts. If the wordmark or Apple device matrix
 changes, regenerate assets and run `tests/pwa/pwa-config.test.ts` before committing the PNG output.
 
+## PWA Install Guidance
+
+`PortalInstallPrompt` is the single presentation host for the product-wide PWA and is mounted in
+`app/app.vue`, not in a role-specific layout. Supporting Chromium browsers feed it through the
+captured `beforeinstallprompt` event. iPhone and iPad use the manual install sheet; detection also
+covers iPadOS desktop-class user agents that identify as Mac. Browser-specific copy stays neutral,
+with a Safari fallback when the current iOS browser does not expose Add to Home Screen.
+
+The Apple flow mirrors current platform UI: Share, Add to Home Screen, enable Open as Web App, then
+Add. The prompt stays hidden on first paint, after dismissal for the current app session, and while
+running in standalone mode. `PortalBottomSheet` owns dialog naming, focus containment, Escape close,
+scroll locking, and focus restoration for the manual guide.
+
 ## Styling
 
 The app is a dense operational tool, not a marketing site.

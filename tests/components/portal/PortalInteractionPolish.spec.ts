@@ -40,6 +40,15 @@ describe('portal interaction polish', () => {
     }
   })
 
+  it('keeps the Apple install guide current and browser-neutral', () => {
+    const prompt = source('app/components/portal/PortalInstallPrompt.vue')
+
+    expect(prompt).toContain('Mở dưới dạng ứng dụng web')
+    expect(prompt).toContain('Nếu không thấy lựa chọn này')
+    expect(prompt).toContain("isPortalRoute.value ? resolvedTheme.value : 'dark'")
+    expect(prompt).not.toContain('trên thanh công cụ Safari')
+  })
+
   it('does not make the live-region status itself clickable', () => {
     const toast = source('app/components/portal/PortalToastHost.vue')
 
