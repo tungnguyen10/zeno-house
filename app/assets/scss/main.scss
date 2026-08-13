@@ -143,6 +143,14 @@ input[type='number'] {
   --sal: env(safe-area-inset-left);
 }
 
+/* Reuse portal theme tokens for app-level overlays without turning their
+   positioning host into a full-screen portal canvas. */
+.portal-shell.portal-install-host {
+  min-height: 0;
+  background: transparent;
+  color: inherit;
+}
+
 .portal-shell[data-theme='light'] {
   --portal-bg: #f8fafc;
   --portal-backdrop: #e8f1f3;

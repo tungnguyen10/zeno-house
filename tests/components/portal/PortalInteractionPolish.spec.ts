@@ -51,6 +51,16 @@ describe('portal interaction polish', () => {
     expect(prompt).not.toContain('trên thanh công cụ Safari')
   })
 
+  it('keeps the install banner from inheriting the full-height portal shell', () => {
+    const prompt = source('app/components/portal/PortalInstallPrompt.vue')
+    const styles = source('app/assets/scss/main.scss')
+
+    expect(prompt).toContain('portal-shell portal-install-host')
+    expect(styles).toMatch(
+      /\.portal-shell\.portal-install-host\s*\{[\s\S]*?min-height:\s*0;[\s\S]*?background:\s*transparent;/,
+    )
+  })
+
   it('does not make the live-region status itself clickable', () => {
     const toast = source('app/components/portal/PortalToastHost.vue')
 

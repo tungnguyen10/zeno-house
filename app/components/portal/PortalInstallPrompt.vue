@@ -54,17 +54,17 @@ async function onInstall() {
       >
         <div
           v-if="showBanner"
-          class="portal-shell portal-safe-x fixed inset-x-0 z-[70] min-h-0 bg-transparent px-4"
+          class="portal-shell portal-install-host portal-safe-x fixed inset-x-0 z-[70] px-4"
           :class="isPortalRoute ? 'bottom-[76px]' : 'bottom-4'"
           :data-theme="installTheme"
         >
-          <div class="flex items-center gap-3 rounded-2xl border border-border-light bg-white p-3 shadow-lg">
+          <div class="flex items-center gap-3 rounded-2xl border border-border-light bg-white p-3 m-1.5 shadow-lg">
             <span class="hidden h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-smoke-blue text-theme sm:flex">
               <IconBrand class="h-6 w-6" aria-hidden="true" />
             </span>
             <div class="min-w-0 flex-1">
               <p class="text-sm font-semibold text-title">Cài đặt ứng dụng Zeno</p>
-              <p class="hidden truncate text-xs text-body min-[360px]:block">Mở nhanh từ màn hình chính, như một ứng dụng.</p>
+              <p class="hidden text-xs text-body min-[360px]:block">Mở nhanh từ màn hình chính, như một ứng dụng.</p>
             </div>
             <PortalButton size="sm" class="whitespace-nowrap" @click="onInstall">Cài đặt</PortalButton>
             <button
