@@ -43,6 +43,8 @@ describe('portal interaction polish', () => {
   it('keeps the Apple install guide current and browser-neutral', () => {
     const prompt = source('app/components/portal/PortalInstallPrompt.vue')
 
+    expect(prompt).toContain('useAuthStore()')
+    expect(prompt).toContain('authStore.isAuthenticated')
     expect(prompt).toContain('Mở dưới dạng ứng dụng web')
     expect(prompt).toContain('Nếu không thấy lựa chọn này')
     expect(prompt).toContain("isPortalRoute.value ? resolvedTheme.value : 'dark'")

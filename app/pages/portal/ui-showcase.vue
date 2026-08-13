@@ -148,7 +148,7 @@ async function refreshDemo() {
 
       <section class="space-y-3">
         <h3 class="portal-type-heading text-title">Overlays & installation</h3>
-        <PortalCard class="flex flex-wrap gap-3"><PortalButton @click="sheetOpen = true">Mở bottom sheet</PortalButton><PortalButton variant="secondary" @click="info('Thông báo portal demo.')">Hiện toast</PortalButton><p class="portal-type-caption self-center text-body">PortalInstallPrompt đang được mount trong tenant layout.</p></PortalCard>
+        <PortalCard class="flex flex-wrap gap-3"><PortalButton @click="sheetOpen = true">Mở bottom sheet</PortalButton><PortalButton variant="secondary" @click="info('Thông báo portal demo.')">Hiện toast</PortalButton><p class="portal-type-caption self-center text-body">PortalInstallPrompt được mount ở app scope và chỉ hiện sau đăng nhập.</p></PortalCard>
       </section>
     </div>
   </PortalPullToRefresh>

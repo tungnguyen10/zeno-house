@@ -21,7 +21,7 @@ The app SHALL be installable as a single Progressive Web App for the whole produ
 ---
 
 ### Requirement: Install prompt and iOS support
-The app SHALL present one app-scoped, custom, dismissible install prompt driven by `beforeinstallprompt` on supporting platforms, and SHALL NOT show it on first paint or when already running in `display-mode: standalone`. The prompt SHALL remain available across portal, dashboard, and auth layouts without being owned by a role-specific layout. For iOS and iPadOS, where `beforeinstallprompt` is not fired, the app SHALL recognize both mobile and desktop-class iPad user agents and provide a browser-neutral "Add to Home Screen" instruction sheet. The sheet SHALL cover the current Share → Add to Home Screen → Open as Web App → Add flow and direct users to Safari when their current browser does not expose the action. The app SHALL set `apple-touch-icon`, `apple-mobile-web-app-capable`, a status-bar style, and media-qualified light and dark startup images for supported iPhone and iPad sizes in portrait and landscape. Startup imagery SHALL use the portal canvas colors and Zeno mark so an installed tenant transitions continuously into the portal bootstrap splash, while dashboard and auth layouts SHALL NOT gain an application-managed splash.
+The app SHALL present one app-scoped, custom, dismissible install prompt driven by `beforeinstallprompt` on supporting platforms, and SHALL NOT show it before authentication, on first paint, or when already running in `display-mode: standalone`. The app-scoped host MAY capture install availability before authentication so the prompt remains usable after sign-in, but its UI SHALL only become visible to an authenticated user on the portal or dashboard. For iOS and iPadOS, where `beforeinstallprompt` is not fired, the app SHALL recognize both mobile and desktop-class iPad user agents and provide a browser-neutral "Add to Home Screen" instruction sheet. The sheet SHALL cover the current Share → Add to Home Screen → Open as Web App → Add flow and direct users to Safari when their current browser does not expose the action. The app SHALL set `apple-touch-icon`, `apple-mobile-web-app-capable`, a status-bar style, and media-qualified light and dark startup images for supported iPhone and iPad sizes in portrait and landscape. Startup imagery SHALL use the portal canvas colors and Zeno mark so an installed tenant transitions continuously into the portal bootstrap splash, while dashboard and auth layouts SHALL NOT gain an application-managed splash.
 
 #### Scenario: Custom install prompt on supported platforms
 - **WHEN** `beforeinstallprompt` fires and the app is not already installed
@@ -35,9 +35,9 @@ The app SHALL present one app-scoped, custom, dismissible install prompt driven 
 - **WHEN** Safari on iPadOS presents a Mac desktop user agent
 - **THEN** the app still recognizes the device as Apple mobile and offers the manual install guide
 
-#### Scenario: Install prompt follows the user across roles
-- **WHEN** an eligible user visits an auth, dashboard, or portal route
-- **THEN** the same app-scoped install host can offer installation without duplicate role-layout mounts
+#### Scenario: Install prompt appears only after sign-in
+- **WHEN** an install-eligible browser visits an authentication route and then the user signs in
+- **THEN** the app may retain install availability but does not render the prompt until the user is authenticated on the dashboard or portal
 
 #### Scenario: Apple launch image matches device and appearance
 - **WHEN** an installed PWA launches on a supported iPhone or iPad in portrait or landscape with a light or dark system appearance

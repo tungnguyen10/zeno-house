@@ -1,5 +1,6 @@
 <script setup lang="ts">
 const route = useRoute()
+const authStore = useAuthStore()
 const { resolvedTheme, initialize } = usePortalTheme()
 const {
   showInstallPrompt,
@@ -24,7 +25,11 @@ onBeforeUnmount(() => {
   if (readyTimer) clearTimeout(readyTimer)
 })
 
-const showBanner = computed(() => ready.value && (showInstallPrompt.value || showIosGuide.value))
+const showBanner = computed(() => (
+  authStore.isAuthenticated
+  && ready.value
+  && (showInstallPrompt.value || showIosGuide.value)
+))
 const isPortalRoute = computed(() => route.path.startsWith('/portal'))
 const installTheme = computed(() => isPortalRoute.value ? resolvedTheme.value : 'dark')
 

@@ -112,6 +112,10 @@ captured `beforeinstallprompt` event. iPhone and iPad use the manual install she
 covers iPadOS desktop-class user agents that identify as Mac. Browser-specific copy stays neutral,
 with a Safari fallback when the current iOS browser does not expose Add to Home Screen.
 
+The host remains mounted before authentication so it can capture early browser install events, but
+the banner is gated by `useAuthStore().isAuthenticated`. Login, registration, recovery, onboarding,
+and pending-account screens never show installation UI; authenticated dashboard and portal routes do.
+
 The Apple flow mirrors current platform UI: Share, Add to Home Screen, enable Open as Web App, then
 Add. The prompt stays hidden on first paint, after dismissal for the current app session, and while
 running in standalone mode. `PortalBottomSheet` owns dialog naming, focus containment, Escape close,
