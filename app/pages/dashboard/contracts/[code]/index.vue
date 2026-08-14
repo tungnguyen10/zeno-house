@@ -224,7 +224,7 @@ watchEffect(() => {
         </div>
       </UiAlert>
 
-      <nav class="sticky top-0 z-20 mt-4 overflow-x-auto border-y border-ui-border bg-ui-deep/95 py-2 backdrop-blur">
+      <nav class="sticky top-0 z-20 mt-4 overflow-x-auto border-y border-ui-border bg-ui-deep/95 py-2 backdrop-blur lg:top-16">
         <div class="flex min-w-max gap-2 text-sm">
           <a href="#overview" class="rounded-md px-3 py-1.5 text-ui-muted hover:bg-ui-hover hover:text-ui-primary">Tổng quan</a>
           <a href="#amendments" class="rounded-md px-3 py-1.5 text-ui-muted hover:bg-ui-hover hover:text-ui-primary">Phụ lục</a>

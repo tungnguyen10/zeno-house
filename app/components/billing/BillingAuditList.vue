@@ -35,7 +35,7 @@ const groups = computed(() => groupAuditEvents(props.events))
     <template v-else>
       <template v-for="group in groups" :key="group.key">
         <!-- Group header -->
-        <div class="sticky top-0 z-10 bg-ui-chrome/90 backdrop-blur-sm border-b border-ui-border py-1.5 px-1 mb-1">
+        <div class="sticky top-0 z-10 bg-ui-chrome/90 backdrop-blur-sm border-b border-ui-border py-1.5 px-1 mb-1 lg:top-16">
           <span class="text-xs font-semibold uppercase tracking-wider text-ui-muted">
             {{ group.label }}
           </span>

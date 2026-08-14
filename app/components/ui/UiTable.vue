@@ -76,7 +76,7 @@ function getCellValue(row: TRow, col: UiTableColumn<TRow>): unknown {
       <thead
         :class="clsx(
           'bg-ui-chrome text-xs uppercase tracking-wide text-ui-muted',
-          stickyHeader && 'sticky top-0 z-10',
+          stickyHeader && 'sticky top-0 z-10 lg:top-16',
         )"
       >
         <tr>
