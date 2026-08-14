@@ -35,13 +35,13 @@ export const BuildingService = {
     user: AuthUser,
     opts: BuildingListOptions,
   ): Promise<{ items: Building[]; total: number }> {
-    if (!can(user, 'buildings.read')) throwForbidden('Không có quyền xem danh sách tòa nhà')
+    requireCapability(user, 'buildings.read', 'Không có quyền xem danh sách tòa nhà')
     const buildingIds = await getAssignedBuildingIds(event, user)
     return BuildingRepository.findAll(event, { ...opts, buildingIds })
   },
 
   async get(event: H3Event, user: AuthUser, id: string): Promise<Building> {
-    if (!can(user, 'buildings.read')) throwForbidden('Không có quyền xem tòa nhà')
+    requireCapability(user, 'buildings.read', 'Không có quyền xem tòa nhà')
     const building = await BuildingRepository.findByIdentifier(event, id)
     if (!building) throwNotFound('Không tìm thấy tòa nhà')
     await assertBuildingScope(event, user, building.id, 'read')
@@ -53,7 +53,7 @@ export const BuildingService = {
     user: AuthUser,
     input: BuildingCreateInput,
   ): Promise<Building> {
-    if (!can(user, 'buildings.create')) throwForbidden('Không có quyền tạo tòa nhà')
+    requireCapability(user, 'buildings.create', 'Không có quyền tạo tòa nhà')
 
     const owner = isOwner(user)
     // Owner-created buildings record owner provenance; admin-created buildings
@@ -107,7 +107,7 @@ export const BuildingService = {
     id: string,
     input: BuildingUpdateInput,
   ): Promise<Building> {
-    if (!can(user, 'buildings.update')) throwForbidden('Không có quyền cập nhật tòa nhà')
+    requireCapability(user, 'buildings.update', 'Không có quyền cập nhật tòa nhà')
     const existing = await BuildingRepository.findByIdentifier(event, id)
     if (!existing) throwNotFound('Không tìm thấy tòa nhà')
     await assertBuildingScope(event, user, existing.id, 'write')
@@ -129,7 +129,7 @@ export const BuildingService = {
     id: string,
     opts: { force?: boolean; emitAudit?: boolean } = {},
   ): Promise<Building | undefined> {
-    if (!can(user, 'buildings.delete')) throwForbidden('Không có quyền xoá tòa nhà')
+    requireCapability(user, 'buildings.delete', 'Không có quyền xoá tòa nhà')
     const existing = await BuildingRepository.findByIdentifier(event, id)
     if (!existing) throwNotFound('Không tìm thấy tòa nhà')
     await assertBuildingScope(event, user, existing.id, 'write')
@@ -179,7 +179,7 @@ export const BuildingService = {
     user: AuthUser,
     input: BuildingBulkActionInput,
   ): Promise<BuildingBulkResult> {
-    if (!can(user, 'buildings.delete')) throwForbidden('Không có quyền thao tác hàng loạt')
+    requireCapability(user, 'buildings.delete', 'Không có quyền thao tác hàng loạt')
 
     const succeeded: string[] = []
     const failed: { id: string; reason: string }[] = []

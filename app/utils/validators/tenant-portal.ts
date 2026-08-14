@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { tenantIdImageSideSchema } from './tenants'
+import { passwordSchema } from './password'
 
 export const TENANT_DOCUMENT_MAX_BYTES = 5 * 1024 * 1024
 export const TENANT_DOCUMENT_MIME_TYPES = [
@@ -57,10 +58,7 @@ export const tenantProfileUpdateSchema = z.object({
   message: 'Cần ít nhất một trường hồ sơ hợp lệ',
 })
 
-const tenantPasswordSchema = z
-  .string()
-  .min(8, 'Mật khẩu phải có ít nhất 8 ký tự')
-  .max(72, 'Mật khẩu không được vượt quá 72 ký tự')
+const tenantPasswordSchema = passwordSchema
 
 export const tenantPasswordChangeSchema = z.object({
   current_password: tenantPasswordSchema,

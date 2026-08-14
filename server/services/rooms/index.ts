@@ -24,7 +24,7 @@ export const RoomService = {
     user: AuthUser,
     filters: RoomFilters,
   ): Promise<{ items: Room[]; total: number }> {
-    if (!can(user, 'rooms.read')) throwForbidden('Không có quyền xem danh sách phòng')
+    requireCapability(user, 'rooms.read', 'Không có quyền xem danh sách phòng')
     let buildingId = filters.buildingId
     const buildingIds = await getAssignedBuildingIds(event, user)
     if (buildingId) {
@@ -39,7 +39,7 @@ export const RoomService = {
   },
 
   async get(event: H3Event, user: AuthUser, id: string): Promise<Room> {
-    if (!can(user, 'rooms.read')) throwForbidden('Không có quyền xem phòng')
+    requireCapability(user, 'rooms.read', 'Không có quyền xem phòng')
     const room = await RoomRepository.findByIdentifier(event, id)
     if (!room) throwNotFound('Không tìm thấy phòng')
     await assertBuildingScope(event, user, room.buildingId, 'read')
@@ -52,7 +52,7 @@ export const RoomService = {
     buildingIdentifier: string,
     roomSlug: string,
   ): Promise<Room> {
-    if (!can(user, 'rooms.read')) throwForbidden('Không có quyền xem phòng')
+    requireCapability(user, 'rooms.read', 'Không có quyền xem phòng')
     const building = await BuildingRepository.findByIdentifier(event, buildingIdentifier)
     if (!building) throwNotFound('Không tìm thấy tòa nhà')
     await assertBuildingScope(event, user, building.id, 'read')
@@ -62,7 +62,7 @@ export const RoomService = {
   },
 
   async create(event: H3Event, user: AuthUser, input: RoomCreateInput): Promise<Room> {
-    if (!can(user, 'rooms.create')) throwForbidden('Không có quyền tạo phòng')
+    requireCapability(user, 'rooms.create', 'Không có quyền tạo phòng')
     await assertBuildingScope(event, user, input.building_id, 'write')
     const result = await RoomRepository.insert(event, input)
     await AuditService.append(event, user, {
@@ -76,7 +76,7 @@ export const RoomService = {
   },
 
   async update(event: H3Event, user: AuthUser, id: string, input: RoomUpdateInput): Promise<Room> {
-    if (!can(user, 'rooms.update')) throwForbidden('Không có quyền cập nhật phòng')
+    requireCapability(user, 'rooms.update', 'Không có quyền cập nhật phòng')
     const existing = await RoomRepository.findByIdentifier(event, id)
     if (!existing) throwNotFound('Không tìm thấy phòng')
     await assertBuildingScope(event, user, existing.buildingId, 'write')
@@ -154,7 +154,7 @@ export const RoomService = {
     user: AuthUser,
     input: RoomBulkActionInput,
   ): Promise<RoomBulkResult> {
-    if (!can(user, 'rooms.update')) throwForbidden('Không có quyền thao tác hàng loạt')
+    requireCapability(user, 'rooms.update', 'Không có quyền thao tác hàng loạt')
 
     const succeeded: string[] = []
     const failed: { id: string; reason: string }[] = []

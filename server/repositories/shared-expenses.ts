@@ -65,7 +65,7 @@ export const SharedExpenseRepository = {
       p_actor_id: actorId,
     })
     if (error) {
-      if (error.code === '23505') throwConflict('Kỳ này đã được phân bổ')
+      throwIfUniqueViolation(error, 'Kỳ này đã được phân bổ')
       if (error.code === 'P0001') throwConflict('Không thể phân bổ vào kỳ đã chốt')
       throwDbError(error, 'sharedExpenses.allocate')
     }

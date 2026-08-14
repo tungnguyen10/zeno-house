@@ -1,3 +1,5 @@
+import { formatVndSuffix } from '~/utils/format/currency'
+
 function asRecord(value: unknown): Record<string, unknown> {
   if (value && typeof value === 'object' && !Array.isArray(value)) {
     return value as Record<string, unknown>
@@ -37,7 +39,7 @@ function formatDate(value: unknown): string | null {
 function formatCurrency(value: unknown): string | null {
   const amount = numberValue(value)
   if (amount === null) return null
-  return `${Math.trunc(amount).toLocaleString('vi-VN')}đ`
+  return formatVndSuffix(amount)
 }
 
 export function formatAuditSummary(

@@ -1,33 +1,18 @@
 import { z } from 'zod'
+import { limitSchema, orderSchema, pageSchema, searchQuerySchema, toArray, trimmedOptionalString } from './_shared'
+import { VALIDATION_MESSAGES } from './messages'
 
 export const contractStatusSchema = z.enum(['active', 'expired', 'terminated', 'renewed'])
 export const contractSortFieldSchema = z.enum(['start_date', 'end_date', 'created_at', 'monthly_rent'])
-export const contractSortOrderSchema = z.enum(['asc', 'desc'])
-
-const toArray = <T>(value: T | T[] | undefined): T[] | undefined => {
-  if (value === undefined) return undefined
-  return Array.isArray(value) ? value : [value]
-}
+export const contractSortOrderSchema = orderSchema
 
 export const contractListQuerySchema = z.object({
-  page: z.coerce.number().int().min(1).optional().default(1),
-  limit: z.coerce.number().int().min(1).max(200).optional().default(20),
-  q: z.preprocess(
-    v => (typeof v === 'string' && v.trim() === '' ? undefined : v),
-    z.string().trim().min(1).max(100).optional(),
-  ),
-  building_id: z.preprocess(
-    v => (typeof v === 'string' && v.trim() === '' ? undefined : v),
-    z.string().trim().min(1).optional(),
-  ),
-  room_id: z.preprocess(
-    v => (typeof v === 'string' && v.trim() === '' ? undefined : v),
-    z.string().trim().min(1).optional(),
-  ),
-  tenant_id: z.preprocess(
-    v => (typeof v === 'string' && v.trim() === '' ? undefined : v),
-    z.string().trim().min(1).optional(),
-  ),
+  page: pageSchema,
+  limit: limitSchema(200),
+  q: searchQuerySchema,
+  building_id: trimmedOptionalString,
+  room_id: trimmedOptionalString,
+  tenant_id: trimmedOptionalString,
   status: z.preprocess(toArray, z.array(contractStatusSchema).min(1).optional()),
   sort: contractSortFieldSchema.optional().default('created_at'),
   order: contractSortOrderSchema.optional().default('desc'),
@@ -41,13 +26,13 @@ export const contractBulkActionSchema = z.object({
   reason: z.string().trim().max(500, 'Lý do quá dài').optional(),
 }).refine(
   data => data.action !== 'delete' || Boolean(data.reason?.trim()),
-  { message: 'Lý do xoá là bắt buộc', path: ['reason'] },
+  { message: VALIDATION_MESSAGES.deleteReasonRequired, path: ['reason'] },
 )
 
 export type ContractBulkActionInput = z.infer<typeof contractBulkActionSchema>
 
 export const contractDeleteSchema = z.object({
-  reason: z.string().trim().min(1, 'Lý do xoá là bắt buộc').max(500, 'Lý do quá dài'),
+  reason: z.string().trim().min(1, VALIDATION_MESSAGES.deleteReasonRequired).max(500, 'Lý do quá dài'),
 })
 
 export type ContractDeleteInput = z.infer<typeof contractDeleteSchema>

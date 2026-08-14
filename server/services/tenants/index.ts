@@ -105,7 +105,7 @@ export const TenantService = {
     user: AuthUser,
     filters: TenantFilters,
   ): Promise<{ items: Tenant[]; total: number }> {
-    if (!can(user, 'tenants.read')) throwForbidden('Không có quyền xem danh sách khách thuê')
+    requireCapability(user, 'tenants.read', 'Không có quyền xem danh sách khách thuê')
     let buildingId = filters.building_id
     const buildingIds = await getAssignedBuildingIds(event, user)
     if (buildingId) {
@@ -131,7 +131,7 @@ export const TenantService = {
   },
 
   async get(event: H3Event, user: AuthUser, id: string): Promise<Tenant> {
-    if (!can(user, 'tenants.read')) throwForbidden('Không có quyền xem khách thuê')
+    requireCapability(user, 'tenants.read', 'Không có quyền xem khách thuê')
     const tenant = await TenantRepository.findByIdentifier(event, id)
     if (!tenant) throwNotFound('Không tìm thấy khách thuê')
     const buildingIds = await getAssignedBuildingIds(event, user)
@@ -155,7 +155,7 @@ export const TenantService = {
   },
 
   async create(event: H3Event, user: AuthUser, input: TenantCreateInput): Promise<Tenant> {
-    if (!can(user, 'tenants.create')) throwForbidden('Không có quyền tạo khách thuê')
+    requireCapability(user, 'tenants.create', 'Không có quyền tạo khách thuê')
     const duplicatePhone = await TenantRepository.findByPhone(event, input.phone)
     if (duplicatePhone) throwConflict('Số điện thoại đã tồn tại')
     if (input.id_number) {
@@ -178,7 +178,7 @@ export const TenantService = {
     user: AuthUser,
     input: TenantBulkCreateInput,
   ): Promise<TenantBulkCreateResult> {
-    if (!can(user, 'tenants.create')) throwForbidden('Không có quyền tạo khách thuê')
+    requireCapability(user, 'tenants.create', 'Không có quyền tạo khách thuê')
 
     const created: Tenant[] = []
     const failed: TenantBulkCreateFailure[] = []
@@ -274,7 +274,7 @@ export const TenantService = {
   },
 
   async update(event: H3Event, user: AuthUser, id: string, input: TenantUpdateInput): Promise<Tenant> {
-    if (!can(user, 'tenants.update')) throwForbidden('Không có quyền cập nhật khách thuê')
+    requireCapability(user, 'tenants.update', 'Không có quyền cập nhật khách thuê')
     const existing = await TenantRepository.findByIdentifier(event, id)
     if (!existing) throwNotFound('Không tìm thấy khách thuê')
     if (input.phone !== undefined) {
@@ -304,7 +304,7 @@ export const TenantService = {
     side: TenantIdImageSideInput,
     file: { filename?: string, type?: string, data: Buffer },
   ): Promise<Tenant> {
-    if (!can(user, 'tenants.update')) throwForbidden('Không có quyền cập nhật khách thuê')
+    requireCapability(user, 'tenants.update', 'Không có quyền cập nhật khách thuê')
 
     const existing = await TenantRepository.findByIdentifier(event, id)
     if (!existing) throwNotFound('Không tìm thấy khách thuê')
@@ -353,7 +353,7 @@ export const TenantService = {
     id: string,
     side: TenantIdImageSideInput,
   ): Promise<Tenant> {
-    if (!can(user, 'tenants.update')) throwForbidden('Không có quyền cập nhật khách thuê')
+    requireCapability(user, 'tenants.update', 'Không có quyền cập nhật khách thuê')
 
     const existing = await TenantRepository.findByIdentifier(event, id)
     if (!existing) throwNotFound('Không tìm thấy khách thuê')
@@ -458,7 +458,7 @@ export const TenantService = {
     user: AuthUser,
     input: TenantBulkActionInput,
   ): Promise<TenantBulkResult> {
-    if (!can(user, 'tenants.update')) throwForbidden('Không có quyền thao tác hàng loạt')
+    requireCapability(user, 'tenants.update', 'Không có quyền thao tác hàng loạt')
 
     const succeeded: string[] = []
     const failed: { id: string; reason: string }[] = []

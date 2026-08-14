@@ -191,7 +191,7 @@ export const AssignmentRepository = {
       .single()
 
     if (error) {
-      if (error.code === '23505') throwConflict('Manager đã được gán vào tòa nhà này')
+      throwIfUniqueViolation(error, 'Manager đã được gán vào tòa nhà này')
       throwDbError(error, 'assignments.insert')
     }
     return mapAssignment(data)

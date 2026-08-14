@@ -1,14 +1,10 @@
 import type { Room } from '~/types/rooms'
-import type { ApiSuccess } from '~/types/api'
+import { useResourceDetail } from '~/composables/useResourceDetail'
 
-export function useRoomDetail(id: string) {
-  const { data, status, error, refresh } = useFetch<ApiSuccess<Room>>(
-    `/api/rooms/${id}`,
-    { getCachedData: (_key, nuxtApp) => nuxtApp.isHydrating ? nuxtApp.payload.data[_key] : undefined },
+export function useRoomDetail(id: MaybeRef<string>) {
+  const { entity, isLoading, error, refresh } = useResourceDetail<Room>(
+    () => `/api/rooms/${toValue(id)}`,
   )
 
-  const room = computed(() => data.value?.data ?? null)
-  const isLoading = computed(() => status.value === 'pending')
-
-  return { room, isLoading, error, refresh }
+  return { room: entity, isLoading, error, refresh }
 }

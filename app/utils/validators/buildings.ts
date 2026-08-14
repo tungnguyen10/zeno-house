@@ -1,4 +1,6 @@
 import { z } from 'zod'
+import { limitSchema, orderSchema, pageSchema, searchQuerySchema, toArray } from './_shared'
+import { selectAtLeastOne } from './messages'
 
 const daySchema = z.number().int().min(1).max(31)
 
@@ -70,20 +72,12 @@ export type BuildingUpdateInput = z.infer<typeof buildingUpdateSchema>
 
 export const buildingStatusSchema = z.enum(['active', 'inactive'])
 export const buildingSortFieldSchema = z.enum(['name', 'created_at', 'total_rooms'])
-export const buildingSortOrderSchema = z.enum(['asc', 'desc'])
-
-const toArray = <T>(value: T | T[] | undefined): T[] | undefined => {
-  if (value === undefined) return undefined
-  return Array.isArray(value) ? value : [value]
-}
+export const buildingSortOrderSchema = orderSchema
 
 export const buildingListQuerySchema = z.object({
-  page: z.coerce.number().int().min(1).optional().default(1),
-  limit: z.coerce.number().int().min(1).max(100).optional().default(20),
-  q: z.preprocess(
-    v => (typeof v === 'string' && v.trim() === '' ? undefined : v),
-    z.string().trim().min(1).max(100).optional(),
-  ),
+  page: pageSchema,
+  limit: limitSchema(100),
+  q: searchQuerySchema,
   status: z.preprocess(toArray, z.array(buildingStatusSchema).min(1).optional()),
   sort: buildingSortFieldSchema.optional().default('created_at'),
   order: buildingSortOrderSchema.optional().default('desc'),
@@ -93,7 +87,7 @@ export type BuildingListQuery = z.infer<typeof buildingListQuerySchema>
 
 export const buildingBulkActionSchema = z.object({
   action: z.enum(['archive', 'activate', 'delete']),
-  ids: z.array(z.string().min(1)).min(1, 'Cần chọn ít nhất một tòa nhà'),
+  ids: z.array(z.string().min(1)).min(1, selectAtLeastOne('tòa nhà')),
 })
 
 export type BuildingBulkActionInput = z.infer<typeof buildingBulkActionSchema>
