@@ -135,6 +135,16 @@ AI full-balance collection is committed by `record_ai_invoice_payments_with_audi
 
 `billing_incidental_charges` stores positive one-off charges for exactly one billing period, contract, and room. It has an idempotent `operation_id`, optimistic `updated_at`, service-role-only reads/RPC writes, and atomic create/update/delete audit functions. Deletes remain hidden soft tombstones so retrying the original operation cannot recreate a removed charge. Source rows are editable only while the period is not closed and the contract has no non-void invoice in that period; a void invoice permits correction before reissue. A deferred commit guard compares current active sources with persisted invoice lines, preventing a concurrent source change from issuing stale data. Issuance snapshots each row as `invoice_charges.charge_type = 'incidental'`, so later periods do not inherit it.
 
+`contract_amendments` is server-owned legal history with strict JSONB change validation, immutable
+publication snapshots, and at most one scheduled row per contract. Browser roles have no table or
+RPC grants. Security-invoker lifecycle functions lock the amendment and contract, update the
+current `contracts` snapshot, and append correlated amendment/contract audit rows atomically.
+Draft mutations use audited RPCs. A contract-table guard atomically cancels scheduled amendments
+on renewal/termination and audits/removes drafts during an allowed contract deletion. Apply-due
+isolates each row in a subtransaction so one invalid scheduled row cannot roll back the batch.
+Supabase Cron wakes the private Nitro apply-due endpoint every five minutes using a base URL and
+worker secret stored in Vault.
+
 `billing_audit_events` stores append-only operational audit events.
 
 Audit access is server-owned: `anon` and `authenticated` have no table privileges on

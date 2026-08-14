@@ -1,6 +1,7 @@
 import type { ContractStatus } from '~/types/contracts'
 import type { InvoiceProfileDisplay } from '~/types/building-invoice-profile'
 import type { InvoiceStatus } from '~/utils/constants/billing'
+import type { PaymentDueDaySource, TenantContractAmendmentSummary } from '~/types/contract-amendments'
 
 export type TenantGender = 'male' | 'female' | 'other'
 
@@ -62,10 +63,10 @@ export interface TenantContractSummary {
   monthlyRent: number
   deposit: number
   paymentDueDay: number | null
+  paymentDueDaySource: PaymentDueDaySource
   occupantCount: number
   discountAmount: number
   surchargeAmount: number
-  notes: string | null
   status: ContractStatus
   assignmentRole: 'primary' | 'roommate'
   primaryTenantName: string | null
@@ -100,6 +101,7 @@ export interface TenantInvoiceListItem {
 export interface TenantPortalBootstrap {
   profile: TenantProfile | null
   contract: TenantContractSummary | null
+  contractAmendments: TenantContractAmendmentSummary[]
   invoices: TenantInvoiceListItem[]
   invoiceMeta: {
     total: number

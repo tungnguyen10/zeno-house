@@ -20,15 +20,17 @@ export const TenantBootstrapService = {
     user: AuthUser,
     today = todayInHoChiMinh(),
   ): Promise<TenantPortalBootstrap> {
-    const [profile, contract, invoiceResult] = await Promise.all([
+    const [profile, contract, contractAmendments, invoiceResult] = await Promise.all([
       TenantProfileService.get(event, user),
       TenantContractService.get(event, user, today),
+      TenantContractService.listAmendments(event, user, today),
       TenantInvoiceService.list(event, user, { page: 1, page_size: 20 }, today),
     ])
 
     return {
       profile,
       contract,
+      contractAmendments,
       invoices: invoiceResult.data,
       invoiceMeta: invoiceResult.meta,
     }

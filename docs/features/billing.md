@@ -59,6 +59,10 @@ After a period is open, the assistant can preview deterministic meter paste, pla
 ## Draft Calculation
 
 Draft calculation lives in `server/services/billing/drafts.ts`.
+Before loading the billing input snapshot, draft and grid calculation call the same idempotent
+`apply_due_contract_amendments` RPC used by the scheduler. This is a safety check for delayed cron
+wake-ups: due terms reach `contracts` before draft lines are built, while already issued invoices
+retain their original charge and due-date snapshots.
 
 It computes per active contract:
 

@@ -13,12 +13,15 @@ import { TenantRepository } from '../../repositories/tenants'
 import { assertBuildingScope, canDeleteMasterData, getAssignedBuildingIds } from '../../utils/scope'
 import { AuditService } from '../audit'
 import { AUDIT_ACTIONS } from '~/utils/constants/audit'
+import { ContractAmendmentRepository } from '../../repositories/contract-amendments'
+import { ContractAmendmentService } from '../contract-amendments'
 
 interface ContractDeleteConflictDetails {
   reason?: 'ACTIVE_CONTRACT'
   issuedBillingPeriods?: number
   paidPayments?: number
   nonHandoverMeterReadings?: number
+  publishedAmendments?: number
 }
 
 export interface ContractBulkActionResult {
@@ -31,7 +34,8 @@ function hasDeleteConflicts(details: ContractDeleteConflictDetails): boolean {
     details.reason
     || (details.issuedBillingPeriods && details.issuedBillingPeriods > 0)
     || (details.paidPayments && details.paidPayments > 0)
-    || (details.nonHandoverMeterReadings && details.nonHandoverMeterReadings > 0),
+    || (details.nonHandoverMeterReadings && details.nonHandoverMeterReadings > 0)
+    || (details.publishedAmendments && details.publishedAmendments > 0)
   )
 }
 
@@ -269,6 +273,15 @@ export const ContractService = {
       after_data: updated,
     })
 
+    if (existing.status === 'active' && updated.status === 'terminated') {
+      await ContractAmendmentService.cancelScheduledForContract(
+        event,
+        user,
+        updated.id,
+        'Hợp đồng đã chấm dứt',
+      )
+    }
+
     return updated
   },
 
@@ -289,10 +302,11 @@ export const ContractService = {
       existing = await this.update(event, user, existing.id, { status: 'terminated' })
     }
 
-    const [issuedBillingPeriods, paidPayments, nonHandoverMeterReadings] = await Promise.all([
+    const [issuedBillingPeriods, paidPayments, nonHandoverMeterReadings, publishedAmendments] = await Promise.all([
       ContractRepository.countBillingPeriodsForContract(event, existing.id),
       ContractRepository.countPaidInvoicesForContract(event, existing.id),
       ContractRepository.countNonHandoverMeterReadingsForContract(event, existing.id),
+      ContractAmendmentRepository.listPublishedByContract(event, existing.id),
     ])
 
     const details: ContractDeleteConflictDetails = {
@@ -300,6 +314,7 @@ export const ContractService = {
       ...(issuedBillingPeriods > 0 ? { issuedBillingPeriods } : {}),
       ...(paidPayments > 0 ? { paidPayments } : {}),
       ...(nonHandoverMeterReadings > 0 ? { nonHandoverMeterReadings } : {}),
+      ...(publishedAmendments.length > 0 ? { publishedAmendments: publishedAmendments.length } : {}),
     }
 
     if (hasDeleteConflicts(details)) throwDeleteConflict(details)
@@ -353,7 +368,15 @@ export const ContractService = {
       }
       const rows = await BulkActionRepository.execute(event, 'contract', 'terminate', allowed)
       for (const row of rows) {
-        if (row.succeeded) succeeded.push(row.id)
+        if (row.succeeded) {
+          succeeded.push(row.id)
+          await ContractAmendmentService.cancelScheduledForContract(
+            event,
+            user,
+            row.id,
+            'Hợp đồng đã chấm dứt qua thao tác hàng loạt',
+          )
+        }
         else failed.push({ id: row.id, reason: row.reason ?? 'error' })
       }
       const afterSnapshots = await BulkActionRepository.resolveSnapshots(event, 'contract', succeeded)

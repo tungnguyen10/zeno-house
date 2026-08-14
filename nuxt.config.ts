@@ -37,6 +37,7 @@ export default defineNuxtConfig({
     resendReplyTo: process.env.NUXT_RESEND_REPLY_TO || "", // NUXT_RESEND_REPLY_TO
     resendWebhookSecret: process.env.NUXT_RESEND_WEBHOOK_SECRET || "", // NUXT_RESEND_WEBHOOK_SECRET
     invoiceEmailDispatchSecret: process.env.NUXT_INVOICE_EMAIL_DISPATCH_SECRET || "", // NUXT_INVOICE_EMAIL_DISPATCH_SECRET
+    contractAmendmentsApplySecret: process.env.NUXT_CONTRACT_AMENDMENTS_APPLY_SECRET || "", // NUXT_CONTRACT_AMENDMENTS_APPLY_SECRET
     aiProvider: process.env.NUXT_AI_PROVIDER || "openrouter", // NUXT_AI_PROVIDER (openrouter | google)
     aiOpenrouterApiKey: process.env.NUXT_AI_OPENROUTER_API_KEY || "", // NUXT_AI_OPENROUTER_API_KEY
     aiGoogleApiKey: process.env.NUXT_AI_GOOGLE_API_KEY || "", // NUXT_AI_GOOGLE_API_KEY

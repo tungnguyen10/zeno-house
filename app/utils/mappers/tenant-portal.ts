@@ -41,11 +41,10 @@ interface TenantContractSummaryRow {
   occupant_count: number
   discount_amount: number
   surcharge_amount: number
-  notes: string | null
   status: string
   rooms: {
     room_number: string | null
-    buildings: { name: string | null } | null
+    buildings: { name: string | null; payment_due_day: number | null } | null
   } | null
 }
 
@@ -88,6 +87,8 @@ export function mapTenantContractSummary(
   assignmentRole: TenantContractSummary['assignmentRole'] = 'primary',
   primaryTenantName: string | null = null,
 ): TenantContractSummary {
+  const buildingDueDay = row.rooms?.buildings?.payment_due_day ?? null
+  const paymentDueDay = row.payment_due_day ?? buildingDueDay
   return {
     id: row.id,
     contractCode: row.contract_code,
@@ -97,11 +98,13 @@ export function mapTenantContractSummary(
     endDate: row.end_date,
     monthlyRent: row.monthly_rent,
     deposit: row.deposit,
-    paymentDueDay: row.payment_due_day,
+    paymentDueDay,
+    paymentDueDaySource: row.payment_due_day !== null
+      ? 'contract'
+      : buildingDueDay !== null ? 'building' : 'unset',
     occupantCount: row.occupant_count,
     discountAmount: row.discount_amount,
     surchargeAmount: row.surcharge_amount,
-    notes: row.notes,
     status: row.status as ContractStatus,
     assignmentRole,
     primaryTenantName,

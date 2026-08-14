@@ -148,6 +148,19 @@ but the Auth row was retained by irreversible soft deletion for historical refer
 | POST | `/api/contracts/[id]/payments` |
 | GET | `/api/contracts/[id]/renewals` |
 | POST | `/api/contracts/[id]/renew` |
+| GET | `/api/contracts/[id]/amendments` |
+| POST | `/api/contracts/[id]/amendments` |
+| PATCH | `/api/contracts/[id]/amendments/[amendmentId]` |
+| DELETE | `/api/contracts/[id]/amendments/[amendmentId]` |
+| POST | `/api/contracts/[id]/amendments/[amendmentId]/publish` |
+| POST | `/api/contracts/[id]/amendments/[amendmentId]/cancel` |
+| POST | `/api/internal/contracts/amendments/apply-due` |
+
+Amendment draft update/delete, publish, and cancel use `expected_updated_at`. Publish and cancel are
+atomic database lifecycle operations. The apply-due endpoint is private, requires
+`x-contract-amendments-secret`, and reads `NUXT_CONTRACT_AMENDMENTS_APPLY_SECRET`; it is not a
+browser API. Portal bootstrap returns `contractAmendments` from server-derived housing role and
+never accepts a tenant identifier.
 
 ## Service Catalog And Services
 

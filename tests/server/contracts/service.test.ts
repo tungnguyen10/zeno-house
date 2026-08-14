@@ -15,6 +15,7 @@ const mocks = vi.hoisted(() => ({
   updateRoom: vi.fn(),
   findActiveOccupancyByTenant: vi.fn(),
   cloneFromBuilding: vi.fn(),
+  cancelScheduledForContract: vi.fn(),
 }))
 
 vi.mock('../../../server/repositories/contracts', () => ({
@@ -51,6 +52,19 @@ vi.mock('../../../server/repositories/contract-occupants', () => ({
 vi.mock('../../../server/services/contract-services', () => ({
   ContractServiceService: {
     cloneFromBuilding: mocks.cloneFromBuilding,
+  },
+}))
+
+vi.mock('../../../server/services/contract-amendments', () => ({
+  ContractAmendmentService: {
+    cancelScheduledForContract: mocks.cancelScheduledForContract,
+  },
+}))
+
+vi.mock('../../../server/repositories/contract-amendments', () => ({
+  ContractAmendmentRepository: {
+    listPublishedByContract: vi.fn().mockResolvedValue([]),
+    deleteDraftsByContract: vi.fn().mockResolvedValue([]),
   },
 }))
 

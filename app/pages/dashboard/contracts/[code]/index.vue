@@ -27,6 +27,23 @@ const { payments, isLoading: paymentsLoading, addPayment, updatePayment, removeP
 const { renewals, isLoading: renewalsLoading, renew } = useContractRenewals(id)
 const { occupants, isLoading: occupantsLoading, addOccupant, moveOut, removeOccupant } = useContractOccupants(id)
 const { services: contractServices, isLoading: servicesLoading, updateService: updateContractService, removeService: removeContractService } = useContractServices(id)
+const {
+  amendments,
+  isLoading: amendmentsLoading,
+  error: amendmentsError,
+  refresh: refreshAmendments,
+  create: createAmendment,
+  update: updateAmendment,
+  remove: removeAmendment,
+  publish: publishAmendmentRequest,
+  cancel: cancelAmendment,
+} = useContractAmendments(id)
+
+async function publishAmendment(amendmentId: string, expectedUpdatedAt: string) {
+  const amendment = await publishAmendmentRequest(amendmentId, { expected_updated_at: expectedUpdatedAt })
+  await refreshContract()
+  return amendment
+}
 
 const activeOccupantCount = computed(
   () => occupants.value.filter(o => !o.moveOutDate && o.role === 'roommate').length + 1,
@@ -74,6 +91,7 @@ const conflictItems = computed(() => {
   if (Number(details.issuedBillingPeriods ?? 0) > 0) items.push(`${details.issuedBillingPeriods} kỳ hoá đơn đã phát hành`)
   if (Number(details.paidPayments ?? 0) > 0) items.push(`${details.paidPayments} khoản thanh toán đã thu`)
   if (Number(details.nonHandoverMeterReadings ?? 0) > 0) items.push(`${details.nonHandoverMeterReadings} chỉ số ngoài bàn giao`)
+  if (Number(details.publishedAmendments ?? 0) > 0) items.push(`${details.publishedAmendments} phụ lục đã ban hành`)
   return items
 })
 
@@ -81,7 +99,8 @@ const onlyActiveConflict = computed(() =>
   deleteConflict.value?.reason === 'ACTIVE_CONTRACT'
   && !deleteConflict.value?.issuedBillingPeriods
   && !deleteConflict.value?.paidPayments
-  && !deleteConflict.value?.nonHandoverMeterReadings,
+  && !deleteConflict.value?.nonHandoverMeterReadings
+  && !deleteConflict.value?.publishedAmendments,
 )
 
 async function confirmDelete(force = false) {
@@ -208,6 +227,7 @@ watchEffect(() => {
       <nav class="sticky top-0 z-20 mt-4 overflow-x-auto border-y border-ui-border bg-ui-deep/95 py-2 backdrop-blur">
         <div class="flex min-w-max gap-2 text-sm">
           <a href="#overview" class="rounded-md px-3 py-1.5 text-ui-muted hover:bg-ui-hover hover:text-ui-primary">Tổng quan</a>
+          <a href="#amendments" class="rounded-md px-3 py-1.5 text-ui-muted hover:bg-ui-hover hover:text-ui-primary">Phụ lục</a>
           <a href="#occupants" class="rounded-md px-3 py-1.5 text-ui-muted hover:bg-ui-hover hover:text-ui-primary">Người ở</a>
           <a href="#payments" class="rounded-md px-3 py-1.5 text-ui-muted hover:bg-ui-hover hover:text-ui-primary">Thanh toán</a>
           <a href="#services" class="rounded-md px-3 py-1.5 text-ui-muted hover:bg-ui-hover hover:text-ui-primary">Dịch vụ</a>
@@ -219,6 +239,20 @@ watchEffect(() => {
       <ContractOverviewPanel
         :contract="contract"
         :active-occupant-count="activeOccupantCount"
+      />
+
+      <ContractAmendmentsSection
+        :contract="contract"
+        :amendments="amendments"
+        :is-loading="amendmentsLoading"
+        :error="amendmentsError"
+        :can-manage="authStore.can('contracts.update')"
+        :create-amendment="createAmendment"
+        :update-amendment="updateAmendment"
+        :remove-amendment="removeAmendment"
+        :publish-amendment="publishAmendment"
+        :cancel-amendment="cancelAmendment"
+        @retry="refreshAmendments"
       />
 
       <ContractOccupantsSection

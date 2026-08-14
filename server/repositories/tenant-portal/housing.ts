@@ -25,15 +25,14 @@ interface ContractRow {
   occupant_count: number
   discount_amount: number
   surcharge_amount: number
-  notes: string | null
   status: string
   tenants: { full_name: string | null } | Array<{ full_name: string | null }> | null
   rooms: {
     room_number: string | null
-    buildings: { name: string | null } | Array<{ name: string | null }> | null
+    buildings: { name: string | null; payment_due_day: number | null } | Array<{ name: string | null; payment_due_day: number | null }> | null
   } | Array<{
     room_number: string | null
-    buildings: { name: string | null } | Array<{ name: string | null }> | null
+    buildings: { name: string | null; payment_due_day: number | null } | Array<{ name: string | null; payment_due_day: number | null }> | null
   }> | null
 }
 
@@ -54,10 +53,9 @@ const CONTRACT_SELECT = `
   occupant_count,
   discount_amount,
   surcharge_amount,
-  notes,
   status,
   tenants(full_name),
-  rooms!inner(room_number, buildings!inner(name))
+  rooms!inner(room_number, buildings!inner(name, payment_due_day))
 `
 
 function one<T>(value: T | T[] | null): T | null {

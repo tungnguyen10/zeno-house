@@ -9,6 +9,7 @@ const listInvoicesByPeriods = vi.fn()
 const listUtilityUsagesByPeriod = vi.fn()
 const listUtilityUsagesByPeriods = vi.fn()
 const loadSnapshot = vi.fn()
+const applyDueAmendments = vi.fn()
 
 vi.mock('../../../server/repositories/billing/periods', () => ({
   BillingPeriodRepository: {
@@ -32,6 +33,9 @@ vi.mock('../../../server/repositories/billing/utility-usages', () => ({
 }))
 vi.mock('../../../server/repositories/billing/snapshot', () => ({
   BillingSnapshotRepository: { load: loadSnapshot },
+}))
+vi.mock('../../../server/services/contract-amendments', () => ({
+  ContractAmendmentService: { applyDue: applyDueAmendments },
 }))
 
 vi.mock('../../../server/repositories/buildings', () => ({
@@ -175,6 +179,7 @@ describe('billing API consistency regression', () => {
       rooms: resolveTable('rooms', { eq: {} }),
       tenants: resolveTable('tenants', { eq: {} }),
     })
+    applyDueAmendments.mockResolvedValue([])
   })
 
   it('keeps period list, overview, drafts, and draft grid aligned for one fixture', async () => {

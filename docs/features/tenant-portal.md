@@ -28,6 +28,14 @@ The server resolves housing context for every shared read:
 
 The contract DTO includes `assignmentRole` (`primary` or `roommate`) and `primaryTenantName`.
 Overview and room pages display this role so a roommate is not presented as the contract holder.
+The contract summary never exposes internal `contracts.notes`. It resolves the payment due day from
+the contract override first and then the building default, and returns `paymentDueDaySource` as
+`contract`, `building`, or `unset` so the portal can explain inherited values.
+
+The bootstrap payload also includes `contractAmendments`. A primary tenant receives only
+`scheduled` and `applied` amendments with their public content and immutable term diff. A roommate
+always receives an empty amendment list and sees only the current terms already applied to the
+shared contract.
 
 ## Data boundaries
 

@@ -89,6 +89,14 @@ The detail page includes:
 - readable contract term diffs such as monthly rent, dates, deposit, payment day, status, and notes; raw audit snapshots are admin-only
 - admin-only danger zone for edit, renew, terminate, and delete
 
+### Contract amendments
+
+The detail page owns a separate **Phụ lục hợp đồng** timeline. Authorized users can create and edit drafts with optimistic concurrency, publish a draft, delete only a draft, or cancel only a scheduled amendment with a reason. Publishing freezes full before/after term snapshots. An amendment effective today is applied immediately; a future amendment becomes `scheduled` and the private worker applies it when due.
+
+Supported structured changes are monthly rent, deposit, payment due day, occupant count, discount, and surcharge. Missing JSON keys mean unchanged; a null payment due day clears the contract override and restores building inheritance. Recurring billing fields require the first day of a month, while a deposit-only change can use another date. Publication is rejected when the effective month already has a non-void invoice.
+
+`contracts` remains the current-term snapshot used by billing and existing consumers. Applied amendments and published history are immutable; corrections require a new amendment. Renewal and termination cancel any scheduled amendment with a system reason in the same database transaction as the contract lifecycle change. Published, applied, or previously scheduled/cancelled amendments block hard deletion of the contract; draft amendments and their audit records are handled atomically with the allowed contract deletion.
+
 Delete conflicts are displayed as a checklist of blockers. If the only blocker is `ACTIVE_CONTRACT`, admins can use "Kết thúc rồi xoá", which calls `DELETE ?force=true`. Billing, paid payment, and non-handover meter-reading history still block deletion.
 
 ## Form Drafts And Dirty Guards
@@ -110,6 +118,7 @@ Default `DELETE /api/contracts/[id]` is a hard delete only when the contract has
 - `issuedBillingPeriods`
 - `paidPayments`
 - `nonHandoverMeterReadings`
+- `publishedAmendments`
 
 `DELETE /api/contracts/[id]?force=true` may terminate an active contract first, then delete only if billing, paid payment, and non-handover meter-reading counts are still zero. Force never destroys billing or meter-reading history.
 
@@ -190,5 +199,7 @@ Monthly billing can use handover-in as a fallback previous reading when prior mo
 - Handover readings: `app/components/contracts/ContractHandoverReadings.vue`
 - Contract service: `server/services/contracts/index.ts`
 - Contract repository: `server/repositories/contracts/index.ts`
+- Contract amendment service/repository: `server/services/contract-amendments.ts`, `server/repositories/contract-amendments/index.ts`
+- Contract amendment UI: `app/components/contracts/ContractAmendmentsSection.vue`
 - Validators: `app/utils/validators/contracts.ts`
 - Mappers: `app/utils/mappers/contracts.ts`
