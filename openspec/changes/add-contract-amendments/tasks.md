@@ -2,7 +2,7 @@
 
 - [x] 1.1 Add amendment DTOs, strict validators, mapper, status/diff constants, and validator/mapper tests.
 - [x] 1.2 Add the contract-amendment table, constraints, RLS/privilege hardening, audit entity/actions, atomic lifecycle/application RPCs, scheduler migration, and SQL contract tests.
-- [ ] 1.3 Regenerate Supabase database types after cloud migration application; keep local type adapters isolated until generation is available.
+- [x] 1.3 Regenerate Supabase database types after cloud migration application; keep local type adapters isolated until generation is available.
 
 ## 2. Server Lifecycle And APIs
 

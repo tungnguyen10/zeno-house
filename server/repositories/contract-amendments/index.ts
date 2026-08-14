@@ -1,46 +1,21 @@
 import type { H3Event } from 'h3'
-import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database, Json } from '~/types/database.types'
 import type { ContractAmendment, TenantContractAmendmentSummary } from '~/types/contract-amendments'
 import type {
   ContractAmendmentCreateInput,
   ContractAmendmentUpdateInput,
 } from '~/utils/validators/contract-amendments'
-import {
-  mapContractAmendment,
-  mapTenantContractAmendment,
-  type ContractAmendmentRow,
-} from '~/utils/mappers/contract-amendments'
+import { mapContractAmendment, mapTenantContractAmendment } from '~/utils/mappers/contract-amendments'
 import { db as serverSupabaseClient } from '../../utils/db'
 
-type AmendmentDatabase = Omit<Database, 'public'> & {
-  public: Omit<Database['public'], 'Tables'> & {
-    Tables: Database['public']['Tables'] & {
-      contract_amendments: {
-        Row: ContractAmendmentRow
-        Insert: {
-          contract_id: string
-          sequence_no: number
-          title: string
-          public_content: string
-          effective_date: string
-          changes: Json
-          created_by: string | null
-        }
-        Update: Partial<ContractAmendmentRow>
-        Relationships: []
-      }
-    }
-  }
-}
+type SingleAmendmentRpcName =
+  | 'create_contract_amendment_draft'
+  | 'update_contract_amendment_draft'
+  | 'publish_contract_amendment'
+  | 'cancel_contract_amendment'
 
-type AmendmentRpc = (
-  name: string,
-  args: Record<string, unknown>,
-) => PromiseLike<{ data: ContractAmendmentRow | ContractAmendmentRow[] | null; error: unknown }>
-
-function client(event: H3Event): SupabaseClient<AmendmentDatabase> {
-  return serverSupabaseClient(event) as unknown as SupabaseClient<AmendmentDatabase>
+function client(event: H3Event) {
+  return serverSupabaseClient(event)
 }
 
 function errorMessage(error: unknown): string {
@@ -83,12 +58,11 @@ export function throwContractAmendmentRpcError(error: unknown): never {
 }
 
 async function callSingleRpc(
+  name: SingleAmendmentRpcName,
   event: H3Event,
-  name: string,
-  args: Record<string, unknown>,
+  args: Database['public']['Functions'][SingleAmendmentRpcName]['Args'],
 ): Promise<ContractAmendment> {
-  const rpc = client(event).rpc as unknown as AmendmentRpc
-  const { data, error } = await rpc(name, args)
+  const { data, error } = await client(event).rpc(name, args)
   if (error) throwContractAmendmentRpcError(error)
   const row = Array.isArray(data) ? data[0] : data
   if (!row) throwInternal(new Error(`Empty ${name} result`), 'contractAmendments.rpc')
@@ -152,11 +126,11 @@ export const ContractAmendmentRepository = {
   async createDraft(
     event: H3Event,
     contractId: string,
-    actorId: string | null,
+    actorId: string,
     input: ContractAmendmentCreateInput,
     operationId: string,
   ): Promise<ContractAmendment> {
-    return callSingleRpc(event, 'create_contract_amendment_draft', {
+    return callSingleRpc('create_contract_amendment_draft', event, {
       p_contract_id: contractId,
       p_title: input.title,
       p_public_content: input.public_content,
@@ -174,7 +148,7 @@ export const ContractAmendmentRepository = {
     actorId: string,
     operationId: string,
   ): Promise<ContractAmendment> {
-    return callSingleRpc(event, 'update_contract_amendment_draft', {
+    return callSingleRpc('update_contract_amendment_draft', event, {
       p_amendment_id: amendmentId,
       p_title: input.title,
       p_public_content: input.public_content,
@@ -193,8 +167,7 @@ export const ContractAmendmentRepository = {
     actorId: string,
     operationId: string,
   ): Promise<void> {
-    const rpc = client(event).rpc as unknown as AmendmentRpc
-    const { error } = await rpc('delete_contract_amendment_draft', {
+    const { error } = await client(event).rpc('delete_contract_amendment_draft', {
       p_amendment_id: amendmentId,
       p_expected_updated_at: expectedUpdatedAt,
       p_actor_id: actorId,
@@ -211,7 +184,7 @@ export const ContractAmendmentRepository = {
     today: string,
     operationId: string,
   ): Promise<ContractAmendment> {
-    return callSingleRpc(event, 'publish_contract_amendment', {
+    return callSingleRpc('publish_contract_amendment', event, {
       p_amendment_id: amendmentId,
       p_expected_updated_at: expectedUpdatedAt,
       p_actor_id: actorId,
@@ -224,11 +197,11 @@ export const ContractAmendmentRepository = {
     event: H3Event,
     amendmentId: string,
     expectedUpdatedAt: string,
-    actorId: string | null,
+    actorId: string,
     reason: string,
     operationId: string,
   ): Promise<ContractAmendment> {
-    return callSingleRpc(event, 'cancel_contract_amendment', {
+    return callSingleRpc('cancel_contract_amendment', event, {
       p_amendment_id: amendmentId,
       p_expected_updated_at: expectedUpdatedAt,
       p_actor_id: actorId,
@@ -238,10 +211,9 @@ export const ContractAmendmentRepository = {
   },
 
   async applyDue(event: H3Event, asOf: string, buildingId?: string | null): Promise<ContractAmendment[]> {
-    const rpc = client(event).rpc as unknown as AmendmentRpc
-    const { data, error } = await rpc('apply_due_contract_amendments', {
+    const { data, error } = await client(event).rpc('apply_due_contract_amendments', {
       p_as_of: asOf,
-      p_building_id: buildingId ?? null,
+      ...(buildingId && { p_building_id: buildingId }),
     })
     if (error) throwContractAmendmentRpcError(error)
     const rows = Array.isArray(data) ? data : data ? [data] : []

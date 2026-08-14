@@ -146,7 +146,7 @@ export const ContractAmendmentService = {
 
   async cancelScheduledForContract(
     event: H3Event,
-    actor: AuthUser | null,
+    actor: AuthUser,
     contractId: string,
     reason: string,
   ): Promise<ContractAmendment[]> {
@@ -155,7 +155,7 @@ export const ContractAmendmentService = {
     const cancelled: ContractAmendment[] = []
     for (const amendment of scheduled) {
       cancelled.push(await ContractAmendmentRepository.cancel(
-        event, amendment.id, amendment.updatedAt, actor?.id ?? null, reason, randomUUID(),
+        event, amendment.id, amendment.updatedAt, actor.id, reason, randomUUID(),
       ))
     }
     return cancelled

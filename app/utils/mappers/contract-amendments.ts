@@ -5,30 +5,9 @@ import type {
   ContractTermSnapshot,
   TenantContractAmendmentSummary,
 } from '~/types/contract-amendments'
-import type { Json } from '~/types/database.types'
+import type { Json, Tables } from '~/types/database.types'
 
-export interface ContractAmendmentRow {
-  id: string
-  contract_id: string
-  sequence_no: number
-  title: string
-  public_content: string
-  effective_date: string
-  status: string
-  changes: Json
-  before_terms: Json | null
-  after_terms: Json | null
-  created_by: string | null
-  published_by: string | null
-  applied_by: string | null
-  cancelled_by: string | null
-  cancellation_reason: string | null
-  created_at: string
-  updated_at: string
-  published_at: string | null
-  applied_at: string | null
-  cancelled_at: string | null
-}
+export type ContractAmendmentRow = Tables<'contract_amendments'>
 
 type JsonRecord = Record<string, Json | undefined>
 
