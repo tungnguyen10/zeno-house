@@ -1,6 +1,8 @@
 import { mount } from '@vue/test-utils'
 import dayjs from 'dayjs'
 import { afterEach, describe, expect, it } from 'vitest'
+import { createSSRApp, h } from 'vue'
+import { renderToString } from 'vue/server-renderer'
 import UiDatePicker from '~/components/ui/UiDatePicker.vue'
 
 function mountDatePicker(props: Record<string, unknown> = {}, attrs: Record<string, unknown> = {}) {
@@ -37,6 +39,22 @@ afterEach(() => {
 })
 
 describe('UiDatePicker', () => {
+  it('does not render a body teleport before client hydration', async () => {
+    const app = createSSRApp({
+      render: () => h(UiDatePicker, {
+        id: 'period',
+        modelValue: '2026-08',
+        pickerMode: 'month',
+      }),
+    })
+    app.component('IconCalendar', { render: () => h('span') })
+    const context: { teleports?: Record<string, string> } = {}
+
+    await renderToString(app, context)
+
+    expect(context.teleports?.body).toBeUndefined()
+  })
+
   it('renders a formatted trigger and wires field state', () => {
     const wrapper = mountDatePicker(
       { error: 'Ngày không hợp lệ' },

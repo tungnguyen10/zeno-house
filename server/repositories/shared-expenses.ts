@@ -22,6 +22,27 @@ async function mapWithBuildings(event: H3Event, row: SharedExpenseRow): Promise<
 }
 
 export const SharedExpenseRepository = {
+  async allocatedSharedExpenseIdsForPeriod(
+    event: H3Event,
+    periodYear: number,
+    periodMonth: number,
+  ): Promise<Set<string>> {
+    const client = await serverSupabaseClient(event)
+    const period = `${periodYear}-${String(periodMonth).padStart(2, '0')}`
+    const { data, error } = await client
+      .from('building_expenses')
+      .select('note')
+      .ilike('note', `%[shared:%:${period}]%`)
+    if (error) throwDbError(error, 'sharedExpenses.allocatedSharedExpenseIdsForPeriod')
+
+    const marker = new RegExp(`\\[shared:([0-9a-f-]{36}):${period}\\]`, 'i')
+    return new Set(
+      (data ?? [])
+        .map(row => typeof row.note === 'string' ? row.note.match(marker)?.[1] : undefined)
+        .filter((id): id is string => !!id),
+    )
+  },
+
   async allocate(
     event: H3Event,
     sharedExpenseId: string,
@@ -161,20 +182,4 @@ export const SharedExpenseRepository = {
     if (inserted.error) throwDbError(inserted.error, 'sharedExpenses.replaceBuildings.insert')
   },
 
-  async hasAllocation(
-    event: H3Event,
-    sharedExpenseId: string,
-    periodYear: number,
-    periodMonth: number,
-  ): Promise<boolean> {
-    const client = await serverSupabaseClient(event)
-    const marker = `[shared:${sharedExpenseId}:${periodYear}-${String(periodMonth).padStart(2, '0')}]`
-    const { data, error } = await client
-      .from('building_expenses')
-      .select('id')
-      .ilike('note', `%${marker}%`)
-      .limit(1)
-    if (error) throwDbError(error, 'sharedExpenses.hasAllocation')
-    return (data ?? []).length > 0
-  },
 }

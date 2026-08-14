@@ -1,9 +1,16 @@
 import type { ApiSuccess } from '~/types/api'
-import type { SharedExpense, SharedExpenseAllocationResult } from '~/types/shared-expenses'
+import type { Ref } from 'vue'
+import type {
+  SharedExpense,
+  SharedExpenseAllocationResult,
+  SharedExpenseListItem,
+  SharedExpenseListMeta,
+} from '~/types/shared-expenses'
 
-export function useSharedExpenses() {
-  const { data, status, error, refresh } = useFetch<ApiSuccess<SharedExpense[]>>(
+export function useSharedExpenses(periodYear: Ref<number>, periodMonth: Ref<number>) {
+  const { data, status, error, refresh } = useFetch<ApiSuccess<SharedExpenseListItem[], SharedExpenseListMeta>>(
     '/api/shared-expenses',
+    { query: { period_year: periodYear, period_month: periodMonth } },
   )
 
   async function create(payload: Record<string, unknown>) {

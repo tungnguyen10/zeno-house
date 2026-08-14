@@ -150,7 +150,7 @@ All business routes require server-side authorization unless explicitly document
 | DELETE | `/api/shared-expenses/[id]` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | PATCH | `/api/shared-expenses/[id]` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | POST | `/api/shared-expenses/[id]/allocate` | n/a | invalidate affected domain | p95 ≤ 250ms |
-| GET | `/api/shared-expenses` | domain-bounded | request/DTO policy | p95 ≤ 400ms |
+| GET | `/api/shared-expenses?period_year={year}&period_month={month}` | domain-bounded | request/DTO policy; period status batch lookup | p95 ≤ 400ms |
 | POST | `/api/shared-expenses` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | GET | `/api/tenant-accounts` | domain-bounded | request/DTO policy | p95 ≤ 400ms |
 | DELETE | `/api/tenant-accounts/orphans/[id]` | n/a | invalidate affected domain | p95 ≤ 250ms |

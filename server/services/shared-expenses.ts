@@ -1,9 +1,14 @@
 import type { H3Event } from 'h3'
 import type { AuthUser } from '~/types/auth'
-import type { SharedExpense, SharedExpenseAllocationResult } from '~/types/shared-expenses'
+import type {
+  SharedExpense,
+  SharedExpenseAllocationResult,
+  SharedExpenseListItem,
+} from '~/types/shared-expenses'
 import type {
   SharedExpenseAllocateInput,
   SharedExpenseCreateInput,
+  SharedExpenseListQuery,
   SharedExpenseUpdateInput,
 } from '~/utils/validators/shared-expenses'
 import { SharedExpenseRepository } from '../repositories/shared-expenses'
@@ -33,11 +38,24 @@ async function assertEveryBuildingInScope(
 }
 
 export const SharedExpenseService = {
-  async list(event: H3Event, user: AuthUser): Promise<SharedExpense[]> {
+  async list(
+    event: H3Event,
+    user: AuthUser,
+    input: SharedExpenseListQuery,
+  ): Promise<SharedExpenseListItem[]> {
     if (!can(user, 'shared-expenses.read')) throwForbidden('Không có quyền xem chi phí dùng chung')
-    return isAdmin(user)
+    const items = await (isAdmin(user)
       ? SharedExpenseRepository.listAll(event)
-      : SharedExpenseRepository.listByOwner(event, ownerScopeId(user))
+      : SharedExpenseRepository.listByOwner(event, ownerScopeId(user)))
+    const allocatedIds = await SharedExpenseRepository.allocatedSharedExpenseIdsForPeriod(
+      event,
+      input.period_year,
+      input.period_month,
+    )
+    return items.map(item => ({
+      ...item,
+      isAllocatedForPeriod: allocatedIds.has(item.id),
+    }))
   },
 
   async create(

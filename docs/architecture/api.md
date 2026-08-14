@@ -272,7 +272,7 @@ Server services should raise domain-specific conflicts rather than letting datab
 | GET | `/api/reserve-fund-rates` |
 | POST | `/api/reserve-fund-rates` |
 | PATCH | `/api/reserve-fund-rates/[id]` |
-| GET | `/api/shared-expenses` |
+| GET | `/api/shared-expenses?period_year={year}&period_month={month}` |
 | POST | `/api/shared-expenses` |
 | PATCH | `/api/shared-expenses/[id]` |
 | DELETE | `/api/shared-expenses/[id]` |
@@ -280,4 +280,4 @@ Server services should raise domain-specific conflicts rather than letting datab
 | POST | `/api/internal/operations-report/auto-close` |
 
 Operations report export requires `operations-report.export`; report close/reopen and reserve accrual refresh are admin-only. Close accepts `building_id`, `period_year`, and `period_month`; reopen also requires `reason`; reserve accrual refresh accepts only the target period and never accepts an amount. Expense receipt routes accept a private image attachment and return the expense DTO with a short-lived signed receipt URL when present. Recurring expense `record` advances the reminder and returns a prefill payload for the normal building expense form; the actual expense is still created through `/api/building-expenses`. Prepaid expenses are owner/admin configuration records and contribute monthly allocation to `/api/operations-report`.
-One-off building expenses and fixed costs keep using their existing `note` fields for user-entered display labels; recurring expenses, prepaid expenses, and shared expenses use their existing `name` fields. Reserve fund routes are owner/admin for read/manage, derive balance from active transactions, and reserve rates are managed through building settings. Shared-expense routes are owner/admin only; allocation materializes normal `building_expenses` rows for the selected period. The internal auto-close route requires `NUXT_OPERATIONS_REPORT_AUTO_CLOSE_SECRET` and is intended for Supabase Cron, not browser use.
+One-off building expenses and fixed costs keep using their existing `note` fields for user-entered display labels; recurring expenses, prepaid expenses, and shared expenses use their existing `name` fields. Reserve fund routes are owner/admin for read/manage, derive balance from active transactions, and reserve rates are managed through building settings. Shared-expense routes are owner/admin only; the list requires `period_year` and `period_month`, returns period metadata plus `isAllocatedForPeriod`, and allocation materializes normal `building_expenses` rows for the selected period. The internal auto-close route requires `NUXT_OPERATIONS_REPORT_AUTO_CLOSE_SECRET` and is intended for Supabase Cron, not browser use.

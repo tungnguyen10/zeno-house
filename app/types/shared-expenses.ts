@@ -14,6 +14,15 @@ export interface SharedExpense {
   updatedAt: string
 }
 
+export interface SharedExpenseListItem extends SharedExpense {
+  isAllocatedForPeriod: boolean
+}
+
+export interface SharedExpenseListMeta extends Record<string, unknown> {
+  periodYear: number
+  periodMonth: number
+}
+
 export interface SharedExpenseAllocationResult {
   sharedExpenseId: string
   periodYear: number
