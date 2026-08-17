@@ -1,7 +1,7 @@
 import { getRedirectByRole } from '~/utils/auth-redirect'
 import { requiresTenantOnboarding } from '~/utils/tenant-onboarding'
 
-const PUBLIC_ROUTES = ['/login', '/register', '/forgot-password', '/auth/callback', '/auth/reset-password']
+const PUBLIC_ROUTES = ['/', '/login', '/register', '/forgot-password', '/auth/callback', '/auth/reset-password']
 const PENDING_ROUTE = '/auth/pending'
 const COMPLETE_ACCOUNT_ROUTE = '/auth/complete-account'
 

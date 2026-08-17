@@ -23,7 +23,7 @@ onMounted(() => {
       <PortalSidebar />
       <div class="relative flex h-full min-w-0 flex-1 flex-col overflow-hidden">
         <PortalHeader />
-        <main class="relative flex-1 overflow-y-auto overscroll-contain">
+        <main id="main-content" class="relative flex-1 overflow-y-auto overscroll-contain">
           <div class="mx-auto w-full max-w-5xl">
             <slot />
           </div>

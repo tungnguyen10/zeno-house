@@ -62,7 +62,7 @@ const sidebarClass = computed(() =>
       </AppHeader>
 
       <!-- Content -->
-      <main class="flex-1 overflow-y-auto bg-ui-canvas p-4 sm:p-6">
+      <main id="main-content" class="flex-1 overflow-y-auto bg-ui-canvas p-4 sm:p-6">
         <slot />
       </main>
     </div>

@@ -88,8 +88,10 @@ export default defineNuxtConfig({
     head: {
       charset: "utf-8",
       viewport: "width=device-width, initial-scale=1, viewport-fit=cover",
+      htmlAttrs: {
+        lang: "vi",
+      },
       title: "Zeno House",
-      titleTemplate: "%s | Zeno House",
       meta: [
         {
           name: "description",
@@ -99,7 +101,6 @@ export default defineNuxtConfig({
         { property: "og:type", content: "website" },
         { property: "og:site_name", content: "Zeno House" },
         { property: "og:locale", content: "vi_VN" },
-        { name: "robots", content: "index, follow" },
         // PWA / installed app metadata (Android + iOS).
         { name: "mobile-web-app-capable", content: "yes" },
         { name: "apple-mobile-web-app-capable", content: "yes" },
