@@ -1,7 +1,8 @@
 import { getRedirectByRole } from '~/utils/auth-redirect'
 import { requiresTenantOnboarding } from '~/utils/tenant-onboarding'
 
-const PUBLIC_ROUTES = ['/', '/login', '/register', '/forgot-password', '/auth/callback', '/auth/reset-password']
+const PUBLIC_ROUTES = ['/login', '/register', '/forgot-password', '/auth/callback', '/auth/reset-password']
+const LANDING_ROUTE = '/'
 const PENDING_ROUTE = '/auth/pending'
 const COMPLETE_ACCOUNT_ROUTE = '/auth/complete-account'
 
@@ -9,6 +10,11 @@ export default defineNuxtRouteMiddleware(async (to) => {
   if (PUBLIC_ROUTES.includes(to.path)) return
 
   const reactiveUser = useSupabaseUser()
+
+  // The landing page stays open for visitors, but a signed-in session still
+  // has to land inside its own namespace.
+  if (to.path === LANDING_ROUTE && !reactiveUser.value) return
+
   let resolvedUser: { app_metadata?: unknown } | null = reactiveUser.value
 
   if (!resolvedUser || requiresTenantOnboarding(resolvedUser)) {
