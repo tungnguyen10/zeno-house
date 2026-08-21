@@ -865,7 +865,7 @@ const activeSectionId = computed(() => {
         </div>
       </aside>
 
-      <div class="space-y-6">
+      <div class="min-w-0 space-y-6">
         <section id="identity-access" class="scroll-mt-20 space-y-3">
           <header class="flex items-center justify-between gap-2">
             <h2 class="text-sm font-semibold text-ui-accent">Định danh và phân quyền</h2>
