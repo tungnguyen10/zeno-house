@@ -21,6 +21,7 @@ export const AUDIT_ENTITY_CATALOG: Record<AuditEntityType, AuditEntityCatalogEnt
   room: { label: 'Phòng', group: 'Master data', snapshotKeys: ['roomNumber', 'room_number', 'code'], icon: 'IconDoor', ring: 'ring-violet-500/30', bg: 'bg-violet-500/15', fg: 'text-violet-300' },
   tenant: { label: 'Khách thuê', group: 'Master data', snapshotKeys: ['fullName', 'full_name', 'name', 'phone'], icon: 'IconUsers', ring: 'ring-blue-500/30', bg: 'bg-blue-500/15', fg: 'text-blue-300' },
   contract: { label: 'Hợp đồng', group: 'Hợp đồng', snapshotKeys: ['contractCode', 'contract_code'], icon: 'IconDocumentText', ring: 'ring-amber-500/30', bg: 'bg-amber-500/15', fg: 'text-amber-300' },
+  contract_amendment: { label: 'Phụ lục hợp đồng', group: 'Hợp đồng', snapshotKeys: ['title', 'sequenceNo', 'sequence_no'], icon: 'IconDocumentText', ring: 'ring-amber-500/30', bg: 'bg-amber-500/15', fg: 'text-amber-300' },
   contract_renewal: { label: 'Gia hạn hợp đồng', group: 'Hợp đồng', snapshotKeys: ['contractCode', 'contract_code'], icon: 'IconRefresh', ring: 'ring-emerald-500/30', bg: 'bg-emerald-500/15', fg: 'text-emerald-300' },
   building_service: { label: 'Dịch vụ tòa nhà', group: 'Master data', snapshotKeys: ['name', 'serviceName', 'service_name'], icon: 'IconLayers', ring: 'ring-teal-500/30', bg: 'bg-teal-500/15', fg: 'text-teal-300' },
   contract_service: { label: 'Dịch vụ hợp đồng', group: 'Hợp đồng', snapshotKeys: ['name', 'serviceName', 'service_name'], icon: 'IconLayers', ring: 'ring-teal-500/30', bg: 'bg-teal-500/15', fg: 'text-teal-300' },
@@ -178,6 +179,13 @@ const ACTION_LABELS: Record<string, string> = {
   'operations_report_period.reopened': 'Mở lại báo cáo',
   'reserve_fund.accrual_refreshed': 'Cập nhật quỹ',
   'tenant.profile_updated': 'Cập nhật hồ sơ',
+  'contract_amendment.published': 'Ban hành phụ lục',
+  'contract_amendment.applied': 'Áp dụng phụ lục',
+  'contract_amendment.cancelled': 'Hủy phụ lục',
+  'contract_amendment.draft_removed': 'Xóa phụ lục nháp',
+  'contract.amendment.published': 'Ban hành phụ lục',
+  'contract.amendment.applied': 'Áp dụng phụ lục',
+  'contract.amendment.cancelled': 'Hủy phụ lục',
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -221,9 +229,9 @@ export function auditActionLabel(action: string): string {
 }
 
 export function auditActionVariant(action: string): StatusVariant {
-  if (/(\.created|\.activated|\.added|\.uploaded|\.recorded)$/.test(action)) return 'success'
-  if (/(\.updated|\.renewed|\.role_changed|\.synced|\.attached|\.allocated|\.refreshed)$/.test(action)) return 'accent'
-  if (/(\.removed|\.terminated|\.deleted|\.voided|\.deactivated|\.orphan_reconciled)$/.test(action)) return 'danger'
+  if (/(\.created|\.activated|\.added|\.uploaded|\.recorded|\.applied)$/.test(action)) return 'success'
+  if (/(\.updated|\.renewed|\.role_changed|\.synced|\.attached|\.allocated|\.refreshed|\.published)$/.test(action)) return 'accent'
+  if (/(\.removed|\.terminated|\.deleted|\.voided|\.deactivated|\.orphan_reconciled|\.cancelled|\.draft_removed)$/.test(action)) return 'danger'
   if (/(\.archived|\.maintenance_set|\.expired|\.moved_out|\.dismissed|\.reopened)$/.test(action)) return 'warning'
   return 'neutral'
 }

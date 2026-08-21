@@ -95,7 +95,7 @@ export const TenantAccountLinkRepository = {
 
     if (error) {
       // unique(tenant_id) / unique(auth_user_id) violation.
-      if (error.code === '23505') throwConflict('Người thuê hoặc email này đã có tài khoản')
+      throwIfUniqueViolation(error, 'Người thuê hoặc email này đã có tài khoản')
       throwDbError(error, 'tenantPortal.accountLinks.create')
     }
     return mapRow(data as TenantLinkDbRow)

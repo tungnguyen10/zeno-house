@@ -11,6 +11,7 @@ import { ContractOccupantRepository } from '../repositories/contract-occupants'
 import { assertBuildingScope } from '../utils/scope'
 import { AuditService } from './audit'
 import { AUDIT_ACTIONS } from '~/utils/constants/audit'
+import { ContractAmendmentService } from './contract-amendments'
 
 export const ContractRenewalService = {
   async list(event: H3Event, user: AuthUser, contractId: string): Promise<ContractRenewal[]> {
@@ -81,6 +82,13 @@ export const ContractRenewalService = {
         before_data: contract,
         metadata: { mode: 'extend', renewal_id: renewal.id, new_end_date: newEndDate, new_monthly_rent: newRent },
       })
+
+      await ContractAmendmentService.cancelScheduledForContract(
+        event,
+        user,
+        resolvedContractId,
+        'Hợp đồng đã được gia hạn',
+      )
 
       return renewal
     }
@@ -175,6 +183,13 @@ export const ContractRenewalService = {
       after_data: successor ?? { id: newContractData.id, previousContractId: resolvedContractId },
       metadata: { source: 'renewal', renewal_id: renewal.id, previous_contract_id: resolvedContractId },
     })
+
+    await ContractAmendmentService.cancelScheduledForContract(
+      event,
+      user,
+      resolvedContractId,
+      'Hợp đồng đã được gia hạn thành hợp đồng mới',
+    )
 
     return renewal
   },

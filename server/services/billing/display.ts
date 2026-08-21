@@ -1,5 +1,6 @@
 import type { H3Event } from 'h3'
 import { db as serverSupabaseClient } from '../../utils/db'
+import { formatVndSuffix } from '~/utils/format/currency'
 import type { BillingAuditEntityType } from '~/utils/constants/billing'
 
 type MaybeId = string | null | undefined
@@ -324,7 +325,7 @@ export class BillingDisplayResolver {
       const period = periods.get(invoice.billingPeriodId)
       return {
         label: `${invoice.invoiceCode ?? `Hoá đơn ${invoice.id.slice(0, 8)}`}${room?.roomNumber ? ` · P${room.roomNumber}` : ''}${tenant?.fullName ? ` · ${tenant.fullName}` : ''}`,
-        subLabel: [periodToken(period), `${Math.trunc(invoice.totalAmount).toLocaleString('vi-VN')}đ`].filter(Boolean).join(' · ') || null,
+        subLabel: [periodToken(period), formatVndSuffix(invoice.totalAmount)].filter(Boolean).join(' · ') || null,
       }
     }
     if (entityType === 'invoice_payment') return { label: 'Thanh toán', subLabel: null }

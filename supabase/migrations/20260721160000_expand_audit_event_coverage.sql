@@ -11,6 +11,7 @@ alter table public.audit_events
     'room',
     'tenant',
     'contract',
+    'contract_amendment',
     'contract_renewal',
     'building_service',
     'contract_service',

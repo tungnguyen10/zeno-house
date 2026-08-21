@@ -76,6 +76,18 @@ export const CORRECTION_STATUSES: Record<string, StatusDef> = {
   baseline: { label: 'Không lập hoá đơn', variant: 'neutral' },
 }
 
+export const SHARED_EXPENSE_ALLOCATION_STATUSES: Record<string, StatusDef> = {
+  allocated: { label: 'Đã phân bổ', variant: 'success' },
+  not_allocated: { label: 'Chưa phân bổ', variant: 'neutral' },
+}
+
+export const CONTRACT_AMENDMENT_STATUSES: Record<string, StatusDef> = {
+  draft: { label: 'Nháp', variant: 'neutral' },
+  scheduled: { label: 'Đã ban hành · Chờ hiệu lực', variant: 'warning' },
+  applied: { label: 'Đang áp dụng', variant: 'success' },
+  cancelled: { label: 'Đã hủy', variant: 'danger' },
+}
+
 /**
  * Combined map used by `UiStatusBadge` when no `context` is supplied.
  *
@@ -89,16 +101,20 @@ export const STATUS_MAP: Record<string, StatusDef> = {
   ...INVOICE_STATUSES,
   ...CORRECTION_STATUSES,
   ...BILLING_PERIOD_STATUSES,
+  ...SHARED_EXPENSE_ALLOCATION_STATUSES,
+  ...CONTRACT_AMENDMENT_STATUSES,
 }
 
 /** Context used to disambiguate keys that exist in multiple status maps. */
-export type StatusContext = 'entity' | 'period' | 'invoice' | 'correction'
+export type StatusContext = 'entity' | 'period' | 'invoice' | 'correction' | 'shared-expense-allocation' | 'contract-amendment'
 
 const CONTEXT_MAPS: Record<StatusContext, Record<string, StatusDef>> = {
   entity: ENTITY_STATUSES,
   period: BILLING_PERIOD_STATUSES,
   invoice: INVOICE_STATUSES,
   correction: CORRECTION_STATUSES,
+  'shared-expense-allocation': SHARED_EXPENSE_ALLOCATION_STATUSES,
+  'contract-amendment': CONTRACT_AMENDMENT_STATUSES,
 }
 
 /** Fallback definition when the requested key is unknown. */

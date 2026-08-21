@@ -18,6 +18,8 @@ import type { BillingPeriodInputSnapshot } from '../../repositories/billing/snap
 import { assertBuildingScope } from '../../utils/scope'
 import { billingPeriodBounds, type BillableContractPeriodRow } from './core'
 import { calculateProratedRent, roundUpToThousand } from './rules'
+import { ContractAmendmentService } from '../contract-amendments'
+import { vietnamDateISO } from '../../utils/date'
 
 // ---------------------------------------------------------------------------
 // Types describing the source rows we load. Kept local to this service so the
@@ -119,7 +121,7 @@ export const BillingDraftService = {
     event: H3Event,
     user: AuthUser,
     periodId: string,
-    preloaded?: { period: BillingPeriod, snapshot: BillingPeriodInputSnapshot },
+    preloaded?: { period: BillingPeriod, snapshot: BillingPeriodInputSnapshot, amendmentsApplied?: boolean },
   ): Promise<BillingDraftResponse> {
     if (!can(user, 'billing.read')) throwForbidden('Không có quyền xem dự thảo')
 
@@ -127,9 +129,17 @@ export const BillingDraftService = {
     if (!period) throwNotFound('Không tìm thấy kỳ vận hành')
     await assertBuildingScope(event, user, period.buildingId, 'read')
 
+    // The worker is the primary scheduler; billing repeats the same idempotent
+    // operation so a delayed wake-up can never produce a draft from stale terms.
+    if (!preloaded?.amendmentsApplied) {
+      await ContractAmendmentService.applyDue(event, vietnamDateISO(), period.buildingId)
+    }
+
     const { first: firstDay, last: lastDay } = billingPeriodBounds(period.periodYear, period.periodMonth)
     const prev = previousPeriod(period.periodYear, period.periodMonth)
-    const snapshot = preloaded?.snapshot ?? await BillingSnapshotRepository.load(event, period.id)
+    const snapshot = preloaded?.amendmentsApplied
+      ? preloaded.snapshot
+      : await BillingSnapshotRepository.load(event, period.id)
 
     // Building pricing config
     const building = snapshot.building

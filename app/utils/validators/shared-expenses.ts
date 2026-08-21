@@ -4,6 +4,13 @@ import { EXPENSE_CATEGORIES } from '~/utils/constants/operations-report'
 const periodYear = z.coerce.number().int().min(2000).max(2100)
 const periodMonth = z.coerce.number().int().min(1).max(12)
 
+export const sharedExpenseListQuerySchema = z.object({
+  period_year: periodYear,
+  period_month: periodMonth,
+})
+
+export type SharedExpenseListQuery = z.infer<typeof sharedExpenseListQuerySchema>
+
 export const sharedExpenseCreateSchema = z.object({
   name: z.string().trim().min(1, 'Tên chi phí là bắt buộc').max(200),
   category: z.enum(EXPENSE_CATEGORIES),

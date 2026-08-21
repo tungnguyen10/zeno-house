@@ -52,11 +52,14 @@ Route: `/dashboard/shared-expenses` — chỉ admin và owner (manager không c�
 
 Dùng khi một khoản chi phí thực tế phát sinh chung cho nhiều tòa nhà (ví dụ một hóa đơn dịch vụ dùng chung, một lần sửa chữa chung), thay vì phải tự tay chia và nhập riêng từng tòa.
 
-1. Tạo một khoản chi phí dùng chung: tên, loại chi phí, số tiền, chọn các tòa nhà cùng chia sẻ.
-2. Chọn kỳ (tháng/năm) cần phân bổ, nhấn phân bổ. Hệ thống chia đều số tiền cho các tòa đã chọn; tòa cuối cùng nhận thêm phần dư làm tròn để tổng luôn khớp với số tiền gốc.
-3. Sau khi phân bổ, mỗi tòa nhà sẽ có một dòng chi phí riêng tương ứng, hiển thị trong Báo cáo vận hành của tòa đó ở đúng tháng.
+1. Chọn kỳ (tháng/năm) trên thanh công cụ. Danh sách tự cập nhật để hiển thị khoản nào đã hoặc chưa phân bổ trong kỳ đó.
+2. Nhấn **Tạo khoản chi** để mở biểu mẫu: nhập tên, loại chi phí, số tiền và chọn các tòa nhà cùng chia sẻ. Lỗi nhập liệu hiển thị ngay dưới trường cần sửa.
+3. Với một khoản đang hoạt động và chưa phân bổ, nhấn **Phân bổ**. Kiểm tra màn hình xác nhận gồm kỳ, tổng tiền và phần chia của từng tòa; tòa cuối cùng nhận phần dư làm tròn để tổng luôn khớp số tiền gốc.
+4. Sau khi xác nhận thành công, màn hình kết quả hiển thị số dòng chi phí đã tạo và số tiền của từng tòa. Các dòng này xuất hiện trong Báo cáo vận hành của đúng tòa và đúng tháng.
 
-Một khoản chi phí dùng chung không thể phân bổ trùng hai lần cho cùng một kỳ. Tính năng này chỉ chia đều — không hỗ trợ chia theo tỷ lệ phần trăm tùy chỉnh hay tự động lặp lại hằng tháng.
+Menu hành động của từng khoản cho phép **Sửa** hoặc **Ngừng sử dụng**. Khoản đã ngừng vẫn còn trong danh sách để tra cứu, không thể phân bổ, và có thể **Kích hoạt lại** khi cần.
+
+Một khoản chi phí dùng chung không thể phân bổ trùng hai lần cho cùng một kỳ. Nếu kỳ đã chốt hoặc dữ liệu vừa được người khác phân bổ, hộp thoại giữ nguyên để hiển thị lỗi và đồng bộ lại trạng thái. Tính năng này chỉ chia đều — không hỗ trợ chia theo tỷ lệ phần trăm tùy chỉnh hay tự động lặp lại hằng tháng.
 
 ## Quỹ Dự Phòng
 

@@ -10,6 +10,7 @@ const insertShared = vi.fn()
 const updateShared = vi.fn()
 const deactivateShared = vi.fn()
 const allocateShared = vi.fn()
+const allocatedSharedExpenseIdsForPeriod = vi.fn()
 const assertBuildingScope = vi.fn()
 const assertReportOpen = vi.fn()
 const appendAudit = vi.fn()
@@ -23,6 +24,7 @@ vi.mock('../../server/repositories/shared-expenses', () => ({
     update: updateShared,
     deactivate: deactivateShared,
     allocate: allocateShared,
+    allocatedSharedExpenseIdsForPeriod,
   },
 }))
 
@@ -65,6 +67,28 @@ describe('SharedExpenseService', () => {
     allocateShared.mockResolvedValue([
       { buildingId: 'building-1', expenseId: 'expense-1', amount: 500 },
       { buildingId: 'building-2', expenseId: 'expense-2', amount: 501 },
+    ])
+    allocatedSharedExpenseIdsForPeriod.mockResolvedValue(new Set(['shared-1']))
+  })
+
+  it('annotates definitions with allocation state for the selected period', async () => {
+    listByOwner.mockResolvedValue([
+      shared(),
+      shared({ id: 'shared-2', name: 'Cleaning', isActive: false }),
+    ])
+    const { SharedExpenseService } = await import('../../server/services/shared-expenses')
+
+    const result = await SharedExpenseService.list({} as never, owner, {
+      period_year: 2026,
+      period_month: 7,
+    })
+
+    expect(allocatedSharedExpenseIdsForPeriod).toHaveBeenCalledWith(
+      expect.anything(), 2026, 7,
+    )
+    expect(result).toEqual([
+      expect.objectContaining({ id: 'shared-1', isAllocatedForPeriod: true }),
+      expect.objectContaining({ id: 'shared-2', isActive: false, isAllocatedForPeriod: false }),
     ])
   })
 
@@ -117,7 +141,7 @@ describe('SharedExpenseService', () => {
     const { SharedExpenseService } = await import('../../server/services/shared-expenses')
 
     await expect(
-      SharedExpenseService.list({} as never, manager),
+      SharedExpenseService.list({} as never, manager, { period_year: 2026, period_month: 7 }),
     ).rejects.toMatchObject({ statusCode: 403 })
   })
 

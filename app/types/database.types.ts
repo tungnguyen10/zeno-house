@@ -312,46 +312,118 @@ export type Database = {
           actor_id: string | null
           after_data: Json | null
           before_data: Json | null
+          building_code_snapshot: string | null
           building_id: string | null
+          building_name_snapshot: string | null
           correlation_id: string | null
           created_at: string
           entity_id: string | null
           entity_type: string
           id: string
           metadata: Json
+          operation_id: string | null
         }
         Insert: {
           action: string
           actor_id?: string | null
           after_data?: Json | null
           before_data?: Json | null
+          building_code_snapshot?: string | null
           building_id?: string | null
+          building_name_snapshot?: string | null
           correlation_id?: string | null
           created_at?: string
           entity_id?: string | null
           entity_type: string
           id?: string
           metadata?: Json
+          operation_id?: string | null
         }
         Update: {
           action?: string
           actor_id?: string | null
           after_data?: Json | null
           before_data?: Json | null
+          building_code_snapshot?: string | null
           building_id?: string | null
+          building_name_snapshot?: string | null
           correlation_id?: string | null
           created_at?: string
           entity_id?: string | null
           entity_type?: string
           id?: string
           metadata?: Json
+          operation_id?: string | null
+        }
+        Relationships: []
+      }
+      audit_operations: {
+        Row: {
+          action: string
+          actor_id: string | null
+          attempt_count: number
+          audit_event_id: string | null
+          building_id: string | null
+          completed_at: string | null
+          created_at: string
+          entity_id: string | null
+          entity_type: string
+          id: string
+          idempotency_key: string
+          intent_data: Json
+          last_error_code: string | null
+          lease_owner: string | null
+          lease_until: string | null
+          outcome_data: Json | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          attempt_count?: number
+          audit_event_id?: string | null
+          building_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          entity_id?: string | null
+          entity_type: string
+          id?: string
+          idempotency_key: string
+          intent_data?: Json
+          last_error_code?: string | null
+          lease_owner?: string | null
+          lease_until?: string | null
+          outcome_data?: Json | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          attempt_count?: number
+          audit_event_id?: string | null
+          building_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          idempotency_key?: string
+          intent_data?: Json
+          last_error_code?: string | null
+          lease_owner?: string | null
+          lease_until?: string | null
+          outcome_data?: Json | null
+          status?: string
+          updated_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "audit_events_building_id_fkey"
-            columns: ["building_id"]
+            foreignKeyName: "audit_operations_audit_event_id_fkey"
+            columns: ["audit_event_id"]
             isOneToOne: false
-            referencedRelation: "buildings"
+            referencedRelation: "audit_events"
             referencedColumns: ["id"]
           },
         ]
@@ -363,12 +435,16 @@ export type Database = {
           after_data: Json | null
           before_data: Json | null
           billing_period_id: string | null
+          building_id: string | null
           correlation_id: string | null
           created_at: string
           entity_id: string | null
           entity_type: string
           id: string
           metadata: Json
+          operation_id: string | null
+          period_month: number | null
+          period_year: number | null
         }
         Insert: {
           action: string
@@ -376,12 +452,16 @@ export type Database = {
           after_data?: Json | null
           before_data?: Json | null
           billing_period_id?: string | null
+          building_id?: string | null
           correlation_id?: string | null
           created_at?: string
           entity_id?: string | null
           entity_type: string
           id?: string
           metadata?: Json
+          operation_id?: string | null
+          period_month?: number | null
+          period_year?: number | null
         }
         Update: {
           action?: string
@@ -389,12 +469,16 @@ export type Database = {
           after_data?: Json | null
           before_data?: Json | null
           billing_period_id?: string | null
+          building_id?: string | null
           correlation_id?: string | null
           created_at?: string
           entity_id?: string | null
           entity_type?: string
           id?: string
           metadata?: Json
+          operation_id?: string | null
+          period_month?: number | null
+          period_year?: number | null
         }
         Relationships: [
           {
@@ -1002,6 +1086,83 @@ export type Database = {
           water_pricing_type?: string
         }
         Relationships: []
+      }
+      contract_amendments: {
+        Row: {
+          after_terms: Json | null
+          applied_at: string | null
+          applied_by: string | null
+          before_terms: Json | null
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          changes: Json
+          contract_id: string
+          created_at: string
+          created_by: string | null
+          effective_date: string
+          id: string
+          public_content: string
+          published_at: string | null
+          published_by: string | null
+          sequence_no: number
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          after_terms?: Json | null
+          applied_at?: string | null
+          applied_by?: string | null
+          before_terms?: Json | null
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          changes: Json
+          contract_id: string
+          created_at?: string
+          created_by?: string | null
+          effective_date: string
+          id?: string
+          public_content: string
+          published_at?: string | null
+          published_by?: string | null
+          sequence_no: number
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          after_terms?: Json | null
+          applied_at?: string | null
+          applied_by?: string | null
+          before_terms?: Json | null
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          changes?: Json
+          contract_id?: string
+          created_at?: string
+          created_by?: string | null
+          effective_date?: string
+          id?: string
+          public_content?: string
+          published_at?: string | null
+          published_by?: string | null
+          sequence_no?: number
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_amendments_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       contract_occupants: {
         Row: {
@@ -2512,6 +2673,37 @@ export type Database = {
         Args: { p_actor_id: string; p_request_id: string }
         Returns: boolean
       }
+      apply_due_contract_amendments: {
+        Args: { p_as_of?: string; p_building_id?: string }
+        Returns: {
+          after_terms: Json | null
+          applied_at: string | null
+          applied_by: string | null
+          before_terms: Json | null
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          changes: Json
+          contract_id: string
+          created_at: string
+          created_by: string | null
+          effective_date: string
+          id: string
+          public_content: string
+          published_at: string | null
+          published_by: string | null
+          sequence_no: number
+          status: string
+          title: string
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "contract_amendments"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       apply_invoice_email_webhook_event: {
         Args: {
           p_event_created_at: string
@@ -2550,12 +2742,16 @@ export type Database = {
           after_data: Json | null
           before_data: Json | null
           billing_period_id: string | null
+          building_id: string | null
           correlation_id: string | null
           created_at: string
           entity_id: string | null
           entity_type: string
           id: string
           metadata: Json
+          operation_id: string | null
+          period_month: number | null
+          period_year: number | null
         }[]
         SetofOptions: {
           from: "*"
@@ -2607,6 +2803,43 @@ export type Database = {
           to: "ai_action_plans"
           isOneToOne: false
           isSetofReturn: true
+        }
+      }
+      cancel_contract_amendment: {
+        Args: {
+          p_actor_id: string
+          p_amendment_id: string
+          p_expected_updated_at: string
+          p_operation_id?: string
+          p_reason: string
+        }
+        Returns: {
+          after_terms: Json | null
+          applied_at: string | null
+          applied_by: string | null
+          before_terms: Json | null
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          changes: Json
+          contract_id: string
+          created_at: string
+          created_by: string | null
+          effective_date: string
+          id: string
+          public_content: string
+          published_at: string | null
+          published_by: string | null
+          sequence_no: number
+          status: string
+          title: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "contract_amendments"
+          isOneToOne: true
+          isSetofReturn: false
         }
       }
       claim_ai_action_plan:
@@ -2719,6 +2952,39 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      claim_stale_audit_operations: {
+        Args: {
+          p_lease_seconds?: number
+          p_limit?: number
+          p_worker_id: string
+        }
+        Returns: {
+          action: string
+          actor_id: string | null
+          attempt_count: number
+          audit_event_id: string | null
+          building_id: string | null
+          completed_at: string | null
+          created_at: string
+          entity_id: string | null
+          entity_type: string
+          id: string
+          idempotency_key: string
+          intent_data: Json
+          last_error_code: string | null
+          lease_owner: string | null
+          lease_until: string | null
+          outcome_data: Json | null
+          status: string
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "audit_operations"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       cleanup_expired_ai_conversations: {
         Args: { p_limit?: number }
         Returns: number
@@ -2774,6 +3040,41 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      complete_audit_operation: {
+        Args: {
+          p_after_data?: Json
+          p_before_data?: Json
+          p_metadata?: Json
+          p_operation_id: string
+          p_outcome_data?: Json
+        }
+        Returns: {
+          action: string
+          actor_id: string | null
+          attempt_count: number
+          audit_event_id: string | null
+          building_id: string | null
+          completed_at: string | null
+          created_at: string
+          entity_id: string | null
+          entity_type: string
+          id: string
+          idempotency_key: string
+          intent_data: Json
+          last_error_code: string | null
+          lease_owner: string | null
+          lease_until: string | null
+          outcome_data: Json | null
+          status: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "audit_operations"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       consume_ai_rate_limit: {
         Args: {
           p_limit: number
@@ -2818,6 +3119,45 @@ export type Database = {
           to: "billing_incidental_charges"
           isOneToOne: false
           isSetofReturn: true
+        }
+      }
+      create_contract_amendment_draft: {
+        Args: {
+          p_actor_id: string
+          p_changes: Json
+          p_contract_id: string
+          p_effective_date: string
+          p_operation_id?: string
+          p_public_content: string
+          p_title: string
+        }
+        Returns: {
+          after_terms: Json | null
+          applied_at: string | null
+          applied_by: string | null
+          before_terms: Json | null
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          changes: Json
+          contract_id: string
+          created_at: string
+          created_by: string | null
+          effective_date: string
+          id: string
+          public_content: string
+          published_at: string | null
+          published_by: string | null
+          sequence_no: number
+          status: string
+          title: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "contract_amendments"
+          isOneToOne: true
+          isSetofReturn: false
         }
       }
       create_contract_with_handover: {
@@ -2924,6 +3264,23 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      delete_building_with_audit: {
+        Args: {
+          p_actor_id: string
+          p_building_id: string
+          p_operation_id: string
+        }
+        Returns: boolean
+      }
+      delete_contract_amendment_draft: {
+        Args: {
+          p_actor_id: string
+          p_amendment_id: string
+          p_expected_updated_at: string
+          p_operation_id?: string
+        }
+        Returns: undefined
+      }
       enqueue_invoice_email_delivery: {
         Args: { p_actor_id: string; p_invoice_id: string }
         Returns: Json
@@ -2967,6 +3324,10 @@ export type Database = {
       }
       invoice_profile_template_is_valid: {
         Args: { p_template: string }
+        Returns: boolean
+      }
+      is_valid_contract_amendment_changes: {
+        Args: { changes: Json }
         Returns: boolean
       }
       issue_and_pay: {
@@ -3228,6 +3589,43 @@ export type Database = {
         Args: { p_building_id: string }
         Returns: boolean
       }
+      publish_contract_amendment: {
+        Args: {
+          p_actor_id: string
+          p_amendment_id: string
+          p_expected_updated_at: string
+          p_operation_id?: string
+          p_today?: string
+        }
+        Returns: {
+          after_terms: Json | null
+          applied_at: string | null
+          applied_by: string | null
+          before_terms: Json | null
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          changes: Json
+          contract_id: string
+          created_at: string
+          created_by: string | null
+          effective_date: string
+          id: string
+          public_content: string
+          published_at: string | null
+          published_by: string | null
+          sequence_no: number
+          status: string
+          title: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "contract_amendments"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       record_ai_invoice_payments_with_audit: {
         Args: {
           p_actor_id: string
@@ -3275,6 +3673,14 @@ export type Database = {
           isOneToOne: false
           isSetofReturn: true
         }
+      }
+      refresh_invoice_profile_snapshot_with_audit: {
+        Args: {
+          p_actor_id: string
+          p_invoice_id: string
+          p_operation_id?: string
+        }
+        Returns: boolean
       }
       refresh_reserve_accrual_with_audit: {
         Args: {
@@ -3527,6 +3933,67 @@ export type Database = {
           to: "billing_incidental_charges"
           isOneToOne: false
           isSetofReturn: true
+        }
+      }
+      update_contract_amendment_draft: {
+        Args: {
+          p_actor_id: string
+          p_amendment_id: string
+          p_changes: Json
+          p_effective_date: string
+          p_expected_updated_at: string
+          p_operation_id?: string
+          p_public_content: string
+          p_title: string
+        }
+        Returns: {
+          after_terms: Json | null
+          applied_at: string | null
+          applied_by: string | null
+          before_terms: Json | null
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          changes: Json
+          contract_id: string
+          created_at: string
+          created_by: string | null
+          effective_date: string
+          id: string
+          public_content: string
+          published_at: string | null
+          published_by: string | null
+          sequence_no: number
+          status: string
+          title: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "contract_amendments"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      update_invoice_email_settings_with_audit: {
+        Args: {
+          p_actor_id: string
+          p_auto_send_enabled: boolean
+          p_building_id: string
+          p_operation_id?: string
+        }
+        Returns: {
+          auto_send_enabled: boolean
+          building_id: string
+          created_at: string
+          updated_at: string
+          updated_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "building_invoice_email_settings"
+          isOneToOne: true
+          isSetofReturn: false
         }
       }
       upsert_building_invoice_profile: {

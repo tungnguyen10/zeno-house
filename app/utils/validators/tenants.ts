@@ -1,14 +1,11 @@
 import { z } from 'zod'
+import { limitSchema, orderSchema, pageSchema, searchQuerySchema, toArray, trimmedOptionalString } from './_shared'
+import { selectAtLeastOne, VALIDATION_MESSAGES } from './messages'
 
 export const tenantStatusSchema = z.enum(['active', 'archived'])
 export const tenantIdImageSideSchema = z.enum(['front', 'back'])
 export const tenantSortFieldSchema = z.enum(['full_name', 'created_at', 'code'])
-export const tenantSortOrderSchema = z.enum(['asc', 'desc'])
-
-const toArray = <T>(value: T | T[] | undefined): T[] | undefined => {
-  if (value === undefined) return undefined
-  return Array.isArray(value) ? value : [value]
-}
+export const tenantSortOrderSchema = orderSchema
 
 export const tenantCreateSchema = z.object({
   full_name: z.string().min(1, 'Họ tên không được trống').max(100, 'Họ tên quá dài'),
@@ -32,16 +29,10 @@ export type TenantCreateInput = z.infer<typeof tenantCreateSchema>
 export type TenantUpdateInput = z.infer<typeof tenantUpdateSchema>
 
 export const tenantListQuerySchema = z.object({
-  page: z.coerce.number().int().min(1).optional().default(1),
-  limit: z.coerce.number().int().min(1).max(200).optional().default(20),
-  q: z.preprocess(
-    v => (typeof v === 'string' && v.trim() === '' ? undefined : v),
-    z.string().trim().min(1).max(100).optional(),
-  ),
-  building_id: z.preprocess(
-    v => (typeof v === 'string' && v.trim() === '' ? undefined : v),
-    z.string().trim().min(1).optional(),
-  ),
+  page: pageSchema,
+  limit: limitSchema(200),
+  q: searchQuerySchema,
+  building_id: trimmedOptionalString,
   contract_state: z.preprocess(
     v => (v === '' || v === undefined ? undefined : v),
     z.enum(['with_contract', 'without_contract']).optional(),
@@ -53,22 +44,19 @@ export const tenantListQuerySchema = z.object({
     v => (v === 'true' || v === true ? true : v === 'false' || v === false ? false : undefined),
     z.boolean().optional(),
   ),
-  excludeContractId: z.preprocess(
-    v => (typeof v === 'string' && v.trim() === '' ? undefined : v),
-    z.string().trim().min(1).optional(),
-  ),
+  excludeContractId: trimmedOptionalString,
 })
 
 export type TenantListQuery = z.infer<typeof tenantListQuerySchema>
 
 export const tenantBulkActionSchema = z.object({
   action: z.enum(['archive', 'activate', 'delete']),
-  ids: z.array(z.string().min(1)).min(1, 'Cần chọn ít nhất một khách thuê'),
-  reason: z.string().trim().min(1, 'Lý do xoá là bắt buộc').max(500, 'Lý do quá dài').optional(),
+  ids: z.array(z.string().min(1)).min(1, selectAtLeastOne('khách thuê')),
+  reason: z.string().trim().min(1, VALIDATION_MESSAGES.deleteReasonRequired).max(500, 'Lý do quá dài').optional(),
   building_id: z.string().uuid('Building không hợp lệ').optional(),
 }).refine(
   data => data.action !== 'delete' || Boolean(data.reason),
-  { message: 'Lý do xoá là bắt buộc', path: ['reason'] },
+  { message: VALIDATION_MESSAGES.deleteReasonRequired, path: ['reason'] },
 )
 
 export const tenantBulkCreateRowSchema = z.object({

@@ -13,12 +13,15 @@ import { TenantRepository } from '../../repositories/tenants'
 import { assertBuildingScope, canDeleteMasterData, getAssignedBuildingIds } from '../../utils/scope'
 import { AuditService } from '../audit'
 import { AUDIT_ACTIONS } from '~/utils/constants/audit'
+import { ContractAmendmentRepository } from '../../repositories/contract-amendments'
+import { ContractAmendmentService } from '../contract-amendments'
 
 interface ContractDeleteConflictDetails {
   reason?: 'ACTIVE_CONTRACT'
   issuedBillingPeriods?: number
   paidPayments?: number
   nonHandoverMeterReadings?: number
+  publishedAmendments?: number
 }
 
 export interface ContractBulkActionResult {
@@ -31,7 +34,8 @@ function hasDeleteConflicts(details: ContractDeleteConflictDetails): boolean {
     details.reason
     || (details.issuedBillingPeriods && details.issuedBillingPeriods > 0)
     || (details.paidPayments && details.paidPayments > 0)
-    || (details.nonHandoverMeterReadings && details.nonHandoverMeterReadings > 0),
+    || (details.nonHandoverMeterReadings && details.nonHandoverMeterReadings > 0)
+    || (details.publishedAmendments && details.publishedAmendments > 0)
   )
 }
 
@@ -71,7 +75,7 @@ export const ContractService = {
     user: AuthUser,
     filters: ContractFilters,
   ): Promise<{ items: ContractWithDetails[]; total: number }> {
-    if (!can(user, 'contracts.read')) throwForbidden('Không có quyền xem danh sách hợp đồng')
+    requireCapability(user, 'contracts.read', 'Không có quyền xem danh sách hợp đồng')
 
     let buildingId = filters.building_id
     const buildingIds = await getAssignedBuildingIds(event, user)
@@ -108,7 +112,7 @@ export const ContractService = {
   },
 
   async get(event: H3Event, user: AuthUser, id: string): Promise<ContractWithDetails> {
-    if (!can(user, 'contracts.read')) throwForbidden('Không có quyền xem hợp đồng')
+    requireCapability(user, 'contracts.read', 'Không có quyền xem hợp đồng')
     const contract = await ContractRepository.findByIdentifier(event, id)
     if (!contract) throwNotFound('Không tìm thấy hợp đồng')
     await assertBuildingScope(event, user, contract.buildingId, 'read')
@@ -116,7 +120,7 @@ export const ContractService = {
   },
 
   async create(event: H3Event, user: AuthUser, input: ContractCreateInput): Promise<ContractWithDetails> {
-    if (!can(user, 'contracts.create')) throwForbidden('Không có quyền tạo hợp đồng')
+    requireCapability(user, 'contracts.create', 'Không có quyền tạo hợp đồng')
 
     const room = await RoomRepository.findById(event, input.room_id)
     if (!room) throwNotFound('Không tìm thấy phòng')
@@ -186,7 +190,7 @@ export const ContractService = {
   },
 
   async update(event: H3Event, user: AuthUser, id: string, input: ContractUpdateInput): Promise<ContractWithDetails> {
-    if (!can(user, 'contracts.update')) throwForbidden('Không có quyền cập nhật hợp đồng')
+    requireCapability(user, 'contracts.update', 'Không có quyền cập nhật hợp đồng')
     const existing = await ContractRepository.findByIdentifier(event, id)
     if (!existing) throwNotFound('Không tìm thấy hợp đồng')
     await assertBuildingScope(event, user, existing.buildingId, 'write')
@@ -269,6 +273,15 @@ export const ContractService = {
       after_data: updated,
     })
 
+    if (existing.status === 'active' && updated.status === 'terminated') {
+      await ContractAmendmentService.cancelScheduledForContract(
+        event,
+        user,
+        updated.id,
+        'Hợp đồng đã chấm dứt',
+      )
+    }
+
     return updated
   },
 
@@ -289,10 +302,11 @@ export const ContractService = {
       existing = await this.update(event, user, existing.id, { status: 'terminated' })
     }
 
-    const [issuedBillingPeriods, paidPayments, nonHandoverMeterReadings] = await Promise.all([
+    const [issuedBillingPeriods, paidPayments, nonHandoverMeterReadings, publishedAmendments] = await Promise.all([
       ContractRepository.countBillingPeriodsForContract(event, existing.id),
       ContractRepository.countPaidInvoicesForContract(event, existing.id),
       ContractRepository.countNonHandoverMeterReadingsForContract(event, existing.id),
+      ContractAmendmentRepository.listPublishedByContract(event, existing.id),
     ])
 
     const details: ContractDeleteConflictDetails = {
@@ -300,6 +314,7 @@ export const ContractService = {
       ...(issuedBillingPeriods > 0 ? { issuedBillingPeriods } : {}),
       ...(paidPayments > 0 ? { paidPayments } : {}),
       ...(nonHandoverMeterReadings > 0 ? { nonHandoverMeterReadings } : {}),
+      ...(publishedAmendments.length > 0 ? { publishedAmendments: publishedAmendments.length } : {}),
     }
 
     if (hasDeleteConflicts(details)) throwDeleteConflict(details)
@@ -321,7 +336,7 @@ export const ContractService = {
     user: AuthUser,
     input: ContractBulkActionInput,
   ): Promise<ContractBulkActionResult> {
-    if (!can(user, 'contracts.update')) throwForbidden('Không có quyền thao tác hàng loạt')
+    requireCapability(user, 'contracts.update', 'Không có quyền thao tác hàng loạt')
 
     const succeeded: string[] = []
     const failed: { id: string; reason: string }[] = []
@@ -353,7 +368,15 @@ export const ContractService = {
       }
       const rows = await BulkActionRepository.execute(event, 'contract', 'terminate', allowed)
       for (const row of rows) {
-        if (row.succeeded) succeeded.push(row.id)
+        if (row.succeeded) {
+          succeeded.push(row.id)
+          await ContractAmendmentService.cancelScheduledForContract(
+            event,
+            user,
+            row.id,
+            'Hợp đồng đã chấm dứt qua thao tác hàng loạt',
+          )
+        }
         else failed.push({ id: row.id, reason: row.reason ?? 'error' })
       }
       const afterSnapshots = await BulkActionRepository.resolveSnapshots(event, 'contract', succeeded)

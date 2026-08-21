@@ -12,6 +12,11 @@ export function formatCurrencyNumber(amount: number): string {
   }).format(amount)
 }
 
+/** Truncated VND amount with a trailing "đ" suffix (e.g. "1.200.000đ"). */
+export function formatVndSuffix(amount: number): string {
+  return `${Math.trunc(amount).toLocaleString('vi-VN')}đ`
+}
+
 const BILLION = 1_000_000_000
 const MILLION = 1_000_000
 const THOUSAND = 1_000

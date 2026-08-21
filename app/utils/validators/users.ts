@@ -1,5 +1,7 @@
 import { z } from 'zod'
 import { ROLES } from '~/utils/constants/roles'
+import { passwordSchema } from './password'
+import { VALIDATION_MESSAGES } from './messages'
 
 /**
  * User creation payload for scoped user management.
@@ -9,8 +11,8 @@ import { ROLES } from '~/utils/constants/roles'
  * matching the "app never creates admin" requirement. Unknown roles fail with 422.
  */
 export const userCreateSchema = z.object({
-  email: z.string().trim().toLowerCase().email('Email không hợp lệ'),
-  password: z.string().min(8, 'Mật khẩu tối thiểu 8 ký tự').max(72, 'Mật khẩu tối đa 72 ký tự'),
+  email: z.string().trim().toLowerCase().email(VALIDATION_MESSAGES.emailInvalid),
+  password: passwordSchema,
   full_name: z.string().trim().min(1, 'Tên không được để trống').max(120).optional(),
   role: z.enum([ROLES.ADMIN, ROLES.OWNER, ROLES.MANAGER]),
   building_ids: z.array(z.string().uuid('Tòa nhà không hợp lệ')).default([]),
@@ -19,8 +21,8 @@ export const userCreateSchema = z.object({
 export type UserCreateInput = z.infer<typeof userCreateSchema>
 
 export const userUpdateSchema = z.object({
-  email: z.string().trim().toLowerCase().email('Email không hợp lệ').optional(),
-  password: z.string().min(8, 'Mật khẩu tối thiểu 8 ký tự').max(72, 'Mật khẩu tối đa 72 ký tự').optional(),
+  email: z.string().trim().toLowerCase().email(VALIDATION_MESSAGES.emailInvalid).optional(),
+  password: passwordSchema.optional(),
   full_name: z.string().trim().max(120).optional(),
   role: z.enum([ROLES.ADMIN, ROLES.OWNER, ROLES.MANAGER]).optional(),
 }).refine(
@@ -37,10 +39,7 @@ export const userProfileUpdateSchema = z.object({
 
 export type UserProfileUpdateInput = z.infer<typeof userProfileUpdateSchema>
 
-const userPasswordSchema = z
-  .string()
-  .min(8, 'Mật khẩu phải có ít nhất 8 ký tự')
-  .max(72, 'Mật khẩu không được vượt quá 72 ký tự')
+const userPasswordSchema = passwordSchema
 
 export const userPasswordChangeSchema = z.object({
   current_password: userPasswordSchema,

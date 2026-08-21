@@ -168,8 +168,7 @@ export const BuildingRepository = {
       return { items: await attachServiceSummaries(event, slice), total: count ?? rows.length }
     }
 
-    const from = (opts.page - 1) * opts.limit
-    const to = from + opts.limit - 1
+    const { from, to } = calculatePaginationBounds(opts.page, opts.limit)
 
     let query = client
       .from('buildings')

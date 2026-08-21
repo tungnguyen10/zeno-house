@@ -1,10 +1,10 @@
 import { z } from 'zod'
 import { ROLES } from '~/utils/constants/roles'
+import { passwordSchema } from './password'
+import { VALIDATION_MESSAGES } from './messages'
 
 const uuid = z.string().uuid('Định danh không hợp lệ')
-const password = z.string()
-  .min(8, 'Mật khẩu tối thiểu 8 ký tự')
-  .max(72, 'Mật khẩu tối đa 72 ký tự')
+const password = passwordSchema
 
 export const accessRequestStatusSchema = z.enum(['pending', 'processing', 'approved', 'rejected'])
 export const accessRequestListQuerySchema = z.object({
@@ -32,7 +32,7 @@ export const accessRequestRejectionSchema = z.object({
 
 export const authRegistrationSchema = z.object({
   full_name: z.string().trim().min(1, 'Họ tên là bắt buộc').max(120),
-  email: z.string().trim().toLowerCase().email('Email không hợp lệ'),
+  email: z.string().trim().toLowerCase().email(VALIDATION_MESSAGES.emailInvalid),
   password,
   password_confirmation: password,
 }).refine(value => value.password === value.password_confirmation, {

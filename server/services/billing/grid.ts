@@ -22,6 +22,8 @@ import { MeterReadingRepository } from '../../repositories/meter-readings'
 import { assertBuildingScope } from '../../utils/scope'
 import { calculateRequiredReadingProgress } from './core'
 import { BillingDraftService } from './drafts'
+import { ContractAmendmentService } from '../contract-amendments'
+import { vietnamDateISO } from '../../utils/date'
 import { BillingAuditService } from './audit'
 
 // ---------------------------------------------------------------------------
@@ -316,6 +318,14 @@ export const BillingDraftGridService = {
     if (!period) throwNotFound('Không tìm thấy kỳ vận hành')
     await assertBuildingScope(event, user, period.buildingId, 'read')
 
+    // Apply before loading the shared snapshot that powers both grid cells and
+    // draft calculation. The nested draft call is intentionally idempotent.
+    await ContractAmendmentService.applyDue(
+      event,
+      vietnamDateISO(),
+      period.buildingId,
+    )
+
     const prev = previousPeriod(period.periodYear, period.periodMonth)
     const snapshot = await BillingSnapshotRepository.load(event, period.id)
 
@@ -358,7 +368,11 @@ export const BillingDraftGridService = {
     }
 
     // Draft (reuses existing draft service end-to-end)
-    const draftResp = await BillingDraftService.calculateDraft(event, user, periodId, { period, snapshot })
+    const draftResp = await BillingDraftService.calculateDraft(event, user, periodId, {
+      period,
+      snapshot,
+      amendmentsApplied: true,
+    })
     const draftByContract = new Map<string, BillingDraftInvoice>()
     const draftByRoom = new Map<string, BillingDraftInvoice>()
     for (const d of draftResp.drafts) {

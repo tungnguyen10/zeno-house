@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
   auditAppend: vi.fn(),
   findDomainContract: vi.fn(),
   findTenantByIdNumber: vi.fn(),
+  listTenantAmendments: vi.fn(),
 }))
 
 vi.mock('../../../server/utils/scope', () => ({ resolveTenantId: mocks.resolveTenantId }))
@@ -45,6 +46,9 @@ vi.mock('../../../server/repositories/contracts', () => ({ ContractRepository: {
 vi.mock('../../../server/repositories/tenants', () => ({
   TenantRepository: { findByIdNumber: mocks.findTenantByIdNumber },
 }))
+vi.mock('../../../server/repositories/contract-amendments', () => ({
+  ContractAmendmentRepository: { listTenantVisible: mocks.listTenantAmendments },
+}))
 
 const tenantUser = { id: 'auth-tenant', app_metadata: { role: 'tenant' } } as never
 const internalUser = { id: 'auth-admin', app_metadata: { role: 'admin' } } as never
@@ -58,6 +62,7 @@ describe('tenant portal services', () => {
     mocks.resolveHousing.mockResolvedValue(null)
     mocks.findDomainContract.mockResolvedValue({ buildingId: 'building-1' })
     mocks.findTenantByIdNumber.mockResolvedValue(null)
+    mocks.listTenantAmendments.mockResolvedValue([{ id: 'amendment-1', status: 'scheduled' }])
     mocks.listInvoices.mockResolvedValue({ items: [], total: 0 })
     mocks.findInvoiceDetail.mockResolvedValue(null)
     mocks.findInvoiceSnapshotsByIds.mockResolvedValue(new Map())
@@ -139,6 +144,25 @@ describe('tenant portal services', () => {
     expect(mocks.resolveTenantId).toHaveBeenCalledWith(expect.anything(), tenantUser)
     expect(mocks.resolveHousing).toHaveBeenCalledWith(expect.anything(), 'tenant-1', '2026-07-16')
     expect(result).toEqual(contract)
+  })
+
+  it('returns published amendments only to the primary tenant', async () => {
+    mocks.resolveHousing.mockResolvedValue({
+      contractId: 'contract-1', buildingId: 'building-1', primaryTenantId: 'tenant-1',
+      assignmentRole: 'primary', primaryTenantName: 'Tenant', contract: {},
+    })
+    const { TenantContractService } = await import('../../../server/services/tenant-portal/contract')
+
+    await expect(TenantContractService.listAmendments({} as never, tenantUser, '2026-07-16'))
+      .resolves.toEqual([{ id: 'amendment-1', status: 'scheduled' }])
+    expect(mocks.listTenantAmendments).toHaveBeenCalledWith(expect.anything(), 'contract-1')
+
+    mocks.resolveHousing.mockResolvedValue({
+      contractId: 'contract-1', buildingId: 'building-1', primaryTenantId: 'tenant-primary',
+      assignmentRole: 'roommate', primaryTenantName: 'Primary', contract: {},
+    })
+    await expect(TenantContractService.listAmendments({ context: {} } as never, tenantUser, '2026-07-17'))
+      .resolves.toEqual([])
   })
 
   it('derives overdue status and paginates only tenant invoices', async () => {

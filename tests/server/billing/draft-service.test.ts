@@ -5,6 +5,7 @@ const listByPeriod = vi.fn()
 const listInvoicesByPeriod = vi.fn()
 const findPeriodById = vi.fn()
 const loadSnapshot = vi.fn()
+const applyDueAmendments = vi.fn()
 let meterReadingCall = 0
 
 vi.mock('../../../server/repositories/billing/periods', () => ({
@@ -26,6 +27,9 @@ vi.mock('../../../server/repositories/billing/utility-usages', () => ({
 }))
 vi.mock('../../../server/repositories/billing/snapshot', () => ({
   BillingSnapshotRepository: { load: loadSnapshot },
+}))
+vi.mock('../../../server/services/contract-amendments', () => ({
+  ContractAmendmentService: { applyDue: applyDueAmendments },
 }))
 
 vi.mock('#supabase/server', () => ({
@@ -109,6 +113,7 @@ describe('BillingDraftService.calculateDraft', () => {
     findPeriodById.mockResolvedValue(buildPeriod({ id: 'period-1', buildingId: 'building-1', periodYear: 2026, periodMonth: 5 }))
     listByPeriod.mockResolvedValue([])
     listInvoicesByPeriod.mockResolvedValue([])
+    applyDueAmendments.mockResolvedValue([])
     loadSnapshot.mockResolvedValue({
       building: resolveTable('buildings'),
       contracts: resolveTable('contracts'),
@@ -126,6 +131,36 @@ describe('BillingDraftService.calculateDraft', () => {
       rooms: resolveTable('rooms'),
       tenants: resolveTable('tenants'),
     })
+  })
+
+  it('applies due contract amendments before loading billing inputs', async () => {
+    const { BillingDraftService } = await import('../../../server/services/billing/drafts')
+
+    await BillingDraftService.calculateDraft(
+      {} as never,
+      { id: 'user-1', app_metadata: { role: 'admin' } } as never,
+      'period-1',
+    )
+
+    expect(applyDueAmendments).toHaveBeenCalledWith(expect.anything(), expect.any(String), 'building-1')
+    expect(applyDueAmendments.mock.invocationCallOrder[0]).toBeLessThan(loadSnapshot.mock.invocationCallOrder[0]!)
+  })
+
+  it('reloads a caller snapshot unless amendments were already applied before it was loaded', async () => {
+    const { BillingDraftService } = await import('../../../server/services/billing/drafts')
+    const period = buildPeriod({ id: 'period-1', buildingId: 'building-1', periodYear: 2026, periodMonth: 5 })
+    const snapshot = await loadSnapshot()
+    loadSnapshot.mockClear()
+
+    await BillingDraftService.calculateDraft(
+      {} as never,
+      { id: 'user-1', app_metadata: { role: 'admin' } } as never,
+      'period-1',
+      { period, snapshot },
+    )
+
+    expect(applyDueAmendments).toHaveBeenCalledTimes(1)
+    expect(loadSnapshot).toHaveBeenCalledWith(expect.anything(), 'period-1')
   })
 
   it('calculates production draft rows with prorated rent, utilities, and discount', async () => {

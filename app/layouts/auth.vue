@@ -8,7 +8,7 @@
       <div class="absolute inset-0 bg-gradient-to-b from-dark/60 via-transparent to-dark" />
     </div>
 
-    <main class="relative z-10 flex flex-1 items-center justify-center px-4 py-10 sm:px-6 sm:py-14">
+    <main id="main-content" class="relative z-10 flex flex-1 items-center justify-center px-4 py-10 sm:px-6 sm:py-14">
       <div class="w-full max-w-md">
         <div class="mb-8 flex justify-center">
           <NuxtLink

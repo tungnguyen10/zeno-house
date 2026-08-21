@@ -125,8 +125,7 @@ export const CrossPeriodInvoiceRepository = {
     }
 
     const client = await serverSupabaseClient(event)
-    const from = (filter.page - 1) * filter.page_size
-    const to = from + filter.page_size - 1
+    const { from, to } = calculatePaginationBounds(filter.page, filter.page_size)
 
     const invoices = client.from('invoices')
     let query = options.exactCount === false

@@ -11,7 +11,7 @@ definePageMeta({
 const { setChrome } = usePortalChrome()
 setChrome({ title: 'Phòng của bạn', back: null })
 
-const { contract, status, error, refresh } = usePortalContract()
+const { contract, contractAmendments, status, error, refresh } = usePortalContract()
 
 const STATUS_LABELS: Record<ContractStatus, string> = {
   active: 'Đang hiệu lực',
@@ -26,6 +26,7 @@ const STATUS_CLASS: Record<ContractStatus, string> = {
   terminated: 'bg-portal-danger/10 text-portal-danger-ink',
   renewed: 'bg-theme/10 text-theme',
 }
+
 </script>
 
 <template>
@@ -92,8 +93,8 @@ const STATUS_CLASS: Record<ContractStatus, string> = {
 
         <PortalCard :padded="false">
           <div class="px-4 pb-2 pt-4">
-            <p class="portal-type-heading text-title">Điều khoản chính</p>
-            <p class="portal-type-caption mt-0.5 text-body">Thông tin của hợp đồng đang hiệu lực</p>
+            <p class="portal-type-heading text-title">Điều khoản hiện tại</p>
+            <p class="portal-type-caption mt-0.5 text-body">Các điều khoản đang được áp dụng cho phòng của bạn</p>
           </div>
           <dl class="divide-y divide-border-light">
             <div class="flex items-center justify-between gap-4 px-4 py-3">
@@ -120,6 +121,7 @@ const STATUS_CLASS: Record<ContractStatus, string> = {
               <dt class="portal-type-body text-body">Ngày thanh toán</dt>
               <dd class="portal-type-body text-right font-medium text-title">
                 {{ contract.paymentDueDay ? `Ngày ${contract.paymentDueDay} hằng tháng` : 'Chưa thỏa thuận' }}
+                <span v-if="contract.paymentDueDaySource === 'building'" class="block portal-type-caption text-body">Theo tòa nhà</span>
               </dd>
             </div>
             <div class="flex items-center justify-between gap-4 px-4 py-3">
@@ -132,7 +134,7 @@ const STATUS_CLASS: Record<ContractStatus, string> = {
         </PortalCard>
 
         <PortalCard
-          v-if="contract.discountAmount !== 0 || contract.surchargeAmount !== 0 || contract.notes"
+          v-if="contract.discountAmount !== 0 || contract.surchargeAmount !== 0"
           :padded="false"
         >
           <div class="px-4 pb-2 pt-4">
@@ -151,12 +153,13 @@ const STATUS_CLASS: Record<ContractStatus, string> = {
                 {{ formatCurrencyNumber(contract.surchargeAmount) }}<span class="portal-money-unit">₫</span>
               </dd>
             </div>
-            <div v-if="contract.notes" class="px-4 py-3">
-              <dt class="portal-type-body text-body">Ghi chú</dt>
-              <dd class="portal-type-body mt-1.5 whitespace-pre-line break-words text-title">{{ contract.notes }}</dd>
-            </div>
           </dl>
         </PortalCard>
+
+        <PortalContractAmendments
+          v-if="contract.assignmentRole === 'primary' && contractAmendments.length"
+          :amendments="contractAmendments"
+        />
       </template>
     </div>
   </PortalPullToRefresh>

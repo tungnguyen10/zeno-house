@@ -42,6 +42,11 @@ const contractServicesMocks = vi.hoisted(() => ({
   cloneFromBuilding: vi.fn(),
 }))
 const bulkRepoMocks = vi.hoisted(() => ({ resolveBuildingScopes: vi.fn(), resolveSnapshots: vi.fn(), execute: vi.fn() }))
+const amendmentRepoMocks = vi.hoisted(() => ({
+  listPublishedByContract: vi.fn(),
+  deleteDraftsByContract: vi.fn(),
+}))
+const amendmentServiceMocks = vi.hoisted(() => ({ cancelScheduledForContract: vi.fn() }))
 
 vi.mock('../../server/repositories/contracts', () => ({
   ContractRepository: contractRepoMocks,
@@ -71,6 +76,8 @@ vi.mock('../../server/services/contract-services', () => ({
   ContractServiceService: contractServicesMocks,
 }))
 vi.mock('../../server/repositories/bulk-actions', () => ({ BulkActionRepository: bulkRepoMocks }))
+vi.mock('../../server/repositories/contract-amendments', () => ({ ContractAmendmentRepository: amendmentRepoMocks }))
+vi.mock('../../server/services/contract-amendments', () => ({ ContractAmendmentService: amendmentServiceMocks }))
 
 const requireAuthMock = vi.hoisted(() => vi.fn())
 
@@ -218,6 +225,9 @@ beforeEach(() => {
   contractRepoMocks.countBillingPeriodsForContract.mockResolvedValue(0)
   contractRepoMocks.countPaidInvoicesForContract.mockResolvedValue(0)
   contractRepoMocks.countNonHandoverMeterReadingsForContract.mockResolvedValue(0)
+  amendmentRepoMocks.listPublishedByContract.mockResolvedValue([])
+  amendmentRepoMocks.deleteDraftsByContract.mockResolvedValue([])
+  amendmentServiceMocks.cancelScheduledForContract.mockResolvedValue([])
   assignmentRepoMocks.findBuildingIdsByUser.mockResolvedValue(['building-1'])
   assignmentRepoMocks.findByUserAndBuilding.mockResolvedValue(null)
   bulkRepoMocks.resolveBuildingScopes.mockImplementation((_event, _entity, ids: string[]) =>
@@ -427,6 +437,21 @@ describe('DELETE /api/contracts/[id]', () => {
     expect(event.context.statusCode).toBe(204)
   })
 
+  it('blocks deletion when the contract has a published amendment', async () => {
+    const contract = buildContract({ status: 'terminated' })
+    contractRepoMocks.findByIdentifier.mockResolvedValue(contract)
+    amendmentRepoMocks.listPublishedByContract.mockResolvedValue([{ id: 'amendment-1', status: 'applied' }])
+    const { default: handler } = await import('../../server/api/contracts/[id].delete')
+
+    const error = await expectError(Promise.resolve(handler(makeEvent({
+      params: { id: contract.id }, body: { reason: 'cleanup' },
+    }))))
+
+    expect(error.statusCode).toBe(409)
+    expect(error.data?.error?.details).toEqual({ publishedAmendments: 1 })
+    expect(contractRepoMocks.removeWithCascade).not.toHaveBeenCalled()
+  })
+
   it('force=true terminates active contract then deletes when clean, but still blocks billing and managers', async () => {
     const active = buildContract({ status: 'active' })
     const terminated = buildContract({ status: 'terminated' })
@@ -436,6 +461,9 @@ describe('DELETE /api/contracts/[id]', () => {
 
     const res = await handler(makeEvent({ params: { id: active.id }, query: { force: 'true' }, body: { reason: 'cleanup' } })) as { data: ContractWithDetails }
     expect(contractRepoMocks.update).toHaveBeenCalledWith(expect.anything(), active.id, { status: 'terminated' })
+    expect(amendmentServiceMocks.cancelScheduledForContract).toHaveBeenCalledWith(
+      expect.anything(), expect.objectContaining({ id: 'user-admin' }), terminated.id, 'Hợp đồng đã chấm dứt',
+    )
     expect(contractRepoMocks.removeWithCascade).toHaveBeenCalledWith(expect.anything(), terminated)
     expect(res.data.status).toBe('terminated')
 

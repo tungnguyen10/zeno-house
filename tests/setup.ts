@@ -91,6 +91,28 @@ vi.stubGlobal('throwNotFound', (message = 'Not found') => {
 
 vi.stubGlobal('can', () => true)
 
+// New shared server helpers (server/utils/permissions.ts, repository-helpers.ts).
+// Resolve dependent helpers from globals at call time so per-test overrides
+// (e.g. stubbing `can` to false) still apply.
+vi.stubGlobal('requireCapability', (user: unknown, capability: string, message?: string) => {
+  const g = globalThis as {
+    can: (u: unknown, c: string) => boolean
+    throwForbidden: (m?: string) => never
+  }
+  if (!g.can(user, capability)) g.throwForbidden(message)
+})
+
+vi.stubGlobal('calculatePaginationBounds', (page: number, limit: number) => {
+  const from = (page - 1) * limit
+  return { from, to: from + limit - 1 }
+})
+
+vi.stubGlobal('throwIfUniqueViolation', (error: { code?: string } | null, message: string) => {
+  if (error?.code === '23505') {
+    (globalThis as { throwConflict: (m: string) => never }).throwConflict(message)
+  }
+})
+
 vi.stubGlobal('useToast', () => ({ success: vi.fn(), info: vi.fn(), error: vi.fn() }))
 vi.stubGlobal('apiFetch', (...args: unknown[]) => (globalThis as { $fetch: (...values: unknown[]) => unknown }).$fetch(...args))
 vi.stubGlobal('createLatestApiRequest', () => (...args: unknown[]) => (

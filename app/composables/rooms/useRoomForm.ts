@@ -3,8 +3,8 @@ import type { ApiSuccess } from '~/types/api'
 import { roomCreateSchema, roomUpdateSchema } from '~/utils/validators/rooms'
 import type { RoomCreateInput, RoomUpdateInput } from '~/utils/validators/rooms'
 import { roomPath } from '~/utils/routes/operational'
-import { getApiErrorMessage } from '~/utils/api-error'
 import { useLocalFormDraft } from '~/composables/useLocalFormDraft'
+import { useFormState } from '~/composables/useFormState'
 
 type DraftKey =
   | { mode: 'create'; buildingId?: MaybeRef<string | null | undefined> }
@@ -24,9 +24,7 @@ function buildStorageKey(key: NonNullable<DraftKey>): string {
 }
 
 export function useRoomForm<T = unknown>(options: UseRoomFormOptions<T> = {}) {
-  const isLoading = ref(false)
-  const errors = ref<Record<string, string[]>>({})
-  const apiError = ref<string | null>(null)
+  const { isLoading, errors, apiError, clearErrors, applyZodErrors, applyApiError } = useFormState()
 
   const storageKey = computed(() => options.draftKey ? buildStorageKey(options.draftKey) : null)
 
@@ -37,17 +35,12 @@ export function useRoomForm<T = unknown>(options: UseRoomFormOptions<T> = {}) {
     envelope: true,
   })
 
-  function clearErrors() {
-    errors.value = {}
-    apiError.value = null
-  }
-
   async function submitCreate(input: RoomCreateInput) {
     clearErrors()
 
     const result = roomCreateSchema.safeParse(input)
     if (!result.success) {
-      errors.value = result.error.flatten().fieldErrors as Record<string, string[]>
+      applyZodErrors(result.error)
       return
     }
 
@@ -62,7 +55,7 @@ export function useRoomForm<T = unknown>(options: UseRoomFormOptions<T> = {}) {
       await navigateTo('/dashboard/rooms')
     }
     catch (e: unknown) {
-      apiError.value = getApiErrorMessage(e)
+      applyApiError(e)
     }
     finally {
       isLoading.value = false
@@ -74,7 +67,7 @@ export function useRoomForm<T = unknown>(options: UseRoomFormOptions<T> = {}) {
 
     const result = roomUpdateSchema.safeParse(input)
     if (!result.success) {
-      errors.value = result.error.flatten().fieldErrors as Record<string, string[]>
+      applyZodErrors(result.error)
       return
     }
 
@@ -89,7 +82,7 @@ export function useRoomForm<T = unknown>(options: UseRoomFormOptions<T> = {}) {
       await navigateTo(roomPath(res.data))
     }
     catch (e: unknown) {
-      apiError.value = getApiErrorMessage(e)
+      applyApiError(e)
     }
     finally {
       isLoading.value = false

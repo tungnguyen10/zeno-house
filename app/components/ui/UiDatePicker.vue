@@ -2,6 +2,7 @@
 import {
   computed,
   nextTick,
+  onMounted,
   ref,
   useAttrs,
   useId,
@@ -134,11 +135,16 @@ const maxPeriod = computed(() => {
 })
 
 const isOpen = ref(false)
+const isMounted = ref(false)
 const triggerRef = ref<HTMLButtonElement | null>(null)
 const panelRef = ref<HTMLElement | null>(null)
 const panelStyle = ref<CSSProperties>({})
 const PANEL_WIDTH = 288 // matches w-72 utility
 const PANEL_MAX_HEIGHT = 360 // approximate popover height for flip decision
+
+onMounted(() => {
+  isMounted.value = true
+})
 
 function updatePanelPosition() {
   const trigger = triggerRef.value
@@ -485,7 +491,7 @@ onKeyStroke('Escape', () => {
       <IconCalendar class="size-4 shrink-0 text-ui-muted" aria-hidden="true" />
     </button>
 
-    <Teleport to="body">
+    <Teleport v-if="isMounted" to="body">
       <Transition
         enter-active-class="transition duration-150 ease-out"
         enter-from-class="opacity-0 -translate-y-1 scale-95"

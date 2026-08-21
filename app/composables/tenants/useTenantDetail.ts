@@ -1,17 +1,10 @@
 import type { Tenant } from '~/types/tenants'
-import type { ApiSuccess } from '~/types/api'
+import { useResourceDetail } from '~/composables/useResourceDetail'
 
 export function useTenantDetail(id: MaybeRef<string>) {
-  const { data, status, error, refresh } = useFetch<ApiSuccess<Tenant>>(
+  const { entity, isLoading, error, refresh } = useResourceDetail<Tenant>(
     () => `/api/tenants/${toValue(id)}`,
-    {
-      watch: [() => toValue(id)],
-      getCachedData: (_key, nuxtApp) => nuxtApp.isHydrating ? nuxtApp.payload.data[_key] : undefined,
-    },
   )
 
-  const tenant = computed(() => data.value?.data ?? null)
-  const isLoading = computed(() => status.value === 'pending')
-
-  return { tenant, isLoading, error, refresh }
+  return { tenant: entity, isLoading, error, refresh }
 }

@@ -8,6 +8,7 @@ export function usePortalBootstrap() {
       data: {
         profile: null,
         contract: null,
+        contractAmendments: [],
         invoices: [],
         invoiceMeta: { total: 0, page: 1, limit: 20, totalPages: 0 },
       },

@@ -43,8 +43,7 @@ export const RoomRepository = {
     const client = serverSupabaseClient(event)
     const page = filters.page ?? 1
     const limit = filters.limit ?? 20
-    const from = (page - 1) * limit
-    const to = from + limit - 1
+    const { from, to } = calculatePaginationBounds(page, limit)
     const sort = filters.sort ?? 'floor'
     const order = filters.order ?? 'asc'
     const ascending = order === 'asc'

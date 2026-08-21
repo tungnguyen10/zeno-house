@@ -3,8 +3,8 @@ import type { ApiSuccess } from '~/types/api'
 import { tenantCreateSchema, tenantUpdateSchema } from '~/utils/validators/tenants'
 import type { TenantCreateInput, TenantUpdateInput } from '~/utils/validators/tenants'
 import { tenantPath } from '~/utils/routes/operational'
-import { getApiErrorMessage } from '~/utils/api-error'
 import { useLocalFormDraft } from '~/composables/useLocalFormDraft'
+import { useFormState } from '~/composables/useFormState'
 
 type DraftKey =
   | { mode: 'create' }
@@ -28,9 +28,7 @@ function buildStorageKey(key: NonNullable<DraftKey>): string {
 }
 
 export function useTenantForm<T = unknown>(options: UseTenantFormOptions<T> = {}) {
-  const isLoading = ref(false)
-  const errors = ref<Record<string, string[]>>({})
-  const apiError = ref<string | null>(null)
+  const { isLoading, errors, apiError, clearErrors, applyZodErrors, applyApiError } = useFormState()
 
   const storageKey = options.draftKey ? buildStorageKey(options.draftKey) : null
 
@@ -40,17 +38,12 @@ export function useTenantForm<T = unknown>(options: UseTenantFormOptions<T> = {}
     initialSnapshot: options.initialSnapshot,
   })
 
-  function clearErrors() {
-    errors.value = {}
-    apiError.value = null
-  }
-
   async function submitCreate(input: TenantCreateInput, options: TenantSubmitOptions = {}): Promise<Tenant | null> {
     clearErrors()
 
     const result = tenantCreateSchema.safeParse(input)
     if (!result.success) {
-      errors.value = result.error.flatten().fieldErrors as Record<string, string[]>
+      applyZodErrors(result.error)
       return null
     }
 
@@ -68,7 +61,7 @@ export function useTenantForm<T = unknown>(options: UseTenantFormOptions<T> = {}
       return res.data ?? null
     }
     catch (e: unknown) {
-      apiError.value = getApiErrorMessage(e)
+      applyApiError(e)
       return null
     }
     finally {
@@ -81,7 +74,7 @@ export function useTenantForm<T = unknown>(options: UseTenantFormOptions<T> = {}
 
     const result = tenantUpdateSchema.safeParse(input)
     if (!result.success) {
-      errors.value = result.error.flatten().fieldErrors as Record<string, string[]>
+      applyZodErrors(result.error)
       return null
     }
 
@@ -99,7 +92,7 @@ export function useTenantForm<T = unknown>(options: UseTenantFormOptions<T> = {}
       return res.data ?? null
     }
     catch (e: unknown) {
-      apiError.value = getApiErrorMessage(e)
+      applyApiError(e)
       return null
     }
     finally {

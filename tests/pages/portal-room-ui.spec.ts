@@ -14,7 +14,7 @@ describe('portal room refreshed UI', () => {
 
   it('presents lease terms as clean divider-separated rows', () => {
     expect(page).toContain('<dl class="divide-y divide-border-light">')
-    expect(page).toContain('Điều khoản chính')
+    expect(page).toContain('Điều khoản hiện tại')
     expect(page).toContain('portal-money')
     expect(page).toContain('Tiền thuê hàng tháng')
     expect(page).toContain('Tiền cọc')
@@ -25,8 +25,8 @@ describe('portal room refreshed UI', () => {
   it('only renders contract adjustments when the signed terms include them', () => {
     expect(page).toContain('contract.discountAmount !== 0')
     expect(page).toContain('contract.surchargeAmount !== 0')
-    expect(page).toContain('contract.notes')
     expect(page).toContain('Điều chỉnh hợp đồng')
+    expect(page).not.toContain('contract.notes')
   })
 
   it('matches loading placeholders to the room summary and lease terms', () => {
@@ -39,5 +39,11 @@ describe('portal room refreshed UI', () => {
     expect(page).toContain('Người ở cùng')
     expect(page).toContain('Người đứng hợp đồng')
     expect(page).toContain('contract.primaryTenantName')
+  })
+
+  it('shows published amendments only for the primary tenant with effective dates and diffs', () => {
+    expect(page).toContain("contract.assignmentRole === 'primary' && contractAmendments.length")
+    expect(page).toContain('<PortalContractAmendments')
+    expect(page).toContain(':amendments="contractAmendments"')
   })
 })

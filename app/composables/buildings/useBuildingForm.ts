@@ -3,8 +3,8 @@ import type { ApiSuccess } from '~/types/api'
 import { buildingCreateSchema, buildingUpdateSchema } from '~/utils/validators/buildings'
 import type { BuildingCreateInput, BuildingUpdateInput } from '~/utils/validators/buildings'
 import { buildingPath } from '~/utils/routes/operational'
-import { getApiErrorMessage } from '~/utils/api-error'
 import { useLocalFormDraft } from '~/composables/useLocalFormDraft'
+import { useFormState } from '~/composables/useFormState'
 
 interface QuickRoom {
   room_number: string
@@ -35,9 +35,7 @@ function buildStorageKey(key: NonNullable<DraftKey>): string {
 }
 
 export function useBuildingForm<T = unknown>(options: UseBuildingFormOptions<T> = {}) {
-  const isLoading = ref(false)
-  const errors = ref<Record<string, string[]>>({})
-  const apiError = ref<string | null>(null)
+  const { isLoading, errors, apiError, clearErrors, applyZodErrors, applyApiError } = useFormState()
 
   const storageKey = options.draftKey ? buildStorageKey(options.draftKey) : null
 
@@ -47,18 +45,13 @@ export function useBuildingForm<T = unknown>(options: UseBuildingFormOptions<T> 
     initialSnapshot: options.initialSnapshot,
   })
 
-  function clearErrors() {
-    errors.value = {}
-    apiError.value = null
-  }
-
   async function submitCreate(input: CreateInput) {
     clearErrors()
 
     const { quickRooms, ...buildingInput } = input
     const result = buildingCreateSchema.safeParse(buildingInput)
     if (!result.success) {
-      errors.value = result.error.flatten().fieldErrors as Record<string, string[]>
+      applyZodErrors(result.error)
       return
     }
 
@@ -91,7 +84,7 @@ export function useBuildingForm<T = unknown>(options: UseBuildingFormOptions<T> 
       await navigateTo('/dashboard/buildings')
     }
     catch (e: unknown) {
-      apiError.value = getApiErrorMessage(e)
+      applyApiError(e)
     }
     finally {
       isLoading.value = false
@@ -103,7 +96,7 @@ export function useBuildingForm<T = unknown>(options: UseBuildingFormOptions<T> 
 
     const result = buildingUpdateSchema.safeParse(input)
     if (!result.success) {
-      errors.value = result.error.flatten().fieldErrors as Record<string, string[]>
+      applyZodErrors(result.error)
       return
     }
 
@@ -118,7 +111,7 @@ export function useBuildingForm<T = unknown>(options: UseBuildingFormOptions<T> 
       await navigateTo(buildingPath(res.data))
     }
     catch (e: unknown) {
-      apiError.value = getApiErrorMessage(e)
+      applyApiError(e)
     }
     finally {
       isLoading.value = false

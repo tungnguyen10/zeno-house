@@ -136,9 +136,8 @@ describe('tenant portal mappers', () => {
       occupant_count: 2,
       discount_amount: 150000,
       surcharge_amount: 50000,
-      notes: 'Không nuôi thú cưng',
       status: 'active',
-      rooms: { room_number: 'A101', buildings: { name: 'Zeno One' } },
+      rooms: { room_number: 'A101', buildings: { name: 'Zeno One', payment_due_day: 10 } },
     }, 'roommate', 'Nguyen Van Chinh')
 
     expect(summary).toMatchObject({
@@ -149,14 +148,28 @@ describe('tenant portal mappers', () => {
       monthlyRent: 5000000,
       deposit: 10000000,
       paymentDueDay: 5,
+      paymentDueDaySource: 'contract',
       occupantCount: 2,
       discountAmount: 150000,
       surchargeAmount: 50000,
-      notes: 'Không nuôi thú cưng',
       status: 'active',
       assignmentRole: 'roommate',
       primaryTenantName: 'Nguyen Van Chinh',
     })
+    expect(summary).not.toHaveProperty('notes')
+  })
+
+  it('resolves the payment due day from the building without exposing contract notes', () => {
+    const summary = mapTenantContractSummary({
+      id: 'contract-1', contract_code: 'C-001', start_date: '2026-01-01', end_date: '2026-12-31',
+      monthly_rent: 5_000_000, deposit: 5_000_000, payment_due_day: null,
+      occupant_count: 1, discount_amount: 0, surcharge_amount: 0, status: 'active',
+      rooms: { room_number: 'A101', buildings: { name: 'Zeno One', payment_due_day: 12 } },
+    })
+
+    expect(summary.paymentDueDay).toBe(12)
+    expect(summary.paymentDueDaySource).toBe('building')
+    expect(summary).not.toHaveProperty('notes')
   })
 
   it('maps invoice list and detail into camel-case DTOs', () => {

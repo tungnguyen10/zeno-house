@@ -262,8 +262,7 @@ export const TenantRepository = {
     const client = await serverSupabaseClient(event)
     const page = filters.page ?? 1
     const limit = filters.limit ?? 20
-    const from = (page - 1) * limit
-    const to = from + limit - 1
+    const { from, to } = calculatePaginationBounds(page, limit)
     const sort = filters.sort ?? 'full_name'
     const order = filters.order ?? 'asc'
     const ascending = order === 'asc'
