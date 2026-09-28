@@ -176,6 +176,7 @@ async function onSubmitEdit(data: BuildingFormData) {
 </script>
 
 <template>
+  <AppPullToRefresh :on-refresh="refresh">
   <div>
     <UiPageHeader title="Tòa nhà" :description="`${total} tòa nhà`">
       <template #actions>
@@ -347,4 +348,5 @@ async function onSubmitEdit(data: BuildingFormData) {
       />
     </UiDrawer>
   </div>
+  </AppPullToRefresh>
 </template>

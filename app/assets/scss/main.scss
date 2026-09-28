@@ -418,6 +418,9 @@ input[type='number'] {
   padding-right: env(safe-area-inset-right);
 }
 
+/* Same inset for admin-shell surfaces (bottom sheets) — neutral name, no portal tokens. */
+.safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+
 /* ──────────────────────────────────────────────────────────────
    Dark-theme bridge. The portal templates were authored against light
    Tailwind aliases (bg-white, text-title, text-theme, …). These scoped
@@ -534,3 +537,4 @@ input[type='number'] {
     transform: none;
   }
 }
+

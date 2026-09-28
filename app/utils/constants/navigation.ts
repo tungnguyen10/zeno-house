@@ -62,3 +62,28 @@ export function isNavItemVisible(
   if (item.roles && !(ctx.role && item.roles.includes(ctx.role))) return false
   return true
 }
+
+/**
+ * Highest-frequency destinations surfaced directly in the mobile bottom tab
+ * bar; every other item is reachable through the tab bar's "More" sheet.
+ */
+const MOBILE_TAB_KEYS = ['dashboard', 'billing', 'invoices', 'contracts'] as const
+
+export function getMobileTabItems(ctx: { isAdmin: boolean; role: UserRole | null }): NavItem[] {
+  const items: NavItem[] = NAV_ITEMS
+  return MOBILE_TAB_KEYS
+    .map(key => items.find(item => item.key === key))
+    .filter((item): item is NavItem => item !== undefined && isNavItemVisible(item, ctx))
+}
+
+export function getMoreSheetSections(ctx: { isAdmin: boolean; role: UserRole | null }) {
+  const tabKeys = new Set<string>(MOBILE_TAB_KEYS)
+  const items: NavItem[] = NAV_ITEMS.filter(item => !tabKeys.has(item.key) && isNavItemVisible(item, ctx))
+
+  return NAV_SECTIONS
+    .map(section => ({
+      ...section,
+      items: items.filter(item => item.section === section.key),
+    }))
+    .filter(section => section.items.length > 0)
+}

@@ -97,6 +97,7 @@ async function sendSelectedInvoices() {
 </script>
 
 <template>
+  <AppPullToRefresh :on-refresh="refresh">
   <div class="space-y-5">
     <UiPageHeader
       title="Hoá đơn"
@@ -247,4 +248,5 @@ async function sendSelectedInvoices() {
       </template>
     </UiModal>
   </div>
+  </AppPullToRefresh>
 </template>

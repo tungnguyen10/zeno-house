@@ -133,7 +133,7 @@ describe('AppSidebar role visibility', () => {
     expect(dashboardLabel.classes()).toContain('lg:sr-only')
   })
 
-  it('emits close when a navigation link is selected', async () => {
+  it('renders nav links with visible focus and hover-only transitions', () => {
     const wrapper = mountSidebar('admin')
     const invoiceLink = wrapper.get('a[href="/dashboard/invoices"]')
 
@@ -142,10 +142,6 @@ describe('AppSidebar role visibility', () => {
     expect(invoiceLink.classes()).toContain('focus-visible:ring-2')
     expect(invoiceLink.classes()).toContain('transition-colors')
     expect(invoiceLink.classes()).not.toContain('transition-all')
-
-    await invoiceLink.trigger('click')
-
-    expect(wrapper.emitted('close')).toHaveLength(1)
   })
 
   it('links both sidebar logos directly to the dashboard namespace', () => {

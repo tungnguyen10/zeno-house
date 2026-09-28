@@ -152,6 +152,7 @@ async function openCreateTenant() {
 </script>
 
 <template>
+  <AppPullToRefresh :on-refresh="refresh">
   <div>
     <UiPageHeader title="Khách thuê" :description="`${total} khách thuê`">
       <template #actions>
@@ -401,4 +402,5 @@ async function openCreateTenant() {
       @done="onBulkCreateDone"
     />
   </div>
+  </AppPullToRefresh>
 </template>

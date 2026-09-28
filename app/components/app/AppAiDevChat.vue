@@ -15,6 +15,9 @@ const DRAG_CLICK_THRESHOLD = 4
 const WIDGET_WIDTH = 320
 const WIDGET_MAX_HEIGHT = 480
 const WIDGET_GAP = 12
+// Below `lg` a floating bottom tab bar covers this much of the viewport — keep the FAB above it.
+const MOBILE_BREAKPOINT = 1024
+const MOBILE_TAB_BAR_RESERVE = 96
 
 const open = ref(false)
 const fullscreen = ref(false)
@@ -26,6 +29,7 @@ const suppressFabClick = ref(false)
 const dragStartPosition = ref<FabPosition | null>(null)
 const runtimeConfig = useRuntimeConfig()
 const { width: viewportWidth, height: viewportHeight } = useWindowSize()
+const bottomReserve = computed(() => (viewportWidth.value < MOBILE_BREAKPOINT ? MOBILE_TAB_BAR_RESERVE : 0))
 // Explicit `object` serializer: a `null` default makes useStorage fall back to
 // the plain string serializer, which corrupts stored objects as "[object Object]".
 const storedFabPosition = useStorage<FabPosition | null>(FAB_STORAGE_KEY, null, undefined, {
@@ -43,14 +47,14 @@ function clamp(value: number, min: number, max: number) {
 function defaultFabPosition(): FabPosition {
   return {
     x: Math.max(FAB_MARGIN, viewportWidth.value - FAB_SIZE - FAB_MARGIN),
-    y: Math.max(FAB_MARGIN, viewportHeight.value - FAB_SIZE - FAB_MARGIN),
+    y: Math.max(FAB_MARGIN, viewportHeight.value - FAB_SIZE - FAB_MARGIN - bottomReserve.value),
   }
 }
 
 function clampFabPosition(position: FabPosition): FabPosition {
   return {
     x: clamp(position.x, FAB_MARGIN, Math.max(FAB_MARGIN, viewportWidth.value - FAB_SIZE - FAB_MARGIN)),
-    y: clamp(position.y, FAB_MARGIN, Math.max(FAB_MARGIN, viewportHeight.value - FAB_SIZE - FAB_MARGIN)),
+    y: clamp(position.y, FAB_MARGIN, Math.max(FAB_MARGIN, viewportHeight.value - FAB_SIZE - FAB_MARGIN - bottomReserve.value)),
   }
 }
 

@@ -222,6 +222,7 @@ function periodLabel(row: BillingPeriodSummary): string {
 </script>
 
 <template>
+  <AppPullToRefresh :on-refresh="refresh">
   <div class="space-y-5">
     <UiPageHeader
       title="Vận hành tháng"
@@ -476,4 +477,5 @@ function periodLabel(row: BillingPeriodSummary): string {
       </template>
     </UiModal>
   </div>
+  </AppPullToRefresh>
 </template>

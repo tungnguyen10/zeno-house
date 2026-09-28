@@ -275,6 +275,7 @@ async function onBulkDone(result: RoomBulkResult, action: RoomBulkAction) {
 </script>
 
 <template>
+  <AppPullToRefresh :on-refresh="refresh">
   <div>
     <UiPageHeader title="Phòng" :description="`${total} phòng`">
       <template #actions>
@@ -494,4 +495,5 @@ async function onBulkDone(result: RoomBulkResult, action: RoomBulkAction) {
       </div>
     </UiDrawer>
   </div>
+  </AppPullToRefresh>
 </template>

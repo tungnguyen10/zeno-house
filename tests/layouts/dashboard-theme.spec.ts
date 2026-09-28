@@ -8,8 +8,6 @@ describe('default layout dashboard theme lifecycle', () => {
     const initialize = vi.fn()
     const dispose = vi.fn()
     vi.stubGlobal('useDashboardTheme', () => ({ initialize, dispose }))
-    vi.stubGlobal('useAppStore', () => ({ closeSidebar: vi.fn(), toggleSidebar: vi.fn() }))
-    vi.stubGlobal('storeToRefs', () => ({ sidebarOpen: ref(false) }))
     vi.stubGlobal('useDashboardSummary', () => ({
       summary: ref(null),
       isLoading: ref(false),
@@ -24,6 +22,7 @@ describe('default layout dashboard theme lifecycle', () => {
           AppSidebar: defineComponent({ template: '<aside />' }),
           AppHeader: defineComponent({ template: '<header><slot name="status" /></header>' }),
           DashboardOperationsPopover: true,
+          AppTabBar: true,
           AppAiDevChat: true,
           UiToastHost: true,
         },

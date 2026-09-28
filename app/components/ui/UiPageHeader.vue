@@ -17,12 +17,22 @@ import type { RouteLocationRaw } from 'vue-router'
  *   #actions → right-side action group (do NOT place back navigation here)
  */
 
-defineProps<{
+const props = defineProps<{
   title: string
   description?: string
   backTo?: RouteLocationRaw
   backLabel?: string
 }>()
+
+// Mirrors `backTo` into the sticky mobile header so the back affordance stays
+// reachable while the page title scrolls away with the content.
+const headerBack = useAppHeaderBack()
+watchEffect(() => {
+  headerBack.value = props.backTo ?? null
+})
+onBeforeUnmount(() => {
+  headerBack.value = null
+})
 </script>
 
 <template>

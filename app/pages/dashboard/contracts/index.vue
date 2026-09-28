@@ -90,6 +90,7 @@ watch(contracts, () => {
 </script>
 
 <template>
+  <AppPullToRefresh :on-refresh="refresh">
   <div>
     <UiPageHeader title="Hợp đồng" :description="`${total} hợp đồng`">
       <template #actions>
@@ -221,4 +222,5 @@ watch(contracts, () => {
       </div>
     </div>
   </div>
+  </AppPullToRefresh>
 </template>

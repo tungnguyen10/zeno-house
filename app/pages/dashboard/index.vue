@@ -135,8 +135,9 @@ const previousCollectionRate = computed<number | null>(() => {
 </script>
 
 <template>
-  <div class="space-y-6">
-    <UiPageHeader title="Dashboard" description="Tổng quan vận hành nhà cho thuê">
+  <AppPullToRefresh :on-refresh="handleRefresh">
+    <div class="space-y-6">
+      <UiPageHeader title="Dashboard" description="Tổng quan vận hành nhà cho thuê">
       <template #actions>
         <div class="flex items-center gap-3">
           <span
@@ -271,5 +272,6 @@ const previousCollectionRate = computed<number | null>(() => {
         </UiSurfacePanel>
       </div>
     </template>
-  </div>
+    </div>
+  </AppPullToRefresh>
 </template>
