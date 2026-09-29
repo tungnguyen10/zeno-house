@@ -43,20 +43,20 @@ function dueLabel(row: InvoiceListItem): string {
 
 <template>
   <div class="space-y-2">
-    <div class="space-y-2 md:hidden">
-      <template v-if="loading">
+    <div class="md:hidden">
+      <div v-if="loading" class="space-y-2">
         <UiSkeleton v-for="n in 10" :key="`invoice-card-skeleton-${n}`" class="h-28 w-full rounded-lg" />
-      </template>
+      </div>
       <UiEmptyState
         v-else-if="rows.length === 0"
         title="Không có hoá đơn"
         description="Đổi tháng / building / mở rộng status"
       />
+      <div v-else class="divide-y divide-ui-border overflow-hidden rounded-xl border border-ui-border bg-ui-surface">
       <div
         v-for="row in rows"
-        v-else
         :key="row.id"
-        class="flex items-start gap-3 rounded-lg border border-ui-border bg-ui-surface p-3 transition hover:bg-ui-hover"
+        class="flex items-start gap-3 p-3 transition hover:bg-ui-hover"
       >
         <UiCheckbox
           v-if="row.status !== 'void'"
@@ -105,6 +105,7 @@ function dueLabel(row: InvoiceListItem): string {
             </div>
           </div>
         </UiButton>
+      </div>
       </div>
     </div>
 

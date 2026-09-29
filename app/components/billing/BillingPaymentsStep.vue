@@ -89,6 +89,12 @@ const summary = computed(() => {
   return { issuedTotal, paidTotal, outstanding, overdueCount }
 })
 
+// Mobile card list renders its own action row instead of the table's actions column.
+function rowHasActions(row: Invoice): boolean {
+  return (!periodIsClosed.value && row.status === 'paid' && !!props.onUndoPayment)
+    || row.status === 'issued' || row.status === 'partial' || row.status === 'overdue'
+}
+
 const columns: UiTableColumn<Invoice>[] = [
   { key: 'select', label: '', width: 'w-10' },
   { key: 'tenant', label: 'Hợp đồng' },
@@ -526,7 +532,101 @@ watch(
         </template>
       </UiToolbar>
 
+      <!-- Mobile: grouped list replaces the table below md -->
+      <div class="md:hidden">
+        <div v-if="loading" class="space-y-2">
+          <UiSkeleton v-for="n in 4" :key="`inv-skel-${n}`" class="h-24 w-full rounded-xl" />
+        </div>
+        <UiEmptyState
+          v-else-if="filteredInvoices.length === 0"
+          title="Chưa có hoá đơn"
+          description="Phát hành hoá đơn từ tab Soạn kỳ."
+        />
+        <div v-else class="divide-y divide-ui-border overflow-hidden rounded-xl border border-ui-border bg-ui-surface">
+          <div
+            v-for="row in filteredInvoices"
+            :key="row.id"
+            class="flex flex-col gap-2 p-3"
+          >
+            <div class="flex items-start gap-3">
+              <UiCheckbox
+                v-if="row.status !== 'void'"
+                class="mt-0.5 shrink-0"
+                :model-value="selectedIds.has(row.id)"
+                :aria-label="`Chọn hoá đơn ${row.invoiceCode}`"
+                @update:model-value="toggleSelect(row)"
+              />
+              <UiButton
+                :ref="(el) => setInvoiceRef(row.id, el)"
+                unstyled
+                :class="[
+                  'min-w-0 flex-1 rounded-md text-left transition',
+                  highlightedInvoiceId === row.id && 'bg-ui-accent/10 ring-2 ring-ui-accent/50',
+                ]"
+                @click="openDetail(row)"
+              >
+                <div class="flex items-start justify-between gap-2">
+                  <div class="min-w-0 flex-1">
+                    <p class="truncate text-sm font-medium text-ui-primary">{{ invoiceDisplay(row).title }}</p>
+                    <p class="mt-0.5 truncate text-xs text-ui-muted">{{ invoiceDisplay(row).subtitle }}</p>
+                  </div>
+                  <UiStatusBadge :status="row.status" context="invoice" />
+                </div>
+                <div class="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+                  <div class="min-w-0">
+                    <span class="text-ui-muted">Tổng </span>
+                    <span class="tabular-nums text-ui-primary">{{ formatCurrency(row.totalAmount) }}</span>
+                  </div>
+                  <div class="min-w-0 text-right">
+                    <span class="text-ui-muted">Đã thu </span>
+                    <span :class="['tabular-nums', row.paidAmount === 0 ? 'text-ui-muted' : 'text-ui-primary']">{{ formatCurrency(row.paidAmount) }}</span>
+                  </div>
+                  <div class="min-w-0">
+                    <span class="text-ui-muted">Còn lại </span>
+                    <span :class="['font-medium tabular-nums', row.balanceAmount > 0 ? 'text-status-danger' : 'text-status-success']">{{ formatCurrency(row.balanceAmount) }}</span>
+                  </div>
+                  <div v-if="row.dueDate" class="min-w-0 text-right">
+                    <span class="text-ui-muted">Hạn </span>
+                    <span class="tabular-nums text-ui-primary">{{ row.dueDate }}</span>
+                  </div>
+                </div>
+              </UiButton>
+            </div>
+
+            <div v-if="rowHasActions(row)" class="flex flex-wrap items-center justify-end gap-2 pl-7">
+              <UiButton
+                v-if="!periodIsClosed && row.status === 'paid' && onUndoPayment"
+                size="sm"
+                variant="ghost"
+                @click="startUndoFromRow(row)"
+              >
+                Hoàn tác thu
+              </UiButton>
+              <UiButton
+                v-if="row.status === 'issued' || row.status === 'partial' || row.status === 'overdue'"
+                size="sm"
+                variant="primary"
+                :disabled="periodIsClosed"
+                @click="startPayment(row)"
+              >
+                Đã thu
+              </UiButton>
+              <UiButton
+                v-if="row.status === 'issued' && row.paidAmount === 0"
+                size="sm"
+                variant="ghost"
+                :disabled="periodIsClosed"
+                @click="startVoid(row)"
+              >
+                Huỷ
+              </UiButton>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <UiTable
+        class="hidden md:block"
         :rows="filteredInvoices"
         :columns="columns"
         :loading="loading"
@@ -615,7 +715,28 @@ watch(
       title="Hoá đơn đã huỷ"
       :description="`${voidedInvoices.length} hoá đơn — snapshot tại thời điểm huỷ. Không đếm vào công nợ.`"
     >
-      <UiTable :rows="voidedInvoices" :columns="voidedColumns">
+      <div class="divide-y divide-ui-border overflow-hidden rounded-xl border border-ui-border bg-ui-surface md:hidden">
+        <div v-for="row in voidedInvoices" :key="row.id" class="flex flex-col gap-1 p-3 text-xs">
+          <div class="flex items-start justify-between gap-2">
+            <div class="min-w-0">
+              <p class="truncate text-sm text-ui-primary">{{ invoiceDisplay(row).title }}</p>
+              <p class="truncate text-ui-muted">{{ invoiceDisplay(row).subtitle }}</p>
+            </div>
+            <span class="shrink-0 tabular-nums text-ui-muted line-through">{{ formatCurrency(row.totalAmount) }}</span>
+          </div>
+          <p class="text-ui-muted">{{ row.voidedAt ? new Date(row.voidedAt).toLocaleString('vi-VN') : '---' }}</p>
+          <p v-if="row.voidReason" class="text-ui-primary">{{ row.voidReason }}</p>
+          <p>
+            <template v-if="row.supersededByInvoiceId && replacementById.get(row.supersededByInvoiceId)">
+              <span class="text-ui-accent">{{ formatCurrency(replacementById.get(row.supersededByInvoiceId)!.totalAmount) }}</span>
+              <span class="text-ui-muted"> (đã phát hành lại)</span>
+            </template>
+            <span v-else class="text-ui-muted">Chưa phát hành lại</span>
+          </p>
+        </div>
+      </div>
+
+      <UiTable class="hidden md:block" :rows="voidedInvoices" :columns="voidedColumns">
         <template #cell-contract="{ row }">
           <span class="block text-ui-primary text-sm">{{ invoiceDisplay(row).title }}</span>
           <span class="block text-xs text-ui-muted">{{ invoiceDisplay(row).subtitle }}</span>
@@ -822,7 +943,7 @@ watch(
     >
       <div
         v-if="selectedIds.size > 0"
-        class="fixed bottom-4 left-1/2 z-30 w-[calc(100%-2rem)] max-w-max -translate-x-1/2 rounded-xl border border-ui-border bg-ui-chrome px-4 py-2 shadow-lg shadow-ui-shadow/40 backdrop-blur sm:w-auto"
+        class="fixed bottom-[calc(6rem+env(safe-area-inset-bottom))] left-1/2 z-30 w-[calc(100%-2rem)] max-w-max -translate-x-1/2 rounded-xl border border-ui-border bg-ui-chrome px-4 py-2 shadow-lg shadow-ui-shadow/40 backdrop-blur sm:w-auto lg:bottom-4"
       >
         <div class="grid grid-cols-2 items-center gap-2 sm:flex sm:gap-3">
           <span class="col-span-2 text-center text-sm text-ui-primary sm:col-auto sm:text-left">

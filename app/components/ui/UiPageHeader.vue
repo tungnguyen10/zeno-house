@@ -47,7 +47,7 @@ onBeforeUnmount(() => {
         {{ backLabel ?? 'Quay lại' }}
       </NuxtLink>
       <h1 class="text-xl font-semibold text-ui-primary">{{ title }}</h1>
-      <p v-if="description" class="text-sm text-ui-muted mt-0.5">{{ description }}</p>
+      <p v-if="description" class="hidden text-sm text-ui-muted mt-0.5 sm:block">{{ description }}</p>
       <slot />
     </div>
     <div

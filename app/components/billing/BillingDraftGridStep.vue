@@ -155,6 +155,45 @@ const {
   clearSelection,
 } = useBillingDraftGridFilters(displayedRows)
 
+// ---------------------------------------------------------------------------
+// Mobile: floor quick-jump chips + bulk-entry prompt for long room lists
+// ---------------------------------------------------------------------------
+
+const MOBILE_MANY_ROOMS_THRESHOLD = 8
+
+const showMobileBulkEntryPrompt = computed(() =>
+  periodEditable.value && filteredRows.value.length >= MOBILE_MANY_ROOMS_THRESHOLD,
+)
+
+function floorAnchorId(floor: number): string {
+  return `draft-floor-${floor}`
+}
+
+// First row (in list order) for each floor — the row that carries the scroll anchor id.
+const firstRowKeyByFloor = computed(() => {
+  const map = new Map<number, string>()
+  for (const row of filteredRows.value) {
+    if (row.floor === null) continue
+    if (!map.has(row.floor)) map.set(row.floor, row.key)
+  }
+  return map
+})
+
+const mobileFloorChips = computed(() =>
+  Array.from(firstRowKeyByFloor.value.keys())
+    .sort((a, b) => a - b)
+    .map(floor => ({ floor, label: `Tầng ${floor}` })),
+)
+
+function rowFloorAnchorId(row: BillingDraftGridRow): string | undefined {
+  if (row.floor === null) return undefined
+  return firstRowKeyByFloor.value.get(row.floor) === row.key ? floorAnchorId(row.floor) : undefined
+}
+
+function scrollToFloor(floor: number) {
+  document.getElementById(floorAnchorId(floor))?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
 const readingBlockerCodes = new Set<string>([
   BILLING_BLOCKER_CODES.MISSING_CURRENT_READING,
   BILLING_BLOCKER_CODES.MISSING_PREVIOUS_READING,
@@ -691,7 +730,7 @@ const columns: UiTableColumn<BillingDraftGridRow>[] = [
       <!-- Selection action bar -->
       <div
         v-if="selectedCount > 0"
-        class="fixed inset-x-3 bottom-4 z-30 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-ui-accent/40 bg-ui-chrome px-3 py-2 text-sm shadow-lg shadow-ui-shadow/40 md:static md:z-auto md:bg-ui-accent/5 md:shadow-none"
+        class="fixed inset-x-3 bottom-[calc(6rem+env(safe-area-inset-bottom))] z-30 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-ui-accent/40 bg-ui-chrome px-3 py-2 text-sm shadow-lg shadow-ui-shadow/40 md:static md:bottom-auto md:z-auto md:bg-ui-accent/5 md:shadow-none"
       >
         <p class="text-ui-primary">
           Đã chọn <span class="font-semibold tabular-nums">{{ selectedCount }}</span> phiếu
@@ -971,6 +1010,36 @@ const columns: UiTableColumn<BillingDraftGridRow>[] = [
         </template>
       </UiTable>
 
+      <!-- Mobile: floor quick-jump so a long room list isn't one flat scroll -->
+      <div
+        v-if="mobileFloorChips.length > 1 && !loading && response && filteredRows.length > 0"
+        class="relative md:hidden"
+      >
+        <div class="-mx-4 flex snap-x snap-mandatory gap-1.5 overflow-x-auto px-4 pb-0.5">
+          <UiButton
+            v-for="chip in mobileFloorChips"
+            :key="chip.floor"
+            unstyled
+            class="shrink-0 snap-start rounded-full border border-ui-border bg-ui-surface px-3 py-1.5 text-xs text-ui-muted transition hover:border-ui-border-strong hover:bg-ui-hover/40 hover:text-ui-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-ui-accent/40"
+            @click="scrollToFloor(chip.floor)"
+          >
+            {{ chip.label }}
+          </UiButton>
+        </div>
+        <div class="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-ui-canvas to-transparent" aria-hidden="true" />
+      </div>
+
+      <!-- Mobile: many rooms means scrolling+typing is slow — nudge toward paste-based bulk entry -->
+      <UiButton
+        v-if="showMobileBulkEntryPrompt"
+        variant="secondary"
+        class="w-full md:hidden"
+        @click="bulkEntryOpen = true"
+      >
+        <IconCopy class="h-4 w-4 shrink-0" aria-hidden="true" />
+        Nhập nhanh cho nhiều phòng
+      </UiButton>
+
       <!-- Mobile select-all -->
       <div
         v-if="!loading && response && filteredRows.length > 0"
@@ -994,7 +1063,9 @@ const columns: UiTableColumn<BillingDraftGridRow>[] = [
       >
         <BillingMobileDraftRow
           v-for="row in filteredRows"
+          :id="rowFloorAnchorId(row)"
           :key="row.key"
+          class="scroll-mt-24"
           :row="displayGridRow(row)"
           :selectable="isSelectable(row)"
           :selected="isSelected(row)"
