@@ -28,7 +28,7 @@ function tabLinkClass(active: boolean) {
 
 <template>
   <nav
-    class="fixed bottom-[calc(0.75rem+env(safe-area-inset-bottom))] left-[calc(0.75rem+env(safe-area-inset-left))] right-[calc(0.75rem+env(safe-area-inset-right))] z-30 rounded-2xl border border-ui-border bg-ui-chrome/95 shadow-lg shadow-black/10 backdrop-blur-md lg:hidden"
+    class="fixed bottom-[calc(0.75rem+env(safe-area-inset-bottom))] left-[calc(0.75rem+env(safe-area-inset-left))] right-[calc(0.75rem+env(safe-area-inset-right))] z-30 rounded-2xl border border-ui-border bg-ui-chrome/95 shadow-lg shadow-ui-shadow/10 backdrop-blur-md lg:hidden"
     aria-label="Điều hướng chính"
   >
     <ul class="mx-auto flex max-w-md items-center justify-between gap-1 px-1.5 py-1.5">

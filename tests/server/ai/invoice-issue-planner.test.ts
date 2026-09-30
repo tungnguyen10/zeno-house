@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { BillingDraftInvoice, BillingDraftResponse } from '~/types/billing'
 import { buildPeriod } from '../../__fixtures__/billing/period'
 import { aiToolPlanInvoiceIssueSchema } from '../../../app/utils/validators/ai'
@@ -63,6 +63,10 @@ function response(drafts: BillingDraftInvoice[]): BillingDraftResponse {
 
 describe('AI invoice issue planning', () => {
   beforeEach(() => {
+    // The planner derives its issue date from the wall clock and rejects a due date
+    // before it, so the fixed 2026-08 fixtures only hold with the clock pinned.
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-08-06T03:00:00.000Z'))
     vi.clearAllMocks()
     vi.stubGlobal('can', () => true)
     findBuildingById.mockResolvedValue({ paymentDueDay: 10, gracePeriodDays: 2 })
@@ -71,6 +75,10 @@ describe('AI invoice issue planning', () => {
       status: 'pending', title: 'Issue', summary: 'Issue', buildingId: 'building-1',
       preview: {}, warnings: [], expiresAt: '2026-07-14T01:00:00.000Z', result: null, error: null,
     })
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
   it('rejects model-supplied totals and charge lines at the strict tool boundary', () => {
