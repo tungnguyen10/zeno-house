@@ -6,6 +6,23 @@ import type { InvoiceListItem } from '~/utils/validators/invoices'
 
 definePageMeta({ title: 'Hoá đơn' })
 
+// Mobile large-title collapse: fades into the persistent app header once scrolled past.
+const titleSentinel = ref<HTMLElement | null>(null)
+const isTitleCollapsed = ref(false)
+useIntersectionObserver(titleSentinel, ([entry]) => {
+  isTitleCollapsed.value = !!entry && !entry.isIntersecting
+})
+const headerTitle = useAppHeaderTitle()
+const compactTitle = computed(() => (isTitleCollapsed.value ? 'Hoá đơn' : null))
+watchEffect(() => {
+  headerTitle.value = compactTitle.value
+})
+onBeforeUnmount(() => {
+  // A newer page can claim this slot before this instance unmounts during a
+  // page transition — only clear it if it's still ours.
+  if (headerTitle.value === compactTitle.value) headerTitle.value = null
+})
+
 const {
   buildingId,
   periodYear,
@@ -22,8 +39,6 @@ const {
   errorCode,
   hasActiveFilters,
   refresh,
-  nextPage,
-  previousPage,
   resetFilters,
 } = useInvoiceList()
 
@@ -42,7 +57,11 @@ const bulkEmailSummary = ref<string | null>(null)
 const {
   selectedIds,
   selectedInvoices,
+  selectableInvoices,
+  allSelected,
+  someSelected,
   toggle: togglePrintSelection,
+  toggleAll: toggleSelectAll,
   clearSelection,
 } = useInvoicePagePrintSelection(invoices)
 
@@ -102,7 +121,9 @@ async function sendSelectedInvoices() {
     <UiPageHeader
       title="Hoá đơn"
       description="Tra cứu hoá đơn theo tòa nhà, kỳ, trạng thái và khách thuê."
-    />
+    >
+      <div ref="titleSentinel" aria-hidden="true" />
+    </UiPageHeader>
 
     <template v-if="isInitialLoading">
       <UiSkeleton class="h-20 w-full rounded-lg" />
@@ -149,6 +170,16 @@ async function sendSelectedInvoices() {
           <div class="h-full w-1/3 animate-pulse rounded-full bg-ui-accent" />
         </div>
 
+        <UiSelectAllBar
+          v-if="selectableInvoices.length > 0"
+          :model-value="allSelected"
+          :indeterminate="someSelected"
+          :page-count="selectableInvoices.length"
+          :total-selected="selectedInvoices.length"
+          aria-label="Chọn tất cả hoá đơn trên trang"
+          @update:model-value="toggleSelectAll"
+        />
+
         <InvoiceListTable
           :rows="invoices"
           :loading="isLoading && invoices.length === 0"
@@ -158,29 +189,12 @@ async function sendSelectedInvoices() {
         />
       </div>
 
-      <div class="flex flex-col gap-2 text-sm text-ui-muted sm:flex-row sm:items-center sm:justify-between">
-        <span>
-          Trang {{ meta.page }}/{{ meta.total_pages }} · {{ totalLabel }}
-        </span>
-        <div class="flex items-center gap-2">
-          <UiButton
-            variant="secondary"
-            size="sm"
-            :disabled="page <= 1"
-            @click="previousPage"
-          >
-            Trước
-          </UiButton>
-          <UiButton
-            variant="secondary"
-            size="sm"
-            :disabled="page >= meta.total_pages"
-            @click="nextPage"
-          >
-            Sau
-          </UiButton>
-        </div>
-      </div>
+      <UiPagination
+        :page="meta.page"
+        :total-pages="meta.total_pages"
+        :total-label="totalLabel"
+        @update:page="page = $event"
+      />
     </template>
 
     <InvoicePreviewDrawer
@@ -197,28 +211,24 @@ async function sendSelectedInvoices() {
       leave-from-class="opacity-100 translate-y-0"
       leave-to-class="opacity-0 translate-y-2"
     >
-      <div
+      <UiBulkActionsBar
         v-if="selectedInvoices.length > 0"
-        class="fixed bottom-4 left-1/2 z-30 w-[calc(100%-2rem)] max-w-max -translate-x-1/2 rounded-xl border border-ui-border bg-ui-chrome px-4 py-2 shadow-lg shadow-ui-shadow/40 backdrop-blur sm:w-auto sm:rounded-full"
+        aria-label="Thao tác hàng loạt hoá đơn"
+        :count="selectedInvoices.length"
+        @clear="clearSelection"
       >
-        <div class="grid grid-cols-2 items-center gap-2 sm:flex sm:gap-3">
-          <span class="col-span-2 text-center text-sm text-ui-primary sm:col-auto sm:text-left">
-            Đã chọn <span class="font-semibold">{{ selectedInvoices.length }}</span> hóa đơn
-          </span>
-          <UiButton class="whitespace-nowrap" variant="ghost" size="sm" @click="clearSelection">Bỏ chọn</UiButton>
-          <UiButton class="whitespace-nowrap" variant="primary" size="sm" @click="printSelectedInvoices">In phiếu</UiButton>
-          <UiButton
-            v-if="invoiceEmailEnabled"
-            class="col-span-2 whitespace-nowrap sm:col-auto"
-            variant="secondary"
-            size="sm"
-            :disabled="selectedInvoices.length > 100"
-            @click="emailConfirmOpen = true"
-          >
-            Gửi email ({{ selectedInvoices.length }})
-          </UiButton>
-        </div>
-      </div>
+        <UiButton class="whitespace-nowrap" variant="primary" size="sm" @click="printSelectedInvoices">In phiếu</UiButton>
+        <UiButton
+          v-if="invoiceEmailEnabled"
+          class="whitespace-nowrap"
+          variant="secondary"
+          size="sm"
+          :disabled="selectedInvoices.length > 100"
+          @click="emailConfirmOpen = true"
+        >
+          Gửi email ({{ selectedInvoices.length }})
+        </UiButton>
+      </UiBulkActionsBar>
     </Transition>
 
     <UiModal

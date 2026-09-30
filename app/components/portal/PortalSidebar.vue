@@ -31,7 +31,7 @@ const initials = computed(() => {
       to="/portal"
       class="flex h-16 items-center px-5 text-[color:var(--portal-chrome-ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-theme/40"
     >
-      <IconLogo class="h-7 w-auto text-[color:var(--portal-chrome-ink)]" aria-label="Zeno House" />
+      <IconLogoSidebar class="h-7 w-auto text-[color:var(--portal-chrome-ink)]" aria-label="Zeno House" />
     </NuxtLink>
 
     <nav class="flex-1 space-y-1 px-3 py-4">

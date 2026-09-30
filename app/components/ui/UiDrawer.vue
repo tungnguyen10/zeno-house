@@ -29,6 +29,8 @@ const accessibleLabel = computed(() => props.title ? undefined : (props.ariaLabe
 const panelClass = computed(() =>
   clsx(
     'fixed inset-x-0 bottom-0 z-10 flex max-h-[85vh] w-full flex-col rounded-t-3xl bg-ui-chrome shadow-2xl safe-bottom',
+    // `inset-x-0` + a fixed width would pin the sheet to the left edge on tablets.
+    'mx-auto',
     'lg:inset-x-auto lg:inset-y-0 lg:bottom-auto lg:right-0 lg:h-full lg:max-h-full lg:rounded-t-none lg:shadow-xl',
     'sm:max-w-full',
     props.width,

@@ -19,8 +19,8 @@ const stubs = {
   IconLock: iconStub,
   IconSettings: iconStub,
   IconClock: iconStub,
-  IconLogo: iconStub,
-  IconLogoMini: iconStub,
+  IconLogoSidebar: iconStub,
+  IconLogoMiniSidebar: iconStub,
   IconPanelLeft: iconStub,
   IconX: iconStub,
   NuxtLink: defineComponent({

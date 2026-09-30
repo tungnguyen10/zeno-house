@@ -110,12 +110,12 @@ function sectionLabelClass() {
     <!-- Logo -->
     <div :class="headerClass">
       <NuxtLink to="/dashboard" :class="logoLinkClass" aria-label="Zeno House — Trang chủ">
-        <IconLogo class="h-7 w-auto text-ui-primary" aria-hidden="true" />
+        <IconLogoSidebar class="h-7 w-auto text-ui-primary" aria-hidden="true" />
       </NuxtLink>
 
       <!-- Mini logo — desktop rail (hover swaps to the toggle) -->
       <NuxtLink to="/dashboard" :class="miniLogoClass" aria-label="Zeno House — Trang chủ">
-        <IconLogoMini class="h-6 w-auto text-ui-accent" aria-hidden="true" />
+        <IconLogoMiniSidebar class="h-6 w-auto text-ui-accent" aria-hidden="true" />
       </NuxtLink>
 
       <!-- Collapse toggle — desktop only -->

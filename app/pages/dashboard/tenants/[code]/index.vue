@@ -25,6 +25,23 @@ if (isUuid(id)) {
 
 const { tenant, isLoading, error, refresh } = useTenantDetail(id)
 
+// Mobile large-title collapse: fades into the persistent app header once scrolled past.
+const titleSentinel = ref<HTMLElement | null>(null)
+const isTitleCollapsed = ref(false)
+useIntersectionObserver(titleSentinel, ([entry]) => {
+  isTitleCollapsed.value = !!entry && !entry.isIntersecting
+})
+const headerTitle = useAppHeaderTitle()
+const compactTitle = computed(() => (isTitleCollapsed.value && tenant.value ? tenant.value.fullName : null))
+watchEffect(() => {
+  headerTitle.value = compactTitle.value
+})
+onBeforeUnmount(() => {
+  // A newer page can claim this slot before this instance unmounts during a
+  // page transition — only clear it if it's still ours.
+  if (headerTitle.value === compactTitle.value) headerTitle.value = null
+})
+
 // Contracts
 const { data: contractsData } = await useFetch<ApiSuccess<ContractWithDetails[]> & { meta: { total: number } }>(
   '/api/contracts',
@@ -197,6 +214,7 @@ watchEffect(() => {
         :back-to="'/dashboard/tenants'"
         back-label="Khách thuê"
       >
+        <div ref="titleSentinel" aria-hidden="true" />
         <template #actions>
           <div v-if="authStore.can('tenants.update')" class="flex gap-2 shrink-0">
             <NuxtLink :to="`/dashboard/tenants/${tenant.code}/edit`">

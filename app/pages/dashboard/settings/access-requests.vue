@@ -14,6 +14,23 @@ definePageMeta({
   },
 })
 
+// Mobile large-title collapse: fades into the persistent app header once scrolled past.
+const titleSentinel = ref<HTMLElement | null>(null)
+const isTitleCollapsed = ref(false)
+useIntersectionObserver(titleSentinel, ([entry]) => {
+  isTitleCollapsed.value = !!entry && !entry.isIntersecting
+})
+const headerTitle = useAppHeaderTitle()
+const compactTitle = computed(() => (isTitleCollapsed.value ? 'Yêu cầu tài khoản' : null))
+watchEffect(() => {
+  headerTitle.value = compactTitle.value
+})
+onBeforeUnmount(() => {
+  // A newer page can claim this slot before this instance unmounts during a
+  // page transition — only clear it if it's still ours.
+  if (headerTitle.value === compactTitle.value) headerTitle.value = null
+})
+
 const toast = useToast()
 const { selectedStatus, requests, isLoading, error: listError, approve, reject } = useAccessRequests()
 const { data: buildingsData } = useFetch<ApiSuccess<Building[]>>('/api/buildings', {
@@ -182,14 +199,15 @@ function statusLabel(status: AccessRequestStatus) {
   <div class="space-y-6">
     <AppSettingsSubNav />
 
-    <header class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-      <div>
-        <p class="text-xs font-medium uppercase tracking-[0.16em] text-ui-accent">Quyền truy cập</p>
-        <h1 class="mt-1 text-2xl font-semibold text-ui-primary">Yêu cầu tài khoản</h1>
-        <p class="mt-2 max-w-2xl text-sm text-ui-muted">Duyệt danh tính mới và gán đúng vai trò, phạm vi trước khi họ vào hệ thống.</p>
-      </div>
-      <UiSelect v-model="selectedStatus" class="w-full sm:w-48" label="Trạng thái" :options="statusOptions" />
-    </header>
+    <UiPageHeader
+      title="Yêu cầu tài khoản"
+      description="Duyệt danh tính mới và gán đúng vai trò, phạm vi trước khi họ vào hệ thống."
+    >
+      <div ref="titleSentinel" aria-hidden="true" />
+      <template #actions>
+        <UiSelect v-model="selectedStatus" class="w-full sm:w-48" label="Trạng thái" :options="statusOptions" />
+      </template>
+    </UiPageHeader>
 
     <UiAlert v-if="listError" severity="danger" title="Không thể tải hàng đợi">
       {{ getApiErrorMessage(listError, 'Hãy tải lại trang và thử lại.') }}

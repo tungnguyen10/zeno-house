@@ -20,6 +20,23 @@ watchEffect(() => {
   if (error.value?.statusCode === 404) navigateTo('/dashboard/buildings')
 })
 
+// Mobile large-title collapse: fades into the persistent app header once scrolled past.
+const titleSentinel = ref<HTMLElement | null>(null)
+const isTitleCollapsed = ref(false)
+useIntersectionObserver(titleSentinel, ([entry]) => {
+  isTitleCollapsed.value = !!entry && !entry.isIntersecting
+})
+const headerTitle = useAppHeaderTitle()
+const compactTitle = computed(() => (isTitleCollapsed.value && building.value ? building.value.name : null))
+watchEffect(() => {
+  headerTitle.value = compactTitle.value
+})
+onBeforeUnmount(() => {
+  // A newer page can claim this slot before this instance unmounts during a
+  // page transition — only clear it if it's still ours.
+  if (headerTitle.value === compactTitle.value) headerTitle.value = null
+})
+
 const showDeleteModal = ref(false)
 const isDeleting = ref(false)
 const togglingServiceId = ref<string | null>(null)
@@ -116,6 +133,7 @@ const waterLabel = computed(() => {
         :back-to="'/dashboard/buildings'"
         back-label="Tòa nhà"
       >
+        <div ref="titleSentinel" aria-hidden="true" />
         <template #actions>
           <div v-if="authStore.canManage" class="flex gap-2 shrink-0">
             <UiButton

@@ -28,6 +28,14 @@ function onBack() {
       >
         <IconArrowLeft class="h-5 w-5" aria-hidden="true" />
       </button>
+      <NuxtLink
+        v-else
+        to="/dashboard"
+        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-ui-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-accent/40 lg:hidden"
+        aria-label="Zeno House — Trang chủ"
+      >
+        <IconLogoMini class="h-6 w-auto" aria-hidden="true" />
+      </NuxtLink>
     </ClientOnly>
 
     <div class="flex-1 min-w-0 lg:hidden">
@@ -40,14 +48,14 @@ function onBack() {
           leave-from-class="opacity-100"
           leave-to-class="opacity-0"
         >
-          <p v-if="headerTitle" class="truncate text-center text-sm font-semibold text-ui-primary">
+          <p v-if="headerTitle" class="truncate text-left text-sm font-semibold text-ui-primary">
             {{ headerTitle }}
           </p>
         </Transition>
       </ClientOnly>
     </div>
 
-    <div data-global-actions class="pointer-events-auto flex items-center gap-2">
+    <div data-global-actions class="pointer-events-auto flex items-center gap-1 lg:gap-2">
       <slot name="status" />
       <UiButton
         variant="ghost"

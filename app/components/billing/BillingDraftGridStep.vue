@@ -757,34 +757,31 @@ const columns: UiTableColumn<BillingDraftGridRow>[] = [
       </div>
 
       <!-- Selection action bar -->
-      <div
+      <UiBulkActionsBar
         v-if="selectedCount > 0"
-        class="fixed inset-x-3 bottom-[calc(6rem+env(safe-area-inset-bottom))] z-30 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-ui-accent/40 bg-ui-chrome/95 px-3 py-2 text-sm shadow-lg shadow-ui-shadow/40 backdrop-blur-md md:static md:bottom-auto md:z-auto md:rounded-lg md:bg-ui-accent/5 md:shadow-none md:backdrop-blur-none"
+        aria-label="Thao tác hàng loạt phiếu"
+        :count="selectedCount"
+        @clear="clearSelection"
       >
-        <p class="text-ui-primary">
-          Đã chọn <span class="font-semibold tabular-nums">{{ selectedCount }}</span> phiếu
-          <UiButton
-            v-if="!allVisibleSelected"
-            unstyled
-            class="ml-2 whitespace-nowrap text-xs text-ui-accent hover:underline"
-            @click="selectAllVisible"
-          >
-            Chọn tất cả trong lọc
-          </UiButton>
-        </p>
-        <div class="flex items-center gap-2">
-          <UiButton variant="ghost" size="sm" class="whitespace-nowrap" @click="clearSelection">Bỏ chọn</UiButton>
-          <UiButton
-            v-if="onIssue && onPreviewIssue && issuableSelectedCount > 0"
-            variant="primary"
-            size="sm"
-            class="whitespace-nowrap"
-            @click="startIssue"
-          >
-            Xem trước &amp; phát hành ({{ issuableSelectedCount }})
-          </UiButton>
-        </div>
-      </div>
+        <UiButton
+          v-if="!allVisibleSelected"
+          variant="ghost"
+          size="sm"
+          class="whitespace-nowrap"
+          @click="selectAllVisible"
+        >
+          Chọn tất cả trong lọc
+        </UiButton>
+        <UiButton
+          v-if="onIssue && onPreviewIssue && issuableSelectedCount > 0"
+          variant="primary"
+          size="sm"
+          class="whitespace-nowrap"
+          @click="startIssue"
+        >
+          Xem trước &amp; phát hành ({{ issuableSelectedCount }})
+        </UiButton>
+      </UiBulkActionsBar>
 
       <!-- Loading -->
       <div v-if="loading" class="space-y-3">
@@ -1083,24 +1080,19 @@ const columns: UiTableColumn<BillingDraftGridRow>[] = [
           </UiButton>
         </div>
         <div v-if="periodEditable" class="border-t border-ui-border" />
-        <div class="flex items-center justify-between">
-          <UiCheckbox
-            shape="circle"
-            :model-value="allVisibleSelected"
-            :indeterminate="someVisibleSelected"
-            :disabled="!hasSelectableRows"
-            label="Chọn tất cả"
-            class="[&>label]:min-h-11 [&>label]:items-center"
-            aria-label="Chọn tất cả phòng để phát hành hàng loạt"
-            @update:model-value="toggleSelectAllVisible"
-          />
-          <span v-if="selectedCount > 0" class="text-xs tabular-nums text-ui-muted">Đã chọn {{ selectedCount }}</span>
-        </div>
-        <p class="pl-11 text-xs text-ui-muted">
-          {{ hasSelectableRows
+        <UiSelectAllBar
+          variant="bare"
+          :model-value="allVisibleSelected"
+          :indeterminate="someVisibleSelected"
+          :disabled="!hasSelectableRows"
+          :page-count="filteredRows.length"
+          :total-selected="selectedCount"
+          aria-label="Chọn tất cả phòng để phát hành hàng loạt"
+          :description="hasSelectableRows
             ? 'Chọn để xem trước & phát hành nhiều phòng cùng lúc.'
-            : 'Xuất hiện khi phòng đã đủ chỉ số — dùng để phát hành hàng loạt.' }}
-        </p>
+            : 'Xuất hiện khi phòng đã đủ chỉ số — dùng để phát hành hàng loạt.'"
+          @update:model-value="toggleSelectAllVisible"
+        />
       </div>
 
       <!-- Mobile cards (stacked) -->

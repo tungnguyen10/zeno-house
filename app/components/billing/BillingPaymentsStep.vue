@@ -534,17 +534,17 @@ watch(
         <span class="text-xs text-ui-muted">
           {{ filteredInvoices.length }} / {{ activeInvoices.length }} hoá đơn
         </span>
-        <template #actions>
-          <UiButton
-            v-if="printableCandidates.length > 0"
-            variant="ghost"
-            size="sm"
-            @click="toggleSelectAll"
-          >
-            {{ allVisibleSelected ? 'Bỏ chọn tất cả' : `Chọn tất cả (${printableCandidates.length})` }}
-          </UiButton>
-        </template>
       </UiToolbar>
+
+      <UiSelectAllBar
+        v-if="printableCandidates.length > 0"
+        :model-value="allVisibleSelected"
+        :indeterminate="selectedIds.size > 0 && !allVisibleSelected"
+        :page-count="printableCandidates.length"
+        :total-selected="selectedIds.size"
+        aria-label="Chọn tất cả hoá đơn đang hiển thị"
+        @update:model-value="toggleSelectAll"
+      />
 
       <!-- Mobile: grouped list replaces the table below md -->
       <div class="md:hidden">
@@ -959,46 +959,45 @@ watch(
       leave-from-class="opacity-100 translate-y-0"
       leave-to-class="opacity-0 translate-y-2"
     >
-      <div
+      <UiBulkActionsBar
         v-if="selectedIds.size > 0"
-        class="fixed bottom-[calc(6rem+env(safe-area-inset-bottom))] left-1/2 z-30 w-[calc(100%-2rem)] max-w-max -translate-x-1/2 rounded-2xl border border-ui-border bg-ui-chrome/95 px-4 py-2 shadow-lg shadow-ui-shadow/40 backdrop-blur-md sm:w-auto lg:bottom-4 lg:rounded-xl lg:bg-ui-chrome lg:backdrop-blur"
+        aria-label="Thao tác hàng loạt hoá đơn"
+        :count="selectedIds.size"
+        @clear="clearSelection"
       >
-        <div class="grid grid-cols-2 items-center gap-2 sm:flex sm:gap-3">
-          <span class="col-span-2 text-center text-sm text-ui-primary sm:col-auto sm:text-left">
-            Đã chọn <span class="font-semibold">{{ selectedIds.size }}</span> hoá đơn
-          </span>
-          <UiButton class="whitespace-nowrap" variant="ghost" size="sm" @click="clearSelection">Bỏ chọn</UiButton>
-          <UiButton class="whitespace-nowrap" variant="secondary" size="sm" @click="printSelection">
-            In phiếu
-          </UiButton>
-          <UiButton
-            v-if="invoiceEmailEnabled"
-            class="col-span-2 whitespace-nowrap sm:col-auto"
-            variant="secondary"
-            size="sm"
-            :disabled="selectedInvoicesForBulk.length > 100"
-            @click="showEmailModal = true"
-          >
-            Gửi email ({{ selectedInvoicesForBulk.length }})
-          </UiButton>
-          <UiButton
-            class="col-span-2 whitespace-nowrap sm:col-auto"
-            variant="primary"
-            size="sm"
-            :disabled="!bulkPaymentSelectionEligible"
-            :title="bulkPaymentDisabledReason"
-            @click="openBulkModal"
-          >
-            Ghi thu hàng loạt
-          </UiButton>
-        </div>
-        <p
-          v-if="bulkPaymentDisabledReason"
-          class="mt-2 text-center text-xs text-status-warning"
+        <UiButton class="whitespace-nowrap" variant="secondary" size="sm" @click="printSelection">
+          In phiếu
+        </UiButton>
+        <UiButton
+          v-if="invoiceEmailEnabled"
+          class="whitespace-nowrap"
+          variant="secondary"
+          size="sm"
+          :disabled="selectedInvoicesForBulk.length > 100"
+          @click="showEmailModal = true"
         >
-          {{ bulkPaymentDisabledReason }}
-        </p>
-      </div>
+          Gửi email ({{ selectedInvoicesForBulk.length }})
+        </UiButton>
+        <UiButton
+          class="whitespace-nowrap"
+          variant="primary"
+          size="sm"
+          :disabled="!bulkPaymentSelectionEligible"
+          :title="bulkPaymentDisabledReason"
+          @click="openBulkModal"
+        >
+          Ghi thu hàng loạt
+        </UiButton>
+
+        <template #note>
+          <p
+            v-if="bulkPaymentDisabledReason"
+            class="text-xs text-status-warning"
+          >
+            {{ bulkPaymentDisabledReason }}
+          </p>
+        </template>
+      </UiBulkActionsBar>
     </Transition>
 
     <UiConfirmModal

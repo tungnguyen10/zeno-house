@@ -28,6 +28,23 @@ if (isUuid(id)) {
 
 const { room, isLoading, error, refresh: refreshRoom } = useRoomDetail(id)
 
+// Mobile large-title collapse: fades into the persistent app header once scrolled past.
+const titleSentinel = ref<HTMLElement | null>(null)
+const isTitleCollapsed = ref(false)
+useIntersectionObserver(titleSentinel, ([entry]) => {
+  isTitleCollapsed.value = !!entry && !entry.isIntersecting
+})
+const headerTitle = useAppHeaderTitle()
+const compactTitle = computed(() => (isTitleCollapsed.value && room.value ? `Phòng ${room.value.roomNumber}` : null))
+watchEffect(() => {
+  headerTitle.value = compactTitle.value
+})
+onBeforeUnmount(() => {
+  // A newer page can claim this slot before this instance unmounts during a
+  // page transition — only clear it if it's still ours.
+  if (headerTitle.value === compactTitle.value) headerTitle.value = null
+})
+
 const buildingId = computed(() => room.value?.buildingId ?? '')
 const { data: buildingData, refresh: refreshBuilding } = await useFetch<ApiSuccess<Building>>(
   computed(() => buildingId.value ? `/api/buildings/${buildingId.value}` : '/api/buildings/__missing'),
@@ -210,6 +227,7 @@ if (error.value?.statusCode === 404) {
         :back-to="'/dashboard/rooms'"
         back-label="Phòng"
       >
+        <div ref="titleSentinel" aria-hidden="true" />
         <template #actions>
           <div v-if="authStore.can('rooms.update')" class="flex gap-2 shrink-0">
             <NuxtLink :to="roomEditPath(room)">

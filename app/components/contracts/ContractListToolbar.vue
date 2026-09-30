@@ -60,17 +60,17 @@ const activeFilterCount = computed(() => {
 </script>
 
 <template>
-  <UiToolbar>
-    <UiSearchInput
-      :model-value="q"
-      placeholder="Tìm mã HĐ, tên khách thuê, số phòng…"
-      aria-label="Tìm kiếm hợp đồng"
-      :debounce="250"
-      class="w-full sm:w-72"
-      @update:model-value="emit('update:q', $event)"
-    />
-
-    <UiFilterPopover :count="activeFilterCount" aria-label="Bộ lọc hợp đồng">
+  <UiListToolbar
+    :search="q"
+    search-placeholder="Tìm mã HĐ, tên khách thuê, số phòng…"
+    search-aria-label="Tìm kiếm hợp đồng"
+    :filter-count="activeFilterCount"
+    filter-aria-label="Bộ lọc hợp đồng"
+    :has-active-filters="hasActiveFilters"
+    @update:search="emit('update:q', $event)"
+    @reset="emit('reset')"
+  >
+    <template #filters>
       <div class="flex flex-col gap-3">
         <label class="flex flex-col gap-1.5 text-xs text-ui-muted">
           <span>Tòa nhà</span>
@@ -93,19 +93,17 @@ const activeFilterCount = computed(() => {
           />
         </div>
       </div>
-    </UiFilterPopover>
-
-    <UiSortControl
-      :model-value="sort"
-      :order="order"
-      :options="sortOptions"
-      class="sm:ml-auto"
-      @update:model-value="emit('update:sort', $event as SortField)"
-      @update:order="emit('update:order', $event)"
-    />
-
-    <template v-if="hasActiveFilters" #actions>
-      <UiFilterResetButton @click="emit('reset')" />
     </template>
-  </UiToolbar>
+
+    <template #sort>
+      <UiSortControl
+        :model-value="sort"
+        :order="order"
+        :options="sortOptions"
+        class="shrink-0 sm:ml-auto"
+        @update:model-value="emit('update:sort', $event as SortField)"
+        @update:order="emit('update:order', $event)"
+      />
+    </template>
+  </UiListToolbar>
 </template>

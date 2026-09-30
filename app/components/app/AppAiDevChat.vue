@@ -58,8 +58,22 @@ function clampFabPosition(position: FabPosition): FabPosition {
   }
 }
 
+// Snap to the nearer left/right edge so the FAB always rests clear of page
+// content (table columns, pagination) instead of settling mid-screen —
+// covers both a fresh drag release and correcting any stale stored position.
+function snapFabPosition(position: FabPosition): FabPosition {
+  const clamped = clampFabPosition(position)
+  const leftEdge = FAB_MARGIN
+  const rightEdge = Math.max(FAB_MARGIN, viewportWidth.value - FAB_SIZE - FAB_MARGIN)
+  const nearRight = Math.abs(clamped.x - rightEdge) <= Math.abs(clamped.x - leftEdge)
+  return {
+    x: nearRight ? rightEdge : leftEdge,
+    y: clamped.y,
+  }
+}
+
 function syncFabPosition(position: FabPosition) {
-  const next = clampFabPosition(position)
+  const next = snapFabPosition(position)
   fabX.value = next.x
   fabY.value = next.y
   storedFabPosition.value = next
@@ -85,7 +99,7 @@ const { x: fabX, y: fabY } = useDraggable(fabEl, {
     }
   },
   onEnd(position) {
-    const next = clampFabPosition(position)
+    const next = snapFabPosition(position)
     fabX.value = next.x
     fabY.value = next.y
     storedFabPosition.value = next
@@ -173,7 +187,7 @@ onMounted(() => {
 onBeforeUnmount(() => abort())
 
 watch([viewportWidth, viewportHeight], () => {
-  const current = clampFabPosition({ x: fabX.value, y: fabY.value })
+  const current = snapFabPosition({ x: fabX.value, y: fabY.value })
   if (current.x !== fabX.value) {
     fabX.value = current.x
   }

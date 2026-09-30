@@ -45,7 +45,7 @@ function dueLabel(row: InvoiceListItem): string {
   <div class="space-y-2">
     <div class="md:hidden">
       <div v-if="loading" class="space-y-2">
-        <UiSkeleton v-for="n in 10" :key="`invoice-card-skeleton-${n}`" class="h-28 w-full rounded-lg" />
+        <UiSkeleton v-for="n in 10" :key="`invoice-card-skeleton-${n}`" class="h-20 w-full rounded-lg" />
       </div>
       <UiEmptyState
         v-else-if="rows.length === 0"
@@ -60,49 +60,45 @@ function dueLabel(row: InvoiceListItem): string {
       >
         <UiCheckbox
           v-if="row.status !== 'void'"
+          shape="circle"
           class="mt-0.5 shrink-0"
           :model-value="selectedIds.has(row.id)"
           :aria-label="`Chọn hoá đơn ${row.invoice_code}`"
           @update:model-value="emit('toggle-select', row)"
         />
+        <!-- Void rows aren't selectable; keep the text column aligned with the rest. -->
+        <span v-else class="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+
         <UiButton
           unstyled
           :aria-label="`Mở hoá đơn ${row.invoice_code}`"
           class="min-w-0 flex-1 rounded-md text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-ui-accent/40"
           @click="emit('open', row)"
         >
-          <div class="flex items-start justify-between gap-3">
-            <div class="min-w-0 flex-1">
-              <p class="truncate text-sm font-medium text-ui-primary">{{ row.tenant_name ?? 'Khách thuê' }}</p>
-              <p class="mt-0.5 truncate text-xs text-ui-muted">{{ roomLabel(row) }}</p>
-              <p class="mt-1 truncate text-xs tabular-nums text-ui-muted">{{ row.invoice_code }} · {{ periodLabel(row) }}</p>
-              <p v-if="row.tenant_phone" class="mt-0.5 truncate text-xs tabular-nums text-ui-muted">
-                {{ row.tenant_phone }}
-              </p>
-            </div>
-            <div class="shrink-0">
+          <div class="flex items-baseline justify-between gap-3">
+            <p class="min-w-0 truncate text-sm font-medium text-ui-primary">
+              {{ row.tenant_name ?? 'Khách thuê' }}
+            </p>
+            <p class="shrink-0 text-sm font-medium tabular-nums text-ui-primary">
+              {{ formatCurrency(row.total_amount) }}
+            </p>
+          </div>
+
+          <div class="mt-1 flex items-center justify-between gap-2">
+            <p class="min-w-0 truncate text-xs text-ui-muted">
+              {{ roomLabel(row) }} · {{ periodLabel(row) }}
+            </p>
+            <div class="flex shrink-0 items-center gap-1.5">
               <UiStatusBadge :status="row.status" context="invoice" />
+              <IconChevronRight class="h-4 w-4 shrink-0 text-ui-muted" aria-hidden="true" />
             </div>
           </div>
-          <div class="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
-            <div class="min-w-0">
-              <p class="text-ui-muted">Tổng</p>
-              <p class="mt-0.5 truncate text-ui-primary tabular-nums">{{ formatCurrency(row.total_amount) }}</p>
-            </div>
-            <div class="min-w-0 text-right">
-              <p class="text-ui-muted">Đã thu</p>
-              <p class="mt-0.5 truncate text-ui-primary tabular-nums">{{ formatCurrency(row.paid_amount) }}</p>
-            </div>
-            <div class="min-w-0">
-              <p class="text-ui-muted">Hạn</p>
-              <p class="mt-0.5 truncate text-ui-primary tabular-nums">{{ dueLabel(row) }}</p>
-            </div>
-            <div class="min-w-0 text-right">
-              <p class="text-ui-muted">Còn lại</p>
-              <p :class="['mt-0.5 truncate tabular-nums', row.balance_amount > 0 ? 'font-medium text-status-danger' : 'text-status-success']">
-                {{ formatCurrency(row.balance_amount) }}
-              </p>
-            </div>
+
+          <div class="mt-1 flex items-baseline justify-between gap-2">
+            <p class="min-w-0 truncate text-xs tabular-nums text-ui-muted">{{ row.invoice_code }}</p>
+            <p v-if="row.balance_amount > 0" class="shrink-0 text-xs tabular-nums text-status-danger">
+              Còn {{ formatCurrency(row.balance_amount) }} · hạn {{ dueLabel(row) }}
+            </p>
           </div>
         </UiButton>
       </div>

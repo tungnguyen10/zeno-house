@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { nextTick, reactive, ref } from 'vue'
+import { LIST_PAGE_SIZE } from '../../app/utils/constants/pagination'
 
 const replaceMock = vi.fn()
 const refreshMock = vi.fn()
@@ -64,7 +65,7 @@ describe('useInvoiceList', () => {
       status: ['issued', 'overdue'],
       tenant_search: 'Tung',
       page: 3,
-      page_size: 50,
+      page_size: LIST_PAGE_SIZE,
     })
   })
 

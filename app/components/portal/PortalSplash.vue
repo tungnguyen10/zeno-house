@@ -3,12 +3,6 @@
 // bootstrap data resolves. Signature: a thin teal "tracking" bar that sweeps
 // beneath the wordmark (a nod to the portal's MapTrack heritage), rather than a
 // generic whole-logo pulse. Motion is disabled under reduced-motion.
-//
-// Uses a dedicated IconLogoSplash rather than IconLogo: the base logo's
-// `userSpaceOnUse` gradient ids collide with the sidebar's IconLogo when both
-// render at once (the larger instance loses its gold fill). logo-splash.svg
-// carries unique gradient ids while keeping `currentColor` on the wordmark so it
-// still adapts to the light/dark portal theme.
 </script>
 
 <template>
@@ -17,7 +11,7 @@
     role="status"
     aria-label="Đang mở không gian của bạn"
   >
-    <IconLogoSplash class="portal-splash__mark h-11 w-auto" />
+    <IconLogo class="portal-splash__mark h-11 w-auto" />
     <div class="portal-splash__track relative h-1 w-40 overflow-hidden rounded-full bg-[color:var(--portal-accent-soft)]">
       <span class="portal-splash__beam absolute inset-y-0 left-0 w-10 rounded-full bg-[color:var(--portal-accent)]" />
     </div>

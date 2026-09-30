@@ -3,6 +3,7 @@ import type { InvoiceStatus } from '~/utils/constants/billing'
 import type { InvoiceListItem, InvoiceListMeta } from '~/utils/validators/invoices'
 import { useRouteListQuerySync, readQueryEnumArray, readQueryString } from '~/composables/useRouteListQuerySync'
 import { getApiErrorCode, getApiErrorMessage } from '~/utils/api-error'
+import { LIST_PAGE_SIZE } from '~/utils/constants/pagination'
 
 const LIST_STATUSES: InvoiceStatus[] = ['issued', 'partial', 'paid', 'overdue', 'void']
 const DEFAULT_STATUSES: InvoiceStatus[] = ['issued', 'partial', 'paid', 'overdue']
@@ -42,7 +43,7 @@ export function useInvoiceList() {
   const status = ref<InvoiceStatus[]>(initStatus.length > 0 ? initStatus : [...DEFAULT_STATUSES])
   const tenantSearchInput = ref(readQueryString(route.query.tenant_search))
   const page = ref(readNumber(route.query.page) ?? 1)
-  const pageSize = ref(50)
+  const pageSize = ref(LIST_PAGE_SIZE)
   const tenantSearch = computed(() => tenantSearchInput.value.trim())
 
   const apiQuery = computed(() => ({

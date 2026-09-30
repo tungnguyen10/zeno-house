@@ -15,6 +15,23 @@ definePageMeta({
   title: 'Dashboard',
 })
 
+// Mobile large-title collapse: fades into the persistent app header once scrolled past.
+const titleSentinel = ref<HTMLElement | null>(null)
+const isTitleCollapsed = ref(false)
+useIntersectionObserver(titleSentinel, ([entry]) => {
+  isTitleCollapsed.value = !!entry && !entry.isIntersecting
+})
+const headerTitle = useAppHeaderTitle()
+const compactTitle = computed(() => (isTitleCollapsed.value ? 'Dashboard' : null))
+watchEffect(() => {
+  headerTitle.value = compactTitle.value
+})
+onBeforeUnmount(() => {
+  // A newer page can claim this slot before this instance unmounts during a
+  // page transition — only clear it if it's still ours.
+  if (headerTitle.value === compactTitle.value) headerTitle.value = null
+})
+
 const { summary, meta, isLoading, error, errorCode, refresh } = useDashboardSummary()
 
 const isForbidden = computed(() => errorCode.value === 'FORBIDDEN')
@@ -138,6 +155,7 @@ const previousCollectionRate = computed<number | null>(() => {
   <AppPullToRefresh :on-refresh="handleRefresh">
     <div class="space-y-6">
       <UiPageHeader title="Dashboard" description="Tổng quan vận hành nhà cho thuê">
+      <div ref="titleSentinel" aria-hidden="true" />
       <template #actions>
         <div class="flex items-center gap-3">
           <span

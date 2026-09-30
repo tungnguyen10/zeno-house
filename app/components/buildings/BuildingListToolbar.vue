@@ -35,17 +35,17 @@ const activeFilterCount = computed(() => props.status.length)
 </script>
 
 <template>
-  <UiToolbar>
-    <UiSearchInput
-      :model-value="q"
-      placeholder="Tìm theo tên, mã, địa chỉ…"
-      aria-label="Tìm kiếm tòa nhà"
-      :debounce="250"
-      class="w-full sm:w-72"
-      @update:model-value="emit('update:q', $event)"
-    />
-
-    <UiFilterPopover :count="activeFilterCount" aria-label="Bộ lọc tòa nhà">
+  <UiListToolbar
+    :search="q"
+    search-placeholder="Tìm theo tên, mã, địa chỉ…"
+    search-aria-label="Tìm kiếm tòa nhà"
+    :filter-count="activeFilterCount"
+    filter-aria-label="Bộ lọc tòa nhà"
+    :has-active-filters="hasActiveFilters"
+    @update:search="emit('update:q', $event)"
+    @reset="emit('reset')"
+  >
+    <template #filters>
       <div class="flex flex-col gap-1.5">
         <span class="text-xs text-ui-muted">Trạng thái</span>
         <UiFilterChips
@@ -55,19 +55,17 @@ const activeFilterCount = computed(() => props.status.length)
           @update:model-value="emit('update:status', $event)"
         />
       </div>
-    </UiFilterPopover>
-
-    <UiSortControl
-      :model-value="sort"
-      :order="order"
-      :options="sortOptions"
-      class="sm:ml-auto"
-      @update:model-value="emit('update:sort', $event as SortField)"
-      @update:order="emit('update:order', $event)"
-    />
-
-    <template v-if="hasActiveFilters" #actions>
-      <UiFilterResetButton @click="emit('reset')" />
     </template>
-  </UiToolbar>
+
+    <template #sort>
+      <UiSortControl
+        :model-value="sort"
+        :order="order"
+        :options="sortOptions"
+        class="shrink-0 sm:ml-auto"
+        @update:model-value="emit('update:sort', $event as SortField)"
+        @update:order="emit('update:order', $event)"
+      />
+    </template>
+  </UiListToolbar>
 </template>

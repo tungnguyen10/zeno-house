@@ -4,6 +4,23 @@ import { userPasswordChangeSchema, type UserPasswordChangeInput } from '~/utils/
 const toast = useToast()
 const { change, saving, fieldErrors: serverFieldErrors } = useUserPassword()
 
+// Mobile large-title collapse: fades into the persistent app header once scrolled past.
+const titleSentinel = ref<HTMLElement | null>(null)
+const isTitleCollapsed = ref(false)
+useIntersectionObserver(titleSentinel, ([entry]) => {
+  isTitleCollapsed.value = !!entry && !entry.isIntersecting
+})
+const headerTitle = useAppHeaderTitle()
+const compactTitle = computed(() => (isTitleCollapsed.value ? 'Đổi mật khẩu' : null))
+watchEffect(() => {
+  headerTitle.value = compactTitle.value
+})
+onBeforeUnmount(() => {
+  // A newer page can claim this slot before this instance unmounts during a
+  // page transition — only clear it if it's still ours.
+  if (headerTitle.value === compactTitle.value) headerTitle.value = null
+})
+
 const form = reactive<UserPasswordChangeInput>({
   current_password: '',
   password: '',
@@ -48,7 +65,9 @@ async function onSubmit() {
       title="Đổi mật khẩu"
       description="Xác nhận mật khẩu hiện tại trước khi tạo mật khẩu mới."
       :back-to="'/dashboard/profile'"
-    />
+    >
+      <div ref="titleSentinel" aria-hidden="true" />
+    </UiPageHeader>
 
     <UiSurfacePanel>
       <form class="space-y-4" @submit.prevent="onSubmit">

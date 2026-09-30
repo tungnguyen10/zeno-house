@@ -15,6 +15,23 @@ definePageMeta({
 
 const authStore = useAuthStore()
 
+// Mobile large-title collapse: fades into the persistent app header once scrolled past.
+const titleSentinel = ref<HTMLElement | null>(null)
+const isTitleCollapsed = ref(false)
+useIntersectionObserver(titleSentinel, ([entry]) => {
+  isTitleCollapsed.value = !!entry && !entry.isIntersecting
+})
+const headerTitle = useAppHeaderTitle()
+const compactTitle = computed(() => (isTitleCollapsed.value ? 'Quản lý người dùng' : null))
+watchEffect(() => {
+  headerTitle.value = compactTitle.value
+})
+onBeforeUnmount(() => {
+  // A newer page can claim this slot before this instance unmounts during a
+  // page transition — only clear it if it's still ours.
+  if (headerTitle.value === compactTitle.value) headerTitle.value = null
+})
+
 const {
   users,
   buildings,
@@ -265,7 +282,9 @@ function managerInitials(row: ManagedUserWithAssignments): string {
       :description="authStore.isAdmin
         ? 'Tạo owner/quản lý, phân quyền theo tòa nhà và quyền xóa dữ liệu nhạy cảm.'
         : 'Tạo quản lý và phân quyền theo tòa nhà trong phạm vi của bạn.'"
-    />
+    >
+      <div ref="titleSentinel" aria-hidden="true" />
+    </UiPageHeader>
 
     <!-- Create user -->
     <form

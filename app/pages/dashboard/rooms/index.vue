@@ -13,6 +13,23 @@ import { getApiErrorDetails, getApiErrorMessage } from '~/utils/api-error'
 
 definePageMeta({ title: 'Phòng' })
 
+// Mobile large-title collapse: fades into the persistent app header once scrolled past.
+const titleSentinel = ref<HTMLElement | null>(null)
+const isTitleCollapsed = ref(false)
+useIntersectionObserver(titleSentinel, ([entry]) => {
+  isTitleCollapsed.value = !!entry && !entry.isIntersecting
+})
+const headerTitle = useAppHeaderTitle()
+const compactTitle = computed(() => (isTitleCollapsed.value ? 'Phòng' : null))
+watchEffect(() => {
+  headerTitle.value = compactTitle.value
+})
+onBeforeUnmount(() => {
+  // A newer page can claim this slot before this instance unmounts during a
+  // page transition — only clear it if it's still ours.
+  if (headerTitle.value === compactTitle.value) headerTitle.value = null
+})
+
 const authStore = useAuthStore()
 const toast = useToast()
 const {
@@ -278,6 +295,7 @@ async function onBulkDone(result: RoomBulkResult, action: RoomBulkAction) {
   <AppPullToRefresh :on-refresh="refresh">
   <div>
     <UiPageHeader title="Phòng" :description="`${total} phòng`">
+      <div ref="titleSentinel" aria-hidden="true" />
       <template #actions>
         <UiDropdownMenu v-if="authStore.can('rooms.create') || authStore.can('rooms.delete')">
           <UiDropdownMenuItem v-if="authStore.can('rooms.create')" @click="openCreateRoom">
@@ -355,18 +373,15 @@ async function onBulkDone(result: RoomBulkResult, action: RoomBulkAction) {
     </UiEmptyState>
 
     <template v-else>
-      <div
+      <UiSelectAllBar
         v-if="selectionMode && authStore.can('rooms.delete')"
-        class="mb-3 flex items-center justify-between gap-3 rounded-lg border border-ui-border bg-ui-deep/40 px-3 py-2"
-      >
-        <UiCheckbox
-          :model-value="allOnPageSelected"
-          :indeterminate="someOnPageSelected && !allOnPageSelected"
-          :label="`Chọn cả trang (${rooms.length})`"
-          @update:model-value="toggleAllOnPage"
-        />
-        <span class="text-xs text-ui-muted">{{ bulk.selectedIds.value.length }} đã chọn tổng cộng</span>
-      </div>
+        :model-value="allOnPageSelected"
+        :indeterminate="someOnPageSelected && !allOnPageSelected"
+        :page-count="rooms.length"
+        :total-selected="bulk.selectedIds.value.length"
+        aria-label="Chọn tất cả phòng trên trang"
+        @update:model-value="toggleAllOnPage"
+      />
 
       <div class="space-y-6">
         <section
@@ -404,17 +419,11 @@ async function onBulkDone(result: RoomBulkResult, action: RoomBulkAction) {
         </section>
       </div>
 
-      <div v-if="totalPages > 1" class="mt-6 flex items-center justify-between border-t border-ui-border pt-4">
-        <p class="text-sm text-ui-muted">Trang {{ page }} / {{ totalPages }}</p>
-        <div class="flex gap-2">
-          <UiButton variant="secondary" size="sm" :disabled="page <= 1" @click="page--">
-            Trước
-          </UiButton>
-          <UiButton variant="secondary" size="sm" :disabled="page >= totalPages" @click="page++">
-            Tiếp
-          </UiButton>
-        </div>
-      </div>
+      <UiPagination
+        :page="page"
+        :total-pages="totalPages"
+        @update:page="page = $event"
+      />
     </template>
 
     <RoomBulkActionsBar

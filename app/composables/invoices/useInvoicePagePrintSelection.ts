@@ -20,10 +20,34 @@ export function useInvoicePagePrintSelection(rows: Ref<InvoiceListItem[]> | Comp
     rows.value.filter(invoice => selectedIds.value.has(invoice.id) && invoice.status !== 'void'),
   )
 
+  // Void invoices can never be printed, so they are excluded from "select all".
+  const selectableInvoices = computed(() => rows.value.filter(invoice => invoice.status !== 'void'))
+
+  const allSelected = computed(() =>
+    selectableInvoices.value.length > 0 && selectedInvoices.value.length === selectableInvoices.value.length,
+  )
+
+  const someSelected = computed(() => selectedInvoices.value.length > 0 && !allSelected.value)
+
+  function toggleAll() {
+    selectedIds.value = allSelected.value
+      ? new Set()
+      : new Set(selectableInvoices.value.map(invoice => invoice.id))
+  }
+
   watch(
     () => rows.value,
     clearSelection,
   )
 
-  return { selectedIds, selectedInvoices, toggle, clearSelection }
+  return {
+    selectedIds,
+    selectedInvoices,
+    selectableInvoices,
+    allSelected,
+    someSelected,
+    toggle,
+    toggleAll,
+    clearSelection,
+  }
 }

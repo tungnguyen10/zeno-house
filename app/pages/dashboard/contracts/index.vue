@@ -9,6 +9,23 @@ import { contractPath } from '~/utils/routes/operational'
 
 definePageMeta({ title: 'Hợp đồng' })
 
+// Mobile large-title collapse: fades into the persistent app header once scrolled past.
+const titleSentinel = ref<HTMLElement | null>(null)
+const isTitleCollapsed = ref(false)
+useIntersectionObserver(titleSentinel, ([entry]) => {
+  isTitleCollapsed.value = !!entry && !entry.isIntersecting
+})
+const headerTitle = useAppHeaderTitle()
+const compactTitle = computed(() => (isTitleCollapsed.value ? 'Hợp đồng' : null))
+watchEffect(() => {
+  headerTitle.value = compactTitle.value
+})
+onBeforeUnmount(() => {
+  // A newer page can claim this slot before this instance unmounts during a
+  // page transition — only clear it if it's still ours.
+  if (headerTitle.value === compactTitle.value) headerTitle.value = null
+})
+
 const authStore = useAuthStore()
 const {
   contracts,
@@ -93,6 +110,7 @@ watch(contracts, () => {
   <AppPullToRefresh :on-refresh="refresh">
   <div>
     <UiPageHeader title="Hợp đồng" :description="`${total} hợp đồng`">
+      <div ref="titleSentinel" aria-hidden="true" />
       <template #actions>
         <UiDropdownMenu v-if="authStore.can('contracts.create')">
           <UiDropdownMenuItem @click="openCreateContract">
@@ -157,20 +175,15 @@ watch(contracts, () => {
 
     <!-- List -->
     <div v-else class="space-y-2">
-      <div
+      <UiSelectAllBar
         v-if="authStore.can('contracts.delete')"
-        class="flex items-center gap-3 rounded-xl border border-transparent px-4 py-1"
-      >
-        <UiCheckbox
-          :model-value="allVisibleSelected"
-          :indeterminate="someVisibleSelected"
-          aria-label="Chọn tất cả hợp đồng trên trang"
-          @update:model-value="toggleSelectAll"
-        />
-        <span class="text-sm text-ui-muted select-none">
-          {{ selectedIds.length > 0 ? `Đã chọn ${selectedIds.length}` : 'Chọn tất cả trên trang' }}
-        </span>
-      </div>
+        :model-value="allVisibleSelected"
+        :indeterminate="someVisibleSelected"
+        :page-count="contracts.length"
+        :total-selected="selectedIds.length"
+        aria-label="Chọn tất cả hợp đồng trên trang"
+        @update:model-value="toggleSelectAll"
+      />
 
       <div
         v-for="contract in contracts"
@@ -182,6 +195,7 @@ watch(contracts, () => {
           class="shrink-0"
           :model-value="isSelected(contract.id)"
           :aria-label="`Chọn hợp đồng ${contract.contractCode}`"
+          shape="circle"
           @update:model-value="toggle(contract.id)"
           @click.stop
         />
@@ -214,13 +228,11 @@ watch(contracts, () => {
     </div>
 
     <!-- Pagination -->
-    <div v-if="totalPages > 1" class="flex items-center justify-between mt-6 pt-4 border-t border-ui-border">
-      <p class="text-sm text-ui-muted">Trang {{ page }} / {{ totalPages }}</p>
-      <div class="flex gap-2">
-        <UiButton variant="secondary" size="sm" :disabled="page <= 1" @click="page--">← Trước</UiButton>
-        <UiButton variant="secondary" size="sm" :disabled="page >= totalPages" @click="page++">Tiếp →</UiButton>
-      </div>
-    </div>
+    <UiPagination
+      :page="page"
+      :total-pages="totalPages"
+      @update:page="page = $event"
+    />
   </div>
   </AppPullToRefresh>
 </template>

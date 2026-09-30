@@ -3,6 +3,7 @@
 import type { ContractRenewInput } from '~/utils/validators/contract-renewals'
 import type { ContractWithDetails } from '~/types/contracts'
 import type { ApiSuccess } from '~/types/api'
+import clsx from 'clsx'
 import { contractPath } from '~/utils/routes/operational'
 import { getApiErrorCode, getApiErrorDetails, getApiErrorMessage } from '~/utils/api-error'
 import { isUuid } from '~/utils/format/slug'
@@ -23,6 +24,24 @@ if (isUuid(id)) {
 }
 
 const { contract, isLoading, error, refresh: refreshContract } = useContractDetail(id)
+
+// Mobile large-title collapse: fades into the persistent app header once scrolled past.
+const titleSentinel = ref<HTMLElement | null>(null)
+const isTitleCollapsed = ref(false)
+useIntersectionObserver(titleSentinel, ([entry]) => {
+  isTitleCollapsed.value = !!entry && !entry.isIntersecting
+})
+const headerTitle = useAppHeaderTitle()
+const compactTitle = computed(() => (isTitleCollapsed.value && contract.value ? contract.value.contractCode : null))
+watchEffect(() => {
+  headerTitle.value = compactTitle.value
+})
+onBeforeUnmount(() => {
+  // A newer page can claim this slot before this instance unmounts during a
+  // page transition — only clear it if it's still ours.
+  if (headerTitle.value === compactTitle.value) headerTitle.value = null
+})
+
 const { payments, isLoading: paymentsLoading, addPayment, updatePayment, removePayment } = useContractPayments(id)
 const { renewals, isLoading: renewalsLoading, renew } = useContractRenewals(id)
 const { occupants, isLoading: occupantsLoading, addOccupant, moveOut, removeOccupant } = useContractOccupants(id)
@@ -166,6 +185,41 @@ async function handleDeleteService() {
 watchEffect(() => {
   if (error.value?.statusCode === 404) navigateTo('/dashboard/contracts')
 })
+
+// Scroll-spy for the in-page anchor nav: tracks which section the user has scrolled past so the
+// mobile segmented-pill skin can highlight it (desktop keeps the plain underline-free look).
+// IntersectionObserver's visibility window is unreliable for short sections (they can pass through
+// the window entirely between two callbacks), so this walks section positions directly instead.
+const sectionIds = ['overview', 'amendments', 'occupants', 'payments', 'services', 'meter-readings', 'history']
+const activeSection = ref(sectionIds[0])
+const SCROLLSPY_OFFSET = 140
+let scrollContainer: HTMLElement | null = null
+
+function updateActiveSection() {
+  let current = sectionIds[0]
+  for (const sectionId of sectionIds) {
+    const el = document.getElementById(sectionId)
+    if (el && el.getBoundingClientRect().top - SCROLLSPY_OFFSET <= 0) current = sectionId
+  }
+  activeSection.value = current
+}
+
+onMounted(() => {
+  scrollContainer = document.querySelector('main')
+  scrollContainer?.addEventListener('scroll', updateActiveSection, { passive: true })
+  updateActiveSection()
+})
+onBeforeUnmount(() => scrollContainer?.removeEventListener('scroll', updateActiveSection))
+
+function sectionLinkClass(sectionId: string) {
+  const active = activeSection.value === sectionId
+  return clsx(
+    'shrink-0 rounded-full px-3 py-1.5 transition-colors hover:bg-ui-hover hover:text-ui-primary lg:rounded-md lg:font-normal',
+    active
+      ? 'bg-ui-surface text-ui-primary shadow-sm lg:bg-transparent lg:text-ui-muted lg:shadow-none'
+      : 'text-ui-muted',
+  )
+}
 </script>
 
 <template>
@@ -187,7 +241,9 @@ watchEffect(() => {
         title="Chi tiết hợp đồng"
         :back-to="'/dashboard/contracts'"
         back-label="Danh sách hợp đồng"
-      />
+      >
+        <div ref="titleSentinel" aria-hidden="true" />
+      </UiPageHeader>
 
       <ContractDetailHero
         :contract="contract"
@@ -225,14 +281,14 @@ watchEffect(() => {
       </UiAlert>
 
       <nav class="sticky top-0 z-20 mt-4 overflow-x-auto border-y border-ui-border bg-ui-deep/95 py-2 backdrop-blur lg:top-16">
-        <div class="flex min-w-max gap-2 text-sm">
-          <a href="#overview" class="rounded-md px-3 py-1.5 text-ui-muted hover:bg-ui-hover hover:text-ui-primary">Tổng quan</a>
-          <a href="#amendments" class="rounded-md px-3 py-1.5 text-ui-muted hover:bg-ui-hover hover:text-ui-primary">Phụ lục</a>
-          <a href="#occupants" class="rounded-md px-3 py-1.5 text-ui-muted hover:bg-ui-hover hover:text-ui-primary">Người ở</a>
-          <a href="#payments" class="rounded-md px-3 py-1.5 text-ui-muted hover:bg-ui-hover hover:text-ui-primary">Thanh toán</a>
-          <a href="#services" class="rounded-md px-3 py-1.5 text-ui-muted hover:bg-ui-hover hover:text-ui-primary">Dịch vụ</a>
-          <a href="#meter-readings" class="rounded-md px-3 py-1.5 text-ui-muted hover:bg-ui-hover hover:text-ui-primary">Chỉ số</a>
-          <a href="#history" class="rounded-md px-3 py-1.5 text-ui-muted hover:bg-ui-hover hover:text-ui-primary">Lịch sử</a>
+        <div class="flex min-w-max gap-1 rounded-full bg-ui-chrome p-1 text-sm lg:gap-2 lg:rounded-none lg:bg-transparent lg:p-0">
+          <a href="#overview" :class="sectionLinkClass('overview')">Tổng quan</a>
+          <a href="#amendments" :class="sectionLinkClass('amendments')">Phụ lục</a>
+          <a href="#occupants" :class="sectionLinkClass('occupants')">Người ở</a>
+          <a href="#payments" :class="sectionLinkClass('payments')">Thanh toán</a>
+          <a href="#services" :class="sectionLinkClass('services')">Dịch vụ</a>
+          <a href="#meter-readings" :class="sectionLinkClass('meter-readings')">Chỉ số</a>
+          <a href="#history" :class="sectionLinkClass('history')">Lịch sử</a>
         </div>
       </nav>
 

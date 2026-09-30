@@ -8,6 +8,23 @@ import type { TenantBulkCreateResult, TenantBulkCreateFailure } from '~/composab
 
 definePageMeta({ title: 'Khách thuê' })
 
+// Mobile large-title collapse: fades into the persistent app header once scrolled past.
+const titleSentinel = ref<HTMLElement | null>(null)
+const isTitleCollapsed = ref(false)
+useIntersectionObserver(titleSentinel, ([entry]) => {
+  isTitleCollapsed.value = !!entry && !entry.isIntersecting
+})
+const headerTitle = useAppHeaderTitle()
+const compactTitle = computed(() => (isTitleCollapsed.value ? 'Khách thuê' : null))
+watchEffect(() => {
+  headerTitle.value = compactTitle.value
+})
+onBeforeUnmount(() => {
+  // A newer page can claim this slot before this instance unmounts during a
+  // page transition — only clear it if it's still ours.
+  if (headerTitle.value === compactTitle.value) headerTitle.value = null
+})
+
 const authStore = useAuthStore()
 const toast = useToast()
 const {
@@ -155,6 +172,7 @@ async function openCreateTenant() {
   <AppPullToRefresh :on-refresh="refresh">
   <div>
     <UiPageHeader title="Khách thuê" :description="`${total} khách thuê`">
+      <div ref="titleSentinel" aria-hidden="true" />
       <template #actions>
         <UiDropdownMenu v-if="authStore.can('tenants.create') || authStore.can('tenants.delete')">
           <UiDropdownMenuItem v-if="authStore.can('tenants.create')" @click="openCreateTenant">
@@ -251,18 +269,15 @@ async function openCreateTenant() {
     </UiEmptyState>
 
     <template v-else>
-      <div
+      <UiSelectAllBar
         v-if="selectionMode && authStore.can('tenants.delete')"
-        class="mb-3 flex items-center justify-between gap-3 rounded-lg border border-ui-border bg-ui-deep/40 px-3 py-2"
-      >
-        <UiCheckbox
-          :model-value="allOnPageSelected"
-          :indeterminate="someOnPageSelected && !allOnPageSelected"
-          :label="`Chọn cả trang (${tenants.length})`"
-          @update:model-value="toggleAllOnPage"
-        />
-        <span class="text-xs text-ui-muted">{{ bulk.selectedIds.value.length }} đã chọn tổng cộng</span>
-      </div>
+        :model-value="allOnPageSelected"
+        :indeterminate="someOnPageSelected && !allOnPageSelected"
+        :page-count="tenants.length"
+        :total-selected="bulk.selectedIds.value.length"
+        aria-label="Chọn tất cả khách thuê trên trang"
+        @update:model-value="toggleAllOnPage"
+      />
 
       <div class="space-y-2">
         <div
@@ -277,6 +292,7 @@ async function openCreateTenant() {
             <UiCheckbox
               :model-value="bulk.selectedIds.value.includes(tenant.id)"
               :aria-label="`Chọn ${tenant.fullName}`"
+              shape="circle"
               @update:model-value="onToggleSelect(tenant.id)"
             />
           </label>
@@ -326,13 +342,11 @@ async function openCreateTenant() {
         </div>
       </div>
 
-      <div v-if="totalPages > 1" class="flex items-center justify-between mt-6 pt-4 border-t border-ui-border">
-        <p class="text-sm text-ui-muted">Trang {{ page }} / {{ totalPages }}</p>
-        <div class="flex gap-2">
-          <UiButton variant="secondary" size="sm" :disabled="page <= 1" @click="page--">← Trước</UiButton>
-          <UiButton variant="secondary" size="sm" :disabled="page >= totalPages" @click="page++">Tiếp →</UiButton>
-        </div>
-      </div>
+      <UiPagination
+        :page="page"
+        :total-pages="totalPages"
+        @update:page="page = $event"
+      />
     </template>
 
     <TenantBulkActionsBar

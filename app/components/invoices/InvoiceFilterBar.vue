@@ -65,17 +65,18 @@ function updateAllMonths(value: boolean) {
 </script>
 
 <template>
-  <UiToolbar>
-    <UiSearchInput
-      :model-value="tenantSearch"
-      placeholder="Tìm khách hoặc SĐT"
-      aria-label="Tìm kiếm hoá đơn theo khách thuê hoặc số điện thoại"
-      :debounce="300"
-      class="w-full sm:w-72"
-      @update:model-value="emit('update:tenantSearch', $event)"
-    />
-
-    <UiFilterPopover :count="activeFilterCount" aria-label="Bộ lọc hoá đơn">
+  <UiListToolbar
+    :search="tenantSearch"
+    search-placeholder="Tìm khách hoặc SĐT"
+    search-aria-label="Tìm kiếm hoá đơn theo khách thuê hoặc số điện thoại"
+    :search-debounce="300"
+    :filter-count="activeFilterCount"
+    filter-aria-label="Bộ lọc hoá đơn"
+    :has-active-filters="hasActiveFilters"
+    @update:search="emit('update:tenantSearch', $event)"
+    @reset="emit('reset')"
+  >
+    <template #filters>
       <div class="flex flex-col gap-3">
         <label class="flex flex-col gap-1.5 text-xs text-ui-muted">
           <span>Tòa nhà</span>
@@ -132,10 +133,6 @@ function updateAllMonths(value: boolean) {
           />
         </div>
       </div>
-    </UiFilterPopover>
-
-    <template v-if="hasActiveFilters" #actions>
-      <UiFilterResetButton @click="emit('reset')" />
     </template>
-  </UiToolbar>
+  </UiListToolbar>
 </template>

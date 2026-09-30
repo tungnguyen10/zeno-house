@@ -79,7 +79,11 @@ onKeyStroke('Escape', () => {
         role="dialog"
         :aria-label="ariaLabel"
         :class="clsx(
-          'absolute left-0 z-50 mt-2 origin-top-left rounded-xl border border-ui-border bg-ui-chrome p-3 shadow-xl shadow-ui-shadow/40',
+          'absolute z-50 mt-2 rounded-xl border border-ui-border bg-ui-chrome p-3 shadow-xl shadow-ui-shadow/40',
+          // Right-anchored on mobile so the panel never overflows past the
+          // viewport edge when the trigger sits on the right of the toolbar.
+          'right-0 origin-top-right sm:left-0 sm:right-auto sm:origin-top-left',
+          'max-w-[calc(100vw-2rem)]',
           panelClass,
         )"
       >
