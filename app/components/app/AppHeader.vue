@@ -7,6 +7,7 @@ const themeActionLabel = computed(() => (
 ))
 
 const headerBack = useAppHeaderBack()
+const headerTitle = useAppHeaderTitle()
 function onBack() {
   if (headerBack.value) void navigateTo(headerBack.value)
 }
@@ -29,7 +30,22 @@ function onBack() {
       </button>
     </ClientOnly>
 
-    <div class="flex-1 lg:hidden" />
+    <div class="flex-1 min-w-0 lg:hidden">
+      <ClientOnly>
+        <Transition
+          enter-active-class="transition duration-150 ease-out"
+          enter-from-class="opacity-0"
+          enter-to-class="opacity-100"
+          leave-active-class="transition duration-150 ease-in"
+          leave-from-class="opacity-100"
+          leave-to-class="opacity-0"
+        >
+          <p v-if="headerTitle" class="truncate text-center text-sm font-semibold text-ui-primary">
+            {{ headerTitle }}
+          </p>
+        </Transition>
+      </ClientOnly>
+    </div>
 
     <div data-global-actions class="pointer-events-auto flex items-center gap-2">
       <slot name="status" />

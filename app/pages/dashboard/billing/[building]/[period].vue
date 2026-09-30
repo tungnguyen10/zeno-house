@@ -97,6 +97,27 @@ const tab = ref<string>(
     ? 'payments'
     : 'draft-grid',
 )
+// Mobile large-title collapse: once the sentinel below the title scrolls out
+// of view, fade the compact title into the persistent mobile app header
+// (iOS large-title pattern — reuses the same empty slot as the back button).
+const titleSentinel = ref<HTMLElement | null>(null)
+const isTitleCollapsed = ref(false)
+useIntersectionObserver(titleSentinel, ([entry]) => {
+  isTitleCollapsed.value = !!entry && !entry.isIntersecting
+})
+const headerTitle = useAppHeaderTitle()
+const compactTitle = computed(() => (
+  isTitleCollapsed.value ? `Kỳ ${periodLabel()} - ${overview.value?.buildingName ?? ''}` : null
+))
+watchEffect(() => {
+  headerTitle.value = compactTitle.value
+})
+onBeforeUnmount(() => {
+  // A newer page can claim this slot before this instance unmounts during a
+  // page transition — only clear it if it's still ours.
+  if (headerTitle.value === compactTitle.value) headerTitle.value = null
+})
+
 const auditOpen = ref(false)
 const closeOpen = ref(false)
 const reopenOpen = ref(false)
@@ -353,6 +374,7 @@ watch(
         :back-to="'/dashboard/billing'"
         back-label="Danh sách kỳ"
       >
+        <div ref="titleSentinel" aria-hidden="true" />
         <template #actions>
           <UiButton
             v-if="period?.status === 'issued' || period?.status === 'collecting'"
@@ -428,7 +450,7 @@ watch(
 
       <template v-else-if="overview && period">
         <BillingKpiStrip :overview="overview" :loading="overviewLoading" />
-        <UiTabs v-model="tab" :tabs="tabs" />
+        <UiTabs v-model="tab" :tabs="tabs" variant="segmented" />
 
         <BillingDraftGridStep
           v-if="tab === 'draft-grid'"

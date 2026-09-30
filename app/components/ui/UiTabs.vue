@@ -11,10 +11,18 @@ export interface UiTabItem {
   reason?: string
 }
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   modelValue: string
   tabs: UiTabItem[]
-}>()
+  /**
+   * `segmented` renders an iOS-style sliding pill control below `lg` and
+   * reverts to the standard underline look at `lg` and above. Mobile-only
+   * opt-in; default `underline` is unchanged for every other consumer.
+   */
+  variant?: 'underline' | 'segmented'
+}>(), {
+  variant: 'underline',
+})
 
 const emit = defineEmits<{
   (e: 'update:modelValue', value: string): void
@@ -24,10 +32,38 @@ function select(tab: UiTabItem) {
   if (tab.disabled) return
   if (tab.key !== props.modelValue) emit('update:modelValue', tab.key)
 }
+
+const containerClass = computed(() => clsx(
+  'flex items-center gap-1 overflow-x-auto no-scrollbar',
+  props.variant === 'segmented'
+    ? 'rounded-full bg-ui-chrome p-1 lg:rounded-none lg:bg-transparent lg:gap-1 lg:border-b lg:border-ui-border lg:p-0'
+    : 'border-b border-ui-border',
+))
+
+function tabClass(tab: UiTabItem) {
+  const active = tab.key === props.modelValue
+  if (props.variant === 'segmented') {
+    return clsx(
+      'relative inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-sm font-medium transition-colors',
+      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-accent/40',
+      'lg:rounded-t-md lg:px-4 lg:py-2.5',
+      active
+        ? 'bg-ui-surface text-ui-primary shadow-sm lg:bg-transparent lg:text-ui-accent lg:shadow-none'
+        : 'text-ui-muted hover:text-ui-primary',
+      tab.disabled && 'opacity-50 cursor-not-allowed hover:text-ui-muted',
+    )
+  }
+  return clsx(
+    'relative inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors',
+    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-accent/40 rounded-t-md',
+    active ? 'text-ui-accent' : 'text-ui-muted hover:text-ui-primary',
+    tab.disabled && 'opacity-50 cursor-not-allowed hover:text-ui-muted',
+  )
+}
 </script>
 
 <template>
-  <div role="tablist" class="flex items-center gap-1 border-b border-ui-border overflow-x-auto no-scrollbar">
+  <div role="tablist" :class="containerClass">
     <button
       v-for="tab in tabs"
       :key="tab.key"
@@ -37,14 +73,7 @@ function select(tab: UiTabItem) {
       :aria-disabled="tab.disabled"
       :tabindex="tab.disabled ? -1 : 0"
       :title="tab.disabled ? tab.reason : undefined"
-      :class="clsx(
-        'relative inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-accent/40 rounded-t-md',
-        tab.key === modelValue
-          ? 'text-ui-accent'
-          : 'text-ui-muted hover:text-ui-primary',
-        tab.disabled && 'opacity-50 cursor-not-allowed hover:text-ui-muted',
-      )"
+      :class="tabClass(tab)"
       :disabled="tab.disabled"
       @click="select(tab)"
     >
@@ -60,10 +89,13 @@ function select(tab: UiTabItem) {
       >
         {{ tab.count }}
       </span>
-      <!-- Active indicator -->
+      <!-- Active indicator: underline-only signature, hidden for the segmented pill below lg -->
       <span
         v-if="tab.key === modelValue"
-        class="absolute inset-x-0 -bottom-px h-0.5 bg-ui-accent"
+        :class="clsx(
+          'absolute inset-x-0 -bottom-px h-0.5 bg-ui-accent',
+          variant === 'segmented' && 'hidden lg:block',
+        )"
         aria-hidden="true"
       />
     </button>

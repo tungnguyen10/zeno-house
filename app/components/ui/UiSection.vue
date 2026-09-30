@@ -11,6 +11,8 @@
 defineProps<{
   title?: string
   description?: string
+  /** Extra classes on the title/description wrapper — e.g. `hidden md:block` when a parent tab already labels this section on mobile. */
+  titleClass?: string
 }>()
 </script>
 
@@ -20,7 +22,7 @@ defineProps<{
       v-if="title || $slots.actions || description || $slots.description"
       class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
     >
-      <div class="min-w-0">
+      <div class="min-w-0" :class="titleClass">
         <h2 v-if="title" class="text-sm font-semibold text-ui-primary">{{ title }}</h2>
         <p v-if="description" class="text-xs text-ui-muted mt-0.5">{{ description }}</p>
         <slot name="description" />

@@ -63,18 +63,18 @@ const metrics = computed<Array<{ label: string; value: string; tone: Tone; capti
 </script>
 
 <template>
-  <div class="sticky top-0 z-20 -mx-1 border-y border-ui-border bg-ui-canvas/95 px-3 py-2 backdrop-blur lg:top-16">
+  <div class="sticky top-0 z-20 -mx-1 border-y border-ui-border bg-ui-canvas px-3 py-2 lg:top-16">
     <div v-if="loading" class="flex gap-4">
       <UiSkeleton v-for="i in 5" :key="i" class="h-5 w-28" />
     </div>
     <dl
       v-else
-      class="flex flex-wrap items-baseline gap-x-5 gap-y-1.5 text-sm"
+      class="flex flex-nowrap items-baseline gap-x-4 overflow-x-auto no-scrollbar text-sm md:flex-wrap md:gap-x-5 md:gap-y-1.5 md:overflow-visible"
     >
       <div
         v-for="(m, idx) in metrics"
         :key="m.label"
-        class="flex items-baseline gap-2"
+        class="flex shrink-0 items-baseline gap-2"
       >
         <span
           v-if="idx > 0"
@@ -83,7 +83,7 @@ const metrics = computed<Array<{ label: string; value: string; tone: Tone; capti
         >·</span>
         <dt class="text-[11px] uppercase tracking-wide text-ui-muted">{{ m.label }}</dt>
         <dd :class="clsx('font-semibold tabular-nums', toneClass[m.tone])">{{ m.value }}</dd>
-        <dd v-if="m.caption" class="text-xs text-ui-muted">{{ m.caption }}</dd>
+        <dd v-if="m.caption" class="hidden text-xs text-ui-muted md:inline">{{ m.caption }}</dd>
       </div>
     </dl>
   </div>

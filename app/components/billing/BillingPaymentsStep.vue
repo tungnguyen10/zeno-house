@@ -46,6 +46,13 @@ const filterOptions = [
   { value: 'overdue', label: 'Quá hạn' },
 ]
 
+// UiFilterChips is multi-select; the mobile filter row keeps single-select
+// behavior by only accepting the newly toggled-on value.
+function onFilterChipChange(next: string[]) {
+  const picked = next.find(value => value !== filterStatus.value)
+  if (picked) filterStatus.value = picked as typeof filterStatus.value
+}
+
 const today = new Date().toISOString().slice(0, 10)
 function deriveBucket(inv: Invoice): 'paid' | 'partial' | 'unpaid' | 'overdue' | 'void' {
   if (inv.status === 'void') return 'void'
@@ -503,7 +510,7 @@ watch(
       {{ bulkEmailSummary }}
     </UiAlert>
 
-    <UiSection title="Thu tiền & công nợ" description="Theo dõi hoá đơn, ghi nhận thanh toán, hoàn tác và huỷ/phát hành lại.">
+    <UiSection title="Thu tiền & công nợ" description="Theo dõi hoá đơn, ghi nhận thanh toán, hoàn tác và huỷ/phát hành lại." title-class="hidden md:block">
       <template v-if="summary.overdueCount > 0" #actions>
         <span class="inline-flex items-center gap-1 rounded-full bg-status-warning/10 px-2.5 py-0.5 text-xs font-medium text-status-warning">
           Quá hạn: {{ summary.overdueCount }}
@@ -515,7 +522,14 @@ watch(
           v-model="filterStatus"
           :options="filterOptions"
           aria-label="Lọc hóa đơn theo trạng thái"
-          class="w-44"
+          class="hidden w-44 md:block"
+        />
+        <UiFilterChips
+          class="md:hidden"
+          :model-value="[filterStatus]"
+          :options="filterOptions"
+          aria-label="Lọc hóa đơn theo trạng thái"
+          @update:model-value="onFilterChipChange"
         />
         <span class="text-xs text-ui-muted">
           {{ filteredInvoices.length }} / {{ activeInvoices.length }} hoá đơn
@@ -551,6 +565,7 @@ watch(
             <div class="flex items-start gap-3">
               <UiCheckbox
                 v-if="row.status !== 'void'"
+                shape="circle"
                 class="mt-0.5 shrink-0"
                 :model-value="selectedIds.has(row.id)"
                 :aria-label="`Chọn hoá đơn ${row.invoiceCode}`"
@@ -560,19 +575,20 @@ watch(
                 :ref="(el) => setInvoiceRef(row.id, el)"
                 unstyled
                 :class="[
-                  'min-w-0 flex-1 rounded-md text-left transition',
+                  'flex min-w-0 flex-1 items-start gap-2 rounded-md text-left transition',
                   highlightedInvoiceId === row.id && 'bg-ui-accent/10 ring-2 ring-ui-accent/50',
                 ]"
                 @click="openDetail(row)"
               >
-                <div class="flex items-start justify-between gap-2">
-                  <div class="min-w-0 flex-1">
-                    <p class="truncate text-sm font-medium text-ui-primary">{{ invoiceDisplay(row).title }}</p>
-                    <p class="mt-0.5 truncate text-xs text-ui-muted">{{ invoiceDisplay(row).subtitle }}</p>
+                <div class="min-w-0 flex-1">
+                  <div class="flex items-start justify-between gap-2">
+                    <div class="min-w-0 flex-1">
+                      <p class="truncate text-sm font-medium text-ui-primary">{{ invoiceDisplay(row).title }}</p>
+                      <p class="mt-0.5 truncate text-xs text-ui-muted">{{ invoiceDisplay(row).subtitle }}</p>
+                    </div>
+                    <UiStatusBadge :status="row.status" context="invoice" />
                   </div>
-                  <UiStatusBadge :status="row.status" context="invoice" />
-                </div>
-                <div class="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+                  <div class="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
                   <div class="min-w-0">
                     <span class="text-ui-muted">Tổng </span>
                     <span class="tabular-nums text-ui-primary">{{ formatCurrency(row.totalAmount) }}</span>
@@ -590,6 +606,8 @@ watch(
                     <span class="tabular-nums text-ui-primary">{{ row.dueDate }}</span>
                   </div>
                 </div>
+                </div>
+                <IconChevronRight class="mt-1 h-4 w-4 shrink-0 text-ui-muted" aria-hidden="true" />
               </UiButton>
             </div>
 
@@ -943,7 +961,7 @@ watch(
     >
       <div
         v-if="selectedIds.size > 0"
-        class="fixed bottom-[calc(6rem+env(safe-area-inset-bottom))] left-1/2 z-30 w-[calc(100%-2rem)] max-w-max -translate-x-1/2 rounded-xl border border-ui-border bg-ui-chrome px-4 py-2 shadow-lg shadow-ui-shadow/40 backdrop-blur sm:w-auto lg:bottom-4"
+        class="fixed bottom-[calc(6rem+env(safe-area-inset-bottom))] left-1/2 z-30 w-[calc(100%-2rem)] max-w-max -translate-x-1/2 rounded-2xl border border-ui-border bg-ui-chrome/95 px-4 py-2 shadow-lg shadow-ui-shadow/40 backdrop-blur-md sm:w-auto lg:bottom-4 lg:rounded-xl lg:bg-ui-chrome lg:backdrop-blur"
       >
         <div class="grid grid-cols-2 items-center gap-2 sm:flex sm:gap-3">
           <span class="col-span-2 text-center text-sm text-ui-primary sm:col-auto sm:text-left">

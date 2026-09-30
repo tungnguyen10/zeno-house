@@ -1,8 +1,11 @@
 <script setup lang="ts">
+import clsx from 'clsx'
 import { onClickOutside, onKeyStroke } from '@vueuse/core'
 
-withDefaults(defineProps<{
+const props = withDefaults(defineProps<{
   ariaLabel?: string
+  /** Extra classes on the trigger button — e.g. `min-h-11 min-w-11` for a mobile 44px touch target. */
+  triggerClass?: string
 }>(), {
   ariaLabel: 'Thêm hành động',
 })
@@ -10,6 +13,11 @@ withDefaults(defineProps<{
 const isOpen = ref(false)
 const panelRef = ref<HTMLElement | null>(null)
 const triggerRef = ref<HTMLElement | null>(null)
+
+const triggerClasses = computed(() => clsx(
+  'inline-flex items-center justify-center font-medium rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-0 size-7 text-xs bg-ui-surface text-ui-primary border border-ui-border hover:bg-ui-hover focus-visible:ring-ui-border-strong',
+  props.triggerClass,
+))
 
 function toggle() {
   isOpen.value = !isOpen.value
@@ -35,7 +43,7 @@ onKeyStroke('Escape', () => {
       :aria-expanded="isOpen"
       :aria-label="ariaLabel"
       aria-haspopup="menu"
-      class="inline-flex items-center justify-center font-medium rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-0 size-7 text-xs bg-ui-surface text-ui-primary border border-ui-border hover:bg-ui-hover focus-visible:ring-ui-border-strong"
+      :class="triggerClasses"
       @click="toggle"
     >
       <IconMoreVertical class="h-4 w-4" aria-hidden="true" />

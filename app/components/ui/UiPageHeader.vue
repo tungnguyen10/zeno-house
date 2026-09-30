@@ -31,7 +31,9 @@ watchEffect(() => {
   headerBack.value = props.backTo ?? null
 })
 onBeforeUnmount(() => {
-  headerBack.value = null
+  // During a page transition the next page can mount (and claim this slot)
+  // before this instance unmounts — only clear it if it's still ours.
+  if (headerBack.value === (props.backTo ?? null)) headerBack.value = null
 })
 </script>
 

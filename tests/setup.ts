@@ -2,12 +2,14 @@ import { vi } from 'vitest'
 import { config } from '@vue/test-utils'
 import {
   computed,
+  inject,
   isRef,
   nextTick,
   onBeforeMount,
   onBeforeUnmount,
   onMounted,
   onUnmounted,
+  provide,
   reactive,
   readonly,
   ref,
@@ -24,20 +26,24 @@ import {
 import { useBulkSelection } from '~/composables/useBulkSelection'
 import UiButton from '~/components/ui/UiButton.vue'
 import UiCheckbox from '~/components/ui/UiCheckbox.vue'
+import UiDropdownMenu from '~/components/ui/UiDropdownMenu.vue'
+import UiDropdownMenuItem from '~/components/ui/UiDropdownMenuItem.vue'
 import { ok, paginated, parseBody, parseQuery } from '../server/utils/api'
 
 config.global.components = {
   ...config.global.components,
   UiButton,
   UiCheckbox,
+  UiDropdownMenu,
+  UiDropdownMenuItem,
 }
 
 // Nuxt auto-imports these into Vue SFCs at build-time. In vitest we don't run
 // the Nuxt build, so we expose the same identifiers on globalThis. Components
 // that import explicitly are unaffected (the import wins over the global).
 for (const [name, fn] of Object.entries({
-  computed, isRef, nextTick, onBeforeMount, onBeforeUnmount, onMounted, onUnmounted,
-  reactive, readonly, ref, shallowRef, toRaw, toRef, toRefs, toValue, unref, useId, watch, watchEffect,
+  computed, inject, isRef, nextTick, onBeforeMount, onBeforeUnmount, onMounted, onUnmounted,
+  provide, reactive, readonly, ref, shallowRef, toRaw, toRef, toRefs, toValue, unref, useId, watch, watchEffect,
   useBulkSelection,
 })) {
   vi.stubGlobal(name, fn)

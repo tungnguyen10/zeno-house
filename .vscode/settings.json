@@ -8,6 +8,10 @@
         },
         "copilot": true,
         "npx eslint": true,
-        "npx vitest": true
+        "npx vitest": true,
+        "git stash": true,
+        "cp": true,
+        "git checkout": true,
+        "awk": true
     }
 }

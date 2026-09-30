@@ -16,6 +16,14 @@ definePageMeta({ title: 'Hoá đơn' })
 const route = useRoute()
 const invoiceId = String(route.params.id ?? '')
 
+// Mobile large-title collapse: fades into the persistent app header once scrolled past.
+const titleSentinel = ref<HTMLElement | null>(null)
+const isTitleCollapsed = ref(false)
+useIntersectionObserver(titleSentinel, ([entry]) => {
+  isTitleCollapsed.value = !!entry && !entry.isIntersecting
+})
+const headerTitle = useAppHeaderTitle()
+
 const {
   data: invoiceResponse,
   pending,
@@ -62,6 +70,16 @@ const contractHref = computed(() =>
     : '/dashboard/contracts',
 )
 
+const compactTitle = computed(() => (isTitleCollapsed.value ? title.value : null))
+watchEffect(() => {
+  headerTitle.value = compactTitle.value
+})
+onBeforeUnmount(() => {
+  // A newer page can claim this slot before this instance unmounts during a
+  // page transition — only clear it if it's still ours.
+  if (headerTitle.value === compactTitle.value) headerTitle.value = null
+})
+
 const chargeColumns: UiTableColumn<InvoiceCharge>[] = [
   { key: 'label', label: 'Khoản phí' },
   { key: 'quantity', label: 'SL', numeric: true, hideOnMobile: true, width: 'w-20' },
@@ -96,6 +114,7 @@ function dateTimeText(value: string | null | undefined): string {
       :back-to="workspaceHref"
       :back-label="periodLabel ? `Kỳ ${periodLabel}` : 'Kỳ vận hành'"
     >
+      <div ref="titleSentinel" aria-hidden="true" />
       <template #actions>
         <UiStatusBadge v-if="invoice" :status="invoice.status" context="invoice" />
       </template>

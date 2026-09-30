@@ -15,6 +15,7 @@ describe('AppHeader', () => {
     toggleTheme.mockReset()
     vi.stubGlobal('useDashboardTheme', () => ({ resolvedTheme: ref('dark'), toggleTheme }))
     vi.stubGlobal('useAppHeaderBack', () => ref(null))
+    vi.stubGlobal('useAppHeaderTitle', () => ref(null))
   })
 
   it('renders global status actions before the account menu', () => {

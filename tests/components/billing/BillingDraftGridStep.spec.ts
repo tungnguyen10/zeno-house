@@ -223,14 +223,17 @@ describe('BillingDraftGridStep', () => {
     vi.useRealTimers()
   })
 
-  it('renders a stacked mobile row layout for the same draft rows', () => {
+  it('renders a stacked mobile row layout for the same draft rows', async () => {
     const wrapper = mountGrid()
 
     const mobileRows = wrapper.findAllComponents(BillingMobileDraftRow)
     expect(mobileRows).toHaveLength(2)
-    expect(mobileRows[0]?.text()).toContain('Thêm phát sinh')
     expect(mobileRows[0]?.text()).toContain('Chi tiết')
     expect(wrapper.find('.md\\:hidden').exists()).toBe(true)
+
+    // Secondary actions live behind the row's kebab menu now (not always visible).
+    await mobileRows[0]!.get('[aria-label="Hành động khác cho phòng"]').trigger('click')
+    expect(mobileRows[0]?.text()).toContain('Thêm phát sinh')
 
     wrapper.unmount()
   })

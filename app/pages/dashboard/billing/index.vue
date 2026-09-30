@@ -12,6 +12,23 @@ definePageMeta({ title: 'Vận hành tháng' })
 
 type BillingPeriodStatus = BillingPeriodSummary['period']['status']
 
+// Mobile large-title collapse: fades into the persistent app header once scrolled past.
+const titleSentinel = ref<HTMLElement | null>(null)
+const isTitleCollapsed = ref(false)
+useIntersectionObserver(titleSentinel, ([entry]) => {
+  isTitleCollapsed.value = !!entry && !entry.isIntersecting
+})
+const headerTitle = useAppHeaderTitle()
+const compactTitle = computed(() => (isTitleCollapsed.value ? 'Vận hành tháng' : null))
+watchEffect(() => {
+  headerTitle.value = compactTitle.value
+})
+onBeforeUnmount(() => {
+  // A newer page can claim this slot before this instance unmounts during a
+  // page transition — only clear it if it's still ours.
+  if (headerTitle.value === compactTitle.value) headerTitle.value = null
+})
+
 const route = useRoute()
 const router = useRouter()
 const now = new Date()
@@ -228,6 +245,7 @@ function periodLabel(row: BillingPeriodSummary): string {
       title="Vận hành tháng"
       description="Danh sách các kỳ thanh toán theo tòa nhà — nhập chỉ số, soát phí, phát hành hóa đơn, thu tiền và chốt kỳ."
     >
+      <div ref="titleSentinel" aria-hidden="true" />
       <template #actions>
         <UiDropdownMenu>
           <UiDropdownMenuItem @click="startOpenPeriod">

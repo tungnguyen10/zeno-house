@@ -15,10 +15,13 @@ const props = withDefaults(defineProps<{
   indeterminate?: boolean
   /** Accessible label when no visible `label` is rendered. */
   ariaLabel?: string
+  /** `circle` renders an iOS-style round multi-select indicator instead of the default checkbox square. */
+  shape?: 'square' | 'circle'
 }>(), {
   modelValue: false,
   disabled: false,
   indeterminate: false,
+  shape: 'square',
 })
 
 const emit = defineEmits<{
@@ -30,7 +33,8 @@ const checkboxId = computed(() => props.id ?? generatedId)
 
 const boxClass = computed(() =>
   clsx(
-    'peer size-4 appearance-none rounded border bg-ui-surface transition-colors',
+    'peer size-4 appearance-none border bg-ui-surface transition-colors',
+    props.shape === 'circle' ? 'rounded-full' : 'rounded',
     'focus:outline-none focus:ring-2 focus:ring-offset-0 focus:ring-ui-accent/40',
     'checked:border-ui-accent checked:bg-ui-accent indeterminate:border-ui-accent indeterminate:bg-ui-accent',
     props.error ? 'border-status-danger/50' : 'border-ui-border-strong',
