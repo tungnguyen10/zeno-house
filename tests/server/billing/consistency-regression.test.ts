@@ -223,6 +223,19 @@ describe('billing API consistency regression', () => {
     })
   })
 
+
+  it('keeps both contract rows when occupants change in the same room and routes final charges through checkout', async () => {
+    const snapshot = await loadSnapshot()
+    snapshot.contracts.push({ ...snapshot.contracts[0], id: 'contract-returned', contract_code: 'HD-OLD', status: 'terminated' })
+    snapshot.checkouts = [{ id: 'checkout-1', contract_id: 'contract-returned', status: 'returned', actual_return_date: '2026-05-15', charges: [{ key: 'final-electricity', chargeType: 'electricity', label: 'Điện cuối kỳ', amount: 40_000, quantity: 10, unitPrice: 4_000, metadata: {} }] }]
+    loadSnapshot.mockResolvedValue(snapshot)
+    const { BillingDraftGridService } = await import('../../../server/services/billing/grid')
+    const grid = await BillingDraftGridService.getGrid({ context: {} } as never, { id: 'user-1', app_metadata: { role: 'admin' } } as never, period.id)
+    const rows = grid.rows.filter(row => row.roomId === 'room-1')
+    expect(rows).toHaveLength(2)
+    expect(rows.find(row => row.contractId === 'contract-returned')).toMatchObject({ checkoutId: 'checkout-1', checkoutHref: '/dashboard/contracts/HD-OLD#checkout', editable: false, draftTotal: 40_000, rentAndServiceTotal: 0, blockers: [expect.objectContaining({ code: 'checkout_required' })] })
+  })
+
   it('batch-loads invoices and utility overrides once for multiple periods', async () => {
     const secondPeriod = buildPeriod({
       id: 'period-2',

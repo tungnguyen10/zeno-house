@@ -7,6 +7,7 @@ import { formatCurrency } from '~/utils/format/currency'
 const props = defineProps<{
   contract: ContractWithDetails
   paidAmount?: number
+  depositHeld?: number
   canManage?: boolean
 }>()
 
@@ -23,7 +24,7 @@ function monthDiff(start: string, end = new Date()) {
 }
 
 const monthsElapsed = computed(() => monthDiff(props.contract.startDate))
-const depositBalance = computed(() => Math.max(0, props.contract.deposit - (props.paidAmount ?? 0)))
+const depositBalance = computed(() => props.depositHeld ?? props.paidAmount ?? 0)
 
 const canRenew = computed(() => props.contract.status === 'active' || props.contract.status === 'expired')
 const canTerminate = computed(() => props.contract.status === 'active')
@@ -167,10 +168,9 @@ onKeyStroke('Escape', () => {
         <dd class="mt-0.5 text-base font-semibold text-ui-primary">{{ monthsElapsed }} tháng</dd>
       </div>
       <div class="px-4 py-2.5">
-        <dt class="text-xs text-ui-muted">Đã thu / còn cọc</dt>
+        <dt class="text-xs text-ui-muted">Cọc đang giữ</dt>
         <dd class="mt-0.5 text-sm font-semibold text-ui-primary">
-          {{ formatCurrency(paidAmount ?? 0) }}
-          <span class="text-ui-muted">/ {{ formatCurrency(depositBalance) }}</span>
+          {{ formatCurrency(depositBalance) }}
         </dd>
       </div>
     </dl>

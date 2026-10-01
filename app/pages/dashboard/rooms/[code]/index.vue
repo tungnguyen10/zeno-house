@@ -55,7 +55,7 @@ watch(buildingId, () => {
 }, { immediate: true })
 const building = computed(() => buildingData.value?.data ?? null)
 
-const { data: contractsData, refresh: refreshContracts } = await useFetch<ApiSuccess<ContractWithDetails[]> & { meta: { total: number } }>(
+const { data: contractsData } = await useFetch<ApiSuccess<ContractWithDetails[]> & { meta: { total: number } }>(
   '/api/contracts',
   { query: { room_id: id, limit: 50 } },
 )
@@ -104,9 +104,6 @@ const showDeleteModal = ref(false)
 const isDeleting = ref(false)
 const deleteReason = ref('')
 const deleteReasonError = ref('')
-
-const showTerminateModal = ref(false)
-const isTerminating = ref(false)
 
 interface ConflictDetails {
   activeContracts?: number
@@ -180,22 +177,6 @@ async function archiveInstead() {
   }
   finally {
     isDeleting.value = false
-  }
-}
-
-async function confirmTerminate() {
-  if (!activeContract.value) return
-  isTerminating.value = true
-  try {
-    await apiFetch(`/api/contracts/${activeContract.value.id}`, {
-      method: 'PATCH',
-      body: { status: 'terminated' },
-    })
-    showTerminateModal.value = false
-    await Promise.all([refreshContracts(), refreshRoom()])
-  }
-  finally {
-    isTerminating.value = false
   }
 }
 
@@ -315,7 +296,7 @@ if (error.value?.statusCode === 404) {
               v-else-if="activeContract"
               variant="danger"
               size="sm"
-              @click="showTerminateModal = true"
+              @click="navigateTo(`${contractPath(activeContract)}#checkout`)"
             >
               Thu phòng
             </UiButton>
@@ -453,16 +434,6 @@ if (error.value?.statusCode === 404) {
         />
       </div>
     </UiConfirmModal>
-
-    <UiConfirmModal
-      :open="showTerminateModal"
-      title="Xác nhận thu phòng"
-      :message="`Bạn có chắc muốn thu phòng ${room?.roomNumber ?? ''}? Hợp đồng của ${activeContract?.tenant.fullName ?? 'khách thuê'} sẽ được thanh lý.`"
-      confirm-label="Thu phòng"
-      :loading="isTerminating"
-      @confirm="confirmTerminate"
-      @cancel="showTerminateModal = false"
-    />
 
     <UiModal
       :open="showServicesModal && Boolean(activeContract)"

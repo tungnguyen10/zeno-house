@@ -515,6 +515,11 @@ function signedClass(value: number): string {
         />
       </div>
 
+      <div v-if="metrics.settlementAllocationTotal || metrics.refundTotal" class="mt-2 grid grid-cols-2 gap-2">
+        <UiMetric label="Cấn trừ tiền có sẵn" :value="formatCurrency(metrics.settlementAllocationTotal)" caption="Đã áp dụng vào hóa đơn, không phải khoản thu mới" />
+        <UiMetric label="Đã hoàn tiền" :value="formatCurrency(metrics.refundTotal)" caption="Hoàn tiền khách, không tính vào chi phí vận hành" />
+      </div>
+
       <UiSection title="Cơ cấu doanh thu và chi phí" class="mt-6">
         <div class="grid grid-cols-1 gap-2 md:grid-cols-[minmax(0,1.15fr)_minmax(260px,0.85fr)] md:items-start">
           <UiListPanel

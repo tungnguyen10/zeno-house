@@ -9,6 +9,8 @@ const findPaymentById = vi.fn()
 const softDelete = vi.fn()
 const sumByInvoice = vi.fn()
 const findPeriodById = vi.fn()
+const checkoutGet = vi.fn()
+const checkoutUndoCash = vi.fn()
 const append = vi.fn()
 const enrichInvoices = vi.fn(async (invoices: unknown[]) => invoices)
 const assignmentRepoMocks = vi.hoisted(() => ({
@@ -21,6 +23,7 @@ vi.mock('../../../server/repositories/billing/invoices', () => ({
     updatePaymentTotals,
   },
 }))
+vi.mock('../../../server/repositories/checkout', () => ({ CheckoutRepository: { get: checkoutGet, undoCash: checkoutUndoCash } }))
 
 vi.mock('../../../server/repositories/billing/payments', () => ({
   InvoicePaymentRepository: {
@@ -67,8 +70,30 @@ describe('UndoPaymentService.undoPayment', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.stubGlobal('can', () => true)
+    checkoutGet.mockResolvedValue({ checkout: null })
     assignmentRepoMocks.findBuildingIdsByUser.mockResolvedValue(['building-1'])
     findPeriodById.mockResolvedValue(buildPeriod({ id: 'period-1', status: 'collecting' }))
+  })
+
+  it('undoes cash atomically after checkout so a settlement cannot read intermediate totals', async () => {
+    const invoice = buildInvoice({ id: 'invoice-1', contractId: 'contract-1', billingPeriodId: 'period-1' })
+    findInvoiceByIdentifier.mockResolvedValue(invoice)
+    findPaymentById.mockResolvedValue(buildInvoicePayment({ invoiceId: 'invoice-1' }))
+    checkoutGet.mockResolvedValue({ checkout: { id: 'checkout-1' } })
+    checkoutUndoCash.mockResolvedValue({})
+    const { UndoPaymentService } = await import('../../../server/services/billing/undo-payment')
+    await UndoPaymentService.undoPayment(event(), makeUser(), 'invoice-1', 'payment-1', 'Nhập nhầm')
+    expect(checkoutUndoCash).toHaveBeenCalledWith(expect.anything(), 'contract-1', 'user-1', 'invoice-1', 'payment-1', 'Nhập nhầm')
+    expect(softDelete).not.toHaveBeenCalled()
+  })
+
+  it('refuses to undo a deposit allocation through the ordinary cash payment endpoint', async () => {
+    findInvoiceByIdentifier.mockResolvedValue(buildInvoice({ id: 'invoice-1', billingPeriodId: 'period-1' }))
+    findPaymentById.mockResolvedValue({ ...buildInvoicePayment({ invoiceId: 'invoice-1' }), fundingSource: 'deposit' })
+    const { UndoPaymentService } = await import('../../../server/services/billing/undo-payment')
+    await expect(UndoPaymentService.undoPayment(event(), makeUser(), 'invoice-1', 'payment-1'))
+      .rejects.toMatchObject({ statusCode: 409 })
+    expect(softDelete).not.toHaveBeenCalled()
   })
 
   it('soft-deletes the payment and recomputes the invoice to issued when nothing remains', async () => {

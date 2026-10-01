@@ -35,12 +35,16 @@ export interface ReportInvoice {
 }
 
 export interface ReportBillingData {
+  settlementAllocationTotal?: number
+  refundTotal?: number
   periodId: string | null
   periodStatus: string | null
   invoices: ReportInvoice[]
 }
 
 interface SnapshotRow {
+  settlementAllocationTotal?: number | string
+  refundTotal?: number | string
   billing_period: { id: string, status: string } | null
   invoices: Array<{
     id: string
@@ -72,7 +76,7 @@ type InvoiceRow = {
   total_amount: number | string
   balance_amount: number | string
   invoice_charges: { charge_type: string; amount: number | string }[] | null
-  invoice_payments: { amount: number | string; deleted_at: string | null }[] | null
+  invoice_payments: { amount: number | string; deleted_at: string | null; funding_source?: string }[] | null
 }
 
 export const OperationsReportRepository = {
@@ -92,6 +96,8 @@ export const OperationsReportRepository = {
     const row = data as unknown as SnapshotRow
     return {
       billing: {
+        settlementAllocationTotal: Number(row.settlementAllocationTotal ?? 0),
+        refundTotal: Number(row.refundTotal ?? 0),
         periodId: row.billing_period?.id ?? null,
         periodStatus: row.billing_period?.status ?? null,
         invoices: (row.invoices ?? []).map(invoice => ({
@@ -157,19 +163,19 @@ export const OperationsReportRepository = {
     const { data, error } = await client
       .from('invoices')
       .select(
-        'id, total_amount, balance_amount, invoice_charges(charge_type, amount), invoice_payments(amount, deleted_at)',
+        'id, total_amount, balance_amount, invoice_charges(charge_type, amount), invoice_payments(*)',
       )
       .eq('billing_period_id', periodId)
       .neq('status', 'void')
     if (error) throwDbError(error, 'operationsReport.report.fetchBillingData')
 
-    const invoices: ReportInvoice[] = ((data ?? []) as InvoiceRow[]).map((row) => {
+    const invoices: ReportInvoice[] = ((data ?? []) as unknown as InvoiceRow[]).map((row) => {
       const charges = (row.invoice_charges ?? []).map(c => ({
         chargeType: c.charge_type,
         amount: Number(c.amount),
       }))
       const collected = (row.invoice_payments ?? [])
-        .filter(p => p.deleted_at === null)
+        .filter(p => p.deleted_at === null && (!p.funding_source || p.funding_source === 'cash'))
         .reduce((sum, p) => sum + Number(p.amount), 0)
       return {
         id: row.id,

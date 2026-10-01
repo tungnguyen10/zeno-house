@@ -145,6 +145,12 @@ function formatRate(cell: BillingDraftGridUtilityCell | null): string {
     </div>
 
     <footer class="flex items-center justify-between gap-1 border-t border-ui-border pt-2">
+      <NuxtLink
+        v-if="row.checkoutHref"
+        :to="row.checkoutHref"
+        data-test="checkout-link"
+        class="inline-flex min-h-11 items-center whitespace-nowrap rounded px-3 text-sm font-medium text-ui-accent hover:bg-ui-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-accent"
+      >Quyết toán</NuxtLink>
       <UiButton variant="ghost" size="sm" class="min-h-11 whitespace-nowrap" @click="emit('detail', row)">Chi tiết</UiButton>
       <UiDropdownMenu
         v-if="(canManageIncidental && row.contractId && row.editable) || ((row.electricity?.required || row.water?.required) && row.editable)"

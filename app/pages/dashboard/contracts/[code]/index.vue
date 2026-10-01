@@ -24,6 +24,21 @@ if (isUuid(id)) {
 }
 
 const { contract, isLoading, error, refresh: refreshContract } = useContractDetail(id)
+const checkout = useContractCheckout(id)
+const { bundle: checkoutBundle, isLoading: checkoutLoading, error: checkoutError } = checkout
+
+async function beginCheckout() {
+  if (checkoutLoading.value || checkoutError.value) {
+    await checkout.refresh()
+    if (checkoutError.value) { toast.error(checkoutError.value); return }
+  }
+  if (!checkoutBundle.value?.enabled) { showTerminateModal.value = true; return }
+  await navigateTo({ hash: '#checkout' })
+  await nextTick()
+  const section = document.getElementById('checkout')
+  section?.scrollIntoView({ block: 'start' })
+  section?.focus({ preventScroll: true })
+}
 
 // Mobile large-title collapse: fades into the persistent app header once scrolled past.
 const titleSentinel = ref<HTMLElement | null>(null)
@@ -67,7 +82,9 @@ async function publishAmendment(amendmentId: string, expectedUpdatedAt: string) 
 const activeOccupantCount = computed(
   () => occupants.value.filter(o => !o.moveOutDate && o.role === 'roommate').length + 1,
 )
-const paidAmount = computed(() => payments.value.reduce((sum, p) => sum + p.amount, 0))
+const depositReceived = computed(() => payments.value.filter(p => p.paymentType === 'deposit').reduce((sum, p) => sum + p.amount, 0))
+const depositHeld = computed(() => checkoutBundle.value?.enabled ? checkoutBundle.value.depositHeld : depositReceived.value)
+watch(payments, () => { if (checkoutBundle.value?.enabled) checkout.refresh() })
 
 const showRenewalForm = ref(false)
 const isRenewing = ref(false)
@@ -190,7 +207,7 @@ watchEffect(() => {
 // mobile segmented-pill skin can highlight it (desktop keeps the plain underline-free look).
 // IntersectionObserver's visibility window is unreliable for short sections (they can pass through
 // the window entirely between two callbacks), so this walks section positions directly instead.
-const sectionIds = ['overview', 'amendments', 'occupants', 'payments', 'services', 'meter-readings', 'history']
+const sectionIds = ['overview', 'amendments', 'occupants', 'payments', 'services', 'meter-readings', 'checkout', 'history']
 const activeSection = ref(sectionIds[0])
 const SCROLLSPY_OFFSET = 140
 let scrollContainer: HTMLElement | null = null
@@ -247,11 +264,12 @@ function sectionLinkClass(sectionId: string) {
 
       <ContractDetailHero
         :contract="contract"
-        :paid-amount="paidAmount"
+        :paid-amount="depositReceived"
+        :deposit-held="depositHeld"
         :can-manage="authStore.can('contracts.update')"
         @edit="navigateTo(`${contractPath(contract)}/edit`)"
         @renew="showRenewalForm = !showRenewalForm"
-        @terminate="showTerminateModal = true"
+        @terminate="beginCheckout"
         @delete="showDeleteModal = true"
       />
 
@@ -280,7 +298,7 @@ function sectionLinkClass(sectionId: string) {
         </div>
       </UiAlert>
 
-      <nav class="sticky top-0 z-20 mt-4 overflow-x-auto border-y border-ui-border bg-ui-deep/95 py-2 backdrop-blur lg:top-16">
+      <nav class="sticky top-0 z-20 mt-4 overflow-x-auto border-y border-ui-border bg-ui-deep py-2 lg:top-16">
         <div class="flex min-w-max gap-1 rounded-full bg-ui-chrome p-1 text-sm lg:gap-2 lg:rounded-none lg:bg-transparent lg:p-0">
           <a href="#overview" :class="sectionLinkClass('overview')">Tổng quan</a>
           <a href="#amendments" :class="sectionLinkClass('amendments')">Phụ lục</a>
@@ -288,6 +306,7 @@ function sectionLinkClass(sectionId: string) {
           <a href="#payments" :class="sectionLinkClass('payments')">Thanh toán</a>
           <a href="#services" :class="sectionLinkClass('services')">Dịch vụ</a>
           <a href="#meter-readings" :class="sectionLinkClass('meter-readings')">Chỉ số</a>
+          <a v-if="checkoutBundle?.enabled" href="#checkout" :class="sectionLinkClass('checkout')">Trả phòng</a>
           <a href="#history" :class="sectionLinkClass('history')">Lịch sử</a>
         </div>
       </nav>
@@ -355,6 +374,20 @@ function sectionLinkClass(sectionId: string) {
           />
         </UiSurfacePanel>
       </UiSection>
+
+      <ContractCheckoutSection
+        :bundle="checkoutBundle"
+        :loading="checkoutLoading"
+        :error="checkoutError"
+        :contract-code="contract.contractCode"
+        :can-manage="authStore.can('contracts.update')"
+        :can-settle="authStore.can('contracts.settle')"
+        :can-refund="authStore.can('contracts.refund')"
+        :can-correct="authStore.can('contracts.settle') && authStore.can('billing.corrections')"
+        :actions="checkout.actions"
+        @retry="checkout.refresh"
+        @changed="refreshContract"
+      />
 
       <!-- Renewal form inline -->
       <UiSection v-if="showRenewalForm" title="Gia hạn hợp đồng" class="mt-6 scroll-mt-20">

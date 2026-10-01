@@ -1,3 +1,4 @@
+import { meterReadingIdentity } from '~/utils/meter-reading-identity'
 import type { H3Event } from 'h3'
 import { db as serverSupabaseClient } from '../../utils/db'
 import type { AuthUser } from '~/types/auth'
@@ -99,6 +100,7 @@ export const MeterReadingService = {
     await assertBuildingScope(event, _user, room.building_id, 'write')
     const key = {
       room_id: input.room_id,
+      ...(input.contract_id ? { contract_id: input.contract_id } : {}),
       meter_type: input.meter_type,
       period_year: input.period_year,
       period_month: input.period_month,
@@ -150,23 +152,23 @@ export const MeterReadingService = {
       const handoverInsInRequest = new Map(
         enriched
           .filter(r => r.reading_type === 'handover_in')
-          .map(r => [`${r.room_id}:${r.meter_type}`, r.reading_value]),
+          .map(r => [`${r.contract_id ?? r.room_id}:${r.meter_type}`, r.reading_value]),
       )
       // Then fetch latest existing handover_in from DB for each affected room
       const outRoomIds = [...new Set(handoverOuts.map(r => r.room_id))]
       const { data: existingIns } = await supabase
         .from('meter_readings')
-        .select('room_id, meter_type, reading_value')
+        .select('*')
         .eq('reading_type', 'handover_in')
         .in('room_id', outRoomIds)
         .order('created_at', { ascending: false })
       const handoverInMap = new Map<string, number>()
-      for (const row of existingIns ?? []) {
-        const key = `${row.room_id}:${row.meter_type}`
+      for (const row of (existingIns ?? []) as unknown as Array<{ room_id: string; meter_type: string; reading_value: number; contract_id?: string | null }>) {
+        const key = `${row.contract_id ?? row.room_id}:${row.meter_type}`
         if (!handoverInMap.has(key)) handoverInMap.set(key, row.reading_value as number)
       }
       for (const out of handoverOuts) {
-        const key = `${out.room_id}:${out.meter_type}`
+        const key = `${out.contract_id ?? out.room_id}:${out.meter_type}`
         const inValue = handoverInsInRequest.get(key) ?? handoverInMap.get(key)
         if (inValue !== undefined && out.reading_value < inValue) {
           const label = out.meter_type === 'electricity' ? 'điện' : 'nước'
@@ -179,6 +181,7 @@ export const MeterReadingService = {
     // compares them again before writing any row.
     const conflictKeys = enriched.map(r => ({
       room_id: r.room_id,
+      ...(r.contract_id ? { contract_id: r.contract_id } : {}),
       meter_type: r.meter_type,
       period_year: r.period_year,
       period_month: r.period_month,
@@ -186,9 +189,10 @@ export const MeterReadingService = {
     }))
     const beforeMap = await MeterReadingRepository.findExistingByConflictKeys(event, conflictKeys)
     const atomicReadings: MeterReadingAtomicInput[] = enriched.map((reading) => {
-      const key = `${reading.room_id}:${reading.meter_type}:${reading.period_year}:${reading.period_month}:${reading.reading_type}`
+      const key = meterReadingIdentity(reading)
       return {
         room_id: reading.room_id,
+        ...(reading.contract_id ? { contract_id: reading.contract_id } : {}),
         meter_type: reading.meter_type,
         period_year: reading.period_year,
         period_month: reading.period_month,
@@ -216,6 +220,7 @@ export const MeterReadingService = {
     await assertBuildingScope(event, _user, existing.buildingId, 'write')
     const [updated] = await MeterReadingRepository.saveWithAudit(event, [{
       room_id: existing.roomId,
+      ...(existing.contractId ? { contract_id: existing.contractId } : {}),
       meter_type: existing.meterType,
       period_year: existing.periodYear,
       period_month: existing.periodMonth,

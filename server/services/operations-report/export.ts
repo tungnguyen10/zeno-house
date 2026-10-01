@@ -88,6 +88,8 @@ export const OperationsReportExportService = {
     const overviewRows: Array<[string, number]> = [
       ['Doanh thu phát hành', report.metrics.issuedRevenue],
       ['Đã thu', report.metrics.collectedCash],
+      ['Cấn trừ tiền có sẵn', report.metrics.settlementAllocationTotal],
+      ['Đã hoàn tiền', report.metrics.refundTotal],
       ['Công nợ', report.metrics.debt],
       ['Tổng chi phí cố định', report.metrics.fixedCostTotal],
       ['Tổng chi phí tháng', report.metrics.monthlyExpenseTotal],

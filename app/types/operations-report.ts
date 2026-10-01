@@ -199,6 +199,8 @@ export interface OperationsReport {
   metrics: {
     issuedRevenue: number
     collectedCash: number
+    settlementAllocationTotal: number
+    refundTotal: number
     debt: number
     fixedCostTotal: number
     monthlyExpenseTotal: number

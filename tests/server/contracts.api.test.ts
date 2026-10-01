@@ -15,6 +15,8 @@ const contractRepoMocks = vi.hoisted(() => ({
   countNonHandoverMeterReadingsForContract: vi.fn(),
 }))
 
+vi.mock('../../server/utils/checkout-feature', () => ({ checkoutEnabledForBuilding: () => false }))
+
 const buildingRepoMocks = vi.hoisted(() => ({
   findByIdentifier: vi.fn(),
 }))

@@ -184,6 +184,21 @@ Contracts use handover readings for electricity and water:
 
 Monthly billing can use handover-in as a fallback previous reading when prior monthly readings are missing.
 
+## Checkout And Settlement
+
+Checkout is a separate financial step from contract termination/expiration: ending a contract still releases the room immediately, but the deposit/credit ledger, final utility charges, and refund are settled through this flow, which can finish later. The feature is gated per building by `server/utils/checkout-feature.ts` (runtime-config flag + building allowlist); it is disabled everywhere until explicitly piloted. Once a contract has any checkout history, database guards keep its payment/lifecycle safeguards active even if the flag is later disabled for that building — see "Contract Checkout And Settlement Model" in `docs/architecture/database.md`.
+
+Flow on the contract detail page (`ContractCheckoutSection.vue`, section `#checkout`):
+
+1. **Return** — enter the actual return date, reason, and handover-out meter readings; this records contract-scoped `handover_out` readings and terminates the contract.
+2. **Charges/credits** — add incidental final charges and approve credit from unapplied `other`/`prepaid_rent` receipts.
+3. **Preview** — load a deterministic settlement snapshot (deposit/credit held, existing debt, final charges, refund or amount due).
+4. **Confirm** — post the settlement: allocates approved credit then deposit to the oldest open invoices first, creates or augments the final invoice, and locks the statement.
+5. **Refund** — record an already-performed refund transfer against the confirmed statement (this never initiates a bank transfer itself).
+6. **Correction** — after confirmation, a signed adjustment to an active invoice for reconciliation, without rewriting the original statement or past refunds.
+
+A printable settlement statement is available at `/dashboard/contracts/[code]/settlement/print`. Deposit/credit allocations and refunds use `invoice_payments.funding_source` (`deposit`/`credit`), so billing/report cash totals (`funding_source = 'cash'`) never include them; undoing a non-cash payment is blocked outside this flow (`server/services/billing/undo-payment.ts`).
+
 ## Important Files
 
 - Contract form: `app/components/contracts/ContractForm.vue`
@@ -198,6 +213,12 @@ Monthly billing can use handover-in as a fallback previous reading when prior mo
 - Payment/renewal label constants: `app/utils/constants/contracts.ts`
 - Handover readings: `app/components/contracts/ContractHandoverReadings.vue`
 - Contract service: `server/services/contracts/index.ts`
+- Checkout section: `app/components/contracts/ContractCheckoutSection.vue`
+- Checkout composable: `app/composables/contracts/useContractCheckout.ts`
+- Settlement statement: `app/pages/dashboard/contracts/[code]/settlement/print.vue`
+- Checkout service: `server/services/checkout.ts`
+- Checkout repository: `server/repositories/checkout.ts`
+- Checkout feature gate: `server/utils/checkout-feature.ts`
 - Contract repository: `server/repositories/contracts/index.ts`
 - Contract amendment service/repository: `server/services/contract-amendments.ts`, `server/repositories/contract-amendments/index.ts`
 - Contract amendment UI: `app/components/contracts/ContractAmendmentsSection.vue`

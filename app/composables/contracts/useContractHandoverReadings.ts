@@ -2,7 +2,7 @@ import type { MeterReading, BulkReadingInput } from '~/types/meter-readings'
 import type { ApiSuccess } from '~/types/api'
 import { getApiErrorMessage } from '~/utils/api-error'
 
-export function useContractHandoverReadings(_contractId: string, roomId: string) {
+export function useContractHandoverReadings(contractId: string, roomId: string) {
   const isSaving = ref(false)
   const saveError = ref<string | null>(null)
 
@@ -14,10 +14,10 @@ export function useContractHandoverReadings(_contractId: string, roomId: string)
   const isLoading = ref(false)
 
   const handoverInReadings = computed(() =>
-    (readingsData.value?.data ?? []).filter(r => r.readingType === 'handover_in'),
+    (readingsData.value?.data ?? []).filter(r => r.readingType === 'handover_in' && r.contractId === contractId),
   )
   const handoverOutReadings = computed(() =>
-    (readingsData.value?.data ?? []).filter(r => r.readingType === 'handover_out'),
+    (readingsData.value?.data ?? []).filter(r => r.readingType === 'handover_out' && r.contractId === contractId),
   )
 
   function getReadingByType(meterType: 'electricity' | 'water', type: 'handover_in' | 'handover_out'): MeterReading | null {
@@ -38,6 +38,7 @@ export function useContractHandoverReadings(_contractId: string, roomId: string)
     try {
       const input: BulkReadingInput = {
         room_id: roomId,
+        contract_id: contractId,
         meter_type: meterType,
         period_year: periodYear,
         period_month: periodMonth,

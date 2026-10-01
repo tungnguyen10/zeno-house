@@ -175,6 +175,10 @@ Supported flows:
 
 Payment updates invoice paid amount, balance, and status.
 
+## Checkout Final Billing
+
+A contract that has been checked out (see `docs/features/contracts.md`) keeps its room's room-row billable for the month of its actual return date, alongside any successor contract in the same room/period; the draft grid shows both as separate rows instead of skipping the predecessor. The draft augments the contract's effective invoice with typed final charges from the checkout preview and blocks issuing until the settlement is confirmed (`CHECKOUT_REQUIRED`, with a link back to the checkout section). Confirmed settlement allocations and refunds use `invoice_payments.funding_source` (`deposit`/`credit`) instead of `cash`; invoice paid/balance recomputation includes them, but cash-only report sums must filter `funding_source = 'cash'`. Undoing a non-cash payment through the ordinary undo-payment endpoint is rejected — it must go through the checkout/settlement correction flow.
+
 ## Correction Flows
 
 There are two supported workspace correction paths. Adjustment APIs remain only for legacy/back-office compatibility and are not exposed in the billing workspace.

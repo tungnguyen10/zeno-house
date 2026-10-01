@@ -166,6 +166,14 @@ function mountGrid(overrides: Partial<{
 }
 
 describe('BillingDraftGridStep', () => {
+  it('provides checkout links on desktop and mobile returned contract rows', () => {
+    const row = buildRow({ checkoutId: 'checkout-1', checkoutHref: '/dashboard/contracts/HD-OLD#checkout', editable: false, status: 'blocked', blockers: [{ code: 'checkout_required', message: 'Hoàn tất quyết toán' }] })
+    const wrapper = mountGrid({ response: response([row]) })
+    expect(wrapper.findAll('[data-test="checkout-link"]')).toHaveLength(2)
+    expect(wrapper.text()).toContain('Quyết toán')
+    wrapper.unmount()
+  })
+
   it('moves focus from electricity to water cell on Tab', async () => {
     const wrapper = mountGrid()
     const electricity = wrapper.get('[data-reading-cell="room-1::electricity"] input')

@@ -1164,6 +1164,215 @@ export type Database = {
           },
         ]
       }
+      contract_checkout_refunds: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          note: string | null
+          operation_id: string
+          paid_at: string
+          payment_method: string
+          recorded_by: string | null
+          source_id: string
+          statement_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          note?: string | null
+          operation_id: string
+          paid_at: string
+          payment_method: string
+          recorded_by?: string | null
+          source_id: string
+          statement_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          note?: string | null
+          operation_id?: string
+          paid_at?: string
+          payment_method?: string
+          recorded_by?: string | null
+          source_id?: string
+          statement_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_checkout_refunds_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "contract_checkout_sources"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_checkout_refunds_statement_id_fkey"
+            columns: ["statement_id"]
+            isOneToOne: false
+            referencedRelation: "contract_checkout_statements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contract_checkout_sources: {
+        Row: {
+          approved_amount: number
+          approved_by: string | null
+          contract_id: string
+          created_at: string
+          id: string
+          operation_id: string | null
+          payment_id: string
+          reason: string | null
+          source_type: string
+          updated_at: string
+        }
+        Insert: {
+          approved_amount: number
+          approved_by?: string | null
+          contract_id: string
+          created_at?: string
+          id?: string
+          operation_id?: string | null
+          payment_id: string
+          reason?: string | null
+          source_type: string
+          updated_at?: string
+        }
+        Update: {
+          approved_amount?: number
+          approved_by?: string | null
+          contract_id?: string
+          created_at?: string
+          id?: string
+          operation_id?: string | null
+          payment_id?: string
+          reason?: string | null
+          source_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_checkout_sources_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_checkout_sources_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: true
+            referencedRelation: "contract_payments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contract_checkout_statements: {
+        Row: {
+          checkout_id: string
+          code: string
+          confirmed_at: string
+          confirmed_by: string | null
+          id: string
+          operation_id: string
+          preview: Json
+          snapshot_hash: string
+        }
+        Insert: {
+          checkout_id: string
+          code: string
+          confirmed_at?: string
+          confirmed_by?: string | null
+          id?: string
+          operation_id: string
+          preview: Json
+          snapshot_hash: string
+        }
+        Update: {
+          checkout_id?: string
+          code?: string
+          confirmed_at?: string
+          confirmed_by?: string | null
+          id?: string
+          operation_id?: string
+          preview?: Json
+          snapshot_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_checkout_statements_checkout_id_fkey"
+            columns: ["checkout_id"]
+            isOneToOne: true
+            referencedRelation: "contract_checkouts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contract_checkouts: {
+        Row: {
+          actual_return_date: string
+          building_id: string
+          contract_id: string
+          created_at: string
+          electricity: Json | null
+          id: string
+          reason: string
+          returned_by: string | null
+          returned_operation_id: string | null
+          status: string
+          updated_at: string
+          water: Json | null
+        }
+        Insert: {
+          actual_return_date: string
+          building_id: string
+          contract_id: string
+          created_at?: string
+          electricity?: Json | null
+          id?: string
+          reason: string
+          returned_by?: string | null
+          returned_operation_id?: string | null
+          status?: string
+          updated_at?: string
+          water?: Json | null
+        }
+        Update: {
+          actual_return_date?: string
+          building_id?: string
+          contract_id?: string
+          created_at?: string
+          electricity?: Json | null
+          id?: string
+          reason?: string
+          returned_by?: string | null
+          returned_operation_id?: string | null
+          status?: string
+          updated_at?: string
+          water?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_checkouts_building_id_fkey"
+            columns: ["building_id"]
+            isOneToOne: false
+            referencedRelation: "buildings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_checkouts_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: true
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contract_occupants: {
         Row: {
           billing_counted: boolean
@@ -1676,10 +1885,13 @@ export type Database = {
       invoice_payments: {
         Row: {
           amount: number
+          checkout_source_id: string | null
+          checkout_statement_id: string | null
           created_at: string
           delete_reason: string | null
           deleted_at: string | null
           deleted_by: string | null
+          funding_source: string
           id: string
           invoice_id: string
           note: string | null
@@ -1690,10 +1902,13 @@ export type Database = {
         }
         Insert: {
           amount: number
+          checkout_source_id?: string | null
+          checkout_statement_id?: string | null
           created_at?: string
           delete_reason?: string | null
           deleted_at?: string | null
           deleted_by?: string | null
+          funding_source?: string
           id?: string
           invoice_id: string
           note?: string | null
@@ -1704,10 +1919,13 @@ export type Database = {
         }
         Update: {
           amount?: number
+          checkout_source_id?: string | null
+          checkout_statement_id?: string | null
           created_at?: string
           delete_reason?: string | null
           deleted_at?: string | null
           deleted_by?: string | null
+          funding_source?: string
           id?: string
           invoice_id?: string
           note?: string | null
@@ -1717,6 +1935,20 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "invoice_payments_checkout_source_id_fkey"
+            columns: ["checkout_source_id"]
+            isOneToOne: false
+            referencedRelation: "contract_checkout_sources"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_payments_checkout_statement_id_fkey"
+            columns: ["checkout_statement_id"]
+            isOneToOne: false
+            referencedRelation: "contract_checkout_statements"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "invoice_payments_invoice_id_fkey"
             columns: ["invoice_id"]
@@ -1864,6 +2096,7 @@ export type Database = {
           adjustment_reason: string | null
           building_id: string
           consumption: number | null
+          contract_id: string | null
           created_at: string | null
           id: string
           is_adjusted: boolean
@@ -1886,6 +2119,7 @@ export type Database = {
           adjustment_reason?: string | null
           building_id: string
           consumption?: number | null
+          contract_id?: string | null
           created_at?: string | null
           id?: string
           is_adjusted?: boolean
@@ -1908,6 +2142,7 @@ export type Database = {
           adjustment_reason?: string | null
           building_id?: string
           consumption?: number | null
+          contract_id?: string | null
           created_at?: string | null
           id?: string
           is_adjusted?: boolean
@@ -1932,6 +2167,13 @@ export type Database = {
             columns: ["building_id"]
             isOneToOne: false
             referencedRelation: "buildings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meter_readings_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
             referencedColumns: ["id"]
           },
           {
@@ -3089,6 +3331,104 @@ export type Database = {
           retry_after_seconds: number
         }[]
       }
+      contract_checkout_audit: {
+        Args: {
+          p_action: string
+          p_actor_id: string
+          p_contract_id: string
+          p_data: Json
+          p_operation_id: string
+        }
+        Returns: undefined
+      }
+      contract_checkout_charge: {
+        Args: {
+          p_actor_id: string
+          p_amount: number
+          p_contract_id: string
+          p_label: string
+          p_note: string
+          p_operation_id: string
+        }
+        Returns: Json
+      }
+      contract_checkout_confirm: {
+        Args: {
+          p_actor_id: string
+          p_contract_id: string
+          p_operation_id: string
+          p_snapshot_hash: string
+        }
+        Returns: Json
+      }
+      contract_checkout_correct: {
+        Args: {
+          p_actor_id: string
+          p_amount: number
+          p_contract_id: string
+          p_expected_updated_at: string
+          p_invoice_id: string
+          p_label: string
+          p_operation_id: string
+          p_reason: string
+        }
+        Returns: Json
+      }
+      contract_checkout_credit: {
+        Args: {
+          p_actor_id: string
+          p_amount: number
+          p_contract_id: string
+          p_operation_id: string
+          p_payment_id: string
+          p_reason: string
+        }
+        Returns: Json
+      }
+      contract_checkout_get: { Args: { p_contract_id: string }; Returns: Json }
+      contract_checkout_preview: {
+        Args: { p_contract_id: string }
+        Returns: Json
+      }
+      contract_checkout_refund: {
+        Args: {
+          p_actor_id: string
+          p_amount: number
+          p_contract_id: string
+          p_note: string
+          p_operation_id: string
+          p_paid_at: string
+          p_payment_method: string
+        }
+        Returns: Json
+      }
+      contract_checkout_return: {
+        Args: {
+          p_actor_id: string
+          p_contract_id: string
+          p_expected_updated_at: string
+          p_operation_id: string
+        }
+        Returns: Json
+      }
+      contract_checkout_save: {
+        Args: { p_actor_id: string; p_contract_id: string; p_input: Json }
+        Returns: Json
+      }
+      contract_checkout_source_balance: {
+        Args: { p_source_id: string }
+        Returns: number
+      }
+      contract_checkout_undo_cash: {
+        Args: {
+          p_actor_id: string
+          p_contract_id: string
+          p_invoice_id: string
+          p_payment_id: string
+          p_reason: string
+        }
+        Returns: Json
+      }
       create_billing_incidental_charge_with_audit: {
         Args: {
           p_actor_id: string
@@ -3655,10 +3995,13 @@ export type Database = {
         }
         Returns: {
           amount: number
+          checkout_source_id: string | null
+          checkout_statement_id: string | null
           created_at: string
           delete_reason: string | null
           deleted_at: string | null
           deleted_by: string | null
+          funding_source: string
           id: string
           invoice_id: string
           note: string | null
@@ -3832,6 +4175,7 @@ export type Database = {
           adjustment_reason: string | null
           building_id: string
           consumption: number | null
+          contract_id: string | null
           created_at: string | null
           id: string
           is_adjusted: boolean
@@ -4072,12 +4416,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -4101,11 +4445,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -4126,11 +4470,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -4151,11 +4495,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -4168,11 +4512,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }

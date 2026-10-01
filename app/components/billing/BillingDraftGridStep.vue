@@ -397,6 +397,7 @@ const autoIssueSubmitting = ref(false)
 function canAutoIssue(row: BillingDraftGridRow): boolean {
   return autoIssueEnabled.value
     && !periodLocked.value
+    && !row.checkoutId
     && row.status === 'ready'
     && !!row.contractId
     && !row.invoiceId
@@ -980,6 +981,12 @@ const columns: UiTableColumn<BillingDraftGridRow>[] = [
 
         <template #cell-actions="{ row }">
           <div class="flex items-center justify-end gap-2">
+            <NuxtLink
+              v-if="(row as BillingDraftGridRow).checkoutHref"
+              :to="(row as BillingDraftGridRow).checkoutHref!"
+              data-test="checkout-link"
+              class="whitespace-nowrap rounded px-2 py-1.5 text-xs font-medium text-ui-accent hover:bg-ui-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-accent"
+            >Quyết toán</NuxtLink>
             <span
               v-if="rowSaveStateOf(row as BillingDraftGridRow) === 'saving'"
               class="whitespace-nowrap text-[11px] text-ui-muted"

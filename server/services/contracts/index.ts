@@ -15,6 +15,9 @@ import { AuditService } from '../audit'
 import { AUDIT_ACTIONS } from '~/utils/constants/audit'
 import { ContractAmendmentRepository } from '../../repositories/contract-amendments'
 import { ContractAmendmentService } from '../contract-amendments'
+import { checkoutEnabledForBuilding } from '../../utils/checkout-feature'
+import { CheckoutRepository } from '../../repositories/checkout'
+import { CheckoutService } from '../checkout'
 
 interface ContractDeleteConflictDetails {
   reason?: 'ACTIVE_CONTRACT'
@@ -200,6 +203,9 @@ export const ContractService = {
     const newTenantId = input.tenant_id ?? existing.tenantId
     const wasActive = existing.status === 'active'
     const willBeActive = newStatus === 'active'
+    if (wasActive && !willBeActive && checkoutEnabledForBuilding(event, existing.buildingId)) {
+      throwConflict('Hãy dùng Trả phòng & tất toán để ghi nhận bàn giao trước khi kết thúc hợp đồng.', { reason: 'CHECKOUT_REQUIRED' })
+    }
     const roomChanged = newRoomId !== existing.roomId
     const correlationId = randomUUID()
     if (roomChanged) {
@@ -366,7 +372,28 @@ export const ContractService = {
         if (permitted) allowed.push(id)
         else failed.push({ id, reason: 'forbidden' })
       }
-      const rows = await BulkActionRepository.execute(event, 'contract', 'terminate', allowed)
+      const legacyIds: string[] = []
+      for (const id of allowed) {
+        const buildingId = scopes.get(id)!
+        if (!checkoutEnabledForBuilding(event, buildingId)) {
+          legacyIds.push(id)
+          continue
+        }
+        const bundle = await CheckoutRepository.get(event, id)
+        if (!bundle.checkout || bundle.checkout.status !== 'draft') {
+          failed.push({ id, reason: 'Cần hoàn thành hồ sơ bàn giao trước khi kết thúc hợp đồng.' })
+          continue
+        }
+        try {
+          await CheckoutService.returnRoom(event, user, id, {
+            operation_id: randomUUID(), expected_updated_at: bundle.checkout.updatedAt,
+          })
+          succeeded.push(id)
+        } catch {
+          failed.push({ id, reason: 'Hồ sơ bàn giao chưa hợp lệ hoặc đã thay đổi. Mở hợp đồng để kiểm tra.' })
+        }
+      }
+      const rows = legacyIds.length ? await BulkActionRepository.execute(event, 'contract', 'terminate', legacyIds) : []
       for (const row of rows) {
         if (row.succeeded) {
           succeeded.push(row.id)

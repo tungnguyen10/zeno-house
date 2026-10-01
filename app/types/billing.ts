@@ -90,6 +90,7 @@ export interface InvoiceCharge {
 }
 
 export interface InvoicePayment {
+  fundingSource?: 'cash' | 'deposit' | 'credit'
   id: string
   invoiceId: string
   amount: number
@@ -236,6 +237,8 @@ export interface BillingExistingInvoiceContext {
 }
 
 export interface BillingDraftInvoice {
+  checkoutId?: string | null
+  checkoutHref?: string | null
   contractId: string
   paymentDueDay?: number | null
   roomId: string
@@ -399,6 +402,8 @@ export interface BillingDraftGridUtilityCell {
 }
 
 export interface BillingDraftGridRow {
+  checkoutId?: string | null
+  checkoutHref?: string | null
   key: string
   rowType: BillingDraftGridRowType
   roomId: string

@@ -12,6 +12,8 @@
         "git stash": true,
         "cp": true,
         "git checkout": true,
-        "awk": true
+        "awk": true,
+        "openspec": true,
+        "printf": true
     }
 }

@@ -307,4 +307,14 @@ describe('BillingDraftService.calculateDraft', () => {
     expect(draft?.surchargeAmount).toBe(50_000)
     expect(draft?.totalAmount).toBe(1_945_000)
   })
+  it('uses the new occupant contract handover instead of the preceding occupant monthly baseline', async () => {
+    const snapshot = await loadSnapshot()
+    snapshot.readings.push({ id: 'own-handover', contract_id: 'contract-1', room_id: 'room-1', meter_type: 'electricity', reading_type: 'handover_in', period_year: 2026, period_month: 5, reading_value: 120 })
+    snapshot.readings.push({ id: 'other-handover', contract_id: 'contract-old', room_id: 'room-1', meter_type: 'electricity', reading_type: 'handover_in', period_year: 2026, period_month: 5, reading_value: 110 })
+    loadSnapshot.mockResolvedValueOnce(snapshot)
+    const { BillingDraftService } = await import('../../../server/services/billing/drafts')
+    const result = await BillingDraftService.calculateDraft({} as never, { id: 'user-1', app_metadata: { role: 'admin' } } as never, 'period-1')
+    expect(result.drafts[0]?.lines.find(line => line.chargeType === 'electricity')).toMatchObject({ quantity: 5, metadata: { previous_reading_id: 'own-handover' } })
+  })
+
 })

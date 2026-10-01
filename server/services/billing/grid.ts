@@ -373,12 +373,9 @@ export const BillingDraftGridService = {
       snapshot,
       amendmentsApplied: true,
     })
-    const draftByContract = new Map<string, BillingDraftInvoice>()
-    const draftByRoom = new Map<string, BillingDraftInvoice>()
+    const draftsByRoom = new Map<string, BillingDraftInvoice[]>()
     for (const d of draftResp.drafts) {
-      draftByContract.set(d.contractId, d)
-      // Use room-id mapping; if multiple contracts share a room (rare), the last one wins
-      draftByRoom.set(d.roomId, d)
+      draftsByRoom.set(d.roomId, [...(draftsByRoom.get(d.roomId) ?? []), d])
     }
 
     // Build batch reading date default
@@ -392,7 +389,7 @@ export const BillingDraftGridService = {
     // it for cells where the draft has no electricity/water line — currently not the case).
     const usageOverrides = snapshot.overrides
     const sharedReadingProgress = calculateRequiredReadingProgress({
-      contracts: draftResp.drafts.map(draft => ({ room_id: draft.roomId })),
+      contracts: draftResp.drafts.filter(draft => !draft.checkoutId).map(draft => ({ room_id: draft.roomId })),
       pricing,
       readings: currentData,
       overrides: usageOverrides.map(override => ({
@@ -409,7 +406,7 @@ export const BillingDraftGridService = {
     let draftTotalSum = 0
 
     for (const room of rooms) {
-      const draft = draftByRoom.get(room.id) ?? null
+      const roomDrafts = draftsByRoom.get(room.id) ?? []
       const elecCurrent = currentByKey.get(`${room.id}::electricity`)
       const elecPrev = prevByKey.get(`${room.id}::electricity`)
       const waterCurrent = currentByKey.get(`${room.id}::water`)
@@ -417,9 +414,11 @@ export const BillingDraftGridService = {
       const elecPrevPrevValue = prevPrevByKey.get(`${room.id}::electricity`) ?? null
       const waterPrevPrevValue = prevPrevByKey.get(`${room.id}::water`) ?? null
 
-      if (draft) {
+      if (roomDrafts.length > 0) {
+        for (const draft of roomDrafts) {
         const invoiceIsActive = !!draft.existingInvoiceStatus && draft.existingInvoiceStatus !== 'void'
-        const rowEditable = periodEditable && !invoiceIsActive
+        const roomHasReturn = snapshot.checkouts?.some(checkout => checkout.status === 'returned' && snapshot.contracts.some(contract => contract.id === checkout.contract_id && contract.room_id === room.id))
+        const rowEditable = periodEditable && !invoiceIsActive && !draft.checkoutId && !roomHasReturn
         const elecCell = buildBillableCell('electricity', draft, pricing, elecCurrent, elecPrev, rowEditable, elecPrevPrevValue)
         const waterCell = buildBillableCell('water', draft, pricing, waterCurrent, waterPrev, rowEditable, waterPrevPrevValue)
 
@@ -434,6 +433,8 @@ export const BillingDraftGridService = {
         if (!invoiceIsActive) draftTotalSum += draft.totalAmount
 
         rows.push({
+          checkoutId: draft.checkoutId ?? null,
+          checkoutHref: draft.checkoutHref ?? null,
           key: `contract:${draft.contractId}`,
           rowType: 'billable_contract',
           roomId: room.id,
@@ -456,6 +457,7 @@ export const BillingDraftGridService = {
           warnings: draft.warnings,
           lines: draft.lines,
         })
+        }
       } else {
         // Vacant baseline
         const rowEditable = periodEditable

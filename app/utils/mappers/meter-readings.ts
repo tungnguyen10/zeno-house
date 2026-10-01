@@ -1,8 +1,9 @@
 import type { Tables } from '~/types/database.types'
 import type { MeterReading } from '~/types/meter-readings'
 
-export function mapMeterReading(row: Tables<'meter_readings'>): MeterReading {
+export function mapMeterReading(row: Tables<'meter_readings'> & { contract_id?: string | null }): MeterReading {
   return {
+    contractId: row.contract_id ?? null,
     id: row.id,
     roomId: row.room_id,
     buildingId: row.building_id,

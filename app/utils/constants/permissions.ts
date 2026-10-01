@@ -22,6 +22,8 @@ export const OWNER_CAPABILITIES = [
   'contracts.create',
   'contracts.update',
   'contracts.delete',
+  'contracts.settle',
+  'contracts.refund',
   'meter-readings.read',
   'meter-readings.write',
   'building-services.read',

@@ -1,3 +1,4 @@
+import { meterReadingIdentity } from '~/utils/meter-reading-identity'
 import { db as serverSupabaseClient } from '../../utils/db'
 import type { H3Event } from 'h3'
 import type { MeterReading, RoomMeterStatus } from '~/types/meter-readings'
@@ -38,6 +39,9 @@ export function throwMeterReadingRpcError(error: unknown): never {
     throwConflict('Phòng đã có hóa đơn đang hiệu lực, không thể sửa chỉ số.', {
       category: 'OPTIMISTIC_LOCK_CONFLICT', retryable: true,
     })
+  }
+  if (message.includes('CHECKOUT_')) {
+    throwConflict('Chỉ số đã được dùng trong bàn giao hoặc quyết toán, không thể sửa.', { category: 'OPTIMISTIC_LOCK_CONFLICT', retryable: false })
   }
   if (message.includes('METER_')) {
     throwValidationError('Dữ liệu chỉ số không hợp lệ.')
@@ -122,7 +126,7 @@ export const MeterReadingRepository = {
 
     const { data: rooms, error: roomsError } = await client
       .from('rooms')
-      .select('id, room_number, floor')
+      .select('id, room_number, floor, contracts(id, start_date, end_date, status)')
       .eq('building_id', buildingId)
       .eq('status', 'occupied')
       .order('floor', { ascending: true })
@@ -177,14 +181,21 @@ export const MeterReadingRepository = {
       devices: METER_TYPES.map(meterType => {
         const currentRow = currentReadings.find(r => r.room_id === room.id && r.meter_type === meterType)
         const prevMonthlyRow = prevReadings.find(r => r.room_id === room.id && r.meter_type === meterType)
-        const handoverRow = handoverInReadings.find(r => r.room_id === room.id && r.meter_type === meterType)
+        const firstDay = `${periodYear}-${String(periodMonth).padStart(2, '0')}-01`
+        const lastDay = new Date(Date.UTC(periodYear, periodMonth, 0)).toISOString().slice(0, 10)
+        const contracts = room.contracts.filter(contract => contract.status !== 'terminated'
+          && contract.start_date <= lastDay && (!contract.end_date || contract.end_date >= firstDay))
+          .sort((a, b) => b.start_date.localeCompare(a.start_date))
+        const occupant = contracts[0]
+        const candidates = handoverInReadings.filter(r => r.room_id === room.id && r.meter_type === meterType)
+        const own = occupant ? candidates.find(r => (r as unknown as { contract_id?: string }).contract_id === occupant.id) : undefined
+        const legacy = candidates.filter(r => !(r as unknown as { contract_id?: string }).contract_id)
+        const handoverRow = own ?? (legacy.length === 1 && contracts.length === 1 ? legacy[0] : undefined)
+        const previous = own && occupant!.start_date >= firstDay ? own : prevMonthlyRow ?? handoverRow
         return {
           meterType,
           existingReading: currentRow ? mapMeterReading(currentRow) : null,
-          // Use previous monthly if exists, fall back to handover_in for first billing month
-          previousReading: prevMonthlyRow
-            ? mapMeterReading(prevMonthlyRow)
-            : (handoverRow ? mapMeterReading(handoverRow) : null),
+          previousReading: previous ? mapMeterReading(previous) : null,
         }
       }),
     }))
@@ -219,7 +230,7 @@ export const MeterReadingRepository = {
 
   async findExistingByConflictKeys(
     event: H3Event,
-    keys: Array<{ room_id: string; meter_type: string; period_year: number; period_month: number; reading_type: string }>,
+    keys: Array<{ room_id: string; contract_id?: string | null; meter_type: string; period_year: number; period_month: number; reading_type: string }>,
   ): Promise<Map<string, MeterReading>> {
     if (keys.length === 0) return new Map()
     const client = await serverSupabaseClient(event)
@@ -229,17 +240,16 @@ export const MeterReadingRepository = {
     const roomIds = [...new Set(keys.map(k => k.room_id))]
     const periodYears = [...new Set(keys.map(k => k.period_year))]
     const periodMonths = [...new Set(keys.map(k => k.period_month))]
-    const { data, error } = await client
-      .from('meter_readings')
-      .select('*')
-      .in('room_id', roomIds)
-      .in('period_year', periodYears)
-      .in('period_month', periodMonths)
+    let query = client.from('meter_readings').select('*').in('room_id', roomIds)
+    if (keys.every(key => key.reading_type === 'monthly')) {
+      query = query.in('period_year', periodYears).in('period_month', periodMonths)
+    }
+    const { data, error } = await query
     if (error) throwDbError(error, 'meterReadings.findExistingByConflictKeys')
-    const keySet = new Set(keys.map(k => `${k.room_id}:${k.meter_type}:${k.period_year}:${k.period_month}:${k.reading_type}`))
+    const keySet = new Set(keys.map(meterReadingIdentity))
     const result = new Map<string, MeterReading>()
     for (const row of data ?? []) {
-      const key = `${row.room_id}:${row.meter_type}:${row.period_year}:${row.period_month}:${row.reading_type}`
+      const key = meterReadingIdentity(row)
       if (keySet.has(key)) result.set(key, mapMeterReading(row))
     }
     return result

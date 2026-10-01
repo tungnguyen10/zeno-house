@@ -3,6 +3,7 @@ import type { AuthUser } from '~/types/auth'
 import { buildContract } from '../../__fixtures__/billing/contract'
 
 const mocks = vi.hoisted(() => ({
+  checkoutEnabled: vi.fn(() => false),
   findByIdentifier: vi.fn(),
   findAll: vi.fn(),
   findActiveByRoomId: vi.fn(),
@@ -17,6 +18,8 @@ const mocks = vi.hoisted(() => ({
   cloneFromBuilding: vi.fn(),
   cancelScheduledForContract: vi.fn(),
 }))
+
+vi.mock('../../../server/utils/checkout-feature', () => ({ checkoutEnabledForBuilding: mocks.checkoutEnabled }))
 
 vi.mock('../../../server/repositories/contracts', () => ({
   ContractRepository: {
@@ -97,6 +100,17 @@ function event() {
 describe('ContractService code lookup', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mocks.checkoutEnabled.mockReturnValue(false)
+  })
+
+  it.each(['terminated', 'expired'] as const)('prevents direct %s lifecycle bypass in checkout pilot buildings', async (status) => {
+    const contract = buildContractWithDetails()
+    mocks.findByIdentifier.mockResolvedValue(contract)
+    mocks.checkoutEnabled.mockReturnValue(true)
+    const { ContractService } = await import('../../../server/services/contracts')
+    await expect(ContractService.update(event(), user(), contract.id, { status })).rejects.toMatchObject({ statusCode: 409 })
+    expect(mocks.update).not.toHaveBeenCalled()
+    mocks.checkoutEnabled.mockReturnValue(false)
   })
 
   it('resolves building slug filters before listing contracts', async () => {

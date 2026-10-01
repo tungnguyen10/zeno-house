@@ -75,6 +75,7 @@ interface ContractOccupantRow {
 }
 
 interface MeterReadingRow {
+  contract_id?: string | null
   id: string
   room_id: string
   meter_type: 'electricity' | 'water'
@@ -216,7 +217,31 @@ export const BillingDraftService = {
     }
     const currentByRoomMeter = indexByRoomMeter((currentReadings ?? []) as MeterReadingRow[])
     const prevByRoomMeter = indexByRoomMeter((prevReadings ?? []) as MeterReadingRow[])
-    const handoverByRoomMeter = indexByRoomMeter((handoverReadings ?? []) as MeterReadingRow[])
+    const handoverByContractMeter = new Map<string, MeterReadingRow>()
+    for (const reading of handoverReadings) {
+      if (reading.contract_id) handoverByContractMeter.set(`${reading.contract_id}::${reading.meter_type}`, reading)
+    }
+    // Keep only an unambiguous legacy fallback. Multiple unscoped handovers
+    // cannot safely identify which occupant owns the baseline.
+    const legacyHandovers = new Map<string, MeterReadingRow[]>()
+    for (const reading of handoverReadings.filter(row => !row.contract_id)) {
+      const key = `${reading.room_id}::${reading.meter_type}`
+      legacyHandovers.set(key, [...(legacyHandovers.get(key) ?? []), reading])
+    }
+    const handoverFor = (contract: ContractRow, meter: string) => {
+      const own = handoverByContractMeter.get(`${contract.id}::${meter}`)
+      if (own) return own
+      const legacy = legacyHandovers.get(`${contract.room_id}::${meter}`) ?? []
+      const occupants = activeContracts.filter(row => row.room_id === contract.room_id)
+      return legacy.length === 1 && occupants.length === 1 ? legacy[0] : undefined
+    }
+    const previousFor = (contract: ContractRow, meter: string) => {
+      const own = handoverFor(contract, meter)
+      const prior = prevByRoomMeter.get(`${contract.room_id}::${meter}`)
+      // A new tenancy must start at its own handover even if the room has
+      // a monthly reading from the departing occupant.
+      return own?.contract_id && contract.start_date >= firstDay ? own : prior ?? own
+    }
 
     // Utility usage overrides for this period
     const overrides = snapshot.overrides
@@ -258,6 +283,36 @@ export const BillingDraftService = {
         })
       }
 
+      const checkout = snapshot.checkouts?.find(row => row.contract_id === contract.id && row.status === 'returned')
+      if (checkout) {
+        // Final posting and source applications must remain one settlement
+        // transaction. Ordinary invoice issuance cannot create these lines.
+        if (checkout.actual_return_date < firstDay || checkout.actual_return_date > lastDay) continue
+        const finalLines: BillingDraftLine[] = (checkout.charges ?? []).map((charge, index) => ({
+          chargeType: charge.chargeType, label: charge.label, amount: charge.amount,
+          quantity: charge.quantity, unitPrice: charge.unitPrice,
+          sourceType: 'checkout', sourceId: checkout.id,
+          metadata: charge.metadata, sortOrder: index,
+        }))
+        const total = finalLines.reduce((sum, line) => sum + line.amount, 0)
+        blockers.push({ code: BILLING_BLOCKER_CODES.CHECKOUT_REQUIRED, message: 'Hoàn tất quyết toán tại hợp đồng để ghi nhận khoản cuối kỳ và cấn trừ tiền có sẵn', meta: { checkout_id: checkout.id } })
+        const room = roomById.get(contract.room_id)
+        const tenant = tenantById.get(contract.tenant_id)
+        drafts.push({
+          checkoutId: checkout.id, checkoutHref: `/dashboard/contracts/${encodeURIComponent(contract.contract_code ?? contract.id)}#checkout`,
+          contractId: contract.id, roomId: contract.room_id, tenantId: contract.tenant_id,
+          contractCode: contract.contract_code, paymentDueDay: contract.payment_due_day,
+          roomNumber: room?.room_number ?? null, tenantName: tenant?.full_name ?? null,
+          lines: finalLines, subtotalAmount: total, discountAmount: 0, surchargeAmount: 0,
+          totalAmount: total, blockers, warnings,
+          existingInvoiceId: existing?.id ?? null, existingInvoiceStatus: existing?.status ?? null,
+          existingInvoice: existing ? { id: existing.id, totalAmount: existing.totalAmount, paidAmount: existing.paidAmount, status: existing.status } : null,
+        })
+        if (!existing) draftTotalSum += total
+        blockedCount += 1
+        continue
+      }
+
       // 1) Rent
       const rent = calculateProratedRent({
         monthlyRent: contract.monthly_rent,
@@ -288,8 +343,8 @@ export const BillingDraftService = {
       const elecKey = `${contract.room_id}::electricity`
       const elecOverride = overrideByRoomMeter.get(elecKey)
       const elecCurrent = currentByRoomMeter.get(elecKey)
-      const elecPrev = prevByRoomMeter.get(elecKey)
-      const elecHandover = handoverByRoomMeter.get(elecKey)
+      const elecPrev = previousFor(contract, 'electricity')
+      const elecHandover = handoverFor(contract, 'electricity')
       const elecPricing = buildingCfg.electricity_pricing_type
       const elecRate = buildingCfg.default_electricity_rate
 
@@ -416,7 +471,7 @@ export const BillingDraftService = {
               })
             } else {
               const amount = roundUpToThousand(Math.round(usage * elecRate))
-              const isHandoverFallback = !elecPrev && !!elecHandover
+              const isHandoverFallback = previousRow.reading_type === 'handover_in'
               if (isHandoverFallback) {
                 warnings.push({
                   code: BILLING_WARNING_CODES.HANDOVER_FALLBACK_PREVIOUS,
@@ -453,8 +508,8 @@ export const BillingDraftService = {
       const waterKey = `${contract.room_id}::water`
       const waterOverride = overrideByRoomMeter.get(waterKey)
       const waterCurrent = currentByRoomMeter.get(waterKey)
-      const waterPrev = prevByRoomMeter.get(waterKey)
-      const waterHandover = handoverByRoomMeter.get(waterKey)
+      const waterPrev = previousFor(contract, 'water')
+      const waterHandover = handoverFor(contract, 'water')
       const waterPricing = buildingCfg.water_pricing_type
       const waterRate = buildingCfg.default_water_rate
 
@@ -578,7 +633,7 @@ export const BillingDraftService = {
               })
             } else {
               const amount = roundUpToThousand(Math.round(usage * waterRate))
-              const isHandoverFallback = !waterPrev && !!waterHandover
+              const isHandoverFallback = previousRow.reading_type === 'handover_in'
               if (isHandoverFallback) {
                 warnings.push({
                   code: BILLING_WARNING_CODES.HANDOVER_FALLBACK_PREVIOUS,

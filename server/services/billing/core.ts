@@ -12,6 +12,7 @@ export interface BillableContractPeriodRow {
   room_id: string
   start_date: string
   end_date: string | null
+  checkout_return_date?: string | null
   status: BillableContractStatus
 }
 
@@ -63,9 +64,26 @@ export function isBillableContractInPeriod(
   periodYear: number,
   periodMonth: number,
 ): boolean {
+  if (contract.checkout_return_date) {
+    const { first, last } = billingPeriodBounds(periodYear, periodMonth)
+    return contract.building_id === buildingId && contract.checkout_return_date >= first && contract.checkout_return_date <= last
+  }
   return contract.building_id === buildingId
     && isBillableContractStatus(contract.status)
     && contractOverlapsBillingPeriod(contract, periodYear, periodMonth)
+}
+
+/** A pre-migration deployment has no checkout table; legacy billing remains usable. */
+async function loadReturnedDates(event: H3Event, buildingIds: string[]): Promise<Map<string, string>> {
+  const client = await serverSupabaseClient(event)
+  const { data, error } = await client.from('contract_checkouts' as never).select('*')
+    .in('building_id', buildingIds).eq('status', 'returned')
+  if (error) {
+    if (error.code === '42P01' || error.code === 'PGRST205') return new Map()
+    throw createError({ statusCode: 500, message: error.message })
+  }
+  const rows = (data ?? []) as unknown as Array<{ contract_id: string, actual_return_date: string }>
+  return new Map(rows.map(row => [row.contract_id, row.actual_return_date]))
 }
 
 export async function loadBillableContractsInPeriod<T extends BillableContractPeriodRow>(
@@ -78,15 +96,15 @@ export async function loadBillableContractsInPeriod<T extends BillableContractPe
   },
 ): Promise<T[]> {
   const supabase = await serverSupabaseClient(event)
-  const { first, last } = billingPeriodBounds(input.periodYear, input.periodMonth)
+  const { last } = billingPeriodBounds(input.periodYear, input.periodMonth)
   const { data, error } = await supabase
     .from('contracts')
     .select(input.select)
     .eq('building_id', input.buildingId)
     .lte('start_date', last)
-    .or(`end_date.gte.${first},end_date.is.null`)
   if (error) throw createError({ statusCode: 500, message: error.message })
-  return ((data ?? []) as unknown as T[]).filter(contract =>
+  const returnedDates = await loadReturnedDates(event, [input.buildingId])
+  return ((data ?? []) as unknown as T[]).map(contract => ({ ...contract, checkout_return_date: returnedDates.get(contract.id) ?? null })).filter(contract =>
     isBillableContractInPeriod(contract, input.buildingId, input.periodYear, input.periodMonth),
   )
 }
@@ -99,7 +117,7 @@ export function requiredMeterTypesForPricing(pricing: BillingPricingRules): Requ
 }
 
 export function calculateRequiredReadingProgress(input: {
-  contracts: Array<Pick<BillableContractPeriodRow, 'room_id'>>
+  contracts: Array<Pick<BillableContractPeriodRow, 'room_id' | 'checkout_return_date'>>
   pricing: BillingPricingRules
   readings: ReadingProgressReading[]
   overrides?: ReadingProgressOverride[]
@@ -111,6 +129,7 @@ export function calculateRequiredReadingProgress(input: {
 
   const requiredKeys = new Set<string>()
   for (const contract of input.contracts) {
+    if (contract.checkout_return_date) continue
     for (const meter of requiredMeters) {
       requiredKeys.add(`${contract.room_id}::${meter}`)
     }
@@ -191,7 +210,6 @@ export async function loadBatchedPeriodInputs(
   const supabase = await serverSupabaseClient(event)
   const buildingIds = [...new Set(periods.map(period => period.buildingId))]
   const bounds = periods.map(period => billingPeriodBounds(period.periodYear, period.periodMonth))
-  const earliest = bounds.reduce((value, bound) => bound.first < value ? bound.first : value, bounds[0]!.first)
   const latest = bounds.reduce((value, bound) => bound.last > value ? bound.last : value, bounds[0]!.last)
 
   const [{ data: contractData, error: contractError }, overrides] = await Promise.all([
@@ -199,13 +217,13 @@ export async function loadBatchedPeriodInputs(
       .from('contracts')
       .select('id, building_id, room_id, start_date, end_date, status')
       .in('building_id', buildingIds)
-      .lte('start_date', latest)
-      .or(`end_date.gte.${earliest},end_date.is.null`),
+      .lte('start_date', latest),
     BillingUtilityUsageRepository.listByPeriods(event, periods.map(period => period.id)),
   ])
   if (contractError) throw createError({ statusCode: 500, message: contractError.message })
 
-  const contracts = (contractData ?? []) as BillableContractPeriodRow[]
+  const returnedDates = await loadReturnedDates(event, buildingIds)
+  const contracts = ((contractData ?? []) as BillableContractPeriodRow[]).map(contract => ({ ...contract, checkout_return_date: returnedDates.get(contract.id) ?? null }))
   for (const period of periods) {
     contractsByPeriod.set(period.id, contracts.filter(contract =>
       isBillableContractInPeriod(contract, period.buildingId, period.periodYear, period.periodMonth),
