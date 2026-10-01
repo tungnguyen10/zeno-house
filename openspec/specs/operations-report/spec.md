@@ -189,3 +189,10 @@ The operations report API SHALL derive billing, expense, prepaid, closure, and r
 #### Scenario: Load a closed report
 - **WHEN** an authorized user requests a closed period report whose version has not changed
 - **THEN** the server may reuse the versioned cached snapshot without recomputing it
+
+### Requirement: Non-cash settlement visibility
+Reports SHALL distinguish fresh invoice cash receipts from deposit/credit allocations and actual refunds without treating deposit refunds as operating expense.
+
+#### Scenario: Invoice paid from deposit
+- **WHEN** settlement applies 650000 of held deposit to invoice balances
+- **THEN** debt decreases by 650000 and collected cash does not increase, while electricity revenue remains in its invoice period

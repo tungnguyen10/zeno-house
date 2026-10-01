@@ -37,3 +37,10 @@ The system SHALL allow recording payments against a contract. A payment SHALL in
 - **WHEN** a user records payment for an issued monthly invoice
 - **THEN** the payment is recorded against the invoice, not as a new contract-level `rent` payment
 
+### Requirement: Held funds and protected allocations
+Held deposits SHALL derive only from actual deposit receipts less allocations and refunds. Explicitly approved other source funds SHALL remain distinguishable. Allocated sources SHALL NOT be edited or deleted directly.
+
+#### Scenario: Prepaid rent is not deposit
+- **WHEN** a contract has both deposit and prepaid-rent receipts
+- **THEN** the displayed held deposit includes only deposit receipts and prepaid funds require explicit source approval before settlement use
+
