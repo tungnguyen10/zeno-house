@@ -20,7 +20,9 @@ const lifecycle = computed<{ percent: number, label: string, tone: LifecycleTone
   const now = Date.now()
   const total = end - start
   const elapsed = now - start
-  const percent = total <= 0 ? 100 : Math.max(0, Math.min(100, (elapsed / total) * 100))
+  // Rounded because this is derived from `Date.now()`: sub-percent precision differs
+  // between the server render and hydration and trips a style mismatch.
+  const percent = total <= 0 ? 100 : Math.round(Math.max(0, Math.min(100, (elapsed / total) * 100)))
   const day = 24 * 60 * 60 * 1000
   const remainingDays = Math.ceil((end - now) / day)
 

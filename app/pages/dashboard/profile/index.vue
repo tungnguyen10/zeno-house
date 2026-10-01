@@ -33,12 +33,17 @@ const {
 
 const toast = useToast()
 
-const fullName = ref('')
+// Derived rather than copied in a watcher: watchers do not flush before the server
+// render, so SSR emitted an empty input while the client had the name.
+const draftName = ref<string | null>(null)
 const touched = ref(false)
 
-watch(profile, (value) => {
-  if (value) fullName.value = value.fullName ?? ''
-}, { immediate: true })
+const fullName = computed({
+  get: () => draftName.value ?? profile.value?.fullName ?? '',
+  set: (value: string) => { draftName.value = value },
+})
+
+watch(profile, () => { draftName.value = null })
 
 const dirty = computed(() => (
   profile.value !== null && fullName.value.trim() !== (profile.value.fullName ?? '')

@@ -186,38 +186,20 @@ const waterLabel = computed(() => {
       </div>
 
       <!-- Section: Overview -->
-      <section id="overview" class="mt-6 rounded-xl border border-ui-border bg-ui-surface p-6">
-        <h3 class="text-sm font-semibold text-ui-primary mb-4">Thông tin tổng quan</h3>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <p class="text-xs text-ui-muted mb-1">Địa chỉ</p>
-            <p class="text-sm text-ui-primary">{{ building.address }}</p>
-          </div>
-          <div>
-            <p class="text-xs text-ui-muted mb-1">Ngày tạo</p>
-            <p class="text-sm text-ui-primary">{{ new Date(building.createdAt).toLocaleDateString('vi-VN') }}</p>
-          </div>
-          <div v-if="building.ownerName">
-            <p class="text-xs text-ui-muted mb-1">Tên chủ nhà</p>
-            <p class="text-sm text-ui-primary">{{ building.ownerName }}</p>
-          </div>
-          <div v-if="building.ownerPhone">
-            <p class="text-xs text-ui-muted mb-1">Số điện thoại</p>
-            <p class="text-sm text-ui-primary">{{ building.ownerPhone }}</p>
-          </div>
-          <div v-if="building.ownerEmail">
-            <p class="text-xs text-ui-muted mb-1">Email</p>
-            <p class="text-sm text-ui-primary">{{ building.ownerEmail }}</p>
-          </div>
-        </div>
-        <div v-if="building.description" class="mt-4">
-          <p class="text-xs text-ui-muted mb-1">Mô tả</p>
-          <p class="text-sm text-ui-primary">{{ building.description }}</p>
-        </div>
-      </section>
+      <UiSurfacePanel id="overview" as="section" class="mt-6">
+        <h3 class="mb-2 text-sm font-semibold text-ui-primary">Thông tin tổng quan</h3>
+        <UiDefinitionList>
+          <UiDefinitionItem label="Địa chỉ" :value="building.address" />
+          <UiDefinitionItem label="Ngày tạo" :value="new Date(building.createdAt).toLocaleDateString('vi-VN')" />
+          <UiDefinitionItem v-if="building.ownerName" label="Tên chủ nhà" :value="building.ownerName" />
+          <UiDefinitionItem v-if="building.ownerPhone" label="Số điện thoại" :value="building.ownerPhone" />
+          <UiDefinitionItem v-if="building.ownerEmail" label="Email" :value="building.ownerEmail" />
+          <UiDefinitionItem v-if="building.description" label="Mô tả" :value="building.description" stacked />
+        </UiDefinitionList>
+      </UiSurfacePanel>
 
       <!-- Section: Services + Billing -->
-      <section id="services" class="mt-4 rounded-xl border border-ui-border bg-ui-surface p-6">
+      <UiSurfacePanel id="services" as="section" class="mt-4">
         <header class="flex items-center justify-between mb-4">
           <h3 class="text-sm font-semibold text-ui-primary">Dịch vụ & cấu hình tính phí</h3>
           <UiButton
@@ -230,22 +212,16 @@ const waterLabel = computed(() => {
           </UiButton>
         </header>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-          <div>
-            <p class="text-xs text-ui-muted mb-1">Tính tiền điện</p>
-            <p class="text-sm text-ui-primary">
-              {{ electricityLabel }}
-              <span v-if="building.defaultElectricityRate" class="text-ui-muted"> — {{ building.defaultElectricityRate.toLocaleString('vi-VN') }}đ</span>
-            </p>
-          </div>
-          <div>
-            <p class="text-xs text-ui-muted mb-1">Tính tiền nước</p>
-            <p class="text-sm text-ui-primary">
-              {{ waterLabel }}
-              <span v-if="building.defaultWaterRate" class="text-ui-muted"> — {{ building.defaultWaterRate.toLocaleString('vi-VN') }}đ</span>
-            </p>
-          </div>
-        </div>
+        <UiDefinitionList class="mb-4">
+          <UiDefinitionItem label="Tính tiền điện">
+            {{ electricityLabel }}
+            <span v-if="building.defaultElectricityRate" class="text-ui-muted"> — {{ building.defaultElectricityRate.toLocaleString('vi-VN') }}đ</span>
+          </UiDefinitionItem>
+          <UiDefinitionItem label="Tính tiền nước">
+            {{ waterLabel }}
+            <span v-if="building.defaultWaterRate" class="text-ui-muted"> — {{ building.defaultWaterRate.toLocaleString('vi-VN') }}đ</span>
+          </UiDefinitionItem>
+        </UiDefinitionList>
 
         <div class="rounded-lg border border-ui-border bg-ui-deep/30 p-4">
           <div v-if="loadingServices" class="space-y-2">
@@ -279,30 +255,18 @@ const waterLabel = computed(() => {
             </div>
           </div>
         </div>
-      </section>
+      </UiSurfacePanel>
 
       <!-- Section: Operations -->
-      <section id="operations" class="mt-4 rounded-xl border border-ui-border bg-ui-surface p-6">
-        <h3 class="text-sm font-semibold text-ui-primary mb-4">Vận hành</h3>
+      <UiSurfacePanel id="operations" as="section" class="mt-4">
+        <h3 class="mb-2 text-sm font-semibold text-ui-primary">Vận hành</h3>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-          <div v-if="building.meterReadingDay">
-            <p class="text-xs text-ui-muted mb-1">Ngày chốt số</p>
-            <p class="text-sm text-ui-primary">{{ building.meterReadingDay }}</p>
-          </div>
-          <div v-if="building.billingGenerationDay">
-            <p class="text-xs text-ui-muted mb-1">Ngày lập hóa đơn</p>
-            <p class="text-sm text-ui-primary">{{ building.billingGenerationDay }}</p>
-          </div>
-          <div v-if="building.paymentDueDay">
-            <p class="text-xs text-ui-muted mb-1">Ngày đến hạn</p>
-            <p class="text-sm text-ui-primary">{{ building.paymentDueDay }}</p>
-          </div>
-          <div>
-            <p class="text-xs text-ui-muted mb-1">Số ngày gia hạn</p>
-            <p class="text-sm text-ui-primary">{{ building.gracePeriodDays }}</p>
-          </div>
-        </div>
+        <UiDefinitionList class="mb-4">
+          <UiDefinitionItem v-if="building.meterReadingDay" label="Ngày chốt số" :value="building.meterReadingDay" />
+          <UiDefinitionItem v-if="building.billingGenerationDay" label="Ngày lập hóa đơn" :value="building.billingGenerationDay" />
+          <UiDefinitionItem v-if="building.paymentDueDay" label="Ngày đến hạn" :value="building.paymentDueDay" />
+          <UiDefinitionItem label="Số ngày gia hạn" :value="building.gracePeriodDays" />
+        </UiDefinitionList>
 
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-4 border-t border-ui-border">
           <NuxtLink
@@ -336,7 +300,7 @@ const waterLabel = computed(() => {
             <p class="mt-1 text-xs text-ui-muted">Nhập chỉ số điện, nước</p>
           </NuxtLink>
         </div>
-      </section>
+      </UiSurfacePanel>
 
       <!-- Section: Danger zone (admin only) -->
       <section

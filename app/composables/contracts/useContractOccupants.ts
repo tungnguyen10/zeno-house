@@ -4,7 +4,8 @@ import type { ApiSuccess } from '~/types/api'
 
 export function useContractOccupants(contractId: MaybeRef<string>) {
   const occupants = ref<ContractOccupant[]>([])
-  const isLoading = ref(false)
+  // Starts true so SSR renders the same skeleton the client hydrates with.
+  const isLoading = ref(true)
   const error = ref<Error | null>(null)
 
   async function fetchOccupants() {
@@ -48,7 +49,9 @@ export function useContractOccupants(contractId: MaybeRef<string>) {
     occupants.value = occupants.value.filter(o => o.id !== occupantId)
   }
 
-  fetchOccupants()
+  // Client-only: this result is not transferred in the SSR payload, so fetching on the
+  // server just renders state the client immediately contradicts on hydration.
+  if (import.meta.client) fetchOccupants()
 
   return {
     occupants,

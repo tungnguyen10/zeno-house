@@ -32,6 +32,9 @@ import UiListToolbar from '~/components/ui/UiListToolbar.vue'
 import UiBulkActionsBar from '~/components/ui/UiBulkActionsBar.vue'
 import UiSelectAllBar from '~/components/ui/UiSelectAllBar.vue'
 import UiPagination from '~/components/ui/UiPagination.vue'
+import UiDefinitionList from '~/components/ui/UiDefinitionList.vue'
+import UiDefinitionItem from '~/components/ui/UiDefinitionItem.vue'
+import UiListPanel from '~/components/ui/UiListPanel.vue'
 import { ok, paginated, parseBody, parseQuery } from '../server/utils/api'
 
 config.global.components = {
@@ -44,6 +47,9 @@ config.global.components = {
   UiBulkActionsBar,
   UiSelectAllBar,
   UiPagination,
+  UiDefinitionList,
+  UiDefinitionItem,
+  UiListPanel,
 }
 
 // Nuxt auto-imports these into Vue SFCs at build-time. In vitest we don't run

@@ -44,7 +44,7 @@ async function confirmClose() {
 
 <template>
   <div class="space-y-4">
-    <div class="rounded-xl border border-ui-border bg-ui-surface p-4 space-y-3">
+    <UiSurfacePanel density="compact" class="space-y-3">
       <div class="grid grid-cols-2 gap-3 md:grid-cols-3">
         <div>
           <p class="text-xs text-ui-muted">Trạng thái</p>
@@ -88,7 +88,7 @@ async function confirmClose() {
           Chốt kỳ {{ String(period.periodMonth).padStart(2, '0') }}/{{ period.periodYear }}
         </UiButton>
       </div>
-    </div>
+    </UiSurfacePanel>
 
     <UiConfirmModal
       :open="showConfirm"

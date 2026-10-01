@@ -56,7 +56,7 @@ defineExpose({ refresh })
 </script>
 
 <template>
-  <div class="rounded-xl border border-ui-border bg-ui-surface p-4">
+  <UiSurfacePanel density="compact">
     <div class="mb-3 flex items-center justify-between gap-3">
       <div>
         <p class="text-sm font-medium text-ui-primary">Lịch sử thay đổi</p>
@@ -149,5 +149,5 @@ defineExpose({ refresh })
         </div>
       </article>
     </div>
-  </div>
+  </UiSurfacePanel>
 </template>

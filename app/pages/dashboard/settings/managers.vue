@@ -389,43 +389,39 @@ function managerInitials(row: ManagedUserWithAssignments): string {
       >
         <!-- Card header -->
         <div class="flex flex-col gap-3 border-b border-ui-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-          <div class="flex min-w-0 items-center gap-3">
+          <div class="flex min-w-0 items-start gap-3">
             <!-- Avatar -->
             <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-ui-accent/15 text-sm font-semibold text-ui-accent">
               {{ managerInitials(row) }}
             </span>
-            <div class="min-w-0">
+            <div class="min-w-0 flex-1">
               <p class="truncate text-sm font-semibold text-ui-primary">
                 {{ row.user.name ?? row.user.email ?? row.user.id }}
               </p>
               <p v-if="row.user.name && row.user.email" class="truncate text-xs text-ui-muted">
                 {{ row.user.email }}
               </p>
+              <!-- Badges sit below the identity: inline they squeeze the name to nothing on a phone. -->
+              <div class="mt-1.5 flex flex-wrap items-center gap-1.5">
+                <UiBadge :variant="row.user.role === 'owner' ? 'accent' : 'neutral'">
+                  {{ roleLabel(row.user.role) }}
+                </UiBadge>
+                <UiBadge v-if="row.assignments.length === 0" variant="warning">
+                  Chưa có tòa nhà
+                </UiBadge>
+                <span
+                  v-else
+                  class="rounded-md border border-ui-border bg-ui-deep/40 px-2 py-0.5 text-xs font-medium text-ui-muted"
+                >
+                  {{ row.assignments.length }} tòa nhà
+                </span>
+              </div>
             </div>
-            <UiBadge
-              :variant="row.user.role === 'owner' ? 'accent' : 'neutral'"
-              class="ml-1 shrink-0"
-            >
-              {{ roleLabel(row.user.role) }}
-            </UiBadge>
-            <UiBadge
-              v-if="row.assignments.length === 0"
-              variant="warning"
-              class="ml-1 shrink-0"
-            >
-              Chưa có tòa nhà
-            </UiBadge>
-            <span
-              v-else
-              class="ml-1 shrink-0 rounded-md border border-ui-border bg-ui-deep/40 px-2 py-0.5 text-xs font-medium text-ui-muted"
-            >
-              {{ row.assignments.length }} tòa nhà
-            </span>
           </div>
 
           <div
             v-if="canManageRow(row)"
-            class="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center"
+            class="flex flex-col gap-2 sm:shrink-0 sm:flex-row sm:items-center"
           >
             <!-- Assign form -->
             <form
@@ -438,7 +434,7 @@ function managerInitials(row: ManagedUserWithAssignments): string {
                 :options="availableBuildingOptions(row)"
                 density="compact"
                 aria-label="Chọn tòa nhà để gán"
-                class="w-56"
+                class="min-w-0 flex-1 sm:w-56 sm:flex-none"
               />
               <UiButton
                 type="submit"
@@ -480,10 +476,10 @@ function managerInitials(row: ManagedUserWithAssignments): string {
           <li
             v-for="assignment in row.assignments"
             :key="assignment.id"
-            class="flex items-center gap-4 px-4 py-2.5"
+            class="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-2.5"
           >
             <!-- Building info -->
-            <div class="min-w-0 flex-1">
+            <div class="min-w-0 flex-1 basis-full sm:basis-auto">
               <p class="truncate text-sm font-medium text-ui-primary">
                 {{ assignment.building?.name ?? assignment.building_id }}
               </p>
@@ -495,7 +491,7 @@ function managerInitials(row: ManagedUserWithAssignments): string {
             <!-- Delete permission toggle -->
             <label
               v-if="canManageRow(row)"
-              class="flex shrink-0 items-center gap-2 rounded-md border border-ui-border/60 bg-ui-deep/30 px-2.5 py-1"
+              class="flex shrink-0 items-center gap-2 rounded-md border border-ui-border/60 bg-ui-deep/30 px-2.5 py-1 ml-auto sm:ml-0"
               :class="!busyKey && 'cursor-pointer hover:border-ui-border'"
             >
               <UiToggle

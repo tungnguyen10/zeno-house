@@ -275,43 +275,29 @@ if (error.value?.statusCode === 404) {
         />
       </div>
 
-      <section id="overview" class="mt-6 rounded-xl border border-ui-border bg-ui-surface p-6">
-        <header class="mb-4">
+      <UiSurfacePanel id="overview" as="section" class="mt-6">
+        <header class="mb-2">
           <h3 class="text-sm font-semibold text-ui-primary">Tổng quan</h3>
           <p class="mt-0.5 text-xs text-ui-muted">Thông tin định danh, giá chuẩn và vị trí của phòng.</p>
         </header>
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div>
-            <p class="mb-1 text-xs text-ui-muted">Tòa nhà</p>
-            <NuxtLink v-if="building" :to="buildingPath(building)" class="text-sm text-ui-accent hover:underline">
-              Tòa nhà: {{ building.name }}
+        <UiDefinitionList>
+          <UiDefinitionItem label="Tòa nhà">
+            <NuxtLink v-if="building" :to="buildingPath(building)" class="text-ui-accent hover:underline">
+              {{ building.name }}
             </NuxtLink>
-            <p v-else class="text-sm text-ui-primary">{{ room.buildingId }}</p>
-          </div>
-          <div>
-            <p class="mb-1 text-xs text-ui-muted">Giá chuẩn</p>
-            <p class="text-sm font-medium text-ui-primary">{{ formatCurrency(room.monthlyRent) }}/tháng</p>
-          </div>
-          <div>
-            <p class="mb-1 text-xs text-ui-muted">Tầng</p>
-            <p class="text-sm text-ui-primary">{{ room.floor }}</p>
-          </div>
-          <div v-if="room.area">
-            <p class="mb-1 text-xs text-ui-muted">Diện tích</p>
-            <p class="text-sm text-ui-primary">{{ room.area }} m²</p>
-          </div>
-          <div>
-            <p class="mb-1 text-xs text-ui-muted">Ngày tạo</p>
-            <p class="text-sm text-ui-primary">{{ new Date(room.createdAt).toLocaleDateString('vi-VN') }}</p>
-          </div>
-        </div>
-        <div v-if="room.description" class="mt-4">
-          <p class="mb-1 text-xs text-ui-muted">Mô tả</p>
-          <p class="text-sm text-ui-primary">{{ room.description }}</p>
-        </div>
-      </section>
+            <template v-else>{{ room.buildingId }}</template>
+          </UiDefinitionItem>
+          <UiDefinitionItem label="Giá chuẩn">
+            <span class="font-medium">{{ formatCurrency(room.monthlyRent) }}/tháng</span>
+          </UiDefinitionItem>
+          <UiDefinitionItem label="Tầng" :value="room.floor" />
+          <UiDefinitionItem v-if="room.area" label="Diện tích" :value="`${room.area} m²`" />
+          <UiDefinitionItem label="Ngày tạo" :value="new Date(room.createdAt).toLocaleDateString('vi-VN')" />
+          <UiDefinitionItem v-if="room.description" label="Mô tả" :value="room.description" stacked />
+        </UiDefinitionList>
+      </UiSurfacePanel>
 
-      <section id="active-contract" class="mt-4 rounded-xl border border-ui-border bg-ui-surface p-6">
+      <UiSurfacePanel id="active-contract" as="section" class="mt-4">
         <header class="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
             <h3 class="text-sm font-semibold text-ui-primary">Hợp đồng hiện tại</h3>
@@ -371,10 +357,10 @@ if (error.value?.statusCode === 404) {
           </div>
         </div>
         <p v-else class="text-sm text-ui-muted">Phòng đang trống.</p>
-      </section>
+      </UiSurfacePanel>
 
-      <section id="meter-readings" class="mt-4 rounded-xl border border-ui-border bg-ui-surface p-6">
-        <header class="mb-4 flex flex-wrap items-center justify-between gap-3">
+      <UiSurfacePanel id="meter-readings" as="section" class="mt-4">
+        <header class="mb-2 flex flex-wrap items-center justify-between gap-3">
           <div>
             <h3 class="text-sm font-semibold text-ui-primary">Chỉ số đồng hồ</h3>
             <p class="mt-0.5 text-xs text-ui-muted">Đi tới workspace vận hành tháng để nhập điện, nước.</p>
@@ -384,23 +370,19 @@ if (error.value?.statusCode === 404) {
           </NuxtLink>
         </header>
 
-        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div class="rounded-lg border border-ui-border bg-ui-deep/40 p-4">
-            <p class="text-xs text-ui-muted">Điện gần nhất</p>
-            <p class="mt-1 text-sm text-ui-primary">
-              {{ latestReadingsData?.data?.electricity ? `${latestReadingsData.data.electricity.readingValue.toLocaleString('vi-VN')} kWh` : 'Chưa có dữ liệu' }}
-            </p>
-          </div>
-          <div class="rounded-lg border border-ui-border bg-ui-deep/40 p-4">
-            <p class="text-xs text-ui-muted">Nước gần nhất</p>
-            <p class="mt-1 text-sm text-ui-primary">
-              {{ latestReadingsData?.data?.water ? `${latestReadingsData.data.water.readingValue.toLocaleString('vi-VN')} m³` : 'Chưa có dữ liệu' }}
-            </p>
-          </div>
-        </div>
-      </section>
+        <UiDefinitionList>
+          <UiDefinitionItem
+            label="Điện gần nhất"
+            :value="latestReadingsData?.data?.electricity ? `${latestReadingsData.data.electricity.readingValue.toLocaleString('vi-VN')} kWh` : 'Chưa có dữ liệu'"
+          />
+          <UiDefinitionItem
+            label="Nước gần nhất"
+            :value="latestReadingsData?.data?.water ? `${latestReadingsData.data.water.readingValue.toLocaleString('vi-VN')} m³` : 'Chưa có dữ liệu'"
+          />
+        </UiDefinitionList>
+      </UiSurfacePanel>
 
-      <section id="contracts-history" class="mt-4 rounded-xl border border-ui-border bg-ui-surface p-6">
+      <UiSurfacePanel id="contracts-history" as="section" class="mt-4">
         <header class="mb-4">
           <h3 class="text-sm font-semibold text-ui-primary">Lịch sử hợp đồng</h3>
           <p class="mt-0.5 text-xs text-ui-muted">Tất cả hợp đồng đã từng gắn với phòng này.</p>
@@ -424,7 +406,7 @@ if (error.value?.statusCode === 404) {
           </UiListRow>
         </div>
         <p v-else class="text-sm text-ui-muted">Chưa có hợp đồng.</p>
-      </section>
+      </UiSurfacePanel>
 
       <section
         v-if="authStore.can('rooms.delete')"

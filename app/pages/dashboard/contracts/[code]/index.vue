@@ -332,7 +332,7 @@ function sectionLinkClass(sectionId: string) {
 
       <!-- Services section -->
       <UiSection id="services" title="Dịch vụ hàng tháng" class="mt-6 scroll-mt-20">
-        <div class="rounded-xl border border-ui-border bg-ui-surface p-4">
+        <UiSurfacePanel density="compact">
           <ContractServicesTab
             :services="contractServices"
             :loading="servicesLoading"
@@ -340,12 +340,12 @@ function sectionLinkClass(sectionId: string) {
             @update="updateContractService"
             @delete="deletingServiceId = $event"
           />
-        </div>
+        </UiSurfacePanel>
       </UiSection>
 
       <!-- Handover readings section -->
       <UiSection id="meter-readings" title="Số bàn giao" class="mt-6 scroll-mt-20">
-        <div class="rounded-xl border border-ui-border bg-ui-surface p-4">
+        <UiSurfacePanel density="compact">
           <ContractHandoverReadings
             :contract-id="id"
             :room-id="contract.room.id"
@@ -353,7 +353,7 @@ function sectionLinkClass(sectionId: string) {
             :end-date="contract.endDate"
             :status="contract.status"
           />
-        </div>
+        </UiSurfacePanel>
       </UiSection>
 
       <!-- Renewal form inline -->
@@ -372,7 +372,7 @@ function sectionLinkClass(sectionId: string) {
 
       <!-- Contract history -->
       <UiSection id="history" title="Lịch sử" class="mt-6 scroll-mt-20">
-        <div class="rounded-xl border border-ui-border bg-ui-surface p-4">
+        <UiSurfacePanel density="compact">
           <ContractRenewalHistoryList
             :renewals="renewals"
             :is-loading="renewalsLoading"
@@ -384,7 +384,7 @@ function sectionLinkClass(sectionId: string) {
             :contract-id="contract.id"
             :building-id="contract.buildingId"
           />
-        </div>
+        </UiSurfacePanel>
       </UiSection>
     </template>
 

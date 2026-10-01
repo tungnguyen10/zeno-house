@@ -5,14 +5,10 @@ import type { ContractServiceUpdateInput } from '~/utils/validators/contract-ser
 export function useContractServices(contractId: MaybeRef<string>) {
   const url = computed(() => `/api/contract-services?contract_id=${toValue(contractId)}`)
 
-  const { data, status, error, refresh } = useFetch<ApiSuccess<ContractService[]>>(url, {
-    immediate: false,
-    watch: false,
-  })
-
-  watch(() => toValue(contractId), (value) => {
-    if (value) refresh()
-  }, { immediate: true })
+  // Let useFetch run in setup so Nuxt awaits it and transfers the payload; firing it
+  // from a watcher instead left SSR flushing as `pending` and mismatched on hydration.
+  // `url` is reactive, so useFetch already refetches when the contract changes.
+  const { data, status, error, refresh } = useFetch<ApiSuccess<ContractService[]>>(url)
 
   const services = computed(() => data.value?.data ?? [])
   const isLoading = computed(() => status.value === 'pending')

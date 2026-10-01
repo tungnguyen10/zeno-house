@@ -10,7 +10,7 @@ const props = defineProps<{
   yearOptions: SelectOption[]
   monthOptions: SelectOption[]
   expenseCategoryOptions: SelectOption[]
-  hasActiveFilters?: boolean
+  activeFilterCount?: number
 }>()
 
 const emit = defineEmits<{
@@ -20,17 +20,17 @@ const emit = defineEmits<{
   'update:expenseCategoryValue': [value: string | number | null]
   reset: []
 }>()
-
-// Building auto-defaults to the first assigned building (never genuinely
-// "empty"), so a per-field count would misreport it as an active filter and
-// mismatch between SSR (default not resolved yet) and client. Reuse the
-// parent's already-correct `hasActiveFilters` instead.
-const filterCount = computed(() => (props.hasActiveFilters ? 1 : 0))
 </script>
 
 <template>
-  <UiToolbar class="mb-4">
-    <UiFilterPopover :count="filterCount" aria-label="Bộ lọc báo cáo vận hành" panel-class="w-72">
+  <UiListToolbar
+    class="mb-4"
+    :filter-count="props.activeFilterCount ?? 0"
+    filter-aria-label="Bộ lọc báo cáo vận hành"
+    :has-active-filters="(props.activeFilterCount ?? 0) > 0"
+    @reset="emit('reset')"
+  >
+    <template #filters>
       <div class="flex flex-col gap-3">
         <label class="flex flex-col gap-1.5 text-xs text-ui-muted">
           <span>Tòa nhà</span>
@@ -78,10 +78,6 @@ const filterCount = computed(() => (props.hasActiveFilters ? 1 : 0))
           />
         </label>
       </div>
-    </UiFilterPopover>
-
-    <template v-if="props.hasActiveFilters" #actions>
-      <UiFilterResetButton @click="emit('reset')" />
     </template>
-  </UiToolbar>
+  </UiListToolbar>
 </template>
