@@ -21,6 +21,9 @@ export interface CheckoutRecord {
   actualReturnDate: string
   reason: string
   status: 'draft' | 'returned'
+  financialMode?: 'standard' | 'settlement' | 'legacy'
+  pricingSnapshot?: Record<string, unknown> | null
+  chargeModes?: Record<string, { mode: 'prorated' | 'full_month' | 'waived'; reason?: string | null }>
   electricity: CheckoutMeterInput | null
   water: CheckoutMeterInput | null
   updatedAt: string
@@ -28,7 +31,7 @@ export interface CheckoutRecord {
 
 export interface CheckoutCharge {
   key: string
-  chargeType: 'electricity' | 'water' | 'incidental'
+  chargeType: 'rent' | 'service' | 'electricity' | 'water' | 'incidental' | 'discount' | 'surcharge'
   label: string
   amount: number
   quantity: number
@@ -47,6 +50,7 @@ export interface CheckoutPreview {
   snapshotHash: string
   depositHeld: number
   creditHeld: number
+  cashCollected?: number
   existingDebt: number
   finalChargesTotal: number
   totalDue: number
@@ -55,6 +59,8 @@ export interface CheckoutPreview {
   depositApplied: number
   creditApplied: number
   charges: CheckoutCharge[]
+  billedCharges?: Array<{ key: string; label: string; amount: number; invoiceId: string }>
+  waivedCharges?: Array<{ key: string; label: string; reason: string }>
   invoices: CheckoutInvoiceBalance[]
   blockers: string[]
 }
@@ -88,10 +94,13 @@ export interface CheckoutSource {
 
 export interface CheckoutBundle {
   enabled: boolean
+  schemaAvailable?: boolean
+  settlementEnabled?: boolean
   checkout: CheckoutRecord | null
   depositHeld: number
   creditHeld: number
   statement: CheckoutStatement | null
+  finalBill?: { id: string; issuedAt: string; preview: CheckoutPreview } | null
   refunds: CheckoutRefund[]
   sources: CheckoutSource[]
   invoices?: CheckoutInvoiceBalance[]

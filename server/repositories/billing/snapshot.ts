@@ -11,7 +11,7 @@ import {
 import { db } from '../../utils/db'
 
 export interface BillingPeriodInputSnapshot {
-  checkouts?: Array<{ id: string, contract_id: string, status: string, actual_return_date: string, charges: CheckoutCharge[] }>
+  checkouts?: Array<{ id: string, contract_id: string, status: string, actual_return_date: string, financial_mode?: 'standard' | 'settlement' | 'legacy', final_bill_issued?: boolean, settlement_confirmed?: boolean, charges: CheckoutCharge[] }>
 
   building: Tables<'buildings'>
   contracts: Tables<'contracts'>[]

@@ -103,10 +103,9 @@ describe('ContractService code lookup', () => {
     mocks.checkoutEnabled.mockReturnValue(false)
   })
 
-  it.each(['terminated', 'expired'] as const)('prevents direct %s lifecycle bypass in checkout pilot buildings', async (status) => {
+  it.each(['terminated', 'expired'] as const)('prevents direct %s lifecycle bypass in every building', async (status) => {
     const contract = buildContractWithDetails()
     mocks.findByIdentifier.mockResolvedValue(contract)
-    mocks.checkoutEnabled.mockReturnValue(true)
     const { ContractService } = await import('../../../server/services/contracts')
     await expect(ContractService.update(event(), user(), contract.id, { status })).rejects.toMatchObject({ statusCode: 409 })
     expect(mocks.update).not.toHaveBeenCalled()

@@ -1,56 +1,38 @@
--- Manual Dashboard deployment only. See docs/development/checkout-sql-verification.md.
+-- SQL Editor upgrade for a staging database that already has the original checkout migration.
+-- Do not use on a database without the original checkout schema.
+-- Existing returned records are marked legacy and left financially unchanged.
 begin;
-create table public.contract_checkouts (
- id uuid primary key default gen_random_uuid(), contract_id uuid not null unique references public.contracts(id) on delete restrict,
- building_id uuid not null references public.buildings(id) on delete restrict,
- actual_return_date date not null, reason text not null check(length(btrim(reason)) between 1 and 500),
- status text not null default 'draft' check(status in ('draft','returned')),
- electricity jsonb, water jsonb, pricing_snapshot jsonb, charge_modes jsonb not null default '{}'::jsonb,
- financial_mode text not null default 'standard' check(financial_mode in ('standard','settlement','legacy')),
- returned_operation_id uuid unique, returned_by uuid references auth.users(id) on delete set null,
- created_at timestamptz not null default now(), updated_at timestamptz not null default now()
-);
-create table public.contract_checkout_sources (
- id uuid primary key default gen_random_uuid(), contract_id uuid not null references public.contracts(id) on delete restrict,
- payment_id uuid not null unique references public.contract_payments(id) on delete restrict,
- source_type text not null check(source_type in ('deposit','credit')), approved_amount numeric(12,0) not null check(approved_amount>0),
- reason text, operation_id uuid unique, approved_by uuid references auth.users(id) on delete set null,
- created_at timestamptz not null default now(), updated_at timestamptz not null default now()
-);
-create table public.contract_checkout_statements (
- id uuid primary key default gen_random_uuid(), checkout_id uuid not null unique references public.contract_checkouts(id) on delete restrict,
- operation_id uuid not null unique, snapshot_hash text not null, preview jsonb not null,
- code text not null unique, confirmed_by uuid references auth.users(id) on delete set null, confirmed_at timestamptz not null default now()
-);
+do $$
+begin
+  if to_regclass('public.contract_checkouts') is null
+    or to_regclass('public.contract_checkout_sources') is null
+    or to_regclass('public.contract_checkout_statements') is null
+    or to_regclass('public.contract_checkout_refunds') is null
+    or to_regprocedure('public.contract_checkout_return(uuid,uuid,uuid,timestamptz)') is null
+  then raise exception 'CHECKOUT_OLD_SCHEMA_REQUIRED'; end if;
+  if exists(select 1 from information_schema.columns where table_schema='public' and table_name='contract_checkouts' and column_name='pricing_snapshot')
+    or to_regclass('public.contract_checkout_final_bills') is not null
+  then raise exception 'CHECKOUT_UPGRADE_ALREADY_STARTED'; end if;
+  if not exists(select 1 from pg_trigger where tgrelid='public.contract_checkouts'::regclass and tgname='checkout_record_history' and not tgisinternal)
+  then raise exception 'CHECKOUT_OLD_GUARD_REQUIRED'; end if;
+end $$;
+
+alter table public.contract_checkouts
+  add column pricing_snapshot jsonb,
+  add column charge_modes jsonb not null default '{}'::jsonb,
+  add column financial_mode text not null default 'standard' check(financial_mode in ('standard','settlement','legacy'));
+-- The old immutable-history trigger disallows even a classification update.
+-- Recreate that one trigger in this transaction after marking old returns.
+drop trigger checkout_record_history on public.contract_checkouts;
+update public.contract_checkouts set financial_mode='legacy' where status='returned';
+create trigger checkout_record_history before update or delete on public.contract_checkouts for each row execute function public.contract_checkout_record_guard();
 create table public.contract_checkout_final_bills (
  id uuid primary key default gen_random_uuid(), checkout_id uuid not null unique references public.contract_checkouts(id) on delete restrict,
  operation_id uuid not null unique, snapshot_hash text not null, preview jsonb not null,
  issued_by uuid references auth.users(id) on delete set null, issued_at timestamptz not null default now()
 );
-create table public.contract_checkout_refunds (
- id uuid primary key default gen_random_uuid(), statement_id uuid not null references public.contract_checkout_statements(id) on delete restrict,
- source_id uuid not null references public.contract_checkout_sources(id) on delete restrict,
- operation_id uuid not null, amount numeric(12,0) not null check(amount>0), paid_at date not null,
- payment_method text not null, note text, recorded_by uuid references auth.users(id) on delete set null,
- created_at timestamptz not null default now(), unique(operation_id,source_id)
-);
-alter table public.invoice_payments add column funding_source text not null default 'cash' check(funding_source in ('cash','deposit','credit')),
- add column checkout_source_id uuid references public.contract_checkout_sources(id) on delete restrict,
- add column checkout_statement_id uuid references public.contract_checkout_statements(id) on delete restrict,
- add constraint invoice_payments_checkout_source_check check((funding_source='cash' and checkout_source_id is null and checkout_statement_id is null) or (funding_source<>'cash' and checkout_source_id is not null and checkout_statement_id is not null));
-alter table public.meter_readings add column contract_id uuid references public.contracts(id) on delete restrict;
-alter table public.meter_readings drop constraint meter_readings_room_type_period_unique;
-create unique index meter_readings_monthly_identity on public.meter_readings(room_id,meter_type,period_year,period_month) where reading_type='monthly';
-create unique index meter_readings_handover_identity on public.meter_readings(contract_id,meter_type,reading_type) where reading_type<>'monthly' and contract_id is not null;
--- Legacy handovers retain NULL scope. Deliberately do not infer a contract.
-alter table public.meter_readings add constraint meter_readings_monthly_scope check(reading_type<>'monthly' or contract_id is null);
-insert into public.contract_checkout_sources(contract_id,payment_id,source_type,approved_amount)
- select contract_id,id,'deposit',amount from public.contract_payments where payment_type='deposit';
 
-create function public.contract_checkout_source_balance(p_source_id uuid) returns numeric language sql stable security invoker set search_path='' as $$
- select s.approved_amount-coalesce((select sum(p.amount) from public.invoice_payments p where p.checkout_source_id=s.id),0)-coalesce((select sum(r.amount) from public.contract_checkout_refunds r where r.source_id=s.id),0) from public.contract_checkout_sources s where s.id=p_source_id
-$$;
-create function public.contract_checkout_preview(p_contract_id uuid) returns jsonb language plpgsql security invoker set search_path='' as $$
+create or replace function public.contract_checkout_preview(p_contract_id uuid) returns jsonb language plpgsql security invoker set search_path='' as $$
 declare c public.contracts%rowtype; h public.contract_checkouts%rowtype; b public.buildings%rowtype;
  d numeric:=0; x numeric:=0; n numeric:=0; f numeric:=0; cash_collected numeric:=0; base numeric; rate numeric; usage numeric; amount numeric;
  meter text; input jsonb; charges jsonb:='[]'; billed_charges jsonb:='[]'; waived_charges jsonb:='[]'; debts jsonb:='[]'; blockers jsonb:='[]'; snapshot jsonb; item record; target uuid;
@@ -139,7 +121,7 @@ begin
  return jsonb_build_object('snapshotHash',md5(snapshot::text),'depositHeld',d,'creditHeld',x,'cashCollected',cash_collected,'existingDebt',n,'finalChargesTotal',f,'totalDue',n+f,'refundDue',greatest(d+x-n-f,0),'additionalDue',greatest(n+f-d-x,0),'creditApplied',least(x,n+f),'depositApplied',least(d,greatest(n+f-x,0)),'charges',charges,'billedCharges',billed_charges,'waivedCharges',waived_charges,'invoices',debts,'blockers',blockers);
 end $$;
 
-create function public.contract_checkout_get(p_contract_id uuid) returns jsonb language plpgsql security invoker set search_path='' as $$
+create or replace function public.contract_checkout_get(p_contract_id uuid) returns jsonb language plpgsql security invoker set search_path='' as $$
 declare h public.contract_checkouts%rowtype; s public.contract_checkout_statements%rowtype; fb public.contract_checkout_final_bills%rowtype; d numeric; x numeric; refunded numeric; debt numeric; remaining numeric; statement jsonb:=null;
 begin
  select * into h from public.contract_checkouts where contract_id=p_contract_id;
@@ -158,24 +140,11 @@ begin
  'sources',(select coalesce(jsonb_agg(jsonb_build_object('id',p.id,'paymentType',p.payment_type,'amount',p.amount,'approvedAmount',coalesce(cs.approved_amount,0)) order by p.id),'[]') from public.contract_payments p left join public.contract_checkout_sources cs on p.id=cs.payment_id where p.contract_id=p_contract_id));
 end $$;
 
-create function public.contract_checkout_audit(p_contract_id uuid,p_actor_id uuid,p_action text,p_operation_id uuid,p_data jsonb) returns void language sql security invoker set search_path='' as $$
+create or replace function public.contract_checkout_audit(p_contract_id uuid,p_actor_id uuid,p_action text,p_operation_id uuid,p_data jsonb) returns void language sql security invoker set search_path='' as $$
  insert into public.audit_events(building_id,actor_id,action,entity_type,entity_id,correlation_id,operation_id,after_data) select building_id,p_actor_id,p_action,'contract',id,p_operation_id,p_operation_id,p_data from public.contracts where id=p_contract_id
 $$;
-create function public.contract_checkout_save(p_contract_id uuid,p_actor_id uuid,p_input jsonb) returns jsonb language plpgsql security invoker set search_path='' as $$
-declare c public.contracts%rowtype; h public.contract_checkouts%rowtype;
-begin
- select * into c from public.contracts where id=p_contract_id for update;
- if not found then raise exception 'CHECKOUT_CONTRACT_NOT_FOUND'; end if;
- select * into h from public.contract_checkouts where contract_id=c.id for update;
- if h.status='returned' then raise exception 'CHECKOUT_RETURNED_IMMUTABLE'; end if;
- if h.id is not null and (p_input->>'expected_updated_at')::timestamptz is distinct from h.updated_at then raise exception 'CHECKOUT_VERSION_CONFLICT'; end if;
- if (p_input->'electricity'->>'reading')::numeric<0 or (p_input->'water'->>'reading')::numeric<0 or (p_input->'electricity'->>'usageOverride')::numeric<0 or (p_input->'water'->>'usageOverride')::numeric<0 then raise exception 'CHECKOUT_USAGE_INVALID'; end if;
- if c.status='terminated' or (p_input->>'actual_return_date')::date<c.start_date then raise exception 'CHECKOUT_STATE_INVALID'; end if;
- insert into public.contract_checkouts(contract_id,building_id,actual_return_date,reason,electricity,water) values(c.id,c.building_id,(p_input->>'actual_return_date')::date,p_input->>'reason',nullif(p_input->'electricity','null'),nullif(p_input->'water','null')) on conflict(contract_id) do update set actual_return_date=excluded.actual_return_date,reason=excluded.reason,electricity=excluded.electricity,water=excluded.water,updated_at=clock_timestamp();
- perform public.contract_checkout_audit(c.id,p_actor_id,'contract.checkout.saved',null,p_input);
- return public.contract_checkout_get(c.id);
-end $$;
 
+drop function public.contract_checkout_return(uuid,uuid,uuid,timestamptz);
 create function public.contract_checkout_return(p_contract_id uuid,p_actor_id uuid,p_operation_id uuid,p_expected_updated_at timestamptz,p_financial_mode text default 'standard') returns jsonb language plpgsql security invoker set search_path='' as $$
 declare h public.contract_checkouts%rowtype; c public.contracts%rowtype; b public.buildings%rowtype; meter text; input jsonb; baseline numeric; pricing text; room_before jsonb;
 begin
@@ -248,7 +217,7 @@ begin
  return public.contract_checkout_get(p_contract_id);
 end $$;
 
-create function public.contract_checkout_confirm(p_contract_id uuid,p_actor_id uuid,p_operation_id uuid,p_snapshot_hash text) returns jsonb language plpgsql security invoker set search_path='' as $$
+create or replace function public.contract_checkout_confirm(p_contract_id uuid,p_actor_id uuid,p_operation_id uuid,p_snapshot_hash text) returns jsonb language plpgsql security invoker set search_path='' as $$
 declare c public.contracts%rowtype; h public.contract_checkouts%rowtype; s public.contract_checkout_statements%rowtype; preview jsonb;
  target uuid; invoice uuid; charge jsonb; item record; source record; take numeric; available numeric; balance numeric;
 begin
@@ -350,7 +319,7 @@ begin
  return public.contract_checkout_get(c.id);
 end $$;
 
-create function public.contract_checkout_credit(p_contract_id uuid,p_actor_id uuid,p_payment_id uuid,p_amount numeric,p_reason text,p_operation_id uuid) returns jsonb language plpgsql security invoker set search_path='' as $$
+create or replace function public.contract_checkout_credit(p_contract_id uuid,p_actor_id uuid,p_payment_id uuid,p_amount numeric,p_reason text,p_operation_id uuid) returns jsonb language plpgsql security invoker set search_path='' as $$
 declare p public.contract_payments%rowtype; source public.contract_checkout_sources%rowtype;
 begin
  if p_operation_id is null then raise exception 'CHECKOUT_OPERATION_REQUIRED'; end if;
@@ -366,7 +335,27 @@ begin
  return public.contract_checkout_get(p_contract_id);
 end $$;
 
-create function public.contract_checkout_refund(p_contract_id uuid,p_actor_id uuid,p_operation_id uuid,p_amount numeric,p_paid_at date,p_payment_method text,p_note text) returns jsonb language plpgsql security invoker set search_path='' as $$
+create or replace function public.contract_checkout_charge(p_contract_id uuid,p_actor_id uuid,p_operation_id uuid,p_label text,p_amount numeric,p_note text) returns jsonb language plpgsql security invoker set search_path='' as $$
+declare h public.contract_checkouts%rowtype; target uuid; replay public.billing_incidental_charges%rowtype; c public.contracts%rowtype;
+begin
+ if p_operation_id is null then raise exception 'CHECKOUT_OPERATION_REQUIRED'; end if;
+ select * into c from public.contracts where id=p_contract_id for update;
+ select * into h from public.contract_checkouts where contract_id=p_contract_id for update;
+ if h.id is null then raise exception 'CHECKOUT_DRAFT_REQUIRED'; end if;
+ select * into replay from public.billing_incidental_charges where operation_id=p_operation_id;
+ if found then if replay.contract_id=p_contract_id and replay.label=btrim(p_label) and replay.amount=p_amount and replay.note is not distinct from p_note and replay.created_by is not distinct from p_actor_id then return public.contract_checkout_get(p_contract_id); end if; raise exception 'CHECKOUT_OPERATION_CONFLICT'; end if;
+ if h.financial_mode='legacy' then raise exception 'CHECKOUT_LEGACY_RETURN'; end if;
+ if exists(select 1 from public.contract_checkout_statements where checkout_id=h.id) or exists(select 1 from public.contract_checkout_final_bills where checkout_id=h.id) then raise exception 'CHECKOUT_ALREADY_CONFIRMED'; end if;
+ if p_amount is null or p_amount<=0 or p_amount<>trunc(p_amount) or length(btrim(coalesce(p_label,''))) not between 1 and 200 then raise exception 'CHECKOUT_CHARGE_INVALID'; end if;
+ insert into public.billing_periods(building_id,period_year,period_month,opened_by) values(c.building_id,extract(year from h.actual_return_date),extract(month from h.actual_return_date),p_actor_id) on conflict(building_id,period_year,period_month) do nothing;
+ select id into target from public.billing_periods where building_id=c.building_id and period_year=extract(year from h.actual_return_date) and period_month=extract(month from h.actual_return_date) for update;
+ if exists(select 1 from public.billing_periods where id=target and status='closed') then raise exception 'CHECKOUT_PERIOD_CLOSED'; end if;
+ insert into public.billing_incidental_charges(billing_period_id,contract_id,room_id,label,amount,note,operation_id,created_by) values(target,c.id,c.room_id,btrim(p_label),p_amount,p_note,p_operation_id,p_actor_id);
+ perform public.contract_checkout_audit(p_contract_id,p_actor_id,'contract.checkout.charge_added',p_operation_id,jsonb_build_object('label',p_label,'amount',p_amount,'note',p_note));
+ return public.contract_checkout_get(p_contract_id);
+end $$;
+
+create or replace function public.contract_checkout_refund(p_contract_id uuid,p_actor_id uuid,p_operation_id uuid,p_amount numeric,p_paid_at date,p_payment_method text,p_note text) returns jsonb language plpgsql security invoker set search_path='' as $$
 declare h public.contract_checkouts%rowtype; s public.contract_checkout_statements%rowtype; replay record; source record; remainder numeric; take numeric; due numeric;
 begin
  if p_operation_id is null then raise exception 'CHECKOUT_OPERATION_REQUIRED'; end if;
@@ -395,384 +384,7 @@ begin
  return public.contract_checkout_get(p_contract_id);
 end $$;
 
-create function public.contract_checkout_charge(p_contract_id uuid,p_actor_id uuid,p_operation_id uuid,p_label text,p_amount numeric,p_note text) returns jsonb language plpgsql security invoker set search_path='' as $$
-declare h public.contract_checkouts%rowtype; target uuid; replay public.billing_incidental_charges%rowtype; c public.contracts%rowtype;
-begin
- if p_operation_id is null then raise exception 'CHECKOUT_OPERATION_REQUIRED'; end if;
- select * into c from public.contracts where id=p_contract_id for update;
- select * into h from public.contract_checkouts where contract_id=p_contract_id for update;
- if h.id is null then raise exception 'CHECKOUT_DRAFT_REQUIRED'; end if;
- select * into replay from public.billing_incidental_charges where operation_id=p_operation_id;
- if found then if replay.contract_id=p_contract_id and replay.label=btrim(p_label) and replay.amount=p_amount and replay.note is not distinct from p_note and replay.created_by is not distinct from p_actor_id then return public.contract_checkout_get(p_contract_id); end if; raise exception 'CHECKOUT_OPERATION_CONFLICT'; end if;
- if h.financial_mode='legacy' then raise exception 'CHECKOUT_LEGACY_RETURN'; end if;
- if exists(select 1 from public.contract_checkout_statements where checkout_id=h.id) or exists(select 1 from public.contract_checkout_final_bills where checkout_id=h.id) then raise exception 'CHECKOUT_ALREADY_CONFIRMED'; end if;
- if p_amount is null or p_amount<=0 or p_amount<>trunc(p_amount) or length(btrim(coalesce(p_label,''))) not between 1 and 200 then raise exception 'CHECKOUT_CHARGE_INVALID'; end if;
- insert into public.billing_periods(building_id,period_year,period_month,opened_by) values(c.building_id,extract(year from h.actual_return_date),extract(month from h.actual_return_date),p_actor_id) on conflict(building_id,period_year,period_month) do nothing;
- select id into target from public.billing_periods where building_id=c.building_id and period_year=extract(year from h.actual_return_date) and period_month=extract(month from h.actual_return_date) for update;
- if exists(select 1 from public.billing_periods where id=target and status='closed') then raise exception 'CHECKOUT_PERIOD_CLOSED'; end if;
- insert into public.billing_incidental_charges(billing_period_id,contract_id,room_id,label,amount,note,operation_id,created_by) values(target,c.id,c.room_id,btrim(p_label),p_amount,p_note,p_operation_id,p_actor_id);
- perform public.contract_checkout_audit(p_contract_id,p_actor_id,'contract.checkout.charge_added',p_operation_id,jsonb_build_object('label',p_label,'amount',p_amount,'note',p_note));
- return public.contract_checkout_get(p_contract_id);
-end $$;
-
--- Triggers enforce historical invariants even when the application feature gate is off.
-create function public.contract_checkout_payment_guard() returns trigger language plpgsql security invoker set search_path='' as $$
-declare source public.contract_checkout_sources%rowtype;
-begin
- if tg_op='INSERT' then
- if new.payment_type='deposit' then insert into public.contract_checkout_sources(contract_id,payment_id,source_type,approved_amount) values(new.contract_id,new.id,'deposit',new.amount); end if;
- return new;
- end if;
- select * into source from public.contract_checkout_sources where payment_id=old.id for update;
- if source.id is not null then
- if exists(select 1 from public.invoice_payments where checkout_source_id=source.id) or exists(select 1 from public.contract_checkout_refunds where source_id=source.id) or exists(select 1 from public.contract_checkout_statements s join public.contract_checkouts h on h.id=s.checkout_id where h.contract_id=old.contract_id) then raise exception 'CHECKOUT_RECEIPT_ALLOCATED'; end if;
- if tg_op='DELETE' then
- delete from public.contract_checkout_sources where id=source.id;
- return old;
- end if;
- if new.contract_id<>old.contract_id or new.payment_type<>old.payment_type or (source.source_type='credit' and new.amount<source.approved_amount) then raise exception 'CHECKOUT_SOURCE_RECEIPT_PROTECTED'; end if;
- if source.source_type='deposit' then update public.contract_checkout_sources set approved_amount=new.amount,updated_at=clock_timestamp() where id=source.id; end if;
- elsif tg_op='UPDATE' and new.payment_type='deposit' then insert into public.contract_checkout_sources(contract_id,payment_id,source_type,approved_amount) values(new.contract_id,new.id,'deposit',new.amount);
- end if;
- if tg_op='DELETE' then return old; end if; return new;
-end $$;
-create trigger contract_checkout_receipt_insert after insert on public.contract_payments for each row execute function public.contract_checkout_payment_guard();
-create trigger contract_checkout_receipt_mutation before update or delete on public.contract_payments for each row execute function public.contract_checkout_payment_guard();
-
-create function public.contract_checkout_lifecycle_guard() returns trigger language plpgsql security invoker set search_path='' as $$
-begin
- if tg_op='UPDATE' then
-   if old.status='active' and new.status in ('terminated','expired') and current_setting('zeno.checkout_return_contract',true) is distinct from old.id::text then raise exception 'CHECKOUT_LIFECYCLE_REQUIRED'; end if;
- end if;
- if exists(select 1 from public.contract_checkouts where contract_id=old.id) then
- if tg_op='DELETE' then raise exception 'CHECKOUT_HISTORY_PROTECTED'; end if;
- if new.end_date is distinct from old.end_date or new.start_date is distinct from old.start_date or new.room_id is distinct from old.room_id or new.tenant_id is distinct from old.tenant_id or new.building_id is distinct from old.building_id or new.original_end_date is distinct from old.original_end_date then raise exception 'CHECKOUT_HISTORY_PROTECTED'; end if;
- if new.status is distinct from old.status and not (new.status='terminated' and old.status<>'terminated' and current_setting('zeno.checkout_return_contract',true)=old.id::text) then raise exception 'CHECKOUT_LIFECYCLE_REQUIRED'; end if;
- end if;
- if tg_op='DELETE' then return old; end if; return new;
-end $$;
-create trigger contract_checkout_lifecycle before update or delete on public.contracts for each row execute function public.contract_checkout_lifecycle_guard();
-
-create function public.contract_checkout_history_guard() returns trigger language plpgsql security invoker set search_path='' as $$
-begin
- raise exception 'CHECKOUT_HISTORY_PROTECTED';
-end $$;
-create trigger checkout_statement_immutable before update or delete on public.contract_checkout_statements for each row execute function public.contract_checkout_history_guard();
-create trigger checkout_final_bill_immutable before update or delete on public.contract_checkout_final_bills for each row execute function public.contract_checkout_history_guard();
-create trigger checkout_refund_immutable before update or delete on public.contract_checkout_refunds for each row execute function public.contract_checkout_history_guard();
-create function public.contract_checkout_allocation_guard() returns trigger language plpgsql security invoker set search_path='' as $$
-begin
- if old.funding_source<>'cash' then raise exception 'CHECKOUT_ALLOCATION_PROTECTED'; end if;
- if tg_op='UPDATE' and (new.funding_source<>old.funding_source or new.checkout_source_id is distinct from old.checkout_source_id or new.checkout_statement_id is distinct from old.checkout_statement_id) then raise exception 'CHECKOUT_ALLOCATION_PROTECTED'; end if;
- if tg_op='DELETE' then return old; end if; return new;
-end $$;
-create trigger checkout_allocation_immutable before update or delete on public.invoice_payments for each row execute function public.contract_checkout_allocation_guard();
-
-create function public.contract_checkout_meter_guard() returns trigger language plpgsql security invoker set search_path='' as $$
-declare row_data jsonb; cid uuid; room uuid; year integer; month integer;
-begin
- row_data:=case when tg_op='DELETE' then to_jsonb(old) else to_jsonb(new) end;
- cid:=(row_data->>'contract_id')::uuid; room:=(row_data->>'room_id')::uuid;
- if tg_table_name='meter_readings' then
- if row_data->>'reading_type'<>'monthly' and cid is null and tg_op='INSERT' then raise exception 'CHECKOUT_HANDOVER_CONTRACT_REQUIRED'; end if;
- if cid is not null and not exists(select 1 from public.contracts where id=cid and room_id=room and building_id=(row_data->>'building_id')::uuid) then raise exception 'CHECKOUT_METER_SCOPE_INVALID'; end if;
- year:=(row_data->>'period_year')::integer; month:=(row_data->>'period_month')::integer;
- else
- select period_year,period_month into year,month from public.billing_periods where id=(row_data->>'billing_period_id')::uuid;
- end if;
- if exists(select 1 from public.contract_checkouts h join public.contracts c on c.id=h.contract_id where c.room_id=room and h.status='returned' and ((cid=h.contract_id) or (cid is null and extract(year from h.actual_return_date)=year and extract(month from h.actual_return_date)=month and not exists(select 1 from public.contracts successor where successor.room_id=room and successor.id<>h.contract_id and successor.status='active' and successor.start_date>h.actual_return_date and extract(year from successor.start_date)=year and extract(month from successor.start_date)=month)))) then raise exception 'CHECKOUT_METER_HISTORY_PROTECTED'; end if;
- if tg_op='DELETE' then return old; end if; return new;
-end $$;
-create trigger checkout_meter_scope before insert or update or delete on public.meter_readings for each row execute function public.contract_checkout_meter_guard();
-create trigger checkout_usage_scope before insert or update or delete on public.billing_utility_usages for each row execute function public.contract_checkout_meter_guard();
-
-create function public.contract_checkout_invoice_guard() returns trigger language plpgsql security invoker set search_path='' as $$
-begin
- if tg_op='DELETE' or (tg_op='UPDATE' and new.status='void') then
- if exists(select 1 from public.invoice_payments where invoice_id=old.id and funding_source<>'cash') or exists(select 1 from public.invoice_charges where invoice_id=old.id and (metadata ? 'statement_id' or metadata ? 'final_bill_id')) then raise exception 'CHECKOUT_INVOICE_HISTORY_PROTECTED'; end if;
- end if;
- if tg_op='DELETE' then return old; end if; return new;
-end $$;
-create trigger checkout_invoice_history before update or delete on public.invoices for each row execute function public.contract_checkout_invoice_guard();
-
-
-create function public.contract_checkout_final_charge_guard() returns trigger language plpgsql security invoker set search_path='' as $$
-begin
- if old.metadata ? 'statement_id' or old.metadata ? 'final_bill_id' then raise exception 'CHECKOUT_INVOICE_HISTORY_PROTECTED'; end if;
- if tg_op='DELETE' then return old; end if; return new;
-end $$;
-create trigger checkout_final_charge_history before update or delete on public.invoice_charges for each row execute function public.contract_checkout_final_charge_guard();
-
-create function public.contract_checkout_ledger_guard() returns trigger language plpgsql security invoker set search_path='' as $$
-declare source_id uuid; available numeric;
-begin
- source_id:=case when tg_table_name='invoice_payments' then (to_jsonb(new)->>'checkout_source_id')::uuid else (to_jsonb(new)->>'source_id')::uuid end;
- if source_id is null then return new; end if;
- available:=public.contract_checkout_source_balance(source_id);
- if available is null or available<0 then raise exception 'CHECKOUT_SOURCE_BALANCE_INVALID'; end if;
- if tg_table_name='invoice_payments' then
- if not exists(select 1 from public.contract_checkout_sources s join public.invoices i on i.contract_id=s.contract_id join public.contract_checkouts h on h.contract_id=s.contract_id join public.contract_checkout_statements t on t.checkout_id=h.id where s.id=source_id and i.id=new.invoice_id and s.source_type=new.funding_source and t.id=new.checkout_statement_id) then raise exception 'CHECKOUT_SOURCE_SCOPE_INVALID'; end if;
- elsif tg_table_name='contract_checkout_refunds' then
- if not exists(select 1 from public.contract_checkout_sources s join public.contract_checkouts h on h.contract_id=s.contract_id join public.contract_checkout_statements t on t.checkout_id=h.id where s.id=source_id and t.id=new.statement_id) then raise exception 'CHECKOUT_SOURCE_SCOPE_INVALID'; end if;
- end if;
- return new;
-end $$;
-create constraint trigger checkout_allocation_balance after insert on public.invoice_payments deferrable initially deferred for each row execute function public.contract_checkout_ledger_guard();
-create constraint trigger checkout_refund_balance after insert on public.contract_checkout_refunds deferrable initially deferred for each row execute function public.contract_checkout_ledger_guard();
-
-create or replace function public.create_contract_with_handover(
-  p_room_id uuid,
-  p_tenant_id uuid,
-  p_building_id uuid,
-  p_start_date date,
-  p_end_date date,
-  p_monthly_rent numeric,
-  p_deposit numeric,
-  p_payment_due_day smallint,
-  p_occupant_count integer,
-  p_discount_amount numeric,
-  p_surcharge_amount numeric,
-  p_status text,
-  p_notes text,
-  p_handover_electricity_reading numeric,
-  p_handover_water_reading numeric,
-  p_handover_reading_date date,
-  p_recorded_by uuid
-)
-returns setof public.contracts
-language plpgsql
-security invoker
-set search_path = public
-as $$
-declare
-  v_building_code text;
-  v_year integer;
-  v_prefix text;
-  v_next_seq integer;
-  v_contract_code text;
-  v_inserted_contract public.contracts%rowtype;
-  v_period_year integer;
-  v_period_month integer;
-begin
-  if p_end_date <= p_start_date then
-    raise exception 'end_date must be after start_date' using errcode = 'P0001';
-  end if;
-
-  select code into v_building_code from public.buildings where id = p_building_id;
-  if v_building_code is null then
-    raise exception 'building % not found', p_building_id using errcode = 'P0002';
-  end if;
-
-  perform pg_advisory_xact_lock(hashtextextended(p_building_id::text, 1));
-  v_year := extract(year from p_start_date)::integer;
-  v_prefix := format('hd-%s-%s', v_building_code, v_year);
-
-  select coalesce(max(
-    nullif(regexp_replace(contract_code, '^' || v_prefix || '-', ''), '')::integer
-  ), 0) + 1
-    into v_next_seq
-    from public.contracts
-   where contract_code like v_prefix || '-%';
-  v_contract_code := v_prefix || '-' || lpad(v_next_seq::text, 4, '0');
-
-  insert into public.contracts (
-    contract_code, room_id, tenant_id, building_id, start_date, end_date,
-    monthly_rent, deposit, payment_due_day, occupant_count, discount_amount,
-    surcharge_amount, status, notes
-  ) values (
-    v_contract_code, p_room_id, p_tenant_id, p_building_id, p_start_date, p_end_date,
-    p_monthly_rent, coalesce(p_deposit, 0), p_payment_due_day,
-    coalesce(p_occupant_count, 1), coalesce(p_discount_amount, 0),
-    coalesce(p_surcharge_amount, 0), coalesce(p_status, 'active'), nullif(p_notes, '')
-  ) returning * into v_inserted_contract;
-
-  v_period_year := extract(year from p_handover_reading_date)::integer;
-  v_period_month := extract(month from p_handover_reading_date)::integer;
-  insert into public.meter_readings (
-    room_id, building_id, contract_id, meter_type, reading_type, period_year, period_month,
-    reading_date, reading_value, recorded_by
-  ) values
-    (p_room_id, p_building_id, v_inserted_contract.id, 'electricity', 'handover_in', v_period_year,
-     v_period_month, p_handover_reading_date, p_handover_electricity_reading, p_recorded_by),
-    (p_room_id, p_building_id, v_inserted_contract.id, 'water', 'handover_in', v_period_year,
-     v_period_month, p_handover_reading_date, p_handover_water_reading, p_recorded_by);
-
-  return next v_inserted_contract;
-end;
-$$;
-
-
-revoke all on function public.create_contract_with_handover(uuid,uuid,uuid,date,date,numeric,numeric,smallint,integer,numeric,numeric,text,text,numeric,numeric,date,uuid) from public,anon,authenticated;
-grant execute on function public.create_contract_with_handover(uuid,uuid,uuid,date,date,numeric,numeric,smallint,integer,numeric,numeric,text,text,numeric,numeric,date,uuid) to service_role;
-
-create or replace function public.save_meter_readings_with_audit(
-  p_readings jsonb,
-  p_actor_id uuid,
-  p_source text default 'api',
-  p_action_plan_id uuid default null,
-  p_idempotency_key uuid default null
-)
-returns setof public.meter_readings
-language plpgsql
-security invoker
-set search_path = public
-as $$
-declare
-  v_item jsonb;
-  v_room public.rooms%rowtype;
-  v_period public.billing_periods%rowtype;
-  v_existing public.meter_readings%rowtype;
-  v_saved public.meter_readings%rowtype;
-  v_contract_id uuid;
-  v_room_id uuid;
-  v_meter_type text;
-  v_reading_type text;
-  v_period_year integer;
-  v_period_month integer;
-  v_reading_date date;
-  v_reading_value numeric;
-  v_expected_updated_at timestamptz;
-  v_before jsonb;
-begin
-  if jsonb_typeof(p_readings) <> 'array' or jsonb_array_length(p_readings) not between 1 and 500 then
-    raise exception using errcode = '22023', message = 'METER_INPUT_INVALID';
-  end if;
-  if p_source not in ('api', 'ai') then
-    raise exception using errcode = '22023', message = 'METER_SOURCE_INVALID';
-  end if;
-
-  if exists (
-    select 1
-    from jsonb_array_elements(p_readings) item
-    group by
-      item->>'contract_id', item->>'room_id', item->>'meter_type', item->>'period_year',
-      item->>'period_month', item->>'reading_type'
-    having count(*) > 1
-  ) then
-    raise exception using errcode = '22023', message = 'METER_DUPLICATE_INPUT';
-  end if;
-
-  for v_item in
-    select item
-    from jsonb_array_elements(p_readings) item
-    order by
-      item->>'period_year', item->>'period_month', item->>'room_id',
-      item->>'meter_type', item->>'reading_type'
-  loop
-    begin
-      v_contract_id := nullif(v_item->>'contract_id','')::uuid;
-      v_room_id := (v_item->>'room_id')::uuid;
-      v_meter_type := v_item->>'meter_type';
-      v_reading_type := v_item->>'reading_type';
-      v_period_year := (v_item->>'period_year')::integer;
-      v_period_month := (v_item->>'period_month')::integer;
-      v_reading_date := (v_item->>'reading_date')::date;
-      v_reading_value := (v_item->>'reading_value')::numeric;
-      v_expected_updated_at := nullif(v_item->>'expected_updated_at', '')::timestamptz;
-    exception when others then
-      raise exception using errcode = '22023', message = 'METER_INPUT_INVALID';
-    end;
-
-    if v_meter_type not in ('electricity', 'water')
-      or v_reading_type not in ('monthly', 'handover_in', 'handover_out')
-      or v_period_year not between 2000 and 2100
-      or v_period_month not between 1 and 12
-      or v_reading_value < 0 then
-      raise exception using errcode = '22023', message = 'METER_INPUT_INVALID';
-    end if;
-
-    select room.* into v_room
-    from public.rooms room
-    where room.id = v_room_id;
-    if not found then
-      raise exception using errcode = '22023', message = 'METER_ROOM_INVALID';
-    end if;
-
-    if v_reading_type<>'monthly' and v_contract_id is null then raise exception 'CHECKOUT_HANDOVER_CONTRACT_REQUIRED'; end if;
-    if v_reading_type='monthly' and v_contract_id is not null then raise exception 'CHECKOUT_METER_SCOPE_INVALID'; end if;
-    perform pg_advisory_xact_lock(hashtextextended(v_room_id::text||v_meter_type||v_reading_type||coalesce(v_contract_id::text,v_period_year::text||v_period_month::text),0));
-    v_period := null;
-    if v_reading_type = 'monthly' then
-      select period.* into v_period
-      from public.billing_periods period
-      where period.building_id = v_room.building_id
-        and period.period_year = v_period_year
-        and period.period_month = v_period_month
-      for update;
-
-      if v_period.id is not null and v_period.status = 'closed' then
-        raise exception using errcode = 'P0001', message = 'BILLING_PERIOD_LOCKED';
-      end if;
-      if v_period.id is not null and exists (
-        select 1
-        from public.invoices invoice
-        where invoice.billing_period_id = v_period.id
-          and invoice.room_id = v_room_id
-          and invoice.status <> 'void'
-      ) then
-        raise exception using errcode = 'P0001', message = 'BILLING_INVOICE_LOCKED';
-      end if;
-    end if;
-
-    v_existing := null;
-    select reading.* into v_existing
-    from public.meter_readings reading
-    where reading.room_id = v_room_id
-      and reading.meter_type = v_meter_type
-      and ((v_reading_type='monthly' and reading.period_year=v_period_year and reading.period_month=v_period_month) or (v_reading_type<>'monthly' and reading.contract_id=v_contract_id))
-      and reading.reading_type = v_reading_type
-    for update;
-
-    if v_existing.id is null then
-      if v_expected_updated_at is not null then
-        raise exception using errcode = 'P0001', message = 'METER_VERSION_CONFLICT';
-      end if;
-      v_before := null;
-    else
-      if v_expected_updated_at is null or v_existing.updated_at is distinct from v_expected_updated_at then
-        raise exception using errcode = 'P0001', message = 'METER_VERSION_CONFLICT';
-      end if;
-      v_before := to_jsonb(v_existing);
-    end if;
-
-    if v_existing.id is null then
-      insert into public.meter_readings(room_id,building_id,contract_id,meter_type,reading_type,period_year,period_month,reading_date,reading_value,is_estimated,notes,recorded_by,updated_by,updated_at)
-      values(v_room_id,v_room.building_id,v_contract_id,v_meter_type,v_reading_type,v_period_year,v_period_month,v_reading_date,v_reading_value,coalesce((v_item->>'is_estimated')::boolean,false),v_item->>'notes',p_actor_id,p_actor_id,clock_timestamp()) returning * into v_saved;
-    else
-      update public.meter_readings set reading_date=v_reading_date,reading_value=v_reading_value,is_estimated=coalesce((v_item->>'is_estimated')::boolean,false),notes=v_item->>'notes',updated_by=p_actor_id,updated_at=clock_timestamp() where id=v_existing.id returning * into v_saved;
-    end if;
-
-    insert into public.billing_audit_events (
-      billing_period_id, actor_id, action, entity_type, entity_id,
-      before_data, after_data, metadata
-    )
-    values (
-      v_period.id,
-      p_actor_id,
-      'reading.saved',
-      'meter_reading',
-      v_saved.id,
-      v_before,
-      to_jsonb(v_saved),
-      jsonb_strip_nulls(jsonb_build_object(
-        'count', 1,
-        'meter_type', v_saved.meter_type,
-        'previous_value', v_existing.reading_value,
-        'new_value', v_saved.reading_value,
-        'unit', case when v_saved.meter_type = 'electricity' then 'kWh' else 'm³' end,
-        'reading_date', v_saved.reading_date,
-        'source', p_source,
-        'action_plan_id', p_action_plan_id,
-        'idempotency_key', p_idempotency_key
-      ))
-    );
-
-    return next v_saved;
-  end loop;
-end;
-$$;
-
-create function public.contract_checkout_correct(p_contract_id uuid,p_actor_id uuid,p_operation_id uuid,p_invoice_id uuid,p_amount numeric,p_label text,p_reason text,p_expected_updated_at timestamptz) returns jsonb language plpgsql security invoker set search_path='' as $$
+create or replace function public.contract_checkout_correct(p_contract_id uuid,p_actor_id uuid,p_operation_id uuid,p_invoice_id uuid,p_amount numeric,p_label text,p_reason text,p_expected_updated_at timestamptz) returns jsonb language plpgsql security invoker set search_path='' as $$
 declare i public.invoices%rowtype; h public.contract_checkouts%rowtype; s public.contract_checkout_statements%rowtype; replay public.invoice_charges%rowtype; target uuid; source record; item record; available numeric; take numeric;
 begin
  if p_operation_id is null then raise exception 'CHECKOUT_OPERATION_REQUIRED'; end if;
@@ -817,28 +429,8 @@ begin
  perform public.contract_checkout_audit(p_contract_id,p_actor_id,'contract.checkout.corrected',p_operation_id,jsonb_build_object('invoiceId',i.id,'amount',p_amount,'reason',btrim(p_reason),'label',btrim(p_label)));
  return public.contract_checkout_get(p_contract_id);
 end $$;
-create unique index checkout_correction_operation on public.invoice_charges((metadata->>'checkout_correction_operation_id')) where metadata ? 'checkout_correction_operation_id';
 
-create function public.contract_checkout_record_guard() returns trigger language plpgsql security invoker set search_path='' as $$
-begin
- if tg_op='DELETE' then raise exception 'CHECKOUT_HISTORY_PROTECTED'; end if;
- if old.status='returned' and not (current_setting('zeno.checkout_charge_modes',true)=old.id::text and to_jsonb(new)-'charge_modes'-'updated_at'=to_jsonb(old)-'charge_modes'-'updated_at') then raise exception 'CHECKOUT_HISTORY_PROTECTED'; end if;
- if new.contract_id<>old.contract_id or new.building_id<>old.building_id then raise exception 'CHECKOUT_HISTORY_PROTECTED'; end if;
- if new.status<>old.status and current_setting('zeno.checkout_return_contract',true) is distinct from old.contract_id::text then raise exception 'CHECKOUT_LIFECYCLE_REQUIRED'; end if;
- return new;
-end $$;
-create trigger checkout_record_history before update or delete on public.contract_checkouts for each row execute function public.contract_checkout_record_guard();
-
-create function public.contract_checkout_charge_insert_guard() returns trigger language plpgsql security invoker set search_path='' as $$
-begin
- if (new.metadata ? 'statement_id' or new.metadata ? 'final_bill_id') and current_setting('zeno.checkout_invoice_mutation',true) is distinct from new.invoice_id::text then raise exception 'CHECKOUT_INVOICE_HISTORY_PROTECTED'; end if;
- return new;
-end $$;
-create trigger checkout_charge_append_scope before insert on public.invoice_charges for each row execute function public.contract_checkout_charge_insert_guard();
-create unique index checkout_final_charge_identity on public.invoice_charges((metadata->>'checkout_id'),(metadata->>'checkout_charge_key')) where metadata ? 'checkout_charge_key';
-
-
-create function public.contract_checkout_undo_cash(p_contract_id uuid,p_actor_id uuid,p_invoice_id uuid,p_payment_id uuid,p_reason text) returns jsonb language plpgsql security invoker set search_path='' as $$
+create or replace function public.contract_checkout_undo_cash(p_contract_id uuid,p_actor_id uuid,p_invoice_id uuid,p_payment_id uuid,p_reason text) returns jsonb language plpgsql security invoker set search_path='' as $$
 declare i public.invoices%rowtype; p public.invoice_payments%rowtype; target uuid; paid numeric;
 begin
  perform 1 from public.contracts where id=p_contract_id for update;
@@ -861,7 +453,68 @@ begin
  return public.contract_checkout_get(p_contract_id);
 end $$;
 
--- Only server role can read or invoke checkout state. Mutations are audited RPCs.
+create or replace function public.contract_checkout_lifecycle_guard() returns trigger language plpgsql security invoker set search_path='' as $$
+begin
+ if tg_op='UPDATE' then
+   if old.status='active' and new.status in ('terminated','expired') and current_setting('zeno.checkout_return_contract',true) is distinct from old.id::text then raise exception 'CHECKOUT_LIFECYCLE_REQUIRED'; end if;
+ end if;
+ if exists(select 1 from public.contract_checkouts where contract_id=old.id) then
+ if tg_op='DELETE' then raise exception 'CHECKOUT_HISTORY_PROTECTED'; end if;
+ if new.end_date is distinct from old.end_date or new.start_date is distinct from old.start_date or new.room_id is distinct from old.room_id or new.tenant_id is distinct from old.tenant_id or new.building_id is distinct from old.building_id or new.original_end_date is distinct from old.original_end_date then raise exception 'CHECKOUT_HISTORY_PROTECTED'; end if;
+ if new.status is distinct from old.status and not (new.status='terminated' and old.status<>'terminated' and current_setting('zeno.checkout_return_contract',true)=old.id::text) then raise exception 'CHECKOUT_LIFECYCLE_REQUIRED'; end if;
+ end if;
+ if tg_op='DELETE' then return old; end if; return new;
+end $$;
+
+create or replace function public.contract_checkout_meter_guard() returns trigger language plpgsql security invoker set search_path='' as $$
+declare row_data jsonb; cid uuid; room uuid; year integer; month integer;
+begin
+ row_data:=case when tg_op='DELETE' then to_jsonb(old) else to_jsonb(new) end;
+ cid:=(row_data->>'contract_id')::uuid; room:=(row_data->>'room_id')::uuid;
+ if tg_table_name='meter_readings' then
+ if row_data->>'reading_type'<>'monthly' and cid is null and tg_op='INSERT' then raise exception 'CHECKOUT_HANDOVER_CONTRACT_REQUIRED'; end if;
+ if cid is not null and not exists(select 1 from public.contracts where id=cid and room_id=room and building_id=(row_data->>'building_id')::uuid) then raise exception 'CHECKOUT_METER_SCOPE_INVALID'; end if;
+ year:=(row_data->>'period_year')::integer; month:=(row_data->>'period_month')::integer;
+ else
+ select period_year,period_month into year,month from public.billing_periods where id=(row_data->>'billing_period_id')::uuid;
+ end if;
+ if exists(select 1 from public.contract_checkouts h join public.contracts c on c.id=h.contract_id where c.room_id=room and h.status='returned' and ((cid=h.contract_id) or (cid is null and extract(year from h.actual_return_date)=year and extract(month from h.actual_return_date)=month and not exists(select 1 from public.contracts successor where successor.room_id=room and successor.id<>h.contract_id and successor.status='active' and successor.start_date>h.actual_return_date and extract(year from successor.start_date)=year and extract(month from successor.start_date)=month)))) then raise exception 'CHECKOUT_METER_HISTORY_PROTECTED'; end if;
+ if tg_op='DELETE' then return old; end if; return new;
+end $$;
+
+create or replace function public.contract_checkout_invoice_guard() returns trigger language plpgsql security invoker set search_path='' as $$
+begin
+ if tg_op='DELETE' or (tg_op='UPDATE' and new.status='void') then
+ if exists(select 1 from public.invoice_payments where invoice_id=old.id and funding_source<>'cash') or exists(select 1 from public.invoice_charges where invoice_id=old.id and (metadata ? 'statement_id' or metadata ? 'final_bill_id')) then raise exception 'CHECKOUT_INVOICE_HISTORY_PROTECTED'; end if;
+ end if;
+ if tg_op='DELETE' then return old; end if; return new;
+end $$;
+
+create or replace function public.contract_checkout_final_charge_guard() returns trigger language plpgsql security invoker set search_path='' as $$
+begin
+ if old.metadata ? 'statement_id' or old.metadata ? 'final_bill_id' then raise exception 'CHECKOUT_INVOICE_HISTORY_PROTECTED'; end if;
+ if tg_op='DELETE' then return old; end if; return new;
+end $$;
+
+create or replace function public.contract_checkout_record_guard() returns trigger language plpgsql security invoker set search_path='' as $$
+begin
+ if tg_op='DELETE' then raise exception 'CHECKOUT_HISTORY_PROTECTED'; end if;
+ if old.status='returned' and not (current_setting('zeno.checkout_charge_modes',true)=old.id::text and to_jsonb(new)-'charge_modes'-'updated_at'=to_jsonb(old)-'charge_modes'-'updated_at') then raise exception 'CHECKOUT_HISTORY_PROTECTED'; end if;
+ if new.contract_id<>old.contract_id or new.building_id<>old.building_id then raise exception 'CHECKOUT_HISTORY_PROTECTED'; end if;
+ if new.status<>old.status and current_setting('zeno.checkout_return_contract',true) is distinct from old.contract_id::text then raise exception 'CHECKOUT_LIFECYCLE_REQUIRED'; end if;
+ return new;
+end $$;
+
+create or replace function public.contract_checkout_charge_insert_guard() returns trigger language plpgsql security invoker set search_path='' as $$
+begin
+ if (new.metadata ? 'statement_id' or new.metadata ? 'final_bill_id') and current_setting('zeno.checkout_invoice_mutation',true) is distinct from new.invoice_id::text then raise exception 'CHECKOUT_INVOICE_HISTORY_PROTECTED'; end if;
+ return new;
+end $$;
+
+create trigger checkout_final_bill_immutable before update or delete on public.contract_checkout_final_bills for each row execute function public.contract_checkout_history_guard();
+create unique index checkout_final_charge_identity on public.invoice_charges((metadata->>'checkout_id'),(metadata->>'checkout_charge_key')) where metadata ? 'checkout_charge_key';
+
+-- Keep the same server-only grants as the fresh checkout migration.
 do $$ declare table_name text; function_name regprocedure; begin
  foreach table_name in array array['contract_checkouts','contract_checkout_sources','contract_checkout_statements','contract_checkout_final_bills','contract_checkout_refunds'] loop
  execute format('alter table public.%I enable row level security',table_name);

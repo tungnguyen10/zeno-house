@@ -3,7 +3,7 @@
 -- forces deferred invariants, and rolls every fixture/change back.
 begin;
 do $$
-declare template public.contracts%rowtype; cid uuid:=gen_random_uuid(); cid2 uuid:=gen_random_uuid(); payment uuid; invoice uuid; target uuid;
+declare template public.contracts%rowtype; cid uuid:=gen_random_uuid(); cid2 uuid:=gen_random_uuid(); cid3 uuid:=gen_random_uuid(); cid4 uuid:=gen_random_uuid(); payment uuid; invoice uuid; paid_invoice uuid; target uuid;
  actor uuid; preview jsonb; bundle jsonb; op uuid:=gen_random_uuid(); refund_op uuid:=gen_random_uuid(); original_end date:=date '2099-02-28'; version timestamptz; failed boolean; hash text;
 begin
  select * into template from public.contracts order by id limit 1;
@@ -18,11 +18,20 @@ begin
  select id into target from public.billing_periods where building_id=template.building_id and period_year=2099 and period_month=1;
  update public.billing_periods set status='issued' where id=target;
  insert into public.invoices(invoice_code,billing_period_id,contract_id,room_id,tenant_id,status,due_date,subtotal_amount,total_amount,balance_amount) values('checkout-test-'||cid,target,cid,template.room_id,template.tenant_id,'issued','2099-01-15',200000,200000,200000) returning id into invoice;
- bundle:=public.contract_checkout_save(cid,actor,jsonb_build_object('actual_return_date','2099-01-20','reason','Staging regression','electricity',jsonb_build_object('reading',80),'water',jsonb_build_object('reading',20)));
+ insert into public.invoice_charges(invoice_id,charge_type,label,unit_price,amount) values(invoice,'adjustment','Prior balance',200000,200000);
+ bundle:=public.contract_checkout_save(cid,actor,jsonb_build_object('actual_return_date','2099-01-20','reason','Staging regression','electricity',jsonb_build_object('reading',80)));
+ failed:=false;
+ begin perform public.contract_checkout_return(cid,actor,gen_random_uuid(),(bundle->'checkout'->>'updatedAt')::timestamptz,'settlement'); exception when others then if sqlerrm<>'CHECKOUT_READING_REQUIRED' then raise; end if; failed:=true; end;
+ if not failed or (select status from public.contracts where id=cid)<>'expired' then raise exception 'Missing physical reading left a partial return'; end if;
+ bundle:=public.contract_checkout_save(cid,actor,jsonb_build_object('actual_return_date','2099-01-20','reason','Staging regression','electricity',jsonb_build_object('reading',80),'water',jsonb_build_object('reading',20),'expected_updated_at',bundle->'checkout'->>'updatedAt'));
  bundle:=public.contract_checkout_charge(cid,actor,gen_random_uuid(),'Damage',150000,null);
- bundle:=public.contract_checkout_return(cid,actor,gen_random_uuid(),(bundle->'checkout'->>'updatedAt')::timestamptz);
+ update public.billing_periods set status='closed' where id=target;
+ bundle:=public.contract_checkout_return(cid,actor,gen_random_uuid(),(bundle->'checkout'->>'updatedAt')::timestamptz,'settlement');
+ preview:=public.contract_checkout_preview(cid);
+ if not (preview->'blockers' ? 'CHECKOUT_PERIOD_CLOSED') then raise exception 'Closed period did not postpone finance'; end if;
+ update public.billing_periods set status='issued' where id=target;
  preview:=public.contract_checkout_preview(cid); hash:=preview->>'snapshotHash';
- if (preview->>'existingDebt')::numeric<>200000 or (preview->>'finalChargesTotal')::numeric<>450000 or (preview->>'refundDue')::numeric<>4350000 or jsonb_array_length(preview->'blockers')<>0 then raise exception 'Preview regression: %',preview; end if;
+ if (preview->>'existingDebt')::numeric<>200000 or (preview->>'finalChargesTotal')::numeric<>1096000 or (preview->>'refundDue')::numeric<>3704000 or jsonb_array_length(preview->'blockers')<>0 then raise exception 'Preview regression: %',preview; end if;
  -- A changed cash receipt invalidates the entire preview, then subtransaction rollback restores it.
  failed:=false;
  begin
@@ -32,9 +41,9 @@ begin
  if not failed then raise exception 'Changed receipt did not invalidate snapshot'; end if;
  bundle:=public.contract_checkout_confirm(cid,actor,op,hash);
  set constraints all immediate;
- if (bundle->'statement'->>'remainingRefund')::numeric<>4350000 or bundle->'statement'->>'financialStatus'<>'awaiting_refund' then raise exception 'Confirmation regression: %',bundle; end if;
+ if (bundle->'statement'->>'remainingRefund')::numeric<>3704000 or bundle->'statement'->>'financialStatus'<>'awaiting_refund' then raise exception 'Confirmation regression: %',bundle; end if;
  if (select end_date from public.contracts where id=cid)<>original_end then raise exception 'Original end date changed'; end if;
- if (select sum(amount) from public.invoice_payments where checkout_statement_id=(bundle->'statement'->>'id')::uuid)<>650000 then raise exception 'Allocation regression'; end if;
+ if (select sum(amount) from public.invoice_payments where checkout_statement_id=(bundle->'statement'->>'id')::uuid)<>1296000 then raise exception 'Allocation regression'; end if;
  perform public.contract_checkout_confirm(cid,actor,op,hash);
  if (select count(*) from public.contract_checkout_statements where checkout_id=(bundle->'checkout'->>'id')::uuid)<>1 then raise exception 'Duplicate confirmation'; end if;
  failed:=false;
@@ -44,22 +53,56 @@ begin
  begin delete from public.invoice_payments where funding_source<>'cash' and invoice_id=invoice; exception when others then if sqlerrm<>'CHECKOUT_ALLOCATION_PROTECTED' then raise; end if; failed:=true; end;
  if not failed then raise exception 'Allocation removal was accepted'; end if;
  failed:=false;
- begin perform public.contract_checkout_refund(cid,actor,refund_op,4350001,'2099-01-20','bank_transfer',null); exception when others then if sqlerrm<>'CHECKOUT_REFUND_INVALID' then raise; end if; failed:=true; end;
+ begin perform public.contract_checkout_refund(cid,actor,refund_op,3704001,'2099-01-20','bank_transfer',null); exception when others then if sqlerrm<>'CHECKOUT_REFUND_INVALID' then raise; end if; failed:=true; end;
  if not failed then raise exception 'Excess refund accepted'; end if;
- bundle:=public.contract_checkout_refund(cid,actor,refund_op,4350000,'2099-01-20','bank_transfer',null);
- perform public.contract_checkout_refund(cid,actor,refund_op,4350000,'2099-01-20','bank_transfer',null);
+ bundle:=public.contract_checkout_refund(cid,actor,refund_op,3704000,'2099-01-20','bank_transfer',null);
+ perform public.contract_checkout_refund(cid,actor,refund_op,3704000,'2099-01-20','bank_transfer',null);
  if (bundle->'statement'->>'remainingRefund')::numeric<>0 or bundle->'statement'->>'financialStatus'<>'settled' then raise exception 'Refund regression: %',bundle; end if;
- if (select sum(amount) from public.contract_checkout_refunds where operation_id=refund_op)<>4350000 then raise exception 'Duplicate refund'; end if;
+ if (select sum(amount) from public.contract_checkout_refunds where operation_id=refund_op)<>3704000 then raise exception 'Duplicate refund'; end if;
  select updated_at into version from public.invoices where id=invoice;
  failed:=false;
  begin perform public.contract_checkout_correct(cid,actor,gen_random_uuid(),invoice,-1,'Decrease paid bill','Regression',version); exception when others then if sqlerrm<>'CHECKOUT_CORRECTION_REQUIRES_RECONCILIATION' then raise; end if; failed:=true; end;
  if not failed then raise exception 'Correction silently reversed paid funds'; end if;
  bundle:=public.contract_checkout_correct(cid,actor,gen_random_uuid(),invoice,1000,'Additional damage','Regression',version);
- if (bundle->'statement'->>'outstandingDebt')::numeric<>1000 or (bundle->'statement'->>'refundedAmount')::numeric<>4350000 then raise exception 'Correction did not preserve actual refunds'; end if;
+ if (bundle->'statement'->>'outstandingDebt')::numeric<>1000 or (bundle->'statement'->>'refundedAmount')::numeric<>3704000 then raise exception 'Correction did not preserve actual refunds'; end if;
  -- Same room/month successor handover never overwrites predecessor identity.
  insert into public.contracts(id,contract_code,room_id,building_id,tenant_id,start_date,end_date,monthly_rent,status) values(cid2,'checkout-test-'||cid2,template.room_id,template.building_id,template.tenant_id,'2099-01-21','2099-02-28',1000000,'expired');
- insert into public.meter_readings(contract_id,room_id,building_id,meter_type,reading_type,period_year,period_month,reading_date,reading_value) values(cid2,template.room_id,template.building_id,'electricity','handover_in',2099,1,'2099-01-21',80);
+ insert into public.meter_readings(contract_id,room_id,building_id,meter_type,reading_type,period_year,period_month,reading_date,reading_value) values(cid2,template.room_id,template.building_id,'electricity','handover_in',2099,1,'2099-01-21',80),(cid2,template.room_id,template.building_id,'water','handover_in',2099,1,'2099-01-21',20);
  if (select count(*) from public.meter_readings where contract_id in(cid,cid2) and meter_type='electricity' and reading_type='handover_in')<>2 then raise exception 'Handover identity collision'; end if;
+ bundle:=public.contract_checkout_save(cid2,actor,jsonb_build_object('actual_return_date','2099-01-25','reason','Standard final bill','electricity',jsonb_build_object('reading',90),'water',jsonb_build_object('reading',30)));
+ bundle:=public.contract_checkout_return(cid2,actor,gen_random_uuid(),(bundle->'checkout'->>'updatedAt')::timestamptz,'standard');
+ bundle:=public.contract_checkout_save_charge_modes(cid2,actor,(bundle->'checkout'->>'updatedAt')::timestamptz,jsonb_build_object('rent',jsonb_build_object('mode','waived','reason','Approved waiver')));
+ preview:=public.contract_checkout_preview(cid2);
+ if exists(select 1 from jsonb_array_elements(preview->'charges') q where q->>'chargeType'='rent') then raise exception 'Waived rent was charged'; end if;
+ bundle:=public.contract_checkout_save_charge_modes(cid2,actor,(bundle->'checkout'->>'updatedAt')::timestamptz,jsonb_build_object('rent',jsonb_build_object('mode','full_month')));
+ preview:=public.contract_checkout_preview(cid2); hash:=preview->>'snapshotHash';
+ if not exists(select 1 from jsonb_array_elements(preview->'charges') q where q->>'chargeType'='rent' and (q->>'amount')::numeric=1000000) then raise exception 'Full-month rent was not charged'; end if;
+ op:=gen_random_uuid();
+ bundle:=public.contract_checkout_issue_final(cid2,actor,op,hash);
+ perform public.contract_checkout_issue_final(cid2,actor,op,hash);
+ if (select count(*) from public.contract_checkout_final_bills where checkout_id=(bundle->'checkout'->>'id')::uuid)<>1 or (select count(*) from public.invoice_charges q join public.invoices i on i.id=q.invoice_id where i.contract_id=cid2 and q.charge_type='rent')<>1 then raise exception 'Standard final bill duplicated'; end if;
+ update public.buildings set electricity_pricing_type='fixed',water_pricing_type='per_person',default_electricity_rate=90000,default_water_rate=60000 where id=template.building_id;
+ insert into public.contracts(id,contract_code,room_id,building_id,tenant_id,start_date,end_date,monthly_rent,status) values(cid3,'checkout-test-'||cid3,template.room_id,template.building_id,template.tenant_id,'2099-02-01','2099-12-31',1000000,'expired');
+ bundle:=public.contract_checkout_save(cid3,actor,jsonb_build_object('actual_return_date','2099-02-10','reason','Fixed price regression'));
+ bundle:=public.contract_checkout_return(cid3,actor,gen_random_uuid(),(bundle->'checkout'->>'updatedAt')::timestamptz,'standard');
+ preview:=public.contract_checkout_preview(cid3);
+ if (preview->>'finalChargesTotal')::numeric<>413000 then raise exception 'Default day proration for fixed/per-person utilities failed: %',preview; end if;
+ bundle:=public.contract_checkout_save_charge_modes(cid3,actor,(bundle->'checkout'->>'updatedAt')::timestamptz,jsonb_build_object('electricity_fixed',jsonb_build_object('mode','waived','reason','Approved waiver'),'water_fixed',jsonb_build_object('mode','full_month')));
+ preview:=public.contract_checkout_preview(cid3);
+ if (preview->>'finalChargesTotal')::numeric<>418000 or jsonb_array_length(preview->'waivedCharges')<>1 then raise exception 'Independent fixed utility modes failed: %',preview; end if;
+ insert into public.contracts(id,contract_code,room_id,building_id,tenant_id,start_date,end_date,monthly_rent,status) values(cid4,'checkout-test-'||cid4,template.room_id,template.building_id,template.tenant_id,'2099-03-01','2099-12-31',1000000,'expired');
+ insert into public.billing_periods(building_id,period_year,period_month) values(template.building_id,2099,3) on conflict(building_id,period_year,period_month) do nothing;
+ select id into target from public.billing_periods where building_id=template.building_id and period_year=2099 and period_month=3;
+ update public.billing_periods set status='issued' where id=target;
+ insert into public.invoices(invoice_code,billing_period_id,contract_id,room_id,tenant_id,status,due_date,subtotal_amount,total_amount,paid_amount,balance_amount,paid_at) values('checkout-paid-'||cid4,target,cid4,template.room_id,template.tenant_id,'paid','2099-03-05',1000000,1000000,1000000,0,now()) returning id into paid_invoice;
+ insert into public.invoice_charges(invoice_id,charge_type,label,source_type,source_id,unit_price,amount) values(paid_invoice,'rent','Paid rent','contract',cid4,1000000,1000000);
+ insert into public.invoice_payments(invoice_id,amount,paid_at,payment_method,recorded_by) values(paid_invoice,1000000,'2099-03-05','cash',actor);
+ bundle:=public.contract_checkout_save(cid4,actor,jsonb_build_object('actual_return_date','2099-03-10','reason','Paid invoice regression'));
+ bundle:=public.contract_checkout_return(cid4,actor,gen_random_uuid(),(bundle->'checkout'->>'updatedAt')::timestamptz,'standard');
+ preview:=public.contract_checkout_preview(cid4);
+ if (preview->>'cashCollected')::numeric<>1000000 or exists(select 1 from jsonb_array_elements(preview->'charges') q where q->>'chargeType'='rent') or jsonb_array_length(preview->'billedCharges')<>1 then raise exception 'Paid rent was recalculated: %',preview; end if;
+ bundle:=public.contract_checkout_issue_final(cid4,actor,gen_random_uuid(),preview->>'snapshotHash');
+ if (select paid_amount from public.invoices where id=paid_invoice)<>1000000 or (select balance_amount from public.invoices where id=paid_invoice)<>50000 or (select count(*) from public.invoice_charges where invoice_id=paid_invoice and charge_type='rent')<>1 then raise exception 'Paid invoice was not preserved while adding missing utilities'; end if;
  failed:=false;
  begin update public.contracts set end_date='2099-01-20' where id=cid; exception when others then if sqlerrm<>'CHECKOUT_HISTORY_PROTECTED' then raise; end if; failed:=true; end;
  if not failed then raise exception 'Lifecycle history bypass accepted'; end if;

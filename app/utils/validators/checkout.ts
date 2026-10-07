@@ -31,6 +31,14 @@ export const checkoutConfirmSchema = z.object({
   operation_id: operationId,
   snapshot_hash: z.string().min(16).max(128),
 }).strict()
+export const checkoutChargeModeSchema = z.object({
+  mode: z.enum(['prorated', 'full_month', 'waived']),
+  reason: z.string().trim().max(500).nullable().optional(),
+}).strict().refine(value => value.mode !== 'waived' || Boolean(value.reason?.trim()), { path: ['reason'], message: 'Cần ghi lý do miễn thu' })
+export const checkoutChargeModesSchema = z.object({
+  expected_updated_at: expectedVersion,
+  modes: z.record(z.string(), checkoutChargeModeSchema),
+}).strict()
 export const checkoutRefundSchema = z.object({
   operation_id: operationId,
   amount: money.positive('Số tiền phải lớn hơn 0'),
@@ -61,6 +69,7 @@ export const checkoutCorrectionSchema = z.object({
 
 export type CheckoutReturnInput = z.infer<typeof checkoutReturnSchema>
 export type CheckoutConfirmInput = z.infer<typeof checkoutConfirmSchema>
+export type CheckoutChargeModesInput = z.infer<typeof checkoutChargeModesSchema>
 export type CheckoutRefundInput = z.infer<typeof checkoutRefundSchema>
 export type CheckoutCreditInput = z.infer<typeof checkoutCreditSchema>
 export type CheckoutChargeInput = z.infer<typeof checkoutChargeSchema>

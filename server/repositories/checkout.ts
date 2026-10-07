@@ -1,14 +1,17 @@
 import type { H3Event } from 'h3'
 import type { CheckoutDraftInput } from '~/types/checkout'
-import type { CheckoutChargeInput, CheckoutConfirmInput, CheckoutCorrectionInput, CheckoutCreditInput, CheckoutRefundInput, CheckoutReturnInput } from '~/utils/validators/checkout'
+import type { CheckoutChargeInput, CheckoutChargeModesInput, CheckoutConfirmInput, CheckoutCorrectionInput, CheckoutCreditInput, CheckoutRefundInput, CheckoutReturnInput } from '~/utils/validators/checkout'
 import { mapCheckoutBundle, mapCheckoutPreview } from '~/utils/mappers/checkout'
 import { db } from '../utils/db'
 
-const emptyBundle = () => ({ checkout: null, statement: null, depositHeld: 0, creditHeld: 0, refunds: [], sources: [] })
+const emptyBundle = () => ({ checkout: null, statement: null, depositHeld: 0, creditHeld: 0, refunds: [], sources: [], schemaAvailable: false })
 
 function checkoutError(error: { message?: string; code?: string }, context: string): never {
   const message = error.message ?? ''
   if (/CHECKOUT_|SETTLEMENT_|REFUND_|CREDIT_|BILLING_PERIOD_LOCKED|BILLING_INVOICE_LOCKED/.test(message)) {
+    if (message.includes('CHECKOUT_READING_REQUIRED')) throwValidationError('Cần nhập chỉ số cuối cho mọi đồng hồ tính theo lượng dùng.', { reason: 'CHECKOUT_READING_REQUIRED' })
+    if (message.includes('CHECKOUT_BASELINE_REQUIRED')) throwValidationError('Chưa có chỉ số đầu hoặc mốc đã tính tiền để đối chiếu.', { reason: 'CHECKOUT_BASELINE_REQUIRED' })
+    if (message.includes('CHECKOUT_READING_BELOW_BASELINE')) throwValidationError('Chỉ số cuối thấp hơn mốc đã tính tiền. Cần đối soát đồng hồ trước khi trả phòng.', { reason: 'CHECKOUT_READING_BELOW_BASELINE' })
     if (/NOT_FOUND/.test(message)) throwNotFound('Không tìm thấy hồ sơ trả phòng hoặc nguồn thanh toán')
     if (/INVALID|NEGATIVE|REQUIRED|MISSING|EXCEEDS|INSUFFICIENT/.test(message)) {
       throwValidationError('Dữ liệu tất toán chưa hợp lệ. Kiểm tra chỉ số, nguồn tiền và số dư.', { reason: message.match(/[A-Z][A-Z_]+/)?.[0] })
@@ -33,6 +36,16 @@ async function bundle(event: H3Event, name: string, args: Record<string, unknown
 }
 
 export const CheckoutRepository = {
+  saveChargeModes(event: H3Event, contractId: string, actorId: string, input: CheckoutChargeModesInput) {
+    return bundle(event, 'contract_checkout_save_charge_modes', {
+      p_contract_id: contractId, p_actor_id: actorId, p_expected_updated_at: input.expected_updated_at, p_modes: input.modes,
+    })
+  },
+  issueFinal(event: H3Event, contractId: string, actorId: string, input: CheckoutConfirmInput) {
+    return bundle(event, 'contract_checkout_issue_final', {
+      p_contract_id: contractId, p_actor_id: actorId, p_operation_id: input.operation_id, p_snapshot_hash: input.snapshot_hash,
+    })
+  },
   correct(event: H3Event, contractId: string, actorId: string, input: CheckoutCorrectionInput) {
     return bundle(event, 'contract_checkout_correct', {
       p_contract_id: contractId, p_actor_id: actorId, p_operation_id: input.operation_id,
@@ -46,9 +59,9 @@ export const CheckoutRepository = {
   save(event: H3Event, contractId: string, actorId: string, input: CheckoutDraftInput) {
     return bundle(event, 'contract_checkout_save', { p_contract_id: contractId, p_actor_id: actorId, p_input: input })
   },
-  returnRoom(event: H3Event, contractId: string, actorId: string, input: CheckoutReturnInput) {
+  returnRoom(event: H3Event, contractId: string, actorId: string, input: CheckoutReturnInput, financialMode: 'standard' | 'settlement') {
     return bundle(event, 'contract_checkout_return', {
-      p_contract_id: contractId, p_actor_id: actorId, p_operation_id: input.operation_id, p_expected_updated_at: input.expected_updated_at,
+      p_contract_id: contractId, p_actor_id: actorId, p_operation_id: input.operation_id, p_expected_updated_at: input.expected_updated_at, p_financial_mode: financialMode,
     })
   },
   async preview(event: H3Event, contractId: string) {

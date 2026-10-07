@@ -2,6 +2,7 @@ import { getApiErrorMessage } from '~/utils/api-error'
 import type { InvoiceWithCharges } from '~/types/billing'
 import type { ApiSuccess } from '~/types/api'
 import type { CheckoutBundle, CheckoutDraftInput, CheckoutPreview } from '~/types/checkout'
+import type { CheckoutChargeModesInput } from '~/utils/validators/checkout'
 
 export interface CheckoutRefundInput { amount: number; paid_at: string; payment_method: string; note?: string }
 export interface CheckoutCreditInput { payment_id: string; amount: number; reason: string }
@@ -17,6 +18,8 @@ export interface CheckoutActions {
   confirm: (snapshotHash: string) => Promise<CheckoutBundle>
   refund: (input: CheckoutRefundInput) => Promise<CheckoutBundle>
   approveCredit: (input: CheckoutCreditInput) => Promise<CheckoutBundle>
+  saveChargeModes: (input: CheckoutChargeModesInput) => Promise<CheckoutBundle>
+  issueFinal: (snapshotHash: string) => Promise<CheckoutBundle>
 }
 
 export function useContractCheckout(contractId: MaybeRef<string>) {
@@ -67,6 +70,12 @@ export function useContractCheckout(contractId: MaybeRef<string>) {
     confirm: snapshotHash => mutate('confirm', { snapshot_hash: snapshotHash }),
     refund: input => mutate('refunds', { ...input }),
     approveCredit: input => mutate('credits', { ...input }),
+    async saveChargeModes(input) {
+      const response = await apiFetch<ApiSuccess<CheckoutBundle>>(`${endpoint()}/charge-modes`, { method: 'PATCH', body: input })
+      bundle.value = response.data
+      return response.data
+    },
+    issueFinal: snapshotHash => mutate('issue-final', { snapshot_hash: snapshotHash }),
   }
 
   if (import.meta.client) refresh()

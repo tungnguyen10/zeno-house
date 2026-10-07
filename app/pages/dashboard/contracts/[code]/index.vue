@@ -32,7 +32,7 @@ async function beginCheckout() {
     await checkout.refresh()
     if (checkoutError.value) { toast.error(checkoutError.value); return }
   }
-  if (!checkoutBundle.value?.enabled) { showTerminateModal.value = true; return }
+  if (!checkoutBundle.value?.enabled) { toast.error('Luồng trả phòng chưa sẵn sàng trên máy chủ. Vui lòng liên hệ quản trị viên.'); return }
   await navigateTo({ hash: '#checkout' })
   await nextTick()
   const section = document.getElementById('checkout')
@@ -112,8 +112,6 @@ async function handleRenew(input: ContractRenewInput) {
 const showDeleteModal = ref(false)
 const isDeleting = ref(false)
 const deleteConflict = ref<Record<string, unknown> | null>(null)
-const showTerminateModal = ref(false)
-const isTerminating = ref(false)
 
 const deletingServiceId = ref<string | null>(null)
 const isDeletingService = ref(false)
@@ -131,21 +129,12 @@ const conflictItems = computed(() => {
   return items
 })
 
-const onlyActiveConflict = computed(() =>
-  deleteConflict.value?.reason === 'ACTIVE_CONTRACT'
-  && !deleteConflict.value?.issuedBillingPeriods
-  && !deleteConflict.value?.paidPayments
-  && !deleteConflict.value?.nonHandoverMeterReadings
-  && !deleteConflict.value?.publishedAmendments,
-)
-
-async function confirmDelete(force = false) {
+async function confirmDelete() {
   isDeleting.value = true
   deleteConflict.value = null
   try {
     await apiFetch(`/api/contracts/${id}`, {
       method: 'DELETE',
-      query: force ? { force: true } : undefined,
     })
     await navigateTo('/dashboard/contracts')
   }
@@ -160,26 +149,6 @@ async function confirmDelete(force = false) {
   finally {
     isDeleting.value = false
     if (!deleteConflict.value) showDeleteModal.value = false
-  }
-}
-
-async function confirmTerminate() {
-  if (!contract.value) return
-  isTerminating.value = true
-  try {
-    await apiFetch(`/api/contracts/${id}`, {
-      method: 'PATCH',
-      body: { status: 'terminated' },
-    })
-    toast.success('Đã kết thúc hợp đồng')
-    showTerminateModal.value = false
-    await refreshContract()
-  }
-  catch {
-    toast.error('Không thể kết thúc hợp đồng. Vui lòng thử lại.')
-  }
-  finally {
-    isTerminating.value = false
   }
 }
 
@@ -282,14 +251,8 @@ function sectionLinkClass(sectionId: string) {
             </ul>
           </div>
           <div class="flex flex-wrap gap-2">
-            <UiButton
-              v-if="onlyActiveConflict"
-              size="sm"
-              variant="danger"
-              :loading="isDeleting"
-              @click="confirmDelete(true)"
-            >
-              Kết thúc rồi xoá
+            <UiButton v-if="deleteConflict.reason === 'ACTIVE_CONTRACT'" size="sm" variant="secondary" @click="beginCheckout">
+              Mở bàn giao
             </UiButton>
             <UiButton size="sm" variant="secondary" @click="deleteConflict = null">
               Đã hiểu
@@ -380,8 +343,10 @@ function sectionLinkClass(sectionId: string) {
         :loading="checkoutLoading"
         :error="checkoutError"
         :contract-code="contract.contractCode"
+        :contract-status="contract.status"
         :can-manage="authStore.can('contracts.update')"
         :can-settle="authStore.can('contracts.settle')"
+        :can-issue="authStore.can('billing.write')"
         :can-refund="authStore.can('contracts.refund')"
         :can-correct="authStore.can('contracts.settle') && authStore.can('billing.corrections')"
         :actions="checkout.actions"
@@ -429,16 +394,6 @@ function sectionLinkClass(sectionId: string) {
       :loading="isDeleting"
       @confirm="confirmDelete"
       @cancel="showDeleteModal = false"
-    />
-
-    <UiConfirmModal
-      :open="showTerminateModal"
-      title="Kết thúc hợp đồng"
-      message="Hợp đồng sẽ chuyển sang trạng thái đã chấm dứt và giải phóng phòng/khách thuê theo logic hiện có."
-      confirm-label="Kết thúc"
-      :loading="isTerminating"
-      @confirm="confirmTerminate"
-      @cancel="showTerminateModal = false"
     />
 
     <!-- Delete service modal -->

@@ -7,33 +7,55 @@ import type { CheckoutBundle, CheckoutPreview } from '../../../app/types/checkou
 const panel = defineComponent({ setup(_, { slots }) { return () => h('div', slots.default?.()) } })
 const button = defineComponent({ props: ['disabled', 'loading'], setup(p, { slots }) { return () => h('button', { disabled: p.disabled || p.loading }, slots.default?.()) } })
 const stubs = { UiSection: panel, UiSurfacePanel: panel, UiAlert: panel, UiSkeleton: panel, UiButton: button, UiInput: true, UiDatePicker: true, UiTextarea: true, UiSelect: true, UiCheckbox: true, UiConfirmModal: true, NuxtLink: panel }
-const bundle: CheckoutBundle = { enabled: true, checkout: { id: 'x', contractId: 'c', buildingId: 'b', actualReturnDate: '2026-10-01', reason: 'Trả phòng', status: 'returned', electricity: null, water: null, updatedAt: 'now' }, depositHeld: 3000000, creditHeld: 0, statement: null, refunds: [], sources: [] }
+const bundle: CheckoutBundle = { enabled: true, settlementEnabled: true, checkout: { id: 'x', contractId: 'c', buildingId: 'b', actualReturnDate: '2026-10-01', reason: 'Trả phòng', status: 'returned', financialMode: 'settlement', electricity: null, water: null, updatedAt: 'now' }, depositHeld: 3000000, creditHeld: 0, statement: null, refunds: [], sources: [] }
 const preview: CheckoutPreview = { snapshotHash: 'hash', depositHeld: 3000000, creditHeld: 0, existingDebt: 500000, finalChargesTotal: 100000, totalDue: 600000, refundDue: 2400000, additionalDue: 0, depositApplied: 600000, creditApplied: 0, charges: [], invoices: [], blockers: [] }
 function render(overrides = {}) {
-  return mount(ContractCheckoutSection, { props: { bundle, loading: false, error: null, contractCode: 'HD-1', canManage: true, canSettle: true, canRefund: true, actions: { loadCorrectionInvoice: vi.fn(), correct: vi.fn(), addCharge: vi.fn(), save: vi.fn(), confirmReturn: vi.fn(), preview: vi.fn(async () => preview), confirm: vi.fn(), refund: vi.fn(), approveCredit: vi.fn() }, ...overrides }, global: { stubs } })
+  return mount(ContractCheckoutSection, { props: { bundle, loading: false, error: null, contractCode: 'HD-1', canManage: true, canSettle: true, canIssue: true, canRefund: true, actions: { loadCorrectionInvoice: vi.fn(), correct: vi.fn(), addCharge: vi.fn(), save: vi.fn(), confirmReturn: vi.fn(), preview: vi.fn(async () => preview), confirm: vi.fn(), refund: vi.fn(), approveCredit: vi.fn(), saveChargeModes: vi.fn(), issueFinal: vi.fn() }, ...overrides }, global: { stubs } })
 }
 
 describe('ContractCheckoutSection', () => {
   it('hides checkout when rollout is disabled', () => {
     expect(render({ bundle: { ...bundle, enabled: false } }).text()).toBe('')
   })
+  it('keeps legacy terminated contracts outside the pilot return workflow', () => {
+    const wrapper = render({ bundle: { ...bundle, checkout: null }, contractStatus: 'terminated' })
+    expect(wrapper.text()).toContain('không tự chuyển thành quyết toán pilot')
+    expect(wrapper.text()).not.toContain('Lưu bàn giao')
+  })
+  it('shows an old returned checkout as history without offering new financial actions', () => {
+    const wrapper = render({ bundle: { ...bundle, checkout: { ...bundle.checkout!, financialMode: 'legacy' }, statement: null } })
+    expect(wrapper.text()).toContain('Hồ sơ đã trả phòng theo phiên bản trước')
+    expect(wrapper.text()).toContain('Chờ đối soát lịch sử')
+    expect(wrapper.text()).not.toContain('Xem bảng tính cuối')
+    expect(wrapper.text()).not.toContain('Phát hành khoản cuối')
+  })
   it('requires preview and shows allocation and refund before confirmation', async () => {
     const wrapper = render()
     expect(wrapper.text()).not.toContain('Xác nhận quyết toán')
-    await wrapper.findAll('button').find(b => b.text() === 'Xem quyết toán')!.trigger('click')
+    await wrapper.findAll('button').find(b => b.text() === 'Xem bảng tính cuối')!.trigger('click')
     await flushPromises()
     expect(wrapper.text()).toContain('Cọc đang giữ')
     expect(wrapper.text()).toContain('Cọc bù trừ')
     expect(wrapper.text()).toContain('Cần hoàn')
-    expect(wrapper.text()).toContain('Xác nhận quyết toán')
+    expect(wrapper.text()).toContain('Phát hành và quyết toán')
     expect(wrapper.text()).not.toContain('Ghi nhận hoàn tiền')
   })
   it('blocks confirmation when preview has blockers', async () => {
     const wrapper = render({ actions: { loadCorrectionInvoice: vi.fn(), correct: vi.fn(), addCharge: vi.fn(), save: vi.fn(), confirmReturn: vi.fn(), preview: vi.fn(async () => ({ ...preview, blockers: ['Thiếu chỉ số nước'] })), confirm: vi.fn(), refund: vi.fn(), approveCredit: vi.fn() } })
-    await wrapper.findAll('button').find(b => b.text() === 'Xem quyết toán')!.trigger('click')
+    await wrapper.findAll('button').find(b => b.text() === 'Xem bảng tính cuối')!.trigger('click')
     await flushPromises()
     expect(wrapper.text()).toContain('Thiếu chỉ số nước')
-    expect(wrapper.findAll('button').find(b => b.text() === 'Xác nhận quyết toán')!.attributes('disabled')).toBeDefined()
+    expect(wrapper.findAll('button').find(b => b.text() === 'Phát hành và quyết toán')!.attributes('disabled')).toBeDefined()
+  })
+  it('keeps standard final billing separate from deposit settlement', async () => {
+    const standard = { ...bundle, checkout: { ...bundle.checkout!, financialMode: 'standard' as const, pricingSnapshot: { monthlyRent: 3_000_000, building: { electricityPricingType: 'per_kwh', waterPricingType: 'per_m3', electricityRate: 3000, waterRate: 2000 }, services: [] } } }
+    const wrapper = render({ bundle: standard, actions: { loadCorrectionInvoice: vi.fn(), correct: vi.fn(), addCharge: vi.fn(), save: vi.fn(), confirmReturn: vi.fn(), preview: vi.fn(async () => ({ ...preview, billedCharges: [{ key: 'rent', label: 'Tiền phòng', amount: 3000000, invoiceId: 'i' }] })), confirm: vi.fn(), refund: vi.fn(), approveCredit: vi.fn(), saveChargeModes: vi.fn(), issueFinal: vi.fn() } })
+    await wrapper.findAll('button').find(b => b.text() === 'Xem bảng tính cuối')!.trigger('click')
+    await flushPromises()
+    expect(wrapper.text()).toContain('Tiền phòng')
+    expect(wrapper.text()).toContain('Đã lập hóa đơn, không tính lại')
+    expect(wrapper.text()).toContain('Phát hành khoản cuối')
+    expect(wrapper.text()).not.toContain('Cọc bù trừ')
   })
   it('keeps handover confirmation disabled until edited readings are saved', async () => {
     const wrapper = render({ bundle: { ...bundle, checkout: { ...bundle.checkout!, status: 'draft' } } })
@@ -57,8 +79,8 @@ describe('ContractCheckoutSection', () => {
     expect(wrapper.text()).toContain('Cần thu hết nợ điều chỉnh')
   })
   it('does not offer financial mutations to a handover-only user', () => {
-    const wrapper = render({ canSettle: false, canRefund: false })
-    expect(wrapper.text()).not.toContain('Xem quyết toán')
+    const wrapper = render({ canSettle: false, canIssue: false, canRefund: false })
+    expect(wrapper.text()).not.toContain('Xem bảng tính cuối')
     expect(wrapper.text()).not.toContain('Duyệt tiền bù trừ')
   })
 })

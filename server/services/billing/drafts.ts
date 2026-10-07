@@ -154,7 +154,7 @@ export const BillingDraftService = {
     }
 
     // Active contracts for this building/period
-    const activeContracts = snapshot.contracts.map(contract => ({
+    const activeContracts = snapshot.contracts.filter(contract => !snapshot.checkouts?.some(checkout => checkout.contract_id === contract.id && checkout.financial_mode === 'legacy')).map(contract => ({
       ...contract,
       monthly_rent: Number(contract.monthly_rent),
       deposit: Number(contract.deposit),
@@ -283,11 +283,12 @@ export const BillingDraftService = {
         })
       }
 
-      const checkout = snapshot.checkouts?.find(row => row.contract_id === contract.id && row.status === 'returned')
+      const checkout = snapshot.checkouts?.find(row => row.contract_id === contract.id && row.status === 'returned' && row.financial_mode !== 'legacy')
       if (checkout) {
-        // Final posting and source applications must remain one settlement
-        // transaction. Ordinary invoice issuance cannot create these lines.
+        // The final month remains in the queue until its dedicated posting RPC
+        // has issued the missing charges (and, in pilot, settled held funds).
         if (checkout.actual_return_date < firstDay || checkout.actual_return_date > lastDay) continue
+        if (checkout.final_bill_issued || checkout.settlement_confirmed) continue
         const finalLines: BillingDraftLine[] = (checkout.charges ?? []).map((charge, index) => ({
           chargeType: charge.chargeType, label: charge.label, amount: charge.amount,
           quantity: charge.quantity, unitPrice: charge.unitPrice,
@@ -295,7 +296,7 @@ export const BillingDraftService = {
           metadata: charge.metadata, sortOrder: index,
         }))
         const total = finalLines.reduce((sum, line) => sum + line.amount, 0)
-        blockers.push({ code: BILLING_BLOCKER_CODES.CHECKOUT_REQUIRED, message: 'Hoàn tất quyết toán tại hợp đồng để ghi nhận khoản cuối kỳ và cấn trừ tiền có sẵn', meta: { checkout_id: checkout.id } })
+        blockers.push({ code: BILLING_BLOCKER_CODES.CHECKOUT_REQUIRED, message: checkout.financial_mode === 'settlement' ? 'Mở bảng tính cuối tại hợp đồng để phát hành và quyết toán tiền đang giữ' : 'Mở bảng tính cuối tại hợp đồng để phát hành các khoản chưa tính', meta: { checkout_id: checkout.id } })
         const room = roomById.get(contract.room_id)
         const tenant = tenantById.get(contract.tenant_id)
         drafts.push({

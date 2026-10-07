@@ -6,6 +6,7 @@ export function mapCheckoutPreview(value: unknown): CheckoutPreview {
   if (!row || !Array.isArray(row.charges) || !Array.isArray(row.invoices) || !Array.isArray(row.blockers)) {
     throw new Error('Invalid checkout preview response')
   }
+  if (row.blockers.includes('CHECKOUT_NEGATIVE_FINAL_TOTAL')) return row
   // Narrow to the four ledger inputs only — the full row also carries arrays/strings
   // (charges, invoices, snapshotHash, ...) that would fail the integer check below.
   const totals = calculateCheckoutTotals({

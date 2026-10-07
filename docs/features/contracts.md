@@ -46,14 +46,14 @@ Statuses:
 - `sort`: `created_at`, `start_date`, `end_date`, `monthly_rent`
 - `order`: `asc`, `desc`
 
-The list page keeps these controls in the URL so filtered views can be shared. Admin users can select rows, terminate multiple contracts with an optional reason, or bulk-delete contracts that pass the safe-delete checks.
+The list page keeps these controls in the URL so filtered views can be shared. Selected contracts open a per-contract return queue; each contract needs its own date, reason, and final readings. Admin users can bulk-delete contracts that pass the safe-delete checks.
 Bulk delete requires a non-empty reason and a strong opt-in acknowledgement. After bulk actions finish, the list page clears selection in its `onDone` handler and refreshes the keyed list (`contracts:list`) so the filtered view shows the latest server state immediately.
 
 ## Occupancy Side Effects
 
 Creating an active contract marks the room as occupied.
 
-Terminating or expiring a contract releases the room back to available unless the room is in maintenance.
+The return RPC terminates the contract, closes every active occupant's move-out date, and releases the room unless it is in maintenance or another active contract occupies it. The signed end date stays unchanged. Direct active-to-terminated/expired PATCH and bulk termination are rejected.
 
 These side effects belong in the service layer, not in UI code.
 
@@ -97,7 +97,7 @@ Supported structured changes are monthly rent, deposit, payment due day, occupan
 
 `contracts` remains the current-term snapshot used by billing and existing consumers. Applied amendments and published history are immutable; corrections require a new amendment. Renewal and termination cancel any scheduled amendment with a system reason in the same database transaction as the contract lifecycle change. Published, applied, or previously scheduled/cancelled amendments block hard deletion of the contract; draft amendments and their audit records are handled atomically with the allowed contract deletion.
 
-Delete conflicts are displayed as a checklist of blockers. If the only blocker is `ACTIVE_CONTRACT`, admins can use "Kết thúc rồi xoá", which calls `DELETE ?force=true`. Billing, paid payment, and non-handover meter-reading history still block deletion.
+Delete conflicts are displayed as a checklist of blockers. Active contracts must pass through return first; `DELETE ?force=true` cannot bypass the handover. Billing, paid payment, and non-handover meter-reading history still block deletion.
 
 ## Form Drafts And Dirty Guards
 
@@ -120,9 +120,9 @@ Default `DELETE /api/contracts/[id]` is a hard delete only when the contract has
 - `nonHandoverMeterReadings`
 - `publishedAmendments`
 
-`DELETE /api/contracts/[id]?force=true` may terminate an active contract first, then delete only if billing, paid payment, and non-handover meter-reading counts are still zero. Force never destroys billing or meter-reading history.
+`DELETE /api/contracts/[id]?force=true` cannot terminate an active contract. A returned contract retains protected checkout history and cannot be hard-deleted.
 
-Bulk operations use `POST /api/contracts/bulk` with `{ action: 'terminate' | 'delete', ids, reason? }` and return per-item partial success.
+The bulk endpoint rejects `action: 'terminate'`; the list offers links to each selected contract's return form. Bulk delete still returns per-item partial success.
 
 ## Occupants
 
@@ -186,14 +186,14 @@ Monthly billing can use handover-in as a fallback previous reading when prior mo
 
 ## Checkout And Settlement
 
-Checkout is a separate financial step from contract termination/expiration: ending a contract still releases the room immediately, but the deposit/credit ledger, final utility charges, and refund are settled through this flow, which can finish later. The feature is gated per building by `server/utils/checkout-feature.ts` (runtime-config flag + building allowlist); it is disabled everywhere until explicitly piloted. Once a contract has any checkout history, database guards keep its payment/lifecycle safeguards active even if the flag is later disabled for that building — see "Contract Checkout And Settlement Model" in `docs/architecture/database.md`.
+Physical return is available for every building after the checkout schema is deployed. Deposit/credit settlement is gated per building by `server/utils/checkout-feature.ts` (runtime-config flag + building allowlist), disabled until the one-building pilot passes staging checks. A returned contract remains in the final-month billing queue until its final charges are issued. Checkout history stays protected even if the pilot flag is later disabled — see "Contract Checkout And Settlement Model" in `docs/architecture/database.md`.
 
 Flow on the contract detail page (`ContractCheckoutSection.vue`, section `#checkout`):
 
-1. **Return** — enter the actual return date, reason, and handover-out meter readings; this records contract-scoped `handover_out` readings and terminates the contract.
-2. **Charges/credits** — add incidental final charges and approve credit from unapplied `other`/`prepaid_rent` receipts.
-3. **Preview** — load a deterministic settlement snapshot (deposit/credit held, existing debt, final charges, refund or amount due).
-4. **Confirm** — post the settlement: allocates approved credit then deposit to the oldest open invoices first, creates or augments the final invoice, and locks the statement.
+1. **Return** — enter the actual return date, reason, and physical final readings. Metered utilities require a reconciled billed or handover-in baseline. One RPC records readings, terminates the contract, closes occupants, releases the room, freezes prices/services, and audits the handover. A closed billing period does not block physical return.
+2. **Final calculation** — rent, each service, and fixed/per-person utilities default to inclusive-day proration through the return date; each can be set to full month or waived with a reason. Metered utilities charge only usage since the last billed reading; incidental fees are separate. Existing issued/paid lines are shown and never rewritten or billed twice. The checkout timestamp is an optimistic version for mode edits.
+3. **Standard final bill** — outside the pilot, a dedicated RPC issues only missing final lines. No deposit or approved credit is allocated automatically.
+4. **Pilot settlement** — approve credit from unapplied `other`/`prepaid_rent` receipts. One confirmation transaction posts missing final lines and allocates approved credit then deposit to the oldest open invoices. A closed financial period blocks this step pending reconciliation.
 5. **Refund** — record an already-performed refund transfer against the confirmed statement (this never initiates a bank transfer itself).
 6. **Correction** — after confirmation, a signed adjustment to an active invoice for reconciliation, without rewriting the original statement or past refunds.
 

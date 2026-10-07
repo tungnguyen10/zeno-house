@@ -172,7 +172,7 @@ describe('ContractListToolbar', () => {
 })
 
 describe('ContractBulkActionsBar', () => {
-  it('shows count and runs terminate confirmation with reason', async () => {
+  it('shows a per-contract return queue without bulk mutation', async () => {
     const runAction = vi.fn(async (): Promise<ContractBulkActionResult> => ({ succeeded: ['c-1'], failed: [] }))
     const wrapper = mount(ContractBulkActionsBar, {
       props: { selectedIds: ['c-1'], contracts: [buildContract()], runAction },
@@ -180,12 +180,13 @@ describe('ContractBulkActionsBar', () => {
     })
 
     expect(wrapper.text()).toContain('1 đã chọn')
-    await wrapper.findAll('button').find(button => button.text().includes('Kết thúc'))!.trigger('click')
-    await wrapper.find('textarea').setValue('Khách trả phòng')
+    await wrapper.findAll('button').find(button => button.text().includes('Danh sách cần xử lý'))!.trigger('click')
+    expect(wrapper.text()).toContain('Mở từng hợp đồng')
+    expect(wrapper.text()).toContain('Mở bàn giao')
     await wrapper.find('[data-test="confirm"]').trigger('click')
 
-    expect(runAction).toHaveBeenCalledWith('terminate', { reason: 'Khách trả phòng' })
-    expect(wrapper.emitted('done')?.[0]?.[1]).toBe('terminate')
+    expect(runAction).not.toHaveBeenCalled()
+    expect(wrapper.emitted('done')).toBeUndefined()
   })
 
   it('requires reason and ack before running delete action', async () => {

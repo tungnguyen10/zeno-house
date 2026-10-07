@@ -24,14 +24,16 @@ as $$
       and (c.end_date is null or c.end_date >= b.first_day)
       and not exists(select 1 from public.contract_checkouts h where h.contract_id=c.id and h.status='returned'))
       or exists(select 1 from public.contract_checkouts h where h.contract_id=c.id and h.status='returned'
-        and h.actual_return_date between b.first_day and b.last_day)
+        and h.financial_mode<>'legacy' and h.actual_return_date between b.first_day and b.last_day)
   ), room_ids as (select distinct room_id as id from contracts), contract_ids as (select id from contracts)
   select jsonb_build_object(
     'building', (select to_jsonb(bld) from public.buildings bld join bounds b on b.building_id = bld.id),
     'checkouts', coalesce((
-      select jsonb_agg(to_jsonb(h) || jsonb_build_object('charges', public.contract_checkout_preview(h.contract_id)->'charges'))
+      select jsonb_agg(to_jsonb(h) || jsonb_build_object('charges', public.contract_checkout_preview(h.contract_id)->'charges',
+        'final_bill_issued', exists(select 1 from public.contract_checkout_final_bills fb where fb.checkout_id=h.id),
+        'settlement_confirmed', exists(select 1 from public.contract_checkout_statements s where s.checkout_id=h.id)))
       from public.contract_checkouts h join bounds b on h.building_id=b.building_id
-      where h.contract_id in (select id from contract_ids) and h.status='returned'
+      where h.contract_id in (select id from contract_ids) and h.status='returned' and h.financial_mode<>'legacy'
         and h.actual_return_date between b.first_day and b.last_day
     ), '[]'::jsonb),
     'contracts', coalesce((select jsonb_agg(to_jsonb(c)) from contracts c), '[]'::jsonb),

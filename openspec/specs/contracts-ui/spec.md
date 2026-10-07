@@ -33,19 +33,19 @@ TBD - created by archiving change contracts-overhaul. Update Purpose after archi
 ---
 
 ### Requirement: Contracts list bulk selection
-`app/pages/contracts/index.vue` SHALL provide bulk selection in the list (checkbox per row, "select all on page" checkbox) for admin users. When at least one contract is selected, a `ContractBulkActionsBar` SHALL appear with actions: "Kết thúc" (terminate), "Xoá nhiều" (delete). The bar SHALL show the selected count and a "Bỏ chọn" action.
+`app/pages/contracts/index.vue` SHALL provide bulk selection in the list (checkbox per row, "select all on page" checkbox) for admin users. When at least one contract is selected, a `ContractBulkActionsBar` SHALL appear with "Danh sách cần xử lý" and "Xoá nhiều". The bar SHALL show the selected count and a "Bỏ chọn" action.
 
 #### Scenario: Show bulk bar when at least one selected
 - **WHEN** admin selects 1 or more contracts
 - **THEN** the ContractBulkActionsBar appears at the bottom with action buttons and count
 
-#### Scenario: Bulk terminate confirmation with reason
-- **WHEN** admin clicks "Kết thúc" with 3 active contracts selected
-- **THEN** a confirm modal appears listing the selected contract codes + a textarea for reason; on confirm, POST `/api/contracts/bulk` runs with action `terminate` and the reason
+#### Scenario: Per-contract return queue
+- **WHEN** admin clicks "Danh sách cần xử lý" with 3 contracts selected
+- **THEN** the full list links to each contract's return section; opening the list performs no bulk mutation
 
 #### Scenario: Bulk delete confirmation with strong opt-in
 - **WHEN** admin clicks "Xoá nhiều"
-- **THEN** the confirm modal lists contract codes (max 10 + "...và X khác"), includes a reason textarea and a checkbox "Tôi hiểu thao tác này không thể hoàn tác và chỉ áp dụng cho hợp đồng không có dữ liệu hoá đơn"
+- **THEN** the confirm modal lists the selected contract codes, includes a reason textarea and a checkbox "Tôi hiểu thao tác này không thể hoàn tác và chỉ áp dụng cho hợp đồng không có dữ liệu hoá đơn"
 - **AND** the delete button is disabled until both the checkbox is checked and reason is non-empty
 
 #### Scenario: Manager does not see bulk selection
@@ -56,8 +56,8 @@ TBD - created by archiving change contracts-overhaul. Update Purpose after archi
 - **WHEN** bulk delete returns `{ succeeded: ['a'], failed: [{id:'b', reason:'has_billing_history'}, {id:'c', reason:'ACTIVE_CONTRACT'}] }`
 - **THEN** a toast summarizes "Đã xoá 1 hợp đồng, 2 bị bỏ qua" and a "Xem chi tiết" link opens a modal listing failures with reason labels
 
-#### Scenario: Bulk action refreshes latest filtered list
-- **WHEN** any bulk action completes (full success or partial success)
+#### Scenario: Bulk delete refreshes latest filtered list
+- **WHEN** bulk delete completes (full success or partial success)
 - **THEN** the page clears selected ids and refetches the keyed contract list so current filters render latest data from server
 
 ---
@@ -92,15 +92,15 @@ TBD - created by archiving change contracts-overhaul. Update Purpose after archi
 
 #### Scenario: Danger zone groups destructive actions
 - **WHEN** admin scrolls to the danger zone section
-- **THEN** Edit, Terminate (with confirm), and Delete buttons appear inside a card with a warning border tone
+- **THEN** Edit, Return (linking to the handover section), and Delete actions appear; return requires its own date, reason, and readings
 
 #### Scenario: Manager sees read-only sections
 - **WHEN** user with role `manager` opens detail
 - **THEN** the Danger zone section is hidden entirely; other sections are read-only (no add/edit buttons)
 
-#### Scenario: 409 conflict on delete shows soft-delete option
+#### Scenario: 409 conflict on active delete opens return
 - **WHEN** admin clicks Delete and the API responds 409 with details
-- **THEN** an alert displays which checks blocked deletion (active / billing / payment / readings) with specific counts; if only the active-contract check blocks, offer a "Kết thúc rồi xoá" button calling DELETE with `?force=true`
+- **THEN** an alert displays the blockers; an active-contract conflict offers a link to the return section without forcing deletion
 
 #### Scenario: Contract audit history is visible in context
 - **WHEN** a user opens a contract detail page
@@ -222,4 +222,3 @@ TBD - created by archiving change contracts-overhaul. Update Purpose after archi
 #### Scenario: Mismatched draft version
 - **WHEN** restore detects the stored `draftVersion` differs from current code version
 - **THEN** the alert text reads "Bản nháp cũ không tương thích — chỉ có thể xoá" and only the "Xoá bản nháp" action remains active
-

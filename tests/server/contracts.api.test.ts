@@ -379,15 +379,16 @@ describe('GET /api/contracts/[id]', () => {
 })
 
 describe('PATCH /api/contracts/[id]', () => {
-  it('updates status transitions', async () => {
+  it('rejects direct termination even before the settlement pilot', async () => {
     const existing = buildContract({ status: 'active' })
     contractRepoMocks.findByIdentifier.mockResolvedValue(existing)
     contractRepoMocks.update.mockResolvedValue(buildContract({ status: 'terminated' }))
     const { default: handler } = await import('../../server/api/contracts/[id].patch')
 
-    const res = await handler(makeEvent({ params: { id: 'contract-1' }, body: { status: 'terminated' } })) as { data: ContractWithDetails }
-    expect(res.data.status).toBe('terminated')
-    expect(roomRepoMocks.update).toHaveBeenCalledWith(expect.anything(), existing.roomId, { status: 'available' })
+    const err = await expectError(Promise.resolve(handler(makeEvent({ params: { id: 'contract-1' }, body: { status: 'terminated' } }))))
+    expect(err.statusCode).toBe(409)
+    expect(contractRepoMocks.update).not.toHaveBeenCalled()
+    expect(roomRepoMocks.update).not.toHaveBeenCalled()
   })
 
   it('rejects invalid transition payload and forbids manager', async () => {
@@ -408,12 +409,7 @@ describe('DELETE /api/contracts/[id]', () => {
     ['issued billing periods', buildContract({ status: 'terminated' }), [2, 0, 0], { issuedBillingPeriods: 2 }],
     ['paid invoices', buildContract({ status: 'terminated' }), [0, 1, 0], { paidPayments: 1 }],
     ['non-handover meter readings', buildContract({ status: 'terminated' }), [0, 0, 3], { nonHandoverMeterReadings: 3 }],
-    ['multiple violations', buildContract({ status: 'active' }), [2, 1, 3], {
-      reason: 'ACTIVE_CONTRACT',
-      issuedBillingPeriods: 2,
-      paidPayments: 1,
-      nonHandoverMeterReadings: 3,
-    }],
+    ['multiple violations', buildContract({ status: 'active' }), [2, 1, 3], { reason: 'ACTIVE_CONTRACT' }],
   ])('returns 409 for %s', async (_label, contract, counts, details) => {
     contractRepoMocks.findByIdentifier.mockResolvedValue(contract)
     contractRepoMocks.countBillingPeriodsForContract.mockResolvedValue(counts[0])
@@ -454,26 +450,15 @@ describe('DELETE /api/contracts/[id]', () => {
     expect(contractRepoMocks.removeWithCascade).not.toHaveBeenCalled()
   })
 
-  it('force=true terminates active contract then deletes when clean, but still blocks billing and managers', async () => {
+  it('force=true cannot bypass the return workflow', async () => {
     const active = buildContract({ status: 'active' })
-    const terminated = buildContract({ status: 'terminated' })
     contractRepoMocks.findByIdentifier.mockResolvedValue(active)
-    contractRepoMocks.update.mockResolvedValue(terminated)
     const { default: handler } = await import('../../server/api/contracts/[id].delete')
 
-    const res = await handler(makeEvent({ params: { id: active.id }, query: { force: 'true' }, body: { reason: 'cleanup' } })) as { data: ContractWithDetails }
-    expect(contractRepoMocks.update).toHaveBeenCalledWith(expect.anything(), active.id, { status: 'terminated' })
-    expect(amendmentServiceMocks.cancelScheduledForContract).toHaveBeenCalledWith(
-      expect.anything(), expect.objectContaining({ id: 'user-admin' }), terminated.id, 'Hợp đồng đã chấm dứt',
-    )
-    expect(contractRepoMocks.removeWithCascade).toHaveBeenCalledWith(expect.anything(), terminated)
-    expect(res.data.status).toBe('terminated')
-
-    contractRepoMocks.removeWithCascade.mockClear()
-    contractRepoMocks.countBillingPeriodsForContract.mockResolvedValue(1)
     const conflict = await expectError(Promise.resolve(handler(makeEvent({ params: { id: active.id }, query: { force: 'true' }, body: { reason: 'cleanup' } }))))
     expect(conflict.statusCode).toBe(409)
-    expect(conflict.data?.error?.details).toEqual({ issuedBillingPeriods: 1 })
+    expect(conflict.data?.error?.details).toEqual({ reason: 'ACTIVE_CONTRACT' })
+    expect(contractRepoMocks.update).not.toHaveBeenCalled()
     expect(contractRepoMocks.removeWithCascade).not.toHaveBeenCalled()
 
     asManager()
@@ -490,17 +475,14 @@ describe('DELETE /api/contracts/[id]', () => {
 })
 
 describe('POST /api/contracts/bulk', () => {
-  it('terminates selected contracts', async () => {
+  it('rejects bulk termination without per-contract return details', async () => {
     contractRepoMocks.findByIdentifier.mockResolvedValue(buildContract({ status: 'active' }))
     contractRepoMocks.update.mockResolvedValue(buildContract({ status: 'terminated' }))
     const { default: handler } = await import('../../server/api/contracts/bulk.post')
 
-    const res = await handler(makeEvent({ body: { action: 'terminate', ids: ['a', 'b'], reason: 'done' } })) as {
-      data: { succeeded: string[]; failed: { id: string; reason: string }[] }
-    }
-
-    expect(res.data).toEqual({ succeeded: ['a', 'b'], failed: [] })
-    expect(bulkRepoMocks.execute).toHaveBeenCalledWith(expect.anything(), 'contract', 'terminate', ['a', 'b'])
+    const err = await expectError(Promise.resolve(handler(makeEvent({ body: { action: 'terminate', ids: ['a', 'b'], reason: 'done' } }))))
+    expect(err.statusCode).toBe(409)
+    expect(bulkRepoMocks.execute).not.toHaveBeenCalled()
   })
 
   it('returns mixed delete results with normalized reasons', async () => {
