@@ -203,33 +203,23 @@ async function sendSelectedInvoices() {
       @print="openPrint([$event])"
     />
 
-    <Transition
-      enter-active-class="transition duration-150 ease-out"
-      enter-from-class="opacity-0 translate-y-2"
-      enter-to-class="opacity-100 translate-y-0"
-      leave-active-class="transition duration-150 ease-in"
-      leave-from-class="opacity-100 translate-y-0"
-      leave-to-class="opacity-0 translate-y-2"
+    <UiBulkActionsBar
+      aria-label="Thao tác hàng loạt hoá đơn"
+      :count="selectedInvoices.length"
+      @clear="clearSelection"
     >
-      <UiBulkActionsBar
-        v-if="selectedInvoices.length > 0"
-        aria-label="Thao tác hàng loạt hoá đơn"
-        :count="selectedInvoices.length"
-        @clear="clearSelection"
+      <UiButton class="whitespace-nowrap" variant="primary" size="sm" @click="printSelectedInvoices">In phiếu</UiButton>
+      <UiButton
+        v-if="invoiceEmailEnabled"
+        class="whitespace-nowrap"
+        variant="secondary"
+        size="sm"
+        :disabled="selectedInvoices.length > 100"
+        @click="emailConfirmOpen = true"
       >
-        <UiButton class="whitespace-nowrap" variant="primary" size="sm" @click="printSelectedInvoices">In phiếu</UiButton>
-        <UiButton
-          v-if="invoiceEmailEnabled"
-          class="whitespace-nowrap"
-          variant="secondary"
-          size="sm"
-          :disabled="selectedInvoices.length > 100"
-          @click="emailConfirmOpen = true"
-        >
-          Gửi email ({{ selectedInvoices.length }})
-        </UiButton>
-      </UiBulkActionsBar>
-    </Transition>
+        Gửi email ({{ selectedInvoices.length }})
+      </UiButton>
+    </UiBulkActionsBar>
 
     <UiModal
       :open="emailConfirmOpen"

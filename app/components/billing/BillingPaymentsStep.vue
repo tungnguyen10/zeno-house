@@ -951,54 +951,44 @@ watch(
     </UiModal>
 
     <!-- Sticky bulk action bar -->
-    <Transition
-      enter-active-class="transition duration-150 ease-out"
-      enter-from-class="opacity-0 translate-y-2"
-      enter-to-class="opacity-100 translate-y-0"
-      leave-active-class="transition duration-150 ease-in"
-      leave-from-class="opacity-100 translate-y-0"
-      leave-to-class="opacity-0 translate-y-2"
+    <UiBulkActionsBar
+      aria-label="Thao tác hàng loạt hoá đơn"
+      :count="selectedIds.size"
+      @clear="clearSelection"
     >
-      <UiBulkActionsBar
-        v-if="selectedIds.size > 0"
-        aria-label="Thao tác hàng loạt hoá đơn"
-        :count="selectedIds.size"
-        @clear="clearSelection"
+      <UiButton class="whitespace-nowrap" variant="secondary" size="sm" @click="printSelection">
+        In phiếu
+      </UiButton>
+      <UiButton
+        v-if="invoiceEmailEnabled"
+        class="whitespace-nowrap"
+        variant="secondary"
+        size="sm"
+        :disabled="selectedInvoicesForBulk.length > 100"
+        @click="showEmailModal = true"
       >
-        <UiButton class="whitespace-nowrap" variant="secondary" size="sm" @click="printSelection">
-          In phiếu
-        </UiButton>
-        <UiButton
-          v-if="invoiceEmailEnabled"
-          class="whitespace-nowrap"
-          variant="secondary"
-          size="sm"
-          :disabled="selectedInvoicesForBulk.length > 100"
-          @click="showEmailModal = true"
-        >
-          Gửi email ({{ selectedInvoicesForBulk.length }})
-        </UiButton>
-        <UiButton
-          class="whitespace-nowrap"
-          variant="primary"
-          size="sm"
-          :disabled="!bulkPaymentSelectionEligible"
-          :title="bulkPaymentDisabledReason"
-          @click="openBulkModal"
-        >
-          Ghi thu hàng loạt
-        </UiButton>
+        Gửi email ({{ selectedInvoicesForBulk.length }})
+      </UiButton>
+      <UiButton
+        class="whitespace-nowrap"
+        variant="primary"
+        size="sm"
+        :disabled="!bulkPaymentSelectionEligible"
+        :title="bulkPaymentDisabledReason"
+        @click="openBulkModal"
+      >
+        Ghi thu hàng loạt
+      </UiButton>
 
-        <template #note>
-          <p
-            v-if="bulkPaymentDisabledReason"
-            class="text-xs text-status-warning"
-          >
-            {{ bulkPaymentDisabledReason }}
-          </p>
-        </template>
-      </UiBulkActionsBar>
-    </Transition>
+      <template #note>
+        <p
+          v-if="bulkPaymentDisabledReason"
+          class="text-xs text-status-warning"
+        >
+          {{ bulkPaymentDisabledReason }}
+        </p>
+      </template>
+    </UiBulkActionsBar>
 
     <UiConfirmModal
       :open="!!undoTarget"
