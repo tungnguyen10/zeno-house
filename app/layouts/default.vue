@@ -29,10 +29,11 @@ onBeforeUnmount(disposeDashboardTheme)
         </template>
       </AppHeader>
 
-      <!-- Content — bottom padding on mobile clears the fixed tab bar. -->
+      <!-- Content — bottom padding on mobile clears the fixed tab bar. The `sm:pb-*`
+           repeat is required: `sm:p-6` would otherwise reset it. -->
       <main
         id="main-content"
-        class="flex-1 overflow-y-auto bg-ui-canvas p-4 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:p-6 lg:pb-6"
+        class="flex-1 overflow-y-auto bg-ui-canvas p-4 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:p-6 sm:pb-[calc(6rem+env(safe-area-inset-bottom))] lg:pb-6"
       >
         <slot />
       </main>

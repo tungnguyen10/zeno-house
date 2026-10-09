@@ -184,30 +184,15 @@ const canSubmit = computed(() => !props.loading && (props.isDirty || props.hasDr
 </script>
 
 <template>
-  <form class="space-y-8 pb-28 md:pb-0" novalidate @submit.prevent="onSubmit">
-    <UiAlert
+  <form class="space-y-6" novalidate @submit.prevent="onSubmit">
+    <UiFormDraftBanner
       v-if="hasDraft"
-      severity="info"
-      data-test="draft-banner"
-    >
-      <div class="flex flex-wrap items-center justify-between gap-3">
-        <div class="flex items-center gap-2 text-sm">
-          <IconCheckCircle class="h-4 w-4 shrink-0" aria-hidden="true" />
-          <span>Có bản nháp chưa lưu cho biểu mẫu này.</span>
-        </div>
-        <div class="flex items-center gap-2">
-          <UiButton size="sm" variant="secondary" @click="emit('restore-draft')">Khôi phục</UiButton>
-          <UiButton size="sm" variant="ghost" @click="emit('discard-draft')">Bỏ nháp</UiButton>
-        </div>
-      </div>
-    </UiAlert>
+      clear-label="Bỏ nháp"
+      @restore="emit('restore-draft')"
+      @clear="emit('discard-draft')"
+    />
 
-    <!-- Group: Basic info -->
-    <section class="space-y-4">
-      <header>
-        <h3 class="text-sm font-semibold text-ui-primary">Thông tin cơ bản</h3>
-        <p class="text-xs text-ui-muted mt-0.5">Tên, địa chỉ và trạng thái hoạt động của toà nhà.</p>
-      </header>
+    <UiFormSection title="Thông tin cơ bản" description="Tên, địa chỉ và trạng thái hoạt động của toà nhà.">
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <UiInput
           id="bf-name"
@@ -252,16 +237,9 @@ const canSubmit = computed(() => !props.loading && (props.isDirty || props.hasDr
           />
         </div>
       </div>
-    </section>
+    </UiFormSection>
 
-    <div class="border-t border-ui-border" />
-
-    <!-- Group: Owner contact -->
-    <section class="space-y-4">
-      <header>
-        <h3 class="text-sm font-semibold text-ui-primary">Chủ sở hữu</h3>
-        <p class="text-xs text-ui-muted mt-0.5">Liên hệ chính cho việc vận hành — tất cả đều tuỳ chọn.</p>
-      </header>
+    <UiFormSection title="Chủ sở hữu" description="Liên hệ chính cho việc vận hành — tất cả đều tuỳ chọn.">
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <UiInput
           id="bf-owner-name"
@@ -293,16 +271,9 @@ const canSubmit = computed(() => !props.loading && (props.isDirty || props.hasDr
           @blur="onBlur('owner_email')"
         />
       </div>
-    </section>
+    </UiFormSection>
 
-    <div class="border-t border-ui-border" />
-
-    <!-- Group: Billing defaults -->
-    <section class="space-y-4">
-      <header>
-        <h3 class="text-sm font-semibold text-ui-primary">Tính phí mặc định</h3>
-        <p class="text-xs text-ui-muted mt-0.5">Áp dụng cho mọi phòng trong toà — có thể ghi đè ở từng hợp đồng.</p>
-      </header>
+    <UiFormSection title="Tính phí mặc định" description="Áp dụng cho mọi phòng trong toà — có thể ghi đè ở từng hợp đồng.">
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <UiSelect
           id="bf-electricity-pricing"
@@ -347,19 +318,9 @@ const canSubmit = computed(() => !props.loading && (props.isDirty || props.hasDr
           <template #suffix>đ</template>
         </UiInput>
       </div>
-    </section>
+    </UiFormSection>
 
-    <div class="border-t border-ui-border" />
-
-    <!-- Group: Schedule -->
-    <section class="space-y-5">
-      <header>
-        <h3 class="text-sm font-semibold text-ui-primary">Lịch vận hành</h3>
-        <p class="text-xs text-ui-muted mt-0.5">
-          Chốt số &amp; lập hoá đơn chỉ là mốc nhắc việc; ngày đến hạn &amp; gia hạn quyết định hạn thanh toán hoá đơn.
-        </p>
-      </header>
-
+    <UiFormSection title="Lịch vận hành">
       <!-- Sub-group: reminder-only dates, no automation reads these -->
       <div class="space-y-2">
         <div class="flex items-center gap-2">
@@ -439,35 +400,22 @@ const canSubmit = computed(() => !props.loading && (props.isDirty || props.hasDr
           </UiInput>
         </div>
       </div>
-    </section>
+
+      <template #footnote>
+        <p class="text-xs text-ui-muted">
+          Chốt số &amp; lập hoá đơn chỉ là mốc nhắc việc; ngày đến hạn &amp; gia hạn quyết định hạn thanh toán hoá đơn.
+        </p>
+      </template>
+    </UiFormSection>
 
     <!-- Extension slot for page-specific groups (e.g. quick rooms on create). -->
     <slot name="extras" />
 
-    <!-- Desktop footer -->
-    <div class="hidden md:flex items-center justify-end gap-3 pt-2 border-t border-ui-border">
-      <UiButton variant="ghost" type="button" :disabled="loading" @click="emit('cancel')">
-        Huỷ
-      </UiButton>
-      <UiButton type="submit" :loading="loading" :disabled="!canSubmit">
-        {{ submitLabel }}
-      </UiButton>
-    </div>
-
-    <!-- Mobile sticky save bar -->
-    <div
-      data-test="sticky-save-bar"
-      class="md:hidden fixed inset-x-0 bottom-0 z-40 border-t border-ui-border bg-ui-deep/95 px-4 pt-3 backdrop-blur"
-      :style="{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }"
-    >
-      <div class="flex items-center gap-2">
-        <UiButton class="flex-1" variant="ghost" type="button" :disabled="loading" @click="emit('cancel')">
-          Huỷ
-        </UiButton>
-        <UiButton class="flex-1" type="submit" :loading="loading" :disabled="!canSubmit" @click="onSubmit">
-          {{ submitLabel }}
-        </UiButton>
-      </div>
-    </div>
+    <UiFormActions
+      :submit-label="submitLabel"
+      :loading="loading"
+      :can-submit="canSubmit"
+      @cancel="emit('cancel')"
+    />
   </form>
 </template>

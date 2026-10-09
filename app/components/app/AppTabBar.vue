@@ -4,6 +4,7 @@ import { getMobileTabItems } from '~/utils/constants/navigation'
 const route = useRoute()
 const authStore = useAuthStore()
 const moreOpen = ref(false)
+const formMode = useAppFormMode()
 
 const tabs = computed(() => getMobileTabItems({ isAdmin: authStore.isAdmin, role: authStore.role }))
 
@@ -29,6 +30,7 @@ function tabLinkClass(active: boolean) {
 <template>
   <nav
     class="fixed bottom-[calc(0.75rem+env(safe-area-inset-bottom))] left-[calc(0.75rem+env(safe-area-inset-left))] right-[calc(0.75rem+env(safe-area-inset-right))] z-30 rounded-2xl border border-ui-border bg-ui-chrome/95 shadow-lg shadow-ui-shadow/10 backdrop-blur-md lg:hidden"
+    :class="formMode && 'max-sm:hidden'"
     aria-label="Điều hướng chính"
   >
     <ul class="mx-auto flex max-w-md items-center justify-between gap-1 px-1.5 py-1.5">

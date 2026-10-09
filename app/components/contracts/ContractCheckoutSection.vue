@@ -8,19 +8,23 @@ import { getApiErrorMessage } from '~/utils/api-error'
 import { invoicePath } from '~/utils/routes/operational'
 import { checkoutBlockerMessage } from '~/utils/checkout'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   bundle: CheckoutBundle | null
   loading: boolean
   error: string | null
   contractCode: string
   contractStatus?: string
+  /** Caller-controlled visibility gate (e.g. hide on a freshly-active contract). Defaults to always visible. */
+  visible?: boolean
   canManage: boolean
   canSettle: boolean
   canIssue: boolean
   canRefund: boolean
   canCorrect?: boolean
   actions: CheckoutActions
-}>()
+}>(), {
+  visible: true,
+})
 const emit = defineEmits<{ retry: []; changed: [] }>()
 const pending = ref(false)
 const actionError = ref<string | null>(null)
@@ -218,7 +222,7 @@ const confirmationContent = computed(() => {
 </script>
 
 <template>
-  <UiSection v-if="loading || error || bundle?.enabled" id="checkout" title="Kết thúc hợp đồng" class="mt-6 scroll-mt-20" tabindex="-1">
+  <UiSection v-if="visible && (loading || error || bundle?.enabled)" id="checkout" title="Kết thúc hợp đồng" class="mt-6 scroll-mt-20" tabindex="-1">
     <UiSurfacePanel density="compact">
       <div v-if="loading" class="space-y-3"><UiSkeleton class="h-8 w-full" /><UiSkeleton class="h-32 w-full" /></div>
       <UiAlert v-else-if="error" severity="danger">

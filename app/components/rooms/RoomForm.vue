@@ -151,44 +151,21 @@ async function onSubmit() {
   emit('submit', props.modelValue)
 }
 
-const draftLabel = computed(() => {
-  if (!props.draftSavedAt) return ''
-  const date = new Date(props.draftSavedAt)
-  if (Number.isNaN(date.getTime())) return ''
-  return date.toLocaleString('vi-VN')
-})
-
 const canSubmit = computed(() => !props.loading && (props.isDirty || submitAttempted.value))
 </script>
 
 <template>
-  <form class="space-y-8 pb-28 md:pb-0" novalidate @submit.prevent="onSubmit">
-    <UiAlert v-if="hasDraft" severity="info" data-test="draft-banner">
-      <div class="flex flex-wrap items-center justify-between gap-3">
-        <div class="flex items-center gap-2 text-sm">
-          <IconCheckCircle class="h-4 w-4 shrink-0" aria-hidden="true" />
-          <span>
-            Có bản nháp chưa lưu<span v-if="draftLabel"> lúc {{ draftLabel }}</span>.
-          </span>
-        </div>
-        <div class="flex flex-wrap items-center gap-2">
-          <UiButton size="sm" variant="secondary" @click="emit('restore-draft')">Khôi phục</UiButton>
-          <UiButton size="sm" variant="ghost" @click="emit('dismiss-draft')">Bỏ qua</UiButton>
-          <UiButton size="sm" variant="ghost" @click="emit('clear-draft')">Xoá bản nháp</UiButton>
-        </div>
-      </div>
-    </UiAlert>
+  <form class="space-y-6" novalidate @submit.prevent="onSubmit">
+    <UiFormDraftBanner
+      v-if="hasDraft"
+      dismissible
+      :saved-at="draftSavedAt"
+      @restore="emit('restore-draft')"
+      @dismiss="emit('dismiss-draft')"
+      @clear="emit('clear-draft')"
+    />
 
-    <section class="space-y-4">
-      <header class="border-t border-ui-border pt-4">
-        <div class="flex items-start gap-3">
-          <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-ui-accent/10 text-sm font-semibold text-ui-accent">1</span>
-          <div>
-            <h3 class="text-sm font-semibold text-ui-primary">Vị trí</h3>
-            <p class="mt-0.5 text-xs text-ui-muted">Định danh phòng trong một tòa nhà.</p>
-          </div>
-        </div>
-      </header>
+    <UiFormSection title="Vị trí" description="Định danh phòng trong một tòa nhà.">
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div class="sm:col-span-1">
           <UiSelect
@@ -229,18 +206,9 @@ const canSubmit = computed(() => !props.loading && (props.isDirty || submitAttem
           @blur="onBlur('room_number')"
         />
       </div>
-    </section>
+    </UiFormSection>
 
-    <section class="space-y-4">
-      <header class="border-t border-ui-border pt-4">
-        <div class="flex items-start gap-3">
-          <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-ui-accent/10 text-sm font-semibold text-ui-accent">2</span>
-          <div>
-            <h3 class="text-sm font-semibold text-ui-primary">Trạng thái</h3>
-            <p class="mt-0.5 text-xs text-ui-muted">Tình trạng vận hành hiện tại của phòng.</p>
-          </div>
-        </div>
-      </header>
+    <UiFormSection title="Trạng thái" description="Tình trạng vận hành hiện tại của phòng.">
       <UiSelect
         id="rf-status"
         :model-value="modelValue.status"
@@ -251,18 +219,9 @@ const canSubmit = computed(() => !props.loading && (props.isDirty || submitAttem
         @update:model-value="update('status', String($event) as RoomStatus)"
         @blur="onBlur('status')"
       />
-    </section>
+    </UiFormSection>
 
-    <section class="space-y-4">
-      <header class="border-t border-ui-border pt-4">
-        <div class="flex items-start gap-3">
-          <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-ui-accent/10 text-sm font-semibold text-ui-accent">3</span>
-          <div>
-            <h3 class="text-sm font-semibold text-ui-primary">Giá thuê & diện tích</h3>
-            <p class="mt-0.5 text-xs text-ui-muted">Giá chuẩn dùng làm mặc định khi tạo hợp đồng mới.</p>
-          </div>
-        </div>
-      </header>
+    <UiFormSection title="Giá thuê &amp; diện tích" description="Giá chuẩn dùng làm mặc định khi tạo hợp đồng mới.">
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <UiInput
           id="rf-monthly-rent"
@@ -295,18 +254,9 @@ const canSubmit = computed(() => !props.loading && (props.isDirty || submitAttem
           <template #suffix>m²</template>
         </UiInput>
       </div>
-    </section>
+    </UiFormSection>
 
-    <section class="space-y-4">
-      <header class="border-t border-ui-border pt-4">
-        <div class="flex items-start gap-3">
-          <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-ui-accent/10 text-sm font-semibold text-ui-accent">4</span>
-          <div>
-            <h3 class="text-sm font-semibold text-ui-primary">Mô tả</h3>
-            <p class="mt-0.5 text-xs text-ui-muted">Ghi chú nội bộ về đặc điểm hoặc lưu ý của phòng.</p>
-          </div>
-        </div>
-      </header>
+    <UiFormSection title="Mô tả" description="Ghi chú nội bộ về đặc điểm hoặc lưu ý của phòng.">
       <UiTextarea
         id="rf-description"
         :model-value="modelValue.description"
@@ -318,30 +268,13 @@ const canSubmit = computed(() => !props.loading && (props.isDirty || submitAttem
         @update:model-value="update('description', $event)"
         @blur="onBlur('description')"
       />
-    </section>
+    </UiFormSection>
 
-    <div class="hidden items-center justify-end gap-3 border-t border-ui-border pt-2 md:flex">
-      <UiButton variant="ghost" type="button" :disabled="loading" @click="emit('cancel')">
-        Huỷ
-      </UiButton>
-      <UiButton type="submit" :loading="loading" :disabled="!canSubmit">
-        {{ submitLabel }}
-      </UiButton>
-    </div>
-
-    <div
-      data-test="sticky-save-bar"
-      class="fixed inset-x-0 bottom-0 z-40 border-t border-ui-border bg-ui-deep/95 px-4 pt-3 backdrop-blur md:hidden"
-      :style="{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }"
-    >
-      <div class="flex items-center gap-2">
-        <UiButton class="flex-1" variant="ghost" type="button" :disabled="loading" @click="emit('cancel')">
-          Huỷ
-        </UiButton>
-        <UiButton class="flex-1" type="submit" :loading="loading" :disabled="!canSubmit" @click="onSubmit">
-          {{ submitLabel }}
-        </UiButton>
-      </div>
-    </div>
+    <UiFormActions
+      :submit-label="submitLabel"
+      :loading="loading"
+      :can-submit="canSubmit"
+      @cancel="emit('cancel')"
+    />
   </form>
 </template>

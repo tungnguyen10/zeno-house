@@ -175,6 +175,7 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', onDocumentClick)
 const triggerClass = computed(() =>
   clsx(
     'flex w-full items-center justify-between rounded-md border bg-ui-surface px-3 py-2 text-base sm:text-sm',
+    'min-h-11 sm:min-h-10',
     'transition-colors cursor-pointer select-none',
     'focus:outline-none focus:ring-2 focus:ring-offset-0',
     props.error

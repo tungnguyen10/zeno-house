@@ -24,6 +24,7 @@ import {
   watchEffect,
 } from 'vue'
 import { useBulkSelection } from '~/composables/useBulkSelection'
+import { useAppFormMode } from '~/composables/useAppFormMode'
 import UiButton from '~/components/ui/UiButton.vue'
 import UiCheckbox from '~/components/ui/UiCheckbox.vue'
 import UiDropdownMenu from '~/components/ui/UiDropdownMenu.vue'
@@ -35,7 +36,12 @@ import UiPagination from '~/components/ui/UiPagination.vue'
 import UiDefinitionList from '~/components/ui/UiDefinitionList.vue'
 import UiDefinitionItem from '~/components/ui/UiDefinitionItem.vue'
 import UiListPanel from '~/components/ui/UiListPanel.vue'
+import UiFormSection from '~/components/ui/UiFormSection.vue'
+import UiFormActions from '~/components/ui/UiFormActions.vue'
+import UiFormDraftBanner from '~/components/ui/UiFormDraftBanner.vue'
 import { ok, paginated, parseBody, parseQuery } from '../server/utils/api'
+
+const stateStore = new Map<string, ReturnType<typeof ref>>()
 
 config.global.components = {
   ...config.global.components,
@@ -50,6 +56,9 @@ config.global.components = {
   UiDefinitionList,
   UiDefinitionItem,
   UiListPanel,
+  UiFormSection,
+  UiFormActions,
+  UiFormDraftBanner,
 }
 
 // Nuxt auto-imports these into Vue SFCs at build-time. In vitest we don't run
@@ -59,9 +68,16 @@ for (const [name, fn] of Object.entries({
   computed, inject, isRef, nextTick, onBeforeMount, onBeforeUnmount, onMounted, onUnmounted,
   provide, reactive, readonly, ref, shallowRef, toRaw, toRef, toRefs, toValue, unref, useId, watch, watchEffect,
   useBulkSelection,
+  useAppFormMode,
 })) {
   vi.stubGlobal(name, fn)
 }
+
+// Minimal stand-in for Nuxt's `useState`: one shared ref per key, per test file.
+vi.stubGlobal('useState', <T>(key: string, init?: () => T) => {
+  if (!stateStore.has(key)) stateStore.set(key, ref(init?.()))
+  return stateStore.get(key)!
+})
 
 function appError(statusCode: number, code: string, message: string, details?: unknown): Error {
   const error = new Error(message) as Error & { statusCode: number; data: unknown }

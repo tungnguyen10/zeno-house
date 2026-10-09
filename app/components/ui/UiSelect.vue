@@ -259,7 +259,7 @@ const triggerClass = computed(() =>
   clsx(
     'flex w-full items-center justify-between rounded-md border bg-ui-surface pr-9 text-left text-ui-primary',
     'transition-colors focus:outline-none focus:ring-2 focus:ring-offset-0',
-    props.density === 'compact' ? 'py-1 text-sm sm:text-xs' : 'py-2 text-base sm:text-sm',
+    props.density === 'compact' ? 'py-1 text-sm sm:text-xs' : 'min-h-11 py-2 text-base sm:min-h-10 sm:text-sm',
     hasPrefix.value ? 'pl-9' : 'pl-3',
     props.error
       ? 'border-status-danger/50 focus:border-status-danger/60 focus:ring-status-danger/30'
