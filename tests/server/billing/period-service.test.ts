@@ -106,6 +106,18 @@ describe('BillingPeriodService.advanceStatus', () => {
     }))
   })
 
+  it('drops a hidden building from the period list scope', async () => {
+    list.mockResolvedValue([])
+    const { BuildingVisibilityRepository } = await import('../../../server/repositories/buildings/visibility')
+    vi.mocked(BuildingVisibilityRepository.findHiddenIds).mockResolvedValueOnce(['building-1'])
+    const { BillingPeriodService } = await import('../../../server/services/billing/periods')
+
+    await BillingPeriodService.list(event(), makeUser('manager'), {})
+    expect(list).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      buildingIds: [],
+    }))
+  })
+
   it('opens a period by building slug through id-or-slug lookup', async () => {
     const created = buildPeriod({ buildingId: 'building-1', periodYear: 2026, periodMonth: 6 })
     findBuildingByIdentifier.mockResolvedValue({ id: 'building-1', slug: 'toa-a' })

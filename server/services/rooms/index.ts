@@ -9,7 +9,7 @@ import type {
 import { RoomRepository, type RoomFilters } from '../../repositories/rooms'
 import { BulkActionRepository } from '../../repositories/bulk-actions'
 import { BuildingRepository } from '../../repositories/buildings'
-import { assertBuildingScope, canDeleteMasterData, getAssignedBuildingIds } from '../../utils/scope'
+import { assertBuildingScope, canDeleteMasterData, getVisibleBuildingIds } from '../../utils/scope'
 import { AuditService } from '../audit'
 import { AUDIT_ACTIONS } from '~/utils/constants/audit'
 
@@ -26,7 +26,7 @@ export const RoomService = {
   ): Promise<{ items: Room[]; total: number }> {
     requireCapability(user, 'rooms.read', 'Không có quyền xem danh sách phòng')
     let buildingId = filters.buildingId
-    const buildingIds = await getAssignedBuildingIds(event, user)
+    const buildingIds = await getVisibleBuildingIds(event, user)
     if (buildingId) {
       const building = await BuildingRepository.findByIdentifier(event, buildingId)
       if (!building) throwNotFound('Không tìm thấy tòa nhà')

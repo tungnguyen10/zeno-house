@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { limitSchema, orderSchema, pageSchema, searchQuerySchema, toArray } from './_shared'
+import { booleanQuerySchema, limitSchema, orderSchema, pageSchema, searchQuerySchema, toArray } from './_shared'
 import { selectAtLeastOne } from './messages'
 
 const daySchema = z.number().int().min(1).max(31)
@@ -79,11 +79,18 @@ export const buildingListQuerySchema = z.object({
   limit: limitSchema(100),
   q: searchQuerySchema,
   status: z.preprocess(toArray, z.array(buildingStatusSchema).min(1).optional()),
+  include_hidden: booleanQuerySchema,
   sort: buildingSortFieldSchema.optional().default('created_at'),
   order: buildingSortOrderSchema.optional().default('desc'),
 })
 
 export type BuildingListQuery = z.infer<typeof buildingListQuerySchema>
+
+export const buildingVisibilitySchema = z.object({
+  is_hidden: z.boolean(),
+})
+
+export type BuildingVisibilityInput = z.infer<typeof buildingVisibilitySchema>
 
 export const buildingBulkActionSchema = z.object({
   action: z.enum(['archive', 'activate', 'delete']),

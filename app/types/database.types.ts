@@ -1016,6 +1016,7 @@ export type Database = {
           electricity_pricing_type: string
           grace_period_days: number
           id: string
+          is_hidden: boolean
           meter_reading_day: number | null
           name: string
           operational_start_month: number | null
@@ -1043,6 +1044,7 @@ export type Database = {
           electricity_pricing_type?: string
           grace_period_days?: number
           id?: string
+          is_hidden?: boolean
           meter_reading_day?: number | null
           name: string
           operational_start_month?: number | null
@@ -1070,6 +1072,7 @@ export type Database = {
           electricity_pricing_type?: string
           grace_period_days?: number
           id?: string
+          is_hidden?: boolean
           meter_reading_day?: number | null
           name?: string
           operational_start_month?: number | null
@@ -1160,6 +1163,44 @@ export type Database = {
             columns: ["contract_id"]
             isOneToOne: false
             referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contract_checkout_final_bills: {
+        Row: {
+          checkout_id: string
+          id: string
+          issued_at: string
+          issued_by: string | null
+          operation_id: string
+          preview: Json
+          snapshot_hash: string
+        }
+        Insert: {
+          checkout_id: string
+          id?: string
+          issued_at?: string
+          issued_by?: string | null
+          operation_id: string
+          preview: Json
+          snapshot_hash: string
+        }
+        Update: {
+          checkout_id?: string
+          id?: string
+          issued_at?: string
+          issued_by?: string | null
+          operation_id?: string
+          preview?: Json
+          snapshot_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_checkout_final_bills_checkout_id_fkey"
+            columns: ["checkout_id"]
+            isOneToOne: true
+            referencedRelation: "contract_checkouts"
             referencedColumns: ["id"]
           },
         ]
@@ -1317,10 +1358,13 @@ export type Database = {
         Row: {
           actual_return_date: string
           building_id: string
+          charge_modes: Json
           contract_id: string
           created_at: string
           electricity: Json | null
+          financial_mode: string
           id: string
+          pricing_snapshot: Json | null
           reason: string
           returned_by: string | null
           returned_operation_id: string | null
@@ -1331,10 +1375,13 @@ export type Database = {
         Insert: {
           actual_return_date: string
           building_id: string
+          charge_modes?: Json
           contract_id: string
           created_at?: string
           electricity?: Json | null
+          financial_mode?: string
           id?: string
+          pricing_snapshot?: Json | null
           reason: string
           returned_by?: string | null
           returned_operation_id?: string | null
@@ -1345,10 +1392,13 @@ export type Database = {
         Update: {
           actual_return_date?: string
           building_id?: string
+          charge_modes?: Json
           contract_id?: string
           created_at?: string
           electricity?: Json | null
+          financial_mode?: string
           id?: string
+          pricing_snapshot?: Json | null
           reason?: string
           returned_by?: string | null
           returned_operation_id?: string | null
@@ -3386,6 +3436,15 @@ export type Database = {
         Returns: Json
       }
       contract_checkout_get: { Args: { p_contract_id: string }; Returns: Json }
+      contract_checkout_issue_final: {
+        Args: {
+          p_actor_id: string
+          p_contract_id: string
+          p_operation_id: string
+          p_snapshot_hash: string
+        }
+        Returns: Json
+      }
       contract_checkout_preview: {
         Args: { p_contract_id: string }
         Returns: Json
@@ -3407,12 +3466,22 @@ export type Database = {
           p_actor_id: string
           p_contract_id: string
           p_expected_updated_at: string
+          p_financial_mode?: string
           p_operation_id: string
         }
         Returns: Json
       }
       contract_checkout_save: {
         Args: { p_actor_id: string; p_contract_id: string; p_input: Json }
+        Returns: Json
+      }
+      contract_checkout_save_charge_modes: {
+        Args: {
+          p_actor_id: string
+          p_contract_id: string
+          p_expected_updated_at: string
+          p_modes: Json
+        }
         Returns: Json
       }
       contract_checkout_source_balance: {

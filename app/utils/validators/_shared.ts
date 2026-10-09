@@ -27,3 +27,18 @@ export const orderSchema = z.enum(['asc', 'desc'])
 /** Page size schema with a configurable maximum, defaults to 20. */
 export const limitSchema = (max = 200) =>
   z.coerce.number().int().min(1).max(max).optional().default(20)
+
+/**
+ * Boolean flag carried in a query string. `z.coerce.boolean()` is wrong here:
+ * it reads the string "false" as true.
+ */
+export const booleanQuerySchema = z.preprocess(
+  (v) => {
+    if (typeof v !== 'string') return v
+    const normalized = v.trim().toLowerCase()
+    if (normalized === 'true' || normalized === '1') return true
+    if (normalized === 'false' || normalized === '0' || normalized === '') return false
+    return v
+  },
+  z.boolean().optional().default(false),
+)

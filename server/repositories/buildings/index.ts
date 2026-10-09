@@ -102,6 +102,18 @@ async function attachServiceSummaries(event: H3Event, buildings: Building[]): Pr
 }
 
 export const BuildingRepository = {
+  async setVisibility(event: H3Event, id: string, isHidden: boolean): Promise<Building> {
+    const client = serverSupabaseClient(event)
+    const { data, error } = await client
+      .from('buildings')
+      .update({ is_hidden: isHidden })
+      .eq('id', id)
+      .select('*, rooms(count)')
+      .single()
+    if (error) throwDbError(error, 'buildings.setVisibility')
+    return mapBuilding(data as BuildingRow)
+  },
+
   async findManyByIds(event: H3Event, ids: string[]): Promise<Building[]> {
     const unique = [...new Set(ids)]
     if (unique.length === 0) return []

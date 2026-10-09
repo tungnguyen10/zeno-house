@@ -79,6 +79,16 @@ vi.stubGlobal('useState', <T>(key: string, init?: () => T) => {
   return stateStore.get(key)!
 })
 
+// `getVisibleBuildingIds` hits this on every scoped list request. Default to
+// "nothing hidden" so unrelated service tests keep their pre-visibility scope;
+// visibility tests override this mock per file.
+vi.mock('../server/repositories/buildings/visibility', () => ({
+  BuildingVisibilityRepository: {
+    findHiddenIds: vi.fn(async () => [] as string[]),
+    findVisibleIds: vi.fn(async () => [] as string[]),
+  },
+}))
+
 function appError(statusCode: number, code: string, message: string, details?: unknown): Error {
   const error = new Error(message) as Error & { statusCode: number; data: unknown }
   error.statusCode = statusCode

@@ -10,7 +10,7 @@ import { ContractOccupantRepository } from '../../repositories/contract-occupant
 import { RoomRepository } from '../../repositories/rooms'
 import { BuildingRepository } from '../../repositories/buildings'
 import { TenantRepository } from '../../repositories/tenants'
-import { assertBuildingScope, canDeleteMasterData, getAssignedBuildingIds } from '../../utils/scope'
+import { assertBuildingScope, canDeleteMasterData, getVisibleBuildingIds } from '../../utils/scope'
 import { AuditService } from '../audit'
 import { AUDIT_ACTIONS } from '~/utils/constants/audit'
 import { ContractAmendmentRepository } from '../../repositories/contract-amendments'
@@ -78,7 +78,7 @@ export const ContractService = {
     requireCapability(user, 'contracts.read', 'Không có quyền xem danh sách hợp đồng')
 
     let buildingId = filters.building_id
-    const buildingIds = await getAssignedBuildingIds(event, user)
+    const buildingIds = await getVisibleBuildingIds(event, user)
     if (buildingId) {
       const building = await BuildingRepository.findByIdentifier(event, buildingId)
       if (!building) throwNotFound('Building not found')

@@ -20,7 +20,7 @@ import { BuildingRepository } from '../../repositories/buildings'
 import { BuildingFixedCostRepository } from '../../repositories/operations-report/fixed-costs'
 import { BuildingExpenseRepository } from '../../repositories/operations-report/expenses'
 import { assertReason } from '../../utils/billing/reason'
-import { assertBuildingScope, getAssignedBuildingIds } from '../../utils/scope'
+import { assertBuildingScope, getVisibleBuildingIds } from '../../utils/scope'
 import { BillingAuditService } from './audit'
 import { ReserveFundService } from '../operations-report/reserve-funds'
 import { PrepaidExpenseService } from '../operations-report/prepaid-expenses'
@@ -144,7 +144,7 @@ export const BillingPeriodService = {
     if (!can(user, 'billing.read')) throwForbidden('Không có quyền xem kỳ vận hành')
 
     let buildingId = filters.building_id
-    const scopedBuildingIds = await getAssignedBuildingIds(event, user)
+    const scopedBuildingIds = await getVisibleBuildingIds(event, user)
     if (buildingId) {
       const building = await BuildingRepository.findByIdentifier(event, buildingId)
       if (!building) throwNotFound('Không tìm thấy tòa nhà')

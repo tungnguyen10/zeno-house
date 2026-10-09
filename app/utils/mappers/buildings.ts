@@ -17,6 +17,7 @@ export function mapBuilding(row: BuildingRow): Building {
     address: row.address,
     description: row.description,
     status: row.status as BuildingStatus,
+    isHidden: row.is_hidden ?? false,
     totalRooms: row.rooms[0]?.count ?? 0,
     serviceSummary: {
       totalCount: 0,

@@ -6,7 +6,7 @@ Zeno House uses Supabase Postgres. Schema history lives in `supabase/migrations`
 
 | Area | Migrations |
 | --- | --- |
-| Buildings | `20260514000000_create_buildings.sql`, `20260514000001_fix_buildings_rls.sql`, `20260514000003_buildings_drop_total_rooms.sql`, `20260517000000_building_operational_config.sql`, `20260614000000_add_building_slugs.sql`, `20260708010000_add_building_operational_start_period.sql` |
+| Buildings | `20260514000000_create_buildings.sql`, `20260514000001_fix_buildings_rls.sql`, `20260514000003_buildings_drop_total_rooms.sql`, `20260517000000_building_operational_config.sql`, `20260614000000_add_building_slugs.sql`, `20260708010000_add_building_operational_start_period.sql`, `20261009150000_building_visibility.sql` |
 | Rooms | `20260514000002_create_rooms.sql` |
 | Tenants | `20260514000004_create_tenants.sql`, `20260530100000_tenant_enrichment.sql` |
 | Tenant identity | `20260708020000_tenant_id_images.sql`, `20260716083605_add_tenant_identity_foundation.sql`, `20260717001405_tenant_self_identity_images.sql`, `20260722085743_tenant_roommate_portal_access.sql`, `20260729120000_harden_tenant_account_lifecycle.sql` |
@@ -41,6 +41,11 @@ Property and occupancy:
 - `contract_renewals`
 
 `buildings` now includes `operational_start_year` and `operational_start_month` to declare each building's first operating month. The pair is nullable but must be provided together.
+
+`buildings.is_hidden` is an admin-only presentation flag, independent of `status`. Archiving sets
+`status = 'inactive'`; hiding sets `is_hidden = true`. Neither changes the other. Hidden buildings
+are filtered out of list and aggregate reads in the service layer (see `getVisibleBuildingIds` in
+`server/utils/scope.ts`), never by RLS, so direct detail access keeps working.
 
 `tenant_user_links` maps one Supabase Auth user to one tenant record. Only an `active` link
 establishes tenant self-scope; unique constraints on both ids enforce the one-to-one mapping.

@@ -61,7 +61,10 @@ const meterReadingsPath = computed(() => `${buildingPath(props.building)}/meter-
               {{ building.name }}
             </h3>
             <!-- Active is the norm, so only the exception earns a badge and the row's width. -->
-            <UiStatusBadge v-if="building.status !== 'active'" :status="building.status" />
+            <div class="flex shrink-0 items-center gap-1.5">
+              <UiBadge v-if="building.isHidden" variant="warning">Đang ẩn</UiBadge>
+              <UiStatusBadge v-if="building.status !== 'active'" :status="building.status" />
+            </div>
           </div>
           <div class="mt-0.5 flex items-baseline justify-between gap-3 text-xs text-ui-muted">
             <span class="min-w-0 truncate" :title="building.address">{{ building.address }}</span>

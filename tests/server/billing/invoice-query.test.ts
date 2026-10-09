@@ -2,7 +2,7 @@ import { describe, expect, it, beforeEach, vi } from 'vitest'
 
 const listCrossPeriod = vi.fn()
 const findByIdentifier = vi.fn()
-const getAssignedBuildingIds = vi.fn()
+const getVisibleBuildingIds = vi.fn()
 
 vi.mock('../../../server/repositories/invoices', () => ({
   CrossPeriodInvoiceRepository: {
@@ -17,7 +17,7 @@ vi.mock('../../../server/repositories/buildings', () => ({
 }))
 
 vi.mock('../../../server/utils/scope', () => ({
-  getAssignedBuildingIds,
+  getVisibleBuildingIds,
 }))
 
 function user(role: 'admin' | 'owner' | 'manager', extra: Record<string, unknown> = {}) {
@@ -36,7 +36,7 @@ describe('InvoiceQueryService', () => {
     listCrossPeriod.mockResolvedValue({ items: [], total: 0 })
     findByIdentifier.mockResolvedValue({ id: 'building-1', slug: 'toa-a' })
     // Admin is unscoped by default; scoped tests override per-case.
-    getAssignedBuildingIds.mockResolvedValue(null)
+    getVisibleBuildingIds.mockResolvedValue(null)
   })
 
   it('derives overdue from issued invoices with unpaid balance past due date', async () => {
@@ -117,7 +117,7 @@ describe('InvoiceQueryService', () => {
   it('forbids a manager from filtering a building outside assigned ids when present', async () => {
     const { InvoiceQueryService } = await import('../../../server/services/billing/invoice-query')
     findByIdentifier.mockResolvedValue({ id: 'building-3', slug: 'toa-c' })
-    getAssignedBuildingIds.mockResolvedValue(['building-1', 'building-2'])
+    getVisibleBuildingIds.mockResolvedValue(['building-1', 'building-2'])
 
     await expect(InvoiceQueryService.list({} as never, user('manager'), {
       building_id: 'toa-c',
@@ -129,7 +129,7 @@ describe('InvoiceQueryService', () => {
 
   it('passes assigned manager buildings as repository scope when no building filter is selected', async () => {
     const { InvoiceQueryService } = await import('../../../server/services/billing/invoice-query')
-    getAssignedBuildingIds.mockResolvedValue(['building-1', 'building-2'])
+    getVisibleBuildingIds.mockResolvedValue(['building-1', 'building-2'])
 
     await InvoiceQueryService.list({} as never, user('manager'), {
       status: [],
@@ -146,7 +146,7 @@ describe('InvoiceQueryService', () => {
 
   it('scopes owner invoice queries to owner assigned buildings', async () => {
     const { InvoiceQueryService } = await import('../../../server/services/billing/invoice-query')
-    getAssignedBuildingIds.mockResolvedValue(['building-9'])
+    getVisibleBuildingIds.mockResolvedValue(['building-9'])
 
     await InvoiceQueryService.list({} as never, user('owner'), {
       status: [],
@@ -163,7 +163,7 @@ describe('InvoiceQueryService', () => {
 
   it('returns an empty list for managers without assigned buildings', async () => {
     const { InvoiceQueryService } = await import('../../../server/services/billing/invoice-query')
-    getAssignedBuildingIds.mockResolvedValue([])
+    getVisibleBuildingIds.mockResolvedValue([])
 
     const result = await InvoiceQueryService.list({} as never, user('manager'), {
       status: [],

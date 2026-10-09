@@ -6,11 +6,12 @@ import type {
   BuildingBulkActionInput,
   BuildingCreateInput,
   BuildingUpdateInput,
+  BuildingVisibilityInput,
 } from '~/utils/validators/buildings'
 import { BuildingRepository } from '../../repositories/buildings'
 import { BulkActionRepository } from '../../repositories/bulk-actions'
 import { AssignmentRepository } from '../../repositories/assignments'
-import { assertBuildingScope, getAssignedBuildingIds } from '../../utils/scope'
+import { assertBuildingScope, getAssignedBuildingIds, getVisibleBuildingIds } from '../../utils/scope'
 import { AuditService } from '../audit'
 import { AUDIT_ACTIONS } from '~/utils/constants/audit'
 
@@ -19,6 +20,7 @@ export interface BuildingListOptions {
   limit: number
   q?: string
   status?: ('active' | 'inactive')[]
+  include_hidden?: boolean
   sort?: 'name' | 'created_at' | 'total_rooms'
   order?: 'asc' | 'desc'
   buildingIds?: string[] | null
@@ -36,7 +38,12 @@ export const BuildingService = {
     opts: BuildingListOptions,
   ): Promise<{ items: Building[]; total: number }> {
     requireCapability(user, 'buildings.read', 'Không có quyền xem danh sách tòa nhà')
-    const buildingIds = await getAssignedBuildingIds(event, user)
+    if (opts.include_hidden) {
+      requireCapability(user, 'buildings.visibility.manage', 'Không có quyền xem tòa nhà đang ẩn')
+    }
+    const buildingIds = opts.include_hidden
+      ? await getAssignedBuildingIds(event, user)
+      : await getVisibleBuildingIds(event, user)
     return BuildingRepository.findAll(event, { ...opts, buildingIds })
   },
 
@@ -119,6 +126,34 @@ export const BuildingService = {
       entity_id: updated.id,
       before_data: existing,
       after_data: updated,
+    })
+    return updated
+  },
+
+  async setVisibility(
+    event: H3Event,
+    user: AuthUser,
+    id: string,
+    input: BuildingVisibilityInput,
+  ): Promise<Building> {
+    // Hiding removes a building from every list and aggregate for every user, so
+    // it is gated separately from `buildings.update`.
+    requireCapability(user, 'buildings.visibility.manage', 'Không có quyền đổi hiển thị tòa nhà')
+    const existing = await BuildingRepository.findByIdentifier(event, id)
+    if (!existing) throwNotFound('Không tìm thấy tòa nhà')
+    if (existing.isHidden === input.is_hidden) return existing
+
+    const updated = await BuildingRepository.setVisibility(event, existing.id, input.is_hidden)
+    event.context.__visibleBuildingScope = undefined
+    event.context.__hiddenBuildingIds = undefined
+
+    await AuditService.append(event, user, {
+      building_id: updated.id,
+      action: AUDIT_ACTIONS.BUILDING_VISIBILITY_CHANGED,
+      entity_type: 'building',
+      entity_id: updated.id,
+      before_data: { is_hidden: existing.isHidden },
+      after_data: { is_hidden: updated.isHidden },
     })
     return updated
   },

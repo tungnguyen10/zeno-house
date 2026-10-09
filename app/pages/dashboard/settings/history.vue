@@ -211,7 +211,7 @@ function clearFilters() {
         </div>
 
         <!-- Card -->
-        <div class="overflow-hidden rounded-lg border border-ui-border bg-ui-surface/40">
+        <div class="-mx-4 overflow-hidden border-y border-ui-border bg-ui-surface/40 sm:mx-0 sm:rounded-lg sm:border">
           <div
             v-for="event in group.events"
             :key="event.id"

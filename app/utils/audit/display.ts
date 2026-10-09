@@ -171,6 +171,7 @@ const ACTION_SUFFIX_LABELS: Record<string, string> = {
 const ACTION_LABELS: Record<string, string> = {
   'user.access_request.reconciled': 'Đối soát yêu cầu truy cập',
   'building.invoice_email_settings.updated': 'Cập nhật gửi hoá đơn tự động',
+  'building.visibility_changed': 'Đổi hiển thị toà nhà',
   'tenant.activated': 'Khôi phục khách thuê',
   'building_expense.receipt_attached': 'Gắn biên lai',
   'building_expense.receipt_removed': 'Xóa biên lai',

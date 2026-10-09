@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const getSummary = vi.fn()
-const getAssignedBuildingIds = vi.fn()
+const getVisibleBuildingIds = vi.fn()
 
 vi.mock('../../../server/repositories/dashboard', () => ({
   DashboardRepository: { getSummary },
 }))
-vi.mock('../../../server/utils/scope', () => ({ getAssignedBuildingIds }))
+vi.mock('../../../server/utils/scope', () => ({ getVisibleBuildingIds }))
 
 describe('DashboardService scope cache', () => {
   beforeEach(async () => {
@@ -22,7 +22,7 @@ describe('DashboardService scope cache', () => {
 
   it('reuses the same sorted scope and isolates different scopes', async () => {
     const { DashboardService } = await import('../../../server/services/dashboard')
-    getAssignedBuildingIds
+    getVisibleBuildingIds
       .mockResolvedValueOnce(['building-b', 'building-a'])
       .mockResolvedValueOnce(['building-a', 'building-b'])
       .mockResolvedValueOnce(['building-c'])

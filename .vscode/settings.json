@@ -32,6 +32,8 @@
             "matchCommandLine": true
         },
         "npm run lint": true,
-        "npm run typecheck": true
+        "npm run typecheck": true,
+        "command": true,
+        "supabase": true
     }
 }

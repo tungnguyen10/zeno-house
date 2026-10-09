@@ -24,6 +24,8 @@ export interface Building {
   address: string
   description: string | null
   status: BuildingStatus
+  /** Admin-only switch: hidden buildings drop out of lists and aggregates, direct links still resolve. */
+  isHidden: boolean
   totalRooms: number
   serviceSummary: BuildingServiceSummary
   // Operational config

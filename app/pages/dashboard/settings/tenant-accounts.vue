@@ -348,7 +348,7 @@ onMounted(() => {
     <section v-if="canReconcileOrphans" class="mt-8 space-y-3" aria-labelledby="orphan-heading">
       <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h2 id="orphan-heading" class="text-lg font-semibold text-ui-primary">Tài khoản Auth mồ côi</h2>
+          <h2 id="orphan-heading" class="text-xs font-semibold uppercase tracking-wide text-ui-muted">Tài khoản Auth mồ côi</h2>
           <p class="mt-1 text-sm text-ui-muted">Tài khoản mang vai trò tenant nhưng không còn liên kết tới hồ sơ người thuê.</p>
         </div>
         <UiButton variant="secondary" size="sm" :loading="orphansLoading" @click="loadOrphans">
@@ -366,11 +366,11 @@ onMounted(() => {
         title="Không phát hiện tài khoản mồ côi"
         description="Mọi tài khoản tenant hiện có đều đang được liên kết."
       />
-      <div v-else class="space-y-2">
+      <div v-else class="-mx-4 space-y-2 sm:mx-0">
         <article
           v-for="orphan in orphans"
           :key="orphan.authUserId"
-          class="flex flex-col gap-3 rounded-xl border border-status-warning/30 bg-status-warning/5 p-4 sm:flex-row sm:items-center sm:justify-between"
+          class="flex flex-col gap-3 border-y border-status-warning/30 bg-status-warning/5 p-4 sm:flex-row sm:items-center sm:justify-between sm:rounded-xl sm:border"
         >
           <div class="min-w-0">
             <div class="flex flex-wrap items-center gap-2">

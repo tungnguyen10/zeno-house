@@ -287,68 +287,64 @@ function managerInitials(row: ManagedUserWithAssignments): string {
     </UiPageHeader>
 
     <!-- Create user -->
-    <form
-      class="space-y-4 rounded-lg border border-ui-border bg-ui-surface p-4"
-      @submit.prevent="handleCreate"
-    >
-      <p class="text-sm font-semibold text-ui-primary">
-        {{ authStore.canCreateOwner ? 'Tạo owner hoặc quản lý' : 'Tạo quản lý' }}
-      </p>
-      <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <UiInput
-          v-model="form.email"
-          type="email"
-          placeholder="Email"
-          aria-label="Email"
-          autocomplete="off"
-        />
-        <UiInput
-          v-model="form.password"
-          type="text"
-          placeholder="Mật khẩu"
-          aria-label="Mật khẩu"
-          autocomplete="off"
-        />
-        <UiInput
-          v-model="form.full_name"
-          type="text"
-          placeholder="Họ tên (tùy chọn)"
-          aria-label="Họ tên"
-        />
-        <UiSelect
-          v-model="form.role"
-          :options="roleOptions"
-          aria-label="Vai trò"
-          :disabled="roleOptions.length === 1"
-        />
-      </div>
-
-      <div v-if="buildings.length > 0">
-        <p class="mb-1.5 text-xs text-ui-muted">
-          Tòa nhà (tùy chọn)
-        </p>
-        <div class="flex flex-wrap gap-2">
-          <button
-            v-for="b in buildings"
-            :key="b.id"
-            type="button"
-            class="rounded-md border px-2.5 py-1 text-xs transition-colors"
-            :class="form.building_ids.includes(b.id)
-              ? 'border-ui-accent bg-ui-accent/15 text-ui-accent'
-              : 'border-ui-border bg-ui-deep/40 text-ui-muted hover:border-ui-border/80'"
-            @click="toggleFormBuilding(b.id)"
-          >
-            {{ b.name }}
-          </button>
+    <form @submit.prevent="handleCreate">
+      <UiFormSection :title="authStore.canCreateOwner ? 'Tạo owner hoặc quản lý' : 'Tạo quản lý'">
+        <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <UiInput
+            v-model="form.email"
+            type="email"
+            placeholder="Email"
+            aria-label="Email"
+            autocomplete="off"
+          />
+          <UiInput
+            v-model="form.password"
+            type="text"
+            placeholder="Mật khẩu"
+            aria-label="Mật khẩu"
+            autocomplete="off"
+          />
+          <UiInput
+            v-model="form.full_name"
+            type="text"
+            placeholder="Họ tên (tùy chọn)"
+            aria-label="Họ tên"
+          />
+          <UiSelect
+            v-model="form.role"
+            :options="roleOptions"
+            aria-label="Vai trò"
+            :disabled="roleOptions.length === 1"
+          />
         </div>
-      </div>
 
-      <div class="flex justify-end">
-        <UiButton type="submit" :loading="createBusy">
-          <IconPlus class="h-3.5 w-3.5" aria-hidden="true" />
-          Tạo người dùng
-        </UiButton>
-      </div>
+        <div v-if="buildings.length > 0">
+          <p class="mb-1.5 text-xs text-ui-muted">
+            Tòa nhà (tùy chọn)
+          </p>
+          <div class="flex flex-wrap gap-2">
+            <button
+              v-for="b in buildings"
+              :key="b.id"
+              type="button"
+              class="inline-flex min-h-9 items-center rounded-md border px-3 text-xs transition-colors sm:min-h-0 sm:px-2.5 sm:py-1"
+              :class="form.building_ids.includes(b.id)
+                ? 'border-ui-accent bg-ui-accent/15 text-ui-accent'
+                : 'border-ui-border bg-ui-deep/40 text-ui-muted hover:border-ui-border/80'"
+              @click="toggleFormBuilding(b.id)"
+            >
+              {{ b.name }}
+            </button>
+          </div>
+        </div>
+
+        <div class="flex justify-end">
+          <UiButton type="submit" :loading="createBusy">
+            <IconPlus class="h-3.5 w-3.5" aria-hidden="true" />
+            Tạo người dùng
+          </UiButton>
+        </div>
+      </UiFormSection>
     </form>
 
     <!-- Buildings without manager alert -->
@@ -381,11 +377,11 @@ function managerInitials(row: ManagedUserWithAssignments): string {
     />
 
     <!-- User list -->
-    <div v-else class="space-y-3">
+    <div v-else class="-mx-4 space-y-3 sm:mx-0">
       <div
         v-for="row in users"
         :key="row.user.id"
-        class="rounded-lg border border-ui-border bg-ui-surface"
+        class="border-y border-ui-border bg-ui-surface sm:rounded-lg sm:border"
       >
         <!-- Card header -->
         <div class="flex flex-col gap-3 border-b border-ui-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between">

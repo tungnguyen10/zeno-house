@@ -3,7 +3,7 @@ import type { AuthUser } from '~/types/auth'
 
 const mocks = vi.hoisted(() => ({
   resolveTenantId: vi.fn(),
-  getAssignedBuildingIds: vi.fn(),
+  getVisibleBuildingIds: vi.fn(),
   listByTenantId: vi.fn(),
   resolveHousing: vi.fn(),
   create: vi.fn(),
@@ -16,7 +16,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('../../../server/utils/scope', () => ({
   resolveTenantId: mocks.resolveTenantId,
-  getAssignedBuildingIds: mocks.getAssignedBuildingIds,
+  getVisibleBuildingIds: mocks.getVisibleBuildingIds,
 }))
 vi.mock('../../../server/repositories/tenant-portal/requests', () => ({
   TenantSupportRequestRepository: {
@@ -65,7 +65,7 @@ async function service() {
 beforeEach(() => {
   vi.clearAllMocks()
   mocks.resolveTenantId.mockResolvedValue('tenant-1')
-  mocks.getAssignedBuildingIds.mockResolvedValue(['building-1'])
+  mocks.getVisibleBuildingIds.mockResolvedValue(['building-1'])
   mocks.listByTenantId.mockResolvedValue([stored])
   mocks.resolveHousing.mockResolvedValue({
     contractId: 'contract-1',
@@ -238,12 +238,12 @@ describe('TenantSupportRequestService operator scope', () => {
 
     await svc.listForOperator({ context: {} } as never, user)
 
-    expect(mocks.getAssignedBuildingIds).toHaveBeenCalledWith(expect.anything(), user)
+    expect(mocks.getVisibleBuildingIds).toHaveBeenCalledWith(expect.anything(), user)
     expect(mocks.listByBuildingIds).toHaveBeenCalledWith(expect.anything(), ['building-1'])
   })
 
   it('passes null scope for an unscoped admin', async () => {
-    mocks.getAssignedBuildingIds.mockResolvedValue(null)
+    mocks.getVisibleBuildingIds.mockResolvedValue(null)
     const svc = await service()
 
     await svc.listForOperator({ context: {} } as never, admin)
@@ -256,6 +256,6 @@ describe('TenantSupportRequestService operator scope', () => {
 
     await expect(svc.listForOperator({ context: {} } as never, tenant))
       .rejects.toMatchObject({ statusCode: 403 })
-    expect(mocks.getAssignedBuildingIds).not.toHaveBeenCalled()
+    expect(mocks.getVisibleBuildingIds).not.toHaveBeenCalled()
   })
 })

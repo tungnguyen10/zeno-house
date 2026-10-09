@@ -8,7 +8,7 @@ import type { AiMeterImportPayload } from '~/utils/validators/ai'
 import { MeterReadingRepository } from '../../repositories/meter-readings'
 import { BuildingRepository } from '../../repositories/buildings'
 import { RoomRepository } from '../../repositories/rooms'
-import { assertBuildingScope, getAssignedBuildingIds } from '../../utils/scope'
+import { assertBuildingScope, getVisibleBuildingIds } from '../../utils/scope'
 
 export interface MeterReadingFilters {
   room_id?: string
@@ -30,7 +30,7 @@ export const MeterReadingService = {
     if (!can(_user, 'meter-readings.read')) throwForbidden('Không có quyền xem chỉ số đồng hồ')
 
     let roomId = filters.room_id
-    const buildingIds = await getAssignedBuildingIds(event, _user)
+    const buildingIds = await getVisibleBuildingIds(event, _user)
     if (roomId) {
       const room = await RoomRepository.findByIdentifier(event, roomId)
       if (!room) throwNotFound('Không tìm thấy phòng')
