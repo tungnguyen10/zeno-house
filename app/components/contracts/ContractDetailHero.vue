@@ -55,7 +55,7 @@ onKeyStroke('Escape', () => {
 
 <template>
   <UiSurfacePanel as="section">
-    <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+    <div class="flex items-start justify-between gap-3">
       <div class="min-w-0">
         <div class="flex flex-wrap items-center gap-2">
           <h1 class="truncate text-xl font-semibold text-ui-primary">{{ contract.contractCode }}</h1>
@@ -148,14 +148,15 @@ onKeyStroke('Escape', () => {
       </div>
     </div>
 
-    <dl class="mt-4 grid grid-cols-1 divide-y divide-ui-border overflow-hidden rounded-lg border border-ui-border bg-ui-deep/30 sm:grid-cols-4 sm:divide-x sm:divide-y-0">
-      <div class="px-4 py-2.5">
+    <dl class="mt-4 grid grid-cols-2 divide-x divide-ui-border overflow-hidden rounded-lg border border-ui-border bg-ui-deep/30 sm:grid-cols-4">
+      <!-- Hidden below sm: tenant/room already shown in the header line above; repeating them burns mobile vertical space. -->
+      <div class="hidden px-4 py-2.5 sm:block">
         <dt class="text-xs text-ui-muted">Khách thuê</dt>
         <dd class="mt-0.5 truncate text-sm font-medium text-ui-primary">
           <NuxtLink :to="`/dashboard/tenants/${contract.tenant.code}`" class="hover:text-ui-accent">{{ contract.tenant.fullName }}</NuxtLink>
         </dd>
       </div>
-      <div class="px-4 py-2.5">
+      <div class="hidden px-4 py-2.5 sm:block">
         <dt class="text-xs text-ui-muted">Phòng</dt>
         <dd class="mt-0.5 truncate text-sm font-medium text-ui-primary">
           <NuxtLink :to="`/dashboard/rooms/${contract.room.code}`" class="hover:text-ui-accent">

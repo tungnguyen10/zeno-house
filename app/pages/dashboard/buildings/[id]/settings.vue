@@ -825,7 +825,7 @@ const activeSectionId = computed(() => {
       </div>
     </div>
 
-    <div class="sticky top-0 z-10 -mx-1 overflow-x-auto border-y border-ui-border bg-ui-canvas/95 px-1 py-2 backdrop-blur xl:hidden lg:top-16">
+    <div class="sticky top-0 z-10 -mx-1 overflow-x-auto bg-ui-canvas/95 px-1 py-2 backdrop-blur xl:hidden lg:top-16">
       <nav class="flex items-center gap-2">
         <a
           v-for="section in settingsSections"

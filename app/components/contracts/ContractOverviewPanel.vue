@@ -82,17 +82,17 @@ const lifecycleTextClass: Record<LifecycleTone, string> = {
     </div>
 
     <!-- KPI strip -->
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
-      <div class="space-y-1">
-        <p class="text-xs uppercase tracking-wide text-ui-muted">Giá thuê / tháng</p>
+    <div class="flex flex-nowrap gap-5 overflow-x-auto no-scrollbar pt-2 sm:grid sm:grid-cols-3 sm:gap-4 sm:overflow-visible">
+      <div class="shrink-0 space-y-1 sm:shrink">
+        <p class="whitespace-nowrap text-xs uppercase tracking-wide text-ui-muted">Giá thuê / tháng</p>
         <p class="text-xl font-semibold text-ui-primary tabular-nums">{{ formatCurrency(contract.monthlyRent) }}</p>
       </div>
-      <div class="space-y-1 sm:border-l sm:border-ui-border sm:pl-4">
-        <p class="text-xs uppercase tracking-wide text-ui-muted">Tiền đặt cọc</p>
+      <div class="shrink-0 space-y-1 border-l border-ui-border pl-4 sm:shrink">
+        <p class="whitespace-nowrap text-xs uppercase tracking-wide text-ui-muted">Tiền đặt cọc</p>
         <p class="text-xl font-semibold text-ui-primary tabular-nums">{{ formatCurrency(contract.deposit) }}</p>
       </div>
-      <div class="space-y-1 sm:border-l sm:border-ui-border sm:pl-4">
-        <p class="text-xs uppercase tracking-wide text-ui-muted">Người ở</p>
+      <div class="shrink-0 space-y-1 border-l border-ui-border pl-4 sm:shrink">
+        <p class="whitespace-nowrap text-xs uppercase tracking-wide text-ui-muted">Người ở</p>
         <p class="text-xl font-semibold text-ui-primary tabular-nums">
           {{ activeOccupantCount }}<span class="text-sm text-ui-muted font-normal">/{{ contract.occupantCount }}</span>
         </p>

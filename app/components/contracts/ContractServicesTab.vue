@@ -53,12 +53,83 @@ const columns = computed<UiTableColumn<ContractService>[]>(() => [
 </script>
 
 <template>
+  <!-- Mobile: card list, desktop table columns don't fit comfortably at this density -->
+  <div class="divide-y divide-ui-border overflow-hidden rounded-xl border border-ui-border bg-ui-surface md:hidden">
+    <div v-if="loading" class="space-y-2 p-3">
+      <UiSkeleton class="h-20 w-full" />
+      <UiSkeleton class="h-20 w-full" />
+    </div>
+    <UiEmptyState
+      v-else-if="services.length === 0"
+      title="Chưa có dịch vụ nào"
+      description="Chưa có dịch vụ nào được cấu hình cho hợp đồng này"
+    />
+    <div v-for="service in services" v-else :key="service.id" class="flex flex-col gap-2 p-3">
+      <div class="flex items-start justify-between gap-2">
+        <span :class="[!service.isEnabled && 'opacity-50', 'min-w-0 truncate text-sm font-medium text-ui-primary']">
+          {{ service.catalog.name }}
+        </span>
+        <div class="flex shrink-0 items-center gap-2">
+          <UiToggle
+            :model-value="service.isEnabled"
+            :aria-label="`Bật/tắt ${service.catalog.name}`"
+            size="sm"
+            @update:model-value="handleToggle(service)"
+          />
+          <UiButton
+            v-if="canDelete"
+            unstyled
+            class="rounded p-1 text-ui-muted transition-colors hover:bg-status-danger/10 hover:text-status-danger focus-visible:outline-none"
+            :aria-label="`Xoá dịch vụ ${service.catalog.name}`"
+            @click="emit('delete', service.id)"
+          >
+            <IconTrash class="h-4 w-4" aria-hidden="true" />
+          </UiButton>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <UiInput
+          label="Đơn giá"
+          density="compact"
+          type="number"
+          number-mode="currency"
+          :model-value="String(service.amount)"
+          @update:model-value="(v) => handleAmountInput(service, v as string)"
+        />
+        <UiInput
+          label="Số lượng"
+          density="compact"
+          type="number"
+          number-mode="integer"
+          :model-value="String(service.quantity)"
+          @update:model-value="(v) => handleQuantityInput(service, v as string)"
+        />
+      </div>
+      <UiInput
+        label="Ghi chú"
+        density="compact"
+        type="text"
+        :model-value="service.notes ?? ''"
+        placeholder="Ghi chú..."
+        @update:model-value="(v) => handleNotesInput(service, v as string)"
+      />
+      <div class="flex items-center justify-between text-xs">
+        <span class="text-ui-muted">Thành tiền</span>
+        <span :class="[!service.isEnabled && 'line-through text-ui-muted', 'font-medium text-ui-primary']">
+          {{ subtotal(service).toLocaleString('vi-VN') }}đ
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Desktop: dense table -->
   <UiTable
     :rows="services"
     :columns="columns"
     :loading="loading"
     empty-title="Chưa có dịch vụ nào"
     empty-description="Chưa có dịch vụ nào được cấu hình cho hợp đồng này"
+    class="hidden md:block"
   >
     <template #cell-name="{ row }">
       <span :class="[!row.isEnabled && 'opacity-50', 'font-medium text-ui-primary']">{{ row.catalog.name }}</span>

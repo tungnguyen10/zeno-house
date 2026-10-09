@@ -63,7 +63,7 @@ const metrics = computed<Array<{ label: string; value: string; tone: Tone; capti
 </script>
 
 <template>
-  <div class="sticky top-0 z-20 -mx-1 border-y border-ui-border bg-ui-canvas px-3 py-2 lg:top-16">
+  <div class="sticky top-0 z-20 -mx-1 bg-ui-canvas px-3 py-2 lg:top-16">
     <div v-if="loading" class="flex gap-4">
       <UiSkeleton v-for="i in 5" :key="i" class="h-5 w-28" />
     </div>

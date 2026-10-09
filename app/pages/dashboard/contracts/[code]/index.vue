@@ -27,7 +27,20 @@ const { contract, isLoading, error, refresh: refreshContract } = useContractDeta
 const checkout = useContractCheckout(id)
 const { bundle: checkoutBundle, isLoading: checkoutLoading, error: checkoutError } = checkout
 
+// Checkout section is noise on a freshly-signed active contract; only surface it once the
+// contract is actually ending (or the user explicitly asks for an early checkout).
+const CHECKOUT_VISIBILITY_WINDOW_DAYS = 60
+const forceShowCheckout = ref(false)
+const checkoutSectionVisible = computed(() => {
+  if (!contract.value) return false
+  if (contract.value.status !== 'active') return true
+  if (forceShowCheckout.value) return true
+  const daysRemaining = Math.ceil((new Date(contract.value.endDate).getTime() - Date.now()) / (24 * 60 * 60 * 1000))
+  return daysRemaining <= CHECKOUT_VISIBILITY_WINDOW_DAYS
+})
+
 async function beginCheckout() {
+  forceShowCheckout.value = true
   if (checkoutLoading.value || checkoutError.value) {
     await checkout.refresh()
     if (checkoutError.value) { toast.error(checkoutError.value); return }
@@ -261,7 +274,7 @@ function sectionLinkClass(sectionId: string) {
         </div>
       </UiAlert>
 
-      <nav class="sticky top-0 z-20 mt-4 overflow-x-auto border-y border-ui-border bg-ui-deep py-2 lg:top-16">
+      <nav class="sticky top-0 z-20 mt-4 overflow-x-auto bg-ui-canvas py-2 lg:top-16">
         <div class="flex min-w-max gap-1 rounded-full bg-ui-chrome p-1 text-sm lg:gap-2 lg:rounded-none lg:bg-transparent lg:p-0">
           <a href="#overview" :class="sectionLinkClass('overview')">Tổng quan</a>
           <a href="#amendments" :class="sectionLinkClass('amendments')">Phụ lục</a>
@@ -269,9 +282,11 @@ function sectionLinkClass(sectionId: string) {
           <a href="#payments" :class="sectionLinkClass('payments')">Thanh toán</a>
           <a href="#services" :class="sectionLinkClass('services')">Dịch vụ</a>
           <a href="#meter-readings" :class="sectionLinkClass('meter-readings')">Chỉ số</a>
-          <a v-if="checkoutBundle?.enabled" href="#checkout" :class="sectionLinkClass('checkout')">Trả phòng</a>
+          <a v-if="checkoutSectionVisible && checkoutBundle?.enabled" href="#checkout" :class="sectionLinkClass('checkout')">Trả phòng</a>
           <a href="#history" :class="sectionLinkClass('history')">Lịch sử</a>
         </div>
+        <!-- Edge fade hints the pill track scrolls further on mobile; desktop nav never overflows. -->
+        <div class="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-ui-canvas to-transparent lg:hidden" aria-hidden="true" />
       </nav>
 
       <ContractOverviewPanel
@@ -344,6 +359,7 @@ function sectionLinkClass(sectionId: string) {
         :error="checkoutError"
         :contract-code="contract.contractCode"
         :contract-status="contract.status"
+        :visible="checkoutSectionVisible"
         :can-manage="authStore.can('contracts.update')"
         :can-settle="authStore.can('contracts.settle')"
         :can-issue="authStore.can('billing.write')"
