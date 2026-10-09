@@ -10,7 +10,7 @@ import { ContractOccupantRepository } from '../../repositories/contract-occupant
 import { RoomRepository } from '../../repositories/rooms'
 import { BuildingRepository } from '../../repositories/buildings'
 import { TenantRepository } from '../../repositories/tenants'
-import { assertBuildingScope, canDeleteMasterData, getAssignedBuildingIds } from '../../utils/scope'
+import { assertBuildingScope, canDeleteMasterData, getVisibleBuildingIds } from '../../utils/scope'
 import { AuditService } from '../audit'
 import { AUDIT_ACTIONS } from '~/utils/constants/audit'
 import { ContractAmendmentRepository } from '../../repositories/contract-amendments'
@@ -78,7 +78,7 @@ export const ContractService = {
     requireCapability(user, 'contracts.read', 'Không có quyền xem danh sách hợp đồng')
 
     let buildingId = filters.building_id
-    const buildingIds = await getAssignedBuildingIds(event, user)
+    const buildingIds = await getVisibleBuildingIds(event, user)
     if (buildingId) {
       const building = await BuildingRepository.findByIdentifier(event, buildingId)
       if (!building) throwNotFound('Building not found')
@@ -200,6 +200,9 @@ export const ContractService = {
     const newTenantId = input.tenant_id ?? existing.tenantId
     const wasActive = existing.status === 'active'
     const willBeActive = newStatus === 'active'
+    if (wasActive && !willBeActive) {
+      throwConflict('Hãy dùng Trả phòng để ghi nhận bàn giao trước khi kết thúc hợp đồng.', { reason: 'CHECKOUT_REQUIRED' })
+    }
     const roomChanged = newRoomId !== existing.roomId
     const correlationId = randomUUID()
     if (roomChanged) {
@@ -291,16 +294,14 @@ export const ContractService = {
     id: string,
     opts: { force?: boolean; reason: string; emitAudit?: boolean },
   ): Promise<ContractWithDetails | undefined> {
-    let existing = await ContractRepository.findByIdentifier(event, id)
+    const existing = await ContractRepository.findByIdentifier(event, id)
     if (!existing) throwNotFound('Không tìm thấy hợp đồng')
     await assertBuildingScope(event, user, existing.buildingId, 'write')
     if (!await canDeleteMasterData(event, user, existing.buildingId)) {
       throwForbidden('Không có quyền xoá hợp đồng trong tòa nhà này')
     }
 
-    if (opts.force && existing.status === 'active') {
-      existing = await this.update(event, user, existing.id, { status: 'terminated' })
-    }
+    if (existing.status === 'active') throwDeleteConflict({ reason: 'ACTIVE_CONTRACT' })
 
     const [issuedBillingPeriods, paidPayments, nonHandoverMeterReadings, publishedAmendments] = await Promise.all([
       ContractRepository.countBillingPeriodsForContract(event, existing.id),
@@ -310,7 +311,6 @@ export const ContractService = {
     ])
 
     const details: ContractDeleteConflictDetails = {
-      ...(!opts.force && existing.status === 'active' ? { reason: 'ACTIVE_CONTRACT' as const } : {}),
       ...(issuedBillingPeriods > 0 ? { issuedBillingPeriods } : {}),
       ...(paidPayments > 0 ? { paidPayments } : {}),
       ...(nonHandoverMeterReadings > 0 ? { nonHandoverMeterReadings } : {}),
@@ -338,59 +338,14 @@ export const ContractService = {
   ): Promise<ContractBulkActionResult> {
     requireCapability(user, 'contracts.update', 'Không có quyền thao tác hàng loạt')
 
+    if (input.action === 'terminate') {
+      throwConflict('Mở từng hợp đồng trong danh sách cần xử lý để nhập ngày, lý do và chỉ số bàn giao.', { reason: 'CHECKOUT_REQUIRED' })
+    }
+
     const succeeded: string[] = []
     const failed: { id: string; reason: string }[] = []
     const scopes = await BulkActionRepository.resolveBuildingScopes(event, 'contract', input.ids)
     const beforeSnapshots = await BulkActionRepository.resolveSnapshots(event, 'contract', input.ids)
-
-    if (input.action === 'terminate') {
-      const scopeAccess = new Map<string, boolean>()
-      const allowed: string[] = []
-      for (const id of input.ids) {
-        const buildingId = scopes.get(id)
-        if (!buildingId) {
-          failed.push({ id, reason: 'not_found' })
-          continue
-        }
-        let permitted = scopeAccess.get(buildingId)
-        if (permitted === undefined) {
-          try {
-            await assertBuildingScope(event, user, buildingId, 'write')
-            permitted = true
-          }
-          catch {
-            permitted = false
-          }
-          scopeAccess.set(buildingId, permitted)
-        }
-        if (permitted) allowed.push(id)
-        else failed.push({ id, reason: 'forbidden' })
-      }
-      const rows = await BulkActionRepository.execute(event, 'contract', 'terminate', allowed)
-      for (const row of rows) {
-        if (row.succeeded) {
-          succeeded.push(row.id)
-          await ContractAmendmentService.cancelScheduledForContract(
-            event,
-            user,
-            row.id,
-            'Hợp đồng đã chấm dứt qua thao tác hàng loạt',
-          )
-        }
-        else failed.push({ id: row.id, reason: row.reason ?? 'error' })
-      }
-      const afterSnapshots = await BulkActionRepository.resolveSnapshots(event, 'contract', succeeded)
-      await AuditService.appendBulk(event, user, {
-        building_id: null,
-        entity_type: 'contract',
-        aggregate_action: 'contract.bulk_terminate',
-        items: succeeded.map(id => ({ entity_id: id, building_id: scopes.get(id) ?? null, action: AUDIT_ACTIONS.CONTRACT_TERMINATED, before_data: beforeSnapshots.get(id), after_data: afterSnapshots.get(id) })),
-        succeeded,
-        total: input.ids.length,
-        failed: failed.length,
-      })
-      return { succeeded, failed }
-    }
 
     for (const id of input.ids) {
       try {

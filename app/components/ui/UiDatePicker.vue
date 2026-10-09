@@ -216,7 +216,7 @@ const triggerClass = computed(() =>
     props.error
       ? 'border-status-danger/50 focus-visible:border-status-danger/60 focus-visible:ring-status-danger/30'
       : 'border-ui-border-strong hover:border-ui-accent/50 focus-visible:border-ui-accent/70 focus-visible:ring-ui-accent/30',
-    props.density === 'compact' ? 'min-h-7 px-2 py-1 text-xs' : 'min-h-10 px-3 py-2 text-sm',
+    props.density === 'compact' ? 'min-h-7 px-2 py-1 text-xs' : 'min-h-11 px-3 py-2 text-sm sm:min-h-10',
     props.disabled && 'cursor-not-allowed bg-ui-hover text-ui-muted opacity-70',
     props.triggerClass,
   ),

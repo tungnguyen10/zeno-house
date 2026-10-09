@@ -166,6 +166,14 @@ function mountGrid(overrides: Partial<{
 }
 
 describe('BillingDraftGridStep', () => {
+  it('provides checkout links on desktop and mobile returned contract rows', () => {
+    const row = buildRow({ checkoutId: 'checkout-1', checkoutHref: '/dashboard/contracts/HD-OLD#checkout', editable: false, status: 'blocked', blockers: [{ code: 'checkout_required', message: 'Hoàn tất quyết toán' }] })
+    const wrapper = mountGrid({ response: response([row]) })
+    expect(wrapper.findAll('[data-test="checkout-link"]')).toHaveLength(2)
+    expect(wrapper.text()).toContain('Quyết toán')
+    wrapper.unmount()
+  })
+
   it('moves focus from electricity to water cell on Tab', async () => {
     const wrapper = mountGrid()
     const electricity = wrapper.get('[data-reading-cell="room-1::electricity"] input')
@@ -223,14 +231,17 @@ describe('BillingDraftGridStep', () => {
     vi.useRealTimers()
   })
 
-  it('renders a stacked mobile row layout for the same draft rows', () => {
+  it('renders a stacked mobile row layout for the same draft rows', async () => {
     const wrapper = mountGrid()
 
     const mobileRows = wrapper.findAllComponents(BillingMobileDraftRow)
     expect(mobileRows).toHaveLength(2)
-    expect(mobileRows[0]?.text()).toContain('Thêm phát sinh')
     expect(mobileRows[0]?.text()).toContain('Chi tiết')
     expect(wrapper.find('.md\\:hidden').exists()).toBe(true)
+
+    // Secondary actions live behind the row's kebab menu now (not always visible).
+    await mobileRows[0]!.get('[aria-label="Hành động khác cho phòng"]').trigger('click')
+    expect(mobileRows[0]?.text()).toContain('Thêm phát sinh')
 
     wrapper.unmount()
   })

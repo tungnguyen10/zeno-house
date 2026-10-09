@@ -12,7 +12,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock('../../../server/repositories/ai/buildings', () => ({
   AiBuildingRepository: { listScoped: mocks.listScoped, resolveScoped: mocks.resolveScoped },
 }))
-vi.mock('../../../server/utils/scope', () => ({ getAssignedBuildingIds: mocks.getScope }))
+vi.mock('../../../server/utils/scope', () => ({ getVisibleBuildingIds: mocks.getScope }))
 vi.mock('../../../server/utils/permissions', () => ({ can: mocks.can }))
 
 const event = {} as never

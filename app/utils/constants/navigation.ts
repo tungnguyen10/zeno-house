@@ -46,6 +46,7 @@ export const NAV_SETTINGS_ITEMS = [
   // User management is available to admin (global) and owner (scoped), not manager.
   { key: 'settings', label: 'Quản lý người dùng', to: '/dashboard/settings/managers', icon: 'IconSettings', section: 'administration', roles: ['admin', 'owner'] },
   { key: 'tenant-accounts', label: 'Tài khoản người thuê', to: '/dashboard/settings/tenant-accounts', icon: 'IconUser', section: 'administration', roles: ['admin', 'owner'] },
+  { key: 'building-visibility', label: 'Hiển thị toà nhà', to: '/dashboard/settings/buildings', icon: 'IconEye', section: 'administration', adminOnly: true },
   { key: 'access-requests', label: 'Yêu cầu truy cập', to: '/dashboard/settings/access-requests', icon: 'IconLock', section: 'administration', adminOnly: true },
   { key: 'history', label: 'Nhật ký hoạt động', to: '/dashboard/settings/history', icon: 'IconClock', section: 'administration', adminOnly: true },
 ] satisfies NavItem[]
@@ -61,4 +62,29 @@ export function isNavItemVisible(
   if (item.adminOnly && !ctx.isAdmin) return false
   if (item.roles && !(ctx.role && item.roles.includes(ctx.role))) return false
   return true
+}
+
+/**
+ * Highest-frequency destinations surfaced directly in the mobile bottom tab
+ * bar; every other item is reachable through the tab bar's "More" sheet.
+ */
+const MOBILE_TAB_KEYS = ['dashboard', 'billing', 'invoices', 'contracts'] as const
+
+export function getMobileTabItems(ctx: { isAdmin: boolean; role: UserRole | null }): NavItem[] {
+  const items: NavItem[] = NAV_ITEMS
+  return MOBILE_TAB_KEYS
+    .map(key => items.find(item => item.key === key))
+    .filter((item): item is NavItem => item !== undefined && isNavItemVisible(item, ctx))
+}
+
+export function getMoreSheetSections(ctx: { isAdmin: boolean; role: UserRole | null }) {
+  const tabKeys = new Set<string>(MOBILE_TAB_KEYS)
+  const items: NavItem[] = NAV_ITEMS.filter(item => !tabKeys.has(item.key) && isNavItemVisible(item, ctx))
+
+  return NAV_SECTIONS
+    .map(section => ({
+      ...section,
+      items: items.filter(item => item.section === section.key),
+    }))
+    .filter(section => section.items.length > 0)
 }

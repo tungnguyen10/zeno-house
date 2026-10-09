@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { buildInvoice } from '../../__fixtures__/billing/invoice'
 import { buildPeriod } from '../../__fixtures__/billing/period'
 
@@ -40,10 +40,18 @@ function planResult(actionType: string) {
 
 describe('AI invoice correction planner', () => {
   beforeEach(() => {
+    // The planner derives its issue date from the wall clock and rejects a due date
+    // before it, so the fixed 2026-08 fixtures only hold with the clock pinned.
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-08-06T03:00:00.000Z'))
     vi.clearAllMocks()
     findPeriodById.mockResolvedValue(period)
     findActiveByPeriodContract.mockResolvedValue(null)
     findLatestCorrelation.mockResolvedValue('00000000-0000-4000-8000-000000000012')
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
   it('plans an unpaid void with the exact invoice version', async () => {

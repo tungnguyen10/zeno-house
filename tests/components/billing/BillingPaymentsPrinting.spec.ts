@@ -108,7 +108,12 @@ describe('BillingPaymentsStep invoice printing', () => {
       buildInvoice({ id: 'invoice-void', status: 'void' }),
     ], 'closed')
 
-    expect(wrapper.findAll('[role="checkbox"]')).toHaveLength(2)
+    // 2 active invoices, each rendered once in the mobile card list and once in the desktop table.
+    // Scoped to per-invoice checkboxes so the shared select-all row isn't counted.
+    const invoiceCheckboxes = wrapper
+      .findAll('[role="checkbox"]')
+      .filter(el => el.attributes('aria-label')?.startsWith('Chọn hoá đơn'))
+    expect(invoiceCheckboxes).toHaveLength(4)
   })
 
   it('prints a mixed selection while disabling bulk payment with guidance', async () => {

@@ -5,6 +5,35 @@
         "/^node -e \"const g = require\\('\\./node_modules/ai/package\\.json'\\); console\\.log\\('version:', g\\.version\\); console\\.log\\('peerDeps:', JSON\\.stringify\\(g\\.peerDependencies\\)\\); console\\.log\\('deps \\(partial\\):', Object\\.entries\\(g\\.dependencies \\|\\| \\{\\}\\)\\.slice\\(0,10\\)\\.map\\(\\(\\[k,v\\]\\) => k\\+': '\\+v\\)\\.join\\(', '\\)\\)\"$/": {
             "approve": true,
             "matchCommandLine": true
-        }
+        },
+        "copilot": true,
+        "npx eslint": true,
+        "npx vitest": true,
+        "git stash": true,
+        "cp": true,
+        "git checkout": true,
+        "awk": true,
+        "openspec": true,
+        "printf": true,
+        "/^python3 - <<'PY'\nfrom pathlib import Path\np=Path\\('/Users/thanhtung\\.nguyen/Library/Application Support/Code/User/workspaceStorage/3efc9f46179b55eafee43d05edc7a870/GitHub\\.copilot-chat/chat-session-resources/6a9802a6-9124-4fd0-a52b-19a3c4583313/call_rvZZcauMdMLUXzGPIrW6g6EV__vscode-1791514975454/content\\.txt'\\)\ns=p\\.read_text\\(\\)\nfor line in s\\.splitlines\\(\\):\n    if any\\(x in line for x in \\['Test Files','Tests','FAIL','AssertionError','expected:','received:','Expected','Received','⎯'\\]\\): print\\(line\\)\nPY$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^python3 - <<'PY'\nfrom pathlib import Path\np=Path\\('/Users/thanhtung\\.nguyen/Library/Application Support/Code/User/workspaceStorage/3efc9f46179b55eafee43d05edc7a870/GitHub\\.copilot-chat/chat-session-resources/6a9802a6-9124-4fd0-a52b-19a3c4583313/call_rvZZcauMdMLUXzGPIrW6g6EV__vscode-1791514975454/content\\.txt'\\)\nlines=p\\.read_text\\(\\)\\.splitlines\\(\\)\nfor i,l in enumerate\\(lines\\):\n    if l\\.startswith\\(' FAIL '\\):\n        print\\('\\\\n'\\+l\\)\n        for x in lines\\[i\\+1:i\\+35\\]:\n            if x\\.startswith\\(' FAIL '\\) or x\\.startswith\\(' Test Files'\\) or x\\.startswith\\(' Tests '\\) or '⎯' in x: break\n            if any\\(k in x for k in \\('AssertionError','expected','received','Expected','Received','Assertion','toHave','toBe','toContain','toEqual'\\)\\): print\\(x\\)\nPY$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^python3 - <<'PY'\nfrom pathlib import Path\nimport re\np=Path\\('/Users/thanhtung\\.nguyen/Library/Application Support/Code/User/workspaceStorage/3efc9f46179b55eafee43d05edc7a870/GitHub\\.copilot-chat/chat-session-resources/6a9802a6-9124-4fd0-a52b-19a3c4583313/call_rvZZcauMdMLUXzGPIrW6g6EV__vscode-1791514975454/content\\.txt'\\)\ns=re\\.sub\\(r'\\\\x1b\\\\\\\\\\[\\[0-9;\\]\\*m','',p\\.read_text\\(\\)\\)\nlines=s\\.splitlines\\(\\)\nfor i,l in enumerate\\(lines\\):\n    if 'Failed Tests' in l or l\\.startswith\\(' FAIL '\\):\n        print\\(f'\\{i\\}: \\{l\\}'\\)\nprint\\('--- assertion/error lines ---'\\)\nfor i,l in enumerate\\(lines\\):\n    if any\\(k in l\\.lower\\(\\) for k in \\['assertionerror','expected:', 'received:', 'expected ', 'received ', 'error:'\\]\\) or 'AssertionError' in l:\n        print\\(f'\\{i\\}: \\{l\\}'\\)\nPY$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^cd /Users/thanhtung\\.nguyen/Documents/personal/zeno-house && python3 - <<'PY'\nimport json, subprocess\ncmd=\\['npx','vitest','run','tests/components/contracts','tests/components/rooms','tests/components/tenants','tests/components/buildings','--reporter=json'\\]\nr=subprocess\\.run\\(cmd, text=True, capture_output=True\\)\ntext=r\\.stdout\nstart=text\\.find\\('\\{'\\)\nif start>=0:\n    try:\n        data=json\\.loads\\(text\\[start:\\]\\)\n        for f in data\\.get\\('testResults',\\[\\]\\):\n            for a in f\\.get\\('assertionResults',\\[\\]\\):\n                if a\\.get\\('status'\\)=='failed':\n                    print\\('FILE:',f\\.get\\('name'\\)\\)\n                    print\\('TEST:', ' > '\\.join\\(a\\.get\\('ancestorTitles',\\[\\]\\)\\+\\[a\\.get\\('title',''\\)\\]\\)\\)\n                    print\\('ERROR:', a\\.get\\('failureMessages', \\[''\\]\\)\\[0\\]\\.strip\\(\\)\\)\n        print\\('SUMMARY:', data\\.get\\('numPassedTests'\\), 'passed,', data\\.get\\('numFailedTests'\\), 'failed,', data\\.get\\('numTotalTests'\\), 'total; files', data\\.get\\('numPassedTestSuites'\\), 'passed,', data\\.get\\('numFailedTestSuites'\\), 'failed,', data\\.get\\('numTotalTestSuites'\\), 'total'\\)\n    except Exception as e: print\\('JSON parse error:',e\\); print\\(text\\[-5000:\\]\\)\nelse:\n    print\\('No JSON output; exit',r\\.returncode\\); print\\(\\(r\\.stdout\\+r\\.stderr\\)\\[-10000:\\]\\)\nPY$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "npm run lint": true,
+        "npm run typecheck": true,
+        "command": true,
+        "supabase": true
     }
 }

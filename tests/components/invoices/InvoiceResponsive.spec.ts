@@ -193,8 +193,11 @@ describe('InvoiceListTable responsive layout', () => {
     expect(mobile.text()).toContain('Nguyen Tung')
     expect(mobile.text()).toContain('Toa A')
     expect(mobile.text()).toContain('INV-2606-014')
-    expect(mobile.text()).toContain('Đã thu')
-    expect(mobile.text()).toContain('Hạn')
+    // The card leads with the total and surfaces the outstanding balance only
+    // when there is one; `paid_amount` stays desktop/detail-only.
+    expect(mobile.text()).toContain('3.000.000')
+    expect(mobile.text()).toContain('Còn')
+    expect(mobile.text()).toContain('hạn')
   })
 
   it('emits open from the mobile invoice card', async () => {
@@ -236,7 +239,7 @@ describe('InvoicePreviewDrawer responsive layout', () => {
     expect(wrapper.find('footer .-mx-2.-my-1.grid').exists()).toBe(true)
   })
 
-  it('renders payments as mobile cards and keeps the table desktop-only', () => {
+  it('renders payments and email delivery in one section as a single list at every width', () => {
     const wrapper = mount(InvoicePreviewDrawer, {
       props: { modelValue: true, invoice: invoice() },
       global: { stubs },
@@ -245,10 +248,10 @@ describe('InvoicePreviewDrawer responsive layout', () => {
     expect(wrapper.text()).toContain('cash')
     expect(wrapper.text()).toContain('Admin')
     expect(wrapper.text()).toContain('Đợt 1')
+    expect(wrapper.text()).toContain('Gửi qua email')
 
-    const paymentTable = wrapper.findComponent(stubs.UiTable)
-    expect(paymentTable.classes()).toContain('hidden')
-    expect(paymentTable.classes()).toContain('md:block')
+    // The 480px drawer is narrower than the table needed, so the card list is the only payment view.
+    expect(wrapper.findComponent(stubs.UiTable).exists()).toBe(false)
   })
 
   it('keeps the invoice preview read-only', () => {

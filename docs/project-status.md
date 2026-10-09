@@ -2,6 +2,20 @@
 
 Last reviewed from source: 2026-07-23.
 
+Mobile app-shell and filter-toolbar unification: 2026-10-01
+
+- `/dashboard/operations-report` was redesigned to the mobile-native app shell: a headline metric
+  block replaces the floating profit grid, and the revenue/cost breakdown is composed from the new
+  `UiListPanel` primitive (`app/components/ui/UiListPanel.vue`).
+- `UiFilterPopover` is now responsive on its own: below `sm` it renders the filter fields in a
+  `UiDrawer` bottom sheet; at `sm` and above it keeps the trigger-anchored popover. All consumers
+  (`UiListToolbar`, `BillingPeriodFilterBar`, `OperationsReportFilterBar`) inherit this.
+- `UiListToolbar` search is optional (`searchAriaLabel` omitted = filter-only toolbar), so report
+  pages without a search box use the same shell as list pages. `OperationsReportFilterBar` no
+  longer hand-assembles `UiToolbar` + `UiFilterPopover` + reset button.
+- The operations-report filter badge now shows a real active-filter count derived in the page from
+  the resolved defaults; `hasActiveFilters` is derived from that count instead of duplicating it.
+
 Invoice email delivery implementation update: 2026-07-23
 
 - Manual single/bulk and building-level automatic invoice delivery are implemented behind a

@@ -2,12 +2,14 @@ import { vi } from 'vitest'
 import { config } from '@vue/test-utils'
 import {
   computed,
+  inject,
   isRef,
   nextTick,
   onBeforeMount,
   onBeforeUnmount,
   onMounted,
   onUnmounted,
+  provide,
   reactive,
   readonly,
   ref,
@@ -22,26 +24,70 @@ import {
   watchEffect,
 } from 'vue'
 import { useBulkSelection } from '~/composables/useBulkSelection'
+import { useAppFormMode } from '~/composables/useAppFormMode'
 import UiButton from '~/components/ui/UiButton.vue'
 import UiCheckbox from '~/components/ui/UiCheckbox.vue'
+import UiDropdownMenu from '~/components/ui/UiDropdownMenu.vue'
+import UiDropdownMenuItem from '~/components/ui/UiDropdownMenuItem.vue'
+import UiListToolbar from '~/components/ui/UiListToolbar.vue'
+import UiBulkActionsBar from '~/components/ui/UiBulkActionsBar.vue'
+import UiSelectAllBar from '~/components/ui/UiSelectAllBar.vue'
+import UiPagination from '~/components/ui/UiPagination.vue'
+import UiDefinitionList from '~/components/ui/UiDefinitionList.vue'
+import UiDefinitionItem from '~/components/ui/UiDefinitionItem.vue'
+import UiListPanel from '~/components/ui/UiListPanel.vue'
+import UiFormSection from '~/components/ui/UiFormSection.vue'
+import UiFormActions from '~/components/ui/UiFormActions.vue'
+import UiFormDraftBanner from '~/components/ui/UiFormDraftBanner.vue'
 import { ok, paginated, parseBody, parseQuery } from '../server/utils/api'
+
+const stateStore = new Map<string, ReturnType<typeof ref>>()
 
 config.global.components = {
   ...config.global.components,
   UiButton,
   UiCheckbox,
+  UiDropdownMenu,
+  UiDropdownMenuItem,
+  UiListToolbar,
+  UiBulkActionsBar,
+  UiSelectAllBar,
+  UiPagination,
+  UiDefinitionList,
+  UiDefinitionItem,
+  UiListPanel,
+  UiFormSection,
+  UiFormActions,
+  UiFormDraftBanner,
 }
 
 // Nuxt auto-imports these into Vue SFCs at build-time. In vitest we don't run
 // the Nuxt build, so we expose the same identifiers on globalThis. Components
 // that import explicitly are unaffected (the import wins over the global).
 for (const [name, fn] of Object.entries({
-  computed, isRef, nextTick, onBeforeMount, onBeforeUnmount, onMounted, onUnmounted,
-  reactive, readonly, ref, shallowRef, toRaw, toRef, toRefs, toValue, unref, useId, watch, watchEffect,
+  computed, inject, isRef, nextTick, onBeforeMount, onBeforeUnmount, onMounted, onUnmounted,
+  provide, reactive, readonly, ref, shallowRef, toRaw, toRef, toRefs, toValue, unref, useId, watch, watchEffect,
   useBulkSelection,
+  useAppFormMode,
 })) {
   vi.stubGlobal(name, fn)
 }
+
+// Minimal stand-in for Nuxt's `useState`: one shared ref per key, per test file.
+vi.stubGlobal('useState', <T>(key: string, init?: () => T) => {
+  if (!stateStore.has(key)) stateStore.set(key, ref(init?.()))
+  return stateStore.get(key)!
+})
+
+// `getVisibleBuildingIds` hits this on every scoped list request. Default to
+// "nothing hidden" so unrelated service tests keep their pre-visibility scope;
+// visibility tests override this mock per file.
+vi.mock('../server/repositories/buildings/visibility', () => ({
+  BuildingVisibilityRepository: {
+    findHiddenIds: vi.fn(async () => [] as string[]),
+    findVisibleIds: vi.fn(async () => [] as string[]),
+  },
+}))
 
 function appError(statusCode: number, code: string, message: string, details?: unknown): Error {
   const error = new Error(message) as Error & { statusCode: number; data: unknown }

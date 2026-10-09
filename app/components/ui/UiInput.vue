@@ -193,7 +193,7 @@ const inputClass = computed(() =>
   clsx(
     'block w-full bg-transparent px-3 text-ui-primary placeholder-ui-muted',
     'focus:outline-none',
-    props.density === 'compact' ? 'py-1 text-sm sm:text-xs' : 'py-2 text-base sm:text-sm',
+    props.density === 'compact' ? 'py-1 text-sm sm:text-xs' : 'min-h-11 py-2 text-base sm:min-h-10 sm:text-sm',
     hasPrefix.value && 'pl-1',
     hasSuffix.value && 'pr-1',
     props.disabled && 'cursor-not-allowed text-ui-muted',

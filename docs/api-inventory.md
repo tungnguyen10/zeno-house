@@ -1,7 +1,7 @@
 # API Inventory And Performance Contracts
 
 Generated from checked-in handlers by `node scripts/generate-api-inventory.mjs`.
-Route count: **182**.
+Route count: **207**.
 
 All business routes require server-side authorization unless explicitly documented as an internal-secret route. Initial reads use Nuxt `useFetch`; imperative reads and mutations use `apiFetch` with a 15-second timeout, request ID, no automatic mutation retry, and normalized server envelopes.
 
@@ -83,6 +83,7 @@ All business routes require server-side authorization unless explicitly document
 | PUT | `/api/buildings/[id]/invoice-profile` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | GET | `/api/buildings/[id]/rooms/[room]` | n/a | request/DTO policy | p95 ≤ 250ms |
 | GET | `/api/buildings/[id]/settings-bootstrap` | n/a | request/DTO policy | p95 ≤ 800ms |
+| PATCH | `/api/buildings/[id]/visibility` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | POST | `/api/buildings/bulk` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | GET | `/api/buildings` | bounded | request/DTO policy | p95 ≤ 400ms |
 | POST | `/api/buildings` | n/a | invalidate affected domain | p95 ≤ 250ms |
@@ -94,6 +95,23 @@ All business routes require server-side authorization unless explicitly document
 | DELETE | `/api/contracts/[id]` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | GET | `/api/contracts/[id]` | n/a | request/DTO policy | p95 ≤ 250ms |
 | PATCH | `/api/contracts/[id]` | n/a | invalidate affected domain | p95 ≤ 250ms |
+| GET | `/api/contracts/[id]/amendments` | n/a | request/DTO policy | p95 ≤ 250ms |
+| POST | `/api/contracts/[id]/amendments` | n/a | invalidate affected domain | p95 ≤ 250ms |
+| DELETE | `/api/contracts/[id]/amendments/[amendmentId]` | n/a | invalidate affected domain | p95 ≤ 250ms |
+| PATCH | `/api/contracts/[id]/amendments/[amendmentId]` | n/a | invalidate affected domain | p95 ≤ 250ms |
+| POST | `/api/contracts/[id]/amendments/[amendmentId]/cancel` | n/a | invalidate affected domain | p95 ≤ 250ms |
+| POST | `/api/contracts/[id]/amendments/[amendmentId]/publish` | n/a | invalidate affected domain | p95 ≤ 250ms |
+| GET | `/api/contracts/[id]/checkout` | n/a | request/DTO policy | p95 ≤ 250ms |
+| PATCH | `/api/contracts/[id]/checkout` | n/a | invalidate affected domain | p95 ≤ 250ms |
+| PATCH | `/api/contracts/[id]/checkout/charge-modes` | n/a | invalidate affected domain | p95 ≤ 250ms |
+| POST | `/api/contracts/[id]/checkout/charges` | n/a | invalidate affected domain | p95 ≤ 250ms |
+| POST | `/api/contracts/[id]/checkout/confirm` | n/a | invalidate affected domain | p95 ≤ 250ms |
+| POST | `/api/contracts/[id]/checkout/corrections` | n/a | invalidate affected domain | p95 ≤ 250ms |
+| POST | `/api/contracts/[id]/checkout/credits` | n/a | invalidate affected domain | p95 ≤ 250ms |
+| POST | `/api/contracts/[id]/checkout/issue-final` | n/a | invalidate affected domain | p95 ≤ 250ms |
+| POST | `/api/contracts/[id]/checkout/preview` | n/a | invalidate affected domain | p95 ≤ 250ms |
+| POST | `/api/contracts/[id]/checkout/refunds` | n/a | invalidate affected domain | p95 ≤ 250ms |
+| POST | `/api/contracts/[id]/checkout/return` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | GET | `/api/contracts/[id]/occupants` | domain-bounded | request/DTO policy | p95 ≤ 400ms |
 | POST | `/api/contracts/[id]/occupants` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | DELETE | `/api/contracts/[id]/occupants/[occupantId]` | n/a | invalidate affected domain | p95 ≤ 250ms |
@@ -109,6 +127,8 @@ All business routes require server-side authorization unless explicitly document
 | POST | `/api/contracts` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | GET | `/api/dashboard/summary` | n/a | 20s scoped | p95 ≤ 800ms |
 | POST | `/api/internal/ai/retention-cleanup` | n/a | invalidate affected domain | p95 ≤ 250ms |
+| POST | `/api/internal/audit/reconcile` | n/a | invalidate affected domain | p95 ≤ 250ms |
+| POST | `/api/internal/contracts/amendments/apply-due` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | POST | `/api/internal/invoice-email/dispatch` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | POST | `/api/internal/operations-report/auto-close` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | GET | `/api/invoices` | bounded | request/DTO policy | p95 ≤ 400ms |
@@ -150,7 +170,7 @@ All business routes require server-side authorization unless explicitly document
 | DELETE | `/api/shared-expenses/[id]` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | PATCH | `/api/shared-expenses/[id]` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | POST | `/api/shared-expenses/[id]/allocate` | n/a | invalidate affected domain | p95 ≤ 250ms |
-| GET | `/api/shared-expenses?period_year={year}&period_month={month}` | domain-bounded | request/DTO policy; period status batch lookup | p95 ≤ 400ms |
+| GET | `/api/shared-expenses` | domain-bounded | request/DTO policy | p95 ≤ 400ms |
 | POST | `/api/shared-expenses` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | GET | `/api/tenant-accounts` | domain-bounded | request/DTO policy | p95 ≤ 400ms |
 | DELETE | `/api/tenant-accounts/orphans/[id]` | n/a | invalidate affected domain | p95 ≤ 250ms |
@@ -188,4 +208,9 @@ All business routes require server-side authorization unless explicitly document
 | DELETE | `/api/users/[id]` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | PATCH | `/api/users/[id]` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | POST | `/api/users` | n/a | invalidate affected domain | p95 ≤ 250ms |
+| GET | `/api/users/me` | n/a | request/DTO policy | p95 ≤ 250ms |
+| PATCH | `/api/users/me` | n/a | invalidate affected domain | p95 ≤ 250ms |
+| DELETE | `/api/users/me/avatar` | n/a | invalidate affected domain | p95 ≤ 250ms |
+| POST | `/api/users/me/avatar` | n/a | invalidate affected domain | p95 ≤ 250ms |
+| POST | `/api/users/me/password` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | POST | `/api/webhooks/resend` | n/a | invalidate affected domain | p95 ≤ 250ms |

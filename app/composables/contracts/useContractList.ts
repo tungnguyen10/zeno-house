@@ -8,6 +8,7 @@ import {
   readQueryString,
   useRouteListQuerySync,
 } from '~/composables/useRouteListQuerySync'
+import { LIST_PAGE_SIZE, LIST_PAGE_SIZE_MAX } from '~/utils/constants/pagination'
 
 export const CONTRACT_LIST_ASYNC_KEY = 'contracts:list'
 
@@ -26,7 +27,7 @@ export function useContractList() {
   const route = useRoute()
 
   const page = ref(readQueryNumber(route.query.page, { fallback: 1, min: 1 }))
-  const limit = ref(readQueryNumber(route.query.limit, { fallback: 20, min: 1, max: 100 }))
+  const limit = ref(readQueryNumber(route.query.limit, { fallback: LIST_PAGE_SIZE, min: 1, max: LIST_PAGE_SIZE_MAX }))
   const q = ref<string>(readQueryString(route.query.q))
   const buildingFilter = ref<string>(readQueryString(route.query.building_id))
   const roomFilter = ref<string>(readQueryString(route.query.room_id))
@@ -51,7 +52,7 @@ export function useContractList() {
     syncOn: [page],
     parseRoute(newQuery) {
       const newPage = readQueryNumber(newQuery.page, { fallback: 1, min: 1 })
-      const newLimit = readQueryNumber(newQuery.limit, { fallback: 20, min: 1, max: 100 })
+      const newLimit = readQueryNumber(newQuery.limit, { fallback: LIST_PAGE_SIZE, min: 1, max: LIST_PAGE_SIZE_MAX })
       const newQ = readQueryString(newQuery.q)
       const newBuilding = readQueryString(newQuery.building_id)
       const newRoom = readQueryString(newQuery.room_id)

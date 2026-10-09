@@ -4,7 +4,8 @@ import type { ApiSuccess } from '~/types/api'
 
 export function useContractRenewals(contractId: MaybeRef<string>) {
   const renewals = ref<ContractRenewal[]>([])
-  const isLoading = ref(false)
+  // Starts true so SSR renders the same skeleton the client hydrates with.
+  const isLoading = ref(true)
   const error = ref<Error | null>(null)
 
   async function fetchRenewals() {
@@ -31,7 +32,9 @@ export function useContractRenewals(contractId: MaybeRef<string>) {
     return res.data
   }
 
-  fetchRenewals()
+  // Client-only: this result is not transferred in the SSR payload, so fetching on the
+  // server just renders state the client immediately contradicts on hydration.
+  if (import.meta.client) fetchRenewals()
 
   return { renewals, isLoading, error, renew, refresh: fetchRenewals }
 }

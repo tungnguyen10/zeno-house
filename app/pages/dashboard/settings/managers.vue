@@ -15,6 +15,23 @@ definePageMeta({
 
 const authStore = useAuthStore()
 
+// Mobile large-title collapse: fades into the persistent app header once scrolled past.
+const titleSentinel = ref<HTMLElement | null>(null)
+const isTitleCollapsed = ref(false)
+useIntersectionObserver(titleSentinel, ([entry]) => {
+  isTitleCollapsed.value = !!entry && !entry.isIntersecting
+})
+const headerTitle = useAppHeaderTitle()
+const compactTitle = computed(() => (isTitleCollapsed.value ? 'Quản lý người dùng' : null))
+watchEffect(() => {
+  headerTitle.value = compactTitle.value
+})
+onBeforeUnmount(() => {
+  // A newer page can claim this slot before this instance unmounts during a
+  // page transition — only clear it if it's still ours.
+  if (headerTitle.value === compactTitle.value) headerTitle.value = null
+})
+
 const {
   users,
   buildings,
@@ -265,71 +282,69 @@ function managerInitials(row: ManagedUserWithAssignments): string {
       :description="authStore.isAdmin
         ? 'Tạo owner/quản lý, phân quyền theo tòa nhà và quyền xóa dữ liệu nhạy cảm.'
         : 'Tạo quản lý và phân quyền theo tòa nhà trong phạm vi của bạn.'"
-    />
+    >
+      <div ref="titleSentinel" aria-hidden="true" />
+    </UiPageHeader>
 
     <!-- Create user -->
-    <form
-      class="space-y-4 rounded-lg border border-ui-border bg-ui-surface p-4"
-      @submit.prevent="handleCreate"
-    >
-      <p class="text-sm font-semibold text-ui-primary">
-        {{ authStore.canCreateOwner ? 'Tạo owner hoặc quản lý' : 'Tạo quản lý' }}
-      </p>
-      <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <UiInput
-          v-model="form.email"
-          type="email"
-          placeholder="Email"
-          aria-label="Email"
-          autocomplete="off"
-        />
-        <UiInput
-          v-model="form.password"
-          type="text"
-          placeholder="Mật khẩu"
-          aria-label="Mật khẩu"
-          autocomplete="off"
-        />
-        <UiInput
-          v-model="form.full_name"
-          type="text"
-          placeholder="Họ tên (tùy chọn)"
-          aria-label="Họ tên"
-        />
-        <UiSelect
-          v-model="form.role"
-          :options="roleOptions"
-          aria-label="Vai trò"
-          :disabled="roleOptions.length === 1"
-        />
-      </div>
-
-      <div v-if="buildings.length > 0">
-        <p class="mb-1.5 text-xs text-ui-muted">
-          Tòa nhà (tùy chọn)
-        </p>
-        <div class="flex flex-wrap gap-2">
-          <button
-            v-for="b in buildings"
-            :key="b.id"
-            type="button"
-            class="rounded-md border px-2.5 py-1 text-xs transition-colors"
-            :class="form.building_ids.includes(b.id)
-              ? 'border-ui-accent bg-ui-accent/15 text-ui-accent'
-              : 'border-ui-border bg-ui-deep/40 text-ui-muted hover:border-ui-border/80'"
-            @click="toggleFormBuilding(b.id)"
-          >
-            {{ b.name }}
-          </button>
+    <form @submit.prevent="handleCreate">
+      <UiFormSection :title="authStore.canCreateOwner ? 'Tạo owner hoặc quản lý' : 'Tạo quản lý'">
+        <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <UiInput
+            v-model="form.email"
+            type="email"
+            placeholder="Email"
+            aria-label="Email"
+            autocomplete="off"
+          />
+          <UiInput
+            v-model="form.password"
+            type="text"
+            placeholder="Mật khẩu"
+            aria-label="Mật khẩu"
+            autocomplete="off"
+          />
+          <UiInput
+            v-model="form.full_name"
+            type="text"
+            placeholder="Họ tên (tùy chọn)"
+            aria-label="Họ tên"
+          />
+          <UiSelect
+            v-model="form.role"
+            :options="roleOptions"
+            aria-label="Vai trò"
+            :disabled="roleOptions.length === 1"
+          />
         </div>
-      </div>
 
-      <div class="flex justify-end">
-        <UiButton type="submit" :loading="createBusy">
-          <IconPlus class="h-3.5 w-3.5" aria-hidden="true" />
-          Tạo người dùng
-        </UiButton>
-      </div>
+        <div v-if="buildings.length > 0">
+          <p class="mb-1.5 text-xs text-ui-muted">
+            Tòa nhà (tùy chọn)
+          </p>
+          <div class="flex flex-wrap gap-2">
+            <button
+              v-for="b in buildings"
+              :key="b.id"
+              type="button"
+              class="inline-flex min-h-9 items-center rounded-md border px-3 text-xs transition-colors sm:min-h-0 sm:px-2.5 sm:py-1"
+              :class="form.building_ids.includes(b.id)
+                ? 'border-ui-accent bg-ui-accent/15 text-ui-accent'
+                : 'border-ui-border bg-ui-deep/40 text-ui-muted hover:border-ui-border/80'"
+              @click="toggleFormBuilding(b.id)"
+            >
+              {{ b.name }}
+            </button>
+          </div>
+        </div>
+
+        <div class="flex justify-end">
+          <UiButton type="submit" :loading="createBusy">
+            <IconPlus class="h-3.5 w-3.5" aria-hidden="true" />
+            Tạo người dùng
+          </UiButton>
+        </div>
+      </UiFormSection>
     </form>
 
     <!-- Buildings without manager alert -->
@@ -362,51 +377,47 @@ function managerInitials(row: ManagedUserWithAssignments): string {
     />
 
     <!-- User list -->
-    <div v-else class="space-y-3">
+    <div v-else class="-mx-4 space-y-3 sm:mx-0">
       <div
         v-for="row in users"
         :key="row.user.id"
-        class="rounded-lg border border-ui-border bg-ui-surface"
+        class="border-y border-ui-border bg-ui-surface sm:rounded-lg sm:border"
       >
         <!-- Card header -->
         <div class="flex flex-col gap-3 border-b border-ui-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-          <div class="flex min-w-0 items-center gap-3">
+          <div class="flex min-w-0 items-start gap-3">
             <!-- Avatar -->
             <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-ui-accent/15 text-sm font-semibold text-ui-accent">
               {{ managerInitials(row) }}
             </span>
-            <div class="min-w-0">
+            <div class="min-w-0 flex-1">
               <p class="truncate text-sm font-semibold text-ui-primary">
                 {{ row.user.name ?? row.user.email ?? row.user.id }}
               </p>
               <p v-if="row.user.name && row.user.email" class="truncate text-xs text-ui-muted">
                 {{ row.user.email }}
               </p>
+              <!-- Badges sit below the identity: inline they squeeze the name to nothing on a phone. -->
+              <div class="mt-1.5 flex flex-wrap items-center gap-1.5">
+                <UiBadge :variant="row.user.role === 'owner' ? 'accent' : 'neutral'">
+                  {{ roleLabel(row.user.role) }}
+                </UiBadge>
+                <UiBadge v-if="row.assignments.length === 0" variant="warning">
+                  Chưa có tòa nhà
+                </UiBadge>
+                <span
+                  v-else
+                  class="rounded-md border border-ui-border bg-ui-deep/40 px-2 py-0.5 text-xs font-medium text-ui-muted"
+                >
+                  {{ row.assignments.length }} tòa nhà
+                </span>
+              </div>
             </div>
-            <UiBadge
-              :variant="row.user.role === 'owner' ? 'accent' : 'neutral'"
-              class="ml-1 shrink-0"
-            >
-              {{ roleLabel(row.user.role) }}
-            </UiBadge>
-            <UiBadge
-              v-if="row.assignments.length === 0"
-              variant="warning"
-              class="ml-1 shrink-0"
-            >
-              Chưa có tòa nhà
-            </UiBadge>
-            <span
-              v-else
-              class="ml-1 shrink-0 rounded-md border border-ui-border bg-ui-deep/40 px-2 py-0.5 text-xs font-medium text-ui-muted"
-            >
-              {{ row.assignments.length }} tòa nhà
-            </span>
           </div>
 
           <div
             v-if="canManageRow(row)"
-            class="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center"
+            class="flex flex-col gap-2 sm:shrink-0 sm:flex-row sm:items-center"
           >
             <!-- Assign form -->
             <form
@@ -419,7 +430,7 @@ function managerInitials(row: ManagedUserWithAssignments): string {
                 :options="availableBuildingOptions(row)"
                 density="compact"
                 aria-label="Chọn tòa nhà để gán"
-                class="w-56"
+                class="min-w-0 flex-1 sm:w-56 sm:flex-none"
               />
               <UiButton
                 type="submit"
@@ -461,10 +472,10 @@ function managerInitials(row: ManagedUserWithAssignments): string {
           <li
             v-for="assignment in row.assignments"
             :key="assignment.id"
-            class="flex items-center gap-4 px-4 py-2.5"
+            class="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-2.5"
           >
             <!-- Building info -->
-            <div class="min-w-0 flex-1">
+            <div class="min-w-0 flex-1 basis-full sm:basis-auto">
               <p class="truncate text-sm font-medium text-ui-primary">
                 {{ assignment.building?.name ?? assignment.building_id }}
               </p>
@@ -476,7 +487,7 @@ function managerInitials(row: ManagedUserWithAssignments): string {
             <!-- Delete permission toggle -->
             <label
               v-if="canManageRow(row)"
-              class="flex shrink-0 items-center gap-2 rounded-md border border-ui-border/60 bg-ui-deep/30 px-2.5 py-1"
+              class="flex shrink-0 items-center gap-2 rounded-md border border-ui-border/60 bg-ui-deep/30 px-2.5 py-1 ml-auto sm:ml-0"
               :class="!busyKey && 'cursor-pointer hover:border-ui-border'"
             >
               <UiToggle

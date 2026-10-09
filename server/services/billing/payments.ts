@@ -2,7 +2,6 @@ import { getHeader, type H3Event } from 'h3'
 import { db as serverSupabaseClient } from '../../utils/db'
 import type { AuthUser } from '~/types/auth'
 import type { Invoice, InvoicePayment } from '~/types/billing'
-import { BILLING_AUDIT_ACTIONS } from '~/utils/constants/billing'
 import type {
   BulkPaymentsBodyInput,
   InvoicePaymentCreateInput,
@@ -12,10 +11,7 @@ import { newCorrelationId } from '../../utils/billing/correlation'
 import { InvoiceRepository } from '../../repositories/billing/invoices'
 import { InvoicePaymentRepository } from '../../repositories/billing/payments'
 import { BillingPeriodRepository } from '../../repositories/billing/periods'
-import { BillingAuditService } from './audit'
-import { BillingPeriodService } from './periods'
 import { BillingDisplayResolver } from './display'
-import { calculateInvoicePaymentStatus } from './rules'
 import { assertBuildingScope } from '../../utils/scope'
 import { invalidateOperationsReport } from '../operations-report/cache'
 
@@ -90,8 +86,8 @@ export const InvoicePaymentService = {
 
   /**
    * Record a payment against an invoice. Updates the invoice's
-   * paid/balance/status atomically (best-effort: payment row first, then
-   * invoice totals; if the totals update fails the payment row is removed).
+   * paid/balance/status in the same transaction as the payment and audit.
+   * This shares the invoice lock with deposit settlement allocations.
    */
   async record(
     event: H3Event,
@@ -128,53 +124,20 @@ export const InvoicePaymentService = {
     await assertBuildingScope(event, user, period.buildingId, 'write')
     if (period?.status === 'closed') throwConflict('Kỳ đã chốt — không thể ghi nhận thanh toán mới')
 
-    const payment = await InvoicePaymentRepository.insert(event, invoice.id, user.id ?? null, input)
-
-    let updatedInvoice: Invoice
-    try {
-      const next = calculateInvoicePaymentStatus(invoice, input.amount)
-      const paidAt = next.balanceAmount <= 0 ? input.paid_at : null
-      updatedInvoice = await InvoiceRepository.updatePaymentTotals(
-        event,
-        invoice.id,
-        next.paidAmount,
-        next.balanceAmount,
-        next.status,
-        paidAt,
-      )
-    } catch (e) {
-      // Best-effort rollback of the payment row
-      await InvoicePaymentRepository.deleteById(event, payment.id)
-      throw e
-    }
-
-    // Move period from issued -> collecting on first payment.
-    if (period && period.status === 'issued') {
-      await BillingPeriodService.advanceStatus(event, user, period.id, 'collecting')
-    }
-
-    await BillingAuditService.append(event, user, {
-      billing_period_id: invoice.billingPeriodId,
-      action: BILLING_AUDIT_ACTIONS.PAYMENT_RECORDED,
-      entity_type: 'invoice_payment',
-      entity_id: payment.id,
-      before_data: { paid_amount: invoice.paidAmount, balance_amount: invoice.balanceAmount, status: invoice.status },
-      after_data: { paid_amount: updatedInvoice.paidAmount, balance_amount: updatedInvoice.balanceAmount, status: updatedInvoice.status },
-      metadata: {
+    const result = await this.recordBatch(event, user, {
+      payments: [{
         invoice_id: invoice.id,
-        amount: payment.amount,
-        paid_at: payment.paidAt,
-        payment_method: payment.paymentMethod,
-      },
+        amount: input.amount,
+        payment_date: input.paid_at,
+        payment_method: input.payment_method,
+        note: input.note,
+      }],
     })
-
-    const resolver = new BillingDisplayResolver(event)
-    const [enrichedPayment] = await resolver.enrichPayments([payment])
-    const [enrichedInvoice] = await resolver.enrichInvoices([updatedInvoice])
-    return {
-      payment: enrichedPayment ?? payment,
-      invoice: enrichedInvoice ?? updatedInvoice,
-    }
+    const payment = result.payments[0]
+    const updated = await InvoiceRepository.findByIdentifier(event, invoice.id)
+    if (!payment || !updated) throwInternal(new Error('Committed payment could not be read'), 'billing.payments.record')
+    const [enriched] = await new BillingDisplayResolver(event).enrichInvoices([updated])
+    return { payment, invoice: enriched ?? updated }
   },
 
   /**
@@ -226,7 +189,7 @@ export const InvoicePaymentService = {
     )
 
     const payload = items.map(item => ({
-      invoice_id: item.invoice_id,
+      invoice_id: invoiceByIdentifier.get(item.invoice_id)!.id,
       amount: item.amount,
       payment_date: item.payment_date,
       payment_method: item.payment_method ?? null,

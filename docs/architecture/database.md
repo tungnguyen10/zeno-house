@@ -6,7 +6,7 @@ Zeno House uses Supabase Postgres. Schema history lives in `supabase/migrations`
 
 | Area | Migrations |
 | --- | --- |
-| Buildings | `20260514000000_create_buildings.sql`, `20260514000001_fix_buildings_rls.sql`, `20260514000003_buildings_drop_total_rooms.sql`, `20260517000000_building_operational_config.sql`, `20260614000000_add_building_slugs.sql`, `20260708010000_add_building_operational_start_period.sql` |
+| Buildings | `20260514000000_create_buildings.sql`, `20260514000001_fix_buildings_rls.sql`, `20260514000003_buildings_drop_total_rooms.sql`, `20260517000000_building_operational_config.sql`, `20260614000000_add_building_slugs.sql`, `20260708010000_add_building_operational_start_period.sql`, `20261009150000_building_visibility.sql` |
 | Rooms | `20260514000002_create_rooms.sql` |
 | Tenants | `20260514000004_create_tenants.sql`, `20260530100000_tenant_enrichment.sql` |
 | Tenant identity | `20260708020000_tenant_id_images.sql`, `20260716083605_add_tenant_identity_foundation.sql`, `20260717001405_tenant_self_identity_images.sql`, `20260722085743_tenant_roommate_portal_access.sql`, `20260729120000_harden_tenant_account_lifecycle.sql` |
@@ -23,6 +23,7 @@ Zeno House uses Supabase Postgres. Schema history lives in `supabase/migrations`
 | Operations report | `20260702173259_add_operations_report.sql`, `20260704000000_expense_receipts_and_export_categories.sql`, `20260705000000_recurring_and_prepaid_expenses.sql`, `20260707030000_operations_report_closure.sql`, `20260707031000_fix_operations_report_periods_shape.sql` |
 | Shared expenses and reserve fund | `20260705010000_shared_expenses_and_reserve_fund.sql`, `20260707010000_reserve_fund_auto_accrual.sql`, `20260707020000_fix_reserve_fund_source_constraint.sql` |
 | Pending account approval | `20260718155418_add_pending_account_approval.sql`, `20260719093000_fence_access_request_approval.sql`, `20260808034740_fix_provisioned_access_request_trigger.sql` |
+| Contract checkout and settlement | `20261001143337_contract_checkout_settlement.sql` for a fresh checkout schema; `supabase/sql-editor/checkout-upgrade-existing-schema.sql` for the original checkout schema already applied in an environment (see `docs/development/checkout-sql-verification.md`) |
 
 ## Core Tables
 
@@ -40,6 +41,11 @@ Property and occupancy:
 - `contract_renewals`
 
 `buildings` now includes `operational_start_year` and `operational_start_month` to declare each building's first operating month. The pair is nullable but must be provided together.
+
+`buildings.is_hidden` is an admin-only presentation flag, independent of `status`. Archiving sets
+`status = 'inactive'`; hiding sets `is_hidden = true`. Neither changes the other. Hidden buildings
+are filtered out of list and aggregate reads in the service layer (see `getVisibleBuildingIds` in
+`server/utils/scope.ts`), never by RLS, so direct detail access keeps working.
 
 `tenant_user_links` maps one Supabase Auth user to one tenant record. Only an `active` link
 establishes tenant self-scope; unique constraints on both ids enforce the one-to-one mapping.
@@ -200,6 +206,16 @@ identity uploads. Admin/owner and tenant flows share `${tenant_id}/front/...` an
 `${tenant_id}/back/...`; the existing tenant path columns identify the current object for each slot.
 Tenant policies match only an active linked tenant id, and API responses expose signed URLs rather
 than raw paths or public URLs.
+
+## Contract Checkout And Settlement Model
+
+Verify the deployed checkout schema per project before applying either SQL path (see migration group table above). `contract_checkouts` stores one draft/returned return record per contract (`contract_id` unique): actual date, reason, physical handover-out readings, frozen prices/services, per-line charge modes, and financial mode (`standard`, pilot `settlement`, or historical `legacy`). The return RPC atomically updates contract status, occupants, room, readings, and audit, preserving the signed end date. The finance step can wait if the billing period is closed. `contract_checkout_final_bills` records one immutable standard final bill per return. `contract_checkout_sources` is the held-money ledger: one row per approved deposit or credit source, linked to its original `contract_payments` receipt. `contract_checkout_statements` records one immutable pilot settlement snapshot per return. `contract_checkout_refunds` records already-performed refund transfers against a statement/source; it never initiates a bank transfer.
+
+`invoice_payments` gains `funding_source` (`cash` / `deposit` / `credit`, default `cash`), `checkout_source_id`, and `checkout_statement_id`. Report and invoice-recomputation sums must filter `funding_source = 'cash'` to keep settlement allocations out of cash totals. `meter_readings` gains `contract_id`, used to scope handover (`handover_in`/`handover_out`) readings to one contract; monthly readings remain room-scoped. `meterReadingIdentity()` in `app/utils/meter-reading-identity.ts` is the single source of truth for this scoping key on both client and server.
+
+All `contract_checkout_*` RPCs are `SECURITY INVOKER`, deny `anon`/`authenticated`/`public` execution, and are callable only through `server/repositories/checkout.ts`. Mutating RPCs lock the contract first and use optimistic versions or caller operation IDs; return, standard final issue, pilot confirmation, and refund replay the same operation without duplicate writes. Database triggers protect receipts, statements, refunds, final charges, and lifecycle history. Direct active-to-terminated/expired updates are blocked even before a checkout record exists.
+
+Physical return and standard final billing are available after schema deployment. The pilot settlement/cash allocation path is gated by `server/utils/checkout-feature.ts`, which reads a runtime-config enabled flag plus a per-building allowlist. Previously returned checkout records in an upgraded database are classified as read-only `legacy`; their financial records remain intact and they do not enter the new final-billing queue. Older terminated contracts are not backfilled into pilot statements.
 
 ## RLS And Security Notes
 

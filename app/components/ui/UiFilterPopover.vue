@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import { onClickOutside, onKeyStroke } from '@vueuse/core'
+import { onClickOutside, onKeyStroke, useMediaQuery } from '@vueuse/core'
 import clsx from 'clsx'
 
-withDefaults(defineProps<{
+const props = withDefaults(defineProps<{
   /** Number of active filters — rendered as a small badge on the trigger. */
   count?: number
   label?: string
   ariaLabel?: string
-  /** Popover panel width (Tailwind class). */
+  /** Popover panel width (Tailwind class). Desktop only. */
   panelClass?: string
 }>(), {
   count: 0,
@@ -20,15 +20,36 @@ const isOpen = ref(false)
 const panelRef = ref<HTMLElement | null>(null)
 const triggerRef = ref<HTMLElement | null>(null)
 
-function toggle() {
-  isOpen.value = !isOpen.value
+// Below `sm` the fields open in a bottom sheet instead of a trigger-anchored
+// popover: the trigger can sit anywhere along the toolbar (left on report
+// pages, right of the search box on list pages) and no single anchoring rule
+// keeps a 288px panel inside a 390px viewport in both positions.
+const isCompact = useMediaQuery('(max-width: 639px)')
+
+const alignEnd = ref(false)
+
+async function open() {
+  isOpen.value = true
+  if (isCompact.value) return
+  await nextTick()
+  const trigger = triggerRef.value?.getBoundingClientRect()
+  const width = panelRef.value?.offsetWidth ?? 0
+  if (!trigger || !width) return
+  alignEnd.value = trigger.left + width > window.innerWidth - 16
 }
 
 function close() {
   isOpen.value = false
 }
 
-onClickOutside(panelRef, close, { ignore: [triggerRef] })
+function toggle() {
+  if (isOpen.value) close()
+  else void open()
+}
+
+// `UiSelect` teleports its listbox to `body`, so picking an option would
+// otherwise register as a click outside the panel and dismiss the filters.
+onClickOutside(panelRef, close, { ignore: [triggerRef, '[role="listbox"]'] })
 onKeyStroke('Escape', () => {
   if (isOpen.value) close()
 })
@@ -65,6 +86,18 @@ onKeyStroke('Escape', () => {
       />
     </button>
 
+    <UiDrawer
+      v-if="isCompact"
+      v-model="isOpen"
+      :title="label"
+      width="w-full"
+    >
+      <slot :close="close" />
+      <template #footer>
+        <UiButton class="w-full" @click="close">Xong</UiButton>
+      </template>
+    </UiDrawer>
+
     <Transition
       enter-active-class="transition duration-150 ease-out"
       enter-from-class="opacity-0 -translate-y-1 scale-95"
@@ -74,13 +107,15 @@ onKeyStroke('Escape', () => {
       leave-to-class="opacity-0 -translate-y-1 scale-95"
     >
       <div
-        v-if="isOpen"
+        v-if="isOpen && !isCompact"
         ref="panelRef"
         role="dialog"
         :aria-label="ariaLabel"
         :class="clsx(
-          'absolute left-0 z-50 mt-2 origin-top-left rounded-xl border border-ui-border bg-ui-chrome p-3 shadow-xl shadow-ui-shadow/40',
-          panelClass,
+          'absolute z-50 mt-2 rounded-xl border border-ui-border bg-ui-chrome p-3 shadow-xl shadow-ui-shadow/40',
+          alignEnd ? 'right-0 origin-top-right' : 'left-0 origin-top-left',
+          'max-w-[calc(100vw-2rem)]',
+          props.panelClass,
         )"
       >
         <slot :close="close" />

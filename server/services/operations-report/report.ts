@@ -287,6 +287,8 @@ export const OperationsReportService = {
       metrics: {
         issuedRevenue,
         collectedCash,
+        settlementAllocationTotal: billing.settlementAllocationTotal ?? 0,
+        refundTotal: billing.refundTotal ?? 0,
         debt,
         fixedCostTotal,
         monthlyExpenseTotal,

@@ -1,5 +1,6 @@
 import type { ApiSuccess } from '~/types/api'
 import type { Building } from '~/types/buildings'
+import { currentVietnamPeriod, parsePeriodString } from '~/utils/format/period'
 import type {
   BuildingExpense,
   BuildingFixedCost,
@@ -17,10 +18,12 @@ function extractError(raw: unknown): { code: string | null, message: string | nu
 }
 
 export function useOperationsReport() {
-  const now = new Date()
+  // Pinned to Vietnam time: `getFullYear()`/`getMonth()` are local, so the server (UTC)
+  // and the browser (UTC+7) picked different default periods and mismatched on hydration.
+  const now = parsePeriodString(currentVietnamPeriod())!
   const buildingId = ref<string | null>(null)
-  const periodYear = ref(now.getFullYear())
-  const periodMonth = ref(now.getMonth() + 1)
+  const periodYear = ref(now.year)
+  const periodMonth = ref(now.month)
 
   // --- Buildings (scoped by server) -------------------------------------
   const { data: buildingsData } = useFetch<ApiSuccess<Building[]>>('/api/buildings', {
@@ -50,7 +53,11 @@ export function useOperationsReport() {
   )
 
   const report = computed(() => data.value?.data ?? null)
-  const isLoading = computed(() => status.value === 'pending')
+  // `idle` means the building-scoped fetch has not started yet. SSR stops there while the
+  // client has already begun, so treat it as loading and let both render the skeleton.
+  const isLoading = computed(() =>
+    status.value === 'pending' || (status.value === 'idle' && buildings.value.length > 0),
+  )
   const errorMessage = computed<string | null>(() => {
     if (!error.value) return null
     return extractError(error.value).message ?? GENERIC_ERROR

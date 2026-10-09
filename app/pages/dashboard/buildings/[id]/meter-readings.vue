@@ -272,7 +272,7 @@ function formatDate(value: string | null): string {
     </div>
 
     <!-- Mobile stacked cards -->
-    <div class="space-y-2 md:hidden">
+    <div class="md:hidden">
       <div v-if="isLoading" class="space-y-2">
         <UiSkeleton class="h-24 w-full rounded-xl" />
         <UiSkeleton class="h-24 w-full rounded-xl" />
@@ -284,11 +284,11 @@ function formatDate(value: string | null): string {
       >
         Chưa có phòng nào đang hoạt động hoặc chưa gắn đồng hồ.
       </p>
+      <div v-else class="divide-y divide-ui-border overflow-hidden rounded-xl border border-ui-border bg-ui-surface">
       <article
         v-for="row in rows"
-        v-else
         :key="row.key"
-        class="rounded-xl border border-ui-border bg-ui-surface p-4"
+        class="p-4"
       >
         <header class="mb-3 flex items-center justify-between">
           <div class="flex items-baseline gap-1.5">
@@ -346,6 +346,7 @@ function formatDate(value: string | null): string {
           Ngày đọc: {{ formatDate(row.readingDate) }}
         </footer>
       </article>
+      </div>
     </div>
   </div>
 </template>

@@ -96,30 +96,28 @@ async function onSubmit(data: ContractFormData) {
 </script>
 
 <template>
-  <div class="">
+  <div>
     <UiPageHeader
       title="Chỉnh sửa hợp đồng"
       :back-to="contract ? contractPath(contract) : `/dashboard/contracts/${id}`"
       back-label="Chi tiết hợp đồng"
     />
 
-    <div class="md:rounded-xl md:border md:border-ui-border md:bg-ui-surface md:p-6">
-      <ContractForm
-        v-model="formData"
-        :exclude-contract-id="id"
-        :loading="isLoading"
-        :errors="errors"
-        :api-error="apiError"
-        :has-draft="hasDraft"
-        :draft-saved-at="draftSavedAt"
-        :draft-error="draftError"
-        :is-draft-version-mismatch="isDraftVersionMismatch"
-        :is-dirty="isDirty"
-        @submit="onSubmit"
-        @cancel="navigateTo(contract ? contractPath(contract) : `/dashboard/contracts/${id}`)"
-        @restore-draft="restoreDraft"
-        @clear-draft="clearDraft"
-      />
-    </div>
+    <ContractForm
+      v-model="formData"
+      :exclude-contract-id="id"
+      :loading="isLoading"
+      :errors="errors"
+      :api-error="apiError"
+      :has-draft="hasDraft"
+      :draft-saved-at="draftSavedAt"
+      :draft-error="draftError"
+      :is-draft-version-mismatch="isDraftVersionMismatch"
+      :is-dirty="isDirty"
+      @submit="onSubmit"
+      @cancel="navigateTo(contract ? contractPath(contract) : `/dashboard/contracts/${id}`)"
+      @restore-draft="restoreDraft"
+      @clear-draft="clearDraft"
+    />
   </div>
 </template>

@@ -46,6 +46,13 @@ const filterOptions = [
   { value: 'overdue', label: 'Quá hạn' },
 ]
 
+// UiFilterChips is multi-select; the mobile filter row keeps single-select
+// behavior by only accepting the newly toggled-on value.
+function onFilterChipChange(next: string[]) {
+  const picked = next.find(value => value !== filterStatus.value)
+  if (picked) filterStatus.value = picked as typeof filterStatus.value
+}
+
 const today = new Date().toISOString().slice(0, 10)
 function deriveBucket(inv: Invoice): 'paid' | 'partial' | 'unpaid' | 'overdue' | 'void' {
   if (inv.status === 'void') return 'void'
@@ -88,6 +95,12 @@ const summary = computed(() => {
   const overdueCount = props.invoices.filter(i => deriveBucket(i) === 'overdue').length
   return { issuedTotal, paidTotal, outstanding, overdueCount }
 })
+
+// Mobile card list renders its own action row instead of the table's actions column.
+function rowHasActions(row: Invoice): boolean {
+  return (!periodIsClosed.value && row.status === 'paid' && !!props.onUndoPayment)
+    || row.status === 'issued' || row.status === 'partial' || row.status === 'overdue'
+}
 
 const columns: UiTableColumn<Invoice>[] = [
   { key: 'select', label: '', width: 'w-10' },
@@ -497,7 +510,7 @@ watch(
       {{ bulkEmailSummary }}
     </UiAlert>
 
-    <UiSection title="Thu tiền & công nợ" description="Theo dõi hoá đơn, ghi nhận thanh toán, hoàn tác và huỷ/phát hành lại.">
+    <UiSection title="Thu tiền & công nợ" description="Theo dõi hoá đơn, ghi nhận thanh toán, hoàn tác và huỷ/phát hành lại." title-class="hidden md:block">
       <template v-if="summary.overdueCount > 0" #actions>
         <span class="inline-flex items-center gap-1 rounded-full bg-status-warning/10 px-2.5 py-0.5 text-xs font-medium text-status-warning">
           Quá hạn: {{ summary.overdueCount }}
@@ -509,24 +522,129 @@ watch(
           v-model="filterStatus"
           :options="filterOptions"
           aria-label="Lọc hóa đơn theo trạng thái"
-          class="w-44"
+          class="hidden w-44 md:block"
+        />
+        <UiFilterChips
+          class="md:hidden"
+          :model-value="[filterStatus]"
+          :options="filterOptions"
+          aria-label="Lọc hóa đơn theo trạng thái"
+          @update:model-value="onFilterChipChange"
         />
         <span class="text-xs text-ui-muted">
           {{ filteredInvoices.length }} / {{ activeInvoices.length }} hoá đơn
         </span>
-        <template #actions>
-          <UiButton
-            v-if="printableCandidates.length > 0"
-            variant="ghost"
-            size="sm"
-            @click="toggleSelectAll"
-          >
-            {{ allVisibleSelected ? 'Bỏ chọn tất cả' : `Chọn tất cả (${printableCandidates.length})` }}
-          </UiButton>
-        </template>
       </UiToolbar>
 
+      <UiSelectAllBar
+        v-if="printableCandidates.length > 0"
+        :model-value="allVisibleSelected"
+        :indeterminate="selectedIds.size > 0 && !allVisibleSelected"
+        :page-count="printableCandidates.length"
+        :total-selected="selectedIds.size"
+        aria-label="Chọn tất cả hoá đơn đang hiển thị"
+        @update:model-value="toggleSelectAll"
+      />
+
+      <!-- Mobile: grouped list replaces the table below md -->
+      <div class="md:hidden">
+        <div v-if="loading" class="space-y-2">
+          <UiSkeleton v-for="n in 4" :key="`inv-skel-${n}`" class="h-24 w-full rounded-xl" />
+        </div>
+        <UiEmptyState
+          v-else-if="filteredInvoices.length === 0"
+          title="Chưa có hoá đơn"
+          description="Phát hành hoá đơn từ tab Soạn kỳ."
+        />
+        <div v-else class="divide-y divide-ui-border overflow-hidden rounded-xl border border-ui-border bg-ui-surface">
+          <div
+            v-for="row in filteredInvoices"
+            :key="row.id"
+            class="flex flex-col gap-2 p-3"
+          >
+            <div class="flex items-start gap-3">
+              <UiCheckbox
+                v-if="row.status !== 'void'"
+                shape="circle"
+                class="mt-0.5 shrink-0"
+                :model-value="selectedIds.has(row.id)"
+                :aria-label="`Chọn hoá đơn ${row.invoiceCode}`"
+                @update:model-value="toggleSelect(row)"
+              />
+              <UiButton
+                :ref="(el) => setInvoiceRef(row.id, el)"
+                unstyled
+                :class="[
+                  'flex min-w-0 flex-1 items-start gap-2 rounded-md text-left transition',
+                  highlightedInvoiceId === row.id && 'bg-ui-accent/10 ring-2 ring-ui-accent/50',
+                ]"
+                @click="openDetail(row)"
+              >
+                <div class="min-w-0 flex-1">
+                  <div class="flex items-start justify-between gap-2">
+                    <div class="min-w-0 flex-1">
+                      <p class="truncate text-sm font-medium text-ui-primary">{{ invoiceDisplay(row).title }}</p>
+                      <p class="mt-0.5 truncate text-xs text-ui-muted">{{ invoiceDisplay(row).subtitle }}</p>
+                    </div>
+                    <UiStatusBadge :status="row.status" context="invoice" />
+                  </div>
+                  <div class="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+                  <div class="min-w-0">
+                    <span class="text-ui-muted">Tổng </span>
+                    <span class="tabular-nums text-ui-primary">{{ formatCurrency(row.totalAmount) }}</span>
+                  </div>
+                  <div class="min-w-0 text-right">
+                    <span class="text-ui-muted">Đã thu </span>
+                    <span :class="['tabular-nums', row.paidAmount === 0 ? 'text-ui-muted' : 'text-ui-primary']">{{ formatCurrency(row.paidAmount) }}</span>
+                  </div>
+                  <div class="min-w-0">
+                    <span class="text-ui-muted">Còn lại </span>
+                    <span :class="['font-medium tabular-nums', row.balanceAmount > 0 ? 'text-status-danger' : 'text-status-success']">{{ formatCurrency(row.balanceAmount) }}</span>
+                  </div>
+                  <div v-if="row.dueDate" class="min-w-0 text-right">
+                    <span class="text-ui-muted">Hạn </span>
+                    <span class="tabular-nums text-ui-primary">{{ row.dueDate }}</span>
+                  </div>
+                </div>
+                </div>
+                <IconChevronRight class="mt-1 h-4 w-4 shrink-0 text-ui-muted" aria-hidden="true" />
+              </UiButton>
+            </div>
+
+            <div v-if="rowHasActions(row)" class="flex flex-wrap items-center justify-end gap-2 pl-7">
+              <UiButton
+                v-if="!periodIsClosed && row.status === 'paid' && onUndoPayment"
+                size="sm"
+                variant="ghost"
+                @click="startUndoFromRow(row)"
+              >
+                Hoàn tác thu
+              </UiButton>
+              <UiButton
+                v-if="row.status === 'issued' || row.status === 'partial' || row.status === 'overdue'"
+                size="sm"
+                variant="primary"
+                :disabled="periodIsClosed"
+                @click="startPayment(row)"
+              >
+                Đã thu
+              </UiButton>
+              <UiButton
+                v-if="row.status === 'issued' && row.paidAmount === 0"
+                size="sm"
+                variant="ghost"
+                :disabled="periodIsClosed"
+                @click="startVoid(row)"
+              >
+                Huỷ
+              </UiButton>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <UiTable
+        class="hidden md:block"
         :rows="filteredInvoices"
         :columns="columns"
         :loading="loading"
@@ -615,7 +733,28 @@ watch(
       title="Hoá đơn đã huỷ"
       :description="`${voidedInvoices.length} hoá đơn — snapshot tại thời điểm huỷ. Không đếm vào công nợ.`"
     >
-      <UiTable :rows="voidedInvoices" :columns="voidedColumns">
+      <div class="divide-y divide-ui-border overflow-hidden rounded-xl border border-ui-border bg-ui-surface md:hidden">
+        <div v-for="row in voidedInvoices" :key="row.id" class="flex flex-col gap-1 p-3 text-xs">
+          <div class="flex items-start justify-between gap-2">
+            <div class="min-w-0">
+              <p class="truncate text-sm text-ui-primary">{{ invoiceDisplay(row).title }}</p>
+              <p class="truncate text-ui-muted">{{ invoiceDisplay(row).subtitle }}</p>
+            </div>
+            <span class="shrink-0 tabular-nums text-ui-muted line-through">{{ formatCurrency(row.totalAmount) }}</span>
+          </div>
+          <p class="text-ui-muted">{{ row.voidedAt ? new Date(row.voidedAt).toLocaleString('vi-VN') : '---' }}</p>
+          <p v-if="row.voidReason" class="text-ui-primary">{{ row.voidReason }}</p>
+          <p>
+            <template v-if="row.supersededByInvoiceId && replacementById.get(row.supersededByInvoiceId)">
+              <span class="text-ui-accent">{{ formatCurrency(replacementById.get(row.supersededByInvoiceId)!.totalAmount) }}</span>
+              <span class="text-ui-muted"> (đã phát hành lại)</span>
+            </template>
+            <span v-else class="text-ui-muted">Chưa phát hành lại</span>
+          </p>
+        </div>
+      </div>
+
+      <UiTable class="hidden md:block" :rows="voidedInvoices" :columns="voidedColumns">
         <template #cell-contract="{ row }">
           <span class="block text-ui-primary text-sm">{{ invoiceDisplay(row).title }}</span>
           <span class="block text-xs text-ui-muted">{{ invoiceDisplay(row).subtitle }}</span>
@@ -812,55 +951,44 @@ watch(
     </UiModal>
 
     <!-- Sticky bulk action bar -->
-    <Transition
-      enter-active-class="transition duration-150 ease-out"
-      enter-from-class="opacity-0 translate-y-2"
-      enter-to-class="opacity-100 translate-y-0"
-      leave-active-class="transition duration-150 ease-in"
-      leave-from-class="opacity-100 translate-y-0"
-      leave-to-class="opacity-0 translate-y-2"
+    <UiBulkActionsBar
+      aria-label="Thao tác hàng loạt hoá đơn"
+      :count="selectedIds.size"
+      @clear="clearSelection"
     >
-      <div
-        v-if="selectedIds.size > 0"
-        class="fixed bottom-4 left-1/2 z-30 w-[calc(100%-2rem)] max-w-max -translate-x-1/2 rounded-xl border border-ui-border bg-ui-chrome px-4 py-2 shadow-lg shadow-ui-shadow/40 backdrop-blur sm:w-auto"
+      <UiButton class="whitespace-nowrap" variant="secondary" size="sm" @click="printSelection">
+        In phiếu
+      </UiButton>
+      <UiButton
+        v-if="invoiceEmailEnabled"
+        class="whitespace-nowrap"
+        variant="secondary"
+        size="sm"
+        :disabled="selectedInvoicesForBulk.length > 100"
+        @click="showEmailModal = true"
       >
-        <div class="grid grid-cols-2 items-center gap-2 sm:flex sm:gap-3">
-          <span class="col-span-2 text-center text-sm text-ui-primary sm:col-auto sm:text-left">
-            Đã chọn <span class="font-semibold">{{ selectedIds.size }}</span> hoá đơn
-          </span>
-          <UiButton class="whitespace-nowrap" variant="ghost" size="sm" @click="clearSelection">Bỏ chọn</UiButton>
-          <UiButton class="whitespace-nowrap" variant="secondary" size="sm" @click="printSelection">
-            In phiếu
-          </UiButton>
-          <UiButton
-            v-if="invoiceEmailEnabled"
-            class="col-span-2 whitespace-nowrap sm:col-auto"
-            variant="secondary"
-            size="sm"
-            :disabled="selectedInvoicesForBulk.length > 100"
-            @click="showEmailModal = true"
-          >
-            Gửi email ({{ selectedInvoicesForBulk.length }})
-          </UiButton>
-          <UiButton
-            class="col-span-2 whitespace-nowrap sm:col-auto"
-            variant="primary"
-            size="sm"
-            :disabled="!bulkPaymentSelectionEligible"
-            :title="bulkPaymentDisabledReason"
-            @click="openBulkModal"
-          >
-            Ghi thu hàng loạt
-          </UiButton>
-        </div>
+        Gửi email ({{ selectedInvoicesForBulk.length }})
+      </UiButton>
+      <UiButton
+        class="whitespace-nowrap"
+        variant="primary"
+        size="sm"
+        :disabled="!bulkPaymentSelectionEligible"
+        :title="bulkPaymentDisabledReason"
+        @click="openBulkModal"
+      >
+        Ghi thu hàng loạt
+      </UiButton>
+
+      <template #note>
         <p
           v-if="bulkPaymentDisabledReason"
-          class="mt-2 text-center text-xs text-status-warning"
+          class="text-xs text-status-warning"
         >
           {{ bulkPaymentDisabledReason }}
         </p>
-      </div>
-    </Transition>
+      </template>
+    </UiBulkActionsBar>
 
     <UiConfirmModal
       :open="!!undoTarget"

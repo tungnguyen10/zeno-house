@@ -120,68 +120,70 @@ async function handleDeleteOccupant() {
       />
     </div>
 
-    <!-- Primary tenant -->
-    <div v-if="contract.tenant" class="flex items-center gap-3 rounded-lg border border-ui-border px-4 py-3 mb-2">
-      <div class="size-8 rounded-full bg-ui-accent/10 flex items-center justify-center shrink-0">
-        <span class="text-ui-accent text-xs font-bold">{{ contract.tenant.fullName.charAt(0).toUpperCase() }}</span>
-      </div>
-      <div class="min-w-0 flex-1">
-        <NuxtLink :to="`/dashboard/tenants/${contract.tenant.id}`" class="text-sm font-medium text-ui-primary hover:text-ui-accent transition-colors">
-          {{ contract.tenant.fullName }}
-        </NuxtLink>
-        <p class="text-xs text-ui-muted mt-0.5">{{ contract.tenant.phone }}</p>
-      </div>
-      <span class="text-xs text-ui-muted border border-ui-border rounded px-2 py-0.5 shrink-0">Người thuê chính</span>
-    </div>
-
-    <!-- Roommate list -->
-    <div v-if="isLoading" class="space-y-2 mt-2">
-      <UiSkeleton class="h-12 rounded-lg" />
-    </div>
-    <div v-else class="space-y-2">
-      <div
-        v-for="occ in occupants.filter(o => o.role === 'roommate')"
-        :key="occ.id"
-        :class="[
-          'flex items-center gap-3 rounded-lg border px-4 py-3',
-          occ.moveOutDate ? 'border-ui-border opacity-50' : 'border-ui-border',
-        ]"
+    <!-- Occupants: one grouped inset container, primary tenant first -->
+    <div class="overflow-hidden rounded-xl border border-ui-border bg-ui-surface divide-y divide-ui-border">
+      <NuxtLink
+        v-if="contract.tenant"
+        :to="`/dashboard/tenants/${contract.tenant.id}`"
+        class="group flex items-center gap-3 px-4 py-3 transition-colors hover:bg-ui-hover"
       >
-        <div class="size-8 rounded-full bg-ui-deep flex items-center justify-center shrink-0">
-          <span class="text-ui-muted text-xs font-bold">{{ occ.tenantName?.charAt(0).toUpperCase() ?? '?' }}</span>
+        <div class="size-8 rounded-full bg-ui-accent/10 flex items-center justify-center shrink-0">
+          <span class="text-ui-accent text-xs font-bold">{{ contract.tenant.fullName.charAt(0).toUpperCase() }}</span>
         </div>
         <div class="min-w-0 flex-1">
-          <p class="text-sm font-medium text-ui-primary">{{ occ.tenantName ?? occ.tenantId.slice(0, 8) + '…' }}</p>
-          <p class="text-xs text-ui-muted mt-0.5">
-            <template v-if="occ.tenantPhone">{{ occ.tenantPhone }} · </template>
-            Vào {{ formatViDate(occ.moveInDate) }}
-            <template v-if="occ.moveOutDate">
-              · Rời {{ formatViDate(occ.moveOutDate) }}
-            </template>
-          </p>
+          <p class="text-sm font-medium text-ui-primary group-hover:text-ui-accent transition-colors">{{ contract.tenant.fullName }}</p>
+          <p class="text-xs text-ui-muted mt-0.5">{{ contract.tenant.phone }}</p>
         </div>
-        <template v-if="canManage">
-          <UiButton
-            v-if="!occ.moveOutDate"
-            variant="ghost"
-            size="sm"
-            @click="moveOutOccupantId = occ.id; moveOutDate = new Date().toISOString().slice(0, 10)"
-          >
-            Ghi nhận rời
-          </UiButton>
-          <UiButton
-            variant="ghost"
-            size="sm"
-            class="text-status-danger hover:text-status-danger"
-            @click="deletingOccupantId = occ.id"
-          >
-            Xoá
-          </UiButton>
-        </template>
+        <span class="text-xs text-ui-muted border border-ui-border rounded px-2 py-0.5 shrink-0">Người thuê chính</span>
+        <IconChevronRight class="h-4 w-4 shrink-0 text-ui-muted" aria-hidden="true" />
+      </NuxtLink>
+
+      <!-- Roommate list -->
+      <div v-if="isLoading" class="p-3">
+        <UiSkeleton class="h-12 rounded-lg" />
       </div>
-      <p v-if="occupants.filter(o => o.role === 'roommate').length === 0 && !showOccupantForm" class="text-sm text-ui-muted text-center py-3">
-        Chưa có người ở chung nào.
-      </p>
+      <template v-else>
+        <div
+          v-for="occ in occupants.filter(o => o.role === 'roommate')"
+          :key="occ.id"
+          :class="['flex items-center gap-3 px-4 py-3', occ.moveOutDate && 'opacity-50']"
+        >
+          <div class="size-8 rounded-full bg-ui-deep flex items-center justify-center shrink-0">
+            <span class="text-ui-muted text-xs font-bold">{{ occ.tenantName?.charAt(0).toUpperCase() ?? '?' }}</span>
+          </div>
+          <div class="min-w-0 flex-1">
+            <p class="text-sm font-medium text-ui-primary">{{ occ.tenantName ?? occ.tenantId.slice(0, 8) + '…' }}</p>
+            <p class="text-xs text-ui-muted mt-0.5">
+              <template v-if="occ.tenantPhone">{{ occ.tenantPhone }} · </template>
+              Vào {{ formatViDate(occ.moveInDate) }}
+              <template v-if="occ.moveOutDate">
+                · Rời {{ formatViDate(occ.moveOutDate) }}
+              </template>
+            </p>
+          </div>
+          <template v-if="canManage">
+            <UiButton
+              v-if="!occ.moveOutDate"
+              variant="ghost"
+              size="sm"
+              @click="moveOutOccupantId = occ.id; moveOutDate = new Date().toISOString().slice(0, 10)"
+            >
+              Ghi nhận rời
+            </UiButton>
+            <UiButton
+              variant="ghost"
+              size="sm"
+              class="text-status-danger hover:text-status-danger"
+              @click="deletingOccupantId = occ.id"
+            >
+              Xoá
+            </UiButton>
+          </template>
+        </div>
+        <p v-if="occupants.filter(o => o.role === 'roommate').length === 0 && !showOccupantForm" class="text-sm text-ui-muted text-center py-3">
+          Chưa có người ở chung nào.
+        </p>
+      </template>
     </div>
   </UiSection>
 

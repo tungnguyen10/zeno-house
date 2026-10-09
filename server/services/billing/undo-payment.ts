@@ -7,6 +7,7 @@ import { newCorrelationId } from '../../utils/billing/correlation'
 import { InvoiceRepository } from '../../repositories/billing/invoices'
 import { InvoicePaymentRepository } from '../../repositories/billing/payments'
 import { BillingPeriodRepository } from '../../repositories/billing/periods'
+import { CheckoutRepository } from '../../repositories/checkout'
 import { BillingAuditService } from './audit'
 import { BillingDisplayResolver } from './display'
 import { assertBuildingScope } from '../../utils/scope'
@@ -36,6 +37,20 @@ export const UndoPaymentService = {
     if (!period) throwNotFound('Không tìm thấy kỳ vận hành')
     await assertBuildingScope(event, user, period.buildingId, 'write')
     if (period.status === 'closed') throwConflict('Kỳ đã chốt — không thể hoàn tác thanh toán')
+    if (payment.fundingSource && payment.fundingSource !== 'cash') {
+      throwConflict('Khoản cấn cọc hoặc tiền dư phải được xử lý trong hồ sơ tất toán, không thể hoàn tác như khoản thu mới.')
+    }
+
+    // Once checkout exists, undo this cash receipt through the atomic RPC so a
+    // concurrent settlement confirmation can never observe intermediate totals.
+    const checkoutState = await CheckoutRepository.get(event, invoice.contractId)
+    if (checkoutState.checkout) {
+      await CheckoutRepository.undoCash(event, invoice.contractId, user.id ?? '', invoice.id, payment.id, reason ?? null)
+      const refreshed = await InvoiceRepository.findByIdentifier(event, invoice.id)
+      if (!refreshed) throwNotFound('Không tìm thấy hoá đơn')
+      const [enrichedAfterUndo] = await new BillingDisplayResolver(event).enrichInvoices([refreshed])
+      return enrichedAfterUndo ?? refreshed
+    }
 
     await InvoicePaymentRepository.softDelete(event, payment.id, user.id ?? null, reason ?? null)
 

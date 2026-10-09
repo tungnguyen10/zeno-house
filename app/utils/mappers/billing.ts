@@ -117,6 +117,7 @@ export function mapInvoicePayment(row: Tables<'invoice_payments'>): InvoicePayme
     id: row.id,
     invoiceId: row.invoice_id,
     amount: Number(row.amount),
+    fundingSource: (row.funding_source as InvoicePayment['fundingSource']) ?? 'cash',
     paidAt: row.paid_at,
     paymentMethod: row.payment_method,
     note: row.note,

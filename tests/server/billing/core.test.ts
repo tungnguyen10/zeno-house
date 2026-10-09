@@ -22,6 +22,13 @@ describe('billing core period eligibility', () => {
     expect(isBillableContractInPeriod(contract({ status }), 'building-1', 2026, 5)).toBe(true)
   })
 
+  it('includes a returned contract only in its actual return month, preserving its original end date', () => {
+    const returned = contract({ status: 'terminated', end_date: '2026-04-30', checkout_return_date: '2026-05-15' })
+    expect(isBillableContractInPeriod(returned, 'building-1', 2026, 5)).toBe(true)
+    expect(isBillableContractInPeriod(returned, 'building-1', 2026, 4)).toBe(false)
+    expect(isBillableContractInPeriod(returned, 'building-1', 2026, 6)).toBe(false)
+  })
+
   it('excludes terminated contracts', () => {
     expect(isBillableContractInPeriod(contract({ status: 'terminated' }), 'building-1', 2026, 5)).toBe(false)
   })
@@ -70,6 +77,11 @@ describe('billing core required reading progress', () => {
     })
 
     expect(progress).toEqual({ complete: 3, required: 4 })
+  })
+
+  it('does not require room monthly readings for the departing checkout contract', () => {
+    const progress = calculateRequiredReadingProgress({ contracts: [contract({ checkout_return_date: '2026-05-15' })], pricing: { electricity_pricing_type: 'per_kwh', water_pricing_type: 'per_m3' }, readings: [] })
+    expect(progress).toEqual({ complete: 0, required: 0 })
   })
 
   it('deduplicates required room meter pairs', () => {

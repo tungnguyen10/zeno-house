@@ -40,7 +40,7 @@ onKeyStroke('Escape', () => {
     <UiButton
       ref="triggerRef"
       unstyled
-      class="flex items-center gap-2 rounded-full border border-ui-border bg-ui-surface/60 py-1 pl-1 pr-2 transition-colors hover:bg-ui-hover hover:border-ui-accent/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-accent/60"
+      class="flex items-center gap-2 rounded-full border border-ui-border bg-ui-surface/60 py-1 pl-1 pr-1 transition-colors hover:bg-ui-hover hover:border-ui-accent/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-accent/60 lg:pr-2"
       :aria-expanded="isOpen"
       aria-haspopup="menu"
       aria-label="Tài khoản"
@@ -63,7 +63,7 @@ onKeyStroke('Escape', () => {
         {{ userInitial }}
       </span>
       <IconChevronDown
-        :class="clsx('h-3.5 w-3.5 text-ui-muted transition-transform duration-150', isOpen && 'rotate-180')"
+        :class="clsx('hidden h-3.5 w-3.5 text-ui-muted transition-transform duration-150 lg:block', isOpen && 'rotate-180')"
         aria-hidden="true"
       />
     </UiButton>

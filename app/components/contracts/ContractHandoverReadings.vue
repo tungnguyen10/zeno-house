@@ -66,9 +66,13 @@ function getRow(meterType: MeterType, readingType: 'handover_in' | 'handover_out
         : ''
     rowStates.value[key] = {
       value: initialValue,
-      date: readingType === 'handover_in'
-        ? props.startDate
-        : (props.endDate ?? new Date().toISOString().slice(0, 10)),
+      // A saved reading (e.g. checkout's handover_out) keeps its own recorded
+      // date even when it differs from the contract's start/end date.
+      date: existing
+        ? existing.readingDate
+        : readingType === 'handover_in'
+          ? props.startDate
+          : (props.endDate ?? new Date().toISOString().slice(0, 10)),
       prefilled: !existing && Boolean(prior) && readingType === 'handover_in',
     }
   }

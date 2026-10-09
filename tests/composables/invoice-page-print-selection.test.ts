@@ -60,4 +60,39 @@ describe('useInvoicePagePrintSelection', () => {
 
     expect(selection.selectedIds.value.size).toBe(0)
   })
+
+  it('selects and clears every non-void invoice via toggleAll', async () => {
+    const voided = { ...row('invoice-void'), status: 'void' as const }
+    const rows = ref([row('invoice-1'), row('invoice-2'), voided])
+    const { useInvoicePagePrintSelection } = await import('../../app/composables/invoices/useInvoicePagePrintSelection')
+    const selection = useInvoicePagePrintSelection(rows)
+
+    selection.toggleAll()
+    expect([...selection.selectedIds.value]).toEqual(['invoice-1', 'invoice-2'])
+    expect(selection.allSelected.value).toBe(true)
+    expect(selection.someSelected.value).toBe(false)
+
+    selection.toggleAll()
+    expect(selection.selectedIds.value.size).toBe(0)
+    expect(selection.allSelected.value).toBe(false)
+  })
+
+  it('reports a partial selection as indeterminate', async () => {
+    const rows = ref([row('invoice-1'), row('invoice-2')])
+    const { useInvoicePagePrintSelection } = await import('../../app/composables/invoices/useInvoicePagePrintSelection')
+    const selection = useInvoicePagePrintSelection(rows)
+
+    selection.toggle(rows.value[0]!)
+    expect(selection.someSelected.value).toBe(true)
+    expect(selection.allSelected.value).toBe(false)
+  })
+
+  it('is not "all selected" when the page has only void invoices', async () => {
+    const rows = ref([{ ...row('invoice-void'), status: 'void' as const }])
+    const { useInvoicePagePrintSelection } = await import('../../app/composables/invoices/useInvoicePagePrintSelection')
+    const selection = useInvoicePagePrintSelection(rows)
+
+    expect(selection.selectableInvoices.value).toEqual([])
+    expect(selection.allSelected.value).toBe(false)
+  })
 })

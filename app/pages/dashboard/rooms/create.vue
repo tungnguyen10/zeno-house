@@ -68,21 +68,19 @@ function onClearDraft() {
       {{ apiError }}
     </UiAlert>
 
-    <div class="rounded-xl border border-ui-border bg-ui-surface p-6">
-      <RoomForm
-        v-model="formData"
-        :loading="isLoading"
-        :errors="errors"
-        :has-draft="showDraft"
-        :draft-saved-at="draftSavedAt"
-        :is-dirty="isDirty"
-        submit-label="Tạo phòng"
-        @submit="onSubmit"
-        @cancel="navigateTo('/dashboard/rooms')"
-        @restore-draft="onRestoreDraft"
-        @dismiss-draft="onDismissDraft"
-        @clear-draft="onClearDraft"
-      />
-    </div>
+    <RoomForm
+      v-model="formData"
+      :loading="isLoading"
+      :errors="errors"
+      :has-draft="showDraft"
+      :draft-saved-at="draftSavedAt"
+      :is-dirty="isDirty"
+      submit-label="Tạo phòng"
+      @submit="onSubmit"
+      @cancel="navigateTo('/dashboard/rooms')"
+      @restore-draft="onRestoreDraft"
+      @dismiss-draft="onDismissDraft"
+      @clear-draft="onClearDraft"
+    />
   </div>
 </template>

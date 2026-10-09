@@ -2,6 +2,7 @@ import { z } from 'zod'
 
 export const meterReadingCreateSchema = z.object({
   room_id: z.string().uuid(),
+  contract_id: z.string().uuid().nullable().optional(),
   meter_type: z.enum(['electricity', 'water']),
   period_year: z.number().int().min(2000).max(2100),
   period_month: z.number().int().min(1).max(12),

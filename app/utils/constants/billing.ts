@@ -152,6 +152,7 @@ export function billingAuditActionsForCategories(
  * Stable codes for blockers/warnings surfaced from draft calculation.
  */
 export const BILLING_BLOCKER_CODES = {
+  CHECKOUT_REQUIRED: 'checkout_required',
   MISSING_CURRENT_READING: 'missing_current_reading',
   MISSING_PREVIOUS_READING: 'missing_previous_reading',
   MISSING_ELECTRICITY_RATE: 'missing_electricity_rate',

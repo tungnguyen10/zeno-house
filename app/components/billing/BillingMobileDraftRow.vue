@@ -58,6 +58,7 @@ function formatRate(cell: BillingDraftGridUtilityCell | null): string {
         <UiCheckbox
           v-if="selectable"
           data-test="mobile-draft-select"
+          shape="circle"
           class="shrink-0 [&>label]:size-11 [&>label]:items-center [&>label]:justify-center"
           :model-value="selected"
           :aria-label="`Chọn phòng ${row.roomNumber ?? ''} để phát hành`"
@@ -110,7 +111,10 @@ function formatRate(cell: BillingDraftGridUtilityCell | null): string {
           <span v-else class="flex-1 text-sm text-ui-primary tabular-nums">
             {{ meterCell(row, type)!.currentValue ?? '—' }}
           </span>
-          <span class="text-xs text-ui-muted tabular-nums w-20 text-right">
+          <span
+            v-if="meterCell(row, type)!.amount !== null"
+            class="text-xs text-ui-muted tabular-nums w-20 text-right"
+          >
             {{ formatCurrency(meterCell(row, type)!.amount) }}
           </span>
         </div>
@@ -135,33 +139,43 @@ function formatRate(cell: BillingDraftGridUtilityCell | null): string {
           <span class="text-ui-primary tabular-nums">
             {{ readingValueOf(row, type) || meterCell(row, type)!.currentValue || '—' }}
           </span>
-          · {{ meterLabel(type) }} {{ formatRate(meterCell(row, type)) }}
+          · {{ formatRate(meterCell(row, type)) }}
         </p>
       </template>
     </div>
 
-    <footer class="flex flex-wrap items-center gap-1 border-t border-ui-border pt-2">
+    <footer class="flex items-center justify-between gap-1 border-t border-ui-border pt-2">
+      <NuxtLink
+        v-if="row.checkoutHref"
+        :to="row.checkoutHref"
+        data-test="checkout-link"
+        class="inline-flex min-h-11 items-center whitespace-nowrap rounded px-3 text-sm font-medium text-ui-accent hover:bg-ui-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-accent"
+      >Quyết toán</NuxtLink>
       <UiButton variant="ghost" size="sm" class="min-h-11 whitespace-nowrap" @click="emit('detail', row)">Chi tiết</UiButton>
-      <UiButton
-        v-if="canManageIncidental && row.contractId && row.editable"
-        variant="ghost"
-        size="sm"
-        class="min-h-11 whitespace-nowrap"
-        @click="emit('add-incidental', row)"
+      <UiDropdownMenu
+        v-if="(canManageIncidental && row.contractId && row.editable) || ((row.electricity?.required || row.water?.required) && row.editable)"
+        aria-label="Hành động khác cho phòng"
+        trigger-class="min-h-11 min-w-11"
       >
-        <IconPlus class="h-4 w-4" aria-hidden="true" />
-        Thêm phát sinh
-      </UiButton>
-      <UiButton
-        v-if="(row.electricity?.required || row.water?.required) && row.editable"
-        variant="ghost"
-        size="sm"
-        class="min-h-11 whitespace-nowrap"
-        @click="emit('override', row)"
-      >
-        <IconPencilSquare class="h-4 w-4" aria-hidden="true" />
-        Điều chỉnh chỉ số
-      </UiButton>
+        <UiDropdownMenuItem
+          v-if="canManageIncidental && row.contractId && row.editable"
+          @click="emit('add-incidental', row)"
+        >
+          <template #icon>
+            <IconPlus class="h-4 w-4 shrink-0" aria-hidden="true" />
+          </template>
+          Thêm phát sinh
+        </UiDropdownMenuItem>
+        <UiDropdownMenuItem
+          v-if="(row.electricity?.required || row.water?.required) && row.editable"
+          @click="emit('override', row)"
+        >
+          <template #icon>
+            <IconPencilSquare class="h-4 w-4 shrink-0" aria-hidden="true" />
+          </template>
+          Điều chỉnh chỉ số
+        </UiDropdownMenuItem>
+      </UiDropdownMenu>
     </footer>
   </article>
 </template>

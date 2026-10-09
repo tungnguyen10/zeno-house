@@ -22,6 +22,8 @@ export const OWNER_CAPABILITIES = [
   'contracts.create',
   'contracts.update',
   'contracts.delete',
+  'contracts.settle',
+  'contracts.refund',
   'meter-readings.read',
   'meter-readings.write',
   'building-services.read',
@@ -71,6 +73,9 @@ export const ADMIN_ONLY_CAPABILITIES = [
   'operations-report.reopen',
   'reserve-fund.refresh-accrual',
   'users.approve.pending',
+  // Hiding a building removes it from every list and aggregate for everyone, so
+  // it stays out of the owner's `buildings.update` grant.
+  'buildings.visibility.manage',
 ] as const
 
 export const TENANT_CAPABILITIES = [

@@ -26,6 +26,23 @@ const {
   refresh,
 } = useBuildingList()
 
+// Mobile large-title collapse: fades into the persistent app header once scrolled past.
+const titleSentinel = ref<HTMLElement | null>(null)
+const isTitleCollapsed = ref(false)
+useIntersectionObserver(titleSentinel, ([entry]) => {
+  isTitleCollapsed.value = !!entry && !entry.isIntersecting
+})
+const headerTitle = useAppHeaderTitle()
+const compactTitle = computed(() => (isTitleCollapsed.value ? 'Tòa nhà' : null))
+watchEffect(() => {
+  headerTitle.value = compactTitle.value
+})
+onBeforeUnmount(() => {
+  // A newer page can claim this slot before this instance unmounts during a
+  // page transition — only clear it if it's still ours.
+  if (headerTitle.value === compactTitle.value) headerTitle.value = null
+})
+
 const bulk = useBuildingBulkActions()
 const selectionMode = ref(false)
 
@@ -176,8 +193,10 @@ async function onSubmitEdit(data: BuildingFormData) {
 </script>
 
 <template>
+  <AppPullToRefresh :on-refresh="refresh">
   <div>
     <UiPageHeader title="Tòa nhà" :description="`${total} tòa nhà`">
+      <div ref="titleSentinel" aria-hidden="true" />
       <template #actions>
         <UiDropdownMenu v-if="authStore.canManage">
           <UiDropdownMenuItem @click="openCreateBuilding">
@@ -220,8 +239,8 @@ async function onSubmitEdit(data: BuildingFormData) {
       </div>
     </UiAlert>
 
-    <div v-if="isLoading" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-      <UiSkeleton v-for="n in 6" :key="n" class="h-36 rounded-xl" />
+    <div v-if="isLoading" class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <UiSkeleton v-for="n in 6" :key="n" class="h-16 rounded-xl" />
     </div>
 
     <UiAlert v-else-if="error" severity="danger">
@@ -255,20 +274,17 @@ async function onSubmitEdit(data: BuildingFormData) {
     </UiEmptyState>
 
     <template v-else>
-      <div
+      <UiSelectAllBar
         v-if="selectionMode && authStore.canManage"
-        class="mb-3 flex items-center justify-between gap-3 rounded-lg border border-ui-border bg-ui-deep/40 px-3 py-2"
-      >
-        <UiCheckbox
-          :model-value="allOnPageSelected"
-          :indeterminate="someOnPageSelected && !allOnPageSelected"
-          :label="`Chọn cả trang (${buildings.length})`"
-          @update:model-value="toggleAllOnPage"
-        />
-        <span class="text-xs text-ui-muted">{{ bulk.selectedIds.value.length }} đã chọn tổng cộng</span>
-      </div>
+        :model-value="allOnPageSelected"
+        :indeterminate="someOnPageSelected && !allOnPageSelected"
+        :page-count="buildings.length"
+        :total-selected="bulk.selectedIds.value.length"
+        aria-label="Chọn tất cả tòa nhà trên trang"
+        @update:model-value="toggleAllOnPage"
+      />
 
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <BuildingCard
           v-for="building in buildings"
           :key="building.id"
@@ -280,17 +296,11 @@ async function onSubmitEdit(data: BuildingFormData) {
         />
       </div>
 
-      <div v-if="totalPages > 1" class="flex items-center justify-between mt-6 pt-4 border-t border-ui-border">
-        <p class="text-sm text-ui-muted">Trang {{ page }} / {{ totalPages }}</p>
-        <div class="flex gap-2">
-          <UiButton variant="secondary" size="sm" :disabled="page <= 1" @click="page--">
-            Trước
-          </UiButton>
-          <UiButton variant="secondary" size="sm" :disabled="page >= totalPages" @click="page++">
-            Tiếp
-          </UiButton>
-        </div>
-      </div>
+      <UiPagination
+        :page="page"
+        :total-pages="totalPages"
+        @update:page="page = $event"
+      />
     </template>
 
     <BuildingBulkActionsBar
@@ -347,4 +357,5 @@ async function onSubmitEdit(data: BuildingFormData) {
       />
     </UiDrawer>
   </div>
+  </AppPullToRefresh>
 </template>

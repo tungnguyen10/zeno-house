@@ -70,6 +70,7 @@ Status colors must come from `app/utils/constants/statuses.ts`. Do not map domai
 - hardcode HEX/RGB values when a repository token exists.
 - create a parallel theme, typography stack, token file, primitive, or CSS stamp to satisfy generic skill output.
 - repeat panel class bundles across features; use `UiSurfacePanel` or another matching primitive.
+- re-assemble a page filter bar from `UiToolbar` + `UiFilterPopover` + a reset button; use `UiListToolbar` (omit `searchAriaLabel` when the page has no search) and pass a real `filterCount`.
 - generalize a new primitive from one isolated use without evidence that the pattern recurs.
 
 ## Custom CSS exceptions

@@ -101,19 +101,17 @@ async function onSubmit(data: BuildingFormData) {
       {{ apiError }}
     </UiAlert>
 
-    <div class="rounded-xl border border-ui-border bg-ui-surface p-6">
-      <BuildingForm
-        v-model="formData"
-        :loading="isLoading"
-        :errors="errors"
-        :has-draft="hasDraft"
-        :is-dirty="isDirty"
-        submit-label="Cập nhật"
-        @submit="onSubmit"
-        @cancel="navigateTo(building ? buildingPath(building) : `/dashboard/buildings/${id}`)"
-        @restore-draft="restoreDraft"
-        @discard-draft="clearDraft"
-      />
-    </div>
+    <BuildingForm
+      v-model="formData"
+      :loading="isLoading"
+      :errors="errors"
+      :has-draft="hasDraft"
+      :is-dirty="isDirty"
+      submit-label="Cập nhật"
+      @submit="onSubmit"
+      @cancel="navigateTo(building ? buildingPath(building) : `/dashboard/buildings/${id}`)"
+      @restore-draft="restoreDraft"
+      @discard-draft="clearDraft"
+    />
   </div>
 </template>

@@ -1,6 +1,23 @@
 <script setup lang="ts">
 import { getApiErrorMessage } from '~/utils/api-error'
 
+// Mobile large-title collapse: fades into the persistent app header once scrolled past.
+const titleSentinel = ref<HTMLElement | null>(null)
+const isTitleCollapsed = ref(false)
+useIntersectionObserver(titleSentinel, ([entry]) => {
+  isTitleCollapsed.value = !!entry && !entry.isIntersecting
+})
+const headerTitle = useAppHeaderTitle()
+const compactTitle = computed(() => (isTitleCollapsed.value ? 'Hồ sơ của tôi' : null))
+watchEffect(() => {
+  headerTitle.value = compactTitle.value
+})
+onBeforeUnmount(() => {
+  // A newer page can claim this slot before this instance unmounts during a
+  // page transition — only clear it if it's still ours.
+  if (headerTitle.value === compactTitle.value) headerTitle.value = null
+})
+
 const {
   profile,
   status,
@@ -16,12 +33,17 @@ const {
 
 const toast = useToast()
 
-const fullName = ref('')
+// Derived rather than copied in a watcher: watchers do not flush before the server
+// render, so SSR emitted an empty input while the client had the name.
+const draftName = ref<string | null>(null)
 const touched = ref(false)
 
-watch(profile, (value) => {
-  if (value) fullName.value = value.fullName ?? ''
-}, { immediate: true })
+const fullName = computed({
+  get: () => draftName.value ?? profile.value?.fullName ?? '',
+  set: (value: string) => { draftName.value = value },
+})
+
+watch(profile, () => { draftName.value = null })
 
 const dirty = computed(() => (
   profile.value !== null && fullName.value.trim() !== (profile.value.fullName ?? '')
@@ -56,7 +78,9 @@ async function onAvatarRemove() {
     <UiPageHeader
       title="Hồ sơ của tôi"
       description="Cập nhật tên hiển thị và ảnh đại diện dùng trong toàn bộ hệ thống."
-    />
+    >
+      <div ref="titleSentinel" aria-hidden="true" />
+    </UiPageHeader>
 
     <UiSkeleton v-if="status === 'pending'" class="h-72" />
 

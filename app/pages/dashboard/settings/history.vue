@@ -21,6 +21,23 @@ definePageMeta({
   },
 })
 
+// Mobile large-title collapse: fades into the persistent app header once scrolled past.
+const titleSentinel = ref<HTMLElement | null>(null)
+const isTitleCollapsed = ref(false)
+useIntersectionObserver(titleSentinel, ([entry]) => {
+  isTitleCollapsed.value = !!entry && !entry.isIntersecting
+})
+const headerTitle = useAppHeaderTitle()
+const compactTitle = computed(() => (isTitleCollapsed.value ? 'Nhật ký hoạt động' : null))
+watchEffect(() => {
+  headerTitle.value = compactTitle.value
+})
+onBeforeUnmount(() => {
+  // A newer page can claim this slot before this instance unmounts during a
+  // page transition — only clear it if it's still ours.
+  if (headerTitle.value === compactTitle.value) headerTitle.value = null
+})
+
 const {
   buildingId,
   entityType,
@@ -119,7 +136,9 @@ function clearFilters() {
     <UiPageHeader
       title="Nhật ký hoạt động"
       description="Theo dõi thay đổi master data, phân quyền, hợp đồng, vận hành và tenant portal."
-    />
+    >
+      <div ref="titleSentinel" aria-hidden="true" />
+    </UiPageHeader>
 
     <!-- Toolbar -->
     <UiToolbar>
@@ -192,7 +211,7 @@ function clearFilters() {
         </div>
 
         <!-- Card -->
-        <div class="overflow-hidden rounded-lg border border-ui-border bg-ui-surface/40">
+        <div class="-mx-4 overflow-hidden border-y border-ui-border bg-ui-surface/40 sm:mx-0 sm:rounded-lg sm:border">
           <div
             v-for="event in group.events"
             :key="event.id"

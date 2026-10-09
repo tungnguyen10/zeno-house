@@ -43,42 +43,37 @@ const meterReadingsPath = computed(() => `${buildingPath(props.building)}/meter-
     <NuxtLink
       :to="buildingPath(building)"
       :class="[
-        'block rounded-xl p-5 focus:outline-none focus-visible:ring-2 focus-visible:ring-ui-accent/40',
+        'block rounded-xl p-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-ui-accent/40 sm:p-4',
         selectable ? 'pl-12' : '',
       ]"
     >
-      <div class="flex items-start gap-3 mb-3">
+      <div class="flex items-center gap-3">
         <div
           v-if="!selectable"
-          class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-ui-accent/10 text-ui-accent group-hover:bg-ui-accent/15 transition-colors"
+          class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-ui-accent/10 text-ui-accent transition-colors group-hover:bg-ui-accent/15"
           aria-hidden="true"
         >
-          <IconBuilding class="h-5 w-5" />
+          <IconBuilding class="h-4 w-4" />
         </div>
-        <div class="flex-1 min-w-0">
+        <div class="min-w-0 flex-1">
           <div class="flex items-start justify-between gap-2">
-            <h3 class="text-sm font-semibold text-ui-primary truncate group-hover:text-ui-accent">
+            <h3 class="truncate text-sm font-semibold text-ui-primary group-hover:text-ui-accent">
               {{ building.name }}
             </h3>
-            <UiStatusBadge :status="building.status" />
+            <!-- Active is the norm, so only the exception earns a badge and the row's width. -->
+            <div class="flex shrink-0 items-center gap-1.5">
+              <UiBadge v-if="building.isHidden" variant="warning">Đang ẩn</UiBadge>
+              <UiStatusBadge v-if="building.status !== 'active'" :status="building.status" />
+            </div>
           </div>
-          <p class="text-xs text-ui-muted truncate mt-0.5">{{ building.address }}</p>
+          <div class="mt-0.5 flex items-baseline justify-between gap-3 text-xs text-ui-muted">
+            <span class="min-w-0 truncate" :title="building.address">{{ building.address }}</span>
+            <span class="shrink-0 tabular-nums">
+              {{ building.totalRooms }} phòng · {{ building.serviceSummary.activeCount }} dịch vụ
+            </span>
+          </div>
         </div>
       </div>
-
-      <div class="flex items-center gap-3 text-xs text-ui-muted">
-        <span class="inline-flex items-center gap-1">
-          <IconDoor class="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
-          {{ building.totalRooms }} phòng
-        </span>
-        <span class="inline-flex items-center gap-1">
-          <span class="h-1 w-1 rounded-full bg-ui-border" aria-hidden="true" />
-          {{ building.serviceSummary.activeCount }} dịch vụ
-        </span>
-      </div>
-      <p v-if="building.serviceSummary.activeNames.length" class="mt-2 truncate text-xs text-ui-muted">
-        {{ building.serviceSummary.activeNames.slice(0, 3).join(' · ') }}
-      </p>
     </NuxtLink>
 
     <!--

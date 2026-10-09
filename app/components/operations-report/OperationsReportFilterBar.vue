@@ -10,7 +10,7 @@ const props = defineProps<{
   yearOptions: SelectOption[]
   monthOptions: SelectOption[]
   expenseCategoryOptions: SelectOption[]
-  hasActiveFilters?: boolean
+  activeFilterCount?: number
 }>()
 
 const emit = defineEmits<{
@@ -23,39 +23,61 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <UiToolbar class="mb-4">
-    <UiSelect
-      :model-value="buildingValue"
-      aria-label="Tòa nhà"
-      :options="buildingOptions"
-      placeholder="Tòa nhà"
-      class="w-full sm:min-w-[200px] sm:max-w-[260px]"
-      @update:model-value="emit('update:buildingValue', $event)"
-    />
-    <UiSelect
-      :model-value="yearValue"
-      aria-label="Năm"
-      :options="yearOptions"
-      class="w-full sm:w-28"
-      @update:model-value="emit('update:yearValue', $event)"
-    />
-    <UiSelect
-      :model-value="monthValue"
-      aria-label="Tháng"
-      :options="monthOptions"
-      class="w-full sm:w-32"
-      @update:model-value="emit('update:monthValue', $event)"
-    />
-    <UiSelect
-      :model-value="expenseCategoryValue"
-      aria-label="Loại chi"
-      :options="expenseCategoryOptions"
-      class="w-full sm:min-w-[170px] sm:max-w-[220px]"
-      @update:model-value="emit('update:expenseCategoryValue', $event)"
-    />
+  <UiListToolbar
+    class="mb-4"
+    :filter-count="props.activeFilterCount ?? 0"
+    filter-aria-label="Bộ lọc báo cáo vận hành"
+    :has-active-filters="(props.activeFilterCount ?? 0) > 0"
+    @reset="emit('reset')"
+  >
+    <template #filters>
+      <div class="flex flex-col gap-3">
+        <label class="flex flex-col gap-1.5 text-xs text-ui-muted">
+          <span>Tòa nhà</span>
+          <UiSelect
+            :model-value="buildingValue"
+            :options="buildingOptions"
+            placeholder="Tòa nhà"
+            density="compact"
+            aria-label="Tòa nhà"
+            @update:model-value="emit('update:buildingValue', $event)"
+          />
+        </label>
 
-    <template v-if="props.hasActiveFilters" #actions>
-      <UiFilterResetButton @click="emit('reset')" />
+        <div class="grid grid-cols-2 gap-2">
+          <label class="flex flex-col gap-1.5 text-xs text-ui-muted">
+            <span>Năm</span>
+            <UiSelect
+              :model-value="yearValue"
+              :options="yearOptions"
+              density="compact"
+              aria-label="Năm"
+              @update:model-value="emit('update:yearValue', $event)"
+            />
+          </label>
+          <label class="flex flex-col gap-1.5 text-xs text-ui-muted">
+            <span>Tháng</span>
+            <UiSelect
+              :model-value="monthValue"
+              :options="monthOptions"
+              density="compact"
+              aria-label="Tháng"
+              @update:model-value="emit('update:monthValue', $event)"
+            />
+          </label>
+        </div>
+
+        <label class="flex flex-col gap-1.5 text-xs text-ui-muted">
+          <span>Loại chi</span>
+          <UiSelect
+            :model-value="expenseCategoryValue"
+            :options="expenseCategoryOptions"
+            density="compact"
+            aria-label="Loại chi"
+            @update:model-value="emit('update:expenseCategoryValue', $event)"
+          />
+        </label>
+      </div>
     </template>
-  </UiToolbar>
+  </UiListToolbar>
 </template>

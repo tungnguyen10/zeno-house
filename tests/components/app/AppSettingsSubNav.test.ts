@@ -30,6 +30,7 @@ describe('AppSettingsSubNav role visibility', () => {
     expect(wrapper.findAll('a').map(link => link.attributes('href'))).toEqual([
       '/dashboard/settings/managers',
       '/dashboard/settings/tenant-accounts',
+      '/dashboard/settings/buildings',
       '/dashboard/settings/access-requests',
       '/dashboard/settings/history',
     ])

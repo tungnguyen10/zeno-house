@@ -7,6 +7,8 @@ const rpcMock = vi.fn()
 const enrichPayments = vi.fn(async payments => payments)
 const findManyInvoices = vi.fn()
 const findManyPeriods = vi.fn()
+const findInvoice = vi.fn()
+const findPeriod = vi.fn()
 
 vi.mock('#supabase/server', () => ({
   serverSupabaseClient: vi.fn(async () => ({
@@ -19,19 +21,21 @@ vi.mock('#supabase/server', () => ({
 
 vi.mock('../../../server/services/billing/display', () => ({
   BillingDisplayResolver: vi.fn(function BillingDisplayResolver() {
-    return { enrichPayments }
+    return { enrichPayments, enrichInvoices: async (invoices: unknown[]) => invoices }
   }),
 }))
 
 vi.mock('../../../server/repositories/billing/invoices', () => ({
   InvoiceRepository: {
     findManyByIdentifiers: findManyInvoices,
+    findByIdentifier: findInvoice,
   },
 }))
 
 vi.mock('../../../server/repositories/billing/periods', () => ({
   BillingPeriodRepository: {
     findManyByIds: findManyPeriods,
+    findById: findPeriod,
   },
 }))
 
@@ -74,6 +78,22 @@ describe('InvoicePaymentService.recordBatch (RPC-backed)', () => {
       updated_at: p.updatedAt,
     }
   }
+
+  it('records single cash payments through the atomic transaction too, preserving existing deposit allocations', async () => {
+    const before = buildInvoice({ paidAmount: 500_000, balanceAmount: 500_000, totalAmount: 1_000_000 })
+    const after = { ...before, paidAmount: 1_000_000, balanceAmount: 0, status: 'paid' as const }
+    findInvoice.mockResolvedValueOnce(before).mockResolvedValueOnce(after)
+    findPeriod.mockResolvedValue(buildPeriod({ id: before.billingPeriodId }))
+    rpcMock.mockResolvedValueOnce({ data: [rowFromPayment(buildInvoicePayment({ amount: 500_000 }))], error: null })
+    const { InvoicePaymentService } = await import('../../../server/services/billing/payments')
+    const result = await InvoicePaymentService.record({ context: {}, node: { req: { headers: {} } } } as never, user(), before.id, {
+      amount: 500_000, paid_at: '2026-06-02', payment_method: 'cash',
+    })
+    expect(rpcMock).toHaveBeenCalledWith('record_bulk_payments', expect.objectContaining({
+      p_payments: [expect.objectContaining({ invoice_id: before.id, amount: 500_000 })],
+    }))
+    expect(result.invoice.paidAmount).toBe(1_000_000)
+  })
 
   it('forwards items to record_bulk_payments and maps the returned payment rows', async () => {
     const inserted = [

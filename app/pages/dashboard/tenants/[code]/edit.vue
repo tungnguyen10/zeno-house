@@ -168,26 +168,24 @@ async function onSubmit(data: TenantFormData) {
       {{ apiError }}
     </UiAlert>
 
-    <div class="rounded-xl border border-ui-border bg-ui-surface p-6">
-      <TenantForm
-        v-model="formData"
-        :loading="isLoading"
-        :errors="errors"
-        :has-draft="hasDraft"
-        :is-dirty="isDirty"
-        :id-card-front-signed-url="idCardFrontSignedUrl"
-        :id-card-back-signed-url="idCardBackSignedUrl"
-        :id-card-front-file-name="idImageFiles.front?.name ?? null"
-        :id-card-back-file-name="idImageFiles.back?.name ?? null"
-        :id-image-loading-side="idImageLoadingSide"
-        :can-manage-id-images="authStore.can('tenants.update')"
-        @submit="onSubmit"
-        @select-id-image="onSelectIdImage"
-        @remove-id-image="onRemoveIdImage"
-        @cancel="navigateTo(`/dashboard/tenants/${id}`)"
-        @restore-draft="restoreDraft"
-        @discard-draft="clearDraft"
-      />
-    </div>
+    <TenantForm
+      v-model="formData"
+      :loading="isLoading"
+      :errors="errors"
+      :has-draft="hasDraft"
+      :is-dirty="isDirty"
+      :id-card-front-signed-url="idCardFrontSignedUrl"
+      :id-card-back-signed-url="idCardBackSignedUrl"
+      :id-card-front-file-name="idImageFiles.front?.name ?? null"
+      :id-card-back-file-name="idImageFiles.back?.name ?? null"
+      :id-image-loading-side="idImageLoadingSide"
+      :can-manage-id-images="authStore.can('tenants.update')"
+      @submit="onSubmit"
+      @select-id-image="onSelectIdImage"
+      @remove-id-image="onRemoveIdImage"
+      @cancel="navigateTo(`/dashboard/tenants/${id}`)"
+      @restore-draft="restoreDraft"
+      @discard-draft="clearDraft"
+    />
   </div>
 </template>

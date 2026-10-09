@@ -24,17 +24,49 @@ const generatedId = useId()
 const titleId = computed(() => props.title ? `${generatedId}-title` : undefined)
 const accessibleLabel = computed(() => props.title ? undefined : (props.ariaLabel ?? 'Ngăn chi tiết'))
 
+// Below `lg` this renders as a bottom sheet (native-style, drag-to-dismiss);
+// at `lg+` it keeps the original right-side drawer.
 const panelClass = computed(() =>
   clsx(
-    'fixed inset-y-0 right-0 z-10 flex h-full max-h-full w-full flex-col bg-ui-chrome shadow-xl',
+    'fixed inset-x-0 bottom-0 z-10 flex max-h-[85vh] w-full flex-col rounded-t-3xl bg-ui-chrome shadow-2xl safe-bottom',
+    // `inset-x-0` + a fixed width would pin the sheet to the left edge on tablets.
+    'mx-auto',
+    'lg:inset-x-auto lg:inset-y-0 lg:bottom-auto lg:right-0 lg:h-full lg:max-h-full lg:rounded-t-none lg:shadow-xl',
     'sm:max-w-full',
     props.width,
   ),
 )
 
+const dragY = ref(0)
+const dragging = ref(false)
+let startY = 0
+
 function close() {
   emit('update:modelValue', false)
 }
+
+function onHandlePointerDown(event: PointerEvent) {
+  dragging.value = true
+  startY = event.clientY
+  ;(event.currentTarget as HTMLElement).setPointerCapture(event.pointerId)
+}
+
+function onHandlePointerMove(event: PointerEvent) {
+  if (!dragging.value) return
+  dragY.value = Math.max(0, event.clientY - startY)
+}
+
+function onHandlePointerUp() {
+  if (!dragging.value) return
+  dragging.value = false
+  if (dragY.value > 120) close()
+  dragY.value = 0
+}
+
+// Drag offset for the mobile sheet handle; unused (0) when not dragging.
+const panelStyle = computed(() =>
+  dragging.value || dragY.value ? { transform: `translateY(${dragY.value}px)` } : undefined,
+)
 
 onMounted(() => { mounted.value = true })
 
@@ -99,30 +131,43 @@ watch(
     >
       <div
         v-if="modelValue"
-        class="fixed inset-0 z-50"
+        class="fixed inset-0 z-[65]"
         role="dialog"
         aria-modal="true"
         :aria-labelledby="titleId"
         :aria-label="accessibleLabel"
         @keydown="onKeydown"
       >
+        <!-- Above the AI FAB (z-60) so an open sheet never sits under it, below the toast host (z-70). -->
         <div class="absolute inset-0 bg-ui-overlay/50" aria-hidden="true" @click="close" />
 
         <Transition
           appear
-          enter-active-class="transition duration-200 ease-out"
-          enter-from-class="translate-x-full"
-          enter-to-class="translate-x-0"
-          leave-active-class="transition duration-200 ease-in"
-          leave-from-class="translate-x-0"
-          leave-to-class="translate-x-full"
+          enter-active-class="transition-transform duration-300 [transition-timing-function:cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none"
+          enter-from-class="translate-y-full translate-x-0 lg:translate-y-0 lg:translate-x-full"
+          enter-to-class="translate-y-0 translate-x-0"
+          leave-active-class="transition-transform duration-200 [transition-timing-function:cubic-bezier(0.32,0,0.67,0)] motion-reduce:transition-none"
+          leave-from-class="translate-y-0 translate-x-0"
+          leave-to-class="translate-y-full translate-x-0 lg:translate-y-0 lg:translate-x-full"
         >
           <aside
             v-if="modelValue"
             ref="drawerRef"
-            :class="panelClass"
+            :class="[panelClass, { 'transition-transform duration-200 motion-reduce:transition-none': !dragging }]"
+            :style="panelStyle"
             tabindex="-1"
           >
+            <!-- Drag handle — mobile bottom-sheet only, hidden on the desktop drawer. -->
+            <div
+              class="flex touch-none justify-center pb-1 pt-2.5 lg:hidden"
+              @pointerdown="onHandlePointerDown"
+              @pointermove="onHandlePointerMove"
+              @pointerup="onHandlePointerUp"
+              @pointercancel="onHandlePointerUp"
+            >
+              <span class="h-1.5 w-10 rounded-full bg-ui-border-strong" aria-hidden="true" />
+            </div>
+
             <header class="flex items-center justify-between border-b border-ui-border px-5 py-4">
               <div :id="titleId" class="min-w-0">
                 <slot name="header">
@@ -130,7 +175,7 @@ watch(
                 </slot>
               </div>
               <UiButton variant="ghost" size="sm" icon-only aria-label="Đóng" @click="close">
-                ×
+                <IconX class="h-4 w-4" aria-hidden="true" />
               </UiButton>
             </header>
 
@@ -147,3 +192,4 @@ watch(
     </Transition>
   </Teleport>
 </template>
+

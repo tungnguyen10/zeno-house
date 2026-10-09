@@ -26,6 +26,18 @@ const raw = ref('')
 const mode = ref<BulkReadingMode>('auto')
 const usageWarningPercent = ref(DEFAULT_USAGE_WARNING_PERCENT)
 
+const modeOptions: Array<{ value: BulkReadingMode, label: string }> = [
+  { value: 'auto', label: 'Tự nhận' },
+  { value: 'room', label: 'Theo tên phòng' },
+  { value: 'ordered', label: 'Theo thứ tự' },
+]
+
+// UiFilterChips is multi-select; keep single-select by only accepting the newly toggled-on value.
+function onModeChipChange(next: BulkReadingMode[]) {
+  const picked = next.find(value => value !== mode.value)
+  if (picked) mode.value = picked
+}
+
 const preview = computed(() => buildBulkReadingPreview(raw.value, props.rows, {
   mode: mode.value,
   usageWarningPercent: usageWarningPercent.value,
@@ -81,6 +93,15 @@ const guidance = computed(() => {
     examples: [],
     note: 'Kiểm tra bộ lọc hoặc trạng thái kỳ trước khi nhập.',
   }
+})
+
+// Each guidance branch lists room-prefixed examples first, then one bare/ordered
+// example last — narrow the list to what the active mode actually accepts.
+const visibleExamples = computed(() => {
+  const examples = guidance.value.examples
+  if (mode.value === 'room') return examples.slice(0, -1)
+  if (mode.value === 'ordered') return examples.slice(-1)
+  return examples
 })
 
 watch(() => props.open, (open) => {
@@ -150,58 +171,56 @@ function statusClass(line: BulkReadingPreviewLine): string {
     :open="open"
     title="Nhập nhanh chỉ số"
     size="xl"
+    mobile-fullscreen
     @close="emit('close')"
   >
-    <div class="space-y-4">
+    <div class="space-y-3 sm:space-y-4">
       <UiAlert severity="info">
         <p class="text-sm text-ui-primary">{{ guidance.title }}</p>
-        <div v-if="guidance.examples.length > 0" class="mt-2 grid gap-1 text-xs text-ui-muted sm:grid-cols-3">
+        <div
+          v-if="visibleExamples.length > 0"
+          class="mt-1.5 flex gap-1.5 overflow-x-auto no-scrollbar text-xs text-ui-muted sm:grid sm:grid-cols-3 sm:gap-1 sm:overflow-visible"
+        >
           <code
-            v-for="example in guidance.examples"
+            v-for="example in visibleExamples"
             :key="example"
-            class="rounded border border-ui-border bg-ui-surface px-2 py-1 text-ui-primary"
+            class="shrink-0 rounded border border-ui-border bg-ui-surface px-2 py-1 text-ui-primary sm:shrink"
           >
             {{ example }}
           </code>
         </div>
-        <p class="mt-2 text-xs text-ui-muted">{{ guidance.note }}</p>
+        <p class="mt-1.5 text-xs text-ui-muted">{{ guidance.note }}</p>
       </UiAlert>
 
-      <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
-        <div class="flex items-center gap-1.5">
-          <UiButton size="sm" :variant="mode === 'auto' ? 'primary' : 'ghost'" @click="mode = 'auto'">
-            Tự nhận
-          </UiButton>
-          <UiButton size="sm" :variant="mode === 'room' ? 'primary' : 'ghost'" @click="mode = 'room'">
-            Theo tên phòng
-          </UiButton>
-          <UiButton size="sm" :variant="mode === 'ordered' ? 'primary' : 'ghost'" @click="mode = 'ordered'">
-            Theo thứ tự
-          </UiButton>
-        </div>
-        <span class="hidden h-4 w-px bg-ui-border sm:block" aria-hidden="true" />
-        <label
-          class="flex items-center gap-1.5 text-xs text-ui-muted"
-          title="Áp dụng khi tiêu thụ kỳ này tăng hoặc giảm quá ngưỡng so với kỳ trước"
-        >
-          Cảnh báo lệch tiêu thụ hơn
-          <UiInput
-            v-model.number="usageWarningPercent"
-            type="number"
-            number-mode="integer"
-            min="1"
-            max="200"
-            step="1"
-            density="compact"
-            class="w-16"
-            aria-label="Ngưỡng cảnh báo lệch tiêu thụ (%)"
+      <div class="space-y-2">
+        <UiFilterChips
+          :model-value="[mode]"
+          :options="modeOptions"
+          aria-label="Chế độ đọc chỉ số"
+          @update:model-value="onModeChipChange"
+        />
+        <div class="flex flex-col gap-1.5 text-xs text-ui-muted sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+          <label
+            class="flex items-center gap-1.5"
+            title="Áp dụng khi tiêu thụ kỳ này tăng hoặc giảm quá ngưỡng so với kỳ trước"
           >
-            <template #suffix>%</template>
-          </UiInput>
-        </label>
-        <span class="text-xs text-ui-muted">
-          Đang đọc: {{ preview.mode === 'room' ? 'theo tên phòng' : 'theo thứ tự đang hiển thị' }}
-        </span>
+            Cảnh báo lệch tiêu thụ hơn
+            <UiInput
+              v-model.number="usageWarningPercent"
+              type="number"
+              number-mode="integer"
+              min="1"
+              max="200"
+              step="1"
+              density="compact"
+              class="w-16"
+              aria-label="Ngưỡng cảnh báo lệch tiêu thụ (%)"
+            >
+              <template #suffix>%</template>
+            </UiInput>
+          </label>
+          <span>Đang đọc: {{ preview.mode === 'room' ? 'theo tên phòng' : 'theo thứ tự đang hiển thị' }}</span>
+        </div>
       </div>
 
       <UiTextarea
@@ -217,64 +236,97 @@ function statusClass(line: BulkReadingPreviewLine): string {
         Input có thể bị nhầm giữa tên phòng và chỉ số. Kiểm tra preview hoặc chọn chế độ đọc trước khi áp dụng.
       </UiAlert>
 
-      <div class="grid gap-2 text-xs text-ui-muted sm:grid-cols-4">
+      <div class="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs text-ui-muted sm:grid-cols-4">
         <span>Áp dụng: <strong class="text-ui-primary">{{ preview.applyCount }}</strong></span>
         <span>Cảnh báo: <strong class="text-status-warning">{{ preview.warningCount }}</strong></span>
         <span>Bị loại: <strong class="text-status-danger">{{ preview.rejectedCount }}</strong></span>
         <span>Lỗi: <strong class="text-status-danger">{{ preview.blockingCount }}</strong></span>
       </div>
 
-      <UiTable
-        v-if="preview.lines.length > 0"
-        :columns="columns"
-        :rows="preview.lines"
-        row-key="lineNumber"
-        density="dense"
-      >
-        <template #cell-line="{ row }">
-          {{ (row as BulkReadingPreviewLine).lineNumber }}
-        </template>
-        <template #cell-room="{ row }">
-          {{ (row as BulkReadingPreviewLine).roomNumber ?? (row as BulkReadingPreviewLine).roomToken ?? '—' }}
-        </template>
-        <template #cell-electricity="{ row }">
-          <span class="inline-flex flex-col items-end gap-0.5">
-            <span
-              :class="cellClass(row as BulkReadingPreviewLine, 'electricity')"
-              :title="cellTitle(row as BulkReadingPreviewLine, 'electricity')"
-            >
-              {{ cellText(row as BulkReadingPreviewLine, 'electricity') }}
+      <template v-if="preview.lines.length > 0">
+        <!-- Mobile: card list, same convention as the invoice review list -->
+        <div class="divide-y divide-ui-border overflow-hidden rounded-xl border border-ui-border bg-ui-surface md:hidden">
+          <div v-for="line in preview.lines" :key="line.lineNumber" class="flex flex-col gap-2 p-3">
+            <p class="truncate text-sm font-medium text-ui-primary">
+              Dòng {{ line.lineNumber }} · {{ line.roomNumber ?? line.roomToken ?? '—' }}
+            </p>
+            <div class="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+              <div class="min-w-0">
+                <span class="text-ui-muted">Điện </span>
+                <span :class="cellClass(line, 'electricity')" :title="cellTitle(line, 'electricity')">
+                  {{ cellText(line, 'electricity') }}
+                </span>
+                <span v-if="cellHasIssue(line, 'electricity') && cellPreviousText(line, 'electricity')" class="block text-[11px] tabular-nums text-ui-muted">
+                  {{ cellPreviousText(line, 'electricity') }}
+                </span>
+              </div>
+              <div class="min-w-0 text-right">
+                <span class="text-ui-muted">Nước </span>
+                <span :class="cellClass(line, 'water')" :title="cellTitle(line, 'water')">
+                  {{ cellText(line, 'water') }}
+                </span>
+                <span v-if="cellHasIssue(line, 'water') && cellPreviousText(line, 'water')" class="block text-[11px] tabular-nums text-ui-muted">
+                  {{ cellPreviousText(line, 'water') }}
+                </span>
+              </div>
+            </div>
+            <p :class="statusClass(line)">{{ line.message }}</p>
+          </div>
+        </div>
+
+        <!-- Desktop: dense table -->
+        <UiTable
+          :columns="columns"
+          :rows="preview.lines"
+          row-key="lineNumber"
+          density="dense"
+          class="hidden md:block"
+        >
+          <template #cell-line="{ row }">
+            {{ (row as BulkReadingPreviewLine).lineNumber }}
+          </template>
+          <template #cell-room="{ row }">
+            {{ (row as BulkReadingPreviewLine).roomNumber ?? (row as BulkReadingPreviewLine).roomToken ?? '—' }}
+          </template>
+          <template #cell-electricity="{ row }">
+            <span class="inline-flex flex-col items-end gap-0.5">
+              <span
+                :class="cellClass(row as BulkReadingPreviewLine, 'electricity')"
+                :title="cellTitle(row as BulkReadingPreviewLine, 'electricity')"
+              >
+                {{ cellText(row as BulkReadingPreviewLine, 'electricity') }}
+              </span>
+              <span
+                v-if="cellHasIssue(row as BulkReadingPreviewLine, 'electricity') && cellPreviousText(row as BulkReadingPreviewLine, 'electricity')"
+                class="text-[11px] tabular-nums text-ui-muted"
+              >
+                {{ cellPreviousText(row as BulkReadingPreviewLine, 'electricity') }}
+              </span>
             </span>
-            <span
-              v-if="cellHasIssue(row as BulkReadingPreviewLine, 'electricity') && cellPreviousText(row as BulkReadingPreviewLine, 'electricity')"
-              class="text-[11px] tabular-nums text-ui-muted"
-            >
-              {{ cellPreviousText(row as BulkReadingPreviewLine, 'electricity') }}
+          </template>
+          <template #cell-water="{ row }">
+            <span class="inline-flex flex-col items-end gap-0.5">
+              <span
+                :class="cellClass(row as BulkReadingPreviewLine, 'water')"
+                :title="cellTitle(row as BulkReadingPreviewLine, 'water')"
+              >
+                {{ cellText(row as BulkReadingPreviewLine, 'water') }}
+              </span>
+              <span
+                v-if="cellHasIssue(row as BulkReadingPreviewLine, 'water') && cellPreviousText(row as BulkReadingPreviewLine, 'water')"
+                class="text-[11px] tabular-nums text-ui-muted"
+              >
+                {{ cellPreviousText(row as BulkReadingPreviewLine, 'water') }}
+              </span>
             </span>
-          </span>
-        </template>
-        <template #cell-water="{ row }">
-          <span class="inline-flex flex-col items-end gap-0.5">
-            <span
-              :class="cellClass(row as BulkReadingPreviewLine, 'water')"
-              :title="cellTitle(row as BulkReadingPreviewLine, 'water')"
-            >
-              {{ cellText(row as BulkReadingPreviewLine, 'water') }}
+          </template>
+          <template #cell-status="{ row }">
+            <span :class="statusClass(row as BulkReadingPreviewLine)">
+              {{ (row as BulkReadingPreviewLine).message }}
             </span>
-            <span
-              v-if="cellHasIssue(row as BulkReadingPreviewLine, 'water') && cellPreviousText(row as BulkReadingPreviewLine, 'water')"
-              class="text-[11px] tabular-nums text-ui-muted"
-            >
-              {{ cellPreviousText(row as BulkReadingPreviewLine, 'water') }}
-            </span>
-          </span>
-        </template>
-        <template #cell-status="{ row }">
-          <span :class="statusClass(row as BulkReadingPreviewLine)">
-            {{ (row as BulkReadingPreviewLine).message }}
-          </span>
-        </template>
-      </UiTable>
+          </template>
+        </UiTable>
+      </template>
     </div>
 
     <template #footer>

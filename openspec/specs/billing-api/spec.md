@@ -564,3 +564,10 @@ The invoice issue transaction SHALL accept a server-owned operation key, SHALL r
 #### Scenario: Concurrent issue targets overlap
 - **WHEN** concurrent issue operations target the same period and contract
 - **THEN** at most one active invoice is committed and the losing operation resolves without partial financial state
+
+### Requirement: Checkout final charges
+Billing SHALL show each eligible contract per room, including a returned predecessor and an active successor in the same month. A returned contract SHALL remain in the final-month queue until a dedicated final-bill or pilot settlement operation posts unbilled recurring, metered, and incidental charges. Final charge persistence SHALL retain the one-effective-invoice-per-contract-period rule and preserve issued or paid lines.
+
+#### Scenario: Existing paid invoice
+- **WHEN** a returned contract already has a paid invoice and unbilled final consumption
+- **THEN** confirmation appends only missing typed, audited charges and preserves the existing lines and payments rather than creating a duplicate invoice

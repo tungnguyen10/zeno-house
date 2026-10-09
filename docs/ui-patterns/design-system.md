@@ -96,7 +96,10 @@ Cho destructive button dùng `focus-visible:ring-status-danger`. Không tắt ou
 | Need | Use |
 |------|-----|
 | Page title + actions | `UiPageHeader` |
-| Filter row + actions | `UiToolbar` |
+| Search + filter bar on a list/report page | `UiListToolbar` |
+| Filter row + actions (no search, non-list surface) | `UiToolbar` |
+| Filter trigger + fields panel | `UiFilterPopover` |
+| Small labelled breakdown list | `UiListPanel` |
 | Compact KPI strip | `UiMetric` |
 | Workspace step nav | `UiTabs` |
 | Many comparable rows | `UiTable` |
@@ -147,6 +150,26 @@ Use `UiDatePicker` instead of native `UiInput type="date"` for domain/page date 
 
 - `UiModal` and `UiDrawer` must have a visible `title` or an `ariaLabel`; they close on Escape, keep focus inside while open, and restore previous focus after close.
 - `UiCombobox` clear actions must not be nested inside the trigger button, and clearing should not open the dropdown.
+
+### List Toolbar and Filters (`UiListToolbar`, `UiFilterPopover`)
+
+Every page-level filter bar goes through `UiListToolbar` — list pages and report pages alike. Do not re-assemble `UiToolbar` + `UiFilterPopover` + `UiFilterResetButton` by hand in a domain toolbar; that is how `OperationsReportFilterBar` drifted out of the shared shell.
+
+- `UiListToolbar` props: `search?`, `searchPlaceholder?`, `searchAriaLabel?`, `searchDebounce` (250), `filterCount` (0), `filterAriaLabel` (required), `filterPanelClass?`, `hasActiveFilters?`. Emits `update:search` and `reset`.
+- **Search is optional.** Omit `searchAriaLabel` and the search input is not rendered — that is how report pages with nothing to search (`OperationsReportFilterBar`) still use the shared shell.
+- Slots: `#filters` (the fields, rendered inside the popover/sheet) and `#sort` (e.g. `UiSortControl`, wraps to its own row on mobile). The reset button is owned by the shell and renders in `UiToolbar`'s `#actions` when `hasActiveFilters` is true.
+- `filterCount` must be a **real** count of active filters, not `hasActiveFilters ? 1 : 0`. Compute it in the page/composable that knows the defaults and derive `hasActiveFilters` from it (`count > 0`) so the two can never disagree.
+- SSR safety: when a filter auto-defaults from async data (e.g. building seeded from the first assigned building), only count it once **both** the value and the default are resolved. Comparing against a still-`null` value makes the server render an active filter the client does not, which triggers a hydration mismatch.
+- `UiFilterPopover` is responsive by itself: below `sm` it renders the `#filters` content in a `UiDrawer` bottom sheet with a full-width "Xong" button; at `sm` and above it keeps the trigger-anchored popover (`panelClass`, default `w-72`, auto-flips to right-aligned near the viewport edge). Callers never branch on breakpoint.
+- `UiFilterChips` belongs **inside** the filter panel for multi-select fields (status, type). It is not an "active filters" summary row.
+
+### Grouped List Panel (`UiListPanel`)
+
+Use for small labelled breakdowns (revenue by type, fixed costs, prepaid allocation) instead of repeating `overflow-hidden rounded-xl border border-ui-border bg-ui-surface` plus a header `div` plus `divide-y`.
+
+- Props: `title`, `total?` (already-formatted string, right-aligned in the header), `empty?`, `emptyText?`.
+- The default slot supplies `<li>` rows; the component owns the `<ul class="divide-y">`.
+- The empty case collapses to one muted line — use `UiEmptyState` only when the whole section is empty, not for a sub-breakdown.
 
 ### Surface Wrapper (`UiSurfacePanel`)
 
@@ -202,6 +225,9 @@ long emails with truncation/title disclosure where appropriate, and respect redu
 - ✗ Tự nghĩ class màu cho status — map qua `app/utils/constants/statuses.ts`.
 - ✗ Card-trong-card chỉ để có border. Dùng `UiSection` + divider.
 - ✗ Lặp lại chuỗi class panel (`rounded-xl border border-ui-border bg-ui-surface p-*`) ở nhiều file. Dùng `UiSurfacePanel`.
+- ✗ Tự ráp lại `UiToolbar` + `UiFilterPopover` + nút reset cho một trang. Dùng `UiListToolbar` (bỏ `searchAriaLabel` nếu trang không có ô tìm kiếm).
+- ✗ Truyền `filterCount` giả (`hasActiveFilters ? 1 : 0`). Đếm đúng số bộ lọc đang bật.
+- ✗ Tự branch breakpoint để chọn popover hay bottom sheet cho bộ lọc — `UiFilterPopover` đã lo.
 - ✗ Dashboard hero typography ở dense workspace.
 - ✗ Tạo primitive cho 1 chỗ dùng. Đợi có 2+ chỗ rồi mới generalize.
 
@@ -220,6 +246,7 @@ Use `UiDrawer` for reference surfaces that should preserve the current workspace
 - Props: `modelValue`, `title`, `ariaLabel`, `width` (default `w-96`).
 - Slots: `header`, default body, `footer`.
 - Behavior: right-side slide-in, backdrop click closes, Esc closes, focus remains inside the drawer while open, previous focus is restored after close.
+- Mobile: below `lg` it renders as a bottom sheet (rounded top corners, grabber); at `lg` and above it is the right-side drawer. `UiFilterPopover` reuses this for its compact filter sheet.
 - Mobile: pass a responsive width such as `w-full sm:w-[44rem]` when the content needs more room.
 
 ### Toasts
@@ -242,7 +269,7 @@ The billing workspace header now uses a dropdown menu containing **Xuất Excel*
 Used in `BillingPaymentsStep` so operators can record many payments in one round trip.
 
 - Add a 40px-wide leading column with checkboxes; only render the checkbox when the row is eligible (e.g. invoice has remaining balance).
-- Provide a header "Chọn tất cả (N)" / "Bỏ chọn tất cả" toggle in the table toolbar `#actions` slot.
+- Provide the page-level select-all control with `UiSelectAllBar` (`Chọn cả trang (N)` checkbox plus the current selection count); do not hand-roll a "Chọn tất cả / Bỏ chọn tất cả" text toggle in the table toolbar.
 - Render a sticky bottom bar (`fixed bottom-4 left-1/2 -translate-x-1/2 z-30`, with `<Transition>`) showing the count plus primary "Ghi thu hàng loạt" / secondary "Bỏ chọn".
 - Open a modal that pre-fills one row per selected invoice (default amount = remaining balance) and exposes shared fields (payment method, payment date, note).
 - On 409 responses with `details.failed_index`, highlight the failing row inside the modal (`bg-rose-500/10`) and surface the server message via toast — keep the modal open so the operator can adjust.
@@ -270,3 +297,18 @@ Those skills improve visual direction and critique; they do not replace this des
 Do not create a parallel theme, font stack, token file, primitive library, or copied CSS signature merely because a generic design skill proposes one. If a broader visual change would materially improve multiple product surfaces, raise it as an explicit design-system optimization with affected surfaces, benefit, cost, and a compliant fallback before implementation.
 
 UI completion requires checking relevant interaction states and visually inspecting the rendered result when tooling is available. A page that compiles but has weak hierarchy, inconsistent spacing, generic styling, or missing states is not complete.
+
+## 13. Mobile Native App Shell (iOS-inspired)
+
+Standard for pages that get a full mobile-native pass (applied across `/dashboard/**`, including `/dashboard/billing/**` and `/dashboard/operations-report`). Desktop (`lg` and above) stays on the existing patterns above unless stated otherwise — every item here is gated `< lg` (or `< md` where noted) and reverts to the prior desktop look via explicit `lg:`/`md:` overrides on the same element, not a duplicated instance.
+
+- **Collapsing large title.** Keep the page's existing `UiPageHeader` large title as normal scrolling content. Place a zero-height sentinel `<div ref="titleSentinel" aria-hidden="true" />` right after the title (inside `UiPageHeader`'s default slot) and watch it with `useIntersectionObserver` (VueUse, default root — do not pass an explicit scroll-root ref). When the sentinel leaves view, write the compact title string into `useAppHeaderTitle()` (`app/composables/useAppHeaderTitle.ts`); clear it in `onBeforeUnmount`. `AppHeader.vue` renders that state centered and truncated in its previously-empty mobile slot with a short opacity `<Transition>` — this reuses the always-visible persistent top bar instead of adding a second sticky header, so no vertical space is added. Do not build a page-local compact title; it duplicates height and drifts from this pattern (see the KPI-strip mistake this section replaced).
+- **Segmented tabs.** `UiTabs` has an opt-in `variant="segmented"` prop (default remains `underline`, unaffected everywhere else). It renders an iOS-style sliding pill track below `lg` and reverts to the standard underline tabs at `lg`+ on the same instance (no duplicated `role="tablist"`). Pass it only on pages that want the mobile-native treatment.
+- **Grouped inset list rows.** Reuse the existing `divide-y divide-ui-border overflow-hidden rounded-xl border border-ui-border bg-ui-surface` container for `md:hidden` card lists (already the repo convention). For a small labelled breakdown with a header caption and optional total, use `UiListPanel` instead of re-typing that bundle. For navigable rows (row tap opens detail), add a trailing `IconChevronRight` (`h-4 w-4 shrink-0 text-ui-muted`) — the same icon `UiListRow` uses — to signal the affordance. Keep `rounded-xl` as the max radius for these containers; do not introduce `rounded-2xl` here (reserved for floating chrome, next item).
+- **Circular multi-select.** `UiCheckbox` has an opt-in `shape="circle"` prop (default `square`, unaffected everywhere else) for iOS-style round bulk-select indicators inside grouped inset lists. Desktop table checkboxes stay square.
+- **Floating chrome bars.** Any `fixed`/floating element that sits above the tab bar (sticky bulk-action bars, etc.) should match `AppTabBar`'s chrome language: `rounded-2xl border border-ui-border bg-ui-chrome/95 backdrop-blur-md shadow-lg`. This is the one place `rounded-2xl` is sanctioned for a bar, since it mirrors the tab bar's own floating pill rather than a card. If the same bar also renders inline on desktop (e.g. `md:static`), add explicit `md:`/`lg:` overrides so desktop keeps its original flat look byte-for-byte.
+- **Opaque sticky summary/KPI bars.** Never use a translucent background (`bg-ui-canvas/95` + `backdrop-blur`) on a `position: sticky` bar that sits above scrolling list content — text scrolling underneath bleeds through the blur instead of being hidden. Use a solid `bg-ui-canvas` (matching the page background, no `border-y` framing needed) for any sticky bar with scrollable content behind it; reserve `bg-ui-surface`/`bg-ui-chrome` for a bar that should read as a distinct card rather than blend with the page.
+- **Single-line KPI/metric strips.** On mobile, metric strips with more than 2-3 items should scroll horizontally on one line (`flex flex-nowrap overflow-x-auto no-scrollbar` + `shrink-0` per item) instead of `flex-wrap`ping to multiple stacked lines. Hide secondary captions below `md` (`hidden md:inline`) to keep each item short; keep the full wrapped/captioned layout at `md:` and above unchanged.
+- **No duplicate section titles under segmented tabs.** When a `UiSection` sits directly under a tab (segmented or underline) whose label already says what the section is, don't repeat that label as the section's own `title`/`description` on mobile — it reads as literal duplication and burns vertical space the segmented pill was supposed to save. Use `UiSection`'s opt-in `titleClass="hidden md:block"` prop to hide the title/description text below `md` while keeping the section's `#actions` (refresh/export buttons, etc.) visible; keep the title/description at `md:` and above where the tab bar is a subtler underline. Any inline filter tablist inside that section should also get `overflow-x-auto no-scrollbar` + `shrink-0` per button so it never wraps to a second line either.
+- **Known boundary.** Read-only detail tables with 2+ columns already hidden via `hideOnMobile` (e.g. the invoice detail page's charge/payment tables) are left as plain `UiTable` — `UiTable`'s own wrapper already provides `overflow-x-auto`, and converting every such table to a grouped mobile card list is a separate, larger change. Do that conversion only when a table's mobile-visible columns still don't fit comfortably (follow the `BillingPaymentsStep` mobile-card pattern from section 10/11 when you do).
+- **Scrollspy anchor nav for long single-page detail views.** When a detail page has too many sections for real tab switching to make sense (the contract detail page has 8: overview, amendments, occupants, payments, services, meter readings, checkout, history), keep every section rendered in one scrollable column and add a hand-rolled `<nav>` of `<a href="#section-id">` links instead of `UiTabs`. Give each target section `id` + `scroll-mt-20` so the sticky nav doesn't cover it when jumped to. Track the active link by walking `sectionIds.map(id => document.getElementById(id))` on scroll (`passive` listener on the `<main>` scroll container) rather than `IntersectionObserver` — short sections can pass entirely through an observer's viewport window between two callbacks. Style the nav container like the segmented `UiTabs` skin (`rounded-full bg-ui-chrome p-1` below `lg`, `lg:rounded-none lg:bg-transparent`) with a solid, borderless `bg-ui-canvas` sticky backdrop (`sticky top-0 z-20 ... lg:top-16`, no `border-y`) per the opaque-sticky-bar rule above. See `app/pages/dashboard/contracts/[code]/index.vue`.

@@ -94,7 +94,7 @@ When the effective contract is `active` after update, the API SHALL also reject 
 
 #### Scenario: Terminate contract
 - **WHEN** admin PATCHes `{ status: 'terminated' }`
-- **THEN** contract status updated to 'terminated'; returns updated contract
+- **THEN** response is 409 and the contract remains active; the user must complete the return workflow
 
 #### Scenario: Update non-existent contract
 - **WHEN** id does not exist
@@ -105,7 +105,7 @@ When the effective contract is `active` after update, the API SHALL also reject 
 - **THEN** returns 409 CONFLICT with message indicating the tenant is already living under another contract
 
 ### Requirement: Delete contract endpoint
-`DELETE /api/contracts/:id` SHALL delete a contract. Returns 204 on success. Returns 404 if not found. If the deleted contract was active, the service SHALL set the associated room back to `available` unless the room is `maintenance`.
+`DELETE /api/contracts/:id` SHALL delete only an inactive contract without protected history. Returns 204 on success, 404 if not found, and 409 for an active contract. The return workflow releases occupancy before any eligible later deletion.
 
 #### Scenario: Delete success
 - **WHEN** admin DELETEs existing contract
@@ -117,8 +117,7 @@ When the effective contract is `active` after update, the API SHALL also reject 
 
 #### Scenario: Delete active contract releases room
 - **WHEN** admin deletes an active contract for an occupied room
-- **THEN** the contract is removed
-- **AND** the room status becomes `available`
+- **THEN** deletion is rejected with 409; no room or occupant state changes
 
 #### Scenario: Delete inactive contract does not alter active occupancy
 - **WHEN** admin deletes an expired, terminated, or renewed contract
@@ -131,9 +130,9 @@ When the effective contract is `active` after update, the API SHALL also reject 
 - **WHEN** admin updates a contract from `expired` or `terminated` to `active`
 - **THEN** the contract's room is set to `occupied` unless the room is `maintenance`
 
-#### Scenario: Active termination releases the room
+#### Scenario: Active termination requires return
 - **WHEN** admin updates a contract from `active` to `expired` or `terminated`
-- **THEN** the contract's room is set to `available` unless the room is `maintenance`
+- **THEN** PATCH returns 409 without changing the room; the atomic return RPC releases it unless the room is in maintenance
 
 #### Scenario: Room reassignment on active contract releases old and claims new
 - **WHEN** admin updates an `active` contract's `room_id` to a different room while remaining `active`
@@ -282,7 +281,7 @@ The server contract creation logic SHALL generate `contract_code` using the form
 3. If contract has any `invoices` with status `paid` or `partial`: 409 with `error.details.paidPayments: number`.
 4. If contract has any `meter_readings` of type other than `handover_in` / `handover_out`: 409 with `error.details.nonHandoverMeterReadings: number`.
 
-If all checks pass, the endpoint SHALL cascade-delete sub-resources (occupants, payments, renewals, contract_services, handover meter readings) then delete the contract row and respond `204`. The response body for any 409 SHALL include `error.code === 'CONFLICT'` and an aggregated `error.details` object combining all violated checks.
+If the contract is active, the endpoint SHALL return the active-contract conflict before inspecting other history. Otherwise, if all checks pass, it SHALL cascade-delete safe sub-resources and respond `204`. A returned checkout record remains protected by database history guards.
 
 #### Scenario: Conflict response when contract is active
 - **WHEN** admin sends DELETE on a contract with `status='active'`
@@ -300,9 +299,9 @@ If all checks pass, the endpoint SHALL cascade-delete sub-resources (occupants, 
 - **WHEN** admin sends DELETE on a terminated contract with 3 monthly meter readings
 - **THEN** response is 409 with `error.details.nonHandoverMeterReadings === 3`
 
-#### Scenario: Aggregate conflict response
-- **WHEN** admin sends DELETE on a contract violating multiple checks
-- **THEN** response is 409 with `error.details` containing all violated counts in one object
+#### Scenario: Aggregate conflict response for inactive contract
+- **WHEN** admin sends DELETE on an inactive contract violating multiple history checks
+- **THEN** response is 409 with `error.details` containing those violated counts in one object
 
 #### Scenario: Successful hard-delete when no blockers
 - **WHEN** admin sends DELETE on a never-active contract with 0 billing periods, 0 paid invoices, and only handover readings
@@ -310,19 +309,16 @@ If all checks pass, the endpoint SHALL cascade-delete sub-resources (occupants, 
 
 ---
 
-### Requirement: DELETE /api/contracts/:id supports force soft-delete
-`server/api/contracts/[id].delete.ts` SHALL accept query param `?force=true`. When present and the caller is admin, the endpoint SHALL:
-- If status `active`, terminate it first (set `status='terminated'`, release room + tenant) via the existing terminate logic.
-- Skip the active-contract check (#1) but STILL enforce checks #2, #3, #4 (billing, payment, meter-reading history is never destroyed).
-- If checks pass, hard-delete the contract row and cascade-clean safe-deletable sub-resources, returning `200` with `{ data: Contract }` (the terminated contract before delete).
+### Requirement: DELETE /api/contracts/:id cannot bypass return
+`server/api/contracts/[id].delete.ts` SHALL accept the legacy `?force=true` query for compatibility but SHALL reject deletion of an active contract with 409. No forced status change or room release SHALL occur. Inactive contracts remain subject to billing, payment, meter-reading, amendment, and checkout-history guards.
 
-#### Scenario: Force terminates then deletes contract with no billing
+#### Scenario: Force cannot terminate active contract
 - **WHEN** admin sends DELETE `/api/contracts/:id?force=true` on an active contract with no billing history
-- **THEN** the contract is terminated, then deleted; response is 200 with `{ data }` containing the terminated DTO
+- **THEN** response is 409 with `ACTIVE_CONTRACT` and no lifecycle mutation
 
-#### Scenario: Force still blocked by billing
+#### Scenario: Force still blocked by active state
 - **WHEN** admin sends DELETE `/api/contracts/:id?force=true` on an active contract with 1 issued billing period
-- **THEN** response is 409 with `error.details.issuedBillingPeriods === 1` (terminate may have run, but delete is blocked)
+- **THEN** response is 409 with `error.details.reason === 'ACTIVE_CONTRACT'` and no partial termination
 
 #### Scenario: Manager cannot force
 - **WHEN** user with role `manager` sends DELETE with `?force=true`
@@ -330,12 +326,12 @@ If all checks pass, the endpoint SHALL cascade-delete sub-resources (occupants, 
 
 ---
 
-### Requirement: POST /api/contracts/bulk performs bulk action with per-item result
-`server/api/contracts/bulk.post.ts` SHALL require admin auth, validate body with `contractBulkActionSchema` (`{ action: 'terminate' | 'delete', ids: string[], reason?: string }`), iterate over the IDs applying the action via the service, and return `{ data: { succeeded: string[], failed: { id: string, reason: string }[] } }` with status 200. The endpoint SHALL NOT short-circuit on first failure. `reason` SHALL be required when `action='delete'`.
+### Requirement: POST /api/contracts/bulk deletes only safe contracts
+`server/api/contracts/bulk.post.ts` SHALL require admin auth and validate body with `contractBulkActionSchema`. `action='terminate'` SHALL return 409 because each contract needs its own return date, reason, and physical readings. `action='delete'` SHALL iterate per item and return partial success without short-circuiting; a reason is required.
 
 #### Scenario: Bulk terminate
 - **WHEN** admin posts `{ action: 'terminate', ids: ['a','b'] }` for 2 active contracts
-- **THEN** both contracts become `status='terminated'`, rooms and tenants are released, response is `{ data: { succeeded: ['a','b'], failed: [] } }`
+- **THEN** response is 409 and neither contract nor room is changed
 
 #### Scenario: Bulk delete with mixed results
 - **WHEN** admin posts `{ action: 'delete', ids: ['empty','with-billing','active'] }`
@@ -362,8 +358,8 @@ If all checks pass, the endpoint SHALL cascade-delete sub-resources (occupants, 
 ### Requirement: Contracts service supports filter/sort/bulk/safe-delete
 `server/services/contracts/index.ts` SHALL expose:
 - `list(event, user, opts)` accepting `{ page, limit, q?, building_id?, room_id?, tenant_id?, status?, sort?, order? }` and forwarding to repository.
-- `remove(event, user, id, { force })` performing the conflict matrix check; when `force`, terminate-then-delete with billing/payment/meter history still enforced.
-- `bulkAction(event, user, { action, ids })` iterating per item, catching errors, returning `{ succeeded, failed }`.
+- `remove(event, user, id, { force })` rejecting active contracts regardless of `force` and enforcing protected history for inactive records.
+- `bulkAction(event, user, { action, ids })` rejecting `terminate`; for `delete`, iterating per item and returning `{ succeeded, failed }`.
 Each method SHALL re-check permissions using `can(user, capability)`.
 
 #### Scenario: list forwards filters to repository

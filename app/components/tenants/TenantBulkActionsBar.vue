@@ -79,27 +79,16 @@ async function confirm() {
 </script>
 
 <template>
-  <div
-    role="region"
-    aria-label="Thao tác hàng loạt"
-    class="sticky bottom-3 z-30 flex flex-col gap-3 rounded-xl border border-ui-border bg-ui-surface/95 p-3 shadow-lg backdrop-blur sm:flex-row sm:items-center sm:justify-between"
-  >
-    <div class="flex items-center gap-3">
-      <UiBadge variant="accent">{{ selectedCount }} đã chọn</UiBadge>
-      <UiButton variant="ghost" size="sm" @click="emit('clear')">Bỏ chọn</UiButton>
-    </div>
-
-    <div class="flex flex-wrap items-center gap-2">
-      <UiButton variant="secondary" size="sm" :disabled="!!isRunning || selectedCount === 0" @click="open('activate')">
-        Đánh dấu hoạt động
-      </UiButton>
-      <UiButton variant="secondary" size="sm" :disabled="!!isRunning || selectedCount === 0" @click="open('archive')">
-        Lưu trữ
-      </UiButton>
-      <UiButton variant="danger" size="sm" :disabled="!!isRunning || selectedCount === 0" @click="open('delete')">
-        Xoá nhiều
-      </UiButton>
-    </div>
+  <UiBulkActionsBar aria-label="Thao tác hàng loạt" :count="selectedCount" @clear="emit('clear')">
+    <UiButton variant="secondary" size="sm" :disabled="!!isRunning || selectedCount === 0" @click="open('activate')">
+      Đánh dấu hoạt động
+    </UiButton>
+    <UiButton variant="secondary" size="sm" :disabled="!!isRunning || selectedCount === 0" @click="open('archive')">
+      Lưu trữ
+    </UiButton>
+    <UiButton variant="danger" size="sm" :disabled="!!isRunning || selectedCount === 0" @click="open('delete')">
+      Xoá nhiều
+    </UiButton>
 
     <UiConfirmModal
       :open="confirmOpen"
@@ -133,5 +122,5 @@ async function confirm() {
         />
       </div>
     </UiConfirmModal>
-  </div>
+  </UiBulkActionsBar>
 </template>

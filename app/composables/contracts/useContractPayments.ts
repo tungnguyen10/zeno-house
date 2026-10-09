@@ -4,7 +4,8 @@ import type { ApiSuccess } from '~/types/api'
 
 export function useContractPayments(contractId: MaybeRef<string>) {
   const payments = ref<ContractPayment[]>([])
-  const isLoading = ref(false)
+  // Starts true so SSR renders the same skeleton the client hydrates with.
+  const isLoading = ref(true)
   const error = ref<Error | null>(null)
 
   async function fetchPayments() {
@@ -48,7 +49,9 @@ export function useContractPayments(contractId: MaybeRef<string>) {
     payments.value = payments.value.filter(p => p.id !== paymentId)
   }
 
-  fetchPayments()
+  // Client-only: this result is not transferred in the SSR payload, so fetching on the
+  // server just renders state the client immediately contradicts on hydration.
+  if (import.meta.client) fetchPayments()
 
   return { payments, isLoading, error, addPayment, updatePayment, removePayment, refresh: fetchPayments }
 }

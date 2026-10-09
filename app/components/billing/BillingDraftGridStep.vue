@@ -155,6 +155,49 @@ const {
   clearSelection,
 } = useBillingDraftGridFilters(displayedRows)
 
+// ---------------------------------------------------------------------------
+// Mobile: floor quick-jump chips + bulk-entry prompt for long room lists
+// ---------------------------------------------------------------------------
+
+const MOBILE_MANY_ROOMS_THRESHOLD = 8
+
+const showMobileBulkEntryPrompt = computed(() =>
+  periodEditable.value && filteredRows.value.length >= MOBILE_MANY_ROOMS_THRESHOLD,
+)
+
+// Explains what "Chọn tất cả" is for — selection only does something once at
+// least one row has readings saved (no blockers), which isn't obvious upfront.
+const hasSelectableRows = computed(() => filteredRows.value.some(row => isSelectable(row)))
+
+function floorAnchorId(floor: number): string {
+  return `draft-floor-${floor}`
+}
+
+// First row (in list order) for each floor — the row that carries the scroll anchor id.
+const firstRowKeyByFloor = computed(() => {
+  const map = new Map<number, string>()
+  for (const row of filteredRows.value) {
+    if (row.floor === null) continue
+    if (!map.has(row.floor)) map.set(row.floor, row.key)
+  }
+  return map
+})
+
+const mobileFloorChips = computed(() =>
+  Array.from(firstRowKeyByFloor.value.keys())
+    .sort((a, b) => a - b)
+    .map(floor => ({ floor, label: `Tầng ${floor}` })),
+)
+
+function rowFloorAnchorId(row: BillingDraftGridRow): string | undefined {
+  if (row.floor === null) return undefined
+  return firstRowKeyByFloor.value.get(row.floor) === row.key ? floorAnchorId(row.floor) : undefined
+}
+
+function scrollToFloor(floor: number) {
+  document.getElementById(floorAnchorId(floor))?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
 const readingBlockerCodes = new Set<string>([
   BILLING_BLOCKER_CODES.MISSING_CURRENT_READING,
   BILLING_BLOCKER_CODES.MISSING_PREVIOUS_READING,
@@ -354,6 +397,7 @@ const autoIssueSubmitting = ref(false)
 function canAutoIssue(row: BillingDraftGridRow): boolean {
   return autoIssueEnabled.value
     && !periodLocked.value
+    && !row.checkoutId
     && row.status === 'ready'
     && !!row.contractId
     && !row.invoiceId
@@ -611,16 +655,19 @@ const columns: UiTableColumn<BillingDraftGridRow>[] = [
     <UiSection
       title="Soạn kỳ"
       description="Mỗi phòng một dòng. Nhập chỉ số mới, lưu để tính lại tiền điện/nước và tổng hoá đơn nháp."
+      title-class="hidden md:block"
     >
       <template #actions>
-        <UiButton variant="secondary" size="sm" @click="$emit('refresh')">Tải lại</UiButton>
+        <div class="hidden md:block">
+          <UiButton variant="secondary" size="sm" @click="$emit('refresh')">Tải lại</UiButton>
+        </div>
       </template>
 
       <!-- Toolbar: batch reading date + filters -->
       <UiToolbar>
-        <div class="flex flex-wrap items-center gap-3">
-          <div class="flex items-center gap-2 text-xs text-ui-muted">
-            <span>Ngày đọc</span>
+        <div class="flex flex-wrap items-center gap-2">
+          <div class="flex min-w-0 flex-1 items-center gap-2 text-xs text-ui-muted">
+            <span class="shrink-0">Ngày đọc</span>
             <UiDatePicker
               id="batch-reading-date"
               v-model="batchReadingDate"
@@ -630,20 +677,42 @@ const columns: UiTableColumn<BillingDraftGridRow>[] = [
               :disabled="!periodEditable"
             />
           </div>
-          <UiButton
-            v-if="periodEditable"
-            variant="ghost"
-            size="sm"
-            @click="bulkEntryOpen = true"
-          >
-            Nhập nhanh
-          </UiButton>
+          <div v-if="periodEditable" class="hidden md:block">
+            <UiButton
+              variant="ghost"
+              size="sm"
+              @click="bulkEntryOpen = true"
+            >
+              Nhập nhanh
+            </UiButton>
+          </div>
+          <div class="flex shrink-0 items-center gap-1 md:hidden">
+            <UiButton
+              variant="ghost"
+              icon-only
+              aria-label="Tải lại"
+              class="min-h-11 min-w-11"
+              @click="$emit('refresh')"
+            >
+              <IconRefresh class="h-4 w-4" aria-hidden="true" />
+            </UiButton>
+            <UiButton
+              v-if="showMobileBulkEntryPrompt"
+              variant="ghost"
+              icon-only
+              aria-label="Nhập nhanh cho nhiều phòng"
+              class="min-h-11 min-w-11"
+              @click="bulkEntryOpen = true"
+            >
+              <IconCopy class="h-4 w-4" aria-hidden="true" />
+            </UiButton>
+          </div>
         </div>
         <template #actions>
           <div
             role="tablist"
             aria-label="Lọc dòng theo trạng thái"
-            class="inline-flex items-center rounded-lg border border-ui-border bg-ui-chrome p-0.5"
+            class="inline-flex max-w-full items-center gap-0.5 overflow-x-auto no-scrollbar rounded-lg border border-ui-border bg-ui-chrome p-0.5"
           >
             <UiButton
               v-for="t in filterTabs"
@@ -652,7 +721,7 @@ const columns: UiTableColumn<BillingDraftGridRow>[] = [
               role="tab"
               :aria-selected="filter === t.key"
               :class="clsx(
-                'rounded-md px-2.5 py-1 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-accent/30',
+                'shrink-0 rounded-md px-2.5 py-1 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-accent/30',
                 filter === t.key
                   ? 'bg-ui-hover text-ui-primary'
                   : 'text-ui-muted hover:text-ui-primary',
@@ -665,10 +734,10 @@ const columns: UiTableColumn<BillingDraftGridRow>[] = [
         </template>
       </UiToolbar>
 
-      <!-- Save bar -->
+      <!-- Save bar (desktop) -->
       <div
         v-if="periodEditable"
-        class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-ui-border bg-ui-surface px-3 py-2"
+        class="hidden flex-wrap items-center justify-between gap-3 rounded-lg border border-ui-border bg-ui-surface px-3 py-2 md:flex"
       >
         <p class="text-sm text-ui-muted">
           <template v-if="dirtyCountValue > 0">
@@ -689,34 +758,31 @@ const columns: UiTableColumn<BillingDraftGridRow>[] = [
       </div>
 
       <!-- Selection action bar -->
-      <div
+      <UiBulkActionsBar
         v-if="selectedCount > 0"
-        class="fixed inset-x-3 bottom-4 z-30 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-ui-accent/40 bg-ui-chrome px-3 py-2 text-sm shadow-lg shadow-ui-shadow/40 md:static md:z-auto md:bg-ui-accent/5 md:shadow-none"
+        aria-label="Thao tác hàng loạt phiếu"
+        :count="selectedCount"
+        @clear="clearSelection"
       >
-        <p class="text-ui-primary">
-          Đã chọn <span class="font-semibold tabular-nums">{{ selectedCount }}</span> phiếu
-          <UiButton
-            v-if="!allVisibleSelected"
-            unstyled
-            class="ml-2 whitespace-nowrap text-xs text-ui-accent hover:underline"
-            @click="selectAllVisible"
-          >
-            Chọn tất cả trong lọc
-          </UiButton>
-        </p>
-        <div class="flex items-center gap-2">
-          <UiButton variant="ghost" size="sm" class="whitespace-nowrap" @click="clearSelection">Bỏ chọn</UiButton>
-          <UiButton
-            v-if="onIssue && onPreviewIssue && issuableSelectedCount > 0"
-            variant="primary"
-            size="sm"
-            class="whitespace-nowrap"
-            @click="startIssue"
-          >
-            Xem trước &amp; phát hành ({{ issuableSelectedCount }})
-          </UiButton>
-        </div>
-      </div>
+        <UiButton
+          v-if="!allVisibleSelected"
+          variant="ghost"
+          size="sm"
+          class="whitespace-nowrap"
+          @click="selectAllVisible"
+        >
+          Chọn tất cả trong lọc
+        </UiButton>
+        <UiButton
+          v-if="onIssue && onPreviewIssue && issuableSelectedCount > 0"
+          variant="primary"
+          size="sm"
+          class="whitespace-nowrap"
+          @click="startIssue"
+        >
+          Xem trước &amp; phát hành ({{ issuableSelectedCount }})
+        </UiButton>
+      </UiBulkActionsBar>
 
       <!-- Loading -->
       <div v-if="loading" class="space-y-3">
@@ -915,6 +981,12 @@ const columns: UiTableColumn<BillingDraftGridRow>[] = [
 
         <template #cell-actions="{ row }">
           <div class="flex items-center justify-end gap-2">
+            <NuxtLink
+              v-if="(row as BillingDraftGridRow).checkoutHref"
+              :to="(row as BillingDraftGridRow).checkoutHref!"
+              data-test="checkout-link"
+              class="whitespace-nowrap rounded px-2 py-1.5 text-xs font-medium text-ui-accent hover:bg-ui-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-accent"
+            >Quyết toán</NuxtLink>
             <span
               v-if="rowSaveStateOf(row as BillingDraftGridRow) === 'saving'"
               class="whitespace-nowrap text-[11px] text-ui-muted"
@@ -959,6 +1031,7 @@ const columns: UiTableColumn<BillingDraftGridRow>[] = [
               </UiDropdownMenuItem>
               <UiDropdownMenuItem
                 v-if="canOverrideReadings(row as BillingDraftGridRow)"
+                :data-test="`desktop-override-${(row as BillingDraftGridRow).roomId}`"
                 @click="openOverrideModal(row as BillingDraftGridRow)"
               >
                 <template #icon>
@@ -971,20 +1044,62 @@ const columns: UiTableColumn<BillingDraftGridRow>[] = [
         </template>
       </UiTable>
 
-      <!-- Mobile select-all -->
+      <!-- Mobile: floor quick-jump so a long room list isn't one flat scroll -->
+      <div
+        v-if="mobileFloorChips.length > 1 && !loading && response && filteredRows.length > 0"
+        class="relative md:hidden"
+      >
+        <div class="-mx-4 flex snap-x snap-mandatory gap-1.5 overflow-x-auto px-4 pb-0.5">
+          <UiButton
+            v-for="chip in mobileFloorChips"
+            :key="chip.floor"
+            unstyled
+            class="shrink-0 snap-start rounded-full border border-ui-border bg-ui-surface px-3 py-1.5 text-xs text-ui-muted transition hover:border-ui-border-strong hover:bg-ui-hover/40 hover:text-ui-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-ui-accent/40"
+            @click="scrollToFloor(chip.floor)"
+          >
+            {{ chip.label }}
+          </UiButton>
+        </div>
+        <div class="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-ui-canvas to-transparent" aria-hidden="true" />
+      </div>
+
+      <!-- Mobile: merged save-status + select-all panel -->
       <div
         v-if="!loading && response && filteredRows.length > 0"
-        class="flex items-center justify-between rounded-lg border border-ui-border bg-ui-surface px-3 py-2 md:hidden"
+        class="flex flex-col gap-2 rounded-lg border border-ui-border bg-ui-surface px-3 py-2 md:hidden"
       >
-        <UiCheckbox
+        <div v-if="periodEditable" class="flex items-center justify-between gap-3">
+          <p class="text-xs text-ui-muted">
+            <template v-if="dirtyCountValue > 0">
+              Đang nhập <span class="font-semibold text-ui-primary">{{ dirtyCountValue }}</span> chỉ số.
+            </template>
+            <template v-else>
+              Mọi thay đổi đã được tự động lưu.
+            </template>
+          </p>
+          <UiButton
+            variant="ghost"
+            size="sm"
+            :disabled="dirtyCountValue === 0 || isSaving"
+            @click="saveAll"
+          >
+            {{ isSaving ? 'Đang lưu...' : 'Lưu ngay' }}
+          </UiButton>
+        </div>
+        <div v-if="periodEditable" class="border-t border-ui-border" />
+        <UiSelectAllBar
+          variant="bare"
           :model-value="allVisibleSelected"
           :indeterminate="someVisibleSelected"
-          label="Chọn tất cả"
-          class="[&>label]:min-h-11 [&>label]:items-center"
-          aria-label="Chọn tất cả phòng"
+          :disabled="!hasSelectableRows"
+          :page-count="filteredRows.length"
+          :total-selected="selectedCount"
+          aria-label="Chọn tất cả phòng để phát hành hàng loạt"
+          :description="hasSelectableRows
+            ? 'Chọn để xem trước & phát hành nhiều phòng cùng lúc.'
+            : 'Xuất hiện khi phòng đã đủ chỉ số — dùng để phát hành hàng loạt.'"
           @update:model-value="toggleSelectAllVisible"
         />
-        <span v-if="selectedCount > 0" class="text-xs tabular-nums text-ui-muted">Đã chọn {{ selectedCount }}</span>
       </div>
 
       <!-- Mobile cards (stacked) -->
@@ -994,7 +1109,9 @@ const columns: UiTableColumn<BillingDraftGridRow>[] = [
       >
         <BillingMobileDraftRow
           v-for="row in filteredRows"
+          :id="rowFloorAnchorId(row)"
           :key="row.key"
+          class="scroll-mt-24"
           :row="displayGridRow(row)"
           :selectable="isSelectable(row)"
           :selected="isSelected(row)"

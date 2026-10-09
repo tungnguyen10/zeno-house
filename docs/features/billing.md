@@ -175,6 +175,10 @@ Supported flows:
 
 Payment updates invoice paid amount, balance, and status.
 
+## Checkout Final Billing
+
+A returned contract (see `docs/features/contracts.md`) remains billable in the month of its actual return date alongside a successor in the same room. The draft grid shows pending final lines, existing invoice state, and a link to the contract. The dedicated final-bill RPC issues missing lines for standard buildings; the pilot settlement RPC issues them and applies held funds in one transaction. Both preserve already issued or paid invoice lines. A closed final-month period leaves the financial step blocked while physical return remains complete. Confirmed settlement allocations and refunds use `invoice_payments.funding_source` (`deposit`/`credit`) instead of `cash`; invoice paid/balance recomputation includes them, but cash-only report sums must filter `funding_source = 'cash'`. Undoing a non-cash payment through the ordinary undo-payment endpoint is rejected.
+
 ## Correction Flows
 
 There are two supported workspace correction paths. Adjustment APIs remain only for legacy/back-office compatibility and are not exposed in the billing workspace.

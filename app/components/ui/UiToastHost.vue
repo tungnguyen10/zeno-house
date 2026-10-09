@@ -1,6 +1,11 @@
 <script setup lang="ts">
 const { toasts, dismiss, pause, resume } = useToast()
 
+// Keep the body teleport out of SSR so its anchor cannot conflict with other
+// teleported UI during hydration.
+const mounted = ref(false)
+onMounted(() => { mounted.value = true })
+
 interface ToneConfig {
   container: string
   bar: string
@@ -31,7 +36,7 @@ function tone(severity: string): ToneConfig {
 </script>
 
 <template>
-  <Teleport to="body">
+  <Teleport v-if="mounted" to="body">
     <div
       class="fixed inset-x-3 bottom-4 z-[70] flex flex-col-reverse gap-2
              sm:inset-x-auto sm:bottom-auto sm:right-5 sm:top-5 sm:w-80 sm:flex-col"

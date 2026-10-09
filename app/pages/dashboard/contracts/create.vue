@@ -174,28 +174,27 @@ async function createContract(data: ContractFormData) {
         @change="goStep"
       />
 
-      <section v-if="currentStep === 1" class="rounded-xl border border-ui-border bg-ui-surface p-6">
-        <ContractForm
-          v-model="formData"
-          :loading="isLoading"
-          :errors="errors"
-          :api-error="apiError"
-          :has-draft="hasDraft"
-          :draft-saved-at="draftSavedAt"
-          :draft-error="draftError"
-          :is-draft-version-mismatch="isDraftVersionMismatch"
-          :is-dirty="isDirty"
-          submit-label="Tiếp"
-          mobile-submit-label="Tiếp"
-          cancel-label="Huỷ"
-          mobile-cancel-label="Huỷ"
-          show-handover
-          @submit="onStepOneValid"
-          @cancel="navigateTo('/dashboard/contracts')"
-          @restore-draft="restoreDraft"
-          @clear-draft="clearDraft"
-        />
-      </section>
+      <ContractForm
+        v-if="currentStep === 1"
+        v-model="formData"
+        :loading="isLoading"
+        :errors="errors"
+        :api-error="apiError"
+        :has-draft="hasDraft"
+        :draft-saved-at="draftSavedAt"
+        :draft-error="draftError"
+        :is-draft-version-mismatch="isDraftVersionMismatch"
+        :is-dirty="isDirty"
+        submit-label="Tiếp"
+        mobile-submit-label="Tiếp"
+        cancel-label="Huỷ"
+        mobile-cancel-label="Huỷ"
+        show-handover
+        @submit="onStepOneValid"
+        @cancel="navigateTo('/dashboard/contracts')"
+        @restore-draft="restoreDraft"
+        @clear-draft="clearDraft"
+      />
 
       <section v-else-if="currentStep === 2" class="rounded-xl border border-ui-border bg-ui-surface p-6">
         <div class="mb-4 flex items-start justify-between gap-3">

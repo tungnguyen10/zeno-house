@@ -208,26 +208,15 @@ function onRemoveIdImage(side: TenantIdImageSide) {
 </script>
 
 <template>
-  <form class="space-y-8 pb-28 md:pb-0" novalidate @submit.prevent="onSubmit">
-    <UiAlert v-if="hasDraft" severity="info" data-test="draft-banner">
-      <div class="flex flex-wrap items-center justify-between gap-3">
-        <div class="flex items-center gap-2 text-sm">
-          <IconCheckCircle class="h-4 w-4 shrink-0" aria-hidden="true" />
-          <span>Có bản nháp chưa lưu cho biểu mẫu này.</span>
-        </div>
-        <div class="flex items-center gap-2">
-          <UiButton size="sm" variant="secondary" @click="emit('restore-draft')">Khôi phục</UiButton>
-          <UiButton size="sm" variant="ghost" @click="emit('discard-draft')">Bỏ nháp</UiButton>
-        </div>
-      </div>
-    </UiAlert>
+  <form class="space-y-6" novalidate @submit.prevent="onSubmit">
+    <UiFormDraftBanner
+      v-if="hasDraft"
+      clear-label="Bỏ nháp"
+      @restore="emit('restore-draft')"
+      @clear="emit('discard-draft')"
+    />
 
-    <!-- 1. Personal -->
-    <section class="space-y-4">
-      <header>
-        <h3 class="text-sm font-semibold text-ui-primary">1. Thông tin cá nhân</h3>
-        <p class="text-xs text-ui-muted mt-0.5">Họ tên, liên hệ và thông tin nhân khẩu.</p>
-      </header>
+    <UiFormSection title="Thông tin cá nhân" description="Họ tên, liên hệ và thông tin nhân khẩu.">
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <UiInput
           id="tf-full-name"
@@ -299,16 +288,9 @@ function onRemoveIdImage(side: TenantIdImageSide) {
           />
         </div>
       </div>
-    </section>
+    </UiFormSection>
 
-    <div class="border-t border-ui-border" />
-
-    <!-- 2. ID document -->
-    <section class="space-y-4">
-      <header>
-        <h3 class="text-sm font-semibold text-ui-primary">2. Giấy tờ tuỳ thân</h3>
-        <p class="text-xs text-ui-muted mt-0.5">Thông tin CMND/CCCD để đối chiếu khi ký hợp đồng.</p>
-      </header>
+    <UiFormSection title="Giấy tờ tuỳ thân" description="Thông tin CMND/CCCD để đối chiếu khi ký hợp đồng.">
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <UiInput
           id="tf-id-number"
@@ -340,7 +322,7 @@ function onRemoveIdImage(side: TenantIdImageSide) {
           />
         </div>
 
-        <div class="sm:col-span-2 rounded-lg border border-ui-border bg-ui-deep/20 p-4">
+        <div class="sm:col-span-2 rounded-lg border border-ui-border bg-ui-hover/30 p-4">
           <div class="flex items-center justify-between gap-2">
             <h4 class="text-xs font-semibold text-ui-primary">Ảnh CCCD</h4>
             <span class="text-[11px] text-ui-muted">Tối đa 5MB · JPG/PNG/WEBP</span>
@@ -399,16 +381,9 @@ function onRemoveIdImage(side: TenantIdImageSide) {
           </div>
         </div>
       </div>
-    </section>
+    </UiFormSection>
 
-    <div class="border-t border-ui-border" />
-
-    <!-- 3. Emergency contact -->
-    <section class="space-y-4">
-      <header>
-        <h3 class="text-sm font-semibold text-ui-primary">3. Liên hệ khẩn cấp</h3>
-        <p class="text-xs text-ui-muted mt-0.5">Người thân/đại diện liên hệ khi cần.</p>
-      </header>
+    <UiFormSection title="Liên hệ khẩn cấp" description="Người thân/đại diện liên hệ khi cần.">
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <UiInput
           id="tf-emergency-name"
@@ -430,16 +405,9 @@ function onRemoveIdImage(side: TenantIdImageSide) {
           @blur="onBlur('emergency_contact_phone')"
         />
       </div>
-    </section>
+    </UiFormSection>
 
-    <div class="border-t border-ui-border" />
-
-    <!-- 4. Notes -->
-    <section class="space-y-4">
-      <header>
-        <h3 class="text-sm font-semibold text-ui-primary">4. Ghi chú</h3>
-        <p class="text-xs text-ui-muted mt-0.5">Thông tin nội bộ về khách thuê.</p>
-      </header>
+    <UiFormSection title="Ghi chú" description="Thông tin nội bộ về khách thuê.">
       <UiTextarea
         id="tf-notes"
         :model-value="modelValue.notes"
@@ -451,32 +419,13 @@ function onRemoveIdImage(side: TenantIdImageSide) {
         @update:model-value="(v) => update('notes', v as string)"
         @blur="onBlur('notes')"
       />
-    </section>
+    </UiFormSection>
 
-    <!-- Desktop footer -->
-    <div class="hidden md:flex items-center justify-end gap-3 pt-2 border-t border-ui-border">
-      <UiButton variant="ghost" type="button" :disabled="loading" @click="emit('cancel')">
-        Huỷ
-      </UiButton>
-      <UiButton type="submit" :loading="loading" :disabled="!canSubmit">
-        {{ submitLabel }}
-      </UiButton>
-    </div>
-
-    <!-- Mobile sticky save bar -->
-    <div
-      data-test="sticky-save-bar"
-      class="md:hidden fixed inset-x-0 bottom-0 z-40 border-t border-ui-border bg-ui-deep/95 px-4 pt-3 backdrop-blur"
-      :style="{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }"
-    >
-      <div class="flex items-center gap-2">
-        <UiButton class="flex-1" variant="ghost" type="button" :disabled="loading" @click="emit('cancel')">
-          Huỷ
-        </UiButton>
-        <UiButton class="flex-1" type="submit" :loading="loading" :disabled="!canSubmit" @click="onSubmit">
-          {{ submitLabel }}
-        </UiButton>
-      </div>
-    </div>
+    <UiFormActions
+      :submit-label="submitLabel"
+      :loading="loading"
+      :can-submit="canSubmit"
+      @cancel="emit('cancel')"
+    />
   </form>
 </template>

@@ -20,6 +20,7 @@ describe('settings history page contract', () => {
     expect(composable).toContain('existingIds')
     expect(composable).toContain('response.data.filter')
     expect(composable).toContain('nextCursor.value !== requestedCursor')
-    expect(composable).toContain('nextCursor.value = response.meta?.nextCursor ?? null')
+    // Pages accumulate in `appended`; the first page stays derived from `data` so SSR matches.
+    expect(composable).toContain('appendedCursor.value = response.meta?.nextCursor ?? null')
   })
 })

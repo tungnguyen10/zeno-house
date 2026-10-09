@@ -42,6 +42,15 @@ Internal building scope is resolved from `user_building_assignments`. `admin` is
 (`getAssignedBuildingIds` returns `null`); `owner` and `manager` are limited to their
 assigned building ids.
 
+Building visibility is a second, narrower scope layered on top of that. `getVisibleBuildingIds`
+subtracts buildings flagged `is_hidden` and is used only by browsable lists and aggregates;
+`getAssignedBuildingIds` and `assertBuildingScope` stay blind to it, which is what keeps a direct
+link to a record inside a hidden building working. Account and permission administration
+(manager assignments, internal user management, the tenant-account list) deliberately keeps the
+assignment scope so hiding never removes an operator's ability to administer an account. Only
+`admin` holds `buildings.visibility.manage`, so an owner can update a building but cannot hide it.
+The tenant portal is never filtered by visibility.
+
 ## Route Guards
 
 Global authenticated route guard:
@@ -152,7 +161,8 @@ Owner has full operational access, but limited to assigned buildings:
 - dashboard read
 - scoped user management (`users.manage.scoped`, `users.create.manager`)
 
-Owner does not have global user management (`users.manage.global`, `users.create.owner`).
+Owner does not have global user management (`users.manage.global`, `users.create.owner`) and
+cannot change building visibility (`buildings.visibility.manage`).
 
 Manager has operational read/write access but no destructive or admin actions:
 
@@ -185,7 +195,9 @@ Authorization is authoritative at the service layer, with RLS as a direct-access
 Internal building scope and tenant self-scope are separate mechanisms:
 
 - `admin`, `owner`, and `manager` use `user_building_assignments` through
-  `getAssignedBuildingIds` / `assertBuildingScope`.
+  `getAssignedBuildingIds` / `assertBuildingScope`. Browsable lists and aggregates additionally
+  narrow through `getVisibleBuildingIds`, which drops hidden buildings; detail and write paths
+  deliberately do not.
 - `tenant` uses the active one-to-one `tenant_user_links` row through `resolveTenantId`.
   Missing or disabled links resolve to the same not-found response. Client-supplied tenant ids
   are never used to establish tenant identity. Shared housing scope is then resolved from a

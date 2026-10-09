@@ -8,7 +8,7 @@ import type {
 import type { InvoiceStatus } from '~/utils/constants/billing'
 import { BuildingRepository } from '../../repositories/buildings'
 import { CrossPeriodInvoiceRepository } from '../../repositories/invoices'
-import { getAssignedBuildingIds } from '../../utils/scope'
+import { getVisibleBuildingIds } from '../../utils/scope'
 
 function todayInHoChiMinh(): string {
   return new Intl.DateTimeFormat('en-CA', {
@@ -46,7 +46,7 @@ export const InvoiceQueryService = {
     if (query.page_size > 100) throwValidationError('page_size tối đa là 100')
 
     // Admin is unscoped (null); owner/manager are scoped to assigned buildings.
-    const buildingScope = await getAssignedBuildingIds(event, user)
+    const buildingScope = await getVisibleBuildingIds(event, user)
     const assignedIds = buildingScope ?? undefined
 
     let buildingId = query.building_id

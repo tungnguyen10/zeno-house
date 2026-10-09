@@ -52,39 +52,33 @@ const to = computed(() => roomPath(props.room))
     <NuxtLink
       :to="to"
       :class="[
-        'block rounded-xl p-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-ui-accent/40',
+        'block rounded-xl p-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-ui-accent/40 sm:p-4',
         selectable ? 'pl-12' : '',
       ]"
     >
-      <div class="flex items-start gap-3 mb-3">
+      <div class="flex items-center gap-3">
         <div
           v-if="!selectable"
-          class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-ui-accent/10 text-ui-accent group-hover:bg-ui-accent/15 transition-colors"
+          class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-ui-accent/10 text-ui-accent transition-colors group-hover:bg-ui-accent/15"
           aria-hidden="true"
         >
           <IconDoor class="h-4 w-4" />
         </div>
-        <div class="flex-1 min-w-0">
+        <div class="min-w-0 flex-1">
           <div class="flex items-start justify-between gap-2">
-            <p class="text-base font-semibold text-ui-primary truncate group-hover:text-ui-accent">Phòng {{ room.roomNumber }}</p>
+            <p class="truncate text-sm font-semibold text-ui-primary group-hover:text-ui-accent">Phòng {{ room.roomNumber }}</p>
             <UiStatusBadge :status="room.status" />
           </div>
-          <p class="text-xs text-ui-muted mt-0.5">
-            <span v-if="buildingName">{{ buildingName }} · </span>Tầng {{ room.floor }}
-          </p>
+          <div class="mt-0.5 flex items-baseline justify-between gap-3 text-xs">
+            <span class="min-w-0 truncate text-ui-muted">
+              <template v-if="buildingName">{{ buildingName }} · </template>Tầng {{ room.floor }}<template v-if="room.area"> · {{ room.area }} m²</template>
+            </span>
+            <span class="shrink-0 font-medium tabular-nums text-ui-primary">
+              {{ formatCurrency(room.monthlyRent) }}<span class="font-normal text-ui-muted">/tháng</span>
+            </span>
+          </div>
         </div>
       </div>
-
-      <dl class="space-y-1 text-sm">
-        <div class="flex items-center justify-between gap-2">
-          <dt class="text-ui-muted">Giá thuê</dt>
-          <dd class="text-ui-primary font-medium truncate">{{ formatCurrency(room.monthlyRent) }}/tháng</dd>
-        </div>
-        <div v-if="room.area" class="flex items-center justify-between gap-2">
-          <dt class="text-ui-muted">Diện tích</dt>
-          <dd class="text-ui-primary font-medium">{{ room.area }} m²</dd>
-        </div>
-      </dl>
     </NuxtLink>
 
     <div

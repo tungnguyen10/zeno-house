@@ -307,16 +307,6 @@ function onSubmit() {
 }
 
 const draftAlertVisible = computed(() => props.hasDraft && !draftDismissed.value)
-const draftSavedLabel = computed(() => {
-  if (!props.draftSavedAt) return ''
-  return new Date(props.draftSavedAt).toLocaleString('vi-VN', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
-})
 
 function dismissDraft() {
   draftDismissed.value = true
@@ -333,53 +323,51 @@ function restoreDraft() {
   emit('restore-draft')
 }
 
-const submitText = computed(() => props.submitLabel)
-const mobileSubmitText = computed(() => props.mobileSubmitLabel ?? props.submitLabel)
-const mobileCancelText = computed(() => props.mobileCancelLabel ?? props.cancelLabel)
+const canSubmit = computed(() => !props.loading && (props.isDirty || props.hasDraft || submitAttempted.value))
+
+const selectedRoomLabel = computed(() => {
+  const room = selectedRoom.value
+  if (!room) return '—'
+  const building = buildingMap.value[room.buildingId]
+  return building ? `Phòng ${room.roomNumber} · ${building}` : `Phòng ${room.roomNumber}`
+})
 </script>
 
 <template>
-  <form class="space-y-6 pb-28 md:pb-0" novalidate @submit.prevent="onSubmit">
-    <UiAlert v-if="draftAlertVisible" severity="info" data-test="draft-banner">
-      <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p class="text-sm font-medium text-ui-primary">
-            {{ isDraftVersionMismatch ? 'Bản nháp cũ không tương thích — chỉ có thể xoá' : 'Có bản nháp chưa lưu' }}
-          </p>
-          <p v-if="draftError" class="mt-0.5 text-xs text-ui-muted">{{ draftError }}</p>
-          <p v-else-if="draftSavedLabel" class="mt-0.5 text-xs text-ui-muted">Lưu lúc {{ draftSavedLabel }}</p>
-        </div>
-        <div class="flex flex-wrap gap-2">
-          <UiButton v-if="!isDraftVersionMismatch" type="button" size="sm" variant="secondary" @click="restoreDraft">
-            Khôi phục
-          </UiButton>
-          <UiButton v-if="!isDraftVersionMismatch" type="button" size="sm" variant="ghost" @click="dismissDraft">
-            Bỏ qua
-          </UiButton>
-          <UiButton type="button" size="sm" variant="ghost" @click="clearDraft">
-            Xoá bản nháp
-          </UiButton>
-        </div>
-      </div>
-    </UiAlert>
+  <form class="space-y-6" novalidate @submit.prevent="onSubmit">
+    <UiFormDraftBanner
+      v-if="draftAlertVisible"
+      dismissible
+      :saved-at="draftSavedAt"
+      :error="draftError"
+      :version-mismatch="isDraftVersionMismatch"
+      @restore="restoreDraft"
+      @dismiss="dismissDraft"
+      @clear="clearDraft"
+    />
 
     <UiAlert v-if="apiError" severity="danger">
       {{ apiError }}
     </UiAlert>
 
-    <section
-      class="rounded-lg border border-ui-border bg-ui-surface p-5"
-      :class="showHandover ? 'space-y-5' : 'space-y-5 border-t-2 border-t-cyan/60'"
-    >
-      <header v-if="!showHandover" class="flex items-start gap-3">
-        <span class="flex size-7 shrink-0 items-center justify-center rounded-full border border-ui-accent/30 bg-ui-accent/10 text-sm font-semibold text-ui-accent">1</span>
-        <div>
-          <h3 class="text-sm font-semibold text-ui-primary">Quan hệ</h3>
-          <p class="mt-0.5 text-xs text-ui-muted">Phòng và khách thuê gắn với hợp đồng.</p>
+    <UiFormSection title="Quan hệ" description="Phòng và khách thuê gắn với hợp đồng.">
+      <dl v-if="relationReadonly" class="divide-y divide-ui-border" data-test="contract-relation-readonly">
+        <div class="flex items-baseline justify-between gap-4 py-2.5 first:pt-0 last:pb-0">
+          <dt class="shrink-0 text-sm text-ui-muted">Phòng</dt>
+          <dd class="min-w-0 text-right text-sm font-medium text-ui-primary">{{ selectedRoomLabel }}</dd>
         </div>
-      </header>
+        <div class="flex items-baseline justify-between gap-4 py-2.5 first:pt-0 last:pb-0">
+          <dt class="shrink-0 text-sm text-ui-muted">Khách thuê</dt>
+          <dd class="min-w-0 text-right text-sm font-medium text-ui-primary">
+            {{ selectedTenant?.fullName ?? '—' }}
+            <span v-if="selectedTenant?.phone" class="block text-xs font-normal text-ui-muted">
+              {{ selectedTenant.phone }}
+            </span>
+          </dd>
+        </div>
+      </dl>
 
-      <div class="grid gap-4 md:grid-cols-2">
+      <div v-else class="grid gap-4 md:grid-cols-2">
         <UiCombobox
           id="contract-room"
           :model-value="selectedRoom"
@@ -390,7 +378,7 @@ const mobileCancelText = computed(() => props.mobileCancelLabel ?? props.cancelL
           placeholder="Tìm và chọn phòng..."
           search-placeholder="Tìm số phòng hoặc tòa nhà..."
           required
-          :disabled="loading || relationReadonly"
+          :disabled="loading"
           :error="errorFor('room_id')"
           empty-message="Không tìm thấy phòng trống nào"
           @update:model-value="onRoomSelect"
@@ -406,27 +394,19 @@ const mobileCancelText = computed(() => props.mobileCancelLabel ?? props.cancelL
           placeholder="Tìm và chọn khách thuê..."
           search-placeholder="Tìm theo tên hoặc số điện thoại..."
           required
-          :disabled="loading || relationReadonly"
+          :disabled="loading"
           :error="errorFor('tenant_id')"
           empty-message="Không tìm thấy khách thuê nào"
           @update:model-value="onTenantSelect"
         />
       </div>
 
-      <p v-if="relationReadonly" class="text-xs text-ui-muted">
-        Hợp đồng đang chạy — không thể đổi phòng hoặc khách thuê.
-      </p>
-    </section>
+      <template v-if="relationReadonly" #footnote>
+        <p class="text-xs text-ui-muted">Hợp đồng đang chạy — không thể đổi phòng hoặc khách thuê.</p>
+      </template>
+    </UiFormSection>
 
-    <section class="rounded-lg border border-ui-border bg-ui-surface p-5 space-y-5" :class="!showHandover ? 'border-t-2 border-t-cyan/60' : ''">
-      <header v-if="!showHandover" class="flex items-start gap-3">
-        <span class="flex size-7 shrink-0 items-center justify-center rounded-full border border-ui-accent/30 bg-ui-accent/10 text-sm font-semibold text-ui-accent">2</span>
-        <div>
-          <h3 class="text-sm font-semibold text-ui-primary">Thời hạn & Giá</h3>
-          <p class="mt-0.5 text-xs text-ui-muted">Mốc hiệu lực, tiền thuê và lịch thanh toán.</p>
-        </div>
-      </header>
-
+    <UiFormSection title="Thời hạn & Giá" description="Mốc hiệu lực, tiền thuê và lịch thanh toán.">
       <div class="grid gap-4 md:grid-cols-2">
         <UiDatePicker
           id="contract-start-date"
@@ -498,17 +478,9 @@ const mobileCancelText = computed(() => props.mobileCancelLabel ?? props.cancelL
           @blur="onBlur('payment_due_day')"
         />
       </div>
-    </section>
+    </UiFormSection>
 
-    <section class="rounded-lg border border-ui-border bg-ui-surface p-5 space-y-5" :class="!showHandover ? 'border-t-2 border-t-cyan/60' : ''">
-      <header v-if="!showHandover" class="flex items-start gap-3">
-        <span class="flex size-7 shrink-0 items-center justify-center rounded-full border border-ui-accent/30 bg-ui-accent/10 text-sm font-semibold text-ui-accent">3</span>
-        <div>
-          <h3 class="text-sm font-semibold text-ui-primary">Điều khoản</h3>
-          <p class="mt-0.5 text-xs text-ui-muted">Sức chứa, giảm giá và phụ thu cố định.</p>
-        </div>
-      </header>
-
+    <UiFormSection title="Điều khoản" description="Sức chứa, giảm giá và phụ thu cố định.">
       <div class="grid gap-4 md:grid-cols-3">
         <UiInput
           id="contract-occupant-count"
@@ -547,14 +519,14 @@ const mobileCancelText = computed(() => props.mobileCancelLabel ?? props.cancelL
           @blur="onBlur('surcharge_amount')"
         />
       </div>
-    </section>
+    </UiFormSection>
 
-    <section v-if="showHandover" class="space-y-4 rounded-lg border border-ui-border bg-ui-hover/30 p-5">
-      <div>
-        <p class="text-sm font-semibold text-ui-primary">Số bàn giao đầu vào</p>
-        <p class="mt-0.5 text-xs text-ui-muted">Đọc số điện và nước tại thời điểm bàn giao phòng cho khách thuê.</p>
-      </div>
-
+    <UiFormSection
+      v-if="showHandover"
+      tone="muted"
+      title="Số bàn giao đầu vào"
+      description="Đọc số điện và nước tại thời điểm bàn giao phòng cho khách thuê."
+    >
       <div class="grid gap-4 md:grid-cols-2">
         <div class="flex flex-col gap-1">
           <UiInput
@@ -610,17 +582,9 @@ const mobileCancelText = computed(() => props.mobileCancelLabel ?? props.cancelL
         @blur="onBlur('handover_reading_date')"
       />
       <p class="text-xs text-ui-muted">Mặc định lấy theo ngày bắt đầu hợp đồng nếu để trống.</p>
-    </section>
+    </UiFormSection>
 
-    <section class="rounded-lg border border-ui-border bg-ui-surface p-5 space-y-5" :class="!showHandover ? 'border-t-2 border-t-cyan/60' : ''">
-      <header v-if="!showHandover" class="flex items-start gap-3">
-        <span class="flex size-7 shrink-0 items-center justify-center rounded-full border border-ui-accent/30 bg-ui-accent/10 text-sm font-semibold text-ui-accent">4</span>
-        <div>
-          <h3 class="text-sm font-semibold text-ui-primary">Trạng thái & Ghi chú</h3>
-          <p class="mt-0.5 text-xs text-ui-muted">Vòng đời hợp đồng và ghi chú nội bộ.</p>
-        </div>
-      </header>
-
+    <UiFormSection title="Trạng thái &amp; Ghi chú" description="Vòng đời hợp đồng và ghi chú nội bộ.">
       <div class="grid gap-4 md:grid-cols-2">
         <UiSelect
           id="contract-status"
@@ -650,26 +614,16 @@ const mobileCancelText = computed(() => props.mobileCancelLabel ?? props.cancelL
           />
         </div>
       </div>
-    </section>
+    </UiFormSection>
 
-    <div class="hidden justify-end gap-3 pt-2 md:flex">
-      <UiButton type="button" variant="secondary" :disabled="loading" @click="emit('cancel')">
-        {{ cancelLabel }}
-      </UiButton>
-      <UiButton type="submit" :loading="loading">
-        {{ submitText }}
-      </UiButton>
-    </div>
-
-    <div class="fixed inset-x-0 bottom-0 z-40 border-t border-ui-border bg-ui-deep/95 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-lg backdrop-blur md:hidden">
-      <div class="mx-auto flex max-w-screen-sm gap-2">
-        <UiButton type="button" variant="secondary" class="flex-1" :disabled="loading" @click="emit('cancel')">
-          {{ mobileCancelText }}
-        </UiButton>
-        <UiButton type="submit" class="flex-1" :loading="loading">
-          {{ mobileSubmitText }}
-        </UiButton>
-      </div>
-    </div>
+    <UiFormActions
+      :submit-label="submitLabel"
+      :cancel-label="cancelLabel"
+      :mobile-submit-label="mobileSubmitLabel"
+      :mobile-cancel-label="mobileCancelLabel"
+      :loading="loading"
+      :can-submit="canSubmit"
+      @cancel="emit('cancel')"
+    />
   </form>
 </template>

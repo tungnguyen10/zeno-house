@@ -9,10 +9,6 @@ const _props = withDefaults(defineProps<{
   navItems: () => NAV_ITEMS,
 })
 
-const emit = defineEmits<{
-  (e: 'close'): void
-}>()
-
 const route = useRoute()
 const authStore = useAuthStore()
 const appStore = useAppStore()
@@ -41,10 +37,10 @@ function isActive(item: NavItem) {
 
 const asideClass = computed(() =>
   clsx(
-    'flex shrink-0 flex-col bg-ui-chrome border-r border-ui-border h-full',
+    // Desktop-only rail; mobile navigation lives in the bottom tab bar instead.
+    'hidden shrink-0 flex-col bg-ui-chrome border-r border-ui-border h-full',
     'transition-[width] duration-200',
-    // Mobile drawer is always full width; only the desktop rail collapses.
-    'w-64',
+    'lg:flex',
     sidebarCollapsed.value ? 'lg:w-16' : 'lg:w-64',
   ),
 )
@@ -114,12 +110,12 @@ function sectionLabelClass() {
     <!-- Logo -->
     <div :class="headerClass">
       <NuxtLink to="/dashboard" :class="logoLinkClass" aria-label="Zeno House — Trang chủ">
-        <IconLogo class="h-7 w-auto text-ui-primary" aria-hidden="true" />
+        <IconLogoSidebar class="h-7 w-auto text-ui-primary" aria-hidden="true" />
       </NuxtLink>
 
       <!-- Mini logo — desktop rail (hover swaps to the toggle) -->
       <NuxtLink to="/dashboard" :class="miniLogoClass" aria-label="Zeno House — Trang chủ">
-        <IconLogoMini class="h-6 w-auto text-ui-accent" aria-hidden="true" />
+        <IconLogoMiniSidebar class="h-6 w-auto text-ui-accent" aria-hidden="true" />
       </NuxtLink>
 
       <!-- Collapse toggle — desktop only -->
@@ -134,16 +130,6 @@ function sectionLabelClass() {
         <IconPanelLeft class="h-5 w-5" aria-hidden="true" />
       </UiButton>
 
-      <!-- Close button on mobile -->
-      <UiButton
-        variant="ghost"
-        icon-only
-        class="ml-auto lg:hidden"
-        aria-label="Đóng sidebar"
-        @click="emit('close')"
-      >
-        <IconX class="h-5 w-5" aria-hidden="true" />
-      </UiButton>
     </div>
 
     <!-- Navigation -->
@@ -175,7 +161,6 @@ function sectionLabelClass() {
               :class="navItemClass(item)"
               :title="sidebarCollapsed ? item.label : undefined"
               :aria-current="isActive(item) ? 'page' : undefined"
-              @click="emit('close')"
             >
               <span
                 v-if="isActive(item)"
@@ -201,7 +186,6 @@ function sectionLabelClass() {
         data-sidebar-user
         class="flex items-center gap-3 rounded-xl border border-ui-border bg-ui-surface/40 px-3 py-2.5 transition-colors hover:border-ui-accent/20 hover:bg-ui-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ui-accent/40"
         :class="sidebarCollapsed && 'lg:justify-center lg:px-0'"
-        @click="emit('close')"
       >
         <img
           v-if="showAvatarImage"

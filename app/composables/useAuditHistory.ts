@@ -30,13 +30,20 @@ export function useAuditHistory() {
     watch: [buildingId, entityType],
   })
 
-  const events = ref<AuditEvent[]>([])
-  const nextCursor = ref<string | null>(null)
+  // Derived, not copied via a watcher: watchers do not flush before the server render,
+  // so SSR showed an empty list next to a non-zero total and mismatched on hydration.
+  const appended = ref<AuditEvent[]>([])
+  const appendedCursor = ref<string | null | undefined>(undefined)
   const isLoadingMore = ref(false)
-  watch(data, (response) => {
-    events.value = response?.data ?? []
-    nextCursor.value = response?.meta?.nextCursor ?? null
-  }, { immediate: true })
+
+  const events = computed(() => [...(data.value?.data ?? []), ...appended.value])
+  const nextCursor = computed(() =>
+    appendedCursor.value === undefined ? (data.value?.meta?.nextCursor ?? null) : appendedCursor.value,
+  )
+  watch(data, () => {
+    appended.value = []
+    appendedCursor.value = undefined
+  })
   const total = computed(() => data.value?.meta?.total ?? 0)
   const isLoading = computed(() => status.value === 'pending')
   const hasMore = computed(() => Boolean(nextCursor.value))
@@ -65,8 +72,8 @@ export function useAuditHistory() {
         || nextCursor.value !== requestedCursor
       ) return
       const existingIds = new Set(events.value.map(event => event.id))
-      events.value = [...events.value, ...response.data.filter(event => !existingIds.has(event.id))]
-      nextCursor.value = response.meta?.nextCursor ?? null
+      appended.value = [...appended.value, ...response.data.filter(event => !existingIds.has(event.id))]
+      appendedCursor.value = response.meta?.nextCursor ?? null
     }
     finally {
       isLoadingMore.value = false

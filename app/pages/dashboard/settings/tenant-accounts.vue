@@ -17,6 +17,23 @@ definePageMeta({
   },
 })
 
+// Mobile large-title collapse: fades into the persistent app header once scrolled past.
+const titleSentinel = ref<HTMLElement | null>(null)
+const isTitleCollapsed = ref(false)
+useIntersectionObserver(titleSentinel, ([entry]) => {
+  isTitleCollapsed.value = !!entry && !entry.isIntersecting
+})
+const headerTitle = useAppHeaderTitle()
+const compactTitle = computed(() => (isTitleCollapsed.value ? 'Tài khoản người thuê' : null))
+watchEffect(() => {
+  headerTitle.value = compactTitle.value
+})
+onBeforeUnmount(() => {
+  // A newer page can claim this slot before this instance unmounts during a
+  // page transition — only clear it if it's still ours.
+  if (headerTitle.value === compactTitle.value) headerTitle.value = null
+})
+
 const toast = useToast()
 const authStore = useAuthStore()
 const {
@@ -39,7 +56,7 @@ const columns: UiTableColumn<TenantAccountListItem>[] = [
   { key: 'tenant', label: 'Khách thuê' },
   { key: 'email', label: 'Email đăng nhập', hideOnMobile: true },
   { key: 'health', label: 'Liên kết' },
-  { key: 'actions', action: true, width: 'w-80' },
+  { key: 'actions', action: true, width: 'w-14 md:w-80' },
 ]
 
 // ── Provision + tenant search ────────────────────────────────────────────────
@@ -251,6 +268,7 @@ onMounted(() => {
       title="Tài khoản người thuê"
       description="Cấp và quản lý tài khoản đăng nhập portal cho khách thuê đã có trong hệ thống."
     >
+      <div ref="titleSentinel" aria-hidden="true" />
       <template #actions>
         <UiButton variant="primary" @click="openProvision">
           <IconPlus class="h-4 w-4" aria-hidden="true" />
@@ -287,7 +305,7 @@ onMounted(() => {
         <UiStatusBadge :status="row.health === 'missing_auth' ? row.health : row.status" />
       </template>
       <template #cell-actions="{ row }">
-        <div class="flex min-w-52 flex-wrap items-center justify-end gap-2">
+        <div class="hidden min-w-52 flex-wrap items-center justify-end gap-2 md:flex">
           <UiButton
             variant="secondary"
             size="sm"
@@ -309,13 +327,28 @@ onMounted(() => {
             {{ row.health === 'missing_auth' ? 'Dọn liên kết' : 'Gỡ' }}
           </UiButton>
         </div>
+        <UiDropdownMenu class="ml-auto md:hidden" trigger-class="min-h-11 min-w-11" aria-label="Thao tác tài khoản">
+          <UiDropdownMenuItem
+            :disabled="row.health !== 'linked' || busyTenantId === row.tenantId"
+            :loading="busyTenantId === row.tenantId"
+            @click="toggleStatus(row)"
+          >
+            {{ row.status === 'active' ? 'Khóa' : 'Mở lại' }}
+          </UiDropdownMenuItem>
+          <UiDropdownMenuItem :disabled="row.health !== 'linked'" @click="resetTarget = row">
+            Đặt lại mật khẩu
+          </UiDropdownMenuItem>
+          <UiDropdownMenuItem variant="danger" @click="revokeTarget = row">
+            {{ row.health === 'missing_auth' ? 'Dọn liên kết' : 'Gỡ' }}
+          </UiDropdownMenuItem>
+        </UiDropdownMenu>
       </template>
     </UiTable>
 
     <section v-if="canReconcileOrphans" class="mt-8 space-y-3" aria-labelledby="orphan-heading">
       <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h2 id="orphan-heading" class="text-lg font-semibold text-ui-primary">Tài khoản Auth mồ côi</h2>
+          <h2 id="orphan-heading" class="text-xs font-semibold uppercase tracking-wide text-ui-muted">Tài khoản Auth mồ côi</h2>
           <p class="mt-1 text-sm text-ui-muted">Tài khoản mang vai trò tenant nhưng không còn liên kết tới hồ sơ người thuê.</p>
         </div>
         <UiButton variant="secondary" size="sm" :loading="orphansLoading" @click="loadOrphans">
@@ -333,11 +366,11 @@ onMounted(() => {
         title="Không phát hiện tài khoản mồ côi"
         description="Mọi tài khoản tenant hiện có đều đang được liên kết."
       />
-      <div v-else class="space-y-2">
+      <div v-else class="-mx-4 space-y-2 sm:mx-0">
         <article
           v-for="orphan in orphans"
           :key="orphan.authUserId"
-          class="flex flex-col gap-3 rounded-xl border border-status-warning/30 bg-status-warning/5 p-4 sm:flex-row sm:items-center sm:justify-between"
+          class="flex flex-col gap-3 border-y border-status-warning/30 bg-status-warning/5 p-4 sm:flex-row sm:items-center sm:justify-between sm:rounded-xl sm:border"
         >
           <div class="min-w-0">
             <div class="flex flex-wrap items-center gap-2">

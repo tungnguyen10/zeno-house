@@ -17,12 +17,24 @@ import type { RouteLocationRaw } from 'vue-router'
  *   #actions → right-side action group (do NOT place back navigation here)
  */
 
-defineProps<{
+const props = defineProps<{
   title: string
   description?: string
   backTo?: RouteLocationRaw
   backLabel?: string
 }>()
+
+// Mirrors `backTo` into the sticky mobile header so the back affordance stays
+// reachable while the page title scrolls away with the content.
+const headerBack = useAppHeaderBack()
+watchEffect(() => {
+  headerBack.value = props.backTo ?? null
+})
+onBeforeUnmount(() => {
+  // During a page transition the next page can mount (and claim this slot)
+  // before this instance unmounts — only clear it if it's still ours.
+  if (headerBack.value === (props.backTo ?? null)) headerBack.value = null
+})
 </script>
 
 <template>
@@ -37,7 +49,7 @@ defineProps<{
         {{ backLabel ?? 'Quay lại' }}
       </NuxtLink>
       <h1 class="text-xl font-semibold text-ui-primary">{{ title }}</h1>
-      <p v-if="description" class="text-sm text-ui-muted mt-0.5">{{ description }}</p>
+      <p v-if="description" class="hidden text-sm text-ui-muted mt-0.5 sm:block">{{ description }}</p>
       <slot />
     </div>
     <div

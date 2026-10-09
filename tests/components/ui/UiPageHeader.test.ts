@@ -1,7 +1,9 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
-import { defineComponent } from 'vue'
+import { defineComponent, ref } from 'vue'
 import UiPageHeader from '../../../app/components/ui/UiPageHeader.vue'
+
+vi.stubGlobal('useAppHeaderBack', () => ref(null))
 
 describe('UiPageHeader', () => {
   it('reserves desktop space for global shell actions', () => {

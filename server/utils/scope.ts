@@ -1,6 +1,7 @@
 import type { H3Event } from 'h3'
 import type { AuthUser } from '~/types/auth'
 import { AssignmentRepository } from '../repositories/assignments'
+import { BuildingVisibilityRepository } from '../repositories/buildings/visibility'
 import { getTenantIdForAuthUser } from '../repositories/tenant-portal/links'
 
 export type ScopeMode = 'read' | 'write'
@@ -32,6 +33,49 @@ export async function getAssignedBuildingIds(
   const ids = await AssignmentRepository.findBuildingIdsByUser(event, user.id)
   event.context.__buildingScope = ids
   return ids
+}
+
+async function getHiddenBuildingIds(event: H3Event): Promise<string[]> {
+  if (event.context.__hiddenBuildingIds !== undefined) {
+    return event.context.__hiddenBuildingIds
+  }
+  const ids = await BuildingVisibilityRepository.findHiddenIds(event)
+  event.context.__hiddenBuildingIds = ids
+  return ids
+}
+
+/**
+ * Visibility-aware building scope for browsable lists and aggregates.
+ *
+ * Deliberately separate from `getAssignedBuildingIds`: permission scope decides
+ * whether a record resolves at all, visibility only decides whether it shows up
+ * in a collection. Keeping them apart is what lets a direct link to a record in
+ * a hidden building keep working.
+ */
+export async function getVisibleBuildingIds(
+  event: H3Event,
+  user: AuthUser,
+): Promise<string[] | null> {
+  if (event.context.__visibleBuildingScope !== undefined) {
+    return event.context.__visibleBuildingScope
+  }
+
+  const assigned = await getAssignedBuildingIds(event, user)
+  const hidden = await getHiddenBuildingIds(event)
+
+  let visible: string[] | null
+  if (assigned === null) {
+    // Admin stays unscoped while nothing is hidden, so the common case keeps
+    // skipping the `in (...)` filter entirely.
+    visible = hidden.length === 0 ? null : await BuildingVisibilityRepository.findVisibleIds(event)
+  }
+  else {
+    const hiddenSet = new Set(hidden)
+    visible = assigned.filter(id => !hiddenSet.has(id))
+  }
+
+  event.context.__visibleBuildingScope = visible
+  return visible
 }
 
 export async function assertBuildingScope(

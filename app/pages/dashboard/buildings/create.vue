@@ -115,8 +115,7 @@ async function onSubmit(data: BuildingFormData) {
       {{ apiError }}
     </UiAlert>
 
-    <div class="rounded-xl border border-ui-border bg-ui-surface p-6">
-      <BuildingForm
+    <BuildingForm
       v-model="formData"
       :loading="isLoading"
       :errors="errors"
@@ -129,16 +128,11 @@ async function onSubmit(data: BuildingFormData) {
       @discard-draft="clearDraft"
     >
       <template #extras>
-        <div class="border-t border-ui-border" />
-        <section class="space-y-4">
-          <header class="flex items-start justify-between gap-3">
-            <div>
-              <h3 class="text-sm font-semibold text-ui-primary">Tạo phòng nhanh</h3>
-              <p class="text-xs text-ui-muted mt-0.5">Tạo trước một loạt phòng (mã, giá thuê) cùng lúc với toà nhà — tuỳ chọn.</p>
-            </div>
-            <UiCheckbox v-model="enableQuickRooms" label="Bật" />
-          </header>
-
+        <UiFormSection
+          title="Tạo phòng nhanh"
+          description="Tạo trước một loạt phòng (mã, giá thuê) cùng lúc với toà nhà — tuỳ chọn."
+        >
+          <UiCheckbox v-model="enableQuickRooms" label="Bật tạo phòng nhanh" />
           <template v-if="enableQuickRooms">
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <UiInput
@@ -212,9 +206,8 @@ async function onSubmit(data: BuildingFormData) {
               {{ quickRoomError }}
             </UiAlert>
           </template>
-        </section>
+        </UiFormSection>
       </template>
-      </BuildingForm>
-    </div>
+    </BuildingForm>
   </div>
 </template>

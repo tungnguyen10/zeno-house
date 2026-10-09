@@ -95,10 +95,10 @@ describe('TenantForm', () => {
   it('renders four numbered sections', () => {
     const wrapper = mountForm()
     const html = wrapper.html()
-    expect(html).toContain('1. Thông tin cá nhân')
-    expect(html).toContain('2. Giấy tờ tuỳ thân')
-    expect(html).toContain('3. Liên hệ khẩn cấp')
-    expect(html).toContain('4. Ghi chú')
+    expect(html).toContain('Thông tin cá nhân')
+    expect(html).toContain('Giấy tờ tuỳ thân')
+    expect(html).toContain('Liên hệ khẩn cấp')
+    expect(html).toContain('Ghi chú')
   })
 
   it('does not show inline errors until the field is touched', async () => {

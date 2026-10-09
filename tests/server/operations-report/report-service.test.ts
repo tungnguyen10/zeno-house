@@ -303,6 +303,14 @@ describe('OperationsReportService.getReport', () => {
     })
   })
 
+
+  it('separates noncash settlement and deposit refunds from revenue cash and operating expense', async () => {
+    const original = await fetchSnapshot()
+    fetchSnapshot.mockResolvedValueOnce({ ...original, billing: { ...original.billing, settlementAllocationTotal: 700_000, refundTotal: 250_000 } })
+    const report = await run()
+    expect(report.metrics).toMatchObject({ collectedCash: 4_000_000, settlementAllocationTotal: 700_000, refundTotal: 250_000, totalExpense: 11_650_000, profitByCash: 4_000_000 - 11_650_000 })
+  })
+
   it('reuses a scoped closed-period report snapshot', async () => {
     const first = await run()
     const second = await run()

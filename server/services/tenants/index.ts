@@ -14,7 +14,7 @@ import { tenantCreateSchema } from '~/utils/validators/tenants'
 import { TenantRepository, type TenantFilters } from '../../repositories/tenants'
 import { BulkActionRepository } from '../../repositories/bulk-actions'
 import { BuildingRepository } from '../../repositories/buildings'
-import { canDeleteMasterData, getAssignedBuildingIds } from '../../utils/scope'
+import { canDeleteMasterData, getAssignedBuildingIds, getVisibleBuildingIds } from '../../utils/scope'
 import { AuditService } from '../audit'
 import { AUDIT_ACTIONS } from '~/utils/constants/audit'
 import { db } from '../../utils/db'
@@ -107,7 +107,7 @@ export const TenantService = {
   ): Promise<{ items: Tenant[]; total: number }> {
     requireCapability(user, 'tenants.read', 'Không có quyền xem danh sách khách thuê')
     let buildingId = filters.building_id
-    const buildingIds = await getAssignedBuildingIds(event, user)
+    const buildingIds = await getVisibleBuildingIds(event, user)
     if (buildingId) {
       const building = await BuildingRepository.findByIdentifier(event, buildingId)
       if (!building) throwNotFound('Không tìm thấy tòa nhà')

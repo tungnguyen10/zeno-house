@@ -8,6 +8,7 @@ import {
   readQueryString,
   useRouteListQuerySync,
 } from '~/composables/useRouteListQuerySync'
+import { ROOM_LIST_PAGE_SIZE } from '~/utils/constants/pagination'
 
 export const ROOM_LIST_ASYNC_KEY = 'rooms:list'
 
@@ -33,7 +34,9 @@ export function useRoomList() {
     route.query.floor !== undefined ? Number(route.query.floor) || undefined : undefined,
   )
   const page = ref(readQueryNumber(route.query.page, { fallback: 1, min: 1 }))
-  const limit = ref(readQueryNumber(route.query.limit, { fallback: 200, min: 1, max: 200 }))
+  // Not LIST_PAGE_SIZE: the page groups rooms by building and shows a per-building
+  // count, so a page must hold every room of the buildings it renders.
+  const limit = ref(readQueryNumber(route.query.limit, { fallback: ROOM_LIST_PAGE_SIZE, min: 1, max: ROOM_LIST_PAGE_SIZE }))
   const q = ref<string>(readQueryString(route.query.q))
   const sort = ref<SortField>(readQueryEnum(route.query.sort, SORT_FIELDS, 'floor'))
   const order = ref<SortOrder>(readQueryEnum(route.query.order, SORT_ORDERS, 'asc'))
@@ -46,7 +49,7 @@ export function useRoomList() {
       const newBuildingId = typeof newQuery.building_id === 'string' ? newQuery.building_id : undefined
       const newFloor = newQuery.floor !== undefined ? Number(newQuery.floor) || undefined : undefined
       const newPage = readQueryNumber(newQuery.page, { fallback: 1, min: 1 })
-      const newLimit = readQueryNumber(newQuery.limit, { fallback: 200, min: 1, max: 200 })
+      const newLimit = readQueryNumber(newQuery.limit, { fallback: ROOM_LIST_PAGE_SIZE, min: 1, max: ROOM_LIST_PAGE_SIZE })
       const newQ = readQueryString(newQuery.q)
       const newStatus = readQueryEnumArray(newQuery.status, STATUSES)
       const newSort = readQueryEnum(newQuery.sort, SORT_FIELDS, 'floor')
@@ -65,7 +68,7 @@ export function useRoomList() {
       const next = copyStringQuery(query)
 
       next.page = page.value > 1 ? String(page.value) : undefined
-      next.limit = limit.value !== 200 ? String(limit.value) : undefined
+      next.limit = limit.value !== ROOM_LIST_PAGE_SIZE ? String(limit.value) : undefined
       next.q = q.value || undefined
       next.status = status.value.length > 0 ? status.value : undefined
       next.building_id = buildingId.value || undefined

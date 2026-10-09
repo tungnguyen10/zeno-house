@@ -25,6 +25,23 @@ if (isUuid(id)) {
 
 const { tenant, isLoading, error, refresh } = useTenantDetail(id)
 
+// Mobile large-title collapse: fades into the persistent app header once scrolled past.
+const titleSentinel = ref<HTMLElement | null>(null)
+const isTitleCollapsed = ref(false)
+useIntersectionObserver(titleSentinel, ([entry]) => {
+  isTitleCollapsed.value = !!entry && !entry.isIntersecting
+})
+const headerTitle = useAppHeaderTitle()
+const compactTitle = computed(() => (isTitleCollapsed.value && tenant.value ? tenant.value.fullName : null))
+watchEffect(() => {
+  headerTitle.value = compactTitle.value
+})
+onBeforeUnmount(() => {
+  // A newer page can claim this slot before this instance unmounts during a
+  // page transition — only clear it if it's still ours.
+  if (headerTitle.value === compactTitle.value) headerTitle.value = null
+})
+
 // Contracts
 const { data: contractsData } = await useFetch<ApiSuccess<ContractWithDetails[]> & { meta: { total: number } }>(
   '/api/contracts',
@@ -197,6 +214,7 @@ watchEffect(() => {
         :back-to="'/dashboard/tenants'"
         back-label="Khách thuê"
       >
+        <div ref="titleSentinel" aria-hidden="true" />
         <template #actions>
           <div v-if="authStore.can('tenants.update')" class="flex gap-2 shrink-0">
             <NuxtLink :to="`/dashboard/tenants/${tenant.code}/edit`">
@@ -269,66 +287,51 @@ watchEffect(() => {
         </div>
       </UiAlert>
 
-      <section id="personal" class="mt-6 rounded-xl border border-ui-border bg-ui-surface p-6">
-        <h3 class="mb-4 text-sm font-semibold text-ui-primary">Thông tin cá nhân</h3>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <p class="text-xs text-ui-muted mb-1">Số điện thoại</p>
-            <p class="text-sm text-ui-primary">{{ tenant.phone }}</p>
-          </div>
-          <div v-if="tenant.email">
-            <p class="text-xs text-ui-muted mb-1">Email</p>
-            <p class="text-sm text-ui-primary">{{ tenant.email }}</p>
-          </div>
-          <div v-if="tenant.gender">
-            <p class="text-xs text-ui-muted mb-1">Giới tính</p>
-            <p class="text-sm text-ui-primary">
-              {{ tenant.gender === 'male' ? 'Nam' : tenant.gender === 'female' ? 'Nữ' : 'Khác' }}
-            </p>
-          </div>
-          <div v-if="tenant.occupation">
-            <p class="text-xs text-ui-muted mb-1">Nghề nghiệp</p>
-            <p class="text-sm text-ui-primary">{{ tenant.occupation }}</p>
-          </div>
-          <div v-if="tenant.dateOfBirth">
-            <p class="text-xs text-ui-muted mb-1">Ngày sinh</p>
-            <p class="text-sm text-ui-primary">{{ new Date(tenant.dateOfBirth).toLocaleDateString('vi-VN') }}</p>
-          </div>
-          <div>
-            <p class="text-xs text-ui-muted mb-1">Ngày tạo</p>
-            <p class="text-sm text-ui-primary">{{ new Date(tenant.createdAt).toLocaleDateString('vi-VN') }}</p>
-          </div>
-        </div>
-        <div v-if="tenant.permanentAddress" class="mt-4">
-          <p class="text-xs text-ui-muted mb-1">Địa chỉ thường trú</p>
-          <p class="text-sm text-ui-primary">{{ tenant.permanentAddress }}</p>
-        </div>
-        <div v-if="tenant.notes" class="mt-4 pt-4 border-t border-ui-border">
-          <p class="text-xs text-ui-muted mb-1">Ghi chú</p>
-          <p class="text-sm text-ui-primary whitespace-pre-wrap">{{ tenant.notes }}</p>
-        </div>
-      </section>
+      <UiSurfacePanel id="personal" as="section" class="mt-6">
+        <h3 class="mb-2 text-sm font-semibold text-ui-primary">Thông tin cá nhân</h3>
+        <UiDefinitionList>
+          <UiDefinitionItem label="Số điện thoại" :value="tenant.phone" />
+          <UiDefinitionItem v-if="tenant.email" label="Email" :value="tenant.email" />
+          <UiDefinitionItem
+            v-if="tenant.gender"
+            label="Giới tính"
+            :value="tenant.gender === 'male' ? 'Nam' : tenant.gender === 'female' ? 'Nữ' : 'Khác'"
+          />
+          <UiDefinitionItem v-if="tenant.occupation" label="Nghề nghiệp" :value="tenant.occupation" />
+          <UiDefinitionItem
+            v-if="tenant.dateOfBirth"
+            label="Ngày sinh"
+            :value="new Date(tenant.dateOfBirth).toLocaleDateString('vi-VN')"
+          />
+          <UiDefinitionItem label="Ngày tạo" :value="new Date(tenant.createdAt).toLocaleDateString('vi-VN')" />
+          <UiDefinitionItem
+            v-if="tenant.permanentAddress"
+            label="Địa chỉ thường trú"
+            :value="tenant.permanentAddress"
+            stacked
+          />
+          <UiDefinitionItem v-if="tenant.notes" label="Ghi chú" stacked>
+            <span class="whitespace-pre-wrap">{{ tenant.notes }}</span>
+          </UiDefinitionItem>
+        </UiDefinitionList>
+      </UiSurfacePanel>
 
-      <section
+      <UiSurfacePanel
         v-if="tenant.idNumber || tenant.idIssuedDate || tenant.idIssuedPlace || tenant.idCardFrontSignedUrl || tenant.idCardBackSignedUrl"
         id="id-document"
-        class="mt-4 rounded-xl border border-ui-border bg-ui-surface p-6"
+        as="section"
+        class="mt-4"
       >
-        <h3 class="mb-4 text-sm font-semibold text-ui-primary">Giấy tờ tuỳ thân</h3>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div v-if="tenant.idNumber">
-            <p class="text-xs text-ui-muted mb-1">Số CMND/CCCD</p>
-            <p class="text-sm text-ui-primary">{{ tenant.idNumber }}</p>
-          </div>
-          <div v-if="tenant.idIssuedDate">
-            <p class="text-xs text-ui-muted mb-1">Ngày cấp</p>
-            <p class="text-sm text-ui-primary">{{ new Date(tenant.idIssuedDate).toLocaleDateString('vi-VN') }}</p>
-          </div>
-          <div v-if="tenant.idIssuedPlace">
-            <p class="text-xs text-ui-muted mb-1">Nơi cấp</p>
-            <p class="text-sm text-ui-primary">{{ tenant.idIssuedPlace }}</p>
-          </div>
-        </div>
+        <h3 class="mb-2 text-sm font-semibold text-ui-primary">Giấy tờ tuỳ thân</h3>
+        <UiDefinitionList>
+          <UiDefinitionItem v-if="tenant.idNumber" label="Số CMND/CCCD" :value="tenant.idNumber" />
+          <UiDefinitionItem
+            v-if="tenant.idIssuedDate"
+            label="Ngày cấp"
+            :value="new Date(tenant.idIssuedDate).toLocaleDateString('vi-VN')"
+          />
+          <UiDefinitionItem v-if="tenant.idIssuedPlace" label="Nơi cấp" :value="tenant.idIssuedPlace" />
+        </UiDefinitionList>
 
         <div v-if="tenant.idCardFrontSignedUrl || tenant.idCardBackSignedUrl" class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div v-if="tenant.idCardFrontSignedUrl" class="space-y-1.5">
@@ -376,27 +379,22 @@ watchEffect(() => {
         >
           Bạn có thể cập nhật ảnh CCCD ở trang chỉnh sửa khách thuê.
         </p>
-      </section>
+      </UiSurfacePanel>
 
-      <section
+      <UiSurfacePanel
         v-if="tenant.emergencyContactName || tenant.emergencyContactPhone"
         id="emergency"
-        class="mt-4 rounded-xl border border-ui-border bg-ui-surface p-6"
+        as="section"
+        class="mt-4"
       >
-        <h3 class="mb-4 text-sm font-semibold text-ui-primary">Liên hệ khẩn cấp</h3>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div v-if="tenant.emergencyContactName">
-            <p class="text-xs text-ui-muted mb-1">Tên</p>
-            <p class="text-sm text-ui-primary">{{ tenant.emergencyContactName }}</p>
-          </div>
-          <div v-if="tenant.emergencyContactPhone">
-            <p class="text-xs text-ui-muted mb-1">Số điện thoại</p>
-            <p class="text-sm text-ui-primary">{{ tenant.emergencyContactPhone }}</p>
-          </div>
-        </div>
-      </section>
+        <h3 class="mb-2 text-sm font-semibold text-ui-primary">Liên hệ khẩn cấp</h3>
+        <UiDefinitionList>
+          <UiDefinitionItem v-if="tenant.emergencyContactName" label="Tên" :value="tenant.emergencyContactName" />
+          <UiDefinitionItem v-if="tenant.emergencyContactPhone" label="Số điện thoại" :value="tenant.emergencyContactPhone" />
+        </UiDefinitionList>
+      </UiSurfacePanel>
 
-      <section id="contracts" class="mt-4 rounded-xl border border-ui-border bg-ui-surface p-6">
+      <UiSurfacePanel id="contracts" as="section" class="mt-4">
         <div class="flex items-center justify-between mb-4">
           <h3 class="text-sm font-semibold text-ui-primary">Hợp đồng</h3>
           <NuxtLink
@@ -434,7 +432,7 @@ watchEffect(() => {
           </UiListRow>
         </div>
         <p v-else class="text-sm text-ui-muted">Chưa có hợp đồng</p>
-      </section>
+      </UiSurfacePanel>
 
       <section
         v-if="authStore.can('tenants.delete')"

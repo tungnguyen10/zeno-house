@@ -16,6 +16,23 @@ import { formatPeriodString, parsePeriodString } from '~/utils/format/period'
 
 definePageMeta({ title: 'Chi phí dùng chung' })
 
+// Mobile large-title collapse: fades into the persistent app header once scrolled past.
+const titleSentinel = ref<HTMLElement | null>(null)
+const isTitleCollapsed = ref(false)
+useIntersectionObserver(titleSentinel, ([entry]) => {
+  isTitleCollapsed.value = !!entry && !entry.isIntersecting
+})
+const headerTitle = useAppHeaderTitle()
+const compactTitle = computed(() => (isTitleCollapsed.value ? 'Chi phí dùng chung' : null))
+watchEffect(() => {
+  headerTitle.value = compactTitle.value
+})
+onBeforeUnmount(() => {
+  // A newer page can claim this slot before this instance unmounts during a
+  // page transition — only clear it if it's still ours.
+  if (headerTitle.value === compactTitle.value) headerTitle.value = null
+})
+
 const auth = useAuthStore()
 const toast = useToast()
 const periodYear = ref(new Date().getFullYear())
@@ -196,6 +213,7 @@ async function reactivate(item: SharedExpenseListItem) {
       title="Chi phí dùng chung"
       description="Theo dõi khoản chi của nhiều tòa nhà và phân bổ theo từng kỳ."
     >
+      <div ref="titleSentinel" aria-hidden="true" />
       <template v-if="canRead && canWrite" #actions>
         <UiButton class="whitespace-nowrap" @click="openCreate">
           <IconPlus class="size-4" aria-hidden="true" />

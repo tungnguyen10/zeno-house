@@ -179,14 +179,12 @@ describe('ContractForm — overhaul UI', () => {
     expect(wrapper.text()).toContain('Trạng thái & Ghi chú')
   })
 
-  it('disables room and tenant pickers when editing an active contract', async () => {
+  it('shows room and tenant as read-only rows when editing an active contract', async () => {
     const wrapper = mountForm(buildForm({ room_id: 'room-1', tenant_id: 'tenant-1', status: 'active' }), false)
     await flushPromises()
 
-    const relationButtons = wrapper.findAll('.combobox button')
-    expect(relationButtons).toHaveLength(2)
-    expect(relationButtons[0]!.attributes('disabled')).toBeDefined()
-    expect(relationButtons[1]!.attributes('disabled')).toBeDefined()
+    expect(wrapper.find('[data-test="contract-relation-readonly"]').exists()).toBe(true)
+    expect(wrapper.findAll('.combobox button')).toHaveLength(0)
     expect(wrapper.text()).toContain('Hợp đồng đang chạy')
   })
 
@@ -210,6 +208,6 @@ describe('ContractForm — overhaul UI', () => {
 
     expect(wrapper.text()).toContain('Có bản nháp chưa lưu')
     expect(wrapper.text()).toContain('Khôi phục')
-    expect(wrapper.find('.fixed.inset-x-0.bottom-0').exists()).toBe(true)
+    expect(wrapper.find('[data-test="sticky-save-bar"]').exists()).toBe(true)
   })
 })

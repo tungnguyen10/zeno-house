@@ -3,6 +3,7 @@
 import type { ContractRenewInput } from '~/utils/validators/contract-renewals'
 import type { ContractWithDetails } from '~/types/contracts'
 import type { ApiSuccess } from '~/types/api'
+import clsx from 'clsx'
 import { contractPath } from '~/utils/routes/operational'
 import { getApiErrorCode, getApiErrorDetails, getApiErrorMessage } from '~/utils/api-error'
 import { isUuid } from '~/utils/format/slug'
@@ -23,6 +24,52 @@ if (isUuid(id)) {
 }
 
 const { contract, isLoading, error, refresh: refreshContract } = useContractDetail(id)
+const checkout = useContractCheckout(id)
+const { bundle: checkoutBundle, isLoading: checkoutLoading, error: checkoutError } = checkout
+
+// Checkout section is noise on a freshly-signed active contract; only surface it once the
+// contract is actually ending (or the user explicitly asks for an early checkout).
+const CHECKOUT_VISIBILITY_WINDOW_DAYS = 60
+const forceShowCheckout = ref(false)
+const checkoutSectionVisible = computed(() => {
+  if (!contract.value) return false
+  if (contract.value.status !== 'active') return true
+  if (forceShowCheckout.value) return true
+  const daysRemaining = Math.ceil((new Date(contract.value.endDate).getTime() - Date.now()) / (24 * 60 * 60 * 1000))
+  return daysRemaining <= CHECKOUT_VISIBILITY_WINDOW_DAYS
+})
+
+async function beginCheckout() {
+  forceShowCheckout.value = true
+  if (checkoutLoading.value || checkoutError.value) {
+    await checkout.refresh()
+    if (checkoutError.value) { toast.error(checkoutError.value); return }
+  }
+  if (!checkoutBundle.value?.enabled) { toast.error('Luồng trả phòng chưa sẵn sàng trên máy chủ. Vui lòng liên hệ quản trị viên.'); return }
+  await navigateTo({ hash: '#checkout' })
+  await nextTick()
+  const section = document.getElementById('checkout')
+  section?.scrollIntoView({ block: 'start' })
+  section?.focus({ preventScroll: true })
+}
+
+// Mobile large-title collapse: fades into the persistent app header once scrolled past.
+const titleSentinel = ref<HTMLElement | null>(null)
+const isTitleCollapsed = ref(false)
+useIntersectionObserver(titleSentinel, ([entry]) => {
+  isTitleCollapsed.value = !!entry && !entry.isIntersecting
+})
+const headerTitle = useAppHeaderTitle()
+const compactTitle = computed(() => (isTitleCollapsed.value && contract.value ? contract.value.contractCode : null))
+watchEffect(() => {
+  headerTitle.value = compactTitle.value
+})
+onBeforeUnmount(() => {
+  // A newer page can claim this slot before this instance unmounts during a
+  // page transition — only clear it if it's still ours.
+  if (headerTitle.value === compactTitle.value) headerTitle.value = null
+})
+
 const { payments, isLoading: paymentsLoading, addPayment, updatePayment, removePayment } = useContractPayments(id)
 const { renewals, isLoading: renewalsLoading, renew } = useContractRenewals(id)
 const { occupants, isLoading: occupantsLoading, addOccupant, moveOut, removeOccupant } = useContractOccupants(id)
@@ -48,7 +95,9 @@ async function publishAmendment(amendmentId: string, expectedUpdatedAt: string) 
 const activeOccupantCount = computed(
   () => occupants.value.filter(o => !o.moveOutDate && o.role === 'roommate').length + 1,
 )
-const paidAmount = computed(() => payments.value.reduce((sum, p) => sum + p.amount, 0))
+const depositReceived = computed(() => payments.value.filter(p => p.paymentType === 'deposit').reduce((sum, p) => sum + p.amount, 0))
+const depositHeld = computed(() => checkoutBundle.value?.enabled ? checkoutBundle.value.depositHeld : depositReceived.value)
+watch(payments, () => { if (checkoutBundle.value?.enabled) checkout.refresh() })
 
 const showRenewalForm = ref(false)
 const isRenewing = ref(false)
@@ -76,8 +125,6 @@ async function handleRenew(input: ContractRenewInput) {
 const showDeleteModal = ref(false)
 const isDeleting = ref(false)
 const deleteConflict = ref<Record<string, unknown> | null>(null)
-const showTerminateModal = ref(false)
-const isTerminating = ref(false)
 
 const deletingServiceId = ref<string | null>(null)
 const isDeletingService = ref(false)
@@ -95,21 +142,12 @@ const conflictItems = computed(() => {
   return items
 })
 
-const onlyActiveConflict = computed(() =>
-  deleteConflict.value?.reason === 'ACTIVE_CONTRACT'
-  && !deleteConflict.value?.issuedBillingPeriods
-  && !deleteConflict.value?.paidPayments
-  && !deleteConflict.value?.nonHandoverMeterReadings
-  && !deleteConflict.value?.publishedAmendments,
-)
-
-async function confirmDelete(force = false) {
+async function confirmDelete() {
   isDeleting.value = true
   deleteConflict.value = null
   try {
     await apiFetch(`/api/contracts/${id}`, {
       method: 'DELETE',
-      query: force ? { force: true } : undefined,
     })
     await navigateTo('/dashboard/contracts')
   }
@@ -124,26 +162,6 @@ async function confirmDelete(force = false) {
   finally {
     isDeleting.value = false
     if (!deleteConflict.value) showDeleteModal.value = false
-  }
-}
-
-async function confirmTerminate() {
-  if (!contract.value) return
-  isTerminating.value = true
-  try {
-    await apiFetch(`/api/contracts/${id}`, {
-      method: 'PATCH',
-      body: { status: 'terminated' },
-    })
-    toast.success('Đã kết thúc hợp đồng')
-    showTerminateModal.value = false
-    await refreshContract()
-  }
-  catch {
-    toast.error('Không thể kết thúc hợp đồng. Vui lòng thử lại.')
-  }
-  finally {
-    isTerminating.value = false
   }
 }
 
@@ -166,6 +184,41 @@ async function handleDeleteService() {
 watchEffect(() => {
   if (error.value?.statusCode === 404) navigateTo('/dashboard/contracts')
 })
+
+// Scroll-spy for the in-page anchor nav: tracks which section the user has scrolled past so the
+// mobile segmented-pill skin can highlight it (desktop keeps the plain underline-free look).
+// IntersectionObserver's visibility window is unreliable for short sections (they can pass through
+// the window entirely between two callbacks), so this walks section positions directly instead.
+const sectionIds = ['overview', 'amendments', 'occupants', 'payments', 'services', 'meter-readings', 'checkout', 'history']
+const activeSection = ref(sectionIds[0])
+const SCROLLSPY_OFFSET = 140
+let scrollContainer: HTMLElement | null = null
+
+function updateActiveSection() {
+  let current = sectionIds[0]
+  for (const sectionId of sectionIds) {
+    const el = document.getElementById(sectionId)
+    if (el && el.getBoundingClientRect().top - SCROLLSPY_OFFSET <= 0) current = sectionId
+  }
+  activeSection.value = current
+}
+
+onMounted(() => {
+  scrollContainer = document.querySelector('main')
+  scrollContainer?.addEventListener('scroll', updateActiveSection, { passive: true })
+  updateActiveSection()
+})
+onBeforeUnmount(() => scrollContainer?.removeEventListener('scroll', updateActiveSection))
+
+function sectionLinkClass(sectionId: string) {
+  const active = activeSection.value === sectionId
+  return clsx(
+    'shrink-0 rounded-full px-3 py-1.5 transition-colors hover:bg-ui-hover hover:text-ui-primary lg:rounded-md lg:font-normal',
+    active
+      ? 'bg-ui-surface text-ui-primary shadow-sm lg:bg-transparent lg:text-ui-muted lg:shadow-none'
+      : 'text-ui-muted',
+  )
+}
 </script>
 
 <template>
@@ -187,15 +240,18 @@ watchEffect(() => {
         title="Chi tiết hợp đồng"
         :back-to="'/dashboard/contracts'"
         back-label="Danh sách hợp đồng"
-      />
+      >
+        <div ref="titleSentinel" aria-hidden="true" />
+      </UiPageHeader>
 
       <ContractDetailHero
         :contract="contract"
-        :paid-amount="paidAmount"
+        :paid-amount="depositReceived"
+        :deposit-held="depositHeld"
         :can-manage="authStore.can('contracts.update')"
         @edit="navigateTo(`${contractPath(contract)}/edit`)"
         @renew="showRenewalForm = !showRenewalForm"
-        @terminate="showTerminateModal = true"
+        @terminate="beginCheckout"
         @delete="showDeleteModal = true"
       />
 
@@ -208,14 +264,8 @@ watchEffect(() => {
             </ul>
           </div>
           <div class="flex flex-wrap gap-2">
-            <UiButton
-              v-if="onlyActiveConflict"
-              size="sm"
-              variant="danger"
-              :loading="isDeleting"
-              @click="confirmDelete(true)"
-            >
-              Kết thúc rồi xoá
+            <UiButton v-if="deleteConflict.reason === 'ACTIVE_CONTRACT'" size="sm" variant="secondary" @click="beginCheckout">
+              Mở bàn giao
             </UiButton>
             <UiButton size="sm" variant="secondary" @click="deleteConflict = null">
               Đã hiểu
@@ -224,16 +274,19 @@ watchEffect(() => {
         </div>
       </UiAlert>
 
-      <nav class="sticky top-0 z-20 mt-4 overflow-x-auto border-y border-ui-border bg-ui-deep/95 py-2 backdrop-blur lg:top-16">
-        <div class="flex min-w-max gap-2 text-sm">
-          <a href="#overview" class="rounded-md px-3 py-1.5 text-ui-muted hover:bg-ui-hover hover:text-ui-primary">Tổng quan</a>
-          <a href="#amendments" class="rounded-md px-3 py-1.5 text-ui-muted hover:bg-ui-hover hover:text-ui-primary">Phụ lục</a>
-          <a href="#occupants" class="rounded-md px-3 py-1.5 text-ui-muted hover:bg-ui-hover hover:text-ui-primary">Người ở</a>
-          <a href="#payments" class="rounded-md px-3 py-1.5 text-ui-muted hover:bg-ui-hover hover:text-ui-primary">Thanh toán</a>
-          <a href="#services" class="rounded-md px-3 py-1.5 text-ui-muted hover:bg-ui-hover hover:text-ui-primary">Dịch vụ</a>
-          <a href="#meter-readings" class="rounded-md px-3 py-1.5 text-ui-muted hover:bg-ui-hover hover:text-ui-primary">Chỉ số</a>
-          <a href="#history" class="rounded-md px-3 py-1.5 text-ui-muted hover:bg-ui-hover hover:text-ui-primary">Lịch sử</a>
+      <nav class="sticky top-0 z-20 mt-4 overflow-x-auto bg-ui-canvas py-2 lg:top-16">
+        <div class="flex min-w-max gap-1 rounded-full bg-ui-chrome p-1 text-sm lg:gap-2 lg:rounded-none lg:bg-transparent lg:p-0">
+          <a href="#overview" :class="sectionLinkClass('overview')">Tổng quan</a>
+          <a href="#amendments" :class="sectionLinkClass('amendments')">Phụ lục</a>
+          <a href="#occupants" :class="sectionLinkClass('occupants')">Người ở</a>
+          <a href="#payments" :class="sectionLinkClass('payments')">Thanh toán</a>
+          <a href="#services" :class="sectionLinkClass('services')">Dịch vụ</a>
+          <a href="#meter-readings" :class="sectionLinkClass('meter-readings')">Chỉ số</a>
+          <a v-if="checkoutSectionVisible && checkoutBundle?.enabled" href="#checkout" :class="sectionLinkClass('checkout')">Trả phòng</a>
+          <a href="#history" :class="sectionLinkClass('history')">Lịch sử</a>
         </div>
+        <!-- Edge fade hints the pill track scrolls further on mobile; desktop nav never overflows. -->
+        <div class="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-ui-canvas to-transparent lg:hidden" aria-hidden="true" />
       </nav>
 
       <ContractOverviewPanel
@@ -276,7 +329,7 @@ watchEffect(() => {
 
       <!-- Services section -->
       <UiSection id="services" title="Dịch vụ hàng tháng" class="mt-6 scroll-mt-20">
-        <div class="rounded-xl border border-ui-border bg-ui-surface p-4">
+        <UiSurfacePanel density="compact">
           <ContractServicesTab
             :services="contractServices"
             :loading="servicesLoading"
@@ -284,12 +337,12 @@ watchEffect(() => {
             @update="updateContractService"
             @delete="deletingServiceId = $event"
           />
-        </div>
+        </UiSurfacePanel>
       </UiSection>
 
       <!-- Handover readings section -->
       <UiSection id="meter-readings" title="Số bàn giao" class="mt-6 scroll-mt-20">
-        <div class="rounded-xl border border-ui-border bg-ui-surface p-4">
+        <UiSurfacePanel density="compact">
           <ContractHandoverReadings
             :contract-id="id"
             :room-id="contract.room.id"
@@ -297,8 +350,25 @@ watchEffect(() => {
             :end-date="contract.endDate"
             :status="contract.status"
           />
-        </div>
+        </UiSurfacePanel>
       </UiSection>
+
+      <ContractCheckoutSection
+        :bundle="checkoutBundle"
+        :loading="checkoutLoading"
+        :error="checkoutError"
+        :contract-code="contract.contractCode"
+        :contract-status="contract.status"
+        :visible="checkoutSectionVisible"
+        :can-manage="authStore.can('contracts.update')"
+        :can-settle="authStore.can('contracts.settle')"
+        :can-issue="authStore.can('billing.write')"
+        :can-refund="authStore.can('contracts.refund')"
+        :can-correct="authStore.can('contracts.settle') && authStore.can('billing.corrections')"
+        :actions="checkout.actions"
+        @retry="checkout.refresh"
+        @changed="refreshContract"
+      />
 
       <!-- Renewal form inline -->
       <UiSection v-if="showRenewalForm" title="Gia hạn hợp đồng" class="mt-6 scroll-mt-20">
@@ -316,7 +386,7 @@ watchEffect(() => {
 
       <!-- Contract history -->
       <UiSection id="history" title="Lịch sử" class="mt-6 scroll-mt-20">
-        <div class="rounded-xl border border-ui-border bg-ui-surface p-4">
+        <UiSurfacePanel density="compact">
           <ContractRenewalHistoryList
             :renewals="renewals"
             :is-loading="renewalsLoading"
@@ -328,7 +398,7 @@ watchEffect(() => {
             :contract-id="contract.id"
             :building-id="contract.buildingId"
           />
-        </div>
+        </UiSurfacePanel>
       </UiSection>
     </template>
 
@@ -340,16 +410,6 @@ watchEffect(() => {
       :loading="isDeleting"
       @confirm="confirmDelete"
       @cancel="showDeleteModal = false"
-    />
-
-    <UiConfirmModal
-      :open="showTerminateModal"
-      title="Kết thúc hợp đồng"
-      message="Hợp đồng sẽ chuyển sang trạng thái đã chấm dứt và giải phóng phòng/khách thuê theo logic hiện có."
-      confirm-label="Kết thúc"
-      :loading="isTerminating"
-      @confirm="confirmTerminate"
-      @cancel="showTerminateModal = false"
     />
 
     <!-- Delete service modal -->

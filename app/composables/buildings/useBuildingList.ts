@@ -8,6 +8,7 @@ import {
   readQueryString,
   useRouteListQuerySync,
 } from '~/composables/useRouteListQuerySync'
+import { LIST_PAGE_SIZE, LIST_PAGE_SIZE_MAX } from '~/utils/constants/pagination'
 
 export const BUILDING_LIST_ASYNC_KEY = 'buildings:list'
 
@@ -26,7 +27,7 @@ export function useBuildingList() {
   const route = useRoute()
 
   const page = ref(readQueryNumber(route.query.page, { fallback: 1, min: 1 }))
-  const limit = ref(readQueryNumber(route.query.limit, { fallback: 20, min: 1, max: 100 }))
+  const limit = ref(readQueryNumber(route.query.limit, { fallback: LIST_PAGE_SIZE, min: 1, max: LIST_PAGE_SIZE_MAX }))
   const q = ref<string>(readQueryString(route.query.q))
   const status = ref<BuildingStatus[]>(readQueryEnumArray(route.query.status, STATUSES))
   const sort = ref<SortField>(readQueryEnum(route.query.sort, SORT_FIELDS, 'created_at'))
@@ -38,7 +39,7 @@ export function useBuildingList() {
     syncOn: [page],
     parseRoute(newQuery) {
       const newPage = readQueryNumber(newQuery.page, { fallback: 1, min: 1 })
-      const newLimit = readQueryNumber(newQuery.limit, { fallback: 20, min: 1, max: 100 })
+      const newLimit = readQueryNumber(newQuery.limit, { fallback: LIST_PAGE_SIZE, min: 1, max: LIST_PAGE_SIZE_MAX })
       const newQ = readQueryString(newQuery.q)
       const newStatus = readQueryEnumArray(newQuery.status, STATUSES)
       const newSort = readQueryEnum(newQuery.sort, SORT_FIELDS, 'created_at')

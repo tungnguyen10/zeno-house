@@ -34,6 +34,14 @@ export function throwConflict(message = 'Xung đột dữ liệu', details?: unk
  * original error with context and returns a generic user-facing message.
  */
 export function throwDbError(error: unknown, context?: string): never {
+  // Database guards also protect legacy write paths after checkout is enabled.
+  // Expose only the stable domain code, never PostgreSQL query/details text.
+  if (error && typeof error === 'object' && 'message' in error) {
+    const reason = String(error.message).match(/^CHECKOUT_[A-Z_]+$/)?.[0]
+    if (reason) {
+      throwConflict('Dữ liệu đã được liên kết với hồ sơ trả phòng. Mở Trả phòng & tất toán để kiểm tra hoặc điều chỉnh.', { reason })
+    }
+  }
   throwInternal(error, context)
 }
 

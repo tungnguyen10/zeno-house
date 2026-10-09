@@ -12,6 +12,23 @@ definePageMeta({ title: 'Vận hành tháng' })
 
 type BillingPeriodStatus = BillingPeriodSummary['period']['status']
 
+// Mobile large-title collapse: fades into the persistent app header once scrolled past.
+const titleSentinel = ref<HTMLElement | null>(null)
+const isTitleCollapsed = ref(false)
+useIntersectionObserver(titleSentinel, ([entry]) => {
+  isTitleCollapsed.value = !!entry && !entry.isIntersecting
+})
+const headerTitle = useAppHeaderTitle()
+const compactTitle = computed(() => (isTitleCollapsed.value ? 'Vận hành tháng' : null))
+watchEffect(() => {
+  headerTitle.value = compactTitle.value
+})
+onBeforeUnmount(() => {
+  // A newer page can claim this slot before this instance unmounts during a
+  // page transition — only clear it if it's still ours.
+  if (headerTitle.value === compactTitle.value) headerTitle.value = null
+})
+
 const route = useRoute()
 const router = useRouter()
 const now = new Date()
@@ -222,11 +239,13 @@ function periodLabel(row: BillingPeriodSummary): string {
 </script>
 
 <template>
+  <AppPullToRefresh :on-refresh="refresh">
   <div class="space-y-5">
     <UiPageHeader
       title="Vận hành tháng"
       description="Danh sách các kỳ thanh toán theo tòa nhà — nhập chỉ số, soát phí, phát hành hóa đơn, thu tiền và chốt kỳ."
     >
+      <div ref="titleSentinel" aria-hidden="true" />
       <template #actions>
         <UiDropdownMenu>
           <UiDropdownMenuItem @click="startOpenPeriod">
@@ -240,25 +259,29 @@ function periodLabel(row: BillingPeriodSummary): string {
     </UiPageHeader>
 
     <!-- Compact scrollable chip strip below sm; card grid takes over from sm up -->
-    <div class="-mx-4 flex gap-1.5 overflow-x-auto px-4 pb-0.5 sm:hidden">
-      <UiButton
-        v-for="metric in queueMetrics"
-        :key="`chip-${metric.key}`"
-        unstyled
-        :aria-pressed="activeQueue === metric.key"
-        :class="[
-          'flex shrink-0 snap-start items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs transition focus:outline-none focus-visible:ring-2 focus-visible:ring-ui-accent/40',
-          activeQueue === metric.key
-            ? `${queueChipTone[metric.tone].ring} ring-2 bg-ui-hover/40`
-            : 'border-ui-border bg-ui-surface hover:border-ui-border-strong hover:bg-ui-hover/40',
-        ]"
-        @click="toggleQueue(metric.key)"
-      >
-        <span :class="['h-1.5 w-1.5 rounded-full shrink-0', queueChipTone[metric.tone].dot]" />
-        <span class="whitespace-nowrap text-ui-muted">{{ metric.shortLabel }}</span>
-        <UiSkeleton v-if="isLoading" class="h-3.5 w-5" />
-        <span v-else :class="['font-semibold tabular-nums', queueChipTone[metric.tone].value]">{{ metric.value }}</span>
-      </UiButton>
+    <div class="relative sm:hidden">
+      <div class="-mx-4 flex snap-x snap-mandatory gap-1.5 overflow-x-auto px-4 pb-0.5">
+        <UiButton
+          v-for="metric in queueMetrics"
+          :key="`chip-${metric.key}`"
+          unstyled
+          :aria-pressed="activeQueue === metric.key"
+          :class="[
+            'flex shrink-0 snap-start items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs transition focus:outline-none focus-visible:ring-2 focus-visible:ring-ui-accent/40',
+            activeQueue === metric.key
+              ? `${queueChipTone[metric.tone].ring} ring-2 bg-ui-hover/40`
+              : 'border-ui-border bg-ui-surface hover:border-ui-border-strong hover:bg-ui-hover/40',
+          ]"
+          @click="toggleQueue(metric.key)"
+        >
+          <span :class="['h-1.5 w-1.5 rounded-full shrink-0', queueChipTone[metric.tone].dot]" />
+          <span class="whitespace-nowrap text-ui-muted">{{ metric.shortLabel }}</span>
+          <UiSkeleton v-if="isLoading" class="h-3.5 w-5" />
+          <span v-else :class="['font-semibold tabular-nums', queueChipTone[metric.tone].value]">{{ metric.value }}</span>
+        </UiButton>
+      </div>
+      <!-- Signals horizontal scrollability instead of an abrupt content cut-off -->
+      <div class="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-ui-canvas to-transparent" aria-hidden="true" />
     </div>
 
     <div class="hidden gap-2 sm:grid sm:grid-cols-3 lg:grid-cols-5">
@@ -311,31 +334,34 @@ function periodLabel(row: BillingPeriodSummary): string {
       @refresh="refresh()"
     />
 
-    <div class="space-y-2 md:hidden">
-      <template v-if="isLoading">
+    <div class="md:hidden">
+      <div v-if="isLoading" class="space-y-2">
         <UiSkeleton v-for="n in 4" :key="`m-skel-${n}`" class="h-24 w-full rounded-xl" />
-      </template>
+      </div>
       <UiEmptyState
         v-else-if="displayedPeriods.length === 0"
         title="Không có kỳ nào khớp bộ lọc"
         description="Bỏ filter hoặc mở kỳ mới cho tòa nhà cần xử lý."
       />
+      <div v-else class="divide-y divide-ui-border overflow-hidden rounded-xl border border-ui-border bg-ui-surface">
       <UiButton
         v-for="row in displayedPeriods"
-        v-else
         :key="row.period.id"
         unstyled
-        class="flex w-full flex-col gap-2 rounded-xl border border-ui-border bg-ui-surface p-3 text-left transition hover:bg-ui-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-ui-accent/40"
+        class="flex w-full flex-col gap-1.5 p-2.5 text-left transition hover:bg-ui-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ui-accent/40"
         @click="gotoWorkspace(row)"
       >
         <div class="flex items-start justify-between gap-2">
-          <div class="min-w-0">
+          <div class="flex min-w-0 items-baseline gap-1.5">
             <p :class="['truncate text-sm', isClosed(row) ? 'text-ui-muted' : 'font-medium text-ui-primary']">
               {{ row.buildingName ?? '—' }}
             </p>
-            <p class="text-xs tabular-nums text-ui-muted">Kỳ {{ periodLabel(row) }}</p>
+            <span class="shrink-0 text-xs tabular-nums text-ui-muted">Kỳ {{ periodLabel(row) }}</span>
           </div>
-          <UiStatusBadge :status="row.period.status" context="period" />
+          <div class="flex shrink-0 items-center gap-1">
+            <UiStatusBadge :status="row.period.status" context="period" />
+            <IconChevronRight class="h-4 w-4 text-ui-muted/50" aria-hidden="true" />
+          </div>
         </div>
 
         <div v-if="row.issuedTotal > 0" class="flex flex-col gap-1">
@@ -373,6 +399,7 @@ function periodLabel(row: BillingPeriodSummary): string {
           </span>
         </div>
       </UiButton>
+      </div>
     </div>
 
     <UiTable
@@ -476,4 +503,5 @@ function periodLabel(row: BillingPeriodSummary): string {
       </template>
     </UiModal>
   </div>
+  </AppPullToRefresh>
 </template>

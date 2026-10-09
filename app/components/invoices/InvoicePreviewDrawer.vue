@@ -205,15 +205,30 @@ async function resendEmail(confirmDuplicate: boolean) {
     <div class="-mx-2 -my-1 space-y-3 sm:mx-0 sm:my-0 sm:space-y-4">
       <UiAlert v-if="error" severity="danger">{{ error }}</UiAlert>
 
-      <div v-if="invoice" class="grid grid-cols-1 gap-2 sm:grid-cols-2">
-        <UiMetric label="Tổng tiền" :value="formatCurrency(invoice.total_amount)" />
-        <UiMetric label="Đã thu" :value="formatCurrency(invoice.paid_amount)" tone="success" />
-        <UiMetric
-          label="Còn lại"
-          :value="formatCurrency(invoice.balance_amount)"
-          :tone="invoice.balance_amount > 0 ? 'danger' : 'default'"
-        />
-        <UiMetric label="Hạn" :value="invoice.due_date ?? '---'" />
+      <div
+        v-if="invoice"
+        class="rounded-xl border border-ui-border bg-ui-surface px-3 py-2.5"
+      >
+        <div class="flex items-baseline justify-between gap-3">
+          <span class="text-xs text-ui-muted">Tổng tiền</span>
+          <span class="text-base font-semibold tabular-nums text-ui-primary">{{ formatCurrency(invoice.total_amount) }}</span>
+        </div>
+        <div class="mt-1 flex items-baseline justify-between gap-3 text-xs">
+          <span class="min-w-0 truncate tabular-nums text-ui-muted">
+            Hạn {{ invoice.due_date ?? '---' }}
+            <template v-if="invoice.balance_amount > 0 && invoice.paid_amount > 0">
+              · Đã thu {{ formatCurrency(invoice.paid_amount) }}
+            </template>
+          </span>
+          <span
+            :class="[
+              'shrink-0 font-medium tabular-nums',
+              invoice.balance_amount > 0 ? 'text-status-danger' : 'text-status-success',
+            ]"
+          >
+            {{ invoice.balance_amount > 0 ? `Còn ${formatCurrency(invoice.balance_amount)}` : 'Đã thu đủ' }}
+          </span>
+        </div>
       </div>
 
       <template v-if="isLoading">
@@ -234,11 +249,35 @@ async function resendEmail(confirmDuplicate: boolean) {
           <InvoicePaymentProfileCard :profile="detail.invoiceProfile" />
         </UiSection>
 
-        <UiSection title="Gửi qua email">
-          <div class="space-y-3">
-            <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <UiSection title="Thanh toán">
+          <div class="space-y-2">
+            <UiEmptyState
+              v-if="payments.length === 0"
+              title="Chưa có thanh toán"
+            />
+            <div
+              v-for="payment in payments"
+              v-else
+              :key="payment.id"
+              class="rounded-lg border border-ui-border bg-ui-surface px-3 py-2"
+            >
+              <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                  <p class="text-sm font-medium text-ui-primary tabular-nums">{{ paymentDate(payment) }}</p>
+                  <p class="mt-0.5 truncate text-xs text-ui-muted">{{ paymentMethodLabel(payment) }}</p>
+                </div>
+                <p class="shrink-0 text-sm font-medium text-ui-primary tabular-nums">{{ formatCurrency(payment.amount) }}</p>
+              </div>
+              <p v-if="payment.recordedByName || payment.note" class="mt-1 truncate text-xs text-ui-muted">
+                {{ payment.recordedByName ?? 'Hệ thống' }}<span v-if="payment.note"> · {{ payment.note }}</span>
+              </p>
+            </div>
+          </div>
+
+          <div class="space-y-2 border-t border-ui-border pt-3">
+            <div class="flex items-center justify-between gap-3">
               <div class="min-w-0">
-                <p class="text-xs text-ui-muted">Người nhận</p>
+                <p class="text-xs text-ui-muted">Gửi qua email</p>
                 <p
                   class="mt-0.5 truncate text-sm text-ui-primary"
                   :title="detail.recipientEmail ?? undefined"
@@ -253,6 +292,7 @@ async function resendEmail(confirmDuplicate: boolean) {
               >
                 {{ INVOICE_EMAIL_DELIVERY_STATUS_LABELS[latestDelivery.status] }}
               </UiBadge>
+              <span v-else-if="!loadingHistory" class="shrink-0 text-xs text-ui-muted">Chưa có lần gửi nào</span>
             </div>
 
             <UiAlert v-if="!invoiceEmailEnabled" severity="info">
@@ -273,13 +313,13 @@ async function resendEmail(confirmDuplicate: boolean) {
             <UiAlert v-if="emailError" severity="danger">{{ emailError }}</UiAlert>
 
             <div v-if="loadingHistory" class="space-y-2" aria-label="Đang tải lịch sử gửi email">
-              <UiSkeleton v-for="item in 2" :key="item" class="h-12 w-full" />
+              <UiSkeleton v-for="item in 2" :key="item" class="h-10 w-full" />
             </div>
-            <div v-else-if="emailHistory.length > 0" class="divide-y divide-ui-border border-y border-ui-border">
+            <div v-else-if="emailHistory.length > 0" class="divide-y divide-ui-border">
               <div
                 v-for="delivery in emailHistory"
                 :key="delivery.id"
-                class="flex items-start justify-between gap-3 py-3"
+                class="flex items-start justify-between gap-3 py-2"
               >
                 <div class="min-w-0">
                   <p class="truncate text-sm text-ui-primary" :title="delivery.recipientEmail ?? undefined">
@@ -300,53 +340,7 @@ async function resendEmail(confirmDuplicate: boolean) {
                 </UiBadge>
               </div>
             </div>
-            <p v-else class="text-xs text-ui-muted">Chưa có lần gửi nào.</p>
           </div>
-        </UiSection>
-
-        <UiSection title="Thanh toán">
-          <div class="space-y-2 md:hidden">
-            <UiEmptyState
-              v-if="payments.length === 0"
-              title="Chưa có thanh toán"
-            />
-            <div
-              v-for="payment in payments"
-              v-else
-              :key="payment.id"
-              class="rounded-lg border border-ui-border bg-ui-surface px-3 py-2"
-            >
-              <div class="flex items-start justify-between gap-3">
-                <div class="min-w-0">
-                  <p class="text-sm font-medium text-ui-primary tabular-nums">{{ paymentDate(payment) }}</p>
-                  <p class="mt-0.5 truncate text-xs text-ui-muted">{{ paymentMethodLabel(payment) }}</p>
-                </div>
-                <p class="shrink-0 text-sm font-medium text-ui-primary tabular-nums">{{ formatCurrency(payment.amount) }}</p>
-              </div>
-              <p v-if="payment.recordedByName || payment.note" class="mt-2 truncate text-xs text-ui-muted">
-                {{ payment.recordedByName ?? 'Hệ thống' }}<span v-if="payment.note"> · {{ payment.note }}</span>
-              </p>
-            </div>
-          </div>
-
-          <UiTable
-            class="hidden md:block"
-            :rows="payments"
-            :columns="[
-              { key: 'paidAt', label: 'Ngày', width: 'w-28' },
-              { key: 'amount', label: 'Số tiền', numeric: true, width: 'w-32' },
-              { key: 'paymentMethod', label: 'Hình thức', hideOnMobile: true },
-              { key: 'recordedByName', label: 'Người ghi', hideOnMobile: true },
-              { key: 'note', label: 'Ghi chú', hideOnMobile: true },
-            ]"
-            empty-title="Chưa có thanh toán"
-          >
-            <template #cell-paidAt="{ row }">{{ paymentDate(row) }}</template>
-            <template #cell-amount="{ row }">{{ formatCurrency(row.amount) }}</template>
-            <template #cell-paymentMethod="{ row }">{{ row.paymentMethod ?? '---' }}</template>
-            <template #cell-recordedByName="{ row }">{{ row.recordedByName ?? 'Hệ thống' }}</template>
-            <template #cell-note="{ row }">{{ row.note ?? '---' }}</template>
-          </UiTable>
         </UiSection>
 
         <UiSection v-if="detail.invoice.notes" title="Ghi chú">
@@ -356,7 +350,8 @@ async function resendEmail(confirmDuplicate: boolean) {
     </div>
 
     <template #footer>
-      <div class="-mx-2 -my-1 grid grid-cols-1 gap-2 sm:mx-0 sm:my-0 sm:flex sm:flex-wrap sm:items-center sm:justify-end">
+      <!-- Below `sm` the actions form a 2-up grid; `sm:flex` keeps the original single desktop row. -->
+      <div class="-mx-2 -my-1 grid grid-cols-2 gap-2 sm:mx-0 sm:my-0 sm:flex sm:flex-wrap sm:items-center sm:justify-end">
         <UiButton
           v-if="invoice && invoice.status !== 'void'"
           class="w-full whitespace-nowrap sm:w-auto"
@@ -374,7 +369,7 @@ async function resendEmail(confirmDuplicate: boolean) {
         >
           In phiếu
         </UiButton>
-        <UiButton class="w-full sm:w-auto" @click="openWorkspace">
+        <UiButton class="w-full sm:w-auto" variant="secondary" @click="openWorkspace">
           <span>Mở trong kỳ</span>
           <IconChevronRight class="h-4 w-4" aria-hidden="true" />
         </UiButton>
@@ -382,7 +377,8 @@ async function resendEmail(confirmDuplicate: boolean) {
           <IconDocumentText class="h-4 w-4" aria-hidden="true" />
           <span>Sao mã</span>
         </UiButton>
-        <UiButton class="w-full sm:w-auto" variant="ghost" @click="close">Đóng</UiButton>
+        <!-- UiDrawer is a bottom sheet (with its own close affordance) until `lg`. -->
+        <UiButton class="hidden lg:inline-flex lg:w-auto" variant="ghost" @click="close">Đóng</UiButton>
       </div>
     </template>
   </UiDrawer>

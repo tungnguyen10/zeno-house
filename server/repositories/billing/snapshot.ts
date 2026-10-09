@@ -1,3 +1,4 @@
+import type { CheckoutCharge } from '~/types/checkout'
 import type { H3Event } from 'h3'
 import type { Tables } from '~/types/database.types'
 import type { BillingIncidentalCharge, BillingUtilityUsage, Invoice } from '~/types/billing'
@@ -10,6 +11,8 @@ import {
 import { db } from '../../utils/db'
 
 export interface BillingPeriodInputSnapshot {
+  checkouts?: Array<{ id: string, contract_id: string, status: string, actual_return_date: string, financial_mode?: 'standard' | 'settlement' | 'legacy', final_bill_issued?: boolean, settlement_confirmed?: boolean, charges: CheckoutCharge[] }>
+
   building: Tables<'buildings'>
   contracts: Tables<'contracts'>[]
   services: Array<Tables<'contract_services'> & { service_catalog: Tables<'service_catalog'> | null }>

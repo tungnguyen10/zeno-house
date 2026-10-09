@@ -1,4 +1,5 @@
 export interface MeterReading {
+  contractId?: string | null
   id: string
   roomId: string
   buildingId: string
@@ -17,6 +18,7 @@ export interface MeterReading {
 
 // Alias matching spec task 2.2 — structurally equivalent to MeterReadingCreateInput
 export interface BulkReadingInput {
+  contract_id?: string | null
   room_id: string
   meter_type: 'electricity' | 'water'
   period_year: number

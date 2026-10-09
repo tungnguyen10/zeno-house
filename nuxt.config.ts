@@ -32,6 +32,8 @@ export default defineNuxtConfig({
 
   // Runtime config — NUXT_* env vars are auto-mapped
   runtimeConfig: {
+    checkoutEnabled: false, // NUXT_CHECKOUT_ENABLED; opt-in after cloud verification
+    checkoutBuildingIds: "", // NUXT_CHECKOUT_BUILDING_IDS; comma-separated UUIDs
     resendApiKey: process.env.NUXT_RESEND_API_KEY || "", // NUXT_RESEND_API_KEY
     resendFrom: process.env.NUXT_RESEND_FROM  || "", // NUXT_RESEND_FROM
     resendReplyTo: process.env.NUXT_RESEND_REPLY_TO || "", // NUXT_RESEND_REPLY_TO

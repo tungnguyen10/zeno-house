@@ -9,7 +9,7 @@ const source = readFileSync(resolve('app/components/portal/PortalSplash.vue'), '
 describe('PortalSplash', () => {
   it('announces the branded portal launch state accessibly', () => {
     const wrapper = mount(PortalSplash, {
-      global: { stubs: { IconLogoSplash: true } },
+      global: { stubs: { IconLogo: true } },
     })
 
     const status = wrapper.get('[role="status"]')
