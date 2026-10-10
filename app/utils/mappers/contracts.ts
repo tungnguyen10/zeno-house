@@ -54,3 +54,34 @@ export function mapContractWithDetails(row: Tables<'contracts'> & {
     },
   }
 }
+
+export interface ContractBrowseRow extends Tables<'contracts'> {
+  room_number: string | null
+  room_floor: number | null
+  room_code: string | null
+  room_building_id: string | null
+  building_name: string | null
+  tenant_name: string | null
+  tenant_phone: string | null
+  tenant_code: string | null
+}
+
+export function mapContractBrowseRow(row: ContractBrowseRow): ContractWithDetails {
+  return mapContractWithDetails({
+    ...row,
+    rooms: {
+      id: row.room_id,
+      room_number: row.room_number ?? '',
+      floor: row.room_floor ?? 0,
+      building_id: row.room_building_id ?? row.building_id,
+      code: row.room_code ?? '',
+      buildings: row.building_name == null ? null : { name: row.building_name },
+    },
+    tenants: row.tenant_name == null ? null : {
+      id: row.tenant_id,
+      full_name: row.tenant_name,
+      phone: row.tenant_phone ?? '',
+      code: row.tenant_code ?? '',
+    },
+  })
+}

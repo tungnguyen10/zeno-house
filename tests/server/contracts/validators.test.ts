@@ -1,6 +1,15 @@
 import { describe, it, expect } from 'vitest'
-import { contractCreateSchema, contractUpdateSchema } from '../../../app/utils/validators/contracts'
+import { contractCreateSchema, contractListQuerySchema, contractUpdateSchema } from '../../../app/utils/validators/contracts'
 import { contractRenewSchema } from '../../../app/utils/validators/contract-renewals'
+
+describe('contract list sorting', () => {
+  it('defaults to location ascending and keeps date sorts descending', () => {
+    expect(contractListQuerySchema.parse({})).toMatchObject({ sort: 'location', order: 'asc' })
+    expect(contractListQuerySchema.parse({ sort: 'created_at' })).toMatchObject({ sort: 'created_at', order: 'desc' })
+    expect(contractListQuerySchema.parse({ sort: 'location', order: 'desc' }))
+      .toMatchObject({ sort: 'location', order: 'desc' })
+  })
+})
 
 describe('contractCreateSchema — handover readings', () => {
   const base = {

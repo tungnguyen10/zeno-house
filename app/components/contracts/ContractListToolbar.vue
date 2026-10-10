@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { ContractStatus } from '~/types/contracts'
 
-type SortField = 'start_date' | 'end_date' | 'created_at' | 'monthly_rent'
+type SortField = 'location' | 'start_date' | 'end_date' | 'created_at' | 'monthly_rent'
 type SortOrder = 'asc' | 'desc'
 
 interface BuildingOption {
@@ -40,6 +40,7 @@ const statusOptions: { value: ContractStatus; label: string }[] = [
 ]
 
 const sortOptions = [
+  { value: 'location', label: 'Tòa nhà & phòng' },
   { value: 'created_at', label: 'Mới nhất' },
   { value: 'start_date', label: 'Ngày bắt đầu' },
   { value: 'end_date', label: 'Ngày kết thúc' },
