@@ -65,7 +65,7 @@ const {
   clearSelection,
 } = useInvoicePagePrintSelection(invoices)
 
-const { data: buildingResponse, status: buildingsStatus } = await useFetch<
+const { data: buildingResponse, status: buildingsStatus } = useLazyFetch<
   ApiSuccess<Building[]> & { meta: { total: number } }
 >('/api/buildings', {
   query: { page: 1, limit: 100, sort: 'name', order: 'asc' },

@@ -6,27 +6,32 @@ export function useInvoiceDetail() {
   const detail = ref<InvoiceWithCharges | null>(null)
   const isLoading = ref(false)
   const error = ref<string | null>(null)
+  let requestId = 0
 
   async function load(invoiceId: string): Promise<InvoiceWithCharges | null> {
     if (!invoiceId) return null
+    const current = ++requestId
     isLoading.value = true
+    detail.value = null
     error.value = null
     try {
       const resp = await apiFetch<ApiSuccess<InvoiceWithCharges>>(`/api/billing/invoices/${invoiceId}`)
-      detail.value = resp.data
-      return resp.data
+      if (current === requestId) detail.value = resp.data
+      return current === requestId ? resp.data : null
     }
     catch (err) {
-      error.value = getApiErrorMessage(err, 'Không thể tải hoá đơn')
+      if (current === requestId) error.value = getApiErrorMessage(err, 'Không thể tải hoá đơn')
       return null
     }
     finally {
-      isLoading.value = false
+      if (current === requestId) isLoading.value = false
     }
   }
 
   function clear() {
+    requestId++
     detail.value = null
+    isLoading.value = false
     error.value = null
   }
 

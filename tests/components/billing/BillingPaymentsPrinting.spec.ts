@@ -101,6 +101,28 @@ beforeEach(() => {
 })
 
 describe('BillingPaymentsStep invoice printing', () => {
+  it('opens the detail drawer immediately and offers retry when loading fails', async () => {
+    const invoice = buildInvoice({ id: 'invoice-issued', invoiceCode: 'INV-1', status: 'issued' })
+    let rejectLoad!: (reason: Error) => void
+    loadInvoice.mockImplementationOnce(() => new Promise((_resolve, reject) => { rejectLoad = reject }))
+    const wrapper = mountPayments([invoice])
+
+    await wrapper.findAll('[data-test="row-invoice-issued"] button')[1]!.trigger('click')
+    expect(wrapper.find('aside').exists()).toBe(true)
+    expect(wrapper.find('aside [aria-busy="true"]').exists()).toBe(true)
+
+    rejectLoad(new Error('Network unavailable'))
+    await flushPromises()
+    const retry = wrapper.findAll('aside button').find(button => button.text() === 'Thử lại')
+    expect(retry).toBeTruthy()
+
+    loadInvoice.mockResolvedValueOnce({ invoice, charges: [], payments: [] })
+    await retry!.trigger('click')
+    await flushPromises()
+    expect(wrapper.find('aside [aria-busy="true"]').exists()).toBe(false)
+    expect(wrapper.text()).toContain('Khoản phí')
+  })
+
   it('keeps void invoices separate and orders them by room', () => {
     const wrapper = mountPayments([
       buildInvoice({ id: 'void-10', status: 'void', roomFloor: 1, roomNumber: '10', voidedAt: '2026-08-10T00:00:00Z' }),

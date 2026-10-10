@@ -7,7 +7,7 @@ import { buildingPath } from '~/utils/routes/operational'
 const route = useRoute()
 const id = route.params.id as string
 
-const { building, error } = useBuildingDetail(id)
+const { building, isLoading: detailLoading, error } = useBuildingDetail(id)
 
 watchEffect(() => {
   if (error.value?.statusCode === 404) navigateTo('/dashboard/buildings')
@@ -101,7 +101,13 @@ async function onSubmit(data: BuildingFormData) {
       {{ apiError }}
     </UiAlert>
 
+    <div v-if="detailLoading" class="space-y-3" aria-busy="true" aria-label="Đang tải thông tin tòa nhà">
+      <UiSkeleton class="h-8 w-48" />
+      <UiSkeleton class="h-64 w-full rounded-xl" />
+    </div>
+    <UiAlert v-else-if="error" severity="danger">Không thể tải thông tin tòa nhà.</UiAlert>
     <BuildingForm
+      v-else-if="building"
       v-model="formData"
       :loading="isLoading"
       :errors="errors"

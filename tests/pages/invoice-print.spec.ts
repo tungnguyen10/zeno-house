@@ -30,6 +30,7 @@ function mountPage() {
           emits: ['click'],
           template: '<button :disabled="disabled" @click="$emit(\'click\')"><slot /></button>',
         },
+        UiSkeleton: { template: '<div data-test="print-skeleton" />' },
       },
     },
   })
@@ -47,7 +48,8 @@ describe('issued invoice print page', () => {
     const wrapper = mountPage()
     await wrapper.vm.$nextTick()
 
-    expect(wrapper.text()).toContain('Đang tải dữ liệu...')
+    expect(wrapper.get('[aria-busy="true"]').attributes('aria-label')).toBe('Đang tải dữ liệu in hoá đơn')
+    expect(wrapper.findAll('[data-test="print-skeleton"]')).toHaveLength(3)
     expect(wrapper.get('button:last-child').attributes('disabled')).toBeDefined()
   })
 

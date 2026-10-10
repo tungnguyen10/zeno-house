@@ -46,7 +46,7 @@ onBeforeUnmount(() => {
 })
 
 const buildingId = computed(() => room.value?.buildingId ?? '')
-const { data: buildingData, refresh: refreshBuilding } = await useFetch<ApiSuccess<Building>>(
+const { data: buildingData, refresh: refreshBuilding } = useLazyFetch<ApiSuccess<Building>>(
   computed(() => buildingId.value ? `/api/buildings/${buildingId.value}` : '/api/buildings/__missing'),
   { immediate: false },
 )
@@ -55,7 +55,7 @@ watch(buildingId, () => {
 }, { immediate: true })
 const building = computed(() => buildingData.value?.data ?? null)
 
-const { data: contractsData } = await useFetch<ApiSuccess<ContractWithDetails[]> & { meta: { total: number } }>(
+const { data: contractsData } = useLazyFetch<ApiSuccess<ContractWithDetails[]> & { meta: { total: number } }>(
   '/api/contracts',
   { query: { room_id: id, limit: 50 } },
 )
@@ -63,7 +63,7 @@ const roomContracts = computed(() => contractsData.value?.data ?? [])
 const activeContract = computed(() => roomContracts.value.find(c => c.status === 'active') ?? null)
 const occupantCount = computed(() => activeContract.value?.occupantCount ?? 0)
 
-const { data: latestReadingsData } = await useFetch<ApiSuccess<{ electricity: MeterReading | null; water: MeterReading | null }>>(
+const { data: latestReadingsData } = useLazyFetch<ApiSuccess<{ electricity: MeterReading | null; water: MeterReading | null }>>(
   '/api/meter-readings/latest',
   { query: { room_id: id } },
 )
@@ -75,7 +75,7 @@ const meterDeviceCount = computed(() => {
 
 // Per-contract services (only loads when there's an active contract)
 const activeContractId = computed(() => activeContract.value?.id ?? '')
-const { data: contractServicesData, refresh: refreshContractServices } = await useFetch<ApiSuccess<ContractService[]>>(
+const { data: contractServicesData, refresh: refreshContractServices } = useLazyFetch<ApiSuccess<ContractService[]>>(
   computed(() => activeContractId.value
     ? `/api/contract-services?contract_id=${activeContractId.value}`
     : '/api/contract-services?__skip'),

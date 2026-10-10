@@ -10,11 +10,11 @@ definePageMeta({ title: 'Chỉnh sửa phòng' })
 const route = useRoute()
 const id = route.params.code as string
 
-const { data, error } = await useFetch<ApiSuccess<Room>>(`/api/rooms/${id}`)
+const { data, error, status } = useLazyFetch<ApiSuccess<Room>>(`/api/rooms/${id}`)
 
-if (error.value?.statusCode === 404) {
-  await navigateTo('/dashboard/rooms')
-}
+watchEffect(() => {
+  if (error.value?.statusCode === 404) navigateTo('/dashboard/rooms')
+})
 
 const room = computed(() => data.value?.data ?? null)
 
@@ -110,7 +110,13 @@ function onClearDraft() {
       {{ apiError }}
     </UiAlert>
 
+    <div v-if="status === 'idle' || status === 'pending'" class="space-y-3" aria-busy="true" aria-label="Đang tải thông tin phòng">
+      <UiSkeleton class="h-8 w-40" />
+      <UiSkeleton class="h-64 w-full rounded-xl" />
+    </div>
+    <UiAlert v-else-if="error" severity="danger">Không thể tải thông tin phòng.</UiAlert>
     <RoomForm
+      v-else-if="room"
       v-model="formData"
       :loading="isLoading"
       :errors="errors"

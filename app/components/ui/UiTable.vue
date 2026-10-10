@@ -136,7 +136,7 @@ function getCellValue(row: TRow, col: UiTableColumn<TRow>): unknown {
           :key="getRowKey(row)"
           :class="clsx(
             'transition-colors',
-            rowClickable && 'cursor-pointer hover:bg-ui-hover',
+            rowClickable && 'cursor-pointer hover:bg-ui-hover active:bg-ui-hover',
           )"
           @click="rowClickable ? emit('rowClick', row) : undefined"
         >

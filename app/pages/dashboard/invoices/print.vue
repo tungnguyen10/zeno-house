@@ -64,7 +64,11 @@ function goBack() {
       </div>
     </header>
 
-    <div v-if="loading" class="px-6 py-16 text-center text-muted"><p>Đang tải dữ liệu...</p></div>
+    <div v-if="loading" class="mx-auto mt-6 w-[min(210mm,calc(100vw-24px))] space-y-4 bg-white p-6" aria-busy="true" aria-label="Đang tải dữ liệu in hoá đơn">
+      <UiSkeleton class="h-7 w-2/3" />
+      <UiSkeleton class="h-20 w-full" />
+      <UiSkeleton class="h-40 w-full" />
+    </div>
     <div v-else-if="errorMessage" class="px-6 py-16 text-center text-error-vivid"><p>{{ errorMessage }}</p></div>
     <div v-else-if="items.length === 0" class="px-6 py-16 text-center text-muted"><p>Không có hóa đơn nào để in.</p></div>
     <main v-else class="print-sheet">

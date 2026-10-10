@@ -8,7 +8,7 @@ const route = useRoute()
 const buildingIdentifier = route.params.id as string
 const roomSlug = route.params.room as string
 
-const { data, error } = await useFetch<ApiSuccess<Room>>(
+const { data, error } = useLazyFetch<ApiSuccess<Room>>(
   `/api/buildings/${buildingIdentifier}/rooms/${roomSlug}`,
 )
 

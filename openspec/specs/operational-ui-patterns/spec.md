@@ -77,6 +77,19 @@ Operational screens SHALL represent loading, empty, error, warning, and blocked 
 - **WHEN** content is loading
 - **THEN** the page uses skeleton/table loading states that preserve layout
 
+#### Scenario: Dashboard navigation feedback
+- **WHEN** an operator opens another dashboard page from a link, row, or button
+- **THEN** the activated control acknowledges the click immediately and the route progress indicator remains visible until the destination page renders
+- **AND** repeated activation of the pending control does not start another navigation
+
+#### Scenario: Detail loading feedback
+- **WHEN** an operator opens an asynchronously loaded detail drawer
+- **THEN** the drawer opens immediately with a skeleton, then shows the detail or an error with a retry action
+
+#### Scenario: Dashboard scroll restoration
+- **WHEN** an operator returns to a dashboard list with browser back or forward
+- **THEN** the list restores its previous scroll position after the destination renders
+
 #### Scenario: Empty state
 - **WHEN** a list or table has no records
 - **THEN** the page uses `UiEmptyState` or table empty state with optional action

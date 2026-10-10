@@ -45,7 +45,7 @@ const {
   refresh,
 } = useTenantList()
 
-const { data: buildingsData } = await useFetch<ApiSuccess<Building[]> & { meta: { total: number } }>(
+const { data: buildingsData } = useLazyFetch<ApiSuccess<Building[]> & { meta: { total: number } }>(
   '/api/buildings',
   { query: { limit: 100 } },
 )

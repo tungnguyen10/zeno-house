@@ -10,11 +10,11 @@ definePageMeta({ title: 'Chỉnh sửa hợp đồng' })
 const route = useRoute()
 const id = route.params.code as string
 
-const { data, error } = await useFetch<ApiSuccess<ContractWithDetails>>(`/api/contracts/${id}`)
+const { data, error, status } = useLazyFetch<ApiSuccess<ContractWithDetails>>(`/api/contracts/${id}`)
 
-if (error.value?.statusCode === 404) {
-  await navigateTo('/dashboard/contracts')
-}
+watchEffect(() => {
+  if (error.value?.statusCode === 404) navigateTo('/dashboard/contracts')
+})
 
 const contract = computed(() => data.value?.data ?? null)
 
@@ -54,6 +54,10 @@ const initialSnapshot = computed<ContractFormData | null>(() => contract.value
       handover_reading_date: '',
     }
   : null)
+
+watch(initialSnapshot, (value) => {
+  if (value) formData.value = { ...value }
+}, { immediate: true })
 
 const {
   isLoading,
@@ -103,7 +107,13 @@ async function onSubmit(data: ContractFormData) {
       back-label="Chi tiết hợp đồng"
     />
 
+    <div v-if="status === 'idle' || status === 'pending'" class="space-y-3" aria-busy="true" aria-label="Đang tải thông tin hợp đồng">
+      <UiSkeleton class="h-8 w-48" />
+      <UiSkeleton class="h-64 w-full rounded-xl" />
+    </div>
+    <UiAlert v-else-if="error" severity="danger">Không thể tải thông tin hợp đồng.</UiAlert>
     <ContractForm
+      v-else-if="contract"
       v-model="formData"
       :exclude-contract-id="id"
       :loading="isLoading"
