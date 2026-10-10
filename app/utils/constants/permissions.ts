@@ -15,6 +15,7 @@ export const OWNER_CAPABILITIES = [
   'rooms.update',
   'rooms.delete',
   'tenants.read',
+  'tenants.export',
   'tenants.create',
   'tenants.update',
   'tenants.delete',

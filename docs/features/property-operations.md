@@ -151,6 +151,9 @@ API:
 - `DELETE /api/tenants/[id]` — returns `409 CONFLICT` with `details.activeContracts`, `details.activeOccupancies`, and `details.portalAccounts` when blocked. Revoke or clean the portal account link before hard-deleting the tenant. Pass `?force=true` to soft-archive instead (returns archived tenant). For owner users, when tenant has no active-building scope, delete is still allowed if the tenant row was created by that owner.
 - `POST /api/tenants/bulk` — body `{ action: 'archive' | 'activate' | 'delete', ids: string[], reason?: string }` returns `{ succeeded: string[], failed: { id, reason }[] }`. `reason` is required when `action='delete'`. Reasons: `has_active_contracts`, `has_active_occupancies`, `not_found`, `conflict`, `forbidden`.
 
+- `GET /api/tenants/export-candidates?building_id=<uuid>` — admin/owner-only roster of current primary tenants and roommates in one visible, assigned building.
+- `POST /api/tenants/export` — body `{ building_id, tenant_ids }`; rechecks current building membership and returns a full-profile XLSX for the selected tenants. Stale selections fail with 409 instead of exporting a partial file. The export is audited with building and selected IDs/count.
+
 Tenant records include:
 
 - full name and contact fields
@@ -161,6 +164,8 @@ Tenant records include:
 - status (`active` / `archived`)
 
 UX notes:
+
+- Admins and owners can open **Xuất Excel** from the list actions. The modal chooses one building and individual current occupants, retains selections across search, and can select every matching result. The file contains one row per tenant with current room/role and all text profile fields. Identity images and signed URLs are never included. Managers cannot see or call the export.
 
 - List page (`/tenants`): toolbar wraps debounced search, building filter, contract-state filter, status chips, sort dropdown, and order toggle. Filters sync to URL query so the view is shareable. Admins can toggle a selection mode that exposes per-row checkboxes plus a `TenantBulkActionsBar` for archive/activate/delete. Bulk delete requires a non-empty reason. Failures are surfaced inline with a "Xem chi tiết" modal listing each blocked tenant. After bulk actions, the page clears selection in the `onDone` handler and refreshes the keyed list (`tenants:list`) so filtered data is immediately up to date.
 - Detail page (`/tenants/[code]`): renders a `TenantDetailHero` with status badge, contact chips (phone `tel:`, email `mailto:`, ID number), and three stat tiles (active contracts, current room, occupancies). Sections use anchor ids `#personal`, `#id-document`, `#emergency`, `#contracts`, `#danger-zone`. The danger-zone section is hidden for managers. Delete/archive confirmations require a non-empty reason. When delete returns 409, the page shows a warning alert summarising blockers with a "Lưu trữ thay vì xoá" button that calls `DELETE` with `?force=true`.

@@ -173,6 +173,7 @@ const ACTION_LABELS: Record<string, string> = {
   'building.invoice_email_settings.updated': 'Cập nhật gửi hoá đơn tự động',
   'building.visibility_changed': 'Đổi hiển thị toà nhà',
   'tenant.activated': 'Khôi phục khách thuê',
+  'tenant.exported': 'Xuất danh sách khách thuê',
   'building_expense.receipt_attached': 'Gắn biên lai',
   'building_expense.receipt_removed': 'Xóa biên lai',
   'operations_report_period.closed': 'Chốt báo cáo',

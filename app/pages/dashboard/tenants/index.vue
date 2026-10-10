@@ -58,6 +58,7 @@ const buildingOptions = computed(() =>
 
 const bulk = useTenantBulkActions()
 const bulkCreateOpen = ref(false)
+const exportOpen = ref(false)
 const selectionMode = ref(false)
 
 function toggleSelectionMode() {
@@ -174,7 +175,7 @@ async function openCreateTenant() {
     <UiPageHeader title="Khách thuê" :description="`${total} khách thuê`">
       <div ref="titleSentinel" aria-hidden="true" />
       <template #actions>
-        <UiDropdownMenu v-if="authStore.can('tenants.create') || authStore.can('tenants.delete')">
+        <UiDropdownMenu v-if="authStore.can('tenants.create') || authStore.can('tenants.delete') || authStore.can('tenants.export')">
           <UiDropdownMenuItem v-if="authStore.can('tenants.create')" @click="openCreateTenant">
             <template #icon>
               <IconPlus class="h-4 w-4 shrink-0" aria-hidden="true" />
@@ -186,6 +187,12 @@ async function openCreateTenant() {
               <IconUsers class="h-4 w-4 shrink-0" aria-hidden="true" />
             </template>
             Thêm nhanh nhiều khách thuê
+          </UiDropdownMenuItem>
+          <UiDropdownMenuItem v-if="authStore.can('tenants.export')" @click="exportOpen = true">
+            <template #icon>
+              <IconDownload class="h-4 w-4 shrink-0" aria-hidden="true" />
+            </template>
+            Xuất Excel
           </UiDropdownMenuItem>
           <UiDropdownMenuItem v-if="authStore.can('tenants.delete')" @click="toggleSelectionMode">
             <template #icon>
@@ -414,6 +421,11 @@ async function openCreateTenant() {
       :open="bulkCreateOpen"
       @close="bulkCreateOpen = false"
       @done="onBulkCreateDone"
+    />
+    <TenantExportModal
+      :open="exportOpen"
+      @close="exportOpen = false"
+      @done="toast.success('Đã xuất Excel khách thuê')"
     />
   </div>
   </AppPullToRefresh>

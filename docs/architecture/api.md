@@ -88,6 +88,8 @@ Invoice-profile updates use `multipart/form-data`. The initial save requires com
 | PATCH | `/api/tenants/[id]` |
 | DELETE | `/api/tenants/[id]` |
 | POST | `/api/tenants/bulk` |
+| GET | `/api/tenants/export-candidates` |
+| POST | `/api/tenants/export` |
 
 ## Tenant Portal
 

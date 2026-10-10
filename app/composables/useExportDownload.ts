@@ -1,6 +1,26 @@
 export function useExportDownload() {
-  async function downloadBlob(url: string, fallbackName: string): Promise<{ blob: Blob, fileName: string }> {
-    const response = await $fetch.raw<Blob>(url, { responseType: 'blob' })
+  async function downloadBlob(
+    url: string,
+    fallbackName: string,
+    options?: { method?: 'GET' | 'POST'; body?: Record<string, unknown> },
+  ): Promise<{ blob: Blob, fileName: string }> {
+    let response: Awaited<ReturnType<typeof $fetch.raw<Blob>>>
+    try {
+      response = await $fetch.raw<Blob>(url, { responseType: 'blob', ...options })
+    }
+    catch (cause) {
+      const error = cause as { data?: unknown; response?: { _data?: unknown } }
+      const payload = error.data ?? error.response?._data
+      if (payload instanceof Blob && payload.type.includes('json')) {
+        try {
+          throw { data: JSON.parse(await payload.text()) }
+        }
+        catch (parsedError) {
+          if (!(parsedError instanceof SyntaxError)) throw parsedError
+        }
+      }
+      throw cause
+    }
     const blob = response._data as Blob
     const disposition = response.headers.get('content-disposition') ?? ''
     const utf8Match = disposition.match(/filename\*=UTF-8''([^;]+)/i)

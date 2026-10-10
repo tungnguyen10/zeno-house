@@ -49,6 +49,17 @@ export const tenantListQuerySchema = z.object({
 
 export type TenantListQuery = z.infer<typeof tenantListQuerySchema>
 
+export const tenantExportCandidatesQuerySchema = z.object({
+  building_id: z.string().uuid('Tòa nhà không hợp lệ'),
+})
+
+export const tenantExportBodySchema = z.object({
+  building_id: z.string().uuid('Tòa nhà không hợp lệ'),
+  tenant_ids: z.array(z.string().uuid('Khách thuê không hợp lệ')).min(1, 'Cần chọn ít nhất một khách thuê'),
+})
+
+export type TenantExportBody = z.infer<typeof tenantExportBodySchema>
+
 export const tenantBulkActionSchema = z.object({
   action: z.enum(['archive', 'activate', 'delete']),
   ids: z.array(z.string().min(1)).min(1, selectAtLeastOne('khách thuê')),

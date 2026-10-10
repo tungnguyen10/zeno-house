@@ -19,6 +19,7 @@ export const AUDIT_ACTIONS = {
 
   // Tenant
   TENANT_CREATED: 'tenant.created',
+  TENANT_EXPORTED: 'tenant.exported',
   TENANT_UPDATED: 'tenant.updated',
   TENANT_ARCHIVED: 'tenant.archived',
   TENANT_ACTIVATED: 'tenant.activated',
