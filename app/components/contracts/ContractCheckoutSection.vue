@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Invoice } from '~/types/billing'
-import type { CheckoutBundle, CheckoutDraftInput, CheckoutPreview } from '~/types/checkout'
+import type { CheckoutBuildingPricing, CheckoutBundle, CheckoutDraftInput, CheckoutPreview } from '~/types/checkout'
 import type { CheckoutActions } from '~/composables/contracts/useContractCheckout'
 import { checkoutDraftSchema, checkoutRefundSchema, checkoutCreditSchema, checkoutChargeSchema, checkoutCorrectionSchema, checkoutChargeModesSchema } from '~/utils/validators/checkout'
 import { formatCurrency } from '~/utils/format/currency'
@@ -42,24 +42,37 @@ const correctionOptions = computed(() => (props.bundle?.invoices ?? props.bundle
 watch(() => correctionForm.invoice_id, () => { correctionInvoice.value = null })
 const chargeForm = reactive({ label: '', amount: '', note: '' })
 const creditForm = reactive({ payment_id: '', amount: '', reason: '' })
-const meters = [{ key: 'electricity' as const, label: 'Điện', unit: 'kWh' }, { key: 'water' as const, label: 'Nước', unit: 'm³' }]
+const allMeters = [{ key: 'electricity' as const, label: 'Điện', unit: 'kWh' }, { key: 'water' as const, label: 'Nước', unit: 'm³' }]
+const meteredPricingTypes = ['per_kwh', 'per_m3', 'tiered']
+const pricingModeLabels: Record<string, string> = { fixed: 'cố định', fixed_per_room: 'cố định theo phòng', per_person: 'theo đầu người' }
 const paymentMethods = [{ value: 'cash', label: 'Tiền mặt' }, { value: 'bank_transfer', label: 'Chuyển khoản' }]
+const pricing = computed(() => props.bundle?.checkout?.pricingSnapshot as {
+  monthlyRent: number
+  building: CheckoutBuildingPricing
+  services: Array<{ id: string; label: string; amount: number; quantity: number }>
+} | null | undefined)
+// Live building config first; the frozen snapshot only exists once a draft has been saved.
+const buildingPricing = computed(() => props.bundle?.buildingPricing ?? pricing.value?.building ?? null)
+const pricingTypeOf = (key: 'electricity' | 'water') => key === 'electricity' ? buildingPricing.value?.electricityPricingType : buildingPricing.value?.waterPricingType
+// Fail open when pricing is unknown so a metered handover is never silently skipped.
+const meters = computed(() => allMeters.filter(({ key }) => { const type = pricingTypeOf(key); return !type || meteredPricingTypes.includes(type) }))
+const hiddenMeterNote = computed(() => {
+  const hidden = allMeters.filter(({ key }) => !meters.value.some(meter => meter.key === key))
+  if (!hidden.length) return null
+  const parts = hidden.map(({ key, label }) => `${label.toLowerCase()} ${pricingModeLabels[pricingTypeOf(key) ?? ''] ?? ''}`.trim())
+  return `Tòa nhà tính tiền ${parts.join(' và ')} nên không cần chỉ số cuối kỳ.`
+})
 const draftDirty = computed(() => {
   const saved = props.bundle?.checkout
   if (!saved) return true
   if (draft.date !== saved.actualReturnDate || draft.reason !== saved.reason) return true
-  return meters.some(({ key }) => draft[key] !== (saved[key] ? String(saved[key]!.reading) : '') || draft[`${key}Override`] !== (saved[key]?.usageOverride == null ? '' : String(saved[key]!.usageOverride)) || draft[`${key}Reason`] !== (saved[key]?.reason ?? ''))
+  return meters.value.some(({ key }) => draft[key] !== (saved[key] ? String(saved[key]!.reading) : '') || draft[`${key}Override`] !== (saved[key]?.usageOverride == null ? '' : String(saved[key]!.usageOverride)) || draft[`${key}Reason`] !== (saved[key]?.reason ?? ''))
 })
 const returned = computed(() => props.bundle?.checkout?.status === 'returned')
 const settlementPilot = computed(() => props.bundle?.checkout?.financialMode === 'settlement')
 const legacyReturn = computed(() => props.bundle?.checkout?.financialMode === 'legacy')
 const statement = computed(() => props.bundle?.statement ?? null)
 const breakdown = computed(() => statement.value?.preview ?? props.bundle?.finalBill?.preview ?? preview.value)
-const pricing = computed(() => props.bundle?.checkout?.pricingSnapshot as {
-  monthlyRent: number
-  building: { electricityPricingType: string; waterPricingType: string; electricityRate: number; waterRate: number }
-  services: Array<{ id: string; label: string; amount: number; quantity: number }>
-} | null | undefined)
 const recurringRows = computed(() => {
   if (!pricing.value) return []
   const rows = [{ key: 'rent', label: 'Tiền phòng', monthly: Number(pricing.value.monthlyRent) }]
@@ -87,7 +100,7 @@ watch(() => props.bundle?.checkout, value => {
   if (!value) return
   draft.date = value.actualReturnDate
   draft.reason = value.reason
-  for (const { key } of meters) {
+  for (const { key } of allMeters) {
     draft[key] = value[key] ? String(value[key]!.reading) : ''
     draft[`${key}Override`] = value[key]?.usageOverride == null ? '' : String(value[key]!.usageOverride)
     draft[`${key}Reason`] = value[key]?.reason ?? ''
@@ -102,8 +115,9 @@ watch(() => props.bundle, () => { preview.value = null })
 
 function draftInput(): CheckoutDraftInput {
   const input: CheckoutDraftInput = { actual_return_date: draft.date, reason: draft.reason, expected_updated_at: props.bundle?.checkout?.updatedAt }
-  for (const { key } of meters) {
-    input[key] = draft[key] === '' ? null : { reading: Number(draft[key]), usageOverride: draft[`${key}Override`] === '' ? null : Number(draft[`${key}Override`]), reason: draft[`${key}Reason`] || null }
+  const billed = new Set(meters.value.map(meter => meter.key))
+  for (const { key } of allMeters) {
+    input[key] = !billed.has(key) || draft[key] === '' ? null : { reading: Number(draft[key]), usageOverride: draft[`${key}Override`] === '' ? null : Number(draft[`${key}Override`]), reason: draft[`${key}Reason`] || null }
   }
   return input
 }
@@ -128,7 +142,7 @@ async function run(action: () => Promise<unknown>, success?: string, options?: {
 
 async function saveDraft() {
   fieldErrors.value = {}
-  for (const { key } of meters) {
+  for (const { key } of meters.value) {
     if (draft[key] === '' && (draft[`${key}Override`] !== '' || draft[`${key}Reason`] !== '')) fieldErrors.value[`${key}.reading`] = 'Nhập chỉ số chốt trước khi điều chỉnh lượng dùng'
   }
   if (Object.keys(fieldErrors.value).length) return
@@ -244,11 +258,12 @@ const confirmationContent = computed(() => {
             <div v-for="meter in meters" :key="meter.key" class="space-y-3 border-t border-ui-border pt-3">
               <h3 class="text-sm font-medium text-ui-primary">{{ meter.label }} cuối kỳ ({{ meter.unit }})</h3>
               <div class="grid gap-3 sm:grid-cols-3">
-                <UiInput v-model="draft[meter.key]" label="Chỉ số chốt" type="number" number-mode="meter" :error="fieldErrors[`${meter.key}.reading`]" :disabled="pending" hint="Để trống nếu không sử dụng đồng hồ này" />
+                <UiInput v-model="draft[meter.key]" label="Chỉ số chốt" type="number" number-mode="meter" :error="fieldErrors[`${meter.key}.reading`]" :disabled="pending" hint="Bắt buộc trước khi xác nhận trả phòng" />
                 <UiInput v-model="draft[`${meter.key}Override`]" label="Điều chỉnh lượng dùng" type="number" number-mode="meter" :error="fieldErrors[`${meter.key}.usageOverride`]" :disabled="pending" hint="Chỉ nhập khi cần thay lượng dùng tính từ chỉ số" />
                 <UiInput v-model="draft[`${meter.key}Reason`]" label="Lý do điều chỉnh" :error="fieldErrors[`${meter.key}.reason`]" :disabled="pending" />
               </div>
             </div>
+            <p v-if="hiddenMeterNote" class="border-t border-ui-border pt-3 text-xs text-ui-muted">{{ hiddenMeterNote }}</p>
             <div class="flex flex-wrap gap-2">
               <UiButton type="submit" size="sm" :loading="pending">Lưu bàn giao</UiButton>
               <UiButton v-if="bundle.checkout" type="button" size="sm" variant="secondary" :disabled="pending || draftDirty" @click="confirmation = 'return'">Xác nhận trả phòng</UiButton>

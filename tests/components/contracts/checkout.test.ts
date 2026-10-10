@@ -3,14 +3,16 @@ import { defineComponent, h } from 'vue'
 import { describe, expect, it, vi } from 'vitest'
 import ContractCheckoutSection from '../../../app/components/contracts/ContractCheckoutSection.vue'
 import type { CheckoutBundle, CheckoutPreview } from '../../../app/types/checkout'
+import type { WaterPricingType } from '../../../app/types/buildings'
 
 const panel = defineComponent({ setup(_, { slots }) { return () => h('div', slots.default?.()) } })
 const button = defineComponent({ props: ['disabled', 'loading'], setup(p, { slots }) { return () => h('button', { disabled: p.disabled || p.loading }, slots.default?.()) } })
 const stubs = { UiSection: panel, UiSurfacePanel: panel, UiAlert: panel, UiSkeleton: panel, UiButton: button, UiInput: true, UiDatePicker: true, UiTextarea: true, UiSelect: true, UiCheckbox: true, UiConfirmModal: true, NuxtLink: panel }
 const bundle: CheckoutBundle = { enabled: true, settlementEnabled: true, checkout: { id: 'x', contractId: 'c', buildingId: 'b', actualReturnDate: '2026-10-01', reason: 'Trả phòng', status: 'returned', financialMode: 'settlement', electricity: null, water: null, updatedAt: 'now' }, depositHeld: 3000000, creditHeld: 0, statement: null, refunds: [], sources: [] }
 const preview: CheckoutPreview = { snapshotHash: 'hash', depositHeld: 3000000, creditHeld: 0, existingDebt: 500000, finalChargesTotal: 100000, totalDue: 600000, refundDue: 2400000, additionalDue: 0, depositApplied: 600000, creditApplied: 0, charges: [], invoices: [], blockers: [] }
+const actions = () => ({ loadCorrectionInvoice: vi.fn(), correct: vi.fn(), addCharge: vi.fn(), save: vi.fn(), confirmReturn: vi.fn(), preview: vi.fn(async () => preview), confirm: vi.fn(), refund: vi.fn(), approveCredit: vi.fn(), saveChargeModes: vi.fn(), issueFinal: vi.fn() })
 function render(overrides = {}) {
-  return mount(ContractCheckoutSection, { props: { bundle, loading: false, error: null, contractCode: 'HD-1', canManage: true, canSettle: true, canIssue: true, canRefund: true, actions: { loadCorrectionInvoice: vi.fn(), correct: vi.fn(), addCharge: vi.fn(), save: vi.fn(), confirmReturn: vi.fn(), preview: vi.fn(async () => preview), confirm: vi.fn(), refund: vi.fn(), approveCredit: vi.fn(), saveChargeModes: vi.fn(), issueFinal: vi.fn() }, ...overrides }, global: { stubs } })
+  return mount(ContractCheckoutSection, { props: { bundle, loading: false, error: null, contractCode: 'HD-1', canManage: true, canSettle: true, canIssue: true, canRefund: true, actions: actions(), ...overrides }, global: { stubs } })
 }
 
 describe('ContractCheckoutSection', () => {
@@ -82,5 +84,42 @@ describe('ContractCheckoutSection', () => {
     const wrapper = render({ canSettle: false, canIssue: false, canRefund: false })
     expect(wrapper.text()).not.toContain('Xem bảng tính cuối')
     expect(wrapper.text()).not.toContain('Duyệt tiền bù trừ')
+  })
+})
+
+describe('ContractCheckoutSection closing readings', () => {
+  const draft = { ...bundle, checkout: { ...bundle.checkout!, status: 'draft' as const, updatedAt: '2026-10-01T00:00:00Z' } }
+  const withPricing = (waterPricingType: WaterPricingType) => ({
+    ...draft,
+    buildingPricing: { electricityPricingType: 'per_kwh' as const, waterPricingType, electricityRate: 3000, waterRate: 40000 },
+  })
+
+  it('asks for both readings when every utility is metered', () => {
+    const wrapper = render({ bundle: withPricing('per_m3') })
+    expect(wrapper.text()).toContain('Điện cuối kỳ (kWh)')
+    expect(wrapper.text()).toContain('Nước cuối kỳ (m³)')
+    expect(wrapper.text()).not.toContain('không cần chỉ số cuối kỳ')
+  })
+
+  it('drops the water reading when the building bills water per head', () => {
+    const wrapper = render({ bundle: withPricing('per_person') })
+    expect(wrapper.text()).toContain('Điện cuối kỳ (kWh)')
+    expect(wrapper.text()).not.toContain('Nước cuối kỳ (m³)')
+    expect(wrapper.text()).toContain('Tòa nhà tính tiền nước theo đầu người nên không cần chỉ số cuối kỳ.')
+  })
+
+  it('never submits a reading for a utility it does not bill by usage', async () => {
+    const save = vi.fn()
+    const wrapper = render({ bundle: withPricing('per_person'), actions: { ...actions(), save } })
+    wrapper.findAllComponents({ name: 'UiInput' })[0]!.vm.$emit('update:modelValue', '150')
+    await wrapper.find('form').trigger('submit')
+    await flushPromises()
+    expect(save).toHaveBeenCalledWith(expect.objectContaining({ electricity: expect.objectContaining({ reading: 150 }), water: null }))
+  })
+
+  it('keeps both readings visible while the building pricing is unknown', () => {
+    const wrapper = render({ bundle: { ...draft, checkout: { ...draft.checkout, pricingSnapshot: null } } })
+    expect(wrapper.text()).toContain('Điện cuối kỳ (kWh)')
+    expect(wrapper.text()).toContain('Nước cuối kỳ (m³)')
   })
 })
