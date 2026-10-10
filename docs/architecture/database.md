@@ -127,6 +127,8 @@ Route helpers still fall back to ids when readable identifiers are absent.
 - denormalized totals: subtotal, discount, surcharge, total, paid, balance
 - `invoice_profile_snapshot`: nullable, schema-versioned receiving-bank identity captured when the invoice is inserted
 
+`invoice_browse_rows` is a service-role-only, security-invoker read view joining invoices to period, building, room, contract, and tenant display fields. It exposes a Vietnamese numeric collation for building, room, contract, and invoice sort fields so the cross-period invoice query orders rows before applying server pagination. Browser access remains through `GET /api/invoices`.
+
 `building_invoice_profiles` stores one current receiving profile per building: normalized bank fields, transfer-content template, required QR path, optional logo path, audit actor, and one-time legacy-backfill marker. A `BEFORE INSERT` trigger snapshots the current profile for every invoice creation transaction; missing profiles do not block issuance. The first profile upsert backfills only non-void invoices with a null snapshot, and later edits preserve history.
 
 The private `building-invoice-assets` Storage bucket accepts JPEG, PNG, and WebP objects up to 5 MB. Objects use unique append-only paths because issued snapshots may retain older versions. Browser clients receive only short-lived signed URLs after service-layer permission and building-scope checks.

@@ -304,6 +304,13 @@ Billing workspace tab summaries SHALL NOT repeat metrics that are already on the
 ### Requirement: Billing draft grid workspace tab
 The billing workspace SHALL provide a `Soạn kỳ` tab that combines monthly reading entry and draft invoice review into one room-centered grid.
 
+#### Scenario: Invoice order remains consistent through the monthly workflow
+- **WHEN** the user moves between Soạn kỳ, invoice issue preview, and Thu tiền & công nợ
+- **THEN** rows are ordered by floor ascending, natural room number ascending, contract code, invoice code where present, and stable identifiers
+- **AND** preview exclusions follow the same floor and room order
+- **AND** void invoices remain in their separate section but follow the same room order
+- **AND** rooms without a floor or room number appear after rooms with those values
+
 #### Scenario: One room row
 - **WHEN** a room has an active billing contract in the selected period
 - **THEN** the grid renders one row for that room/contract with electricity input, water input, utility charge preview, rent/service summary, draft total, status, and detail action
@@ -531,4 +538,3 @@ The billing client SHALL update direct mutation results locally where safe and S
 #### Scenario: Issue invoices
 - **WHEN** invoices are issued successfully
 - **THEN** the client refreshes invoice and grid state without duplicate draft or overview requests that return equivalent data
-

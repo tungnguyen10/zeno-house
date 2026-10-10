@@ -169,6 +169,22 @@ describe('InvoiceService invoice lifecycle methods', () => {
     expect(result.map(item => item.id)).toEqual(['inv-1', 'inv-2', 'inv-3'])
   })
 
+  it('sorts period invoices by floor and contract before invoice code', async () => {
+    const invoices = [
+      buildInvoice({ id: 'floor-2', roomFloor: 2, roomNumber: '1', contractCode: 'HD-1' }),
+      buildInvoice({ id: 'contract-10', roomFloor: 1, roomNumber: '10', contractCode: 'HD-10' }),
+      buildInvoice({ id: 'contract-2', roomFloor: 1, roomNumber: '10', contractCode: 'HD-2' }),
+      buildInvoice({ id: 'room-2', roomFloor: 1, roomNumber: '2', contractCode: 'HD-1' }),
+    ]
+    listByPeriod.mockResolvedValue(invoices)
+    enrichInvoices.mockResolvedValueOnce(invoices)
+    const { InvoiceService } = await import('../../../server/services/billing/invoices')
+
+    const result = await InvoiceService.list(event(), makeUser(), 'period-1')
+
+    expect(result.map(item => item.id)).toEqual(['room-2', 'contract-2', 'contract-10', 'floor-2'])
+  })
+
   it('voids an issued invoice with no payments and records audit metadata', async () => {
     const invoice = buildInvoice({ id: 'invoice-1', paidAmount: 0, status: 'issued' })
     const voided = buildInvoice({ ...invoice, status: 'void', voidReason: 'wrong reading' })

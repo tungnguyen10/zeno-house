@@ -29,20 +29,10 @@ import { BuildingInvoiceProfileRepository } from '../../repositories/building-in
 import { BuildingRepository } from '../../repositories/buildings'
 import { InvoiceProfileDisplayService } from './invoice-profile-display'
 import { calculationDateInHoChiMinh, resolveInvoiceDueSchedule } from './invoice-due-policy'
-
-const roomNumberCollator = new Intl.Collator('vi', {
-  numeric: true,
-  sensitivity: 'base',
-})
+import { compareBillingItems } from '~/utils/billing/invoice-sort'
 
 function compareInvoicesByRoomAsc(a: Invoice, b: Invoice): number {
-  const byRoom = roomNumberCollator.compare(a.roomNumber ?? '', b.roomNumber ?? '')
-  if (byRoom !== 0) return byRoom
-
-  const byCode = roomNumberCollator.compare(a.invoiceCode ?? '', b.invoiceCode ?? '')
-  if (byCode !== 0) return byCode
-
-  return a.id.localeCompare(b.id)
+  return compareBillingItems({ ...a, floor: a.roomFloor }, { ...b, floor: b.roomFloor })
 }
 
 export const InvoiceService = {

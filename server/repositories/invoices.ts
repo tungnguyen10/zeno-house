@@ -113,6 +113,37 @@ export function mapInvoiceListRow(row: InvoiceListRow): InvoiceListItem {
   }
 }
 
+function mapInvoiceBrowseRow(row: InvoiceListRow): InvoiceListItem {
+  return {
+    id: String(row.id),
+    invoice_code: String(row.invoice_code ?? ''),
+    billing_period_id: String(row.billing_period_id ?? ''),
+    period_year: numberValue(row.period_year),
+    period_month: numberValue(row.period_month),
+    building_id: String(row.building_id ?? ''),
+    building_name: text(row.building_name),
+    building_slug: text(row.building_slug),
+    room_id: String(row.room_id ?? ''),
+    room_number: text(row.room_number),
+    contract_id: String(row.contract_id ?? ''),
+    contract_code: text(row.contract_code),
+    tenant_id: String(row.tenant_id ?? ''),
+    tenant_name: text(row.tenant_name),
+    tenant_phone: text(row.tenant_phone),
+    total_amount: numberValue(row.total_amount),
+    paid_amount: numberValue(row.paid_amount),
+    balance_amount: numberValue(row.balance_amount),
+    due_date: text(row.due_date),
+    grace_period_days: numberValue(row.grace_period_days),
+    overdue_date: text(row.overdue_date),
+    status: row.status as InvoiceStatus,
+    issued_at: text(row.issued_at),
+    voided_at: text(row.voided_at),
+    void_reason: text(row.void_reason),
+    notes: text(row.notes),
+  }
+}
+
 export const CrossPeriodInvoiceRepository = {
   async listCrossPeriod(
     event: H3Event,
@@ -127,10 +158,10 @@ export const CrossPeriodInvoiceRepository = {
     const client = await serverSupabaseClient(event)
     const { from, to } = calculatePaginationBounds(filter.page, filter.page_size)
 
-    const invoices = client.from('invoices')
+    const invoices = client.from('invoice_browse_rows' as never)
     let query = options.exactCount === false
-      ? invoices.select(INVOICE_LIST_SELECT)
-      : invoices.select(INVOICE_LIST_SELECT, { count: 'exact' })
+      ? invoices.select('*')
+      : invoices.select('*', { count: 'exact' })
 
     if (scope.tenantId) {
       query = query.eq('tenant_id', scope.tenantId)
@@ -140,17 +171,17 @@ export const CrossPeriodInvoiceRepository = {
     }
 
     if (filter.building_id) {
-      query = query.eq('billing_periods.building_id', filter.building_id)
+      query = query.eq('building_id', filter.building_id)
     }
     else if (scope.buildingIds && scope.buildingIds.length > 0) {
-      query = query.in('billing_periods.building_id', scope.buildingIds)
+      query = query.in('building_id', scope.buildingIds)
     }
 
     if (filter.period_year !== undefined) {
-      query = query.eq('billing_periods.period_year', filter.period_year)
+      query = query.eq('period_year', filter.period_year)
     }
     if (filter.period_month !== undefined) {
-      query = query.eq('billing_periods.period_month', filter.period_month)
+      query = query.eq('period_month', filter.period_month)
     }
 
     const statusFilter = invoiceStatusFilter(filter.status, filter.today)
@@ -159,21 +190,28 @@ export const CrossPeriodInvoiceRepository = {
     if (filter.tenant_search) {
       const term = filter.tenant_search.replace(/[%(),]/g, '').trim()
       if (term) {
-        query = query.or(`full_name.ilike.%${term}%,phone.ilike.%${term}%`, {
-          foreignTable: 'tenants',
-        })
+        query = query.or(`tenant_name.ilike.%${term}%,tenant_phone.ilike.%${term}%`)
       }
     }
 
     const { data, error, count } = await query
-      .order('room_number', { foreignTable: 'rooms', ascending: true, nullsFirst: false })
+      .order('period_year', { ascending: false })
+      .order('period_month', { ascending: false })
+      .order('building_sort_name', { ascending: true, nullsFirst: false })
+      .order('building_id', { ascending: true })
+      .order('room_floor', { ascending: true, nullsFirst: false })
+      .order('room_sort_number', { ascending: true, nullsFirst: false })
+      .order('room_number', { ascending: true, nullsFirst: false })
+      .order('contract_sort_code', { ascending: true, nullsFirst: false })
+      .order('contract_code', { ascending: true, nullsFirst: false })
+      .order('invoice_sort_code', { ascending: true, nullsFirst: false })
       .order('invoice_code', { ascending: true, nullsFirst: false })
-      .order('issued_at', { ascending: true, nullsFirst: true })
+      .order('contract_id', { ascending: true })
       .order('id', { ascending: true })
       .range(from, to)
 
     if (error) throwDbError(error, 'invoices.list')
-    const items = ((data ?? []) as unknown as InvoiceListRow[]).map(mapInvoiceListRow)
+    const items = ((data ?? []) as unknown as InvoiceListRow[]).map(mapInvoiceBrowseRow)
     return { items, total: options.exactCount === false ? items.length : count ?? 0 }
   },
 

@@ -7,6 +7,7 @@ import { formatCurrency } from '~/utils/format/currency'
 import { invoicePath, invoiceRouteSegment } from '~/utils/routes/operational'
 import { isPeriodLocked } from '~/utils/billing/lock'
 import { getApiErrorDetails, getApiErrorMessage } from '~/utils/api-error'
+import { compareBillingItems } from '~/utils/billing/invoice-sort'
 
 export interface BillingPaymentsIntent {
   id: number
@@ -62,12 +63,15 @@ function deriveBucket(inv: Invoice): 'paid' | 'partial' | 'unpaid' | 'overdue' |
   return 'unpaid'
 }
 
-const activeInvoices = computed(() => props.invoices.filter(i => i.status !== 'void'))
+const compareInvoices = (a: Invoice, b: Invoice) => compareBillingItems(
+  { ...a, floor: a.roomFloor },
+  { ...b, floor: b.roomFloor },
+)
+const activeInvoices = computed(() => props.invoices.filter(i => i.status !== 'void').sort(compareInvoices))
 const voidedInvoices = computed(() =>
   props.invoices
     .filter(i => i.status === 'void')
-    .slice()
-    .sort((a, b) => (b.voidedAt ?? '').localeCompare(a.voidedAt ?? '')),
+    .sort(compareInvoices),
 )
 const replacementById = computed(() => {
   const byId = new Map(props.invoices.map(i => [i.id, i]))

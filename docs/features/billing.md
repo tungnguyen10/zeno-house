@@ -130,6 +130,10 @@ The workspace route `/billing/[building]/[period]` has **two tabs** (simplified 
 1. **Soạn kỳ** (draft-grid): enter readings, manage one-off room charges, review blockers, bulk-issue ready rows, auto-issue-and-collect individual rows (when flag enabled). Draft rows are not printable.
 2. **Thu tiền & công nợ** (payments): print issued invoices, collect payments, bulk collect, void/reissue, undo individual payments.
 
+Invoice rows use one order throughout the monthly workflow: floor ascending, natural room number ascending (`2` before `10`), then contract code, invoice code when present, and stable IDs. Soạn kỳ, issue preview documents and exclusions, and Thu tiền & công nợ follow this order. Voided invoices stay in a separate section and use the same room order. Rooms missing a floor or number appear last.
+
+The cross-period Hoá đơn browser sorts before pagination: newest period first, then building name, floor, room, contract code, invoice code, and stable IDs. Its server-only `invoice_browse_rows` view flattens those fields for reliable page boundaries; the existing filters, scope checks, and API response remain the same. The period queue retains its own newest-month order.
+
 Header overflow actions (`Hành động ▾`):
 
 - audit drawer — with recent-24h badge when activity present

@@ -71,6 +71,7 @@ export interface Invoice {
   updatedAt: string
   tenantName?: string | null
   roomNumber?: string | null
+  roomFloor?: number | null
   contractCode?: string | null
 }
 
@@ -245,6 +246,7 @@ export interface BillingDraftInvoice {
   tenantId: string
   contractCode: string | null
   roomNumber: string | null
+  roomFloor?: number | null
   tenantName: string | null
   lines: BillingDraftLine[]
   subtotalAmount: number
