@@ -250,6 +250,7 @@ Closing a period:
 ## Export
 
 `GET /api/billing/periods/[id]/export` returns an Excel workbook for the period. Export is available to users with `billing.read`.
+The workbook uses the shared Excel title, table, total, and date styles also used by tenant and operations exports; its columns and monetary formats remain unchanged.
 
 Incidental invoice lines remain individually labelled in invoice detail/print and operations-report revenue. The period workbook includes their amount in **Phụ phí/Dịch vụ** while preserving the invoice total.
 

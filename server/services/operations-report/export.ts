@@ -10,6 +10,9 @@ import { slugifyName } from '~/utils/format/slug'
 import {
   MONEY_FORMAT,
   alignRightCells,
+  styleDateRow,
+  styleMetaRow,
+  styleSectionRow,
   styleTableRow,
   styleTitleRow,
   viExportDate,
@@ -31,9 +34,7 @@ function periodTitle(query: OperationsReportQuery): string {
 function addSectionTitle(sheet: ExcelJS.Worksheet, title: string) {
   const row = sheet.addRow([title])
   sheet.mergeCells(row.number, 1, row.number, COL_COUNT)
-  row.font = { bold: true, size: 14, name: 'Times New Roman' }
-  row.alignment = { horizontal: 'left', vertical: 'middle' }
-  row.height = 24
+  styleSectionRow(row, COL_COUNT)
 }
 
 function addMoneyRow(sheet: ExcelJS.Worksheet, label: string, amount: number, note = '') {
@@ -77,12 +78,12 @@ export const OperationsReportExportService = {
 
     sheet.mergeCells('A2:E2')
     sheet.getCell('A2').value = building.name
-    styleTitleRow(sheet.getRow(2), 16)
+    styleMetaRow(sheet.getRow(2), 16)
     sheet.getRow(2).height = 28
 
-    const generatedRow = sheet.addRow(['', viExportDate(), '', '', ''])
+    const generatedRow = sheet.addRow([viExportDate()])
     sheet.mergeCells(generatedRow.number, 1, generatedRow.number, COL_COUNT)
-    generatedRow.getCell(1).alignment = { horizontal: 'right', vertical: 'middle' }
+    styleDateRow(generatedRow)
 
     addSectionTitle(sheet, 'Tổng quan')
     const overviewRows: Array<[string, number]> = [

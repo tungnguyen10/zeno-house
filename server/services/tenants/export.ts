@@ -8,6 +8,7 @@ import { BuildingRepository } from '../../repositories/buildings'
 import { AuditRepository } from '../../repositories/audit'
 import { TenantExportRepository, type TenantExportAssignment } from '../../repositories/tenants/export'
 import { vietnamDateISO } from '../../utils/date'
+import { styleMetaRow, styleTableHeaderRow, styleTableRow, styleTitleRow } from '../../utils/excel'
 import { requireCapability } from '../../utils/permissions'
 import { getVisibleBuildingIds } from '../../utils/scope'
 
@@ -92,17 +93,17 @@ export const TenantExportService = {
     workbook.creator = 'Zeno House'
     workbook.created = new Date()
     const sheet = workbook.addWorksheet('Khách thuê')
-    sheet.columns = columns.map(([header, width]) => ({ header, width }))
-    sheet.spliceRows(1, 0, [], [])
+    sheet.columns = columns.map(([, width]) => ({ width }))
     sheet.mergeCells(1, 1, 1, columns.length)
     sheet.getCell(1, 1).value = 'DANH SÁCH KHÁCH THUÊ'
-    sheet.getCell(1, 1).font = { bold: true, size: 17 }
+    styleTitleRow(sheet.getRow(1), 18)
+    sheet.getRow(1).height = 38
     sheet.mergeCells(2, 1, 2, columns.length)
     sheet.getCell(2, 1).value = `${building.name} · ${selected.length} khách · ${vietnamDateISO()}`
+    styleMetaRow(sheet.getRow(2), 15)
+    sheet.getRow(2).height = 30
     sheet.getRow(3).values = columns.map(([header]) => header)
-    sheet.getRow(3).font = { bold: true }
-    sheet.getRow(3).alignment = { vertical: 'middle', wrapText: true }
-    sheet.getRow(3).height = 28
+    styleTableHeaderRow(sheet.getRow(3), columns.length)
     sheet.views = [{ state: 'frozen', ySplit: 3 }]
     sheet.autoFilter = { from: 'A3', to: `Q${Math.max(4, selected.length + 3)}` }
 
@@ -118,7 +119,9 @@ export const TenantExportService = {
         tenant.idIssuedDate ?? '', tenant.idIssuedPlace ?? '', tenant.permanentAddress ?? '',
         tenant.emergencyContactName ?? '', tenant.emergencyContactPhone ?? '', tenant.notes ?? '',
       ]
-      row.alignment = { vertical: 'top', wrapText: true }
+      styleTableRow(row, false, columns.length)
+      row.alignment = { horizontal: 'left', vertical: 'top', wrapText: true }
+      row.eachCell({ includeEmpty: true }, cell => { cell.alignment = row.alignment })
       for (const cellIndex of [3, 8, 16]) row.getCell(cellIndex).numFmt = '@'
     }
 

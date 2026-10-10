@@ -420,6 +420,7 @@ Chưa làm (như MVP scope đã nêu): approval, upload chứng từ, custom cat
 
 - Expense có thể gắn ảnh biên lai jpeg/png/webp tới 5MB. File nằm trong bucket private `expense-receipts`; API chỉ trả signed URL ngắn hạn.
 - API export Excel `GET /api/operations-report/export` xuất báo cáo tháng của một tòa nhà. Chỉ admin/owner có `operations-report.export`; manager không thấy nút export.
+- File Excel dùng style chung cho tiêu đề, tòa nhà, ngày xuất, tiêu đề nhóm và dòng dữ liệu; các mục báo cáo và định dạng tiền giữ nguyên.
 - Category chi phí mở rộng thêm `insurance`, `bank_fee`, `fire_safety`.
 - Quản lý chi phí cố định được chuyển sang `/buildings/[id]/settings`; trang báo cáo chỉ hiện chi phí cố định dạng read-only.
 

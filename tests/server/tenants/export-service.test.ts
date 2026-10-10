@@ -90,6 +90,12 @@ describe('TenantExportService', () => {
     const values = sheet.getRow(4).values as unknown[]
     expect(sheet.getCell('A1').value).toBe('DANH SÁCH KHÁCH THUÊ')
     expect(sheet.getCell('A3').value).toBe('Mã khách')
+    expect(sheet.getCell('A1').fill).toMatchObject({ fgColor: { argb: 'FFEAF2F8' } })
+    expect(sheet.getCell('A2').font?.color).toEqual({ argb: 'FF526579' })
+    expect(sheet.getCell('A3').fill).toMatchObject({ fgColor: { argb: 'FFDCE8F2' } })
+    expect(sheet.getCell('A3').border?.bottom?.style).toBe('thin')
+    expect(sheet.getCell('A4').border?.bottom?.style).toBe('thin')
+    expect(sheet.getRow(4).height).toBe(28)
     expect(sheet.rowCount).toBe(4)
     expect(values).toContain('Nguyễn Văn A')
     expect(values).toContain('0901234567')

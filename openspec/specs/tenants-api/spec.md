@@ -297,3 +297,7 @@ Tenant service mutation methods SHALL write audit events to `audit_events`.
 #### Scenario: Stale or unauthorized export
 - **WHEN** a manager calls either route, an owner names an out-of-scope building, or a selected tenant is no longer current in that building
 - **THEN** no XLSX is returned; the manager is forbidden, the building is hidden, or the stale selection is rejected as appropriate
+
+#### Scenario: Tenant workbook uses shared styling
+- **WHEN** selected current tenants are exported
+- **THEN** title, building summary, column headers, and profile rows use the shared Excel styling while filters, frozen headers, one row per tenant, and text formats for phone and identity number remain intact

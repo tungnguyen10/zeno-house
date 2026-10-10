@@ -4,8 +4,12 @@ import { db } from '../../utils/db'
 import {
   MONEY_FORMAT,
   alignRightCells,
+  styleDateRow,
+  styleMetaRow,
   styleTableRow as styleExcelTableRow,
+  styleTableHeaderRow,
   styleTitleRow,
+  styleTotalRow,
   viExportDate,
 } from '../../utils/excel'
 import type { AuthUser } from '~/types/auth'
@@ -141,7 +145,7 @@ export const BillingExportService = {
 
     sheet.mergeCells('A2:K2')
     sheet.getCell('A2').value = buildingName
-    styleTitleRow(sheet.getRow(2), 18)
+    styleMetaRow(sheet.getRow(2), 18)
     sheet.getRow(2).height = 32
 
     const header = sheet.getRow(3)
@@ -158,7 +162,7 @@ export const BillingExportService = {
       'Tổng',
       'Ghi chú',
     ]
-    styleTableRow(header, true)
+    styleTableHeaderRow(header, TABLE_COLUMN_COUNT)
     header.height = 34
 
     const totals = {
@@ -212,15 +216,14 @@ export const BillingExportService = {
     })
     sheet.mergeCells(totalRow.number, 1, totalRow.number, 4)
     totalRow.getCell(1).value = 'TỔNG TIỀN'
-    styleTableRow(totalRow, true)
+    styleTotalRow(totalRow, TABLE_COLUMN_COUNT)
     alignMoneyCells(totalRow)
     totalRow.height = 30
 
     const dateRow = sheet.addRow([])
     sheet.mergeCells(dateRow.number, 1, dateRow.number, 11)
     dateRow.getCell(1).value = viExportDate()
-    dateRow.getCell(1).font = { size: 14, name: 'Times New Roman' }
-    dateRow.getCell(1).alignment = { horizontal: 'right', vertical: 'middle' }
+    styleDateRow(dateRow)
 
     const arrayBuffer = await wb.xlsx.writeBuffer()
     const buffer = Buffer.from(arrayBuffer as ArrayBuffer)

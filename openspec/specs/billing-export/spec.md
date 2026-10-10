@@ -24,6 +24,7 @@ A `GET /api/billing/periods/:id/export` endpoint SHALL return an `.xlsx` workboo
 #### Scenario: Collection sheet totals and formatting
 - **WHEN** the workbook is rendered
 - **THEN** the sheet includes a bold `TỔNG TIỀN` row summing all money columns, bold total values per row, full table borders across all columns and rows, readable spacing for title/header/data rows, and a footer date row in the format `Ngày DD tháng MM năm YYYY`
+- **AND** shared Excel styling gives the title, building line, header, data, total, and date distinct readable treatments without changing monetary values or columns
 
 #### Scenario: Filename pattern
 - **WHEN** the response sets `Content-Disposition`
