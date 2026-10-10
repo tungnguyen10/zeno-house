@@ -13,18 +13,18 @@ const authStore = useAuthStore()
 const toast = useToast()
 const id = route.params.code as string
 
-const { data, error } = await useFetch<ApiSuccess<Tenant>>(`/api/tenants/${id}`)
+const { data, error, status } = useLazyFetch<ApiSuccess<Tenant>>(`/api/tenants/${id}`)
 
-if (error.value?.statusCode === 404) {
-  await navigateTo('/dashboard/tenants')
-}
+watchEffect(() => {
+  if (error.value?.statusCode === 404) navigateTo('/dashboard/tenants')
+})
 
 const tenant = computed(() => data.value?.data ?? null)
 
 // Redirect UUID-based URL to canonical code-based URL
-if (tenant.value && isUuid(id) && tenant.value.code) {
-  await navigateTo(`${tenantPath(tenant.value)}/edit`, { replace: true })
-}
+watch(tenant, (value) => {
+  if (value && isUuid(id) && value.code) navigateTo(`${tenantPath(value)}/edit`, { replace: true })
+})
 
 const initialFormData: TenantFormData = {
   full_name: tenant.value?.fullName ?? '',
@@ -44,6 +44,26 @@ const initialFormData: TenantFormData = {
 
 const formData = ref<TenantFormData>({ ...initialFormData })
 const initialSnapshot = ref<TenantFormData>({ ...initialFormData })
+watch(tenant, (value) => {
+  if (!value) return
+  const next: TenantFormData = {
+    full_name: value.fullName ?? '',
+    phone: value.phone ?? '',
+    email: value.email ?? '',
+    id_number: value.idNumber ?? '',
+    date_of_birth: value.dateOfBirth ?? '',
+    permanent_address: value.permanentAddress ?? '',
+    notes: value.notes ?? '',
+    gender: value.gender ?? '',
+    occupation: value.occupation ?? '',
+    id_issued_date: value.idIssuedDate ?? '',
+    id_issued_place: value.idIssuedPlace ?? '',
+    emergency_contact_name: value.emergencyContactName ?? '',
+    emergency_contact_phone: value.emergencyContactPhone ?? '',
+  }
+  formData.value = next
+  initialSnapshot.value = { ...next }
+}, { immediate: true })
 
 const {
   isLoading,
@@ -55,7 +75,7 @@ const {
   clearDraft,
   isDirty,
 } = useTenantForm<TenantFormData>({
-  draftKey: tenant.value ? { mode: 'edit', id: tenant.value.id } : null,
+  draftKey: { mode: 'edit', id },
   formData,
   initialSnapshot,
 })
@@ -168,7 +188,13 @@ async function onSubmit(data: TenantFormData) {
       {{ apiError }}
     </UiAlert>
 
+    <div v-if="status === 'idle' || status === 'pending'" class="space-y-3" aria-busy="true" aria-label="Đang tải thông tin khách thuê">
+      <UiSkeleton class="h-8 w-48" />
+      <UiSkeleton class="h-64 w-full rounded-xl" />
+    </div>
+    <UiAlert v-else-if="error" severity="danger">Không thể tải thông tin khách thuê.</UiAlert>
     <TenantForm
+      v-else-if="tenant"
       v-model="formData"
       :loading="isLoading"
       :errors="errors"

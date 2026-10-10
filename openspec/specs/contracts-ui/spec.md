@@ -4,7 +4,7 @@
 TBD - created by archiving change contracts-overhaul. Update Purpose after archive.
 ## Requirements
 ### Requirement: Contracts list toolbar (search/filter/sort)
-`app/pages/contracts/index.vue` SHALL render a `ContractListToolbar` component above the list containing a debounced search input (250ms — contract_code / tenant name / room number), a status filter (multi-select chips for `active`, `expired`, `terminated`, `renewed`), a building selector (keeps existing), and a sort selector (`start_date`, `end_date`, `created_at`, `monthly_rent`) with order toggle. Toolbar state SHALL be reflected in URL query (`?q`, `?status`, `?building_id`, `?sort`, `?order`) and restored from URL on mount.
+`app/pages/contracts/index.vue` SHALL render a `ContractListToolbar` component above the list containing a debounced search input (250ms — contract_code / tenant name / room number), a status filter (multi-select chips for `active`, `expired`, `terminated`, `renewed`), a building selector (keeps existing), and a sort selector (`location`, `start_date`, `end_date`, `created_at`, `monthly_rent`) with order toggle. The default is ascending `location`, matching invoice building/floor/room order. Toolbar state SHALL be reflected in URL query (`?q`, `?status`, `?building_id`, `?sort`, `?order`) and restored from URL on mount.
 
 #### Scenario: Search filters list across code / tenant / room
 - **WHEN** admin types "A101" in the search box and waits 250ms

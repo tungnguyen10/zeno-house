@@ -115,6 +115,8 @@ Cho destructive button dùng `focus-visible:ring-status-danger`. Không tắt ou
 | Confirm action | `UiConfirmModal` (destructive) hoặc `UiModal` |
 | Dense correction form | `UiModal size="lg"` (Drawer chỉ thêm khi modal không đủ) |
 | Loading rows | `UiSkeleton` (fallback) hoặc table built-in loading |
+
+Điều hướng trong `/dashboard/**`: link hoặc hàng vừa kích hoạt có phản hồi ngay; thanh tiến trình route dùng `--ui-accent`. Skeleton của trang đích xuất hiện khi dữ liệu còn tải. Drawer chi tiết mở ngay với skeleton và có nút thử lại nếu tải lỗi. Trình duyệt back/forward khôi phục vị trí cuộn danh sách trong `#main-content`.
 | No data | `UiEmptyState` hoặc `UiTable` empty state |
 | Titled content region | `UiSection` |
 | Reusable panel surface | `UiSurfacePanel` |

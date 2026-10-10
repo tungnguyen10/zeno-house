@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto'
 import type { AiInvoiceIssuePreview, AiInvoiceIssuePreviewItem } from '~/types/ai'
 import type { BillingDraftInvoice, BillingDraftResponse } from '~/types/billing'
+import { compareBillingItems } from '~/utils/billing/invoice-sort'
 import {
   resolveInvoiceDueSchedule,
   type InvoiceDueSchedule,
@@ -65,7 +66,10 @@ export function selectInvoiceIssueDrafts(
   response: BillingDraftResponse,
   requestedContractIds?: string[],
 ): BillingDraftInvoice[] {
-  if (!requestedContractIds) return [...response.drafts]
+  if (!requestedContractIds) return [...response.drafts].sort((a, b) => compareBillingItems(
+    { ...a, floor: a.roomFloor },
+    { ...b, floor: b.roomFloor },
+  ))
   const requested = new Set(requestedContractIds)
   const available = new Set(response.drafts.map(draft => draft.contractId))
   const missing = sortedUnique([...requested].filter(contractId => !available.has(contractId)))
@@ -73,6 +77,10 @@ export function selectInvoiceIssueDrafts(
     throwValidationError('Không tìm thấy hợp đồng trong dự thảo kỳ này.', { contract_ids: missing })
   }
   return response.drafts.filter(draft => requested.has(draft.contractId))
+    .sort((a, b) => compareBillingItems(
+      { ...a, floor: a.roomFloor },
+      { ...b, floor: b.roomFloor },
+    ))
 }
 
 export function buildInvoiceIssueSnapshot(
@@ -198,10 +206,9 @@ export function createInvoiceIssuePreview(
       calculationDate: dueContext.calculationDate,
       dueDateOverride: dueContext.dueDateOverride ?? null,
       requestedContractIds: sortedUnique(requestedContractIds ?? selected.map(draft => draft.contractId)),
-      issuable: issuableRows.map(draft => previewItem(draft, schedulesByContract[draft.contractId]))
-        .sort((a, b) => a.contractId.localeCompare(b.contractId)),
-      blocked: blockedRows.map(draft => previewItem(draft)).sort((a, b) => a.contractId.localeCompare(b.contractId)),
-      alreadyIssued: alreadyIssuedRows.map(draft => previewItem(draft)).sort((a, b) => a.contractId.localeCompare(b.contractId)),
+      issuable: issuableRows.map(draft => previewItem(draft, schedulesByContract[draft.contractId])),
+      blocked: blockedRows.map(draft => previewItem(draft)),
+      alreadyIssued: alreadyIssuedRows.map(draft => previewItem(draft)),
       issuableCount: issuableRows.length,
       blockedCount: blockedRows.length,
       alreadyIssuedCount: alreadyIssuedRows.length,

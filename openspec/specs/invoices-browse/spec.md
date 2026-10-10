@@ -13,6 +13,12 @@ The system SHALL provide a `/invoices` page that lists all invoices the current 
 - **WHEN** filter trả về 0 invoice
 - **THEN** page hiển thị empty state với gợi ý "Đổi tháng / building / mở rộng status"
 
+#### Scenario: Browse order matches the monthly workflow
+- **WHEN** the list contains invoices from multiple periods and buildings
+- **THEN** newer periods appear first, followed by building name, floor, and natural room number in ascending order
+- **AND** contracts and invoices sharing a room have a stable code and ID order
+- **AND** the order is applied before server pagination
+
 ### Requirement: Filter and search controls
 The page SHALL provide filter controls: building (single select, default "tất cả"), month + year picker (single month or "tất cả tháng năm này"), status (multi-select chip: chưa thu / một phần / đã thu / quá hạn / huỷ), tenant search (free-text, search theo tên hoặc số điện thoại).
 

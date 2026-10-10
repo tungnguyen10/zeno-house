@@ -43,7 +43,7 @@ onBeforeUnmount(() => {
 })
 
 // Contracts
-const { data: contractsData } = await useFetch<ApiSuccess<ContractWithDetails[]> & { meta: { total: number } }>(
+const { data: contractsData } = useLazyFetch<ApiSuccess<ContractWithDetails[]> & { meta: { total: number } }>(
   '/api/contracts',
   { query: { tenant_id: id, limit: 50 } },
 )

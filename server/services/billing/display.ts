@@ -21,6 +21,7 @@ export interface TenantDisplay {
 export interface RoomDisplay {
   id: string
   roomNumber: string | null
+  floor: number | null
   buildingId: string | null
 }
 
@@ -174,7 +175,7 @@ export class BillingDisplayResolver {
       this.countQuery('rooms')
       const { data, error } = await client
         .from('rooms')
-        .select('id, room_number, building_id')
+        .select('id, room_number, floor, building_id')
         .in('id', missing)
       if (error) throw createError({ statusCode: 500, message: error.message })
       const found = new Set<string>()
@@ -183,6 +184,7 @@ export class BillingDisplayResolver {
         this.rooms.set(row.id, {
           id: row.id,
           roomNumber: row.room_number ?? null,
+          floor: row.floor ?? null,
           buildingId: row.building_id ?? null,
         })
       }
@@ -278,7 +280,7 @@ export class BillingDisplayResolver {
     return new Map(uniqueIds(ids).map(id => [id, this.invoices.get(id) ?? null]))
   }
 
-  async enrichInvoices<T extends { tenantId: string; roomId: string; contractId: string }>(invoices: T[]): Promise<Array<T & { tenantName: string | null; roomNumber: string | null; contractCode: string | null }>> {
+  async enrichInvoices<T extends { tenantId: string; roomId: string; contractId: string }>(invoices: T[]): Promise<Array<T & { tenantName: string | null; roomNumber: string | null; roomFloor: number | null; contractCode: string | null }>> {
     const [tenants, rooms, contracts] = await Promise.all([
       this.loadTenants(invoices.map(i => i.tenantId)),
       this.loadRooms(invoices.map(i => i.roomId)),
@@ -290,6 +292,7 @@ export class BillingDisplayResolver {
         ...invoice,
         tenantName: tenants.get(invoice.tenantId)?.fullName ?? null,
         roomNumber: rooms.get(invoice.roomId)?.roomNumber ?? null,
+        roomFloor: rooms.get(invoice.roomId)?.floor ?? null,
         contractCode: contract?.contractCode ?? fallbackContractCode(invoice.contractId),
       }
     })

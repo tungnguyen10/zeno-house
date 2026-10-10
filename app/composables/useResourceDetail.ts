@@ -11,7 +11,7 @@ export function useResourceDetail<T>(endpoint: MaybeRefOrGetter<string>) {
   )
 
   const entity = computed(() => data.value?.data ?? null)
-  const isLoading = computed(() => status.value === 'pending')
+  const isLoading = computed(() => status.value === 'idle' || status.value === 'pending')
 
   return { entity, data, status, isLoading, error, refresh }
 }

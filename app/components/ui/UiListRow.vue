@@ -20,7 +20,7 @@ const props = withDefaults(defineProps<{
 
 const rowClass = computed(() =>
   clsx(
-    'group flex items-center gap-3 transition-colors',
+    'group flex items-center gap-3 transition-colors active:bg-ui-hover',
     props.compact
       ? 'rounded-lg border border-ui-border px-3 py-2 hover:border-ui-accent/40'
       : 'rounded-xl border border-ui-border bg-ui-surface px-4 py-3 hover:border-ui-accent/40',

@@ -26,14 +26,14 @@ const headerTitle = useAppHeaderTitle()
 
 const {
   data: invoiceResponse,
-  pending,
+  status: detailStatus,
   error,
-} = await useFetch<ApiSuccess<InvoiceWithCharges>>(`/api/billing/invoices/${invoiceId}`)
+} = useLazyFetch<ApiSuccess<InvoiceWithCharges>>(`/api/billing/invoices/${invoiceId}`)
 
 const detail = computed(() => invoiceResponse.value?.data ?? null)
 const invoice = computed(() => detail.value?.invoice ?? null)
 
-const { data: overview } = await useAsyncData(
+const { data: overview } = useLazyAsyncData(
   `billing-invoice-overview-${invoiceId}`,
   async () => {
     const periodId = invoice.value?.billingPeriodId
@@ -120,7 +120,7 @@ function dateTimeText(value: string | null | undefined): string {
       </template>
     </UiPageHeader>
 
-    <div v-if="pending" class="space-y-3">
+    <div v-if="detailStatus === 'idle' || detailStatus === 'pending'" class="space-y-3">
       <UiSkeleton class="h-24 w-full" />
       <UiSkeleton class="h-48 w-full" />
     </div>

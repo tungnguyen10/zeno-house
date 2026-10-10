@@ -20,6 +20,7 @@ import { billingPeriodBounds, type BillableContractPeriodRow } from './core'
 import { calculateProratedRent, roundUpToThousand } from './rules'
 import { ContractAmendmentService } from '../contract-amendments'
 import { vietnamDateISO } from '../../utils/date'
+import { compareBillingItems } from '~/utils/billing/invoice-sort'
 
 // ---------------------------------------------------------------------------
 // Types describing the source rows we load. Kept local to this service so the
@@ -88,6 +89,7 @@ interface MeterReadingRow {
 interface RoomRow {
   id: string
   room_number: string | null
+  floor: number | null
 }
 
 interface TenantRow {
@@ -304,6 +306,7 @@ export const BillingDraftService = {
           contractId: contract.id, roomId: contract.room_id, tenantId: contract.tenant_id,
           contractCode: contract.contract_code, paymentDueDay: contract.payment_due_day,
           roomNumber: room?.room_number ?? null, tenantName: tenant?.full_name ?? null,
+          roomFloor: room?.floor ?? null,
           lines: finalLines, subtotalAmount: total, discountAmount: 0, surchargeAmount: 0,
           totalAmount: total, blockers, warnings,
           existingInvoiceId: existing?.id ?? null, existingInvoiceStatus: existing?.status ?? null,
@@ -768,6 +771,7 @@ export const BillingDraftService = {
         tenantId: contract.tenant_id,
         contractCode: contract.contract_code ?? null,
         roomNumber: room?.room_number ?? null,
+        roomFloor: room?.floor ?? null,
         tenantName: tenant?.full_name ?? null,
         lines,
         subtotalAmount: subtotal,
@@ -798,7 +802,10 @@ export const BillingDraftService = {
 
     return {
       period,
-      drafts,
+      drafts: drafts.sort((a, b) => compareBillingItems(
+        { ...a, floor: a.roomFloor },
+        { ...b, floor: b.roomFloor },
+      )),
       totals: {
         draftTotal: draftTotalSum,
         blockedDraftCount: blockedCount,

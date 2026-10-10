@@ -2,6 +2,15 @@ export type TenantStatus = 'active' | 'archived'
 export type TenantAssignmentRole = 'primary' | 'roommate'
 export type TenantIdImageSide = 'front' | 'back'
 
+export interface TenantExportCandidate {
+  id: string
+  code: string
+  fullName: string
+  phone: string
+  roomNumbers: string[]
+  roles: TenantAssignmentRole[]
+}
+
 export interface Tenant {
   id: string
   code: string

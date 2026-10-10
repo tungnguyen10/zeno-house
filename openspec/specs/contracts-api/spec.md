@@ -233,7 +233,7 @@ The server contract creation logic SHALL generate `contract_code` using the form
 - **THEN** first contract for `hnt` in 2026 gets `hd-hnt-2026-0001` regardless of `zhpn` sequence
 
 ### Requirement: GET /api/contracts validates query with Zod
-`server/api/contracts/index.get.ts` SHALL validate the incoming query with `contractListQuerySchema` (`page`, `limit`, `q?`, `building_id?`, `room_id?`, `tenant_id?`, `status?: ('active'|'expired'|'terminated'|'renewed')[]`, `sort?: 'start_date'|'end_date'|'created_at'|'monthly_rent'`, `order?: 'asc'|'desc'`). Invalid query SHALL yield `422 VALIDATION_ERROR`. The endpoint SHALL preserve the existing `{ data, meta }` envelope.
+`server/api/contracts/index.get.ts` SHALL validate the incoming query with `contractListQuerySchema` (`page`, `limit`, `q?`, `building_id?`, `room_id?`, `tenant_id?`, `status?: ('active'|'expired'|'terminated'|'renewed')[]`, `sort?: 'location'|'start_date'|'end_date'|'created_at'|'monthly_rent'`, `order?: 'asc'|'desc'`). Invalid query SHALL yield `422 VALIDATION_ERROR`. The endpoint SHALL preserve the existing `{ data, meta }` envelope.
 
 #### Scenario: Valid query passes
 - **WHEN** authenticated user calls `GET /api/contracts?q=A101&status=active&sort=start_date&order=desc`
@@ -250,7 +250,12 @@ The server contract creation logic SHALL generate `contract_code` using the form
 ---
 
 ### Requirement: GET /api/contracts supports search, sort, and multi-status filter
-`server/api/contracts/index.get.ts` SHALL accept query params `q`, `sort`, `order`, `status[]` in addition to existing `building_id`, `room_id`, `tenant_id`, `page`, `limit`. When `status` is omitted, results SHALL include all statuses (default order: `created_at desc`). Search `q` SHALL match `contract_code` or the joined `tenants.full_name` / `rooms.room_number` (case-insensitive).
+`server/api/contracts/index.get.ts` SHALL accept query params `q`, `sort`, `order`, `status[]` in addition to existing `building_id`, `room_id`, `tenant_id`, `page`, `limit`. When `status` is omitted, results SHALL include all statuses. The default sort is ascending location: building name, floor, natural room number, contract code, then ID, applied before pagination. Search `q` SHALL match `contract_code` or the joined `tenants.full_name` / `rooms.room_number` (case-insensitive).
+
+#### Scenario: Default location order across page boundaries
+- **WHEN** the list spans multiple buildings, floors, and rooms including `2` and `10`
+- **THEN** contracts appear by building name, ascending floor, natural room number, contract code, and ID
+- **AND** the order is applied before server pagination without changing filters, scope, or total count
 
 #### Scenario: Search across contract_code, tenant name, room number
 - **WHEN** authenticated user calls `GET /api/contracts?q=nguyen`
@@ -378,7 +383,7 @@ Each method SHALL re-check permissions using `can(user, capability)`.
 
 ### Requirement: Contracts repository supports search, sort, and counts
 `server/repositories/contracts/index.ts` SHALL extend:
-- `findAll({ page, limit, q?, building_id?, room_id?, tenant_id?, status?, sort?, order? })` builds a Supabase query with `ilike` for `q` on `contract_code` and via foreign-table on `tenants.full_name` and `rooms.room_number`, `in` filter for `status`, `order` clause for the chosen sort field.
+- `findAll({ page, limit, q?, building_id?, room_id?, tenant_id?, status?, sort?, order? })` resolves tenant and room search matches, applies the combined `q` and status filters to contract browse rows, and orders in the database before page range.
 - `countBillingPeriodsForContract(id)` returns the number of billing_periods referencing the contract.
 - `countPaidInvoicesForContract(id)` returns the number of invoices with `status` in `('paid','partial')`.
 - `countNonHandoverMeterReadingsForContract(id)` returns the number of meter_readings not of type `handover_in` or `handover_out`.

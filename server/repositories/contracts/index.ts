@@ -3,7 +3,7 @@ import type { H3Event } from 'h3'
 import type { Database } from '~/types/database.types'
 import type { Contract, ContractStatus, ContractWithDetails } from '~/types/contracts'
 import type { ContractCreateInput, ContractUpdateInput } from '~/utils/validators/contracts'
-import { mapContract, mapContractWithDetails } from '~/utils/mappers/contracts'
+import { mapContract, mapContractBrowseRow, mapContractWithDetails, type ContractBrowseRow } from '~/utils/mappers/contracts'
 import { isUuid } from '~/utils/format/slug'
 
 export interface ContractFilters {
@@ -13,7 +13,7 @@ export interface ContractFilters {
   buildingIds?: string[] | null
   status?: ContractStatus[]
   q?: string
-  sort?: 'start_date' | 'end_date' | 'created_at' | 'monthly_rent'
+  sort?: 'location' | 'start_date' | 'end_date' | 'created_at' | 'monthly_rent'
   order?: 'asc' | 'desc'
   page?: number
   limit?: number
@@ -80,13 +80,13 @@ export const ContractRepository = {
     const page = filters.page ?? 1
     const limit = filters.limit ?? 20
     const { from, to } = calculatePaginationBounds(page, limit)
-    const sort = filters.sort ?? 'created_at'
-    const order = filters.order ?? 'desc'
+    const sort = filters.sort ?? 'location'
+    const order = filters.order ?? (sort === 'location' ? 'asc' : 'desc')
     const ascending = order === 'asc'
 
     let query = client
-      .from('contracts')
-      .select(DETAIL_SELECT, { count: 'exact' })
+      .from('contract_browse_rows' as never)
+      .select('*', { count: 'exact' })
 
     if (filters.room_id) query = query.eq('room_id', filters.room_id)
     if (filters.tenant_id) query = query.eq('tenant_id', filters.tenant_id)
@@ -117,14 +117,27 @@ export const ContractRepository = {
       query = query.or(orParts.join(','))
     }
 
-    query = query.order(sort, { ascending })
-    if (sort !== 'created_at') query = query.order('created_at', { ascending: false })
+    if (sort === 'location') {
+      query = query
+        .order('building_sort_name', { ascending, nullsFirst: false })
+        .order('building_id', { ascending })
+        .order('room_floor', { ascending, nullsFirst: false })
+        .order('room_sort_number', { ascending, nullsFirst: false })
+        .order('room_number', { ascending, nullsFirst: false })
+        .order('contract_sort_code', { ascending, nullsFirst: false })
+        .order('contract_code', { ascending, nullsFirst: false })
+    }
+    else {
+      query = query.order(sort, { ascending })
+      if (sort !== 'created_at') query = query.order('created_at', { ascending: false })
+    }
+    query = query.order('id', { ascending: true })
     query = query.range(from, to)
 
     const { data, error, count } = await query
     if (error) throwDbError(error, 'contracts.findAll')
     return {
-      items: (data ?? []).map((row) => mapContractWithDetails(row as Parameters<typeof mapContractWithDetails>[0])),
+      items: ((data ?? []) as unknown as ContractBrowseRow[]).map(mapContractBrowseRow),
       total: count ?? 0,
     }
   },

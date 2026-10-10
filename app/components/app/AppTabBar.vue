@@ -22,7 +22,7 @@ function tabLinkClass(active: boolean) {
     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ui-accent/40',
     active
       ? 'bg-ui-accent/10 px-3.5 text-ui-accent'
-      : 'w-12 text-ui-muted hover:bg-ui-hover hover:text-ui-primary',
+      : 'w-12 text-ui-muted hover:bg-ui-hover hover:text-ui-primary active:bg-ui-hover active:text-ui-primary',
   ]
 }
 </script>

@@ -223,6 +223,36 @@ describe('billing API consistency regression', () => {
     })
   })
 
+  it('keeps draft and grid rows in the same floor, room, contract order', async () => {
+    const snapshot = await loadSnapshot()
+    const first = snapshot.contracts[0]
+    snapshot.rooms = [
+      { id: 'room-10', room_number: '10', floor: 1, status: 'occupied' },
+      { id: 'room-1', room_number: '1', floor: 2, status: 'occupied' },
+      { id: 'room-2', room_number: '2', floor: 1, status: 'occupied' },
+    ]
+    snapshot.contracts = [
+      { ...first, id: 'contract-floor-2', contract_code: 'HD-1', room_id: 'room-1' },
+      { ...first, id: 'contract-10', contract_code: 'HD-10', room_id: 'room-2' },
+      { ...first, id: 'contract-2', contract_code: 'HD-2', room_id: 'room-2' },
+      { ...first, id: 'contract-room-10', contract_code: 'HD-1', room_id: 'room-10' },
+    ]
+    loadSnapshot.mockResolvedValue(snapshot)
+    const [{ BillingDraftService }, { BillingDraftGridService }] = await Promise.all([
+      import('../../../server/services/billing/drafts'),
+      import('../../../server/services/billing/grid'),
+    ])
+    const user = { id: 'user-1', app_metadata: { role: 'admin' } } as never
+    const event = { context: {} } as never
+
+    const drafts = await BillingDraftService.calculateDraft(event, user, period.id)
+    const grid = await BillingDraftGridService.getGrid(event, user, period.id)
+    const expected = ['contract-2', 'contract-10', 'contract-room-10', 'contract-floor-2']
+
+    expect(drafts.drafts.map(row => row.contractId)).toEqual(expected)
+    expect(grid.rows.filter(row => row.contractId).map(row => row.contractId)).toEqual(expected)
+  })
+
 
   it('keeps both contract rows when occupants change in the same room and routes final charges through checkout', async () => {
     const snapshot = await loadSnapshot()

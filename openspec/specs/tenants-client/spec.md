@@ -238,3 +238,13 @@ Tenant client behavior SHALL allow internal implementation via shared helpers (q
 - **WHEN** `tenantBulkActionSchema.safeParse({ action: 'delete', ids: ['x'] })` is called
 - **THEN** `success === false` with error on `reason`
 
+### Requirement: Export current tenants from the list
+`/dashboard/tenants` SHALL show **Xuất Excel** only to users with `tenants.export`. Its modal SHALL choose one visible building, show current tenants from that building, support search and individual or all-matching selection, retain selections across search, and clear selections when the building changes. Export SHALL remain disabled until at least one tenant is selected and SHALL show loading, empty, failure, and in-flight states.
+
+#### Scenario: Select across a search
+- **WHEN** the operator selects one tenant, searches for another, and selects all matching results
+- **THEN** both tenants remain selected and only those IDs are submitted for XLSX export
+
+#### Scenario: Change building
+- **WHEN** the operator chooses another building
+- **THEN** the previous selection is cleared before the new candidate list loads

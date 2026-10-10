@@ -3,7 +3,7 @@ import { limitSchema, orderSchema, pageSchema, searchQuerySchema, toArray, trimm
 import { VALIDATION_MESSAGES } from './messages'
 
 export const contractStatusSchema = z.enum(['active', 'expired', 'terminated', 'renewed'])
-export const contractSortFieldSchema = z.enum(['start_date', 'end_date', 'created_at', 'monthly_rent'])
+export const contractSortFieldSchema = z.enum(['location', 'start_date', 'end_date', 'created_at', 'monthly_rent'])
 export const contractSortOrderSchema = orderSchema
 
 export const contractListQuerySchema = z.object({
@@ -14,9 +14,9 @@ export const contractListQuerySchema = z.object({
   room_id: trimmedOptionalString,
   tenant_id: trimmedOptionalString,
   status: z.preprocess(toArray, z.array(contractStatusSchema).min(1).optional()),
-  sort: contractSortFieldSchema.optional().default('created_at'),
-  order: contractSortOrderSchema.optional().default('desc'),
-})
+  sort: contractSortFieldSchema.optional().default('location'),
+  order: contractSortOrderSchema.optional(),
+}).transform(query => ({ ...query, order: query.order ?? (query.sort === 'location' ? 'asc' : 'desc') }))
 
 export type ContractListQuery = z.infer<typeof contractListQuerySchema>
 

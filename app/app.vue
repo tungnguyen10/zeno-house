@@ -20,15 +20,16 @@ useHead({
 
 // The scrollable region is an inner `#main-content` div, not the window, so
 // Nuxt's default scroll-to-top on navigation never resets it — do it here.
-watch(() => route.fullPath, () => {
+watch(() => route.fullPath, (_next, previous) => {
   if (typeof document === 'undefined') return
+  if (route.path.startsWith('/dashboard') || previous?.startsWith('/dashboard')) return
   document.getElementById('main-content')?.scrollTo({ top: 0 })
 })
 </script>
 
 <template>
   <div>
-    <NuxtLoadingIndicator color="var(--color-accent)" />
+    <NuxtLoadingIndicator color="rgb(var(--ui-accent))" :throttle="0" />
     <NuxtRouteAnnouncer />
     <a
       href="#main-content"

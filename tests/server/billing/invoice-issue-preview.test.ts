@@ -138,6 +138,34 @@ describe('BillingInvoiceIssueService', () => {
     })
   })
 
+  it('orders preview documents and exclusions by floor and natural room number', async () => {
+    const base = draftResponse()
+    const makeDraft = (contract: string, floor: number, room: string, state: 'ready' | 'blocked' | 'issued' = 'ready') => ({
+      ...base.drafts[0]!,
+      contractId: contract,
+      roomFloor: floor,
+      roomNumber: room,
+      roomId: `room-${contract}`,
+      blockers: state === 'blocked' ? [{ code: 'missing_current_reading' as const, message: 'Thiếu chỉ số' }] : [],
+      existingInvoiceId: state === 'issued' ? `invoice-${contract}` : null,
+      existingInvoiceStatus: state === 'issued' ? 'issued' as const : null,
+    })
+    base.drafts = [
+      makeDraft('contract-floor-2', 2, '1'),
+      makeDraft('contract-blocked-10', 1, '10', 'blocked'),
+      makeDraft('contract-ready-10', 1, '10'),
+      makeDraft('contract-issued-2', 1, '2', 'issued'),
+      makeDraft('contract-ready-2', 1, '2'),
+    ]
+    calculateDraft.mockResolvedValue(base)
+    const { BillingInvoiceIssueService } = await import('../../../server/services/billing/invoice-issue-preview')
+
+    const result = await BillingInvoiceIssueService.preview({} as never, user, periodId, {})
+
+    expect(result.items.map(item => item.roomNumber)).toEqual(['2', '10', '1'])
+    expect(result.exclusions.map(item => item.roomNumber)).toEqual(['2', '10'])
+  })
+
   it('rejects stale confirmation without issuing anything', async () => {
     const { BillingInvoiceIssueService } = await import('../../../server/services/billing/invoice-issue-preview')
     await expect(BillingInvoiceIssueService.confirm({} as never, user, periodId, {

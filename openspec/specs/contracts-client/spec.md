@@ -5,6 +5,11 @@ Client-side UI for managing contracts. List page with status filter, detail page
 ### Requirement: Contract list page
 `/contracts` page SHALL display all contracts in a list. Supports filter by building and status (dropdown: all / active / expired / terminated). When no building is selected, the page SHALL list contracts from all buildings. Shows loading skeleton and empty state. Admin sees create button. Includes pagination (prev/next) when `totalPages > 1`. Each row/card shows: room number + building name, tenant full_name, start_date, end_date, monthly_rent, status badge.
 
+#### Scenario: Default contract order follows invoice location order
+- **WHEN** the user opens the contract list without a sort query
+- **THEN** contracts appear by building name, ascending floor, natural room number, contract code, and ID
+- **AND** the selected sort control shows "Tòa nhà & phòng"
+
 #### Scenario: List loads
 - **WHEN** admin navigates to /contracts
 - **THEN** contracts are displayed with room, tenant, dates, rent, and status badge
@@ -184,7 +189,7 @@ Contract routes SHALL NOT use tenant-name-derived slugs.
 - **THEN** the contract URL does not include a slug derived from `Nguyen Van A`
 
 ### Requirement: useContractList accepts filter/sort/URL-sync refs
-`useContractList()` SHALL expose reactive refs for `q: string`, `status: ContractStatus[]`, `sort: 'start_date' | 'end_date' | 'created_at' | 'monthly_rent'`, `order: 'asc' | 'desc'`, `roomFilter: string`, `tenantFilter: string` in addition to existing `buildingFilter`, `statusFilter`, `page`, `limit`. These refs SHALL be two-way synchronized with `useRoute().query` so that updating a ref pushes to URL and navigating with new query updates the refs. Changes to `q`, `status`, `sort`, `buildingFilter`, `roomFilter`, or `tenantFilter` SHALL reset `page` to 1.
+`useContractList()` SHALL expose reactive refs for `q: string`, `status: ContractStatus[]`, `sort: 'location' | 'start_date' | 'end_date' | 'created_at' | 'monthly_rent'`, `order: 'asc' | 'desc'`, `roomFilter: string`, `tenantFilter: string` in addition to existing `buildingFilter`, `statusFilter`, `page`, `limit`. The default is `location` ascending. These refs SHALL be two-way synchronized with `useRoute().query` so that updating a ref pushes to URL and navigating with new query updates the refs. Changes to `q`, `status`, `sort`, `buildingFilter`, `roomFilter`, or `tenantFilter` SHALL reset `page` to 1.
 
 #### Scenario: Query refs initialize from URL
 - **WHEN** composable mounts on `/contracts?q=A101&status=active&sort=start_date&order=desc&page=2`
@@ -254,7 +259,7 @@ Contract draft behavior SHALL remain wizard-aware and versioned (including `curr
 ---
 
 ### Requirement: Contracts validators include list-query and bulk-action schemas
-`app/utils/validators/contracts.ts` SHALL export `contractListQuerySchema` (page, limit, q, building_id, room_id, tenant_id, status[], sort, order — all optional with defaults) and `contractBulkActionSchema` (action enum, ids min 1, optional `reason` that is required when `action='delete'`). Both schemas SHALL be shared between client (URL parse, request body) and server (validation entry).
+`app/utils/validators/contracts.ts` SHALL export `contractListQuerySchema` (page, limit, q, building_id, room_id, tenant_id, status[], sort, order — all optional with defaults) and `contractBulkActionSchema` (action enum, ids min 1, optional `reason` that is required when `action='delete'`). The list query defaults to `location` ascending and preserves descending order for other sorts when `order` is omitted. Both schemas SHALL be shared between client (URL parse, request body) and server (validation entry).
 
 #### Scenario: contractListQuerySchema parses URL-shaped data
 - **WHEN** `contractListQuerySchema.safeParse({ q: 'x', status: ['active'], sort: 'start_date', order: 'desc' })` is called
@@ -275,4 +280,3 @@ Contract draft behavior SHALL remain wizard-aware and versioned (including `curr
 #### Scenario: contractBulkActionSchema requires reason for delete
 - **WHEN** `contractBulkActionSchema.safeParse({ action: 'delete', ids: ['x'] })` is called
 - **THEN** `success === false` with error on `reason`
-

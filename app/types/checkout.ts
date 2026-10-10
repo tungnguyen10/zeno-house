@@ -1,3 +1,5 @@
+import type { ElectricityPricingType, WaterPricingType } from '~/types/buildings'
+
 export type CheckoutFinancialStatus = 'unsettled' | 'awaiting_payment' | 'awaiting_refund' | 'settled'
 
 export interface CheckoutMeterInput {
@@ -92,11 +94,19 @@ export interface CheckoutSource {
   approvedAmount: number
 }
 
+export interface CheckoutBuildingPricing {
+  electricityPricingType: ElectricityPricingType
+  waterPricingType: WaterPricingType
+  electricityRate: number | null
+  waterRate: number | null
+}
+
 export interface CheckoutBundle {
   enabled: boolean
   schemaAvailable?: boolean
   settlementEnabled?: boolean
   checkout: CheckoutRecord | null
+  buildingPricing?: CheckoutBuildingPricing | null
   depositHeld: number
   creditHeld: number
   statement: CheckoutStatement | null

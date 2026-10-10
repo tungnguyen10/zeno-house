@@ -43,10 +43,10 @@ Statuses:
 - `q` searching contract code, tenant name, and room number
 - `building_id`, `room_id`, `tenant_id`
 - multi-value `status`
-- `sort`: `created_at`, `start_date`, `end_date`, `monthly_rent`
+- `sort`: `location`, `created_at`, `start_date`, `end_date`, `monthly_rent`
 - `order`: `asc`, `desc`
 
-The list page keeps these controls in the URL so filtered views can be shared. Selected contracts open a per-contract return queue; each contract needs its own date, reason, and final readings. Admin users can bulk-delete contracts that pass the safe-delete checks.
+The default `location` order matches invoice browsing: building name, ascending floor, natural room number (`2` before `10`), contract code, then ID. The server applies it before pagination. Other date and rent sort options remain available. The list page keeps these controls in the URL so filtered views can be shared. Selected contracts open a per-contract return queue; each contract needs its own date, reason, and final readings. Admin users can bulk-delete contracts that pass the safe-delete checks.
 Bulk delete requires a non-empty reason and a strong opt-in acknowledgement. After bulk actions finish, the list page clears selection in its `onDone` handler and refreshes the keyed list (`contracts:list`) so the filtered view shows the latest server state immediately.
 
 ## Occupancy Side Effects

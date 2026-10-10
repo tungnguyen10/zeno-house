@@ -286,3 +286,18 @@ Tenant service mutation methods SHALL write audit events to `audit_events`.
 #### Scenario: TenantService mutations emit audit events
 - **WHEN** any mutation method on `TenantService` is called
 - **THEN** an audit event is written to `audit_events`
+
+### Requirement: Export selected current tenants
+`GET /api/tenants/export-candidates?building_id=<uuid>` SHALL return only current primary tenants and roommates in that building, with lean selection fields. `POST /api/tenants/export` SHALL accept `{ building_id, tenant_ids }` and return an XLSX containing one full text-profile row per selected tenant. Both routes SHALL require `tenants.export`, available only to admin and owner, and SHALL enforce visible building scope. The export SHALL recheck every selected tenant's current assignment, reject an empty or stale selection, exclude identity images and URLs, and audit the building and selected count/IDs.
+
+#### Scenario: Current occupants only
+- **WHEN** a building has a current primary tenant, a current roommate, a moved-out roommate, and a future occupant
+- **THEN** only the current primary tenant and roommate are export candidates
+
+#### Scenario: Stale or unauthorized export
+- **WHEN** a manager calls either route, an owner names an out-of-scope building, or a selected tenant is no longer current in that building
+- **THEN** no XLSX is returned; the manager is forbidden, the building is hidden, or the stale selection is rejected as appropriate
+
+#### Scenario: Tenant workbook uses shared styling
+- **WHEN** selected current tenants are exported
+- **THEN** title, building summary, column headers, and profile rows use the shared Excel styling while filters, frozen headers, one row per tenant, and text formats for phone and identity number remain intact

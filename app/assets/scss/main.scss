@@ -69,6 +69,42 @@ html[data-dashboard-theme='light'] {
   }
 }
 
+/* Immediate acknowledgement for navigation from dashboard links and buttons. */
+[data-dashboard-navigation-pending] {
+  box-shadow: inset 0 0 0 2px rgb(var(--ui-accent) / 0.45);
+  background-color: rgb(var(--ui-accent) / 0.1);
+}
+
+[data-dashboard-navigation-spinner] {
+  cursor: progress;
+}
+
+[data-dashboard-navigation-spinner]:is(a, button) {
+  position: relative;
+}
+
+[data-dashboard-navigation-spinner]:is(a, button)::after {
+  content: '';
+  position: absolute;
+  right: 0.35rem;
+  top: calc(50% - 0.35rem);
+  width: 0.7rem;
+  height: 0.7rem;
+  border: 2px solid rgb(var(--ui-accent) / 0.35);
+  border-top-color: rgb(var(--ui-accent));
+  border-radius: 50%;
+  animation: dashboard-navigation-spin 0.7s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes dashboard-navigation-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-dashboard-navigation-spinner]:is(a, button)::after { animation: none; }
+}
+
 /* Inter Variable Font */
 @font-face {
   font-family: 'Inter';

@@ -203,7 +203,12 @@ async function resendEmail(confirmDuplicate: boolean) {
     </template>
 
     <div class="-mx-2 -my-1 space-y-3 sm:mx-0 sm:my-0 sm:space-y-4">
-      <UiAlert v-if="error" severity="danger">{{ error }}</UiAlert>
+      <UiAlert v-if="error" severity="danger">
+        {{ error }}
+        <UiButton v-if="invoice" variant="secondary" size="sm" class="mt-3" @click="load(invoice.invoice_code)">
+          Thử lại
+        </UiButton>
+      </UiAlert>
 
       <div
         v-if="invoice"

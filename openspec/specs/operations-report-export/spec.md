@@ -15,6 +15,10 @@ The system SHALL export the monthly operations report for a selected building/mo
 - **WHEN** the export workbook is generated
 - **THEN** it includes issued revenue, collected amount, debt, fixed-cost total, monthly expense total, total expense, profit by revenue, profit by cash, revenue-by-type rows, expense rows, and electricity/water margins for that building/month
 
+#### Scenario: Report sections use shared workbook styling
+- **WHEN** the export workbook is generated
+- **THEN** the title, building, export date, section headings, and data rows use the shared Excel styling while preserving the report sections and numeric formats
+
 #### Scenario: Export excludes voided and soft-deleted data
 - **WHEN** the selected period contains void invoices or soft-deleted payments
 - **THEN** the export excludes them consistently with the on-screen report
@@ -35,7 +39,7 @@ The system SHALL restrict operations report export to authorized, in-scope users
 - **THEN** the API responds with a forbidden error
 
 ### Requirement: Shared export utilities
-The system SHALL share Excel-building and download helpers between billing and operations exports without changing billing export behavior.
+The system SHALL share Excel-building and download helpers between billing, operations, and tenant exports while preserving each workbook's content and layout.
 
 #### Scenario: Billing export uses shared helpers
 - **WHEN** billing export produces its workbook

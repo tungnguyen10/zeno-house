@@ -44,6 +44,12 @@ const {
   refresh,
 } = useContractList()
 const toast = useToast()
+
+function handleSortChange(value: typeof sort.value) {
+  sort.value = value
+  order.value = value === 'location' ? 'asc' : 'desc'
+}
+
 const {
   selectedIds,
   isSelected,
@@ -54,7 +60,7 @@ const {
   isRunning,
 } = useContractBulkActions()
 
-const { data: buildingsData } = await useFetch<ApiSuccess<Building[]> & { meta: { total: number } }>(
+const { data: buildingsData } = useLazyFetch<ApiSuccess<Building[]> & { meta: { total: number } }>(
   '/api/buildings',
   { query: { limit: 100 } },
 )
@@ -127,11 +133,12 @@ watch(contracts, () => {
       v-model:q="q"
       v-model:building-filter="buildingFilter"
       v-model:status="status"
-      v-model:sort="sort"
       v-model:order="order"
+      :sort="sort"
       :building-options="buildingOptions"
       :has-active-filters="hasActiveFilters"
       class="mb-4"
+      @update:sort="handleSortChange"
       @reset="resetFilters"
     />
 

@@ -16,12 +16,16 @@ export function invalidateContractListCache() {
   clearNuxtData(CONTRACT_LIST_ASYNC_KEY)
 }
 
-type SortField = 'start_date' | 'end_date' | 'created_at' | 'monthly_rent'
+type SortField = 'location' | 'start_date' | 'end_date' | 'created_at' | 'monthly_rent'
 type SortOrder = 'asc' | 'desc'
 
-const SORT_FIELDS: SortField[] = ['start_date', 'end_date', 'created_at', 'monthly_rent']
+const SORT_FIELDS: SortField[] = ['location', 'start_date', 'end_date', 'created_at', 'monthly_rent']
 const SORT_ORDERS: SortOrder[] = ['asc', 'desc']
 const STATUSES: ContractStatus[] = ['active', 'expired', 'terminated', 'renewed']
+
+function defaultSortOrder(sort: SortField): SortOrder {
+  return sort === 'location' ? 'asc' : 'desc'
+}
 
 export function useContractList() {
   const route = useRoute()
@@ -33,8 +37,8 @@ export function useContractList() {
   const roomFilter = ref<string>(readQueryString(route.query.room_id))
   const tenantFilter = ref<string>(readQueryString(route.query.tenant_id))
   const status = ref<ContractStatus[]>(readQueryEnumArray(route.query.status, STATUSES))
-  const sort = ref<SortField>(readQueryEnum(route.query.sort, SORT_FIELDS, 'created_at'))
-  const order = ref<SortOrder>(readQueryEnum(route.query.order, SORT_ORDERS, 'desc'))
+  const sort = ref<SortField>(readQueryEnum(route.query.sort, SORT_FIELDS, 'location'))
+  const order = ref<SortOrder>(readQueryEnum(route.query.order, SORT_ORDERS, defaultSortOrder(sort.value)))
 
   // Backward-compat single-value status filter (kept for callers that still
   // bind a single select). Mirrors into `status` array on change.
@@ -58,8 +62,8 @@ export function useContractList() {
       const newRoom = readQueryString(newQuery.room_id)
       const newTenant = readQueryString(newQuery.tenant_id)
       const newStatus = readQueryEnumArray(newQuery.status, STATUSES)
-      const newSort = readQueryEnum(newQuery.sort, SORT_FIELDS, 'created_at')
-      const newOrder = readQueryEnum(newQuery.order, SORT_ORDERS, 'desc')
+      const newSort = readQueryEnum(newQuery.sort, SORT_FIELDS, 'location')
+      const newOrder = readQueryEnum(newQuery.order, SORT_ORDERS, defaultSortOrder(newSort))
 
       if (page.value !== newPage) page.value = newPage
       if (limit.value !== newLimit) limit.value = newLimit
@@ -80,8 +84,8 @@ export function useContractList() {
       next.room_id = roomFilter.value || undefined
       next.tenant_id = tenantFilter.value || undefined
       next.status = status.value.length > 0 ? status.value : undefined
-      next.sort = sort.value !== 'created_at' ? sort.value : undefined
-      next.order = order.value !== 'desc' ? order.value : undefined
+      next.sort = sort.value !== 'location' ? sort.value : undefined
+      next.order = sort.value !== 'location' || order.value !== 'asc' ? order.value : undefined
 
       return next
     },
@@ -117,8 +121,8 @@ export function useContractList() {
     || Boolean(roomFilter.value)
     || Boolean(tenantFilter.value)
     || status.value.length > 0
-    || sort.value !== 'created_at'
-    || order.value !== 'desc',
+    || sort.value !== 'location'
+    || order.value !== 'asc',
   )
 
   function resetFilters() {
@@ -127,8 +131,8 @@ export function useContractList() {
     roomFilter.value = ''
     tenantFilter.value = ''
     status.value = []
-    sort.value = 'created_at'
-    order.value = 'desc'
+    sort.value = 'location'
+    order.value = 'asc'
     page.value = 1
   }
 

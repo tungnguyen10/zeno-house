@@ -7,6 +7,7 @@ import { formatCurrency } from '~/utils/format/currency'
 import { invoicePath, invoiceRouteSegment } from '~/utils/routes/operational'
 import { isPeriodLocked } from '~/utils/billing/lock'
 import { getApiErrorDetails, getApiErrorMessage } from '~/utils/api-error'
+import { compareBillingItems } from '~/utils/billing/invoice-sort'
 
 export interface BillingPaymentsIntent {
   id: number
@@ -62,12 +63,15 @@ function deriveBucket(inv: Invoice): 'paid' | 'partial' | 'unpaid' | 'overdue' |
   return 'unpaid'
 }
 
-const activeInvoices = computed(() => props.invoices.filter(i => i.status !== 'void'))
+const compareInvoices = (a: Invoice, b: Invoice) => compareBillingItems(
+  { ...a, floor: a.roomFloor },
+  { ...b, floor: b.roomFloor },
+)
+const activeInvoices = computed(() => props.invoices.filter(i => i.status !== 'void').sort(compareInvoices))
 const voidedInvoices = computed(() =>
   props.invoices
     .filter(i => i.status === 'void')
-    .slice()
-    .sort((a, b) => (b.voidedAt ?? '').localeCompare(a.voidedAt ?? '')),
+    .sort(compareInvoices),
 )
 const replacementById = computed(() => {
   const byId = new Map(props.invoices.map(i => [i.id, i]))
@@ -287,24 +291,37 @@ async function submitBulkPayments(payload: BulkPaymentItemInput[]) {
 
 // ---------- Detail panel ----------
 const selectedInvoice = ref<InvoiceWithCharges | null>(null)
+const detailInvoice = ref<Invoice | null>(null)
+const detailOpen = ref(false)
 const detailLoading = ref(false)
 const detailError = ref<string | null>(null)
+let detailRequest = 0
 
 async function openDetail(inv: Invoice) {
+  if (detailOpen.value && detailLoading.value && detailInvoice.value?.id === inv.id) return
+  const request = ++detailRequest
+  detailInvoice.value = inv
+  selectedInvoice.value = null
+  detailOpen.value = true
   detailLoading.value = true
   detailError.value = null
   try {
-    selectedInvoice.value = await load(invoiceRouteSegment(inv))
+    const result = await load(invoiceRouteSegment(inv))
+    if (request === detailRequest) selectedInvoice.value = result
   } catch (err) {
-    detailError.value = getApiErrorMessage(err, 'Không thể tải hoá đơn')
+    if (request === detailRequest) detailError.value = getApiErrorMessage(err, 'Không thể tải hoá đơn')
   } finally {
-    detailLoading.value = false
+    if (request === detailRequest) detailLoading.value = false
   }
 }
 
 function closeDetail() {
+  detailRequest++
+  detailOpen.value = false
+  detailInvoice.value = null
   selectedInvoice.value = null
   detailError.value = null
+  detailLoading.value = false
 }
 
 const profileRefreshing = ref(false)
@@ -783,15 +800,22 @@ watch(
 
     <!-- Detail / payments history drawer -->
     <UiDrawer
-      :model-value="!!selectedInvoice && !showPaymentModal && !showVoidModal"
+      :model-value="detailOpen && !showPaymentModal && !showVoidModal"
       title="Chi tiết hoá đơn"
       width="w-full sm:w-[480px]"
       @update:model-value="(open) => { if (!open) closeDetail() }"
     >
       <div class="space-y-4">
-        <UiAlert v-if="detailError" severity="danger">{{ detailError }}</UiAlert>
-        <div v-if="detailLoading">
+        <UiAlert v-if="detailError" severity="danger">
+          {{ detailError }}
+          <UiButton v-if="detailInvoice" variant="secondary" size="sm" class="mt-3" @click="openDetail(detailInvoice)">
+            Thử lại
+          </UiButton>
+        </UiAlert>
+        <div v-if="detailLoading" class="space-y-3" aria-busy="true" aria-label="Đang tải chi tiết hoá đơn">
+          <UiSkeleton class="h-7 w-40" />
           <UiSkeleton class="h-24 w-full" />
+          <UiSkeleton class="h-36 w-full" />
         </div>
         <template v-else-if="selectedInvoice">
           <UiSection title="Khoản phí" description="Snapshot tại thời điểm phát hành — không bị ảnh hưởng khi giá thay đổi sau này.">

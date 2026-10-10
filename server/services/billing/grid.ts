@@ -25,6 +25,7 @@ import { BillingDraftService } from './drafts'
 import { ContractAmendmentService } from '../contract-amendments'
 import { vietnamDateISO } from '../../utils/date'
 import { BillingAuditService } from './audit'
+import { compareBillingItems } from '~/utils/billing/invoice-sort'
 
 // ---------------------------------------------------------------------------
 // Types for source rows
@@ -37,19 +38,11 @@ interface RoomRow {
   status: string
 }
 
-const roomNumberCollator = new Intl.Collator('vi', {
-  numeric: true,
-  sensitivity: 'base',
-})
-
 function compareRoomRows(a: RoomRow, b: RoomRow): number {
-  const byFloor = (a.floor ?? Number.MAX_SAFE_INTEGER) - (b.floor ?? Number.MAX_SAFE_INTEGER)
-  if (byFloor !== 0) return byFloor
-
-  const byRoomNumber = roomNumberCollator.compare(a.room_number ?? '', b.room_number ?? '')
-  if (byRoomNumber !== 0) return byRoomNumber
-
-  return a.id.localeCompare(b.id)
+  return compareBillingItems(
+    { floor: a.floor, roomNumber: a.room_number, id: a.id },
+    { floor: b.floor, roomNumber: b.room_number, id: b.id },
+  )
 }
 
 interface MeterReadingRow {
@@ -503,7 +496,10 @@ export const BillingDraftGridService = {
     return {
       period,
       batchReadingDate,
-      rows,
+      rows: rows.sort((a, b) => compareBillingItems(
+        { ...a, id: a.key },
+        { ...b, id: b.key },
+      )),
       totals: {
         requiredReadingCount,
         completeReadingCount,

@@ -400,9 +400,11 @@ Response shape:
 - **WHEN** client sends `tenant_search=0912`
 - **THEN** response includes invoices where tenant phone contains "0912"
 
-#### Scenario: Default sort by issued date desc
+#### Scenario: Default invoice order is stable across pages
 - **WHEN** client calls without explicit sort
-- **THEN** results ordered by `issued_at DESC, id DESC` (deterministic tiebreaker)
+- **THEN** results are ordered by period year/month descending, building name ascending, floor ascending, and room number ascending with numeric segments compared naturally
+- **AND** rows in the same room are ordered by contract code, invoice code, then stable identifiers
+- **AND** the database applies this order before page range so consecutive pages do not overlap or skip matching invoices
 
 #### Scenario: Status `overdue` is derived not stored
 - **WHEN** invoice has status `issued` and `due_date < today` and `balance_amount > 0`
