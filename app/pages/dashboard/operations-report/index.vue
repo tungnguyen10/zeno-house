@@ -505,36 +505,33 @@ function signedClass(value: number): string {
 
     <template v-else-if="report && metrics">
       <!-- Headline numbers: revenue, cost and both profit readings in one block -->
-      <div class="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-ui-border bg-ui-border lg:grid-cols-3">
-        <UiMetric flat label="Doanh thu phát hành" :value="formatCurrency(metrics.issuedRevenue)" />
-        <UiMetric flat label="Đã thu" :value="formatCurrency(metrics.collectedCash)" tone="accent" />
+      <UiMetricGrid :cols="3">
+        <UiMetric label="Doanh thu phát hành" :value="formatCurrency(metrics.issuedRevenue)" />
+        <UiMetric label="Đã thu" :value="formatCurrency(metrics.collectedCash)" tone="accent" />
         <UiMetric
-          flat
           label="Công nợ"
           :value="formatCurrency(metrics.debt)"
           :tone="metrics.debt > 0 ? 'warning' : 'default'"
         />
-        <UiMetric flat label="Tổng chi phí" :value="formatCurrency(metrics.totalExpense)" />
+        <UiMetric label="Tổng chi phí" :value="formatCurrency(metrics.totalExpense)" />
         <UiMetric
-          flat
           label="Lợi nhuận (phát hành)"
           :value="formatCurrency(metrics.profitByRevenue)"
           :tone="metrics.profitByRevenue >= 0 ? 'success' : 'danger'"
-          caption="Doanh thu phát hành − tổng chi phí"
+          hint="Doanh thu phát hành − tổng chi phí"
         />
         <UiMetric
-          flat
           label="Lợi nhuận (tiền thu)"
           :value="formatCurrency(metrics.profitByCash)"
           :tone="metrics.profitByCash >= 0 ? 'success' : 'danger'"
-          caption="Tiền đã thu − tổng chi phí"
+          hint="Tiền đã thu − tổng chi phí"
         />
-      </div>
+      </UiMetricGrid>
 
-      <div v-if="metrics.settlementAllocationTotal || metrics.refundTotal" class="mt-2 grid grid-cols-2 gap-2">
+      <UiMetricGrid v-if="metrics.settlementAllocationTotal || metrics.refundTotal" :cols="2" class="mt-2">
         <UiMetric label="Cấn trừ tiền có sẵn" :value="formatCurrency(metrics.settlementAllocationTotal)" caption="Đã áp dụng vào hóa đơn, không phải khoản thu mới" />
         <UiMetric label="Đã hoàn tiền" :value="formatCurrency(metrics.refundTotal)" caption="Hoàn tiền khách, không tính vào chi phí vận hành" />
-      </div>
+      </UiMetricGrid>
 
       <UiSection title="Cơ cấu doanh thu và chi phí" class="mt-6">
         <div class="grid grid-cols-1 gap-2 md:grid-cols-[minmax(0,1.15fr)_minmax(260px,0.85fr)] md:items-start">
@@ -646,46 +643,41 @@ function signedClass(value: number): string {
       </UiSection>
 
       <UiSection v-if="canReadReserveFund && report.reserveFund" title="Quỹ dự phòng" class="mt-6">
-        <div class="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-ui-border bg-ui-border lg:grid-cols-4">
+        <UiMetricGrid :cols="4">
           <UiMetric
-            flat
             label="Tỷ lệ"
             :value="`${report.reserveFund.effectiveRatePercent}%`"
-            caption="Áp dụng cho kỳ này"
+            hint="Áp dụng cho kỳ này"
           />
           <UiMetric
-            flat
             :label="report.reserveFund.monthlyAccrualIsEstimated ? 'Quỹ tháng · ước tính' : 'Tiền quỹ tháng'"
             :value="formatCurrency(report.reserveFund.monthlyAccrualIsEstimated ? report.reserveFund.monthlyAccrualEstimated : report.reserveFund.monthlyAccrual)"
-            :caption="report.reserveFund.monthlyAccrualIsEstimated ? 'Ước tính (chưa chốt báo cáo)' : 'Đã chốt báo cáo'"
+            :hint="report.reserveFund.monthlyAccrualIsEstimated ? 'Ước tính (chưa chốt báo cáo)' : 'Đã chốt báo cáo'"
             tone="success"
           />
           <UiMetric
-            flat
             label="Số dư tháng"
             :value="formatCurrency(report.reserveFund.monthlyBalance)"
             :tone="report.reserveFund.monthlyBalance >= 0 ? 'success' : 'danger'"
-            caption="Tiền quỹ − Chi từ quỹ"
+            hint="Tiền quỹ − Chi từ quỹ"
           />
           <UiMetric
-            flat
             :label="report.reserveFund.cumulativeBalanceIsEstimated ? 'Tổng quỹ · ước tính' : 'Tổng quỹ tòa nhà'"
             :value="formatCurrency(report.reserveFund.cumulativeBalance)"
             :tone="report.reserveFund.cumulativeBalance >= 0 ? 'success' : 'danger'"
-            :caption="report.reserveFund.cumulativeBalanceIsEstimated ? 'Ước tính theo kỳ đang mở' : 'Theo số đã chốt'"
+            :hint="report.reserveFund.cumulativeBalanceIsEstimated ? 'Ước tính theo kỳ đang mở' : 'Theo số đã chốt'"
           />
-        </div>
+        </UiMetricGrid>
       </UiSection>
 
       <!-- Expenses -->
-      <section class="mt-6 space-y-3">
-        <header class="flex items-center justify-between gap-3">
-          <h2 class="min-w-0 truncate text-sm font-semibold text-ui-primary">Chi phí phát sinh trong tháng</h2>
-          <UiButton v-if="canWriteExpense" size="sm" class="shrink-0" @click="openCreateExpense">
+      <UiSection title="Chi phí phát sinh trong tháng" class="mt-6">
+        <template #actions>
+          <UiButton v-if="canWriteExpense" size="sm" @click="openCreateExpense">
             <IconPlus class="h-4 w-4" aria-hidden="true" />
             Thêm chi phí
           </UiButton>
-        </header>
+        </template>
         <div class="rounded-xl border border-ui-border bg-ui-surface md:overflow-hidden">
           <div class="flex items-baseline justify-between gap-3 border-b border-ui-border px-3.5 py-2">
             <span class="text-[11px] font-semibold uppercase tracking-wider text-ui-muted">Tổng</span>
@@ -853,7 +845,7 @@ function signedClass(value: number): string {
             </div>
           </div>
         </div>
-      </section>
+      </UiSection>
     </template>
 
     <!-- Modals -->

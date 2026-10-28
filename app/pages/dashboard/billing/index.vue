@@ -145,14 +145,6 @@ function clearFilters() {
   activeQueue.value = null
 }
 
-const queueChipTone: Record<'warning' | 'accent' | 'default' | 'danger' | 'success', { value: string; ring: string; dot: string }> = {
-  warning: { value: 'text-status-warning', ring: 'ring-status-warning/40 border-status-warning/60', dot: 'bg-status-warning' },
-  accent: { value: 'text-ui-accent', ring: 'ring-ui-accent/40 border-ui-accent/60', dot: 'bg-ui-accent' },
-  default: { value: 'text-ui-primary', ring: 'ring-ui-muted/20 border-ui-muted/30', dot: 'bg-ui-muted/60' },
-  danger: { value: 'text-status-danger', ring: 'ring-status-danger/40 border-status-danger/60', dot: 'bg-status-danger' },
-  success: { value: 'text-status-success', ring: 'ring-status-success/40 border-status-success/60', dot: 'bg-status-success' },
-}
-
 const columns: UiTableColumn<BillingPeriodSummary>[] = [
   { key: 'building', label: 'Tòa nhà' },
   { key: 'period', label: 'Kỳ', width: 'w-20' },
@@ -258,59 +250,19 @@ function periodLabel(row: BillingPeriodSummary): string {
       </template>
     </UiPageHeader>
 
-    <!-- Compact scrollable chip strip below sm; card grid takes over from sm up -->
-    <div class="relative sm:hidden">
-      <div class="-mx-4 flex snap-x snap-mandatory gap-1.5 overflow-x-auto px-4 pb-0.5">
-        <UiButton
-          v-for="metric in queueMetrics"
-          :key="`chip-${metric.key}`"
-          unstyled
-          :aria-pressed="activeQueue === metric.key"
-          :class="[
-            'flex shrink-0 snap-start items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs transition focus:outline-none focus-visible:ring-2 focus-visible:ring-ui-accent/40',
-            activeQueue === metric.key
-              ? `${queueChipTone[metric.tone].ring} ring-2 bg-ui-hover/40`
-              : 'border-ui-border bg-ui-surface hover:border-ui-border-strong hover:bg-ui-hover/40',
-          ]"
-          @click="toggleQueue(metric.key)"
-        >
-          <span :class="['h-1.5 w-1.5 rounded-full shrink-0', queueChipTone[metric.tone].dot]" />
-          <span class="whitespace-nowrap text-ui-muted">{{ metric.shortLabel }}</span>
-          <UiSkeleton v-if="isLoading" class="h-3.5 w-5" />
-          <span v-else :class="['font-semibold tabular-nums', queueChipTone[metric.tone].value]">{{ metric.value }}</span>
-        </UiButton>
-      </div>
-      <!-- Signals horizontal scrollability instead of an abrupt content cut-off -->
-      <div class="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-ui-canvas to-transparent" aria-hidden="true" />
-    </div>
-
-    <div class="hidden gap-2 sm:grid sm:grid-cols-3 lg:grid-cols-5">
-      <UiButton
+    <UiMetricGrid :cols="5" chips>
+      <UiMetricTile
         v-for="metric in queueMetrics"
         :key="metric.key"
-        unstyled
-        :aria-pressed="activeQueue === metric.key"
-        :class="[
-          'group flex min-w-0 flex-col gap-1 rounded-xl border bg-ui-surface px-4 py-3 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-ui-accent/40',
-          activeQueue === metric.key
-            ? `${queueChipTone[metric.tone].ring} ring-2`
-            : 'border-ui-border hover:border-ui-border-strong hover:bg-ui-hover/40',
-        ]"
+        :label="metric.label"
+        :short-label="metric.shortLabel"
+        :value="metric.value"
+        :tone="metric.tone"
+        :pressed="activeQueue === metric.key"
+        :loading="isLoading"
         @click="toggleQueue(metric.key)"
-      >
-        <span class="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-ui-muted">
-          <span :class="['h-1.5 w-1.5 rounded-full shrink-0', queueChipTone[metric.tone].dot]" />
-          <span class="whitespace-nowrap">{{ metric.label }}</span>
-        </span>
-        <UiSkeleton v-if="isLoading" class="h-6 w-12" />
-        <span
-          v-else
-          :class="['text-xl font-semibold tabular-nums leading-none', queueChipTone[metric.tone].value]"
-        >
-          {{ metric.value }}
-        </span>
-      </UiButton>
-    </div>
+      />
+    </UiMetricGrid>
 
     <BillingPeriodFilterBar
       :building-value="buildingFilter"

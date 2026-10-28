@@ -156,7 +156,7 @@ function formatDate(value: string | null): string {
     </UiPageHeader>
 
     <!-- KPI strip -->
-    <div class="mb-4 grid grid-cols-2 gap-3 md:grid-cols-4">
+    <UiMetricGrid :cols="4" class="mb-4">
       <UiMetric
         label="Phòng đang hoạt động"
         :value="String(summary.total)"
@@ -177,7 +177,7 @@ function formatDate(value: string | null): string {
         :value="`${formatNumber(summary.waterUsage)} m³`"
         tone="accent"
       />
-    </div>
+    </UiMetricGrid>
 
     <!-- Period selector -->
     <div class="mb-4 flex flex-wrap items-center gap-3">
