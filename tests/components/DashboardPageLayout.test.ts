@@ -8,15 +8,15 @@ const globalStyles = readFileSync(resolve(process.cwd(), 'app/assets/scss/main.s
 
 describe('dashboard page composition', () => {
   it('uses surface panels and the adaptive KPI grid', () => {
-    expect(source).toContain('md:grid-cols-2')
-    expect(source).toContain('lg:grid-cols-3')
+    expect(source).toContain('grid-cols-2')
+    expect(source).toContain('lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1fr)]')
     expect(source).toContain('data-dashboard-card="collection"')
     expect(source).toContain('data-dashboard-card="rooms"')
     expect(source).toContain('data-dashboard-card="contracts"')
     expect(source.match(/<UiSurfacePanel/g)?.length ?? 0).toBeGreaterThanOrEqual(6)
   })
 
-  it('keeps the approved mobile reading order', () => {
+  it('keeps the approved reading order with actionable work before revenue', () => {
     const collection = source.indexOf('data-dashboard-card="collection"')
     const rooms = source.indexOf('data-dashboard-card="rooms"')
     const contracts = source.indexOf('data-dashboard-card="contracts"')
@@ -27,9 +27,9 @@ describe('dashboard page composition', () => {
     expect(collection).toBeGreaterThan(0)
     expect(collection).toBeLessThan(rooms)
     expect(rooms).toBeLessThan(contracts)
-    expect(contracts).toBeLessThan(revenue)
-    expect(revenue).toBeLessThan(occupancy)
-    expect(occupancy).toBeLessThan(pending)
+    expect(contracts).toBeLessThan(pending)
+    expect(pending).toBeLessThan(occupancy)
+    expect(occupancy).toBeLessThan(revenue)
   })
 
   it('uses the combined revenue overview and exposes the pending anchor', () => {

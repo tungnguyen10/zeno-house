@@ -15,11 +15,3 @@ export const REVENUE_CATEGORY_LABEL: Record<RevenueCategoryKey, string> = {
   service: 'Dịch vụ',
   other: 'Khác',
 }
-
-export const REVENUE_CATEGORY_COLOR: Record<RevenueCategoryKey, string> = {
-  rent: '#00E5FF',
-  electricity: '#FFB539',
-  water: '#38BDF8',
-  service: '#32D74B',
-  other: '#98989D',
-}

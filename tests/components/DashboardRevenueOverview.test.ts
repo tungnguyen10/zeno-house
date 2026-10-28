@@ -52,13 +52,13 @@ describe('DashboardRevenueOverview', () => {
     const grid = mountOverview().get('[data-revenue-grid]')
 
     expect(grid.classes()).toContain('grid-cols-1')
-    expect(grid.classes()).toContain('lg:grid-cols-[minmax(15rem,3fr)_minmax(0,7fr)]')
+    expect(grid.classes()).toContain('lg:grid-cols-[minmax(17rem,1fr)_minmax(0,2.5fr)]')
   })
 
-  it('moves category share to a second line on narrow screens', () => {
+  it('stacks category share under the amount on narrow screens', () => {
     const share = mountOverview().get('[data-category-share="rent"]')
 
-    expect(share.classes()).toContain('col-start-2')
+    expect(share.classes()).toContain('col-start-3')
     expect(share.classes()).toContain('sm:col-start-auto')
   })
 })

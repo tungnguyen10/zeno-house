@@ -25,17 +25,20 @@ const segments = computed(() => {
 <template>
   <div class="flex h-full flex-col">
     <div class="flex items-baseline justify-between gap-3">
-      <div>
+      <div class="min-w-0">
         <p class="text-2xl font-semibold tabular-nums text-ui-accent">{{ occupancyPercent }}%</p>
-        <p class="mt-0.5 text-xs text-ui-muted">tỷ lệ lấp đầy</p>
+        <p class="mt-0.5 text-xs text-ui-muted">
+          <span class="sm:hidden"><span class="tabular-nums text-ui-primary">{{ rooms.occupied }}</span>/<span class="tabular-nums">{{ rooms.total }}</span> đang thuê</span>
+          <span class="hidden sm:inline">tỷ lệ lấp đầy</span>
+        </p>
       </div>
-      <p class="text-xs tabular-nums text-ui-muted">
+      <p class="hidden text-xs tabular-nums text-ui-muted sm:block">
         <span class="font-medium text-ui-primary">{{ rooms.occupied }}</span> / {{ rooms.total }} phòng
       </p>
     </div>
 
     <div
-      class="mt-4 flex h-2 overflow-hidden rounded-full bg-ui-border"
+      class="mt-auto flex h-1.5 overflow-hidden rounded-full bg-ui-border sm:mt-4 sm:h-2"
       role="img"
       :aria-label="`${occupancyPercent}% phòng đang thuê`"
     >
@@ -44,7 +47,7 @@ const segments = computed(() => {
       <div class="bg-status-warning transition-[width]" :style="{ width: `${segments.maintenance}%` }" />
     </div>
 
-    <div class="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-ui-muted">
+    <div class="mt-3 hidden flex-wrap gap-x-4 gap-y-1 text-xs text-ui-muted sm:flex">
       <span class="inline-flex items-center gap-1.5">
         <span class="inline-block h-2 w-2 rounded-sm bg-ui-accent" aria-hidden="true" />
         Đang thuê <span class="tabular-nums text-ui-primary">{{ rooms.occupied }}</span>
@@ -59,7 +62,7 @@ const segments = computed(() => {
       </span>
     </div>
 
-    <div class="mt-3 border-t border-ui-border pt-3 text-xs text-ui-muted sm:mt-auto">
+    <div class="mt-3 hidden border-t border-ui-border pt-3 text-xs text-ui-muted sm:mt-auto sm:block">
       <span class="tabular-nums text-ui-primary">{{ buildingCount }}</span> tòa nhà ·
       <span class="tabular-nums text-ui-primary">{{ rooms.total }}</span> phòng quản lý
     </div>

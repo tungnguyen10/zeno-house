@@ -153,7 +153,7 @@ const previousCollectionRate = computed<number | null>(() => {
 
 <template>
   <AppPullToRefresh :on-refresh="handleRefresh">
-    <div class="space-y-6">
+    <div class="space-y-3 sm:space-y-4 lg:space-y-6">
       <UiPageHeader title="Dashboard" description="Tổng quan vận hành nhà cho thuê">
       <div ref="titleSentinel" aria-hidden="true" />
       <template #actions>
@@ -193,10 +193,10 @@ const previousCollectionRate = computed<number | null>(() => {
     </UiAlert>
 
     <template v-else>
-      <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 lg:gap-6">
+      <div class="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1fr)] lg:gap-6">
         <UiSurfacePanel
           data-dashboard-card="collection"
-          class="min-h-52 md:col-span-2 lg:col-span-1"
+          class="col-span-2 min-h-52 lg:col-span-1"
         >
           <UiSkeleton v-if="isLoading" class="h-44 rounded-lg" />
           <DashboardCollectionDonut
@@ -211,10 +211,10 @@ const previousCollectionRate = computed<number | null>(() => {
           />
         </UiSurfacePanel>
 
-        <UiSurfacePanel data-dashboard-card="rooms" class="min-h-52">
+        <UiSurfacePanel data-dashboard-card="rooms" density="compact" class="min-w-0 sm:min-h-52 sm:p-5">
           <div class="flex h-full flex-col">
-            <h2 class="mb-3 text-sm font-semibold text-ui-primary">Phòng</h2>
-            <UiSkeleton v-if="isLoading" class="h-36 rounded-lg" />
+            <h2 class="mb-2 text-sm font-semibold text-ui-primary sm:mb-3">Phòng</h2>
+            <UiSkeleton v-if="isLoading" class="h-20 rounded-lg sm:h-36" />
             <DashboardRoomsSummaryCard
               v-else-if="summary"
               class="flex-1"
@@ -224,10 +224,10 @@ const previousCollectionRate = computed<number | null>(() => {
           </div>
         </UiSurfacePanel>
 
-        <UiSurfacePanel data-dashboard-card="contracts" class="min-h-52">
+        <UiSurfacePanel data-dashboard-card="contracts" density="compact" class="min-w-0 sm:min-h-52 sm:p-5">
           <div class="flex h-full flex-col">
-            <h2 class="mb-3 text-sm font-semibold text-ui-primary">Hợp đồng</h2>
-            <UiSkeleton v-if="isLoading" class="h-36 rounded-lg" />
+            <h2 class="mb-2 text-sm font-semibold text-ui-primary sm:mb-3">Hợp đồng</h2>
+            <UiSkeleton v-if="isLoading" class="h-20 rounded-lg sm:h-36" />
             <DashboardContractsSummaryCard
               v-else-if="summary"
               class="flex-1"
@@ -237,6 +237,30 @@ const previousCollectionRate = computed<number | null>(() => {
               :tenant-count="summary.tenants.total"
             />
           </div>
+        </UiSurfacePanel>
+      </div>
+
+      <div class="grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-2 lg:gap-6">
+        <UiSurfacePanel
+          id="pending-operations"
+          as="section"
+          data-dashboard-section="pending"
+          density="compact"
+          class="flex scroll-mt-20 flex-col"
+        >
+          <h2 class="mb-3 text-sm font-semibold text-ui-primary">Việc cần xử lý</h2>
+          <div v-if="isLoading" class="space-y-2">
+            <UiSkeleton v-for="i in 3" :key="i" class="h-12 rounded-lg" />
+          </div>
+          <DashboardPendingList v-else-if="summary" class="flex-1" :items="summary.pendingOperations" />
+        </UiSurfacePanel>
+
+        <UiSurfacePanel as="section" data-dashboard-section="occupancy" density="compact">
+          <h2 class="mb-3 text-sm font-semibold text-ui-primary">Tỷ lệ phòng theo tòa</h2>
+          <div v-if="isLoading" class="space-y-3">
+            <UiSkeleton v-for="i in 3" :key="i" class="h-16 rounded-lg" />
+          </div>
+          <DashboardOccupancyList v-else-if="summary" :buildings="summary.buildingBreakdown" />
         </UiSurfacePanel>
       </div>
 
@@ -253,8 +277,8 @@ const previousCollectionRate = computed<number | null>(() => {
           />
         </header>
         <div v-if="isLoading" class="space-y-4">
-          <UiSkeleton class="h-20 rounded-xl" />
-          <div class="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(15rem,3fr)_minmax(0,7fr)]">
+          <UiSkeleton class="h-16 rounded-xl" />
+          <div class="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(17rem,1fr)_minmax(0,2.5fr)]">
             <UiSkeleton class="h-48 rounded-lg" />
             <UiSkeleton class="h-64 rounded-lg" />
           </div>
@@ -263,32 +287,9 @@ const previousCollectionRate = computed<number | null>(() => {
           v-else-if="summary"
           :breakdown="filteredBreakdown"
           :trend="filteredTrend"
+          :current-period="summary.billing.currentMonth.period"
         />
       </UiSurfacePanel>
-
-      <div class="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
-        <UiSurfacePanel as="section" data-dashboard-section="occupancy" density="compact">
-          <h2 class="mb-3 text-sm font-semibold text-ui-primary">Tỷ lệ phòng theo tòa</h2>
-          <div v-if="isLoading" class="space-y-3">
-            <UiSkeleton v-for="i in 3" :key="i" class="h-16 rounded-lg" />
-          </div>
-          <DashboardOccupancyList v-else-if="summary" :buildings="summary.buildingBreakdown" />
-        </UiSurfacePanel>
-
-        <UiSurfacePanel
-          id="pending-operations"
-          as="section"
-          data-dashboard-section="pending"
-          density="compact"
-          class="scroll-mt-20"
-        >
-          <h2 class="mb-3 text-sm font-semibold text-ui-primary">Việc cần xử lý</h2>
-          <div v-if="isLoading" class="space-y-2">
-            <UiSkeleton v-for="i in 3" :key="i" class="h-12 rounded-lg" />
-          </div>
-          <DashboardPendingList v-else-if="summary" :items="summary.pendingOperations" />
-        </UiSurfacePanel>
-      </div>
     </template>
     </div>
   </AppPullToRefresh>

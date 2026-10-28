@@ -1,5 +1,6 @@
 import type { ChartOptions, Plugin } from 'chart.js'
 import { computed } from 'vue'
+import type { RevenueCategoryKey } from '~/types/dashboard'
 import { useDashboardTheme, type DashboardResolvedTheme } from './useDashboardTheme'
 
 export interface DashboardChartPalette {
@@ -11,6 +12,8 @@ export interface DashboardChartPalette {
   surface: string
   muted: string
   primary: string
+  // Revenue categories intentionally avoid status hues so they never read as paid/overdue.
+  categories: Record<RevenueCategoryKey, string>
 }
 
 const DASHBOARD_CHART_PALETTES: Record<DashboardResolvedTheme, DashboardChartPalette> = {
@@ -23,6 +26,13 @@ const DASHBOARD_CHART_PALETTES: Record<DashboardResolvedTheme, DashboardChartPal
     surface: '#1E1E1E',
     muted: '#98989D',
     primary: '#FFFFFF',
+    categories: {
+      rent: '#00E5FF',
+      electricity: '#A78BFA',
+      water: '#60A5FA',
+      service: '#D6C7A1',
+      other: '#98989D',
+    },
   },
   light: {
     accent: '#007C91',
@@ -33,6 +43,13 @@ const DASHBOARD_CHART_PALETTES: Record<DashboardResolvedTheme, DashboardChartPal
     surface: '#FFFFFF',
     muted: '#5B6B7A',
     primary: '#17212B',
+    categories: {
+      rent: '#007C91',
+      electricity: '#6D28D9',
+      water: '#2563EB',
+      service: '#8A7650',
+      other: '#5B6B7A',
+    },
   },
 }
 
