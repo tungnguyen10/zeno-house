@@ -44,24 +44,15 @@ const deltaPct = computed<number | null>(() => {
 
 const deltaLabel = computed(() => {
   if (deltaPct.value == null) return ''
-  if (deltaPct.value === 0) return '±0% vs trước'
-  const sign = deltaPct.value > 0 ? '↑' : '↓'
-  return `${sign} ${Math.abs(deltaPct.value)}% vs trước`
+  if (deltaPct.value === 0) return 'Bằng tháng trước'
+  const sign = deltaPct.value > 0 ? '+' : '−'
+  return `${sign}${Math.abs(deltaPct.value)} điểm % so với tháng trước`
 })
 
 const deltaTextClass = computed(() => {
   if (deltaPct.value == null || deltaPct.value === 0) return 'text-ui-muted'
   return deltaPct.value > 0 ? 'text-status-success' : 'text-status-danger'
 })
-
-function share(amount: number): number {
-  if (!hasData.value) return 0
-  return amount / props.invoiceTotal
-}
-
-const paidShare = computed(() => share(props.paidAmount) * 100)
-const inGraceShare = computed(() => share(inGraceAmount.value) * 100)
-const overdueShare = computed(() => share(overdueAmount.value) * 100)
 
 const chartData = computed<ChartData<'doughnut'>>(() => {
   if (!hasData.value) {
@@ -125,12 +116,17 @@ const chartOptions = computed<ChartOptions<'doughnut'>>(() => ({
 
 <template>
   <div class="flex h-full flex-col">
-    <header class="mb-3 flex items-baseline justify-between gap-2">
-      <h3 class="text-sm font-semibold text-ui-primary">Tỷ lệ thu tháng này</h3>
-      <span v-if="periodLabel" class="text-xs text-ui-muted tabular-nums">{{ periodLabel }}</span>
+    <header class="mb-4">
+      <div class="flex items-baseline justify-between gap-2">
+        <h2 class="text-sm font-semibold text-ui-primary">Tỷ lệ thu tháng này</h2>
+        <span v-if="periodLabel" class="whitespace-nowrap text-xs text-ui-muted tabular-nums">{{ periodLabel }}</span>
+      </div>
+      <p v-if="deltaLabel" data-collection-delta class="mt-0.5 text-xs tabular-nums" :class="deltaTextClass">
+        {{ deltaLabel }}
+      </p>
     </header>
 
-    <div class="flex items-center gap-3">
+    <div class="flex items-center gap-4">
       <div class="relative h-24 w-24 shrink-0 sm:h-28 sm:w-28">
         <ClientOnly>
           <Doughnut :key="resolvedTheme" :data="chartData" :options="chartOptions" />
@@ -138,31 +134,24 @@ const chartOptions = computed<ChartOptions<'doughnut'>>(() => ({
             <div class="h-full w-full animate-pulse rounded-full bg-ui-border/50" />
           </template>
         </ClientOnly>
-        <div class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
+        <div class="pointer-events-none absolute inset-0 flex items-center justify-center">
           <span class="text-xl font-semibold leading-none tabular-nums sm:text-2xl" :class="rateColorClass">
             {{ percentLabel }}
-          </span>
-          <span
-            v-if="deltaLabel"
-            class="mt-1 text-[10px] font-medium leading-none tabular-nums"
-            :class="deltaTextClass"
-          >
-            {{ deltaLabel }}
           </span>
         </div>
       </div>
 
-      <dl class="min-w-0 flex-1 space-y-1.5 text-xs">
+      <dl class="min-w-0 flex-1 space-y-2 text-xs">
         <div class="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-2">
           <span class="h-2 w-2 rounded-full bg-status-success" aria-hidden="true" />
-          <dt class="truncate text-ui-muted">Đã thu</dt>
-          <dd class="font-semibold tabular-nums text-status-success">{{ formatCurrency(paidAmount) }}</dd>
+          <dt class="whitespace-nowrap text-ui-muted">Đã thu</dt>
+          <dd class="whitespace-nowrap text-right font-semibold tabular-nums text-status-success">{{ formatCurrency(paidAmount) }}</dd>
         </div>
         <div class="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-2">
           <span class="h-2 w-2 rounded-full bg-status-warning" aria-hidden="true" />
-          <dt class="truncate text-ui-muted">Chưa đến hạn</dt>
+          <dt class="whitespace-nowrap text-ui-muted">Chưa đến hạn</dt>
           <dd
-            class="font-semibold tabular-nums"
+            class="whitespace-nowrap text-right font-semibold tabular-nums"
             :class="inGraceAmount > 0 ? 'text-status-warning' : 'text-ui-muted'"
           >
             {{ formatCurrency(inGraceAmount) }}
@@ -170,9 +159,9 @@ const chartOptions = computed<ChartOptions<'doughnut'>>(() => ({
         </div>
         <div class="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-2">
           <span class="h-2 w-2 rounded-full bg-status-danger" aria-hidden="true" />
-          <dt class="truncate text-ui-muted">Quá hạn</dt>
+          <dt class="whitespace-nowrap text-ui-muted">Quá hạn</dt>
           <dd
-            class="font-semibold tabular-nums"
+            class="whitespace-nowrap text-right font-semibold tabular-nums"
             :class="overdueAmount > 0 ? 'text-status-danger' : 'text-ui-muted'"
           >
             {{ formatCurrency(overdueAmount) }}
@@ -181,18 +170,7 @@ const chartOptions = computed<ChartOptions<'doughnut'>>(() => ({
       </dl>
     </div>
 
-    <div
-      v-if="hasData"
-      class="mt-3 flex h-1.5 overflow-hidden rounded-full bg-ui-border"
-      role="img"
-      :aria-label="`Đã thu ${Math.round(paidShare)}%, chưa đến hạn ${Math.round(inGraceShare)}%, quá hạn ${Math.round(overdueShare)}%`"
-    >
-      <div class="bg-status-success transition-[width]" :style="{ width: `${paidShare}%` }" />
-      <div class="bg-status-warning transition-[width]" :style="{ width: `${inGraceShare}%` }" />
-      <div class="bg-status-danger transition-[width]" :style="{ width: `${overdueShare}%` }" />
-    </div>
-
-    <div class="mt-3 flex items-center justify-between gap-3 border-t border-ui-border pt-3 text-xs sm:mt-auto">
+    <div class="mt-4 flex items-center justify-between gap-3 border-t border-ui-border pt-3 text-xs sm:mt-auto">
       <span class="text-ui-muted">Tổng phát hành</span>
       <span class="font-semibold tabular-nums text-ui-primary">{{ formatCurrency(invoiceTotal) }}</span>
     </div>

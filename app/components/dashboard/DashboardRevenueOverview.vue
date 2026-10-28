@@ -1,15 +1,16 @@
 <script setup lang="ts">
 import type { BillingTrendEntry, RevenueBreakdown } from '~/types/dashboard'
+import { useChartTheme } from '~/composables/useChartTheme'
 import { formatCurrency } from '~/utils/format/currency'
-import {
-  REVENUE_CATEGORY_COLOR,
-  REVENUE_CATEGORY_LABEL,
-} from '~/utils/constants/revenue-categories'
+import { REVENUE_CATEGORY_LABEL } from '~/utils/constants/revenue-categories'
 
 const props = defineProps<{
   breakdown: RevenueBreakdown
   trend: BillingTrendEntry[]
+  currentPeriod?: string
 }>()
+
+const { palette } = useChartTheme()
 
 const categoryRows = computed(() => {
   const total = props.breakdown.totalIssued
@@ -18,13 +19,11 @@ const categoryRows = computed(() => {
     .map(entry => ({
       key: entry.key,
       label: REVENUE_CATEGORY_LABEL[entry.key],
-      color: REVENUE_CATEGORY_COLOR[entry.key],
+      color: palette.value.categories[entry.key],
       amount: entry.amount,
       share: total === 0 ? 0 : (entry.amount / total) * 100,
     }))
 })
-
-const segments = computed(() => categoryRows.value.filter(row => row.share > 0))
 
 const collectionRate = computed(() => {
   if (props.breakdown.totalIssued === 0) return 0
@@ -44,26 +43,26 @@ function formatShare(share: number): string {
 
 <template>
   <div class="space-y-5">
-    <dl data-revenue-summary class="grid grid-cols-1 gap-y-2 sm:grid-cols-3 sm:gap-x-6">
-      <div class="flex min-w-0 items-baseline justify-between gap-3 sm:block">
+    <dl data-revenue-summary class="grid grid-cols-2 gap-x-4 sm:grid-cols-3 sm:gap-x-6">
+      <div class="col-span-2 min-w-0 sm:col-span-1">
         <dt class="text-xs uppercase tracking-wide text-ui-muted">Tổng doanh thu</dt>
-        <dd class="text-lg font-semibold tabular-nums text-ui-primary sm:mt-1 sm:text-2xl">
+        <dd class="mt-1 text-2xl font-semibold tabular-nums text-ui-primary">
           {{ formatCurrency(breakdown.totalIssued) }}
         </dd>
       </div>
-      <div class="flex min-w-0 items-baseline justify-between gap-3 sm:block">
+      <div class="mt-3 min-w-0 border-t border-ui-border pt-3 sm:mt-0 sm:border-0 sm:pt-0">
         <dt class="text-xs uppercase tracking-wide text-ui-muted">
           Đã thu
           <span class="ml-1 tabular-nums text-status-success">{{ collectionRate }}%</span>
         </dt>
-        <dd class="text-lg font-semibold tabular-nums text-status-success sm:mt-1 sm:text-2xl">
+        <dd class="mt-1 truncate text-base font-semibold tabular-nums text-status-success sm:text-2xl">
           {{ formatCurrency(breakdown.totalPaid) }}
         </dd>
       </div>
-      <div class="flex min-w-0 items-baseline justify-between gap-3 sm:block">
+      <div class="mt-3 min-w-0 border-t border-ui-border pt-3 sm:mt-0 sm:border-0 sm:pt-0">
         <dt class="text-xs uppercase tracking-wide text-ui-muted">Còn lại</dt>
         <dd
-          class="text-lg font-semibold tabular-nums sm:mt-1 sm:text-2xl"
+          class="mt-1 truncate text-base font-semibold tabular-nums sm:text-2xl"
           :class="outstandingAmount > 0 ? 'text-status-warning' : 'text-ui-muted'"
         >
           {{ formatCurrency(outstandingAmount) }}
@@ -71,31 +70,22 @@ function formatShare(share: number): string {
       </div>
     </dl>
 
-    <div class="flex h-1.5 overflow-hidden rounded-full bg-ui-border" role="img" aria-label="Tỷ trọng doanh thu theo nhóm">
-      <div
-        v-for="segment in segments"
-        :key="segment.key"
-        class="h-full"
-        :style="{ width: `${segment.share}%`, background: segment.color }"
-      />
-    </div>
-
     <div
       data-revenue-grid
-      class="grid grid-cols-1 gap-5 border-t border-ui-border pt-5 lg:grid-cols-[minmax(15rem,3fr)_minmax(0,7fr)] lg:items-stretch"
+      class="grid grid-cols-1 gap-5 border-t border-ui-border pt-5 lg:grid-cols-[minmax(17rem,1fr)_minmax(0,2.5fr)] lg:items-stretch"
     >
-      <ul v-if="categoryRows.length" class="divide-y divide-ui-border rounded-lg border border-ui-border">
+      <ul v-if="categoryRows.length" class="divide-y divide-ui-border rounded-lg border border-ui-border lg:flex lg:flex-col">
         <li
           v-for="row in categoryRows"
           :key="row.key"
-          class="grid grid-cols-[1rem_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-0.5 px-3 py-2.5 text-sm sm:grid-cols-[1rem_minmax(0,1fr)_auto_3rem]"
+          class="grid grid-cols-[0.625rem_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-0.5 px-3 py-2.5 text-sm sm:grid-cols-[0.625rem_minmax(0,1fr)_auto_3rem] lg:flex-1"
         >
-          <span class="inline-block h-2.5 w-2.5 rounded-sm" :style="{ background: row.color }" aria-hidden="true" />
-          <span class="min-w-0 truncate text-ui-primary">{{ row.label }}</span>
-          <span class="whitespace-nowrap text-xs tabular-nums text-ui-primary sm:text-sm">{{ formatCurrency(row.amount) }}</span>
+          <span class="row-span-2 inline-block h-2.5 w-2.5 rounded-sm sm:row-span-1" :style="{ background: row.color }" aria-hidden="true" />
+          <span class="row-span-2 min-w-0 whitespace-nowrap text-ui-primary sm:row-span-1">{{ row.label }}</span>
+          <span class="whitespace-nowrap text-right tabular-nums text-ui-primary">{{ formatCurrency(row.amount) }}</span>
           <span
             :data-category-share="row.key"
-            class="col-start-2 text-xs tabular-nums text-ui-muted sm:col-start-auto sm:text-right"
+            class="col-start-3 text-right text-xs tabular-nums text-ui-muted sm:col-start-auto"
           >
             {{ formatShare(row.share) }}
           </span>
@@ -106,7 +96,7 @@ function formatShare(share: number): string {
       </div>
 
       <div class="min-w-0">
-        <DashboardBillingTrendChart :trend="trend" />
+        <DashboardBillingTrendChart :trend="trend" :current-period="currentPeriod" />
       </div>
     </div>
   </div>

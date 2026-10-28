@@ -796,8 +796,7 @@ const activeSectionId = computed(() => {
       back-label="Quay lại tòa nhà"
     />
 
-    <div class="rounded-xl border border-ui-border bg-ui-surface p-4">
-      <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+    <UiMetricGrid :cols="4">
         <UiMetric
           label="Dịch vụ mặc định bật"
           :value="activeServiceCount"
@@ -822,8 +821,7 @@ const activeSectionId = computed(() => {
           caption="Tài khoản đang có quyền"
           tone="default"
         />
-      </div>
-    </div>
+    </UiMetricGrid>
 
     <div class="sticky top-0 z-10 -mx-1 overflow-x-auto bg-ui-canvas/95 px-1 py-2 backdrop-blur xl:hidden lg:top-16">
       <nav class="flex items-center gap-2">

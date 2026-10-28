@@ -130,12 +130,12 @@ function dateTimeText(value: string | null | undefined): string {
     </UiAlert>
 
     <template v-else-if="detail && invoice">
-      <div class="grid grid-cols-2 gap-3 md:grid-cols-4">
+      <UiMetricGrid :cols="4">
         <UiMetric label="Tổng tiền" :value="formatCurrency(invoice.totalAmount)" tone="default" />
         <UiMetric label="Đã thu" :value="formatCurrency(invoice.paidAmount)" tone="success" />
         <UiMetric label="Còn lại" :value="formatCurrency(invoice.balanceAmount)" :tone="invoice.balanceAmount > 0 ? 'danger' : 'default'" />
         <UiMetric label="Hạn thanh toán" :value="dateText(invoice.dueDate)" tone="default" />
-      </div>
+      </UiMetricGrid>
 
       <UiSection title="Thông tin">
         <dl class="grid gap-3 text-sm md:grid-cols-2">

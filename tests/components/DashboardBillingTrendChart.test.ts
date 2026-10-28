@@ -5,11 +5,12 @@ import DashboardBillingTrendChart from '../../app/components/dashboard/Dashboard
 import type { BillingTrendEntry } from '../../app/types/dashboard'
 
 vi.mock('vue-chartjs', () => ({
-  Line: defineComponent({
+  Bar: defineComponent({
     props: ['data', 'options'],
     setup(props) {
       const labelsAttr = JSON.stringify(props.data?.datasets?.map((d: { label?: string }) => d.label) ?? [])
-      return () => h('div', { 'data-test': 'line', 'data-labels': labelsAttr })
+      const dataAttr = JSON.stringify(props.data?.datasets?.[0]?.data ?? [])
+      return () => h('div', { 'data-test': 'bar', 'data-labels': labelsAttr, 'data-first': dataAttr })
     },
   }),
 }))
@@ -19,9 +20,9 @@ const emptyStub = defineComponent({
   template: '<div data-test="empty">{{ title }}</div>',
 })
 
-function mountChart(trend: BillingTrendEntry[]) {
+function mountChart(trend: BillingTrendEntry[], currentPeriod?: string) {
   return mount(DashboardBillingTrendChart, {
-    props: { trend },
+    props: { trend, currentPeriod },
     global: {
       stubs: {
         ClientOnly: defineComponent({ setup(_, { slots }) { return () => slots.default?.() } }),
@@ -49,7 +50,7 @@ describe('DashboardBillingTrendChart', () => {
   it('renders empty state when trend has no revenue', () => {
     const wrapper = mountChart([])
     expect(wrapper.find('[data-test="empty"]').exists()).toBe(true)
-    expect(wrapper.find('[data-test="line"]').exists()).toBe(false)
+    expect(wrapper.find('[data-test="bar"]').exists()).toBe(false)
   })
 
   it('renders only categories that have data, in canonical order', () => {
@@ -57,9 +58,19 @@ describe('DashboardBillingTrendChart', () => {
       entry('2026-04', { rent: 1_000_000, electricity: 400_000, water: 100_000 }),
       entry('2026-05', { rent: 1_200_000, electricity: 500_000, water: 150_000 }),
     ])
-    const chart = wrapper.find('[data-test="line"]')
+    const chart = wrapper.find('[data-test="bar"]')
     expect(chart.exists()).toBe(true)
     const labels = JSON.parse(chart.attributes('data-labels') || '[]')
     expect(labels).toEqual(['Tiền phòng', 'Điện', 'Nước'])
+  })
+
+  it('leaves months after the current period empty instead of zero', () => {
+    const wrapper = mountChart([
+      entry('2026-09', { rent: 1_000_000 }),
+      entry('2026-10', { rent: 1_200_000 }),
+      entry('2026-11', {}),
+    ], '2026-10')
+    const data = JSON.parse(wrapper.get('[data-test="bar"]').attributes('data-first') || '[]')
+    expect(data).toEqual([1_000_000, 1_200_000, null])
   })
 })

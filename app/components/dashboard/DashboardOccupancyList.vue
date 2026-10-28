@@ -70,22 +70,22 @@ const rows = computed<Row[]>(() =>
       v-for="row in rows"
       :key="row.id"
       :to="buildingPath(row)"
-      class="group grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-4 gap-y-2 border-b border-ui-border px-2 py-3 last:border-b-0 hover:bg-ui-hover sm:grid-cols-[minmax(10rem,1.2fr)_minmax(6rem,1fr)_3rem_1rem] sm:px-3"
+      class="group grid grid-cols-[minmax(0,1fr)_2.75rem_1rem] items-center gap-x-3 gap-y-2 border-b border-ui-border px-1 py-3 last:border-b-0 hover:bg-ui-hover active:bg-ui-hover sm:grid-cols-[minmax(10rem,1.2fr)_minmax(6rem,1fr)_3rem_1rem] sm:gap-x-4 sm:px-3"
     >
-      <div class="min-w-0 col-span-2 sm:col-span-1">
+      <div class="col-start-1 row-start-1 min-w-0 sm:col-start-auto sm:row-start-auto">
         <div class="truncate text-sm font-medium text-ui-primary">{{ row.name }}</div>
         <div class="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-ui-muted">
           <span>
             <span class="tabular-nums text-ui-primary">{{ row.occupied }}</span>/<span class="tabular-nums">{{ row.total }}</span> {{ row.total === 0 ? 'phòng' : 'đang thuê' }}
           </span>
           <template v-if="row.available > 0">
-            <span class="text-dark-border" aria-hidden="true">·</span>
+            <span class="text-ui-border-strong" aria-hidden="true">·</span>
             <span>
               <span class="tabular-nums text-status-success">{{ row.available }}</span> trống
             </span>
           </template>
           <template v-if="row.maintenance > 0">
-            <span class="text-dark-border" aria-hidden="true">·</span>
+            <span class="text-ui-border-strong" aria-hidden="true">·</span>
             <span>
               <span class="tabular-nums text-status-warning">{{ row.maintenance }}</span> bảo trì
             </span>
@@ -95,7 +95,7 @@ const rows = computed<Row[]>(() =>
 
       <div
         v-if="row.occupancyPercent !== null"
-        class="col-span-3 flex h-2 overflow-hidden rounded-full bg-ui-border sm:col-span-1"
+        class="col-start-1 row-start-2 flex h-1.5 overflow-hidden rounded-full bg-ui-border sm:col-start-auto sm:row-start-auto sm:h-2"
         role="img"
         :aria-label="`${row.occupancyPercent}% phòng đang thuê`"
       >
@@ -103,15 +103,15 @@ const rows = computed<Row[]>(() =>
         <div class="bg-status-success/80 transition-[width]" :style="{ width: `${row.availablePercent}%` }" />
         <div class="bg-status-warning transition-[width]" :style="{ width: `${row.maintenancePercent}%` }" />
       </div>
-      <div v-else class="col-span-3 text-xs text-ui-muted sm:col-span-1">Chưa có phòng</div>
+      <div v-else class="col-start-1 row-start-2 text-xs text-ui-muted sm:col-start-auto sm:row-start-auto">Chưa có phòng</div>
 
-      <div class="text-right text-sm font-semibold tabular-nums text-ui-primary">
+      <div class="col-start-2 row-span-2 row-start-1 text-right text-sm font-semibold tabular-nums text-ui-primary sm:col-start-auto sm:row-span-1 sm:row-start-auto">
         <template v-if="row.occupancyPercent !== null">{{ row.occupancyPercent }}%</template>
         <span v-else class="text-ui-muted">—</span>
       </div>
 
       <IconChevronRight
-        class="h-4 w-4 text-ui-muted transition group-hover:translate-x-0.5 group-hover:text-ui-accent"
+        class="col-start-3 row-span-2 row-start-1 h-4 w-4 shrink-0 text-ui-muted transition group-hover:translate-x-0.5 group-hover:text-ui-accent sm:col-start-auto sm:row-span-1 sm:row-start-auto"
         aria-hidden="true"
       />
     </NuxtLink>

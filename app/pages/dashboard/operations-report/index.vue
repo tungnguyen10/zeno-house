@@ -150,6 +150,11 @@ const buildingOptions = computed(() =>
 const selectedBuilding = computed(() =>
   buildings.value.find(b => b.id === buildingId.value) ?? null,
 )
+const contextLabel = computed(() =>
+  [selectedBuilding.value?.name, `Tháng ${periodMonth.value}/${periodYear.value}`]
+    .filter(Boolean)
+    .join(' · '),
+)
 const buildingStartPeriod = computed<{ year: number, month: number } | null>(() => {
   const year = selectedBuilding.value?.operationalStartYear
   const month = selectedBuilding.value?.operationalStartMonth
@@ -405,15 +410,23 @@ function signedClass(value: number): string {
   <div>
     <UiPageHeader
       title="Báo cáo vận hành"
-      description="Doanh thu, chi phí và lợi nhuận theo tòa nhà từng tháng."
+      :description="contextLabel"
     >
-      <template #actions>
+      <p class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-ui-muted sm:hidden">
+        <span>{{ contextLabel }}</span>
         <UiBadge
           v-if="report"
           :variant="isReportClosed ? 'success' : 'warning'"
         >
-          {{ isReportClosed ? 'Đã chốt báo cáo' : 'Đang mở' }}
+          {{ isReportClosed ? 'Đã chốt' : 'Đang mở' }}
         </UiBadge>
+      </p>
+      <template #actions>
+        <span v-if="report" class="hidden sm:inline-flex">
+          <UiBadge :variant="isReportClosed ? 'success' : 'warning'">
+            {{ isReportClosed ? 'Đã chốt báo cáo' : 'Đang mở' }}
+          </UiBadge>
+        </span>
         <UiButton
           v-if="canCloseReport && report && !isReportClosed"
           size="sm"
@@ -492,7 +505,7 @@ function signedClass(value: number): string {
 
     <template v-else-if="report && metrics">
       <!-- Headline numbers: revenue, cost and both profit readings in one block -->
-      <div class="grid grid-cols-2 gap-2 lg:grid-cols-3">
+      <UiMetricGrid :cols="3">
         <UiMetric label="Doanh thu phát hành" :value="formatCurrency(metrics.issuedRevenue)" />
         <UiMetric label="Đã thu" :value="formatCurrency(metrics.collectedCash)" tone="accent" />
         <UiMetric
@@ -505,20 +518,20 @@ function signedClass(value: number): string {
           label="Lợi nhuận (phát hành)"
           :value="formatCurrency(metrics.profitByRevenue)"
           :tone="metrics.profitByRevenue >= 0 ? 'success' : 'danger'"
-          caption="Doanh thu phát hành − tổng chi phí"
+          hint="Doanh thu phát hành − tổng chi phí"
         />
         <UiMetric
           label="Lợi nhuận (tiền thu)"
           :value="formatCurrency(metrics.profitByCash)"
           :tone="metrics.profitByCash >= 0 ? 'success' : 'danger'"
-          caption="Tiền đã thu − tổng chi phí"
+          hint="Tiền đã thu − tổng chi phí"
         />
-      </div>
+      </UiMetricGrid>
 
-      <div v-if="metrics.settlementAllocationTotal || metrics.refundTotal" class="mt-2 grid grid-cols-2 gap-2">
+      <UiMetricGrid v-if="metrics.settlementAllocationTotal || metrics.refundTotal" :cols="2" class="mt-2">
         <UiMetric label="Cấn trừ tiền có sẵn" :value="formatCurrency(metrics.settlementAllocationTotal)" caption="Đã áp dụng vào hóa đơn, không phải khoản thu mới" />
         <UiMetric label="Đã hoàn tiền" :value="formatCurrency(metrics.refundTotal)" caption="Hoàn tiền khách, không tính vào chi phí vận hành" />
-      </div>
+      </UiMetricGrid>
 
       <UiSection title="Cơ cấu doanh thu và chi phí" class="mt-6">
         <div class="grid grid-cols-1 gap-2 md:grid-cols-[minmax(0,1.15fr)_minmax(260px,0.85fr)] md:items-start">
@@ -630,45 +643,48 @@ function signedClass(value: number): string {
       </UiSection>
 
       <UiSection v-if="canReadReserveFund && report.reserveFund" title="Quỹ dự phòng" class="mt-6">
-        <div class="grid grid-cols-2 gap-2 lg:grid-cols-4">
+        <UiMetricGrid :cols="4">
           <UiMetric
             label="Tỷ lệ"
             :value="`${report.reserveFund.effectiveRatePercent}%`"
-            caption="Áp dụng cho kỳ này"
+            hint="Áp dụng cho kỳ này"
           />
           <UiMetric
-            label="Tiền quỹ tháng"
+            :label="report.reserveFund.monthlyAccrualIsEstimated ? 'Quỹ tháng · ước tính' : 'Tiền quỹ tháng'"
             :value="formatCurrency(report.reserveFund.monthlyAccrualIsEstimated ? report.reserveFund.monthlyAccrualEstimated : report.reserveFund.monthlyAccrual)"
-            :caption="report.reserveFund.monthlyAccrualIsEstimated ? 'Ước tính (chưa chốt báo cáo)' : 'Đã chốt báo cáo'"
+            :hint="report.reserveFund.monthlyAccrualIsEstimated ? 'Ước tính (chưa chốt báo cáo)' : 'Đã chốt báo cáo'"
             tone="success"
           />
           <UiMetric
             label="Số dư tháng"
             :value="formatCurrency(report.reserveFund.monthlyBalance)"
             :tone="report.reserveFund.monthlyBalance >= 0 ? 'success' : 'danger'"
-            caption="Tiền quỹ − Chi từ quỹ"
+            hint="Tiền quỹ − Chi từ quỹ"
           />
           <UiMetric
-            label="Tổng quỹ tòa nhà"
+            :label="report.reserveFund.cumulativeBalanceIsEstimated ? 'Tổng quỹ · ước tính' : 'Tổng quỹ tòa nhà'"
             :value="formatCurrency(report.reserveFund.cumulativeBalance)"
             :tone="report.reserveFund.cumulativeBalance >= 0 ? 'success' : 'danger'"
-            :caption="report.reserveFund.cumulativeBalanceIsEstimated ? 'Ước tính theo kỳ đang mở' : 'Theo số đã chốt'"
+            :hint="report.reserveFund.cumulativeBalanceIsEstimated ? 'Ước tính theo kỳ đang mở' : 'Theo số đã chốt'"
           />
-        </div>
+        </UiMetricGrid>
       </UiSection>
 
       <!-- Expenses -->
       <UiSection title="Chi phí phát sinh trong tháng" class="mt-6">
         <template #actions>
-          <span class="text-sm font-semibold tabular-nums text-ui-primary">
-            {{ formatCurrency(expenseCategory ? filteredExpenseTotal : metrics.monthlyExpenseTotal) }}
-          </span>
           <UiButton v-if="canWriteExpense" size="sm" @click="openCreateExpense">
             <IconPlus class="h-4 w-4" aria-hidden="true" />
             Thêm chi phí
           </UiButton>
         </template>
-        <div class="overflow-hidden rounded-xl border border-ui-border bg-ui-surface">
+        <div class="rounded-xl border border-ui-border bg-ui-surface md:overflow-hidden">
+          <div class="flex items-baseline justify-between gap-3 border-b border-ui-border px-3.5 py-2">
+            <span class="text-[11px] font-semibold uppercase tracking-wider text-ui-muted">Tổng</span>
+            <span class="text-sm font-semibold tabular-nums text-ui-primary">
+              {{ formatCurrency(expenseCategory ? filteredExpenseTotal : metrics.monthlyExpenseTotal) }}
+            </span>
+          </div>
           <table class="hidden w-full text-sm md:table">
             <thead>
               <tr class="border-b border-ui-border text-left text-xs text-ui-muted">
@@ -764,17 +780,12 @@ function signedClass(value: number): string {
             <div
               v-for="e in filteredExpenses"
               :key="e.id"
-              :class="clsx('flex items-start justify-between gap-3 px-3.5 py-2.5', e.voidedAt && 'opacity-50')"
+              :class="clsx('flex items-center justify-between gap-2 py-2 pl-3.5 pr-3.5', e.voidedAt && 'opacity-50')"
             >
               <div class="min-w-0 flex-1">
-                <div class="flex items-baseline justify-between gap-3">
-                  <span class="min-w-0 truncate text-sm font-medium text-ui-primary">
-                    {{ expenseLabel(e.category) }}
-                  </span>
-                  <span class="shrink-0 text-sm font-semibold tabular-nums text-ui-primary">
-                    {{ formatCurrency(e.amount) }}
-                  </span>
-                </div>
+                <span class="block truncate text-sm font-medium text-ui-primary">
+                  {{ expenseLabel(e.category) }}
+                </span>
                 <div class="mt-0.5 flex min-w-0 items-center gap-x-1.5 text-[11px] text-ui-muted">
                   <span class="shrink-0">{{ e.expenseDate ?? '—' }}</span>
                   <span v-if="e.payee" class="truncate">· {{ e.payee }}</span>
@@ -793,11 +804,14 @@ function signedClass(value: number): string {
                   </a>
                 </div>
               </div>
+              <span class="shrink-0 text-sm font-semibold tabular-nums text-ui-primary">
+                {{ formatCurrency(e.amount) }}
+              </span>
               <UiDropdownMenu
                 v-if="!e.voidedAt && (canWriteExpense || canVoidExpense)"
-                class="shrink-0"
+                class="-my-2 -mr-2.5 shrink-0"
                 :aria-label="`Thao tác ${expenseLabel(e.category)}`"
-                trigger-class="min-h-11 min-w-11"
+                trigger-class="min-h-11 min-w-9 !border-transparent !bg-transparent text-ui-muted"
               >
                 <UiDropdownMenuItem v-if="canWriteExpense" @click="openEditExpense(e)">
                   <template #icon>

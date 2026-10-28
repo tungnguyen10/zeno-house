@@ -100,7 +100,8 @@ Cho destructive button dùng `focus-visible:ring-status-danger`. Không tắt ou
 | Filter row + actions (no search, non-list surface) | `UiToolbar` |
 | Filter trigger + fields panel | `UiFilterPopover` |
 | Small labelled breakdown list | `UiListPanel` |
-| Compact KPI strip | `UiMetric` |
+| Compact KPI strip | `UiMetricGrid` + `UiMetric` (non-clickable) or `UiMetricTile` (clickable filter; `chips` + `shortLabel` turns the grid into an edge-to-edge filter-chip strip on mobile) |
+| Mobile row list with row actions | Inline `md:hidden` list; put `UiDropdownMenu` last with `-my-2 -mr-2.5` and `trigger-class="min-h-11 min-w-9 !border-transparent !bg-transparent"` |
 | Workspace step nav | `UiTabs` |
 | Many comparable rows | `UiTable` |
 | Inline feedback / blocker | `UiAlert` |

@@ -20,10 +20,10 @@ defineProps<{
   <section class="space-y-3">
     <header
       v-if="title || $slots.actions || description || $slots.description"
-      class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
+      class="flex items-center justify-between gap-3"
     >
       <div class="min-w-0" :class="titleClass">
-        <h2 v-if="title" class="text-sm font-semibold text-ui-primary">{{ title }}</h2>
+        <h2 v-if="title" class="truncate text-sm font-semibold text-ui-primary">{{ title }}</h2>
         <p v-if="description" class="text-xs text-ui-muted mt-0.5">{{ description }}</p>
         <slot name="description" />
       </div>

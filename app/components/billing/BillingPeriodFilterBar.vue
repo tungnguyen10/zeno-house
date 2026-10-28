@@ -91,7 +91,7 @@ const filterCount = computed(() => {
       <UiButton
         v-if="activeQueueLabel"
         unstyled
-        class="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-md border border-ui-accent/60 bg-ui-accent/10 px-3 text-sm text-ui-accent transition hover:bg-ui-accent/20"
+        class="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-md border border-ui-accent/60 bg-ui-accent/10 px-3 text-sm text-ui-accent transition hover:bg-ui-accent/20 max-md:hidden"
         @click="emit('clearQueue')"
       >
         <span class="whitespace-nowrap">{{ activeQueueLabel }}</span>

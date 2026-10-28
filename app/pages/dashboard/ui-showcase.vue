@@ -56,6 +56,7 @@ const toast = useToast()
 
 // Tabs
 const activeTab = ref('overview')
+const activeMetricTile = ref<string | null>(null)
 const tabs = [
   { key: 'overview', label: 'Tổng quan', count: 12 },
   { key: 'readings', label: 'Chỉ số', count: 5 },
@@ -423,15 +424,35 @@ function dismissAlert(key: string) {
       </UiToolbar>
     </UiSection>
 
-    <UiSection title="UiMetric" description="Compact KPI strip cho operational workspace.">
-      <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+    <UiSection title="UiMetricGrid + UiMetric" description="Thẻ KPI chia ô; hint là tooltip, caption hiện sẵn.">
+      <UiMetricGrid :cols="3">
         <UiMetric label="Kỳ đang xử lý" value="06/2026" tone="accent" />
         <UiMetric label="Tổng phải thu" value="125.4M" caption="↑ 12% so với T5" />
-        <UiMetric label="Đã thu" value="98.2M" tone="success" />
+        <UiMetric label="Đã thu" value="98.2M" tone="success" hint="Tiền đã thu trong kỳ" />
         <UiMetric label="Còn nợ" value="27.2M" tone="danger" />
         <UiMetric label="Thiếu chỉ số" value="3" tone="warning" />
         <UiMetric label="Loading..." value="--" loading />
-      </div>
+      </UiMetricGrid>
+    </UiSection>
+
+    <UiSection title="UiMetricTile" description="Ô KPI bấm được dùng làm bộ lọc; đặt chips để mobile thành dải chip cuộn ngang.">
+      <UiMetricGrid :cols="5" chips>
+        <UiMetricTile
+          v-for="tile in [
+            { key: 'readings', label: 'Cần nhập chỉ số', value: 2, tone: 'warning' },
+            { key: 'review', label: 'Soát chờ phát hành', value: 0, tone: 'accent' },
+            { key: 'collecting', label: 'Đang thu', value: 4, tone: 'default' },
+            { key: 'debt', label: 'Còn công nợ', value: 1, tone: 'danger' },
+            { key: 'closed', label: 'Đã chốt', value: 26, tone: 'success' },
+          ] as const"
+          :key="tile.key"
+          :label="tile.label"
+          :value="tile.value"
+          :tone="tile.tone"
+          :pressed="activeMetricTile === tile.key"
+          @click="activeMetricTile = activeMetricTile === tile.key ? null : tile.key"
+        />
+      </UiMetricGrid>
     </UiSection>
 
     <!-- Tabs -->
