@@ -145,6 +145,7 @@ function mountGrid(overrides: Partial<{
         UiTable,
       },
       stubs: {
+        teleport: true,
         UiSection: passthrough,
         UiToolbar: passthrough,
         UiButton: defineComponent({ template: '<button type="button"><slot /></button>' }),

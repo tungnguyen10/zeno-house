@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import clsx from 'clsx'
 
-defineProps<{
+const props = defineProps<{
   /** Primary metric label (Vietnamese). */
   label: string
   /** Primary value. Pass already-formatted strings (currency, count). */
@@ -12,6 +12,8 @@ defineProps<{
   tone?: 'default' | 'accent' | 'success' | 'warning' | 'danger'
   /** Optional loading state — renders skeletons in place of label/value. */
   loading?: boolean
+  /** Borderless cell for use inside a divided metric card; caption becomes a tooltip. */
+  flat?: boolean
 }>()
 
 // Tone expressed as a structural left-border stripe — flat/minimal signal.
@@ -34,15 +36,20 @@ const valueColor: Record<string, string> = {
 </script>
 
 <template>
-  <div :class="clsx('flex flex-col gap-1 border-l-2 py-2 pl-3', accentBorder[tone ?? 'default'])">
-    <p class="text-[10px] font-medium uppercase tracking-widest text-ui-muted">{{ label }}</p>
+  <div
+    :class="props.flat
+      ? 'flex flex-col gap-0.5 bg-ui-surface px-3 py-1.5 sm:gap-1 sm:px-3.5 sm:py-2'
+      : clsx('flex flex-col gap-1 border-l-2 py-2 pl-3', accentBorder[tone ?? 'default'])"
+    :title="props.flat ? caption : undefined"
+  >
+    <p :class="clsx('text-[10px] font-medium uppercase text-ui-muted', props.flat ? 'tracking-wide' : 'tracking-widest')">{{ label }}</p>
     <UiSkeleton v-if="loading" class="h-5 w-20" />
     <p
       v-else
-      :class="clsx('text-lg font-semibold tabular-nums leading-none', valueColor[tone ?? 'default'])"
+      :class="clsx('font-semibold tabular-nums leading-none', props.flat ? 'text-base sm:text-lg' : 'text-lg', valueColor[tone ?? 'default'])"
     >
       {{ value }}
     </p>
-    <p v-if="caption && !loading" class="text-[10px] text-ui-muted/60">{{ caption }}</p>
+    <p v-if="caption && !loading && !props.flat" class="text-[10px] text-ui-muted/60">{{ caption }}</p>
   </div>
 </template>
