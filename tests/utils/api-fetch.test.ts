@@ -1,9 +1,12 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { apiFetch, createLatestApiRequest } from '../../app/utils/api-fetch'
 
+const originalFetch = Object.getOwnPropertyDescriptor(globalThis, '$fetch')
+
 describe('apiFetch', () => {
-  beforeEach(() => {
-    vi.unstubAllGlobals()
+  afterEach(() => {
+    if (originalFetch) Object.defineProperty(globalThis, '$fetch', originalFetch)
+    else Reflect.deleteProperty(globalThis, '$fetch')
   })
 
   it('shares a request with the same explicit in-flight dedupe key', async () => {

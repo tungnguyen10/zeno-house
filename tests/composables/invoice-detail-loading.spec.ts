@@ -1,9 +1,12 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { ref } from 'vue'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { useInvoiceDetail } from '../../app/composables/invoices/useInvoiceDetail'
 
-beforeEach(() => vi.stubGlobal('ref', ref))
-afterEach(() => vi.unstubAllGlobals())
+const originalApiFetch = Object.getOwnPropertyDescriptor(globalThis, 'apiFetch')
+
+afterEach(() => {
+  if (originalApiFetch) Object.defineProperty(globalThis, 'apiFetch', originalApiFetch)
+  else Reflect.deleteProperty(globalThis, 'apiFetch')
+})
 
 describe('useInvoiceDetail loading lifecycle', () => {
   it('ignores a response from a closed drawer', async () => {

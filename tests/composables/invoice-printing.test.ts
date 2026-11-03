@@ -1,13 +1,21 @@
 import { afterEach, vi } from 'vitest'
 
 const originalWindowPrint = Object.getOwnPropertyDescriptor(window, 'print')
+const originalUseToast = Object.getOwnPropertyDescriptor(globalThis, 'useToast')
+const originalApiFetch = Object.getOwnPropertyDescriptor(globalThis, 'apiFetch')
+
+function restoreGlobal(name: string, descriptor: PropertyDescriptor | undefined) {
+  if (descriptor) Object.defineProperty(globalThis, name, descriptor)
+  else Reflect.deleteProperty(globalThis, name)
+}
 
 describe('useInvoicePrinting', () => {
   afterEach(() => {
     vi.restoreAllMocks()
-    vi.unstubAllGlobals()
     if (originalWindowPrint) Object.defineProperty(window, 'print', originalWindowPrint)
     else Reflect.deleteProperty(window, 'print')
+    restoreGlobal('useToast', originalUseToast)
+    restoreGlobal('apiFetch', originalApiFetch)
   })
 
   it('opens the shared route for ordered unique invoice ids', async () => {
