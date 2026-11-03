@@ -255,7 +255,7 @@ export const TenantRepository = {
     event: H3Event,
     filters: TenantFilters = {},
   ): Promise<{ items: Tenant[]; total: number }> {
-    if (filters.buildingIds && filters.buildingIds.length === 0) {
+    if (filters.buildingIds && filters.buildingIds.length === 0 && !filters.include_ids?.length) {
       return { items: [], total: 0 }
     }
 
@@ -375,6 +375,37 @@ export const TenantRepository = {
   /** Public wrapper over the building→tenant resolver for scope filtering. */
   async findTenantIdsForBuildings(event: H3Event, buildingIds: string[]): Promise<string[]> {
     return findTenantIdsForBuildings(event, buildingIds)
+  },
+
+  async findUnassignedTenantIds(event: H3Event): Promise<string[]> {
+    const client = await serverSupabaseClient(event)
+    const { data: contracts, error: contractError } = await client
+      .from('contracts')
+      .select('id, tenant_id')
+
+    if (contractError) throwDbError(contractError, 'tenants.findUnassignedTenantIds.contracts')
+
+    const contractIds = (contracts ?? []).map(contract => contract.id)
+    const assignedTenantIds = new Set((contracts ?? []).map(contract => contract.tenant_id))
+
+    if (contractIds.length > 0) {
+      const { data: occupants, error: occupantError } = await client
+        .from('contract_occupants')
+        .select('tenant_id')
+        .in('contract_id', contractIds)
+
+      if (occupantError) throwDbError(occupantError, 'tenants.findUnassignedTenantIds.occupants')
+      for (const occupant of occupants ?? []) assignedTenantIds.add(occupant.tenant_id)
+    }
+
+    const { data: tenants, error: tenantError } = await client
+      .from('tenants')
+      .select('id')
+
+    if (tenantError) throwDbError(tenantError, 'tenants.findUnassignedTenantIds.tenants')
+    return (tenants ?? [])
+      .filter(tenant => !assignedTenantIds.has(tenant.id))
+      .map(tenant => tenant.id)
   },
 
   async hasContractInBuildings(

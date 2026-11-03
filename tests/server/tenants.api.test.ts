@@ -1,8 +1,10 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest'
 import type { Tenant } from '../../app/types/tenants'
+import { BuildingVisibilityRepository } from '../../server/repositories/buildings/visibility'
 
 const repoMocks = vi.hoisted(() => ({
   findAll: vi.fn(),
+  findUnassignedTenantIds: vi.fn(),
   findByIdentifier: vi.fn(),
   findActiveAssignmentByTenantId: vi.fn(),
   findById: vi.fn(),
@@ -169,6 +171,9 @@ beforeEach(() => {
   tenantAccountLinkRepoMocks.getByTenantId.mockResolvedValue(null)
   assignmentRepoMocks.findBuildingIdsByUser.mockResolvedValue(['0a8a4dd0-7d6f-4f4e-bc7e-3c5e1b833333'])
   assignmentRepoMocks.findByUserAndBuilding.mockResolvedValue(null)
+  repoMocks.findUnassignedTenantIds.mockResolvedValue([])
+  vi.mocked(BuildingVisibilityRepository.findHiddenIds).mockResolvedValue([])
+  vi.mocked(BuildingVisibilityRepository.findVisibleIds).mockResolvedValue([])
   bulkRepoMocks.execute.mockImplementation((_event, _entity, _action, ids: string[]) =>
     Promise.resolve(ids.map(id => ({ id, succeeded: true, reason: null }))),
   )
@@ -271,6 +276,23 @@ describe('GET /api/tenants', () => {
 
     expect(repoMocks.findCreatedTenantIdsByActor).toHaveBeenCalledWith(expect.anything(), 'user-owner')
     expect(repoMocks.findAll).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ include_ids: ['orphan-1'] }))
+  })
+
+  it('includes unassigned tenants in admin lists when hidden buildings constrain visibility', async () => {
+    asAdmin()
+    repoMocks.findAll.mockResolvedValue({ items: [], total: 0 })
+    repoMocks.findUnassignedTenantIds.mockResolvedValue(['unassigned-1'])
+    vi.mocked(BuildingVisibilityRepository.findHiddenIds).mockResolvedValue(['hidden-building'])
+    vi.mocked(BuildingVisibilityRepository.findVisibleIds).mockResolvedValue(['visible-building'])
+    const { default: handler } = await import('../../server/api/tenants/index.get')
+
+    await handler(makeEvent({ query: {} }))
+
+    expect(repoMocks.findUnassignedTenantIds).toHaveBeenCalledWith(expect.anything())
+    expect(repoMocks.findAll).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      buildingIds: ['visible-building'],
+      include_ids: ['unassigned-1'],
+    }))
   })
 
   it('forwards sort by full_name and created_at', async () => {
