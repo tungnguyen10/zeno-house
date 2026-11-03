@@ -24,6 +24,7 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./tests/setup.ts'],
     root,
+    fileParallelism: false,
     exclude: ['**/node_modules/**', '.worktrees/**'],
     coverage: {
       provider: 'v8',
