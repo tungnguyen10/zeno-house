@@ -434,6 +434,24 @@ describe('TenantRepository search and status filtering', () => {
     expect(result.items.map(t => t.id)).toEqual(['a'])
   })
 
+  it('includes explicit tenant ids when no buildings are visible', async () => {
+    serverSupabaseClient.mockResolvedValue(createClientMock({
+      tenants: [
+        buildTenant({ id: 'unassigned-1', full_name: 'Unassigned' }),
+      ],
+      contracts: [],
+      occupants: [],
+    }))
+
+    const { TenantRepository } = await import('../../../server/repositories/tenants')
+    const result = await TenantRepository.findAll({} as never, {
+      buildingIds: [],
+      include_ids: ['unassigned-1'],
+    })
+
+    expect(result.items.map(t => t.id)).toEqual(['unassigned-1'])
+  })
+
   it('returns only archived when status=archived', async () => {
     serverSupabaseClient.mockResolvedValue(createClientMock({
       tenants: [
@@ -463,6 +481,33 @@ describe('TenantRepository search and status filtering', () => {
     const { TenantRepository } = await import('../../../server/repositories/tenants')
     const result = await TenantRepository.findAll({} as never, { sort: 'created_at', order: 'desc' })
     expect(result.items.map(t => t.id)).toEqual(['b', 'c', 'a'])
+  })
+})
+
+describe('TenantRepository.findUnassignedTenantIds', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('returns only tenants without any contract or occupant relationship', async () => {
+    serverSupabaseClient.mockResolvedValue(createClientMock({
+      tenants: [
+        buildTenant({ id: 'unassigned-1' }),
+        buildTenant({ id: 'primary-1' }),
+        buildTenant({ id: 'roommate-1' }),
+      ],
+      contracts: [
+        { id: 'historical-contract', building_id: 'hidden-building', tenant_id: 'primary-1', status: 'terminated' },
+        { id: 'occupant-contract', building_id: 'hidden-building', tenant_id: 'primary-1', status: 'active' },
+      ],
+      occupants: [
+        { contract_id: 'occupant-contract', tenant_id: 'roommate-1', move_out_date: '2026-01-01' },
+      ],
+    }))
+
+    const { TenantRepository } = await import('../../../server/repositories/tenants')
+
+    await expect(TenantRepository.findUnassignedTenantIds({} as never)).resolves.toEqual(['unassigned-1'])
   })
 })
 

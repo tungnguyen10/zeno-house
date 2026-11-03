@@ -43,6 +43,23 @@ import { ok, paginated, parseBody, parseQuery } from '../server/utils/api'
 
 const stateStore = new Map<string, ReturnType<typeof ref>>()
 
+// Some Node/happy-dom combinations leave `localStorage` undefined; install an in-memory Storage.
+for (const key of ['localStorage', 'sessionStorage'] as const) {
+  if (typeof window !== 'undefined' && !window[key]) {
+    const data = new Map<string, string>()
+    const storage: Storage = {
+      get length() { return data.size },
+      clear: () => data.clear(),
+      getItem: (k) => data.get(String(k)) ?? null,
+      key: (i) => Array.from(data.keys())[i] ?? null,
+      removeItem: (k) => { data.delete(String(k)) },
+      setItem: (k, v) => { data.set(String(k), String(v)) },
+    }
+    Object.defineProperty(window, key, { value: storage, configurable: true })
+    Object.defineProperty(globalThis, key, { value: storage, configurable: true })
+  }
+}
+
 config.global.components = {
   ...config.global.components,
   UiButton,

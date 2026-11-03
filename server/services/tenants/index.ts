@@ -121,6 +121,9 @@ export const TenantService = {
     if (user.app_metadata.role === 'owner' && buildingIds && !buildingId) {
       includeIds = await TenantRepository.findCreatedTenantIdsByActor(event, user.id)
     }
+    else if (user.app_metadata.role === 'admin' && buildingIds !== null && !buildingId) {
+      includeIds = await TenantRepository.findUnassignedTenantIds(event)
+    }
 
     return TenantRepository.findAll(event, {
       ...filters,

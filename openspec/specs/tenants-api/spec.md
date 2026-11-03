@@ -9,6 +9,11 @@ REST API for managing tenants. Full CRUD with pagination, search by name/phone, 
 - **WHEN** admin calls GET /api/tenants
 - **THEN** returns array of tenants with pagination meta
 
+#### Scenario: Admin list includes unassigned tenants when buildings are hidden
+- **GIVEN** at least one building is hidden and an active tenant has no contract or occupant relationship
+- **WHEN** admin calls GET /api/tenants without a building filter
+- **THEN** the unassigned tenant is included while tenants associated only with hidden buildings remain omitted
+
 #### Scenario: Search by name
 - **WHEN** admin calls GET /api/tenants?q=Nguyễn
 - **THEN** returns only tenants whose full_name contains "Nguyễn" (case-insensitive)

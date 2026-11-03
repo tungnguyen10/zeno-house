@@ -45,7 +45,9 @@ Property and occupancy:
 `buildings.is_hidden` is an admin-only presentation flag, independent of `status`. Archiving sets
 `status = 'inactive'`; hiding sets `is_hidden = true`. Neither changes the other. Hidden buildings
 are filtered out of list and aggregate reads in the service layer (see `getVisibleBuildingIds` in
-`server/utils/scope.ts`), never by RLS, so direct detail access keeps working.
+`server/utils/scope.ts`), never by RLS, so direct detail access keeps working. The admin tenant list
+also keeps tenant master rows with no contract or occupant relationship visible; rows associated
+only with hidden buildings remain filtered out.
 
 `tenant_user_links` maps one Supabase Auth user to one tenant record. Only an `active` link
 establishes tenant self-scope; unique constraints on both ids enforce the one-to-one mapping.
