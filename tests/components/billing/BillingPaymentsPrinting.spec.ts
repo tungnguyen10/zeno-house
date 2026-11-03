@@ -1,4 +1,5 @@
 import { flushPromises, mount } from '@vue/test-utils'
+import { afterAll, afterEach } from 'vitest'
 import { defineComponent, h, ref } from 'vue'
 import BillingPaymentsStep from '../../../app/components/billing/BillingPaymentsStep.vue'
 import { buildInvoice } from '../../__fixtures__/billing/invoice'
@@ -7,6 +8,29 @@ import type { Invoice } from '../../../app/types/billing'
 
 const openPrint = vi.fn()
 const loadInvoice = vi.fn()
+const stubbedGlobalNames = [
+  'useToast',
+  'useInvoicePrinting',
+  'useRuntimeConfig',
+  'useInvoiceEmailDelivery',
+  'useBillingInvoiceActions',
+]
+const originalGlobalDescriptors = new Map(
+  stubbedGlobalNames.map(name => [name, Object.getOwnPropertyDescriptor(globalThis, name)]),
+)
+
+afterAll(() => {
+  for (const [name, descriptor] of originalGlobalDescriptors) {
+    expect(Object.getOwnPropertyDescriptor(globalThis, name)).toEqual(descriptor)
+  }
+})
+
+afterEach(() => {
+  for (const [name, descriptor] of originalGlobalDescriptors) {
+    if (descriptor) Object.defineProperty(globalThis, name, descriptor)
+    else Reflect.deleteProperty(globalThis, name)
+  }
+})
 
 const passthrough = defineComponent({
   props: ['title'],
