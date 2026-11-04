@@ -29,7 +29,8 @@ interface ServiceWorkerScope {
 // `self.__WB_MANIFEST` that workbox-build searches for when injecting the manifest.
 declare const self: ServiceWorkerScope
 
-const OFFLINE_URL = '/offline.html'
+// @vite-pwa/nuxt strips ".html" from precache URLs, so the entry key is "/offline".
+const OFFLINE_URL = '/offline'
 
 self.skipWaiting()
 self.addEventListener('activate', (event) => {

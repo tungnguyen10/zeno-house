@@ -1,6 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "regions": ["sin1"],
+  "rewrites": [{ "source": "/offline", "destination": "/offline.html" }],
   "git": {
     "deploymentEnabled": {
       "main": true,

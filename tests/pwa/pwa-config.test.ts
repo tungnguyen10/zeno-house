@@ -167,7 +167,7 @@ describe('service worker — no authenticated personal data is cached', () => {
   })
 
   it('denylists /api navigations and falls back to a non-sensitive offline shell', () => {
-    expect(sw).toContain('/offline.html')
+    expect(sw).toContain("OFFLINE_URL = '/offline'")
     expect(sw).toMatch(/denylist:\s*\[[^\]]*\/\^\\\/api/)
   })
 })
