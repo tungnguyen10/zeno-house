@@ -252,6 +252,16 @@ Closing a period (`BillingPeriodService.close` -> `close_billing_period_atomic`)
 - a retry after success replays (`replayed = true`, no duplicate audit or accrual). A period that is `closed` without a matching `period.closed` audit event raises `PERIOD_CLOSED_INCONSISTENT` and must go through reconciliation instead of silently succeeding. Audit rows written by the old TypeScript flow (camelCase `closedAt`) still count as a matching close
 - `POST /api/billing/periods/:id/close` returns `{ data: period, meta: { accrualStatus } }`
 
+### Month-end automatic close
+
+The `operations-report-auto-close` Supabase Cron job (23:55 `Asia/Ho_Chi_Minh`, acts only on the last day of the month) also closes billing periods through `runMonthEndClose` (`server/services/billing/month-end-close.ts`):
+
+- for each active building the month's billing period is closed first, then the operations report, so the reserve accrual is written once by billing
+- a period is closed only when it is `issued`/`collecting` and every non-void invoice is paid; periods with unpaid invoices (`has_outstanding`), `draft`/`readings`/`review` periods (`not_closable`), and missing periods (`no_period`) are skipped and left for an admin, while the operations report still closes
+- the close uses the same atomic RPC with a NULL actor, so retries replay safely and the audit event has no actor
+- one building failing never blocks the others; the route response lists the per-building `billing` and `report` outcome
+- there is no day-20 or other schedule; `POST /api/billing/periods/:id/close` stays the manual path
+
 ### Closed-period locks
 
 - `record_bulk_payments` locks the affected `billing_periods` rows (ordered by id, `FOR NO KEY UPDATE`) before locking any invoice, then rejects closed periods. `NO KEY UPDATE` is used instead of `SHARE` because the function moves `issued -> collecting` and two `SHARE` holders would deadlock on that update

@@ -211,7 +211,7 @@ Chỉ sau khi anh/chị duyệt báo cáo mới viết script sửa (`supabase/s
 
 ## Ngoài phạm vi
 
-- Auto-close billing.
+- Auto-close billing (đã bổ sung sau đó cho kỳ đã thu hết vào cuối tháng, xem `docs/features/billing.md`).
 - Thay đổi lifecycle hoặc quyền của operations report.
 - Tự động refresh accrual khi báo cáo đã chốt.
 - Snapshot tài chính đầy đủ (ngoài metadata audit) cho kỳ billing.

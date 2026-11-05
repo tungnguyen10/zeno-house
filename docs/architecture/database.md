@@ -207,7 +207,7 @@ accessible only through service-role repositories/functions.
 
 `building_reserve_fund_rates` stores period-based reserve rate history per building. `reserve_funds` stores one fund per building. `reserve_fund_transactions` is the ledger; active `monthly_accrual` rows increase the fund from non-negative operations profit at billing close, report close, auto-close, or admin refresh; active `expense_deduction` rows decrease it for reserve-funded expenses, and voided deductions no longer affect active balance. `building_expenses.funded_by` marks direct versus reserve-funded expenses. Reserve balances may be negative.
 
-Operations-report close, operations-report auto-close, and admin reserve refresh never close billing periods. Billing period status changes only through billing flows.
+Operations-report close, operations-report auto-close, and admin reserve refresh never change billing period status themselves. Billing periods close only through the billing close flow: the manual API or the month-end job (`runMonthEndClose`), which closes fully collected `issued`/`collecting` periods through `close_billing_period_atomic` with a NULL actor before closing the operations report.
 
 ### Atomic Billing Close
 
