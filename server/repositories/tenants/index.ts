@@ -442,12 +442,14 @@ export const TenantRepository = {
   },
 
   async findByIds(event: H3Event, ids: string[]): Promise<Tenant[]> {
-    if (ids.length === 0) return []
+    // A non-UUID value would make Postgres reject the whole query; treat it as a missing tenant.
+    const uuids = [...new Set(ids.filter(isUuid))]
+    if (uuids.length === 0) return []
     const client = await serverSupabaseClient(event)
     const { data, error } = await client
       .from('tenants')
       .select('*')
-      .in('id', [...new Set(ids)])
+      .in('id', uuids)
 
     if (error) throwDbError(error, 'tenants.findByIds')
     return (data ?? []).map(mapTenant)

@@ -43,38 +43,25 @@ export const ContractRenewalRepository = {
 
   async renewAtomic(event: H3Event, args: RenewAtomicArgs): Promise<RenewAtomicResult> {
     const client = serverSupabaseClient(event)
-    // Temporary RPC adapter until the approved cloud migration is applied and
-    // database.types.ts is regenerated. Keep its name and arguments narrowly typed.
-    const rpc = client.rpc.bind(client) as unknown as (
-      name: 'renew_contract_atomic',
-      params: {
-        p_contract_id: string
-        p_mode: RenewAtomicArgs['mode']
-        p_new_end_date: string
-        p_new_monthly_rent: number | null
-        p_reason: string | null
-        p_actor_id: string
-        p_operation_id: string
-        p_correlation_id: string
-      },
-    ) => PromiseLike<{ data: RenewAtomicPayload | null, error: unknown }>
-    const { data, error } = await rpc('renew_contract_atomic', {
+    // The RPC accepts null for rent (keep current) and reason, but generated types mark them non-null.
+    const { data, error } = await client.rpc('renew_contract_atomic', {
       p_contract_id: args.contractId,
       p_mode: args.mode,
       p_new_end_date: args.newEndDate,
-      p_new_monthly_rent: args.newMonthlyRent,
-      p_reason: args.reason,
+      p_new_monthly_rent: args.newMonthlyRent as number,
+      p_reason: args.reason as string,
       p_actor_id: args.actorId,
       p_operation_id: args.operationId,
       p_correlation_id: args.correlationId,
     })
     if (error) throwDbError(error, 'contractRenewals.renewAtomic')
     if (!data) throwInternal(new Error('Empty renewal RPC result'), 'contractRenewals.renewAtomic')
+    const payload = data as unknown as RenewAtomicPayload
     return {
-      renewal: mapContractRenewal(data.renewal),
-      newContractId: data.new_contract?.id ?? null,
-      transferredSourceIds: data.transferred_source_ids,
-      replayed: data.replayed,
+      renewal: mapContractRenewal(payload.renewal),
+      newContractId: payload.new_contract?.id ?? null,
+      transferredSourceIds: payload.transferred_source_ids,
+      replayed: payload.replayed,
     }
   },
 }

@@ -245,7 +245,9 @@ begin
   end if;
   v_cancel_reason := 'Hợp đồng đã được gia hạn thành hợp đồng mới';
 
-  -- Lock order: contract (above), room, open occupants by id, checkout sources by id.
+  -- Lock order: contract (above), building advisory lock, room, open occupants by id, checkout sources by id.
+  -- The advisory lock comes first to match create_contract_with_handover and avoid a lock-order deadlock.
+  perform pg_advisory_xact_lock(hashtextextended(old_row.building_id::text, 1));
   perform 1 from public.rooms where id = old_row.room_id for update;
   perform 1 from public.contract_occupants where contract_id = old_row.id and move_out_date is null order by id for update;
   perform 1 from public.contract_checkout_sources where contract_id = old_row.id order by id for update;
@@ -282,8 +284,7 @@ begin
   update public.contracts set status = 'renewed' where id = old_row.id
     returning * into old_row;
 
-  -- Serialize contract_code allocation per building (same scheme as create_contract_with_handover).
-  perform pg_advisory_xact_lock(hashtextextended(old_row.building_id::text, 1));
+  -- contract_code allocation is already serialized per building by the advisory lock taken above.
   v_prefix := format('hd-%s-%s', v_building_code, extract(year from old_row.end_date + 1)::integer);
   select coalesce(max(
     nullif(regexp_replace(contract_code, '^' || v_prefix || '-', ''), '')::integer
