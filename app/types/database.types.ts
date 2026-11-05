@@ -3375,6 +3375,14 @@ export type Database = {
           succeeded: boolean
         }[]
       }
+      bulk_tenant_status_action: {
+        Args: { p_action: string; p_items: Json }
+        Returns: {
+          id: string
+          reason: string
+          succeeded: boolean
+        }[]
+      }
       cancel_ai_action_plan: {
         Args: { p_plan_id: string; p_user_id: string }
         Returns: {
