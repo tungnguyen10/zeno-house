@@ -165,7 +165,7 @@ Contract dates are inclusive. A `new_contract` renewal starts the day after the 
 Renewal is atomic. The `renew_contract_atomic` database function runs the whole renewal in one transaction, so a failure leaves the original contract unchanged:
 
 - `extend`: updates the end date and optional rent, writes the renewal log, and cancels scheduled amendments.
-- `new_contract`: marks the old contract `renewed`, closes its open occupancies at its end date, creates the successor with the same occupants and services, and cancels scheduled amendments.
+- `new_contract`: marks the old contract `renewed`, closes its open occupancies at its end date, creates the successor with the same occupants and services (a legacy contract without occupant rows gets its tenant as the primary occupant), and cancels scheduled amendments.
 - Deposit and credit sources with a positive balance move to the successor, so the successor's checkout sees the held money. Checkout lists each source with its origin contract.
 - The form sends one `operation_id` per renewal attempt. Retrying with the same id replays the stored result; reusing it with different terms is a conflict.
 - A contract allows only one successor and a room only one active contract, so concurrent renewals produce a single winner and a `409 CONTRACT_ALREADY_RENEWED`.

@@ -87,7 +87,7 @@ Kết quả trả về: `{ renewal, contract, new_contract, transferred_source_i
    3. `contract_occupants` đang mở của hợp đồng, theo `id`;
    4. `contract_checkout_sources` của hợp đồng, theo `id`.
 3. Đã có successor (`previous_contract_id = p_contract_id`) thì raise `CONTRACT_ALREADY_RENEWED`.
-4. Không có occupancy đang mở nào thì raise `RENEWAL_OCCUPANTS_MISSING`.
+4. Không có occupancy đang mở nào thì lấy `contracts.tenant_id` làm người ở chính (`primary`, `billing_counted = true`) cho successor, vì hợp đồng cũ có thể chưa có dòng occupancy. Nếu tenant đó đang có occupancy mở ở hợp đồng khác thì raise `RENEWAL_OCCUPANTS_MISSING`.
 5. Đóng occupancy đang mở: `move_out_date = old.end_date`.
 6. Chuyển hợp đồng cũ sang `status = 'renewed'`.
 7. Cấp `contract_code` bằng cơ chế advisory lock theo tòa như trong `create_contract_with_handover`.

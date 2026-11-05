@@ -224,11 +224,28 @@ begin
     or (public.contract_checkout_get(successor)->>'creditHeld')::numeric <> 500000 then raise exception 'FAIL: ancestor credit'; end if;
 end $$;
 
--- No valid open occupancy means no successor and no partial lifecycle mutation.
+-- A contract without occupant rows (legacy data) renews with its tenant as primary occupant.
 do $$
-declare f jsonb := pg_temp.renewal_fixture(); c uuid := (f->>'contract')::uuid;
+declare f jsonb := pg_temp.renewal_fixture(); c uuid := (f->>'contract')::uuid; result jsonb; successor uuid;
 begin
-  update public.contract_occupants set move_out_date='2026-12-31' where contract_id=c;
+  delete from public.contract_occupants where contract_id=c;
+  result := pg_temp.renewal_call(f,'new_contract'); successor := (result->'new_contract'->>'id')::uuid;
+  if (select count(*) from public.contract_occupants where contract_id=successor) <> 1
+    or not exists(select 1 from public.contract_occupants o join public.contracts ct on ct.id=o.contract_id
+      where o.contract_id=successor and o.tenant_id=ct.tenant_id and o.role='primary'
+        and o.billing_counted and o.move_in_date='2027-01-01' and o.move_out_date is null)
+    or exists(select 1 from public.contract_occupants where contract_id=c) then
+    raise exception 'FAIL: legacy contract without occupants did not get a primary occupant';
+  end if;
+end $$;
+
+-- No usable occupancy (tenant already lives on another contract) means no successor and no partial mutation.
+do $$
+declare f jsonb := pg_temp.renewal_fixture(); other jsonb := pg_temp.renewal_fixture(); c uuid := (f->>'contract')::uuid;
+begin
+  delete from public.contract_occupants where contract_id=c;
+  insert into public.contract_occupants(contract_id,tenant_id,role,billing_counted,move_in_date)
+    select (other->>'contract')::uuid, tenant_id, 'roommate', true, '2026-03-01' from public.contracts where id=c;
   begin
     perform pg_temp.renewal_call(f,'new_contract'); raise exception 'FAIL: missing occupants accepted';
   exception when check_violation then

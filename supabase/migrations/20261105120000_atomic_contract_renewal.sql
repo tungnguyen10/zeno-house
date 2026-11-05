@@ -261,7 +261,13 @@ begin
     from public.contract_occupants o
     where o.contract_id = old_row.id and o.move_out_date is null;
   if v_closed_occ is null then
-    raise exception 'RENEWAL_OCCUPANTS_MISSING' using errcode = '23514';
+    -- Legacy contracts can have no occupant rows. The contract tenant is then the primary occupant,
+    -- unless that tenant already lives on another contract (one open occupancy per tenant).
+    if exists (select 1 from public.contract_occupants where tenant_id = old_row.tenant_id and move_out_date is null) then
+      raise exception 'RENEWAL_OCCUPANTS_MISSING' using errcode = '23514';
+    end if;
+    v_closed_occ := jsonb_build_array(jsonb_build_object(
+      'tenant_id', old_row.tenant_id, 'role', 'primary', 'billing_counted', true));
   end if;
 
   -- Cancel first for the same reason as in the extend branch (status change fires the lifecycle trigger).

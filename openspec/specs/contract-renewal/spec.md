@@ -33,6 +33,10 @@ The system SHALL commit a renewal in a single database transaction. Contract dat
 - **WHEN** admin renews with mode `new_contract`
 - **THEN** open occupancies of the old contract are closed at its `end_date`; the successor starts on `end_date + 1` with the same occupants and services; checkout sources with a positive balance move to the successor; scheduled amendments of the old contract are cancelled; all changes are audited under one correlation id
 
+#### Scenario: Legacy contract without occupant rows
+- **WHEN** admin renews with mode `new_contract` a contract that has no open occupancies
+- **THEN** the successor gets the contract tenant as primary occupant; if that tenant already has an open occupancy on another contract the request is rejected with CONFLICT
+
 #### Scenario: Failure leaves the contract unchanged
 - **WHEN** any step of a renewal fails
 - **THEN** the original contract, occupancies, services, and sources are unchanged and no successor exists
