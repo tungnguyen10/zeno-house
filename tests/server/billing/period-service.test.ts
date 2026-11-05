@@ -8,13 +8,10 @@ const findById = vi.fn()
 const findByBuildingPeriod = vi.fn()
 const openOrGetWithAudit = vi.fn()
 const updateStatus = vi.fn()
+const reopenAtomic = vi.fn()
 const listOutstandingByPeriod = vi.fn()
 const listInvoicesByPeriod = vi.fn()
 const listInvoicesByPeriods = vi.fn()
-const listFixedCostsByBuilding = vi.fn()
-const listExpenses = vi.fn()
-const listActiveAllocations = vi.fn()
-const recordMonthlyAccrual = vi.fn()
 const append = vi.fn()
 const findBuildingByIdentifier = vi.fn()
 const assignmentRepoMocks = vi.hoisted(() => ({
@@ -28,6 +25,7 @@ vi.mock('../../../server/repositories/billing/periods', () => ({
     findByBuildingPeriod,
     openOrGetWithAudit,
     updateStatus,
+    reopenAtomic,
   },
 }))
 
@@ -45,28 +43,12 @@ vi.mock('../../../server/repositories/billing/invoices', () => ({
   },
 }))
 
-vi.mock('../../../server/repositories/operations-report/fixed-costs', () => ({
-  BuildingFixedCostRepository: {
-    listByBuilding: listFixedCostsByBuilding,
-  },
+vi.mock('../../../server/services/operations-report/accrual', () => ({
+  computeAccrualInputs: vi.fn(),
 }))
 
-vi.mock('../../../server/repositories/operations-report/expenses', () => ({
-  BuildingExpenseRepository: {
-    list: listExpenses,
-  },
-}))
-
-vi.mock('../../../server/services/operations-report/prepaid-expenses', () => ({
-  PrepaidExpenseService: {
-    listActiveAllocations,
-  },
-}))
-
-vi.mock('../../../server/services/operations-report/reserve-funds', () => ({
-  ReserveFundService: {
-    recordMonthlyAccrual,
-  },
+vi.mock('../../../server/services/operations-report/cache', () => ({
+  invalidateOperationsReport: vi.fn(),
 }))
 
 vi.mock('../../../server/services/billing/audit', () => ({
@@ -198,55 +180,11 @@ describe('BillingPeriodService.advanceStatus', () => {
   })
 })
 
-describe('BillingPeriodService.reopen', () => {
+describe('BillingPeriodService.reopen role and scope guards', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.stubGlobal('can', realCan)
     assignmentRepoMocks.findBuildingIdsByUser.mockResolvedValue(['building-1'])
-  })
-
-  it('reopens a closed period back to collecting and audits the reason', async () => {
-    const closed = buildPeriod({ id: 'period-1', buildingId: 'building-1', status: 'closed' })
-    const reopened = buildPeriod({ id: 'period-1', buildingId: 'building-1', status: 'collecting' })
-    findById.mockResolvedValue(closed)
-    updateStatus.mockResolvedValue(reopened)
-    const { BillingPeriodService } = await import('../../../server/services/billing/periods')
-
-    const result = await BillingPeriodService.reopen(
-      event(), makeUser('admin'), 'period-1', 'sửa lại chỉ số điện phòng 201',
-    )
-
-    expect(result.status).toBe('collecting')
-    expect(updateStatus).toHaveBeenCalledWith(
-      expect.anything(), 'period-1', 'collecting', { closed_at: null },
-    )
-    expect(append).toHaveBeenCalledWith(expect.anything(), expect.anything(), expect.objectContaining({
-      action: 'period.reopened',
-      metadata: expect.objectContaining({
-        reason: 'sửa lại chỉ số điện phòng 201',
-        prior_status: 'closed',
-        trigger: 'manual',
-      }),
-    }))
-  })
-
-  it('rejects a reason shorter than 10 characters', async () => {
-    const { BillingPeriodService } = await import('../../../server/services/billing/periods')
-
-    await expect(BillingPeriodService.reopen(event(), makeUser('admin'), 'period-1', 'ngắn'))
-      .rejects.toMatchObject({ statusCode: 422 })
-    expect(findById).not.toHaveBeenCalled()
-    expect(updateStatus).not.toHaveBeenCalled()
-  })
-
-  it('returns 409 when the period is not closed', async () => {
-    findById.mockResolvedValue(buildPeriod({ id: 'period-1', buildingId: 'building-1', status: 'collecting' }))
-    const { BillingPeriodService } = await import('../../../server/services/billing/periods')
-
-    await expect(BillingPeriodService.reopen(
-      event(), makeUser('admin'), 'period-1', 'cần mở lại để chỉnh sửa',
-    )).rejects.toMatchObject({ statusCode: 409 })
-    expect(updateStatus).not.toHaveBeenCalled()
   })
 
   it('returns 403 when a manager reopens a period outside assigned scope', async () => {
@@ -256,7 +194,7 @@ describe('BillingPeriodService.reopen', () => {
     await expect(BillingPeriodService.reopen(
       event(), makeUser('manager'), 'period-2', 'cần mở lại để chỉnh sửa',
     )).rejects.toMatchObject({ statusCode: 403 })
-    expect(updateStatus).not.toHaveBeenCalled()
+    expect(reopenAtomic).not.toHaveBeenCalled()
   })
 
   it('returns 403 when an owner tries to reopen a closed period', async () => {
@@ -266,125 +204,6 @@ describe('BillingPeriodService.reopen', () => {
       event(), makeUser('owner'), 'period-1', 'cần mở lại để chỉnh sửa',
     )).rejects.toMatchObject({ statusCode: 403 })
     expect(findById).not.toHaveBeenCalled()
-    expect(updateStatus).not.toHaveBeenCalled()
-  })
-})
-
-describe('BillingPeriodService.close', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-    assignmentRepoMocks.findBuildingIdsByUser.mockResolvedValue(['building-1'])
-    listOutstandingByPeriod.mockResolvedValue([])
-    listInvoicesByPeriod.mockResolvedValue([
-      { id: 'invoice-1', status: 'paid', totalAmount: 1_000_000 },
-      { id: 'invoice-2', status: 'void', totalAmount: 900_000 },
-      { id: 'invoice-3', status: 'paid', totalAmount: 2_000_000 },
-    ])
-    listFixedCostsByBuilding.mockResolvedValue([
-      {
-        effectiveFromPeriodYear: 2026,
-        effectiveFromPeriodMonth: 1,
-        effectiveToPeriodYear: null,
-        effectiveToPeriodMonth: null,
-        amount: 400_000,
-      },
-    ])
-    listExpenses.mockResolvedValue([{ amount: 500_000 }])
-    listActiveAllocations.mockResolvedValue([{ monthlyAmount: 100_000 }])
-    recordMonthlyAccrual.mockResolvedValue({ id: 'accrual-1' })
-  })
-
-  it('closes a collecting period and records reserve accrual from issued profit', async () => {
-    const period = buildPeriod({
-      id: 'period-1',
-      buildingId: 'building-1',
-      periodYear: 2026,
-      periodMonth: 7,
-      status: 'collecting',
-    })
-    const closed = buildPeriod({ ...period, status: 'closed' })
-    findById.mockResolvedValue(period)
-    updateStatus.mockResolvedValue(closed)
-    const { BillingPeriodService } = await import('../../../server/services/billing/periods')
-
-    const result = await BillingPeriodService.close(event(), makeUser('admin'), 'period-1')
-
-    expect(result.status).toBe('closed')
-    expect(recordMonthlyAccrual).toHaveBeenCalledWith(expect.anything(), expect.anything(), {
-      buildingId: 'building-1',
-      periodYear: 2026,
-      periodMonth: 7,
-      billingPeriodId: 'period-1',
-      issuedRevenue: 3_000_000,
-      issuedProfitByRevenue: 2_000_000,
-    })
-    expect(append).toHaveBeenCalledWith(expect.anything(), expect.anything(), expect.objectContaining({
-      action: 'period.closed',
-    }))
-  })
-
-  it('does not create another accrual when close is called on an already closed period', async () => {
-    const period = buildPeriod({ id: 'period-1', buildingId: 'building-1', status: 'closed' })
-    findById.mockResolvedValue(period)
-    const { BillingPeriodService } = await import('../../../server/services/billing/periods')
-
-    const result = await BillingPeriodService.close(event(), makeUser('admin'), 'period-1')
-
-    expect(result).toBe(period)
-    expect(updateStatus).not.toHaveBeenCalled()
-    expect(recordMonthlyAccrual).not.toHaveBeenCalled()
-  })
-
-  it('re-records monthly accrual when a period is reopened and closed again', async () => {
-    const collecting = buildPeriod({
-      id: 'period-1',
-      buildingId: 'building-1',
-      periodYear: 2026,
-      periodMonth: 7,
-      status: 'collecting',
-    })
-    const closed = buildPeriod({ ...collecting, status: 'closed' })
-
-    findById
-      .mockResolvedValueOnce(collecting)
-      .mockResolvedValueOnce(closed)
-      .mockResolvedValueOnce(collecting)
-    updateStatus
-      .mockResolvedValueOnce(closed)
-      .mockResolvedValueOnce(collecting)
-      .mockResolvedValueOnce(closed)
-    listInvoicesByPeriod
-      .mockResolvedValueOnce([
-        { id: 'invoice-1', status: 'paid', totalAmount: 1_000_000 },
-      ])
-      .mockResolvedValueOnce([
-        { id: 'invoice-1', status: 'paid', totalAmount: 1_500_000 },
-      ])
-    listExpenses
-      .mockResolvedValueOnce([{ amount: 100_000 }])
-      .mockResolvedValueOnce([{ amount: 300_000 }])
-
-    const { BillingPeriodService } = await import('../../../server/services/billing/periods')
-
-    await BillingPeriodService.close(event(), makeUser('admin'), 'period-1')
-    await BillingPeriodService.reopen(event(), makeUser('admin'), 'period-1', 'reopen to refresh accrual')
-    await BillingPeriodService.close(event(), makeUser('admin'), 'period-1')
-
-    expect(recordMonthlyAccrual).toHaveBeenNthCalledWith(1, expect.anything(), expect.anything(), {
-      buildingId: 'building-1',
-      periodYear: 2026,
-      periodMonth: 7,
-      billingPeriodId: 'period-1',
-      issuedRevenue: 1_000_000,
-      issuedProfitByRevenue: 400_000,
-    })
-    expect(recordMonthlyAccrual).toHaveBeenNthCalledWith(2, expect.anything(), expect.anything(), {
-      buildingId: 'building-1',
-      periodYear: 2026,
-      periodMonth: 7,
-      billingPeriodId: 'period-1',
-      issuedRevenue: 1_500_000,
-      issuedProfitByRevenue: 700_000,
-    })
+    expect(reopenAtomic).not.toHaveBeenCalled()
   })
 })

@@ -564,3 +564,47 @@ describe('InvoiceService invoice lifecycle methods', () => {
     expect(append).not.toHaveBeenCalled()
   })
 })
+
+describe('InvoiceService corrections on a closed period', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.stubGlobal('can', () => true)
+    assignmentRepoMocks.findBuildingIdsByUser.mockResolvedValue(['building-1'])
+    findPeriodById.mockResolvedValue(buildPeriod({ id: 'period-1', status: 'closed' }))
+  })
+
+  it('rejects voiding an invoice with 409 before calling the RPC', async () => {
+    findInvoiceByIdentifier.mockResolvedValue(buildInvoice({ id: 'invoice-1', paidAmount: 0, status: 'issued' }))
+    const { InvoiceService } = await import('../../../server/services/billing/invoices')
+
+    await expect(InvoiceService.voidInvoice(event(), makeUser(), 'invoice-1', {
+      reason: 'wrong reading', expected_updated_at: '2026-07-14T00:00:00.000Z',
+    })).rejects.toMatchObject({ statusCode: 409 })
+    expect(voidWithAudit).not.toHaveBeenCalled()
+  })
+
+  it('rejects reissuing an invoice with 409 before calling the RPC', async () => {
+    findInvoiceByIdentifier.mockResolvedValue(buildInvoice({ id: 'invoice-1', status: 'void' }))
+    const { InvoiceService } = await import('../../../server/services/billing/invoices')
+
+    await expect(InvoiceService.reissueInvoice(event(), makeUser(), 'invoice-1', {
+      reason: 'wrong reading fixed', expected_updated_at: '2026-07-14T00:00:00.000Z',
+    })).rejects.toMatchObject({ statusCode: 409 })
+    expect(reissueWithAudit).not.toHaveBeenCalled()
+  })
+
+  it('rejects adding an adjustment with 409 before calling the RPC', async () => {
+    findInvoiceByIdentifier.mockResolvedValue(buildInvoice({ id: 'invoice-1', status: 'paid', paidAmount: 1_000_000 }))
+    const { InvoiceService } = await import('../../../server/services/billing/invoices')
+
+    await expect(InvoiceService.addAdjustment(event(), makeUser(), {
+      target_invoice_id: 'invoice-1',
+      label: 'Điều chỉnh tiền điện',
+      amount: 100_000,
+      reason: 'Bổ sung chênh lệch chỉ số',
+      reference_invoice_id: null,
+      expected_updated_at: '2026-07-14T00:00:00.000Z',
+    })).rejects.toMatchObject({ statusCode: 409 })
+    expect(addAdjustmentWithAudit).not.toHaveBeenCalled()
+  })
+})
