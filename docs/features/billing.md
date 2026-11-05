@@ -229,23 +229,46 @@ Rules:
 
 ## Reopen Flow
 
-Reopening a closed period:
+Reopening a closed period (`BillingPeriodRepository.reopenAtomic` -> `reopen_billing_period_atomic`):
 
 - requires `billing.reopen` (admin only)
-- requires a reason with at least 10 characters
-- only allowed from `closed` status
-- transitions `closed → collecting`
-- clears `closed_at`
-- writes `period.reopened` audit event with `{ reason, prior_status, trigger: 'manual' }`
+- requires a reason with at least 10 characters (also enforced in the RPC as `PERIOD_REOPEN_REASON_INVALID`)
+- only allowed from `closed` status (`PERIOD_NOT_CLOSED` otherwise)
+- transitions `closed -> collecting` and clears `closed_at`
+- the status change and the `period.reopened` audit event (`{ reason, prior_status, trigger: 'manual' }`) are one transaction
+- never edits or deletes the period's `monthly_accrual` row; closing again updates it
+- invalidates the operations report cache for the building
 
 ## Close Flow
 
-Closing a period:
+Closing a period (`BillingPeriodService.close` -> `close_billing_period_atomic`):
 
-- requires `billing.close`
+- requires `billing.close` and building write scope
 - allowed only from `issued` or `collecting`
-- requires zero outstanding invoices
-- writes audit metadata
+- requires zero non-void invoices with a balance (`PERIOD_HAS_OUTSTANDING`, message carries the count)
+- the service computes revenue, profit, reserve rate and accrual with the one shared formula (`computeAccrualInputs`, `server/utils/billing/accrual-formula.ts`) and passes them to the RPC
+- the RPC locks the period, re-checks revenue against the expected value (`PERIOD_SNAPSHOT_STALE` -> the service recomputes and retries once), sets `status = closed`, upserts the accrual and writes the `period.closed` audit event in one transaction
+- accrual ownership belongs to the operations report: the accrual is only upserted while the month's operations report is open or missing. When the report is already closed the accrual is untouched and the response carries `accrualStatus = skipped_report_closed`; the period page then shows a warning and an admin must refresh the reserve fund. A successful accrual write returns `recorded`; a replay returns `null`
+- a retry after success replays (`replayed = true`, no duplicate audit or accrual). A period that is `closed` without a matching `period.closed` audit event raises `PERIOD_CLOSED_INCONSISTENT` and must go through reconciliation instead of silently succeeding. Audit rows written by the old TypeScript flow (camelCase `closedAt`) still count as a matching close
+- `POST /api/billing/periods/:id/close` returns `{ data: period, meta: { accrualStatus } }`
+
+### Closed-period locks
+
+- `record_bulk_payments` locks the affected `billing_periods` rows (ordered by id, `FOR NO KEY UPDATE`) before locking any invoice, then rejects closed periods. `NO KEY UPDATE` is used instead of `SHARE` because the function moves `issued -> collecting` and two `SHARE` holders would deadlock on that update
+- trigger `billing_period_closed_guard` blocks insert/update/delete on `invoice_payments` and updates to invoice `status`, `subtotal_amount`, `discount_amount`, `surcharge_amount`, `total_amount`, `paid_amount`, `balance_amount` when the invoice's period is `closed` (`PERIOD_CLOSED_LOCKED`, HTTP 409). Non-money columns still update
+- lock order for every billing RPC: `billing_periods` -> `invoices` -> `invoice_payments`
+- void, reissue and adjustment already reject closed periods in `InvoiceService`; the trigger is the last line of defence
+
+### Grants
+
+`close_billing_period_atomic`, `reopen_billing_period_atomic`, `issue_period_invoices`, `record_bulk_payments` and `issue_and_pay` are `SECURITY INVOKER`, revoked from `public`, `anon` and `authenticated`, and executable only by `service_role`. The server uses the service role and `app/` never calls `.rpc(`.
+
+### Legacy data reconciliation (PR3a, before deploying the migration)
+
+1. Run `supabase/verification/billing_close_integrity.sql` in the Dashboard (read-only): closed periods without close audit, closed periods without accrual (split by effective rate), accruals pointing at non-closed periods, writes after `closed_at`, and current RPC grants.
+2. Run `node scripts/reconcile-reserve-accruals.mjs --out report.csv` with `SUPABASE_URL` and `SUPABASE_SECRET_KEY` (read-only). It recomputes each closed period with the shared formula and reports `match`, `mismatch` or `missing_accrual`.
+3. Review the report. The repair script (`supabase/sql-editor/repair-billing-close.sql`) is written only after the report is approved.
+4. Apply `supabase/migrations/20261105140000_atomic_billing_close.sql`, run `supabase/verification/atomic_billing_close.sql` (rolls back) and the concurrency exercise described at its top, then regenerate `app/types/database.types.ts`.
 
 ## Export
 

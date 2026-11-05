@@ -455,5 +455,8 @@ Chưa làm (như MVP scope đã nêu): approval, upload chứng từ, custom cat
 - Chi phí trả trước `expired` hoặc `cancelled` vẫn là bản ghi lịch sử chỉ đọc. Snapshot báo cáo dùng cửa sổ `start_date <= period start < end_date`, không dùng riêng trạng thái `active`, nên báo cáo cũ giữ nguyên phân bổ.
 - Supabase Cron gọi route internal auto-close lúc 16:55 UTC (23:55 `Asia/Ho_Chi_Minh`). Route internal yêu cầu `NUXT_OPERATIONS_REPORT_AUTO_CLOSE_SECRET`; nếu thiếu secret hoặc không phải ngày cuối tháng thì không chốt gì.
 - Có thể tắt tạm auto-close qua runtime env `NUXT_OPERATIONS_REPORT_AUTO_CLOSE_ENABLED=false` (hữu ích cho môi trường dev/local); bật lại bằng `true`.
-- Không có auto-close billing; billing close giữ nguyên flow và điều kiện hiện tại.
+- Billing close chỉ ghi accrual khi báo cáo vận hành của tháng đó còn mở hoặc chưa có dòng; nếu báo cáo đã chốt thì accrual được giữ nguyên, audit ghi `skipped_report_closed` và UI billing nhắc admin làm mới quỹ. Operations report là nơi sở hữu accrual.
+- Billing close, chốt báo cáo thủ công, auto-close và admin refresh dùng chung một công thức (`server/utils/billing/accrual-formula.ts`, qua `computeAccrualInputs`): chi phí trả từ quỹ không làm giảm lợi nhuận, `accrual = round(max(lãi, 0) * tỷ lệ / 100)`, thiếu tỷ lệ thì bằng 0.
+- Mở lại kỳ billing không xóa hay sửa accrual; chốt lại cập nhật cùng một dòng và audit ghi giá trị trước/sau.
+- Không có auto-close billing; billing close giữ nguyên điều kiện hiện tại.
 - Migration `20260707031000_fix_operations_report_periods_shape.sql` vá các DB đã có `operations_report_periods` shape cũ thiếu `close_source` và reload PostgREST schema cache.
