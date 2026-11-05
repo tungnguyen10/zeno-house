@@ -3604,6 +3604,18 @@ export type Database = {
         Args: { p_limit?: number }
         Returns: number
       }
+      close_billing_period_atomic: {
+        Args: {
+          p_accrual_amount: number
+          p_actor_id: string
+          p_correlation_id: string
+          p_expected_issued_revenue: number
+          p_issued_profit: number
+          p_period_id: string
+          p_reserve_rate_percent: number
+        }
+        Returns: Json
+      }
       close_operations_report_with_audit: {
         Args: {
           p_accrual_amount: number
@@ -4542,6 +4554,15 @@ export type Database = {
           p_new_end_date: string
           p_new_monthly_rent: number
           p_operation_id: string
+          p_reason: string
+        }
+        Returns: Json
+      }
+      reopen_billing_period_atomic: {
+        Args: {
+          p_actor_id: string
+          p_correlation_id: string
+          p_period_id: string
           p_reason: string
         }
         Returns: Json

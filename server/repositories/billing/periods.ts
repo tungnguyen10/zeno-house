@@ -27,8 +27,7 @@ export const BillingPeriodRepository = {
     accrualAmount: number
   }): Promise<{ period: BillingPeriod, accrualStatus: BillingAccrualStatus | null, replayed: boolean }> {
     const client = await serverSupabaseClient(event)
-    // Cast until database.types.ts is regenerated after the migration reaches staging.
-    const { data, error } = await client.rpc('close_billing_period_atomic' as never, {
+    const { data, error } = await client.rpc('close_billing_period_atomic', {
       p_period_id: input.periodId,
       p_actor_id: input.actorId,
       p_correlation_id: input.correlationId,
@@ -36,7 +35,7 @@ export const BillingPeriodRepository = {
       p_issued_profit: input.issuedProfit,
       p_reserve_rate_percent: input.reserveRatePercent,
       p_accrual_amount: input.accrualAmount,
-    } as never)
+    })
     if (error) throwDbError(error, 'billing.periods.closeAtomic')
     const row = data as unknown as CloseAtomicRow | null
     if (!row?.period) throwInternal(new Error('Empty period close result'), 'billing.periods.closeAtomic')
@@ -54,12 +53,12 @@ export const BillingPeriodRepository = {
     correlationId: string
   }): Promise<BillingPeriod> {
     const client = await serverSupabaseClient(event)
-    const { data, error } = await client.rpc('reopen_billing_period_atomic' as never, {
+    const { data, error } = await client.rpc('reopen_billing_period_atomic', {
       p_period_id: input.periodId,
       p_actor_id: input.actorId,
       p_reason: input.reason,
       p_correlation_id: input.correlationId,
-    } as never)
+    })
     if (error) throwDbError(error, 'billing.periods.reopenAtomic')
     const row = data as unknown as { period?: Tables<'billing_periods'> } | null
     if (!row?.period) throwInternal(new Error('Empty period reopen result'), 'billing.periods.reopenAtomic')
