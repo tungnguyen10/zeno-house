@@ -73,7 +73,6 @@ export default defineNuxtConfig({
     adminEmail: process.env.ADMIN_EMAIL || "", // ADMIN_EMAIL
     turnstileSecretKey: process.env.NUXT_TURNSTILE_SECRET_KEY || "", // NUXT_TURNSTILE_SECRET_KEY
     operationsReportAutoCloseSecret: process.env.NUXT_OPERATIONS_REPORT_AUTO_CLOSE_SECRET || "", // NUXT_OPERATIONS_REPORT_AUTO_CLOSE_SECRET
-    operationsReportAutoCloseEnabled: process.env.NUXT_OPERATIONS_REPORT_AUTO_CLOSE_ENABLED === "true", // NUXT_OPERATIONS_REPORT_AUTO_CLOSE_ENABLED
     public: {
       siteUrl: process.env.NUXT_PUBLIC_SITE_URL || "", // NUXT_PUBLIC_SITE_URL
       gaId: process.env.NUXT_PUBLIC_GA_ID || "", // NUXT_PUBLIC_GA_ID
