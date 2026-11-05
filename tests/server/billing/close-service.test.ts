@@ -10,6 +10,11 @@ const computeAccrualInputs = vi.fn()
 const assertBuildingScope = vi.fn()
 const invalidateOperationsReport = vi.fn()
 const append = vi.fn()
+const listOutstandingByPeriod = vi.fn()
+
+vi.mock('../../../server/repositories/billing/invoices', () => ({
+  InvoiceRepository: { listOutstandingByPeriod },
+}))
 
 vi.mock('../../../server/repositories/billing/periods', () => ({
   BillingPeriodRepository: { findById, closeAtomic, reopenAtomic },
@@ -231,5 +236,76 @@ describe('BillingPeriodService.reopen', () => {
     })
     expect(append).not.toHaveBeenCalled()
     expect(invalidateOperationsReport).toHaveBeenCalledWith('building-1')
+  })
+})
+
+describe('BillingPeriodService.closeSystem', () => {
+  const collecting = buildPeriod({ id: 'period-1', buildingId: 'building-1', periodYear: 2026, periodMonth: 10, status: 'collecting' })
+  const closed = buildPeriod({ ...collecting, status: 'closed' })
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    listOutstandingByPeriod.mockResolvedValue([])
+    computeAccrualInputs.mockResolvedValue(inputs)
+    closeAtomic.mockResolvedValue({ period: closed, accrualStatus: 'recorded', replayed: false })
+  })
+
+  it('closes a fully collected period with a null actor and no scope or capability check', async () => {
+    vi.stubGlobal('can', () => false)
+    const { BillingPeriodService } = await import('../../../server/services/billing/periods')
+
+    const result = await BillingPeriodService.closeSystem(event(), collecting)
+
+    expect(result).toEqual({ status: 'closed', accrualStatus: 'recorded' })
+    expect(closeAtomic).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      periodId: 'period-1',
+      actorId: null,
+      expectedIssuedRevenue: 3_000_000,
+      accrualAmount: 200_000,
+    }))
+    expect(assertBuildingScope).not.toHaveBeenCalled()
+    expect(invalidateOperationsReport).toHaveBeenCalledWith('building-1')
+  })
+
+  it('skips a period with unpaid invoices and reports the count', async () => {
+    listOutstandingByPeriod.mockResolvedValue([{ id: 'i1' }, { id: 'i2' }])
+    const { BillingPeriodService } = await import('../../../server/services/billing/periods')
+
+    await expect(BillingPeriodService.closeSystem(event(), collecting))
+      .resolves.toEqual({ status: 'skipped', reason: 'has_outstanding', outstandingCount: 2 })
+    expect(closeAtomic).not.toHaveBeenCalled()
+  })
+
+  it.each(['draft', 'readings', 'review'] as const)('skips a %s period', async (status) => {
+    const { BillingPeriodService } = await import('../../../server/services/billing/periods')
+
+    await expect(BillingPeriodService.closeSystem(event(), buildPeriod({ ...collecting, status })))
+      .resolves.toEqual({ status: 'skipped', reason: 'not_closable' })
+    expect(closeAtomic).not.toHaveBeenCalled()
+  })
+
+  it('skips an already closed period without calling the RPC', async () => {
+    const { BillingPeriodService } = await import('../../../server/services/billing/periods')
+
+    await expect(BillingPeriodService.closeSystem(event(), closed))
+      .resolves.toEqual({ status: 'skipped', reason: 'already_closed' })
+    expect(closeAtomic).not.toHaveBeenCalled()
+  })
+
+  it('recomputes and retries once on a stale snapshot', async () => {
+    closeAtomic.mockRejectedValueOnce(staleError())
+    const { BillingPeriodService } = await import('../../../server/services/billing/periods')
+
+    await expect(BillingPeriodService.closeSystem(event(), collecting))
+      .resolves.toEqual({ status: 'closed', accrualStatus: 'recorded' })
+    expect(closeAtomic).toHaveBeenCalledTimes(2)
+  })
+
+  it('reports a null accrual status on replay', async () => {
+    closeAtomic.mockResolvedValue({ period: closed, accrualStatus: null, replayed: true })
+    const { BillingPeriodService } = await import('../../../server/services/billing/periods')
+
+    await expect(BillingPeriodService.closeSystem(event(), collecting))
+      .resolves.toEqual({ status: 'closed', accrualStatus: null })
   })
 })

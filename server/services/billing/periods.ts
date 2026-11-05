@@ -78,6 +78,46 @@ function isStaleSnapshotError(error: unknown): boolean {
   return reason === 'PERIOD_SNAPSHOT_STALE'
 }
 
+export type SystemCloseOutcome =
+  | { status: 'closed', accrualStatus: BillingPeriodCloseResult['accrualStatus'] }
+  | { status: 'skipped', reason: 'already_closed' | 'not_closable' | 'has_outstanding', outstandingCount?: number }
+
+/** Recompute and retry once when the revenue snapshot went stale between compute and RPC. */
+async function closePeriodAtomically(
+  event: H3Event,
+  period: BillingPeriod,
+  actorId: string | null,
+): Promise<BillingPeriodCloseResult> {
+  const correlationId = newCorrelationId()
+  const attempt = async () => {
+    const inputs = await computeAccrualInputs(event, period.buildingId, period.periodYear, period.periodMonth)
+    return BillingPeriodRepository.closeAtomic(event, {
+      periodId: period.id,
+      actorId,
+      correlationId,
+      expectedIssuedRevenue: inputs.issuedRevenue,
+      issuedProfit: inputs.profitByRevenue,
+      reserveRatePercent: inputs.reserveRatePercent,
+      accrualAmount: inputs.accrualAmount,
+    })
+  }
+
+  let result: Awaited<ReturnType<typeof attempt>>
+  try {
+    result = await attempt()
+  }
+  catch (error) {
+    if (!isStaleSnapshotError(error)) throw error
+    result = await attempt()
+  }
+
+  invalidateOperationsReport(period.buildingId)
+  return {
+    period: result.period,
+    accrualStatus: result.replayed ? null : result.accrualStatus,
+  }
+}
+
 async function loadBuildingsByIds(event: H3Event, ids: string[]): Promise<Map<string, BuildingLite>> {
   if (ids.length === 0) return new Map()
   const supabase = await serverSupabaseClient(event)
@@ -317,34 +357,24 @@ export const BillingPeriodService = {
     if (!period) throwNotFound('Không tìm thấy kỳ vận hành')
     await assertBuildingScope(event, user, period.buildingId, 'write')
 
-    const correlationId = newCorrelationId()
-    const attempt = async () => {
-      const inputs = await computeAccrualInputs(event, period.buildingId, period.periodYear, period.periodMonth)
-      return BillingPeriodRepository.closeAtomic(event, {
-        periodId: period.id,
-        actorId: user.id,
-        correlationId,
-        expectedIssuedRevenue: inputs.issuedRevenue,
-        issuedProfit: inputs.profitByRevenue,
-        reserveRatePercent: inputs.reserveRatePercent,
-        accrualAmount: inputs.accrualAmount,
-      })
-    }
+    return closePeriodAtomically(event, period, user.id)
+  },
 
-    let result: Awaited<ReturnType<typeof attempt>>
-    try {
-      result = await attempt()
+  /**
+   * Month-end close without a user. Closes only fully collected `issued`/`collecting` periods;
+   * anything else is skipped so an admin can finish it.
+   */
+  async closeSystem(event: H3Event, period: BillingPeriod): Promise<SystemCloseOutcome> {
+    if (period.status === 'closed') return { status: 'skipped', reason: 'already_closed' }
+    if (period.status !== 'issued' && period.status !== 'collecting') {
+      return { status: 'skipped', reason: 'not_closable' }
     }
-    catch (error) {
-      if (!isStaleSnapshotError(error)) throw error
-      result = await attempt()
+    const outstanding = await InvoiceRepository.listOutstandingByPeriod(event, period.id)
+    if (outstanding.length > 0) {
+      return { status: 'skipped', reason: 'has_outstanding', outstandingCount: outstanding.length }
     }
-
-    invalidateOperationsReport(period.buildingId)
-    return {
-      period: result.period,
-      accrualStatus: result.replayed ? null : result.accrualStatus,
-    }
+    const { accrualStatus } = await closePeriodAtomically(event, period, null)
+    return { status: 'closed', accrualStatus }
   },
 
   /**

@@ -73,3 +73,18 @@ The billing close, reopen, issue, bulk payment and issue-and-pay RPCs SHALL be e
 #### Scenario: Browser roles cannot execute billing RPCs
 - **WHEN** `anon` or `authenticated` checks execute privilege on any of those RPCs
 - **THEN** the privilege is denied
+
+### Requirement: Month-end automatic close
+On the last day of each month at 23:55 Asia/Ho_Chi_Minh the system SHALL, for every active building, close the billing period of that month before closing its operations report. A billing period SHALL be closed automatically only when it is `issued` or `collecting` and has no non-void invoice with a balance. Periods that do not qualify SHALL be left open and reported as skipped, and a failure for one building SHALL NOT stop the other buildings or the operations report close.
+
+#### Scenario: Fully collected period closes with the report
+- **WHEN** the month-end job runs and every non-void invoice of the building's period is paid
+- **THEN** the billing period closes through the atomic RPC with no actor, the accrual is written once, and the operations report then closes
+
+#### Scenario: Unpaid invoices keep the billing period open
+- **WHEN** the month-end job runs and the period still has unpaid invoices
+- **THEN** the billing period stays open and is reported as `has_outstanding`, and the operations report still closes
+
+#### Scenario: Not-yet-issued or missing period
+- **WHEN** the building's period is `draft`, `readings`, `review` or does not exist
+- **THEN** it is skipped and the operations report still closes

@@ -19,7 +19,7 @@ interface CloseAtomicRow {
 export const BillingPeriodRepository = {
   async closeAtomic(event: H3Event, input: {
     periodId: string
-    actorId: string
+    actorId: string | null
     correlationId: string
     expectedIssuedRevenue: number
     issuedProfit: number
@@ -29,7 +29,8 @@ export const BillingPeriodRepository = {
     const client = await serverSupabaseClient(event)
     const { data, error } = await client.rpc('close_billing_period_atomic', {
       p_period_id: input.periodId,
-      p_actor_id: input.actorId,
+      // Generated types mark uuid args non-null; the RPC accepts NULL for system closes.
+      p_actor_id: input.actorId as string,
       p_correlation_id: input.correlationId,
       p_expected_issued_revenue: input.expectedIssuedRevenue,
       p_issued_profit: input.issuedProfit,
