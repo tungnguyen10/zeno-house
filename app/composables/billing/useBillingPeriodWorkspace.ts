@@ -1,6 +1,7 @@
 import type { ApiSuccess } from '~/types/api'
 import type {
   BillingPeriod,
+  BillingPeriodCloseResult,
   BillingWorkspaceOverview,
   BillingDraftResponse,
   BillingDraftGridResponse,
@@ -218,14 +219,15 @@ export function useBillingPeriodWorkspace(
     return resp.data
   }
 
-  async function close(): Promise<BillingPeriod> {
+  async function close(): Promise<BillingPeriodCloseResult> {
     if (!id.value) throw new Error('No period id')
-    const resp = await apiFetch<ApiSuccess<BillingPeriod>>(`/api/billing/periods/${id.value}/close`, {
-      method: 'POST',
-    })
+    const resp = await apiFetch<ApiSuccess<BillingPeriod, { accrualStatus?: BillingPeriodCloseResult['accrualStatus'] }>>(
+      `/api/billing/periods/${id.value}/close`,
+      { method: 'POST' },
+    )
     period.value = resp.data
     await loadOverview()
-    return resp.data
+    return { period: resp.data, accrualStatus: resp.meta?.accrualStatus ?? null }
   }
 
   async function reopen(reason: string): Promise<BillingPeriod> {
