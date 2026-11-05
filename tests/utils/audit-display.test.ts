@@ -65,3 +65,11 @@ describe('audit display helpers', () => {
     }
   })
 })
+
+describe('renewal source transfer audit', () => {
+  it('uses a Vietnamese action label and existing accent treatment', () => {
+    expect(AUDIT_ACTIONS.CONTRACT_CHECKOUT_SOURCE_TRANSFERRED).toBe('contract.checkout_source.transferred')
+    expect(auditActionLabel('contract.checkout_source.transferred')).toBe('Chuyển nguồn tiền tất toán')
+    expect(auditActionVariant('contract.checkout_source.transferred')).toBe('accent')
+  })
+})

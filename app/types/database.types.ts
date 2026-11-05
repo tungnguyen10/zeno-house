@@ -12,6 +12,31 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       access_requests: {
@@ -542,6 +567,13 @@ export type Database = {
             columns: ["billing_period_id"]
             isOneToOne: false
             referencedRelation: "billing_periods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "billing_incidental_charges_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contract_browse_rows"
             referencedColumns: ["id"]
           },
           {
@@ -1162,6 +1194,13 @@ export type Database = {
             foreignKeyName: "contract_amendments_contract_id_fkey"
             columns: ["contract_id"]
             isOneToOne: false
+            referencedRelation: "contract_browse_rows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_amendments_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
             referencedRelation: "contracts"
             referencedColumns: ["id"]
           },
@@ -1301,6 +1340,13 @@ export type Database = {
             foreignKeyName: "contract_checkout_sources_contract_id_fkey"
             columns: ["contract_id"]
             isOneToOne: false
+            referencedRelation: "contract_browse_rows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_checkout_sources_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
             referencedRelation: "contracts"
             referencedColumns: ["id"]
           },
@@ -1418,6 +1464,13 @@ export type Database = {
             foreignKeyName: "contract_checkouts_contract_id_fkey"
             columns: ["contract_id"]
             isOneToOne: true
+            referencedRelation: "contract_browse_rows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_checkouts_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: true
             referencedRelation: "contracts"
             referencedColumns: ["id"]
           },
@@ -1458,6 +1511,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "contract_occupants_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contract_browse_rows"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "contract_occupants_contract_id_fkey"
             columns: ["contract_id"]
@@ -1519,6 +1579,13 @@ export type Database = {
             foreignKeyName: "contract_payments_contract_id_fkey"
             columns: ["contract_id"]
             isOneToOne: false
+            referencedRelation: "contract_browse_rows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_payments_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
             referencedRelation: "contracts"
             referencedColumns: ["id"]
           },
@@ -1536,6 +1603,7 @@ export type Database = {
           new_monthly_rent: number
           old_end_date: string
           old_monthly_rent: number
+          operation_id: string | null
           reason: string | null
         }
         Insert: {
@@ -1549,6 +1617,7 @@ export type Database = {
           new_monthly_rent: number
           old_end_date: string
           old_monthly_rent: number
+          operation_id?: string | null
           reason?: string | null
         }
         Update: {
@@ -1562,6 +1631,7 @@ export type Database = {
           new_monthly_rent?: number
           old_end_date?: string
           old_monthly_rent?: number
+          operation_id?: string | null
           reason?: string | null
         }
         Relationships: [
@@ -1569,7 +1639,21 @@ export type Database = {
             foreignKeyName: "contract_renewals_contract_id_fkey"
             columns: ["contract_id"]
             isOneToOne: false
+            referencedRelation: "contract_browse_rows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_renewals_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
             referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_renewals_new_contract_id_fkey"
+            columns: ["new_contract_id"]
+            isOneToOne: false
+            referencedRelation: "contract_browse_rows"
             referencedColumns: ["id"]
           },
           {
@@ -1621,6 +1705,13 @@ export type Database = {
             columns: ["catalog_id"]
             isOneToOne: false
             referencedRelation: "service_catalog"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_services_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contract_browse_rows"
             referencedColumns: ["id"]
           },
           {
@@ -1711,6 +1802,13 @@ export type Database = {
             foreignKeyName: "contracts_previous_contract_id_fkey"
             columns: ["previous_contract_id"]
             isOneToOne: false
+            referencedRelation: "contract_browse_rows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_previous_contract_id_fkey"
+            columns: ["previous_contract_id"]
+            isOneToOne: false
             referencedRelation: "contracts"
             referencedColumns: ["id"]
           },
@@ -1774,6 +1872,13 @@ export type Database = {
           unit_price?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "invoice_charges_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoice_browse_rows"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "invoice_charges_invoice_id_fkey"
             columns: ["invoice_id"]
@@ -1893,6 +1998,13 @@ export type Database = {
             foreignKeyName: "invoice_email_deliveries_invoice_id_fkey"
             columns: ["invoice_id"]
             isOneToOne: false
+            referencedRelation: "invoice_browse_rows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_email_deliveries_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
             referencedRelation: "invoices"
             referencedColumns: ["id"]
           },
@@ -1997,6 +2109,13 @@ export type Database = {
             columns: ["checkout_statement_id"]
             isOneToOne: false
             referencedRelation: "contract_checkout_statements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_payments_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoice_browse_rows"
             referencedColumns: ["id"]
           },
           {
@@ -2108,6 +2227,13 @@ export type Database = {
             foreignKeyName: "invoices_contract_id_fkey"
             columns: ["contract_id"]
             isOneToOne: false
+            referencedRelation: "contract_browse_rows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
             referencedRelation: "contracts"
             referencedColumns: ["id"]
           },
@@ -2122,7 +2248,21 @@ export type Database = {
             foreignKeyName: "invoices_superseded_by_invoice_id_fkey"
             columns: ["superseded_by_invoice_id"]
             isOneToOne: false
+            referencedRelation: "invoice_browse_rows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_superseded_by_invoice_id_fkey"
+            columns: ["superseded_by_invoice_id"]
+            isOneToOne: false
             referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_supersedes_invoice_id_fkey"
+            columns: ["supersedes_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoice_browse_rows"
             referencedColumns: ["id"]
           },
           {
@@ -2217,6 +2357,13 @@ export type Database = {
             columns: ["building_id"]
             isOneToOne: false
             referencedRelation: "buildings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meter_readings_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contract_browse_rows"
             referencedColumns: ["id"]
           },
           {
@@ -2756,6 +2903,13 @@ export type Database = {
             foreignKeyName: "support_requests_contract_id_fkey"
             columns: ["contract_id"]
             isOneToOne: false
+            referencedRelation: "contract_browse_rows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_requests_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
             referencedRelation: "contracts"
             referencedColumns: ["id"]
           },
@@ -2918,7 +3072,164 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      contract_browse_rows: {
+        Row: {
+          building_id: string | null
+          building_name: string | null
+          building_sort_name: string | null
+          contract_code: string | null
+          contract_sort_code: string | null
+          created_at: string | null
+          deposit: number | null
+          discount_amount: number | null
+          end_date: string | null
+          id: string | null
+          monthly_rent: number | null
+          notes: string | null
+          occupant_count: number | null
+          original_end_date: string | null
+          payment_due_day: number | null
+          previous_contract_id: string | null
+          renewal_count: number | null
+          room_building_id: string | null
+          room_code: string | null
+          room_floor: number | null
+          room_id: string | null
+          room_number: string | null
+          room_sort_number: string | null
+          start_date: string | null
+          status: string | null
+          surcharge_amount: number | null
+          tenant_code: string | null
+          tenant_id: string | null
+          tenant_name: string | null
+          tenant_phone: string | null
+          updated_at: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contracts_building_id_fkey"
+            columns: ["building_id"]
+            isOneToOne: false
+            referencedRelation: "buildings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_previous_contract_id_fkey"
+            columns: ["previous_contract_id"]
+            isOneToOne: false
+            referencedRelation: "contract_browse_rows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_previous_contract_id_fkey"
+            columns: ["previous_contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rooms_building_id_fkey"
+            columns: ["room_building_id"]
+            isOneToOne: false
+            referencedRelation: "buildings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoice_browse_rows: {
+        Row: {
+          balance_amount: number | null
+          billing_period_id: string | null
+          building_id: string | null
+          building_name: string | null
+          building_slug: string | null
+          building_sort_name: string | null
+          contract_code: string | null
+          contract_id: string | null
+          contract_sort_code: string | null
+          due_date: string | null
+          grace_period_days: number | null
+          id: string | null
+          invoice_code: string | null
+          invoice_sort_code: string | null
+          issued_at: string | null
+          notes: string | null
+          overdue_date: string | null
+          paid_amount: number | null
+          period_month: number | null
+          period_year: number | null
+          room_floor: number | null
+          room_id: string | null
+          room_number: string | null
+          room_sort_number: string | null
+          status: string | null
+          tenant_id: string | null
+          tenant_name: string | null
+          tenant_phone: string | null
+          total_amount: number | null
+          void_reason: string | null
+          voided_at: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_periods_building_id_fkey"
+            columns: ["building_id"]
+            isOneToOne: false
+            referencedRelation: "buildings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_billing_period_id_fkey"
+            columns: ["billing_period_id"]
+            isOneToOne: false
+            referencedRelation: "billing_periods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contract_browse_rows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       acquire_ai_provider_request: {
@@ -3058,6 +3369,14 @@ export type Database = {
       }
       bulk_master_data_action: {
         Args: { p_action: string; p_entity: string; p_ids: string[] }
+        Returns: {
+          id: string
+          reason: string
+          succeeded: boolean
+        }[]
+      }
+      bulk_tenant_status_action: {
+        Args: { p_action: string; p_items: Json }
         Returns: {
           id: string
           reason: string
@@ -3284,6 +3603,18 @@ export type Database = {
       cleanup_expired_ai_rate_limits: {
         Args: { p_limit?: number }
         Returns: number
+      }
+      close_billing_period_atomic: {
+        Args: {
+          p_accrual_amount: number
+          p_actor_id: string
+          p_correlation_id: string
+          p_expected_issued_revenue: number
+          p_issued_profit: number
+          p_period_id: string
+          p_reserve_rate_percent: number
+        }
+        Returns: Json
       }
       close_operations_report_with_audit: {
         Args: {
@@ -4214,6 +4545,28 @@ export type Database = {
         }
         Returns: Json
       }
+      renew_contract_atomic: {
+        Args: {
+          p_actor_id: string
+          p_contract_id: string
+          p_correlation_id: string
+          p_mode: string
+          p_new_end_date: string
+          p_new_monthly_rent: number
+          p_operation_id: string
+          p_reason: string
+        }
+        Returns: Json
+      }
+      reopen_billing_period_atomic: {
+        Args: {
+          p_actor_id: string
+          p_correlation_id: string
+          p_period_id: string
+          p_reason: string
+        }
+        Returns: Json
+      }
       reopen_operations_report_with_audit: {
         Args: {
           p_actor_id: string
@@ -4595,6 +4948,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       utility_type: ["electricity", "water"],

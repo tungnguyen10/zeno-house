@@ -4,6 +4,8 @@ import { BuildingVisibilityRepository } from '../../server/repositories/building
 
 const repoMocks = vi.hoisted(() => ({
   findAll: vi.fn(),
+  findByIds: vi.fn(),
+  findAccessFacts: vi.fn(),
   findUnassignedTenantIds: vi.fn(),
   findByIdentifier: vi.fn(),
   findActiveAssignmentByTenantId: vi.fn(),
@@ -33,6 +35,8 @@ vi.mock('../../server/repositories/tenants', () => ({
   TenantRepository: repoMocks,
 }))
 vi.mock('../../server/repositories/bulk-actions', () => ({ BulkActionRepository: bulkRepoMocks }))
+const statusRepo = vi.hoisted(() => ({ execute: vi.fn() }))
+vi.mock('../../server/repositories/tenants/bulk-status', () => ({ TenantBulkStatusRepository: statusRepo }))
 vi.mock('../../server/repositories/tenant-portal/account-links', () => ({
   TenantAccountLinkRepository: tenantAccountLinkRepoMocks,
 }))
@@ -162,6 +166,9 @@ async function expectError(promise: Promise<unknown>): Promise<ApiError> {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  repoMocks.findByIds.mockImplementation(async (_event, ids: string[]) => ids.filter(id => id !== 'missing').map(id => buildTenant({ id })))
+  repoMocks.findAccessFacts.mockImplementation(async (_event, ids: string[]) => new Map(ids.map(id => [id, { activeBuildingIds: [], historicalBuildingIds: [], everContracted: false }])))
+  statusRepo.execute.mockImplementation(async (_event, _action, items: Array<{ id: string }>) => items.map(item => ({ id: item.id, succeeded: true, reason: null })))
   repoMocks.findByPhone.mockResolvedValue(null)
   repoMocks.findByIdNumber.mockResolvedValue(null)
   repoMocks.findActiveBuildingIdForTenant.mockResolvedValue(null)
@@ -439,6 +446,7 @@ describe('GET /api/tenants/[id]', () => {
     repoMocks.findByIdentifier.mockResolvedValue(buildTenant({ id: 't-owner-orphan' }))
     repoMocks.hasContractInBuildings.mockResolvedValue(false)
     repoMocks.wasCreatedByActor.mockResolvedValue(true)
+    repoMocks.findCreatedTenantIdsByActor.mockResolvedValue(['t-1', 't-owner-orphan', 'orphan-owned'])
     const { default: handler } = await import('../../server/api/tenants/[id].get')
 
     const res = await handler(makeEvent({ params: { id: 't-owner-orphan' } })) as { data: Tenant }
@@ -572,8 +580,10 @@ describe('DELETE /api/tenants/[id]', () => {
     expect(repoMocks.countActiveContractsForTenant).not.toHaveBeenCalled()
   })
 
-  it('forbids managers from force-deleting', async () => {
+  it('forbids managers from force-deleting without a building grant', async () => {
     asManager()
+    repoMocks.findByIdentifier.mockResolvedValue(buildTenant())
+    repoMocks.findAccessFacts.mockResolvedValue(new Map([['t-1', { activeBuildingIds: ['0a8a4dd0-7d6f-4f4e-bc7e-3c5e1b833333'], historicalBuildingIds: ['0a8a4dd0-7d6f-4f4e-bc7e-3c5e1b833333'], everContracted: true }]]))
     const { default: handler } = await import('../../server/api/tenants/[id].delete')
 
     const err = await expectError(Promise.resolve(handler(makeEvent({
@@ -589,6 +599,7 @@ describe('DELETE /api/tenants/[id]', () => {
     repoMocks.findByIdentifier.mockResolvedValue(buildTenant({ id: 't-owner-orphan' }))
     repoMocks.findActiveBuildingIdForTenant.mockResolvedValue(null)
     repoMocks.wasCreatedByActor.mockResolvedValue(true)
+    repoMocks.findCreatedTenantIdsByActor.mockResolvedValue(['t-1', 't-owner-orphan', 'orphan-owned'])
     repoMocks.countActiveContractsForTenant.mockResolvedValue(0)
     repoMocks.countActiveOccupanciesForTenant.mockResolvedValue(0)
     repoMocks.remove.mockResolvedValue(undefined)
@@ -597,7 +608,7 @@ describe('DELETE /api/tenants/[id]', () => {
     const event = makeEvent({ params: { id: 't-owner-orphan' }, body: { reason: 'cleanup' } })
     await handler(event)
     expect((event as MockEvent).context.statusCode).toBe(204)
-    expect(repoMocks.wasCreatedByActor).toHaveBeenCalledWith(expect.anything(), 't-owner-orphan', 'user-owner')
+    expect(repoMocks.findCreatedTenantIdsByActor).toHaveBeenCalledWith(expect.anything(), 'user-owner')
     expect(repoMocks.remove).toHaveBeenCalledWith(expect.anything(), 't-owner-orphan')
   })
 
@@ -612,7 +623,7 @@ describe('DELETE /api/tenants/[id]', () => {
       params: { id: 't-owner-forbidden' },
       body: { reason: 'cleanup' },
     }))))
-    expect(err.statusCode).toBe(403)
+    expect(err.statusCode).toBe(404)
   })
 
   it('requires a delete reason', async () => {
@@ -644,7 +655,7 @@ describe('POST /api/tenants/bulk', () => {
     }
     expect(res.data.succeeded).toEqual(['a', 'b'])
     expect(res.data.failed).toEqual([])
-    expect(bulkRepoMocks.execute).toHaveBeenCalledWith(expect.anything(), 'tenant', 'archive', ['a', 'b'])
+    expect(statusRepo.execute).toHaveBeenCalledWith(expect.anything(), 'archive', [{ id: 'a', expected_building_ids: [] }, { id: 'b', expected_building_ids: [] }])
   })
 
   it('activate flips status to active', async () => {
@@ -659,7 +670,7 @@ describe('POST /api/tenants/bulk', () => {
       data: { succeeded: string[]; failed: { id: string; reason: string }[] }
     }
     expect(res.data.succeeded).toEqual(['a'])
-    expect(bulkRepoMocks.execute).toHaveBeenCalledWith(expect.anything(), 'tenant', 'activate', ['a'])
+    expect(statusRepo.execute).toHaveBeenCalledWith(expect.anything(), 'activate', [{ id: 'a', expected_building_ids: [] }])
   })
 
   it('delete action reports mixed results without short-circuiting', async () => {
@@ -698,7 +709,7 @@ describe('POST /api/tenants/bulk', () => {
       data: { succeeded: string[]; failed: { id: string; reason: string }[] }
     }
     expect(res.data.succeeded).toEqual([])
-    expect(res.data.failed).toEqual([{ id: 'orphan-foreign', reason: 'forbidden' }])
+    expect(res.data.failed).toEqual([{ id: 'orphan-foreign', reason: 'not_found' }])
   })
 
   it('allows owner bulk delete for orphan tenant they created', async () => {
@@ -706,6 +717,7 @@ describe('POST /api/tenants/bulk', () => {
     repoMocks.findByIdentifier.mockResolvedValue(buildTenant({ id: 'orphan-owned' }))
     repoMocks.findActiveBuildingIdForTenant.mockResolvedValue(null)
     repoMocks.wasCreatedByActor.mockResolvedValue(true)
+    repoMocks.findCreatedTenantIdsByActor.mockResolvedValue(['t-1', 't-owner-orphan', 'orphan-owned'])
     repoMocks.countActiveContractsForTenant.mockResolvedValue(0)
     repoMocks.countActiveOccupanciesForTenant.mockResolvedValue(0)
     repoMocks.remove.mockResolvedValue(undefined)
@@ -861,5 +873,35 @@ describe('POST /api/tenants/bulk-create', () => {
     const err = await expectError(Promise.resolve(handler(makeEvent({ body: { rows: [] } }))))
     expect(err.statusCode).toBe(422)
     expect(err.data?.error?.code).toBe('VALIDATION_ERROR')
+  })
+})
+
+describe('tenant scope regressions', () => {
+  it('does not include creator tenants once they have contract history elsewhere', async () => {
+    asOwner()
+    repoMocks.findAll.mockResolvedValue({ items: [], total: 0 })
+    repoMocks.findCreatedTenantIdsByActor.mockResolvedValue(['orphan', 'transferred'])
+    repoMocks.findAccessFacts.mockResolvedValue(new Map([
+      ['orphan', { activeBuildingIds: [], historicalBuildingIds: [], everContracted: false }],
+      ['transferred', { activeBuildingIds: ['elsewhere'], historicalBuildingIds: ['elsewhere'], everContracted: true }],
+    ]))
+    const { default: handler } = await import('../../server/api/tenants/index.get')
+    await handler(makeEvent())
+    expect(repoMocks.findAll).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ include_ids: ['orphan'], active_scope_only: true }))
+  })
+  it('preserves manager deletion grant with canonical server building and ignores supplied building', async () => {
+    asManager()
+    const buildingId = '0a8a4dd0-7d6f-4f4e-bc7e-3c5e1b833333'
+    repoMocks.findByIdentifier.mockResolvedValue(buildTenant())
+    repoMocks.findAccessFacts.mockResolvedValue(new Map([['t-1', { activeBuildingIds: [buildingId], historicalBuildingIds: [buildingId], everContracted: true }]]))
+    assignmentRepoMocks.findByUserAndBuilding.mockResolvedValue({ can_delete_master_data: true })
+    repoMocks.countActiveContractsForTenant.mockResolvedValue(0)
+    repoMocks.countActiveOccupanciesForTenant.mockResolvedValue(0)
+    const { default: handler } = await import('../../server/api/tenants/[id].delete')
+    const event = makeEvent({ params: { id: 'CODE' }, body: { reason: 'cleanup', building_id: '11111111-1111-4111-8111-111111111111' } })
+    await handler(event)
+    expect(event.context.statusCode).toBe(204)
+    expect(assignmentRepoMocks.findByUserAndBuilding).toHaveBeenCalledWith(expect.anything(), 'user-manager', buildingId)
+    expect(repoMocks.remove).toHaveBeenCalledWith(expect.anything(), 't-1')
   })
 })

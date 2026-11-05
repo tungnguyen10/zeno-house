@@ -1,10 +1,70 @@
 import { db as serverSupabaseClient } from '../../utils/db'
 import type { H3Event } from 'h3'
-import type { BillingPeriod, BillingPeriodListFilters, BillingPeriodOpenResult } from '~/types/billing'
+import type {
+  BillingAccrualStatus,
+  BillingPeriod,
+  BillingPeriodListFilters,
+  BillingPeriodOpenResult,
+} from '~/types/billing'
 import type { BillingPeriodStatus } from '~/utils/constants/billing'
 import { mapBillingPeriod } from '~/utils/mappers/billing'
+import type { Tables } from '~/types/database.types'
+
+interface CloseAtomicRow {
+  period: Tables<'billing_periods'>
+  accrual_status: BillingAccrualStatus | null
+  replayed: boolean
+}
 
 export const BillingPeriodRepository = {
+  async closeAtomic(event: H3Event, input: {
+    periodId: string
+    actorId: string | null
+    correlationId: string
+    expectedIssuedRevenue: number
+    issuedProfit: number
+    reserveRatePercent: number
+    accrualAmount: number
+  }): Promise<{ period: BillingPeriod, accrualStatus: BillingAccrualStatus | null, replayed: boolean }> {
+    const client = await serverSupabaseClient(event)
+    const { data, error } = await client.rpc('close_billing_period_atomic', {
+      p_period_id: input.periodId,
+      // Generated types mark uuid args non-null; the RPC accepts NULL for system closes.
+      p_actor_id: input.actorId as string,
+      p_correlation_id: input.correlationId,
+      p_expected_issued_revenue: input.expectedIssuedRevenue,
+      p_issued_profit: input.issuedProfit,
+      p_reserve_rate_percent: input.reserveRatePercent,
+      p_accrual_amount: input.accrualAmount,
+    })
+    if (error) throwDbError(error, 'billing.periods.closeAtomic')
+    const row = data as unknown as CloseAtomicRow | null
+    if (!row?.period) throwInternal(new Error('Empty period close result'), 'billing.periods.closeAtomic')
+    return {
+      period: mapBillingPeriod(row.period),
+      accrualStatus: row.accrual_status ?? null,
+      replayed: row.replayed === true,
+    }
+  },
+
+  async reopenAtomic(event: H3Event, input: {
+    periodId: string
+    actorId: string
+    reason: string
+    correlationId: string
+  }): Promise<BillingPeriod> {
+    const client = await serverSupabaseClient(event)
+    const { data, error } = await client.rpc('reopen_billing_period_atomic', {
+      p_period_id: input.periodId,
+      p_actor_id: input.actorId,
+      p_reason: input.reason,
+      p_correlation_id: input.correlationId,
+    })
+    if (error) throwDbError(error, 'billing.periods.reopenAtomic')
+    const row = data as unknown as { period?: Tables<'billing_periods'> } | null
+    if (!row?.period) throwInternal(new Error('Empty period reopen result'), 'billing.periods.reopenAtomic')
+    return mapBillingPeriod(row.period)
+  },
   async openOrGetWithAudit(event: H3Event, input: {
     building_id: string
     period_year: number

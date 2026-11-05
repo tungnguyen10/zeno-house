@@ -9,6 +9,7 @@ import BillingAuditDrawer from '~/components/billing/BillingAuditDrawer.vue'
 import BillingCloseStep from '~/components/billing/BillingCloseStep.vue'
 import BillingUnissueModal from '~/components/billing/BillingUnissueModal.vue'
 import { getApiErrorCode, getApiErrorMessage, type ApiErrorLike } from '~/utils/api-error'
+import { closePeriodFeedback } from '~/utils/billing/close-feedback'
 
 definePageMeta({ title: 'Kỳ vận hành' })
 
@@ -124,6 +125,7 @@ const reopenOpen = ref(false)
 const reopenReason = ref('')
 const reopenSubmitting = ref(false)
 const reopenError = ref<string | null>(null)
+const closeNotice = ref<string | null>(null)
 const unissueOpen = ref(false)
 const unissueSubmitting = ref(false)
 const unissueError = ref<string | null>(null)
@@ -188,8 +190,10 @@ function periodLabel(): string {
 
 async function closePeriodFromModal() {
   try {
-    await close()
+    const { accrualStatus } = await close()
+    const feedback = closePeriodFeedback(accrualStatus)
     toast.success('Đã chốt kỳ vận hành')
+    closeNotice.value = feedback.kind === 'warning' ? feedback.message : null
     closeOpen.value = false
     await loadOverview()
   }
@@ -204,6 +208,7 @@ async function reopenPeriodFromModal() {
   reopenError.value = null
   try {
     await reopen(reopenReason.value)
+    closeNotice.value = null
     toast.success('Đã mở lại kỳ vận hành')
     reopenOpen.value = false
   }
@@ -367,6 +372,14 @@ watch(
 <template>
   <div class="space-y-5">
     <UiAlert v-if="resolveError" severity="danger">{{ resolveError }}</UiAlert>
+    <UiAlert
+      v-if="closeNotice"
+      severity="warning"
+      dismissible
+      @dismiss="closeNotice = null"
+    >
+      {{ closeNotice }}
+    </UiAlert>
 
     <template v-if="!resolveError">
       <UiPageHeader

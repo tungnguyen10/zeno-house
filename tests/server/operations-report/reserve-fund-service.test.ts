@@ -8,7 +8,7 @@ const assertBuildingScope = vi.fn()
 const createReserveFundedExpenseWithAudit = vi.fn()
 const upsertExpenseDeduction = vi.fn()
 const voidExpenseDeduction = vi.fn()
-const upsertMonthlyAccrual = vi.fn()
+const refreshAccrualWithAudit = vi.fn()
 const listRatesByBuilding = vi.fn()
 const insertRate = vi.fn()
 const findRateById = vi.fn()
@@ -28,7 +28,7 @@ vi.mock('../../../server/repositories/operations-report/reserve-funds', () => ({
   ReserveFundRepository: {
     upsertExpenseDeduction,
     voidExpenseDeduction,
-    upsertMonthlyAccrual,
+    refreshAccrualWithAudit,
     listRatesByBuilding,
     insertRate,
     findRateById,
@@ -96,7 +96,7 @@ describe('ReserveFundService', () => {
     })
     upsertExpenseDeduction.mockResolvedValue({ id: 'tx-1' })
     voidExpenseDeduction.mockResolvedValue({ id: 'tx-1', voidedAt: '2026-07-05T00:00:00Z' })
-    upsertMonthlyAccrual.mockResolvedValue({ id: 'accrual-1' })
+    refreshAccrualWithAudit.mockResolvedValue({ id: 'accrual-1' })
     listRatesByBuilding.mockResolvedValue([rate()])
     insertRate.mockResolvedValue(rate())
     findRateById.mockResolvedValue(rate())
@@ -176,19 +176,10 @@ describe('ReserveFundService', () => {
     )
   })
 
-  it('records monthly accrual from issued profit and effective rate', async () => {
+  it('refreshes the accrual with the precomputed rate and amount', async () => {
     const { ReserveFundService } = await import('../../../server/services/operations-report/reserve-funds')
 
-    await ReserveFundService.recordMonthlyAccrual({} as never, owner, {
-      buildingId: 'building-1',
-      periodYear: 2026,
-      periodMonth: 7,
-      billingPeriodId: 'period-1',
-      issuedRevenue: 10_000_000,
-      issuedProfitByRevenue: 4_000_000,
-    })
-
-    expect(upsertMonthlyAccrual).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+    await ReserveFundService.refreshAccrualWithAudit({} as never, owner, {
       buildingId: 'building-1',
       periodYear: 2026,
       periodMonth: 7,
@@ -196,54 +187,18 @@ describe('ReserveFundService', () => {
       issuedRevenue: 10_000_000,
       reserveRatePercent: 5,
       amount: 200_000,
-    }))
-  })
-
-  it('records zero accrual when issued profit is negative', async () => {
-    const { ReserveFundService } = await import('../../../server/services/operations-report/reserve-funds')
-
-    await ReserveFundService.recordMonthlyAccrual({} as never, owner, {
-      buildingId: 'building-1',
-      periodYear: 2026,
-      periodMonth: 8,
-      billingPeriodId: 'period-2',
-      issuedRevenue: 2_500_000,
-      issuedProfitByRevenue: -1_000_000,
     })
 
-    expect(upsertMonthlyAccrual).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+    expect(refreshAccrualWithAudit).toHaveBeenCalledWith(expect.anything(), {
       buildingId: 'building-1',
       periodYear: 2026,
-      periodMonth: 8,
-      billingPeriodId: 'period-2',
-      issuedRevenue: 2_500_000,
+      periodMonth: 7,
+      billingPeriodId: 'period-1',
+      issuedRevenue: 10_000_000,
       reserveRatePercent: 5,
-      amount: 0,
-    }))
-  })
-
-  it('records zero-rate accrual when no effective reserve rate exists', async () => {
-    listRatesByBuilding.mockResolvedValueOnce([])
-    const { ReserveFundService } = await import('../../../server/services/operations-report/reserve-funds')
-
-    await ReserveFundService.recordMonthlyAccrual({} as never, owner, {
-      buildingId: 'building-1',
-      periodYear: 2026,
-      periodMonth: 8,
-      billingPeriodId: 'period-2',
-      issuedRevenue: 2_500_000,
-      issuedProfitByRevenue: 1_500_000,
+      amount: 200_000,
+      actorId: 'owner-1',
     })
-
-    expect(upsertMonthlyAccrual).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
-      buildingId: 'building-1',
-      periodYear: 2026,
-      periodMonth: 8,
-      billingPeriodId: 'period-2',
-      issuedRevenue: 2_500_000,
-      reserveRatePercent: 0,
-      amount: 0,
-    }))
   })
 
   it('rejects overlapping reserve rate ranges', async () => {

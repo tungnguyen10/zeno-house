@@ -1,18 +1,32 @@
 import { db as serverSupabaseClient } from '../../utils/db'
 import type { H3Event } from 'h3'
+import type { Tables } from '~/types/database.types'
 import type { ContractRenewal } from '~/types/contract-renewals'
 import { mapContractRenewal } from '~/utils/mappers/contract-renewals'
 
-export interface ContractRenewalInsertInput {
-  contract_id: string
-  new_contract_id: string | null
-  mode: string
-  old_end_date: string
-  new_end_date: string
-  old_monthly_rent: number
-  new_monthly_rent: number
+export interface RenewAtomicArgs {
+  contractId: string
+  mode: 'extend' | 'new_contract'
+  newEndDate: string
+  newMonthlyRent: number | null
   reason: string | null
-  created_by: string
+  actorId: string
+  operationId: string
+  correlationId: string
+}
+
+export interface RenewAtomicResult {
+  renewal: ContractRenewal
+  newContractId: string | null
+  transferredSourceIds: string[]
+  replayed: boolean
+}
+
+interface RenewAtomicPayload {
+  renewal: Tables<'contract_renewals'>
+  new_contract: { id: string } | null
+  transferred_source_ids: string[]
+  replayed: boolean
 }
 
 export const ContractRenewalRepository = {
@@ -27,30 +41,27 @@ export const ContractRenewalRepository = {
     return (data ?? []).map(mapContractRenewal)
   },
 
-  async insert(event: H3Event, input: ContractRenewalInsertInput): Promise<ContractRenewal> {
-    // Use service-role: server is the only writer for renewal logs, and permission was
-    // already verified at the service entry (`can(user, 'contracts.update')`).
-    // RLS on contract_renewals stays strict as defense-in-depth for any direct client access.
+  async renewAtomic(event: H3Event, args: RenewAtomicArgs): Promise<RenewAtomicResult> {
     const client = serverSupabaseClient(event)
-    const { data, error } = await client
-      .from('contract_renewals')
-      .insert(input)
-      .select()
-      .single()
-    if (error) {
-      console.error('[ContractRenewalRepository.insert] failed', { input, error })
-      throwDbError(error, 'contractRenewals.insert')
-    }
-    return mapContractRenewal(data)
-  },
-
-  async deleteById(event: H3Event, id: string): Promise<void> {
-    // Best-effort cleanup used to roll back a log row when a follow-up write fails.
-    // Uses service-role to mirror `insert()` and bypass RLS.
-    const client = serverSupabaseClient(event)
-    const { error } = await client.from('contract_renewals').delete().eq('id', id)
-    if (error) {
-      console.error('[ContractRenewalRepository.deleteById] rollback failed', { id, error })
+    // The RPC accepts null for rent (keep current) and reason, but generated types mark them non-null.
+    const { data, error } = await client.rpc('renew_contract_atomic', {
+      p_contract_id: args.contractId,
+      p_mode: args.mode,
+      p_new_end_date: args.newEndDate,
+      p_new_monthly_rent: args.newMonthlyRent as number,
+      p_reason: args.reason as string,
+      p_actor_id: args.actorId,
+      p_operation_id: args.operationId,
+      p_correlation_id: args.correlationId,
+    })
+    if (error) throwDbError(error, 'contractRenewals.renewAtomic')
+    if (!data) throwInternal(new Error('Empty renewal RPC result'), 'contractRenewals.renewAtomic')
+    const payload = data as unknown as RenewAtomicPayload
+    return {
+      renewal: mapContractRenewal(payload.renewal),
+      newContractId: payload.new_contract?.id ?? null,
+      transferredSourceIds: payload.transferred_source_ids,
+      replayed: payload.replayed,
     }
   },
 }

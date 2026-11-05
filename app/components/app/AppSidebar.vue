@@ -208,6 +208,7 @@ function sectionLabelClass() {
           <p class="truncate text-xs text-ui-muted">{{ authStore.role ?? 'user' }}</p>
         </div>
       </NuxtLink>
+      <AppVersionLabel class="mt-2 px-3" :class="sidebarCollapsed && 'lg:hidden'" />
     </div>
   </aside>
 </template>

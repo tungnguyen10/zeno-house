@@ -24,6 +24,8 @@ export interface Contract {
 }
 
 export interface ContractWithDetails extends Contract {
+  previousContract: { id: string; code: string } | null
+  successorContract: { id: string; code: string } | null
   room: {
     id: string
     code: string

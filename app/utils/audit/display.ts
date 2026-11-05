@@ -169,6 +169,8 @@ const ACTION_SUFFIX_LABELS: Record<string, string> = {
 }
 
 const ACTION_LABELS: Record<string, string> = {
+  'contract.checkout_source.transferred': 'Chuyển nguồn tiền tất toán',
+  'contract.renewal.repaired': 'Sửa dữ liệu chuỗi gia hạn',
   'user.access_request.reconciled': 'Đối soát yêu cầu truy cập',
   'building.invoice_email_settings.updated': 'Cập nhật gửi hoá đơn tự động',
   'building.visibility_changed': 'Đổi hiển thị toà nhà',
@@ -232,7 +234,7 @@ export function auditActionLabel(action: string): string {
 
 export function auditActionVariant(action: string): StatusVariant {
   if (/(\.created|\.activated|\.added|\.uploaded|\.recorded|\.applied)$/.test(action)) return 'success'
-  if (/(\.updated|\.renewed|\.role_changed|\.synced|\.attached|\.allocated|\.refreshed|\.published)$/.test(action)) return 'accent'
+  if (/(\.updated|\.renewed|\.role_changed|\.synced|\.attached|\.allocated|\.refreshed|\.published|\.transferred|\.repaired)$/.test(action)) return 'accent'
   if (/(\.removed|\.terminated|\.deleted|\.voided|\.deactivated|\.orphan_reconciled|\.cancelled|\.draft_removed)$/.test(action)) return 'danger'
   if (/(\.archived|\.maintenance_set|\.expired|\.moved_out|\.dismissed|\.reopened)$/.test(action)) return 'warning'
   return 'neutral'

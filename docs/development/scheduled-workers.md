@@ -22,7 +22,7 @@ matching Nitro runtime configuration, then manually invoking its endpoint before
 | Job | Schedule | Private endpoint |
 | --- | --- | --- |
 | `invoice-email-dispatch-every-minute` | Every minute | `/api/internal/invoice-email/dispatch` |
-| `operations-report-auto-close` | `16:55 UTC` | `/api/internal/operations-report/auto-close` |
+| `operations-report-auto-close` | `16:55 UTC` | `/api/internal/operations-report/auto-close` (last day of the month only: closes fully collected billing periods, then operations reports) |
 | `ai-retention-cleanup` | `17:20 UTC` | `/api/internal/ai/retention-cleanup` |
 | `audit-operation-reconcile` | Every 5 minutes | `/api/internal/audit/reconcile` |
 

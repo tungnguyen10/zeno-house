@@ -1,0 +1,58 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  release:
+    name: Bump version, tag and publish release
+    runs-on: ubuntu-latest
+    if: ${{ !startsWith(github.event.head_commit.message, 'chore(release):') }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve bump type from PR labels
+        id: bump
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          labels=$(gh api "repos/${{ github.repository }}/commits/${{ github.sha }}/pulls" --jq '.[].labels[].name' || true)
+          if echo "$labels" | grep -qx 'release:major'; then
+            echo "type=major" >> "$GITHUB_OUTPUT"
+          elif echo "$labels" | grep -qx 'release:minor'; then
+            echo "type=minor" >> "$GITHUB_OUTPUT"
+          else
+            echo "type=patch" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Bump package.json version
+        id: version
+        run: |
+          npm version "${{ steps.bump.outputs.type }}" --no-git-tag-version
+          echo "value=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Commit and tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json
+          git commit -m "chore(release): v${{ steps.version.outputs.value }}"
+          git tag "v${{ steps.version.outputs.value }}"
+          git push origin HEAD:main --follow-tags
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "v${{ steps.version.outputs.value }}" --generate-notes --title "v${{ steps.version.outputs.value }}"

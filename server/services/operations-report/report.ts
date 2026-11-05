@@ -1,7 +1,6 @@
 import type { H3Event } from 'h3'
 import type { AuthUser } from '~/types/auth'
 import type {
-  BuildingFixedCost,
   OperationsBreakdownEntry,
   OperationsReport,
   OperationsReportCloseSource,
@@ -24,6 +23,8 @@ import {
 import { BuildingRepository } from '../../repositories/buildings'
 import { OperationsReportPeriodRepository } from '../../repositories/operations-report/periods'
 import { OperationsReportRepository } from '../../repositories/operations-report/report'
+import { calculateAccrualAmount, computeAccrualFormula, fixedCostApplies } from '../../utils/billing/accrual-formula'
+import { computeAccrualInputs } from './accrual'
 import { ReserveFundService } from './reserve-funds'
 import { assertBuildingScope } from '../../utils/scope'
 import {
@@ -43,19 +44,6 @@ const REVENUE_LABELS: Record<string, string> = {
   surcharge: 'Phụ thu',
   adjustment: 'Điều chỉnh',
   other: 'Khác',
-}
-
-function ordinal(year: number, month: number): number {
-  return year * 12 + month
-}
-
-function fixedCostApplies(cost: BuildingFixedCost, period: number): boolean {
-  const from = ordinal(cost.effectiveFromPeriodYear, cost.effectiveFromPeriodMonth)
-  const to =
-    cost.effectiveToPeriodYear != null && cost.effectiveToPeriodMonth != null
-      ? ordinal(cost.effectiveToPeriodYear, cost.effectiveToPeriodMonth)
-      : null
-  return from <= period && (to == null || period <= to)
 }
 
 function sumReserveTransactions(transactions: ReserveFundTransaction[]): number {
@@ -84,7 +72,7 @@ async function buildReserveSummary(
   const isClosedReport = closure.status === 'closed'
   const appliedAccrual = isClosedReport ? accrual : null
   const effectiveRatePercent = accrual?.reserveRatePercent ?? effectiveRate
-  const monthlyAccrualEstimated = Math.round((Math.max(issuedProfitByRevenue, 0) * effectiveRatePercent) / 100)
+  const monthlyAccrualEstimated = calculateAccrualAmount(issuedProfitByRevenue, effectiveRatePercent)
   const monthlyAccrualIsEstimated = !appliedAccrual
   const cumulativeBalance = sumReserveTransactions(transactions.filter(tx => !tx.voidedAt))
   const monthlyAccrual = appliedAccrual?.amount ?? 0
@@ -112,41 +100,6 @@ async function assertBuildingReadable(
   await assertBuildingScope(event, user, buildingId, mode)
 }
 
-async function buildReportSnapshot(
-  event: H3Event,
-  query: OperationsReportQuery,
-): Promise<{
-  billing: Awaited<ReturnType<typeof OperationsReportRepository.fetchBillingData>>
-  closure: OperationsReportClosure
-  issuedRevenue: number
-  totalExpense: number
-  profitByRevenue: number
-}> {
-  const period = ordinal(query.period_year, query.period_month)
-  const snapshot = await OperationsReportRepository.fetchSnapshot(
-    event, query.building_id, query.period_year, query.period_month,
-  )
-  const { billing, fixedCosts: allFixedCosts, expenses, prepaidItems, closure } = snapshot
-
-  const issuedRevenue = billing.invoices.reduce((sum, inv) => sum + inv.totalAmount, 0)
-  const fixedCostTotal = allFixedCosts
-    .filter(cost => fixedCostApplies(cost, period))
-    .reduce((sum, cost) => sum + cost.amount, 0)
-  const monthlyExpenseTotal = expenses
-    .filter(expense => expense.fundedBy !== 'reserve_fund')
-    .reduce((sum, expense) => sum + expense.amount, 0)
-  const prepaidAllocationTotal = prepaidItems.reduce((sum, item) => sum + item.monthlyAmount, 0)
-  const totalExpense = fixedCostTotal + monthlyExpenseTotal + prepaidAllocationTotal
-
-  return {
-    billing,
-    closure,
-    issuedRevenue,
-    totalExpense,
-    profitByRevenue: issuedRevenue - totalExpense,
-  }
-}
-
 async function closeReportPeriod(
   event: H3Event,
   user: AuthUser | null,
@@ -162,20 +115,15 @@ async function closeReportPeriod(
     if (!building) throwNotFound('Không tìm thấy tòa nhà')
   }
 
-  const snapshot = await buildReportSnapshot(event, query)
-  const rate = await ReserveFundService.findEffectiveRate(
-    event, query.building_id, query.period_year, query.period_month,
-  )
-  const reserveRatePercent = rate?.reserveRatePercent ?? 0
-  const accrualAmount = Math.round((Math.max(snapshot.profitByRevenue, 0) * reserveRatePercent) / 100)
+  const inputs = await computeAccrualInputs(event, query.building_id, query.period_year, query.period_month)
   return OperationsReportPeriodRepository.closeWithAccrualAndAudit(event, {
     buildingId: query.building_id,
     periodYear: query.period_year,
     periodMonth: query.period_month,
-    billingPeriodId: snapshot.billing.periodId,
-    issuedRevenue: snapshot.issuedRevenue,
-    reserveRatePercent,
-    accrualAmount,
+    billingPeriodId: inputs.billingPeriodId,
+    issuedRevenue: inputs.issuedRevenue,
+    reserveRatePercent: inputs.reserveRatePercent,
+    accrualAmount: inputs.accrualAmount,
     closeSource,
     closedBy: user?.id ?? null,
   })
@@ -201,8 +149,6 @@ export const OperationsReportService = {
     const cached = getCachedOperationsReport(cacheKey)
     if (cached) return cached
 
-    const period = ordinal(query.period_year, query.period_month)
-
     const snapshot = await OperationsReportRepository.fetchSnapshot(
       event, query.building_id, query.period_year, query.period_month,
     )
@@ -227,8 +173,7 @@ export const OperationsReportService = {
     )
 
     // --- Fixed costs (applicable to this period) -------------------------
-    const applicableFixedCosts = allFixedCosts.filter(c => fixedCostApplies(c, period))
-    const fixedCostTotal = applicableFixedCosts.reduce((s, c) => s + c.amount, 0)
+    const applicableFixedCosts = allFixedCosts.filter(c => fixedCostApplies(c, query.period_year, query.period_month))
     const fixedCostMap = new Map<string, number>()
     for (const cost of applicableFixedCosts) {
       fixedCostMap.set(cost.category, (fixedCostMap.get(cost.category) ?? 0) + cost.amount)
@@ -245,7 +190,6 @@ export const OperationsReportService = {
     // Exclude reserve-funded expenses from operation profit calculation
     // (they're paid from reserve fund, tracked separately)
     const directExpenses = expenses.filter(e => e.fundedBy !== 'reserve_fund')
-    const monthlyExpenseTotal = directExpenses.reduce((s, e) => s + e.amount, 0)
     const expenseMap = new Map<string, number>()
     for (const exp of directExpenses) {
       expenseMap.set(exp.category, (expenseMap.get(exp.category) ?? 0) + exp.amount)
@@ -258,8 +202,20 @@ export const OperationsReportService = {
       }),
     )
 
-    const prepaidAllocationTotal = prepaidItems.reduce((s, item) => s + item.monthlyAmount, 0)
-    const totalExpense = fixedCostTotal + monthlyExpenseTotal + prepaidAllocationTotal
+    const {
+      fixedCostTotal,
+      directMonthlyExpenseTotal: monthlyExpenseTotal,
+      prepaidAllocationTotal,
+      totalExpense,
+    } = computeAccrualFormula({
+      periodYear: query.period_year,
+      periodMonth: query.period_month,
+      invoiceTotals: billing.invoices.map(inv => inv.totalAmount),
+      fixedCosts: allFixedCosts,
+      expenses,
+      prepaidMonthlyAmounts: prepaidItems.map(item => item.monthlyAmount),
+      reserveRatePercent: 0,
+    })
     const reserveFund = includeReserveFund
       ? await buildReserveSummary(
           snapshot.reserveTransactions,
@@ -328,14 +284,15 @@ export const OperationsReportService = {
       throwForbidden('Không có quyền cập nhật quỹ dự phòng')
     }
     await assertBuildingReadable(event, user, query.building_id, 'write')
-    const snapshot = await buildReportSnapshot(event, query)
+    const inputs = await computeAccrualInputs(event, query.building_id, query.period_year, query.period_month)
     const transaction = await ReserveFundService.refreshAccrualWithAudit(event, user, {
       buildingId: query.building_id,
       periodYear: query.period_year,
       periodMonth: query.period_month,
-      billingPeriodId: snapshot.billing.periodId,
-      issuedRevenue: snapshot.issuedRevenue,
-      issuedProfitByRevenue: snapshot.profitByRevenue,
+      billingPeriodId: inputs.billingPeriodId,
+      issuedRevenue: inputs.issuedRevenue,
+      reserveRatePercent: inputs.reserveRatePercent,
+      amount: inputs.accrualAmount,
     })
     invalidateOperationsReport(query.building_id)
     return transaction

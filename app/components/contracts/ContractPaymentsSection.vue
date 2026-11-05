@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import type { ContractWithDetails } from '~/types/contracts'
+import { getApiErrorMessage } from '~/utils/api-error'
+import { contractPath } from '~/utils/routes/operational'
 import type { ContractPayment } from '~/types/contract-payments'
 import type { ContractPaymentCreateInput, ContractPaymentUpdateInput } from '~/utils/validators/contract-payments'
 import { formatCurrency } from '~/utils/format/currency'
@@ -6,6 +9,7 @@ import { formatViDate } from '~/utils/format/time'
 import { CONTRACT_PAYMENT_TYPE_LABELS } from '~/utils/constants/contracts'
 
 const props = defineProps<{
+  contract?: Pick<ContractWithDetails, 'status' | 'successorContract'>
   payments: ContractPayment[]
   isLoading: boolean
   canManage: boolean
@@ -13,6 +17,9 @@ const props = defineProps<{
   updatePayment: (id: string, input: ContractPaymentUpdateInput) => Promise<ContractPayment>
   removePayment: (id: string) => Promise<void>
 }>()
+
+const canEditPayments = computed(() => props.canManage && props.contract?.status !== 'renewed')
+const deleteApiError = ref<string | null>(null)
 
 const showPaymentForm = ref(false)
 const isAddingPayment = ref(false)
@@ -26,14 +33,15 @@ const deletingPaymentId = ref<string | null>(null)
 const isDeletingPayment = ref(false)
 
 async function handleAddPayment(input: ContractPaymentCreateInput) {
+  if (!canEditPayments.value || isAddingPayment.value) return
   isAddingPayment.value = true
   paymentApiError.value = null
   try {
     await props.addPayment(input)
     showPaymentForm.value = false
   }
-  catch {
-    paymentApiError.value = 'Không thể thêm thanh toán. Vui lòng thử lại.'
+  catch (error) {
+    paymentApiError.value = getApiErrorMessage(error, 'Không thể thêm thanh toán. Vui lòng thử lại.')
   }
   finally {
     isAddingPayment.value = false
@@ -41,15 +49,15 @@ async function handleAddPayment(input: ContractPaymentCreateInput) {
 }
 
 async function handleUpdatePayment(input: ContractPaymentCreateInput) {
-  if (!editingPayment.value) return
+  if (!canEditPayments.value || !editingPayment.value || isUpdatingPayment.value) return
   isUpdatingPayment.value = true
   editPaymentApiError.value = null
   try {
     await props.updatePayment(editingPayment.value.id, input)
     editingPayment.value = null
   }
-  catch {
-    editPaymentApiError.value = 'Không thể cập nhật thanh toán. Vui lòng thử lại.'
+  catch (error) {
+    editPaymentApiError.value = getApiErrorMessage(error, 'Không thể cập nhật thanh toán. Vui lòng thử lại.')
   }
   finally {
     isUpdatingPayment.value = false
@@ -57,10 +65,14 @@ async function handleUpdatePayment(input: ContractPaymentCreateInput) {
 }
 
 async function handleDeletePayment() {
-  if (!deletingPaymentId.value) return
+  if (!canEditPayments.value || !deletingPaymentId.value || isDeletingPayment.value) return
+  deleteApiError.value = null
   isDeletingPayment.value = true
   try {
     await props.removePayment(deletingPaymentId.value)
+  }
+  catch (error) {
+    deleteApiError.value = getApiErrorMessage(error, 'Không thể xoá thanh toán. Vui lòng thử lại.')
   }
   finally {
     isDeletingPayment.value = false
@@ -78,7 +90,7 @@ async function handleDeletePayment() {
   >
     <template #actions>
       <UiButton
-        v-if="canManage && !showPaymentForm"
+        v-if="canEditPayments && !showPaymentForm"
         variant="secondary"
         size="sm"
         @click="showPaymentForm = true"
@@ -87,8 +99,12 @@ async function handleDeletePayment() {
       </UiButton>
     </template>
 
+    <UiAlert v-if="contract?.status === 'renewed'" severity="info" class="mb-4">
+      Hợp đồng đã gia hạn.<template v-if="contract.successorContract"> Tiền cọc đang giữ đã chuyển sang HĐ <NuxtLink :to="contractPath(contract.successorContract)" class="rounded-sm font-medium underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-accent/40">{{ contract.successorContract.code }}</NuxtLink>.</template>
+    </UiAlert>
+    <UiAlert v-if="deleteApiError" severity="danger" class="mb-4">{{ deleteApiError }}</UiAlert>
     <!-- Add payment form -->
-    <template v-if="showPaymentForm">
+    <template v-if="canEditPayments && showPaymentForm">
       <ContractPaymentForm
         :loading="isAddingPayment"
         :api-error="paymentApiError"
@@ -110,7 +126,7 @@ async function handleDeletePayment() {
     <div v-else class="space-y-2">
       <template v-for="payment in payments" :key="payment.id">
         <!-- Inline edit form -->
-        <div v-if="editingPayment?.id === payment.id" class="rounded-lg border border-ui-accent/40 p-4">
+        <div v-if="canEditPayments && editingPayment?.id === payment.id" class="rounded-lg border border-ui-accent/40 p-4">
           <ContractPaymentForm
             :initial-data="editingPayment"
             :loading="isUpdatingPayment"
@@ -140,7 +156,7 @@ async function handleDeletePayment() {
           </div>
           <div class="flex items-center gap-2 shrink-0 ml-4">
             <p class="text-sm font-semibold text-ui-accent">{{ formatCurrency(payment.amount) }}</p>
-            <template v-if="canManage">
+            <template v-if="canEditPayments">
               <UiButton
                 variant="ghost"
                 size="sm"
@@ -165,7 +181,7 @@ async function handleDeletePayment() {
 
   <!-- Delete payment modal -->
   <UiConfirmModal
-    :open="!!deletingPaymentId"
+    :open="canEditPayments && !!deletingPaymentId"
     title="Xoá thanh toán"
     message="Bạn có chắc muốn xoá khoản thanh toán này? Hành động này không thể hoàn tác."
     :loading="isDeletingPayment"

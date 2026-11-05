@@ -12,25 +12,26 @@ export interface TenantExportCandidate {
 }
 
 export interface Tenant {
+  accessLevel?: 'full' | 'basic'
   id: string
   code: string
   fullName: string
   phone: string
-  email: string | null
-  idNumber: string | null
-  dateOfBirth: string | null
-  gender: string | null
-  occupation: string | null
-  idIssuedDate: string | null
-  idIssuedPlace: string | null
-  idCardFrontPath: string | null
-  idCardBackPath: string | null
-  idCardFrontSignedUrl: string | null
-  idCardBackSignedUrl: string | null
-  emergencyContactName: string | null
-  emergencyContactPhone: string | null
-  permanentAddress: string | null
-  notes: string | null
+  email?: string | null
+  idNumber?: string | null
+  dateOfBirth?: string | null
+  gender?: string | null
+  occupation?: string | null
+  idIssuedDate?: string | null
+  idIssuedPlace?: string | null
+  idCardFrontPath?: string | null
+  idCardBackPath?: string | null
+  idCardFrontSignedUrl?: string | null
+  idCardBackSignedUrl?: string | null
+  emergencyContactName?: string | null
+  emergencyContactPhone?: string | null
+  permanentAddress?: string | null
+  notes?: string | null
   status: TenantStatus
   hasActiveContract?: boolean
   activeAssignment?: {
@@ -43,6 +44,6 @@ export interface Tenant {
     assignmentRole: TenantAssignmentRole
     primaryTenantName: string | null
   } | null
-  createdAt: string
-  updatedAt: string
+  createdAt?: string
+  updatedAt?: string
 }

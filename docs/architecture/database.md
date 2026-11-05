@@ -157,6 +157,14 @@ isolates each row in a subtransaction so one invalid scheduled row cannot roll b
 Supabase Cron wakes the private Nitro apply-due endpoint every five minutes using a base URL and
 worker secret stored in Vault.
 
+Contract renewal is committed by `renew_contract_atomic`, a service-role-only `SECURITY INVOKER` RPC.
+It locks the contract, room, open occupants, and checkout sources in a fixed order, then extends the
+contract or creates the successor, clones occupants and services, transfers positive-balance checkout
+sources, cancels scheduled amendments, and writes correlated audit rows. `contract_renewals.operation_id`
+is unique and makes retries idempotent. The unique index `contracts_one_successor` allows one successor
+per contract. The `contract_payments_renewed_lock` trigger rejects receipt insert, update, and delete on a
+`renewed` contract and runs before `contract_checkout_payment_guard`.
+
 `billing_audit_events` stores append-only operational audit events.
 
 Audit access is server-owned: `anon` and `authenticated` have no table privileges on
@@ -199,7 +207,15 @@ accessible only through service-role repositories/functions.
 
 `building_reserve_fund_rates` stores period-based reserve rate history per building. `reserve_funds` stores one fund per building. `reserve_fund_transactions` is the ledger; active `monthly_accrual` rows increase the fund from non-negative operations profit at billing close, report close, auto-close, or admin refresh; active `expense_deduction` rows decrease it for reserve-funded expenses, and voided deductions no longer affect active balance. `building_expenses.funded_by` marks direct versus reserve-funded expenses. Reserve balances may be negative.
 
-Operations-report close, operations-report auto-close, and admin reserve refresh never close billing periods. Billing period status changes only through billing flows.
+Operations-report close, operations-report auto-close, and admin reserve refresh never change billing period status themselves. Billing periods close only through the billing close flow: the manual API or the month-end job (`runMonthEndClose`), which closes fully collected `issued`/`collecting` periods through `close_billing_period_atomic` with a NULL actor before closing the operations report.
+
+### Atomic Billing Close
+
+`close_billing_period_atomic` and `reopen_billing_period_atomic` (migration `20261105140000_atomic_billing_close.sql`) are `SECURITY INVOKER`, `set search_path = ''`, revoked from `public`/`anon`/`authenticated` and granted to `service_role`. Close changes the period status, upserts the `monthly_accrual` row (only while the month's operations report is open or missing, under the same `operations-report:<building>:<year>:<month>` advisory lock as `close_operations_report_with_audit`) and appends `period.closed` to `billing_audit_events` in one transaction. Reopen clears `closed_at`, returns the period to `collecting` and appends `period.reopened`; it never touches `reserve_fund_transactions`.
+
+Closed periods are immutable for money: `record_bulk_payments` takes a `FOR NO KEY UPDATE` lock on the affected `billing_periods` rows before locking invoices, and trigger `billing_period_closed_guard` raises `PERIOD_CLOSED_LOCKED` for payment writes and invoice status/money-column updates. Lock order for billing RPCs is `billing_periods` -> `invoices` -> `invoice_payments`. `issue_period_invoices`, `record_bulk_payments` and `issue_and_pay` are executable only by `service_role`.
+
+Errors raised by the RPCs (`PERIOD_NOT_FOUND`, `PERIOD_STATUS_INVALID`, `PERIOD_HAS_OUTSTANDING`, `PERIOD_SNAPSHOT_STALE`, `PERIOD_CLOSED_INCONSISTENT`, `PERIOD_NOT_CLOSED`, `PERIOD_REOPEN_REASON_INVALID`, `PERIOD_CLOSED_LOCKED`) are mapped to 404/409/422 by `throwDbError`. Verify with `supabase/verification/atomic_billing_close.sql`; check legacy data first with `supabase/verification/billing_close_integrity.sql`.
 
 `expense-receipts` is a private Storage bucket for receipt images. Server services enforce capability and building scope before upload, delete, or signed URL generation.
 

@@ -7,17 +7,25 @@ import { mapTenant } from '~/utils/mappers/tenants'
 import { isUuid } from '~/utils/format/slug'
 import { nameInitialsFromFullName } from '~/utils/format/codes'
 
+export interface TenantAccessFacts {
+  activeBuildingIds: string[]
+  historicalBuildingIds: string[]
+  everContracted: boolean
+}
+
 export interface TenantFilters {
   q?: string
   building_id?: string
   buildingIds?: string[] | null
   include_ids?: string[]
+  sensitive_search_ids?: string[]
   contract_state?: 'with_contract' | 'without_contract'
   status?: TenantStatus[]
   sort?: 'full_name' | 'created_at' | 'code'
   order?: 'asc' | 'desc'
   page?: number
   limit?: number
+  active_scope_only?: boolean
   available?: boolean
   excludeContractId?: string
 }
@@ -182,7 +190,70 @@ async function findTenantIdsForBuildings(event: H3Event, buildingIds: string[]):
   return [...new Set([...primaryTenantIds, ...occupantTenantIds])]
 }
 
+const ACCESS_FACT_PAGE_SIZE = 1000
+const ACCESS_FACT_TENANT_BATCH_SIZE = 100
+
+async function collectAccessFactRows<T>(
+  loadPage: (offset: number) => PromiseLike<{ data: T[] | null; count: number | null; error: unknown }>,
+  context: string,
+): Promise<T[]> {
+  const rows: T[] = []
+  let total: number | null = null
+  while (true) {
+    const { data, count, error } = await loadPage(rows.length)
+    if (error) throwDbError(error, context)
+    // A short page can be the configured Data API cap, not the end of history.
+    // Require a consistent exact count and advance by the actual returned size.
+    if (!data || count === null || !Number.isSafeInteger(count) || count < 0
+      || (total !== null && count !== total)
+      || rows.length + data.length > count
+      || (data.length === 0 && rows.length < count)) {
+      throwDbError(new Error('Incomplete tenant relationship facts'), context)
+    }
+    total = count
+    rows.push(...data)
+    if (rows.length === total) return rows
+  }
+}
+
 export const TenantRepository = {
+  async findAccessFacts(event: H3Event, tenantIds: string[]): Promise<Map<string, TenantAccessFacts>> {
+    const ids = [...new Set(tenantIds)]
+    const facts = new Map(ids.map(id => [id, { activeBuildingIds: [] as string[], historicalBuildingIds: [] as string[], everContracted: false }]))
+    if (!ids.length) return facts
+    const client = await serverSupabaseClient(event)
+    const add = (tenantId: string, buildingId: string | undefined, active: boolean) => {
+      const fact = facts.get(tenantId)
+      if (!fact) return
+      fact.everContracted = true
+      if (!buildingId) return
+      fact.historicalBuildingIds.push(buildingId)
+      if (active) fact.activeBuildingIds.push(buildingId)
+    }
+    for (let offset = 0; offset < ids.length; offset += ACCESS_FACT_TENANT_BATCH_SIZE) {
+      const batch = ids.slice(offset, offset + ACCESS_FACT_TENANT_BATCH_SIZE)
+      const [primary, occupants] = await Promise.all([
+        collectAccessFactRows(pageOffset => client.from('contracts')
+          .select('tenant_id, building_id, status', { count: 'exact' })
+          .in('tenant_id', batch).order('id', { ascending: true })
+          .range(pageOffset, pageOffset + ACCESS_FACT_PAGE_SIZE - 1), 'tenants.findAccessFacts.primary'),
+        collectAccessFactRows(pageOffset => client.from('contract_occupants')
+          .select('tenant_id, move_out_date, contracts!inner(building_id)', { count: 'exact' })
+          .in('tenant_id', batch).order('id', { ascending: true })
+          .range(pageOffset, pageOffset + ACCESS_FACT_PAGE_SIZE - 1), 'tenants.findAccessFacts.occupants'),
+      ])
+      for (const row of primary) add(row.tenant_id, row.building_id, row.status === 'active')
+      for (const row of occupants) {
+        const contract = row.contracts as { building_id?: string } | null
+        add(row.tenant_id, contract?.building_id, row.move_out_date === null)
+      }
+    }
+    for (const fact of facts.values()) {
+      fact.activeBuildingIds = [...new Set(fact.activeBuildingIds)].sort()
+      fact.historicalBuildingIds = [...new Set(fact.historicalBuildingIds)].sort()
+    }
+    return facts
+  },
   async findExistingIdentifiers(
     event: H3Event,
     phones: string[],
@@ -281,7 +352,11 @@ export const TenantRepository = {
       : filters.buildingIds
 
     if (effectiveBuildingIds) {
-      const tenantIds = await findTenantIdsForBuildings(event, effectiveBuildingIds)
+      let tenantIds = await findTenantIdsForBuildings(event, effectiveBuildingIds)
+      if (filters.active_scope_only) {
+        const facts = await TenantRepository.findAccessFacts(event, tenantIds)
+        tenantIds = tenantIds.filter(id => facts.get(id)?.activeBuildingIds.some(buildingId => effectiveBuildingIds.includes(buildingId)))
+      }
       const includeIds = !filters.building_id ? (filters.include_ids ?? []) : []
       const scopedTenantIds = [...new Set([...tenantIds, ...includeIds])]
       if (scopedTenantIds.length === 0) {
@@ -293,9 +368,15 @@ export const TenantRepository = {
 
     if (filters.q) {
       const term = filters.q.trim().replace(/[,()]/g, '')
-      query = query.or(
-        `full_name.ilike.%${term}%,phone.ilike.%${term}%,email.ilike.%${term}%,id_number.ilike.%${term}%,code.ilike.%${term}%`,
-      )
+      const safeSearch = `full_name.ilike.%${term}%,phone.ilike.%${term}%,code.ilike.%${term}%`
+      const sensitiveSearch = `email.ilike.%${term}%,id_number.ilike.%${term}%`
+      const fullIds = filters.sensitive_search_ids
+      query = query.or(fullIds === undefined
+        ? `${safeSearch},${sensitiveSearch}`
+        : fullIds.length
+          ? `${safeSearch},and(id.in.(${fullIds.join(',')}),or(${sensitiveSearch}))`
+          : safeSearch)
+
     }
 
     if (filters.status && filters.status.length > 0) {
@@ -361,12 +442,14 @@ export const TenantRepository = {
   },
 
   async findByIds(event: H3Event, ids: string[]): Promise<Tenant[]> {
-    if (ids.length === 0) return []
+    // A non-UUID value would make Postgres reject the whole query; treat it as a missing tenant.
+    const uuids = [...new Set(ids.filter(isUuid))]
+    if (uuids.length === 0) return []
     const client = await serverSupabaseClient(event)
     const { data, error } = await client
       .from('tenants')
       .select('*')
-      .in('id', [...new Set(ids)])
+      .in('id', uuids)
 
     if (error) throwDbError(error, 'tenants.findByIds')
     return (data ?? []).map(mapTenant)

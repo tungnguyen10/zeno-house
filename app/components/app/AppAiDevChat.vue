@@ -420,6 +420,7 @@ function onFabClick() {
                 >
                   {{ message.content }}
                 </div>
+                <!-- eslint-disable-next-line vue/no-v-html -- renderChatMarkdown escapes all raw text before adding tags -->
                 <div
                   v-else
                   class="chat-markdown max-w-[85%] rounded-2xl rounded-bl-sm border border-ui-border bg-ui-surface px-3 py-2 text-sm leading-relaxed text-ui-primary"

@@ -26,6 +26,41 @@ The system SHALL support creating a successor contract when terms change signifi
 - **WHEN** admin attempts to renew a contract with status `renewed`
 - **THEN** request rejected with CONFLICT
 
+### Requirement: Atomic contract renewal
+The system SHALL commit a renewal in a single database transaction. Contract dates are inclusive: a successor contract starts the day after the previous contract's `end_date`. Each renewal request carries an `operation_id` so retries are idempotent.
+
+#### Scenario: Successor carries occupants, services, and held money
+- **WHEN** admin renews with mode `new_contract`
+- **THEN** open occupancies of the old contract are closed at its `end_date`; the successor starts on `end_date + 1` with the same occupants and services; checkout sources with a positive balance move to the successor; scheduled amendments of the old contract are cancelled; all changes are audited under one correlation id
+
+#### Scenario: Legacy contract without occupant rows
+- **WHEN** admin renews with mode `new_contract` a contract that has no open occupancies
+- **THEN** the successor gets the contract tenant as primary occupant; if that tenant already has an open occupancy on another contract the request is rejected with CONFLICT
+
+#### Scenario: Failure leaves the contract unchanged
+- **WHEN** any step of a renewal fails
+- **THEN** the original contract, occupancies, services, and sources are unchanged and no successor exists
+
+#### Scenario: Retry replays the stored result
+- **WHEN** a renewal is submitted again with the same `operation_id` and the same terms
+- **THEN** the stored result is returned without creating another renewal, contract, or audit event
+
+#### Scenario: Reused operation id with different terms
+- **WHEN** a renewal is submitted with an `operation_id` already used for different terms
+- **THEN** the request is rejected with CONFLICT
+
+#### Scenario: Concurrent renewals
+- **WHEN** two renewals for the same contract run concurrently
+- **THEN** exactly one succeeds and the other is rejected with CONFLICT
+
+#### Scenario: Contract with a checkout cannot be renewed
+- **WHEN** admin renews a contract that has a checkout record
+- **THEN** request rejected with CONFLICT
+
+#### Scenario: Receipts on a renewed contract are locked
+- **WHEN** a payment receipt is created, updated, or deleted on a `renewed` contract
+- **THEN** the request is rejected with CONFLICT
+
 ### Requirement: Contract renewal history
 The system SHALL record each renewal event in a `contract_renewals` log with old/new end date, old/new rent, mode, and optional reason.
 

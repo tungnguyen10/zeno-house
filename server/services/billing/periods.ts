@@ -3,6 +3,7 @@ import { db as serverSupabaseClient } from '../../utils/db'
 import type { AuthUser } from '~/types/auth'
 import type {
   BillingPeriod,
+  BillingPeriodCloseResult,
   BillingPeriodListFilters,
   BillingPeriodOpenResult,
   BillingPeriodSummary,
@@ -17,13 +18,12 @@ import { BillingPeriodRepository } from '../../repositories/billing/periods'
 import { InvoiceRepository } from '../../repositories/billing/invoices'
 import { InvoicePaymentRepository } from '../../repositories/billing/payments'
 import { BuildingRepository } from '../../repositories/buildings'
-import { BuildingFixedCostRepository } from '../../repositories/operations-report/fixed-costs'
-import { BuildingExpenseRepository } from '../../repositories/operations-report/expenses'
 import { assertReason } from '../../utils/billing/reason'
+import { newCorrelationId } from '../../utils/billing/correlation'
 import { assertBuildingScope, getVisibleBuildingIds } from '../../utils/scope'
 import { BillingAuditService } from './audit'
-import { ReserveFundService } from '../operations-report/reserve-funds'
-import { PrepaidExpenseService } from '../operations-report/prepaid-expenses'
+import { computeAccrualInputs } from '../operations-report/accrual'
+import { invalidateOperationsReport } from '../operations-report/cache'
 import {
   calculateRequiredReadingProgress,
   loadBatchedPeriodInputs,
@@ -72,25 +72,50 @@ async function openOrGetPeriod(
   })
 }
 
-function ordinal(year: number, month: number): number {
-  return year * 12 + month
+function isStaleSnapshotError(error: unknown): boolean {
+  const reason = (error as { data?: { error?: { details?: { reason?: unknown } } } } | null)
+    ?.data?.error?.details?.reason
+  return reason === 'PERIOD_SNAPSHOT_STALE'
 }
 
-function fixedCostApplies(
-  cost: {
-    effectiveFromPeriodYear: number
-    effectiveFromPeriodMonth: number
-    effectiveToPeriodYear: number | null
-    effectiveToPeriodMonth: number | null
-  },
-  period: number,
-): boolean {
-  const from = ordinal(cost.effectiveFromPeriodYear, cost.effectiveFromPeriodMonth)
-  const to =
-    cost.effectiveToPeriodYear != null && cost.effectiveToPeriodMonth != null
-      ? ordinal(cost.effectiveToPeriodYear, cost.effectiveToPeriodMonth)
-      : null
-  return from <= period && (to == null || period <= to)
+export type SystemCloseOutcome =
+  | { status: 'closed', accrualStatus: BillingPeriodCloseResult['accrualStatus'] }
+  | { status: 'skipped', reason: 'already_closed' | 'not_closable' | 'has_outstanding', outstandingCount?: number }
+
+/** Recompute and retry once when the revenue snapshot went stale between compute and RPC. */
+async function closePeriodAtomically(
+  event: H3Event,
+  period: BillingPeriod,
+  actorId: string | null,
+): Promise<BillingPeriodCloseResult> {
+  const correlationId = newCorrelationId()
+  const attempt = async () => {
+    const inputs = await computeAccrualInputs(event, period.buildingId, period.periodYear, period.periodMonth)
+    return BillingPeriodRepository.closeAtomic(event, {
+      periodId: period.id,
+      actorId,
+      correlationId,
+      expectedIssuedRevenue: inputs.issuedRevenue,
+      issuedProfit: inputs.profitByRevenue,
+      reserveRatePercent: inputs.reserveRatePercent,
+      accrualAmount: inputs.accrualAmount,
+    })
+  }
+
+  let result: Awaited<ReturnType<typeof attempt>>
+  try {
+    result = await attempt()
+  }
+  catch (error) {
+    if (!isStaleSnapshotError(error)) throw error
+    result = await attempt()
+  }
+
+  invalidateOperationsReport(period.buildingId)
+  return {
+    period: result.period,
+    accrualStatus: result.replayed ? null : result.accrualStatus,
+  }
 }
 
 async function loadBuildingsByIds(event: H3Event, ids: string[]): Promise<Map<string, BuildingLite>> {
@@ -318,73 +343,38 @@ export const BillingPeriodService = {
   },
 
   /**
-   * Close a period. Requires `billing.close`. The period may only be closed
-   * from `issued` or `collecting` and only when no invoice has an outstanding
-   * balance.
+   * Close a period. Requires `billing.close`. Status, reserve accrual and audit are written by one
+   * atomic RPC; a stale revenue snapshot is recomputed and retried once.
    */
   async close(
     event: H3Event,
     user: AuthUser,
     id: string,
-  ): Promise<BillingPeriod> {
+  ): Promise<BillingPeriodCloseResult> {
     if (!can(user, 'billing.close')) throwForbidden('Không có quyền chốt kỳ vận hành')
 
     const period = await BillingPeriodRepository.findById(event, id)
     if (!period) throwNotFound('Không tìm thấy kỳ vận hành')
     await assertBuildingScope(event, user, period.buildingId, 'write')
-    if (period.status === 'closed') return period
-    if (period.status !== 'issued' && period.status !== 'collecting') {
-      throwConflict('Chỉ có thể chốt kỳ đã phát hành hoặc đang thu')
-    }
 
+    return closePeriodAtomically(event, period, user.id)
+  },
+
+  /**
+   * Month-end close without a user. Closes only fully collected `issued`/`collecting` periods;
+   * anything else is skipped so an admin can finish it.
+   */
+  async closeSystem(event: H3Event, period: BillingPeriod): Promise<SystemCloseOutcome> {
+    if (period.status === 'closed') return { status: 'skipped', reason: 'already_closed' }
+    if (period.status !== 'issued' && period.status !== 'collecting') {
+      return { status: 'skipped', reason: 'not_closable' }
+    }
     const outstanding = await InvoiceRepository.listOutstandingByPeriod(event, period.id)
     if (outstanding.length > 0) {
-      throwConflict(`Còn ${outstanding.length} hoá đơn chưa thanh toán đủ. Cần xử lý trước khi chốt kỳ.`)
+      return { status: 'skipped', reason: 'has_outstanding', outstandingCount: outstanding.length }
     }
-
-    const closed = await BillingPeriodRepository.updateStatus(event, period.id, 'closed', {
-      closed_at: new Date().toISOString(),
-    })
-    const invoices = await InvoiceRepository.listByPeriod(event, period.id)
-    const issuedRevenue = invoices
-      .filter(invoice => invoice.status !== 'void')
-      .reduce((sum, invoice) => sum + invoice.totalAmount, 0)
-    const periodOrdinal = ordinal(period.periodYear, period.periodMonth)
-    const allFixedCosts = await BuildingFixedCostRepository.listByBuilding(event, period.buildingId)
-    const fixedCostTotal = allFixedCosts
-      .filter(cost => fixedCostApplies(cost, periodOrdinal))
-      .reduce((sum, cost) => sum + cost.amount, 0)
-    const monthlyExpenseTotal = (await BuildingExpenseRepository.list(event, {
-      buildingId: period.buildingId,
-      periodYear: period.periodYear,
-      periodMonth: period.periodMonth,
-    })).reduce((sum, expense) => sum + expense.amount, 0)
-    const prepaidAllocationTotal = (await PrepaidExpenseService.listActiveAllocations(
-      event,
-      period.buildingId,
-      period.periodYear,
-      period.periodMonth,
-    )).reduce((sum, item) => sum + item.monthlyAmount, 0)
-    const issuedProfitByRevenue = issuedRevenue - (fixedCostTotal + monthlyExpenseTotal + prepaidAllocationTotal)
-    await ReserveFundService.recordMonthlyAccrual(event, user, {
-      buildingId: period.buildingId,
-      periodYear: period.periodYear,
-      periodMonth: period.periodMonth,
-      billingPeriodId: period.id,
-      issuedRevenue,
-      issuedProfitByRevenue,
-    })
-
-    await BillingAuditService.append(event, user, {
-      billing_period_id: closed.id,
-      action: BILLING_AUDIT_ACTIONS.PERIOD_CLOSED,
-      entity_type: 'billing_period',
-      entity_id: closed.id,
-      before_data: period,
-      after_data: closed,
-    })
-
-    return closed
+    const { accrualStatus } = await closePeriodAtomically(event, period, null)
+    return { status: 'closed', accrualStatus }
   },
 
   /**
@@ -516,28 +506,14 @@ export const BillingPeriodService = {
     const period = await BillingPeriodRepository.findById(event, id)
     if (!period) throwNotFound('Không tìm thấy kỳ vận hành')
     await assertBuildingScope(event, user, period.buildingId, 'write')
-    if (period.status !== 'closed') {
-      throwConflict('Kỳ chưa chốt — không thể mở lại')
-    }
 
-    const reopened = await BillingPeriodRepository.updateStatus(event, period.id, 'collecting', {
-      closed_at: null,
+    const reopened = await BillingPeriodRepository.reopenAtomic(event, {
+      periodId: period.id,
+      actorId: user.id,
+      reason,
+      correlationId: newCorrelationId(),
     })
-
-    await BillingAuditService.append(event, user, {
-      billing_period_id: reopened.id,
-      action: BILLING_AUDIT_ACTIONS.PERIOD_REOPENED,
-      entity_type: 'billing_period',
-      entity_id: reopened.id,
-      before_data: period,
-      after_data: reopened,
-      metadata: {
-        reason,
-        prior_status: period.status,
-        trigger: 'manual',
-      },
-    })
-
+    invalidateOperationsReport(period.buildingId)
     return reopened
   },
 }

@@ -31,7 +31,7 @@ function contract(): ContractWithDetails {
   return {
     id: 'contract-1', contractCode: 'HD-001', roomId: 'room-1', tenantId: 'tenant-1', buildingId: 'building-1',
     startDate: '2026-01-01', endDate: '2027-01-01', monthlyRent: 3_000_000, deposit: 3_000_000,
-    paymentDueDay: 5, occupantCount: 2, discountAmount: 0, surchargeAmount: 0, previousContractId: null,
+    paymentDueDay: 5, occupantCount: 2, discountAmount: 0, surchargeAmount: 0, previousContractId: null, previousContract: null, successorContract: null,
     originalEndDate: null, renewalCount: 0, status: 'active', notes: null,
     createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z',
     room: { id: 'room-1', code: 'a-101', roomNumber: 'A101', floor: 1, buildingId: 'building-1', buildingName: 'Tòa A' },

@@ -32,6 +32,14 @@ export interface BillingPeriodOpenResult {
   created: boolean
 }
 
+export type BillingAccrualStatus = 'recorded' | 'skipped_report_closed'
+
+export interface BillingPeriodCloseResult {
+  period: BillingPeriod
+  /** `null` when the close was a replay of an earlier successful close. */
+  accrualStatus: BillingAccrualStatus | null
+}
+
 export interface BillingWorkspaceBootstrap {
   period: BillingPeriod
   grid: BillingDraftGridResponse | null

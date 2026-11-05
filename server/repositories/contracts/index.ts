@@ -19,10 +19,12 @@ export interface ContractFilters {
   limit?: number
 }
 
+// Self-relations select the forward parent through the FK column, without a table hint.
 const DETAIL_SELECT = `
   *,
   rooms!inner (id, room_number, floor, building_id, code, buildings (name)),
-  tenants (id, full_name, phone, code)
+  tenants (id, full_name, phone, code),
+  previous_contract:previous_contract_id(id, contract_code)
 `
 
 function contractCodePrefix(buildingCode: string, startDate: string): string {
@@ -169,7 +171,19 @@ export const ContractRepository = {
 
     if (error) throwDbError(error, 'contracts.findByIdentifier')
     if (!data) return null
-    return mapContractWithDetails(data as Parameters<typeof mapContractWithDetails>[0])
+    const successor = await this.findSuccessor(event, data.id)
+    return mapContractWithDetails({ ...data, successor } as Parameters<typeof mapContractWithDetails>[0])
+  },
+
+  async findSuccessor(event: H3Event, contractId: string): Promise<{ id: string; contract_code: string } | null> {
+    const client = await serverSupabaseClient(event)
+    const { data, error } = await client
+      .from('contracts')
+      .select('id, contract_code')
+      .eq('previous_contract_id', contractId)
+      .maybeSingle()
+    if (error) throwDbError(error, 'contracts.findSuccessor')
+    return data
   },
 
   async findActiveByRoomId(event: H3Event, roomId: string, excludeId?: string): Promise<Contract | null> {

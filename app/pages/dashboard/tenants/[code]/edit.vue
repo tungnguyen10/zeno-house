@@ -20,6 +20,8 @@ watchEffect(() => {
 })
 
 const tenant = computed(() => data.value?.data ?? null)
+const isBasic = computed(() => tenant.value?.accessLevel === 'basic')
+const canEdit = computed(() => !!tenant.value && status.value === 'success' && !error.value && !isBasic.value && authStore.can('tenants.update'))
 
 // Redirect UUID-based URL to canonical code-based URL
 watch(tenant, (value) => {
@@ -101,6 +103,7 @@ const idCardBackSignedUrl = computed(() => {
 })
 
 function onSelectIdImage(payload: { side: TenantIdImageSide, file: File | null }) {
+  if (!canEdit.value || isLoading.value || idImageLoadingSide.value) return
   idImageFiles.value = {
     ...idImageFiles.value,
     [payload.side]: payload.file,
@@ -114,6 +117,7 @@ function onSelectIdImage(payload: { side: TenantIdImageSide, file: File | null }
 }
 
 function onRemoveIdImage(side: TenantIdImageSide) {
+  if (!canEdit.value || isLoading.value || idImageLoadingSide.value) return
   const hasExistingImage = side === 'front'
     ? Boolean(tenant.value?.idCardFrontPath)
     : Boolean(tenant.value?.idCardBackPath)
@@ -149,12 +153,14 @@ async function removeIdImage(tenantId: string, side: TenantIdImageSide): Promise
 }
 
 async function onSubmit(data: TenantFormData) {
+  if (!canEdit.value || isLoading.value || idImageLoadingSide.value) return
   const updated = await submitUpdate(id, tenantFormToApiPayload(data), { skipRedirect: true })
   if (!updated) return
 
   let latestTenant = updated
 
   for (const side of ['front', 'back'] as const) {
+    if (!canEdit.value || updated.accessLevel === 'basic') return
     try {
       idImageLoadingSide.value = side
       if (idImageFiles.value[side]) {
@@ -193,10 +199,14 @@ async function onSubmit(data: TenantFormData) {
       <UiSkeleton class="h-64 w-full rounded-xl" />
     </div>
     <UiAlert v-else-if="error" severity="danger">Không thể tải thông tin khách thuê.</UiAlert>
+    <UiAlert v-else-if="isBasic" severity="info">
+      Khách thuê hiện không thuộc tòa nhà bạn quản lý. Bạn chỉ xem được thông tin cơ bản và lịch sử hợp đồng tại tòa của mình.
+    </UiAlert>
+    <UiAlert v-else-if="tenant && !canEdit" severity="warning">Bạn không có quyền chỉnh sửa khách thuê này.</UiAlert>
     <TenantForm
-      v-else-if="tenant"
+      v-else-if="canEdit"
       v-model="formData"
-      :loading="isLoading"
+      :loading="isLoading || !!idImageLoadingSide"
       :errors="errors"
       :has-draft="hasDraft"
       :is-dirty="isDirty"
@@ -205,7 +215,7 @@ async function onSubmit(data: TenantFormData) {
       :id-card-front-file-name="idImageFiles.front?.name ?? null"
       :id-card-back-file-name="idImageFiles.back?.name ?? null"
       :id-image-loading-side="idImageLoadingSide"
-      :can-manage-id-images="authStore.can('tenants.update')"
+      :can-manage-id-images="canEdit"
       @submit="onSubmit"
       @select-id-image="onSelectIdImage"
       @remove-id-image="onRemoveIdImage"

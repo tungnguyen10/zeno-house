@@ -43,6 +43,7 @@ interface ContractRow {
 }
 
 interface ContractOccupantRow {
+  id?: string
   contract_id: string
   tenant_id: string
   move_out_date?: string | null
@@ -78,6 +79,8 @@ function createClientMock(input: {
   tenants: TenantRow[]
   contracts: ContractRow[]
   occupants: ContractOccupantRow[]
+  relationshipRowCap?: number
+  relationshipPage?: (table: string, offset: number, order: string | null) => { error?: { message: string }; count?: number | null; empty?: boolean } | undefined
 }) {
   class QueryBuilder {
     private equals = new Map<string, string>()
@@ -87,6 +90,7 @@ function createClientMock(input: {
     private isNull = new Set<string>()
     private search: string | null = null
     private searchColumns: string[] = []
+    private sensitiveIds: string[] | null = null
     private rangeFrom = 0
     private rangeTo = Number.POSITIVE_INFINITY
     private headOnly = false
@@ -154,6 +158,11 @@ function createClientMock(input: {
       const match = expression.match(/%([^%]+)%/)
       this.search = match?.[1]?.toLowerCase() ?? null
       this.searchColumns = expression.split(',').map(part => part.split('.')[0] ?? '').filter(Boolean)
+      const sensitiveMatch = expression.match(/and\(id\.in\.\(([^)]+)\),or\(/)
+      if (sensitiveMatch) {
+        this.sensitiveIds = sensitiveMatch[1]!.split(',')
+        this.searchColumns = ['full_name', 'phone', 'code']
+      }
       return this
     }
 
@@ -197,6 +206,15 @@ function createClientMock(input: {
       return Promise.resolve(this.execute()).then(onfulfilled, onrejected)
     }
 
+    private relationshipResult<T extends { id?: string }>(rows: T[]) {
+      const override = input.relationshipPage?.(this.table, this.rangeFrom, this.orderField)
+      if (override?.error) return { data: null, error: override.error, count: null }
+      if (this.orderField === 'id') rows.sort((a, b) => (a.id ?? '').localeCompare(b.id ?? ''))
+      const count = override && 'count' in override ? override.count : rows.length
+      const end = Math.min(this.rangeTo + 1, this.rangeFrom + (input.relationshipRowCap ?? Infinity))
+      return { data: override?.empty ? [] : rows.slice(this.rangeFrom, end), error: null, count }
+    }
+
     private execute() {
       if (this.table === 'contracts') {
         let rows = [...input.contracts]
@@ -204,25 +222,29 @@ function createClientMock(input: {
         if (buildingId) rows = rows.filter(row => row.building_id === buildingId)
         const buildingIds = this.inValues.get('building_id')
         if (buildingIds) rows = rows.filter(row => buildingIds.includes(row.building_id))
+        const tenantIds = this.inValues.get('tenant_id')
+        if (tenantIds) rows = rows.filter(row => tenantIds.includes(row.tenant_id))
         const status = this.equals.get('status')
         if (status) rows = rows.filter(row => row.status === status)
         const tenantId = this.equals.get('tenant_id')
         if (tenantId) rows = rows.filter(row => row.tenant_id === tenantId)
         if (this.headOnly) return { data: null, error: null, count: rows.length }
-        return { data: rows, error: null, count: rows.length }
+        return this.relationshipResult(rows)
       }
 
       if (this.table === 'contract_occupants') {
         let rows = [...input.occupants]
         const contractIds = this.inValues.get('contract_id')
         if (contractIds) rows = rows.filter(row => contractIds.includes(row.contract_id))
+        const tenantIds = this.inValues.get('tenant_id')
+        if (tenantIds) rows = rows.filter(row => tenantIds.includes(row.tenant_id))
         const excludedContractIds = this.notInValues.get('contract_id')
         if (excludedContractIds) rows = rows.filter(row => !excludedContractIds.includes(row.contract_id))
         const tenantId = this.equals.get('tenant_id')
         if (tenantId) rows = rows.filter(row => row.tenant_id === tenantId)
         if (this.isNull.has('move_out_date')) rows = rows.filter(row => row.move_out_date == null)
         if (this.headOnly) return { data: null, error: null, count: rows.length }
-        return { data: rows, error: null, count: rows.length }
+        return this.relationshipResult(rows.map(row => ({ ...row, contracts: input.contracts.find(contract => contract.id === row.contract_id) })))
       }
 
       let rows = [...input.tenants]
@@ -238,7 +260,7 @@ function createClientMock(input: {
         const term = this.search
         const cols = this.searchColumns.length > 0 ? this.searchColumns : ['full_name', 'phone']
         rows = rows.filter((row) => {
-          return cols.some((col) => {
+          return (this.sensitiveIds?.includes(row.id) && [row.email, row.id_number].some(value => value?.toLowerCase().includes(term))) || cols.some((col) => {
             const value = (row as unknown as Record<string, unknown>)[col]
             return typeof value === 'string' && value.toLowerCase().includes(term)
           })
@@ -576,4 +598,113 @@ describe('TenantRepository delete helpers', () => {
     const result = await TenantRepository.setStatus({} as never, 't-1', 'active')
     expect(result.status).toBe('active')
   })
+})
+
+describe('TenantRepository authorization facts', () => {
+  it.each(['contracts', 'contract_occupants'])('reads capped %s pages through foreign active scope and later tenant history', async (table) => {
+    const pages: { table: string; offset: number; order: string | null }[] = []
+    const contracts = [
+      { id: 'c-01', tenant_id: table === 'contracts' ? 'shared' : 'other', building_id: 'a', status: 'active' },
+      { id: 'c-02', tenant_id: table === 'contracts' ? 'shared' : 'other', building_id: 'b', status: 'active' },
+      { id: 'c-03', tenant_id: table === 'contracts' ? 'creator' : 'other', building_id: 'b', status: 'ended' },
+    ]
+    serverSupabaseClient.mockResolvedValue(createClientMock({
+      tenants: [], contracts,
+      occupants: table === 'contract_occupants' ? [
+        { id: 'o-01', contract_id: 'c-01', tenant_id: 'shared', move_out_date: null },
+        { id: 'o-02', contract_id: 'c-02', tenant_id: 'shared', move_out_date: null },
+        { id: 'o-03', contract_id: 'c-03', tenant_id: 'creator', move_out_date: '2020-01-01' },
+      ] : [],
+      relationshipRowCap: 1,
+      relationshipPage: (table, offset, order) => { pages.push({ table, offset, order }); return undefined },
+    }))
+    const { TenantRepository } = await import('../../../server/repositories/tenants')
+    const facts = await TenantRepository.findAccessFacts({} as never, ['shared', 'creator', 'orphan'])
+    expect(facts.get('shared')).toEqual({ activeBuildingIds: ['a', 'b'], historicalBuildingIds: ['a', 'b'], everContracted: true })
+    expect(facts.get('creator')).toEqual({ activeBuildingIds: [], historicalBuildingIds: ['b'], everContracted: true })
+    expect(facts.get('orphan')?.everContracted).toBe(false)
+    expect(pages.filter(page => page.table === table)).toEqual([
+      { table, offset: 0, order: 'id' }, { table, offset: 1, order: 'id' }, { table, offset: 2, order: 'id' },
+    ])
+  })
+
+  it.each(['contracts', 'contract_occupants'])('rejects %s errors on a later page instead of returning partial facts', async (table) => {
+    serverSupabaseClient.mockResolvedValue(createClientMock({
+      tenants: [],
+      contracts: [
+        { id: 'c-1', tenant_id: 't', building_id: 'a', status: 'active' },
+        { id: 'c-2', tenant_id: 't', building_id: 'b', status: 'active' },
+      ],
+      occupants: [
+        { id: 'o-1', contract_id: 'c-1', tenant_id: 't', move_out_date: null },
+        { id: 'o-2', contract_id: 'c-2', tenant_id: 't', move_out_date: null },
+      ],
+      relationshipRowCap: 1,
+      relationshipPage: (queriedTable, offset) => queriedTable === table && offset > 0 ? { error: { message: 'page unavailable' } } : undefined,
+    }))
+    const { TenantRepository } = await import('../../../server/repositories/tenants')
+    await expect(TenantRepository.findAccessFacts({} as never, ['t'])).rejects.toMatchObject({ statusCode: 500 })
+  })
+
+  it.each([
+    ['missing count', { count: null }],
+    ['changing count', { count: 3 }],
+    ['premature empty page', { empty: true }],
+  ])('rejects incomplete facts with %s', async (_name, override) => {
+    serverSupabaseClient.mockResolvedValue(createClientMock({
+      tenants: [], occupants: [], relationshipRowCap: 1,
+      contracts: [
+        { id: 'c-1', tenant_id: 't', building_id: 'a', status: 'active' },
+        { id: 'c-2', tenant_id: 't', building_id: 'b', status: 'active' },
+      ],
+      relationshipPage: (table, offset) => table === 'contracts' && offset > 0 ? override : undefined,
+    }))
+    const { TenantRepository } = await import('../../../server/repositories/tenants')
+    await expect(TenantRepository.findAccessFacts({} as never, ['t'])).rejects.toMatchObject({ statusCode: 500 })
+  })
+
+  it('unions active primary and open occupants even on ended contracts; retains all history', async () => {
+    serverSupabaseClient.mockResolvedValue(createClientMock({
+      tenants: [],
+      contracts: [
+        { id: 'primary', tenant_id: 't', building_id: 'b', status: 'active' },
+        { id: 'ended', tenant_id: 'another', building_id: 'a', status: 'ended' },
+        { id: 'old', tenant_id: 'another', building_id: 'c', status: 'ended' },
+      ],
+      occupants: [
+        { contract_id: 'ended', tenant_id: 't', move_out_date: null },
+        { contract_id: 'old', tenant_id: 't', move_out_date: '2020-01-01' },
+      ],
+    }))
+    const { TenantRepository } = await import('../../../server/repositories/tenants')
+    const result = await TenantRepository.findAccessFacts({} as never, ['t', 'orphan'])
+    expect(result.get('t')).toEqual({ activeBuildingIds: ['a', 'b'], historicalBuildingIds: ['a', 'b', 'c'], everContracted: true })
+    expect(result.get('orphan')).toEqual({ activeBuildingIds: [], historicalBuildingIds: [], everContracted: false })
+  })
+  it('excludes historical-only tenants before default owner pagination, retaining building-history lookup', async () => {
+    serverSupabaseClient.mockResolvedValue(createClientMock({
+      tenants: [buildTenant({ id: 'old', full_name: 'A Old' }), buildTenant({ id: 'current', full_name: 'B Current' })],
+      contracts: [
+        { id: 'old-contract', tenant_id: 'old', building_id: 'a', status: 'ended' },
+        { id: 'current-contract', tenant_id: 'current', building_id: 'a', status: 'active' },
+      ], occupants: [],
+    }))
+    const { TenantRepository } = await import('../../../server/repositories/tenants')
+    const result = await TenantRepository.findAll({} as never, { buildingIds: ['a'], active_scope_only: true, limit: 1 })
+    expect(result.items.map(tenant => tenant.id)).toEqual(['current'])
+    expect(result.total).toBe(1)
+    const history = await TenantRepository.findAll({} as never, { building_id: 'a' })
+    expect(history.items.map(tenant => tenant.id)).toEqual(['old', 'current'])
+  })
+})
+
+it('restricts identity search to service-authorized full IDs while basic names stay searchable', async () => {
+  serverSupabaseClient.mockResolvedValue(createClientMock({ tenants: [
+    buildTenant({ id: 'basic', full_name: 'Basic Name', email: 'secret-basic@example.com', id_number: 'secret-basic' }),
+    buildTenant({ id: 'full', full_name: 'Full Name', email: 'secret-full@example.com', id_number: 'secret-full' }),
+  ], contracts: [], occupants: [] }))
+  const { TenantRepository } = await import('../../../server/repositories/tenants')
+  expect((await TenantRepository.findAll({} as never, { q: 'secret', sensitive_search_ids: ['full'] })).items.map(tenant => tenant.id)).toEqual(['full'])
+  expect((await TenantRepository.findAll({} as never, { q: 'secret', sensitive_search_ids: [] })).items).toEqual([])
+  expect((await TenantRepository.findAll({} as never, { q: 'Basic', sensitive_search_ids: [] })).items.map(tenant => tenant.id)).toEqual(['basic'])
 })

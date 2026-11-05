@@ -549,6 +549,8 @@ Implemented billing rules:
 - negative adjustment cannot exceed paid amount according to service validation
 - large/risky corrections require explicit reasons through reason guards
 - close requires `billing.close`, period status `issued` or `collecting`, and no outstanding invoices
+- close and reopen run as atomic RPCs (status, reserve accrual and audit in one transaction; replay-safe; closed periods lock payments and invoice money columns via `billing_period_closed_guard`); see `docs/features/billing.md`
+- the month-end cron also closes fully collected billing periods automatically before the operations report
 - unissue requires `billing.unissue`, reason length >= 10, and a non-closed period
 - unissue voids unpaid invoices and retains paid invoices
 - destructive billing flows append audit events

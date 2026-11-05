@@ -25,6 +25,10 @@ if (isUuid(id)) {
 
 const { tenant, isLoading, error, refresh } = useTenantDetail(id)
 
+const isBasic = computed(() => tenant.value?.accessLevel === 'basic')
+const canUpdate = computed(() => !!tenant.value && !isLoading.value && !error.value && !isBasic.value && authStore.can('tenants.update'))
+const canDelete = computed(() => !!tenant.value && !isLoading.value && !error.value && !isBasic.value && authStore.can('tenants.delete'))
+
 // Mobile large-title collapse: fades into the persistent app header once scrolled past.
 const titleSentinel = ref<HTMLElement | null>(null)
 const isTitleCollapsed = ref(false)
@@ -87,18 +91,21 @@ interface ConflictDetails {
 const conflictDetails = ref<ConflictDetails | null>(null)
 
 function openDeleteModal() {
+  if (!canDelete.value || isDeleting.value) return
   deleteReason.value = ''
   deleteReasonError.value = ''
   showDeleteModal.value = true
 }
 
 function openArchiveModal() {
+  if (!canDelete.value || isDeleting.value) return
   archiveReason.value = ''
   archiveReasonError.value = ''
   showArchiveModal.value = true
 }
 
 async function confirmDelete() {
+  if (!canDelete.value || isDeleting.value) return
   const reason = deleteReason.value.trim()
   if (!reason) {
     deleteReasonError.value = 'Lý do xoá là bắt buộc.'
@@ -133,6 +140,7 @@ async function confirmDelete() {
 }
 
 async function archiveInstead() {
+  if (!canDelete.value || isDeleting.value) return
   if (!tenant.value) return
   const reason = deleteReason.value.trim()
   if (!reason) {
@@ -161,6 +169,7 @@ async function archiveInstead() {
 }
 
 async function confirmArchive() {
+  if (!canDelete.value || isDeleting.value) return
   if (!tenant.value) return
 
   const reason = archiveReason.value.trim()
@@ -191,6 +200,13 @@ async function confirmArchive() {
   }
 }
 
+watch(canDelete, (allowed) => {
+  if (allowed) return
+  showDeleteModal.value = false
+  showArchiveModal.value = false
+  conflictDetails.value = null
+})
+
 watchEffect(() => {
   if (error.value?.statusCode === 404) navigateTo('/dashboard/tenants')
 })
@@ -216,7 +232,7 @@ watchEffect(() => {
       >
         <div ref="titleSentinel" aria-hidden="true" />
         <template #actions>
-          <div v-if="authStore.can('tenants.update')" class="flex gap-2 shrink-0">
+          <div v-if="canUpdate" class="flex gap-2 shrink-0">
             <NuxtLink :to="`/dashboard/tenants/${tenant.code}/edit`">
               <UiButton variant="secondary" size="sm">Chỉnh sửa</UiButton>
             </NuxtLink>
@@ -224,8 +240,12 @@ watchEffect(() => {
         </template>
       </UiPageHeader>
 
+      <UiAlert v-if="isBasic" severity="info" class="mt-6">
+        Khách thuê hiện không thuộc tòa nhà bạn quản lý. Bạn chỉ xem được thông tin cơ bản và lịch sử hợp đồng tại tòa của mình.
+      </UiAlert>
+
       <UiAlert
-        v-if="conflictDetails"
+        v-if="canDelete && conflictDetails"
         severity="warning"
         class="mt-6"
         data-test="delete-conflict-alert"
@@ -262,7 +282,7 @@ watchEffect(() => {
       </div>
 
       <UiAlert
-        v-if="isRoommate && tenant.activeAssignment"
+        v-if="!isBasic && isRoommate && tenant.activeAssignment"
         severity="info"
         class="mt-4"
       >
@@ -287,7 +307,7 @@ watchEffect(() => {
         </div>
       </UiAlert>
 
-      <UiSurfacePanel id="personal" as="section" class="mt-6">
+      <UiSurfacePanel v-if="!isBasic" id="personal" as="section" class="mt-6">
         <h3 class="mb-2 text-sm font-semibold text-ui-primary">Thông tin cá nhân</h3>
         <UiDefinitionList>
           <UiDefinitionItem label="Số điện thoại" :value="tenant.phone" />
@@ -303,7 +323,7 @@ watchEffect(() => {
             label="Ngày sinh"
             :value="new Date(tenant.dateOfBirth).toLocaleDateString('vi-VN')"
           />
-          <UiDefinitionItem label="Ngày tạo" :value="new Date(tenant.createdAt).toLocaleDateString('vi-VN')" />
+          <UiDefinitionItem v-if="tenant.createdAt" label="Ngày tạo" :value="new Date(tenant.createdAt ?? '').toLocaleDateString('vi-VN')" />
           <UiDefinitionItem
             v-if="tenant.permanentAddress"
             label="Địa chỉ thường trú"
@@ -317,7 +337,7 @@ watchEffect(() => {
       </UiSurfacePanel>
 
       <UiSurfacePanel
-        v-if="tenant.idNumber || tenant.idIssuedDate || tenant.idIssuedPlace || tenant.idCardFrontSignedUrl || tenant.idCardBackSignedUrl"
+        v-if="!isBasic && (tenant.idNumber || tenant.idIssuedDate || tenant.idIssuedPlace || tenant.idCardFrontSignedUrl || tenant.idCardBackSignedUrl)"
         id="id-document"
         as="section"
         class="mt-4"
@@ -374,7 +394,7 @@ watchEffect(() => {
         </div>
 
         <p
-          v-if="authStore.can('tenants.update')"
+          v-if="canUpdate"
           class="mt-3 text-xs text-ui-muted"
         >
           Bạn có thể cập nhật ảnh CCCD ở trang chỉnh sửa khách thuê.
@@ -382,7 +402,7 @@ watchEffect(() => {
       </UiSurfacePanel>
 
       <UiSurfacePanel
-        v-if="tenant.emergencyContactName || tenant.emergencyContactPhone"
+        v-if="!isBasic && (tenant.emergencyContactName || tenant.emergencyContactPhone)"
         id="emergency"
         as="section"
         class="mt-4"
@@ -398,14 +418,14 @@ watchEffect(() => {
         <div class="flex items-center justify-between mb-4">
           <h3 class="text-sm font-semibold text-ui-primary">Hợp đồng</h3>
           <NuxtLink
-            v-if="authStore.can('contracts.create') && !isRoommate"
+            v-if="!isBasic && authStore.can('contracts.create') && !isRoommate"
             to="/dashboard/contracts/create"
             class="text-xs text-ui-accent hover:underline"
           >
             + Thêm
           </NuxtLink>
           <span
-            v-else-if="authStore.can('contracts.create') && isRoommate"
+            v-else-if="!isBasic && authStore.can('contracts.create') && isRoommate"
             class="text-xs text-ui-muted"
           >
             Không thể thêm HĐ khi đang ở chung
@@ -435,7 +455,7 @@ watchEffect(() => {
       </UiSurfacePanel>
 
       <section
-        v-if="authStore.can('tenants.delete')"
+        v-if="canDelete"
         id="danger-zone"
         class="mt-4 rounded-xl border border-status-danger/30 bg-status-danger/5 p-6"
       >
@@ -457,7 +477,7 @@ watchEffect(() => {
     </template>
 
     <UiConfirmModal
-      :open="showDeleteModal"
+      :open="canDelete && showDeleteModal"
       title="Xác nhận xoá"
       :message="`Bạn có chắc muốn xoá khách thuê ${tenant?.fullName ?? ''}? Hành động này không thể hoàn tác.`"
       :loading="isDeleting"
@@ -480,7 +500,7 @@ watchEffect(() => {
     </UiConfirmModal>
 
     <UiConfirmModal
-      :open="showArchiveModal"
+      :open="canDelete && showArchiveModal"
       title="Xác nhận lưu trữ"
       :message="`Bạn có chắc muốn lưu trữ khách thuê ${tenant?.fullName ?? ''}?`"
       confirm-label="Lưu trữ"

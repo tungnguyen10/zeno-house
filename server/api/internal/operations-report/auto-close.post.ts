@@ -1,5 +1,4 @@
-import { BuildingRepository } from '../../../repositories/buildings'
-import { OperationsReportService } from '../../../services/operations-report/report'
+import { runMonthEndClose } from '../../../services/billing/month-end-close'
 
 const TIME_ZONE = 'Asia/Ho_Chi_Minh'
 
@@ -47,40 +46,16 @@ export default defineEventHandler(async (event) => {
     }
   }
 
-  const buildings = await BuildingRepository.findAll(event, {
-    page: 1,
-    limit: 1000,
-    status: ['active'],
-    sort: 'name',
-    order: 'asc',
-    buildingIds: null,
-  })
-  const results = []
-  for (const building of buildings.items) {
-    try {
-      const closure = await OperationsReportService.closeSystem(event, {
-        building_id: building.id,
-        period_year: period.year,
-        period_month: period.month,
-      })
-      results.push({ buildingId: building.id, status: 'closed', closureId: closure.id })
-    }
-    catch (error) {
-      results.push({
-        buildingId: building.id,
-        status: 'failed',
-        message: error instanceof Error ? error.message : 'unknown',
-      })
-    }
-  }
+  const summary = await runMonthEndClose(event, { year: period.year, month: period.month })
 
   return {
     data: {
       skipped: false,
       periodYear: period.year,
       periodMonth: period.month,
-      closed: results.filter(result => result.status === 'closed').length,
-      results,
+      closed: summary.reportsClosed,
+      billingClosed: summary.billingClosed,
+      results: summary.results,
     },
   }
 })

@@ -4,6 +4,23 @@ The tenant portal supports both the person named on a contract and active roomma
 still maps one-to-one to its own `tenants` row through `tenant_user_links`; account provisioning,
 temporary-password onboarding, reset, disable, and revoke remain operator-controlled.
 
+## Operator account scope
+
+Internal account status, provisioning, enable/disable, password reset, and revoke require both
+`tenant.account.provision` and full tenant access from the shared authorization service. A previous
+building relationship grants only basic profile/history lookup and never reveals Portal state or
+grants account control. Account lists and provisioning search choices exclude basic tenants.
+Active relationships spanning an unassigned building fail closed to basic for scoped operators.
+Creator custody applies only to tenants that have never had any primary or occupant contract
+history, using the `TENANT_CREATED` audit. Account operations use the resolved canonical tenant ID.
+The tenant's self-service `/api/tenant/**` identity and housing rules below remain unchanged.
+
+Tenant authorization rollout uses
+`supabase/migrations/20261105032920_tenant_scoped_bulk_status.sql` and
+`supabase/verification/tenant_scoped_bulk_status.sql`; Dashboard execution, security advisors,
+cloud type regeneration, and live staging checks remain required as detailed in
+`docs/architecture/auth-permissions.md`.
+
 ## Account lifecycle
 
 - Disabling the link blocks portal resolution immediately.

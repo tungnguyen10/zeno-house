@@ -89,6 +89,8 @@ export interface CheckoutRefund {
 
 export interface CheckoutSource {
   id: string
+  originContractId: string
+  originContractCode: string
   paymentType: string
   amount: number
   approvedAmount: number

@@ -70,10 +70,10 @@ onBeforeUnmount(() => {
   if (headerTitle.value === compactTitle.value) headerTitle.value = null
 })
 
-const { payments, isLoading: paymentsLoading, addPayment, updatePayment, removePayment } = useContractPayments(id)
+const { payments, isLoading: paymentsLoading, error: paymentsError, addPayment, updatePayment, removePayment } = useContractPayments(id)
 const { renewals, isLoading: renewalsLoading, renew } = useContractRenewals(id)
-const { occupants, isLoading: occupantsLoading, addOccupant, moveOut, removeOccupant } = useContractOccupants(id)
-const { services: contractServices, isLoading: servicesLoading, updateService: updateContractService, removeService: removeContractService } = useContractServices(id)
+const { occupants, isLoading: occupantsLoading, error: occupantsError, addOccupant, moveOut, removeOccupant } = useContractOccupants(id)
+const { services: contractServices, isLoading: servicesLoading, error: servicesError, updateService: updateContractService, removeService: removeContractService } = useContractServices(id)
 const {
   amendments,
   isLoading: amendmentsLoading,
@@ -93,7 +93,7 @@ async function publishAmendment(amendmentId: string, expectedUpdatedAt: string) 
 }
 
 const activeOccupantCount = computed(
-  () => occupants.value.filter(o => !o.moveOutDate && o.role === 'roommate').length + 1,
+  () => occupants.value.filter(o => !o.moveOutDate).length,
 )
 const depositReceived = computed(() => payments.value.filter(p => p.paymentType === 'deposit').reduce((sum, p) => sum + p.amount, 0))
 const depositHeld = computed(() => checkoutBundle.value?.enabled ? checkoutBundle.value.depositHeld : depositReceived.value)
@@ -104,6 +104,7 @@ const isRenewing = ref(false)
 const renewalApiError = ref<string | null>(null)
 
 async function handleRenew(input: ContractRenewInput) {
+  if (isRenewing.value) return
   isRenewing.value = true
   renewalApiError.value = null
   try {
@@ -111,9 +112,9 @@ async function handleRenew(input: ContractRenewInput) {
     showRenewalForm.value = false
     // If new contract was created, navigate to it
     if (renewal.newContractId) {
-              await navigateTo(`/dashboard/contracts/${renewal.newContractId}`)
+      await navigateTo(`/dashboard/contracts/${renewal.newContractId}`)
     } else {
-      await refreshContract()
+      await Promise.all([refreshContract(), refreshAmendments()])
     }
   } catch (err: unknown) {
     renewalApiError.value = getApiErrorMessage(err, 'Không thể gia hạn hợp đồng. Vui lòng thử lại.')
@@ -319,6 +320,7 @@ function sectionLinkClass(sectionId: string) {
       />
 
       <ContractPaymentsSection
+        :contract="contract"
         :payments="payments"
         :is-loading="paymentsLoading"
         :can-manage="authStore.can('contracts.update')"
@@ -357,6 +359,7 @@ function sectionLinkClass(sectionId: string) {
         :bundle="checkoutBundle"
         :loading="checkoutLoading"
         :error="checkoutError"
+        :contract-id="contract.id"
         :contract-code="contract.contractCode"
         :contract-status="contract.status"
         :visible="checkoutSectionVisible"
@@ -376,6 +379,9 @@ function sectionLinkClass(sectionId: string) {
           <ContractRenewalForm
             :current-end-date="contract.endDate"
             :current-monthly-rent="contract.monthlyRent"
+            :occupant-count="occupantsLoading || occupantsError ? undefined : activeOccupantCount"
+            :service-count="servicesLoading || servicesError ? undefined : contractServices.length"
+            :deposit-held="checkoutLoading || checkoutError || (!checkoutBundle?.enabled && (paymentsLoading || paymentsError)) ? undefined : depositHeld"
             :loading="isRenewing"
             :api-error="renewalApiError"
             @submit="handleRenew"
