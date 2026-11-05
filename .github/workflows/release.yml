@@ -50,7 +50,7 @@ jobs:
           git add package.json
           git commit -m "chore(release): v${{ steps.version.outputs.value }}"
           git tag "v${{ steps.version.outputs.value }}"
-          git push origin HEAD:main --follow-tags
+          git push origin HEAD:main "v${{ steps.version.outputs.value }}"
 
       - name: Create GitHub Release
         env:
