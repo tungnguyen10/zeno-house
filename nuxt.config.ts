@@ -1,5 +1,9 @@
+import { readFileSync } from 'node:fs'
 import { appleStartupImages } from './pwa/apple-startup'
 import { DASHBOARD_THEME_BOOTSTRAP_SCRIPT } from './app/utils/theme/dashboard-theme-bootstrap'
+
+// Bumped by .github/workflows/release.yml on every merge to main.
+const appVersion: string = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')).version ?? ""
 
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
@@ -74,6 +78,7 @@ export default defineNuxtConfig({
     turnstileSecretKey: process.env.NUXT_TURNSTILE_SECRET_KEY || "", // NUXT_TURNSTILE_SECRET_KEY
     operationsReportAutoCloseSecret: process.env.NUXT_OPERATIONS_REPORT_AUTO_CLOSE_SECRET || "", // NUXT_OPERATIONS_REPORT_AUTO_CLOSE_SECRET
     public: {
+      appVersion, // package.json version
       siteUrl: process.env.NUXT_PUBLIC_SITE_URL || "", // NUXT_PUBLIC_SITE_URL
       gaId: process.env.NUXT_PUBLIC_GA_ID || "", // NUXT_PUBLIC_GA_ID
       turnstileSiteKey: process.env.NUXT_PUBLIC_TURNSTILE_SITE_KEY || "", // NUXT_PUBLIC_TURNSTILE_SITE_KEY

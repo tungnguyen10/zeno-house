@@ -52,5 +52,6 @@ function close() {
         </ul>
       </div>
     </nav>
+    <AppVersionLabel class="mt-6 px-2.5 pb-2" />
   </UiDrawer>
 </template>
