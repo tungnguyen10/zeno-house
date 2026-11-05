@@ -216,6 +216,60 @@ flows through `server/api/**` -> service -> repository. The client only uses Sup
 auth. Because RLS is bypassed by the service-role client, every access decision MUST be made
 in a service before the repository runs.
 
+## Internal Tenant Authorization
+
+`server/services/tenants/authorization.ts` owns tenant profile, identity-document, mutation,
+and Portal-account scope. Capabilities are checked first (403), including for admin. Missing
+or inaccessible tenants share 404; a basic-access mutation or account request receives 403.
+Identifiers resolve to the canonical tenant ID before repository, storage, Auth, and audit calls.
+
+| Tenant relationship | Admin | Assigned owner/manager |
+| --- | --- | --- |
+| Every active building is assigned | full | full |
+| Active buildings include an unassigned building | full | basic when any current or historical building is assigned; otherwise none |
+| Never had a contract | full | full only for the actor recorded by `TENANT_CREATED`; otherwise none |
+| Contract history, no active relationship | full | basic when a historical building is assigned; otherwise none |
+
+Active relationships are active primary contracts plus occupant rows with null `move_out_date`;
+this authorization rule adds no date checks. History includes primary and occupant relationships.
+Creator custody ends permanently once any contract history exists. No `tenants.created_by`
+column or client-supplied building fallback establishes custody or delete permission.
+
+Basic get/list DTOs contain exactly `id`, `code`, `fullName`, `phone`, `status`, and
+`accessLevel: 'basic'`. They contain no identity/contact extras, timestamps, assignment, image
+paths/URLs, or Portal state. Full get/list DTOs carry `accessLevel: 'full'`. Email and identity
+number search matches require full access; basic search only matches name, phone, or code.
+Default owner lists exclude historical-only tenants, while a scoped building-history lookup can
+return their basic profiles. Contract picker behavior remains separate and unchanged.
+
+Every mutation and Portal account action requires full access plus its existing capability.
+Account lists and provisioning choices exclude basic tenants. Profile XLSX candidates require
+full access; export rechecks every selected ID before reading sensitive profile rows or building
+the workbook. Assignment to one of several active buildings does not grant full access.
+
+Deletes derive all relevant buildings on the server and require `canDeleteMasterData` for each.
+Never-contracted creator custody still requires the role capability. Bulk deduplicates IDs,
+classifies missing/none as `not_found` and basic as `forbidden`, and sends only full contexts to
+`bulk_tenant_status_action`. The service-role-only RPC locks tenants and checks the exact active
+building snapshot before archive/activate, returning `conflict` on changes. Only successes are
+audited with server-owned building context. Generic master-data bulk behavior is unchanged.
+
+### Tenant Authorization Rollout
+
+Apply `supabase/migrations/20261105032920_tenant_scoped_bulk_status.sql` through the configured
+Supabase Dashboard SQL Editor before enabling this service deployment. Run
+`supabase/verification/tenant_scoped_bulk_status.sql` on staging; its labelled probes use
+`BEGIN`/`ROLLBACK` and cover execute grants, matching/conflicting scope, missing and already-target
+rows, primary/open-occupant unions, and empty snapshots. Review Supabase security advisors and
+regenerate `app/types/database.types.ts` from the cloud schema; never hand-edit generated types.
+The repository temporarily isolates pre-generation RPC typing at its repository boundary.
+
+Static SQL and mocked service/UI tests do not prove deployed grants, live locking/race behavior,
+or staging data compatibility. Dashboard application, rollback probes, advisors, cloud type
+regeneration, and authenticated staging access checks remain external rollout steps until their
+actual execution is recorded. Visual fixture screenshots verify affected component composition;
+mounted page tests verify access gating. They do not replace authenticated staging end-to-end checks.
+
 ## Master-Data Deletes
 
 Deleting master data (rooms, tenants, contracts, contract services) is gated by

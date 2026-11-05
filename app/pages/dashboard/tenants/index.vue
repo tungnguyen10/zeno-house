@@ -3,7 +3,6 @@
 import type { Building } from '~/types/buildings'
 import type { ApiSuccess } from '~/types/api'
 import type { TenantBulkAction, TenantBulkResult } from '~/composables/tenants/useTenantBulkActions'
-import { BULK_FAILURE_LABELS_COMMON } from '~/utils/constants/bulk-failure-labels'
 import type { TenantBulkCreateResult, TenantBulkCreateFailure } from '~/composables/tenants/useTenantBulkCreate'
 
 definePageMeta({ title: 'Khách thuê' })
@@ -92,14 +91,18 @@ function toggleAllOnPage(checked: boolean) {
 
 const failureModalOpen = ref(false)
 const lastFailures = ref<TenantBulkResult['failed']>([])
+const lastSucceededCount = ref(0)
 const lastFailureAction = ref<TenantBulkAction | null>(null)
 const bulkCreateFailuresModalOpen = ref(false)
 const lastBulkCreateFailures = ref<TenantBulkCreateFailure[]>([])
 
 const reasonLabels: Record<string, string> = {
-  ...BULK_FAILURE_LABELS_COMMON,
-  has_active_occupancies: 'Đang đồng cư trong hợp đồng',
-  forbidden: 'Không có quyền xoá khách thuê này',
+  has_active_contracts: 'Đang có hợp đồng',
+  has_active_occupancies: 'Đang ở ghép',
+  forbidden: 'Ngoài phạm vi quản lý',
+  conflict: 'Dữ liệu vừa thay đổi, hãy thử lại',
+  not_found: 'Không tìm thấy',
+  unexpected_error: 'Không thể thực hiện. Vui lòng thử lại.',
 }
 
 const bulkCreateReasonLabels: Record<string, string> = {
@@ -116,8 +119,16 @@ const failuresWithName = computed(() => {
   return lastFailures.value.map(f => ({
     id: f.id,
     name: map.get(f.id) ?? f.id,
-    reason: reasonLabels[f.reason] ?? f.reason,
+    reason: reasonLabels[f.reason] ?? reasonLabels.unexpected_error!,
   }))
+})
+
+const failureGroups = computed(() => {
+  const groups = new Map<string, number>()
+  for (const failure of failuresWithName.value) {
+    groups.set(failure.reason, (groups.get(failure.reason) ?? 0) + 1)
+  }
+  return [...groups].map(([reason, count]) => ({ reason, count }))
 })
 
 const lastActionVerb = computed(() =>
@@ -133,12 +144,13 @@ async function onBulkDone(result: TenantBulkResult, action: TenantBulkAction) {
   const succeeded = result.succeeded.length
   const failed = result.failed.length
 
+  lastSucceededCount.value = succeeded
   lastFailures.value = result.failed
   lastFailureAction.value = action
 
   if (succeeded > 0 && failed === 0) toast.success(`Đã ${verb} ${succeeded} khách thuê`)
-  else if (succeeded > 0 && failed > 0) toast.info(`Đã ${verb} ${succeeded} khách, ${failed} bị bỏ qua`)
-  else if (failed > 0) toast.error(`Không thể ${verb}. ${failed} bị bỏ qua`)
+  else if (succeeded > 0 && failed > 0) toast.info(`Đã ${verb} ${succeeded} khách, ${failed} thất bại`)
+  else if (failed > 0) toast.error(`Không thể ${verb}. ${failed} thất bại`)
 
   bulk.clear()
   await refreshNuxtData(TENANT_LIST_ASYNC_KEY)
@@ -220,13 +232,16 @@ async function openCreateTenant() {
     <UiAlert v-if="lastFailures.length > 0" severity="warning" class="mb-4">
       <div class="flex flex-wrap items-center justify-between gap-3">
         <span class="text-sm">
-          {{ lastFailures.length }} khách bị bỏ qua trong lần {{ lastActionVerb }} gần nhất.
+          {{ lastSucceededCount }} thành công, {{ lastFailures.length }} thất bại trong lần {{ lastActionVerb }} gần nhất.
         </span>
         <div class="flex items-center gap-2">
           <UiButton size="sm" variant="secondary" @click="failureModalOpen = true">Xem chi tiết</UiButton>
           <UiButton size="sm" variant="ghost" @click="lastFailures = []">Đóng</UiButton>
         </div>
       </div>
+      <ul class="mt-2 space-y-1 text-xs">
+        <li v-for="group in failureGroups" :key="group.reason">{{ group.reason }}: {{ group.count }}</li>
+      </ul>
     </UiAlert>
 
     <UiAlert v-if="lastBulkCreateFailures.length > 0" severity="warning" class="mb-4">
@@ -317,30 +332,31 @@ async function openCreateTenant() {
               <div class="flex-1 min-w-0">
                 <div class="flex items-center gap-2 flex-wrap">
                   <p class="text-sm font-medium text-ui-primary truncate">{{ tenant.fullName }}</p>
-                  <UiBadge :variant="tenant.hasActiveContract ? 'success' : 'neutral'" pill>
+                  <UiBadge v-if="tenant.accessLevel !== 'basic'" :variant="tenant.hasActiveContract ? 'success' : 'neutral'" pill>
                     {{ tenant.hasActiveContract ? 'Có HĐ' : 'Chưa có HĐ' }}
                   </UiBadge>
                   <UiBadge
-                    v-if="tenant.activeAssignment?.assignmentRole === 'roommate'"
+                    v-if="tenant.accessLevel !== 'basic' && tenant.activeAssignment?.assignmentRole === 'roommate'"
                     variant="accent"
                     pill
                   >
                     Ở chung
                   </UiBadge>
+                  <UiBadge v-if="tenant.accessLevel === 'basic'" variant="neutral">Chỉ xem cơ bản</UiBadge>
                   <UiBadge v-if="tenant.status === 'archived'" variant="warning" pill>
                     Đã lưu trữ
                   </UiBadge>
                 </div>
                 <p class="text-xs text-ui-muted mt-0.5 truncate">
-                  {{ tenant.phone }}<template v-if="tenant.idNumber"> · CMND/CCCD: {{ tenant.idNumber }}</template>
+                  {{ tenant.phone }}<template v-if="tenant.accessLevel !== 'basic' && tenant.idNumber"> · CMND/CCCD: {{ tenant.idNumber }}</template>
                 </p>
                 <p
-                  v-if="tenant.activeAssignment?.assignmentRole === 'roommate' && tenant.activeAssignment.primaryTenantName"
+                  v-if="tenant.accessLevel !== 'basic' && tenant.activeAssignment?.assignmentRole === 'roommate' && tenant.activeAssignment.primaryTenantName"
                   class="text-xs text-ui-muted mt-0.5 truncate"
                 >
                   Ở chung với {{ tenant.activeAssignment.primaryTenantName }}
                 </p>
-                <p v-if="tenant.activeAssignment" class="text-xs text-ui-muted mt-0.5 truncate">
+                <p v-if="tenant.accessLevel !== 'basic' && tenant.activeAssignment" class="text-xs text-ui-muted mt-0.5 truncate">
                   Phòng {{ tenant.activeAssignment.roomNumber }} · {{ tenant.activeAssignment.buildingName }}
                 </p>
               </div>

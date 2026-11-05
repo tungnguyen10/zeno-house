@@ -12,9 +12,11 @@ import type {
 } from '~/utils/validators/tenants'
 import { tenantCreateSchema } from '~/utils/validators/tenants'
 import { TenantRepository, type TenantFilters } from '../../repositories/tenants'
+import { TenantAuthorizationService } from './authorization'
+import { TenantBulkStatusRepository } from '../../repositories/tenants/bulk-status'
 import { BulkActionRepository } from '../../repositories/bulk-actions'
 import { BuildingRepository } from '../../repositories/buildings'
-import { canDeleteMasterData, getAssignedBuildingIds, getVisibleBuildingIds } from '../../utils/scope'
+import { canDeleteMasterData, getVisibleBuildingIds } from '../../utils/scope'
 import { AuditService } from '../audit'
 import { AUDIT_ACTIONS } from '~/utils/constants/audit'
 import { db } from '../../utils/db'
@@ -30,7 +32,7 @@ const TENANT_ID_IMAGE_EXTENSIONS: Record<string, string> = {
   'image/webp': 'webp',
 }
 
-async function signedTenantIdImageUrl(event: H3Event, path: string | null): Promise<string | null> {
+async function signedTenantIdImageUrl(event: H3Event, path: string | null | undefined): Promise<string | null> {
   if (!path) return null
   const { data, error } = await db(event)
     .storage
@@ -99,6 +101,14 @@ function normalizeBulkCreateRow(row: TenantBulkCreateRowInput): TenantCreateInpu
   }
 }
 
+function basicTenant(tenant: Tenant): Tenant {
+  return { id: tenant.id, code: tenant.code, fullName: tenant.fullName, phone: tenant.phone, status: tenant.status, accessLevel: 'basic' }
+}
+
+function normalizeBulkReason(reason: string | null | undefined): string {
+  return ['not_found', 'forbidden', 'conflict', 'has_active_contracts', 'has_active_occupancies'].includes(reason ?? '') ? reason! : 'unexpected_error'
+}
+
 export const TenantService = {
   async list(
     event: H3Event,
@@ -119,39 +129,47 @@ export const TenantService = {
 
     let includeIds: string[] | undefined
     if (user.app_metadata.role === 'owner' && buildingIds && !buildingId) {
-      includeIds = await TenantRepository.findCreatedTenantIdsByActor(event, user.id)
+      const createdIds = await TenantRepository.findCreatedTenantIdsByActor(event, user.id)
+      const facts = await TenantRepository.findAccessFacts(event, createdIds)
+      includeIds = createdIds.filter(id => facts.get(id)?.everContracted === false)
     }
     else if (user.app_metadata.role === 'admin' && buildingIds !== null && !buildingId) {
       includeIds = await TenantRepository.findUnassignedTenantIds(event)
     }
 
-    return TenantRepository.findAll(event, {
+    let sensitiveSearchIds: string[] | undefined
+    if (filters.q && user.app_metadata.role !== 'admin') {
+      const candidateIds = await TenantRepository.findTenantIdsForBuildings(event, buildingId ? [buildingId] : buildingIds ?? [])
+      const contexts = await TenantAuthorizationService.resolveAccessMany(event, user, [...new Set([...candidateIds, ...includeIds ?? []])])
+      sensitiveSearchIds = [...contexts].filter(([, context]) => context.level === 'full').map(([id]) => id)
+    }
+
+    const result = await TenantRepository.findAll(event, {
       ...filters,
       building_id: buildingId,
       buildingIds,
       include_ids: includeIds,
+      sensitive_search_ids: sensitiveSearchIds,
+      active_scope_only: user.app_metadata.role === 'owner' && !buildingId && !filters.available,
     })
+    const contexts = await TenantAuthorizationService.resolveTenants(event, user, result.items)
+    const items = result.items.flatMap((tenant) => {
+      const context = contexts.get(tenant.id)
+      if (!context || context.level === 'none') return []
+      return [context.level === 'basic' ? basicTenant(tenant) : { ...tenant, accessLevel: 'full' as const }]
+    })
+    return { items, total: result.total }
   },
 
   async get(event: H3Event, user: AuthUser, id: string): Promise<Tenant> {
-    requireCapability(user, 'tenants.read', 'Không có quyền xem khách thuê')
-    const tenant = await TenantRepository.findByIdentifier(event, id)
-    if (!tenant) throwNotFound('Không tìm thấy khách thuê')
-    const buildingIds = await getAssignedBuildingIds(event, user)
-    if (buildingIds) {
-      const inScopeByContract = await TenantRepository.hasContractInBuildings(event, tenant.id, buildingIds)
-      if (!inScopeByContract) {
-        const isOwnerCreatedOrphan = user.app_metadata.role === 'owner'
-          && await TenantRepository.wasCreatedByActor(event, tenant.id, user.id)
-        if (!isOwnerCreatedOrphan) {
-          throwNotFound('Không tìm thấy khách thuê')
-        }
-      }
-    }
+    const context = await TenantAuthorizationService.assertAccess(event, user, id, 'read_profile')
+    const tenant = context.tenant
+    if (context.level === 'basic') return basicTenant(tenant)
     const activeAssignment = await TenantRepository.findActiveAssignmentByTenantId(event, tenant.id)
     const signedTenant = await withSignedTenantIdImages(event, tenant)
     return {
       ...signedTenant,
+      accessLevel: 'full',
       hasActiveContract: Boolean(activeAssignment),
       activeAssignment,
     }
@@ -277,9 +295,7 @@ export const TenantService = {
   },
 
   async update(event: H3Event, user: AuthUser, id: string, input: TenantUpdateInput): Promise<Tenant> {
-    requireCapability(user, 'tenants.update', 'Không có quyền cập nhật khách thuê')
-    const existing = await TenantRepository.findByIdentifier(event, id)
-    if (!existing) throwNotFound('Không tìm thấy khách thuê')
+    const { tenant: existing } = await TenantAuthorizationService.assertAccess(event, user, id, 'update_profile')
     if (input.phone !== undefined) {
       const conflictPhone = await TenantRepository.findByPhone(event, input.phone, existing.id)
       if (conflictPhone) throwConflict('Số điện thoại đã tồn tại')
@@ -307,10 +323,7 @@ export const TenantService = {
     side: TenantIdImageSideInput,
     file: { filename?: string, type?: string, data: Buffer },
   ): Promise<Tenant> {
-    requireCapability(user, 'tenants.update', 'Không có quyền cập nhật khách thuê')
-
-    const existing = await TenantRepository.findByIdentifier(event, id)
-    if (!existing) throwNotFound('Không tìm thấy khách thuê')
+    const { tenant: existing } = await TenantAuthorizationService.assertAccess(event, user, id, 'manage_documents')
 
     const contentType = file.type ?? ''
     const ext = TENANT_ID_IMAGE_EXTENSIONS[contentType]
@@ -356,10 +369,7 @@ export const TenantService = {
     id: string,
     side: TenantIdImageSideInput,
   ): Promise<Tenant> {
-    requireCapability(user, 'tenants.update', 'Không có quyền cập nhật khách thuê')
-
-    const existing = await TenantRepository.findByIdentifier(event, id)
-    if (!existing) throwNotFound('Không tìm thấy khách thuê')
+    const { tenant: existing } = await TenantAuthorizationService.assertAccess(event, user, id, 'manage_documents')
 
     const previousPath = side === 'front' ? existing.idCardFrontPath : existing.idCardBackPath
     const operation = await AuditOperationService.begin(event, {
@@ -390,21 +400,17 @@ export const TenantService = {
     event: H3Event,
     user: AuthUser,
     id: string,
-    opts: { force?: boolean; reason: string; buildingId?: string; emitAudit?: boolean } = { reason: '' },
+    opts: { force?: boolean; reason: string; emitAudit?: boolean } = { reason: '' },
   ): Promise<Tenant | undefined> {
-    const existing = await TenantRepository.findByIdentifier(event, id)
-    if (!existing) throwNotFound('Không tìm thấy khách thuê')
-    const scopeBuildingId = await TenantRepository.findActiveBuildingIdForTenant(event, existing.id)
-      ?? opts.buildingId
-    if (!scopeBuildingId && user.app_metadata.role !== 'admin') {
-      const isOwnerCreatedOrphan = user.app_metadata.role === 'owner'
-        && await TenantRepository.wasCreatedByActor(event, existing.id, user.id)
-      if (!isOwnerCreatedOrphan) {
-        throwForbidden('Không xác định được tòa nhà để kiểm tra quyền xoá khách thuê')
-      }
+    const context = await TenantAuthorizationService.assertAccess(event, user, id, 'delete')
+    const existing = context.tenant
+    const relevantBuildings = context.activeBuildingIds.length ? context.activeBuildingIds : context.historicalBuildingIds
+    const scopeBuildingId = relevantBuildings[0] ?? null
+    if (!relevantBuildings.length) {
+      requireCapability(user, 'tenants.delete', 'Không có quyền xoá khách thuê')
     }
-    if (scopeBuildingId && !await canDeleteMasterData(event, user, scopeBuildingId)) {
-      throwForbidden('Không có quyền xoá khách thuê trong tòa nhà này')
+    for (const buildingId of relevantBuildings) {
+      if (!await canDeleteMasterData(event, user, buildingId)) throwForbidden('Không có quyền xoá khách thuê trong tòa nhà này')
     }
 
     if (opts.force) {
@@ -463,79 +469,58 @@ export const TenantService = {
   ): Promise<TenantBulkResult> {
     requireCapability(user, 'tenants.update', 'Không có quyền thao tác hàng loạt')
 
+    const ids = [...new Set(input.ids)]
     const succeeded: string[] = []
     const failed: { id: string; reason: string }[] = []
-    const scopes = new Map<string, string | null>(await Promise.all(input.ids.map(async id => [
-      id,
-      await TenantRepository.findActiveBuildingIdForTenant(event, id) ?? input.building_id ?? null,
-    ] as const)))
-    const beforeSnapshots = await BulkActionRepository.resolveSnapshots(event, 'tenant', input.ids)
-
+    const contexts = await TenantAuthorizationService.resolveAccessMany(event, user, ids)
+    const authorized = ids.filter((id) => {
+      const context = contexts.get(id)
+      if (!context || context.level === 'none') failed.push({ id, reason: 'not_found' })
+      else if (context.level === 'basic') failed.push({ id, reason: 'forbidden' })
+      else return true
+      return false
+    })
+    const beforeSnapshots = await BulkActionRepository.resolveSnapshots(event, 'tenant', authorized)
     if (input.action !== 'delete') {
-      const rows = await BulkActionRepository.execute(event, 'tenant', input.action, input.ids)
-      for (const row of rows) {
-        if (row.succeeded) succeeded.push(row.id)
-        else failed.push({ id: row.id, reason: row.reason ?? 'error' })
+      const rows = await TenantBulkStatusRepository.execute(event, input.action, authorized.map(id => ({ id, expected_building_ids: contexts.get(id)!.activeBuildingIds })))
+      const rowMap = new Map(rows.map(row => [row.id, row]))
+      for (const id of authorized) {
+        const row = rowMap.get(id)
+        if (row?.succeeded) succeeded.push(id)
+        else failed.push({ id, reason: normalizeBulkReason(row?.reason) })
       }
-      const bulkActionCode = input.action === 'archive'
-        ? AUDIT_ACTIONS.TENANT_ARCHIVED
-        : input.action === 'activate'
-          ? AUDIT_ACTIONS.TENANT_ACTIVATED
-          : AUDIT_ACTIONS.TENANT_REMOVED
-      const afterSnapshots = await BulkActionRepository.resolveSnapshots(event, 'tenant', succeeded)
+    }
+    else {
+      for (const id of authorized) {
+        try {
+          await TenantService.remove(event, user, id, { reason: input.reason!, emitAudit: false })
+          succeeded.push(id)
+        }
+        catch (error) {
+          const e = error as { data?: { error?: { code?: string; details?: { activeContracts?: number; activeOccupancies?: number } } } }
+          const failure = e.data?.error
+          const reason = failure?.code === 'NOT_FOUND' ? 'not_found'
+            : failure?.code === 'FORBIDDEN' ? 'forbidden'
+              : failure?.code === 'CONFLICT' ? failure.details?.activeContracts ? 'has_active_contracts'
+                : failure.details?.activeOccupancies ? 'has_active_occupancies' : 'conflict'
+                : 'unexpected_error'
+          failed.push({ id, reason })
+        }
+      }
+    }
+    if (succeeded.length) {
+      const afterSnapshots = input.action === 'delete' ? new Map() : await BulkActionRepository.resolveSnapshots(event, 'tenant', succeeded)
+      const action = input.action === 'archive' ? AUDIT_ACTIONS.TENANT_ARCHIVED : input.action === 'activate' ? AUDIT_ACTIONS.TENANT_ACTIVATED : AUDIT_ACTIONS.TENANT_REMOVED
       await AuditService.appendBulk(event, user, {
         building_id: null,
         entity_type: 'tenant',
         aggregate_action: `tenant.bulk_${input.action}`,
-        items: succeeded.map(id => ({ entity_id: id, building_id: scopes.get(id) ?? null, action: bulkActionCode, before_data: beforeSnapshots.get(id), after_data: afterSnapshots.get(id) })),
+        items: succeeded.map(id => ({ entity_id: id, building_id: contexts.get(id)!.activeBuildingIds[0] ?? contexts.get(id)!.historicalBuildingIds[0] ?? null, action, before_data: beforeSnapshots.get(id), after_data: afterSnapshots.get(id) })),
         succeeded,
-        total: input.ids.length,
+        total: ids.length,
         failed: failed.length,
       })
-      return { succeeded, failed }
     }
-
-    for (const id of input.ids) {
-      try {
-        await TenantService.remove(event, user, id, {
-          reason: input.reason!,
-          buildingId: input.building_id,
-          emitAudit: false,
-        })
-        succeeded.push(id)
-      }
-      catch (err: unknown) {
-        const e = err as { data?: { error?: { code?: string; details?: { activeContracts?: number; activeOccupancies?: number } } }; message?: string }
-        const code = e?.data?.error?.code
-        if (code === 'CONFLICT') {
-          const details = e?.data?.error?.details
-          if (details?.activeContracts && details.activeContracts > 0) failed.push({ id, reason: 'has_active_contracts' })
-          else if (details?.activeOccupancies && details.activeOccupancies > 0) failed.push({ id, reason: 'has_active_occupancies' })
-          else failed.push({ id, reason: 'conflict' })
-        }
-        else if (code === 'NOT_FOUND') {
-          failed.push({ id, reason: 'not_found' })
-        }
-        else if (code === 'FORBIDDEN') {
-          failed.push({ id, reason: 'forbidden' })
-        }
-        else {
-          failed.push({ id, reason: e?.message || 'error' })
-        }
-      }
-    }
-
-    const bulkActionCode = AUDIT_ACTIONS.TENANT_REMOVED
-    await AuditService.appendBulk(event, user, {
-      building_id: null,
-      entity_type: 'tenant',
-      aggregate_action: `tenant.bulk_${input.action}`,
-      items: succeeded.map(id => ({ entity_id: id, building_id: scopes.get(id) ?? null, action: bulkActionCode, before_data: beforeSnapshots.get(id) })),
-      succeeded,
-      total: input.ids.length,
-      failed: failed.length,
-    })
-
     return { succeeded, failed }
   },
 }

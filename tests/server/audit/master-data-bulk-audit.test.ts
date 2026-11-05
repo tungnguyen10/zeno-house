@@ -27,7 +27,6 @@ describe('master-data bulk audit wiring', () => {
 
   it.each([
     'server/services/rooms/index.ts',
-    'server/services/tenants/index.ts',
     'server/services/contracts/index.ts',
   ])('resolves child building scope in %s', (path) => {
     const code = source(path)

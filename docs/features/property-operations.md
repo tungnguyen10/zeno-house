@@ -148,11 +148,11 @@ API:
 - `POST /api/tenants`
 - `GET /api/tenants/[id]`
 - `PATCH /api/tenants/[id]`
-- `DELETE /api/tenants/[id]` — returns `409 CONFLICT` with `details.activeContracts`, `details.activeOccupancies`, and `details.portalAccounts` when blocked. Revoke or clean the portal account link before hard-deleting the tenant. Pass `?force=true` to soft-archive instead (returns archived tenant). For owner users, when tenant has no active-building scope, delete is still allowed if the tenant row was created by that owner.
-- `POST /api/tenants/bulk` — body `{ action: 'archive' | 'activate' | 'delete', ids: string[], reason?: string }` returns `{ succeeded: string[], failed: { id, reason }[] }`. `reason` is required when `action='delete'`. Reasons: `has_active_contracts`, `has_active_occupancies`, `not_found`, `conflict`, `forbidden`.
+- `DELETE /api/tenants/[id]` — returns `409 CONFLICT` with `details.activeContracts`, `details.activeOccupancies`, and `details.portalAccounts` when blocked. Revoke or clean the portal account link before hard-deleting the tenant. Pass `?force=true` to soft-archive instead (returns archived tenant). Full tenant access is required. Delete scope is derived from all relevant server-owned buildings; creator custody applies only before any contract history and is established by the `TENANT_CREATED` audit.
+- `POST /api/tenants/bulk` — body `{ action: 'archive' | 'activate' | 'delete', ids: string[], reason?: string }` returns `{ succeeded: string[], failed: { id, reason }[] }`. `reason` is required when `action='delete'`. Reasons: `has_active_contracts`, `has_active_occupancies`, `not_found`, `conflict`, `forbidden`, `unexpected_error`. IDs are deduplicated; only full-access IDs can mutate, and archive/activate recheck the exact active-building snapshot in the tenant-specific RPC.
 
-- `GET /api/tenants/export-candidates?building_id=<uuid>` — admin/owner-only roster of current primary tenants and roommates in one visible, assigned building.
-- `POST /api/tenants/export` — body `{ building_id, tenant_ids }`; rechecks current building membership and returns a full-profile XLSX for the selected tenants. Stale selections fail with 409 instead of exporting a partial file. The export is audited with building and selected IDs/count.
+- `GET /api/tenants/export-candidates?building_id=<uuid>` — admin/owner-only roster of full-access current primary tenants and roommates in one visible, assigned building.
+- `POST /api/tenants/export` — body `{ building_id, tenant_ids }`; rechecks full tenant access and current building membership for every selected ID before reading sensitive rows and returns a full-profile XLSX for the selected tenants. Stale selections fail with 409 instead of exporting a partial file. The export is audited with building and selected IDs/count.
 
 Tenant records include:
 
@@ -168,9 +168,27 @@ UX notes:
 - Admins and owners can open **Xuất Excel** from the list actions. The modal chooses one building and individual current occupants, retains selections across search, and can select every matching result. The file contains one row per tenant with current room/role and all text profile fields. Identity images and signed URLs are never included. Managers cannot see or call the export.
 - The workbook uses the shared Excel title, building summary, header, and table styles. Filters, frozen headers, and text formatting for phone and identity numbers remain intact.
 
-- List page (`/tenants`): toolbar wraps debounced search, building filter, contract-state filter, status chips, sort dropdown, and order toggle. Filters sync to URL query so the view is shareable. Admins can toggle a selection mode that exposes per-row checkboxes plus a `TenantBulkActionsBar` for archive/activate/delete. Bulk delete requires a non-empty reason. Failures are surfaced inline with a "Xem chi tiết" modal listing each blocked tenant. After bulk actions, the page clears selection in the `onDone` handler and refreshes the keyed list (`tenants:list`) so filtered data is immediately up to date.
-- Detail page (`/tenants/[code]`): renders a `TenantDetailHero` with status badge, contact chips (phone `tel:`, email `mailto:`, ID number), and three stat tiles (active contracts, current room, occupancies). Sections use anchor ids `#personal`, `#id-document`, `#emergency`, `#contracts`, `#danger-zone`. The danger-zone section is hidden for managers. Delete/archive confirmations require a non-empty reason. When delete returns 409, the page shows a warning alert summarising blockers with a "Lưu trữ thay vì xoá" button that calls `DELETE` with `?force=true`.
-- Form (`TenantForm`): four numbered sections (Personal / ID document / Emergency contact / Notes), inline blur validation, submit-time inline errors with first-invalid focus, draft autosave to `localStorage` (`tenant-form:create` or `tenant-form:edit:<id>`), restore/dismiss banner (draft visibility computed after client mount for hydration safety), dirty-state guard via `onBeforeRouteLeave` + `beforeunload`, mobile sticky save bar with safe-area-inset padding.
+- List page (`/tenants`): toolbar wraps debounced search, building filter, contract-state filter, status chips, sort dropdown, and order toggle. Filters sync to URL query so the view is shareable. Operators with `tenants.delete` can toggle a selection mode that exposes per-row checkboxes plus a `TenantBulkActionsBar` for archive/activate/delete. Bulk delete requires a non-empty reason. Feedback retains truthful success/failure counts and groups failures by Vietnamese reason, with a generic Vietnamese fallback for unknown errors; "Xem chi tiết" lists each blocked tenant. After bulk actions, the page clears selection in the `onDone` handler and refreshes the keyed list (`tenants:list`) so filtered data is immediately up to date.
+- Detail page (`/tenants/[code]`): renders a `TenantDetailHero` with status badge, contact chips (phone `tel:`, email `mailto:`, ID number), and three stat tiles (active contracts, current room, occupancies). Sections use anchor ids `#personal`, `#id-document`, `#emergency`, `#contracts`, `#danger-zone`. The danger-zone section requires the delete capability and full access. Delete/archive confirmations require a non-empty reason. When delete returns 409, the page shows a warning alert summarising blockers with a "Lưu trữ thay vì xoá" button that calls `DELETE` with `?force=true`.
+- Form (`TenantForm`): four numbered sections (Personal / ID document / Emergency contact / Notes), inline blur validation, submit-time inline errors with first-invalid focus, draft autosave to `localStorage` (`tenant-form:create` or `tenant-form:edit:<id>`), restore/dismiss banner (draft visibility computed after client mount for hydration safety), immediate navigation with drafts retained, mobile sticky save bar with safe-area-inset padding.
+
+### Tenant read-only scope
+
+Tenant get/list responses explicitly declare `accessLevel`. A basic profile exposes only ID, code,
+name, phone, and status. Detail displays the approved information alert and scoped contract
+history; edit, documents, private contact/identity sections, current-assignment metrics, destructive
+controls, and Portal information are absent. Direct edit navigation never mounts the form for
+basic access. Refresh and access downgrades close mutation confirmations and block pending handlers.
+Basic list rows show “Chỉ xem cơ bản” instead of inferring a missing contract state.
+
+Active relationships across multiple buildings require all buildings in the operator's scope for
+full access. Historical-only access is basic and is excluded from the owner's default list;
+scoped building-history searches remain available. Creator custody exists only before any
+contract history. Email/identity-number searches require full access; basic search matches only
+name, phone, or code. Full profile exports and Portal provisioning exclude basic tenants.
+
+See `docs/architecture/auth-permissions.md` for the complete matrix and the tenant RPC Dashboard
+rollout, rollback verification, advisors, cloud type regeneration, and remaining staging checks.
 
 ## Implementation Files
 

@@ -72,7 +72,7 @@ let tenantSearchRequestId = 0
 const availableTenants = computed(() => {
   const linkedIds = new Set(accounts.value.map(account => account.tenantId))
   return searchResults.value.filter(tenant =>
-    !linkedIds.has(tenant.id) || tenant.id === selectedTenant.value?.id,
+    tenant.accessLevel !== 'basic' && (!linkedIds.has(tenant.id) || tenant.id === selectedTenant.value?.id),
   )
 })
 
@@ -97,7 +97,14 @@ async function runSearch(query: string) {
       query: { q: query.trim() || undefined, limit: 20, sort: 'full_name', order: 'asc' },
     })
     if (requestId !== tenantSearchRequestId) return
-    searchResults.value = res.data ?? []
+    const refreshedSelection = (res.data ?? []).find(tenant => tenant.id === selectedTenant.value?.id)
+    if (refreshedSelection?.accessLevel === 'basic' || selectedTenant.value?.accessLevel === 'basic') {
+      selectedTenant.value = null
+    }
+    else if (refreshedSelection) {
+      selectedTenant.value = refreshedSelection
+    }
+    searchResults.value = (res.data ?? []).filter(tenant => tenant.accessLevel !== 'basic')
     if (selectedTenant.value && !searchResults.value.some(tenant => tenant.id === selectedTenant.value?.id)) {
       searchResults.value.unshift(selectedTenant.value)
     }
@@ -120,7 +127,7 @@ function openProvision() {
 }
 
 async function handleProvision() {
-  if (!selectedTenant.value) {
+  if (!selectedTenant.value || selectedTenant.value.accessLevel === 'basic' || provisionBusy.value) {
     toast.error('Hãy chọn người thuê.')
     return
   }
@@ -440,7 +447,7 @@ onMounted(() => {
         <UiButton
           variant="primary"
           :loading="provisionBusy"
-          :disabled="!selectedTenant"
+          :disabled="!selectedTenant || selectedTenant.accessLevel === 'basic' || provisionBusy"
           @click="handleProvision"
         >
           Cấp tài khoản

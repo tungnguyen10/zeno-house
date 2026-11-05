@@ -39,7 +39,7 @@ REST API for managing tenants. Full CRUD with pagination, search by name/phone, 
 - **THEN** returns 401 UNAUTHENTICATED
 
 ### Requirement: Get tenant by id endpoint
-`GET /api/tenants/:id` SHALL return single tenant by UUID. Returns 404 NOT_FOUND if not found.
+`GET /api/tenants/:id` SHALL resolve a tenant UUID or code and return its authorized full or basic profile. Returns 404 NOT_FOUND if not found.
 
 #### Scenario: Tenant found
 - **WHEN** admin calls GET /api/tenants/:id with valid id
@@ -76,23 +76,23 @@ REST API for managing tenants. Full CRUD with pagination, search by name/phone, 
 - **THEN** returns 404 NOT_FOUND
 
 ### Requirement: Delete tenant endpoint
-`DELETE /api/tenants/:id` SHALL delete a tenant. Returns 204 on success. Returns 404 if not found. When active-building scope cannot be derived, owner users SHALL still be allowed to delete a tenant if they created that tenant row (`created_by` equals caller id).
+`DELETE /api/tenants/:id` SHALL require full tenant access and the existing delete capability.
+The service SHALL derive every relevant building from active or historical relationships and
+check `canDeleteMasterData` for all of them. Client `building_id` SHALL NOT establish delete scope.
+Never-contracted tenants SHALL use creator custody established by `TENANT_CREATED` audit history,
+with the existing role capability still required. Successful hard delete returns 204.
 
-#### Scenario: Delete success
-- **WHEN** admin DELETEs existing tenant
-- **THEN** tenant removed, returns 204
+#### Scenario: Creator custody before first contract
+- **WHEN** an authorized creator deletes a tenant that has never had a primary or occupant contract relationship
+- **THEN** full creator custody permits deletion subject to existing blocker checks
 
-#### Scenario: Delete non-existent
-- **WHEN** id does not exist
-- **THEN** returns 404 NOT_FOUND
+#### Scenario: Creator custody ends after contract history
+- **WHEN** the creator targets a tenant that has acquired contract history outside their building scope
+- **THEN** creator identity alone does not permit deletion
 
-#### Scenario: Owner can delete owner-created orphan tenant
-- **WHEN** owner deletes a tenant with no active-building scope and `tenant.created_by` equals the owner id
-- **THEN** response is 204 and tenant is deleted
-
-#### Scenario: Owner cannot delete orphan tenant created by another user
-- **WHEN** owner deletes a tenant with no active-building scope and `tenant.created_by` does not equal the owner id
-- **THEN** response is 403 FORBIDDEN
+#### Scenario: Client building cannot broaden scope
+- **WHEN** a request supplies an unrelated `building_id`
+- **THEN** authorization derives scope solely from server-owned relationships
 
 ### Requirement: List tenants supports contract-state filter
 `GET /api/tenants` SHALL support `contract_state` query param with values `with_contract` and `without_contract`. Contract state SHALL be based on active contracts where the tenant is either the primary tenant or an active occupant.
@@ -110,26 +110,26 @@ REST API for managing tenants. Full CRUD with pagination, search by name/phone, 
 - **THEN** the response includes only tenants matching both the building relationship and active-contract filter
 
 ### Requirement: Tenant list response includes active assignment summary
-Tenant list responses SHALL include active contract state and current room/building context for each tenant when available.
+Full-access tenant list responses SHALL include active contract state and current room/building context when available. Basic profiles SHALL omit this context and follow the exact allowlist below.
 
 When a tenant has active assignment context, the API payload SHALL include:
 - `assignmentRole: 'primary' | 'roommate'` to distinguish contract holder vs roommate occupant.
 - `primaryTenantName: string | null` where roommate records point to the contract holder name.
 
 #### Scenario: Tenant with active assignment returned
-- **WHEN** a returned tenant has active contract participation
+- **WHEN** a returned full-access tenant has active contract participation
 - **THEN** its DTO includes `hasActiveContract: true` and active room/building summary
 
 #### Scenario: Roommate assignment returned
-- **WHEN** a returned tenant is active via `contract_occupants` (not the primary tenant)
+- **WHEN** a returned full-access tenant is active via `contract_occupants` (not the primary tenant)
 - **THEN** its DTO includes `activeAssignment.assignmentRole === 'roommate'` and `activeAssignment.primaryTenantName` with the contract holder's name
 
 #### Scenario: Primary assignment returned
-- **WHEN** a returned tenant is the primary tenant of the active contract
+- **WHEN** a returned full-access tenant is the primary tenant of the active contract
 - **THEN** its DTO includes `activeAssignment.assignmentRole === 'primary'` and `activeAssignment.primaryTenantName === null`
 
 #### Scenario: Tenant without active assignment returned
-- **WHEN** a returned tenant has no active contract participation
+- **WHEN** a returned full-access tenant has no active contract participation
 - **THEN** its DTO includes `hasActiveContract: false` and no active room/building summary
 
 ### Requirement: GET /api/tenants validates query with Zod
@@ -192,7 +192,7 @@ When a tenant has active assignment context, the API payload SHALL include:
 ---
 
 ### Requirement: DELETE /api/tenants/:id supports force soft-archive
-`server/api/tenants/[id].delete.ts` SHALL accept query param `?force=true`. When present and the caller is admin, the endpoint SHALL skip the conflict check and instead set `status='archived'` on the tenant (soft-archive), returning `200` with `{ data: Tenant }`. The endpoint SHALL NOT hard-delete when `?force=true` is used. Historical references (contracts, occupants) are preserved.
+`server/api/tenants/[id].delete.ts` SHALL accept query param `?force=true`. When present and the caller has full tenant access plus the existing delete capability, the endpoint SHALL skip the conflict check and instead set `status='archived'` on the tenant (soft-archive), returning `200` with `{ data: Tenant }`. The endpoint SHALL NOT hard-delete when `?force=true` is used. Historical references (contracts, occupants) are preserved.
 
 #### Scenario: Force archives a tenant with active contract
 - **WHEN** admin sends DELETE `/api/tenants/:id?force=true` on a tenant with active contract
@@ -209,7 +209,7 @@ When a tenant has active assignment context, the API payload SHALL include:
 ---
 
 ### Requirement: POST /api/tenants/bulk performs bulk action with per-item result
-`server/api/tenants/bulk.post.ts` SHALL require admin auth, validate body with `tenantBulkActionSchema` (`{ action: 'archive' | 'activate' | 'delete', ids: string[], reason?: string }`), iterate over the IDs applying the action via the service, and return `{ data: { succeeded: string[], failed: { id: string, reason: string }[] } }` with status 200. The endpoint SHALL NOT short-circuit on first failure. `reason` SHALL be required when `action='delete'`.
+`server/api/tenants/bulk.post.ts` SHALL require the existing action capability, validate body with `tenantBulkActionSchema` (`{ action: 'archive' | 'activate' | 'delete', ids: string[], reason?: string }`), deduplicate IDs and authorize each through the shared tenant service, and return `{ data: { succeeded: string[], failed: { id: string, reason: string }[] } }` with status 200. The endpoint SHALL NOT short-circuit on first failure. `reason` SHALL be required when `action='delete'`.
 
 #### Scenario: Bulk archive succeeds
 - **WHEN** admin posts `{ action: 'archive', ids: ['a','b'] }`
@@ -248,13 +248,13 @@ Each method SHALL re-check permissions using `can(user, capability)`.
 - **WHEN** `TenantService.list(event, user, { q:'x', status:['active'], sort:'full_name' })` is called
 - **THEN** repository `findAll` receives the same filter options
 
-#### Scenario: remove with force re-checks admin permission
-- **WHEN** `TenantService.remove(event, user, id, { force: true })` is called with non-admin user
-- **THEN** the service throws FORBIDDEN before any DB write
+#### Scenario: remove with force requires full access and capability
+- **WHEN** `TenantService.remove(event, user, id, { force: true })` is called without full access or the action capability
+- **THEN** the service denies before any DB write
 
-#### Scenario: remove allows owner-created orphan delete
-- **WHEN** `TenantService.remove(event, ownerUser, id, { force: false })` is called and tenant has no derived active-building scope but `tenant.created_by === ownerUser.id`
-- **THEN** the service allows delete instead of throwing FORBIDDEN
+#### Scenario: remove permits never-contracted creator custody
+- **WHEN** a capable creator has full custody of a tenant that has never had any contract history
+- **THEN** the service permits delete subject to the existing blockers
 
 #### Scenario: bulkAction continues past per-item failures
 - **WHEN** `TenantService.bulkAction(event, user, { action:'delete', ids:['a','b'] })` and `a` throws conflict
@@ -293,7 +293,7 @@ Tenant service mutation methods SHALL write audit events to `audit_events`.
 - **THEN** an audit event is written to `audit_events`
 
 ### Requirement: Export selected current tenants
-`GET /api/tenants/export-candidates?building_id=<uuid>` SHALL return only current primary tenants and roommates in that building, with lean selection fields. `POST /api/tenants/export` SHALL accept `{ building_id, tenant_ids }` and return an XLSX containing one full text-profile row per selected tenant. Both routes SHALL require `tenants.export`, available only to admin and owner, and SHALL enforce visible building scope. The export SHALL recheck every selected tenant's current assignment, reject an empty or stale selection, exclude identity images and URLs, and audit the building and selected count/IDs.
+`GET /api/tenants/export-candidates?building_id=<uuid>` SHALL return only current primary tenants and roommates in that building, with lean selection fields. `POST /api/tenants/export` SHALL accept `{ building_id, tenant_ids }` and return an XLSX containing one full text-profile row per selected tenant. Both routes SHALL require `tenants.export`, available only to admin and owner, and SHALL enforce visible building scope. The candidate endpoint SHALL exclude tenants without full tenant access. The export SHALL recheck every selected tenant's full access and current assignment before reading sensitive profile rows or constructing the workbook, reject an empty or stale selection, exclude identity images and URLs, and audit the building and selected count/IDs.
 
 #### Scenario: Current occupants only
 - **WHEN** a building has a current primary tenant, a current roommate, a moved-out roommate, and a future occupant
@@ -306,3 +306,57 @@ Tenant service mutation methods SHALL write audit events to `audit_events`.
 #### Scenario: Tenant workbook uses shared styling
 - **WHEN** selected current tenants are exported
 - **THEN** title, building summary, column headers, and profile rows use the shared Excel styling while filters, frozen headers, one row per tenant, and text formats for phone and identity number remain intact
+
+### Requirement: Shared tenant authorization and redaction
+All internal profile, document, mutation, and account services SHALL use the shared tenant
+authorization service. Capability denial SHALL return 403 before tenant lookup, including for
+admin. Missing or `none` targets SHALL return 404. A `basic` write/document/account action SHALL
+return 403 before storage, Auth, duplicate checks, or persistence side effects. Request codes
+SHALL resolve to canonical tenant IDs before side effects and audits.
+
+Active relationships SHALL be active primary contracts or occupant rows whose `move_out_date`
+is null, without adding date rules. History SHALL include all primary and occupant contracts.
+Admin SHALL have full scope subject to capabilities. A scoped actor SHALL have full access only
+when every active building is assigned; any outside active building reduces access to basic if
+any current or historical building is assigned. Without active relationships, historical scope
+SHALL grant basic access. Only before any contract history SHALL `TENANT_CREATED` audit custody
+grant the creator full access. All other targets SHALL be none.
+
+Get/list responses SHALL explicitly emit `accessLevel: 'full' | 'basic'`. Basic DTOs SHALL contain
+exactly `id`, `code`, `fullName`, `phone`, `status`, and `accessLevel`, with no extra identity,
+contact, timestamps, assignment, storage path/URL, or Portal fields. Basic search SHALL only
+match name, phone, or code; email and identity-number matches SHALL require full access.
+Default owner lists SHALL exclude historical-only tenants while scoped building-history lookup
+remains possible. Contract creation tenant-picker behavior SHALL remain unchanged.
+
+#### Scenario: Previous owner reads transferred tenant
+- **WHEN** a capable owner has historical scope but a tenant's active relationship is outside that scope
+- **THEN** get returns only the exact basic allowlist and performs no identity-image signing
+- **AND** the default list excludes the historical-only tenant while a scoped building-history lookup can return basic data
+
+#### Scenario: Multi-building relationship fails closed
+- **WHEN** a tenant has active relationships in buildings A and B and the owner is assigned only A
+- **THEN** the owner receives basic access and no sensitive mutation, account control, or full-profile export
+
+#### Scenario: Basic search cannot disclose private fields
+- **WHEN** a basic-only tenant matches a search solely by email or identity number
+- **THEN** the tenant is omitted; matching name, phone, or code can return the basic allowlist
+
+### Requirement: Scoped tenant bulk status transaction
+Bulk SHALL classify each unique missing/none ID as `not_found` and basic ID as `forbidden`.
+Only full contexts SHALL reach `bulk_tenant_status_action` for archive/activate, carrying sorted
+exact active-building snapshots. The service-role-only security-invoker RPC SHALL lock tenants
+in sorted ID order and recompute active buildings before mutation; changed snapshots SHALL
+return `conflict`. Delete SHALL use server-derived building checks without client fallback.
+Failure codes SHALL be `not_found`, `forbidden`, `conflict`, `has_active_contracts`,
+`has_active_occupancies`, or `unexpected_error`. Only successful IDs SHALL produce mutation audits
+with server-owned building context. The generic master-data bulk RPC SHALL remain unchanged.
+
+#### Scenario: Mixed and duplicate bulk IDs
+- **WHEN** capable operator submits full, basic, missing, and duplicate IDs
+- **THEN** each unique ID has one outcome and only full authorized status items reach the RPC
+- **AND** basic/missing outcomes are forbidden/not_found and only successes are audited
+
+#### Scenario: Relationship changes after authorization
+- **WHEN** active building relationships differ from the authorized snapshot under the RPC lock
+- **THEN** that item returns conflict without changing its status

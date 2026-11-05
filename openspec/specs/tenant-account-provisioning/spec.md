@@ -24,20 +24,39 @@ The system SHALL let `admin` and `owner` provision a Supabase Auth login for an 
 
 ---
 
-### Requirement: Owner provisioning is building-scoped
-An `owner` SHALL be able to provision or manage an account only for a tenant that has a contract in a building assigned to the owner, or that the owner created. Admin SHALL be unscoped. Out-of-scope targets SHALL be treated as not found.
+### Requirement: Operator account management requires full tenant scope
+Account status, provisioning, enable/disable, reset, and revoke SHALL require the existing
+`tenant.account.provision` capability followed by full access from shared tenant authorization.
+All active buildings SHALL be assigned to a scoped operator for full access. Historical-only
+relationships SHALL grant basic profile lookup and SHALL NOT grant account access. Audit-based
+creator custody SHALL apply only before any primary or occupant contract history. Admin scope
+SHALL be global but SHALL still require the capability. Canonical resolved IDs SHALL be used
+for links, Auth side effects, and audits.
 
-#### Scenario: Owner within scope
-- **WHEN** an owner provisions a tenant that has a contract in an assigned building
-- **THEN** provisioning succeeds
+#### Scenario: Owner within all active scope
+- **WHEN** a capable owner targets a tenant whose every active primary/open-occupant building is assigned
+- **THEN** account management is permitted
 
-#### Scenario: Roommate inherits provisioning building scope
-- **WHEN** an owner provisions an active occupant of a contract in an assigned building
-- **THEN** the roommate is considered in scope without changing the account API or link model
+#### Scenario: Previous owner has basic access only
+- **WHEN** a transferred tenant has history in the owner's building and is now active elsewhere
+- **THEN** all account status and mutation requests return 403 before Auth side effects
+
+#### Scenario: Multi-building tenant is basic
+- **WHEN** a tenant has any active building outside the owner's scope
+- **THEN** partial active or historical scope does not grant Portal account control
 
 #### Scenario: Owner out of scope
-- **WHEN** an owner targets a tenant with no contract in any assigned building and not created by the owner
-- **THEN** the request resolves as not found
+- **WHEN** a capable owner has neither relationship scope nor never-contracted creator custody
+- **THEN** the target resolves as not found
+
+### Requirement: Account UI and inventory exclude basic access
+The account list SHALL include only full-access tenant contexts. Provisioning search choices
+SHALL exclude basic tenants, and submission SHALL reject a selected tenant that has become basic.
+Basic tenant detail SHALL not request or display Portal account status.
+
+#### Scenario: Basic tenant in search result
+- **WHEN** provisioning search returns full and basic tenants
+- **THEN** only full tenants are selectable and basic account state is not exposed
 
 ---
 

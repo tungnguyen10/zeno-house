@@ -52,7 +52,7 @@ Roommate rows SHALL also display context text `Ở chung với <primaryTenantNam
 ---
 
 ### Requirement: Tenants list bulk selection
-`app/pages/tenants/index.vue` SHALL provide bulk selection in the list (checkbox per row, "select all on page" checkbox) for admin users. When at least one tenant is selected, a `TenantBulkActionsBar` SHALL appear with actions: "Khôi phục" (activate), "Lưu trữ" (archive), "Xoá nhiều" (delete). The bar SHALL show the selected count and a "Bỏ chọn" action.
+`app/pages/tenants/index.vue` SHALL provide bulk selection in the list (checkbox per row, "select all on page" checkbox) for users with the existing `tenants.delete` capability. When at least one tenant is selected, a `TenantBulkActionsBar` SHALL appear with actions: "Khôi phục" (activate), "Lưu trữ" (archive), "Xoá nhiều" (delete). The bar SHALL show the selected count and a "Bỏ chọn" action.
 
 #### Scenario: Show bulk bar when at least one selected
 - **WHEN** admin selects 1 or more tenants
@@ -73,7 +73,7 @@ Roommate rows SHALL also display context text `Ở chung với <primaryTenantNam
 
 #### Scenario: Partial-success result toast
 - **WHEN** bulk delete returns `{ succeeded: ['a','b'], failed: [{id:'c', reason:'has_active_contracts'}] }`
-- **THEN** a toast summarizes "Đã xoá 2 khách thuê, 1 bị bỏ qua" and a "Xem chi tiết" link opens a modal listing failures
+- **THEN** a toast summarizes “Đã xoá 2 khách, 1 thất bại” and the inline result retains both counts, groups Vietnamese failure reasons, and offers “Xem chi tiết” for individual failures
 
 #### Scenario: Bulk action refreshes latest filtered list
 - **WHEN** any bulk action completes (full success or partial success)
@@ -82,7 +82,7 @@ Roommate rows SHALL also display context text `Ở chung với <primaryTenantNam
 ---
 
 ### Requirement: Tenant detail hero with quick stats
-`app/pages/tenants/[code]/index.vue` SHALL render a hero header containing the tenant `full_name`, `code`, status pill, phone, and email chips, and three quick stat tiles: active contracts count, current room link (if any), occupancy count.
+`app/pages/tenants/[code]/index.vue` SHALL render a hero header for full-access tenants containing the tenant `full_name`, `code`, status pill, phone, and email chips, and three quick stat tiles: active contracts count, current room link (if any), occupancy count.
 
 When the tenant is currently a roommate (`activeAssignment.assignmentRole === 'roommate'`), the detail page SHALL show who they are living with and SHALL not show the "+ Thêm" contract action.
 
@@ -109,7 +109,7 @@ When the tenant is currently a roommate (`activeAssignment.assignmentRole === 'r
 ---
 
 ### Requirement: Tenant detail sectioned layout
-`app/pages/tenants/[code]/index.vue` SHALL organize the detail body into sections with anchor IDs: `#personal` (full_name, phone, email, dob, gender, occupation), `#id-document` (id_number, id_issued_date, id_issued_place), `#emergency` (emergency_contact_name, emergency_contact_phone, permanent_address), `#contracts` (active + historical contracts list with links), `#danger-zone` (Edit, Archive, Delete actions). Each section SHALL have a heading and short description.
+`app/pages/tenants/[code]/index.vue` SHALL organize the full-access detail body into sections with anchor IDs: `#personal` (full_name, phone, email, dob, gender, occupation), `#id-document` (id_number, id_issued_date, id_issued_place), `#emergency` (emergency_contact_name, emergency_contact_phone, permanent_address), `#contracts` (active + historical contracts list with links), `#danger-zone` (Edit, Archive, Delete actions). Each section SHALL have a heading and short description.
 
 #### Scenario: Contracts section lists active and historical
 - **WHEN** detail page loads
@@ -144,8 +144,8 @@ When the tenant is currently a roommate (`activeAssignment.assignmentRole === 'r
 - **WHEN** admin saves the edit form successfully
 - **THEN** the page navigates to `/tenants/[code]`
 
-#### Scenario: Edit page enforces admin role
-- **WHEN** user with role `manager` navigates to `/tenants/[code]/edit`
+#### Scenario: Edit page enforces update capability
+- **WHEN** user without the update capability navigates to `/tenants/[code]/edit`
 - **THEN** route guard redirects them or shows a 403 page
 
 ---
@@ -230,3 +230,43 @@ When the tenant is currently a roommate (`activeAssignment.assignmentRole === 'r
 - **WHEN** user types changes, waits 600ms, then reloads the page
 - **THEN** the restore alert appears on the new mount
 
+
+### Requirement: Basic-access read-only tenant UI
+The dashboard SHALL consume the server's explicit `accessLevel`. For `basic`, detail SHALL show
+an existing info `UiAlert` with: “Khách thuê hiện không thuộc tòa nhà bạn quản lý. Bạn chỉ xem
+được thông tin cơ bản và lịch sử hợp đồng tại tòa của mình.” The basic hero SHALL show only
+name, code, phone, and status; private contact/identity fields, current assignment and quick
+metrics SHALL be absent even if stale fields remain in memory. Scoped contract history SHALL
+remain available. Basic list rows SHALL indicate “Chỉ xem cơ bản” and SHALL NOT infer absent
+assignment data as “Chưa có HĐ”.
+
+Basic detail SHALL hide edit, document, archive/delete and all Portal-account controls and
+SHALL NOT fetch Portal account status. Direct basic edit navigation SHALL not mount a form.
+Existing capabilities SHALL still gate full controls. Loading/error refresh and access
+downgrades SHALL prevent mutation handlers and close destructive confirmations. Async edit
+submission SHALL recheck access before subsequent identity-image requests.
+
+#### Scenario: Basic profile with stale sensitive fields
+- **WHEN** a basic DTO still has old identity fields or assignment data in client memory
+- **THEN** no private profile, roommate context, current-room metrics, document links, edit or destructive controls render
+- **AND** the scoped contract history remains accessible without a Portal status request
+
+#### Scenario: Direct basic edit navigation
+- **WHEN** a basic-only operator opens the tenant edit URL
+- **THEN** the read-only info alert appears and no form or identity-image controls mount
+
+#### Scenario: Full access changes during refresh
+- **WHEN** a previously full tenant refreshes or becomes basic
+- **THEN** edit and destructive actions are unavailable and pending action handlers cannot start further requests
+
+### Requirement: Truthful grouped tenant bulk feedback
+Bulk results SHALL retain both successful and failed counts. Failures SHALL be grouped with
+Vietnamese labels: forbidden “Ngoài phạm vi quản lý”, conflict “Dữ liệu vừa thay đổi, hãy thử
+lại”, not_found “Không tìm thấy”, has_active_contracts “Đang có hợp đồng”, and
+has_active_occupancies “Đang ở ghép”. Unknown reasons SHALL use a generic Vietnamese message
+rather than exposing raw server codes. The detail modal SHALL retain per-tenant failures.
+
+#### Scenario: Partial bulk result with unknown failure
+- **WHEN** one tenant succeeds and three fail, two forbidden and one unknown
+- **THEN** the result displays one success, three failures, a forbidden group of two, and one generic error
+- **AND** raw unknown reason codes do not render

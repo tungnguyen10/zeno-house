@@ -13,14 +13,12 @@ export default defineEventHandler(async (event) => {
     const tenant = await TenantService.remove(event, user, id, {
       force: true,
       reason: input.reason,
-      buildingId: input.building_id,
     })
     return { data: tenant }
   }
 
   await TenantService.remove(event, user, id, {
     reason: input.reason,
-    buildingId: input.building_id,
   })
   setResponseStatus(event, 204)
 })

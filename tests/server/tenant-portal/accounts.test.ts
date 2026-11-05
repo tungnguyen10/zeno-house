@@ -24,6 +24,8 @@ const userRepo = vi.hoisted(() => ({
 }))
 const tenantRepo = vi.hoisted(() => ({
   findById: vi.fn(),
+  findByIdentifier: vi.fn(),
+  findAccessFacts: vi.fn(),
   hasContractInBuildings: vi.fn(),
   wasCreatedByActor: vi.fn(),
   findCreatedTenantIdsByActor: vi.fn(),
@@ -58,6 +60,9 @@ async function service() {
 beforeEach(() => {
   vi.clearAllMocks()
   tenantRepo.findById.mockResolvedValue(tenant)
+  tenantRepo.findByIdentifier.mockResolvedValue(tenant)
+  tenantRepo.findAccessFacts.mockResolvedValue(new Map([['t-1', { activeBuildingIds: ['b-1'], historicalBuildingIds: ['b-1'], everContracted: true }]]))
+  tenantRepo.findCreatedTenantIdsByActor.mockResolvedValue([])
   scope.getAssignedBuildingIds.mockResolvedValue(null) // admin by default
   linkRepo.getByTenantId.mockResolvedValue(null)
   userRepo.create.mockResolvedValue({ id: 'auth-1', email: 'login@example.com' })
@@ -119,6 +124,7 @@ describe('TenantAccountService.provision', () => {
   it('hides an out-of-scope tenant from an owner (not found)', async () => {
     scope.getAssignedBuildingIds.mockResolvedValue(['b-1'])
     tenantRepo.hasContractInBuildings.mockResolvedValue(false)
+    tenantRepo.findAccessFacts.mockResolvedValue(new Map([['t-1', { activeBuildingIds: ['b-2'], historicalBuildingIds: ['b-2'], everContracted: true }]]))
     tenantRepo.wasCreatedByActor.mockResolvedValue(false)
     const svc = await service()
     await expect(svc.provision(event(), user('owner'), 't-1', { email: 'e@e.com' })).rejects.toBeTruthy()
@@ -223,5 +229,54 @@ describe('TenantAccountService orphan reconciliation', () => {
     await expect(svc.reconcileOrphan(event(), user('admin'), 'orphan'))
       .resolves.toEqual({ outcome: 'deactivated' })
     expect(userRepo.remove).toHaveBeenCalledWith(expect.anything(), 'orphan')
+  })
+})
+
+
+describe('tenant account transferred scope', () => {
+  beforeEach(() => {
+    scope.getAssignedBuildingIds.mockResolvedValue(['b-1'])
+    tenantRepo.findAccessFacts.mockResolvedValue(new Map([['t-1', { activeBuildingIds: ['b-2'], historicalBuildingIds: ['b-1', 'b-2'], everContracted: true }]]))
+    tenantRepo.hasContractInBuildings.mockResolvedValue(true)
+  })
+  it.each(['getStatus', 'provision', 'setStatus', 'resetPassword', 'revoke'] as const)('denies basic %s before link or Auth side effects', async (method) => {
+    const svc = await service()
+    const operation = method === 'provision' ? svc.provision(event(), user('owner'), 't-1', { email: 'login@example.com' })
+      : method === 'setStatus' ? svc.setStatus(event(), user('owner'), 't-1', { status: 'disabled' })
+        : svc[method](event(), user('owner'), 't-1')
+    await expect(operation).rejects.toMatchObject({ statusCode: 403 })
+    expect(linkRepo.getByTenantId).not.toHaveBeenCalled()
+    expect(userRepo.create).not.toHaveBeenCalled()
+    expect(userRepo.update).not.toHaveBeenCalled()
+    expect(userRepo.remove).not.toHaveBeenCalled()
+  })
+  it('omits basic account links from list before loading Auth identities', async () => {
+    linkRepo.listAll.mockResolvedValue([{ tenantId: 't-1', authUserId: 'auth-1' }])
+    tenantRepo.findByIds.mockResolvedValue([tenant])
+    tenantRepo.findTenantIdsForBuildings.mockResolvedValue(['t-1'])
+    expect(await (await service()).list(event(), user('owner'))).toEqual([])
+    expect(userRepo.listAuthIdentities).not.toHaveBeenCalled()
+  })
+  it('uses canonical IDs when the request supplies a tenant code', async () => {
+    scope.getAssignedBuildingIds.mockResolvedValue(null)
+    const svc = await service()
+    await svc.getStatus(event(), user('admin'), 'T-001')
+    expect(linkRepo.getByTenantId).toHaveBeenCalledWith(expect.anything(), 't-1')
+  })
+})
+
+describe('tenant account no scope', () => {
+  it.each(['getStatus', 'provision', 'setStatus', 'resetPassword', 'revoke'] as const)('hides none %s before link or Auth side effects', async (method) => {
+    scope.getAssignedBuildingIds.mockResolvedValue(['b-1'])
+    tenantRepo.findAccessFacts.mockResolvedValue(new Map([['t-1', { activeBuildingIds: ['b-2'], historicalBuildingIds: ['b-2'], everContracted: true }]]))
+    const svc = await service()
+    const operation = method === 'provision' ? svc.provision(event(), user('owner'), 't-1', { email: 'login@example.com' })
+      : method === 'setStatus' ? svc.setStatus(event(), user('owner'), 't-1', { status: 'disabled' })
+        : svc[method](event(), user('owner'), 't-1')
+    await expect(operation).rejects.toMatchObject({ statusCode: 404 })
+    expect(linkRepo.getByTenantId).not.toHaveBeenCalled()
+    expect(userRepo.create).not.toHaveBeenCalled()
+    expect(userRepo.update).not.toHaveBeenCalled()
+    expect(userRepo.remove).not.toHaveBeenCalled()
   })
 })

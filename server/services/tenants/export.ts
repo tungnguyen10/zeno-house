@@ -11,6 +11,7 @@ import { vietnamDateISO } from '../../utils/date'
 import { styleMetaRow, styleTableHeaderRow, styleTableRow, styleTitleRow } from '../../utils/excel'
 import { requireCapability } from '../../utils/permissions'
 import { getVisibleBuildingIds } from '../../utils/scope'
+import { TenantAuthorizationService } from './authorization'
 
 export interface TenantExportCandidate {
   id: string
@@ -58,7 +59,7 @@ function roleLabel(roles: TenantExportAssignment['roles']): string {
   return roles.map(role => role === 'primary' ? 'Đứng tên hợp đồng' : 'Người ở cùng').join(', ')
 }
 
-function genderLabel(gender: string | null): string {
+function genderLabel(gender: Tenant['gender']): string {
   if (gender === 'male') return 'Nam'
   if (gender === 'female') return 'Nữ'
   if (gender === 'other') return 'Khác'
@@ -69,8 +70,11 @@ export const TenantExportService = {
   async listCandidates(event: H3Event, user: AuthUser, buildingId: string): Promise<TenantExportCandidate[]> {
     await resolveBuilding(event, user, buildingId)
     const assignments = await TenantExportRepository.listCurrentAssignments(event, buildingId, vietnamDateISO())
-    const tenants = await TenantExportRepository.findTenants(event, assignments.map(row => row.tenantId))
-    return sortedCandidates(assignments, tenants)
+    const access = await TenantAuthorizationService.resolveAccessMany(event, user, assignments.map(row => row.tenantId))
+    const authorizedAssignments = assignments.filter(row => access.get(row.tenantId)?.level === 'full')
+    if (!authorizedAssignments.length) return []
+    const tenants = await TenantExportRepository.findTenants(event, authorizedAssignments.map(row => row.tenantId))
+    return sortedCandidates(authorizedAssignments, tenants)
   },
 
   async buildWorkbook(event: H3Event, user: AuthUser, input: { building_id: string; tenant_ids: string[] }): Promise<{ buffer: Buffer; fileName: string }> {
@@ -81,6 +85,13 @@ export const TenantExportService = {
     const assignmentById = new Map(assignments.map(row => [row.tenantId, row]))
     if (selectedIds.some(id => !assignmentById.has(id))) {
       throwConflict('Danh sách khách đang ở đã thay đổi. Vui lòng chọn lại khách cần xuất.', { reason: 'TENANT_EXPORT_SELECTION_STALE' })
+    }
+    const access = await TenantAuthorizationService.resolveAccessMany(event, user, selectedIds)
+    if (selectedIds.some(id => !access.has(id) || access.get(id)?.level === 'none')) {
+      throwNotFound('Không tìm thấy khách thuê')
+    }
+    if (selectedIds.some(id => access.get(id)?.level !== 'full')) {
+      throwForbidden('Chỉ có quyền xem thông tin cơ bản của khách thuê')
     }
     const tenants = await TenantExportRepository.findTenants(event, selectedIds)
     if (tenants.length !== selectedIds.length) {

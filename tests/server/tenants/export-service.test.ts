@@ -6,6 +6,10 @@ import type { Tenant } from '~/types/tenants'
 const mocks = vi.hoisted(() => ({
   findBuilding: vi.fn(),
   visibleBuildings: vi.fn(),
+  assignedBuildings: vi.fn(),
+  findAuthorizationTenants: vi.fn(),
+  findAccessFacts: vi.fn(),
+  findCreatedTenantIds: vi.fn(),
   listAssignments: vi.fn(),
   findTenants: vi.fn(),
   appendAudit: vi.fn(),
@@ -15,10 +19,21 @@ vi.mock('../../../server/repositories/buildings', () => ({ BuildingRepository: {
 vi.mock('../../../server/repositories/tenants/export', () => ({
   TenantExportRepository: { listCurrentAssignments: mocks.listAssignments, findTenants: mocks.findTenants },
 }))
-vi.mock('../../../server/utils/scope', () => ({ getVisibleBuildingIds: mocks.visibleBuildings }))
+vi.mock('../../../server/utils/scope', () => ({
+  getVisibleBuildingIds: mocks.visibleBuildings, getAssignedBuildingIds: mocks.assignedBuildings,
+}))
+vi.mock('../../../server/repositories/tenants', () => ({
+  TenantRepository: {
+    findByIds: mocks.findAuthorizationTenants,
+    findAccessFacts: mocks.findAccessFacts,
+    findCreatedTenantIdsByActor: mocks.findCreatedTenantIds,
+  },
+}))
 vi.mock('../../../server/repositories/audit', () => ({ AuditRepository: { append: mocks.appendAudit } }))
 
 const buildingId = '0a8a4dd0-7d6f-4f4e-bc7e-3c5e1b833333'
+const otherBuildingId = '0a8a4dd0-7d6f-4f4e-bc7e-3c5e1b866666'
+const otherTenantId = '0a8a4dd0-7d6f-4f4e-bc7e-3c5e1b855555'
 const tenantId = '0a8a4dd0-7d6f-4f4e-bc7e-3c5e1b844444'
 const admin = { id: 'admin', app_metadata: { role: 'admin' } } as AuthUser
 const owner = { id: 'owner', app_metadata: { role: 'owner' } } as AuthUser
@@ -48,11 +63,17 @@ const tenant = {
 } as Tenant
 
 beforeEach(() => {
-  vi.clearAllMocks()
+  vi.resetAllMocks()
   mocks.findBuilding.mockResolvedValue({ id: buildingId, name: 'Tòa Ánh Dương' })
   mocks.visibleBuildings.mockResolvedValue([buildingId])
   mocks.listAssignments.mockResolvedValue([{ tenantId, roomNumbers: ['101'], roles: ['primary'] }])
   mocks.findTenants.mockResolvedValue([tenant])
+  mocks.assignedBuildings.mockResolvedValue([buildingId])
+  mocks.findAuthorizationTenants.mockResolvedValue([tenant])
+  mocks.findAccessFacts.mockResolvedValue(new Map([[tenantId, {
+    activeBuildingIds: [buildingId], historicalBuildingIds: [buildingId], everContracted: true,
+  }]]))
+  mocks.findCreatedTenantIds.mockResolvedValue([])
 })
 
 describe('TenantExportService', () => {
@@ -60,6 +81,66 @@ describe('TenantExportService', () => {
     const { TenantExportService } = await import('../../../server/services/tenants/export')
     await expect(TenantExportService.listCandidates({} as never, manager, buildingId)).rejects.toMatchObject({ statusCode: 403 })
     expect(mocks.findTenants).not.toHaveBeenCalled()
+    expect(mocks.findAuthorizationTenants).not.toHaveBeenCalled()
+  })
+
+  it('denies workbook capability before building, scope, authorization, or export queries', async () => {
+    const { TenantExportService } = await import('../../../server/services/tenants/export')
+    await expect(TenantExportService.buildWorkbook({} as never, manager, {
+      building_id: buildingId, tenant_ids: [tenantId],
+    })).rejects.toMatchObject({ statusCode: 403 })
+    for (const query of [mocks.visibleBuildings, mocks.findBuilding, mocks.listAssignments,
+      mocks.findAuthorizationTenants, mocks.findAccessFacts, mocks.findTenants, mocks.appendAudit]) {
+      expect(query).not.toHaveBeenCalled()
+    }
+  })
+
+  it('omits multi-building basic tenants from candidates before loading private export rows', async () => {
+    const fullTenant = { ...tenant, id: otherTenantId }
+    mocks.listAssignments.mockResolvedValue([
+      { tenantId, roomNumbers: ['101'], roles: ['primary'] },
+      { tenantId: otherTenantId, roomNumbers: ['102'], roles: ['roommate'] },
+    ])
+    mocks.findAuthorizationTenants.mockResolvedValue([tenant, fullTenant])
+    mocks.findAccessFacts.mockResolvedValue(new Map([
+      [tenantId, { activeBuildingIds: [buildingId, otherBuildingId], historicalBuildingIds: [], everContracted: true }],
+      [otherTenantId, { activeBuildingIds: [buildingId], historicalBuildingIds: [], everContracted: true }],
+    ]))
+    mocks.findTenants.mockImplementation(async (_event, ids: string[]) => [tenant, fullTenant].filter(row => ids.includes(row.id)))
+    const { TenantExportService } = await import('../../../server/services/tenants/export')
+    const candidates = await TenantExportService.listCandidates({} as never, owner, buildingId)
+    expect(candidates.map(row => row.id)).toEqual([otherTenantId])
+    expect(mocks.findTenants).toHaveBeenCalledWith(expect.anything(), [otherTenantId])
+    expect(mocks.findAuthorizationTenants).toHaveBeenCalledTimes(1)
+    expect(mocks.findAuthorizationTenants).toHaveBeenCalledWith(expect.anything(), [tenantId, otherTenantId])
+  })
+
+  it('rechecks a selected candidate and denies new multi-building basic access before private rows or audit', async () => {
+    const { TenantExportService } = await import('../../../server/services/tenants/export')
+    expect(await TenantExportService.listCandidates({} as never, owner, buildingId)).toHaveLength(1)
+    mocks.findTenants.mockClear()
+    mocks.findAccessFacts.mockResolvedValue(new Map([[tenantId, {
+      activeBuildingIds: [buildingId, otherBuildingId], historicalBuildingIds: [], everContracted: true,
+    }]]))
+    await expect(TenantExportService.buildWorkbook({} as never, owner, {
+      building_id: buildingId, tenant_ids: [tenantId],
+    })).rejects.toMatchObject({ statusCode: 403 })
+    expect(mocks.findAuthorizationTenants).toHaveBeenCalledTimes(2)
+    expect(mocks.findTenants).not.toHaveBeenCalled()
+    expect(mocks.appendAudit).not.toHaveBeenCalled()
+  })
+
+  it.each(['none', 'missing'] as const)('returns 404 for %s authorization before private rows or audit', async (access) => {
+    if (access === 'missing') mocks.findAuthorizationTenants.mockResolvedValue([])
+    else mocks.findAccessFacts.mockResolvedValue(new Map([[tenantId, {
+      activeBuildingIds: [otherBuildingId], historicalBuildingIds: [], everContracted: true,
+    }]]))
+    const { TenantExportService } = await import('../../../server/services/tenants/export')
+    await expect(TenantExportService.buildWorkbook({} as never, owner, {
+      building_id: buildingId, tenant_ids: [tenantId],
+    })).rejects.toMatchObject({ statusCode: 404 })
+    expect(mocks.findTenants).not.toHaveBeenCalled()
+    expect(mocks.appendAudit).not.toHaveBeenCalled()
   })
 
   it('limits owners to visible assigned buildings', async () => {
