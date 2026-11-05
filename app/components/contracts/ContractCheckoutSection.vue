@@ -5,13 +5,14 @@ import type { CheckoutActions } from '~/composables/contracts/useContractCheckou
 import { checkoutDraftSchema, checkoutRefundSchema, checkoutCreditSchema, checkoutChargeSchema, checkoutCorrectionSchema, checkoutChargeModesSchema } from '~/utils/validators/checkout'
 import { formatCurrency } from '~/utils/format/currency'
 import { getApiErrorMessage } from '~/utils/api-error'
-import { invoicePath } from '~/utils/routes/operational'
+import { contractPath, invoicePath } from '~/utils/routes/operational'
 import { checkoutBlockerMessage } from '~/utils/checkout'
 
 const props = withDefaults(defineProps<{
   bundle: CheckoutBundle | null
   loading: boolean
   error: string | null
+  contractId?: string
   contractCode: string
   contractStatus?: string
   /** Caller-controlled visibility gate (e.g. hide on a freshly-active contract). Defaults to always visible. */
@@ -67,6 +68,10 @@ const draftDirty = computed(() => {
   if (!saved) return true
   if (draft.date !== saved.actualReturnDate || draft.reason !== saved.reason) return true
   return meters.value.some(({ key }) => draft[key] !== (saved[key] ? String(saved[key]!.reading) : '') || draft[`${key}Override`] !== (saved[key]?.usageOverride == null ? '' : String(saved[key]!.usageOverride)) || draft[`${key}Reason`] !== (saved[key]?.reason ?? ''))
+})
+const inheritedSources = computed(() => {
+  const currentId = props.contractId ?? props.bundle?.checkout?.contractId
+  return (props.bundle?.sources ?? []).filter(source => currentId && source.originContractId && source.originContractCode && source.originContractId !== currentId)
 })
 const returned = computed(() => props.bundle?.checkout?.status === 'returned')
 const settlementPilot = computed(() => props.bundle?.checkout?.financialMode === 'settlement')
@@ -248,7 +253,13 @@ const confirmationContent = computed(() => {
         <p v-if="successMessage" role="status" class="text-sm text-status-success">{{ successMessage }}</p>
         <UiAlert v-if="!bundle.checkout && contractStatus === 'terminated'" severity="info">Hợp đồng đã kết thúc theo luồng cũ. Hồ sơ này không tự chuyển thành quyết toán pilot; cần đối soát hóa đơn và cọc theo lịch sử hiện có.</UiAlert>
         <UiAlert v-if="legacyReturn" severity="info">Hồ sơ đã trả phòng theo phiên bản trước. Hóa đơn, cọc và biên bản cũ được giữ nguyên; cần đối soát lịch sử trước khi xử lý thêm tiền.</UiAlert>
-        <div v-if="!returned && contractStatus !== 'terminated'" class="space-y-4">
+        <UiAlert v-if="contractStatus === 'renewed'" severity="info">Hợp đồng đã gia hạn. Xem hợp đồng kế tiếp để tiếp tục quản lý tiền cọc và trả phòng.</UiAlert>
+        <ul v-if="inheritedSources.length" class="space-y-1 text-xs text-ui-muted" aria-label="Nguồn tiền chuyển từ hợp đồng trước">
+          <li v-for="source in inheritedSources" :key="source.id" class="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <NuxtLink :to="contractPath({ id: source.originContractId, code: source.originContractCode })" class="min-w-0 max-w-full break-words rounded-sm text-ui-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-accent/40">Từ HĐ {{ source.originContractCode }}</NuxtLink>
+          </li>
+        </ul>
+        <div v-if="!returned && contractStatus !== 'terminated' && contractStatus !== 'renewed'" class="space-y-4">
           <p class="text-sm text-ui-muted">Ghi ngày trả, lý do và chỉ số cuối. Tiền tháng cuối được đối chiếu sau khi bàn giao; ngày kết thúc đã ký được giữ nguyên.</p>
           <form v-if="canManage" class="space-y-4" novalidate @submit.prevent="saveDraft">
             <div class="grid gap-3 sm:grid-cols-2">

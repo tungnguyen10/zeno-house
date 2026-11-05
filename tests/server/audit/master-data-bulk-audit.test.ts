@@ -41,10 +41,11 @@ describe('correlated contract side-effect audit wiring', () => {
     expect(code).toContain('correlation_id: correlationId')
   })
 
-  it('records the successor contract created by renewal', () => {
-    const code = source('server/services/contract-renewals.ts')
-    expect(code).toContain('action: AUDIT_ACTIONS.CONTRACT_CREATED')
-    expect(code).toContain("source: 'renewal'")
-    expect(code).toContain('correlation_id: correlationId')
+  it('records successor and transferred-source audits in the atomic renewal transaction', () => {
+    const code = source('supabase/migrations/20261105120000_atomic_contract_renewal.sql')
+    expect(code).toContain("'contract.created', 'contract', new_row.id, p_correlation_id, to_jsonb(new_row)")
+    expect(code).toContain("jsonb_build_object('source', 'renewal', 'renewal_id', renewal.id, 'previous_contract_id', old_row.id)")
+    expect(code).toContain("'contract.checkout_source.transferred', 'contract', new_row.id, p_correlation_id")
+    expect(code).toContain("jsonb_build_object('from_contract_id', old_row.id, 'renewal_id', renewal.id, 'sources', v_sources)")
   })
 })

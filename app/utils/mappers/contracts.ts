@@ -35,9 +35,13 @@ export function mapContract(row: Tables<'contracts'>): Contract {
 export function mapContractWithDetails(row: Tables<'contracts'> & {
   rooms: { id: string; room_number: string; floor: number; building_id: string; code: string; buildings: { name: string } | null } | null
   tenants: { id: string; full_name: string; phone: string; code: string } | null
+  previous_contract?: { id: string; contract_code: string } | null
+  successor?: { id: string; contract_code: string } | null
 }): ContractWithDetails {
   return {
     ...mapContract(row),
+    previousContract: row.previous_contract ? { id: row.previous_contract.id, code: row.previous_contract.contract_code } : null,
+    successorContract: row.successor ? { id: row.successor.id, code: row.successor.contract_code } : null,
     room: {
       id: row.rooms?.id ?? '',
       roomNumber: row.rooms?.room_number ?? '',

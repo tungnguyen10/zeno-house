@@ -28,7 +28,7 @@ export function useContractRenewals(contractId: MaybeRef<string>) {
       `/api/contracts/${toValue(contractId)}/renew`,
       { method: 'POST', body: input },
     )
-    renewals.value = [res.data, ...renewals.value]
+    renewals.value = [res.data, ...renewals.value.filter(renewal => renewal.id !== res.data.id)]
     return res.data
   }
 

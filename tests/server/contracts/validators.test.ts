@@ -117,3 +117,13 @@ describe('contractRenewSchema strips handover fields', () => {
     }
   })
 })
+
+describe('renewal operation ID', () => {
+  it.each(['extend', 'new_contract'])('preserves a valid UUID in %s', (mode) => {
+    const operation_id = crypto.randomUUID()
+    expect(contractRenewSchema.parse({ mode, new_end_date: '2027-01-01', new_monthly_rent: 100, operation_id })).toHaveProperty('operation_id', operation_id)
+  })
+  it.each(['extend', 'new_contract'])('rejects an invalid UUID in %s', (mode) => {
+    expect(contractRenewSchema.safeParse({ mode, new_end_date: '2027-01-01', new_monthly_rent: 100, operation_id: 'invalid' }).success).toBe(false)
+  })
+})

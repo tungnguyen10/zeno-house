@@ -22,6 +22,7 @@ export const ContractPaymentService = {
     const contract = await ContractRepository.findById(event, contractId)
     if (!contract) throwNotFound('Không tìm thấy hợp đồng')
     await assertBuildingScope(event, user, contract.buildingId, 'write')
+    if (contract.status === 'renewed') throwConflict('Hợp đồng đã gia hạn, không thể thay đổi khoản thu')
     const created = await ContractPaymentRepository.insert(event, contract.id, input)
     await AuditService.append(event, user, {
       building_id: contract.buildingId,
@@ -39,6 +40,7 @@ export const ContractPaymentService = {
     const contract = await ContractRepository.findById(event, contractId)
     if (!contract) throwNotFound('Không tìm thấy hợp đồng')
     await assertBuildingScope(event, user, contract.buildingId, 'write')
+    if (contract.status === 'renewed') throwConflict('Hợp đồng đã gia hạn, không thể thay đổi khoản thu')
     const payment = await ContractPaymentRepository.findById(event, paymentId)
     if (!payment || payment.contractId !== contract.id) throwNotFound('Không tìm thấy thanh toán')
     const updated = await ContractPaymentRepository.updateById(event, paymentId, input)
@@ -59,6 +61,7 @@ export const ContractPaymentService = {
     const contract = await ContractRepository.findById(event, contractId)
     if (!contract) throwNotFound('Không tìm thấy hợp đồng')
     await assertBuildingScope(event, user, contract.buildingId, 'write')
+    if (contract.status === 'renewed') throwConflict('Hợp đồng đã gia hạn, không thể thay đổi khoản thu')
     const payment = await ContractPaymentRepository.findById(event, paymentId)
     if (!payment || payment.contractId !== contract.id) throwNotFound('Không tìm thấy thanh toán')
     await ContractPaymentRepository.deleteById(event, paymentId)

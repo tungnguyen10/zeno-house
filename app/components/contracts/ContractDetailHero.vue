@@ -2,6 +2,7 @@
 import { onClickOutside, onKeyStroke } from '@vueuse/core'
 import clsx from 'clsx'
 import type { ContractWithDetails } from '~/types/contracts'
+import { contractPath } from '~/utils/routes/operational'
 import { formatCurrency } from '~/utils/format/currency'
 
 const props = defineProps<{
@@ -26,7 +27,7 @@ function monthDiff(start: string, end = new Date()) {
 const monthsElapsed = computed(() => monthDiff(props.contract.startDate))
 const depositBalance = computed(() => props.depositHeld ?? props.paidAmount ?? 0)
 
-const canRenew = computed(() => props.contract.status === 'active' || props.contract.status === 'expired')
+const canRenew = computed(() => props.contract.status === 'active')
 const canTerminate = computed(() => props.contract.status === 'active')
 
 const menuOpen = ref(false)
@@ -60,6 +61,10 @@ onKeyStroke('Escape', () => {
         <div class="flex flex-wrap items-center gap-2">
           <h1 class="truncate text-xl font-semibold text-ui-primary">{{ contract.contractCode }}</h1>
           <UiStatusBadge :status="contract.status" />
+        </div>
+        <div v-if="contract.previousContract || (contract.status === 'renewed' && contract.successorContract)" class="mt-2 flex flex-col items-start gap-1 text-sm">
+          <NuxtLink v-if="contract.status === 'renewed' && contract.successorContract" :to="contractPath(contract.successorContract)" class="max-w-full break-words rounded-sm text-ui-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-accent/40">Đã gia hạn sang HĐ {{ contract.successorContract.code }}</NuxtLink>
+          <NuxtLink v-if="contract.previousContract" :to="contractPath(contract.previousContract)" class="max-w-full break-words rounded-sm text-ui-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-accent/40">Gia hạn từ HĐ {{ contract.previousContract.code }}</NuxtLink>
         </div>
         <div class="mt-1.5 flex flex-wrap items-center gap-2 text-sm text-ui-muted">
           <span>{{ contract.room.buildingName }}</span>

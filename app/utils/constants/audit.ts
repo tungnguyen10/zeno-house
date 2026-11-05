@@ -41,6 +41,8 @@ export const AUDIT_ACTIONS = {
   CONTRACT_TERMINATED: 'contract.terminated',
   CONTRACT_EXPIRED: 'contract.expired',
   CONTRACT_RENEWED: 'contract.renewed',
+  CONTRACT_RENEWAL_REPAIRED: 'contract.renewal.repaired',
+  CONTRACT_CHECKOUT_SOURCE_TRANSFERRED: 'contract.checkout_source.transferred',
   CONTRACT_REMOVED: 'contract.removed',
   CONTRACT_AMENDMENT_CREATED: 'contract_amendment.created',
   CONTRACT_AMENDMENT_UPDATED: 'contract_amendment.updated',

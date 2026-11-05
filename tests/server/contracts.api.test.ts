@@ -166,6 +166,8 @@ function buildContract(overrides: Partial<ContractWithDetails> = {}): ContractWi
     discountAmount: overrides.discountAmount ?? 0,
     surchargeAmount: overrides.surchargeAmount ?? 0,
     previousContractId: overrides.previousContractId ?? null,
+    previousContract: overrides.previousContract ?? null,
+    successorContract: overrides.successorContract ?? null,
     originalEndDate: overrides.originalEndDate ?? null,
     renewalCount: overrides.renewalCount ?? 0,
     status: status as ContractStatus,

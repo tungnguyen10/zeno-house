@@ -14,6 +14,7 @@ import type { ContractBulkActionResult } from '../../../app/composables/contract
 const iconStub = defineComponent({ template: '<span />' })
 
 const stubs = {
+  UiSurfacePanel: defineComponent({ setup(_, { slots }) { return () => h('section', slots.default?.()) } }),
   IconSearch: iconStub,
   IconArrowUp: iconStub,
   IconChevronDown: iconStub,
@@ -108,7 +109,7 @@ function buildContract(overrides: Partial<ContractWithDetails> = {}): ContractWi
     occupantCount: 2,
     discountAmount: 0,
     surchargeAmount: 0,
-    previousContractId: null,
+    previousContractId: null, previousContract: null, successorContract: null,
     originalEndDate: null,
     renewalCount: 0,
     status: 'active',
@@ -242,6 +243,20 @@ describe('ContractDetailHero', () => {
 
     await renewBtn!.trigger('click')
     expect(wrapper.emitted('renew')).toHaveLength(1)
+  })
+
+  it.each([['active', true], ['expired', false]] as const)('offers renewal for %s only when active', async (status, eligible) => {
+    const wrapper = mount(ContractDetailHero, {
+      props: { contract: buildContract({ status }), canManage: true },
+      global: { stubs },
+    })
+    await wrapper.find('[data-test="hero-actions-trigger"]').trigger('click')
+    const renewal = wrapper.find('[data-test="hero-actions-menu"]').findAll('button').find(button => button.text() === 'Gia hạn')
+    expect(!!renewal).toBe(eligible)
+    if (renewal) {
+      await renewal.trigger('click')
+      expect(wrapper.emitted('renew')).toHaveLength(1)
+    }
   })
 
   it('omits lifecycle items the contract status disallows for a manager-capable user', async () => {

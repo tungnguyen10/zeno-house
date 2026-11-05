@@ -157,6 +157,14 @@ isolates each row in a subtransaction so one invalid scheduled row cannot roll b
 Supabase Cron wakes the private Nitro apply-due endpoint every five minutes using a base URL and
 worker secret stored in Vault.
 
+Contract renewal is committed by `renew_contract_atomic`, a service-role-only `SECURITY INVOKER` RPC.
+It locks the contract, room, open occupants, and checkout sources in a fixed order, then extends the
+contract or creates the successor, clones occupants and services, transfers positive-balance checkout
+sources, cancels scheduled amendments, and writes correlated audit rows. `contract_renewals.operation_id`
+is unique and makes retries idempotent. The unique index `contracts_one_successor` allows one successor
+per contract. The `contract_payments_renewed_lock` trigger rejects receipt insert, update, and delete on a
+`renewed` contract and runs before `contract_checkout_payment_guard`.
+
 `billing_audit_events` stores append-only operational audit events.
 
 Audit access is server-owned: `anon` and `authenticated` have no table privileges on
