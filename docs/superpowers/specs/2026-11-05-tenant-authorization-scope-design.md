@@ -154,6 +154,27 @@ Chạy trong một transaction và rollback ở cuối:
 - Fixture có tòa A, tòa B và các tenant: khớp scope, lệch scope (expected là A nhưng thực tế B), ID không tồn tại, và tenant đã có trạng thái đích.
 - Mỗi case trả boolean hoặc count kèm alias mô tả kết quả mong đợi.
 
+## UI
+
+Theo `.agents/skills/zeno-house/references/ui-polish-workflow.md`. Chỉ dùng primitive có sẵn; không thêm primitive hay token.
+
+- DTO `Tenant` thêm `accessLevel: 'full' | 'basic'` do server trả về.
+- Trang chi tiết Tenant khi `basic`:
+  - ẩn các nút sửa, tải lên/xóa CCCD, lưu trữ/xóa và toàn bộ khu vực tài khoản Portal;
+  - hiện `UiAlert` loại info: "Khách thuê hiện không thuộc tòa nhà bạn quản lý. Bạn chỉ xem được thông tin cơ bản và lịch sử hợp đồng tại tòa của mình.";
+  - `TenantDetailHero` không hiển thị CCCD (server cũng không trả trường này).
+- Kết quả bulk trên danh sách hiện số thành công, số thất bại và lý do tiếng Việt theo từng nhóm:
+
+  | Mã | Hiển thị |
+  |---|---|
+  | `forbidden` | Ngoài phạm vi quản lý |
+  | `conflict` | Dữ liệu vừa thay đổi, hãy thử lại |
+  | `not_found` | Không tìm thấy |
+  | `has_active_contracts` | Đang có hợp đồng |
+  | `has_active_occupancies` | Đang ở ghép |
+
+- Kiểm tra các trạng thái loading, lỗi, disabled và đang gửi, ở cả desktop lẫn mobile.
+
 ## Lỗi API
 
 | Tình huống | HTTP |
@@ -189,7 +210,7 @@ Chạy trong một transaction và rollback ở cuối:
 
 ## Ngoài phạm vi
 
-- Không đổi UI. Nếu UI hiện có nút cho Tenant mà actor chỉ có `basic`, API trả 403; ẩn nút sẽ xử lý trong một thay đổi riêng.
+- Không thiết kế lại giao diện Tenant ngoài các điểm ở mục UI.
 - Luồng chọn Tenant khi tạo hợp đồng, orphan auth accounts (đã giới hạn cho Admin) và Portal tự phục vụ `/api/tenant/**`.
 - Luồng chia sẻ quyền giữa nhiều Owner, và bảng custodian.
 - Xét quan hệ hiệu lực theo ngày (thuộc ZH-CTR-01).
