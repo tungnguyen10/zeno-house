@@ -265,58 +265,6 @@ export const ReserveFundRepository = {
     return mapReserveFundTransaction(data as ReserveFundTransactionRow)
   },
 
-  async upsertMonthlyAccrual(
-    event: H3Event,
-    input: {
-      buildingId: string
-      periodYear: number
-      periodMonth: number
-      billingPeriodId: string | null
-      amount: number
-      reserveRatePercent: number
-      issuedRevenue: number
-      createdBy: string | null
-    },
-  ): Promise<ReserveFundTransaction> {
-    const fund = await this.findOrCreateByBuilding(event, input.buildingId)
-    const client = await serverSupabaseClient(event)
-    const existing = await table(client, 'reserve_fund_transactions')
-      .select('*')
-      .eq('fund_id', fund.id)
-      .eq('source', 'monthly_accrual')
-      .eq('period_year', input.periodYear)
-      .eq('period_month', input.periodMonth)
-      .maybeSingle()
-    if (existing.error) throwDbError(existing.error, 'operationsReport.reserveFunds.upsertMonthlyAccrual.existing')
-
-    const payload = {
-      fund_id: fund.id,
-      type: 'deposit',
-      source: 'monthly_accrual',
-      amount: input.amount,
-      date: `${input.periodYear}-${String(input.periodMonth).padStart(2, '0')}-01`,
-      period_year: input.periodYear,
-      period_month: input.periodMonth,
-      billing_period_id: input.billingPeriodId,
-      reserve_rate_percent: input.reserveRatePercent,
-      issued_revenue: input.issuedRevenue,
-      linked_expense_id: null,
-      note: `Reserve accrual ${input.periodYear}-${String(input.periodMonth).padStart(2, '0')}`,
-      created_by: input.createdBy,
-      voided_at: null,
-      voided_by: null,
-      void_reason: null,
-    }
-
-    const existingRow = existing.data as { id: string } | null
-    const query = existingRow
-      ? table(client, 'reserve_fund_transactions').update(payload).eq('id', existingRow.id)
-      : table(client, 'reserve_fund_transactions').insert(payload)
-    const { data, error } = await query.select().single()
-    if (error) throwDbError(error, 'operationsReport.reserveFunds.upsertMonthlyAccrual')
-    return mapReserveFundTransaction(data as ReserveFundTransactionRow)
-  },
-
   async listRatesByBuilding(event: H3Event, buildingId: string): Promise<BuildingReserveFundRate[]> {
     const client = await serverSupabaseClient(event)
     const { data, error } = await table(client, 'building_reserve_fund_rates')

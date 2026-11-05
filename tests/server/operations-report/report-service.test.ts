@@ -16,7 +16,6 @@ const closeClosure = vi.fn()
 const reopenClosure = vi.fn()
 const closeWithAccrualAndAudit = vi.fn()
 const reopenWithAudit = vi.fn()
-const recordMonthlyAccrual = vi.fn()
 const refreshAccrualWithAudit = vi.fn()
 const assertBuildingScope = vi.fn()
 const appendAudit = vi.fn()
@@ -55,7 +54,6 @@ vi.mock('../../../server/services/operations-report/reserve-funds', () => ({
   ReserveFundService: {
     get: getReserveFund,
     findEffectiveRate,
-    recordMonthlyAccrual,
     refreshAccrualWithAudit,
   },
 }))
@@ -194,7 +192,6 @@ describe('OperationsReportService.getReport', () => {
       updatedAt: '',
     })
     reopenWithAudit.mockImplementation(reopenClosure)
-    recordMonthlyAccrual.mockResolvedValue({ id: 'accrual-1' })
     refreshAccrualWithAudit.mockResolvedValue({ id: 'accrual-1' })
     findEffectiveRate.mockResolvedValue({ reserveRatePercent: 5 })
     getReserveFund.mockResolvedValue({
@@ -431,11 +428,11 @@ describe('OperationsReportService.getReport', () => {
     })
 
     expect(closure.status).toBe('closed')
-    expect(recordMonthlyAccrual).not.toHaveBeenCalled()
     expect(closeWithAccrualAndAudit).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
       closeSource: 'manual',
       closedBy: 'admin-1',
       issuedRevenue: 5_000_000,
+      reserveRatePercent: 5,
     }))
     expect(appendAudit).not.toHaveBeenCalled()
   })
@@ -473,7 +470,6 @@ describe('OperationsReportService.getReport', () => {
       period_month: 6,
     })
 
-    expect(recordMonthlyAccrual).not.toHaveBeenCalled()
     expect(closeWithAccrualAndAudit).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
       closeSource: 'auto',
       closedBy: null,
@@ -491,7 +487,11 @@ describe('OperationsReportService.getReport', () => {
       building_id: 'building-1', period_year: 2026, period_month: 6, reason: 'fix expense',
     })
 
-    expect(refreshAccrualWithAudit).toHaveBeenCalled()
+    expect(refreshAccrualWithAudit).toHaveBeenCalledWith(expect.anything(), admin, expect.objectContaining({
+      issuedRevenue: 5_000_000,
+      reserveRatePercent: 5,
+      amount: 0,
+    }))
     expect(reopenWithAudit).toHaveBeenCalled()
     expect(appendAudit).not.toHaveBeenCalled()
   })

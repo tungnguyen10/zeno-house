@@ -228,46 +228,6 @@ export const ReserveFundService = {
     )
   },
 
-  async recordMonthlyAccrual(
-    event: H3Event,
-    user: AuthUser | null,
-    input: {
-      buildingId: string
-      periodYear: number
-      periodMonth: number
-      billingPeriodId: string | null
-      issuedRevenue: number
-      issuedProfitByRevenue: number
-    },
-  ): Promise<ReserveFundTransaction> {
-    if (user) {
-      await requireBuildingAccess(event, user, input.buildingId, 'reserve-fund.manage', 'write')
-    }
-    else {
-      const building = await BuildingRepository.findById(event, input.buildingId)
-      if (!building) throwNotFound('Không tìm thấy tòa nhà')
-    }
-    const rate = await this.findEffectiveRate(
-      event,
-      input.buildingId,
-      input.periodYear,
-      input.periodMonth,
-    )
-    const reserveRatePercent = rate?.reserveRatePercent ?? 0
-    const accrualBase = Math.max(input.issuedProfitByRevenue, 0)
-    const amount = Math.round((accrualBase * reserveRatePercent) / 100)
-    return ReserveFundRepository.upsertMonthlyAccrual(event, {
-      buildingId: input.buildingId,
-      periodYear: input.periodYear,
-      periodMonth: input.periodMonth,
-      billingPeriodId: input.billingPeriodId,
-      issuedRevenue: input.issuedRevenue,
-      reserveRatePercent,
-      amount,
-      createdBy: user?.id ?? null,
-    })
-  },
-
   async refreshAccrualWithAudit(
     event: H3Event,
     user: AuthUser,
@@ -277,20 +237,18 @@ export const ReserveFundService = {
       periodMonth: number
       billingPeriodId: string | null
       issuedRevenue: number
-      issuedProfitByRevenue: number
+      reserveRatePercent: number
+      amount: number
     },
   ): Promise<ReserveFundTransaction> {
-    const rate = await this.findEffectiveRate(event, input.buildingId, input.periodYear, input.periodMonth)
-    const reserveRatePercent = rate?.reserveRatePercent ?? 0
-    const amount = Math.round((Math.max(input.issuedProfitByRevenue, 0) * reserveRatePercent) / 100)
     return ReserveFundRepository.refreshAccrualWithAudit(event, {
       buildingId: input.buildingId,
       periodYear: input.periodYear,
       periodMonth: input.periodMonth,
       billingPeriodId: input.billingPeriodId,
       issuedRevenue: input.issuedRevenue,
-      reserveRatePercent,
-      amount,
+      reserveRatePercent: input.reserveRatePercent,
+      amount: input.amount,
       actorId: user.id,
     })
   },
