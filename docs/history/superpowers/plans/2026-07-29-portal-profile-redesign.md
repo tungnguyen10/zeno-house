@@ -1,3 +1,18 @@
+---
+type: Historical Implementation Plan
+title: "2026-07-29-portal-profile-redesign"
+status: deprecated
+archive_state: historical
+tags: [superpowers, history, migration]
+sources:
+  - resource: "https://github.com/tungnguyen10/zeno-house/blob/060d0d77e07095c593b9ff154450580db8ba0f41/docs/superpowers/plans/2026-07-29-portal-profile-redesign.md"
+generated:
+  by: "process:docs-okf-consolidation"
+  at: "2026-11-06T00:00:00Z"
+---
+
+> Historical Superpowers design/execution record. The document is preserved for provenance and is not a second accepted specification. For current rules, use `docs/capabilities/**` and `docs/changes/**`.
+
 # Portal Profile Redesign Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
@@ -34,8 +49,8 @@
 - Create `tests/composables/portal-unsaved-changes.test.ts`: navigation guard resolution coverage.
 - Create `tests/components/portal/PortalProfileDossier.spec.ts`: complete-profile, missing-value, and responsive-markup coverage.
 - Modify `tests/pages/portal-profile-ui.spec.ts`: assert route-level view/edit separation and portal interaction contracts.
-- Modify `knowledge/changes/refresh-tenant-portal-ui/tasks.md`: record the new profile redesign tasks and verification.
-- Modify `knowledge/capabilities/tenant-portal-ui.md`: specify the dedicated edit route, complete personal dossier, and unsaved-change behavior.
+- Modify `docs/changes/refresh-tenant-portal-ui/tasks.md`: record the new profile redesign tasks and verification.
+- Modify `docs/capabilities/tenant-portal-ui.md`: specify the dedicated edit route, complete personal dossier, and unsaved-change behavior.
 - Modify `docs/features/tenant-portal.md`: document the profile data boundary and edit behavior.
 
 ---
@@ -1061,8 +1076,8 @@ git commit -m "feat(portal): add dedicated profile edit flow"
 ### Task 6: OpenSpec, Documentation, and Verification
 
 **Files:**
-- Modify: `knowledge/changes/refresh-tenant-portal-ui/tasks.md`
-- Modify: `knowledge/capabilities/tenant-portal-ui.md`
+- Modify: `docs/changes/refresh-tenant-portal-ui/tasks.md`
+- Modify: `docs/capabilities/tenant-portal-ui.md`
 - Modify: `docs/features/tenant-portal.md`
 
 **Interfaces:**
@@ -1071,7 +1086,7 @@ git commit -m "feat(portal): add dedicated profile edit flow"
 
 - [ ] **Step 1: Add the accepted requirement scenarios**
 
-Append to the profile requirement in `knowledge/capabilities/tenant-portal-ui.md`:
+Append to the profile requirement in `docs/capabilities/tenant-portal-ui.md`:
 
 ```markdown
 #### Scenario: Complete personal dossier
@@ -1094,7 +1109,7 @@ Append to the profile requirement in `knowledge/capabilities/tenant-portal-ui.md
 
 - [ ] **Step 2: Update active tasks and feature documentation**
 
-Append this section to `knowledge/changes/refresh-tenant-portal-ui/tasks.md`:
+Append this section to `docs/changes/refresh-tenant-portal-ui/tasks.md`:
 
 ```markdown
 ## 8. Tenant profile dossier and dedicated edit flow
@@ -1169,6 +1184,6 @@ focused tests and typecheck.
 - [ ] **Step 6: Commit docs and final polish**
 
 ```bash
-git add knowledge/changes/refresh-tenant-portal-ui/tasks.md knowledge/capabilities/tenant-portal-ui.md docs/features/tenant-portal.md app tests
+git add docs/changes/refresh-tenant-portal-ui/tasks.md docs/capabilities/tenant-portal-ui.md docs/features/tenant-portal.md app tests
 git commit -m "docs(portal): specify profile dossier flow"
 ```

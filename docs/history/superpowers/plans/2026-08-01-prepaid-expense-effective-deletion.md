@@ -1,3 +1,18 @@
+---
+type: Historical Implementation Plan
+title: "2026-08-01-prepaid-expense-effective-deletion"
+status: deprecated
+archive_state: historical
+tags: [superpowers, history, migration]
+sources:
+  - resource: "https://github.com/tungnguyen10/zeno-house/blob/060d0d77e07095c593b9ff154450580db8ba0f41/docs/superpowers/plans/2026-08-01-prepaid-expense-effective-deletion.md"
+generated:
+  by: "process:docs-okf-consolidation"
+  at: "2026-11-06T00:00:00Z"
+---
+
+> Historical Superpowers design/execution record. The document is preserved for provenance and is not a second accepted specification. For current rules, use `docs/capabilities/**` and `docs/changes/**`.
+
 # Prepaid Expense Effective Deletion Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
@@ -32,8 +47,8 @@
 - `tests/server/operations-report/prepaid-effective-deletion-sql.test.ts`: validate the status-independent date-window predicate and function security.
 - `app/pages/dashboard/buildings/[id]/settings.vue`: confirmation state, modal content, loading/error/success states, and active-only action.
 - `tests/pages/building-settings-prepaid-delete.spec.ts`: focused UI contract coverage.
-- `knowledge/capabilities/prepaid-expenses.md`: accepted effective-deletion behavior.
-- `knowledge/capabilities/operations-report.md`: closure-lock exception for non-retroactive cancellation.
+- `docs/capabilities/prepaid-expenses.md`: accepted effective-deletion behavior.
+- `docs/capabilities/operations-report.md`: closure-lock exception for non-retroactive cancellation.
 - `docs/features/operations-report.md`: operator-facing behavior documentation.
 
 ---
@@ -328,7 +343,7 @@ Expected: `status_independent_window = true`. Do not create or modify production
 - [ ] **Step 7: Commit the SQL change**
 
 ```bash
-git add supabase/sql-editor/phase-2-report-and-bulk-rpcs.sql tests/server/operations-report/prepaid-effective-deletion-sql.test.ts docs/superpowers/plans/2026-08-01-prepaid-expense-effective-deletion.md
+git add supabase/sql-editor/phase-2-report-and-bulk-rpcs.sql tests/server/operations-report/prepaid-effective-deletion-sql.test.ts docs/history/superpowers/plans/2026-08-01-prepaid-expense-effective-deletion.md
 git commit -m "fix: preserve historical prepaid allocations"
 ```
 
@@ -441,8 +456,8 @@ git commit -m "feat: confirm prepaid expense cancellation"
 ### Task 5: Synchronize accepted behavior and verify the complete change
 
 **Files:**
-- Modify: `knowledge/capabilities/prepaid-expenses.md`
-- Modify: `knowledge/capabilities/operations-report.md`
+- Modify: `docs/capabilities/prepaid-expenses.md`
+- Modify: `docs/capabilities/operations-report.md`
 - Modify: `docs/features/operations-report.md`
 
 **Interfaces:**
@@ -512,6 +527,6 @@ Run: `git diff --check` and inspect only files in this plan. Confirm:
 - [ ] **Step 6: Commit documentation**
 
 ```bash
-git add knowledge/capabilities/prepaid-expenses.md knowledge/capabilities/operations-report.md docs/features/operations-report.md
+git add docs/capabilities/prepaid-expenses.md docs/capabilities/operations-report.md docs/features/operations-report.md
 git commit -m "docs: define prepaid effective deletion"
 ```

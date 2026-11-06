@@ -1,3 +1,18 @@
+---
+type: Historical Implementation Plan
+title: "2026-08-05-ai-paid-primary-opt-in"
+status: deprecated
+archive_state: historical
+tags: [superpowers, history, migration]
+sources:
+  - resource: "https://github.com/tungnguyen10/zeno-house/blob/060d0d77e07095c593b9ff154450580db8ba0f41/docs/superpowers/plans/2026-08-05-ai-paid-primary-opt-in.md"
+generated:
+  by: "process:docs-okf-consolidation"
+  at: "2026-11-06T00:00:00Z"
+---
+
+> Historical Superpowers design/execution record. The document is preserved for provenance and is not a second accepted specification. For current rules, use `docs/capabilities/**` and `docs/changes/**`.
+
 # Paid AI Primary Opt-In Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
@@ -114,10 +129,10 @@ Expected: all verifier tests pass.
 ### Task 3: Requirements And Rollout Documentation
 
 **Files:**
-- Modify: `knowledge/changes/harden-ai-billing-assistant-flow/proposal.md`
-- Modify: `knowledge/changes/harden-ai-billing-assistant-flow/design.md`
-- Modify: `knowledge/changes/harden-ai-billing-assistant-flow/specs/ai-agent-foundation/spec.md`
-- Modify: `knowledge/changes/harden-ai-billing-assistant-flow/tasks.md`
+- Modify: `docs/changes/harden-ai-billing-assistant-flow/proposal.md`
+- Modify: `docs/changes/harden-ai-billing-assistant-flow/design.md`
+- Modify: `docs/changes/harden-ai-billing-assistant-flow/specs/ai-agent-foundation/spec.md`
+- Modify: `docs/changes/harden-ai-billing-assistant-flow/tasks.md`
 - Modify: `docs/architecture/ai-agent.md`
 - Modify: `docs/development/ai-billing-assistant-rollout.md`
 
