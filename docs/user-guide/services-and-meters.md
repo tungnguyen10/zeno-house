@@ -1,3 +1,10 @@
+---
+type: User Guide
+title: "services-and-meters"
+status: stable
+tags: [engineering, reference]
+---
+
 # Dịch Vụ Và Chỉ Số Điện Nước
 
 ## Danh Mục Dịch Vụ
