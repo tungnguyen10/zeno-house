@@ -41,7 +41,7 @@ Stack:
 
 ## Active OKF Changes
 
-See `docs/changes/index.md`; the source snapshot has four open bundles, with verification evidence and remaining checkbox tasks recorded. Never treat a checked task as proof of cloud rollout or release without source verification.
+See `docs/changes/index.md`; seven tracked bundles, with verification evidence and remaining checkbox tasks recorded. Never treat a checked task as proof of cloud rollout or release without source verification.
 
 ## AI Implementation Snapshot
 

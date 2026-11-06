@@ -3,7 +3,7 @@ import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 const page = readFileSync(resolve('app/pages/portal/index.vue'), 'utf8')
-const spec = readFileSync(resolve('knowledge/capabilities/tenant-portal-ui.md'), 'utf8')
+const spec = readFileSync(resolve('docs/capabilities/tenant-portal-ui.md'), 'utf8')
 
 describe('portal home refreshed statement UI', () => {
   it('uses the shared portal page and type rhythm', () => {

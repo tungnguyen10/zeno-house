@@ -6,7 +6,7 @@ import { basename, dirname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const projectRoot = fileURLToPath(new URL('..', import.meta.url))
-const bundle = join(projectRoot, 'knowledge')
+const bundle = join(projectRoot, 'docs')
 const problems = []
 let concepts = 0
 let indices = 0
@@ -54,9 +54,15 @@ function scan(dir) {
   }
 }
 
-if (!existsSync(bundle)) problems.push('knowledge/: missing OKF bundle')
+if (!existsSync(bundle)) problems.push('docs/: missing OKF documentation bundle')
 else scan(bundle)
-if (existsSync(join(projectRoot, 'openspec'))) problems.push('openspec/: legacy specification directory must be removed')
+if (existsSync(join(projectRoot, 'openspec'))) problems.push('openspec/: legacy spec directory must be removed')
+if (existsSync(join(projectRoot, 'knowledge'))) problems.push('knowledge/: duplicate knowledge root must be removed')
+if (existsSync(join(projectRoot, 'docs', 'superpowers'))) problems.push('docs/superpowers/: parallel specs/plans directory must be removed')
+const required = ['capabilities/index.md','changes/index.md','history/index.md','history/superpowers/index.md','workflow.md']
+for (const file of required) {
+  if (!existsSync(join(bundle,file))) problems.push('docs/: missing required route: ' + file)
+}
 
 if (problems.length) {
   for (const message of problems) console.error('ERROR: ' + message)

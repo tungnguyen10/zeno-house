@@ -4,7 +4,7 @@ title: "product-architecture"
 status: stable
 tags: [capability, requirements]
 sources:
-  - resource: "https://github.com/tungnguyen10/zeno-house/blob/ae95811bbdc1932368b4e6b9ed3e9540399d26e6/knowledge/capabilities/product-architecture.md"
+  - resource: "https://github.com/tungnguyen10/zeno-house/blob/ae95811bbdc1932368b4e6b9ed3e9540399d26e6/docs/capabilities/product-architecture.md"
 generated:
   by: "process:okf-migration"
   at: "2026-11-06T00:00:00Z"
@@ -132,7 +132,7 @@ F0.2.5.9  Contract Renewal Model                    🔲  contract-renewal
 ## Requirements
 
 ### Requirement: Product architecture document
-The `knowledge/capabilities/product-architecture.md` SHALL serve as the living source of truth for the layered platform model. It SHALL define: the 5-layer architecture (Foundation → Core Data → Operational Workspaces → Tenant Experience → Automation), domain boundaries for each entity (Building, Room, Tenant, Contract), what each layer MUST NOT contain, and the correct operational mindset (workspace-scoped billing, not room-centric billing). The document SHALL reflect that monthly billing work is scoped by Building + Period, utility readings are billing inputs, and monthly invoice settlement belongs to invoice/payment allocation rather than contract master data.
+The `docs/capabilities/product-architecture.md` SHALL serve as the living source of truth for the layered platform model. It SHALL define: the 5-layer architecture (Foundation → Core Data → Operational Workspaces → Tenant Experience → Automation), domain boundaries for each entity (Building, Room, Tenant, Contract), what each layer MUST NOT contain, and the correct operational mindset (workspace-scoped billing, not room-centric billing). The document SHALL reflect that monthly billing work is scoped by Building + Period, utility readings are billing inputs, and monthly invoice settlement belongs to invoice/payment allocation rather than contract master data.
 
 #### Scenario: Architecture document accessible
 - **WHEN** a developer opens the spec
