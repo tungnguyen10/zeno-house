@@ -1,7 +1,7 @@
 ---
 type: Workflow
 title: "Unified OKF and Superpowers development"
-status: active
+status: stable
 ---
 
 # Development Workflow — OKF + Superpowers
