@@ -1,8 +1,23 @@
+---
+type: Implementation Plan
+title: "2026-11-05-tenant-authorization-scope"
+status: draft
+change_state: rollout-verification-pending
+tags: [superpowers, change, migration]
+sources:
+  - resource: "https://github.com/tungnguyen10/zeno-house/blob/060d0d77e07095c593b9ff154450580db8ba0f41/docs/superpowers/plans/2026-11-05-tenant-authorization-scope.md"
+generated:
+  by: "process:docs-okf-consolidation"
+  at: "2026-11-06T00:00:00Z"
+---
+
+> Migrated P0 design/execution artifact. Validate actual source, migrations, tests, and rollout state before treating checked tasks as delivered. Canonical accepted requirements live in `docs/capabilities/**`.
+
 # Tenant Authorization Scope Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox syntax for tracking.
 
-**Goal:** Complete PR1 / ZH-SEC-01 from the approved `docs/superpowers/specs/2026-11-05-tenant-authorization-scope-design.md`.
+**Goal:** Complete PR1 / ZH-SEC-01 from the approved `docs/changes/tenant-authorization-scope/design.md`.
 
 **Architecture:** A shared TypeScript authorization service resolves active and historical tenant relationships in batches. Services enforce capabilities before scope, serialize basic profiles through an allowlist, and send only authorized IDs and server-derived relationship snapshots to a tenant-specific status RPC. The existing UI consumes the server's access level.
 
@@ -56,7 +71,7 @@ interface TenantAccessFacts { activeBuildingIds: string[]; historicalBuildingIds
 
 ### Task 3: Basic-access UI, requirements, and final verification
 
-**Files:** `app/pages/dashboard/tenants/[code]/index.vue`, `[code]/edit.vue`, `app/pages/dashboard/tenants/index.vue`, `app/components/tenants/TenantDetailHero.vue`, related composables/components/tests as needed; `docs/architecture/auth-permissions.md`, `docs/features/property-operations.md`, relevant Portal feature docs, `knowledge/capabilities/tenants-api.md`, `knowledge/capabilities/tenants-ui.md`, `knowledge/capabilities/tenant-account-provisioning.md`.
+**Files:** `app/pages/dashboard/tenants/[code]/index.vue`, `[code]/edit.vue`, `app/pages/dashboard/tenants/index.vue`, `app/components/tenants/TenantDetailHero.vue`, related composables/components/tests as needed; `docs/architecture/auth-permissions.md`, `docs/features/property-operations.md`, relevant Portal feature docs, `docs/capabilities/tenants-api.md`, `docs/capabilities/tenants-ui.md`, `docs/capabilities/tenant-account-provisioning.md`.
 
 **Interfaces:** Consumes tenant DTO accessLevel full/basic; bulk failure codes not_found/forbidden/conflict/has_active_contracts/has_active_occupancies/unexpected_error.
 

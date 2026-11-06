@@ -1,3 +1,18 @@
+---
+type: Implementation Plan
+title: "2026-11-05-atomic-contract-renewal"
+status: draft
+change_state: implementation-review
+tags: [superpowers, change, migration]
+sources:
+  - resource: "https://github.com/tungnguyen10/zeno-house/blob/060d0d77e07095c593b9ff154450580db8ba0f41/docs/superpowers/plans/2026-11-05-atomic-contract-renewal.md"
+generated:
+  by: "process:docs-okf-consolidation"
+  at: "2026-11-06T00:00:00Z"
+---
+
+> Migrated P0 design/execution artifact. Validate actual source, migrations, tests, and rollout state before treating checked tasks as delivered. Canonical accepted requirements live in `docs/capabilities/**`.
+
 # Atomic Contract Renewal Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
@@ -8,7 +23,7 @@
 
 **Tech Stack:** Nuxt, Vue, TypeScript, Zod, Vitest, Supabase PostgreSQL (cloud Dashboard SQL, no local DB).
 
-**Spec:** `docs/superpowers/specs/2026-11-05-atomic-contract-renewal-design.md`
+**Spec:** `docs/changes/atomic-contract-renewal/design.md`
 
 ## Global Constraints
 
@@ -42,7 +57,7 @@
 - Modify `server/services/contract-renewals.ts`, `server/repositories/contract-renewals/index.ts`, `server/utils/errors.ts`, `server/services/contract-payments.ts`, `server/repositories/contract-occupants/index.ts`, `server/repositories/contract-services/index.ts`, `server/repositories/contracts/index.ts`.
 - Modify `app/utils/validators/contract-renewals.ts`, `app/types/contracts.ts`, `app/utils/mappers/contracts.ts`, `app/types/checkout.ts`, `app/utils/constants/audit.ts`, `app/composables/contracts/useContractRenewals.ts`.
 - Modify UI: `ContractRenewalForm.vue`, `ContractDetailHero.vue`, `ContractPaymentsSection.vue`, `ContractCheckoutSection.vue`, `app/pages/dashboard/contracts/[code]/index.vue`.
-- Docs: `docs/features/contracts.md`, `docs/architecture/database.md`, `knowledge/changes/add-contract-amendments/tasks.md` (task 2.3).
+- Docs: `docs/features/contracts.md`, `docs/architecture/database.md`, `docs/changes/add-contract-amendments/tasks.md` (task 2.3).
 - Tests: `tests/server/contracts/renewal-migration.test.ts`, `renewal-service.test.ts`, `renewal-errors.test.ts`, `payments-renewed-lock.test.ts`, `tests/utils/contract-renewals-mapper.test.ts`, `tests/utils/contracts-mapper-chain.test.ts`, `tests/components/contracts/renewal.test.ts`.
 
 ---
@@ -406,10 +421,10 @@ git commit -m "feat(contracts): route renewal through atomic RPC (ZH-CTR-01)"
 
 **Files:**
 - Create: `supabase/sql-editor/repair-contract-renewal-chains.sql`
-- Modify: `docs/features/contracts.md`, `docs/architecture/database.md`, `knowledge/changes/add-contract-amendments/tasks.md`, any matching `knowledge/capabilities/contracts*.md` requirement for renewal
+- Modify: `docs/features/contracts.md`, `docs/architecture/database.md`, `docs/changes/add-contract-amendments/tasks.md`, any matching `docs/capabilities/contracts*.md` requirement for renewal
 
 - [ ] **Step 1: Write the repair script.** One `begin;` transaction, one shared `correlation_id`, per chain: find the latest `active` successor, close open occupants of `renewed` contracts at their own `end_date` (`raise notice` per row), insert missing occupants on the latest successor when the tenant has no open occupancy, move sources with balance > 0 to the latest successor, write audit `CONTRACT_RENEWAL_REPAIRED` (`contract.renewal.repaired`; extend the audit action constraint if one exists). It never touches `start_date` or billing data. End with reconciliation `select`s and `rollback;` (comment says switch to `commit;` after review).
-- [ ] **Step 2: Docs.** `docs/features/contracts.md`: inclusive-date convention, atomic renewal behavior, deposit transfer, idempotency, receipt lock. `docs/architecture/database.md`: RPC, `contracts_one_successor`, `contract_payments_renewed_lock`. Mark task 2.3 done in `knowledge/changes/add-contract-amendments/tasks.md`. Update the renewal requirement in the matching OKF spec; run `npm run knowledge:check`.
+- [ ] **Step 2: Docs.** `docs/features/contracts.md`: inclusive-date convention, atomic renewal behavior, deposit transfer, idempotency, receipt lock. `docs/architecture/database.md`: RPC, `contracts_one_successor`, `contract_payments_renewed_lock`. Mark task 2.3 done in `docs/changes/add-contract-amendments/tasks.md`. Update the renewal requirement in the matching OKF spec; run `npm run knowledge:check`.
 - [ ] **Step 3: Regenerate types.** After staging migration is applied, regenerate `app/types/database.types.ts` with the project's documented command (see `docs/architecture/database.md`); never hand-edit. Replace any cast workaround from Task 2.
 - [ ] **Step 4: Full verification.** `npm test`, `npm run typecheck`, `npm run lint`, `npm run knowledge:check`. All green.
 - [ ] **Step 5: Commit** `docs(contracts): document atomic renewal and add repair script`.

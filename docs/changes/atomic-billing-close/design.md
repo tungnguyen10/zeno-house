@@ -1,3 +1,18 @@
+---
+type: Change Design
+title: "2026-11-05-atomic-billing-close-design"
+status: draft
+change_state: implementation-review
+tags: [superpowers, change, migration]
+sources:
+  - resource: "https://github.com/tungnguyen10/zeno-house/blob/060d0d77e07095c593b9ff154450580db8ba0f41/docs/superpowers/specs/2026-11-05-atomic-billing-close-design.md"
+generated:
+  by: "process:docs-okf-consolidation"
+  at: "2026-11-06T00:00:00Z"
+---
+
+> Migrated P0 design/execution artifact. Validate actual source, migrations, tests, and rollout state before treating checked tasks as delivered. Canonical accepted requirements live in `docs/capabilities/**`.
+
 # ZH-BIL-01: Chốt và mở lại kỳ billing atomic
 
 ## Bối cảnh

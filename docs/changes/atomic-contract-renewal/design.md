@@ -1,3 +1,18 @@
+---
+type: Change Design
+title: "2026-11-05-atomic-contract-renewal-design"
+status: draft
+change_state: implementation-review
+tags: [superpowers, change, migration]
+sources:
+  - resource: "https://github.com/tungnguyen10/zeno-house/blob/060d0d77e07095c593b9ff154450580db8ba0f41/docs/superpowers/specs/2026-11-05-atomic-contract-renewal-design.md"
+generated:
+  by: "process:docs-okf-consolidation"
+  at: "2026-11-06T00:00:00Z"
+---
+
+> Migrated P0 design/execution artifact. Validate actual source, migrations, tests, and rollout state before treating checked tasks as delivered. Canonical accepted requirements live in `docs/capabilities/**`.
+
 # ZH-CTR-01: Gia hạn hợp đồng atomic
 
 ## Bối cảnh
@@ -228,5 +243,5 @@ Script không sửa `start_date` hay dữ liệu billing của các successor c�
 
 ## Phối hợp
 
-- Change đang mở `knowledge/changes/add-contract-amendments` (task 2.3) yêu cầu hủy phụ lục `scheduled` khi gia hạn. RPC này đáp ứng yêu cầu đó trong cùng transaction; cần đánh dấu task tương ứng sau khi merge.
+- Change đang mở `docs/changes/add-contract-amendments` (task 2.3) yêu cầu hủy phụ lục `scheduled` khi gia hạn. RPC này đáp ứng yêu cầu đó trong cùng transaction; cần đánh dấu task tương ứng sau khi merge.
 - Cập nhật `docs/features/contracts.md` (gia hạn, quy ước ngày, chuyển tiền cọc) và `docs/architecture/database.md` (RPC mới, `contracts_one_successor`, trigger khóa receipt).

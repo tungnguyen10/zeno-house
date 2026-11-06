@@ -1,3 +1,18 @@
+---
+type: Historical Design
+title: "2026-08-03-ai-chat-suggestions-design"
+status: deprecated
+archive_state: historical
+tags: [superpowers, history, migration]
+sources:
+  - resource: "https://github.com/tungnguyen10/zeno-house/blob/060d0d77e07095c593b9ff154450580db8ba0f41/docs/superpowers/specs/2026-08-03-ai-chat-suggestions-design.md"
+generated:
+  by: "process:docs-okf-consolidation"
+  at: "2026-11-06T00:00:00Z"
+---
+
+> Historical Superpowers design/execution record. It is not an accepted specification; see `docs/capabilities/**` and `docs/changes/**`.
+
 # AI Chat Suggestions Design
 
 ## Goal
