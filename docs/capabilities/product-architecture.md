@@ -4,7 +4,7 @@ title: "product-architecture"
 status: stable
 tags: [capability, requirements]
 sources:
-  - resource: "https://github.com/tungnguyen10/zeno-house/blob/ae95811bbdc1932368b4e6b9ed3e9540399d26e6/docs/capabilities/product-architecture.md"
+  - resource: "https://github.com/tungnguyen10/zeno-house/blob/ae95811bbdc1932368b4e6b9ed3e9540399d26e6/openspec/specs/product-architecture/spec.md"
 generated:
   by: "process:okf-migration"
   at: "2026-11-06T00:00:00Z"
