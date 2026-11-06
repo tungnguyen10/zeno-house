@@ -88,3 +88,7 @@
 - [2026-10-09-add-building-visibility](./2026-10-09-add-building-visibility.md)
 
 All 600 archived source files remain accessible via immutable references to baseline commit `ae95811bbdc1932368b4e6b9ed3e9540399d26e6`. Their bodies are not duplicated in the current knowledge tree; history is not authoritative over accepted capability specifications.
+
+## Historical Superpowers execution records
+
+- [Superpowers historical designs and plans](./superpowers/index.md) — 39 older documents retained under OKF as deprecated provenance.
