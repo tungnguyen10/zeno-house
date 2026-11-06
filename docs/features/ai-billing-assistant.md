@@ -1,3 +1,10 @@
+---
+type: Feature Guide
+title: "ai-billing-assistant"
+status: stable
+tags: [engineering, reference]
+---
+
 # Hướng Dẫn Dùng AI Billing Assistant
 
 AI Billing Assistant giúp owner và manager vận hành kỳ billing bằng hội thoại. Trợ lý có thể đọc dữ liệu trong phạm vi được cấp quyền, chuẩn bị thao tác và giải thích kết quả. Hệ thống backend vẫn là nơi kiểm tra quyền, tính tiền, xác thực dữ liệu và ghi nhận audit.

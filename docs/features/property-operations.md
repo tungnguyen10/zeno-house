@@ -1,3 +1,10 @@
+---
+type: Feature Guide
+title: "property-operations"
+status: stable
+tags: [engineering, reference]
+---
+
 # Property Operations
 
 This feature area covers dashboard, buildings, rooms, and tenants. These are the base records that contracts and billing depend on.
