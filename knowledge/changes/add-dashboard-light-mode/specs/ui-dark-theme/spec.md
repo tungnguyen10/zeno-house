@@ -1,7 +1,8 @@
 ---
 type: Proposed Capability Delta
 title: "add-dashboard-light-mode: spec.md"
-status: in-progress
+status: draft
+change_state: in-progress
 tags: [change, pending-review]
 sources:
   - resource: "https://github.com/tungnguyen10/zeno-house/blob/ae95811bbdc1932368b4e6b9ed3e9540399d26e6/openspec/changes/add-dashboard-light-mode/specs/ui-dark-theme/spec.md"

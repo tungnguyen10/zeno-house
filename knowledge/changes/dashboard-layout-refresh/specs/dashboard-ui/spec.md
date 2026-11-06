@@ -1,7 +1,8 @@
 ---
 type: Proposed Capability Delta
 title: "dashboard-layout-refresh: spec.md"
-status: in-progress
+status: draft
+change_state: in-progress
 tags: [change, pending-review]
 sources:
   - resource: "https://github.com/tungnguyen10/zeno-house/blob/ae95811bbdc1932368b4e6b9ed3e9540399d26e6/openspec/changes/dashboard-layout-refresh/specs/dashboard-ui/spec.md"

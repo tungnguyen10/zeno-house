@@ -1,7 +1,8 @@
 ---
 type: Change Proposal
 title: "harden-event-audit: proposal.md"
-status: in-progress
+status: draft
+change_state: in-progress
 tags: [change, pending-review]
 sources:
   - resource: "https://github.com/tungnguyen10/zeno-house/blob/ae95811bbdc1932368b4e6b9ed3e9540399d26e6/openspec/changes/harden-event-audit/proposal.md"
