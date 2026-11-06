@@ -1,3 +1,10 @@
+---
+type: Feature Guide
+title: "tenant-portal"
+status: stable
+tags: [engineering, reference]
+---
+
 # Tenant Portal
 
 The tenant portal supports both the person named on a contract and active roommates. Every login

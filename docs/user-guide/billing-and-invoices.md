@@ -1,3 +1,10 @@
+---
+type: User Guide
+title: "billing-and-invoices"
+status: stable
+tags: [engineering, reference]
+---
+
 # Vận Hành Billing Và Hóa Đơn
 
 Billing là quy trình rủi ro cao nhất trong hệ thống — mọi số tiền đều do server tính, người dùng chỉ nhập chỉ số và xác nhận thao tác qua giao diện hoặc trợ lý AI.

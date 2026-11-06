@@ -1,3 +1,10 @@
+---
+type: User Guide
+title: "README"
+status: stable
+tags: [engineering, reference]
+---
+
 # Hướng Dẫn Sử Dụng Zeno House
 
 Đây là hướng dẫn sử dụng dành cho **nhân viên nội bộ** (admin, chủ nhà/owner, quản lý/manager) làm việc trong khu vực `/dashboard`. Tài liệu tập trung vào cách sử dụng từng tính năng theo góc nhìn người dùng; nếu cần chi tiết kỹ thuật (API, database, kiến trúc), xem [docs/features/**](../features/) và [docs/architecture/**](../architecture/).

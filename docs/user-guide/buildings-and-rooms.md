@@ -1,3 +1,10 @@
+---
+type: User Guide
+title: "buildings-and-rooms"
+status: stable
+tags: [engineering, reference]
+---
+
 # Tòa Nhà Và Phòng
 
 ## Trang Tổng Quan (Dashboard)

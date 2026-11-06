@@ -1,3 +1,10 @@
+---
+type: Project Status
+title: "project-status"
+status: stable
+tags: [engineering, reference]
+---
+
 # Zeno House - Project Status
 
 Last reviewed from source: 2026-07-23.
@@ -130,7 +137,7 @@ Zeno House is now an authenticated internal operations app for rental buildings.
 | Supabase migrations | 72 SQL migration files under `supabase/migrations` |
 | Tests | 137 `*.test.ts` / `*.spec.ts` files under `tests/**` |
 | OpenSpec specs | 76 capability specs under `openspec/specs/**` |
-| Archived OpenSpec changes | 63 archived changes under `knowledge/changes/archive/**` |
+| Archived OpenSpec changes | 63 archived changes under `docs/changes/archive/**` |
 | Active OpenSpec changes | none |
 
 ## Current Stack
