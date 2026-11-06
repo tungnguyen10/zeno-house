@@ -1,3 +1,10 @@
+---
+type: User Guide
+title: "getting-started"
+status: stable
+tags: [engineering, reference]
+---
+
 # Bắt Đầu Sử Dụng
 
 Hướng dẫn này dành cho nhân viên nội bộ (admin, chủ nhà/owner, quản lý/manager) sử dụng khu vực `/dashboard`. Nếu bạn là khách thuê dùng cổng thông tin `/portal`, tài liệu này không áp dụng.

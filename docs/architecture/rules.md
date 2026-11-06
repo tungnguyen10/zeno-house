@@ -1,3 +1,10 @@
+---
+type: Architecture Reference
+title: "rules"
+status: stable
+tags: [engineering, reference]
+---
+
 # Architecture Rules - Zeno House
 
 ## 1. State Rules

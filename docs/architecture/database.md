@@ -1,3 +1,10 @@
+---
+type: Architecture Reference
+title: "database"
+status: stable
+tags: [engineering, reference]
+---
+
 # Database And Migrations
 
 Zeno House uses Supabase Postgres. Schema history lives in `supabase/migrations`.

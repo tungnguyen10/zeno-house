@@ -1,3 +1,11 @@
-# Zeno House Knowledge + Superpowers
+---
+type: Development Guide
+title: "Unified OKF and Superpowers workflow reference"
+status: stable
+---
 
-This document redirects older development-workflow references to the canonical OKF [knowledge workflow](../../knowledge/workflow.md). Accepted requirements live in [knowledge/capabilities](../../knowledge/capabilities/index.md), current work in [knowledge/changes](../../knowledge/changes/index.md), history in [knowledge/history](../../knowledge/history/index.md). Superpowers handles planning, TDD, debugging and verification. Do not use the discontinued OpenSpec CLI.
+# Change Workflow
+
+The only live development workflow is [docs/workflow.md](../workflow.md). Every requirements/design/implementation document belongs to the OKF v0.2 `docs/**` tree. Approved product requirements live in [capabilities](../capabilities/index.md), active design and one executable checklist per change live in [changes](../changes/index.md), and old records are under [history](../history/index.md).
+
+Use Superpowers to research, design, plan, implement test-first and review. Do not create a parallel `docs/superpowers/plans/**` or `docs/superpowers/specs/**` tree, or invoke OpenSpec CLI.

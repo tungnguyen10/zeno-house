@@ -1,3 +1,10 @@
+---
+type: Documentation Overview
+title: "README"
+status: stable
+tags: [engineering, reference]
+---
+
 # Zeno House Docs
 
 This directory contains source-of-truth engineering docs for the current Zeno House codebase.
@@ -35,4 +42,8 @@ This directory contains source-of-truth engineering docs for the current Zeno Ho
 
 ## OKF Knowledge + Superpowers
 
-Accepted capability specs, active work and archived provenance are indexed in [`../knowledge/index.md`](../knowledge/index.md). See [`../knowledge/workflow.md`](../knowledge/workflow.md) for the unified Superpowers change lifecycle. Engineering docs here support operational implementation details; avoid duplicating normative rules in two places.
+Accepted capability specs, active work and archived provenance are indexed in [`index.md`](./index.md). See [`workflow.md`](./workflow.md) for the unified Superpowers change lifecycle. Engineering docs here support operational implementation details; avoid duplicating normative rules in two places.
+
+## Documentation Ownership
+
+All documentation lives under `docs/**` as OKF v0.2 documents. Accepted product requirements are in `docs/capabilities/**`. Active designs and the single execution plan for each change live in `docs/changes/**`. Older Superpowers designs/plans are preserved in `docs/history/superpowers/**`. Do not create `docs/superpowers/**` or `knowledge/**` again.

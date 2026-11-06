@@ -1,3 +1,10 @@
+---
+type: Development Guide
+title: "local-setup"
+status: stable
+tags: [engineering, reference]
+---
+
 # Local Setup
 
 ## Requirements
