@@ -42,4 +42,8 @@ This directory contains source-of-truth engineering docs for the current Zeno Ho
 
 ## OKF Knowledge + Superpowers
 
-Accepted capability specs, active work and archived provenance are indexed in [`../docs/index.md`](../docs/index.md). See [`../docs/workflow.md`](../docs/workflow.md) for the unified Superpowers change lifecycle. Engineering docs here support operational implementation details; avoid duplicating normative rules in two places.
+Accepted capability specs, active work and archived provenance are indexed in [`index.md`](./index.md). See [`workflow.md`](./workflow.md) for the unified Superpowers change lifecycle. Engineering docs here support operational implementation details; avoid duplicating normative rules in two places.
+
+## Documentation Ownership
+
+All documentation lives under `docs/**` as OKF v0.2 documents. Accepted product requirements are in `docs/capabilities/**`. Active designs and the single execution plan for each change live in `docs/changes/**`. Older Superpowers designs/plans are preserved in `docs/history/superpowers/**`. Do not create `docs/superpowers/**` or `knowledge/**` again.

@@ -1,5 +1,5 @@
 # Zeno House Copilot Instructions
 
-Read `AGENTS.md` first. Route project knowledge through `knowledge/index.md`; accepted behavior is `knowledge/capabilities/**`, planned/in-progress changes are `knowledge/changes/**`, and archived provenance is `knowledge/history/**`. For the development lifecycle read `knowledge/workflow.md` and apply available Superpowers skills. No OpenSpec CLI or parallel proposal workflow.
+Canonical instructions: `AGENTS.md`. Canonical document/knowledge root: `docs/index.md` (OKF v0.2). Accepted requirements: `docs/capabilities/**`; active change specifications and one task checklist: `docs/changes/**`; architecture and user guides: `docs/architecture/**`, `docs/features/**`, `docs/user-guide/**`; historical provenance: `docs/history/**`.
 
-For UI changes, retain `.agents/skills/zeno-house/references/ui-polish-workflow.md`, frontend-design, Hallmark, and the existing Zeno House primitives/design tokens. Use only task-specific context to conserve tokens. Verify behavior against real code/tests before updating accepted knowledge.
+Execute work using Superpowers brainstorming/design/planning/TDD/debugging/review skills; see `docs/workflow.md`. Do not create duplicate `docs/superpowers/**` plan/specs, `knowledge/**`, or OpenSpec. For user-visible UI changes follow Zeno House's existing UI polish workflow, design system and component conventions. Inspect actual source/tests and avoid treating historic docs as deployed behavior.

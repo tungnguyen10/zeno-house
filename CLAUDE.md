@@ -1,5 +1,7 @@
 # Zeno House Claude Context
 
-Follow `AGENTS.md` as the sole cross-agent instructions. Use `knowledge/index.md` for OKF routing and `knowledge/workflow.md` for the Superpowers-based change lifecycle. Read the relevant accepted capability from `knowledge/capabilities/**`, then active change from `knowledge/changes/**` when applicable, and inspect code/tests. Archived history in `knowledge/history/**` is for provenance only.
+Read `AGENTS.md` as the canonical cross-agent rule source, then `docs/index.md`, `docs/agent-context.md` and one task-relevant `docs/capabilities/*.md`. All project documentation is under `docs/**`, and OKF v0.2 is the sole spec/knowledge format.
 
-Use available Superpowers skills for design, task execution, TDD, debugging, and verification. Do **not** use OpenSpec commands, OpenSpec skills or legacy OpenSpec paths. Follow safety, permissions, UI and verification rules in `AGENTS.md`.
+The only feature-delivery method is Superpowers. Follow `docs/workflow.md`; active proposal/design/execution evidence is stored under `docs/changes/<slug>/**`. Do not create a separate Superpowers specs/plans directory, `knowledge/**`, or OpenSpec artifacts. Archived documents in `docs/history/**` are provenance, not live requirements.
+
+Respect the app's authorization, data flow, UI, verification and runtime safety rules from `AGENTS.md`.
