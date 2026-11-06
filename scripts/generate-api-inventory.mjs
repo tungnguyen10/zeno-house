@@ -58,7 +58,14 @@ for (const file of files) {
   rows.push(`| ${method} | \`${path}\` | ${pagination} | ${cache} | ${budget} |`)
 }
 
-const document = `---\ntype: API Inventory\ntitle: "API Inventory And Performance Contracts"\nstatus: stable\ntags: [api, generated, engineering]\n---\n\n# API Inventory And Performance Contracts
+const document = `---
+type: API Inventory
+title: "API Inventory And Performance Contracts"
+status: stable
+tags: [api, generated, engineering]
+---
+
+# API Inventory And Performance Contracts
 
 Generated from checked-in handlers by \`node scripts/generate-api-inventory.mjs\`.
 Route count: **${rows.length}**.
