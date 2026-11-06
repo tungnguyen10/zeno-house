@@ -1,3 +1,18 @@
+---
+type: Historical Implementation Plan
+title: "2026-07-18-ui-skill-routing"
+status: deprecated
+archive_state: historical
+tags: [superpowers, history, migration]
+sources:
+  - resource: "https://github.com/tungnguyen10/zeno-house/blob/060d0d77e07095c593b9ff154450580db8ba0f41/docs/superpowers/plans/2026-07-18-ui-skill-routing.md"
+generated:
+  by: "process:docs-okf-consolidation"
+  at: "2026-11-06T00:00:00Z"
+---
+
+> Historical Superpowers design/execution record. The document is preserved for provenance and is not a second accepted specification. For current rules, use `docs/capabilities/**` and `docs/changes/**`.
+
 # UI Skill Routing Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
@@ -29,7 +44,7 @@
 - Modify: `docs/agent-context.md`
 
 **Interfaces:**
-- Consumes: the authority order and required workflow from `docs/superpowers/specs/2026-07-18-ui-skill-routing-design.md`.
+- Consumes: the authority order and required workflow from `docs/history/superpowers/specs/2026-07-18-ui-skill-routing-design.md`.
 - Produces: a canonical UI workflow reachable from every project entrypoint.
 
 - [ ] **Step 1: Add the UI workflow reference**
@@ -72,7 +87,7 @@ Add an `UI Quality Gate` to `AGENTS.md` with the authority order, required skill
 Replace the dated active-change counts with a dynamic instruction to run:
 
 ```bash
-consult knowledge/changes/index.md
+consult docs/changes/index.md
 openspec list --specs
 ```
 
@@ -236,6 +251,6 @@ Expected: no whitespace errors; only the planned guidance files and this plan ar
 
 ```bash
 git add .agents/instructions docs/ui-patterns/design-system.md \
-  docs/superpowers/plans/2026-07-18-ui-skill-routing.md
+  docs/history/superpowers/plans/2026-07-18-ui-skill-routing.md
 git commit -m "docs: enforce polished design-system UI guidance"
 ```

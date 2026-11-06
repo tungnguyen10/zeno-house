@@ -1,3 +1,18 @@
+---
+type: Historical Implementation Plan
+title: "2026-07-29-portal-profile-identity-password"
+status: deprecated
+archive_state: historical
+tags: [superpowers, history, migration]
+sources:
+  - resource: "https://github.com/tungnguyen10/zeno-house/blob/060d0d77e07095c593b9ff154450580db8ba0f41/docs/superpowers/plans/2026-07-29-portal-profile-identity-password.md"
+generated:
+  by: "process:docs-okf-consolidation"
+  at: "2026-11-06T00:00:00Z"
+---
+
+> Historical Superpowers design/execution record. The document is preserved for provenance and is not a second accepted specification. For current rules, use `docs/capabilities/**` and `docs/changes/**`.
+
 # Portal Profile Identity and Password Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
@@ -24,18 +39,18 @@
 ### Task 1: Update Accepted Requirements and Active Change
 
 **Files:**
-- Modify: `knowledge/changes/refresh-tenant-portal-ui/proposal.md`
-- Modify: `knowledge/changes/refresh-tenant-portal-ui/design.md`
-- Modify: `knowledge/changes/refresh-tenant-portal-ui/specs/tenant-portal-ui/spec.md`
-- Modify: `knowledge/changes/refresh-tenant-portal-ui/tasks.md`
-- Modify: `knowledge/capabilities/tenant-portal-ui.md`
-- Modify: `knowledge/capabilities/tenant-portal-api.md`
-- Modify: `knowledge/capabilities/user-auth.md`
+- Modify: `docs/changes/refresh-tenant-portal-ui/proposal.md`
+- Modify: `docs/changes/refresh-tenant-portal-ui/design.md`
+- Modify: `docs/changes/refresh-tenant-portal-ui/specs/tenant-portal-ui/spec.md`
+- Modify: `docs/changes/refresh-tenant-portal-ui/tasks.md`
+- Modify: `docs/capabilities/tenant-portal-ui.md`
+- Modify: `docs/capabilities/tenant-portal-api.md`
+- Modify: `docs/capabilities/user-auth.md`
 - Modify: `docs/features/tenant-portal.md`
 - Modify: `docs/features/authentication.md`
 
 **Interfaces:**
-- Consumes: approved design in `docs/superpowers/specs/2026-07-29-portal-profile-redesign-design.md`.
+- Consumes: approved design in `docs/history/superpowers/specs/2026-07-29-portal-profile-redesign-design.md`.
 - Produces: normative requirements for 12-field profile editing, edit-only identity-image controls, profile security action, and current-password-verified password changes.
 
 - [ ] **Step 1: Add failing spec expectations**
@@ -195,7 +210,7 @@ Expected: all selected tests pass.
 - [ ] **Step 8: Mark 9.1 complete and commit**
 
 ```bash
-git add app/utils app/composables/tenant-portal/usePortalProfile.ts server/services/tenant-portal/profile.ts tests knowledge/changes/refresh-tenant-portal-ui/tasks.md
+git add app/utils app/composables/tenant-portal/usePortalProfile.ts server/services/tenant-portal/profile.ts tests docs/changes/refresh-tenant-portal-ui/tasks.md
 git commit -m "feat(portal): allow tenant identity updates"
 ```
 
@@ -288,7 +303,7 @@ reduced motion.
 - [ ] **Step 8: Mark 9.2 complete and commit**
 
 ```bash
-git add app/components/portal app/pages/portal/profile tests knowledge/changes/refresh-tenant-portal-ui/tasks.md
+git add app/components/portal app/pages/portal/profile tests docs/changes/refresh-tenant-portal-ui/tasks.md
 git commit -m "feat(portal): edit tenant identity images"
 ```
 
@@ -414,7 +429,7 @@ Expected: all selected tests pass.
 - [ ] **Step 9: Mark 9.3 complete and commit**
 
 ```bash
-git add app server tests knowledge/changes/refresh-tenant-portal-ui/tasks.md
+git add app server tests docs/changes/refresh-tenant-portal-ui/tasks.md
 git commit -m "feat(portal): add secure password change"
 ```
 
@@ -425,7 +440,7 @@ git commit -m "feat(portal): add secure password change"
 **Files:**
 - Modify: `docs/features/tenant-portal.md`
 - Modify: `docs/features/authentication.md`
-- Modify: `knowledge/changes/refresh-tenant-portal-ui/tasks.md`
+- Modify: `docs/changes/refresh-tenant-portal-ui/tasks.md`
 
 **Interfaces:**
 - Consumes: completed identity, image, and password flows.
@@ -485,4 +500,3 @@ were actually inspected.
 git add docs openspec
 git commit -m "docs(portal): document identity and password flows"
 ```
-

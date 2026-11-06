@@ -1,3 +1,18 @@
+---
+type: Historical Implementation Plan
+title: "2026-07-29-portal-invoice-latest-order"
+status: deprecated
+archive_state: historical
+tags: [superpowers, history, migration]
+sources:
+  - resource: "https://github.com/tungnguyen10/zeno-house/blob/060d0d77e07095c593b9ff154450580db8ba0f41/docs/superpowers/plans/2026-07-29-portal-invoice-latest-order.md"
+generated:
+  by: "process:docs-okf-consolidation"
+  at: "2026-11-06T00:00:00Z"
+---
+
+> Historical Superpowers design/execution record. The document is preserved for provenance and is not a second accepted specification. For current rules, use `docs/capabilities/**` and `docs/changes/**`.
+
 # Portal Invoice Latest-First Ordering Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
@@ -25,8 +40,8 @@
 - Modify: `tests/utils/portal-invoice-statement.test.ts`
 - Modify: `tests/pages/portal-invoices.spec.ts`
 - Modify: `app/utils/tenant-portal/invoice-statement.ts`
-- Modify: `knowledge/capabilities/tenant-portal-ui.md`
-- Modify: `knowledge/changes/refresh-tenant-portal-ui/tasks.md`
+- Modify: `docs/capabilities/tenant-portal-ui.md`
+- Modify: `docs/changes/refresh-tenant-portal-ui/tasks.md`
 
 **Interfaces:**
 - Consumes: `TenantInvoiceListItem[]`

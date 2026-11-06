@@ -1,3 +1,18 @@
+---
+type: Historical Implementation Plan
+title: "2026-07-29-portal-financial-overview"
+status: deprecated
+archive_state: historical
+tags: [superpowers, history, migration]
+sources:
+  - resource: "https://github.com/tungnguyen10/zeno-house/blob/060d0d77e07095c593b9ff154450580db8ba0f41/docs/superpowers/plans/2026-07-29-portal-financial-overview.md"
+generated:
+  by: "process:docs-okf-consolidation"
+  at: "2026-11-06T00:00:00Z"
+---
+
+> Historical Superpowers design/execution record. The document is preserved for provenance and is not a second accepted specification. For current rules, use `docs/capabilities/**` and `docs/changes/**`.
+
 # Portal Financial Overview Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
@@ -467,7 +482,7 @@ git commit -m "feat(portal): show billed and paid trends"
 **Files:**
 - Modify: `app/pages/portal/index.vue`
 - Modify: `tests/pages/portal-home-ui.spec.ts`
-- Modify: `knowledge/capabilities/tenant-portal-ui.md`
+- Modify: `docs/capabilities/tenant-portal-ui.md`
 
 **Interfaces:**
 - Consumes: `buildPortalFinancialOverview(invoices, 6)`, `formatCurrencyCompact()`, and `PortalSpendingChart`.
@@ -485,7 +500,7 @@ expect(page).toContain('grid-cols-[minmax(0,1fr)_minmax(0,1fr)]')
 expect(page.indexOf('Financial overview')).toBeLessThan(page.indexOf('Quick actions'))
 ```
 
-Append this accepted requirement to `knowledge/capabilities/tenant-portal-ui.md`:
+Append this accepted requirement to `docs/capabilities/tenant-portal-ui.md`:
 
 ```md
 ### Requirement: Tenant financial overview
@@ -559,7 +574,7 @@ Expected: focused tests and spec validation pass.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add app/pages/portal/index.vue tests/pages/portal-home-ui.spec.ts knowledge/capabilities/tenant-portal-ui.md
+git add app/pages/portal/index.vue tests/pages/portal-home-ui.spec.ts docs/capabilities/tenant-portal-ui.md
 git commit -m "feat(portal): add home financial overview"
 ```
 

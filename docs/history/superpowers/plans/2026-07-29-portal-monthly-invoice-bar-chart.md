@@ -1,3 +1,18 @@
+---
+type: Historical Implementation Plan
+title: "2026-07-29-portal-monthly-invoice-bar-chart"
+status: deprecated
+archive_state: historical
+tags: [superpowers, history, migration]
+sources:
+  - resource: "https://github.com/tungnguyen10/zeno-house/blob/060d0d77e07095c593b9ff154450580db8ba0f41/docs/superpowers/plans/2026-07-29-portal-monthly-invoice-bar-chart.md"
+generated:
+  by: "process:docs-okf-consolidation"
+  at: "2026-11-06T00:00:00Z"
+---
+
+> Historical Superpowers design/execution record. The document is preserved for provenance and is not a second accepted specification. For current rules, use `docs/capabilities/**` and `docs/changes/**`.
+
 # Portal Monthly Invoice Bar Chart Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
@@ -304,7 +319,7 @@ git commit -m "feat(portal): show monthly invoice bar chart"
 
 **Files:**
 - Modify: `tests/pages/portal-home-ui.spec.ts`
-- Modify: `knowledge/capabilities/tenant-portal-ui.md`
+- Modify: `docs/capabilities/tenant-portal-ui.md`
 
 **Interfaces:**
 - Consumes: the existing `Tenant financial overview` OpenSpec requirement.
@@ -366,7 +381,7 @@ Expected: 5 focused test files pass and OpenSpec reports `89 passed, 0 failed`.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add tests/pages/portal-home-ui.spec.ts knowledge/capabilities/tenant-portal-ui.md
+git add tests/pages/portal-home-ui.spec.ts docs/capabilities/tenant-portal-ui.md
 git commit -m "docs(portal): specify monthly invoice bars"
 ```
 
@@ -442,7 +457,7 @@ Expected files:
 
 ```text
 app/components/portal/PortalSpendingChart.vue
-knowledge/capabilities/tenant-portal-ui.md
+docs/capabilities/tenant-portal-ui.md
 tests/components/portal/PortalSpendingChart.spec.ts
 tests/pages/portal-home-ui.spec.ts
 ```

@@ -1,3 +1,18 @@
+---
+type: Historical Implementation Plan
+title: "2026-07-27-invoice-email-recipient-change"
+status: deprecated
+archive_state: historical
+tags: [superpowers, history, migration]
+sources:
+  - resource: "https://github.com/tungnguyen10/zeno-house/blob/060d0d77e07095c593b9ff154450580db8ba0f41/docs/superpowers/plans/2026-07-27-invoice-email-recipient-change.md"
+generated:
+  by: "process:docs-okf-consolidation"
+  at: "2026-11-06T00:00:00Z"
+---
+
+> Historical Superpowers design/execution record. The document is preserved for provenance and is not a second accepted specification. For current rules, use `docs/capabilities/**` and `docs/changes/**`.
+
 # Invoice Email Recipient Change Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
@@ -74,6 +89,6 @@ Run: `npm run lint -- app/components/invoices/InvoicePreviewDrawer.vue tests/com
 Expected: both commands exit 0.
 
 ```bash
-git add app/components/invoices/InvoicePreviewDrawer.vue tests/components/invoices/InvoiceResponsive.spec.ts docs/superpowers/plans/2026-07-27-invoice-email-recipient-change.md
+git add app/components/invoices/InvoicePreviewDrawer.vue tests/components/invoices/InvoiceResponsive.spec.ts docs/history/superpowers/plans/2026-07-27-invoice-email-recipient-change.md
 git commit -m "fix(invoice-email): send newly changed recipients as initial delivery"
 ```
