@@ -55,7 +55,7 @@ Keep other entry files thin and reference this file instead of duplicating rules
 
 ## Verification
 
-- OKF: check YAML frontmatter with `type`, resolve all relative links and verify every accepted capability and active change is indexed; no OpenSpec CLI is required.
+- OKF: run `npm run knowledge:check` to validate concept frontmatter, lifecycle statuses and index links; no legacy specification CLI is required.
 - Source modifications: run narrow tests first, then `npm run typecheck`, `npm test`, `npm run lint` as appropriate.
 - For database or deployment work, verify migration and cloud rollout separately; never claim cloud checks passed from static checks alone.
 - On completion: update accepted `knowledge/capabilities/**`, relevant `knowledge/changes/**` status, architecture docs, and verification evidence in the same PR.

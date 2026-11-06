@@ -42,7 +42,7 @@
 - Create `server/services/operations-report/accrual.ts` (`computeAccrualInputs`).
 - Modify `server/services/operations-report/report.ts`, `server/services/operations-report/reserve-funds.ts`, `server/services/billing/periods.ts`, `server/repositories/billing/periods.ts`, `server/utils/errors.ts`, `server/api/billing/periods/[id]/close.post.ts`.
 - Modify `app/types/billing.ts`, `app/composables/billing/useBillingPeriodWorkspace.ts`, `app/pages/dashboard/billing/[building]/[period].vue`; create `app/utils/billing/close-feedback.ts`.
-- Docs: `docs/features/billing.md`, `docs/features/operations-report.md`, `docs/architecture/database.md`, `openspec/specs/billing-period-close/spec.md`.
+- Docs: `docs/features/billing.md`, `docs/features/operations-report.md`, `docs/architecture/database.md`, `knowledge/capabilities/billing-period-close.md`.
 - Tests: `tests/server/billing/accrual-formula.test.ts`, `billing-close-integrity.test.ts`, `atomic-billing-close-migration.test.ts`, `close-service.test.ts`, `close-errors.test.ts`, `accrual-inputs.test.ts`, `tests/scripts/reconcile-reserve-accruals.test.ts`, `tests/utils/billing-close-feedback.test.ts`; update `period-service.test.ts`, `tests/server/operations-report/report-service.test.ts`, `reserve-fund-service.test.ts`.
 
 Branches: PR3a on `feat/billing-close-reconciliation` (Tasks 1-2), PR3 stacked on `feat/atomic-billing-close` (Tasks 3-8).
@@ -215,22 +215,22 @@ Add the remaining cases in the same style (fixed-cost range boundaries `2026-10`
 
 ---
 
-### Task 7: Docs and OpenSpec
+### Task 7: Docs and OKF
 
 **Files:**
 - Modify: `docs/features/billing.md`, `docs/features/operations-report.md`, `docs/architecture/database.md`
-- Create: `openspec/specs/billing-period-close/spec.md` (format of `openspec/specs/contract-renewal/spec.md`)
+- Update: `knowledge/capabilities/billing-period-close.md` (format of `knowledge/capabilities/contract-renewal.md`)
 
 - [ ] **Step 1:** Document close/reopen atomicity, accrual ownership by operations report, one formula, `skipped_report_closed`, the closed-period locks (share lock in `record_bulk_payments`, `billing_period_closed_guard`), lock order, new RPC grants and revoked `authenticated` execute on the three billing RPCs, and the PR3a reconciliation workflow (run `billing_close_integrity.sql` and `node scripts/reconcile-reserve-accruals.mjs --out report.csv` before deploying PR3; repair script comes only after approval).
-- [ ] **Step 2:** Write the OpenSpec requirements and scenarios (atomic close, replay and inconsistent detection, report-closed skip, reopen keeps accrual, closed-period write lock, grants).
-- [ ] **Step 3: Run** `openspec validate --specs` — Expected: valid.
-- [ ] **Step 4: Commit** `git add docs openspec && git commit -m "docs(billing): document atomic billing close (ZH-BIL-01)"`
+- [ ] **Step 2:** Write the OKF requirements and scenarios (atomic close, replay and inconsistent detection, report-closed skip, reopen keeps accrual, closed-period write lock, grants).
+- [ ] **Step 3: Run** `npm run knowledge:check` — Expected: valid.
+- [ ] **Step 4: Commit** `git add docs knowledge && git commit -m "docs(billing): document atomic billing close (ZH-BIL-01)"`
 
 ---
 
 ### Task 8: Full verification and final review
 
-- [ ] **Step 1:** `npm run typecheck`, `npm test`, `npm run lint`, `openspec validate --specs`, `openspec list --json`; every failure is named in the final report, fixed if caused by this work.
+- [ ] **Step 1:** `npm run typecheck`, `npm test`, `npm run lint`, `npm run knowledge:check`, `read knowledge/changes/index.md`; every failure is named in the final report, fixed if caused by this work.
 - [ ] **Step 2:** `grep -rn "recordMonthlyAccrual\|upsertMonthlyAccrual" server app tests` returns nothing; `git diff --stat origin/develop...HEAD` contains no `app/types/database.types.ts` change.
 - [ ] **Step 3:** Final whole-branch review by a fresh code-review agent against this plan and the spec; fix Critical/Important findings test-first in one pass.
 
