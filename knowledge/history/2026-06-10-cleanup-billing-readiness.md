@@ -1,7 +1,8 @@
 ---
 type: Change History
 title: "2026-06-10-cleanup-billing-readiness"
-status: archived
+status: deprecated
+archive_state: archived
 tags: [history, legacy-openspec]
 sources:
   - resource: "https://github.com/tungnguyen10/zeno-house/tree/ae95811bbdc1932368b4e6b9ed3e9540399d26e6/openspec/changes/archive/2026-06-10-cleanup-billing-readiness/"
