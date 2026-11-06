@@ -1,0 +1,215 @@
+---
+type: Capability Specification
+title: "monthly-billing-database"
+status: stable
+tags: [capability, requirements]
+sources:
+  - resource: "https://github.com/tungnguyen10/zeno-house/blob/ae95811bbdc1932368b4e6b9ed3e9540399d26e6/openspec/specs/monthly-billing-database/spec.md"
+generated:
+  by: "process:okf-migration"
+  at: "2026-11-06T00:00:00Z"
+---
+
+# monthly-billing-database Specification
+
+## Purpose
+TBD - created by archiving change monthly-operations-workspace. Update Purpose after archive.
+## Requirements
+### Requirement: Billing periods table
+The database SHALL store monthly billing period state in `public.billing_periods`.
+
+#### Scenario: Billing period schema exists
+- **WHEN** the billing SQL is applied manually in Supabase Dashboard SQL Editor
+- **THEN** `billing_periods` includes building reference, year, month, status, opened_by, issued_at, closed_at, created_at, and updated_at fields
+
+#### Scenario: Building month uniqueness
+- **WHEN** two billing periods target the same building, year, and month
+- **THEN** the database rejects the duplicate row
+
+#### Scenario: Billing period RLS enabled
+- **WHEN** the table is created
+- **THEN** RLS is enabled and role-based admin/manager policies are present
+
+### Requirement: Invoices table
+The database SHALL store issued invoice snapshots in `public.invoices`, including `due_date`, `grace_period_days` (non-negative integer default 0), and a stored generated `overdue_date` equal to `due_date + grace_period_days`, in addition to the existing identity, lifecycle, totals, notes, replacement links, and timestamps.
+
+#### Scenario: Existing invoices preserve overdue behavior
+- **WHEN** the migration is applied to existing invoices
+- **THEN** they receive zero grace and their generated overdue date equals their existing due date
+
+#### Scenario: Null legacy due date remains unknown
+- **WHEN** an existing invoice has a null due date
+- **THEN** its overdue date remains null
+
+#### Scenario: New schedule is immutable
+- **WHEN** an invoice is issued with a resolved due date and building grace duration
+- **THEN** both values are stored on the invoice and later building or contract edits do not update them
+
+#### Scenario: Overdue query is indexed
+- **WHEN** invoice lists and dashboards filter unpaid invoices by overdue state
+- **THEN** an index supports status, overdue date, balance, and issue ordering
+
+#### Scenario: Existing invoice uniqueness and replacement rules remain
+- **WHEN** invoices are issued, voided, or replaced
+- **THEN** the existing one-active-invoice and supersession constraints remain in force
+
+### Requirement: Invoice charges table
+The database SHALL store invoice line items in `public.invoice_charges`.
+
+#### Scenario: Invoice charge schema exists
+- **WHEN** the billing SQL is applied manually in Supabase Dashboard SQL Editor
+- **THEN** `invoice_charges` includes invoice_id, charge_type, label, source_type, source_id, quantity, unit_price, amount, metadata, sort_order, and created_at fields
+
+#### Scenario: Charges cascade with invoice
+- **WHEN** an invoice is deleted during rollback or void handling
+- **THEN** its invoice charges are removed by foreign key cascade
+
+#### Scenario: Charge calculation metadata stored
+- **WHEN** an invoice charge is issued
+- **THEN** the charge row stores enough metadata to reconstruct the calculation inputs used at issue time
+
+#### Scenario: Adjustment charge references original issue
+- **WHEN** an adjustment charge is created to correct a paid or closed-period invoice
+- **THEN** its metadata references the original invoice, original period, correction reason, and actor context
+
+### Requirement: Invoice payment-profile snapshot
+Every invoice creation transaction SHALL persist the building invoice profile current at issuance as an immutable schema-versioned snapshot, or `NULL` when no profile exists.
+
+#### Scenario: Period issuance snapshots profile
+- **WHEN** one or more drafts are issued through period issuance
+- **THEN** each created invoice receives bank data, rendered transfer content, asset paths, and snapshot time from the current building profile
+
+#### Scenario: Issue-and-pay snapshots profile
+- **WHEN** a ready draft is issued and paid atomically
+- **THEN** the paid invoice receives the same profile snapshot semantics
+
+#### Scenario: Reissue uses current profile
+- **WHEN** a void invoice is reissued after the building profile changed
+- **THEN** the replacement invoice snapshots the profile current at reissue time without modifying the void invoice
+
+#### Scenario: Profile is absent
+- **WHEN** an invoice is issued for a building without a profile
+- **THEN** issuance succeeds and the invoice profile snapshot is `NULL`
+
+### Requirement: Invoice payments table
+The database SHALL store monthly collection entries in `public.invoice_payments`.
+
+#### Scenario: Invoice payment schema exists
+- **WHEN** the billing SQL is applied manually in Supabase Dashboard SQL Editor
+- **THEN** `invoice_payments` includes invoice_id, amount, paid_at, payment_method, note, recorded_by, created_at, and updated_at fields
+
+#### Scenario: Non-positive payment rejected
+- **WHEN** a payment amount is zero or negative
+- **THEN** the database rejects the row
+
+#### Scenario: Payments cascade with invoice
+- **WHEN** an invoice is deleted during rollback or void handling
+- **THEN** its invoice payments are removed by foreign key cascade
+
+### Requirement: Billing utility usages table
+The database SHALL store period-scoped utility usage snapshots and overrides in `public.billing_utility_usages`.
+
+#### Scenario: Utility usage schema exists
+- **WHEN** the billing SQL is applied manually in Supabase Dashboard SQL Editor
+- **THEN** `billing_utility_usages` includes billing_period_id, room_id, meter_type, previous/current reading ids and values, old_meter_final_value, new_meter_start_value, billable_usage, reason, note, created_by, created_at, and updated_at fields
+
+#### Scenario: One usage row per room meter period
+- **WHEN** two utility usage rows target the same billing period, room, and meter type
+- **THEN** the database rejects the duplicate row
+
+#### Scenario: Replacement usage is persisted
+- **WHEN** a meter is replaced or reset during a period
+- **THEN** the table can store old meter final value, new meter start value, current reading value, and billable usage for that period
+
+#### Scenario: Utility usage RLS enabled
+- **WHEN** the table is created
+- **THEN** RLS is enabled and role-based admin/manager policies are present
+
+### Requirement: Billing audit events table
+The database SHALL store immutable billing operational history in `public.billing_audit_events`.
+
+#### Scenario: Billing audit schema exists
+- **WHEN** the billing SQL is applied manually in Supabase Dashboard SQL Editor
+- **THEN** `billing_audit_events` includes billing_period_id, actor_id, action, entity_type, entity_id, before_data, after_data, metadata, and created_at fields
+
+#### Scenario: Audit lookup indexed by period
+- **WHEN** audit events are queried for a billing period
+- **THEN** the database has an index that supports lookup by billing_period_id and created_at
+
+#### Scenario: Audit lookup indexed by entity
+- **WHEN** audit events are queried for a specific invoice, payment, reading, or period
+- **THEN** the database has an index that supports lookup by entity_type, entity_id, and created_at
+
+#### Scenario: Audit RLS enabled
+- **WHEN** the audit table is created
+- **THEN** RLS is enabled and role-based admin/manager policies are present
+
+### Requirement: Manual Supabase SQL execution
+The implementation SHALL document all billing database operations for manual Supabase Dashboard SQL Editor execution.
+
+#### Scenario: SQL script is prepared
+- **WHEN** implementation adds the billing schema
+- **THEN** the SQL script lists tables, columns, constraints, indexes, triggers, RLS policies, verification queries, and rollback notes
+
+#### Scenario: No destructive operation
+- **WHEN** this billing schema is applied
+- **THEN** it only adds new objects and does not drop existing tables or columns
+
+### Requirement: Billing transaction database functions are additive and documented
+Any database function introduced for billing transaction hardening SHALL be additive, manually documented for Supabase Dashboard SQL execution, and include verification and rollback notes.
+
+#### Scenario: Transaction function migration prepared
+- **WHEN** implementation introduces billing transaction functions
+- **THEN** the SQL migration lists function names, input shapes, affected tables, security posture, verification queries, and rollback statements
+
+#### Scenario: Existing table shape preserved
+- **WHEN** billing transaction hardening is applied
+- **THEN** existing billing table columns and constraints are not destructively changed unless a separate proposal explicitly approves that change
+
+### Requirement: Atomic automatic invoice-email enqueue
+Every invoice creation transaction SHALL atomically create the automatic invoice-email outbox result required by the building setting without calling an external provider or blocking issuance for recipient problems.
+
+#### Scenario: Period issuance queues delivery atomically
+- **WHEN** period issuance inserts one or more invoices for an auto-send building
+- **THEN** every inserted invoice commits with exactly one queued or recipient-skipped automatic delivery
+
+#### Scenario: Issue-and-pay queues delivery atomically
+- **WHEN** issue-and-pay inserts and pays an invoice for an auto-send building
+- **THEN** the paid invoice and its queued or recipient-skipped automatic delivery commit in the same transaction
+
+#### Scenario: Reissue queues replacement delivery atomically
+- **WHEN** reissue inserts a replacement invoice for an auto-send building
+- **THEN** only the replacement invoice receives its own queued or recipient-skipped automatic delivery and the void invoice remains unchanged
+
+#### Scenario: Automatic enqueue is disabled
+- **WHEN** an invoice is inserted for a building without an enabled automatic setting
+- **THEN** the invoice transaction preserves existing behavior and creates no automatic delivery
+
+#### Scenario: Invoice transaction fails
+- **WHEN** any supported invoice creation transaction rolls back
+- **THEN** its automatic delivery insert and related queue audit also roll back
+
+### Requirement: Billing incidental charge source table
+The database SHALL store period-scoped incidental charge source rows with billing period, contract, room, positive integer amount, label, optional note, globally unique operation id, actor, timestamps, indexes, and RLS.
+
+#### Scenario: Source table constraints
+- **WHEN** a row has a missing relation, blank label, non-positive/non-integer amount, or duplicate operation id
+- **THEN** the database rejects the row
+
+#### Scenario: Source table is protected
+- **WHEN** an untrusted Data API role attempts unrestricted write access
+- **THEN** RLS and grants prevent bypass of the server-owned transaction path
+
+### Requirement: Incidental writes and audits are atomic
+Create, update, and delete RPCs SHALL lock and validate billing state, mutate one incidental source row, and persist the matching audit event in one transaction.
+
+#### Scenario: Audit insert fails
+- **WHEN** an incidental mutation cannot persist its required audit event
+- **THEN** the source-row mutation rolls back
+
+### Requirement: Invoice charges support incidental snapshots
+The invoice charge constraint SHALL accept `incidental` while preserving every existing charge type and historical row.
+
+#### Scenario: Issued incidental snapshot
+- **WHEN** an invoice is issued from a draft containing an incidental line
+- **THEN** `invoice_charges` stores its label, amount, source type/id, and period/contract metadata

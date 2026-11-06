@@ -33,8 +33,6 @@ This directory contains source-of-truth engineering docs for the current Zeno Ho
 - Services and meter readings: [features/services-meter-readings.md](features/services-meter-readings.md)
 - Change workflow: [development/change-workflow.md](development/change-workflow.md)
 
-## OpenSpec
+## OKF Knowledge + Superpowers
 
-OpenSpec specs live in `openspec/specs/**`. Archived implementation changes live in `openspec/changes/archive/**`. Use those files for requirement-level history; use this `docs/**` tree for source-level operating guidance.
-
-When an implementation changes behavior, update the accepted OpenSpec capability spec and the relevant developer doc in the same change. Archived changes are historical context, not an automatic source to replay into main specs.
+Accepted capability specs, active work and archived provenance are indexed in [`../knowledge/index.md`](../knowledge/index.md). See [`../knowledge/workflow.md`](../knowledge/workflow.md) for the unified Superpowers change lifecycle. Engineering docs here support operational implementation details; avoid duplicating normative rules in two places.

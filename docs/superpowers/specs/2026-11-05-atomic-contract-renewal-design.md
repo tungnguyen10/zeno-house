@@ -228,5 +228,5 @@ Script không sửa `start_date` hay dữ liệu billing của các successor c�
 
 ## Phối hợp
 
-- Change đang mở `openspec/changes/add-contract-amendments` (task 2.3) yêu cầu hủy phụ lục `scheduled` khi gia hạn. RPC này đáp ứng yêu cầu đó trong cùng transaction; cần đánh dấu task tương ứng sau khi merge.
+- Change đang mở `knowledge/changes/add-contract-amendments` (task 2.3) yêu cầu hủy phụ lục `scheduled` khi gia hạn. RPC này đáp ứng yêu cầu đó trong cùng transaction; cần đánh dấu task tương ứng sau khi merge.
 - Cập nhật `docs/features/contracts.md` (gia hạn, quy ước ngày, chuyển tiền cọc) và `docs/architecture/database.md` (RPC mới, `contracts_one_successor`, trigger khóa receipt).

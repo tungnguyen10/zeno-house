@@ -18,7 +18,8 @@
     "prepare": "husky",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "knowledge:check": "node scripts/check-okf.mjs"
   },
   "dependencies": {
     "@ai-sdk/google": "^4.0.12",

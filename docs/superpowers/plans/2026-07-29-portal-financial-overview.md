@@ -467,7 +467,7 @@ git commit -m "feat(portal): show billed and paid trends"
 **Files:**
 - Modify: `app/pages/portal/index.vue`
 - Modify: `tests/pages/portal-home-ui.spec.ts`
-- Modify: `openspec/specs/tenant-portal-ui/spec.md`
+- Modify: `knowledge/capabilities/tenant-portal-ui.md`
 
 **Interfaces:**
 - Consumes: `buildPortalFinancialOverview(invoices, 6)`, `formatCurrencyCompact()`, and `PortalSpendingChart`.
@@ -485,7 +485,7 @@ expect(page).toContain('grid-cols-[minmax(0,1fr)_minmax(0,1fr)]')
 expect(page.indexOf('Financial overview')).toBeLessThan(page.indexOf('Quick actions'))
 ```
 
-Append this accepted requirement to `openspec/specs/tenant-portal-ui/spec.md`:
+Append this accepted requirement to `knowledge/capabilities/tenant-portal-ui.md`:
 
 ```md
 ### Requirement: Tenant financial overview
@@ -551,7 +551,7 @@ Run:
 
 ```bash
 npx vitest run tests/utils/portal-financial-overview.test.ts tests/composables/usePortalChartTheme.test.ts tests/components/portal/PortalSpendingChart.spec.ts tests/pages/portal-home-ui.spec.ts tests/pages/portal-ui-showcase.spec.ts
-openspec validate --specs
+npm run knowledge:check
 ```
 
 Expected: focused tests and spec validation pass.
@@ -559,7 +559,7 @@ Expected: focused tests and spec validation pass.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add app/pages/portal/index.vue tests/pages/portal-home-ui.spec.ts openspec/specs/tenant-portal-ui/spec.md
+git add app/pages/portal/index.vue tests/pages/portal-home-ui.spec.ts knowledge/capabilities/tenant-portal-ui.md
 git commit -m "feat(portal): add home financial overview"
 ```
 

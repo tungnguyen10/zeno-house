@@ -114,10 +114,10 @@ Expected: all verifier tests pass.
 ### Task 3: Requirements And Rollout Documentation
 
 **Files:**
-- Modify: `openspec/changes/harden-ai-billing-assistant-flow/proposal.md`
-- Modify: `openspec/changes/harden-ai-billing-assistant-flow/design.md`
-- Modify: `openspec/changes/harden-ai-billing-assistant-flow/specs/ai-agent-foundation/spec.md`
-- Modify: `openspec/changes/harden-ai-billing-assistant-flow/tasks.md`
+- Modify: `knowledge/changes/harden-ai-billing-assistant-flow/proposal.md`
+- Modify: `knowledge/changes/harden-ai-billing-assistant-flow/design.md`
+- Modify: `knowledge/changes/harden-ai-billing-assistant-flow/specs/ai-agent-foundation/spec.md`
+- Modify: `knowledge/changes/harden-ai-billing-assistant-flow/tasks.md`
 - Modify: `docs/architecture/ai-agent.md`
 - Modify: `docs/development/ai-billing-assistant-rollout.md`
 

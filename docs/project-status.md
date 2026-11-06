@@ -130,7 +130,7 @@ Zeno House is now an authenticated internal operations app for rental buildings.
 | Supabase migrations | 72 SQL migration files under `supabase/migrations` |
 | Tests | 137 `*.test.ts` / `*.spec.ts` files under `tests/**` |
 | OpenSpec specs | 76 capability specs under `openspec/specs/**` |
-| Archived OpenSpec changes | 63 archived changes under `openspec/changes/archive/**` |
+| Archived OpenSpec changes | 63 archived changes under `knowledge/changes/archive/**` |
 | Active OpenSpec changes | none |
 
 ## Current Stack
@@ -145,7 +145,7 @@ Zeno House is now an authenticated internal operations app for rental buildings.
 | Validation | Zod schemas in `app/utils/validators/**` |
 | Data mapping | DTO mappers in `app/utils/mappers/**` |
 | Tests | Vitest with happy-dom, service/repository/unit/component coverage |
-| Workflow docs | OpenSpec specs and archived change proposals/design/tasks |
+| Workflow docs | OKF capabilities, active changes, and archived history |
 
 ## Architecture Shape
 
@@ -678,7 +678,7 @@ npm run typecheck
 npm run lint
 npm test
 npm run test:coverage
-openspec validate --specs
+npm run knowledge:check
 ```
 
 ## OpenSpec Status

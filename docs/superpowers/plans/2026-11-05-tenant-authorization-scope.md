@@ -56,7 +56,7 @@ interface TenantAccessFacts { activeBuildingIds: string[]; historicalBuildingIds
 
 ### Task 3: Basic-access UI, requirements, and final verification
 
-**Files:** `app/pages/dashboard/tenants/[code]/index.vue`, `[code]/edit.vue`, `app/pages/dashboard/tenants/index.vue`, `app/components/tenants/TenantDetailHero.vue`, related composables/components/tests as needed; `docs/architecture/auth-permissions.md`, `docs/features/property-operations.md`, relevant Portal feature docs, `openspec/specs/tenants-api/spec.md`, `openspec/specs/tenants-ui/spec.md`, `openspec/specs/tenant-account-provisioning/spec.md`.
+**Files:** `app/pages/dashboard/tenants/[code]/index.vue`, `[code]/edit.vue`, `app/pages/dashboard/tenants/index.vue`, `app/components/tenants/TenantDetailHero.vue`, related composables/components/tests as needed; `docs/architecture/auth-permissions.md`, `docs/features/property-operations.md`, relevant Portal feature docs, `knowledge/capabilities/tenants-api.md`, `knowledge/capabilities/tenants-ui.md`, `knowledge/capabilities/tenant-account-provisioning.md`.
 
 **Interfaces:** Consumes tenant DTO accessLevel full/basic; bulk failure codes not_found/forbidden/conflict/has_active_contracts/has_active_occupancies/unexpected_error.
 
@@ -65,7 +65,7 @@ interface TenantAccessFacts { activeBuildingIds: string[]; historicalBuildingIds
 - [ ] Apply explicit `accessLevel === 'basic'` read-only states. Use existing UiAlert with the approved Vietnamese message, basic hero without CCCD, and safe handling of absent sensitive fields. Gate in-flight actions and refresh transitions, retain scoped contract history.
 - [ ] Group bulk failures with Vietnamese reasons and truthful success/failure counts; unknown errors use a generic Vietnamese message. Inspect desktop/mobile and light/dark affected layouts when an authorized runnable UI exists.
 - [ ] Close the equivalent full-profile XLSX path in `server/services/tenants/export.ts`: filter candidates through `resolveAccessMany` full contexts and recheck selected IDs before reading sensitive rows/building workbook. Add a multi-building basic-access regression to `tests/server/tenants/export-service.test.ts`. This follows the approved sensitive-profile rule; code inspection found the alternate read path.
-- [ ] Update accepted specs to the new matrix and remove contradictory creator/history/admin-only bulk statements; update engineering/feature docs and migration rollout limitations. Validate `openspec validate --specs`.
+- [ ] Update accepted specs to the new matrix and remove contradictory creator/history/admin-only bulk statements; update engineering/feature docs and migration rollout limitations. Validate `npm run knowledge:check`.
 - [ ] Run `npm run typecheck`, `npm test`, `npm run lint`. Fix regressions, review the complete diff for security leaks and capability/scope consistency, and record exact outcomes and any external SQL rollout step.
 
 ## Execution Record
@@ -79,5 +79,5 @@ interface TenantAccessFacts { activeBuildingIds: string[]; historicalBuildingIds
 
 - Task 2 complete: CLI-generated migration `20261105032920_tenant_scoped_bulk_status.sql`, transactional rollback verification, and 3 static tests pass; targeted lint/diff checks pass. Independent review approved. Live PostgreSQL execution and cloud type generation are pending the manual rollout.
 
-- Task 3 complete: basic-access UI (detail, edit, list, Portal accounts), grouped bulk failure reasons, XLSX export gated by full access, accepted specs and docs updated. Verified 2026-11-05: `npm run typecheck` pass; `npm test` 354 files / 2022 tests pass; `npm run lint` 0 errors (1 pre-existing `vue/no-v-html` warning in AppAiDevChat.vue, unrelated); `openspec validate --specs` pass.
+- Task 3 complete: basic-access UI (detail, edit, list, Portal accounts), grouped bulk failure reasons, XLSX export gated by full access, accepted specs and docs updated. Verified 2026-11-05: `npm run typecheck` pass; `npm test` 354 files / 2022 tests pass; `npm run lint` 0 errors (1 pre-existing `vue/no-v-html` warning in AppAiDevChat.vue, unrelated); legacy OKF validation passed before OKF migration.
 - Not done: live PostgreSQL run of `supabase/verification/tenant_scoped_bulk_status.sql`, cloud type regeneration, and desktop/mobile visual inspection.

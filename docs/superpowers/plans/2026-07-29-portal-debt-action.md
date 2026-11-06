@@ -23,9 +23,9 @@
 ### Task 1: Accept the portal debt and payment-snapshot behavior
 
 **Files:**
-- Modify: `openspec/specs/tenant-portal-api/spec.md`
-- Modify: `openspec/specs/tenant-portal-ui/spec.md`
-- Modify: `openspec/changes/refresh-tenant-portal-ui/tasks.md`
+- Modify: `knowledge/capabilities/tenant-portal-api.md`
+- Modify: `knowledge/capabilities/tenant-portal-ui.md`
+- Modify: `knowledge/changes/refresh-tenant-portal-ui/tasks.md`
 
 **Interfaces:**
 - Produces: accepted API and UI requirements that later implementation tasks satisfy.
@@ -44,7 +44,7 @@ Add checked checklist entries only after the corresponding implementation and ve
 
 - [ ] **Step 4: Validate specs**
 
-Run: `openspec validate --specs`
+Run: `npm run knowledge:check`
 
 Expected: all specs valid.
 
@@ -176,7 +176,7 @@ Expected: all tests pass.
 ### Task 6: Finish documentation, polish, and verification
 
 **Files:**
-- Modify: `openspec/changes/refresh-tenant-portal-ui/tasks.md`
+- Modify: `knowledge/changes/refresh-tenant-portal-ui/tasks.md`
 - Review: all files changed by Tasks 1–5
 
 **Interfaces:**
@@ -188,7 +188,7 @@ Run:
 
 ```bash
 npx vitest run tests/server/tenant-portal/services.test.ts tests/components/portal/PortalInvoicePaymentInstructions.spec.ts tests/pages/portal-invoice-detail-ui.spec.ts tests/pages/portal-home-ui.spec.ts
-openspec validate --specs
+npm run knowledge:check
 ```
 
 Expected: all pass.

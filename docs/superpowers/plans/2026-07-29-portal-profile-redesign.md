@@ -34,8 +34,8 @@
 - Create `tests/composables/portal-unsaved-changes.test.ts`: navigation guard resolution coverage.
 - Create `tests/components/portal/PortalProfileDossier.spec.ts`: complete-profile, missing-value, and responsive-markup coverage.
 - Modify `tests/pages/portal-profile-ui.spec.ts`: assert route-level view/edit separation and portal interaction contracts.
-- Modify `openspec/changes/refresh-tenant-portal-ui/tasks.md`: record the new profile redesign tasks and verification.
-- Modify `openspec/specs/tenant-portal-ui/spec.md`: specify the dedicated edit route, complete personal dossier, and unsaved-change behavior.
+- Modify `knowledge/changes/refresh-tenant-portal-ui/tasks.md`: record the new profile redesign tasks and verification.
+- Modify `knowledge/capabilities/tenant-portal-ui.md`: specify the dedicated edit route, complete personal dossier, and unsaved-change behavior.
 - Modify `docs/features/tenant-portal.md`: document the profile data boundary and edit behavior.
 
 ---
@@ -1061,8 +1061,8 @@ git commit -m "feat(portal): add dedicated profile edit flow"
 ### Task 6: OpenSpec, Documentation, and Verification
 
 **Files:**
-- Modify: `openspec/changes/refresh-tenant-portal-ui/tasks.md`
-- Modify: `openspec/specs/tenant-portal-ui/spec.md`
+- Modify: `knowledge/changes/refresh-tenant-portal-ui/tasks.md`
+- Modify: `knowledge/capabilities/tenant-portal-ui.md`
 - Modify: `docs/features/tenant-portal.md`
 
 **Interfaces:**
@@ -1071,7 +1071,7 @@ git commit -m "feat(portal): add dedicated profile edit flow"
 
 - [ ] **Step 1: Add the accepted requirement scenarios**
 
-Append to the profile requirement in `openspec/specs/tenant-portal-ui/spec.md`:
+Append to the profile requirement in `knowledge/capabilities/tenant-portal-ui.md`:
 
 ```markdown
 #### Scenario: Complete personal dossier
@@ -1094,7 +1094,7 @@ Append to the profile requirement in `openspec/specs/tenant-portal-ui/spec.md`:
 
 - [ ] **Step 2: Update active tasks and feature documentation**
 
-Append this section to `openspec/changes/refresh-tenant-portal-ui/tasks.md`:
+Append this section to `knowledge/changes/refresh-tenant-portal-ui/tasks.md`:
 
 ```markdown
 ## 8. Tenant profile dossier and dedicated edit flow
@@ -1169,6 +1169,6 @@ focused tests and typecheck.
 - [ ] **Step 6: Commit docs and final polish**
 
 ```bash
-git add openspec/changes/refresh-tenant-portal-ui/tasks.md openspec/specs/tenant-portal-ui/spec.md docs/features/tenant-portal.md app tests
+git add knowledge/changes/refresh-tenant-portal-ui/tasks.md knowledge/capabilities/tenant-portal-ui.md docs/features/tenant-portal.md app tests
 git commit -m "docs(portal): specify profile dossier flow"
 ```

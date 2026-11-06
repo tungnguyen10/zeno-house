@@ -47,5 +47,5 @@
 **Files:** relevant operational UI and invoice-browse specs, UI pattern documentation.
 
 - [x] Record the navigation and drawer loading contract in the existing specs and docs.
-- [x] Run focused tests, `openspec validate --specs`, `npm run typecheck`, `npm test`, and `npm run lint`.
+- [x] Run focused tests, `npm run knowledge:check`, `npm run typecheck`, `npm test`, and `npm run lint`.
 - [ ] Visually inspect representative mobile and desktop routes when the running dev server responds.

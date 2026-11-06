@@ -24,13 +24,13 @@
 ### Task 1: Update Accepted Requirements and Active Change
 
 **Files:**
-- Modify: `openspec/changes/refresh-tenant-portal-ui/proposal.md`
-- Modify: `openspec/changes/refresh-tenant-portal-ui/design.md`
-- Modify: `openspec/changes/refresh-tenant-portal-ui/specs/tenant-portal-ui/spec.md`
-- Modify: `openspec/changes/refresh-tenant-portal-ui/tasks.md`
-- Modify: `openspec/specs/tenant-portal-ui/spec.md`
-- Modify: `openspec/specs/tenant-portal-api/spec.md`
-- Modify: `openspec/specs/user-auth/spec.md`
+- Modify: `knowledge/changes/refresh-tenant-portal-ui/proposal.md`
+- Modify: `knowledge/changes/refresh-tenant-portal-ui/design.md`
+- Modify: `knowledge/changes/refresh-tenant-portal-ui/specs/tenant-portal-ui/spec.md`
+- Modify: `knowledge/changes/refresh-tenant-portal-ui/tasks.md`
+- Modify: `knowledge/capabilities/tenant-portal-ui.md`
+- Modify: `knowledge/capabilities/tenant-portal-api.md`
+- Modify: `knowledge/capabilities/user-auth.md`
 - Modify: `docs/features/tenant-portal.md`
 - Modify: `docs/features/authentication.md`
 
@@ -71,7 +71,7 @@ Run:
 
 ```bash
 openspec validate refresh-tenant-portal-ui --strict
-openspec validate --specs
+npm run knowledge:check
 ```
 
 Expected: active change valid; all accepted specs valid.
@@ -195,7 +195,7 @@ Expected: all selected tests pass.
 - [ ] **Step 8: Mark 9.1 complete and commit**
 
 ```bash
-git add app/utils app/composables/tenant-portal/usePortalProfile.ts server/services/tenant-portal/profile.ts tests openspec/changes/refresh-tenant-portal-ui/tasks.md
+git add app/utils app/composables/tenant-portal/usePortalProfile.ts server/services/tenant-portal/profile.ts tests knowledge/changes/refresh-tenant-portal-ui/tasks.md
 git commit -m "feat(portal): allow tenant identity updates"
 ```
 
@@ -288,7 +288,7 @@ reduced motion.
 - [ ] **Step 8: Mark 9.2 complete and commit**
 
 ```bash
-git add app/components/portal app/pages/portal/profile tests openspec/changes/refresh-tenant-portal-ui/tasks.md
+git add app/components/portal app/pages/portal/profile tests knowledge/changes/refresh-tenant-portal-ui/tasks.md
 git commit -m "feat(portal): edit tenant identity images"
 ```
 
@@ -414,7 +414,7 @@ Expected: all selected tests pass.
 - [ ] **Step 9: Mark 9.3 complete and commit**
 
 ```bash
-git add app server tests openspec/changes/refresh-tenant-portal-ui/tasks.md
+git add app server tests knowledge/changes/refresh-tenant-portal-ui/tasks.md
 git commit -m "feat(portal): add secure password change"
 ```
 
@@ -425,7 +425,7 @@ git commit -m "feat(portal): add secure password change"
 **Files:**
 - Modify: `docs/features/tenant-portal.md`
 - Modify: `docs/features/authentication.md`
-- Modify: `openspec/changes/refresh-tenant-portal-ui/tasks.md`
+- Modify: `knowledge/changes/refresh-tenant-portal-ui/tasks.md`
 
 **Interfaces:**
 - Consumes: completed identity, image, and password flows.
@@ -451,7 +451,7 @@ Expected: all selected tests pass.
 npm run typecheck
 npm run lint
 openspec validate refresh-tenant-portal-ui --strict
-openspec validate --specs
+npm run knowledge:check
 git diff --check
 ```
 

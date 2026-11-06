@@ -1,22 +1,5 @@
 # Zeno House Claude Context
 
-Use checked-in project context and treat AGENTS.md as the canonical rule source.
+Follow `AGENTS.md` as the sole cross-agent instructions. Use `knowledge/index.md` for OKF routing and `knowledge/workflow.md` for the Superpowers-based change lifecycle. Read the relevant accepted capability from `knowledge/capabilities/**`, then active change from `knowledge/changes/**` when applicable, and inspect code/tests. Archived history in `knowledge/history/**` is for provenance only.
 
-## First Reads
-
-1. AGENTS.md
-2. docs/agent-context.md
-3. The single architecture/feature/OpenSpec file that matches the task
-
-## Context Budget
-
-- Work delta-first: start from openspec/changes/<active-change>/tasks.md.
-- Read one matching capability spec in openspec/specs/**; do not scan all specs unless requested.
-- Keep scope to one checklist task at a time.
-- Avoid broad repo scans when focused reads are sufficient.
-
-## Rule Ownership
-
-- Repository rules, non-negotiables, and validation commands are owned by AGENTS.md.
-- Deep architecture guidance lives in docs/agent-context.md and docs/architecture/**.
-- Requirement truth lives in openspec/specs/** and active implementation scope in openspec/changes/**.
+Use available Superpowers skills for design, task execution, TDD, debugging, and verification. Do **not** use OpenSpec commands, OpenSpec skills or legacy OpenSpec paths. Follow safety, permissions, UI and verification rules in `AGENTS.md`.
