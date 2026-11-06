@@ -1,3 +1,10 @@
+---
+type: Architecture Reference
+title: "auth-permissions"
+status: stable
+tags: [engineering, reference]
+---
+
 # Auth And Permissions
 
 Zeno House uses Supabase Auth for sessions and role claims. Application authorization is capability-based at the service layer.

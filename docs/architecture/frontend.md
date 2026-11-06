@@ -1,3 +1,10 @@
+---
+type: Architecture Reference
+title: "frontend"
+status: stable
+tags: [engineering, reference]
+---
+
 # Frontend Architecture
 
 Zeno House uses Nuxt file-based routing, auto-imported composables, auto-imported components, Pinia for auth state, and Tailwind for styling.

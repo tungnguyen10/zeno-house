@@ -1,3 +1,10 @@
+---
+type: Development Guide
+title: "ai-billing-assistant-rollout"
+status: stable
+tags: [engineering, reference]
+---
+
 # AI Billing Assistant Rollout
 
 Use this runbook after deploying the additive AI hardening migration. The repository does not require a committed Supabase CLI dependency: apply the SQL through the project's configured cloud workflow or Supabase Dashboard, then run the read-only verification file.
