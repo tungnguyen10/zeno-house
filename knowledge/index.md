@@ -1,7 +1,5 @@
 ---
-type: Index
-title: "Zeno House OKF knowledge graph"
-status: active
+okf_version: "0.2"
 ---
 
 # Zeno House Knowledge

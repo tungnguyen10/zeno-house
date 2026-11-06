@@ -1,8 +1,3 @@
----
-type: Index
-title: "Zeno House change history"
----
-
 # Archived Change History
 
 - [2026-05-14-api-server-architecture](./2026-05-14-api-server-architecture.md)

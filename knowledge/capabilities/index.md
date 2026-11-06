@@ -1,9 +1,3 @@
----
-type: Index
-title: "Zeno House capability specifications"
-status: stable
----
-
 # Accepted Capability Specifications
 
 - [admin-shell](./admin-shell.md)
