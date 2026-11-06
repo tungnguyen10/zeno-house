@@ -63,4 +63,4 @@ if (problems.length) {
   console.error('OKF validation failed: ' + problems.length + ' problem(s)')
   process.exit(1)
 }
-console.log('OKF structure verified: ' + concepts + ' concepts, ' + indices + ' index files')
+console.warn('OKF structure verified: ' + concepts + ' concepts, ' + indices + ' index files')
