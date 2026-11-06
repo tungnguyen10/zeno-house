@@ -1,3 +1,18 @@
+---
+type: Historical Design
+title: "2026-07-29-portal-profile-figma-layout-design"
+status: deprecated
+archive_state: historical
+tags: [superpowers, history, migration]
+sources:
+  - resource: "https://github.com/tungnguyen10/zeno-house/blob/060d0d77e07095c593b9ff154450580db8ba0f41/docs/superpowers/specs/2026-07-29-portal-profile-figma-layout-design.md"
+generated:
+  by: "process:docs-okf-consolidation"
+  at: "2026-11-06T00:00:00Z"
+---
+
+> Historical Superpowers design/execution record. The document is preserved for provenance and is not a second accepted specification. For current rules, use `docs/capabilities/**` and `docs/changes/**`.
+
 # Portal Profile Figma Layout
 
 **Date:** 2026-07-29
@@ -66,4 +81,3 @@ No API, composable, validator, database, route, token, or primitive changes are 
 - Typecheck and lint for changed Vue files
 - Visual inspection in light and dark at representative mobile and desktop widths when a runnable
   authenticated portal session is available
-
