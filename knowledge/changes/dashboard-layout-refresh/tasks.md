@@ -26,4 +26,4 @@ generated:
 ## 3. Page and verification
 
 - [x] 3.1 Reorder `/dashboard`: KPI cards, pending + occupancy, revenue
-- [x] 3.2 Update dashboard component tests; run typecheck, lint, tests, and `openspec validate --specs`
+- [x] 3.2 Update dashboard component tests; run typecheck, lint, tests, and `npm run knowledge:check`
