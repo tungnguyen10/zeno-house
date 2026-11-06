@@ -84,7 +84,7 @@ Cross-tenant or missing invoice requests return the existing not-found response 
 - TDD coverage for scoped snapshot resolution and DTO mapping.
 - Component/source tests for outstanding, paid, void, missing-snapshot, missing-QR, copy success, and copy failure states.
 - Portal-home tests for global error handling, action-first invoice copy, integrated finance card, semantic headings, formatted date, and removal of duplicate quick actions.
-- `openspec validate --specs`
+- `npm run knowledge:check`
 - focused portal and tenant service tests
 - `npm run typecheck`
 - `npm run lint`

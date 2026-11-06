@@ -32,8 +32,8 @@
 - `tests/server/operations-report/prepaid-effective-deletion-sql.test.ts`: validate the status-independent date-window predicate and function security.
 - `app/pages/dashboard/buildings/[id]/settings.vue`: confirmation state, modal content, loading/error/success states, and active-only action.
 - `tests/pages/building-settings-prepaid-delete.spec.ts`: focused UI contract coverage.
-- `openspec/specs/prepaid-expenses/spec.md`: accepted effective-deletion behavior.
-- `openspec/specs/operations-report/spec.md`: closure-lock exception for non-retroactive cancellation.
+- `knowledge/capabilities/prepaid-expenses.md`: accepted effective-deletion behavior.
+- `knowledge/capabilities/operations-report.md`: closure-lock exception for non-retroactive cancellation.
 - `docs/features/operations-report.md`: operator-facing behavior documentation.
 
 ---
@@ -441,8 +441,8 @@ git commit -m "feat: confirm prepaid expense cancellation"
 ### Task 5: Synchronize accepted behavior and verify the complete change
 
 **Files:**
-- Modify: `openspec/specs/prepaid-expenses/spec.md`
-- Modify: `openspec/specs/operations-report/spec.md`
+- Modify: `knowledge/capabilities/prepaid-expenses.md`
+- Modify: `knowledge/capabilities/operations-report.md`
 - Modify: `docs/features/operations-report.md`
 
 **Interfaces:**
@@ -480,7 +480,7 @@ Update `docs/features/operations-report.md` with the same operator flow and note
 Run:
 
 ```bash
-openspec validate --specs
+npm run knowledge:check
 npm test -- tests/utils/api-fetch.test.ts tests/utils/format-period.test.ts tests/server/operations-report/prepaid-expense-service.test.ts tests/server/operations-report/prepaid-effective-deletion-sql.test.ts tests/server/operations-report/snapshot-performance.test.ts tests/pages/building-settings-prepaid-delete.spec.ts
 ```
 
@@ -512,6 +512,6 @@ Run: `git diff --check` and inspect only files in this plan. Confirm:
 - [ ] **Step 6: Commit documentation**
 
 ```bash
-git add openspec/specs/prepaid-expenses/spec.md openspec/specs/operations-report/spec.md docs/features/operations-report.md
+git add knowledge/capabilities/prepaid-expenses.md knowledge/capabilities/operations-report.md docs/features/operations-report.md
 git commit -m "docs: define prepaid effective deletion"
 ```

@@ -160,8 +160,8 @@ No server or composable contract changes are required.
 - Modify `app/pages/portal/invoices/[id].vue`.
 - Modify `tests/pages/portal-invoices.spec.ts`.
 - Modify `tests/pages/portal-invoice-detail-ui.spec.ts`.
-- Update `openspec/specs/tenant-portal-ui/spec.md` only where the accepted visual/interaction behavior needs explicit coverage.
-- Update `openspec/changes/refresh-tenant-portal-ui/tasks.md`.
+- Update `knowledge/capabilities/tenant-portal-ui.md` only where the accepted visual/interaction behavior needs explicit coverage.
+- Update `knowledge/changes/refresh-tenant-portal-ui/tasks.md`.
 
 No production file is deleted.
 
@@ -189,7 +189,7 @@ Detail coverage:
 Final verification:
 
 - focused portal invoice page/component tests;
-- `openspec validate --specs`;
+- `npm run knowledge:check`;
 - `npm run typecheck`;
 - `npm run lint`;
 - full `npm test -- --exclude '.worktrees/**'`;

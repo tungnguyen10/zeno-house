@@ -104,7 +104,7 @@ Run `npx vitest run tests/utils/mappers/tenant-portal.spec.ts tests/pages/portal
 
 - [ ] **Step 2: Run static checks**
 
-Run `npm run typecheck`, `npm run lint`, and `openspec validate --specs`.
+Run `npm run typecheck`, `npm run lint`, and `npm run knowledge:check`.
 
 - [ ] **Step 3: Inspect responsive and state behavior**
 

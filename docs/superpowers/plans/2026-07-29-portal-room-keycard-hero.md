@@ -234,7 +234,7 @@ Run:
 ```bash
 npm run typecheck
 npm run lint
-npx openspec validate --specs
+npx npm run knowledge:check
 git diff --check main...HEAD
 ```
 
