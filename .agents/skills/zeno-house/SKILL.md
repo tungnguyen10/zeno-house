@@ -10,10 +10,10 @@ Use this skill to get oriented quickly before changing Zeno House. Keep context 
 ## Quick Start
 
 1. Read `docs/agent-context.md`.
-2. If the task changes behavior, read the relevant `openspec/specs/<capability>/spec.md`.
+2. If the task changes behavior, read the relevant `knowledge/capabilities/<capability>.md`.
 3. If implementation guidance is needed, read the matching `docs/architecture/*` or `docs/features/*` file.
 4. Inspect source files only after choosing the narrow area.
-5. Update code, specs, and docs together when behavior changes.
+5. Use Superpowers to implement/verify and update code, accepted OKF specs, and supporting docs together when behavior changes.
 
 ## UI Work
 
@@ -44,12 +44,12 @@ Read `references/context-map.md` when you need:
 - Repositories query and persist only.
 - UI consumes DTOs from `app/types/**`; DB rows map through `app/utils/mappers/**`.
 - Zod validators in `app/utils/validators/**` are shared across client/server boundaries.
-- OpenSpec current specs live in `openspec/specs/**`; archives are history and may be superseded.
+- Current requirements live in `knowledge/capabilities/**`; active intent lives in `knowledge/changes/**`; historical provenance is `knowledge/history/**`. Use Superpowers for implementation.
 
 ## Verification
 
-- Specs: `openspec validate --specs`
-- Active changes: `openspec list --json`
+- Knowledge: check OKF YAML frontmatter and links
+- Changes: consult `knowledge/changes/index.md`
 - Typecheck: `npm run typecheck`
 - Tests: `npm test`
 - Lint: `npm run lint`

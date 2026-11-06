@@ -5,16 +5,11 @@ Keep other entry files thin and reference this file instead of duplicating rules
 
 ## Fast Read Order
 
-- Read `docs/agent-context.md` first for project map and task routing.
-- Read only the task-matching deep sources needed for the current scope:
-   - architecture: `docs/architecture/rules.md`
-   - frontend/UI: `docs/architecture/frontend.md`, `docs/ui-patterns/design-system.md`
-   - server/API: `docs/architecture/api.md`
-   - database/Supabase: `docs/architecture/database.md`
-   - auth/permissions: `docs/architecture/auth-permissions.md`
-   - feature behavior: `docs/features/*.md`
-   - requirement behavior: `openspec/specs/<capability>/spec.md`
-- For OpenSpec workflow tasks, use matching `.agents/skills/openspec-*` skill.
+1. Read `knowledge/index.md` and `docs/agent-context.md` for routing.
+2. For accepted behavior, read only matching `knowledge/capabilities/<name>.md`.
+3. For in-progress intent, inspect `knowledge/changes/<change-id>/**` and task checkboxes; do not assume accepted or deployed.
+4. Read `docs/architecture/**`, `docs/features/**`, source and tests for runtime facts; archived change links in `knowledge/history/**` are provenance only.
+5. Use installed Superpowers skills for brainstorming, writing execution plans, TDD, debugging, verification, and review. Do not invoke OpenSpec CLI or OpenSpec skills.
 
 ## UI Quality Gate
 
@@ -27,18 +22,19 @@ Keep other entry files thin and reference this file instead of duplicating rules
 
 ## Context Budget
 
-- Use delta-first reads: `openspec/changes/<active-change>/tasks.md` before broad spec scanning.
-- Do not scan all `openspec/specs/**` unless task scope spans multiple capabilities.
-- Start implementation with a short read plan (target files + why).
-- Keep implementation scope to one checklist task item at a time.
+- Read one relevant capability, active change, and source slice first; avoid scanning all 97 capabilities for narrow changes.
+- For an active change, read `knowledge/changes/<id>/tasks.md` before exploring related specs.
+- Keep one task checklist item in focus during implementation.
 
-## Source Of Truth
+## Sources of Truth
 
-- Current implementation guidance lives in `docs/**`.
-- Accepted requirements live in `openspec/specs/**`.
-- Active proposals/tasks live in `openspec/changes/**` excluding `archive`.
-- Archived changes are history only. Do not resync archive content blindly; later specs may intentionally supersede it.
-- Code wins over stale prose. If code and docs disagree, verify in source, then update docs/specs as part of the change.
+- `knowledge/capabilities/**`: accepted requirements and scenarios (OKF).
+- `knowledge/changes/**`: proposed/in-progress behavior, design, and tasks (OKF); never promote by default.
+- `knowledge/history/**`: historical provenance; later accepted requirements and code may supersede history.
+- `knowledge/workflow.md`: one feature/change lifecycle with Superpowers execution.
+- `docs/**`: engineering and user guidance; if overlapping normative behavior conflicts, reconcile with accepted knowledge and tests.
+- Actual code, migrations, and tests establish implemented behavior. Identify discrepancies explicitly; update knowledge only after verification.
+- Treat baseline imported knowledge as migrated, not proof of implementation or production rollout.
 
 ## Non-Negotiables
 
@@ -59,6 +55,7 @@ Keep other entry files thin and reference this file instead of duplicating rules
 
 ## Verification
 
-- Specs changed: `openspec validate --specs`
-- Check active changes: `openspec list --json`
-- Code edits: run narrow relevant tests first, then `npm run typecheck`, `npm test`, `npm run lint` as needed.
+- OKF: check YAML frontmatter with `type`, resolve all relative links and verify every accepted capability and active change is indexed; no OpenSpec CLI is required.
+- Source modifications: run narrow tests first, then `npm run typecheck`, `npm test`, `npm run lint` as appropriate.
+- For database or deployment work, verify migration and cloud rollout separately; never claim cloud checks passed from static checks alone.
+- On completion: update accepted `knowledge/capabilities/**`, relevant `knowledge/changes/**` status, architecture docs, and verification evidence in the same PR.

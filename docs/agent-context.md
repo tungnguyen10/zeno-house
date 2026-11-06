@@ -22,37 +22,29 @@ Read only what matches the task:
 | Task | Start here | Then read |
 | --- | --- | --- |
 | Any code change | `AGENTS.md`, this file | relevant source files |
-| Feature behavior | `openspec/specs/<capability>/spec.md` | `docs/features/*.md` if current UI/domain context is needed |
-| New/changed requirement | `docs/development/change-workflow.md` | OpenSpec change under `openspec/changes/<name>` |
+| Feature behavior | `knowledge/capabilities/<capability>.md` | `docs/features/*.md` if current UI/domain context is needed |
+| New/changed requirement | `docs/development/change-workflow.md` | OKF change under `knowledge/changes/<name>` |
 | Frontend/UI | `.agents/skills/zeno-house/references/ui-polish-workflow.md` | `docs/architecture/frontend.md`, `docs/ui-patterns/design-system.md`, applicable `.agents/instructions/**`; use `frontend-design` + Hallmark |
 | Server/API | `docs/architecture/api.md` | `docs/architecture/rules.md`, relevant `server/services/**` |
 | Auth/permissions | `docs/architecture/auth-permissions.md` | `server/utils/permissions.ts`, `server/utils/scope.ts` |
 | Database/Supabase | `docs/architecture/database.md` | migrations under `supabase/migrations/**` |
-| Billing | `docs/features/billing.md` | `openspec/specs/billing-*`, `server/services/billing/**` |
-| AI assistant | `docs/architecture/ai-agent.md` | active AI OpenSpec task, then `server/services/ai/**` |
-| Contracts/occupancy | `docs/features/contracts.md` | `openspec/specs/contracts-*`, `contract-occupants-*` |
+| Billing | `docs/features/billing.md` | `knowledge/capabilities/billing-*`, `server/services/billing/**` |
+| AI assistant | `docs/architecture/ai-agent.md` | active AI OKF change tasks, then `server/services/ai/**` |
+| Contracts/occupancy | `docs/features/contracts.md` | `knowledge/capabilities/contracts-*`, `contract-occupants-*` |
 | Property CRUD | `docs/features/property-operations.md` | `buildings-*`, `rooms-*`, `tenants-*` specs |
 | Services/meters | `docs/features/services-meter-readings.md` | `meter-readings-api`, service specs |
 
 ## Source Order
 
-1. Code is the final truth when docs are stale.
-2. `openspec/specs/**` is the accepted requirement truth.
-3. `openspec/changes/<active-change>/**` describes in-progress intended behavior.
-4. `docs/**` explains current architecture and operating guidance.
-5. `openspec/changes/archive/**` is history. Later archives or current specs may supersede it.
+1. Source code, migrations and tests determine what is implemented, not what is approved.
+2. `knowledge/capabilities/**` is accepted requirement truth.
+3. `knowledge/changes/**` is still-proposed/in-progress intent and checklists.
+4. `docs/**` is engineering guidance; reconcile if stale.
+5. `knowledge/history/**` links immutable legacy history, not authoritative behavior.
 
-When a task changes behavior, update code, specs, and developer docs together unless the user explicitly asks for a narrow docs/spec-only edit.
+## Active OKF Changes
 
-## Active OpenSpec State
-
-Run `openspec list --json` for the current source of truth before planning implementation. Do not hardcode active change IDs in this file because they can drift quickly.
-
-Current snapshot at review time (2026-07-14):
-
-- No active changes.
-
-Do not assume archived changes still need syncing. Check current specs first.
+See `knowledge/changes/index.md`; the source snapshot has four open bundles, with verification evidence and remaining checkbox tasks recorded. Never treat a checked task as proof of cloud rollout or release without source verification.
 
 ## AI Implementation Snapshot
 
@@ -81,8 +73,8 @@ Current maturity: server-owned foundation plus scoped period opening, determinis
 
 ## Verification Shortcuts
 
-- Specs: `openspec validate --specs`
-- Active changes: `openspec list --json`
+- Knowledge: validate YAML frontmatter and links in `knowledge/**`
+- Active changes: `knowledge/changes/index.md`
 - Typecheck: `npm run typecheck`
 - Tests: `npm test`
 - Lint: `npm run lint`

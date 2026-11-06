@@ -1,23 +1,5 @@
-# Zeno House Instructions
+# Zeno House Copilot Instructions
 
-Use checked-in project context and treat `AGENTS.md` as the canonical rule source.
+Read `AGENTS.md` first. Route project knowledge through `knowledge/index.md`; accepted behavior is `knowledge/capabilities/**`, planned/in-progress changes are `knowledge/changes/**`, and archived provenance is `knowledge/history/**`. For the development lifecycle read `knowledge/workflow.md` and apply available Superpowers skills. No OpenSpec CLI or parallel proposal workflow.
 
-## First Reads
-
-1. `AGENTS.md`
-2. `docs/agent-context.md`
-3. The one architecture, feature, or OpenSpec file that matches the task.
-
-For every user-visible UI change, follow `.agents/skills/zeno-house/references/ui-polish-workflow.md`. Use `frontend-design` for design judgment and Hallmark for anti-slop critique/final polish; the Zeno House design system and existing primitives override generic design defaults.
-
-## Context Budget
-
-- Work delta-first: read the active `openspec/changes/<change-id>/tasks.md` before broader specs.
-- Read only one matching capability spec under `openspec/specs/**` unless the task is explicitly cross-capability.
-- Avoid full-repo doc scans; pull only files needed for the current checklist item.
-
-## Rule Ownership
-
-- Repository rules, non-negotiables, and verification commands are owned by `AGENTS.md`.
-- Architecture details live in `docs/**`.
-- Requirement truth lives in `openspec/specs/**` and active tasks in `openspec/changes/**`.
+For UI changes, retain `.agents/skills/zeno-house/references/ui-polish-workflow.md`, frontend-design, Hallmark, and the existing Zeno House primitives/design tokens. Use only task-specific context to conserve tokens. Verify behavior against real code/tests before updating accepted knowledge.
