@@ -25,8 +25,8 @@
 - Modify: `tests/utils/portal-invoice-statement.test.ts`
 - Modify: `tests/pages/portal-invoices.spec.ts`
 - Modify: `app/utils/tenant-portal/invoice-statement.ts`
-- Modify: `openspec/specs/tenant-portal-ui/spec.md`
-- Modify: `openspec/changes/refresh-tenant-portal-ui/tasks.md`
+- Modify: `knowledge/capabilities/tenant-portal-ui.md`
+- Modify: `knowledge/changes/refresh-tenant-portal-ui/tasks.md`
 
 **Interfaces:**
 - Consumes: `TenantInvoiceListItem[]`
@@ -101,7 +101,7 @@ Run:
 
 ```bash
 npx vitest run tests/utils/portal-invoice-statement.test.ts tests/pages/portal-invoices.spec.ts
-openspec validate --specs
+npm run knowledge:check
 npm run typecheck
 npm run lint
 npm test -- --exclude '.worktrees/**'

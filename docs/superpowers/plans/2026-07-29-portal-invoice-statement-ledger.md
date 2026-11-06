@@ -296,8 +296,8 @@ git commit -m "feat: polish portal invoice statement detail"
 ### Task 4: Accepted Requirements And Final Quality Gate
 
 **Files:**
-- Modify: `openspec/specs/tenant-portal-ui/spec.md`
-- Modify: `openspec/changes/refresh-tenant-portal-ui/tasks.md`
+- Modify: `knowledge/capabilities/tenant-portal-ui.md`
+- Modify: `knowledge/changes/refresh-tenant-portal-ui/tasks.md`
 - Review: all files changed by Tasks 1–3
 
 **Interfaces:**
@@ -322,7 +322,7 @@ Run:
 
 ```bash
 npx vitest run tests/utils/portal-invoice-statement.test.ts tests/pages/portal-invoices.spec.ts tests/pages/portal-invoice-detail-ui.spec.ts tests/components/portal/PortalInvoicePaymentInstructions.spec.ts
-openspec validate --specs
+npm run knowledge:check
 ```
 
 Expected: all tests and all specs pass.

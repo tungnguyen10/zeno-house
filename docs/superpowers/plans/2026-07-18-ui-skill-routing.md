@@ -72,7 +72,7 @@ Add an `UI Quality Gate` to `AGENTS.md` with the authority order, required skill
 Replace the dated active-change counts with a dynamic instruction to run:
 
 ```bash
-openspec list --json
+consult knowledge/changes/index.md
 openspec list --specs
 ```
 

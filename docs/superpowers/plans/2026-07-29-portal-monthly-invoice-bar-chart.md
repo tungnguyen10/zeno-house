@@ -304,7 +304,7 @@ git commit -m "feat(portal): show monthly invoice bar chart"
 
 **Files:**
 - Modify: `tests/pages/portal-home-ui.spec.ts`
-- Modify: `openspec/specs/tenant-portal-ui/spec.md`
+- Modify: `knowledge/capabilities/tenant-portal-ui.md`
 
 **Interfaces:**
 - Consumes: the existing `Tenant financial overview` OpenSpec requirement.
@@ -358,7 +358,7 @@ Run:
 
 ```bash
 npx vitest run tests/components/portal/PortalSpendingChart.spec.ts tests/pages/portal-home-ui.spec.ts tests/pages/portal-ui-showcase.spec.ts tests/utils/portal-financial-overview.test.ts tests/composables/usePortalChartTheme.test.ts
-openspec validate --specs
+npm run knowledge:check
 ```
 
 Expected: 5 focused test files pass and OpenSpec reports `89 passed, 0 failed`.
@@ -366,7 +366,7 @@ Expected: 5 focused test files pass and OpenSpec reports `89 passed, 0 failed`.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add tests/pages/portal-home-ui.spec.ts openspec/specs/tenant-portal-ui/spec.md
+git add tests/pages/portal-home-ui.spec.ts knowledge/capabilities/tenant-portal-ui.md
 git commit -m "docs(portal): specify monthly invoice bars"
 ```
 
@@ -396,7 +396,7 @@ Run:
 ```bash
 npm run typecheck
 npm run lint
-openspec validate --specs
+npm run knowledge:check
 git diff --check
 ```
 
@@ -442,7 +442,7 @@ Expected files:
 
 ```text
 app/components/portal/PortalSpendingChart.vue
-openspec/specs/tenant-portal-ui/spec.md
+knowledge/capabilities/tenant-portal-ui.md
 tests/components/portal/PortalSpendingChart.spec.ts
 tests/pages/portal-home-ui.spec.ts
 ```
