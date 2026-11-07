@@ -7,7 +7,43 @@ tags: [engineering, reference]
 
 # Zeno House - Project Status
 
-Last reviewed from source: 2026-07-23.
+Documentation structure reviewed: 2026-11-07 against `develop` commit
+`8544e7f9b3293dfc97b41e163468d783bb029b18` (PR #17).
+
+This review covers documentation structure, inventory and execution workflow.
+It does not reverify the implementation or deployment of the business features below.
+Previous source review date: 2026-07-23; dated implementation updates are retained.
+
+## Current Documentation Status — OKF v0.2
+
+`docs/**` is the only documentation and specification root.
+See [bundle index](./index.md) and [agent workflow](./workflow.md).
+
+| Area | Verified scope |
+| --- | --- |
+| Accepted capabilities | 97 specifications in `docs/capabilities/**`; see [index](./capabilities/index.md) |
+| Active changes | 7 bundles in `docs/changes/**`; see [index](./changes/index.md) |
+| Archived changes | 86 legacy change bundles; see [history](./history/index.md) |
+| Historical Superpowers records | 39 design/plan files; see [history](./history/superpowers/index.md) |
+| Execution workflow | Superpowers: explore/design → one plan → TDD/implementation → review/verify → accept/archive |
+| CI evidence | [Run 42159572816](https://github.com/tungnguyen10/zeno-house/actions/runs/42159572816) passed on this commit |
+
+Active bundles are `add-contract-amendments`, `add-dashboard-light-mode`,
+`dashboard-layout-refresh`, `harden-event-audit`, `tenant-authorization-scope`,
+`atomic-contract-renewal`, and `atomic-billing-close`.
+Active status and completed checklist items do not establish deployment.
+Use each bundle's verification evidence and remaining rollout gates.
+
+Accepted requirements live in `docs/capabilities/**`. Proposed behavior, designs
+and one canonical checklist (`implementation-plan.md` or migrated `tasks.md`)
+live in `docs/changes/<slug>/**`. Promote approved, verified deltas into accepted
+capabilities and preserve completed records in `docs/history/**`.
+
+Do not recreate `knowledge/**`, `openspec/**` or `docs/superpowers/**`.
+Commit-pinned legacy URLs in `sources` preserve provenance and remain valid.
+Run `npm run knowledge:check` for current OKF structural validation.
+
+## Dated Implementation Updates
 
 Mobile app-shell and filter-toolbar unification: 2026-10-01
 
@@ -123,13 +159,18 @@ Billing component refactor update: 2026-07-10
   - `app/utils/billing/audit-display.ts`
 - Updated audit CSV UX: export is disabled while cursor pagination still has more pages.
 
-This file summarizes what the current codebase already handles. It reflects the working tree as read on 2026-07-10.
+The following baseline summarizes the working tree read on 2026-07-10.
+Its inventories, feature descriptions and gaps are historical observations,
+not a current repository or deployment assessment.
 
 Zeno House is now an authenticated internal operations app for rental buildings. The implemented surface covers the core landlord workflow from property setup to contract lifecycle, service configuration, meter readings, monthly billing, invoice collection, corrections, period close, and operational dashboard monitoring.
 
-## Source Inventory
+## Historical Source Inventory — 2026-07-10
 
-| Area | Current count / scope |
+Counts and paths below are retained from the original snapshot.
+Use Current Documentation Status above for the post-PR #17 documentation inventory.
+
+| Area | Recorded count / scope |
 | --- | --- |
 | Nuxt pages | 32 Vue page files under `app/pages/**` |
 | Vue components | 100 Vue component files under `app/components/**` |
@@ -688,9 +729,14 @@ npm run test:coverage
 npm run knowledge:check
 ```
 
-## OpenSpec Status
+## Historical OpenSpec Status — July 2026
 
-Active changes:
+This imported section records the previous workflow. It is not the current
+active-change list. The original inventory says no active changes, while this
+section lists `add-owner-scoped-access`; that historical inconsistency is retained
+without inferring completion or changing past counts.
+
+Active changes recorded in this section:
 
 - `add-owner-scoped-access`, 0/52 tasks complete
 
@@ -728,7 +774,11 @@ Recent archived changes show completed work in these areas:
 - buildings, rooms, tenants vertical slices
 - auth/session/app shell/API server foundations
 
-## Known Gaps / Not Yet Productized
+## Historical Known Gaps / Not Yet Productized
+
+These statements belong to the earlier baseline and require fresh source review
+before being used as current work items. In particular, the CI absence claim
+below is superseded by `.github/workflows/ci.yml` and the successful run linked above.
 
 - Tenant portal role and tenant self-service screens are not present.
 - Email/notification flows are not wired into product actions.
@@ -738,7 +788,7 @@ Recent archived changes show completed work in these areas:
 - Billing header cleanup still needs manual smoke/spot-check before the active change should be archived.
 - Active change docs and current source have small UI mismatches around KPI strip layout wording and the missing kebab icon in the action trigger.
 
-## Bottom Line
+## Historical Baseline Summary
 
 The project already handles the complete internal rental-operations backbone:
 

@@ -37,6 +37,10 @@ generated:
 
 ## 5. Coverage gate and documentation
 
+The checked OpenSpec validation item below is imported historical evidence.
+For subsequent verification, run `npm run knowledge:check` under the
+[current workflow](../../workflow.md); no new OKF verification is asserted here.
+
 - [x] 5.1 Add a business mutation registry and CI test requiring every mutating route/system workflow to declare audit ownership and durability strategy
 - [x] 5.2 Strengthen entity-specific snapshot projection tests for credentials, signed access, binary data, and private Storage paths
 - [x] 5.3 Update entity-audit-log and affected main specs plus architecture, database, API, and feature documentation
