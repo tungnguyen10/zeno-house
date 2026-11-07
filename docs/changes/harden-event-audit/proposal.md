@@ -44,4 +44,4 @@ Business mutations can currently succeed without a durable audit event, and dele
 - Supabase migrations for audit history scope, operation outbox, RPC permissions, and atomic audited writes.
 - Audit/billing types, mappers, constants, repositories, services, API query behavior, and reconciliation scheduling.
 - Master-data bulk services, contract/renewal flows, invoice profile and email setting services.
-- OpenSpec requirements, architecture/database/API documentation, and comprehensive Vitest migration/service/coverage tests.
+- OKF accepted capabilities and active change requirements, architecture/database/API documentation, and comprehensive Vitest migration/service/coverage tests.

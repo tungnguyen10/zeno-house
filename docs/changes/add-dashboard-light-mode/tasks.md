@@ -31,6 +31,10 @@ generated:
 
 ## 4. Documentation and Verification
 
+The checked OpenSpec validation item below is imported historical evidence.
+For subsequent verification, run `npm run knowledge:check` under the
+[current workflow](../../workflow.md); no new OKF verification is asserted here.
+
 - [x] 4.1 Update current specs and frontend/design-system/UI-polish guidance for the dual-theme semantic contract
 - [x] 4.2 Run OpenSpec validation, focused tests, typecheck, production build, full tests, and lint
 - [ ] 4.3 Perform desktop/mobile visual and interaction-state polish after approval to start the local runtime

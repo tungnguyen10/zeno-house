@@ -35,5 +35,9 @@ generated:
 
 ## 5. Documentation And Verification
 
+The checked OpenSpec validation item below is imported historical evidence.
+For subsequent verification, run `npm run knowledge:check` under the
+[current workflow](../../workflow.md); no new OKF verification is asserted here.
+
 - [x] 5.1 Update contracts, tenant portal, API, database, scheduler, and rollout documentation including cloud migration/type-generation steps.
 - [x] 5.2 Run focused suites, full tests, typecheck, lint, OpenSpec validation, SQL verification, and final UI polish review; record any environment-only rollout steps as not locally executed.
