@@ -1,7 +1,7 @@
 ---
 type: change-specification-and-implementation-plan
 title: "ZENO HOUSE — Tenant V2: Quick Create & Claude Identity Autofill"
-status: proposed
+status: draft
 version: "1.1"
 date: "2026-11-09"
 repository: "tungnguyen10/zeno-house"
@@ -17,7 +17,7 @@ owner: "ZENO HOUSE"
 >
 > **Quyết định công nghệ:** Claude Platform API trực tiếp (`@anthropic-ai/sdk`) dành riêng cho Identity Autofill. AI Chat/Billing **tiếp tục dùng OpenRouter**, không đổi provider. `claude-haiku-5-5` là model benchmark chính, `claude-sonnet-5-5` là đối chứng; **không tự động fallback sang Sonnet**. Claude API **có tính phí**, không dùng quota Free của OpenRouter.
 >
-> **Trạng thái:** Đây là **spec và kế hoạch**, chưa code, chưa có PR, chưa benchmark và chưa có chứng nhận quyền riêng tư cho ảnh căn cước thật. Chỉ thử bằng ảnh hoàn toàn giả lập cho đến khi privacy/security gate được phê duyệt.
+> **Trạng thái:** Đây là **spec và kế hoạch**, chưa code triển khai, chưa có PR chức năng, chưa benchmark và chưa có chứng nhận quyền riêng tư cho ảnh căn cước thật. Chỉ thử bằng ảnh hoàn toàn giả lập cho đến khi privacy/security gate được phê duyệt.
 
 ## A. Tóm tắt quyết định
 
