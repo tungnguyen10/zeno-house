@@ -372,3 +372,33 @@ with server-owned building context. The generic master-data bulk RPC SHALL remai
 #### Scenario: Relationship changes after authorization
 - **WHEN** active building relationships differ from the authorized snapshot under the RPC lock
 - **THEN** that item returns conflict without changing its status
+
+
+### Requirement: Normalized, scoped identity conflicts
+Tenant create, update and bulk import SHALL validate and store canonical phone/ID values using the shared identity rules. Vietnamese `+84`/`84` plus nine digits becomes a ten-digit `0` number; supported international numbers retain `+` and 8–15 digits. Whitespace and phone separators are removed; IDs remove whitespace and use Unicode uppercase, with blank IDs becoming null.
+
+A duplicate visible with `full` access SHALL return 409 `TENANT_DUPLICATE`, `details.fieldErrors` and `details.existingTenantId`. If any matching tenant is `basic` or `none`, the response SHALL instead be 409 `TENANT_IDENTITY_CONFLICT` with message `Không thể tạo hồ sơ với thông tin này; liên hệ quản trị viên`, without details, IDs or field hints. Identity unique-index races SHALL follow the same policy; a disappearing match SHALL use the generic response.
+
+#### Scenario: Out-of-scope normalized duplicate
+- **WHEN** an owner creates a profile using a formatted phone or ID belonging to an out-of-scope tenant
+- **THEN** the response is the generic conflict without revealing the matching field or tenant
+
+#### Scenario: Concurrent duplicate creation
+- **WHEN** an identity unique index rejects a tenant insert or update
+- **THEN** the service returns a scoped 409 without exposing PostgreSQL/index details
+
+### Requirement: Persistent identity conflict budget
+Identity checks SHALL peek at a per-user database budget before duplicate lookup. All database duplicate conflict responses, including full-access duplicates, SHALL count toward the default 10-conflict budget per 900-second fixed window. Import SHALL count conflicting rows; duplicates inside the same file SHALL not count. Requests starting after budget exhaustion SHALL return 429 `RATE_LIMITED` with `Retry-After` and `details.retryAfterSeconds`, without a duplicate lookup. Peek and record are separate operations: requests already admitted concurrently may exceed the budget; this is not a strict concurrent admission quota.
+
+#### Scenario: Exhausted conflict budget
+- **WHEN** a user begins another identity operation after reaching the budget
+- **THEN** 429 is returned before searching tenant identities
+
+### Requirement: Non-disclosing import results
+Bulk import SHALL compare normalized values. In-file duplicates retain specific row reasons. Database duplicates with full access retain `duplicate_phone`/`duplicate_id_number`; any out-of-scope match SHALL use `identity_conflict` with the generic message and no field errors. A concurrent batch insert failure SHALL mark the entire uncommitted batch `unexpected_error` without exposing database diagnostics.
+
+#### Scenario: Mixed access import duplicate
+- **WHEN** a row matches both a full-access tenant and an out-of-scope tenant
+- **THEN** the row returns only `identity_conflict`
+
+Implementation and production rollout evidence: [tenant identity hardening](../changes/harden-tenant-identity-data/index.md). Database rollout remains a separate acceptance gate.

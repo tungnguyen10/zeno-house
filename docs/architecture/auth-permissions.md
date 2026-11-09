@@ -373,3 +373,7 @@ Managers also receive no reserve-fund or shared-expense capabilities, so both AP
 - Do not expose service-role or secret keys to client runtime config.
 - Never query business tables from browser code; go through `server/api/**`.
 - Prefer capability checks over direct role checks in business code.
+
+## Tenant identity conflict disclosure
+
+The shared tenant conflict service resolves full/basic/none access for matched tenants. Only entirely full-access matches expose field errors and an existing tenant ID. Mixed-scope and portal conflicts use a single generic response; identity checks consult a per-user persistent conflict budget first. See the [identity hardening design](../changes/harden-tenant-identity-data/design.md) for the exact response and import contracts.

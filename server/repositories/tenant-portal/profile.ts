@@ -1,3 +1,4 @@
+import { throwIfTenantIdentityViolation } from '../tenants/identity-errors'
 import type { H3Event } from 'h3'
 import type { TenantProfile } from '~/types/tenant-portal'
 import type { TenantProfileUpdateInput } from '~/utils/validators/tenant-portal'
@@ -28,7 +29,10 @@ export const TenantProfileRepository = {
       .eq('id', tenantId)
       .select(PROFILE_SELECT)
       .single()
-    if (error) throwDbError(error, 'tenantPortal.profile.updateByTenantId')
+    if (error) {
+      throwIfTenantIdentityViolation(error)
+      throwDbError(error, 'tenantPortal.profile.updateByTenantId')
+    }
     return mapTenantProfile(data)
   },
 }

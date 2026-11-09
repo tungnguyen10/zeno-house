@@ -1,6 +1,6 @@
 import { beforeEach, expect, it, vi } from 'vitest'
 import { AUDIT_ACTIONS } from '~/utils/constants/audit'
-const repo = vi.hoisted(() => ({ findTenantIdsForBuildings: vi.fn(), findAll: vi.fn(), findByIds: vi.fn(), findByIdentifier: vi.fn(), findAccessFacts: vi.fn(), findCreatedTenantIdsByActor: vi.fn(), update: vi.fn(), findActiveAssignmentByTenantId: vi.fn(), findByPhone: vi.fn(), findByIdNumber: vi.fn() }))
+const repo = vi.hoisted(() => ({ findTenantIdsForBuildings: vi.fn(), findAll: vi.fn(), findByIds: vi.fn(), findByIdentifier: vi.fn(), findAccessFacts: vi.fn(), findCreatedTenantIdsByActor: vi.fn(), update: vi.fn(), findActiveAssignmentByTenantId: vi.fn(), findIdentityMatches: vi.fn() }))
 const storage = vi.hoisted(() => vi.fn())
 const bulk = vi.hoisted(() => ({ execute: vi.fn() }))
 const audit = vi.hoisted(() => ({ append: vi.fn(), appendBulk: vi.fn() }))
@@ -33,7 +33,7 @@ it.each((['update', 'uploadIdImage', 'removeIdImage', 'remove'] as const).flatMa
         : TenantService.remove(event, actor, 'CODE', { reason: 'reason' })
   await expect(operation).rejects.toMatchObject({ statusCode: status })
   expect(repo.update).not.toHaveBeenCalled()
-  expect(repo.findByPhone).not.toHaveBeenCalled()
+  expect(repo.findIdentityMatches).not.toHaveBeenCalled()
   expect(storage).not.toHaveBeenCalled()
 })
 

@@ -48,7 +48,7 @@ describe('tenant portal API handlers', () => {
     mocks.requireAuth.mockResolvedValue(user)
     mocks.resolveTenantId.mockResolvedValue('tenant-1')
     mocks.profileGet.mockResolvedValue({ id: 'tenant-1' })
-    mocks.profileUpdate.mockResolvedValue({ id: 'tenant-1', phone: '0902' })
+    mocks.profileUpdate.mockResolvedValue({ id: 'tenant-1', phone: '0902000000' })
     mocks.contractGet.mockResolvedValue(null)
     mocks.invoiceList.mockResolvedValue({ data: [], meta: { total: 0, page: 1, limit: 20, totalPages: 0 } })
     mocks.invoiceDetail.mockResolvedValue({ id: 'invoice-1', charges: [] })
@@ -65,7 +65,7 @@ describe('tenant portal API handlers', () => {
     ]
     const events = [
       event(),
-      event({ body: { phone: '0902' } }),
+      event({ body: { phone: '0902000000' } }),
       event(),
       event({ query: {} }),
       event({ params: { id: 'invoice-1' } }),
@@ -81,10 +81,10 @@ describe('tenant portal API handlers', () => {
     const { default: patchProfile } = await import('../../../server/api/tenant/me.patch')
     const { default: listInvoices } = await import('../../../server/api/tenant/invoices/index.get')
 
-    await patchProfile(event({ body: { phone: '0902', tenant_id: 'tenant-2', status: 'archived' } }) as never)
+    await patchProfile(event({ body: { phone: '0902000000', tenant_id: 'tenant-2', status: 'archived' } }) as never)
     await listInvoices(event({ query: { page: '1', page_size: '10', tenant_id: 'tenant-2' } }) as never)
 
-    expect(mocks.profileUpdate).toHaveBeenCalledWith(expect.anything(), user, { phone: '0902' })
+    expect(mocks.profileUpdate).toHaveBeenCalledWith(expect.anything(), user, { phone: '0902000000' })
     expect(mocks.invoiceList).toHaveBeenCalledWith(expect.anything(), user, { page: 1, page_size: 10 })
   })
 

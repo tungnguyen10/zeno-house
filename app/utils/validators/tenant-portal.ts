@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { tenantIdNumberSchema, tenantPhoneSchema } from '../tenant-identity'
 import { tenantIdImageSideSchema } from './tenants'
 import { passwordSchema } from './password'
 
@@ -43,12 +44,12 @@ const isoDateSchema = z
 
 export const tenantProfileUpdateSchema = z.object({
   full_name: z.string().trim().min(1, 'Họ tên không được trống').max(100, 'Họ tên quá dài').optional(),
-  phone: z.string().trim().min(1, 'Số điện thoại không được trống').max(20, 'Số điện thoại quá dài').optional(),
+  phone: tenantPhoneSchema.optional(),
   gender: z.enum(['male', 'female', 'other']).nullable().optional(),
   date_of_birth: isoDateSchema,
   occupation: z.string().trim().max(100, 'Nghề nghiệp quá dài').nullable().optional(),
   permanent_address: z.string().trim().max(300, 'Địa chỉ quá dài').nullable().optional(),
-  id_number: z.string().trim().max(20, 'Số CCCD/CMND quá dài').nullable().optional(),
+  id_number: tenantIdNumberSchema,
   id_issued_date: isoDateSchema,
   id_issued_place: z.string().trim().max(200, 'Nơi cấp quá dài').nullable().optional(),
   emergency_contact_name: z.string().trim().max(100, 'Tên liên hệ khẩn cấp quá dài').nullable().optional(),

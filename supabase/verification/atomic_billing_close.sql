@@ -39,7 +39,7 @@ begin
     insert into public.rooms(id, building_id, room_number, code, slug)
       values(r, b, 'R' || n, 'verify-' || r::text, 'verify-' || r::text);
     insert into public.tenants(id, full_name, phone, code)
-      values(t, 'Close tenant ' || n, '0900000000', 'verify-' || t::text);
+      values(t, 'Close tenant ' || n, '+999' || lpad((floor(random() * 100000000000))::bigint::text, 11, '0'), 'verify-' || t::text);
     insert into public.contracts(id, contract_code, building_id, room_id, tenant_id,
       start_date, end_date, monthly_rent, deposit, payment_due_day, occupant_count)
       values(c, 'verify-' || c::text, b, r, t, '2026-01-01', '2026-12-31', 1000000, 2000000, 5, 1);

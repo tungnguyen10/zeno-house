@@ -1,0 +1,130 @@
+{
+  "phone": [
+    {
+      "input": "0901234567",
+      "expected": "0901234567"
+    },
+    {
+      "input": "0901 234 567",
+      "expected": "0901234567"
+    },
+    {
+      "input": "0901.234.567",
+      "expected": "0901234567"
+    },
+    {
+      "input": "(090) 123-4567",
+      "expected": "0901234567"
+    },
+    {
+      "input": "+84901234567",
+      "expected": "0901234567"
+    },
+    {
+      "input": "+84 90 123 4567",
+      "expected": "0901234567"
+    },
+    {
+      "input": "84901234567",
+      "expected": "0901234567"
+    },
+    {
+      "input": "+12025550123",
+      "expected": "+12025550123"
+    },
+    {
+      "input": "+44 20 7946 0958",
+      "expected": "+442079460958"
+    },
+    {
+      "input": "+8490123",
+      "expected": null
+    },
+    {
+      "input": "+8490123456789",
+      "expected": null
+    },
+    {
+      "input": "090123",
+      "expected": null
+    },
+    {
+      "input": "abc",
+      "expected": null
+    },
+    {
+      "input": "",
+      "expected": null
+    },
+    {
+      "input": " 0900 000 000 ",
+      "expected": "0900000000"
+    },
+    {
+      "input": "﻿0900﻿000﻿000﻿",
+      "expected": "0900000000"
+    },
+    {
+      "input": " 0900 000 000 ",
+      "expected": "0900000000"
+    },
+    {
+      "input": "\t0900\r\n000\t000\t",
+      "expected": "0900000000"
+    }
+  ],
+  "idNumber": [
+    {
+      "input": " 012345678901 ",
+      "expected": "012345678901"
+    },
+    {
+      "input": "0123 4567 8901",
+      "expected": "012345678901"
+    },
+    {
+      "input": "b1234567",
+      "expected": "B1234567"
+    },
+    {
+      "input": "   ",
+      "expected": null
+    },
+    {
+      "input": null,
+      "expected": null
+    },
+    {
+      "input": " b 1234567 ",
+      "expected": "B1234567"
+    },
+    {
+      "input": "﻿b﻿1234567﻿",
+      "expected": "B1234567"
+    },
+    {
+      "input": " b 1234567 ",
+      "expected": "B1234567"
+    },
+    {
+      "input": "straße",
+      "expected": "STRASSE"
+    },
+    {
+      "input": "iı",
+      "expected": "II"
+    },
+    {
+      "input": "éàđ",
+      "expected": "ÉÀĐ"
+    },
+    {
+      "input": "\tb\r\n1234567\t",
+      "expected": "B1234567"
+    },
+    {
+      "input": "b1234567",
+      "expected": "B1234567"
+    }
+  ]
+}

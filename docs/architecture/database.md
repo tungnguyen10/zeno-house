@@ -275,3 +275,7 @@ migration command for new migration files. Generating or applying schema changes
 manual Dashboard change-control requirement above and does not require a local Postgres container.
 
 For the incidental-charge migration, local Supabase CLI/runtime is not available in this repository checkout. Apply the migration in the configured cloud project, run Supabase database advisors, and then run the documented cloud type-generation command; do not hand-edit `app/types/database.types.ts` before that step.
+
+## Tenant identity hardening
+
+Tenant identity normalization and globally unique phone/non-null ID indexes are defined in the [identity hardening change](../changes/harden-tenant-identity-data/index.md). Apply the independent conflict-budget migration before deploying services that call its peek/record RPCs; then run the read-only duplicate preflight before the guarded identity migration. Both RPCs remain service-role-only. Regenerate database types after cloud rollout rather than hand-editing the generated file. Source verification does not establish production deployment.

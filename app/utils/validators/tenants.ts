@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { tenantIdNumberSchema, tenantPhoneSchema } from '../tenant-identity'
 import { limitSchema, orderSchema, pageSchema, searchQuerySchema, toArray, trimmedOptionalString } from './_shared'
 import { selectAtLeastOne, VALIDATION_MESSAGES } from './messages'
 
@@ -9,9 +10,9 @@ export const tenantSortOrderSchema = orderSchema
 
 export const tenantCreateSchema = z.object({
   full_name: z.string().min(1, 'Họ tên không được trống').max(100, 'Họ tên quá dài'),
-  phone: z.string().min(1, 'Số điện thoại không được trống').max(20, 'Số điện thoại quá dài'),
+  phone: tenantPhoneSchema,
   email: z.string().email('Email không hợp lệ').nullable().optional(),
-  id_number: z.string().max(20, 'Số CMND/CCCD quá dài').nullable().optional(),
+  id_number: tenantIdNumberSchema,
   date_of_birth: z.string().nullable().optional(),
   permanent_address: z.string().max(300, 'Địa chỉ quá dài').nullable().optional(),
   notes: z.string().max(500, 'Ghi chú quá dài').nullable().optional(),

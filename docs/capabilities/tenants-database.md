@@ -61,3 +61,23 @@ The `tenants` table SHALL include a `status` column of type `text NOT NULL DEFAU
 #### Scenario: Existing rows after migration
 - **WHEN** the migration runs against an existing database with N tenant rows
 - **THEN** all N rows have `status='active'` after migration
+
+
+### Requirement: Canonical identity uniqueness
+Tenant phones SHALL be unique globally in `tenants_phone_uq`. Non-null ID numbers SHALL be unique globally in the partial `tenants_id_number_uq`. A before-insert/update trigger SHALL normalize identity fields for all writers. SQL and TypeScript SHALL share the normalization fixture, including Unicode whitespace/case. Invalid legacy phones SHALL retain their compact values rather than becoming null; API validators SHALL reject new invalid phones.
+
+The identity migration SHALL lock tenant writes, abort if canonical duplicate groups remain, normalize changed rows and create indexes in one transaction. Preflight SHALL expose only group membership IDs/codes and counts, without phone/ID/name values. Existing duplicates require manual administrative correction; automatic merging is excluded. Normalization may update `updated_at` through the existing trigger.
+
+#### Scenario: Existing normalized duplicates
+- **WHEN** migration preflight finds multiple rows with the same canonical identity
+- **THEN** migration aborts with group counts and no identifying values
+
+#### Scenario: Direct SQL duplicate
+- **WHEN** a writer inserts a separator/country-prefix variant of an existing phone
+- **THEN** the trigger canonicalizes it and the phone unique index rejects it
+
+#### Scenario: Multiple absent ID numbers
+- **WHEN** tenants have null or blank ID numbers
+- **THEN** blank IDs become null and do not conflict through the partial index
+
+Implementation and production rollout evidence: [tenant identity hardening](../changes/harden-tenant-identity-data/index.md). Database rollout remains a separate acceptance gate.

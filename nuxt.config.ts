@@ -65,6 +65,8 @@ export default defineNuxtConfig({
     aiChatRateLimit: 20, // NUXT_AI_CHAT_RATE_LIMIT
     aiActionRateLimit: 30, // NUXT_AI_ACTION_RATE_LIMIT
     aiRateWindowSeconds: 60, // NUXT_AI_RATE_WINDOW_SECONDS
+    tenantIdentityConflictLimit: 10, // NUXT_TENANT_IDENTITY_CONFLICT_LIMIT
+    tenantIdentityConflictWindowSeconds: 900, // NUXT_TENANT_IDENTITY_CONFLICT_WINDOW_SECONDS
     aiCircuitFailureThreshold: 5, // NUXT_AI_CIRCUIT_FAILURE_THRESHOLD
     aiCircuitCooldownMs: 60_000, // NUXT_AI_CIRCUIT_COOLDOWN_MS
     aiMaxContextMessages: 20, // NUXT_AI_MAX_CONTEXT_MESSAGES

@@ -25,7 +25,7 @@ begin
   insert into public.buildings(id, name, address, code, slug)
     values(b, 'Atomic renewal verification', 'Staging fixture', 'verify-' || b::text, 'verify-' || b::text);
   insert into public.rooms(id, building_id, room_number, code, slug) values(r, b, '101', 'verify-' || r::text, 'verify-' || r::text);
-  insert into public.tenants(id, full_name, phone, code) values(t, 'Renewal primary', '0900000000', 'verify-' || t::text);
+  insert into public.tenants(id, full_name, phone, code) values(t, 'Renewal primary', '+999' || lpad((floor(random() * 100000000000))::bigint::text, 11, '0'), 'verify-' || t::text);
   insert into public.contracts(id, contract_code, building_id, room_id, tenant_id,
     start_date, end_date, monthly_rent, deposit, payment_due_day, occupant_count)
     values(c, 'verify-' || c::text, b, r, t, '2026-01-01', '2026-12-31', 3000000, 6000000, 5, roommates + 1);
@@ -33,7 +33,7 @@ begin
     values(c, t, 'primary', true, '2026-01-01');
   for i in 1..roommates loop
     t := gen_random_uuid();
-    insert into public.tenants(id, full_name, phone, code) values(t, 'Renewal roommate ' || i, '0900000000', 'verify-' || t::text);
+    insert into public.tenants(id, full_name, phone, code) values(t, 'Renewal roommate ' || i, '+999' || lpad((floor(random() * 100000000000))::bigint::text, 11, '0'), 'verify-' || t::text);
     insert into public.contract_occupants(contract_id, tenant_id, role, billing_counted, move_in_date)
       values(c, t, 'roommate', i % 2 = 0, '2026-02-01');
   end loop;

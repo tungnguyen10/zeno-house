@@ -2,12 +2,8 @@ import type { ApiSuccess } from '~/types/api'
 import type { TenantProfile } from '~/types/tenant-portal'
 import type { TenantProfileUpdateInput } from '~/utils/validators/tenant-portal'
 import { tenantProfileUpdateSchema } from '~/utils/validators/tenant-portal'
-import { getApiErrorDetails, getApiErrorMessage } from '~/utils/api-error'
+import { getTenantApiError } from '~/utils/tenant-api-error'
 import { usePortalBootstrap } from './usePortalBootstrap'
-
-interface ValidationDetails {
-  fieldErrors?: Record<string, string[]>
-}
 
 /** Maps the snake_case whitelist input onto the camelCase profile DTO for optimistic display. */
 function applyOptimistic(profile: TenantProfile, input: TenantProfileUpdateInput): TenantProfile {
@@ -75,9 +71,9 @@ export function usePortalProfile() {
     }
     catch (e: unknown) {
       data.value = previous
-      const details = getApiErrorDetails<ValidationDetails>(e)
-      fieldErrors.value = details?.fieldErrors ?? {}
-      apiError.value = getApiErrorMessage(e)
+      const failure = getTenantApiError(e)
+      fieldErrors.value = failure.fieldErrors
+      apiError.value = failure.message
       return false
     }
     finally {

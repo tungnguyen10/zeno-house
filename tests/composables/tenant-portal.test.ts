@@ -92,15 +92,15 @@ describe('usePortalDocuments', () => {
 describe('usePortalProfile', () => {
   it('saves whitelisted fields via PATCH /api/tenant/me and applies the update', async () => {
     fetchData = { data: { profile: baseProfile, contract: null, invoices: [], invoiceMeta: {} } }
-    fetchMock.mockResolvedValue({ data: { ...baseProfile, phone: '0999' } })
+    fetchMock.mockResolvedValue({ data: { ...baseProfile, phone: '0999000000' } })
     const { usePortalProfile } = await import('../../app/composables/tenant-portal/usePortalProfile')
     const { save, profile } = usePortalProfile()
 
-    const ok = await save({ phone: '0999' })
+    const ok = await save({ phone: '0999000000' })
 
     expect(ok).toBe(true)
-    expect(fetchMock).toHaveBeenCalledWith('/api/tenant/me', { method: 'PATCH', body: { phone: '0999' } })
-    expect(profile.value?.phone).toBe('0999')
+    expect(fetchMock).toHaveBeenCalledWith('/api/tenant/me', { method: 'PATCH', body: { phone: '0999000000' } })
+    expect(profile.value?.phone).toBe('0999000000')
   })
 
   it('rolls back the optimistic update when the save fails', async () => {
@@ -109,7 +109,7 @@ describe('usePortalProfile', () => {
     const { usePortalProfile } = await import('../../app/composables/tenant-portal/usePortalProfile')
     const { save, profile, apiError } = usePortalProfile()
 
-    const ok = await save({ phone: '0999' })
+    const ok = await save({ phone: '0999000000' })
 
     expect(ok).toBe(false)
     expect(profile.value?.phone).toBe(baseProfile.phone)
@@ -354,5 +354,31 @@ describe('usePortalRequests', () => {
     expect((form as FormData).get('title')).toBe('Vòi nước bị rò rỉ')
     expect((form as FormData).get('description')).toBe('Nước rò dưới bồn rửa.')
     expect((form as FormData).get('attachment')).toBeInstanceOf(File)
+  })
+})
+
+describe('portal identity error presentation', () => {
+  it('shows a generic conflict without identity field errors and rolls back the profile', async () => {
+    const message = 'Không thể tạo hồ sơ với thông tin này; liên hệ quản trị viên'
+    fetchData = { data: { profile: baseProfile, contract: null, invoices: [], invoiceMeta: {} } }
+    fetchMock.mockRejectedValue({ data: { error: { code: 'TENANT_IDENTITY_CONFLICT', message } } })
+    const { usePortalProfile } = await import('../../app/composables/tenant-portal/usePortalProfile')
+    const form = usePortalProfile()
+    expect(await form.save({ phone: '0900000000' })).toBe(false)
+    expect(form.profile.value).toEqual(baseProfile)
+    expect(form.fieldErrors.value).toEqual({})
+    expect(form.apiError.value).toBe(message)
+    expect(form.saving.value).toBe(false)
+  })
+
+  it('shows rate limit retry seconds in the existing error banner', async () => {
+    fetchData = { data: { profile: baseProfile, contract: null, invoices: [], invoiceMeta: {} } }
+    fetchMock.mockRejectedValue({ data: { error: { code: 'RATE_LIMITED', details: { retryAfterSeconds: 120 } } } })
+    const { usePortalProfile } = await import('../../app/composables/tenant-portal/usePortalProfile')
+    const form = usePortalProfile()
+    expect(await form.save({ phone: '0900000000' })).toBe(false)
+    expect(form.apiError.value).toBe('Bạn đã thử quá nhiều lần, vui lòng thử lại sau. Thử lại sau 120 giây.')
+    expect(form.fieldErrors.value).toEqual({})
+    expect(form.profile.value).toEqual(baseProfile)
   })
 })

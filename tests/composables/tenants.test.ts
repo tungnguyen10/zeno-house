@@ -155,3 +155,77 @@ describe('useTenantList helpers', () => {
     expect(clearNuxtDataMock).toHaveBeenCalledWith(TENANT_LIST_ASYNC_KEY)
   })
 })
+
+describe('tenant identity error presentation', () => {
+  const input = { full_name: 'Khách Giả Lập', phone: '0900000000' }
+  const generic = 'Không thể tạo hồ sơ với thông tin này; liên hệ quản trị viên'
+
+  it.each(['create', 'update'] as const)('shows authorized duplicate field errors on %s', async (operation) => {
+    fetchMock.mockRejectedValue({ data: { error: { code: 'TENANT_DUPLICATE', message: 'Thông tin bị trùng', details: { fieldErrors: { phone: ['Số điện thoại đã tồn tại'] }, existingTenantId: 'other-tenant' } } } })
+    const { useTenantForm } = await import('../../app/composables/tenants/useTenantForm')
+    const form = useTenantForm()
+    await (operation === 'create' ? form.submitCreate(input) : form.submitUpdate('tenant-1', input))
+    expect(form.errors.value).toEqual({ phone: ['Số điện thoại đã tồn tại'] })
+    expect(form.apiError.value).toBe('Thông tin bị trùng')
+    expect(form.isLoading.value).toBe(false)
+  })
+
+  it('clears prior duplicate errors and only shows the generic banner for a restricted conflict', async () => {
+    const { useTenantForm } = await import('../../app/composables/tenants/useTenantForm')
+    const form = useTenantForm()
+    form.errors.value = { phone: ['Old error'] }
+    fetchMock.mockRejectedValue({ data: { error: { code: 'TENANT_IDENTITY_CONFLICT', message: generic } } })
+    await form.submitCreate(input)
+    expect(form.errors.value).toEqual({})
+    expect(form.apiError.value).toBe(generic)
+  })
+
+  it('shows the retry wait for a rate limited form submission', async () => {
+    fetchMock.mockRejectedValue({ data: { error: { code: 'RATE_LIMITED', message: 'Too many requests', details: { retryAfterSeconds: 42 } } } })
+    const { useTenantForm } = await import('../../app/composables/tenants/useTenantForm')
+    const form = useTenantForm()
+    await form.submitUpdate('tenant-1', input)
+    expect(form.errors.value).toEqual({})
+    expect(form.apiError.value).toBe('Bạn đã thử quá nhiều lần, vui lòng thử lại sau. Thử lại sau 42 giây.')
+  })
+
+  it('shows the retry wait for a rate limited bulk import', async () => {
+    fetchMock.mockRejectedValue({ data: { error: { code: 'RATE_LIMITED', details: { retryAfterSeconds: 60 } } } })
+    const { useTenantBulkCreate } = await import('../../app/composables/tenants/useTenantBulkCreate')
+    const bulk = useTenantBulkCreate()
+    bulk.rows.value = [{ line: 2, ...input }]
+    expect(await bulk.submit()).toBeNull()
+    expect(bulk.submitError.value).toBe('Bạn đã thử quá nhiều lần, vui lòng thử lại sau. Thử lại sau 60 giây.')
+    expect(bulk.isSubmitting.value).toBe(false)
+  })
+})
+
+describe('tenant bulk normalized preview duplicates', () => {
+  it('flags separator and +84 variants of the same phone without replacing raw preview values', async () => {
+    const { useTenantBulkCreate } = await import('../../app/composables/tenants/useTenantBulkCreate')
+    const bulk = useTenantBulkCreate()
+    bulk.rows.value = [
+      { line: 2, full_name: 'Khách Giả Lập A', phone: '0900 000 000' },
+      { line: 3, full_name: 'Khách Giả Lập B', phone: '+84900000000' },
+    ]
+    expect(bulk.previewRows.value.map(row => row.fieldErrors.phone)).toEqual([
+      ['Số điện thoại bị trùng trong file nhập'], ['Số điện thoại bị trùng trong file nhập'],
+    ])
+    expect(bulk.previewRows.value.map(row => row.phone)).toEqual(['0900 000 000', '+84900000000'])
+    expect(bulk.validRows.value).toBe(0)
+    expect(bulk.canSubmit.value).toBe(false)
+  })
+
+  it('flags passport space and case variants as the same identity', async () => {
+    const { useTenantBulkCreate } = await import('../../app/composables/tenants/useTenantBulkCreate')
+    const bulk = useTenantBulkCreate()
+    bulk.rows.value = [
+      { line: 2, full_name: 'Khách Giả Lập A', phone: '0900000000', id_number: 'b 123 4567' },
+      { line: 3, full_name: 'Khách Giả Lập B', phone: '0900000001', id_number: 'B1234567' },
+    ]
+    expect(bulk.previewRows.value.map(row => row.fieldErrors.id_number)).toEqual([
+      ['Số CMND/CCCD bị trùng trong file nhập'], ['Số CMND/CCCD bị trùng trong file nhập'],
+    ])
+    expect(bulk.previewRows.value[0]?.id_number).toBe('b 123 4567')
+  })
+})

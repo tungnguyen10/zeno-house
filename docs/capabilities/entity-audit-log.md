@@ -238,3 +238,19 @@ The system SHALL define and append audit actions for access-request creation, ap
 #### Scenario: Stale provisioned request reconciliation is audited
 - **WHEN** the system removes an untouched pending request because the Auth user already has a valid application role
 - **THEN** it first appends one `user.access_request.reconciled` event with a system actor, reason, role, and request identifier without deleting prior audit events
+
+
+### Requirement: Tenant identity audit redaction
+New tenant lifecycle, profile, document-image and bulk snapshots SHALL redact camelCase and snake_case identity fields before persistence. ID numbers SHALL expose at most the last four characters after `•••• `; date of birth, permanent address, ID issue details and emergency contacts SHALL use `[đã ẩn]`. Changed hidden fields SHALL use `[đã ẩn · đã thay đổi]` on the after snapshot. An ID change with unchanged last four characters SHALL retain an explicit change marker. Existing secret/path/URL sanitization SHALL still apply. Historical audit rows SHALL remain unchanged.
+
+Generic identity conflicts SHALL append `tenant.identity_conflict` for the matching tenant with only field names and source (`create`, `update`, `import`, `portal`); no submitted identity values SHALL be recorded.
+
+#### Scenario: Changed hidden address
+- **WHEN** a tenant address changes
+- **THEN** the new audit event contains redacted before/after values with a visible change marker
+
+#### Scenario: Out-of-scope duplicate audit
+- **WHEN** a generic identity conflict is recorded
+- **THEN** the admin audit identifies the matching tenant and conflicting field names without identity values
+
+Implementation and production rollout evidence: [tenant identity hardening](../changes/harden-tenant-identity-data/index.md). Database rollout remains a separate acceptance gate.

@@ -174,6 +174,7 @@ const ACTION_LABELS: Record<string, string> = {
   'user.access_request.reconciled': 'Đối soát yêu cầu truy cập',
   'building.invoice_email_settings.updated': 'Cập nhật gửi hoá đơn tự động',
   'building.visibility_changed': 'Đổi hiển thị toà nhà',
+  'tenant.identity_conflict': 'Xung đột định danh khách thuê',
   'tenant.activated': 'Khôi phục khách thuê',
   'tenant.exported': 'Xuất danh sách khách thuê',
   'building_expense.receipt_attached': 'Gắn biên lai',

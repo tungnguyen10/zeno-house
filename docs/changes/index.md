@@ -9,6 +9,8 @@ Current change bundles are OKF draft concepts, not deployed or automatically acc
 - [tenant-authorization-scope](./tenant-authorization-scope/design.md) — P0 authorization and scoped tenant access; cloud rollout checks pending
 - [atomic-contract-renewal](./atomic-contract-renewal/design.md) — P0 atomic successor renewal, occupants and money transfer
 - [atomic-billing-close](./atomic-billing-close/design.md) — P0 atomic billing close/reopen and reconciliation
+- [harden-tenant-identity-data](./harden-tenant-identity-data/index.md) — Tenant V2 change B: phone/ID uniqueness, non-disclosing conflicts, PII out of drafts and audit; source implemented, production migration/SQL verification pending
+- [tenant-v2](./tenant-v2/spec-and-implementation-plan.md) — Umbrella draft, split into B (harden-tenant-identity-data) → A (Quick Create) → C (Claude identity autofill)
 
 ## Checklist status imported from the previous workflow
 

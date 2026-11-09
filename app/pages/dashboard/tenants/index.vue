@@ -111,6 +111,7 @@ const bulkCreateReasonLabels: Record<string, string> = {
   duplicate_id_number: 'Số CMND/CCCD đã tồn tại',
   duplicate_phone_in_file: 'Số điện thoại trùng trong file',
   duplicate_phone: 'Số điện thoại đã tồn tại',
+  identity_conflict: 'Không thể nhập dòng này; liên hệ quản trị viên',
   unexpected_error: 'Lỗi không xác định',
 }
 

@@ -122,3 +122,17 @@ The system SHALL expose tenant self-service endpoints under `/api/tenant/**`, av
 #### Scenario: Existing scope and immutable payment instructions remain
 - **WHEN** a tenant or active roommate requests an invoice within their resolved scope
 - **THEN** the API returns only authorized invoice data and the stored payment-profile snapshot without substituting current building data
+
+
+### Requirement: Private tenant profile identity updates
+Portal profile updates SHALL use the shared phone/ID normalization and uniqueness checks, excluding the current tenant. All duplicate phone/ID matches and unique-index races SHALL return generic 409 `TENANT_IDENTITY_CONFLICT` without field or tenant details, regardless of the caller's access to any matching tenant. The shared persistent conflict budget SHALL apply, including 429 retry metadata.
+
+#### Scenario: Portal updates to another tenant's phone
+- **WHEN** a tenant submits a phone already assigned to another profile
+- **THEN** no update occurs and a generic identity conflict is returned
+
+#### Scenario: Portal race after precheck
+- **WHEN** a concurrent writer claims the submitted identity before the update
+- **THEN** the unique violation is converted to a generic 409
+
+Implementation and production rollout evidence: [tenant identity hardening](../changes/harden-tenant-identity-data/index.md). Database rollout remains a separate acceptance gate.

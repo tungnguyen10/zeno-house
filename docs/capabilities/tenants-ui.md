@@ -282,3 +282,19 @@ rather than exposing raw server codes. The detail modal SHALL retain per-tenant 
 - **WHEN** one tenant succeeds and three fail, two forbidden and one unknown
 - **THEN** the result displays one success, three failures, a forbidden group of two, and one generic error
 - **AND** raw unknown reason codes do not render
+
+
+### Requirement: Safe tenant drafts and identity feedback
+Tenant form drafts SHALL omit `id_number`, `id_issued_date`, `id_issued_place`, `date_of_birth`, `permanent_address`, `emergency_contact_name`, and `emergency_contact_phone`. Reading an existing draft SHALL purge those keys from storage while retaining its timestamp; restoring safe fields SHALL preserve current sensitive form values. Safe fields continue to autosave and restore.
+
+`TENANT_DUPLICATE` field errors SHALL render under the corresponding inputs. Generic identity conflicts SHALL render only the form alert. Rate-limit alerts SHALL include the supplied retry interval. Import previews SHALL compare canonical phone/ID values while retaining the original row presentation.
+
+#### Scenario: Restore a legacy sensitive draft
+- **WHEN** a user opens and restores an old tenant draft containing identity fields
+- **THEN** those fields are removed from storage and are not restored into the form
+
+#### Scenario: Generic identity error
+- **WHEN** the server returns `TENANT_IDENTITY_CONFLICT`
+- **THEN** the form displays the generic alert without marking an identity field
+
+Implementation and production rollout evidence: [tenant identity hardening](../changes/harden-tenant-identity-data/index.md). Database rollout remains a separate acceptance gate.
