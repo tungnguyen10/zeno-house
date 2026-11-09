@@ -12,7 +12,7 @@ generated:
 
 ## Purpose
 
-REST API for managing tenants. Full CRUD with pagination, search by name/phone, and id_number conflict detection at service layer. Follows the same auth/permission pattern as buildings and rooms.
+REST API for managing tenants. Full CRUD with pagination, search by name/phone, and normalized phone/ID conflict handling at service and database boundaries. Follows the same auth/permission pattern as buildings and rooms.
 ## Requirements
 ### Requirement: List tenants endpoint
 `GET /api/tenants` SHALL return paginated list of tenants. Query params: `q` (search by full_name or phone, ILIKE), `building_id` (optional UUID filter derived from primary contracts and contract occupants), `page` (default 1), `limit` (default 20). Response: `{ data: Tenant[], meta: { total, page, limit, totalPages } }`.
@@ -62,7 +62,7 @@ REST API for managing tenants. Full CRUD with pagination, search by name/phone, 
 - **THEN** returns 404 with error code NOT_FOUND
 
 ### Requirement: Create tenant endpoint
-`POST /api/tenants` SHALL create a new tenant. Body validated with Zod: `full_name` required, `phone` required, other fields optional. Returns 201 with created tenant. Returns 409 CONFLICT if `id_number` already exists.
+`POST /api/tenants` SHALL create a new tenant. Body validated with Zod: `full_name` required, `phone` required, other fields optional. Returns 201 with created tenant. Identity duplicates return scoped 409 `TENANT_DUPLICATE` or generic `TENANT_IDENTITY_CONFLICT` as specified below.
 
 #### Scenario: Create success
 - **WHEN** admin POSTs valid tenant data
@@ -74,10 +74,10 @@ REST API for managing tenants. Full CRUD with pagination, search by name/phone, 
 
 #### Scenario: Duplicate id_number
 - **WHEN** admin POSTs with id_number that already exists
-- **THEN** returns 409 CONFLICT
+- **THEN** returns 409 `TENANT_DUPLICATE` with the authorized existing tenant ID and field errors
 
 ### Requirement: Update tenant endpoint
-`PATCH /api/tenants/:id` SHALL update an existing tenant. All fields optional (partial update). Returns updated tenant. Returns 404 if not found. Returns 409 if id_number conflicts with another tenant.
+`PATCH /api/tenants/:id` SHALL update an existing tenant. All fields optional (partial update). Returns updated tenant. Returns 404 if not found. Returns the scoped identity conflict response if phone or ID conflicts with another tenant, excluding the tenant being updated.
 
 #### Scenario: Update success
 - **WHEN** admin PATCHes valid partial data
@@ -401,4 +401,4 @@ Bulk import SHALL compare normalized values. In-file duplicates retain specific 
 - **WHEN** a row matches both a full-access tenant and an out-of-scope tenant
 - **THEN** the row returns only `identity_conflict`
 
-Implementation and production rollout evidence: [tenant identity hardening](../changes/harden-tenant-identity-data/index.md). Database rollout remains a separate acceptance gate.
+Implementation and production rollout evidence: [tenant identity hardening](../history/2026-11-09-harden-tenant-identity-data/index.md). Production database rollout and SQL verification passed on 2026-11-09; application branch deployment is separate.

@@ -376,4 +376,4 @@ Managers also receive no reserve-fund or shared-expense capabilities, so both AP
 
 ## Tenant identity conflict disclosure
 
-The shared tenant conflict service resolves full/basic/none access for matched tenants. Only entirely full-access matches expose field errors and an existing tenant ID. Mixed-scope and portal conflicts use a single generic response; identity checks consult a per-user persistent conflict budget first. See the [identity hardening design](../changes/harden-tenant-identity-data/design.md) for the exact response and import contracts.
+The shared tenant conflict service resolves full/basic/none access for matched tenants. Only entirely full-access matches expose field errors and an existing tenant ID. Mixed-scope and portal conflicts use a single generic response; identity checks consult a per-user persistent conflict budget first. See the [identity hardening design](../history/2026-11-09-harden-tenant-identity-data/design.md) for the exact response and import contracts.

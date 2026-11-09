@@ -253,4 +253,4 @@ Generic identity conflicts SHALL append `tenant.identity_conflict` for the match
 - **WHEN** a generic identity conflict is recorded
 - **THEN** the admin audit identifies the matching tenant and conflicting field names without identity values
 
-Implementation and production rollout evidence: [tenant identity hardening](../changes/harden-tenant-identity-data/index.md). Database rollout remains a separate acceptance gate.
+Implementation and production rollout evidence: [tenant identity hardening](../history/2026-11-09-harden-tenant-identity-data/index.md). Production database rollout and SQL verification passed on 2026-11-09; application branch deployment is separate.

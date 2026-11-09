@@ -1,8 +1,8 @@
 ---
 type: Change Proposal
 title: "harden-tenant-identity-data: proposal.md"
-status: draft
-change_state: implementation-verified-rollout-pending
+status: deprecated
+change_state: completed
 tags: [superpowers, change, migration, security, tenants]
 ---
 
@@ -37,8 +37,8 @@ Tenant V2 (Quick Create, then Claude identity autofill) relies on "one person = 
 
 ## Dependencies
 
-- Builds on the `full/basic/none` model of [tenant-authorization-scope](../tenant-authorization-scope/design.md); its cloud rollout verification should be signed off first.
-- Overlaps with the redaction goal of [harden-event-audit](../harden-event-audit/proposal.md); this change only covers tenant snapshots and must reuse any shared redaction helper if that change lands first.
+- Builds on the `full/basic/none` model of [tenant-authorization-scope](../../changes/tenant-authorization-scope/design.md); its cloud rollout verification should be signed off first.
+- Overlaps with the redaction goal of [harden-event-audit](../../changes/harden-event-audit/proposal.md); this change only covers tenant snapshots and must reuse any shared redaction helper if that change lands first.
 
 ## Capabilities
 

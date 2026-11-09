@@ -15,8 +15,8 @@ One documentation root, one specification source, one execution workflow. The re
 ## Product truth
 
 - [97 accepted capability specifications](./capabilities/index.md) — approved behavioral rules and scenarios.
-- [Nine active change bundles](./changes/index.md) — proposals/designs plus a single implementation checklist per change, including three P0 Superpowers designs now in OKF.
-- [86 archived changes](./history/index.md) — immutable legacy OpenSpec provenance.
+- [Eight active change bundles](./changes/index.md) — proposals/designs plus a single implementation checklist per change, including three P0 Superpowers designs now in OKF.
+- [87 archived changes](./history/index.md) — immutable legacy OpenSpec provenance.
 - [39 historical Superpowers design/plan files](./history/superpowers/index.md) — deprecated historical evidence, no competing specifications.
 
 ## Current engineering documentation

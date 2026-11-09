@@ -92,3 +92,5 @@ All 600 archived source files remain accessible via immutable references to base
 ## Historical Superpowers execution records
 
 - [Superpowers historical designs and plans](./superpowers/index.md) — 39 older documents retained under OKF as deprecated provenance.
+
+- [2026-11-09-harden-tenant-identity-data](./2026-11-09-harden-tenant-identity-data/index.md) — Tenant identity uniqueness, scoped conflict handling and PII hardening; production DB verification evidence

@@ -418,7 +418,7 @@ async function openCreateTenant() {
           class="flex flex-col gap-1 rounded-lg border border-ui-border bg-ui-deep/40 px-3 py-2"
         >
           <div class="flex items-start justify-between gap-3">
-            <span class="font-medium text-ui-primary">Dòng {{ row.line }}</span>
+            <span class="shrink-0 font-medium text-ui-primary">Dòng {{ row.line }}</span>
             <span class="text-xs text-status-danger font-medium">{{ bulkCreateReasonLabels[row.reason] ?? row.reason }}</span>
           </div>
           <p class="text-xs text-ui-muted">{{ row.message }}</p>

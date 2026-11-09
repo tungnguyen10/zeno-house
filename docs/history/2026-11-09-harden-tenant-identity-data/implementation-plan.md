@@ -1,8 +1,8 @@
 ---
 type: Implementation Plan
 title: "2026-11-09-harden-tenant-identity-data"
-status: draft
-change_state: implementation-verified-rollout-pending
+status: deprecated
+change_state: completed
 tags: [superpowers, change, migration, security, tenants]
 ---
 
@@ -217,7 +217,7 @@ In `tests/server/tenant-portal/services.test.ts`, replace every `'0902'` with `'
 Run: `npx vitest run tests/utils/tenant-identity.test.ts tests/server/tenant-portal tests/server/tenants.api.test.ts`
 Expected: PASS. If an existing test sends a non-phone value through a validator, change it to a valid fictional number (`0901234567` style); do not loosen the validator.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add app/utils/tenant-identity.ts app/utils/validators/tenants.ts app/utils/validators/tenant-portal.ts tests/__fixtures__/tenant-identity-normalization.json tests/utils/tenant-identity.test.ts tests/server/tenant-portal/services.test.ts
@@ -1655,11 +1655,11 @@ git commit -m "fix(tenants): keep identity fields out of local form drafts"
 
 Run, in order, and record outputs in the execution record below: `npm run typecheck`, `npm test`, `npm run lint`, `npm run knowledge:check`. All must pass.
 
-- [ ] **Step 2: Visual check of affected states**
+- [x] **Step 2: Visual check of affected states**
 
 Following `.agents/skills/zeno-house/references/ui-polish-workflow.md` for affected states only: tenant create/edit with the generic conflict alert, tenant create with a `TENANT_DUPLICATE` alert, 429 alert, bulk import result with `identity_conflict`, portal profile edit with the generic conflict. Use mocked API responses; no new components.
 
-- [ ] **Step 3: Cloud rollout (ask the user before each write)**
+- [x] **Step 3: Cloud rollout (ask the user before each write)**
 
 1. Apply `*_tenant_identity_conflict_limit.sql` in the Dashboard SQL editor.
 2. Run `supabase/verification/tenant_identity_duplicates.sql`; share only the group counts with the user. Admin resolves every group manually (merge or correct records).
@@ -1670,11 +1670,11 @@ Following `.agents/skills/zeno-house/references/ui-polish-workflow.md` for affec
 
 Never claim cloud steps passed without the user-confirmed output.
 
-- [ ] **Step 4: Reconcile documentation**
+- [x] **Step 4: Reconcile documentation**
 
 Update the accepted capabilities with: normalized phone/ID uniqueness and rules (`tenants-database`, `tenants-api`), `TENANT_DUPLICATE` / `TENANT_IDENTITY_CONFLICT` / `RATE_LIMITED` behavior and the `identity_conflict` import reason (`tenants-api`, `tenant-portal-api`), draft omission and error display (`tenants-ui`), redaction and `tenant.identity_conflict` (`entity-audit-log`). Set `change_state` accordingly, update `docs/changes/index.md`, run `npm run knowledge:check`.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/types/database.types.ts server/repositories/tenants/identity-conflict-limit.ts docs
@@ -1705,9 +1705,25 @@ Tasks 1–7 are recorded in one consolidated implementation commit after full ve
 - Two reviewed migration files: `20261109155705_tenant_identity_conflict_limit.sql` then `20261109155706_harden_tenant_identity_data.sql`. The normalization backfill can change `updated_at`; guard+backfill+unique indexes run under a table lock in one transaction.
 - Cloud writes still require the explicit approval stated in this plan. Apply only these reviewed migrations (do not blindly push all pending repository migrations), then run shared fixture + rollback functional verification and existing billing/renewal/scoped-status regression SQL. Regenerate database types using the existing CLI only after deployment. The temporary narrow RPC cast remains until then.
 
-### Remaining external gates
+### 2026-11-09 — authorized production rollout
 
-- Production migration writes and rollback SQL verification, followed by type generation and scoped/full typecheck.
-- Desktop/mobile browser inspection of affected error states; no local runtime started because AGENTS.md requires explicit permission.
-- Do not archive/promote this record as fully deployed until those gates have real evidence.
+- User explicitly approved both cloud migrations, rollback verification, type generation and local UI runtime. This authorization covers the enumerated cloud writes; no further permission was required between them.
+- `supabase db push --remote --skip-vault --dry-run` confirmed only the two identity migrations; `--yes` applied both successfully with migration history recorded. No vault, roles, seeds or unrelated pending migrations were applied.
+- Live shared SQL normalization fixture passed all 31 cases. Identity verification passed eight boolean assertion groups plus procedural unique-violation checks; scoped-status verification passed eleven assertion groups plus privilege/behavior checks. Atomic billing close and contract renewal procedural assertions passed. All mutation fixtures rolled back.
+- The billing verification script initially selected the wrong close audit due to transaction-stable `now()` ties and random UUID ordering. Corrected the verifier to supply/select the second close's explicit correlation ID; rerun passed. No production billing function changed.
+- Final production metadata check: both migrations recorded, both indexes unique/valid, all identities canonical, peek/record denied to anon/authenticated and allowed to service_role, and no verification tenant rows remained. All ten booleans were true.
+- Generated types with `supabase gen types typescript --remote --schema public,graphql_public`: exactly 23 lines added for four new functions. Removed the temporary RPC cast and inferred the peek row type directly.
+- Post-generation checks: `npm run typecheck` exit 0; narrow conflict/billing tests 3 files / 40 tests passed; full `npm test` 379 files / 2,325 tests passed; `npm run lint` exit 0 with the same preexisting `AppAiDevChat.vue:427` warning. Independent incremental review found no issues.
+- Detailed sanitized cloud evidence is retained in [verification.md](./verification.md).
 
+### 2026-11-09 — affected-state visual verification and completion
+
+- CUA native Chrome desktop/mobile inspection used an isolated Vite harness under `/tmp`, actual `TenantForm`, `UiAlert`, `UiModal`, actual portal edit page composition and production styles. Requests/composables used fictional data and mocked errors; no authenticated production route journey or business API write is claimed.
+- Actual TenantForm submit lifecycle was exercised before synthetic generic/specific errors. Checked generic and specific conflicts at 1739×1009 desktop, mobile375×900 specific/edit/generic/429, import result at desktop1024×900 and375×900, and portal generic alert/save-area at desktop1024×900 and375×900.
+- Fixed a material narrow-screen import wrapping issue by adding `shrink-0` to the existing line-number span; no new component, theme or layout system. Rechecked the result visually.
+- After that class-only fix, `npx vitest run tests/pages tests/composables/tenants.test.ts tests/composables/tenant-portal.test.ts` passed 20 files / 120 tests. Targeted ESLint passed. Earlier post-rollout full suite remains 379 files / 2,325 tests; typecheck and full lint passed (one preexisting warning).
+- Native browser QA completion was recorded and the temporary Vite server stopped (exit130). No harness file was created in the repository. Cropped synthetic screenshots are retained with [verification evidence](./verification.md).
+- Reconciled old create-conflict/draft-restore wording in accepted capabilities. Recorded the existing operator-managed portal identity requirement/source divergence explicitly rather than claiming that separate restriction was implemented.
+- All change-B implementation/verification tasks are complete. This record is archived as historical evidence; accepted behavior remains in `docs/capabilities/**`. Application merge/deployment was not part of this rollout and is not claimed.
+
+Final documentation verification: `npm run knowledge:check` passed with 303 concepts / 12 index files; `git diff --check` passed. The canonical change is archived with a navigation-only stub at its former active index. Existing unrelated/preexisting Tenant V2 overview edits remain uncommitted and preserved.

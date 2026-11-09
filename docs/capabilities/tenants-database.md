@@ -80,4 +80,4 @@ The identity migration SHALL lock tenant writes, abort if canonical duplicate gr
 - **WHEN** tenants have null or blank ID numbers
 - **THEN** blank IDs become null and do not conflict through the partial index
 
-Implementation and production rollout evidence: [tenant identity hardening](../changes/harden-tenant-identity-data/index.md). Database rollout remains a separate acceptance gate.
+Implementation and production rollout evidence: [tenant identity hardening](../history/2026-11-09-harden-tenant-identity-data/index.md). Production database rollout and SQL verification passed on 2026-11-09; application branch deployment is separate.

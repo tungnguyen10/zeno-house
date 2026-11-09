@@ -4293,6 +4293,8 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      normalize_tenant_id_number: { Args: { p_value: string }; Returns: string }
+      normalize_tenant_phone: { Args: { p_value: string }; Returns: string }
       open_or_get_billing_period_with_audit: {
         Args: {
           p_action_plan_id?: string
@@ -4328,6 +4330,18 @@ export type Database = {
       owner_has_building_scope: {
         Args: { p_building_id: string }
         Returns: boolean
+      }
+      peek_tenant_identity_conflict_limit: {
+        Args: {
+          p_limit: number
+          p_now?: string
+          p_subject_hash: string
+          p_window_seconds: number
+        }
+        Returns: {
+          allowed: boolean
+          retry_after_seconds: number
+        }[]
       }
       publish_contract_amendment: {
         Args: {
@@ -4416,6 +4430,15 @@ export type Database = {
           isOneToOne: false
           isSetofReturn: true
         }
+      }
+      record_tenant_identity_conflicts: {
+        Args: {
+          p_now?: string
+          p_subject_hash: string
+          p_units: number
+          p_window_seconds: number
+        }
+        Returns: undefined
       }
       refresh_invoice_profile_snapshot_with_audit: {
         Args: {

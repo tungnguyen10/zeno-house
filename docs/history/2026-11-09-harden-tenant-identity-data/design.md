@@ -1,8 +1,8 @@
 ---
 type: Change Design
 title: "2026-11-09-harden-tenant-identity-data-design"
-status: draft
-change_state: implementation-verified-rollout-pending
+status: deprecated
+change_state: completed
 tags: [superpowers, change, migration, security, tenants]
 ---
 
@@ -12,7 +12,7 @@ tags: [superpowers, change, migration, security, tenants]
 
 ## Bối cảnh
 
-[Tenant V2](../tenant-v2/spec-and-implementation-plan.md) được tách thành ba change theo thứ tự:
+[Tenant V2](../../changes/tenant-v2/spec-and-implementation-plan.md) được tách thành ba change theo thứ tự:
 
 1. **B — change này:** chống trùng ở DB, không lộ dữ liệu khi trùng, bỏ PII khỏi bản nháp và audit.
 2. A — Tenant Quick Create trong luồng Room/Contract, dùng mã lỗi 409 của change này để đề xuất dùng lại khách.

@@ -206,7 +206,7 @@ When the tenant is currently a roommate (`activeAssignment.assignmentRole === 'r
 ---
 
 ### Requirement: Tenants form navigation behavior with drafts
-`app/pages/tenants/create.vue` and `app/pages/tenants/[code]/edit.vue` SHALL allow users to leave the page immediately even when `useTenantForm().isDirty.value === true`. The pages SHALL NOT show a custom leave-confirm modal and SHALL NOT register a browser unload warning. Unsaved values rely on draft autosave and can be restored on revisit.
+`app/pages/tenants/create.vue` and `app/pages/tenants/[code]/edit.vue` SHALL allow users to leave the page immediately even when `useTenantForm().isDirty.value === true`. The pages SHALL NOT show a custom leave-confirm modal and SHALL NOT register a browser unload warning. Unsaved non-sensitive values rely on draft autosave and can be restored on revisit; excluded identity fields are not persisted.
 
 #### Scenario: Leaving while dirty proceeds immediately
 - **WHEN** user changes a field and clicks the back link
@@ -236,7 +236,7 @@ When the tenant is currently a roommate (`activeAssignment.assignmentRole === 'r
 
 #### Scenario: Restore replaces current form values
 - **WHEN** user clicks "Khôi phục"
-- **THEN** form fields are replaced with the draft values and the alert disappears
+- **THEN** safe form fields are restored from the draft, current excluded sensitive values are preserved, and the alert disappears
 
 #### Scenario: Draft persists across page reload
 - **WHEN** user types changes, waits 600ms, then reloads the page
@@ -297,4 +297,4 @@ Tenant form drafts SHALL omit `id_number`, `id_issued_date`, `id_issued_place`, 
 - **WHEN** the server returns `TENANT_IDENTITY_CONFLICT`
 - **THEN** the form displays the generic alert without marking an identity field
 
-Implementation and production rollout evidence: [tenant identity hardening](../changes/harden-tenant-identity-data/index.md). Database rollout remains a separate acceptance gate.
+Implementation and production rollout evidence: [tenant identity hardening](../history/2026-11-09-harden-tenant-identity-data/index.md). Production database rollout and SQL verification passed on 2026-11-09; application branch deployment is separate.
