@@ -11,6 +11,8 @@ Current change bundles are OKF draft concepts, not deployed or automatically acc
 - [atomic-billing-close](./atomic-billing-close/design.md) — P0 atomic billing close/reopen and reconciliation
 - [tenant-v2](./tenant-v2/spec-and-implementation-plan.md) — Umbrella draft, split into B (identity hardening completed; see history) → A (Quick Create) → C (Claude identity autofill)
 
+- [zeno-house-v2-optimization](./zeno-house-v2-optimization/brief.md) — Draft product flow optimization brief; review and split into PR-sized tasks before implementation
+
 ## Checklist status imported from the previous workflow
 
 - add-contract-amendments: 12 checked, 0 unchecked; verify actual rollout and release before archiving.
