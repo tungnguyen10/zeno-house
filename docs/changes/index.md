@@ -4,13 +4,13 @@
 
 ## In progress / planned
 
-- [add-dashboard-light-mode](./add-dashboard-light-mode/proposal.md) — 11/12 tasks; desktop/mobile interactive visual QA remains open.
-- [harden-event-audit](./harden-event-audit/proposal.md) — 12/16 tasks; database-local and distributed audit durability gaps remain.
+- [harden-event-audit](./harden-event-audit/verification.md) — 12/16 tasks; failure injection, transactional DB audits, contract correlations and cross-system durable intent remain open.
 - [tenant-v2](./tenant-v2/spec-and-implementation-plan.md) — Proposed Quick Create and Claude extraction; completed identity hardening is archived separately.
 - [zeno-house-v2-optimization](./zeno-house-v2-optimization/brief.md) — Draft product flow optimization, pending PR task breakdown.
 
 ## Implementation present — verification or rollout gates open
 
+- [add-dashboard-light-mode](./add-dashboard-light-mode/verification.md) — 11/12 tasks; automated theme coverage exists, desktop/tablet/mobile visual and interactive QA task 4.3 remains open.
 - [tenant-authorization-scope](./tenant-authorization-scope/verification.md) — ZH-SEC-01; source and production SQL verification recorded, responsive/authenticated UI and deployment sign-off pending.
 - [atomic-contract-renewal](./atomic-contract-renewal/verification.md) — ZH-CTR-01; production SQL checks passed, new checkout/deposit financial compatibility and release sign-off pending.
 - [atomic-billing-close](./atomic-billing-close/verification.md) — ZH-BIL-01; production SQL checks passed, legacy financial reconciliation and concurrency/release sign-off pending.
