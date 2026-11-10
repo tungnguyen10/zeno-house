@@ -1,8 +1,8 @@
 ---
 type: Implementation Tasks
 title: "dashboard-layout-refresh: tasks.md"
-status: draft
-change_state: in-progress
+status: deprecated
+change_state: complete
 tags: [change, pending-review]
 sources:
   - resource: "https://github.com/tungnguyen10/zeno-house/blob/ae95811bbdc1932368b4e6b9ed3e9540399d26e6/openspec/changes/dashboard-layout-refresh/tasks.md"
