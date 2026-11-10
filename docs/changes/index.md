@@ -9,7 +9,8 @@
 - [zeno-house-v2-optimization](./zeno-house-v2-optimization/brief.md) — Draft product flow optimization, pending PR task breakdown.
 - [atomic-building-room-setup](./atomic-building-room-setup/index.md) — V2 PR0: atomic Building + bulk Room creation; plan ready.
 - [building-contract-defaults](./building-contract-defaults/index.md) — V2 PR1: lessor profile, contract policy defaults, readiness; plan ready.
-- [room-setup-inventory-lite](./room-setup-inventory-lite/index.md) — V2 PR2: floor-based room generator, room inventory, contract handover snapshot; design under review.
+- [room-setup-inventory-lite](./room-setup-inventory-lite/index.md) — V2 PR2: floor-based room generator, room inventory, contract handover snapshot; plan ready.
+- [tenant-quick-create](./tenant-quick-create/index.md) — V2 PR3 / Tenant V2 change A: inline tenant picker + quick create; plan ready.
 
 ## Implementation present — verification or rollout gates open
 

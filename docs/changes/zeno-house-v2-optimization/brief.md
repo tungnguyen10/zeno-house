@@ -165,6 +165,7 @@ Không làm lại core renewal/checkout. Kiểm chứng tình trạng migration 
 - PR0: [atomic-building-room-setup](../atomic-building-room-setup/index.md)
 - PR1: [building-contract-defaults](../building-contract-defaults/index.md)
 - PR2: [room-setup-inventory-lite](../room-setup-inventory-lite/index.md)
+- PR3: [tenant-quick-create](../tenant-quick-create/index.md)
 
 ## 7. Acceptance scenarios (bắt buộc)
 
