@@ -162,6 +162,8 @@ Không làm lại core renewal/checkout. Kiểm chứng tình trạng migration 
 
 **Tách scope rõ:** Mỗi PR có spec + implementation plan trong `docs/changes/<change-name>/`, cập nhật `docs/capabilities/**` khi chấp nhận; PR vào `develop`, không đẩy thẳng `main`.
 
+- PR0: [atomic-building-room-setup](../atomic-building-room-setup/index.md)
+
 ## 7. Acceptance scenarios (bắt buộc)
 
 1. **First setup:** Tạo Building, cấu hình đủ để ký HĐ và nhận tiền mà không trùng dữ liệu giữa form và settings.
