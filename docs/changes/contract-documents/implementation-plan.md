@@ -10,9 +10,9 @@ tags: [superpowers, change, contracts, documents, docx, v2]
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Issue versioned contract and appendix DOCX files from a fixed template, store them immutably in private Storage with metadata and snapshot, and manage issued → signed → voided/replacement lifecycle.
+**Goal:** Issue versioned contract and appendix DOCX files from a fixed template, store them immutably in private Storage with metadata and snapshot, manage issued → signed → voided/replacement lifecycle, keep failed generations retryable from their stored snapshot, and lock handover inventory once the contract DOCX is issued.
 
-**Architecture:** Pure server modules — `vndToWords`, `buildContractDocumentData`, `collectMissing`, `renderDocx` (docxtemplater + pizzip with a dotted-path parser and throwing `nullGetter`). `ContractDocumentService` orchestrates reserve (RPC) → upload → finalize (RPC), with compensation and a cron-triggered cleanup worker. Templates live in `server/assets/contract-templates/**` with a manifest.
+**Architecture:** Pure server modules — `vndToWords`, `buildContractDocumentData`, `collectMissing`, `renderDocx` (docxtemplater + pizzip with a dotted-path parser and throwing `nullGetter`). `ContractDocumentService` orchestrates reserve (RPC) → upload → finalize (RPC); failures mark the row `failed` and keep its snapshot for "Tạo lại file". A readiness endpoint serves the create page before a contract exists. Templates live in `server/assets/contract-templates/**` with a manifest.
 
 **Tech Stack:** Nuxt 3 / Nitro, docxtemplater, pizzip, Supabase Storage + RPC, PL/pgSQL, pg_cron, Vitest.
 
@@ -34,7 +34,7 @@ tags: [superpowers, change, contracts, documents, docx, v2]
 ## Review Focus
 
 1. **A placeholder with no data** (e.g. tenant has no `id_issued_place`) — must block issuance via `collectMissing`, and the renderer must throw rather than print an empty/raw tag. Pinned in Tasks 4–5.
-2. **Upload succeeds, finalize fails** — file removed and pending row deleted; no orphan. Pinned in Task 7.
+2. **Upload succeeds, finalize fails** — object removed, row becomes `failed` with snapshot kept; "Tạo lại file" renders from that snapshot, not from current data. Pinned in Task 7.
 3. **Issuing twice concurrently** — unique partial index allows only one active document; second gets 409. Pinned in Task 6 (SQL) and Task 7.
 4. **Manager downloads a document from another building** — 403 before signing a URL. Pinned in Task 8.
 5. **Replacing a signed document** — only admin/owner, with reason; old row becomes `voided`, file kept. Pinned in Tasks 6–7.
@@ -444,7 +444,7 @@ Use invented fixtures; write the assertions explicitly in the test file.
 - Create: `supabase/verification/contract_documents.sql`
 - Test: `tests/config/contract-documents-migration.test.ts`
 
-- [ ] **Step 1: Write the failing static test** asserting: bucket insert with `public = false` and the DOCX MIME; `create table if not exists public.contract_documents`; RLS + revoke; unique partial index name `contract_documents_one_active`; trigger `contract_documents_guard`; functions `reserve_contract_document`, `finalize_contract_document`, `mark_contract_document_signed`, `void_contract_document`, `claim_stale_contract_documents` each granted only to `service_role`; `cron.schedule('contract-documents-cleanup'`.
+- [ ] **Step 1: Write the failing static test** asserting: bucket insert with `public = false` and the DOCX MIME; `create table if not exists public.contract_documents`; RLS + revoke; unique partial index name `contract_documents_one_active`; trigger `contract_documents_guard`; trigger `contract_inventory_items_lock`; functions `reserve_contract_document`, `finalize_contract_document`, `fail_contract_document`, `mark_contract_document_signed`, `void_contract_document`, `claim_stale_contract_documents` each granted only to `service_role`; `cron.schedule('contract-documents-cleanup'`.
 
 - [ ] **Step 2: Run to verify failure.**
 
@@ -463,12 +463,13 @@ create table if not exists public.contract_documents (
   type text not null check (type in ('contract', 'appendix')),
   amendment_id uuid references public.contract_amendments(id) on delete restrict,
   version_no integer not null check (version_no > 0),
-  status text not null default 'pending' check (status in ('pending', 'issued', 'signed', 'voided')),
+  status text not null default 'pending' check (status in ('pending', 'failed', 'issued', 'signed', 'voided')),
   template_key text not null,
   template_version integer not null check (template_version > 0),
   storage_path text,
   sha256 text check (sha256 is null or sha256 ~ '^[0-9a-f]{64}$'),
   size_bytes integer check (size_bytes is null or size_bytes > 0),
+  last_error_code text check (last_error_code is null or last_error_code ~ '^[A-Z_]{1,64}$'),
   snapshot jsonb not null,
   signed_date date not null,
   issued_by uuid references auth.users(id) on delete set null,
@@ -481,24 +482,27 @@ create table if not exists public.contract_documents (
   replaces_document_id uuid references public.contract_documents(id) on delete restrict,
   created_at timestamptz not null default now(),
   constraint contract_documents_appendix_check check ((type = 'appendix') = (amendment_id is not null)),
-  constraint contract_documents_issued_fields check (status = 'pending' or (storage_path is not null and sha256 is not null and issued_at is not null)),
+  constraint contract_documents_issued_fields check (status in ('pending', 'failed') or (storage_path is not null and sha256 is not null and issued_at is not null)),
   constraint contract_documents_voided_fields check (status <> 'voided' or (voided_at is not null and void_reason is not null))
 );
 
 create unique index if not exists contract_documents_one_active
   on public.contract_documents (contract_id, type, coalesce(amendment_id, '00000000-0000-0000-0000-000000000000'::uuid))
-  where status in ('pending', 'issued', 'signed');
+  where status in ('pending', 'failed', 'issued', 'signed');
 create unique index if not exists contract_documents_version_uq
   on public.contract_documents (contract_id, type, coalesce(amendment_id, '00000000-0000-0000-0000-000000000000'::uuid), version_no);
 ```
 
-Guard trigger `contract_documents_guard` (`before update or delete`): on delete allow only `old.status = 'pending'`; on update reject changes to `contract_id, building_id, type, amendment_id, version_no, template_key, template_version, snapshot, signed_date, replaces_document_id`; allow `storage_path/sha256/size_bytes/issued_at/issued_by` changes only when `old.status = 'pending'`; allowed transitions: `pending→issued`, `issued→signed`, `issued→voided`, `signed→voided`; anything else raises `CONTRACT_DOCUMENT_IMMUTABLE`.
+Guard trigger `contract_documents_guard` (`before update or delete`): reject every delete (`CONTRACT_DOCUMENT_IMMUTABLE`); on update reject changes to `contract_id, building_id, type, amendment_id, version_no, template_key, template_version, snapshot, signed_date, replaces_document_id`; allow `storage_path/sha256/size_bytes/issued_at/issued_by/last_error_code` changes only when `old.status in ('pending', 'failed')`; allowed transitions: `pending→issued`, `pending→failed`, `failed→issued`, `failed→voided`, `issued→signed`, `issued→voided`, `signed→voided`; anything else raises `CONTRACT_DOCUMENT_IMMUTABLE`.
+
+Handover inventory lock (`contract_inventory_items_lock`, `before insert or update or delete on public.contract_inventory_items`): if `exists (select 1 from public.contract_documents d where d.contract_id = coalesce(new.contract_id, old.contract_id) and d.type = 'contract' and d.status in ('issued', 'signed'))` raise `CONTRACT_INVENTORY_LOCKED` (errcode `23514`). Drop the PR2 update-only trigger `contract_inventory_items_no_update` if it exists (PR2 is planned without it; keep the drop for safety).
 
 RPCs (all `security invoker`, `set search_path = ''`, revoke from `public, anon, authenticated`, grant `service_role`):
 - `reserve_contract_document(p_contract_id uuid, p_type text, p_amendment_id uuid, p_template_key text, p_template_version integer, p_snapshot jsonb, p_signed_date date, p_actor_id uuid, p_replaces_document_id uuid, p_void_reason text) returns public.contract_documents` — `pg_advisory_xact_lock(hashtextextended('contract_documents:' || p_contract_id::text, 0))`; find active doc for the key; if exists and `p_replaces_document_id is distinct from active.id` → `raise 'CONTRACT_DOCUMENT_ACTIVE_EXISTS' using errcode='23505'`; if `p_replaces_document_id` not null → update it to `voided` with `p_void_reason`, `voided_by`, `voided_at`; `version_no = coalesce(max, 0) + 1`; insert `pending` with `building_id` from contract; return row.
-- `finalize_contract_document(p_document_id uuid, p_storage_path text, p_sha256 text, p_size_bytes integer, p_actor_id uuid)` — update pending → issued (`issued_by = p_actor_id`, `issued_at = now()`), else `CONTRACT_DOCUMENT_STATE_INVALID`.
+- `finalize_contract_document(p_document_id uuid, p_storage_path text, p_sha256 text, p_size_bytes integer, p_actor_id uuid)` — update `pending|failed` → issued (`issued_by = p_actor_id`, `issued_at = now()`, `last_error_code = null`), else `CONTRACT_DOCUMENT_STATE_INVALID`.
+- `fail_contract_document(p_document_id uuid, p_error_code text)` — `pending` → failed, clear `storage_path/sha256/size_bytes`, set `last_error_code`.
 - `mark_contract_document_signed(p_document_id uuid, p_actor_id uuid)` — issued → signed.
-- `void_contract_document(p_document_id uuid, p_reason text, p_actor_id uuid)` — issued|signed → voided.
+- `void_contract_document(p_document_id uuid, p_reason text, p_actor_id uuid)` — failed|issued|signed → voided.
 - `claim_stale_contract_documents(p_older_than interval)` — `select … where status='pending' and created_at < now() - p_older_than for update skip locked`.
 
 Cron (unschedule existing by name first, as in `harden_event_audit`):
@@ -524,7 +528,7 @@ select cron.schedule(
 );
 ```
 
-- [ ] **Step 4: Verification script** (`begin; … rollback;`): reserve → finalize → sign → void; second reserve while active → `CONTRACT_DOCUMENT_ACTIVE_EXISTS`; replace with reason → old voided, new version 2; update `snapshot` on issued → `CONTRACT_DOCUMENT_IMMUTABLE`; delete issued → blocked; delete pending → allowed; `claim_stale` returns an old pending row; appendix without `amendment_id` → check violation; grants.
+- [ ] **Step 4: Verification script** (`begin; … rollback;`): reserve → finalize → sign → void; second reserve while active (including `failed`) → `CONTRACT_DOCUMENT_ACTIVE_EXISTS`; reserve → fail → finalize (retry) → issued; replace with reason → old voided, new version 2; update `snapshot` on issued → `CONTRACT_DOCUMENT_IMMUTABLE`; delete any row → blocked; `claim_stale` returns an old pending row; appendix without `amendment_id` → check violation; insert into `contract_inventory_items` for a contract with an issued contract document → `CONTRACT_INVENTORY_LOCKED`, and allowed before issuance; grants.
 
 - [ ] **Step 5: Run static test** → PASS. **Commit** `git commit -m "feat(db): contract_documents table, bucket, RPCs and cleanup cron"`.
 
@@ -548,20 +552,24 @@ select cron.schedule(
   ContractDocumentService.check(event, user, contractIdentifier, input: { type; amendment_id? }): Promise<{ ready: boolean; missing: { code: string; label: string }[] }>
   ContractDocumentService.preview(event, user, contractIdentifier, input: { type; amendment_id?; signed_date }): Promise<{ filename: string; buffer: Buffer }>
   ContractDocumentService.issue(event, user, contractIdentifier, input: { type; amendment_id?; signed_date; request_id; replaces_document_id?; void_reason? }): Promise<ContractDocument>
+  ContractDocumentService.regenerate(event, user, documentId): Promise<ContractDocument>   // failed only; renders from stored snapshot + template version
+  ContractDocumentService.readiness(event, user, input: { room_id; tenant_id; occupant_tenant_ids: string[] }): Promise<{ ready: boolean; missing: { code: string; label: string }[] }>
   ContractDocumentService.downloadUrl(event, user, documentId): Promise<{ url: string; expiresIn: number }>
   ContractDocumentService.sign(event, user, documentId): Promise<ContractDocument>
   ContractDocumentService.void(event, user, documentId, reason: string): Promise<ContractDocument>
   ContractDocumentService.cleanupStale(event): Promise<{ removed: number }>
   ```
 - Capabilities: owner list gains `contract-documents.read`, `contract-documents.issue`, `contract-documents.sign`, `contract-documents.void`; manager list gains `contract-documents.read`, `contract-documents.issue`.
-- Audit: `CONTRACT_DOCUMENT_ISSUED: 'contract.document.issued'`, `CONTRACT_DOCUMENT_SIGNED: 'contract.document.signed'`, `CONTRACT_DOCUMENT_VOIDED: 'contract.document.voided'`.
+- Audit: `CONTRACT_DOCUMENT_ISSUED: 'contract.document.issued'`, `CONTRACT_DOCUMENT_REGENERATED: 'contract.document.regenerated'`, `CONTRACT_DOCUMENT_SIGNED: 'contract.document.signed'`, `CONTRACT_DOCUMENT_VOIDED: 'contract.document.voided'`.
 
 - [ ] **Step 1: Write failing service tests** (mock repository, sources loader, renderer, storage):
   - `check` returns missing from `collectMissing`.
   - `issue` with missing → 422 `CONTRACT_DOCUMENT_INCOMPLETE` and no reserve call.
   - Happy path order: `reserve` → `upload(path = ${buildingId}/${contractId}/${docId}.docx, upsert false)` → `finalize(sha256 of buffer)` → audit with `{ document_id, type, version_no, template_version, sha256 }` and no snapshot values.
-  - Upload throws → `deletePending(docId)` called, error rethrown.
-  - Finalize throws → `removeObject(path)` and `deletePending(docId)` called.
+  - Upload throws → `fail(docId, 'UPLOAD_FAILED')` called, snapshot not touched; result returned as a `failed` document (no exception to the caller — the UI shows "Tạo lại file").
+  - Finalize throws → `removeObject(path)` then `fail(docId, 'FINALIZE_FAILED')`.
+  - `regenerate` on `failed`: loads the stored snapshot, renders with the stored `template_version` (assert the sources loader is **not** called), removes any stale object at the path, uploads, finalizes, audits `contract.document.regenerated`; on `issued` → 409.
+  - `readiness` with a room + tenant + occupants builds partial sources (no contract) and returns the same codes as `collectMissing` for lessor/tenant/occupants/invoice profile/schedule/terms; scope checked on the room's building; response contains labels only (assert no tenant values in JSON).
   - Replay: `request_id` already completed for same actor (via `audit_operations` begin/complete using `AuditOperationRepository`, key `contract.document:<request_id>`) → returns existing document, no new reserve.
   - Manager `sign`/`void` → 403; owner `void` on signed → allowed; reason < 10 chars → 422.
   - `downloadUrl` checks `assertBuildingScope(document.buildingId, 'read')` before `createSignedUrl(path, 60)`.
@@ -571,7 +579,7 @@ select cron.schedule(
 - [ ] **Step 2: Run to verify failure.**
 
 - [ ] **Step 3: Implement**
-  - Repository: RPC wrappers (`reserve`, `finalize`, `markSigned`, `void`, `claimStale`), `deletePending(id)` (`delete … eq id eq status pending`), `findById`, `listByContract`, storage helpers (`upload(path, buffer)` with `contentType` DOCX + `upsert: false`, `removeObject(path)`, `signedUrl(path, 60)`). Map RPC errors: `CONTRACT_DOCUMENT_ACTIVE_EXISTS` → 409 "Hợp đồng đã có tài liệu đang hiệu lực. Hủy bản cũ để phát hành bản thay thế."; `CONTRACT_DOCUMENT_STATE_INVALID`/`CONTRACT_DOCUMENT_IMMUTABLE` → 409 "Trạng thái tài liệu không cho phép thao tác này.".
+  - Repository: RPC wrappers (`reserve`, `finalize`, `fail`, `markSigned`, `void`, `claimStale`), `findById`, `listByContract`, storage helpers (`upload(path, buffer)` with `contentType` DOCX + `upsert: false`, `removeObject(path)`, `signedUrl(path, 60)`). Map RPC errors: `CONTRACT_DOCUMENT_ACTIVE_EXISTS` → 409 "Hợp đồng đã có tài liệu đang hiệu lực. Hủy bản cũ để phát hành bản thay thế."; `CONTRACT_DOCUMENT_STATE_INVALID`/`CONTRACT_DOCUMENT_IMMUTABLE` → 409 "Trạng thái tài liệu không cho phép thao tác này.".
   - Sources loader: contract (`ContractRepository.findByIdentifier`), building, `BuildingContractProfileService.getUnmaskedForServer`, invoice profile row, tenant + active roommates (full rows via `TenantRepository` — bypassing the access-level redaction is intentional and server-only), vehicles, enabled contract services joined with catalog, `findHandoverInventory`, handover date from the contract's `handover_in` reading date.
   - Template bytes: `useStorage('assets:contract-templates').getItemRaw(entry.file)`.
   - Idempotency: `AuditOperationRepository.begin` with key `contract.document:<request_id>`; if the returned op is `completed` with `entity_id` and same actor → return that document; on success `complete` with `entity_id`.
@@ -586,7 +594,8 @@ select cron.schedule(
 
 **Files:**
 - Create: `server/api/contracts/[id]/documents/index.get.ts`, `index.post.ts`, `check.post.ts`, `preview.post.ts`
-- Create: `server/api/contract-documents/[docId]/download.get.ts`, `sign.post.ts`, `void.post.ts`
+- Create: `server/api/contract-documents/[docId]/download.get.ts`, `sign.post.ts`, `void.post.ts`, `regenerate.post.ts`
+- Create: `server/api/contract-documents/readiness.post.ts`
 - Create: `server/api/internal/contract-documents/cleanup.post.ts`
 - Create: `app/utils/validators/contract-documents.ts`
 - Modify: `nuxt.config.ts` (`runtimeConfig.contractDocumentsCleanupSecret: ''`)
@@ -595,9 +604,10 @@ select cron.schedule(
 **Interfaces:**
 - Validators: `contractDocumentRequestSchema { type: 'contract'|'appendix', amendment_id?: uuid, signed_date: YYYY-MM-DD }` with refine appendix⇔amendment_id; `contractDocumentIssueSchema` = request + `request_id: uuid`, `replaces_document_id?: uuid`, `void_reason?: string ≥ 10` (required when `replaces_document_id`); `contractDocumentVoidSchema { reason: string trim ≥ 10 ≤ 500 }`.
 - `preview.post.ts` responds with the buffer: `setHeader('Content-Type', DOCX_MIME)`, `setHeader('Content-Disposition', \`attachment; filename="${filename}"\`)`, `return buffer`.
-- Cleanup: header `x-contract-documents-cleanup-secret` must equal `useRuntimeConfig(event).contractDocumentsCleanupSecret` (non-empty) else 403; returns `{ data: { removed } }`.
+- Cleanup: header `x-contract-documents-cleanup-secret` must equal `useRuntimeConfig(event).contractDocumentsCleanupSecret` (non-empty) else 403; claims stale `pending` rows, removes their objects, marks them `failed` with `STALE_PENDING`; returns `{ data: { failed } }`.
+- Readiness validator: `{ room_id: uuid, tenant_id: uuid, occupant_tenant_ids: uuid[] ≤ 10 }`.
 
-- [ ] **Step 1: Write failing tests** — list response contains no `snapshot`/`storagePath`; issue validates and forwards; void requires reason; preview sets DOCX headers; cleanup 403 on wrong/empty secret and calls service on correct secret.
+- [ ] **Step 1: Write failing tests** — list response contains no `snapshot`/`storagePath`; issue validates and forwards; void requires reason; regenerate forwards doc id; readiness validates body and returns labels only; preview sets DOCX headers; cleanup 403 on wrong/empty secret and calls service on correct secret.
 - [ ] **Step 2–4:** implement, run, regenerate `docs/api-inventory.md`.
 - [ ] **Step 5: Commit** `git commit -m "feat(api): contract document endpoints and cleanup worker"`.
 
@@ -610,18 +620,20 @@ select cron.schedule(
 - Create: `app/components/contracts/ContractDocumentsSection.vue`
 - Create: `app/components/contracts/ContractDocumentIssueDialog.vue`
 - Modify: `app/pages/dashboard/contracts/[code]/index.vue` (section `documents` after `overview`, nav "Tài liệu")
-- Modify: `app/pages/dashboard/contracts/create.vue` (done-screen button opens the dialog)
+- Modify: `app/pages/dashboard/contracts/create.vue` (readiness check + "Tạo & xuất DOCX" result panel: download / missing list / "Tạo lại file")
 - Modify: `app/components/contracts/ContractAmendmentsSection.vue` ("Xuất phụ lục" on scheduled/applied amendments)
 - Test: `tests/composables/useContractDocuments.test.ts`, `tests/components/contracts/ContractDocumentIssueDialog.test.ts`, `tests/components/contracts/ContractDocumentsSection.test.ts`
 
 **Interfaces:**
-- `useContractDocuments(contractIdentifier)` → `{ documents, loading, check(input), preview(input) (triggers browser download via Blob), issue(input) (stable request_id per dialog open), download(docId) (opens signed URL), sign(docId), void(docId, reason) }`.
+- `useContractDocuments(contractIdentifier)` → `{ documents, loading, check(input), preview(input) (triggers browser download via Blob), issue(input) (stable request_id per dialog open), regenerate(docId), download(docId) (opens signed URL), sign(docId), void(docId, reason) }`.
+- `useContractDocumentReadiness()` → `{ readiness: Ref<{ ready; missing } | null>, check(input) /* debounced 400 ms */ }` used by the create page.
 - Dialog props `{ open: boolean; contractId: string; type: 'contract' | 'appendix'; amendmentId?: string; replaceDocument?: ContractDocument | null }`; emits `issued: [ContractDocument]`, `close`.
 
 - [ ] **Step 1: UI polish workflow** (`frontend-design` + Hallmark): documents list density, status badges (`UiStatusBadge`), missing-data checklist with links, preview vs issue hierarchy, replace/void confirmation copy (warn that a signed contract should usually get an appendix), mobile. Record in `docs/changes/contract-documents/verification.md`.
 - [ ] **Step 2: Write failing tests**:
   - Dialog: on open calls `check`; with missing shows each label and link (tenant → `/dashboard/tenants/{code}/edit`; lessor/terms → `settings#contract-profile` when `building-contract-profile.write`, else text "Liên hệ chủ nhà để bổ sung"); "Phát hành" disabled while missing; ready → "Xem trước (không lưu)" calls `preview`, "Phát hành" calls `issue` once with stable `request_id` across a retry; replace mode requires reason ≥ 10 chars.
-  - Section: renders versions newest first with status labels "Đã phát hành", "Đã ký", "Đã hủy"; "Đánh dấu đã ký" only for `issued` + `contract-documents.sign`; "Hủy & phát hành lại" only with `contract-documents.void`; download calls `download`.
+  - Section: renders versions newest first with status labels "Đã phát hành", "Đã ký", "Đã hủy", "Sinh file lỗi"; "Đánh dấu đã ký" only for `issued` + `contract-documents.sign`; "Tạo lại file" only for `failed` + `contract-documents.issue`; "Hủy & phát hành lại" only with `contract-documents.void`; download calls `download` and is hidden for `failed`.
+  - Create page result panel: after "Tạo & xuất DOCX", success shows "Tải hợp đồng (DOCX)"; `failed` shows "Tạo lại file"; 422 shows the missing list with links.
 - [ ] **Step 3–4:** implement and run tests.
 - [ ] **Step 5: Visual QA** (ask before starting a local runtime): missing-data, preview download opens in Word/LibreOffice and shows correct content, issue, sign, void + replace, appendix export, mobile. Record in `verification.md`.
 - [ ] **Step 6: Commit** `git commit -m "feat(ui): contract documents section and issue dialog"`.

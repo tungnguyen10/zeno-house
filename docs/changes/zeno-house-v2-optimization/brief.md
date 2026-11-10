@@ -168,6 +168,9 @@ Không làm lại core renewal/checkout. Kiểm chứng tình trạng migration 
 - PR3: [tenant-quick-create](../tenant-quick-create/index.md)
 - PR4a: [contract-quick-create](../contract-quick-create/index.md)
 - PR4b: [contract-documents](../contract-documents/index.md)
+- PR5: [tenant-identity-autofill](../tenant-identity-autofill/index.md)
+
+**Quyết định đã chốt cho PR4 (2026-11-10):** trang tạo HĐ một trang (4 khối luôn hiện, 4 khối thu gọn), điền sẵn tối đa, nút "Tạo & xuất DOCX", không bước xác nhận, nhớ lựa chọn gần nhất theo tòa; tạo HĐ + người ở + dịch vụ + nội thất trong một transaction có `request_id`; bản nháp lưu server; DOCX lưu private Storage kèm `sha256` + phiên bản mẫu + snapshot, sinh lỗi thì giữ HĐ và cho "Tạo lại file"; phụ lục là tài liệu riêng; sai thì `voided` + bản thay thế; nội thất bàn giao sửa được tới khi phát hành DOCX.
 
 ## 7. Acceptance scenarios (bắt buộc)
 

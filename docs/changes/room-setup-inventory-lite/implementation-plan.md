@@ -10,7 +10,7 @@ tags: [superpowers, change, rooms, inventory, contracts, v2]
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Floor-based room generation (create building + add to existing building), per-room inventory seeded from a building template, and an immutable handover inventory captured with each new contract.
+**Goal:** Floor-based room generation (create building + add to existing building), per-room inventory seeded from a building template, and a handover inventory captured with each new contract (editable later via PR4a, locked after DOCX issuance by PR4b).
 
 **Architecture:** Three service-role-only tables (`building_inventory_templates`, `room_inventory_items`, `contract_inventory_items`). New wrapper RPCs (`create_rooms_batch_idempotent`, `create_contract_with_handover_and_inventory`) and `apply_inventory_template` compose existing functions inside one transaction without altering production RPCs. A pure room-number generator extends PR0's `useQuickRoomPreview`. Shared inventory components serve template, room, contract-create, contract-detail and checkout surfaces.
 
@@ -79,8 +79,8 @@ describe('inventory lite migration', () => {
     expect(sql).not.toMatch(/function public\.create_rooms_batch\(/)
   })
 
-  it('blocks updates to handover snapshots', () => {
-    expect(sql).toContain('before update on public.contract_inventory_items')
+  it('does not add an update-block trigger (PR4b owns the post-issuance lock)', () => {
+    expect(sql).not.toContain('before update on public.contract_inventory_items')
   })
 
   it('restricts new functions to service_role', () => {
@@ -100,8 +100,8 @@ describe('inventory lite migration', () => {
 -- =============================================================================
 -- Inventory lite (V2 PR2)
 -- =============================================================================
--- Building inventory templates, room inventory, immutable contract handover
--- inventory, plus wrapper RPCs. Existing RPCs are NOT modified.
+-- Building inventory templates, room inventory, contract handover inventory,
+-- plus wrapper RPCs. Existing RPCs are NOT modified.
 -- Requires PR0 migration (create_rooms_batch).
 --
 -- Data impact: ADDITIVE ONLY.
@@ -162,19 +162,6 @@ create trigger room_inventory_items_set_updated_at
   before update on public.room_inventory_items
   for each row execute function public.set_updated_at();
 
-create or replace function public.contract_inventory_items_immutable()
-returns trigger language plpgsql security invoker set search_path = '' as $$
-begin
-  raise exception 'CONTRACT_INVENTORY_IMMUTABLE' using errcode = '23514';
-end;
-$$;
-revoke all on function public.contract_inventory_items_immutable() from public, anon, authenticated;
-
-drop trigger if exists contract_inventory_items_no_update on public.contract_inventory_items;
-create trigger contract_inventory_items_no_update
-  before update on public.contract_inventory_items
-  for each row execute function public.contract_inventory_items_immutable();
-
 alter table public.building_inventory_templates enable row level security;
 alter table public.room_inventory_items enable row level security;
 alter table public.contract_inventory_items enable row level security;
@@ -183,7 +170,7 @@ revoke all on table public.room_inventory_items from public, anon, authenticated
 revoke all on table public.contract_inventory_items from public, anon, authenticated;
 grant select, insert, update, delete on table public.building_inventory_templates to service_role;
 grant select, insert, update, delete on table public.room_inventory_items to service_role;
-grant select, insert, delete on table public.contract_inventory_items to service_role;
+grant select, insert, update, delete on table public.contract_inventory_items to service_role;
 
 -- ---------- apply_inventory_template ----------
 create or replace function public.apply_inventory_template(
@@ -422,14 +409,6 @@ begin
   if (select count(*) from public.contract_inventory_items where contract_id = v_contract.id) <> 1 then
     raise exception 'VERIFY 4 failed: handover not written';
   end if;
-
-  -- 5. Snapshot is immutable.
-  v_failed := false;
-  begin
-    update public.contract_inventory_items set quantity = 2 where contract_id = v_contract.id;
-  exception when others then v_failed := sqlerrm = 'CONTRACT_INVENTORY_IMMUTABLE';
-  end;
-  if not v_failed then raise exception 'VERIFY 5 failed: snapshot updated'; end if;
 
   -- 6. Handover reading failure rolls back contract + inventory (duplicate handover on same room/period).
   v_failed := false;

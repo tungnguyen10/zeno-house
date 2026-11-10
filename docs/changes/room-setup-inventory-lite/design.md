@@ -48,7 +48,7 @@ Cùng cột, `room_id → rooms on delete cascade` thay `building_id`; `unique (
 
 ### 4.3. `contract_inventory_items`
 
-`id`, `contract_id → contracts on delete cascade`, `name`, `quantity`, `condition`, `unit_value`, `note`, `sort_order`, `created_at`. Không có `updated_at`. Trigger chặn `update` (bản chụp không sửa được). Xóa chỉ xảy ra khi HĐ bị xóa cứng (luồng xóa HĐ hiện có xóa các bảng con trước; `cascade` bảo đảm không sót dòng).
+`id`, `contract_id → contracts on delete cascade`, `name`, `quantity`, `condition`, `unit_value`, `note`, `sort_order`, `created_at`. Không có `updated_at`. PR2 không có đường sửa danh sách này; PR4a thêm API sửa ("bàn giao hoàn tất sau") và PR4b thêm trigger khóa khi hợp đồng đã phát hành DOCX. Xóa chỉ xảy ra khi HĐ bị xóa cứng (`cascade`).
 
 ### 4.4. RPC
 
@@ -127,7 +127,7 @@ Chất lượng UI: theo [ui-polish-workflow](../../../.agents/skills/zeno-house
 | UI | test component + test mã nguồn | Editor; checkbox tắt khi chưa có mẫu; trang tạo tòa dùng `RoomBatchGenerator` |
 
 - Migration `supabase/migrations/<ts>_inventory_lite.sql` chạy **sau** migration PR0: 3 bảng + trigger; `apply_inventory_template`; `create_rooms_batch_idempotent`; `create_contract_with_handover_and_inventory`. Không sửa hàm nào đang có.
-- Script `supabase/verification/inventory_lite.sql`: hàm bọc ghi bàn giao cùng transaction, lỗi chỉ số → rollback cả HĐ và bàn giao; `update` bàn giao bị chặn; `apply_inventory_template` chặn phòng khác tòa; `merge` không trùng; replay batch; grant.
+- Script `supabase/verification/inventory_lite.sql`: hàm bọc ghi bàn giao cùng transaction, lỗi chỉ số → rollback cả HĐ và bàn giao; `apply_inventory_template` chặn phòng khác tòa; `merge` không trùng; replay batch; grant.
 - Thứ tự triển khai: áp migration → xác minh → deploy app gọi hàm bọc; hàm cũ không đổi nên không có khoảng hở.
 - Regenerate types; áp dụng cloud là gate riêng.
 

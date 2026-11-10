@@ -14,7 +14,10 @@ tags: [superpowers, change, contracts, documents, docx, pii, v2]
 
 - Phát hành hợp đồng DOCX từ một mẫu chuẩn có phiên bản, điền đúng placeholder, không còn placeholder thừa.
 - Lưu **file đã phát hành** trong private Storage (không ghi đè) + metadata + snapshot JSON; tải lại đúng file đó.
-- Vòng đời tài liệu: bản xem trước (không lưu) → phát hành → đã ký; sai sót → hủy (`voided`) + phát hành bản thay thế. Không sửa, không xóa.
+- Vòng đời tài liệu: bản xem trước (không lưu) → phát hành → đã ký; sai sót → hủy (`voided`) + phát hành bản thay thế. Không sửa, không xóa. Sinh file lỗi → tài liệu ghi `failed` (giữ snapshot), hợp đồng vẫn còn, có nút **"Tạo lại file"** sinh lại từ đúng snapshot đó.
+- "Xuất DOCX" luôn tải đúng file đã lưu, không sinh lại từ dữ liệu mới.
+- Kiểm tra sẵn sàng ngay trên trang tạo HĐ (PR4a), trước khi hợp đồng tồn tại.
+- Khóa danh sách nội thất bàn giao khi hợp đồng đã có DOCX hợp đồng `issued`/`signed`.
 - Phụ lục (từ `contract_amendments`) là tài liệu riêng, cùng quy trình.
 - Chặn phát hành khi thiếu thông tin pháp lý của bên cho thuê, khách đứng tên **và mọi người ở cùng**.
 
@@ -36,7 +39,9 @@ tags: [superpowers, change, contracts, documents, docx, pii, v2]
 | Phụ lục | Tài liệu riêng (`type = 'appendix'`, gắn `contract_id` + `amendment_id`), cùng quy trình; không sửa file hợp đồng gốc. |
 | Sai sót | Không sửa/xóa; đánh dấu `voided` (kèm lý do) và phát hành bản thay thế (`replaces_document_id`). |
 | Bản nháp | Sinh tại chỗ để xem/tải, không ghi Storage/DB. |
-| Lỗi giữa chừng | Lỗi insert/finalize → xóa file ngay; job định kỳ dọn file mồ côi. |
+| Lỗi giữa chừng | Upload/finalize lỗi → xóa object đã upload (nếu có), chuyển tài liệu sang `failed`, giữ snapshot; "Tạo lại file" sinh lại từ snapshot đã lưu. Job định kỳ chuyển `pending` bị treo sang `failed` và dọn object mồ côi. |
+| Tạo & xuất | Trang tạo HĐ (PR4a) gọi kiểm tra sẵn sàng trước khi tạo; sau khi tạo, phát hành ngay. Lỗi phát hành không ảnh hưởng hợp đồng. |
+| Nội thất bàn giao | Sửa được sau khi tạo HĐ (PR4a); khóa ở DB khi có DOCX hợp đồng `issued`/`signed`. |
 | Người ở cùng | Bắt buộc đủ giấy tờ cho **tất cả** người ở; thiếu → chặn phát hành. |
 | Xe | Bảng xe trong mẫu lấy từ `contract_vehicles` (PR4a). |
 | Dịch vụ | Bảng dịch vụ (tên, đơn giá HĐ, đơn vị theo `pricing_type`, ghi chú) + câu "Số người, số xe tính phí được xác định theo thực tế hằng tháng và thể hiện trên hóa đơn."; bỏ "miễn phí N xe". |
@@ -102,38 +107,43 @@ tags: [superpowers, change, contracts, documents, docx, pii, v2]
 | `type text check in ('contract','appendix')` | |
 | `amendment_id → contract_amendments null` | Bắt buộc khi `appendix` |
 | `version_no int` | Tăng theo `(contract_id, type, amendment_id)` |
-| `status text check in ('pending','issued','signed','voided')` | |
+| `status text check in ('pending','failed','issued','signed','voided')` | |
 | `template_key text`, `template_version int` | |
-| `storage_path text null`, `sha256 text null`, `size_bytes int null` | Null khi `pending` chưa upload xong |
+| `storage_path text null`, `sha256 text null`, `size_bytes int null` | Null khi `pending`/`failed` |
+| `last_error_code text null` | Mã lỗi kỹ thuật khi `failed` (không chứa PII) |
 | `snapshot jsonb not null` | Dữ liệu đã điền (chứa PII; không trả cho client) |
 | `signed_date date` | Ngày ký in trên tài liệu |
 | `issued_by`, `issued_at`, `signed_by`, `signed_at`, `voided_by`, `voided_at`, `void_reason`, `replaces_document_id`, `created_at` | |
 
-- Unique partial: một tài liệu đang hiệu lực (`status in ('pending','issued','signed')`) cho mỗi `(contract_id, type, coalesce(amendment_id, zero_uuid))`.
-- Trigger chặn sửa cột nội dung (`snapshot`, `storage_path`, `sha256`, `template_*`, `version_no`, `type`, `contract_id`) sau khi `status <> 'pending'`; chỉ cho chuyển trạng thái `pending → issued`, `issued → signed`, `issued|signed → voided`. Chặn `delete` trừ dòng `pending` (dọn mồ côi).
+- Unique partial: một tài liệu đang hiệu lực (`status in ('pending','failed','issued','signed')`) cho mỗi `(contract_id, type, coalesce(amendment_id, zero_uuid))`.
+- Trigger chặn sửa cột nội dung (`snapshot`, `template_*`, `version_no`, `type`, `contract_id`) sau khi tạo; `storage_path`, `sha256`, `size_bytes` chỉ đổi khi đang `pending`/`failed`. Chuyển trạng thái hợp lệ: `pending → issued | failed`, `failed → issued | voided`, `issued → signed | voided`, `signed → voided`. Không cho `delete`.
+- Trigger trên `contract_inventory_items` (thay trigger bất biến của PR2 nếu có): chặn `insert/update/delete` khi hợp đồng có tài liệu `type = 'contract'` đang `issued`/`signed` → `CONTRACT_INVENTORY_LOCKED`.
 - RLS bật, không policy, chỉ `service_role`.
 
 ### 5.3. RPC
 
 - `reserve_contract_document(p_contract_id, p_type, p_amendment_id, p_template_key, p_template_version, p_snapshot, p_signed_date, p_actor_id, p_replaces_document_id) returns public.contract_documents` — khóa theo HĐ; nếu đang có tài liệu hiệu lực và `p_replaces_document_id` khác id đó → `CONTRACT_DOCUMENT_ACTIVE_EXISTS`; nếu có `p_replaces_document_id` → đánh dấu bản cũ `voided` (cần lý do — xem 5.4) trong cùng transaction; tính `version_no`; insert `pending`.
-- `finalize_contract_document(p_document_id, p_storage_path, p_sha256, p_size_bytes) returns public.contract_documents` — `pending → issued`, `issued_at = now()`.
-- `mark_contract_document_signed(p_document_id, p_actor_id)`; `void_contract_document(p_document_id, p_reason, p_actor_id)` (lý do ≥ 10 ký tự).
-- `claim_stale_contract_documents(p_older_than interval) returns setof public.contract_documents` — trả các dòng `pending` quá hạn để worker xóa file rồi xóa dòng.
+- `finalize_contract_document(p_document_id, p_storage_path, p_sha256, p_size_bytes, p_actor_id) returns public.contract_documents` — `pending|failed → issued`, `issued_at = now()`.
+- `fail_contract_document(p_document_id, p_error_code)` — `pending → failed`, xóa `storage_path/sha256/size_bytes`.
+- `mark_contract_document_signed(p_document_id, p_actor_id)`; `void_contract_document(p_document_id, p_reason, p_actor_id)` (lý do ≥ 10 ký tự; áp dụng cho `failed`, `issued`, `signed`).
+- `claim_stale_contract_documents(p_older_than interval) returns setof public.contract_documents` — trả các dòng `pending` quá hạn để worker xóa object (nếu có) rồi chuyển sang `failed`.
 
 ### 5.4. Luồng phát hành
 
 1. Server dựng `ContractDocumentData` → `collectMissing` → có thiếu thì 422 `CONTRACT_DOCUMENT_INCOMPLETE` + `details.missing`.
 2. Render DOCX trong bộ nhớ (kiểm tra không còn `{{`).
 3. `reserve_contract_document` (nếu thay thế: truyền `replaces_document_id` + `void_reason`, bản cũ chuyển `voided` cùng transaction).
-4. Upload file vào `{building_id}/{contract_id}/{document_id}.docx`. Lỗi → xóa dòng `pending` (`delete … where id and status='pending'`).
-5. `finalize_contract_document`. Lỗi → xóa file và dòng `pending`.
+4. Upload file vào `{building_id}/{contract_id}/{document_id}.docx`. Lỗi → `fail_contract_document` (giữ snapshot).
+5. `finalize_contract_document`. Lỗi → xóa object vừa upload rồi `fail_contract_document`.
 6. Audit `contract.document.issued` (`document_id`, `type`, `version_no`, `template_version`, `sha256`) — không PII.
+
+**Tạo lại file** (`failed`): render lại từ `snapshot` đã lưu với đúng `template_key/template_version` (không đọc lại dữ liệu hiện tại) → xóa object cũ cùng đường dẫn nếu còn → upload → `finalize`. Audit `contract.document.regenerated`.
 
 Thay thế khi bản cũ đã `signed`: chỉ admin/owner; bản thay thế trên tài liệu đã ký thường nên là **phụ lục** — UI hiện cảnh báo này trước khi cho hủy.
 
 ### 5.5. Worker dọn mồ côi
 
-`POST /api/internal/contract-documents/cleanup` (header `x-contract-documents-cleanup-secret`, runtime config `contractDocumentsCleanupSecret`): gọi `claim_stale_contract_documents('30 minutes')`, xóa object Storage nếu có, xóa dòng. `pg_cron` mỗi 15 phút theo mẫu `apply-due` (base URL + secret trong Vault). Ngoài ra quét object trong bucket không có dòng DB khớp (đường dẫn chứa `document_id` không tồn tại) và xóa nếu cũ hơn 1 giờ.
+`POST /api/internal/contract-documents/cleanup` (header `x-contract-documents-cleanup-secret`, runtime config `contractDocumentsCleanupSecret`): gọi `claim_stale_contract_documents('30 minutes')`, xóa object Storage nếu có, chuyển dòng sang `failed` (`last_error_code = 'STALE_PENDING'`). `pg_cron` mỗi 15 phút theo mẫu `apply-due` (base URL + secret trong Vault). Ngoài ra quét object trong bucket không khớp tài liệu `issued`/`signed`/`voided` nào và xóa nếu cũ hơn 1 giờ.
 
 ## 6. API và quyền
 
@@ -153,6 +163,8 @@ Mọi route kiểm tra `assertBuildingScope(contract.buildingId)`.
 | `POST /api/contracts/[id]/documents/preview` | `{ type, amendment_id?, signed_date }` → file DOCX tải về, header `Content-Disposition`, **không lưu** |
 | `POST /api/contracts/[id]/documents` | `{ type, amendment_id?, signed_date, request_id, replaces_document_id?, void_reason? }` → metadata; idempotent theo `request_id` (khóa `contract.document:<id>`) |
 | `GET /api/contract-documents/[docId]/download` | Kiểm tra quyền → `{ url, expiresIn }` signed URL 60 giây |
+| `POST /api/contract-documents/readiness` | `{ room_id, tenant_id, occupant_tenant_ids[] }` → `{ ready, missing[] }` cho trang tạo HĐ (chưa có hợp đồng); quyền `contract-documents.issue` + scope theo tòa của phòng; chỉ trả mã và nhãn, không trả giá trị |
+| `POST /api/contract-documents/[docId]/regenerate` | `failed` → sinh lại từ snapshot (quyền `contract-documents.issue`) |
 | `POST /api/contract-documents/[docId]/sign` | |
 | `POST /api/contract-documents/[docId]/void` | `{ reason }` |
 
@@ -160,9 +172,9 @@ Phụ lục chỉ phát hành cho amendment `scheduled` hoặc `applied`.
 
 ## 7. UI
 
-- Chi tiết HĐ: mục mới **"Tài liệu"** (`#documents`, sau `overview`): danh sách phiên bản (loại, số phiên bản, trạng thái, mẫu, người/thời điểm phát hành, người ký), hành động: Tải, Đánh dấu đã ký, Hủy & phát hành lại.
+- Chi tiết HĐ: mục mới **"Tài liệu"** (`#documents`, sau `overview`): danh sách phiên bản (loại, số phiên bản, trạng thái, mẫu, người/thời điểm phát hành, người ký), hành động: Tải, Đánh dấu đã ký, Hủy & phát hành lại, **Tạo lại file** (khi `failed`).
 - Hộp thoại **"Xuất hợp đồng"** (`ContractDocumentIssueDialog`): chọn ngày ký (mặc định hôm nay); gọi `check`; thiếu → danh sách mục thiếu + link; đủ → "Xem trước (không lưu)" và "Phát hành". Dùng chung cho phụ lục (mở từ dòng phụ lục trong `ContractAmendmentsSection`).
-- Màn hoàn tất tạo HĐ (PR4a) bật nút "Xuất hợp đồng (DOCX)" mở hộp thoại này.
+- Trang tạo HĐ (PR4a) dùng `readiness` để đổi nút chính và hiện mục thiếu; "Tạo & xuất DOCX" gọi phát hành ngay sau khi tạo và hiện nút tải / danh sách thiếu / "Tạo lại file".
 - Theo [ui-polish-workflow](../../../.agents/skills/zeno-house/references/ui-polish-workflow.md); bắt buộc `frontend-design` + Hallmark; primitive sẵn có; token/primitive mới chỉ khi đánh giá kỹ và được duyệt. Trạng thái: chưa có tài liệu, thiếu dữ liệu, đang sinh, đã phát hành, đã ký, đã hủy, lỗi upload, mobile.
 
 ## 8. Kiểm thử
@@ -174,8 +186,8 @@ Phụ lục chỉ phát hành cho amendment `scheduled` hoặc `applied`.
 | `collectMissing` | Thiếu từng nhóm; người ở cùng thiếu CCCD → mã có chỉ số + tên |
 | Renderer | Fixture dữ liệu giả → DOCX mở được (unzip), không còn `{{`/`}}`, chứa tên/biển số/tổng nội thất; lỗi placeholder thiếu → ném lỗi |
 | Template manifest | Mọi `requiredPaths` tồn tại trong XML của mẫu |
-| Service | Thiếu dữ liệu → 422; luồng reserve → upload → finalize; upload lỗi → xóa pending; finalize lỗi → xóa file + pending; thay thế → bản cũ voided; replay `request_id`; manager không ký/hủy |
-| SQL verification | Unique hiệu lực; trigger bất biến; chuyển trạng thái hợp lệ; `claim_stale`; grant |
+| Service | Thiếu dữ liệu → 422; luồng reserve → upload → finalize; upload lỗi → `failed` (snapshot còn); finalize lỗi → xóa object + `failed`; tạo lại file dùng snapshot cũ (không đọc dữ liệu mới); thay thế → bản cũ voided; replay `request_id`; manager không ký/hủy; readiness trước khi có hợp đồng |
+| SQL verification | Unique hiệu lực (kể cả `failed`); trigger bất biến; chuyển trạng thái hợp lệ; không xóa được; `claim_stale`; nội thất bàn giao bị khóa sau `issued`; grant |
 | API | Không trả `snapshot`/`storage_path`; download kiểm tra scope; preview không ghi DB/Storage |
 | Worker | Secret sai → 403; dọn đúng dòng quá hạn |
 | UI | Dialog thiếu dữ liệu; phát hành; danh sách phiên bản; hủy cần lý do |

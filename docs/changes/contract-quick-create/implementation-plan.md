@@ -10,9 +10,9 @@ tags: [superpowers, change, contracts, v2]
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Create a contract with handover, inventory, roommates, vehicles and services in one idempotent transaction from a shortened, skippable wizard prefilled with building defaults.
+**Goal:** Create a contract with handover, inventory, roommates, vehicles and services in one idempotent transaction from a single prefilled page, with server-side drafts and handover inventory editable until the contract DOCX is issued.
 
-**Architecture:** New table `contract_vehicles` and RPC `create_contract_full` wrapping PR2's `create_contract_with_handover_and_inventory`. `ContractService.create` keeps pre-checks, calls the RPC, audits after commit. The wizard gains Handover and Confirm steps; step 3 (roommates, vehicles, services) is optional and kept client-side until submit.
+**Architecture:** New table `contract_vehicles` and RPC `create_contract_full` wrapping PR2's `create_contract_with_handover_and_inventory`. `ContractService.create` keeps pre-checks, calls the RPC, audits after commit. New table `contract_create_drafts` (one per user) behind `/api/contracts/create-draft`. The create page becomes one page with four always-visible blocks and four collapsible blocks; per-building last choices live in `localStorage` (no PII).
 
 **Tech Stack:** Nuxt 3, Vue 3, Zod, Vitest, Supabase RPC, PL/pgSQL.
 
@@ -26,17 +26,17 @@ tags: [superpowers, change, contracts, v2]
 - New table/function: RLS on, no policies, revoke from `public, anon, authenticated`, grant `service_role`; functions `security invoker`, `set search_path = ''`.
 - Idempotency key `contract.create:<request_id>`; replay only for the same actor.
 - Limits: occupants ≤ 10, vehicles ≤ 10; plate number normalized `toUpperCase()`, internal whitespace collapsed to one space, trimmed; 1–20 chars.
-- No tenant PII in drafts (only `tenant_id`, `tenantName`).
+- No tenant identity fields (id number, date of birth, address) in drafts or `localStorage`; drafts keep ids + display names only.
 - Vietnamese copy with full diacritics; UI per `.agents/skills/zeno-house/references/ui-polish-workflow.md` with `frontend-design` + Hallmark; new tokens/primitives only after evaluation + approval.
 - Cloud migration and type regeneration are separate gates; deploy app after migration.
 
 ## Review Focus
 
 1. **Roommate already living elsewhere** — whole create rolls back; no orphan contract/readings/inventory. Pinned in Task 1 (SQL) and Task 3 (error mapping).
-2. **Retry after lost response** — same `request_id` returns the existing contract, no second contract. Pinned in Task 1 and Task 5.
-3. **User edits end date, then changes start date** — prefill must not overwrite the edited end date. Pinned in Task 4.
+2. **Retry after lost response** — same `request_id` returns the existing contract, no second contract. Pinned in Task 1 and Task 6.
+3. **User edits end date, then changes start date** — prefill must not overwrite the edited end date; last-choice prefs must not override user edits either. Pinned in Task 4.
 4. **`p_services` omitted** — services copied from building, matching old `cloneFromBuilding`. Pinned in Task 1.
-5. **Draft restored mid-wizard with vehicles/services** — restored without tenant PII. Pinned in Task 5.
+5. **Error inside a collapsed block on submit** — page scrolls to it and opens the block; draft restored on another browser contains no identity fields. Pinned in Tasks 5–6.
 
 ---
 
@@ -579,13 +579,18 @@ git commit -m "feat(contracts): atomic create via create_contract_full; vehicles
 **Interfaces:**
 - ```ts
   export interface ContractDefaults { termMonths: number | null; depositMonths: number | null }
+  export interface ContractCreatePrefs { termMonths?: number; depositMonths?: number; paymentDueDay?: number | null; occupantCount?: number; openBlocks?: string[] }
   export function computeEndDate(startDate: string, termMonths: number): string   // YYYY-MM-DD, start + N months − 1 day
   export function computeDeposit(monthlyRent: number, depositMonths: number): number // round to nearest 1,000
+  // Priority: touched field > prefs (last choice for this building) > building defaults.
+  export function resolveDefaults(building: ContractDefaults, prefs: ContractCreatePrefs | null): ContractDefaults
   export function applyContractDefaults(
     form: { start_date: string; end_date: string; monthly_rent: string; deposit: string },
     defaults: ContractDefaults,
     touched: Set<string>,
   ): Partial<{ end_date: string; deposit: string }>
+  export function loadPrefs(buildingId: string): ContractCreatePrefs | null   // localStorage `contract-create:prefs:{buildingId}`
+  export function savePrefs(buildingId: string, prefs: ContractCreatePrefs): void
   ```
 
 - [ ] **Step 1: Write the failing test**
@@ -593,7 +598,7 @@ git commit -m "feat(contracts): atomic create via create_contract_full; vehicles
 ```ts
 // tests/utils/contract-prefill-defaults.test.ts
 import { describe, expect, it } from 'vitest'
-import { applyContractDefaults, computeDeposit, computeEndDate } from '~/utils/contracts/prefill-defaults'
+import { applyContractDefaults, computeDeposit, computeEndDate, loadPrefs, resolveDefaults, savePrefs } from '~/utils/contracts/prefill-defaults'
 
 describe('contract defaults', () => {
   it('end date = start + N months - 1 day, month-end safe', () => {
@@ -615,6 +620,17 @@ describe('contract defaults', () => {
     expect(applyContractDefaults(form, { termMonths: 12, depositMonths: 1 }, new Set())).toEqual({})
     expect(applyContractDefaults({ ...form, start_date: '2026-12-01' }, { termMonths: null, depositMonths: null }, new Set())).toEqual({})
   })
+
+  it('last choice for the building beats building defaults', () => {
+    expect(resolveDefaults({ termMonths: 12, depositMonths: 1 }, { termMonths: 6 })).toEqual({ termMonths: 6, depositMonths: 1 })
+    expect(resolveDefaults({ termMonths: 12, depositMonths: 1 }, null)).toEqual({ termMonths: 12, depositMonths: 1 })
+  })
+
+  it('prefs round-trip through localStorage without extra keys', () => {
+    savePrefs('b-1', { termMonths: 6, depositMonths: 2, openBlocks: ['vehicles'] })
+    expect(loadPrefs('b-1')).toEqual({ termMonths: 6, depositMonths: 2, openBlocks: ['vehicles'] })
+    expect(Object.keys(JSON.parse(window.localStorage.getItem('contract-create:prefs:b-1')!))).toEqual(['termMonths', 'depositMonths', 'openBlocks'])
+  })
 })
 ```
 
@@ -622,36 +638,137 @@ describe('contract defaults', () => {
 
 - [ ] **Step 2: Run to verify failure.**
 
-- [ ] **Step 3: Implement** the helpers with `dayjs`; in `ContractForm.vue`, after a room is selected, fetch `GET /api/buildings/{room.buildingId}/contract-profile` (lazy, cached per building id) and on changes of `start_date`, `monthly_rent`, or room call `applyContractDefaults(modelValue, defaults, touched)` and emit the partial update. `touched` is the existing `touched` set in the component (fields the user blurred/edited). Show a small hint under end date/deposit: "Theo mặc định của tòa: {N} tháng" / "{M} tháng tiền thuê".
+- [ ] **Step 3: Implement** the helpers with `dayjs`. `loadPrefs` reads only the allowed keys (`termMonths`, `depositMonths`, `paymentDueDay`, `occupantCount`, `openBlocks`) and ignores anything else. The page (Task 6) fetches `GET /api/buildings/{room.buildingId}/contract-profile` once per building, computes `resolveDefaults(profileDefaults, loadPrefs(buildingId))`, and on changes of `start_date`, `monthly_rent` or room applies `applyContractDefaults(form, defaults, touched)`; `touched` is the set of fields the user edited. Show a hint under end date/deposit: "Theo mặc định của tòa: {N} tháng" or "Theo lựa chọn gần nhất: {N} tháng".
 
 - [ ] **Step 4: Run tests** → PASS.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add app/utils/contracts/prefill-defaults.ts app/components/contracts/ContractForm.vue tests/utils/contract-prefill-defaults.test.ts
-git commit -m "feat(contracts): prefill end date and deposit from building defaults"
+git add app/utils/contracts/prefill-defaults.ts tests/utils/contract-prefill-defaults.test.ts
+git commit -m "feat(contracts): contract defaults and per-building last choices"
 ```
 
 ---
 
-### Task 5: Wizard — 4 steps, skippable step 3, confirm, done screen (UI polish gate)
+### Task 5: Server drafts + handover inventory edit
 
 **Files:**
-- Modify: `app/pages/dashboard/contracts/create.vue`
-- Modify: `app/components/contracts/ContractWizardSteps.vue` (default steps)
-- Modify: `app/composables/contracts/useContractForm.ts` (`submitCreate` returns `{ contract, replayed }`, stable `requestId`, wizard draft adds `vehicles`, `services`)
-- Create: `app/components/contracts/ContractVehiclesEditor.vue`
-- Create: `app/components/contracts/ContractCreateConfirm.vue`
-- Create or modify: `app/components/contracts/ContractServicesEditor.vue` (local-mode list editor; reuse `ContractServicesTab` if it can run without API)
-- Test: `tests/composables/useContractForm-create.test.ts`, `tests/components/contracts/ContractVehiclesEditor.test.ts`, `tests/components/contracts/ContractCreateConfirm.test.ts`, `tests/pages/contract-create-wizard.spec.ts`
+- Create: `supabase/migrations/20261111121000_contract_create_drafts.sql`
+- Create: `app/utils/validators/contract-create-draft.ts`
+- Create: `server/repositories/contract-create-drafts.ts`, `server/services/contracts/create-draft.ts`
+- Create: `server/api/contracts/create-draft.get.ts`, `create-draft.put.ts`, `create-draft.delete.ts`
+- Create: `server/api/contracts/[id]/handover-inventory.put.ts`
+- Modify: `server/repositories/inventory.ts` (add `replaceContract`)
+- Test: `tests/config/contract-create-drafts-migration.test.ts`, `tests/utils/contract-create-draft-validator.test.ts`, `tests/server/contracts/create-draft.test.ts`, `tests/server/contracts/handover-inventory-edit.test.ts`
 
 **Interfaces:**
-- `ContractWizardSteps` default steps: `[{1,'Hợp đồng'},{2,'Bàn giao'},{3,'Bổ sung'},{4,'Xác nhận'}]`.
-- `useContractForm.submitCreate(input: Omit<ContractCreateInput, 'request_id'>): Promise<{ contract: ContractWithDetails; replayed: boolean } | null>`; exposes `requestId`.
-- `ContractCreateConfirm` props `{ form: ContractFormData; occupants: PendingOccupant[]; vehicles: ContractVehicleInput[]; services: ServiceDraft[]; roomLabel: string; tenantName: string }` emits `edit: [step: number]`; computes warnings: `1 + occupants.length > occupant_count` → "Số người ở cùng vượt quá số người ở."; vehicles count ≠ total quantity of enabled `per_vehicle` services → "Số xe đăng ký ({a}) khác số lượng dịch vụ gửi xe ({b})."
+- Table `public.contract_create_drafts (user_id uuid primary key references auth.users(id) on delete cascade, payload jsonb not null check (pg_column_size(payload) <= 65536), updated_at timestamptz not null default now())`; RLS on, no policies, revoke `public, anon, authenticated`, grant `select, insert, update, delete` to `service_role`.
+- `contractCreateDraftSchema`: `.strict()` object, every key optional — `room_id`, `tenant_id`, `tenant_name`, `start_date`, `end_date`, `monthly_rent`, `deposit`, `payment_due_day`, `occupant_count`, `notes`, `handover_electricity_reading`, `handover_water_reading`, `handover_reading_date`, `occupants: { tenant_id, tenant_name, move_in_date, billing_counted }[] ≤ 10`, `vehicles: contractVehicleListSchema`, `services`, `inventory: inventoryListSchema`, `open_blocks: string[]`. Any other key (e.g. `id_number`, `date_of_birth`, `permanent_address`) is rejected.
+- `ContractCreateDraftService.get(event, user): Promise<{ payload; updatedAt } | null>` (drops and returns null when `updated_at` older than 30 days), `.save(event, user, payload)`, `.remove(event, user)`. Capability `contracts.create`; always keyed by `user.id` (no user id from the client).
+- Routes: `GET/PUT/DELETE /api/contracts/create-draft` → `{ data }`; PUT body `{ payload }`; 413 when the serialized payload exceeds 64 KB.
+- `PUT /api/contracts/[id]/handover-inventory` body `{ items: InventoryItemInput[] }` → `{ data: HandoverInventory }`; capability `contracts.update` + scope write; replaces `contract_inventory_items` for **this** contract only. Errors from the PR4b lock trigger (`CONTRACT_INVENTORY_LOCKED`) map to 409 "Hợp đồng đã phát hành, không sửa được danh sách bàn giao. Lập phụ lục nếu cần thay đổi."
+- `InventoryRepository.replaceContract(event, contractId, items): Promise<InventoryRow[]>` (delete then insert, same pattern as `replaceRoom`).
 
-- [ ] **Step 1: UI polish workflow** — `frontend-design` + Hallmark on wizard steps, optional-step affordance ("Bỏ qua"), confirm summary, done screen, vehicle editor (mobile cards). Record decisions in `docs/changes/contract-quick-create/verification.md`.
+- [ ] **Step 1: Write failing tests**
+
+```ts
+// tests/utils/contract-create-draft-validator.test.ts
+import { describe, expect, it } from 'vitest'
+import { contractCreateDraftSchema } from '~/utils/validators/contract-create-draft'
+
+describe('contractCreateDraftSchema', () => {
+  it('accepts a partial draft', () => {
+    expect(contractCreateDraftSchema.safeParse({ room_id: '7d0b3f7e-8f43-4a8e-9a4f-1f2b3c4d5e61', open_blocks: ['vehicles'] }).success).toBe(true)
+  })
+
+  it.each(['id_number', 'date_of_birth', 'permanent_address', 'id_issued_place'])('rejects identity key %s', (key) => {
+    expect(contractCreateDraftSchema.safeParse({ [key]: 'x' }).success).toBe(false)
+  })
+
+  it('rejects identity keys nested in occupants', () => {
+    expect(contractCreateDraftSchema.safeParse({ occupants: [{ tenant_id: '7d0b3f7e-8f43-4a8e-9a4f-1f2b3c4d5e61', tenant_name: 'B', move_in_date: '2026-12-01', billing_counted: true, id_number: '0123' }] }).success).toBe(false)
+  })
+})
+```
+
+```ts
+// tests/server/contracts/create-draft.test.ts
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { AuthUser } from '~/types/auth'
+
+const repo = vi.hoisted(() => ({ find: vi.fn(), upsert: vi.fn(), remove: vi.fn() }))
+vi.mock('../../../server/repositories/contract-create-drafts', () => ({ ContractCreateDraftRepository: repo }))
+
+const owner = { id: 'o-1', app_metadata: { role: 'owner' } } as AuthUser
+const ev = () => ({ context: {} }) as never
+
+beforeEach(() => {
+  vi.clearAllMocks()
+  vi.stubGlobal('can', (_u: AuthUser, cap: string) => cap === 'contracts.create')
+})
+
+describe('ContractCreateDraftService', () => {
+  it('always keys by the caller', async () => {
+    repo.upsert.mockResolvedValue({ payload: {}, updated_at: '2026-11-11T00:00:00Z' })
+    const { ContractCreateDraftService } = await import('../../../server/services/contracts/create-draft')
+    await ContractCreateDraftService.save(ev(), owner, { room_id: '7d0b3f7e-8f43-4a8e-9a4f-1f2b3c4d5e61' } as never)
+    expect(repo.upsert).toHaveBeenCalledWith(expect.anything(), 'o-1', expect.anything())
+  })
+
+  it('expires drafts older than 30 days', async () => {
+    repo.find.mockResolvedValue({ payload: { room_id: 'x' }, updated_at: '2026-01-01T00:00:00Z' })
+    vi.setSystemTime(new Date('2026-11-11T00:00:00Z'))
+    const { ContractCreateDraftService } = await import('../../../server/services/contracts/create-draft')
+    expect(await ContractCreateDraftService.get(ev(), owner)).toBeNull()
+    expect(repo.remove).toHaveBeenCalledWith(expect.anything(), 'o-1')
+    vi.useRealTimers()
+  })
+})
+```
+
+```ts
+// tests/server/contracts/handover-inventory-edit.test.ts — owner replaces items for contract c-1 (scope write asserted, repository called with c-1 only); manager without contracts.update → 403; repository error message CONTRACT_INVENTORY_LOCKED → 409 with the copy above.
+```
+
+Write the handover edit test fully in the style of `tests/server/inventory/inventory-service.test.ts` (PR2). The migration static test asserts the table, RLS, revoke and the 64 KB check.
+
+- [ ] **Step 2: Run to verify failure.**
+
+- [ ] **Step 3: Implement** migration, validator, repository (`find(userId)`, `upsert(userId, payload)` with `onConflict: 'user_id'`, `remove(userId)`), service, routes (PUT parses with `contractCreateDraftSchema`; reject with 413 when `JSON.stringify(payload).length > 65536`), `replaceContract`, and the handover edit route + `ContractService.updateHandoverInventory(event, user, identifier, items)`.
+
+- [ ] **Step 4: Run tests** → PASS. Regenerate api inventory.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add supabase/migrations/20261111121000_contract_create_drafts.sql app/utils/validators/contract-create-draft.ts server tests docs/api-inventory.md
+git commit -m "feat(contracts): server-side create drafts and editable handover inventory"
+```
+
+---
+
+### Task 6: One-page create (UI polish gate)
+
+**Files:**
+- Rewrite: `app/pages/dashboard/contracts/create.vue`
+- Create: `app/components/contracts/ContractTermsFields.vue`, `app/components/contracts/ContractHandoverFields.vue` (extracted from `ContractForm.vue`; `ContractForm` keeps rendering them so the edit page is unchanged)
+- Create: `app/components/contracts/ContractVehiclesEditor.vue`
+- Create: `app/components/contracts/ContractServicesEditor.vue` (local list editor)
+- Create: `app/components/contracts/ContractCreateBlock.vue` only if no existing collapsible primitive fits (evaluate and ask first)
+- Create: `app/composables/contracts/useContractCreateDraft.ts`
+- Modify: `app/composables/contracts/useContractForm.ts` (`submitCreate` returns `{ contract, replayed }`, stable `requestId`; drop wizard draft refs for create mode)
+- Modify: `server/api/contracts/index.post.ts` (`meta: { replayed }`, 200 on replay)
+- Modify: `app/pages/dashboard/contracts/[code]/index.vue` (Vehicles section; "Sửa" on handover section)
+- Test: `tests/composables/useContractForm-create.test.ts`, `tests/composables/useContractCreateDraft.test.ts`, `tests/components/contracts/ContractVehiclesEditor.test.ts`, `tests/pages/contract-create-page.spec.ts`
+
+**Interfaces:**
+- `useContractForm.submitCreate(input: Omit<ContractCreateInput, 'request_id'>): Promise<{ contract: ContractWithDetails; replayed: boolean } | null>`; exposes `requestId`.
+- `useContractCreateDraft()` → `{ payload: Ref<ContractCreateDraft | null>, restore(): Promise<ContractCreateDraft | null>, schedule(payload) /* debounced 1000 ms PUT */, clear(): Promise<void>, saving: Ref<boolean>, lastSavedAt: Ref<string | null> }`; on first use removes legacy `localStorage` keys of the old wizard draft.
+- Blocks: `room`, `tenant`, `terms`, `handover` always open; `occupants`, `vehicles`, `services`, `inventory` collapsible. `blockForField(field: string): BlockKey` maps validation paths (e.g. `occupants.1.tenant_id` → `occupants`, `vehicles.0.plate_number` → `vehicles`, server reason `CONTRACT_OCCUPANT_BUSY` → `occupants`).
+- Handover readings required only when the latest-reading lookup returned nothing for that meter.
+
+- [ ] **Step 1: UI polish workflow** — `frontend-design` + Hallmark: block order and density, collapsed-block indicators, sticky action bar on mobile, primary/secondary button hierarchy ("Tạo & xuất DOCX" / "Tạo hợp đồng"), non-blocking warnings under blocks, done screen, vehicles editor (mobile cards). Check whether an existing collapsible primitive exists (`UiFormSection` with toggle, `UiDisclosure`, `UiAccordion`); if none, stop and ask with problem/option/affected surfaces/benefit/cost. Record decisions in `docs/changes/contract-quick-create/verification.md`.
 
 - [ ] **Step 2: Write failing tests**
 
@@ -683,31 +800,30 @@ describe('useContractForm.submitCreate', () => {
 ```
 
 ```ts
-// tests/components/contracts/ContractCreateConfirm.test.ts
-import { mount } from '@vue/test-utils'
-import { describe, expect, it } from 'vitest'
-import ContractCreateConfirm from '~/components/contracts/ContractCreateConfirm.vue'
+// tests/composables/useContractCreateDraft.test.ts
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-describe('ContractCreateConfirm', () => {
-  it('warns on occupant overflow and vehicle/service mismatch', () => {
-    const w = mount(ContractCreateConfirm, { props: {
-      form: { occupant_count: '1', start_date: '2026-12-01', end_date: '2027-11-30', monthly_rent: '3000000', deposit: '3000000' } as never,
-      occupants: [{ tenant_id: 't', tenantName: 'B', move_in_date: '2026-12-01', billing_counted: true }],
-      vehicles: [{ owner_name: 'A', plate_number: '59X1', vehicle_type: null, note: null }, { owner_name: 'B', plate_number: '59X2', vehicle_type: null, note: null }],
-      services: [{ catalog_id: 'c', name: 'Gửi xe máy', pricingType: 'per_vehicle', amount: 100000, quantity: 1, is_enabled: true, notes: null }],
-      roomLabel: 'Phòng P101', tenantName: 'A',
-    } })
-    expect(w.text()).toContain('Số người ở cùng vượt quá số người ở.')
-    expect(w.text()).toContain('Số xe đăng ký (2) khác số lượng dịch vụ gửi xe (1).')
-  })
+const fetchMock = vi.hoisted(() => vi.fn())
+vi.stubGlobal('$fetch', fetchMock)
+beforeEach(() => { vi.clearAllMocks(); vi.useFakeTimers(); window.localStorage.clear() })
 
-  it('emits edit with step number', async () => {
-    const w = mount(ContractCreateConfirm, { props: { form: { occupant_count: '2' } as never, occupants: [], vehicles: [], services: [], roomLabel: 'P', tenantName: 'A' } })
-    await w.find('[data-test="confirm-edit-3"]').trigger('click')
-    expect(w.emitted('edit')![0]).toEqual([3])
+describe('useContractCreateDraft', () => {
+  it('debounces PUT and clears legacy local drafts', async () => {
+    window.localStorage.setItem('contract-form:create', '{"x":1}')
+    fetchMock.mockResolvedValue({ data: { updatedAt: '2026-11-11T00:00:00Z' } })
+    const { useContractCreateDraft } = await import('~/composables/contracts/useContractCreateDraft')
+    const d = useContractCreateDraft()
+    d.schedule({ room_id: 'a' } as never)
+    d.schedule({ room_id: 'b' } as never)
+    await vi.advanceTimersByTimeAsync(1000)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(fetchMock.mock.calls[0]![1]).toMatchObject({ method: 'PUT', body: { payload: { room_id: 'b' } } })
+    expect(window.localStorage.getItem('contract-form:create')).toBeNull()
   })
 })
 ```
+
+Use the real legacy draft key from `useContractForm`/`useLocalFormDraft` for create mode (check the source; the test above assumes `contract-form:create`).
 
 ```ts
 // tests/components/contracts/ContractVehiclesEditor.test.ts — add/remove rows, shows duplicate plate error from contractVehicleListSchema, emits normalized plates on blur.
@@ -716,18 +832,24 @@ describe('ContractCreateConfirm', () => {
 Write the vehicles editor test fully in the style of `InventoryItemsEditor.test.ts` (PR2).
 
 ```ts
-// tests/pages/contract-create-wizard.spec.ts
+// tests/pages/contract-create-page.spec.ts
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 const page = readFileSync(resolve(process.cwd(), 'app/pages/dashboard/contracts/create.vue'), 'utf8')
 
-describe('contract create wizard', () => {
-  it('has 4 steps with optional step 3 and confirm', () => {
-    expect(page).toContain('Bỏ qua')
-    expect(page).toContain('<ContractCreateConfirm')
-    expect(page).toContain('<ContractVehiclesEditor')
+describe('contract create page', () => {
+  it('is a single page without wizard or confirm step', () => {
+    expect(page).not.toContain('<ContractWizardSteps')
+    expect(page).not.toContain('currentStep')
+    expect(page).not.toContain('ContractCreateConfirm')
+  })
+
+  it('renders the four always-open blocks and four collapsible blocks', () => {
+    for (const key of ['room', 'tenant', 'terms', 'handover', 'occupants', 'vehicles', 'services', 'inventory']) {
+      expect(page).toContain(`data-block="${key}"`)
+    }
   })
 
   it('submits everything in one request (no per-occupant POST)', () => {
@@ -738,40 +860,55 @@ describe('contract create wizard', () => {
     expect(page).toContain('services:')
   })
 
-  it('shows a done screen with view and export actions', () => {
-    expect(page).toContain('Đã tạo hợp đồng')
-    expect(page).toContain('Xem hợp đồng')
+  it('offers create and create-and-export, scrolls to first error and opens its block', () => {
+    expect(page).toContain('Tạo &amp; xuất DOCX')
+    expect(page).toContain('Tạo hợp đồng')
+    expect(page).toContain('blockForField(')
+    expect(page).toContain('scrollIntoView')
+  })
+
+  it('uses server drafts and saves per-building prefs after success', () => {
+    expect(page).toContain('useContractCreateDraft(')
+    expect(page).toContain('savePrefs(')
   })
 })
 ```
 
+Also add a unit test for `blockForField` in `tests/utils/contract-create-blocks.test.ts` (paths `occupants.1.tenant_id` → `occupants`, `vehicles.0.plate_number` → `vehicles`, `services.2.amount` → `services`, `inventory.0.name` → `inventory`, `monthly_rent` → `terms`, `handover_water_reading` → `handover`, `tenant_id` → `tenant`, `room_id` → `room`, reason `CONTRACT_OCCUPANT_BUSY` → `occupants`, `CONTRACT_VEHICLE_DUPLICATE` → `vehicles`, `CONTRACT_SERVICE_INVALID` → `services`).
+
 - [ ] **Step 3: Run to verify failure.**
 
 - [ ] **Step 4: Implement**
-  - `useContractForm`: `const requestId = crypto.randomUUID()` per instance; `submitCreate` adds `request_id`, validates with `contractCreateSchema`, returns `{ contract: response.data, replayed: response.meta?.replayed ?? false }`; `WizardDraftRefs` gains `vehicles?: Ref<unknown[]>` and `services?: Ref<unknown[]>`. `index.post.ts` returns `meta: { replayed }` and status 200 on replay, 201 otherwise.
-  - `create.vue`:
-    - Step 1: `ContractForm` (fields without handover block; add prop `section: 'terms' | 'handover'` to `ContractForm` or split the handover/inventory blocks into `ContractHandoverForm.vue` — choose the smaller diff after reading the component).
-    - Step 2: handover readings + inventory (PR2 block).
-    - Step 3: roommates (`ContractOccupantForm`), `ContractVehiclesEditor`, services editor prefilled from `GET /api/buildings/{buildingId}/services` (active only, `amount = default_amount`, `quantity = 1`); buttons "Quay lại", "Bỏ qua" (→ step 4, keeps whatever was entered), "Tiếp".
-    - Step 4: `ContractCreateConfirm` + "Tạo hợp đồng" → `submitCreate({ ...toPayload(formData), inventory, occupants: pendingOccupants.map(({ tenant_id, move_in_date, billing_counted }) => ({ tenant_id, move_in_date, billing_counted })), vehicles, services: servicesTouched ? services : undefined })`. Send `services` only when the user changed anything in step 3 so the server falls back to building defaults otherwise.
-    - Done screen: "Đã tạo hợp đồng {contractCode}" + "Xem hợp đồng" (`contractPath`) + "Xuất hợp đồng (DOCX)" rendered only when `authStore.can('contract-documents.issue')` (capability added in PR4b; button hidden until then).
-    - Remove step-3 `ContractServicesTab` remote editing and the per-occupant `Promise.allSettled` block.
-  - Contract detail: add `'vehicles'` to `sectionIds` after `'occupants'`, nav link "Xe", section with `ContractVehiclesEditor` bound to `GET/PUT /api/contracts/{id}/vehicles` (editable with `contracts.update`).
+  - `useContractForm`: `const requestId = crypto.randomUUID()` per instance; `submitCreate` adds `request_id`, validates with `contractCreateSchema`, returns `{ contract: response.data, replayed: response.meta?.replayed ?? false }`. Create mode no longer uses the local wizard draft. `index.post.ts` returns `meta: { replayed }` and status 200 on replay, 201 otherwise.
+  - Extract `ContractTermsFields` and `ContractHandoverFields` from `ContractForm.vue` (props: model, errors, disabled; emits update); `ContractForm` renders them so the edit page keeps working (run existing `ContractForm` tests).
+  - `create.vue` (single page):
+    - Blocks in order with `data-block` attributes: `room` (room combobox, `room_id` query accepts uuid or code — PR3), `tenant` (`TenantPicker`), `terms` (`ContractTermsFields` + read-only line "Điều khoản áp dụng theo mẫu mặc định của tòa" linking to the building settings `#contract-profile` when the user can read it), `handover` (`ContractHandoverFields`; required marker only when no previous reading), then collapsibles `occupants` (`ContractOccupantForm`), `vehicles` (`ContractVehiclesEditor`), `services` (`ContractServicesEditor` prefilled from `GET /api/buildings/{buildingId}/services`, active only, `amount = default_amount`, `quantity = 1`), `inventory` (`InventoryItemsEditor` from PR2). Collapsible titles show counts ("Người ở cùng · 2", "Xe · 1", "Dịch vụ · 1 thay đổi", "Nội thất · 6 món").
+    - Prefill: Task 4 helpers with `resolveDefaults(profileDefaults, loadPrefs(buildingId))`; start date = today; open state of collapsibles from `prefs.openBlocks`.
+    - Non-blocking warnings under the occupants/vehicles blocks: `1 + occupants.length > occupant_count` → "Số người ở cùng vượt quá số người ở."; vehicles ≠ total quantity of enabled `per_vehicle` services → "Số xe đăng ký ({a}) khác số lượng dịch vụ gửi xe ({b})."
+    - DOCX readiness: when PR4b is deployed (`authStore.can('contract-documents.issue')`), call `POST /api/contract-documents/readiness` with `{ room_id, tenant_id, occupant_tenant_ids }` after room/tenant/occupants change (debounced). Missing → primary button becomes "Tạo hợp đồng" and a list of missing items with links renders above the action bar. Before PR4b, only "Tạo hợp đồng" is shown.
+    - Submit: validate; on failure collect the first invalid field, open its block (`blockForField`), `scrollIntoView({ block: 'center' })` and focus it. Call `submitCreate({ ...payload, inventory, occupants, vehicles, services: servicesTouched ? services : undefined })`. Server 409 reasons map to blocks the same way.
+    - Success: `savePrefs(buildingId, { termMonths, depositMonths, paymentDueDay, occupantCount, openBlocks })`, `draft.clear()`, show the done screen "Đã tạo hợp đồng {contractCode}" with "Xem hợp đồng". If the user pressed "Tạo & xuất DOCX", immediately call the PR4b issue endpoint and show "Tải hợp đồng (DOCX)", or the missing list, or "Tạo lại file" on generation failure — the contract stays created in every case.
+    - Server draft: on mount `restore()` and show `UiFormDraftBanner` ("Khôi phục bản nháp" / "Bỏ"); every change calls `schedule(snapshotOfForm())`.
+    - Remove the per-occupant `Promise.allSettled` block and the remote `ContractServicesTab` step.
+  - Contract detail: add `'vehicles'` to `sectionIds` after `'occupants'`, nav link "Xe", section with `ContractVehiclesEditor` bound to `GET/PUT /api/contracts/{id}/vehicles` (editable with `contracts.update`). Handover section (PR2) gains "Sửa" (with `contracts.update`) opening `InventoryItemsEditor` bound to `PUT /api/contracts/{id}/handover-inventory`; 409 shows the locked copy.
 
-- [ ] **Step 5: Run tests** → PASS (new + existing contract page/composable tests; update draft tests for new wizard keys).
+- [ ] **Step 5: Run tests** → PASS (new + existing contract page/composable/`ContractForm` tests; remove obsolete wizard draft tests for create mode).
 
-- [ ] **Step 6: Visual QA** (ask before starting a local runtime): full wizard, skip step 3, confirm warnings, error per 409 type, retry after offline, done screen, contract detail vehicles, mobile. Record in `verification.md`.
+- [ ] **Step 6: Visual QA** (ask before starting a local runtime): shortest path (room + tenant + create), room without previous readings, error inside a collapsed block, each 409 type, retry after offline, draft restore on a second browser, done screen with and without PR4b, contract detail vehicles + handover edit, mobile sticky action bar. Record in `verification.md`.
 
 - [ ] **Step 7: Commit**
 
 ```bash
 git add app tests docs/changes/contract-quick-create/verification.md server/api/contracts/index.post.ts
-git commit -m "feat(contracts): 4-step skippable wizard with atomic submit"
+git commit -m "feat(contracts): one-page contract create with atomic submit"
 ```
 
 ---
 
-### Task 6: Full verification and docs
+### Task 7: Full verification and docs
+
+- [ ] **Step 1:** `npm run typecheck && npm test && npm run lint && npm run knowledge:check`.
+- [ ] **Step 2:** Complete `docs/changes/contract-quick-create/verification.md` (frontmatter `type: Change Verification`, sections: Local, UI decisions, Visual QA, Cloud gates — both migrations applied after PR2, verification script output, types regenerated + casts removed, app deployed after migration, smoke: create contract with 1 roommate + 1 vehicle on staging, draft restored in a second browser
 
 - [ ] **Step 1:** `npm run typecheck && npm test && npm run lint && npm run knowledge:check`.
 - [ ] **Step 2:** Complete `docs/changes/contract-quick-create/verification.md` (frontmatter `type: Change Verification`, sections: Local, UI decisions, Visual QA, Cloud gates — migration applied after PR2, verification script output, types regenerated + casts removed, app deployed after migration, smoke: create contract with 1 roommate + 1 vehicle on staging).
