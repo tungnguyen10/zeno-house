@@ -1,28 +1,33 @@
 # Active Zeno House Changes
 
-Current change bundles are OKF draft concepts, not deployed or automatically accepted behavior. A Superpowers execution checklist is in each change's `tasks.md` **or** `implementation-plan.md`, never both as independent sources.
+`docs/changes/**` contains open proposals, active implementation and outstanding verification/release gates. A checked historical implementation task is **not** proof of production deployment. Approved behavior lives in `docs/capabilities/**`; completed work is archived under `docs/history/**`. Use a single execution checklist per active change.
 
-- [add-contract-amendments](./add-contract-amendments/proposal.md) — Structured contract amendment lifecycle
-- [add-dashboard-light-mode](./add-dashboard-light-mode/proposal.md) — Dual-theme dashboard presentation
-- [dashboard-layout-refresh](./dashboard-layout-refresh/proposal.md) — Dashboard information hierarchy and charts
-- [harden-event-audit](./harden-event-audit/proposal.md) — Durable audit and outbox guarantees
-- [tenant-authorization-scope](./tenant-authorization-scope/design.md) — P0 authorization and scoped tenant access; cloud rollout checks pending
-- [atomic-contract-renewal](./atomic-contract-renewal/design.md) — P0 atomic successor renewal, occupants and money transfer
-- [atomic-billing-close](./atomic-billing-close/design.md) — P0 atomic billing close/reopen and reconciliation
-- [tenant-v2](./tenant-v2/spec-and-implementation-plan.md) — Umbrella draft, split into B (identity hardening completed; see history) → A (Quick Create) → C (Claude identity autofill)
+## In progress / planned
 
-- [zeno-house-v2-optimization](./zeno-house-v2-optimization/brief.md) — Draft product flow optimization brief; review and split into PR-sized tasks before implementation
+- [add-dashboard-light-mode](./add-dashboard-light-mode/proposal.md) — 11/12 tasks; desktop/mobile interactive visual QA remains open.
+- [harden-event-audit](./harden-event-audit/proposal.md) — 12/16 tasks; database-local and distributed audit durability gaps remain.
+- [tenant-v2](./tenant-v2/spec-and-implementation-plan.md) — Proposed Quick Create and Claude extraction; completed identity hardening is archived separately.
+- [zeno-house-v2-optimization](./zeno-house-v2-optimization/brief.md) — Draft product flow optimization, pending PR task breakdown.
 
-## Checklist status imported from the previous workflow
+## Implementation present — verification or rollout gates open
 
-- add-contract-amendments: 12 checked, 0 unchecked; verify actual rollout and release before archiving.
-- add-dashboard-light-mode: 11 checked, 1 unchecked (manual visual/interaction QA).
-- dashboard-layout-refresh: 8 checked, 0 unchecked; verify actual release before archiving.
-- harden-event-audit: 12 checked, 4 unchecked.
-- tenant-authorization-scope: source and tests recorded as complete, but live SQL verification, type regeneration and responsive QA still require explicit sign-off.
-- atomic-contract-renewal: review executable plan and source, then verify cloud migration and results.
-- atomic-billing-close: reconcile stored accrual before deployment/verification; do not assume a checked task implies runtime deployment.
+- [tenant-authorization-scope](./tenant-authorization-scope/verification.md) — ZH-SEC-01; source and production SQL verification recorded, responsive/authenticated UI and deployment sign-off pending.
+- [atomic-contract-renewal](./atomic-contract-renewal/verification.md) — ZH-CTR-01; production SQL checks passed, new checkout/deposit financial compatibility and release sign-off pending.
+- [atomic-billing-close](./atomic-billing-close/verification.md) — ZH-BIL-01; production SQL checks passed, legacy financial reconciliation and concurrency/release sign-off pending.
+- [add-contract-amendments](./add-contract-amendments/verification.md) — 12/12 imported tasks checked; production/staging worker, cron, migration evidence and accepted canonical capability pending.
 
-Completed: [tenant identity hardening](../history/2026-11-09-harden-tenant-identity-data/index.md) — source, production database rollout, generated types, SQL regressions and affected-state UI QA verified on 2026-11-09.
+## Completed and archived — not active
 
-Completed: [restricted portal profile edits](../history/2026-11-10-restrict-tenant-portal-profile-edits/index.md) — source, production SQL rollback verification, generated types and representative desktop/mobile component QA verified on 2026-11-10; application deployment separate.
+- [dashboard-layout-refresh](../history/2026-11-10-dashboard-layout-refresh/index.md) — 8/8 imported implementation tasks checked; accepted dashboard spec reconciled and implementation history archived.
+- [harden-tenant-identity-data](../history/2026-11-09-harden-tenant-identity-data/index.md) — Production schema, identity verification and affected-state checks recorded.
+- [restrict-tenant-portal-profile-edits](../history/2026-11-10-restrict-tenant-portal-profile-edits/index.md) — Source and production SQL verified; application rollout is separately tracked.
+
+## Lifecycle
+
+1. Verify actual source, tests, grants, cloud rollout and relevant UI/finance gates, not just checked boxes.
+2. Reconcile approved behavioral deltas into `docs/capabilities/**` and update engineering guides.
+3. Move completed design, execution and evidence into `docs/history/<date>-<slug>/**`, preserving provenance.
+4. Remove completed bundles from the active list; retain a redirect `docs/changes/<slug>/index.md` only when useful for old references.
+5. Run `npm run knowledge:check`, scoped verification and CI before merging documentation cleanup to `develop`.
+
+See [workflow](../workflow.md).

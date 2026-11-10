@@ -96,3 +96,5 @@ All 600 archived source files remain accessible via immutable references to base
 - [2026-11-09-harden-tenant-identity-data](./2026-11-09-harden-tenant-identity-data/index.md) — Tenant identity uniqueness, scoped conflict handling and PII hardening; production DB verification evidence
 
 - [2026-11-10-restrict-tenant-portal-profile-edits](./2026-11-10-restrict-tenant-portal-profile-edits/index.md) — Four contact fields, staff-managed identity and private correction intake; source/cloud/component QA evidence
+
+- [2026-11-10-dashboard-layout-refresh](./2026-11-10-dashboard-layout-refresh/index.md) — Completed implementation and reconciled dashboard UI requirements (fresh production UI QA not claimed)
