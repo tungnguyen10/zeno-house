@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ref } from 'vue'
+import type { TenantProfileUpdateInput } from '~/utils/validators/tenant-portal'
 import type { TenantInvoiceListItem, TenantProfile, TenantSupportRequest } from '~/types/tenant-portal'
 
 const fetchMock = vi.hoisted(() => vi.fn())
@@ -22,12 +23,19 @@ vi.stubGlobal('useFetch', useFetchMock)
 const baseProfile: TenantProfile = {
   id: 't1',
   code: 'T-001',
-  fullName: 'Nguyen Van A',
-  phone: '0901',
+  status: 'active',
+  fullName: 'Khách Giả Lập',
+  gender: 'other',
+  dateOfBirth: '1990-01-01',
+  occupation: null,
+  permanentAddress: 'Địa chỉ giả lập',
+  idNumber: 'FAKE0001',
+  idIssuedDate: '2020-01-01',
+  idIssuedPlace: 'Nơi cấp giả lập',
+  phone: '0900000000',
   email: 'a@example.com',
   emergencyContactName: null,
   emergencyContactPhone: null,
-  notes: null,
 }
 
 beforeEach(() => {
@@ -130,53 +138,32 @@ describe('usePortalProfile', () => {
     })
   })
 
-  it('optimistically maps identity fields onto the profile DTO', async () => {
+  it('optimistically maps only the four contact fields, preserving legal profile values', async () => {
     fetchData = { data: { profile: baseProfile, contract: null, invoices: [], invoiceMeta: {} } }
-    fetchMock.mockResolvedValue({
-      data: {
-        ...baseProfile,
-        idNumber: '012345678901',
-        idIssuedDate: '2020-01-02',
-        idIssuedPlace: 'Cục Cảnh sát QLHC về TTXH',
-      },
-    })
+    let resolveSave!: (value: unknown) => void
+    fetchMock.mockReturnValue(new Promise(resolve => { resolveSave = resolve }))
     const { usePortalProfile } = await import('../../app/composables/tenant-portal/usePortalProfile')
-    const { save, profile } = usePortalProfile()
-
-    const pending = save({
-      id_number: '012345678901',
-      id_issued_date: '2020-01-02',
-      id_issued_place: 'Cục Cảnh sát QLHC về TTXH',
-    })
-
-    expect(profile.value).toMatchObject({
-      idNumber: '012345678901',
-      idIssuedDate: '2020-01-02',
-      idIssuedPlace: 'Cục Cảnh sát QLHC về TTXH',
-    })
+    const form = usePortalProfile()
+    const pending = form.save({ phone: '+84 90 000 0001', occupation: 'Công việc giả lập', emergency_contact_name: 'Liên hệ giả lập', emergency_contact_phone: '0900000002' })
+    expect(form.saving.value).toBe(true)
+    expect(form.profile.value).toMatchObject({ ...baseProfile, phone: '0900000001', occupation: 'Công việc giả lập', emergencyContactName: 'Liên hệ giả lập', emergencyContactPhone: '0900000002' })
+    expect(fetchMock).toHaveBeenCalledWith('/api/tenant/me', { method: 'PATCH', body: { phone: '0900000001', occupation: 'Công việc giả lập', emergency_contact_name: 'Liên hệ giả lập', emergency_contact_phone: '0900000002' } })
+    resolveSave({ data: { ...baseProfile, phone: '0900000001' } })
     await expect(pending).resolves.toBe(true)
   })
 
-  it('exposes a duplicate identity number as field feedback', async () => {
+  it('rejects stale mixed legal payloads before optimistic mutation or network calls', async () => {
     fetchData = { data: { profile: baseProfile, contract: null, invoices: [], invoiceMeta: {} } }
-    fetchMock.mockRejectedValue({
-      data: {
-        error: {
-          message: 'Số CCCD/CMND đã tồn tại',
-          details: {
-            fieldErrors: {
-              id_number: ['Số CCCD/CMND đã tồn tại'],
-            },
-          },
-        },
-      },
-    })
     const { usePortalProfile } = await import('../../app/composables/tenant-portal/usePortalProfile')
-    const { save, fieldErrors } = usePortalProfile()
-
-    await expect(save({ id_number: '012345678901' })).resolves.toBe(false)
-    expect(fieldErrors.value.id_number).toEqual(['Số CCCD/CMND đã tồn tại'])
+    const form = usePortalProfile()
+    const input = { phone: '0900000001', id_number: 'OTHER', full_name: 'Other', notes: 'PRIVATE' } as unknown as TenantProfileUpdateInput
+    await expect(form.save(input)).resolves.toBe(false)
+    expect(fetchMock).not.toHaveBeenCalled()
+    expect(form.profile.value).toEqual(baseProfile)
+    expect(form.apiError.value).toBe('Dữ liệu hồ sơ không còn phù hợp. Vui lòng tải lại trang và thử lại.')
+    expect(form.apiError.value).not.toContain('PRIVATE')
   })
+
 })
 
 describe('portal bootstrap data', () => {
@@ -226,8 +213,7 @@ describe('portal bootstrap data', () => {
             issuedAt: '2026-06-01',
             voidedAt: null,
             voidReason: null,
-            notes: null,
-          },
+                    },
           {
             id: 'inv-jul',
             invoiceCode: 'inv-2026-07-0025',
@@ -249,8 +235,7 @@ describe('portal bootstrap data', () => {
             issuedAt: '2026-07-01',
             voidedAt: null,
             voidReason: null,
-            notes: null,
-          },
+                    },
         ],
         invoiceMeta: { total: 2, page: 1, limit: 20, totalPages: 1 },
       },
@@ -380,5 +365,26 @@ describe('portal identity error presentation', () => {
     expect(form.apiError.value).toBe('Bạn đã thử quá nhiều lần, vui lòng thử lại sau. Thử lại sau 120 giây.')
     expect(form.fieldErrors.value).toEqual({})
     expect(form.profile.value).toEqual(baseProfile)
+  })
+})
+
+describe('request evidence validation', () => {
+  it.each(['text/plain', 'application/octet-stream'])('rejects unsupported %s before upload', async (type) => {
+    const { usePortalRequests } = await import('../../app/composables/tenant-portal/usePortalRequests')
+    const form = usePortalRequests()
+    const input = { title: 'Yêu cầu chỉnh sửa hồ sơ', description: 'Nội dung giả lập', attachment: new File(['fixture'], 'fixture.txt', { type }) }
+    expect(await form.submit(input)).toBe(false)
+    expect(uploadMock).not.toHaveBeenCalled()
+    expect(fetchMock).not.toHaveBeenCalled()
+    expect(form.apiError.value).toContain('JPEG, PNG, WebP hoặc PDF')
+    expect(input.description).toBe('Nội dung giả lập')
+  })
+  it('rejects evidence exceeding 5MB without uploading', async () => {
+    const { usePortalRequests } = await import('../../app/composables/tenant-portal/usePortalRequests')
+    const form = usePortalRequests()
+    const attachment = new File(['fixture'], 'fixture.pdf', { type: 'application/pdf' })
+    Object.defineProperty(attachment, 'size', { value: 5 * 1024 * 1024 + 1 })
+    expect(await form.submit({ title: 'Yêu cầu chỉnh sửa hồ sơ', description: 'Nội dung giả lập', attachment })).toBe(false)
+    expect(uploadMock).not.toHaveBeenCalled()
   })
 })

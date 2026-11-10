@@ -19,7 +19,7 @@ Define the tenant-authored support request model, tenant self-service API, attac
 ## Requirements
 
 ### Requirement: Support request audit excludes signed attachment access
-The system SHALL audit support request creation with server-derived building scope and safe request fields.
+The system SHALL audit support request creation with server-derived building scope and safe IDs, scope, status, creation time and attachment-presence fields only; title, description, filenames, paths, URLs and bytes SHALL NOT be copied into audit.
 
 #### Scenario: Attached request audit privacy
 - **WHEN** a support request includes an attachment
@@ -78,3 +78,25 @@ The system SHALL provide a building-scoped read hook so operators can view suppo
 #### Scenario: Audit on create
 - **WHEN** a support request is created
 - **THEN** an audit event is appended with the building context
+
+### Requirement: Private scoped staff receiving surface
+`GET /api/tenant-support-requests` SHALL page/count only requests in server-derived visible buildings whose tenant has full access. Private text and signed evidence SHALL be loaded only after this authorization. Basic/none contexts SHALL not expose a request's text or attachment; tenants cannot call the operator API. `/dashboard/tenant-support-requests` SHALL present the receiving list/detail using existing primitives, with no automatic profile application.
+
+#### Scenario: Mixed-scope page
+- **WHEN** the candidate set contains full, basic and foreign tenants
+- **THEN** only full-authorized requests affect visible rows, total and attachment signing
+
+### Requirement: Atomic status handling
+Authorized full-access operators with `tenants.update` SHALL use strict status/expected-status input. Legal transitions are new→in_progress, in_progress→resolved and resolved→in_progress. A duplicate delivery already at target is a no-op; stale status returns safe 409. Status and `support_request.status_updated` audit SHALL commit atomically through a service-role-only RPC. Resolved means handled, not automatic approval or identity change.
+
+#### Scenario: Audit failure
+- **WHEN** audit persistence fails during a request status transition
+- **THEN** the status update rolls back
+
+#### Scenario: Selection during a pending write
+- **WHEN** a status write is pending
+- **THEN** the queue prevents switching to another request and late results do not overwrite a different/closed selection
+
+Raw authenticated request SELECT SHALL be denied; tenant request reads are API-owned. Direct INSERT safety policies SHALL permit only new requests in current owned primary/roommate housing context, including owned request attachment prefixes. The legacy manager occupancy SELECT policy that creates contracts↔occupants recursion is removed; scoped staff occupancy reads remain server-owned.
+
+Implementation/evidence: [restricted portal edits](../changes/restrict-tenant-portal-profile-edits/index.md).

@@ -58,93 +58,18 @@ describe('TenantIdentityImageService', () => {
     expect(mocks.findPaths).toHaveBeenCalledWith(expect.anything(), 'tenant-1')
   })
 
-  it('fills or replaces the shared slot and removes the superseded object', async () => {
-    const { TenantIdentityImageService } = await import(
-      '../../../server/services/tenant-portal/identity-images'
-    )
-    const data = Buffer.from('jpeg')
-
-    const result = await TenantIdentityImageService.upload(
-      {} as never,
-      tenantUser,
-      'front',
-      { mimeType: 'image/jpeg', data },
-    )
-
-    const path = mocks.upload.mock.calls[0][1] as string
-    expect(path).toMatch(/^tenant-1\/front\/[0-9a-f-]{36}\.jpg$/)
-    expect(mocks.updatePath).toHaveBeenCalledWith(expect.anything(), 'tenant-1', 'front', path)
-    expect(mocks.remove).toHaveBeenCalledWith(expect.anything(), oldPaths.frontPath)
-    expect(result).toEqual({ frontSignedUrl: `signed:${path}`, backSignedUrl: null })
-    expect(mocks.auditAppend).toHaveBeenCalledWith(
-      expect.anything(),
-      tenantUser,
-      expect.objectContaining({ action: 'tenant.updated', entity_id: 'tenant-1' }),
-    )
-  })
-
-  it('fills an empty shared slot without attempting to remove an object', async () => {
-    mocks.findPaths.mockResolvedValue({ frontPath: null, backPath: null })
-    mocks.updatePath.mockImplementation(
-      (_event, _tenantId, side: 'front' | 'back', path: string | null) => Promise.resolve({
-        frontPath: side === 'front' ? path : null,
-        backPath: side === 'back' ? path : null,
-      }),
-    )
-    const { TenantIdentityImageService } = await import(
-      '../../../server/services/tenant-portal/identity-images'
-    )
-    const data = Buffer.from('jpeg')
-
-    const result = await TenantIdentityImageService.upload(
-      {} as never,
-      tenantUser,
-      'back',
-      { mimeType: 'image/jpeg', data },
-    )
-
-    const path = mocks.upload.mock.calls[0][1] as string
-    expect(path).toMatch(/^tenant-1\/back\/[0-9a-f-]{36}\.jpg$/)
-    expect(mocks.updatePath).toHaveBeenCalledWith(expect.anything(), 'tenant-1', 'back', path)
-    expect(mocks.remove).not.toHaveBeenCalled()
-    expect(result).toEqual({
-      frontSignedUrl: null,
-      backSignedUrl: `signed:${path}`,
-    })
-  })
-
-  it('clears the same slot and removes its object', async () => {
-    const { TenantIdentityImageService } = await import(
-      '../../../server/services/tenant-portal/identity-images'
-    )
-
-    await expect(TenantIdentityImageService.remove(
-      {} as never,
-      tenantUser,
-      'front',
-    )).resolves.toEqual({ frontSignedUrl: null, backSignedUrl: null })
-    expect(mocks.updatePath).toHaveBeenCalledWith(expect.anything(), 'tenant-1', 'front', null)
-    expect(mocks.remove).toHaveBeenCalledWith(expect.anything(), oldPaths.frontPath)
-  })
-
-  it.each([
-    ['application/pdf', Buffer.from('pdf'), 'jpeg, png hoặc webp'],
-    ['image/jpeg', Buffer.alloc(5 * 1024 * 1024 + 1), '5MB'],
-  ])('rejects invalid image %s before storage', async (mimeType, data, message) => {
-    const { TenantIdentityImageService } = await import(
-      '../../../server/services/tenant-portal/identity-images'
-    )
-
-    await expect(TenantIdentityImageService.upload(
-      {} as never,
-      tenantUser,
-      'front',
-      { mimeType, data },
-    )).rejects.toMatchObject({
-      statusCode: 422,
-      data: { error: { code: 'VALIDATION_ERROR', message: expect.stringContaining(message) } },
-    })
+  it.each(['upload', 'remove'] as const)('denies direct %s before parsing, reads, storage, paths or audits', async (operation) => {
+    const { TenantIdentityImageService } = await import('../../../server/services/tenant-portal/identity-images')
+    const request = operation === 'upload'
+      ? TenantIdentityImageService.upload({} as never, tenantUser, 'front', { mimeType: 'invalid', data: Buffer.alloc(0) })
+      : TenantIdentityImageService.remove({} as never, tenantUser, 'front')
+    await expect(request).rejects.toMatchObject({ statusCode: 403, data: { error: { code: 'FORBIDDEN' } } })
     expect(mocks.upload).not.toHaveBeenCalled()
+    expect(mocks.remove).not.toHaveBeenCalled()
+    expect(mocks.updatePath).not.toHaveBeenCalled()
+    expect(mocks.findPaths).not.toHaveBeenCalled()
+    expect(mocks.createSignedUrl).not.toHaveBeenCalled()
+    expect(mocks.auditAppend).not.toHaveBeenCalled()
   })
 
   it('rejects non-tenant capabilities before resolving any tenant scope', async () => {

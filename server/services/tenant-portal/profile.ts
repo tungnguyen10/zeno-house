@@ -9,7 +9,7 @@ import { TenantIdentityConflictService } from '../tenants/identity-conflict'
 import { redactTenantAuditData } from '../../utils/tenant-audit-redaction'
 import { resolveTenantId } from '../../utils/scope'
 import { can } from '../../utils/permissions'
-import { throwForbidden, throwNotFound } from '../../utils/errors'
+import { throwForbidden, throwNotFound, throwValidationError } from '../../utils/errors'
 import { AuditService } from '../audit'
 import { AUDIT_ACTIONS } from '~/utils/constants/audit'
 import { ContractRepository } from '../../repositories/contracts'
@@ -30,8 +30,10 @@ export const TenantProfileService = {
   ): Promise<TenantProfile> {
     if (!can(user, 'tenant.profile.update')) throwForbidden('Không có quyền cập nhật hồ sơ')
     const id = await resolveTenantId(event, user)
-    const whitelisted = tenantProfileUpdateSchema.parse(input)
-    const candidate = { phone: whitelisted.phone, idNumber: whitelisted.id_number ?? null, excludeId: id }
+    const parsed = tenantProfileUpdateSchema.safeParse(input)
+    if (!parsed.success) throwValidationError('Hồ sơ cập nhật không hợp lệ', parsed.error.flatten())
+    const whitelisted = parsed.data
+    const candidate = { phone: whitelisted.phone, excludeId: id }
     await TenantIdentityConflictService.assertAvailable(event, user, candidate, 'portal')
     const contract = await ContractRepository.findActiveByTenantId(event, id)
     const before = await TenantProfileRepository.findByTenantId(event, id)

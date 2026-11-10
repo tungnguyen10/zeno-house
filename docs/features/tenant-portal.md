@@ -64,8 +64,7 @@ shared contract.
 ## Data boundaries
 
 - Profile, CCCD images, and documents always belong to the linked tenant record.
-- Self-service profile edits include contact, personal preference, CCCD/CMND number, issue date, and
-  issue place. CCCD/CMND numbers remain unique across tenants.
+- Self-service edits are limited to contact phone, occupation and emergency contact name/phone. Personal/legal identity and canonical images are read-only; correction evidence uses private support requests. Internal tenant notes are absent from the portal DTO/bootstrap.
 - Primary tenants read invoices by `tenant_id`, preserving their invoice history.
 - Active roommates read all invoices for the current shared `contract_id`, including invoices
   issued before their move-in date. Invoice detail uses the same server-derived scope.
@@ -97,3 +96,7 @@ close use the browser unload guard.
 `/portal/profile/password`. The tenant supplies the current password, a new password, and
 confirmation. Supabase Auth verifies the current password, keeps the successful session active, and
 the server appends a credential-free `tenant.account.password_changed` audit event.
+
+## Correction intake
+
+The portal correction action pre-fills only a literal intent and neutral title. Private evidence does not replace canonical slots. Authorized staff receive requests in `/dashboard/tenant-support-requests`, verify full tenant/building scope before text or attachment access, manually apply any verified corrections through existing tenant controls, and track handling status atomically. See the [change and verification record](../changes/restrict-tenant-portal-profile-edits/index.md); source, cloud and visual gates are recorded independently.

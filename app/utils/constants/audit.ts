@@ -35,6 +35,7 @@ export const AUDIT_ACTIONS = {
   TENANT_ACCOUNT_ORPHAN_RECONCILED: 'tenant.account.orphan_reconciled',
   TENANT_ACCOUNT_PASSWORD_CHANGED: 'tenant.account.password_changed',
   SUPPORT_REQUEST_CREATED: 'support_request.created',
+  SUPPORT_REQUEST_STATUS_UPDATED: 'support_request.status_updated',
 
   // Contract
   CONTRACT_CREATED: 'contract.created',

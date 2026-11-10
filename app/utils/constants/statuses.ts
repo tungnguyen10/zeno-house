@@ -88,6 +88,12 @@ export const CONTRACT_AMENDMENT_STATUSES: Record<string, StatusDef> = {
   cancelled: { label: 'Đã hủy', variant: 'danger' },
 }
 
+export const SUPPORT_REQUEST_STATUSES: Record<string, StatusDef> = {
+  new: { label: 'Mới gửi', variant: 'warning' },
+  in_progress: { label: 'Đang xử lý', variant: 'accent' },
+  resolved: { label: 'Đã xử lý', variant: 'success' },
+}
+
 /**
  * Combined map used by `UiStatusBadge` when no `context` is supplied.
  *

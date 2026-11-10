@@ -31,7 +31,7 @@ export const AUDIT_ENTITY_CATALOG: Record<AuditEntityType, AuditEntityCatalogEnt
   building_fixed_cost: { label: 'Chi phí cố định', group: 'Vận hành', snapshotKeys: ['name', 'note', 'category'], icon: 'IconReceipt', ring: 'ring-orange-500/30', bg: 'bg-orange-500/15', fg: 'text-orange-300' },
   recurring_expense: { label: 'Chi phí định kỳ', group: 'Vận hành', snapshotKeys: ['name', 'note', 'category'], icon: 'IconRefresh', ring: 'ring-orange-500/30', bg: 'bg-orange-500/15', fg: 'text-orange-300' },
   prepaid_expense: { label: 'Chi phí trả trước', group: 'Vận hành', snapshotKeys: ['name', 'note', 'category'], icon: 'IconCalendar', ring: 'ring-orange-500/30', bg: 'bg-orange-500/15', fg: 'text-orange-300' },
-  support_request: { label: 'Yêu cầu hỗ trợ', group: 'Tenant portal', snapshotKeys: ['title'], icon: 'IconInfoCircle', ring: 'ring-blue-500/30', bg: 'bg-blue-500/15', fg: 'text-blue-300' },
+  support_request: { label: 'Yêu cầu hỗ trợ', group: 'Tenant portal', snapshotKeys: ['id'], icon: 'IconInfoCircle', ring: 'ring-blue-500/30', bg: 'bg-blue-500/15', fg: 'text-blue-300' },
   contract_occupant: { label: 'Người ở cùng', group: 'Hợp đồng', snapshotKeys: ['tenantName', 'tenant_name', 'fullName', 'full_name'], icon: 'IconUsers', ring: 'ring-amber-500/30', bg: 'bg-amber-500/15', fg: 'text-amber-300' },
   contract_payment: { label: 'Thanh toán hợp đồng', group: 'Hợp đồng', snapshotKeys: ['paymentType', 'payment_type', 'note'], icon: 'IconReceipt', ring: 'ring-amber-500/30', bg: 'bg-amber-500/15', fg: 'text-amber-300' },
   service_catalog_item: { label: 'Danh mục dịch vụ', group: 'Master data', snapshotKeys: ['name', 'code'], icon: 'IconLayers', ring: 'ring-teal-500/30', bg: 'bg-teal-500/15', fg: 'text-teal-300' },
@@ -169,6 +169,7 @@ const ACTION_SUFFIX_LABELS: Record<string, string> = {
 }
 
 const ACTION_LABELS: Record<string, string> = {
+  'support_request.status_updated': 'Cập nhật trạng thái yêu cầu',
   'contract.checkout_source.transferred': 'Chuyển nguồn tiền tất toán',
   'contract.renewal.repaired': 'Sửa dữ liệu chuỗi gia hạn',
   'user.access_request.reconciled': 'Đối soát yêu cầu truy cập',

@@ -2,7 +2,7 @@
 type: Change Proposal
 title: "Restrict tenant portal profile edits"
 status: draft
-change_state: plan-review
+change_state: implementation-verification
 tags: [change, tenants, portal, authorization, privacy]
 ---
 

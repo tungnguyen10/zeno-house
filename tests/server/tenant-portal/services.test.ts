@@ -79,11 +79,13 @@ describe('tenant portal services', () => {
     const { TenantProfileService } = await import('../../../server/services/tenant-portal/profile')
 
     await (TenantProfileService.get as (...args: unknown[]) => Promise<unknown>)({} as never, tenantUser, 'tenant-2')
-    await TenantProfileService.update({} as never, tenantUser, {
+    await expect(TenantProfileService.update({} as never, tenantUser, {
       phone: '0902000000', status: 'archived', tenant_id: 'tenant-2',
-    } as never)
+    } as never)).rejects.toMatchObject({ statusCode: 422 })
+    expect(mocks.updateProfile).not.toHaveBeenCalled()
+    await TenantProfileService.update({} as never, tenantUser, { phone: '0902000000' })
 
-    expect(mocks.resolveTenantId).toHaveBeenCalledTimes(2)
+    expect(mocks.resolveTenantId).toHaveBeenCalledTimes(3)
     expect(mocks.findProfile).toHaveBeenCalledWith(expect.anything(), 'tenant-1')
     expect(mocks.updateProfile).toHaveBeenCalledWith(expect.anything(), 'tenant-1', { phone: '0902000000' })
     expect(mocks.auditAppend).toHaveBeenCalledWith(expect.anything(), tenantUser, expect.objectContaining({
@@ -93,10 +95,10 @@ describe('tenant portal services', () => {
     }))
   })
 
-  it.each(['phone', 'id_number'] as const)('rejects duplicate portal %s without field details or identity', async (field) => {
-    mocks.findIdentityMatches.mockResolvedValue([{ tenantId: 'tenant-2', field, value: field === 'phone' ? '0903000000' : '012345678901' }])
+  it.each(['phone'] as const)('rejects duplicate portal %s without field details or identity', async (field) => {
+    mocks.findIdentityMatches.mockResolvedValue([{ tenantId: 'tenant-2', field, value: '0903000000' }])
     const { TenantProfileService } = await import('../../../server/services/tenant-portal/profile')
-    const error = await TenantProfileService.update({} as never, tenantUser, { [field]: field === 'phone' ? '0903000000' : '012345678901' }).catch(e => e)
+    const error = await TenantProfileService.update({} as never, tenantUser, { phone: '0903000000' }).catch(e => e)
     expect(error).toMatchObject({ statusCode: 409, data: { error: { code: 'TENANT_IDENTITY_CONFLICT' } } })
     expect(error.data.error.details).toBeUndefined()
     expect(mocks.updateProfile).not.toHaveBeenCalled()
@@ -106,7 +108,7 @@ describe('tenant portal services', () => {
   it('redacts sensitive identity fields in the profile audit', async () => {
     mocks.updateProfile.mockResolvedValue({ id: 'tenant-1', idNumber: '012345678901' })
     const { TenantProfileService } = await import('../../../server/services/tenant-portal/profile')
-    await TenantProfileService.update({} as never, tenantUser, { id_number: '012345678901' })
+    await TenantProfileService.update({} as never, tenantUser, { occupation: 'Fixture' })
     expect(JSON.stringify(mocks.auditAppend.mock.calls[0]![2])).not.toContain('012345678901')
     expect(mocks.auditAppend.mock.calls[0]![2].after_data.idNumber).toBe('•••• 8901')
   })

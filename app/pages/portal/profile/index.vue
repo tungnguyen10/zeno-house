@@ -109,7 +109,7 @@ async function onLogout() {
                 Ảnh định danh (CCCD)
               </h2>
               <p class="mt-1 portal-type-caption text-body">
-                Ảnh hai mặt CCCD/CMND dùng để đối chiếu hồ sơ.
+                Ảnh định danh trong hồ sơ. Nếu thông tin chưa đúng, hãy gửi yêu cầu chỉnh sửa để ban quản lý đối chiếu.
               </p>
             </div>
           </div>

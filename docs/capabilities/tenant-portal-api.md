@@ -36,23 +36,19 @@ The system SHALL expose tenant self-service endpoints under `/api/tenant/**`, av
 - **THEN** the server uses the resolver's tenant id and ignores the supplied value
 
 ### Requirement: Tenant profile read and whitelist update
-`GET /api/tenant/me` SHALL return the caller's safe tenant profile. `PATCH /api/tenant/me` SHALL update only the strict self-service whitelist: `full_name`, `phone`, `gender`, `date_of_birth`, `occupation`, `permanent_address`, `emergency_contact_name`, `emergency_contact_phone`, and `notes`. Login email, tenant contact email, status, code, linkage fields, and legal identity fields (`id_number`, `id_issued_date`, `id_issued_place`) SHALL be rejected or ignored and never persisted by tenant self-service.
+`GET /api/tenant/me` SHALL return the caller's safe tenant profile without internal `notes`. `PATCH /api/tenant/me` SHALL accept a strict nonempty object containing only `phone`, `occupation`, `emergency_contact_name`, and `emergency_contact_phone`. Unknown or mixed forbidden keys SHALL reject the entire request with 422 before conflict lookup, persistence or audit. Full name, gender, date of birth, permanent address, legal identity fields, emails, status/code and account linkage SHALL NOT be self-service profile writes.
 
 #### Scenario: Read own profile
-- **WHEN** a tenant calls `GET /api/tenant/me`
-- **THEN** the response contains the caller's safe profile fields including read-only legal identity
+- **WHEN** the tenant reads their profile or portal bootstrap
+- **THEN** authorized own identity values are available read-only and `notes` is absent from JSON
 
-#### Scenario: Update allowed contact fields
-- **WHEN** a tenant PATCHes `phone`
-- **THEN** the update succeeds and returns the updated profile
+#### Scenario: Four-field contact edit
+- **WHEN** the tenant submits changed allowed contact fields
+- **THEN** only those normalized values are saved; Auth identity and canonical legal profile remain unchanged
 
-#### Scenario: Login email is not a profile mutation
-- **WHEN** a tenant PATCH includes `email`
-- **THEN** it is not persisted as a profile edit
-
-#### Scenario: Legal identity is operator-managed
-- **WHEN** a tenant PATCH includes `id_number`, `id_issued_date`, or `id_issued_place`
-- **THEN** those fields are rejected or ignored and never persisted
+#### Scenario: Mixed legal and contact payload
+- **WHEN** a request contains both `phone` and `id_number`, or any other forbidden key
+- **THEN** the entire operation returns 422 with no partial update or duplicate lookup
 
 ### Requirement: Tenant password change is verified and audited
 `POST /api/tenant/password` SHALL verify the caller's current password through Supabase Auth before setting a valid new password, SHALL keep the successful current session active, and SHALL append `tenant.account.password_changed` without including any credential values.
@@ -124,8 +120,8 @@ The system SHALL expose tenant self-service endpoints under `/api/tenant/**`, av
 - **THEN** the API returns only authorized invoice data and the stored payment-profile snapshot without substituting current building data
 
 
-### Requirement: Private tenant profile identity updates
-Portal profile updates SHALL use the shared phone/ID normalization and uniqueness checks, excluding the current tenant. All duplicate phone/ID matches and unique-index races SHALL return generic 409 `TENANT_IDENTITY_CONFLICT` without field or tenant details, regardless of the caller's access to any matching tenant. The shared persistent conflict budget SHALL apply, including 429 retry metadata.
+### Requirement: Private tenant contact-phone conflicts
+Portal contact-phone updates SHALL use shared normalization and uniqueness checks, excluding the current tenant. Legal ID fields SHALL be rejected before any lookup. All duplicate phone matches and unique-index races SHALL return generic 409 `TENANT_IDENTITY_CONFLICT` without field or tenant details, regardless of the caller's access to any matching tenant. The shared persistent conflict budget SHALL apply, including 429 retry metadata.
 
 #### Scenario: Portal updates to another tenant's phone
 - **WHEN** a tenant submits a phone already assigned to another profile
@@ -136,3 +132,8 @@ Portal profile updates SHALL use the shared phone/ID normalization and uniquenes
 - **THEN** the unique violation is converted to a generic 409
 
 Implementation and production rollout evidence: [tenant identity hardening](../history/2026-11-09-harden-tenant-identity-data/index.md). Production database rollout and SQL verification passed on 2026-11-09; application branch deployment is separate.
+
+### Requirement: Correction requests never mutate canonical identity
+Tenant correction requests SHALL use the existing self-scoped request API/private attachments. Tenant canonical image POST/DELETE SHALL return 403 before multipart parsing or Storage/path/audit side effects; own image GET remains available. Submitting evidence or changing a request status SHALL never update canonical tenant values or image slots.
+
+Implementation/evidence: [restricted portal edits](../changes/restrict-tenant-portal-profile-edits/index.md). Cloud functional/visual verification gates are recorded separately from source tests.

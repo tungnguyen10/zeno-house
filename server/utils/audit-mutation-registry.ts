@@ -32,6 +32,7 @@ export const AUDIT_MUTATION_POLICIES: readonly AuditMutationPolicy[] = [
   { routePrefix: 'service-catalog/', actionOwner: 'ServiceCatalogService', durability: 'transactional' },
   { routePrefix: 'shared-expenses/', actionOwner: 'SharedExpenseService', durability: 'transactional' },
   { routePrefix: 'tenant-accounts/', actionOwner: 'TenantAccountService', durability: 'outbox' },
+  { routePrefix: 'tenant-support-requests/', actionOwner: 'TenantSupportRequestOperatorService', durability: 'transactional' },
   { routePrefix: 'tenant/', actionOwner: 'Tenant portal services', durability: 'outbox' },
   { routePrefix: 'tenants/', actionOwner: 'TenantService', durability: 'outbox' },
   { routePrefix: 'users/', actionOwner: 'UserService', durability: 'outbox' },

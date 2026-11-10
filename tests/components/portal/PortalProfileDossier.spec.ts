@@ -22,7 +22,6 @@ const profile: TenantProfile = {
   idIssuedPlace: 'Cục CSQLHC',
   emergencyContactName: 'Nguyễn Văn B',
   emergencyContactPhone: '0912345678',
-  notes: 'Liên hệ ngoài giờ hành chính.',
 }
 
 const stubs = {
@@ -78,7 +77,6 @@ describe('PortalProfileDossier', () => {
       profile.idIssuedPlace,
       profile.emergencyContactName,
       profile.emergencyContactPhone,
-      profile.notes,
     ]) {
       expect(wrapper.text()).toContain(value)
     }
@@ -97,8 +95,17 @@ describe('PortalProfileDossier', () => {
     expect(wrapper.text()).toContain('Liên hệ')
     expect(wrapper.text()).toContain('Giấy tờ tùy thân')
     expect(wrapper.text()).toContain('Liên hệ khẩn cấp')
-    expect(wrapper.text()).toContain('Ghi chú')
-    expect(wrapper.findAll('[data-profile-section]')).toHaveLength(5)
+    expect(wrapper.text()).not.toContain('Ghi chú')
+    expect(wrapper.findAll('[data-profile-section]')).toHaveLength(4)
+  })
+
+  it('does not render internal notes from a stale profile object', () => {
+    const wrapper = mount(PortalProfileDossier, {
+      props: { profile: { ...profile, notes: 'PRIVATE INTERNAL FIXTURE' } as TenantProfile },
+      global: { stubs },
+    })
+    expect(wrapper.text()).not.toContain('PRIVATE INTERNAL FIXTURE')
+    expect(wrapper.find('[aria-labelledby="profile-notes-heading"]').exists()).toBe(false)
   })
 
   it('uses an explicit missing-value label', () => {
@@ -107,7 +114,6 @@ describe('PortalProfileDossier', () => {
         profile: {
           ...profile,
           occupation: null,
-          notes: null,
         },
       },
       global: { stubs },
@@ -130,14 +136,15 @@ describe('PortalProfileDossier', () => {
     expect(wrapper.text()).toContain('Chưa cập nhật')
   })
 
-  it('labels identity details without implying management-only editing', () => {
+  it('shows read-only identity and a correction request without claiming verification', () => {
     const wrapper = mount(PortalProfileDossier, {
       props: { profile },
       global: { stubs },
     })
 
     expect(wrapper.text()).toContain('Giấy tờ tùy thân')
-    expect(wrapper.text()).not.toContain('Liên hệ ban quản lý')
+    expect(wrapper.get('a[href="/portal/requests?intent=profile-correction"]').text()).toContain('Yêu cầu chỉnh sửa')
+    expect(wrapper.text()).toContain('Thông tin định danh được ban quản lý đối chiếu trước khi cập nhật.')
     expect(wrapper.find('input').exists()).toBe(false)
   })
 })

@@ -72,30 +72,23 @@ The system SHALL expose `GET /api/tenant/documents`, `POST /api/tenant/documents
 
 ---
 
-### Requirement: Identity-image slots are shared across actors
-Admin, owner, and tenant updates to a tenant's front/back identity images SHALL use the same
-`tenant-id-images` bucket, `${tenant.id}/${side}/...` path convention, and existing
-`id_card_front_path` / `id_card_back_path` columns. The system SHALL NOT create separate identity
-copies based on which actor uploaded the image. Tenant Portal SHALL expose self-scoped read,
-upload, and delete endpoints for these slots; it SHALL resolve the tenant from the authenticated
-user, accept only `front|back`, and accept only JPEG, PNG, or WebP images up to 5 MB.
+### Requirement: Canonical identity images are operator-managed
+Authorized internal operators SHALL use the existing private `tenant-id-images` bucket and tenant front/back path columns after full-access/capability checks. Tenant Portal SHALL expose self-scoped read-only previews. Its POST/DELETE endpoints and direct Storage INSERT/UPDATE/upsert/DELETE SHALL not modify canonical identity objects. Generic personal documents remain separate and tenant-uploadable through their existing APIs.
 
-#### Scenario: Tenant fills an empty identity slot
-- **WHEN** admin or owner has not uploaded one side and the linked tenant uploads it
-- **THEN** the corresponding existing tenant identity path column points to the tenant upload
+#### Scenario: Tenant attempts canonical replacement
+- **WHEN** a tenant calls an old image mutation endpoint or writes the canonical Storage bucket directly
+- **THEN** the mutation is denied and existing objects/path columns remain unchanged
 
-#### Scenario: Tenant replaces an admin-uploaded image
-- **WHEN** the linked tenant replaces an existing front or back image
-- **THEN** the same slot points to the replacement and the superseded object is removed
+#### Scenario: Proposed correction evidence
+- **WHEN** the tenant submits an image/PDF with a support request
+- **THEN** it remains under the private tenant/request evidence path and does not overwrite a canonical slot
 
-#### Scenario: Cross-tenant identity mutation is denied
-- **WHEN** a tenant attempts to read, replace, or remove another tenant's identity image
-- **THEN** the operation is denied without revealing whether that image exists
+#### Scenario: Existing own preview
+- **WHEN** the tenant reads their canonical image
+- **THEN** the API returns only a short-lived signed URL within own scope
 
-#### Scenario: Identity image access stays private
-- **WHEN** a tenant reads an identity image
-- **THEN** the system returns a five-minute signed URL and never a public URL
+#### Scenario: Staff updates a canonical image
+- **WHEN** an authorized full-access operator verifies and updates an image through internal tenant controls
+- **THEN** the existing canonical mutation/audit path remains available
 
-#### Scenario: Invalid identity upload is rejected
-- **WHEN** a tenant submits an unsupported side, MIME type, or image larger than 5 MB
-- **THEN** the request is rejected before any identity slot or Storage object is mutated
+Implementation/evidence: [restricted portal edits](../changes/restrict-tenant-portal-profile-edits/index.md).

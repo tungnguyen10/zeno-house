@@ -1306,7 +1306,7 @@ export type Database = {
           created_at: string
           id: string
           operation_id: string | null
-          payment_id: string
+          payment_id: string | null
           reason: string | null
           source_type: string
           updated_at: string
@@ -1318,7 +1318,7 @@ export type Database = {
           created_at?: string
           id?: string
           operation_id?: string | null
-          payment_id: string
+          payment_id?: string | null
           reason?: string | null
           source_type: string
           updated_at?: string
@@ -1330,7 +1330,7 @@ export type Database = {
           created_at?: string
           id?: string
           operation_id?: string | null
-          payment_id?: string
+          payment_id?: string | null
           reason?: string | null
           source_type?: string
           updated_at?: string
@@ -4784,6 +4784,15 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      update_tenant_support_request_status_with_audit: {
+        Args: {
+          p_actor_id: string
+          p_expected_status: string
+          p_request_id: string
+          p_status: string
+        }
+        Returns: Json
       }
       upsert_building_invoice_profile: {
         Args: {

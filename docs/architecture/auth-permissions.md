@@ -377,3 +377,7 @@ Managers also receive no reserve-fund or shared-expense capabilities, so both AP
 ## Tenant identity conflict disclosure
 
 The shared tenant conflict service resolves full/basic/none access for matched tenants. Only entirely full-access matches expose field errors and an existing tenant ID. Mixed-scope and portal conflicts use a single generic response; identity checks consult a per-user persistent conflict budget first. See the [identity hardening design](../history/2026-11-09-harden-tenant-identity-data/design.md) for the exact response and import contracts.
+
+## Restricted portal contact edits
+
+Portal PATCH permits exactly four contact fields with strict mixed-payload rejection. Internal notes are omitted at SELECT/mapper/DTO boundaries and raw tenant/request SELECT grants are revoked. Canonical tenant image mutations are denied at handler/service/Storage policy boundaries; private correction attachments remain separate. Operator request reads/status writes require visible-building and full tenant access before private text/signing. The legacy direct-manager occupancy SELECT edge is removed to break the contracts/occupants policy cycle; staff server-owned reads remain unchanged. [Implementation and verification](../changes/restrict-tenant-portal-profile-edits/index.md).

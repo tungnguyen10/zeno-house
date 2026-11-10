@@ -25,16 +25,16 @@ The system SHALL have a `tenants` table with columns: `id` (uuid PK), `full_name
 - **WHEN** a tenant row is updated
 - **THEN** `updated_at` is set to current timestamp automatically
 
-### Requirement: Tenants RLS policies
-Row Level Security SHALL be enabled on `tenants`. Policy `tenants_admin_all`: admin role has full access (SELECT/INSERT/UPDATE/DELETE). Policy `tenants_manager_select`: manager role has SELECT only.
+### Requirement: Server-owned tenant reads and writes
+RLS SHALL remain enabled. Raw SELECT, including column-level grants, on tenants SHALL be denied to PUBLIC/anon/authenticated so internal notes cannot bypass portal serialization. Service-role repositories retain access; services enforce full/basic/none scope and capabilities before returning DTOs or mutating data. Browser clients SHALL use server APIs.
 
-#### Scenario: Admin can write
-- **WHEN** authenticated user with role `admin` inserts or updates a tenant
-- **THEN** operation succeeds
+#### Scenario: Raw own-profile read
+- **WHEN** an authenticated tenant queries the tenants table directly
+- **THEN** no private row/column data is returned; the caller must use its safe profile API
 
-#### Scenario: Manager read-only
-- **WHEN** authenticated user with role `manager` attempts DELETE on a tenant
-- **THEN** operation is rejected by RLS
+#### Scenario: Authorized internal mutation
+- **WHEN** an authorized staff actor updates a tenant through the scoped service/API
+- **THEN** the service-role repository can persist the authorized fields
 
 ### Requirement: Generated TypeScript types
 After migration, `database.types.ts` SHALL be regenerated to include `tenants` table Row/Insert/Update types.

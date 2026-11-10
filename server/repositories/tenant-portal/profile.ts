@@ -5,7 +5,7 @@ import type { TenantProfileUpdateInput } from '~/utils/validators/tenant-portal'
 import { mapTenantProfile } from '~/utils/mappers/tenant-portal'
 import { db } from '../../utils/db'
 
-const PROFILE_SELECT = 'id, code, status, full_name, phone, email, gender, date_of_birth, occupation, permanent_address, id_number, id_issued_date, id_issued_place, emergency_contact_name, emergency_contact_phone, notes'
+const PROFILE_SELECT = 'id, code, status, full_name, phone, email, gender, date_of_birth, occupation, permanent_address, id_number, id_issued_date, id_issued_place, emergency_contact_name, emergency_contact_phone'
 
 export const TenantProfileRepository = {
   async findByTenantId(event: H3Event, tenantId: string): Promise<TenantProfile | null> {
@@ -25,7 +25,12 @@ export const TenantProfileRepository = {
   ): Promise<TenantProfile> {
     const { data, error } = await db(event)
       .from('tenants')
-      .update(input)
+      .update({
+        ...(input.phone !== undefined ? { phone: input.phone } : {}),
+        ...(input.occupation !== undefined ? { occupation: input.occupation } : {}),
+        ...(input.emergency_contact_name !== undefined ? { emergency_contact_name: input.emergency_contact_name } : {}),
+        ...(input.emergency_contact_phone !== undefined ? { emergency_contact_phone: input.emergency_contact_phone } : {}),
+      })
       .eq('id', tenantId)
       .select(PROFILE_SELECT)
       .single()

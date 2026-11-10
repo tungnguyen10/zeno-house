@@ -97,3 +97,33 @@ describe('TenantSupportRequestRepository', () => {
     expect(mocks.from).not.toHaveBeenCalled()
   })
 })
+
+describe('operator request repository boundaries', () => {
+  beforeEach(() => { vi.clearAllMocks(); mocks.db.mockReturnValue({ from: mocks.from }) })
+  it('scans only lean metadata in deterministic order before private detail reads', async () => {
+    const query = chain({ range: vi.fn().mockResolvedValue({ data: [row], error: null }) })
+    mocks.from.mockReturnValue(query)
+    const { TenantSupportRequestRepository: repo } = await import('../../../server/repositories/tenant-portal/requests')
+    await repo.listOperatorCandidates({} as never, ['building-1'], 'new')
+    expect(query.select).toHaveBeenCalledWith('id, tenant_id, building_id, contract_id, status, created_at')
+    expect(query.in).toHaveBeenCalledWith('building_id', ['building-1'])
+    expect(query.eq).toHaveBeenCalledWith('status', 'new')
+    expect(query.order.mock.calls).toEqual([['created_at', { ascending: false }], ['id', { ascending: false }]])
+  })
+  it('does not query private descriptions for an empty authorized page', async () => {
+    const { TenantSupportRequestRepository: repo } = await import('../../../server/repositories/tenant-portal/requests')
+    expect(await repo.findByIds({} as never, [])).toEqual([])
+    expect(mocks.from).not.toHaveBeenCalled()
+  })
+  it.each([
+    ['SUPPORT_REQUEST_STATUS_STALE', 409],
+    ['SUPPORT_REQUEST_NOT_FOUND', 404],
+    ['SUPPORT_REQUEST_STATUS_TRANSITION_INVALID', 422],
+  ])('maps %s without leaking database context', async (message, statusCode) => {
+    const rpc = vi.fn().mockResolvedValue({ data: null, error: { message, code: 'P0001' } })
+    mocks.db.mockReturnValue({ rpc })
+    const { TenantSupportRequestRepository: repo } = await import('../../../server/repositories/tenant-portal/requests')
+    await expect(repo.updateStatusWithAudit({} as never, 'request-1', { status: 'resolved', expected_status: 'in_progress' }, 'actor')).rejects.toMatchObject({ statusCode })
+    expect(rpc).toHaveBeenCalledWith('update_tenant_support_request_status_with_audit', { p_request_id: 'request-1', p_expected_status: 'in_progress', p_status: 'resolved', p_actor_id: 'actor' })
+  })
+})

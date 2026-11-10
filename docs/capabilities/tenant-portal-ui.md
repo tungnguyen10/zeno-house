@@ -148,24 +148,21 @@ The portal SHALL present `/portal/profile` as the complete personal dossier for 
 
 #### Scenario: Complete personal dossier
 - **WHEN** a tenant opens `/portal/profile`
-- **THEN** the portal shows every field in the tenant profile DTO, identity images, and tenant documents
+- **THEN** the portal shows the safe own-profile DTO, read-only identity images, and tenant documents, with no internal-notes section
 - **AND** missing optional values are identified as not yet updated
 - **AND** room, building, contract, and occupancy details are not duplicated
 
 #### Scenario: Dedicated self-service edit screen
 - **WHEN** a tenant chooses `Chỉnh sửa`
 - **THEN** the portal opens `/portal/profile/edit`
-- **AND** only the twelve whitelisted self-service fields are editable
+- **AND** only contact phone, occupation, emergency contact name and emergency contact phone are editable
 - **AND** the update payload contains only normalized changed fields
 
-#### Scenario: Tenant updates identity details
-- **WHEN** a tenant submits a unique CCCD/CMND number, issue date, or issue place
-- **THEN** only changed normalized identity fields are persisted and audited
-
-#### Scenario: Identity image controls belong to edit
-- **WHEN** a tenant views `/portal/profile`
-- **THEN** front and back identity images are read-only previews
-- **AND** upload, replace, and remove controls are available only on `/portal/profile/edit`
+#### Scenario: Tenant needs an identity correction
+- **WHEN** a tenant needs to correct personal/legal data or an identity image
+- **THEN** the dossier provides “Yêu cầu chỉnh sửa” through `/portal/requests?intent=profile-correction`
+- **AND** identity values are never placed in route queries or localStorage
+- **AND** canonical identity has no tenant upload/replace/delete controls
 
 #### Scenario: Tenant opens password security
 - **WHEN** a tenant chooses `Đổi mật khẩu` from `/portal/profile`
@@ -180,11 +177,12 @@ The portal SHALL present `/portal/profile` as the complete personal dossier for 
 ---
 
 ### Requirement: Identity and document upload bound to agreed storage
-The portal document UI SHALL consume the archived storage convention and SHALL NOT invent paths or buckets. Identity front/back images SHALL use `GET /api/tenant/id-images`, `POST /api/tenant/id-images/[side]`, and `DELETE /api/tenant/id-images/[side]` against the shared `tenant-id-images` bucket. Free-form documents SHALL use `GET/POST /api/tenant/documents` and `DELETE /api/tenant/documents/[id]` against the `tenant-documents` bucket. The UI SHALL render only the server-returned short-lived signed URLs and SHALL rely on the server for path/bucket selection and mime/size validation.
+The portal document UI SHALL consume the archived storage convention and SHALL NOT invent paths or buckets. Canonical identity previews SHALL use `GET /api/tenant/id-images` against the shared private bucket; tenant POST/DELETE are forbidden. Proposed evidence uses a private support request attachment and never writes canonical slots. Free-form documents SHALL use `GET/POST /api/tenant/documents` and `DELETE /api/tenant/documents/[id]` against the `tenant-documents` bucket. The UI SHALL render only the server-returned short-lived signed URLs and SHALL rely on the server for path/bucket selection and mime/size validation.
 
-#### Scenario: Identity slots use the shared bucket endpoints
-- **WHEN** a tenant captures or replaces the front or back identity image
-- **THEN** the UI calls `POST /api/tenant/id-images/[side]` and displays the returned signed URL, never constructing a storage path itself
+#### Scenario: Evidence pending manual handling
+- **WHEN** a tenant supplies evidence for an identity correction
+- **THEN** the request keeps one private image/PDF up to 5 MB and explains that the profile has not changed
+- **AND** absence of active housing context has actionable contact-management guidance, not a falsely routed request
 
 #### Scenario: Free-form document upload
 - **WHEN** a tenant uploads a document
@@ -313,3 +311,5 @@ Tenant invoice detail and latest-outstanding surfaces SHALL display the invoice 
 #### Scenario: Legacy due date is missing
 - **WHEN** an invoice has no due date
 - **THEN** detail surfaces display “Chưa có hạn thanh toán” instead of a synthetic four-day fallback
+
+Restricted edit and staff-intake implementation: [change record](../changes/restrict-tenant-portal-profile-edits/index.md). No historical identity image is retroactively labelled verified.

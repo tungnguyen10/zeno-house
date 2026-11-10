@@ -33,9 +33,9 @@ describe('tenant validators normalize identity fields', () => {
     expect(tenantUpdateSchema.parse({ full_name: 'Khách Giả Lập' })).toEqual({ full_name: 'Khách Giả Lập' })
   })
 
-  it('normalizes portal profile identity fields', () => {
-    expect(tenantProfileUpdateSchema.parse({ phone: '0901.234.567', id_number: 'b1234567' }))
-      .toEqual({ phone: '0901234567', id_number: 'B1234567' })
+  it('normalizes portal phone and rejects operator-managed identity fields', () => {
+    expect(tenantProfileUpdateSchema.parse({ phone: '0901.234.567' })).toEqual({ phone: '0901234567' })
+    expect(tenantProfileUpdateSchema.safeParse({ phone: '0901.234.567', id_number: 'b1234567' }).success).toBe(false)
   })
 })
 
