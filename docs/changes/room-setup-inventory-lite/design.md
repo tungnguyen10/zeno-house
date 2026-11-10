@@ -53,9 +53,9 @@ Cùng cột, `room_id → rooms on delete cascade` thay `building_id`; `unique (
 ### 4.4. RPC
 
 - `apply_inventory_template(p_building_id uuid, p_room_ids uuid[], p_mode text) returns jsonb` — `merge` thêm món chưa có theo tên (không phân biệt hoa thường); `replace` xóa rồi chép. Khóa advisory theo tòa; mọi `room_id` phải thuộc `p_building_id`, nếu không `raise 'INVENTORY_ROOM_SCOPE'`. Trả `{ room_id: added_count }`.
-- `create_rooms_batch(p_building_id, p_rooms, p_apply_inventory boolean default false)` — thay bản 2 tham số của PR0 (drop + create, grant lại). Bật thì chép mẫu vào các phòng vừa tạo trong cùng transaction. `create_building_with_rooms` gọi với `false`.
-- `create_rooms_batch_idempotent(p_building_id, p_rooms, p_apply_inventory, p_actor_id, p_request_id) returns jsonb` — khóa `rooms.batch:<request_id>` trong `audit_operations`, cùng quy tắc PR0 (replay chỉ khi cùng actor; khác actor → `BUILDING_SETUP_REQUEST_CONFLICT`).
-- `create_contract_with_handover(..., p_inventory jsonb default null)` — drop + create, giữ nguyên logic V1, thêm bước ghi `contract_inventory_items` khi `p_inventory` không null; grant giống bản cũ.
+- `create_rooms_batch` của PR0 **giữ nguyên**.
+- `create_rooms_batch_idempotent(p_building_id, p_rooms, p_apply_inventory, p_actor_id, p_request_id) returns jsonb` — khóa `rooms.batch:<request_id>` trong `audit_operations`, cùng quy tắc PR0 (replay chỉ khi cùng actor; khác actor → `BUILDING_SETUP_REQUEST_CONFLICT`); gọi `create_rooms_batch`, nếu `p_apply_inventory` thì gọi `apply_inventory_template(..., 'merge')` lên các phòng vừa tạo, cùng transaction.
+- `create_contract_with_handover` (định nghĩa mới nhất tại `20261001143337_contract_checkout_settlement.sql`) **giữ nguyên**. Thêm hàm bọc `create_contract_with_handover_and_inventory(<17 tham số cũ>, p_inventory jsonb)` gọi hàm cũ rồi ghi `contract_inventory_items`, cùng transaction; grant chỉ `service_role`.
 
 ## 5. Bộ sinh phòng, API, quyền
 
@@ -126,9 +126,9 @@ Chất lượng UI: theo [ui-polish-workflow](../../../.agents/skills/zeno-house
 | Bàn giao | `tests/server/contracts/handover-inventory.test.ts` | Theo chuỗi gia hạn; chuỗi trống → rỗng |
 | UI | test component + test mã nguồn | Editor; checkbox tắt khi chưa có mẫu; trang tạo tòa dùng `RoomBatchGenerator` |
 
-- Migration `supabase/migrations/<ts>_inventory_lite.sql` chạy **sau** migration PR0: 3 bảng + trigger; `apply_inventory_template`; thay `create_rooms_batch`; thêm `create_rooms_batch_idempotent`; thay `create_contract_with_handover` (giữ logic V1).
-- Script `supabase/verification/inventory_lite.sql`: lời gọi chữ ký cũ của `create_contract_with_handover` vẫn chạy; có `p_inventory` thì ghi cùng transaction, lỗi chỉ số → rollback cả bàn giao; `update` bàn giao bị chặn; `apply_inventory_template` chặn phòng khác tòa; `merge` không trùng; grant.
-- Rủi ro: thay RPC tạo HĐ production. Thứ tự triển khai: áp migration → xác minh → deploy app gọi chữ ký mới; ghi trong `verification.md`.
+- Migration `supabase/migrations/<ts>_inventory_lite.sql` chạy **sau** migration PR0: 3 bảng + trigger; `apply_inventory_template`; `create_rooms_batch_idempotent`; `create_contract_with_handover_and_inventory`. Không sửa hàm nào đang có.
+- Script `supabase/verification/inventory_lite.sql`: hàm bọc ghi bàn giao cùng transaction, lỗi chỉ số → rollback cả HĐ và bàn giao; `update` bàn giao bị chặn; `apply_inventory_template` chặn phòng khác tòa; `merge` không trùng; replay batch; grant.
+- Thứ tự triển khai: áp migration → xác minh → deploy app gọi hàm bọc; hàm cũ không đổi nên không có khoảng hở.
 - Regenerate types; áp dụng cloud là gate riêng.
 
 ## 8. Tài liệu

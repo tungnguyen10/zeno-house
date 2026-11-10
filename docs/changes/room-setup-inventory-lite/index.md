@@ -3,6 +3,7 @@
 **Status: design-review.** Depends on [atomic-building-room-setup](../atomic-building-room-setup/index.md).
 
 - [Design](./design.md)
+- [Implementation plan](./implementation-plan.md)
 - Parent brief: [ZENO House V2 — Flow Optimization Brief](../zeno-house-v2-optimization/brief.md)
 
 ## Capabilities to update on acceptance
