@@ -70,7 +70,7 @@ onBeforeUnmount(() => {
   if (headerTitle.value === compactTitle.value) headerTitle.value = null
 })
 
-const { payments, isLoading: paymentsLoading, error: paymentsError, addPayment, updatePayment, removePayment } = useContractPayments(id)
+const { payments, isLoading: paymentsLoading, addPayment, updatePayment, removePayment } = useContractPayments(id)
 const { renewals, isLoading: renewalsLoading, renew } = useContractRenewals(id)
 const { occupants, isLoading: occupantsLoading, error: occupantsError, addOccupant, moveOut, removeOccupant } = useContractOccupants(id)
 const { services: contractServices, isLoading: servicesLoading, error: servicesError, updateService: updateContractService, removeService: removeContractService } = useContractServices(id)
@@ -95,8 +95,7 @@ async function publishAmendment(amendmentId: string, expectedUpdatedAt: string) 
 const activeOccupantCount = computed(
   () => occupants.value.filter(o => !o.moveOutDate).length,
 )
-const depositReceived = computed(() => payments.value.filter(p => p.paymentType === 'deposit').reduce((sum, p) => sum + p.amount, 0))
-const depositHeld = computed(() => checkoutBundle.value?.enabled ? checkoutBundle.value.depositHeld : depositReceived.value)
+const depositHeld = computed(() => checkoutBundle.value?.enabled ? checkoutBundle.value.depositHeld : (contract.value?.deposit ?? 0))
 watch(payments, () => { if (checkoutBundle.value?.enabled) checkout.refresh() })
 
 const showRenewalForm = ref(false)
@@ -247,7 +246,6 @@ function sectionLinkClass(sectionId: string) {
 
       <ContractDetailHero
         :contract="contract"
-        :paid-amount="depositReceived"
         :deposit-held="depositHeld"
         :can-manage="authStore.can('contracts.update')"
         @edit="navigateTo(`${contractPath(contract)}/edit`)"
@@ -381,7 +379,7 @@ function sectionLinkClass(sectionId: string) {
             :current-monthly-rent="contract.monthlyRent"
             :occupant-count="occupantsLoading || occupantsError ? undefined : activeOccupantCount"
             :service-count="servicesLoading || servicesError ? undefined : contractServices.length"
-            :deposit-held="checkoutLoading || checkoutError || (!checkoutBundle?.enabled && (paymentsLoading || paymentsError)) ? undefined : depositHeld"
+            :deposit-held="checkoutLoading || checkoutError ? undefined : depositHeld"
             :loading="isRenewing"
             :api-error="renewalApiError"
             @submit="handleRenew"
