@@ -1,11 +1,3 @@
----
-type: Archived Change Summary
-title: "Dashboard Layout Refresh — completed implementation"
-status: deprecated
-change_state: complete
-tags: [change, dashboard, archive]
----
-
 # Dashboard Layout Refresh — completed implementation
 
 Archived on 2026-11-10 as the implementation checklist is complete (8/8 checked) and the reviewed `develop` source contains the dashboard layout/chart changes. The accepted `dashboard-ui` requirements were reconciled in the same documentation cleanup.
