@@ -112,7 +112,7 @@ Hàm thuần `computeBuildingReadiness(building, contractProfile, invoiceProfile
   2. **Mặc định cho hợp đồng mới** — thời hạn, số tháng cọc, tên thương hiệu.
   3. **Điều khoản** — 6 trường, mỗi trường có hint điều khoản HĐ dùng nó.
   4. **Bản ký** — số bản, số bản mỗi bên.
-  5. **Lịch thanh toán trên hợp đồng (chỉ đọc)** — câu xem trước *"Trên hợp đồng: Thanh toán từ ngày X đến ngày Y hằng tháng; sau ngày Z không thanh toán, Bên A có quyền chấm dứt hợp đồng."*, mỗi số có chú thích nguồn (Ngày phát hành hóa đơn / Hạn thanh toán / + Số ngày ân hạn) và link "Sửa lịch vận hành"; thiếu cấu hình thì hiện cảnh báo.
+  5. **Lịch thanh toán trên hợp đồng (chỉ đọc)** — câu xem trước *"Trên hợp đồng: Thanh toán từ ngày X đến ngày Y hằng tháng; sau ngày Z không thanh toán, Bên A có quyền chấm dứt hợp đồng."*, mỗi số có chú thích nguồn (Ngày phát hành hóa đơn / Hạn thanh toán / + Số ngày ân hạn) và link "Sửa lịch vận hành"; thiếu cấu hình thì hiện cảnh báo. Nếu Z > 31 thì câu đổi thành *"quá N ngày sau hạn thanh toán, Bên A có quyền chấm dứt hợp đồng."* để không in ngày không tồn tại.
 - Manager: chỉ đọc; CCCD dạng che; ngày sinh, địa chỉ hiện "Ẩn với vai trò quản lý"; không có nút lưu.
 - Lưu bằng `PUT` qua `useFormState`, cảnh báo rời trang khi chưa lưu; sau khi lưu làm mới readiness.
 

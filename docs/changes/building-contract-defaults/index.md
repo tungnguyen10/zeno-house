@@ -3,6 +3,7 @@
 **Status: design-review.** Design drafted; awaiting review before the implementation plan.
 
 - [Design](./design.md)
+- [Implementation plan](./implementation-plan.md)
 - Parent brief: [ZENO House V2 — Flow Optimization Brief](../zeno-house-v2-optimization/brief.md)
 
 ## Capabilities to update on acceptance
