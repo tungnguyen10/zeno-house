@@ -7,7 +7,8 @@
 - [harden-event-audit](./harden-event-audit/verification.md) — 12/16 tasks; failure injection, transactional DB audits, contract correlations and cross-system durable intent remain open.
 - [tenant-v2](./tenant-v2/spec-and-implementation-plan.md) — Proposed Quick Create and Claude extraction; completed identity hardening is archived separately.
 - [zeno-house-v2-optimization](./zeno-house-v2-optimization/brief.md) — Draft product flow optimization, pending PR task breakdown.
-- [atomic-building-room-setup](./atomic-building-room-setup/index.md) — V2 PR0: atomic Building + bulk Room creation; design under review.
+- [atomic-building-room-setup](./atomic-building-room-setup/index.md) — V2 PR0: atomic Building + bulk Room creation; plan ready.
+- [building-contract-defaults](./building-contract-defaults/index.md) — V2 PR1: lessor profile, contract policy defaults, readiness; design under review.
 
 ## Implementation present — verification or rollout gates open
 
