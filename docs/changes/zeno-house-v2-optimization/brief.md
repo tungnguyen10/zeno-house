@@ -166,6 +166,8 @@ Không làm lại core renewal/checkout. Kiểm chứng tình trạng migration 
 - PR1: [building-contract-defaults](../building-contract-defaults/index.md)
 - PR2: [room-setup-inventory-lite](../room-setup-inventory-lite/index.md)
 - PR3: [tenant-quick-create](../tenant-quick-create/index.md)
+- PR4a: [contract-quick-create](../contract-quick-create/index.md)
+- PR4b: [contract-documents](../contract-documents/index.md)
 
 ## 7. Acceptance scenarios (bắt buộc)
 
