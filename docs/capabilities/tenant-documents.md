@@ -91,4 +91,4 @@ Authorized internal operators SHALL use the existing private `tenant-id-images` 
 - **WHEN** an authorized full-access operator verifies and updates an image through internal tenant controls
 - **THEN** the existing canonical mutation/audit path remains available
 
-Implementation/evidence: [restricted portal edits](../changes/restrict-tenant-portal-profile-edits/index.md).
+Implementation/evidence: [restricted portal edits](../history/2026-11-10-restrict-tenant-portal-profile-edits/index.md).

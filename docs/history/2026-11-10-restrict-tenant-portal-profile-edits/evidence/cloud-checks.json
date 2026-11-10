@@ -1,0 +1,19 @@
+{
+  "functional": [
+    {
+      "restricted_portal_profile_verified": true
+    }
+  ],
+  "catalog": [
+    {
+      "client_rpc_denied": true,
+      "fixture_tenants_rolled_back": true,
+      "migrations_recorded": true,
+      "private_profile_read_denied": true,
+      "private_request_read_denied": true,
+      "recursive_edge_removed": true,
+      "service_rpc_allowed": true
+    }
+  ],
+  "fixtures": "rolled back"
+}

@@ -312,4 +312,4 @@ Tenant invoice detail and latest-outstanding surfaces SHALL display the invoice 
 - **WHEN** an invoice has no due date
 - **THEN** detail surfaces display “Chưa có hạn thanh toán” instead of a synthetic four-day fallback
 
-Restricted edit and staff-intake implementation: [change record](../changes/restrict-tenant-portal-profile-edits/index.md). No historical identity image is retroactively labelled verified.
+Restricted edit and staff-intake implementation: [change record](../history/2026-11-10-restrict-tenant-portal-profile-edits/index.md). No historical identity image is retroactively labelled verified.

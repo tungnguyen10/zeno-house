@@ -1,8 +1,8 @@
 ---
 type: Change Proposal
 title: "Restrict tenant portal profile edits"
-status: draft
-change_state: implementation-verification
+status: deprecated
+change_state: complete
 tags: [change, tenants, portal, authorization, privacy]
 ---
 

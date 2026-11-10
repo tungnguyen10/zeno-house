@@ -99,4 +99,4 @@ Authorized full-access operators with `tenants.update` SHALL use strict status/e
 
 Raw authenticated request SELECT SHALL be denied; tenant request reads are API-owned. Direct INSERT safety policies SHALL permit only new requests in current owned primary/roommate housing context, including owned request attachment prefixes. The legacy manager occupancy SELECT policy that creates contracts↔occupants recursion is removed; scoped staff occupancy reads remain server-owned.
 
-Implementation/evidence: [restricted portal edits](../changes/restrict-tenant-portal-profile-edits/index.md).
+Implementation/evidence: [restricted portal edits](../history/2026-11-10-restrict-tenant-portal-profile-edits/index.md).

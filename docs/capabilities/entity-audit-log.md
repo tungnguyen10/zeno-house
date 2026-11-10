@@ -258,4 +258,4 @@ Implementation and production rollout evidence: [tenant identity hardening](../h
 ### Requirement: Support correction evidence stays out of audit
 Support-request creation and handling events SHALL retain safe IDs/scope/status/time/attachment presence only. User title/description, proposed identity values and attachment names/paths/URLs/bytes SHALL not be copied into audit. `support_request.status_updated` and its status mutation SHALL commit atomically; duplicate target-status retries SHALL not add another audit event.
 
-Implementation/evidence: [restricted portal edits](../changes/restrict-tenant-portal-profile-edits/index.md).
+Implementation/evidence: [restricted portal edits](../history/2026-11-10-restrict-tenant-portal-profile-edits/index.md).

@@ -1,8 +1,8 @@
 ---
 type: Implementation Plan
 title: "Restrict tenant portal profile edits implementation plan"
-status: draft
-change_state: implementation-verification
+status: deprecated
+change_state: complete
 tags: [change, plan, portal, tenants, security]
 ---
 
@@ -137,7 +137,7 @@ Phone cannot be empty; optional fields clear to null. Continue to submit only ch
 
 - [x] **3. Reshape existing composition.** Keep two editable groups: contact/work and emergency contact. Remove full name, gender, DOB, address, legal ID/issue controls, notes and image mutation handlers/imports from the edit page. Keep read-only identity and previews on the dossier without inventing a verified badge or retroactively attesting old tenant uploads; remove its notes section. Add the correction CTA described in Task 4 and the copy “Thông tin định danh được ban quản lý đối chiếu trước khi cập nhật. Bạn có thể gửi yêu cầu nếu thông tin chưa đúng.” Rename the ordinary edit action “Sửa thông tin liên hệ”. Reuse portal primitives/theme; do not add a parallel visual system.
 
-- [ ] **4. Run the named tests and `npx vitest run tests/pages tests/composables/tenant-portal.test.ts` GREEN.** Inspect desktop/mobile/error/disabled/focus/sticky-safe-area states under the UI polish workflow. Commit as `feat(portal): separate contact edits from verified identity`.
+- [x] **4. Run the named tests and `npx vitest run tests/pages tests/composables/tenant-portal.test.ts` GREEN.** Inspect desktop/mobile/error/disabled/focus/sticky-safe-area states under the UI polish workflow. Commit as `feat(portal): separate contact edits from verified identity`.
 
 ## Task 4 — Private correction submission using existing support requests
 
@@ -190,14 +190,14 @@ Service requires `tenants.update`, visible building and full tenant access. Repo
 
 ## Task 6 — Integrated security verification, cloud rollout and promotion
 
-- [ ] **1. Run narrow suites, then full checks:** `npx vitest run tests/server/tenant-portal tests/utils/portal-profile.test.ts tests/composables/tenant-portal.test.ts tests/pages`, `npm run typecheck`, `npm test`, `npm run lint`, `npm run knowledge:check`, `git diff --check`. Fix source regressions; keep baseline warnings distinct.
-- [ ] **2. Independent security review:** trace every profile/identity write and every portal/bootstrap/private-text read. Check direct SQL/Storage bypasses, staff full-access checks before evidence signing, and audit leakage. Verify existing internal tenant editing, account security, invoices/contracts and generic document uploads remain functional. Resolve important findings before rollout.
-- [ ] **3. With explicit cloud authorization, run read-only catalog preflight** for grants/column grants, all permissive policies, RLS/helper dependencies and migration history. Apply only the reviewed migration after a dry-run. Coordinate API/UI deployment so unsupported older payloads fail clearly; do not silently restore forbidden edits for old clients.
-- [ ] **4. Run rollback verification on approved cloud target**, including actual tenant and service-role privilege behavior; no fixture cleanup against real tenant IDs. Verify no remaining fixture rows/objects and no changed canonical image paths. Capture the returned booleans/errors as sanitized evidence.
-- [ ] **5. Generate DB types from cloud using existing CLI**, remove the temporary status RPC cast, rerun typecheck and affected repository/service tests. Never fabricate schema/type completion from static tests.
-- [ ] **6. With authorized runtime, inspect representative 375px mobile and desktop states** for four-field edits, read-only dossier/no notes, generic409/429, correction request/no active context, evidence upload errors, and staff queue/scoped detail/stale status. Keep only synthetic screenshots and document what was actually exercised. Apply frontend-design/Hallmark polish, then stop owned QA servers.
-- [ ] **7. Reconcile accepted docs:** `tenant-portal-api`, `tenant-portal-ui`, `tenant-documents`, `tenant-support-requests`, `tenants-database`, `entity-audit-log`, `docs/features/tenant-portal.md` and `docs/architecture/auth-permissions.md`. Explicitly replace old twelve-field/self-image-edit requirements and raw SELECT expectations. Update the predecessor's divergence through a new provenance link, without rewriting its historical verification record. Archive this completed change with preserved links only after evidence passes. Run `npm run knowledge:check`.
-- [ ] **8. Commit completion evidence** with actual test/SQL/visual outputs; keep unrelated workspace changes separate. Do not claim application deployment merely because a migration or branch commit succeeded.
+- [x] **1. Run narrow suites, then full checks:** `npx vitest run tests/server/tenant-portal tests/utils/portal-profile.test.ts tests/composables/tenant-portal.test.ts tests/pages`, `npm run typecheck`, `npm test`, `npm run lint`, `npm run knowledge:check`, `git diff --check`. Fix source regressions; keep baseline warnings distinct.
+- [x] **2. Independent security review:** trace every profile/identity write and every portal/bootstrap/private-text read. Check direct SQL/Storage bypasses, staff full-access checks before evidence signing, and audit leakage. Verify existing internal tenant editing, account security, invoices/contracts and generic document uploads remain functional. Resolve important findings before rollout.
+- [x] **3. With explicit cloud authorization, run read-only catalog preflight** for grants/column grants, all permissive policies, RLS/helper dependencies and migration history. Apply only the reviewed migration after a dry-run. Coordinate API/UI deployment so unsupported older payloads fail clearly; do not silently restore forbidden edits for old clients.
+- [x] **4. Run rollback verification on approved cloud target**, including actual tenant and service-role privilege behavior; no fixture cleanup against real tenant IDs. Verify no remaining fixture rows/objects and no changed canonical image paths. Capture the returned booleans/errors as sanitized evidence.
+- [x] **5. Generate DB types from cloud using existing CLI**, remove the temporary status RPC cast, rerun typecheck and affected repository/service tests. Never fabricate schema/type completion from static tests.
+- [x] **6. With authorized runtime, inspect representative 375px mobile and desktop states** for four-field edits, read-only dossier/no notes, generic409/429, correction request/no active context, evidence upload errors, and staff queue/scoped detail/stale status. Keep only synthetic screenshots and document what was actually exercised. Apply frontend-design/Hallmark polish, then stop owned QA servers.
+- [x] **7. Reconcile accepted docs:** `tenant-portal-api`, `tenant-portal-ui`, `tenant-documents`, `tenant-support-requests`, `tenants-database`, `entity-audit-log`, `docs/features/tenant-portal.md` and `docs/architecture/auth-permissions.md`. Explicitly replace old twelve-field/self-image-edit requirements and raw SELECT expectations. Update the predecessor's divergence through a new provenance link, without rewriting its historical verification record. Archive this completed change with preserved links only after evidence passes. Run `npm run knowledge:check`.
+- [x] **8. Commit completion evidence** with actual test/SQL/visual outputs; keep unrelated workspace changes separate. Do not claim application deployment merely because a migration or branch commit succeeded.
 
 ## Planning self-review
 
@@ -218,6 +218,24 @@ Service requires `tenants.update`, visible building and full tenant access. Repo
 - Kept unrelated Tenant V2/contract edits out of this commit. Generated types reflect the actual shared cloud schema rather than manual changes.
 - 388 test files / 2,420 tests passed; typecheck exit0; scoped lint exit0; full lint has one unrelated concurrent contract-file error and one preexisting warning. Knowledge and diff checks passed.
 - Independent review covered privacy/SQL/staff scope and found the in-flight queue selection race. Root reproduced/fixed it with a mounted component test; no blanket final independent-review claim is made after subagents became unavailable.
-- Read-only production state confirms the primary migration and exact RPC source. Approved rollback verification uncovered a preexisting contracts/occupants RLS cycle. Prepared the minimal no-grant follow-up migration; persistent policy approval and a clean live rerun remain pending.
+- Read-only production state confirms the primary migration and exact RPC source. Approved rollback verification uncovered a preexisting contracts/occupants RLS cycle. Prepared the minimal no-grant follow-up migration; the user approved the follow-up, it was applied, and the corrected live verification passed.
 - Native visual QA attempted through isolated mocked components but blocked by computer-use `Transport closed`. Runtime stopped; representative screenshot gate remains open. Task3's combined automated/visual step is only partially complete despite its automated portion passing.
 - Details: [verification.md](./verification.md). No accepted-deployment/archive claim is made for incomplete external gates.
+
+
+### Approved cloud verification completed
+
+- User approved both the rollback verification script and the exact persistent recursion-fix migration. Dry-run named only `20261110044223_fix_support_request_policy_recursion.sql`; approved push succeeded.
+- Corrected the verifier's outdated Storage upsert conflict target to the actual fixture primary key; product Storage schema was not altered. Final full verification returned `restricted_portal_profile_verified=true` and rolled back all fixtures.
+- Final catalog: seven assertions true, including both migration records, denied private raw reads, service-only RPC execution, removed recursive edge and no remaining fixture tenant rows.
+- Isolated committed-source verification (excluding concurrent contract work): typecheck passed, 388 files / 2,420 tests passed, full lint passed with only the preexisting AppAiDevChat warning.
+- Native visual transport remains closed. User has been offered explicit isolated Chrome-headless QA using already-installed tools; no alternate UI technology is used before that reply.
+
+### Final visual gate and completion
+
+- User approved isolated headless Chrome QA after native transport failure. Actual components/styles passed representative1280px/375px inspection with synthetic composables/data; no production session/API was used. Browser authentication and application deployment are not claimed.
+- The mobile429 screenshot reproduced a sticky footer overlapping the alert; the alert now belongs to the sticky container above its buttons. Rechecked readable errors, disabled/dirty/focus states, dossier, correction form/retry/no-context fallback and staff drawer/status feedback. See verification evidence for limits.
+- Initial independent security review and final root integration review covered private DTOs, image denial, raw grants/Storage, full staff scope before private text/signing and safe transactional audit. The review race finding is fixed with its regression test; no additional independent final review was available after the reviewers stopped.
+- Accepted capabilities and engineering references are reconciled. Completed design/checklist/evidence are archived with a navigation stub at the original URL. Application branch merge/deployment remains a separate action.
+
+Final post-polish checks: full tests388 files /2,420 passed; typecheck exit0; affected ESLint exit0; SQL/staff regression3 files /24 tests passed; knowledge307 concepts /14 index files passed; `git diff --check` passed. The earlier isolated full-lint run passed with one preexisting warning. QA server and temporary Chrome are stopped.

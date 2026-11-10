@@ -136,4 +136,4 @@ Implementation and production rollout evidence: [tenant identity hardening](../h
 ### Requirement: Correction requests never mutate canonical identity
 Tenant correction requests SHALL use the existing self-scoped request API/private attachments. Tenant canonical image POST/DELETE SHALL return 403 before multipart parsing or Storage/path/audit side effects; own image GET remains available. Submitting evidence or changing a request status SHALL never update canonical tenant values or image slots.
 
-Implementation/evidence: [restricted portal edits](../changes/restrict-tenant-portal-profile-edits/index.md). Cloud functional/visual verification gates are recorded separately from source tests.
+Implementation/evidence: [restricted portal edits](../history/2026-11-10-restrict-tenant-portal-profile-edits/index.md). Cloud functional/visual verification gates are recorded separately from source tests.

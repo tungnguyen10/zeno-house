@@ -1,14 +1,14 @@
 ---
 type: Change Design
 title: "Tenant portal profile permissions and correction intake"
-status: draft
-change_state: implementation-verification
+status: deprecated
+change_state: complete
 tags: [change, tenants, portal, security, design]
 ---
 
 # Decisions
 
-User-approved product direction: tenant self-service is limited to contact maintenance. This document makes the implementation choices concrete; implementation has not started.
+User-approved product direction: tenant self-service is limited to contact maintenance. This approved design is retained as provenance; completed implementation and verification are recorded in the linked execution checklist.
 
 ## 1. Field and action matrix
 

@@ -1,11 +1,8 @@
-# Restrict tenant portal profile edits
+# Restricted tenant portal edits — completed
 
-Product direction approved in conversation on 2026-11-10. This bundle is a design and execution plan; no source, migration, cloud rollout or UI implementation is included yet.
+Completed and archived on 2026-11-10.
 
-- [Proposal](./proposal.md)
-- [Design and decisions](./design.md)
-- [Single implementation checklist](./implementation-plan.md)
+- [Completed change and evidence](../../history/2026-11-10-restrict-tenant-portal-profile-edits/index.md)
+- [Canonical execution checklist](../../history/2026-11-10-restrict-tenant-portal-profile-edits/implementation-plan.md)
 
-Accepted requirements remain in [tenant-portal-api](../../capabilities/tenant-portal-api.md), [tenant-portal-ui](../../capabilities/tenant-portal-ui.md), [tenant-documents](../../capabilities/tenant-documents.md), [tenant-support-requests](../../capabilities/tenant-support-requests.md), [tenants-database](../../capabilities/tenants-database.md), and [entity-audit-log](../../capabilities/entity-audit-log.md). Reconcile them only after implementation and verification.
-
-Predecessor: [completed tenant identity hardening](../../history/2026-11-09-harden-tenant-identity-data/index.md). This change closes its explicitly recorded portal-edit requirement divergence.
+Accepted behavior lives in capability specifications. This stub contains no independent requirements or checklist. Application merge/deployment remains separate.

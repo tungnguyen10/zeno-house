@@ -84,8 +84,10 @@ begin
     raise exception 'QA_CANONICAL_INSERT_ALLOWED';
   exception when insufficient_privilege then null; end;
   begin
-    insert into storage.objects(bucket_id,name) select 'tenant-id-images',tenant_a||'/front/original.jpg' from portal_restriction_fixture
-    on conflict(bucket_id,name) do update set metadata='{"qa":true}'::jsonb;
+    insert into storage.objects(id,bucket_id,name)
+    select object.id,object.bucket_id,object.name from storage.objects object
+    where object.bucket_id='tenant-id-images' and object.name=(select tenant_a||'/front/original.jpg' from portal_restriction_fixture)
+    on conflict(id) do update set metadata='{"qa":true}'::jsonb;
     raise exception 'QA_CANONICAL_UPSERT_ALLOWED';
   exception when insufficient_privilege then null; end;
   update storage.objects set metadata='{"qa":true}'::jsonb where bucket_id='tenant-id-images' and name=(select tenant_a||'/front/original.jpg' from portal_restriction_fixture);
@@ -160,7 +162,7 @@ begin
         or metadata::text like '%PRIVATE_%' or after_data::text like '%PRIVATE_%')) then
     raise exception 'QA_PRIVATE_TEXT_IN_AUDIT'; end if;
   if exists(select 1 from public.tenants where id in(f.tenant_a,f.tenant_b,f.tenant_c)
-      and (notes<>'PRIVATE_STAFF_FIXTURE' or id_card_front_path<>id||'/front/original.jpg')) then
+      and (notes is distinct from 'PRIVATE_STAFF_FIXTURE' or id_card_front_path is distinct from (id||'/front/original.jpg'))) then
     raise exception 'QA_CANONICAL_PROFILE_MUTATED'; end if;
   -- Service-owned canonical metadata write remains possible for staff APIs.
   update storage.objects set metadata='{"qa_service":true}'::jsonb where bucket_id='tenant-id-images' and name=f.tenant_a||'/front/original.jpg';

@@ -162,10 +162,10 @@ function cancelEdit() {
           @blur="touchField('emergency_contact_phone')"
         />
       </PortalCard>
-      <p v-if="apiError" role="alert" class="rounded-xl border border-portal-danger/25 bg-portal-danger/5 px-4 py-3 portal-type-body text-portal-danger">
-        {{ apiError }}
-      </p>
       <div class="portal-safe-bottom sticky bottom-0 z-20 -mx-4 border-t border-border-light bg-[color:var(--portal-bg)]/95 px-4 py-3 backdrop-blur-sm">
+        <p v-if="apiError" role="alert" class="mb-3 rounded-xl border border-portal-danger/25 bg-portal-danger/5 px-4 py-3 portal-type-body text-portal-danger">
+          {{ apiError }}
+        </p>
         <div class="grid grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)] gap-3">
           <PortalButton variant="secondary" block :disabled="saving" @click="cancelEdit">Hủy</PortalButton>
           <PortalButton type="submit" block :loading="saving" :disabled="!canSave">Lưu thay đổi</PortalButton>

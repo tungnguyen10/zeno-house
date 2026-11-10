@@ -9,7 +9,6 @@ Current change bundles are OKF draft concepts, not deployed or automatically acc
 - [tenant-authorization-scope](./tenant-authorization-scope/design.md) — P0 authorization and scoped tenant access; cloud rollout checks pending
 - [atomic-contract-renewal](./atomic-contract-renewal/design.md) — P0 atomic successor renewal, occupants and money transfer
 - [atomic-billing-close](./atomic-billing-close/design.md) — P0 atomic billing close/reopen and reconciliation
-- [restrict-tenant-portal-profile-edits](./restrict-tenant-portal-profile-edits/index.md) — Four-field contact edits, operator-managed identity, private notes and scoped correction/evidence intake; plan review
 - [tenant-v2](./tenant-v2/spec-and-implementation-plan.md) — Umbrella draft, split into B (identity hardening completed; see history) → A (Quick Create) → C (Claude identity autofill)
 
 ## Checklist status imported from the previous workflow
@@ -23,3 +22,5 @@ Current change bundles are OKF draft concepts, not deployed or automatically acc
 - atomic-billing-close: reconcile stored accrual before deployment/verification; do not assume a checked task implies runtime deployment.
 
 Completed: [tenant identity hardening](../history/2026-11-09-harden-tenant-identity-data/index.md) — source, production database rollout, generated types, SQL regressions and affected-state UI QA verified on 2026-11-09.
+
+Completed: [restricted portal profile edits](../history/2026-11-10-restrict-tenant-portal-profile-edits/index.md) — source, production SQL rollback verification, generated types and representative desktop/mobile component QA verified on 2026-11-10; application deployment separate.
