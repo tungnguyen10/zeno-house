@@ -218,7 +218,7 @@ describe('ContractBulkActionsBar', () => {
 describe('ContractDetailHero', () => {
   it('renders stat tiles and exposes lifecycle actions via the Quản trị menu', async () => {
     const wrapper = mount(ContractDetailHero, {
-      props: { contract: buildContract(), paidAmount: 1000000, canManage: true },
+      props: { contract: buildContract(), depositHeld: 1000000, canManage: true },
       global: { stubs },
     })
 

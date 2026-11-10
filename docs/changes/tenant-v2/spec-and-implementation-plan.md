@@ -17,6 +17,8 @@ owner: "ZENO HOUSE"
 >
 > **Quyết định công nghệ:** Claude Platform API trực tiếp (`@anthropic-ai/sdk`) dành riêng cho Identity Autofill. AI Chat/Billing **tiếp tục dùng OpenRouter**, không đổi provider. `claude-haiku-5-5` là model benchmark chính, `claude-sonnet-5-5` là đối chứng; **không tự động fallback sang Sonnet**. Claude API **có tính phí**, không dùng quota Free của OpenRouter.
 >
+> **Tách change (2026-11-09):** Tài liệu này là bản tổng quan. Việc triển khai được tách thành ba change theo thứ tự: B — [harden-tenant-identity-data](../harden-tenant-identity-data/index.md) (chống trùng, không lộ dữ liệu, bỏ PII khỏi bản nháp/audit) → A — Tenant Quick Create → C — Claude identity autofill. Quyết định ở change B thay thế các mục D5, C6 và PR3 (phần chống trùng) của tài liệu này.
+>
 > **Trạng thái:** Đây là **spec và kế hoạch**, chưa code triển khai, chưa có PR chức năng, chưa benchmark và chưa có chứng nhận quyền riêng tư cho ảnh căn cước thật. Chỉ thử bằng ảnh hoàn toàn giả lập cho đến khi privacy/security gate được phê duyệt.
 
 ## A. Tóm tắt quyết định

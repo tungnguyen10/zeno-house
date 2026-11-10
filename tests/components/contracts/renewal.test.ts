@@ -157,8 +157,8 @@ describe('renewal summary page wiring', () => {
     await newContract(form)
     expect(form.text()).toContain('— người ở · — dịch vụ')
   })
-  it('renders unknown receipt balance when checkout is disabled and payment loading failed', async () => {
-    const wrapper = renderSummary({ paymentsError: new Error('Failed') })
+  it('renders unknown deposit while checkout data is unavailable', async () => {
+    const wrapper = renderSummary({ checkoutError: new Error('Failed') })
     const form = wrapper.findComponent(ContractRenewalForm)
     expect(form.props('depositHeld')).toBeUndefined()
     await newContract(form)
