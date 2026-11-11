@@ -95,7 +95,9 @@ begin
       ), v_actor, v_actor, v_request_dup);
   exception when unique_violation then
     get stacked diagnostics v_detail = pg_exception_detail;
-    v_failed := coalesce(sqlerrm = 'ROOM_BATCH_DUPLICATE' and v_detail::jsonb = '["A1", "a1"]'::jsonb, false);
+    -- Containment both ways: element order depends on the database collation.
+    v_failed := coalesce(sqlerrm = 'ROOM_BATCH_DUPLICATE'
+      and v_detail::jsonb @> '["A1", "a1"]'::jsonb and '["A1", "a1"]'::jsonb @> v_detail::jsonb, false);
   end;
   if not v_failed or (select count(*) from public.buildings) <> v_count_before
      or (select count(*) from public.rooms) <> v_before_rooms
