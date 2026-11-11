@@ -998,7 +998,7 @@ git commit -m "feat(buildings): contract profile service with PII masking"
 - `PUT /api/buildings/[id]/contract-profile` (JSON body, snake_case per validator) → `{ data: BuildingContractProfile }`
 - `GET /api/buildings/[id]/readiness` → `{ data: BuildingReadiness }`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 // tests/server/buildings/contract-profile-api.test.ts
@@ -1064,9 +1064,9 @@ describe('contract profile API', () => {
 
 Check how `parseBody` builds its 422 details (`server/utils/**`). If it includes `received` values from Zod issues, the "no echo" assertion will fail; in that case use `safeParse` in the route and call `throwValidationError('Thông tin hợp đồng không hợp lệ', result.error.flatten().fieldErrors)` (field errors contain only messages).
 
-- [ ] **Step 2: Run to verify failure** — FAIL.
+- [x] **Step 2: Run to verify failure** — FAIL.
 
-- [ ] **Step 3: Implement routes**
+- [x] **Step 3: Implement routes**
 
 ```ts
 // server/api/buildings/[id]/contract-profile/index.get.ts
@@ -1108,9 +1108,9 @@ export default defineEventHandler(async (event) => {
 
 If `throwValidationError` is not stubbed globally in tests, add `vi.stubGlobal('throwValidationError', …)` like `invoice-profile-api.test.ts`.
 
-- [ ] **Step 4: Run tests** → PASS. Run `node scripts/generate-api-inventory.mjs` and include `docs/api-inventory.md` if changed.
+- [x] **Step 4: Run tests** → PASS. Run `node scripts/generate-api-inventory.mjs` and include `docs/api-inventory.md` if changed.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add server/api/buildings/[id]/contract-profile server/api/buildings/[id]/readiness.get.ts tests/server/buildings/contract-profile-api.test.ts docs/api-inventory.md
