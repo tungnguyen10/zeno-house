@@ -6,6 +6,7 @@ const repoMocks = vi.hoisted(() => ({
   findAll: vi.fn(),
   findByIdentifier: vi.fn(),
   findById: vi.fn(),
+  createWithRooms: vi.fn(),
   insert: vi.fn(),
   update: vi.fn(),
   remove: vi.fn(),
@@ -64,8 +65,8 @@ vi.stubGlobal('setResponseStatus', (event: MockEvent, code: number) => {
 // Override the default permissive `can` from setup with real role-based checks
 // for the buildings.* capabilities. Tests can swap user role via requireAuthMock.
 const CAPS: Record<string, Set<string>> = {
-  admin: new Set(['buildings.read', 'buildings.create', 'buildings.update', 'buildings.delete']),
-  owner: new Set(['buildings.read', 'buildings.create', 'buildings.update', 'buildings.delete']),
+  admin: new Set(['buildings.read', 'buildings.create', 'rooms.create', 'buildings.update', 'buildings.delete']),
+  owner: new Set(['buildings.read', 'buildings.create', 'rooms.create', 'buildings.update', 'buildings.delete']),
   manager: new Set(['buildings.read']),
 }
 vi.stubGlobal('can', (user: { app_metadata?: { role?: string } }, capability: string) => {
@@ -78,7 +79,7 @@ function buildBuilding(overrides: Partial<Building> = {}): Building {
     id: overrides.id ?? 'b-1',
     slug: overrides.slug ?? 'toa-a',
     code: overrides.code ?? 'a',
-    name: overrides.name ?? 'Toa A',
+    name: overrides.name ?? 'Tòa A',
     address: overrides.address ?? '123 Đường ABC',
     description: overrides.description ?? null,
     status: overrides.status ?? 'active',
@@ -249,17 +250,84 @@ describe('GET /api/buildings', () => {
 // ---------------------------------------------------------------------------
 
 describe('POST /api/buildings', () => {
-  it('creates a building and returns 201 envelope', async () => {
+  const ok = (b: Building, rooms: unknown[] = []) => ({ building: b, rooms, replayed: false })
+
+  it('creates a building and returns 201 envelope with room_count', async () => {
     asAdmin()
-    const building = buildBuilding({ id: 'new-1' })
-    repoMocks.insert.mockResolvedValue(building)
+    repoMocks.createWithRooms.mockResolvedValue(ok(buildBuilding({ id: 'new-1' })))
     const { default: handler } = await import('../../server/api/buildings/index.post')
 
-    const event = makeEvent({ body: { name: 'Toa moi', address: '99 Le Loi' } })
-    const res = await handler(event) as { data: Building }
+    const event = makeEvent({ body: { name: 'Tòa mới', address: '99 Lê Lợi' } })
+    const res = await handler(event) as { data: Building; meta: { room_count: number } }
 
     expect(res.data.id).toBe('new-1')
+    expect(res.meta).toEqual({ room_count: 0 })
     expect((event as MockEvent).context.statusCode).toBe(201)
+  })
+
+  it('creates rooms in the same call', async () => {
+    asAdmin()
+    repoMocks.createWithRooms.mockResolvedValue(ok(buildBuilding({ id: 'new-2' }), [{ id: 'r-1' }, { id: 'r-2' }]))
+    const { default: handler } = await import('../../server/api/buildings/index.post')
+
+    const res = await handler(makeEvent({ body: {
+      name: 'Tòa mới', address: '99 Lê Lợi',
+      request_id: '7d0b3f7e-8f43-4a8e-9a4f-1f2b3c4d5e6f',
+      rooms: [
+        { room_number: 'P101', floor: 1, monthly_rent: 3000000, area: null },
+        { room_number: 'P201', floor: 2, monthly_rent: 3500000, area: 20 },
+      ],
+    } })) as { meta: { room_count: number } }
+
+    expect(res.meta.room_count).toBe(2)
+    expect(repoMocks.insert).not.toHaveBeenCalled()
+  })
+
+  it('passes owner assignment to the atomic repository call', async () => {
+    asOwner()
+    repoMocks.createWithRooms.mockResolvedValue(ok(buildBuilding({ id: 'owner-new', createdBy: 'user-owner', ownerUserId: 'user-owner' })))
+    const { default: handler } = await import('../../server/api/buildings/index.post')
+
+    const res = await handler(makeEvent({ body: { name: 'Tòa mới', address: '88 Lê Lợi' } })) as { data: Building }
+
+    expect(res.data.id).toBe('owner-new')
+    expect(repoMocks.createWithRooms).toHaveBeenCalledWith(expect.anything(), expect.anything(), [], {
+      actorId: 'user-owner', ownerUserId: 'user-owner', requestId: expect.any(String),
+    })
+    expect(assignmentRepoMocks.insert).not.toHaveBeenCalled()
+  })
+
+  it('requires rooms.create before creating a building with rooms', async () => {
+    asAdmin()
+    CAPS.admin!.delete('rooms.create')
+    try {
+      const { default: handler } = await import('../../server/api/buildings/index.post')
+      const err = await expectError(Promise.resolve(handler(makeEvent({ body: {
+        name: 'Tòa mới', address: '99 Lê Lợi',
+        rooms: [{ room_number: 'P101', floor: 1, monthly_rent: 1, area: null }],
+      } }))))
+      expect(err.statusCode).toBe(403)
+      expect(repoMocks.createWithRooms).not.toHaveBeenCalled()
+      expect(repoMocks.insert).not.toHaveBeenCalled()
+    }
+    finally {
+      CAPS.admin!.add('rooms.create')
+    }
+  })
+
+  it('rejects duplicate room numbers with 422 before touching the DB', async () => {
+    asAdmin()
+    const { default: handler } = await import('../../server/api/buildings/index.post')
+
+    const err = await expectError(Promise.resolve(handler(makeEvent({ body: {
+      name: 'Tòa mới', address: '99 Lê Lợi',
+      rooms: [
+        { room_number: 'P101', floor: 1, monthly_rent: 1, area: null },
+        { room_number: 'P101', floor: 1, monthly_rent: 1, area: null },
+      ],
+    } }))))
+    expect(err.statusCode).toBe(422)
+    expect(repoMocks.createWithRooms).not.toHaveBeenCalled()
   })
 
   it('rejects invalid payload with 422', async () => {
@@ -275,34 +343,25 @@ describe('POST /api/buildings', () => {
     asManager()
     const { default: handler } = await import('../../server/api/buildings/index.post')
 
-    const err = await expectError(Promise.resolve(handler(makeEvent({ body: { name: 'Toa moi', address: '99 Le Loi' } }))))
+    const err = await expectError(Promise.resolve(handler(makeEvent({ body: { name: 'Tòa mới', address: '99 Lê Lợi' } }))))
     expect(err.statusCode).toBe(403)
+    expect(repoMocks.createWithRooms).not.toHaveBeenCalled()
   })
 
-  it('allows owner to create and auto-assigns the new building', async () => {
-    asOwner()
-    const building = buildBuilding({ id: 'owner-new', createdBy: 'user-owner', ownerUserId: 'user-owner' })
-    repoMocks.insert.mockResolvedValue(building)
+  it('surfaces repository 409 for duplicate rooms', async () => {
+    asAdmin()
+    repoMocks.createWithRooms.mockRejectedValue(Object.assign(new Error('conflict'), {
+      statusCode: 409,
+      data: { error: { code: 'CONFLICT', details: { reason: 'ROOM_BATCH_DUPLICATE', duplicate_room_numbers: ['P101'] } } },
+    }))
     const { default: handler } = await import('../../server/api/buildings/index.post')
 
-    const event = makeEvent({ body: { name: 'Toa owner', address: '88 Le Loi' } })
-    const res = await handler(event) as { data: Building }
-
-    expect(res.data).toMatchObject({
-      id: 'owner-new',
-      createdBy: 'user-owner',
-      ownerUserId: 'user-owner',
-    })
-    expect(repoMocks.insert).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.anything(),
-      { created_by: 'user-owner', owner_user_id: 'user-owner' },
-    )
-    expect(assignmentRepoMocks.insert).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({ user_id: 'user-owner', building_id: 'owner-new' }),
-    )
-    expect((event as MockEvent).context.statusCode).toBe(201)
+    const err = await expectError(Promise.resolve(handler(makeEvent({ body: {
+      name: 'Tòa mới', address: '99 Lê Lợi',
+      rooms: [{ room_number: 'P101', floor: 1, monthly_rent: 1, area: null }],
+    } }))))
+    expect(err.statusCode).toBe(409)
+    expect(err.data?.error?.details).toMatchObject({ duplicate_room_numbers: ['P101'] })
   })
 })
 
