@@ -38,6 +38,7 @@ tags: [superpowers, change, contracts, documents, docx, v2]
 3. **Issuing twice concurrently** — unique partial index allows only one active document; second gets 409. Pinned in Task 6 (SQL) and Task 7.
 4. **Manager downloads a document from another building** — 403 before signing a URL. Pinned in Task 8.
 5. **Replacing a signed document** — only admin/owner, with reason; old row becomes `voided`, file kept. Pinned in Tasks 6–7.
+6. **Existing hard-delete flows** — `contract_documents.contract_id` is `on delete restrict`, so deleting a contract (or a room holding one) that has documents must be refused by the service with a 409 before any SQL delete, never surface a raw `23503`. Pinned in Task 7.
 
 ---
 
@@ -542,7 +543,9 @@ select cron.schedule(
 - Create: `server/services/contract-documents/sources.ts` (loads `ContractDocumentSources`)
 - Modify: `app/utils/constants/permissions.ts`, `app/utils/constants/audit.ts`
 - Create: `app/types/contract-documents.ts`, `app/utils/mappers/contract-documents.ts`
-- Test: `tests/server/contract-documents/service.test.ts`
+- Modify: `server/services/contracts/index.ts` (`remove` + `bulkFailureReason`), `server/repositories/contracts/index.ts` (`countDocumentsForContract`)
+- Modify: `server/services/rooms/index.ts` (`remove` + bulk), `server/repositories/rooms/index.ts` (`countContractDocumentsForRoom`), `app/pages/dashboard/rooms/index.vue` (bulk reason label)
+- Test: `tests/server/contract-documents/service.test.ts`, existing contract/room service delete tests
 
 **Interfaces:**
 - DTO `ContractDocument { id, contractId, type, amendmentId, versionNo, status, templateKey, templateVersion, signedDate, issuedAt, issuedBy, signedAt, signedBy, voidedAt, voidReason, replacesDocumentId, sizeBytes }` (no `snapshot`, no `storagePath`).
@@ -575,6 +578,7 @@ select cron.schedule(
   - `downloadUrl` checks `assertBuildingScope(document.buildingId, 'read')` before `createSignedUrl(path, 60)`.
   - `preview` does not call reserve/upload.
   - Appendix: amendment status must be `scheduled|applied`, else 409.
+  - Delete guards: `ContractService.remove` on a non-active contract with ≥ 1 document → 409 `CONFLICT` with `details.contractDocuments`, `removeWithCascade` not called; bulk → reason `has_contract_documents`. `RoomService.remove` (non-force) on a room whose contracts have documents → 409 with `details.contractDocuments`; bulk → `has_contract_documents`. Zero documents → existing behaviour unchanged.
 
 - [ ] **Step 2: Run to verify failure.**
 
@@ -584,6 +588,7 @@ select cron.schedule(
   - Template bytes: `useStorage('assets:contract-templates').getItemRaw(entry.file)`.
   - Idempotency: `AuditOperationRepository.begin` with key `contract.document:<request_id>`; if the returned op is `completed` with `entity_id` and same actor → return that document; on success `complete` with `entity_id`.
   - Filename: `HD-${contract.contractCode}-v${versionNo}.docx` / `PL${seq}-${contract.contractCode}-v${versionNo}.docx`.
+  - Delete guards: add `contractDocuments` to `ContractDeleteConflictDetails` (counted with `select count` on `contract_documents` by `contract_id`, any status) and to the room conflict details (join through `contracts.room_id`); message "Hợp đồng đã có tài liệu phát hành, không thể xoá"; bulk reason `has_contract_documents`, room page label "Có hợp đồng đã phát hành tài liệu".
 
 - [ ] **Step 4: Run tests** → PASS.
 - [ ] **Step 5: Commit** `git commit -m "feat(contracts): contract document service with compensation and idempotency"`.

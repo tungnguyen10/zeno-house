@@ -119,6 +119,7 @@ tags: [superpowers, change, contracts, documents, docx, pii, v2]
 - Trigger chặn sửa cột nội dung (`snapshot`, `template_*`, `version_no`, `type`, `contract_id`) sau khi tạo; `storage_path`, `sha256`, `size_bytes` chỉ đổi khi đang `pending`/`failed`. Chuyển trạng thái hợp lệ: `pending → issued | failed`, `failed → issued | voided`, `issued → signed | voided`, `signed → voided`. Không cho `delete`.
 - Trigger trên `contract_inventory_items` (thay trigger bất biến của PR2 nếu có): chặn `insert/update/delete` khi hợp đồng có tài liệu `type = 'contract'` đang `issued`/`signed` → `CONTRACT_INVENTORY_LOCKED`.
 - RLS bật, không policy, chỉ `service_role`.
+- **Ảnh hưởng luồng xóa cứng hiện có:** `ContractService.remove` / `RoomService.remove` (và bulk tương ứng) xóa cứng `contracts`/`rooms`. FK `on delete restrict` sẽ làm các luồng này nổ lỗi `23503` thô với HĐ đã có tài liệu. Bắt buộc kiểm tra trước: đếm `contract_documents` của HĐ (hoặc của mọi HĐ thuộc phòng) → 409 `CONFLICT` với `details.contractDocuments`, lý do bulk `has_contract_documents`, thông điệp "Hợp đồng đã có tài liệu phát hành, không thể xoá". Xóa tòa nhà đã bị chặn khi còn phòng nên không cần kiểm tra thêm. Dữ liệu hiện tại không bị ảnh hưởng vì chưa có tài liệu nào.
 
 ### 5.3. RPC
 
@@ -186,7 +187,7 @@ Phụ lục chỉ phát hành cho amendment `scheduled` hoặc `applied`.
 | `collectMissing` | Thiếu từng nhóm; người ở cùng thiếu CCCD → mã có chỉ số + tên |
 | Renderer | Fixture dữ liệu giả → DOCX mở được (unzip), không còn `{{`/`}}`, chứa tên/biển số/tổng nội thất; lỗi placeholder thiếu → ném lỗi |
 | Template manifest | Mọi `requiredPaths` tồn tại trong XML của mẫu |
-| Service | Thiếu dữ liệu → 422; luồng reserve → upload → finalize; upload lỗi → `failed` (snapshot còn); finalize lỗi → xóa object + `failed`; tạo lại file dùng snapshot cũ (không đọc dữ liệu mới); thay thế → bản cũ voided; replay `request_id`; manager không ký/hủy; readiness trước khi có hợp đồng |
+| Service | Thiếu dữ liệu → 422; luồng reserve → upload → finalize; upload lỗi → `failed` (snapshot còn); finalize lỗi → xóa object + `failed`; tạo lại file dùng snapshot cũ (không đọc dữ liệu mới); thay thế → bản cũ voided; replay `request_id`; manager không ký/hủy; readiness trước khi có hợp đồng; xóa HĐ/phòng có tài liệu → 409 `details.contractDocuments` (không gọi xóa cứng), bulk trả `has_contract_documents` |
 | SQL verification | Unique hiệu lực (kể cả `failed`); trigger bất biến; chuyển trạng thái hợp lệ; không xóa được; `claim_stale`; nội thất bàn giao bị khóa sau `issued`; grant |
 | API | Không trả `snapshot`/`storage_path`; download kiểm tra scope; preview không ghi DB/Storage |
 | Worker | Secret sai → 403; dọn đúng dòng quá hạn |

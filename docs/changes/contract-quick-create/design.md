@@ -62,7 +62,7 @@ tags: [superpowers, change, contracts, v2]
 
 ### 4.1. Bản nháp trên server
 
-- Bảng `contract_create_drafts`: `user_id uuid pk → auth.users on delete cascade`, `payload jsonb not null` (≤ 64 KB), `updated_at`. Mỗi người dùng một bản nháp tạo HĐ. RLS bật, không policy, chỉ `service_role`.
+- Bảng `contract_create_drafts`: `user_id uuid pk → auth.users on delete cascade`, `payload jsonb not null check (octet_length(payload::text) <= 65536)` (≤ 64 KB, chặn cả ở DB lẫn API), `updated_at`. Mỗi người dùng một bản nháp tạo HĐ. RLS bật, không policy, chỉ `service_role`.
 - `payload` theo `contractCreateDraftSchema` (mọi trường không bắt buộc): các trường form, `tenant_id` + tên hiển thị, người ở cùng (id + tên), xe, dịch vụ đã sửa, nội thất. **Không** chứa dữ liệu trong dialog thêm nhanh khách (CCCD, ngày sinh…).
 - API: `GET` / `PUT` / `DELETE /api/contracts/create-draft` (quyền `contracts.create`; chỉ đọc/ghi bản của chính mình). Lưu tự động sau 1 giây không gõ; xóa khi tạo thành công. Bản nháp cũ hơn 30 ngày bị xóa khi đọc.
 - Bỏ bản nháp `localStorage` của wizard cũ; khi mở trang, nếu còn bản nháp `localStorage` cũ thì xóa đi.
