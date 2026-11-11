@@ -68,7 +68,7 @@ Local tests and code reviews do not establish cloud rollout or runtime SQL corre
 - [ ] Separate-session batch and request concurrency checks — partial, 2026-11-11 on production: two overlapping `supabase db query` sessions ran an identical rollback-only `create_building_with_rooms` call (same request ID and actor) that holds its transaction 8 seconds. One session alone took 9s; both together took 17s, so the second waited for the first. Nothing was left behind (0 `pr0-%` buildings, 0 `building.create:%` operations). Not covered: the committed case (second session replays the same Building after the first commits; different actor gets `BUILDING_SETUP_REQUEST_CONFLICT`), which needs two interactive SQL Editor sessions and a disposable fixture.
 - [x] Effective grants (read-only query on production, 2026-11-11): `create_building_with_rooms(jsonb,jsonb,uuid,uuid,uuid)` and `create_rooms_batch(uuid,jsonb)` both have anon=false, authenticated=false, service_role=true, `prosecdef=false`, `search_path=""`.
 - [x] `app/types/database.types.ts` regenerated from the cloud schema (+33 lines, both RPCs only); `npm run typecheck` passed.
-- [ ] Application deployed and smoke checked: create 30 rooms atomically, retry after lost response resolves to the same building — not observed. The agent filled a 30-room preview on the local dev server but the automated submit button stayed disabled, so nothing was submitted; production has no smoke building.
+- [x] Application smoke (user-reported, 2026-11-11): the user ran the smoke test manually and said it was "tạm ok" (acceptable for now). No output, building ID or retry-after-lost-response result was attached, so this is a user statement, not agent-verified evidence. The agent's own attempt filled a 30-room preview on the local dev server but the automated submit button stayed disabled, so nothing was submitted.
 
 ## Acceptance
 
@@ -76,4 +76,4 @@ Local tests and code reviews do not establish cloud rollout or runtime SQL corre
 - [x] Capability deltas reconciled: [buildings-api](../../capabilities/buildings-api.md), [buildings-ui](../../capabilities/buildings-ui.md), [rooms-api](../../capabilities/rooms-api.md), [rooms-database](../../capabilities/rooms-database.md).
 - [x] Change bundle archived under `docs/history/2026-11-11-atomic-building-room-setup/`.
 
-Accepted with these gates still open, carried as follow-ups rather than claimed as passed: CI result for PR #21, desktop 1280px and true 375px inspection, browser loading/duplicate/network-error states, the committed two-session concurrency case, and the deployed 30-room smoke test.
+Accepted with these gates still open, carried as follow-ups rather than claimed as passed: CI result for PR #21, desktop 1280px and true 375px inspection, browser loading/duplicate/network-error states, the committed two-session concurrency case, and the retry-after-lost-response smoke (the 30-room create was user-reported OK).

@@ -99,4 +99,4 @@ All 600 archived source files remain accessible via immutable references to base
 
 - [2026-11-10-dashboard-layout-refresh](./2026-11-10-dashboard-layout-refresh/index.md) — Completed implementation and reconciled dashboard UI requirements (fresh production UI QA not claimed)
 
-- [2026-11-11-atomic-building-room-setup](./2026-11-11-atomic-building-room-setup/index.md) — V2 PR0: atomic building + rooms creation, idempotent retry, editable preview; production migration and SQL verification evidence (deployed smoke not claimed)
+- [2026-11-11-atomic-building-room-setup](./2026-11-11-atomic-building-room-setup/index.md) — V2 PR0: atomic building + rooms creation, idempotent retry, editable preview; production migration and SQL verification evidence (30-room smoke user-reported OK, retry-after-lost-response not verified)

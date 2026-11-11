@@ -24,7 +24,7 @@
 
 ## Completed and archived — not active
 
-- [atomic-building-room-setup](../history/2026-11-11-atomic-building-room-setup/index.md) — V2 PR0 accepted 2026-11-11; production migration and SQL verification recorded, CI result, wide/375px visual QA, committed concurrency case and deployed smoke still open.
+- [atomic-building-room-setup](../history/2026-11-11-atomic-building-room-setup/index.md) — V2 PR0 accepted 2026-11-11; production migration and SQL verification recorded, CI result, wide/375px visual QA, committed concurrency case and retry-after-lost-response smoke still open.
 
 - [dashboard-layout-refresh](../history/2026-11-10-dashboard-layout-refresh/index.md) — 8/8 imported implementation tasks checked; accepted dashboard spec reconciled and implementation history archived.
 - [harden-tenant-identity-data](../history/2026-11-09-harden-tenant-identity-data/index.md) — Production schema, identity verification and affected-state checks recorded.

@@ -19,4 +19,4 @@ This is a **completed, archived OKF change**. Accepted requirements live in `doc
 
 Migration `20261111090000_create_building_with_rooms.sql` is applied to production. The rollback-wrapped SQL verification script passed there, grants were checked read-only, and database types were regenerated. The user accepted the change on 2026-11-11.
 
-Still open and not claimed as passed: the CI result for PR #21, desktop 1280px and true 375px inspection, browser loading/duplicate/network-error states, the committed two-session concurrency case, and the deployed 30-room smoke test. See [verification](./verification.md).
+Still open and not claimed as passed: the CI result for PR #21, desktop 1280px and true 375px inspection, browser loading/duplicate/network-error states, the committed two-session concurrency case, and the retry-after-lost-response smoke (the 30-room create was user-reported OK). See [verification](./verification.md).
