@@ -7,7 +7,7 @@
 - [harden-event-audit](./harden-event-audit/verification.md) — 12/16 tasks; failure injection, transactional DB audits, contract correlations and cross-system durable intent remain open.
 - [tenant-v2](./tenant-v2/spec-and-implementation-plan.md) — Proposed Quick Create and Claude extraction; completed identity hardening is archived separately.
 - [zeno-house-v2-optimization](./zeno-house-v2-optimization/brief.md) — Draft product flow optimization, pending PR task breakdown.
-- [building-contract-defaults](./building-contract-defaults/index.md) — V2 PR1: lessor profile, contract policy defaults, readiness; plan ready.
+- [building-contract-defaults](./building-contract-defaults/index.md) — V2 PR1: lessor profile, contract policy defaults and readiness implemented; source verification and cloud rollout tracked.
 - [room-setup-inventory-lite](./room-setup-inventory-lite/index.md) — V2 PR2: floor-based room generator, room inventory, contract handover snapshot; plan ready.
 - [tenant-quick-create](./tenant-quick-create/index.md) — V2 PR3 / Tenant V2 change A: inline tenant picker + quick create; plan ready.
 - [contract-quick-create](./contract-quick-create/index.md) — V2 PR4a: one-page atomic contract create (roommates, vehicles, services, inventory), server drafts; plan ready.

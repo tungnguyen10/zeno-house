@@ -2,13 +2,13 @@
 type: Change Design
 title: "building-contract-defaults-design"
 status: draft
-change_state: design-review
+change_state: implementation-review
 tags: [superpowers, change, buildings, contracts, pii, v2]
 ---
 
 # PR1 — Building Defaults & Readiness
 
-> Sub-project PR1 của [ZENO House V2 — Flow Optimization Brief](../zeno-house-v2-optimization/brief.md). Thiết kế chưa được chấp nhận hay triển khai; yêu cầu đã chấp nhận nằm ở `docs/capabilities/**`.
+> Sub-project PR1 của [ZENO House V2 — Flow Optimization Brief](../zeno-house-v2-optimization/brief.md). Source đã được triển khai theo kế hoạch; cloud rollout và chấp nhận vẫn là gate riêng. Yêu cầu đã chấp nhận nằm ở `docs/capabilities/**`.
 
 ## 1. Mục tiêu
 

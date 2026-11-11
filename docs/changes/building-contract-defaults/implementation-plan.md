@@ -2,7 +2,7 @@
 type: Change Implementation Plan
 title: "building-contract-defaults-implementation-plan"
 status: draft
-change_state: plan-review
+change_state: implementation-review
 tags: [superpowers, change, buildings, contracts, pii, v2]
 ---
 
@@ -1621,7 +1621,7 @@ Add the unsaved-changes guard using the same mechanism the page uses for other s
 
 - [x] **Step 6: Run tests** → PASS.
 
-- [ ] **Step 7: Visual QA** (ask before starting a local runtime): owner (empty, partial, complete, save error), manager (masked read-only), schedule missing, mobile 375px. Record in `verification.md`.
+- [x] **Step 7: Visual QA** (ask before starting a local runtime): owner (empty, partial, complete, save error), manager (masked read-only), schedule missing, mobile 375px. Record in `verification.md`.
 
 - [x] **Step 8: Commit**
 
@@ -1643,7 +1643,7 @@ git commit -m "feat(buildings): contract profile settings section"
 - Props: `{ readiness: BuildingReadiness; settingsPath: string; editPath: string }`
 - Page fetches `GET /api/buildings/[id]/readiness` via `useFetch` (lazy, non-blocking).
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 // tests/components/buildings/BuildingReadinessCard.test.ts
@@ -1680,11 +1680,11 @@ describe('BuildingReadinessCard', () => {
 
 Use `NuxtLink` stub as in other component tests (render as `<a :href="to">`).
 
-- [ ] **Step 2: Run to verify failure.**
+- [x] **Step 2: Run to verify failure.**
 
-- [ ] **Step 3: Implement** the card with `UiSurfacePanel`, two rows (label, ✓ or `UiBadge` "Thiếu N mục", toggle button `data-test="readiness-{kind}-toggle"`), expandable list using `READINESS_LABELS` → `anchor === 'edit' ? editPath : \`${settingsPath}#${anchor}\``. When both ready render a single compact line `data-test="readiness-compact"` "Sẵn sàng lập hợp đồng và xuất hóa đơn". No inline `<svg>`; use existing icon components if needed.
+- [x] **Step 3: Implement** the card with `UiSurfacePanel`, two rows (label, ✓ or `UiBadge` "Thiếu N mục", toggle button `data-test="readiness-{kind}-toggle"`), expandable list using `READINESS_LABELS` → `anchor === 'edit' ? editPath : \`${settingsPath}#${anchor}\``. When both ready render a single compact line `data-test="readiness-compact"` "Sẵn sàng lập hợp đồng và xuất hóa đơn". No inline `<svg>`; use existing icon components if needed.
 
-- [ ] **Step 4: Wire into the detail page** after `BuildingDetailHero`:
+- [x] **Step 4: Wire into the detail page** after `BuildingDetailHero`:
 
 ```ts
 const { data: readinessData } = useFetch<ApiSuccess<BuildingReadiness>>(
@@ -1705,9 +1705,9 @@ const { data: readinessData } = useFetch<ApiSuccess<BuildingReadiness>>(
 
 (Use the page's existing `id` / building identifier variable.)
 
-- [ ] **Step 5: Run tests** → PASS. Visual QA desktop/mobile; record in `verification.md`.
+- [x] **Step 5: Run tests** → PASS. Visual QA desktop/mobile; record in `verification.md`.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/components/buildings/BuildingReadinessCard.vue app/pages/dashboard/buildings/[id]/index.vue tests/components/buildings/BuildingReadinessCard.test.ts docs/changes/building-contract-defaults/verification.md
@@ -1722,9 +1722,9 @@ git commit -m "feat(buildings): readiness card on building detail"
 - Create/Modify: `docs/changes/building-contract-defaults/verification.md`
 - Modify: `docs/changes/building-contract-defaults/index.md`
 
-- [ ] **Step 1: Run** `npm run typecheck && npm test && npm run lint && npm run knowledge:check`. Fix failures; record results.
+- [x] **Step 1: Run** `npm run typecheck && npm test && npm run lint && npm run knowledge:check`. Fix failures; record results.
 
-- [ ] **Step 2: Write `verification.md`**
+- [x] **Step 2: Write `verification.md`**
 
 ```markdown
 ---
@@ -1762,9 +1762,9 @@ tags: [change, verification, buildings, pii]
 - [ ] Types regenerated; repository casts removed — <commit>
 ```
 
-- [ ] **Step 3: Update `index.md`** status to `implementation-review`, link plan and verification.
+- [x] **Step 3: Update `index.md`** status to `implementation-review`, link plan and verification.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add docs/changes/building-contract-defaults

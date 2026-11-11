@@ -115,6 +115,10 @@ Billing:
 - `invoice_email_deliveries`
 - `invoice_email_webhook_events`
 
+## Building Contract Profile Source
+
+V2 PR1 adds `building_contract_profiles`, keyed by `building_id` with cascading deletion. It stores the lessor's signing identity and nullable contract defaults, with explicit copy-count and numeric/date constraints. RLS is enabled without client policies; all privileges are revoked from `public`, `anon` and `authenticated`, and only server-side `service_role` repositories receive CRUD grants. Bank details remain in `building_invoice_profiles`. The additive migration and rolled-back SQL verification are in source; cloud application, cascade verification and type regeneration remain pending in [PR1 verification](../changes/building-contract-defaults/verification.md).
+
 ## Identifier Strategy
 
 Readable operational routes are supported by database identifiers:

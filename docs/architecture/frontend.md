@@ -32,7 +32,7 @@ Composables live in `app/composables/**` and mirror product workflows.
 | Auth | `auth/useAuth`, `useAuthStore`, `useAccessRequests` |
 | Dashboard | `useDashboardSummary` |
 | Dashboard theme | `useDashboardTheme` |
-| Buildings | `useBuildingList`, `useBuildingDetail`, `useBuildingForm`, `useBuildingServices`, `useBuildingMeterReadings`, `useBuildingContractServices` |
+| Buildings | `useBuildingList`, `useBuildingDetail`, `useBuildingForm`, `useBuildingServices`, `useBuildingMeterReadings`, `useBuildingContractServices`, `useBuildingContractProfile` |
 | Rooms | `useRoomList`, `useRoomDetail`, `useRoomForm` |
 | Tenants | `useTenantList`, `useTenantDetail`, `useTenantForm` |
 | Contracts | `useContractList`, `useContractDetail`, `useContractForm`, `useContractOccupants`, `useContractPayments`, `useContractRenewals`, `useContractServices`, `useContractHandoverReadings` |
@@ -45,6 +45,8 @@ Server state belongs here, usually via `useFetch` or `$fetch`. Form state can li
 Dashboard navigation acknowledges the activated link or control immediately and uses the Nuxt route loading indicator while the destination renders. Detail drawers with asynchronous data open before fetching and display their own skeleton and retry state. Pages with loading skeletons should avoid blocking client navigation on ancillary `useFetch` calls; render the page first and let those regions resolve. The dashboard shell restores its inner `#main-content` scroll position on browser back/forward.
 
 Portal home, building settings, and billing workspace use keyed bootstrap composables for their initial SSR data. Components sharing the same workspace consume that payload instead of starting parallel endpoint waterfalls; mutations continue through their domain APIs and refresh the bootstrap payload when necessary.
+
+The V2 PR1 contract settings section consumes its profile and readiness from building settings bootstrap. `BuildingContractProfileSettings` validates the shared schema and emits save/dirty intents; the page owns PUT orchestration, readiness refresh and leave/unload protection. Identity drafts remain in memory. Equivalent bootstrap refreshes preserve unsaved edits. The source is tracked in [PR1 verification](../changes/building-contract-defaults/verification.md); cloud rollout is a separate gate.
 
 ## Component Layer
 

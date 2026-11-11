@@ -69,10 +69,15 @@ The current runtime exposes scoped context, meter status, billing overview/draft
 | GET | `/api/buildings/[id]/rooms/[room]` |
 | GET | `/api/buildings/[id]/invoice-profile` |
 | PUT | `/api/buildings/[id]/invoice-profile` |
+| GET | `/api/buildings/[id]/contract-profile` |
+| PUT | `/api/buildings/[id]/contract-profile` |
+| GET | `/api/buildings/[id]/readiness` |
 | GET | `/api/buildings/[id]/invoice-email-settings` |
 | PUT | `/api/buildings/[id]/invoice-email-settings` |
 
 Invoice-profile updates use `multipart/form-data`. The initial save requires complete bank fields and `qr_image`; later saves preserve omitted images and accept `remove_logo=true`. Images are JPEG, PNG, or WebP up to 5 MB. Responses contain short-lived signed URLs and never private Storage paths.
+
+The V2 PR1 source adds a JSON contract-profile upsert with shared Zod validation. Admin and scoped owners can edit and read full lessor identity; scoped managers receive a masked identity and cannot write. Readiness is computed from unmasked source data before presentation and returns only stable missing-field codes. Settings bootstrap includes the masked profile and readiness. Audit records contain changed field names, and repository errors discard database row/message details before logging. Migration, generated types and rollout remain separate gates in [PR1 verification](../changes/building-contract-defaults/verification.md).
 
 ## Rooms
 
