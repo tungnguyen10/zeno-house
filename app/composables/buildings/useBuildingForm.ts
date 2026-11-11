@@ -1,18 +1,12 @@
 import type { Building } from '~/types/buildings'
 import type { ApiSuccess } from '~/types/api'
-import { buildingCreateSchema, buildingUpdateSchema } from '~/utils/validators/buildings'
-import type { BuildingCreateInput, BuildingUpdateInput } from '~/utils/validators/buildings'
+import { buildingCreateWithRoomsSchema, buildingUpdateSchema } from '~/utils/validators/buildings'
+import type { BuildingCreateWithRoomsInput, BuildingUpdateInput } from '~/utils/validators/buildings'
+import { getApiErrorDetails } from '~/utils/api-error'
+import type { ApiErrorLike } from '~/utils/api-error'
 import { buildingPath } from '~/utils/routes/operational'
 import { useLocalFormDraft } from '~/composables/useLocalFormDraft'
 import { useFormState } from '~/composables/useFormState'
-
-interface QuickRoom {
-  room_number: string
-  monthly_rent: number
-  area: number | null
-}
-
-type CreateInput = BuildingCreateInput & { quickRooms?: QuickRoom[] }
 
 type DraftKey =
   | { mode: 'create' }
@@ -37,6 +31,10 @@ function buildStorageKey(key: NonNullable<DraftKey>): string {
 export function useBuildingForm<T = unknown>(options: UseBuildingFormOptions<T> = {}) {
   const { isLoading, errors, apiError, clearErrors, applyZodErrors, applyApiError } = useFormState()
 
+  // Keep retries in this form session on the same idempotent operation.
+  const requestId = crypto.randomUUID()
+  const duplicateRoomNumbers = ref<string[]>([])
+
   const storageKey = options.draftKey ? buildStorageKey(options.draftKey) : null
 
   const { hasDraft, isDirty, restoreDraft, clearDraft, refreshHasDraft } = useLocalFormDraft<T>({
@@ -45,11 +43,16 @@ export function useBuildingForm<T = unknown>(options: UseBuildingFormOptions<T> 
     initialSnapshot: options.initialSnapshot,
   })
 
-  async function submitCreate(input: CreateInput) {
+  async function submitCreate(input: Omit<BuildingCreateWithRoomsInput, 'request_id'>) {
     clearErrors()
 
-    const { quickRooms, ...buildingInput } = input
-    const result = buildingCreateSchema.safeParse(buildingInput)
+    duplicateRoomNumbers.value = []
+
+    const result = buildingCreateWithRoomsSchema.safeParse({
+      ...input,
+      rooms: input.rooms?.length ? input.rooms : undefined,
+      request_id: requestId,
+    })
     if (!result.success) {
       applyZodErrors(result.error)
       return
@@ -57,27 +60,10 @@ export function useBuildingForm<T = unknown>(options: UseBuildingFormOptions<T> 
 
     isLoading.value = true
     try {
-      const res = await apiFetch<ApiSuccess<Building>>('/api/buildings', {
+      await apiFetch<ApiSuccess<Building>>('/api/buildings', {
         method: 'POST',
         body: result.data,
       })
-
-      if (quickRooms?.length && res.data?.id) {
-        const buildingId = res.data.id
-        await Promise.all(quickRooms.map(room =>
-          apiFetch('/api/rooms', {
-            method: 'POST',
-            body: {
-              building_id: buildingId,
-              room_number: room.room_number,
-              monthly_rent: room.monthly_rent,
-              area: room.area,
-              floor: 1,
-              status: 'available',
-            },
-          }),
-        ))
-      }
 
       clearDraft()
       clearNuxtData()
@@ -85,6 +71,16 @@ export function useBuildingForm<T = unknown>(options: UseBuildingFormOptions<T> 
     }
     catch (e: unknown) {
       applyApiError(e)
+      const details = getApiErrorDetails<{ reason?: string; duplicate_room_numbers?: string[] }>(e)
+      if (details?.reason === 'ROOM_BATCH_DUPLICATE') {
+        duplicateRoomNumbers.value = details.duplicate_room_numbers ?? []
+      }
+      // apiFetch can retain a non-enumerable FetchError status only on its cause.
+      const error = e as (ApiErrorLike & { cause?: ApiErrorLike }) | null
+      const statusCode = error?.statusCode ?? error?.cause?.statusCode
+      if (statusCode === undefined || statusCode >= 500) {
+        apiError.value = 'Chưa xác nhận được kết quả. Bấm thử lại để kiểm tra và tiếp tục.'
+      }
     }
     finally {
       isLoading.value = false
@@ -123,6 +119,8 @@ export function useBuildingForm<T = unknown>(options: UseBuildingFormOptions<T> 
     errors,
     apiError,
     submitCreate,
+    requestId,
+    duplicateRoomNumbers,
     submitUpdate,
     isDirty,
     hasDraft,

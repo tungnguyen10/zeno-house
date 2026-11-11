@@ -160,3 +160,149 @@ describe('useBuildingList helpers', () => {
     expect(clearNuxtDataMock).toHaveBeenCalledWith(BUILDING_LIST_ASYNC_KEY)
   })
 })
+
+describe('useBuildingForm.submitCreate (atomic)', () => {
+  const body = {
+    name: 'Tòa mới', address: '123 Lê Lợi', status: 'active' as const,
+    electricity_pricing_type: 'per_kwh' as const, water_pricing_type: 'per_m3' as const, grace_period_days: 0,
+    rooms: [{ room_number: 'P101', floor: 2, monthly_rent: 1, area: null }],
+  }
+  const uncertainMessage = 'Chưa xác nhận được kết quả. Bấm thử lại để kiểm tra và tiếp tục.'
+
+  beforeEach(() => {
+    fetchMock.mockReset()
+  })
+
+  it('sends one request containing rooms and the exposed uuid request id', async () => {
+    fetchMock.mockResolvedValue({ data: { id: 'b-1' }, meta: { room_count: 1 } })
+    const { useBuildingForm } = await import('../../app/composables/buildings/useBuildingForm')
+    const form = useBuildingForm({ draftKey: { mode: 'create' } })
+
+    await form.submitCreate(body)
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(form.requestId).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/)
+    expect(fetchMock).toHaveBeenCalledWith('/api/buildings', expect.objectContaining({
+      method: 'POST', body: { ...body, request_id: form.requestId },
+    }))
+    expect(clearNuxtDataMock).toHaveBeenCalledOnce()
+    expect(navigateTo).toHaveBeenCalledWith('/dashboard/buildings')
+    expect(form.isLoading.value).toBe(false)
+  })
+
+  it('reuses the same request id on retry and gives a new form its own id', async () => {
+    fetchMock.mockRejectedValueOnce(new Error('network')).mockResolvedValueOnce({ data: { id: 'b-1' } })
+    const { useBuildingForm } = await import('../../app/composables/buildings/useBuildingForm')
+    const form = useBuildingForm()
+
+    await form.submitCreate(body)
+    await form.submitCreate(body)
+
+    expect(form.requestId).toBeDefined()
+    expect(fetchMock.mock.calls[0]![1].body.request_id).toBe(form.requestId)
+    expect(fetchMock.mock.calls[1]![1].body.request_id).toBe(form.requestId)
+    expect(useBuildingForm().requestId).not.toBe(form.requestId)
+    expect(form.apiError.value).toBeNull()
+  })
+
+  it.each([
+    new Error('network'),
+    { data: { error: { code: 'INTERNAL', message: 'Timeout' } } },
+    { statusCode: 500, data: { error: { code: 'INTERNAL', message: 'Internal', details: { reason: 'DATABASE_ERROR' } } } },
+  ])('retains the draft and shows an uncertain result for ambiguous failure %#', async (error) => {
+    window.localStorage.setItem('building-form:create', JSON.stringify(body))
+    fetchMock.mockRejectedValue(error)
+    const { useBuildingForm } = await import('../../app/composables/buildings/useBuildingForm')
+    const form = useBuildingForm({ draftKey: { mode: 'create' } })
+
+    await form.submitCreate(body)
+
+    expect(form.apiError.value).toBe(uncertainMessage)
+    expect(form.isLoading.value).toBe(false)
+    expect(window.localStorage.getItem('building-form:create')).toBe(JSON.stringify(body))
+    expect(form.hasDraft.value).toBe(true)
+    expect(clearNuxtDataMock).not.toHaveBeenCalled()
+    expect(navigateTo).not.toHaveBeenCalled()
+  })
+
+  it('exposes duplicate room numbers from a 409 and clears them before retry', async () => {
+    fetchMock.mockRejectedValueOnce({
+      statusCode: 409,
+      data: { error: { code: 'CONFLICT', message: 'Các mã phòng đã tồn tại: P101', details: { reason: 'ROOM_BATCH_DUPLICATE', duplicate_room_numbers: ['P101'] } } },
+    }).mockResolvedValueOnce({ data: { id: 'b-1' } })
+    const { useBuildingForm } = await import('../../app/composables/buildings/useBuildingForm')
+    const form = useBuildingForm()
+
+    await form.submitCreate(body)
+    expect(form.duplicateRoomNumbers.value).toEqual(['P101'])
+    expect(form.apiError.value).toBe('Các mã phòng đã tồn tại: P101')
+
+    await form.submitCreate(body)
+    expect(form.duplicateRoomNumbers.value).toEqual([])
+    expect(form.apiError.value).toBeNull()
+  })
+
+  it.each([403, 409, 422])('preserves useful server messages for HTTP %i without a reason', async (statusCode) => {
+    fetchMock.mockRejectedValue({ statusCode, data: { error: { code: 'FORBIDDEN', message: 'Thông tin yêu cầu không hợp lệ.' } } })
+    const { useBuildingForm } = await import('../../app/composables/buildings/useBuildingForm')
+    const form = useBuildingForm()
+
+    await form.submitCreate(body)
+
+    expect(form.apiError.value).toBe('Thông tin yêu cầu không hợp lệ.')
+  })
+
+  it('preserves HTTP status from apiFetch cause when FetchError status is not enumerable', async () => {
+    const { apiFetch } = await import('../../app/utils/api-fetch')
+    const cause = Object.defineProperty(new Error('Forbidden'), 'statusCode', { get: () => 403 })
+    Object.assign(cause, { data: { error: { code: 'FORBIDDEN', message: 'Không có quyền tạo tòa nhà.' } } })
+    fetchMock.mockRejectedValue(cause)
+    const normalized = await apiFetch('/api/buildings').catch(error => error)
+    fetchMock.mockRejectedValue(normalized)
+    const { useBuildingForm } = await import('../../app/composables/buildings/useBuildingForm')
+    const form = useBuildingForm()
+
+    await form.submitCreate(body)
+
+    expect(form.apiError.value).toBe('Không có quyền tạo tòa nhà.')
+  })
+
+  it('validates rooms with the shared schema before making any request', async () => {
+    const { useBuildingForm } = await import('../../app/composables/buildings/useBuildingForm')
+    const form = useBuildingForm()
+
+    await form.submitCreate({ ...body, rooms: [{ ...body.rooms[0]!, floor: 0 }] })
+
+    expect(form.errors.value.rooms).toBeDefined()
+    expect(fetchMock).not.toHaveBeenCalled()
+    expect(form.isLoading.value).toBe(false)
+  })
+
+  it('omits an empty room selection from building-only creation', async () => {
+    fetchMock.mockResolvedValue({ data: { id: 'b-1' } })
+    const { useBuildingForm } = await import('../../app/composables/buildings/useBuildingForm')
+    const form = useBuildingForm()
+
+    await form.submitCreate({ ...body, rooms: [] })
+
+    expect(fetchMock).toHaveBeenCalledOnce()
+    expect(fetchMock.mock.calls[0]![1].body.rooms).toBeUndefined()
+    expect(fetchMock.mock.calls[0]![1].body.request_id).toBe(form.requestId)
+  })
+
+  it('preserves submitUpdate PATCH, draft cleanup and building navigation behavior', async () => {
+    window.localStorage.setItem('building-form:edit:b-1', JSON.stringify(body))
+    fetchMock.mockResolvedValue({ data: { id: 'b-1', slug: 'toa-moi' } })
+    const { useBuildingForm } = await import('../../app/composables/buildings/useBuildingForm')
+    const form = useBuildingForm({ draftKey: { mode: 'edit', id: 'b-1' } })
+
+    await form.submitUpdate('b-1', { name: 'Tòa mới' })
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/buildings/b-1', {
+      method: 'PATCH',
+      body: { name: 'Tòa mới', status: 'active', electricity_pricing_type: 'per_kwh', water_pricing_type: 'per_m3', grace_period_days: 0 },
+    })
+    expect(window.localStorage.getItem('building-form:edit:b-1')).toBeNull()
+    expect(navigateTo).toHaveBeenCalledWith('/dashboard/buildings/toa-moi')
+  })
+})

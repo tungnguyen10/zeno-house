@@ -1,14 +1,13 @@
 <script setup lang="ts">
-
+import clsx from 'clsx'
 import type { BuildingFormData } from '~/types/building-form'
 import { buildingFormToApiPayload } from '~/utils/mappers/building-form'
 import type { UiTableColumn } from '~/components/ui/UiTable.vue'
 
-interface PreviewRoom {
-  roomNumber: string
-  rent: number
-  area: number | null
-}
+import type { PreviewRoom } from '~/composables/buildings/useQuickRoomPreview'
+import { QUICK_ROOM_MAX } from '~/utils/validators/buildings'
+
+const preview = useQuickRoomPreview()
 
 const formData = ref<BuildingFormData>({
   name: '',
@@ -37,6 +36,7 @@ const {
   errors,
   apiError,
   submitCreate,
+  duplicateRoomNumbers,
   hasDraft,
   restoreDraft,
   clearDraft,
@@ -47,63 +47,33 @@ const {
   initialSnapshot,
 })
 
-// Quick room setup state
-const enableQuickRooms = ref(false)
-const quickRoomCount = ref(3)
-const quickRoomPrefix = ref('P')
-const quickRoomNumberStart = ref(101)
-const quickDefaultRent = ref(0)
-const quickDefaultArea = ref<number | null>(null)
-const quickSamePriceForAll = ref(true)
-const quickRoomError = ref<string | null>(null)
+watch(duplicateRoomNumbers, value => preview.markServerDuplicates(value))
 
-const previewRooms = computed<PreviewRoom[]>(() => {
-  if (!enableQuickRooms.value) return []
-  return Array.from({ length: quickRoomCount.value }, (_, i) => ({
-    roomNumber: `${quickRoomPrefix.value}${quickRoomNumberStart.value + i}`,
-    rent: quickDefaultRent.value,
-    area: quickDefaultArea.value,
-  }))
-})
-
-const hasDuplicateRoomCodes = computed(() => {
-  const codes = previewRooms.value.map(r => r.roomNumber)
-  return new Set(codes).size !== codes.length
-})
-
-function updatePreviewRent(index: number, value: number) {
-  previewRooms.value[index]!.rent = value
-}
+const flaggedRooms = computed(() => new Set([
+  ...preview.duplicateRoomNumbers.value,
+  ...preview.serverDuplicates.value,
+]))
 
 const previewColumns: UiTableColumn<PreviewRoom>[] = [
   { key: 'roomNumber', label: 'Mã phòng' },
+  { key: 'floor', label: 'Tầng', numeric: true },
   { key: 'rent', label: 'Giá thuê (đ)', numeric: true },
   { key: 'area', label: 'Diện tích (m²)', numeric: true },
 ]
 
-const submitLabel = computed(() => enableQuickRooms.value ? 'Tạo tòa nhà & phòng' : 'Tạo tòa nhà')
+const submitLabel = computed(() => preview.enabled.value ? 'Tạo tòa nhà & phòng' : 'Tạo tòa nhà')
 
 async function onSubmit(data: BuildingFormData) {
-  quickRoomError.value = null
-  if (enableQuickRooms.value && hasDuplicateRoomCodes.value) {
-    quickRoomError.value = 'Mã phòng bị trùng. Vui lòng kiểm tra lại.'
-    return
-  }
+  if (isLoading.value || (preview.enabled.value && preview.duplicateRoomNumbers.value.length > 0)) return
   await submitCreate({
     ...buildingFormToApiPayload(data),
-    quickRooms: enableQuickRooms.value
-      ? previewRooms.value.map(r => ({
-          room_number: r.roomNumber,
-          monthly_rent: r.rent,
-          area: r.area,
-        }))
-      : undefined,
-  } as Parameters<typeof submitCreate>[0])
+    rooms: preview.enabled.value ? preview.toPayload() : undefined,
+  })
 }
 </script>
 
 <template>
-  <div>
+  <div class="min-w-0">
     <UiPageHeader
       title="Thêm tòa nhà mới"
       description="Khai báo thông tin toà nhà và tuỳ chọn tạo phòng ngay từ đầu."
@@ -130,81 +100,175 @@ async function onSubmit(data: BuildingFormData) {
       <template #extras>
         <UiFormSection
           title="Tạo phòng nhanh"
-          description="Tạo trước một loạt phòng (mã, giá thuê) cùng lúc với toà nhà — tuỳ chọn."
+          description="Tạo trước một loạt phòng cùng lúc với tòa nhà. Có thể chỉnh tầng, giá, diện tích từng phòng."
         >
-          <UiCheckbox v-model="enableQuickRooms" label="Bật tạo phòng nhanh" />
-          <template v-if="enableQuickRooms">
+          <UiCheckbox v-model="preview.enabled.value" label="Bật tạo phòng nhanh" :disabled="isLoading" />
+          <template v-if="preview.enabled.value">
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <UiInput
                 label="Số lượng phòng"
                 type="number"
                 number-mode="integer"
-                :model-value="String(quickRoomCount)"
-                @update:model-value="(v) => quickRoomCount = Math.max(1, Number(v) || 1)"
+                min="1"
+                :max="QUICK_ROOM_MAX"
+                :hint="`Tối đa ${QUICK_ROOM_MAX} phòng`"
+                :disabled="isLoading"
+                :model-value="String(preview.count.value)"
+                @update:model-value="(v) => preview.count.value = Math.min(QUICK_ROOM_MAX, Math.max(1, Math.trunc(Number(v)) || 1))"
               />
               <UiInput
-                v-model="quickRoomPrefix"
+                v-model="preview.prefix.value"
                 label="Tiền tố mã phòng"
                 placeholder="Ví dụ: P, A, B"
+                :disabled="isLoading"
               />
               <UiInput
                 label="Số bắt đầu"
                 type="number"
                 number-mode="integer"
-                :model-value="String(quickRoomNumberStart)"
-                @update:model-value="(v) => quickRoomNumberStart = Number(v) || 0"
+                :disabled="isLoading"
+                :model-value="String(preview.start.value)"
+                @update:model-value="(v) => preview.start.value = Math.trunc(Number(v)) || 0"
+              />
+              <UiInput
+                label="Tầng mặc định"
+                type="number"
+                number-mode="integer"
+                min="1"
+                max="100"
+                :disabled="isLoading"
+                :model-value="String(preview.defaultFloor.value)"
+                @update:model-value="(v) => preview.defaultFloor.value = Math.min(100, Math.max(1, Math.trunc(Number(v)) || 1))"
               />
               <UiInput
                 label="Giá thuê mặc định (đ)"
                 type="number"
                 number-mode="currency"
-                :model-value="String(quickDefaultRent)"
-                @update:model-value="(v) => quickDefaultRent = Number(v) || 0"
+                :disabled="isLoading"
+                :model-value="String(preview.defaultRent.value)"
+                @update:model-value="(v) => preview.defaultRent.value = Number(v) || 0"
               />
               <UiInput
-                label="Diện tích (m²)"
+                label="Diện tích mặc định (m²)"
                 type="number"
                 number-mode="area"
-                placeholder="Tuỳ chọn"
-                :model-value="quickDefaultArea !== null ? String(quickDefaultArea) : ''"
-                @update:model-value="(v) => quickDefaultArea = v === '' ? null : Number(v)"
+                min="0"
+                placeholder="Tùy chọn"
+                :disabled="isLoading"
+                :model-value="preview.defaultArea.value !== null ? String(preview.defaultArea.value) : ''"
+                @update:model-value="(v) => preview.defaultArea.value = v === '' ? null : Number(v)"
               />
             </div>
 
-            <div v-if="previewRooms.length" class="mt-5">
-              <UiAlert v-if="hasDuplicateRoomCodes" severity="warning" class="mb-3">
-                Mã phòng bị trùng. Vui lòng thay đổi tiền tố hoặc số bắt đầu.
-              </UiAlert>
-              <p class="mb-2 text-xs text-ui-muted">Xem trước {{ previewRooms.length }} phòng sẽ được tạo:</p>
-              <UiTable :rows="previewRooms" :columns="previewColumns" row-key="roomNumber">
-                <template #cell-roomNumber="{ row }">
-                  <span class="font-mono text-ui-primary">{{ row.roomNumber }}</span>
-                </template>
-                <template #cell-rent="{ row }">
-                  <UiInput
-                    v-if="!quickSamePriceForAll"
-                    density="compact"
-                    type="number"
-                    number-mode="currency"
-                    :model-value="String(row.rent)"
-                    @update:model-value="(v) => updatePreviewRent(previewRooms.indexOf(row), Number(v))"
-                  />
-                  <span v-else>{{ row.rent.toLocaleString('vi-VN') }}</span>
-                </template>
-                <template #cell-area="{ row }">
-                  {{ row.area ?? '—' }}
-                </template>
-              </UiTable>
-              <UiCheckbox
-                v-model="quickSamePriceForAll"
-                label="Đồng giá cho tất cả phòng"
-                class="mt-3"
-              />
-            </div>
-
-            <UiAlert v-if="quickRoomError" severity="danger" class="mt-4">
-              {{ quickRoomError }}
+            <UiAlert v-if="errors.rooms?.length" severity="danger" class="mt-4">
+              Kiểm tra thông tin phòng: {{ errors.rooms.join(' ') }}
             </UiAlert>
+            <UiAlert v-if="flaggedRooms.size" severity="warning" class="mt-4 break-words">
+              Các mã phòng bị trùng: {{ [...flaggedRooms].join(', ') }}. Đổi tiền tố hoặc số bắt đầu rồi thử lại.
+            </UiAlert>
+
+            <div v-if="preview.rows.value.length" class="mt-5 min-w-0">
+              <p class="mb-2 text-xs text-ui-muted">Xem trước {{ preview.rows.value.length }} phòng sẽ được tạo:</p>
+              <UiCheckbox
+                v-model="preview.samePrice.value"
+                label="Đồng giá cho tất cả phòng"
+                :disabled="isLoading"
+                class="mb-3"
+              />
+              <p class="mb-3 text-xs text-ui-muted">
+                Ô đã sửa giữ giá trị khi đổi mặc định. Bật đồng giá sẽ đặt lại giá thuê của tất cả phòng.
+              </p>
+              <div class="max-w-full overflow-x-auto" role="region" aria-label="Xem trước phòng" tabindex="0">
+                <UiTable :rows="preview.rows.value" :columns="previewColumns" row-key="roomNumber" caption="Phòng sẽ được tạo cùng tòa nhà" class="min-w-[640px]">
+                  <template #cell-roomNumber="{ row }">
+                    <span :class="clsx('font-mono break-all', flaggedRooms.has(row.roomNumber) ? 'text-status-danger' : 'text-ui-primary')">
+                      {{ row.roomNumber }}
+                    </span>
+                    <span v-if="flaggedRooms.has(row.roomNumber)" class="block text-xs text-status-danger">Mã trùng</span>
+                  </template>
+                  <template #cell-floor="{ row }">
+                    <div :class="clsx('min-w-24 rounded-md', row.overridden.includes('floor') && 'bg-ui-accent/10')">
+                      <UiInput
+                        density="compact"
+                        type="number"
+                        number-mode="integer"
+                        min="1"
+                        max="100"
+                        :disabled="isLoading"
+                        :aria-label="`Tầng phòng ${row.roomNumber}`"
+                        :model-value="String(row.floor)"
+                        @update:model-value="(v) => preview.setCell(row.roomNumber, 'floor', Math.min(100, Math.max(1, Math.trunc(Number(v)) || 1)))"
+                      />
+                      <div v-if="row.overridden.includes('floor')" class="flex items-center justify-end gap-1 whitespace-nowrap">
+                        <span class="text-xs text-ui-muted">Đã sửa</span>
+                        <UiButton
+                          variant="ghost"
+                          size="sm"
+                          :disabled="isLoading"
+                          :aria-label="`Khôi phục tầng mặc định cho phòng ${row.roomNumber}`"
+                          @click="preview.resetCell(row.roomNumber, 'floor')"
+                        >
+                          Mặc định
+                        </UiButton>
+                      </div>
+                    </div>
+                  </template>
+                  <template #cell-rent="{ row }">
+                    <div v-if="!preview.samePrice.value" :class="clsx('min-w-40 rounded-md', row.overridden.includes('rent') && 'bg-ui-accent/10')">
+                      <UiInput
+                        density="compact"
+                        type="number"
+                        number-mode="currency"
+                        :disabled="isLoading"
+                        :aria-label="`Giá thuê phòng ${row.roomNumber}`"
+                        :model-value="String(row.rent)"
+                        @update:model-value="(v) => preview.setCell(row.roomNumber, 'rent', Number(v) || 0)"
+                      />
+                      <div v-if="row.overridden.includes('rent')" class="flex items-center justify-end gap-1 whitespace-nowrap">
+                        <span class="text-xs text-ui-muted">Đã sửa</span>
+                        <UiButton
+                          variant="ghost"
+                          size="sm"
+                          :disabled="isLoading"
+                          :aria-label="`Khôi phục giá thuê mặc định cho phòng ${row.roomNumber}`"
+                          @click="preview.resetCell(row.roomNumber, 'rent')"
+                        >
+                          Mặc định
+                        </UiButton>
+                      </div>
+                    </div>
+                    <span v-else>{{ row.rent.toLocaleString('vi-VN') }}</span>
+                  </template>
+                  <template #cell-area="{ row }">
+                    <div :class="clsx('min-w-32 rounded-md', row.overridden.includes('area') && 'bg-ui-accent/10')">
+                      <UiInput
+                        density="compact"
+                        type="number"
+                        number-mode="area"
+                        min="0"
+                        placeholder="—"
+                        :disabled="isLoading"
+                        :aria-label="`Diện tích phòng ${row.roomNumber}`"
+                        :model-value="row.area !== null ? String(row.area) : ''"
+                        @update:model-value="(v) => preview.setCell(row.roomNumber, 'area', v === '' ? null : Number(v))"
+                      />
+                      <div v-if="row.overridden.includes('area')" class="flex items-center justify-end gap-1 whitespace-nowrap">
+                        <span class="text-xs text-ui-muted">Đã sửa</span>
+                        <UiButton
+                          variant="ghost"
+                          size="sm"
+                          :disabled="isLoading"
+                          :aria-label="`Khôi phục diện tích mặc định cho phòng ${row.roomNumber}`"
+                          @click="preview.resetCell(row.roomNumber, 'area')"
+                        >
+                          Mặc định
+                        </UiButton>
+                      </div>
+                    </div>
+                  </template>
+                </UiTable>
+              </div>
+            </div>
           </template>
         </UiFormSection>
       </template>
