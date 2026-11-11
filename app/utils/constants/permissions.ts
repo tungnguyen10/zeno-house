@@ -31,6 +31,10 @@ export const OWNER_CAPABILITIES = [
   'building-services.write',
   'building-invoice-profile.read',
   'building-invoice-profile.write',
+  'building-contract-profile.read',
+  'building-contract-profile.write',
+  // Full lessor identity is restricted to admin and scoped owners.
+  'building-contract-profile.pii.read',
   'invoice-email-settings.read',
   'invoice-email-settings.write',
   'contract-services.read',
@@ -119,6 +123,7 @@ export const ROLE_CAPABILITIES: Record<UserRole, readonly string[]> = {
     'building-services.read',
     'building-services.write',
     'building-invoice-profile.read',
+    'building-contract-profile.read',
     'invoice-email-settings.read',
     'contract-services.read',
     'contract-services.write',

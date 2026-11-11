@@ -8,6 +8,7 @@ export const AUDIT_ACTIONS = {
   BUILDING_REMOVED: 'building.removed',
   BUILDING_INVOICE_PROFILE_UPDATED: 'building.invoice_profile.updated',
   BUILDING_INVOICE_EMAIL_SETTINGS_UPDATED: 'building.invoice_email_settings.updated',
+  BUILDING_CONTRACT_PROFILE_UPDATED: 'building.contract_profile.updated',
 
   // Room
   ROOM_CREATED: 'room.created',

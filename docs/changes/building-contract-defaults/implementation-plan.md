@@ -37,7 +37,7 @@ tags: [superpowers, change, buildings, contracts, pii, v2]
 2. **Partial save** — owner saves with only the lessor name filled; save succeeds and readiness lists the remaining codes. Pinned in Task 2 (validator) and Task 3 (readiness).
 3. **`Z` past day 31** — `payment_due_day = 28`, `grace_period_days = 5` must not print "sau ngày 33"; the sentence switches to "quá N ngày sau hạn thanh toán". Pinned in Task 7 (`formatPaymentWindow` test).
 4. **Validation error echoes the CCCD** — Zod messages must be static strings. Pinned in Task 2.
-5. **Owner outside scope** — owner reading/writing another owner's building gets 403 before any repository read of the profile. Pinned in Task 4.
+5. **Owner outside scope** — owner reading another owner's building gets 404, while writing gets 403, before any repository read of the profile (accepted building-scope contract). Pinned in Task 4.
 
 ---
 
@@ -702,7 +702,7 @@ git commit -m "feat(buildings): compute contract and billing readiness"
   ```
   `AUDIT_ACTIONS.BUILDING_CONTRACT_PROFILE_UPDATED = 'building.contract_profile.updated'`
 
-- [ ] **Step 1: Write the failing service test**
+- [x] **Step 1: Write the failing service test**
 
 ```ts
 // tests/server/buildings/contract-profile-service.test.ts
@@ -775,9 +775,9 @@ describe('BuildingContractProfileService.get', () => {
   })
 
   it('checks scope before reading the profile', async () => {
-    assertBuildingScope.mockRejectedValue(Object.assign(new Error('forbidden'), { statusCode: 403 }))
+    assertBuildingScope.mockRejectedValue(Object.assign(new Error('not found'), { statusCode: 404 }))
     const { BuildingContractProfileService } = await import('../../../server/services/buildings/contract-profile')
-    await expect(BuildingContractProfileService.get(ev(), owner, 'b-1')).rejects.toMatchObject({ statusCode: 403 })
+    await expect(BuildingContractProfileService.get(ev(), owner, 'b-1')).rejects.toMatchObject({ statusCode: 404 })
     expect(findProfile).not.toHaveBeenCalled()
   })
 })
@@ -820,9 +820,9 @@ describe('BuildingContractProfileService.readiness', () => {
 })
 ```
 
-- [ ] **Step 2: Run to verify failure** — FAIL.
+- [x] **Step 2: Run to verify failure** — FAIL.
 
-- [ ] **Step 3: Capabilities and audit constant**
+- [x] **Step 3: Capabilities and audit constant**
 
 In `app/utils/constants/permissions.ts`, inside `OWNER_CAPABILITIES` right after `'building-invoice-profile.write',` add:
 
@@ -843,7 +843,7 @@ In `app/utils/constants/audit.ts`, after `BUILDING_INVOICE_EMAIL_SETTINGS_UPDATE
 
 If there is a permissions snapshot test (e.g. `tests/**/permissions*.test.ts`), update it in this step.
 
-- [ ] **Step 4: Repository**
+- [x] **Step 4: Repository**
 
 ```ts
 // server/repositories/building-contract-profiles.ts
@@ -880,7 +880,7 @@ export const BuildingContractProfileRepository = {
 
 `throwDbError` logs via `throwInternal`; confirm `server/utils/errors.ts` `throwInternal` does not log `details` containing row values. If it logs `error.details`/`error.message` from Postgres check violations, those messages contain the failing row for `23514` ("Failing row contains (...)"). Mitigation in this step: catch `error.code === '23514'` before `throwDbError` and call `throwValidationError('Thông tin hợp đồng không hợp lệ')` without passing the error object.
 
-- [ ] **Step 5: Service**
+- [x] **Step 5: Service**
 
 ```ts
 // server/services/buildings/contract-profile.ts
@@ -949,7 +949,7 @@ export const BuildingContractProfileService = {
       action: AUDIT_ACTIONS.BUILDING_CONTRACT_PROFILE_UPDATED,
       entity_type: 'building',
       entity_id: building.id,
-      metadata: { configured_first_time: !existing, changed_fields: changedFields(existing, input) },
+      metadata: { changed_fields: changedFields(existing, input) },
     })
     return present(user, mapBuildingContractProfile(saved))!
   },
@@ -974,9 +974,9 @@ export const BuildingContractProfileService = {
 
 `entity_type: 'building'` must be a valid `AuditEntityType`; it is (used by invoice profile).
 
-- [ ] **Step 6: Run tests** — `npx vitest run tests/server/buildings/contract-profile-service.test.ts` → PASS.
+- [x] **Step 6: Run tests** — `npx vitest run tests/server/buildings/contract-profile-service.test.ts` → PASS.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add app/utils/constants/permissions.ts app/utils/constants/audit.ts server/repositories/building-contract-profiles.ts server/services/buildings/contract-profile.ts tests/server/buildings/contract-profile-service.test.ts
