@@ -52,9 +52,10 @@ The user authorized the dev server and manually handled Chrome's local certifica
 
 Native Chrome QA is currently blocked by `cgWindowNotFound` and an unavailable browser host; a user unlock/reopen request is pending. Rendered component tests do not replace visual inspection.
 
-- [ ] Desktop 1280px — final changed states.
-- [ ] Mobile 375px — final changed states.
-- [ ] Loading, duplicate, error and override/reset states.
+- 2026-11-11 browser pass at the shared tab's fixed ~873px CSS width (bottom-nav layout; viewport resize was not applied by the tool), dark theme, dev server on `https://localhost:3001`: generator defaults above the preview; floor, rent and area overrides each show the tinted cell, "Đã sửa" and a "Mặc định" reset; same-price off makes rent editable; reset returns the cell to the default; address validation blocks submit; room validation shows "Kiểm tra thông tin phòng: Diện tích phải > 0" above the preview. No building was submitted.
+- [ ] Desktop 1280px — not observed (tab width could not be changed).
+- [ ] Mobile 375px — not observed (tab width could not be changed).
+- [ ] Loading, duplicate server-error and network-error states — need the migration applied or a mocked API; not observed.
 
 ## Cloud gates — human-run
 
