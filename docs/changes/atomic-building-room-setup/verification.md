@@ -2,7 +2,7 @@
 type: Change Verification
 title: "atomic-building-room-setup-verification"
 status: draft
-change_state: implementation-in-progress
+change_state: implementation-review
 tags: [change, verification, buildings, rooms]
 ---
 
@@ -19,8 +19,15 @@ tags: [change, verification, buildings, rooms]
 - Task 1: RED/GREEN validator tests, 7 passed; focused ESLint passed; spec and quality review approved.
 - Task 2: RED/GREEN migration contract tests, 5 passed; focused ESLint passed; SQL review approved. SQL has not been executed in this session.
 - Task 8: six source contract tests observed RED before implementation, then GREEN. Focused page/preview/form suite passed: 3 files / 50 tests, including three rendered interaction checks for override persistence/reset, edited payload submission, same-price reset, room validation, server duplicate rows and loading locks. `npm run typecheck` and scoped ESLint passed. Browser visual QA remains a separate pending gate.
-- [ ] Final typecheck / test / lint / knowledge:check.
+- [x] 2026-11-11 full local gate: `npm run typecheck && npm test && npm run lint && npm run knowledge:check` exited 0. Typecheck passed; 393 test files / 2,495 tests passed; ESLint reported 0 errors and one warning in unchanged `AppAiDevChat.vue:427` (`vue/no-v-html`); OKF verified 329 concepts / 26 indexes. Full output: `/private/tmp/zeno-pr0-sdd/task-9-full-checks.log` (local session artifact).
 - [ ] Whole-PR review and CI.
+
+## SQL source review and adaptations
+
+- Both RPCs declare `SECURITY INVOKER` and an empty `search_path`; migration source revokes execution from PUBLIC/anon/authenticated and grants it to service_role inside BEGIN/COMMIT. Static contract checks cover this structure; effective cloud privileges remain unchecked.
+- SQL enforces room JSON types and the 1–200 batch, 1–20-character room number, integer floor 1–100, nonnegative rent and positive nullable area bounds. Malformed non-null wrapper room payloads fail instead of silently creating only a building.
+- The human-run verification script looks up existing actors as postgres, then switches to service_role for RPC calls/assertions inside a rollback transaction. It creates no users or privileged helpers. Runtime and concurrency behavior have not been executed.
+- Final review must resolve the queued nullable-assertion issue in the verification SQL (missing JSON response fields can evade ordinary comparison checks); no SQL changes or runtime claims are made by this documentation task.
 
 ## UI decisions
 
@@ -42,6 +49,8 @@ The user also approved correcting the network-error copy on 2026-11-11: “Chưa
 ## Visual QA
 
 The user authorized the dev server and manually handled Chrome's local certificate warning. The authenticated create page was observed at `https://localhost:3001/dashboard/buildings/create` before UI changes. This is setup evidence, not final visual QA.
+
+Native Chrome QA is currently blocked by `cgWindowNotFound` and an unavailable browser host; a user unlock/reopen request is pending. Rendered component tests do not replace visual inspection.
 
 - [ ] Desktop 1280px — final changed states.
 - [ ] Mobile 375px — final changed states.

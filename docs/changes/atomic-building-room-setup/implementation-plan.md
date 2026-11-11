@@ -2,7 +2,7 @@
 type: Change Implementation Plan
 title: "atomic-building-room-setup-implementation-plan"
 status: draft
-change_state: plan-review
+change_state: implementation-review
 tags: [superpowers, change, buildings, rooms, migration, v2]
 ---
 
@@ -55,7 +55,7 @@ tags: [superpowers, change, buildings, rooms, migration, v2]
   - `type BuildingCreateWithRoomsInput = z.infer<typeof buildingCreateWithRoomsSchema>`
   - `QUICK_ROOM_MAX = 200`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 // tests/utils/building-create-with-rooms-validator.test.ts
@@ -110,12 +110,12 @@ describe('buildingCreateWithRoomsSchema', () => {
 })
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run tests/utils/building-create-with-rooms-validator.test.ts`
 Expected: FAIL — `buildingCreateWithRoomsSchema` is not exported.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 In `app/utils/validators/buildings.ts`, add the import at the top and the schemas after `buildingCreateSchema`:
 
@@ -158,12 +158,12 @@ export type QuickRoomInput = z.infer<typeof quickRoomSchema>
 export type BuildingCreateWithRoomsInput = z.infer<typeof buildingCreateWithRoomsSchema>
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run tests/utils/building-create-with-rooms-validator.test.ts`
 Expected: PASS (6 tests).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/utils/validators/buildings.ts tests/utils/building-create-with-rooms-validator.test.ts
@@ -188,7 +188,7 @@ git commit -m "feat(buildings): add create-with-rooms validator"
     - Returns `{ building: buildings row, rooms: rooms row[], replayed: boolean }`
     - Errors: `BUILDING_SETUP_REQUEST_REQUIRED` (22023), `BUILDING_SETUP_REQUEST_CONFLICT` (23505), plus `create_rooms_batch` errors, plus raw 23505 on `buildings_slug_uq` / `buildings_code_uq`
 
-- [ ] **Step 1: Write the failing static test**
+- [x] **Step 1: Write the failing static test**
 
 ```ts
 // tests/config/create-building-with-rooms-migration.test.ts
@@ -223,12 +223,12 @@ describe('create_building_with_rooms migration', () => {
 })
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run tests/config/create-building-with-rooms-migration.test.ts`
 Expected: FAIL — ENOENT for the migration file.
 
-- [ ] **Step 3: Write the migration**
+- [x] **Step 3: Write the migration**
 
 ```sql
 -- =============================================================================
@@ -393,7 +393,7 @@ revoke all on function public.create_building_with_rooms(jsonb, jsonb, uuid, uui
 grant execute on function public.create_building_with_rooms(jsonb, jsonb, uuid, uuid, uuid) to service_role;
 ```
 
-- [ ] **Step 4: Write the cloud verification script**
+- [x] **Step 4: Write the cloud verification script**
 
 `supabase/verification/create_building_with_rooms.sql` — runs entirely inside `begin; … rollback;`, raises on failure, follows `atomic_contract_renewal.sql` style:
 
@@ -496,12 +496,12 @@ rollback;
 
 Concurrency (two sessions, same building) is checked manually during the cloud gate: open two SQL Editor tabs, run `begin; select public.create_rooms_batch('<id>', '[{"room_number":"X1","slug":"x1","floor":1,"monthly_rent":1,"area":null}]');` in both without committing; the second must block until the first ends, then fail with `ROOM_BATCH_DUPLICATE` if the first committed.
 
-- [ ] **Step 5: Run static test**
+- [x] **Step 5: Run static test**
 
 Run: `npx vitest run tests/config/create-building-with-rooms-migration.test.ts`
 Expected: PASS (4 tests).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add supabase/migrations/20261111090000_create_building_with_rooms.sql supabase/verification/create_building_with_rooms.sql tests/config/create-building-with-rooms-migration.test.ts
@@ -530,7 +530,7 @@ git commit -m "feat(db): add atomic create_building_with_rooms RPC"
   export function throwBuildingSetupError(error: unknown): void // throws mapped error or returns if unknown
   ```
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 // tests/server/buildings/create-with-rooms-repository.test.ts
@@ -638,12 +638,12 @@ describe('throwBuildingSetupError', () => {
 })
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run tests/server/buildings/create-with-rooms-repository.test.ts`
 Expected: FAIL — `createWithRooms` is not a function.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 In `server/repositories/buildings/index.ts`:
 
@@ -791,12 +791,12 @@ export function throwBuildingSetupError(error: unknown): void {
 
 Note: `throwConflict`, `throwValidationError`, `throwDbError` are Nitro auto-imports from `server/utils/errors.ts` (already used in this file). If `mapBuilding` reads `rooms` count differently, check `app/utils/mappers/buildings.ts` and pass the shape it expects.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run tests/server/buildings/create-with-rooms-repository.test.ts`
 Expected: PASS (6 tests).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add server/repositories/buildings/index.ts tests/server/buildings/create-with-rooms-repository.test.ts
@@ -819,7 +819,7 @@ git commit -m "feat(buildings): add createWithRooms repository call"
   - `BuildingService.create(event, user, input: BuildingCreateWithRoomsInput): Promise<{ building: Building; roomCount: number }>`
   - `POST /api/buildings` → `201 { data: Building, meta: { room_count: number } }`
 
-- [ ] **Step 1: Write failing service tests**
+- [x] **Step 1: Write failing service tests**
 
 Replace the `describe('BuildingService.create ownership workflow', …)` block in `tests/server/buildings/owner-service.test.ts`, and add `createWithRooms: vi.fn()` to `buildingRepo`:
 
@@ -898,7 +898,7 @@ describe('BuildingService.create (atomic)', () => {
 
 If the room DTO field names differ (`roomNumber`/`buildingId`), align the `room()` factory with `app/types/rooms.ts`.
 
-- [ ] **Step 2: Write failing API tests**
+- [x] **Step 2: Write failing API tests**
 
 In `tests/server/buildings.api.test.ts`:
 - Add `createWithRooms: vi.fn()` to `repoMocks`.
@@ -991,12 +991,12 @@ describe('POST /api/buildings', () => {
 })
 ```
 
-- [ ] **Step 3: Run tests to verify they fail**
+- [x] **Step 3: Run tests to verify they fail**
 
 Run: `npx vitest run tests/server/buildings/owner-service.test.ts tests/server/buildings.api.test.ts`
 Expected: FAIL — `createWithRooms` not called / `meta` undefined.
 
-- [ ] **Step 4: Implement service**
+- [x] **Step 4: Implement service**
 
 Replace `BuildingService.create` in `server/services/buildings/index.ts` (and update imports: add `BuildingCreateWithRoomsInput`, remove now-unused `AssignmentRepository` import only if nothing else in the file uses it):
 
@@ -1056,7 +1056,7 @@ Replace `BuildingService.create` in `server/services/buildings/index.ts` (and up
 
 `randomUUID` is already imported from `node:crypto` in this file. If `AuditAppendOptions` does not accept `metadata` together with `after_data`, check `server/services/audit.ts` — it does (both are optional fields).
 
-- [ ] **Step 5: Implement route**
+- [x] **Step 5: Implement route**
 
 `server/api/buildings/index.post.ts`:
 
@@ -1076,16 +1076,16 @@ export default defineEventHandler(async (event) => {
 })
 ```
 
-- [ ] **Step 6: Run tests to verify they pass**
+- [x] **Step 6: Run tests to verify they pass**
 
 Run: `npx vitest run tests/server/buildings/owner-service.test.ts tests/server/buildings.api.test.ts`
 Expected: PASS.
 
-- [ ] **Step 7: Regenerate API inventory if the repo tracks it**
+- [x] **Step 7: Regenerate API inventory if the repo tracks it**
 
 Run: `node scripts/generate-api-inventory.mjs` and include `docs/api-inventory.md` in the commit if it changed.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add server/services/buildings/index.ts server/api/buildings/index.post.ts tests/server/buildings/owner-service.test.ts tests/server/buildings.api.test.ts docs/api-inventory.md
@@ -1102,17 +1102,17 @@ git commit -m "feat(buildings): create building and rooms atomically"
 
 **Interfaces:** none.
 
-- [ ] **Step 1: Check remaining usage**
+- [x] **Step 1: Check remaining usage**
 
 Run: `grep -n "AssignmentRepository\|BuildingRepository.insert" server/services/buildings/index.ts`
 Expected: `AssignmentRepository` no longer referenced in `create`. If it is unused anywhere in the file, delete its import. Keep `BuildingRepository.insert` (still a valid repository method; do not delete code other callers may use — run `grep -rn "BuildingRepository.insert" server` and only remove if zero callers remain).
 
-- [ ] **Step 2: Run lint + tests for buildings**
+- [x] **Step 2: Run lint + tests for buildings**
 
 Run: `npx eslint server/services/buildings server/repositories/buildings && npx vitest run tests/server/buildings tests/server/buildings.api.test.ts`
 Expected: no lint errors; PASS.
 
-- [ ] **Step 3: Commit (only if something changed)**
+- [x] **Step 3: Commit (only if something changed)**
 
 ```bash
 git add server/services/buildings/index.ts server/repositories/buildings/index.ts
@@ -1152,7 +1152,7 @@ git commit -m "refactor(buildings): drop unused compensating-delete imports"
   }
   ```
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 // tests/composables/useQuickRoomPreview.test.ts
@@ -1263,12 +1263,12 @@ describe('useQuickRoomPreview', () => {
 })
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run tests/composables/useQuickRoomPreview.test.ts`
 Expected: FAIL — module not found.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 ```ts
 // app/composables/buildings/useQuickRoomPreview.ts
@@ -1373,12 +1373,12 @@ export function useQuickRoomPreview() {
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run tests/composables/useQuickRoomPreview.test.ts`
 Expected: PASS (9 tests).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/composables/buildings/useQuickRoomPreview.ts tests/composables/useQuickRoomPreview.test.ts
@@ -1400,7 +1400,7 @@ git commit -m "feat(buildings): add quick room preview composable"
   - `duplicateRoomNumbers: Ref<string[]>` (from server 409)
   - `requestId: string` (stable per composable instance)
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 Append to `tests/composables/buildings.test.ts` (inside the file, new describe):
 
@@ -1437,13 +1437,13 @@ describe('useBuildingForm.submitCreate (atomic)', () => {
     expect(fetchMock.mock.calls[0]![1].body.request_id).toBe(fetchMock.mock.calls[1]![1].body.request_id)
   })
 
-  it('shows the nothing-saved message on generic failure', async () => {
+  it('shows an uncertain-result message on network failure', async () => {
     fetchMock.mockRejectedValue(new Error('network'))
     const { useBuildingForm } = await import('../../app/composables/buildings/useBuildingForm')
     const { submitCreate, apiError } = useBuildingForm({ draftKey: { mode: 'create' } })
 
     await submitCreate(body)
-    expect(apiError.value).toBe('Chưa có dữ liệu nào được lưu. Bạn có thể bấm lại để thử.')
+    expect(apiError.value).toBe('Chưa xác nhận được kết quả. Bấm thử lại để kiểm tra và tiếp tục.')
   })
 
   it('exposes duplicate room numbers from a 409', async () => {
@@ -1463,12 +1463,12 @@ describe('useBuildingForm.submitCreate (atomic)', () => {
 
 If `apiFetch` wraps `$fetch` and rethrows a normalized error, adjust the rejected shape to whatever `getApiErrorDetails` reads (see `app/utils/api-error.ts`).
 
-- [ ] **Step 2: Run to verify failure**
+- [x] **Step 2: Run to verify failure**
 
 Run: `npx vitest run tests/composables/buildings.test.ts`
 Expected: FAIL — `request_id` undefined / `duplicateRoomNumbers` undefined.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 In `app/composables/buildings/useBuildingForm.ts`:
 
@@ -1517,7 +1517,7 @@ import { getApiErrorDetails } from '~/utils/api-error'
         duplicateRoomNumbers.value = details.duplicate_room_numbers ?? []
       }
       else if (!details?.reason) {
-        apiError.value = 'Chưa có dữ liệu nào được lưu. Bạn có thể bấm lại để thử.'
+        apiError.value = 'Chưa xác nhận được kết quả. Bấm thử lại để kiểm tra và tiếp tục.'
       }
     }
     finally {
@@ -1528,14 +1528,14 @@ import { getApiErrorDetails } from '~/utils/api-error'
 
 - Add `duplicateRoomNumbers` and `requestId` to the returned object.
 
-Note: `422` validation errors from the server carry field errors through `applyApiError`; they have no `reason`, so the generic message replaces `apiError` only — field errors in `errors` stay intact. If that hides a useful server message, restrict the generic message to errors without `statusCode` or with `statusCode >= 500` (check the shape `apiFetch` throws).
+Approved copy correction (2026-11-11): a network error may follow a successful commit, so do not claim nothing was saved. Use the uncertain-result message above for network/ambiguous failures and preserve the same request id on retry. Preserve useful server validation, permission and conflict messages; restrict the generic message to errors without `statusCode` or with `statusCode >= 500` (check the shape `apiFetch` throws).
 
-- [ ] **Step 4: Run tests**
+- [x] **Step 4: Run tests**
 
 Run: `npx vitest run tests/composables/buildings.test.ts`
 Expected: PASS (existing + 4 new).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/composables/buildings/useBuildingForm.ts tests/composables/buildings.test.ts
@@ -1553,11 +1553,11 @@ git commit -m "feat(buildings): submit building and rooms in one idempotent requ
 **Interfaces:**
 - Consumes: `useQuickRoomPreview` (Task 6); `useBuildingForm` with `duplicateRoomNumbers` (Task 7).
 
-- [ ] **Step 1: Run the UI polish workflow (no code yet)**
+- [x] **Step 1: Run the UI polish workflow (no code yet)**
 
 Read `.agents/skills/zeno-house/references/ui-polish-workflow.md`, then apply `frontend-design` (hierarchy, density, copy) and Hallmark (affected states: empty, default, edited cell, local duplicate, server duplicate, generic error, loading, mobile). Record decisions in `docs/changes/atomic-building-room-setup/verification.md` under "UI decisions". Use existing primitives only (`UiTable`, `UiInput density="compact"`, `UiAlert`, `UiCheckbox`, `UiButton`); if a new token/primitive seems necessary, stop and ask with problem/option/affected surfaces/benefit/cost.
 
-- [ ] **Step 2: Write the failing source test**
+- [x] **Step 2: Write the failing source test**
 
 ```ts
 // tests/pages/buildings-create-quick-rooms.spec.ts
@@ -1595,12 +1595,12 @@ describe('building create quick rooms', () => {
 })
 ```
 
-- [ ] **Step 3: Run to verify failure**
+- [x] **Step 3: Run to verify failure**
 
 Run: `npx vitest run tests/pages/buildings-create-quick-rooms.spec.ts`
 Expected: FAIL.
 
-- [ ] **Step 4: Implement the script block**
+- [x] **Step 4: Implement the script block**
 
 Replace the quick-room state section of `<script setup>` (from `interface PreviewRoom` through `onSubmit`) with:
 
@@ -1653,7 +1653,7 @@ async function onSubmit(data: BuildingFormData) {
 
 (Remove the old `quick*` refs, `previewRooms`, `hasDuplicateRoomCodes`, `updatePreviewRent`, `quickRoomError`.)
 
-- [ ] **Step 5: Implement the template section**
+- [x] **Step 5: Implement the template section**
 
 Replace the `<template #extras>` content. Bind generator inputs to `preview.*` refs; add `Tầng mặc định`; table cells:
 
@@ -1762,7 +1762,7 @@ Override marker + "khôi phục mặc định" action: implement using the decis
 
 Change the top-level `UiAlert v-if="apiError"` copy is driven by the composable (Task 7); keep it as is.
 
-- [ ] **Step 6: Run tests**
+- [x] **Step 6: Run tests**
 
 Run: `npx vitest run tests/pages/buildings-create-quick-rooms.spec.ts tests/composables/useQuickRoomPreview.test.ts tests/composables/buildings.test.ts`
 Expected: PASS.
@@ -1771,7 +1771,7 @@ Expected: PASS.
 
 Start dev server (ask the user before starting a local runtime), open `/dashboard/buildings/create` at desktop 1280px and mobile 375px. Check: enabling quick rooms, 30 rooms, edit floor/rent/area on 2 rows, change default rent (edits kept), toggle same price, local duplicate (prefix empty + overlapping), loading state, generic error, server duplicate highlight. Record screenshots/notes in `verification.md`.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add app/pages/dashboard/buildings/create.vue tests/pages/buildings-create-quick-rooms.spec.ts docs/changes/atomic-building-room-setup/verification.md
@@ -1786,12 +1786,12 @@ git commit -m "feat(buildings): editable floor/area preview with duplicate state
 - Create: `docs/changes/atomic-building-room-setup/verification.md` (if not created in Task 8)
 - Modify: `docs/changes/atomic-building-room-setup/index.md` (status + links)
 
-- [ ] **Step 1: Run the full local suite**
+- [x] **Step 1: Run the full local suite**
 
 Run: `npm run typecheck && npm test && npm run lint && npm run knowledge:check`
 Expected: all pass. Fix and re-run on failure; record outputs in `verification.md`.
 
-- [ ] **Step 2: Write `verification.md`**
+- [x] **Step 2: Write `verification.md`**
 
 ```markdown
 ---
@@ -1825,11 +1825,11 @@ tags: [change, verification, buildings, rooms]
 
 Fill local results; leave cloud items unchecked until done.
 
-- [ ] **Step 3: Update `index.md`**
+- [x] **Step 3: Update `index.md`**
 
 Set status line to `**Status: implementation-review.**` and add links to `implementation-plan.md` and `verification.md`.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add docs/changes/atomic-building-room-setup

@@ -7,7 +7,6 @@
 - [harden-event-audit](./harden-event-audit/verification.md) — 12/16 tasks; failure injection, transactional DB audits, contract correlations and cross-system durable intent remain open.
 - [tenant-v2](./tenant-v2/spec-and-implementation-plan.md) — Proposed Quick Create and Claude extraction; completed identity hardening is archived separately.
 - [zeno-house-v2-optimization](./zeno-house-v2-optimization/brief.md) — Draft product flow optimization, pending PR task breakdown.
-- [atomic-building-room-setup](./atomic-building-room-setup/index.md) — V2 PR0: atomic Building + bulk Room creation; plan ready.
 - [building-contract-defaults](./building-contract-defaults/index.md) — V2 PR1: lessor profile, contract policy defaults, readiness; plan ready.
 - [room-setup-inventory-lite](./room-setup-inventory-lite/index.md) — V2 PR2: floor-based room generator, room inventory, contract handover snapshot; plan ready.
 - [tenant-quick-create](./tenant-quick-create/index.md) — V2 PR3 / Tenant V2 change A: inline tenant picker + quick create; plan ready.
@@ -16,6 +15,8 @@
 - [tenant-identity-autofill](./tenant-identity-autofill/index.md) — V2 PR5 / Tenant V2 change C: Claude Vision ID autofill behind flag, quota and privacy gates; plan ready (dependency + privacy gates pending).
 
 ## Implementation present — verification or rollout gates open
+
+- [atomic-building-room-setup](./atomic-building-room-setup/index.md) — V2 PR0: source implementation ready for review and verification; visual QA, CI and human-run cloud gates pending.
 
 - [add-dashboard-light-mode](./add-dashboard-light-mode/verification.md) — 11/12 tasks; automated theme coverage exists, desktop/tablet/mobile visual and interactive QA task 4.3 remains open.
 - [tenant-authorization-scope](./tenant-authorization-scope/verification.md) — ZH-SEC-01; source and production SQL verification recorded, responsive/authenticated UI and deployment sign-off pending.

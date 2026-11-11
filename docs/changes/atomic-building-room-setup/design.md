@@ -48,18 +48,18 @@ Một migration mới, hai hàm `SECURITY INVOKER`, `set search_path = ''`, `gra
 - Một câu `insert … select` từ `jsonb_to_recordset`; `code` tính trong SQL từ `buildings.code`; `status = 'available'`.
 - Bất kỳ lỗi nào → toàn bộ batch rollback.
 
-### 4.2. `public.create_building_with_rooms(p_building jsonb, p_assign_owner uuid, p_rooms jsonb, p_actor_id uuid, p_request_id uuid) returns jsonb`
+### 4.2. `public.create_building_with_rooms(p_building jsonb, p_rooms jsonb, p_assign_owner uuid, p_actor_id uuid, p_request_id uuid) returns jsonb`
 
 Trong cùng transaction:
 
 1. Idempotency: key `building.create:<p_request_id>`.
-   - Nếu đã có dòng `audit_operations` với key này và `actor_id = p_actor_id`: trả `{ building, room_count, replayed: true }`, không ghi gì thêm.
+   - Nếu đã có dòng `audit_operations` với key này và `actor_id = p_actor_id`: trả `{ building, rooms, replayed: true }`, không ghi gì thêm. Service lấy `rooms.length` để trả `meta.room_count` cho API.
    - Nếu key thuộc actor khác: `raise` lỗi xung đột, **không** trả dữ liệu Building.
 2. Insert Building (slug/code do app tính trước).
 3. Nếu `p_assign_owner` khác null: insert gán owner vào tòa (thay cho xóa bù trong TypeScript).
 4. Nếu `p_rooms` không rỗng: gọi `create_rooms_batch`.
 5. Insert `audit_operations(idempotency_key, actor_id, building_id, action = 'building.create', entity_type = 'building', entity_id, status = 'completed', completed_at = now())`. Reconciler chỉ nhận `pending`/`executing` nên không đụng dòng này.
-6. Trả `{ building, room_count, replayed: false }`.
+6. Trả `{ building, rooms, replayed: false }`; các hàng phòng được map thành DTO để ghi audit theo implementation plan.
 
 Không thay đổi cấu trúc bảng. Ràng buộc unique sẵn có là lớp bảo vệ cuối.
 
@@ -119,7 +119,7 @@ Rủi ro đã biết: audit lỗi sau commit → dữ liệu còn nhưng thiếu
 - Một request `POST /api/buildings` kèm `rooms` và `request_id`; bỏ `Promise.all`.
 - `request_id = crypto.randomUUID()` một lần mỗi phiên trang, giữ nguyên qua các lần thử lại.
 - `409 duplicate_room_numbers` → đánh dấu đúng dòng, thông báo "Các mã phòng đã tồn tại: …", giữ form và preview.
-- Lỗi khác/mạng → "Chưa có dữ liệu nào được lưu. Bạn có thể bấm lại để thử." Trường hợp server đã lưu nhưng mất phản hồi, bấm lại nhận Building cũ và chuyển trang bình thường.
+- Lỗi mạng hoặc chưa xác định kết quả → "Chưa xác nhận được kết quả. Bấm thử lại để kiểm tra và tiếp tục." Trường hợp server đã lưu nhưng mất phản hồi, bấm lại với cùng `request_id` nhận Building cũ và chuyển trang bình thường. Người dùng duyệt sửa câu này ngày 2026-11-11; giữ thông báo cụ thể của server cho lỗi validation, quyền và xung đột.
 - Thành công → xóa nháp, chuyển về danh sách tòa nhà như hiện tại.
 
 ### 6.4. Chất lượng UI
@@ -139,7 +139,7 @@ Rủi ro đã biết: audit lỗi sau commit → dữ liệu còn nhưng thiếu
 | Preview | `tests/composables/buildings/useQuickRoomPreview.test.ts` | Giữ override khi đổi tham số; bỏ override của phòng bị loại; đồng giá reset giá; `toPayload()` đúng schema |
 | Form | `tests/composables/buildings/useBuildingForm*.test.ts` | Một request; `request_id` ổn định qua retry; `409` gắn dòng trùng; lỗi chung giữ form |
 | Service/API | `tests/server/buildings.api.test.ts` | Admin/owner tạo kèm phòng; manager `403`; payload RPC đúng; owner được gán trong RPC; replay không ghi audit; key của actor khác → `409` không lộ dữ liệu; retry slug tối đa 2 lần; trùng phòng `409` kèm danh sách; audit `BUILDING_CREATED` + N × `ROOM_CREATED` qua một lần `appendBulk` |
-| Trang | `tests/pages/**/buildings-create*.test.ts` | Cột Tầng/Diện tích sửa được; dòng trùng được đánh dấu; thông báo "Chưa có dữ liệu nào được lưu" |
+| Trang | `tests/pages/**/buildings-create*.test.ts` | Cột Tầng/Diện tích sửa được; dòng trùng được đánh dấu; lỗi mạng báo chưa xác nhận được kết quả và cho thử lại |
 
 ### 7.2. SQL và migration
 
