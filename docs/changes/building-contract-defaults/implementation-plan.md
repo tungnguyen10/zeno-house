@@ -541,7 +541,7 @@ git commit -m "feat(buildings): add contract profile DTO, mapper and validator"
   ```
   Uses the profile's presence of values only; masked profiles still count as filled (`lessorIdNumber` masked is non-null; `lessorDateOfBirth`/`lessorPermanentAddress` masked are null — so the service MUST compute readiness from the **unmasked** profile, see Task 4).
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 // tests/server/buildings/readiness.test.ts
@@ -606,9 +606,9 @@ describe('computeBuildingReadiness', () => {
 })
 ```
 
-- [ ] **Step 2: Run to verify failure** — FAIL (module missing).
+- [x] **Step 2: Run to verify failure** — FAIL (module missing).
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 ```ts
 // server/services/buildings/readiness.ts
@@ -667,9 +667,9 @@ export function computeBuildingReadiness(
 
 Before implementing, confirm in `server/services/billing/rules.ts` which pricing types read `default_*_rate`; if `tiered` brackets live elsewhere and another type also doesn't use the rate, extend the exemption and the test accordingly.
 
-- [ ] **Step 4: Run test** → PASS.
+- [x] **Step 4: Run test** → PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add server/services/buildings/readiness.ts tests/server/buildings/readiness.test.ts
