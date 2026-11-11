@@ -27,7 +27,7 @@ tags: [change, verification, buildings, rooms]
 - Both RPCs declare `SECURITY INVOKER` and an empty `search_path`; migration source revokes execution from PUBLIC/anon/authenticated and grants it to service_role inside BEGIN/COMMIT. Static contract checks cover this structure; effective cloud privileges remain unchecked.
 - SQL enforces room JSON types and the 1–200 batch, 1–20-character room number, integer floor 1–100, nonnegative rent and positive nullable area bounds. Malformed non-null wrapper room payloads fail instead of silently creating only a building.
 - The human-run verification script looks up existing actors as postgres, then switches to service_role for RPC calls/assertions inside a rollback transaction. It creates no users or privileged helpers. Runtime and concurrency behavior have not been executed.
-- Final review must resolve the queued nullable-assertion issue in the verification SQL (missing JSON response fields can evade ordinary comparison checks); no SQL changes or runtime claims are made by this documentation task.
+- 2026-11-11: nullable-assertion issue resolved in the verification SQL (`is distinct from` and `coalesce` so missing JSON fields fail loudly). Migration contract tests still pass (5); the script itself has not been executed.
 
 ## UI decisions
 

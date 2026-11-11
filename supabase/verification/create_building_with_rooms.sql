@@ -44,11 +44,11 @@ begin
     jsonb_build_object('room_number', 'P201', 'slug', 'p201', 'floor', 2, 'monthly_rent', 3500000, 'area', 22)
   ), v_actor, v_actor, v_req);
   v_building_id := (v_res->'building'->>'id')::uuid;
-  if jsonb_array_length(v_res->'rooms') <> 2 or (v_res->>'replayed')::boolean then
+  if jsonb_array_length(v_res->'rooms') is distinct from 2 or coalesce((v_res->>'replayed')::boolean, true) then
     raise exception 'VERIFY 1 failed: %', v_res;
   end if;
   if (select code from public.rooms where building_id = v_building_id and room_number = 'P101')
-     <> (v_building->>'code') || '-p101' then
+     is distinct from (v_building->>'code') || '-p101' then
     raise exception 'VERIFY 1 failed: room code composition';
   end if;
 
@@ -65,7 +65,8 @@ begin
   -- 2. Replay with same actor returns same building, no new rows.
   select count(*) into v_count_before from public.buildings;
   v_res2 := public.create_building_with_rooms(v_building, '[]'::jsonb, null, v_actor, v_req);
-  if (v_res2->'building'->>'id')::uuid <> v_building_id or not (v_res2->>'replayed')::boolean
+  if (v_res2->'building'->>'id')::uuid is distinct from v_building_id
+     or not coalesce((v_res2->>'replayed')::boolean, false)
      or (select count(*) from public.buildings) <> v_count_before then
     raise exception 'VERIFY 2 failed: %', v_res2;
   end if;
@@ -94,7 +95,7 @@ begin
       ), v_actor, v_actor, v_request_dup);
   exception when unique_violation then
     get stacked diagnostics v_detail = pg_exception_detail;
-    v_failed := sqlerrm = 'ROOM_BATCH_DUPLICATE' and v_detail::jsonb = '["A1", "a1"]'::jsonb;
+    v_failed := coalesce(sqlerrm = 'ROOM_BATCH_DUPLICATE' and v_detail::jsonb = '["A1", "a1"]'::jsonb, false);
   end;
   if not v_failed or (select count(*) from public.buildings) <> v_count_before
      or (select count(*) from public.rooms) <> v_before_rooms
@@ -120,7 +121,7 @@ begin
       '[{"room_number":"DIFFERENT","slug":"p101","floor":1,"monthly_rent":0,"area":null}]');
   exception when unique_violation then
     get stacked diagnostics v_detail = pg_exception_detail;
-    v_failed := sqlerrm = 'ROOM_BATCH_DUPLICATE' and v_detail::jsonb = '["DIFFERENT"]'::jsonb;
+    v_failed := coalesce(sqlerrm = 'ROOM_BATCH_DUPLICATE' and v_detail::jsonb = '["DIFFERENT"]'::jsonb, false);
   end;
   if not v_failed then raise exception 'VERIFY 6 failed: supplied slug collision'; end if;
 
@@ -184,7 +185,7 @@ begin
     v_res2 := public.create_building_with_rooms(v_building || jsonb_build_object(
       'slug', 'pr0-only-' || gen_random_uuid()::text, 'code', 'pr0-only-' || gen_random_uuid()::text),
       case when v_count_before = 1 then null else '[]'::jsonb end, null, v_actor, gen_random_uuid());
-    if v_res2->'rooms' <> '[]'::jsonb or (v_res2->>'replayed')::boolean then
+    if v_res2->'rooms' is distinct from '[]'::jsonb or coalesce((v_res2->>'replayed')::boolean, true) then
       raise exception 'VERIFY 9 failed: building-only';
     end if;
   end loop;
@@ -199,8 +200,8 @@ begin
         '[]', null, v_actor, gen_random_uuid());
     exception when unique_violation then
       get stacked diagnostics v_constraint = constraint_name;
-      v_failed := v_constraint = case when v_count_before = 1
-        then 'buildings_slug_uq' else 'buildings_code_uq' end;
+      v_failed := coalesce(v_constraint = case when v_count_before = 1
+        then 'buildings_slug_uq' else 'buildings_code_uq' end, false);
     end;
     if not v_failed then raise exception 'VERIFY 10 failed: native building uniqueness'; end if;
   end loop;
