@@ -1208,7 +1208,7 @@ git commit -m "feat(buildings): include contract profile and readiness in settin
   export const READINESS_LABELS: Record<ReadinessCode, { label: string; anchor: string }>
   ```
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 ```ts
 // tests/utils/payment-window.test.ts
@@ -1276,9 +1276,9 @@ describe('useBuildingContractProfile', () => {
 
 If `apiFetch` does not call `$fetch(url, opts)` directly, adapt the assertion to how `tests/composables/buildings.test.ts` asserts calls.
 
-- [ ] **Step 2: Run to verify failure.**
+- [x] **Step 2: Run to verify failure.**
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 ```ts
 // app/utils/format/payment-window.ts
@@ -1385,9 +1385,9 @@ export function useBuildingContractProfile(
 }
 ```
 
-- [ ] **Step 4: Run tests** → PASS.
+- [x] **Step 4: Run tests** → PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/composables/buildings/useBuildingContractProfile.ts app/utils/format/payment-window.ts app/utils/constants/readiness.ts tests/utils/payment-window.test.ts tests/composables/useBuildingContractProfile.test.ts
