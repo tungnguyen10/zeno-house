@@ -8,7 +8,7 @@ tags: [superpowers, change, rooms, inventory, contracts, v2]
 
 # PR2 — Room Setup & Inventory Lite
 
-> Sub-project PR2 của [ZENO House V2 — Flow Optimization Brief](../zeno-house-v2-optimization/brief.md). Phụ thuộc [PR0 atomic-building-room-setup](../atomic-building-room-setup/design.md). Thiết kế chưa được chấp nhận hay triển khai.
+> Sub-project PR2 của [ZENO House V2 — Flow Optimization Brief](../zeno-house-v2-optimization/brief.md). Phụ thuộc [PR0 atomic-building-room-setup](../../history/2026-11-11-atomic-building-room-setup/design.md). Thiết kế chưa được chấp nhận hay triển khai.
 
 ## 1. Mục tiêu
 

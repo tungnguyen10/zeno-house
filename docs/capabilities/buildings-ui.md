@@ -51,6 +51,23 @@ Defines building list, create, detail, edit, card, and form user interface behav
 
 ---
 
+### Requirement: Tạo phòng nhanh cùng tòa nhà
+The building create page SHALL offer an optional quick-room generator (prefix, start number, count 1–200, default floor, default rent, default area) with an editable preview of floor, rent and area per room, backed by `useQuickRoomPreview`. Manual edits SHALL persist across default changes for rooms still in range; enabling "Đồng giá cho tất cả phòng" SHALL reset rent edits. The page SHALL submit the building and rooms in one `POST /api/buildings` request with a `request_id` that stays the same across retries in the page session. At widths of 640px and above the preview SHALL be a table; below 640px it SHALL be a compact list without horizontal scrolling. All quick-room controls SHALL be disabled while submitting.
+
+#### Scenario: Sửa từng phòng và khôi phục mặc định
+- **WHEN** user sửa tầng, giá hoặc diện tích của một phòng rồi đổi giá trị mặc định
+- **THEN** ô đã sửa giữ giá trị và có nút khôi phục mặc định có `aria-label` theo trường và phòng
+
+#### Scenario: Mã phòng trùng
+- **WHEN** preview hoặc server báo mã phòng trùng
+- **THEN** trang hiện cảnh báo liệt kê mã trùng và đánh dấu "Mã trùng" đúng dòng, giữ nguyên form
+
+#### Scenario: Mất phản hồi khi gửi
+- **WHEN** request lỗi mạng hoặc lỗi 5xx
+- **THEN** trang hiện "Chưa xác nhận được kết quả. Bấm thử lại để kiểm tra và tiếp tục."; bấm lại dùng cùng `request_id`
+
+---
+
 ### Requirement: Trang chi tiết building
 `app/pages/buildings/[id]/index.vue` SHALL fetch building theo id, hiển thị thông tin đầy đủ, có nút Edit (chỉ admin), có nút Delete với confirmation (chỉ admin).
 

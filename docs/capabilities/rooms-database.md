@@ -53,3 +53,14 @@ The `rooms.status` column SHALL accept value `'archived'` in addition to `'avail
 #### Scenario: Existing rows unaffected
 - **WHEN** the migration runs against an existing database
 - **THEN** all existing rows remain valid and their status values unchanged
+
+### Requirement: Atomic room batch RPCs
+The database SHALL provide `public.create_rooms_batch(p_building_id uuid, p_rooms jsonb)` and `public.create_building_with_rooms(p_building jsonb, p_rooms jsonb, p_assign_owner uuid, p_actor_id uuid, p_request_id uuid)`. Both SHALL be `SECURITY INVOKER` with `search_path = ''`, executable only by `service_role`. `create_rooms_batch` SHALL serialize per building with an advisory lock, validate 1–200 rooms and field bounds (`ROOM_BATCH_INVALID`), reject any room number or slug duplicated within the batch or against existing rooms of the building (`ROOM_BATCH_DUPLICATE`, errcode 23505, `detail` = JSON array of room numbers), and insert all rooms with `status = 'available'` and `code = building.code || '-' || slug`. `create_building_with_rooms` SHALL insert the building, the optional owner assignment, the rooms and a completed `audit_operations` marker keyed `building.create:<request_id>` in one transaction, replay the stored result for the same actor and raise `BUILDING_SETUP_REQUEST_CONFLICT` for another actor.
+
+#### Scenario: Duplicate rolls back everything
+- **WHEN** a batch contains a duplicate room
+- **THEN** no building, room, assignment or operation row remains
+
+#### Scenario: Concurrent batches on one building
+- **WHEN** two sessions call the RPC for the same building or request at the same time
+- **THEN** the second waits for the first transaction to finish

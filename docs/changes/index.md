@@ -16,8 +16,6 @@
 
 ## Implementation present — verification or rollout gates open
 
-- [atomic-building-room-setup](./atomic-building-room-setup/index.md) — V2 PR0: source implementation ready for review and verification; visual QA, CI and human-run cloud gates pending.
-
 - [add-dashboard-light-mode](./add-dashboard-light-mode/verification.md) — 11/12 tasks; automated theme coverage exists, desktop/tablet/mobile visual and interactive QA task 4.3 remains open.
 - [tenant-authorization-scope](./tenant-authorization-scope/verification.md) — ZH-SEC-01; source and production SQL verification recorded, responsive/authenticated UI and deployment sign-off pending.
 - [atomic-contract-renewal](./atomic-contract-renewal/verification.md) — ZH-CTR-01; production SQL checks passed, new checkout/deposit financial compatibility and release sign-off pending.
@@ -25,6 +23,8 @@
 - [add-contract-amendments](./add-contract-amendments/verification.md) — 12/12 imported tasks checked; production/staging worker, cron, migration evidence and accepted canonical capability pending.
 
 ## Completed and archived — not active
+
+- [atomic-building-room-setup](../history/2026-11-11-atomic-building-room-setup/index.md) — V2 PR0 accepted 2026-11-11; production migration and SQL verification recorded, CI result, wide/375px visual QA, committed concurrency case and deployed smoke still open.
 
 - [dashboard-layout-refresh](../history/2026-11-10-dashboard-layout-refresh/index.md) — 8/8 imported implementation tasks checked; accepted dashboard spec reconciled and implementation history archived.
 - [harden-tenant-identity-data](../history/2026-11-09-harden-tenant-identity-data/index.md) — Production schema, identity verification and affected-state checks recorded.

@@ -52,6 +52,29 @@ Defines server API behavior for creating, reading, updating, deleting, and enric
 
 ---
 
+### Requirement: POST /api/buildings tạo building kèm phòng trong một giao dịch
+`POST /api/buildings` SHALL accept optional `rooms` (1–200 items of `{ room_number (1–20 chars), floor (integer 1–100), monthly_rent (>= 0), area (> 0 or null) }`, validated by the shared `buildingCreateWithRoomsSchema`) and optional `request_id` (uuid). The service SHALL require `buildings.create`, and additionally `rooms.create` when `rooms` is non-empty, then call RPC `create_building_with_rooms` so the building, the owner self-assignment and all rooms commit or roll back together. The response SHALL be `{ data: Building, meta: { room_count } }` with status 201. When `request_id` is omitted the server SHALL generate one.
+
+#### Scenario: Tạo building kèm nhiều phòng
+- **WHEN** admin hoặc owner gửi POST với building hợp lệ và `rooms` gồm N phòng
+- **THEN** response 201 với `meta.room_count === N`, mọi phòng có `status = 'available'` và đúng `floor`, `monthly_rent`, `area`
+- **AND** audit ghi `BUILDING_CREATED` (metadata `room_count`, `request_id`), `USER_ASSIGNMENT_ADDED` nếu là owner, và N × `ROOM_CREATED` qua một lần bulk append
+
+#### Scenario: Một phòng trùng thì không tạo gì
+- **WHEN** `rooms` có mã phòng trùng nhau (so sánh theo slug, không phân biệt hoa thường)
+- **THEN** response 409 `CONFLICT` với `details.reason === 'ROOM_BATCH_DUPLICATE'` và `details.duplicate_room_numbers`
+- **AND** không có building, assignment, phòng hay operation nào được lưu
+
+#### Scenario: Thử lại cùng request_id
+- **WHEN** cùng actor gửi lại POST với `request_id` đã commit
+- **THEN** response trả building đã tạo trước đó, không tạo thêm bản ghi và không ghi thêm audit
+
+#### Scenario: request_id của actor khác
+- **WHEN** một actor khác gửi POST với `request_id` đã được dùng
+- **THEN** response 409 với `details.reason === 'BUILDING_SETUP_REQUEST_CONFLICT'` và không trả dữ liệu building
+
+---
+
 ### Requirement: GET /api/buildings/:id trả về chi tiết một building
 `server/api/buildings/[id].get.ts` SHALL require auth, kiểm tra permission, tìm building theo id, trả về `ApiSuccess<Building>` hoặc 404 nếu không tồn tại.
 

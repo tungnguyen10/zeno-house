@@ -1,6 +1,6 @@
 # Room setup & inventory lite (V2 PR2)
 
-**Status: design-review.** Depends on [atomic-building-room-setup](../atomic-building-room-setup/index.md).
+**Status: design-review.** Depends on [atomic-building-room-setup](../../history/2026-11-11-atomic-building-room-setup/index.md).
 
 - [Design](./design.md)
 - [Implementation plan](./implementation-plan.md)
