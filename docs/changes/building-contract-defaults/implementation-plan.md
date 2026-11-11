@@ -44,14 +44,14 @@ tags: [superpowers, change, buildings, contracts, pii, v2]
 ### Task 1: Migration + verification script
 
 **Files:**
-- Create: `supabase/migrations/20261111100000_building_contract_profiles.sql`
+- Create: `supabase/migrations/20261111172755_building_contract_profiles.sql`
 - Create: `supabase/verification/building_contract_profiles.sql`
 - Test: `tests/config/building-contract-profiles-migration.test.ts`
 
 **Interfaces:**
 - Produces table `public.building_contract_profiles` with columns listed in design §4.
 
-- [ ] **Step 1: Write the failing static test**
+- [x] **Step 1: Write the failing static test**
 
 ```ts
 // tests/config/building-contract-profiles-migration.test.ts
@@ -59,7 +59,7 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
-const sql = readFileSync(resolve(process.cwd(), 'supabase/migrations/20261111100000_building_contract_profiles.sql'), 'utf8')
+const sql = readFileSync(resolve(process.cwd(), 'supabase/migrations/20261111172755_building_contract_profiles.sql'), 'utf8')
 
 describe('building_contract_profiles migration', () => {
   it('creates a 1:1 table cascading with buildings', () => {
@@ -81,12 +81,12 @@ describe('building_contract_profiles migration', () => {
 })
 ```
 
-- [ ] **Step 2: Run to verify failure**
+- [x] **Step 2: Run to verify failure**
 
 Run: `npx vitest run tests/config/building-contract-profiles-migration.test.ts`
 Expected: FAIL (ENOENT).
 
-- [ ] **Step 3: Write the migration**
+- [x] **Step 3: Write the migration**
 
 ```sql
 -- =============================================================================
@@ -144,7 +144,7 @@ revoke all on table public.building_contract_profiles from public, anon, authent
 grant select, insert, update, delete on table public.building_contract_profiles to service_role;
 ```
 
-- [ ] **Step 4: Write the verification script**
+- [x] **Step 4: Write the verification script**
 
 ```sql
 -- Verification for building_contract_profiles (V2 PR1). Run as service_role; rolled back.
@@ -190,12 +190,12 @@ rollback;
 
 Cascade check (manual, cloud gate): create a throwaway building + profile inside `begin; … rollback;`, delete the building, confirm the profile row is gone.
 
-- [ ] **Step 5: Run test** — `npx vitest run tests/config/building-contract-profiles-migration.test.ts` → PASS.
+- [x] **Step 5: Run test** — `npx vitest run tests/config/building-contract-profiles-migration.test.ts` → PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
-git add supabase/migrations/20261111100000_building_contract_profiles.sql supabase/verification/building_contract_profiles.sql tests/config/building-contract-profiles-migration.test.ts
+git add supabase/migrations/20261111172755_building_contract_profiles.sql supabase/verification/building_contract_profiles.sql tests/config/building-contract-profiles-migration.test.ts
 git commit -m "feat(db): add building_contract_profiles table"
 ```
 
