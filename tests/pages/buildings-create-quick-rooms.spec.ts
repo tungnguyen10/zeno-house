@@ -9,6 +9,7 @@ import CreatePage from '~/pages/dashboard/buildings/create.vue'
 import UiInput from '~/components/ui/UiInput.vue'
 import UiTable from '~/components/ui/UiTable.vue'
 import UiAlert from '~/components/ui/UiAlert.vue'
+import QuickRoomCellEditor from '~/components/buildings/QuickRoomCellEditor.vue'
 import { useQuickRoomPreview } from '~/composables/buildings/useQuickRoomPreview'
 
 const page = readFileSync(resolve(process.cwd(), 'app/pages/dashboard/buildings/create.vue'), 'utf8')
@@ -48,7 +49,15 @@ describe('building create quick rooms', () => {
     expect(page).toContain('overflow-x-auto')
     expect(page).toContain('aria-label="Xem trước phòng"')
     expect(page).toContain('min-w-0')
+    expect(page).toContain("useMediaQuery('(min-width: 640px)')")
+    expect(page).toContain('data-test="quick-room-list"')
   })
+})
+
+const wide = vi.hoisted(() => ({ value: true }))
+vi.mock('@vueuse/core', async (importOriginal) => {
+  const { ref: vueRef } = await import('vue')
+  return { ...(await importOriginal<typeof import('@vueuse/core')>()), useMediaQuery: () => vueRef(wide.value) }
 })
 
 const loading = ref(false)
@@ -57,6 +66,7 @@ const serverDuplicates = ref<string[]>([])
 const submit = vi.fn()
 
 beforeEach(() => {
+  wide.value = true
   loading.value = false
   fieldErrors.value = {}
   serverDuplicates.value = []
@@ -71,7 +81,7 @@ beforeEach(() => {
 
 function renderPage() {
   return mount(CreatePage, { global: {
-    components: { UiInput, UiTable, UiAlert },
+    components: { UiInput, UiTable, UiAlert, QuickRoomCellEditor },
     stubs: {
       UiPageHeader: true,
       BuildingForm: { props: ['modelValue'], emits: ['submit'], template: '<form @submit.prevent="$emit(\'submit\', modelValue)"><slot name="extras" /></form>' },
@@ -126,6 +136,22 @@ describe('building preview interactions', () => {
     expect(wrapper.findAll('input').every(input => input.attributes('disabled') !== undefined)).toBe(true)
     await wrapper.get('form').trigger('submit')
     expect(submit).not.toHaveBeenCalled()
+    wrapper.unmount()
+  })
+
+  it('renders a compact list without a wide table on narrow screens', async () => {
+    wide.value = false
+    const wrapper = renderPage()
+    await wrapper.get('input[type="checkbox"]').setValue(true)
+    expect(wrapper.find('table').exists()).toBe(false)
+    expect(wrapper.findAll('[data-test="quick-room-row"]')).toHaveLength(3)
+    await wrapper.get('[aria-label="Tầng phòng P101"]').setValue('3')
+    const reset = wrapper.get('[aria-label="Khôi phục tầng mặc định cho phòng P101"]')
+    await reset.trigger('click')
+    expect((wrapper.get('[aria-label="Tầng phòng P101"]').element as HTMLInputElement).value).toBe('1')
+    serverDuplicates.value = ['P102']
+    await nextTick()
+    expect(wrapper.findAll('[data-test="quick-room-row"]')[1]!.text()).toContain('Mã trùng')
     wrapper.unmount()
   })
 })

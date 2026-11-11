@@ -18,7 +18,7 @@ tags: [superpowers, change, rooms, inventory, contracts, v2]
 
 **Spec:** [design.md](./design.md)
 
-**Prerequisite:** PR0 ([atomic-building-room-setup](../atomic-building-room-setup/implementation-plan.md)) merged — this plan uses `create_rooms_batch`, `useQuickRoomPreview`, `QUICK_ROOM_MAX`, `quickRoomSchema`, `throwBuildingSetupError`.
+**Prerequisite:** PR0 ([atomic-building-room-setup](../../history/2026-11-11-atomic-building-room-setup/implementation-plan.md)) merged — this plan uses `create_rooms_batch`, `useQuickRoomPreview`, `QUICK_ROOM_MAX`, `quickRoomSchema`, `throwBuildingSetupError`.
 
 ## Global Constraints
 

@@ -1,8 +1,8 @@
 ---
 type: Change Verification
 title: "atomic-building-room-setup-verification"
-status: draft
-change_state: implementation-review
+status: deprecated
+change_state: completed
 tags: [change, verification, buildings, rooms]
 ---
 
@@ -20,7 +20,7 @@ tags: [change, verification, buildings, rooms]
 - Task 2: RED/GREEN migration contract tests, 5 passed; focused ESLint passed; SQL review approved. SQL has not been executed in this session.
 - Task 8: six source contract tests observed RED before implementation, then GREEN. Focused page/preview/form suite passed: 3 files / 50 tests, including three rendered interaction checks for override persistence/reset, edited payload submission, same-price reset, room validation, server duplicate rows and loading locks. `npm run typecheck` and scoped ESLint passed. Browser visual QA remains a separate pending gate.
 - [x] 2026-11-11 full local gate: `npm run typecheck && npm test && npm run lint && npm run knowledge:check` exited 0. Typecheck passed; 393 test files / 2,495 tests passed; ESLint reported 0 errors and one warning in unchanged `AppAiDevChat.vue:427` (`vue/no-v-html`); OKF verified 329 concepts / 26 indexes. Full output: `/private/tmp/zeno-pr0-sdd/task-9-full-checks.log` (local session artifact).
-- [ ] Whole-PR review and CI.
+- [ ] Whole-PR review and CI — PR #21 merged into `develop` on 2026-11-11 (`a0096bab`) by the user; CI "Lint & Type Checking" was still pending when last checked, result not recorded here.
 
 ## SQL source review and adaptations
 
@@ -54,23 +54,26 @@ Native Chrome QA is currently blocked by `cgWindowNotFound` and an unavailable b
 
 - 2026-11-11 browser pass at the shared tab's fixed ~873px CSS width (bottom-nav layout; viewport resize was not applied by the tool), dark theme, dev server on `https://localhost:3001`: generator defaults above the preview; floor, rent and area overrides each show the tinted cell, "Đã sửa" and a "Mặc định" reset; same-price off makes rent editable; reset returns the cell to the default; address validation blocks submit; room validation shows "Kiểm tra thông tin phòng: Diện tích phải > 0" above the preview. No building was submitted.
 - [ ] Desktop 1280px — not observed (tab width could not be changed).
-- [ ] Mobile 375px — not observed (tab width could not be changed).
-- [ ] Loading, duplicate server-error and network-error states — need the migration applied or a mocked API; not observed.
+- [x] Mobile layout — 2026-11-11 the user reported the mobile preview looked wrong (table forced horizontal scroll and cut the area column). Below 640px the preview is now a compact four-column list (room, floor, rent, m²) with an icon reset per edited cell; 640px and above keep the table. Cell editing moved to `QuickRoomCellEditor.vue`, shared by both layouts. Observed at ~582px in the browser; quick-room tests 10/10, full suite 2,496 tests, typecheck and ESLint passed (commit `1b774cc2`). The user confirmed the result on 2026-11-11. A true 375px width was not observed by the agent.
+- [ ] Loading, duplicate server-error and network-error states in the browser — not observed; covered by rendered component tests only.
 
 ## Cloud gates — human-run
 
 Local tests and code reviews do not establish cloud rollout or runtime SQL correctness.
 
-- [ ] Fresh backup before rollout.
-- [ ] `supabase db push --dry-run` reviewed, then migration pushed.
-- [ ] Migration `20261111090000_create_building_with_rooms.sql` applied.
-- [ ] `supabase/verification/create_building_with_rooms.sql` passed.
-- [ ] Separate-session batch and request concurrency checks passed.
-- [ ] Effective grants: anon/authenticated cannot execute; service_role can execute.
-- [ ] `app/types/database.types.ts` regenerated from the updated cloud schema, followed by typecheck.
-- [ ] Application deployed and smoke checked: create 30 rooms atomically, retry after lost response resolves to the same building.
+- [x] Fresh backup before rollout — user confirmed 2026-11-11 (not independently verified).
+- [x] `supabase db push --dry-run` reviewed (2026-11-11, production `zeno-house`): exactly one pending migration, `20261111090000`; then pushed.
+- [x] Migration `20261111090000_create_building_with_rooms.sql` applied to production on 2026-11-11 with `supabase db push --linked --yes` after the user's explicit approval; CLI reported "Finished supabase db push".
+- [x] `supabase/verification/create_building_with_rooms.sql` passed on production, 2026-11-11, run with `supabase db query --linked --yes -f` after the user's explicit approval. The first run failed at VERIFY 4 only because the script expected duplicate detail `["A1","a1"]` while the database collation orders it `["a1","A1"]`; the assertion now compares as a set and the rerun completed without error. Afterwards no `pr0-%` buildings or `building.create:%` operations remained (rolled back).
+- [ ] Separate-session batch and request concurrency checks — partial, 2026-11-11 on production: two overlapping `supabase db query` sessions ran an identical rollback-only `create_building_with_rooms` call (same request ID and actor) that holds its transaction 8 seconds. One session alone took 9s; both together took 17s, so the second waited for the first. Nothing was left behind (0 `pr0-%` buildings, 0 `building.create:%` operations). Not covered: the committed case (second session replays the same Building after the first commits; different actor gets `BUILDING_SETUP_REQUEST_CONFLICT`), which needs two interactive SQL Editor sessions and a disposable fixture.
+- [x] Effective grants (read-only query on production, 2026-11-11): `create_building_with_rooms(jsonb,jsonb,uuid,uuid,uuid)` and `create_rooms_batch(uuid,jsonb)` both have anon=false, authenticated=false, service_role=true, `prosecdef=false`, `search_path=""`.
+- [x] `app/types/database.types.ts` regenerated from the cloud schema (+33 lines, both RPCs only); `npm run typecheck` passed.
+- [x] Application smoke (user-reported, 2026-11-11): the user ran the smoke test manually and said it was "tạm ok" (acceptable for now). No output, building ID or retry-after-lost-response result was attached, so this is a user statement, not agent-verified evidence. The agent's own attempt filled a 30-room preview on the local dev server but the automated submit button stayed disabled, so nothing was submitted.
 
 ## Acceptance
 
-- [ ] Cloud evidence attached and behavior accepted.
-- [ ] Accepted capability deltas reconciled and change bundle archived with provenance.
+- [x] 2026-11-11: the user accepted PR0 ("đã ổn") and asked to reconcile and archive.
+- [x] Capability deltas reconciled: [buildings-api](../../capabilities/buildings-api.md), [buildings-ui](../../capabilities/buildings-ui.md), [rooms-api](../../capabilities/rooms-api.md), [rooms-database](../../capabilities/rooms-database.md).
+- [x] Change bundle archived under `docs/history/2026-11-11-atomic-building-room-setup/`.
+
+Accepted with these gates still open, carried as follow-ups rather than claimed as passed: CI result for PR #21, desktop 1280px and true 375px inspection, browser loading/duplicate/network-error states, the committed two-session concurrency case, and the retry-after-lost-response smoke (the 30-room create was user-reported OK).

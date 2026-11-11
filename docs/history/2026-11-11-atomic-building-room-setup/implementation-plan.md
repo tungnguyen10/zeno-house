@@ -1,8 +1,8 @@
 ---
 type: Change Implementation Plan
 title: "atomic-building-room-setup-implementation-plan"
-status: draft
-change_state: implementation-review
+status: deprecated
+change_state: completed
 tags: [superpowers, change, buildings, rooms, migration, v2]
 ---
 
@@ -1797,8 +1797,8 @@ Expected: all pass. Fix and re-run on failure; record outputs in `verification.m
 ---
 type: Change Verification
 title: "atomic-building-room-setup-verification"
-status: draft
-change_state: verification-pending
+status: deprecated
+change_state: completed
 tags: [change, verification, buildings, rooms]
 ---
 

@@ -1,14 +1,14 @@
 ---
 type: Change Design
 title: "atomic-building-room-setup-design"
-status: draft
-change_state: design-review
+status: deprecated
+change_state: completed
 tags: [superpowers, change, buildings, rooms, migration, v2]
 ---
 
 # PR0 — Tạo Building + phòng hàng loạt nguyên tử
 
-> Sub-project đầu tiên (P0) của [ZENO House V2 — Flow Optimization Brief](../zeno-house-v2-optimization/brief.md). Thiết kế này chưa được chấp nhận hay triển khai; yêu cầu đã chấp nhận vẫn nằm ở `docs/capabilities/**`.
+> Sub-project đầu tiên (P0) của [ZENO House V2 — Flow Optimization Brief](../../changes/zeno-house-v2-optimization/brief.md). Thiết kế này chưa được chấp nhận hay triển khai; yêu cầu đã chấp nhận vẫn nằm ở `docs/capabilities/**`.
 
 ## 1. Mục tiêu
 
@@ -95,7 +95,7 @@ Sau commit, giống hành vi hiện tại:
 - `USER_ASSIGNMENT_ADDED` nếu owner.
 - N × `ROOM_CREATED` qua một lần `AuditService.appendBulk`.
 
-Rủi ro đã biết: audit lỗi sau commit → dữ liệu còn nhưng thiếu dấu vết; đây là hành vi chung hiện tại, do [harden-event-audit](../harden-event-audit/verification.md) theo dõi, ngoài phạm vi PR0.
+Rủi ro đã biết: audit lỗi sau commit → dữ liệu còn nhưng thiếu dấu vết; đây là hành vi chung hiện tại, do [harden-event-audit](../../changes/harden-event-audit/verification.md) theo dõi, ngoài phạm vi PR0.
 
 ## 6. UI và composable
 
@@ -165,7 +165,7 @@ Test hẹp trước, sau đó `npm run typecheck`, `npm test`, `npm run lint`, `
 ## 8. Tài liệu
 
 - Change bundle: `index.md`, `design.md` (file này), `implementation-plan.md` (checklist duy nhất), `verification.md`.
-- Liên kết từ [brief](../zeno-house-v2-optimization/brief.md) và [changes index](../index.md).
+- Liên kết từ [brief](../../changes/zeno-house-v2-optimization/brief.md) và [changes index](../../changes/index.md).
 - Khi chấp nhận: cập nhật [buildings-api](../../capabilities/buildings-api.md), [rooms-api](../../capabilities/rooms-api.md), [rooms-database](../../capabilities/rooms-database.md), [buildings-ui](../../capabilities/buildings-ui.md); chuyển bundle sang `docs/history/`.
 
 ## 9. Ngoài phạm vi PR0
