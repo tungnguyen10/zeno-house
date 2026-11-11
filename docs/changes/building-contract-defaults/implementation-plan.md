@@ -1407,11 +1407,11 @@ git commit -m "feat(buildings): contract profile composable and payment window f
 - Component props: `{ profile: BuildingContractProfile | null; building: Building; canEdit: boolean; saving: boolean; error: string | null; editPath: string }`
 - Emits: `save: [input: BuildingContractProfileInput]`
 
-- [ ] **Step 1: UI polish workflow (no code yet)**
+- [x] **Step 1: UI polish workflow (no code yet)**
 
 Read `.agents/skills/zeno-house/references/ui-polish-workflow.md`; apply `frontend-design` and Hallmark. Mirror `BuildingInvoiceProfileSettings.vue` structure and density. Decide grouping/layout for the 5 groups, how the masked state reads for managers, the payment-window preview treatment, and mobile layout. Record decisions in `docs/changes/building-contract-defaults/verification.md` → "UI decisions". If a new token/primitive seems necessary, stop and ask (problem, option, affected surfaces, benefit, cost).
 
-- [ ] **Step 2: Write failing tests**
+- [x] **Step 2: Write failing tests**
 
 ```ts
 // tests/components/buildings/BuildingContractProfileSettings.test.ts
@@ -1474,9 +1474,9 @@ describe('building settings contract profile section', () => {
 
 Adjust the mount setup to match existing component tests (global stubs/plugins) — check `tests/components/**` for the shared pattern before writing.
 
-- [ ] **Step 3: Run to verify failure.**
+- [x] **Step 3: Run to verify failure.**
 
-- [ ] **Step 4: Implement the component**
+- [x] **Step 4: Implement the component**
 
 Script outline (template follows the Step 1 decisions using `UiFormSection`, `UiInput`, `UiAlert`, `UiButton`, `UiBadge`):
 
@@ -1545,7 +1545,7 @@ Template requirements (verified by tests):
 - When the owner edits an existing masked-for-others id: owner sees full value (not masked) since owner has `pii.read`; `lessor_id_number: ''` from a masked profile only occurs for roles without edit rights, so no accidental wipe.
 - Placeholders as suggestions: notice_days "30", deposit_refund_days "7", renewal_months "6", default_term_months "12", default_deposit_months "1".
 
-- [ ] **Step 5: Wire into the settings page**
+- [x] **Step 5: Wire into the settings page**
 
 In `settings.vue`:
 1. Add a nav item after `invoice-profile`:
@@ -1619,11 +1619,11 @@ async function handleSaveContractProfile(input: BuildingContractProfileInput) {
 
 Add the unsaved-changes guard using the same mechanism the page uses for other sections (search the page for `onBeforeRouteLeave` / `useUnsavedChanges`); if no such mechanism exists for settings sections, skip it and note in `verification.md`.
 
-- [ ] **Step 6: Run tests** → PASS.
+- [x] **Step 6: Run tests** → PASS.
 
 - [ ] **Step 7: Visual QA** (ask before starting a local runtime): owner (empty, partial, complete, save error), manager (masked read-only), schedule missing, mobile 375px. Record in `verification.md`.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add app/components/buildings/BuildingContractProfileSettings.vue app/pages/dashboard/buildings/[id]/settings.vue tests/components/buildings/BuildingContractProfileSettings.test.ts tests/pages/building-settings-contract-profile.spec.ts docs/changes/building-contract-defaults/verification.md
