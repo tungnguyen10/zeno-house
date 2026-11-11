@@ -172,6 +172,18 @@ Không làm lại core renewal/checkout. Kiểm chứng tình trạng migration 
 
 **Quyết định đã chốt cho PR4 (2026-11-10):** trang tạo HĐ một trang (4 khối luôn hiện, 4 khối thu gọn), điền sẵn tối đa, nút "Tạo & xuất DOCX", không bước xác nhận, nhớ lựa chọn gần nhất theo tòa; tạo HĐ + người ở + dịch vụ + nội thất trong một transaction có `request_id`; bản nháp lưu server; DOCX lưu private Storage kèm `sha256` + phiên bản mẫu + snapshot, sinh lỗi thì giữ HĐ và cho "Tạo lại file"; phụ lục là tài liệu riêng; sai thì `voided` + bản thay thế; nội thất bàn giao sửa được tới khi phát hành DOCX.
 
+**Lộ trình triển khai đã chốt (2026-11-11):**
+
+1. **Chuẩn bị (một lần):** commit dependency (`docxtemplater`, `pizzip`, `@anthropic-ai/sdk`); xác minh mục 9 (`supabase migration list` khớp local/remote); backup đầy đủ production.
+2. **Mỗi PR theo thứ tự PR0 → PR1 → PR2 → PR3 → PR4a → PR4b → PR5:**
+   1. Nhánh `feat/v2-prN-<slug>` từ `develop`.
+   2. Thực thi subagent-driven theo `implementation-plan.md`: mỗi task một subagent, TDD, review sau mỗi task.
+   3. PR có UI (PR2, PR3, PR4a, PR4b, PR5): duyệt hướng UI với người dùng trước khi code UI; visual QA desktop/mobile.
+   4. `npm run typecheck && npm test && npm run lint && npm run knowledge:check`; review toàn PR; merge vào `develop`.
+   5. PR có migration (PR0, PR1, PR2, PR4a, PR4b, PR5): cloud gate do người dùng chạy — backup → `supabase db push --dry-run` → push → SQL verification → regenerate types → deploy → smoke.
+   6. Ghi `verification.md`, cập nhật `docs/capabilities/**`, chuyển bundle sang `docs/history/**` khi chấp nhận.
+3. **Quyết định:** chỉ số bàn giao chỉ bắt buộc khi phòng chưa có chỉ số trước đó; PR5 chỉ bật feature flag sau khi qua G1–G5.
+
 ## 7. Acceptance scenarios (bắt buộc)
 
 1. **First setup:** Tạo Building, cấu hình đủ để ký HĐ và nhận tiền mà không trùng dữ liệu giữa form và settings.
