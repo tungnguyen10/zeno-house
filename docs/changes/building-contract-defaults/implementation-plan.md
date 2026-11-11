@@ -261,7 +261,7 @@ git commit -m "feat(db): add building_contract_profiles table"
   export const CONTRACT_PROFILE_PII_FIELDS = ['lessor_date_of_birth', 'lessor_permanent_address', 'lessor_id_number'] as const
   ```
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 ```ts
 // tests/utils/building-contract-profile-validator.test.ts
@@ -360,11 +360,11 @@ describe('building contract profile mapper', () => {
 })
 ```
 
-- [ ] **Step 2: Run to verify failure** — `npx vitest run tests/utils/building-contract-profile-validator.test.ts tests/utils/building-contract-profile-mapper.test.ts` → FAIL (modules missing).
+- [x] **Step 2: Run to verify failure** — `npx vitest run tests/utils/building-contract-profile-validator.test.ts tests/utils/building-contract-profile-mapper.test.ts` → FAIL (modules missing).
 
-- [ ] **Step 3: Implement the types file** exactly as in **Interfaces** above.
+- [x] **Step 3: Implement the types file** exactly as in **Interfaces** above.
 
-- [ ] **Step 4: Implement the mapper**
+- [x] **Step 4: Implement the mapper**
 
 ```ts
 // app/utils/mappers/building-contract-profile.ts
@@ -440,7 +440,7 @@ export function maskBuildingContractProfile(profile: BuildingContractProfile): B
 }
 ```
 
-- [ ] **Step 5: Implement the validator**
+- [x] **Step 5: Implement the validator**
 
 ```ts
 // app/utils/validators/building-contract-profile.ts
@@ -512,9 +512,9 @@ export const buildingContractProfileSchema = z.object({
 export type BuildingContractProfileInput = z.infer<typeof buildingContractProfileSchema>
 ```
 
-- [ ] **Step 6: Run tests** — both files PASS.
+- [x] **Step 6: Run tests** — both files PASS.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add app/types/building-contract-profile.ts app/utils/mappers/building-contract-profile.ts app/utils/validators/building-contract-profile.ts tests/utils/building-contract-profile-*.test.ts
