@@ -1129,7 +1129,7 @@ git commit -m "feat(api): building contract profile and readiness endpoints"
 **Interfaces:**
 - `BuildingSettingsBootstrap` gains `contractProfile: BuildingContractProfile | null` and `readiness: BuildingReadiness`.
 
-- [ ] **Step 1: Write failing tests** (in the existing bootstrap test file, add mocks for `BuildingContractProfileService.get` and `.readiness`):
+- [x] **Step 1: Write failing tests** (in the existing bootstrap test file, add mocks for `BuildingContractProfileService.get` and `.readiness`):
 
 ```ts
 it('includes contract profile and readiness', async () => {
@@ -1152,9 +1152,9 @@ it('skips the profile when the role cannot read it', async () => {
 
 Adapt variable names to the existing file's mocks.
 
-- [ ] **Step 2: Run to verify failure.**
+- [x] **Step 2: Run to verify failure.**
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 In `app/types/building-settings.ts` import `BuildingContractProfile, BuildingReadiness` from `./building-contract-profile` and add:
 
@@ -1174,9 +1174,9 @@ In `server/services/buildings/settings-bootstrap.ts`, import `BuildingContractPr
 
 destructure as `contractProfile, readiness` and add both to the returned object.
 
-- [ ] **Step 4: Run tests** → PASS.
+- [x] **Step 4: Run tests** → PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/types/building-settings.ts server/services/buildings/settings-bootstrap.ts tests/server/buildings

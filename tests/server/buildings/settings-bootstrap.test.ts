@@ -3,6 +3,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const mocks = vi.hoisted(() => ({
   buildingGet: vi.fn(),
   invoiceProfileGet: vi.fn(),
+  contractProfileGet: vi.fn(),
+  contractReadiness: vi.fn(),
   invoiceEmailSettingsGet: vi.fn(),
   buildingServicesList: vi.fn(),
   contractServicesList: vi.fn(),
@@ -15,8 +17,10 @@ const mocks = vi.hoisted(() => ({
   prepaidList: vi.fn(),
 }))
 
-vi.stubGlobal('can', (_user: unknown, capability: string) => !capability.endsWith('.write'))
 vi.mock('../../../server/services/buildings', () => ({ BuildingService: { get: mocks.buildingGet } }))
+vi.mock('../../../server/services/buildings/contract-profile', () => ({
+  BuildingContractProfileService: { get: mocks.contractProfileGet, readiness: mocks.contractReadiness },
+}))
 vi.mock('../../../server/services/buildings/invoice-profile', () => ({ BuildingInvoiceProfileService: { get: mocks.invoiceProfileGet } }))
 vi.mock('../../../server/services/buildings/invoice-email-settings', () => ({
   BuildingInvoiceEmailSettingsService: { get: mocks.invoiceEmailSettingsGet },
@@ -34,6 +38,9 @@ vi.mock('../../../server/services/operations-report/prepaid-expenses', () => ({ 
 describe('BuildingSettingsBootstrapService', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.stubGlobal('can', (_user: unknown, capability: string) => !capability.endsWith('.write'))
+    mocks.contractProfileGet.mockResolvedValue(null)
+    mocks.contractReadiness.mockResolvedValue({ contract: { ready: false, missing: ['invoice_profile'] }, billing: { ready: true, missing: [] } })
     mocks.buildingGet.mockResolvedValue({ id: 'building-1', slug: 'toa-a' })
     mocks.invoiceProfileGet.mockResolvedValue(null)
     mocks.invoiceEmailSettingsGet.mockResolvedValue({
@@ -67,6 +74,8 @@ describe('BuildingSettingsBootstrapService', () => {
     expect(result).toMatchObject({
       building: { id: 'building-1' },
       invoiceProfile: null,
+      contractProfile: null,
+      readiness: { contract: { ready: false, missing: ['invoice_profile'] }, billing: { ready: true, missing: [] } },
       invoiceEmailAvailable: false,
       invoiceEmailSettings: {
         buildingId: 'building-1',
@@ -86,5 +95,46 @@ describe('BuildingSettingsBootstrapService', () => {
     expect(mocks.contractsList).toHaveBeenCalledWith(event, user, expect.objectContaining({
       building_id: 'building-1', status: ['active'], page: 1, limit: 200,
     }))
+  })
+
+  it('includes the service-masked contract profile and readiness for managers', async () => {
+    const event = { context: {} } as never
+    const manager = { id: 'manager-1', app_metadata: { role: 'manager' } } as never
+    mocks.contractProfileGet.mockResolvedValue({
+      buildingId: 'building-1', lessorIdNumber: '*******8901', lessorIdentityMasked: true,
+      lessorDateOfBirth: null, lessorPermanentAddress: null,
+    })
+    const { BuildingSettingsBootstrapService } = await import('../../../server/services/buildings/settings-bootstrap')
+
+    const result = await BuildingSettingsBootstrapService.get(event, manager, 'toa-a')
+
+    expect(result.contractProfile).toMatchObject({ lessorIdentityMasked: true, lessorIdNumber: '*******8901' })
+    expect(result.readiness.contract).toEqual({ ready: false, missing: ['invoice_profile'] })
+    expect(JSON.stringify(result)).not.toContain('012345678901')
+    expect(mocks.contractProfileGet).toHaveBeenCalledWith(event, manager, 'building-1')
+    expect(mocks.contractReadiness).toHaveBeenCalledWith(event, manager, 'building-1')
+  })
+
+  it('skips the contract profile when the caller cannot read it', async () => {
+    vi.stubGlobal('can', (_user: unknown, capability: string) => capability !== 'building-contract-profile.read')
+    const { BuildingSettingsBootstrapService } = await import('../../../server/services/buildings/settings-bootstrap')
+
+    const result = await BuildingSettingsBootstrapService.get({ context: {} } as never, {} as never, 'toa-a')
+
+    expect(mocks.contractProfileGet).not.toHaveBeenCalled()
+    expect(result.contractProfile).toBeNull()
+    expect(mocks.contractReadiness).toHaveBeenCalledOnce()
+  })
+
+  it('preserves initial building authorization failures before loading settings', async () => {
+    mocks.buildingGet.mockRejectedValueOnce(Object.assign(new Error('Forbidden'), { statusCode: 403 }))
+    const { BuildingSettingsBootstrapService } = await import('../../../server/services/buildings/settings-bootstrap')
+
+    await expect(BuildingSettingsBootstrapService.get({ context: {} } as never, {} as never, 'toa-a'))
+      .rejects.toMatchObject({ statusCode: 403 })
+
+    expect(mocks.contractProfileGet).not.toHaveBeenCalled()
+    expect(mocks.contractReadiness).not.toHaveBeenCalled()
+    expect(mocks.invoiceProfileGet).not.toHaveBeenCalled()
   })
 })

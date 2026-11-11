@@ -11,6 +11,7 @@ import { RecurringExpenseService } from '../operations-report/recurring-expenses
 import { ReserveFundService } from '../operations-report/reserve-funds'
 import { ServiceCatalogService } from '../service-catalog'
 import { BuildingService } from './index'
+import { BuildingContractProfileService } from './contract-profile'
 import { BuildingInvoiceProfileService } from './invoice-profile'
 import { BuildingInvoiceEmailSettingsService } from './invoice-email-settings'
 
@@ -25,6 +26,8 @@ export const BuildingSettingsBootstrapService = {
 
     const [
       invoiceProfile,
+      contractProfile,
+      readiness,
       invoiceEmailSettings,
       buildingServices,
       contractServices,
@@ -39,6 +42,10 @@ export const BuildingSettingsBootstrapService = {
       can(user, 'building-invoice-profile.read')
         ? BuildingInvoiceProfileService.get(event, user, buildingId)
         : Promise.resolve(null),
+      can(user, 'building-contract-profile.read')
+        ? BuildingContractProfileService.get(event, user, buildingId)
+        : Promise.resolve(null),
+      BuildingContractProfileService.readiness(event, user, buildingId),
       can(user, 'invoice-email-settings.read')
         ? BuildingInvoiceEmailSettingsService.get(event, user, buildingId)
         : Promise.resolve(null),
@@ -71,6 +78,8 @@ export const BuildingSettingsBootstrapService = {
     return {
       building,
       invoiceProfile,
+      contractProfile,
+      readiness,
       invoiceEmailAvailable: useRuntimeConfig(event).public.invoiceEmailEnabled === true,
       invoiceEmailSettings,
       buildingServices,
