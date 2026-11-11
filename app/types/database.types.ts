@@ -3861,6 +3861,16 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      create_building_with_rooms: {
+        Args: {
+          p_actor_id: string
+          p_assign_owner: string
+          p_building: Json
+          p_request_id: string
+          p_rooms: Json
+        }
+        Returns: Json
+      }
       create_contract_amendment_draft: {
         Args: {
           p_actor_id: string
@@ -3963,6 +3973,29 @@ export type Database = {
           p_period_year: number
         }
         Returns: Json
+      }
+      create_rooms_batch: {
+        Args: { p_building_id: string; p_rooms: Json }
+        Returns: {
+          area: number | null
+          building_id: string
+          code: string
+          created_at: string
+          description: string | null
+          floor: number
+          id: string
+          monthly_rent: number
+          room_number: string
+          slug: string
+          status: string
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "rooms"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       dashboard_source_snapshot: {
         Args: {

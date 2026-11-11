@@ -61,13 +61,13 @@ Native Chrome QA is currently blocked by `cgWindowNotFound` and an unavailable b
 
 Local tests and code reviews do not establish cloud rollout or runtime SQL correctness.
 
-- [ ] Fresh backup before rollout.
-- [ ] `supabase db push --dry-run` reviewed, then migration pushed.
-- [ ] Migration `20261111090000_create_building_with_rooms.sql` applied.
-- [ ] `supabase/verification/create_building_with_rooms.sql` passed.
-- [ ] Separate-session batch and request concurrency checks passed.
-- [ ] Effective grants: anon/authenticated cannot execute; service_role can execute.
-- [ ] `app/types/database.types.ts` regenerated from the updated cloud schema, followed by typecheck.
+- [x] Fresh backup before rollout — user confirmed 2026-11-11 (not independently verified).
+- [x] `supabase db push --dry-run` reviewed (2026-11-11, production `zeno-house`): exactly one pending migration, `20261111090000`; then pushed.
+- [x] Migration `20261111090000_create_building_with_rooms.sql` applied to production on 2026-11-11 with `supabase db push --linked --yes` after the user's explicit approval; CLI reported "Finished supabase db push".
+- [ ] `supabase/verification/create_building_with_rooms.sql` passed — not run; human-run in SQL Editor.
+- [ ] Separate-session batch and request concurrency checks passed — not run.
+- [x] Effective grants (read-only query on production, 2026-11-11): `create_building_with_rooms(jsonb,jsonb,uuid,uuid,uuid)` and `create_rooms_batch(uuid,jsonb)` both have anon=false, authenticated=false, service_role=true, `prosecdef=false`, `search_path=""`.
+- [x] `app/types/database.types.ts` regenerated from the cloud schema (+33 lines, both RPCs only); `npm run typecheck` passed.
 - [ ] Application deployed and smoke checked: create 30 rooms atomically, retry after lost response resolves to the same building.
 
 ## Acceptance
