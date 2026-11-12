@@ -1,6 +1,6 @@
 # Room setup & inventory lite (V2 PR2)
 
-**Status: implementing.** Depends on [atomic-building-room-setup](../../history/2026-11-11-atomic-building-room-setup/index.md).
+**Status: implementation-review.** Source tasks 1-11 are complete; visual QA and cloud gates are pending. Depends on [atomic-building-room-setup](../../history/2026-11-11-atomic-building-room-setup/index.md).
 
 - [Design](./design.md)
 - [Implementation plan](./implementation-plan.md)

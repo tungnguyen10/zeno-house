@@ -16,6 +16,10 @@ Task 1: `20261112005547_inventory_lite.sql` plus rollback verification script ad
 
 Task 2: inventory DTOs, mapper, shared item/list/apply/batch validators added; observed missing-module RED then 18 tests passed, scoped lint passed. Independent specification/code review passed with no findings.
 
+Tasks 4-10 (2026-11-12): inventory repository/service/audit, inventory and batch-room API routes, contract handover capture and read (ancestry restricted to the authorized building, cycle-safe), shared UI components, building pages (create generator, batch page, settings template with apply modal), room inventory section, contract form handover section, contract detail and checkout reference panel were implemented with tests first. The PR0 create-page test that asserted the replaced count/prefix inputs was superseded by `tests/pages/buildings-create-room-generator.spec.ts`. Audit display labels were added for the three inventory actions.
+
+Task 11 source gates (2026-11-12): `npm run typecheck` exit 0; `npm test` 410 files / 2,624 tests passed; `npm run lint` exit 0 (one pre-existing `vue/no-v-html` warning in AppAiDevChat.vue); `npm run knowledge:check` passed. These are static/mocked checks; SQL compilation, runtime and concurrency are not claimed.
+
 ## Preflight decisions
 
 Use the atomic replacement RPC option already offered by Task 4, so an insert failure cannot erase an existing template or room list. Replacement and template application share a per-building transaction lock; merged room lists also respect the 50-item limit. Validate wrapper JSON and numeric bounds rather than relying on implicit casts/rounding. Read handover ancestry only inside the already-authorized building. Existing production RPCs and financial calculations remain unchanged.

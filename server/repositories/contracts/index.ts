@@ -308,18 +308,20 @@ export const ContractRepository = {
   },
 
   async findHandoverInventory(event: H3Event, contractId: string, buildingId: string): Promise<HandoverInventory> {
+    type ChainRow = { id: string, contract_code: string, previous_contract_id: string | null }
     const client = await serverSupabaseClient(event)
     const visited = new Set<string>()
     let currentId: string | null = contractId
     while (currentId && !visited.has(currentId) && visited.size < 20) {
       visited.add(currentId)
-      const { data: contract, error } = await client
+      const result: { data: ChainRow | null, error: unknown } = await client
         .from('contracts')
         .select('id, contract_code, previous_contract_id')
         .eq('id', currentId)
         .eq('building_id', buildingId)
-        .maybeSingle()
-      if (error) throwDbError(error, 'contracts.findHandoverInventory.contract')
+        .maybeSingle<ChainRow>()
+      if (result.error) throwDbError(result.error, 'contracts.findHandoverInventory.contract')
+      const contract = result.data
       if (!contract) break
       const { data: items, error: itemsError } = await client
         .from('contract_inventory_items' as never)
