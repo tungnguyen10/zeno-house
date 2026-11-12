@@ -8,7 +8,7 @@ tags: [api, generated, engineering]
 # API Inventory And Performance Contracts
 
 Generated from checked-in handlers by `node scripts/generate-api-inventory.mjs`.
-Route count: **211**.
+Route count: **217**.
 
 All business routes require server-side authorization unless explicitly documented as an internal-secret route. Initial reads use Nuxt `useFetch`; imperative reads and mutations use `apiFetch` with a 15-second timeout, request ID, no automatic mutation retry, and normalized server envelopes.
 
@@ -84,11 +84,15 @@ All business routes require server-side authorization unless explicitly document
 | DELETE | `/api/buildings/[id]` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | GET | `/api/buildings/[id]` | n/a | request/DTO policy | p95 ≤ 250ms |
 | PATCH | `/api/buildings/[id]` | n/a | invalidate affected domain | p95 ≤ 250ms |
+| POST | `/api/buildings/[id]/inventory-template/apply` | n/a | invalidate affected domain | p95 ≤ 250ms |
+| GET | `/api/buildings/[id]/inventory-template` | domain-bounded | request/DTO policy | p95 ≤ 400ms |
+| PUT | `/api/buildings/[id]/inventory-template` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | GET | `/api/buildings/[id]/invoice-email-settings` | domain-bounded | request/DTO policy | p95 ≤ 400ms |
 | PUT | `/api/buildings/[id]/invoice-email-settings` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | GET | `/api/buildings/[id]/invoice-profile` | domain-bounded | request/DTO policy | p95 ≤ 400ms |
 | PUT | `/api/buildings/[id]/invoice-profile` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | GET | `/api/buildings/[id]/rooms/[room]` | n/a | request/DTO policy | p95 ≤ 250ms |
+| POST | `/api/buildings/[id]/rooms/batch` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | GET | `/api/buildings/[id]/settings-bootstrap` | n/a | request/DTO policy | p95 ≤ 800ms |
 | PATCH | `/api/buildings/[id]/visibility` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | POST | `/api/buildings/bulk` | n/a | invalidate affected domain | p95 ≤ 250ms |
@@ -169,6 +173,8 @@ All business routes require server-side authorization unless explicitly document
 | DELETE | `/api/rooms/[id]` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | GET | `/api/rooms/[id]` | n/a | request/DTO policy | p95 ≤ 250ms |
 | PATCH | `/api/rooms/[id]` | n/a | invalidate affected domain | p95 ≤ 250ms |
+| GET | `/api/rooms/[id]/inventory` | n/a | request/DTO policy | p95 ≤ 250ms |
+| PUT | `/api/rooms/[id]/inventory` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | POST | `/api/rooms/bulk` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | GET | `/api/rooms` | bounded | request/DTO policy | p95 ≤ 400ms |
 | POST | `/api/rooms` | n/a | invalidate affected domain | p95 ≤ 250ms |
