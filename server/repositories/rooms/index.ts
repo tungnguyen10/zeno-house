@@ -221,7 +221,7 @@ export const RoomRepository = {
     const ids = (contracts ?? []).map(c => c.id)
     if (ids.length === 0) return 0
     const { count, error } = await client
-      .from('contract_documents' as never)
+      .from('contract_documents')
       .select('id', { count: 'exact', head: true })
       .in('contract_id', ids)
     if (error) throwDbError(error, 'rooms.countContractDocumentsForRoom')
@@ -263,7 +263,7 @@ export const RoomRepository = {
     opts: { applyInventory: boolean; actorId: string; requestId: string },
   ): Promise<{ rooms: Room[]; replayed: boolean }> {
     // Authorization and scope checks are enforced in RoomService.
-    const { data, error } = await serverSupabaseClient(event).rpc('create_rooms_batch_idempotent' as never, {
+    const { data, error } = await serverSupabaseClient(event).rpc('create_rooms_batch_idempotent', {
       p_building_id: buildingId,
       p_rooms: rooms.map(room => ({
         room_number: room.room_number,
@@ -275,7 +275,7 @@ export const RoomRepository = {
       p_apply_inventory: opts.applyInventory,
       p_actor_id: opts.actorId,
       p_request_id: opts.requestId,
-    } as never)
+    })
     if (error) {
       throwBuildingSetupError(error)
       throwDbError(error, 'rooms.createBatch')

@@ -3,8 +3,7 @@ import { db } from '../utils/db'
 import type { ContractVehicleRow } from '~/utils/mappers/contract-vehicles'
 import type { ContractVehicleInput } from '~/utils/validators/contract-vehicles'
 
-// Cast at the boundary until database.types.ts is regenerated after the cloud migration.
-const from = (event: H3Event) => db(event).from('contract_vehicles' as never)
+const from = (event: H3Event) => db(event).from('contract_vehicles')
 const COLUMNS = 'id, contract_id, owner_name, plate_number, vehicle_type, note, sort_order'
 
 export const ContractVehicleRepository = {
@@ -19,7 +18,7 @@ export const ContractVehicleRepository = {
     if (delError) throwDbError(delError, 'contractVehicles.replace.delete')
     if (items.length === 0) return []
     const rows = items.map((item, index) => ({ contract_id: contractId, ...item, sort_order: index }))
-    const { data, error } = await from(event).insert(rows as never).select(COLUMNS).order('sort_order')
+    const { data, error } = await from(event).insert(rows).select(COLUMNS).order('sort_order')
     if (error) {
       if ((error as { code?: string }).code === '23505') throwConflict('Biển số xe bị trùng', { reason: 'CONTRACT_VEHICLE_DUPLICATE' })
       throwDbError(error, 'contractVehicles.replace.insert')

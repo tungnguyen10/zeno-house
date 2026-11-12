@@ -1,13 +1,13 @@
 import type { H3Event } from 'h3'
 import { db } from '../utils/db'
+import type { Json } from '~/types/database.types'
 
 export interface ContractCreateDraftRow {
   payload: Record<string, unknown>
   updated_at: string
 }
 
-// Cast at the boundary until database.types.ts is regenerated after the cloud migration.
-const from = (event: H3Event) => db(event).from('contract_create_drafts' as never)
+const from = (event: H3Event) => db(event).from('contract_create_drafts')
 
 export const ContractCreateDraftRepository = {
   async find(event: H3Event, userId: string): Promise<ContractCreateDraftRow | null> {
@@ -18,7 +18,7 @@ export const ContractCreateDraftRepository = {
 
   async upsert(event: H3Event, userId: string, payload: Record<string, unknown>): Promise<ContractCreateDraftRow> {
     const { data, error } = await from(event)
-      .upsert({ user_id: userId, payload } as never, { onConflict: 'user_id' })
+      .upsert({ user_id: userId, payload: payload as Json }, { onConflict: 'user_id' })
       .select('payload, updated_at')
       .single()
     if (error) throwDbError(error, 'contractCreateDrafts.upsert')

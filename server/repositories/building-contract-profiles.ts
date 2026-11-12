@@ -3,8 +3,7 @@ import { db } from '../utils/db'
 import type { BuildingContractProfileRow } from '~/utils/mappers/building-contract-profile'
 import type { BuildingContractProfileInput } from '~/utils/validators/building-contract-profile'
 
-// Cast at the boundary until database.types.ts is regenerated after the cloud migration.
-const table = (event: H3Event) => db(event).from('building_contract_profiles' as never)
+const table = (event: H3Event) => db(event).from('building_contract_profiles')
 
 export const BuildingContractProfileRepository = {
   async findByBuildingId(event: H3Event, buildingId: string): Promise<BuildingContractProfileRow | null> {
@@ -20,7 +19,7 @@ export const BuildingContractProfileRepository = {
     actorId: string,
   ): Promise<BuildingContractProfileRow> {
     const { data, error } = await table(event)
-      .upsert({ building_id: buildingId, ...input, updated_by: actorId } as never, { onConflict: 'building_id' })
+      .upsert({ building_id: buildingId, ...input, updated_by: actorId }, { onConflict: 'building_id' })
       .select('*')
       .single()
     if (error) {

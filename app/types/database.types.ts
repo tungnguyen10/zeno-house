@@ -12,31 +12,6 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
       access_requests: {
@@ -731,6 +706,89 @@ export type Database = {
           },
         ]
       }
+      building_contract_profiles: {
+        Row: {
+          brand_name: string | null
+          building_id: string
+          copies_per_party: number
+          created_at: string
+          default_deposit_months: number | null
+          default_term_months: number | null
+          deposit_refund_days: number | null
+          drilling_fee: number | null
+          extra_occupant_fee: number | null
+          fingerprint_reset_fee: number | null
+          lessor_date_of_birth: string | null
+          lessor_full_name: string | null
+          lessor_id_issued_date: string | null
+          lessor_id_issued_place: string | null
+          lessor_id_number: string | null
+          lessor_permanent_address: string | null
+          lessor_phone: string | null
+          notice_days: number | null
+          renewal_months: number | null
+          signed_copies: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          brand_name?: string | null
+          building_id: string
+          copies_per_party?: number
+          created_at?: string
+          default_deposit_months?: number | null
+          default_term_months?: number | null
+          deposit_refund_days?: number | null
+          drilling_fee?: number | null
+          extra_occupant_fee?: number | null
+          fingerprint_reset_fee?: number | null
+          lessor_date_of_birth?: string | null
+          lessor_full_name?: string | null
+          lessor_id_issued_date?: string | null
+          lessor_id_issued_place?: string | null
+          lessor_id_number?: string | null
+          lessor_permanent_address?: string | null
+          lessor_phone?: string | null
+          notice_days?: number | null
+          renewal_months?: number | null
+          signed_copies?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          brand_name?: string | null
+          building_id?: string
+          copies_per_party?: number
+          created_at?: string
+          default_deposit_months?: number | null
+          default_term_months?: number | null
+          deposit_refund_days?: number | null
+          drilling_fee?: number | null
+          extra_occupant_fee?: number | null
+          fingerprint_reset_fee?: number | null
+          lessor_date_of_birth?: string | null
+          lessor_full_name?: string | null
+          lessor_id_issued_date?: string | null
+          lessor_id_issued_place?: string | null
+          lessor_id_number?: string | null
+          lessor_permanent_address?: string | null
+          lessor_phone?: string | null
+          notice_days?: number | null
+          renewal_months?: number | null
+          signed_copies?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "building_contract_profiles_building_id_fkey"
+            columns: ["building_id"]
+            isOneToOne: true
+            referencedRelation: "buildings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       building_expenses: {
         Row: {
           amount: number
@@ -848,6 +906,53 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "building_fixed_costs_building_id_fkey"
+            columns: ["building_id"]
+            isOneToOne: false
+            referencedRelation: "buildings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      building_inventory_templates: {
+        Row: {
+          building_id: string
+          condition: string
+          created_at: string
+          id: string
+          name: string
+          note: string | null
+          quantity: number
+          sort_order: number
+          unit_value: number | null
+          updated_at: string
+        }
+        Insert: {
+          building_id: string
+          condition?: string
+          created_at?: string
+          id?: string
+          name: string
+          note?: string | null
+          quantity?: number
+          sort_order?: number
+          unit_value?: number | null
+          updated_at?: string
+        }
+        Update: {
+          building_id?: string
+          condition?: string
+          created_at?: string
+          id?: string
+          name?: string
+          note?: string | null
+          quantity?: number
+          sort_order?: number
+          unit_value?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "building_inventory_templates_building_id_fkey"
             columns: ["building_id"]
             isOneToOne: false
             referencedRelation: "buildings"
@@ -1476,6 +1581,192 @@ export type Database = {
           },
         ]
       }
+      contract_create_drafts: {
+        Row: {
+          payload: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          payload: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          payload?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      contract_documents: {
+        Row: {
+          amendment_id: string | null
+          building_id: string
+          contract_id: string
+          created_at: string
+          id: string
+          issued_at: string | null
+          issued_by: string | null
+          last_error_code: string | null
+          replaces_document_id: string | null
+          sha256: string | null
+          signed_at: string | null
+          signed_by: string | null
+          signed_date: string
+          size_bytes: number | null
+          snapshot: Json
+          status: string
+          storage_path: string | null
+          template_key: string
+          template_version: number
+          type: string
+          version_no: number
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
+        }
+        Insert: {
+          amendment_id?: string | null
+          building_id: string
+          contract_id: string
+          created_at?: string
+          id?: string
+          issued_at?: string | null
+          issued_by?: string | null
+          last_error_code?: string | null
+          replaces_document_id?: string | null
+          sha256?: string | null
+          signed_at?: string | null
+          signed_by?: string | null
+          signed_date: string
+          size_bytes?: number | null
+          snapshot: Json
+          status?: string
+          storage_path?: string | null
+          template_key: string
+          template_version: number
+          type: string
+          version_no: number
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
+        }
+        Update: {
+          amendment_id?: string | null
+          building_id?: string
+          contract_id?: string
+          created_at?: string
+          id?: string
+          issued_at?: string | null
+          issued_by?: string | null
+          last_error_code?: string | null
+          replaces_document_id?: string | null
+          sha256?: string | null
+          signed_at?: string | null
+          signed_by?: string | null
+          signed_date?: string
+          size_bytes?: number | null
+          snapshot?: Json
+          status?: string
+          storage_path?: string | null
+          template_key?: string
+          template_version?: number
+          type?: string
+          version_no?: number
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_documents_amendment_id_fkey"
+            columns: ["amendment_id"]
+            isOneToOne: false
+            referencedRelation: "contract_amendments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_documents_building_id_fkey"
+            columns: ["building_id"]
+            isOneToOne: false
+            referencedRelation: "buildings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_documents_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contract_browse_rows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_documents_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_documents_replaces_document_id_fkey"
+            columns: ["replaces_document_id"]
+            isOneToOne: false
+            referencedRelation: "contract_documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contract_inventory_items: {
+        Row: {
+          condition: string
+          contract_id: string
+          created_at: string
+          id: string
+          name: string
+          note: string | null
+          quantity: number
+          sort_order: number
+          unit_value: number | null
+        }
+        Insert: {
+          condition: string
+          contract_id: string
+          created_at?: string
+          id?: string
+          name: string
+          note?: string | null
+          quantity: number
+          sort_order?: number
+          unit_value?: number | null
+        }
+        Update: {
+          condition?: string
+          contract_id?: string
+          created_at?: string
+          id?: string
+          name?: string
+          note?: string | null
+          quantity?: number
+          sort_order?: number
+          unit_value?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_inventory_items_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contract_browse_rows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_inventory_items_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contract_occupants: {
         Row: {
           billing_counted: boolean
@@ -1716,6 +2007,57 @@ export type Database = {
           },
           {
             foreignKeyName: "contract_services_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contract_vehicles: {
+        Row: {
+          contract_id: string
+          created_at: string
+          id: string
+          note: string | null
+          owner_name: string
+          plate_number: string
+          sort_order: number
+          updated_at: string
+          vehicle_type: string | null
+        }
+        Insert: {
+          contract_id: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          owner_name: string
+          plate_number: string
+          sort_order?: number
+          updated_at?: string
+          vehicle_type?: string | null
+        }
+        Update: {
+          contract_id?: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          owner_name?: string
+          plate_number?: string
+          sort_order?: number
+          updated_at?: string
+          vehicle_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_vehicles_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contract_browse_rows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_vehicles_contract_id_fkey"
             columns: ["contract_id"]
             isOneToOne: false
             referencedRelation: "contracts"
@@ -2679,6 +3021,53 @@ export type Database = {
           },
         ]
       }
+      room_inventory_items: {
+        Row: {
+          condition: string
+          created_at: string
+          id: string
+          name: string
+          note: string | null
+          quantity: number
+          room_id: string
+          sort_order: number
+          unit_value: number | null
+          updated_at: string
+        }
+        Insert: {
+          condition?: string
+          created_at?: string
+          id?: string
+          name: string
+          note?: string | null
+          quantity?: number
+          room_id: string
+          sort_order?: number
+          unit_value?: number | null
+          updated_at?: string
+        }
+        Update: {
+          condition?: string
+          created_at?: string
+          id?: string
+          name?: string
+          note?: string | null
+          quantity?: number
+          room_id?: string
+          sort_order?: number
+          unit_value?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "room_inventory_items_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rooms: {
         Row: {
           area: number | null
@@ -3307,6 +3696,10 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      apply_inventory_template: {
+        Args: { p_building_id: string; p_mode: string; p_room_ids: string[] }
+        Returns: Json
+      }
       apply_invoice_email_webhook_event: {
         Args: {
           p_event_created_at: string
@@ -3596,6 +3989,41 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      claim_stale_contract_documents: {
+        Args: { p_older_than: string }
+        Returns: {
+          amendment_id: string | null
+          building_id: string
+          contract_id: string
+          created_at: string
+          id: string
+          issued_at: string | null
+          issued_by: string | null
+          last_error_code: string | null
+          replaces_document_id: string | null
+          sha256: string | null
+          signed_at: string | null
+          signed_by: string | null
+          signed_date: string
+          size_bytes: number | null
+          snapshot: Json
+          status: string
+          storage_path: string | null
+          template_key: string
+          template_version: number
+          type: string
+          version_no: number
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "contract_documents"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       cleanup_expired_ai_conversations: {
         Args: { p_limit?: number }
         Returns: number
@@ -3861,6 +4289,16 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      create_building_with_rooms: {
+        Args: {
+          p_actor_id: string
+          p_assign_owner: string
+          p_building: Json
+          p_request_id: string
+          p_rooms: Json
+        }
+        Returns: Json
+      }
       create_contract_amendment_draft: {
         Args: {
           p_actor_id: string
@@ -3900,6 +4338,18 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      create_contract_full: {
+        Args: {
+          p_actor_id: string
+          p_contract: Json
+          p_inventory: Json
+          p_occupants: Json
+          p_request_id: string
+          p_services: Json
+          p_vehicles: Json
+        }
+        Returns: Json
+      }
       create_contract_with_handover: {
         Args: {
           p_building_id: string
@@ -3909,6 +4359,56 @@ export type Database = {
           p_handover_electricity_reading: number
           p_handover_reading_date: string
           p_handover_water_reading: number
+          p_monthly_rent: number
+          p_notes: string
+          p_occupant_count: number
+          p_payment_due_day: number
+          p_recorded_by: string
+          p_room_id: string
+          p_start_date: string
+          p_status: string
+          p_surcharge_amount: number
+          p_tenant_id: string
+        }
+        Returns: {
+          building_id: string
+          contract_code: string
+          created_at: string
+          deposit: number
+          discount_amount: number
+          end_date: string
+          id: string
+          monthly_rent: number
+          notes: string | null
+          occupant_count: number
+          original_end_date: string | null
+          payment_due_day: number | null
+          previous_contract_id: string | null
+          renewal_count: number
+          room_id: string
+          start_date: string
+          status: string
+          surcharge_amount: number
+          tenant_id: string
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "contracts"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      create_contract_with_handover_and_inventory: {
+        Args: {
+          p_building_id: string
+          p_deposit: number
+          p_discount_amount: number
+          p_end_date: string
+          p_handover_electricity_reading: number
+          p_handover_reading_date: string
+          p_handover_water_reading: number
+          p_inventory: Json
           p_monthly_rent: number
           p_notes: string
           p_occupant_count: number
@@ -3961,6 +4461,39 @@ export type Database = {
           p_payment_method: string
           p_period_month: number
           p_period_year: number
+        }
+        Returns: Json
+      }
+      create_rooms_batch: {
+        Args: { p_building_id: string; p_rooms: Json }
+        Returns: {
+          area: number | null
+          building_id: string
+          code: string
+          created_at: string
+          description: string | null
+          floor: number
+          id: string
+          monthly_rent: number
+          room_number: string
+          slug: string
+          status: string
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "rooms"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      create_rooms_batch_idempotent: {
+        Args: {
+          p_actor_id: string
+          p_apply_inventory: boolean
+          p_building_id: string
+          p_request_id: string
+          p_rooms: Json
         }
         Returns: Json
       }
@@ -4056,6 +4589,82 @@ export type Database = {
           to: "ai_action_plans"
           isOneToOne: false
           isSetofReturn: true
+        }
+      }
+      fail_contract_document: {
+        Args: { p_document_id: string; p_error_code: string }
+        Returns: {
+          amendment_id: string | null
+          building_id: string
+          contract_id: string
+          created_at: string
+          id: string
+          issued_at: string | null
+          issued_by: string | null
+          last_error_code: string | null
+          replaces_document_id: string | null
+          sha256: string | null
+          signed_at: string | null
+          signed_by: string | null
+          signed_date: string
+          size_bytes: number | null
+          snapshot: Json
+          status: string
+          storage_path: string | null
+          template_key: string
+          template_version: number
+          type: string
+          version_no: number
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "contract_documents"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      finalize_contract_document: {
+        Args: {
+          p_actor_id: string
+          p_document_id: string
+          p_sha256: string
+          p_size_bytes: number
+          p_storage_path: string
+        }
+        Returns: {
+          amendment_id: string | null
+          building_id: string
+          contract_id: string
+          created_at: string
+          id: string
+          issued_at: string | null
+          issued_by: string | null
+          last_error_code: string | null
+          replaces_document_id: string | null
+          sha256: string | null
+          signed_at: string | null
+          signed_by: string | null
+          signed_date: string
+          size_bytes: number | null
+          snapshot: Json
+          status: string
+          storage_path: string | null
+          template_key: string
+          template_version: number
+          type: string
+          version_no: number
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "contract_documents"
+          isOneToOne: true
+          isSetofReturn: false
         }
       }
       invoice_email_normalize_recipient: {
@@ -4291,6 +4900,41 @@ export type Database = {
           to: "ai_action_plans"
           isOneToOne: false
           isSetofReturn: true
+        }
+      }
+      mark_contract_document_signed: {
+        Args: { p_actor_id: string; p_document_id: string }
+        Returns: {
+          amendment_id: string | null
+          building_id: string
+          contract_id: string
+          created_at: string
+          id: string
+          issued_at: string | null
+          issued_by: string | null
+          last_error_code: string | null
+          replaces_document_id: string | null
+          sha256: string | null
+          signed_at: string | null
+          signed_by: string | null
+          signed_date: string
+          size_bytes: number | null
+          snapshot: Json
+          status: string
+          storage_path: string | null
+          template_key: string
+          template_version: number
+          type: string
+          version_no: number
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "contract_documents"
+          isOneToOne: true
+          isSetofReturn: false
         }
       }
       normalize_tenant_id_number: { Args: { p_value: string }; Returns: string }
@@ -4600,6 +5244,48 @@ export type Database = {
         }
         Returns: Json
       }
+      replace_inventory_template: {
+        Args: { p_building_id: string; p_items: Json }
+        Returns: {
+          building_id: string
+          condition: string
+          created_at: string
+          id: string
+          name: string
+          note: string | null
+          quantity: number
+          sort_order: number
+          unit_value: number | null
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "building_inventory_templates"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      replace_room_inventory: {
+        Args: { p_items: Json; p_room_id: string }
+        Returns: {
+          condition: string
+          created_at: string
+          id: string
+          name: string
+          note: string | null
+          quantity: number
+          room_id: string
+          sort_order: number
+          unit_value: number | null
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "room_inventory_items"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       resend_invoice_email_delivery: {
         Args: {
           p_actor_id: string
@@ -4607,6 +5293,52 @@ export type Database = {
           p_invoice_id: string
         }
         Returns: Json
+      }
+      reserve_contract_document: {
+        Args: {
+          p_actor_id: string
+          p_amendment_id: string
+          p_contract_id: string
+          p_replaces_document_id: string
+          p_signed_date: string
+          p_snapshot: Json
+          p_template_key: string
+          p_template_version: number
+          p_type: string
+          p_void_reason: string
+        }
+        Returns: {
+          amendment_id: string | null
+          building_id: string
+          contract_id: string
+          created_at: string
+          id: string
+          issued_at: string | null
+          issued_by: string | null
+          last_error_code: string | null
+          replaces_document_id: string | null
+          sha256: string | null
+          signed_at: string | null
+          signed_by: string | null
+          signed_date: string
+          size_bytes: number | null
+          snapshot: Json
+          status: string
+          storage_path: string | null
+          template_key: string
+          template_version: number
+          type: string
+          version_no: number
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "contract_documents"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       save_meter_readings_with_audit: {
         Args: {
@@ -4808,6 +5540,42 @@ export type Database = {
         }
         Returns: Json
       }
+      validate_inventory_items: { Args: { p_items: Json }; Returns: undefined }
+      void_contract_document: {
+        Args: { p_actor_id: string; p_document_id: string; p_reason: string }
+        Returns: {
+          amendment_id: string | null
+          building_id: string
+          contract_id: string
+          created_at: string
+          id: string
+          issued_at: string | null
+          issued_by: string | null
+          last_error_code: string | null
+          replaces_document_id: string | null
+          sha256: string | null
+          signed_at: string | null
+          signed_by: string | null
+          signed_date: string
+          size_bytes: number | null
+          snapshot: Json
+          status: string
+          storage_path: string | null
+          template_key: string
+          template_version: number
+          type: string
+          version_no: number
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "contract_documents"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       void_invoice_with_audit: {
         Args: {
           p_actor_id: string
@@ -4980,9 +5748,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {
       utility_type: ["electricity", "water"],

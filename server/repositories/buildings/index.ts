@@ -380,16 +380,17 @@ export const BuildingRepository = {
     for (let attempt = 1; attempt <= MAX_IDENTITY_ATTEMPTS; attempt++) {
       const slug = await buildUniqueSlug(event, input.slug ?? input.name)
       const code = await buildUniqueCode(event, slug)
-      const { data, error } = await client.rpc('create_building_with_rooms' as never, {
+      const { data, error } = await client.rpc('create_building_with_rooms', {
         p_building: buildInsertPayload(input, slug, code, {
           created_by: opts.actorId,
           owner_user_id: opts.ownerUserId,
         }),
         p_rooms: roomPayload,
-        p_assign_owner: opts.ownerUserId,
+        // Generated RPC args omit nullability; the function accepts null.
+        p_assign_owner: opts.ownerUserId as string,
         p_actor_id: opts.actorId,
         p_request_id: opts.requestId,
-      } as never)
+      })
 
       if (error) {
         const isIdentityRace = (error as { code?: string }).code === '23505'

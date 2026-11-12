@@ -6,7 +6,6 @@ const BUCKET = 'contract-documents'
 const DOCX_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
 const SIGNED_URL_TTL_SECONDS = 60
 
-// Cast at the boundary until database.types.ts is regenerated after the cloud migration.
 const client = (event: H3Event) => db(event)
 
 /** Translate contract_document RPC guards into stable API errors (no PII, no index names). */
@@ -82,14 +81,14 @@ export const ContractDocumentRepository = {
   },
 
   async claimStale(event: H3Event, olderThan: string): Promise<ContractDocumentRow[]> {
-    const { data, error } = await client(event).rpc('claim_stale_contract_documents' as never, { p_older_than: olderThan } as never)
+    const { data, error } = await client(event).rpc('claim_stale_contract_documents', { p_older_than: olderThan })
     if (error) throwDbError(error, 'contractDocuments.claimStale')
     return (data as unknown as ContractDocumentRow[]) ?? []
   },
 
   async findById(event: H3Event, id: string): Promise<ContractDocumentRow | null> {
     const { data, error } = await client(event)
-      .from('contract_documents' as never)
+      .from('contract_documents')
       .select('*')
       .eq('id', id)
       .maybeSingle()
@@ -99,7 +98,7 @@ export const ContractDocumentRepository = {
 
   async listByContract(event: H3Event, contractId: string): Promise<ContractDocumentRow[]> {
     const { data, error } = await client(event)
-      .from('contract_documents' as never)
+      .from('contract_documents')
       .select('*')
       .eq('contract_id', contractId)
       .order('created_at', { ascending: false })
