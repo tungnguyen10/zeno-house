@@ -12,6 +12,8 @@ tags: [change, verification, rooms, inventory, v2]
 
 Implementation starts from `origin/develop` commit `30225644`, independently of PR1. The unchanged baseline source passed 393 files / 2,496 tests earlier in this work session. Scoped checks, reviews and final typecheck/test/lint/OKF evidence will be recorded as tasks complete.
 
+Task 1: `20261112005547_inventory_lite.sql` plus rollback verification script added. TDD observed 9 failed/1 passed against the empty migration; final static/PR0 regression run passed 16 tests (11 new + 5 PR0), scoped ESLint and diff checks passed. Independent static/spec review approved with no findings. SQL compilation, runtime and concurrency are not claimed.
+
 ## Preflight decisions
 
 Use the atomic replacement RPC option already offered by Task 4, so an insert failure cannot erase an existing template or room list. Replacement and template application share a per-building transaction lock; merged room lists also respect the 50-item limit. Validate wrapper JSON and numeric bounds rather than relying on implicit casts/rounding. Read handover ancestry only inside the already-authorized building. Existing production RPCs and financial calculations remain unchanged.

@@ -60,7 +60,7 @@ tags: [superpowers, change, rooms, inventory, contracts, v2]
 ### Task 1: Migration — tables, guards, RPCs
 
 **Files:**
-- Create: `supabase/migrations/20261111110000_inventory_lite.sql`
+- Create: `supabase/migrations/20261112005547_inventory_lite.sql`
 - Create: `supabase/verification/inventory_lite.sql`
 - Test: `tests/config/inventory-lite-migration.test.ts`
 
@@ -71,7 +71,7 @@ tags: [superpowers, change, rooms, inventory, contracts, v2]
   - `public.create_rooms_batch_idempotent(p_building_id uuid, p_rooms jsonb, p_apply_inventory boolean, p_actor_id uuid, p_request_id uuid) returns jsonb` — `{ rooms: rooms row[], replayed: boolean }`; errors as PR0 (`ROOM_BATCH_*`, `BUILDING_SETUP_REQUEST_CONFLICT`, `BUILDING_SETUP_REQUEST_REQUIRED`).
   - `public.create_contract_with_handover_and_inventory(<17 params of create_contract_with_handover in the same order and types>, p_inventory jsonb) returns setof public.contracts`.
 
-- [ ] **Step 1: Write the failing static test**
+- [x] **Step 1: Write the failing static test**
 
 ```ts
 // tests/config/inventory-lite-migration.test.ts
@@ -79,7 +79,7 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
-const sql = readFileSync(resolve(process.cwd(), 'supabase/migrations/20261111110000_inventory_lite.sql'), 'utf8')
+const sql = readFileSync(resolve(process.cwd(), 'supabase/migrations/20261112005547_inventory_lite.sql'), 'utf8')
 
 describe('inventory lite migration', () => {
   it.each(['building_inventory_templates', 'room_inventory_items', 'contract_inventory_items'])('locks %s to service_role', (table) => {
@@ -105,9 +105,9 @@ describe('inventory lite migration', () => {
 })
 ```
 
-- [ ] **Step 2: Run to verify failure** — `npx vitest run tests/config/inventory-lite-migration.test.ts` → FAIL (ENOENT).
+- [x] **Step 2: Run to verify failure** — `npx vitest run tests/config/inventory-lite-migration.test.ts` → FAIL (ENOENT).
 
-- [ ] **Step 3: Write the migration**
+- [x] **Step 3: Write the migration**
 
 ```sql
 -- =============================================================================
@@ -350,7 +350,7 @@ Note: `jsonb_to_recordset(...) with ordinality` requires the ordinality column a
 
 Note: the static test regex for `revoke`/`grant` uses `\([^)]*\)`; the multi-line argument list for the contract wrapper contains no `)` so it matches.
 
-- [ ] **Step 4: Write the verification script**
+- [x] **Step 4: Write the verification script**
 
 ```sql
 -- Verification for inventory lite (V2 PR2). Run as service_role; rolled back.
@@ -453,12 +453,12 @@ rollback;
 
 If check 6 does not fail (no unique constraint on handover per room/period), replace it with a call passing `p_end_date <= p_start_date` (the wrapped function raises `P0001`) and assert no `contract_inventory_items` row with `name = 'X'` exists.
 
-- [ ] **Step 5: Run static test** → PASS.
+- [x] **Step 5: Run static test** → PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
-git add supabase/migrations/20261111110000_inventory_lite.sql supabase/verification/inventory_lite.sql tests/config/inventory-lite-migration.test.ts
+git add supabase/migrations/20261112005547_inventory_lite.sql supabase/verification/inventory_lite.sql tests/config/inventory-lite-migration.test.ts
 git commit -m "feat(db): inventory tables and wrapper RPCs"
 ```
 
@@ -2186,7 +2186,7 @@ tags: [change, verification, rooms, inventory]
 
 ## Cloud gates (order matters)
 - [ ] PR0 migration present on target env
-- [ ] `20261111110000_inventory_lite.sql` applied — <env, date>
+- [ ] `20261112005547_inventory_lite.sql` applied — <env, date>
 - [ ] `supabase/verification/inventory_lite.sql` passed — <output>
 - [ ] Types regenerated; `as never` casts removed — <commit>
 - [ ] App deployed after migration — <date>
