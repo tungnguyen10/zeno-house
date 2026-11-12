@@ -44,4 +44,12 @@ The user explicitly approved the design direction on 2026-11-12: floor-group roo
 - Regenerate database types and remove temporary repository casts.
 - Deploy after migration; verify contract snapshots and authenticated owner/manager behavior.
 
-No cloud rollout, SQL execution or accepted capability promotion is claimed.
+## Cloud rollout log (2026-11-12)
+
+- PR0 migrations were already present on the remote (`supabase migration list --remote`).
+- `supabase db push --remote --dry-run` listed only `20261112005547_inventory_lite.sql`; applied to production (zeno-house) after explicit user confirmation. No backup was taken by the agent.
+- `app/types/database.types.ts` regenerated from the cloud schema (additive: +252 lines); temporary `as never` casts removed from the inventory, rooms and contracts repositories. Typecheck, server tests and lint pass.
+- `supabase/verification/inventory_lite.sql` was NOT run: it is written for staging and creates fixtures and triggers. Run it on staging.
+- Not done: app deploy and authenticated smoke test.
+
+No accepted capability promotion is claimed.

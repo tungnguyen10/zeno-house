@@ -855,6 +855,53 @@ export type Database = {
           },
         ]
       }
+      building_inventory_templates: {
+        Row: {
+          building_id: string
+          condition: string
+          created_at: string
+          id: string
+          name: string
+          note: string | null
+          quantity: number
+          sort_order: number
+          unit_value: number | null
+          updated_at: string
+        }
+        Insert: {
+          building_id: string
+          condition?: string
+          created_at?: string
+          id?: string
+          name: string
+          note?: string | null
+          quantity?: number
+          sort_order?: number
+          unit_value?: number | null
+          updated_at?: string
+        }
+        Update: {
+          building_id?: string
+          condition?: string
+          created_at?: string
+          id?: string
+          name?: string
+          note?: string | null
+          quantity?: number
+          sort_order?: number
+          unit_value?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "building_inventory_templates_building_id_fkey"
+            columns: ["building_id"]
+            isOneToOne: false
+            referencedRelation: "buildings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       building_invoice_email_settings: {
         Row: {
           auto_send_enabled: boolean
@@ -1471,6 +1518,57 @@ export type Database = {
             foreignKeyName: "contract_checkouts_contract_id_fkey"
             columns: ["contract_id"]
             isOneToOne: true
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contract_inventory_items: {
+        Row: {
+          condition: string
+          contract_id: string
+          created_at: string
+          id: string
+          name: string
+          note: string | null
+          quantity: number
+          sort_order: number
+          unit_value: number | null
+        }
+        Insert: {
+          condition: string
+          contract_id: string
+          created_at?: string
+          id?: string
+          name: string
+          note?: string | null
+          quantity: number
+          sort_order?: number
+          unit_value?: number | null
+        }
+        Update: {
+          condition?: string
+          contract_id?: string
+          created_at?: string
+          id?: string
+          name?: string
+          note?: string | null
+          quantity?: number
+          sort_order?: number
+          unit_value?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_inventory_items_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contract_browse_rows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_inventory_items_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
             referencedRelation: "contracts"
             referencedColumns: ["id"]
           },
@@ -2679,6 +2777,53 @@ export type Database = {
           },
         ]
       }
+      room_inventory_items: {
+        Row: {
+          condition: string
+          created_at: string
+          id: string
+          name: string
+          note: string | null
+          quantity: number
+          room_id: string
+          sort_order: number
+          unit_value: number | null
+          updated_at: string
+        }
+        Insert: {
+          condition?: string
+          created_at?: string
+          id?: string
+          name: string
+          note?: string | null
+          quantity?: number
+          room_id: string
+          sort_order?: number
+          unit_value?: number | null
+          updated_at?: string
+        }
+        Update: {
+          condition?: string
+          created_at?: string
+          id?: string
+          name?: string
+          note?: string | null
+          quantity?: number
+          room_id?: string
+          sort_order?: number
+          unit_value?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "room_inventory_items_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rooms: {
         Row: {
           area: number | null
@@ -3306,6 +3451,10 @@ export type Database = {
           isOneToOne: false
           isSetofReturn: true
         }
+      }
+      apply_inventory_template: {
+        Args: { p_building_id: string; p_mode: string; p_room_ids: string[] }
+        Returns: Json
       }
       apply_invoice_email_webhook_event: {
         Args: {
@@ -3959,6 +4108,56 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      create_contract_with_handover_and_inventory: {
+        Args: {
+          p_building_id: string
+          p_deposit: number
+          p_discount_amount: number
+          p_end_date: string
+          p_handover_electricity_reading: number
+          p_handover_reading_date: string
+          p_handover_water_reading: number
+          p_inventory: Json
+          p_monthly_rent: number
+          p_notes: string
+          p_occupant_count: number
+          p_payment_due_day: number
+          p_recorded_by: string
+          p_room_id: string
+          p_start_date: string
+          p_status: string
+          p_surcharge_amount: number
+          p_tenant_id: string
+        }
+        Returns: {
+          building_id: string
+          contract_code: string
+          created_at: string
+          deposit: number
+          discount_amount: number
+          end_date: string
+          id: string
+          monthly_rent: number
+          notes: string | null
+          occupant_count: number
+          original_end_date: string | null
+          payment_due_day: number | null
+          previous_contract_id: string | null
+          renewal_count: number
+          room_id: string
+          start_date: string
+          status: string
+          surcharge_amount: number
+          tenant_id: string
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "contracts"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       create_reserve_funded_expense_with_audit: {
         Args: {
           p_actor_id: string
@@ -3996,6 +4195,16 @@ export type Database = {
           isOneToOne: false
           isSetofReturn: true
         }
+      }
+      create_rooms_batch_idempotent: {
+        Args: {
+          p_actor_id: string
+          p_apply_inventory: boolean
+          p_building_id: string
+          p_request_id: string
+          p_rooms: Json
+        }
+        Returns: Json
       }
       dashboard_source_snapshot: {
         Args: {
@@ -4633,6 +4842,48 @@ export type Database = {
         }
         Returns: Json
       }
+      replace_inventory_template: {
+        Args: { p_building_id: string; p_items: Json }
+        Returns: {
+          building_id: string
+          condition: string
+          created_at: string
+          id: string
+          name: string
+          note: string | null
+          quantity: number
+          sort_order: number
+          unit_value: number | null
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "building_inventory_templates"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      replace_room_inventory: {
+        Args: { p_items: Json; p_room_id: string }
+        Returns: {
+          condition: string
+          created_at: string
+          id: string
+          name: string
+          note: string | null
+          quantity: number
+          room_id: string
+          sort_order: number
+          unit_value: number | null
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "room_inventory_items"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       resend_invoice_email_delivery: {
         Args: {
           p_actor_id: string
@@ -4841,6 +5092,7 @@ export type Database = {
         }
         Returns: Json
       }
+      validate_inventory_items: { Args: { p_items: Json }; Returns: undefined }
       void_invoice_with_audit: {
         Args: {
           p_actor_id: string

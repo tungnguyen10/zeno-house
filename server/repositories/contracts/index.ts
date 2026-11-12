@@ -284,9 +284,9 @@ export const ContractRepository = {
       p_handover_reading_date: readingDate,
       p_recorded_by: recordedBy,
       p_inventory: inventory,
-    } as unknown as Database['public']['Functions']['create_contract_with_handover']['Args']
+    } as unknown as Database['public']['Functions']['create_contract_with_handover_and_inventory']['Args']
 
-    const { data, error } = await client.rpc('create_contract_with_handover_and_inventory' as never, args as never)
+    const { data, error } = await client.rpc('create_contract_with_handover_and_inventory', args)
     if (error) {
       // 23505 (unique violation) and P0001 (raised in RPC) both indicate a
       // business conflict the admin can act on; everything else is a 500.
@@ -324,7 +324,7 @@ export const ContractRepository = {
       const contract = result.data
       if (!contract) break
       const { data: items, error: itemsError } = await client
-        .from('contract_inventory_items' as never)
+        .from('contract_inventory_items')
         .select('id, name, quantity, condition, unit_value, note, sort_order')
         .eq('contract_id', contract.id)
         .order('sort_order')
