@@ -17,6 +17,9 @@ const contractRepoMocks = vi.hoisted(() => ({
 
 vi.mock('../../server/utils/checkout-feature', () => ({ checkoutEnabledForBuilding: () => false }))
 
+const inventoryRepoMocks = vi.hoisted(() => ({ listRoom: vi.fn() }))
+vi.mock('../../server/repositories/inventory', () => ({ InventoryRepository: inventoryRepoMocks }))
+
 const buildingRepoMocks = vi.hoisted(() => ({
   findByIdentifier: vi.fn(),
 }))
@@ -226,6 +229,7 @@ beforeEach(() => {
   contractRepoMocks.findActiveByRoomId.mockResolvedValue(null)
   contractRepoMocks.findActiveByTenantId.mockResolvedValue(null)
   occupantRepoMocks.findActiveOccupancyByTenant.mockResolvedValue(null)
+  inventoryRepoMocks.listRoom.mockResolvedValue([])
   contractRepoMocks.countBillingPeriodsForContract.mockResolvedValue(0)
   contractRepoMocks.countPaidInvoicesForContract.mockResolvedValue(0)
   contractRepoMocks.countNonHandoverMeterReadingsForContract.mockResolvedValue(0)
@@ -306,9 +310,38 @@ describe('POST /api/contracts', () => {
         handover_water_reading: 80,
       }),
       'user-admin',
+      [],
     )
     expect(res.data.id).toBe('new-contract')
     expect(event.context.statusCode).toBe(201)
+  })
+
+  it('snapshots room inventory when client sends none', async () => {
+    inventoryRepoMocks.listRoom.mockResolvedValue([
+      { id: 'i-1', name: 'Giường', quantity: 1, condition: 'good', unit_value: '2000000', note: null, sort_order: 0 },
+    ])
+    contractRepoMocks.createWithHandover.mockResolvedValue(buildContract({ id: 'new-contract' }))
+    const { default: handler } = await import('../../server/api/contracts/index.post')
+    await handler(makeEvent({ body: validCreateBody }))
+    expect(contractRepoMocks.createWithHandover.mock.calls[0]![3]).toEqual(
+      [{ name: 'Giường', quantity: 1, condition: 'good', unit_value: 2000000, note: null }],
+    )
+  })
+
+  it('uses client inventory when provided', async () => {
+    const inventory = [{ name: 'Tủ', quantity: 1, condition: 'used', unit_value: null, note: 'Trầy cửa' }]
+    contractRepoMocks.createWithHandover.mockResolvedValue(buildContract({ id: 'new-contract' }))
+    const { default: handler } = await import('../../server/api/contracts/index.post')
+    await handler(makeEvent({ body: { ...validCreateBody, inventory } }))
+    expect(inventoryRepoMocks.listRoom).not.toHaveBeenCalled()
+    expect(contractRepoMocks.createWithHandover.mock.calls[0]![3]).toEqual(inventory)
+  })
+
+  it('creates with empty handover when room has no inventory', async () => {
+    contractRepoMocks.createWithHandover.mockResolvedValue(buildContract({ id: 'new-contract' }))
+    const { default: handler } = await import('../../server/api/contracts/index.post')
+    await handler(makeEvent({ body: validCreateBody }))
+    expect(contractRepoMocks.createWithHandover.mock.calls[0]![3]).toEqual([])
   })
 
   it('returns 422 for invalid body, 409 for occupied room, and 403 for manager', async () => {

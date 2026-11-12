@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { limitSchema, orderSchema, pageSchema, searchQuerySchema, toArray, trimmedOptionalString } from './_shared'
 import { VALIDATION_MESSAGES } from './messages'
+import { inventoryListSchema } from './inventory'
 
 export const contractStatusSchema = z.enum(['active', 'expired', 'terminated', 'renewed'])
 export const contractSortFieldSchema = z.enum(['location', 'start_date', 'end_date', 'created_at', 'monthly_rent'])
@@ -54,6 +55,7 @@ export const contractCreateSchema = z.object({
   handover_electricity_reading: z.number().min(0, 'Số điện không được âm'),
   handover_water_reading: z.number().min(0, 'Số nước không được âm'),
   handover_reading_date: z.string().min(1).optional(),
+  inventory: inventoryListSchema.optional(),
 }).strict().refine(
   (data) => new Date(data.end_date) > new Date(data.start_date),
   { message: 'Ngày kết thúc phải sau ngày bắt đầu', path: ['end_date'] },

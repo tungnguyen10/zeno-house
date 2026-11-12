@@ -8,7 +8,7 @@ tags: [api, generated, engineering]
 # API Inventory And Performance Contracts
 
 Generated from checked-in handlers by `node scripts/generate-api-inventory.mjs`.
-Route count: **217**.
+Route count: **218**.
 
 All business routes require server-side authorization unless explicitly documented as an internal-secret route. Initial reads use Nuxt `useFetch`; imperative reads and mutations use `apiFetch` with a 15-second timeout, request ID, no automatic mutation retry, and normalized server envelopes.
 
@@ -123,6 +123,7 @@ All business routes require server-side authorization unless explicitly document
 | POST | `/api/contracts/[id]/checkout/preview` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | POST | `/api/contracts/[id]/checkout/refunds` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | POST | `/api/contracts/[id]/checkout/return` | n/a | invalidate affected domain | p95 ≤ 250ms |
+| GET | `/api/contracts/[id]/handover-inventory` | n/a | request/DTO policy | p95 ≤ 250ms |
 | GET | `/api/contracts/[id]/occupants` | domain-bounded | request/DTO policy | p95 ≤ 400ms |
 | POST | `/api/contracts/[id]/occupants` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | DELETE | `/api/contracts/[id]/occupants/[occupantId]` | n/a | invalidate affected domain | p95 ≤ 250ms |

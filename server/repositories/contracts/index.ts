@@ -5,6 +5,9 @@ import type { Contract, ContractStatus, ContractWithDetails } from '~/types/cont
 import type { ContractCreateInput, ContractUpdateInput } from '~/utils/validators/contracts'
 import { mapContract, mapContractBrowseRow, mapContractWithDetails, type ContractBrowseRow } from '~/utils/mappers/contracts'
 import { isUuid } from '~/utils/format/slug'
+import type { HandoverInventory } from '~/types/inventory'
+import type { InventoryItemInput } from '~/utils/validators/inventory'
+import { mapInventoryItem, type InventoryRow } from '~/utils/mappers/inventory'
 
 export interface ContractFilters {
   room_id?: string
@@ -251,6 +254,7 @@ export const ContractRepository = {
     event: H3Event,
     input: ContractCreateInput & { building_id: string },
     recordedBy: string | null,
+    inventory: InventoryItemInput[] = [],
   ): Promise<ContractWithDetails> {
     const client = await serverSupabaseClient(event)
 
@@ -279,9 +283,10 @@ export const ContractRepository = {
       p_handover_water_reading: input.handover_water_reading,
       p_handover_reading_date: readingDate,
       p_recorded_by: recordedBy,
+      p_inventory: inventory,
     } as unknown as Database['public']['Functions']['create_contract_with_handover']['Args']
 
-    const { data, error } = await client.rpc('create_contract_with_handover', args)
+    const { data, error } = await client.rpc('create_contract_with_handover_and_inventory' as never, args as never)
     if (error) {
       // 23505 (unique violation) and P0001 (raised in RPC) both indicate a
       // business conflict the admin can act on; everything else is a 500.
@@ -300,6 +305,39 @@ export const ContractRepository = {
       throwInternal(new Error('Contract was inserted but cannot be re-read'), 'contracts.createWithHandover.reread')
     }
     return created
+  },
+
+  async findHandoverInventory(event: H3Event, contractId: string, buildingId: string): Promise<HandoverInventory> {
+    const client = await serverSupabaseClient(event)
+    const visited = new Set<string>()
+    let currentId: string | null = contractId
+    while (currentId && !visited.has(currentId) && visited.size < 20) {
+      visited.add(currentId)
+      const { data: contract, error } = await client
+        .from('contracts')
+        .select('id, contract_code, previous_contract_id')
+        .eq('id', currentId)
+        .eq('building_id', buildingId)
+        .maybeSingle()
+      if (error) throwDbError(error, 'contracts.findHandoverInventory.contract')
+      if (!contract) break
+      const { data: items, error: itemsError } = await client
+        .from('contract_inventory_items' as never)
+        .select('id, name, quantity, condition, unit_value, note, sort_order')
+        .eq('contract_id', contract.id)
+        .order('sort_order')
+      if (itemsError) throwDbError(itemsError, 'contracts.findHandoverInventory.items')
+      const rows = (items ?? []) as unknown as InventoryRow[]
+      if (rows.length > 0) {
+        return {
+          sourceContractId: contract.id,
+          sourceContractCode: contract.contract_code,
+          items: rows.map(mapInventoryItem),
+        }
+      }
+      currentId = contract.previous_contract_id
+    }
+    return { sourceContractId: null, sourceContractCode: null, items: [] }
   },
 
   async update(event: H3Event, id: string, input: ContractUpdateInput): Promise<ContractWithDetails> {

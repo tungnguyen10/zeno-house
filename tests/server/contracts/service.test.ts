@@ -20,6 +20,9 @@ const mocks = vi.hoisted(() => ({
 }))
 
 vi.mock('../../../server/utils/checkout-feature', () => ({ checkoutEnabledForBuilding: mocks.checkoutEnabled }))
+vi.mock('../../../server/repositories/inventory', () => ({
+  InventoryRepository: { listRoom: vi.fn().mockResolvedValue([]) },
+}))
 
 vi.mock('../../../server/repositories/contracts', () => ({
   ContractRepository: {

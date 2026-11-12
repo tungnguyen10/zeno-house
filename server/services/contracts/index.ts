@@ -3,6 +3,9 @@ import { randomUUID } from 'node:crypto'
 import type { AuthUser } from '~/types/auth'
 import type { ContractWithDetails } from '~/types/contracts'
 import type { ContractBulkActionInput, ContractCreateInput, ContractUpdateInput } from '~/utils/validators/contracts'
+import type { HandoverInventory } from '~/types/inventory'
+import type { InventoryItemInput } from '~/utils/validators/inventory'
+import { InventoryRepository } from '../../repositories/inventory'
 import { ContractRepository, type ContractFilters } from '../../repositories/contracts'
 import { BulkActionRepository } from '../../repositories/bulk-actions'
 import { ContractServiceService } from '../contract-services'
@@ -119,6 +122,14 @@ export const ContractService = {
     return contract
   },
 
+  async getHandoverInventory(event: H3Event, user: AuthUser, identifier: string): Promise<HandoverInventory> {
+    requireCapability(user, 'contracts.read', 'Không có quyền xem hợp đồng')
+    const contract = await ContractRepository.findByIdentifier(event, identifier)
+    if (!contract) throwNotFound('Không tìm thấy hợp đồng')
+    await assertBuildingScope(event, user, contract.buildingId, 'read')
+    return ContractRepository.findHandoverInventory(event, contract.id, contract.buildingId)
+  },
+
   async create(event: H3Event, user: AuthUser, input: ContractCreateInput): Promise<ContractWithDetails> {
     requireCapability(user, 'contracts.create', 'Không có quyền tạo hợp đồng')
 
@@ -147,6 +158,15 @@ export const ContractService = {
       throwConflict(`Phòng "${room.roomNumber}" chưa được đặt giá thuê. Vui lòng cập nhật giá phòng trước khi tạo hợp đồng.`)
     }
 
+    const inventory: InventoryItemInput[] = input.inventory
+      ?? (await InventoryRepository.listRoom(event, room.id)).map(row => ({
+        name: row.name,
+        quantity: row.quantity,
+        condition: row.condition as InventoryItemInput['condition'],
+        unit_value: row.unit_value === null ? null : Number(row.unit_value),
+        note: row.note,
+      }))
+
     const contract = await ContractRepository.createWithHandover(
       event,
       {
@@ -155,6 +175,7 @@ export const ContractService = {
         building_id: input.building_id ?? room.buildingId,
       },
       user.id ?? null,
+      inventory,
     )
 
     // Best-effort: clone active building_services → contract_services
