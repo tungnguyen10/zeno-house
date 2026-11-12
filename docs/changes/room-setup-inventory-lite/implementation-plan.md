@@ -712,7 +712,7 @@ git commit -m "feat(inventory): types, mapper and validators"
   - Add `removeRow(roomNumber)`, `addRow(roomNumber, floor)`; manual rows survive regeneration; removed generated rows stay removed until generator inputs change their set.
   - `PreviewRoom` gains `existing: boolean`, `manual: boolean`.
 
-- [ ] **Step 1: Write failing generator tests**
+- [x] **Step 1: Write failing generator tests**
 
 ```ts
 // tests/utils/generate-room-numbers.test.ts
@@ -755,9 +755,9 @@ describe('generateRoomNumbers', () => {
 })
 ```
 
-- [ ] **Step 2: Run to verify failure.**
+- [x] **Step 2: Run to verify failure.**
 
-- [ ] **Step 3: Implement the generator**
+- [x] **Step 3: Implement the generator**
 
 ```ts
 // app/utils/rooms/generate-room-numbers.ts
@@ -807,7 +807,7 @@ export function generateRoomNumbers(input: RoomGeneratorInput): { rooms: Generat
 }
 ```
 
-- [ ] **Step 4: Extend composable tests** (append to `tests/composables/useQuickRoomPreview.test.ts`; update the PR0 `setup()` helper to set `p.generator.value = { floorFrom: 1, floorTo: 1, roomsPerFloor: 3, prefix: 'P', startSeq: 101, includeFloor: false, nameFloorStart: 1 }` so PR0 expectations `P101…P103` still hold):
+- [x] **Step 4: Extend composable tests** (append to `tests/composables/useQuickRoomPreview.test.ts`; update the PR0 `setup()` helper to set `p.generator.value = { floorFrom: 1, floorTo: 1, roomsPerFloor: 3, prefix: 'P', startSeq: 101, includeFloor: false, nameFloorStart: 1 }` so PR0 expectations `P101…P103` still hold):
 
 ```ts
 describe('useQuickRoomPreview (PR2)', () => {
@@ -846,7 +846,7 @@ describe('useQuickRoomPreview (PR2)', () => {
 })
 ```
 
-- [ ] **Step 5: Run to verify failure, then implement composable changes**
+- [x] **Step 5: Run to verify failure, then implement composable changes**
 
 Key changes inside `useQuickRoomPreview`:
 
@@ -909,9 +909,9 @@ function toPayload(): QuickRoomInput[] {
 
 Remove PR0's `prefix`, `start`, `count`, `defaultFloor` refs and the `defaults().floor` usage (`floor` now comes from the generator; `PreviewField` keeps `'floor'` for manual edits). Keep `setCell`/`resetCell`; `resetCell(…, 'floor')` restores the generator's floor for that room (look it up in `generated.value.rooms`; for manual rows restore the floor given to `addRow`).
 
-- [ ] **Step 6: Run tests** → PASS (generator + composable, including PR0 tests).
+- [x] **Step 6: Run tests** → PASS (generator + composable, including PR0 tests).
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add app/utils/rooms/generate-room-numbers.ts app/composables/buildings/useQuickRoomPreview.ts tests/utils/generate-room-numbers.test.ts tests/composables/useQuickRoomPreview.test.ts
