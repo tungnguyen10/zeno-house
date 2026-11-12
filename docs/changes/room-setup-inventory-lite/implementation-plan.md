@@ -2,7 +2,7 @@
 type: Change Implementation Plan
 title: "room-setup-inventory-lite-implementation-plan"
 status: draft
-change_state: plan-review
+change_state: implementing
 tags: [superpowers, change, rooms, inventory, contracts, v2]
 ---
 
@@ -41,6 +41,19 @@ tags: [superpowers, change, rooms, inventory, contracts, v2]
 3. **Renewed contract** — handover list must come from the original contract in the chain, not be empty. Pinned in Task 7.
 4. **Generator re-run on a building that already has some rooms** — existing numbers flagged and excluded; payload never contains them. Pinned in Task 3.
 5. **Two template items differing only by case (`Giường` / `giường`)** — validator rejects before the DB unique index fires a raw 500. Pinned in Task 2.
+
+---
+
+## Preflight implementation decisions (2026-11-12)
+
+- UI direction was explicitly approved by the user: floor-group preview, editable desktop tables/mobile cards, copied building template, collapsible handover reference; preserve existing theme, typography and primitives.
+- Use the atomic replacement option explicitly offered in Task 4: add `replace_inventory_template(p_building_id uuid, p_items jsonb)` and `replace_room_inventory(p_room_id uuid, p_items jsonb)` returning their respective table rows. Their delete/insert steps run in one transaction; a failed insert must preserve the previous list. Task 4 repositories call these RPCs, never separate REST delete/insert requests.
+- All inventory writes take the same per-building advisory transaction lock, including template replacement, room replacement and template application. Validate room membership under row locks before applying; reject malformed mode/room arrays and lists outside their limits without partial writes.
+- Enforce the 50-item invariant after merge as well as for submitted lists. A merge that would exceed 50 raises a stable validation error (`INVENTORY_ITEMS_LIMIT`) and rolls back, rather than truncating or creating an invalid room list.
+- Validate wrapper inventory array shape, item bounds, integer quantities/values and case-insensitive duplicate names before persistence; use `jsonb_array_elements(... ) with ordinality` rather than the ambiguous typed `jsonb_to_recordset` alias sample. Validation helpers, if added, receive the same function security/grant restrictions as the public wrappers. Match monetary bounds to `numeric(12,0)`.
+- Contract handover ancestry queries must filter every hop to the authorized building and handle cycles/invalid traversal explicitly; an initial scope check alone must not expose inventory from another building through a malformed chain.
+- The pure generator validates prefix length (≤10), nonnegative safe-integer start/name-floor values and safe sequence arithmetic. Use a dedicated `invalid_input` error for these invalid configurations, in addition to the four planned generation errors, with a static Vietnamese explanation in the shared generator UI. Existing-room comparison uses the same normalized slug key as persistence, including case/punctuation variants.
+- Existing production RPCs remain unchanged, and cloud SQL execution/type regeneration remain human-run gates. Generate the increasing migration filename through the installed CLI; adapt the sample filename in tests/evidence.
 
 ---
 

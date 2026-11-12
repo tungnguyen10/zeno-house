@@ -8,7 +8,7 @@
 - [tenant-v2](./tenant-v2/spec-and-implementation-plan.md) — Proposed Quick Create and Claude extraction; completed identity hardening is archived separately.
 - [zeno-house-v2-optimization](./zeno-house-v2-optimization/brief.md) — Draft product flow optimization, pending PR task breakdown.
 - [building-contract-defaults](./building-contract-defaults/index.md) — V2 PR1: lessor profile, contract policy defaults, readiness; plan ready.
-- [room-setup-inventory-lite](./room-setup-inventory-lite/index.md) — V2 PR2: floor-based room generator, room inventory, contract handover snapshot; plan ready.
+- [room-setup-inventory-lite](./room-setup-inventory-lite/index.md) — V2 PR2: floor-based room generator, room inventory and contract handover snapshot; implementation in progress.
 - [tenant-quick-create](./tenant-quick-create/index.md) — V2 PR3 / Tenant V2 change A: inline tenant picker + quick create; plan ready.
 - [contract-quick-create](./contract-quick-create/index.md) — V2 PR4a: one-page atomic contract create (roommates, vehicles, services, inventory), server drafts; plan ready.
 - [contract-documents](./contract-documents/index.md) — V2 PR4b: versioned DOCX issuance, private storage, failed/regenerate, sign/void/replace, appendices, handover lock; plan ready (dependency approval pending).
