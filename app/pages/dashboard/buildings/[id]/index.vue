@@ -1,6 +1,6 @@
 <script setup lang="ts">
 
-import { buildingEditPath, buildingSettingsPath } from '~/utils/routes/operational'
+import { buildingEditPath, buildingRoomBatchPath, buildingSettingsPath } from '~/utils/routes/operational'
 import { getApiErrorCode, getApiErrorDetails, type ApiErrorLike } from '~/utils/api-error'
 
 const route = useRoute()
@@ -136,6 +136,9 @@ const waterLabel = computed(() => {
         <div ref="titleSentinel" aria-hidden="true" />
         <template #actions>
           <div v-if="authStore.canManage" class="flex gap-2 shrink-0">
+            <NuxtLink v-if="authStore.can('rooms.create')" :to="buildingRoomBatchPath(building)">
+              <UiButton variant="secondary" size="sm">Thêm phòng hàng loạt</UiButton>
+            </NuxtLink>
             <UiButton
               variant="secondary"
               size="sm"

@@ -47,6 +47,10 @@ export function buildingSettingsPath(building: BuildingRouteSubject): string {
   return `${buildingPath(building)}/settings`
 }
 
+export function buildingRoomBatchPath(building: BuildingRouteSubject): string {
+  return `${buildingPath(building)}/rooms/batch`
+}
+
 export function roomRouteSegment(room: RoomRouteSubject): string {
   return room.slug || (room.roomNumber ? slugifyName(room.roomNumber) : room.id)
 }

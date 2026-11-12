@@ -25,6 +25,9 @@ import {
 import { formatCurrency } from '~/utils/format/currency'
 import { currentVietnamPeriod, formatPeriodString, parsePeriodString } from '~/utils/format/period'
 import { buildingPath } from '~/utils/routes/operational'
+import type { Room } from '~/types/rooms'
+import { toInventoryInput } from '~/utils/mappers/inventory'
+import { inventoryListSchema, type InventoryApplyInput, type InventoryItemInput } from '~/utils/validators/inventory'
 
 const route = useRoute()
 const id = route.params.id as string
@@ -740,6 +743,56 @@ interface SettingsSectionNavItem {
   visible: boolean
 }
 
+const canViewInventoryTemplate = computed(() => authStore.can('rooms.read'))
+const canEditInventoryTemplate = computed(() => authStore.can('buildings.update'))
+const canApplyInventoryTemplate = computed(() => authStore.can('rooms.update'))
+const inventoryTemplate = useInventoryTemplate(id)
+const templateDraft = ref<InventoryItemInput[]>([])
+const templateErrors = ref<Record<string, string>>({})
+const applyModalOpen = ref(false)
+const applyRooms = ref<{ id: string, roomNumber: string, floor: number }[]>([])
+const templateDirty = computed(() =>
+  JSON.stringify(templateDraft.value) !== JSON.stringify(toInventoryInput(inventoryTemplate.items.value)),
+)
+
+onMounted(async () => {
+  if (!canViewInventoryTemplate.value) return
+  await inventoryTemplate.load()
+  templateDraft.value = toInventoryInput(inventoryTemplate.items.value)
+})
+
+async function saveInventoryTemplate() {
+  templateErrors.value = {}
+  const parsed = inventoryListSchema.safeParse(templateDraft.value)
+  if (!parsed.success) {
+    for (const issue of parsed.error.issues) templateErrors.value[issue.path.join('.')] ??= issue.message
+    return
+  }
+  if (await inventoryTemplate.save(parsed.data)) {
+    templateDraft.value = toInventoryInput(inventoryTemplate.items.value)
+    toast.success('Đã lưu nội thất mẫu.')
+  }
+}
+
+async function openApplyModal() {
+  inventoryTemplate.error.value = null
+  try {
+    const res = await apiFetch<ApiSuccess<Room[]>>('/api/rooms', { query: { building_id: id, limit: 200 } })
+    applyRooms.value = res.data.map(room => ({ id: room.id, roomNumber: room.roomNumber, floor: room.floor }))
+    applyModalOpen.value = true
+  }
+  catch (err) {
+    toast.error(resolveApiError(err, 'Không tải được danh sách phòng.'))
+  }
+}
+
+async function applyInventoryTemplate(input: InventoryApplyInput) {
+  const result = await inventoryTemplate.apply(input)
+  if (!result) return
+  applyModalOpen.value = false
+  toast.success(`Đã thêm ${result.addedItems} món cho ${result.appliedRooms} phòng.`)
+}
+
 const settingsSections = computed<SettingsSectionNavItem[]>(() => [
   {
     id: 'identity-access',
@@ -754,6 +807,13 @@ const settingsSections = computed<SettingsSectionNavItem[]>(() => [
     description: 'Logo, tài khoản nhận tiền và QR trên phiếu',
     badge: invoiceProfile.value ? 'Đã cấu hình' : 'Chưa hoàn chỉnh',
     visible: true,
+  },
+  {
+    id: 'inventory-template',
+    label: 'Nội thất mẫu',
+    description: 'Danh sách nội thất áp dụng nhanh cho phòng',
+    badge: `${inventoryTemplate.items.value.length} món`,
+    visible: canViewInventoryTemplate.value,
   },
   {
     id: 'finance-rules',
@@ -979,6 +1039,56 @@ const activeSectionId = computed(() => {
               />
             </UiSurfacePanel>
           </UiSection>
+        </section>
+
+        <section v-if="canViewInventoryTemplate" id="inventory-template" class="scroll-mt-20 space-y-3">
+          <header class="flex items-center justify-between gap-2">
+            <h2 class="text-sm font-semibold text-ui-accent">Nội thất mẫu</h2>
+            <UiBadge variant="neutral">{{ inventoryTemplate.items.value.length }} món</UiBadge>
+          </header>
+
+          <UiSection
+            title="Danh sách nội thất mẫu"
+            description="Được sao chép vào phòng mới hoặc phòng đã chọn. Sửa mẫu không làm thay đổi phòng đã có."
+          >
+            <template v-if="canApplyInventoryTemplate" #actions>
+              <UiButton
+                variant="secondary"
+                size="sm"
+                :disabled="inventoryTemplate.items.value.length === 0 || templateDirty"
+                @click="openApplyModal"
+              >
+                Áp dụng cho phòng…
+              </UiButton>
+            </template>
+            <UiSurfacePanel density="compact">
+              <UiAlert v-if="inventoryTemplate.error.value && !applyModalOpen" severity="danger" class="mb-4">
+                {{ inventoryTemplate.error.value }}
+              </UiAlert>
+              <UiSkeleton v-if="inventoryTemplate.loading.value" class="h-32 rounded-lg" />
+              <template v-else>
+                <InventoryItemsEditor
+                  v-model="templateDraft"
+                  :disabled="!canEditInventoryTemplate || inventoryTemplate.saving.value"
+                  :errors="templateErrors"
+                />
+                <div v-if="canEditInventoryTemplate" class="mt-4 flex justify-end">
+                  <UiButton :loading="inventoryTemplate.saving.value" :disabled="!templateDirty" @click="saveInventoryTemplate">
+                    Lưu nội thất mẫu
+                  </UiButton>
+                </div>
+              </template>
+            </UiSurfacePanel>
+          </UiSection>
+
+          <InventoryApplyModal
+            :open="applyModalOpen"
+            :rooms="applyRooms"
+            :saving="inventoryTemplate.saving.value"
+            :error="applyModalOpen ? inventoryTemplate.error.value : null"
+            @close="applyModalOpen = false"
+            @apply="applyInventoryTemplate"
+          />
         </section>
 
         <section v-if="canViewFinanceRules" id="finance-rules" class="scroll-mt-20 space-y-3">

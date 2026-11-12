@@ -1,4 +1,5 @@
 import type { InventoryCondition, InventoryItem } from '~/types/inventory'
+import type { InventoryItemInput } from '~/utils/validators/inventory'
 
 export interface InventoryRow {
   id: string
@@ -20,6 +21,16 @@ export function mapInventoryItem(row: InventoryRow): InventoryItem {
     note: row.note,
     sortOrder: row.sort_order,
   }
+}
+
+export function toInventoryInput(items: InventoryItem[]): InventoryItemInput[] {
+  return items.map(item => ({
+    name: item.name,
+    quantity: item.quantity,
+    condition: item.condition,
+    unit_value: item.unitValue,
+    note: item.note,
+  }))
 }
 
 export function inventoryTotalValue(items: Pick<InventoryItem, 'quantity' | 'unitValue'>[]): number {

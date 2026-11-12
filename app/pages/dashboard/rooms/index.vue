@@ -10,6 +10,7 @@ import { roomFormToApiPayload, type RoomFormData } from '~/components/rooms/Room
 import type { RoomBulkAction, RoomBulkResult } from '~/composables/rooms/useRoomBulkActions'
 import { BULK_FAILURE_LABELS_COMMON } from '~/utils/constants/bulk-failure-labels'
 import { getApiErrorDetails, getApiErrorMessage } from '~/utils/api-error'
+import { buildingRoomBatchPath } from '~/utils/routes/operational'
 
 definePageMeta({ title: 'Phòng' })
 
@@ -97,6 +98,12 @@ function toggleSelectionMode() {
 
 async function openCreateRoom() {
   await navigateTo('/dashboard/rooms/create')
+}
+
+const filteredBuilding = computed(() => buildings.value.find(b => b.id === buildingId.value) ?? null)
+
+async function openBatchRooms() {
+  if (filteredBuilding.value) await navigateTo(buildingRoomBatchPath(filteredBuilding.value))
 }
 
 function onToggleSelect(id: string) {
@@ -303,6 +310,12 @@ async function onBulkDone(result: RoomBulkResult, action: RoomBulkAction) {
               <IconPlus class="h-4 w-4 shrink-0" aria-hidden="true" />
             </template>
             Thêm phòng
+          </UiDropdownMenuItem>
+          <UiDropdownMenuItem v-if="authStore.can('rooms.create') && filteredBuilding" @click="openBatchRooms">
+            <template #icon>
+              <IconPlus class="h-4 w-4 shrink-0" aria-hidden="true" />
+            </template>
+            Thêm phòng hàng loạt
           </UiDropdownMenuItem>
           <UiDropdownMenuItem v-if="authStore.can('rooms.delete')" @click="toggleSelectionMode">
             <template #icon>
