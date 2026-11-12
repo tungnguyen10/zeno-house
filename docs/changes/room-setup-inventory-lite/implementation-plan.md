@@ -497,7 +497,7 @@ git commit -m "feat(db): inventory tables and wrapper RPCs"
   export type InventoryItemInput, InventoryApplyInput, RoomBatchCreateInput
   ```
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 // tests/utils/inventory-validators.test.ts
@@ -557,9 +557,9 @@ describe('inventoryTotalValue', () => {
 })
 ```
 
-- [ ] **Step 2: Run to verify failure.**
+- [x] **Step 2: Run to verify failure.**
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 ```ts
 // app/types/inventory.ts
@@ -677,9 +677,9 @@ export type RoomBatchCreateInput = z.infer<typeof roomBatchCreateSchema>
 
 Postgres `lower()` and JS `toLocaleLowerCase('vi')` agree for Vietnamese letters with diacritics; the DB unique index is the final guard.
 
-- [ ] **Step 4: Run tests** → PASS.
+- [x] **Step 4: Run tests** → PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/types/inventory.ts app/utils/mappers/inventory.ts app/utils/validators/inventory.ts tests/utils/inventory-validators.test.ts

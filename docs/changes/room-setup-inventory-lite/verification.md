@@ -14,6 +14,8 @@ Implementation starts from `origin/develop` commit `30225644`, independently of 
 
 Task 1: `20261112005547_inventory_lite.sql` plus rollback verification script added. TDD observed 9 failed/1 passed against the empty migration; final static/PR0 regression run passed 16 tests (11 new + 5 PR0), scoped ESLint and diff checks passed. Independent static/spec review approved with no findings. SQL compilation, runtime and concurrency are not claimed.
 
+Task 2: inventory DTOs, mapper, shared item/list/apply/batch validators added; observed missing-module RED then 18 tests passed, scoped lint passed. Independent specification/code review passed with no findings.
+
 ## Preflight decisions
 
 Use the atomic replacement RPC option already offered by Task 4, so an insert failure cannot erase an existing template or room list. Replacement and template application share a per-building transaction lock; merged room lists also respect the 50-item limit. Validate wrapper JSON and numeric bounds rather than relying on implicit casts/rounding. Read handover ancestry only inside the already-authorized building. Existing production RPCs and financial calculations remain unchanged.
