@@ -8,6 +8,7 @@ export const AUDIT_ACTIONS = {
   BUILDING_REMOVED: 'building.removed',
   BUILDING_INVOICE_PROFILE_UPDATED: 'building.invoice_profile.updated',
   BUILDING_INVOICE_EMAIL_SETTINGS_UPDATED: 'building.invoice_email_settings.updated',
+  BUILDING_INVENTORY_TEMPLATE_UPDATED: 'building.inventory_template.updated',
 
   // Room
   ROOM_CREATED: 'room.created',
@@ -16,6 +17,8 @@ export const AUDIT_ACTIONS = {
   ROOM_ACTIVATED: 'room.activated',
   ROOM_MAINTENANCE_SET: 'room.maintenance_set',
   ROOM_REMOVED: 'room.removed',
+  ROOM_INVENTORY_UPDATED: 'room.inventory.updated',
+  ROOM_INVENTORY_TEMPLATE_APPLIED: 'room.inventory.template_applied',
 
   // Tenant
   TENANT_CREATED: 'tenant.created',
