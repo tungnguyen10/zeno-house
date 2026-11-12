@@ -2,7 +2,7 @@
 type: Change Implementation Plan
 title: "building-contract-defaults-implementation-plan"
 status: draft
-change_state: plan-review
+change_state: implementation-review
 tags: [superpowers, change, buildings, contracts, pii, v2]
 ---
 
@@ -37,21 +37,21 @@ tags: [superpowers, change, buildings, contracts, pii, v2]
 2. **Partial save** — owner saves with only the lessor name filled; save succeeds and readiness lists the remaining codes. Pinned in Task 2 (validator) and Task 3 (readiness).
 3. **`Z` past day 31** — `payment_due_day = 28`, `grace_period_days = 5` must not print "sau ngày 33"; the sentence switches to "quá N ngày sau hạn thanh toán". Pinned in Task 7 (`formatPaymentWindow` test).
 4. **Validation error echoes the CCCD** — Zod messages must be static strings. Pinned in Task 2.
-5. **Owner outside scope** — owner reading/writing another owner's building gets 403 before any repository read of the profile. Pinned in Task 4.
+5. **Owner outside scope** — owner reading another owner's building gets 404, while writing gets 403, before any repository read of the profile (accepted building-scope contract). Pinned in Task 4.
 
 ---
 
 ### Task 1: Migration + verification script
 
 **Files:**
-- Create: `supabase/migrations/20261111100000_building_contract_profiles.sql`
+- Create: `supabase/migrations/20261111172755_building_contract_profiles.sql`
 - Create: `supabase/verification/building_contract_profiles.sql`
 - Test: `tests/config/building-contract-profiles-migration.test.ts`
 
 **Interfaces:**
 - Produces table `public.building_contract_profiles` with columns listed in design §4.
 
-- [ ] **Step 1: Write the failing static test**
+- [x] **Step 1: Write the failing static test**
 
 ```ts
 // tests/config/building-contract-profiles-migration.test.ts
@@ -59,7 +59,7 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
-const sql = readFileSync(resolve(process.cwd(), 'supabase/migrations/20261111100000_building_contract_profiles.sql'), 'utf8')
+const sql = readFileSync(resolve(process.cwd(), 'supabase/migrations/20261111172755_building_contract_profiles.sql'), 'utf8')
 
 describe('building_contract_profiles migration', () => {
   it('creates a 1:1 table cascading with buildings', () => {
@@ -81,12 +81,12 @@ describe('building_contract_profiles migration', () => {
 })
 ```
 
-- [ ] **Step 2: Run to verify failure**
+- [x] **Step 2: Run to verify failure**
 
 Run: `npx vitest run tests/config/building-contract-profiles-migration.test.ts`
 Expected: FAIL (ENOENT).
 
-- [ ] **Step 3: Write the migration**
+- [x] **Step 3: Write the migration**
 
 ```sql
 -- =============================================================================
@@ -144,7 +144,7 @@ revoke all on table public.building_contract_profiles from public, anon, authent
 grant select, insert, update, delete on table public.building_contract_profiles to service_role;
 ```
 
-- [ ] **Step 4: Write the verification script**
+- [x] **Step 4: Write the verification script**
 
 ```sql
 -- Verification for building_contract_profiles (V2 PR1). Run as service_role; rolled back.
@@ -190,12 +190,12 @@ rollback;
 
 Cascade check (manual, cloud gate): create a throwaway building + profile inside `begin; … rollback;`, delete the building, confirm the profile row is gone.
 
-- [ ] **Step 5: Run test** — `npx vitest run tests/config/building-contract-profiles-migration.test.ts` → PASS.
+- [x] **Step 5: Run test** — `npx vitest run tests/config/building-contract-profiles-migration.test.ts` → PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
-git add supabase/migrations/20261111100000_building_contract_profiles.sql supabase/verification/building_contract_profiles.sql tests/config/building-contract-profiles-migration.test.ts
+git add supabase/migrations/20261111172755_building_contract_profiles.sql supabase/verification/building_contract_profiles.sql tests/config/building-contract-profiles-migration.test.ts
 git commit -m "feat(db): add building_contract_profiles table"
 ```
 
@@ -261,7 +261,7 @@ git commit -m "feat(db): add building_contract_profiles table"
   export const CONTRACT_PROFILE_PII_FIELDS = ['lessor_date_of_birth', 'lessor_permanent_address', 'lessor_id_number'] as const
   ```
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 ```ts
 // tests/utils/building-contract-profile-validator.test.ts
@@ -360,11 +360,11 @@ describe('building contract profile mapper', () => {
 })
 ```
 
-- [ ] **Step 2: Run to verify failure** — `npx vitest run tests/utils/building-contract-profile-validator.test.ts tests/utils/building-contract-profile-mapper.test.ts` → FAIL (modules missing).
+- [x] **Step 2: Run to verify failure** — `npx vitest run tests/utils/building-contract-profile-validator.test.ts tests/utils/building-contract-profile-mapper.test.ts` → FAIL (modules missing).
 
-- [ ] **Step 3: Implement the types file** exactly as in **Interfaces** above.
+- [x] **Step 3: Implement the types file** exactly as in **Interfaces** above.
 
-- [ ] **Step 4: Implement the mapper**
+- [x] **Step 4: Implement the mapper**
 
 ```ts
 // app/utils/mappers/building-contract-profile.ts
@@ -440,7 +440,7 @@ export function maskBuildingContractProfile(profile: BuildingContractProfile): B
 }
 ```
 
-- [ ] **Step 5: Implement the validator**
+- [x] **Step 5: Implement the validator**
 
 ```ts
 // app/utils/validators/building-contract-profile.ts
@@ -512,9 +512,9 @@ export const buildingContractProfileSchema = z.object({
 export type BuildingContractProfileInput = z.infer<typeof buildingContractProfileSchema>
 ```
 
-- [ ] **Step 6: Run tests** — both files PASS.
+- [x] **Step 6: Run tests** — both files PASS.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add app/types/building-contract-profile.ts app/utils/mappers/building-contract-profile.ts app/utils/validators/building-contract-profile.ts tests/utils/building-contract-profile-*.test.ts
@@ -541,7 +541,7 @@ git commit -m "feat(buildings): add contract profile DTO, mapper and validator"
   ```
   Uses the profile's presence of values only; masked profiles still count as filled (`lessorIdNumber` masked is non-null; `lessorDateOfBirth`/`lessorPermanentAddress` masked are null — so the service MUST compute readiness from the **unmasked** profile, see Task 4).
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 // tests/server/buildings/readiness.test.ts
@@ -606,9 +606,9 @@ describe('computeBuildingReadiness', () => {
 })
 ```
 
-- [ ] **Step 2: Run to verify failure** — FAIL (module missing).
+- [x] **Step 2: Run to verify failure** — FAIL (module missing).
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 ```ts
 // server/services/buildings/readiness.ts
@@ -667,9 +667,9 @@ export function computeBuildingReadiness(
 
 Before implementing, confirm in `server/services/billing/rules.ts` which pricing types read `default_*_rate`; if `tiered` brackets live elsewhere and another type also doesn't use the rate, extend the exemption and the test accordingly.
 
-- [ ] **Step 4: Run test** → PASS.
+- [x] **Step 4: Run test** → PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add server/services/buildings/readiness.ts tests/server/buildings/readiness.test.ts
@@ -702,7 +702,7 @@ git commit -m "feat(buildings): compute contract and billing readiness"
   ```
   `AUDIT_ACTIONS.BUILDING_CONTRACT_PROFILE_UPDATED = 'building.contract_profile.updated'`
 
-- [ ] **Step 1: Write the failing service test**
+- [x] **Step 1: Write the failing service test**
 
 ```ts
 // tests/server/buildings/contract-profile-service.test.ts
@@ -775,9 +775,9 @@ describe('BuildingContractProfileService.get', () => {
   })
 
   it('checks scope before reading the profile', async () => {
-    assertBuildingScope.mockRejectedValue(Object.assign(new Error('forbidden'), { statusCode: 403 }))
+    assertBuildingScope.mockRejectedValue(Object.assign(new Error('not found'), { statusCode: 404 }))
     const { BuildingContractProfileService } = await import('../../../server/services/buildings/contract-profile')
-    await expect(BuildingContractProfileService.get(ev(), owner, 'b-1')).rejects.toMatchObject({ statusCode: 403 })
+    await expect(BuildingContractProfileService.get(ev(), owner, 'b-1')).rejects.toMatchObject({ statusCode: 404 })
     expect(findProfile).not.toHaveBeenCalled()
   })
 })
@@ -820,9 +820,9 @@ describe('BuildingContractProfileService.readiness', () => {
 })
 ```
 
-- [ ] **Step 2: Run to verify failure** — FAIL.
+- [x] **Step 2: Run to verify failure** — FAIL.
 
-- [ ] **Step 3: Capabilities and audit constant**
+- [x] **Step 3: Capabilities and audit constant**
 
 In `app/utils/constants/permissions.ts`, inside `OWNER_CAPABILITIES` right after `'building-invoice-profile.write',` add:
 
@@ -843,7 +843,7 @@ In `app/utils/constants/audit.ts`, after `BUILDING_INVOICE_EMAIL_SETTINGS_UPDATE
 
 If there is a permissions snapshot test (e.g. `tests/**/permissions*.test.ts`), update it in this step.
 
-- [ ] **Step 4: Repository**
+- [x] **Step 4: Repository**
 
 ```ts
 // server/repositories/building-contract-profiles.ts
@@ -880,7 +880,7 @@ export const BuildingContractProfileRepository = {
 
 `throwDbError` logs via `throwInternal`; confirm `server/utils/errors.ts` `throwInternal` does not log `details` containing row values. If it logs `error.details`/`error.message` from Postgres check violations, those messages contain the failing row for `23514` ("Failing row contains (...)"). Mitigation in this step: catch `error.code === '23514'` before `throwDbError` and call `throwValidationError('Thông tin hợp đồng không hợp lệ')` without passing the error object.
 
-- [ ] **Step 5: Service**
+- [x] **Step 5: Service**
 
 ```ts
 // server/services/buildings/contract-profile.ts
@@ -949,7 +949,7 @@ export const BuildingContractProfileService = {
       action: AUDIT_ACTIONS.BUILDING_CONTRACT_PROFILE_UPDATED,
       entity_type: 'building',
       entity_id: building.id,
-      metadata: { configured_first_time: !existing, changed_fields: changedFields(existing, input) },
+      metadata: { changed_fields: changedFields(existing, input) },
     })
     return present(user, mapBuildingContractProfile(saved))!
   },
@@ -974,9 +974,9 @@ export const BuildingContractProfileService = {
 
 `entity_type: 'building'` must be a valid `AuditEntityType`; it is (used by invoice profile).
 
-- [ ] **Step 6: Run tests** — `npx vitest run tests/server/buildings/contract-profile-service.test.ts` → PASS.
+- [x] **Step 6: Run tests** — `npx vitest run tests/server/buildings/contract-profile-service.test.ts` → PASS.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add app/utils/constants/permissions.ts app/utils/constants/audit.ts server/repositories/building-contract-profiles.ts server/services/buildings/contract-profile.ts tests/server/buildings/contract-profile-service.test.ts
@@ -998,7 +998,7 @@ git commit -m "feat(buildings): contract profile service with PII masking"
 - `PUT /api/buildings/[id]/contract-profile` (JSON body, snake_case per validator) → `{ data: BuildingContractProfile }`
 - `GET /api/buildings/[id]/readiness` → `{ data: BuildingReadiness }`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 // tests/server/buildings/contract-profile-api.test.ts
@@ -1064,9 +1064,9 @@ describe('contract profile API', () => {
 
 Check how `parseBody` builds its 422 details (`server/utils/**`). If it includes `received` values from Zod issues, the "no echo" assertion will fail; in that case use `safeParse` in the route and call `throwValidationError('Thông tin hợp đồng không hợp lệ', result.error.flatten().fieldErrors)` (field errors contain only messages).
 
-- [ ] **Step 2: Run to verify failure** — FAIL.
+- [x] **Step 2: Run to verify failure** — FAIL.
 
-- [ ] **Step 3: Implement routes**
+- [x] **Step 3: Implement routes**
 
 ```ts
 // server/api/buildings/[id]/contract-profile/index.get.ts
@@ -1108,9 +1108,9 @@ export default defineEventHandler(async (event) => {
 
 If `throwValidationError` is not stubbed globally in tests, add `vi.stubGlobal('throwValidationError', …)` like `invoice-profile-api.test.ts`.
 
-- [ ] **Step 4: Run tests** → PASS. Run `node scripts/generate-api-inventory.mjs` and include `docs/api-inventory.md` if changed.
+- [x] **Step 4: Run tests** → PASS. Run `node scripts/generate-api-inventory.mjs` and include `docs/api-inventory.md` if changed.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add server/api/buildings/[id]/contract-profile server/api/buildings/[id]/readiness.get.ts tests/server/buildings/contract-profile-api.test.ts docs/api-inventory.md
@@ -1129,7 +1129,7 @@ git commit -m "feat(api): building contract profile and readiness endpoints"
 **Interfaces:**
 - `BuildingSettingsBootstrap` gains `contractProfile: BuildingContractProfile | null` and `readiness: BuildingReadiness`.
 
-- [ ] **Step 1: Write failing tests** (in the existing bootstrap test file, add mocks for `BuildingContractProfileService.get` and `.readiness`):
+- [x] **Step 1: Write failing tests** (in the existing bootstrap test file, add mocks for `BuildingContractProfileService.get` and `.readiness`):
 
 ```ts
 it('includes contract profile and readiness', async () => {
@@ -1152,9 +1152,9 @@ it('skips the profile when the role cannot read it', async () => {
 
 Adapt variable names to the existing file's mocks.
 
-- [ ] **Step 2: Run to verify failure.**
+- [x] **Step 2: Run to verify failure.**
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 In `app/types/building-settings.ts` import `BuildingContractProfile, BuildingReadiness` from `./building-contract-profile` and add:
 
@@ -1174,9 +1174,9 @@ In `server/services/buildings/settings-bootstrap.ts`, import `BuildingContractPr
 
 destructure as `contractProfile, readiness` and add both to the returned object.
 
-- [ ] **Step 4: Run tests** → PASS.
+- [x] **Step 4: Run tests** → PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/types/building-settings.ts server/services/buildings/settings-bootstrap.ts tests/server/buildings
@@ -1208,7 +1208,7 @@ git commit -m "feat(buildings): include contract profile and readiness in settin
   export const READINESS_LABELS: Record<ReadinessCode, { label: string; anchor: string }>
   ```
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 ```ts
 // tests/utils/payment-window.test.ts
@@ -1276,9 +1276,9 @@ describe('useBuildingContractProfile', () => {
 
 If `apiFetch` does not call `$fetch(url, opts)` directly, adapt the assertion to how `tests/composables/buildings.test.ts` asserts calls.
 
-- [ ] **Step 2: Run to verify failure.**
+- [x] **Step 2: Run to verify failure.**
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 ```ts
 // app/utils/format/payment-window.ts
@@ -1385,9 +1385,9 @@ export function useBuildingContractProfile(
 }
 ```
 
-- [ ] **Step 4: Run tests** → PASS.
+- [x] **Step 4: Run tests** → PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/composables/buildings/useBuildingContractProfile.ts app/utils/format/payment-window.ts app/utils/constants/readiness.ts tests/utils/payment-window.test.ts tests/composables/useBuildingContractProfile.test.ts
@@ -1407,11 +1407,11 @@ git commit -m "feat(buildings): contract profile composable and payment window f
 - Component props: `{ profile: BuildingContractProfile | null; building: Building; canEdit: boolean; saving: boolean; error: string | null; editPath: string }`
 - Emits: `save: [input: BuildingContractProfileInput]`
 
-- [ ] **Step 1: UI polish workflow (no code yet)**
+- [x] **Step 1: UI polish workflow (no code yet)**
 
 Read `.agents/skills/zeno-house/references/ui-polish-workflow.md`; apply `frontend-design` and Hallmark. Mirror `BuildingInvoiceProfileSettings.vue` structure and density. Decide grouping/layout for the 5 groups, how the masked state reads for managers, the payment-window preview treatment, and mobile layout. Record decisions in `docs/changes/building-contract-defaults/verification.md` → "UI decisions". If a new token/primitive seems necessary, stop and ask (problem, option, affected surfaces, benefit, cost).
 
-- [ ] **Step 2: Write failing tests**
+- [x] **Step 2: Write failing tests**
 
 ```ts
 // tests/components/buildings/BuildingContractProfileSettings.test.ts
@@ -1474,9 +1474,9 @@ describe('building settings contract profile section', () => {
 
 Adjust the mount setup to match existing component tests (global stubs/plugins) — check `tests/components/**` for the shared pattern before writing.
 
-- [ ] **Step 3: Run to verify failure.**
+- [x] **Step 3: Run to verify failure.**
 
-- [ ] **Step 4: Implement the component**
+- [x] **Step 4: Implement the component**
 
 Script outline (template follows the Step 1 decisions using `UiFormSection`, `UiInput`, `UiAlert`, `UiButton`, `UiBadge`):
 
@@ -1545,7 +1545,7 @@ Template requirements (verified by tests):
 - When the owner edits an existing masked-for-others id: owner sees full value (not masked) since owner has `pii.read`; `lessor_id_number: ''` from a masked profile only occurs for roles without edit rights, so no accidental wipe.
 - Placeholders as suggestions: notice_days "30", deposit_refund_days "7", renewal_months "6", default_term_months "12", default_deposit_months "1".
 
-- [ ] **Step 5: Wire into the settings page**
+- [x] **Step 5: Wire into the settings page**
 
 In `settings.vue`:
 1. Add a nav item after `invoice-profile`:
@@ -1619,11 +1619,11 @@ async function handleSaveContractProfile(input: BuildingContractProfileInput) {
 
 Add the unsaved-changes guard using the same mechanism the page uses for other sections (search the page for `onBeforeRouteLeave` / `useUnsavedChanges`); if no such mechanism exists for settings sections, skip it and note in `verification.md`.
 
-- [ ] **Step 6: Run tests** → PASS.
+- [x] **Step 6: Run tests** → PASS.
 
-- [ ] **Step 7: Visual QA** (ask before starting a local runtime): owner (empty, partial, complete, save error), manager (masked read-only), schedule missing, mobile 375px. Record in `verification.md`.
+- [x] **Step 7: Visual QA** (ask before starting a local runtime): owner (empty, partial, complete, save error), manager (masked read-only), schedule missing, mobile 375px. Record in `verification.md`.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add app/components/buildings/BuildingContractProfileSettings.vue app/pages/dashboard/buildings/[id]/settings.vue tests/components/buildings/BuildingContractProfileSettings.test.ts tests/pages/building-settings-contract-profile.spec.ts docs/changes/building-contract-defaults/verification.md
@@ -1643,7 +1643,7 @@ git commit -m "feat(buildings): contract profile settings section"
 - Props: `{ readiness: BuildingReadiness; settingsPath: string; editPath: string }`
 - Page fetches `GET /api/buildings/[id]/readiness` via `useFetch` (lazy, non-blocking).
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 // tests/components/buildings/BuildingReadinessCard.test.ts
@@ -1680,11 +1680,11 @@ describe('BuildingReadinessCard', () => {
 
 Use `NuxtLink` stub as in other component tests (render as `<a :href="to">`).
 
-- [ ] **Step 2: Run to verify failure.**
+- [x] **Step 2: Run to verify failure.**
 
-- [ ] **Step 3: Implement** the card with `UiSurfacePanel`, two rows (label, ✓ or `UiBadge` "Thiếu N mục", toggle button `data-test="readiness-{kind}-toggle"`), expandable list using `READINESS_LABELS` → `anchor === 'edit' ? editPath : \`${settingsPath}#${anchor}\``. When both ready render a single compact line `data-test="readiness-compact"` "Sẵn sàng lập hợp đồng và xuất hóa đơn". No inline `<svg>`; use existing icon components if needed.
+- [x] **Step 3: Implement** the card with `UiSurfacePanel`, two rows (label, ✓ or `UiBadge` "Thiếu N mục", toggle button `data-test="readiness-{kind}-toggle"`), expandable list using `READINESS_LABELS` → `anchor === 'edit' ? editPath : \`${settingsPath}#${anchor}\``. When both ready render a single compact line `data-test="readiness-compact"` "Sẵn sàng lập hợp đồng và xuất hóa đơn". No inline `<svg>`; use existing icon components if needed.
 
-- [ ] **Step 4: Wire into the detail page** after `BuildingDetailHero`:
+- [x] **Step 4: Wire into the detail page** after `BuildingDetailHero`:
 
 ```ts
 const { data: readinessData } = useFetch<ApiSuccess<BuildingReadiness>>(
@@ -1705,9 +1705,9 @@ const { data: readinessData } = useFetch<ApiSuccess<BuildingReadiness>>(
 
 (Use the page's existing `id` / building identifier variable.)
 
-- [ ] **Step 5: Run tests** → PASS. Visual QA desktop/mobile; record in `verification.md`.
+- [x] **Step 5: Run tests** → PASS. Visual QA desktop/mobile; record in `verification.md`.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/components/buildings/BuildingReadinessCard.vue app/pages/dashboard/buildings/[id]/index.vue tests/components/buildings/BuildingReadinessCard.test.ts docs/changes/building-contract-defaults/verification.md
@@ -1722,9 +1722,9 @@ git commit -m "feat(buildings): readiness card on building detail"
 - Create/Modify: `docs/changes/building-contract-defaults/verification.md`
 - Modify: `docs/changes/building-contract-defaults/index.md`
 
-- [ ] **Step 1: Run** `npm run typecheck && npm test && npm run lint && npm run knowledge:check`. Fix failures; record results.
+- [x] **Step 1: Run** `npm run typecheck && npm test && npm run lint && npm run knowledge:check`. Fix failures; record results.
 
-- [ ] **Step 2: Write `verification.md`**
+- [x] **Step 2: Write `verification.md`**
 
 ```markdown
 ---
@@ -1762,9 +1762,9 @@ tags: [change, verification, buildings, pii]
 - [ ] Types regenerated; repository casts removed — <commit>
 ```
 
-- [ ] **Step 3: Update `index.md`** status to `implementation-review`, link plan and verification.
+- [x] **Step 3: Update `index.md`** status to `implementation-review`, link plan and verification.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add docs/changes/building-contract-defaults

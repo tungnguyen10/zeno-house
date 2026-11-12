@@ -1,4 +1,5 @@
 import type { AssignmentManager } from './assignments'
+import type { BuildingContractProfile, BuildingReadiness } from './building-contract-profile'
 import type { BuildingService } from './building-services'
 import type { BuildingInvoiceProfile } from './building-invoice-profile'
 import type { BuildingInvoiceEmailSettings } from './invoice-email'
@@ -16,6 +17,8 @@ import type { ServiceCatalogItem } from './service-catalog'
 export interface BuildingSettingsBootstrap {
   building: Building
   invoiceProfile: BuildingInvoiceProfile | null
+  contractProfile: BuildingContractProfile | null
+  readiness: BuildingReadiness
   invoiceEmailAvailable: boolean
   invoiceEmailSettings: BuildingInvoiceEmailSettings | null
   buildingServices: BuildingService[]

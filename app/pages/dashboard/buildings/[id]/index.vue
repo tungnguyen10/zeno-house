@@ -1,5 +1,7 @@
 <script setup lang="ts">
 
+import type { ApiSuccess } from '~/types/api'
+import type { BuildingReadiness } from '~/types/building-contract-profile'
 import { buildingEditPath, buildingSettingsPath } from '~/utils/routes/operational'
 import { getApiErrorCode, getApiErrorDetails, type ApiErrorLike } from '~/utils/api-error'
 
@@ -9,6 +11,25 @@ const toast = useToast()
 const id = route.params.id as string
 
 const { building, isLoading, error, refresh } = useBuildingDetail(id)
+const canViewReadiness = computed(() => authStore.canManage && authStore.can('buildings.read'))
+const {
+  data: readinessData,
+  status: readinessStatus,
+  error: readinessError,
+  refresh: refreshReadiness,
+  clear: clearReadiness,
+} = useFetch<ApiSuccess<BuildingReadiness>>(
+  () => `/api/buildings/${encodeURIComponent(id)}/readiness`,
+  { lazy: true, server: false, immediate: false, watch: false },
+)
+
+onMounted(() => {
+  watch(canViewReadiness, (allowed) => {
+    if (allowed) void refreshReadiness()
+    else clearReadiness()
+  }, { immediate: true })
+})
+
 const {
   services: buildingServices,
   isLoading: loadingServices,
@@ -182,6 +203,33 @@ const waterLabel = computed(() => {
         <BuildingDetailHero
           :building="building"
           :active-services="activeServicesCount"
+        />
+      </div>
+
+      <div v-if="canViewReadiness" class="mt-4" data-test="building-readiness">
+        <UiSurfacePanel
+          v-if="readinessStatus === 'idle' || readinessStatus === 'pending'"
+          as="section"
+          density="compact"
+          aria-label="Sẵn sàng vận hành"
+          aria-busy="true"
+          data-test="readiness-loading"
+        >
+          <p role="status" class="text-sm text-ui-muted">Đang kiểm tra thông tin vận hành…</p>
+        </UiSurfacePanel>
+        <UiAlert v-else-if="readinessError || !readinessData?.data" severity="warning" data-test="readiness-error">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <p class="text-sm">Không thể kiểm tra thông tin vận hành. Vui lòng thử lại.</p>
+            <UiButton variant="secondary" size="sm" class="min-h-11 shrink-0" data-test="readiness-retry" @click="refreshReadiness()">
+              Thử lại
+            </UiButton>
+          </div>
+        </UiAlert>
+        <BuildingReadinessCard
+          v-else
+          :readiness="readinessData.data"
+          :settings-path="buildingSettingsPath(building)"
+          :edit-path="buildingEditPath(building)"
         />
       </div>
 

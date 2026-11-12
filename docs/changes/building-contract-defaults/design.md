@@ -2,13 +2,13 @@
 type: Change Design
 title: "building-contract-defaults-design"
 status: draft
-change_state: design-review
+change_state: implementation-review
 tags: [superpowers, change, buildings, contracts, pii, v2]
 ---
 
 # PR1 — Building Defaults & Readiness
 
-> Sub-project PR1 của [ZENO House V2 — Flow Optimization Brief](../zeno-house-v2-optimization/brief.md). Thiết kế chưa được chấp nhận hay triển khai; yêu cầu đã chấp nhận nằm ở `docs/capabilities/**`.
+> Sub-project PR1 của [ZENO House V2 — Flow Optimization Brief](../zeno-house-v2-optimization/brief.md). Source đã được triển khai theo kế hoạch; cloud rollout và chấp nhận vẫn là gate riêng. Yêu cầu đã chấp nhận nằm ở `docs/capabilities/**`.
 
 ## 1. Mục tiêu
 
@@ -99,7 +99,7 @@ Hàm thuần `computeBuildingReadiness(building, contractProfile, invoiceProfile
 
 ### 5.4. Audit và lỗi
 
-- Hành động `building.contract_profile_updated`, `metadata.changed_fields: string[]`; `before_data`/`after_data` = null.
+- Hành động `building.contract_profile.updated`, `metadata.changed_fields: string[]`; `before_data`/`after_data` = null.
 - Lỗi validation chỉ nêu tên trường, không echo giá trị.
 
 ## 6. UI
@@ -133,7 +133,7 @@ Hàm thuần `computeBuildingReadiness(building, contractProfile, invoiceProfile
 | Validator | `tests/utils/building-contract-profile-validator.test.ts` | CCCD 9/12 số; ngày cấp không ở tương lai; các khoảng số; `copies_per_party * 2 ≤ signed_copies`; mọi trường trống vẫn hợp lệ |
 | Readiness | `tests/server/buildings/readiness.test.ts` | Đủ → ready; thiếu từng nhóm → đúng mã; thiếu hồ sơ hóa đơn ảnh hưởng cả hai; cách tính điện/nước không cần đơn giá |
 | Che dữ liệu | cùng file service test | Không còn CCCD gốc, ngày sinh, địa chỉ; chỉ 4 số cuối |
-| Service/API | `tests/server/building-contract-profile.api.test.ts` | Admin/owner thấy đầy đủ; manager nhận bản che (assert chuỗi CCCD gốc không có trong JSON); manager PUT → 403; owner ngoài scope → 403; audit chỉ `changed_fields`; lỗi không echo giá trị |
+| Service/API | `tests/server/building-contract-profile.api.test.ts` | Admin/owner thấy đầy đủ; manager nhận bản che (assert chuỗi CCCD gốc không có trong JSON); manager PUT → 403; owner ngoài scope → GET 404 / PUT 403; audit chỉ `changed_fields`; lỗi không echo giá trị |
 | Bootstrap | test settings-bootstrap hiện có | Có `contractProfile` (đã che theo vai trò) và `readiness` |
 | UI | `tests/pages/building-settings-contract-profile.spec.ts`, test component | Có `#contract-profile`; có câu xem trước lịch; manager chỉ đọc |
 

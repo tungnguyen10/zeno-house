@@ -1,5 +1,7 @@
 <script setup lang="ts">
 
+import type { BuildingContractProfileInput } from '~/utils/validators/building-contract-profile'
+import { usePortalUnsavedChanges } from '~/composables/tenant-portal/usePortalUnsavedChanges'
 import type { ApiSuccess } from '~/types/api'
 import type { BuildingInvoiceProfileSaveInput } from '~/types/building-invoice-profile'
 import type { PricingType, ServiceCatalogItem } from '~/types/service-catalog'
@@ -24,7 +26,7 @@ import {
 } from '~/utils/constants/operations-report'
 import { formatCurrency } from '~/utils/format/currency'
 import { currentVietnamPeriod, formatPeriodString, parsePeriodString } from '~/utils/format/period'
-import { buildingPath } from '~/utils/routes/operational'
+import { buildingPath, buildingEditPath } from '~/utils/routes/operational'
 
 const route = useRoute()
 const id = route.params.id as string
@@ -64,6 +66,42 @@ const {
   },
 })
 const canEditInvoiceProfile = computed(() => authStore.can('building-invoice-profile.write'))
+const readiness = computed(() => settings.value?.readiness ?? null)
+const canReadContractProfile = computed(() => authStore.can('building-contract-profile.read'))
+const canEditContractProfile = computed(() => authStore.can('building-contract-profile.write'))
+const contractReadinessLabel = computed(() => {
+  if (!readiness.value) return 'Đang kiểm tra'
+  return readiness.value.contract.ready ? 'Đủ thông tin lập HĐ' : `Thiếu ${readiness.value.contract.missing.length} mục`
+})
+const contractProfileDirty = ref(false)
+const contractUnsaved = usePortalUnsavedChanges(contractProfileDirty)
+onBeforeRouteLeave(contractUnsaved.guardRouteLeave)
+onBeforeRouteUpdate((to, from) => {
+  if (to.params.id !== from.params.id) return contractUnsaved.guardRouteLeave()
+  return true
+})
+onMounted(() => window.addEventListener('beforeunload', contractUnsaved.onBeforeUnload))
+onBeforeUnmount(() => window.removeEventListener('beforeunload', contractUnsaved.onBeforeUnload))
+const { saving: savingContractProfile, error: contractProfileError, save: saveContractProfile } = useBuildingContractProfile(id, {
+  data: computed(() => settings.value?.contractProfile ?? null),
+  set: (profile) => {
+    if (settingsData.value) {
+      settingsData.value = { ...settingsData.value, data: { ...settingsData.value.data, contractProfile: profile } }
+    }
+  },
+  onSaved: () => refreshSettings(),
+})
+async function handleSaveContractProfile(input: BuildingContractProfileInput) {
+  if (savingContractProfile.value) return
+  try {
+    await saveContractProfile(input)
+    contractProfileDirty.value = false
+    toast.success('Đã lưu thông tin hợp đồng của tòa nhà.')
+  }
+  catch {
+    // The composable shows the API error beside the form.
+  }
+}
 const {
   settings: invoiceEmailSettings,
   loading: loadingInvoiceEmailSettings,
@@ -756,6 +794,13 @@ const settingsSections = computed<SettingsSectionNavItem[]>(() => [
     visible: true,
   },
   {
+    id: 'contract-profile',
+    label: 'Hợp đồng',
+    description: 'Bên cho thuê, điều khoản và lịch thanh toán trên hợp đồng',
+    badge: contractReadinessLabel.value,
+    visible: canReadContractProfile.value,
+  },
+  {
     id: 'finance-rules',
     label: 'Quy tắc vận hành',
     description: 'Chi phí cố định, quỹ dự phòng, nhắc chi và trả trước',
@@ -976,6 +1021,27 @@ const activeSectionId = computed(() => {
                 :saving="savingInvoiceEmailSettings"
                 :error="invoiceEmailSettingsError"
                 @save="handleSaveInvoiceEmailSettings"
+              />
+            </UiSurfacePanel>
+          </UiSection>
+        </section>
+
+        <section v-if="canReadContractProfile && building" id="contract-profile" class="scroll-mt-20 space-y-3">
+          <header class="flex flex-wrap items-center justify-between gap-2">
+            <h2 class="text-sm font-semibold text-ui-accent">Hợp đồng</h2>
+            <UiBadge :variant="!readiness ? 'neutral' : readiness.contract.ready ? 'success' : 'warning'">{{ contractReadinessLabel }}</UiBadge>
+          </header>
+          <UiSection title="Thông tin trên hợp đồng" description="Lưu hồ sơ bên cho thuê và điều khoản để chuẩn bị hợp đồng.">
+            <UiSurfacePanel density="compact">
+              <BuildingContractProfileSettings
+                :profile="settings?.contractProfile ?? null"
+                :building="building"
+                :can-edit="canEditContractProfile"
+                :saving="savingContractProfile"
+                :error="contractProfileError"
+                :edit-path="buildingEditPath(building)"
+                @save="handleSaveContractProfile"
+                @dirty="contractProfileDirty = $event"
               />
             </UiSurfacePanel>
           </UiSection>
@@ -1571,5 +1637,12 @@ const activeSectionId = computed(() => {
         </UiAlert>
       </div>
     </UiConfirmModal>
+    <UiModal :open="contractUnsaved.discardOpen.value" title="Bỏ thay đổi chưa lưu?" @close="contractUnsaved.keepEditing">
+      <p class="text-sm text-ui-muted">Thông tin hợp đồng bạn vừa chỉnh sửa chưa được lưu.</p>
+      <template #footer>
+        <UiButton variant="secondary" @click="contractUnsaved.keepEditing">Tiếp tục chỉnh sửa</UiButton>
+        <UiButton variant="danger" @click="contractUnsaved.discardChanges">Bỏ thay đổi</UiButton>
+      </template>
+    </UiModal>
   </div>
 </template>
