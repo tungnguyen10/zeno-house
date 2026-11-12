@@ -25,6 +25,7 @@ const formData = ref<ContractFormData>({
   handover_electricity_reading: '',
   handover_water_reading: '',
   handover_reading_date: '',
+  inventory: [],
 })
 const initialSnapshot = ref<ContractFormData>({ ...formData.value })
 
@@ -130,6 +131,7 @@ async function createContract(data: ContractFormData) {
     handover_electricity_reading: Number(data.handover_electricity_reading),
     handover_water_reading: Number(data.handover_water_reading),
     handover_reading_date: data.handover_reading_date || undefined,
+    inventory: data.inventory,
   })
   if (!created) return
 

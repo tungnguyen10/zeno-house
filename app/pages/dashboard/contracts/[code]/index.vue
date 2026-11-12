@@ -189,7 +189,7 @@ watchEffect(() => {
 // mobile segmented-pill skin can highlight it (desktop keeps the plain underline-free look).
 // IntersectionObserver's visibility window is unreliable for short sections (they can pass through
 // the window entirely between two callbacks), so this walks section positions directly instead.
-const sectionIds = ['overview', 'amendments', 'occupants', 'payments', 'services', 'meter-readings', 'checkout', 'history']
+const sectionIds = ['overview', 'amendments', 'occupants', 'payments', 'services', 'handover', 'meter-readings', 'checkout', 'history']
 const activeSection = ref(sectionIds[0])
 const SCROLLSPY_OFFSET = 140
 let scrollContainer: HTMLElement | null = null
@@ -280,6 +280,7 @@ function sectionLinkClass(sectionId: string) {
           <a href="#occupants" :class="sectionLinkClass('occupants')">Người ở</a>
           <a href="#payments" :class="sectionLinkClass('payments')">Thanh toán</a>
           <a href="#services" :class="sectionLinkClass('services')">Dịch vụ</a>
+          <a href="#handover" :class="sectionLinkClass('handover')">Nội thất</a>
           <a href="#meter-readings" :class="sectionLinkClass('meter-readings')">Chỉ số</a>
           <a v-if="checkoutSectionVisible && checkoutBundle?.enabled" href="#checkout" :class="sectionLinkClass('checkout')">Trả phòng</a>
           <a href="#history" :class="sectionLinkClass('history')">Lịch sử</a>
@@ -339,6 +340,9 @@ function sectionLinkClass(sectionId: string) {
           />
         </UiSurfacePanel>
       </UiSection>
+
+      <!-- Handover inventory section -->
+      <ContractHandoverSection id="handover" :contract-id="contract.id" class="mt-6 scroll-mt-20" />
 
       <!-- Handover readings section -->
       <UiSection id="meter-readings" title="Số bàn giao" class="mt-6 scroll-mt-20">

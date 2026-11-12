@@ -7,6 +7,9 @@ import type { ContractWithDetails } from '~/types/contracts'
 import type { MeterReading } from '~/types/meter-readings'
 import { formatCurrency } from '~/utils/format/currency'
 import { contractCreateSchema, contractUpdateSchema } from '~/utils/validators/contracts'
+import type { InventoryItem } from '~/types/inventory'
+import { toInventoryInput } from '~/utils/mappers/inventory'
+import type { InventoryItemInput } from '~/utils/validators/inventory'
 
 export interface ContractFormData {
   room_id: string
@@ -24,6 +27,8 @@ export interface ContractFormData {
   handover_electricity_reading: string
   handover_water_reading: string
   handover_reading_date: string
+  /** Optional so drafts saved before inventory existed still load. */
+  inventory?: InventoryItemInput[]
 }
 
 const props = withDefaults(defineProps<{
@@ -140,6 +145,31 @@ function onTenantSelect(tenant: Tenant | null) {
 
 const handoverRoomId = computed(() => props.showHandover ? props.modelValue.room_id : '')
 
+// Room the current inventory list was loaded for; null means it was never loaded by this form (e.g. a restored draft).
+const loadedInventoryRoomId = ref<string | null>(null)
+const loadingInventory = ref(false)
+
+async function loadRoomInventory(roomId: string) {
+  if ((props.modelValue.inventory?.length ?? 0) > 0 && loadedInventoryRoomId.value === null) {
+    loadedInventoryRoomId.value = roomId
+    return
+  }
+  loadingInventory.value = true
+  try {
+    const res = await apiFetch<ApiSuccess<InventoryItem[]>>(`/api/rooms/${roomId}/inventory`)
+    if (props.modelValue.room_id !== roomId) return
+    loadedInventoryRoomId.value = roomId
+    emit('update:modelValue', { ...props.modelValue, inventory: toInventoryInput(res.data) })
+  }
+  catch {
+    // Fail open: the server snapshots the room inventory when none is sent.
+    if (props.modelValue.room_id === roomId) emit('update:modelValue', { ...props.modelValue, inventory: undefined })
+  }
+  finally {
+    loadingInventory.value = false
+  }
+}
+
 const { data: latestReadingsData, refresh: refreshLatestReadings } = useFetch<
   ApiSuccess<{ electricity: MeterReading | null, water: MeterReading | null }>
 >('/api/meter-readings/latest', {
@@ -156,6 +186,7 @@ watch(handoverRoomId, async (roomId) => {
     latestReadingsData.value = undefined
     return
   }
+  void loadRoomInventory(roomId)
   await refreshLatestReadings()
   const updates: Partial<ContractFormData> = {}
   if (props.modelValue.handover_electricity_reading === '' && previousElectricity.value) {
@@ -230,6 +261,7 @@ function toPayload(data: ContractFormData) {
     handover_electricity_reading: Number(data.handover_electricity_reading),
     handover_water_reading: Number(data.handover_water_reading),
     handover_reading_date: data.handover_reading_date || undefined,
+    ...(props.showHandover && data.inventory ? { inventory: data.inventory } : {}),
   }
 }
 
@@ -281,7 +313,7 @@ const firstInvalidFieldId = computed<string | null>(() => {
   }
   for (const field of Object.keys(merged)) {
     if (!touched.value.has(field) && !submitAttempted.value) continue
-    const id = FIELD_META[field]?.id
+    const id = FIELD_META[field]?.id ?? (field.startsWith('inventory') ? 'contract-inventory' : undefined)
     if (id) return id
   }
   return null
@@ -324,6 +356,16 @@ function restoreDraft() {
 }
 
 const canSubmit = computed(() => !props.loading && (props.isDirty || props.hasDraft || submitAttempted.value))
+
+const inventoryItems = computed(() => props.modelValue.inventory ?? [])
+const inventoryErrors = computed(() => {
+  const result: Record<string, string> = {}
+  if (!submitAttempted.value) return result
+  for (const [key, message] of Object.entries(localErrors.value)) {
+    if (key.startsWith('inventory.')) result[key.slice('inventory.'.length)] = message
+  }
+  return result
+})
 
 const selectedRoomLabel = computed(() => {
   const room = selectedRoom.value
@@ -582,6 +624,27 @@ const selectedRoomLabel = computed(() => {
         @blur="onBlur('handover_reading_date')"
       />
       <p class="text-xs text-ui-muted">Mặc định lấy theo ngày bắt đầu hợp đồng nếu để trống.</p>
+    </UiFormSection>
+
+    <UiFormSection
+      v-if="showHandover"
+      id="contract-inventory"
+      tabindex="-1"
+      tone="muted"
+      :title="`Nội thất bàn giao (${inventoryItems.length} món)`"
+      description="Danh sách ghi nhận tình trạng nội thất khi bàn giao phòng. Lấy từ nội thất của phòng, có thể chỉnh riêng cho hợp đồng này."
+    >
+      <UiSkeleton v-if="loadingInventory" class="h-24 rounded-xl" />
+      <p v-else-if="modelValue.room_id && inventoryItems.length === 0" class="text-xs text-ui-muted">
+        Phòng chưa khai báo nội thất. Bạn có thể thêm món thủ công hoặc bỏ trống.
+      </p>
+      <InventoryItemsEditor
+        v-if="!loadingInventory"
+        :model-value="inventoryItems"
+        :disabled="loading"
+        :errors="inventoryErrors"
+        @update:model-value="update('inventory', $event)"
+      />
     </UiFormSection>
 
     <UiFormSection title="Trạng thái &amp; Ghi chú" description="Vòng đời hợp đồng và ghi chú nội bộ.">

@@ -11,6 +11,8 @@ import { formatCurrency } from '~/utils/format/currency'
 import { buildingPath, contractPath, roomEditPath, roomPath } from '~/utils/routes/operational'
 import { getApiErrorCode, getApiErrorDetails, type ApiErrorLike } from '~/utils/api-error'
 import { isUuid } from '~/utils/format/slug'
+import { inventoryTotalValue, toInventoryInput } from '~/utils/mappers/inventory'
+import { inventoryListSchema, type InventoryItemInput } from '~/utils/validators/inventory'
 
 definePageMeta({ title: 'Chi tiết phòng' })
 
@@ -94,6 +96,44 @@ const monthlyServicesTotal = computed(() =>
 )
 
 const showServicesModal = ref(false)
+
+const roomInventory = useRoomInventory(id, {
+  roomId: () => room.value?.id ?? '',
+  buildingId: () => room.value?.buildingId ?? '',
+})
+const inventoryDraft = ref<InventoryItemInput[]>([])
+const inventoryErrors = ref<Record<string, string>>({})
+const canEditInventory = computed(() => authStore.can('rooms.update'))
+const inventoryDirty = computed(() =>
+  JSON.stringify(inventoryDraft.value) !== JSON.stringify(toInventoryInput(roomInventory.items.value)),
+)
+const inventoryTotal = computed(() => inventoryTotalValue(roomInventory.items.value))
+
+watch(() => room.value?.id, async (roomId) => {
+  if (!roomId) return
+  await roomInventory.load()
+  inventoryDraft.value = toInventoryInput(roomInventory.items.value)
+}, { immediate: true })
+
+async function saveInventory() {
+  inventoryErrors.value = {}
+  const parsed = inventoryListSchema.safeParse(inventoryDraft.value)
+  if (!parsed.success) {
+    for (const issue of parsed.error.issues) inventoryErrors.value[issue.path.join('.')] ??= issue.message
+    return
+  }
+  if (await roomInventory.save(parsed.data)) {
+    inventoryDraft.value = toInventoryInput(roomInventory.items.value)
+    toast.success('Đã lưu nội thất của phòng.')
+  }
+}
+
+async function applyBuildingTemplate() {
+  if (await roomInventory.applyTemplate()) {
+    inventoryDraft.value = toInventoryInput(roomInventory.items.value)
+    toast.success('Đã áp dụng nội thất mẫu của tòa.')
+  }
+}
 
 async function handleContractServiceUpdate(serviceId: string, input: ContractServiceUpdateInput) {
   await apiFetch(`/api/contract-services/${serviceId}`, { method: 'PATCH', body: input })
@@ -276,6 +316,43 @@ if (error.value?.statusCode === 404) {
           <UiDefinitionItem label="Ngày tạo" :value="new Date(room.createdAt).toLocaleDateString('vi-VN')" />
           <UiDefinitionItem v-if="room.description" label="Mô tả" :value="room.description" stacked />
         </UiDefinitionList>
+      </UiSurfacePanel>
+
+      <UiSurfacePanel id="inventory" as="section" class="mt-4">
+        <header class="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h3 class="text-sm font-semibold text-ui-primary">Nội thất</h3>
+            <p class="mt-0.5 text-xs text-ui-muted">
+              {{ roomInventory.items.value.length }} món · tổng giá trị {{ formatCurrency(inventoryTotal) }}. Hiện trạng này được ghi vào biên bản khi tạo hợp đồng.
+            </p>
+          </div>
+          <UiButton
+            v-if="canEditInventory"
+            variant="secondary"
+            size="sm"
+            :loading="roomInventory.saving.value"
+            :disabled="inventoryDirty"
+            @click="applyBuildingTemplate"
+          >
+            Áp dụng mẫu tòa
+          </UiButton>
+        </header>
+        <UiAlert v-if="roomInventory.error.value" severity="danger" class="mb-4">
+          {{ roomInventory.error.value }}
+        </UiAlert>
+        <UiSkeleton v-if="roomInventory.loading.value" class="h-24 rounded-lg" />
+        <template v-else>
+          <InventoryItemsEditor
+            v-model="inventoryDraft"
+            :disabled="!canEditInventory || roomInventory.saving.value"
+            :errors="inventoryErrors"
+          />
+          <div v-if="canEditInventory" class="mt-4 flex justify-end">
+            <UiButton :loading="roomInventory.saving.value" :disabled="!inventoryDirty" @click="saveInventory">
+              Lưu nội thất
+            </UiButton>
+          </div>
+        </template>
       </UiSurfacePanel>
 
       <UiSurfacePanel id="active-contract" as="section" class="mt-4">
