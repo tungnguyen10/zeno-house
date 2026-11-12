@@ -1,3 +1,10 @@
+---
+type: Feature Guide
+title: "operations-report"
+status: stable
+tags: [engineering, reference]
+---
+
 # Báo Cáo Vận Hành
 
 Tài liệu này ghi lại hướng explore cho module **Báo cáo vận hành**. Mục tiêu là tổng hợp hiệu quả vận hành theo từng tòa nhà và từng tháng, dựa trên doanh thu đã có từ billing và chi phí vận hành mới cần nhập thêm.

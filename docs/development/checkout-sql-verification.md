@@ -1,3 +1,10 @@
+---
+type: Development Guide
+title: "checkout-sql-verification"
+status: stable
+tags: [engineering, reference]
+---
+
 # Checkout SQL verification and deployment
 
 This change is prepared for manual Dashboard deployment. It has **not been executed against a database** in the implementation workspace; no local database runtime was started. Source review and repository checks do not prove PostgreSQL runtime compatibility or concurrency behavior.

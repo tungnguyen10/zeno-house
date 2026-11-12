@@ -4,9 +4,11 @@ Load this reference only when project orientation or file routing is needed.
 
 ## First Reads
 
-- Always start with `AGENTS.md` and `docs/agent-context.md`.
-- Use `openspec list --json` before assuming active OpenSpec changes.
-- Use `openspec validate --specs` after editing accepted specs.
+- First load `AGENTS.md`, `docs/index.md` and `docs/agent-context.md`.
+- Accepted behavior: `docs/capabilities/**`. Planned work: `docs/changes/**`.
+- Historical Superpowers plans/specs: `docs/history/superpowers/**` (read-only evidence).
+- Only Superpowers is the feature-execution workflow. All authored documentation belongs to the OKF `docs/**` root.
+- Validate with `npm run knowledge:check`.
 
 ## Read By Task
 
@@ -20,28 +22,23 @@ Load this reference only when project orientation or file routing is needed.
 | Server/API | `docs/architecture/api.md`, `.agents/instructions/server-api.instructions.md` |
 | Database/Supabase | `docs/architecture/database.md`, `.agents/instructions/database-schema.instructions.md`, `.agents/instructions/supabase.instructions.md` |
 | Auth/permissions | `docs/architecture/auth-permissions.md`, `server/utils/permissions.ts`, `server/utils/scope.ts` |
-| Billing | `docs/features/billing.md`, `openspec/specs/billing-*`, `server/services/billing/**` |
-| Contracts | `docs/features/contracts.md`, `openspec/specs/contracts-*`, `server/services/contracts/**` |
+| Billing | `docs/features/billing.md`, `docs/capabilities/billing-*`, `server/services/billing/**` |
+| Contracts | `docs/features/contracts.md`, `docs/capabilities/contracts-*`, `server/services/contracts/**` |
 | Property operations | `docs/features/property-operations.md`, `buildings-*`, `rooms-*`, `tenants-*` specs |
 | Services/meters | `docs/features/services-meter-readings.md`, `meter-readings-api`, service specs |
-| OpenSpec workflow | `docs/development/change-workflow.md`, matching `.agents/skills/openspec-*` skill |
+| OKF + Superpowers workflow | `docs/workflow.md`, relevant available Superpowers execution skills |
 
 ## Source Order
 
 1. Code is final truth when docs are stale.
-2. `openspec/specs/**` is accepted requirement truth.
-3. Active `openspec/changes/<name>/**` is planned/in-progress behavior.
+2. `docs/capabilities/**` is accepted requirement truth.
+3. Active `docs/changes/<name>/**` is planned/in-progress behavior.
 4. `docs/**` is current engineering guidance.
-5. `openspec/changes/archive/**` is historical context only.
+5. `docs/history/**` is historical context only.
 
-## Current OpenSpec State
+## Current OKF State
 
-Do not store active-change names or inventory counts here; they drift. Refresh the current state with:
-
-```bash
-openspec list --json
-openspec list --specs
-```
+Consult `docs/changes/index.md` for active work and `docs/capabilities/index.md` for accepted requirements. No legacy specification CLI required.
 
 ## Common Source Areas
 
@@ -63,8 +60,8 @@ openspec list --specs
 
 ## Stale Context Warnings
 
-- Do not sync archived OpenSpec deltas into main specs without checking later accepted specs.
-- Do not trust inventory counts in prose unless recently refreshed.
-- Do not edit `app/types/database.types.ts` manually.
+- Archived deltas in `docs/history/**` are historical and may be superseded.
+- Verify accepted specs against implementation before assuming deployment.
+- Do not hand-edit `app/types/database.types.ts`.
 - Do not use `meter_devices` as current design; readings are room+meter-type scoped.
-- Do not assume managers have owner-wide access; check current accepted specs, active changes, and permission utilities.
+- Do not assume managers have owner-wide access; verify scope utilities, active changes and accepted requirements.

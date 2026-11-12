@@ -11,7 +11,7 @@ import { TenantSupportRequestRepository } from '../../repositories/tenant-portal
 import { TenantHousingRepository } from '../../repositories/tenant-portal/housing'
 import { throwConflict, throwForbidden, throwInternal, throwValidationError } from '../../utils/errors'
 import { can } from '../../utils/permissions'
-import { getVisibleBuildingIds, resolveTenantId } from '../../utils/scope'
+import { resolveTenantId } from '../../utils/scope'
 import { AuditService } from '../audit'
 
 type TenantRequestAttachment = {
@@ -146,8 +146,6 @@ export const TenantSupportRequestService = {
         tenant_id: stored.tenant_id,
         building_id: stored.building_id,
         contract_id: stored.contract_id,
-        title: stored.title,
-        description: stored.description,
         status: stored.status,
         created_at: stored.created_at,
         has_attachment: Boolean(stored.attachment_path),
@@ -160,8 +158,7 @@ export const TenantSupportRequestService = {
     if (!can(user, 'tenants.read')) {
       throwForbidden('Không có quyền xem yêu cầu hỗ trợ')
     }
-    const buildingIds = await getVisibleBuildingIds(event, user)
-    const rows = await TenantSupportRequestRepository.listByBuildingIds(event, buildingIds)
-    return Promise.all(rows.map(row => withSignedAttachment(event, row)))
+    const { TenantSupportRequestOperatorService } = await import('./operator-requests')
+    return (await TenantSupportRequestOperatorService.list(event, user, {})).data
   },
 }

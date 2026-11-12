@@ -9,8 +9,10 @@ import type { Room } from '~/types/rooms'
 import type { ContractServiceUpdateInput } from '~/utils/validators/contract-services'
 import { formatCurrency } from '~/utils/format/currency'
 import { buildingPath, contractPath, roomEditPath, roomPath } from '~/utils/routes/operational'
-import { getApiErrorCode, getApiErrorDetails, type ApiErrorLike } from '~/utils/api-error'
+import { getApiErrorCode, getApiErrorDetails, getApiErrorMessage, type ApiErrorLike } from '~/utils/api-error'
 import { isUuid } from '~/utils/format/slug'
+import type { InventoryItem } from '~/types/inventory'
+import type { InventoryItemInput } from '~/utils/validators/inventory'
 
 definePageMeta({ title: 'Chi tiết phòng' })
 
@@ -54,6 +56,52 @@ watch(buildingId, () => {
   if (buildingId.value) refreshBuilding()
 }, { immediate: true })
 const building = computed(() => buildingData.value?.data ?? null)
+
+const canEditRoomInventory = computed(() => authStore.can('rooms.update'))
+const { data: roomInventoryData, refresh: refreshRoomInventory } = useLazyFetch<ApiSuccess<InventoryItem[]>>(
+  () => `/api/rooms/${encodeURIComponent(id)}/inventory`,
+)
+const roomInventoryDraft = ref<InventoryItemInput[]>([])
+watchEffect(() => {
+  roomInventoryDraft.value = (roomInventoryData.value?.data ?? []).map(item => ({
+    name: item.name, quantity: item.quantity, condition: item.condition, unit_value: item.unitValue, note: item.note,
+  }))
+})
+const savingRoomInventory = ref(false)
+const roomInventoryError = ref<string | null>(null)
+async function saveRoomInventory() {
+  savingRoomInventory.value = true
+  roomInventoryError.value = null
+  try {
+    await apiFetch<ApiSuccess<InventoryItem[]>>(`/api/rooms/${encodeURIComponent(id)}/inventory`, {
+      method: 'PUT',
+      body: { items: roomInventoryDraft.value },
+    })
+    await refreshRoomInventory()
+    useToast().success('Đã lưu nội thất phòng.')
+  }
+  catch (cause) {
+    roomInventoryError.value = getApiErrorMessage(cause, 'Không thể lưu nội thất phòng.')
+  }
+  finally {
+    savingRoomInventory.value = false
+  }
+}
+async function applyRoomTemplate() {
+  if (!room.value) return
+  roomInventoryError.value = null
+  try {
+    await apiFetch(`/api/buildings/${encodeURIComponent(room.value.buildingId)}/inventory-template/apply`, {
+      method: 'POST',
+      body: { room_ids: [room.value.id], mode: 'merge' },
+    })
+    await refreshRoomInventory()
+    useToast().success('Đã áp dụng nội thất mẫu tòa cho phòng.')
+  }
+  catch (cause) {
+    roomInventoryError.value = getApiErrorMessage(cause, 'Không áp dụng được nội thất mẫu.')
+  }
+}
 
 const { data: contractsData } = useLazyFetch<ApiSuccess<ContractWithDetails[]> & { meta: { total: number } }>(
   '/api/contracts',
@@ -276,6 +324,23 @@ if (error.value?.statusCode === 404) {
           <UiDefinitionItem label="Ngày tạo" :value="new Date(room.createdAt).toLocaleDateString('vi-VN')" />
           <UiDefinitionItem v-if="room.description" label="Mô tả" :value="room.description" stacked />
         </UiDefinitionList>
+      </UiSurfacePanel>
+
+      <UiSurfacePanel id="room-inventory" as="section" class="mt-4">
+        <header class="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h3 class="text-sm font-semibold text-ui-primary">Nội thất</h3>
+            <p class="mt-0.5 text-xs text-ui-muted">Nội thất hiện có trong phòng; dùng làm nguồn cho bàn giao hợp đồng.</p>
+          </div>
+          <UiButton v-if="canEditRoomInventory" variant="secondary" size="sm" @click="applyRoomTemplate">
+            Áp dụng mẫu tòa
+          </UiButton>
+        </header>
+        <UiAlert v-if="roomInventoryError" severity="danger" class="mb-3">{{ roomInventoryError }}</UiAlert>
+        <InventoryItemsEditor v-model="roomInventoryDraft" :disabled="!canEditRoomInventory" />
+        <div v-if="canEditRoomInventory" class="mt-3 flex justify-end">
+          <UiButton size="sm" :loading="savingRoomInventory" @click="saveRoomInventory">Lưu nội thất</UiButton>
+        </div>
       </UiSurfacePanel>
 
       <UiSurfacePanel id="active-contract" as="section" class="mt-4">

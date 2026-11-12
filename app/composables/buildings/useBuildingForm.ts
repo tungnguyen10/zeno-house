@@ -1,18 +1,11 @@
 import type { Building } from '~/types/buildings'
 import type { ApiSuccess } from '~/types/api'
-import { buildingCreateSchema, buildingUpdateSchema } from '~/utils/validators/buildings'
-import type { BuildingCreateInput, BuildingUpdateInput } from '~/utils/validators/buildings'
+import { buildingCreateWithRoomsSchema, buildingUpdateSchema } from '~/utils/validators/buildings'
+import type { BuildingCreateWithRoomsInput, BuildingUpdateInput } from '~/utils/validators/buildings'
 import { buildingPath } from '~/utils/routes/operational'
+import { getApiErrorDetails } from '~/utils/api-error'
 import { useLocalFormDraft } from '~/composables/useLocalFormDraft'
 import { useFormState } from '~/composables/useFormState'
-
-interface QuickRoom {
-  room_number: string
-  monthly_rent: number
-  area: number | null
-}
-
-type CreateInput = BuildingCreateInput & { quickRooms?: QuickRoom[] }
 
 type DraftKey =
   | { mode: 'create' }
@@ -45,11 +38,16 @@ export function useBuildingForm<T = unknown>(options: UseBuildingFormOptions<T> 
     initialSnapshot: options.initialSnapshot,
   })
 
-  async function submitCreate(input: CreateInput) {
-    clearErrors()
+  // One id per form session so a retry after a lost response replays instead of duplicating.
+  const requestId = crypto.randomUUID()
+  const duplicateRoomNumbers = ref<string[]>([])
 
-    const { quickRooms, ...buildingInput } = input
-    const result = buildingCreateSchema.safeParse(buildingInput)
+  async function submitCreate(input: Omit<BuildingCreateWithRoomsInput, 'request_id'>) {
+    clearErrors()
+    duplicateRoomNumbers.value = []
+
+    const payload = { ...input, rooms: input.rooms?.length ? input.rooms : undefined, request_id: requestId }
+    const result = buildingCreateWithRoomsSchema.safeParse(payload)
     if (!result.success) {
       applyZodErrors(result.error)
       return
@@ -57,34 +55,20 @@ export function useBuildingForm<T = unknown>(options: UseBuildingFormOptions<T> 
 
     isLoading.value = true
     try {
-      const res = await apiFetch<ApiSuccess<Building>>('/api/buildings', {
-        method: 'POST',
-        body: result.data,
-      })
-
-      if (quickRooms?.length && res.data?.id) {
-        const buildingId = res.data.id
-        await Promise.all(quickRooms.map(room =>
-          apiFetch('/api/rooms', {
-            method: 'POST',
-            body: {
-              building_id: buildingId,
-              room_number: room.room_number,
-              monthly_rent: room.monthly_rent,
-              area: room.area,
-              floor: 1,
-              status: 'available',
-            },
-          }),
-        ))
-      }
-
+      await apiFetch<ApiSuccess<Building>>('/api/buildings', { method: 'POST', body: result.data })
       clearDraft()
       clearNuxtData()
       await navigateTo('/dashboard/buildings')
     }
     catch (e: unknown) {
+      const details = getApiErrorDetails<{ reason?: string; duplicate_room_numbers?: string[] }>(e)
       applyApiError(e)
+      if (details?.reason === 'ROOM_BATCH_DUPLICATE') {
+        duplicateRoomNumbers.value = details.duplicate_room_numbers ?? []
+      }
+      else if (!details?.reason) {
+        apiError.value = 'Chưa có dữ liệu nào được lưu. Bạn có thể bấm lại để thử.'
+      }
     }
     finally {
       isLoading.value = false
@@ -124,6 +108,8 @@ export function useBuildingForm<T = unknown>(options: UseBuildingFormOptions<T> 
     apiError,
     submitCreate,
     submitUpdate,
+    duplicateRoomNumbers,
+    requestId,
     isDirty,
     hasDraft,
     restoreDraft,

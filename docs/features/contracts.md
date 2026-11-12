@@ -1,3 +1,10 @@
+---
+type: Feature Guide
+title: "contracts"
+status: stable
+tags: [engineering, reference]
+---
+
 # Contracts And Occupancy
 
 Contracts are the central operational entity connecting buildings, rooms, tenants, services, payments, occupants, handover readings, and billing.

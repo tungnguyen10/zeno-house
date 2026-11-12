@@ -44,6 +44,7 @@ export default defineNuxtConfig({
     resendWebhookSecret: process.env.NUXT_RESEND_WEBHOOK_SECRET || "", // NUXT_RESEND_WEBHOOK_SECRET
     invoiceEmailDispatchSecret: process.env.NUXT_INVOICE_EMAIL_DISPATCH_SECRET || "", // NUXT_INVOICE_EMAIL_DISPATCH_SECRET
     contractAmendmentsApplySecret: process.env.NUXT_CONTRACT_AMENDMENTS_APPLY_SECRET || "", // NUXT_CONTRACT_AMENDMENTS_APPLY_SECRET
+    contractDocumentsCleanupSecret: process.env.NUXT_CONTRACT_DOCUMENTS_CLEANUP_SECRET || "", // NUXT_CONTRACT_DOCUMENTS_CLEANUP_SECRET
     aiProvider: process.env.NUXT_AI_PROVIDER || "openrouter", // NUXT_AI_PROVIDER (openrouter | google)
     aiOpenrouterApiKey: process.env.NUXT_AI_OPENROUTER_API_KEY || "", // NUXT_AI_OPENROUTER_API_KEY
     aiGoogleApiKey: process.env.NUXT_AI_GOOGLE_API_KEY || "", // NUXT_AI_GOOGLE_API_KEY
@@ -65,6 +66,8 @@ export default defineNuxtConfig({
     aiChatRateLimit: 20, // NUXT_AI_CHAT_RATE_LIMIT
     aiActionRateLimit: 30, // NUXT_AI_ACTION_RATE_LIMIT
     aiRateWindowSeconds: 60, // NUXT_AI_RATE_WINDOW_SECONDS
+    tenantIdentityConflictLimit: 10, // NUXT_TENANT_IDENTITY_CONFLICT_LIMIT
+    tenantIdentityConflictWindowSeconds: 900, // NUXT_TENANT_IDENTITY_CONFLICT_WINDOW_SECONDS
     aiCircuitFailureThreshold: 5, // NUXT_AI_CIRCUIT_FAILURE_THRESHOLD
     aiCircuitCooldownMs: 60_000, // NUXT_AI_CIRCUIT_COOLDOWN_MS
     aiMaxContextMessages: 20, // NUXT_AI_MAX_CONTEXT_MESSAGES

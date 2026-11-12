@@ -123,6 +123,61 @@ describe('useBuildingForm — dirty + draft persistence', () => {
   })
 })
 
+describe('useBuildingForm.submitCreate (atomic)', () => {
+  const body = {
+    name: 'Tòa mới', address: '123 Lê Lợi', status: 'active' as const,
+    electricity_pricing_type: 'per_kwh' as const, water_pricing_type: 'per_m3' as const, grace_period_days: 0,
+    rooms: [{ room_number: 'P101', floor: 1, monthly_rent: 1, area: null }],
+  }
+
+  it('sends one request with rooms and a uuid request_id', async () => {
+    fetchMock.mockResolvedValue({ data: { id: 'b-1' }, meta: { room_count: 1 } })
+    const { useBuildingForm } = await import('../../app/composables/buildings/useBuildingForm')
+    const { submitCreate } = useBuildingForm({ draftKey: { mode: 'create' } })
+
+    await submitCreate(body)
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    const [url, opts] = fetchMock.mock.calls[0]!
+    expect(url).toBe('/api/buildings')
+    expect(opts.body.rooms).toHaveLength(1)
+    expect(opts.body.request_id).toMatch(/^[0-9a-f-]{36}$/)
+  })
+
+  it('reuses the same request_id across retries', async () => {
+    fetchMock.mockRejectedValueOnce(new Error('network')).mockResolvedValueOnce({ data: { id: 'b-1' } })
+    const { useBuildingForm } = await import('../../app/composables/buildings/useBuildingForm')
+    const { submitCreate } = useBuildingForm({ draftKey: { mode: 'create' } })
+
+    await submitCreate(body)
+    await submitCreate(body)
+
+    expect(fetchMock.mock.calls[0]![1].body.request_id).toBe(fetchMock.mock.calls[1]![1].body.request_id)
+  })
+
+  it('shows the nothing-saved message on generic failure', async () => {
+    fetchMock.mockRejectedValue(new Error('network'))
+    const { useBuildingForm } = await import('../../app/composables/buildings/useBuildingForm')
+    const { submitCreate, apiError } = useBuildingForm({ draftKey: { mode: 'create' } })
+
+    await submitCreate(body)
+    expect(apiError.value).toBe('Chưa có dữ liệu nào được lưu. Bạn có thể bấm lại để thử.')
+  })
+
+  it('exposes duplicate room numbers from a 409', async () => {
+    fetchMock.mockRejectedValue({
+      statusCode: 409,
+      data: { error: { code: 'CONFLICT', message: 'Các mã phòng đã tồn tại: P101', details: { reason: 'ROOM_BATCH_DUPLICATE', duplicate_room_numbers: ['P101'] } } },
+    })
+    const { useBuildingForm } = await import('../../app/composables/buildings/useBuildingForm')
+    const { submitCreate, duplicateRoomNumbers, apiError } = useBuildingForm({ draftKey: { mode: 'create' } })
+
+    await submitCreate(body)
+    expect(duplicateRoomNumbers.value).toEqual(['P101'])
+    expect(apiError.value).toBe('Các mã phòng đã tồn tại: P101')
+  })
+})
+
 describe('useBuildingBulkActions', () => {
   it('runAction returns shape and keeps selection until caller clears', async () => {
     fetchMock.mockResolvedValue({

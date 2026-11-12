@@ -1,11 +1,12 @@
 import type { ApiSuccess } from '~/types/api'
 import type { Tenant } from '~/types/tenants'
 import { tenantCreateSchema, type TenantBulkCreateRowInput } from '~/utils/validators/tenants'
+import { getTenantApiError } from '~/utils/tenant-api-error'
 import { getApiErrorMessage } from '~/utils/api-error'
 
 export interface TenantBulkCreateFailure {
   line: number
-  reason: 'validation_error' | 'duplicate_in_file' | 'duplicate_id_number' | 'duplicate_phone_in_file' | 'duplicate_phone' | 'unexpected_error'
+  reason: 'validation_error' | 'duplicate_in_file' | 'duplicate_id_number' | 'duplicate_phone_in_file' | 'duplicate_phone' | 'identity_conflict' | 'unexpected_error'
   message: string
   fieldErrors?: Record<string, string[]>
 }
@@ -61,29 +62,34 @@ export function useTenantBulkCreate() {
     const duplicatePhones = new Set<string>()
     const seenPhones = new Set<string>()
 
-    for (const row of rows.value) {
-      const id = normalizeCell(row.id_number)
+    const validatedRows = rows.value.map((row) => ({
+      row,
+      validation: tenantCreateSchema.safeParse(normalizePreviewRow(row)),
+    }))
+
+    for (const { validation } of validatedRows) {
+      if (!validation.success) continue
+      const id = validation.data.id_number
       if (id) {
         if (seenIdNumbers.has(id)) duplicateIdNumbers.add(id)
         else seenIdNumbers.add(id)
       }
 
-      const phone = normalizeCell(row.phone)
+      const phone = validation.data.phone
       if (phone) {
         if (seenPhones.has(phone)) duplicatePhones.add(phone)
         else seenPhones.add(phone)
       }
     }
 
-    return rows.value.map((row) => {
-      const normalized = normalizePreviewRow(row)
-      const validation = tenantCreateSchema.safeParse(normalized)
+    return validatedRows.map(({ row, validation }) => {
+      const normalized = validation.success ? validation.data : null
       const fieldErrors = validation.success ? {} : validation.error.flatten().fieldErrors
-      if (normalized.id_number && duplicateIdNumbers.has(normalized.id_number)) {
+      if (normalized?.id_number && duplicateIdNumbers.has(normalized.id_number)) {
         const existing = fieldErrors.id_number ?? []
         fieldErrors.id_number = [...existing, 'Số CMND/CCCD bị trùng trong file nhập']
       }
-      if (normalized.phone && duplicatePhones.has(normalized.phone)) {
+      if (normalized?.phone && duplicatePhones.has(normalized.phone)) {
         const existing = fieldErrors.phone ?? []
         fieldErrors.phone = [...existing, 'Số điện thoại bị trùng trong file nhập']
       }
@@ -167,7 +173,7 @@ export function useTenantBulkCreate() {
       return response.data
     }
     catch (error: unknown) {
-      submitError.value = getApiErrorMessage(error, 'Không thể nhập danh sách khách thuê.')
+      submitError.value = getTenantApiError(error, 'Không thể nhập danh sách khách thuê.').message
       return null
     }
     finally {

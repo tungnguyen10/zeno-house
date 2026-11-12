@@ -4,10 +4,12 @@ import type { TenantProfile } from '~/types/tenant-portal'
 import type { TenantProfileUpdateInput } from '~/utils/validators/tenant-portal'
 import { tenantProfileUpdateSchema } from '~/utils/validators/tenant-portal'
 import { TenantProfileRepository } from '../../repositories/tenant-portal/profile'
-import { TenantRepository } from '../../repositories/tenants'
+import { TenantIdentityUniqueViolation } from '../../repositories/tenants/identity-errors'
+import { TenantIdentityConflictService } from '../tenants/identity-conflict'
+import { redactTenantAuditData } from '../../utils/tenant-audit-redaction'
 import { resolveTenantId } from '../../utils/scope'
 import { can } from '../../utils/permissions'
-import { throwConflict, throwForbidden, throwNotFound } from '../../utils/errors'
+import { throwForbidden, throwNotFound, throwValidationError } from '../../utils/errors'
 import { AuditService } from '../audit'
 import { AUDIT_ACTIONS } from '~/utils/constants/audit'
 import { ContractRepository } from '../../repositories/contracts'
@@ -28,28 +30,32 @@ export const TenantProfileService = {
   ): Promise<TenantProfile> {
     if (!can(user, 'tenant.profile.update')) throwForbidden('Không có quyền cập nhật hồ sơ')
     const id = await resolveTenantId(event, user)
-    const whitelisted = tenantProfileUpdateSchema.parse(input)
-    if (whitelisted.id_number) {
-      const conflict = await TenantRepository.findByIdNumber(event, whitelisted.id_number, id)
-      if (conflict) {
-        throwConflict('Số CCCD/CMND đã tồn tại', {
-          fieldErrors: {
-            id_number: ['Số CCCD/CMND đã tồn tại'],
-          },
-        })
-      }
-    }
+    const parsed = tenantProfileUpdateSchema.safeParse(input)
+    if (!parsed.success) throwValidationError('Hồ sơ cập nhật không hợp lệ', parsed.error.flatten())
+    const whitelisted = parsed.data
+    const candidate = { phone: whitelisted.phone, excludeId: id }
+    await TenantIdentityConflictService.assertAvailable(event, user, candidate, 'portal')
     const contract = await ContractRepository.findActiveByTenantId(event, id)
     const before = await TenantProfileRepository.findByTenantId(event, id)
     if (!before) throwNotFound()
-    const updated = await TenantProfileRepository.updateByTenantId(event, id, whitelisted)
+    let updated: TenantProfile
+    try {
+      updated = await TenantProfileRepository.updateByTenantId(event, id, whitelisted)
+    }
+    catch (error) {
+      if (error instanceof TenantIdentityUniqueViolation) {
+        return TenantIdentityConflictService.rejectUniqueViolation(event, user, candidate, 'portal')
+      }
+      throw error
+    }
+    const redacted = redactTenantAuditData(before, updated)
     await AuditService.append(event, user, {
       building_id: contract?.buildingId ?? null,
       action: AUDIT_ACTIONS.TENANT_PROFILE_UPDATED,
       entity_type: 'tenant',
       entity_id: id,
-      before_data: before,
-      after_data: updated,
+      before_data: redacted.before,
+      after_data: redacted.after,
     })
     return updated
   },

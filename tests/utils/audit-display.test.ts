@@ -73,3 +73,7 @@ describe('renewal source transfer audit', () => {
     expect(auditActionVariant('contract.checkout_source.transferred')).toBe('accent')
   })
 })
+
+it('labels tenant identity conflicts for administrators', () => {
+  expect(auditActionLabel(AUDIT_ACTIONS.TENANT_IDENTITY_CONFLICT)).toBe('Xung đột định danh khách thuê')
+})

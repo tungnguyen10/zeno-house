@@ -1,3 +1,10 @@
+---
+type: Feature Guide
+title: "reserve-fund"
+status: stable
+tags: [engineering, reference]
+---
+
 # Reserve Fund
 
 Admin and owner users can track one reserve fund per building. The fund is an accounting ledger: billing close, operations-report close, month-end report auto-close, or admin refresh records an automatic accrual from operations profit; reserve-funded expenses record linked deductions; and the derived balance may be negative. Managers receive no reserve-fund capabilities.

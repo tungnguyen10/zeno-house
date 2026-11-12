@@ -8,6 +8,7 @@ export const AUDIT_ACTIONS = {
   BUILDING_REMOVED: 'building.removed',
   BUILDING_INVOICE_PROFILE_UPDATED: 'building.invoice_profile.updated',
   BUILDING_INVOICE_EMAIL_SETTINGS_UPDATED: 'building.invoice_email_settings.updated',
+  BUILDING_CONTRACT_PROFILE_UPDATED: 'building.contract_profile.updated',
 
   // Room
   ROOM_CREATED: 'room.created',
@@ -16,11 +17,15 @@ export const AUDIT_ACTIONS = {
   ROOM_ACTIVATED: 'room.activated',
   ROOM_MAINTENANCE_SET: 'room.maintenance_set',
   ROOM_REMOVED: 'room.removed',
+  ROOM_INVENTORY_UPDATED: 'room.inventory.updated',
+  ROOM_INVENTORY_TEMPLATE_APPLIED: 'room.inventory.template_applied',
+  BUILDING_INVENTORY_TEMPLATE_UPDATED: 'building.inventory_template.updated',
 
   // Tenant
   TENANT_CREATED: 'tenant.created',
   TENANT_EXPORTED: 'tenant.exported',
   TENANT_UPDATED: 'tenant.updated',
+  TENANT_IDENTITY_CONFLICT: 'tenant.identity_conflict',
   TENANT_ARCHIVED: 'tenant.archived',
   TENANT_ACTIVATED: 'tenant.activated',
   TENANT_REMOVED: 'tenant.removed',
@@ -34,6 +39,7 @@ export const AUDIT_ACTIONS = {
   TENANT_ACCOUNT_ORPHAN_RECONCILED: 'tenant.account.orphan_reconciled',
   TENANT_ACCOUNT_PASSWORD_CHANGED: 'tenant.account.password_changed',
   SUPPORT_REQUEST_CREATED: 'support_request.created',
+  SUPPORT_REQUEST_STATUS_UPDATED: 'support_request.status_updated',
 
   // Contract
   CONTRACT_CREATED: 'contract.created',
@@ -44,6 +50,10 @@ export const AUDIT_ACTIONS = {
   CONTRACT_RENEWAL_REPAIRED: 'contract.renewal.repaired',
   CONTRACT_CHECKOUT_SOURCE_TRANSFERRED: 'contract.checkout_source.transferred',
   CONTRACT_REMOVED: 'contract.removed',
+  CONTRACT_DOCUMENT_ISSUED: 'contract.document.issued',
+  CONTRACT_DOCUMENT_REGENERATED: 'contract.document.regenerated',
+  CONTRACT_DOCUMENT_SIGNED: 'contract.document.signed',
+  CONTRACT_DOCUMENT_VOIDED: 'contract.document.voided',
   CONTRACT_AMENDMENT_CREATED: 'contract_amendment.created',
   CONTRACT_AMENDMENT_UPDATED: 'contract_amendment.updated',
   CONTRACT_AMENDMENT_PUBLISHED: 'contract.amendment.published',
@@ -53,6 +63,7 @@ export const AUDIT_ACTIONS = {
   CONTRACT_OCCUPANT_ADDED: 'contract_occupant.added',
   CONTRACT_OCCUPANT_MOVED_OUT: 'contract_occupant.moved_out',
   CONTRACT_OCCUPANT_REMOVED: 'contract_occupant.removed',
+  CONTRACT_VEHICLES_UPDATED: 'contract.vehicles.updated',
   CONTRACT_PAYMENT_CREATED: 'contract_payment.created',
   CONTRACT_PAYMENT_UPDATED: 'contract_payment.updated',
   CONTRACT_PAYMENT_REMOVED: 'contract_payment.removed',

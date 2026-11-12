@@ -1,3 +1,10 @@
+---
+type: User Guide
+title: "tenants-and-contracts"
+status: stable
+tags: [engineering, reference]
+---
+
 # Khách Thuê Và Hợp Đồng
 
 ## Quản Lý Khách Thuê

@@ -1,8 +1,10 @@
 import { db as serverSupabaseClient } from '../../utils/db'
 import type { H3Event } from 'h3'
 import type { Building, BuildingServiceSummary } from '~/types/buildings'
-import type { BuildingCreateInput, BuildingUpdateInput } from '~/utils/validators/buildings'
+import type { Room } from '~/types/rooms'
+import type { BuildingCreateInput, BuildingUpdateInput, QuickRoomInput } from '~/utils/validators/buildings'
 import { mapBuilding, type BuildingRow } from '~/utils/mappers/buildings'
+import { mapRoom } from '~/utils/mappers/rooms'
 import { isUuid, slugifyName } from '~/utils/format/slug'
 import { buildingCodeFromSlug } from '~/utils/format/codes'
 
@@ -99,6 +101,78 @@ async function attachServiceSummaries(event: H3Event, buildings: Building[]): Pr
     ...building,
     serviceSummary: summaries.get(building.id) ?? building.serviceSummary,
   }))
+}
+
+function buildInsertPayload(
+  input: BuildingCreateInput,
+  slug: string,
+  code: string,
+  provenance: { created_by?: string | null; owner_user_id?: string | null },
+) {
+  return {
+    slug,
+    code,
+    name: input.name,
+    address: input.address,
+    description: input.description ?? null,
+    status: input.status ?? 'active',
+    owner_name: input.owner_name ?? null,
+    owner_phone: input.owner_phone ?? null,
+    owner_email: input.owner_email ?? null,
+    created_by: provenance.created_by ?? null,
+    owner_user_id: provenance.owner_user_id ?? null,
+    electricity_pricing_type: input.electricity_pricing_type ?? 'per_kwh',
+    default_electricity_rate: input.default_electricity_rate ?? null,
+    water_pricing_type: input.water_pricing_type ?? 'per_m3',
+    default_water_rate: input.default_water_rate ?? null,
+    meter_reading_day: input.meter_reading_day ?? null,
+    billing_generation_day: input.billing_generation_day ?? null,
+    payment_due_day: input.payment_due_day ?? null,
+    grace_period_days: input.grace_period_days ?? 0,
+    operational_start_year: input.operational_start_year ?? null,
+    operational_start_month: input.operational_start_month ?? null,
+  }
+}
+
+export interface BuildingSetupResult {
+  building: Building
+  rooms: Room[]
+  replayed: boolean
+}
+
+const BUILDING_IDENTITY_CONFLICT = /buildings_(slug|code)_uq/
+const MAX_IDENTITY_ATTEMPTS = 3
+
+function parseDuplicateRooms(details: unknown): string[] {
+  if (typeof details !== 'string') return []
+  try {
+    const parsed = JSON.parse(details) as unknown
+    return Array.isArray(parsed) ? parsed.filter((v): v is string => typeof v === 'string') : []
+  }
+  catch {
+    return []
+  }
+}
+
+export function throwBuildingSetupError(error: unknown): void {
+  if (!error || typeof error !== 'object' || !('message' in error)) return
+  const message = String(error.message)
+  if (message === 'ROOM_BATCH_DUPLICATE') {
+    const rooms = parseDuplicateRooms('details' in error ? error.details : undefined)
+    throwConflict(
+      rooms.length ? `Các mã phòng đã tồn tại: ${rooms.join(', ')}` : 'Mã phòng bị trùng',
+      { reason: 'ROOM_BATCH_DUPLICATE', duplicate_room_numbers: rooms },
+    )
+  }
+  if (message === 'BUILDING_SETUP_REQUEST_CONFLICT') {
+    throwConflict(
+      'Yêu cầu tạo tòa nhà bị trùng với một thao tác khác. Vui lòng tải lại trang và thử lại.',
+      { reason: 'BUILDING_SETUP_REQUEST_CONFLICT' },
+    )
+  }
+  if (message === 'ROOM_BATCH_INVALID') {
+    throwValidationError('Danh sách phòng không hợp lệ')
+  }
 }
 
 export const BuildingRepository = {
@@ -275,29 +349,7 @@ export const BuildingRepository = {
     const client = serverSupabaseClient(event)
     const slug = await buildUniqueSlug(event, input.slug ?? input.name)
     const code = await buildUniqueCode(event, slug)
-    const insertPayload = {
-      slug,
-      code,
-      name: input.name,
-      address: input.address,
-      description: input.description ?? null,
-      status: input.status ?? 'active',
-      owner_name: input.owner_name ?? null,
-      owner_phone: input.owner_phone ?? null,
-      owner_email: input.owner_email ?? null,
-      created_by: provenance.created_by ?? null,
-      owner_user_id: provenance.owner_user_id ?? null,
-      electricity_pricing_type: input.electricity_pricing_type ?? 'per_kwh',
-      default_electricity_rate: input.default_electricity_rate ?? null,
-      water_pricing_type: input.water_pricing_type ?? 'per_m3',
-      default_water_rate: input.default_water_rate ?? null,
-      meter_reading_day: input.meter_reading_day ?? null,
-      billing_generation_day: input.billing_generation_day ?? null,
-      payment_due_day: input.payment_due_day ?? null,
-      grace_period_days: input.grace_period_days ?? 0,
-      operational_start_year: input.operational_start_year ?? null,
-      operational_start_month: input.operational_start_month ?? null,
-    }
+    const insertPayload = buildInsertPayload(input, slug, code, provenance)
     const { data, error } = await client
       .from('buildings')
       .insert(insertPayload as never)
@@ -307,6 +359,54 @@ export const BuildingRepository = {
     if (error) throwDbError(error, 'buildings.insert')
     const [building] = await attachServiceSummaries(event, [mapBuilding(data as BuildingRow)])
     return building!
+  },
+
+  async createWithRooms(
+    event: H3Event,
+    input: BuildingCreateInput,
+    rooms: QuickRoomInput[],
+    opts: { actorId: string; ownerUserId: string | null; requestId: string },
+  ): Promise<BuildingSetupResult> {
+    // Authorization is enforced in BuildingService; the RPC is service_role only.
+    const client = serverSupabaseClient(event)
+    const roomPayload = rooms.map(room => ({
+      room_number: room.room_number,
+      slug: slugifyName(room.room_number) || room.room_number.toLowerCase(),
+      floor: room.floor,
+      monthly_rent: room.monthly_rent,
+      area: room.area,
+    }))
+
+    for (let attempt = 1; attempt <= MAX_IDENTITY_ATTEMPTS; attempt++) {
+      const slug = await buildUniqueSlug(event, input.slug ?? input.name)
+      const code = await buildUniqueCode(event, slug)
+      const { data, error } = await client.rpc('create_building_with_rooms' as never, {
+        p_building: buildInsertPayload(input, slug, code, {
+          created_by: opts.actorId,
+          owner_user_id: opts.ownerUserId,
+        }),
+        p_rooms: roomPayload,
+        p_assign_owner: opts.ownerUserId,
+        p_actor_id: opts.actorId,
+        p_request_id: opts.requestId,
+      } as never)
+
+      if (error) {
+        const isIdentityRace = (error as { code?: string }).code === '23505'
+          && BUILDING_IDENTITY_CONFLICT.test(String((error as { message?: string }).message))
+        if (isIdentityRace && attempt < MAX_IDENTITY_ATTEMPTS) continue
+        if (isIdentityRace) throwConflict('Không thể tạo mã tòa nhà duy nhất, vui lòng thử lại')
+        throwBuildingSetupError(error)
+        throwDbError(error, 'buildings.createWithRooms')
+      }
+
+      const result = data as unknown as { building: BuildingRow; rooms: Parameters<typeof mapRoom>[0][]; replayed: boolean }
+      const [building] = await attachServiceSummaries(event, [
+        mapBuilding({ ...result.building, rooms: [{ count: result.rooms.length }] } as BuildingRow),
+      ])
+      return { building: building!, rooms: result.rooms.map(mapRoom), replayed: result.replayed }
+    }
+    throwConflict('Không thể tạo mã tòa nhà duy nhất, vui lòng thử lại')
   },
 
   async update(event: H3Event, id: string, input: BuildingUpdateInput): Promise<Building> {

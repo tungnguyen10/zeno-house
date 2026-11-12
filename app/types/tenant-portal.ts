@@ -21,7 +21,6 @@ export interface TenantProfile {
   idIssuedPlace: string | null
   emergencyContactName: string | null
   emergencyContactPhone: string | null
-  notes: string | null
 }
 
 export interface TenantDocument {

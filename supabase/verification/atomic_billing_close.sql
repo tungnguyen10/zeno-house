@@ -39,7 +39,7 @@ begin
     insert into public.rooms(id, building_id, room_number, code, slug)
       values(r, b, 'R' || n, 'verify-' || r::text, 'verify-' || r::text);
     insert into public.tenants(id, full_name, phone, code)
-      values(t, 'Close tenant ' || n, '0900000000', 'verify-' || t::text);
+      values(t, 'Close tenant ' || n, '+999' || lpad((floor(random() * 100000000000))::bigint::text, 11, '0'), 'verify-' || t::text);
     insert into public.contracts(id, contract_code, building_id, room_id, tenant_id,
       start_date, end_date, monthly_rent, deposit, payment_due_day, occupant_count)
       values(c, 'verify-' || c::text, b, r, t, '2026-01-01', '2026-12-31', 1000000, 2000000, 5, 1);
@@ -174,7 +174,7 @@ end $$;
 
 -- Scenario 7: reopen keeps the accrual; closing again updates the same row and audits before/after.
 do $$
-declare f jsonb := pg_temp.close_fixture(1); r jsonb; meta jsonb;
+declare f jsonb := pg_temp.close_fixture(1); r jsonb; meta jsonb; second_close_correlation uuid := gen_random_uuid();
 begin
   perform pg_temp.expect_error(
     format('select public.reopen_billing_period_atomic(%L::uuid, %L::uuid, %L, gen_random_uuid())',
@@ -190,13 +190,16 @@ begin
   if pg_temp.audit_count(f, 'period.reopened') <> 1 then raise exception 'S7: expected one reopen audit'; end if;
   if (select amount from pg_temp.accrual_rows(f)) <> 100000 then raise exception 'S7: reopen must keep the accrual'; end if;
 
-  r := pg_temp.close_call(f, 1000000, 150000, 15);
+  r := public.close_billing_period_atomic((f->>'period')::uuid, (f->>'actor')::uuid, second_close_correlation,
+    1000000, 1000000, 15, 150000);
   if r->>'accrual_status' <> 'recorded' then raise exception 'S7: second close accrual_status %', r->>'accrual_status'; end if;
   if (select count(*) from pg_temp.accrual_rows(f)) <> 1 or (select amount from pg_temp.accrual_rows(f)) <> 150000 then
     raise exception 'S7: expected exactly one accrual of 150000'; end if;
   select metadata into meta from public.billing_audit_events
     where billing_period_id = (f->>'period')::uuid and action = 'period.closed'
-    order by created_at desc, id desc limit 1;
+      and correlation_id = second_close_correlation;
+  -- now() is transaction-stable, so UUID ordering cannot identify the second close.
+  if meta is null then raise exception 'S7: second close audit missing'; end if;
   if (meta->'accrual_before'->>'amount')::numeric <> 100000 or (meta->'accrual_after'->>'amount')::numeric <> 150000 then
     raise exception 'S7: audit must hold before/after accrual: %', meta; end if;
 end $$;

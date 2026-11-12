@@ -2,6 +2,8 @@
 
 import { buildingEditPath, buildingSettingsPath } from '~/utils/routes/operational'
 import { getApiErrorCode, getApiErrorDetails, type ApiErrorLike } from '~/utils/api-error'
+import type { ApiSuccess } from '~/types/api'
+import type { BuildingReadiness } from '~/types/building-contract-profile'
 
 const route = useRoute()
 const authStore = useAuthStore()
@@ -15,6 +17,12 @@ const {
   updateService: updateBuildingService,
   refresh: refreshBuildingServices,
 } = useBuildingServices(id)
+
+// Non-blocking readiness summary for managers/owners/admins.
+const { data: readinessData } = useFetch<ApiSuccess<BuildingReadiness>>(
+  () => `/api/buildings/${encodeURIComponent(id)}/readiness`,
+  { lazy: true, server: false },
+)
 
 watchEffect(() => {
   if (error.value?.statusCode === 404) navigateTo('/dashboard/buildings')
@@ -136,6 +144,9 @@ const waterLabel = computed(() => {
         <div ref="titleSentinel" aria-hidden="true" />
         <template #actions>
           <div v-if="authStore.canManage" class="flex gap-2 shrink-0">
+            <NuxtLink v-if="authStore.can('rooms.create')" :to="`/dashboard/buildings/${building.slug}/rooms/batch`">
+              <UiButton variant="secondary" size="sm">Thêm phòng</UiButton>
+            </NuxtLink>
             <UiButton
               variant="secondary"
               size="sm"
@@ -184,6 +195,14 @@ const waterLabel = computed(() => {
           :active-services="activeServicesCount"
         />
       </div>
+
+      <BuildingReadinessCard
+        v-if="readinessData?.data && authStore.canManage"
+        class="mt-4"
+        :readiness="readinessData.data"
+        :settings-path="buildingSettingsPath(building)"
+        :edit-path="buildingEditPath(building)"
+      />
 
       <!-- Section: Overview -->
       <UiSurfacePanel id="overview" as="section" class="mt-6">

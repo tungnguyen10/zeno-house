@@ -10,6 +10,7 @@ const roomRepoMocks = vi.hoisted(() => ({
   remove: vi.fn(),
   countActiveContractsForRoom: vi.fn(),
   countMeterReadingsForRoom: vi.fn(),
+  countContractDocumentsForRoom: vi.fn(),
   softArchive: vi.fn(),
 }))
 

@@ -28,6 +28,7 @@ export const NAV_ITEMS = [
   { key: 'buildings', label: 'Tòa nhà', to: '/dashboard/buildings', icon: 'IconBuilding', section: 'rental' },
   { key: 'rooms', label: 'Phòng', to: '/dashboard/rooms', icon: 'IconDoor', section: 'rental' },
   { key: 'tenants', label: 'Khách thuê', to: '/dashboard/tenants', icon: 'IconUsers', section: 'rental' },
+  { key: 'tenant-support-requests', label: 'Yêu cầu người thuê', to: '/dashboard/tenant-support-requests', icon: 'IconInfoCircle', section: 'rental', roles: ['admin', 'owner', 'manager'] },
   { key: 'contracts', label: 'Hợp đồng', to: '/dashboard/contracts', icon: 'IconDocumentText', section: 'rental' },
   { key: 'billing', label: 'Vận hành tháng', to: '/dashboard/billing', icon: 'IconCalendar', section: 'finance' },
   { key: 'invoices', label: 'Hoá đơn', to: '/dashboard/invoices', icon: 'IconReceipt', section: 'finance' },

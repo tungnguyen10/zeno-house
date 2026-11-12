@@ -200,7 +200,20 @@ select
 from tenant_rls_test_context as context
 cross join tenant_rls_test_fixture as fixture;
 
--- Primary tenant retains direct profile, contract, and invoice access.
+-- No authenticated caller can bypass the profile API to retrieve internal notes.
+set local role authenticated;
+do $$
+begin
+  begin
+    perform 1 from public.tenants limit 1;
+    raise exception 'raw tenant profile SELECT unexpectedly allowed';
+  exception when insufficient_privilege then null;
+  end;
+end;
+$$;
+reset role;
+
+-- Profile reads are server-owned. Primary tenant retains scoped contract/invoice reads.
 select set_config(
   'request.jwt.claims',
   jsonb_build_object(
@@ -215,12 +228,7 @@ set local role authenticated;
 
 do $$
 begin
-  if (select count(*) from public.tenants where id in (
-    select primary_tenant_id from tenant_rls_test_context
-    union all
-    select roommate_tenant_id from tenant_rls_test_context
-  )) <> 1
-  or (select count(*) from public.contracts where id = (
+  if (select count(*) from public.contracts where id = (
     select shared_contract_id from tenant_rls_test_context
   )) <> 1
   or (select count(*) from public.invoices where id = (
@@ -234,7 +242,7 @@ $$;
 
 reset role;
 
--- Active roommate sees only their profile/occupancy and the shared contract/invoice.
+-- Active roommate sees their occupancy and shared contract/invoice through remaining RLS reads.
 select set_config(
   'request.jwt.claims',
   jsonb_build_object(
@@ -249,12 +257,7 @@ set local role authenticated;
 
 do $$
 begin
-  if (select count(*) from public.tenants where id in (
-    select primary_tenant_id from tenant_rls_test_context
-    union all
-    select roommate_tenant_id from tenant_rls_test_context
-  )) <> 1
-  or (select count(*) from public.contract_occupants where tenant_id = (
+  if (select count(*) from public.contract_occupants where tenant_id = (
     select roommate_tenant_id from tenant_rls_test_context
   )) <> 1
   or (select count(*) from public.contracts where id = (
@@ -380,10 +383,7 @@ begin
     select 1 from public.invoices
     where id = (select shared_invoice_id from tenant_rls_test_context)
   )
-  or not exists (
-    select 1 from public.tenants
-    where id = (select roommate_tenant_id from tenant_rls_test_context)
-  )
+
   then
     raise exception 'moved-out roommate RLS verification failed';
   end if;
@@ -406,10 +406,6 @@ set local role authenticated;
 do $$
 begin
   if exists (
-    select 1 from public.tenants
-    where id = (select roommate_tenant_id from tenant_rls_test_context)
-  )
-  or exists (
     select 1 from public.contract_occupants
     where tenant_id = (select roommate_tenant_id from tenant_rls_test_context)
   )

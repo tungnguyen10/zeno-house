@@ -48,7 +48,7 @@ describe('tenant portal API handlers', () => {
     mocks.requireAuth.mockResolvedValue(user)
     mocks.resolveTenantId.mockResolvedValue('tenant-1')
     mocks.profileGet.mockResolvedValue({ id: 'tenant-1' })
-    mocks.profileUpdate.mockResolvedValue({ id: 'tenant-1', phone: '0902' })
+    mocks.profileUpdate.mockResolvedValue({ id: 'tenant-1', phone: '0902000000' })
     mocks.contractGet.mockResolvedValue(null)
     mocks.invoiceList.mockResolvedValue({ data: [], meta: { total: 0, page: 1, limit: 20, totalPages: 0 } })
     mocks.invoiceDetail.mockResolvedValue({ id: 'invoice-1', charges: [] })
@@ -65,7 +65,7 @@ describe('tenant portal API handlers', () => {
     ]
     const events = [
       event(),
-      event({ body: { phone: '0902' } }),
+      event({ body: { phone: '0902000000' } }),
       event(),
       event({ query: {} }),
       event({ params: { id: 'invoice-1' } }),
@@ -77,14 +77,14 @@ describe('tenant portal API handlers', () => {
     expect(mocks.resolveTenantId).toHaveBeenCalledTimes(5)
   })
 
-  it('ignores client tenant identifiers in profile updates and invoice queries', async () => {
+  it('rejects profile linkage injection while keeping invoice queries self-scoped', async () => {
     const { default: patchProfile } = await import('../../../server/api/tenant/me.patch')
     const { default: listInvoices } = await import('../../../server/api/tenant/invoices/index.get')
 
-    await patchProfile(event({ body: { phone: '0902', tenant_id: 'tenant-2', status: 'archived' } }) as never)
+    await expect(patchProfile(event({ body: { phone: '0902000000', tenant_id: 'tenant-2', status: 'archived' } }) as never)).rejects.toMatchObject({ statusCode: 422 })
     await listInvoices(event({ query: { page: '1', page_size: '10', tenant_id: 'tenant-2' } }) as never)
 
-    expect(mocks.profileUpdate).toHaveBeenCalledWith(expect.anything(), user, { phone: '0902' })
+    expect(mocks.profileUpdate).not.toHaveBeenCalled()
     expect(mocks.invoiceList).toHaveBeenCalledWith(expect.anything(), user, { page: 1, page_size: 10 })
   })
 
@@ -93,6 +93,14 @@ describe('tenant portal API handlers', () => {
 
     await expect(patchProfile(event({ body: { tenant_id: 'tenant-2', status: 'archived' } }) as never))
       .rejects.toMatchObject({ statusCode: 422, data: { error: { code: 'VALIDATION_ERROR' } } })
+    expect(mocks.profileUpdate).not.toHaveBeenCalled()
+  })
+
+  it.each(Object.entries({ full_name: 'Fixture', gender: 'other', date_of_birth: '1990-01-01', permanent_address: 'Fixture', id_number: 'FAKE-ID', id_issued_date: '2020-01-01', id_issued_place: 'Fixture', notes: 'Private', email: 'fixture@example.test', tenant_id: 'other', code: 'OTHER', status: 'archived' }).flatMap(([key, value]) => [
+    { key, mixed: false, body: { [key]: value } }, { key, mixed: true, body: { phone: '0900000000', [key]: value } },
+  ]))('rejects $key mixed=$mixed before invoking profile mutations', async ({ body }) => {
+    const handler = (await import('../../../server/api/tenant/me.patch')).default
+    await expect(handler(event({ body }) as never)).rejects.toMatchObject({ statusCode: 422, data: { error: { code: 'VALIDATION_ERROR' } } })
     expect(mocks.profileUpdate).not.toHaveBeenCalled()
   })
 

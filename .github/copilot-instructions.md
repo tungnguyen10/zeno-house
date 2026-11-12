@@ -1,23 +1,5 @@
-# Zeno House Instructions
+# Zeno House Copilot Instructions
 
-Use checked-in project context and treat `AGENTS.md` as the canonical rule source.
+Canonical instructions: `AGENTS.md`. Canonical document/knowledge root: `docs/index.md` (OKF v0.2). Accepted requirements: `docs/capabilities/**`; active change specifications and one task checklist: `docs/changes/**`; architecture and user guides: `docs/architecture/**`, `docs/features/**`, `docs/user-guide/**`; historical provenance: `docs/history/**`.
 
-## First Reads
-
-1. `AGENTS.md`
-2. `docs/agent-context.md`
-3. The one architecture, feature, or OpenSpec file that matches the task.
-
-For every user-visible UI change, follow `.agents/skills/zeno-house/references/ui-polish-workflow.md`. Use `frontend-design` for design judgment and Hallmark for anti-slop critique/final polish; the Zeno House design system and existing primitives override generic design defaults.
-
-## Context Budget
-
-- Work delta-first: read the active `openspec/changes/<change-id>/tasks.md` before broader specs.
-- Read only one matching capability spec under `openspec/specs/**` unless the task is explicitly cross-capability.
-- Avoid full-repo doc scans; pull only files needed for the current checklist item.
-
-## Rule Ownership
-
-- Repository rules, non-negotiables, and verification commands are owned by `AGENTS.md`.
-- Architecture details live in `docs/**`.
-- Requirement truth lives in `openspec/specs/**` and active tasks in `openspec/changes/**`.
+Execute work using Superpowers brainstorming/design/planning/TDD/debugging/review skills; see `docs/workflow.md`. Do not create duplicate `docs/superpowers/**` plan/specs, `knowledge/**`, or OpenSpec. For user-visible UI changes follow Zeno House's existing UI polish workflow, design system and component conventions. Inspect actual source/tests and avoid treating historic docs as deployed behavior.

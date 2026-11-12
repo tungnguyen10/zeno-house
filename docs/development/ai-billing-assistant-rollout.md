@@ -1,3 +1,10 @@
+---
+type: Development Guide
+title: "ai-billing-assistant-rollout"
+status: stable
+tags: [engineering, reference]
+---
+
 # AI Billing Assistant Rollout
 
 Use this runbook after deploying the additive AI hardening migration. The repository does not require a committed Supabase CLI dependency: apply the SQL through the project's configured cloud workflow or Supabase Dashboard, then run the read-only verification file.
@@ -33,7 +40,7 @@ NUXT_AI_INVOICE_PAYMENT_ENABLED=false
 2. Apply `supabase/migrations/20260802080015_harden_ai_billing_assistant_flow.sql`, then `supabase/migrations/20260803042715_add_ai_invoice_payments.sql`, to staging.
 3. Run `supabase/verification/ai_billing_assistant_flow.sql` and `supabase/verification/ai_invoice_payments.sql` in the SQL editor. Every result marked `expect zero` must be empty; verify only `service_role` can execute the payment RPC.
 4. Regenerate `app/types/database.types.ts` through the established cloud schema workflow after the migration is applied. Do not edit the generated file manually.
-5. Run `openspec validate --specs`, the AI tests, `npm run typecheck`, `npm test`, and `npm run lint`.
+5. Run `npm run knowledge:check`, the AI tests, `npm run typecheck`, `npm test`, and `npm run lint`.
 
 ## Staging Smoke
 

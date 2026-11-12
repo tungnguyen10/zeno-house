@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { mapTenant } from '~/utils/mappers/tenants'
 import {
   tenantInvoiceListQuerySchema,
   tenantProfileUpdateSchema,
@@ -13,27 +14,10 @@ import {
 } from '~/utils/mappers/tenant-portal'
 
 describe('tenant portal validators', () => {
-  it('keeps self-service and identity fields while stripping login and linkage fields', () => {
-    const result = tenantProfileUpdateSchema.parse({
-      full_name: 'Nguyen Van A',
-      phone: '0901234567',
-      email: 'tenant@example.com',
-      gender: 'male',
-      id_number: ' 012345678901 ',
-      id_issued_date: '2020-01-02',
-      id_issued_place: ' Cục Cảnh sát QLHC về TTXH ',
-      status: 'archived',
-      tenant_id: 'another-tenant',
-    })
-
-    expect(result).toEqual({
-      full_name: 'Nguyen Van A',
-      phone: '0901234567',
-      gender: 'male',
-      id_number: '012345678901',
-      id_issued_date: '2020-01-02',
-      id_issued_place: 'Cục Cảnh sát QLHC về TTXH',
-    })
+  it('keeps exactly four self-service contact fields', () => {
+    expect(tenantProfileUpdateSchema.parse({ phone: '0900000000', occupation: ' Fixture ', emergency_contact_name: null, emergency_contact_phone: null }))
+      .toEqual({ phone: '0900000000', occupation: 'Fixture', emergency_contact_name: null, emergency_contact_phone: null })
+    expect(tenantProfileUpdateSchema.safeParse({ full_name: 'Fixture', phone: '0900000000' }).success).toBe(false)
   })
 
   it('rejects profile updates with no whitelisted fields', () => {
@@ -85,7 +69,7 @@ describe('tenant portal validators', () => {
 
 describe('tenant portal mappers', () => {
   it('maps only safe tenant profile fields', () => {
-    const profile = mapTenantProfile({
+    const row = {
       id: 'tenant-1',
       code: 'T-001',
       status: 'active',
@@ -102,7 +86,8 @@ describe('tenant portal mappers', () => {
       emergency_contact_name: 'Tran Thi B',
       emergency_contact_phone: '0907654321',
       notes: 'Call after 5pm',
-    })
+    }
+    const profile = mapTenantProfile(row)
 
     expect(profile).toEqual({
       id: 'tenant-1',
@@ -120,8 +105,9 @@ describe('tenant portal mappers', () => {
       idIssuedPlace: 'Cuc Canh sat QLHC',
       emergencyContactName: 'Tran Thi B',
       emergencyContactPhone: '0907654321',
-      notes: 'Call after 5pm',
     })
+    expect(profile).not.toHaveProperty('notes')
+    expect(mapTenant(row as never).notes).toBe('Call after 5pm')
   })
 
   it('maps an active contract summary with room and building labels', () => {

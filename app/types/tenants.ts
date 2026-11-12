@@ -47,3 +47,5 @@ export interface Tenant {
   createdAt?: string
   updatedAt?: string
 }
+
+export type TenantSummary = Pick<Tenant, 'id' | 'code' | 'fullName' | 'phone'>

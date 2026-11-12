@@ -203,10 +203,16 @@ export function useContractForm<T = unknown>(options: UseContractFormOptions<T> 
     apiError.value = null
   }
 
-  async function submitCreate(input: ContractCreateInput) {
+  // One id per form instance so a retry after a lost response replays the same
+  // atomic create instead of making a duplicate contract.
+  const requestId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}`
+
+  async function submitCreate(
+    input: Omit<ContractCreateInput, 'request_id'>,
+  ): Promise<{ contract: ContractWithDetails; replayed: boolean } | null> {
     clearErrors()
 
-    const result = contractCreateSchema.safeParse(input)
+    const result = contractCreateSchema.safeParse({ ...input, request_id: requestId })
     if (!result.success) {
       errors.value = result.error.flatten().fieldErrors as Record<string, string[]>
       return null
@@ -214,12 +220,12 @@ export function useContractForm<T = unknown>(options: UseContractFormOptions<T> 
 
     isLoading.value = true
     try {
-      const response = await apiFetch<ApiSuccess<ContractWithDetails>>('/api/contracts', {
+      const response = await apiFetch<ApiSuccess<ContractWithDetails> & { meta?: { replayed?: boolean } }>('/api/contracts', {
         method: 'POST',
         body: result.data,
       })
       clearDraft()
-      return response.data
+      return { contract: response.data, replayed: response.meta?.replayed ?? false }
     }
     catch (e: unknown) {
       apiError.value = getApiErrorMessage(e)
@@ -270,5 +276,6 @@ export function useContractForm<T = unknown>(options: UseContractFormOptions<T> 
     clearDraft,
     submitCreate,
     submitUpdate,
+    requestId,
   }
 }

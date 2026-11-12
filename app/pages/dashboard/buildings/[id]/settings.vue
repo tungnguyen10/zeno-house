@@ -24,7 +24,11 @@ import {
 } from '~/utils/constants/operations-report'
 import { formatCurrency } from '~/utils/format/currency'
 import { currentVietnamPeriod, formatPeriodString, parsePeriodString } from '~/utils/format/period'
-import { buildingPath } from '~/utils/routes/operational'
+import { buildingEditPath, buildingPath } from '~/utils/routes/operational'
+import type { BuildingReadiness } from '~/types/building-contract-profile'
+import type { BuildingContractProfileInput } from '~/utils/validators/building-contract-profile'
+import type { InventoryItem } from '~/types/inventory'
+import type { InventoryApplyInput, InventoryItemInput } from '~/utils/validators/inventory'
 
 const route = useRoute()
 const id = route.params.id as string
@@ -84,6 +88,74 @@ const {
   },
 })
 const canEditInvoiceEmailSettings = computed(() => authStore.can('invoice-email-settings.write'))
+
+const readiness = computed<BuildingReadiness>(() => settings.value?.readiness
+  ?? { contract: { ready: false, missing: [] }, billing: { ready: false, missing: [] } })
+const canEditContractProfile = computed(() => authStore.can('building-contract-profile.write'))
+const {
+  saving: savingContractProfile,
+  error: contractProfileError,
+  save: saveContractProfile,
+} = useBuildingContractProfile(id, {
+  data: computed(() => settings.value?.contractProfile ?? null),
+  set: (profile) => {
+    if (settingsData.value) {
+      settingsData.value = {
+        ...settingsData.value,
+        data: { ...settingsData.value.data, contractProfile: profile },
+      }
+    }
+  },
+  onSaved: () => refreshSettings(),
+})
+
+async function handleSaveContractProfile(input: BuildingContractProfileInput) {
+  try {
+    await saveContractProfile(input)
+    toast.success('Đã lưu thông tin hợp đồng của tòa nhà.')
+  }
+  catch {
+    // The composable surfaces the standardized error beside the form.
+  }
+}
+
+const canEditInventoryTemplate = computed(() => authStore.can('buildings.update'))
+const inventoryTemplate = useInventoryTemplate(id)
+const { items: inventoryItems, saving: savingInventory, error: inventoryError } = inventoryTemplate
+const inventoryDraft = ref<InventoryItemInput[]>([])
+const inventoryApplyOpen = ref(false)
+const { data: inventoryTemplateData } = await useFetch<ApiSuccess<InventoryItem[]>>(
+  () => `/api/buildings/${encodeURIComponent(id)}/inventory-template`,
+)
+watchEffect(() => {
+  const loaded = inventoryTemplateData.value?.data ?? []
+  inventoryItems.value = loaded
+  inventoryDraft.value = loaded.map(item => ({
+    name: item.name, quantity: item.quantity, condition: item.condition, unit_value: item.unitValue, note: item.note,
+  }))
+})
+const inventoryItemCount = computed(() => inventoryItems.value.length)
+
+async function handleSaveInventoryTemplate() {
+  try {
+    await inventoryTemplate.save(inventoryDraft.value)
+    toast.success('Đã lưu nội thất mẫu của tòa nhà.')
+  }
+  catch {
+    // The composable surfaces the standardized error beside the editor.
+  }
+}
+
+async function handleApplyInventory(input: InventoryApplyInput) {
+  try {
+    const result = await inventoryTemplate.apply(input)
+    inventoryApplyOpen.value = false
+    toast.success(`Đã thêm ${result.addedItems} món cho ${result.appliedRooms} phòng.`)
+  }
+  catch (cause) {
+    toast.error(getApiErrorMessage(cause, 'Không áp dụng được nội thất mẫu.'))
+  }
+}
 
 async function handleSaveInvoiceProfile(input: BuildingInvoiceProfileSaveInput) {
   try {
@@ -756,6 +828,20 @@ const settingsSections = computed<SettingsSectionNavItem[]>(() => [
     visible: true,
   },
   {
+    id: 'contract-profile',
+    label: 'Hợp đồng',
+    description: 'Bên cho thuê, điều khoản và lịch thanh toán trên hợp đồng',
+    badge: readiness.value.contract.ready ? 'Đủ thông tin lập HĐ' : `Thiếu ${readiness.value.contract.missing.length} mục`,
+    visible: authStore.can('building-contract-profile.read'),
+  },
+  {
+    id: 'inventory-template',
+    label: 'Nội thất mẫu',
+    description: 'Danh sách nội thất áp dụng nhanh cho phòng',
+    badge: `${inventoryItemCount.value} món`,
+    visible: authStore.can('rooms.read'),
+  },
+  {
     id: 'finance-rules',
     label: 'Quy tắc vận hành',
     description: 'Chi phí cố định, quỹ dự phòng, nhắc chi và trả trước',
@@ -979,6 +1065,67 @@ const activeSectionId = computed(() => {
               />
             </UiSurfacePanel>
           </UiSection>
+        </section>
+
+        <section
+          v-if="authStore.can('building-contract-profile.read')"
+          id="contract-profile"
+          class="scroll-mt-20 space-y-3"
+        >
+          <header class="flex items-center justify-between gap-2">
+            <h2 class="text-sm font-semibold text-ui-accent">Hợp đồng</h2>
+            <UiBadge :variant="readiness.contract.ready ? 'success' : 'warning'">
+              {{ readiness.contract.ready ? 'Đủ thông tin lập HĐ' : `Thiếu ${readiness.contract.missing.length} mục` }}
+            </UiBadge>
+          </header>
+
+          <UiSection
+            title="Thông tin trên hợp đồng"
+            description="Áp dụng cho hợp đồng tạo mới. Hợp đồng đã phát hành không thay đổi."
+          >
+            <UiSurfacePanel density="compact">
+              <BuildingContractProfileSettings
+                v-if="building"
+                :profile="settings?.contractProfile ?? null"
+                :building="building"
+                :can-edit="canEditContractProfile"
+                :saving="savingContractProfile"
+                :error="contractProfileError"
+                :edit-path="buildingEditPath(building)"
+                @save="handleSaveContractProfile"
+              />
+            </UiSurfacePanel>
+          </UiSection>
+        </section>
+
+        <section v-if="authStore.can('rooms.read')" id="inventory-template" class="scroll-mt-20 space-y-3">
+          <header class="flex items-center justify-between gap-2">
+            <h2 class="text-sm font-semibold text-ui-accent">Nội thất mẫu</h2>
+            <UiBadge variant="neutral">{{ inventoryItemCount }} món</UiBadge>
+          </header>
+
+          <UiSection
+            title="Nội thất mẫu của tòa nhà"
+            description="Danh sách này được sao chép vào phòng khi áp dụng; sửa từng phòng không ảnh hưởng mẫu."
+          >
+            <template #actions>
+              <UiButton size="sm" variant="secondary" @click="inventoryApplyOpen = true">Áp dụng cho phòng…</UiButton>
+            </template>
+            <UiSurfacePanel density="compact">
+              <UiAlert v-if="inventoryError" severity="danger" class="mb-3">{{ inventoryError }}</UiAlert>
+              <InventoryItemsEditor v-model="inventoryDraft" :disabled="!canEditInventoryTemplate" />
+              <div v-if="canEditInventoryTemplate" class="mt-3 flex justify-end">
+                <UiButton size="sm" :loading="savingInventory" @click="handleSaveInventoryTemplate">Lưu nội thất mẫu</UiButton>
+              </div>
+            </UiSurfacePanel>
+          </UiSection>
+
+          <InventoryApplyModal
+            :open="inventoryApplyOpen"
+            :building-id="building?.id ?? id"
+            @close="inventoryApplyOpen = false"
+            @apply="handleApplyInventory"
+          />
         </section>
 
         <section v-if="canViewFinanceRules" id="finance-rules" class="scroll-mt-20 space-y-3">

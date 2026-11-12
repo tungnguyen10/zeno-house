@@ -11,8 +11,7 @@ const repoMocks = vi.hoisted(() => ({
   findActiveAssignmentByTenantId: vi.fn(),
   findById: vi.fn(),
   hasContractInBuildings: vi.fn(),
-  findByIdNumber: vi.fn(),
-  findByPhone: vi.fn(),
+  findIdentityMatches: vi.fn(),
   findCreatedTenantIdsByActor: vi.fn(),
   wasCreatedByActor: vi.fn(),
   insert: vi.fn(),
@@ -23,9 +22,16 @@ const repoMocks = vi.hoisted(() => ({
   findActiveBuildingIdForTenant: vi.fn(),
   softArchive: vi.fn(),
   setStatus: vi.fn(),
-  findExistingIdentifiers: vi.fn(),
   insertMany: vi.fn(),
 }))
+const auditMocks = vi.hoisted(() => ({ append: vi.fn(), appendBulk: vi.fn() }))
+vi.mock('../../server/services/audit', () => ({ AuditService: auditMocks }))
+
+const limitMocks = vi.hoisted(() => ({ peek: vi.fn(), record: vi.fn() }))
+vi.mock('../../server/repositories/tenants/identity-conflict-limit', () => ({ TenantIdentityConflictLimitRepository: limitMocks }))
+vi.stubGlobal('useRuntimeConfig', () => ({}))
+vi.stubGlobal('setResponseHeader', vi.fn())
+
 const bulkRepoMocks = vi.hoisted(() => ({ resolveSnapshots: vi.fn(), execute: vi.fn() }))
 const tenantAccountLinkRepoMocks = vi.hoisted(() => ({
   getByTenantId: vi.fn(),
@@ -169,8 +175,8 @@ beforeEach(() => {
   repoMocks.findByIds.mockImplementation(async (_event, ids: string[]) => ids.filter(id => id !== 'missing').map(id => buildTenant({ id })))
   repoMocks.findAccessFacts.mockImplementation(async (_event, ids: string[]) => new Map(ids.map(id => [id, { activeBuildingIds: [], historicalBuildingIds: [], everContracted: false }])))
   statusRepo.execute.mockImplementation(async (_event, _action, items: Array<{ id: string }>) => items.map(item => ({ id: item.id, succeeded: true, reason: null })))
-  repoMocks.findByPhone.mockResolvedValue(null)
-  repoMocks.findByIdNumber.mockResolvedValue(null)
+  repoMocks.findIdentityMatches.mockResolvedValue([])
+  limitMocks.peek.mockResolvedValue({ allowed: true, retryAfterSeconds: 1 })
   repoMocks.findActiveBuildingIdForTenant.mockResolvedValue(null)
   repoMocks.findActiveAssignmentByTenantId.mockResolvedValue(null)
   repoMocks.findCreatedTenantIdsByActor.mockResolvedValue([])
@@ -185,7 +191,6 @@ beforeEach(() => {
     Promise.resolve(ids.map(id => ({ id, succeeded: true, reason: null }))),
   )
   bulkRepoMocks.resolveSnapshots.mockResolvedValue(new Map())
-  repoMocks.findExistingIdentifiers.mockResolvedValue({ phones: new Set(), idNumbers: new Set() })
   repoMocks.insertMany.mockImplementation(async (_event, inputs: Array<{ full_name: string, phone: string }>) =>
     Promise.all(inputs.map(input => repoMocks.insert(_event, input))),
   )
@@ -341,7 +346,6 @@ describe('POST /api/tenants', () => {
   it('creates a tenant and returns 201 envelope', async () => {
     asAdmin()
     const tenant = buildTenant({ id: 'new-1' })
-    repoMocks.findByIdNumber.mockResolvedValue(null)
     repoMocks.insert.mockResolvedValue(tenant)
     const { default: handler } = await import('../../server/api/tenants/index.post')
 
@@ -371,26 +375,26 @@ describe('POST /api/tenants', () => {
 
   it('rejects duplicate id_number with 409', async () => {
     asAdmin()
-    repoMocks.findByIdNumber.mockResolvedValue(buildTenant({ id: 'existing' }))
+    repoMocks.findIdentityMatches.mockResolvedValue([{ tenantId: 'existing', field: 'id_number', value: '012345678901' }])
     const { default: handler } = await import('../../server/api/tenants/index.post')
 
     const err = await expectError(Promise.resolve(handler(makeEvent({
       body: { full_name: 'Nguyen Van A', phone: '0901234567', id_number: '012345678901' },
     }))))
     expect(err.statusCode).toBe(409)
-    expect(err.data?.error?.code).toBe('CONFLICT')
+    expect(err.data?.error?.code).toBe('TENANT_DUPLICATE')
   })
 
   it('rejects duplicate phone with 409', async () => {
     asAdmin()
-    repoMocks.findByPhone.mockResolvedValue(buildTenant({ id: 'existing' }))
+    repoMocks.findIdentityMatches.mockResolvedValue([{ tenantId: 'existing', field: 'phone', value: '0901234567' }])
     const { default: handler } = await import('../../server/api/tenants/index.post')
 
     const err = await expectError(Promise.resolve(handler(makeEvent({
       body: { full_name: 'Nguyen Van A', phone: '0901234567' },
     }))))
     expect(err.statusCode).toBe(409)
-    expect(err.data?.error?.code).toBe('CONFLICT')
+    expect(err.data?.error?.code).toBe('TENANT_DUPLICATE')
   })
 })
 
@@ -489,7 +493,7 @@ describe('PATCH /api/tenants/[id]', () => {
   it('rejects duplicate phone with 409', async () => {
     asAdmin()
     repoMocks.findByIdentifier.mockResolvedValue(buildTenant({ id: 't-1' }))
-    repoMocks.findByPhone.mockResolvedValue(buildTenant({ id: 't-2' }))
+    repoMocks.findIdentityMatches.mockResolvedValue([{ tenantId: 't-2', field: 'phone', value: '0909999888' }])
     const { default: handler } = await import('../../server/api/tenants/[id].patch')
 
     const err = await expectError(Promise.resolve(handler(makeEvent({
@@ -497,7 +501,7 @@ describe('PATCH /api/tenants/[id]', () => {
       body: { phone: '0909999888' },
     }))))
     expect(err.statusCode).toBe(409)
-    expect(err.data?.error?.code).toBe('CONFLICT')
+    expect(err.data?.error?.code).toBe('TENANT_DUPLICATE')
   })
 })
 
@@ -834,7 +838,7 @@ describe('POST /api/tenants/bulk-create', () => {
 
   it('flags phone already existing in system during bulk import', async () => {
     asAdmin()
-    repoMocks.findExistingIdentifiers.mockResolvedValue({ phones: new Set(['0901234567']), idNumbers: new Set() })
+    repoMocks.findIdentityMatches.mockResolvedValue([{ tenantId: 'existing', field: 'phone', value: '0901234567' }])
     repoMocks.insert.mockResolvedValue(buildTenant({ id: 'new-2' }))
     const { default: handler } = await import('../../server/api/tenants/bulk-create.post')
 
@@ -903,5 +907,129 @@ describe('tenant scope regressions', () => {
     expect(event.context.statusCode).toBe(204)
     expect(assignmentRepoMocks.findByUserAndBuilding).toHaveBeenCalledWith(expect.anything(), 'user-manager', buildingId)
     expect(repoMocks.remove).toHaveBeenCalledWith(expect.anything(), 't-1')
+  })
+})
+
+describe('tenant identity hardening regressions', () => {
+  it('returns TENANT_DUPLICATE for an admin when the normalized id number exists', async () => {
+    asAdmin()
+    repoMocks.findIdentityMatches.mockResolvedValue([{ tenantId: 'existing', field: 'id_number', value: '012345678901' }])
+    const { default: handler } = await import('../../server/api/tenants/index.post')
+    const err = await expectError(Promise.resolve(handler(makeEvent({
+      body: { full_name: 'Khách Giả Lập', phone: '0901234567', id_number: '0123 4567 8901' },
+    }))))
+    expect(err.statusCode).toBe(409)
+    expect(err.data?.error?.code).toBe('TENANT_DUPLICATE')
+    expect(repoMocks.findIdentityMatches).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ idNumbers: ['012345678901'] }))
+    expect(repoMocks.insert).not.toHaveBeenCalled()
+  })
+
+  it('looks up the normalized phone when the input uses +84 and separators', async () => {
+    asAdmin()
+    repoMocks.findIdentityMatches.mockResolvedValue([{ tenantId: 'existing', field: 'phone', value: '0901234567' }])
+    const { default: handler } = await import('../../server/api/tenants/index.post')
+    const err = await expectError(Promise.resolve(handler(makeEvent({ body: { full_name: 'Khách Giả Lập', phone: '+84 90 123 4567' } }))))
+    expect(err.data?.error?.code).toBe('TENANT_DUPLICATE')
+    expect(repoMocks.findIdentityMatches).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ phones: ['0901234567'] }))
+  })
+
+  it('returns the generic conflict to an owner when the duplicate is outside scope', async () => {
+    asOwner()
+    repoMocks.findIdentityMatches.mockResolvedValue([{ tenantId: 'other-building', field: 'phone', value: '0901234567' }])
+    repoMocks.findAccessFacts.mockResolvedValue(new Map([['other-building', { activeBuildingIds: ['b-other'], historicalBuildingIds: ['b-other'], everContracted: true }]]))
+    const { default: handler } = await import('../../server/api/tenants/index.post')
+    const err = await expectError(Promise.resolve(handler(makeEvent({ body: { full_name: 'Khách Giả Lập', phone: '0901234567' } }))))
+    expect(err.statusCode).toBe(409)
+    expect(err.data?.error?.code).toBe('TENANT_IDENTITY_CONFLICT')
+    expect(err.data?.error?.details).toBeUndefined()
+  })
+
+  it('maps a unique-index race on insert to a conflict instead of 500', async () => {
+    asAdmin()
+    const { TenantIdentityUniqueViolation } = await import('../../server/repositories/tenants/identity-errors')
+    repoMocks.insert.mockRejectedValue(new TenantIdentityUniqueViolation('phone'))
+    repoMocks.findIdentityMatches.mockResolvedValueOnce([]).mockResolvedValueOnce([{ tenantId: 'racer', field: 'phone', value: '0901234567' }])
+    const { default: handler } = await import('../../server/api/tenants/index.post')
+    const err = await expectError(Promise.resolve(handler(makeEvent({ body: { full_name: 'Khách Giả Lập', phone: '0901234567' } }))))
+    expect(err.statusCode).toBe(409)
+    expect(err.data?.error?.code).toBe('TENANT_DUPLICATE')
+  })
+
+  it('rejects with 429 before lookup when the conflict limit is exhausted', async () => {
+    asAdmin()
+    limitMocks.peek.mockResolvedValue({ allowed: false, retryAfterSeconds: 60 })
+    const { default: handler } = await import('../../server/api/tenants/index.post')
+    const err = await expectError(Promise.resolve(handler(makeEvent({ body: { full_name: 'Khách Giả Lập', phone: '0901234567' } }))))
+    expect(err.statusCode).toBe(429)
+    expect(repoMocks.findIdentityMatches).not.toHaveBeenCalled()
+    expect(repoMocks.insert).not.toHaveBeenCalled()
+  })
+  it('excludes the tenant being edited from identity matching', async () => {
+    asAdmin()
+    repoMocks.findByIdentifier.mockResolvedValue(buildTenant({ id: 't-1', phone: '0901234567' }))
+    repoMocks.update.mockResolvedValue(buildTenant({ id: 't-1' }))
+    const { default: handler } = await import('../../server/api/tenants/[id].patch')
+    await handler(makeEvent({ params: { id: 't-1' }, body: { phone: '0901234567' } }))
+    expect(repoMocks.findIdentityMatches).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ excludeId: 't-1', phones: ['0901234567'] }))
+  })
+  it('reports out-of-scope duplicates as identity_conflict without detail', async () => {
+    asOwner()
+    repoMocks.findIdentityMatches.mockResolvedValue([{ tenantId: 'elsewhere', field: 'id_number', value: '012345678901' }])
+    repoMocks.findAccessFacts.mockResolvedValue(new Map([['elsewhere', { activeBuildingIds: ['b-other'], historicalBuildingIds: ['b-other'], everContracted: true }]]))
+    const { default: handler } = await import('../../server/api/tenants/bulk-create.post')
+    const res = await handler(makeEvent({ body: { rows: [{ line: 2, full_name: 'Khách Giả Lập', phone: '0901234567', id_number: '012345678901' }] } })) as { data: { failed: unknown[] } }
+    expect(res.data.failed).toEqual([{ line: 2, reason: 'identity_conflict', message: 'Không thể tạo hồ sơ với thông tin này; liên hệ quản trị viên' }])
+    expect(limitMocks.record).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ units: 1 }))
+  })
+
+})
+
+describe('tenant identity write and audit boundaries', () => {
+  it('maps an update race to a generic conflict when the racing row disappears', async () => {
+    asAdmin()
+    repoMocks.findByIdentifier.mockResolvedValue(buildTenant())
+    const { TenantIdentityUniqueViolation } = await import('../../server/repositories/tenants/identity-errors')
+    repoMocks.update.mockRejectedValueOnce(new TenantIdentityUniqueViolation('phone'))
+    const { default: handler } = await import('../../server/api/tenants/[id].patch')
+    const error = await expectError(Promise.resolve(handler(makeEvent({ params: { id: 't-1' }, body: { phone: '0901234567' } }))))
+    expect(error).toMatchObject({ statusCode: 409, data: { error: { code: 'TENANT_IDENTITY_CONFLICT' } } })
+    expect(error.data?.error?.details).toBeUndefined()
+    expect(repoMocks.findIdentityMatches).toHaveBeenCalledTimes(2)
+  })
+
+  it('counts database duplicate rows once each while keeping mixed access details generic', async () => {
+    asOwner()
+    repoMocks.findIdentityMatches.mockResolvedValue([
+      { tenantId: 'full', field: 'phone', value: '0900000001' },
+      { tenantId: 'foreign', field: 'id_number', value: 'FAKE001' },
+      { tenantId: 'full', field: 'phone', value: '0900000002' },
+    ])
+    repoMocks.findByIds.mockResolvedValue([buildTenant({ id: 'full' }), buildTenant({ id: 'foreign' })])
+    repoMocks.findAccessFacts.mockResolvedValue(new Map([
+      ['full', { activeBuildingIds: ['0a8a4dd0-7d6f-4f4e-bc7e-3c5e1b833333'], historicalBuildingIds: [], everContracted: true }],
+      ['foreign', { activeBuildingIds: ['other'], historicalBuildingIds: ['other'], everContracted: true }],
+    ]))
+    const { default: handler } = await import('../../server/api/tenants/bulk-create.post')
+    const result = await handler(makeEvent({ body: { rows: [
+      { line: 2, full_name: 'Fixture One', phone: '0900000001', id_number: 'FAKE001' },
+      { line: 3, full_name: 'Fixture Two', phone: '0900000002' },
+    ] } })) as { data: { failed: unknown[] } }
+    expect(result.data.failed).toEqual([
+      { line: 2, reason: 'identity_conflict', message: 'Không thể tạo hồ sơ với thông tin này; liên hệ quản trị viên' },
+      expect.objectContaining({ line: 3, reason: 'duplicate_phone' }),
+    ])
+    expect(limitMocks.record).toHaveBeenCalledExactlyOnceWith(expect.anything(), expect.objectContaining({ units: 2 }))
+    expect(repoMocks.insertMany).not.toHaveBeenCalled()
+  })
+
+  it('passes a redacted snapshot to audit while returning the full authorized tenant', async () => {
+    asAdmin()
+    repoMocks.insert.mockResolvedValue(buildTenant({ idNumber: 'FAKE123456789', permanentAddress: 'Private fixture address' }))
+    const { default: handler } = await import('../../server/api/tenants/index.post')
+    const result = await handler(makeEvent({ body: { full_name: 'Fixture Tenant', phone: '0901234567' } })) as { data: Tenant }
+    expect(result.data.idNumber).toBe('FAKE123456789')
+    expect(auditMocks.append).toHaveBeenCalledWith(expect.anything(), expect.anything(), expect.objectContaining({ after_data: expect.objectContaining({ idNumber: '•••• 6789', permanentAddress: '[đã ẩn]' }) }))
+    expect(JSON.stringify(auditMocks.append.mock.calls)).not.toContain('FAKE123456789')
+    expect(JSON.stringify(auditMocks.append.mock.calls)).not.toContain('Private fixture address')
   })
 })

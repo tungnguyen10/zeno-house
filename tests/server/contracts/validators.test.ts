@@ -13,6 +13,7 @@ describe('contract list sorting', () => {
 
 describe('contractCreateSchema — handover readings', () => {
   const base = {
+    request_id: '0a8a4dd0-7d6f-4f4e-bc7e-3c5e1b8e0000',
     room_id: '0a8a4dd0-7d6f-4f4e-bc7e-3c5e1b8e1111',
     tenant_id: '0a8a4dd0-7d6f-4f4e-bc7e-3c5e1b8e2222',
     building_id: '0a8a4dd0-7d6f-4f4e-bc7e-3c5e1b8e3333',
@@ -68,6 +69,7 @@ describe('contractCreateSchema — handover readings', () => {
 
 describe('contract due-day boundary', () => {
   const validContract = {
+    request_id: '00000000-0000-4000-8000-000000000009',
     room_id: '00000000-0000-4000-8000-000000000001',
     tenant_id: '00000000-0000-4000-8000-000000000002',
     start_date: '2026-08-01',

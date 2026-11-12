@@ -13,6 +13,8 @@ const mocks = vi.hoisted(() => ({
   reserveRatesList: vi.fn(),
   recurringList: vi.fn(),
   prepaidList: vi.fn(),
+  contractProfileGet: vi.fn(),
+  contractReadiness: vi.fn(),
 }))
 
 vi.stubGlobal('can', (_user: unknown, capability: string) => !capability.endsWith('.write'))
@@ -30,6 +32,9 @@ vi.mock('../../../server/services/operations-report/fixed-costs', () => ({ Build
 vi.mock('../../../server/services/operations-report/reserve-funds', () => ({ ReserveFundService: { listRates: mocks.reserveRatesList } }))
 vi.mock('../../../server/services/operations-report/recurring-expenses', () => ({ RecurringExpenseService: { list: mocks.recurringList } }))
 vi.mock('../../../server/services/operations-report/prepaid-expenses', () => ({ PrepaidExpenseService: { list: mocks.prepaidList } }))
+vi.mock('../../../server/services/buildings/contract-profile', () => ({
+  BuildingContractProfileService: { get: mocks.contractProfileGet, readiness: mocks.contractReadiness },
+}))
 
 describe('BuildingSettingsBootstrapService', () => {
   beforeEach(() => {
@@ -52,6 +57,9 @@ describe('BuildingSettingsBootstrapService', () => {
     mocks.reserveRatesList.mockResolvedValue([])
     mocks.recurringList.mockResolvedValue([])
     mocks.prepaidList.mockResolvedValue([])
+    mocks.contractProfileGet.mockResolvedValue(null)
+    mocks.contractReadiness.mockResolvedValue({ contract: { ready: false, missing: [] }, billing: { ready: false, missing: [] } })
+    vi.stubGlobal('can', (_user: unknown, capability: string) => !capability.endsWith('.write'))
     vi.stubGlobal('useRuntimeConfig', () => ({
       public: { invoiceEmailEnabled: false },
     }))
@@ -86,5 +94,31 @@ describe('BuildingSettingsBootstrapService', () => {
     expect(mocks.contractsList).toHaveBeenCalledWith(event, user, expect.objectContaining({
       building_id: 'building-1', status: ['active'], page: 1, limit: 200,
     }))
+  })
+
+  it('includes contract profile and readiness', async () => {
+    mocks.contractProfileGet.mockResolvedValue({ buildingId: 'building-1', lessorIdNumber: '*******8901', lessorIdentityMasked: true })
+    mocks.contractReadiness.mockResolvedValue({ contract: { ready: false, missing: ['invoice_profile'] }, billing: { ready: true, missing: [] } })
+    const event = { context: {} } as never
+    const manager = { id: 'm-1', app_metadata: { role: 'manager' } } as never
+    const { BuildingSettingsBootstrapService } = await import('../../../server/services/buildings/settings-bootstrap')
+
+    const result = await BuildingSettingsBootstrapService.get(event, manager, 'building-1')
+
+    expect(result.contractProfile).toMatchObject({ lessorIdentityMasked: true })
+    expect(result.readiness.contract.ready).toBe(false)
+    expect(JSON.stringify(result)).not.toContain('012345678901')
+  })
+
+  it('skips the profile when the role cannot read it', async () => {
+    vi.stubGlobal('can', () => false)
+    const event = { context: {} } as never
+    const user = { id: 'x-1', app_metadata: { role: 'manager' } } as never
+    const { BuildingSettingsBootstrapService } = await import('../../../server/services/buildings/settings-bootstrap')
+
+    const result = await BuildingSettingsBootstrapService.get(event, user, 'building-1')
+
+    expect(mocks.contractProfileGet).not.toHaveBeenCalled()
+    expect(result.contractProfile).toBeNull()
   })
 })

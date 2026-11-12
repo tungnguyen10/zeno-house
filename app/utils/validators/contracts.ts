@@ -1,6 +1,8 @@
 import { z } from 'zod'
 import { limitSchema, orderSchema, pageSchema, searchQuerySchema, toArray, trimmedOptionalString } from './_shared'
 import { VALIDATION_MESSAGES } from './messages'
+import { inventoryListSchema } from './inventory'
+import { contractVehicleListSchema } from './contract-vehicles'
 
 export const contractStatusSchema = z.enum(['active', 'expired', 'terminated', 'renewed'])
 export const contractSortFieldSchema = z.enum(['location', 'start_date', 'end_date', 'created_at', 'monthly_rent'])
@@ -54,10 +56,37 @@ export const contractCreateSchema = z.object({
   handover_electricity_reading: z.number().min(0, 'Số điện không được âm'),
   handover_water_reading: z.number().min(0, 'Số nước không được âm'),
   handover_reading_date: z.string().min(1).optional(),
+  inventory: inventoryListSchema.optional(),
+  request_id: z.string().uuid('Mã yêu cầu không hợp lệ'),
+  occupants: z.array(z.object({
+    tenant_id: z.string().uuid('Khách không hợp lệ'),
+    move_in_date: z.string().min(1).optional(),
+    billing_counted: z.boolean().default(true),
+  })).max(10, 'Tối đa 10 người ở cùng').optional(),
+  vehicles: contractVehicleListSchema.optional(),
+  services: z.array(z.object({
+    catalog_id: z.string().uuid(),
+    amount: z.number().int().min(0, 'Đơn giá không được âm'),
+    quantity: z.number().int().min(0, 'Số lượng không được âm'),
+    is_enabled: z.boolean(),
+    notes: z.string().max(200, 'Ghi chú quá dài').nullable(),
+  })).optional(),
 }).strict().refine(
   (data) => new Date(data.end_date) > new Date(data.start_date),
   { message: 'Ngày kết thúc phải sau ngày bắt đầu', path: ['end_date'] },
-)
+).superRefine((data, ctx) => {
+  const ids = new Set<string>()
+  data.occupants?.forEach((o, i) => {
+    if (o.tenant_id === data.tenant_id) ctx.addIssue({ code: 'custom', path: ['occupants', i, 'tenant_id'], message: 'Người ở cùng trùng với khách đứng tên' })
+    if (ids.has(o.tenant_id)) ctx.addIssue({ code: 'custom', path: ['occupants', i, 'tenant_id'], message: 'Người ở cùng bị trùng' })
+    ids.add(o.tenant_id)
+  })
+  const cat = new Set<string>()
+  data.services?.forEach((s, i) => {
+    if (cat.has(s.catalog_id)) ctx.addIssue({ code: 'custom', path: ['services', i, 'catalog_id'], message: 'Dịch vụ bị trùng' })
+    cat.add(s.catalog_id)
+  })
+})
 
 export const contractUpdateSchema = z.object({
   room_id: z.string().uuid('ID phòng không hợp lệ').optional(),

@@ -2,8 +2,10 @@ import { db as serverSupabaseClient } from '../../utils/db'
 import type { H3Event } from 'h3'
 import type { Room, RoomStatus } from '~/types/rooms'
 import type { RoomCreateInput, RoomUpdateInput } from '~/utils/validators/rooms'
+import type { QuickRoomInput } from '~/utils/validators/buildings'
 import { mapRoom } from '~/utils/mappers/rooms'
 import { isUuid, slugifyName } from '~/utils/format/slug'
+import { throwBuildingSetupError } from '../buildings'
 
 export interface RoomFilters {
   buildingId?: string
@@ -208,6 +210,24 @@ export const RoomRepository = {
     return count ?? 0
   },
 
+  async countContractDocumentsForRoom(event: H3Event, roomId: string): Promise<number> {
+    // Blocks hard-deleting a room whose contracts have issued documents (FK restrict).
+    const client = serverSupabaseClient(event)
+    const { data: contracts, error: contractsError } = await client
+      .from('contracts')
+      .select('id')
+      .eq('room_id', roomId)
+    if (contractsError) throwDbError(contractsError, 'rooms.countContractDocumentsForRoom.contracts')
+    const ids = (contracts ?? []).map(c => c.id)
+    if (ids.length === 0) return 0
+    const { count, error } = await client
+      .from('contract_documents' as never)
+      .select('id', { count: 'exact', head: true })
+      .in('contract_id', ids)
+    if (error) throwDbError(error, 'rooms.countContractDocumentsForRoom')
+    return count ?? 0
+  },
+
   async softArchive(event: H3Event, id: string): Promise<Room> {
     // Authorization and scope checks are enforced in RoomService.
     const client = serverSupabaseClient(event)
@@ -234,5 +254,33 @@ export const RoomRepository = {
 
     if (error) throwDbError(error, 'rooms.findByIdentifier')
     return data ? mapRoom(data) : null
+  },
+
+  async createBatch(
+    event: H3Event,
+    buildingId: string,
+    rooms: QuickRoomInput[],
+    opts: { applyInventory: boolean; actorId: string; requestId: string },
+  ): Promise<{ rooms: Room[]; replayed: boolean }> {
+    // Authorization and scope checks are enforced in RoomService.
+    const { data, error } = await serverSupabaseClient(event).rpc('create_rooms_batch_idempotent' as never, {
+      p_building_id: buildingId,
+      p_rooms: rooms.map(room => ({
+        room_number: room.room_number,
+        slug: slugifyName(room.room_number) || room.room_number.toLowerCase(),
+        floor: room.floor,
+        monthly_rent: room.monthly_rent,
+        area: room.area,
+      })),
+      p_apply_inventory: opts.applyInventory,
+      p_actor_id: opts.actorId,
+      p_request_id: opts.requestId,
+    } as never)
+    if (error) {
+      throwBuildingSetupError(error)
+      throwDbError(error, 'rooms.createBatch')
+    }
+    const result = data as unknown as { rooms: Parameters<typeof mapRoom>[0][]; replayed: boolean }
+    return { rooms: result.rooms.map(mapRoom), replayed: result.replayed }
   },
 }

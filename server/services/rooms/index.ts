@@ -6,6 +6,7 @@ import type {
   RoomCreateInput,
   RoomUpdateInput,
 } from '~/utils/validators/rooms'
+import type { RoomBatchCreateInput } from '~/utils/validators/inventory'
 import { RoomRepository, type RoomFilters } from '../../repositories/rooms'
 import { BulkActionRepository } from '../../repositories/bulk-actions'
 import { BuildingRepository } from '../../repositories/buildings'
@@ -119,19 +120,20 @@ export const RoomService = {
       return archived
     }
 
-    const [activeContracts, meterReadings] = await Promise.all([
+    const [activeContracts, meterReadings, contractDocuments] = await Promise.all([
       RoomRepository.countActiveContractsForRoom(event, existing.id),
       RoomRepository.countMeterReadingsForRoom(event, existing.id),
+      RoomRepository.countContractDocumentsForRoom(event, existing.id),
     ])
 
-    if (activeContracts > 0 || meterReadings > 0) {
+    if (activeContracts > 0 || meterReadings > 0 || contractDocuments > 0) {
       throw createError({
         statusCode: 409,
         data: {
           error: {
             code: 'CONFLICT',
             message: 'Phòng còn ràng buộc, không thể xoá',
-            details: { activeContracts, meterReadings },
+            details: { activeContracts, meterReadings, contractDocuments },
           },
         },
       })
@@ -219,12 +221,13 @@ export const RoomService = {
         succeeded.push(id)
       }
       catch (err: unknown) {
-        const e = err as { data?: { error?: { code?: string; details?: { activeContracts?: number; meterReadings?: number } } }; message?: string }
+        const e = err as { data?: { error?: { code?: string; details?: { activeContracts?: number; meterReadings?: number; contractDocuments?: number } } }; message?: string }
         const code = e?.data?.error?.code
         if (code === 'CONFLICT') {
           const details = e?.data?.error?.details
           if (details?.activeContracts && details.activeContracts > 0) failed.push({ id, reason: 'has_active_contracts' })
           else if (details?.meterReadings && details.meterReadings > 0) failed.push({ id, reason: 'has_meter_readings' })
+          else if (details?.contractDocuments && details.contractDocuments > 0) failed.push({ id, reason: 'has_contract_documents' })
           else failed.push({ id, reason: 'conflict' })
         }
         else if (code === 'NOT_FOUND') {
@@ -251,5 +254,29 @@ export const RoomService = {
     })
 
     return { succeeded, failed }
+  },
+
+  async createBatch(event: H3Event, user: AuthUser, buildingIdentifier: string, input: RoomBatchCreateInput) {
+    requireCapability(user, 'rooms.create', 'Không có quyền tạo phòng')
+    const building = await BuildingRepository.findByIdentifier(event, buildingIdentifier)
+    if (!building) throwNotFound('Không tìm thấy tòa nhà')
+    await assertBuildingScope(event, user, building.id, 'write')
+    const result = await RoomRepository.createBatch(event, building.id, input.rooms, {
+      applyInventory: input.apply_inventory,
+      actorId: user.id,
+      requestId: input.request_id,
+    })
+    if (!result.replayed && result.rooms.length > 0) {
+      await AuditService.appendBulk(event, user, {
+        building_id: building.id,
+        entity_type: 'room',
+        aggregate_action: 'room.bulk_create',
+        items: result.rooms.map(room => ({ entity_id: room.id, action: AUDIT_ACTIONS.ROOM_CREATED, after_data: room })),
+        succeeded: result.rooms.map(room => room.id),
+        total: result.rooms.length,
+        failed: 0,
+      })
+    }
+    return result
   },
 }

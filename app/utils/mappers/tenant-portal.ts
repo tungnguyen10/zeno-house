@@ -27,7 +27,6 @@ interface TenantProfileRow {
   id_issued_place: string | null
   emergency_contact_name: string | null
   emergency_contact_phone: string | null
-  notes: string | null
 }
 
 interface TenantContractSummaryRow {
@@ -78,7 +77,6 @@ export function mapTenantProfile(row: TenantProfileRow): TenantProfile {
     idIssuedPlace: row.id_issued_place,
     emergencyContactName: row.emergency_contact_name,
     emergencyContactPhone: row.emergency_contact_phone,
-    notes: row.notes,
   }
 }
 

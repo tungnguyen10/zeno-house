@@ -59,25 +59,24 @@ describe('portal profile refreshed UI', () => {
     expect(viewPage).toContain('@click="onLogout"')
   })
 
-  it('uses a dedicated edit route with all twelve whitelisted fields', () => {
-    expect(editPage).toContain("setChrome({ title: 'Chỉnh sửa hồ sơ', back: '/portal/profile' })")
-    expect(editPage.match(/<PortalInput/g)).toHaveLength(11)
-    expect(editPage).toContain('GENDER_OPTIONS')
-    expect(editPage).toContain(':aria-pressed="form.gender === option.value"')
-    expect(editPage).not.toContain('v-model="form.email"')
-    expect(editPage).toContain('v-model="form.id_number"')
-    expect(editPage).toContain('v-model="form.id_issued_date"')
-    expect(editPage).toContain('v-model="form.id_issued_place"')
+  it('only exposes the four contact fields and no canonical image mutations', () => {
+    expect(editPage.match(/<PortalInput/g)).toHaveLength(4)
+    for (const key of ['phone', 'occupation', 'emergency_contact_name', 'emergency_contact_phone']) {
+      expect(editPage).toContain(`v-model="form.${key}"`)
+    }
+    for (const key of ['full_name', 'gender', 'date_of_birth', 'permanent_address', 'id_number', 'id_issued_date', 'id_issued_place', 'notes']) {
+      expect(editPage).not.toContain(`form.${key}`)
+    }
+    expect(editPage).not.toContain('usePortalIdentityImages')
+    expect(editPage).not.toContain('onIdentitySelect')
+    expect(editPage).not.toContain('onIdentityRemove')
   })
 
-  it('owns identity-image mutation controls on the edit route', () => {
-    expect(editPage).toContain('usePortalIdentityImages()')
-    expect(editPage).toContain("onIdentitySelect('front', file)")
-    expect(editPage).toContain("onIdentitySelect('back', file)")
-    expect(editPage).toContain("onIdentityRemove('front')")
-    expect(editPage).toContain("onIdentityRemove('back')")
-    expect(editPage).toContain('grid-cols-2 gap-2.5')
-    expect(editPage).toContain('sm:gap-3')
+  it('keeps private notes out of the dossier and offers a value-free correction route', () => {
+    expect(dossier).not.toContain('profile.notes')
+    expect(dossier).toContain('Sửa thông tin liên hệ')
+    expect(dossier).toContain('/portal/requests?intent=profile-correction')
+    expect(dossier).toContain('Thông tin định danh được ban quản lý đối chiếu trước khi cập nhật.')
   })
 
   it('links profile security to the dedicated password route', () => {
@@ -86,7 +85,6 @@ describe('portal profile refreshed UI', () => {
   })
 
   it('shares save state between header and sticky actions', () => {
-    expect(editPage).toContain('<Teleport to="#portal-header-action">')
     expect(editPage).toContain('@submit.prevent="onSave"')
     expect(editPage).toContain(':disabled="!canSave"')
     expect(editPage).toContain('portal-safe-bottom')
@@ -95,8 +93,8 @@ describe('portal profile refreshed UI', () => {
   it('reveals validation feedback after blur or a save attempt', () => {
     expect(editPage).toContain('const touched = reactive')
     expect(editPage).toContain('const submitted = ref(false)')
-    expect(editPage).toContain('@blur="touchField(\'full_name\')"')
-    expect(editPage).toContain('visibleError(\'full_name\')')
+    expect(editPage).toContain('@blur="touchField(\'phone\')"')
+    expect(editPage).toContain('visibleError(\'phone\')')
     expect(editPage).toContain('serverFieldErrors.value[field]')
   })
 

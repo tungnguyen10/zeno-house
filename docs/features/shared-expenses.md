@@ -1,3 +1,10 @@
+---
+type: Feature Guide
+title: "shared-expenses"
+status: stable
+tags: [engineering, reference]
+---
+
 # Shared Expenses
 
 Owners can define a shared expense once and attach it to multiple buildings they control. Allocation is explicit per period and creates normal `building_expenses` rows so each building report includes its share.

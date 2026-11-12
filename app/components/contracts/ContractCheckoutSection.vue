@@ -249,6 +249,12 @@ const confirmationContent = computed(() => {
       </UiAlert>
       <div v-else-if="bundle?.enabled" class="space-y-5">
         <p class="text-xs font-medium tracking-wide text-ui-muted">{{ legacyReturn ? 'Hồ sơ trả phòng lịch sử' : settlementPilot || bundle.settlementEnabled ? 'Bàn giao → Bảng tính cuối → Quyết toán → Hoàn tiền' : 'Bàn giao → Bảng tính cuối → Phát hành hóa đơn' }}</p>
+        <details v-if="contractId" class="rounded-lg border border-ui-border">
+          <summary class="cursor-pointer px-3 py-2 text-sm font-medium text-ui-secondary">Nội thất đã bàn giao</summary>
+          <div class="border-t border-ui-border p-3">
+            <ContractHandoverSection :contract-id="contractId" />
+          </div>
+        </details>
         <UiAlert v-if="actionError" severity="danger" role="alert">{{ actionError }}</UiAlert>
         <p v-if="successMessage" role="status" class="text-sm text-status-success">{{ successMessage }}</p>
         <UiAlert v-if="!bundle.checkout && contractStatus === 'terminated'" severity="info">Hợp đồng đã kết thúc theo luồng cũ. Hồ sơ này không tự chuyển thành quyết toán pilot; cần đối soát hóa đơn và cọc theo lịch sử hiện có.</UiAlert>

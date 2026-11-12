@@ -1,3 +1,10 @@
+---
+type: Documentation Overview
+title: "README"
+status: stable
+tags: [engineering, reference]
+---
+
 # Zeno House Docs
 
 This directory contains source-of-truth engineering docs for the current Zeno House codebase.
@@ -33,8 +40,10 @@ This directory contains source-of-truth engineering docs for the current Zeno Ho
 - Services and meter readings: [features/services-meter-readings.md](features/services-meter-readings.md)
 - Change workflow: [development/change-workflow.md](development/change-workflow.md)
 
-## OpenSpec
+## OKF Knowledge + Superpowers
 
-OpenSpec specs live in `openspec/specs/**`. Archived implementation changes live in `openspec/changes/archive/**`. Use those files for requirement-level history; use this `docs/**` tree for source-level operating guidance.
+Accepted capability specs, active work and archived provenance are indexed in [`index.md`](./index.md). See [`workflow.md`](./workflow.md) for the unified Superpowers change lifecycle. Engineering docs here support operational implementation details; avoid duplicating normative rules in two places.
 
-When an implementation changes behavior, update the accepted OpenSpec capability spec and the relevant developer doc in the same change. Archived changes are historical context, not an automatic source to replay into main specs.
+## Documentation Ownership
+
+All documentation lives under `docs/**` as OKF v0.2 documents. Accepted product requirements are in `docs/capabilities/**`. Active designs and the single execution plan for each change live in `docs/changes/**`. Older Superpowers designs/plans are preserved in `docs/history/superpowers/**`. Do not create `docs/superpowers/**` or `knowledge/**` again.

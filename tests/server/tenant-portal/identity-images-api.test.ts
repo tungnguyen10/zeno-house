@@ -63,54 +63,17 @@ describe('tenant identity-image API handlers', () => {
     expect(mocks.get).toHaveBeenCalledWith(expect.anything(), user)
   })
 
-  it('uploads one validated side without accepting a tenant id', async () => {
-    const { default: handler } = await import(
-      '../../../server/api/tenant/id-images/[side].post'
-    )
-    const requestEvent = event({ side: 'front' })
-
-    await expect(handler(requestEvent as never)).resolves.toEqual({ data: images })
-    expect(mocks.upload).toHaveBeenCalledWith(requestEvent, user, 'front', {
-      mimeType: 'image/jpeg',
-      data: Buffer.from('jpeg'),
+  it.each(['post', 'delete'] as const)('denies %s before parsing or invoking image mutations', async (method) => {
+    const handler = method === 'post'
+      ? (await import('../../../server/api/tenant/id-images/[side].post')).default
+      : (await import('../../../server/api/tenant/id-images/[side].delete')).default
+    await expect(handler(event({ side: 'invalid' }) as never)).rejects.toMatchObject({
+      statusCode: 403, data: { error: { code: 'FORBIDDEN' } },
     })
-  })
-
-  it.each([
-    [{ side: 'middle' }, 'invalid side'],
-    [{ side: 'front' }, 'missing image'],
-  ])('rejects %s before identity mutation', async (params, reason) => {
-    if (reason === 'missing image') mocks.readMultipartFormData.mockResolvedValue([])
-    const { default: handler } = await import(
-      '../../../server/api/tenant/id-images/[side].post'
-    )
-
-    await expect(handler(event(params) as never)).rejects.toMatchObject({
-      statusCode: 422,
-      data: { error: { code: 'VALIDATION_ERROR' } },
-    })
+    expect(mocks.requireAuth).toHaveBeenCalled()
+    expect(mocks.resolveTenantId).toHaveBeenCalled()
+    expect(mocks.readMultipartFormData).not.toHaveBeenCalled()
     expect(mocks.upload).not.toHaveBeenCalled()
-  })
-
-  it('removes one validated side and returns the remaining slots', async () => {
-    const { default: handler } = await import(
-      '../../../server/api/tenant/id-images/[side].delete'
-    )
-    const requestEvent = event({ side: 'back' })
-
-    await expect(handler(requestEvent as never)).resolves.toEqual({ data: images })
-    expect(mocks.remove).toHaveBeenCalledWith(requestEvent, user, 'back')
-  })
-
-  it('rejects an invalid delete side', async () => {
-    const { default: handler } = await import(
-      '../../../server/api/tenant/id-images/[side].delete'
-    )
-
-    await expect(handler(event({ side: 'other' }) as never)).rejects.toMatchObject({
-      statusCode: 422,
-      data: { error: { code: 'VALIDATION_ERROR' } },
-    })
     expect(mocks.remove).not.toHaveBeenCalled()
   })
 })

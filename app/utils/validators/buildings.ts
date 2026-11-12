@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { slugifyName } from '~/utils/format/slug'
 import { booleanQuerySchema, limitSchema, orderSchema, pageSchema, searchQuerySchema, toArray } from './_shared'
 import { selectAtLeastOne } from './messages'
 
@@ -62,6 +63,39 @@ function validateOperationalStartPair(
 }
 
 export const buildingCreateSchema = buildingBaseSchema.superRefine(validateOperationalStartPair)
+
+export const QUICK_ROOM_MAX = 200
+
+export const quickRoomSchema = z.object({
+  room_number: z.string().trim().min(1, 'Số phòng không được trống').max(20, 'Số phòng quá dài'),
+  floor: z.number().int().min(1, 'Tầng phải >= 1').max(100, 'Tầng phải <= 100'),
+  monthly_rent: z.number().min(0, 'Giá thuê không được âm'),
+  area: z.number().positive('Diện tích phải > 0').nullable(),
+})
+
+export const buildingCreateWithRoomsSchema = buildingBaseSchema
+  .extend({
+    request_id: z.string().uuid('Mã yêu cầu không hợp lệ').optional(),
+    rooms: z.array(quickRoomSchema).max(QUICK_ROOM_MAX, `Tối đa ${QUICK_ROOM_MAX} phòng mỗi lần`).optional(),
+  })
+  .superRefine(validateOperationalStartPair)
+  .superRefine((value, ctx) => {
+    const seen = new Set<string>()
+    value.rooms?.forEach((room, index) => {
+      const key = slugifyName(room.room_number) || room.room_number.toLowerCase()
+      if (seen.has(key)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['rooms', index, 'room_number'],
+          message: `Mã phòng "${room.room_number}" bị trùng`,
+        })
+      }
+      seen.add(key)
+    })
+  })
+
+export type QuickRoomInput = z.infer<typeof quickRoomSchema>
+export type BuildingCreateWithRoomsInput = z.infer<typeof buildingCreateWithRoomsSchema>
 
 export const buildingUpdateSchema = buildingBaseSchema.partial().extend({
   code: z.string().min(1).max(20).regex(/^[a-z0-9]+$/, 'Code chỉ được chứa chữ thường và số').optional(),

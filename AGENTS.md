@@ -3,18 +3,13 @@
 This is the canonical cross-agent contract for repository-level rules.
 Keep other entry files thin and reference this file instead of duplicating rules.
 
-## Fast Read Order
+## Fast Read Order — One Document Root
 
-- Read `docs/agent-context.md` first for project map and task routing.
-- Read only the task-matching deep sources needed for the current scope:
-   - architecture: `docs/architecture/rules.md`
-   - frontend/UI: `docs/architecture/frontend.md`, `docs/ui-patterns/design-system.md`
-   - server/API: `docs/architecture/api.md`
-   - database/Supabase: `docs/architecture/database.md`
-   - auth/permissions: `docs/architecture/auth-permissions.md`
-   - feature behavior: `docs/features/*.md`
-   - requirement behavior: `openspec/specs/<capability>/spec.md`
-- For OpenSpec workflow tasks, use matching `.agents/skills/openspec-*` skill.
+1. Read `docs/index.md` and `docs/agent-context.md` first. The entire `docs/**` tree is the OKF v0.2 bundle; do not create a second knowledge or specification root.
+2. Read the one relevant accepted `docs/capabilities/<name>.md` and any related `docs/changes/<slug>/**` before making decisions. `docs/features/**` and `docs/architecture/**` describe current implementation details.
+3. Inspect real source, SQL migrations, and tests. If actual behavior differs from accepted requirements, report and reconcile explicitly; do not silently promote in-progress designs.
+4. Read `docs/workflow.md` for the lifecycle; apply available Superpowers skills for brainstorming, planning, TDD, debugging, executing plans, code review, and verification.
+5. Never create `docs/superpowers/specs/**`, `docs/superpowers/plans/**`, `knowledge/**` or `openspec/**`. Existing archived design/plan artifacts live in `docs/history/superpowers/**`.
 
 ## UI Quality Gate
 
@@ -27,18 +22,25 @@ Keep other entry files thin and reference this file instead of duplicating rules
 
 ## Context Budget
 
-- Use delta-first reads: `openspec/changes/<active-change>/tasks.md` before broad spec scanning.
-- Do not scan all `openspec/specs/**` unless task scope spans multiple capabilities.
-- Start implementation with a short read plan (target files + why).
-- Keep implementation scope to one checklist task item at a time.
+- Start with the relevant `docs/capabilities/*.md` and `docs/changes/index.md`; do not load the entire bundle for a small task.
+- For active changes, read `docs/changes/<slug>/implementation-plan.md` or `tasks.md`, whichever is canonical; never maintain two competing checklists.
+- Work one testable task at a time. Read `docs/history/**` only when history or provenance matters.
 
-## Source Of Truth
+## Sources of Truth
 
-- Current implementation guidance lives in `docs/**`.
-- Accepted requirements live in `openspec/specs/**`.
-- Active proposals/tasks live in `openspec/changes/**` excluding `archive`.
-- Archived changes are history only. Do not resync archive content blindly; later specs may intentionally supersede it.
-- Code wins over stale prose. If code and docs disagree, verify in source, then update docs/specs as part of the change.
+1. **Accepted requirements:** `docs/capabilities/**` (OKF); only change these after acceptance/verification.
+2. **Proposed or active work:** `docs/changes/**` (OKF proposal, design, and one execution checklist). Not automatically accepted or deployed.
+3. **Engineering and user reference:** `docs/architecture/**`, `docs/features/**`, `docs/development/**`, `docs/user-guide/**` (all OKF concepts).
+4. **Historical evidence:** `docs/history/**` (deprecated/archived, never current spec).
+5. **Implementation evidence:** Source code, database migrations, CI/tests and rollout reports show what actually runs. Report conflicts with documentation.
+
+## Agent Execution Protocol
+
+- **Research/bug investigation:** read matching OKF docs + source/tests; use Superpowers systematic-debugging where needed.
+- **Behavioral feature/change:** Superpowers brainstorming and design; store canonical proposal/design under `docs/changes/<slug>/`. One implementation checklist lives in `implementation-plan.md` or migrated `tasks.md`.
+- **Implementation:** use Superpowers TDD, executing-plans/subagent-driven-development and review skills as available; do not start a second specifications workflow.
+- **Verification:** unit/integration/typecheck/lint, permission/scope, financial invariants and cloud migrations separately; attach evidence to the change.
+- **Promotion:** reconcile approved behavior into `docs/capabilities/**`, update engineering docs, and move completed change records to `docs/history/**` (preserve links/provenance).
 
 ## Non-Negotiables
 
@@ -59,6 +61,7 @@ Keep other entry files thin and reference this file instead of duplicating rules
 
 ## Verification
 
-- Specs changed: `openspec validate --specs`
-- Check active changes: `openspec list --json`
-- Code edits: run narrow relevant tests first, then `npm run typecheck`, `npm test`, `npm run lint` as needed.
+- OKF: run `npm run knowledge:check` to validate the entire `docs/**` bundle, index links and absence of duplicate spec directories.
+- Source modifications: run narrow tests first, then `npm run typecheck`, `npm test`, `npm run lint` as appropriate.
+- For database or deployment work, verify migration and cloud rollout separately; never claim cloud checks passed from static checks alone.
+- On completion: update accepted `docs/capabilities/**`, relevant `docs/changes/**` status, architecture docs, and verification evidence in the same PR.

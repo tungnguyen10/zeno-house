@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import type { Room } from '~/types/rooms'
-import type { Tenant } from '~/types/tenants'
+import type { Tenant, TenantSummary } from '~/types/tenants'
 import type { Building } from '~/types/buildings'
 import type { ApiSuccess } from '~/types/api'
 import type { ContractWithDetails } from '~/types/contracts'
 import type { MeterReading } from '~/types/meter-readings'
 import { formatCurrency } from '~/utils/format/currency'
 import { contractCreateSchema, contractUpdateSchema } from '~/utils/validators/contracts'
+import type { InventoryItem } from '~/types/inventory'
+import type { InventoryItemInput } from '~/utils/validators/inventory'
 
 export interface ContractFormData {
   room_id: string
@@ -24,6 +26,7 @@ export interface ContractFormData {
   handover_electricity_reading: string
   handover_water_reading: string
   handover_reading_date: string
+  inventory?: InventoryItemInput[]
 }
 
 const props = withDefaults(defineProps<{
@@ -32,6 +35,7 @@ const props = withDefaults(defineProps<{
   errors?: Record<string, string[]>
   apiError?: string | null
   excludeContractId?: string
+  excludeTenantIds?: string[]
   showHandover?: boolean
   hasDraft?: boolean
   draftSavedAt?: string
@@ -46,6 +50,7 @@ const props = withDefaults(defineProps<{
   loading: false,
   errors: () => ({}),
   apiError: null,
+  excludeTenantIds: () => [],
   showHandover: false,
   hasDraft: false,
   draftSavedAt: '',
@@ -100,18 +105,20 @@ const selectedRoom = computed(() =>
   (roomsData.value?.data ?? []).find(room => room.id === props.modelValue.room_id) ?? null,
 )
 
-const { data: tenantsData } = useFetch<ApiSuccess<Tenant[]>>('/api/tenants', {
-  query: computed(() => ({
-    limit: 200,
-    available: true,
-    excludeContractId: props.excludeContractId || undefined,
-  })),
-})
-const availableTenants = computed(() => tenantsData.value?.data ?? [])
-
-const selectedTenant = computed(() =>
-  availableTenants.value.find(tenant => tenant.id === props.modelValue.tenant_id) ?? null,
-)
+// The tenant summary shown in the read-only relation block or carried from the
+// picker; no up-front tenant list is loaded any more.
+const selectedTenantSummary = ref<TenantSummary | null>(null)
+watch(() => props.modelValue.tenant_id, async (id) => {
+  if (!id) { selectedTenantSummary.value = null; return }
+  if (selectedTenantSummary.value?.id === id) return
+  try {
+    const res = await apiFetch<ApiSuccess<Tenant>>(`/api/tenants/${id}`)
+    selectedTenantSummary.value = { id: res.data.id, code: res.data.code, fullName: res.data.fullName, phone: res.data.phone }
+  }
+  catch {
+    // Leave the summary null when the tenant cannot be loaded.
+  }
+}, { immediate: true })
 
 const relationReadonly = computed(() => !props.showHandover && props.modelValue.status === 'active')
 
@@ -134,8 +141,8 @@ function onRoomSelect(room: Room | null) {
   selectRoom(room.id)
 }
 
-function onTenantSelect(tenant: Tenant | null) {
-  update('tenant_id', tenant?.id ?? '')
+function onTenantPicked(tenant: TenantSummary | null) {
+  selectedTenantSummary.value = tenant
 }
 
 const handoverRoomId = computed(() => props.showHandover ? props.modelValue.room_id : '')
@@ -168,6 +175,27 @@ watch(handoverRoomId, async (roomId) => {
     emit('update:modelValue', { ...props.modelValue, ...updates })
   }
 }, { immediate: true })
+
+// Handover inventory: prefill from the room's declared inventory when the room
+// changes; the manager can edit condition/note or drop items for this contract.
+const handoverInventory = computed(() => props.modelValue.inventory ?? [])
+const inventoryRoomLoaded = ref<string | null>(null)
+watch(handoverRoomId, async (roomId) => {
+  if (!roomId || roomId === inventoryRoomLoaded.value) return
+  inventoryRoomLoaded.value = roomId
+  try {
+    const res = await apiFetch<ApiSuccess<InventoryItem[]>>(`/api/rooms/${encodeURIComponent(roomId)}/inventory`)
+    emit('update:modelValue', {
+      ...props.modelValue,
+      inventory: res.data.map(item => ({
+        name: item.name, quantity: item.quantity, condition: item.condition, unit_value: item.unitValue, note: item.note,
+      })),
+    })
+  }
+  catch {
+    // Leave inventory as-is when the room has none or the request fails.
+  }
+})
 
 const electricityWarning = computed(() => {
   const ref = previousElectricity.value
@@ -359,9 +387,9 @@ const selectedRoomLabel = computed(() => {
         <div class="flex items-baseline justify-between gap-4 py-2.5 first:pt-0 last:pb-0">
           <dt class="shrink-0 text-sm text-ui-muted">Khách thuê</dt>
           <dd class="min-w-0 text-right text-sm font-medium text-ui-primary">
-            {{ selectedTenant?.fullName ?? '—' }}
-            <span v-if="selectedTenant?.phone" class="block text-xs font-normal text-ui-muted">
-              {{ selectedTenant.phone }}
+            {{ selectedTenantSummary?.fullName ?? '—' }}
+            <span v-if="selectedTenantSummary?.phone" class="block text-xs font-normal text-ui-muted">
+              {{ selectedTenantSummary.phone }}
             </span>
           </dd>
         </div>
@@ -384,20 +412,16 @@ const selectedRoomLabel = computed(() => {
           @update:model-value="onRoomSelect"
         />
 
-        <UiCombobox
+        <TenantPicker
           id="contract-tenant"
-          :model-value="selectedTenant"
-          :options="availableTenants"
-          :option-key="tenant => tenant.id"
-          :option-label="tenant => `${tenant.fullName} - ${tenant.phone}`"
-          label="Khách thuê"
-          placeholder="Tìm và chọn khách thuê..."
-          search-placeholder="Tìm theo tên hoặc số điện thoại..."
+          :model-value="modelValue.tenant_id || null"
+          :exclude-tenant-ids="excludeTenantIds"
+          :exclude-contract-id="excludeContractId"
           required
           :disabled="loading"
           :error="errorFor('tenant_id')"
-          empty-message="Không tìm thấy khách thuê nào"
-          @update:model-value="onTenantSelect"
+          @update:model-value="(id: string | null) => update('tenant_id', id ?? '')"
+          @selected="onTenantPicked"
         />
       </div>
 
@@ -582,6 +606,17 @@ const selectedRoomLabel = computed(() => {
         @blur="onBlur('handover_reading_date')"
       />
       <p class="text-xs text-ui-muted">Mặc định lấy theo ngày bắt đầu hợp đồng nếu để trống.</p>
+    </UiFormSection>
+
+    <UiFormSection
+      v-if="showHandover"
+      title="Nội thất bàn giao"
+      :description="`Nội thất kèm theo khi bàn giao phòng (${handoverInventory.length} món). Điền sẵn từ nội thất của phòng; chỉnh riêng cho hợp đồng này.`"
+    >
+      <InventoryItemsEditor
+        :model-value="handoverInventory"
+        @update:model-value="(items) => update('inventory', items)"
+      />
     </UiFormSection>
 
     <UiFormSection title="Trạng thái &amp; Ghi chú" description="Vòng đời hợp đồng và ghi chú nội bộ.">

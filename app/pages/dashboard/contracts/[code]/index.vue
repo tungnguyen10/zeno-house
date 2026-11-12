@@ -70,7 +70,7 @@ onBeforeUnmount(() => {
   if (headerTitle.value === compactTitle.value) headerTitle.value = null
 })
 
-const { payments, isLoading: paymentsLoading, error: paymentsError, addPayment, updatePayment, removePayment } = useContractPayments(id)
+const { payments, isLoading: paymentsLoading, addPayment, updatePayment, removePayment } = useContractPayments(id)
 const { renewals, isLoading: renewalsLoading, renew } = useContractRenewals(id)
 const { occupants, isLoading: occupantsLoading, error: occupantsError, addOccupant, moveOut, removeOccupant } = useContractOccupants(id)
 const { services: contractServices, isLoading: servicesLoading, error: servicesError, updateService: updateContractService, removeService: removeContractService } = useContractServices(id)
@@ -95,8 +95,7 @@ async function publishAmendment(amendmentId: string, expectedUpdatedAt: string) 
 const activeOccupantCount = computed(
   () => occupants.value.filter(o => !o.moveOutDate).length,
 )
-const depositReceived = computed(() => payments.value.filter(p => p.paymentType === 'deposit').reduce((sum, p) => sum + p.amount, 0))
-const depositHeld = computed(() => checkoutBundle.value?.enabled ? checkoutBundle.value.depositHeld : depositReceived.value)
+const depositHeld = computed(() => checkoutBundle.value?.enabled ? checkoutBundle.value.depositHeld : (contract.value?.deposit ?? 0))
 watch(payments, () => { if (checkoutBundle.value?.enabled) checkout.refresh() })
 
 const showRenewalForm = ref(false)
@@ -190,7 +189,7 @@ watchEffect(() => {
 // mobile segmented-pill skin can highlight it (desktop keeps the plain underline-free look).
 // IntersectionObserver's visibility window is unreliable for short sections (they can pass through
 // the window entirely between two callbacks), so this walks section positions directly instead.
-const sectionIds = ['overview', 'amendments', 'occupants', 'payments', 'services', 'meter-readings', 'checkout', 'history']
+const sectionIds = ['overview', 'documents', 'amendments', 'occupants', 'payments', 'services', 'meter-readings', 'handover', 'checkout', 'history']
 const activeSection = ref(sectionIds[0])
 const SCROLLSPY_OFFSET = 140
 let scrollContainer: HTMLElement | null = null
@@ -247,7 +246,6 @@ function sectionLinkClass(sectionId: string) {
 
       <ContractDetailHero
         :contract="contract"
-        :paid-amount="depositReceived"
         :deposit-held="depositHeld"
         :can-manage="authStore.can('contracts.update')"
         @edit="navigateTo(`${contractPath(contract)}/edit`)"
@@ -278,11 +276,13 @@ function sectionLinkClass(sectionId: string) {
       <nav class="sticky top-0 z-20 mt-4 overflow-x-auto bg-ui-canvas py-2 lg:top-16">
         <div class="flex min-w-max gap-1 rounded-full bg-ui-chrome p-1 text-sm lg:gap-2 lg:rounded-none lg:bg-transparent lg:p-0">
           <a href="#overview" :class="sectionLinkClass('overview')">Tổng quan</a>
+          <a href="#documents" :class="sectionLinkClass('documents')">Tài liệu</a>
           <a href="#amendments" :class="sectionLinkClass('amendments')">Phụ lục</a>
           <a href="#occupants" :class="sectionLinkClass('occupants')">Người ở</a>
           <a href="#payments" :class="sectionLinkClass('payments')">Thanh toán</a>
           <a href="#services" :class="sectionLinkClass('services')">Dịch vụ</a>
           <a href="#meter-readings" :class="sectionLinkClass('meter-readings')">Chỉ số</a>
+          <a href="#handover" :class="sectionLinkClass('handover')">Bàn giao</a>
           <a v-if="checkoutSectionVisible && checkoutBundle?.enabled" href="#checkout" :class="sectionLinkClass('checkout')">Trả phòng</a>
           <a href="#history" :class="sectionLinkClass('history')">Lịch sử</a>
         </div>
@@ -294,6 +294,8 @@ function sectionLinkClass(sectionId: string) {
         :contract="contract"
         :active-occupant-count="activeOccupantCount"
       />
+
+      <ContractDocumentsSection :contract-id="contract.id" class="mt-4" />
 
       <ContractAmendmentsSection
         :contract="contract"
@@ -355,6 +357,13 @@ function sectionLinkClass(sectionId: string) {
         </UiSurfacePanel>
       </UiSection>
 
+      <!-- Handover inventory section -->
+      <UiSection id="handover" title="Nội thất bàn giao" class="mt-6 scroll-mt-20">
+        <UiSurfacePanel density="compact">
+          <ContractHandoverSection :contract-id="contract.id" />
+        </UiSurfacePanel>
+      </UiSection>
+
       <ContractCheckoutSection
         :bundle="checkoutBundle"
         :loading="checkoutLoading"
@@ -381,7 +390,7 @@ function sectionLinkClass(sectionId: string) {
             :current-monthly-rent="contract.monthlyRent"
             :occupant-count="occupantsLoading || occupantsError ? undefined : activeOccupantCount"
             :service-count="servicesLoading || servicesError ? undefined : contractServices.length"
-            :deposit-held="checkoutLoading || checkoutError || (!checkoutBundle?.enabled && (paymentsLoading || paymentsError)) ? undefined : depositHeld"
+            :deposit-held="checkoutLoading || checkoutError ? undefined : depositHeld"
             :loading="isRenewing"
             :api-error="renewalApiError"
             @submit="handleRenew"
