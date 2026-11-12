@@ -80,7 +80,7 @@ const groups: { title: string, description: string, fields: Field[] }[] = [
   },
   {
     title: 'Mặc định hợp đồng',
-    description: 'Gợi ý khi tạo hợp đồng mới; có thể điều chỉnh trên từng hợp đồng.',
+    description: 'Lưu thời hạn và tiền cọc để chuẩn bị hợp đồng.',
     fields: [
       { key: 'brand_name', label: 'Tên thương hiệu', kind: 'text' },
       { key: 'default_term_months', label: 'Thời hạn (tháng)', kind: 'integer', placeholder: '12' },

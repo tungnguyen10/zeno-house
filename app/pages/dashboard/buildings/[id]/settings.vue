@@ -1031,7 +1031,7 @@ const activeSectionId = computed(() => {
             <h2 class="text-sm font-semibold text-ui-accent">Hợp đồng</h2>
             <UiBadge :variant="!readiness ? 'neutral' : readiness.contract.ready ? 'success' : 'warning'">{{ contractReadinessLabel }}</UiBadge>
           </header>
-          <UiSection title="Thông tin trên hợp đồng" description="Áp dụng cho hợp đồng tạo mới. Hợp đồng đã phát hành không thay đổi.">
+          <UiSection title="Thông tin trên hợp đồng" description="Lưu hồ sơ bên cho thuê và điều khoản để chuẩn bị hợp đồng.">
             <UiSurfacePanel density="compact">
               <BuildingContractProfileSettings
                 :profile="settings?.contractProfile ?? null"

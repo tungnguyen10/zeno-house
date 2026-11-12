@@ -42,7 +42,11 @@ Native Chrome inspection on the approved local Nuxt dev runtime (2026-11-12) use
 
 ## Review evidence
 
-Tasks 1–8 received independent specification and code-quality review. Task 8's same-record route-parameter draft-loss issue was fixed and independently re-reviewed; its router regression proves cancel/discard and same-building hash behavior (16 focused tests). Task 9 passed six focused tests and controller source review, including authorization arriving after mount, revocation, nonblocking loading/error/retry, repair paths and native button semantics. Its independent review could not run because the subagent service reported workspace credits exhausted. A whole-branch independent review remains outstanding for the same reason; controller self-review does not replace that gate.
+Tasks 1–9 received independent specification and code-quality review. Task 8's same-record route-parameter draft-loss issue was fixed and independently re-reviewed; its router regression proves cancel/discard and same-building hash behavior (16 focused tests). Task 9's retried independent review passed, covering late authorization/revocation, nonblocking loading/error/retry, repair paths and native button semantics. The first review attempt was blocked by workspace credits; review became available later in the session.
+
+Whole-branch independent review passed with one Minor copy finding: the UI implied contract autofill before PR4 implements it. Both descriptions now say that the data is stored for contract preparation. The covering 16 tests, scoped lint and diff check passed; independent re-review confirmed the finding resolved with no remaining actionable issues. Cloud application, generated types and authenticated rollout remain separate gates.
+
+Draft pull request: [#23](https://github.com/tungnguyen10/zeno-house/pull/23), targeting `develop`. GitHub CI run `43130102712` passed its Lint & Type Check job (including OKF, lint, typecheck and tests) at commit `e926799c`. The follow-up copy/evidence commit is checked separately on the pull request.
 
 ## Cloud gates (human-run)
 
