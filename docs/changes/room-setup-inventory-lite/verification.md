@@ -30,11 +30,14 @@ The user explicitly approved the design direction on 2026-11-12: floor-group roo
 
 ## Visual QA
 
-- Create-building multi-floor generator: pending.
-- Existing-building batch with existing room numbers and template: pending.
-- Template edit and merge/replace confirmation: pending.
-- Room inventory edit/apply: pending.
-- Contract create with/without inventory, renewal handover and checkout reference: pending.
+Rendered in the browser on 2026-11-12 against the dev server (Supabase production data, read-only: no save or create was pressed).
+
+- Create-building multi-floor generator: checked at 1280px and 390px; three floors, nine rooms, rent/area editing, no horizontal overflow. A mobile caption row for floor/rent/area was added after this pass.
+- Batch page (`/rooms/batch`): renders; template count loads from the migrated schema (0 items), checkbox disabled with a settings link.
+- Settings "Nội thất mẫu": section and nav item render, add-row works, empty state and total are correct. Template save and apply modal not exercised (would write production data).
+- Room page inventory section: renders with the empty state; edit/apply not exercised.
+- Contract detail "Nội thất bàn giao": renders the empty state ("Không có dữ liệu bàn giao"). Contract create form shows the handover inventory section with the empty-room hint.
+- Not verified: contract create with seeded inventory, renewed-contract source note, checkout reference panel, apply modal merge/replace.
 
 ## Cloud gates (human-run)
 

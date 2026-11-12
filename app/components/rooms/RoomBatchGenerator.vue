@@ -171,6 +171,11 @@ const toNonNegative = (raw: string) => Math.max(0, Math.trunc(Number(raw)) || 0)
               <span v-else-if="flagged.has(roomKey(row.roomNumber))" class="block text-xs text-status-danger">Mã trùng</span>
             </div>
             <div class="order-last col-span-2 grid grid-cols-3 gap-2 md:order-none md:col-span-3">
+              <div class="col-span-3 grid grid-cols-3 gap-2 text-[11px] text-ui-muted md:hidden" aria-hidden="true">
+                <span>Tầng</span>
+                <span>Giá thuê</span>
+                <span>m²</span>
+              </div>
               <QuickRoomCellEditor
                 compact
                 :room-number="row.roomNumber"
