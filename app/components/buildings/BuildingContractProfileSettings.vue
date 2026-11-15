@@ -24,7 +24,7 @@ const toForm = (p: BuildingContractProfile | null) => ({
   lessor_phone: p?.lessorPhone ?? '',
   brand_name: p?.brandName ?? '',
   default_term_months: p?.defaultTermMonths ?? null,
-  default_deposit_months: p?.defaultDepositMonths ?? null,
+  default_deposit_months: (p?.defaultDepositMonths ?? 1) as number | null,
   notice_days: p?.noticeDays ?? null,
   deposit_refund_days: p?.depositRefundDays ?? null,
   renewal_months: p?.renewalMonths ?? null,
@@ -39,6 +39,44 @@ const form = reactive(toForm(props.profile))
 watch(() => props.profile, value => Object.assign(form, toForm(value)))
 
 const fieldErrors = ref<Record<string, string>>({})
+
+const DEPOSIT_PRESETS = [0.5, 1, 1.5, 2, 3]
+const DEPOSIT_UNIT_OPTIONS = [
+  { value: 'months', label: 'Tháng tiền thuê' },
+  { value: 'percent', label: '% tiền thuê 1 tháng' },
+]
+const depositUnit = ref<'months' | 'percent'>('months')
+
+// The stored value is always months of rent; percent is only an input/display unit.
+const depositInput = computed({
+  get: () => {
+    const months = form.default_deposit_months
+    if (months === null || months === undefined || String(months) === '') return ''
+    const n = Number(months)
+    return String(depositUnit.value === 'percent' ? Math.round(n * 100) : n)
+  },
+  set: (value: string) => {
+    if (value.trim() === '') {
+      form.default_deposit_months = null
+      return
+    }
+    const n = Number(value)
+    if (Number.isNaN(n)) return
+    form.default_deposit_months = depositUnit.value === 'percent' ? n / 100 : n
+  },
+})
+
+const depositHint = computed(() => {
+  const months = Number(form.default_deposit_months)
+  if (form.default_deposit_months === null || Number.isNaN(months)) return 'Mặc định 1 tháng tiền thuê'
+  return depositUnit.value === 'percent'
+    ? `Tương đương ${months} tháng tiền thuê`
+    : `Tương đương ${Math.round(months * 100)}% tiền thuê 1 tháng`
+})
+
+function pickDepositPreset(months: number) {
+  form.default_deposit_months = months
+}
 const paymentWindow = computed(() => formatPaymentWindow(props.building))
 
 const HIDDEN = 'Ẩn với vai trò quản lý'
@@ -106,7 +144,32 @@ function submit() {
       <UiFormSection title="Mặc định cho hợp đồng mới">
         <div class="grid gap-3 sm:grid-cols-3">
           <UiInput v-model="form.default_term_months" label="Thời hạn (tháng)" type="number" number-mode="integer" placeholder="12" :error="fieldErrors.default_term_months" />
-          <UiInput v-model="form.default_deposit_months" label="Số tháng cọc" type="number" placeholder="1" :error="fieldErrors.default_deposit_months" />
+          <div class="space-y-2 sm:col-span-2">
+            <div class="grid gap-3 sm:grid-cols-2">
+              <UiInput
+                v-model="depositInput"
+                :label="depositUnit === 'percent' ? 'Tiền cọc (%)' : 'Số tháng cọc'"
+                type="number"
+                :placeholder="depositUnit === 'percent' ? '100' : '1'"
+                :hint="depositHint"
+                :error="fieldErrors.default_deposit_months"
+              />
+              <UiSelect v-model="depositUnit" label="Đơn vị" :options="DEPOSIT_UNIT_OPTIONS" />
+            </div>
+            <div class="flex flex-wrap gap-2" role="group" aria-label="Chọn nhanh số tháng cọc">
+              <UiButton
+                v-for="preset in DEPOSIT_PRESETS"
+                :key="preset"
+                size="sm"
+                :variant="Number(form.default_deposit_months) === preset ? 'primary' : 'secondary'"
+                :aria-pressed="Number(form.default_deposit_months) === preset"
+                :data-test="`deposit-preset-${preset}`"
+                @click="pickDepositPreset(preset)"
+              >
+                {{ depositUnit === 'percent' ? `${preset * 100}%` : `${preset} tháng` }}
+              </UiButton>
+            </div>
+          </div>
           <UiInput v-model="form.brand_name" label="Tên thương hiệu" placeholder="Mặc định dùng tên tòa" :error="fieldErrors.brand_name" />
         </div>
       </UiFormSection>

@@ -42,6 +42,12 @@ describe('buildingContractProfileSchema', () => {
     expect(buildingContractProfileSchema.safeParse({ lessor_id_issued_date: tomorrow }).success).toBe(false)
   })
 
+  it('accepts numeric text from form inputs', () => {
+    const r = buildingContractProfileSchema.safeParse({ default_deposit_months: '1.1', default_term_months: '12', drilling_fee: '200000' })
+    expect(r.success).toBe(true)
+    expect(r.data).toMatchObject({ default_deposit_months: 1.1, default_term_months: 12, drilling_fee: 200000 })
+  })
+
   it('enforces copies_per_party * 2 <= signed_copies', () => {
     const r = buildingContractProfileSchema.safeParse({ signed_copies: 1, copies_per_party: 1 })
     expect(r.success).toBe(false)
