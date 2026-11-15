@@ -19,6 +19,10 @@ definePageMeta({ title: 'Thêm hợp đồng mới' })
 const route = useRoute()
 const authStore = useAuthStore()
 
+// The docked action bar owns the bottom of the mobile viewport, so the tab bar steps aside.
+const formMode = useAppFormMode()
+onMounted(() => { formMode.value = true })
+onBeforeUnmount(() => { formMode.value = false })
 interface PendingOccupant { tenant_id: string; tenantName: string; move_in_date: string; billing_counted: boolean }
 
 const form = ref({
@@ -403,7 +407,7 @@ watch([form, occupants, vehicles, services, inventory], () => {
       </UiAlert>
 
       <!-- Sticky action bar -->
-      <div class="fixed inset-x-0 bottom-0 z-20 border-t border-ui-border bg-ui-surface/95 p-3 backdrop-blur sm:static sm:border-0 sm:bg-transparent sm:p-0">
+      <div class="fixed inset-x-0 bottom-0 z-30 border-t border-ui-border bg-ui-chrome/95 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur-md sm:static sm:border-0 sm:bg-transparent sm:p-0 sm:pb-0 sm:backdrop-blur-none">
         <div class="mx-auto flex max-w-3xl justify-end gap-2">
           <UiButton variant="secondary" :disabled="isLoading" @click="navigateTo('/dashboard/contracts')">Huỷ</UiButton>
           <UiButton variant="secondary" :loading="isLoading" @click="create(false)">Tạo hợp đồng</UiButton>

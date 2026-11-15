@@ -38,6 +38,13 @@ describe('contract create page', () => {
     expect(page).toContain('/api/meter-readings/latest')
   })
 
+  it('docks the mobile action bar above the tab bar via form mode', () => {
+    expect(page).toContain('useAppFormMode()')
+    expect(page).toContain('formMode.value = true')
+    expect(page).toContain('formMode.value = false')
+    expect(page).not.toContain('bottom-0 z-20')
+  })
+
   it('uses server drafts and saves per-building prefs after success', () => {
     expect(page).toContain('useContractCreateDraft(')
     expect(page).toContain('savePrefs(')
