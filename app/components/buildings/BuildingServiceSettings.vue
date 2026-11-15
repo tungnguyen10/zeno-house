@@ -40,7 +40,7 @@ function isActive(item: ServiceCatalogItem): boolean {
 }
 
 function amountOf(item: ServiceCatalogItem): number {
-  return getService(item.id)?.defaultAmount ?? 0
+  return getService(item.id)?.defaultAmount ?? item.defaultAmount
 }
 
 function needsPrice(item: ServiceCatalogItem): boolean {

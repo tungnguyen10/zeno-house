@@ -119,7 +119,11 @@ async function handleSync() {
 async function handleToggle(catalogId: string, isActive: boolean) {
   const existing = services.value.find(s => s.catalogId === catalogId)
   if (existing) await updateService(existing.id, { is_active: isActive })
-  else await upsertService({ building_id: id, catalog_id: catalogId, is_active: isActive })
+  else await upsertService({ building_id: id, catalog_id: catalogId, default_amount: suggestedAmount(catalogId), is_active: isActive })
+}
+
+function suggestedAmount(catalogId: string): number {
+  return catalog.value.find(item => item.id === catalogId)?.defaultAmount ?? 0
 }
 
 async function handleUpdateAmount(catalogId: string, amount: number) {
@@ -131,7 +135,7 @@ async function handleUpdateAmount(catalogId: string, amount: number) {
 async function handleUpdatePricingType(catalogId: string, pricingType: PricingType) {
   const existing = services.value.find(s => s.catalogId === catalogId)
   if (existing) await updateService(existing.id, { pricing_type: pricingType })
-  else await upsertService({ building_id: id, catalog_id: catalogId, pricing_type: pricingType })
+  else await upsertService({ building_id: id, catalog_id: catalogId, default_amount: suggestedAmount(catalogId), pricing_type: pricingType })
 }
 
 const canManageBuildingServices = computed(() => authStore.can('building-services.write'))

@@ -3126,6 +3126,7 @@ export type Database = {
           building_id: string | null
           code: string
           created_at: string | null
+          default_amount: number
           description: string | null
           id: string
           is_active: boolean
@@ -3138,6 +3139,7 @@ export type Database = {
           building_id?: string | null
           code: string
           created_at?: string | null
+          default_amount?: number
           description?: string | null
           id?: string
           is_active?: boolean
@@ -3150,6 +3152,7 @@ export type Database = {
           building_id?: string | null
           code?: string
           created_at?: string | null
+          default_amount?: number
           description?: string | null
           id?: string
           is_active?: boolean
