@@ -44,14 +44,14 @@ Re-verified independently by the parent on Node 22 (2026-11-12): typecheck 0, **
 
 ## Visual QA — run by maintainer
 
-- [ ] Create building multi-floor generator; batch page with existing rooms + template toggle.
-- [ ] Settings template edit + apply (merge / replace confirm); manager read-only but can apply.
-- [ ] Room detail inventory edit + apply template; contract create prefill; contract detail "Bàn giao" (renewed contract source note); checkout reference; mobile.
+- [x] Batch page with a multi-floor generator and the template toggle: 4 rooms created with 4 inventory items each; replay returns 200 `replayed`, existing code returns 409, duplicate in payload returns 422 (2026-11-15)
+- [x] Manager can apply the template but cannot edit it or create rooms (403); manager account since deleted
+- [x] Room detail inventory renders and applies the template; contract create prefills inventory from the room; contract detail "Bàn giao" renders; 390px mobile has no overflow. Hydration mismatch on room detail fixed (client-only editor)
 
 ## Cloud gates (order matters)
 
-- [ ] Migration `20261111110000_inventory_lite.sql` applied — <env, date>
-- [ ] `supabase/verification/inventory_lite.sql` passed — <output>
-- [ ] `apply_inventory_template` cross-building guard + merge/replace + batch replay + wrapper rollback checks — <output>
-- [ ] Grants: anon/auth = false, service_role = true — <output>
-- [ ] Types regenerated; `as never` casts removed from inventory repo + handover query — <commit>
+- [x] Migration `20261111110000_inventory_lite.sql` applied — production, 2026-11-15
+- [x] `supabase/verification/inventory_lite.sql` passed — production, 2026-11-15
+- [x] `apply_inventory_template` merge/replace and batch replay checked end to end through the API (merge twice adds 0 the second time; replace re-adds 4; empty room list returns 422)
+- [x] Grants: anon/auth = false, service_role = true
+- [x] Types regenerated; `as never` casts removed — see commit history on `feat/v2-pr0-pr4b`

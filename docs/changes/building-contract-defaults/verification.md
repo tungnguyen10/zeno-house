@@ -35,14 +35,14 @@ Environment note: the workspace shipped with Node 18 and no `node_modules`; inst
 
 ## Visual QA — run by maintainer
 
-- [ ] Owner: empty / partial / complete / save error — desktop + mobile
-- [ ] Manager: masked read-only
-- [ ] Schedule missing warning
-- [ ] Detail page readiness card: missing / ready
+- [x] Owner/admin: edit and save on the settings page (2026-11-15, desktop + 390px mobile, no overflow)
+- [x] Manager: read-only, ID number masked, DOB and address hidden; PUT returns 403 (2026-11-15, temp manager account, since deleted)
+- [x] Schedule line renders from the building schedule
+- [x] Settings readiness card: missing / ready states (3/3 ready)
 
 ## Cloud gates
 
-- [ ] Migration `20261111100000_building_contract_profiles.sql` applied — <env, date>
-- [ ] `supabase/verification/building_contract_profiles.sql` passed — <output>
-- [ ] Cascade check (delete building removes profile) — <result>
-- [ ] Types regenerated; `as never` cast in `building-contract-profiles.ts` removed — <commit>
+- [x] Migration `20261111100000_building_contract_profiles.sql` applied — production, 2026-11-15
+- [x] `supabase/verification/building_contract_profiles.sql` passed — production, 2026-11-15
+- [x] Cascade check (delete building removes profile) — building purge removed the profile row
+- [x] Types regenerated; `as never` cast removed — see commit history on `feat/v2-pr0-pr4b`

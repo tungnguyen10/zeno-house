@@ -14,7 +14,7 @@ insert into public.buildings (
 ) values (
   '50000000-0000-4000-8000-000000000001',
   'QA V2 Flow Building',
-  '1 Duong QA, Quan 1, TP. Ho Chi Minh',
+  '1 Đường QA, Quận 1, TP. Hồ Chí Minh',
   'QA only - disposable, created for the V2 end-to-end flow test.',
   'active', 'qa-v2-flow', 'qav2',
   '4a4e10c3-9e1a-408d-a671-7906538a301c', '4a4e10c3-9e1a-408d-a671-7906538a301c',
@@ -38,26 +38,26 @@ insert into public.building_contract_profiles (
   default_term_months, default_deposit_months, notice_days, deposit_refund_days, renewal_months,
   extra_occupant_fee, drilling_fee, fingerprint_reset_fee, signed_copies, copies_per_party
 ) values (
-  '50000000-0000-4000-8000-000000000001', 'Nguyen Van QA', '1985-01-15', '1 Duong QA, Quan 1, TP. Ho Chi Minh',
-  '079000000001', '2020-06-01', 'Cuc Canh sat QLHC ve TTXH', '0900000001', 'QA House',
-  12, 1.5, 30, 15, 6,
-  100000, 200000, 50000, 2, 1
+  '50000000-0000-4000-8000-000000000001', 'Nguyễn Văn QA', '1985-01-15', '1 Đường QA, Quận 1, TP. Hồ Chí Minh',
+  '079000000001', '2020-06-01', 'Cục Cảnh sát QLHC về TTXH', '0900000001', 'QA House',
+  12, 1, 30, 15, 6,
+  1000000, 200000, 50000, 2, 1
 ) on conflict (building_id) do nothing;
 
 insert into public.building_inventory_templates (building_id, name, quantity, condition, unit_value, sort_order)
 values
-  ('50000000-0000-4000-8000-000000000001', 'Giuong', 1, 'good', 1500000, 1),
-  ('50000000-0000-4000-8000-000000000001', 'Tu quan ao', 1, 'good', 1200000, 2),
-  ('50000000-0000-4000-8000-000000000001', 'May lanh', 1, 'used', 4000000, 3),
-  ('50000000-0000-4000-8000-000000000001', 'Quat tran', 1, 'good', 500000, 4)
+  ('50000000-0000-4000-8000-000000000001', 'Giường', 1, 'good', 1500000, 1),
+  ('50000000-0000-4000-8000-000000000001', 'Tủ quần áo', 1, 'good', 1200000, 2),
+  ('50000000-0000-4000-8000-000000000001', 'Máy lạnh', 1, 'used', 4000000, 3),
+  ('50000000-0000-4000-8000-000000000001', 'Quạt trần', 1, 'good', 500000, 4)
 on conflict do nothing;
 
 -- Tenants are global (no building FK); three free tenants for pick/duplicate scenarios.
 insert into public.tenants (id, code, full_name, phone, email, id_number, date_of_birth, status)
 values
-  ('50000000-0000-4000-8000-000000000a01', 'qa-v2-tenant-001', 'Le Thi QA Mot', '0900000101', 'qa-v2-001@example.test', '079100000001', '1995-03-10', 'active'),
-  ('50000000-0000-4000-8000-000000000a02', 'qa-v2-tenant-002', 'Tran Van QA Hai', '0900000102', 'qa-v2-002@example.test', null, null, 'active'),
-  ('50000000-0000-4000-8000-000000000a03', 'qa-v2-tenant-003', 'Pham Thi QA Ba', '0900000103', null, null, null, 'active')
+  ('50000000-0000-4000-8000-000000000a01', 'qa-v2-tenant-001', 'Lê Thị QA Một', '0900000101', 'qa-v2-001@example.test', '079100000001', '1995-03-10', 'active'),
+  ('50000000-0000-4000-8000-000000000a02', 'qa-v2-tenant-002', 'Trần Văn QA Hai', '0900000102', 'qa-v2-002@example.test', null, null, 'active'),
+  ('50000000-0000-4000-8000-000000000a03', 'qa-v2-tenant-003', 'Phạm Thị QA Ba', '0900000103', null, null, null, 'active')
 on conflict (id) do nothing;
 
 commit;

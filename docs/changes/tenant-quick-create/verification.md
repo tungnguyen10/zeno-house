@@ -33,11 +33,12 @@ tags: [change, verification, tenants, contracts]
 
 ## Visual QA — run by maintainer
 
-- [ ] Picker search / empty / loading — desktop + mobile
-- [ ] Quick create success; duplicate (free, busy); generic conflict
-- [ ] Roommate add in create wizard and contract detail
-- [ ] Room "Tạo hợp đồng" preselects the room (code → uuid)
-- [ ] Manager: no "Thêm khách mới" row
+- [x] Picker search / empty ("Thêm khách mới" row) / loading — desktop (2026-11-15)
+- [x] Quick create success (typed dd/mm/yyyy dates stored correctly); duplicate by phone shows the existing tenant with "Dùng khách này"
+- [x] Roommate add in the create wizard (picker excludes the primary tenant and tenants with an active contract)
+- [x] Room "Tạo hợp đồng" preselects the room (code → uuid)
+- [x] Manager: no "Thêm khách mới" row; `POST /api/tenants` returns 403
+- [ ] Busy-tenant duplicate and generic identity conflict states — covered by component tests only
 
 ## Privacy
 

@@ -37,16 +37,12 @@ test execution is deferred to a Node 20+ environment (the current workspace has 
 - `app/pages/dashboard/buildings/create.vue` — `useQuickRoomPreview`, editable floor/rent/area cells, default floor, `QUICK_ROOM_MAX`, duplicate highlight.
 - `tests/server/buildings/owner-service.test.ts`, `tests/server/buildings.api.test.ts`, `tests/composables/buildings.test.ts` — updated for the atomic path.
 
-## Local (source) — run by maintainer on Node 20+
+## Local (source) — full run on Node 22 (2026-11-15)
 
-- [ ] `npm install`
-- [ ] `npx vitest run tests/utils/building-create-with-rooms-validator.test.ts`
-- [ ] `npx vitest run tests/config/create-building-with-rooms-migration.test.ts`
-- [ ] `npx vitest run tests/server/buildings/create-with-rooms-repository.test.ts`
-- [ ] `npx vitest run tests/server/buildings/owner-service.test.ts tests/server/buildings.api.test.ts`
-- [ ] `npx vitest run tests/composables/useQuickRoomPreview.test.ts tests/composables/buildings.test.ts`
-- [ ] `npx vitest run tests/pages/buildings-create-quick-rooms.spec.ts`
-- [ ] `npm run typecheck && npm test && npm run lint && npm run knowledge:check`
+- [x] `npm run typecheck` — pass
+- [x] `npx vitest run` — 2806 tests in 462 files pass (includes all PR0 suites)
+- [x] `npm run lint` — 0 errors (1 unrelated `vue/no-v-html` warning)
+- [x] `npm run knowledge:check` — OK (337 concepts)
 
 ## UI decisions (Task 8)
 
@@ -57,14 +53,15 @@ test execution is deferred to a Node 20+ environment (the current workspace has 
 
 ## Visual QA — run by maintainer
 
-- [ ] Desktop 1280px — enable quick rooms, 30 rooms, edit floor/rent/area on 2 rows, change default rent (edits kept), toggle same price, local duplicate, loading, generic error, server duplicate highlight.
-- [ ] Mobile 375px — table scrolls horizontally; inputs usable.
+- [x] Batch generator on the building rooms batch page (same preview composable): floors 3–4 × 2 rooms, floor number in the code, default rent applied; hydration mismatch between server and client fixed (2026-11-15)
+- [x] Building create page renders without hydration warnings; 390px mobile has no horizontal overflow
+- [ ] Create a building with 30 rooms from the create page; local duplicate, generic error and server duplicate highlight — covered by component tests only
 
 ## Cloud gates (separate; not implied by local tests)
 
-- [ ] Migration `20261111090000_create_building_with_rooms.sql` applied — <env, date>
-- [ ] `supabase/verification/create_building_with_rooms.sql` passed — <output>
-- [ ] Concurrency check (two sessions) — <result>
-- [ ] Grants: anon/auth = false, service_role = true — <output>
-- [ ] `app/types/database.types.ts` regenerated — <commit>
-- [ ] Deployed app smoke: create building with 30 rooms; retry after forced network error lands on same building (no duplicate)
+- [x] Migration `20261111090000_create_building_with_rooms.sql` applied — production, 2026-11-15
+- [x] `supabase/verification/create_building_with_rooms.sql` passed — production, 2026-11-15 (rolled back)
+- [ ] Concurrency check (two sessions) — not run
+- [x] Grants: anon/auth = false, service_role = true — checked in the verification script
+- [x] `app/types/database.types.ts` regenerated — see commit history on `feat/v2-pr0-pr4b`
+- [ ] Deployed app smoke: create building with 30 rooms; retry after forced network error lands on same building (no duplicate) — pending deploy

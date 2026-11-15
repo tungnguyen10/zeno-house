@@ -39,14 +39,17 @@ tags: [change, verification, contracts, documents, docx, pii]
 
 ## Visual QA — run by maintainer
 
-- [ ] Issue dialog: missing-data list vs ready; preview (no save) vs publish; appendix from amendment row.
-- [ ] Documents section: version list, download, mark-signed, void-with-reason, regenerate (failed), manager cannot sign/void.
-- [ ] Create page: readiness swaps primary button; "Tạo & xuất DOCX" issues then shows download / missing / regenerate; contract always created on issue failure. Mobile.
+- [x] Issue dialog: missing-data list vs ready; preview vs publish; contract created from the create page with "Tạo & xuất DOCX" issues the document and shows a download button (`hd-qav2-2026-0003`)
+- [x] Documents section: version list, download, mark signed, void with reason (≥ 10 characters enforced), re-issue as a new version; manager sees only download and issue, sign/void return 403
+- [x] Issued DOCX downloaded from storage: valid package, no leftover placeholders, parties, dates and amounts rendered; utility prices now carry currency and unit
+- [x] Contract detail loads on a hard reload (two SSR/identifier bugs fixed)
+- [ ] Appendix from an amendment row and regenerate of a failed document — unit tests and SQL verification only
 
 ## Cloud gates (order matters)
 
-- [ ] Migration `20261111130000_contract_documents.sql` applied; `contract-documents` private bucket created — <env, date>
-- [ ] `supabase/verification/*contract-document*` passed (unique-active incl failed; immutability + status transitions; no delete; claim_stale; inventory locked after issued; grants) — <output>
-- [ ] `pg_cron` entry for the cleanup worker (base URL + secret in Vault) — <output>
-- [ ] Types regenerated; `as never` casts removed from contract-documents repo — <commit>
-- [ ] Deployed smoke: issue a contract DOCX, download, mark signed, void+reissue, regenerate a failed doc; deleting a contract with documents is blocked.
+- [x] Migration `20261111130000_contract_documents.sql` applied; `contract-documents` private bucket created — production, 2026-11-15
+- [x] `supabase/verification/contract_documents.sql` passed — production, 2026-11-15 (unique-active incl. failed; immutability and status transitions; no delete; claim_stale; inventory locked after issued; FK restrict; grants; bucket private)
+- [x] `pg_cron` entry `contract-documents-cleanup` (every 15 minutes) active; Vault secret `contract_documents_cleanup_secret` created; local cleanup endpoint returns 403 without or with a wrong secret and 200 with the right one. The same value must be set as `NUXT_CONTRACT_DOCUMENTS_CLEANUP_SECRET` in the Vercel environment before deploy
+- [x] Types regenerated; `as never` casts removed — see commit history on `feat/v2-pr0-pr4b`
+- [ ] Deployed smoke (issue, download, sign, void + re-issue, blocked delete) — the same flow passed on a local dev server against the production database; repeat after deploy
+- [x] Deleting a room that has contract documents is blocked with `contractDocuments` in the 409 details

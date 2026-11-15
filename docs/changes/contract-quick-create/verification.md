@@ -36,11 +36,13 @@ tags: [change, verification, contracts]
 
 ## Visual QA — run by maintainer
 
-- [ ] Shortest path (room + tenant only); room with no prior reading (readings required); collapsed-block errors; per-type 409 (occupant busy, etc.); retry after network error (no duplicate); server draft restore; missing-DOCX state; mobile sticky action bar.
+- [x] Shortest path (room + tenant only) created `hd-qav2-2026-0001`; missing handover readings are now rejected with a clear message (previously stored as 0, fixed); collapsed-block errors scroll to and open the block; server draft restore works after the envelope fix; per-building prefill of services and inventory works; 390px mobile action bar is docked above the tab bar (fixed 2026-11-15)
+- [x] Atomic create with roommate + vehicle + 3 services + 4 inventory items + readings (`hd-qav2-2026-0002`): all rows present, draft cleared
+- [ ] Per-type 409 (occupant busy) and retry after a network error — covered by `supabase/verification/contract_quick_create.sql` and unit tests, not exercised in the browser
 
 ## Cloud gates (order matters)
 
-- [ ] Migrations `20261111120000` + `20261111121000` applied — <env, date>
-- [ ] `supabase/verification/*contract*` scripts passed (idempotency same/foreign actor; occupant-limit/busy rollback; services clone vs explicit; unknown service rollback; room occupied; draft table locked to service_role) — <output>
-- [ ] Grants: anon/auth = false, service_role = true — <output>
-- [ ] Types regenerated; `as never` casts removed from new repos/queries — <commit>
+- [x] Migrations `20261111120000` + `20261111121000` applied — production, 2026-11-15
+- [x] `supabase/verification/contract_quick_create.sql` passed — production, 2026-11-15 (idempotency same/foreign actor, occupant limit/busy rollback, unknown service rollback, grants)
+- [x] Grants: anon/auth = false, service_role = true
+- [x] Types regenerated; `as never` casts removed — see commit history on `feat/v2-pr0-pr4b`

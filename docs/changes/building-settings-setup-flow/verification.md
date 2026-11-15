@@ -37,5 +37,5 @@ tags: [change, verification, buildings, settings, ui, v2]
 - [x] Desktop: card 2/3 then 3/3 after adding an invoice profile; first missing step opens; all eight panels open with content.
 - [x] `/edit` redirects to `settings#basics`; unsaved edit in step 1 then switching step shows the discard modal.
 - [x] Mobile 390px: no horizontal overflow, titles wrap, ready state shows the "Lập hợp đồng" link.
-- [ ] Manager account: steps hidden and forms read-only by permission (covered by unit tests only).
-- [ ] Light theme and keyboard-only pass.
+- [x] Manager account (2026-11-15, temp account since deleted): all steps readable, contract profile read-only with the ID number masked and DOB/address hidden; write attempts return 403.
+- [x] Light theme on the contract detail page renders correctly; keyboard-only pass is still open.
