@@ -60,6 +60,8 @@ const building = computed(() => buildingData.value?.data ?? null)
 const canEditRoomInventory = computed(() => authStore.can('rooms.update'))
 const { data: roomInventoryData, refresh: refreshRoomInventory } = useLazyFetch<ApiSuccess<InventoryItem[]>>(
   () => `/api/rooms/${encodeURIComponent(id)}/inventory`,
+  // Client-only: a lazy SSR fetch resolves after the HTML is rendered and desyncs hydration.
+  { server: false },
 )
 const roomInventoryDraft = ref<InventoryItemInput[]>([])
 watchEffect(() => {
@@ -337,7 +339,12 @@ if (error.value?.statusCode === 404) {
           </UiButton>
         </header>
         <UiAlert v-if="roomInventoryError" severity="danger" class="mb-3">{{ roomInventoryError }}</UiAlert>
-        <InventoryItemsEditor v-model="roomInventoryDraft" :disabled="!canEditRoomInventory" />
+        <ClientOnly>
+          <InventoryItemsEditor v-model="roomInventoryDraft" :disabled="!canEditRoomInventory" />
+          <template #fallback>
+            <UiSkeleton class="h-24 w-full" />
+          </template>
+        </ClientOnly>
         <div v-if="canEditRoomInventory" class="mt-3 flex justify-end">
           <UiButton size="sm" :loading="savingRoomInventory" @click="saveRoomInventory">Lưu nội thất</UiButton>
         </div>
