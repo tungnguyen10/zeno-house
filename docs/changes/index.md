@@ -14,7 +14,7 @@
 - [contract-quick-create](./contract-quick-create/index.md) — V2 PR4a: one-page atomic contract create (roommates, vehicles, services, inventory), server drafts; plan ready.
 - [contract-documents](./contract-documents/index.md) — V2 PR4b: versioned DOCX issuance, private storage, failed/regenerate, sign/void/replace, appendices, handover lock; plan ready (dependency approval pending).
 - [tenant-identity-autofill](./tenant-identity-autofill/index.md) — V2 PR5 / Tenant V2 change C: Claude Vision ID autofill behind flag, quota and privacy gates; plan ready (dependency + privacy gates pending).
-- [building-settings-setup-flow](./building-settings-setup-flow/index.md) — V2 UI: building settings reorganized as a setup-flow step list with readiness card; implemented and verified locally; waiting for acceptance before updating the buildings-ui capability.
+- [building-settings-setup-flow](./building-settings-setup-flow/index.md) — V2 UI: building settings reorganized as a setup-flow step list with readiness card; implemented and verified locally; accepted and promoted into the buildings-ui capability before updating the buildings-ui capability.
 
 ## Implementation present — verification or rollout gates open
 

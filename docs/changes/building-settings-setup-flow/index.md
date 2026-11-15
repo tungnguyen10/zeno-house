@@ -1,6 +1,6 @@
 # Building settings — setup flow
 
-**Status: implementation-review.** Tasks 1-6 implemented and verified locally; capability update waits for acceptance.
+**Status: accepted.** Implemented, verified, and promoted into the `buildings-ui` capability.
 
 - [Design](./design.md)
 - [Implementation plan](./implementation-plan.md)
