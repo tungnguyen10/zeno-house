@@ -17,4 +17,17 @@ describe('useContractCreateDraft', () => {
     expect(fetchMock.mock.calls[0]![1]).toMatchObject({ method: 'PUT', body: { payload: { room_id: 'b' } } })
     expect(window.localStorage.getItem('contract-form:create')).toBeNull()
   })
+
+  it('restore unwraps the draft payload from the API envelope', async () => {
+    fetchMock.mockResolvedValue({ data: { payload: { room_id: 'r-1', tenant_id: 't-1' }, updatedAt: '2026-11-11T00:00:00Z' } })
+    const { useContractCreateDraft } = await import('~/composables/contracts/useContractCreateDraft')
+    const restored = await useContractCreateDraft().restore()
+    expect(restored).toEqual({ room_id: 'r-1', tenant_id: 't-1' })
+  })
+
+  it('restore returns null when there is no draft', async () => {
+    fetchMock.mockResolvedValue({ data: null })
+    const { useContractCreateDraft } = await import('~/composables/contracts/useContractCreateDraft')
+    expect(await useContractCreateDraft().restore()).toBeNull()
+  })
 })

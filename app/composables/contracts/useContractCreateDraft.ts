@@ -19,8 +19,8 @@ export function useContractCreateDraft() {
 
   async function restore(): Promise<ContractCreateDraftInput | null> {
     try {
-      const res = await apiFetch<ApiSuccess<ContractCreateDraftInput | null>>('/api/contracts/create-draft')
-      payload.value = res.data ?? null
+      const res = await apiFetch<ApiSuccess<{ payload: ContractCreateDraftInput; updatedAt: string } | null>>('/api/contracts/create-draft')
+      payload.value = res.data?.payload ?? null
       return payload.value
     }
     catch {

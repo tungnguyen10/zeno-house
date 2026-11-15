@@ -42,6 +42,8 @@ const servicesTouched = ref(false)
 const inventory = ref<InventoryItemInput[]>([])
 const showOccupantForm = ref(false)
 const touched = new Set<string>()
+let skipInventoryPrefill = false
+const draftReady = ref(false)
 
 const openBlocks = ref<Record<ContractCreateBlock, boolean>>({
   room: true, tenant: true, terms: true, handover: true,
@@ -126,6 +128,7 @@ watch(() => form.value.room_id, async (id) => {
 
 watch(() => form.value.room_id, async (id) => {
   if (!id) return
+  if (skipInventoryPrefill) { skipInventoryPrefill = false; return }
   try {
     const inv = await apiFetch<ApiSuccess<{ name: string; quantity: number; condition: InventoryItemInput['condition']; unitValue: number | null; note: string | null }[]>>(`/api/rooms/${id}/inventory`)
     inventory.value = (inv.data ?? []).map(i => ({ name: i.name, quantity: i.quantity, condition: i.condition, unit_value: i.unitValue, note: i.note }))
@@ -225,14 +228,30 @@ onMounted(async () => {
   // Restore the server draft if present.
   const restored = await draft.restore()
   if (restored) {
-    form.value = { ...form.value, ...restored, monthly_rent: restored.monthly_rent != null ? String(restored.monthly_rent) : form.value.monthly_rent, deposit: restored.deposit != null ? String(restored.deposit) : form.value.deposit } as typeof form.value
-    if (restored.vehicles) vehicles.value = restored.vehicles as VehicleRow[]
-    if (restored.inventory) inventory.value = restored.inventory
+    const { occupants: draftOccupants, vehicles: draftVehicles, inventory: draftInventory, services: _draftServices, ...fields } = restored
+    form.value = { ...form.value, ...fields, monthly_rent: restored.monthly_rent != null ? String(restored.monthly_rent) : form.value.monthly_rent, deposit: restored.deposit != null ? String(restored.deposit) : form.value.deposit, occupant_count: restored.occupant_count != null ? String(restored.occupant_count) : form.value.occupant_count } as typeof form.value
+    if (draftVehicles) vehicles.value = draftVehicles as VehicleRow[]
+    if (draftInventory) {
+      inventory.value = draftInventory
+      skipInventoryPrefill = true
+    }
+    for (const key of ['monthly_rent', 'deposit', 'end_date'] as const) {
+      if (fields[key] != null && fields[key] !== '') touched.add(key)
+    }
+    if (draftOccupants?.length) {
+      occupants.value = draftOccupants.flatMap(o => (o.tenant_id
+        ? [{ tenant_id: o.tenant_id, tenantName: o.tenant_name || '-', move_in_date: o.move_in_date ?? form.value.start_date, billing_counted: o.billing_counted ?? true }]
+        : []))
+    }
   }
+  await nextTick()
+  draftReady.value = true
 })
 
 // Autosave the server draft on change (debounced inside the composable).
 watch([form, occupants, vehicles, services, inventory], () => {
+  // An empty form (or one still restoring) must never overwrite a saved draft.
+  if (!draftReady.value || (!form.value.room_id && !form.value.tenant_id)) return
   draft.schedule({
     room_id: form.value.room_id || undefined,
     tenant_id: form.value.tenant_id || undefined,
