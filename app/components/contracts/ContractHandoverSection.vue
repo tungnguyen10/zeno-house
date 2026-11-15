@@ -7,19 +7,26 @@ const props = defineProps<{ contractId: string }>()
 
 const data = ref<HandoverInventory | null>(null)
 const loading = ref(false)
+const loadFailed = ref(false)
 
 async function load() {
   loading.value = true
+  loadFailed.value = false
   try {
     const res = await apiFetch<ApiSuccess<HandoverInventory>>(`/api/contracts/${encodeURIComponent(props.contractId)}/handover-inventory`)
     data.value = res.data
+  }
+  catch {
+    loadFailed.value = true
   }
   finally {
     loading.value = false
   }
 }
 
-watch(() => props.contractId, load, { immediate: true })
+// Client-only: apiFetch does not forward the session cookie during SSR.
+onMounted(load)
+watch(() => props.contractId, load)
 
 const items = computed(() => data.value?.items ?? [])
 const sourceNote = computed(() => {
@@ -34,7 +41,8 @@ const sourceNote = computed(() => {
 <template>
   <div class="space-y-3">
     <p v-if="sourceNote" class="text-xs text-ui-muted">{{ sourceNote }}</p>
-    <p v-if="items.length === 0" class="text-sm text-ui-muted">Không có dữ liệu bàn giao</p>
+    <p v-if="loadFailed" class="text-sm text-ui-muted">Không tải được dữ liệu bàn giao.</p>
+    <p v-else-if="items.length === 0" class="text-sm text-ui-muted">Không có dữ liệu bàn giao</p>
     <InventoryItemsList v-else :items="items" />
   </div>
 </template>

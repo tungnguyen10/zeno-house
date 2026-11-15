@@ -13,6 +13,14 @@ describe('ContractHandoverSection', () => {
     expect(w.text()).toContain('Theo biên bản bàn giao của hợp đồng hd-1')
   })
 
+  it('shows a failure note instead of throwing when the request fails', async () => {
+    fetchMock.mockRejectedValue(new Error('401'))
+    const { default: C } = await import('~/components/contracts/ContractHandoverSection.vue')
+    const w = mount(C, { props: { contractId: 'c-9' } })
+    await flushPromises()
+    expect(w.text()).toContain('Không tải được dữ liệu bàn giao')
+  })
+
   it('shows empty state', async () => {
     fetchMock.mockResolvedValue({ data: { sourceContractId: null, sourceContractCode: null, items: [] } })
     const { default: C } = await import('~/components/contracts/ContractHandoverSection.vue')
