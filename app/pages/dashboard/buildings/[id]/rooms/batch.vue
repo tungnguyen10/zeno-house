@@ -9,8 +9,7 @@ const route = useRoute()
 const authStore = useAuthStore()
 const id = route.params.id as string
 
-const preview = useQuickRoomPreview()
-preview.enabled.value = true
+const preview = useQuickRoomPreview({ enabled: true })
 
 const { data: buildingData } = await useFetch<ApiSuccess<Building>>(() => `/api/buildings/${encodeURIComponent(id)}`)
 const building = computed(() => buildingData.value?.data ?? null)

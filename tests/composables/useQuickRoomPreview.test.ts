@@ -12,6 +12,11 @@ async function setup() {
 }
 
 describe('useQuickRoomPreview', () => {
+  it('has rows immediately when created enabled (no extra tick, so SSR matches hydration)', () => {
+    const p = useQuickRoomPreview({ enabled: true })
+    expect(p.rows.value.map(r => r.roomNumber)).toEqual(['P01', 'P02', 'P03'])
+  })
+
   it('generates rows from the generator', async () => {
     const p = await setup()
     expect(p.rows.value.map(r => r.roomNumber)).toEqual(['P101', 'P102', 'P103'])

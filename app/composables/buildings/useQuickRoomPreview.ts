@@ -15,8 +15,8 @@ export interface PreviewRoom {
   manual: boolean
 }
 
-export function useQuickRoomPreview() {
-  const enabled = ref(false)
+export function useQuickRoomPreview(options: { enabled?: boolean } = {}) {
+  const enabled = ref(options.enabled ?? false)
   const defaultRent = ref(0)
   const defaultArea = ref<number | null>(null)
   const samePrice = ref(true)
