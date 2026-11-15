@@ -106,6 +106,24 @@ describe('ContractDocumentService.issue', () => {
   })
 })
 
+describe('ContractDocumentService contract code identifiers', () => {
+  it('resolves a contract code to its id before querying documents and sources', async () => {
+    const { ContractDocumentService } = await import('../../../server/services/contract-documents')
+    await ContractDocumentService.list(ev(), owner, 'hd-code-0001')
+    expect(repo.listByContract).toHaveBeenLastCalledWith(expect.anything(), 'c-1')
+
+    await ContractDocumentService.check(ev(), owner, 'hd-code-0001', { type: 'contract' })
+    expect(gatherContractSources).toHaveBeenLastCalledWith(expect.anything(), 'c-1', expect.any(String))
+
+    await ContractDocumentService.preview(ev(), owner, 'hd-code-0001', { type: 'contract', signed_date: '2026-11-12' })
+    expect(gatherContractSources).toHaveBeenLastCalledWith(expect.anything(), 'c-1', '2026-11-12')
+
+    await ContractDocumentService.issue(ev(), owner, 'hd-code-0001', issueInput)
+    expect(repo.listByContract).toHaveBeenLastCalledWith(expect.anything(), 'c-1')
+    expect(gatherContractSources).toHaveBeenLastCalledWith(expect.anything(), 'c-1', '2026-11-12')
+  })
+})
+
 describe('ContractDocumentService.regenerate', () => {
   it('re-renders from the stored snapshot (not live data)', async () => {
     repo.findById.mockResolvedValue(row({ status: 'failed', snapshot: { stored: true } }))

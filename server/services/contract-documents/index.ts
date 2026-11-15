@@ -57,27 +57,27 @@ async function requireDocumentScope(event: H3Event, user: AuthUser, documentId: 
 }
 
 export const ContractDocumentService = {
-  async list(event: H3Event, user: AuthUser, contractId: string): Promise<ContractDocument[]> {
+  async list(event: H3Event, user: AuthUser, identifier: string): Promise<ContractDocument[]> {
     requireCapability(user, 'contract-documents.read', 'Không có quyền xem tài liệu hợp đồng')
-    await requireContractScope(event, user, contractId, 'read')
-    const rows = await ContractDocumentRepository.listByContract(event, contractId)
+    const contract = await requireContractScope(event, user, identifier, 'read')
+    const rows = await ContractDocumentRepository.listByContract(event, contract.id)
     return rows.map(mapContractDocument)
   },
 
-  async check(event: H3Event, user: AuthUser, contractId: string, input: { type: DocType; amendment_id?: string | null }): Promise<ContractDocumentReadiness> {
+  async check(event: H3Event, user: AuthUser, identifier: string, input: { type: DocType; amendment_id?: string | null }): Promise<ContractDocumentReadiness> {
     requireCapability(user, 'contract-documents.issue', 'Không có quyền phát hành tài liệu hợp đồng')
-    await requireContractScope(event, user, contractId, 'read')
+    const contract = await requireContractScope(event, user, identifier, 'read')
     assertContractType(input.type)
-    const sources = await gatherContractSources(event, contractId, new Date().toISOString().slice(0, 10))
+    const sources = await gatherContractSources(event, contract.id, new Date().toISOString().slice(0, 10))
     const missing = collectMissing(sources)
     return { ready: missing.length === 0, missing }
   },
 
-  async preview(event: H3Event, user: AuthUser, contractId: string, input: { type: DocType; signed_date: string }): Promise<Buffer> {
+  async preview(event: H3Event, user: AuthUser, identifier: string, input: { type: DocType; signed_date: string }): Promise<Buffer> {
     requireCapability(user, 'contract-documents.issue', 'Không có quyền phát hành tài liệu hợp đồng')
-    await requireContractScope(event, user, contractId, 'read')
+    const contract = await requireContractScope(event, user, identifier, 'read')
     assertContractType(input.type)
-    const sources = await gatherContractSources(event, contractId, input.signed_date)
+    const sources = await gatherContractSources(event, contract.id, input.signed_date)
     const missing = collectMissing(sources)
     if (missing.length > 0) {
       throwValidationError('Thiếu thông tin để xuất tài liệu', { reason: 'CONTRACT_DOCUMENT_INCOMPLETE', missing })
@@ -89,22 +89,22 @@ export const ContractDocumentService = {
   async issue(
     event: H3Event,
     user: AuthUser,
-    contractId: string,
+    identifier: string,
     input: { type: DocType; amendment_id?: string | null; signed_date: string; request_id: string; replaces_document_id?: string | null; void_reason?: string | null },
   ): Promise<ContractDocument> {
     requireCapability(user, 'contract-documents.issue', 'Không có quyền phát hành tài liệu hợp đồng')
-    const contract = await requireContractScope(event, user, contractId, 'write')
+    const contract = await requireContractScope(event, user, identifier, 'write')
     assertContractType(input.type)
 
     // Idempotency / duplicate guard: an already-issued document of this type is returned as-is
     // unless the caller is explicitly replacing it.
     if (!input.replaces_document_id) {
-      const existing = (await ContractDocumentRepository.listByContract(event, contractId))
+      const existing = (await ContractDocumentRepository.listByContract(event, contract.id))
         .find(d => d.type === input.type && (d.amendment_id ?? null) === (input.amendment_id ?? null) && (d.status === 'issued' || d.status === 'signed'))
       if (existing) return mapContractDocument(existing)
     }
 
-    const sources = await gatherContractSources(event, contractId, input.signed_date)
+    const sources = await gatherContractSources(event, contract.id, input.signed_date)
     const missing = collectMissing(sources)
     if (missing.length > 0) {
       throwValidationError('Thiếu thông tin để xuất tài liệu', { reason: 'CONTRACT_DOCUMENT_INCOMPLETE', missing })
