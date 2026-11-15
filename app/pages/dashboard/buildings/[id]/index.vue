@@ -201,7 +201,6 @@ const waterLabel = computed(() => {
         class="mt-4"
         :readiness="readinessData.data"
         :settings-path="buildingSettingsPath(building)"
-        :edit-path="buildingEditPath(building)"
       />
 
       <!-- Section: Overview -->

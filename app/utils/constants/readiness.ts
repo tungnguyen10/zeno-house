@@ -16,8 +16,8 @@ export const READINESS_LABELS: Record<ReadinessCode, { label: string; anchor: st
   'terms.extra_occupant_fee': { label: 'Phí người ở vượt số đăng ký', anchor: 'contract-profile' },
   'terms.drilling_fee': { label: 'Phí khoan tường', anchor: 'contract-profile' },
   'terms.fingerprint_reset_fee': { label: 'Phí làm lại vân tay', anchor: 'contract-profile' },
-  'billing.schedule': { label: 'Ngày phát hành hóa đơn và hạn thanh toán', anchor: 'edit' },
-  'billing.electricity_rate': { label: 'Đơn giá điện', anchor: 'edit' },
-  'billing.water_rate': { label: 'Đơn giá nước', anchor: 'edit' },
+  'billing.schedule': { label: 'Ngày phát hành hóa đơn và hạn thanh toán', anchor: 'basics' },
+  'billing.electricity_rate': { label: 'Đơn giá điện', anchor: 'basics' },
+  'billing.water_rate': { label: 'Đơn giá nước', anchor: 'basics' },
   invoice_profile: { label: 'Hồ sơ thanh toán trên hóa đơn', anchor: 'invoice-profile' },
 }

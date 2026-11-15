@@ -5,7 +5,6 @@ import { READINESS_LABELS } from '~/utils/constants/readiness'
 const props = defineProps<{
   readiness: BuildingReadiness
   settingsPath: string
-  editPath: string
 }>()
 
 const bothReady = computed(() => props.readiness.contract.ready && props.readiness.billing.ready)
@@ -13,8 +12,7 @@ const openContract = ref(false)
 const openBilling = ref(false)
 
 function hrefFor(code: ReadinessCode): string {
-  const { anchor } = READINESS_LABELS[code]
-  return anchor === 'edit' ? props.editPath : `${props.settingsPath}#${anchor}`
+  return `${props.settingsPath}#${READINESS_LABELS[code].anchor}`
 }
 function labelFor(code: ReadinessCode): string {
   return READINESS_LABELS[code].label

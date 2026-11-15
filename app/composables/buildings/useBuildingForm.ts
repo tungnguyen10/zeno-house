@@ -19,6 +19,8 @@ interface UseBuildingFormOptions<T> {
   formData?: Ref<T>
   /** Snapshot used to compute `isDirty`. Must be reactive (computed) for edit mode. */
   initialSnapshot?: MaybeRef<T | null>
+  /** Replaces the post-update redirect, so the form can live inside another page. */
+  onUpdated?: (building: Building) => void | Promise<void>
 }
 
 function buildStorageKey(key: NonNullable<DraftKey>): string {
@@ -91,6 +93,10 @@ export function useBuildingForm<T = unknown>(options: UseBuildingFormOptions<T> 
         body: result.data,
       })
       clearDraft()
+      if (options.onUpdated) {
+        await options.onUpdated(res.data)
+        return
+      }
       clearNuxtData()
       await navigateTo(buildingPath(res.data))
     }

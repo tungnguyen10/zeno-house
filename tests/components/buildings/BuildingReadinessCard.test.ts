@@ -18,7 +18,6 @@ const props = (contractMissing: string[], billingMissing: string[]) => ({
     billing: { ready: billingMissing.length === 0, missing: billingMissing },
   } as never,
   settingsPath: '/dashboard/buildings/zeno/settings',
-  editPath: '/dashboard/buildings/zeno/edit',
 })
 
 describe('BuildingReadinessCard', () => {

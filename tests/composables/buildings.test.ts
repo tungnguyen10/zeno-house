@@ -178,6 +178,49 @@ describe('useBuildingForm.submitCreate (atomic)', () => {
   })
 })
 
+describe('useBuildingForm.submitUpdate', () => {
+  const update = { name: 'Tòa A cập nhật' }
+
+  it('navigates to the building page by default', async () => {
+    fetchMock.mockResolvedValue({ data: { id: 'b-1', slug: 'toa-a', code: 'toaa' } })
+    const { useBuildingForm } = await import('../../app/composables/buildings/useBuildingForm')
+    const { submitUpdate } = useBuildingForm({ draftKey: { mode: 'edit', id: 'b-1' } })
+
+    await submitUpdate('b-1', update)
+
+    expect(clearNuxtDataMock).toHaveBeenCalled()
+    expect((globalThis as { navigateTo: ReturnType<typeof vi.fn> }).navigateTo).toHaveBeenCalled()
+  })
+
+  it('calls onUpdated instead of navigating and keeps cached page data', async () => {
+    const saved = { id: 'b-1', slug: 'toa-a', code: 'toaa' }
+    fetchMock.mockResolvedValue({ data: saved })
+    const onUpdated = vi.fn()
+    window.localStorage.setItem('building-form:edit:b-1', JSON.stringify({ name: 'nháp' }))
+    const { useBuildingForm } = await import('../../app/composables/buildings/useBuildingForm')
+    const { submitUpdate } = useBuildingForm({ draftKey: { mode: 'edit', id: 'b-1' }, onUpdated })
+
+    await submitUpdate('b-1', update)
+
+    expect(onUpdated).toHaveBeenCalledWith(saved)
+    expect(clearNuxtDataMock).not.toHaveBeenCalled()
+    expect((globalThis as { navigateTo: ReturnType<typeof vi.fn> }).navigateTo).not.toHaveBeenCalled()
+    expect(window.localStorage.getItem('building-form:edit:b-1')).toBeNull()
+  })
+
+  it('does not call onUpdated when the request fails', async () => {
+    fetchMock.mockRejectedValue(new Error('network'))
+    const onUpdated = vi.fn()
+    const { useBuildingForm } = await import('../../app/composables/buildings/useBuildingForm')
+    const { submitUpdate, apiError } = useBuildingForm({ draftKey: { mode: 'edit', id: 'b-1' }, onUpdated })
+
+    await submitUpdate('b-1', update)
+
+    expect(onUpdated).not.toHaveBeenCalled()
+    expect(apiError.value).toBeTruthy()
+  })
+})
+
 describe('useBuildingBulkActions', () => {
   it('runAction returns shape and keeps selection until caller clears', async () => {
     fetchMock.mockResolvedValue({
