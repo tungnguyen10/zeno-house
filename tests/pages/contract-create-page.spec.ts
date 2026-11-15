@@ -32,6 +32,12 @@ describe('contract create page', () => {
     expect(page).toContain('scrollIntoView')
   })
 
+  it('never coerces blank handover readings to 0 and prefills them from the latest reading', () => {
+    expect(page).not.toMatch(/handover_(electricity|water)_reading: Number\(/)
+    expect(page).toContain("form.value.handover_electricity_reading === '' ? undefined")
+    expect(page).toContain('/api/meter-readings/latest')
+  })
+
   it('uses server drafts and saves per-building prefs after success', () => {
     expect(page).toContain('useContractCreateDraft(')
     expect(page).toContain('savePrefs(')

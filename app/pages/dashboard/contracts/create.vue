@@ -115,6 +115,18 @@ watch(buildingId, async (id) => {
 watch(() => form.value.room_id, async (id) => {
   if (!id) return
   try {
+    const latest = await apiFetch<ApiSuccess<{ electricity: { readingValue: number } | null; water: { readingValue: number } | null }>>(
+      '/api/meter-readings/latest', { query: { room_id: id } },
+    )
+    if (form.value.handover_electricity_reading === '' && latest.data?.electricity) form.value.handover_electricity_reading = String(latest.data.electricity.readingValue)
+    if (form.value.handover_water_reading === '' && latest.data?.water) form.value.handover_water_reading = String(latest.data.water.readingValue)
+  }
+  catch { /* readings stay manual */ }
+})
+
+watch(() => form.value.room_id, async (id) => {
+  if (!id) return
+  try {
     const inv = await apiFetch<ApiSuccess<{ name: string; quantity: number; condition: InventoryItemInput['condition']; unitValue: number | null; note: string | null }[]>>(`/api/rooms/${id}/inventory`)
     inventory.value = (inv.data ?? []).map(i => ({ name: i.name, quantity: i.quantity, condition: i.condition, unit_value: i.unitValue, note: i.note }))
   }
@@ -154,8 +166,8 @@ function buildPayload() {
     occupant_count: form.value.occupant_count ? Number(form.value.occupant_count) : 1,
     status: 'active' as const,
     notes: form.value.notes || null,
-    handover_electricity_reading: Number(form.value.handover_electricity_reading),
-    handover_water_reading: Number(form.value.handover_water_reading),
+    handover_electricity_reading: form.value.handover_electricity_reading === '' ? undefined : Number(form.value.handover_electricity_reading),
+    handover_water_reading: form.value.handover_water_reading === '' ? undefined : Number(form.value.handover_water_reading),
     handover_reading_date: form.value.handover_reading_date || undefined,
     occupants: occupants.value.map(o => ({ tenant_id: o.tenant_id, move_in_date: o.move_in_date, billing_counted: o.billing_counted })),
     vehicles: vehicles.value.length ? vehicles.value : undefined,

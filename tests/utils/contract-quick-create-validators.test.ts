@@ -28,6 +28,15 @@ describe('vehicles', () => {
 })
 
 describe('contractCreateSchema (PR4a)', () => {
+  it('requires handover readings with a readable message', () => {
+    const { handover_electricity_reading: _e, handover_water_reading: _w, ...rest } = base
+    const r = contractCreateSchema.safeParse(rest)
+    expect(r.success).toBe(false)
+    const messages = Object.fromEntries(r.error!.issues.map(i => [i.path[0], i.message]))
+    expect(messages.handover_electricity_reading).toBe('Chỉ số điện bàn giao là bắt buộc')
+    expect(messages.handover_water_reading).toBe('Chỉ số nước bàn giao là bắt buộc')
+  })
+
   it('requires request_id', () => {
     const { request_id: _omit, ...rest } = base
     expect(contractCreateSchema.safeParse(rest).success).toBe(false)
