@@ -100,7 +100,7 @@ export function buildContractDocumentData(src: ContractDocumentSources): Record<
   const window = formatPaymentWindow(building)
   const electricityDisplay = building.electricityPricingType === 'tiered'
     ? 'Theo bậc thang của tòa nhà'
-    : formatCurrencyNumber(building.defaultElectricityRate ?? 0)
+    : `${formatCurrencyNumber(building.defaultElectricityRate ?? 0)} đồng/${building.electricityPricingType === 'fixed' ? 'phòng/tháng' : 'kWh'}`
   const overdueClause = window
     ? (window.overdueDay !== null
         ? `Nếu sau ngày ${window.overdueDay} của tháng không đóng tiền, Bên A có quyền chấm dứt hợp đồng.`
@@ -149,7 +149,7 @@ export function buildContractDocumentData(src: ContractDocumentSources): Record<
     room: { number: str(contract.roomNumber) },
     utilities: {
       electricity_price_display: electricityDisplay,
-      water_price_display: formatCurrencyNumber(building.defaultWaterRate ?? 0),
+      water_price_display: `${formatCurrencyNumber(building.defaultWaterRate ?? 0)} đồng`,
       water_unit: waterUnit(building.waterPricingType),
     },
     payment: {

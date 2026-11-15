@@ -61,6 +61,15 @@ describe('buildContractDocumentData', () => {
     expect((data.payment as Record<string, string>).transfer_content).toBe('ZEN P101 mã hóa đơn kỳ')
   })
 
+  it('labels utility prices with currency and unit', () => {
+    const data = buildContractDocumentData(sources())
+    const utilities = data.utilities as Record<string, string>
+    expect(utilities.electricity_price_display).toBe('3.500 đồng/kWh')
+    expect(utilities.water_price_display).toBe('15.000 đồng')
+    const fixed = buildContractDocumentData(sources({ building: { ...sources().building, electricityPricingType: 'fixed', defaultElectricityRate: 200000 } }))
+    expect((fixed.utilities as Record<string, string>).electricity_price_display).toBe('200.000 đồng/phòng/tháng')
+  })
+
   it('shows tiered electricity text and the grace-overflow clause', () => {
     const tiered = buildContractDocumentData(sources({ building: { ...sources().building, electricityPricingType: 'tiered', defaultElectricityRate: null } }))
     expect((tiered.utilities as Record<string, string>).electricity_price_display).toBe('Theo bậc thang của tòa nhà')
