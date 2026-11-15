@@ -138,4 +138,68 @@ describe('UiDatePicker', () => {
     expect(wrapper.emitted('update:modelValue')?.[0]).toEqual(['2026-09'])
     expect(wrapper.emitted('change')?.[0]).toEqual(['2026-09'])
   })
+
+  describe('typeable', () => {
+    async function type(wrapper: ReturnType<typeof mountDatePicker>, text: string) {
+      const input = wrapper.get('input#paid-at')
+      await input.setValue(text)
+      return input
+    }
+
+    it('masks digits and emits an ISO date once complete', async () => {
+      const wrapper = mountDatePicker({ typeable: true, modelValue: '' })
+      const input = await type(wrapper, '15011985')
+
+      expect((input.element as HTMLInputElement).value).toBe('15/01/1985')
+      expect(wrapper.emitted('update:modelValue')?.at(-1)).toEqual(['1985-01-15'])
+    })
+
+    it('shows partial input masked without emitting', async () => {
+      const wrapper = mountDatePicker({ typeable: true, modelValue: '' })
+      const input = await type(wrapper, '1501')
+
+      expect((input.element as HTMLInputElement).value).toBe('15/01')
+      expect(wrapper.emitted('update:modelValue')).toBeUndefined()
+    })
+
+    it('rejects a date that does not exist', async () => {
+      const wrapper = mountDatePicker({ typeable: true, modelValue: '' })
+      await type(wrapper, '31022020')
+
+      expect(wrapper.text()).toContain('Ngày không hợp lệ')
+      expect(wrapper.emitted('update:modelValue')).toBeUndefined()
+    })
+
+    it('rejects a future date in past mode', async () => {
+      const wrapper = mountDatePicker({ typeable: true, modelValue: '', dateMode: 'past' })
+      const next = dayjs().add(1, 'year').format('DDMMYYYY')
+      await type(wrapper, next)
+
+      expect(wrapper.text()).toContain('Ngày nằm ngoài khoảng cho phép')
+      expect(wrapper.emitted('update:modelValue')).toBeUndefined()
+    })
+
+    it('clears the value when the text is emptied', async () => {
+      const wrapper = mountDatePicker({ typeable: true, modelValue: '2026-07-08' })
+      await type(wrapper, '')
+
+      expect(wrapper.emitted('update:modelValue')?.at(-1)).toEqual([''])
+    })
+
+    it('flags incomplete input on blur', async () => {
+      const wrapper = mountDatePicker({ typeable: true, modelValue: '' })
+      const input = await type(wrapper, '1501')
+      await input.trigger('blur')
+
+      expect(wrapper.text()).toContain('Nhập đủ ngày/tháng/năm')
+      expect(wrapper.emitted('blur')).toHaveLength(1)
+    })
+
+    it('still opens the calendar from the icon button', async () => {
+      const wrapper = mountDatePicker({ typeable: true })
+      await wrapper.get('button[aria-label="Mở lịch"]').trigger('click')
+
+      expect(panel()).not.toBeNull()
+    })
+  })
 })

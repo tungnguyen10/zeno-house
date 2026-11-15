@@ -112,12 +112,14 @@ function useExisting() {
           <UiDatePicker
             label="Ngày sinh"
             date-mode="past"
+            typeable
             :model-value="form.date_of_birth"
             @update:model-value="(v: string) => form.date_of_birth = v"
           />
           <UiDatePicker
             label="Ngày cấp"
             date-mode="past"
+            typeable
             :model-value="form.id_issued_date"
             @update:model-value="(v: string) => form.id_issued_date = v"
           />
