@@ -2,6 +2,7 @@
 import { useObjectUrl } from '@vueuse/core'
 import { tenantCreateSchema, type TenantCreateInput } from '~/utils/validators/tenants'
 import type { TenantIdImageSide } from '~/types/tenants'
+import type { SuggestionField, SuggestionValues } from '~/utils/tenant-identity-suggestions'
 
 export interface TenantFormData {
   full_name: string
@@ -112,6 +113,22 @@ const submitAttempted = ref(false)
 
 function update<K extends keyof TenantFormData>(field: K, value: TenantFormData[K]) {
   emit('update:modelValue', { ...props.modelValue, [field]: value })
+}
+
+const SCANNER_FIELDS: SuggestionField[] = ['full_name', 'id_number', 'date_of_birth', 'gender', 'id_issued_date', 'id_issued_place', 'permanent_address']
+const scannerValues = computed<SuggestionValues>(() => ({
+  full_name: props.modelValue.full_name,
+  id_number: props.modelValue.id_number,
+  date_of_birth: props.modelValue.date_of_birth,
+  gender: props.modelValue.gender,
+  id_issued_date: props.modelValue.id_issued_date,
+  // The default issuing place is pre-filled on blur; it is not manual input.
+  id_issued_place: props.modelValue.id_issued_place === ID_ISSUED_PLACE_DEFAULT ? '' : props.modelValue.id_issued_place,
+  permanent_address: props.modelValue.permanent_address,
+}))
+
+function onScannerApply(values: SuggestionValues) {
+  emit('update:modelValue', { ...props.modelValue, ...values })
 }
 
 function markTouched(snakeField: string) {
@@ -293,6 +310,12 @@ function onRemoveIdImage(side: TenantIdImageSide) {
 
     <UiFormSection title="Giấy tờ tuỳ thân" description="Thông tin CMND/CCCD để đối chiếu khi ký hợp đồng.">
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <TenantIdentityScanner
+          class="sm:col-span-2"
+          :current-values="scannerValues"
+          :fields="SCANNER_FIELDS"
+          @apply="onScannerApply"
+        />
         <UiInput
           id="tf-id-number"
           :model-value="modelValue.id_number"

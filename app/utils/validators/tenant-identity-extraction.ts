@@ -40,6 +40,11 @@ export const identityExtractionSchema = z.strictObject({
 export type IdentityExtraction = z.infer<typeof identityExtractionSchema>
 export type IdentityExtractionFields = IdentityExtraction['fields']
 
+/** Normalized extraction returned to the client; `apply` carries server-side apply rules. */
+export interface IdentitySuggestion extends IdentityExtraction {
+  apply: { permanent_address_allowed: boolean }
+}
+
 const textOrNull = { type: ['string', 'null'] } as const
 const enumOrNull = (values: readonly string[]) => ({ enum: [...values, null] })
 

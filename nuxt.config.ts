@@ -96,6 +96,7 @@ export default defineNuxtConfig({
       gaId: process.env.NUXT_PUBLIC_GA_ID || "", // NUXT_PUBLIC_GA_ID
       turnstileSiteKey: process.env.NUXT_PUBLIC_TURNSTILE_SITE_KEY || "", // NUXT_PUBLIC_TURNSTILE_SITE_KEY
       aiDevChatEnabled: process.env.NUXT_PUBLIC_AI_DEV_CHAT_ENABLED === "true", // NUXT_PUBLIC_AI_DEV_CHAT_ENABLED
+      aiTenantVisionEnabled: process.env.NUXT_PUBLIC_AI_TENANT_VISION_ENABLED === "true", // NUXT_PUBLIC_AI_TENANT_VISION_ENABLED; shows the scanner entry point only
       // Feature flag: one-click auto-issue ("Đã thu") on draft rows. Public so
       // the client can gate the row action; default off until staging-verified.
       billingAutoIssueEnabled: false, // NUXT_PUBLIC_BILLING_AUTO_ISSUE_ENABLED

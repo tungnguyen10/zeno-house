@@ -2,6 +2,7 @@
 import type { ApiSuccess } from '~/types/api'
 import type { Tenant, TenantSummary } from '~/types/tenants'
 import { tenantCreateSchema } from '~/utils/validators/tenants'
+import type { SuggestionField, SuggestionValues } from '~/utils/tenant-identity-suggestions'
 import { toTenantSummary, useTenantQuickCreate } from '~/composables/tenants/useTenantQuickCreate'
 
 const props = defineProps<{ open: boolean; initialName?: string; initialPhone?: string }>()
@@ -20,8 +21,25 @@ const existing = ref<Tenant | null>(null)
 const duplicateFields = ref<('phone' | 'id_number')[]>([])
 const { submitting, submit } = useTenantQuickCreate()
 
+const SCANNER_FIELDS: SuggestionField[] = ['full_name', 'id_number', 'date_of_birth', 'id_issued_date', 'id_issued_place', 'permanent_address']
+const scannerValues = computed<SuggestionValues>(() => ({
+  full_name: form.full_name,
+  id_number: form.id_number,
+  date_of_birth: form.date_of_birth,
+  id_issued_date: form.id_issued_date,
+  id_issued_place: form.id_issued_place,
+  permanent_address: form.permanent_address,
+}))
+
+function onScannerApply(values: SuggestionValues) {
+  Object.assign(form, values)
+}
+
 watch(() => props.open, (open) => {
-  if (!open) return
+  if (!open) {
+    showIdentity.value = false
+    return
+  }
   Object.assign(form, blank())
   showIdentity.value = false
   fieldErrors.value = {}
@@ -100,6 +118,12 @@ function useExisting() {
       </button>
 
       <UiFormSection v-if="showIdentity" title="Thông tin giấy tờ (không bắt buộc)">
+        <TenantIdentityScanner
+          class="mb-4"
+          :current-values="scannerValues"
+          :fields="SCANNER_FIELDS"
+          @apply="onScannerApply"
+        />
         <div class="grid gap-4 sm:grid-cols-2">
           <UiInput
             data-test="qc-id-number"
