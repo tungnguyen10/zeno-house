@@ -154,34 +154,6 @@ export const RoomRepository = {
     return mapRoom(data)
   },
 
-  async createBatch(
-    event: H3Event,
-    buildingId: string,
-    rooms: QuickRoomInput[],
-    opts: { applyInventory: boolean; actorId: string; requestId: string },
-  ): Promise<{ rooms: Room[]; replayed: boolean }> {
-    // Authorization and scope checks are enforced in RoomService.
-    const { data, error } = await serverSupabaseClient(event).rpc('create_rooms_batch_idempotent', {
-      p_building_id: buildingId,
-      p_rooms: rooms.map(room => ({
-        room_number: room.room_number,
-        slug: slugifyName(room.room_number) || room.room_number.toLowerCase(),
-        floor: room.floor,
-        monthly_rent: room.monthly_rent,
-        area: room.area,
-      })),
-      p_apply_inventory: opts.applyInventory,
-      p_actor_id: opts.actorId,
-      p_request_id: opts.requestId,
-    })
-    if (error) {
-      throwBuildingSetupError(error)
-      throwDbError(error, 'rooms.createBatch')
-    }
-    const result = data as unknown as { rooms: Parameters<typeof mapRoom>[0][]; replayed: boolean }
-    return { rooms: result.rooms.map(mapRoom), replayed: result.replayed }
-  },
-
   async update(event: H3Event, id: string, input: RoomUpdateInput): Promise<Room> {
     // Authorization and scope checks are enforced in RoomService.
     const client = serverSupabaseClient(event)

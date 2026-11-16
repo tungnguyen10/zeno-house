@@ -32,10 +32,6 @@ function buildStorageKey(key: NonNullable<DraftKey>): string {
 export function useBuildingForm<T = unknown>(options: UseBuildingFormOptions<T> = {}) {
   const { isLoading, errors, apiError, clearErrors, applyZodErrors, applyApiError } = useFormState()
 
-  // Keep retries in this form session on the same idempotent operation.
-  const requestId = crypto.randomUUID()
-  const duplicateRoomNumbers = ref<string[]>([])
-
   const storageKey = options.draftKey ? buildStorageKey(options.draftKey) : null
 
   const { hasDraft, isDirty, restoreDraft, clearDraft, refreshHasDraft } = useLocalFormDraft<T>({
@@ -117,8 +113,6 @@ export function useBuildingForm<T = unknown>(options: UseBuildingFormOptions<T> 
     errors,
     apiError,
     submitCreate,
-    requestId,
-    duplicateRoomNumbers,
     submitUpdate,
     duplicateRoomNumbers,
     requestId,

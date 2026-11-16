@@ -1,4 +1,5 @@
 <script setup lang="ts">
+
 import type { BuildingFormData } from '~/types/building-form'
 import { buildingFormToApiPayload } from '~/utils/mappers/building-form'
 
@@ -57,7 +58,7 @@ async function onSubmit(data: BuildingFormData) {
 </script>
 
 <template>
-  <div class="min-w-0">
+  <div>
     <UiPageHeader
       title="Thêm tòa nhà mới"
       description="Khai báo thông tin toà nhà và tuỳ chọn tạo phòng ngay từ đầu."

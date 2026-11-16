@@ -128,14 +128,6 @@ export const ContractService = {
     return contract
   },
 
-  async getHandoverInventory(event: H3Event, user: AuthUser, identifier: string): Promise<HandoverInventory> {
-    requireCapability(user, 'contracts.read', 'Không có quyền xem hợp đồng')
-    const contract = await ContractRepository.findByIdentifier(event, identifier)
-    if (!contract) throwNotFound('Không tìm thấy hợp đồng')
-    await assertBuildingScope(event, user, contract.buildingId, 'read')
-    return ContractRepository.findHandoverInventory(event, contract.id, contract.buildingId)
-  },
-
   async create(event: H3Event, user: AuthUser, input: ContractCreateInput): Promise<ContractWithDetails> {
     requireCapability(user, 'contracts.create', 'Không có quyền tạo hợp đồng')
 

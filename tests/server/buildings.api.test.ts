@@ -6,7 +6,6 @@ const repoMocks = vi.hoisted(() => ({
   findAll: vi.fn(),
   findByIdentifier: vi.fn(),
   findById: vi.fn(),
-  createWithRooms: vi.fn(),
   insert: vi.fn(),
   createWithRooms: vi.fn(),
   update: vi.fn(),
@@ -80,7 +79,7 @@ function buildBuilding(overrides: Partial<Building> = {}): Building {
     id: overrides.id ?? 'b-1',
     slug: overrides.slug ?? 'toa-a',
     code: overrides.code ?? 'a',
-    name: overrides.name ?? 'Tòa A',
+    name: overrides.name ?? 'Toa A',
     address: overrides.address ?? '123 Đường ABC',
     description: overrides.description ?? null,
     status: overrides.status ?? 'active',
@@ -312,7 +311,7 @@ describe('POST /api/buildings', () => {
     asManager()
     const { default: handler } = await import('../../server/api/buildings/index.post')
 
-    const err = await expectError(Promise.resolve(handler(makeEvent({ body: { name: 'Tòa mới', address: '99 Lê Lợi' } }))))
+    const err = await expectError(Promise.resolve(handler(makeEvent({ body: { name: 'Toa moi', address: '99 Le Loi' } }))))
     expect(err.statusCode).toBe(403)
     expect(repoMocks.createWithRooms).not.toHaveBeenCalled()
   })

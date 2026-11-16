@@ -38,7 +38,6 @@ const form = ref({
   handover_electricity_reading: '',
   handover_water_reading: '',
   handover_reading_date: '',
-  inventory: [],
 })
 const occupants = ref<PendingOccupant[]>([])
 const vehicles = ref<VehicleRow[]>([])

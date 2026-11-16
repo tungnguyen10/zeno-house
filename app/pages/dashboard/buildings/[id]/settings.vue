@@ -4,9 +4,6 @@ import type { BuildingReadiness } from '~/types/building-contract-profile'
 import type { InventoryItem } from '~/types/inventory'
 import { countActiveFinanceRules, deriveAdvancedSteps, deriveSetupSteps } from '~/utils/building-setup-steps'
 import { buildingPath } from '~/utils/routes/operational'
-import type { Room } from '~/types/rooms'
-import { toInventoryInput } from '~/utils/mappers/inventory'
-import { inventoryListSchema, type InventoryApplyInput, type InventoryItemInput } from '~/utils/validators/inventory'
 
 const route = useRoute()
 const id = route.params.id as string

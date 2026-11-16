@@ -245,7 +245,7 @@ export function auditActionLabel(action: string): string {
 
 export function auditActionVariant(action: string): StatusVariant {
   if (/(\.created|\.activated|\.added|\.uploaded|\.recorded|\.applied)$/.test(action)) return 'success'
-  if (/(\.updated|\.renewed|\.role_changed|\.synced|\.attached|\.allocated|\.refreshed|\.published|\.transferred|\.repaired|\.template_applied)$/.test(action)) return 'accent'
+  if (/(\.updated|\.renewed|\.role_changed|\.synced|\.attached|\.allocated|\.refreshed|\.published|\.transferred|\.repaired)$/.test(action)) return 'accent'
   if (/(\.removed|\.terminated|\.deleted|\.voided|\.deactivated|\.orphan_reconciled|\.cancelled|\.draft_removed)$/.test(action)) return 'danger'
   if (/(\.archived|\.maintenance_set|\.expired|\.moved_out|\.dismissed|\.reopened)$/.test(action)) return 'warning'
   return 'neutral'

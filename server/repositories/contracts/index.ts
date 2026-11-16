@@ -8,9 +8,6 @@ import type { InventoryItemInput } from '~/utils/validators/inventory'
 import type { ContractVehicleInput } from '~/utils/validators/contract-vehicles'
 import type { HandoverInventory } from '~/types/inventory'
 import { isUuid } from '~/utils/format/slug'
-import type { HandoverInventory } from '~/types/inventory'
-import type { InventoryItemInput } from '~/utils/validators/inventory'
-import { mapInventoryItem, type InventoryRow } from '~/utils/mappers/inventory'
 
 const CONTRACT_CREATE_ERRORS: Record<string, { status: 409 | 422; message: string }> = {
   CONTRACT_CREATE_REQUEST_CONFLICT: { status: 409, message: 'Yêu cầu tạo hợp đồng bị trùng với một thao tác khác. Vui lòng tải lại trang.' },

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 
-import { buildingEditPath, buildingRoomBatchPath, buildingSettingsPath } from '~/utils/routes/operational'
+import { buildingEditPath, buildingSettingsPath } from '~/utils/routes/operational'
 import { getApiErrorCode, getApiErrorDetails, type ApiErrorLike } from '~/utils/api-error'
 import type { ApiSuccess } from '~/types/api'
 import type { BuildingReadiness } from '~/types/building-contract-profile'

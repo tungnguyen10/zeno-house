@@ -145,44 +145,6 @@ const monthlyServicesTotal = computed(() =>
 
 const showServicesModal = ref(false)
 
-const roomInventory = useRoomInventory(id, {
-  roomId: () => room.value?.id ?? '',
-  buildingId: () => room.value?.buildingId ?? '',
-})
-const inventoryDraft = ref<InventoryItemInput[]>([])
-const inventoryErrors = ref<Record<string, string>>({})
-const canEditInventory = computed(() => authStore.can('rooms.update'))
-const inventoryDirty = computed(() =>
-  JSON.stringify(inventoryDraft.value) !== JSON.stringify(toInventoryInput(roomInventory.items.value)),
-)
-const inventoryTotal = computed(() => inventoryTotalValue(roomInventory.items.value))
-
-watch(() => room.value?.id, async (roomId) => {
-  if (!roomId) return
-  await roomInventory.load()
-  inventoryDraft.value = toInventoryInput(roomInventory.items.value)
-}, { immediate: true })
-
-async function saveInventory() {
-  inventoryErrors.value = {}
-  const parsed = inventoryListSchema.safeParse(inventoryDraft.value)
-  if (!parsed.success) {
-    for (const issue of parsed.error.issues) inventoryErrors.value[issue.path.join('.')] ??= issue.message
-    return
-  }
-  if (await roomInventory.save(parsed.data)) {
-    inventoryDraft.value = toInventoryInput(roomInventory.items.value)
-    toast.success('Đã lưu nội thất của phòng.')
-  }
-}
-
-async function applyBuildingTemplate() {
-  if (await roomInventory.applyTemplate()) {
-    inventoryDraft.value = toInventoryInput(roomInventory.items.value)
-    toast.success('Đã áp dụng nội thất mẫu của tòa.')
-  }
-}
-
 async function handleContractServiceUpdate(serviceId: string, input: ContractServiceUpdateInput) {
   await apiFetch(`/api/contract-services/${serviceId}`, { method: 'PATCH', body: input })
   await refreshContractServices()

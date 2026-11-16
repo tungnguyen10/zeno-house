@@ -147,31 +147,6 @@ function onTenantPicked(tenant: TenantSummary | null) {
 
 const handoverRoomId = computed(() => props.showHandover ? props.modelValue.room_id : '')
 
-// Room the current inventory list was loaded for; null means it was never loaded by this form (e.g. a restored draft).
-const loadedInventoryRoomId = ref<string | null>(null)
-const loadingInventory = ref(false)
-
-async function loadRoomInventory(roomId: string) {
-  if ((props.modelValue.inventory?.length ?? 0) > 0 && loadedInventoryRoomId.value === null) {
-    loadedInventoryRoomId.value = roomId
-    return
-  }
-  loadingInventory.value = true
-  try {
-    const res = await apiFetch<ApiSuccess<InventoryItem[]>>(`/api/rooms/${roomId}/inventory`)
-    if (props.modelValue.room_id !== roomId) return
-    loadedInventoryRoomId.value = roomId
-    emit('update:modelValue', { ...props.modelValue, inventory: toInventoryInput(res.data) })
-  }
-  catch {
-    // Fail open: the server snapshots the room inventory when none is sent.
-    if (props.modelValue.room_id === roomId) emit('update:modelValue', { ...props.modelValue, inventory: undefined })
-  }
-  finally {
-    loadingInventory.value = false
-  }
-}
-
 const { data: latestReadingsData, refresh: refreshLatestReadings } = useFetch<
   ApiSuccess<{ electricity: MeterReading | null, water: MeterReading | null }>
 >('/api/meter-readings/latest', {
@@ -188,7 +163,6 @@ watch(handoverRoomId, async (roomId) => {
     latestReadingsData.value = undefined
     return
   }
-  void loadRoomInventory(roomId)
   await refreshLatestReadings()
   const updates: Partial<ContractFormData> = {}
   if (props.modelValue.handover_electricity_reading === '' && previousElectricity.value) {
@@ -284,7 +258,6 @@ function toPayload(data: ContractFormData) {
     handover_electricity_reading: Number(data.handover_electricity_reading),
     handover_water_reading: Number(data.handover_water_reading),
     handover_reading_date: data.handover_reading_date || undefined,
-    ...(props.showHandover && data.inventory ? { inventory: data.inventory } : {}),
   }
 }
 
@@ -336,7 +309,7 @@ const firstInvalidFieldId = computed<string | null>(() => {
   }
   for (const field of Object.keys(merged)) {
     if (!touched.value.has(field) && !submitAttempted.value) continue
-    const id = FIELD_META[field]?.id ?? (field.startsWith('inventory') ? 'contract-inventory' : undefined)
+    const id = FIELD_META[field]?.id
     if (id) return id
   }
   return null
@@ -379,16 +352,6 @@ function restoreDraft() {
 }
 
 const canSubmit = computed(() => !props.loading && (props.isDirty || props.hasDraft || submitAttempted.value))
-
-const inventoryItems = computed(() => props.modelValue.inventory ?? [])
-const inventoryErrors = computed(() => {
-  const result: Record<string, string> = {}
-  if (!submitAttempted.value) return result
-  for (const [key, message] of Object.entries(localErrors.value)) {
-    if (key.startsWith('inventory.')) result[key.slice('inventory.'.length)] = message
-  }
-  return result
-})
 
 const selectedRoomLabel = computed(() => {
   const room = selectedRoom.value

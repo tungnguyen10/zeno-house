@@ -19,9 +19,6 @@ const contractRepoMocks = vi.hoisted(() => ({
 
 vi.mock('../../server/utils/checkout-feature', () => ({ checkoutEnabledForBuilding: () => false }))
 
-const inventoryRepoMocks = vi.hoisted(() => ({ listRoom: vi.fn() }))
-vi.mock('../../server/repositories/inventory', () => ({ InventoryRepository: inventoryRepoMocks }))
-
 const buildingRepoMocks = vi.hoisted(() => ({
   findByIdentifier: vi.fn(),
 }))
@@ -234,7 +231,6 @@ beforeEach(() => {
   contractRepoMocks.findActiveByRoomId.mockResolvedValue(null)
   contractRepoMocks.findActiveByTenantId.mockResolvedValue(null)
   occupantRepoMocks.findActiveOccupancyByTenant.mockResolvedValue(null)
-  inventoryRepoMocks.listRoom.mockResolvedValue([])
   contractRepoMocks.countBillingPeriodsForContract.mockResolvedValue(0)
   contractRepoMocks.countPaidInvoicesForContract.mockResolvedValue(0)
   contractRepoMocks.countNonHandoverMeterReadingsForContract.mockResolvedValue(0)

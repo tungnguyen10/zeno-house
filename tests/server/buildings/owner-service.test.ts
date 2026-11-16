@@ -3,7 +3,6 @@ import type { Building } from '~/types/buildings'
 import type { AuthUser } from '~/types/auth'
 
 const buildingRepo = vi.hoisted(() => ({
-  createWithRooms: vi.fn(),
   insert: vi.fn(),
   createWithRooms: vi.fn(),
   findByIdentifier: vi.fn(),
@@ -41,7 +40,7 @@ function building(overrides: Partial<Building> = {}): Building {
     id: overrides.id ?? 'b-1',
     slug: 'toa-a',
     code: 'a',
-    name: 'Tòa A',
+    name: 'Toa A',
     address: '123',
     description: null,
     status: 'active',

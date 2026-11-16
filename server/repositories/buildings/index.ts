@@ -176,54 +176,6 @@ export function throwBuildingSetupError(error: unknown): void {
 }
 
 export const BuildingRepository = {
-  async createWithRooms(
-    event: H3Event,
-    input: BuildingCreateInput,
-    rooms: QuickRoomInput[],
-    opts: { actorId: string; ownerUserId: string | null; requestId: string },
-  ): Promise<BuildingSetupResult> {
-    // Authorization is enforced in BuildingService; the RPC is service_role only.
-    const client = serverSupabaseClient(event)
-    const roomPayload = rooms.map(room => ({
-      room_number: room.room_number,
-      slug: slugifyName(room.room_number) || room.room_number.toLowerCase(),
-      floor: room.floor,
-      monthly_rent: room.monthly_rent,
-      area: room.area,
-    }))
-
-    for (let attempt = 1; attempt <= MAX_IDENTITY_ATTEMPTS; attempt++) {
-      const slug = await buildUniqueSlug(event, input.slug ?? input.name)
-      const code = await buildUniqueCode(event, slug)
-      const { data, error } = await client.rpc('create_building_with_rooms' as never, {
-        p_building: buildInsertPayload(input, slug, code, {
-          created_by: opts.actorId,
-          owner_user_id: opts.ownerUserId,
-        }),
-        p_rooms: roomPayload,
-        p_assign_owner: opts.ownerUserId,
-        p_actor_id: opts.actorId,
-        p_request_id: opts.requestId,
-      } as never)
-
-      if (error) {
-        const isIdentityRace = (error as { code?: string }).code === '23505'
-          && BUILDING_IDENTITY_CONFLICT.test(String((error as { message?: string }).message))
-        if (isIdentityRace && attempt < MAX_IDENTITY_ATTEMPTS) continue
-        if (isIdentityRace) throwConflict('Không thể tạo mã tòa nhà duy nhất, vui lòng thử lại')
-        throwBuildingSetupError(error)
-        throwDbError(error, 'buildings.createWithRooms')
-      }
-
-      const result = data as unknown as { building: BuildingRow; rooms: Parameters<typeof mapRoom>[0][]; replayed: boolean }
-      const [building] = await attachServiceSummaries(event, [
-        mapBuilding({ ...result.building, rooms: [{ count: result.rooms.length }] } as BuildingRow),
-      ])
-      return { building: building!, rooms: result.rooms.map(mapRoom), replayed: result.replayed }
-    }
-    throwConflict('Không thể tạo mã tòa nhà duy nhất, vui lòng thử lại')
-  },
-
   async setVisibility(event: H3Event, id: string, isHidden: boolean): Promise<Building> {
     const client = serverSupabaseClient(event)
     const { data, error } = await client
