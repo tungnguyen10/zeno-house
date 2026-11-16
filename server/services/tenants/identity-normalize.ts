@@ -1,11 +1,10 @@
 import type {
   IdentityExtraction,
   IdentityExtractionFields,
+  IdentitySuggestion,
 } from '~/utils/validators/tenant-identity-extraction'
 
-export interface IdentitySuggestion extends IdentityExtraction {
-  apply: { permanent_address_allowed: boolean }
-}
+export type { IdentitySuggestion }
 
 const ID_NUMBER_PATTERN = /^\d{9}(\d{3})?$/
 const DATE_PATTERN = /^(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})$|^(\d{4})-(\d{2})-(\d{2})$/
