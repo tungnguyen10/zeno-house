@@ -77,6 +77,16 @@ export default defineNuxtConfig({
     aiRetentionCleanupEnabled: true, // NUXT_AI_RETENTION_CLEANUP_ENABLED
     aiRetentionCleanupBatchSize: 500, // NUXT_AI_RETENTION_CLEANUP_BATCH_SIZE
     aiRetentionCleanupSecret: process.env.NUXT_AI_RETENTION_CLEANUP_SECRET || "", // NUXT_AI_RETENTION_CLEANUP_SECRET
+    aiTenantVisionEnabled: false, // NUXT_AI_TENANT_VISION_ENABLED; off until privacy, benchmark and security gates pass
+    aiTenantAnthropicApiKey: "", // NUXT_AI_TENANT_ANTHROPIC_API_KEY
+    aiTenantVisionModel: "", // NUXT_AI_TENANT_VISION_MODEL
+    aiTenantVisionTimeoutMs: 30_000, // NUXT_AI_TENANT_VISION_TIMEOUT_MS
+    aiTenantOcrDailyLimit: 20, // NUXT_AI_TENANT_OCR_DAILY_LIMIT
+    aiTenantOcrUserDailyLimit: 10, // NUXT_AI_TENANT_OCR_USER_DAILY_LIMIT
+    aiTenantOcrDailyBudgetMicroUsd: 1_000_000, // NUXT_AI_TENANT_OCR_DAILY_BUDGET_MICRO_USD
+    aiTenantOcrInputPricePerMTokMicroUsd: 0, // NUXT_AI_TENANT_OCR_INPUT_PRICE_PER_MTOK_MICRO_USD
+    aiTenantOcrOutputPricePerMTokMicroUsd: 0, // NUXT_AI_TENANT_OCR_OUTPUT_PRICE_PER_MTOK_MICRO_USD
+    aiTenantOcrReserveMicroUsd: 20_000, // NUXT_AI_TENANT_OCR_RESERVE_MICRO_USD
     adminEmail: process.env.ADMIN_EMAIL || "", // ADMIN_EMAIL
     turnstileSecretKey: process.env.NUXT_TURNSTILE_SECRET_KEY || "", // NUXT_TURNSTILE_SECRET_KEY
     operationsReportAutoCloseSecret: process.env.NUXT_OPERATIONS_REPORT_AUTO_CLOSE_SECRET || "", // NUXT_OPERATIONS_REPORT_AUTO_CLOSE_SECRET
