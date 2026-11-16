@@ -1,6 +1,6 @@
 # Room setup & inventory lite (V2 PR2)
 
-**Status: implementation-review.** Tasks 1–11 implemented TDD-first on Node 22; local typecheck/test/lint/knowledge:check all pass. Depends on [atomic-building-room-setup](../atomic-building-room-setup/index.md). Cloud migration apply + type regeneration and git/PR remain maintainer-run — see verification. Batch-page entry points (room list + building detail) are wired.
+**Status: source merged; cloud hardening check open.** Room generator, templates and handover snapshots were integrated in `develop`. The 2026-11-15 migration and SQL checks are recorded, but newer `20261116100000_inventory_lite_functions_hardening.sql` (PR #26) was not confirmed applied to cloud. Baseline stabilization also corrects non-atomic template/room saves using existing replacement RPCs.
 
 - [Design](./design.md)
 - [Implementation plan](./implementation-plan.md)
