@@ -3,6 +3,7 @@ import type { H3Event } from 'h3'
 export interface TenantVisionRuntime {
   enabled: boolean
   apiKey: string
+  workspaceId: string
   model: string
   timeoutMs: number
   dailyLimit: number
@@ -36,6 +37,7 @@ export function resolveTenantVisionRuntime(runtime: RuntimeInput): TenantVisionR
   return {
     enabled: booleanValue(runtime.aiTenantVisionEnabled) && apiKey !== '' && model !== '',
     apiKey,
+    workspaceId: text(runtime.aiTenantAnthropicWorkspaceId),
     model,
     timeoutMs: boundedNumber(runtime.aiTenantVisionTimeoutMs, 30_000, 5_000, 120_000),
     dailyLimit: boundedNumber(runtime.aiTenantOcrDailyLimit, 20, 1, 1_000),

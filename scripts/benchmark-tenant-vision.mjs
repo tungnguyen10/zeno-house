@@ -90,7 +90,9 @@ async function main() {
   for (const fixture of fixtures) {
     const started = performance.now()
     try {
-      const result = await extractIdentityWithClaude({ apiKey, model, timeoutMs: 60_000, images: fixture.images })
+      const result = await extractIdentityWithClaude({
+        apiKey, workspaceId: process.env.NUXT_AI_TENANT_ANTHROPIC_WORKSPACE_ID, model, timeoutMs: 60_000, images: fixture.images,
+      })
       const parsed = identityExtractionSchema.safeParse(result.output)
       samples.push({
         ok: true, valid: parsed.success, latencyMs: Math.round(performance.now() - started), usage: result.usage,

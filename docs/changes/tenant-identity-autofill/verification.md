@@ -54,7 +54,7 @@ Reused existing primitives only (`UiButton`, `UiAlert`) and existing tokens; no 
 
 ## Cloud gates
 
-- [ ] `20261116110000_tenant_ocr_usage.sql` applied — environment and date
+- [x] `20261116110000_tenant_ocr_usage.sql` applied — production, 2026-11-16
 - [ ] `supabase/verification/tenant_ocr_usage.sql` passed — environment and date
 - [ ] Types regenerated (`reserve_tenant_ocr`, `settle_tenant_ocr`, `release_tenant_ocr`, `tenant_ocr_usage`)
 - [ ] Runtime secrets set (`NUXT_AI_TENANT_ANTHROPIC_API_KEY`, `NUXT_AI_TENANT_VISION_MODEL`, price and limit variables)

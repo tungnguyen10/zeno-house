@@ -19,6 +19,11 @@ describe('resolveTenantVisionRuntime', () => {
     expect(resolveTenantVisionRuntime({ ...base, aiTenantVisionModel: '  ' }).enabled).toBe(false)
   })
 
+  it('exposes an optional workspace id', () => {
+    expect(resolveTenantVisionRuntime(base).workspaceId).toBe('')
+    expect(resolveTenantVisionRuntime({ ...base, aiTenantAnthropicWorkspaceId: ' wrkspc_1 ' }).workspaceId).toBe('wrkspc_1')
+  })
+
   it('accepts string flags from env', () => {
     expect(resolveTenantVisionRuntime({ ...base, aiTenantVisionEnabled: 'true' }).enabled).toBe(true)
     expect(resolveTenantVisionRuntime({ ...base, aiTenantVisionEnabled: 'false' }).enabled).toBe(false)

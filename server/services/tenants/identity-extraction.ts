@@ -78,6 +78,7 @@ export const TenantIdentityExtractionService = {
       try {
         result = await extractIdentityWithClaude({
           apiKey: runtime.apiKey,
+          workspaceId: runtime.workspaceId,
           model: runtime.model,
           timeoutMs: runtime.timeoutMs,
           images: validation.images,

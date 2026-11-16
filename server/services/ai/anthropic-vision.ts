@@ -39,11 +39,18 @@ function retryAfter(error: RateLimitError): number | undefined {
 
 export async function extractIdentityWithClaude(input: {
   apiKey: string
+  /** Required only when the API key is not scoped to a workspace. */
+  workspaceId?: string
   model: string
   timeoutMs: number
   images: { mime: IdentityImageMime, data: Buffer }[]
 }): Promise<VisionResult> {
-  const client = new Anthropic({ apiKey: input.apiKey, maxRetries: 0, timeout: input.timeoutMs })
+  const client = new Anthropic({
+    apiKey: input.apiKey,
+    maxRetries: 0,
+    timeout: input.timeoutMs,
+    ...(input.workspaceId ? { defaultHeaders: { 'anthropic-workspace-id': input.workspaceId } } : {}),
+  })
   try {
     const message = await client.messages.create({
       model: input.model,
@@ -84,6 +91,11 @@ export async function extractIdentityWithClaude(input: {
     if (error instanceof VisionProviderError) throw error
     if (error instanceof APIConnectionTimeoutError) throw new VisionProviderError('timeout')
     if (error instanceof RateLimitError) throw new VisionProviderError('rate_limited', retryAfter(error))
+    // Status and class only: provider messages can echo request content.
+    console.error('[tenant-vision] provider error', {
+      status: (error as { status?: number }).status,
+      name: error instanceof Error ? error.name : 'unknown',
+    })
     throw new VisionProviderError('unavailable')
   }
 }

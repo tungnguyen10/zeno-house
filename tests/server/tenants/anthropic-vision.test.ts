@@ -50,6 +50,13 @@ describe('extractIdentityWithClaude', () => {
     expect(sdk.constructorArgs[0]).toEqual({ apiKey: 'test-key', maxRetries: 0, timeout: 20_000 })
   })
 
+  it('sends the workspace header only when a workspace id is configured', async () => {
+    sdk.create.mockResolvedValue(reply('{"ok":true}'))
+    const { extractIdentityWithClaude } = await load()
+    await extractIdentityWithClaude({ ...input, workspaceId: 'wrkspc_test' })
+    expect(sdk.constructorArgs[0]).toMatchObject({ defaultHeaders: { 'anthropic-workspace-id': 'wrkspc_test' } })
+  })
+
   it('sends one base64 image block per image and the JSON schema', async () => {
     sdk.create.mockResolvedValue(reply('{"ok":true}'))
     const { extractIdentityWithClaude } = await load()
@@ -115,5 +122,16 @@ describe('extractIdentityWithClaude', () => {
     const error = await extractIdentityWithClaude(input).catch((e: unknown) => e)
     expect(error).toMatchObject({ kind: 'unavailable' })
     expect((error as Error).message).not.toContain('SECRET')
+  })
+
+  it('logs only the status and error class for unexpected provider errors', async () => {
+    const { BadRequestError } = await import('@anthropic-ai/sdk')
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    sdk.create.mockRejectedValue(new BadRequestError(400, {}, 'echo NGUYEN VAN SECRET', new Headers()))
+    const { extractIdentityWithClaude } = await load()
+    await expect(extractIdentityWithClaude(input)).rejects.toMatchObject({ kind: 'unavailable' })
+    expect(spy).toHaveBeenCalledWith('[tenant-vision] provider error', { status: 400, name: 'BadRequestError' })
+    expect(JSON.stringify(spy.mock.calls)).not.toContain('SECRET')
+    spy.mockRestore()
   })
 })
