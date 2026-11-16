@@ -4,6 +4,8 @@ import { tenantCreateSchema, tenantUpdateSchema } from '~/utils/validators/tenan
 import type { TenantCreateInput, TenantUpdateInput } from '~/utils/validators/tenants'
 import { tenantPath } from '~/utils/routes/operational'
 import { useLocalFormDraft } from '~/composables/useLocalFormDraft'
+import { TENANT_SENSITIVE_DRAFT_KEYS } from '~/utils/tenant-identity'
+import { getTenantApiError } from '~/utils/tenant-api-error'
 import { useFormState } from '~/composables/useFormState'
 
 type DraftKey =
@@ -28,12 +30,13 @@ function buildStorageKey(key: NonNullable<DraftKey>): string {
 }
 
 export function useTenantForm<T = unknown>(options: UseTenantFormOptions<T> = {}) {
-  const { isLoading, errors, apiError, clearErrors, applyZodErrors, applyApiError } = useFormState()
+  const { isLoading, errors, apiError, clearErrors, applyZodErrors } = useFormState()
 
   const storageKey = options.draftKey ? buildStorageKey(options.draftKey) : null
 
   const { hasDraft, isDirty, restoreDraft, clearDraft, refreshHasDraft } = useLocalFormDraft<T>({
     key: storageKey,
+    omitKeys: TENANT_SENSITIVE_DRAFT_KEYS,
     formData: options.formData,
     initialSnapshot: options.initialSnapshot,
   })
@@ -61,7 +64,9 @@ export function useTenantForm<T = unknown>(options: UseTenantFormOptions<T> = {}
       return res.data ?? null
     }
     catch (e: unknown) {
-      applyApiError(e)
+      const failure = getTenantApiError(e)
+      errors.value = failure.fieldErrors
+      apiError.value = failure.message
       return null
     }
     finally {
@@ -92,7 +97,9 @@ export function useTenantForm<T = unknown>(options: UseTenantFormOptions<T> = {}
       return res.data ?? null
     }
     catch (e: unknown) {
-      applyApiError(e)
+      const failure = getTenantApiError(e)
+      errors.value = failure.fieldErrors
+      apiError.value = failure.message
       return null
     }
     finally {

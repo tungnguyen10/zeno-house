@@ -1,3 +1,10 @@
+---
+type: Feature Guide
+title: "authentication"
+status: stable
+tags: [engineering, reference]
+---
+
 # Authentication And Access Requests
 
 ## Entry Paths

@@ -1,0 +1,196 @@
+---
+type: Capability Specification
+title: "admin-shell"
+status: stable
+tags: [capability, requirements]
+sources:
+  - resource: "https://github.com/tungnguyen10/zeno-house/blob/ae95811bbdc1932368b4e6b9ed3e9540399d26e6/openspec/specs/admin-shell/spec.md"
+generated:
+  by: "process:okf-migration"
+  at: "2026-11-06T00:00:00Z"
+---
+
+## Purpose
+Defines the authenticated admin application shell, layouts, navigation, and route-level presentation expectations.
+
+## Requirements
+
+### Requirement: Default layout wraps admin pages
+App SHALL render internal admin pages với `layouts/default.vue` bao gồm AppSidebar ở trái và AppHeader ở trên, except dedicated print-only routes MAY set `layout: false` so printed output excludes application chrome. Content area ở giữa scroll độc lập. Internal pages SHALL live under the `/dashboard` namespace; navigation and route-level links SHALL target `/dashboard`-based paths, and legacy top-level paths SHALL redirect to their `/dashboard` equivalents. The layout SHALL activate the resolved dashboard color theme for shell content and teleported overlays and SHALL clean up document theme state when it unmounts.
+
+#### Scenario: Admin page sử dụng default layout
+- **WHEN** người dùng truy cập một internal route dưới `/dashboard`
+- **THEN** trang hiển thị với sidebar bên trái, header ở trên, content area ở giữa
+
+#### Scenario: Content area scroll không ảnh hưởng sidebar
+- **WHEN** nội dung trang dài hơn viewport
+- **THEN** chỉ content area scroll, sidebar và header giữ nguyên vị trí
+
+#### Scenario: Legacy path redirect về dashboard namespace
+- **WHEN** người dùng mở một đường dẫn nội bộ cũ ở top-level (ví dụ `/buildings`)
+- **THEN** app redirect tới đường dẫn `/dashboard` tương ứng
+
+#### Scenario: Print-only route không render application chrome
+- **WHEN** người dùng mở một dedicated print-only route dưới `/dashboard`
+- **THEN** route vẫn được namespace guard bảo vệ nhưng MAY render với `layout: false` để không hiển thị sidebar và header trong bản in
+
+#### Scenario: Dashboard shell resolves theme
+- **WHEN** an authenticated internal user enters a `/dashboard` route
+- **THEN** the layout activates the stored or system-resolved dashboard theme before interactive content is shown
+
+#### Scenario: Dashboard shell cleans up theme
+- **WHEN** client navigation leaves the default dashboard layout
+- **THEN** dashboard-specific document attributes and listeners are removed
+
+---
+
+### Requirement: Auth layout dành riêng cho trang login
+App SHALL use `layouts/auth.vue` for login, registration, forgot-password, reset-password, callback, and pending status. The layout SHALL have no application sidebar/header, SHALL use the Zeno House dark/cyan/Inter system, SHALL render a two-panel brand/form composition on desktop, and SHALL collapse the illustration to a compact top band on mobile.
+
+#### Scenario: Auth page uses split layout on desktop
+- **WHEN** viewport is at least the desktop breakpoint and an auth route renders
+- **THEN** the operational illustration and form occupy separate readable panels without application chrome
+
+#### Scenario: Auth page is usable on mobile
+- **WHEN** viewport is 320, 375, 414, or 768 pixels wide
+- **THEN** the illustration becomes a compact top band and the form has no horizontal overflow
+
+### Requirement: Admin shell exposes pending access review
+App SHALL add an admin-only navigation item and `/dashboard/settings/access-requests` page. The page SHALL show loading, empty, error, pending, approved, and rejected states and SHALL use shared table, modal, input, select/combobox, checkbox, alert, and button primitives.
+
+#### Scenario: Admin sees review queue
+- **WHEN** admin opens the access-request settings route
+- **THEN** pending requests and decision controls are available
+
+#### Scenario: Owner cannot see review queue
+- **WHEN** owner renders navigation or opens the route
+- **THEN** the item is hidden and the route redirects to `/dashboard`
+
+#### Scenario: Approval form changes by role
+- **WHEN** admin selects owner/manager or tenant in the approval modal
+- **THEN** the form requires building selection or tenant selection respectively and prevents submit until valid
+
+---
+
+### Requirement: AppSidebar hiển thị navigation items
+AppSidebar SHALL nhận `navItems: NavItem[]` qua props và render các navigation link tới `/dashboard`-based paths theo nhóm tĩnh. `Dashboard` SHALL đứng riêng; các link còn lại SHALL thuộc `Tài sản & cho thuê`, `Tài chính & vận hành`, hoặc một entry point `Quản trị` duy nhất. `Quản trị` SHALL trỏ tới `/dashboard/settings/managers` và chỉ hiển thị cho role `admin`/`owner`; các sub-page (`Tài khoản người thuê`, `Yêu cầu truy cập`, `Nhật ký hoạt động`) SHALL không render item riêng trong sidebar mà được điều hướng qua `AppSettingsSubNav`. Section không còn item sau khi lọc theo role SHALL không được render. Item active SHALL được highlight bằng canonical cyan surface/border và expose `aria-current="page"`. Label của link SHALL vẫn là accessible name khi desktop sidebar thu gọn. AppSidebar SHALL hiển thị thông tin user đã đăng nhập trong một footer panel có avatar, email, và role. AppSidebar SHALL NOT render trong `/portal` namespace.
+
+#### Scenario: Sidebar trỏ tới dashboard routes
+- **WHEN** admin layout mount
+- **THEN** mỗi nav item trỏ tới đường dẫn dưới `/dashboard`
+
+#### Scenario: Sidebar nhóm các destination liên quan
+- **WHEN** admin mở sidebar
+- **THEN** `Dashboard` đứng riêng, section `Tài sản & cho thuê` và `Tài chính & vận hành` hiển thị link theo đúng product relationship, và section `administration` chỉ có một link `Quản trị`
+
+#### Scenario: Empty role section is hidden
+- **WHEN** manager mở sidebar và không có item nào thuộc section `administration`
+- **THEN** section `administration` không được render
+
+#### Scenario: Settings sub-pages điều hướng qua AppSettingsSubNav
+- **WHEN** admin/owner mở một trang dưới `/dashboard/settings/*`
+- **THEN** `AppSettingsSubNav` hiển thị tab ngang cho các sub-page mà role hiện tại được phép truy cập, ẩn các tab admin-only với owner, và đánh dấu tab hiện tại bằng `aria-current="page"`
+
+#### Scenario: Active nav item được highlight
+- **WHEN** người dùng đang ở route `/dashboard/buildings`
+- **THEN** nav item "Tòa nhà" có class active và `aria-current="page"`, các item còn lại không có
+
+#### Scenario: Hoá đơn nav active khi ở /dashboard/invoices
+- **WHEN** người dùng đang ở route `/dashboard/invoices` hoặc `/dashboard/invoices?...`
+- **THEN** nav item "Hoá đơn" có class active và `aria-current="page"`
+
+#### Scenario: Sidebar collapse trên mobile
+- **WHEN** viewport nhỏ hơn `lg` breakpoint (1024px)
+- **THEN** sidebar collapse mặc định, có nút toggle để mở/đóng và navigation link có touch target tối thiểu 44px
+
+#### Scenario: Collapsed desktop rail remains accessible
+- **WHEN** desktop sidebar được thu gọn thành icon rail
+- **THEN** section label được thay bằng separator và mỗi navigation link vẫn có accessible name
+
+#### Scenario: Sidebar footer hiển thị email và role
+- **WHEN** user đã login và admin layout mount
+- **THEN** sidebar footer hiển thị email đầy đủ và role (`admin` / `manager`)
+
+#### Scenario: Avatar initial lấy từ email
+- **WHEN** user email là `abc@example.com`
+- **THEN** avatar hiển thị chữ `A` (ký tự đầu viết hoa)
+
+#### Scenario: Sidebar không xuất hiện ở portal
+- **WHEN** một route thuộc `/portal` được render
+- **THEN** AppSidebar nội bộ không được render
+
+---
+
+### Requirement: AppHeader tích hợp global actions với page header
+Trên desktop, AppHeader SHALL render như một global action rail ở góc phải để page title, description, page actions, pending-operations trigger, theme toggle, và user menu cùng nằm trong dải đầu trang mà không tạo một hàng header trống. Trên mobile, AppHeader SHALL giữ một hàng cao 64px với hamburger và global actions. User menu SHALL expose user info thật và logout action.
+
+#### Scenario: Header hiển thị đúng structure
+- **WHEN** admin layout mount
+- **THEN** `UiPageHeader` render title/description ở trái và dành đủ khoảng trống cho AppHeader global actions ở phải mà không overlap
+
+#### Scenario: Header có nút toggle sidebar trên mobile
+- **WHEN** viewport nhỏ hơn `lg` breakpoint
+- **THEN** header hiển thị hamburger button để toggle sidebar
+
+#### Scenario: Header exposes theme toggle
+- **WHEN** an internal user views any dashboard route
+- **THEN** the global action rail shows an accessible theme toggle immediately before the user menu
+
+#### Scenario: Header hiển thị email user đã đăng nhập
+- **WHEN** user đã login và đang ở admin page
+- **THEN** AppHeader hiển thị email của user hiện tại trong vùng user info
+
+#### Scenario: Logout từ AppHeader
+- **WHEN** user click nút logout trong AppHeader
+- **THEN** session bị xoá và user được redirect về `/login`
+
+#### Scenario: Pending operations indicator is truthful
+- **WHEN** `pendingOperations` có ít nhất một item
+- **THEN** nút chuông hiển thị chấm trạng thái và popover hiển thị tối đa năm item theo đúng thứ tự API
+
+#### Scenario: No pending operations
+- **WHEN** `pendingOperations` rỗng
+- **THEN** nút chuông không hiển thị chấm trạng thái và popover hiển thị positive empty state
+
+#### Scenario: Pending operations popover is keyboard accessible
+- **WHEN** người dùng mở popover bằng keyboard và nhấn Escape
+- **THEN** popover đóng và focus trở lại nút chuông
+
+---
+
+### Requirement: App root sử dụng NuxtLayout và NuxtPage
+`app/app.vue` SHALL render `<NuxtLayout>` và `<NuxtPage>` thay vì `NuxtWelcome`.
+
+#### Scenario: App root không render NuxtWelcome
+- **WHEN** app khởi động
+- **THEN** `<NuxtWelcome>` không còn trong DOM; `<NuxtLayout>` và `<NuxtPage>` được render
+
+---
+
+### Requirement: Dashboard page tồn tại trong internal namespace
+`pages/dashboard/index.vue` SHALL tồn tại và render trong default layout với tiêu đề "Dashboard". `pages/index.vue` SHALL act as a role-based landing route.
+
+#### Scenario: Route /dashboard render dashboard page
+- **WHEN** internal user truy cập `/dashboard`
+- **THEN** trang hiển thị với tiêu đề "Dashboard" trong default layout
+
+#### Scenario: Route gốc điều hướng theo role
+- **WHEN** authenticated user truy cập `/`
+- **THEN** app redirect qua `getRedirectByRole(role)`
+
+---
+
+### Requirement: Login page với Supabase Auth
+`pages/login.vue` SHALL render trong auth layout với form email/password thật nối Supabase Auth. Form SHALL xử lý loading state và error message.
+
+#### Scenario: Route /login render login page
+- **WHEN** người dùng truy cập `/login`
+- **THEN** trang hiển thị với auth layout (không có sidebar/header)
+
+#### Scenario: Login form submit thành công
+- **WHEN** user nhập đúng credentials và submit
+- **THEN** session được tạo, user redirect qua `getRedirectByRole(role)`
+
+#### Scenario: Login form hiển thị lỗi khi thất bại
+- **WHEN** user nhập sai credentials và submit
+- **THEN** form hiển thị error message, không redirect

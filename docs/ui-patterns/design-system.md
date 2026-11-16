@@ -1,3 +1,10 @@
+---
+type: Design System
+title: "design-system"
+status: stable
+tags: [engineering, reference]
+---
+
 # Zeno House — Operational Design System
 
 Hệ thống UI cho Zeno House được thiết kế cho **work tool nội bộ** với dashboard light/dark theme. Tối ưu cho:

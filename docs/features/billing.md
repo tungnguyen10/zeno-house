@@ -1,3 +1,10 @@
+---
+type: Feature Guide
+title: "billing"
+status: stable
+tags: [engineering, reference]
+---
+
 # Billing And Monthly Operations
 
 Billing is the highest-risk workflow in the app. It is implemented as a monthly period workspace per building.

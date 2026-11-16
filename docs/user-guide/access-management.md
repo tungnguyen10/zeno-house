@@ -1,3 +1,10 @@
+---
+type: User Guide
+title: "access-management"
+status: stable
+tags: [engineering, reference]
+---
+
 # Quản Lý Truy Cập Và Người Dùng
 
 Các màn hình trong chương này nằm trong mục **Cài đặt** và chủ yếu dành cho admin; một số phần owner cũng dùng được. Manager không thấy mục này.

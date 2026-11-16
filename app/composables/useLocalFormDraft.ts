@@ -17,6 +17,8 @@ interface UseLocalFormDraftOptions<T> {
   envelope?: boolean
   /** Debounce for autosave writes. Defaults to 500ms. */
   debounceMs?: number
+  /** Top-level keys never persisted; existing drafts are purged of them on read. */
+  omitKeys?: readonly string[]
 }
 
 function safeGetItem(storageKey: string): string | null {
@@ -78,6 +80,23 @@ function readDraftEnvelope<T>(storageKey: string): DraftEnvelope<T> | null {
 export function useLocalFormDraft<T = unknown>(options: UseLocalFormDraftOptions<T>) {
   const debounceMs = options.debounceMs ?? 500
   const useEnvelope = options.envelope ?? false
+  const omitKeys = options.omitKeys ?? []
+
+  function stripOmitted(value: T): T {
+    if (!omitKeys.length || !value || typeof value !== 'object' || Array.isArray(value)) return value
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).filter(([key]) => !omitKeys.includes(key)),
+    ) as T
+  }
+
+  function purgeStoredDraft() {
+    if (!omitKeys.length || !storageKey.value) return
+    const envelope = readDraftEnvelope<T>(storageKey.value)
+    if (!envelope?.data || typeof envelope.data !== 'object' || Array.isArray(envelope.data)) return
+    if (!omitKeys.some(key => Object.hasOwn(envelope.data as object, key))) return
+    const data = stripOmitted(envelope.data)
+    safeSetItem(storageKey.value, envelope.savedAt ? JSON.stringify({ savedAt: envelope.savedAt, data }) : JSON.stringify(data))
+  }
 
   const storageKey = computed<string | null>(() => toValue(options.key) || null)
 
@@ -94,10 +113,13 @@ export function useLocalFormDraft<T = unknown>(options: UseLocalFormDraftOptions
   const draftSavedAt = computed(() => draftEnvelope.value?.savedAt ?? '')
 
   function refreshHasDraft() {
+    purgeStoredDraft()
     draftVersion.value++
   }
 
   if (isHydrated.value) refreshHasDraft()
+
+  watch(storageKey, refreshHasDraft, { flush: 'sync' })
 
   onMounted(() => {
     isHydrated.value = true
@@ -119,8 +141,8 @@ export function useLocalFormDraft<T = unknown>(options: UseLocalFormDraftOptions
   function write(value: T) {
     if (!storageKey.value) return
     const payload = useEnvelope
-      ? JSON.stringify({ savedAt: new Date().toISOString(), data: value })
-      : JSON.stringify(value)
+      ? JSON.stringify({ savedAt: new Date().toISOString(), data: stripOmitted(value) })
+      : JSON.stringify(stripOmitted(value))
     safeSetItem(storageKey.value, payload)
     refreshHasDraft()
   }
@@ -138,11 +160,17 @@ export function useLocalFormDraft<T = unknown>(options: UseLocalFormDraftOptions
   }
 
   function restoreDraft(): T | null {
+    purgeStoredDraft()
     if (!storageKey.value) return null
     const envelope = readDraftEnvelope<T>(storageKey.value)
     if (envelope === null) return null
-    if (options.formData) options.formData.value = envelope.data
-    return envelope.data
+    const data = stripOmitted(envelope.data)
+    if (options.formData) {
+      options.formData.value = omitKeys.length && options.formData.value && typeof options.formData.value === 'object'
+        ? { ...options.formData.value, ...data } as T
+        : data
+    }
+    return data
   }
 
   function clearDraft() {

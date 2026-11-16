@@ -4,6 +4,9 @@ export type ErrorCode =
   | 'NOT_FOUND'
   | 'VALIDATION_ERROR'
   | 'CONFLICT'
+  | 'TENANT_DUPLICATE'
+  | 'TENANT_IDENTITY_CONFLICT'
+  | 'RATE_LIMITED'
   | 'INTERNAL'
 
 export type ApiSuccess<T, M extends Record<string, unknown> = Record<string, unknown>> = {

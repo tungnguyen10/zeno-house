@@ -1,3 +1,10 @@
+---
+type: Architecture Reference
+title: "api"
+status: stable
+tags: [engineering, reference]
+---
+
 # API Reference
 
 All business APIs live under `server/api/**`. The generated route inventory and its pagination/cache/performance contract live in [`docs/api-inventory.md`](../api-inventory.md). Regenerate it with `node scripts/generate-api-inventory.mjs` whenever handlers change.

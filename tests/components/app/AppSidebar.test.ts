@@ -76,6 +76,7 @@ describe('AppSidebar role visibility', () => {
       '/dashboard/buildings',
       '/dashboard/rooms',
       '/dashboard/tenants',
+      '/dashboard/tenant-support-requests',
       '/dashboard/contracts',
     ])
     expect(hrefsIn('finance')).toEqual([

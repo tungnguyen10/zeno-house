@@ -86,6 +86,12 @@ const UiButton = defineComponent({
   template: '<button :type="type ?? \'submit\'" :disabled="disabled" @click="$emit(\'click\')"><slot /></button>',
 })
 const UiAlert = defineComponent({ template: '<div><slot /></div>' })
+const tenantPickerStub = defineComponent({
+  name: 'TenantPicker',
+  props: ['modelValue', 'excludeTenantIds', 'excludeContractId', 'required', 'disabled', 'error', 'id'],
+  emits: ['update:modelValue', 'selected'],
+  template: '<div class="tenant-picker" />',
+})
 
 function buildForm(overrides: Partial<ContractFormData> = {}): ContractFormData {
   return {
@@ -117,6 +123,7 @@ function mountForm(modelValue: ContractFormData, showHandover = true, extraProps
         UiSelect: passthroughSelect,
         UiTextarea: passthroughTextarea,
         UiCombobox: passthroughCombobox,
+        TenantPicker: tenantPickerStub,
         UiButton,
         UiAlert,
       },

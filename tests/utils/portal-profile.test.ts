@@ -1,76 +1,38 @@
 import { describe, expect, it } from 'vitest'
 import type { TenantProfile } from '~/types/tenant-portal'
-import {
-  buildTenantProfileChanges,
-  toTenantProfileEditForm,
-  validateTenantProfileChanges,
-} from '~/utils/portal-profile'
+import { buildTenantProfileChanges, toTenantProfileEditForm, validateTenantProfileChanges } from '~/utils/portal-profile'
 
-const profile: TenantProfile = {
-  id: 'tenant-1',
-  code: 'KH-024',
-  status: 'active',
-  fullName: 'Nguyễn Thanh Tùng',
-  phone: '0901234567',
-  email: 'tung@example.com',
-  gender: 'male',
-  dateOfBirth: '1995-08-12',
-  occupation: null,
-  permanentAddress: 'Quận 7, TP.HCM',
-  idNumber: '079095001234',
-  idIssuedDate: '2021-05-10',
-  idIssuedPlace: 'Cục CSQLHC',
-  emergencyContactName: null,
-  emergencyContactPhone: null,
-  notes: null,
-}
+const profile = {
+  id: 'tenant-1', code: 'QA-001', status: 'active', fullName: 'Khách Giả Lập',
+  phone: '0900000000', email: 'fixture@example.test', gender: 'other', dateOfBirth: '1990-01-01',
+  occupation: null, permanentAddress: 'Địa chỉ giả lập', idNumber: 'FAKE0001',
+  idIssuedDate: '2020-01-01', idIssuedPlace: 'Nơi cấp giả lập',
+  emergencyContactName: null, emergencyContactPhone: null,
+} satisfies TenantProfile
 
-describe('portal profile edit model', () => {
-  it('maps nullable DTO values to editable strings', () => {
-    expect(toTenantProfileEditForm(profile)).toEqual({
-      full_name: 'Nguyễn Thanh Tùng',
-      phone: '0901234567',
-      gender: 'male',
-      date_of_birth: '1995-08-12',
-      occupation: '',
-      permanent_address: 'Quận 7, TP.HCM',
-      id_number: '079095001234',
-      id_issued_date: '2021-05-10',
-      id_issued_place: 'Cục CSQLHC',
-      emergency_contact_name: '',
-      emergency_contact_phone: '',
-      notes: '',
+describe('portal four-field contact edit model', () => {
+  it('only maps four contact fields even when a stale DTO contains internal notes', () => {
+    expect(toTenantProfileEditForm({ ...profile, notes: 'Private fixture' } as TenantProfile)).toEqual({
+      phone: '0900000000', occupation: '', emergency_contact_name: '', emergency_contact_phone: '',
     })
   })
-
-  it('returns null when normalized values are unchanged', () => {
+  it('keeps optional whitespace clean and does not change equal normalized values', () => {
     const baseline = toTenantProfileEditForm(profile)
     expect(buildTenantProfileChanges({ ...baseline, occupation: '   ' }, baseline)).toBeNull()
   })
-
-  it('returns only changed fields and normalizes optional blanks to null', () => {
-    const baseline = toTenantProfileEditForm(profile)
-    expect(buildTenantProfileChanges({
-      ...baseline,
-      phone: ' 0999999999 ',
-      permanent_address: '   ',
-      id_number: ' 079095009999 ',
-      id_issued_date: '',
-      id_issued_place: ' Cục Cảnh sát QLHC về TTXH ',
-    }, baseline)).toEqual({
-      phone: '0999999999',
-      permanent_address: null,
-      id_number: '079095009999',
-      id_issued_date: null,
-      id_issued_place: 'Cục Cảnh sát QLHC về TTXH',
-    })
+  it('only submits changed contact fields and clears optional fields to null', () => {
+    const baseline = toTenantProfileEditForm({ ...profile, occupation: 'Old work', emergencyContactName: 'Old contact', emergencyContactPhone: '0900000001' })
+    expect(buildTenantProfileChanges({ ...baseline, phone: ' 0900000002 ', occupation: '   ', emergency_contact_name: '', emergency_contact_phone: '' }, baseline))
+      .toEqual({ phone: '0900000002', occupation: null, emergency_contact_name: null, emergency_contact_phone: null })
   })
-
-  it('returns field errors for invalid changed values', () => {
+  it('ignores stale legal/internal model keys when constructing mutations', () => {
     const baseline = toTenantProfileEditForm(profile)
-    const changes = buildTenantProfileChanges({ ...baseline, full_name: ' ' }, baseline)
-    const result = validateTenantProfileChanges(changes)
-    expect(result.data).toBeNull()
-    expect(result.fieldErrors.full_name?.[0]).toBe('Họ tên không được trống')
+    const stale = { ...baseline, phone: '0900000002', full_name: 'Other', id_number: 'OTHER', notes: 'Private' }
+    expect(buildTenantProfileChanges(stale, baseline)).toEqual({ phone: '0900000002' })
+  })
+  it('validates the canonical phone and rejects empty phone', () => {
+    expect(validateTenantProfileChanges({ phone: '+84 90 000 0000' }).data).toEqual({ phone: '0900000000' })
+    expect(validateTenantProfileChanges({ phone: '' }).fieldErrors.phone).toEqual(['Số điện thoại không được trống'])
+    expect(validateTenantProfileChanges(null)).toEqual({ data: null, fieldErrors: {} })
   })
 })

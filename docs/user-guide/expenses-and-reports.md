@@ -1,3 +1,10 @@
+---
+type: User Guide
+title: "expenses-and-reports"
+status: stable
+tags: [engineering, reference]
+---
+
 # Chi Phí Và Báo Cáo Vận Hành
 
 Báo cáo vận hành không thay thế billing — doanh thu luôn được đọc từ dữ liệu billing (hóa đơn/thanh toán), còn chi phí là dữ liệu bạn nhập thêm theo từng tòa nhà/tháng.

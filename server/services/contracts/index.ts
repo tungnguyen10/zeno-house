@@ -3,10 +3,16 @@ import { randomUUID } from 'node:crypto'
 import type { AuthUser } from '~/types/auth'
 import type { ContractWithDetails } from '~/types/contracts'
 import type { ContractBulkActionInput, ContractCreateInput, ContractUpdateInput } from '~/utils/validators/contracts'
+import type { InventoryItemInput } from '~/utils/validators/inventory'
+import type { HandoverInventory } from '~/types/inventory'
 import { ContractRepository, type ContractFilters } from '../../repositories/contracts'
+import { InventoryRepository } from '../../repositories/inventory'
 import { BulkActionRepository } from '../../repositories/bulk-actions'
-import { ContractServiceService } from '../contract-services'
 import { ContractOccupantRepository } from '../../repositories/contract-occupants'
+import { ContractVehicleRepository } from '../../repositories/contract-vehicles'
+import { mapContractVehicle } from '~/utils/mappers/contract-vehicles'
+import type { ContractVehicle } from '~/types/contract-vehicles'
+import type { ContractVehicleInput } from '~/utils/validators/contract-vehicles'
 import { RoomRepository } from '../../repositories/rooms'
 import { BuildingRepository } from '../../repositories/buildings'
 import { TenantRepository } from '../../repositories/tenants'
@@ -22,6 +28,7 @@ interface ContractDeleteConflictDetails {
   paidPayments?: number
   nonHandoverMeterReadings?: number
   publishedAmendments?: number
+  contractDocuments?: number
 }
 
 export interface ContractBulkActionResult {
@@ -36,6 +43,7 @@ function hasDeleteConflicts(details: ContractDeleteConflictDetails): boolean {
     || (details.paidPayments && details.paidPayments > 0)
     || (details.nonHandoverMeterReadings && details.nonHandoverMeterReadings > 0)
     || (details.publishedAmendments && details.publishedAmendments > 0)
+    || (details.contractDocuments && details.contractDocuments > 0)
   )
 }
 
@@ -66,6 +74,7 @@ function bulkFailureReason(err: unknown): string {
   if (details?.issuedBillingPeriods && details.issuedBillingPeriods > 0) return 'has_billing_history'
   if (details?.paidPayments && details.paidPayments > 0) return 'has_paid_invoices'
   if (details?.nonHandoverMeterReadings && details.nonHandoverMeterReadings > 0) return 'has_meter_readings'
+  if (details?.contractDocuments && details.contractDocuments > 0) return 'has_contract_documents'
   return 'conflict'
 }
 
@@ -147,46 +156,144 @@ export const ContractService = {
       throwConflict(`Phòng "${room.roomNumber}" chưa được đặt giá thuê. Vui lòng cập nhật giá phòng trước khi tạo hợp đồng.`)
     }
 
-    const contract = await ContractRepository.createWithHandover(
+    // Friendly roommate pre-checks for nicer messages; create_contract_full also
+    // enforces these atomically (CONTRACT_OCCUPANT_BUSY / _PRIMARY / _LIMIT).
+    for (const occupant of input.occupants ?? []) {
+      const asPrimary = await ContractRepository.findActiveByTenantId(event, occupant.tenant_id)
+      if (asPrimary) throwConflict('Người ở cùng đang đứng tên hợp đồng khác')
+      const asOccupant = await ContractOccupantRepository.findActiveOccupancyByTenant(event, occupant.tenant_id)
+      if (asOccupant) throwConflict('Người ở cùng đang ở theo hợp đồng khác')
+    }
+
+    const buildingId = input.building_id ?? room.buildingId
+
+    // Default handover inventory to a snapshot of the room's current inventory
+    // when the client sends none; the RPC writes it in the same transaction.
+    const inventory: InventoryItemInput[] = input.inventory
+      ?? (await InventoryRepository.listRoom(event, room.id)).map(row => ({
+        name: row.name,
+        quantity: row.quantity,
+        condition: row.condition as InventoryItemInput['condition'],
+        unit_value: row.unit_value === null ? null : Number(row.unit_value),
+        note: row.note,
+      }))
+
+    const { contract, replayed } = await ContractRepository.createFull(
       event,
       {
-        ...input,
-        monthly_rent: resolvedRent,
-        building_id: input.building_id ?? room.buildingId,
+        contract: {
+          room_id: input.room_id,
+          tenant_id: input.tenant_id,
+          building_id: buildingId,
+          start_date: input.start_date,
+          end_date: input.end_date,
+          monthly_rent: resolvedRent,
+          deposit: input.deposit ?? 0,
+          payment_due_day: input.payment_due_day ?? null,
+          occupant_count: input.occupant_count ?? 1,
+          discount_amount: input.discount_amount ?? 0,
+          surcharge_amount: input.surcharge_amount ?? 0,
+          status: input.status ?? 'active',
+          notes: input.notes ?? null,
+          handover_electricity_reading: input.handover_electricity_reading,
+          handover_water_reading: input.handover_water_reading,
+          handover_reading_date: input.handover_reading_date && input.handover_reading_date.length > 0
+            ? input.handover_reading_date
+            : input.start_date,
+          recorded_by: user.id ?? null,
+        },
+        inventory,
+        occupants: (input.occupants ?? []).map(o => ({ tenant_id: o.tenant_id, move_in_date: o.move_in_date, billing_counted: o.billing_counted })),
+        vehicles: input.vehicles ?? [],
+        services: input.services ?? null,
       },
-      user.id ?? null,
+      { actorId: user.id, requestId: input.request_id },
     )
 
-    // Best-effort: clone active building_services → contract_services
-    const buildingId = input.building_id ?? room.buildingId
-    if (buildingId) {
-      await ContractServiceService.cloneFromBuilding(event, contract.id, buildingId)
-    }
-
-    const correlationId = randomUUID()
-    if (input.status === 'active' || !input.status) {
-      const updatedRoom = await RoomRepository.update(event, input.room_id, { status: 'occupied' })
+    if (!replayed) {
+      const correlationId = randomUUID()
+      if (contract.status === 'active') {
+        await AuditService.append(event, user, {
+          building_id: room.buildingId,
+          action: AUDIT_ACTIONS.ROOM_UPDATED,
+          entity_type: 'room',
+          entity_id: room.id,
+          correlation_id: correlationId,
+          before_data: room,
+          after_data: { ...room, status: 'occupied' },
+        })
+      }
       await AuditService.append(event, user, {
-        building_id: room.buildingId,
-        action: AUDIT_ACTIONS.ROOM_UPDATED,
-        entity_type: 'room',
-        entity_id: room.id,
+        building_id: contract.buildingId,
+        action: AUDIT_ACTIONS.CONTRACT_CREATED,
+        entity_type: 'contract',
+        entity_id: contract.id,
         correlation_id: correlationId,
-        before_data: room,
-        after_data: updatedRoom,
+        after_data: contract,
       })
+      for (const occupant of input.occupants ?? []) {
+        await AuditService.append(event, user, {
+          building_id: contract.buildingId,
+          action: AUDIT_ACTIONS.CONTRACT_OCCUPANT_ADDED,
+          entity_type: 'contract_occupant',
+          entity_id: null,
+          correlation_id: correlationId,
+          metadata: { contract_id: contract.id, tenant_id: occupant.tenant_id },
+        })
+      }
+      if (input.vehicles?.length) {
+        await AuditService.append(event, user, {
+          building_id: contract.buildingId,
+          action: AUDIT_ACTIONS.CONTRACT_VEHICLES_UPDATED,
+          entity_type: 'contract',
+          entity_id: contract.id,
+          correlation_id: correlationId,
+          metadata: { count: input.vehicles.length },
+        })
+      }
     }
-
-    await AuditService.append(event, user, {
-      building_id: contract.buildingId,
-      action: AUDIT_ACTIONS.CONTRACT_CREATED,
-      entity_type: 'contract',
-      entity_id: contract.id,
-      correlation_id: correlationId,
-      after_data: contract,
-    })
 
     return contract
+  },
+
+  async getVehicles(event: H3Event, user: AuthUser, identifier: string): Promise<ContractVehicle[]> {
+    requireCapability(user, 'contracts.read', 'Không có quyền xem hợp đồng')
+    const contract = await ContractRepository.findByIdentifier(event, identifier)
+    if (!contract) throwNotFound('Không tìm thấy hợp đồng')
+    await assertBuildingScope(event, user, contract.buildingId, 'read')
+    return (await ContractVehicleRepository.list(event, contract.id)).map(mapContractVehicle)
+  },
+
+  async saveVehicles(event: H3Event, user: AuthUser, identifier: string, items: ContractVehicleInput[]): Promise<ContractVehicle[]> {
+    requireCapability(user, 'contracts.update', 'Không có quyền cập nhật hợp đồng')
+    const contract = await ContractRepository.findByIdentifier(event, identifier)
+    if (!contract) throwNotFound('Không tìm thấy hợp đồng')
+    await assertBuildingScope(event, user, contract.buildingId, 'write')
+    const rows = await ContractVehicleRepository.replace(event, contract.id, items)
+    await AuditService.append(event, user, {
+      building_id: contract.buildingId,
+      action: AUDIT_ACTIONS.CONTRACT_VEHICLES_UPDATED,
+      entity_type: 'contract',
+      entity_id: contract.id,
+      metadata: { count: items.length },
+    })
+    return rows.map(mapContractVehicle)
+  },
+
+  async updateHandoverInventory(event: H3Event, user: AuthUser, identifier: string, items: InventoryItemInput[]): Promise<HandoverInventory> {
+    requireCapability(user, 'contracts.update', 'Không có quyền cập nhật hợp đồng')
+    const contract = await ContractRepository.findByIdentifier(event, identifier)
+    if (!contract) throwNotFound('Không tìm thấy hợp đồng')
+    await assertBuildingScope(event, user, contract.buildingId, 'write')
+    await InventoryRepository.replaceContract(event, contract.id, items)
+    await AuditService.append(event, user, {
+      building_id: contract.buildingId,
+      action: AUDIT_ACTIONS.ROOM_INVENTORY_UPDATED,
+      entity_type: 'contract',
+      entity_id: contract.id,
+      metadata: { count: items.length, scope: 'handover' },
+    })
+    return ContractRepository.findHandoverInventory(event, contract.id)
   },
 
   async update(event: H3Event, user: AuthUser, id: string, input: ContractUpdateInput): Promise<ContractWithDetails> {
@@ -303,11 +410,12 @@ export const ContractService = {
 
     if (existing.status === 'active') throwDeleteConflict({ reason: 'ACTIVE_CONTRACT' })
 
-    const [issuedBillingPeriods, paidPayments, nonHandoverMeterReadings, publishedAmendments] = await Promise.all([
+    const [issuedBillingPeriods, paidPayments, nonHandoverMeterReadings, publishedAmendments, contractDocuments] = await Promise.all([
       ContractRepository.countBillingPeriodsForContract(event, existing.id),
       ContractRepository.countPaidInvoicesForContract(event, existing.id),
       ContractRepository.countNonHandoverMeterReadingsForContract(event, existing.id),
       ContractAmendmentRepository.listPublishedByContract(event, existing.id),
+      ContractRepository.countDocumentsForContract(event, existing.id),
     ])
 
     const details: ContractDeleteConflictDetails = {
@@ -315,6 +423,7 @@ export const ContractService = {
       ...(paidPayments > 0 ? { paidPayments } : {}),
       ...(nonHandoverMeterReadings > 0 ? { nonHandoverMeterReadings } : {}),
       ...(publishedAmendments.length > 0 ? { publishedAmendments: publishedAmendments.length } : {}),
+      ...(contractDocuments > 0 ? { contractDocuments } : {}),
     }
 
     if (hasDeleteConflicts(details)) throwDeleteConflict(details)
@@ -371,5 +480,13 @@ export const ContractService = {
     })
 
     return { succeeded, failed }
+  },
+
+  async getHandoverInventory(event: H3Event, user: AuthUser, identifier: string): Promise<HandoverInventory> {
+    requireCapability(user, 'contracts.read', 'Không có quyền xem hợp đồng')
+    const contract = await ContractRepository.findByIdentifier(event, identifier)
+    if (!contract) throwNotFound('Không tìm thấy hợp đồng')
+    await assertBuildingScope(event, user, contract.buildingId, 'read')
+    return ContractRepository.findHandoverInventory(event, contract.id)
   },
 }

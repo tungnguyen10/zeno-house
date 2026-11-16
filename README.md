@@ -118,7 +118,7 @@ The feature is disabled by default in production until an explicit rollout enabl
 - Change workflow: `docs/development/change-workflow.md`
 - Testing guide: `docs/development/testing.md`
 - Operational design system: `docs/ui-patterns/design-system.md`
-- OpenSpec specs: `openspec/specs/**`
+- OKF knowledge and accepted specifications: `docs/index.md`
 
 ## Database
 

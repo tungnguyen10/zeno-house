@@ -1,3 +1,10 @@
+---
+type: User Guide
+title: "ai-assistant"
+status: stable
+tags: [engineering, reference]
+---
+
 # Trợ Lý AI
 
 Trợ lý AI giúp bạn vận hành billing bằng hội thoại tự nhiên: mở kỳ, nhập/sửa chỉ số, xem draft, phát hành hóa đơn, ghi thu, hủy/phát hành lại hóa đơn. Trợ lý chỉ chuẩn bị và giải thích thao tác — mọi kiểm tra quyền, tính tiền, xác thực dữ liệu và ghi log vẫn do hệ thống backend đảm nhiệm như khi bạn thao tác trực tiếp trên giao diện billing (xem [Vận hành billing và hóa đơn](billing-and-invoices.md)).

@@ -1,13 +1,13 @@
 import { BuildingService } from '../../services/buildings'
-import { buildingCreateSchema } from '~/utils/validators/buildings'
+import { buildingCreateWithRoomsSchema } from '~/utils/validators/buildings'
 
 export default defineEventHandler(async (event) => {
   const user = await requireAuth(event)
 
-  const input = await parseBody(event, buildingCreateSchema)
+  const input = await parseBody(event, buildingCreateWithRoomsSchema)
 
-  const building = await BuildingService.create(event, user, input)
+  const { building, roomCount } = await BuildingService.create(event, user, input)
 
   setResponseStatus(event, 201)
-  return { data: building }
+  return { data: building, meta: { room_count: roomCount } }
 })

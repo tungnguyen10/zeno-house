@@ -1,3 +1,10 @@
+---
+type: Development Guide
+title: "contract-amendments-rollout"
+status: stable
+tags: [engineering, reference]
+---
+
 # Contract Amendments Rollout
 
 Contract amendments require a database migration, generated types, private runtime configuration,

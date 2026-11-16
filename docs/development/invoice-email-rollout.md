@@ -1,3 +1,10 @@
+---
+type: Development Guide
+title: "invoice-email-rollout"
+status: stable
+tags: [engineering, reference]
+---
+
 # Invoice Email Delivery Rollout
 
 Invoice email has two independent default-off controls:

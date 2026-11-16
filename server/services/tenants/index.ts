@@ -12,6 +12,9 @@ import type {
 } from '~/utils/validators/tenants'
 import { tenantCreateSchema } from '~/utils/validators/tenants'
 import { TenantRepository, type TenantFilters } from '../../repositories/tenants'
+import { TenantIdentityUniqueViolation } from '../../repositories/tenants/identity-errors'
+import { TENANT_IDENTITY_CONFLICT_MESSAGE, TenantIdentityConflictService } from './identity-conflict'
+import { redactTenantAuditData } from '../../utils/tenant-audit-redaction'
 import { TenantAuthorizationService } from './authorization'
 import { TenantBulkStatusRepository } from '../../repositories/tenants/bulk-status'
 import { BulkActionRepository } from '../../repositories/bulk-actions'
@@ -62,7 +65,7 @@ export interface TenantBulkResult {
 
 export interface TenantBulkCreateFailure {
   line: number
-  reason: 'validation_error' | 'duplicate_in_file' | 'duplicate_id_number' | 'duplicate_phone_in_file' | 'duplicate_phone' | 'unexpected_error'
+  reason: 'validation_error' | 'duplicate_in_file' | 'duplicate_id_number' | 'duplicate_phone_in_file' | 'duplicate_phone' | 'identity_conflict' | 'unexpected_error'
   message: string
   fieldErrors?: Record<string, string[]>
 }
@@ -177,19 +180,25 @@ export const TenantService = {
 
   async create(event: H3Event, user: AuthUser, input: TenantCreateInput): Promise<Tenant> {
     requireCapability(user, 'tenants.create', 'Không có quyền tạo khách thuê')
-    const duplicatePhone = await TenantRepository.findByPhone(event, input.phone)
-    if (duplicatePhone) throwConflict('Số điện thoại đã tồn tại')
-    if (input.id_number) {
-      const existing = await TenantRepository.findByIdNumber(event, input.id_number)
-      if (existing) throwConflict('Số CMND/CCCD đã tồn tại')
+    const candidate = { phone: input.phone, idNumber: input.id_number ?? null }
+    await TenantIdentityConflictService.assertAvailable(event, user, candidate, 'create')
+    let result: Tenant
+    try {
+      result = await TenantRepository.insert(event, input)
     }
-    const result = await TenantRepository.insert(event, input)
+    catch (error) {
+      if (error instanceof TenantIdentityUniqueViolation) {
+        return TenantIdentityConflictService.rejectUniqueViolation(event, user, candidate, 'create')
+      }
+      throw error
+    }
+    const redacted = redactTenantAuditData(null, result)
     await AuditService.append(event, user, {
       building_id: null,
       action: AUDIT_ACTIONS.TENANT_CREATED,
       entity_type: 'tenant',
       entity_id: result.id,
-      after_data: result,
+      after_data: redacted.after,
     })
     return withSignedTenantIdImages(event, result)
   },
@@ -200,6 +209,7 @@ export const TenantService = {
     input: TenantBulkCreateInput,
   ): Promise<TenantBulkCreateResult> {
     requireCapability(user, 'tenants.create', 'Không có quyền tạo khách thuê')
+    await TenantIdentityConflictService.assertWithinLimit(event, user)
 
     const created: Tenant[] = []
     const failed: TenantBulkCreateFailure[] = []
@@ -241,13 +251,27 @@ export const TenantService = {
       valid.push({ line: row.line, data: parsed.data })
     }
 
-    const existing = await TenantRepository.findExistingIdentifiers(
-      event,
-      valid.map(item => item.data.phone),
-      valid.flatMap(item => item.data.id_number ? [item.data.id_number] : []),
-    )
+    const matches = await TenantRepository.findIdentityMatches(event, {
+      phones: valid.map(item => item.data.phone),
+      idNumbers: valid.flatMap(item => item.data.id_number ? [item.data.id_number] : []),
+    })
+    const { specific, generic } = await TenantIdentityConflictService.classify(event, user, matches, 'import')
+    const valuesOf = (list: typeof matches, field: 'phone' | 'id_number') =>
+      new Set(list.filter(match => match.field === field).map(match => match.value))
+    const genericPhones = valuesOf(generic, 'phone')
+    const genericIds = valuesOf(generic, 'id_number')
+    const specificPhones = valuesOf(specific, 'phone')
+    const specificIds = valuesOf(specific, 'id_number')
+    let conflictRows = 0
     const insertable = valid.filter((item) => {
-      if (existing.phones.has(item.data.phone)) {
+      const idNumber = item.data.id_number
+      if (genericPhones.has(item.data.phone) || (idNumber && genericIds.has(idNumber))) {
+        conflictRows++
+        failed.push({ line: item.line, reason: 'identity_conflict', message: TENANT_IDENTITY_CONFLICT_MESSAGE })
+        return false
+      }
+      if (specificPhones.has(item.data.phone)) {
+        conflictRows++
         failed.push({
           line: item.line,
           reason: 'duplicate_phone',
@@ -256,7 +280,8 @@ export const TenantService = {
         })
         return false
       }
-      if (item.data.id_number && existing.idNumbers.has(item.data.id_number)) {
+      if (idNumber && specificIds.has(idNumber)) {
+        conflictRows++
         failed.push({
           line: item.line,
           reason: 'duplicate_id_number',
@@ -267,6 +292,7 @@ export const TenantService = {
       }
       return true
     })
+    await TenantIdentityConflictService.recordConflicts(event, user, generic, 'import', conflictRows)
 
     if (insertable.length > 0) {
       try {
@@ -296,22 +322,26 @@ export const TenantService = {
 
   async update(event: H3Event, user: AuthUser, id: string, input: TenantUpdateInput): Promise<Tenant> {
     const { tenant: existing } = await TenantAuthorizationService.assertAccess(event, user, id, 'update_profile')
-    if (input.phone !== undefined) {
-      const conflictPhone = await TenantRepository.findByPhone(event, input.phone, existing.id)
-      if (conflictPhone) throwConflict('Số điện thoại đã tồn tại')
+    const candidate = { phone: input.phone, idNumber: input.id_number ?? null, excludeId: existing.id }
+    await TenantIdentityConflictService.assertAvailable(event, user, candidate, 'update')
+    let updated: Tenant
+    try {
+      updated = await TenantRepository.update(event, existing.id, input)
     }
-    if (input.id_number) {
-      const conflict = await TenantRepository.findByIdNumber(event, input.id_number, existing.id)
-      if (conflict) throwConflict('Số CMND/CCCD đã tồn tại')
+    catch (error) {
+      if (error instanceof TenantIdentityUniqueViolation) {
+        return TenantIdentityConflictService.rejectUniqueViolation(event, user, candidate, 'update')
+      }
+      throw error
     }
-    const updated = await TenantRepository.update(event, existing.id, input)
+    const redacted = redactTenantAuditData(existing, updated)
     await AuditService.append(event, user, {
       building_id: null,
       action: AUDIT_ACTIONS.TENANT_UPDATED,
       entity_type: 'tenant',
       entity_id: updated.id,
-      before_data: existing,
-      after_data: updated,
+      before_data: redacted.before,
+      after_data: redacted.after,
     })
     return withSignedTenantIdImages(event, updated)
   },
@@ -355,8 +385,8 @@ export const TenantService = {
 
     await AuditOperationService.complete(event, operation.id, {
       outcomeData: { storage: 'uploaded', side },
-      beforeData: existing,
-      afterData: updated,
+      beforeData: redactTenantAuditData(existing, updated).before,
+      afterData: redactTenantAuditData(existing, updated).after,
       metadata: { kind: 'tenant_id_image_upload', side },
     })
 
@@ -388,8 +418,8 @@ export const TenantService = {
 
     await AuditOperationService.complete(event, operation.id, {
       outcomeData: { storage: previousPath ? 'removed' : 'absent', side },
-      beforeData: existing,
-      afterData: updated,
+      beforeData: redactTenantAuditData(existing, updated).before,
+      afterData: redactTenantAuditData(existing, updated).after,
       metadata: { kind: 'tenant_id_image_remove', side },
     })
 
@@ -420,8 +450,8 @@ export const TenantService = {
         action: AUDIT_ACTIONS.TENANT_ARCHIVED,
         entity_type: 'tenant',
         entity_id: existing.id,
-        before_data: existing,
-        after_data: archived,
+        before_data: redactTenantAuditData(existing, archived).before,
+        after_data: redactTenantAuditData(existing, archived).after,
         metadata: { reason: opts.reason },
       })
       return archived
@@ -456,7 +486,7 @@ export const TenantService = {
       action: AUDIT_ACTIONS.TENANT_REMOVED,
       entity_type: 'tenant',
       entity_id: existing.id,
-      before_data: existing,
+      before_data: redactTenantAuditData(existing, null).before,
       metadata: { reason: opts.reason },
     })
     return undefined
@@ -515,7 +545,7 @@ export const TenantService = {
         building_id: null,
         entity_type: 'tenant',
         aggregate_action: `tenant.bulk_${input.action}`,
-        items: succeeded.map(id => ({ entity_id: id, building_id: contexts.get(id)!.activeBuildingIds[0] ?? contexts.get(id)!.historicalBuildingIds[0] ?? null, action, before_data: beforeSnapshots.get(id), after_data: afterSnapshots.get(id) })),
+        items: succeeded.map(id => ({ entity_id: id, building_id: contexts.get(id)!.activeBuildingIds[0] ?? contexts.get(id)!.historicalBuildingIds[0] ?? null, action, before_data: redactTenantAuditData(beforeSnapshots.get(id), afterSnapshots.get(id)).before, after_data: redactTenantAuditData(beforeSnapshots.get(id), afterSnapshots.get(id)).after })),
         succeeded,
         total: ids.length,
         failed: failed.length,

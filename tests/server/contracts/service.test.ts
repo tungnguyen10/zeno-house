@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
   update: vi.fn(),
   remove: vi.fn(),
   createWithHandover: vi.fn(),
+  createFull: vi.fn(),
   findBuildingByIdentifier: vi.fn(),
   findRoomById: vi.fn(),
   updateRoom: vi.fn(),
@@ -30,6 +31,7 @@ vi.mock('../../../server/repositories/contracts', () => ({
     update: mocks.update,
     remove: mocks.remove,
     createWithHandover: mocks.createWithHandover,
+    createFull: mocks.createFull,
   },
 }))
 
@@ -69,6 +71,10 @@ vi.mock('../../../server/repositories/contract-amendments', () => ({
     listPublishedByContract: vi.fn().mockResolvedValue([]),
     deleteDraftsByContract: vi.fn().mockResolvedValue([]),
   },
+}))
+
+vi.mock('../../../server/repositories/inventory', () => ({
+  InventoryRepository: { listRoom: () => Promise.resolve([]) },
 }))
 
 function buildContractWithDetails() {
@@ -198,7 +204,7 @@ describe('ContractService.create with handover readings', () => {
     mocks.findActiveByRoomId.mockResolvedValue(null)
     mocks.findActiveByTenantId.mockResolvedValue(null)
     mocks.findActiveOccupancyByTenant.mockResolvedValue(null)
-    mocks.createWithHandover.mockResolvedValue(contract)
+    mocks.createFull.mockResolvedValue({ contract, replayed: false })
 
     const { ContractService } = await import('../../../server/services/contracts')
 
@@ -206,6 +212,7 @@ describe('ContractService.create with handover readings', () => {
       event(),
       user(),
       {
+        request_id: '0a8a4dd0-7d6f-4f4e-bc7e-3c5e1b800000',
         room_id: 'room-1',
         tenant_id: 'tenant-1',
         start_date: '2026-06-01',
@@ -224,9 +231,9 @@ describe('ContractService.create with handover readings', () => {
       },
     )
 
-    expect(mocks.createWithHandover).toHaveBeenCalledTimes(1)
-    const [, payload, recordedBy] = mocks.createWithHandover.mock.calls[0]!
-    expect(payload).toMatchObject({
+    expect(mocks.createFull).toHaveBeenCalledTimes(1)
+    const [, payload, opts] = mocks.createFull.mock.calls[0]!
+    expect(payload.contract).toMatchObject({
       room_id: 'room-1',
       tenant_id: 'tenant-1',
       building_id: 'building-1',
@@ -234,8 +241,9 @@ describe('ContractService.create with handover readings', () => {
       handover_electricity_reading: 1250,
       handover_water_reading: 80,
       handover_reading_date: '2026-06-01',
+      recorded_by: 'user-1',
     })
-    expect(recordedBy).toBe('user-1')
+    expect(opts).toMatchObject({ actorId: 'user-1', requestId: '0a8a4dd0-7d6f-4f4e-bc7e-3c5e1b800000' })
     expect(result.id).toBe(contract.id)
   })
 
@@ -276,6 +284,6 @@ describe('ContractService.create with handover readings', () => {
       ),
     ).rejects.toThrow()
 
-    expect(mocks.createWithHandover).not.toHaveBeenCalled()
+    expect(mocks.createFull).not.toHaveBeenCalled()
   })
 })

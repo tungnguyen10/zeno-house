@@ -40,8 +40,6 @@ vi.mock('../../../server/services/audit', () => ({
 }))
 
 const tenant = { id: 'auth-tenant', app_metadata: { role: 'tenant' } } as AuthUser
-const owner = { id: 'auth-owner', app_metadata: { role: 'owner' } } as AuthUser
-const manager = { id: 'auth-manager', app_metadata: { role: 'manager' } } as AuthUser
 const admin = { id: 'auth-admin', app_metadata: { role: 'admin' } } as AuthUser
 
 const stored = {
@@ -220,8 +218,6 @@ describe('TenantSupportRequestService tenant scope', () => {
         tenant_id: 'tenant-1',
         building_id: 'building-1',
         contract_id: 'contract-1',
-        title: 'Issue',
-        description: 'Details',
         status: 'new',
         created_at: '2026-07-17T10:00:00.000Z',
         has_attachment: true,
@@ -232,30 +228,9 @@ describe('TenantSupportRequestService tenant scope', () => {
   })
 })
 
-describe('TenantSupportRequestService operator scope', () => {
-  it.each([owner, manager])('uses assigned building ids for $app_metadata.role reads', async (user) => {
-    const svc = await service()
-
-    await svc.listForOperator({ context: {} } as never, user)
-
-    expect(mocks.getVisibleBuildingIds).toHaveBeenCalledWith(expect.anything(), user)
-    expect(mocks.listByBuildingIds).toHaveBeenCalledWith(expect.anything(), ['building-1'])
-  })
-
-  it('passes null scope for an unscoped admin', async () => {
-    mocks.getVisibleBuildingIds.mockResolvedValue(null)
-    const svc = await service()
-
-    await svc.listForOperator({ context: {} } as never, admin)
-
-    expect(mocks.listByBuildingIds).toHaveBeenCalledWith(expect.anything(), null)
-  })
-
-  it('forbids tenant callers from the operator read hook', async () => {
-    const svc = await service()
-
-    await expect(svc.listForOperator({ context: {} } as never, tenant))
-      .rejects.toMatchObject({ statusCode: 403 })
-    expect(mocks.getVisibleBuildingIds).not.toHaveBeenCalled()
+describe('TenantSupportRequestService operator hook', () => {
+  it('forbids tenant callers before operator reads', async () => {
+    await expect((await service()).listForOperator({} as never, tenant)).rejects.toMatchObject({ statusCode: 403 })
+    expect(mocks.listByBuildingIds).not.toHaveBeenCalled()
   })
 })

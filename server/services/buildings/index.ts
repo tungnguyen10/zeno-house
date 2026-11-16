@@ -4,13 +4,12 @@ import type { AuthUser } from '~/types/auth'
 import type { Building } from '~/types/buildings'
 import type {
   BuildingBulkActionInput,
-  BuildingCreateInput,
+  BuildingCreateWithRoomsInput,
   BuildingUpdateInput,
   BuildingVisibilityInput,
 } from '~/utils/validators/buildings'
 import { BuildingRepository } from '../../repositories/buildings'
 import { BulkActionRepository } from '../../repositories/bulk-actions'
-import { AssignmentRepository } from '../../repositories/assignments'
 import { assertBuildingScope, getAssignedBuildingIds, getVisibleBuildingIds } from '../../utils/scope'
 import { AuditService } from '../audit'
 import { AUDIT_ACTIONS } from '~/utils/constants/audit'
@@ -58,54 +57,56 @@ export const BuildingService = {
   async create(
     event: H3Event,
     user: AuthUser,
-    input: BuildingCreateInput,
-  ): Promise<Building> {
+    input: BuildingCreateWithRoomsInput,
+  ): Promise<{ building: Building; roomCount: number }> {
     requireCapability(user, 'buildings.create', 'Không có quyền tạo tòa nhà')
+    const { rooms = [], request_id: requestId, ...buildingInput } = input
+    if (rooms.length > 0) requireCapability(user, 'rooms.create', 'Không có quyền tạo phòng')
 
     const owner = isOwner(user)
-    // Owner-created buildings record owner provenance; admin-created buildings
-    // record the creator only and stay globally visible (no owner scope).
-    const result = await BuildingRepository.insert(event, input, {
-      created_by: user.id,
-      owner_user_id: owner ? user.id : null,
+    // Building + owner assignment + rooms are created in one atomic RPC; the
+    // owner is assigned inside the same transaction so there is no partial state.
+    const result = await BuildingRepository.createWithRooms(event, buildingInput, rooms, {
+      actorId: user.id,
+      ownerUserId: owner ? user.id : null,
+      requestId: requestId ?? randomUUID(),
     })
+    // Invalidate the per-request scope cache so a follow-up read in the same
+    // request includes the newly created building.
+    event.context.__buildingScope = undefined
 
-    if (owner) {
-      // Auto-assign the new building to the owner in the same workflow so the
-      // owner immediately has scoped access. If the assignment fails, roll back
-      // the building to avoid a partially inaccessible record.
-      try {
-        await AssignmentRepository.insert(event, {
-          user_id: user.id,
-          building_id: result.id,
-          created_by: user.id,
+    if (!result.replayed) {
+      const buildingId = result.building.id
+      if (owner) {
+        await AuditService.append(event, user, {
+          building_id: buildingId,
+          action: AUDIT_ACTIONS.USER_ASSIGNMENT_ADDED,
+          entity_type: 'user',
+          entity_id: user.id,
+          metadata: { building_id: buildingId, self_assigned: true },
         })
       }
-      catch (err) {
-        await BuildingRepository.remove(event, result.id).catch(() => {})
-        throw err
-      }
-      // Invalidate the per-request scope cache so a follow-up read in the same
-      // request includes the newly created building.
-      event.context.__buildingScope = undefined
-
       await AuditService.append(event, user, {
-        building_id: result.id,
-        action: AUDIT_ACTIONS.USER_ASSIGNMENT_ADDED,
-        entity_type: 'user',
-        entity_id: user.id,
-        metadata: { building_id: result.id, self_assigned: true },
+        building_id: buildingId,
+        action: AUDIT_ACTIONS.BUILDING_CREATED,
+        entity_type: 'building',
+        entity_id: buildingId,
+        after_data: result.building,
+        metadata: { room_count: result.rooms.length, request_id: requestId ?? null },
       })
+      if (result.rooms.length > 0) {
+        await AuditService.appendBulk(event, user, {
+          building_id: buildingId,
+          entity_type: 'room',
+          aggregate_action: 'room.bulk_create',
+          items: result.rooms.map(room => ({ entity_id: room.id, action: AUDIT_ACTIONS.ROOM_CREATED, after_data: room })),
+          succeeded: result.rooms.map(room => room.id),
+          total: result.rooms.length,
+          failed: 0,
+        })
+      }
     }
-
-    await AuditService.append(event, user, {
-      building_id: result.id,
-      action: AUDIT_ACTIONS.BUILDING_CREATED,
-      entity_type: 'building',
-      entity_id: result.id,
-      after_data: result,
-    })
-    return result
+    return { building: result.building, roomCount: result.rooms.length }
   },
 
   async update(

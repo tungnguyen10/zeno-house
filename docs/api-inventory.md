@@ -1,3 +1,10 @@
+---
+type: API Inventory
+title: "api-inventory"
+status: stable
+tags: [engineering, reference]
+---
+
 # API Inventory And Performance Contracts
 
 Generated from checked-in handlers by `node scripts/generate-api-inventory.mjs`.

@@ -1,3 +1,10 @@
+---
+type: Development Guide
+title: "testing"
+status: stable
+tags: [engineering, reference]
+---
+
 # Testing
 
 The project uses Vitest for unit, service, repository, utility, and component tests.

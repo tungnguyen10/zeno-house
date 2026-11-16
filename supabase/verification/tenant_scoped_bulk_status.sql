@@ -52,7 +52,7 @@ union all
 select room_b, building_b, 'scope-room-' || room_b, 'scope-room-' || room_b, 'B'
 from tenant_status_scope_fixture;
 insert into public.tenants (id, code, full_name, phone, status)
-select id, 'scope-tenant-' || id, 'Scope fixture ' || kind, '0900000000',
+select id, 'scope-tenant-' || id, 'Scope fixture ' || kind, '+999' || lpad((floor(random() * 100000000000))::bigint::text, 11, '0'),
   case when kind = 'already_target' then 'archived' else 'active' end
 from tenant_status_people_fixture;
 

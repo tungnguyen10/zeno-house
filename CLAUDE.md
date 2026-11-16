@@ -1,22 +1,7 @@
 # Zeno House Claude Context
 
-Use checked-in project context and treat AGENTS.md as the canonical rule source.
+Read `AGENTS.md` as the canonical cross-agent rule source, then `docs/index.md`, `docs/agent-context.md` and one task-relevant `docs/capabilities/*.md`. All project documentation is under `docs/**`, and OKF v0.2 is the sole spec/knowledge format.
 
-## First Reads
+The only feature-delivery method is Superpowers. Follow `docs/workflow.md`; active proposal/design/execution evidence is stored under `docs/changes/<slug>/**`. Do not create a separate Superpowers specs/plans directory, `knowledge/**`, or OpenSpec artifacts. Archived documents in `docs/history/**` are provenance, not live requirements.
 
-1. AGENTS.md
-2. docs/agent-context.md
-3. The single architecture/feature/OpenSpec file that matches the task
-
-## Context Budget
-
-- Work delta-first: start from openspec/changes/<active-change>/tasks.md.
-- Read one matching capability spec in openspec/specs/**; do not scan all specs unless requested.
-- Keep scope to one checklist task at a time.
-- Avoid broad repo scans when focused reads are sufficient.
-
-## Rule Ownership
-
-- Repository rules, non-negotiables, and validation commands are owned by AGENTS.md.
-- Deep architecture guidance lives in docs/agent-context.md and docs/architecture/**.
-- Requirement truth lives in openspec/specs/** and active implementation scope in openspec/changes/**.
+Respect the app's authorization, data flow, UI, verification and runtime safety rules from `AGENTS.md`.

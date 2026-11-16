@@ -247,7 +247,13 @@ function createClientMock(input: {
         return this.relationshipResult(rows.map(row => ({ ...row, contracts: input.contracts.find(contract => contract.id === row.contract_id) })))
       }
 
-      let rows = [...input.tenants]
+      let rows = this.applyTenantFilters([...input.tenants])
+      const excludedId = this.notEquals.get('id')
+      if (excludedId) rows = rows.filter(row => row.id !== excludedId)
+      for (const field of ['phone', 'id_number'] as const) {
+        const values = this.inValues.get(field)
+        if (values) rows = rows.filter(row => row[field] !== null && values.includes(row[field]!))
+      }
       const tenantIds = this.inValues.get('id')
       if (tenantIds) rows = rows.filter(row => tenantIds.includes(row.id))
       const excludedTenantIds = this.notInValues.get('id')
@@ -707,4 +713,18 @@ it('restricts identity search to service-authorized full IDs while basic names s
   expect((await TenantRepository.findAll({} as never, { q: 'secret', sensitive_search_ids: ['full'] })).items.map(tenant => tenant.id)).toEqual(['full'])
   expect((await TenantRepository.findAll({} as never, { q: 'secret', sensitive_search_ids: [] })).items).toEqual([])
   expect((await TenantRepository.findAll({} as never, { q: 'Basic', sensitive_search_ids: [] })).items.map(tenant => tenant.id)).toEqual(['basic'])
+})
+
+
+it('finds both identity fields, excludes self and skips empty input', async () => {
+  serverSupabaseClient.mockReturnValue(createClientMock({
+    tenants: [buildTenant({ id: 'a', phone: '0900000000' }), buildTenant({ id: 'b', phone: '0900000001', id_number: 'FAKE-ID' })],
+    contracts: [], occupants: [],
+  }))
+  const { TenantRepository } = await import('../../../server/repositories/tenants')
+  const event = {} as never
+  expect(await TenantRepository.findIdentityMatches(event, { phones: ['0900000000'], idNumbers: ['FAKE-ID'] }))
+    .toEqual(expect.arrayContaining([{ tenantId: 'a', field: 'phone', value: '0900000000' }, { tenantId: 'b', field: 'id_number', value: 'FAKE-ID' }]))
+  expect(await TenantRepository.findIdentityMatches(event, { phones: ['0900000000'], idNumbers: [], excludeId: 'a' })).toEqual([])
+  expect(await TenantRepository.findIdentityMatches(event, { phones: [], idNumbers: [] })).toEqual([])
 })

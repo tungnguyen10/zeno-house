@@ -1,3 +1,4 @@
+import { throwIfTenantIdentityViolation, type TenantIdentityField } from './identity-errors'
 import { db as serverSupabaseClient } from '../../utils/db'
 import type { H3Event } from 'h3'
 import type { Tenant, TenantStatus } from '~/types/tenants'
@@ -6,6 +7,9 @@ import { AUDIT_ACTIONS } from '~/utils/constants/audit'
 import { mapTenant } from '~/utils/mappers/tenants'
 import { isUuid } from '~/utils/format/slug'
 import { nameInitialsFromFullName } from '~/utils/format/codes'
+
+export type { TenantIdentityField } from './identity-errors'
+export interface TenantIdentityMatch { tenantId: string; field: TenantIdentityField; value: string }
 
 export interface TenantAccessFacts {
   activeBuildingIds: string[]
@@ -254,26 +258,34 @@ export const TenantRepository = {
     }
     return facts
   },
-  async findExistingIdentifiers(
+  async findIdentityMatches(
     event: H3Event,
-    phones: string[],
-    idNumbers: string[],
-  ): Promise<{ phones: Set<string>, idNumbers: Set<string> }> {
+    input: { phones: string[]; idNumbers: string[]; excludeId?: string },
+  ): Promise<TenantIdentityMatch[]> {
+    const phones = [...new Set(input.phones)]
+    const idNumbers = [...new Set(input.idNumbers)]
+    if (!phones.length && !idNumbers.length) return []
     const client = await serverSupabaseClient(event)
-    const [phoneResult, idResult] = await Promise.all([
-      phones.length > 0
-        ? client.from('tenants').select('phone').in('phone', [...new Set(phones)])
-        : Promise.resolve({ data: [], error: null }),
-      idNumbers.length > 0
-        ? client.from('tenants').select('id_number').in('id_number', [...new Set(idNumbers)])
-        : Promise.resolve({ data: [], error: null }),
-    ])
-    if (phoneResult.error) throwDbError(phoneResult.error, 'tenants.findExistingIdentifiers.phones')
-    if (idResult.error) throwDbError(idResult.error, 'tenants.findExistingIdentifiers.idNumbers')
-    return {
-      phones: new Set((phoneResult.data ?? []).map(row => row.phone)),
-      idNumbers: new Set((idResult.data ?? []).map(row => row.id_number).filter((value): value is string => Boolean(value))),
+    const phoneQuery = () => {
+      const query = client.from('tenants').select('id, phone').in('phone', phones)
+      return input.excludeId ? query.neq('id', input.excludeId) : query
     }
+    const idQuery = () => {
+      const query = client.from('tenants').select('id, id_number').in('id_number', idNumbers)
+      return input.excludeId ? query.neq('id', input.excludeId) : query
+    }
+    const [phoneResult, idResult] = await Promise.all([
+      phones.length ? phoneQuery() : Promise.resolve({ data: [], error: null }),
+      idNumbers.length ? idQuery() : Promise.resolve({ data: [], error: null }),
+    ])
+    if (phoneResult.error) throwDbError(phoneResult.error, 'tenants.findIdentityMatches.phones')
+    if (idResult.error) throwDbError(idResult.error, 'tenants.findIdentityMatches.idNumbers')
+    return [
+      ...(phoneResult.data ?? []).map(row => ({ tenantId: row.id, field: 'phone' as const, value: row.phone })),
+      ...(idResult.data ?? []).flatMap(row => row.id_number
+        ? [{ tenantId: row.id, field: 'id_number' as const, value: row.id_number }]
+        : []),
+    ]
   },
 
   async insertMany(event: H3Event, inputs: TenantCreateInput[]): Promise<Tenant[]> {
@@ -319,7 +331,10 @@ export const TenantRepository = {
       }
     })
     const { data, error } = await client.from('tenants').insert(payloads as never).select()
-    if (error) throwDbError(error, 'tenants.insertMany')
+    if (error) {
+      throwIfTenantIdentityViolation(error)
+      throwDbError(error, 'tenants.insertMany')
+    }
     return (data ?? []).map(mapTenant)
   },
   async findAll(
@@ -531,24 +546,6 @@ export const TenantRepository = {
     return [...new Set((data ?? []).map(row => row.entity_id).filter((id): id is string => Boolean(id)))]
   },
 
-  async findByIdNumber(event: H3Event, idNumber: string, excludeId?: string): Promise<Tenant | null> {
-    const client = await serverSupabaseClient(event)
-    let query = client.from('tenants').select('*').eq('id_number', idNumber)
-    if (excludeId) query = query.neq('id', excludeId)
-    const { data, error } = await query.maybeSingle()
-    if (error) throwDbError(error, 'tenants.findByIdNumber')
-    return data ? mapTenant(data) : null
-  },
-
-  async findByPhone(event: H3Event, phone: string, excludeId?: string): Promise<Tenant | null> {
-    const client = await serverSupabaseClient(event)
-    let query = client.from('tenants').select('*').eq('phone', phone)
-    if (excludeId) query = query.neq('id', excludeId)
-    const { data, error } = await query.maybeSingle()
-    if (error) throwDbError(error, 'tenants.findByPhone')
-    return data ? mapTenant(data) : null
-  },
-
   async insert(event: H3Event, input: TenantCreateInput): Promise<Tenant> {
     const client = await serverSupabaseClient(event)
     const createdAt = new Date().toISOString()
@@ -577,7 +574,10 @@ export const TenantRepository = {
       .select()
       .single()
 
-    if (error) throwDbError(error, 'tenants.insert')
+    if (error) {
+      throwIfTenantIdentityViolation(error)
+      throwDbError(error, 'tenants.insert')
+    }
     return mapTenant(data)
   },
 
@@ -604,7 +604,10 @@ export const TenantRepository = {
       .select()
       .single()
 
-    if (error) throwDbError(error, 'tenants.update')
+    if (error) {
+      throwIfTenantIdentityViolation(error)
+      throwDbError(error, 'tenants.update')
+    }
     return mapTenant(data)
   },
 

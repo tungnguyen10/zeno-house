@@ -135,7 +135,7 @@ const emergencyRows = computed<DossierRow[]>(() => [
           <IconPencilSquare class="h-4 w-4" />
         </span>
         <span class="min-w-0 flex-1 portal-type-body font-semibold text-title">
-          Sửa thông tin
+          Sửa thông tin liên hệ
         </span>
         <IconChevronRight class="h-5 w-5 shrink-0 text-body" aria-hidden="true" />
       </NuxtLink>
@@ -202,8 +202,15 @@ const emergencyRows = computed<DossierRow[]>(() => [
       </div>
       <PortalCard>
         <p class="portal-type-caption text-body">
-          Thông tin trên giấy tờ tùy thân dùng để đối chiếu hồ sơ.
+          Thông tin định danh được ban quản lý đối chiếu trước khi cập nhật. Bạn có thể gửi yêu cầu nếu thông tin chưa đúng.
         </p>
+        <NuxtLink
+          to="/portal/requests?intent=profile-correction"
+          class="mt-3 inline-flex min-h-11 items-center gap-2 rounded-lg px-1 portal-type-label text-theme focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme/40"
+        >
+          Yêu cầu chỉnh sửa
+          <IconChevronRight class="h-4 w-4 shrink-0" aria-hidden="true" />
+        </NuxtLink>
         <dl class="mt-3 grid grid-cols-2 gap-2.5">
           <div
             v-for="row in identityRows"
@@ -248,18 +255,6 @@ const emergencyRows = computed<DossierRow[]>(() => [
       </PortalCard>
     </section>
 
-    <section data-profile-section aria-labelledby="profile-notes-heading" class="space-y-3">
-      <div class="flex items-center gap-2 px-1">
-        <IconDocumentText class="h-5 w-5 shrink-0 text-theme" aria-hidden="true" />
-        <h2 id="profile-notes-heading" class="portal-type-heading text-title">
-          Ghi chú
-        </h2>
-      </div>
-      <PortalCard>
-        <p class="whitespace-pre-line break-words portal-type-body text-body">
-          {{ displayValue(profile.notes) }}
-        </p>
-      </PortalCard>
-    </section>
+
   </div>
 </template>

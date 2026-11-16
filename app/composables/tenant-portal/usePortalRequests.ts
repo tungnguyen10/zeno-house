@@ -2,13 +2,9 @@ import type { ApiSuccess } from '~/types/api'
 import type { TenantSupportRequest } from '~/types/tenant-portal'
 import { getApiErrorMessage } from '~/utils/api-error'
 import { uploadWithProgress } from '~/utils/upload'
+import { tenantSupportRequestCreateSchema } from '~/utils/validators/tenant-portal'
 
-/**
- * Tenant support requests. Consumes `/api/tenant/requests`, which is delivered
- * by the separate `add-tenant-support-requests` change. Until that endpoint
- * ships, `useFetch` surfaces the error and the page renders its error state —
- * no placeholder data is fabricated.
- */
+/** Private support requests and single-file evidence; never mutates canonical profile/images. */
 export interface TenantSupportRequestCreateInput {
   title: string
   description: string
@@ -27,12 +23,23 @@ export function usePortalRequests() {
 
   async function submit(input: TenantSupportRequestCreateInput): Promise<boolean> {
     apiError.value = null
+    const parsed = tenantSupportRequestCreateSchema.safeParse({
+      title: input.title,
+      description: input.description,
+      attachment: input.attachment
+        ? { name: input.attachment.name, mimeType: input.attachment.type, size: input.attachment.size }
+        : undefined,
+    })
+    if (!parsed.success) {
+      apiError.value = 'Yêu cầu chưa hợp lệ. Kiểm tra tiêu đề, mô tả và tệp đính kèm (JPEG, PNG, WebP hoặc PDF, tối đa 5MB).'
+      return false
+    }
     submitting.value = true
     try {
       if (input.attachment) {
         const form = new FormData()
-        form.append('title', input.title)
-        form.append('description', input.description)
+        form.append('title', parsed.data.title)
+        form.append('description', parsed.data.description)
         form.append('attachment', input.attachment, input.attachment.name)
         await uploadWithProgress<ApiSuccess<TenantSupportRequest>>(
           '/api/tenant/requests',
@@ -42,7 +49,7 @@ export function usePortalRequests() {
       else {
         await apiFetch<ApiSuccess<TenantSupportRequest>>('/api/tenant/requests', {
           method: 'POST',
-          body: { title: input.title, description: input.description },
+          body: { title: parsed.data.title, description: parsed.data.description },
         })
       }
       await refresh()

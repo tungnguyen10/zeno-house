@@ -1,10 +1,35 @@
 import { db as serverSupabaseClient } from '../../utils/db'
 import type { H3Event } from 'h3'
-import type { Database } from '~/types/database.types'
 import type { Contract, ContractStatus, ContractWithDetails } from '~/types/contracts'
 import type { ContractCreateInput, ContractUpdateInput } from '~/utils/validators/contracts'
 import { mapContract, mapContractBrowseRow, mapContractWithDetails, type ContractBrowseRow } from '~/utils/mappers/contracts'
+import { mapInventoryItem, type InventoryRow } from '~/utils/mappers/inventory'
+import type { InventoryItemInput } from '~/utils/validators/inventory'
+import type { ContractVehicleInput } from '~/utils/validators/contract-vehicles'
+import type { HandoverInventory } from '~/types/inventory'
 import { isUuid } from '~/utils/format/slug'
+
+const CONTRACT_CREATE_ERRORS: Record<string, { status: 409 | 422; message: string }> = {
+  CONTRACT_CREATE_REQUEST_CONFLICT: { status: 409, message: 'Yêu cầu tạo hợp đồng bị trùng với một thao tác khác. Vui lòng tải lại trang.' },
+  CONTRACT_OCCUPANT_LIMIT: { status: 409, message: 'Số người ở cùng vượt quá số người ở của hợp đồng.' },
+  CONTRACT_OCCUPANT_PRIMARY: { status: 422, message: 'Người ở cùng trùng với khách đứng tên.' },
+  CONTRACT_OCCUPANT_BUSY: { status: 409, message: 'Có người ở cùng đang ở theo hợp đồng khác.' },
+  CONTRACT_SERVICE_INVALID: { status: 422, message: 'Dịch vụ không thuộc tòa nhà này.' },
+  CONTRACT_VEHICLE_DUPLICATE: { status: 409, message: 'Biển số xe bị trùng.' },
+}
+
+/** Maps create_contract_full domain errors to friendly API errors; returns silently for unknown errors. */
+export function throwContractCreateError(error: unknown): void {
+  if (!error || typeof error !== 'object' || !('message' in error)) return
+  const message = String((error as { message?: string }).message)
+  const mapped = CONTRACT_CREATE_ERRORS[message]
+  if (mapped) {
+    if (mapped.status === 422) throwValidationError(mapped.message)
+    throwConflict(mapped.message, { reason: message })
+  }
+  // Legacy guard raised by create_contract_with_handover (end_date must be after start_date).
+  if ((error as { code?: string }).code === 'P0001') throwConflict(message)
+}
 
 export interface ContractFilters {
   room_id?: string
@@ -251,6 +276,7 @@ export const ContractRepository = {
     event: H3Event,
     input: ContractCreateInput & { building_id: string },
     recordedBy: string | null,
+    inventory: InventoryItemInput[],
   ): Promise<ContractWithDetails> {
     const client = await serverSupabaseClient(event)
 
@@ -279,9 +305,10 @@ export const ContractRepository = {
       p_handover_water_reading: input.handover_water_reading,
       p_handover_reading_date: readingDate,
       p_recorded_by: recordedBy,
-    } as unknown as Database['public']['Functions']['create_contract_with_handover']['Args']
+      p_inventory: inventory,
+    } as never
 
-    const { data, error } = await client.rpc('create_contract_with_handover', args)
+    const { data, error } = await client.rpc('create_contract_with_handover_and_inventory' as never, args)
     if (error) {
       // 23505 (unique violation) and P0001 (raised in RPC) both indicate a
       // business conflict the admin can act on; everything else is a 500.
@@ -300,6 +327,67 @@ export const ContractRepository = {
       throwInternal(new Error('Contract was inserted but cannot be re-read'), 'contracts.createWithHandover.reread')
     }
     return created
+  },
+
+  async createFull(
+    event: H3Event,
+    payload: {
+      contract: Record<string, unknown>
+      inventory: InventoryItemInput[]
+      occupants: { tenant_id: string; move_in_date?: string; billing_counted: boolean }[]
+      vehicles: ContractVehicleInput[]
+      services: ContractCreateInput['services'] | null
+    },
+    opts: { actorId: string; requestId: string },
+  ): Promise<{ contract: ContractWithDetails; replayed: boolean }> {
+    const client = await serverSupabaseClient(event)
+    const { data, error } = await client.rpc('create_contract_full' as never, {
+      p_contract: payload.contract,
+      p_inventory: payload.inventory,
+      p_occupants: payload.occupants,
+      p_vehicles: payload.vehicles,
+      p_services: payload.services,
+      p_actor_id: opts.actorId,
+      p_request_id: opts.requestId,
+    } as never)
+    if (error) {
+      throwContractCreateError(error)
+      throwDbError(error, 'contracts.createFull')
+    }
+    const result = data as unknown as { contract_id: string; replayed: boolean }
+    const contract = await this.findByIdentifier(event, result.contract_id)
+    if (!contract) throwInternal(new Error('Contract missing after create_contract_full'), 'contracts.createFull.reread')
+    return { contract, replayed: result.replayed }
+  },
+
+  async findHandoverInventory(event: H3Event, contractId: string): Promise<HandoverInventory> {
+    const client = await serverSupabaseClient(event)
+    let currentId: string | null = contractId
+    for (let depth = 0; currentId && depth < 20; depth++) {
+      const { data, error } = await client
+        .from('contracts')
+        .select('id, contract_code, previous_contract_id')
+        .eq('id', currentId)
+        .maybeSingle()
+      if (error) throwDbError(error, 'contracts.findHandoverInventory.contract')
+      const contract = data as { id: string; contract_code: string; previous_contract_id: string | null } | null
+      if (!contract) break
+      const { data: items, error: itemsError } = await client
+        .from('contract_inventory_items' as never)
+        .select('id, name, quantity, condition, unit_value, note, sort_order')
+        .eq('contract_id', contract.id)
+        .order('sort_order')
+      if (itemsError) throwDbError(itemsError, 'contracts.findHandoverInventory.items')
+      if (items && (items as unknown[]).length > 0) {
+        return {
+          sourceContractId: contract.id,
+          sourceContractCode: contract.contract_code,
+          items: (items as InventoryRow[]).map(mapInventoryItem),
+        }
+      }
+      currentId = contract.previous_contract_id
+    }
+    return { sourceContractId: null, sourceContractCode: null, items: [] }
   },
 
   async update(event: H3Event, id: string, input: ContractUpdateInput): Promise<ContractWithDetails> {
@@ -370,6 +458,17 @@ export const ContractRepository = {
 
     if (error) throwDbError(error, 'contracts.countBillingPeriodsForContract')
     return new Set((data ?? []).map(row => row.billing_period_id)).size
+  },
+
+  async countDocumentsForContract(event: H3Event, contractId: string): Promise<number> {
+    // contract_documents.contract_id is `on delete restrict`; the service pre-checks before hard delete.
+    const client = await serverSupabaseClient(event)
+    const { count, error } = await client
+      .from('contract_documents' as never)
+      .select('id', { count: 'exact', head: true })
+      .eq('contract_id', contractId)
+    if (error) throwDbError(error, 'contracts.countDocumentsForContract')
+    return count ?? 0
   },
 
   async countPaidInvoicesForContract(event: H3Event, contractId: string): Promise<number> {

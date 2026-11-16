@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { tenantPhoneSchema } from '../tenant-identity'
 import { tenantIdImageSideSchema } from './tenants'
 import { passwordSchema } from './password'
 
@@ -34,28 +35,13 @@ export const tenantIdentityImageUploadSchema = z.object({
   size: z.number().int().positive().max(TENANT_DOCUMENT_MAX_BYTES),
 })
 
-const isoDateSchema = z
-  .string()
-  .trim()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, 'Ngày không hợp lệ')
-  .nullable()
-  .optional()
-
 export const tenantProfileUpdateSchema = z.object({
-  full_name: z.string().trim().min(1, 'Họ tên không được trống').max(100, 'Họ tên quá dài').optional(),
-  phone: z.string().trim().min(1, 'Số điện thoại không được trống').max(20, 'Số điện thoại quá dài').optional(),
-  gender: z.enum(['male', 'female', 'other']).nullable().optional(),
-  date_of_birth: isoDateSchema,
+  phone: tenantPhoneSchema.optional(),
   occupation: z.string().trim().max(100, 'Nghề nghiệp quá dài').nullable().optional(),
-  permanent_address: z.string().trim().max(300, 'Địa chỉ quá dài').nullable().optional(),
-  id_number: z.string().trim().max(20, 'Số CCCD/CMND quá dài').nullable().optional(),
-  id_issued_date: isoDateSchema,
-  id_issued_place: z.string().trim().max(200, 'Nơi cấp quá dài').nullable().optional(),
   emergency_contact_name: z.string().trim().max(100, 'Tên liên hệ khẩn cấp quá dài').nullable().optional(),
   emergency_contact_phone: z.string().trim().max(20, 'SĐT khẩn cấp quá dài').nullable().optional(),
-  notes: z.string().trim().max(500, 'Ghi chú quá dài').nullable().optional(),
-}).refine(input => Object.keys(input).length > 0, {
-  message: 'Cần ít nhất một trường hồ sơ hợp lệ',
+}).strict().refine(input => Object.keys(input).length > 0, {
+  message: 'Cần ít nhất một trường liên hệ hợp lệ',
 })
 
 const tenantPasswordSchema = passwordSchema

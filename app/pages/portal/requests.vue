@@ -10,8 +10,12 @@ definePageMeta({
 })
 
 const { setChrome } = usePortalChrome()
+const correctionIntent = useRoute().query.intent === 'profile-correction'
+const isProfileCorrection = ref(false)
+const { contract, status: housingStatus, error: housingError, refresh: refreshHousing } = usePortalContract()
+const canRouteRequest = computed(() => housingStatus.value === 'success' && Boolean(contract.value))
 
-const { requests, status, error, refresh, submit, submitting } = usePortalRequests()
+const { requests, status, error, refresh, submit, submitting, apiError } = usePortalRequests()
 const toast = usePortalToast()
 
 const mode = ref<'list' | 'create'>('list')
@@ -23,13 +27,15 @@ const attachmentError = ref('')
 
 watch(mode, (val) => {
   setChrome(val === 'create'
-    ? { title: 'Yêu cầu mới', back: null }
+    ? { title: isProfileCorrection.value ? 'Yêu cầu chỉnh sửa hồ sơ' : 'Yêu cầu mới', back: null }
     : { title: 'Yêu cầu', back: null },
   )
 }, { immediate: true })
 
-function openCreate() {
-  form.title = ''
+function openCreate(intent?: unknown) {
+  apiError.value = null
+  isProfileCorrection.value = intent === 'profile-correction'
+  form.title = isProfileCorrection.value ? 'Yêu cầu chỉnh sửa hồ sơ' : ''
   form.description = ''
   formErrors.title = ''
   formErrors.description = ''
@@ -40,8 +46,12 @@ function openCreate() {
 }
 
 function cancelCreate() {
+  if (submitting.value) return
   mode.value = 'list'
 }
+
+// Consume only the literal intent once; query updates must not reset an in-progress form.
+if (correctionIntent) openCreate('profile-correction')
 
 function onAttachmentChange(event: Event) {
   const input = event.target as HTMLInputElement
@@ -62,9 +72,10 @@ function onAttachmentChange(event: Event) {
 }
 
 async function onSubmit() {
+  if (!canRouteRequest.value || submitting.value) return
   formErrors.title = form.title.trim() ? '' : 'Vui lòng nhập tiêu đề.'
   formErrors.description = form.description.trim() ? '' : 'Vui lòng mô tả yêu cầu.'
-  if (formErrors.title || formErrors.description) return
+  if (formErrors.title || formErrors.description || attachmentError.value) return
 
   const ok = await submit({
     title: form.title.trim(),
@@ -73,10 +84,12 @@ async function onSubmit() {
   })
   if (ok) {
     mode.value = 'list'
-    toast.success('Đã gửi yêu cầu.')
+    toast.success(isProfileCorrection.value
+      ? 'Đã gửi yêu cầu, thông tin hồ sơ chưa thay đổi'
+      : 'Đã gửi yêu cầu.')
   }
   else {
-    toast.error('Không gửi được yêu cầu. Vui lòng thử lại.')
+    toast.error(apiError.value ?? 'Không gửi được yêu cầu. Vui lòng thử lại.')
   }
 }
 </script>
@@ -144,7 +157,29 @@ async function onSubmit() {
     </PortalPullToRefresh>
 
     <!-- Create mode -->
-    <form v-else class="mx-auto w-full max-w-2xl space-y-5 px-4 py-5 lg:px-8 lg:py-8" @submit.prevent="onSubmit">
+    <div v-else>
+      <div v-if="housingStatus === 'pending' || housingStatus === 'idle'" class="mx-auto max-w-2xl px-4 py-5 lg:px-8 lg:py-8">
+        <PortalSkeleton variant="card" />
+      </div>
+      <PortalEmptyState
+        v-else-if="housingError"
+        tone="error"
+        title="Không xác định được nơi tiếp nhận"
+        description="Hãy kiểm tra kết nối và thử lại trước khi gửi yêu cầu."
+        action-label="Thử lại"
+        @action="refreshHousing"
+      />
+      <PortalEmptyState
+        v-else-if="!canRouteRequest"
+        title="Chưa có nơi tiếp nhận"
+        description="Hồ sơ chưa có nơi tiếp nhận yêu cầu. Vui lòng liên hệ trực tiếp ban quản lý"
+        action-label="Quay lại yêu cầu"
+        @action="cancelCreate"
+      />
+      <form v-else class="mx-auto w-full max-w-2xl space-y-5 px-4 py-5 lg:px-8 lg:py-8" @submit.prevent="onSubmit">
+      <p v-if="isProfileCorrection" class="px-1 portal-type-body text-body">
+        Mô tả thông tin cần chỉnh sửa để ban quản lý đối chiếu. Thông tin hồ sơ chỉ thay đổi sau khi ban quản lý đối chiếu và cập nhật.
+      </p>
       <section class="space-y-3">
         <h3 class="portal-type-heading px-1 text-title">Thông tin yêu cầu</h3>
         <PortalCard class="space-y-4">
@@ -153,6 +188,8 @@ async function onSubmit() {
             label="Tiêu đề"
             placeholder="Ví dụ: Vòi nước bị rò rỉ"
             :error="formErrors.title"
+            :readonly="isProfileCorrection"
+            :disabled="submitting"
             required
           />
           <UiTextarea
@@ -161,6 +198,7 @@ async function onSubmit() {
             :rows="4"
             placeholder="Mô tả chi tiết vấn đề của bạn"
             :error="formErrors.description"
+            :disabled="submitting"
             required
           />
         </PortalCard>
@@ -169,6 +207,9 @@ async function onSubmit() {
       <section class="space-y-3">
         <h3 class="portal-type-heading px-1 text-title">Tệp đính kèm</h3>
         <PortalCard>
+          <p class="mb-3 portal-type-caption text-body">
+            Một tệp JPEG, PNG, WebP hoặc PDF, tối đa 5MB. Tài liệu hai mặt có thể gộp thành một tệp PDF.
+          </p>
           <label
             class="flex min-h-12 cursor-pointer items-center gap-3 rounded-md border border-dark-border px-3 py-2 text-sm text-body focus-within:ring-2 focus-within:ring-theme/30"
             :class="attachmentError
@@ -182,6 +223,7 @@ async function onSubmit() {
             <input
               ref="attachmentInput"
               type="file"
+              :disabled="submitting"
               accept="image/jpeg,image/png,image/webp,application/pdf"
               class="sr-only"
               :aria-invalid="attachmentError ? 'true' : undefined"
@@ -195,10 +237,14 @@ async function onSubmit() {
         </PortalCard>
       </section>
 
+      <p v-if="apiError" role="alert" class="rounded-xl border border-portal-danger/25 bg-portal-danger/5 px-4 py-3 portal-type-body text-portal-danger">
+        {{ apiError }}
+      </p>
       <div class="flex gap-3">
         <PortalButton variant="secondary" block :disabled="submitting" @click="cancelCreate">Hủy</PortalButton>
         <PortalButton type="submit" block :loading="submitting">Gửi yêu cầu</PortalButton>
       </div>
-    </form>
+      </form>
+    </div>
   </div>
 </template>

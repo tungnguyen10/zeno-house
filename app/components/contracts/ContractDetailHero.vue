@@ -7,7 +7,6 @@ import { formatCurrency } from '~/utils/format/currency'
 
 const props = defineProps<{
   contract: ContractWithDetails
-  paidAmount?: number
   depositHeld?: number
   canManage?: boolean
 }>()
@@ -25,7 +24,7 @@ function monthDiff(start: string, end = new Date()) {
 }
 
 const monthsElapsed = computed(() => monthDiff(props.contract.startDate))
-const depositBalance = computed(() => props.depositHeld ?? props.paidAmount ?? 0)
+const depositBalance = computed(() => props.depositHeld ?? props.contract.deposit ?? 0)
 
 const canRenew = computed(() => props.contract.status === 'active')
 const canTerminate = computed(() => props.contract.status === 'active')

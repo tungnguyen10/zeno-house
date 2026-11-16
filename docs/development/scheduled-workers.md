@@ -1,3 +1,10 @@
+---
+type: Development Guide
+title: "scheduled-workers"
+status: stable
+tags: [engineering, reference]
+---
+
 # Scheduled Workers
 
 Production scheduler wake-ups are owned by Supabase Cron, not Nitro or Vercel Cron. Supabase

@@ -1,3 +1,10 @@
+---
+type: Architecture Reference
+title: "ai-agent"
+status: stable
+tags: [engineering, reference]
+---
+
 # AI Agent Architecture
 
 This document is the canonical current-state architecture for the internal Zeno House AI assistant. The assistant is an operations interface over existing services; it is not a replacement backend.
