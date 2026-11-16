@@ -1,7 +1,7 @@
 import { z } from 'zod'
+import { slugifyName } from '~/utils/format/slug'
 import { booleanQuerySchema, limitSchema, orderSchema, pageSchema, searchQuerySchema, toArray } from './_shared'
 import { selectAtLeastOne } from './messages'
-import { slugifyName } from '~/utils/format/slug'
 
 const daySchema = z.number().int().min(1).max(31)
 
@@ -76,7 +76,7 @@ export const quickRoomSchema = z.object({
 export const buildingCreateWithRoomsSchema = buildingBaseSchema
   .extend({
     request_id: z.string().uuid('Mã yêu cầu không hợp lệ').optional(),
-    rooms: z.array(quickRoomSchema).min(1, 'Cần ít nhất một phòng').max(QUICK_ROOM_MAX, `Tối đa ${QUICK_ROOM_MAX} phòng mỗi lần`).optional(),
+    rooms: z.array(quickRoomSchema).max(QUICK_ROOM_MAX, `Tối đa ${QUICK_ROOM_MAX} phòng mỗi lần`).optional(),
   })
   .superRefine(validateOperationalStartPair)
   .superRefine((value, ctx) => {

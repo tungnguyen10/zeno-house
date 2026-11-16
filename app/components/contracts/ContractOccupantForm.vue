@@ -1,18 +1,15 @@
 <script setup lang="ts">
-import type { Tenant } from '~/types/tenants'
+import type { TenantSummary } from '~/types/tenants'
 import type { ContractOccupantAddInput } from '~/utils/validators/contract-occupants'
-import type { ApiSuccess } from '~/types/api'
 
-const props = defineProps<{
+defineProps<{
   loading?: boolean
   apiError?: string | null
   excludeTenantIds?: string[]
-  /** Pass true to only show tenants not currently in any active contract/occupancy */
-  available?: boolean
 }>()
 
 const emit = defineEmits<{
-  'submit': [value: ContractOccupantAddInput]
+  'submit': [value: ContractOccupantAddInput & { tenantName: string }]
   'cancel': []
 }>()
 
@@ -21,22 +18,9 @@ const form = reactive({
   move_in_date: new Date().toISOString().slice(0, 10),
   billing_counted: true,
 })
+const tenantName = ref('')
 
 const fieldErrors = ref<Record<string, string>>({})
-
-// Tenant search — pre-load available tenants; UiCombobox handles client-side filtering
-const { data: tenantsData, status: tenantsStatus } = useFetch<ApiSuccess<Tenant[]>>('/api/tenants', {
-  query: computed(() => ({
-    limit: 200,
-    available: props.available ? true : undefined,
-  })),
-})
-const tenantsLoading = computed(() => tenantsStatus.value === 'pending')
-const filteredTenants = computed(() => {
-  const excluded = new Set(props.excludeTenantIds ?? [])
-  return (tenantsData.value?.data ?? []).filter(t => !excluded.has(t.id))
-})
-const selectedTenant = computed(() => filteredTenants.value.find(t => t.id === form.tenant_id) ?? null)
 
 function validate(): boolean {
   fieldErrors.value = {}
@@ -52,6 +36,7 @@ function handleSubmit() {
     role: 'roommate',
     move_in_date: form.move_in_date,
     billing_counted: form.billing_counted,
+    tenantName: tenantName.value,
   })
 }
 </script>
@@ -59,20 +44,14 @@ function handleSubmit() {
 <template>
   <form novalidate class="space-y-4" @submit.prevent="handleSubmit">
     <!-- Tenant picker -->
-    <UiCombobox
-      :model-value="selectedTenant"
-      :options="filteredTenants"
-      :option-key="t => t.id"
-      :option-label="t => `${t.fullName} — ${t.phone}`"
-      label="Khách thuê"
-      placeholder="Tìm và chọn khách thuê..."
-      search-placeholder="Tìm theo tên hoặc số điện thoại..."
+    <TenantPicker
+      :model-value="form.tenant_id || null"
+      :exclude-tenant-ids="excludeTenantIds"
       required
-      :loading="tenantsLoading"
       :disabled="loading"
       :error="fieldErrors.tenant_id"
-      empty-message="Không tìm thấy khách thuê nào"
-      @update:model-value="t => form.tenant_id = t?.id ?? ''"
+      @update:model-value="(id: string | null) => form.tenant_id = id ?? ''"
+      @selected="(t: TenantSummary | null) => tenantName = t?.fullName ?? ''"
     />
 
     <!-- Move-in date -->

@@ -11,4 +11,6 @@ export interface ServiceCatalogItem {
   isActive: boolean
   isCustom: boolean
   sortOrder: number
+  /** Suggested price used when a building first enables the service. */
+  defaultAmount: number
 }

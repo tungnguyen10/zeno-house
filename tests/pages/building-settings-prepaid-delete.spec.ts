@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 
 const page = readFileSync(resolve(
   process.cwd(),
-  'app/pages/dashboard/buildings/[id]/settings.vue',
+  'app/components/buildings/settings/advanced/FinanceRulesSection.vue',
 ), 'utf8')
 
 describe('building settings prepaid deletion', () => {

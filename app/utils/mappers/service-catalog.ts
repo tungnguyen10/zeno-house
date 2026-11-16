@@ -17,5 +17,6 @@ export function mapServiceCatalog(row: ServiceCatalogRow): ServiceCatalogItem {
     isActive: row.is_active,
     isCustom: Boolean(row.building_id),
     sortOrder: row.sort_order,
+    defaultAmount: Number(row.default_amount ?? 0),
   }
 }

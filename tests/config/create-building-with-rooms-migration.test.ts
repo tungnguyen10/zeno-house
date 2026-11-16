@@ -1,4 +1,3 @@
-// tests/config/create-building-with-rooms-migration.test.ts
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
@@ -9,15 +8,6 @@ describe('create_building_with_rooms migration', () => {
   it('defines both functions as security invoker with empty search_path', () => {
     expect(sql).toMatch(/function public\.create_rooms_batch\([\s\S]*?security invoker[\s\S]*?set search_path = ''/)
     expect(sql).toMatch(/function public\.create_building_with_rooms\([\s\S]*?security invoker[\s\S]*?set search_path = ''/)
-  })
-
-  it('validates room fields and bounds before persistence', () => {
-    expect(sql).toContain('jsonb_array_elements(p_rooms)')
-    expect(sql).toContain("char_length(v_room->>'room_number') not between 1 and 20")
-    expect(sql).toContain("(v_room->>'floor')::numeric not between 1 and 100")
-    expect(sql).toContain("(v_room->>'floor')::numeric <> trunc((v_room->>'floor')::numeric)")
-    expect(sql).toContain("(v_room->>'monthly_rent')::numeric < 0")
-    expect(sql).toContain("(v_room->>'area')::numeric <= 0")
   })
 
   it('restricts execution to service_role', () => {

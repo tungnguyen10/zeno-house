@@ -13,7 +13,7 @@ describe('room and contract inventory surfaces', () => {
 
   it('contract form shows handover inventory and create page sends it', () => {
     expect(read('app/components/contracts/ContractForm.vue')).toContain('Nội thất bàn giao')
-    expect(read('app/pages/dashboard/contracts/create.vue')).toContain('inventory: data.inventory')
+    expect(read('app/pages/dashboard/contracts/create.vue')).toContain('<InventoryItemsEditor')
   })
 
   it('contract detail and checkout show handover list', () => {

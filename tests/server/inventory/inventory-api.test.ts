@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { z } from 'zod'
 
 const svc = vi.hoisted(() => ({ getTemplate: vi.fn(), saveTemplate: vi.fn(), applyTemplate: vi.fn(), getRoom: vi.fn(), saveRoom: vi.fn() }))
 const g = vi.hoisted(() => ({ requireAuth: vi.fn(), getRouterParam: vi.fn(), readBody: vi.fn() }))
@@ -8,10 +7,9 @@ vi.mock('../../../server/services/inventory', () => ({ InventoryService: svc }))
 vi.stubGlobal('defineEventHandler', (h: unknown) => h)
 vi.stubGlobal('requireAuth', g.requireAuth)
 vi.stubGlobal('getRouterParam', g.getRouterParam)
-vi.stubGlobal('parseBody', async (_event: unknown, schema: z.ZodTypeAny) => {
-  const result = schema.safeParse(await g.readBody())
-  if (!result.success) throw { statusCode: 422, data: { error: { code: 'VALIDATION_ERROR' } } }
-  return result.data
+vi.stubGlobal('readBody', g.readBody)
+vi.stubGlobal('throwValidationError', (message: string, details?: unknown) => {
+  throw { statusCode: 422, data: { error: { code: 'VALIDATION_ERROR', message, details } } }
 })
 
 beforeEach(() => {

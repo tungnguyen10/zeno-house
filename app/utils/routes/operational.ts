@@ -39,16 +39,13 @@ export function buildingPath(building: BuildingRouteSubject): string {
   return `/dashboard/buildings/${buildingRouteSegment(building)}`
 }
 
-export function buildingEditPath(building: BuildingRouteSubject): string {
-  return `${buildingPath(building)}/edit`
-}
-
 export function buildingSettingsPath(building: BuildingRouteSubject): string {
   return `${buildingPath(building)}/settings`
 }
 
-export function buildingRoomBatchPath(building: BuildingRouteSubject): string {
-  return `${buildingPath(building)}/rooms/batch`
+/** Editing happens in the "basics" step of settings; `/edit` only redirects there. */
+export function buildingEditPath(building: BuildingRouteSubject): string {
+  return `${buildingSettingsPath(building)}#basics`
 }
 
 export function roomRouteSegment(room: RoomRouteSubject): string {

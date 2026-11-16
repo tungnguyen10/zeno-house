@@ -1,132 +1,91 @@
 <script setup lang="ts">
 import type { ApiSuccess } from '~/types/api'
+import type { Building } from '~/types/buildings'
 import type { Room } from '~/types/rooms'
-import { buildingPath, buildingSettingsPath } from '~/utils/routes/operational'
+import type { InventoryItem } from '~/types/inventory'
+import { buildingSettingsPath } from '~/utils/routes/operational'
 
 const route = useRoute()
-const id = route.params.id as string
 const authStore = useAuthStore()
+const id = route.params.id as string
 
-const { building, isLoading: loadingBuilding, error: buildingError } = useBuildingDetail(id)
-const preview = useQuickRoomPreview()
-const { submit, loading, apiError, duplicateRoomNumbers } = useRoomBatchCreate(id)
-const template = useInventoryTemplate(id)
-const applyInventory = ref(false)
-const loadingRooms = ref(true)
-const roomsError = ref<string | null>(null)
-const submitError = ref<string | null>(null)
+const preview = useQuickRoomPreview({ enabled: true })
 
-const canCreate = computed(() => authStore.can('rooms.create'))
-const templateCount = computed(() => template.items.value.length)
-const templateSummary = computed(() => `Áp dụng nội thất mẫu (${templateCount.value} món)`)
+const { data: buildingData } = await useFetch<ApiSuccess<Building>>(() => `/api/buildings/${encodeURIComponent(id)}`)
+const building = computed(() => buildingData.value?.data ?? null)
 
-async function loadExistingRooms() {
-  loadingRooms.value = true
-  roomsError.value = null
-  try {
-    const numbers: string[] = []
-    let page = 1
-    let total = Infinity
-    while (numbers.length < total) {
-      const res = await apiFetch<ApiSuccess<Room[]> & { meta: { total: number } }>('/api/rooms', {
-        query: { building_id: id, limit: 200, page, status: ['available', 'occupied', 'maintenance', 'archived'] },
-      })
-      total = res.meta.total
-      numbers.push(...res.data.map(room => room.roomNumber))
-      if (res.data.length === 0) break
-      page++
-    }
-    preview.existingRoomNumbers.value = numbers
-  }
-  catch {
-    roomsError.value = 'Không tải được danh sách phòng hiện có. Tải lại trang để tránh tạo trùng mã phòng.'
-  }
-  finally {
-    loadingRooms.value = false
-  }
-}
-
-onMounted(async () => {
-  preview.enabled.value = true
-  await Promise.all([loadExistingRooms(), template.load()])
+const { data: roomsData } = await useFetch<ApiSuccess<Room[]> & { meta?: { total?: number } }>(
+  '/api/rooms',
+  { query: { building_id: id, limit: 200 } },
+)
+watchEffect(() => {
+  preview.existingRoomNumbers.value = (roomsData.value?.data ?? []).map(room => room.roomNumber)
 })
 
+const { data: templateData } = await useFetch<ApiSuccess<InventoryItem[]>>(
+  () => `/api/buildings/${encodeURIComponent(id)}/inventory-template`,
+)
+const templateCount = computed(() => templateData.value?.data?.length ?? 0)
+
+const applyInventory = ref(false)
+watch(templateCount, (n) => { if (n === 0) applyInventory.value = false })
+
+const { submit, loading, apiError, duplicateRoomNumbers } = useRoomBatchCreate(id)
 watch(duplicateRoomNumbers, value => preview.markServerDuplicates(value))
 
-const newRoomCount = computed(() => preview.rows.value.filter(row => !row.existing).length)
+const canCreate = computed(() => authStore.can('rooms.create'))
 
 async function onSubmit() {
-  submitError.value = null
-  if (loading.value || preview.duplicateRoomNumbers.value.length > 0) return
-  let rooms
-  try {
-    rooms = preview.toPayload()
-  }
-  catch (e: unknown) {
-    submitError.value = e instanceof Error ? e.message : 'Danh sách phòng không hợp lệ.'
-    return
-  }
-  if (rooms.length === 0) {
-    submitError.value = 'Không có phòng mới để tạo.'
-    return
-  }
-  await submit({ rooms, apply_inventory: applyInventory.value && templateCount.value > 0 })
+  if (preview.duplicateRoomNumbers.value.length > 0) return
+  const rooms = preview.toPayload()
+  if (rooms.length === 0) return
+  await submit({ rooms, apply_inventory: applyInventory.value })
 }
 </script>
 
 <template>
-  <div class="min-w-0">
+  <div>
     <UiPageHeader
       title="Thêm phòng hàng loạt"
-      :description="building?.name"
-      :back-to="building ? buildingPath(building) : `/dashboard/buildings/${id}`"
-      back-label="Quay lại tòa nhà"
+      :description="building ? `Tạo thêm phòng cho ${building.name}` : 'Tạo thêm phòng theo dải tầng'"
+      :back-to="building ? buildingSettingsPath(building) : '/dashboard/buildings'"
+      back-label="Cài đặt tòa nhà"
     />
 
-    <UiSkeleton v-if="loadingBuilding" class="h-48 rounded-xl" />
-    <UiAlert v-else-if="buildingError" severity="danger">
-      Không thể tải thông tin tòa nhà.
+    <UiAlert v-if="!canCreate" severity="warning" class="mb-4">
+      Bạn không có quyền tạo phòng cho tòa nhà này.
     </UiAlert>
-    <UiAlert v-else-if="!canCreate" severity="warning">
-      Bạn không có quyền tạo phòng.
-    </UiAlert>
+    <UiAlert v-else-if="apiError" severity="danger" class="mb-4">{{ apiError }}</UiAlert>
 
-    <form v-else class="space-y-5" @submit.prevent="onSubmit">
-      <UiAlert v-if="roomsError" severity="warning">
-        {{ roomsError }}
-      </UiAlert>
-      <UiAlert v-if="apiError || submitError" severity="danger">
-        {{ apiError || submitError }}
-      </UiAlert>
+    <div v-if="canCreate" class="space-y-5">
+      <RoomBatchGenerator :preview="preview" />
 
-      <UiFormSection
-        title="Quy tắc tạo phòng"
-        description="Các mã phòng đã tồn tại trong tòa nhà được đánh dấu và không bị tạo lại."
-      >
-        <UiSkeleton v-if="loadingRooms" class="h-32 rounded-xl" />
-        <RoomBatchGenerator v-else :preview="preview" :disabled="loading" />
-      </UiFormSection>
-
-      <UiFormSection title="Nội thất" description="Sao chép danh sách nội thất mẫu của tòa nhà vào từng phòng mới.">
+      <div class="rounded-lg border border-ui-border p-3">
         <UiCheckbox
           v-model="applyInventory"
-          :label="templateSummary"
-          :disabled="loading || templateCount === 0"
+          :disabled="templateCount === 0"
+          :label="`Áp dụng nội thất mẫu (${templateCount} món)`"
         />
-        <p v-if="templateCount === 0 && !template.loading.value" class="mt-2 text-xs text-ui-muted">
+        <p v-if="templateCount === 0" class="mt-1 text-xs text-ui-muted">
           Tòa nhà chưa có nội thất mẫu.
-          <NuxtLink v-if="building" :to="`${buildingSettingsPath(building)}#inventory-template`" class="text-ui-accent hover:text-ui-accent/80">
-            Khai báo trong cài đặt
+          <NuxtLink v-if="building" :to="`${buildingSettingsPath(building)}#inventory-template`" class="text-ui-accent underline">
+            Thiết lập nội thất mẫu
           </NuxtLink>
         </p>
-      </UiFormSection>
+      </div>
 
-      <UiFormActions
-        :submit-label="`Tạo ${newRoomCount} phòng`"
-        :loading="loading"
-        :can-submit="!loadingRooms && newRoomCount > 0"
-        @cancel="navigateTo(building ? buildingPath(building) : '/dashboard/buildings')"
-      />
-    </form>
+      <div class="flex justify-end gap-2">
+        <UiButton variant="secondary" @click="navigateTo(building ? buildingSettingsPath(building) : '/dashboard/buildings')">
+          Hủy
+        </UiButton>
+        <UiButton
+          :loading="loading"
+          :disabled="preview.toPayload().length === 0 || preview.duplicateRoomNumbers.value.length > 0"
+          @click="onSubmit"
+        >
+          Tạo {{ preview.toPayload().length }} phòng
+        </UiButton>
+      </div>
+    </div>
   </div>
 </template>

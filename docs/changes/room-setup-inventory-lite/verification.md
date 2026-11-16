@@ -1,58 +1,57 @@
 ---
-type: Change Verification
-title: "room-setup-inventory-lite-verification"
+type: Verification Record
+title: "room-setup-inventory-lite — verification checkpoint"
 status: draft
-change_state: implementing
-tags: [change, verification, rooms, inventory, v2]
+change_state: verification-pending
+tags: [change, verification, rooms, inventory, contracts]
 ---
 
 # Room setup & inventory lite — verification
 
-## Source checks
+> Tasks 1–10 implemented TDD-first on Node 22; code only (no git, no cloud). Parent completes Task 11 (full local suite + docs) and the cloud gate.
 
-Implementation starts from `origin/develop` commit `30225644`, independently of PR1. The unchanged baseline source passed 393 files / 2,496 tests earlier in this work session. Scoped checks, reviews and final typecheck/test/lint/OKF evidence will be recorded as tasks complete.
+## UI decisions (Tasks 8–10)
 
-Task 1: `20261112005547_inventory_lite.sql` plus rollback verification script added. TDD observed 9 failed/1 passed against the empty migration; final static/PR0 regression run passed 16 tests (11 new + 5 PR0), scoped ESLint and diff checks passed. Independent static/spec review approved with no findings. SQL compilation, runtime and concurrency are not claimed.
+- Reused existing primitives only (`UiInput`, `UiSelect`, `UiButton`, `UiBadge`, `UiAlert`, `UiCheckbox`, `UiModal`, `UiConfirmModal`, `UiSection`, `UiSurfacePanel`, `UiFormSection`, `UiDefinitionList`). No new tokens/primitives.
+- `InventoryItemsEditor`: responsive stacked rows (grid on `sm+`, card-style stack on mobile per the approved "card on mobile" direction); inline add/remove; live total via `inventoryTotalValue`; field errors keyed `"{index}.name"`.
+- `InventoryItemsList`: read-only list with per-item value and a reference total; optional source note line.
+- `RoomBatchGenerator`: floor-range generator inputs (từ/đến tầng, số phòng mỗi tầng, tiền tố, STT bắt đầu, gắn số tầng, số tầng trong tên) + per-floor grouped preview with editable floor/rent/area, existing-room badge ("Đã có", excluded from payload), manual add/remove rows, and the generator-error copy map. The shared composable is passed in and driven by the component (aliased locally to keep lint's prop-mutation rule satisfied while preserving the intended contract).
+- `InventoryApplyModal`: floor-grouped room multi-select + select-all + mode radios; "Thay toàn bộ" routes through `UiConfirmModal`; emits `apply` with `InventoryApplyInput`, parent toasts the result.
+- Building create page now embeds `RoomBatchGenerator` behind the existing "Bật tạo phòng nhanh" toggle; new `buildings/[id]/rooms/batch.vue` adds the "Áp dụng nội thất mẫu (N món)" checkbox (disabled + settings link when the template is empty).
+- Settings gains a "Nội thất mẫu" section (`#inventory-template`) with the editor + "Áp dụng cho phòng…" modal. Room detail gains a "Nội thất" section with "Áp dụng mẫu tòa". `ContractForm` gains a "Nội thất bàn giao" section prefilled from the room on room change. Contract detail gains a "Bàn giao" section (`#handover`) and checkout a collapsible "Nội thất đã bàn giao" reference, both via `ContractHandoverSection`.
 
-Task 2: inventory DTOs, mapper, shared item/list/apply/batch validators added; observed missing-module RED then 18 tests passed, scoped lint passed. Independent specification/code review passed with no findings.
+## Delta from plan (important)
 
-Tasks 4-10 (2026-11-12): inventory repository/service/audit, inventory and batch-room API routes, contract handover capture and read (ancestry restricted to the authorized building, cycle-safe), shared UI components, building pages (create generator, batch page, settings template with apply modal), room inventory section, contract form handover section, contract detail and checkout reference panel were implemented with tests first. The PR0 create-page test that asserted the replaced count/prefix inputs was superseded by `tests/pages/buildings-create-room-generator.spec.ts`. Audit display labels were added for the three inventory actions.
+- **Task 3 composable extension was missing from the backend pass.** The backend worker shipped the pure `generateRoomNumbers` util + its test but left `useQuickRoomPreview` on the PR0 API. This fork completed the Task 3 composable extension (floor `generator`, `generatorError`, `existingRoomNumbers`, `removeRow`/`addRow`, `existing`/`manual` row flags, `toPayload` excluding existing rows) and rewrote `tests/composables/useQuickRoomPreview.test.ts` to the new API, since Tasks 8–10 depend on it.
+- Fixed a `TS7022` self-referential-inference error in `server/repositories/contracts/index.ts` `findHandoverInventory` (introduced with Task 7) by casting the fetched row explicitly.
+- `ContractFormData.inventory` is optional (`inventory?`) to avoid forcing the field on every existing `ContractFormData` constructor (edit page, drafts). `create.vue` initializes it to `[]` and sends `inventory: data.inventory`.
+- Added Vietnamese audit labels for the new inventory actions in `app/utils/audit/display.ts` (the backend pass added the action constants but not the labels, which failed `audit-display.test.ts`).
 
-Task 11 source gates (2026-11-12): `npm run typecheck` exit 0; `npm test` 410 files / 2,624 tests passed; `npm run lint` exit 0 (one pre-existing `vue/no-v-html` warning in AppAiDevChat.vue); `npm run knowledge:check` passed. These are static/mocked checks; SQL compilation, runtime and concurrency are not claimed.
+## Local (source) — run on Node 22 (2026-11-12)
 
-## Preflight decisions
+- [x] `npm run typecheck` — pass (Supabase env warnings only).
+- [x] `npm test` — **2576/2576 pass** (420 files).
+- [x] `npm run lint` — 0 errors (1 pre-existing `vue/no-v-html` warning, unrelated).
+- [x] `npm run knowledge:check` — OK (331 concepts, 26 index files).
 
-Use the atomic replacement RPC option already offered by Task 4, so an insert failure cannot erase an existing template or room list. Replacement and template application share a per-building transaction lock; merged room lists also respect the 50-item limit. Validate wrapper JSON and numeric bounds rather than relying on implicit casts/rounding. Read handover ancestry only inside the already-authorized building. Existing production RPCs and financial calculations remain unchanged.
+Re-verified independently by the parent on Node 22 (2026-11-12): typecheck 0, **2576/2576 tests**, lint 0 errors, knowledge OK. `audit/display.ts` has a single `building.contract_profile.updated` label (no duplicate key).
 
-## UI decisions
+## Batch-page entry points (done 2026-11-12)
 
-The user explicitly approved the design direction on 2026-11-12: floor-group room preview with direct editing, inventory tables on desktop and cards on mobile, copied building templates, collapsible handover references, and the existing dashboard theme, typography and primitives. No design-system changes are authorized. Component/page polish and rendered verification remain pending.
+- Building detail header: "Thêm phòng" button → `…/rooms/batch`, gated on `rooms.create`.
+- Rooms list header dropdown: "Thêm phòng hàng loạt" item → the filtered building's `…/rooms/batch`, shown only when a building filter is active (`rooms.create && buildingId`).
+- Source test `tests/pages/rooms-batch-entry-points.spec.ts`. Full suite after: 2578/2578; typecheck 0; lint 0 errors.
 
-## Visual QA
+## Visual QA — run by maintainer
 
-Rendered in the browser on 2026-11-12 against the dev server (Supabase production data, read-only: no save or create was pressed).
+- [x] Batch page with a multi-floor generator and the template toggle: 4 rooms created with 4 inventory items each; replay returns 200 `replayed`, existing code returns 409, duplicate in payload returns 422 (2026-11-15)
+- [x] Manager can apply the template but cannot edit it or create rooms (403); manager account since deleted
+- [x] Room detail inventory renders and applies the template; contract create prefills inventory from the room; contract detail "Bàn giao" renders; 390px mobile has no overflow. Hydration mismatch on room detail fixed (client-only editor)
 
-- Create-building multi-floor generator: checked at 1280px and 390px; three floors, nine rooms, rent/area editing, no horizontal overflow. A mobile caption row for floor/rent/area was added after this pass.
-- Batch page (`/rooms/batch`): renders; template count loads from the migrated schema (0 items), checkbox disabled with a settings link.
-- Settings "Nội thất mẫu": section and nav item render, add-row works, empty state and total are correct. Template save and apply modal not exercised (would write production data).
-- Room page inventory section: renders with the empty state; edit/apply not exercised.
-- Contract detail "Nội thất bàn giao": renders the empty state ("Không có dữ liệu bàn giao"). Contract create form shows the handover inventory section with the empty-room hint.
-- Not verified: contract create with seeded inventory, renewed-contract source note, checkout reference panel, apply modal merge/replace.
+## Cloud gates (order matters)
 
-## Cloud gates (human-run)
-
-- Confirm PR0 migration on target environment.
-- Apply the CLI-generated inventory migration after backup/dry-run.
-- Execute rolled-back inventory SQL verification, including grants, scope, atomic rollback and idempotency.
-- Regenerate database types and remove temporary repository casts.
-- Deploy after migration; verify contract snapshots and authenticated owner/manager behavior.
-
-## Cloud rollout log (2026-11-12)
-
-- PR0 migrations were already present on the remote (`supabase migration list --remote`).
-- `supabase db push --remote --dry-run` listed only `20261112005547_inventory_lite.sql`; applied to production (zeno-house) after explicit user confirmation. No backup was taken by the agent.
-- `app/types/database.types.ts` regenerated from the cloud schema (additive: +252 lines); temporary `as never` casts removed from the inventory, rooms and contracts repositories. Typecheck, server tests and lint pass.
-- `supabase/verification/inventory_lite.sql` was NOT run: it is written for staging and creates fixtures and triggers. Run it on staging.
-- Not done: app deploy and authenticated smoke test.
-
-No accepted capability promotion is claimed.
+- [x] Migration `20261111110000_inventory_lite.sql` applied — production, 2026-11-15
+- [x] `supabase/verification/inventory_lite.sql` passed — production, 2026-11-15
+- [x] `apply_inventory_template` merge/replace and batch replay checked end to end through the API (merge twice adds 0 the second time; replace re-adds 4; empty room list returns 422)
+- [x] Grants: anon/auth = false, service_role = true
+- [x] Types regenerated; `as never` casts removed — see commit history on `feat/v2-pr0-pr4b`

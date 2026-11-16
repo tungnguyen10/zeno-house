@@ -189,7 +189,7 @@ watchEffect(() => {
 // mobile segmented-pill skin can highlight it (desktop keeps the plain underline-free look).
 // IntersectionObserver's visibility window is unreliable for short sections (they can pass through
 // the window entirely between two callbacks), so this walks section positions directly instead.
-const sectionIds = ['overview', 'amendments', 'occupants', 'payments', 'services', 'handover', 'meter-readings', 'checkout', 'history']
+const sectionIds = ['overview', 'documents', 'amendments', 'occupants', 'payments', 'services', 'meter-readings', 'handover', 'checkout', 'history']
 const activeSection = ref(sectionIds[0])
 const SCROLLSPY_OFFSET = 140
 let scrollContainer: HTMLElement | null = null
@@ -276,12 +276,13 @@ function sectionLinkClass(sectionId: string) {
       <nav class="sticky top-0 z-20 mt-4 overflow-x-auto bg-ui-canvas py-2 lg:top-16">
         <div class="flex min-w-max gap-1 rounded-full bg-ui-chrome p-1 text-sm lg:gap-2 lg:rounded-none lg:bg-transparent lg:p-0">
           <a href="#overview" :class="sectionLinkClass('overview')">Tổng quan</a>
+          <a href="#documents" :class="sectionLinkClass('documents')">Tài liệu</a>
           <a href="#amendments" :class="sectionLinkClass('amendments')">Phụ lục</a>
           <a href="#occupants" :class="sectionLinkClass('occupants')">Người ở</a>
           <a href="#payments" :class="sectionLinkClass('payments')">Thanh toán</a>
           <a href="#services" :class="sectionLinkClass('services')">Dịch vụ</a>
-          <a href="#handover" :class="sectionLinkClass('handover')">Nội thất</a>
           <a href="#meter-readings" :class="sectionLinkClass('meter-readings')">Chỉ số</a>
+          <a href="#handover" :class="sectionLinkClass('handover')">Bàn giao</a>
           <a v-if="checkoutSectionVisible && checkoutBundle?.enabled" href="#checkout" :class="sectionLinkClass('checkout')">Trả phòng</a>
           <a href="#history" :class="sectionLinkClass('history')">Lịch sử</a>
         </div>
@@ -293,6 +294,8 @@ function sectionLinkClass(sectionId: string) {
         :contract="contract"
         :active-occupant-count="activeOccupantCount"
       />
+
+      <ContractDocumentsSection :contract-id="contract.id" class="mt-4" />
 
       <ContractAmendmentsSection
         :contract="contract"
@@ -341,9 +344,6 @@ function sectionLinkClass(sectionId: string) {
         </UiSurfacePanel>
       </UiSection>
 
-      <!-- Handover inventory section -->
-      <ContractHandoverSection id="handover" :contract-id="contract.id" class="mt-6 scroll-mt-20" />
-
       <!-- Handover readings section -->
       <UiSection id="meter-readings" title="Số bàn giao" class="mt-6 scroll-mt-20">
         <UiSurfacePanel density="compact">
@@ -354,6 +354,13 @@ function sectionLinkClass(sectionId: string) {
             :end-date="contract.endDate"
             :status="contract.status"
           />
+        </UiSurfacePanel>
+      </UiSection>
+
+      <!-- Handover inventory section -->
+      <UiSection id="handover" title="Nội thất bàn giao" class="mt-6 scroll-mt-20">
+        <UiSurfacePanel density="compact">
+          <ContractHandoverSection :contract-id="contract.id" />
         </UiSurfacePanel>
       </UiSection>
 

@@ -174,10 +174,11 @@ const ACTION_LABELS: Record<string, string> = {
   'contract.renewal.repaired': 'Sửa dữ liệu chuỗi gia hạn',
   'user.access_request.reconciled': 'Đối soát yêu cầu truy cập',
   'building.invoice_email_settings.updated': 'Cập nhật gửi hoá đơn tự động',
-  'building.visibility_changed': 'Đổi hiển thị toà nhà',
+  'building.contract_profile.updated': 'Cập nhật thông tin hợp đồng của toà nhà',
   'building.inventory_template.updated': 'Cập nhật nội thất mẫu',
   'room.inventory.updated': 'Cập nhật nội thất phòng',
-  'room.inventory.template_applied': 'Áp dụng nội thất mẫu',
+  'room.inventory.template_applied': 'Áp dụng nội thất mẫu cho phòng',
+  'building.visibility_changed': 'Đổi hiển thị toà nhà',
   'tenant.identity_conflict': 'Xung đột định danh khách thuê',
   'tenant.activated': 'Khôi phục khách thuê',
   'tenant.exported': 'Xuất danh sách khách thuê',
@@ -195,6 +196,11 @@ const ACTION_LABELS: Record<string, string> = {
   'contract.amendment.published': 'Ban hành phụ lục',
   'contract.amendment.applied': 'Áp dụng phụ lục',
   'contract.amendment.cancelled': 'Hủy phụ lục',
+  'contract.vehicles.updated': 'Cập nhật danh sách xe',
+  'contract.document.issued': 'Phát hành tài liệu hợp đồng',
+  'contract.document.regenerated': 'Tạo lại tài liệu hợp đồng',
+  'contract.document.signed': 'Đánh dấu đã ký tài liệu',
+  'contract.document.voided': 'Hủy tài liệu hợp đồng',
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -239,7 +245,7 @@ export function auditActionLabel(action: string): string {
 
 export function auditActionVariant(action: string): StatusVariant {
   if (/(\.created|\.activated|\.added|\.uploaded|\.recorded|\.applied)$/.test(action)) return 'success'
-  if (/(\.updated|\.renewed|\.role_changed|\.synced|\.attached|\.allocated|\.refreshed|\.published|\.transferred|\.repaired|\.template_applied)$/.test(action)) return 'accent'
+  if (/(\.updated|\.renewed|\.role_changed|\.synced|\.attached|\.allocated|\.refreshed|\.published|\.transferred|\.repaired)$/.test(action)) return 'accent'
   if (/(\.removed|\.terminated|\.deleted|\.voided|\.deactivated|\.orphan_reconciled|\.cancelled|\.draft_removed)$/.test(action)) return 'danger'
   if (/(\.archived|\.maintenance_set|\.expired|\.moved_out|\.dismissed|\.reopened)$/.test(action)) return 'warning'
   return 'neutral'

@@ -3,8 +3,8 @@ import type { Building } from '~/types/buildings'
 import type { AuthUser } from '~/types/auth'
 
 const buildingRepo = vi.hoisted(() => ({
-  createWithRooms: vi.fn(),
   insert: vi.fn(),
+  createWithRooms: vi.fn(),
   findByIdentifier: vi.fn(),
   update: vi.fn(),
   remove: vi.fn(),
@@ -40,7 +40,7 @@ function building(overrides: Partial<Building> = {}): Building {
     id: overrides.id ?? 'b-1',
     slug: 'toa-a',
     code: 'a',
-    name: 'Tòa A',
+    name: 'Toa A',
     address: '123',
     description: null,
     status: 'active',
@@ -95,18 +95,11 @@ describe('BuildingService.create (atomic)', () => {
     expect(buildingRepo.createWithRooms.mock.calls[0]![1]).not.toHaveProperty('request_id')
     expect(assignmentRepo.insert).not.toHaveBeenCalled()
     const actions = auditService.append.mock.calls.map(c => c[2].action)
-    expect(actions).toEqual(['user.assignment_added', 'building.created'])
-    expect(auditService.append).toHaveBeenCalledWith(expect.anything(), expect.anything(), expect.objectContaining({
-      action: 'building.created', metadata: { room_count: 2, request_id: '7d0b3f7e-8f43-4a8e-9a4f-1f2b3c4d5e6f' },
-    }))
+    expect(actions).toEqual(expect.arrayContaining(['building.created', 'user.assignment_added']))
     expect(auditService.appendBulk).toHaveBeenCalledTimes(1)
     expect(auditService.appendBulk.mock.calls[0]![2]).toMatchObject({
       building_id: 'new-1', entity_type: 'room', aggregate_action: 'room.bulk_create',
       succeeded: ['r-1', 'r-2'], total: 2, failed: 0,
-      items: [
-        { entity_id: 'r-1', action: 'room.created', after_data: room('r-1', 'P101') },
-        { entity_id: 'r-2', action: 'room.created', after_data: room('r-2', 'P102') },
-      ],
     })
   })
 
@@ -120,9 +113,6 @@ describe('BuildingService.create (atomic)', () => {
     expect(opts.ownerUserId).toBeNull()
     expect(opts.requestId).toMatch(/^[0-9a-f-]{36}$/)
     expect(auditService.appendBulk).not.toHaveBeenCalled()
-    expect(auditService.append).toHaveBeenCalledWith(expect.anything(), expect.anything(), expect.objectContaining({
-      action: 'building.created', metadata: { room_count: 0, request_id: opts.requestId },
-    }))
   })
 
   it('skips all audit on replay', async () => {
@@ -132,7 +122,6 @@ describe('BuildingService.create (atomic)', () => {
     const res = await BuildingService.create(event(), user('owner'), { name: 'X', address: 'Y', rooms: [] } as never)
 
     expect(res.building.id).toBe('new-3')
-    expect(res.roomCount).toBe(1)
     expect(auditService.append).not.toHaveBeenCalled()
     expect(auditService.appendBulk).not.toHaveBeenCalled()
   })

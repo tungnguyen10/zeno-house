@@ -35,6 +35,8 @@ const props = withDefaults(defineProps<{
   minDate?: string
   maxDate?: string
   clearable?: boolean
+  /** Allow typing dd/mm/yyyy directly; the calendar stays available via the icon button. */
+  typeable?: boolean
 }>(), {
   placeholder: 'Chọn ngày',
   required: false,
@@ -43,6 +45,7 @@ const props = withDefaults(defineProps<{
   dateMode: 'iso',
   pickerMode: 'date',
   clearable: true,
+  typeable: false,
 })
 
 const emit = defineEmits<{
@@ -217,6 +220,88 @@ const triggerClass = computed(() =>
       ? 'border-status-danger/50 focus-visible:border-status-danger/60 focus-visible:ring-status-danger/30'
       : 'border-ui-border-strong hover:border-ui-accent/50 focus-visible:border-ui-accent/70 focus-visible:ring-ui-accent/30',
     props.density === 'compact' ? 'min-h-7 px-2 py-1 text-xs' : 'min-h-11 px-3 py-2 text-sm sm:min-h-10',
+    props.disabled && 'cursor-not-allowed bg-ui-hover text-ui-muted opacity-70',
+    props.triggerClass,
+  ),
+)
+
+const isTypeable = computed(() => props.typeable && !isMonthMode.value)
+const typedText = ref(displayValue.value)
+const typedError = ref('')
+const shownError = computed(() => props.error || typedError.value)
+const inputPlaceholder = computed(() =>
+  isTypeable.value && props.placeholder === 'Chọn ngày' ? 'dd/mm/yyyy' : props.placeholder,
+)
+
+// Calendar picks and parent updates replace whatever was typed.
+watch(displayValue, (value) => {
+  typedText.value = value
+  typedError.value = ''
+})
+
+function maskDate(digits: string) {
+  if (digits.length <= 2) return digits
+  if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`
+  return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`
+}
+
+function parseTyped(digits: string) {
+  const iso = `${digits.slice(4, 8)}-${digits.slice(2, 4)}-${digits.slice(0, 2)}`
+  return dayjs(iso).isValid() && dayjs(iso).format('YYYY-MM-DD') === iso ? iso : null
+}
+
+function onTypedInput(event: Event) {
+  const input = event.target as HTMLInputElement
+  const digits = input.value.replace(/\D/g, '').slice(0, 8)
+  typedText.value = maskDate(digits)
+  input.value = typedText.value
+  typedError.value = ''
+
+  if (digits.length === 0) {
+    if (props.modelValue) {
+      emit('update:modelValue', '')
+      emit('change', '')
+    }
+    return
+  }
+  if (digits.length < 8) return
+
+  const iso = parseTyped(digits)
+  if (!iso) {
+    typedError.value = 'Ngày không hợp lệ'
+    return
+  }
+  const min = effectiveMinDate.value
+  const max = effectiveMaxDate.value
+  if ((min && iso < min) || (max && iso > max)) {
+    typedError.value = 'Ngày nằm ngoài khoảng cho phép'
+    return
+  }
+  emit('update:modelValue', iso)
+  emit('change', iso)
+}
+
+function onTypedBlur(event: FocusEvent) {
+  const digits = typedText.value.replace(/\D/g, '')
+  if (digits.length > 0 && digits.length < 8) typedError.value = 'Nhập đủ ngày/tháng/năm (dd/mm/yyyy)'
+  emit('blur', event)
+}
+
+function onTypedKeydown(event: KeyboardEvent) {
+  if (event.key === 'ArrowDown' && !isOpen.value) {
+    event.preventDefault()
+    openPicker()
+  }
+}
+
+const typeableWrapperClass = computed(() =>
+  clsx(
+    'flex w-full items-center rounded-md border bg-ui-surface text-ui-primary transition-colors',
+    'focus-within:ring-2 focus-within:ring-offset-0',
+    shownError.value
+      ? 'border-status-danger/50 focus-within:border-status-danger/60 focus-within:ring-status-danger/30'
+      : 'border-ui-border-strong hover:border-ui-accent/50 focus-within:border-ui-accent/70 focus-within:ring-ui-accent/30',
+    props.density === 'compact' ? 'min-h-7 text-xs' : 'min-h-11 text-sm sm:min-h-10',
     props.disabled && 'cursor-not-allowed bg-ui-hover text-ui-muted opacity-70',
     props.triggerClass,
   ),
@@ -458,7 +543,7 @@ onKeyStroke('Escape', () => {
     v-bind="rootDataAttrs"
     :class="['relative flex flex-col gap-1.5', rootClass]"
     :style="rootStyle"
-    :data-invalid="error ? '' : undefined"
+    :data-invalid="shownError ? '' : undefined"
     :data-disabled="disabled ? '' : undefined"
   >
     <label
@@ -470,7 +555,41 @@ onKeyStroke('Escape', () => {
       <span v-if="required" class="text-status-danger ml-0.5" aria-hidden="true">*</span>
     </label>
 
+    <div v-if="isTypeable" :class="typeableWrapperClass">
+      <input
+        v-bind="triggerAttrs"
+        :id="pickerId"
+        type="text"
+        inputmode="numeric"
+        autocomplete="off"
+        maxlength="10"
+        :value="typedText"
+        :placeholder="inputPlaceholder"
+        :disabled="disabled"
+        :aria-invalid="!!shownError"
+        :aria-describedby="shownError ? `${pickerId}-error` : hint ? `${pickerId}-hint` : undefined"
+        class="min-w-0 flex-1 bg-transparent px-3 py-2 text-ui-primary placeholder-ui-muted focus:outline-none"
+        @input="onTypedInput"
+        @blur="onTypedBlur"
+        @keydown="onTypedKeydown"
+      >
+      <button
+        ref="triggerRef"
+        type="button"
+        class="flex shrink-0 items-center self-stretch rounded-r-md px-3 text-ui-muted transition-colors hover:text-ui-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-accent/40"
+        :disabled="disabled"
+        aria-label="Mở lịch"
+        aria-haspopup="dialog"
+        :aria-expanded="isOpen"
+        :aria-controls="isOpen ? panelId : undefined"
+        @click="isOpen ? closePicker({ restoreFocus: false }) : openPicker()"
+      >
+        <IconCalendar class="size-4" aria-hidden="true" />
+      </button>
+    </div>
+
     <button
+      v-else
       v-bind="triggerAttrs"
       :id="pickerId"
       ref="triggerRef"
@@ -647,11 +766,11 @@ onKeyStroke('Escape', () => {
       </Transition>
     </Teleport>
 
-    <p v-if="hint && !error" :id="`${pickerId}-hint`" class="text-xs text-ui-muted">
+    <p v-if="hint && !shownError" :id="`${pickerId}-hint`" class="text-xs text-ui-muted">
       {{ hint }}
     </p>
-    <p v-if="error" :id="`${pickerId}-error`" class="text-xs text-status-danger">
-      {{ error }}
+    <p v-if="shownError" :id="`${pickerId}-error`" class="text-xs text-status-danger">
+      {{ shownError }}
     </p>
   </div>
 </template>

@@ -13,6 +13,7 @@ import { ServiceCatalogService } from '../service-catalog'
 import { BuildingService } from './index'
 import { BuildingInvoiceProfileService } from './invoice-profile'
 import { BuildingInvoiceEmailSettingsService } from './invoice-email-settings'
+import { BuildingContractProfileService } from './contract-profile'
 
 export const BuildingSettingsBootstrapService = {
   async get(
@@ -35,6 +36,8 @@ export const BuildingSettingsBootstrapService = {
       reserveRates,
       recurringExpenses,
       prepaidExpenses,
+      contractProfile,
+      readiness,
     ] = await Promise.all([
       can(user, 'building-invoice-profile.read')
         ? BuildingInvoiceProfileService.get(event, user, buildingId)
@@ -66,6 +69,10 @@ export const BuildingSettingsBootstrapService = {
       can(user, 'prepaid-expenses.read')
         ? PrepaidExpenseService.list(event, user, { building_id: buildingId })
         : Promise.resolve([]),
+      can(user, 'building-contract-profile.read')
+        ? BuildingContractProfileService.get(event, user, buildingId)
+        : Promise.resolve(null),
+      BuildingContractProfileService.readiness(event, user, buildingId),
     ])
 
     return {
@@ -82,6 +89,8 @@ export const BuildingSettingsBootstrapService = {
       reserveRates,
       recurringExpenses,
       prepaidExpenses,
+      contractProfile,
+      readiness,
     }
   },
 }

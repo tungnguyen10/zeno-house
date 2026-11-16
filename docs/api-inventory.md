@@ -1,8 +1,8 @@
 ---
 type: API Inventory
-title: "API Inventory And Performance Contracts"
+title: "api-inventory"
 status: stable
-tags: [api, generated, engineering]
+tags: [engineering, reference]
 ---
 
 # API Inventory And Performance Contracts

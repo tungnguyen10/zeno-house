@@ -30,7 +30,6 @@ const emit = defineEmits<{ retry: []; changed: [] }>()
 const pending = ref(false)
 const actionError = ref<string | null>(null)
 const successMessage = ref<string | null>(null)
-const handoverOpened = ref(false)
 const fieldErrors = ref<Record<string, string>>({})
 const preview = ref<CheckoutPreview | null>(null)
 const confirmation = ref<'return' | 'settle' | 'issue' | 'refund' | 'correction' | null>(null)
@@ -250,12 +249,14 @@ const confirmationContent = computed(() => {
       </UiAlert>
       <div v-else-if="bundle?.enabled" class="space-y-5">
         <p class="text-xs font-medium tracking-wide text-ui-muted">{{ legacyReturn ? 'Hồ sơ trả phòng lịch sử' : settlementPilot || bundle.settlementEnabled ? 'Bàn giao → Bảng tính cuối → Quyết toán → Hoàn tiền' : 'Bàn giao → Bảng tính cuối → Phát hành hóa đơn' }}</p>
+        <details v-if="contractId" class="rounded-lg border border-ui-border">
+          <summary class="cursor-pointer px-3 py-2 text-sm font-medium text-ui-secondary">Nội thất đã bàn giao</summary>
+          <div class="border-t border-ui-border p-3">
+            <ContractHandoverSection :contract-id="contractId" />
+          </div>
+        </details>
         <UiAlert v-if="actionError" severity="danger" role="alert">{{ actionError }}</UiAlert>
         <p v-if="successMessage" role="status" class="text-sm text-status-success">{{ successMessage }}</p>
-        <details v-if="contractId" class="rounded-xl border border-ui-border px-3 py-2" data-test="checkout-handover-inventory" @toggle="handoverOpened = true">
-          <summary class="cursor-pointer text-sm font-medium text-ui-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-accent/40">Nội thất đã bàn giao</summary>
-          <ContractHandoverSection v-if="handoverOpened" class="mt-3" :contract-id="contractId" embedded />
-        </details>
         <UiAlert v-if="!bundle.checkout && contractStatus === 'terminated'" severity="info">Hợp đồng đã kết thúc theo luồng cũ. Hồ sơ này không tự chuyển thành quyết toán pilot; cần đối soát hóa đơn và cọc theo lịch sử hiện có.</UiAlert>
         <UiAlert v-if="legacyReturn" severity="info">Hồ sơ đã trả phòng theo phiên bản trước. Hóa đơn, cọc và biên bản cũ được giữ nguyên; cần đối soát lịch sử trước khi xử lý thêm tiền.</UiAlert>
         <UiAlert v-if="contractStatus === 'renewed'" severity="info">Hợp đồng đã gia hạn. Xem hợp đồng kế tiếp để tiếp tục quản lý tiền cọc và trả phòng.</UiAlert>
