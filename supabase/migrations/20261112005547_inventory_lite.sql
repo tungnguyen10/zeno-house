@@ -61,9 +61,11 @@ grant select, insert, update, delete on table public.contract_inventory_items to
 create unique index if not exists contract_inventory_items_name_uq
   on public.contract_inventory_items (contract_id, lower(btrim(name)));
 
+drop trigger if exists building_inventory_templates_set_updated_at on public.building_inventory_templates;
 create trigger building_inventory_templates_set_updated_at
   before update on public.building_inventory_templates
   for each row execute function public.set_updated_at();
+drop trigger if exists room_inventory_items_set_updated_at on public.room_inventory_items;
 create trigger room_inventory_items_set_updated_at
   before update on public.room_inventory_items
   for each row execute function public.set_updated_at();
