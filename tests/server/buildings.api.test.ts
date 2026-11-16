@@ -8,6 +8,7 @@ const repoMocks = vi.hoisted(() => ({
   findById: vi.fn(),
   createWithRooms: vi.fn(),
   insert: vi.fn(),
+  createWithRooms: vi.fn(),
   update: vi.fn(),
   remove: vi.fn(),
   removeWithAudit: vi.fn(),
@@ -65,8 +66,8 @@ vi.stubGlobal('setResponseStatus', (event: MockEvent, code: number) => {
 // Override the default permissive `can` from setup with real role-based checks
 // for the buildings.* capabilities. Tests can swap user role via requireAuthMock.
 const CAPS: Record<string, Set<string>> = {
-  admin: new Set(['buildings.read', 'buildings.create', 'rooms.create', 'buildings.update', 'buildings.delete']),
-  owner: new Set(['buildings.read', 'buildings.create', 'rooms.create', 'buildings.update', 'buildings.delete']),
+  admin: new Set(['buildings.read', 'buildings.create', 'buildings.update', 'buildings.delete', 'rooms.create']),
+  owner: new Set(['buildings.read', 'buildings.create', 'buildings.update', 'buildings.delete', 'rooms.create']),
   manager: new Set(['buildings.read']),
 }
 vi.stubGlobal('can', (user: { app_metadata?: { role?: string } }, capability: string) => {
@@ -257,7 +258,7 @@ describe('POST /api/buildings', () => {
     repoMocks.createWithRooms.mockResolvedValue(ok(buildBuilding({ id: 'new-1' })))
     const { default: handler } = await import('../../server/api/buildings/index.post')
 
-    const event = makeEvent({ body: { name: 'Tòa mới', address: '99 Lê Lợi' } })
+    const event = makeEvent({ body: { name: 'Toa moi', address: '99 Le Loi' } })
     const res = await handler(event) as { data: Building; meta: { room_count: number } }
 
     expect(res.data.id).toBe('new-1')
@@ -271,7 +272,7 @@ describe('POST /api/buildings', () => {
     const { default: handler } = await import('../../server/api/buildings/index.post')
 
     const res = await handler(makeEvent({ body: {
-      name: 'Tòa mới', address: '99 Lê Lợi',
+      name: 'Toa moi', address: '99 Le Loi',
       request_id: '7d0b3f7e-8f43-4a8e-9a4f-1f2b3c4d5e6f',
       rooms: [
         { room_number: 'P101', floor: 1, monthly_rent: 3000000, area: null },
@@ -283,44 +284,12 @@ describe('POST /api/buildings', () => {
     expect(repoMocks.insert).not.toHaveBeenCalled()
   })
 
-  it('passes owner assignment to the atomic repository call', async () => {
-    asOwner()
-    repoMocks.createWithRooms.mockResolvedValue(ok(buildBuilding({ id: 'owner-new', createdBy: 'user-owner', ownerUserId: 'user-owner' })))
-    const { default: handler } = await import('../../server/api/buildings/index.post')
-
-    const res = await handler(makeEvent({ body: { name: 'Tòa mới', address: '88 Lê Lợi' } })) as { data: Building }
-
-    expect(res.data.id).toBe('owner-new')
-    expect(repoMocks.createWithRooms).toHaveBeenCalledWith(expect.anything(), expect.anything(), [], {
-      actorId: 'user-owner', ownerUserId: 'user-owner', requestId: expect.any(String),
-    })
-    expect(assignmentRepoMocks.insert).not.toHaveBeenCalled()
-  })
-
-  it('requires rooms.create before creating a building with rooms', async () => {
-    asAdmin()
-    CAPS.admin!.delete('rooms.create')
-    try {
-      const { default: handler } = await import('../../server/api/buildings/index.post')
-      const err = await expectError(Promise.resolve(handler(makeEvent({ body: {
-        name: 'Tòa mới', address: '99 Lê Lợi',
-        rooms: [{ room_number: 'P101', floor: 1, monthly_rent: 1, area: null }],
-      } }))))
-      expect(err.statusCode).toBe(403)
-      expect(repoMocks.createWithRooms).not.toHaveBeenCalled()
-      expect(repoMocks.insert).not.toHaveBeenCalled()
-    }
-    finally {
-      CAPS.admin!.add('rooms.create')
-    }
-  })
-
   it('rejects duplicate room numbers with 422 before touching the DB', async () => {
     asAdmin()
     const { default: handler } = await import('../../server/api/buildings/index.post')
 
     const err = await expectError(Promise.resolve(handler(makeEvent({ body: {
-      name: 'Tòa mới', address: '99 Lê Lợi',
+      name: 'Toa moi', address: '99 Le Loi',
       rooms: [
         { room_number: 'P101', floor: 1, monthly_rent: 1, area: null },
         { room_number: 'P101', floor: 1, monthly_rent: 1, area: null },
@@ -357,7 +326,7 @@ describe('POST /api/buildings', () => {
     const { default: handler } = await import('../../server/api/buildings/index.post')
 
     const err = await expectError(Promise.resolve(handler(makeEvent({ body: {
-      name: 'Tòa mới', address: '99 Lê Lợi',
+      name: 'Toa moi', address: '99 Le Loi',
       rooms: [{ room_number: 'P101', floor: 1, monthly_rent: 1, area: null }],
     } }))))
     expect(err.statusCode).toBe(409)

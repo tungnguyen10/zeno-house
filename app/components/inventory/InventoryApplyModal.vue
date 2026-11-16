@@ -1,142 +1,115 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import type { ApiSuccess } from '~/types/api'
+import type { Room } from '~/types/rooms'
 import type { InventoryApplyInput } from '~/utils/validators/inventory'
 
-interface ApplyRoom {
-  id: string
-  roomNumber: string
-  floor: number
-}
+const props = defineProps<{ open: boolean; buildingId: string }>()
+const emit = defineEmits<{ close: []; apply: [input: InventoryApplyInput] }>()
 
-const props = withDefaults(defineProps<{
-  open: boolean
-  rooms: ApplyRoom[]
-  saving?: boolean
-  error?: string | null
-}>(), {
-  saving: false,
-  error: null,
-})
+const { data: roomsData, refresh } = await useFetch<ApiSuccess<Room[]>>(
+  '/api/rooms',
+  { query: { building_id: props.buildingId, limit: 200 }, immediate: false },
+)
 
-const emit = defineEmits<{
-  (e: 'close'): void
-  (e: 'apply', input: InventoryApplyInput): void
-}>()
-
-const selected = ref<string[]>([])
-const mode = ref<InventoryApplyInput['mode']>('merge')
-const confirmingReplace = ref(false)
+const selected = ref<Set<string>>(new Set())
+const mode = ref<'merge' | 'replace'>('merge')
+const confirmReplace = ref(false)
 
 watch(() => props.open, (open) => {
-  if (!open) return
-  selected.value = []
-  mode.value = 'merge'
-  confirmingReplace.value = false
+  if (open) {
+    selected.value = new Set()
+    mode.value = 'merge'
+    refresh()
+  }
 })
-watch(mode, () => { confirmingReplace.value = false })
 
-const floors = computed(() => {
-  const byFloor = new Map<number, ApplyRoom[]>()
-  for (const room of props.rooms) byFloor.set(room.floor, [...(byFloor.get(room.floor) ?? []), room])
-  return [...byFloor.entries()].sort(([a], [b]) => a - b).map(([floor, rooms]) => ({ floor, rooms }))
+const rooms = computed(() => roomsData.value?.data ?? [])
+const floorGroups = computed(() => {
+  const groups = new Map<number, Room[]>()
+  for (const room of rooms.value) {
+    const list = groups.get(room.floor) ?? []
+    list.push(room)
+    groups.set(room.floor, list)
+  }
+  return [...groups.entries()].sort((a, b) => a[0] - b[0]).map(([floor, items]) => ({ floor, items }))
 })
-const allSelected = computed(() => props.rooms.length > 0 && selected.value.length === props.rooms.length)
 
-function toggleAll(checked: boolean) {
-  selected.value = checked ? props.rooms.map(room => room.id) : []
+const allSelected = computed(() => rooms.value.length > 0 && selected.value.size === rooms.value.length)
+
+function toggle(roomId: string) {
+  const next = new Set(selected.value)
+  if (next.has(roomId)) next.delete(roomId)
+  else next.add(roomId)
+  selected.value = next
 }
 
-function toggleFloor(rooms: ApplyRoom[], checked: boolean) {
-  const ids = new Set(rooms.map(room => room.id))
-  const rest = selected.value.filter(id => !ids.has(id))
-  selected.value = checked ? [...rest, ...ids] : rest
+function toggleAll() {
+  selected.value = allSelected.value ? new Set() : new Set(rooms.value.map(r => r.id))
 }
 
-function floorChecked(rooms: ApplyRoom[]) {
-  return rooms.every(room => selected.value.includes(room.id))
-}
-
-function toggleRoom(id: string, checked: boolean) {
-  selected.value = checked ? [...selected.value, id] : selected.value.filter(item => item !== id)
-}
-
-function submit() {
-  if (selected.value.length === 0 || props.saving) return
-  if (mode.value === 'replace' && !confirmingReplace.value) {
-    confirmingReplace.value = true
+function requestApply() {
+  if (selected.value.size === 0) return
+  if (mode.value === 'replace') {
+    confirmReplace.value = true
     return
   }
-  emit('apply', { room_ids: selected.value, mode: mode.value })
+  emitApply()
 }
 
-const modeOptions = [
-  { value: 'merge', label: 'Thêm món còn thiếu', hint: 'Giữ nội thất hiện có của phòng, chỉ thêm món chưa có.' },
-  { value: 'replace', label: 'Thay toàn bộ', hint: 'Xóa nội thất hiện có của phòng và dùng đúng danh sách mẫu.' },
-] as const
+function emitApply() {
+  confirmReplace.value = false
+  emit('apply', { room_ids: [...selected.value], mode: mode.value })
+}
 </script>
 
 <template>
-  <UiModal :open="open" title="Áp dụng nội thất mẫu" size="lg" @close="emit('close')">
+  <UiModal :open="open" title="Áp dụng nội thất mẫu cho phòng" @close="emit('close')">
     <div class="space-y-4">
-      <fieldset class="space-y-2" :disabled="saving">
-        <legend class="mb-1 text-xs font-medium uppercase tracking-wide text-ui-muted">Cách áp dụng</legend>
-        <label v-for="option in modeOptions" :key="option.value" class="flex cursor-pointer items-start gap-2">
-          <input v-model="mode" type="radio" name="inventory-apply-mode" :value="option.value" class="mt-1 accent-ui-accent">
-          <span>
-            <span class="block text-sm font-medium text-ui-primary">{{ option.label }}</span>
-            <span class="block text-xs text-ui-muted">{{ option.hint }}</span>
-          </span>
+      <div class="space-y-2">
+        <label class="flex items-center gap-2 text-sm">
+          <input type="radio" value="merge" :checked="mode === 'merge'" @change="mode = 'merge'">
+          Thêm món còn thiếu (giữ nội thất hiện có)
         </label>
-      </fieldset>
-
-      <div class="space-y-3">
-        <UiCheckbox
-          :model-value="allSelected"
-          :indeterminate="selected.length > 0 && !allSelected"
-          :label="`Chọn tất cả (${selected.length}/${rooms.length} phòng)`"
-          :disabled="saving || rooms.length === 0"
-          @update:model-value="toggleAll"
-        />
-        <p v-if="rooms.length === 0" class="text-sm text-ui-muted">Tòa nhà chưa có phòng.</p>
-        <div class="max-h-72 space-y-3 overflow-y-auto rounded-xl border border-ui-border p-3">
-          <section v-for="group in floors" :key="group.floor">
-            <UiCheckbox
-              :model-value="floorChecked(group.rooms)"
-              :label="`Tầng ${group.floor}`"
-              label-class="text-xs font-medium uppercase tracking-wide text-ui-muted"
-              :disabled="saving"
-              @update:model-value="(v: boolean) => toggleFloor(group.rooms, v)"
-            />
-            <div class="mt-1.5 grid grid-cols-2 gap-x-3 gap-y-1.5 pl-6 sm:grid-cols-4">
-              <UiCheckbox
-                v-for="room in group.rooms"
-                :key="room.id"
-                :model-value="selected.includes(room.id)"
-                :label="room.roomNumber"
-                :disabled="saving"
-                @update:model-value="(v: boolean) => toggleRoom(room.id, v)"
-              />
-            </div>
-          </section>
-        </div>
+        <label class="flex items-center gap-2 text-sm">
+          <input type="radio" value="replace" :checked="mode === 'replace'" @change="mode = 'replace'">
+          Thay toàn bộ nội thất của phòng
+        </label>
       </div>
 
-      <UiAlert v-if="confirmingReplace" severity="warning">
-        Nội thất hiện có của {{ selected.length }} phòng sẽ bị thay bằng danh sách mẫu. Bấm xác nhận để tiếp tục.
-      </UiAlert>
-      <UiAlert v-if="error" severity="danger">{{ error }}</UiAlert>
+      <div class="flex items-center justify-between">
+        <p class="text-xs text-ui-muted">Đã chọn {{ selected.size }} phòng</p>
+        <UiButton variant="ghost" size="sm" :disabled="rooms.length === 0" @click="toggleAll">
+          {{ allSelected ? 'Bỏ chọn tất cả' : 'Chọn tất cả' }}
+        </UiButton>
+      </div>
+
+      <div class="max-h-72 space-y-3 overflow-y-auto">
+        <p v-if="rooms.length === 0" class="text-sm text-ui-muted">Tòa nhà chưa có phòng nào.</p>
+        <div v-for="group in floorGroups" :key="group.floor">
+          <p class="mb-1 text-xs font-semibold text-ui-accent">Tầng {{ group.floor }}</p>
+          <div class="grid grid-cols-2 gap-1 sm:grid-cols-3">
+            <label v-for="room in group.items" :key="room.id" class="flex items-center gap-2 text-sm">
+              <input type="checkbox" :checked="selected.has(room.id)" @change="toggle(room.id)">
+              <span class="font-mono">{{ room.roomNumber }}</span>
+            </label>
+          </div>
+        </div>
+      </div>
     </div>
 
     <template #footer>
-      <UiButton variant="secondary" :disabled="saving" @click="emit('close')">Huỷ</UiButton>
-      <UiButton
-        :variant="confirmingReplace ? 'danger' : 'primary'"
-        :loading="saving"
-        :disabled="selected.length === 0"
-        @click="submit"
-      >
-        {{ confirmingReplace ? 'Xác nhận thay toàn bộ' : 'Áp dụng' }}
-      </UiButton>
+      <UiButton variant="secondary" @click="emit('close')">Hủy</UiButton>
+      <UiButton :disabled="selected.size === 0" @click="requestApply">Áp dụng</UiButton>
     </template>
   </UiModal>
+
+  <UiConfirmModal
+    :open="confirmReplace"
+    title="Thay toàn bộ nội thất?"
+    :message="`Nội thất hiện có của ${selected.size} phòng sẽ bị thay bằng danh sách mẫu. Thao tác không thể hoàn tác.`"
+    confirm-label="Thay toàn bộ"
+    @confirm="emitApply"
+    @cancel="confirmReplace = false"
+  />
 </template>

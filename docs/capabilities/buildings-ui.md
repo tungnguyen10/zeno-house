@@ -347,3 +347,41 @@ When invoice email is globally enabled, building settings SHALL present a focuse
 #### Scenario: Email feature is disabled globally
 - **WHEN** the global invoice-email feature flag is off
 - **THEN** the automation control is unavailable and no parallel theme, primitive, or settings convention is introduced
+
+### Requirement: Building settings as a setup flow
+The building settings page SHALL present setup as a single column of collapsible steps with a readiness card on top. The steps are: basics and operating schedule, invoice payment profile, default services, inventory template, and contract profile, followed by an Advanced group (building code and managers, financial operating rules, per-contract services). Only the basics, invoice profile, and contract profile steps count towards readiness ("n/3"); default services and inventory template never block it.
+
+#### Scenario: Readiness card
+- **WHEN** a required step is incomplete
+- **THEN** the card shows "n/3 bước bắt buộc đã xong" with a progress bar and a link to the first missing step
+- **WHEN** all three required steps are complete
+- **THEN** the card shows the ready state with a "Lập hợp đồng" link
+
+#### Scenario: One step open at a time
+- **WHEN** the page loads
+- **THEN** the first missing step is open, or the step named by the URL hash (`#basics`, `#invoice-profile`, `#service-defaults`, `#inventory-template`, `#contract-profile`)
+- **WHEN** the user opens another step while the open one has unsaved changes
+- **THEN** a discard confirmation is shown, and leaving the page is guarded the same way
+
+#### Scenario: Manager access
+- **WHEN** a scoped manager opens the page
+- **THEN** every step is readable but read-only, and the contract profile shows the lessor ID number masked and hides date of birth and permanent address
+
+#### Scenario: Edit page redirect
+- **WHEN** a user opens `/buildings/:id/edit`
+- **THEN** they are redirected to `/buildings/:id/settings#basics`, which contains the building form (this supersedes the standalone edit page above)
+
+### Requirement: Default services with a suggested price
+Each catalog service MAY carry a suggested default price. When a building first enables a catalog service, or first sets its pricing type, the building service row SHALL be created with the catalog's suggested price; the price stays editable per building and never changes automatically afterwards. The global catalog includes "Phí quản lý" (fixed per room) with a suggested price of 200.000 ₫.
+
+#### Scenario: First enable uses the suggestion
+- **WHEN** an admin enables "Phí quản lý" for a building that has no row for it
+- **THEN** the building service is created active with a price of 200.000 ₫
+
+#### Scenario: Price is editable and sticky
+- **WHEN** an admin changes the price to another value
+- **THEN** the building's price is saved and the catalog suggestion is no longer shown for that building
+
+#### Scenario: Not yet configured
+- **WHEN** a building has no row for a catalog service
+- **THEN** the price field shows the catalog suggestion, and an enabled service with price 0 shows "Chưa đặt giá"

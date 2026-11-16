@@ -1,51 +1,45 @@
 import type { ApiSuccess } from '~/types/api'
 import type { Room } from '~/types/rooms'
-import { getApiErrorDetails } from '~/utils/api-error'
-import type { ApiErrorLike } from '~/utils/api-error'
-import { useFormState } from '~/composables/useFormState'
 import type { QuickRoomInput } from '~/utils/validators/buildings'
-import { roomBatchCreateSchema } from '~/utils/validators/inventory'
+import { getApiErrorDetails, getApiErrorMessage } from '~/utils/api-error'
 
-export function useRoomBatchCreate(buildingIdentifier: string) {
-  const { isLoading, apiError, clearErrors, applyApiError } = useFormState()
-  // Retries in this form session replay the same idempotent operation.
+export function useRoomBatchCreate(buildingIdentifier: MaybeRef<string>) {
+  // One id per composable instance so a retry after a lost response replays
+  // instead of creating duplicate rooms.
   const requestId = crypto.randomUUID()
+  const loading = ref(false)
+  const apiError = ref<string | null>(null)
   const duplicateRoomNumbers = ref<string[]>([])
 
-  async function submit(input: { rooms: QuickRoomInput[], apply_inventory: boolean }): Promise<boolean> {
-    clearErrors()
+  async function submit(input: { rooms: QuickRoomInput[]; apply_inventory: boolean }): Promise<boolean> {
+    apiError.value = null
     duplicateRoomNumbers.value = []
-    const parsed = roomBatchCreateSchema.safeParse({ ...input, request_id: requestId })
-    if (!parsed.success) {
-      apiError.value = parsed.error.issues[0]?.message ?? 'Danh sách phòng không hợp lệ.'
-      return false
-    }
-
-    isLoading.value = true
+    loading.value = true
+    const id = encodeURIComponent(toValue(buildingIdentifier))
     try {
-      await apiFetch<ApiSuccess<Room[]>>(`/api/buildings/${buildingIdentifier}/rooms/batch`, {
+      await apiFetch<ApiSuccess<Room[]>>(`/api/buildings/${id}/rooms/batch`, {
         method: 'POST',
-        body: parsed.data,
+        body: { request_id: requestId, rooms: input.rooms, apply_inventory: input.apply_inventory },
       })
       clearNuxtData()
-      await navigateTo(`/dashboard/rooms?building_id=${encodeURIComponent(buildingIdentifier)}`)
+      await navigateTo(`/dashboard/rooms?building_id=${id}`)
       return true
     }
-    catch (e: unknown) {
-      applyApiError(e)
-      const details = getApiErrorDetails<{ reason?: string, duplicate_room_numbers?: string[] }>(e)
-      if (details?.reason === 'ROOM_BATCH_DUPLICATE') duplicateRoomNumbers.value = details.duplicate_room_numbers ?? []
-      const error = e as (ApiErrorLike & { cause?: ApiErrorLike }) | null
-      const statusCode = error?.statusCode ?? error?.cause?.statusCode
-      if (statusCode === undefined || statusCode >= 500) {
-        apiError.value = 'Chưa xác nhận được kết quả. Bấm thử lại để kiểm tra và tiếp tục.'
+    catch (cause) {
+      const details = getApiErrorDetails<{ reason?: string; duplicate_room_numbers?: string[] }>(cause)
+      if (details?.reason === 'ROOM_BATCH_DUPLICATE') {
+        duplicateRoomNumbers.value = details.duplicate_room_numbers ?? []
+        apiError.value = getApiErrorMessage(cause, 'Một số mã phòng đã tồn tại.')
+      }
+      else {
+        apiError.value = getApiErrorMessage(cause, 'Chưa tạo được phòng. Bạn có thể bấm lại để thử.')
       }
       return false
     }
     finally {
-      isLoading.value = false
+      loading.value = false
     }
   }
 
-  return { submit, loading: isLoading, apiError, duplicateRoomNumbers, requestId }
+  return { submit, loading, apiError, duplicateRoomNumbers, requestId }
 }

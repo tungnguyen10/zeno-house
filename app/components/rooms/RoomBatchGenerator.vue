@@ -1,248 +1,171 @@
 <script setup lang="ts">
-import clsx from 'clsx'
 import { computed, ref } from 'vue'
-import type { useQuickRoomPreview, PreviewRoom } from '~/composables/buildings/useQuickRoomPreview'
+import type { useQuickRoomPreview } from '~/composables/buildings/useQuickRoomPreview'
 import type { GeneratorError } from '~/utils/rooms/generate-room-numbers'
-import { slugifyName } from '~/utils/format/slug'
-import { QUICK_ROOM_MAX } from '~/utils/validators/buildings'
 
-const props = withDefaults(defineProps<{
-  preview: ReturnType<typeof useQuickRoomPreview>
-  disabled?: boolean
-}>(), {
-  disabled: false,
-})
+const props = defineProps<{ preview: ReturnType<typeof useQuickRoomPreview> }>()
 
-const GENERATOR_ERRORS: Record<GeneratorError, string> = {
+// The parent owns this composable instance and passes it in to be driven here;
+// mutating its refs is the intended contract (not a plain prop mutation).
+const preview = props.preview
+
+const GENERATOR_ERROR_COPY: Record<GeneratorError, string> = {
   floor_range: 'Khoảng tầng không hợp lệ (1–100, từ tầng ≤ đến tầng).',
   rooms_per_floor: 'Tối đa 99 phòng mỗi tầng.',
   seq_overflow: 'Số thứ tự vượt quá 99 khi gắn số tầng. Giảm số phòng hoặc số bắt đầu.',
-  too_many: `Tối đa ${QUICK_ROOM_MAX} phòng mỗi lần tạo.`,
-  invalid_input: 'Cấu hình sinh mã phòng không hợp lệ. Kiểm tra tiền tố (tối đa 10 ký tự) và các số bắt đầu.',
+  too_many: 'Tối đa 200 phòng mỗi lần tạo.',
 }
 
-const { generator, defaultRent, defaultArea, samePrice } = props.preview
-const roomKey = (roomNumber: string) => slugifyName(roomNumber) || roomNumber.toLowerCase()
+const g = computed({
+  get: () => preview.generator.value,
+  set: (value) => { preview.generator.value = value },
+})
+function patch(changes: Partial<typeof g.value>) {
+  g.value = { ...g.value, ...changes }
+}
 
-const generatorMessage = computed(() => {
-  const error = props.preview.generatorError.value
-  return error ? GENERATOR_ERRORS[error] : null
+const errorCopy = computed(() => {
+  const code = preview.generatorError.value
+  return code ? GENERATOR_ERROR_COPY[code] : null
 })
 
 const flagged = computed(() => new Set([
-  ...props.preview.duplicateRoomNumbers.value,
-  ...props.preview.serverDuplicates.value,
-].map(roomKey)))
+  ...preview.duplicateRoomNumbers.value,
+  ...preview.serverDuplicates.value,
+]))
 
-const groups = computed(() => {
-  const byFloor = new Map<number, PreviewRoom[]>()
-  for (const row of props.preview.rows.value) {
-    const list = byFloor.get(row.floor) ?? []
+const floorGroups = computed(() => {
+  const groups = new Map<number, typeof preview.rows.value>()
+  for (const row of preview.rows.value) {
+    const list = groups.get(row.floor) ?? []
     list.push(row)
-    byFloor.set(row.floor, list)
+    groups.set(row.floor, list)
   }
-  return [...byFloor.entries()].sort(([a], [b]) => a - b).map(([floor, rows]) => ({ floor, rows }))
+  return [...groups.entries()].sort((a, b) => a[0] - b[0]).map(([floor, items]) => ({ floor, items }))
 })
 
 const newNumber = ref('')
 const newFloor = ref(1)
-const addError = ref<string | null>(null)
-
 function addManual() {
-  const ok = props.preview.addRow(newNumber.value.trim(), newFloor.value)
-  addError.value = ok ? null : 'Không thể thêm phòng: mã phòng trống, đã tồn tại trong danh sách hoặc đã đạt giới hạn.'
-  if (ok) newNumber.value = ''
+  const value = newNumber.value.trim()
+  if (!value) return
+  preview.addRow(value, Math.max(1, Number(newFloor.value) || 1))
+  newNumber.value = ''
 }
-
-const toInt = (raw: string, min: number, max: number) => Math.min(max, Math.max(min, Math.trunc(Number(raw)) || min))
-const toNonNegative = (raw: string) => Math.max(0, Math.trunc(Number(raw)) || 0)
 </script>
 
 <template>
-  <div class="min-w-0 space-y-5">
-    <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
+  <div class="space-y-4">
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
       <UiInput
-        label="Từ tầng"
-        type="number"
-        number-mode="integer"
-        min="1"
-        max="100"
-        :disabled="disabled"
-        :model-value="String(generator.floorFrom)"
-        @update:model-value="(v: string) => generator.floorFrom = toInt(v, 1, 100)"
+        label="Từ tầng" type="number" number-mode="integer"
+        :model-value="String(g.floorFrom)"
+        @update:model-value="(v: string) => patch({ floorFrom: Number(v) || 1 })"
       />
       <UiInput
-        label="Đến tầng"
-        type="number"
-        number-mode="integer"
-        min="1"
-        max="100"
-        :disabled="disabled"
-        :model-value="String(generator.floorTo)"
-        @update:model-value="(v: string) => generator.floorTo = toInt(v, 1, 100)"
+        label="Đến tầng" type="number" number-mode="integer"
+        :model-value="String(g.floorTo)"
+        @update:model-value="(v: string) => patch({ floorTo: Number(v) || 1 })"
       />
       <UiInput
-        label="Phòng mỗi tầng"
-        type="number"
-        number-mode="integer"
-        min="1"
-        max="99"
-        :disabled="disabled"
-        :model-value="String(generator.roomsPerFloor)"
-        @update:model-value="(v: string) => generator.roomsPerFloor = toInt(v, 1, 99)"
+        label="Số phòng mỗi tầng" type="number" number-mode="integer"
+        :model-value="String(g.roomsPerFloor)"
+        @update:model-value="(v: string) => patch({ roomsPerFloor: Number(v) || 1 })"
       />
       <UiInput
-        v-model="generator.prefix"
-        label="Tiền tố mã phòng"
-        placeholder="Ví dụ: P, A"
-        :disabled="disabled"
+        label="Tiền tố mã phòng" placeholder="Ví dụ: P, A"
+        :model-value="g.prefix"
+        @update:model-value="(v: string) => patch({ prefix: v })"
       />
       <UiInput
-        :label="generator.includeFloor ? 'Số thứ tự đầu mỗi tầng' : 'Số bắt đầu'"
-        type="number"
-        number-mode="integer"
-        min="0"
-        :disabled="disabled"
-        :model-value="String(generator.startSeq)"
-        @update:model-value="(v: string) => generator.startSeq = toNonNegative(v)"
+        label="Số thứ tự bắt đầu" type="number" number-mode="integer"
+        :model-value="String(g.startSeq)"
+        @update:model-value="(v: string) => patch({ startSeq: Number(v) || 0 })"
       />
       <UiInput
-        v-if="generator.includeFloor"
-        label="Số tầng bắt đầu trong mã"
-        type="number"
-        number-mode="integer"
-        min="0"
-        :disabled="disabled"
-        :model-value="String(generator.nameFloorStart)"
-        @update:model-value="(v: string) => generator.nameFloorStart = toNonNegative(v)"
+        v-if="g.includeFloor"
+        label="Số tầng trong tên (tầng đầu)" type="number" number-mode="integer"
+        :model-value="String(g.nameFloorStart)"
+        @update:model-value="(v: string) => patch({ nameFloorStart: Number(v) || 0 })"
       />
       <UiInput
-        label="Giá thuê mặc định (đ)"
-        type="number"
-        number-mode="currency"
-        :disabled="disabled"
-        :model-value="String(defaultRent)"
-        @update:model-value="(v: string) => defaultRent = Number(v) || 0"
+        label="Giá thuê mặc định (đ)" type="number" number-mode="currency"
+        :model-value="String(preview.defaultRent.value)"
+        @update:model-value="(v: string) => preview.defaultRent.value = Number(v) || 0"
       />
       <UiInput
-        label="Diện tích mặc định (m²)"
-        type="number"
-        number-mode="area"
-        min="0"
-        placeholder="Tùy chọn"
-        :disabled="disabled"
-        :model-value="defaultArea !== null ? String(defaultArea) : ''"
-        @update:model-value="(v: string) => defaultArea = v === '' ? null : Number(v)"
+        label="Diện tích mặc định (m²)" type="number" number-mode="area" placeholder="Tùy chọn"
+        :model-value="preview.defaultArea.value !== null ? String(preview.defaultArea.value) : ''"
+        @update:model-value="(v: string) => preview.defaultArea.value = v === '' ? null : Number(v)"
       />
     </div>
 
-    <div class="flex flex-wrap gap-x-6 gap-y-2">
-      <UiCheckbox v-model="generator.includeFloor" label="Gắn số tầng vào mã phòng (P101, P201…)" :disabled="disabled" />
-      <UiCheckbox v-model="samePrice" label="Đồng giá cho tất cả phòng" :disabled="disabled" />
+    <div class="flex flex-wrap items-center gap-4">
+      <UiCheckbox :model-value="g.includeFloor" label="Gắn số tầng vào mã phòng" @update:model-value="(v: boolean) => patch({ includeFloor: v })" />
+      <UiCheckbox v-model="preview.samePrice.value" label="Đồng giá cho tất cả phòng" />
     </div>
 
-    <UiAlert v-if="generatorMessage" severity="danger" data-test="generator-error">
-      {{ generatorMessage }}
-    </UiAlert>
-    <UiAlert v-if="flagged.size" severity="warning" class="break-words">
-      Các mã phòng bị trùng: {{ [...preview.duplicateRoomNumbers.value, ...preview.serverDuplicates.value].join(', ') }}. Đổi tiền tố hoặc số bắt đầu rồi thử lại.
+    <UiAlert v-if="errorCopy" severity="warning">{{ errorCopy }}</UiAlert>
+    <UiAlert v-else-if="flagged.size" severity="warning">
+      Các mã phòng bị trùng: {{ [...flagged].join(', ') }}. Đổi tiền tố, số bắt đầu hoặc xóa dòng rồi thử lại.
     </UiAlert>
 
-    <div v-if="groups.length" class="min-w-0 space-y-4" role="region" aria-label="Xem trước phòng">
-      <p class="text-xs text-ui-muted">
-        Xem trước {{ preview.rows.value.length }} phòng. Ô đã sửa giữ giá trị khi đổi mặc định; bật đồng giá sẽ đặt lại giá thuê của tất cả phòng.
-      </p>
-      <section v-for="group in groups" :key="group.floor" data-test="floor-group" class="overflow-hidden rounded-xl border border-ui-border">
-        <h4 class="bg-ui-chrome px-3 py-2 text-xs font-medium uppercase tracking-wide text-ui-muted">
-          Tầng {{ group.floor }} · {{ group.rows.length }} phòng
-        </h4>
-        <ul class="divide-y divide-ui-border">
-          <li
-            v-for="row in group.rows"
+    <div v-if="floorGroups.length" class="space-y-4">
+      <p class="text-xs text-ui-muted">Xem trước {{ preview.rows.value.length }} phòng (các phòng đã tồn tại sẽ không được tạo lại):</p>
+      <div v-for="group in floorGroups" :key="group.floor" data-test="floor-group" class="rounded-lg border border-ui-border">
+        <div class="border-b border-ui-border px-3 py-2 text-xs font-semibold text-ui-accent">Tầng {{ group.floor }}</div>
+        <div class="divide-y divide-ui-border">
+          <div
+            v-for="row in group.items"
             :key="row.roomNumber"
             :data-test="`room-row-${row.roomNumber}`"
-            :class="clsx('grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-2 px-3 py-2 md:grid-cols-[7rem_5rem_minmax(0,1fr)_7rem_2.25rem]', row.existing && 'opacity-60')"
+            class="flex flex-wrap items-center gap-3 px-3 py-2"
           >
-            <div class="min-w-0 pt-1.5">
-              <span :class="clsx('break-all font-mono text-sm', flagged.has(roomKey(row.roomNumber)) ? 'text-status-danger' : 'text-ui-primary')">
-                {{ row.roomNumber }}
-              </span>
-              <UiBadge v-if="row.existing" class="ml-2">Đã có</UiBadge>
-              <span v-else-if="flagged.has(roomKey(row.roomNumber))" class="block text-xs text-status-danger">Mã trùng</span>
-            </div>
-            <div class="order-last col-span-2 grid grid-cols-3 gap-2 md:order-none md:col-span-3">
-              <div class="col-span-3 grid grid-cols-3 gap-2 text-[11px] text-ui-muted md:hidden" aria-hidden="true">
-                <span>Tầng</span>
-                <span>Giá thuê</span>
-                <span>m²</span>
-              </div>
-              <QuickRoomCellEditor
-                compact
-                :room-number="row.roomNumber"
-                field="floor"
-                :value="row.floor"
-                :overridden="row.overridden.includes('floor')"
-                :disabled="disabled || row.existing"
-                @update="(v) => preview.setCell(row.roomNumber, 'floor', v ?? 1)"
-                @reset="preview.resetCell(row.roomNumber, 'floor')"
+            <span
+              class="w-24 font-mono text-sm"
+              :class="row.existing ? 'text-ui-muted line-through' : flagged.has(row.roomNumber) ? 'text-ui-danger' : 'text-ui-primary'"
+            >{{ row.roomNumber }}</span>
+            <UiBadge v-if="row.existing" variant="neutral">Đã có</UiBadge>
+            <UiBadge v-else-if="row.manual" variant="accent">Thêm tay</UiBadge>
+            <template v-if="!row.existing">
+              <UiInput
+                class="w-28" density="compact" type="number" number-mode="integer"
+                :aria-label="`Tầng ${row.roomNumber}`"
+                :model-value="String(row.floor)"
+                @update:model-value="(v: string) => preview.setCell(row.roomNumber, 'floor', Math.max(1, Number(v) || 1))"
               />
-              <QuickRoomCellEditor
-                v-if="!samePrice"
-                compact
-                :room-number="row.roomNumber"
-                field="rent"
-                :value="row.rent"
-                :overridden="row.overridden.includes('rent')"
-                :disabled="disabled || row.existing"
-                @update="(v) => preview.setCell(row.roomNumber, 'rent', v ?? 0)"
-                @reset="preview.resetCell(row.roomNumber, 'rent')"
+              <UiInput
+                v-if="!preview.samePrice.value"
+                class="w-36" density="compact" type="number" number-mode="currency"
+                :aria-label="`Giá thuê ${row.roomNumber}`"
+                :model-value="String(row.rent)"
+                @update:model-value="(v: string) => preview.setCell(row.roomNumber, 'rent', Number(v) || 0)"
               />
-              <span v-else class="pt-1.5 text-sm tabular-nums text-ui-primary">{{ row.rent.toLocaleString('vi-VN') }} đ</span>
-              <QuickRoomCellEditor
-                compact
-                :room-number="row.roomNumber"
-                field="area"
-                :value="row.area"
-                :overridden="row.overridden.includes('area')"
-                :disabled="disabled || row.existing"
-                @update="(v) => preview.setCell(row.roomNumber, 'area', v)"
-                @reset="preview.resetCell(row.roomNumber, 'area')"
+              <UiInput
+                class="w-28" density="compact" type="number" number-mode="area" placeholder="m²"
+                :aria-label="`Diện tích ${row.roomNumber}`"
+                :model-value="row.area !== null ? String(row.area) : ''"
+                @update:model-value="(v: string) => preview.setCell(row.roomNumber, 'area', v === '' ? null : Number(v))"
               />
-            </div>
+            </template>
             <UiButton
-              variant="ghost"
-              size="sm"
-              icon-only
-              :disabled="disabled"
-              :aria-label="`Bỏ phòng ${row.roomNumber}`"
-              class="md:col-start-5 md:row-start-1"
+              variant="ghost" size="sm" class="ml-auto"
+              :aria-label="`Xóa dòng ${row.roomNumber}`"
               @click="preview.removeRow(row.roomNumber)"
-            >
-              <IconX class="size-4" aria-hidden="true" />
-            </UiButton>
-          </li>
-        </ul>
-      </section>
+            >Xóa</UiButton>
+          </div>
+        </div>
+      </div>
 
-      <form class="flex flex-wrap items-end gap-3" @submit.prevent="addManual">
-        <UiInput v-model="newNumber" label="Thêm phòng lẻ" placeholder="Mã phòng" :disabled="disabled" class="w-40" />
+      <div class="flex flex-wrap items-end gap-3">
+        <UiInput v-model="newNumber" label="Thêm phòng thủ công" placeholder="Mã phòng" density="compact" class="w-40" />
         <UiInput
-          label="Tầng"
-          type="number"
-          number-mode="integer"
-          min="1"
-          max="100"
-          :disabled="disabled"
-          class="w-24"
+          label="Tầng" type="number" number-mode="integer" density="compact" class="w-24"
           :model-value="String(newFloor)"
-          @update:model-value="(v: string) => newFloor = toInt(v, 1, 100)"
+          @update:model-value="(v: string) => newFloor = Math.max(1, Number(v) || 1)"
         />
-        <UiButton type="submit" variant="secondary" size="md" :disabled="disabled || !newNumber.trim()">
-          <IconPlus class="size-4" aria-hidden="true" />
-          Thêm
-        </UiButton>
-      </form>
-      <p v-if="addError" class="text-xs text-status-danger">{{ addError }}</p>
+        <UiButton variant="secondary" size="sm" :disabled="!newNumber.trim()" @click="addManual">Thêm dòng</UiButton>
+      </div>
     </div>
   </div>
 </template>

@@ -3,6 +3,7 @@ import type { BuildingService } from './building-services'
 import type { BuildingInvoiceProfile } from './building-invoice-profile'
 import type { BuildingInvoiceEmailSettings } from './invoice-email'
 import type { Building } from './buildings'
+import type { BuildingContractProfile, BuildingReadiness } from './building-contract-profile'
 import type { ContractService } from './contract-services'
 import type { ContractWithDetails } from './contracts'
 import type {
@@ -27,4 +28,6 @@ export interface BuildingSettingsBootstrap {
   reserveRates: BuildingReserveFundRate[]
   recurringExpenses: RecurringExpense[]
   prepaidExpenses: PrepaidExpense[]
+  contractProfile: BuildingContractProfile | null
+  readiness: BuildingReadiness
 }

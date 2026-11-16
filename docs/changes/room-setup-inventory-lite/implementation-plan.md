@@ -2,7 +2,7 @@
 type: Change Implementation Plan
 title: "room-setup-inventory-lite-implementation-plan"
 status: draft
-change_state: implementing
+change_state: plan-review
 tags: [superpowers, change, rooms, inventory, contracts, v2]
 ---
 
@@ -18,7 +18,7 @@ tags: [superpowers, change, rooms, inventory, contracts, v2]
 
 **Spec:** [design.md](./design.md)
 
-**Prerequisite:** PR0 ([atomic-building-room-setup](../../history/2026-11-11-atomic-building-room-setup/implementation-plan.md)) merged — this plan uses `create_rooms_batch`, `useQuickRoomPreview`, `QUICK_ROOM_MAX`, `quickRoomSchema`, `throwBuildingSetupError`.
+**Prerequisite:** PR0 ([atomic-building-room-setup](../atomic-building-room-setup/implementation-plan.md)) merged — this plan uses `create_rooms_batch`, `useQuickRoomPreview`, `QUICK_ROOM_MAX`, `quickRoomSchema`, `throwBuildingSetupError`.
 
 ## Global Constraints
 
@@ -44,23 +44,10 @@ tags: [superpowers, change, rooms, inventory, contracts, v2]
 
 ---
 
-## Preflight implementation decisions (2026-11-12)
-
-- UI direction was explicitly approved by the user: floor-group preview, editable desktop tables/mobile cards, copied building template, collapsible handover reference; preserve existing theme, typography and primitives.
-- Use the atomic replacement option explicitly offered in Task 4: add `replace_inventory_template(p_building_id uuid, p_items jsonb)` and `replace_room_inventory(p_room_id uuid, p_items jsonb)` returning their respective table rows. Their delete/insert steps run in one transaction; a failed insert must preserve the previous list. Task 4 repositories call these RPCs, never separate REST delete/insert requests.
-- All inventory writes take the same per-building advisory transaction lock, including template replacement, room replacement and template application. Validate room membership under row locks before applying; reject malformed mode/room arrays and lists outside their limits without partial writes.
-- Enforce the 50-item invariant after merge as well as for submitted lists. A merge that would exceed 50 raises a stable validation error (`INVENTORY_ITEMS_LIMIT`) and rolls back, rather than truncating or creating an invalid room list.
-- Validate wrapper inventory array shape, item bounds, integer quantities/values and case-insensitive duplicate names before persistence; use `jsonb_array_elements(... ) with ordinality` rather than the ambiguous typed `jsonb_to_recordset` alias sample. Validation helpers, if added, receive the same function security/grant restrictions as the public wrappers. Match monetary bounds to `numeric(12,0)`.
-- Contract handover ancestry queries must filter every hop to the authorized building and handle cycles/invalid traversal explicitly; an initial scope check alone must not expose inventory from another building through a malformed chain.
-- The pure generator validates prefix length (≤10), nonnegative safe-integer start/name-floor values and safe sequence arithmetic. Use a dedicated `invalid_input` error for these invalid configurations, in addition to the four planned generation errors, with a static Vietnamese explanation in the shared generator UI. Existing-room comparison uses the same normalized slug key as persistence, including case/punctuation variants.
-- Existing production RPCs remain unchanged, and cloud SQL execution/type regeneration remain human-run gates. Generate the increasing migration filename through the installed CLI; adapt the sample filename in tests/evidence.
-
----
-
 ### Task 1: Migration — tables, guards, RPCs
 
 **Files:**
-- Create: `supabase/migrations/20261112005547_inventory_lite.sql`
+- Create: `supabase/migrations/20261111110000_inventory_lite.sql`
 - Create: `supabase/verification/inventory_lite.sql`
 - Test: `tests/config/inventory-lite-migration.test.ts`
 
@@ -71,7 +58,7 @@ tags: [superpowers, change, rooms, inventory, contracts, v2]
   - `public.create_rooms_batch_idempotent(p_building_id uuid, p_rooms jsonb, p_apply_inventory boolean, p_actor_id uuid, p_request_id uuid) returns jsonb` — `{ rooms: rooms row[], replayed: boolean }`; errors as PR0 (`ROOM_BATCH_*`, `BUILDING_SETUP_REQUEST_CONFLICT`, `BUILDING_SETUP_REQUEST_REQUIRED`).
   - `public.create_contract_with_handover_and_inventory(<17 params of create_contract_with_handover in the same order and types>, p_inventory jsonb) returns setof public.contracts`.
 
-- [x] **Step 1: Write the failing static test**
+- [ ] **Step 1: Write the failing static test**
 
 ```ts
 // tests/config/inventory-lite-migration.test.ts
@@ -79,7 +66,7 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
-const sql = readFileSync(resolve(process.cwd(), 'supabase/migrations/20261112005547_inventory_lite.sql'), 'utf8')
+const sql = readFileSync(resolve(process.cwd(), 'supabase/migrations/20261111110000_inventory_lite.sql'), 'utf8')
 
 describe('inventory lite migration', () => {
   it.each(['building_inventory_templates', 'room_inventory_items', 'contract_inventory_items'])('locks %s to service_role', (table) => {
@@ -105,9 +92,9 @@ describe('inventory lite migration', () => {
 })
 ```
 
-- [x] **Step 2: Run to verify failure** — `npx vitest run tests/config/inventory-lite-migration.test.ts` → FAIL (ENOENT).
+- [ ] **Step 2: Run to verify failure** — `npx vitest run tests/config/inventory-lite-migration.test.ts` → FAIL (ENOENT).
 
-- [x] **Step 3: Write the migration**
+- [ ] **Step 3: Write the migration**
 
 ```sql
 -- =============================================================================
@@ -350,7 +337,7 @@ Note: `jsonb_to_recordset(...) with ordinality` requires the ordinality column a
 
 Note: the static test regex for `revoke`/`grant` uses `\([^)]*\)`; the multi-line argument list for the contract wrapper contains no `)` so it matches.
 
-- [x] **Step 4: Write the verification script**
+- [ ] **Step 4: Write the verification script**
 
 ```sql
 -- Verification for inventory lite (V2 PR2). Run as service_role; rolled back.
@@ -453,12 +440,12 @@ rollback;
 
 If check 6 does not fail (no unique constraint on handover per room/period), replace it with a call passing `p_end_date <= p_start_date` (the wrapped function raises `P0001`) and assert no `contract_inventory_items` row with `name = 'X'` exists.
 
-- [x] **Step 5: Run static test** → PASS.
+- [ ] **Step 5: Run static test** → PASS.
 
-- [x] **Step 6: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
-git add supabase/migrations/20261112005547_inventory_lite.sql supabase/verification/inventory_lite.sql tests/config/inventory-lite-migration.test.ts
+git add supabase/migrations/20261111110000_inventory_lite.sql supabase/verification/inventory_lite.sql tests/config/inventory-lite-migration.test.ts
 git commit -m "feat(db): inventory tables and wrapper RPCs"
 ```
 
@@ -497,7 +484,7 @@ git commit -m "feat(db): inventory tables and wrapper RPCs"
   export type InventoryItemInput, InventoryApplyInput, RoomBatchCreateInput
   ```
 
-- [x] **Step 1: Write the failing test**
+- [ ] **Step 1: Write the failing test**
 
 ```ts
 // tests/utils/inventory-validators.test.ts
@@ -557,9 +544,9 @@ describe('inventoryTotalValue', () => {
 })
 ```
 
-- [x] **Step 2: Run to verify failure.**
+- [ ] **Step 2: Run to verify failure.**
 
-- [x] **Step 3: Implement**
+- [ ] **Step 3: Implement**
 
 ```ts
 // app/types/inventory.ts
@@ -677,9 +664,9 @@ export type RoomBatchCreateInput = z.infer<typeof roomBatchCreateSchema>
 
 Postgres `lower()` and JS `toLocaleLowerCase('vi')` agree for Vietnamese letters with diacritics; the DB unique index is the final guard.
 
-- [x] **Step 4: Run tests** → PASS.
+- [ ] **Step 4: Run tests** → PASS.
 
-- [x] **Step 5: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
 git add app/types/inventory.ts app/utils/mappers/inventory.ts app/utils/validators/inventory.ts tests/utils/inventory-validators.test.ts
@@ -712,7 +699,7 @@ git commit -m "feat(inventory): types, mapper and validators"
   - Add `removeRow(roomNumber)`, `addRow(roomNumber, floor)`; manual rows survive regeneration; removed generated rows stay removed until generator inputs change their set.
   - `PreviewRoom` gains `existing: boolean`, `manual: boolean`.
 
-- [x] **Step 1: Write failing generator tests**
+- [ ] **Step 1: Write failing generator tests**
 
 ```ts
 // tests/utils/generate-room-numbers.test.ts
@@ -755,9 +742,9 @@ describe('generateRoomNumbers', () => {
 })
 ```
 
-- [x] **Step 2: Run to verify failure.**
+- [ ] **Step 2: Run to verify failure.**
 
-- [x] **Step 3: Implement the generator**
+- [ ] **Step 3: Implement the generator**
 
 ```ts
 // app/utils/rooms/generate-room-numbers.ts
@@ -807,7 +794,7 @@ export function generateRoomNumbers(input: RoomGeneratorInput): { rooms: Generat
 }
 ```
 
-- [x] **Step 4: Extend composable tests** (append to `tests/composables/useQuickRoomPreview.test.ts`; update the PR0 `setup()` helper to set `p.generator.value = { floorFrom: 1, floorTo: 1, roomsPerFloor: 3, prefix: 'P', startSeq: 101, includeFloor: false, nameFloorStart: 1 }` so PR0 expectations `P101…P103` still hold):
+- [ ] **Step 4: Extend composable tests** (append to `tests/composables/useQuickRoomPreview.test.ts`; update the PR0 `setup()` helper to set `p.generator.value = { floorFrom: 1, floorTo: 1, roomsPerFloor: 3, prefix: 'P', startSeq: 101, includeFloor: false, nameFloorStart: 1 }` so PR0 expectations `P101…P103` still hold):
 
 ```ts
 describe('useQuickRoomPreview (PR2)', () => {
@@ -846,7 +833,7 @@ describe('useQuickRoomPreview (PR2)', () => {
 })
 ```
 
-- [x] **Step 5: Run to verify failure, then implement composable changes**
+- [ ] **Step 5: Run to verify failure, then implement composable changes**
 
 Key changes inside `useQuickRoomPreview`:
 
@@ -909,9 +896,9 @@ function toPayload(): QuickRoomInput[] {
 
 Remove PR0's `prefix`, `start`, `count`, `defaultFloor` refs and the `defaults().floor` usage (`floor` now comes from the generator; `PreviewField` keeps `'floor'` for manual edits). Keep `setCell`/`resetCell`; `resetCell(…, 'floor')` restores the generator's floor for that room (look it up in `generated.value.rooms`; for manual rows restore the floor given to `addRow`).
 
-- [x] **Step 6: Run tests** → PASS (generator + composable, including PR0 tests).
+- [ ] **Step 6: Run tests** → PASS (generator + composable, including PR0 tests).
 
-- [x] **Step 7: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
 git add app/utils/rooms/generate-room-numbers.ts app/composables/buildings/useQuickRoomPreview.ts tests/utils/generate-room-numbers.test.ts tests/composables/useQuickRoomPreview.test.ts
@@ -952,7 +939,7 @@ git commit -m "feat(rooms): floor-based room number generator"
   ROOM_INVENTORY_TEMPLATE_APPLIED: 'room.inventory.template_applied',
   ```
 
-- [x] **Step 1: Write the failing service test**
+- [ ] **Step 1: Write the failing service test**
 
 ```ts
 // tests/server/inventory/inventory-service.test.ts
@@ -1034,9 +1021,9 @@ describe('InventoryService', () => {
 })
 ```
 
-- [x] **Step 2: Run to verify failure.**
+- [ ] **Step 2: Run to verify failure.**
 
-- [x] **Step 3: Implement repository**
+- [ ] **Step 3: Implement repository**
 
 ```ts
 // server/repositories/inventory.ts
@@ -1109,7 +1096,7 @@ export const InventoryRepository = {
 
 `replaceTemplate`/`replaceRoom` are delete-then-insert without a transaction; a failed insert leaves the list empty. Mitigation: validation runs before the call (Task 5 route) and duplicate names are rejected client- and server-side, so insert failure is limited to infrastructure errors. If reviewers require atomicity, add `replace_room_inventory(p_room_id, p_items jsonb)` / `replace_inventory_template(...)` RPCs in Task 1's migration and call them here instead; tests are unchanged.
 
-- [x] **Step 4: Implement service**
+- [ ] **Step 4: Implement service**
 
 ```ts
 // server/services/inventory.ts
@@ -1218,9 +1205,9 @@ export const InventoryService = {
 
 Add the three audit constants to `app/utils/constants/audit.ts` (near the `ROOM_*` and `BUILDING_*` groups). If an audit-display label map exists for actions (search `app/utils/audit*`), add Vietnamese labels: "Cập nhật nội thất mẫu", "Cập nhật nội thất phòng", "Áp dụng nội thất mẫu".
 
-- [x] **Step 5: Run tests** → PASS.
+- [ ] **Step 5: Run tests** → PASS.
 
-- [x] **Step 6: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
 git add server/repositories/inventory.ts server/services/inventory.ts app/utils/constants/audit.ts tests/server/inventory/inventory-service.test.ts
@@ -1243,7 +1230,7 @@ git commit -m "feat(inventory): repository and service with scope checks"
 - `GET /api/rooms/[id]/inventory` → `{ data: InventoryItem[] }`
 - `PUT /api/rooms/[id]/inventory` body `{ items }` → `{ data: InventoryItem[] }`
 
-- [x] **Step 1: Write the failing test**
+- [ ] **Step 1: Write the failing test**
 
 ```ts
 // tests/server/inventory/inventory-api.test.ts
@@ -1298,9 +1285,9 @@ describe('inventory API', () => {
 })
 ```
 
-- [x] **Step 2: Run to verify failure.**
+- [ ] **Step 2: Run to verify failure.**
 
-- [x] **Step 3: Implement routes** (pattern; repeat per file):
+- [ ] **Step 3: Implement routes** (pattern; repeat per file):
 
 ```ts
 // server/api/buildings/[id]/inventory-template/index.put.ts
@@ -1372,9 +1359,9 @@ export default defineEventHandler(async (event) => {
 
 Check that `server/api/rooms/[id].get.ts` and a new `server/api/rooms/[id]/inventory.get.ts` coexist under Nitro routing (they do: `[id].get.ts` and `[id]/…` are distinct). If the rooms API uses `[code]` instead of `[id]`, match the existing param name.
 
-- [x] **Step 4: Run tests** → PASS. Regenerate `docs/api-inventory.md` with `node scripts/generate-api-inventory.mjs`.
+- [ ] **Step 4: Run tests** → PASS. Regenerate `docs/api-inventory.md` with `node scripts/generate-api-inventory.mjs`.
 
-- [x] **Step 5: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
 git add server/api/buildings/[id]/inventory-template server/api/rooms/[id] tests/server/inventory/inventory-api.test.ts docs/api-inventory.md
@@ -1400,7 +1387,7 @@ git commit -m "feat(api): inventory template and room inventory endpoints"
   ```
   `POST /api/buildings/[id]/rooms/batch` → `201 { data: Room[], meta: { room_count, replayed } }`
 
-- [x] **Step 1: Write the failing test**
+- [ ] **Step 1: Write the failing test**
 
 ```ts
 // tests/server/rooms-batch.api.test.ts
@@ -1475,9 +1462,9 @@ describe('POST /api/buildings/[id]/rooms/batch', () => {
 })
 ```
 
-- [x] **Step 2: Run to verify failure.**
+- [ ] **Step 2: Run to verify failure.**
 
-- [x] **Step 3: Implement**
+- [ ] **Step 3: Implement**
 
 Repository (append to `RoomRepository`):
 
@@ -1561,9 +1548,9 @@ export default defineEventHandler(async (event) => {
 
 Check: `server/api/buildings/[id]/rooms/[room].get.ts` already exists; `batch.post.ts` is a static segment and takes precedence over `[room]` for POST. Confirm there is no `[room].post.ts`.
 
-- [x] **Step 4: Run tests** → PASS. Regenerate api inventory.
+- [ ] **Step 4: Run tests** → PASS. Regenerate api inventory.
 
-- [x] **Step 5: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
 git add server/repositories/rooms/index.ts server/services/rooms/index.ts server/api/buildings/[id]/rooms/batch.post.ts tests/server/rooms-batch.api.test.ts docs/api-inventory.md
@@ -1587,7 +1574,7 @@ git commit -m "feat(rooms): idempotent batch room creation for existing building
 - `ContractRepository.findHandoverInventory(event, contractId): Promise<HandoverInventory>`
 - `GET /api/contracts/[id]/handover-inventory` → `{ data: HandoverInventory }`
 
-- [x] **Step 1: Write failing tests**
+- [ ] **Step 1: Write failing tests**
 
 Extend the create describe in `tests/server/contracts.api.test.ts` (add `inventoryRepoMocks = { listRoom: vi.fn() }` and `vi.mock('../../server/repositories/inventory', () => ({ InventoryRepository: inventoryRepoMocks }))`):
 
@@ -1674,9 +1661,9 @@ describe('ContractRepository.findHandoverInventory', () => {
 
 If the contracts repository uses a different client accessor (e.g. `serverSupabaseClient` alias), mock that module path instead.
 
-- [x] **Step 2: Run to verify failure.**
+- [ ] **Step 2: Run to verify failure.**
 
-- [x] **Step 3: Implement**
+- [ ] **Step 3: Implement**
 
 Validator — in `contractCreateSchema` object add (before `.strict()`):
 
@@ -1760,9 +1747,9 @@ export default defineEventHandler(async (event) => {
 
 Match the contracts route param name (`[id]` vs `[code]`) used by existing `server/api/contracts/**` files. Check `contract.buildingId` is the DTO field name (`ContractWithDetails`).
 
-- [x] **Step 4: Run tests** → PASS (including all existing contract tests). Regenerate api inventory.
+- [ ] **Step 4: Run tests** → PASS (including all existing contract tests). Regenerate api inventory.
 
-- [x] **Step 5: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
 git add app/utils/validators/contracts.ts server/services/contracts/index.ts server/repositories/contracts/index.ts server/api/contracts/[id]/handover-inventory.get.ts tests/server/contracts.api.test.ts tests/server/contracts/handover-inventory.test.ts docs/api-inventory.md
@@ -1784,9 +1771,9 @@ git commit -m "feat(contracts): capture and read handover inventory"
 - `InventoryItemsList` props `{ items: InventoryItem[]; emptyText?: string; sourceNote?: string | null }`.
 - `RoomBatchGenerator` props `{ preview: ReturnType<typeof useQuickRoomPreview> }` — renders generator inputs bound to `preview.generator`, error message for `preview.generatorError`, preview grouped by floor with editable floor/rent/area (as PR0), "existing" badge rows (excluded), remove-row action, add-row form (room number + floor).
 
-- [x] **Step 1: UI polish workflow** — read `.agents/skills/zeno-house/references/ui-polish-workflow.md`; apply `frontend-design` + Hallmark; decide table vs card layout on mobile, density, error placement, generator field grouping, and copy. Record in `docs/changes/room-setup-inventory-lite/verification.md` → "UI decisions". New tokens/primitives: stop and ask.
+- [ ] **Step 1: UI polish workflow** — read `.agents/skills/zeno-house/references/ui-polish-workflow.md`; apply `frontend-design` + Hallmark; decide table vs card layout on mobile, density, error placement, generator field grouping, and copy. Record in `docs/changes/room-setup-inventory-lite/verification.md` → "UI decisions". New tokens/primitives: stop and ask.
 
-- [x] **Step 2: Write failing tests**
+- [ ] **Step 2: Write failing tests**
 
 ```ts
 // tests/components/inventory/InventoryItemsEditor.test.ts
@@ -1875,13 +1862,13 @@ describe('RoomBatchGenerator', () => {
 
 Error copy map (put in the component): `floor_range` → "Khoảng tầng không hợp lệ (1–100, từ tầng ≤ đến tầng).", `rooms_per_floor` → "Tối đa 99 phòng mỗi tầng.", `seq_overflow` → "Số thứ tự vượt quá 99 khi gắn số tầng. Giảm số phòng hoặc số bắt đầu.", `too_many` → "Tối đa 200 phòng mỗi lần tạo."
 
-- [x] **Step 3: Run to verify failure.**
+- [ ] **Step 3: Run to verify failure.**
 
-- [x] **Step 4: Implement** the three components following Step 1 decisions and the interfaces above; reuse `UiTable`, `UiInput density="compact"`, `UiSelect`, `UiButton`, `UiBadge`, `UiAlert`, `UiCheckbox`. Use existing icon components (`IconPlus`, etc.) — no inline `<svg>`. `data-test` hooks: `inventory-add`, `inventory-remove-{index}`, `inventory-total`, `floor-group`, `room-row-{roomNumber}`.
+- [ ] **Step 4: Implement** the three components following Step 1 decisions and the interfaces above; reuse `UiTable`, `UiInput density="compact"`, `UiSelect`, `UiButton`, `UiBadge`, `UiAlert`, `UiCheckbox`. Use existing icon components (`IconPlus`, etc.) — no inline `<svg>`. `data-test` hooks: `inventory-add`, `inventory-remove-{index}`, `inventory-total`, `floor-group`, `room-row-{roomNumber}`.
 
-- [x] **Step 5: Run tests** → PASS.
+- [ ] **Step 5: Run tests** → PASS.
 
-- [x] **Step 6: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
 git add app/components/inventory app/components/rooms/RoomBatchGenerator.vue tests/components/inventory tests/components/rooms/RoomBatchGenerator.test.ts docs/changes/room-setup-inventory-lite/verification.md
@@ -1906,7 +1893,7 @@ git commit -m "feat(ui): inventory editor/list and room batch generator componen
 - `useRoomBatchCreate(buildingIdentifier)` → `{ submit(input: { rooms, apply_inventory }): Promise<boolean>; loading; apiError; duplicateRoomNumbers; requestId }` — stable `request_id` per instance, same error handling as PR0 `useBuildingForm.submitCreate`, navigates to `/dashboard/rooms?building_id=<id>` on success.
 - `useInventoryTemplate(buildingIdentifier)` → `{ items, loading, saving, error, save(items), apply(input) }` via `GET/PUT …/inventory-template` and `POST …/apply`.
 
-- [x] **Step 1: Write failing composable tests**
+- [ ] **Step 1: Write failing composable tests**
 
 ```ts
 // tests/composables/useRoomBatchCreate.test.ts
@@ -1969,9 +1956,9 @@ describe('useInventoryTemplate', () => {
 })
 ```
 
-- [x] **Step 2: Run to verify failure; implement composables** following `useBuildingForm` (PR0) and `useBuildingContractProfile` (PR1) patterns (`apiFetch`, `getApiErrorMessage`, `getApiErrorDetails`).
+- [ ] **Step 2: Run to verify failure; implement composables** following `useBuildingForm` (PR0) and `useBuildingContractProfile` (PR1) patterns (`apiFetch`, `getApiErrorMessage`, `getApiErrorDetails`).
 
-- [x] **Step 3: Write failing page source test**
+- [ ] **Step 3: Write failing page source test**
 
 ```ts
 // tests/pages/building-inventory-pages.spec.ts
@@ -2004,7 +1991,7 @@ describe('building inventory pages', () => {
 })
 ```
 
-- [x] **Step 4: Implement pages**
+- [ ] **Step 4: Implement pages**
   - `create.vue`: replace PR0's generator inputs and table with `<RoomBatchGenerator :preview="preview" />`; keep the `enabled` checkbox and submit flow from PR0 unchanged (`preview.toPayload()`).
   - `buildings/[id]/rooms/batch.vue`: fetch building; fetch rooms via `useFetch('/api/rooms', { query: { building_id, limit: 200 } })` and set `preview.existingRoomNumbers`; if the building has > 200 rooms, page through until done. `preview.enabled = true` on mount. Template inventory count from `GET …/inventory-template`; checkbox "Áp dụng nội thất mẫu ({n} món)" disabled with a link to `settings#inventory-template` when `n === 0`. Submit via `useRoomBatchCreate`; watch `duplicateRoomNumbers` → `preview.markServerDuplicates`. Guard with `authStore.can('rooms.create')`.
   - Entry points: "Thêm phòng hàng loạt" item in the rooms list `UiDropdownMenu` (only when a building filter is active; link to `buildings/<id>/rooms/batch`) and a secondary button on the building detail header actions.
@@ -2013,7 +2000,7 @@ describe('building inventory pages', () => {
 
 - [ ] **Step 5: Run tests** → PASS. Visual QA (ask before starting a local runtime): create page multi-floor, batch page with existing rooms + template, settings template edit + apply merge/replace, mobile. Record in `verification.md`.
 
-- [x] **Step 6: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
 git add app/pages/dashboard/buildings app/pages/dashboard/rooms/index.vue app/composables/rooms app/composables/inventory app/components/inventory/InventoryApplyModal.vue tests/composables/useRoomBatchCreate.test.ts tests/composables/useInventoryTemplate.test.ts tests/pages/building-inventory-pages.spec.ts docs/changes/room-setup-inventory-lite/verification.md
@@ -2038,7 +2025,7 @@ git commit -m "feat(ui): floor generator pages and building inventory template"
 - `ContractFormData` gains `inventory: InventoryItemInput[]`; `ContractForm` loads `GET /api/rooms/{room_id}/inventory` when `room_id` changes and sets `inventory` (only if the user has not edited it for that room).
 - `ContractHandoverSection` props `{ contractId: string }`; fetches `/api/contracts/{id}/handover-inventory`; renders `InventoryItemsList` with `sourceNote` when `sourceContractId !== contractId`.
 
-- [x] **Step 1: Write failing tests**
+- [ ] **Step 1: Write failing tests**
 
 ```ts
 // tests/composables/useRoomInventory.test.ts
@@ -2126,9 +2113,9 @@ describe('room and contract inventory surfaces', () => {
 })
 ```
 
-- [x] **Step 2: Run to verify failure.**
+- [ ] **Step 2: Run to verify failure.**
 
-- [x] **Step 3: Implement**
+- [ ] **Step 3: Implement**
   - `useRoomInventory` per interface.
   - Room detail: section after `RoomDetailHero` titled "Nội thất" with `InventoryItemsEditor` (editable when `authStore.can('rooms.update')`), save button, "Áp dụng mẫu tòa" (`UiButton variant="secondary"`), total value line.
   - `ContractForm.vue`: add `inventory: InventoryItemInput[]` to `ContractFormData`; in `selectRoom`, after updating `room_id`, fetch room inventory (`apiFetch(\`/api/rooms/${roomId}/inventory\`)`) and set `inventory` mapped to input shape; render a collapsible `UiFormSection` titled "Nội thất bàn giao ({n} món)" after the handover readings block, containing `InventoryItemsEditor` (or a muted line "Phòng chưa khai báo nội thất." when empty). Initialize `inventory: []` wherever `ContractFormData` defaults are created (create page + draft restore; drafts saved before this change must load with `inventory: []`).
@@ -2136,11 +2123,11 @@ describe('room and contract inventory surfaces', () => {
   - Contract detail: add `'handover'` to `sectionIds` after `'services'` and render `<ContractHandoverSection :contract-id="contract.id" />` with `id="handover"`.
   - `ContractCheckoutSection.vue`: add a collapsible read-only panel "Nội thất đã bàn giao" using `ContractHandoverSection` (or `InventoryItemsList` fed by the same fetch) near the settlement/deduction inputs; no change to calculations.
 
-- [x] **Step 4: Run tests** → PASS, plus existing `tests/**/contract*` suites (draft restore must not break).
+- [ ] **Step 4: Run tests** → PASS, plus existing `tests/**/contract*` suites (draft restore must not break).
 
 - [ ] **Step 5: Visual QA** (ask before starting a local runtime): room inventory edit/apply, contract create with/without room inventory, contract detail for a renewed contract, checkout panel, mobile. Record in `verification.md`.
 
-- [x] **Step 6: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
 git add app/composables/inventory/useRoomInventory.ts app/pages/dashboard/rooms app/components/contracts app/pages/dashboard/contracts tests/composables/useRoomInventory.test.ts tests/components/contracts/ContractHandoverSection.test.ts tests/pages/room-contract-inventory.spec.ts docs/changes/room-setup-inventory-lite/verification.md
@@ -2154,9 +2141,9 @@ git commit -m "feat(ui): room inventory, contract handover and checkout referenc
 **Files:**
 - Modify: `docs/changes/room-setup-inventory-lite/verification.md`, `index.md`
 
-- [x] **Step 1: Run** `npm run typecheck && npm test && npm run lint && npm run knowledge:check`; fix and record.
+- [ ] **Step 1: Run** `npm run typecheck && npm test && npm run lint && npm run knowledge:check`; fix and record.
 
-- [x] **Step 2: Complete `verification.md`**
+- [ ] **Step 2: Complete `verification.md`**
 
 ```markdown
 ---
@@ -2186,7 +2173,7 @@ tags: [change, verification, rooms, inventory]
 
 ## Cloud gates (order matters)
 - [ ] PR0 migration present on target env
-- [ ] `20261112005547_inventory_lite.sql` applied — <env, date>
+- [ ] `20261111110000_inventory_lite.sql` applied — <env, date>
 - [ ] `supabase/verification/inventory_lite.sql` passed — <output>
 - [ ] Types regenerated; `as never` casts removed — <commit>
 - [ ] App deployed after migration — <date>

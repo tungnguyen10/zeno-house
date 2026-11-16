@@ -2,8 +2,6 @@
 import type { BuildingFormData } from '~/types/building-form'
 import { buildingFormToApiPayload } from '~/utils/mappers/building-form'
 
-const preview = useQuickRoomPreview()
-
 const formData = ref<BuildingFormData>({
   name: '',
   address: '',
@@ -26,6 +24,8 @@ const formData = ref<BuildingFormData>({
 
 const initialSnapshot = ref<BuildingFormData>({ ...formData.value })
 
+const preview = useQuickRoomPreview()
+
 const {
   isLoading,
   errors,
@@ -42,16 +42,17 @@ const {
   initialSnapshot,
 })
 
+// Server-reported duplicates stay highlighted until the generator inputs change.
 watch(duplicateRoomNumbers, value => preview.markServerDuplicates(value))
 
 const submitLabel = computed(() => preview.enabled.value ? 'Tạo tòa nhà & phòng' : 'Tạo tòa nhà')
 
 async function onSubmit(data: BuildingFormData) {
-  if (isLoading.value || (preview.enabled.value && preview.duplicateRoomNumbers.value.length > 0)) return
+  if (preview.enabled.value && preview.duplicateRoomNumbers.value.length > 0) return
   await submitCreate({
     ...buildingFormToApiPayload(data),
     rooms: preview.enabled.value ? preview.toPayload() : undefined,
-  })
+  } as Parameters<typeof submitCreate>[0])
 }
 </script>
 
@@ -83,15 +84,10 @@ async function onSubmit(data: BuildingFormData) {
       <template #extras>
         <UiFormSection
           title="Tạo phòng nhanh"
-          description="Tạo trước một loạt phòng cùng lúc với tòa nhà. Có thể chỉnh tầng, giá, diện tích từng phòng."
+          description="Tạo trước một loạt phòng theo dải tầng cùng lúc với tòa nhà. Có thể chỉnh tầng, giá, diện tích từng phòng."
         >
-          <UiCheckbox v-model="preview.enabled.value" label="Bật tạo phòng nhanh" :disabled="isLoading" />
-          <template v-if="preview.enabled.value">
-            <UiAlert v-if="errors.rooms?.length" severity="danger" class="mt-4">
-              Kiểm tra thông tin phòng: {{ errors.rooms.join(' ') }}
-            </UiAlert>
-            <RoomBatchGenerator class="mt-4" :preview="preview" :disabled="isLoading" />
-          </template>
+          <UiCheckbox v-model="preview.enabled.value" label="Bật tạo phòng nhanh" />
+          <RoomBatchGenerator v-if="preview.enabled.value" :preview="preview" class="mt-4" />
         </UiFormSection>
       </template>
     </BuildingForm>

@@ -24,20 +24,14 @@ async function requireRoom(event: H3Event, identifier: string) {
 
 function diff(before: InventoryRow[], after: InventoryItemInput[]) {
   const key = (name: string) => name.trim().toLocaleLowerCase('vi')
-  const old = new Map(before.map(row => [key(row.name), row]))
-  const next = new Map(after.map(item => [key(item.name), item]))
-  let added = 0
-  let removed = 0
-  let changed = 0
+  const old = new Map(before.map(r => [key(r.name), r]))
+  const next = new Map(after.map(i => [key(i.name), i]))
+  let added = 0, removed = 0, changed = 0
   for (const [k, item] of next) {
     const prev = old.get(k)
     if (!prev) added++
-    else if (
-      prev.quantity !== item.quantity
-      || prev.condition !== item.condition
-      || (prev.unit_value === null ? null : Number(prev.unit_value)) !== item.unit_value
-      || prev.note !== item.note
-    ) changed++
+    else if (prev.quantity !== item.quantity || prev.condition !== item.condition
+      || (prev.unit_value === null ? null : Number(prev.unit_value)) !== item.unit_value || prev.note !== item.note) changed++
   }
   for (const k of old.keys()) if (!next.has(k)) removed++
   return { added, removed, changed }
@@ -66,18 +60,12 @@ export const InventoryService = {
     return rows.map(mapInventoryItem)
   },
 
-  async applyTemplate(
-    event: H3Event,
-    user: AuthUser,
-    buildingIdentifier: string,
-    input: InventoryApplyInput,
-  ): Promise<{ appliedRooms: number, addedItems: number }> {
+  async applyTemplate(event: H3Event, user: AuthUser, buildingIdentifier: string, input: InventoryApplyInput) {
     requireCapability(user, 'rooms.update', 'Không có quyền cập nhật phòng')
     const building = await requireBuilding(event, buildingIdentifier)
     await assertBuildingScope(event, user, building.id, 'write')
-    // The RPC validates room membership under row locks and applies all rooms or none.
     const result = await InventoryRepository.applyTemplate(event, building.id, input.room_ids, input.mode)
-    const addedItems = Object.values(result).reduce((sum, count) => sum + count, 0)
+    const addedItems = Object.values(result).reduce((s, n) => s + n, 0)
     await AuditService.append(event, user, {
       building_id: building.id,
       action: AUDIT_ACTIONS.ROOM_INVENTORY_TEMPLATE_APPLIED,

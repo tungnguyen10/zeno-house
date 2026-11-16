@@ -10,11 +10,8 @@
 -- regenerate database types:
 --   npx supabase gen types typescript --project-id "$SUPABASE_PROJECT_REF" \
 --     --schema public > app/types/database.types.ts
--- Migration reruns: CREATE OR REPLACE preserves function identities and grants.
--- Requests: the actor-bound audit_operations marker makes retries idempotent.
+-- Idempotency: CREATE OR REPLACE makes re-runs safe.
 -- =============================================================================
-
-begin;
 
 create or replace function public.create_rooms_batch(
   p_building_id uuid,
@@ -28,7 +25,6 @@ declare
   v_building_code text;
   v_count integer;
   v_dups jsonb;
-  v_room jsonb;
 begin
   if p_rooms is null or jsonb_typeof(p_rooms) <> 'array' then
     raise exception 'ROOM_BATCH_INVALID' using errcode = '22023';
@@ -37,26 +33,6 @@ begin
   if v_count < 1 or v_count > 200 then
     raise exception 'ROOM_BATCH_INVALID' using errcode = '22023';
   end if;
-
-  -- Check JSON types before numeric casts so invalid input has one stable error.
-  for v_room in select value from jsonb_array_elements(p_rooms) loop
-    if jsonb_typeof(v_room) is distinct from 'object'
-       or jsonb_typeof(v_room->'room_number') is distinct from 'string'
-       or char_length(v_room->>'room_number') not between 1 and 20
-       or jsonb_typeof(v_room->'slug') is distinct from 'string'
-       or char_length(v_room->>'slug') < 1
-       or jsonb_typeof(v_room->'floor') is distinct from 'number'
-       or jsonb_typeof(v_room->'monthly_rent') is distinct from 'number'
-       or (v_room ? 'area' and jsonb_typeof(v_room->'area') not in ('number', 'null')) then
-      raise exception 'ROOM_BATCH_INVALID' using errcode = '22023';
-    end if;
-    if (v_room->>'floor')::numeric not between 1 and 100
-       or (v_room->>'floor')::numeric <> trunc((v_room->>'floor')::numeric)
-       or (v_room->>'monthly_rent')::numeric < 0
-       or (v_room->>'area')::numeric <= 0 then
-      raise exception 'ROOM_BATCH_INVALID' using errcode = '22023';
-    end if;
-  end loop;
 
   select code into v_building_code from public.buildings where id = p_building_id;
   if v_building_code is null then
@@ -89,8 +65,8 @@ begin
   return query
   insert into public.rooms (building_id, room_number, slug, code, floor, status, monthly_rent, area)
   select p_building_id, r.room_number, r.slug, v_building_code || '-' || r.slug,
-         r.floor::integer, 'available', r.monthly_rent, r.area
-  from jsonb_to_recordset(p_rooms) as r(room_number text, slug text, floor numeric, monthly_rent numeric, area numeric)
+         r.floor, 'available', r.monthly_rent, r.area
+  from jsonb_to_recordset(p_rooms) as r(room_number text, slug text, floor integer, monthly_rent numeric, area numeric)
   returning *;
 end;
 $$;
@@ -161,12 +137,7 @@ begin
     values (p_assign_owner, v_building.id, false, p_actor_id);
   end if;
 
-  -- NULL and [] mean Building-only. Reject malformed payloads rather than
-  -- silently committing a Building after dropping the requested rooms.
-  if p_rooms is not null and jsonb_typeof(p_rooms) <> 'array' then
-    raise exception 'ROOM_BATCH_INVALID' using errcode = '22023';
-  end if;
-  if p_rooms is not null and jsonb_array_length(p_rooms) > 0 then
+  if p_rooms is not null and jsonb_typeof(p_rooms) = 'array' and jsonb_array_length(p_rooms) > 0 then
     select coalesce(jsonb_agg(to_jsonb(r) order by r.room_number), '[]'::jsonb)
     into v_rooms
     from public.create_rooms_batch(v_building.id, p_rooms) r;
@@ -187,5 +158,3 @@ $$;
 
 revoke all on function public.create_building_with_rooms(jsonb, jsonb, uuid, uuid, uuid) from public, anon, authenticated;
 grant execute on function public.create_building_with_rooms(jsonb, jsonb, uuid, uuid, uuid) to service_role;
-
-commit;

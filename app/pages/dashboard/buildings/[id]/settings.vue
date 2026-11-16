@@ -1,29 +1,8 @@
 <script setup lang="ts">
-
 import type { ApiSuccess } from '~/types/api'
-import type { BuildingInvoiceProfileSaveInput } from '~/types/building-invoice-profile'
-import type { PricingType, ServiceCatalogItem } from '~/types/service-catalog'
-import { getApiErrorMessage } from '~/utils/api-error'
-import type {
-  BuildingFixedCost,
-  BuildingReserveFundRate,
-  PrepaidExpense,
-  RecurringExpense,
-} from '~/types/operations-report'
-import {
-  EXPENSE_CATEGORIES,
-  EXPENSE_CATEGORY_LABELS,
-  FIXED_COST_CATEGORY_LABELS,
-  PREPAID_EXPENSE_STATUS_LABELS,
-  PREPAID_EXPENSE_STATUSES,
-  RECURRING_EXPENSE_FREQUENCIES,
-  RECURRING_EXPENSE_FREQUENCY_LABELS,
-  type ExpenseCategory,
-  type PrepaidExpenseStatus,
-  type RecurringExpenseFrequency,
-} from '~/utils/constants/operations-report'
-import { formatCurrency } from '~/utils/format/currency'
-import { currentVietnamPeriod, formatPeriodString, parsePeriodString } from '~/utils/format/period'
+import type { BuildingReadiness } from '~/types/building-contract-profile'
+import type { InventoryItem } from '~/types/inventory'
+import { countActiveFinanceRules, deriveAdvancedSteps, deriveSetupSteps } from '~/utils/building-setup-steps'
 import { buildingPath } from '~/utils/routes/operational'
 import type { Room } from '~/types/rooms'
 import { toInventoryInput } from '~/utils/mappers/inventory'
@@ -34,817 +13,138 @@ const id = route.params.id as string
 const authStore = useAuthStore()
 const toast = useToast()
 
-const {
-  data: settingsData,
-  status: settingsStatus,
-  error: settingsLoadError,
-  refresh: refreshSettings,
-} = await useBuildingSettingsBootstrap(id)
-const settings = computed(() => settingsData.value?.data ?? null)
-const building = computed(() => settings.value?.building ?? null)
-const sharedSettingsSource = {
-  status: settingsStatus,
-  error: settingsLoadError,
-  refresh: refreshSettings,
-}
+const settingsSource = createBuildingSettingsSource(id, await useBuildingSettingsBootstrap(id))
+provideBuildingSettingsSource(settingsSource)
+const { settings, building, contractRows, assignedManagers } = settingsSource
 
-const {
-  profile: invoiceProfile,
-  loading: loadingInvoiceProfile,
-  saving: savingInvoiceProfile,
-  error: invoiceProfileError,
-  save: saveInvoiceProfile,
-} = useBuildingInvoiceProfile(id, {
-  ...sharedSettingsSource,
-  data: computed(() => settings.value?.invoiceProfile ?? null),
-  set: (profile) => {
-    if (settingsData.value) {
-      settingsData.value = {
-        ...settingsData.value,
-        data: { ...settingsData.value.data, invoiceProfile: profile },
-      }
-    }
-  },
-})
-const canEditInvoiceProfile = computed(() => authStore.can('building-invoice-profile.write'))
-const {
-  settings: invoiceEmailSettings,
-  loading: loadingInvoiceEmailSettings,
-  saving: savingInvoiceEmailSettings,
-  error: invoiceEmailSettingsError,
-  update: updateInvoiceEmailSettings,
-} = useBuildingInvoiceEmailSettings(id, {
-  status: settingsStatus,
-  error: settingsLoadError,
-  data: computed(() => settings.value?.invoiceEmailSettings ?? null),
-  set: (emailSettings) => {
-    if (settingsData.value) {
-      settingsData.value = {
-        ...settingsData.value,
-        data: { ...settingsData.value.data, invoiceEmailSettings: emailSettings },
-      }
-    }
-  },
-})
-const canEditInvoiceEmailSettings = computed(() => authStore.can('invoice-email-settings.write'))
+const readiness = computed<BuildingReadiness>(() => settings.value?.readiness
+  ?? { contract: { ready: false, missing: [] }, billing: { ready: false, missing: [] } })
 
-async function handleSaveInvoiceProfile(input: BuildingInvoiceProfileSaveInput) {
-  try {
-    await saveInvoiceProfile(input)
-    toast.success('Đã lưu thông tin nhận diện và thanh toán trên phiếu.')
-  }
-  catch {
-    // The composable exposes the standardized API message beside the form.
-  }
-}
-
-async function handleSaveInvoiceEmailSettings(enabled: boolean) {
-  try {
-    await updateInvoiceEmailSettings(enabled)
-    toast.success(enabled ? 'Đã bật gửi hoá đơn tự động.' : 'Đã tắt gửi hoá đơn tự động.')
-  }
-  catch {
-    // The composable surfaces the standardized error beside the control.
-  }
-}
-
-const refreshBuilding = refreshSettings
-const {
-  services,
-  isLoading: loadingServices,
-  upsertService,
-  updateService,
-  syncToContracts,
-} = useBuildingServices(id, {
-  ...sharedSettingsSource,
-  data: computed(() => settings.value?.buildingServices ?? []),
-})
-const {
-  allServices: contractServices,
-  isLoading: loadingContractServices,
-  updateService: updateContractService,
-} = useBuildingContractServices(id, {
-  ...sharedSettingsSource,
-  data: computed(() => settings.value?.contractServices ?? []),
-})
-
-const catalog = computed(() => settings.value?.catalog ?? [])
-const refreshCatalog = refreshSettings
-
-const contractRows = computed(() =>
-  (settings.value?.contracts ?? []).map(c => ({
-    contractId: c.id,
-    roomNumber: c.room.roomNumber,
-    tenantName: c.tenant.fullName,
-  })),
-)
-const assignedManagers = computed(() => settings.value?.managers ?? [])
-
-const activeServiceCount = computed(() => services.value.filter(s => s.isActive).length)
-const canManageBuildingServices = computed(() => authStore.can('building-services.write'))
-const canManageFixedCosts = computed(() => authStore.can('building-fixed-costs.write'))
-const canManageRecurringExpenses = computed(() => authStore.can('recurring-expenses.write'))
-const canManagePrepaidExpenses = computed(() => authStore.can('prepaid-expenses.write'))
-const canManageReserveFund = computed(() => authStore.can('reserve-fund.manage'))
-const apiBuildingId = computed(() => building.value?.id ?? '')
-const now = new Date()
-const prepaidCancellationPeriod = currentVietnamPeriod(now)
-const prepaidCancellationPeriodParts = parsePeriodString(prepaidCancellationPeriod)!
-const prepaidCancellationPeriodLabel = `${String(prepaidCancellationPeriodParts.month).padStart(2, '0')}/${prepaidCancellationPeriodParts.year}`
-const fixedCostPeriodYear = ref(now.getFullYear())
-const fixedCostPeriodMonth = ref(now.getMonth() + 1)
-const fixedCostModalOpen = ref(false)
-const savingFixedCost = ref(false)
-const endFixedCostModalOpen = ref(false)
-const endingFixedCost = ref(false)
-const endFixedCostTarget = ref<BuildingFixedCost | null>(null)
-const endFixedCostPeriod = ref(formatPeriodString(now.getFullYear(), now.getMonth() + 1))
-const fixedCostError = ref<string | null>(null)
-const { createFixedCost } = useOperationsMutations()
-const refreshReserveRates = refreshSettings
-const reserveRates = computed(() => settings.value?.reserveRates ?? [])
-const isLoadingReserveRates = computed(() => settingsStatus.value === 'pending')
-const reserveRateModalOpen = ref(false)
-const savingReserveRate = ref(false)
-const reserveRateError = ref<string | null>(null)
-const reserveRateForm = reactive({
-  reserve_rate_percent: '',
-  effective_from_period: formatPeriodString(now.getFullYear(), now.getMonth() + 1),
-})
-const endReserveRateModalOpen = ref(false)
-const endingReserveRate = ref(false)
-const endReserveRateTarget = ref<BuildingReserveFundRate | null>(null)
-const endReserveRatePeriod = ref(formatPeriodString(now.getFullYear(), now.getMonth() + 1))
-const refreshFixedCosts = refreshSettings
-const fixedCosts = computed(() => settings.value?.fixedCosts ?? [])
-const isLoadingFixedCosts = computed(() => settingsStatus.value === 'pending')
-const expenseCategoryOptions = EXPENSE_CATEGORIES.map(value => ({
-  value,
-  label: EXPENSE_CATEGORY_LABELS[value],
-}))
-const frequencyOptions = RECURRING_EXPENSE_FREQUENCIES.map(value => ({
-  value,
-  label: RECURRING_EXPENSE_FREQUENCY_LABELS[value],
-}))
-const prepaidStatusOptions = PREPAID_EXPENSE_STATUSES.map(value => ({
-  value,
-  label: PREPAID_EXPENSE_STATUS_LABELS[value],
-}))
-const {
-  recurringExpenses,
-  isLoadingRecurringExpenses,
-  createRecurringExpense,
-  updateRecurringExpense,
-  deleteRecurringExpense,
-} = useRecurringExpenses(apiBuildingId, {
-  status: settingsStatus,
-  refresh: refreshSettings,
-  data: computed(() => settings.value?.recurringExpenses ?? []),
-})
-const {
-  prepaidExpenses,
-  isLoadingPrepaidExpenses,
-  createPrepaidExpense,
-  updatePrepaidExpense,
-  deletePrepaidExpense,
-} = usePrepaidExpenses(apiBuildingId, {
-  status: settingsStatus,
-  refresh: refreshSettings,
-  data: computed(() => settings.value?.prepaidExpenses ?? []),
-})
-const recurringFormOpen = ref(false)
-const editingRecurring = ref<RecurringExpense | null>(null)
-const savingRecurring = ref(false)
-const recurringError = ref<string | null>(null)
-const recurringForm = reactive({
-  name: '',
-  category: 'staff' as ExpenseCategory,
-  frequency: 'monthly' as RecurringExpenseFrequency,
-  anchor_day: now.getDate() > 28 ? 28 : now.getDate(),
-  estimated_amount: '',
-  is_active: true,
-})
-const recurringNameSuggestions = computed(() => {
-  const existingNames = recurringExpenses.value.map(item => item.name)
-  const categoryNames = EXPENSE_CATEGORIES.map(category => EXPENSE_CATEGORY_LABELS[category])
-  return [...new Set([...existingNames, ...categoryNames])].filter(Boolean)
-})
-const recurringNameModel = computed<string | null>({
-  get: () => recurringForm.name || null,
-  set: value => { recurringForm.name = value ?? '' },
-})
-const prepaidFormOpen = ref(false)
-const editingPrepaid = ref<PrepaidExpense | null>(null)
-const savingPrepaid = ref(false)
-const prepaidError = ref<string | null>(null)
-const prepaidDeleteTarget = ref<PrepaidExpense | null>(null)
-const deletingPrepaid = ref(false)
-const prepaidForm = reactive({
-  name: '',
-  category: 'internet' as ExpenseCategory,
-  total_amount: '',
-  total_months: 12,
-  start_date: new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1)).toISOString().slice(0, 10),
-  status: 'active' as PrepaidExpenseStatus,
-  receipt_url: '',
-  note: '',
-})
-const prepaidNameSuggestions = computed(() => {
-  const existingNames = prepaidExpenses.value.map(item => item.name)
-  const recurringNames = recurringExpenses.value.map(item => item.name)
-  const categoryNames = EXPENSE_CATEGORIES.map(category => EXPENSE_CATEGORY_LABELS[category])
-  return [...new Set([...existingNames, ...recurringNames, ...categoryNames])].filter(Boolean)
-})
-const prepaidNameModel = computed<string | null>({
-  get: () => prepaidForm.name || null,
-  set: value => { prepaidForm.name = value ?? '' },
-})
-const servicePricingOptions: { value: PricingType, label: string }[] = [
-  { value: 'fixed_per_room', label: 'Cố định / phòng' },
-  { value: 'per_person', label: 'Theo người' },
-  { value: 'per_vehicle', label: 'Theo xe' },
-]
-const customServiceModalOpen = ref(false)
-const savingCustomService = ref(false)
-const customServiceError = ref<string | null>(null)
-const customServiceForm = reactive({
-  name: '',
-  pricing_type: 'fixed_per_room' as PricingType,
-  unit: '',
-  default_amount: '',
-  is_active: true,
-  description: '',
-})
-
-function openCustomServiceModal() {
-  customServiceError.value = null
-  customServiceForm.name = ''
-  customServiceForm.pricing_type = 'fixed_per_room'
-  customServiceForm.unit = ''
-  customServiceForm.default_amount = ''
-  customServiceForm.is_active = true
-  customServiceForm.description = ''
-  customServiceModalOpen.value = true
-}
-
-function openCreateReserveRate() {
-  reserveRateError.value = null
-  reserveRateForm.reserve_rate_percent = ''
-  reserveRateForm.effective_from_period = formatPeriodString(
-    fixedCostPeriodYear.value,
-    fixedCostPeriodMonth.value,
-  )
-  reserveRateModalOpen.value = true
-}
-
-async function submitReserveRate() {
-  if (!apiBuildingId.value) return
-  const rate = Number(reserveRateForm.reserve_rate_percent)
-  if (!Number.isFinite(rate) || rate < 0 || rate > 100) {
-    reserveRateError.value = 'Tỷ lệ phải nằm trong khoảng 0 đến 100.'
-    return
-  }
-  const period = parsePeriodString(reserveRateForm.effective_from_period)
-  if (!period) {
-    reserveRateError.value = 'Chọn tháng bắt đầu áp dụng.'
-    return
-  }
-  savingReserveRate.value = true
-  reserveRateError.value = null
-  try {
-    await apiFetch('/api/reserve-fund-rates', {
-      method: 'POST',
-      body: {
-        building_id: apiBuildingId.value,
-        reserve_rate_percent: rate,
-        effective_from_period_year: period.year,
-        effective_from_period_month: period.month,
-      },
-    })
-    reserveRateModalOpen.value = false
-    await refreshReserveRates()
-  }
-  catch (err) {
-    reserveRateError.value = resolveApiError(err, 'Không lưu được tỷ lệ quỹ dự phòng.')
-  }
-  finally {
-    savingReserveRate.value = false
-  }
-}
-
-function openEndReserveRate(rate: BuildingReserveFundRate) {
-  endReserveRateTarget.value = rate
-  endReserveRatePeriod.value = formatPeriodString(
-    fixedCostPeriodYear.value,
-    fixedCostPeriodMonth.value,
-  )
-  reserveRateError.value = null
-  endReserveRateModalOpen.value = true
-}
-
-async function submitEndReserveRate() {
-  if (!endReserveRateTarget.value) return
-  const period = parsePeriodString(endReserveRatePeriod.value)
-  if (!period) {
-    reserveRateError.value = 'Chọn tháng kết thúc.'
-    return
-  }
-  endingReserveRate.value = true
-  reserveRateError.value = null
-  try {
-    await apiFetch(`/api/reserve-fund-rates/${endReserveRateTarget.value.id}`, {
-      method: 'PATCH',
-      body: {
-        effective_to_period_year: period.year,
-        effective_to_period_month: period.month,
-      },
-    })
-    endReserveRateModalOpen.value = false
-    await refreshReserveRates()
-  }
-  catch (err) {
-    reserveRateError.value = resolveApiError(err, 'Không kết thúc được tỷ lệ quỹ dự phòng.')
-  }
-  finally {
-    endingReserveRate.value = false
-  }
-}
-
-async function submitFixedCost(payload: Record<string, unknown>) {
-  if (!apiBuildingId.value) return
-  savingFixedCost.value = true
-  fixedCostError.value = null
-  try {
-    await createFixedCost(payload)
-    fixedCostModalOpen.value = false
-    await refreshFixedCosts()
-  }
-  catch (err) {
-    fixedCostError.value = resolveApiError(err, 'Không lưu được chi phí vận hành.')
-  }
-  finally {
-    savingFixedCost.value = false
-  }
-}
-
-function openCreateRecurring() {
-  editingRecurring.value = null
-  recurringError.value = null
-  recurringForm.name = ''
-  recurringForm.category = 'staff'
-  recurringForm.frequency = 'monthly'
-  recurringForm.anchor_day = now.getDate() > 28 ? 28 : now.getDate()
-  recurringForm.estimated_amount = ''
-  recurringForm.is_active = true
-  recurringFormOpen.value = true
-}
-
-function openEditRecurring(item: RecurringExpense) {
-  editingRecurring.value = item
-  recurringError.value = null
-  recurringForm.name = item.name
-  recurringForm.category = item.category
-  recurringForm.frequency = item.frequency
-  recurringForm.anchor_day = item.anchorDay
-  recurringForm.estimated_amount = String(item.estimatedAmount)
-  recurringForm.is_active = item.isActive
-  recurringFormOpen.value = true
-}
-
-async function submitRecurring() {
-  if (!apiBuildingId.value) return
-  const amount = Number(recurringForm.estimated_amount)
-  if (!recurringForm.name.trim() || !Number.isFinite(amount) || amount < 0) {
-    recurringError.value = 'Kiểm tra tên và số tiền dự kiến.'
-    return
-  }
-  savingRecurring.value = true
-  recurringError.value = null
-  try {
-    const payload = {
-      building_id: apiBuildingId.value,
-      name: recurringForm.name.trim(),
-      category: recurringForm.category,
-      frequency: recurringForm.frequency,
-      anchor_day: Number(recurringForm.anchor_day),
-      estimated_amount: amount,
-      is_active: recurringForm.is_active,
-    }
-    if (editingRecurring.value) await updateRecurringExpense(editingRecurring.value.id, payload)
-    else await createRecurringExpense(payload)
-    recurringFormOpen.value = false
-  }
-  catch (err) {
-    recurringError.value = resolveApiError(err, 'Không lưu được nhắc chi phí.')
-  }
-  finally {
-    savingRecurring.value = false
-  }
-}
-
-async function removeRecurring(item: RecurringExpense) {
-  try {
-    await deleteRecurringExpense(item.id)
-  }
-  catch (err) {
-    recurringError.value = resolveApiError(err, 'Không xóa được nhắc chi phí.')
-  }
-}
-
-function openCreatePrepaid() {
-  editingPrepaid.value = null
-  prepaidError.value = null
-  prepaidForm.name = ''
-  prepaidForm.category = 'internet'
-  prepaidForm.total_amount = ''
-  prepaidForm.total_months = 12
-  prepaidForm.start_date = new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1)).toISOString().slice(0, 10)
-  prepaidForm.status = 'active'
-  prepaidForm.receipt_url = ''
-  prepaidForm.note = ''
-  prepaidFormOpen.value = true
-}
-
-function openEditPrepaid(item: PrepaidExpense) {
-  editingPrepaid.value = item
-  prepaidError.value = null
-  prepaidForm.name = item.name
-  prepaidForm.category = item.category
-  prepaidForm.total_amount = String(item.totalAmount)
-  prepaidForm.total_months = item.totalMonths
-  prepaidForm.start_date = item.startDate
-  prepaidForm.status = item.status
-  prepaidForm.receipt_url = item.receiptUrl ?? ''
-  prepaidForm.note = item.note ?? ''
-  prepaidFormOpen.value = true
-}
-
-const prepaidPreview = computed(() => {
-  const total = Number(prepaidForm.total_amount)
-  const months = Number(prepaidForm.total_months)
-  if (!Number.isFinite(total) || !Number.isFinite(months) || months < 1) return null
-  const start = new Date(`${prepaidForm.start_date}T00:00:00Z`)
-  if (Number.isNaN(start.getTime())) return null
-  const end = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + months, start.getUTCDate()))
-  return {
-    monthly: Math.round(total / months),
-    endDate: end.toISOString().slice(0, 10),
-  }
-})
-
-async function submitPrepaid() {
-  if (!apiBuildingId.value) return
-  const total = Number(prepaidForm.total_amount)
-  const months = Number(prepaidForm.total_months)
-  if (!prepaidForm.name.trim() || !Number.isFinite(total) || total < 0 || !Number.isInteger(months) || months < 1) {
-    prepaidError.value = 'Kiểm tra tên, tổng tiền và số tháng.'
-    return
-  }
-  savingPrepaid.value = true
-  prepaidError.value = null
-  try {
-    const payload = {
-      name: prepaidForm.name.trim(),
-      category: prepaidForm.category,
-      total_amount: total,
-      total_months: months,
-      start_date: prepaidForm.start_date,
-      status: prepaidForm.status,
-      receipt_url: prepaidForm.receipt_url.trim() || null,
-      note: prepaidForm.note.trim() || null,
-    }
-    if (editingPrepaid.value) {
-      await updatePrepaidExpense(editingPrepaid.value.id, payload)
-    }
-    else {
-      await createPrepaidExpense({ building_id: apiBuildingId.value, ...payload })
-    }
-    prepaidFormOpen.value = false
-    editingPrepaid.value = null
-  }
-  catch (err) {
-    prepaidError.value = resolveApiError(err, 'Không lưu được chi phí trả trước.')
-  }
-  finally {
-    savingPrepaid.value = false
-  }
-}
-
-async function submitCustomService() {
-  const amount = customServiceForm.default_amount === '' ? 0 : Number(customServiceForm.default_amount)
-  if (!customServiceForm.name.trim() || !Number.isFinite(amount) || amount < 0) {
-    customServiceError.value = 'Kiểm tra tên dịch vụ và đơn giá mặc định.'
-    return
-  }
-
-  savingCustomService.value = true
-  customServiceError.value = null
-  try {
-    const created = await apiFetch<ApiSuccess<ServiceCatalogItem>>('/api/service-catalog', {
-      method: 'POST',
-      body: {
-        building_id: id,
-        name: customServiceForm.name.trim(),
-        pricing_type: customServiceForm.pricing_type,
-        unit: customServiceForm.unit.trim() || null,
-        description: customServiceForm.description.trim() || null,
-      },
-    })
-    await upsertService({
-      building_id: id,
-      catalog_id: created.data.id,
-      default_amount: amount,
-      pricing_type: customServiceForm.pricing_type,
-      is_active: customServiceForm.is_active,
-    })
-    await refreshCatalog()
-    customServiceModalOpen.value = false
-    toast.success('Đã thêm dịch vụ riêng.')
-  }
-  catch (err) {
-    customServiceError.value = resolveApiError(err, 'Không tạo được dịch vụ.')
-  }
-  finally {
-    savingCustomService.value = false
-  }
-}
-
-function openPrepaidDelete(item: PrepaidExpense) {
-  prepaidError.value = null
-  prepaidDeleteTarget.value = item
-}
-
-function closePrepaidDelete() {
-  if (deletingPrepaid.value) return
-  prepaidDeleteTarget.value = null
-}
-
-async function confirmPrepaidDelete() {
-  const target = prepaidDeleteTarget.value
-  if (!target || deletingPrepaid.value) return
-  deletingPrepaid.value = true
-  prepaidError.value = null
-  try {
-    await deletePrepaidExpense(target.id)
-    prepaidDeleteTarget.value = null
-  }
-  catch (err) {
-    prepaidError.value = resolveApiError(err, 'Không xóa được chi phí trả trước.')
-  }
-  finally {
-    deletingPrepaid.value = false
-  }
-}
-
-function openEndFixedCost(cost: BuildingFixedCost) {
-  endFixedCostTarget.value = cost
-  endFixedCostPeriod.value = formatPeriodString(
-    fixedCostPeriodYear.value,
-    fixedCostPeriodMonth.value,
-  )
-  fixedCostError.value = null
-  endFixedCostModalOpen.value = true
-}
-
-async function submitEndFixedCost() {
-  if (!endFixedCostTarget.value) return
-  const period = parsePeriodString(endFixedCostPeriod.value)
-  if (!period) {
-    fixedCostError.value = 'Chọn tháng kết thúc.'
-    return
-  }
-  endingFixedCost.value = true
-  fixedCostError.value = null
-  try {
-    await apiFetch(`/api/building-fixed-costs/${endFixedCostTarget.value.id}`, {
-      method: 'PATCH',
-      body: {
-        effective_to_period_year: period.year,
-        effective_to_period_month: period.month,
-      },
-    })
-    endFixedCostModalOpen.value = false
-    await refreshFixedCosts()
-  }
-  catch (err) {
-    fixedCostError.value = resolveApiError(err, 'Không kết thúc được chi phí vận hành.')
-  }
-  finally {
-    endingFixedCost.value = false
-  }
-}
-
-function resolveApiError(err: unknown, fallback: string): string {
-  return getApiErrorMessage(err, fallback)
-}
-
-// Building code
-const codeInput = ref('')
-const isCodeLocked = computed(() => (building.value?.totalRooms ?? 0) > 0)
-const isSavingCode = ref(false)
-const codeSaveError = ref<string | null>(null)
-const codeSaveSuccess = ref(false)
-const codeDirty = computed(() => Boolean(codeInput.value) && codeInput.value !== building.value?.code)
-
-watch(() => building.value?.code, (code) => {
-  if (code) codeInput.value = code
-}, { immediate: true })
-
-async function handleSaveCode() {
-  if (!codeDirty.value) return
-  isSavingCode.value = true
-  codeSaveError.value = null
-  codeSaveSuccess.value = false
-  try {
-    await apiFetch(`/api/buildings/${id}`, { method: 'PATCH', body: { code: codeInput.value } })
-    await refreshBuilding()
-    codeSaveSuccess.value = true
-    setTimeout(() => { codeSaveSuccess.value = false }, 3000)
-  }
-  catch (err: unknown) {
-    codeSaveError.value = getApiErrorMessage(err, 'Không thể lưu code. Vui lòng thử lại.')
-  }
-  finally {
-    isSavingCode.value = false
-  }
-}
-
-// Sync defaults to active contracts
-const isSyncing = ref(false)
-const syncResult = ref<string | null>(null)
-
-async function handleSync() {
-  isSyncing.value = true
-  syncResult.value = null
-  try {
-    const changes = await syncToContracts(id)
-    syncResult.value = changes > 0
-      ? `Đã cập nhật ${changes} dịch vụ trên hợp đồng.`
-      : 'Hợp đồng đã khớp với cấu hình mặc định.'
-    await refreshSettings()
-  }
-  catch {
-    syncResult.value = 'Đồng bộ thất bại.'
-  }
-  finally {
-    isSyncing.value = false
-    setTimeout(() => { syncResult.value = null }, 4000)
-  }
-}
-
-async function handleToggle(catalogId: string, isActive: boolean) {
-  const existing = services.value.find(s => s.catalogId === catalogId)
-  if (existing) await updateService(existing.id, { is_active: isActive })
-  else await upsertService({ building_id: id, catalog_id: catalogId, is_active: isActive })
-}
-
-async function handleUpdateAmount(catalogId: string, amount: number) {
-  const existing = services.value.find(s => s.catalogId === catalogId)
-  if (existing) await updateService(existing.id, { default_amount: amount })
-  else await upsertService({ building_id: id, catalog_id: catalogId, default_amount: amount })
-}
-
-async function handleUpdatePricingType(catalogId: string, pricingType: PricingType) {
-  const existing = services.value.find(s => s.catalogId === catalogId)
-  if (existing) await updateService(existing.id, { pricing_type: pricingType })
-  else await upsertService({ building_id: id, catalog_id: catalogId, pricing_type: pricingType })
-}
-
-const activeFixedCostCount = computed(() =>
-  fixedCosts.value.filter(item => !item.effectiveToPeriodYear).length,
-)
-const activeReserveRateCount = computed(() =>
-  reserveRates.value.filter(item => !item.effectiveToPeriodYear).length,
-)
-const activeRecurringExpenseCount = computed(() =>
-  recurringExpenses.value.filter(item => item.isActive).length,
-)
-const activePrepaidExpenseCount = computed(() =>
-  prepaidExpenses.value.filter(item => item.status === 'active').length,
-)
-const activeFinanceRuleCount = computed(() =>
-  activeFixedCostCount.value
-  + activeReserveRateCount.value
-  + activeRecurringExpenseCount.value
-  + activePrepaidExpenseCount.value,
-)
-const canViewFinanceRules = computed(() =>
-  canManageFixedCosts.value
-  || canManageReserveFund.value
-  || canManageRecurringExpenses.value
-  || canManagePrepaidExpenses.value,
-)
-
-interface SettingsSectionNavItem {
-  id: string
-  label: string
-  description: string
-  badge?: string
-  visible: boolean
-}
-
-const canViewInventoryTemplate = computed(() => authStore.can('rooms.read'))
-const canEditInventoryTemplate = computed(() => authStore.can('buildings.update'))
-const canApplyInventoryTemplate = computed(() => authStore.can('rooms.update'))
+// The page owns the template items so the closed step can still summarize them.
 const inventoryTemplate = useInventoryTemplate(id)
-const templateDraft = ref<InventoryItemInput[]>([])
-const templateErrors = ref<Record<string, string>>({})
-const applyModalOpen = ref(false)
-const applyRooms = ref<{ id: string, roomNumber: string, floor: number }[]>([])
-const templateDirty = computed(() =>
-  JSON.stringify(templateDraft.value) !== JSON.stringify(toInventoryInput(inventoryTemplate.items.value)),
+const { items: inventoryItems } = inventoryTemplate
+const { data: inventoryTemplateData } = await useFetch<ApiSuccess<InventoryItem[]>>(
+  () => `/api/buildings/${encodeURIComponent(id)}/inventory-template`,
+)
+watchEffect(() => {
+  inventoryItems.value = inventoryTemplateData.value?.data ?? []
+})
+const canEditInventoryTemplate = computed(() => authStore.can('buildings.update'))
+
+const buildingServices = computed(() => settings.value?.buildingServices ?? [])
+
+const setupFlow = computed(() => deriveSetupSteps({
+  readiness: readiness.value,
+  building: building.value
+    ? {
+        defaultElectricityRate: building.value.defaultElectricityRate,
+        defaultWaterRate: building.value.defaultWaterRate,
+        billingGenerationDay: building.value.billingGenerationDay,
+        paymentDueDay: building.value.paymentDueDay,
+      }
+    : null,
+  contractProfile: settings.value?.contractProfile ?? null,
+  services: {
+    activeCount: buildingServices.value.filter(service => service.isActive).length,
+    unpricedActiveCount: buildingServices.value.filter(service => service.isActive && service.defaultAmount === 0).length,
+  },
+  inventory: {
+    itemCount: inventoryItems.value.length,
+    totalValue: inventoryItems.value.reduce((sum, item) => sum + item.quantity * (item.unitValue ?? 0), 0),
+  },
+  canViewContractProfile: authStore.can('building-contract-profile.read'),
+  canViewInventory: authStore.can('rooms.read'),
+}))
+
+const canViewFinanceRules = computed(() =>
+  authStore.can('building-fixed-costs.write')
+  || authStore.can('reserve-fund.manage')
+  || authStore.can('recurring-expenses.write')
+  || authStore.can('prepaid-expenses.write'),
 )
 
-onMounted(async () => {
-  if (!canViewInventoryTemplate.value) return
-  await inventoryTemplate.load()
-  templateDraft.value = toInventoryInput(inventoryTemplate.items.value)
-})
+const advancedSteps = computed(() => deriveAdvancedSteps({
+  buildingCode: building.value?.code ?? null,
+  managerCount: authStore.canManageUsers ? assignedManagers.value.length : null,
+  canViewFinanceRules: canViewFinanceRules.value,
+  financeRuleCount: settings.value ? countActiveFinanceRules(settings.value) : 0,
+  contractCount: contractRows.value.length,
+}))
 
-async function saveInventoryTemplate() {
-  templateErrors.value = {}
-  const parsed = inventoryListSchema.safeParse(templateDraft.value)
-  if (!parsed.success) {
-    for (const issue of parsed.error.issues) templateErrors.value[issue.path.join('.')] ??= issue.message
+const openStepId = ref<string | null>(setupFlow.value.nextStepId)
+const advancedOpenId = ref<string | null>(null)
+const basicsDirty = ref(false)
+// undefined = no pending switch; null = the user asked to close the open step.
+const pendingStepId = ref<string | null | undefined>(undefined)
+
+const { discardOpen, guardRouteLeave, keepEditing, discardChanges, onBeforeUnload } = usePortalUnsavedChanges(basicsDirty)
+onBeforeRouteLeave(guardRouteLeave)
+
+const discardModalOpen = computed(() => discardOpen.value || pendingStepId.value !== undefined)
+
+function scrollToStep(stepId: string) {
+  nextTick(() => document.getElementById(stepId)?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
+}
+
+function requestOpenStep(next: string | null) {
+  if (basicsDirty.value && openStepId.value === 'basics' && next !== 'basics') {
+    pendingStepId.value = next
     return
   }
-  if (await inventoryTemplate.save(parsed.data)) {
-    templateDraft.value = toInventoryInput(inventoryTemplate.items.value)
-    toast.success('Đã lưu nội thất mẫu.')
-  }
+  openStepId.value = next
 }
 
-async function openApplyModal() {
-  inventoryTemplate.error.value = null
-  try {
-    const res = await apiFetch<ApiSuccess<Room[]>>('/api/rooms', { query: { building_id: id, limit: 200 } })
-    applyRooms.value = res.data.map(room => ({ id: room.id, roomNumber: room.roomNumber, floor: room.floor }))
-    applyModalOpen.value = true
-  }
-  catch (err) {
-    toast.error(resolveApiError(err, 'Không tải được danh sách phòng.'))
-  }
+function openStep(stepId: string) {
+  requestOpenStep(stepId)
+  scrollToStep(stepId)
 }
 
-async function applyInventoryTemplate(input: InventoryApplyInput) {
-  const result = await inventoryTemplate.apply(input)
-  if (!result) return
-  applyModalOpen.value = false
-  toast.success(`Đã thêm ${result.addedItems} món cho ${result.appliedRooms} phòng.`)
+function closeStep() {
+  openStepId.value = null
 }
 
-const settingsSections = computed<SettingsSectionNavItem[]>(() => [
-  {
-    id: 'identity-access',
-    label: 'Định danh và phân quyền',
-    description: 'Code tòa nhà và manager phụ trách',
-    badge: authStore.canManageUsers ? `${assignedManagers.value.length} manager` : undefined,
-    visible: true,
-  },
-  {
-    id: 'invoice-profile',
-    label: 'Nhận diện và thanh toán',
-    description: 'Logo, tài khoản nhận tiền và QR trên phiếu',
-    badge: invoiceProfile.value ? 'Đã cấu hình' : 'Chưa hoàn chỉnh',
-    visible: true,
-  },
-  {
-    id: 'inventory-template',
-    label: 'Nội thất mẫu',
-    description: 'Danh sách nội thất áp dụng nhanh cho phòng',
-    badge: `${inventoryTemplate.items.value.length} món`,
-    visible: canViewInventoryTemplate.value,
-  },
-  {
-    id: 'finance-rules',
-    label: 'Quy tắc vận hành',
-    description: 'Chi phí cố định, quỹ dự phòng, nhắc chi và trả trước',
-    badge: `${activeFinanceRuleCount.value} mục đang áp dụng`,
-    visible: canViewFinanceRules.value,
-  },
-  {
-    id: 'service-defaults',
-    label: 'Dịch vụ mặc định',
-    description: 'Mẫu dịch vụ áp xuống hợp đồng mới',
-    badge: `${activeServiceCount.value} dịch vụ bật`,
-    visible: true,
-  },
-  {
-    id: 'service-overrides',
-    label: 'Dịch vụ theo phòng',
-    description: 'Tinh chỉnh riêng từng hợp đồng active',
-    badge: `${contractRows.value.length} hợp đồng active`,
-    visible: true,
-  },
-].filter(item => item.visible))
+function onDiscardConfirm() {
+  if (pendingStepId.value === undefined) {
+    discardChanges()
+    return
+  }
+  const next = pendingStepId.value
+  pendingStepId.value = undefined
+  basicsDirty.value = false
+  openStepId.value = next
+}
 
-const activeSectionId = computed(() => {
+function onDiscardCancel() {
+  if (pendingStepId.value === undefined) keepEditing()
+  else pendingStepId.value = undefined
+}
+
+function applyHash() {
   const hash = route.hash?.slice(1)
-  if (hash && settingsSections.value.some(section => section.id === hash)) {
-    return hash
+  if (!hash) return
+  if (setupFlow.value.steps.some(step => step.id === hash)) {
+    requestOpenStep(hash)
+    scrollToStep(hash)
   }
-  return settingsSections.value[0]?.id ?? ''
+  else if (advancedSteps.value.some(step => step.id === hash)) {
+    advancedOpenId.value = hash
+    scrollToStep(hash)
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('beforeunload', onBeforeUnload)
+  applyHash()
 })
+onBeforeUnmount(() => window.removeEventListener('beforeunload', onBeforeUnload))
+watch(() => route.hash, applyHash)
+
+async function handleBasicsSaved() {
+  await settingsSource.refresh()
+  basicsDirty.value = false
+  closeStep()
+  toast.success('Đã lưu thông tin tòa nhà.')
+}
 </script>
 
 <template>
@@ -856,830 +156,50 @@ const activeSectionId = computed(() => {
       back-label="Quay lại tòa nhà"
     />
 
-    <UiMetricGrid :cols="4">
-        <UiMetric
-          label="Dịch vụ mặc định bật"
-          :value="activeServiceCount"
-          caption="Mẫu áp vào hợp đồng mới"
-          tone="accent"
-        />
-        <UiMetric
-          label="Hợp đồng active"
-          :value="contractRows.length"
-          caption="Có thể đồng bộ từ cấu hình mặc định"
-          tone="default"
-        />
-        <UiMetric
-          label="Quy tắc vận hành"
-          :value="activeFinanceRuleCount"
-          caption="Đang áp dụng theo kỳ"
-          :tone="activeFinanceRuleCount > 0 ? 'success' : 'warning'"
-        />
-        <UiMetric
-          label="Manager phụ trách"
-          :value="assignedManagers.length"
-          caption="Tài khoản đang có quyền"
-          tone="default"
-        />
-    </UiMetricGrid>
-
-    <div class="sticky top-0 z-10 -mx-1 overflow-x-auto bg-ui-canvas/95 px-1 py-2 backdrop-blur xl:hidden lg:top-16">
-      <nav class="flex items-center gap-2">
-        <a
-          v-for="section in settingsSections"
-          :key="`mobile-${section.id}`"
-          :href="`#${section.id}`"
-          class="shrink-0 rounded-md border px-2.5 py-1.5 text-xs transition-colors"
-          :class="activeSectionId === section.id
-            ? 'border-ui-accent/50 bg-ui-accent/10 text-ui-accent'
-            : 'border-ui-border bg-ui-surface text-ui-muted hover:text-ui-primary'"
-        >
-          {{ section.label }}
-        </a>
-      </nav>
-    </div>
-
-    <div class="grid gap-4 xl:grid-cols-[220px_minmax(0,1fr)]">
-      <aside class="hidden xl:block">
-        <div class="sticky top-4 rounded-xl border border-ui-border bg-ui-surface p-3">
-          <p class="text-xs font-semibold uppercase tracking-wide text-ui-muted">Điều hướng cài đặt</p>
-          <nav class="mt-3 flex flex-col gap-1.5">
-            <a
-              v-for="section in settingsSections"
-              :key="section.id"
-              :href="`#${section.id}`"
-              class="rounded-lg border px-3 py-2 transition-colors"
-              :class="activeSectionId === section.id
-                ? 'border-ui-accent/40 bg-ui-accent/10'
-                : 'border-ui-border bg-ui-deep/40 hover:bg-ui-hover/50'"
-            >
-              <p :class="activeSectionId === section.id ? 'text-sm font-medium text-ui-accent' : 'text-sm font-medium text-ui-primary'">
-                {{ section.label }}
-              </p>
-              <p class="mt-0.5 text-xs text-ui-muted">{{ section.description }}</p>
-              <p v-if="section.badge" class="mt-1 text-[11px] text-ui-accent/90">{{ section.badge }}</p>
-            </a>
-          </nav>
-        </div>
-      </aside>
-
-      <div class="min-w-0 space-y-6">
-        <section id="identity-access" class="scroll-mt-20 space-y-3">
-          <header class="flex items-center justify-between gap-2">
-            <h2 class="text-sm font-semibold text-ui-accent">Định danh và phân quyền</h2>
-            <UiBadge variant="neutral">{{ assignedManagers.length }} manager</UiBadge>
-          </header>
-
-          <UiSection
-            title="Mã tòa nhà"
-            description="Dùng trong URL và tên hợp đồng. Khóa sau khi tòa nhà đã có phòng."
-          >
-            <UiSurfacePanel density="compact">
-              <div class="flex flex-col gap-3 sm:flex-row sm:items-end">
-                <UiInput
-                  v-model="codeInput"
-                  label="Code"
-                  :disabled="isCodeLocked"
-                  :title="isCodeLocked ? 'Không thể đổi vì tòa nhà đã có phòng' : undefined"
-                  placeholder="vd: zhpn"
-                  input-class="font-mono"
-                  class="flex-1 min-w-0"
-                />
-                <div class="flex items-center gap-2 sm:pb-0.5">
-                  <UiButton
-                    v-if="!isCodeLocked"
-                    size="sm"
-                    :loading="isSavingCode"
-                    :disabled="!codeDirty"
-                    @click="handleSaveCode"
-                  >
-                    Lưu
-                  </UiButton>
-                  <span
-                    v-else
-                    class="inline-flex items-center gap-1.5 rounded-md border border-ui-border bg-ui-deep/40 px-2 py-1 text-xs text-ui-muted"
-                  >
-                    <IconLock class="h-3.5 w-3.5" aria-hidden="true" />
-                    Đã khóa · {{ building?.totalRooms }} phòng
-                  </span>
-                </div>
-              </div>
-              <UiAlert v-if="codeSaveError" severity="danger" class="mt-3">
-                {{ codeSaveError }}
-              </UiAlert>
-              <p v-if="codeSaveSuccess" class="mt-2 text-xs text-status-success">
-                Code đã được lưu.
-              </p>
-            </UiSurfacePanel>
-          </UiSection>
-
-          <UiSection
-            v-if="authStore.canManageUsers"
-            title="Managers"
-            description="Những manager đang được phân quyền vào tòa nhà này."
-          >
-            <template #actions>
-              <NuxtLink to="/dashboard/settings/managers" class="text-sm text-ui-accent hover:text-ui-accent/80 transition-colors">
-                Quản lý phân quyền
-              </NuxtLink>
-            </template>
-            <UiSurfacePanel density="compact">
-              <div v-if="assignedManagers.length === 0" class="text-sm text-ui-muted">
-                Chưa có manager nào được gán.
-              </div>
-              <div v-else class="flex flex-wrap gap-2">
-                <span
-                  v-for="manager in assignedManagers"
-                  :key="manager.id"
-                  class="rounded-md border border-ui-border bg-ui-deep px-3 py-2 text-sm text-ui-primary"
-                >
-                  {{ manager.name ?? manager.email ?? manager.id }}
-                </span>
-              </div>
-            </UiSurfacePanel>
-          </UiSection>
-        </section>
-
-        <section id="invoice-profile" class="scroll-mt-20 space-y-3">
-          <header class="flex items-center justify-between gap-2">
-            <h2 class="text-sm font-semibold text-ui-accent">Nhận diện và thanh toán</h2>
-            <UiBadge :variant="invoiceProfile ? 'success' : 'warning'">
-              {{ invoiceProfile ? 'Đã cấu hình' : 'Chưa hoàn chỉnh' }}
-            </UiBadge>
-          </header>
-
-          <UiSection
-            title="Nhận diện & thanh toán trên phiếu"
-            description="Logo, tài khoản nhận tiền và QR được lưu thành snapshot riêng trên từng hóa đơn khi phát hành."
-          >
-            <UiSurfacePanel density="compact">
-              <BuildingInvoiceProfileSettings
-                :profile="invoiceProfile"
-                :can-edit="canEditInvoiceProfile"
-                :loading="loadingInvoiceProfile"
-                :saving="savingInvoiceProfile"
-                :error="invoiceProfileError"
-                @save="handleSaveInvoiceProfile"
-              />
-            </UiSurfacePanel>
-          </UiSection>
-
-          <UiSection
-            title="Gửi hoá đơn qua email"
-            description="Kiểm soát việc xếp hàng gửi email cho các hoá đơn mới của toà nhà."
-          >
-            <UiSurfacePanel density="compact">
-              <BuildingInvoiceEmailSettings
-                :settings="invoiceEmailSettings"
-                :can-edit="canEditInvoiceEmailSettings"
-                :loading="loadingInvoiceEmailSettings"
-                :saving="savingInvoiceEmailSettings"
-                :error="invoiceEmailSettingsError"
-                @save="handleSaveInvoiceEmailSettings"
-              />
-            </UiSurfacePanel>
-          </UiSection>
-        </section>
-
-        <section v-if="canViewInventoryTemplate" id="inventory-template" class="scroll-mt-20 space-y-3">
-          <header class="flex items-center justify-between gap-2">
-            <h2 class="text-sm font-semibold text-ui-accent">Nội thất mẫu</h2>
-            <UiBadge variant="neutral">{{ inventoryTemplate.items.value.length }} món</UiBadge>
-          </header>
-
-          <UiSection
-            title="Danh sách nội thất mẫu"
-            description="Được sao chép vào phòng mới hoặc phòng đã chọn. Sửa mẫu không làm thay đổi phòng đã có."
-          >
-            <template v-if="canApplyInventoryTemplate" #actions>
-              <UiButton
-                variant="secondary"
-                size="sm"
-                :disabled="inventoryTemplate.items.value.length === 0 || templateDirty"
-                @click="openApplyModal"
-              >
-                Áp dụng cho phòng…
-              </UiButton>
-            </template>
-            <UiSurfacePanel density="compact">
-              <UiAlert v-if="inventoryTemplate.error.value && !applyModalOpen" severity="danger" class="mb-4">
-                {{ inventoryTemplate.error.value }}
-              </UiAlert>
-              <UiSkeleton v-if="inventoryTemplate.loading.value" class="h-32 rounded-lg" />
-              <template v-else>
-                <InventoryItemsEditor
-                  v-model="templateDraft"
-                  :disabled="!canEditInventoryTemplate || inventoryTemplate.saving.value"
-                  :errors="templateErrors"
-                />
-                <div v-if="canEditInventoryTemplate" class="mt-4 flex justify-end">
-                  <UiButton :loading="inventoryTemplate.saving.value" :disabled="!templateDirty" @click="saveInventoryTemplate">
-                    Lưu nội thất mẫu
-                  </UiButton>
-                </div>
-              </template>
-            </UiSurfacePanel>
-          </UiSection>
-
-          <InventoryApplyModal
-            :open="applyModalOpen"
-            :rooms="applyRooms"
-            :saving="inventoryTemplate.saving.value"
-            :error="applyModalOpen ? inventoryTemplate.error.value : null"
-            @close="applyModalOpen = false"
-            @apply="applyInventoryTemplate"
-          />
-        </section>
-
-        <section v-if="canViewFinanceRules" id="finance-rules" class="scroll-mt-20 space-y-3">
-          <header class="flex items-center justify-between gap-2">
-            <h2 class="text-sm font-semibold text-ui-accent">Quy tắc vận hành</h2>
-            <UiBadge variant="neutral">{{ activeFinanceRuleCount }} mục</UiBadge>
-          </header>
-
-          <UiSection
-            v-if="canManageFixedCosts"
-            title="Chi phí vận hành"
-            description="Quản lý chi phí cố định theo tháng cho báo cáo vận hành."
-          >
-            <template #actions>
-              <UiButton size="sm" :disabled="!apiBuildingId" @click="fixedCostModalOpen = true">
-                <IconPlus class="h-4 w-4" aria-hidden="true" />
-                Thêm chi phí
-              </UiButton>
-            </template>
-            <UiSurfacePanel density="compact">
-              <UiAlert v-if="fixedCostError" severity="danger" class="mb-4">
-                {{ fixedCostError }}
-              </UiAlert>
-              <div v-if="isLoadingFixedCosts" class="space-y-2">
-                <UiSkeleton v-for="i in 3" :key="i" class="h-14 rounded-lg" />
-              </div>
-              <div v-else-if="fixedCosts.length === 0" class="text-sm text-ui-muted">
-                Chưa có chi phí vận hành cố định.
-              </div>
-              <div v-else class="divide-y divide-ui-border">
-                <div
-                  v-for="cost in fixedCosts"
-                  :key="cost.id"
-                  class="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between"
-                >
-                  <div>
-                    <div class="font-medium text-ui-primary">
-                      {{ FIXED_COST_CATEGORY_LABELS[cost.category] ?? cost.category }}
-                    </div>
-                    <div class="mt-1 text-xs text-ui-muted">
-                      Từ {{ cost.effectiveFromPeriodMonth }}/{{ cost.effectiveFromPeriodYear }}
-                      <template v-if="cost.effectiveToPeriodYear">
-                        đến {{ cost.effectiveToPeriodMonth }}/{{ cost.effectiveToPeriodYear }}
-                      </template>
-                      <template v-else>
-                        · đang áp dụng
-                      </template>
-                    </div>
-                    <p v-if="cost.note" class="mt-1 text-xs text-ui-muted">{{ cost.note }}</p>
-                  </div>
-                  <div class="flex items-center justify-between gap-3 sm:justify-end">
-                    <span class="tabular-nums text-ui-primary">{{ formatCurrency(cost.amount) }}</span>
-                    <UiButton
-                      v-if="!cost.effectiveToPeriodYear"
-                      size="sm"
-                      variant="secondary"
-                      @click="openEndFixedCost(cost)"
-                    >
-                      Kết thúc
-                    </UiButton>
-                  </div>
-                </div>
-              </div>
-            </UiSurfacePanel>
-          </UiSection>
-
-          <UiSection
-            v-if="canManageReserveFund"
-            title="Tỷ lệ quỹ dự phòng"
-            description="Tỷ lệ trích lập từ doanh thu phát hành khi chốt kỳ vận hành."
-          >
-            <template #actions>
-              <UiButton size="sm" :disabled="!apiBuildingId" @click="openCreateReserveRate">
-                <IconPlus class="h-4 w-4" aria-hidden="true" />
-                Thêm tỷ lệ
-              </UiButton>
-            </template>
-            <UiSurfacePanel density="compact">
-              <UiAlert v-if="reserveRateError" severity="danger" class="mb-4">
-                {{ reserveRateError }}
-              </UiAlert>
-              <div v-if="isLoadingReserveRates" class="space-y-2">
-                <UiSkeleton v-for="i in 3" :key="i" class="h-14 rounded-lg" />
-              </div>
-              <div v-else-if="reserveRates.length === 0" class="text-sm text-ui-muted">
-                Chưa có tỷ lệ quỹ dự phòng.
-              </div>
-              <div v-else class="divide-y divide-ui-border">
-                <div
-                  v-for="rate in reserveRates"
-                  :key="rate.id"
-                  class="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between"
-                >
-                  <div>
-                    <div class="font-medium text-ui-primary">
-                      {{ rate.reserveRatePercent }}%
-                      <UiBadge v-if="!rate.effectiveToPeriodYear" variant="accent" class="ml-2">Đang áp dụng</UiBadge>
-                    </div>
-                    <div class="mt-1 text-xs text-ui-muted">
-                      Từ {{ rate.effectiveFromPeriodMonth }}/{{ rate.effectiveFromPeriodYear }}
-                      <template v-if="rate.effectiveToPeriodYear">
-                        đến {{ rate.effectiveToPeriodMonth }}/{{ rate.effectiveToPeriodYear }}
-                      </template>
-                    </div>
-                  </div>
-                  <UiButton
-                    v-if="!rate.effectiveToPeriodYear"
-                    size="sm"
-                    variant="secondary"
-                    @click="openEndReserveRate(rate)"
-                  >
-                    Kết thúc
-                  </UiButton>
-                </div>
-              </div>
-            </UiSurfacePanel>
-          </UiSection>
-
-          <UiSection
-            v-if="canManageRecurringExpenses"
-            title="Nhắc chi phí định kỳ"
-            description="Các khoản chi cần được nhắc lại và ghi nhận thủ công vào báo cáo tháng."
-          >
-            <template #actions>
-              <UiButton size="sm" :disabled="!apiBuildingId" @click="openCreateRecurring">
-                <IconPlus class="h-4 w-4" aria-hidden="true" />
-                Thêm nhắc
-              </UiButton>
-            </template>
-            <UiSurfacePanel density="compact">
-              <UiAlert v-if="recurringError" severity="danger" class="mb-4">
-                {{ recurringError }}
-              </UiAlert>
-              <div v-if="isLoadingRecurringExpenses" class="space-y-2">
-                <UiSkeleton v-for="i in 3" :key="i" class="h-14 rounded-lg" />
-              </div>
-              <div v-else-if="recurringExpenses.length === 0" class="text-sm text-ui-muted">
-                Chưa có nhắc chi phí định kỳ.
-              </div>
-              <div v-else class="divide-y divide-ui-border">
-                <div
-                  v-for="item in recurringExpenses"
-                  :key="item.id"
-                  class="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between"
-                >
-                  <div>
-                    <div class="font-medium text-ui-primary">
-                      {{ item.name }}
-                      <UiBadge v-if="!item.isActive" variant="warning" class="ml-2">Tắt</UiBadge>
-                    </div>
-                    <div class="mt-1 text-xs text-ui-muted">
-                      {{ EXPENSE_CATEGORY_LABELS[item.category] }} ·
-                      {{ RECURRING_EXPENSE_FREQUENCY_LABELS[item.frequency] }} ·
-                      ngày {{ item.anchorDay }} · nhắc tiếp {{ item.nextReminderAt }}
-                    </div>
-                  </div>
-                  <div class="flex items-center justify-between gap-2 sm:justify-end">
-                    <span class="tabular-nums text-ui-primary">{{ formatCurrency(item.estimatedAmount) }}</span>
-                    <UiButton size="sm" variant="secondary" @click="openEditRecurring(item)">Sửa</UiButton>
-                    <UiButton size="sm" variant="ghost" icon-only aria-label="Xóa" @click="removeRecurring(item)">
-                      <IconTrash class="h-4 w-4" aria-hidden="true" />
-                    </UiButton>
-                  </div>
-                </div>
-              </div>
-            </UiSurfacePanel>
-          </UiSection>
-
-          <UiSection
-            v-if="canManagePrepaidExpenses"
-            title="Chi phí trả trước"
-            description="Khoản trả một lần được phân bổ đều vào các tháng trong kỳ hiệu lực."
-          >
-            <template #actions>
-              <UiButton size="sm" :disabled="!apiBuildingId" @click="openCreatePrepaid">
-                <IconPlus class="h-4 w-4" aria-hidden="true" />
-                Thêm trả trước
-              </UiButton>
-            </template>
-            <UiSurfacePanel density="compact">
-              <UiAlert v-if="prepaidError" severity="danger" class="mb-4">
-                {{ prepaidError }}
-              </UiAlert>
-              <div v-if="isLoadingPrepaidExpenses" class="space-y-2">
-                <UiSkeleton v-for="i in 3" :key="i" class="h-14 rounded-lg" />
-              </div>
-              <div v-else-if="prepaidExpenses.length === 0" class="text-sm text-ui-muted">
-                Chưa có chi phí trả trước.
-              </div>
-              <div v-else class="divide-y divide-ui-border">
-                <div
-                  v-for="item in prepaidExpenses"
-                  :key="item.id"
-                  class="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between"
-                >
-                  <div>
-                    <div class="font-medium text-ui-primary">
-                      {{ item.name }}
-                      <UiBadge class="ml-2">{{ PREPAID_EXPENSE_STATUS_LABELS[item.status] }}</UiBadge>
-                    </div>
-                    <div class="mt-1 text-xs text-ui-muted">
-                      {{ EXPENSE_CATEGORY_LABELS[item.category] }} · {{ item.startDate }} đến {{ item.endDate }} ·
-                      {{ item.totalMonths }} tháng
-                    </div>
-                    <p v-if="item.note" class="mt-1 text-xs text-ui-muted">{{ item.note }}</p>
-                  </div>
-                  <div class="flex items-center justify-between gap-2 sm:justify-end">
-                    <span class="tabular-nums text-ui-primary">{{ formatCurrency(item.monthlyAmount) }}/tháng</span>
-                    <UiButton
-                      v-if="item.status === 'active'"
-                      size="sm"
-                      variant="secondary"
-                      @click="openEditPrepaid(item)"
-                    >
-                      Sửa
-                    </UiButton>
-                    <UiButton
-                      v-if="item.status === 'active'"
-                      size="sm"
-                      variant="ghost"
-                      icon-only
-                      aria-label="Xóa chi phí trả trước"
-                      @click="openPrepaidDelete(item)"
-                    >
-                      <IconTrash class="h-4 w-4" aria-hidden="true" />
-                    </UiButton>
-                  </div>
-                </div>
-              </div>
-            </UiSurfacePanel>
-          </UiSection>
-        </section>
-
-        <section id="service-defaults" class="scroll-mt-20">
-          <UiSection
-            title="Dịch vụ mặc định"
-            description="Dịch vụ bật ở đây sẽ tự động thêm vào hợp đồng mới. Đơn giá là gợi ý — có thể chỉnh riêng từng phòng bên dưới."
-          >
-            <template #actions>
-              <div class="flex items-center gap-3">
-                <span
-                  v-if="syncResult"
-                  class="rounded-md bg-status-success/10 px-2 py-1 text-xs text-status-success"
-                >
-                  {{ syncResult }}
-                </span>
-                <span
-                  v-else-if="activeServiceCount > 0"
-                  class="rounded-md bg-ui-accent/10 px-2 py-1 text-xs text-ui-accent"
-                >
-                  {{ activeServiceCount }} dịch vụ đang bật
-                </span>
-                <UiButton
-                  v-if="canManageBuildingServices"
-                  size="sm"
-                  variant="secondary"
-                  @click="openCustomServiceModal"
-                >
-                  <IconPlus class="h-4 w-4" aria-hidden="true" />
-                  Thêm dịch vụ
-                </UiButton>
-                <UiButton
-                  size="sm"
-                  variant="secondary"
-                  :loading="isSyncing"
-                  :disabled="contractRows.length === 0"
-                  title="Cập nhật trạng thái bật/tắt dịch vụ trên tất cả hợp đồng active theo cấu hình mặc định. Không ghi đè giá và số lượng đã chỉnh riêng."
-                  @click="handleSync"
-                >
-                  Đồng bộ xuống {{ contractRows.length }} hợp đồng
-                </UiButton>
-              </div>
-            </template>
-            <UiSurfacePanel density="compact">
-              <BuildingServiceSettings
-                :building-id="id"
-                :catalog="catalog"
-                :services="services"
-                :loading="loadingServices"
-                @toggle="handleToggle"
-                @update-amount="handleUpdateAmount"
-                @update-pricing-type="handleUpdatePricingType"
-              />
-            </UiSurfacePanel>
-          </UiSection>
-        </section>
-
-        <section id="service-overrides" class="scroll-mt-20">
-          <UiSection
-            title="Dịch vụ theo phòng"
-            description="Bật/tắt, chỉnh đơn giá và số lượng riêng cho từng phòng. Thay đổi ở đây chỉ ảnh hưởng phòng đó."
-          >
-            <UiSurfacePanel density="compact">
-              <BuildingContractServicesList
-                :contracts="contractRows"
-                :services="contractServices"
-                :loading="loadingContractServices"
-                @update="updateContractService"
-              />
-            </UiSurfacePanel>
-          </UiSection>
-        </section>
-      </div>
-    </div>
-
-    <UiModal
-      :open="customServiceModalOpen"
-      title="Thêm dịch vụ riêng"
-      size="md"
-      @close="customServiceModalOpen = false"
-    >
-      <div class="space-y-4">
-        <UiInput
-          v-model="customServiceForm.name"
-          label="Tên dịch vụ"
-          placeholder="Ví dụ: Giặt sấy"
-          required
-        />
-        <div class="grid gap-3 sm:grid-cols-2">
-          <UiSelect
-            v-model="customServiceForm.pricing_type"
-            label="Loại tính phí"
-            :options="servicePricingOptions"
-          />
-          <UiInput
-            v-model="customServiceForm.unit"
-            label="Đơn vị"
-            placeholder="lần, người, xe..."
-          />
-        </div>
-        <div class="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
-          <UiInput
-            v-model="customServiceForm.default_amount"
-            label="Đơn giá mặc định"
-            type="number"
-            number-mode="currency"
-            placeholder="0"
-          />
-          <UiToggle
-            v-model="customServiceForm.is_active"
-            label="Kích hoạt ngay"
-            size="sm"
-            class="pb-2"
-          />
-        </div>
-        <UiTextarea
-          v-model="customServiceForm.description"
-          label="Ghi chú"
-          :rows="2"
-          resize="none"
-        />
-        <UiAlert v-if="customServiceError" severity="danger">
-          {{ customServiceError }}
-        </UiAlert>
-      </div>
-      <template #footer>
-        <UiButton variant="secondary" :disabled="savingCustomService" @click="customServiceModalOpen = false">
-          Hủy
-        </UiButton>
-        <UiButton :loading="savingCustomService" @click="submitCustomService">
-          Lưu dịch vụ
-        </UiButton>
-      </template>
-    </UiModal>
-
-    <OperationsFixedCostModal
-      :open="fixedCostModalOpen"
-      :building-id="apiBuildingId"
-      :period-year="fixedCostPeriodYear"
-      :period-month="fixedCostPeriodMonth"
-      :submitting="savingFixedCost"
-      @close="fixedCostModalOpen = false"
-      @submit="submitFixedCost"
+    <SettingsReadinessCard
+      :flow="setupFlow"
+      create-contract-path="/dashboard/contracts/create"
+      @open-step="openStep"
     />
 
-    <UiModal
-      :open="endFixedCostModalOpen"
-      title="Kết thúc chi phí vận hành"
-      size="sm"
-      @close="endFixedCostModalOpen = false"
-    >
-      <div class="space-y-4">
-        <p class="text-sm text-ui-muted">
-          Chọn kỳ cuối cùng còn áp dụng chi phí này.
-        </p>
-        <UiDatePicker
-          v-model="endFixedCostPeriod"
-          label="Tháng kết thúc"
-          picker-mode="month"
-          required
+    <SettingsStepList :steps="setupFlow.steps" :open-id="openStepId" @update:open-id="requestOpenStep">
+      <template #step-basics>
+        <BasicsStep
+          v-if="building"
+          :building="building"
+          @saved="handleBasicsSaved"
+          @cancel="requestOpenStep(null)"
+          @update:dirty="basicsDirty = $event"
         />
-        <UiAlert v-if="fixedCostError" severity="danger">
-          {{ fixedCostError }}
-        </UiAlert>
-      </div>
-      <template #footer>
-        <div class="flex justify-end gap-2">
-          <UiButton variant="secondary" :disabled="endingFixedCost" @click="endFixedCostModalOpen = false">
-            Đóng
-          </UiButton>
-          <UiButton :loading="endingFixedCost" @click="submitEndFixedCost">
-            Lưu
-          </UiButton>
-        </div>
       </template>
-    </UiModal>
+      <template #step-invoice-profile>
+        <InvoiceProfileStep @saved="closeStep" />
+      </template>
+      <template #step-service-defaults>
+        <ServicesStep />
+      </template>
+      <template #step-inventory-template>
+        <InventoryStep
+          :template="inventoryTemplate"
+          :building-id="building?.id ?? id"
+          :can-edit="canEditInventoryTemplate"
+          @saved="closeStep"
+        />
+      </template>
+      <template #step-contract-profile>
+        <ContractStep @saved="closeStep" />
+      </template>
+    </SettingsStepList>
 
-    <UiModal
-      :open="reserveRateModalOpen"
-      title="Thêm tỷ lệ quỹ dự phòng"
-      size="sm"
-      @close="reserveRateModalOpen = false"
-    >
-      <div class="space-y-4">
-        <UiInput
-          v-model="reserveRateForm.reserve_rate_percent"
-          label="Tỷ lệ (%)"
-          type="number"
-          number-mode="percent"
-          min="0"
-          max="100"
-          step="0.01"
-          required
-        />
-        <UiDatePicker
-          v-model="reserveRateForm.effective_from_period"
-          label="Tháng bắt đầu áp dụng"
-          picker-mode="month"
-          required
-        />
-        <UiAlert v-if="reserveRateError" severity="danger">
-          {{ reserveRateError }}
-        </UiAlert>
-      </div>
-      <template #footer>
-        <div class="flex justify-end gap-2">
-          <UiButton variant="secondary" :disabled="savingReserveRate" @click="reserveRateModalOpen = false">
-            Đóng
-          </UiButton>
-          <UiButton :loading="savingReserveRate" @click="submitReserveRate">Lưu</UiButton>
-        </div>
-      </template>
-    </UiModal>
-
-    <UiModal
-      :open="endReserveRateModalOpen"
-      title="Kết thúc tỷ lệ quỹ dự phòng"
-      size="sm"
-      @close="endReserveRateModalOpen = false"
-    >
-      <div class="space-y-4">
-        <p class="text-sm text-ui-muted">
-          Chọn kỳ cuối cùng còn áp dụng tỷ lệ này.
-        </p>
-        <UiDatePicker
-          v-model="endReserveRatePeriod"
-          label="Tháng kết thúc"
-          picker-mode="month"
-          required
-        />
-        <UiAlert v-if="reserveRateError" severity="danger">
-          {{ reserveRateError }}
-        </UiAlert>
-      </div>
-      <template #footer>
-        <div class="flex justify-end gap-2">
-          <UiButton variant="secondary" :disabled="endingReserveRate" @click="endReserveRateModalOpen = false">
-            Đóng
-          </UiButton>
-          <UiButton :loading="endingReserveRate" @click="submitEndReserveRate">
-            Lưu
-          </UiButton>
-        </div>
-      </template>
-    </UiModal>
-
-    <UiModal
-      :open="recurringFormOpen"
-      :title="editingRecurring ? 'Sửa nhắc chi phí' : 'Thêm nhắc chi phí'"
-      size="md"
-      @close="recurringFormOpen = false"
-    >
-      <div class="space-y-4">
-        <UiCombobox
-          v-model="recurringNameModel"
-          label="Tên chi phí"
-          :options="recurringNameSuggestions"
-          :option-key="name => name"
-          :option-label="name => name"
-          :create-option="name => name"
-          allow-custom
-          custom-option-label="Dùng"
-          placeholder="Chọn mẫu hoặc nhập tên riêng"
-          search-placeholder="Nhập tên chi phí"
-          empty-message="Nhập tên mới để dùng"
-          required
-        />
-        <UiSelect v-model="recurringForm.category" label="Loại chi phí" :options="expenseCategoryOptions" />
-        <div class="grid grid-cols-2 gap-3">
-          <UiSelect v-model="recurringForm.frequency" label="Tần suất" :options="frequencyOptions" />
-          <UiInput v-model.number="recurringForm.anchor_day" label="Ngày nhắc" type="number" number-mode="day" min="1" max="28" />
-        </div>
-        <UiInput
-          v-model="recurringForm.estimated_amount"
-          label="Số tiền dự kiến"
-          type="number"
-          number-mode="currency"
-          min="0"
-          required
-        />
-        <UiCheckbox v-model="recurringForm.is_active" label="Đang bật" />
-        <UiAlert v-if="recurringError" severity="danger">{{ recurringError }}</UiAlert>
-      </div>
-      <template #footer>
-        <div class="flex justify-end gap-2">
-          <UiButton variant="secondary" :disabled="savingRecurring" @click="recurringFormOpen = false">
-            Đóng
-          </UiButton>
-          <UiButton :loading="savingRecurring" @click="submitRecurring">Lưu</UiButton>
-        </div>
-      </template>
-    </UiModal>
-
-    <UiModal
-      :open="prepaidFormOpen"
-      :title="editingPrepaid ? 'Sửa chi phí trả trước' : 'Thêm chi phí trả trước'"
-      size="md"
-      @close="prepaidFormOpen = false"
-    >
-      <div class="space-y-4">
-        <UiCombobox
-          v-model="prepaidNameModel"
-          label="Tên chi phí"
-          :options="prepaidNameSuggestions"
-          :option-key="name => name"
-          :option-label="name => name"
-          :create-option="name => name"
-          allow-custom
-          custom-option-label="Dùng"
-          placeholder="Chọn mẫu hoặc nhập tên riêng"
-          search-placeholder="Nhập tên chi phí"
-          empty-message="Nhập tên mới để dùng"
-          required
-        />
-        <UiSelect v-model="prepaidForm.category" label="Loại chi phí" :options="expenseCategoryOptions" />
-        <div class="grid grid-cols-2 gap-3">
-          <UiInput v-model="prepaidForm.total_amount" label="Tổng tiền" type="number" number-mode="currency" min="0" required />
-          <UiInput v-model.number="prepaidForm.total_months" label="Số tháng" type="number" number-mode="integer" min="1" required />
-        </div>
-        <UiDatePicker v-model="prepaidForm.start_date" label="Ngày bắt đầu" date-mode="period-start" required />
-        <UiSelect
-          v-if="editingPrepaid"
-          v-model="prepaidForm.status"
-          label="Trạng thái"
-          :options="prepaidStatusOptions"
-        />
-        <UiTextarea v-model="prepaidForm.note" label="Ghi chú" :rows="2" />
-        <div v-if="prepaidPreview" class="rounded-md border border-ui-border bg-ui-deep px-3 py-2 text-sm text-ui-muted">
-          ~{{ formatCurrency(prepaidPreview.monthly) }}/tháng · kết thúc {{ prepaidPreview.endDate }}
-        </div>
-        <UiAlert v-if="prepaidError" severity="danger">{{ prepaidError }}</UiAlert>
-      </div>
-      <template #footer>
-        <div class="flex justify-end gap-2">
-          <UiButton variant="secondary" :disabled="savingPrepaid" @click="prepaidFormOpen = false">
-            Đóng
-          </UiButton>
-          <UiButton :loading="savingPrepaid" @click="submitPrepaid">Lưu</UiButton>
-        </div>
-      </template>
-    </UiModal>
+    <AdvancedSection :steps="advancedSteps" :open-id="advancedOpenId" @update:open-id="advancedOpenId = $event" />
 
     <UiConfirmModal
-      :open="Boolean(prepaidDeleteTarget)"
-      title="Xóa chi phí trả trước?"
-      message=""
-      confirm-label="Xóa và ngừng phân bổ"
-      :loading="deletingPrepaid"
-      @confirm="confirmPrepaidDelete"
-      @cancel="closePrepaidDelete"
-    >
-      <div class="space-y-3">
-        <p class="break-words text-sm text-ui-muted">
-          Bạn sắp ngừng phân bổ “{{ prepaidDeleteTarget?.name }}”.
-          Số liệu các kỳ đã chốt được giữ nguyên. Khoản này sẽ không còn được tính từ
-          {{ prepaidCancellationPeriodLabel }}.
-        </p>
-        <UiAlert v-if="prepaidError" severity="danger">
-          {{ prepaidError }}
-        </UiAlert>
-      </div>
-    </UiConfirmModal>
+      :open="discardModalOpen"
+      title="Bỏ thay đổi chưa lưu?"
+      message="Thông tin tòa nhà bạn vừa sửa chưa được lưu."
+      confirm-label="Bỏ thay đổi"
+      @confirm="onDiscardConfirm"
+      @cancel="onDiscardCancel"
+    />
   </div>
 </template>

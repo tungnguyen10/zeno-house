@@ -253,6 +253,7 @@ function onRemoveIdImage(side: TenantIdImageSide) {
           id="tf-date-of-birth"
           :model-value="modelValue.date_of_birth"
           date-mode="past"
+          typeable
           label="Ngày sinh"
           :error="errorFor('date_of_birth')"
           @update:model-value="(v) => update('date_of_birth', v as string)"
@@ -305,6 +306,7 @@ function onRemoveIdImage(side: TenantIdImageSide) {
           id="tf-id-issued-date"
           :model-value="modelValue.id_issued_date"
           date-mode="past"
+          typeable
           label="Ngày cấp"
           :error="errorFor('id_issued_date')"
           @update:model-value="(v) => update('id_issued_date', v as string)"

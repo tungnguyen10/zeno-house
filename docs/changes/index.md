@@ -7,12 +7,14 @@
 - [harden-event-audit](./harden-event-audit/verification.md) — 12/16 tasks; failure injection, transactional DB audits, contract correlations and cross-system durable intent remain open.
 - [tenant-v2](./tenant-v2/spec-and-implementation-plan.md) — Proposed Quick Create and Claude extraction; completed identity hardening is archived separately.
 - [zeno-house-v2-optimization](./zeno-house-v2-optimization/brief.md) — Draft product flow optimization, pending PR task breakdown.
+- [atomic-building-room-setup](./atomic-building-room-setup/index.md) — V2 PR0: atomic Building + bulk Room creation; plan ready.
 - [building-contract-defaults](./building-contract-defaults/index.md) — V2 PR1: lessor profile, contract policy defaults, readiness; plan ready.
-- [room-setup-inventory-lite](./room-setup-inventory-lite/index.md) — V2 PR2: floor-based room generator, room inventory and contract handover snapshot; implementation in progress.
+- [room-setup-inventory-lite](./room-setup-inventory-lite/index.md) — V2 PR2: floor-based room generator, room inventory, contract handover snapshot; plan ready.
 - [tenant-quick-create](./tenant-quick-create/index.md) — V2 PR3 / Tenant V2 change A: inline tenant picker + quick create; plan ready.
 - [contract-quick-create](./contract-quick-create/index.md) — V2 PR4a: one-page atomic contract create (roommates, vehicles, services, inventory), server drafts; plan ready.
 - [contract-documents](./contract-documents/index.md) — V2 PR4b: versioned DOCX issuance, private storage, failed/regenerate, sign/void/replace, appendices, handover lock; plan ready (dependency approval pending).
 - [tenant-identity-autofill](./tenant-identity-autofill/index.md) — V2 PR5 / Tenant V2 change C: Claude Vision ID autofill behind flag, quota and privacy gates; plan ready (dependency + privacy gates pending).
+- [building-settings-setup-flow](./building-settings-setup-flow/index.md) — V2 UI: building settings reorganized as a setup-flow step list with readiness card; implemented and verified locally; accepted and promoted into the buildings-ui capability before updating the buildings-ui capability.
 
 ## Implementation present — verification or rollout gates open
 
@@ -23,8 +25,6 @@
 - [add-contract-amendments](./add-contract-amendments/verification.md) — 12/12 imported tasks checked; production/staging worker, cron, migration evidence and accepted canonical capability pending.
 
 ## Completed and archived — not active
-
-- [atomic-building-room-setup](../history/2026-11-11-atomic-building-room-setup/index.md) — V2 PR0 accepted 2026-11-11; production migration and SQL verification recorded, CI result, wide/375px visual QA, committed concurrency case and retry-after-lost-response smoke still open.
 
 - [dashboard-layout-refresh](../history/2026-11-10-dashboard-layout-refresh/index.md) — 8/8 imported implementation tasks checked; accepted dashboard spec reconciled and implementation history archived.
 - [harden-tenant-identity-data](../history/2026-11-09-harden-tenant-identity-data/index.md) — Production schema, identity verification and affected-state checks recorded.

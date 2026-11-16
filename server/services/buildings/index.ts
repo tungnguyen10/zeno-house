@@ -60,17 +60,19 @@ export const BuildingService = {
     input: BuildingCreateWithRoomsInput,
   ): Promise<{ building: Building; roomCount: number }> {
     requireCapability(user, 'buildings.create', 'Không có quyền tạo tòa nhà')
-    const { rooms = [], request_id, ...buildingInput } = input
-    const requestId = request_id ?? randomUUID()
+    const { rooms = [], request_id: requestId, ...buildingInput } = input
     if (rooms.length > 0) requireCapability(user, 'rooms.create', 'Không có quyền tạo phòng')
 
     const owner = isOwner(user)
-    // Owner-created buildings are assigned to the owner inside the same transaction.
+    // Building + owner assignment + rooms are created in one atomic RPC; the
+    // owner is assigned inside the same transaction so there is no partial state.
     const result = await BuildingRepository.createWithRooms(event, buildingInput, rooms, {
       actorId: user.id,
       ownerUserId: owner ? user.id : null,
-      requestId,
+      requestId: requestId ?? randomUUID(),
     })
+    // Invalidate the per-request scope cache so a follow-up read in the same
+    // request includes the newly created building.
     event.context.__buildingScope = undefined
 
     if (!result.replayed) {
@@ -90,7 +92,7 @@ export const BuildingService = {
         entity_type: 'building',
         entity_id: buildingId,
         after_data: result.building,
-        metadata: { room_count: result.rooms.length, request_id: requestId },
+        metadata: { room_count: result.rooms.length, request_id: requestId ?? null },
       })
       if (result.rooms.length > 0) {
         await AuditService.appendBulk(event, user, {

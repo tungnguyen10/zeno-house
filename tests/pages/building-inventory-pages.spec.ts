@@ -20,8 +20,10 @@ describe('building inventory pages', () => {
 
   it('settings page has the inventory template section with apply modal', () => {
     const page = read('app/pages/dashboard/buildings/[id]/settings.vue')
-    expect(page).toContain(`id: 'inventory-template'`)
-    expect(page).toContain('<InventoryItemsEditor')
-    expect(page).toContain('<InventoryApplyModal')
+    const step = read('app/components/buildings/settings/steps/InventoryStep.vue')
+    expect(page).toContain('<template #step-inventory-template>')
+    expect(page).toContain('<InventoryStep')
+    expect(step).toContain('<InventoryItemsEditor')
+    expect(step).toContain('<InventoryApplyModal')
   })
 })

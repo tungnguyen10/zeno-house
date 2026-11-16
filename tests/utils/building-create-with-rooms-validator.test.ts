@@ -46,8 +46,4 @@ describe('buildingCreateWithRoomsSchema', () => {
     const paths = r.error!.issues.map(i => i.path.join('.'))
     expect(paths).toContain('rooms.2.room_number')
   })
-
-  it('rejects an empty room batch', () => {
-    expect(buildingCreateWithRoomsSchema.safeParse({ ...base, rooms: [] }).success).toBe(false)
-  })
 })

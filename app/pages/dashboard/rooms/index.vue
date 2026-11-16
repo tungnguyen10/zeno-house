@@ -311,7 +311,10 @@ async function onBulkDone(result: RoomBulkResult, action: RoomBulkAction) {
             </template>
             Thêm phòng
           </UiDropdownMenuItem>
-          <UiDropdownMenuItem v-if="authStore.can('rooms.create') && filteredBuilding" @click="openBatchRooms">
+          <UiDropdownMenuItem
+            v-if="authStore.can('rooms.create') && buildingId"
+            @click="navigateTo(`/dashboard/buildings/${buildingId}/rooms/batch`)"
+          >
             <template #icon>
               <IconPlus class="h-4 w-4 shrink-0" aria-hidden="true" />
             </template>
