@@ -2,6 +2,7 @@ import type { H3Event } from 'h3'
 import { db } from '../utils/db'
 import type { InventoryRow } from '~/utils/mappers/inventory'
 import type { InventoryItemInput } from '~/utils/validators/inventory'
+import type { Json } from '~/types/database.types'
 
 // Cast at the boundary until database.types.ts is regenerated after the cloud migration.
 const from = (event: H3Event, table: string) => db(event).from(table as never)
@@ -29,12 +30,13 @@ export const InventoryRepository = {
   },
 
   async replaceTemplate(event: H3Event, buildingId: string, items: InventoryItemInput[]): Promise<InventoryRow[]> {
-    const { error: delError } = await from(event, 'building_inventory_templates').delete().eq('building_id', buildingId)
-    if (delError) throwDbError(delError, 'inventory.replaceTemplate.delete')
-    if (items.length === 0) return []
-    const { data, error } = await from(event, 'building_inventory_templates').insert(toRows(items, 'building_id', buildingId) as never).select(COLUMNS).order('sort_order')
-    if (error) mapInventoryDbError(error, 'inventory.replaceTemplate.insert')
-    return (data ?? []) as InventoryRow[]
+    // Validate, delete and insert in one database transaction; never expose a partial replacement.
+    const { data, error } = await db(event).rpc('replace_inventory_template', {
+      p_building_id: buildingId,
+      p_items: items as unknown as Json,
+    })
+    if (error) mapInventoryDbError(error, 'inventory.replaceTemplate')
+    return ((data ?? []) as InventoryRow[]).sort((a, b) => a.sort_order - b.sort_order)
   },
 
   async listRoom(event: H3Event, roomId: string): Promise<InventoryRow[]> {
@@ -44,12 +46,13 @@ export const InventoryRepository = {
   },
 
   async replaceRoom(event: H3Event, roomId: string, items: InventoryItemInput[]): Promise<InventoryRow[]> {
-    const { error: delError } = await from(event, 'room_inventory_items').delete().eq('room_id', roomId)
-    if (delError) throwDbError(delError, 'inventory.replaceRoom.delete')
-    if (items.length === 0) return []
-    const { data, error } = await from(event, 'room_inventory_items').insert(toRows(items, 'room_id', roomId) as never).select(COLUMNS).order('sort_order')
-    if (error) mapInventoryDbError(error, 'inventory.replaceRoom.insert')
-    return (data ?? []) as InventoryRow[]
+    // The existing RPC locks the room and rolls back the entire replacement on error.
+    const { data, error } = await db(event).rpc('replace_room_inventory', {
+      p_room_id: roomId,
+      p_items: items as unknown as Json,
+    })
+    if (error) mapInventoryDbError(error, 'inventory.replaceRoom')
+    return ((data ?? []) as InventoryRow[]).sort((a, b) => a.sort_order - b.sort_order)
   },
 
   async applyTemplate(event: H3Event, buildingId: string, roomIds: string[], mode: 'merge' | 'replace'): Promise<Record<string, number>> {
