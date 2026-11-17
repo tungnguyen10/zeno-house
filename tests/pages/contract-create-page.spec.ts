@@ -76,4 +76,10 @@ describe('contract create page', () => {
     expect(page).toContain('@search="onRoomSearch"')
     expect(page).toContain('pickedRoom')
   })
+
+  it('filters available rooms by building_id from the query and lets the user clear it', () => {
+    expect(page).toContain("const buildingFilter = ref(typeof route.query.building_id === 'string' ? route.query.building_id : '')")
+    expect(page).toContain('...(buildingFilter.value ? { building_id: buildingFilter.value } : {})')
+    expect(page).toContain('Xem phòng của mọi tòa')
+  })
 })
