@@ -2,18 +2,29 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
-const page = readFileSync(resolve(process.cwd(), 'app/pages/dashboard/buildings/[id]/settings.vue'), 'utf8')
-const step = readFileSync(resolve(process.cwd(), 'app/components/buildings/settings/steps/ContractStep.vue'), 'utf8')
+const read = (path: string) => readFileSync(resolve(process.cwd(), path), 'utf8')
 
-describe('building settings contract profile section', () => {
-  it('adds the contract section with readiness badge', () => {
-    expect(page).toContain('<template #step-contract-profile>')
-    expect(page).toContain('<ContractStep')
-    expect(step).toContain('<BuildingContractProfileSettings')
-    expect(page).toContain('readiness: readiness.value')
+describe('contract profile split into two steps', () => {
+  const lessor = read('app/components/buildings/BuildingLessorProfileForm.vue')
+  const terms = read('app/components/buildings/BuildingContractTermsForm.vue')
+
+  it('lessor form holds identity and contact only, including email', () => {
+    expect(lessor).toContain('title="Danh tính"')
+    expect(lessor).toContain('title="Liên hệ"')
+    expect(lessor).toContain('lessor_email')
+    expect(lessor).not.toContain('notice_days')
+    expect(lessor).not.toContain('khác với thông tin liên hệ chủ nhà')
   })
 
-  it('gates editing on the write capability', () => {
-    expect(step).toContain(`'building-contract-profile.write'`)
+  it('terms form holds no personal data and starts from suggestions', () => {
+    for (const pii of ['lessor_id_number', 'lessor_date_of_birth', 'lessor_permanent_address']) expect(terms).not.toContain(pii)
+    expect(terms).toContain('contractTermsInitialValues(')
+  })
+
+  it('both forms save through PATCH with only their own keys', () => {
+    const lessorStep = read('app/components/buildings/settings/steps/LessorProfileStep.vue')
+    const termsStep = read('app/components/buildings/settings/steps/ContractTermsStep.vue')
+    expect(lessorStep).toContain('patch(')
+    expect(termsStep).toContain('patch(')
   })
 })
