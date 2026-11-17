@@ -86,3 +86,20 @@ describe('contract profile validators', () => {
     expect(parseContractProfilePatch(null).success).toBe(false)
   })
 })
+
+describe('numeric text for copies', () => {
+  it('coerces numeric strings typed into the form for signed_copies and copies_per_party', () => {
+    const parsed = buildingContractProfileSchema.parse({ signed_copies: '4', copies_per_party: '2' })
+    expect(parsed).toMatchObject({ signed_copies: 4, copies_per_party: 2 })
+  })
+
+  it('reports the copies rule instead of a type error when strings break it', () => {
+    const result = buildingContractProfileSchema.safeParse({ signed_copies: '2', copies_per_party: '2' })
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error.issues[0]?.message).toBe('Tổng số bản hai bên giữ vượt quá số bản ký')
+  })
+
+  it('keeps defaults when the keys are absent', () => {
+    expect(buildingContractProfileSchema.parse({})).toMatchObject({ signed_copies: 2, copies_per_party: 1 })
+  })
+})

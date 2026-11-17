@@ -67,8 +67,8 @@ export const buildingContractProfileBaseSchema = z.object({
   extra_occupant_fee: optionalMoney,
   drilling_fee: optionalMoney,
   fingerprint_reset_fee: optionalMoney,
-  signed_copies: z.number().int().min(1, 'Tối thiểu 1').max(10, 'Tối đa 10').default(2),
-  copies_per_party: z.number().int().min(1, 'Tối thiểu 1').max(5, 'Tối đa 5').default(1),
+  signed_copies: z.preprocess(numericText, z.number().int().min(1, 'Tối thiểu 1').max(10, 'Tối đa 10').default(2)),
+  copies_per_party: z.preprocess(numericText, z.number().int().min(1, 'Tối thiểu 1').max(5, 'Tối đa 5').default(1)),
 }).strict()
 
 export function contractProfileCopiesRule(value: { signed_copies?: number; copies_per_party?: number }, ctx: z.RefinementCtx) {
