@@ -23,6 +23,9 @@ interface UseBuildingFormOptions<T> {
   onUpdated?: (building: Building) => void | Promise<void>
 }
 
+// The create form no longer has owner fields; purge them from drafts saved before that.
+const REMOVED_CREATE_DRAFT_KEYS = ['ownerName', 'ownerPhone', 'ownerEmail'] as const
+
 function buildStorageKey(key: NonNullable<DraftKey>): string {
   return key.mode === 'create'
     ? 'building-form:create'
@@ -38,6 +41,7 @@ export function useBuildingForm<T = unknown>(options: UseBuildingFormOptions<T> 
     key: storageKey,
     formData: options.formData,
     initialSnapshot: options.initialSnapshot,
+    omitKeys: options.draftKey?.mode === 'create' ? REMOVED_CREATE_DRAFT_KEYS : undefined,
   })
 
   // One id per form session so a retry after a lost response replays instead of duplicating.
