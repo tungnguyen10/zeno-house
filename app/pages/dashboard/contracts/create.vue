@@ -356,7 +356,7 @@ watch([form, occupants, vehicles, services, inventory], () => {
         <button
           v-if="buildingFilter"
           type="button"
-          class="mt-2 text-xs text-ui-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-accent/40"
+          class="mt-2 inline-flex min-h-9 items-center text-xs text-ui-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-accent/40"
           @click="buildingFilter = ''"
         >
           Xem phòng của mọi tòa

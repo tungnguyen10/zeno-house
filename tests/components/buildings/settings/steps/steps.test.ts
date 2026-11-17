@@ -137,6 +137,20 @@ describe('InventoryStep', () => {
     expect(wrapper.find('[data-test="inventory-apply-suggestion"]').exists()).toBe(true)
   })
 
+  it('hides the apply suggestion again when a later save fails', async () => {
+    const template = makeTemplate()
+    const { wrapper } = mountStep(template, true, ['r-1'])
+    await saveButton(wrapper).trigger('click')
+    await flushPromises()
+    expect(wrapper.find('[data-test="inventory-apply-suggestion"]').exists()).toBe(true)
+
+    template.save.mockRejectedValueOnce(new Error('nope'))
+    await saveButton(wrapper).trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('[data-test="inventory-apply-suggestion"]').exists()).toBe(false)
+  })
+
   it('turns the template items into an editable draft', () => {
     const { wrapper } = mountStep()
 

@@ -45,6 +45,7 @@ async function handleSave() {
   }
   catch {
     // The composable surfaces the standardized error beside the editor.
+    justSaved.value = false
   }
 }
 
