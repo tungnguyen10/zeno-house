@@ -22,9 +22,14 @@ const optionalInt = (min: number, max: number) =>
 
 const optionalMoney = z.preprocess(numericText, z.number().int('Phải là số nguyên').min(0, 'Không được âm').nullable().default(null))
 
+const optionalEmail = z.preprocess(
+  value => (typeof value === 'string' ? value.trim().toLowerCase() : value),
+  z.preprocess(blankToNull, z.string().max(254, 'Email quá dài').email('Email không hợp lệ').nullable().default(null)),
+)
+
 export const CONTRACT_PROFILE_PII_FIELDS = ['lessor_date_of_birth', 'lessor_permanent_address', 'lessor_id_number'] as const
 
-export const buildingContractProfileSchema = z.object({
+export const buildingContractProfileBaseSchema = z.object({
   lessor_full_name: optionalText(2, 100, 'Họ tên'),
   lessor_date_of_birth: optionalDate,
   lessor_permanent_address: optionalText(1, 255, 'Địa chỉ'),
@@ -48,6 +53,7 @@ export const buildingContractProfileSchema = z.object({
       return normalized
     }),
   brand_name: optionalText(1, 100, 'Tên thương hiệu'),
+  lessor_email: optionalEmail,
   default_term_months: optionalInt(1, 60),
   default_deposit_months: z.preprocess(
     numericText,
@@ -63,10 +69,27 @@ export const buildingContractProfileSchema = z.object({
   fingerprint_reset_fee: optionalMoney,
   signed_copies: z.number().int().min(1, 'Tối thiểu 1').max(10, 'Tối đa 10').default(2),
   copies_per_party: z.number().int().min(1, 'Tối thiểu 1').max(5, 'Tối đa 5').default(1),
-}).superRefine((value, ctx) => {
+}).strict()
+
+function copiesRule(value: { signed_copies?: number; copies_per_party?: number }, ctx: z.RefinementCtx) {
+  if (value.signed_copies == null || value.copies_per_party == null) return
   if (value.copies_per_party * 2 > value.signed_copies) {
     ctx.addIssue({ code: 'custom', path: ['copies_per_party'], message: 'Tổng số bản hai bên giữ vượt quá số bản ký' })
   }
-})
+}
+
+export const buildingContractProfileSchema = buildingContractProfileBaseSchema.superRefine(copiesRule)
 
 export type BuildingContractProfileInput = z.infer<typeof buildingContractProfileSchema>
+export type BuildingContractProfilePatch = Partial<BuildingContractProfileInput>
+
+const patchSchema = buildingContractProfileBaseSchema.partial()
+
+// Zod 4 `.partial()` still applies `.default()` to absent keys, so keep only keys the client sent.
+export function parseContractProfilePatch(body: unknown) {
+  const result = patchSchema.safeParse(body)
+  if (!result.success) return result
+  const sent = new Set(Object.keys(body as object))
+  const data = Object.fromEntries(Object.entries(result.data).filter(([key]) => sent.has(key))) as BuildingContractProfilePatch
+  return { success: true as const, data }
+}

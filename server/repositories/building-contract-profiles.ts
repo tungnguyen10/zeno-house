@@ -2,6 +2,7 @@ import type { H3Event } from 'h3'
 import { db } from '../utils/db'
 import type { BuildingContractProfileRow } from '~/utils/mappers/building-contract-profile'
 import type { BuildingContractProfileInput } from '~/utils/validators/building-contract-profile'
+import type { Database } from '~/types/database.types'
 
 const table = (event: H3Event) => db(event).from('building_contract_profiles')
 
@@ -19,7 +20,11 @@ export const BuildingContractProfileRepository = {
     actorId: string,
   ): Promise<BuildingContractProfileRow> {
     const { data, error } = await table(event)
-      .upsert({ building_id: buildingId, ...input, updated_by: actorId }, { onConflict: 'building_id' })
+      // `lessor_email` is in the DB (Task 1) but missing from the generated Insert type until Task 12 regenerates it.
+      .upsert(
+        { building_id: buildingId, ...input, updated_by: actorId } as Database['public']['Tables']['building_contract_profiles']['Insert'],
+        { onConflict: 'building_id' },
+      )
       .select('*')
       .single()
     if (error) {

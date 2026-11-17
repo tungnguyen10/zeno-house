@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildingContractProfileSchema } from '~/utils/validators/building-contract-profile'
+import { buildingContractProfileSchema, parseContractProfilePatch } from '~/utils/validators/building-contract-profile'
 
 const full = {
   lessor_full_name: 'Nguyễn Văn A', lessor_date_of_birth: '1980-01-02', lessor_permanent_address: '12 Lê Lợi, Huế',
@@ -59,5 +59,30 @@ describe('buildingContractProfileSchema', () => {
     ['notice_days', 181], ['deposit_refund_days', 91], ['renewal_months', 25], ['drilling_fee', -1],
   ])('rejects %s = %s', (field, value) => {
     expect(buildingContractProfileSchema.safeParse({ [field]: value }).success).toBe(false)
+  })
+})
+
+describe('contract profile validators', () => {
+  it('accepts and lowercases lessor_email, blank becomes null', () => {
+    expect(buildingContractProfileSchema.parse({ lessor_email: ' Chu@Example.com ' }).lessor_email).toBe('chu@example.com')
+    expect(buildingContractProfileSchema.parse({ lessor_email: '' }).lessor_email).toBeNull()
+  })
+
+  it('rejects a malformed email', () => {
+    expect(buildingContractProfileSchema.safeParse({ lessor_email: 'not-an-email' }).success).toBe(false)
+  })
+
+  it('patch keeps only the keys present in the body (no defaults injected)', () => {
+    const result = parseContractProfilePatch({ notice_days: '30' })
+    expect(result.success).toBe(true)
+    if (result.success) expect(result.data).toEqual({ notice_days: 30 })
+  })
+
+  it('patch rejects unknown keys', () => {
+    expect(parseContractProfilePatch({ owner_name: 'x' }).success).toBe(false)
+  })
+
+  it('patch rejects a non-object body', () => {
+    expect(parseContractProfilePatch(null).success).toBe(false)
   })
 })

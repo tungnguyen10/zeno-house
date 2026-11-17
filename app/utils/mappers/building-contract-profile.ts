@@ -9,6 +9,7 @@ export interface BuildingContractProfileRow {
   lessor_id_issued_date: string | null
   lessor_id_issued_place: string | null
   lessor_phone: string | null
+  lessor_email: string | null
   brand_name: string | null
   default_term_months: number | null
   default_deposit_months: number | string | null
@@ -37,6 +38,7 @@ export function mapBuildingContractProfile(row: BuildingContractProfileRow): Bui
     lessorIdIssuedDate: row.lessor_id_issued_date,
     lessorIdIssuedPlace: row.lessor_id_issued_place,
     lessorPhone: row.lessor_phone,
+    lessorEmail: row.lessor_email ?? null,
     lessorIdentityMasked: false,
     brandName: row.brand_name,
     defaultTermMonths: row.default_term_months,
