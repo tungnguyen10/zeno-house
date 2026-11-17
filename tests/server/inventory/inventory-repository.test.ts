@@ -107,26 +107,44 @@ describe('InventoryRepository atomic replacements', () => {
 })
 
 describe('InventoryRepository.roomOccupancyForSetup', () => {
+  const calls: { method: string, args: unknown[] }[] = []
   function chain(result: unknown) {
+    calls.length = 0
     const c: Record<string, unknown> = {}
-    for (const m of ['select', 'eq', 'neq', 'in']) c[m] = () => c
+    for (const m of ['select', 'eq', 'neq']) c[m] = (...args: unknown[]) => { calls.push({ method: m, args }); return c }
     c.then = (resolve: (v: unknown) => void) => resolve(result)
     return c
   }
 
-  it('returns rooms with no inventory rows and rooms that are available', async () => {
-    from.mockImplementation((table: string) => chain(table === 'rooms'
-      ? { data: [{ id: 'r-1', status: 'available' }, { id: 'r-2', status: 'occupied' }, { id: 'r-3', status: 'available' }], error: null }
-      : { data: [{ room_id: 'r-2' }], error: null }))
+  it('reads one row per room with an embedded item count', async () => {
+    from.mockImplementation(() => chain({
+      data: [
+        { id: 'r-1', status: 'available', room_inventory_items: [{ count: 0 }] },
+        { id: 'r-2', status: 'occupied', room_inventory_items: [{ count: 3 }] },
+        { id: 'r-3', status: 'available', room_inventory_items: [] },
+        { id: 'r-4', status: 'maintenance', room_inventory_items: [{ count: 0 }] },
+      ],
+      error: null,
+    }))
     const { InventoryRepository } = await import('../../../server/repositories/inventory')
     const res = await InventoryRepository.roomOccupancyForSetup(event(), 'b-1')
-    expect(res).toEqual({ roomIdsWithoutInventory: ['r-1', 'r-3'], vacantRoomIds: ['r-1', 'r-3'] })
+
+    expect(res).toEqual({ roomIdsWithoutInventory: ['r-1', 'r-3', 'r-4'], vacantRoomIds: ['r-1', 'r-3'] })
+    expect(from).toHaveBeenCalledExactlyOnceWith('rooms')
+    expect(calls).toContainEqual({ method: 'select', args: ['id, status, room_inventory_items(count)'] })
+    expect(calls).toContainEqual({ method: 'eq', args: ['building_id', 'b-1'] })
+    expect(calls).toContainEqual({ method: 'neq', args: ['status', 'archived'] })
   })
 
-  it('skips the inventory query when the building has no rooms', async () => {
+  it('returns empty lists for a building without rooms', async () => {
     from.mockImplementation(() => chain({ data: [], error: null }))
     const { InventoryRepository } = await import('../../../server/repositories/inventory')
     expect(await InventoryRepository.roomOccupancyForSetup(event(), 'b-1')).toEqual({ roomIdsWithoutInventory: [], vacantRoomIds: [] })
-    expect(from).toHaveBeenCalledTimes(1)
+  })
+
+  it('propagates a query failure', async () => {
+    from.mockImplementation(() => chain({ data: null, error: new Error('boom') }))
+    const { InventoryRepository } = await import('../../../server/repositories/inventory')
+    await expect(InventoryRepository.roomOccupancyForSetup(event(), 'b-1')).rejects.toThrow('boom')
   })
 })

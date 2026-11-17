@@ -107,6 +107,14 @@ describe('BuildingSettingsBootstrapService', () => {
     expect(mocks.roomOccupancy).toHaveBeenCalledWith(expect.anything(), 'building-1')
   })
 
+  it('does not query room occupancy without rooms.read', async () => {
+    vi.stubGlobal('can', (_user: unknown, capability: string) => capability !== 'rooms.read')
+    const { BuildingSettingsBootstrapService } = await import('../../../server/services/buildings/settings-bootstrap')
+    const res = await BuildingSettingsBootstrapService.get({} as never, {} as never, 'toa-a')
+    expect(mocks.roomOccupancy).not.toHaveBeenCalled()
+    expect(res).toMatchObject({ roomIdsWithoutInventory: [], vacantRoomIds: [] })
+  })
+
   it('includes contract profile and readiness', async () => {
     mocks.contractProfileGet.mockResolvedValue({ buildingId: 'building-1', lessorIdNumber: '*******8901', lessorIdentityMasked: true })
     mocks.contractReadiness.mockResolvedValue({ contract: { ready: false, missing: ['invoice_profile'] }, billing: { ready: true, missing: [] } })

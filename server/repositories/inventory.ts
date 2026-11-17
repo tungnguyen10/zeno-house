@@ -24,16 +24,17 @@ export const InventoryRepository = {
   },
 
   async roomOccupancyForSetup(event: H3Event, buildingId: string): Promise<{ roomIdsWithoutInventory: string[], vacantRoomIds: string[] }> {
-    const { data: rooms, error } = await db(event).from('rooms').select('id, status').eq('building_id', buildingId).neq('status', 'archived')
-    if (error) throwDbError(error, 'inventory.roomOccupancyForSetup.rooms')
-    const list = (rooms ?? []) as { id: string, status: string }[]
-    if (list.length === 0) return { roomIdsWithoutInventory: [], vacantRoomIds: [] }
-    const { data: items, error: itemsError } = await db(event).from('room_inventory_items').select('room_id').in('room_id', list.map(r => r.id))
-    if (itemsError) throwDbError(itemsError, 'inventory.roomOccupancyForSetup.items')
-    const withItems = new Set(((items ?? []) as { room_id: string }[]).map(i => i.room_id))
+    // One row per room (embedded count) so item volume cannot hit the PostgREST row cap.
+    const { data, error } = await db(event)
+      .from('rooms')
+      .select('id, status, room_inventory_items(count)')
+      .eq('building_id', buildingId)
+      .neq('status', 'archived')
+    if (error) throwDbError(error, 'inventory.roomOccupancyForSetup')
+    const rooms = (data ?? []) as unknown as { id: string, status: string, room_inventory_items: { count: number }[] }[]
     return {
-      roomIdsWithoutInventory: list.filter(r => !withItems.has(r.id)).map(r => r.id),
-      vacantRoomIds: list.filter(r => r.status === 'available').map(r => r.id),
+      roomIdsWithoutInventory: rooms.filter(r => (r.room_inventory_items[0]?.count ?? 0) === 0).map(r => r.id),
+      vacantRoomIds: rooms.filter(r => r.status === 'available').map(r => r.id),
     }
   },
 
