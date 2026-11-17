@@ -56,6 +56,8 @@ const canEditInvoiceEmailSettings = computed(() => authStore.can('invoice-email-
 async function handleSaveInvoiceProfile(input: BuildingInvoiceProfileSaveInput) {
   try {
     await saveInvoiceProfile(input)
+    // Readiness is computed server-side; refresh it before the page decides the next step.
+    await source.refresh()
     toast.success('Đã lưu thông tin nhận diện và thanh toán trên phiếu.')
     emit('saved')
   }

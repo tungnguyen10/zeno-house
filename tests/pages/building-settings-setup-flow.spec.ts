@@ -91,3 +91,15 @@ describe('building settings locked steps', () => {
     expect(card).not.toMatch(/<NuxtLink[^>]*>\s*<UiButton/)
   })
 })
+
+describe('invoice step refreshes readiness before advancing', () => {
+  it('awaits the settings refresh between saving and emitting saved', () => {
+    const step = readFileSync(resolve(process.cwd(), 'app/components/buildings/settings/steps/InvoiceProfileStep.vue'), 'utf8')
+    const save = step.indexOf('await saveInvoiceProfile(input)')
+    const refresh = step.indexOf('await source.refresh()', save)
+    const emitSaved = step.indexOf("emit('saved')", save)
+    expect(save).toBeGreaterThan(-1)
+    expect(refresh).toBeGreaterThan(save)
+    expect(emitSaved).toBeGreaterThan(refresh)
+  })
+})

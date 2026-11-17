@@ -13,7 +13,7 @@ Branch `feat/building-onboarding-v2` (from `develop` bd9cf7ef). Evidence recorde
 ## Source and local checks (passed)
 
 - `npm run typecheck`: no errors.
-- `npm test`: 492 files, 3063 tests passed at the last full run; later commits re-ran the related suites (482 tests in `tests/server/buildings` and `tests/utils`).
+- `npm test`: full run recorded at the end of this record's last update (see below).
 - `npm run lint`: 0 errors; 1 pre-existing warning (`vue/no-v-html`, `app/components/app/AppAiDevChat.vue`).
 - `npm run knowledge:check`: passed.
 - Every task was implemented test-first, reviewed against the spec and plan, and the whole branch had a final review (outcome: no Critical findings; two Important and several Minor findings were fixed in the fix round `93b41716..6ec5bdb9`).
@@ -28,20 +28,25 @@ Branch `feat/building-onboarding-v2` (from `develop` bd9cf7ef). Evidence recorde
 - Types regenerated with Supabase CLI 3.1 and formatted with `prettier@3 --no-semi --trailing-comma all --print-width 80`; the diff against the previous file was exactly the three `lessor_email` lines. The temporary Insert-type cast in `server/repositories/building-contract-profiles.ts` was removed.
 - `buildings.owner_*` columns were left in place by design.
 
-## Browser verification (NOT done)
+## Browser verification (2026-11-17, local dev server against production data, admin account)
 
-The integrated browser could not reach a fresh dev server: port 3000 is occupied by an unrelated `aem up` process, and a Nuxt dev server on port 3100 uses a new self-signed certificate that the browser rejects (`ERR_CERT_AUTHORITY_INVALID`). No UI state below has been checked visually.
+Run on a temporary building created for the test and deleted afterwards (building, 3 rooms, profiles removed; production is back to the original 4 buildings; the uploaded test QR image may remain as an orphan object in private storage).
 
-To verify (390 / 768 / 1280 px, light and dark):
+Passed:
 
-- [ ] Create a building with 0 rooms and with several rooms; lands on `settings?setup=1` with "Bên cho thuê" open; toast shown.
-- [ ] "Lưu và tiếp" walks lessor → terms (prefilled 12/1/30/7/6 with the suggestion hint) → basics → invoice → services ("Tiếp") → inventory ("Bỏ qua", or save and apply the suggestion).
-- [ ] Completion: "Lập hợp đồng đầu tiên" opens contract create filtered to the building; with exactly one vacant room it is preselected; with 0 rooms the primary action is "Thêm phòng".
-- [ ] Leave halfway, open the building detail page: setup strip shows "Thiết lập x/4" and "Tiếp tục thiết lập".
-- [ ] Old link `settings#contract-profile` opens "Bên cho thuê".
-- [ ] A user without `building-contract-profile.pii.read` sees the lessor step read-only with masked PII, and cannot write PII.
-- [ ] Buildings list in multi-select mode: checkbox does not cover the building name at `sm` and above.
-- [ ] States: loading, save error keeps typed data, saving disables the button, focus-visible on "Lưu và tiếp", reduced motion on step scroll.
+- Setup mode `?setup=1`: header "Thiết lập tòa nhà" with building name and "Hoàn tất 4 bước bắt buộc để lập hợp đồng"; first missing step opens; "Lưu và tiếp" saves the Basics step and opens the next step; progress 2/4 -> 3/4 -> 4/4.
+- Completion state: "Sẵn sàng lập hợp đồng", "Lập hợp đồng đầu tiên" -> `/dashboard/contracts/create?building_id=<id>` (no `room_id` with 3 vacant rooms), "Xem tòa nhà", "Thoát thiết lập" (hidden outside setup mode). Checked at 1280 px dark and 390 px dark; no horizontal overflow at 390 px.
+- Contract create filtered by `building_id`: only the building's rooms are offered and "Xem phòng của mọi tòa" is shown.
+- Building detail: "Sẵn sàng lập hợp đồng" strip, header actions "Thêm phòng" and "Cài đặt", "Bên cho thuê" row (name, phone, email), building name shown once.
+- Old hash `settings#contract-profile` opens "Bên cho thuê"; outside setup mode the page title is "Cài đặt tòa nhà".
+- Create building page: slim form (no owner fields), "Phòng" block always visible, new description text.
+- Inventory template in setup mode: after saving, "3 phòng chưa có nội thất" suggestion appears and the step stays open; applying it clears the suggestion.
+- Buildings list in multi-select mode at 1280 px: checkbox does not overlap the title (link padding-left 48 px).
+- Terms step in light mode: suggested values shown, deposit presets and fee fields render correctly.
+
+Bug found and fixed during this run (commit "fix(buildings): refresh readiness before leaving the invoice step"): after saving the invoice profile in setup mode the readiness was not refreshed, so progress stayed 3/4 and the step did not advance until a reload. `InvoiceProfileStep.vue` now awaits `source.refresh()` before emitting `saved`; regression spec added.
+
+Not covered: a building with 0 rooms end to end (covered by component tests only), a user without `building-contract-profile.pii.read` (covered by service tests only), 768 px, light mode of the setup completion card, keyboard-only walkthrough and reduced motion.
 
 ## Known deferred findings
 
