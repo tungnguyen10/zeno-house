@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { ContractDocument, ContractDocumentStatus } from '~/types/contract-documents'
 import type { StatusVariant } from '~/utils/constants/statuses'
+import { getApiErrorMessage } from '~/utils/api-error'
 import { useContractDocuments } from '~/composables/contracts/useContractDocuments'
 
 const props = defineProps<{ contractId: string }>()
@@ -27,12 +28,41 @@ const typeLabel = (t: ContractDocument['type']) => (t === 'appendix' ? 'Phụ l�
 onMounted(docs.refresh)
 
 const voidValid = computed(() => voidReason.value.trim().length >= 10)
+const voidError = ref<string | null>(null)
 
-async function confirmVoid() {
-  if (!voidTarget.value || !voidValid.value) return
-  await docs.voidDocument(voidTarget.value.id, voidReason.value.trim())
+// Only a live contract document can be replaced in one step; failed files and appendices are voided.
+const canReplace = (d: ContractDocument) => d.type === 'contract' && (d.status === 'issued' || d.status === 'signed')
+const voidActionLabel = (d: ContractDocument) => (canReplace(d) ? 'Hủy & phát hành lại' : 'Hủy bản lỗi')
+
+function closeVoid() {
   voidTarget.value = null
   voidReason.value = ''
+  voidError.value = null
+}
+
+async function confirmVoid() {
+  const target = voidTarget.value
+  if (!target || !voidValid.value) return
+  voidError.value = null
+  const reason = voidReason.value.trim()
+  try {
+    if (canReplace(target)) {
+      await docs.issue({
+        type: target.type,
+        amendment_id: target.amendmentId,
+        signed_date: target.signedDate ?? new Date().toISOString().slice(0, 10),
+        replaces_document_id: target.id,
+        void_reason: reason,
+      })
+    }
+    else {
+      await docs.voidDocument(target.id, reason)
+    }
+    closeVoid()
+  }
+  catch (cause) {
+    voidError.value = getApiErrorMessage(cause, 'Không thể hủy tài liệu.')
+  }
 }
 </script>
 
@@ -80,7 +110,7 @@ async function confirmVoid() {
               size="sm" variant="ghost" data-test="document-void"
               @click="voidTarget = d"
             >
-              Hủy &amp; phát hành lại
+              {{ voidActionLabel(d) }}
             </UiButton>
           </div>
         </li>
@@ -95,14 +125,20 @@ async function confirmVoid() {
       @issued="docs.refresh()"
     />
 
-    <UiModal :open="voidTarget !== null" title="Hủy tài liệu" @close="voidTarget = null">
+    <UiModal :open="voidTarget !== null" :title="voidTarget ? voidActionLabel(voidTarget) : ''" @close="closeVoid">
       <div class="space-y-3">
-        <p class="text-sm text-ui-muted">Nêu lý do hủy (tối thiểu 10 ký tự). Bản bị hủy không thể khôi phục.</p>
+        <p class="text-sm text-ui-muted">
+          Nêu lý do hủy (tối thiểu 10 ký tự). Bản bị hủy không thể khôi phục.
+          <template v-if="voidTarget && canReplace(voidTarget)">Bản thay thế được phát hành ngay với dữ liệu hiện tại của hợp đồng.</template>
+        </p>
         <UiTextarea v-model="voidReason" label="Lý do hủy" :rows="3" />
+        <UiAlert v-if="voidError" severity="danger">{{ voidError }}</UiAlert>
       </div>
       <template #footer>
-        <UiButton variant="secondary" @click="voidTarget = null">Đóng</UiButton>
-        <UiButton variant="danger" :disabled="!voidValid" data-test="void-confirm" @click="confirmVoid">Hủy tài liệu</UiButton>
+        <UiButton variant="secondary" @click="closeVoid">Đóng</UiButton>
+        <UiButton variant="danger" :disabled="!voidValid" data-test="void-confirm" @click="confirmVoid">
+          {{ voidTarget && canReplace(voidTarget) ? 'Hủy & phát hành bản mới' : 'Hủy tài liệu' }}
+        </UiButton>
       </template>
     </UiModal>
   </section>

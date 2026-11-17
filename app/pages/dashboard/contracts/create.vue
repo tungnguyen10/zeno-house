@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { ApiSuccess } from '~/types/api'
 import type { Room } from '~/types/rooms'
+import type { Building } from '~/types/buildings'
 import type { BuildingService } from '~/types/building-services'
 import type { ContractWithDetails } from '~/types/contracts'
 import type { ContractOccupantAddInput } from '~/utils/validators/contract-occupants'
@@ -8,6 +9,7 @@ import type { InventoryItemInput } from '~/utils/validators/inventory'
 import type { VehicleRow } from '~/components/contracts/ContractVehiclesEditor.vue'
 import type { ContractServiceRow } from '~/components/contracts/ContractServicesEditor.vue'
 import { resolveRoomQuery } from '~/utils/contracts/resolve-room-query'
+import { roomOptionLabel } from '~/utils/contracts/room-option'
 import { blockForField, type ContractCreateBlock } from '~/utils/contracts/contract-create-blocks'
 import { getApiErrorCode, getApiErrorDetails, getApiErrorMessage } from '~/utils/api-error'
 import { computeDeposit, computeEndDate, loadPrefs, resolveDefaults, savePrefs } from '~/utils/contracts/prefill-defaults'
@@ -82,6 +84,8 @@ const { data: roomsData } = useLazyFetch<ApiSuccess<Room[]> & { meta: unknown }>
   query: { available: 'true', limit: 200 },
 })
 const roomOptions = computed(() => roomsData.value?.data ?? [])
+const { data: buildingsData } = useLazyFetch<ApiSuccess<Building[]>>('/api/buildings', { query: { limit: 100 } })
+const buildingNameById = computed(() => new Map((buildingsData.value?.data ?? []).map(b => [b.id, b.name])))
 const selectedRoom = computed(() => (roomsData.value?.data ?? []).find(r => r.id === form.value.room_id) ?? null)
 const buildingId = computed(() => selectedRoom.value?.buildingId ?? null)
 
@@ -236,7 +240,13 @@ onMounted(async () => {
     form.value = { ...form.value, ...fields, monthly_rent: restored.monthly_rent != null ? String(restored.monthly_rent) : form.value.monthly_rent, deposit: restored.deposit != null ? String(restored.deposit) : form.value.deposit, occupant_count: restored.occupant_count != null ? String(restored.occupant_count) : form.value.occupant_count } as typeof form.value
     if (draftVehicles) vehicles.value = draftVehicles as VehicleRow[]
     if (draftInventory) {
-      inventory.value = draftInventory
+      inventory.value = draftInventory.map(item => ({
+        name: item.name ?? '',
+        quantity: item.quantity ?? 1,
+        condition: item.condition ?? 'good',
+        unit_value: item.unit_value ?? null,
+        note: item.note ?? null,
+      }))
       skipInventoryPrefill = true
     }
     for (const key of ['monthly_rent', 'deposit', 'end_date'] as const) {
@@ -306,10 +316,10 @@ watch([form, occupants, vehicles, services, inventory], () => {
           :model-value="selectedRoom"
           :options="roomOptions"
           :option-key="(r) => r.id"
-          :option-label="(r) => r.roomNumber"
+          :option-label="(r) => roomOptionLabel(r.roomNumber, buildingNameById.get(r.buildingId))"
           label="Phòng cho thuê"
           placeholder="Chọn phòng trống"
-          search-placeholder="Tìm số phòng..."
+          search-placeholder="Tìm tòa hoặc số phòng..."
           :error="errors.room_id?.[0]"
           @update:model-value="(r) => form.room_id = r?.id ?? ''"
         />

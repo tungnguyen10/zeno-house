@@ -3,6 +3,7 @@ import { onClickOutside, onKeyStroke } from '@vueuse/core'
 import clsx from 'clsx'
 import type { ContractWithDetails } from '~/types/contracts'
 import { contractPath } from '~/utils/routes/operational'
+import { fullMonthsElapsed } from '~/utils/contracts/elapsed'
 import { formatCurrency } from '~/utils/format/currency'
 
 const props = defineProps<{
@@ -18,12 +19,7 @@ const emit = defineEmits<{
   delete: []
 }>()
 
-function monthDiff(start: string, end = new Date()) {
-  const from = new Date(start)
-  return Math.max(0, (end.getFullYear() - from.getFullYear()) * 12 + end.getMonth() - from.getMonth() + 1)
-}
-
-const monthsElapsed = computed(() => monthDiff(props.contract.startDate))
+const monthsElapsed = computed(() => fullMonthsElapsed(props.contract.startDate))
 const depositBalance = computed(() => props.depositHeld ?? props.contract.deposit ?? 0)
 
 const canRenew = computed(() => props.contract.status === 'active')

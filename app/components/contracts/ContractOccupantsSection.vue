@@ -4,6 +4,7 @@ import type { ContractOccupant } from '~/types/contract-occupants'
 import type { ContractOccupantAddInput, ContractOccupantMoveOutInput } from '~/utils/validators/contract-occupants'
 import { getApiErrorMessage } from '~/utils/api-error'
 import { formatViDate } from '~/utils/format/time'
+import { countActiveResidents } from '~/utils/contracts/occupancy'
 
 const props = defineProps<{
   contract: ContractWithDetails
@@ -15,9 +16,7 @@ const props = defineProps<{
   removeOccupant: (id: string) => Promise<void>
 }>()
 
-const activeOccupantCount = computed(
-  () => props.occupants.filter(o => !o.moveOutDate && o.role === 'roommate').length + 1,
-)
+const activeOccupantCount = computed(() => countActiveResidents(props.occupants))
 const isOccupantLimitReached = computed(
   () => activeOccupantCount.value >= props.contract.occupantCount,
 )

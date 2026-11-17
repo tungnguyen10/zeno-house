@@ -5,6 +5,7 @@ import type { ContractWithDetails } from '~/types/contracts'
 import type { ApiSuccess } from '~/types/api'
 import clsx from 'clsx'
 import { contractPath } from '~/utils/routes/operational'
+import { countActiveResidents } from '~/utils/contracts/occupancy'
 import { getApiErrorCode, getApiErrorDetails, getApiErrorMessage } from '~/utils/api-error'
 import { isUuid } from '~/utils/format/slug'
 
@@ -92,9 +93,7 @@ async function publishAmendment(amendmentId: string, expectedUpdatedAt: string) 
   return amendment
 }
 
-const activeOccupantCount = computed(
-  () => occupants.value.filter(o => !o.moveOutDate).length,
-)
+const activeOccupantCount = computed(() => countActiveResidents(occupants.value))
 const depositHeld = computed(() => checkoutBundle.value?.enabled ? checkoutBundle.value.depositHeld : (contract.value?.deposit ?? 0))
 watch(payments, () => { if (checkoutBundle.value?.enabled) checkout.refresh() })
 
