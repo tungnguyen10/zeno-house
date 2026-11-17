@@ -27,7 +27,7 @@ describe('BuildingReadinessCard', () => {
     expect(w.text()).toContain('Thiếu 2 mục')
     await w.find('[data-test="readiness-contract-toggle"]').trigger('click')
     const hrefs = w.findAll('a').map(a => a.attributes('href'))
-    expect(hrefs).toContain('/dashboard/buildings/zeno/settings#contract-profile')
+    expect(hrefs).toContain('/dashboard/buildings/zeno/settings#lessor-profile')
     expect(hrefs).toContain('/dashboard/buildings/zeno/settings#invoice-profile')
   })
 
