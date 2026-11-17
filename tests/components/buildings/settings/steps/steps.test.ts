@@ -131,9 +131,15 @@ describe('InventoryStep', () => {
   const EditorStub = defineComponent({ props: ['modelValue', 'disabled'], setup(props) { return () => h('div', { 'data-test': 'editor', 'data-disabled': String(props.disabled) }, JSON.stringify(props.modelValue)) } })
   const ApplyStub = defineComponent({ props: ['open', 'buildingId'], emits: ['apply', 'close'], setup(props) { return () => h('div', { 'data-test': 'apply', 'data-open': String(props.open) }) } })
 
-  const mountStep = (template = makeTemplate(), canEdit = true) => {
-    const wrapper = mount(InventoryStep, {
-      props: { template: template as never, buildingId: 'b-1', canEdit },
+  const mountStep = (template = makeTemplate(), canEdit = true, pendingRoomIds: string[] = []) => {
+    const source = makeSource()
+    source.settingsData.value = { data: { building, roomIdsWithoutInventory: pendingRoomIds } } as never
+    const wrapper = mount(defineComponent({
+      setup() {
+        provideBuildingSettingsSource(source)
+        return () => h(InventoryStep, { template: template as never, buildingId: 'b-1', canEdit })
+      },
+    }), {
       global: {
         stubs: {
           UiSection: defineComponent({ setup(_, { slots }) { return () => h('section', [slots.actions?.(), slots.default?.()]) } }),
@@ -145,8 +151,73 @@ describe('InventoryStep', () => {
         },
       },
     })
-    return { wrapper, template }
+    return { wrapper, template, source }
   }
+
+  const saveButton = (wrapper: ReturnType<typeof mountStep>['wrapper']) =>
+    wrapper.findAll('button').find(b => b.text() === 'Lưu nội thất mẫu')!
+
+  it('suggests applying the template to rooms without items only after saving', async () => {
+    const { wrapper } = mountStep(makeTemplate(), true, ['r-1', 'r-2'])
+    expect(wrapper.find('[data-test="inventory-apply-suggestion"]').exists()).toBe(false)
+
+    await saveButton(wrapper).trigger('click')
+    await flushPromises()
+
+    const alert = wrapper.get('[data-test="inventory-apply-suggestion"]')
+    expect(alert.text()).toContain('2 phòng chưa có nội thất')
+    expect(wrapper.findComponent(InventoryStep).emitted('saved')).toHaveLength(1)
+  })
+
+  it('does not suggest anything when every room already has items', async () => {
+    const { wrapper } = mountStep()
+    await saveButton(wrapper).trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('[data-test="inventory-apply-suggestion"]').exists()).toBe(false)
+  })
+
+  it('applies the template to the pending rooms in merge mode, refreshes and hides the suggestion', async () => {
+    const { wrapper, template, source } = mountStep(makeTemplate(), true, ['r-1', 'r-2'])
+    await saveButton(wrapper).trigger('click')
+    await flushPromises()
+    await wrapper.findAll('button').find(b => b.text() === 'Áp dụng cho 2 phòng')!.trigger('click')
+    await flushPromises()
+
+    expect(template.apply).toHaveBeenCalledWith({ room_ids: ['r-1', 'r-2'], mode: 'merge' })
+    expect(source.refresh).toHaveBeenCalled()
+    expect(toast.success).toHaveBeenCalledWith('Đã áp dụng nội thất mẫu.')
+    expect(wrapper.find('[data-test="inventory-apply-suggestion"]').exists()).toBe(false)
+  })
+
+  it('sends at most 200 rooms per request and keeps the suggestion for the rest', async () => {
+    const pending = Array.from({ length: 250 }, (_, i) => `r-${i}`)
+    const { wrapper, template, source } = mountStep(makeTemplate(), true, pending)
+    source.refresh = vi.fn(async () => {
+      source.settingsData.value = { data: { building, roomIdsWithoutInventory: pending.slice(200) } } as never
+    }) as never
+    await saveButton(wrapper).trigger('click')
+    await flushPromises()
+    await wrapper.findAll('button').find(b => b.text() === 'Áp dụng cho 250 phòng')!.trigger('click')
+    await flushPromises()
+
+    const call = (template.apply.mock.calls[0] as unknown as [{ room_ids: string[] }])[0]
+    expect(call.room_ids).toHaveLength(200)
+    expect(wrapper.get('[data-test="inventory-apply-suggestion"]').text()).toContain('50 phòng chưa có nội thất')
+  })
+
+  it('reports an apply failure and keeps the suggestion', async () => {
+    const template = makeTemplate()
+    template.apply.mockRejectedValue(new Error('nope'))
+    const { wrapper } = mountStep(template, true, ['r-1'])
+    await saveButton(wrapper).trigger('click')
+    await flushPromises()
+    await wrapper.findAll('button').find(b => b.text() === 'Áp dụng cho 1 phòng')!.trigger('click')
+    await flushPromises()
+
+    expect(toast.error).toHaveBeenCalled()
+    expect(wrapper.find('[data-test="inventory-apply-suggestion"]').exists()).toBe(true)
+  })
 
   it('turns the template items into an editable draft', () => {
     const { wrapper } = mountStep()
@@ -168,7 +239,7 @@ describe('InventoryStep', () => {
 
     expect(template.save).toHaveBeenCalledWith([{ name: 'Giuong', quantity: 1, condition: 'good', unit_value: 1_500_000, note: null }])
     expect(toast.success).toHaveBeenCalledWith('Đã lưu nội thất mẫu của tòa nhà.')
-    expect(wrapper.emitted('saved')).toHaveLength(1)
+    expect(wrapper.findComponent(InventoryStep).emitted('saved')).toHaveLength(1)
   })
 
   it('applies to rooms, closes the modal and reports the counts', async () => {

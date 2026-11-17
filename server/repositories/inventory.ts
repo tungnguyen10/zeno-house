@@ -23,6 +23,20 @@ export const InventoryRepository = {
     return (data ?? []) as InventoryRow[]
   },
 
+  async roomOccupancyForSetup(event: H3Event, buildingId: string): Promise<{ roomIdsWithoutInventory: string[], vacantRoomIds: string[] }> {
+    const { data: rooms, error } = await db(event).from('rooms').select('id, status').eq('building_id', buildingId).neq('status', 'archived')
+    if (error) throwDbError(error, 'inventory.roomOccupancyForSetup.rooms')
+    const list = (rooms ?? []) as { id: string, status: string }[]
+    if (list.length === 0) return { roomIdsWithoutInventory: [], vacantRoomIds: [] }
+    const { data: items, error: itemsError } = await db(event).from('room_inventory_items').select('room_id').in('room_id', list.map(r => r.id))
+    if (itemsError) throwDbError(itemsError, 'inventory.roomOccupancyForSetup.items')
+    const withItems = new Set(((items ?? []) as { room_id: string }[]).map(i => i.room_id))
+    return {
+      roomIdsWithoutInventory: list.filter(r => !withItems.has(r.id)).map(r => r.id),
+      vacantRoomIds: list.filter(r => r.status === 'available').map(r => r.id),
+    }
+  },
+
   async replaceTemplate(event: H3Event, buildingId: string, items: InventoryItemInput[]): Promise<InventoryRow[]> {
     // Validate, delete and insert in one database transaction; never expose a partial replacement.
     const { data, error } = await db(event).rpc('replace_inventory_template', {

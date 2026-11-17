@@ -15,6 +15,7 @@ const mocks = vi.hoisted(() => ({
   prepaidList: vi.fn(),
   contractProfileGet: vi.fn(),
   contractReadiness: vi.fn(),
+  roomOccupancy: vi.fn(),
 }))
 
 vi.stubGlobal('can', (_user: unknown, capability: string) => !capability.endsWith('.write'))
@@ -35,6 +36,8 @@ vi.mock('../../../server/services/operations-report/prepaid-expenses', () => ({ 
 vi.mock('../../../server/services/buildings/contract-profile', () => ({
   BuildingContractProfileService: { get: mocks.contractProfileGet, readiness: mocks.contractReadiness },
 }))
+
+vi.mock('../../../server/repositories/inventory', () => ({ InventoryRepository: { roomOccupancyForSetup: mocks.roomOccupancy } }))
 
 describe('BuildingSettingsBootstrapService', () => {
   beforeEach(() => {
@@ -57,6 +60,7 @@ describe('BuildingSettingsBootstrapService', () => {
     mocks.reserveRatesList.mockResolvedValue([])
     mocks.recurringList.mockResolvedValue([])
     mocks.prepaidList.mockResolvedValue([])
+    mocks.roomOccupancy.mockResolvedValue({ roomIdsWithoutInventory: ['r-1'], vacantRoomIds: ['r-1'] })
     mocks.contractProfileGet.mockResolvedValue(null)
     mocks.contractReadiness.mockResolvedValue({ contract: { ready: false, missing: [] }, billing: { ready: false, missing: [] } })
     vi.stubGlobal('can', (_user: unknown, capability: string) => !capability.endsWith('.write'))
@@ -94,6 +98,13 @@ describe('BuildingSettingsBootstrapService', () => {
     expect(mocks.contractsList).toHaveBeenCalledWith(event, user, expect.objectContaining({
       building_id: 'building-1', status: ['active'], page: 1, limit: 200,
     }))
+  })
+
+  it('includes rooms without inventory and vacant rooms', async () => {
+    const { BuildingSettingsBootstrapService } = await import('../../../server/services/buildings/settings-bootstrap')
+    const res = await BuildingSettingsBootstrapService.get({} as never, {} as never, 'toa-a')
+    expect(res).toMatchObject({ roomIdsWithoutInventory: ['r-1'], vacantRoomIds: ['r-1'] })
+    expect(mocks.roomOccupancy).toHaveBeenCalledWith(expect.anything(), 'building-1')
   })
 
   it('includes contract profile and readiness', async () => {
