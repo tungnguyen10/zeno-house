@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
   remove: vi.fn(),
   createWithHandover: vi.fn(),
   createFull: vi.fn(),
+  findCreateReplay: vi.fn(),
   findBuildingByIdentifier: vi.fn(),
   findRoomById: vi.fn(),
   updateRoom: vi.fn(),
@@ -32,6 +33,7 @@ vi.mock('../../../server/repositories/contracts', () => ({
     remove: mocks.remove,
     createWithHandover: mocks.createWithHandover,
     createFull: mocks.createFull,
+    findCreateReplay: mocks.findCreateReplay,
   },
 }))
 
@@ -245,6 +247,27 @@ describe('ContractService.create with handover readings', () => {
     })
     expect(opts).toMatchObject({ actorId: 'user-1', requestId: '0a8a4dd0-7d6f-4f4e-bc7e-3c5e1b800000' })
     expect(result.id).toBe(contract.id)
+  })
+
+  it('returns the original contract when the same request_id is replayed after a lost response', async () => {
+    const contract = buildContractWithDetails()
+    mocks.findRoomById.mockResolvedValue({ id: 'room-1', roomNumber: 'A101', status: 'occupied', buildingId: 'building-1', monthlyRent: 3_000_000 })
+    mocks.findCreateReplay.mockResolvedValueOnce(contract.id)
+    mocks.findByIdentifier.mockResolvedValue(contract)
+    // The room is now taken by this very contract, so the normal conflict pre-check would 409.
+    mocks.findActiveByRoomId.mockResolvedValue({ id: contract.id })
+
+    const { ContractService } = await import('../../../server/services/contracts')
+    const result = await ContractService.create(event(), user(), {
+      request_id: '0a8a4dd0-7d6f-4f4e-bc7e-3c5e1b800000', room_id: 'room-1', tenant_id: 'tenant-1',
+      start_date: '2026-06-01', end_date: '2027-06-01', monthly_rent: 3_000_000, deposit: 0, payment_due_day: null,
+      occupant_count: 1, discount_amount: 0, surcharge_amount: 0, status: 'active', notes: null,
+      handover_electricity_reading: 1, handover_water_reading: 1,
+    })
+
+    expect(mocks.findCreateReplay).toHaveBeenCalledWith(expect.anything(), '0a8a4dd0-7d6f-4f4e-bc7e-3c5e1b800000', 'user-1')
+    expect(result.id).toBe(contract.id)
+    expect(mocks.createFull).not.toHaveBeenCalled()
   })
 
   it('refuses to create a contract when the room has no rent set', async () => {

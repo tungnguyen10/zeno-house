@@ -131,6 +131,16 @@ export const ContractService = {
   async create(event: H3Event, user: AuthUser, input: ContractCreateInput): Promise<ContractWithDetails> {
     requireCapability(user, 'contracts.create', 'Không có quyền tạo hợp đồng')
 
+    // A retry after a lost response must get the contract back, not a conflict with itself.
+    const replayedId = await ContractRepository.findCreateReplay(event, input.request_id, user.id)
+    if (replayedId) {
+      const replayed = await ContractRepository.findByIdentifier(event, replayedId)
+      if (replayed) {
+        await assertBuildingScope(event, user, replayed.buildingId, 'write')
+        return replayed
+      }
+    }
+
     const room = await RoomRepository.findById(event, input.room_id)
     if (!room) throwNotFound('Không tìm thấy phòng')
     await assertBuildingScope(event, user, room.buildingId, 'write')

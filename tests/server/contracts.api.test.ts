@@ -9,6 +9,7 @@ const contractRepoMocks = vi.hoisted(() => ({
   findActiveByTenantId: vi.fn(),
   createWithHandover: vi.fn(),
   createFull: vi.fn(),
+  findCreateReplay: vi.fn().mockResolvedValue(null),
   update: vi.fn(),
   removeWithCascade: vi.fn(),
   countBillingPeriodsForContract: vi.fn(),

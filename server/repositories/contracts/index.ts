@@ -329,6 +329,19 @@ export const ContractRepository = {
     return created
   },
 
+  /** Contract id of a create request that already committed for this actor (same key the RPC replays on). */
+  async findCreateReplay(event: H3Event, requestId: string, actorId: string): Promise<string | null> {
+    const client = await serverSupabaseClient(event)
+    const { data, error } = await client
+      .from('audit_operations' as never)
+      .select('entity_id, actor_id')
+      .eq('idempotency_key', `contract.create:${requestId}`)
+      .maybeSingle()
+    if (error) throwDbError(error, 'contracts.findCreateReplay')
+    const row = data as unknown as { entity_id: string | null; actor_id: string | null } | null
+    return row?.entity_id && row.actor_id === actorId ? row.entity_id : null
+  },
+
   async createFull(
     event: H3Event,
     payload: {

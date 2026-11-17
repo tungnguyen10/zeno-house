@@ -95,6 +95,8 @@ export const ContractDocumentService = {
     requireCapability(user, 'contract-documents.issue', 'Không có quyền phát hành tài liệu hợp đồng')
     const contract = await requireContractScope(event, user, identifier, 'write')
     assertContractType(input.type)
+    // Replacing voids the previous document, so it needs the same capability as voiding.
+    if (input.replaces_document_id) requireCapability(user, 'contract-documents.void', 'Không có quyền hủy tài liệu hợp đồng')
 
     // Idempotency / duplicate guard: an already-issued document of this type is returned as-is
     // unless the caller is explicitly replacing it.

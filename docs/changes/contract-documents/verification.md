@@ -36,6 +36,8 @@ tags: [change, verification, contracts, documents, docx, pii]
 - Audit mutation registry: added `contract-documents/` policy (the governance test requires every mutation route prefix to be declared).
 - cleanup-worker test mocked `removeObject` as a non-promise → route's `.catch` threw; fixed the mock to resolve.
 - `ContractDocumentsSection.vue`: typed the status→`UiBadge` variant map as `StatusVariant` (was `string`).
+- Local E2E (2026-11-17): issuing with `replaces_document_id` voids the previous document, so `ContractDocumentService.issue` now requires `contract-documents.void` (a manager previously replaced a document through that path); "Hủy & phát hành lại" uses one atomic issue call; marking signed asks for confirmation. A manager probe against the dev server confirmed sign, void, replace, contract-profile, inventory-template, rooms/batch and tenant create are 403, while list, download and check work.
+- `POST /api/contracts` replayed with the same `request_id` after a lost response returned 409 (the room-conflict pre-check ran before the RPC replay); `ContractService.create` now returns the original contract first.
 
 ## Visual QA — run by maintainer
 

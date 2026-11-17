@@ -104,6 +104,21 @@ describe('ContractDocumentService.issue', () => {
     expect(res.id).toBe('d-1')
     expect(repo.reserve).not.toHaveBeenCalled()
   })
+
+  it('forbids replacing (voiding) an issued document without the void capability', async () => {
+    repo.listByContract.mockResolvedValue([row({ status: 'issued' })])
+    const { ContractDocumentService } = await import('../../../server/services/contract-documents')
+    await expect(ContractDocumentService.issue(ev(), manager, 'c-1', { ...issueInput, replaces_document_id: 'd-1', void_reason: 'Sai thông tin cần phát hành lại' }))
+      .rejects.toMatchObject({ statusCode: 403 })
+    expect(repo.reserve).not.toHaveBeenCalled()
+  })
+
+  it('lets a user with the void capability replace an issued document', async () => {
+    repo.listByContract.mockResolvedValue([row({ status: 'issued' })])
+    const { ContractDocumentService } = await import('../../../server/services/contract-documents')
+    await ContractDocumentService.issue(ev(), owner, 'c-1', { ...issueInput, replaces_document_id: 'd-1', void_reason: 'Sai thông tin cần phát hành lại' })
+    expect(repo.reserve).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ replacesDocumentId: 'd-1', voidReason: 'Sai thông tin cần phát hành lại' }))
+  })
 })
 
 describe('ContractDocumentService contract code identifiers', () => {
