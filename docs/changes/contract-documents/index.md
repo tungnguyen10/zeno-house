@@ -1,6 +1,6 @@
 # Contract documents (V2 PR4b)
 
-**Status: implementation-review.** Tasks 1–10 implemented TDD-first on Node 22; local typecheck/test/lint/knowledge:check all pass. `docxtemplater`/`pizzip` were already present (no new install). Depends on PR1, PR2, PR4a. Migration + Storage bucket + cron cloud gate and git/PR + visual QA remain maintainer-run — see verification.
+**Status: source merged; deployed smoke / appendix open.** Contract DOCX issuance, private bucket, immutable snapshot, regeneration, signing, void/reissue and cleanup job exist; production migration/verification and local QA were reported passed 2026-11-15. Production application smoke, worker environment secret, failed-file recovery and appendix issuance still need verification/implementation. **Source currently rejects `type: appendix`; do not advertise it as delivered.**
 
 - [Design](./design.md)
 - [Implementation plan](./implementation-plan.md)

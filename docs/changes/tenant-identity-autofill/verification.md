@@ -63,3 +63,7 @@ Reused existing primitives only (`UiButton`, `UiAlert`) and existing tokens; no 
 ## Benchmark
 
 See [benchmark-results.md](./benchmark-results.md) after G4.
+
+## 2026-11-16 merged-source reconciliation
+
+PR #27 merged the OCR source into `develop` and its GitHub CI passed, but the generated `app/types/database.types.ts` at `74aaac5c` does **not** include `reserve_tenant_ocr`, `settle_tenant_ocr`, `release_tenant_ocr` or `tenant_ocr_usage`. Cloud SQL verification, generated type refresh and security/privacy/benchmark gates remain open. Runtime casts are not proof of generated types. Do **not** enable real-ID uploads based solely on the merge. [V2 baseline](../zeno-house-v2-optimization/baseline-2026-11-16.md).

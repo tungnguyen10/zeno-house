@@ -1,6 +1,6 @@
 # Contract quick create (V2 PR4a)
 
-**Status: implementation-review.** Tasks 1–7 implemented TDD-first on Node 22; local typecheck/test/lint/knowledge:check all pass. Depends on PR0–PR3. DOCX is split to [contract-documents](../contract-documents/index.md). Two migrations + cloud gate and git/PR + visual QA remain maintainer-run — see verification.
+**Status: source merged; browser retry acceptance open.** One-page create, occupants, vehicles, services, inventory, server draft and atomic `create_contract_full` are integrated in `develop`. Production migrations/rollback SQL were reported verified 2026-11-15, including source-level idempotency. Browser lost-response retry and busy-occupant 409 scenarios remain open.
 
 - [Design](./design.md)
 - [Implementation plan](./implementation-plan.md)

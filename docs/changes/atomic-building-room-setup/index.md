@@ -1,15 +1,8 @@
-# Atomic Building + Room setup (V2 PR0)
+# Atomic Building + Room setup (V2 PR0) — archived
 
-**Status: implementation-review.** Tasks 1–8 implemented TDD-first (code only; git and cloud gate are maintainer-run). Local test run, typecheck/lint and cloud migration remain open — see verification.
+The accepted implementation, original design, plan and dated verification record were archived under [2026-11-11 atomic-building-room-setup](../../history/2026-11-11-atomic-building-room-setup/index.md). This is a redirect, **not an active PR0 implementation checklist**.
 
-- [Design](./design.md)
-- [Implementation plan](./implementation-plan.md)
-- [Verification](./verification.md)
-- Parent brief: [ZENO House V2 — Flow Optimization Brief](../zeno-house-v2-optimization/brief.md)
+- [Archived verification and release boundary](../../history/2026-11-11-atomic-building-room-setup/verification.md)
+- [V2 baseline review](../zeno-house-v2-optimization/baseline-2026-11-16.md)
 
-## Capabilities to update on acceptance
-
-- [buildings-api](../../capabilities/buildings-api.md)
-- [rooms-api](../../capabilities/rooms-api.md)
-- [rooms-database](../../capabilities/rooms-database.md)
-- [buildings-ui](../../capabilities/buildings-ui.md)
+The archived record explicitly retains open concurrency/lost-response deployment checks; archiving does not assert those checks passed.

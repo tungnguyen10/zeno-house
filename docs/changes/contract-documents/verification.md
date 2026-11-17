@@ -53,3 +53,7 @@ tags: [change, verification, contracts, documents, docx, pii]
 - [x] Types regenerated; `as never` casts removed — see commit history on `feat/v2-pr0-pr4b`
 - [ ] Deployed smoke (issue, download, sign, void + re-issue, blocked delete) — the same flow passed on a local dev server against the production database; repeat after deploy
 - [x] Deleting a room that has contract documents is blocked with `contractDocuments` in the 409 details
+
+## 2026-11-16 baseline scope clarification
+
+The reviewed `server/services/contract-documents/index.ts` explicitly rejects `type !== 'contract'` via `assertContractType`. Although PR4b design described independent appendices, **appendix issuance is not implemented**; do not archive or promote that requirement as delivered. A separate scoped implementation and acceptance suite are needed. Deployed download/sign/void/reissue and failed regeneration gates above remain open. [Baseline checkpoint](../zeno-house-v2-optimization/baseline-2026-11-16.md).

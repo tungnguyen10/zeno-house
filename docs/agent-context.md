@@ -41,7 +41,7 @@ Stack:
 
 ## Active OKF Changes
 
-See `docs/changes/index.md`; eight tracked bundles, with verification evidence and remaining checkbox tasks recorded. Never treat a checked task as proof of cloud rollout or release without source verification.
+See `docs/changes/index.md` for current active and verification-pending bundles; counts change as V2 ships, and archived redirects are not new work. Never treat a checked task as proof of cloud rollout or release without source verification.
 
 ## AI Implementation Snapshot
 
