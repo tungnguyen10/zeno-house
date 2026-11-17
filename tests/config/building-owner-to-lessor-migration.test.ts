@@ -23,6 +23,19 @@ describe('building owner → lessor migration', () => {
     }
   })
 
+  it('does not touch rows where nothing would change', () => {
+    const where = flat.slice(flat.indexOf('do update set'))
+    expect(where).toContain('where (public.building_contract_profiles.lessor_full_name is null and excluded.lessor_full_name is not null)')
+    expect(where).toContain('or (public.building_contract_profiles.lessor_phone is null and excluded.lessor_phone is not null)')
+    expect(where).toContain('or (public.building_contract_profiles.lessor_email is null and excluded.lessor_email is not null)')
+  })
+
+  it('uses a strict email shape with an alphabetic TLD in the check and the copy filter', () => {
+    const strict = "'^[^@[:space:]]+@[^@[:space:]]+\\.[A-Za-z]{2,}$'"
+    expect(flat.split(strict)).toHaveLength(3)
+    expect(flat).not.toContain('\\.[^@[:space:]]+$')
+  })
+
   it('filters values through the existing constraints before copying', () => {
     expect(flat).toContain('between 2 and 100')
     expect(flat).toContain("'^0[0-9]{9}$'")

@@ -4,7 +4,7 @@ begin;
 do $$
 declare
   v_actor uuid := (select id from auth.users order by created_at limit 1);
-  v_a uuid; v_b uuid; v_c uuid; v_d uuid; v_e uuid;
+  v_a uuid; v_b uuid; v_c uuid; v_d uuid; v_e uuid; v_f uuid;
   v_row public.building_contract_profiles%rowtype;
 begin
   insert into public.buildings (name, slug, code, address, status, owner_name, owner_phone, owner_email, created_by)
@@ -27,6 +27,10 @@ begin
   values ('OL verify E', 'ol-e-' || substr(gen_random_uuid()::text,1,8), 'ole' || substr(replace(gen_random_uuid()::text,'-',''),1,6),
           '5 Verify', 'active', 'Alice Brown', '+84 12345', v_actor)
   returning id into v_e;
+  insert into public.buildings (name, slug, code, address, status, owner_name, owner_email, created_by)
+  values ('OL verify F', 'ol-f-' || substr(gen_random_uuid()::text,1,8), 'olf' || substr(replace(gen_random_uuid()::text,'-',''),1,6),
+          '6 Verify', 'active', 'Bob Green', 'a@b.c', v_actor)
+  returning id into v_f;
   insert into public.building_contract_profiles (building_id, lessor_full_name) values (v_c, 'Người Ký Cũ');
 
   -- Re-run the fold body against the fixtures.
@@ -39,16 +43,19 @@ begin
         when regexp_replace(b.owner_phone, '[[:space:].()-]', '', 'g') ~ '^\+[1-9][0-9]{7,14}$'
           and not regexp_replace(b.owner_phone, '[[:space:].()-]', '', 'g') like '+84%' then regexp_replace(b.owner_phone, '[[:space:].()-]', '', 'g')
       end as phone,
-      case when length(btrim(b.owner_email)) <= 254 and btrim(b.owner_email) ~* '^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$'
+      case when length(btrim(b.owner_email)) <= 254 and btrim(b.owner_email) ~* '^[^@[:space:]]+@[^@[:space:]]+\.[A-Za-z]{2,}$'
         then lower(btrim(b.owner_email)) end as email
-    from public.buildings b where b.id in (v_a, v_b, v_c, v_d, v_e)
+    from public.buildings b where b.id in (v_a, v_b, v_c, v_d, v_e, v_f)
   )
   insert into public.building_contract_profiles (building_id, lessor_full_name, lessor_phone, lessor_email)
   select building_id, full_name, phone, email from src where coalesce(full_name, phone, email) is not null
   on conflict (building_id) do update set
     lessor_full_name = coalesce(public.building_contract_profiles.lessor_full_name, excluded.lessor_full_name),
     lessor_phone = coalesce(public.building_contract_profiles.lessor_phone, excluded.lessor_phone),
-    lessor_email = coalesce(public.building_contract_profiles.lessor_email, excluded.lessor_email);
+    lessor_email = coalesce(public.building_contract_profiles.lessor_email, excluded.lessor_email)
+  where (public.building_contract_profiles.lessor_full_name is null and excluded.lessor_full_name is not null)
+    or (public.building_contract_profiles.lessor_phone is null and excluded.lessor_phone is not null)
+    or (public.building_contract_profiles.lessor_email is null and excluded.lessor_email is not null);
 
   select * into v_row from public.building_contract_profiles where building_id = v_a;
   if v_row.lessor_full_name <> 'Nguyễn Văn Chủ' or v_row.lessor_phone <> '0901234567' or v_row.lessor_email <> 'chu@example.com' then
@@ -71,6 +78,11 @@ begin
 
   if exists (select 1 from public.building_contract_profiles where building_id = v_e and lessor_phone is not null) then
     raise exception 'VERIFY 5 failed: invalid +84 format should not create phone';
+  end if;
+
+  select * into v_row from public.building_contract_profiles where building_id = v_f;
+  if v_row.lessor_full_name <> 'Bob Green' or v_row.lessor_email is not null then
+    raise exception 'VERIFY 6 failed: malformed email must not be copied %', row_to_json(v_row);
   end if;
 
   raise notice 'owner → lessor verification passed';

@@ -6,7 +6,7 @@ begin;
 
 alter table public.building_contract_profiles
   add column if not exists lessor_email text
-  check (lessor_email is null or (length(lessor_email) <= 254 and lessor_email ~* '^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$'));
+  check (lessor_email is null or (length(lessor_email) <= 254 and lessor_email ~* '^[^@[:space:]]+@[^@[:space:]]+\.[A-Za-z]{2,}$'));
 
 with src as (
   select
@@ -23,7 +23,7 @@ with src as (
     end as phone,
     case
       when length(btrim(b.owner_email)) <= 254
-        and btrim(b.owner_email) ~* '^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$'
+        and btrim(b.owner_email) ~* '^[^@[:space:]]+@[^@[:space:]]+\.[A-Za-z]{2,}$'
         then lower(btrim(b.owner_email))
     end as email
   from public.buildings b
@@ -35,6 +35,9 @@ where coalesce(full_name, phone, email) is not null
 on conflict (building_id) do update set
   lessor_full_name = coalesce(public.building_contract_profiles.lessor_full_name, excluded.lessor_full_name),
   lessor_phone = coalesce(public.building_contract_profiles.lessor_phone, excluded.lessor_phone),
-  lessor_email = coalesce(public.building_contract_profiles.lessor_email, excluded.lessor_email);
+  lessor_email = coalesce(public.building_contract_profiles.lessor_email, excluded.lessor_email)
+where (public.building_contract_profiles.lessor_full_name is null and excluded.lessor_full_name is not null)
+  or (public.building_contract_profiles.lessor_phone is null and excluded.lessor_phone is not null)
+  or (public.building_contract_profiles.lessor_email is null and excluded.lessor_email is not null);
 
 commit;
