@@ -6,6 +6,7 @@ import type { ContractRenewInput } from '~/utils/validators/contract-renewals'
 import { ContractRenewalRepository } from '../repositories/contract-renewals'
 import { ContractRepository } from '../repositories/contracts'
 import { assertBuildingScope } from '../utils/scope'
+import { vietnamDateISO } from '../utils/date'
 
 export const ContractRenewalService = {
   async list(event: H3Event, user: AuthUser, contractId: string): Promise<ContractRenewal[]> {
@@ -22,6 +23,7 @@ export const ContractRenewalService = {
     const contract = await ContractRepository.findById(event, contractId)
     if (!contract) throwNotFound('Không tìm thấy hợp đồng')
     await assertBuildingScope(event, user, contract.buildingId, 'write')
+    if (input.new_end_date < vietnamDateISO()) throwValidationError('Ngày kết thúc mới không được ở trong quá khứ')
     const result = await ContractRenewalRepository.renewAtomic(event, {
       contractId: contract.id,
       mode: input.mode,

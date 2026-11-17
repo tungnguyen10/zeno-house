@@ -62,6 +62,20 @@ describe('atomic contract renewal service', () => {
     }))
   })
 
+  it.each(['extend', 'new_contract'] as const)('rejects a past end date for %s before calling the RPC', async (mode) => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-11-05T05:00:00Z'))
+    try {
+      await expect(ContractRenewalService.renew(event, user, 'code', { ...input, mode, new_end_date: '2026-11-04' }))
+        .rejects.toMatchObject({ statusCode: 422 })
+      expect(mocks.renewAtomic).not.toHaveBeenCalled()
+      await expect(ContractRenewalService.renew(event, user, 'code', { ...input, mode, new_end_date: '2026-11-05' }))
+        .resolves.toEqual(renewal)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('allows the RPC to replay a renewal after contract status and date changed', async () => {
     mocks.findById.mockResolvedValue({ ...contract, status: 'renewed', endDate: input.new_end_date })
     await expect(ContractRenewalService.renew(event, user, 'code', input)).resolves.toEqual(renewal)

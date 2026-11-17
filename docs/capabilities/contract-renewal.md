@@ -27,6 +27,10 @@ The system SHALL support extending a contract's end date in-place. The original 
 - **WHEN** admin submits renewal with new end date ≤ current end date
 - **THEN** request rejected with VALIDATION_ERROR
 
+#### Scenario: New end date cannot be in the past
+- **WHEN** admin submits a renewal (either mode) whose new end date is before today in Asia/Ho_Chi_Minh
+- **THEN** request rejected with VALIDATION_ERROR before the database call
+
 ### Requirement: Contract renewal via new contract
 The system SHALL support creating a successor contract when terms change significantly. The old contract is marked `renewed`. The new contract references the old via `previous_contract_id`.
 
@@ -43,7 +47,7 @@ The system SHALL commit a renewal in a single database transaction. Contract dat
 
 #### Scenario: Successor carries occupants, services, and held money
 - **WHEN** admin renews with mode `new_contract`
-- **THEN** open occupancies of the old contract are closed at its `end_date`; the successor starts on `end_date + 1` with the same occupants and services; checkout sources with a positive balance move to the successor; scheduled amendments of the old contract are cancelled; all changes are audited under one correlation id
+- **THEN** open occupancies of the old contract are closed at its `end_date`; the successor starts on `end_date + 1` with the same occupants, services and registered vehicles; checkout sources with a positive balance move to the successor; scheduled amendments of the old contract are cancelled; all changes are audited under one correlation id
 
 #### Scenario: Legacy contract without occupant rows
 - **WHEN** admin renews with mode `new_contract` a contract that has no open occupancies
