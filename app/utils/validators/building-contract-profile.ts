@@ -71,14 +71,14 @@ export const buildingContractProfileBaseSchema = z.object({
   copies_per_party: z.number().int().min(1, 'Tối thiểu 1').max(5, 'Tối đa 5').default(1),
 }).strict()
 
-function copiesRule(value: { signed_copies?: number; copies_per_party?: number }, ctx: z.RefinementCtx) {
+export function contractProfileCopiesRule(value: { signed_copies?: number; copies_per_party?: number }, ctx: z.RefinementCtx) {
   if (value.signed_copies == null || value.copies_per_party == null) return
   if (value.copies_per_party * 2 > value.signed_copies) {
     ctx.addIssue({ code: 'custom', path: ['copies_per_party'], message: 'Tổng số bản hai bên giữ vượt quá số bản ký' })
   }
 }
 
-export const buildingContractProfileSchema = buildingContractProfileBaseSchema.superRefine(copiesRule)
+export const buildingContractProfileSchema = buildingContractProfileBaseSchema.superRefine(contractProfileCopiesRule)
 
 export type BuildingContractProfileInput = z.infer<typeof buildingContractProfileSchema>
 export type BuildingContractProfilePatch = Partial<BuildingContractProfileInput>
