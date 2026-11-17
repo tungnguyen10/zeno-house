@@ -209,9 +209,6 @@ const waterLabel = computed(() => {
         <UiDefinitionList>
           <UiDefinitionItem label="Địa chỉ" :value="building.address" />
           <UiDefinitionItem label="Ngày tạo" :value="new Date(building.createdAt).toLocaleDateString('vi-VN')" />
-          <UiDefinitionItem v-if="building.ownerName" label="Tên chủ nhà" :value="building.ownerName" />
-          <UiDefinitionItem v-if="building.ownerPhone" label="Số điện thoại" :value="building.ownerPhone" />
-          <UiDefinitionItem v-if="building.ownerEmail" label="Email" :value="building.ownerEmail" />
           <UiDefinitionItem v-if="building.description" label="Mô tả" :value="building.description" stacked />
         </UiDefinitionList>
       </UiSurfacePanel>

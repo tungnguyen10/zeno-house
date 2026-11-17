@@ -8,9 +8,6 @@ const building = {
   address: '1 Lê Lợi',
   description: null,
   status: 'active',
-  ownerName: null,
-  ownerPhone: '0900000001',
-  ownerEmail: null,
   electricityPricingType: 'per_kwh',
   defaultElectricityRate: 3500,
   waterPricingType: 'per_m3',
@@ -30,9 +27,6 @@ describe('buildingToFormData', () => {
       address: '1 Lê Lợi',
       description: '',
       status: 'active',
-      ownerName: '',
-      ownerPhone: '0900000001',
-      ownerEmail: '',
       electricityPricingType: 'per_kwh',
       defaultElectricityRate: '3500',
       waterPricingType: 'per_m3',
@@ -59,7 +53,6 @@ describe('buildingToFormData', () => {
       default_water_rate: null,
       payment_due_day: 5,
       grace_period_days: 3,
-      owner_name: null,
     })
   })
 })
@@ -67,5 +60,10 @@ describe('buildingToFormData', () => {
 describe('emptyBuildingFormData', () => {
   it('starts with active status and zero grace period', () => {
     expect(emptyBuildingFormData()).toMatchObject({ status: 'active', gracePeriodDays: '0', name: '' })
+  })
+
+  it('never emits owner fields', () => {
+    const payload = buildingFormToApiPayload(emptyBuildingFormData())
+    expect(Object.keys(payload).some(key => key.startsWith('owner_'))).toBe(false)
   })
 })

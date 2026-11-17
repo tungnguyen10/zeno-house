@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildingCreateWithRoomsSchema, QUICK_ROOM_MAX } from '~/utils/validators/buildings'
+import { buildingCreateSchema, buildingCreateWithRoomsSchema, buildingUpdateSchema, QUICK_ROOM_MAX } from '~/utils/validators/buildings'
 
 const base = { name: 'Tòa A', address: '123 Lê Lợi, Quận 1' }
 const room = (n: string, extra: Record<string, unknown> = {}) => ({
@@ -45,5 +45,13 @@ describe('buildingCreateWithRoomsSchema', () => {
     expect(r.success).toBe(false)
     const paths = r.error!.issues.map(i => i.path.join('.'))
     expect(paths).toContain('rooms.2.room_number')
+  })
+})
+
+describe('building validators without owner contact', () => {
+  it('drops owner_* keys from create and update payloads', () => {
+    const parsed = buildingCreateSchema.parse({ name: 'Tòa A', address: '12 Đường Số 1', owner_name: 'X' })
+    expect(parsed).not.toHaveProperty('owner_name')
+    expect(buildingUpdateSchema.parse({ owner_phone: '0901234567' })).not.toHaveProperty('owner_phone')
   })
 })
