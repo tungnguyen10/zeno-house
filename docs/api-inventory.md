@@ -8,7 +8,7 @@ tags: [api, generated, engineering]
 # API Inventory And Performance Contracts
 
 Generated from checked-in handlers by `node scripts/generate-api-inventory.mjs`.
-Route count: **238**.
+Route count: **239**.
 
 All business routes require server-side authorization unless explicitly documented as an internal-secret route. Initial reads use Nuxt `useFetch`; imperative reads and mutations use `apiFetch` with a 15-second timeout, request ID, no automatic mutation retry, and normalized server envelopes.
 
@@ -85,6 +85,7 @@ All business routes require server-side authorization unless explicitly document
 | GET | `/api/buildings/[id]` | n/a | request/DTO policy | p95 ≤ 250ms |
 | PATCH | `/api/buildings/[id]` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | GET | `/api/buildings/[id]/contract-profile` | domain-bounded | request/DTO policy | p95 ≤ 400ms |
+| PATCH | `/api/buildings/[id]/contract-profile` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | PUT | `/api/buildings/[id]/contract-profile` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | POST | `/api/buildings/[id]/inventory-template/apply` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | GET | `/api/buildings/[id]/inventory-template` | domain-bounded | request/DTO policy | p95 ≤ 400ms |
