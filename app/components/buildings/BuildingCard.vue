@@ -44,7 +44,7 @@ const meterReadingsPath = computed(() => `${buildingPath(props.building)}/meter-
       :to="buildingPath(building)"
       :class="[
         'block rounded-xl p-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-ui-accent/40 sm:p-4',
-        selectable ? 'pl-12' : '',
+        selectable ? 'pl-12 sm:pl-12' : '',
       ]"
     >
       <div class="flex items-center gap-3">
