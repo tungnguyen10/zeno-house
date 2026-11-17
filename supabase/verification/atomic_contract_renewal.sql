@@ -46,6 +46,8 @@ begin
   end loop;
   insert into public.contract_payments(contract_id, payment_type, amount, paid_at)
     values(c, 'deposit', 6000000, '2026-01-01') returning id into payment;
+  insert into public.contract_vehicles(contract_id, owner_name, plate_number, vehicle_type, note, sort_order)
+    values(c, 'Fixture owner', 'VERIFY-' || left(c::text, 8), 'Xe máy', 'Preserve vehicles', 0);
   return jsonb_build_object('contract', c, 'building', b, 'actor', actor, 'payment', payment);
 end $$;
 
@@ -100,6 +102,9 @@ begin
       or exists(select catalog_id, amount, quantity, is_enabled, notes from public.contract_services where contract_id=c
         except select catalog_id, amount, quantity, is_enabled, notes from public.contract_services where contract_id=successor)
       or (public.contract_checkout_preview(successor)->>'depositHeld')::numeric is distinct from held
+      or exists(select owner_name, plate_number, vehicle_type, note, sort_order from public.contract_vehicles where contract_id=c
+        except select owner_name, plate_number, vehicle_type, note, sort_order from public.contract_vehicles where contract_id=successor)
+      or (select count(*) from public.contract_vehicles where contract_id=successor) <> 1
       or not exists(select 1 from public.contract_checkout_sources where contract_id=successor and payment_id=(f->>'payment')::uuid)
       or not exists(select 1 from jsonb_array_elements(public.contract_checkout_get(successor)->'sources') x
         where x->>'originContractId'=c::text and x->>'originContractCode'='verify-' || c::text)
