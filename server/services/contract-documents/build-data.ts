@@ -51,10 +51,20 @@ export interface ContractDocumentSources {
   signedDate: string
 }
 
-/** The contract's own `handover_in` reading per meter type (null when none was recorded). */
-export function pickHandoverReadings(readings: MeterReading[], contractId: string): ContractDocumentSources['handoverReadings'] {
-  const own = readings.filter(r => r.readingType === 'handover_in' && r.contractId === contractId)
-  const value = (type: MeterReading['meterType']) => own.find(r => r.meterType === type)?.readingValue ?? null
+/**
+ * The `handover_in` reading per meter type (null when none was recorded). `contractIds` is the
+ * contract or its renewal chain ordered newest first; a successor falls back to the original's reading.
+ */
+export function pickHandoverReadings(readings: MeterReading[], contractIds: string | string[]): ContractDocumentSources['handoverReadings'] {
+  const chain = Array.isArray(contractIds) ? contractIds : [contractIds]
+  const handovers = readings.filter(r => r.readingType === 'handover_in')
+  const value = (type: MeterReading['meterType']) => {
+    for (const id of chain) {
+      const found = handovers.find(r => r.meterType === type && r.contractId === id)
+      if (found) return found.readingValue
+    }
+    return null
+  }
   return { electricity: value('electricity'), water: value('water') }
 }
 

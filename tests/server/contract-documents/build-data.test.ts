@@ -116,6 +116,15 @@ describe('pickHandoverReadings', () => {
   it('returns nulls when the contract has no handover reading', () => {
     expect(pickHandoverReadings([], 'c-1')).toEqual({ electricity: null, water: null })
   })
+
+  it('falls back to the original contract of a renewal chain, preferring the newest', () => {
+    const picked = pickHandoverReadings([
+      reading({ contractId: 'c-1', meterType: 'electricity', readingValue: 1200 }),
+      reading({ contractId: 'c-1', meterType: 'water', readingValue: 340 }),
+      reading({ contractId: 'c-2', meterType: 'water', readingValue: 500 }),
+    ] as never, ['c-3', 'c-2', 'c-1'])
+    expect(picked).toEqual({ electricity: 1200, water: 500 })
+  })
 })
 
 describe('collectMissing', () => {

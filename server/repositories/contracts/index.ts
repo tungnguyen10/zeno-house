@@ -373,6 +373,26 @@ export const ContractRepository = {
     return { contract, replayed: result.replayed }
   },
 
+  /** The contract id followed by its predecessors through `previous_contract_id`, newest first. */
+  async findChainContractIds(event: H3Event, contractId: string): Promise<string[]> {
+    const client = await serverSupabaseClient(event)
+    const ids: string[] = []
+    let currentId: string | null = contractId
+    for (let depth = 0; currentId && depth < 20; depth++) {
+      const { data, error } = await client
+        .from('contracts')
+        .select('id, previous_contract_id')
+        .eq('id', currentId)
+        .maybeSingle()
+      if (error) throwDbError(error, 'contracts.findChainContractIds')
+      const row = data as { id: string; previous_contract_id: string | null } | null
+      if (!row) break
+      ids.push(row.id)
+      currentId = row.previous_contract_id
+    }
+    return ids
+  },
+
   async findHandoverInventory(event: H3Event, contractId: string): Promise<HandoverInventory> {
     const client = await serverSupabaseClient(event)
     let currentId: string | null = contractId

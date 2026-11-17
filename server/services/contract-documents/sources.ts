@@ -70,7 +70,7 @@ export async function gatherContractSources(event: H3Event, contractId: string, 
   const contract = await ContractRepository.findByIdentifier(event, contractId)
   if (!contract) throwNotFound('Không tìm thấy hợp đồng')
 
-  const [building, lessor, invoiceRow, tenant, occupantRows, vehicleRows, serviceRows, inventory, roomReadings] = await Promise.all([
+  const [building, lessor, invoiceRow, tenant, occupantRows, vehicleRows, serviceRows, inventory, roomReadings, chainIds] = await Promise.all([
     BuildingRepository.findById(event, contract.buildingId),
     BuildingContractProfileService.getUnmaskedForServer(event, contract.buildingId),
     BuildingInvoiceProfileRepository.findByBuildingId(event, contract.buildingId),
@@ -80,6 +80,7 @@ export async function gatherContractSources(event: H3Event, contractId: string, 
     ContractServiceRepository.findByContract(event, contract.id),
     ContractRepository.findHandoverInventory(event, contract.id),
     MeterReadingRepository.findByRoom(event, contract.roomId),
+    ContractRepository.findChainContractIds(event, contract.id),
   ])
   if (!building) throwNotFound('Không tìm thấy tòa nhà')
 
@@ -106,7 +107,7 @@ export async function gatherContractSources(event: H3Event, contractId: string, 
     services: mapServices(serviceRows),
     inventory,
     handoverDate: contract.startDate,
-    handoverReadings: pickHandoverReadings(roomReadings, contract.id),
+    handoverReadings: pickHandoverReadings(roomReadings, chainIds.length ? chainIds : contract.id),
     signedDate,
   }
 }

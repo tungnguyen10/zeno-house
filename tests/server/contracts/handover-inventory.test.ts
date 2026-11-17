@@ -13,6 +13,19 @@ function chain(result: unknown) {
 
 beforeEach(() => vi.clearAllMocks())
 
+describe('ContractRepository.findChainContractIds', () => {
+  it('returns the contract and its predecessors, newest first', async () => {
+    const calls = [
+      { data: { id: 'c-3', previous_contract_id: 'c-2' }, error: null },
+      { data: { id: 'c-2', previous_contract_id: 'c-1' }, error: null },
+      { data: { id: 'c-1', previous_contract_id: null }, error: null },
+    ]
+    from.mockImplementation(() => chain(calls.shift()))
+    const { ContractRepository } = await import('../../../server/repositories/contracts')
+    expect(await ContractRepository.findChainContractIds({ context: {} } as never, 'c-3')).toEqual(['c-3', 'c-2', 'c-1'])
+  })
+})
+
 describe('ContractRepository.findHandoverInventory', () => {
   it('walks previous_contract_id to the original contract', async () => {
     const contractsCalls = [
