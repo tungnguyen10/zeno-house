@@ -49,7 +49,15 @@ const submitLabel = computed(() => {
   return count > 0 ? `Tạo tòa nhà và ${count} phòng` : 'Tạo tòa nhà'
 })
 
+// An invalid generator would otherwise create the building without the rooms the user configured.
+const roomsBlocked = ref(false)
+watch(preview.generatorError, (error) => { if (!error) roomsBlocked.value = false })
+
 async function onSubmit(data: BuildingFormData) {
+  if (preview.generatorError.value) {
+    roomsBlocked.value = true
+    return
+  }
   if (preview.duplicateRoomNumbers.value.length > 0) return
   const rooms = preview.toPayload()
   await submitCreate({
@@ -70,6 +78,10 @@ async function onSubmit(data: BuildingFormData) {
 
     <UiAlert v-if="apiError" severity="danger" class="mb-4">
       {{ apiError }}
+    </UiAlert>
+
+    <UiAlert v-if="roomsBlocked" severity="danger" class="mb-4">
+      Sửa lỗi tạo phòng nhanh trước khi tạo tòa nhà.
     </UiAlert>
 
     <BuildingForm
