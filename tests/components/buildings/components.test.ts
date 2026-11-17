@@ -195,7 +195,8 @@ describe('BuildingDetailHero', () => {
     expect(wrapper.text()).toContain('12')
     expect(wrapper.text()).toContain('9')
     expect(wrapper.text()).toContain('4')
-    expect(wrapper.text()).toContain('Toa A')
+    expect(wrapper.text()).not.toContain('Toa A')
+    expect(wrapper.text()).toContain('123 Đường ABC')
     expect(wrapper.text()).toContain('#a')
   })
 
