@@ -63,4 +63,45 @@ describe('InventoryRepository atomic replacements', () => {
     await expect(InventoryRepository.replaceRoom(event(), 'room-1', input)).rejects.toThrow('SQL validation failed')
     expect(from).not.toHaveBeenCalled()
   })
+
+  it('replaces handover inventory through one RPC and preserves input order', async () => {
+    rpc.mockResolvedValue({ data: [row('c-2', 'Tủ', 1), row('c-1', 'Giường', 0)], error: null })
+    const { InventoryRepository } = await import('../../../server/repositories/inventory')
+    const result = await InventoryRepository.replaceContract(event(), 'contract-1', input)
+
+    expect(rpc).toHaveBeenCalledExactlyOnceWith('replace_contract_inventory', {
+      p_contract_id: 'contract-1', p_items: input,
+    })
+    expect(result.map(r => r.name)).toEqual(['Giường', 'Tủ'])
+    expect(from).not.toHaveBeenCalled()
+  })
+
+  it('clears handover inventory atomically with an empty array', async () => {
+    rpc.mockResolvedValue({ data: [], error: null })
+    const { InventoryRepository } = await import('../../../server/repositories/inventory')
+    await expect(InventoryRepository.replaceContract(event(), 'contract-1', [])).resolves.toEqual([])
+    expect(rpc).toHaveBeenCalledExactlyOnceWith('replace_contract_inventory', { p_contract_id: 'contract-1', p_items: [] })
+    expect(from).not.toHaveBeenCalled()
+  })
+
+  it('maps the issued-document lock to a conflict without a separate DELETE', async () => {
+    const throwConflict = vi.fn((message: string, details?: unknown) => { throw Object.assign(new Error(message), { details }) })
+    vi.stubGlobal('throwConflict', throwConflict)
+    rpc.mockResolvedValue({ data: null, error: { message: 'CONTRACT_INVENTORY_LOCKED', code: '23514' } })
+    const { InventoryRepository } = await import('../../../server/repositories/inventory')
+
+    await expect(InventoryRepository.replaceContract(event(), 'contract-1', input)).rejects.toMatchObject({
+      details: { reason: 'CONTRACT_INVENTORY_LOCKED' },
+    })
+    expect(from).not.toHaveBeenCalled()
+  })
+
+  it('applies a template through the typed RPC', async () => {
+    rpc.mockResolvedValue({ data: { 'room-1': 2 }, error: null })
+    const { InventoryRepository } = await import('../../../server/repositories/inventory')
+    await expect(InventoryRepository.applyTemplate(event(), 'building-1', ['room-1'], 'merge')).resolves.toEqual({ 'room-1': 2 })
+    expect(rpc).toHaveBeenCalledExactlyOnceWith('apply_inventory_template', {
+      p_building_id: 'building-1', p_room_ids: ['room-1'], p_mode: 'merge',
+    })
+  })
 })

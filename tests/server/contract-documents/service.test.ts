@@ -106,6 +106,20 @@ describe('ContractDocumentService.issue', () => {
   })
 })
 
+describe('ContractDocumentService appendix', () => {
+  it('rejects appendix for check, preview and issue without touching storage', async () => {
+    const { ContractDocumentService } = await import('../../../server/services/contract-documents')
+    const appendix = { ...issueInput, type: 'appendix' as const }
+
+    await expect(ContractDocumentService.check(ev(), owner, 'c-1', { type: 'appendix' })).rejects.toMatchObject({ statusCode: 422 })
+    await expect(ContractDocumentService.preview(ev(), owner, 'c-1', { type: 'appendix', signed_date: '2026-11-12' })).rejects.toMatchObject({ statusCode: 422 })
+    await expect(ContractDocumentService.issue(ev(), owner, 'c-1', appendix)).rejects.toMatchObject({ statusCode: 422 })
+    expect(repo.reserve).not.toHaveBeenCalled()
+    expect(repo.upload).not.toHaveBeenCalled()
+    expect(renderDocx).not.toHaveBeenCalled()
+  })
+})
+
 describe('ContractDocumentService contract code identifiers', () => {
   it('resolves a contract code to its id before querying documents and sources', async () => {
     const { ContractDocumentService } = await import('../../../server/services/contract-documents')

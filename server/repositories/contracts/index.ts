@@ -362,32 +362,14 @@ export const ContractRepository = {
 
   async findHandoverInventory(event: H3Event, contractId: string): Promise<HandoverInventory> {
     const client = await serverSupabaseClient(event)
-    let currentId: string | null = contractId
-    for (let depth = 0; currentId && depth < 20; depth++) {
-      const { data, error } = await client
-        .from('contracts')
-        .select('id, contract_code, previous_contract_id')
-        .eq('id', currentId)
-        .maybeSingle()
-      if (error) throwDbError(error, 'contracts.findHandoverInventory.contract')
-      const contract = data as { id: string; contract_code: string; previous_contract_id: string | null } | null
-      if (!contract) break
-      const { data: items, error: itemsError } = await client
-        .from('contract_inventory_items' as never)
-        .select('id, name, quantity, condition, unit_value, note, sort_order')
-        .eq('contract_id', contract.id)
-        .order('sort_order')
-      if (itemsError) throwDbError(itemsError, 'contracts.findHandoverInventory.items')
-      if (items && (items as unknown[]).length > 0) {
-        return {
-          sourceContractId: contract.id,
-          sourceContractCode: contract.contract_code,
-          items: (items as InventoryRow[]).map(mapInventoryItem),
-        }
-      }
-      currentId = contract.previous_contract_id
+    const { data, error } = await client.rpc('find_handover_inventory', { p_contract_id: contractId })
+    if (error) throwDbError(error, 'contracts.findHandoverInventory')
+    const result = data as unknown as { source_contract_id: string | null; source_contract_code: string | null; items: InventoryRow[] } | null
+    return {
+      sourceContractId: result?.source_contract_id ?? null,
+      sourceContractCode: result?.source_contract_code ?? null,
+      items: (result?.items ?? []).map(mapInventoryItem),
     }
-    return { sourceContractId: null, sourceContractCode: null, items: [] }
   },
 
   async update(event: H3Event, id: string, input: ContractUpdateInput): Promise<ContractWithDetails> {

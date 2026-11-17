@@ -53,4 +53,27 @@ describe('contract create page', () => {
   it('no longer preloads all tenants', () => {
     expect(page).not.toContain('allTenantsData')
   })
+
+  it('ignores stale async prefill responses after the room changes', () => {
+    for (const guard of ['readinessGuard', 'prefillGuard', 'readingsGuard', 'inventoryGuard']) {
+      expect(page).toContain(`const ${guard} = createLatestGuard()`)
+    }
+    expect(page.match(/if \(!isLatest\(\)\) return/g)?.length).toBeGreaterThanOrEqual(3)
+  })
+
+  it('loads building profile and services in parallel', () => {
+    expect(page).toContain('Promise.all([')
+    expect(page).toContain('/contract-profile')
+    expect(page).toContain('/api/building-services?building_id=')
+  })
+
+  it('refreshes rent when switching rooms inside the same building', () => {
+    expect(page).toContain('selectedRoom.value?.id] as const')
+  })
+
+  it('searches rooms on the server instead of truncating at the list limit', () => {
+    expect(page).toContain('remote-search')
+    expect(page).toContain('@search="onRoomSearch"')
+    expect(page).toContain('pickedRoom')
+  })
 })

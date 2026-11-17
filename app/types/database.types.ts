@@ -33,6 +33,7 @@ export type Database = {
           status: string
           updated_at: string
         }
+        ComputedFields: never
         Insert: {
           approval_claim_token?: string | null
           auth_user_id: string
@@ -92,18 +93,19 @@ export type Database = {
           expires_at: string
           id: string
           idempotency_key: string
-          normalized_payload: Json
+          normalized_payload: NonNullable<Json>
           payload_hash: string
-          preview: Json
-          resource_versions: Json
+          preview: NonNullable<Json>
+          resource_versions: NonNullable<Json>
           result: Json | null
           status: string
           summary: string
           title: string
           updated_at: string
           user_id: string
-          warnings: Json
+          warnings: NonNullable<Json>
         }
+        ComputedFields: never
         Insert: {
           action_type: string
           building_id?: string | null
@@ -116,17 +118,17 @@ export type Database = {
           expires_at?: string
           id?: string
           idempotency_key?: string
-          normalized_payload: Json
+          normalized_payload: NonNullable<Json>
           payload_hash: string
-          preview?: Json
-          resource_versions?: Json
+          preview?: NonNullable<Json>
+          resource_versions?: NonNullable<Json>
           result?: Json | null
           status?: string
           summary: string
           title: string
           updated_at?: string
           user_id: string
-          warnings?: Json
+          warnings?: NonNullable<Json>
         }
         Update: {
           action_type?: string
@@ -140,17 +142,17 @@ export type Database = {
           expires_at?: string
           id?: string
           idempotency_key?: string
-          normalized_payload?: Json
+          normalized_payload?: NonNullable<Json>
           payload_hash?: string
-          preview?: Json
-          resource_versions?: Json
+          preview?: NonNullable<Json>
+          resource_versions?: NonNullable<Json>
           result?: Json | null
           status?: string
           summary?: string
           title?: string
           updated_at?: string
           user_id?: string
-          warnings?: Json
+          warnings?: NonNullable<Json>
         }
         Relationships: [
           {
@@ -179,6 +181,7 @@ export type Database = {
           updated_at: string
           user_id: string
         }
+        ComputedFields: never
         Insert: {
           created_at?: string
           expires_at?: string
@@ -206,6 +209,7 @@ export type Database = {
           request_count: number
           updated_at: string
         }
+        ComputedFields: never
         Insert: {
           bucket_day: string
           provider: string
@@ -226,16 +230,17 @@ export type Database = {
           conversation_id: string
           created_at: string
           id: string
-          metadata: Json
+          metadata: NonNullable<Json>
           role: string
           user_id: string
         }
+        ComputedFields: never
         Insert: {
           content: string
           conversation_id: string
           created_at?: string
           id?: string
-          metadata?: Json
+          metadata?: NonNullable<Json>
           role: string
           user_id: string
         }
@@ -244,7 +249,7 @@ export type Database = {
           conversation_id?: string
           created_at?: string
           id?: string
-          metadata?: Json
+          metadata?: NonNullable<Json>
           role?: string
           user_id?: string
         }
@@ -266,6 +271,7 @@ export type Database = {
           provider: string
           updated_at: string
         }
+        ComputedFields: never
         Insert: {
           consecutive_failures?: number
           opened_at?: string | null
@@ -290,6 +296,7 @@ export type Database = {
           subject_hash: string
           window_started: string
         }
+        ComputedFields: never
         Insert: {
           expires_at: string
           request_count?: number
@@ -320,9 +327,10 @@ export type Database = {
           entity_id: string | null
           entity_type: string
           id: string
-          metadata: Json
+          metadata: NonNullable<Json>
           operation_id: string | null
         }
+        ComputedFields: never
         Insert: {
           action: string
           actor_id?: string | null
@@ -336,7 +344,7 @@ export type Database = {
           entity_id?: string | null
           entity_type: string
           id?: string
-          metadata?: Json
+          metadata?: NonNullable<Json>
           operation_id?: string | null
         }
         Update: {
@@ -352,7 +360,7 @@ export type Database = {
           entity_id?: string | null
           entity_type?: string
           id?: string
-          metadata?: Json
+          metadata?: NonNullable<Json>
           operation_id?: string | null
         }
         Relationships: []
@@ -370,7 +378,7 @@ export type Database = {
           entity_type: string
           id: string
           idempotency_key: string
-          intent_data: Json
+          intent_data: NonNullable<Json>
           last_error_code: string | null
           lease_owner: string | null
           lease_until: string | null
@@ -378,6 +386,7 @@ export type Database = {
           status: string
           updated_at: string
         }
+        ComputedFields: never
         Insert: {
           action: string
           actor_id?: string | null
@@ -390,7 +399,7 @@ export type Database = {
           entity_type: string
           id?: string
           idempotency_key: string
-          intent_data?: Json
+          intent_data?: NonNullable<Json>
           last_error_code?: string | null
           lease_owner?: string | null
           lease_until?: string | null
@@ -410,7 +419,7 @@ export type Database = {
           entity_type?: string
           id?: string
           idempotency_key?: string
-          intent_data?: Json
+          intent_data?: NonNullable<Json>
           last_error_code?: string | null
           lease_owner?: string | null
           lease_until?: string | null
@@ -441,11 +450,12 @@ export type Database = {
           entity_id: string | null
           entity_type: string
           id: string
-          metadata: Json
+          metadata: NonNullable<Json>
           operation_id: string | null
           period_month: number | null
           period_year: number | null
         }
+        ComputedFields: never
         Insert: {
           action: string
           actor_id?: string | null
@@ -458,7 +468,7 @@ export type Database = {
           entity_id?: string | null
           entity_type: string
           id?: string
-          metadata?: Json
+          metadata?: NonNullable<Json>
           operation_id?: string | null
           period_month?: number | null
           period_year?: number | null
@@ -475,7 +485,7 @@ export type Database = {
           entity_id?: string | null
           entity_type?: string
           id?: string
-          metadata?: Json
+          metadata?: NonNullable<Json>
           operation_id?: string | null
           period_month?: number | null
           period_year?: number | null
@@ -506,6 +516,7 @@ export type Database = {
           room_id: string
           updated_at: string
         }
+        ComputedFields: never
         Insert: {
           amount: number
           billing_period_id: string
@@ -580,6 +591,7 @@ export type Database = {
           status: string
           updated_at: string
         }
+        ComputedFields: never
         Insert: {
           building_id: string
           closed_at?: string | null
@@ -635,6 +647,7 @@ export type Database = {
           room_id: string
           updated_at: string
         }
+        ComputedFields: never
         Insert: {
           approved_at?: string | null
           approved_by?: string | null
@@ -731,6 +744,7 @@ export type Database = {
           updated_at: string
           updated_by: string | null
         }
+        ComputedFields: never
         Insert: {
           brand_name?: string | null
           building_id: string
@@ -810,6 +824,7 @@ export type Database = {
           voided_at: string | null
           voided_by: string | null
         }
+        ComputedFields: never
         Insert: {
           amount: number
           building_id: string
@@ -875,6 +890,7 @@ export type Database = {
           note: string | null
           updated_at: string
         }
+        ComputedFields: never
         Insert: {
           amount: number
           building_id: string
@@ -926,6 +942,7 @@ export type Database = {
           unit_value: number | null
           updated_at: string
         }
+        ComputedFields: never
         Insert: {
           building_id: string
           condition?: string
@@ -968,6 +985,7 @@ export type Database = {
           updated_at: string
           updated_by: string | null
         }
+        ComputedFields: never
         Insert: {
           auto_send_enabled?: boolean
           building_id: string
@@ -1006,6 +1024,7 @@ export type Database = {
           updated_at: string
           updated_by: string | null
         }
+        ComputedFields: never
         Insert: {
           account_holder: string
           account_number: string
@@ -1055,6 +1074,7 @@ export type Database = {
           reserve_rate_percent: number
           updated_at: string
         }
+        ComputedFields: never
         Insert: {
           building_id: string
           created_at?: string
@@ -1101,6 +1121,7 @@ export type Database = {
           sort_order: number
           updated_at: string | null
         }
+        ComputedFields: never
         Insert: {
           building_id: string
           catalog_id: string
@@ -1169,6 +1190,7 @@ export type Database = {
           updated_at: string
           water_pricing_type: string
         }
+        ComputedFields: never
         Insert: {
           address: string
           billing_generation_day?: number | null
@@ -1236,7 +1258,7 @@ export type Database = {
           cancellation_reason: string | null
           cancelled_at: string | null
           cancelled_by: string | null
-          changes: Json
+          changes: NonNullable<Json>
           contract_id: string
           created_at: string
           created_by: string | null
@@ -1250,6 +1272,7 @@ export type Database = {
           title: string
           updated_at: string
         }
+        ComputedFields: never
         Insert: {
           after_terms?: Json | null
           applied_at?: string | null
@@ -1258,7 +1281,7 @@ export type Database = {
           cancellation_reason?: string | null
           cancelled_at?: string | null
           cancelled_by?: string | null
-          changes: Json
+          changes: NonNullable<Json>
           contract_id: string
           created_at?: string
           created_by?: string | null
@@ -1280,7 +1303,7 @@ export type Database = {
           cancellation_reason?: string | null
           cancelled_at?: string | null
           cancelled_by?: string | null
-          changes?: Json
+          changes?: NonNullable<Json>
           contract_id?: string
           created_at?: string
           created_by?: string | null
@@ -1318,16 +1341,17 @@ export type Database = {
           issued_at: string
           issued_by: string | null
           operation_id: string
-          preview: Json
+          preview: NonNullable<Json>
           snapshot_hash: string
         }
+        ComputedFields: never
         Insert: {
           checkout_id: string
           id?: string
           issued_at?: string
           issued_by?: string | null
           operation_id: string
-          preview: Json
+          preview: NonNullable<Json>
           snapshot_hash: string
         }
         Update: {
@@ -1336,7 +1360,7 @@ export type Database = {
           issued_at?: string
           issued_by?: string | null
           operation_id?: string
-          preview?: Json
+          preview?: NonNullable<Json>
           snapshot_hash?: string
         }
         Relationships: [
@@ -1362,6 +1386,7 @@ export type Database = {
           source_id: string
           statement_id: string
         }
+        ComputedFields: never
         Insert: {
           amount: number
           created_at?: string
@@ -1416,6 +1441,7 @@ export type Database = {
           source_type: string
           updated_at: string
         }
+        ComputedFields: never
         Insert: {
           approved_amount: number
           approved_by?: string | null
@@ -1472,9 +1498,10 @@ export type Database = {
           confirmed_by: string | null
           id: string
           operation_id: string
-          preview: Json
+          preview: NonNullable<Json>
           snapshot_hash: string
         }
+        ComputedFields: never
         Insert: {
           checkout_id: string
           code: string
@@ -1482,7 +1509,7 @@ export type Database = {
           confirmed_by?: string | null
           id?: string
           operation_id: string
-          preview: Json
+          preview: NonNullable<Json>
           snapshot_hash: string
         }
         Update: {
@@ -1492,7 +1519,7 @@ export type Database = {
           confirmed_by?: string | null
           id?: string
           operation_id?: string
-          preview?: Json
+          preview?: NonNullable<Json>
           snapshot_hash?: string
         }
         Relationships: [
@@ -1509,7 +1536,7 @@ export type Database = {
         Row: {
           actual_return_date: string
           building_id: string
-          charge_modes: Json
+          charge_modes: NonNullable<Json>
           contract_id: string
           created_at: string
           electricity: Json | null
@@ -1523,10 +1550,11 @@ export type Database = {
           updated_at: string
           water: Json | null
         }
+        ComputedFields: never
         Insert: {
           actual_return_date: string
           building_id: string
-          charge_modes?: Json
+          charge_modes?: NonNullable<Json>
           contract_id: string
           created_at?: string
           electricity?: Json | null
@@ -1543,7 +1571,7 @@ export type Database = {
         Update: {
           actual_return_date?: string
           building_id?: string
-          charge_modes?: Json
+          charge_modes?: NonNullable<Json>
           contract_id?: string
           created_at?: string
           electricity?: Json | null
@@ -1583,17 +1611,18 @@ export type Database = {
       }
       contract_create_drafts: {
         Row: {
-          payload: Json
+          payload: NonNullable<Json>
           updated_at: string
           user_id: string
         }
+        ComputedFields: never
         Insert: {
-          payload: Json
+          payload: NonNullable<Json>
           updated_at?: string
           user_id: string
         }
         Update: {
-          payload?: Json
+          payload?: NonNullable<Json>
           updated_at?: string
           user_id?: string
         }
@@ -1615,7 +1644,7 @@ export type Database = {
           signed_by: string | null
           signed_date: string
           size_bytes: number | null
-          snapshot: Json
+          snapshot: NonNullable<Json>
           status: string
           storage_path: string | null
           template_key: string
@@ -1626,6 +1655,7 @@ export type Database = {
           voided_at: string | null
           voided_by: string | null
         }
+        ComputedFields: never
         Insert: {
           amendment_id?: string | null
           building_id: string
@@ -1641,7 +1671,7 @@ export type Database = {
           signed_by?: string | null
           signed_date: string
           size_bytes?: number | null
-          snapshot: Json
+          snapshot: NonNullable<Json>
           status?: string
           storage_path?: string | null
           template_key: string
@@ -1667,7 +1697,7 @@ export type Database = {
           signed_by?: string | null
           signed_date?: string
           size_bytes?: number | null
-          snapshot?: Json
+          snapshot?: NonNullable<Json>
           status?: string
           storage_path?: string | null
           template_key?: string
@@ -1728,6 +1758,7 @@ export type Database = {
           sort_order: number
           unit_value: number | null
         }
+        ComputedFields: never
         Insert: {
           condition: string
           contract_id: string
@@ -1779,6 +1810,7 @@ export type Database = {
           tenant_id: string
           updated_at: string
         }
+        ComputedFields: never
         Insert: {
           billing_counted?: boolean
           contract_id: string
@@ -1839,6 +1871,7 @@ export type Database = {
           payment_type: string
           updated_at: string
         }
+        ComputedFields: never
         Insert: {
           amount: number
           contract_id: string
@@ -1897,6 +1930,7 @@ export type Database = {
           operation_id: string | null
           reason: string | null
         }
+        ComputedFields: never
         Insert: {
           contract_id: string
           created_at?: string
@@ -1968,6 +2002,7 @@ export type Database = {
           quantity: number
           updated_at: string | null
         }
+        ComputedFields: never
         Insert: {
           amount: number
           catalog_id: string
@@ -2026,6 +2061,7 @@ export type Database = {
           updated_at: string
           vehicle_type: string | null
         }
+        ComputedFields: never
         Insert: {
           contract_id: string
           created_at?: string
@@ -2088,6 +2124,7 @@ export type Database = {
           tenant_id: string
           updated_at: string
         }
+        ComputedFields: never
         Insert: {
           building_id: string
           contract_code: string
@@ -2178,13 +2215,14 @@ export type Database = {
           id: string
           invoice_id: string
           label: string
-          metadata: Json
+          metadata: NonNullable<Json>
           quantity: number
           sort_order: number
           source_id: string | null
           source_type: string | null
           unit_price: number
         }
+        ComputedFields: never
         Insert: {
           amount?: number
           charge_type: string
@@ -2192,7 +2230,7 @@ export type Database = {
           id?: string
           invoice_id: string
           label: string
-          metadata?: Json
+          metadata?: NonNullable<Json>
           quantity?: number
           sort_order?: number
           source_id?: string | null
@@ -2206,7 +2244,7 @@ export type Database = {
           id?: string
           invoice_id?: string
           label?: string
-          metadata?: Json
+          metadata?: NonNullable<Json>
           quantity?: number
           sort_order?: number
           source_id?: string | null
@@ -2261,6 +2299,7 @@ export type Database = {
           supersedes_delivery_id: string | null
           updated_at: string
         }
+        ComputedFields: never
         Insert: {
           accepted_at?: string | null
           attempt_count?: number
@@ -2368,6 +2407,7 @@ export type Database = {
           received_at: string
           svix_id: string
         }
+        ComputedFields: never
         Insert: {
           event_created_at: string
           event_type: string
@@ -2404,6 +2444,7 @@ export type Database = {
           recorded_by: string | null
           updated_at: string
         }
+        ComputedFields: never
         Insert: {
           amount: number
           checkout_source_id?: string | null
@@ -2499,6 +2540,7 @@ export type Database = {
           voided_at: string | null
           voided_by: string | null
         }
+        ComputedFields: never
         Insert: {
           balance_amount?: number
           billing_period_id: string
@@ -2512,7 +2554,7 @@ export type Database = {
           invoice_profile_snapshot?: Json | null
           issued_at?: string | null
           notes?: string | null
-          overdue_date?: string | null
+          overdue_date?: never
           paid_amount?: number
           paid_at?: string | null
           room_id: string
@@ -2541,7 +2583,7 @@ export type Database = {
           invoice_profile_snapshot?: Json | null
           issued_at?: string | null
           notes?: string | null
-          overdue_date?: string | null
+          overdue_date?: never
           paid_amount?: number
           paid_at?: string | null
           room_id?: string
@@ -2647,6 +2689,7 @@ export type Database = {
           updated_at: string | null
           updated_by: string | null
         }
+        ComputedFields: never
         Insert: {
           adjustment_reason?: string | null
           building_id: string
@@ -2744,6 +2787,7 @@ export type Database = {
           status: string
           updated_at: string
         }
+        ComputedFields: never
         Insert: {
           auto_closed?: boolean
           building_id: string
@@ -2810,6 +2854,7 @@ export type Database = {
           total_months: number
           updated_at: string
         }
+        ComputedFields: never
         Insert: {
           building_id: string
           category: string
@@ -2869,6 +2914,7 @@ export type Database = {
           next_reminder_at: string
           updated_at: string
         }
+        ComputedFields: never
         Insert: {
           anchor_day: number
           building_id: string
@@ -2929,6 +2975,7 @@ export type Database = {
           voided_at: string | null
           voided_by: string | null
         }
+        ComputedFields: never
         Insert: {
           amount: number
           billing_period_id?: string | null
@@ -3001,6 +3048,7 @@ export type Database = {
           created_at: string
           id: string
         }
+        ComputedFields: never
         Insert: {
           building_id: string
           created_at?: string
@@ -3034,6 +3082,7 @@ export type Database = {
           unit_value: number | null
           updated_at: string
         }
+        ComputedFields: never
         Insert: {
           condition?: string
           created_at?: string
@@ -3083,6 +3132,7 @@ export type Database = {
           status: string
           updated_at: string
         }
+        ComputedFields: never
         Insert: {
           area?: number | null
           building_id: string
@@ -3135,6 +3185,7 @@ export type Database = {
           sort_order: number
           unit: string | null
         }
+        ComputedFields: never
         Insert: {
           building_id?: string | null
           code: string
@@ -3178,6 +3229,7 @@ export type Database = {
           id: string
           shared_expense_id: string
         }
+        ComputedFields: never
         Insert: {
           building_id: string
           created_at?: string
@@ -3220,6 +3272,7 @@ export type Database = {
           owner_id: string
           updated_at: string
         }
+        ComputedFields: never
         Insert: {
           amount: number
           category: string
@@ -3259,6 +3312,7 @@ export type Database = {
           title: string
           updated_at: string
         }
+        ComputedFields: never
         Insert: {
           attachment_path?: string | null
           building_id: string
@@ -3314,6 +3368,49 @@ export type Database = {
           },
         ]
       }
+      tenant_ocr_usage: {
+        Row: {
+          cost_micro_usd: number | null
+          created_at: string
+          id: string
+          input_tokens: number | null
+          model: string | null
+          output_tokens: number | null
+          reserved_micro_usd: number
+          settled_at: string | null
+          status: string
+          usage_date: string
+          user_id: string
+        }
+        ComputedFields: never
+        Insert: {
+          cost_micro_usd?: number | null
+          created_at?: string
+          id?: string
+          input_tokens?: number | null
+          model?: string | null
+          output_tokens?: number | null
+          reserved_micro_usd: number
+          settled_at?: string | null
+          status: string
+          usage_date?: string
+          user_id: string
+        }
+        Update: {
+          cost_micro_usd?: number | null
+          created_at?: string
+          id?: string
+          input_tokens?: number | null
+          model?: string | null
+          output_tokens?: number | null
+          reserved_micro_usd?: number
+          settled_at?: string | null
+          status?: string
+          usage_date?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       tenant_user_links: {
         Row: {
           approval_claim_token: string | null
@@ -3324,6 +3421,7 @@ export type Database = {
           tenant_id: string
           updated_at: string
         }
+        ComputedFields: never
         Insert: {
           approval_claim_token?: string | null
           auth_user_id: string
@@ -3375,6 +3473,7 @@ export type Database = {
           status: string
           updated_at: string
         }
+        ComputedFields: never
         Insert: {
           code: string
           created_at?: string
@@ -3432,6 +3531,7 @@ export type Database = {
           updated_at: string
           user_id: string
         }
+        ComputedFields: never
         Insert: {
           approval_claim_token?: string | null
           building_id: string
@@ -3466,38 +3566,39 @@ export type Database = {
     Views: {
       contract_browse_rows: {
         Row: {
-          building_id: string | null
+          building_id: string
           building_name: string | null
           building_sort_name: string | null
-          contract_code: string | null
+          contract_code: string
           contract_sort_code: string | null
-          created_at: string | null
-          deposit: number | null
-          discount_amount: number | null
-          end_date: string | null
-          id: string | null
-          monthly_rent: number | null
+          created_at: string
+          deposit: number
+          discount_amount: number
+          end_date: string
+          id: string
+          monthly_rent: number
           notes: string | null
-          occupant_count: number | null
+          occupant_count: number
           original_end_date: string | null
           payment_due_day: number | null
           previous_contract_id: string | null
-          renewal_count: number | null
-          room_building_id: string | null
-          room_code: string | null
-          room_floor: number | null
-          room_id: string | null
-          room_number: string | null
+          renewal_count: number
+          room_building_id: string
+          room_code: string
+          room_floor: number
+          room_id: string
+          room_number: string
           room_sort_number: string | null
-          start_date: string | null
-          status: string | null
-          surcharge_amount: number | null
+          start_date: string
+          status: string
+          surcharge_amount: number
           tenant_code: string | null
-          tenant_id: string | null
+          tenant_id: string
           tenant_name: string | null
           tenant_phone: string | null
-          updated_at: string | null
+          updated_at: string
         }
+        ComputedFields: never
         Relationships: [
           {
             foreignKeyName: "contracts_building_id_fkey"
@@ -3545,38 +3646,39 @@ export type Database = {
       }
       invoice_browse_rows: {
         Row: {
-          balance_amount: number | null
-          billing_period_id: string | null
-          building_id: string | null
+          balance_amount: number
+          billing_period_id: string
+          building_id: string
           building_name: string | null
           building_slug: string | null
           building_sort_name: string | null
           contract_code: string | null
-          contract_id: string | null
+          contract_id: string
           contract_sort_code: string | null
           due_date: string | null
-          grace_period_days: number | null
-          id: string | null
-          invoice_code: string | null
+          grace_period_days: number
+          id: string
+          invoice_code: string
           invoice_sort_code: string | null
           issued_at: string | null
           notes: string | null
           overdue_date: string | null
-          paid_amount: number | null
-          period_month: number | null
-          period_year: number | null
+          paid_amount: number
+          period_month: number
+          period_year: number
           room_floor: number | null
-          room_id: string | null
+          room_id: string
           room_number: string | null
           room_sort_number: string | null
-          status: string | null
-          tenant_id: string | null
-          tenant_name: string | null
-          tenant_phone: string | null
-          total_amount: number | null
+          status: string
+          tenant_id: string
+          tenant_name: string
+          tenant_phone: string
+          total_amount: number
           void_reason: string | null
           voided_at: string | null
         }
+        ComputedFields: never
         Relationships: [
           {
             foreignKeyName: "billing_periods_building_id_fkey"
@@ -3678,7 +3780,7 @@ export type Database = {
           cancellation_reason: string | null
           cancelled_at: string | null
           cancelled_by: string | null
-          changes: Json
+          changes: NonNullable<Json>
           contract_id: string
           created_at: string
           created_by: string | null
@@ -3747,7 +3849,7 @@ export type Database = {
           entity_id: string | null
           entity_type: string
           id: string
-          metadata: Json
+          metadata: NonNullable<Json>
           operation_id: string | null
           period_month: number | null
           period_year: number | null
@@ -3793,17 +3895,17 @@ export type Database = {
           expires_at: string
           id: string
           idempotency_key: string
-          normalized_payload: Json
+          normalized_payload: NonNullable<Json>
           payload_hash: string
-          preview: Json
-          resource_versions: Json
+          preview: NonNullable<Json>
+          resource_versions: NonNullable<Json>
           result: Json | null
           status: string
           summary: string
           title: string
           updated_at: string
           user_id: string
-          warnings: Json
+          warnings: NonNullable<Json>
         }[]
         SetofOptions: {
           from: "*"
@@ -3828,7 +3930,7 @@ export type Database = {
           cancellation_reason: string | null
           cancelled_at: string | null
           cancelled_by: string | null
-          changes: Json
+          changes: NonNullable<Json>
           contract_id: string
           created_at: string
           created_by: string | null
@@ -3864,17 +3966,17 @@ export type Database = {
               expires_at: string
               id: string
               idempotency_key: string
-              normalized_payload: Json
+              normalized_payload: NonNullable<Json>
               payload_hash: string
-              preview: Json
-              resource_versions: Json
+              preview: NonNullable<Json>
+              resource_versions: NonNullable<Json>
               result: Json | null
               status: string
               summary: string
               title: string
               updated_at: string
               user_id: string
-              warnings: Json
+              warnings: NonNullable<Json>
             }[]
             SetofOptions: {
               from: "*"
@@ -3901,17 +4003,17 @@ export type Database = {
               expires_at: string
               id: string
               idempotency_key: string
-              normalized_payload: Json
+              normalized_payload: NonNullable<Json>
               payload_hash: string
-              preview: Json
-              resource_versions: Json
+              preview: NonNullable<Json>
+              resource_versions: NonNullable<Json>
               result: Json | null
               status: string
               summary: string
               title: string
               updated_at: string
               user_id: string
-              warnings: Json
+              warnings: NonNullable<Json>
             }[]
             SetofOptions: {
               from: "*"
@@ -3977,7 +4079,7 @@ export type Database = {
           entity_type: string
           id: string
           idempotency_key: string
-          intent_data: Json
+          intent_data: NonNullable<Json>
           last_error_code: string | null
           lease_owner: string | null
           lease_until: string | null
@@ -4009,7 +4111,7 @@ export type Database = {
           signed_by: string | null
           signed_date: string
           size_bytes: number | null
-          snapshot: Json
+          snapshot: NonNullable<Json>
           status: string
           storage_path: string | null
           template_key: string
@@ -4075,17 +4177,17 @@ export type Database = {
           expires_at: string
           id: string
           idempotency_key: string
-          normalized_payload: Json
+          normalized_payload: NonNullable<Json>
           payload_hash: string
-          preview: Json
-          resource_versions: Json
+          preview: NonNullable<Json>
+          resource_versions: NonNullable<Json>
           result: Json | null
           status: string
           summary: string
           title: string
           updated_at: string
           user_id: string
-          warnings: Json
+          warnings: NonNullable<Json>
         }[]
         SetofOptions: {
           from: "*"
@@ -4114,7 +4216,7 @@ export type Database = {
           entity_type: string
           id: string
           idempotency_key: string
-          intent_data: Json
+          intent_data: NonNullable<Json>
           last_error_code: string | null
           lease_owner: string | null
           lease_until: string | null
@@ -4320,7 +4422,7 @@ export type Database = {
           cancellation_reason: string | null
           cancelled_at: string | null
           cancelled_by: string | null
-          changes: Json
+          changes: NonNullable<Json>
           contract_id: string
           created_at: string
           created_by: string | null
@@ -4575,17 +4677,17 @@ export type Database = {
           expires_at: string
           id: string
           idempotency_key: string
-          normalized_payload: Json
+          normalized_payload: NonNullable<Json>
           payload_hash: string
-          preview: Json
-          resource_versions: Json
+          preview: NonNullable<Json>
+          resource_versions: NonNullable<Json>
           result: Json | null
           status: string
           summary: string
           title: string
           updated_at: string
           user_id: string
-          warnings: Json
+          warnings: NonNullable<Json>
         }[]
         SetofOptions: {
           from: "*"
@@ -4611,7 +4713,7 @@ export type Database = {
           signed_by: string | null
           signed_date: string
           size_bytes: number | null
-          snapshot: Json
+          snapshot: NonNullable<Json>
           status: string
           storage_path: string | null
           template_key: string
@@ -4652,7 +4754,7 @@ export type Database = {
           signed_by: string | null
           signed_date: string
           size_bytes: number | null
-          snapshot: Json
+          snapshot: NonNullable<Json>
           status: string
           storage_path: string | null
           template_key: string
@@ -4669,6 +4771,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      find_handover_inventory: {
+        Args: { p_contract_id: string }
+        Returns: Json
       }
       invoice_email_normalize_recipient: {
         Args: { p_email: string }
@@ -4886,17 +4992,17 @@ export type Database = {
           expires_at: string
           id: string
           idempotency_key: string
-          normalized_payload: Json
+          normalized_payload: NonNullable<Json>
           payload_hash: string
-          preview: Json
-          resource_versions: Json
+          preview: NonNullable<Json>
+          resource_versions: NonNullable<Json>
           result: Json | null
           status: string
           summary: string
           title: string
           updated_at: string
           user_id: string
-          warnings: Json
+          warnings: NonNullable<Json>
         }[]
         SetofOptions: {
           from: "*"
@@ -4922,7 +5028,7 @@ export type Database = {
           signed_by: string | null
           signed_date: string
           size_bytes: number | null
-          snapshot: Json
+          snapshot: NonNullable<Json>
           status: string
           storage_path: string | null
           template_key: string
@@ -5006,7 +5112,7 @@ export type Database = {
           cancellation_reason: string | null
           cancelled_at: string | null
           cancelled_by: string | null
-          changes: Json
+          changes: NonNullable<Json>
           contract_id: string
           created_at: string
           created_by: string | null
@@ -5205,6 +5311,7 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      release_tenant_ocr: { Args: { p_id: string }; Returns: undefined }
       render_invoice_profile_snapshot: {
         Args: {
           p_building_id: string
@@ -5246,6 +5353,26 @@ export type Database = {
           p_reason: string
         }
         Returns: Json
+      }
+      replace_contract_inventory: {
+        Args: { p_contract_id: string; p_items: Json }
+        Returns: {
+          condition: string
+          contract_id: string
+          created_at: string
+          id: string
+          name: string
+          note: string | null
+          quantity: number
+          sort_order: number
+          unit_value: number | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "contract_inventory_items"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       replace_inventory_template: {
         Args: { p_building_id: string; p_items: Json }
@@ -5325,7 +5452,7 @@ export type Database = {
           signed_by: string | null
           signed_date: string
           size_bytes: number | null
-          snapshot: Json
+          snapshot: NonNullable<Json>
           status: string
           storage_path: string | null
           template_key: string
@@ -5342,6 +5469,16 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      reserve_tenant_ocr: {
+        Args: {
+          p_budget_micro_usd: number
+          p_global_limit: number
+          p_reserve_micro_usd: number
+          p_user_id: string
+          p_user_limit: number
+        }
+        Returns: string
       }
       save_meter_readings_with_audit: {
         Args: {
@@ -5418,6 +5555,16 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      settle_tenant_ocr: {
+        Args: {
+          p_cost_micro_usd: number
+          p_id: string
+          p_input_tokens: number
+          p_model: string
+          p_output_tokens: number
+        }
+        Returns: undefined
+      }
       slugify_text: { Args: { input: string }; Returns: string }
       sync_contract_services_from_building: {
         Args: { p_actor_id: string; p_building_id: string }
@@ -5478,7 +5625,7 @@ export type Database = {
           cancellation_reason: string | null
           cancelled_at: string | null
           cancelled_by: string | null
-          changes: Json
+          changes: NonNullable<Json>
           contract_id: string
           created_at: string
           created_by: string | null
@@ -5561,7 +5708,7 @@ export type Database = {
           signed_by: string | null
           signed_date: string
           size_bytes: number | null
-          snapshot: Json
+          snapshot: NonNullable<Json>
           status: string
           storage_path: string | null
           template_key: string
@@ -5668,8 +5815,7 @@ export type Tables<
 
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
-    | { schema: keyof DatabaseWithoutInternals },
+    keyof DefaultSchema["Tables"] | { schema: keyof DatabaseWithoutInternals },
   TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
@@ -5693,8 +5839,7 @@ export type TablesInsert<
 
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
-    | { schema: keyof DatabaseWithoutInternals },
+    keyof DefaultSchema["Tables"] | { schema: keyof DatabaseWithoutInternals },
   TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
@@ -5718,8 +5863,7 @@ export type TablesUpdate<
 
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
-    | keyof DefaultSchema["Enums"]
-    | { schema: keyof DatabaseWithoutInternals },
+    keyof DefaultSchema["Enums"] | { schema: keyof DatabaseWithoutInternals },
   EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }

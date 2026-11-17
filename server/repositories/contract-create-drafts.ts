@@ -18,7 +18,7 @@ export const ContractCreateDraftRepository = {
 
   async upsert(event: H3Event, userId: string, payload: Record<string, unknown>): Promise<ContractCreateDraftRow> {
     const { data, error } = await from(event)
-      .upsert({ user_id: userId, payload: payload as Json }, { onConflict: 'user_id' })
+      .upsert({ user_id: userId, payload: payload as NonNullable<Json> }, { onConflict: 'user_id' })
       .select('payload, updated_at')
       .single()
     if (error) throwDbError(error, 'contractCreateDrafts.upsert')

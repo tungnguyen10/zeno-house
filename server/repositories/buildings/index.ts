@@ -401,7 +401,10 @@ export const BuildingRepository = {
         throwDbError(error, 'buildings.createWithRooms')
       }
 
-      const result = data as unknown as { building: BuildingRow; rooms: Parameters<typeof mapRoom>[0][]; replayed: boolean }
+      const result = data as unknown as { building: BuildingRow; rooms: Parameters<typeof mapRoom>[0][]; replayed: boolean } | null
+      if (!result?.building || !Array.isArray(result.rooms)) {
+        throwInternal(new Error('create_building_with_rooms returned an unexpected shape'), 'buildings.createWithRooms.result')
+      }
       const [building] = await attachServiceSummaries(event, [
         mapBuilding({ ...result.building, rooms: [{ count: result.rooms.length }] } as BuildingRow),
       ])
