@@ -91,6 +91,8 @@ function scrollToStep(stepId: string) {
 }
 
 function requestOpenStep(next: string | null) {
+  // Locked steps are never openable (hash links and old anchors can still ask for them).
+  if (next !== null && setupFlow.value.steps.some(step => step.id === next && step.locked)) return
   if (basicsDirty.value && openStepId.value === 'basics' && next !== 'basics') {
     pendingStepId.value = next
     return

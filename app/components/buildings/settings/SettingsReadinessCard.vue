@@ -29,11 +29,20 @@ const percent = computed(() =>
       </div>
       <div class="flex flex-wrap items-center gap-2">
         <template v-if="flow.ready">
-          <NuxtLink v-if="setupMode && buildingPath" :to="buildingPath" data-test="setup-view-building">
-            <UiButton size="sm" variant="secondary">Xem tòa nhà</UiButton>
+          <NuxtLink
+            v-if="setupMode && buildingPath"
+            :to="buildingPath"
+            data-test="setup-view-building"
+            class="inline-flex items-center justify-center rounded-md border border-ui-border bg-ui-surface px-3 py-1.5 text-xs font-medium text-ui-primary transition-colors hover:bg-ui-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-border-strong"
+          >
+            Xem tòa nhà
           </NuxtLink>
-          <NuxtLink :to="createContractPath" data-test="setup-create-contract">
-            <UiButton size="sm">{{ setupMode ? 'Lập hợp đồng đầu tiên' : 'Lập hợp đồng' }}</UiButton>
+          <NuxtLink
+            :to="createContractPath"
+            data-test="setup-create-contract"
+            class="inline-flex items-center justify-center rounded-md bg-ui-accent px-3 py-1.5 text-xs font-medium text-ui-on-accent transition-colors hover:bg-ui-accent/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-accent"
+          >
+            {{ setupMode ? 'Lập hợp đồng đầu tiên' : 'Lập hợp đồng' }}
           </NuxtLink>
         </template>
         <UiButton v-else-if="nextStep" size="sm" data-test="setup-next" @click="emit('open-step', nextStep.id)">

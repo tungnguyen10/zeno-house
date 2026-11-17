@@ -72,3 +72,14 @@ describe('building settings setup flow page', () => {
     expect(page).toContain(`canViewInventory: authStore.can('rooms.read')`)
   })
 })
+
+describe('building settings locked steps', () => {
+  it('refuses to open a locked step from a hash or a programmatic request', () => {
+    expect(page).toContain('step.id === next && step.locked')
+  })
+
+  it('does not nest a button inside the completion links', () => {
+    const card = readFileSync(resolve(process.cwd(), 'app/components/buildings/settings/SettingsReadinessCard.vue'), 'utf8')
+    expect(card).not.toMatch(/<NuxtLink[^>]*>\s*<UiButton/)
+  })
+})
