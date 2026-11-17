@@ -36,7 +36,9 @@ async function handleApply(input: InventoryApplyInput) {
   try {
     const result = await props.template.apply(input)
     applyOpen.value = false
-    toast.success(`Đã thêm ${result.addedItems} món cho ${result.appliedRooms} phòng.`)
+    toast.success(result.addedItems > 0
+      ? `Đã thêm ${result.addedItems} món cho ${result.appliedRooms} phòng.`
+      : `${result.appliedRooms} phòng đã có đủ nội thất mẫu, không thêm món nào.`)
   }
   catch (cause) {
     toast.error(getApiErrorMessage(cause, 'Không áp dụng được nội thất mẫu.'))

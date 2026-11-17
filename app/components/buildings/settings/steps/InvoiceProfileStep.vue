@@ -55,6 +55,8 @@ const canEditInvoiceEmailSettings = computed(() => authStore.can('invoice-email-
 async function handleSaveInvoiceProfile(input: BuildingInvoiceProfileSaveInput) {
   try {
     await saveInvoiceProfile(input)
+    // Readiness is computed server-side, so the setup card needs a fresh bootstrap.
+    await source.refresh()
     toast.success('Đã lưu thông tin nhận diện và thanh toán trên phiếu.')
     emit('saved')
   }
