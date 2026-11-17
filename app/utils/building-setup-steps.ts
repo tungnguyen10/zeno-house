@@ -173,6 +173,8 @@ export function nextSetupStepId(flow: SetupFlow, currentId: SetupStepId | null):
   const missingRequired = open.find(step => step.required && step.status === 'missing' && step.id !== currentId)
   if (missingRequired) return missingRequired.id
   if (currentId === null) return null
+  const current = open.find(step => step.id === currentId)
+  if (current?.required && current.status === 'missing') return current.id
   const index = open.findIndex(step => step.id === currentId)
   // A current step that is locked or hidden is not in `open`; there is nothing after it to advance to.
   return open.slice(index === -1 ? open.length : index + 1).find(step => !step.required)?.id ?? null

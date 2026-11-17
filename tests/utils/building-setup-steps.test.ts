@@ -83,6 +83,14 @@ describe('nextSetupStepId', () => {
     expect(nextSetupStepId(flow, null)).toBeNull()
   })
 
+  it('stays on a required current step that is still missing instead of jumping to optional steps', () => {
+    const flow = deriveSetupSteps(input({
+      readiness: { contract: { ready: false, missing: ['terms.notice_days'] }, billing: ready },
+      services: { activeCount: 0, unpricedActiveCount: 0 },
+    }))
+    expect(nextSetupStepId(flow, 'contract-terms')).toBe('contract-terms')
+  })
+
   it('skips locked steps', () => {
     const flow = deriveSetupSteps({ ...newBuilding(), canViewContractProfile: false })
     expect(nextSetupStepId(flow, null)).toBe('basics')
