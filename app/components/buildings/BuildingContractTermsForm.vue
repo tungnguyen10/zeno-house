@@ -142,30 +142,13 @@ function submit() {
       </UiFormSection>
 
       <details class="rounded-lg border border-ui-border">
-        <summary class="cursor-pointer px-4 py-2 text-sm font-medium text-ui-primary">Bản ký và lịch thanh toán</summary>
+        <summary class="cursor-pointer px-4 py-2 text-sm font-medium text-ui-primary">Bản ký</summary>
         <div class="space-y-5 border-t border-ui-border p-4">
           <UiFormSection title="Bản ký">
             <div class="grid gap-3 sm:grid-cols-2">
               <UiInput v-model="form.signed_copies" label="Số bản ký" type="number" number-mode="integer" :error="fieldErrors.signed_copies" />
               <UiInput v-model="form.copies_per_party" label="Số bản mỗi bên giữ" type="number" number-mode="integer" :error="fieldErrors.copies_per_party" />
             </div>
-          </UiFormSection>
-          <UiFormSection title="Lịch thanh toán trên hợp đồng (chỉ đọc)">
-            <template v-if="paymentWindow">
-              <p class="text-sm text-ui-primary">Trên hợp đồng: {{ paymentWindow.sentence }}</p>
-              <div class="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-xs text-ui-muted">
-                <span>Ngày phát hành hóa đơn: {{ paymentWindow.startDay }}</span>
-                <span>Hạn thanh toán: {{ paymentWindow.endDay }}</span>
-                <span>Số ngày ân hạn: {{ paymentWindow.graceDays }}</span>
-              </div>
-              <a href="#basics" class="mt-2 inline-block text-xs text-ui-accent hover:underline">Sửa lịch vận hành</a>
-            </template>
-            <template v-else>
-              <UiAlert severity="warning">
-                Chưa đủ lịch thanh toán. Cài đặt ngày phát hành hóa đơn và hạn thanh toán trước.
-              </UiAlert>
-              <a href="#basics" class="mt-2 inline-block text-xs text-ui-accent hover:underline">Sửa lịch vận hành</a>
-            </template>
           </UiFormSection>
         </div>
       </details>
@@ -174,5 +157,24 @@ function submit() {
         <UiButton data-test="contract-terms-save" :loading="saving" :disabled="saving" @click="submit">{{ submitLabel }}</UiButton>
       </div>
     </template>
+
+    <!-- Visible to editors and read-only viewers alike -->
+    <UiFormSection title="Lịch thanh toán trên hợp đồng (chỉ đọc)">
+      <template v-if="paymentWindow">
+        <p class="text-sm text-ui-primary">Trên hợp đồng: {{ paymentWindow.sentence }}</p>
+        <div class="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-xs text-ui-muted">
+          <span>Ngày phát hành hóa đơn: {{ paymentWindow.startDay }}</span>
+          <span>Hạn thanh toán: {{ paymentWindow.endDay }}</span>
+          <span>Số ngày ân hạn: {{ paymentWindow.graceDays }}</span>
+        </div>
+        <a href="#basics" class="mt-2 inline-block text-xs text-ui-accent hover:underline">Sửa lịch vận hành</a>
+      </template>
+      <template v-else>
+        <UiAlert severity="warning">
+          Chưa đủ lịch thanh toán. Cài đặt ngày phát hành hóa đơn và hạn thanh toán trước.
+        </UiAlert>
+        <a href="#basics" class="mt-2 inline-block text-xs text-ui-accent hover:underline">Sửa lịch vận hành</a>
+      </template>
+    </UiFormSection>
   </div>
 </template>
