@@ -13,7 +13,7 @@ const comboStub = defineComponent({
   name: 'UiCombobox',
   props: ['modelValue', 'options', 'optionKey', 'optionLabel', 'label', 'remoteSearch', 'allowCustom', 'createOption', 'customOptionLabel', 'loading', 'disabled', 'required', 'error', 'id', 'placeholder', 'searchPlaceholder', 'emptyMessage'],
   emits: ['search', 'update:modelValue'],
-  template: '<div class="combobox" />',
+  template: '<div class="combobox" role="combobox" tabindex="0" />',
 })
 const dialogStub = defineComponent({
   name: 'TenantQuickCreateDialog',
@@ -77,6 +77,22 @@ describe('TenantPicker', () => {
     await flushPromises()
     expect(w.emitted('update:modelValue')!.at(-1)).toEqual(['t-9'])
     expect(w.emitted('selected')!.at(-1)![0]).toMatchObject({ id: 't-9' })
+  })
+
+  it('returns focus to the combobox when the quick-create dialog closes', async () => {
+    const w = mount(TenantPicker, {
+      props: { modelValue: null },
+      attachTo: document.body,
+      global: { stubs: { UiCombobox: comboStub, TenantQuickCreateDialog: dialogStub } },
+    })
+    const combo = w.findComponent({ name: 'UiCombobox' })
+    combo.vm.$emit('update:modelValue', combo.props('createOption')('Nguyễn Văn A'))
+    await flushPromises()
+    ;(document.activeElement as HTMLElement | null)?.blur()
+    w.findComponent({ name: 'TenantQuickCreateDialog' }).vm.$emit('close')
+    await flushPromises()
+    expect(document.activeElement).toBe(w.find('[role="combobox"]').element)
+    w.unmount()
   })
 
   it('loads summary for a preset id not in results (draft restore)', async () => {

@@ -57,6 +57,10 @@ const duplicateFieldLabel = computed(() =>
 async function onSubmit() {
   fieldErrors.value = {}
   message.value = null
+  if (stage.value === 'duplicate') {
+    stage.value = 'form'
+    existing.value = null
+  }
   const nullIfEmpty = (v: string) => (v.trim() === '' ? null : v.trim())
   const parsed = tenantCreateSchema.safeParse({
     full_name: form.full_name.trim(), phone: form.phone,
@@ -89,7 +93,30 @@ function useExisting() {
 
 <template>
   <UiModal :open="open" title="Thêm khách mới" mobile-fullscreen @close="emit('close')">
-    <div v-if="stage === 'form'" class="space-y-4">
+    <div v-if="stage === 'duplicate'" class="mb-4 space-y-3">
+      <p class="text-sm text-ui-muted">
+        Đã có khách với {{ duplicateFieldLabel }} này:
+      </p>
+      <div v-if="existing" class="rounded-lg border border-ui-border bg-ui-deep/40 p-4">
+        <p class="text-sm font-medium text-ui-primary">{{ existing.fullName }}</p>
+        <p class="text-xs text-ui-muted">{{ existing.phone }} · {{ existing.code }}</p>
+        <p v-if="existingBusy" class="mt-2 text-xs text-status-warning">
+          Khách đang ở theo hợp đồng khác
+        </p>
+      </div>
+      <div class="flex flex-wrap items-center gap-3">
+        <UiButton
+          data-test="qc-use-existing"
+          :disabled="existingBusy"
+          @click="useExisting"
+        >
+          Dùng khách này
+        </UiButton>
+        <span class="text-xs text-ui-muted">hoặc sửa thông tin bên dưới rồi lưu lại</span>
+      </div>
+    </div>
+
+    <div v-if="stage === 'form' || stage === 'duplicate'" class="space-y-4">
       <UiInput
         data-test="qc-name"
         label="Họ tên"
@@ -165,31 +192,11 @@ function useExisting() {
       <UiAlert v-if="message" severity="danger">{{ message }}</UiAlert>
     </div>
 
-    <div v-else-if="stage === 'duplicate'" class="space-y-3">
-      <p class="text-sm text-ui-muted">
-        Đã có khách với {{ duplicateFieldLabel }} này:
-      </p>
-      <div v-if="existing" class="rounded-lg border border-ui-border bg-ui-deep/40 p-4">
-        <p class="text-sm font-medium text-ui-primary">{{ existing.fullName }}</p>
-        <p class="text-xs text-ui-muted">{{ existing.phone }} · {{ existing.code }}</p>
-        <p v-if="existingBusy" class="mt-2 text-xs text-status-warning">
-          Khách đang ở theo hợp đồng khác
-        </p>
-      </div>
-      <UiButton
-        data-test="qc-use-existing"
-        :disabled="existingBusy"
-        @click="useExisting"
-      >
-        Dùng khách này
-      </UiButton>
-    </div>
-
-    <UiAlert v-else-if="stage === 'conflict'" severity="warning">{{ message }}</UiAlert>
+    <UiAlert v-if="stage === 'conflict'" severity="warning">{{ message }}</UiAlert>
 
     <template #footer>
       <UiButton
-        v-if="stage === 'form'"
+        v-if="stage !== 'conflict'"
         data-test="qc-submit"
         :loading="submitting"
         @click="onSubmit"

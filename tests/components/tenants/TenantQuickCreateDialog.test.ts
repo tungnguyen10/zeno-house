@@ -75,6 +75,23 @@ describe('TenantQuickCreateDialog', () => {
     expect(w.text()).toContain('Khách đang ở theo hợp đồng khác')
   })
 
+  it('keeps the form editable after a duplicate so the phone can be corrected and resubmitted', async () => {
+    submit.mockResolvedValueOnce({ kind: 'duplicate', existingTenantId: 't-9', fields: ['phone'] })
+    fetchMock.mockResolvedValue({ data: { id: 't-9', code: 'kt-9', fullName: 'Trần B', phone: '0901234567', status: 'active', hasActiveContract: false } })
+    const w = mountDialog({ initialName: 'A', initialPhone: '0901234567' })
+    await w.find('[data-test="qc-submit"]').trigger('click')
+    await flushPromises()
+    expect(w.find('[data-test="qc-use-existing"]').exists()).toBe(true)
+    expect((w.find('[data-test="qc-name"] input').element as HTMLInputElement).value).toBe('A')
+
+    submit.mockResolvedValueOnce({ kind: 'created', tenant: { id: 't-2', code: 'c', fullName: 'A', phone: '0907654321' } })
+    await w.find('[data-test="qc-phone"] input').setValue('0907654321')
+    await w.find('[data-test="qc-submit"]').trigger('click')
+    await flushPromises()
+    expect(submit).toHaveBeenLastCalledWith(expect.objectContaining({ phone: '0907654321' }))
+    expect(w.emitted('created')![0]![0]).toMatchObject({ id: 't-2' })
+  })
+
   it('uses existing tenant when free', async () => {
     submit.mockResolvedValue({ kind: 'duplicate', existingTenantId: 't-9', fields: ['id_number'] })
     fetchMock.mockResolvedValue({ data: { id: 't-9', code: 'kt-9', fullName: 'Trần B', phone: '0909', status: 'active', hasActiveContract: false } })

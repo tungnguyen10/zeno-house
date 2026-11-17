@@ -60,6 +60,21 @@ describe('ContractDocumentsSection', () => {
     })
   })
 
+  it('asks for confirmation before marking a document as signed', async () => {
+    const issued = { id: 'd-1', type: 'contract', amendmentId: null, versionNo: 1, status: 'issued', templateVersion: 1, signedDate: '2026-11-12', issuedAt: '2026-11-12T00:00:00Z' }
+    fetchMock.mockImplementation(async (url: string, opts?: { method?: string }) => (opts?.method === 'POST' ? { data: { ...issued, status: 'signed' } } : { data: [issued] }))
+    const w = mount(ContractDocumentsSection, { props: { contractId: 'c-1' }, global: { stubs } })
+    await flushPromises()
+    await w.find('[data-test="document-sign"]').trigger('click')
+    expect(fetchMock.mock.calls.filter(([, opts]) => opts?.method === 'POST')).toHaveLength(0)
+
+    await w.find('[data-test="sign-confirm"]').trigger('click')
+    await flushPromises()
+    const posts = fetchMock.mock.calls.filter(([, opts]) => opts?.method === 'POST')
+    expect(posts).toHaveLength(1)
+    expect(posts[0]![0]).toBe('/api/contract-documents/d-1/sign')
+  })
+
   it('only voids a failed document (nothing to replace it with yet)', async () => {
     const failed = { id: 'd-9', type: 'contract', amendmentId: null, versionNo: 1, status: 'failed', templateVersion: 1, signedDate: '2026-11-12', issuedAt: null }
     fetchMock.mockImplementation(async (url: string, opts?: { method?: string }) => (opts?.method === 'POST' ? { data: { ...failed, status: 'voided' } } : { data: [failed] }))

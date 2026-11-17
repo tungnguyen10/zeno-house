@@ -29,6 +29,26 @@ onMounted(docs.refresh)
 
 const voidValid = computed(() => voidReason.value.trim().length >= 10)
 const voidError = ref<string | null>(null)
+const signTarget = ref<ContractDocument | null>(null)
+const signing = ref(false)
+const signError = ref<string | null>(null)
+
+async function confirmSign() {
+  const target = signTarget.value
+  if (!target || signing.value) return
+  signing.value = true
+  signError.value = null
+  try {
+    await docs.sign(target.id)
+    signTarget.value = null
+  }
+  catch (cause) {
+    signError.value = getApiErrorMessage(cause, 'Không thể đánh dấu đã ký.')
+  }
+  finally {
+    signing.value = false
+  }
+}
 
 // Only a live contract document can be replaced in one step; failed files and appendices are voided.
 const canReplace = (d: ContractDocument) => d.type === 'contract' && (d.status === 'issued' || d.status === 'signed')
@@ -102,7 +122,7 @@ async function confirmVoid() {
             <UiButton v-if="canIssue && d.status === 'failed'" size="sm" variant="secondary" @click="docs.regenerate(d.id)">
               Tạo lại file
             </UiButton>
-            <UiButton v-if="canSign && d.status === 'issued'" size="sm" variant="secondary" @click="docs.sign(d.id)">
+            <UiButton v-if="canSign && d.status === 'issued'" size="sm" variant="secondary" data-test="document-sign" @click="signTarget = d">
               Đánh dấu đã ký
             </UiButton>
             <UiButton
@@ -124,6 +144,19 @@ async function confirmVoid() {
       @close="showIssue = false"
       @issued="docs.refresh()"
     />
+
+    <UiModal :open="signTarget !== null" title="Đánh dấu đã ký" @close="signTarget = null">
+      <div class="space-y-3">
+        <p class="text-sm text-ui-muted">
+          Xác nhận bản {{ signTarget?.versionNo }} đã được hai bên ký. Bản đã ký không sửa được; nếu sai phải hủy và phát hành bản mới.
+        </p>
+        <UiAlert v-if="signError" severity="danger">{{ signError }}</UiAlert>
+      </div>
+      <template #footer>
+        <UiButton variant="secondary" @click="signTarget = null">Đóng</UiButton>
+        <UiButton :loading="signing" data-test="sign-confirm" @click="confirmSign">Đánh dấu đã ký</UiButton>
+      </template>
+    </UiModal>
 
     <UiModal :open="voidTarget !== null" :title="voidTarget ? voidActionLabel(voidTarget) : ''" @close="closeVoid">
       <div class="space-y-3">

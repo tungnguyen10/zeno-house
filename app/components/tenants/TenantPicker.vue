@@ -82,15 +82,22 @@ function select(tenant: TenantSummary | null) {
 }
 
 function onCreated(tenant: TenantSummary) {
-  dialog.open = false
+  closeDialog()
   select(tenant)
+}
+
+// The combobox popover that opened the dialog is gone by now, so focus would fall back to <body>.
+const rootRef = ref<HTMLElement | null>(null)
+function closeDialog() {
+  dialog.open = false
+  nextTick(() => rootRef.value?.querySelector<HTMLElement>('[role="combobox"]')?.focus())
 }
 
 onMounted(() => runSearch(''))
 </script>
 
 <template>
-  <div>
+  <div ref="rootRef">
     <UiCombobox
       :id="id"
       :model-value="selected"
@@ -117,7 +124,7 @@ onMounted(() => runSearch(''))
       :initial-name="dialog.name"
       :initial-phone="dialog.phone"
       @created="onCreated"
-      @close="dialog.open = false"
+      @close="closeDialog"
     />
   </div>
 </template>
