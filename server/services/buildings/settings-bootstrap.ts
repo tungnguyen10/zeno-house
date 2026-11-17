@@ -2,6 +2,7 @@ import type { H3Event } from 'h3'
 import type { AuthUser } from '~/types/auth'
 import type { BuildingSettingsBootstrap } from '~/types/building-settings'
 import { AssignmentRepository } from '../../repositories/assignments'
+import { InventoryRepository } from '../../repositories/inventory'
 import { BuildingServiceService } from '../building-services'
 import { ContractServiceService } from '../contract-services'
 import { ContractService } from '../contracts'
@@ -38,6 +39,7 @@ export const BuildingSettingsBootstrapService = {
       prepaidExpenses,
       contractProfile,
       readiness,
+      roomOccupancy,
     ] = await Promise.all([
       can(user, 'building-invoice-profile.read')
         ? BuildingInvoiceProfileService.get(event, user, buildingId)
@@ -73,6 +75,9 @@ export const BuildingSettingsBootstrapService = {
         ? BuildingContractProfileService.get(event, user, buildingId)
         : Promise.resolve(null),
       BuildingContractProfileService.readiness(event, user, buildingId),
+      can(user, 'rooms.read')
+        ? InventoryRepository.roomOccupancyForSetup(event, buildingId)
+        : Promise.resolve({ roomIdsWithoutInventory: [], vacantRoomIds: [] }),
     ])
 
     return {
@@ -91,6 +96,7 @@ export const BuildingSettingsBootstrapService = {
       prepaidExpenses,
       contractProfile,
       readiness,
+      ...roomOccupancy,
     }
   },
 }

@@ -43,6 +43,10 @@ export function buildingSettingsPath(building: BuildingRouteSubject): string {
   return `${buildingPath(building)}/settings`
 }
 
+export function buildingSetupPath(building: BuildingRouteSubject): string {
+  return `${buildingSettingsPath(building)}?setup=1`
+}
+
 /** Editing happens in the "basics" step of settings; `/edit` only redirects there. */
 export function buildingEditPath(building: BuildingRouteSubject): string {
   return `${buildingSettingsPath(building)}#basics`

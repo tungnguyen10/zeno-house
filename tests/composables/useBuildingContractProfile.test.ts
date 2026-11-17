@@ -28,4 +28,16 @@ describe('useBuildingContractProfile', () => {
     await expect(save({} as never)).rejects.toBeTruthy()
     expect(error.value).toBeTruthy()
   })
+
+  it('PATCHes only the provided fields', async () => {
+    fetchMock.mockResolvedValue({ data: { buildingId: 'b-1' } })
+    const set = vi.fn()
+    const { useBuildingContractProfile } = await import('~/composables/buildings/useBuildingContractProfile')
+    const { patch } = useBuildingContractProfile('zeno', { data: ref(null), set })
+
+    await patch({ notice_days: 30 })
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/buildings/zeno/contract-profile', expect.objectContaining({ method: 'PATCH', body: { notice_days: 30 } }))
+    expect(set).toHaveBeenCalledWith({ buildingId: 'b-1' })
+  })
 })

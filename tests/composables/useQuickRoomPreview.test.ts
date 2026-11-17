@@ -17,6 +17,12 @@ describe('useQuickRoomPreview', () => {
     expect(p.rows.value.map(r => r.roomNumber)).toEqual(['P01', 'P02', 'P03'])
   })
 
+  it('starts with zero rows when initialRoomsPerFloor is 0, so creating a building with no rooms is possible', () => {
+    const p = useQuickRoomPreview({ enabled: true, initialRoomsPerFloor: 0 })
+    expect(p.rows.value).toEqual([])
+    expect(p.toPayload()).toEqual([])
+  })
+
   it('generates rows from the generator', async () => {
     const p = await setup()
     expect(p.rows.value.map(r => r.roomNumber)).toEqual(['P101', 'P102', 'P103'])

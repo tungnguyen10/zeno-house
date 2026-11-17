@@ -11,12 +11,15 @@ const props = withDefaults(defineProps<{
   submitLabel?: string
   hasDraft?: boolean
   isDirty?: boolean
+  /** 'create' hides pricing/schedule (set up later); 'basics' shows the full form. */
+  variant?: 'create' | 'basics'
 }>(), {
   errors: () => ({}),
   loading: false,
   submitLabel: 'Lưu',
   hasDraft: false,
   isDirty: false,
+  variant: 'basics',
 })
 
 const emit = defineEmits<{
@@ -47,9 +50,6 @@ const FIELD_IDS: Record<string, string> = {
   address: 'bf-address',
   description: 'bf-description',
   status: 'bf-status',
-  owner_name: 'bf-owner-name',
-  owner_phone: 'bf-owner-phone',
-  owner_email: 'bf-owner-email',
   electricity_pricing_type: 'bf-electricity-pricing',
   default_electricity_rate: 'bf-electricity-rate',
   water_pricing_type: 'bf-water-pricing',
@@ -239,40 +239,7 @@ const canSubmit = computed(() => !props.loading && (props.isDirty || props.hasDr
       </div>
     </UiFormSection>
 
-    <UiFormSection title="Chủ sở hữu" description="Liên hệ chính cho việc vận hành — tất cả đều tuỳ chọn.">
-      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <UiInput
-          id="bf-owner-name"
-          :model-value="modelValue.ownerName"
-          label="Tên chủ nhà"
-          placeholder="Nguyễn Văn A"
-          :error="errorFor('owner_name')"
-          @update:model-value="(v) => update('ownerName', v as string)"
-          @blur="onBlur('owner_name')"
-        />
-        <UiInput
-          id="bf-owner-phone"
-          :model-value="modelValue.ownerPhone"
-          type="tel"
-          label="Số điện thoại"
-          placeholder="0901234567"
-          :error="errorFor('owner_phone')"
-          @update:model-value="(v) => update('ownerPhone', v as string)"
-          @blur="onBlur('owner_phone')"
-        />
-        <UiInput
-          id="bf-owner-email"
-          :model-value="modelValue.ownerEmail"
-          type="email"
-          label="Email"
-          placeholder="owner@example.com"
-          :error="errorFor('owner_email')"
-          @update:model-value="(v) => update('ownerEmail', v as string)"
-          @blur="onBlur('owner_email')"
-        />
-      </div>
-    </UiFormSection>
-
+    <template v-if="variant === 'basics'">
     <UiFormSection title="Tính phí mặc định" description="Áp dụng cho mọi phòng trong toà — có thể ghi đè ở từng hợp đồng.">
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <UiSelect
@@ -407,6 +374,7 @@ const canSubmit = computed(() => !props.loading && (props.isDirty || props.hasDr
         </p>
       </template>
     </UiFormSection>
+    </template>
 
     <!-- Extension slot for page-specific groups (e.g. quick rooms on create). -->
     <slot name="extras" />

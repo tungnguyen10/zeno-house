@@ -19,6 +19,7 @@ import { checkContractDocumentReadiness, useContractDocuments } from '~/composab
 definePageMeta({ title: 'Thêm hợp đồng mới' })
 
 const route = useRoute()
+const buildingFilter = ref(typeof route.query.building_id === 'string' ? route.query.building_id : '')
 const authStore = useAuthStore()
 
 // The docked action bar owns the bottom of the mobile viewport, so the tab bar steps aside.
@@ -85,7 +86,12 @@ watch([() => form.value.room_id, () => form.value.tenant_id, occupants], async (
 // Room options (available rooms); typing searches on the server so large buildings are not truncated.
 const roomSearch = ref('')
 const { data: roomsData, status: roomsStatus } = useLazyFetch<ApiSuccess<Room[]> & { meta: unknown }>('/api/rooms', {
-  query: computed(() => ({ available: 'true', limit: 200, ...(roomSearch.value ? { q: roomSearch.value } : {}) })),
+  query: computed(() => ({
+    available: 'true',
+    limit: 200,
+    ...(roomSearch.value ? { q: roomSearch.value } : {}),
+    ...(buildingFilter.value ? { building_id: buildingFilter.value } : {}),
+  })),
 })
 const onRoomSearch = useDebounceFn((value: string) => { roomSearch.value = value.trim() }, 250)
 const roomOptions = computed(() => roomsData.value?.data ?? [])
@@ -347,6 +353,14 @@ watch([form, occupants, vehicles, services, inventory], () => {
           @search="onRoomSearch"
           @update:model-value="onRoomPicked"
         />
+        <button
+          v-if="buildingFilter"
+          type="button"
+          class="mt-2 inline-flex min-h-9 items-center text-xs text-ui-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-accent/40"
+          @click="buildingFilter = ''"
+        >
+          Xem phòng của mọi tòa
+        </button>
       </section>
 
       <!-- Tenant -->

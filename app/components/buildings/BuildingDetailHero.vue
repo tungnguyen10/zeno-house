@@ -12,7 +12,6 @@ defineProps<{
   <UiSurfacePanel as="section">
     <div class="min-w-0">
       <div class="flex flex-wrap items-center gap-2">
-        <h2 class="text-lg font-semibold text-ui-primary truncate">{{ building.name }}</h2>
         <UiBadge variant="neutral">#{{ building.code }}</UiBadge>
         <UiStatusBadge :status="building.status" />
       </div>

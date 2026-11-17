@@ -23,6 +23,21 @@ export const InventoryRepository = {
     return (data ?? []) as InventoryRow[]
   },
 
+  async roomOccupancyForSetup(event: H3Event, buildingId: string): Promise<{ roomIdsWithoutInventory: string[], vacantRoomIds: string[] }> {
+    // One row per room (embedded count) so item volume cannot hit the PostgREST row cap.
+    const { data, error } = await db(event)
+      .from('rooms')
+      .select('id, status, room_inventory_items(count)')
+      .eq('building_id', buildingId)
+      .neq('status', 'archived')
+    if (error) throwDbError(error, 'inventory.roomOccupancyForSetup')
+    const rooms = (data ?? []) as unknown as { id: string, status: string, room_inventory_items: { count: number }[] }[]
+    return {
+      roomIdsWithoutInventory: rooms.filter(r => (r.room_inventory_items[0]?.count ?? 0) === 0).map(r => r.id),
+      vacantRoomIds: rooms.filter(r => r.status === 'available').map(r => r.id),
+    }
+  },
+
   async replaceTemplate(event: H3Event, buildingId: string, items: InventoryItemInput[]): Promise<InventoryRow[]> {
     // Validate, delete and insert in one database transaction; never expose a partial replacement.
     const { data, error } = await db(event).rpc('replace_inventory_template', {

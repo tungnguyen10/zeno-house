@@ -2,7 +2,7 @@ import type { BuildingReadiness, ReadinessCode } from '~/types/building-contract
 import { READINESS_LABELS } from '~/utils/constants/readiness'
 import { formatCurrency } from '~/utils/format/currency'
 
-export type SetupStepId = 'basics' | 'invoice-profile' | 'service-defaults' | 'inventory-template' | 'contract-profile'
+export type SetupStepId = 'lessor-profile' | 'contract-terms' | 'basics' | 'invoice-profile' | 'service-defaults' | 'inventory-template'
 export type SetupStepStatus = 'ready' | 'missing' | 'warning' | 'optional'
 
 export interface SetupStep {
@@ -13,6 +13,8 @@ export interface SetupStep {
   missingCount: number
   /** Required steps count toward "ready to create a contract". */
   required: boolean
+  /** Visible in progress but not openable by this user. */
+  locked: boolean
 }
 
 export interface SetupStepsInput {
@@ -25,6 +27,7 @@ export interface SetupStepsInput {
   } | null
   contractProfile: {
     lessorFullName: string | null
+    lessorPhone: string | null
     defaultTermMonths: number | null
     defaultDepositMonths: number | null
   } | null
@@ -44,6 +47,16 @@ export interface SetupFlow {
 
 const MAX_LISTED_MISSING = 2
 
+const REQUIRED_ORDER: SetupStepId[] = ['lessor-profile', 'contract-terms', 'basics', 'invoice-profile']
+const STEP_LABELS: Record<SetupStepId, string> = {
+  'lessor-profile': 'Bên cho thuê',
+  'contract-terms': 'Điều khoản hợp đồng',
+  'basics': 'Thông tin và lịch vận hành',
+  'invoice-profile': 'Thanh toán trên hóa đơn',
+  'service-defaults': 'Dịch vụ mặc định',
+  'inventory-template': 'Nội thất mẫu',
+}
+
 function missingCodes(readiness: BuildingReadiness): ReadinessCode[] {
   return [...new Set([...readiness.contract.missing, ...readiness.billing.missing])]
 }
@@ -52,6 +65,17 @@ function listMissing(codes: ReadinessCode[]): string {
   const labels = codes.map(code => READINESS_LABELS[code]?.label ?? code)
   const shown = labels.slice(0, MAX_LISTED_MISSING).join(', ')
   return labels.length > MAX_LISTED_MISSING ? `Thiếu: ${shown}…` : `Thiếu: ${shown}`
+}
+
+export function stepForCode(code: ReadinessCode): SetupStepId {
+  if (code.startsWith('lessor.')) return 'lessor-profile'
+  if (code.startsWith('contract.') || code.startsWith('terms.')) return 'contract-terms'
+  if (code === 'invoice_profile') return 'invoice-profile'
+  return 'basics'
+}
+
+function codesFor(codes: ReadinessCode[], id: SetupStepId): ReadinessCode[] {
+  return codes.filter(code => stepForCode(code) === id)
 }
 
 function basicsSummary(input: SetupStepsInput, missing: ReadinessCode[]): string {
@@ -65,45 +89,48 @@ function basicsSummary(input: SetupStepsInput, missing: ReadinessCode[]): string
   return parts.join(' · ') || 'Đã thiết lập'
 }
 
-function contractSummary(input: SetupStepsInput, missing: ReadinessCode[]): string {
+function lessorSummary(input: SetupStepsInput, missing: ReadinessCode[]): string {
+  if (!input.canViewContractProfile) return 'Cần chủ tòa hoàn tất'
+  if (missing.length > 0) return listMissing(missing)
+  const profile = input.contractProfile
+  return [profile?.lessorFullName, profile?.lessorPhone].filter(Boolean).join(' · ') || 'Đã thiết lập'
+}
+
+function termsSummary(input: SetupStepsInput, missing: ReadinessCode[]): string {
+  if (!input.canViewContractProfile) return 'Cần chủ tòa hoàn tất'
   if (missing.length > 0) return `Thiếu ${missing.length} mục`
   const profile = input.contractProfile
   const parts: string[] = []
-  if (profile?.lessorFullName) parts.push(profile.lessorFullName)
-  if (profile?.defaultDepositMonths != null) parts.push(`Cọc ${profile.defaultDepositMonths} tháng`)
   if (profile?.defaultTermMonths != null) parts.push(`${profile.defaultTermMonths} tháng`)
+  if (profile?.defaultDepositMonths != null) parts.push(`Cọc ${profile.defaultDepositMonths} tháng`)
   return parts.join(' · ') || 'Đã thiết lập'
+}
+
+function requiredStep(id: SetupStepId, missing: ReadinessCode[], summary: string, locked: boolean): SetupStep {
+  return {
+    id, label: STEP_LABELS[id], summary, locked, required: true,
+    status: missing.length > 0 ? 'missing' : 'ready',
+    missingCount: missing.length,
+  }
 }
 
 export function deriveSetupSteps(input: SetupStepsInput): SetupFlow {
   const codes = missingCodes(input.readiness)
-  const basicsMissing = codes.filter(code => code.startsWith('billing.'))
-  const invoiceMissing = codes.filter(code => code === 'invoice_profile')
-  const contractMissing = codes.filter(code => /^(lessor|contract|terms)\./.test(code))
-
+  const contractLocked = !input.canViewContractProfile
   const steps: SetupStep[] = [
+    requiredStep('lessor-profile', codesFor(codes, 'lessor-profile'), lessorSummary(input, codesFor(codes, 'lessor-profile')), contractLocked),
+    requiredStep('contract-terms', codesFor(codes, 'contract-terms'), termsSummary(input, codesFor(codes, 'contract-terms')), contractLocked),
+    requiredStep('basics', codesFor(codes, 'basics'), basicsSummary(input, codesFor(codes, 'basics')), false),
     {
-      id: 'basics',
-      label: 'Thông tin và lịch vận hành',
-      summary: basicsSummary(input, basicsMissing),
-      status: basicsMissing.length > 0 ? 'missing' : 'ready',
-      missingCount: basicsMissing.length,
-      required: true,
-    },
-    {
-      id: 'invoice-profile',
-      label: 'Thanh toán trên hóa đơn',
-      summary: invoiceMissing.length > 0 ? 'Chưa cấu hình' : 'Đã cấu hình nhận diện và tài khoản nhận tiền',
-      status: invoiceMissing.length > 0 ? 'missing' : 'ready',
-      missingCount: invoiceMissing.length,
-      required: true,
+      ...requiredStep('invoice-profile', codesFor(codes, 'invoice-profile'), '', false),
+      summary: codesFor(codes, 'invoice-profile').length > 0 ? 'Chưa cấu hình' : 'Đã cấu hình nhận diện và tài khoản nhận tiền',
     },
   ]
 
   const { activeCount, unpricedActiveCount } = input.services
   steps.push({
     id: 'service-defaults',
-    label: 'Dịch vụ mặc định',
+    label: STEP_LABELS['service-defaults'],
     summary: activeCount === 0
       ? 'Chưa bật dịch vụ nào'
       : unpricedActiveCount > 0
@@ -112,34 +139,25 @@ export function deriveSetupSteps(input: SetupStepsInput): SetupFlow {
     status: activeCount === 0 ? 'optional' : unpricedActiveCount > 0 ? 'warning' : 'ready',
     missingCount: unpricedActiveCount,
     required: false,
+    locked: false,
   })
 
   if (input.canViewInventory) {
     const { itemCount, totalValue } = input.inventory
     steps.push({
       id: 'inventory-template',
-      label: 'Nội thất mẫu',
+      label: STEP_LABELS['inventory-template'],
       summary: itemCount === 0 ? 'Chưa có nội thất mẫu' : `${itemCount} món · ${formatCurrency(totalValue)}`,
       status: itemCount === 0 ? 'optional' : 'ready',
       missingCount: 0,
       required: false,
-    })
-  }
-
-  if (input.canViewContractProfile) {
-    steps.push({
-      id: 'contract-profile',
-      label: 'Hợp đồng',
-      summary: contractSummary(input, contractMissing),
-      status: contractMissing.length > 0 ? 'missing' : 'ready',
-      missingCount: contractMissing.length,
-      required: true,
+      locked: false,
     })
   }
 
   const required = steps.filter(step => step.required)
   const requiredReady = required.filter(step => step.status === 'ready').length
-  const next = required.find(step => step.status === 'missing')
+  const next = required.find(step => step.status === 'missing' && !step.locked)
 
   return {
     steps,
@@ -147,6 +165,42 @@ export function deriveSetupSteps(input: SetupStepsInput): SetupFlow {
     requiredReady,
     ready: requiredReady === required.length,
     nextStepId: next?.id ?? null,
+  }
+}
+
+export function nextSetupStepId(flow: SetupFlow, currentId: SetupStepId | null): SetupStepId | null {
+  const open = flow.steps.filter(step => !step.locked)
+  const missingRequired = open.find(step => step.required && step.status === 'missing' && step.id !== currentId)
+  if (missingRequired) return missingRequired.id
+  if (currentId === null) return null
+  const current = open.find(step => step.id === currentId)
+  if (current?.required && current.status === 'missing') return current.id
+  const index = open.findIndex(step => step.id === currentId)
+  // A current step that is locked or hidden is not in `open`; there is nothing after it to advance to.
+  return open.slice(index === -1 ? open.length : index + 1).find(step => !step.required)?.id ?? null
+}
+
+const STEP_HASH_ALIASES: Record<string, SetupStepId> = { 'contract-profile': 'lessor-profile' }
+
+export function resolveStepHash(hash: string): string {
+  return STEP_HASH_ALIASES[hash] ?? hash
+}
+
+export function summarizeRequiredSteps(readiness: BuildingReadiness): {
+  requiredTotal: number
+  requiredReady: number
+  ready: boolean
+  missingLabels: string[]
+  nextStepId: SetupStepId | null
+} {
+  const codes = missingCodes(readiness)
+  const missingSteps = REQUIRED_ORDER.filter(id => codesFor(codes, id).length > 0)
+  return {
+    requiredTotal: REQUIRED_ORDER.length,
+    requiredReady: REQUIRED_ORDER.length - missingSteps.length,
+    ready: missingSteps.length === 0,
+    missingLabels: missingSteps.map(id => STEP_LABELS[id]),
+    nextStepId: missingSteps[0] ?? null,
   }
 }
 
@@ -159,6 +213,8 @@ export interface StepListItem {
   missingCount: number
   /** Overrides the default status text, e.g. for non-step groups. */
   statusLabel?: string
+  /** Visible in progress but not openable by this user. */
+  locked?: boolean
 }
 
 export interface AdvancedStepsInput {

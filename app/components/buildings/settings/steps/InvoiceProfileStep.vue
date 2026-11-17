@@ -2,6 +2,7 @@
 import type { BuildingInvoiceProfileSaveInput } from '~/types/building-invoice-profile'
 
 const emit = defineEmits<{ saved: [] }>()
+withDefaults(defineProps<{ submitLabel?: string }>(), { submitLabel: 'Lưu thay đổi' })
 const source = useBuildingSettingsSource()
 const id = source.id
 const settings = source.settings
@@ -55,6 +56,8 @@ const canEditInvoiceEmailSettings = computed(() => authStore.can('invoice-email-
 async function handleSaveInvoiceProfile(input: BuildingInvoiceProfileSaveInput) {
   try {
     await saveInvoiceProfile(input)
+    // Readiness is computed server-side; refresh it before the page decides the next step.
+    await source.refresh()
     toast.success('Đã lưu thông tin nhận diện và thanh toán trên phiếu.')
     emit('saved')
   }
@@ -86,6 +89,7 @@ async function handleSaveInvoiceEmailSettings(enabled: boolean) {
         :loading="loadingInvoiceProfile"
         :saving="savingInvoiceProfile"
         :error="invoiceProfileError"
+        :submit-label="submitLabel"
         @save="handleSaveInvoiceProfile"
       />
     </UiSurfacePanel>

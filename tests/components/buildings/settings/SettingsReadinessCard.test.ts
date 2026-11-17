@@ -56,6 +56,65 @@ describe('SettingsReadinessCard', () => {
     expect(w.get('[data-test="setup-create-contract"]').attributes('href')).toBe('/dashboard/contracts/create?building=zeno')
   })
 
+  it('offers exit in setup mode and the first-contract CTA once ready', async () => {
+    const w = mount(SettingsReadinessCard, {
+      props: {
+        flow: flow({ requiredReady: 3, ready: true, nextStepId: null }),
+        createContractPath: '/dashboard/contracts/create?building_id=b-1',
+        setupMode: true,
+        buildingPath: '/dashboard/buildings/zeno',
+      },
+      global: { stubs },
+    })
+
+    expect(w.get('[data-test="setup-create-contract"]').text()).toBe('Lập hợp đồng đầu tiên')
+    expect(w.get('[data-test="setup-view-building"]').attributes('href')).toBe('/dashboard/buildings/zeno')
+    await w.get('[data-test="setup-exit"]').trigger('click')
+    expect(w.emitted('exit-setup')).toHaveLength(1)
+  })
+
+  it('makes "Thêm phòng" the primary action when the building has no rooms', () => {
+    const w = mount(SettingsReadinessCard, {
+      props: {
+        flow: flow({ requiredReady: 3, ready: true, nextStepId: null }),
+        createContractPath: '/dashboard/contracts/create?building_id=b-1',
+        canAddRooms: true,
+        addRoomsPath: '/dashboard/buildings/zeno/rooms/batch',
+      },
+      global: { stubs },
+    })
+
+    expect(w.text()).toContain('Sẵn sàng lập hợp đồng')
+    expect(w.get('[data-test="setup-no-rooms"]').text()).toBe('Tòa nhà chưa có phòng. Thêm phòng trước khi lập hợp đồng.')
+    const add = w.get('[data-test="setup-add-rooms"]')
+    expect(add.text()).toBe('Thêm phòng')
+    expect(add.attributes('href')).toBe('/dashboard/buildings/zeno/rooms/batch')
+    expect(add.classes()).toContain('bg-ui-accent')
+    const contract = w.get('[data-test="setup-create-contract"]')
+    expect(contract.text()).toBe('Lập hợp đồng')
+    expect(contract.classes()).not.toContain('bg-ui-accent')
+  })
+
+  it('keeps the contract CTA primary when rooms cannot be added', () => {
+    const w = mount(SettingsReadinessCard, {
+      props: {
+        flow: flow({ requiredReady: 3, ready: true, nextStepId: null }),
+        createContractPath: '/dashboard/contracts/create?building_id=b-1',
+        canAddRooms: false,
+        addRoomsPath: '/dashboard/buildings/zeno/rooms/batch',
+      },
+      global: { stubs },
+    })
+
+    expect(w.find('[data-test="setup-add-rooms"]').exists()).toBe(false)
+    expect(w.find('[data-test="setup-no-rooms"]').exists()).toBe(false)
+    expect(w.get('[data-test="setup-create-contract"]').classes()).toContain('bg-ui-accent')
+  })
+
+  it('hides exit outside setup mode', () => {
+    expect(mountCard(flow()).find('[data-test="setup-exit"]').exists()).toBe(false)
+  })
+
   it('exposes progress to assistive tech', () => {
     const bar = mountCard(flow()).get('[role="progressbar"]')
 

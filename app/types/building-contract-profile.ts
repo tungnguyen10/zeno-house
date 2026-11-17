@@ -7,6 +7,7 @@ export interface BuildingContractProfile {
   lessorIdIssuedDate: string | null
   lessorIdIssuedPlace: string | null
   lessorPhone: string | null
+  lessorEmail: string | null
   lessorIdentityMasked: boolean
   brandName: string | null
   defaultTermMonths: number | null

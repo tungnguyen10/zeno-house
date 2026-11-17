@@ -24,7 +24,9 @@ export function generateRoomNumbers(input: RoomGeneratorInput): { rooms: Generat
   if (!Number.isInteger(floorFrom) || !Number.isInteger(floorTo) || floorFrom < 1 || floorTo > 100 || floorFrom > floorTo) {
     return fail('floor_range')
   }
-  if (!Number.isInteger(roomsPerFloor) || roomsPerFloor < 1 || roomsPerFloor > 99) return fail('rooms_per_floor')
+  if (!Number.isInteger(roomsPerFloor) || roomsPerFloor < 0 || roomsPerFloor > 99) return fail('rooms_per_floor')
+  // Zero is a valid "no rooms yet" state (e.g. an untouched generator), not an error.
+  if (roomsPerFloor === 0) return { rooms: [], error: null }
   if (includeFloor && startSeq + roomsPerFloor - 1 > 99) return fail('seq_overflow')
   const floors = floorTo - floorFrom + 1
   if (floors * roomsPerFloor > QUICK_ROOM_MAX) return fail('too_many')

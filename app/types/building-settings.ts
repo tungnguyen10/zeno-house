@@ -30,4 +30,6 @@ export interface BuildingSettingsBootstrap {
   prepaidExpenses: PrepaidExpense[]
   contractProfile: BuildingContractProfile | null
   readiness: BuildingReadiness
+  roomIdsWithoutInventory: string[]
+  vacantRoomIds: string[]
 }

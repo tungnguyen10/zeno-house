@@ -2,7 +2,7 @@ import type { H3Event } from 'h3'
 import type { AuthUser } from '~/types/auth'
 import type { BuildingContractProfile, BuildingReadiness } from '~/types/building-contract-profile'
 import { mapBuildingContractProfile, maskBuildingContractProfile, type BuildingContractProfileRow } from '~/utils/mappers/building-contract-profile'
-import type { BuildingContractProfileInput } from '~/utils/validators/building-contract-profile'
+import { buildingContractProfileSchema, CONTRACT_PROFILE_PII_FIELDS, type BuildingContractProfileInput, type BuildingContractProfilePatch } from '~/utils/validators/building-contract-profile'
 import { AUDIT_ACTIONS } from '~/utils/constants/audit'
 import { BuildingRepository } from '../../repositories/buildings'
 import { BuildingContractProfileRepository } from '../../repositories/building-contract-profiles'
@@ -13,7 +13,7 @@ import { computeBuildingReadiness } from './readiness'
 
 const EDITABLE_COLUMNS: (keyof BuildingContractProfileInput)[] = [
   'lessor_full_name', 'lessor_date_of_birth', 'lessor_permanent_address', 'lessor_id_number',
-  'lessor_id_issued_date', 'lessor_id_issued_place', 'lessor_phone', 'brand_name',
+  'lessor_id_issued_date', 'lessor_id_issued_place', 'lessor_phone', 'lessor_email', 'brand_name',
   'default_term_months', 'default_deposit_months', 'notice_days', 'deposit_refund_days', 'renewal_months',
   'extra_occupant_fee', 'drilling_fee', 'fingerprint_reset_fee', 'signed_copies', 'copies_per_party',
 ]
@@ -30,6 +30,24 @@ function changedFields(before: BuildingContractProfileRow | null, after: Buildin
     const next = after[key] ?? null
     return String(prev) !== String(next)
   })
+}
+
+function rowToInput(row: BuildingContractProfileRow | null): Record<string, unknown> {
+  if (!row) return {}
+  return Object.fromEntries(EDITABLE_COLUMNS.map(key => [key, row[key as keyof BuildingContractProfileRow] ?? null]))
+}
+
+// Normalized values of only the keys the client sent, so untouched columns are never rewritten.
+function patchedValues(patch: BuildingContractProfilePatch, merged: BuildingContractProfileInput): BuildingContractProfilePatch {
+  return Object.fromEntries(
+    (Object.keys(patch) as (keyof BuildingContractProfileInput)[]).map(key => [key, merged[key]]),
+  ) as BuildingContractProfilePatch
+}
+
+const PII_FORBIDDEN_MESSAGE = 'Không có quyền cập nhật thông tin định danh của bên cho thuê'
+
+function assertMayWritePii(user: AuthUser, touchesPii: boolean) {
+  if (touchesPii && !can(user, 'building-contract-profile.pii.read')) throwForbidden(PII_FORBIDDEN_MESSAGE)
 }
 
 function present(user: AuthUser, profile: BuildingContractProfile | null) {
@@ -56,6 +74,8 @@ export const BuildingContractProfileService = {
     const building = await requireBuilding(event, buildingIdentifier)
     await assertBuildingScope(event, user, building.id, 'write')
     const existing = await BuildingContractProfileRepository.findByBuildingId(event, building.id)
+    const changed = changedFields(existing, input)
+    assertMayWritePii(user, CONTRACT_PROFILE_PII_FIELDS.some(key => changed.includes(key)))
     const saved = await BuildingContractProfileRepository.upsert(event, building.id, input, user.id)
 
     await AuditService.append(event, user, {
@@ -63,7 +83,32 @@ export const BuildingContractProfileService = {
       action: AUDIT_ACTIONS.BUILDING_CONTRACT_PROFILE_UPDATED,
       entity_type: 'building',
       entity_id: building.id,
-      metadata: { configured_first_time: !existing, changed_fields: changedFields(existing, input) },
+      metadata: { configured_first_time: !existing, changed_fields: changed },
+    })
+    return present(user, mapBuildingContractProfile(saved))!
+  },
+
+  async patch(
+    event: H3Event,
+    user: AuthUser,
+    buildingIdentifier: string,
+    patch: BuildingContractProfilePatch,
+  ): Promise<BuildingContractProfile> {
+    if (!can(user, 'building-contract-profile.write')) throwForbidden('Không có quyền cập nhật thông tin hợp đồng của tòa nhà')
+    const building = await requireBuilding(event, buildingIdentifier)
+    await assertBuildingScope(event, user, building.id, 'write')
+    assertMayWritePii(user, CONTRACT_PROFILE_PII_FIELDS.some(key => key in patch))
+    const existing = await BuildingContractProfileRepository.findByBuildingId(event, building.id)
+    const merged = buildingContractProfileSchema.safeParse({ ...rowToInput(existing), ...patch })
+    if (!merged.success) throwValidationError('Thông tin hợp đồng không hợp lệ', merged.error.flatten().fieldErrors)
+    const saved = await BuildingContractProfileRepository.upsert(event, building.id, patchedValues(patch, merged.data), user.id)
+
+    await AuditService.append(event, user, {
+      building_id: building.id,
+      action: AUDIT_ACTIONS.BUILDING_CONTRACT_PROFILE_UPDATED,
+      entity_type: 'building',
+      entity_id: building.id,
+      metadata: { configured_first_time: !existing, changed_fields: changedFields(existing, merged.data).filter(key => key in patch) },
     })
     return present(user, mapBuildingContractProfile(saved))!
   },

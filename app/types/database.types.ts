@@ -732,6 +732,7 @@ export type Database = {
           extra_occupant_fee: number | null
           fingerprint_reset_fee: number | null
           lessor_date_of_birth: string | null
+          lessor_email: string | null
           lessor_full_name: string | null
           lessor_id_issued_date: string | null
           lessor_id_issued_place: string | null
@@ -757,6 +758,7 @@ export type Database = {
           extra_occupant_fee?: number | null
           fingerprint_reset_fee?: number | null
           lessor_date_of_birth?: string | null
+          lessor_email?: string | null
           lessor_full_name?: string | null
           lessor_id_issued_date?: string | null
           lessor_id_issued_place?: string | null
@@ -781,6 +783,7 @@ export type Database = {
           extra_occupant_fee?: number | null
           fingerprint_reset_fee?: number | null
           lessor_date_of_birth?: string | null
+          lessor_email?: string | null
           lessor_full_name?: string | null
           lessor_id_issued_date?: string | null
           lessor_id_issued_place?: string | null
