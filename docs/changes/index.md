@@ -6,6 +6,7 @@
 
 - [harden-event-audit](./harden-event-audit/verification.md) — 12/16 tasks; atomic DB audit/contract correlation and durable cross-system intent remain incomplete.
 - [zeno-house-v2-optimization](./zeno-house-v2-optimization/baseline-2026-11-16.md) — V2 PR0–PR5 source baseline review, integrity fixes and release gate matrix.
+- [building-onboarding-v2](./building-onboarding-v2/index.md) — design review: create building → setup mode → first contract; owner folded into lessor.
 - [tenant-v2](./tenant-v2/spec-and-implementation-plan.md) — Original umbrella specification; Quick Create is now merged, Claude autofill merged behind flag. Review individual change verification records instead of treating the entire design as unimplemented.
 
 ## V2 implementation merged — verification/release gates open
