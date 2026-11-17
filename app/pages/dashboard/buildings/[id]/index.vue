@@ -203,6 +203,8 @@ const waterLabel = computed(() => {
         :readiness="readinessData.data"
         :setup-path="buildingSetupPath(building)"
         :create-contract-path="`/dashboard/contracts/create?building_id=${building.id}`"
+        :can-add-rooms="building.totalRooms === 0 && authStore.can('rooms.create')"
+        :add-rooms-path="`/dashboard/buildings/${building.slug}/rooms/batch`"
       />
 
       <!-- Section: Overview -->

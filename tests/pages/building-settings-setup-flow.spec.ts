@@ -28,6 +28,14 @@ describe('building settings setup flow page', () => {
     expect(page).toContain('Thiết lập tòa nhà')
   })
 
+  it('offers "Thêm phòng" in the completion state for a building with no rooms', () => {
+    expect(page).toContain(`authStore.can('rooms.create')`)
+    expect(page).toContain('totalRooms === 0')
+    expect(page).toContain(':can-add-rooms="canAddRooms"')
+    expect(page).toContain(':add-rooms-path=')
+    expect(page).toContain('/rooms/batch')
+  })
+
   it('aliases the old contract-profile hash', () => {
     expect(page).toContain('resolveStepHash(')
   })

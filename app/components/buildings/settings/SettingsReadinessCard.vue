@@ -6,7 +6,11 @@ const props = withDefaults(defineProps<{
   createContractPath: string
   setupMode?: boolean
   buildingPath?: string
-}>(), { setupMode: false, buildingPath: undefined })
+  canAddRooms?: boolean
+  addRoomsPath?: string
+}>(), { setupMode: false, buildingPath: undefined, canAddRooms: false, addRoomsPath: undefined })
+
+const showAddRooms = computed(() => props.flow.ready && props.canAddRooms && !!props.addRoomsPath)
 
 const emit = defineEmits<{ 'open-step': [id: SetupStepId], 'exit-setup': [] }>()
 
@@ -26,6 +30,9 @@ const percent = computed(() =>
         <p class="mt-0.5 text-xs text-ui-muted" data-test="setup-progress">
           {{ flow.requiredReady }}/{{ flow.requiredTotal }} bước bắt buộc đã xong
         </p>
+        <p v-if="showAddRooms" class="mt-0.5 text-xs text-ui-muted" data-test="setup-no-rooms">
+          Tòa nhà chưa có phòng. Thêm phòng trước khi lập hợp đồng.
+        </p>
       </div>
       <div class="flex flex-wrap items-center gap-2">
         <template v-if="flow.ready">
@@ -40,9 +47,19 @@ const percent = computed(() =>
           <NuxtLink
             :to="createContractPath"
             data-test="setup-create-contract"
-            class="inline-flex items-center justify-center rounded-md bg-ui-accent px-3 py-1.5 text-xs font-medium text-ui-on-accent transition-colors hover:bg-ui-accent/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-accent"
+            :class="showAddRooms
+              ? 'inline-flex items-center justify-center rounded-md border border-ui-border bg-ui-surface px-3 py-1.5 text-xs font-medium text-ui-primary transition-colors hover:bg-ui-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-border-strong'
+              : 'inline-flex items-center justify-center rounded-md bg-ui-accent px-3 py-1.5 text-xs font-medium text-ui-on-accent transition-colors hover:bg-ui-accent/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-accent'"
           >
             {{ setupMode ? 'Lập hợp đồng đầu tiên' : 'Lập hợp đồng' }}
+          </NuxtLink>
+          <NuxtLink
+            v-if="showAddRooms"
+            :to="addRoomsPath"
+            data-test="setup-add-rooms"
+            class="inline-flex items-center justify-center rounded-md bg-ui-accent px-3 py-1.5 text-xs font-medium text-ui-on-accent transition-colors hover:bg-ui-accent/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-accent"
+          >
+            Thêm phòng
           </NuxtLink>
         </template>
         <UiButton v-else-if="nextStep" size="sm" data-test="setup-next" @click="emit('open-step', nextStep.id)">

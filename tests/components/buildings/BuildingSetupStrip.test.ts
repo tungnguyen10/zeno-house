@@ -41,4 +41,28 @@ describe('BuildingSetupStrip', () => {
     expect(link.text()).toBe('Lập hợp đồng')
     expect(link.attributes('href')).toBe('/dashboard/contracts/create?building_id=b1')
   })
+
+  it('makes "Thêm phòng" primary and demotes the contract link when the building has no rooms', () => {
+    const w = mount(BuildingSetupStrip, {
+      props: { ...props([], []), canAddRooms: true, addRoomsPath: '/dashboard/buildings/zeno/rooms/batch' },
+      global: { stubs },
+    })
+    expect(w.text()).toContain('Sẵn sàng lập hợp đồng')
+    expect(w.get('[data-test="strip-no-rooms"]').text()).toBe('Tòa nhà chưa có phòng. Thêm phòng trước khi lập hợp đồng.')
+    const add = w.get('[data-test="strip-add-rooms"]')
+    expect(add.text()).toBe('Thêm phòng')
+    expect(add.attributes('href')).toBe('/dashboard/buildings/zeno/rooms/batch')
+    expect(add.classes()).toContain('bg-ui-accent')
+    const contract = w.get('[data-test="strip-create-contract"]')
+    expect(contract.text()).toBe('Lập hợp đồng')
+    expect(contract.classes()).not.toContain('bg-ui-accent')
+  })
+
+  it('does not offer "Thêm phòng" while setup is incomplete', () => {
+    const w = mount(BuildingSetupStrip, {
+      props: { ...props(['lessor.id_number'], []), canAddRooms: true, addRoomsPath: '/x' },
+      global: { stubs },
+    })
+    expect(w.find('[data-test="strip-add-rooms"]').exists()).toBe(false)
+  })
 })

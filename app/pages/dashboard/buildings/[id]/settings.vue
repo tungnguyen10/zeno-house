@@ -120,6 +120,8 @@ const createContractPath = computed(() => {
   return vacant.length === 1 ? `${base}&room_id=${encodeURIComponent(vacant[0]!)}` : base
 })
 
+const canAddRooms = computed(() => building.value?.totalRooms === 0 && authStore.can('rooms.create'))
+
 const hasRoomsWithoutInventory = computed(() =>
   inventoryItems.value.length > 0 && (settings.value?.roomIdsWithoutInventory ?? []).length > 0,
 )
@@ -188,6 +190,8 @@ function handleInventorySaved() {
       :setup-mode="setupMode.active.value"
       :create-contract-path="createContractPath"
       :building-path="building ? buildingPath(building) : undefined"
+      :can-add-rooms="canAddRooms"
+      :add-rooms-path="building ? `${buildingPath(building)}/rooms/batch` : undefined"
       @open-step="openStep"
       @exit-setup="setupMode.exit()"
     />

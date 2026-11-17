@@ -16,6 +16,11 @@ describe('building detail setup and cleanup', () => {
     expect(strip).toContain('Tiếp tục thiết lập')
   })
 
+  it('passes the add-rooms CTA to the strip when the building has no rooms', () => {
+    expect(page).toContain(':can-add-rooms="building.totalRooms === 0 && authStore.can(\'rooms.create\')"')
+    expect(page).toContain(':add-rooms-path="`/dashboard/buildings/${building.slug}/rooms/batch`"')
+  })
+
   it('does not nest a button inside a link in the strip', () => {
     expect(strip).not.toMatch(/<NuxtLink[^>]*>\s*<UiButton/)
   })
