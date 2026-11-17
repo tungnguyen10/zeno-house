@@ -60,7 +60,7 @@ Với mỗi tòa có ít nhất một trong `owner_name`, `owner_phone`, `owner_
 
 1. Nếu chưa có dòng `building_contract_profiles` → chèn dòng chỉ chứa trường lessor tương ứng.
 2. Nếu đã có → chỉ điền trường lessor **đang null**; không bao giờ ghi đè.
-3. Chỉ chép giá trị qua ràng buộc sẵn có: tên `trim` dài 2–100, SĐT dài 8–20, email khớp định dạng. Giá trị không hợp lệ bị bỏ qua.
+3. Chỉ chép giá trị qua ràng buộc sẵn có và qua bộ kiểm tra của ứng dụng: tên `trim` dài 2–100; SĐT phải được `normalizeTenantPhone` chấp nhận (di động VN `0XXXXXXXXX`, dạng `+84` đổi về `0XXXXXXXXX`, hoặc `+` quốc tế 8–15 chữ số), vì ứng dụng kiểm tra lại giá trị đã lưu mỗi lần lưu một phần; email đúng định dạng. Giá trị không hợp lệ bị bỏ qua.
 
 Ánh xạ: `owner_name → lessor_full_name`, `owner_phone → lessor_phone`, `owner_email → lessor_email`.
 
