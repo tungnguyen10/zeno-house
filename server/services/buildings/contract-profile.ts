@@ -37,6 +37,13 @@ function rowToInput(row: BuildingContractProfileRow | null): Record<string, unkn
   return Object.fromEntries(EDITABLE_COLUMNS.map(key => [key, row[key as keyof BuildingContractProfileRow] ?? null]))
 }
 
+// Normalized values of only the keys the client sent, so untouched columns are never rewritten.
+function patchedValues(patch: BuildingContractProfilePatch, merged: BuildingContractProfileInput): BuildingContractProfilePatch {
+  return Object.fromEntries(
+    (Object.keys(patch) as (keyof BuildingContractProfileInput)[]).map(key => [key, merged[key]]),
+  ) as BuildingContractProfilePatch
+}
+
 const PII_FORBIDDEN_MESSAGE = 'Không có quyền cập nhật thông tin định danh của bên cho thuê'
 
 function assertMayWritePii(user: AuthUser, touchesPii: boolean) {
@@ -94,14 +101,14 @@ export const BuildingContractProfileService = {
     const existing = await BuildingContractProfileRepository.findByBuildingId(event, building.id)
     const merged = buildingContractProfileSchema.safeParse({ ...rowToInput(existing), ...patch })
     if (!merged.success) throwValidationError('Thông tin hợp đồng không hợp lệ', merged.error.flatten().fieldErrors)
-    const saved = await BuildingContractProfileRepository.upsert(event, building.id, merged.data, user.id)
+    const saved = await BuildingContractProfileRepository.upsert(event, building.id, patchedValues(patch, merged.data), user.id)
 
     await AuditService.append(event, user, {
       building_id: building.id,
       action: AUDIT_ACTIONS.BUILDING_CONTRACT_PROFILE_UPDATED,
       entity_type: 'building',
       entity_id: building.id,
-      metadata: { configured_first_time: !existing, changed_fields: changedFields(existing, merged.data) },
+      metadata: { configured_first_time: !existing, changed_fields: changedFields(existing, merged.data).filter(key => key in patch) },
     })
     return present(user, mapBuildingContractProfile(saved))!
   },

@@ -37,21 +37,27 @@ beforeEach(() => {
 })
 
 describe('BuildingContractProfileService.patch', () => {
-  it('merges the patch over the stored row and keeps untouched fields', async () => {
+  it('validates against the stored row but writes only the patched keys', async () => {
     const { BuildingContractProfileService } = await import('../../../server/services/buildings/contract-profile')
     await BuildingContractProfileService.patch(ev(), owner, 'b-1', { notice_days: 30 })
 
-    const written = upsertProfile.mock.calls[0]![2]
-    expect(written).toMatchObject({ notice_days: 30, lessor_id_number: '012345678901', signed_copies: 4, copies_per_party: 2 })
+    expect(upsertProfile.mock.calls[0]![2]).toEqual({ notice_days: 30 })
     expect(assertBuildingScope).toHaveBeenCalledWith(expect.anything(), owner, 'b-1', 'write')
   })
 
-  it('creates a profile from defaults when none exists', async () => {
+  it('writes the normalized value of the patched key', async () => {
+    const { BuildingContractProfileService } = await import('../../../server/services/buildings/contract-profile')
+    await BuildingContractProfileService.patch(ev(), owner, 'b-1', { lessor_phone: '0901 234 568' })
+
+    expect(upsertProfile.mock.calls[0]![2]).toEqual({ lessor_phone: '0901234568' })
+  })
+
+  it('creates a profile writing only the patched keys when none exists', async () => {
     findProfile.mockResolvedValue(null)
     const { BuildingContractProfileService } = await import('../../../server/services/buildings/contract-profile')
     await BuildingContractProfileService.patch(ev(), owner, 'b-1', { lessor_full_name: 'Chủ Mới' })
 
-    expect(upsertProfile.mock.calls[0]![2]).toMatchObject({ lessor_full_name: 'Chủ Mới', signed_copies: 2, copies_per_party: 1, notice_days: null })
+    expect(upsertProfile.mock.calls[0]![2]).toEqual({ lessor_full_name: 'Chủ Mới' })
   })
 
   it('rejects a patch that breaks the copies rule after merging', async () => {
