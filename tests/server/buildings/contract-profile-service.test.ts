@@ -104,6 +104,49 @@ describe('BuildingContractProfileService.save', () => {
   })
 })
 
+describe('BuildingContractProfileService.save without pii.read', () => {
+  const editor = { id: 'e-1', app_metadata: { role: 'editor' } } as AuthUser
+  const parse = async (overrides: Record<string, unknown>) => {
+    const { buildingContractProfileSchema } = await import('~/utils/validators/building-contract-profile')
+    return buildingContractProfileSchema.parse({
+      ...Object.fromEntries(Object.entries(row).filter(([k]) => !['building_id', 'updated_by', 'created_at', 'updated_at'].includes(k))),
+      ...overrides,
+    })
+  }
+
+  beforeEach(() => {
+    vi.stubGlobal('can', (_user: AuthUser, cap: string) => cap !== 'building-contract-profile.pii.read')
+    upsertProfile.mockResolvedValue(row)
+  })
+
+  it('forbids changing a PII field', async () => {
+    const { BuildingContractProfileService } = await import('../../../server/services/buildings/contract-profile')
+    const input = await parse({ lessor_id_number: '987654321' })
+    await expect(BuildingContractProfileService.save(ev(), editor, 'b-1', input)).rejects.toMatchObject({ statusCode: 403 })
+    expect(upsertProfile).not.toHaveBeenCalled()
+  })
+
+  it('forbids clearing a PII field', async () => {
+    const { BuildingContractProfileService } = await import('../../../server/services/buildings/contract-profile')
+    const input = await parse({ lessor_permanent_address: null })
+    await expect(BuildingContractProfileService.save(ev(), editor, 'b-1', input)).rejects.toMatchObject({ statusCode: 403 })
+  })
+
+  it('allows a save that leaves PII values unchanged', async () => {
+    const { BuildingContractProfileService } = await import('../../../server/services/buildings/contract-profile')
+    const input = await parse({ notice_days: 45 })
+    await BuildingContractProfileService.save(ev(), editor, 'b-1', input)
+    expect(upsertProfile).toHaveBeenCalledTimes(1)
+  })
+
+  it('treats first-time PII values as a change', async () => {
+    findProfile.mockResolvedValue(null)
+    const { BuildingContractProfileService } = await import('../../../server/services/buildings/contract-profile')
+    const input = await parse({})
+    await expect(BuildingContractProfileService.save(ev(), editor, 'b-1', input)).rejects.toMatchObject({ statusCode: 403 })
+  })
+})
+
 describe('BuildingContractProfileService.readiness', () => {
   it('uses unmasked data even for managers', async () => {
     const { BuildingContractProfileService } = await import('../../../server/services/buildings/contract-profile')

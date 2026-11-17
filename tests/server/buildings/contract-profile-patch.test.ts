@@ -66,6 +66,32 @@ describe('BuildingContractProfileService.patch', () => {
     await expect(BuildingContractProfileService.patch(ev(), manager, 'b-1', { notice_days: 30 })).rejects.toMatchObject({ statusCode: 403 })
   })
 
+  describe('without building-contract-profile.pii.read', () => {
+    beforeEach(() => {
+      vi.stubGlobal('can', (_user: AuthUser, cap: string) => cap !== 'building-contract-profile.pii.read')
+    })
+
+    it.each(['lessor_date_of_birth', 'lessor_permanent_address', 'lessor_id_number'])('forbids patching %s', async (key) => {
+      const { BuildingContractProfileService } = await import('../../../server/services/buildings/contract-profile')
+      const value = key === 'lessor_date_of_birth' ? '1990-01-01' : key === 'lessor_id_number' ? '987654321' : 'Địa chỉ mới'
+      await expect(BuildingContractProfileService.patch(ev(), owner, 'b-1', { [key]: value }))
+        .rejects.toMatchObject({ statusCode: 403 })
+      expect(upsertProfile).not.toHaveBeenCalled()
+    })
+
+    it('forbids nulling a PII field', async () => {
+      const { BuildingContractProfileService } = await import('../../../server/services/buildings/contract-profile')
+      await expect(BuildingContractProfileService.patch(ev(), owner, 'b-1', { lessor_id_number: null }))
+        .rejects.toMatchObject({ statusCode: 403 })
+    })
+
+    it('still allows patching non-PII fields', async () => {
+      const { BuildingContractProfileService } = await import('../../../server/services/buildings/contract-profile')
+      await BuildingContractProfileService.patch(ev(), owner, 'b-1', { notice_days: 30 })
+      expect(upsertProfile).toHaveBeenCalledTimes(1)
+    })
+  })
+
   it('audits only the patched field names, never values', async () => {
     const { BuildingContractProfileService } = await import('../../../server/services/buildings/contract-profile')
     await BuildingContractProfileService.patch(ev(), owner, 'b-1', { lessor_email: 'chu@example.com' })
