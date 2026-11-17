@@ -90,4 +90,22 @@ describe('SettingsStepList', () => {
     expect(w.find('[aria-hidden="true"].rounded-full').exists()).toBe(false)
     expect(w.get('[data-test="badge"]').text()).toBe('Nâng cao')
   })
+
+  it('renders a locked step as a disabled, non-expandable row', async () => {
+    const w = mount(SettingsStepList, {
+      props: {
+        openId: 'lessor-profile',
+        steps: [{ id: 'lessor-profile', label: 'Bên cho thuê', summary: 'Cần chủ tòa hoàn tất', status: 'missing', missingCount: 1, locked: true }],
+      },
+      slots: { 'step-lessor-profile': '<div data-test="body-lessor">Form</div>' },
+      global: { stubs },
+    })
+    const toggle = w.get('[data-test="step-toggle-lessor-profile"]')
+
+    expect(toggle.attributes('disabled')).toBeDefined()
+    expect(w.get('[data-test="badge"]').text()).toBe('Cần chủ tòa')
+    expect(w.find('[data-test="body-lessor"]').exists()).toBe(false)
+    await toggle.trigger('click')
+    expect(w.emitted('update:openId')).toBeUndefined()
+  })
 })

@@ -2,6 +2,7 @@
 import type { BuildingInvoiceProfileSaveInput } from '~/types/building-invoice-profile'
 
 const emit = defineEmits<{ saved: [] }>()
+withDefaults(defineProps<{ submitLabel?: string }>(), { submitLabel: 'Lưu thay đổi' })
 const source = useBuildingSettingsSource()
 const id = source.id
 const settings = source.settings
@@ -86,6 +87,7 @@ async function handleSaveInvoiceEmailSettings(enabled: boolean) {
         :loading="loadingInvoiceProfile"
         :saving="savingInvoiceProfile"
         :error="invoiceProfileError"
+        :submit-label="submitLabel"
         @save="handleSaveInvoiceProfile"
       />
     </UiSurfacePanel>

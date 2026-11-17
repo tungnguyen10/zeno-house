@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { countActiveFinanceRules, deriveAdvancedSteps, deriveSetupSteps, nextSetupStepId, summarizeRequiredSteps, type SetupStepsInput } from '~/utils/building-setup-steps'
+import { countActiveFinanceRules, deriveAdvancedSteps, deriveSetupSteps, nextSetupStepId, resolveStepHash, summarizeRequiredSteps, type SetupStepsInput } from '~/utils/building-setup-steps'
 import { READINESS_LABELS } from '~/utils/constants/readiness'
 
 const ready = { ready: true, missing: [] }
@@ -86,6 +86,20 @@ describe('nextSetupStepId', () => {
   it('skips locked steps', () => {
     const flow = deriveSetupSteps({ ...newBuilding(), canViewContractProfile: false })
     expect(nextSetupStepId(flow, null)).toBe('basics')
+  })
+
+  it('returns null instead of restarting when the current step is locked or hidden', () => {
+    const locked = deriveSetupSteps(input({ canViewContractProfile: false }))
+    expect(nextSetupStepId(locked, 'lessor-profile')).toBeNull()
+    const hidden = deriveSetupSteps(input({ canViewInventory: false }))
+    expect(nextSetupStepId(hidden, 'inventory-template')).toBeNull()
+  })
+})
+
+describe('resolveStepHash', () => {
+  it('maps the old contract-profile hash to lessor-profile and keeps others', () => {
+    expect(resolveStepHash('contract-profile')).toBe('lessor-profile')
+    expect(resolveStepHash('basics')).toBe('basics')
   })
 })
 

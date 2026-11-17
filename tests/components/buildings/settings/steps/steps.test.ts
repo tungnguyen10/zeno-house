@@ -1,7 +1,6 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { computed, defineComponent, h, ref } from 'vue'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import ContractStep from '~/components/buildings/settings/steps/ContractStep.vue'
 import InventoryStep from '~/components/buildings/settings/steps/InventoryStep.vue'
 import { provideBuildingSettingsSource, useBuildingSettingsSource, type BuildingSettingsSource } from '~/composables/buildings/useBuildingSettingsSource'
 
@@ -30,91 +29,10 @@ function makeSource(): BuildingSettingsSource {
   }
 }
 
-function withSource<T extends object>(component: T, props: Record<string, unknown> = {}, source = makeSource(), components: Record<string, object> = {}) {
-  const onSaved = vi.fn()
-  const wrapper = mount(defineComponent({
-    setup() {
-      provideBuildingSettingsSource(source)
-      return () => h(component as never, { ...props, onSaved })
-    },
-  }), {
-    global: {
-      components: components as never,
-      stubs: {
-        UiSection: defineComponent({ setup(_, { slots }) { return () => h('section', [slots.actions?.(), slots.default?.()]) } }),
-        UiSurfacePanel: defineComponent({ setup(_, { slots }) { return () => h('div', slots.default?.()) } }),
-        UiAlert: defineComponent({ setup(_, { slots }) { return () => h('div', { 'data-test': 'alert' }, slots.default?.()) } }),
-        UiButton: defineComponent({
-          emits: ['click'],
-          setup(_, { slots, emit }) { return () => h('button', { onClick: () => emit('click') }, slots.default?.()) },
-        }),
-      },
-    },
-  })
-  return { wrapper, onSaved, source }
-}
-
 beforeEach(() => {
   toast.success.mockReset()
   toast.error.mockReset()
   allowed = []
-})
-
-describe('ContractStep', () => {
-  const save = vi.fn()
-  let formProps: Record<string, unknown> = {}
-  const ProfileStub = defineComponent({
-    props: ['profile', 'building', 'canEdit', 'saving', 'error', 'editPath'],
-    emits: ['save'],
-    setup(props, { emit }) {
-      formProps = props as Record<string, unknown>
-      return () => h('button', { 'data-test': 'save', onClick: () => emit('save', { lessor_full_name: 'Moi' }) })
-    },
-  })
-
-  beforeEach(() => {
-    save.mockReset()
-    formProps = {}
-    vi.stubGlobal('useBuildingContractProfile', () => ({ saving: ref(false), error: ref(null), save }))
-  })
-
-  const mountStep = () => withSource(ContractStep, {}, makeSource(), { BuildingContractProfileSettings: ProfileStub })
-
-  it('hands the profile, permission and settings edit path to the form', () => {
-    allowed = ['building-contract-profile.write']
-    mountStep()
-
-    expect(formProps.profile).toEqual(profile)
-    expect(formProps.canEdit).toBe(true)
-    expect(formProps.editPath).toBe('/dashboard/buildings/qa-v2-flow/settings#basics')
-  })
-
-  it('is read-only without the write permission', () => {
-    mountStep()
-
-    expect(formProps.canEdit).toBe(false)
-  })
-
-  it('saves, shows a success toast and tells the page to close the step', async () => {
-    save.mockResolvedValue(undefined)
-    const { wrapper, onSaved } = mountStep()
-    await wrapper.get('[data-test="save"]').trigger('click')
-    await flushPromises()
-
-    expect(save).toHaveBeenCalledWith({ lessor_full_name: 'Moi' })
-    expect(toast.success).toHaveBeenCalledWith('Đã lưu thông tin hợp đồng của tòa nhà.')
-    expect(onSaved).toHaveBeenCalledTimes(1)
-  })
-
-  it('keeps the step open and stays silent when saving fails', async () => {
-    save.mockRejectedValue(new Error('boom'))
-    const { wrapper, onSaved } = mountStep()
-    await wrapper.get('[data-test="save"]').trigger('click')
-    await flushPromises()
-
-    expect(toast.success).not.toHaveBeenCalled()
-    expect(onSaved).not.toHaveBeenCalled()
-  })
 })
 
 describe('InventoryStep', () => {

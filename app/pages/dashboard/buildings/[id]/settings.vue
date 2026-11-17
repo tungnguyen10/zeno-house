@@ -2,7 +2,7 @@
 import type { ApiSuccess } from '~/types/api'
 import type { BuildingReadiness } from '~/types/building-contract-profile'
 import type { InventoryItem } from '~/types/inventory'
-import { countActiveFinanceRules, deriveAdvancedSteps, deriveSetupSteps } from '~/utils/building-setup-steps'
+import { countActiveFinanceRules, deriveAdvancedSteps, deriveSetupSteps, resolveStepHash } from '~/utils/building-setup-steps'
 import { buildingPath } from '~/utils/routes/operational'
 
 const route = useRoute()
@@ -40,7 +40,14 @@ const setupFlow = computed(() => deriveSetupSteps({
         paymentDueDay: building.value.paymentDueDay,
       }
     : null,
-  contractProfile: settings.value?.contractProfile ?? null,
+  contractProfile: settings.value?.contractProfile
+    ? {
+        lessorFullName: settings.value.contractProfile.lessorFullName,
+        lessorPhone: settings.value.contractProfile.lessorPhone,
+        defaultTermMonths: settings.value.contractProfile.defaultTermMonths,
+        defaultDepositMonths: settings.value.contractProfile.defaultDepositMonths,
+      }
+    : null,
   services: {
     activeCount: buildingServices.value.filter(service => service.isActive).length,
     unpricedActiveCount: buildingServices.value.filter(service => service.isActive && service.defaultAmount === 0).length,
@@ -96,9 +103,24 @@ function openStep(stepId: string) {
   scrollToStep(stepId)
 }
 
-function closeStep() {
-  openStepId.value = null
-}
+const setupMode = useBuildingSetupMode({
+  flow: setupFlow,
+  openStep: (stepId) => {
+    requestOpenStep(stepId)
+    if (stepId) scrollToStep(stepId)
+  },
+})
+
+const createContractPath = computed(() => {
+  if (!building.value) return '/dashboard/contracts/create'
+  const vacant = settings.value?.vacantRoomIds ?? []
+  const base = `/dashboard/contracts/create?building_id=${encodeURIComponent(building.value.id)}`
+  return vacant.length === 1 ? `${base}&room_id=${encodeURIComponent(vacant[0]!)}` : base
+})
+
+const hasRoomsWithoutInventory = computed(() =>
+  inventoryItems.value.length > 0 && (settings.value?.roomIdsWithoutInventory ?? []).length > 0,
+)
 
 function onDiscardConfirm() {
   if (pendingStepId.value === undefined) {
@@ -117,7 +139,7 @@ function onDiscardCancel() {
 }
 
 function applyHash() {
-  const hash = route.hash?.slice(1)
+  const hash = resolveStepHash(route.hash?.slice(1) ?? '')
   if (!hash) return
   if (setupFlow.value.steps.some(step => step.id === hash)) {
     requestOpenStep(hash)
@@ -139,52 +161,72 @@ watch(() => route.hash, applyHash)
 async function handleBasicsSaved() {
   await settingsSource.refresh()
   basicsDirty.value = false
-  closeStep()
   toast.success('Đã lưu thông tin tòa nhà.')
+  setupMode.afterSave('basics')
+}
+
+// Leave the step open while rooms still lack inventory so the apply suggestion stays visible.
+function handleInventorySaved() {
+  if (hasRoomsWithoutInventory.value) return
+  setupMode.afterSave('inventory-template')
 }
 </script>
 
 <template>
   <div class="space-y-6">
     <UiPageHeader
-      title="Cài đặt tòa nhà"
-      :description="building?.name"
+      :title="setupMode.active.value ? 'Thiết lập tòa nhà' : 'Cài đặt tòa nhà'"
+      :description="setupMode.active.value ? `${building?.name ?? ''} · Hoàn tất 4 bước bắt buộc để lập hợp đồng` : building?.name"
       :back-to="building ? buildingPath(building) : `/dashboard/buildings/${id}`"
       back-label="Quay lại tòa nhà"
     />
 
     <SettingsReadinessCard
       :flow="setupFlow"
-      create-contract-path="/dashboard/contracts/create"
+      :setup-mode="setupMode.active.value"
+      :create-contract-path="createContractPath"
+      :building-path="building ? buildingPath(building) : undefined"
       @open-step="openStep"
+      @exit-setup="setupMode.exit()"
     />
 
     <SettingsStepList :steps="setupFlow.steps" :open-id="openStepId" @update:open-id="requestOpenStep">
+      <template #step-lessor-profile>
+        <LessorProfileStep :submit-label="setupMode.submitLabel.value" @saved="setupMode.afterSave('lessor-profile')" />
+      </template>
+      <template #step-contract-terms>
+        <ContractTermsStep :submit-label="setupMode.submitLabel.value" @saved="setupMode.afterSave('contract-terms')" />
+      </template>
       <template #step-basics>
         <BasicsStep
           v-if="building"
           :building="building"
+          :submit-label="setupMode.submitLabel.value"
           @saved="handleBasicsSaved"
           @cancel="requestOpenStep(null)"
           @update:dirty="basicsDirty = $event"
         />
       </template>
       <template #step-invoice-profile>
-        <InvoiceProfileStep @saved="closeStep" />
+        <InvoiceProfileStep :submit-label="setupMode.submitLabel.value" @saved="setupMode.afterSave('invoice-profile')" />
       </template>
       <template #step-service-defaults>
         <ServicesStep />
+        <div v-if="setupMode.active.value" class="flex justify-end">
+          <UiButton size="sm" data-test="setup-services-next" @click="setupMode.skip('service-defaults')">Tiếp</UiButton>
+        </div>
       </template>
       <template #step-inventory-template>
         <InventoryStep
           :template="inventoryTemplate"
           :building-id="building?.id ?? id"
           :can-edit="canEditInventoryTemplate"
-          @saved="closeStep"
+          :submit-label="setupMode.submitLabel.value"
+          @saved="handleInventorySaved"
         />
-      </template>
-      <template #step-contract-profile>
-        <ContractStep @saved="closeStep" />
+        <div v-if="setupMode.active.value" class="flex justify-end">
+          <UiButton size="sm" variant="ghost" data-test="setup-inventory-skip" @click="setupMode.skip('inventory-template')">Bỏ qua</UiButton>
+        </div>
       </template>
     </SettingsStepList>
 

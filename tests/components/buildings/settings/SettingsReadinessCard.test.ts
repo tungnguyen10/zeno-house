@@ -56,6 +56,27 @@ describe('SettingsReadinessCard', () => {
     expect(w.get('[data-test="setup-create-contract"]').attributes('href')).toBe('/dashboard/contracts/create?building=zeno')
   })
 
+  it('offers exit in setup mode and the first-contract CTA once ready', async () => {
+    const w = mount(SettingsReadinessCard, {
+      props: {
+        flow: flow({ requiredReady: 3, ready: true, nextStepId: null }),
+        createContractPath: '/dashboard/contracts/create?building_id=b-1',
+        setupMode: true,
+        buildingPath: '/dashboard/buildings/zeno',
+      },
+      global: { stubs },
+    })
+
+    expect(w.get('[data-test="setup-create-contract"]').text()).toBe('Lập hợp đồng đầu tiên')
+    expect(w.get('[data-test="setup-view-building"]').attributes('href')).toBe('/dashboard/buildings/zeno')
+    await w.get('[data-test="setup-exit"]').trigger('click')
+    expect(w.emitted('exit-setup')).toHaveLength(1)
+  })
+
+  it('hides exit outside setup mode', () => {
+    expect(mountCard(flow()).find('[data-test="setup-exit"]').exists()).toBe(false)
+  })
+
   it('exposes progress to assistive tech', () => {
     const bar = mountCard(flow()).get('[role="progressbar"]')
 

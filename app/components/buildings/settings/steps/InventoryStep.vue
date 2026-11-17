@@ -2,11 +2,12 @@
 import type { InventoryApplyInput, InventoryItemInput } from '~/utils/validators/inventory'
 import { getApiErrorMessage } from '~/utils/api-error'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   template: ReturnType<typeof useInventoryTemplate>
   buildingId: string
   canEdit: boolean
-}>()
+  submitLabel?: string
+}>(), { submitLabel: 'Lưu nội thất mẫu' })
 
 const emit = defineEmits<{ saved: [] }>()
 const toast = useToast()
@@ -88,7 +89,7 @@ async function handleApply(input: InventoryApplyInput) {
       <UiAlert v-if="error" severity="danger" class="mb-3">{{ error }}</UiAlert>
       <InventoryItemsEditor v-model="draft" :disabled="!canEdit" />
       <div v-if="canEdit" class="mt-3 flex justify-end">
-        <UiButton size="sm" :loading="saving" @click="handleSave">Lưu nội thất mẫu</UiButton>
+        <UiButton size="sm" :loading="saving" @click="handleSave">{{ submitLabel }}</UiButton>
       </div>
     </UiSurfacePanel>
 

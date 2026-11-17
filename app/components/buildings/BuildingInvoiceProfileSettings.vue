@@ -5,13 +5,14 @@ import type {
   BuildingInvoiceProfileSaveInput,
 } from '~/types/building-invoice-profile'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   profile: BuildingInvoiceProfile | null
   canEdit: boolean
   loading: boolean
   saving: boolean
   error: string | null
-}>()
+  submitLabel?: string
+}>(), { submitLabel: 'Lưu thay đổi' })
 
 const emit = defineEmits<{
   save: [intent: BuildingInvoiceProfileSaveInput]
@@ -237,7 +238,7 @@ onBeforeUnmount(() => {
 
       <div v-if="canEdit" class="flex justify-end border-t border-ui-border pt-4">
         <UiButton class="whitespace-nowrap" :loading="saving" :disabled="saving" @click="submit">
-          Lưu thay đổi
+          {{ submitLabel }}
         </UiButton>
       </div>
     </template>

@@ -174,7 +174,14 @@ export function nextSetupStepId(flow: SetupFlow, currentId: SetupStepId | null):
   if (missingRequired) return missingRequired.id
   if (currentId === null) return null
   const index = open.findIndex(step => step.id === currentId)
-  return open.slice(index + 1).find(step => !step.required)?.id ?? null
+  // A current step that is locked or hidden is not in `open`; there is nothing after it to advance to.
+  return open.slice(index === -1 ? open.length : index + 1).find(step => !step.required)?.id ?? null
+}
+
+const STEP_HASH_ALIASES: Record<string, SetupStepId> = { 'contract-profile': 'lessor-profile' }
+
+export function resolveStepHash(hash: string): string {
+  return STEP_HASH_ALIASES[hash] ?? hash
 }
 
 export function summarizeRequiredSteps(readiness: BuildingReadiness): {

@@ -11,12 +11,35 @@ describe('building settings setup flow page', () => {
     expect(page).toContain('deriveSetupSteps(')
   })
 
-  it('has a slot for each required and optional setup step in flow order', () => {
-    const order = ['basics', 'invoice-profile', 'service-defaults', 'inventory-template', 'contract-profile']
+  it('has a slot for each step in the new order', () => {
+    const order = ['lessor-profile', 'contract-terms', 'basics', 'invoice-profile', 'service-defaults', 'inventory-template']
     const positions = order.map(id => page.indexOf(`<template #step-${id}>`))
 
     expect(positions.every(position => position > -1)).toBe(true)
     expect([...positions].sort((a, b) => a - b)).toEqual(positions)
+    expect(page).not.toContain('<ContractStep')
+  })
+
+  it('wires setup mode: relabelled saves, skip for optional steps, completion CTA with building_id', () => {
+    expect(page).toContain('useBuildingSetupMode(')
+    expect(page).toContain(':submit-label="setupMode.submitLabel.value"')
+    expect(page).toContain('setupMode.skip(')
+    expect(page).toContain('/dashboard/contracts/create?building_id=')
+    expect(page).toContain('Thiết lập tòa nhà')
+  })
+
+  it('aliases the old contract-profile hash', () => {
+    expect(page).toContain('resolveStepHash(')
+  })
+
+  it('does not auto-advance after the inventory template while rooms still lack inventory', () => {
+    expect(page).toContain('roomIdsWithoutInventory')
+    expect(page).toContain('@saved="handleInventorySaved"')
+    expect(page).toContain("setupMode.afterSave('inventory-template')")
+  })
+
+  it('passes the lessor phone into the step derivation', () => {
+    expect(page).toContain('lessorPhone')
   })
 
   it('keeps advanced groups out of the setup progress', () => {
