@@ -1,5 +1,7 @@
 -- Folds building owner contact into the lessor profile (single source). Additive only:
 -- buildings.owner_* stay until a later migration removes them.
+-- Phones are copied only when they pass the app's phone validator: VN mobile (0XX format),
+-- +84 form (converted to 0XX), or +international (8-15 digits); other values are skipped.
 begin;
 
 alter table public.building_contract_profiles
@@ -15,6 +17,9 @@ with src as (
         then regexp_replace(b.owner_phone, '[[:space:].()-]', '', 'g')
       when regexp_replace(b.owner_phone, '[[:space:].()-]', '', 'g') ~ '^\+?84[0-9]{9}$'
         then '0' || right(regexp_replace(b.owner_phone, '[[:space:].()-]', '', 'g'), 9)
+      when regexp_replace(b.owner_phone, '[[:space:].()-]', '', 'g') ~ '^\+[1-9][0-9]{7,14}$'
+        and not regexp_replace(b.owner_phone, '[[:space:].()-]', '', 'g') like '+84%'
+        then regexp_replace(b.owner_phone, '[[:space:].()-]', '', 'g')
     end as phone,
     case
       when length(btrim(b.owner_email)) <= 254

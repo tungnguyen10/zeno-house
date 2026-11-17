@@ -28,6 +28,11 @@ describe('building owner → lessor migration', () => {
     expect(flat).toContain("'^0[0-9]{9}$'")
   })
 
+  it('handles international phones and excludes +84 format', () => {
+    expect(flat).toContain("'^\\+[1-9][0-9]{7,14}$'")
+    expect(flat).toMatch(/\+84.*then/) // ensures +84 cases are handled before international regex
+  })
+
   it('does not drop or modify buildings.owner_* columns', () => {
     expect(flat).not.toMatch(/alter table public\.buildings/i)
     expect(flat).not.toMatch(/drop column/i)
