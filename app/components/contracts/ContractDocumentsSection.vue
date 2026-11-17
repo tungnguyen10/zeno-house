@@ -4,7 +4,7 @@ import type { StatusVariant } from '~/utils/constants/statuses'
 import { getApiErrorMessage } from '~/utils/api-error'
 import { useContractDocuments } from '~/composables/contracts/useContractDocuments'
 
-const props = defineProps<{ contractId: string }>()
+const props = defineProps<{ contractId: string; lastRenewalAt?: string | null }>()
 
 const authStore = useAuthStore()
 const docs = useContractDocuments(() => props.contractId)
@@ -26,6 +26,13 @@ const STATUS_VARIANTS: Record<ContractDocumentStatus, StatusVariant> = {
 const typeLabel = (t: ContractDocument['type']) => (t === 'appendix' ? 'Phụ lục' : 'Hợp đồng')
 
 onMounted(docs.refresh)
+
+// An issued (unsigned) file keeps the end date and rent from the time it was generated.
+const staleAfterRenewal = computed(() => {
+  const renewedAt = props.lastRenewalAt
+  if (!renewedAt) return null
+  return docs.documents.value.find(d => d.type === 'contract' && d.status === 'issued' && d.issuedAt !== null && d.issuedAt < renewedAt) ?? null
+})
 
 const voidValid = computed(() => voidReason.value.trim().length >= 10)
 const voidError = ref<string | null>(null)
@@ -95,6 +102,10 @@ async function confirmVoid() {
           Xuất hợp đồng
         </UiButton>
       </header>
+
+      <UiAlert v-if="staleAfterRenewal" severity="warning" class="mb-3" data-test="documents-stale-renewal">
+        Hợp đồng đã được gia hạn sau khi phát hành bản {{ staleAfterRenewal.versionNo }}. File này có thể còn ngày kết thúc và giá thuê cũ; dùng "Hủy & phát hành lại" để cập nhật.
+      </UiAlert>
 
       <div v-if="docs.isLoading.value" class="text-sm text-ui-muted">Đang tải…</div>
       <UiAlert v-else-if="docs.error.value" severity="danger">{{ docs.error.value }}</UiAlert>

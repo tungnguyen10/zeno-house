@@ -75,6 +75,26 @@ describe('ContractDocumentsSection', () => {
     expect(posts[0]![0]).toBe('/api/contract-documents/d-1/sign')
   })
 
+  it('warns when an unsigned contract document was issued before the latest renewal', async () => {
+    const issued = { id: 'd-1', type: 'contract', amendmentId: null, versionNo: 2, status: 'issued', templateVersion: 1, signedDate: '2026-11-12', issuedAt: '2026-11-12T00:00:00Z' }
+    fetchMock.mockResolvedValue({ data: [issued] })
+    const w = mount(ContractDocumentsSection, { props: { contractId: 'c-1', lastRenewalAt: '2026-11-13T00:00:00Z' }, global: { stubs } })
+    await flushPromises()
+    expect(w.find('[data-test="documents-stale-renewal"]').exists()).toBe(true)
+    expect(w.find('[data-test="documents-stale-renewal"]').text()).toContain('bản 2')
+  })
+
+  it.each([
+    ['issued after the renewal', { status: 'issued', issuedAt: '2026-11-14T00:00:00Z' }, '2026-11-13T00:00:00Z'],
+    ['signed before the renewal', { status: 'signed', issuedAt: '2026-11-12T00:00:00Z' }, '2026-11-13T00:00:00Z'],
+    ['no renewal yet', { status: 'issued', issuedAt: '2026-11-12T00:00:00Z' }, null],
+  ])('does not warn when %s', async (_label, doc, lastRenewalAt) => {
+    fetchMock.mockResolvedValue({ data: [{ id: 'd-1', type: 'contract', amendmentId: null, versionNo: 1, templateVersion: 1, signedDate: '2026-11-12', ...doc }] })
+    const w = mount(ContractDocumentsSection, { props: { contractId: 'c-1', lastRenewalAt }, global: { stubs } })
+    await flushPromises()
+    expect(w.find('[data-test="documents-stale-renewal"]').exists()).toBe(false)
+  })
+
   it('only voids a failed document (nothing to replace it with yet)', async () => {
     const failed = { id: 'd-9', type: 'contract', amendmentId: null, versionNo: 1, status: 'failed', templateVersion: 1, signedDate: '2026-11-12', issuedAt: null }
     fetchMock.mockImplementation(async (url: string, opts?: { method?: string }) => (opts?.method === 'POST' ? { data: { ...failed, status: 'voided' } } : { data: [failed] }))

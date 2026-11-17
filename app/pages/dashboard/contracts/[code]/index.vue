@@ -73,6 +73,7 @@ onBeforeUnmount(() => {
 
 const { payments, isLoading: paymentsLoading, addPayment, updatePayment, removePayment } = useContractPayments(id)
 const { renewals, isLoading: renewalsLoading, renew } = useContractRenewals(id)
+const lastRenewalAt = computed(() => renewals.value.reduce<string | null>((latest, r) => (latest === null || r.createdAt > latest ? r.createdAt : latest), null))
 const { occupants, isLoading: occupantsLoading, error: occupantsError, addOccupant, moveOut, removeOccupant } = useContractOccupants(id)
 const { services: contractServices, isLoading: servicesLoading, error: servicesError, updateService: updateContractService, removeService: removeContractService } = useContractServices(id)
 const {
@@ -294,7 +295,7 @@ function sectionLinkClass(sectionId: string) {
         :active-occupant-count="activeOccupantCount"
       />
 
-      <ContractDocumentsSection :contract-id="contract.id" class="mt-4" />
+      <ContractDocumentsSection :contract-id="contract.id" :last-renewal-at="lastRenewalAt" class="mt-4" />
 
       <ContractAmendmentsSection
         :contract="contract"
