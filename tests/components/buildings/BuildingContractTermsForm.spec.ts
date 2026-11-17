@@ -95,6 +95,25 @@ describe('BuildingContractTermsForm', () => {
     expect(inputByLabel(w, 'Số tháng tự gia hạn').element.value).toBe('0')
   })
 
+  it('shows the suggestion hint when a saved profile still has null suggested terms', () => {
+    const w = mount(BuildingContractTermsForm, {
+      props: {
+        profile: { ...savedProfile, defaultTermMonths: null, noticeDays: null } as never,
+        building: buildingWithSchedule, canEdit: true, saving: false, error: null,
+      },
+      global: { stubs },
+    })
+    expect(w.text()).toContain('Đã điền sẵn giá trị thường dùng. Xem lại rồi lưu.')
+  })
+
+  it('hides the suggestion hint once every suggested term is saved', () => {
+    const w = mount(BuildingContractTermsForm, {
+      props: { profile: savedProfile as never, building: buildingWithSchedule, canEdit: true, saving: false, error: null },
+      global: { stubs },
+    })
+    expect(w.text()).not.toContain('Đã điền sẵn giá trị thường dùng')
+  })
+
   it('emits save with only terms keys and numeric values', async () => {
     const w = mount(BuildingContractTermsForm, {
       props: { profile: null, building: buildingWithSchedule, canEdit: true, saving: false, error: null },

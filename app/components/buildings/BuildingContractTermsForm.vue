@@ -28,7 +28,11 @@ const form = reactive(contractTermsInitialValues(props.profile))
 watch(() => props.profile, value => Object.assign(form, contractTermsInitialValues(value)))
 const fieldErrors = ref<Record<string, string>>({})
 
-const showSuggestionHint = computed(() => !props.profile?.updatedAt)
+const showSuggestionHint = computed(() => {
+  const p = props.profile
+  return !p || [p.defaultTermMonths, p.defaultDepositMonths, p.noticeDays, p.depositRefundDays, p.renewalMonths]
+    .some(value => value === null)
+})
 
 const DEPOSIT_PRESETS = [0.5, 1, 1.5, 2, 3]
 const DEPOSIT_UNIT_OPTIONS = [
