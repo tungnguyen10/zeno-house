@@ -10,7 +10,7 @@ export function contractDocumentFixture(): Record<string, unknown> {
     phone: '0901234567',
   })
   return {
-    building: { brand_name: 'Zeno House', address: '1 Nguyễn Huệ' },
+    building: { brand_name: 'Zeno House', address: '1 Nguyễn Huệ', contact_phone: '0900000000' },
     contract: {
       number: 'HD-2026-001',
       signed_date_text: 'ngày 12 tháng 11 năm 2026',
@@ -29,11 +29,12 @@ export function contractDocumentFixture(): Record<string, unknown> {
     lessor: party('Chủ Nhà Giả Lập'),
     tenant: party('Người Thuê Giả Lập'),
     room: { number: 'P101' },
-    utilities: { electricity_price_display: '3.500 đ/kWh', water_price_display: '15.000', water_unit: 'm³' },
+    handover: { electricity_display: '1.200 kWh', water_display: '340 m³' },
+    utilities: { electricity_price_display: '3.500 VNĐ/kWh', water_price_display: '15.000', water_unit: 'm³' },
     payment: {
       due_day_start: '1',
       due_day_end: '5',
-      overdue_clause: 'Nếu sau ngày 10 của tháng không đóng tiền, Bên A có quyền chấm dứt hợp đồng.',
+      overdue_clause: 'Nếu sau ngày 10 của tháng không đóng tiền,',
       account_holder: 'CHU NHA',
       account_number: '0123456789',
       bank_name: 'Vietcombank',
@@ -59,9 +60,7 @@ export function contractDocumentFixture(): Record<string, unknown> {
       { index: 2, name: 'Internet', unit_price_display: '100.000', unit_label: 'phòng/tháng', note: 'Chung' },
     ],
     inventory: [
-      { index: 1, name: 'Giường đơn', quantity: '1', condition_label: 'Tốt', unit_value_display: '2.000.000', note: '' },
+      { index: 1, name_display: 'Giường đơn', value_display: '2.000.000', note_display: 'Tốt' },
     ],
-    inventory_total_display: '2.000.000',
-    inventory_empty_text: '',
   }
 }

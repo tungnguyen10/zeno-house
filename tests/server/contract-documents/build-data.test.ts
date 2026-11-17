@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildContractDocumentData, type ContractDocumentSources, type DocParty } from '../../../server/services/contract-documents/build-data'
+import { buildContractDocumentData, pickHandoverReadings, type ContractDocumentSources, type DocParty } from '../../../server/services/contract-documents/build-data'
 import { collectMissing } from '../../../server/services/contract-documents/missing'
 import { renderDocx } from '../../../server/services/contract-documents/render'
 import { CONTRACT_TEMPLATES } from '../../../server/assets/contract-templates/manifest'
@@ -15,7 +15,7 @@ const party = (name: string, overrides: Partial<DocParty> = {}): DocParty => ({
 function sources(overrides: Partial<ContractDocumentSources> = {}): ContractDocumentSources {
   return {
     contract: { contractCode: 'HD-2026-001', roomNumber: 'P101', startDate: '2026-11-12', endDate: '2027-11-11', monthlyRent: 3_000_000, deposit: 4_500_000, occupantCount: 3 },
-    building: { name: 'Zeno', address: '1 Nguyễn Huệ', code: 'ZEN', electricityPricingType: 'per_kwh', defaultElectricityRate: 3500, waterPricingType: 'per_m3', defaultWaterRate: 15000, billingGenerationDay: 1, paymentDueDay: 5, gracePeriodDays: 5 } as never,
+    building: { name: 'Zeno', address: '1 Nguyễn Huệ', code: 'ZEN', electricityPricingType: 'per_kwh', defaultElectricityRate: 3500, waterPricingType: 'per_m3', defaultWaterRate: 15000, billingGenerationDay: 1, paymentDueDay: 5, gracePeriodDays: 5, ownerPhone: '0900000000' } as never,
     lessor: {
       buildingId: 'b-1', lessorFullName: 'Chủ Nhà', lessorDateOfBirth: '1975-01-01', lessorPermanentAddress: 'Huế',
       lessorIdNumber: '012000000001', lessorIdIssuedDate: '2020-01-01', lessorIdIssuedPlace: 'Huế', lessorPhone: '0900000000',
@@ -33,6 +33,7 @@ function sources(overrides: Partial<ContractDocumentSources> = {}): ContractDocu
     ],
     inventory: { sourceContractId: null, sourceContractCode: null, items: [{ id: 'i1', name: 'Giường đơn', quantity: 1, condition: 'good', unitValue: 2_000_000, note: null, sortOrder: 0 }] },
     handoverDate: '2026-11-12',
+    handoverReadings: { electricity: 1200, water: 340 },
     signedDate: '2026-12-05',
     ...overrides,
   }
@@ -52,22 +53,22 @@ describe('buildContractDocumentData', () => {
     expect(c.deposit_words).toBe('Bốn triệu năm trăm nghìn đồng')
     expect(c.deposit_months_equiv).toBe('1,5')
     expect(c.signed_date_text).toBe('ngày 05 tháng 12 năm 2026')
-    expect((data.payment as Record<string, string>).overdue_clause).toContain('sau ngày 10')
+    expect((data.payment as Record<string, string>).overdue_clause).toBe('Nếu sau ngày 10 của tháng không đóng tiền,')
     expect((data.occupants as { index: number; full_name: string }[]).map(o => o.full_name)).toEqual(['Người Thuê Giả Lập', 'Người Ở A', 'Người Ở B'])
     expect((data.services as { unit_label: string; note: string }[])[0]).toMatchObject({ unit_label: 'phòng/tháng', note: '' })
     expect((data.services as { unit_label: string }[])[1]!.unit_label).toBe('xe/tháng')
-    expect(data.inventory_empty_text).toBe('')
-    expect(data.inventory_total_display).toBe('2.000.000')
+    expect((data.inventory as unknown[])[0]).toEqual({ index: 1, name_display: 'Giường đơn', value_display: '2.000.000', note_display: 'Tốt' })
+    expect((data.building as Record<string, string>).contact_phone).toBe('0900000000')
     expect((data.payment as Record<string, string>).transfer_content).toBe('ZEN P101 mã hóa đơn kỳ')
   })
 
   it('labels utility prices with currency and unit', () => {
     const data = buildContractDocumentData(sources())
     const utilities = data.utilities as Record<string, string>
-    expect(utilities.electricity_price_display).toBe('3.500 đồng/kWh')
-    expect(utilities.water_price_display).toBe('15.000 đồng')
+    expect(utilities.electricity_price_display).toBe('3.500 VNĐ/kWh')
+    expect(utilities.water_price_display).toBe('15.000')
     const fixed = buildContractDocumentData(sources({ building: { ...sources().building, electricityPricingType: 'fixed', defaultElectricityRate: 200000 } }))
-    expect((fixed.utilities as Record<string, string>).electricity_price_display).toBe('200.000 đồng/phòng/tháng')
+    expect((fixed.utilities as Record<string, string>).electricity_price_display).toBe('200.000 VNĐ/phòng/tháng')
   })
 
   it('shows tiered electricity text and the grace-overflow clause', () => {
@@ -77,9 +78,16 @@ describe('buildContractDocumentData', () => {
     expect((overflow.payment as Record<string, string>).overdue_clause).toContain('quá 5 ngày sau hạn thanh toán')
   })
 
-  it('sets empty-inventory text when there are no items', () => {
-    const data = buildContractDocumentData(sources({ inventory: { sourceContractId: null, sourceContractCode: null, items: [] } }))
-    expect(data.inventory_empty_text).toBe('Không có tài sản bàn giao kèm theo.')
+  it('prints the handover meter readings with units, or a not-recorded text', () => {
+    const data = buildContractDocumentData(sources())
+    expect(data.handover).toEqual({ electricity_display: '1.200 kWh', water_display: '340 m³' })
+    const none = buildContractDocumentData(sources({ handoverReadings: { electricity: null, water: null } }))
+    expect(none.handover).toEqual({ electricity_display: 'Chưa ghi nhận', water_display: 'Chưa ghi nhận' })
+  })
+
+  it('multiplies inventory value by quantity and joins condition with note', () => {
+    const data = buildContractDocumentData(sources({ inventory: { sourceContractId: null, sourceContractCode: null, items: [{ id: 'i2', name: 'Ghế', quantity: 2, condition: 'used', unitValue: 100_000, note: 'Gỗ', sortOrder: 0 }] } }))
+    expect((data.inventory as unknown[])[0]).toEqual({ index: 1, name_display: 'Ghế (x2)', value_display: '200.000', note_display: 'Đã qua sử dụng - Gỗ' })
   })
 
   it('renders to a DOCX with no leftover placeholders', () => {
@@ -88,6 +96,25 @@ describe('buildContractDocumentData', () => {
     const text = new PizZip(out).file('word/document.xml').asText().replace(/<[^>]+>/g, '')
     expect(text).not.toMatch(/\{\{|\}\}/)
     expect(text).toContain('Người Thuê Giả Lập')
+  })
+})
+
+describe('pickHandoverReadings', () => {
+  const reading = (over: Record<string, unknown>) => ({ contractId: 'c-1', readingType: 'handover_in', meterType: 'electricity', readingValue: 10, readingDate: '2026-11-12', ...over })
+
+  it('takes the handover_in reading of this contract per meter type', () => {
+    const picked = pickHandoverReadings([
+      reading({ meterType: 'electricity', readingValue: 1200 }),
+      reading({ meterType: 'water', readingValue: 340 }),
+      reading({ readingType: 'monthly', readingValue: 1300 }),
+      reading({ contractId: 'other', readingValue: 99 }),
+      reading({ readingType: 'handover_out', readingValue: 1500 }),
+    ] as never, 'c-1')
+    expect(picked).toEqual({ electricity: 1200, water: 340 })
+  })
+
+  it('returns nulls when the contract has no handover reading', () => {
+    expect(pickHandoverReadings([], 'c-1')).toEqual({ electricity: null, water: null })
   })
 })
 

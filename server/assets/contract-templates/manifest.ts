@@ -13,7 +13,7 @@ export const CONTRACT_TEMPLATES: Record<TemplateManifestEntry['key'], TemplateMa
     version: 1,
     file: 'hop-dong-thue-phong/v1.docx',
     requiredPaths: [
-      'building.brand_name', 'building.address', 'contract.number', 'contract.signed_date_text',
+      'building.brand_name', 'building.address', 'building.contact_phone', 'contract.number', 'contract.signed_date_text',
       ...PARTY.map(f => `lessor.${f}`), ...PARTY.map(f => `tenant.${f}`),
       'room.number', 'contract.start_date', 'contract.end_date', 'contract.handover_date',
       'contract.monthly_rent_display', 'utilities.electricity_price_display', 'utilities.water_price_display', 'utilities.water_unit',
@@ -22,7 +22,7 @@ export const CONTRACT_TEMPLATES: Record<TemplateManifestEntry['key'], TemplateMa
       'payment.account_holder', 'payment.account_number', 'payment.bank_name', 'payment.transfer_content',
       'contract.deposit_display', 'contract.deposit_words', 'contract.deposit_months_equiv',
       'terms.notice_days', 'terms.deposit_refund_days', 'terms.renewal_months',
-      'contract.signed_copies', 'contract.copies_per_party', 'inventory_total_display', 'inventory_empty_text',
+      'contract.signed_copies', 'contract.copies_per_party', 'handover.electricity_display', 'handover.water_display',
     ],
   },
   'phu-luc-hop-dong': {

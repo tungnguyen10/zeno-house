@@ -8,10 +8,12 @@ import { ContractVehicleRepository } from '../../repositories/contract-vehicles'
 import { ContractServiceRepository } from '../../repositories/contract-services'
 import { BuildingRepository } from '../../repositories/buildings'
 import { RoomRepository } from '../../repositories/rooms'
+import { MeterReadingRepository } from '../../repositories/meter-readings'
 import { TenantRepository } from '../../repositories/tenants'
 import { BuildingInvoiceProfileRepository } from '../../repositories/building-invoice-profiles'
 import { BuildingContractProfileService } from '../buildings/contract-profile'
 import type { ContractDocumentSources, DocParty, DocService } from './build-data'
+import { pickHandoverReadings } from './build-data'
 
 function tenantToParty(t: Tenant | null): DocParty {
   return {
@@ -48,6 +50,7 @@ function pickBuilding(b: NonNullable<Awaited<ReturnType<typeof BuildingRepositor
     billingGenerationDay: b.billingGenerationDay,
     paymentDueDay: b.paymentDueDay,
     gracePeriodDays: b.gracePeriodDays,
+    ownerPhone: b.ownerPhone,
   }
 }
 
@@ -67,7 +70,7 @@ export async function gatherContractSources(event: H3Event, contractId: string, 
   const contract = await ContractRepository.findByIdentifier(event, contractId)
   if (!contract) throwNotFound('Không tìm thấy hợp đồng')
 
-  const [building, lessor, invoiceRow, tenant, occupantRows, vehicleRows, serviceRows, inventory] = await Promise.all([
+  const [building, lessor, invoiceRow, tenant, occupantRows, vehicleRows, serviceRows, inventory, roomReadings] = await Promise.all([
     BuildingRepository.findById(event, contract.buildingId),
     BuildingContractProfileService.getUnmaskedForServer(event, contract.buildingId),
     BuildingInvoiceProfileRepository.findByBuildingId(event, contract.buildingId),
@@ -76,6 +79,7 @@ export async function gatherContractSources(event: H3Event, contractId: string, 
     ContractVehicleRepository.list(event, contract.id),
     ContractServiceRepository.findByContract(event, contract.id),
     ContractRepository.findHandoverInventory(event, contract.id),
+    MeterReadingRepository.findByRoom(event, contract.roomId),
   ])
   if (!building) throwNotFound('Không tìm thấy tòa nhà')
 
@@ -102,6 +106,7 @@ export async function gatherContractSources(event: H3Event, contractId: string, 
     services: mapServices(serviceRows),
     inventory,
     handoverDate: contract.startDate,
+    handoverReadings: pickHandoverReadings(roomReadings, contract.id),
     signedDate,
   }
 }
@@ -137,6 +142,7 @@ export async function gatherReadinessSources(
     services: [],
     inventory: emptyInventory,
     handoverDate: '',
+    handoverReadings: { electricity: null, water: null },
     signedDate: '',
   }
   return { buildingId: room.buildingId, sources }

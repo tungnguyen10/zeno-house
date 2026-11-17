@@ -3,8 +3,8 @@ import type { Building } from '~/types/buildings'
 import type { BuildingContractProfile } from '~/types/building-contract-profile'
 import type { ContractVehicle } from '~/types/contract-vehicles'
 import type { HandoverInventory } from '~/types/inventory'
+import type { MeterReading } from '~/types/meter-readings'
 import { INVENTORY_CONDITION_LABELS } from '~/types/inventory'
-import { inventoryTotalValue } from '~/utils/mappers/inventory'
 import { formatCurrencyNumber } from '~/utils/format/currency'
 import { formatPaymentWindow } from '~/utils/format/payment-window'
 import { vndToWords } from '~/utils/format/vnd-words'
@@ -38,7 +38,7 @@ export interface DocService {
 
 export interface ContractDocumentSources {
   contract: DocContract
-  building: Pick<Building, 'name' | 'address' | 'code' | 'electricityPricingType' | 'defaultElectricityRate' | 'waterPricingType' | 'defaultWaterRate' | 'billingGenerationDay' | 'paymentDueDay' | 'gracePeriodDays'>
+  building: Pick<Building, 'name' | 'address' | 'code' | 'electricityPricingType' | 'defaultElectricityRate' | 'waterPricingType' | 'defaultWaterRate' | 'billingGenerationDay' | 'paymentDueDay' | 'gracePeriodDays' | 'ownerPhone'>
   lessor: BuildingContractProfile | null
   invoiceProfile: { bankName: string; accountHolder: string; accountNumber: string; transferContentTemplate: string } | null
   tenant: DocParty
@@ -47,7 +47,15 @@ export interface ContractDocumentSources {
   services: DocService[]
   inventory: HandoverInventory
   handoverDate: string
+  handoverReadings: { electricity: number | null; water: number | null }
   signedDate: string
+}
+
+/** The contract's own `handover_in` reading per meter type (null when none was recorded). */
+export function pickHandoverReadings(readings: MeterReading[], contractId: string): ContractDocumentSources['handoverReadings'] {
+  const own = readings.filter(r => r.readingType === 'handover_in' && r.contractId === contractId)
+  const value = (type: MeterReading['meterType']) => own.find(r => r.meterType === type)?.readingValue ?? null
+  return { electricity: value('electricity'), water: value('water') }
 }
 
 export type DocParty = DocPartySource & { fullName: string | null }
@@ -67,6 +75,11 @@ function signedDateText(iso: string): string {
 
 function waterUnit(type: Building['waterPricingType']): string {
   return type === 'per_m3' ? 'm³' : type === 'per_person' ? 'người' : 'phòng'
+}
+
+// Meter readings may carry decimals, unlike currency amounts.
+function readingDisplay(value: number | null, unit: string): string {
+  return value == null ? 'Chưa ghi nhận' : `${new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 2 }).format(value)} ${unit}`
 }
 
 function party(src: DocPartySource): Record<string, string> {
@@ -100,11 +113,12 @@ export function buildContractDocumentData(src: ContractDocumentSources): Record<
   const window = formatPaymentWindow(building)
   const electricityDisplay = building.electricityPricingType === 'tiered'
     ? 'Theo bậc thang của tòa nhà'
-    : `${formatCurrencyNumber(building.defaultElectricityRate ?? 0)} đồng/${building.electricityPricingType === 'fixed' ? 'phòng/tháng' : 'kWh'}`
+    : `${formatCurrencyNumber(building.defaultElectricityRate ?? 0)} VNĐ/${building.electricityPricingType === 'fixed' ? 'phòng/tháng' : 'kWh'}`
+  // The template continues the sentence after the comma.
   const overdueClause = window
     ? (window.overdueDay !== null
-        ? `Nếu sau ngày ${window.overdueDay} của tháng không đóng tiền, Bên A có quyền chấm dứt hợp đồng.`
-        : `Nếu quá ${window.graceDays} ngày sau hạn thanh toán không đóng tiền, Bên A có quyền chấm dứt hợp đồng.`)
+        ? `Nếu sau ngày ${window.overdueDay} của tháng không đóng tiền,`
+        : `Nếu quá ${window.graceDays} ngày sau hạn thanh toán không đóng tiền,`)
     : ''
 
   const occupants = [src.tenant, ...src.occupants].map((p, i) => ({ index: i + 1, ...party(p) }))
@@ -117,13 +131,18 @@ export function buildContractDocumentData(src: ContractDocumentSources): Record<
     unit_label: UNIT_LABELS[s.pricingType], note: str(s.notes),
   }))
   const inventoryItems = inventory.items.map((it, i) => ({
-    index: i + 1, name: str(it.name), quantity: String(it.quantity),
-    condition_label: INVENTORY_CONDITION_LABELS[it.condition], unit_value_display: it.unitValue == null ? '' : formatCurrencyNumber(it.unitValue),
-    note: str(it.note),
+    index: i + 1,
+    name_display: it.quantity > 1 ? `${it.name} (x${it.quantity})` : str(it.name),
+    value_display: it.unitValue == null ? '' : formatCurrencyNumber(it.unitValue * it.quantity),
+    note_display: [INVENTORY_CONDITION_LABELS[it.condition], it.note].filter(Boolean).join(' - '),
   }))
 
   return {
-    building: { brand_name: str(lessor?.brandName || building.name), address: str(building.address) },
+    building: {
+      brand_name: str(lessor?.brandName || building.name),
+      address: str(building.address),
+      contact_phone: str(building.ownerPhone || lessor?.lessorPhone),
+    },
     contract: {
       number: str(contract.contractCode),
       signed_date_text: signedDateText(src.signedDate),
@@ -147,9 +166,13 @@ export function buildContractDocumentData(src: ContractDocumentSources): Record<
     }),
     tenant: party(src.tenant),
     room: { number: str(contract.roomNumber) },
+    handover: {
+      electricity_display: readingDisplay(src.handoverReadings.electricity, 'kWh'),
+      water_display: readingDisplay(src.handoverReadings.water, 'm³'),
+    },
     utilities: {
       electricity_price_display: electricityDisplay,
-      water_price_display: `${formatCurrencyNumber(building.defaultWaterRate ?? 0)} đồng`,
+      water_price_display: formatCurrencyNumber(building.defaultWaterRate ?? 0),
       water_unit: waterUnit(building.waterPricingType),
     },
     payment: {
@@ -173,8 +196,6 @@ export function buildContractDocumentData(src: ContractDocumentSources): Record<
     vehicles,
     services,
     inventory: inventoryItems,
-    inventory_total_display: formatCurrencyNumber(inventoryTotalValue(inventory.items)),
-    inventory_empty_text: inventory.items.length > 0 ? '' : 'Không có tài sản bàn giao kèm theo.',
   }
 }
 
