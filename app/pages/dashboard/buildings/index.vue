@@ -345,6 +345,7 @@ async function onSubmitEdit(data: BuildingFormData) {
       <BuildingForm
         v-if="editForm"
         v-model="editForm"
+        variant="basics"
         :loading="editLoading"
         :errors="editFieldErrors"
         :is-dirty="true"

@@ -15,7 +15,7 @@ export interface PreviewRoom {
   manual: boolean
 }
 
-export function useQuickRoomPreview(options: { enabled?: boolean } = {}) {
+export function useQuickRoomPreview(options: { enabled?: boolean, initialRoomsPerFloor?: number } = {}) {
   const enabled = ref(options.enabled ?? false)
   const defaultRent = ref(0)
   const defaultArea = ref<number | null>(null)
@@ -24,7 +24,7 @@ export function useQuickRoomPreview(options: { enabled?: boolean } = {}) {
   const serverDuplicates = ref<string[]>([])
 
   const generator = ref<RoomGeneratorInput>({
-    floorFrom: 1, floorTo: 1, roomsPerFloor: 3, prefix: 'P', startSeq: 1, includeFloor: false, nameFloorStart: 1,
+    floorFrom: 1, floorTo: 1, roomsPerFloor: options.initialRoomsPerFloor ?? 3, prefix: 'P', startSeq: 1, includeFloor: false, nameFloorStart: 1,
   })
   const existingRoomNumbers = ref<string[]>([])
   const removed = ref(new Set<string>())

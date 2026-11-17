@@ -22,7 +22,8 @@ const formData = ref<BuildingFormData>({
 
 const initialSnapshot = ref<BuildingFormData>({ ...formData.value })
 
-const preview = useQuickRoomPreview()
+// Starts with no rooms generated: creating a building with zero rooms must stay possible.
+const preview = useQuickRoomPreview({ enabled: true, initialRoomsPerFloor: 0 })
 
 const {
   isLoading,
@@ -43,13 +44,17 @@ const {
 // Server-reported duplicates stay highlighted until the generator inputs change.
 watch(duplicateRoomNumbers, value => preview.markServerDuplicates(value))
 
-const submitLabel = computed(() => preview.enabled.value ? 'Tạo tòa nhà & phòng' : 'Tạo tòa nhà')
+const submitLabel = computed(() => {
+  const count = preview.toPayload().length
+  return count > 0 ? `Tạo tòa nhà và ${count} phòng` : 'Tạo tòa nhà'
+})
 
 async function onSubmit(data: BuildingFormData) {
-  if (preview.enabled.value && preview.duplicateRoomNumbers.value.length > 0) return
+  if (preview.duplicateRoomNumbers.value.length > 0) return
+  const rooms = preview.toPayload()
   await submitCreate({
     ...buildingFormToApiPayload(data),
-    rooms: preview.enabled.value ? preview.toPayload() : undefined,
+    rooms: rooms.length ? rooms : undefined,
   } as Parameters<typeof submitCreate>[0])
 }
 </script>
@@ -58,7 +63,7 @@ async function onSubmit(data: BuildingFormData) {
   <div>
     <UiPageHeader
       title="Thêm tòa nhà mới"
-      description="Khai báo thông tin toà nhà và tuỳ chọn tạo phòng ngay từ đầu."
+      description="Khai báo tòa nhà và phòng. Bên cho thuê, giá điện nước, thanh toán sẽ thiết lập ở bước tiếp theo."
       :back-to="'/dashboard/buildings'"
       back-label="Danh sách tòa nhà"
     />
@@ -69,6 +74,7 @@ async function onSubmit(data: BuildingFormData) {
 
     <BuildingForm
       v-model="formData"
+      variant="create"
       :loading="isLoading"
       :errors="errors"
       :has-draft="hasDraft"
@@ -81,11 +87,10 @@ async function onSubmit(data: BuildingFormData) {
     >
       <template #extras>
         <UiFormSection
-          title="Tạo phòng nhanh"
-          description="Tạo trước một loạt phòng theo dải tầng cùng lúc với tòa nhà. Có thể chỉnh tầng, giá, diện tích từng phòng."
+          title="Phòng"
+          description="Tạo luôn các phòng theo tầng. Có thể bỏ trống và thêm phòng sau."
         >
-          <UiCheckbox v-model="preview.enabled.value" label="Bật tạo phòng nhanh" />
-          <RoomBatchGenerator v-if="preview.enabled.value" :preview="preview" class="mt-4" />
+          <RoomBatchGenerator :preview="preview" />
         </UiFormSection>
       </template>
     </BuildingForm>

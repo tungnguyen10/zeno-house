@@ -22,11 +22,16 @@ describe('generateRoomNumbers', () => {
     expect(numbers({ includeFloor: false, floorTo: 1, roomsPerFloor: 2, startSeq: 101 })).toEqual(['1:P101', '1:P102'])
   })
 
+  it('treats roomsPerFloor 0 as a valid "no rooms yet" state, not an error', () => {
+    const r = generateRoomNumbers({ ...base, roomsPerFloor: 0 })
+    expect(r).toEqual({ rooms: [], error: null })
+  })
+
   it.each([
     [{ floorFrom: 3, floorTo: 1 }, 'floor_range'],
     [{ floorTo: 101 }, 'floor_range'],
     [{ roomsPerFloor: 100 }, 'rooms_per_floor'],
-    [{ roomsPerFloor: 0 }, 'rooms_per_floor'],
+    [{ roomsPerFloor: -1 }, 'rooms_per_floor'],
     [{ startSeq: 95, roomsPerFloor: 10 }, 'seq_overflow'],
     [{ floorTo: 21, roomsPerFloor: 10 }, 'too_many'],
   ])('reports %j as %s', (input, error) => {

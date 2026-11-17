@@ -2,7 +2,7 @@ import type { Building } from '~/types/buildings'
 import type { ApiSuccess } from '~/types/api'
 import { buildingCreateWithRoomsSchema, buildingUpdateSchema } from '~/utils/validators/buildings'
 import type { BuildingCreateWithRoomsInput, BuildingUpdateInput } from '~/utils/validators/buildings'
-import { buildingPath } from '~/utils/routes/operational'
+import { buildingPath, buildingSetupPath } from '~/utils/routes/operational'
 import { getApiErrorDetails } from '~/utils/api-error'
 import { useLocalFormDraft } from '~/composables/useLocalFormDraft'
 import { useFormState } from '~/composables/useFormState'
@@ -57,10 +57,11 @@ export function useBuildingForm<T = unknown>(options: UseBuildingFormOptions<T> 
 
     isLoading.value = true
     try {
-      await apiFetch<ApiSuccess<Building>>('/api/buildings', { method: 'POST', body: result.data })
+      const res = await apiFetch<ApiSuccess<Building>>('/api/buildings', { method: 'POST', body: result.data })
       clearDraft()
       clearNuxtData()
-      await navigateTo('/dashboard/buildings')
+      useToast().success('Đã tạo tòa nhà. Tiếp tục thiết lập để sẵn sàng cho thuê.')
+      await navigateTo(useAuthStore().canManage ? buildingSetupPath(res.data) : buildingPath(res.data))
     }
     catch (e: unknown) {
       const details = getApiErrorDetails<{ reason?: string; duplicate_room_numbers?: string[] }>(e)

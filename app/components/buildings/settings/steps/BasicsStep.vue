@@ -46,6 +46,7 @@ async function onSubmit(data: BuildingFormData) {
     <UiAlert v-if="apiError" severity="danger">{{ apiError }}</UiAlert>
     <BuildingForm
       v-model="formData"
+      variant="basics"
       :loading="isLoading"
       :errors="errors"
       :has-draft="hasDraft"

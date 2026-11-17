@@ -11,12 +11,15 @@ const props = withDefaults(defineProps<{
   submitLabel?: string
   hasDraft?: boolean
   isDirty?: boolean
+  /** 'create' hides pricing/schedule (set up later); 'basics' shows the full form. */
+  variant?: 'create' | 'basics'
 }>(), {
   errors: () => ({}),
   loading: false,
   submitLabel: 'Lưu',
   hasDraft: false,
   isDirty: false,
+  variant: 'basics',
 })
 
 const emit = defineEmits<{
@@ -236,6 +239,7 @@ const canSubmit = computed(() => !props.loading && (props.isDirty || props.hasDr
       </div>
     </UiFormSection>
 
+    <template v-if="variant === 'basics'">
     <UiFormSection title="Tính phí mặc định" description="Áp dụng cho mọi phòng trong toà — có thể ghi đè ở từng hợp đồng.">
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <UiSelect
@@ -370,6 +374,7 @@ const canSubmit = computed(() => !props.loading && (props.isDirty || props.hasDr
         </p>
       </template>
     </UiFormSection>
+    </template>
 
     <!-- Extension slot for page-specific groups (e.g. quick rooms on create). -->
     <slot name="extras" />
