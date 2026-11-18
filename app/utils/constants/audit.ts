@@ -87,6 +87,10 @@ export const AUDIT_ACTIONS = {
   BUILDING_EXPENSE_RECEIPT_ATTACHED: 'building_expense.receipt_attached',
   BUILDING_EXPENSE_RECEIPT_REMOVED: 'building_expense.receipt_removed',
 
+  BUILDING_OTHER_INCOME_CREATED: 'building_other_income.created',
+  BUILDING_OTHER_INCOME_UPDATED: 'building_other_income.updated',
+  BUILDING_OTHER_INCOME_VOIDED: 'building_other_income.voided',
+
   // Operations report — shared expenses
   SHARED_EXPENSE_CREATED: 'shared_expense.created',
   SHARED_EXPENSE_UPDATED: 'shared_expense.updated',
@@ -153,6 +157,7 @@ export const AUDIT_ENTITY_TYPES = [
   'meter_device',
   'user',
   'building_expense',
+  'building_other_income',
   'building_fixed_cost',
   'recurring_expense',
   'prepaid_expense',

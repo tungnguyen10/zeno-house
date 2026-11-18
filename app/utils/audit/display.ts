@@ -27,6 +27,7 @@ export const AUDIT_ENTITY_CATALOG: Record<AuditEntityType, AuditEntityCatalogEnt
   contract_service: { label: 'Dịch vụ hợp đồng', group: 'Hợp đồng', snapshotKeys: ['name', 'serviceName', 'service_name'], icon: 'IconLayers', ring: 'ring-teal-500/30', bg: 'bg-teal-500/15', fg: 'text-teal-300' },
   meter_device: { label: 'Đồng hồ', group: 'Master data', snapshotKeys: ['serialNumber', 'serial_number', 'code'], icon: 'IconCpu', ring: 'ring-fuchsia-500/30', bg: 'bg-fuchsia-500/15', fg: 'text-fuchsia-300' },
   user: { label: 'Người dùng', group: 'Phân quyền', snapshotKeys: ['fullName', 'full_name', 'name', 'email'], icon: 'IconUsers', ring: 'ring-sky-500/30', bg: 'bg-sky-500/15', fg: 'text-sky-300' },
+  building_other_income: { label: 'Khoản thu khác', group: 'Vận hành', snapshotKeys: ['name'], icon: 'IconReceipt', ring: 'ring-emerald-500/30', bg: 'bg-emerald-500/15', fg: 'text-emerald-300' },
   building_expense: { label: 'Khoản chi tòa nhà', group: 'Vận hành', snapshotKeys: ['name', 'note', 'category'], icon: 'IconReceipt', ring: 'ring-orange-500/30', bg: 'bg-orange-500/15', fg: 'text-orange-300' },
   building_fixed_cost: { label: 'Chi phí cố định', group: 'Vận hành', snapshotKeys: ['name', 'note', 'category'], icon: 'IconReceipt', ring: 'ring-orange-500/30', bg: 'bg-orange-500/15', fg: 'text-orange-300' },
   recurring_expense: { label: 'Chi phí định kỳ', group: 'Vận hành', snapshotKeys: ['name', 'note', 'category'], icon: 'IconRefresh', ring: 'ring-orange-500/30', bg: 'bg-orange-500/15', fg: 'text-orange-300' },

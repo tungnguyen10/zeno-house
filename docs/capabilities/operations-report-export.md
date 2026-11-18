@@ -60,3 +60,7 @@ The system SHALL share Excel-building and download helpers between billing, oper
 #### Scenario: Client download reused
 - **WHEN** either billing or operations report triggers a download
 - **THEN** it uses the shared client download composable that parses the response filename and initiates the browser download
+
+### Requirement: Independent building receipts
+
+Excel shows the same period collections, allocations, profit metrics and reserve credits as the report. The detailed section lists each active building receipt once with its date, amount and allocation.

@@ -30,6 +30,9 @@ const report: OperationsReport = {
   metrics: {
     issuedRevenue: 5_000_000,
     collectedCash: 4_000_000,
+    otherIncomeTotal: 800_000, otherIncomeProfitTotal: 0, otherIncomeReserveTotal: 800_000,
+    totalOperatingRevenue: 5_000_000, totalCollectedCash: 4_800_000,
+    settlementAllocationTotal: 0, refundTotal: 0,
     debt: 1_000_000,
     fixedCostTotal: 10_000_000,
     monthlyExpenseTotal: 1_500_000,
@@ -38,6 +41,12 @@ const report: OperationsReport = {
     profitByRevenue: -6_750_000,
     profitByCash: -7_750_000,
   },
+  otherIncomes: [{
+    id: 'sale', buildingId: 'building-1', periodYear: 2026, periodMonth: 6, name: 'Thanh lý máy giặt',
+    receivedDate: '2026-06-15', amount: 800_000, allocationTarget: 'reserve_fund',
+    payer: null, paymentMethod: null, transactionReference: null, note: null,
+    createdAt: '', updatedAt: '', createdBy: null, voidedAt: null, voidedBy: null, voidReason: null,
+  }],
   revenueByType: [{ key: 'rent', label: 'Tiền phòng', amount: 5_000_000 }],
   expenseByCategory: [{ key: 'repair', label: 'Sửa chữa / bảo trì', amount: 1_500_000 }],
   fixedCostByCategory: [{ key: 'rent', label: 'Tiền thuê nhà', amount: 10_000_000 }],
@@ -141,6 +150,9 @@ describe('OperationsReportExportService', () => {
     await workbook.xlsx.load(result.buffer)
     const sheet = workbook.getWorksheet('Báo cáo vận hành')
     expect(sheet).toBeDefined()
+    const rows = sheet!.getSheetValues()
+    expect(rows).toContainEqual(expect.arrayContaining(['Tổng đã thu của kỳ', 4_800_000]))
+    expect(rows).toContainEqual(expect.arrayContaining(['Thanh lý máy giặt', 800_000, 'Quỹ dự phòng']))
     expect(sheet?.getCell('A1').value).toBe('BÁO CÁO VẬN HÀNH 06/2026')
     expect(sheet?.getCell('A1').fill).toMatchObject({ fgColor: { argb: 'FFEAF2F8' } })
     expect(sheet?.getCell('A2').font?.color).toEqual({ argb: 'FF526579' })

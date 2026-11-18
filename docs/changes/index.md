@@ -4,6 +4,8 @@
 
 ## In progress / planned
 
+- [Building other income](./operations-other-income/implementation-plan.md) — report receipts allocated to reserves or profit, with billing duplicate checks.
+
 - [harden-event-audit](./harden-event-audit/verification.md) — 12/16 tasks; atomic DB audit/contract correlation and durable cross-system intent remain incomplete.
 - [zeno-house-v2-optimization](./zeno-house-v2-optimization/baseline-2026-11-16.md) — V2 PR0–PR5 source baseline review, integrity fixes and release gate matrix.
 - [tenant-v2](./tenant-v2/spec-and-implementation-plan.md) — Original umbrella specification; Quick Create is now merged, Claude autofill merged behind flag. Review individual change verification records instead of treating the entire design as unimplemented.

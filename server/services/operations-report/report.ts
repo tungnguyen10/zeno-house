@@ -69,6 +69,9 @@ async function buildReserveSummary(
   const monthlyDeduction = monthlyTransactions
     .filter(tx => tx.source === 'expense_deduction')
     .reduce((sum, tx) => sum + tx.amount, 0)
+  const monthlyOtherIncome = monthlyTransactions
+    .filter(tx => tx.source === 'other_income')
+    .reduce((sum, tx) => sum + tx.amount, 0)
   const isClosedReport = closure.status === 'closed'
   const appliedAccrual = isClosedReport ? accrual : null
   const effectiveRatePercent = accrual?.reserveRatePercent ?? effectiveRate
@@ -83,7 +86,8 @@ async function buildReserveSummary(
     monthlyAccrualEstimated,
     monthlyAccrualIsEstimated,
     monthlyDeduction,
-    monthlyBalance: monthlyAccrual - monthlyDeduction,
+    monthlyOtherIncome,
+    monthlyBalance: monthlyOtherIncome + monthlyAccrual - monthlyDeduction,
     cumulativeBalance,
     cumulativeBalanceIsEstimated: false,
   }
@@ -157,6 +161,15 @@ export const OperationsReportService = {
     // --- Revenue ---------------------------------------------------------
     const issuedRevenue = billing.invoices.reduce((s, inv) => s + inv.totalAmount, 0)
     const collectedCash = billing.invoices.reduce((s, inv) => s + inv.collected, 0)
+    const otherIncomes = snapshot.otherIncomes
+    let otherIncomeProfitTotal = 0
+    let otherIncomeReserveTotal = 0
+    for (const income of otherIncomes) {
+      if (income.allocationTarget === 'profit') otherIncomeProfitTotal += income.amount
+      else otherIncomeReserveTotal += income.amount
+    }
+    const otherIncomeTotal = otherIncomeProfitTotal + otherIncomeReserveTotal
+    const totalOperatingRevenue = issuedRevenue + otherIncomeProfitTotal
     const debt = billing.invoices.reduce((s, inv) => s + inv.balanceAmount, 0)
 
     const revenueMap = new Map<string, number>()
@@ -243,6 +256,11 @@ export const OperationsReportService = {
       metrics: {
         issuedRevenue,
         collectedCash,
+        otherIncomeProfitTotal,
+        otherIncomeReserveTotal,
+        otherIncomeTotal,
+        totalCollectedCash: collectedCash + otherIncomeTotal,
+        totalOperatingRevenue,
         settlementAllocationTotal: billing.settlementAllocationTotal ?? 0,
         refundTotal: billing.refundTotal ?? 0,
         debt,
@@ -250,9 +268,10 @@ export const OperationsReportService = {
         monthlyExpenseTotal,
         prepaidAllocationTotal,
         totalExpense,
-        profitByRevenue: issuedRevenue - totalExpense,
-        profitByCash: collectedCash - totalExpense,
+        profitByRevenue: totalOperatingRevenue - totalExpense,
+        profitByCash: collectedCash + otherIncomeProfitTotal - totalExpense,
       },
+      otherIncomes,
       revenueByType,
       expenseByCategory,
       fixedCostByCategory,
