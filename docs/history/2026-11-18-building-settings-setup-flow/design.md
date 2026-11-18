@@ -1,15 +1,15 @@
 ---
 type: Change Design
 title: "building-settings-setup-flow-design"
-status: draft
-change_state: design-review
+status: deprecated
+change_state: completed
 tags: [superpowers, change, buildings, settings, ui, v2]
 ---
 
 # Cài đặt tòa nhà theo luồng thiết lập
 
 > Sắp xếp lại trang `/dashboard/buildings/[slug]/settings` theo luồng thiết lập của
-> [ZENO House V2](../zeno-house-v2-optimization/brief.md). Thiết kế chưa được chấp nhận hay triển khai.
+> [ZENO House V2](../../changes/zeno-house-v2-optimization/brief.md). Thiết kế chưa được chấp nhận hay triển khai.
 
 ## 1. Mục tiêu
 

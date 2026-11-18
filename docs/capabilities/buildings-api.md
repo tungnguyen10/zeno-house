@@ -346,3 +346,14 @@ Building create/update payloads SHALL support optional `operational_start_year` 
 #### Scenario: List/detail include operational start period
 - **WHEN** authenticated users read building list or detail
 - **THEN** each building DTO includes `operationalStartYear` and `operationalStartMonth` (nullable)
+
+### Requirement: Building create and update do not carry owner contact
+`POST /api/buildings` and `PATCH /api/buildings/:id` SHALL NOT accept or return owner contact fields; the person who signs contracts is stored in the building contract profile (see [building-contract-profile](./building-contract-profile.md)). The legacy `buildings.owner_*` columns remain in the database but are neither read nor written by the application.
+
+#### Scenario: Owner keys are ignored
+- **WHEN** a create or update body contains `owner_name`, `owner_phone` or `owner_email`
+- **THEN** the keys are dropped by validation and never persisted
+
+#### Scenario: Create without pricing or schedule
+- **WHEN** a building is created with only name, address and optional rooms
+- **THEN** it is created with `per_kwh` and `per_m3` pricing types and empty rates and schedule, and readiness reports the missing items

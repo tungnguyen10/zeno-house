@@ -1,8 +1,8 @@
 ---
 type: Verification Record
 title: "building-settings-setup-flow — verification checkpoint"
-status: draft
-change_state: verification-pending
+status: deprecated
+change_state: completed
 tags: [change, verification, buildings, settings, ui, v2]
 ---
 

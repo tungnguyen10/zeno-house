@@ -1,14 +1,7 @@
-# Building onboarding V2
+# Building onboarding V2 — archived
 
-**Status: implemented on branch `feat/building-onboarding-v2`; verification pending.** Migration applied to production 2026-11-17; browser verification not yet done.
+The accepted implementation, design, plan and verification record were archived under [2026-11-18 building-onboarding-v2](../../history/2026-11-18-building-onboarding-v2/index.md). This is a redirect, **not an active implementation checklist**.
 
-- [Design](./design.md)
-- [Implementation plan](./implementation-plan.md)
-- [Verification](./verification.md)
-- Parent brief: [ZENO House V2 — Flow Optimization Brief](../zeno-house-v2-optimization/brief.md)
-- Builds on: [building-settings-setup-flow](../building-settings-setup-flow/index.md), [building-contract-defaults](../building-contract-defaults/index.md)
+- [Archived verification and release boundary](../../history/2026-11-18-building-onboarding-v2/verification.md)
 
-## Capabilities to update on acceptance
-
-- [buildings-ui](../../capabilities/buildings-ui.md)
-- [buildings-api](../../capabilities/buildings-api.md)
+Archiving does not assert any check that the archived record lists as not verified.

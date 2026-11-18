@@ -1,8 +1,8 @@
 ---
 type: Implementation Plan
 title: "building-onboarding-v2-implementation-plan"
-status: draft
-change_state: plan-review
+status: deprecated
+change_state: completed
 tags: [superpowers, change, buildings, settings, contracts, onboarding, v2]
 ---
 

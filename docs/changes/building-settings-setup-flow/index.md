@@ -1,12 +1,7 @@
-# Building settings — setup flow
+# Building settings - setup flow — archived
 
-**Status: accepted.** Implemented, verified, and promoted into the `buildings-ui` capability.
+The accepted implementation, design, plan and verification record were archived under [2026-11-18 building-settings-setup-flow](../../history/2026-11-18-building-settings-setup-flow/index.md). This is a redirect, **not an active implementation checklist**.
 
-- [Design](./design.md)
-- [Implementation plan](./implementation-plan.md)
-- [Verification](./verification.md)
-- Parent brief: [ZENO House V2 — Flow Optimization Brief](../zeno-house-v2-optimization/brief.md)
+- [Archived verification and release boundary](../../history/2026-11-18-building-settings-setup-flow/verification.md)
 
-## Capabilities to update on acceptance
-
-- [buildings-ui](../../capabilities/buildings-ui.md)
+Archiving does not assert any check that the archived record lists as not verified.

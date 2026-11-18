@@ -1,8 +1,8 @@
 ---
 type: Verification Record
 title: "building-onboarding-v2-verification"
-status: draft
-change_state: verification-pending
+status: deprecated
+change_state: completed
 tags: [change, verification, buildings, settings, contracts, onboarding, v2]
 ---
 
@@ -24,7 +24,7 @@ Branch `feat/building-onboarding-v2` (from `develop` bd9cf7ef). Evidence recorde
 - Read-only verification after the push:
   - column `public.building_contract_profiles.lessor_email` exists (`text`);
   - 4 buildings had owner contact; 4 profiles exist; every owner name and phone and email that was present was copied (`*_not_copied` = 0); 4 profiles have a name, 2 a phone, 1 an email.
-- `supabase/verification/building_owner_to_lessor.sql` (rolled-back fixtures for phone normalization, invalid values skipped, no overwrite) has **not been run** in the SQL editor yet.
+- `supabase/verification/building_owner_to_lessor.sql` (rolled-back fixtures for phone normalization, international phones, invalid values skipped, no overwrite) was run in the SQL editor on 2026-11-18 and passed (no `VERIFY` failure; summary row `buildings_with_owner` 10, `profiles_with_name` 9, `profiles_with_email` 2, `owner_phone_skipped` 2, which equals the 4 real buildings plus the 6 rolled-back fixtures).
 - Types regenerated with Supabase CLI 3.1 and formatted with `prettier@3 --no-semi --trailing-comma all --print-width 80`; the diff against the previous file was exactly the three `lessor_email` lines. The temporary Insert-type cast in `server/repositories/building-contract-profiles.ts` was removed.
 - `buildings.owner_*` columns were left in place by design.
 
@@ -54,4 +54,4 @@ See the SDD ledger notes; none blocks merge. Highlights: no unsaved-changes guar
 
 ## Promotion
 
-Capabilities (`docs/capabilities/buildings-ui.md`, `buildings-api.md`) are **not** updated yet; update them and archive this bundle to `docs/history/` only after the browser checks above pass and the behavior is accepted.
+PR #29 merged to `develop`. Accepted behavior was reconciled into [buildings-ui](../../capabilities/buildings-ui.md), [buildings-api](../../capabilities/buildings-api.md) and the new [building-contract-profile](../../capabilities/building-contract-profile.md) on 2026-11-18, and this bundle was archived. The checks listed above as not covered remain unverified.
