@@ -298,3 +298,14 @@ Tenant form drafts SHALL omit `id_number`, `id_issued_date`, `id_issued_place`, 
 - **THEN** the form displays the generic alert without marking an identity field
 
 Implementation and production rollout evidence: [tenant identity hardening](../history/2026-11-09-harden-tenant-identity-data/index.md). Production database rollout and SQL verification passed on 2026-11-09; application branch deployment is separate.
+
+### Requirement: Verify a former tenant from the tenant picker
+When the picker has a building context and a search that is a valid phone number returns no tenant in scope, it SHALL show one row inside the open popup (never beneath it, where the popup would cover it) with a single input for the ID number or full name and a Verify action; on narrow screens the input and action stack at full width with a touch-sized input. After a quick-create conflict hand-off, when the popup is closed, the same row SHALL appear under the field. Success SHALL select the tenant, keep the link token in component state only and show a verified hint. Failures SHALL appear as one short line (`Không khớp`, `Đang thuê nơi khác`, a retry wait, or feature disabled), not as a toast. An identity conflict from quick create SHALL close the dialog and open this row prefilled. Changing the building SHALL drop a verified selection and ask to select or verify again; a restored tenant that is no longer visible (404) SHALL do the same. Tokens SHALL never enter drafts or browser storage.
+
+#### Scenario: Unmatched phone
+- **WHEN** the user types a valid phone with no scoped result in a building context
+- **THEN** the verify row appears prefilled with that phone
+
+#### Scenario: Building changed
+- **WHEN** the selected room moves to another building after a verification
+- **THEN** the tenant is cleared and the user is asked to select or verify again

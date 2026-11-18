@@ -26,7 +26,7 @@ const authStore = useAuthStore()
 const formMode = useAppFormMode()
 onMounted(() => { formMode.value = true })
 onBeforeUnmount(() => { formMode.value = false })
-interface PendingOccupant { tenant_id: string; tenantName: string; move_in_date: string; billing_counted: boolean }
+interface PendingOccupant { tenant_id: string; tenantName: string; move_in_date: string; billing_counted: boolean; link_token?: string }
 
 const form = ref({
   room_id: '',
@@ -43,6 +43,8 @@ const form = ref({
   handover_reading_date: '',
 })
 const occupants = ref<PendingOccupant[]>([])
+// Verification tokens live in page memory only; never in the server draft.
+const tenantLinkToken = ref<string | null>(null)
 const vehicles = ref<VehicleRow[]>([])
 const services = ref<ContractServiceRow[]>([])
 const servicesTouched = ref(false)
@@ -186,7 +188,7 @@ function markTouched(field: string) { touched.add(field) }
 function onServicesUpdate(rows: ContractServiceRow[]) { services.value = rows; servicesTouched.value = true }
 
 function addPendingOccupant(input: ContractOccupantAddInput & { tenantName: string }) {
-  occupants.value.push({ tenant_id: input.tenant_id, tenantName: input.tenantName || '-', move_in_date: input.move_in_date, billing_counted: input.billing_counted })
+  occupants.value.push({ tenant_id: input.tenant_id, tenantName: input.tenantName || '-', move_in_date: input.move_in_date, billing_counted: input.billing_counted, link_token: input.link_token })
   showOccupantForm.value = false
 }
 function removePendingOccupant(tenantId: string) { occupants.value = occupants.value.filter(o => o.tenant_id !== tenantId) }
@@ -203,6 +205,7 @@ function buildPayload() {
   return {
     room_id: form.value.room_id,
     tenant_id: form.value.tenant_id,
+    tenant_link_token: tenantLinkToken.value || undefined,
     start_date: form.value.start_date,
     end_date: form.value.end_date,
     monthly_rent: Number(form.value.monthly_rent),
@@ -214,7 +217,7 @@ function buildPayload() {
     handover_electricity_reading: form.value.handover_electricity_reading === '' ? undefined : Number(form.value.handover_electricity_reading),
     handover_water_reading: form.value.handover_water_reading === '' ? undefined : Number(form.value.handover_water_reading),
     handover_reading_date: form.value.handover_reading_date || undefined,
-    occupants: occupants.value.map(o => ({ tenant_id: o.tenant_id, move_in_date: o.move_in_date, billing_counted: o.billing_counted })),
+    occupants: occupants.value.map(o => ({ tenant_id: o.tenant_id, move_in_date: o.move_in_date, billing_counted: o.billing_counted, ...(o.link_token ? { link_token: o.link_token } : {}) })),
     vehicles: vehicles.value.length ? vehicles.value : undefined,
     services: servicesTouched.value
       ? services.value.map(s => ({ catalog_id: s.catalog_id, amount: s.amount, quantity: s.quantity, is_enabled: s.is_enabled, notes: s.notes }))
@@ -369,9 +372,11 @@ watch([form, occupants, vehicles, services, inventory], () => {
         <TenantPicker
           :model-value="form.tenant_id || null"
           :exclude-tenant-ids="occupants.map(o => o.tenant_id)"
+          :building-id="buildingId"
           :error="errors.tenant_id?.[0]"
           required
           @update:model-value="(v) => form.tenant_id = v ?? ''"
+          @update:link-token="(t) => tenantLinkToken = t"
         />
       </section>
 
@@ -411,7 +416,7 @@ watch([form, occupants, vehicles, services, inventory], () => {
             <span class="text-sm text-ui-primary">{{ o.tenantName }}</span>
             <UiButton variant="ghost" size="sm" @click="removePendingOccupant(o.tenant_id)">Xoá</UiButton>
           </div>
-          <ContractOccupantForm v-if="showOccupantForm" :exclude-tenant-ids="excludeTenantIds" @submit="addPendingOccupant" @cancel="showOccupantForm = false" />
+          <ContractOccupantForm v-if="showOccupantForm" :exclude-tenant-ids="excludeTenantIds" :building-id="buildingId" @submit="addPendingOccupant" @cancel="showOccupantForm = false" />
           <UiButton v-else variant="secondary" size="sm" @click="showOccupantForm = true">Thêm người ở</UiButton>
         </div>
       </section>

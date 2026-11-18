@@ -3,11 +3,19 @@ import type { AuthUser } from '~/types/auth'
 import type { Tenant } from '~/types/tenants'
 import { TenantRepository, type TenantAccessFacts } from '../../repositories/tenants'
 import { getAssignedBuildingIds } from '../../utils/scope'
+import { getTenantLinkSecret, verifyTenantLinkToken } from '../../utils/tenant-link-token'
 
 export type TenantAccessLevel = 'full' | 'basic' | 'none'
 export type TenantAction = 'read_profile' | 'update_profile' | 'manage_documents' | 'archive' | 'activate' | 'delete' | 'manage_account'
 export interface TenantAccessContext extends TenantAccessFacts { tenant: Tenant; level: TenantAccessLevel }
 const sorted = (ids: string[]) => [...new Set(ids)].sort()
+
+function throwNotLinkable(): never {
+  throw createError({
+    statusCode: 404,
+    data: { error: { code: 'TENANT_NOT_LINKABLE', message: 'Không tìm thấy khách thuê hoặc cần xác minh lại khách' } },
+  })
+}
 
 export const TenantAuthorizationService = {
   async resolveTenants(event: H3Event, user: AuthUser, tenants: Tenant[]): Promise<Map<string, TenantAccessContext>> {
@@ -62,5 +70,15 @@ export const TenantAuthorizationService = {
     if (!context || context.level === 'none') throwNotFound('Không tìm thấy khách thuê')
     if (action !== 'read_profile' && context.level !== 'full') throwForbidden('Chỉ có quyền xem thông tin cơ bản của khách thuê')
     return context
+  },
+  /** Whether the actor may attach this tenant to a contract in `buildingId`; availability is checked separately. */
+  async assertLinkable(event: H3Event, user: AuthUser, tenantId: string, opts: { buildingId: string; linkToken?: string | null }): Promise<void> {
+    if (opts.linkToken) {
+      const secret = getTenantLinkSecret(event)
+      const claims = secret ? verifyTenantLinkToken(secret, opts.linkToken) : null
+      if (claims && claims.sub === user.id && claims.tid === tenantId && claims.bid === opts.buildingId) return
+    }
+    const level = (await this.resolveAccessMany(event, user, [tenantId])).get(tenantId)?.level
+    if (level !== 'full' && level !== 'basic') throwNotLinkable()
   },
 }

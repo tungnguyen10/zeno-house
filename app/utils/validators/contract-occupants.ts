@@ -5,6 +5,7 @@ export const contractOccupantAddSchema = z.object({
   role: z.enum(['primary', 'roommate']).default('roommate'),
   move_in_date: z.string().min(1, 'Ngày vào ở là bắt buộc'),
   billing_counted: z.boolean().default(true),
+  link_token: z.string().max(1000).optional(),
 })
 
 export type ContractOccupantAddInput = z.infer<typeof contractOccupantAddSchema>

@@ -136,6 +136,11 @@ export const TenantIdentityConflictService = {
     await this.rejectMatches(event, user, await TenantRepository.findIdentityMatches(event, lookup), source)
   },
 
+  async recordAttempt(event: H3Event, user: AuthUser): Promise<void> {
+    const { windowSeconds } = policy(event)
+    await TenantIdentityConflictLimitRepository.record(event, { subjectHash: subjectHash(user), units: 1, windowSeconds })
+  },
+
   async rejectUniqueViolation(event: H3Event, user: AuthUser, candidate: TenantIdentityCandidate, source: TenantIdentitySource): Promise<never> {
     await this.rejectMatches(event, user, await TenantRepository.findIdentityMatches(event, lookupOf(candidate)), source)
     await this.recordConflicts(event, user, [], source, 1)

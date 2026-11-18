@@ -29,3 +29,4 @@ logs
 # Local agent worktrees
 .worktrees/
 .vscode/
+.vercel

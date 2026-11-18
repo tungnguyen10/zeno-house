@@ -1,8 +1,8 @@
 ---
 type: Change Design
 title: "building-onboarding-v2-design"
-status: draft
-change_state: design-review
+status: deprecated
+change_state: completed
 tags: [superpowers, change, buildings, settings, contracts, onboarding, v2]
 ---
 

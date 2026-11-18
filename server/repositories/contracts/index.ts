@@ -14,6 +14,7 @@ const CONTRACT_CREATE_ERRORS: Record<string, { status: 409 | 422; message: strin
   CONTRACT_OCCUPANT_LIMIT: { status: 409, message: 'Số người ở cùng vượt quá số người ở của hợp đồng.' },
   CONTRACT_OCCUPANT_PRIMARY: { status: 422, message: 'Người ở cùng trùng với khách đứng tên.' },
   CONTRACT_OCCUPANT_BUSY: { status: 409, message: 'Có người ở cùng đang ở theo hợp đồng khác.' },
+  TENANT_BUSY: { status: 409, message: 'Khách thuê này đang ở theo hợp đồng khác.' },
   CONTRACT_SERVICE_INVALID: { status: 422, message: 'Dịch vụ không thuộc tòa nhà này.' },
   CONTRACT_VEHICLE_DUPLICATE: { status: 409, message: 'Biển số xe bị trùng.' },
 }
@@ -372,14 +373,13 @@ export const ContractRepository = {
     }
   },
 
-  async update(event: H3Event, id: string, input: ContractUpdateInput): Promise<ContractWithDetails> {
+  async update(event: H3Event, id: string, input: Omit<ContractUpdateInput, 'building_id' | 'tenant_link_token'>): Promise<ContractWithDetails> {
     const client = await serverSupabaseClient(event)
     const { data, error } = await client
       .from('contracts')
       .update({
         ...(input.room_id !== undefined && { room_id: input.room_id }),
         ...(input.tenant_id !== undefined && { tenant_id: input.tenant_id }),
-        ...(input.building_id !== undefined && input.building_id !== null && { building_id: input.building_id }),
         ...(input.start_date !== undefined && { start_date: input.start_date }),
         ...(input.end_date !== undefined && { end_date: input.end_date }),
         ...(input.monthly_rent !== undefined && { monthly_rent: input.monthly_rent }),

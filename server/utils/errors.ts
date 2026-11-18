@@ -75,6 +75,9 @@ export function throwDbError(error: unknown, context?: string): never {
       throwConflict('Dữ liệu đã được liên kết với hồ sơ trả phòng. Mở Trả phòng & tất toán để kiểm tra hoặc điều chỉnh.', { reason })
     }
     const message = String(error.message)
+    if (message === 'TENANT_BUSY') {
+      throwConflict('Khách thuê này đang ở theo hợp đồng khác', { reason: 'TENANT_BUSY' })
+    }
     let renewalReason = message.match(/^(CONTRACT|RENEWAL)_[A-Z_]+$/)?.[0]
     if ('code' in error && error.code === '23505') {
       if (/"contract_renewals_operation_id_key"/.test(message)) renewalReason = 'RENEWAL_OPERATION_MISMATCH'
