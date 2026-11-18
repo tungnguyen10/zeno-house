@@ -35,11 +35,17 @@ Defines building list, create, detail, edit, card, and form user interface behav
 ---
 
 ### Requirement: Trang tạo building mới
-`app/pages/buildings/create.vue` SHALL render `BuildingForm` component, dùng `useBuildingForm().submitCreate()`, hiển thị loading state khi đang submit, redirect về `/buildings` sau khi thành công.
+`app/pages/buildings/create.vue` SHALL render `BuildingForm` with `variant="create"` (name, address, description, status) followed by an always-visible "Phòng" block (the quick room generator, which MAY be left empty), dùng `useBuildingForm().submitCreate()` và hiển thị loading state khi đang submit. The form SHALL NOT ask for owner contact, electricity/water pricing or the billing schedule; those are configured in the setup steps. The submit button reads "Tạo tòa nhà" or "Tạo tòa nhà và N phòng". Submit SHALL be blocked while the room generator is invalid.
 
 #### Scenario: Submit tạo building thành công
 - **WHEN** admin điền form hợp lệ và submit
-- **THEN** gọi POST /api/buildings, sau đó redirect về `/buildings`
+- **THEN** gọi POST /api/buildings, hiển thị "Đã tạo tòa nhà. Tiếp tục thiết lập để sẵn sàng cho thuê." và chuyển tới `/buildings/:slug/settings?setup=1`
+- **WHEN** người dùng không có quyền vào cài đặt tòa nhà
+- **THEN** chuyển tới trang chi tiết `/buildings/:slug`
+
+#### Scenario: Stale draft with owner fields
+- **WHEN** a saved create draft still contains `ownerName`, `ownerPhone` or `ownerEmail`
+- **THEN** those keys are discarded when the draft is restored and are never submitted
 
 #### Scenario: Hiển thị validation errors
 - **WHEN** form được submit với data không hợp lệ
@@ -232,7 +238,7 @@ Building detail SHALL not show a month-specific "Van hanh thang <month>" primary
 - **THEN** the hero displays a "Đã lưu trữ" pill in muted color next to the name
 
 ### Requirement: Building detail sectioned layout
-`app/pages/buildings/[id]/index.vue` SHALL organize the detail body into four sections with anchor IDs: `#overview` (basic info + owner + billing config), `#services` (existing fast service toggles + summary), `#operations` (links to rooms, contracts, meter readings of this building), `#danger-zone` (Edit, Archive, Delete actions). Each section SHALL have a heading and short description.
+`app/pages/buildings/[id]/index.vue` SHALL organize the detail body into four sections with anchor IDs: `#overview` (creation date, lessor contact and billing config; name, address and description are shown once, in the page header and hero), `#services` (existing fast service toggles + summary), `#operations` (links to rooms, contracts, meter readings of this building), `#danger-zone` (Edit, Archive, Delete actions). Each section SHALL have a heading and short description.
 
 #### Scenario: Operations section shows shortcuts
 - **WHEN** detail page loads
@@ -247,11 +253,11 @@ Building detail SHALL not show a month-specific "Van hanh thang <month>" primary
 - **THEN** the Danger zone section is hidden entirely; Operations links still visible
 
 ### Requirement: Buildings form sectioned cards with numbered headings
-`app/components/buildings/BuildingForm.vue` SHALL render its four field groups (basic info, owner, billing defaults, schedule) as visually distinct cards. Each section SHALL have a numbered badge (1–4), a section title, and a one-line description. Sections SHALL be separated by `border-t border-dark-border` and consistent spacing.
+`app/components/buildings/BuildingForm.vue` SHALL render its field groups as visually distinct cards: with `variant="create"` only basic info; with `variant="basics"` (settings Basics step and the list quick-edit modal) basic info, billing defaults and schedule. The form has no owner group. Each section SHALL have a section title and a one-line description. Sections SHALL be separated by `border-t border-dark-border` and consistent spacing.
 
-#### Scenario: Sections render with numbered badges
+#### Scenario: Sections render with titles
 - **WHEN** form mounts
-- **THEN** each of the four sections shows a circular cyan badge with the section number followed by the title text
+- **THEN** each section shows its title and one-line description
 
 ### Requirement: Buildings form inline validation
 `app/components/buildings/BuildingForm.vue` SHALL run field-level Zod validation on `blur` and re-validate on `input` only if the field already has an error. On submit, the form SHALL reveal inline errors for every invalid field and SHALL focus the first invalid field.
@@ -349,27 +355,73 @@ When invoice email is globally enabled, building settings SHALL present a focuse
 - **THEN** the automation control is unavailable and no parallel theme, primitive, or settings convention is introduced
 
 ### Requirement: Building settings as a setup flow
-The building settings page SHALL present setup as a single column of collapsible steps with a readiness card on top. The steps are: basics and operating schedule, invoice payment profile, default services, inventory template, and contract profile, followed by an Advanced group (building code and managers, financial operating rules, per-contract services). Only the basics, invoice profile, and contract profile steps count towards readiness ("n/3"); default services and inventory template never block it.
+The building settings page SHALL present setup as a single column of collapsible steps with a readiness card on top. The steps are, in order: lessor profile ("Bên cho thuê", id `lessor-profile`), contract terms ("Điều khoản hợp đồng", `contract-terms`), basics and operating schedule (`basics`), invoice payment profile (`invoice-profile`), default services (`service-defaults`) and inventory template (`inventory-template`), followed by an Advanced group (building code and managers, financial operating rules, per-contract services). The first four steps are required and count towards readiness ("n/4"); default services and inventory template never block it.
 
 #### Scenario: Readiness card
 - **WHEN** a required step is incomplete
-- **THEN** the card shows "n/3 bước bắt buộc đã xong" with a progress bar and a link to the first missing step
-- **WHEN** all three required steps are complete
+- **THEN** the card shows "n/4 bước bắt buộc đã xong" with a progress bar and a link to the first missing step
+- **WHEN** all four required steps are complete
 - **THEN** the card shows the ready state with a "Lập hợp đồng" link
 
 #### Scenario: One step open at a time
 - **WHEN** the page loads
-- **THEN** the first missing step is open, or the step named by the URL hash (`#basics`, `#invoice-profile`, `#service-defaults`, `#inventory-template`, `#contract-profile`)
+- **THEN** the first missing step is open, or the step named by the URL hash (`#lessor-profile`, `#contract-terms`, `#basics`, `#invoice-profile`, `#service-defaults`, `#inventory-template`); the legacy hash `#contract-profile` opens `lessor-profile`
 - **WHEN** the user opens another step while the open one has unsaved changes
-- **THEN** a discard confirmation is shown, and leaving the page is guarded the same way
+- **THEN** a discard confirmation is shown, and leaving the page is guarded the same way (this guard covers the Basics step)
 
 #### Scenario: Manager access
 - **WHEN** a scoped manager opens the page
-- **THEN** every step is readable but read-only, and the contract profile shows the lessor ID number masked and hides date of birth and permanent address
+- **THEN** every step is readable but read-only, and the lessor profile shows the ID number masked and hides date of birth and permanent address; a manager cannot write lessor identity fields
+
+#### Scenario: Step the user cannot view
+- **WHEN** the user lacks permission to view a required step
+- **THEN** the step still counts in progress, is shown locked ("Cần chủ tòa hoàn tất"), cannot be opened by click or hash, and is skipped by "Lưu và tiếp"
 
 #### Scenario: Edit page redirect
 - **WHEN** a user opens `/buildings/:id/edit`
 - **THEN** they are redirected to `/buildings/:id/settings#basics`, which contains the building form (this supersedes the standalone edit page above)
+
+### Requirement: Contract terms start from suggested values
+The "Điều khoản hợp đồng" step SHALL pre-fill, for any of term, deposit, notice, deposit-refund and renewal that are still empty in the saved profile, the suggested values 12 months, 1 month, 30 days, 7 days and 6 months, and SHALL show a hint that they are suggestions to review and save. Fees stay empty. The step is complete only after the profile has been saved with all required values.
+
+#### Scenario: First visit
+- **WHEN** the profile has no saved terms
+- **THEN** the form shows the suggested values with the hint and the step still reports missing items until saved
+
+### Requirement: Building setup mode
+Opening settings with `?setup=1` SHALL put the page in setup mode: the header reads "Thiết lập tòa nhà" with the building name and "Hoàn tất 4 bước bắt buộc để lập hợp đồng", the first missing step is open, and each step's save button reads "Lưu và tiếp".
+
+#### Scenario: Save and continue
+- **WHEN** the user saves a step in setup mode
+- **THEN** readiness is refreshed first, then the next missing required step opens and scrolls into view; if the saved step is still incomplete it stays open; with no required step missing the next optional step opens, otherwise none
+
+#### Scenario: Optional steps
+- **WHEN** the default services or inventory template step is open in setup mode
+- **THEN** the user can continue with "Tiếp" or "Bỏ qua"; saving the inventory template does not advance while rooms still lack inventory
+
+#### Scenario: Inventory template applies to existing rooms
+- **WHEN** the template is saved and some rooms of the building have no inventory items
+- **THEN** "Áp dụng cho N phòng" is offered and applies the template in merge mode to at most 200 rooms per request
+
+#### Scenario: Completion
+- **WHEN** all required steps are complete in setup mode
+- **THEN** the card offers "Lập hợp đồng đầu tiên" linking to `/dashboard/contracts/create?building_id=<id>` (plus `room_id` when the building has exactly one vacant room), "Xem tòa nhà" and "Thoát thiết lập"
+- **WHEN** the building has no rooms and the user may create rooms
+- **THEN** "Thêm phòng" is the primary action and "Lập hợp đồng" is secondary
+
+#### Scenario: Exit
+- **WHEN** the user chooses "Thoát thiết lập"
+- **THEN** `?setup=1` is removed, other query parameters stay, and saved data is unchanged
+
+### Requirement: Building detail setup strip
+The building detail page SHALL show, for users who can manage buildings, a single strip derived from readiness: "Thiết lập x/4 · Còn thiếu: …" with "Tiếp tục thiết lập" (to `settings?setup=1`) while incomplete, or "Sẵn sàng lập hợp đồng" with a link to contract create for this building when complete. The header actions are "Thêm phòng" and "Cài đặt".
+
+#### Scenario: Lessor contact on detail
+- **WHEN** the user can read the contract profile
+- **THEN** the overview shows "Bên cho thuê" with name, phone and email
+
+### Requirement: Building list selection keeps the title readable
+In selection mode the building card SHALL keep a left gutter for the checkbox at every breakpoint so the checkbox never covers the building name.
 
 ### Requirement: Default services with a suggested price
 Each catalog service MAY carry a suggested default price. When a building first enables a catalog service, or first sets its pricing type, the building service row SHALL be created with the catalog's suggested price; the price stays editable per building and never changes automatically afterwards. The global catalog includes "Phí quản lý" (fixed per room) with a suggested price of 200.000 ₫.

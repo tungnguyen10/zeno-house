@@ -19,6 +19,7 @@
 - [billing-test-coverage](./billing-test-coverage.md)
 - [billing-ui-readiness](./billing-ui-readiness.md)
 - [building-code](./building-code.md)
+- [building-contract-profile](./building-contract-profile.md)
 - [building-invoice-profile](./building-invoice-profile.md)
 - [building-visibility](./building-visibility.md)
 - [buildings-api](./buildings-api.md)

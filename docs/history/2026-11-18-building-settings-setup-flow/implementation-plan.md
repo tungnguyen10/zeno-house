@@ -1,8 +1,8 @@
 ---
 type: Change Implementation Plan
 title: "building-settings-setup-flow-implementation-plan"
-status: draft
-change_state: implementation
+status: deprecated
+change_state: completed
 tags: [superpowers, change, buildings, settings, ui, v2]
 ---
 
