@@ -122,6 +122,23 @@ describe('tenant basic-access UI', () => {
     expect(wrapper.find('[data-test="edit-form"]').exists()).toBe(false)
   })
 
+  it('still uploads selected ID images when saving clears the page data', async () => {
+    const wrapper = await render(Edit)
+    const editor = wrapper.findComponent(form)
+    const file = new File(['id'], 'id.png', { type: 'image/png' })
+    editor.vm.$emit('select-id-image', { side: 'front', file })
+    submitUpdate.mockImplementationOnce(async () => {
+      tenant.value = null
+      requestStatus.value = 'idle'
+      return profile()
+    })
+    apiFetch.mockResolvedValue({ data: profile() })
+    editor.vm.$emit('submit', editor.props('modelValue'))
+    await flushPromises()
+    expect(apiFetch).toHaveBeenCalledWith('/api/tenants/t1/id-image', expect.objectContaining({ method: 'POST', query: { side: 'front' } }))
+    expect(navigateTo).toHaveBeenCalled()
+  })
+
   it('hero ignores stale sensitive fields and assignment metrics for basic', () => {
     const wrapper = mount(Hero, { props: { tenant: { ...profile(), accessLevel: 'basic' }, currentRoomLabel: 'Private Room' }, global: { stubs } })
     expect(wrapper.text()).toContain('Khách Một')

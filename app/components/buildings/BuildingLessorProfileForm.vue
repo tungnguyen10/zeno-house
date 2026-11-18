@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { BuildingContractProfile } from '~/types/building-contract-profile'
 import { buildingContractProfileBaseSchema, type BuildingContractProfilePatch } from '~/utils/validators/building-contract-profile'
+import type { SuggestionField, SuggestionValues } from '~/utils/tenant-identity-suggestions'
 
 const props = withDefaults(defineProps<{
   profile: BuildingContractProfile | null
@@ -33,6 +34,28 @@ const form = reactive(toForm(props.profile))
 watch(() => props.profile, value => Object.assign(form, toForm(value)))
 const fieldErrors = ref<Record<string, string>>({})
 
+// Gender is not part of the lessor profile, so it is not offered as a suggestion.
+const SCANNER_FIELD_TO_FORM = {
+  full_name: 'lessor_full_name',
+  date_of_birth: 'lessor_date_of_birth',
+  id_number: 'lessor_id_number',
+  id_issued_date: 'lessor_id_issued_date',
+  id_issued_place: 'lessor_id_issued_place',
+  permanent_address: 'lessor_permanent_address',
+} as const satisfies Partial<Record<SuggestionField, keyof typeof form>>
+const SCANNER_FIELDS = Object.keys(SCANNER_FIELD_TO_FORM) as (keyof typeof SCANNER_FIELD_TO_FORM)[]
+
+const scannerValues = computed<SuggestionValues>(() =>
+  Object.fromEntries(SCANNER_FIELDS.map(field => [field, form[SCANNER_FIELD_TO_FORM[field]]])),
+)
+
+function onScannerApply(values: SuggestionValues) {
+  for (const field of SCANNER_FIELDS) {
+    const value = values[field]
+    if (value !== undefined) form[SCANNER_FIELD_TO_FORM[field]] = value
+  }
+}
+
 const HIDDEN = 'Ẩn với vai trò quản lý'
 
 function submit() {
@@ -63,6 +86,12 @@ function submit() {
     <template v-else>
       <UiFormSection title="Danh tính" description="Người ký hợp đồng. Thông tin này in trên hợp đồng.">
         <div class="grid gap-3 sm:grid-cols-2">
+          <TenantIdentityScanner
+            class="sm:col-span-2"
+            :current-values="scannerValues"
+            :fields="SCANNER_FIELDS"
+            @apply="onScannerApply"
+          />
           <div data-test="lessor-full-name">
             <UiInput v-model="form.lessor_full_name" label="Họ tên" :error="fieldErrors.lessor_full_name" />
           </div>

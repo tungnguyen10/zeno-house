@@ -20,13 +20,15 @@ describe('contract templates', () => {
     })
   }
 
-  it('contract template drops free-parking sentence and has service/inventory tables', () => {
+  it('contract template keeps the original articles, house rules and appendix, with building-service and table loops', () => {
     const text = documentText(CONTRACT_TEMPLATES['hop-dong-thue-phong'].file)
     expect(text).not.toContain('parking.free_slots')
     expect(text).toContain('{{#services}}')
     expect(text).toContain('{{#inventory}}')
     expect(text).toContain('{{#vehicles}}')
     expect(text).toContain('{{#occupants}}')
-    expect(text).toContain('Phụ lục 1')
+    for (const marker of ['Điều 1:', 'Điều 8:', '8.7.', 'NỘI QUY', '16. Việc ra vào', 'PHỤ LỤC 01']) {
+      expect(text).toContain(marker)
+    }
   })
 })

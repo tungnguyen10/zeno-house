@@ -27,6 +27,8 @@ function defaultSortOrder(sort: SortField): SortOrder {
   return sort === 'location' ? 'asc' : 'desc'
 }
 
+const DEFAULT_SORT: SortField = 'created_at'
+
 export function useContractList() {
   const route = useRoute()
 
@@ -37,7 +39,7 @@ export function useContractList() {
   const roomFilter = ref<string>(readQueryString(route.query.room_id))
   const tenantFilter = ref<string>(readQueryString(route.query.tenant_id))
   const status = ref<ContractStatus[]>(readQueryEnumArray(route.query.status, STATUSES))
-  const sort = ref<SortField>(readQueryEnum(route.query.sort, SORT_FIELDS, 'location'))
+  const sort = ref<SortField>(readQueryEnum(route.query.sort, SORT_FIELDS, DEFAULT_SORT))
   const order = ref<SortOrder>(readQueryEnum(route.query.order, SORT_ORDERS, defaultSortOrder(sort.value)))
 
   // Backward-compat single-value status filter (kept for callers that still
@@ -62,7 +64,7 @@ export function useContractList() {
       const newRoom = readQueryString(newQuery.room_id)
       const newTenant = readQueryString(newQuery.tenant_id)
       const newStatus = readQueryEnumArray(newQuery.status, STATUSES)
-      const newSort = readQueryEnum(newQuery.sort, SORT_FIELDS, 'location')
+      const newSort = readQueryEnum(newQuery.sort, SORT_FIELDS, DEFAULT_SORT)
       const newOrder = readQueryEnum(newQuery.order, SORT_ORDERS, defaultSortOrder(newSort))
 
       if (page.value !== newPage) page.value = newPage
@@ -84,8 +86,8 @@ export function useContractList() {
       next.room_id = roomFilter.value || undefined
       next.tenant_id = tenantFilter.value || undefined
       next.status = status.value.length > 0 ? status.value : undefined
-      next.sort = sort.value !== 'location' ? sort.value : undefined
-      next.order = sort.value !== 'location' || order.value !== 'asc' ? order.value : undefined
+      next.sort = sort.value !== DEFAULT_SORT ? sort.value : undefined
+      next.order = order.value !== defaultSortOrder(sort.value) ? order.value : undefined
 
       return next
     },
@@ -121,8 +123,8 @@ export function useContractList() {
     || Boolean(roomFilter.value)
     || Boolean(tenantFilter.value)
     || status.value.length > 0
-    || sort.value !== 'location'
-    || order.value !== 'asc',
+    || sort.value !== DEFAULT_SORT
+    || order.value !== defaultSortOrder(DEFAULT_SORT),
   )
 
   function resetFilters() {
@@ -131,8 +133,8 @@ export function useContractList() {
     roomFilter.value = ''
     tenantFilter.value = ''
     status.value = []
-    sort.value = 'location'
-    order.value = 'asc'
+    sort.value = DEFAULT_SORT
+    order.value = defaultSortOrder(DEFAULT_SORT)
     page.value = 1
   }
 

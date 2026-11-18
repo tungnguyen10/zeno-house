@@ -36,6 +36,7 @@
     "chrome-devtools-mcp": "^1.6.0",
     "clsx": "^2.1.1",
     "dayjs": "^1.11.20",
+    "docx-preview": "^0.4.1",
     "docxtemplater": "^3.71.1",
     "eslint": "^10.3.0",
     "exceljs": "^4.4.0",
