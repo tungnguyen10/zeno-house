@@ -13,6 +13,9 @@ function user(role: 'admin' | 'owner' | 'manager' | null): AuthUser {
 const ALL_CAPS = [
   'operations-report.read',
   'operations-report.export',
+  'building-other-incomes.read',
+  'building-other-incomes.write',
+  'building-other-incomes.delete',
   'building-expenses.read',
   'building-expenses.write',
   'building-expenses.delete',
@@ -46,6 +49,9 @@ describe('operations-report permission matrix', () => {
 
     expect(can(manager, 'operations-report.read')).toBe(true)
     expect(can(manager, 'operations-report.export')).toBe(false)
+    expect(can(manager, 'building-other-incomes.read')).toBe(true)
+    expect(can(manager, 'building-other-incomes.write')).toBe(true)
+    expect(can(manager, 'building-other-incomes.delete')).toBe(false)
     expect(can(manager, 'building-expenses.read')).toBe(true)
     expect(can(manager, 'building-expenses.write')).toBe(true)
 

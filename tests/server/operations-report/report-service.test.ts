@@ -247,6 +247,7 @@ describe('OperationsReportService.getReport', () => {
       const rate = await findEffectiveRate()
       return {
         billing,
+        otherIncomes: [],
         fixedCosts: await listFixedCosts(),
         expenses: await listExpenses(),
         prepaidItems: await listActiveAllocations(),
@@ -294,12 +295,47 @@ describe('OperationsReportService.getReport', () => {
       monthlyAccrualEstimated: 0,
       monthlyAccrualIsEstimated: false,
       monthlyDeduction: 300_000,
+      monthlyOtherIncome: 0,
       monthlyBalance: -50_000,
       cumulativeBalance: -50_000,
       cumulativeBalanceIsEstimated: false,
     })
   })
 
+
+  it('counts each building receipt once and excludes both allocations from the reserve percentage at close', async () => {
+    const baseline = await fetchSnapshot()
+    const snapshot = {
+      ...baseline,
+      fixedCosts: [], expenses: [], prepaidItems: [],
+      closure: { ...baseline.closure, status: 'open' },
+      otherIncomes: [
+        { allocationTarget: 'profit', amount: 300_000 },
+        { allocationTarget: 'reserve_fund', amount: 800_000 },
+      ],
+      reserveTransactions: [{
+        source: 'other_income', type: 'deposit', amount: 800_000, periodYear: 2026, periodMonth: 6,
+      }],
+    }
+    fetchSnapshot.mockResolvedValue(snapshot)
+    const report = await run()
+    expect(report.metrics).toMatchObject({
+      issuedRevenue: 5_000_000, collectedCash: 4_000_000, debt: 1_000_000,
+      otherIncomeTotal: 1_100_000, totalCollectedCash: 5_100_000,
+      totalOperatingRevenue: 5_300_000, profitByRevenue: 5_300_000, profitByCash: 4_300_000,
+    })
+    expect(report.reserveFund).toMatchObject({
+      monthlyOtherIncome: 800_000, monthlyAccrualEstimated: 250_000, monthlyBalance: 800_000,
+      cumulativeBalance: 800_000,
+    })
+    const { OperationsReportService } = await import('../../../server/services/operations-report/report')
+    await OperationsReportService.closeSystem({} as never, {
+      building_id: 'building-1', period_year: 2026, period_month: 6,
+    })
+    expect(closeWithAccrualAndAudit).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      issuedRevenue: 5_000_000, accrualAmount: 250_000,
+    }))
+  })
 
   it('separates noncash settlement and deposit refunds from revenue cash and operating expense', async () => {
     const original = await fetchSnapshot()

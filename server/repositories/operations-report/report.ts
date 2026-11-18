@@ -4,6 +4,7 @@ import type { Tables } from '~/types/database.types'
 import type {
   BuildingExpense,
   BuildingFixedCost,
+  BuildingOtherIncome,
   BuildingReserveFundRate,
   OperationsReportClosure,
   PrepaidExpenseAllocation,
@@ -12,6 +13,8 @@ import type {
 import {
   mapBuildingExpense,
   mapBuildingFixedCost,
+  mapBuildingOtherIncome,
+  type BuildingOtherIncomeRow,
   mapBuildingReserveFundRate,
   mapOperationsReportClosure,
   mapReserveFundTransaction,
@@ -53,6 +56,7 @@ interface SnapshotRow {
     charges: Array<{ charge_type: string, amount: number | string }>
     collected: number | string
   }>
+  other_incomes?: BuildingOtherIncomeRow[]
   fixed_costs: Tables<'building_fixed_costs'>[]
   expenses: Tables<'building_expenses'>[]
   prepaid_items: Array<{ id: string, name: string, category: string, monthly_amount: number | string }>
@@ -63,6 +67,7 @@ interface SnapshotRow {
 
 export interface OperationsReportSnapshot {
   billing: ReportBillingData
+  otherIncomes: BuildingOtherIncome[]
   fixedCosts: BuildingFixedCost[]
   expenses: BuildingExpense[]
   prepaidItems: PrepaidExpenseAllocation[]
@@ -111,6 +116,7 @@ export const OperationsReportRepository = {
           })),
         })),
       },
+      otherIncomes: (row.other_incomes ?? []).map(mapBuildingOtherIncome),
       fixedCosts: (row.fixed_costs ?? []).map(mapBuildingFixedCost),
       expenses: (row.expenses ?? []).map(mapBuildingExpense),
       prepaidItems: (row.prepaid_items ?? []).map(item => ({

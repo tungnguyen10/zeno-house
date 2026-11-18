@@ -36,7 +36,7 @@ The system SHALL maintain a per-building reserve fund whose balance is derived f
 
 #### Scenario: Balance derived from transactions
 - **WHEN** an authorized in-scope user views a building's reserve fund
-- **THEN** the system returns a balance equal to monthly accrual transactions minus active expense deduction transactions
+- **THEN** the system returns a balance equal to monthly accrual transactions plus active linked other-income deposits minus active expense deduction transactions
 
 #### Scenario: Balance may be negative
 - **WHEN** active expense deductions exceed monthly accruals
@@ -55,11 +55,11 @@ The system SHALL maintain a per-building reserve fund whose balance is derived f
 - **THEN** the system responds with a forbidden error
 
 ### Requirement: Reserve fund transactions
-The system SHALL record reserve fund changes as automatic monthly accrual transactions and linked expense deduction transactions.
+The system SHALL record reserve fund changes as automatic monthly accruals, linked other-income deposits and linked expense deductions.
 
 #### Scenario: Monthly accrual increases balance
 - **WHEN** a billing period, operations report close, auto-close, or admin refresh records accrual for a building with an effective reserve rate
-- **THEN** the system records one monthly accrual transaction for that building/month based on non-negative operations profit and the effective rate
+- **THEN** the system records one monthly accrual transaction for that building/month based on non-negative issued invoice revenue less operating expenses and the effective rate. Both allocations of building other income are excluded from the percentage base
 
 #### Scenario: Monthly accrual is idempotent
 - **WHEN** close processing runs more than once for the same building/month

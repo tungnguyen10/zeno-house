@@ -11,7 +11,8 @@ describe('audit entity type persistence', () => {
 
     expect(migrationName).toBeDefined()
 
-    const sql = readFileSync(resolve(migrationsDir, migrationName!), 'utf8')
+    const sql = readdirSync(migrationsDir).sort()
+      .map(name => readFileSync(resolve(migrationsDir, name), 'utf8')).join('\n')
     expect(sql).toContain('audit_events_entity_type_check')
     for (const entityType of AUDIT_ENTITY_TYPES) {
       expect(sql).toContain(`'${entityType}'`)

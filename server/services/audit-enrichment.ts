@@ -37,6 +37,8 @@ function fallbackLabel(event: AuditEvent): { label: string | null; sub: string |
       return { label: pickString(snap, ['name', 'service_name']), sub: null }
     case 'user':
       return { label: pickString(snap, ['name', 'full_name', 'email']), sub: pickString(snap, ['email']) }
+    case 'building_other_income':
+      return { label: pickString(snap, ['name']), sub: pickString(snap, ['received_date']) }
     case 'building_expense':
     case 'building_fixed_cost':
     case 'recurring_expense':

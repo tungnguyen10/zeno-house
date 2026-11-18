@@ -88,7 +88,12 @@ export const OperationsReportExportService = {
     addSectionTitle(sheet, 'Tổng quan')
     const overviewRows: Array<[string, number]> = [
       ['Doanh thu phát hành', report.metrics.issuedRevenue],
-      ['Đã thu', report.metrics.collectedCash],
+      ['Tổng doanh thu vận hành', report.metrics.totalOperatingRevenue],
+      ['Đã thu từ hóa đơn của kỳ', report.metrics.collectedCash],
+      ['Thu khác của tòa nhà', report.metrics.otherIncomeTotal],
+      ['Thu khác vào lợi nhuận', report.metrics.otherIncomeProfitTotal],
+      ['Thu khác vào quỹ dự phòng', report.metrics.otherIncomeReserveTotal],
+      ['Tổng đã thu của kỳ', report.metrics.totalCollectedCash],
       ['Cấn trừ tiền có sẵn', report.metrics.settlementAllocationTotal],
       ['Đã hoàn tiền', report.metrics.refundTotal],
       ['Công nợ', report.metrics.debt],
@@ -99,11 +104,24 @@ export const OperationsReportExportService = {
       ['Lợi nhuận theo doanh thu', report.metrics.profitByRevenue],
       ['Lợi nhuận theo tiền thu', report.metrics.profitByCash],
     ]
-    overviewRows.forEach(([label, amount]) => addMoneyRow(sheet, label, amount))
+    overviewRows.forEach(([label, amount]) => addMoneyRow(
+      sheet, label, amount,
+      label === 'Lợi nhuận theo tiền thu' ? 'Loại trừ khoản thu phân bổ vào quỹ' : '',
+    ))
 
     sheet.addRow([])
     addSectionTitle(sheet, 'Doanh thu theo loại')
     report.revenueByType.forEach(row => addMoneyRow(sheet, row.label, row.amount))
+
+    sheet.addRow([])
+    addSectionTitle(sheet, 'Khoản thu khác của tòa nhà')
+    for (const income of report.otherIncomes) {
+      const allocation = income.allocationTarget === 'reserve_fund' ? 'Quỹ dự phòng' : 'Lợi nhuận'
+      const row = sheet.addRow([income.receivedDate, income.name, income.amount, allocation, income.payer ?? ''])
+      row.getCell(3).numFmt = MONEY_FORMAT
+      styleTableRow(row, false, COL_COUNT)
+      alignRightCells(row, 3, 3)
+    }
 
     sheet.addRow([])
     addSectionTitle(sheet, 'Chi phí cố định')
@@ -169,6 +187,7 @@ export const OperationsReportExportService = {
       alignRightCells(rateRow, 3, 3)
       addMoneyRow(sheet, 'Doanh thu phát hành', report.reserveFund.issuedRevenue)
       addMoneyRow(sheet, 'Trích lập trong tháng', report.reserveFund.monthlyAccrual)
+      addMoneyRow(sheet, 'Thu khác vào quỹ trong tháng', report.reserveFund.monthlyOtherIncome)
       addMoneyRow(sheet, 'Chi từ quỹ trong tháng', report.reserveFund.monthlyDeduction)
       addMoneyRow(sheet, 'Số dư tháng', report.reserveFund.monthlyBalance)
       addMoneyRow(sheet, 'Số dư lũy kế', report.reserveFund.cumulativeBalance)

@@ -4,6 +4,8 @@
 
 ## In progress / planned
 
+- [Building other income](./operations-other-income/implementation-plan.md) — report receipts allocated to reserves or profit, with billing duplicate checks.
+
 - [harden-event-audit](./harden-event-audit/verification.md) — 12/16 tasks; atomic DB audit/contract correlation and durable cross-system intent remain incomplete.
 - [zeno-house-v2-optimization](./zeno-house-v2-optimization/baseline-2026-11-16.md) — V2 PR0–PR5 source baseline review, integrity fixes and release gate matrix.
 - [building-onboarding-v2](./building-onboarding-v2/index.md) — implemented on a feature branch, migration applied; browser verification pending (create building → setup mode → first contract; owner folded into lessor).
