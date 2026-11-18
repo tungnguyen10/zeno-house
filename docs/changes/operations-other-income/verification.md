@@ -7,13 +7,13 @@ tags: [change, operations-report, verification]
 
 # Verification
 
-Source is based on develop commit d2cc1d22238e393de1ebd18386d2c2241d16c11c.
+Source includes the latest develop through b48f1130. The feature originally started at d2cc1d22238e393de1ebd18386d2c2241d16c11c.
 
 ## Evidence
 
-- Full suite passed 496 files and 3103 tests with npm test -- --maxWorkers=4.
+- Full suite passed 503 files and 3177 tests after merging latest develop with npm test -- --maxWorkers=4.
 - npm run lint completed with zero errors. Its sole existing warning concerns v-html in AppAiDevChat.vue.
-- npm run knowledge:check passed 349 concepts and 29 index files.
+- npm run knowledge:check passed 353 concepts and 32 index files after merging latest develop.
 
 - Typecheck completed successfully through npm run typecheck. The copied workspace has no Supabase runtime credentials, so Nuxt reports missing URL/key warnings.
 - Focused report, export, billing accrual and reconciliation checks passed 37 assertions before integration.
