@@ -26,6 +26,8 @@ export const AUDIT_ACTIONS = {
   TENANT_EXPORTED: 'tenant.exported',
   TENANT_UPDATED: 'tenant.updated',
   TENANT_IDENTITY_CONFLICT: 'tenant.identity_conflict',
+  TENANT_LINK_VERIFIED: 'tenant.link_verified',
+  TENANT_LINK_VERIFY_FAILED: 'tenant.link_verify_failed',
   TENANT_ARCHIVED: 'tenant.archived',
   TENANT_ACTIVATED: 'tenant.activated',
   TENANT_REMOVED: 'tenant.removed',

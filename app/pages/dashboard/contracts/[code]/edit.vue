@@ -77,10 +77,11 @@ const {
   initialSnapshot,
 })
 
-async function onSubmit(data: ContractFormData) {
+async function onSubmit(data: ContractFormData, opts: { tenantLinkToken: string | null }) {
   const updated = await submitUpdate(id, {
     room_id: data.room_id || undefined,
     tenant_id: data.tenant_id || undefined,
+    tenant_link_token: opts.tenantLinkToken || undefined,
     start_date: data.start_date || undefined,
     end_date: data.end_date || undefined,
     monthly_rent: data.monthly_rent ? Number(data.monthly_rent) : undefined,

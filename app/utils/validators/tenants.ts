@@ -29,6 +29,14 @@ export const tenantUpdateSchema = tenantCreateSchema.partial()
 export type TenantCreateInput = z.infer<typeof tenantCreateSchema>
 export type TenantUpdateInput = z.infer<typeof tenantUpdateSchema>
 
+export const tenantLinkVerifySchema = z.object({
+  building_id: z.string().uuid('ID tòa nhà không hợp lệ'),
+  phone: tenantPhoneSchema,
+  proof: z.string().trim().min(1, 'Nhập số CCCD hoặc họ tên').max(100, 'Thông tin xác minh quá dài'),
+}).strict()
+
+export type TenantLinkVerifyInput = z.infer<typeof tenantLinkVerifySchema>
+
 export const tenantListQuerySchema = z.object({
   page: pageSchema,
   limit: limitSchema(200),

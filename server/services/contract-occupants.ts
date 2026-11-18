@@ -5,6 +5,7 @@ import type { ContractOccupantAddInput, ContractOccupantMoveOutInput } from '~/u
 import { ContractOccupantRepository } from '../repositories/contract-occupants'
 import { ContractRepository } from '../repositories/contracts'
 import { assertBuildingScope } from '../utils/scope'
+import { TenantAuthorizationService } from './tenants/authorization'
 import { AuditService } from './audit'
 import { AUDIT_ACTIONS } from '~/utils/constants/audit'
 
@@ -22,6 +23,7 @@ export const ContractOccupantService = {
     const contract = await ContractRepository.findById(event, contractId)
     if (!contract) throwNotFound('Không tìm thấy hợp đồng')
     await assertBuildingScope(event, user, contract.buildingId, 'write')
+    await TenantAuthorizationService.assertLinkable(event, user, input.tenant_id, { buildingId: contract.buildingId, linkToken: input.link_token })
 
     // Block primary tenant
     if (input.tenant_id === contract.tenantId) throwConflict('Người thuê chính đã là đại diện hợp đồng, không thể thêm vào danh sách người ở')

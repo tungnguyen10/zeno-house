@@ -180,6 +180,8 @@ const ACTION_LABELS: Record<string, string> = {
   'room.inventory.template_applied': 'Áp dụng nội thất mẫu cho phòng',
   'building.visibility_changed': 'Đổi hiển thị toà nhà',
   'tenant.identity_conflict': 'Xung đột định danh khách thuê',
+  'tenant.link_verified': 'Xác minh khách thuê cũ',
+  'tenant.link_verify_failed': 'Xác minh khách thuê cũ thất bại',
   'tenant.activated': 'Khôi phục khách thuê',
   'tenant.exported': 'Xuất danh sách khách thuê',
   'building_expense.receipt_attached': 'Gắn biên lai',

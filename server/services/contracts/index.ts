@@ -16,6 +16,7 @@ import type { ContractVehicleInput } from '~/utils/validators/contract-vehicles'
 import { RoomRepository } from '../../repositories/rooms'
 import { BuildingRepository } from '../../repositories/buildings'
 import { TenantRepository } from '../../repositories/tenants'
+import { TenantAuthorizationService } from '../tenants/authorization'
 import { assertBuildingScope, canDeleteMasterData, getVisibleBuildingIds } from '../../utils/scope'
 import { AuditService } from '../audit'
 import { AUDIT_ACTIONS } from '~/utils/constants/audit'
@@ -136,6 +137,12 @@ export const ContractService = {
     await assertBuildingScope(event, user, room.buildingId, 'write')
     if (room.status === 'maintenance') throwConflict(`Phòng "${room.roomNumber}" đang bảo trì, không thể tạo hợp đồng`)
 
+    const buildingId = room.buildingId
+    await TenantAuthorizationService.assertLinkable(event, user, input.tenant_id, { buildingId, linkToken: input.tenant_link_token })
+    for (const occupant of input.occupants ?? []) {
+      await TenantAuthorizationService.assertLinkable(event, user, occupant.tenant_id, { buildingId, linkToken: occupant.link_token })
+    }
+
     if (input.status === 'active' || !input.status) {
       const roomConflict = await ContractRepository.findActiveByRoomId(event, input.room_id)
       if (roomConflict) throwConflict('Phòng này đã có hợp đồng đang hiệu lực')
@@ -164,8 +171,6 @@ export const ContractService = {
       const asOccupant = await ContractOccupantRepository.findActiveOccupancyByTenant(event, occupant.tenant_id)
       if (asOccupant) throwConflict('Người ở cùng đang ở theo hợp đồng khác')
     }
-
-    const buildingId = input.building_id ?? room.buildingId
 
     // Default handover inventory to a snapshot of the room's current inventory
     // when the client sends none; the RPC writes it in the same transaction.
@@ -316,6 +321,12 @@ export const ContractService = {
       const newRoom = await RoomRepository.findById(event, newRoomId)
       if (!newRoom) throwNotFound('Không tìm thấy phòng')
       await assertBuildingScope(event, user, newRoom.buildingId, 'write')
+      if (newRoom.buildingId !== existing.buildingId) {
+        throwConflict('Không thể chuyển hợp đồng sang phòng ở tòa khác. Hãy trả phòng và tạo hợp đồng mới.', { reason: 'CONTRACT_ROOM_BUILDING_CHANGE' })
+      }
+    }
+    if (newTenantId !== existing.tenantId) {
+      await TenantAuthorizationService.assertLinkable(event, user, newTenantId, { buildingId: existing.buildingId, linkToken: input.tenant_link_token })
     }
 
     if (willBeActive) {
@@ -329,7 +340,8 @@ export const ContractService = {
       if (occupantConflict) throwConflict('Khách thuê này đang ở theo hợp đồng khác')
     }
 
-    const updated = await ContractRepository.update(event, existing.id, input)
+    const { building_id: _clientBuildingId, tenant_link_token: _linkToken, ...changes } = input
+    const updated = await ContractRepository.update(event, existing.id, changes)
 
     // Release the previous room whenever the contract leaves it while having been active there:
     //   - active → expired/terminated (status transition)

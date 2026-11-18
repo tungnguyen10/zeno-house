@@ -10,6 +10,8 @@ const REASON_BLOCKS: Record<string, ContractCreateBlock> = {
   CONTRACT_OCCUPANT_PRIMARY: 'occupants',
   CONTRACT_VEHICLE_DUPLICATE: 'vehicles',
   CONTRACT_SERVICE_INVALID: 'services',
+  TENANT_BUSY: 'tenant',
+  TENANT_NOT_LINKABLE: 'tenant',
 }
 
 /**

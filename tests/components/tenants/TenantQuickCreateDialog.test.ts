@@ -94,6 +94,24 @@ describe('TenantQuickCreateDialog', () => {
     expect(w.find('[data-test="qc-use-existing"]').exists()).toBe(false)
   })
 
+  it('hands an identity conflict over to verification when linking is possible', async () => {
+    submit.mockResolvedValue({ kind: 'conflict', message: 'Không thể tạo hồ sơ với thông tin này; liên hệ quản trị viên' })
+    const w = mountDialog({ initialName: 'Lê C', initialPhone: '0901234567', linkable: true })
+    await w.find('[data-test="qc-toggle-id"]').trigger('click')
+    await w.find('[data-test="qc-id-number"] input').setValue('012345678901')
+    await w.find('[data-test="qc-submit"]').trigger('click')
+    await flushPromises()
+    expect(w.emitted('needs-verify')![0]![0]).toEqual({ phone: '0901234567', proof: '012345678901' })
+  })
+
+  it('falls back to the typed name as proof when no ID number was entered', async () => {
+    submit.mockResolvedValue({ kind: 'conflict', message: 'x' })
+    const w = mountDialog({ initialName: 'Lê C', initialPhone: '0901234567', linkable: true })
+    await w.find('[data-test="qc-submit"]').trigger('click')
+    await flushPromises()
+    expect(w.emitted('needs-verify')![0]![0]).toEqual({ phone: '0901234567', proof: 'Lê C' })
+  })
+
   it('resets state when closed and reopened', async () => {
     const w = mountDialog({ initialName: 'A' })
     await w.setProps({ open: false })

@@ -5,8 +5,8 @@ import { tenantCreateSchema } from '~/utils/validators/tenants'
 import type { SuggestionField, SuggestionValues } from '~/utils/tenant-identity-suggestions'
 import { toTenantSummary, useTenantQuickCreate } from '~/composables/tenants/useTenantQuickCreate'
 
-const props = defineProps<{ open: boolean; initialName?: string; initialPhone?: string }>()
-const emit = defineEmits<{ created: [tenant: TenantSummary]; close: [] }>()
+const props = defineProps<{ open: boolean; initialName?: string; initialPhone?: string; linkable?: boolean }>()
+const emit = defineEmits<{ created: [tenant: TenantSummary]; close: []; 'needs-verify': [payload: { phone: string; proof: string }] }>()
 
 const blank = () => ({
   full_name: props.initialName ?? '', phone: props.initialPhone ?? '',
@@ -77,7 +77,16 @@ async function onSubmit() {
     existing.value = res.data
     return
   }
-  if (result.kind === 'conflict') { stage.value = 'conflict'; message.value = result.message; return }
+  if (result.kind === 'conflict') {
+    // The record exists outside this scope: verify and reuse it instead of a dead end.
+    if (props.linkable) {
+      emit('needs-verify', { phone: form.phone.trim(), proof: form.id_number.trim() || form.full_name.trim() })
+      return
+    }
+    stage.value = 'conflict'
+    message.value = result.message
+    return
+  }
   message.value = result.message
   for (const [k, v] of Object.entries(result.fieldErrors ?? {})) fieldErrors.value[k] = v[0]!
 }

@@ -82,4 +82,50 @@ describe('UiCombobox', () => {
     expect(wrapper.emitted('search')?.at(-1)).toEqual(['ngoài trang đầu'])
     expect(wrapper.findAll('[role="option"]')).toHaveLength(options.length)
   })
+
+  it('renders the footer slot inside the open popup so it is never covered by it', async () => {
+    const wrapper = mount(UiCombobox<Option>, {
+      attachTo: document.body,
+      props: { modelValue: null, options, optionKey: o => o.id, optionLabel: o => o.label },
+      slots: { footer: '<div data-test="footer-slot">Xác minh</div>' },
+      global: { stubs: { IconCheckSmall: true, IconChevronDown: true, IconPlus: true, IconSpinner: true, IconX: true } },
+    })
+    expect(wrapper.find('[data-test="footer-slot"]').exists()).toBe(false)
+
+    await wrapper.get('[role="combobox"]').trigger('click')
+
+    const footer = wrapper.get('[data-test="footer-slot"]')
+    expect(footer.element.closest('[role="listbox"]')).toBeNull()
+    expect(wrapper.get('.absolute.z-50').element.contains(footer.element)).toBe(true)
+  })
+
+  it('lets the footer slot close the popup and receive the typed query', async () => {
+    const wrapper = mount(UiCombobox<Option>, {
+      attachTo: document.body,
+      props: { modelValue: null, options, optionKey: o => o.id, optionLabel: o => o.label },
+      slots: {
+        footer: `<template #footer="{ close, query }"><button data-test="footer-close" @click="close">{{ query }}</button></template>`,
+      },
+      global: { stubs: { IconCheckSmall: true, IconChevronDown: true, IconPlus: true, IconSpinner: true, IconX: true } },
+    })
+    await wrapper.get('[role="combobox"]').trigger('click')
+    await wrapper.get('input[type="text"]').setValue('0901')
+    expect(wrapper.get('[data-test="footer-close"]').text()).toBe('0901')
+
+    await wrapper.get('[data-test="footer-close"]').trigger('click')
+    expect(wrapper.find('[role="listbox"]').exists()).toBe(false)
+  })
+
+  it('keeps the popup open when interacting inside the footer slot', async () => {
+    const wrapper = mount(UiCombobox<Option>, {
+      attachTo: document.body,
+      props: { modelValue: null, options, optionKey: o => o.id, optionLabel: o => o.label },
+      slots: { footer: '<input data-test="footer-input" />' },
+      global: { stubs: { IconCheckSmall: true, IconChevronDown: true, IconPlus: true, IconSpinner: true, IconX: true } },
+    })
+    await wrapper.get('[role="combobox"]').trigger('click')
+    wrapper.get('[data-test="footer-input"]').element.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }))
+    await wrapper.vm.$nextTick()
+    expect(wrapper.find('[role="listbox"]').exists()).toBe(true)
+  })
 })

@@ -27,6 +27,7 @@
 
 ## Completed and archived — not active
 
+- [tenant-access-contract-linking](../history/2026-11-18-tenant-access-contract-linking/index.md) — Tenant optimization PR1 (P0): tenant-attach authorization on contract create/update/occupant add, cross-owner re-rental via phone + ID/name verification and a short-lived link token, per-tenant DB availability guard. Accepted into `tenants-api`, `contracts-api` and `tenants-ui`; production migration, SQL verification and Vercel secret recorded. Visual QA of the verify row done (a popup-overlap defect was found and fixed); application deployment and the deployed two-owner smoke are not done.
 - [building-onboarding-v2](../history/2026-11-18-building-onboarding-v2/index.md) — Create building → setup mode → first contract; owner folded into lessor; contract profile split with partial PATCH. Merged as PR #29, production migration and SQL verification recorded; 768 px, keyboard and reduced-motion checks not done.
 - [building-settings-setup-flow](../history/2026-11-18-building-settings-setup-flow/index.md) — Settings as readiness card plus collapsible steps; accepted into `buildings-ui` and superseded in step order by building-onboarding-v2; keyboard QA not done.
 - [atomic-building-room-setup](../history/2026-11-11-atomic-building-room-setup/index.md) — PR0 accepted and archived; retry/concurrency deployment gates are retained explicitly in its history verification record.

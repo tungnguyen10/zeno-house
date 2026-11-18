@@ -54,6 +54,14 @@ describe('contract create page', () => {
     expect(page).not.toContain('allTenantsData')
   })
 
+  it('sends tenant link tokens with the create request but never into the server draft', () => {
+    expect(page).toContain('tenant_link_token: tenantLinkToken.value || undefined')
+    expect(page).toContain(':building-id="buildingId"')
+    const draftBlock = page.slice(page.indexOf('draft.schedule({'), page.indexOf('} as never)', page.indexOf('draft.schedule({')))
+    expect(draftBlock).not.toContain('link_token')
+    expect(draftBlock).not.toContain('tenantLinkToken')
+  })
+
   it('ignores stale async prefill responses after the room changes', () => {
     for (const guard of ['readinessGuard', 'prefillGuard', 'readingsGuard', 'inventoryGuard']) {
       expect(page).toContain(`const ${guard} = createLatestGuard()`)

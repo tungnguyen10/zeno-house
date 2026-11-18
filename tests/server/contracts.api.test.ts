@@ -31,6 +31,9 @@ const roomRepoMocks = vi.hoisted(() => ({
 
 const tenantRepoMocks = vi.hoisted(() => ({
   findByIdentifier: vi.fn(),
+  findByIds: vi.fn(async (_event: unknown, ids: string[]) => ids.map(id => ({ id }))),
+  findAccessFacts: vi.fn(async (_event: unknown, ids: string[]) => new Map(ids.map(id => [id, { activeBuildingIds: [], historicalBuildingIds: [], everContracted: false }]))),
+  findCreatedTenantIdsByActor: vi.fn(async () => []),
 }))
 
 const assignmentRepoMocks = vi.hoisted(() => ({
