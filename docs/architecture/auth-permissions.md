@@ -340,6 +340,8 @@ out-of-scope invoice identifiers intentionally share the same not-found response
 | Capability | Role | Used for |
 | --- | --- | --- |
 | `operations-report.read` | admin, owner, manager | View the monthly report. |
+| `building-other-incomes.read/write` | admin, owner, manager | Read receipts or record a profit receipt in an assigned building. Any edit involving reserve allocation also requires `reserve-fund.manage`. |
+| `building-other-incomes.delete` | admin, owner | Void a receipt in an open report period with a reason. |
 | `operations-report.export` | admin, owner | Export the monthly report workbook. |
 | `operations-report.close` | admin | Close an operations report period and refresh reserve accrual. |
 | `operations-report.reopen` | admin | Reopen a closed operations report period with a reason. |

@@ -70,9 +70,6 @@ function baseData() {
     address: '',
     description: '',
     status: 'active' as const,
-    ownerName: '',
-    ownerPhone: '',
-    ownerEmail: '',
     electricityPricingType: 'per_kwh' as const,
     defaultElectricityRate: '',
     waterPricingType: 'per_m3' as const,
@@ -94,11 +91,10 @@ function mountForm(props: Partial<InstanceType<typeof BuildingForm>['$props']> =
 beforeEach(() => { vi.clearAllMocks() })
 
 describe('BuildingForm', () => {
-  it('renders four sections with the expected titles', () => {
+  it('renders three sections with the expected titles', () => {
     const wrapper = mountForm()
     const html = wrapper.html()
     expect(html).toContain('Thông tin cơ bản')
-    expect(html).toContain('Chủ sở hữu')
     expect(html).toContain('Tính phí mặc định')
     expect(html).toContain('Lịch vận hành')
   })

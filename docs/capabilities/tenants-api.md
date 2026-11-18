@@ -402,3 +402,29 @@ Bulk import SHALL compare normalized values. In-file duplicates retain specific 
 - **THEN** the row returns only `identity_conflict`
 
 Implementation and production rollout evidence: [tenant identity hardening](../history/2026-11-09-harden-tenant-identity-data/index.md). Production database rollout and SQL verification passed on 2026-11-09; application branch deployment is separate.
+
+### Requirement: Cross-owner tenant link verification
+`POST /api/tenants/link-verify` SHALL let an actor with `contracts.create` and write scope on `building_id` verify a former tenant of another owner by normalized phone plus proof: the ID number when the record has an ID number or ID images, otherwise the full name (NFC, collapsed whitespace, case-insensitive). Success SHALL return only `{ tenant: { id, code, fullName, phone }, linkToken, expiresAt }`. The token SHALL be HMAC-signed, expire after 10 minutes and be bound to actor, tenant and building. An unknown phone and a wrong proof SHALL return the identical `404 TENANT_LINK_UNVERIFIED`, consume one identity-conflict rate-limit unit and write an audit event without personal data. A verified tenant with an active tenancy SHALL return `409 TENANT_BUSY` without building or owner detail. Without `NUXT_TENANT_LINK_SECRET` (at least 32 characters) the endpoint SHALL return `503 TENANT_LINK_DISABLED`.
+
+#### Scenario: Former tenant of another owner
+- **WHEN** an owner enters the phone and ID number of a tenant with no active tenancy
+- **THEN** the response contains a link token and the same Tenant ID, with no ID number, birth date, images or history
+
+#### Scenario: Wrong or unknown proof
+- **WHEN** the phone is unknown or the proof does not match
+- **THEN** the response is the same `404 TENANT_LINK_UNVERIFIED`
+
+#### Scenario: Secret missing
+- **WHEN** `NUXT_TENANT_LINK_SECRET` is absent or shorter than 32 characters
+- **THEN** the endpoint returns `503 TENANT_LINK_DISABLED` before any identity lookup
+
+### Requirement: Tenants may only be attached to contracts within the actor's access
+Any write that attaches a tenant to a contract (create primary or roommates, change the primary tenant, add an occupant) SHALL require the tenant to be fully or basically accessible to the actor in the contract's building, or a valid link token bound to that actor, tenant and building. Otherwise the API SHALL return `404 TENANT_NOT_LINKABLE`. A tenant with an active tenancy SHALL never be attachable, with or without a token.
+
+#### Scenario: Spoofed tenant id
+- **WHEN** a client sends a `tenant_id` or `occupants[].tenant_id` outside its access without a valid token
+- **THEN** the API returns `404 TENANT_NOT_LINKABLE` and writes nothing
+
+#### Scenario: Legitimate re-rental
+- **WHEN** an owner attaches a former tenant of their own building, or one verified with a link token
+- **THEN** the write succeeds with the same Tenant ID, and afterwards the new owner has full access while the previous owner keeps basic history access

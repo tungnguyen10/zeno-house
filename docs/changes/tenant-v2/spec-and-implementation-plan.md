@@ -13,6 +13,8 @@ owner: "ZENO HOUSE"
 
 # Tenant V2 — Specification & Implementation Plan
 
+> **Implementation checkpoint (2026-11-16):** identity hardening has its own archived record; [Tenant Quick Create](../tenant-quick-create/verification.md) and [Claude identity autofill](../tenant-identity-autofill/verification.md) have merged into `develop`. OCR remains off pending privacy, benchmark, security and cloud verification gates. This document is the original design and should not be read as an unimplemented task list.
+
 > **Mục tiêu:** Chọn khách cũ hoặc tạo khách thuê mới ngay trong luồng Room / Contract, với tối đa **2 trường bắt buộc** khi nhập tay; cho phép **chụp/upload căn cước -> Claude Vision trích xuất -> người dùng kiểm tra -> tự điền form -> lưu**. Một hồ sơ Tenant được tái sử dụng trong nhiều lần thuê.
 >
 > **Quyết định công nghệ:** Claude Platform API trực tiếp (`@anthropic-ai/sdk`) dành riêng cho Identity Autofill. AI Chat/Billing **tiếp tục dùng OpenRouter**, không đổi provider. `claude-haiku-5-5` là model benchmark chính, `claude-sonnet-5-5` là đối chứng; **không tự động fallback sang Sonnet**. Claude API **có tính phí**, không dùng quota Free của OpenRouter.

@@ -6,16 +6,17 @@ const page = readFileSync(resolve(process.cwd(), 'app/pages/dashboard/buildings/
 
 describe('building create quick rooms', () => {
   it('uses the floor-based RoomBatchGenerator', () => {
-    expect(page).toContain('useQuickRoomPreview()')
+    expect(page).toContain('useQuickRoomPreview({ enabled: true, initialRoomsPerFloor: 0 })')
     expect(page).toContain('<RoomBatchGenerator')
     // The PR0 single-floor inputs are gone (moved into the generator component).
     expect(page).not.toContain('label="Số lượng phòng"')
     expect(page).not.toContain('previewColumns')
   })
 
-  it('keeps the enable toggle and sends rooms via toPayload', () => {
-    expect(page).toContain('Bật tạo phòng nhanh')
+  it('always shows the rooms block and sends rooms via toPayload', () => {
+    expect(page).toContain('useQuickRoomPreview({ enabled: true, initialRoomsPerFloor: 0 })')
+    expect(page).not.toContain('Bật tạo phòng nhanh')
     expect(page).toContain('preview.toPayload()')
-    expect(page).not.toContain('quickRooms:')
+    expect(page).toContain('Bên cho thuê, giá điện nước, thanh toán sẽ thiết lập ở bước tiếp theo.')
   })
 })

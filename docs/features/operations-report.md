@@ -24,7 +24,7 @@ Module này không thay thế billing workspace. Billing vẫn là nguồn tính
 
 ## Nguyên Tắc Dữ Liệu
 
-Revenue không nhập tay. Revenue lấy từ billing:
+Doanh thu hóa đơn lấy từ billing:
 
 ```text
 billing_periods(building_id, period_year, period_month)
@@ -35,7 +35,7 @@ billing_periods(building_id, period_year, period_month)
 Expense là dữ liệu mới, nhập theo building và theo tháng.
 
 ```text
-Revenue: billing sinh ra
+Doanh thu vận hành: doanh thu billing + thu khác chọn lợi nhuận
 Expense: người dùng nhập
 Report: tổng hợp revenue + expense
 ```
@@ -49,8 +49,8 @@ Report: tổng hợp revenue + expense
 | Công nợ | Tổng `balance_amount` của invoice chưa void. |
 | Chi phí cố định | Khoản lặp lại theo tháng của building, ví dụ tiền thuê lại tòa nhà. |
 | Chi phí tháng | Khoản chi phát sinh theo building/tháng, ví dụ điện đầu vào, nước đầu vào, sửa chữa. |
-| Lãi theo doanh thu | Doanh thu phát hành - tổng chi. |
-| Lãi tiền mặt | Tiền đã thu - tổng chi. |
+| Lãi theo doanh thu | Doanh thu phát hành + thu khác vào lợi nhuận - tổng chi. |
+| Lãi tiền mặt | Tiền thu billing + thu khác vào lợi nhuận - tổng chi. |
 
 ## Chi Phí Cố Định
 
@@ -156,10 +156,10 @@ Tổng chi
    where voided_at is null
 
 Lãi theo doanh thu
-= Doanh thu phát hành - Tổng chi
+= Doanh thu phát hành + thu khác vào lợi nhuận - Tổng chi
 
 Lãi tiền mặt
-= Tiền đã thu - Tổng chi
+= Tiền đã thu qua hóa đơn + thu khác vào lợi nhuận - Tổng chi
 ```
 
 Doanh thu theo nhóm lấy từ `invoice_charges.charge_type`:

@@ -16,7 +16,7 @@ function slugLookupReturnsEmpty() {
 
 const buildingRow = {
   id: 'b-1', slug: 'toa-a', code: 'toaa', name: 'Tòa A', address: '123 Lê Lợi', description: null,
-  status: 'active', owner_name: null, owner_phone: null, owner_email: null,
+  status: 'active',
   electricity_pricing_type: 'per_kwh', default_electricity_rate: null, water_pricing_type: 'per_m3',
   default_water_rate: null, meter_reading_day: null, billing_generation_day: null, payment_due_day: null,
   grace_period_days: 0, created_by: 'u-1', owner_user_id: null,

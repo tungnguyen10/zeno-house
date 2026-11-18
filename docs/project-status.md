@@ -5,43 +5,27 @@ status: stable
 tags: [engineering, reference]
 ---
 
-# Zeno House - Project Status
+# Zeno House — Project Status
 
-Documentation structure reviewed: 2026-11-07 against `develop` commit
-`8544e7f9b3293dfc97b41e163468d783bb029b18` (PR #17).
+**Source review snapshot: 2026-11-16, `develop` `74aaac5c2be43965a2058126c9ac2828bbc76027`.** For the current state after that SHA, compare new commits and PRs. [CI for this SHA](https://github.com/tungnguyen10/zeno-house/actions/runs/43892088853): **success**. Cloud release state was not independently re-verified in this snapshot.
 
-This review covers documentation structure, inventory and execution workflow.
-It does not reverify the implementation or deployment of the business features below.
-Previous source review date: 2026-07-23; dated implementation updates are retained.
+## V2 Baseline — source merged, release gates still open
 
-## Current Documentation Status — OKF v0.2
+- V2 PR0–PR4b merged into `develop` via [PR #25](https://github.com/tungnguyen10/zeno-house/pull/25). PR #26 added Inventory Lite migration replay fixes; PR #27 merged Claude identity autofill behind default-off flags.
+- Implemented flow: **Building setup → Room batch/inventory → inline Tenant → one-page Contract → private versioned DOCX**. Existing Billing/Payment/Renewal is preserved rather than rebuilt.
+- Cloud evidence for several 2026-11-15 migrations, type generation and selected QA exists in their change verification documents. **Post-merge deployed full-flow, lost-response retry and cloud hardening verification are not all signed off.**
+- Important: `20261116100000_inventory_lite_functions_hardening.sql` was added by PR #26; the PR explicitly states it was not applied to cloud when merged. Do not assume database functions match latest source.
+- PR5 quota migration was reported applied on 2026-11-16. `tenant_ocr_usage.sql` and generated RPC type refresh remain open. Do not enable real-ID OCR until privacy, security, benchmark and spend-limit gates pass.
+- PR4b contract DOCX is implemented, but **appendix issuance is rejected by the service** and is not a supported feature yet.
+- The V2 stabilization checkpoint, source evidence, tests and outstanding gates are recorded in [baseline-2026-11-16](./changes/zeno-house-v2-optimization/baseline-2026-11-16.md).
 
-`docs/**` is the only documentation and specification root.
-See [bundle index](./index.md) and [agent workflow](./workflow.md).
+## OKF documentation source of truth
 
-| Area | Verified scope |
-| --- | --- |
-| Accepted capabilities | 97 specifications in `docs/capabilities/**`; see [index](./capabilities/index.md) |
-| Active changes | 7 bundles in `docs/changes/**`; see [index](./changes/index.md) |
-| Archived changes | 86 legacy change bundles; see [history](./history/index.md) |
-| Historical Superpowers records | 39 design/plan files; see [history](./history/superpowers/index.md) |
-| Execution workflow | Superpowers: explore/design → one plan → TDD/implementation → review/verify → accept/archive |
-| CI evidence | [Run 42159572816](https://github.com/tungnguyen10/zeno-house/actions/runs/42159572816) passed on this commit |
+`docs/**` remains the sole OKF v0.2 and Superpowers documentation root. On the reviewed SHA, there are **97 accepted capability Markdown files**, while some V2 capability promotions (building contract profile, room inventory, contract documents) still require final sign-off. The physical `docs/changes/` tree includes active changes **and archived redirects**; use the [active change index](./changes/index.md) rather than an outdated raw directory count.
 
-Active bundles are `add-contract-amendments`, `add-dashboard-light-mode`,
-`dashboard-layout-refresh`, `harden-event-audit`, `tenant-authorization-scope`,
-`atomic-contract-renewal`, and `atomic-billing-close`.
-Active status and completed checklist items do not establish deployment.
-Use each bundle's verification evidence and remaining rollout gates.
+Accepted requirement truth is `docs/capabilities/**`; implementation and current verification checkpoints are in `docs/changes/**`; completed work and prior verification records belong to `docs/history/**`. A merged PR or checked checklist is not proof of production deployment. Run `npm run knowledge:check` and CI for documentation changes.
 
-Accepted requirements live in `docs/capabilities/**`. Proposed behavior, designs
-and one canonical checklist (`implementation-plan.md` or migrated `tasks.md`)
-live in `docs/changes/<slug>/**`. Promote approved, verified deltas into accepted
-capabilities and preserve completed records in `docs/history/**`.
-
-Do not recreate `knowledge/**`, `openspec/**` or `docs/superpowers/**`.
-Commit-pinned legacy URLs in `sources` preserve provenance and remain valid.
-Run `npm run knowledge:check` for current OKF structural validation.
+The historical updates below are retained with their original dates and must not be treated as the current V2 runtime assessment.
 
 ## Dated Implementation Updates
 

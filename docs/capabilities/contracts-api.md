@@ -422,3 +422,16 @@ Contract service mutation methods SHALL write audit events to `audit_events`.
 #### Scenario: ContractService mutations emit audit events
 - **WHEN** any mutation method on `ContractService` is called
 - **THEN** an audit event is written to `audit_events`
+
+### Requirement: Contract building follows its room and tenants stay available
+Contract create and update SHALL derive `building_id` from the room and SHALL ignore a client-supplied `building_id`. Moving a contract to a room in another building SHALL return `409` with reason `CONTRACT_ROOM_BUILDING_CHANGE`. A database guard SHALL serialize writes per tenant and reject, with `TENANT_BUSY` (409), an active contract or open occupancy for a tenant who is already primary on another active contract or has an open occupancy on another contract. Contract create, update and occupant add accept the verification token as `tenant_link_token`, `occupants[].link_token` or `link_token`; tokens SHALL never be stored.
+
+#### Scenario: Client building id ignored
+- **WHEN** a create request carries a `building_id` that differs from the room's building
+- **THEN** the contract is created in the room's building
+
+#### Scenario: Concurrent creates for one tenant
+- **WHEN** two requests concurrently create active contracts for the same tenant
+- **THEN** exactly one succeeds and the other fails with `TENANT_BUSY`
+
+Implementation and production migration evidence: [tenant access and contract linking](../history/2026-11-18-tenant-access-contract-linking/index.md).

@@ -1,6 +1,6 @@
 # Tenant quick create (V2 PR3 · Tenant V2 change A)
 
-**Status: implementation-review.** Tasks 1–6 implemented TDD-first on Node 22; local typecheck/test/lint/knowledge:check all pass. Client-only change; no migration. Git/PR and visual QA remain maintainer-run — see verification.
+**Status: source merged; browser edge cases open.** Scoped picker and inline name/phone create are available in `develop`; 2026-11-15 desktop/mobile and permission checks are recorded. Busy-tenant duplicate, generic identity conflict and interrupted request journeys still need explicit acceptance evidence.
 
 - [Design](./design.md)
 - [Implementation plan](./implementation-plan.md)

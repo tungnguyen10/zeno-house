@@ -79,6 +79,7 @@ Readable building routes use `slug` when available and fall back to id.
 ### Form
 
 - Four numbered card sections (basic, owner, billing defaults, schedule); the create page extends the form with a fifth "Tạo phòng nhanh" section via the `extras` slot so the same desktop footer / mobile sticky save bar drives the entire flow.
+- "Tạo phòng nhanh" (`useQuickRoomPreview`) generates up to 200 rooms from prefix, start number, default floor, rent and area; floor, rent and area are editable per room through `QuickRoomCellEditor` and edits survive default changes. The preview is a table from 640px and a compact list below. The building and rooms are sent in one `POST /api/buildings` with a page-session `request_id`, created atomically by RPC `create_building_with_rooms`; a retry after a lost response returns the same building.
 - Schedule section includes optional "Năm bắt đầu" and "Tháng bắt đầu" fields to declare the first operational month of the building.
 - Inline blur validation runs the create schema per field — errors appear on blur and clear as soon as the value becomes valid. Submit reveals remaining errors inline for all invalid fields and focuses the first invalid field.
 - Draft autosaved to `localStorage` (`building-form:create` or `building-form:edit:<id>`); draft presence is evaluated after client mount so SSR/hydration output stays stable, then the form shows a restore banner when a draft exists and clears it on successful submit.

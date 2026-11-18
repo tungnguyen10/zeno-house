@@ -343,6 +343,11 @@ const triggerLabelClass = computed(() =>
             <IconPlus class="size-4 shrink-0 text-ui-accent" aria-hidden="true" />
           </li>
         </ul>
+
+        <!-- Footer slot: extra actions that must stay visible inside the popup -->
+        <div v-if="$slots.footer" class="border-t border-ui-border p-2">
+          <slot name="footer" :close="closeDropdown" :query="trimmedQuery" />
+        </div>
       </div>
     </div>
 

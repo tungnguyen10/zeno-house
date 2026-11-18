@@ -7,7 +7,7 @@ tags: [engineering, reference]
 
 # Chi Phí Và Báo Cáo Vận Hành
 
-Báo cáo vận hành không thay thế billing — doanh thu luôn được đọc từ dữ liệu billing (hóa đơn/thanh toán), còn chi phí là dữ liệu bạn nhập thêm theo từng tòa nhà/tháng.
+Báo cáo tổng hợp hóa đơn phòng, khoản thu khác và chi phí của từng tòa nhà trong kỳ.
 
 ## Báo Cáo Vận Hành
 
@@ -20,13 +20,22 @@ Chọn **tòa nhà**, **năm**, **tháng** (giới hạn theo tháng/năm bắt 
 ### Các chỉ số chính
 
 - **Doanh thu phát hành** — tổng tiền trên hóa đơn đã phát hành trong kỳ.
-- **Đã thu** — tổng tiền thực thu.
+- **Tổng đã thu của kỳ** = tiền thực thu từ hóa đơn của kỳ + khoản thu khác của tòa nhà trong tháng.
 - **Công nợ** — tổng số dư hóa đơn chưa thu.
 - **Tổng chi phí** — tổng chi phí cố định + chi phí phát sinh trong tháng.
-- **Lợi nhuận (theo phát hành)** = doanh thu phát hành − tổng chi phí.
-- **Lợi nhuận (theo tiền thu)** = tiền đã thu − tổng chi phí.
+- **Lợi nhuận (theo phát hành)** = doanh thu phát hành + thu khác vào lợi nhuận − tổng chi phí.
+- **Lợi nhuận (theo tiền thu)** = tiền thu từ hóa đơn + thu khác vào lợi nhuận − tổng chi phí.
 
 Ngoài ra, mục **"Doanh thu theo loại"** tách doanh thu theo tiền thuê/điện/nước/dịch vụ/phát sinh/giảm giá/phụ thu; riêng điện và nước còn hiển thị **chênh lệch** giữa tiền thu khách và chi phí điện/nước đầu vào — số dương (xanh) nghĩa là thu đủ bù chi phí đầu vào, số âm (đỏ) nghĩa là đang bù lỗ phần điện/nước.
+
+### Khoản thu khác của tòa nhà
+
+Trong kỳ báo cáo đang mở, chọn **Thêm khoản thu**, nhập tên, số tiền và ngày nhận. Ví dụ, ghi “Thanh lý máy giặt” khi tòa nhà đã nhận tiền. Phí phải thu của một phòng được ghi trong Billing.
+
+- **Quỹ dự phòng** được chọn sẵn. Quỹ nhận toàn bộ số tiền khi lưu.
+- **Lợi nhuận** cộng toàn bộ số tiền vào lợi nhuận. Khoản trích quỹ định kỳ vẫn chỉ dựa trên doanh thu hóa đơn trừ chi phí.
+- Cả hai lựa chọn đều cộng vào tổng đã thu của kỳ đúng một lần. Khi có cảnh báo trùng, đối chiếu giao dịch trước khi xác nhận.
+- Nếu nhập sai, sửa hoặc hủy khoản thu trong kỳ đang mở. Giao dịch quỹ liên quan được cập nhật cùng lúc.
 
 ### Chi phí cố định và chi phí trả trước
 
@@ -75,6 +84,7 @@ Chỉ admin và owner có quyền xem/quản lý quỹ dự phòng của một t
 Quỹ dự phòng là một sổ cái theo tòa nhà, ghi nhận:
 
 - **Trích quỹ hằng tháng** (tự động): tính theo công thức `max(doanh thu phát hành − tổng chi phí báo cáo, 0) × tỷ lệ quỹ / 100`, được ghi hoặc cập nhật mỗi khi bạn chốt kỳ billing, chốt báo cáo vận hành, hoặc hệ thống tự chốt báo cáo cuối tháng.
+- **Thu khác vào quỹ** cộng toàn bộ số tiền của khoản thu chọn quỹ ngay khi lưu.
 - **Chi từ quỹ**: khi một khoản chi phí được đánh dấu "Trừ quỹ dự phòng" lúc ghi nhận (xem phần chi phí ở trên), khoản đó được trừ thẳng vào số dư quỹ.
 
 ### Cấu hình tỷ lệ quỹ

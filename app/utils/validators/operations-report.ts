@@ -261,3 +261,47 @@ export const prepaidExpenseUpdateSchema = prepaidExpenseCreateSchema
   })
 
 export type PrepaidExpenseUpdateInput = z.infer<typeof prepaidExpenseUpdateSchema>
+
+const otherIncomeFields = z.object({
+  name: z.string().trim().min(1, 'Nhập tên khoản thu').max(200),
+  amount: z.number().int('Nhập số tiền nguyên').positive('Số tiền phải lớn hơn 0').max(999_999_999_999),
+  received_date: z.iso.date('Ngày thu không hợp lệ'),
+  allocation_target: z.enum(['reserve_fund', 'profit']),
+  payer: z.string().trim().max(200).nullable().optional(),
+  payment_method: z.string().trim().max(100).nullable().optional(),
+  transaction_reference: z.string().trim().toUpperCase().max(100).nullable().optional(),
+  note: z.string().trim().max(500).nullable().optional(),
+})
+const otherIncomeVersion = z.string().datetime({ offset: true, message: 'Phiên bản khoản thu không hợp lệ' })
+const duplicateConfirmation = z.boolean().optional()
+
+export function otherIncomeDateInPeriod(date: string, year: number, month: number): boolean {
+  return date.startsWith(`${year}-${String(month).padStart(2, '0')}-`)
+}
+
+export const buildingOtherIncomeCreateSchema = otherIncomeFields.extend({
+  building_id: z.string().uuid('Tòa nhà không hợp lệ'),
+  period_year: z.number().int().min(2000).max(2100),
+  period_month: z.number().int().min(1).max(12),
+  operation_id: z.string().uuid('Mã thao tác không hợp lệ'),
+  allocation_target: otherIncomeFields.shape.allocation_target.default('reserve_fund'),
+  confirm_duplicate: duplicateConfirmation,
+}).strict().refine(d => otherIncomeDateInPeriod(d.received_date, d.period_year, d.period_month), {
+  path: ['received_date'], message: 'Ngày thu phải thuộc tháng báo cáo',
+})
+
+export const buildingOtherIncomeUpdateSchema = otherIncomeFields.partial().extend({
+  expected_updated_at: otherIncomeVersion,
+  confirm_duplicate: duplicateConfirmation,
+}).strict().refine(d => Object.keys(d).some(key => key in otherIncomeFields.shape), {
+  message: 'Cần nhập thay đổi cho khoản thu',
+})
+
+export const buildingOtherIncomeVoidSchema = z.object({
+  expected_updated_at: otherIncomeVersion,
+  void_reason: z.string().trim().min(1, 'Nhập lý do hủy khoản thu').max(500),
+}).strict()
+
+export type BuildingOtherIncomeCreateInput = z.infer<typeof buildingOtherIncomeCreateSchema>
+export type BuildingOtherIncomeUpdateInput = z.infer<typeof buildingOtherIncomeUpdateSchema>
+export type BuildingOtherIncomeVoidInput = z.infer<typeof buildingOtherIncomeVoidSchema>

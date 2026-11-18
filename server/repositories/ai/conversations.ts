@@ -81,7 +81,7 @@ export const AiConversationRepository = {
         user_id: input.userId,
         role: input.role,
         content: input.content,
-        metadata: (input.metadata ?? {}) as Json,
+        metadata: (input.metadata ?? {}) as NonNullable<Json>,
       })
       .select()
       .single()

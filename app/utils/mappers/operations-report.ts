@@ -1,6 +1,7 @@
 import type { Tables } from '~/types/database.types'
 import type {
   BuildingExpense,
+  BuildingOtherIncome,
   BuildingFixedCost,
   BuildingReserveFundRate,
   OperationsReportClosure,
@@ -17,6 +18,50 @@ import type {
   PrepaidExpenseStatus,
   RecurringExpenseFrequency,
 } from '~/utils/constants/operations-report'
+
+export type BuildingOtherIncomeRow = {
+  id: string
+  building_id: string
+  period_year: number
+  period_month: number
+  name: string
+  amount: number | string
+  received_date: string
+  allocation_target: BuildingOtherIncome['allocationTarget']
+  payer: string | null
+  payment_method: string | null
+  transaction_reference: string | null
+  note: string | null
+  created_by: string | null
+  created_at: string
+  updated_at: string
+  voided_at: string | null
+  voided_by: string | null
+  void_reason: string | null
+}
+
+export function mapBuildingOtherIncome(row: BuildingOtherIncomeRow): BuildingOtherIncome {
+  return {
+    id: row.id,
+    buildingId: row.building_id,
+    periodYear: row.period_year,
+    periodMonth: row.period_month,
+    name: row.name,
+    amount: Number(row.amount),
+    receivedDate: row.received_date,
+    allocationTarget: row.allocation_target,
+    payer: row.payer,
+    paymentMethod: row.payment_method,
+    transactionReference: row.transaction_reference,
+    note: row.note,
+    createdBy: row.created_by,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    voidedAt: row.voided_at,
+    voidedBy: row.voided_by,
+    voidReason: row.void_reason,
+  }
+}
 
 export interface RecurringExpenseRow {
   id: string

@@ -6,6 +6,29 @@ import type {
   RevenueChargeType,
 } from '~/utils/constants/operations-report'
 
+export type OtherIncomeAllocationTarget = 'reserve_fund' | 'profit'
+
+export interface BuildingOtherIncome {
+  id: string
+  buildingId: string
+  periodYear: number
+  periodMonth: number
+  name: string
+  amount: number
+  receivedDate: string
+  allocationTarget: OtherIncomeAllocationTarget
+  payer: string | null
+  paymentMethod: string | null
+  transactionReference: string | null
+  note: string | null
+  createdBy: string | null
+  createdAt: string
+  updatedAt: string
+  voidedAt: string | null
+  voidedBy: string | null
+  voidReason: string | null
+}
+
 /** A monthly one-off building expense (soft-voidable financial record). */
 export interface BuildingExpense {
   id: string
@@ -46,7 +69,7 @@ export interface BuildingFixedCost {
 }
 
 export type ReserveFundTransactionType = 'deposit' | 'withdrawal'
-export type ReserveFundTransactionSource = 'manual' | 'monthly_accrual' | 'expense_deduction'
+export type ReserveFundTransactionSource = 'manual' | 'monthly_accrual' | 'expense_deduction' | 'other_income'
 
 export interface BuildingReserveFundRate {
   id: string
@@ -97,6 +120,7 @@ export interface ReserveFundSummary {
   monthlyAccrualEstimated: number
   monthlyAccrualIsEstimated: boolean
   monthlyDeduction: number
+  monthlyOtherIncome: number
   monthlyBalance: number
   cumulativeBalance: number
   cumulativeBalanceIsEstimated: boolean
@@ -199,6 +223,11 @@ export interface OperationsReport {
   metrics: {
     issuedRevenue: number
     collectedCash: number
+    otherIncomeTotal: number
+    otherIncomeProfitTotal: number
+    otherIncomeReserveTotal: number
+    totalOperatingRevenue: number
+    totalCollectedCash: number
     settlementAllocationTotal: number
     refundTotal: number
     debt: number
@@ -209,6 +238,7 @@ export interface OperationsReport {
     profitByRevenue: number
     profitByCash: number
   }
+  otherIncomes: BuildingOtherIncome[]
   revenueByType: OperationsBreakdownEntry[]
   expenseByCategory: OperationsBreakdownEntry[]
   fixedCostByCategory: OperationsBreakdownEntry[]

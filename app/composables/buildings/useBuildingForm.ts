@@ -2,7 +2,7 @@ import type { Building } from '~/types/buildings'
 import type { ApiSuccess } from '~/types/api'
 import { buildingCreateWithRoomsSchema, buildingUpdateSchema } from '~/utils/validators/buildings'
 import type { BuildingCreateWithRoomsInput, BuildingUpdateInput } from '~/utils/validators/buildings'
-import { buildingPath } from '~/utils/routes/operational'
+import { buildingPath, buildingSetupPath } from '~/utils/routes/operational'
 import { getApiErrorDetails } from '~/utils/api-error'
 import { useLocalFormDraft } from '~/composables/useLocalFormDraft'
 import { useFormState } from '~/composables/useFormState'
@@ -23,6 +23,9 @@ interface UseBuildingFormOptions<T> {
   onUpdated?: (building: Building) => void | Promise<void>
 }
 
+// The create form no longer has owner fields; purge them from drafts saved before that.
+const REMOVED_CREATE_DRAFT_KEYS = ['ownerName', 'ownerPhone', 'ownerEmail'] as const
+
 function buildStorageKey(key: NonNullable<DraftKey>): string {
   return key.mode === 'create'
     ? 'building-form:create'
@@ -38,6 +41,7 @@ export function useBuildingForm<T = unknown>(options: UseBuildingFormOptions<T> 
     key: storageKey,
     formData: options.formData,
     initialSnapshot: options.initialSnapshot,
+    omitKeys: options.draftKey?.mode === 'create' ? REMOVED_CREATE_DRAFT_KEYS : undefined,
   })
 
   // One id per form session so a retry after a lost response replays instead of duplicating.
@@ -57,10 +61,11 @@ export function useBuildingForm<T = unknown>(options: UseBuildingFormOptions<T> 
 
     isLoading.value = true
     try {
-      await apiFetch<ApiSuccess<Building>>('/api/buildings', { method: 'POST', body: result.data })
+      const res = await apiFetch<ApiSuccess<Building>>('/api/buildings', { method: 'POST', body: result.data })
       clearDraft()
       clearNuxtData()
-      await navigateTo('/dashboard/buildings')
+      useToast().success('Đã tạo tòa nhà. Tiếp tục thiết lập để sẵn sàng cho thuê.')
+      await navigateTo(useAuthStore().canManage ? buildingSetupPath(res.data) : buildingPath(res.data))
     }
     catch (e: unknown) {
       const details = getApiErrorDetails<{ reason?: string; duplicate_room_numbers?: string[] }>(e)

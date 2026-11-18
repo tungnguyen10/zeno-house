@@ -29,9 +29,6 @@ export interface Building {
   totalRooms: number
   serviceSummary: BuildingServiceSummary
   // Operational config
-  ownerName: string | null
-  ownerPhone: string | null
-  ownerEmail: string | null
   electricityPricingType: ElectricityPricingType
   defaultElectricityRate: number | null
   waterPricingType: WaterPricingType
@@ -56,9 +53,6 @@ export interface BuildingInput {
   address: string
   description?: string | null
   status?: BuildingStatus
-  ownerName?: string | null
-  ownerPhone?: string | null
-  ownerEmail?: string | null
   electricityPricingType?: ElectricityPricingType
   defaultElectricityRate?: number | null
   waterPricingType?: WaterPricingType

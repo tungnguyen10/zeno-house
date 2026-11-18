@@ -19,14 +19,16 @@ const BADGE_VARIANT: Record<StepListItem['status'], 'success' | 'warning' | 'neu
 
 function statusLabel(step: StepListItem): string {
   if (step.statusLabel) return step.statusLabel
+  if (step.locked) return 'Cần chủ tòa'
   if (step.status === 'ready') return 'Hoàn tất'
   if (step.status === 'missing') return `Thiếu ${step.missingCount} mục`
   if (step.status === 'warning') return 'Cần xem lại'
   return 'Tùy chọn'
 }
 
-function toggle(id: string) {
-  emit('update:openId', props.openId === id ? null : id)
+function toggle(step: StepListItem) {
+  if (step.locked) return
+  emit('update:openId', props.openId === step.id ? null : step.id)
 }
 </script>
 
@@ -45,11 +47,15 @@ function toggle(id: string) {
       <div class="flex items-center gap-2 px-4 py-3">
         <button
           type="button"
-          class="flex min-w-0 flex-1 items-center gap-3 rounded-md text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-accent/40"
+          :disabled="step.locked"
+          :class="clsx(
+            'flex min-w-0 flex-1 items-center gap-3 rounded-md text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-accent/40',
+            step.locked && 'cursor-not-allowed opacity-70',
+          )"
           :aria-expanded="openId === step.id"
           :aria-controls="`${step.id}-panel`"
           :data-test="`step-toggle-${step.id}`"
-          @click="toggle(step.id)"
+          @click="toggle(step)"
         >
           <span
             v-if="numbered"
@@ -75,7 +81,7 @@ function toggle(id: string) {
         <slot :name="`step-${step.id}-actions`" :step="step" />
       </div>
 
-      <div v-if="openId === step.id" :id="`${step.id}-panel`" class="space-y-4 border-t border-ui-border p-4">
+      <div v-if="openId === step.id && !step.locked" :id="`${step.id}-panel`" class="space-y-4 border-t border-ui-border p-4">
         <slot :name="`step-${step.id}`" :step="step" />
       </div>
     </li>

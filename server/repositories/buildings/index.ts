@@ -116,9 +116,6 @@ function buildInsertPayload(
     address: input.address,
     description: input.description ?? null,
     status: input.status ?? 'active',
-    owner_name: input.owner_name ?? null,
-    owner_phone: input.owner_phone ?? null,
-    owner_email: input.owner_email ?? null,
     created_by: provenance.created_by ?? null,
     owner_user_id: provenance.owner_user_id ?? null,
     electricity_pricing_type: input.electricity_pricing_type ?? 'per_kwh',
@@ -401,7 +398,10 @@ export const BuildingRepository = {
         throwDbError(error, 'buildings.createWithRooms')
       }
 
-      const result = data as unknown as { building: BuildingRow; rooms: Parameters<typeof mapRoom>[0][]; replayed: boolean }
+      const result = data as unknown as { building: BuildingRow; rooms: Parameters<typeof mapRoom>[0][]; replayed: boolean } | null
+      if (!result?.building || !Array.isArray(result.rooms)) {
+        throwInternal(new Error('create_building_with_rooms returned an unexpected shape'), 'buildings.createWithRooms.result')
+      }
       const [building] = await attachServiceSummaries(event, [
         mapBuilding({ ...result.building, rooms: [{ count: result.rooms.length }] } as BuildingRow),
       ])
@@ -440,9 +440,6 @@ export const BuildingRepository = {
       ...(input.address !== undefined && { address: input.address }),
       ...(input.description !== undefined && { description: input.description }),
       ...(input.status !== undefined && { status: input.status }),
-      ...(input.owner_name !== undefined && { owner_name: input.owner_name }),
-      ...(input.owner_phone !== undefined && { owner_phone: input.owner_phone }),
-      ...(input.owner_email !== undefined && { owner_email: input.owner_email }),
       ...(input.electricity_pricing_type !== undefined && { electricity_pricing_type: input.electricity_pricing_type }),
       ...(input.default_electricity_rate !== undefined && { default_electricity_rate: input.default_electricity_rate }),
       ...(input.water_pricing_type !== undefined && { water_pricing_type: input.water_pricing_type }),

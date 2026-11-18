@@ -16,6 +16,13 @@ describe('building inventory pages', () => {
     expect(page).toContain('existingRoomNumbers')
     expect(page).toContain('Áp dụng nội thất mẫu')
     expect(page).toContain('useRoomBatchCreate(')
+    // Unlike create.vue, batch keeps the composable's sensible non-zero default.
+    expect(page).toContain('useQuickRoomPreview({ enabled: true })')
+    expect(page).not.toContain('initialRoomsPerFloor')
+  })
+
+  it('batch page links straight to the inventory template step', () => {
+    expect(read('app/pages/dashboard/buildings/[id]/rooms/batch.vue')).toContain('#inventory-template')
   })
 
   it('settings page has the inventory template section with apply modal', () => {

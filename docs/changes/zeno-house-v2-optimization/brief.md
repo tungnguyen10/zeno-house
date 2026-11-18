@@ -12,6 +12,8 @@ owner: "ZENO HOUSE"
 
 # ZENO House V2 — Flow Optimization Brief
 
+> **Baseline update 2026-11-16:** PR0–PR5 have now merged into `develop`. The V1 gaps and PR planning below are historical rationale, **not current implementation status**. Read the [commit-pinned V2 baseline and release gates](./baseline-2026-11-16.md) before opening new tasks.
+
 > **Mục tiêu:** Đơn giản hóa luồng vận hành nhà cho thuê trên nền V1, **không viết lại module đã hoạt động tốt**. Setup tòa nhà/phòng một lần; khi có khách mới, quản lý chỉ cần **chọn phòng → chọn/thêm khách → xác nhận điều khoản → tạo và xuất HĐ DOCX**.
 
 ## 1. Baseline và phạm vi xác minh

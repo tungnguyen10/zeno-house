@@ -15,6 +15,8 @@ describe('blockForField', () => {
     ['CONTRACT_OCCUPANT_BUSY', 'occupants'],
     ['CONTRACT_VEHICLE_DUPLICATE', 'vehicles'],
     ['CONTRACT_SERVICE_INVALID', 'services'],
+    ['TENANT_BUSY', 'tenant'],
+    ['TENANT_NOT_LINKABLE', 'tenant'],
   ])('maps %s → %s', (field, block) => {
     expect(blockForField(field)).toBe(block)
   })

@@ -19,10 +19,6 @@ const buildingBaseSchema = z.object({
   address: z.string().min(5, 'Địa chỉ phải có ít nhất 5 ký tự').max(200, 'Địa chỉ quá dài'),
   description: z.string().max(500, 'Mô tả quá dài').nullable().optional(),
   status: z.enum(['active', 'inactive']).optional().default('active'),
-  // Owner/contact
-  owner_name: z.string().max(100).nullable().optional(),
-  owner_phone: z.string().max(20).nullable().optional(),
-  owner_email: z.string().email('Email không hợp lệ').nullable().optional(),
   // Billing defaults
   electricity_pricing_type: z.enum(['per_kwh', 'fixed', 'tiered']).optional().default('per_kwh'),
   default_electricity_rate: z.number().min(0).nullable().optional(),

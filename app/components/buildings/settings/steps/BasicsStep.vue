@@ -3,7 +3,7 @@ import type { Building } from '~/types/buildings'
 import type { BuildingFormData } from '~/types/building-form'
 import { buildingFormToApiPayload, buildingToFormData } from '~/utils/mappers/building-form'
 
-const props = defineProps<{ building: Building }>()
+const props = withDefaults(defineProps<{ building: Building, submitLabel?: string }>(), { submitLabel: 'Lưu thông tin' })
 
 const emit = defineEmits<{
   saved: [building: Building]
@@ -46,11 +46,12 @@ async function onSubmit(data: BuildingFormData) {
     <UiAlert v-if="apiError" severity="danger">{{ apiError }}</UiAlert>
     <BuildingForm
       v-model="formData"
+      variant="basics"
       :loading="isLoading"
       :errors="errors"
       :has-draft="hasDraft"
       :is-dirty="isDirty"
-      submit-label="Lưu thông tin"
+      :submit-label="submitLabel"
       @submit="onSubmit"
       @cancel="emit('cancel')"
       @restore-draft="restoreDraft"

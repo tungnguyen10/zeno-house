@@ -208,3 +208,19 @@ Reports SHALL distinguish fresh invoice cash receipts from deposit/credit alloca
 #### Scenario: Invoice paid from deposit
 - **WHEN** settlement applies 650000 of held deposit to invoice balances
 - **THEN** debt decreases by 650000 and collected cash does not increase, while electricity revenue remains in its invoice period
+
+### Requirement: Other income of a building
+
+An operator can record an independent receipt in an open report month. The receipt belongs to its building and date, including when there is no corresponding billing period. Each active receipt contributes to total collections once. The billing amounts and invoice debt are derived exclusively from invoices and payments.
+
+#### Scenario: Allocate proceeds directly to reserves
+- **WHEN** an authorized operator records a receipt without choosing an allocation
+- **THEN** the system credits the full receipt to the reserve, linked to the receipt, and excludes it from both profit metrics and the monthly reserve percentage base
+
+#### Scenario: Allocate proceeds to profit
+- **WHEN** an operator chooses profit
+- **THEN** both report profit metrics include the full receipt and reserve accrual still uses issued invoice revenue less operating expenses
+
+#### Scenario: Correct a receipt
+- **WHEN** an authorized operator changes allocation, edits the amount, or voids the receipt in an open report
+- **THEN** the report, linked deposit and audit are consistent, including after retries. A stale edit is rejected.

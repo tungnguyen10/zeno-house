@@ -58,8 +58,10 @@ export const contractCreateSchema = z.object({
   handover_reading_date: z.string().min(1).optional(),
   inventory: inventoryListSchema.optional(),
   request_id: z.string().uuid('Mã yêu cầu không hợp lệ'),
+  tenant_link_token: z.string().max(1000).optional(),
   occupants: z.array(z.object({
     tenant_id: z.string().uuid('Khách không hợp lệ'),
+    link_token: z.string().max(1000).optional(),
     move_in_date: z.string().min(1).optional(),
     billing_counted: z.boolean().default(true),
   })).max(10, 'Tối đa 10 người ở cùng').optional(),
@@ -91,6 +93,7 @@ export const contractCreateSchema = z.object({
 export const contractUpdateSchema = z.object({
   room_id: z.string().uuid('ID phòng không hợp lệ').optional(),
   tenant_id: z.string().uuid('ID khách thuê không hợp lệ').optional(),
+  tenant_link_token: z.string().max(1000).optional(),
   building_id: z.string().uuid('ID tòa nhà không hợp lệ').nullable().optional(),
   start_date: z.string().optional(),
   end_date: z.string().optional(),

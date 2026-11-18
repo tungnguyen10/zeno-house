@@ -31,11 +31,11 @@ export const AiActionPlanRepository = {
         action_type: input.actionType,
         title: input.title,
         summary: input.summary,
-        normalized_payload: input.normalizedPayload as Json,
+        normalized_payload: input.normalizedPayload as NonNullable<Json>,
         payload_hash: input.payloadHash,
-        preview: input.preview as Json,
-        warnings: input.warnings as Json,
-        resource_versions: input.resourceVersions as Json,
+        preview: input.preview as NonNullable<Json>,
+        warnings: input.warnings as NonNullable<Json>,
+        resource_versions: input.resourceVersions as NonNullable<Json>,
         expires_at: input.expiresAt,
       })
       .select()

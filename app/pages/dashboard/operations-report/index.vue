@@ -59,6 +59,9 @@ const {
 
 // --- Capability gates ---------------------------------------------------
 const isReportClosed = computed(() => report.value?.closure.status === 'closed')
+const canReadOtherIncome = computed(() => auth.can('building-other-incomes.read'))
+const canWriteOtherIncome = computed(() => auth.can('building-other-incomes.write'))
+const canVoidOtherIncome = computed(() => auth.can('building-other-incomes.delete'))
 const canWriteExpense = computed(() => auth.can('building-expenses.write') && !isReportClosed.value)
 const canVoidExpense = computed(() => auth.can('building-expenses.delete') && !isReportClosed.value)
 const canExportReport = computed(() => auth.can('operations-report.export'))
@@ -503,11 +506,14 @@ function signedClass(value: number): string {
       <UiSkeleton v-for="n in 6" :key="n" class="h-[72px] rounded-xl" />
     </div>
 
-    <template v-else-if="report && metrics">
+    <template v-else-if="report && metrics && !errorMessage && !forbidden">
       <!-- Headline numbers: revenue, cost and both profit readings in one block -->
       <UiMetricGrid :cols="3">
-        <UiMetric label="Doanh thu phát hành" :value="formatCurrency(metrics.issuedRevenue)" />
-        <UiMetric label="Đã thu" :value="formatCurrency(metrics.collectedCash)" tone="accent" />
+        <UiMetric
+          label="Tổng doanh thu vận hành" :value="formatCurrency(metrics.totalOperatingRevenue)"
+          :caption="`Thu khác vào lợi nhuận: ${formatCurrency(metrics.otherIncomeProfitTotal)}`"
+        />
+        <UiMetric label="Tổng đã thu của kỳ" :value="formatCurrency(metrics.totalCollectedCash)" tone="accent" />
         <UiMetric
           label="Công nợ"
           :value="formatCurrency(metrics.debt)"
@@ -515,16 +521,16 @@ function signedClass(value: number): string {
         />
         <UiMetric label="Tổng chi phí" :value="formatCurrency(metrics.totalExpense)" />
         <UiMetric
-          label="Lợi nhuận (phát hành)"
+          label="Lợi nhuận (doanh thu)"
           :value="formatCurrency(metrics.profitByRevenue)"
           :tone="metrics.profitByRevenue >= 0 ? 'success' : 'danger'"
-          hint="Doanh thu phát hành − tổng chi phí"
+          hint="Tổng doanh thu vận hành − tổng chi phí"
         />
         <UiMetric
           label="Lợi nhuận (tiền thu)"
           :value="formatCurrency(metrics.profitByCash)"
           :tone="metrics.profitByCash >= 0 ? 'success' : 'danger'"
-          hint="Tiền đã thu − tổng chi phí"
+          caption="Loại trừ khoản thu phân bổ vào quỹ"
         />
       </UiMetricGrid>
 
@@ -536,7 +542,7 @@ function signedClass(value: number): string {
       <UiSection title="Cơ cấu doanh thu và chi phí" class="mt-6">
         <div class="grid grid-cols-1 gap-2 md:grid-cols-[minmax(0,1.15fr)_minmax(260px,0.85fr)] md:items-start">
           <UiListPanel
-            title="Doanh thu theo loại"
+            title="Doanh thu hóa đơn theo loại"
             :total="formatCurrency(metrics.issuedRevenue)"
             :empty="revenueRows.length === 0"
             empty-text="Kỳ này chưa phát hành hóa đơn."
@@ -561,6 +567,16 @@ function signedClass(value: number): string {
           </UiListPanel>
 
           <div class="grid gap-2">
+            <UiListPanel title="Nguồn tiền đã thu">
+              <li class="flex items-baseline justify-between gap-3 px-3.5 py-2 text-sm">
+                <span class="text-ui-primary">Đã thu từ hóa đơn của kỳ</span>
+                <span class="shrink-0 tabular-nums">{{ formatCurrency(metrics.collectedCash) }}</span>
+              </li>
+              <li class="flex items-baseline justify-between gap-3 px-3.5 py-2 text-sm">
+                <span class="text-ui-primary">Thu khác của tòa nhà</span>
+                <span class="shrink-0 tabular-nums">{{ formatCurrency(metrics.otherIncomeTotal) }}</span>
+              </li>
+            </UiListPanel>
             <UiListPanel
               title="Chi phí cố định"
               :empty="report.fixedCosts.length === 0"
@@ -643,23 +659,28 @@ function signedClass(value: number): string {
       </UiSection>
 
       <UiSection v-if="canReadReserveFund && report.reserveFund" title="Quỹ dự phòng" class="mt-6">
-        <UiMetricGrid :cols="4">
+        <UiMetricGrid :cols="5">
           <UiMetric
             label="Tỷ lệ"
             :value="`${report.reserveFund.effectiveRatePercent}%`"
             hint="Áp dụng cho kỳ này"
           />
           <UiMetric
-            :label="report.reserveFund.monthlyAccrualIsEstimated ? 'Quỹ tháng · ước tính' : 'Tiền quỹ tháng'"
+            :label="report.reserveFund.monthlyAccrualIsEstimated ? 'Trích quỹ · ước tính' : 'Trích quỹ theo tỷ lệ'"
             :value="formatCurrency(report.reserveFund.monthlyAccrualIsEstimated ? report.reserveFund.monthlyAccrualEstimated : report.reserveFund.monthlyAccrual)"
             :hint="report.reserveFund.monthlyAccrualIsEstimated ? 'Ước tính (chưa chốt báo cáo)' : 'Đã chốt báo cáo'"
             tone="success"
           />
           <UiMetric
+            label="Thu khác vào quỹ"
+            :value="formatCurrency(report.reserveFund.monthlyOtherIncome)"
+            hint="Đã cộng trực tiếp vào quỹ dự phòng"
+          />
+          <UiMetric
             label="Số dư tháng"
             :value="formatCurrency(report.reserveFund.monthlyBalance)"
             :tone="report.reserveFund.monthlyBalance >= 0 ? 'success' : 'danger'"
-            hint="Tiền quỹ − Chi từ quỹ"
+            hint="Trích quỹ theo tỷ lệ + thu khác vào quỹ − chi từ quỹ"
           />
           <UiMetric
             :label="report.reserveFund.cumulativeBalanceIsEstimated ? 'Tổng quỹ · ước tính' : 'Tổng quỹ tòa nhà'"
@@ -669,6 +690,15 @@ function signedClass(value: number): string {
           />
         </UiMetricGrid>
       </UiSection>
+
+      <OperationsOtherIncomeSection
+        v-if="canReadOtherIncome"
+        :key="`${report.buildingId}-${report.periodYear}-${report.periodMonth}`"
+        :incomes="report.otherIncomes" :total="metrics.otherIncomeTotal"
+        :building-id="report.buildingId" :period-year="report.periodYear" :period-month="report.periodMonth"
+        :closed="isReportClosed" :can-write="canWriteOtherIncome" :can-void="canVoidOtherIncome"
+        :can-use-reserve="canManageReserveFund" @refresh="reload"
+      />
 
       <!-- Expenses -->
       <UiSection title="Chi phí phát sinh trong tháng" class="mt-6">

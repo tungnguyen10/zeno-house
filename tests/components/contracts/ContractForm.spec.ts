@@ -88,10 +88,13 @@ const UiButton = defineComponent({
 const UiAlert = defineComponent({ template: '<div><slot /></div>' })
 const tenantPickerStub = defineComponent({
   name: 'TenantPicker',
-  props: ['modelValue', 'excludeTenantIds', 'excludeContractId', 'required', 'disabled', 'error', 'id'],
-  emits: ['update:modelValue', 'selected'],
+  props: ['modelValue', 'excludeTenantIds', 'excludeContractId', 'buildingId', 'required', 'disabled', 'error', 'id'],
+  emits: ['update:modelValue', 'update:linkToken', 'selected'],
   template: '<div class="tenant-picker" />',
 })
+
+const ROOM_UUID = '0a8a4dd0-7d6f-4f4e-bc7e-3c5e1b800001'
+const TENANT_UUID = '0a8a4dd0-7d6f-4f4e-bc7e-3c5e1b800002'
 
 function buildForm(overrides: Partial<ContractFormData> = {}): ContractFormData {
   return {
@@ -176,6 +179,31 @@ describe('ContractForm — handover meter readings', () => {
 })
 
 describe('ContractForm — overhaul UI', () => {
+  it('gives the tenant picker the building of the selected room', async () => {
+    const wrapper = mountForm(buildForm({ room_id: 'room-1', status: 'expired' }), false)
+    await flushPromises()
+    expect(wrapper.findComponent({ name: 'TenantPicker' }).props('buildingId')).toBe('building-1')
+  })
+
+  it('submits the verification token of a re-linked tenant without storing it in the form data', async () => {
+    const data = buildForm({ room_id: ROOM_UUID, tenant_id: TENANT_UUID, status: 'expired', monthly_rent: '3000000' })
+    const wrapper = mountForm(data, false)
+    await flushPromises()
+    wrapper.findComponent({ name: 'TenantPicker' }).vm.$emit('update:linkToken', 'tok-1')
+    await wrapper.find('form').trigger('submit.prevent')
+    await flushPromises()
+    expect(wrapper.emitted('submit')![0]![1]).toEqual({ tenantLinkToken: 'tok-1' })
+    expect(JSON.stringify(wrapper.emitted('update:modelValue') ?? [])).not.toContain('tok-1')
+  })
+
+  it('submits without a token by default', async () => {
+    const wrapper = mountForm(buildForm({ room_id: ROOM_UUID, tenant_id: TENANT_UUID, status: 'expired', monthly_rent: '3000000' }), false)
+    await flushPromises()
+    await wrapper.find('form').trigger('submit.prevent')
+    await flushPromises()
+    expect(wrapper.emitted('submit')![0]![1]).toEqual({ tenantLinkToken: null })
+  })
+
   it('renders four numbered edit sections', async () => {
     const wrapper = mountForm(buildForm({ room_id: 'room-1', tenant_id: 'tenant-1' }), false)
     await flushPromises()

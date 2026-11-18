@@ -1,6 +1,6 @@
 # Building contract defaults & readiness (V2 PR1)
 
-**Status: implementation-review.** Tasks 1–10 implemented TDD-first on Node 22; local typecheck/test/lint/knowledge:check all pass. Cloud migration apply + type regeneration and git/PR remain maintainer-run — see verification.
+**Status: source merged; verification/release follow-up.** PR1 implementation is in `develop` via the V2 integration; the 2026-11-15 cloud migration/SQL, regenerated types, scoped manager PII and selected desktop/mobile QA were recorded as passed. Do not repeat the original "cloud and git pending" claim. Application deployment smoke and accepted capability promotion remain to be reviewed.
 
 - [Design](./design.md)
 - [Implementation plan](./implementation-plan.md)

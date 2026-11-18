@@ -98,3 +98,7 @@ All 600 archived source files remain accessible via immutable references to base
 - [2026-11-10-restrict-tenant-portal-profile-edits](./2026-11-10-restrict-tenant-portal-profile-edits/index.md) — Four contact fields, staff-managed identity and private correction intake; source/cloud/component QA evidence
 
 - [2026-11-10-dashboard-layout-refresh](./2026-11-10-dashboard-layout-refresh/index.md) — Completed implementation and reconciled dashboard UI requirements (fresh production UI QA not claimed)
+
+- [2026-11-18-building-onboarding-v2](./2026-11-18-building-onboarding-v2/index.md) — Setup mode from create building to first contract, owner folded into lessor, partial contract-profile PATCH; production SQL verification recorded (some visual checks not done)
+
+- [2026-11-18-building-settings-setup-flow](./2026-11-18-building-settings-setup-flow/index.md) — Settings page as readiness card plus collapsible steps; superseded by building-onboarding-v2 for step order

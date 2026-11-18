@@ -55,3 +55,10 @@ Re-verified independently by the parent on Node 22 (2026-11-12): typecheck 0, **
 - [x] `apply_inventory_template` merge/replace and batch replay checked end to end through the API (merge twice adds 0 the second time; replace re-adds 4; empty room list returns 422)
 - [x] Grants: anon/auth = false, service_role = true
 - [x] Types regenerated; `as never` casts removed — see commit history on `feat/v2-pr0-pr4b`
+
+## 2026-11-16 stabilization addendum (not a new production verification)
+
+- PR #26 added `20261116100000_inventory_lite_functions_hardening.sql` to restore stricter function definitions in timestamp order; its PR explicitly reported **not applied to cloud** at merge. New migration-order source regression tests are in the stabilization branch; verify the target catalog and privilege grants before deployment.
+- The stabilization branch changes `InventoryRepository.replaceTemplate` and `replaceRoom` from two independent DELETE/INSERT calls to the already-existing atomic `replace_inventory_template` and `replace_room_inventory` RPCs; repository regression tests cover empty clear and failure cases. This is source work awaiting review/CI, not a live SQL pass.
+- The separate pre-issuance contract handover inventory replacement still uses delete/insert in the repository and needs its own atomic implementation and post-DOCX-lock tests.
+- [Baseline checkpoint](../zeno-house-v2-optimization/baseline-2026-11-16.md).

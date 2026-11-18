@@ -1,44 +1,38 @@
 <script setup lang="ts">
 import type { Building } from '~/types/buildings'
 import type { BuildingContractProfile } from '~/types/building-contract-profile'
-import { buildingContractProfileSchema, type BuildingContractProfileInput } from '~/utils/validators/building-contract-profile'
+import { buildingContractProfileBaseSchema, contractProfileCopiesRule, type BuildingContractProfilePatch } from '~/utils/validators/building-contract-profile'
+import { contractTermsInitialValues } from '~/utils/contracts/contract-term-suggestions'
 import { formatPaymentWindow } from '~/utils/format/payment-window'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   profile: BuildingContractProfile | null
   building: Building
   canEdit: boolean
   saving: boolean
   error: string | null
-  editPath: string
-}>()
-const emit = defineEmits<{ save: [input: BuildingContractProfileInput] }>()
+  submitLabel?: string
+}>(), { submitLabel: 'Lưu' })
+const emit = defineEmits<{ save: [patch: BuildingContractProfilePatch] }>()
 
-const toForm = (p: BuildingContractProfile | null) => ({
-  lessor_full_name: p?.lessorFullName ?? '',
-  lessor_date_of_birth: p?.lessorDateOfBirth ?? '',
-  lessor_permanent_address: p?.lessorPermanentAddress ?? '',
-  lessor_id_number: p?.lessorIdentityMasked ? '' : (p?.lessorIdNumber ?? ''),
-  lessor_id_issued_date: p?.lessorIdIssuedDate ?? '',
-  lessor_id_issued_place: p?.lessorIdIssuedPlace ?? '',
-  lessor_phone: p?.lessorPhone ?? '',
-  brand_name: p?.brandName ?? '',
-  default_term_months: p?.defaultTermMonths ?? null,
-  default_deposit_months: (p?.defaultDepositMonths ?? 1) as number | null,
-  notice_days: p?.noticeDays ?? null,
-  deposit_refund_days: p?.depositRefundDays ?? null,
-  renewal_months: p?.renewalMonths ?? null,
-  extra_occupant_fee: p?.extraOccupantFee ?? null,
-  drilling_fee: p?.drillingFee ?? null,
-  fingerprint_reset_fee: p?.fingerprintResetFee ?? null,
-  signed_copies: p?.signedCopies ?? 2,
-  copies_per_party: p?.copiesPerParty ?? 1,
-})
+const TERMS_KEYS = [
+  'brand_name', 'default_term_months', 'default_deposit_months', 'notice_days',
+  'deposit_refund_days', 'renewal_months', 'extra_occupant_fee', 'drilling_fee',
+  'fingerprint_reset_fee', 'signed_copies', 'copies_per_party',
+] as const
+const termsSchema = buildingContractProfileBaseSchema
+  .pick(Object.fromEntries(TERMS_KEYS.map(key => [key, true])) as Record<typeof TERMS_KEYS[number], true>)
+  .superRefine(contractProfileCopiesRule)
 
-const form = reactive(toForm(props.profile))
-watch(() => props.profile, value => Object.assign(form, toForm(value)))
-
+const form = reactive(contractTermsInitialValues(props.profile))
+watch(() => props.profile, value => Object.assign(form, contractTermsInitialValues(value)))
 const fieldErrors = ref<Record<string, string>>({})
+
+const showSuggestionHint = computed(() => {
+  const p = props.profile
+  return !p || [p.defaultTermMonths, p.defaultDepositMonths, p.noticeDays, p.depositRefundDays, p.renewalMonths]
+    .some(value => value === null)
+})
 
 const DEPOSIT_PRESETS = [0.5, 1, 1.5, 2, 3]
 const DEPOSIT_UNIT_OPTIONS = [
@@ -79,14 +73,9 @@ function pickDepositPreset(months: number) {
 }
 const paymentWindow = computed(() => formatPaymentWindow(props.building))
 
-const HIDDEN = 'Ẩn với vai trò quản lý'
-const displayIdNumber = computed(() => props.profile?.lessorIdNumber ?? '—')
-const displayDob = computed(() => (props.profile?.lessorIdentityMasked ? HIDDEN : (props.profile?.lessorDateOfBirth ?? '—')))
-const displayAddress = computed(() => (props.profile?.lessorIdentityMasked ? HIDDEN : (props.profile?.lessorPermanentAddress ?? '—')))
-
 function submit() {
   fieldErrors.value = {}
-  const result = buildingContractProfileSchema.safeParse({ ...form })
+  const result = termsSchema.safeParse({ ...form })
   if (!result.success) {
     for (const issue of result.error.issues) fieldErrors.value[String(issue.path[0])] = issue.message
     return
@@ -98,48 +87,19 @@ function submit() {
 <template>
   <div class="space-y-5">
     <UiAlert v-if="error" severity="danger">{{ error }}</UiAlert>
-    <UiAlert v-if="!canEdit" severity="info">
-      Chỉ chủ nhà và admin có thể cập nhật. Quản lý đang xem bản chỉ đọc; số CMND/CCCD được che.
-    </UiAlert>
-
-    <!-- Read-only (manager) view -->
-    <div v-if="!canEdit" class="space-y-5">
-      <UiFormSection
-        title="Bên cho thuê (người ký hợp đồng)"
-        description="Thông tin này in trên hợp đồng, khác với thông tin liên hệ chủ nhà."
-      >
-        <UiDefinitionList>
-          <UiDefinitionItem label="Họ tên">{{ profile?.lessorFullName ?? '—' }}</UiDefinitionItem>
-          <UiDefinitionItem label="Ngày sinh">{{ displayDob }}</UiDefinitionItem>
-          <UiDefinitionItem label="Địa chỉ thường trú">{{ displayAddress }}</UiDefinitionItem>
-          <UiDefinitionItem label="Số CMND/CCCD">{{ displayIdNumber }}</UiDefinitionItem>
-          <UiDefinitionItem label="Ngày cấp">{{ profile?.lessorIdIssuedDate ?? '—' }}</UiDefinitionItem>
-          <UiDefinitionItem label="Nơi cấp">{{ profile?.lessorIdIssuedPlace ?? '—' }}</UiDefinitionItem>
-          <UiDefinitionItem label="Số điện thoại">{{ profile?.lessorPhone ?? '—' }}</UiDefinitionItem>
-        </UiDefinitionList>
-      </UiFormSection>
-    </div>
-
-    <!-- Editable (owner/admin) view -->
-    <div v-else class="space-y-5">
-      <UiFormSection
-        title="Bên cho thuê (người ký hợp đồng)"
-        description="Thông tin này in trên hợp đồng, khác với thông tin liên hệ chủ nhà."
-      >
-        <div class="grid gap-3 sm:grid-cols-2">
-          <div data-test="lessor-full-name">
-            <UiInput v-model="form.lessor_full_name" label="Họ tên" :error="fieldErrors.lessor_full_name" />
-          </div>
-          <UiInput v-model="form.lessor_phone" label="Số điện thoại" :error="fieldErrors.lessor_phone" />
-          <UiInput v-model="form.lessor_date_of_birth" label="Ngày sinh" type="date" :error="fieldErrors.lessor_date_of_birth" />
-          <UiInput v-model="form.lessor_id_number" label="Số CMND/CCCD" :error="fieldErrors.lessor_id_number" />
-          <UiInput v-model="form.lessor_id_issued_date" label="Ngày cấp" type="date" :error="fieldErrors.lessor_id_issued_date" />
-          <UiInput v-model="form.lessor_id_issued_place" label="Nơi cấp" :error="fieldErrors.lessor_id_issued_place" />
-          <div class="sm:col-span-2">
-            <UiInput v-model="form.lessor_permanent_address" label="Địa chỉ thường trú" :error="fieldErrors.lessor_permanent_address" />
-          </div>
-        </div>
-      </UiFormSection>
+    <template v-if="!canEdit">
+      <UiAlert severity="info">Chỉ chủ nhà và admin có thể cập nhật.</UiAlert>
+      <UiDefinitionList>
+        <UiDefinitionItem label="Thời hạn mặc định">{{ profile?.defaultTermMonths ? `${profile.defaultTermMonths} tháng` : '—' }}</UiDefinitionItem>
+        <UiDefinitionItem label="Số tháng cọc">{{ profile?.defaultDepositMonths ?? '—' }}</UiDefinitionItem>
+        <UiDefinitionItem label="Tên thương hiệu">{{ profile?.brandName ?? '—' }}</UiDefinitionItem>
+        <UiDefinitionItem label="Số ngày báo trước">{{ profile?.noticeDays ?? '—' }}</UiDefinitionItem>
+        <UiDefinitionItem label="Số ngày hoàn cọc">{{ profile?.depositRefundDays ?? '—' }}</UiDefinitionItem>
+        <UiDefinitionItem label="Số tháng tự gia hạn">{{ profile?.renewalMonths ?? '—' }}</UiDefinitionItem>
+      </UiDefinitionList>
+    </template>
+    <template v-else>
+      <UiAlert v-if="showSuggestionHint" severity="info">Đã điền sẵn giá trị thường dùng. Xem lại rồi lưu.</UiAlert>
 
       <UiFormSection title="Mặc định cho hợp đồng mới">
         <div class="grid gap-3 sm:grid-cols-3">
@@ -185,15 +145,24 @@ function submit() {
         </div>
       </UiFormSection>
 
-      <UiFormSection title="Bản ký">
-        <div class="grid gap-3 sm:grid-cols-2">
-          <UiInput v-model="form.signed_copies" label="Số bản ký" type="number" number-mode="integer" :error="fieldErrors.signed_copies" />
-          <UiInput v-model="form.copies_per_party" label="Số bản mỗi bên giữ" type="number" number-mode="integer" :error="fieldErrors.copies_per_party" />
+      <details class="rounded-lg border border-ui-border">
+        <summary class="cursor-pointer px-4 py-2 text-sm font-medium text-ui-primary">Bản ký</summary>
+        <div class="space-y-5 border-t border-ui-border p-4">
+          <UiFormSection title="Bản ký">
+            <div class="grid gap-3 sm:grid-cols-2">
+              <UiInput v-model="form.signed_copies" label="Số bản ký" type="number" number-mode="integer" :error="fieldErrors.signed_copies" />
+              <UiInput v-model="form.copies_per_party" label="Số bản mỗi bên giữ" type="number" number-mode="integer" :error="fieldErrors.copies_per_party" />
+            </div>
+          </UiFormSection>
         </div>
-      </UiFormSection>
-    </div>
+      </details>
 
-    <!-- Payment window preview (both roles) -->
+      <div class="flex justify-end border-t border-ui-border pt-4">
+        <UiButton data-test="contract-terms-save" :loading="saving" :disabled="saving" @click="submit">{{ submitLabel }}</UiButton>
+      </div>
+    </template>
+
+    <!-- Visible to editors and read-only viewers alike -->
     <UiFormSection title="Lịch thanh toán trên hợp đồng (chỉ đọc)">
       <template v-if="paymentWindow">
         <p class="text-sm text-ui-primary">Trên hợp đồng: {{ paymentWindow.sentence }}</p>
@@ -202,20 +171,14 @@ function submit() {
           <span>Hạn thanh toán: {{ paymentWindow.endDay }}</span>
           <span>Số ngày ân hạn: {{ paymentWindow.graceDays }}</span>
         </div>
-        <NuxtLink :to="editPath" class="mt-2 inline-block text-xs text-ui-accent hover:underline">Sửa lịch vận hành</NuxtLink>
+        <a href="#basics" class="mt-2 inline-block text-xs text-ui-accent hover:underline">Sửa lịch vận hành</a>
       </template>
       <template v-else>
         <UiAlert severity="warning">
           Chưa đủ lịch thanh toán. Cài đặt ngày phát hành hóa đơn và hạn thanh toán trước.
         </UiAlert>
-        <NuxtLink :to="editPath" class="mt-2 inline-block text-xs text-ui-accent hover:underline">Sửa lịch vận hành</NuxtLink>
+        <a href="#basics" class="mt-2 inline-block text-xs text-ui-accent hover:underline">Sửa lịch vận hành</a>
       </template>
     </UiFormSection>
-
-    <div v-if="canEdit" class="flex justify-end border-t border-ui-border pt-4">
-      <UiButton data-test="contract-profile-save" :loading="saving" :disabled="saving" @click="submit">
-        Lưu thông tin hợp đồng
-      </UiButton>
-    </div>
   </div>
 </template>

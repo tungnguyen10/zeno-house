@@ -1,10 +1,10 @@
 import { mount } from '@vue/test-utils'
 import { defineComponent, h } from 'vue'
 import { describe, expect, it } from 'vitest'
-import BuildingContractProfileSettings from '~/components/buildings/BuildingContractProfileSettings.vue'
+import BuildingLessorProfileForm from '~/components/buildings/BuildingLessorProfileForm.vue'
 
 const FieldStub = defineComponent({
-  props: ['modelValue', 'label', 'error', 'type', 'numberMode', 'placeholder', 'hint', 'disabled', 'readonly'],
+  props: ['modelValue', 'label', 'error', 'type'],
   emits: ['update:modelValue'],
   setup(props, { emit }) {
     return () => h('label', {}, [
@@ -42,47 +42,37 @@ const stubs = {
       return () => h('button', { ...attrs, disabled: props.disabled, onClick: () => emit('click') }, slots.default?.())
     },
   }),
-  NuxtLink: defineComponent({
-    props: ['to'],
-    setup(props, { slots }) { return () => h('a', { href: props.to }, slots.default?.()) },
-  }),
 }
 
-const building = { id: 'b-1', name: 'Zeno', billingGenerationDay: 1, paymentDueDay: 5, gracePeriodDays: 5 } as never
 const masked = {
   buildingId: 'b-1', lessorFullName: 'Nguyễn Văn A', lessorDateOfBirth: null, lessorPermanentAddress: null,
   lessorIdNumber: '*******8901', lessorIdIssuedDate: '2021-05-01', lessorIdIssuedPlace: 'Huế', lessorPhone: '0901234567',
-  lessorIdentityMasked: true, brandName: null, defaultTermMonths: 12, defaultDepositMonths: 1, noticeDays: 30,
-  depositRefundDays: 7, renewalMonths: 0, extraOccupantFee: 0, drillingFee: 0, fingerprintResetFee: 0,
+  lessorEmail: null, lessorIdentityMasked: true, brandName: null, defaultTermMonths: 12, defaultDepositMonths: 1,
+  noticeDays: 30, depositRefundDays: 7, renewalMonths: 0, extraOccupantFee: 0, drillingFee: 0, fingerprintResetFee: 0,
   signedCopies: 2, copiesPerParty: 1, updatedAt: '', updatedBy: null,
 }
 
-describe('BuildingContractProfileSettings', () => {
-  it('shows the payment window sentence from building schedule', () => {
-    const w = mount(BuildingContractProfileSettings, {
-      props: { profile: null, building, canEdit: true, saving: false, error: null, editPath: '/x' },
-      global: { stubs },
-    })
-    expect(w.text()).toContain('Thanh toán từ ngày 1 đến ngày 5 hằng tháng; sau ngày 10')
-  })
-
-  it('renders read-only masked view for managers without a save button', () => {
-    const w = mount(BuildingContractProfileSettings, {
-      props: { profile: masked, building, canEdit: false, saving: false, error: null, editPath: '/x' },
+describe('BuildingLessorProfileForm', () => {
+  it('renders read-only masked view without a save button', () => {
+    const w = mount(BuildingLessorProfileForm, {
+      props: { profile: masked, canEdit: false, saving: false, error: null },
       global: { stubs },
     })
     expect(w.text()).toContain('*******8901')
     expect(w.text()).toContain('Ẩn với vai trò quản lý')
-    expect(w.find('[data-test="contract-profile-save"]').exists()).toBe(false)
+    expect(w.find('[data-test="lessor-profile-save"]').exists()).toBe(false)
   })
 
-  it('emits snake_case input on save', async () => {
-    const w = mount(BuildingContractProfileSettings, {
-      props: { profile: null, building, canEdit: true, saving: false, error: null, editPath: '/x' },
+  it('emits only lessor keys (snake_case) on save', async () => {
+    const w = mount(BuildingLessorProfileForm, {
+      props: { profile: null, canEdit: true, saving: false, error: null },
       global: { stubs },
     })
     await w.find('[data-test="lessor-full-name"] input').setValue('Nguyễn Văn A')
-    await w.find('[data-test="contract-profile-save"]').trigger('click')
-    expect(w.emitted('save')![0]![0]).toMatchObject({ lessor_full_name: 'Nguyễn Văn A', signed_copies: 2, copies_per_party: 1 })
+    await w.find('[data-test="lessor-profile-save"]').trigger('click')
+    const patch = w.emitted('save')![0]![0] as Record<string, unknown>
+    expect(patch).toMatchObject({ lessor_full_name: 'Nguyễn Văn A' })
+    expect(patch).not.toHaveProperty('notice_days')
+    expect(patch).not.toHaveProperty('signed_copies')
   })
 })

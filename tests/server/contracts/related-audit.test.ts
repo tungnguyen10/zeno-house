@@ -36,6 +36,7 @@ vi.mock('../../../server/repositories/contract-payments', () => ({ ContractPayme
   deleteById: mocks.paymentDelete,
 } }))
 vi.mock('../../../server/services/audit', () => ({ AuditService: { append: mocks.auditAppend } }))
+vi.mock('../../../server/services/tenants/authorization', () => ({ TenantAuthorizationService: { assertLinkable: vi.fn().mockResolvedValue(undefined) } }))
 
 const actor = { id: 'admin-1', app_metadata: { role: 'admin' } } as never
 const event = { context: {} } as never

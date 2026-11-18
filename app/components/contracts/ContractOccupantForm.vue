@@ -6,6 +6,7 @@ defineProps<{
   loading?: boolean
   apiError?: string | null
   excludeTenantIds?: string[]
+  buildingId?: string | null
 }>()
 
 const emit = defineEmits<{
@@ -19,6 +20,7 @@ const form = reactive({
   billing_counted: true,
 })
 const tenantName = ref('')
+const linkToken = ref<string | null>(null)
 
 const fieldErrors = ref<Record<string, string>>({})
 
@@ -37,6 +39,7 @@ function handleSubmit() {
     move_in_date: form.move_in_date,
     billing_counted: form.billing_counted,
     tenantName: tenantName.value,
+    ...(linkToken.value ? { link_token: linkToken.value } : {}),
   })
 }
 </script>
@@ -47,10 +50,12 @@ function handleSubmit() {
     <TenantPicker
       :model-value="form.tenant_id || null"
       :exclude-tenant-ids="excludeTenantIds"
+      :building-id="buildingId"
       required
       :disabled="loading"
       :error="fieldErrors.tenant_id"
       @update:model-value="(id: string | null) => form.tenant_id = id ?? ''"
+      @update:link-token="(token: string | null) => linkToken = token"
       @selected="(t: TenantSummary | null) => tenantName = t?.fullName ?? ''"
     />
 

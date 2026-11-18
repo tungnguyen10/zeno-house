@@ -1,6 +1,6 @@
 import type { ApiSuccess } from '~/types/api'
 import type { BuildingContractProfile } from '~/types/building-contract-profile'
-import type { BuildingContractProfileInput } from '~/utils/validators/building-contract-profile'
+import type { BuildingContractProfileInput, BuildingContractProfilePatch } from '~/utils/validators/building-contract-profile'
 import { getApiErrorMessage } from '~/utils/api-error'
 
 export function useBuildingContractProfile(
@@ -14,13 +14,13 @@ export function useBuildingContractProfile(
   const saving = ref(false)
   const error = ref<string | null>(null)
 
-  async function save(input: BuildingContractProfileInput): Promise<BuildingContractProfile> {
+  async function send(method: 'PUT' | 'PATCH', body: BuildingContractProfileInput | BuildingContractProfilePatch): Promise<BuildingContractProfile> {
     error.value = null
     saving.value = true
     try {
       const response = await apiFetch<ApiSuccess<BuildingContractProfile>>(
         `/api/buildings/${encodeURIComponent(toValue(buildingIdentifier))}/contract-profile`,
-        { method: 'PUT', body: input },
+        { method, body },
       )
       source.set(response.data)
       await source.onSaved?.()
@@ -35,5 +35,8 @@ export function useBuildingContractProfile(
     }
   }
 
-  return { profile: source.data, saving, error, save }
+  const save = (input: BuildingContractProfileInput) => send('PUT', input)
+  const patch = (input: BuildingContractProfilePatch) => send('PATCH', input)
+
+  return { profile: source.data, saving, error, save, patch }
 }

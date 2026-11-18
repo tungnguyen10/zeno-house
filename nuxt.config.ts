@@ -36,8 +36,8 @@ export default defineNuxtConfig({
 
   // Runtime config — NUXT_* env vars are auto-mapped
   runtimeConfig: {
-    checkoutEnabled: false, // NUXT_CHECKOUT_ENABLED; opt-in after cloud verification
-    checkoutBuildingIds: "", // NUXT_CHECKOUT_BUILDING_IDS; comma-separated UUIDs
+    checkoutEnabled: process.env.NUXT_CHECKOUT_ENABLED === "true", // NUXT_CHECKOUT_ENABLED; opt-in after cloud verification
+    checkoutBuildingIds: process.env.NUXT_CHECKOUT_BUILDING_IDS || "", // NUXT_CHECKOUT_BUILDING_IDS; comma-separated UUIDs
     resendApiKey: process.env.NUXT_RESEND_API_KEY || "", // NUXT_RESEND_API_KEY
     resendFrom: process.env.NUXT_RESEND_FROM  || "", // NUXT_RESEND_FROM
     resendReplyTo: process.env.NUXT_RESEND_REPLY_TO || "", // NUXT_RESEND_REPLY_TO
@@ -45,6 +45,7 @@ export default defineNuxtConfig({
     invoiceEmailDispatchSecret: process.env.NUXT_INVOICE_EMAIL_DISPATCH_SECRET || "", // NUXT_INVOICE_EMAIL_DISPATCH_SECRET
     contractAmendmentsApplySecret: process.env.NUXT_CONTRACT_AMENDMENTS_APPLY_SECRET || "", // NUXT_CONTRACT_AMENDMENTS_APPLY_SECRET
     contractDocumentsCleanupSecret: process.env.NUXT_CONTRACT_DOCUMENTS_CLEANUP_SECRET || "", // NUXT_CONTRACT_DOCUMENTS_CLEANUP_SECRET
+    tenantLinkSecret: process.env.NUXT_TENANT_LINK_SECRET || "", // NUXT_TENANT_LINK_SECRET; >= 32 chars, cross-owner tenant linking is off without it
     aiProvider: process.env.NUXT_AI_PROVIDER || "openrouter", // NUXT_AI_PROVIDER (openrouter | google)
     aiOpenrouterApiKey: process.env.NUXT_AI_OPENROUTER_API_KEY || "", // NUXT_AI_OPENROUTER_API_KEY
     aiGoogleApiKey: process.env.NUXT_AI_GOOGLE_API_KEY || "", // NUXT_AI_GOOGLE_API_KEY
@@ -62,21 +63,32 @@ export default defineNuxtConfig({
     aiInvoiceReissueEnabled: process.env.NODE_ENV !== "production", // NUXT_AI_INVOICE_REISSUE_ENABLED
     aiInvoiceAdjustmentEnabled: process.env.NODE_ENV !== "production", // NUXT_AI_INVOICE_ADJUSTMENT_ENABLED
     aiInvoicePaymentEnabled: process.env.NODE_ENV !== "production", // NUXT_AI_INVOICE_PAYMENT_ENABLED
-    aiProviderTimeoutMs: 120_000, // NUXT_AI_PROVIDER_TIMEOUT_MS
-    aiChatRateLimit: 20, // NUXT_AI_CHAT_RATE_LIMIT
-    aiActionRateLimit: 30, // NUXT_AI_ACTION_RATE_LIMIT
-    aiRateWindowSeconds: 60, // NUXT_AI_RATE_WINDOW_SECONDS
-    tenantIdentityConflictLimit: 10, // NUXT_TENANT_IDENTITY_CONFLICT_LIMIT
-    tenantIdentityConflictWindowSeconds: 900, // NUXT_TENANT_IDENTITY_CONFLICT_WINDOW_SECONDS
-    aiCircuitFailureThreshold: 5, // NUXT_AI_CIRCUIT_FAILURE_THRESHOLD
-    aiCircuitCooldownMs: 60_000, // NUXT_AI_CIRCUIT_COOLDOWN_MS
-    aiMaxContextMessages: 20, // NUXT_AI_MAX_CONTEXT_MESSAGES
-    aiMaxContextChars: 12_000, // NUXT_AI_MAX_CONTEXT_CHARS
-    aiGlobalDailyLimit: 40, // NUXT_AI_GLOBAL_DAILY_LIMIT
-    aiActionLeaseSeconds: 30, // NUXT_AI_ACTION_LEASE_SECONDS
-    aiRetentionCleanupEnabled: true, // NUXT_AI_RETENTION_CLEANUP_ENABLED
-    aiRetentionCleanupBatchSize: 500, // NUXT_AI_RETENTION_CLEANUP_BATCH_SIZE
+    aiProviderTimeoutMs: process.env.NUXT_AI_PROVIDER_TIMEOUT_MS ? parseInt(process.env.NUXT_AI_PROVIDER_TIMEOUT_MS) : 120_000, // NUXT_AI_PROVIDER_TIMEOUT_MS
+    aiChatRateLimit: process.env.NUXT_AI_CHAT_RATE_LIMIT ? parseInt(process.env.NUXT_AI_CHAT_RATE_LIMIT) : 20, // NUXT_AI_CHAT_RATE_LIMIT
+    aiActionRateLimit: process.env.NUXT_AI_ACTION_RATE_LIMIT ? parseInt(process.env.NUXT_AI_ACTION_RATE_LIMIT) : 30, // NUXT_AI_ACTION_RATE_LIMIT
+    aiRateWindowSeconds: process.env.NUXT_AI_RATE_WINDOW_SECONDS ? parseInt(process.env.NUXT_AI_RATE_WINDOW_SECONDS) : 60, // NUXT_AI_RATE_WINDOW_SECONDS
+    tenantIdentityConflictLimit: process.env.NUXT_TENANT_IDENTITY_CONFLICT_LIMIT ? parseInt(process.env.NUXT_TENANT_IDENTITY_CONFLICT_LIMIT) : 10, // NUXT_TENANT_IDENTITY_CONFLICT_LIMIT
+    tenantIdentityConflictWindowSeconds: process.env.NUXT_TENANT_IDENTITY_CONFLICT_WINDOW_SECONDS ? parseInt(process.env.NUXT_TENANT_IDENTITY_CONFLICT_WINDOW_SECONDS) : 900, // NUXT_TENANT_IDENTITY_CONFLICT_WINDOW_SECONDS
+    aiCircuitFailureThreshold: process.env.NUXT_AI_CIRCUIT_FAILURE_THRESHOLD ? parseInt(process.env.NUXT_AI_CIRCUIT_FAILURE_THRESHOLD) : 5, // NUXT_AI_CIRCUIT_FAILURE_THRESHOLD
+    aiCircuitCooldownMs: process.env.NUXT_AI_CIRCUIT_COOLDOWN_MS ? parseInt(process.env.NUXT_AI_CIRCUIT_COOLDOWN_MS) : 60_000, // NUXT_AI_CIRCUIT_COOLDOWN_MS
+    aiMaxContextMessages: process.env.NUXT_AI_MAX_CONTEXT_MESSAGES ? parseInt(process.env.NUXT_AI_MAX_CONTEXT_MESSAGES) : 20, // NUXT_AI_MAX_CONTEXT_MESSAGES
+    aiMaxContextChars: process.env.NUXT_AI_MAX_CONTEXT_CHARS ? parseInt(process.env.NUXT_AI_MAX_CONTEXT_CHARS) : 12_000, // NUXT_AI_MAX_CONTEXT_CHARS
+    aiGlobalDailyLimit: process.env.NUXT_AI_GLOBAL_DAILY_LIMIT ? parseInt(process.env.NUXT_AI_GLOBAL_DAILY_LIMIT) : 40, // NUXT_AI_GLOBAL_DAILY_LIMIT
+    aiActionLeaseSeconds: process.env.NUXT_AI_ACTION_LEASE_SECONDS ? parseInt(process.env.NUXT_AI_ACTION_LEASE_SECONDS) : 30, // NUXT_AI_ACTION_LEASE_SECONDS
+    aiRetentionCleanupEnabled: process.env.NUXT_AI_RETENTION_CLEANUP_ENABLED !== "false", // NUXT_AI_RETENTION_CLEANUP_ENABLED
+    aiRetentionCleanupBatchSize: process.env.NUXT_AI_RETENTION_CLEANUP_BATCH_SIZE ? parseInt(process.env.NUXT_AI_RETENTION_CLEANUP_BATCH_SIZE) : 500, // NUXT_AI_RETENTION_CLEANUP_BATCH_SIZE
     aiRetentionCleanupSecret: process.env.NUXT_AI_RETENTION_CLEANUP_SECRET || "", // NUXT_AI_RETENTION_CLEANUP_SECRET
+    aiTenantVisionEnabled: process.env.NUXT_AI_TENANT_VISION_ENABLED === "true", // NUXT_AI_TENANT_VISION_ENABLED; off until privacy, benchmark and security gates pass
+    aiTenantAnthropicApiKey: process.env.NUXT_AI_TENANT_ANTHROPIC_API_KEY || "", // NUXT_AI_TENANT_ANTHROPIC_API_KEY
+    aiTenantAnthropicWorkspaceId: process.env.NUXT_AI_TENANT_ANTHROPIC_WORKSPACE_ID || "", // NUXT_AI_TENANT_ANTHROPIC_WORKSPACE_ID; only for keys not scoped to a workspace
+    aiTenantVisionModel: process.env.NUXT_AI_TENANT_VISION_MODEL || "claude-haiku-5-5", // NUXT_AI_TENANT_VISION_MODEL
+    aiTenantVisionTimeoutMs: process.env.NUXT_AI_TENANT_VISION_TIMEOUT_MS ? parseInt(process.env.NUXT_AI_TENANT_VISION_TIMEOUT_MS) : 30_000, // NUXT_AI_TENANT_VISION_TIMEOUT_MS
+    aiTenantOcrDailyLimit: process.env.NUXT_AI_TENANT_OCR_DAILY_LIMIT ? parseInt(process.env.NUXT_AI_TENANT_OCR_DAILY_LIMIT) : 20, // NUXT_AI_TENANT_OCR_DAILY_LIMIT
+    aiTenantOcrUserDailyLimit: process.env.NUXT_AI_TENANT_OCR_USER_DAILY_LIMIT ? parseInt(process.env.NUXT_AI_TENANT_OCR_USER_DAILY_LIMIT) : 10, // NUXT_AI_TENANT_OCR_USER_DAILY_LIMIT
+    aiTenantOcrDailyBudgetMicroUsd: process.env.NUXT_AI_TENANT_OCR_DAILY_BUDGET_MICRO_USD ? parseInt(process.env.NUXT_AI_TENANT_OCR_DAILY_BUDGET_MICRO_USD) : 1_000_000, // NUXT_AI_TENANT_OCR_DAILY_BUDGET_MICRO_USD
+    aiTenantOcrInputPricePerMTokMicroUsd: process.env.NUXT_AI_TENANT_OCR_INPUT_PRICE_PER_MTOK_MICRO_USD ? parseInt(process.env.NUXT_AI_TENANT_OCR_INPUT_PRICE_PER_MTOK_MICRO_USD) : 100_000, // NUXT_AI_TENANT_OCR_INPUT_PRICE_PER_MTOK_MICRO_USD
+    aiTenantOcrOutputPricePerMTokMicroUsd: process.env.NUXT_AI_TENANT_OCR_OUTPUT_PRICE_PER_MTOK_MICRO_USD ? parseInt(process.env.NUXT_AI_TENANT_OCR_OUTPUT_PRICE_PER_MTOK_MICRO_USD) : 500_000, // NUXT_AI_TENANT_OCR_OUTPUT_PRICE_PER_MTOK_MICRO_USD
+    aiTenantOcrReserveMicroUsd: process.env.NUXT_AI_TENANT_OCR_RESERVE_MICRO_USD ? parseInt(process.env.NUXT_AI_TENANT_OCR_RESERVE_MICRO_USD) : 20_000, // NUXT_AI_TENANT_OCR_RESERVE_MICRO_USD
     adminEmail: process.env.ADMIN_EMAIL || "", // ADMIN_EMAIL
     turnstileSecretKey: process.env.NUXT_TURNSTILE_SECRET_KEY || "", // NUXT_TURNSTILE_SECRET_KEY
     operationsReportAutoCloseSecret: process.env.NUXT_OPERATIONS_REPORT_AUTO_CLOSE_SECRET || "", // NUXT_OPERATIONS_REPORT_AUTO_CLOSE_SECRET
@@ -86,9 +98,10 @@ export default defineNuxtConfig({
       gaId: process.env.NUXT_PUBLIC_GA_ID || "", // NUXT_PUBLIC_GA_ID
       turnstileSiteKey: process.env.NUXT_PUBLIC_TURNSTILE_SITE_KEY || "", // NUXT_PUBLIC_TURNSTILE_SITE_KEY
       aiDevChatEnabled: process.env.NUXT_PUBLIC_AI_DEV_CHAT_ENABLED === "true", // NUXT_PUBLIC_AI_DEV_CHAT_ENABLED
+      aiTenantVisionEnabled: process.env.NUXT_PUBLIC_AI_TENANT_VISION_ENABLED === "true", // NUXT_PUBLIC_AI_TENANT_VISION_ENABLED; shows the scanner entry point only
       // Feature flag: one-click auto-issue ("Đã thu") on draft rows. Public so
       // the client can gate the row action; default off until staging-verified.
-      billingAutoIssueEnabled: false, // NUXT_PUBLIC_BILLING_AUTO_ISSUE_ENABLED
+      billingAutoIssueEnabled: process.env.NUXT_PUBLIC_BILLING_AUTO_ISSUE_ENABLED === "true", // NUXT_PUBLIC_BILLING_AUTO_ISSUE_ENABLED
       invoiceEmailEnabled: process.env.NUXT_PUBLIC_INVOICE_EMAIL_ENABLED === "true", // NUXT_PUBLIC_INVOICE_EMAIL_ENABLED
     },
   },

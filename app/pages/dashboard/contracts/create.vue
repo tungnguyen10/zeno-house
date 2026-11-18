@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useDebounceFn } from '@vueuse/core'
 import type { ApiSuccess } from '~/types/api'
 import type { Room } from '~/types/rooms'
 import type { BuildingService } from '~/types/building-services'
@@ -11,19 +12,21 @@ import { resolveRoomQuery } from '~/utils/contracts/resolve-room-query'
 import { blockForField, type ContractCreateBlock } from '~/utils/contracts/contract-create-blocks'
 import { getApiErrorCode, getApiErrorDetails, getApiErrorMessage } from '~/utils/api-error'
 import { computeDeposit, computeEndDate, loadPrefs, resolveDefaults, savePrefs } from '~/utils/contracts/prefill-defaults'
+import { createLatestGuard } from '~/utils/contracts/latest-guard'
 import type { ContractDocument, ContractDocumentReadiness } from '~/types/contract-documents'
 import { checkContractDocumentReadiness, useContractDocuments } from '~/composables/contracts/useContractDocuments'
 
 definePageMeta({ title: 'Thêm hợp đồng mới' })
 
 const route = useRoute()
+const buildingFilter = ref(typeof route.query.building_id === 'string' ? route.query.building_id : '')
 const authStore = useAuthStore()
 
 // The docked action bar owns the bottom of the mobile viewport, so the tab bar steps aside.
 const formMode = useAppFormMode()
 onMounted(() => { formMode.value = true })
 onBeforeUnmount(() => { formMode.value = false })
-interface PendingOccupant { tenant_id: string; tenantName: string; move_in_date: string; billing_counted: boolean }
+interface PendingOccupant { tenant_id: string; tenantName: string; move_in_date: string; billing_counted: boolean; link_token?: string }
 
 const form = ref({
   room_id: '',
@@ -40,6 +43,8 @@ const form = ref({
   handover_reading_date: '',
 })
 const occupants = ref<PendingOccupant[]>([])
+// Verification tokens live in page memory only; never in the server draft.
+const tenantLinkToken = ref<string | null>(null)
 const vehicles = ref<VehicleRow[]>([])
 const services = ref<ContractServiceRow[]>([])
 const servicesTouched = ref(false)
@@ -65,41 +70,78 @@ const docReadiness = ref<ContractDocumentReadiness | null>(null)
 const issuedDoc = ref<ContractDocument | null>(null)
 const issueError = ref<string | null>(null)
 
+const readinessGuard = createLatestGuard()
 watch([() => form.value.room_id, () => form.value.tenant_id, occupants], async () => {
+  const isLatest = readinessGuard()
   if (!form.value.room_id || !form.value.tenant_id) { docReadiness.value = null; return }
   try {
-    docReadiness.value = await checkContractDocumentReadiness({
+    const result = await checkContractDocumentReadiness({
       room_id: form.value.room_id,
       tenant_id: form.value.tenant_id,
       occupant_tenant_ids: occupants.value.map(o => o.tenant_id),
     })
+    if (isLatest()) docReadiness.value = result
   }
-  catch { docReadiness.value = null }
+  catch { if (isLatest()) docReadiness.value = null }
 }, { deep: true })
 
-// Room options (available rooms); selecting one derives building + default rent.
-const { data: roomsData } = useLazyFetch<ApiSuccess<Room[]> & { meta: unknown }>('/api/rooms', {
-  query: { available: 'true', limit: 200 },
+// Room options (available rooms); typing searches on the server so large buildings are not truncated.
+const roomSearch = ref('')
+const { data: roomsData, status: roomsStatus } = useLazyFetch<ApiSuccess<Room[]> & { meta: unknown }>('/api/rooms', {
+  query: computed(() => ({
+    available: 'true',
+    limit: 200,
+    ...(roomSearch.value ? { q: roomSearch.value } : {}),
+    ...(buildingFilter.value ? { building_id: buildingFilter.value } : {}),
+  })),
 })
+const onRoomSearch = useDebounceFn((value: string) => { roomSearch.value = value.trim() }, 250)
 const roomOptions = computed(() => roomsData.value?.data ?? [])
-const selectedRoom = computed(() => (roomsData.value?.data ?? []).find(r => r.id === form.value.room_id) ?? null)
+// Keeps the chosen room resolvable after a search narrows the option list.
+const pickedRoom = ref<Room | null>(null)
+const selectedRoom = computed(() =>
+  roomOptions.value.find(r => r.id === form.value.room_id)
+  ?? (pickedRoom.value?.id === form.value.room_id ? pickedRoom.value : null),
+)
 const buildingId = computed(() => selectedRoom.value?.buildingId ?? null)
+function onRoomPicked(room: Room | null) {
+  pickedRoom.value = room
+  form.value.room_id = room?.id ?? ''
+}
+
+// A room restored from a link or draft may fall outside the loaded options.
+watch([() => form.value.room_id, roomsStatus], async ([id, loadState]) => {
+  if (!id || loadState !== 'success' || selectedRoom.value) return
+  try {
+    const res = await apiFetch<ApiSuccess<Room>>(`/api/rooms/${encodeURIComponent(id)}`)
+    if (form.value.room_id === id) pickedRoom.value = res.data
+  }
+  catch { /* the room stays unresolved; the user can pick again */ }
+})
 
 // Prefill rent + building-scoped defaults (prefs > building contract profile).
-watch(buildingId, async (id) => {
+const prefillGuard = createLatestGuard()
+let loadedBuildingId: string | null = null
+let buildingDefaults = { termMonths: null as number | null, depositMonths: null as number | null }
+watch(() => [buildingId.value, selectedRoom.value?.id] as const, async ([id]) => {
   if (!id) return
+  const isLatest = prefillGuard()
   if (selectedRoom.value && !touched.has('monthly_rent')) form.value.monthly_rent = String(selectedRoom.value.monthlyRent)
-  let buildingDefaults = { termMonths: null as number | null, depositMonths: null as number | null }
-  try {
-    const profile = await apiFetch<ApiSuccess<{ defaultTermMonths: number | null; defaultDepositMonths: number | null } | null>>(
-      `/api/buildings/${id}/contract-profile`,
-    )
-    buildingDefaults = {
-      termMonths: profile.data?.defaultTermMonths ?? null,
-      depositMonths: profile.data?.defaultDepositMonths ?? null,
+  if (loadedBuildingId !== id) {
+    // Each request is optional: a failure falls back to manual entry.
+    const [profile, svc] = await Promise.all([
+      apiFetch<ApiSuccess<{ defaultTermMonths: number | null; defaultDepositMonths: number | null } | null>>(`/api/buildings/${id}/contract-profile`).catch(() => null),
+      apiFetch<ApiSuccess<BuildingService[]>>(`/api/building-services?building_id=${id}`).catch(() => null),
+    ])
+    if (!isLatest()) return
+    loadedBuildingId = id
+    buildingDefaults = { termMonths: profile?.data?.defaultTermMonths ?? null, depositMonths: profile?.data?.defaultDepositMonths ?? null }
+    if (svc) {
+      services.value = (svc.data ?? []).filter(s => s.isActive).map(s => ({
+        catalog_id: s.catalogId, name: s.catalog.name, amount: s.defaultAmount, quantity: 1, is_enabled: true, notes: null,
+      }))
     }
   }
-  catch { /* profile optional */ }
   const defaults = resolveDefaults(buildingDefaults, loadPrefs(id))
   if (defaults.termMonths != null && form.value.start_date && !touched.has('end_date')) {
     form.value.end_date = computeEndDate(form.value.start_date, defaults.termMonths)
@@ -108,33 +150,31 @@ watch(buildingId, async (id) => {
   if (defaults.depositMonths != null && rent > 0 && !touched.has('deposit')) {
     form.value.deposit = String(computeDeposit(rent, defaults.depositMonths))
   }
-  // Prefill service + inventory blocks from the building/room.
-  try {
-    const svc = await apiFetch<ApiSuccess<BuildingService[]>>(`/api/building-services?building_id=${id}`)
-    services.value = (svc.data ?? []).filter(s => s.isActive).map(s => ({
-      catalog_id: s.catalogId, name: s.catalog.name, amount: s.defaultAmount, quantity: 1, is_enabled: true, notes: null,
-    }))
-  }
-  catch { /* ignore */ }
 })
 
+const readingsGuard = createLatestGuard()
 watch(() => form.value.room_id, async (id) => {
   if (!id) return
+  const isLatest = readingsGuard()
   try {
     const latest = await apiFetch<ApiSuccess<{ electricity: { readingValue: number } | null; water: { readingValue: number } | null }>>(
       '/api/meter-readings/latest', { query: { room_id: id } },
     )
+    if (!isLatest()) return
     if (form.value.handover_electricity_reading === '' && latest.data?.electricity) form.value.handover_electricity_reading = String(latest.data.electricity.readingValue)
     if (form.value.handover_water_reading === '' && latest.data?.water) form.value.handover_water_reading = String(latest.data.water.readingValue)
   }
   catch { /* readings stay manual */ }
 })
 
+const inventoryGuard = createLatestGuard()
 watch(() => form.value.room_id, async (id) => {
   if (!id) return
   if (skipInventoryPrefill) { skipInventoryPrefill = false; return }
+  const isLatest = inventoryGuard()
   try {
     const inv = await apiFetch<ApiSuccess<{ name: string; quantity: number; condition: InventoryItemInput['condition']; unitValue: number | null; note: string | null }[]>>(`/api/rooms/${id}/inventory`)
+    if (!isLatest()) return
     inventory.value = (inv.data ?? []).map(i => ({ name: i.name, quantity: i.quantity, condition: i.condition, unit_value: i.unitValue, note: i.note }))
   }
   catch { /* ignore */ }
@@ -148,7 +188,7 @@ function markTouched(field: string) { touched.add(field) }
 function onServicesUpdate(rows: ContractServiceRow[]) { services.value = rows; servicesTouched.value = true }
 
 function addPendingOccupant(input: ContractOccupantAddInput & { tenantName: string }) {
-  occupants.value.push({ tenant_id: input.tenant_id, tenantName: input.tenantName || '-', move_in_date: input.move_in_date, billing_counted: input.billing_counted })
+  occupants.value.push({ tenant_id: input.tenant_id, tenantName: input.tenantName || '-', move_in_date: input.move_in_date, billing_counted: input.billing_counted, link_token: input.link_token })
   showOccupantForm.value = false
 }
 function removePendingOccupant(tenantId: string) { occupants.value = occupants.value.filter(o => o.tenant_id !== tenantId) }
@@ -165,6 +205,7 @@ function buildPayload() {
   return {
     room_id: form.value.room_id,
     tenant_id: form.value.tenant_id,
+    tenant_link_token: tenantLinkToken.value || undefined,
     start_date: form.value.start_date,
     end_date: form.value.end_date,
     monthly_rent: Number(form.value.monthly_rent),
@@ -176,7 +217,7 @@ function buildPayload() {
     handover_electricity_reading: form.value.handover_electricity_reading === '' ? undefined : Number(form.value.handover_electricity_reading),
     handover_water_reading: form.value.handover_water_reading === '' ? undefined : Number(form.value.handover_water_reading),
     handover_reading_date: form.value.handover_reading_date || undefined,
-    occupants: occupants.value.map(o => ({ tenant_id: o.tenant_id, move_in_date: o.move_in_date, billing_counted: o.billing_counted })),
+    occupants: occupants.value.map(o => ({ tenant_id: o.tenant_id, move_in_date: o.move_in_date, billing_counted: o.billing_counted, ...(o.link_token ? { link_token: o.link_token } : {}) })),
     vehicles: vehicles.value.length ? vehicles.value : undefined,
     services: servicesTouched.value
       ? services.value.map(s => ({ catalog_id: s.catalog_id, amount: s.amount, quantity: s.quantity, is_enabled: s.is_enabled, notes: s.notes }))
@@ -310,9 +351,19 @@ watch([form, occupants, vehicles, services, inventory], () => {
           label="Phòng cho thuê"
           placeholder="Chọn phòng trống"
           search-placeholder="Tìm số phòng..."
+          remote-search
           :error="errors.room_id?.[0]"
-          @update:model-value="(r) => form.room_id = r?.id ?? ''"
+          @search="onRoomSearch"
+          @update:model-value="onRoomPicked"
         />
+        <button
+          v-if="buildingFilter"
+          type="button"
+          class="mt-2 inline-flex min-h-9 items-center text-xs text-ui-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-accent/40"
+          @click="buildingFilter = ''"
+        >
+          Xem phòng của mọi tòa
+        </button>
       </section>
 
       <!-- Tenant -->
@@ -321,9 +372,11 @@ watch([form, occupants, vehicles, services, inventory], () => {
         <TenantPicker
           :model-value="form.tenant_id || null"
           :exclude-tenant-ids="occupants.map(o => o.tenant_id)"
+          :building-id="buildingId"
           :error="errors.tenant_id?.[0]"
           required
           @update:model-value="(v) => form.tenant_id = v ?? ''"
+          @update:link-token="(t) => tenantLinkToken = t"
         />
       </section>
 
@@ -363,7 +416,7 @@ watch([form, occupants, vehicles, services, inventory], () => {
             <span class="text-sm text-ui-primary">{{ o.tenantName }}</span>
             <UiButton variant="ghost" size="sm" @click="removePendingOccupant(o.tenant_id)">Xoá</UiButton>
           </div>
-          <ContractOccupantForm v-if="showOccupantForm" :exclude-tenant-ids="excludeTenantIds" @submit="addPendingOccupant" @cancel="showOccupantForm = false" />
+          <ContractOccupantForm v-if="showOccupantForm" :exclude-tenant-ids="excludeTenantIds" :building-id="buildingId" @submit="addPendingOccupant" @cancel="showOccupantForm = false" />
           <UiButton v-else variant="secondary" size="sm" @click="showOccupantForm = true">Thêm người ở</UiButton>
         </div>
       </section>

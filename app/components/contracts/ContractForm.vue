@@ -65,7 +65,7 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits<{
   'update:modelValue': [value: ContractFormData]
-  'submit': [value: ContractFormData]
+  'submit': [value: ContractFormData, opts: { tenantLinkToken: string | null }]
   'cancel': []
   'restore-draft': []
   'dismiss-draft': []
@@ -144,6 +144,9 @@ function onRoomSelect(room: Room | null) {
 function onTenantPicked(tenant: TenantSummary | null) {
   selectedTenantSummary.value = tenant
 }
+
+// Kept out of the form data: drafts persist the form, and tokens are short-lived secrets.
+const tenantLinkToken = ref<string | null>(null)
 
 const handoverRoomId = computed(() => props.showHandover ? props.modelValue.room_id : '')
 
@@ -330,7 +333,7 @@ function onSubmit() {
       focusField(firstInvalidFieldId.value)
       return
     }
-    emit('submit', props.modelValue)
+    emit('submit', props.modelValue, { tenantLinkToken: tenantLinkToken.value })
   })
 }
 
@@ -417,10 +420,12 @@ const selectedRoomLabel = computed(() => {
           :model-value="modelValue.tenant_id || null"
           :exclude-tenant-ids="excludeTenantIds"
           :exclude-contract-id="excludeContractId"
+          :building-id="selectedRoom?.buildingId ?? null"
           required
           :disabled="loading"
           :error="errorFor('tenant_id')"
           @update:model-value="(id: string | null) => update('tenant_id', id ?? '')"
+          @update:link-token="(token: string | null) => tenantLinkToken = token"
           @selected="onTenantPicked"
         />
       </div>

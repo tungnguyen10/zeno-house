@@ -135,9 +135,6 @@ function buildingToForm(b: Building): BuildingFormData {
     address: b.address,
     description: b.description ?? '',
     status: b.status,
-    ownerName: b.ownerName ?? '',
-    ownerPhone: b.ownerPhone ?? '',
-    ownerEmail: b.ownerEmail ?? '',
     electricityPricingType: b.electricityPricingType,
     defaultElectricityRate: b.defaultElectricityRate != null ? String(b.defaultElectricityRate) : '',
     waterPricingType: b.waterPricingType,
@@ -348,6 +345,7 @@ async function onSubmitEdit(data: BuildingFormData) {
       <BuildingForm
         v-if="editForm"
         v-model="editForm"
+        variant="basics"
         :loading="editLoading"
         :errors="editFieldErrors"
         :is-dirty="true"

@@ -53,4 +53,42 @@ describe('contract create page', () => {
   it('no longer preloads all tenants', () => {
     expect(page).not.toContain('allTenantsData')
   })
+
+  it('sends tenant link tokens with the create request but never into the server draft', () => {
+    expect(page).toContain('tenant_link_token: tenantLinkToken.value || undefined')
+    expect(page).toContain(':building-id="buildingId"')
+    const draftBlock = page.slice(page.indexOf('draft.schedule({'), page.indexOf('} as never)', page.indexOf('draft.schedule({')))
+    expect(draftBlock).not.toContain('link_token')
+    expect(draftBlock).not.toContain('tenantLinkToken')
+  })
+
+  it('ignores stale async prefill responses after the room changes', () => {
+    for (const guard of ['readinessGuard', 'prefillGuard', 'readingsGuard', 'inventoryGuard']) {
+      expect(page).toContain(`const ${guard} = createLatestGuard()`)
+    }
+    expect(page.match(/if \(!isLatest\(\)\) return/g)?.length).toBeGreaterThanOrEqual(3)
+  })
+
+  it('loads building profile and services in parallel', () => {
+    expect(page).toContain('Promise.all([')
+    expect(page).toContain('/contract-profile')
+    expect(page).toContain('/api/building-services?building_id=')
+  })
+
+  it('refreshes rent when switching rooms inside the same building', () => {
+    expect(page).toContain('selectedRoom.value?.id] as const')
+  })
+
+  it('searches rooms on the server instead of truncating at the list limit', () => {
+    expect(page).toContain('remote-search')
+    expect(page).toContain('@search="onRoomSearch"')
+    expect(page).toContain('pickedRoom')
+  })
+
+  it('filters available rooms by building_id from the query and lets the user clear it', () => {
+    expect(page).toContain("const buildingFilter = ref(typeof route.query.building_id === 'string' ? route.query.building_id : '')")
+    expect(page).toContain('...(buildingFilter.value ? { building_id: buildingFilter.value } : {})')
+    expect(page).toContain('Xem phòng của mọi tòa')
+    expect(page).toMatch(/class="[^"]*inline-flex min-h-9 items-center[^"]*"[^>]*\n\s*@click="buildingFilter = ''"/)
+  })
 })

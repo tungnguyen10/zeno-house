@@ -37,7 +37,6 @@ const BuildingFormStub = defineComponent({
 
 const building = {
   id: 'b-1', name: 'Tòa A', address: '1 Lê Lợi', description: null, status: 'active',
-  ownerName: null, ownerPhone: null, ownerEmail: null,
   electricityPricingType: 'per_kwh', defaultElectricityRate: 3500,
   waterPricingType: 'per_m3', defaultWaterRate: 15000,
   meterReadingDay: 28, billingGenerationDay: 1, paymentDueDay: 5, gracePeriodDays: 3,

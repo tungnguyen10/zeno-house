@@ -15,7 +15,7 @@ export const BuildingContractProfileRepository = {
   async upsert(
     event: H3Event,
     buildingId: string,
-    input: BuildingContractProfileInput,
+    input: Partial<BuildingContractProfileInput>,
     actorId: string,
   ): Promise<BuildingContractProfileRow> {
     const { data, error } = await table(event)

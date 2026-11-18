@@ -15,6 +15,7 @@ export const AUDIT_MUTATION_POLICIES: readonly AuditMutationPolicy[] = [
   { routePrefix: 'assignments/', actionOwner: 'AssignmentService', durability: 'transactional' },
   { routePrefix: 'auth/', actionOwner: 'AuthService', durability: 'outbox' },
   { routePrefix: 'billing/', actionOwner: 'Billing services/RPCs', durability: 'transactional' },
+  { routePrefix: 'building-other-incomes/', actionOwner: 'BuildingOtherIncomeService', durability: 'transactional' },
   { routePrefix: 'building-expenses/', actionOwner: 'BuildingExpenseService', durability: 'outbox' },
   { routePrefix: 'building-fixed-costs/', actionOwner: 'BuildingFixedCostService', durability: 'transactional' },
   { routePrefix: 'building-services/', actionOwner: 'BuildingServiceService', durability: 'transactional' },

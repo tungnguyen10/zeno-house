@@ -63,6 +63,13 @@ HTTP API for managing rooms. All endpoints require authentication. Admin-only en
 - **WHEN** manager POSTs room data
 - **THEN** returns 403 FORBIDDEN
 
+### Requirement: Batch room creation goes through building create
+Creating many rooms at once SHALL happen only through `POST /api/buildings` with `rooms` (see buildings-api), which uses the shared `create_rooms_batch` core. There SHALL be no standalone batch endpoint for existing buildings until a later change adds one on the same core.
+
+#### Scenario: Rooms created with a new building
+- **WHEN** admin or owner creates a building with `rooms`
+- **THEN** all rooms are created atomically with the building, or none are
+
 ### Requirement: Update room endpoint
 `PATCH /api/rooms/:id` SHALL update an existing room. Requires admin role. All fields optional. Returns updated room.
 

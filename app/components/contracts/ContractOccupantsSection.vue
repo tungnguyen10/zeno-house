@@ -109,6 +109,7 @@ async function handleDeleteOccupant() {
     <!-- Add form -->
     <div v-if="showOccupantForm" class="mb-4 rounded-lg border border-ui-border p-4">
       <ContractOccupantForm
+        :building-id="contract.buildingId"
         :exclude-tenant-ids="[
           contract.tenantId,
           ...occupants.filter(o => !o.moveOutDate).map(o => o.tenantId),

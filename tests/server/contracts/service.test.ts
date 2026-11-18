@@ -21,6 +21,7 @@ const mocks = vi.hoisted(() => ({
 }))
 
 vi.mock('../../../server/utils/checkout-feature', () => ({ checkoutEnabledForBuilding: mocks.checkoutEnabled }))
+vi.mock('../../../server/services/tenants/authorization', () => ({ TenantAuthorizationService: { assertLinkable: vi.fn().mockResolvedValue(undefined) } }))
 
 vi.mock('../../../server/repositories/contracts', () => ({
   ContractRepository: {

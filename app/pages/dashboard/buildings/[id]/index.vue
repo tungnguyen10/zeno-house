@@ -1,9 +1,9 @@
 <script setup lang="ts">
 
-import { buildingEditPath, buildingSettingsPath } from '~/utils/routes/operational'
+import { buildingSettingsPath, buildingSetupPath } from '~/utils/routes/operational'
 import { getApiErrorCode, getApiErrorDetails, type ApiErrorLike } from '~/utils/api-error'
 import type { ApiSuccess } from '~/types/api'
-import type { BuildingReadiness } from '~/types/building-contract-profile'
+import type { BuildingContractProfile, BuildingReadiness } from '~/types/building-contract-profile'
 
 const route = useRoute()
 const authStore = useAuthStore()
@@ -23,6 +23,12 @@ const { data: readinessData } = useFetch<ApiSuccess<BuildingReadiness>>(
   () => `/api/buildings/${encodeURIComponent(id)}/readiness`,
   { lazy: true, server: false },
 )
+
+const { data: contractProfileData } = useFetch<ApiSuccess<BuildingContractProfile | null>>(
+  () => `/api/buildings/${encodeURIComponent(id)}/contract-profile`,
+  { lazy: true, server: false, immediate: authStore.can('building-contract-profile.read') },
+)
+const lessor = computed(() => contractProfileData.value?.data ?? null)
 
 watchEffect(() => {
   if (error.value?.statusCode === 404) navigateTo('/dashboard/buildings')
@@ -151,12 +157,7 @@ const waterLabel = computed(() => {
               variant="secondary"
               size="sm"
               @click="navigateTo(buildingSettingsPath(building))"
-            >
-              Dịch vụ
-            </UiButton>
-            <NuxtLink :to="buildingEditPath(building)">
-              <UiButton variant="secondary" size="sm">Chỉnh sửa</UiButton>
-            </NuxtLink>
+            >Cài đặt</UiButton>
           </div>
         </template>
       </UiPageHeader>
@@ -196,23 +197,24 @@ const waterLabel = computed(() => {
         />
       </div>
 
-      <BuildingReadinessCard
+      <BuildingSetupStrip
         v-if="readinessData?.data && authStore.canManage"
         class="mt-4"
         :readiness="readinessData.data"
-        :settings-path="buildingSettingsPath(building)"
+        :setup-path="buildingSetupPath(building)"
+        :create-contract-path="`/dashboard/contracts/create?building_id=${building.id}`"
+        :can-add-rooms="building.totalRooms === 0 && authStore.can('rooms.create')"
+        :add-rooms-path="`/dashboard/buildings/${building.slug}/rooms/batch`"
       />
 
       <!-- Section: Overview -->
       <UiSurfacePanel id="overview" as="section" class="mt-6">
         <h3 class="mb-2 text-sm font-semibold text-ui-primary">Thông tin tổng quan</h3>
         <UiDefinitionList>
-          <UiDefinitionItem label="Địa chỉ" :value="building.address" />
           <UiDefinitionItem label="Ngày tạo" :value="new Date(building.createdAt).toLocaleDateString('vi-VN')" />
-          <UiDefinitionItem v-if="building.ownerName" label="Tên chủ nhà" :value="building.ownerName" />
-          <UiDefinitionItem v-if="building.ownerPhone" label="Số điện thoại" :value="building.ownerPhone" />
-          <UiDefinitionItem v-if="building.ownerEmail" label="Email" :value="building.ownerEmail" />
-          <UiDefinitionItem v-if="building.description" label="Mô tả" :value="building.description" stacked />
+          <UiDefinitionItem v-if="lessor?.lessorFullName" label="Bên cho thuê">
+            {{ lessor.lessorFullName }}<span v-if="lessor.lessorPhone" class="text-ui-muted"> · {{ lessor.lessorPhone }}</span><span v-if="lessor.lessorEmail" class="text-ui-muted"> · {{ lessor.lessorEmail }}</span>
+          </UiDefinitionItem>
         </UiDefinitionList>
       </UiSurfacePanel>
 
@@ -224,7 +226,7 @@ const waterLabel = computed(() => {
             v-if="authStore.canManage"
             variant="secondary"
             size="sm"
-            @click="navigateTo(buildingSettingsPath(building))"
+            @click="navigateTo(`${buildingSettingsPath(building)}#service-defaults`)"
           >
             Quản lý dịch vụ
           </UiButton>
