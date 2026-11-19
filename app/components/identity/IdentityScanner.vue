@@ -1,13 +1,18 @@
 <script setup lang="ts">
-import { useTenantIdentityExtract } from '~/composables/tenants/useTenantIdentityExtract'
+import { useIdentityExtract } from '~/composables/identity/useIdentityExtract'
 import {
   buildSuggestionRows,
   type SuggestionField,
   type SuggestionValues,
-} from '~/utils/tenant-identity-suggestions'
-import type { IdentitySuggestion } from '~/utils/validators/tenant-identity-extraction'
+} from '~/utils/identity-suggestions'
+import {
+  IDENTITY_PURPOSE_CAPABILITIES,
+  type IdentityPurpose,
+  type IdentitySuggestion,
+} from '~/utils/validators/identity-extraction'
 
 const props = defineProps<{
+  purpose: IdentityPurpose
   currentValues: SuggestionValues
   /** Form fields that can receive a suggestion. */
   fields: SuggestionField[]
@@ -25,10 +30,10 @@ const auth = useAuthStore()
 const visible = computed(() => {
   const flag = config.public.aiTenantVisionEnabled as unknown
   const enabled = flag === true || flag === 'true'
-  return enabled && (auth.can('tenants.create') || auth.can('tenants.update'))
+  return enabled && IDENTITY_PURPOSE_CAPABILITIES[props.purpose].some(capability => auth.can(capability))
 })
 
-const { extract, abort, loading, error } = useTenantIdentityExtract()
+const { extract, abort, loading, error } = useIdentityExtract(props.purpose)
 
 const items = ref<{ file: File, url: string }[]>([])
 const localError = ref<string | null>(null)
@@ -127,85 +132,88 @@ defineExpose({ reset })
 <template>
   <section
     v-if="visible"
-    class="space-y-3 rounded-lg border border-ui-border bg-ui-hover/30 p-4"
+    class="space-y-3 rounded-lg border border-dashed border-ui-border-strong p-3 sm:p-4"
     data-test="identity-scanner"
   >
-    <div>
-      <h4 class="text-xs font-semibold text-ui-primary">Đọc thông tin từ ảnh giấy tờ</h4>
-      <p class="mt-1 text-xs text-ui-muted">
-        Chụp hoặc chọn 1–2 ảnh CCCD, hoặc ảnh chụp màn hình VNeID.
-      </p>
-      <p class="mt-1 text-xs text-ui-muted" data-test="scanner-notice">
-        Ảnh được gửi tới dịch vụ AI để đọc chữ và không được lưu lại. Kiểm tra từng thông tin trước khi áp dụng.
-      </p>
-    </div>
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      <div class="flex min-w-0 gap-3">
+        <IconPhoto class="mt-0.5 size-4 shrink-0 text-ui-accent" aria-hidden="true" />
+        <div class="min-w-0">
+          <h4 class="text-sm font-medium text-ui-primary">Đọc thông tin từ ảnh giấy tờ</h4>
+          <p class="mt-0.5 text-xs text-ui-muted">
+            1–2 ảnh CCCD, hoặc ảnh chụp màn hình VNeID.
+          </p>
+        </div>
+      </div>
 
-    <div class="flex flex-wrap items-center gap-2">
-      <UiButton variant="secondary" size="sm" :disabled="loading" @click="cameraInput?.click()">
-        Chụp ảnh
-      </UiButton>
-      <UiButton variant="secondary" size="sm" :disabled="loading" @click="pickInput?.click()">
-        Chọn ảnh
-      </UiButton>
-      <input
-        ref="cameraInput"
-        type="file"
-        class="sr-only"
-        tabindex="-1"
-        :accept="ACCEPT"
-        capture="environment"
-        data-test="scanner-camera-input"
-        @change="onFilesSelected"
-      >
-      <input
-        ref="pickInput"
-        type="file"
-        class="sr-only"
-        tabindex="-1"
-        :accept="ACCEPT"
-        multiple
-        data-test="scanner-file-input"
-        @change="onFilesSelected"
-      >
-    </div>
-
-    <ul v-if="items.length" class="flex flex-wrap gap-3">
-      <li
-        v-for="(item, index) in items"
-        :key="item.url"
-        class="flex items-center gap-2"
-        data-test="scanner-preview"
-      >
-        <img
-          :src="item.url"
-          :alt="`Ảnh giấy tờ ${index + 1}`"
-          class="h-16 w-24 rounded-md border border-ui-border object-cover"
-        >
-        <UiButton
-          variant="ghost"
-          size="sm"
-          :disabled="loading"
-          :data-test="`scanner-remove-${index}`"
-          @click="removeAt(index)"
-        >
-          Bỏ ảnh
+      <div class="flex shrink-0 flex-wrap items-center gap-2 pl-7 sm:pl-0">
+        <UiButton variant="secondary" size="sm" :disabled="loading || items.length >= MAX_FILES" @click="cameraInput?.click()">
+          Chụp ảnh
         </UiButton>
-      </li>
-    </ul>
+        <UiButton variant="secondary" size="sm" :disabled="loading || items.length >= MAX_FILES" @click="pickInput?.click()">
+          Chọn ảnh
+        </UiButton>
+        <input
+          ref="cameraInput"
+          type="file"
+          class="sr-only"
+          tabindex="-1"
+          :accept="ACCEPT"
+          capture="environment"
+          data-test="scanner-camera-input"
+          @change="onFilesSelected"
+        >
+        <input
+          ref="pickInput"
+          type="file"
+          class="sr-only"
+          tabindex="-1"
+          :accept="ACCEPT"
+          multiple
+          data-test="scanner-file-input"
+          @change="onFilesSelected"
+        >
+      </div>
+    </div>
+
+    <div v-if="items.length" class="flex flex-wrap items-end gap-3">
+      <ul class="flex flex-wrap gap-3">
+        <li
+          v-for="(item, index) in items"
+          :key="item.url"
+          class="flex items-center gap-1"
+          data-test="scanner-preview"
+        >
+          <img
+            :src="item.url"
+            :alt="`Ảnh giấy tờ ${index + 1}`"
+            class="h-16 w-24 rounded-md border border-ui-border object-cover"
+          >
+          <UiButton
+            variant="ghost"
+            size="sm"
+            :disabled="loading"
+            :data-test="`scanner-remove-${index}`"
+            @click="removeAt(index)"
+          >
+            Bỏ ảnh
+          </UiButton>
+        </li>
+      </ul>
+      <UiButton
+        size="sm"
+        class="sm:ml-auto"
+        data-test="scanner-extract"
+        :loading="loading"
+        @click="onExtract"
+      >
+        {{ loading ? 'Đang đọc…' : 'Đọc thông tin' }}
+      </UiButton>
+    </div>
 
     <p v-if="localError" class="text-xs text-status-danger" role="alert" data-test="scanner-local-error">
       {{ localError }}
     </p>
-
-    <UiButton
-      size="sm"
-      data-test="scanner-extract"
-      :loading="loading"
-      :disabled="items.length === 0"
-      @click="onExtract"
-    >
-      Đọc thông tin
-    </UiButton>
 
     <UiAlert v-if="error" severity="danger" data-test="scanner-error">{{ error }}</UiAlert>
 
@@ -262,5 +270,9 @@ defineExpose({ reset })
         Áp dụng các trường còn trống
       </UiButton>
     </template>
+
+    <p class="text-xs text-ui-muted" data-test="scanner-notice">
+      Ảnh được gửi tới dịch vụ AI để đọc chữ và không được lưu lại. Kiểm tra từng thông tin trước khi áp dụng.
+    </p>
   </section>
 </template>

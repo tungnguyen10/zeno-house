@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import type { IdentitySuggestion } from '~/utils/validators/tenant-identity-extraction'
-import { buildSuggestionRows, type SuggestionField } from '~/utils/tenant-identity-suggestions'
+import type { IdentitySuggestion } from '~/utils/validators/identity-extraction'
+import { buildSuggestionRows, type SuggestionField } from '~/utils/identity-suggestions'
 
 const ALL: SuggestionField[] = ['full_name', 'id_number', 'date_of_birth', 'gender', 'id_issued_date', 'id_issued_place', 'permanent_address']
 

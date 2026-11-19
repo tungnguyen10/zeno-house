@@ -1,4 +1,4 @@
-import type { IdentitySuggestion } from '~/utils/validators/tenant-identity-extraction'
+import type { IdentitySuggestion } from '~/utils/validators/identity-extraction'
 
 export type SuggestionField =
   | 'full_name'

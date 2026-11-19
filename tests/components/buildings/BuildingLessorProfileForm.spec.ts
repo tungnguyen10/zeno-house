@@ -20,18 +20,18 @@ const FieldStub = defineComponent({
 const SlotStub = defineComponent({ setup(_, { slots }) { return () => h('div', slots.default?.()) } })
 
 const ScannerStub = defineComponent({
-  props: ['currentValues', 'fields'],
+  props: ['purpose', 'currentValues', 'fields'],
   emits: ['apply'],
   setup(_, { emit }) {
     return () => h('button', {
       'data-test': 'scanner-stub',
-      onClick: () => emit('apply', { full_name: 'Trần Thị B', id_number: '012345678901', gender: 'female' }),
+      onClick: () => emit('apply', { full_name: 'Trần Thị B', id_number: '012345678901', gender: 'female', permanent_address: 'Phường Mẫu, Huế' }),
     })
   },
 })
 
 const stubs = {
-  TenantIdentityScanner: ScannerStub,
+  IdentityScanner: ScannerStub,
   UiInput: FieldStub,
   UiAlert: SlotStub,
   UiFormSection: defineComponent({
@@ -80,12 +80,24 @@ describe('BuildingLessorProfileForm', () => {
       props: { profile: null, canEdit: true, saving: false, error: null },
       global: { stubs },
     })
+    expect(w.findComponent(ScannerStub).props('purpose')).toBe('lessor')
     expect(w.findComponent(ScannerStub).props('fields')).not.toContain('gender')
     await w.find('[data-test="scanner-stub"]').trigger('click')
     await w.find('[data-test="lessor-profile-save"]').trigger('click')
     const patch = w.emitted('save')![0]![0] as Record<string, unknown>
-    expect(patch).toMatchObject({ lessor_full_name: 'Trần Thị B', lessor_id_number: '012345678901' })
+    expect(patch).toMatchObject({ lessor_full_name: 'Trần Thị B', lessor_id_number: '012345678901', lessor_permanent_address: 'Phường Mẫu, Huế' })
     expect(patch).not.toHaveProperty('gender')
+  })
+
+  it('keeps the permanent address in the identity section next to the scanner', () => {
+    const w = mount(BuildingLessorProfileForm, {
+      props: { profile: null, canEdit: true, saving: false, error: null },
+      global: { stubs },
+    })
+    const [identity, contact] = w.findAll('section')
+    expect(identity!.find('h3').text()).toBe('Danh tính')
+    expect(identity!.text()).toContain('Địa chỉ thường trú')
+    expect(contact!.text()).not.toContain('Địa chỉ thường trú')
   })
 
   it('emits only lessor keys (snake_case) on save', async () => {
