@@ -24,6 +24,10 @@ const STATUS_VARIANTS: Record<ContractDocumentStatus, StatusVariant> = {
 }
 const typeLabel = (t: ContractDocument['type']) => (t === 'appendix' ? 'Phụ lục' : 'Hợp đồng')
 
+function openPdf(docId: string) {
+  void navigateTo(`/dashboard/contracts/${encodeURIComponent(props.contractId)}/documents/${encodeURIComponent(docId)}/print`, { open: { target: '_blank' } })
+}
+
 onMounted(docs.refresh)
 
 const voidValid = computed(() => voidReason.value.trim().length >= 10)
@@ -62,13 +66,14 @@ async function confirmVoid() {
             </p>
           </div>
           <div class="flex shrink-0 items-center gap-2">
-            <UiButton
-              v-if="d.status === 'issued' || d.status === 'signed'"
-              size="sm" variant="ghost" data-test="document-download"
-              @click="docs.download(d.id)"
-            >
-              Tải
-            </UiButton>
+            <template v-if="d.status === 'issued' || d.status === 'signed'">
+              <UiButton size="sm" variant="ghost" data-test="document-download-pdf" @click="openPdf(d.id)">
+                Tải PDF
+              </UiButton>
+              <UiButton size="sm" variant="ghost" data-test="document-download" @click="docs.download(d.id)">
+                Tải DOCX
+              </UiButton>
+            </template>
             <UiButton v-if="canIssue && d.status === 'failed'" size="sm" variant="secondary" @click="docs.regenerate(d.id)">
               Tạo lại file
             </UiButton>

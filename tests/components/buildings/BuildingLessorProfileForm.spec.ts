@@ -19,7 +19,19 @@ const FieldStub = defineComponent({
 
 const SlotStub = defineComponent({ setup(_, { slots }) { return () => h('div', slots.default?.()) } })
 
+const ScannerStub = defineComponent({
+  props: ['currentValues', 'fields'],
+  emits: ['apply'],
+  setup(_, { emit }) {
+    return () => h('button', {
+      'data-test': 'scanner-stub',
+      onClick: () => emit('apply', { full_name: 'Trần Thị B', id_number: '012345678901', gender: 'female' }),
+    })
+  },
+})
+
 const stubs = {
+  TenantIdentityScanner: ScannerStub,
   UiInput: FieldStub,
   UiAlert: SlotStub,
   UiFormSection: defineComponent({
@@ -61,6 +73,19 @@ describe('BuildingLessorProfileForm', () => {
     expect(w.text()).toContain('*******8901')
     expect(w.text()).toContain('Ẩn với vai trò quản lý')
     expect(w.find('[data-test="lessor-profile-save"]').exists()).toBe(false)
+  })
+
+  it('fills lessor fields from scanner suggestions and ignores gender', async () => {
+    const w = mount(BuildingLessorProfileForm, {
+      props: { profile: null, canEdit: true, saving: false, error: null },
+      global: { stubs },
+    })
+    expect(w.findComponent(ScannerStub).props('fields')).not.toContain('gender')
+    await w.find('[data-test="scanner-stub"]').trigger('click')
+    await w.find('[data-test="lessor-profile-save"]').trigger('click')
+    const patch = w.emitted('save')![0]![0] as Record<string, unknown>
+    expect(patch).toMatchObject({ lessor_full_name: 'Trần Thị B', lessor_id_number: '012345678901' })
+    expect(patch).not.toHaveProperty('gender')
   })
 
   it('emits only lessor keys (snake_case) on save', async () => {

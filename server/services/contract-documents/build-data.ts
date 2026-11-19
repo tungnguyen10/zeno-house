@@ -101,11 +101,10 @@ export function buildContractDocumentData(src: ContractDocumentSources): Record<
   const electricityDisplay = building.electricityPricingType === 'tiered'
     ? 'Theo bậc thang của tòa nhà'
     : `${formatCurrencyNumber(building.defaultElectricityRate ?? 0)} đồng/${building.electricityPricingType === 'fixed' ? 'phòng/tháng' : 'kWh'}`
-  const overdueClause = window
-    ? (window.overdueDay !== null
-        ? `Nếu sau ngày ${window.overdueDay} của tháng không đóng tiền, Bên A có quyền chấm dứt hợp đồng.`
-        : `Nếu quá ${window.graceDays} ngày sau hạn thanh toán không đóng tiền, Bên A có quyền chấm dứt hợp đồng.`)
+  const overdueTrigger = window
+    ? (window.overdueDay !== null ? `sau ngày ${window.overdueDay} của tháng` : `quá ${window.graceDays} ngày sau hạn thanh toán`)
     : ''
+  const overdueClause = window ? `Nếu ${overdueTrigger} không đóng tiền, Bên A có quyền chấm dứt hợp đồng.` : ''
 
   const occupants = [src.tenant, ...src.occupants].map((p, i) => ({ index: i + 1, ...party(p) }))
   const vehicles = src.vehicles.map((v, i) => ({
@@ -119,11 +118,13 @@ export function buildContractDocumentData(src: ContractDocumentSources): Record<
   const inventoryItems = inventory.items.map((it, i) => ({
     index: i + 1, name: str(it.name), quantity: String(it.quantity),
     condition_label: INVENTORY_CONDITION_LABELS[it.condition], unit_value_display: it.unitValue == null ? '' : formatCurrencyNumber(it.unitValue),
+    value_display: it.unitValue == null ? '' : formatCurrencyNumber(it.unitValue * it.quantity),
+    status_note: [it.quantity > 1 ? `SL ${it.quantity}` : '', INVENTORY_CONDITION_LABELS[it.condition], str(it.note)].filter(Boolean).join(' - '),
     note: str(it.note),
   }))
 
   return {
-    building: { brand_name: str(lessor?.brandName || building.name), address: str(building.address) },
+    building: { brand_name: str(lessor?.brandName || building.name), address: str(building.address), contact_phone: str(lessor?.lessorPhone) },
     contract: {
       number: str(contract.contractCode),
       signed_date_text: signedDateText(src.signedDate),
@@ -156,6 +157,7 @@ export function buildContractDocumentData(src: ContractDocumentSources): Record<
       due_day_start: window ? String(window.startDay) : '',
       due_day_end: window ? String(window.endDay) : '',
       overdue_clause: overdueClause,
+      overdue_trigger: overdueTrigger,
       account_holder: str(invoiceProfile?.accountHolder),
       account_number: str(invoiceProfile?.accountNumber),
       bank_name: str(invoiceProfile?.bankName),

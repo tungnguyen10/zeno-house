@@ -92,6 +92,10 @@ const idImageRemoved = ref<Record<TenantIdImageSide, boolean>>({
 })
 const idImageLoadingSide = ref<TenantIdImageSide | null>(null)
 
+const hasIdImageChanges = computed(() =>
+  Boolean(idImageFiles.value.front || idImageFiles.value.back || idImageRemoved.value.front || idImageRemoved.value.back),
+)
+
 const idCardFrontSignedUrl = computed(() => {
   if (idImageRemoved.value.front || idImageFiles.value.front) return null
   return tenant.value?.idCardFrontSignedUrl ?? null
@@ -160,7 +164,8 @@ async function onSubmit(data: TenantFormData) {
   let latestTenant = updated
 
   for (const side of ['front', 'back'] as const) {
-    if (!canEdit.value || updated.accessLevel === 'basic') return
+    // canEdit is not usable here: submitUpdate clears the page data, which flips it to false.
+    if (isBasic.value || updated.accessLevel === 'basic' || !authStore.can('tenants.update')) break
     try {
       idImageLoadingSide.value = side
       if (idImageFiles.value[side]) {
@@ -209,7 +214,7 @@ async function onSubmit(data: TenantFormData) {
       :loading="isLoading || !!idImageLoadingSide"
       :errors="errors"
       :has-draft="hasDraft"
-      :is-dirty="isDirty"
+      :is-dirty="isDirty || hasIdImageChanges"
       :id-card-front-signed-url="idCardFrontSignedUrl"
       :id-card-back-signed-url="idCardBackSignedUrl"
       :id-card-front-file-name="idImageFiles.front?.name ?? null"
