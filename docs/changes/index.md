@@ -17,7 +17,7 @@
 - [tenant-quick-create](./tenant-quick-create/verification.md) — PR3: source merged; busy-tenant duplicate and generic conflict browser states remain.
 - [contract-quick-create](./contract-quick-create/verification.md) — PR4a: source merged; create/restore QA performed, retry and 409 end-to-end verification remain.
 - [contract-documents](./contract-documents/verification.md) — PR4b: source merged, contract DOCX verified locally; deployed smoke and failed regeneration pending; **appendix issuance not supported yet**.
-- [tenant-identity-autofill](./tenant-identity-autofill/verification.md) — PR5: source merged behind flags; generated types now include `tenant_ocr_usage` (regenerated 2026-11-17); OCR privacy/security/benchmark gates remain and the flags stay off.
+- [tenant-identity-autofill](./tenant-identity-autofill/verification.md) — PR5: source merged behind flags; generated types now include `tenant_ocr_usage` (regenerated 2026-11-17); OCR privacy/security/benchmark gates remain and the flags stay off. 2026-11-19: scanner is now a shared identity module (`POST /api/identity/extract` with `purpose`, also used by the lessor profile); rename migration `20261119090000_identity_ocr_usage.sql` applied to production and verified; types regenerated.
 
 ## Other implementation present — verification or rollout gates open
 

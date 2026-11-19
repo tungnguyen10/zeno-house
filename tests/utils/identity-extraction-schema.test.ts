@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   IDENTITY_EXTRACTION_JSON_SCHEMA,
   identityExtractionSchema,
-} from '~/utils/validators/tenant-identity-extraction'
+} from '~/utils/validators/identity-extraction'
 
 const validExtraction = () => ({
   document_type: 'can_cuoc_2024',

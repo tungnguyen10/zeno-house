@@ -23,6 +23,7 @@ export const AUDIT_MUTATION_POLICIES: readonly AuditMutationPolicy[] = [
   { routePrefix: 'contract-documents/', actionOwner: 'ContractDocumentService', durability: 'transactional' },
   { routePrefix: 'contract-services/', actionOwner: 'ContractServiceService', durability: 'transactional' },
   { routePrefix: 'contracts/', actionOwner: 'Contract services', durability: 'transactional' },
+  { routePrefix: 'identity/', actionOwner: 'IdentityExtractionService quota ledger (no domain writes)', durability: 'operational' },
   { routePrefix: 'internal/', actionOwner: 'Internal operation telemetry', durability: 'operational' },
   { routePrefix: 'meter-readings/', actionOwner: 'MeterReadingService', durability: 'transactional' },
   { routePrefix: 'operations-report/', actionOwner: 'OperationsReportService', durability: 'transactional' },

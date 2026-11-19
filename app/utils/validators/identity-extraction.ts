@@ -13,6 +13,17 @@ export const CAPTURE_LAYOUTS = [
 export const ADDRESS_LABELS = ['noi_cu_tru', 'noi_thuong_tru', 'unknown'] as const
 export const EXTRACTION_GENDERS = ['male', 'female', 'other'] as const
 
+/** Which form the scanned identity fills; each purpose has its own permission. */
+export const IDENTITY_PURPOSES = ['tenant', 'lessor'] as const
+export const identityPurposeSchema = z.enum(IDENTITY_PURPOSES)
+export type IdentityPurpose = z.infer<typeof identityPurposeSchema>
+
+/** Any one capability allows scanning for that purpose; shared by the UI gate and the server. */
+export const IDENTITY_PURPOSE_CAPABILITIES: Record<IdentityPurpose, readonly string[]> = {
+  tenant: ['tenants.create', 'tenants.update'],
+  lessor: ['building-contract-profile.pii.read'],
+}
+
 const nullableText = z.string().nullable()
 
 export const identityExtractionSchema = z.strictObject({

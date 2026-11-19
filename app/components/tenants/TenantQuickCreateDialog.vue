@@ -2,7 +2,7 @@
 import type { ApiSuccess } from '~/types/api'
 import type { Tenant, TenantSummary } from '~/types/tenants'
 import { tenantCreateSchema } from '~/utils/validators/tenants'
-import type { SuggestionField, SuggestionValues } from '~/utils/tenant-identity-suggestions'
+import type { SuggestionField, SuggestionValues } from '~/utils/identity-suggestions'
 import { toTenantSummary, useTenantQuickCreate } from '~/composables/tenants/useTenantQuickCreate'
 
 const props = defineProps<{ open: boolean; initialName?: string; initialPhone?: string; linkable?: boolean }>()
@@ -127,8 +127,9 @@ function useExisting() {
       </button>
 
       <UiFormSection v-if="showIdentity" title="Thông tin giấy tờ (không bắt buộc)">
-        <TenantIdentityScanner
+        <IdentityScanner
           class="mb-4"
+          purpose="tenant"
           :current-values="scannerValues"
           :fields="SCANNER_FIELDS"
           @apply="onScannerApply"

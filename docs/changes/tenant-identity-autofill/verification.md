@@ -55,8 +55,9 @@ Reused existing primitives only (`UiButton`, `UiAlert`) and existing tokens; no 
 ## Cloud gates
 
 - [x] `20261116110000_tenant_ocr_usage.sql` applied — production, 2026-11-16
-- [ ] `supabase/verification/tenant_ocr_usage.sql` passed — environment and date
-- [ ] Types regenerated (`reserve_tenant_ocr`, `settle_tenant_ocr`, `release_tenant_ocr`, `tenant_ocr_usage`)
+- [x] `20261119090000_identity_ocr_usage.sql` applied (renames to `identity_ocr_usage` and `reserve|settle|release_identity_ocr`) — production, 2026-11-19 (`db push --dry-run` listed only this migration)
+- [x] `supabase/verification/identity_ocr_usage.sql` passed — production, 2026-11-19 (rolled back; anon/authenticated cannot execute, service_role can). Old `tenant_ocr*` table and functions gone; 7 existing rows kept.
+- [x] Types regenerated (`supabase gen types typescript --remote --schema public`, formatted with `oxfmt` semi=false, printWidth=80) — 2026-11-19; repository RPC cast removed
 - [ ] Runtime secrets set (`NUXT_AI_TENANT_ANTHROPIC_API_KEY`, `NUXT_AI_TENANT_VISION_MODEL`, price and limit variables)
 - [ ] Flags confirmed off in production
 
@@ -67,3 +68,15 @@ See [benchmark-results.md](./benchmark-results.md) after G4.
 ## 2026-11-16 merged-source reconciliation
 
 PR #27 merged the OCR source into `develop` and its GitHub CI passed, but the generated `app/types/database.types.ts` at `74aaac5c` does **not** include `reserve_tenant_ocr`, `settle_tenant_ocr`, `release_tenant_ocr` or `tenant_ocr_usage`. Cloud SQL verification, generated type refresh and security/privacy/benchmark gates remain open. Runtime casts are not proof of generated types. Do **not** enable real-ID uploads based solely on the merge. [V2 baseline](../zeno-house-v2-optimization/baseline-2026-11-16.md).
+
+## 2026-11-19 shared identity scanner
+
+The scanner also fills the building lessor profile, so the feature moved out of the tenant domain:
+
+- Client: `app/components/identity/IdentityScanner.vue`, `app/composables/identity/useIdentityExtract.ts`, `app/utils/identity-suggestions.ts`, `app/utils/validators/identity-extraction.ts`.
+- Server: `POST /api/identity/extract` (the `/api/tenants/identity/extract` route is removed), `server/services/identity/{extraction,normalize}.ts`, `server/repositories/identity-ocr-usage.ts`. Error codes are now `IDENTITY_VISION_*` and `IDENTITY_OCR_*`.
+- Each request sends a required `purpose` (`tenant` | `lessor`); a missing or unknown value is rejected with 422. `tenant` needs `tenants.create` or `tenants.update`; `lessor` needs `building-contract-profile.pii.read`. The same map (`IDENTITY_PURPOSE_CAPABILITIES`) gates the UI entry point.
+- The quota ledger is renamed by `20261119090000_identity_ocr_usage.sql`; rows are kept. Runtime keys and `NUXT_AI_TENANT_*` environment variables are unchanged.
+- UI: lighter dashed block with title and pickers on one row; the read action appears beside the previews only after an image is chosen; pickers disable at two images; the privacy notice sits at the bottom. The lessor permanent address moved into the "Danh tính" section beside the scanner.
+
+Local: focused Vitest suites (13 files, 119 tests), `npm run typecheck` and ESLint on touched files pass. Cloud rollout completed 2026-11-19 (see Cloud gates). Regenerated types also picked up `building_other_incomes`, which was already in production. Mobile visual check of the tenant form passed; desktop and lessor-profile visual checks are still open.

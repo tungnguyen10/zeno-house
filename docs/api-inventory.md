@@ -8,7 +8,7 @@ tags: [api, generated, engineering]
 # API Inventory And Performance Contracts
 
 Generated from checked-in handlers by `node scripts/generate-api-inventory.mjs`.
-Route count: **240**.
+Route count: **244**.
 
 All business routes require server-side authorization unless explicitly documented as an internal-secret route. Initial reads use Nuxt `useFetch`; imperative reads and mutations use `apiFetch` with a 15-second timeout, request ID, no automatic mutation retry, and normalized server envelopes.
 
@@ -77,6 +77,10 @@ All business routes require server-side authorization unless explicitly document
 | PATCH | `/api/building-fixed-costs/[id]` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | GET | `/api/building-fixed-costs` | domain-bounded | request/DTO policy | p95 ≤ 400ms |
 | POST | `/api/building-fixed-costs` | n/a | invalidate affected domain | p95 ≤ 250ms |
+| DELETE | `/api/building-other-incomes/[id]` | n/a | invalidate affected domain | p95 ≤ 250ms |
+| PATCH | `/api/building-other-incomes/[id]` | n/a | invalidate affected domain | p95 ≤ 250ms |
+| GET | `/api/building-other-incomes` | domain-bounded | request/DTO policy | p95 ≤ 400ms |
+| POST | `/api/building-other-incomes` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | DELETE | `/api/building-services/[id]` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | PATCH | `/api/building-services/[id]` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | GET | `/api/building-services` | domain-bounded | request/DTO policy | p95 ≤ 400ms |
@@ -157,6 +161,7 @@ All business routes require server-side authorization unless explicitly document
 | GET | `/api/contracts` | bounded | request/DTO policy | p95 ≤ 400ms |
 | POST | `/api/contracts` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | GET | `/api/dashboard/summary` | n/a | 20s scoped | p95 ≤ 800ms |
+| POST | `/api/identity/extract` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | POST | `/api/internal/ai/retention-cleanup` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | POST | `/api/internal/audit/reconcile` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | POST | `/api/internal/contract-documents/cleanup` | n/a | invalidate affected domain | p95 ≤ 250ms |
@@ -240,7 +245,6 @@ All business routes require server-side authorization unless explicitly document
 | POST | `/api/tenants/bulk` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | GET | `/api/tenants/export-candidates` | n/a | no-store | p95 ≤ 800ms |
 | POST | `/api/tenants/export` | n/a | no-store | p95 ≤ 800ms |
-| POST | `/api/tenants/identity/extract` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | GET | `/api/tenants` | bounded | request/DTO policy | p95 ≤ 400ms |
 | POST | `/api/tenants` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | POST | `/api/tenants/link-verify` | n/a | invalidate affected domain | p95 ≤ 250ms |

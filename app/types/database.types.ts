@@ -1064,6 +1064,81 @@ export type Database = {
           },
         ]
       }
+      building_other_incomes: {
+        Row: {
+          allocation_target: string
+          amount: number
+          building_id: string
+          created_at: string
+          created_by: string
+          id: string
+          name: string
+          note: string | null
+          operation_id: string
+          payer: string | null
+          payment_method: string | null
+          period_month: number
+          period_year: number
+          received_date: string
+          transaction_reference: string | null
+          updated_at: string
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
+        }
+        ComputedFields: never
+        Insert: {
+          allocation_target?: string
+          amount: number
+          building_id: string
+          created_at?: string
+          created_by: string
+          id?: string
+          name: string
+          note?: string | null
+          operation_id: string
+          payer?: string | null
+          payment_method?: string | null
+          period_month: number
+          period_year: number
+          received_date: string
+          transaction_reference?: string | null
+          updated_at?: string
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
+        }
+        Update: {
+          allocation_target?: string
+          amount?: number
+          building_id?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          name?: string
+          note?: string | null
+          operation_id?: string
+          payer?: string | null
+          payment_method?: string | null
+          period_month?: number
+          period_year?: number
+          received_date?: string
+          transaction_reference?: string | null
+          updated_at?: string
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "building_other_incomes_building_id_fkey"
+            columns: ["building_id"]
+            isOneToOne: false
+            referencedRelation: "buildings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       building_reserve_fund_rates: {
         Row: {
           building_id: string
@@ -2210,6 +2285,49 @@ export type Database = {
           },
         ]
       }
+      identity_ocr_usage: {
+        Row: {
+          cost_micro_usd: number | null
+          created_at: string
+          id: string
+          input_tokens: number | null
+          model: string | null
+          output_tokens: number | null
+          reserved_micro_usd: number
+          settled_at: string | null
+          status: string
+          usage_date: string
+          user_id: string
+        }
+        ComputedFields: never
+        Insert: {
+          cost_micro_usd?: number | null
+          created_at?: string
+          id?: string
+          input_tokens?: number | null
+          model?: string | null
+          output_tokens?: number | null
+          reserved_micro_usd: number
+          settled_at?: string | null
+          status: string
+          usage_date?: string
+          user_id: string
+        }
+        Update: {
+          cost_micro_usd?: number | null
+          created_at?: string
+          id?: string
+          input_tokens?: number | null
+          model?: string | null
+          output_tokens?: number | null
+          reserved_micro_usd?: number
+          settled_at?: string | null
+          status?: string
+          usage_date?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       invoice_charges: {
         Row: {
           amount: number
@@ -2968,6 +3086,7 @@ export type Database = {
           idempotency_key: string | null
           issued_revenue: number | null
           linked_expense_id: string | null
+          linked_other_income_id: string | null
           note: string | null
           period_month: number | null
           period_year: number | null
@@ -2990,6 +3109,7 @@ export type Database = {
           idempotency_key?: string | null
           issued_revenue?: number | null
           linked_expense_id?: string | null
+          linked_other_income_id?: string | null
           note?: string | null
           period_month?: number | null
           period_year?: number | null
@@ -3011,6 +3131,7 @@ export type Database = {
           idempotency_key?: string | null
           issued_revenue?: number | null
           linked_expense_id?: string | null
+          linked_other_income_id?: string | null
           note?: string | null
           period_month?: number | null
           period_year?: number | null
@@ -3041,6 +3162,13 @@ export type Database = {
             columns: ["linked_expense_id"]
             isOneToOne: false
             referencedRelation: "building_expenses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reserve_fund_transactions_linked_other_income_id_fkey"
+            columns: ["linked_other_income_id"]
+            isOneToOne: false
+            referencedRelation: "building_other_incomes"
             referencedColumns: ["id"]
           },
         ]
@@ -3370,49 +3498,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      tenant_ocr_usage: {
-        Row: {
-          cost_micro_usd: number | null
-          created_at: string
-          id: string
-          input_tokens: number | null
-          model: string | null
-          output_tokens: number | null
-          reserved_micro_usd: number
-          settled_at: string | null
-          status: string
-          usage_date: string
-          user_id: string
-        }
-        ComputedFields: never
-        Insert: {
-          cost_micro_usd?: number | null
-          created_at?: string
-          id?: string
-          input_tokens?: number | null
-          model?: string | null
-          output_tokens?: number | null
-          reserved_micro_usd: number
-          settled_at?: string | null
-          status: string
-          usage_date?: string
-          user_id: string
-        }
-        Update: {
-          cost_micro_usd?: number | null
-          created_at?: string
-          id?: string
-          input_tokens?: number | null
-          model?: string | null
-          output_tokens?: number | null
-          reserved_micro_usd?: number
-          settled_at?: string | null
-          status?: string
-          usage_date?: string
-          user_id?: string
-        }
-        Relationships: []
       }
       tenant_user_links: {
         Row: {
@@ -5049,6 +5134,15 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      mutate_building_other_income: {
+        Args: {
+          p_action: string
+          p_actor_id: string
+          p_income_id: string
+          p_payload: Json
+        }
+        Returns: Json
+      }
       normalize_tenant_id_number: { Args: { p_value: string }; Returns: string }
       normalize_tenant_phone: { Args: { p_value: string }; Returns: string }
       open_or_get_billing_period_with_audit: {
@@ -5314,7 +5408,7 @@ export type Database = {
           isSetofReturn: true
         }
       }
-      release_tenant_ocr: { Args: { p_id: string }; Returns: undefined }
+      release_identity_ocr: { Args: { p_id: string }; Returns: undefined }
       render_invoice_profile_snapshot: {
         Args: {
           p_building_id: string
@@ -5473,7 +5567,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      reserve_tenant_ocr: {
+      reserve_identity_ocr: {
         Args: {
           p_budget_micro_usd: number
           p_global_limit: number
@@ -5558,7 +5652,7 @@ export type Database = {
           isSetofReturn: true
         }
       }
-      settle_tenant_ocr: {
+      settle_identity_ocr: {
         Args: {
           p_cost_micro_usd: number
           p_id: string
@@ -5818,7 +5912,8 @@ export type Tables<
 
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
-    keyof DefaultSchema["Tables"] | { schema: keyof DatabaseWithoutInternals },
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
@@ -5842,7 +5937,8 @@ export type TablesInsert<
 
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
-    keyof DefaultSchema["Tables"] | { schema: keyof DatabaseWithoutInternals },
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
@@ -5866,7 +5962,8 @@ export type TablesUpdate<
 
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
-    keyof DefaultSchema["Enums"] | { schema: keyof DatabaseWithoutInternals },
+    | keyof DefaultSchema["Enums"]
+    | { schema: keyof DatabaseWithoutInternals },
   EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }

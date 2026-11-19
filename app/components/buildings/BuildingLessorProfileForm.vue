@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { BuildingContractProfile } from '~/types/building-contract-profile'
 import { buildingContractProfileBaseSchema, type BuildingContractProfilePatch } from '~/utils/validators/building-contract-profile'
-import type { SuggestionField, SuggestionValues } from '~/utils/tenant-identity-suggestions'
+import type { SuggestionField, SuggestionValues } from '~/utils/identity-suggestions'
 
 const props = withDefaults(defineProps<{
   profile: BuildingContractProfile | null
@@ -86,8 +86,9 @@ function submit() {
     <template v-else>
       <UiFormSection title="Danh tính" description="Người ký hợp đồng. Thông tin này in trên hợp đồng.">
         <div class="grid gap-3 sm:grid-cols-2">
-          <TenantIdentityScanner
+          <IdentityScanner
             class="sm:col-span-2"
+            purpose="lessor"
             :current-values="scannerValues"
             :fields="SCANNER_FIELDS"
             @apply="onScannerApply"
@@ -101,15 +102,15 @@ function submit() {
           <div class="sm:col-span-2">
             <UiInput v-model="form.lessor_id_issued_place" label="Nơi cấp" :error="fieldErrors.lessor_id_issued_place" />
           </div>
+          <div class="sm:col-span-2">
+            <UiInput v-model="form.lessor_permanent_address" label="Địa chỉ thường trú" :error="fieldErrors.lessor_permanent_address" />
+          </div>
         </div>
       </UiFormSection>
       <UiFormSection title="Liên hệ">
         <div class="grid gap-3 sm:grid-cols-2">
           <UiInput v-model="form.lessor_phone" label="Số điện thoại" type="tel" :error="fieldErrors.lessor_phone" />
           <UiInput v-model="form.lessor_email" label="Email (tùy chọn)" type="email" :error="fieldErrors.lessor_email" />
-          <div class="sm:col-span-2">
-            <UiInput v-model="form.lessor_permanent_address" label="Địa chỉ thường trú" :error="fieldErrors.lessor_permanent_address" />
-          </div>
         </div>
       </UiFormSection>
       <div class="flex justify-end border-t border-ui-border pt-4">

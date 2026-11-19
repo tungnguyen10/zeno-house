@@ -1,19 +1,23 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { defineComponent, ref } from 'vue'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { IdentitySuggestion } from '~/utils/validators/tenant-identity-extraction'
-import TenantIdentityScanner from '~/components/tenants/TenantIdentityScanner.vue'
+import type { IdentitySuggestion } from '~/utils/validators/identity-extraction'
+import IdentityScanner from '~/components/identity/IdentityScanner.vue'
 
 const extractMock = vi.hoisted(() => vi.fn())
 const abortMock = vi.hoisted(() => vi.fn())
+const purposeMock = vi.hoisted(() => vi.fn())
 const errorRef = vi.hoisted(() => ({ value: null as string | null }))
-vi.mock('~/composables/tenants/useTenantIdentityExtract', () => ({
-  useTenantIdentityExtract: () => ({
-    extract: extractMock,
-    abort: abortMock,
-    loading: ref(false),
-    get error() { return ref(errorRef.value) },
-  }),
+vi.mock('~/composables/identity/useIdentityExtract', () => ({
+  useIdentityExtract: (purpose: string) => {
+    purposeMock(purpose)
+    return {
+      extract: extractMock,
+      abort: abortMock,
+      loading: ref(false),
+      get error() { return ref(errorRef.value) },
+    }
+  },
 }))
 
 const config = { public: { aiTenantVisionEnabled: true } }
@@ -65,9 +69,9 @@ function suggestion(overrides: Partial<IdentitySuggestion> = {}, fields: Partial
 const image = (name: string, type = 'image/jpeg', size = 1000) => new File([new Uint8Array(size)], name, { type })
 
 function mountScanner(props: Record<string, unknown> = {}) {
-  return mount(TenantIdentityScanner, {
-    props: { currentValues: {}, fields: TARGETS, ...props },
-    global: { stubs: { UiButton: buttonStub, UiAlert: alertStub, UiBadge: badgeStub } },
+  return mount(IdentityScanner, {
+    props: { purpose: 'tenant', currentValues: {}, fields: TARGETS, ...props },
+    global: { stubs: { UiButton: buttonStub, UiAlert: alertStub, UiBadge: badgeStub, IconPhoto: true } },
     attachTo: document.body,
   })
 }
@@ -85,7 +89,7 @@ beforeEach(() => {
   errorRef.value = null
 })
 
-describe('TenantIdentityScanner visibility', () => {
+describe('IdentityScanner visibility', () => {
   it('is hidden when the public flag is off', () => {
     config.public.aiTenantVisionEnabled = false
     expect(mountScanner().find('[data-test="identity-scanner"]').exists()).toBe(false)
@@ -98,19 +102,29 @@ describe('TenantIdentityScanner visibility', () => {
 
   it('is shown when enabled and permitted', () => {
     expect(mountScanner().find('[data-test="identity-scanner"]').exists()).toBe(true)
+    expect(purposeMock).toHaveBeenCalledWith('tenant')
+  })
+
+  it('gates lessor scans on lessor PII access, not tenant capabilities', () => {
+    auth.can = capability => capability === 'tenants.create'
+    expect(mountScanner({ purpose: 'lessor' }).find('[data-test="identity-scanner"]').exists()).toBe(false)
+    auth.can = capability => capability === 'building-contract-profile.pii.read'
+    expect(mountScanner({ purpose: 'lessor' }).find('[data-test="identity-scanner"]').exists()).toBe(true)
+    expect(purposeMock).toHaveBeenLastCalledWith('lessor')
   })
 })
 
-describe('TenantIdentityScanner images', () => {
-  it('shows a preview, enables reading and revokes the url on remove', async () => {
+describe('IdentityScanner images', () => {
+  it('shows a preview with the read action and revokes the url on remove', async () => {
     const wrapper = mountScanner()
-    expect(wrapper.find('[data-test="scanner-extract"]').attributes('disabled')).toBeDefined()
+    expect(wrapper.find('[data-test="scanner-extract"]').exists()).toBe(false)
     await selectFiles(wrapper, [image('front.jpg')])
     expect(wrapper.findAll('[data-test="scanner-preview"]')).toHaveLength(1)
     expect(wrapper.find('[data-test="scanner-extract"]').attributes('disabled')).toBeUndefined()
     await wrapper.find('[data-test="scanner-remove-0"]').trigger('click')
     expect(revokeUrl).toHaveBeenCalledWith('blob:front.jpg')
     expect(wrapper.findAll('[data-test="scanner-preview"]')).toHaveLength(0)
+    expect(wrapper.find('[data-test="scanner-extract"]').exists()).toBe(false)
   })
 
   it('accepts at most two images', async () => {
@@ -118,6 +132,8 @@ describe('TenantIdentityScanner images', () => {
     await selectFiles(wrapper, [image('a.jpg'), image('b.jpg'), image('c.jpg')])
     expect(wrapper.findAll('[data-test="scanner-preview"]')).toHaveLength(2)
     expect(wrapper.find('[data-test="scanner-local-error"]').text()).toContain('tối đa 2')
+    const pickers = wrapper.findAll('button').filter(button => ['Chụp ảnh', 'Chọn ảnh'].includes(button.text()))
+    expect(pickers.every(button => button.attributes('disabled') !== undefined)).toBe(true)
   })
 
   it('rejects unsupported types and files over 5 MB', async () => {
@@ -153,7 +169,7 @@ describe('TenantIdentityScanner images', () => {
   })
 })
 
-describe('TenantIdentityScanner suggestions', () => {
+describe('IdentityScanner suggestions', () => {
   async function readWith(result: IdentitySuggestion, props: Record<string, unknown> = {}) {
     extractMock.mockResolvedValue(result)
     const wrapper = mountScanner(props)

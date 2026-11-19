@@ -15,13 +15,13 @@ beforeEach(() => {
   vi.clearAllMocks()
 })
 
-describe('TenantOcrUsageRepository', () => {
+describe('IdentityOcrUsageRepository', () => {
   it('reserves with the configured limits and returns the reservation id', async () => {
     rpc.mockResolvedValue({ data: 'res-1', error: null })
-    const { TenantOcrUsageRepository } = await import('../../../server/repositories/tenant-ocr-usage')
-    const result = await TenantOcrUsageRepository.reserve(event, 'user-1', limits)
+    const { IdentityOcrUsageRepository } = await import('../../../server/repositories/identity-ocr-usage')
+    const result = await IdentityOcrUsageRepository.reserve(event, 'user-1', limits)
     expect(result).toEqual({ kind: 'reserved', id: 'res-1' })
-    expect(rpc).toHaveBeenCalledWith('reserve_tenant_ocr', {
+    expect(rpc).toHaveBeenCalledWith('reserve_identity_ocr', {
       p_user_id: 'user-1',
       p_global_limit: 20,
       p_user_limit: 10,
@@ -31,27 +31,27 @@ describe('TenantOcrUsageRepository', () => {
   })
 
   it.each([
-    ['TENANT_OCR_GLOBAL_LIMIT', 'global'],
-    ['TENANT_OCR_USER_LIMIT', 'user'],
-    ['TENANT_OCR_BUDGET', 'budget'],
+    ['IDENTITY_OCR_GLOBAL_LIMIT', 'global'],
+    ['IDENTITY_OCR_USER_LIMIT', 'user'],
+    ['IDENTITY_OCR_BUDGET', 'budget'],
   ])('maps %s to a quota result', async (message, reason) => {
     rpc.mockResolvedValue({ data: null, error: { message, code: 'P0001' } })
-    const { TenantOcrUsageRepository } = await import('../../../server/repositories/tenant-ocr-usage')
-    expect(await TenantOcrUsageRepository.reserve(event, 'user-1', limits)).toEqual({ kind: 'quota', reason })
+    const { IdentityOcrUsageRepository } = await import('../../../server/repositories/identity-ocr-usage')
+    expect(await IdentityOcrUsageRepository.reserve(event, 'user-1', limits)).toEqual({ kind: 'quota', reason })
   })
 
   it('delegates unknown database errors to throwDbError', async () => {
     rpc.mockResolvedValue({ data: null, error: { message: 'boom' } })
-    const { TenantOcrUsageRepository } = await import('../../../server/repositories/tenant-ocr-usage')
-    await expect(TenantOcrUsageRepository.reserve(event, 'user-1', limits)).rejects.toThrow('db')
-    expect(throwDbError).toHaveBeenCalledWith({ message: 'boom' }, 'tenantOcrUsage.reserve')
+    const { IdentityOcrUsageRepository } = await import('../../../server/repositories/identity-ocr-usage')
+    await expect(IdentityOcrUsageRepository.reserve(event, 'user-1', limits)).rejects.toThrow('db')
+    expect(throwDbError).toHaveBeenCalledWith({ message: 'boom' }, 'identityOcrUsage.reserve')
   })
 
   it('settles with usage numbers only', async () => {
     rpc.mockResolvedValue({ data: null, error: null })
-    const { TenantOcrUsageRepository } = await import('../../../server/repositories/tenant-ocr-usage')
-    await TenantOcrUsageRepository.settle(event, 'res-1', { costMicroUsd: 1200, inputTokens: 900, outputTokens: 150, model: 'm' })
-    expect(rpc).toHaveBeenCalledWith('settle_tenant_ocr', {
+    const { IdentityOcrUsageRepository } = await import('../../../server/repositories/identity-ocr-usage')
+    await IdentityOcrUsageRepository.settle(event, 'res-1', { costMicroUsd: 1200, inputTokens: 900, outputTokens: 150, model: 'm' })
+    expect(rpc).toHaveBeenCalledWith('settle_identity_ocr', {
       p_id: 'res-1',
       p_cost_micro_usd: 1200,
       p_input_tokens: 900,
@@ -62,8 +62,8 @@ describe('TenantOcrUsageRepository', () => {
 
   it('releases a reservation', async () => {
     rpc.mockResolvedValue({ data: null, error: null })
-    const { TenantOcrUsageRepository } = await import('../../../server/repositories/tenant-ocr-usage')
-    await TenantOcrUsageRepository.release(event, 'res-1')
-    expect(rpc).toHaveBeenCalledWith('release_tenant_ocr', { p_id: 'res-1' })
+    const { IdentityOcrUsageRepository } = await import('../../../server/repositories/identity-ocr-usage')
+    await IdentityOcrUsageRepository.release(event, 'res-1')
+    expect(rpc).toHaveBeenCalledWith('release_identity_ocr', { p_id: 'res-1' })
   })
 })

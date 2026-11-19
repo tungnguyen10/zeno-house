@@ -11,7 +11,7 @@ vi.mock('~/composables/tenants/useTenantQuickCreate', async orig => ({
 }))
 
 const scannerStub = defineComponent({
-  props: ['currentValues', 'fields'],
+  props: ['purpose', 'currentValues', 'fields'],
   emits: ['apply'],
   template: '<div data-test="scanner-stub" />',
 })
@@ -33,7 +33,7 @@ describe('TenantQuickCreateDialog scanner wiring', () => {
     return mount(TenantQuickCreateDialog, {
       props: { open: true },
       global: {
-        components: { TenantIdentityScanner: scannerStub },
+        components: { IdentityScanner: scannerStub },
         stubs: { UiModal: modalStub, UiInput: inputStub, UiDatePicker: inputStub, UiAlert: passthrough, UiFormSection: passthrough },
       },
     })
@@ -50,6 +50,7 @@ describe('TenantQuickCreateDialog scanner wiring', () => {
     const wrapper = mountDialog()
     await wrapper.find('[data-test="qc-toggle-id"]').trigger('click')
     const scanner = wrapper.findComponent(scannerStub)
+    expect(scanner.props('purpose')).toBe('tenant')
     expect(scanner.props('fields')).not.toContain('gender')
     expect(scanner.props('fields')).toContain('permanent_address')
     scanner.vm.$emit('apply', { full_name: 'NGUYỄN VĂN MẪU', id_number: '001099000000' })
@@ -70,7 +71,7 @@ describe('TenantForm scanner wiring', () => {
     return mount(TenantForm, {
       props: { modelValue },
       global: {
-        components: { TenantIdentityScanner: scannerStub },
+        components: { IdentityScanner: scannerStub },
         stubs: {
           UiInput: inputStub, UiDatePicker: inputStub, UiSelect: inputStub, UiTextarea: inputStub,
           UiFileUpload: passthrough, UiFormSection: passthrough,
@@ -82,6 +83,7 @@ describe('TenantForm scanner wiring', () => {
   it('merges applied values into the model and offers gender', () => {
     const wrapper = mountForm(data({ phone: '0901234567' }))
     const scanner = wrapper.findComponent(scannerStub)
+    expect(scanner.props('purpose')).toBe('tenant')
     expect(scanner.props('fields')).toContain('gender')
     scanner.vm.$emit('apply', { gender: 'male', id_number: '001099000000' })
     expect(wrapper.emitted('update:modelValue')?.[0]?.[0]).toMatchObject({ phone: '0901234567', gender: 'male', id_number: '001099000000' })

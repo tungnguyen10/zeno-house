@@ -2,7 +2,7 @@
 import { useObjectUrl } from '@vueuse/core'
 import { tenantCreateSchema, type TenantCreateInput } from '~/utils/validators/tenants'
 import type { TenantIdImageSide } from '~/types/tenants'
-import type { SuggestionField, SuggestionValues } from '~/utils/tenant-identity-suggestions'
+import type { SuggestionField, SuggestionValues } from '~/utils/identity-suggestions'
 
 export interface TenantFormData {
   full_name: string
@@ -310,8 +310,9 @@ function onRemoveIdImage(side: TenantIdImageSide) {
 
     <UiFormSection title="Giấy tờ tuỳ thân" description="Thông tin CMND/CCCD để đối chiếu khi ký hợp đồng.">
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <TenantIdentityScanner
+        <IdentityScanner
           class="sm:col-span-2"
+          purpose="tenant"
           :current-values="scannerValues"
           :fields="SCANNER_FIELDS"
           @apply="onScannerApply"

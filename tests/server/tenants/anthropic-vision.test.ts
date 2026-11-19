@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { IDENTITY_EXTRACTION_JSON_SCHEMA } from '~/utils/validators/tenant-identity-extraction'
+import { IDENTITY_EXTRACTION_JSON_SCHEMA } from '~/utils/validators/identity-extraction'
 
 const sdk = vi.hoisted(() => ({
   create: vi.fn(),

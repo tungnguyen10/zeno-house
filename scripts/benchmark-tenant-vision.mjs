@@ -84,7 +84,7 @@ async function main() {
   const { createJiti } = await import('jiti')
   const jiti = createJiti(import.meta.url, { alias: { '~': join(root, 'app') } })
   const { extractIdentityWithClaude } = await jiti.import('../server/services/ai/anthropic-vision.ts')
-  const { identityExtractionSchema } = await jiti.import('../app/utils/validators/tenant-identity-extraction.ts')
+  const { identityExtractionSchema } = await jiti.import('../app/utils/validators/identity-extraction.ts')
 
   const samples = []
   for (const fixture of fixtures) {

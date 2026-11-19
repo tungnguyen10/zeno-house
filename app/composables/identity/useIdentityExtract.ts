@@ -1,11 +1,11 @@
 import type { ApiSuccess } from '~/types/api'
 import { getApiErrorMessage } from '~/utils/api-error'
-import type { IdentitySuggestion } from '~/utils/validators/tenant-identity-extraction'
+import type { IdentityPurpose, IdentitySuggestion } from '~/utils/validators/identity-extraction'
 
 // Longer than the provider timeout so the server reports its own 504.
 const EXTRACT_TIMEOUT_MS = 45_000
 
-export function useTenantIdentityExtract(): {
+export function useIdentityExtract(purpose: IdentityPurpose): {
   extract: (files: File[]) => Promise<IdentitySuggestion | null>
   abort: () => void
   loading: Ref<boolean>
@@ -29,10 +29,11 @@ export function useTenantIdentityExtract(): {
     error.value = null
 
     const body = new FormData()
+    body.append('purpose', purpose)
     for (const file of files) body.append('images[]', file)
 
     try {
-      const response = await apiFetch<ApiSuccess<IdentitySuggestion>>('/api/tenants/identity/extract', {
+      const response = await apiFetch<ApiSuccess<IdentitySuggestion>>('/api/identity/extract', {
         method: 'POST',
         body,
         signal: current.signal,

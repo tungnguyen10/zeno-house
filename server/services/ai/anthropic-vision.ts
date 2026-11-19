@@ -1,5 +1,5 @@
 import Anthropic, { APIConnectionTimeoutError, RateLimitError } from '@anthropic-ai/sdk'
-import { IDENTITY_EXTRACTION_JSON_SCHEMA } from '~/utils/validators/tenant-identity-extraction'
+import { IDENTITY_EXTRACTION_JSON_SCHEMA } from '~/utils/validators/identity-extraction'
 import type { IdentityImageMime } from '../../utils/identity-images'
 
 export interface VisionResult {
