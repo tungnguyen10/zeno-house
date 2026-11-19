@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { IdentityExtraction } from '~/utils/validators/tenant-identity-extraction'
-import { normalizeExtraction } from '../../../server/services/tenants/identity-normalize'
+import type { IdentityExtraction } from '~/utils/validators/identity-extraction'
+import { normalizeExtraction } from '../../../server/services/identity/normalize'
 
 function extraction(fields: Partial<IdentityExtraction['fields']> = {}, overrides: Partial<IdentityExtraction> = {}): IdentityExtraction {
   return {

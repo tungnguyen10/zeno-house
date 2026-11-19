@@ -1,12 +1,12 @@
 import type { H3Event } from 'h3'
 import { setResponseHeader } from 'h3'
 import type { AuthUser } from '~/types/auth'
-import { identityExtractionSchema } from '~/utils/validators/tenant-identity-extraction'
-import { TenantOcrUsageRepository } from '../../repositories/tenant-ocr-usage'
+import { IDENTITY_PURPOSE_CAPABILITIES, identityExtractionSchema, type IdentityPurpose } from '~/utils/validators/identity-extraction'
+import { IdentityOcrUsageRepository } from '../../repositories/identity-ocr-usage'
 import { extractIdentityWithClaude, VisionProviderError } from '../ai/anthropic-vision'
 import { validateIdentityImages } from '../../utils/identity-images'
 import { getTenantVisionRuntime } from '../../utils/tenant-vision-runtime'
-import { normalizeExtraction, type IdentitySuggestion } from './identity-normalize'
+import { normalizeExtraction, type IdentitySuggestion } from './normalize'
 
 // Single-instance guard; the daily quota stays the authoritative limit.
 const inFlightUsers = new Set<string>()
@@ -28,23 +28,24 @@ const IMAGE_ERRORS: Record<number, { code: string, message: string }> = {
   422: { code: 'VALIDATION_ERROR', message: 'Cần 1 hoặc 2 ảnh hợp lệ, không bị hỏng.' },
 }
 
-export const TenantIdentityExtractionService = {
+export const IdentityExtractionService = {
   async extract(
     event: H3Event,
     user: AuthUser,
+    purpose: IdentityPurpose,
     parts: { data: Buffer, filename?: string, type?: string }[],
   ): Promise<{ suggestion: IdentitySuggestion, model: string }> {
-    if (!can(user, 'tenants.create') && !can(user, 'tenants.update')) {
+    if (!IDENTITY_PURPOSE_CAPABILITIES[purpose].some(capability => can(user, capability))) {
       throwForbidden('Không có quyền đọc ảnh giấy tờ')
     }
 
     const runtime = getTenantVisionRuntime(event)
     if (!runtime.enabled) {
-      fail(503, 'TENANT_VISION_DISABLED', 'Tính năng đọc ảnh giấy tờ chưa được bật. Vui lòng nhập tay.')
+      fail(503, 'IDENTITY_VISION_DISABLED', 'Tính năng đọc ảnh giấy tờ chưa được bật. Vui lòng nhập tay.')
     }
 
     if (inFlightUsers.has(user.id)) {
-      fail(429, 'TENANT_VISION_BUSY', 'Đang xử lý ảnh trước đó. Vui lòng chờ.')
+      fail(429, 'IDENTITY_VISION_BUSY', 'Đang xử lý ảnh trước đó. Vui lòng chờ.')
     }
     inFlightUsers.add(user.id)
 
@@ -55,7 +56,7 @@ export const TenantIdentityExtractionService = {
         fail(validation.status, error.code, error.message)
       }
 
-      const reservation = await TenantOcrUsageRepository.reserve(event, user.id, {
+      const reservation = await IdentityOcrUsageRepository.reserve(event, user.id, {
         globalLimit: runtime.dailyLimit,
         userLimit: runtime.userDailyLimit,
         budgetMicroUsd: runtime.dailyBudgetMicroUsd,
@@ -63,14 +64,14 @@ export const TenantIdentityExtractionService = {
       })
       if (reservation.kind === 'quota') {
         if (reservation.reason === 'budget') {
-          fail(503, 'TENANT_OCR_BUDGET', 'Đã hết ngân sách đọc ảnh hôm nay. Vui lòng nhập tay.')
+          fail(503, 'IDENTITY_OCR_BUDGET', 'Đã hết ngân sách đọc ảnh hôm nay. Vui lòng nhập tay.')
         }
-        fail(429, 'TENANT_OCR_QUOTA', 'Đã hết lượt đọc ảnh hôm nay. Vui lòng nhập tay.')
+        fail(429, 'IDENTITY_OCR_QUOTA', 'Đã hết lượt đọc ảnh hôm nay. Vui lòng nhập tay.')
       }
 
       const release = async () => {
-        await TenantOcrUsageRepository.release(event, reservation.id).catch(() => {
-          console.error('[tenant-ocr] release failed')
+        await IdentityOcrUsageRepository.release(event, reservation.id).catch(() => {
+          console.error('[identity-ocr] release failed')
         })
       }
 
@@ -87,22 +88,22 @@ export const TenantIdentityExtractionService = {
       catch (error) {
         await release()
         if (error instanceof VisionProviderError) {
-          if (error.kind === 'timeout') fail(504, 'TENANT_VISION_TIMEOUT', 'Đọc ảnh quá lâu. Vui lòng thử lại hoặc nhập tay.')
-          if (error.kind === 'invalid_output') fail(502, 'TENANT_VISION_INVALID_OUTPUT', 'Không đọc được kết quả từ ảnh. Vui lòng nhập tay.')
+          if (error.kind === 'timeout') fail(504, 'IDENTITY_VISION_TIMEOUT', 'Đọc ảnh quá lâu. Vui lòng thử lại hoặc nhập tay.')
+          if (error.kind === 'invalid_output') fail(502, 'IDENTITY_VISION_INVALID_OUTPUT', 'Không đọc được kết quả từ ảnh. Vui lòng nhập tay.')
           if (error.kind === 'rate_limited' && error.retryAfterSeconds) {
             setResponseHeader(event, 'Retry-After', error.retryAfterSeconds)
           }
         }
-        fail(503, 'TENANT_VISION_UNAVAILABLE', 'Dịch vụ đọc ảnh tạm thời không khả dụng. Vui lòng nhập tay.')
+        fail(503, 'IDENTITY_VISION_UNAVAILABLE', 'Dịch vụ đọc ảnh tạm thời không khả dụng. Vui lòng nhập tay.')
       }
 
       const parsed = identityExtractionSchema.safeParse(result.output)
       if (!parsed.success) {
         await release()
-        fail(502, 'TENANT_VISION_INVALID_OUTPUT', 'Không đọc được kết quả từ ảnh. Vui lòng nhập tay.')
+        fail(502, 'IDENTITY_VISION_INVALID_OUTPUT', 'Không đọc được kết quả từ ảnh. Vui lòng nhập tay.')
       }
 
-      await TenantOcrUsageRepository.settle(event, reservation.id, {
+      await IdentityOcrUsageRepository.settle(event, reservation.id, {
         costMicroUsd: costMicroUsd(result.usage, {
           input: runtime.inputPricePerMTokMicroUsd,
           output: runtime.outputPricePerMTokMicroUsd,
@@ -111,7 +112,7 @@ export const TenantIdentityExtractionService = {
         outputTokens: result.usage.outputTokens,
         model: result.model,
       }).catch(() => {
-        console.error('[tenant-ocr] settle failed')
+        console.error('[identity-ocr] settle failed')
       })
 
       return { suggestion: normalizeExtraction(parsed.data), model: result.model }

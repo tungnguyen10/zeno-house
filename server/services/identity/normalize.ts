@@ -2,7 +2,7 @@ import type {
   IdentityExtraction,
   IdentityExtractionFields,
   IdentitySuggestion,
-} from '~/utils/validators/tenant-identity-extraction'
+} from '~/utils/validators/identity-extraction'
 
 export type { IdentitySuggestion }
 

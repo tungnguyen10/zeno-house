@@ -18,7 +18,7 @@ const runtime = vi.hoisted(() => ({
 vi.mock('../../../server/utils/tenant-vision-runtime', () => ({ getTenantVisionRuntime: () => runtime.value }))
 
 const usage = vi.hoisted(() => ({ reserve: vi.fn(), settle: vi.fn(), release: vi.fn() }))
-vi.mock('../../../server/repositories/tenant-ocr-usage', () => ({ TenantOcrUsageRepository: usage }))
+vi.mock('../../../server/repositories/identity-ocr-usage', () => ({ IdentityOcrUsageRepository: usage }))
 
 const provider = vi.hoisted(() => {
   class VisionProviderError extends Error {
@@ -71,8 +71,12 @@ const rawExtraction = {
   needs_review: true,
 }
 
-async function load() {
-  return (await import('../../../server/services/tenants/identity-extraction')).TenantIdentityExtractionService
+async function load(purpose: 'tenant' | 'lessor' = 'tenant') {
+  const { IdentityExtractionService } = await import('../../../server/services/identity/extraction')
+  return {
+    extract: (event: never, caller: AuthUser, parts: Parameters<typeof IdentityExtractionService.extract>[3]) =>
+      IdentityExtractionService.extract(event, caller, purpose, parts),
+  }
 }
 
 async function statusOf(promise: Promise<unknown>): Promise<number | undefined> {
@@ -94,7 +98,7 @@ beforeEach(() => {
   })
 })
 
-describe('TenantIdentityExtractionService.extract', () => {
+describe('IdentityExtractionService.extract', () => {
   it('returns a normalized suggestion and settles usage with the computed cost', async () => {
     const service = await load()
     const result = await service.extract(ev(), user, [part()])
@@ -127,6 +131,18 @@ describe('TenantIdentityExtractionService.extract', () => {
     const service = await load()
     expect(await statusOf(service.extract(ev(), user, [part()]))).toBe(403)
     expect(provider.extractIdentityWithClaude).not.toHaveBeenCalled()
+  })
+
+  it('allows lessor scans with lessor PII access and no tenant capabilities', async () => {
+    vi.stubGlobal('can', (_user: AuthUser, capability: string) => capability === 'building-contract-profile.pii.read')
+    const service = await load('lessor')
+    await expect(service.extract(ev(), user, [part()])).resolves.toBeTruthy()
+  })
+
+  it('returns 403 for lessor scans with only tenant capabilities', async () => {
+    const service = await load('lessor')
+    expect(await statusOf(service.extract(ev(), user, [part()]))).toBe(403)
+    expect(usage.reserve).not.toHaveBeenCalled()
   })
 
   it('returns 503 when disabled', async () => {
