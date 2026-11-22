@@ -92,8 +92,9 @@ async function publishAmendment(amendmentId: string, expectedUpdatedAt: string) 
   return amendment
 }
 
+// The primary tenant has no contract_occupants row, so count them explicitly.
 const activeOccupantCount = computed(
-  () => occupants.value.filter(o => !o.moveOutDate).length,
+  () => occupants.value.filter(o => !o.moveOutDate && o.role === 'roommate').length + 1,
 )
 const depositHeld = computed(() => checkoutBundle.value?.enabled ? checkoutBundle.value.depositHeld : (contract.value?.deposit ?? 0))
 watch(payments, () => { if (checkoutBundle.value?.enabled) checkout.refresh() })
@@ -348,7 +349,7 @@ function sectionLinkClass(sectionId: string) {
       <UiSection id="meter-readings" title="Số bàn giao" class="mt-6 scroll-mt-20">
         <UiSurfacePanel density="compact">
           <ContractHandoverReadings
-            :contract-id="id"
+            :contract-id="contract.id"
             :room-id="contract.room.id"
             :start-date="contract.startDate"
             :end-date="contract.endDate"

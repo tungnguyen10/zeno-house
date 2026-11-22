@@ -6,12 +6,12 @@ export function useContractHandoverReadings(contractId: string, roomId: string) 
   const isSaving = ref(false)
   const saveError = ref<string | null>(null)
 
-  const { data: readingsData, refresh: refreshReadings } = useFetch<ApiSuccess<MeterReading[]>>(
+  const { data: readingsData, refresh: refreshReadings, status } = useFetch<ApiSuccess<MeterReading[]>>(
     '/api/meter-readings',
     { query: { room_id: roomId } },
   )
 
-  const isLoading = ref(false)
+  const isLoading = computed(() => status?.value === 'pending' && !readingsData.value)
 
   const handoverInReadings = computed(() =>
     (readingsData.value?.data ?? []).filter(r => r.readingType === 'handover_in' && r.contractId === contractId),
@@ -32,7 +32,7 @@ export function useContractHandoverReadings(contractId: string, roomId: string) 
     readingDate: string,
     periodYear: number,
     periodMonth: number,
-  ): Promise<void> {
+  ): Promise<boolean> {
     isSaving.value = true
     saveError.value = null
     try {
@@ -51,9 +51,11 @@ export function useContractHandoverReadings(contractId: string, roomId: string) 
         body: { readings: [input] },
       })
       await refreshReadings()
+      return true
     }
     catch (e: unknown) {
       saveError.value = getApiErrorMessage(e, 'Lưu thất bại')
+      return false
     }
     finally {
       isSaving.value = false

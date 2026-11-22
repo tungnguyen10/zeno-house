@@ -55,38 +55,45 @@ async function confirmVoid() {
       <p v-else-if="!docs.documents.value.length" class="text-sm text-ui-muted">Chưa có tài liệu nào.</p>
 
       <ul v-else class="divide-y divide-ui-border">
-        <li v-for="d in docs.documents.value" :key="d.id" class="flex flex-wrap items-center justify-between gap-2 py-3" data-test="document-row">
-          <div class="min-w-0">
-            <p class="text-sm font-medium text-ui-primary">
-              {{ typeLabel(d.type) }} · bản {{ d.versionNo }}
-              <UiBadge :variant="STATUS_VARIANTS[d.status]" class="ml-1">{{ STATUS_LABELS[d.status] }}</UiBadge>
-            </p>
-            <p class="text-xs text-ui-muted">
-              Mẫu v{{ d.templateVersion }}<span v-if="d.issuedAt"> · phát hành {{ new Date(d.issuedAt).toLocaleDateString('vi-VN') }}</span>
+        <li v-for="d in docs.documents.value" :key="d.id" class="flex items-center gap-3 py-3" data-test="document-row">
+          <div class="min-w-0 flex-1">
+            <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <p class="text-sm font-medium text-ui-primary">{{ typeLabel(d.type) }} · bản {{ d.versionNo }}</p>
+              <UiBadge :variant="STATUS_VARIANTS[d.status]">{{ STATUS_LABELS[d.status] }}</UiBadge>
+            </div>
+            <p class="mt-0.5 truncate text-xs text-ui-muted tabular-nums">
+              Mẫu v{{ d.templateVersion }}<span v-if="d.issuedAt"> · {{ new Date(d.issuedAt).toLocaleDateString('vi-VN') }}</span>
             </p>
           </div>
-          <div class="flex shrink-0 items-center gap-2">
-            <template v-if="d.status === 'issued' || d.status === 'signed'">
-              <UiButton size="sm" variant="ghost" data-test="document-download-pdf" @click="openPdf(d.id)">
-                Tải PDF
-              </UiButton>
-              <UiButton size="sm" variant="ghost" data-test="document-download" @click="docs.download(d.id)">
-                Tải DOCX
-              </UiButton>
-            </template>
-            <UiButton v-if="canIssue && d.status === 'failed'" size="sm" variant="secondary" @click="docs.regenerate(d.id)">
+          <div class="flex shrink-0 items-center gap-1">
+            <UiButton
+              v-if="d.status === 'issued' || d.status === 'signed'"
+              size="sm" variant="secondary" data-test="document-download-pdf"
+              @click="openPdf(d.id)"
+            >
+              <IconDownload class="size-3.5" aria-hidden="true" />
+              PDF
+            </UiButton>
+            <UiButton v-else-if="canIssue && d.status === 'failed'" size="sm" variant="secondary" @click="docs.regenerate(d.id)">
               Tạo lại file
             </UiButton>
-            <UiButton v-if="canSign && d.status === 'issued'" size="sm" variant="secondary" @click="docs.sign(d.id)">
-              Đánh dấu đã ký
-            </UiButton>
-            <UiButton
-              v-if="canVoid && (d.status === 'issued' || d.status === 'signed' || d.status === 'failed')"
-              size="sm" variant="ghost" data-test="document-void"
-              @click="voidTarget = d"
+            <UiDropdownMenu
+              v-if="d.status === 'issued' || d.status === 'signed' || (canVoid && d.status === 'failed')"
+              :aria-label="`Hành động ${typeLabel(d.type).toLowerCase()} bản ${d.versionNo}`"
             >
-              Hủy &amp; phát hành lại
-            </UiButton>
+              <UiDropdownMenuItem v-if="canSign && d.status === 'issued'" @click="docs.sign(d.id)">
+                <template #icon><IconCheckCircle class="size-4" aria-hidden="true" /></template>
+                Đánh dấu đã ký
+              </UiDropdownMenuItem>
+              <UiDropdownMenuItem v-if="d.status === 'issued' || d.status === 'signed'" data-test="document-download" @click="docs.download(d.id)">
+                <template #icon><IconDocumentText class="size-4" aria-hidden="true" /></template>
+                Tải DOCX
+              </UiDropdownMenuItem>
+              <UiDropdownMenuItem v-if="canVoid" variant="danger" data-test="document-void" @click="voidTarget = d">
+                <template #icon><IconXCircle class="size-4" aria-hidden="true" /></template>
+                Hủy &amp; phát hành lại
+              </UiDropdownMenuItem>
+            </UiDropdownMenu>
           </div>
         </li>
       </ul>
