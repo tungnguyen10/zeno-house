@@ -11,6 +11,8 @@ const stubs = {
   UiAlert: { template: '<div><slot /></div>' },
   UiButton: { template: '<button><slot /></button>' },
   UiBadge: { template: '<span><slot /></span>' },
+  UiDropdownMenu: { template: '<div><slot /></div>' },
+  UiDropdownMenuItem: { template: '<button><slot /></button>' },
   UiModal: { props: ['open'], template: '<div v-if="open"><slot /><slot name="footer" /></div>' },
   UiTextarea: { props: ['modelValue'], emits: ['update:modelValue'], template: '<textarea :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" />' },
   ContractDocumentIssueDialog: { template: '<div />' },
