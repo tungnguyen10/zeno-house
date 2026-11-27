@@ -74,14 +74,24 @@ describe('access requests page', () => {
     expect(selectedStatus.value).toBe('approved')
   })
 
-  it('replaces the approve action with an unverified-email badge', async () => {
+  it('replaces only the approve action with an unverified-email badge', async () => {
     requests.value = [{ ...baseRequest, id: 'r1', email: 'a@x.com', fullName: 'A', status: 'pending', emailVerified: false, decisionRole: null }]
     const wrapper = await mountPage()
     const row = wrapper.get('[data-row="r1"]')
 
     expect(row.text()).toContain('Chưa xác minh email')
     expect(row.text()).not.toContain('Duyệt')
+    expect(row.text()).toContain('Từ chối')
+  })
+
+  it('keeps an unverified processing request free of reject and approve actions', async () => {
+    requests.value = [{ ...baseRequest, id: 'r4', email: 'd@x.com', fullName: 'D', status: 'processing', emailVerified: false, decisionRole: null }]
+    const wrapper = await mountPage()
+    const row = wrapper.get('[data-row="r4"]')
+
+    expect(row.text()).toContain('Chưa xác minh email')
     expect(row.text()).not.toContain('Từ chối')
+    expect(row.text()).not.toContain('Tiếp tục')
   })
 
   it('offers actions for a verified pending request', async () => {

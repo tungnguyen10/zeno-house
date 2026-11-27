@@ -251,11 +251,9 @@ function statusLabel(status: AccessRequestStatus) {
       </template>
       <template #cell-actions="{ row }">
         <div v-if="row.status === 'pending' || row.status === 'processing'" class="flex justify-end gap-2">
+          <UiButton v-if="row.status === 'pending'" class="min-h-11 sm:min-h-0" size="sm" variant="ghost" @click="openRejection(row)">Từ chối</UiButton>
           <UiBadge v-if="!row.emailVerified" variant="warning">Chưa xác minh email</UiBadge>
-          <template v-else>
-            <UiButton v-if="row.status === 'pending'" class="min-h-11 sm:min-h-0" size="sm" variant="ghost" @click="openRejection(row)">Từ chối</UiButton>
-            <UiButton class="min-h-11 sm:min-h-0" size="sm" @click="openApproval(row)">{{ row.status === 'processing' ? 'Tiếp tục' : 'Duyệt' }}</UiButton>
-          </template>
+          <UiButton v-else class="min-h-11 sm:min-h-0" size="sm" @click="openApproval(row)">{{ row.status === 'processing' ? 'Tiếp tục' : 'Duyệt' }}</UiButton>
         </div>
         <span v-else class="block text-right text-xs text-ui-muted">{{ roleLabel(row.decisionRole) }}</span>
       </template>
@@ -294,8 +292,8 @@ function statusLabel(status: AccessRequestStatus) {
         <UiAlert v-if="formError" severity="danger" role="alert">{{ formError }}</UiAlert>
       </div>
       <template #footer>
-        <UiButton variant="ghost" :disabled="busy" @click="approvalOpen = false">Huỷ</UiButton>
-        <UiButton :loading="busy" @click="submitApproval">Duyệt và cấp quyền</UiButton>
+        <UiButton class="min-h-11 sm:min-h-0" variant="ghost" :disabled="busy" @click="approvalOpen = false">Huỷ</UiButton>
+        <UiButton class="min-h-11 sm:min-h-0" :loading="busy" @click="submitApproval">Duyệt và cấp quyền</UiButton>
       </template>
     </UiModal>
 
@@ -305,8 +303,8 @@ function statusLabel(status: AccessRequestStatus) {
         <UiAlert v-if="formError" severity="danger" role="alert">{{ formError }}</UiAlert>
       </div>
       <template #footer>
-        <UiButton variant="ghost" :disabled="busy" @click="rejectionOpen = false">Huỷ</UiButton>
-        <UiButton variant="danger" :loading="busy" @click="submitRejection">Xác nhận từ chối</UiButton>
+        <UiButton class="min-h-11 sm:min-h-0" variant="ghost" :disabled="busy" @click="rejectionOpen = false">Huỷ</UiButton>
+        <UiButton class="min-h-11 sm:min-h-0" variant="danger" :loading="busy" @click="submitRejection">Xác nhận từ chối</UiButton>
       </template>
     </UiModal>
   </div>
