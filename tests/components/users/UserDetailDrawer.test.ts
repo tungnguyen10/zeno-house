@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { mount, flushPromises } from '@vue/test-utils'
 import { defineComponent, h } from 'vue'
 import UserDetailDrawer from '~/components/users/UserDetailDrawer.vue'
 import type { ManagedUserWithAssignments } from '~/types/users'
@@ -32,7 +32,7 @@ const baseProps = {
   buildings: [{ id: 'b1', name: 'Nguyễn Thành Tùng' }, { id: 'b2', name: 'Zeno House Phan Tây Hồ' }],
   roleOptions: [{ value: 'owner' as const, label: 'Chủ nhà' }, { value: 'manager' as const, label: 'Quản lý' }],
   canEditRole: false,
-  busyKey: null,
+  busyKeys: new Set<string>(),
   editing: false,
 }
 
@@ -40,6 +40,46 @@ const button = (wrapper: ReturnType<typeof mount>, text: string) =>
   wrapper.findAll('button').find(b => b.text().trim() === text)!
 
 describe('UserDetailDrawer', () => {
+  it('does not steal focus from the opener when it closes while editing', async () => {
+    const host = document.createElement('div')
+    document.body.appendChild(host)
+    const opener = document.createElement('button')
+    host.appendChild(opener)
+    const mountPoint = document.createElement('div')
+    host.appendChild(mountPoint)
+    const wrapper = mount(UserDetailDrawer, {
+      attachTo: mountPoint,
+      props: { ...baseProps, editing: true, 'onUpdate:editing': (value: boolean) => wrapper.setProps({ editing: value }) },
+      global: { stubs: { ...stubs, UiDrawer: { props: ['modelValue'], template: '<div data-drawer :data-open="modelValue"><slot name="header" /><slot /></div>' } } },
+    })
+    opener.focus()
+
+    await wrapper.setProps({ row: null })
+    await flushPromises()
+
+    expect(wrapper.props('editing')).toBe(false)
+    expect(button(wrapper, 'Sửa')).toBeTruthy()
+    expect(document.activeElement).toBe(opener)
+    wrapper.unmount()
+    host.remove()
+  })
+
+  it('shows only the role as subtitle when the user has no name', () => {
+    const nameless = { ...row, user: { ...row.user, name: null } } as ManagedUserWithAssignments
+    const wrapper = mount(UserDetailDrawer, { props: { ...baseProps, row: nameless }, global: { stubs } })
+    const subtitle = wrapper.get('p.text-xs')
+
+    expect(subtitle.text()).toBe('Quản lý')
+    expect(wrapper.get('h2').text()).toBe('duong@zeno.test')
+  })
+
+  it('marks a control busy only for its own key', () => {
+    const busyKeys = new Set(['unassign:a1'])
+    const wrapper = mount(UserDetailDrawer, { props: { ...baseProps, busyKeys }, global: { stubs } })
+
+    expect(wrapper.findAllComponents(UiButton).find(b => b.text() === 'Bỏ gán')!.props('loading')).toBe(true)
+    expect(wrapper.findAllComponents(UiButton).find(b => b.text() === 'Gán')!.props('loading')).toBe(false)
+  })
   it('keeps rendering the last row while the drawer closes', async () => {
     const wrapper = mount(UserDetailDrawer, { props: baseProps, global: { stubs: { ...stubs, UiDrawer: { props: ['modelValue'], template: '<div data-drawer :data-open="modelValue"><slot name="header" /><slot /></div>' } } } })
 

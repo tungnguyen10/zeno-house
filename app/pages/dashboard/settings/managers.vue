@@ -92,9 +92,7 @@ async function handleCreate(payload: UserCreateInput) {
     toast.success('Đã tạo người dùng. Hãy gửi email và mật khẩu cho họ.')
   }
   catch (err: unknown) {
-    const message = getApiErrorMessage(err, 'Không thể tạo người dùng.')
-    createError.value = message
-    toast.error(message)
+    createError.value = getApiErrorMessage(err, 'Không thể tạo người dùng.')
   }
   finally {
     createBusy.value = false
@@ -105,11 +103,11 @@ async function handleCreate(payload: UserCreateInput) {
 const selectedUserId = ref<string | null>(null)
 const selectedRow = computed(() => users.value.find(row => row.user.id === selectedUserId.value) ?? null)
 const editing = ref(false)
-const busyKey = ref<string | null>(null)
+const busyKeys = reactive(new Set<string>())
 const addButton = ref<{ $el?: HTMLElement } | null>(null)
 
 async function run(key: string, action: () => Promise<unknown>, success: string, failure: string): Promise<boolean> {
-  busyKey.value = key
+  busyKeys.add(key)
   try {
     await action()
     toast.success(success)
@@ -120,7 +118,7 @@ async function run(key: string, action: () => Promise<unknown>, success: string,
     return false
   }
   finally {
-    busyKey.value = null
+    busyKeys.delete(key)
   }
 }
 
@@ -247,7 +245,7 @@ async function handleRemove(id: string) {
       :buildings="buildingChoices"
       :role-options="roleOptions"
       :can-edit-role="authStore.isAdmin"
-      :busy-key="busyKey"
+      :busy-keys="busyKeys"
       @close="selectedUserId = null"
       @update="handleUpdate"
       @assign="handleAssign"

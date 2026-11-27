@@ -9,7 +9,7 @@ const props = defineProps<{
   buildings: { id: string; name: string }[]
   roleOptions: { value: CreatableRole; label: string }[]
   canEditRole: boolean
-  busyKey: string | null
+  busyKeys: ReadonlySet<string>
 }>()
 
 const editing = defineModel<boolean>('editing', { default: false })
@@ -45,7 +45,13 @@ const availableOptions = computed(() => {
     ...props.buildings.filter(b => !assigned.has(b.id)).map(b => ({ value: b.id, label: b.name })),
   ]
 })
-const isBusy = (key: string) => props.busyKey === key
+const isBusy = (key: string) => props.busyKeys.has(key)
+const subtitle = computed(() => {
+  const user = displayRow.value?.user
+  if (!user) return ''
+  const role = managedRoleLabel(user.role)
+  return user.name ? `${user.email} · ${role}` : role
+})
 
 watch(() => props.row?.user.id, () => {
   editing.value = false
@@ -56,7 +62,9 @@ watch(() => props.row?.user.id, () => {
 watch(() => props.row?.assignments.length, () => { buildingToAssign.value = '' })
 
 // Swapping a control for its form drops focus to <body>, which would also kill Escape-to-close.
+// While closing, leave focus to the drawer's own restore.
 watch(editing, async (value) => {
+  if (!props.row) return
   await nextTick()
   infoSection.value?.querySelector<HTMLElement>(value ? 'input' : 'button')?.focus()
 })
@@ -110,7 +118,7 @@ async function askDelete() {
         <span class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-ui-accent/15 text-sm font-semibold text-ui-accent" aria-hidden="true">{{ initials }}</span>
         <div class="min-w-0">
           <h2 class="truncate text-base font-semibold text-ui-primary">{{ displayName }}</h2>
-          <p class="truncate text-xs text-ui-muted">{{ displayRow.user.email }} · {{ managedRoleLabel(displayRow.user.role) }}</p>
+          <p class="truncate text-xs text-ui-muted">{{ subtitle }}</p>
         </div>
       </div>
     </template>

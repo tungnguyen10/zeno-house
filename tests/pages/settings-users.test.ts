@@ -26,7 +26,7 @@ const UserCreateModal = defineComponent({
 })
 const UserDetailDrawer = defineComponent({
   name: 'UserDetailDrawer',
-  props: ['row', 'buildings', 'roleOptions', 'canEditRole', 'busyKey', 'editing'],
+  props: ['row', 'buildings', 'roleOptions', 'canEditRole', 'busyKeys', 'editing'],
   emits: ['close', 'update', 'assign', 'toggleDelete', 'unassign', 'remove', 'update:editing'],
   setup(props) {
     return () => {
@@ -179,8 +179,76 @@ describe('settings users page', () => {
     modal.vm.$emit('submit', { email: 'a@b.c', password: 'Secret#2026', role: 'manager', building_ids: [] })
     await flushPromises()
 
-    expect(toast.error).toHaveBeenCalled()
+    expect(toast.error).not.toHaveBeenCalled()
     expect(modal.props('open')).toBe(true)
     expect(modal.props('error')).toBe('Không thể tạo người dùng.')
+  })
+
+  const openDrawer = async () => {
+    const wrapper = await mountPage()
+    await wrapper.get('[data-row="m1"]').trigger('click')
+    return { wrapper, drawer: wrapper.findComponent({ name: 'UserDetailDrawer' }) }
+  }
+
+  it('keeps editing open and toasts when an update fails', async () => {
+    api.updateUser.mockRejectedValueOnce(new Error('boom'))
+    const { drawer } = await openDrawer()
+    drawer.vm.$emit('update:editing', true)
+    await flushPromises()
+    expect(drawerProps.value.editing).toBe(true)
+
+    drawer.vm.$emit('update', 'm1', { email: 'm1@zeno.test', full_name: 'Trần Minh' })
+    await flushPromises()
+
+    expect(toast.error).toHaveBeenCalledWith('Không thể cập nhật người dùng.')
+    expect(drawerProps.value.editing).toBe(true)
+  })
+
+  it('toasts when an assign fails', async () => {
+    api.assign.mockRejectedValueOnce(new Error('boom'))
+    const { drawer } = await openDrawer()
+
+    drawer.vm.$emit('assign', 'm1', 'b1')
+    await flushPromises()
+
+    expect(toast.error).toHaveBeenCalledWith('Không thể gán vào tòa nhà.')
+  })
+
+  it('toasts when a delete-permission toggle fails', async () => {
+    api.toggle.mockRejectedValueOnce(new Error('boom'))
+    const { drawer } = await openDrawer()
+
+    drawer.vm.$emit('toggleDelete', 'a1', true)
+    await flushPromises()
+
+    expect(toast.error).toHaveBeenCalledWith('Không thể cập nhật quyền xoá dữ liệu.')
+  })
+
+  it('keeps the drawer open and toasts when a delete fails', async () => {
+    api.deleteUser.mockRejectedValueOnce(new Error('boom'))
+    const { wrapper, drawer } = await openDrawer()
+
+    drawer.vm.$emit('remove', 'm1')
+    await flushPromises()
+
+    expect(toast.error).toHaveBeenCalledWith('Không thể xoá người dùng.')
+    expect(wrapper.get('[data-drawer]').attributes('data-drawer')).toBe('m1')
+  })
+
+  it('keeps a busy key until its own operation settles', async () => {
+    let resolveToggle: () => void = () => {}
+    api.toggle.mockReturnValueOnce(new Promise<void>((resolve) => { resolveToggle = resolve }))
+    api.unassign.mockReturnValueOnce(new Promise<void>(() => {}))
+    const { drawer } = await openDrawer()
+    const busyKeys = () => drawerProps.value.busyKeys as Set<string>
+
+    drawer.vm.$emit('toggleDelete', 'a1', true)
+    drawer.vm.$emit('unassign', 'a2')
+    await flushPromises()
+    expect([...busyKeys()].sort()).toEqual(['toggle:a1', 'unassign:a2'])
+
+    resolveToggle()
+    await flushPromises()
+    expect([...busyKeys()]).toEqual(['unassign:a2'])
   })
 })
