@@ -128,7 +128,7 @@ const CONTRACT_FIELD_LABELS: Record<string, string> = {
 const ACTION_SUFFIX_LABELS: Record<string, string> = {
   created: 'Tạo mới',
   updated: 'Cập nhật',
-  removed: 'Xóa',
+  removed: 'Xoá',
   archived: 'Lưu trữ',
   activated: 'Kích hoạt',
   terminated: 'Chấm dứt',
@@ -150,12 +150,12 @@ const ACTION_SUFFIX_LABELS: Record<string, string> = {
   closed: 'Chốt báo cáo',
   auto_closed: 'Tự động chốt',
   reopened: 'Mở lại báo cáo',
-  refreshed: 'Cập nhật quỹ',
+  refreshed: 'Làm mới',
   uploaded: 'Tải lên',
   profile_updated: 'Cập nhật hồ sơ',
-  voided: 'Hủy',
+  voided: 'Huỷ',
   ended: 'Kết thúc',
-  deleted: 'Xóa',
+  deleted: 'Xoá',
   enabled: 'Kích hoạt tài khoản',
   disabled: 'Vô hiệu hóa tài khoản',
   password_reset: 'Đặt lại mật khẩu',
@@ -175,35 +175,35 @@ const ACTION_LABELS: Record<string, string> = {
   'contract.renewal.repaired': 'Sửa dữ liệu chuỗi gia hạn',
   'user.access_request.reconciled': 'Đối soát yêu cầu truy cập',
   'building.invoice_email_settings.updated': 'Cập nhật gửi hoá đơn tự động',
-  'building.contract_profile.updated': 'Cập nhật thông tin hợp đồng của toà nhà',
+  'building.contract_profile.updated': 'Cập nhật thông tin hợp đồng của tòa nhà',
   'building.inventory_template.updated': 'Cập nhật nội thất mẫu',
   'room.inventory.updated': 'Cập nhật nội thất phòng',
   'room.inventory.template_applied': 'Áp dụng nội thất mẫu cho phòng',
-  'building.visibility_changed': 'Đổi hiển thị toà nhà',
+  'building.visibility_changed': 'Đổi hiển thị tòa nhà',
   'tenant.identity_conflict': 'Xung đột định danh khách thuê',
   'tenant.link_verified': 'Xác minh khách thuê cũ',
   'tenant.link_verify_failed': 'Xác minh khách thuê cũ thất bại',
   'tenant.activated': 'Khôi phục khách thuê',
   'tenant.exported': 'Xuất danh sách khách thuê',
   'building_expense.receipt_attached': 'Gắn biên lai',
-  'building_expense.receipt_removed': 'Xóa biên lai',
+  'building_expense.receipt_removed': 'Xoá biên lai',
   'operations_report_period.closed': 'Chốt báo cáo',
   'operations_report_period.auto_closed': 'Tự động chốt',
   'operations_report_period.reopened': 'Mở lại báo cáo',
-  'reserve_fund.accrual_refreshed': 'Cập nhật quỹ',
+  'reserve_fund.accrual_refreshed': 'Cập nhật quỹ dự phòng',
   'tenant.profile_updated': 'Cập nhật hồ sơ',
   'contract_amendment.published': 'Ban hành phụ lục',
   'contract_amendment.applied': 'Áp dụng phụ lục',
-  'contract_amendment.cancelled': 'Hủy phụ lục',
-  'contract_amendment.draft_removed': 'Xóa phụ lục nháp',
+  'contract_amendment.cancelled': 'Huỷ phụ lục',
+  'contract_amendment.draft_removed': 'Xoá phụ lục nháp',
   'contract.amendment.published': 'Ban hành phụ lục',
   'contract.amendment.applied': 'Áp dụng phụ lục',
-  'contract.amendment.cancelled': 'Hủy phụ lục',
+  'contract.amendment.cancelled': 'Huỷ phụ lục',
   'contract.vehicles.updated': 'Cập nhật danh sách xe',
   'contract.document.issued': 'Phát hành tài liệu hợp đồng',
   'contract.document.regenerated': 'Tạo lại tài liệu hợp đồng',
   'contract.document.signed': 'Đánh dấu đã ký tài liệu',
-  'contract.document.voided': 'Hủy tài liệu hợp đồng',
+  'contract.document.voided': 'Huỷ tài liệu hợp đồng',
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -322,4 +322,33 @@ export function auditDiffRows(before: unknown, after: unknown, entityType?: stri
     }
   }
   return rows.sort((a, b) => a.label.localeCompare(b.label))
+}
+
+const TECHNICAL_KEY_RE = /^[a-z0-9]+(?:_[a-z0-9]+)+$/
+
+function comparable(text: string): string {
+  return text.toLocaleLowerCase('vi').replaceAll('toà nhà', 'tòa nhà')
+}
+
+export interface AuditEventSentence {
+  verb: string
+  entityNoun: string | null
+  subject: string | null
+  detail: string | null
+}
+
+/** Readable parts of an activity line, without repeating the noun or leaking technical keys. */
+export function auditEventSentence(
+  event: Pick<AuditEvent, 'action' | 'entityType' | 'entityLabel' | 'entitySubLabel' | 'entityId' | 'beforeData' | 'afterData'>,
+): AuditEventSentence {
+  const verb = auditActionLabel(event.action).toLocaleLowerCase('vi')
+  const noun = auditEntityLabel(event.entityType)
+  const display = auditEntityDisplay(event)
+  const sub = event.entitySubLabel?.trim() || null
+  return {
+    verb,
+    entityNoun: comparable(verb).includes(comparable(noun)) ? null : noun.toLocaleLowerCase('vi'),
+    subject: display === '—' || TECHNICAL_KEY_RE.test(display) ? null : display,
+    detail: sub && sub !== display && !TECHNICAL_KEY_RE.test(sub) ? sub : null,
+  }
 }

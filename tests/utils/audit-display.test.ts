@@ -6,6 +6,7 @@ import {
   auditDiffRows,
   auditEntityDisplay,
   auditEntityLabel,
+  auditEventSentence,
 } from '../../app/utils/audit/display'
 import { AUDIT_ACTIONS } from '../../app/utils/constants/audit'
 
@@ -76,4 +77,36 @@ describe('renewal source transfer audit', () => {
 
 it('labels tenant identity conflicts for administrators', () => {
   expect(auditActionLabel(AUDIT_ACTIONS.TENANT_IDENTITY_CONFLICT)).toBe('Xung đột định danh khách thuê')
+})
+
+describe('auditEventSentence', () => {
+  const base = { entityId: 'e1', beforeData: null, afterData: null, entitySubLabel: null }
+
+  it('drops the entity noun when the verb already names it', () => {
+    expect(auditEventSentence({ ...base, action: 'reserve_fund.accrual_refreshed', entityType: 'reserve_fund', entityLabel: 'Quỹ tòa A' }))
+      .toEqual({ verb: 'cập nhật quỹ dự phòng', entityNoun: null, subject: 'Quỹ tòa A', detail: null })
+    expect(auditEventSentence({ ...base, action: 'contract.document.issued', entityType: 'contract', entityLabel: 'HD-0012' }).entityNoun).toBeNull()
+    expect(auditEventSentence({ ...base, action: 'building.visibility_changed', entityType: 'building', entityLabel: 'Zeno' }).entityNoun).toBeNull()
+  })
+
+  it('keeps the entity noun for generic verbs', () => {
+    expect(auditEventSentence({ ...base, action: 'room.updated', entityType: 'room', entityLabel: 'P101' }))
+      .toEqual({ verb: 'cập nhật', entityNoun: 'phòng', subject: 'P101', detail: null })
+  })
+
+  it('hides technical keys and duplicated sub-labels', () => {
+    expect(auditEventSentence({ ...base, action: 'building_service.updated', entityType: 'building_service', entityLabel: 'water_input', entitySubLabel: 'water_input' }))
+      .toMatchObject({ subject: null, detail: null })
+    expect(auditEventSentence({ ...base, action: 'room.updated', entityType: 'room', entityLabel: 'P101', entitySubLabel: 'P101' }).detail).toBeNull()
+    expect(auditEventSentence({ ...base, action: 'room.updated', entityType: 'room', entityLabel: 'P101', entitySubLabel: 'Tòa A' }).detail).toBe('Tòa A')
+  })
+
+  it('has no subject when the entity cannot be named', () => {
+    expect(auditEventSentence({ ...base, entityId: null, action: 'contract_occupant.added', entityType: 'contract_occupant', entityLabel: null }).subject).toBeNull()
+  })
+})
+
+it('spells action labels with xoá and tòa', () => {
+  expect(auditActionLabel('building.removed')).toBe('Xoá')
+  expect(auditActionLabel('building.visibility_changed')).toBe('Đổi hiển thị tòa nhà')
 })

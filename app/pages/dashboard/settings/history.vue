@@ -4,12 +4,9 @@ import clsx from 'clsx'
 import type { AuditEvent } from '~/types/audit'
 import {
   AUDIT_ENTITY_FILTER_OPTIONS,
-  auditActionLabel,
-  auditActionVariant,
   auditDiffRows,
-  auditEntityDisplay,
-  auditEntityLabel,
   auditEntityStyle,
+  auditEventSentence,
 } from '~/utils/audit/display'
 import { formatRelativeTime } from '~/utils/format/relative-time'
 import { formatDateTimeShort, formatTimeHHmm } from '~/utils/format/time'
@@ -133,7 +130,7 @@ function clearFilters() {
   <div class="space-y-5">
     <UiPageHeader
       title="Nhật ký hoạt động"
-      description="Theo dõi thay đổi master data, phân quyền, hợp đồng, vận hành và tenant portal."
+      description="Ai đã làm gì, ở tòa nhà nào."
       back-to="/dashboard/settings"
       back-mobile-only
       :reserve-global-actions="false"
@@ -155,7 +152,7 @@ function clearFilters() {
         aria-label="Lọc lịch sử theo loại dữ liệu"
         class="min-w-44"
       />
-      <UiFilterResetButton v-if="hasActiveFilters" label="Xóa lọc" @click="clearFilters" />
+      <UiFilterResetButton v-if="hasActiveFilters" label="Xoá lọc" @click="clearFilters" />
       <span v-if="!isLoading" class="text-xs text-ui-muted">
         {{ events.length }} / {{ total }} sự kiện
       </span>
@@ -190,7 +187,7 @@ function clearFilters() {
     <UiEmptyState
       v-else-if="events.length === 0"
       title="Chưa có sự kiện nào"
-      description="Thực hiện một thao tác (tạo, cập nhật, xóa) để xem log tại đây."
+      description="Khi có thao tác tạo, cập nhật hoặc xoá, nhật ký sẽ hiện ở đây."
     />
 
     <!-- Grouped event list -->
@@ -240,26 +237,13 @@ function clearFilters() {
 
               <!-- Content -->
               <div class="min-w-0 flex-1 space-y-1">
-                <div class="flex flex-wrap items-center gap-2">
-                  <span class="text-sm text-ui-primary">
-                    <span class="text-ui-muted">{{ auditActionLabel(event.action).toLowerCase() }} {{ auditEntityLabel(event.entityType).toLowerCase() }}</span>
-                    <span class="ml-1 font-semibold text-ui-primary">{{ auditEntityDisplay(event) }}</span>
-                    <span v-if="event.entitySubLabel" class="ml-1 text-xs text-ui-muted">· {{ event.entitySubLabel }}</span>
-                  </span>
-                  <UiBadge :variant="auditActionVariant(event.action)" size="sm">
-                    {{ auditActionLabel(event.action) }}
-                  </UiBadge>
-                  <span v-if="event.correlationId" class="rounded-full bg-ui-surface px-1.5 py-0.5 text-[10px] font-medium text-ui-muted">
-                    bulk
-                  </span>
-                </div>
-                <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ui-muted">
-                  <span class="inline-flex items-center gap-1">
-                    <IconUsers class="h-3 w-3" aria-hidden="true" />
-                    <span :class="{ 'italic': actorDisplay(event).isSystem }">{{ actorDisplay(event).primary }}</span>
-                    <span v-if="actorDisplay(event).secondary" class="text-ui-primary/40">· {{ actorDisplay(event).secondary }}</span>
-                  </span>
-                </div>
+                <p class="text-sm text-ui-primary">
+                  <span :class="{ italic: actorDisplay(event).isSystem }" class="font-medium" :title="actorDisplay(event).secondary ?? undefined">{{ actorDisplay(event).primary }}</span>
+                  <span class="text-ui-muted">{{ ' ' }}{{ auditEventSentence(event).verb }}<template v-if="auditEventSentence(event).entityNoun">{{ ' ' }}{{ auditEventSentence(event).entityNoun }}</template></span>
+                  <span v-if="auditEventSentence(event).subject" class="font-semibold">{{ ' ' }}{{ auditEventSentence(event).subject }}</span>
+                  <span v-if="auditEventSentence(event).detail" class="text-xs text-ui-muted">{{ ' · ' }}{{ auditEventSentence(event).detail }}</span>
+                  <span v-if="event.correlationId" class="ml-1 rounded-full bg-ui-surface px-1.5 py-0.5 text-[10px] font-medium text-ui-muted">hàng loạt</span>
+                </p>
               </div>
 
               <!-- Timestamp + chevron -->
