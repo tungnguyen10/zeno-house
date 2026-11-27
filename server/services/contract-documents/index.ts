@@ -1,6 +1,4 @@
 import { createHash } from 'node:crypto'
-import { readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
 import type { H3Event } from 'h3'
 import type { AuthUser } from '~/types/auth'
 import type { ContractDocument, ContractDocumentReadiness } from '~/types/contract-documents'
@@ -23,9 +21,16 @@ const TEMPLATE_KEY_BY_TYPE: Record<DocType, TemplateManifestEntry['key']> = {
   appendix: 'phu-luc-hop-dong',
 }
 
-function loadTemplate(type: DocType) {
+// Serverless bundles ship server/assets only via Nitro storage, not as files under process.cwd().
+async function readTemplateFile(file: string): Promise<Buffer> {
+  const raw = await useStorage('assets:server').getItemRaw<Buffer>(`contract-templates/${file}`)
+  if (!raw) throw new Error('CONTRACT_TEMPLATE_MISSING')
+  return Buffer.from(raw)
+}
+
+async function loadTemplate(type: DocType) {
   const entry = CONTRACT_TEMPLATES[TEMPLATE_KEY_BY_TYPE[type]]
-  const buffer = readFileSync(resolve(process.cwd(), 'server/assets/contract-templates', entry.file))
+  const buffer = await readTemplateFile(entry.file)
   return { buffer, templateKey: entry.key, templateVersion: entry.version }
 }
 
@@ -82,7 +87,7 @@ export const ContractDocumentService = {
     if (missing.length > 0) {
       throwValidationError('Thiếu thông tin để xuất tài liệu', { reason: 'CONTRACT_DOCUMENT_INCOMPLETE', missing })
     }
-    const { buffer } = loadTemplate(input.type)
+    const { buffer } = await loadTemplate(input.type)
     return renderDocx(buffer, buildContractDocumentData(sources))
   },
 
@@ -110,7 +115,7 @@ export const ContractDocumentService = {
       throwValidationError('Thiếu thông tin để xuất tài liệu', { reason: 'CONTRACT_DOCUMENT_INCOMPLETE', missing })
     }
 
-    const { buffer: templateBuffer, templateKey, templateVersion } = loadTemplate(input.type)
+    const { buffer: templateBuffer, templateKey, templateVersion } = await loadTemplate(input.type)
     const snapshot = buildContractDocumentData(sources)
     const rendered = renderDocx(templateBuffer, snapshot)
 
@@ -163,7 +168,7 @@ export const ContractDocumentService = {
 
     const entry = Object.values(CONTRACT_TEMPLATES).find(e => e.key === row.template_key)
     if (!entry) throwValidationError('Không tìm thấy mẫu tài liệu')
-    const templateBuffer = readFileSync(resolve(process.cwd(), 'server/assets/contract-templates', entry!.file))
+    const templateBuffer = await readTemplateFile(entry!.file)
     // Re-render from the stored snapshot — never re-read live data.
     const rendered = renderDocx(templateBuffer, row.snapshot as Record<string, unknown>)
     const path = storagePath(row.building_id, row.contract_id, row.id)
