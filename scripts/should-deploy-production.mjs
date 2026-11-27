@@ -27,11 +27,11 @@ try {
   const firstChange = nextVersion.findIndex((part, index) => part !== previousVersion[index]);
 
   if (firstChange >= 0 && nextVersion[firstChange] > previousVersion[firstChange]) {
-    console.log(`Build the production version ${current}.`);
+    process.stdout.write(`Build the production version ${current}.` + "\n");
     // Vercel continues the build when the ignored-build command exits with 1.
     process.exitCode = 1;
   } else {
-    console.log(`Skip production build. Version ${current} does not advance ${parent}.`);
+    process.stdout.write(`Skip production build. Version ${current} does not advance ${parent}.` + "\n");
   }
 } catch (error) {
   console.error(`Skip production build. ${error.message}`);
