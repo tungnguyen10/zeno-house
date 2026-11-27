@@ -52,11 +52,19 @@ const {
 }
   = useTenantAccounts()
 const canReconcileOrphans = computed(() => authStore.can('users.manage.global'))
+const query = ref('')
+const filteredAccounts = computed(() => {
+  const needle = query.value.trim().toLocaleLowerCase('vi')
+  if (!needle) return accounts.value
+  return accounts.value.filter(account =>
+    [account.tenantName, account.tenantCode, account.email].some(value => value?.toLocaleLowerCase('vi').includes(needle)),
+  )
+})
 const columns: UiTableColumn<TenantAccountListItem>[] = [
   { key: 'tenant', label: 'Khách thuê' },
   { key: 'email', label: 'Email đăng nhập', hideOnMobile: true },
-  { key: 'health', label: 'Liên kết' },
-  { key: 'actions', action: true, width: 'w-14 md:w-80' },
+  { key: 'health', label: 'Liên kết', hideOnMobile: true },
+  { key: 'actions', action: true, width: 'w-14' },
 ]
 
 // ── Provision + tenant search ────────────────────────────────────────────────
@@ -185,7 +193,7 @@ async function toggleStatus(item: TenantAccountListItem) {
     toast.success(item.status === 'active' ? 'Đã khoá tài khoản.' : 'Đã mở lại tài khoản.')
   }
   catch (e) {
-    toast.error(getApiErrorMessage(e))
+    toast.error(getApiErrorMessage(e, item.status === 'active' ? 'Không thể khoá tài khoản.' : 'Không thể mở lại tài khoản.'))
   }
   finally {
     busyTenantId.value = null
@@ -205,7 +213,7 @@ async function confirmReset() {
     toast.success('Đã đặt lại mật khẩu.')
   }
   catch (e) {
-    toast.error(getApiErrorMessage(e))
+    toast.error(getApiErrorMessage(e, 'Không thể đặt lại mật khẩu.'))
   }
   finally {
     resetBusy.value = false
@@ -224,7 +232,7 @@ async function confirmRevoke() {
     toast.success(removalMessage(result.outcome))
   }
   catch (e) {
-    toast.error(getApiErrorMessage(e))
+    toast.error(getApiErrorMessage(e, 'Không thể gỡ quyền truy cập.'))
   }
   finally {
     revokeBusy.value = false
@@ -233,13 +241,13 @@ async function confirmRevoke() {
 
 const revokeMessage = computed(() =>
   revokeTarget.value
-    ? `Gỡ quyền truy cập portal của ${revokeTarget.value.tenantName}? Quyền truy cập sẽ bị chặn trước. Hệ thống sẽ xóa tài khoản Auth nếu an toàn; nếu còn dữ liệu tham chiếu, tài khoản sẽ được vô hiệu hóa để bảo toàn lịch sử.`
+    ? `Gỡ quyền truy cập portal của ${revokeTarget.value.tenantName}? Quyền truy cập sẽ bị chặn trước. Hệ thống sẽ xoá tài khoản Auth nếu an toàn; nếu còn dữ liệu tham chiếu, tài khoản sẽ được vô hiệu hóa để bảo toàn lịch sử.`
     : '',
 )
 
 function removalMessage(outcome: TenantAccountRemovalOutcome): string {
   return outcome === 'deleted'
-    ? 'Đã xóa tài khoản Auth và giải phóng email.'
+    ? 'Đã xoá tài khoản Auth và giải phóng email.'
     : 'Đã vô hiệu hóa tài khoản và gỡ liên kết portal; dữ liệu lịch sử được giữ lại.'
 }
 
@@ -285,25 +293,35 @@ onMounted(() => {
       </template>
     </UiPageHeader>
 
+    <UiSearchInput
+      v-if="accounts.length > 0"
+      v-model="query"
+      placeholder="Tìm theo tên, mã hoặc email"
+      aria-label="Tìm tài khoản người thuê"
+      density="normal"
+      class="mb-4 sm:max-w-sm"
+    />
+
     <UiAlert v-if="error" severity="danger" title="Không tải được danh sách">
       {{ getApiErrorMessage(error, 'Hãy tải lại trang và thử lại.') }}
     </UiAlert>
 
     <UiTable
       v-else
-      :rows="accounts"
+      :rows="filteredAccounts"
       :columns="columns"
       row-key="tenantId"
       :loading="status === 'pending'"
       caption="Danh sách tài khoản portal của người thuê"
-      empty-title="Chưa có tài khoản nào"
-      empty-description="Nhấn “Cấp tài khoản” để tạo tài khoản portal cho một khách thuê."
+      :empty-title="query ? 'Không tìm thấy tài khoản' : 'Chưa có tài khoản nào'"
+      :empty-description="query ? 'Thử tên, mã hoặc email khác.' : 'Nhấn “Cấp tài khoản” để tạo tài khoản portal cho một khách thuê.'"
     >
       <template #cell-tenant="{ row }">
-        <div class="min-w-40">
-          <p class="font-medium text-ui-primary">{{ row.tenantName }}</p>
+        <div class="min-w-0">
+          <p class="break-words font-medium text-ui-primary">{{ row.tenantName }}</p>
           <p class="text-xs text-ui-muted">{{ row.tenantCode }}</p>
           <p class="mt-1 break-all text-xs text-ui-muted md:hidden">{{ row.email ?? 'Không có email Auth' }}</p>
+          <UiStatusBadge class="mt-2 md:hidden" :status="row.health === 'missing_auth' ? row.health : row.status" />
         </div>
       </template>
       <template #cell-email="{ row }">
@@ -313,68 +331,44 @@ onMounted(() => {
         <UiStatusBadge :status="row.health === 'missing_auth' ? row.health : row.status" />
       </template>
       <template #cell-actions="{ row }">
-        <div class="hidden min-w-52 flex-wrap items-center justify-end gap-2 md:flex">
-          <UiButton
-            variant="secondary"
-            size="sm"
-            :loading="busyTenantId === row.tenantId"
-            :disabled="row.health !== 'linked' || busyTenantId === row.tenantId"
-            @click="toggleStatus(row)"
-          >
-            {{ row.status === 'active' ? 'Khóa' : 'Mở lại' }}
-          </UiButton>
-          <UiButton
-            variant="secondary"
-            size="sm"
-            :disabled="row.health !== 'linked'"
-            @click="resetTarget = row"
-          >
-            Đặt lại mật khẩu
-          </UiButton>
-          <UiButton variant="danger" size="sm" @click="revokeTarget = row">
-            {{ row.health === 'missing_auth' ? 'Dọn liên kết' : 'Gỡ' }}
-          </UiButton>
-        </div>
-        <UiDropdownMenu class="ml-auto md:hidden" trigger-class="min-h-11 min-w-11" aria-label="Thao tác tài khoản">
+        <UiDropdownMenu class="ml-auto" trigger-class="min-h-11 min-w-11 md:min-h-9 md:min-w-9" :aria-label="`Thao tác cho ${row.tenantName}`">
           <UiDropdownMenuItem
             :disabled="row.health !== 'linked' || busyTenantId === row.tenantId"
             :loading="busyTenantId === row.tenantId"
             @click="toggleStatus(row)"
           >
-            {{ row.status === 'active' ? 'Khóa' : 'Mở lại' }}
+            {{ row.status === 'active' ? 'Khoá' : 'Mở lại' }}
           </UiDropdownMenuItem>
           <UiDropdownMenuItem :disabled="row.health !== 'linked'" @click="resetTarget = row">
             Đặt lại mật khẩu
           </UiDropdownMenuItem>
           <UiDropdownMenuItem variant="danger" @click="revokeTarget = row">
-            {{ row.health === 'missing_auth' ? 'Dọn liên kết' : 'Gỡ' }}
+            {{ row.health === 'missing_auth' ? 'Dọn liên kết' : 'Gỡ quyền truy cập' }}
           </UiDropdownMenuItem>
         </UiDropdownMenu>
       </template>
     </UiTable>
 
-    <section v-if="canReconcileOrphans" class="mt-8 space-y-3" aria-labelledby="orphan-heading">
-      <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h2 id="orphan-heading" class="text-xs font-semibold uppercase tracking-wide text-ui-muted">Tài khoản Auth mồ côi</h2>
-          <p class="mt-1 text-sm text-ui-muted">Tài khoản mang vai trò tenant nhưng không còn liên kết tới hồ sơ người thuê.</p>
-        </div>
-        <UiButton variant="secondary" size="sm" :loading="orphansLoading" @click="loadOrphans">
-          Kiểm tra lại
-        </UiButton>
-      </div>
+    <section v-if="canReconcileOrphans" class="mt-8 space-y-3" aria-label="Tài khoản Auth mồ côi">
       <UiAlert v-if="orphansError" severity="danger" title="Không thể kiểm tra tài khoản mồ côi">
-        {{ getApiErrorMessage(orphansError, 'Hãy thử lại sau.') }}
+        <p>{{ getApiErrorMessage(orphansError, 'Hãy thử lại sau.') }}</p>
+        <UiButton class="mt-2" variant="secondary" size="sm" :loading="orphansLoading" @click="loadOrphans">Kiểm tra lại</UiButton>
       </UiAlert>
-      <div v-else-if="orphansLoading" class="space-y-2">
-        <UiSkeleton v-for="n in 2" :key="n" class="h-16 w-full" />
+      <UiSkeleton v-else-if="orphansLoading && orphans.length === 0" class="h-12 w-full" />
+      <div v-else-if="orphans.length === 0" class="flex items-center gap-3 rounded-lg border border-ui-border px-4 py-3">
+        <IconCheckCircle class="h-4 w-4 shrink-0 text-status-success" aria-hidden="true" />
+        <p class="min-w-0 flex-1 text-sm text-ui-muted">Không có tài khoản Auth mồ côi</p>
+        <UiButton variant="secondary" size="sm" :loading="orphansLoading" @click="loadOrphans">Kiểm tra lại</UiButton>
       </div>
-      <UiEmptyState
-        v-else-if="orphans.length === 0"
-        title="Không phát hiện tài khoản mồ côi"
-        description="Mọi tài khoản tenant hiện có đều đang được liên kết."
-      />
-      <div v-else class="-mx-4 space-y-2 sm:mx-0">
+      <template v-else>
+        <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h2 class="text-sm font-semibold text-ui-primary">{{ orphans.length }} tài khoản Auth mồ côi</h2>
+            <p class="mt-1 text-sm text-ui-muted">Tài khoản mang vai trò người thuê nhưng không còn liên kết tới hồ sơ người thuê.</p>
+          </div>
+          <UiButton variant="secondary" size="sm" :loading="orphansLoading" @click="loadOrphans">Kiểm tra lại</UiButton>
+        </div>
+        <div class="-mx-4 space-y-2 sm:mx-0">
         <article
           v-for="orphan in orphans"
           :key="orphan.authUserId"
@@ -392,7 +386,8 @@ onMounted(() => {
           </div>
           <UiButton variant="danger" size="sm" @click="orphanTarget = orphan">Xử lý tài khoản</UiButton>
         </article>
-      </div>
+        </div>
+      </template>
     </section>
 
     <!-- Provision modal -->
@@ -498,9 +493,9 @@ onMounted(() => {
     <!-- Revoke confirm -->
     <UiConfirmModal
       :open="revokeTarget !== null"
-      title="Gỡ tài khoản"
+      title="Gỡ quyền truy cập"
       :message="revokeMessage"
-      confirm-label="Gỡ tài khoản"
+      confirm-label="Gỡ quyền truy cập"
       :loading="revokeBusy"
       @confirm="confirmRevoke"
       @cancel="revokeTarget = null"
@@ -510,7 +505,7 @@ onMounted(() => {
       :open="orphanTarget !== null"
       title="Xử lý tài khoản Auth mồ côi"
       :message="orphanTarget
-        ? `Xử lý ${orphanTarget.email ?? 'tài khoản không có email'}? Hệ thống sẽ xóa Auth user nếu an toàn; nếu còn tham chiếu lịch sử, tài khoản sẽ được vô hiệu hóa.`
+        ? `Xử lý ${orphanTarget.email ?? 'tài khoản không có email'}? Hệ thống sẽ xoá Auth user nếu an toàn; nếu còn tham chiếu lịch sử, tài khoản sẽ được vô hiệu hóa.`
         : ''"
       confirm-label="Xử lý tài khoản"
       :loading="orphanBusy"
