@@ -1,0 +1,88 @@
+name: Prepare Production Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: prepare-production-release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  prepare:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refs/heads/main
+          fetch-depth: 0
+
+      - name: Open the next production version PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          version_at() {
+            git show "$1:package.json" | node -pe "JSON.parse(require('node:fs').readFileSync(0)).version"
+          }
+
+          current="$(version_at HEAD)"
+          previous="$(version_at HEAD^)"
+          if [[ "$current" != "$previous" ]]; then
+            echo "Main already introduces version $current."
+            exit 0
+          fi
+
+          bump=patch
+          while IFS= read -r sha; do
+            if [[ "$(version_at "$sha")" != "$current" ]]; then
+              break
+            fi
+            labels="$(gh api "repos/$GITHUB_REPOSITORY/commits/$sha/pulls" --jq               '.[] | select(.merged_at != null and .base.ref == "main") | .labels[].name')"
+            if grep -Fx 'release:major' <<< "$labels" > /dev/null; then
+              bump=major
+              break
+            fi
+            if grep -Fx 'release:minor' <<< "$labels" > /dev/null; then
+              bump=minor
+            fi
+          done < <(git rev-list --first-parent HEAD)
+
+          npm version "$bump" --no-git-tag-version --ignore-scripts
+          next="$(node -p "require('./package.json').version")"
+          head="release/production-v$next"
+
+          open_release="$(gh pr list --base main --state open --limit 100 --json headRefName,url --jq             '.[] | select(.headRefName | startswith("release/production-v")) | .url')"
+          if [[ -n "$open_release" ]]; then
+            echo "An existing production release PR will contain these changes when merged: $open_release."
+            exit 0
+          fi
+
+          if git show-ref --verify --quiet "refs/tags/v$next"; then
+            echo "::error::Tag v$next already exists."
+            exit 1
+          fi
+
+          if git show-ref --verify --quiet "refs/remotes/origin/$head"; then
+            if [[ "$(version_at "refs/remotes/origin/$head")" != "$next" ]]; then
+              echo "::error::The existing release branch has an unexpected version."
+              exit 1
+            fi
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add package.json package-lock.json
+            git commit -m "chore(release): bump version to $next"
+            git push origin "HEAD:refs/heads/$head"
+          fi
+
+          gh pr create --base main --head "$head" --title "chore(release): v$next" \
+            --body "Prepare v$next in package.json and package-lock.json. Merging this PR triggers the production deployment."

@@ -2,7 +2,7 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "regions": ["sin1"],
   "rewrites": [{ "source": "/offline", "destination": "/offline.html" }],
-  "ignoreCommand": "exit 1",
+  "ignoreCommand": "node scripts/should-deploy-production.mjs",
   "git": {
     "deploymentEnabled": {
       "main": true,
