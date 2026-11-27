@@ -7,7 +7,7 @@ tags: [superpowers, change, settings, verification]
 
 # Settings redesign verification
 
-Branch `feat/settings-redesign` @ `1a78347a`, verified 2026-11-27.
+Branch `feat/settings-redesign`: gates first recorded at `1a78347a`, re-run after the final fix wave at `d14fb412`, verified 2026-11-27.
 
 | Gate | Result | Evidence |
 | --- | --- | --- |
@@ -15,13 +15,13 @@ Branch `feat/settings-redesign` @ `1a78347a`, verified 2026-11-27.
 | `npm run typecheck` | Pass | `nuxt typecheck` exited 0 with no type errors |
 | `npm test` | Pass | 521 test files passed, 3320 tests passed |
 | `npm run lint` | Pass (0 errors, 1 warning) | `eslint .` reported 1 warning: `vue/no-v-html` at `app/components/app/AppAiDevChat.vue:427`. The file is not changed by this branch and the usage is documented as safe by `79f897ad` |
-| Browser QA (admin, owner, manager × 320/390/1280 × light/dark) | Partial pass (admin only) | Admin session on the dev server. 1280px dark: `/dashboard/settings` redirects to `/dashboard/settings/profile`; all 8 items (profile, security, managers, tenant-accounts, access-requests, buildings, history, building-settings) have no horizontal overflow, an `h1` matching the nav label, correct `aria-current`, no duplicate IDs, and primary actions clear of the floating header actions. Users drawer (owner with 2 buildings) shows header, info, building rows with permission toggle and unassign, assign select, and danger zone; Escape closes. Light theme on tenant accounts is readable. 390px: grouped drill-in list at `/dashboard/settings`, no overflow, access-requests and managers tabs are 44px, single line and scroll horizontally. 320px: managers, profile, security and buildings have no overflow; the role tablist scrolls; the profile avatar row wraps. No data was created, changed or deleted |
+| Browser QA (admin, owner, manager × 320/390/1280 × light/dark) | Partial pass (admin only) | Admin session on the dev server. 1280px dark: `/dashboard/settings` redirects to `/dashboard/settings/profile`; all 8 items (profile, security, managers, tenant-accounts, access-requests, buildings, history, building-settings) have no horizontal overflow, an `h1` matching the nav label, correct `aria-current`, no duplicate IDs, and primary actions clear of the floating header actions. Users drawer (owner with 2 buildings) shows header, info, building rows with permission toggle and unassign, assign select, and danger zone; Escape closes. Light theme on tenant accounts is readable. 390px: grouped drill-in list at `/dashboard/settings`, no overflow, access-requests and managers tabs are 44px, single line and scroll horizontally. 320px: managers, profile, security and buildings have no overflow; the role tablist scrolls; the profile avatar row wraps. No data was created, changed or deleted. After the final fix wave (`d14fb412`), tenant-accounts, history, access-requests, managers and building-settings were re-checked at 320, 390 and 768px with no page overflow (only the access-requests segmented tablist scrolls inside itself, by design) |
 
 ## Open items
 
 - Owner and manager browser sessions were not run (no accounts available); covered by `settings-navigation`, `AppSettingsNav`, `AppSidebar` and `settings-users` owner-case tests.
 - `prefers-reduced-motion: reduce` was not emulated in the browser.
 - The pending-access-request badge was not observed with real pending data (queue was empty).
-- Capability promotion (`admin-shell`, `manager-assignment-ui`) was applied in the final fix wave; `docs/changes/index.md` is left to the controller.
+- Capability promotion (`admin-shell`, `manager-assignment-ui`) was applied in the final fix wave on the user's pre-approval of full completion; `docs/changes/index.md` updated at finish.
 - Final fix wave re-ran `npx vitest run tests/pages tests/components tests/utils tests/composables` (243 files, 1440 tests passed), `npm run typecheck` (exit 0), `npm run lint` (0 errors, same single warning) and `npm run knowledge:check` (359 concepts).
 - Unrelated uncommitted contract-handover work in the checkout did not cause any gate failure.

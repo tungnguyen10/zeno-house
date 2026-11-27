@@ -5,7 +5,7 @@
 ## In progress / planned
 
 - [Building other income](./operations-other-income/implementation-plan.md) — report receipts allocated to reserves or profit, with billing duplicate checks.
-- [settings-redesign](./settings-redesign/design.md) — unified Settings area (personal, administration, building settings entry) with vertical nav, user detail drawer and page polish; design approved, plan in review.
+- [settings-redesign](./settings-redesign/design.md) — unified Settings area (personal, administration, building settings entry) with vertical nav, user detail drawer and page polish; implemented and verified (admin browser QA; owner/manager sessions open), capabilities promoted — see [verification](./settings-redesign/verification.md).
 
 - [harden-event-audit](./harden-event-audit/verification.md) — 12/16 tasks; atomic DB audit/contract correlation and durable cross-system intent remain incomplete.
 - [zeno-house-v2-optimization](./zeno-house-v2-optimization/baseline-2026-11-16.md) — V2 PR0–PR5 source baseline review, integrity fixes and release gate matrix.
