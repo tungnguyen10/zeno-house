@@ -253,8 +253,8 @@ function statusLabel(status: AccessRequestStatus) {
         <div v-if="row.status === 'pending' || row.status === 'processing'" class="flex justify-end gap-2">
           <UiBadge v-if="!row.emailVerified" variant="warning">Chưa xác minh email</UiBadge>
           <template v-else>
-            <UiButton v-if="row.status === 'pending'" size="sm" variant="ghost" @click="openRejection(row)">Từ chối</UiButton>
-            <UiButton size="sm" @click="openApproval(row)">{{ row.status === 'processing' ? 'Tiếp tục' : 'Duyệt' }}</UiButton>
+            <UiButton v-if="row.status === 'pending'" class="min-h-11 sm:min-h-0" size="sm" variant="ghost" @click="openRejection(row)">Từ chối</UiButton>
+            <UiButton class="min-h-11 sm:min-h-0" size="sm" @click="openApproval(row)">{{ row.status === 'processing' ? 'Tiếp tục' : 'Duyệt' }}</UiButton>
           </template>
         </div>
         <span v-else class="block text-right text-xs text-ui-muted">{{ roleLabel(row.decisionRole) }}</span>

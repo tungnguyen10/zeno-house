@@ -44,7 +44,7 @@ function tabClass(tab: UiTabItem) {
   const active = tab.key === props.modelValue
   if (props.variant === 'segmented') {
     return clsx(
-      'relative inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-sm font-medium transition-colors',
+      'relative inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium transition-colors min-h-11 sm:min-h-0',
       'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-accent/40',
       'lg:rounded-t-md lg:px-4 lg:py-2.5',
       active

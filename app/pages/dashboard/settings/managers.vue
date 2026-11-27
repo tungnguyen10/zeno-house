@@ -194,7 +194,7 @@ async function handleRemove(id: string) {
         v-model="roleFilter"
         :tabs="roleTabs"
         variant="segmented"
-        class="[&_[role=tab]]:min-h-11 [&_[role=tab]]:shrink-0 [&_[role=tab]]:whitespace-nowrap [&_[role=tab]]:px-2.5 sm:[&_[role=tab]]:min-h-0 sm:[&_[role=tab]]:px-3.5 lg:[&_[role=tab]]:px-4"
+        class="[&_[role=tab]]:px-2.5 sm:[&_[role=tab]]:px-3.5 lg:[&_[role=tab]]:px-4"
       />
     </div>
 
