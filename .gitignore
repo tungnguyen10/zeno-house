@@ -30,3 +30,6 @@ logs
 .worktrees/
 .vscode/
 .vercel
+
+# Superpowers brainstorm mockups
+.superpowers/
