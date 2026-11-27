@@ -4,7 +4,7 @@ import { managedRoleLabel, userInitials } from '~/utils/users/display'
 describe('userInitials', () => {
   it.each([
     ['Bùi Văn Linh', null, 'BL'],
-    ['Nguyen Tung Duong', 'x@y.z', 'ND'],
+    ['Nguyễn Tùng Dương', 'x@y.z', 'ND'],
     ['Minh', null, 'MI'],
     ['  ', 'tuananh@gmail.com', 'TU'],
     [null, null, '?'],

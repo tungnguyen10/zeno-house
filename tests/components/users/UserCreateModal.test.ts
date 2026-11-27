@@ -17,7 +17,7 @@ const stubs = {
   UiModal: { props: ['open'], template: '<div v-if="open"><slot /><slot name="footer" /></div>' },
   UiInput,
   UiSelect: { props: ['modelValue'], template: '<select />' },
-  UiAlert: { template: '<div><slot /></div>' },
+  UiAlert: { template: '<div data-alert><slot /></div>' },
   IconPlus: true,
 }
 
@@ -55,6 +55,17 @@ describe('UserCreateModal', () => {
       role: 'manager',
       building_ids: ['11111111-1111-4111-8111-111111111111'],
     })
+  })
+
+  it('shows a server error inside the modal and keeps entered data', async () => {
+    const wrapper = mount(UserCreateModal, { props, global: { stubs } })
+    await fill(wrapper, 'Email', 'linh@zeno.test')
+    expect(wrapper.find('[data-alert]').exists()).toBe(false)
+
+    await wrapper.setProps({ error: 'Email đã tồn tại.' })
+
+    expect(wrapper.get('[data-alert]').text()).toBe('Email đã tồn tại.')
+    expect((wrapper.get('input[data-label="Email"]').element as HTMLInputElement).value).toBe('linh@zeno.test')
   })
 
   it('resets the form each time it opens', async () => {

@@ -76,16 +76,25 @@ const filteredUsers = computed(() => {
 // Create ----------------------------------------------------------------------
 const createOpen = ref(false)
 const createBusy = ref(false)
+const createError = ref<string | null>(null)
+
+function openCreate() {
+  createError.value = null
+  createOpen.value = true
+}
 
 async function handleCreate(payload: UserCreateInput) {
   createBusy.value = true
+  createError.value = null
   try {
     await createUser(payload)
     createOpen.value = false
     toast.success('Đã tạo người dùng. Hãy gửi email và mật khẩu cho họ.')
   }
   catch (err: unknown) {
-    toast.error(getApiErrorMessage(err, 'Không thể tạo người dùng.'))
+    const message = getApiErrorMessage(err, 'Không thể tạo người dùng.')
+    createError.value = message
+    toast.error(message)
   }
   finally {
     createBusy.value = false
@@ -97,6 +106,7 @@ const selectedUserId = ref<string | null>(null)
 const selectedRow = computed(() => users.value.find(row => row.user.id === selectedUserId.value) ?? null)
 const editing = ref(false)
 const busyKey = ref<string | null>(null)
+const addButton = ref<{ $el?: HTMLElement } | null>(null)
 
 async function run(key: string, action: () => Promise<unknown>, success: string, failure: string): Promise<boolean> {
   busyKey.value = key
@@ -135,6 +145,9 @@ function handleUnassign(assignmentId: string) {
 async function handleRemove(id: string) {
   if (await run(`delete:${id}`, () => deleteUser(id), 'Đã xoá người dùng.', 'Không thể xoá người dùng.')) {
     selectedUserId.value = null
+    // The opener row is gone; give focus a stable home.
+    await nextTick()
+    addButton.value?.$el?.focus()
   }
 }
 </script>
@@ -152,7 +165,7 @@ async function handleRemove(id: string) {
     >
       <div ref="titleSentinel" aria-hidden="true" />
       <template #actions>
-        <UiButton class="min-h-11 sm:min-h-0" @click="createOpen = true">
+        <UiButton ref="addButton" class="min-h-11 sm:min-h-0" @click="openCreate">
           <IconPlus class="h-4 w-4" aria-hidden="true" />
           Thêm người dùng
         </UiButton>
@@ -181,7 +194,7 @@ async function handleRemove(id: string) {
         v-model="roleFilter"
         :tabs="roleTabs"
         variant="segmented"
-        class="[&_[role=tab]]:min-h-11 [&_[role=tab]]:shrink-0 [&_[role=tab]]:whitespace-nowrap sm:[&_[role=tab]]:min-h-0"
+        class="[&_[role=tab]]:min-h-11 [&_[role=tab]]:shrink-0 [&_[role=tab]]:whitespace-nowrap [&_[role=tab]]:px-2.5 sm:[&_[role=tab]]:min-h-0 sm:[&_[role=tab]]:px-3.5 lg:[&_[role=tab]]:px-4"
       />
     </div>
 
@@ -190,7 +203,7 @@ async function handleRemove(id: string) {
       <UiButton class="mt-2 min-h-11 sm:min-h-0" size="sm" variant="secondary" @click="refresh()">Thử lại</UiButton>
     </UiAlert>
 
-    <div v-else-if="isLoading" class="space-y-2">
+    <div v-else-if="isLoading && users.length === 0" class="space-y-2">
       <UiSkeleton v-for="i in 4" :key="i" class="h-14 w-full" />
     </div>
 
@@ -223,6 +236,7 @@ async function handleRemove(id: string) {
       :role-options="roleOptions"
       :default-role="defaultRole"
       :busy="createBusy"
+      :error="createError"
       @close="createOpen = false"
       @submit="handleCreate"
     />

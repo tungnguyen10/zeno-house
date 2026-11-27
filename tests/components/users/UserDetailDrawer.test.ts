@@ -5,9 +5,9 @@ import UserDetailDrawer from '~/components/users/UserDetailDrawer.vue'
 import type { ManagedUserWithAssignments } from '~/types/users'
 
 const row: ManagedUserWithAssignments = {
-  user: { id: 'u1', email: 'duong@zeno.test', name: 'Nguyen Tung Duong', role: 'manager', createdBy: null },
+  user: { id: 'u1', email: 'duong@zeno.test', name: 'Nguyễn Tùng Dương', role: 'manager', createdBy: null },
   assignments: [
-    { id: 'a1', building_id: 'b1', can_delete_master_data: false, building: { id: 'b1', slug: 's', code: 'nttt', name: 'Nguyen Thanh Tung', address: '', status: 'active' } },
+    { id: 'a1', building_id: 'b1', can_delete_master_data: false, building: { id: 'b1', slug: 's', code: 'nttt', name: 'Nguyễn Thành Tùng', address: '', status: 'active' } },
   ] as never,
 }
 
@@ -29,7 +29,7 @@ const stubs = {
 
 const baseProps = {
   row,
-  buildings: [{ id: 'b1', name: 'Nguyen Thanh Tung' }, { id: 'b2', name: 'Zeno House Phan Tây Hồ' }],
+  buildings: [{ id: 'b1', name: 'Nguyễn Thành Tùng' }, { id: 'b2', name: 'Zeno House Phan Tây Hồ' }],
   roleOptions: [{ value: 'owner' as const, label: 'Chủ nhà' }, { value: 'manager' as const, label: 'Quản lý' }],
   canEditRole: false,
   busyKey: null,
@@ -40,10 +40,20 @@ const button = (wrapper: ReturnType<typeof mount>, text: string) =>
   wrapper.findAll('button').find(b => b.text().trim() === text)!
 
 describe('UserDetailDrawer', () => {
+  it('keeps rendering the last row while the drawer closes', async () => {
+    const wrapper = mount(UserDetailDrawer, { props: baseProps, global: { stubs: { ...stubs, UiDrawer: { props: ['modelValue'], template: '<div data-drawer :data-open="modelValue"><slot name="header" /><slot /></div>' } } } })
+
+    await wrapper.setProps({ row: null })
+
+    expect(wrapper.get('[data-drawer]').attributes('data-open')).toBe('false')
+    expect(wrapper.text()).toContain('Nguyễn Tùng Dương')
+  })
+
   it('lists assignments and emits toggle and unassign', async () => {
     const wrapper = mount(UserDetailDrawer, { props: baseProps, global: { stubs } })
 
-    expect(wrapper.text()).toContain('Nguyen Thanh Tung')
+    expect(wrapper.text()).toContain('Nguyễn Thành Tùng')
+    expect(wrapper.text()).toContain('nttt')
     await wrapper.get('[data-toggle]').trigger('change')
     expect(wrapper.emitted('toggleDelete')).toEqual([['a1', true]])
     await button(wrapper, 'Bỏ gán').trigger('click')

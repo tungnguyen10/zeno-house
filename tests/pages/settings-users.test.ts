@@ -17,6 +17,13 @@ const toast = { success: vi.fn(), error: vi.fn() }
 const auth = { isAdmin: true, canCreateOwner: true, canManageUsers: true, role: 'admin' }
 
 const drawerProps = ref<Record<string, unknown>>({})
+const isLoading = ref(false)
+const UserCreateModal = defineComponent({
+  name: 'UserCreateModal',
+  props: ['open', 'error', 'buildings', 'roleOptions', 'defaultRole', 'busy'],
+  emits: ['close', 'submit'],
+  setup: props => () => h('div', { 'data-create': String(props.open), 'data-create-error': (props.error as string | null) ?? '' }),
+})
 const UserDetailDrawer = defineComponent({
   name: 'UserDetailDrawer',
   props: ['row', 'buildings', 'roleOptions', 'canEditRole', 'busyKey', 'editing'],
@@ -43,25 +50,26 @@ const stubs = {
   UiSearchInput: defineComponent({ props: ['modelValue'], emits: ['update:modelValue'], setup: (_, { emit }) => () => h('input', { 'data-search': '', onInput: (e: Event) => emit('update:modelValue', (e.target as HTMLInputElement).value) }) }),
   UiTabs: defineComponent({ props: ['modelValue', 'tabs'], emits: ['update:modelValue'], setup: (props, { emit }) => () => h('div', { 'data-tabs': '' }, (props.tabs as { key: string; label: string }[]).map(t => h('button', { 'data-tab': t.key, onClick: () => emit('update:modelValue', t.key) }, t.label))) }),
   UiAlert: true, UiSkeleton: true, UiEmptyState: { props: ['title'], template: '<p data-empty>{{ title }}</p>' }, IconPlus: true,
-  UserCreateModal: true, UserDetailDrawer, UserListRow,
+  UserCreateModal, UserDetailDrawer, UserListRow,
 }
 
 beforeEach(() => {
   vi.clearAllMocks()
   users.value = [user('o1', 'Bùi Văn Linh', 'owner'), user('m1', 'Trần Minh', 'manager')]
   Object.assign(auth, { isAdmin: true, canCreateOwner: true, role: 'admin' })
+  isLoading.value = false
   vi.stubGlobal('definePageMeta', vi.fn())
   vi.stubGlobal('useIntersectionObserver', vi.fn())
   vi.stubGlobal('useAppHeaderTitle', () => ref(null))
   vi.stubGlobal('useAuthStore', () => auth)
   vi.stubGlobal('useToast', () => toast)
   vi.stubGlobal('useManagerAssignments', () => ({
-    users, buildings: ref([]), buildingsWithoutManager: ref([]), isLoading: ref(false), error: ref(null), refresh: vi.fn(), ...api,
+    users, buildings: ref([]), buildingsWithoutManager: ref([]), isLoading, error: ref(null), refresh: vi.fn(), ...api,
   }))
 })
 
-const mountPage = async () => {
-  const wrapper = mount(Page, { global: { stubs } })
+const mountPage = async (options: { attachTo?: HTMLElement } = {}) => {
+  const wrapper = mount(Page, { global: { stubs }, ...options })
   await flushPromises()
   return wrapper
 }
@@ -83,6 +91,16 @@ describe('settings users page', () => {
     await wrapper.get('[data-search]').setValue('không có ai')
 
     expect(wrapper.get('[data-empty]').text()).toBe('Không tìm thấy người dùng')
+  })
+
+  it('keeps the list mounted while a refresh is pending', async () => {
+    const wrapper = await mountPage()
+    await wrapper.get('[data-row="m1"]').trigger('click')
+
+    isLoading.value = true
+    await flushPromises()
+
+    expect(wrapper.find('[data-row="m1"]').exists()).toBe(true)
   })
 
   it('opens the drawer for the clicked user', async () => {
@@ -114,7 +132,7 @@ describe('settings users page', () => {
   })
 
   it('closes the drawer after a successful delete', async () => {
-    api.deleteUser.mockImplementationOnce(async () => { users.value = users.value.filter(u => u.user.id !== 'm1') })
+    api.deleteUser.mockResolvedValueOnce(undefined)
     const wrapper = await mountPage()
     await wrapper.get('[data-row="m1"]').trigger('click')
 
@@ -123,5 +141,46 @@ describe('settings users page', () => {
 
     expect(toast.success).toHaveBeenCalledWith('Đã xoá người dùng.')
     expect(wrapper.get('[data-drawer]').attributes('data-drawer')).toBe('')
+  })
+
+  it('moves focus to the add button after a successful delete', async () => {
+    api.deleteUser.mockResolvedValueOnce(undefined)
+    const host = document.createElement('div')
+    document.body.appendChild(host)
+    const wrapper = await mountPage({ attachTo: host })
+    await wrapper.get('[data-row="m1"]').trigger('click')
+
+    wrapper.findComponent({ name: 'UserDetailDrawer' }).vm.$emit('remove', 'm1')
+    await flushPromises()
+
+    expect(document.activeElement?.textContent?.trim()).toBe('Thêm người dùng')
+    wrapper.unmount()
+    host.remove()
+  })
+
+  it('permits role edits for admins only', async () => {
+    let wrapper = await mountPage()
+    expect(drawerProps.value.canEditRole).toBe(true)
+    wrapper.unmount()
+
+    Object.assign(auth, { isAdmin: false, canCreateOwner: false, role: 'owner' })
+    wrapper = await mountPage()
+    expect(drawerProps.value.canEditRole).toBe(false)
+  })
+
+  it('keeps the create modal open with an inline error when creating fails', async () => {
+    api.createUser.mockRejectedValueOnce(new Error('boom'))
+    const wrapper = await mountPage()
+    const modal = wrapper.findComponent({ name: 'UserCreateModal' })
+    expect(modal.props('open')).toBe(false)
+
+    await wrapper.findAll('button').find(b => b.text().includes('Thêm người dùng'))!.trigger('click')
+    expect(modal.props('open')).toBe(true)
+    modal.vm.$emit('submit', { email: 'a@b.c', password: 'Secret#2026', role: 'manager', building_ids: [] })
+    await flushPromises()
+
+    expect(toast.error).toHaveBeenCalled()
+    expect(modal.props('open')).toBe(true)
+    expect(modal.props('error')).toBe('Không thể tạo người dùng.')
   })
 })

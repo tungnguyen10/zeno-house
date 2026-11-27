@@ -8,6 +8,7 @@ const props = defineProps<{
   roleOptions: { value: CreatableRole; label: string }[]
   defaultRole: CreatableRole
   busy: boolean
+  error?: string | null
 }>()
 
 const emit = defineEmits<{
@@ -68,6 +69,7 @@ function submit() {
           </button>
         </div>
       </fieldset>
+      <UiAlert v-if="error" severity="danger">{{ error }}</UiAlert>
       <p class="text-xs text-ui-muted">Sau khi tạo, hãy gửi email và mật khẩu cho người dùng.</p>
     </form>
     <template #footer>

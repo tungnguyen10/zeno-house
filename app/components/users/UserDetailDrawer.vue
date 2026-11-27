@@ -30,10 +30,16 @@ const cancelDeleteRef = ref<{ $el?: HTMLElement } | null>(null)
 const infoSection = ref<HTMLElement | null>(null)
 const dangerSection = ref<HTMLElement | null>(null)
 
-const displayName = computed(() => props.row?.user.name ?? props.row?.user.email ?? '')
-const initials = computed(() => (props.row ? userInitials(props.row.user.name, props.row.user.email) : ''))
+// Keep the last row so the leave animation doesn't show an empty sheet.
+const displayRow = shallowRef(props.row)
+watch(() => props.row, (value) => {
+  if (value) displayRow.value = value
+}, { flush: 'sync' })
+
+const displayName = computed(() => displayRow.value?.user.name ?? displayRow.value?.user.email ?? '')
+const initials = computed(() => (displayRow.value ? userInitials(displayRow.value.user.name, displayRow.value.user.email) : ''))
 const availableOptions = computed(() => {
-  const assigned = new Set(props.row?.assignments.map(a => a.building_id))
+  const assigned = new Set(displayRow.value?.assignments.map(a => a.building_id))
   return [
     { value: '', label: 'Chọn tòa nhà…' },
     ...props.buildings.filter(b => !assigned.has(b.id)).map(b => ({ value: b.id, label: b.name })),
@@ -100,16 +106,16 @@ async function askDelete() {
     @update:model-value="!$event && emit('close')"
   >
     <template #header>
-      <div v-if="row" class="flex min-w-0 items-center gap-3">
+      <div v-if="displayRow" class="flex min-w-0 items-center gap-3">
         <span class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-ui-accent/15 text-sm font-semibold text-ui-accent" aria-hidden="true">{{ initials }}</span>
         <div class="min-w-0">
           <h2 class="truncate text-base font-semibold text-ui-primary">{{ displayName }}</h2>
-          <p class="truncate text-xs text-ui-muted">{{ row.user.email }} · {{ managedRoleLabel(row.user.role) }}</p>
+          <p class="truncate text-xs text-ui-muted">{{ displayRow.user.email }} · {{ managedRoleLabel(displayRow.user.role) }}</p>
         </div>
       </div>
     </template>
 
-    <div v-if="row" class="space-y-6">
+    <div v-if="displayRow" class="space-y-6">
       <section ref="infoSection" aria-labelledby="user-info-heading">
         <div class="mb-2 flex items-center justify-between">
           <h3 id="user-info-heading" class="text-xs font-semibold uppercase tracking-wide text-ui-muted">Thông tin</h3>
@@ -122,25 +128,27 @@ async function askDelete() {
           <UiSelect v-if="canEditRole" v-model="form.role" label="Vai trò" :options="roleOptions" />
           <UiAlert v-if="formError" severity="danger">{{ formError }}</UiAlert>
           <div class="flex justify-end gap-2">
-            <UiButton class="min-h-11 sm:min-h-0" variant="secondary" :disabled="isBusy(`update:${row.user.id}`)" @click="editing = false">Huỷ</UiButton>
-            <UiButton type="submit" class="min-h-11 sm:min-h-0" :loading="isBusy(`update:${row.user.id}`)">Lưu</UiButton>
+            <UiButton class="min-h-11 sm:min-h-0" variant="secondary" :disabled="isBusy(`update:${displayRow.user.id}`)" @click="editing = false">Huỷ</UiButton>
+            <UiButton type="submit" class="min-h-11 sm:min-h-0" :loading="isBusy(`update:${displayRow.user.id}`)">Lưu</UiButton>
           </div>
         </form>
         <UiDefinitionList v-else>
-          <UiDefinitionItem label="Email" :value="row.user.email" />
-          <UiDefinitionItem label="Họ tên" :value="row.user.name" />
-          <UiDefinitionItem label="Vai trò" :value="managedRoleLabel(row.user.role)" />
+          <UiDefinitionItem label="Email" :value="displayRow.user.email" />
+          <UiDefinitionItem label="Họ tên" :value="displayRow.user.name" />
+          <UiDefinitionItem label="Vai trò" :value="managedRoleLabel(displayRow.user.role)" />
         </UiDefinitionList>
       </section>
 
       <section aria-labelledby="user-buildings-heading">
         <h3 id="user-buildings-heading" class="mb-2 text-xs font-semibold uppercase tracking-wide text-ui-muted">Tòa nhà phụ trách</h3>
-        <p v-if="row.assignments.length === 0" class="py-2 text-sm text-ui-muted">Chưa được gán tòa nhà nào.</p>
+        <p v-if="displayRow.assignments.length === 0" class="py-2 text-sm text-ui-muted">Chưa được gán tòa nhà nào.</p>
         <ul v-else role="list" class="divide-y divide-ui-border">
-          <li v-for="assignment in row.assignments" :key="assignment.id" class="flex items-center gap-3 py-2.5">
+          <li v-for="assignment in displayRow.assignments" :key="assignment.id" class="flex items-center gap-3 py-2.5">
             <div class="min-w-0 flex-1">
               <p class="truncate text-sm text-ui-primary">{{ assignment.building?.name ?? assignment.building_id }}</p>
-              <p class="text-xs text-ui-muted">Cho xoá dữ liệu</p>
+              <p class="truncate text-xs text-ui-muted">
+                <span v-if="assignment.building?.code" class="font-mono">{{ assignment.building.code }} · </span>Cho xoá dữ liệu
+              </p>
             </div>
             <UiToggle
               class="-m-3 p-3 sm:m-0 sm:p-0"
@@ -157,10 +165,10 @@ async function askDelete() {
           v-if="availableOptions.length > 1"
           data-assign-form
           class="mt-2 flex items-center gap-2"
-          @submit.prevent="buildingToAssign && emit('assign', row.user.id, buildingToAssign)"
+          @submit.prevent="buildingToAssign && emit('assign', displayRow.user.id, buildingToAssign)"
         >
           <UiSelect v-model="buildingToAssign" :options="availableOptions" aria-label="Chọn tòa nhà để gán" class="min-w-0 flex-1" />
-          <UiButton type="submit" class="min-h-11 sm:min-h-0" size="sm" :disabled="!buildingToAssign" :loading="isBusy(`assign:${row.user.id}`)">Gán</UiButton>
+          <UiButton type="submit" class="min-h-11 sm:min-h-0" size="sm" :disabled="!buildingToAssign" :loading="isBusy(`assign:${displayRow.user.id}`)">Gán</UiButton>
         </form>
         <p v-else class="mt-2 text-xs text-ui-muted">Đã gán tất cả tòa nhà.</p>
       </section>
@@ -173,8 +181,8 @@ async function askDelete() {
         <div v-else class="mt-2 space-y-2">
           <p class="text-sm text-ui-primary">Xoá {{ displayName }} khỏi hệ thống? Hành động này sẽ thu hồi quyền đăng nhập của tài khoản và không thể hoàn tác.</p>
           <div class="flex justify-end gap-2">
-            <UiButton ref="cancelDeleteRef" class="min-h-11 sm:min-h-0" size="sm" variant="secondary" :disabled="isBusy(`delete:${row.user.id}`)" @click="cancelDelete">Huỷ</UiButton>
-            <UiButton class="min-h-11 sm:min-h-0" size="sm" variant="danger" :loading="isBusy(`delete:${row.user.id}`)" @click="emit('remove', row.user.id)">Xoá vĩnh viễn</UiButton>
+            <UiButton ref="cancelDeleteRef" class="min-h-11 sm:min-h-0" size="sm" variant="secondary" :disabled="isBusy(`delete:${displayRow.user.id}`)" @click="cancelDelete">Huỷ</UiButton>
+            <UiButton class="min-h-11 sm:min-h-0" size="sm" variant="danger" :loading="isBusy(`delete:${displayRow.user.id}`)" @click="emit('remove', displayRow.user.id)">Xoá vĩnh viễn</UiButton>
           </div>
         </div>
       </section>
