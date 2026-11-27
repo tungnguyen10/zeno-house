@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { UiTableColumn } from '~/components/ui/UiTable.vue'
+import type { UiTabItem } from '~/components/ui/UiTabs.vue'
 import type { ApiSuccess } from '~/types/api'
 import type { AccessRequest, AccessRequestStatus, ApprovableRole } from '~/types/access-requests'
 import type { Building } from '~/types/buildings'
@@ -21,7 +22,7 @@ useIntersectionObserver(titleSentinel, ([entry]) => {
   isTitleCollapsed.value = !!entry && !entry.isIntersecting
 })
 const headerTitle = useAppHeaderTitle()
-const compactTitle = computed(() => (isTitleCollapsed.value ? 'Yêu cầu tài khoản' : null))
+const compactTitle = computed(() => (isTitleCollapsed.value ? 'Yêu cầu truy cập' : null))
 watchEffect(() => {
   headerTitle.value = compactTitle.value
 })
@@ -61,10 +62,16 @@ const statusOptions = [
   { value: 'approved', label: 'Đã duyệt' },
   { value: 'rejected', label: 'Đã từ chối' },
 ]
+const pendingCount = useAccessRequestPendingCount(true)
+const statusTabs = computed<UiTabItem[]>(() => statusOptions.map(option => ({
+  key: option.value,
+  label: option.label,
+  count: option.value === 'pending' && pendingCount.value ? pendingCount.value : undefined,
+})))
 const roleOptions = [
-  { value: 'owner', label: 'Owner' },
-  { value: 'manager', label: 'Manager' },
-  { value: 'tenant', label: 'Tenant' },
+  { value: 'owner', label: 'Chủ nhà' },
+  { value: 'manager', label: 'Quản lý' },
+  { value: 'tenant', label: 'Người thuê' },
 ]
 
 const approvalOpen = ref(false)
@@ -190,6 +197,10 @@ async function submitRejection() {
   }
 }
 
+function roleLabel(role: string | null | undefined) {
+  return roleOptions.find(option => option.value === role)?.label ?? '—'
+}
+
 function statusLabel(status: AccessRequestStatus) {
   return statusOptions.find(option => option.value === status)?.label ?? status
 }
@@ -198,17 +209,22 @@ function statusLabel(status: AccessRequestStatus) {
 <template>
   <div class="space-y-6">
     <UiPageHeader
-      title="Yêu cầu tài khoản"
-      description="Duyệt danh tính mới và gán đúng vai trò, phạm vi trước khi họ vào hệ thống."
+      title="Yêu cầu truy cập"
+      description="Duyệt danh tính mới, gán vai trò và phạm vi trước khi họ vào hệ thống."
       back-to="/dashboard/settings"
       back-mobile-only
       :reserve-global-actions="false"
     >
       <div ref="titleSentinel" aria-hidden="true" />
-      <template #actions>
-        <UiSelect v-model="selectedStatus" class="w-full sm:w-48" label="Trạng thái" :options="statusOptions" />
-      </template>
     </UiPageHeader>
+
+    <UiTabs
+      class="mb-4"
+      :model-value="selectedStatus"
+      :tabs="statusTabs"
+      variant="segmented"
+      @update:model-value="selectedStatus = $event as AccessRequestStatus"
+    />
 
     <UiAlert v-if="listError" severity="danger" title="Không thể tải hàng đợi">
       {{ getApiErrorMessage(listError, 'Hãy tải lại trang và thử lại.') }}
@@ -226,7 +242,6 @@ function statusLabel(status: AccessRequestStatus) {
         <div class="min-w-0">
           <p class="truncate font-medium text-ui-primary">{{ row.fullName || 'Chưa cung cấp tên' }}</p>
           <p class="max-w-56 truncate text-xs text-ui-muted" :title="row.email">{{ row.email }}</p>
-          <p v-if="!row.emailVerified" class="mt-1 text-xs text-status-warning">Email chưa xác minh</p>
         </div>
       </template>
       <template #cell-provider="{ row }"><span class="capitalize text-ui-muted">{{ row.provider }}</span></template>
@@ -236,10 +251,13 @@ function statusLabel(status: AccessRequestStatus) {
       </template>
       <template #cell-actions="{ row }">
         <div v-if="row.status === 'pending' || row.status === 'processing'" class="flex justify-end gap-2">
-          <UiButton v-if="row.status === 'pending'" size="sm" variant="ghost" @click="openRejection(row)">Từ chối</UiButton>
-          <UiButton size="sm" :disabled="!row.emailVerified" @click="openApproval(row)">{{ row.status === 'processing' ? 'Tiếp tục' : 'Duyệt' }}</UiButton>
+          <UiBadge v-if="!row.emailVerified" variant="warning">Chưa xác minh email</UiBadge>
+          <template v-else>
+            <UiButton v-if="row.status === 'pending'" size="sm" variant="ghost" @click="openRejection(row)">Từ chối</UiButton>
+            <UiButton size="sm" @click="openApproval(row)">{{ row.status === 'processing' ? 'Tiếp tục' : 'Duyệt' }}</UiButton>
+          </template>
         </div>
-        <span v-else class="block text-right text-xs text-ui-muted">{{ row.decisionRole || '—' }}</span>
+        <span v-else class="block text-right text-xs text-ui-muted">{{ roleLabel(row.decisionRole) }}</span>
       </template>
     </UiTable>
 
@@ -276,7 +294,7 @@ function statusLabel(status: AccessRequestStatus) {
         <UiAlert v-if="formError" severity="danger" role="alert">{{ formError }}</UiAlert>
       </div>
       <template #footer>
-        <UiButton variant="ghost" :disabled="busy" @click="approvalOpen = false">Hủy</UiButton>
+        <UiButton variant="ghost" :disabled="busy" @click="approvalOpen = false">Huỷ</UiButton>
         <UiButton :loading="busy" @click="submitApproval">Duyệt và cấp quyền</UiButton>
       </template>
     </UiModal>
@@ -287,7 +305,7 @@ function statusLabel(status: AccessRequestStatus) {
         <UiAlert v-if="formError" severity="danger" role="alert">{{ formError }}</UiAlert>
       </div>
       <template #footer>
-        <UiButton variant="ghost" :disabled="busy" @click="rejectionOpen = false">Hủy</UiButton>
+        <UiButton variant="ghost" :disabled="busy" @click="rejectionOpen = false">Huỷ</UiButton>
         <UiButton variant="danger" :loading="busy" @click="submitRejection">Xác nhận từ chối</UiButton>
       </template>
     </UiModal>

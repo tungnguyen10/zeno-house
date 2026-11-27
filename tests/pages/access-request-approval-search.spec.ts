@@ -21,3 +21,19 @@ describe('access-request tenant approval search', () => {
     expect(page).toContain('tenant.id === selectedRequest.value?.decisionTenantId')
   })
 })
+
+describe('access requests polish', () => {
+  it('titles the page like the nav item and filters with tabs', () => {
+    expect(page).toContain('title="Yêu cầu truy cập"')
+    expect(page).not.toContain('Yêu cầu tài khoản')
+    expect(page).toContain('<UiTabs')
+    expect(page).not.toContain('label="Trạng thái" :options="statusOptions"')
+  })
+
+  it('uses product role names and huỷ spelling', () => {
+    expect(page).toContain("{ value: 'owner', label: 'Chủ nhà' }")
+    expect(page).toContain("{ value: 'manager', label: 'Quản lý' }")
+    expect(page).toContain("{ value: 'tenant', label: 'Người thuê' }")
+    expect(page).not.toContain('Hủy')
+  })
+})
