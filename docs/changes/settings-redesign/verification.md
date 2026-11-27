@@ -19,9 +19,15 @@ Branch `feat/settings-redesign`: gates first recorded at `1a78347a`, re-run afte
 
 ## Open items
 
-- Owner and manager browser sessions were not run (no accounts available); covered by `settings-navigation`, `AppSettingsNav`, `AppSidebar` and `settings-users` owner-case tests.
+- Owner and manager were checked in the browser by overriding the client-side role on an admin session, with no real accounts and no server writes. Server data stayed admin-scoped, so this verifies UI gating and layout only.
+  - Owner sees Hồ sơ, Bảo mật, Người dùng, Tài khoản người thuê and Cài đặt tòa nhà at 1280 and 390px. The Users page has no role tabs, and the row action is off for other owners.
+  - Manager sees Hồ sơ, Bảo mật and Cài đặt tòa nhà. `/dashboard/settings/managers` redirects to `/dashboard`.
+  - Server-scoped owner data still needs a real owner account.
+- The pending badge and access-request rows were checked with client-injected pending data at 1280 and 390px: badge `3`, `99+` for 128, an unverified row and a long email.
+  - This led to two fixes. The email now truncates on its own, and provider and date stay visible (on a second line on mobile).
+  - Sidebar footer and user-menu role labels now use the Vietnamese product terms (`managedRoleLabel`) instead of raw `admin`/`Admin`.
+  - Gates after these fixes: 524 test files and 3378 tests pass; typecheck passes; lint has 0 errors and the same single warning; knowledge check passes.
 - `prefers-reduced-motion: reduce` was not emulated in the browser.
-- The pending-access-request badge was not observed with real pending data (queue was empty).
 - Capability promotion (`admin-shell`, `manager-assignment-ui`) was applied in the final fix wave on the user's pre-approval of full completion; `docs/changes/index.md` updated at finish.
 - Final fix wave re-ran `npx vitest run tests/pages tests/components tests/utils tests/composables` (243 files, 1440 tests passed), `npm run typecheck` (exit 0), `npm run lint` (0 errors, same single warning) and `npm run knowledge:check` (359 concepts).
 - Unrelated uncommitted contract-handover work in the checkout did not cause any gate failure.

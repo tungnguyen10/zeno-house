@@ -2,6 +2,7 @@
 import clsx from 'clsx'
 import { isNavItemVisible, NAV_ITEMS, NAV_SECTIONS } from '~/utils/constants/navigation'
 import type { NavItem } from '~/utils/constants/navigation'
+import { managedRoleLabel } from '~/utils/users/display'
 
 const _props = withDefaults(defineProps<{
   navItems?: NavItem[]
@@ -205,7 +206,7 @@ function sectionLabelClass() {
         </div>
         <div class="min-w-0 flex-1" :class="sidebarCollapsed && 'lg:hidden'">
           <p class="truncate text-sm font-medium text-ui-primary">{{ displayName }}</p>
-          <p class="truncate text-xs text-ui-muted">{{ authStore.role ?? 'user' }}</p>
+          <p class="truncate text-xs text-ui-muted">{{ managedRoleLabel(authStore.role) }}</p>
         </div>
       </NuxtLink>
       <AppVersionLabel class="mt-2 px-3" :class="sidebarCollapsed && 'lg:hidden'" />

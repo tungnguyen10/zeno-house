@@ -151,11 +151,16 @@ describe('access requests page', () => {
     const first = wrapper.get('[data-request-id="r7"]')
     expect(first.get('[aria-hidden="true"]').text()).toBe('NL')
     expect(first.text()).toContain('Nguyễn Văn Lan')
-    expect(first.text()).toContain('lan@x.com · Google · 02/01/2026')
+    // Long emails truncate alone; provider and date stay visible (own line on mobile).
+    expect(first.get('[title="lan@x.com"]').classes()).toContain('truncate')
+    expect(first.get('[title="lan@x.com"]').text()).toBe('lan@x.com')
+    expect(first.get('[data-request-meta]').classes()).toContain('shrink-0')
+    expect(first.get('[data-request-meta]').text()).toBe('· Google · 02/01/2026')
     const second = wrapper.get('[data-request-id="r8"]')
     expect(second.text()).toContain('Chưa cung cấp tên')
-    expect(second.text()).toContain('mai@x.com · Email ·')
-    expect(wrapper.get('[data-request-id="r9"]').text()).toContain('zed@x.com · Github ·')
+    expect(second.get('[title="mai@x.com"]').exists()).toBe(true)
+    expect(second.get('[data-request-meta]').text()).toMatch(/^· Email · /)
+    expect(wrapper.get('[data-request-id="r9"] [data-request-meta]').text()).toMatch(/^· Github · /)
   })
 
   it('shows skeleton rows while loading and the empty state for an empty queue', async () => {

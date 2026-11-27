@@ -18,6 +18,7 @@ describe('managedRoleLabel', () => {
     expect(managedRoleLabel('owner')).toBe('Chủ nhà')
     expect(managedRoleLabel('manager')).toBe('Quản lý')
     expect(managedRoleLabel('admin')).toBe('Quản trị viên')
+    expect(managedRoleLabel('tenant')).toBe('Người thuê')
     expect(managedRoleLabel(null)).toBe('—')
   })
 })

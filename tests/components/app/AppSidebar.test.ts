@@ -160,4 +160,10 @@ describe('AppSidebar role visibility', () => {
     expect(footer.classes()).toContain('rounded-xl')
     expect(footer.classes()).toContain('border-ui-border')
   })
+
+  it('labels the signed-in role with product terms', () => {
+    expect(mountSidebar('admin').get('[data-sidebar-user]').text()).toContain('Quản trị viên')
+    expect(mountSidebar('owner').get('[data-sidebar-user]').text()).toContain('Chủ nhà')
+    expect(mountSidebar('manager').get('[data-sidebar-user]').text()).toContain('Quản lý')
+  })
 })

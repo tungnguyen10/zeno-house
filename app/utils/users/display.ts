@@ -8,10 +8,11 @@ export function userInitials(name: string | null, email: string | null): string 
   return local.slice(0, 2).toLocaleUpperCase('vi') || '?'
 }
 
-const ROLE_LABELS: Partial<Record<UserRole, string>> = {
+const ROLE_LABELS: Record<UserRole, string> = {
   admin: 'Quản trị viên',
   owner: 'Chủ nhà',
   manager: 'Quản lý',
+  tenant: 'Người thuê',
 }
 
 export function managedRoleLabel(role: UserRole | null): string {

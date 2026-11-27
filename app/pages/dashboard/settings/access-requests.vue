@@ -259,7 +259,10 @@ function formatDate(value: string) {
           </span>
           <div class="min-w-0 flex-1">
             <p class="truncate text-sm font-medium text-ui-primary">{{ row.fullName || 'Chưa cung cấp tên' }}</p>
-            <p class="truncate text-xs text-ui-muted" :title="row.email">{{ row.email }} · {{ providerLabel(row.provider) }} · {{ formatDate(row.createdAt) }}</p>
+            <p class="flex flex-col text-xs text-ui-muted sm:flex-row sm:gap-1">
+              <span class="truncate" :title="row.email">{{ row.email }}</span>
+              <span class="shrink-0" data-request-meta><span class="hidden sm:inline">· </span>{{ providerLabel(row.provider) }} · {{ formatDate(row.createdAt) }}</span>
+            </p>
           </div>
         </div>
         <div class="flex items-center justify-end gap-2 sm:shrink-0">
