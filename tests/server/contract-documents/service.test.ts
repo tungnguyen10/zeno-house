@@ -12,6 +12,8 @@ const gatherContractSources = vi.fn()
 const gatherReadinessSources = vi.fn()
 const collectMissing = vi.fn()
 const renderDocx = vi.fn()
+const getItemRaw = vi.fn()
+const TEMPLATE_KEY = 'contract-templates/hop-dong-thue-phong/v1.docx'
 
 vi.mock('../../../server/repositories/contracts', () => ({ ContractRepository: { findByIdentifier: findContract } }))
 vi.mock('../../../server/repositories/contract-documents', () => ({ ContractDocumentRepository: repo }))
@@ -43,6 +45,8 @@ beforeEach(() => {
     if (cap === 'contract-documents.sign' || cap === 'contract-documents.void') return role === 'owner' || role === 'admin'
     return ['owner', 'admin', 'manager'].includes(role)
   })
+  getItemRaw.mockImplementation(async (key: string) => (key === TEMPLATE_KEY ? Buffer.from('tpl') : null))
+  vi.stubGlobal('useStorage', (base: string) => (base === 'assets:server' ? { getItemRaw } : {}))
   findContract.mockResolvedValue({ id: 'c-1', buildingId: 'b-1' })
   assertBuildingScope.mockResolvedValue(undefined)
   repo.listByContract.mockResolvedValue([])
@@ -102,6 +106,29 @@ describe('ContractDocumentService.issue', () => {
     const { ContractDocumentService } = await import('../../../server/services/contract-documents')
     const res = await ContractDocumentService.issue(ev(), owner, 'c-1', issueInput)
     expect(res.id).toBe('d-1')
+    expect(repo.reserve).not.toHaveBeenCalled()
+  })
+})
+
+describe('ContractDocumentService template loading', () => {
+  it('reads the template from bundled server assets (works on serverless deploys)', async () => {
+    const { ContractDocumentService } = await import('../../../server/services/contract-documents')
+    await ContractDocumentService.issue(ev(), owner, 'c-1', issueInput)
+    expect(getItemRaw).toHaveBeenCalledWith(TEMPLATE_KEY)
+    expect(renderDocx).toHaveBeenCalledWith(Buffer.from('tpl'), { built: true })
+  })
+
+  it('regenerate also reads the template from server assets', async () => {
+    repo.findById.mockResolvedValue(row({ status: 'failed', snapshot: { stored: true } }))
+    const { ContractDocumentService } = await import('../../../server/services/contract-documents')
+    await ContractDocumentService.regenerate(ev(), owner, 'd-1')
+    expect(renderDocx).toHaveBeenCalledWith(Buffer.from('tpl'), { stored: true })
+  })
+
+  it('fails before reserving when the template asset is missing', async () => {
+    getItemRaw.mockResolvedValue(null)
+    const { ContractDocumentService } = await import('../../../server/services/contract-documents')
+    await expect(ContractDocumentService.issue(ev(), owner, 'c-1', issueInput)).rejects.toThrow('CONTRACT_TEMPLATE_MISSING')
     expect(repo.reserve).not.toHaveBeenCalled()
   })
 })
