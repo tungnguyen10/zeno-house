@@ -66,8 +66,18 @@ async function onAvatarSelect(file: File) {
   toast[ok ? 'success' : 'error'](ok ? 'Đã cập nhật ảnh đại diện.' : 'Không thể tải ảnh lên.')
 }
 
+const removingAvatar = ref(false)
+const avatarBusy = computed(() => uploadingAvatar.value || removingAvatar.value)
+
 async function onAvatarRemove() {
-  const ok = await removeAvatar()
+  removingAvatar.value = true
+  let ok = false
+  try {
+    ok = await removeAvatar()
+  }
+  finally {
+    removingAvatar.value = false
+  }
   if (ok) toast.success('Đã xoá ảnh đại diện.')
   else toast.error('Không thể xoá ảnh đại diện.')
 }
@@ -75,7 +85,7 @@ async function onAvatarRemove() {
 const avatarDropZone = ref<HTMLElement | null>(null)
 
 function acceptAvatar(file: File | undefined) {
-  if (!file) return
+  if (!file || avatarBusy.value) return
   if (!userAvatarUploadSchema.safeParse({ mimeType: file.type, size: file.size }).success) {
     toast.error('Ảnh phải là JPEG, PNG hoặc WebP và không quá 2 MB.')
     return
@@ -118,7 +128,7 @@ const { isOverDropZone } = useDropZone(avatarDropZone, { onDrop: files => accept
         ref="avatarDropZone"
         aria-labelledby="avatar-heading"
         class="flex flex-wrap items-center gap-4 rounded-lg border p-4 transition-colors"
-        :class="isOverDropZone ? 'border-ui-accent/60 bg-ui-accent/5' : 'border-ui-border bg-ui-surface'"
+        :class="isOverDropZone && !avatarBusy ? 'border-ui-accent/60 bg-ui-accent/5' : 'border-ui-border bg-ui-surface'"
       >
         <img
           v-if="profile.avatarUrl"
@@ -138,10 +148,10 @@ const { isOverDropZone } = useDropZone(avatarDropZone, { onDrop: files => accept
           <p class="text-xs text-ui-muted">JPEG, PNG hoặc WebP, tối đa 2 MB. Có thể kéo thả ảnh vào đây.</p>
         </div>
         <div class="flex shrink-0 gap-2">
-          <UiButton class="min-h-11 sm:min-h-0" size="sm" variant="secondary" :loading="uploadingAvatar" @click="openAvatarDialog()">
+          <UiButton class="min-h-11 sm:min-h-0" size="sm" variant="secondary" :loading="uploadingAvatar" :disabled="removingAvatar" @click="openAvatarDialog()">
             {{ profile.hasCustomAvatar ? 'Đổi ảnh' : 'Tải ảnh lên' }}
           </UiButton>
-          <UiButton v-if="profile.hasCustomAvatar" class="min-h-11 sm:min-h-0" size="sm" variant="ghost" :disabled="uploadingAvatar" @click="onAvatarRemove">
+          <UiButton v-if="profile.hasCustomAvatar" class="min-h-11 sm:min-h-0" size="sm" variant="ghost" :disabled="avatarBusy" @click="onAvatarRemove">
             Xoá ảnh
           </UiButton>
         </div>

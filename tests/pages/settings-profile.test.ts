@@ -32,6 +32,7 @@ vi.mock('@vueuse/core', async (importOriginal) => {
 const profile = ref({ id: 'u', email: 'me@zeno.test', fullName: 'Tùng Nguyễn Thanh', avatarUrl: null, hasCustomAvatar: true, role: 'admin' })
 const removeAvatar = vi.fn()
 const uploadAvatar = vi.fn()
+const uploadingAvatar = ref(false)
 const toast = { success: vi.fn(), error: vi.fn() }
 
 const stubs = {
@@ -41,7 +42,11 @@ const stubs = {
   UiSurfacePanel: { template: '<div><slot /></div>' },
   UiSection: { template: '<div><slot /></div>' },
   UiInput: true,
-  UiButton: defineComponent({ emits: ['click'], setup: (_, { slots, emit }) => () => h('button', { onClick: () => emit('click') }, slots.default?.()) }),
+  UiButton: defineComponent({
+    props: { disabled: Boolean, loading: Boolean },
+    emits: ['click'],
+    setup: (props, { slots, emit }) => () => h('button', { disabled: props.disabled || props.loading, onClick: () => emit('click') }, slots.default?.()),
+  }),
 }
 
 function file(type: string, size: number): File {
@@ -54,11 +59,12 @@ beforeEach(() => {
   vi.clearAllMocks()
   captured.onChange = null
   captured.onDrop = null
+  uploadingAvatar.value = false
   vi.stubGlobal('useIntersectionObserver', vi.fn())
   vi.stubGlobal('useAppHeaderTitle', () => ref(null))
   vi.stubGlobal('useToast', () => toast)
   vi.stubGlobal('useUserProfile', () => ({
-    profile, status: ref('success'), error: ref(null), refresh: vi.fn(), saving: ref(false), uploadingAvatar: ref(false),
+    profile, status: ref('success'), error: ref(null), refresh: vi.fn(), saving: ref(false), uploadingAvatar,
     fieldErrors: ref({}), updateFullName: vi.fn(), uploadAvatar, removeAvatar,
   }))
 })
@@ -123,6 +129,39 @@ describe('settings profile', () => {
     await flushPromises()
     expect(toast.error).toHaveBeenCalledWith('Ảnh phải là JPEG, PNG hoặc WebP và không quá 2 MB.')
     expect(uploadAvatar).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['dialog', (f: File) => captured.onChange!([f])],
+    ['drop', (f: File) => captured.onDrop!([f])],
+  ])('ignores a %s while an upload is in flight', async (_name, send) => {
+    uploadingAvatar.value = true
+    mount(Page, { global: { stubs } })
+    await flushPromises()
+
+    send(file('image/png', 1024))
+    await flushPromises()
+    expect(uploadAvatar).not.toHaveBeenCalled()
+  })
+
+  it('blocks uploads and disables the buttons while a removal is pending', async () => {
+    let finish!: (ok: boolean) => void
+    removeAvatar.mockReturnValueOnce(new Promise<boolean>((resolve) => { finish = resolve }))
+    const wrapper = mount(Page, { global: { stubs } })
+    await flushPromises()
+
+    const button = (label: string) => wrapper.findAll('button').find(b => b.text() === label)!
+    await button('Xoá ảnh').trigger('click')
+    captured.onDrop!([file('image/png', 1024)])
+    captured.onChange!([file('image/png', 1024)])
+    await flushPromises()
+    expect(uploadAvatar).not.toHaveBeenCalled()
+    expect(button('Đổi ảnh').attributes('disabled')).toBeDefined()
+    expect(button('Xoá ảnh').attributes('disabled')).toBeDefined()
+
+    finish(true)
+    await flushPromises()
+    expect(button('Xoá ảnh').attributes('disabled')).toBeUndefined()
   })
 
   it('ignores an empty drop', async () => {
