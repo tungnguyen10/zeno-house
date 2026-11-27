@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { ref } from 'vue'
 import Page from '~/pages/dashboard/settings/history.vue'
 import type { AuditEvent } from '~/types/audit'
@@ -46,6 +48,16 @@ beforeEach(() => {
       actorEmail: 'tung@zeno.test',
     }),
     event({
+      id: 'evt-3',
+      action: 'room.updated',
+      entityType: 'room',
+      entityLabel: 'Phòng 101',
+      entitySubLabel: 'Tòa B',
+      correlationId: 'corr-12345678',
+      actorName: 'Tùng Nguyễn',
+      actorEmail: 'tung@zeno.test',
+    }),
+    event({
       id: 'evt-2',
       action: 'building_service.updated',
       entityType: 'building_service',
@@ -64,7 +76,7 @@ beforeEach(() => {
     entityType: ref(''),
     buildings: ref([]),
     events,
-    total: ref(2),
+    total: ref(3),
     isLoading: ref(false),
     isLoadingMore: ref(false),
     hasMore: ref(false),
@@ -96,5 +108,37 @@ describe('settings history page rendering', () => {
     await flushPromises()
 
     expect(wrapper.find('[data-badge]').exists()).toBe(false)
+  })
+
+  it('keeps the detail and bulk chip on their own line, not inside the sentence', async () => {
+    const wrapper = mount(Page, { global: { stubs } })
+    await flushPromises()
+    const row = wrapper.findAll('[data-event-row]').find(r => r.text().includes('Phòng 101'))!
+    const sentence = row.get('[data-event-sentence]').text().replace(/\s+/g, ' ')
+    const detail = row.get('[data-event-detail]')
+
+    expect(sentence).toContain('Tùng Nguyễn')
+    expect(sentence).toContain('Phòng 101')
+    expect(sentence).not.toContain('Tòa B')
+    expect(sentence).not.toContain('hàng loạt')
+    expect(detail.text()).toContain('Tòa B')
+    expect(detail.text()).toContain('hàng loạt')
+    expect(detail.classes()).toEqual(expect.arrayContaining(['mt-0.5', 'text-xs', 'text-ui-muted']))
+  })
+
+  it('omits the detail line when an event has no detail', async () => {
+    const wrapper = mount(Page, { global: { stubs } })
+    await flushPromises()
+    const row = wrapper.findAll('[data-event-row]').find(r => r.text().includes('Quỹ tòa A'))!
+
+    expect(row.find('[data-event-detail]').exists()).toBe(false)
+  })
+
+  it('stacks the filters in two columns below sm and makes refresh icon-only', () => {
+    const src = readFileSync(resolve('app/pages/dashboard/settings/history.vue'), 'utf8')
+
+    expect(src).toContain('grid grid-cols-2 gap-2')
+    expect(src).toContain('aria-label="Làm mới"')
+    expect(src).toContain('<span class="hidden sm:inline">Làm mới</span>')
   })
 })

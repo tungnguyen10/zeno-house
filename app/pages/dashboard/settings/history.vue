@@ -138,37 +138,39 @@ function clearFilters() {
       <div ref="titleSentinel" aria-hidden="true" />
     </UiPageHeader>
 
-    <!-- Toolbar -->
-    <UiToolbar>
-      <UiSelect
-        v-model="buildingId"
-        :options="buildingOptions"
-        aria-label="Lọc lịch sử theo tòa nhà"
-        class="min-w-48"
-      />
-      <UiSelect
-        v-model="entityType"
-        :options="entityTypeOptions"
-        aria-label="Lọc lịch sử theo loại dữ liệu"
-        class="min-w-44"
-      />
-      <UiFilterResetButton v-if="hasActiveFilters" label="Xoá lọc" @click="clearFilters" />
-      <span v-if="!isLoading" class="text-xs text-ui-muted">
-        {{ events.length }} / {{ total }} sự kiện
-      </span>
-
-      <template #actions>
+    <!-- Toolbar: selects share a row below sm; count/reset/refresh sit on the next line -->
+    <div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
+      <div class="grid grid-cols-2 gap-2 sm:contents">
+        <UiSelect
+          v-model="buildingId"
+          :options="buildingOptions"
+          aria-label="Lọc lịch sử theo tòa nhà"
+          class="w-full min-w-0 sm:w-auto sm:min-w-48"
+        />
+        <UiSelect
+          v-model="entityType"
+          :options="entityTypeOptions"
+          aria-label="Lọc lịch sử theo loại dữ liệu"
+          class="w-full min-w-0 sm:w-auto sm:min-w-44"
+        />
+      </div>
+      <div class="flex min-w-0 items-center gap-2 sm:contents">
+        <UiFilterResetButton v-if="hasActiveFilters" label="Xoá lọc" @click="clearFilters" />
+        <span v-if="!isLoading" class="text-xs text-ui-muted">
+          {{ events.length }} / {{ total }} sự kiện
+        </span>
         <UiButton
           unstyled
-          class="inline-flex items-center gap-1.5 rounded-md border border-ui-border px-3 py-2 text-sm text-ui-muted transition-colors hover:bg-ui-hover hover:text-ui-primary"
+          aria-label="Làm mới"
+          class="ml-auto inline-flex min-h-11 min-w-11 items-center justify-center gap-1.5 rounded-md border border-ui-border px-3 py-2 text-sm text-ui-muted transition-colors hover:bg-ui-hover hover:text-ui-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-border-strong sm:min-h-0 sm:min-w-0"
           :class="{ 'opacity-50 pointer-events-none': isLoading }"
           @click="refresh()"
         >
           <IconRefresh class="h-4 w-4" :class="{ 'animate-spin': isLoading }" aria-hidden="true" />
-          Làm mới
+          <span class="hidden sm:inline">Làm mới</span>
         </UiButton>
-      </template>
-    </UiToolbar>
+      </div>
+    </div>
 
     <!-- Loading skeleton -->
     <div v-if="isLoading" class="space-y-2">
@@ -213,6 +215,7 @@ function clearFilters() {
           <div
             v-for="event in group.events"
             :key="event.id"
+            data-event-row
             class="border-b border-ui-border last:border-b-0"
           >
             <!-- Main row -->
@@ -236,13 +239,23 @@ function clearFilters() {
               </span>
 
               <!-- Content -->
-              <div class="min-w-0 flex-1 space-y-1">
-                <p class="text-sm text-ui-primary">
+              <div class="min-w-0 flex-1">
+                <p data-event-sentence class="text-sm text-ui-primary">
                   <span :class="{ italic: actorDisplay(event).isSystem }" class="font-medium" :title="actorDisplay(event).secondary ?? undefined">{{ actorDisplay(event).primary }}</span>
                   <span class="text-ui-muted">{{ ' ' }}{{ auditEventSentence(event).verb }}<template v-if="auditEventSentence(event).entityNoun">{{ ' ' }}{{ auditEventSentence(event).entityNoun }}</template></span>
                   <span v-if="auditEventSentence(event).subject" class="font-semibold">{{ ' ' }}{{ auditEventSentence(event).subject }}</span>
-                  <span v-if="auditEventSentence(event).detail" class="text-xs text-ui-muted">{{ ' · ' }}{{ auditEventSentence(event).detail }}</span>
-                  <span v-if="event.correlationId" class="ml-1 rounded-full bg-ui-surface px-1.5 py-0.5 text-[10px] font-medium text-ui-muted">hàng loạt</span>
+                </p>
+                <p
+                  v-if="auditEventSentence(event).detail || event.correlationId"
+                  data-event-detail
+                  class="mt-0.5 text-xs text-ui-muted"
+                >
+                  <span v-if="auditEventSentence(event).detail">{{ auditEventSentence(event).detail }}</span>
+                  <span
+                    v-if="event.correlationId"
+                    class="rounded-full bg-ui-surface px-1.5 py-0.5 text-[10px] font-medium"
+                    :class="{ 'ml-1.5': auditEventSentence(event).detail }"
+                  >hàng loạt</span>
                 </p>
               </div>
 

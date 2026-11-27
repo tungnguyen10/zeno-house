@@ -124,38 +124,38 @@ const { isOverDropZone } = useDropZone(avatarDropZone, { onDrop: files => accept
     </UiAlert>
 
     <template v-else>
-      <section
-        ref="avatarDropZone"
-        aria-labelledby="avatar-heading"
-        class="flex flex-wrap items-center gap-4 rounded-lg border p-4 transition-colors"
-        :class="isOverDropZone && !avatarBusy ? 'border-ui-accent/60 bg-ui-accent/5' : 'border-ui-border bg-ui-surface'"
-      >
-        <img
-          v-if="profile.avatarUrl"
-          :src="profile.avatarUrl"
-          alt="Ảnh đại diện hiện tại"
-          class="h-14 w-14 shrink-0 rounded-full object-cover"
-        >
-        <span
-          v-else
-          class="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-ui-accent/20 text-lg font-semibold text-ui-accent"
-          aria-hidden="true"
-        >
-          {{ userInitials(profile.fullName, profile.email) }}
-        </span>
-        <div class="min-w-0 flex-1 basis-40">
-          <h2 id="avatar-heading" class="text-sm font-medium text-ui-primary">Ảnh đại diện</h2>
-          <p class="text-xs text-ui-muted">JPEG, PNG hoặc WebP, tối đa 2 MB. Có thể kéo thả ảnh vào đây.</p>
-        </div>
-        <div class="flex shrink-0 gap-2">
-          <UiButton class="min-h-11 sm:min-h-0" size="sm" variant="secondary" :loading="uploadingAvatar" :disabled="removingAvatar" @click="openAvatarDialog()">
-            {{ profile.hasCustomAvatar ? 'Đổi ảnh' : 'Tải ảnh lên' }}
-          </UiButton>
-          <UiButton v-if="profile.hasCustomAvatar" class="min-h-11 sm:min-h-0" size="sm" variant="ghost" :disabled="avatarBusy" @click="onAvatarRemove">
-            Xoá ảnh
-          </UiButton>
-        </div>
-      </section>
+      <UiSurfacePanel class="space-y-4">
+        <UiSection title="Ảnh đại diện">
+          <div
+            ref="avatarDropZone"
+            class="flex flex-wrap items-center gap-4 rounded-lg p-2 -m-2 transition-colors"
+            :class="isOverDropZone && !avatarBusy ? 'bg-ui-accent/5 ring-1 ring-ui-accent/60' : ''"
+          >
+            <img
+              v-if="profile.avatarUrl"
+              :src="profile.avatarUrl"
+              alt="Ảnh đại diện hiện tại"
+              class="h-14 w-14 shrink-0 rounded-full object-cover"
+            >
+            <span
+              v-else
+              class="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-ui-accent/20 text-lg font-semibold text-ui-accent"
+              aria-hidden="true"
+            >
+              {{ userInitials(profile.fullName, profile.email) }}
+            </span>
+            <p class="min-w-0 flex-1 basis-40 text-xs text-ui-muted">JPEG, PNG hoặc WebP, tối đa 2 MB. Có thể kéo thả ảnh vào đây.</p>
+            <div class="flex shrink-0 gap-2">
+              <UiButton class="min-h-11 sm:min-h-0" size="sm" variant="secondary" :loading="uploadingAvatar" :disabled="removingAvatar" @click="openAvatarDialog()">
+                {{ profile.hasCustomAvatar ? 'Đổi ảnh' : 'Tải ảnh lên' }}
+              </UiButton>
+              <UiButton v-if="profile.hasCustomAvatar" class="min-h-11 sm:min-h-0" size="sm" variant="ghost" :disabled="avatarBusy" @click="onAvatarRemove">
+                Xoá ảnh
+              </UiButton>
+            </div>
+          </div>
+        </UiSection>
+      </UiSurfacePanel>
 
       <UiSurfacePanel class="space-y-4">
         <UiSection title="Thông tin cá nhân">

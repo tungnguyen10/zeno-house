@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import { defineComponent, h, ref } from 'vue'
 import Page from '~/pages/dashboard/settings/profile.vue'
+import UiSection from '~/components/ui/UiSection.vue'
+import UiSurfacePanel from '~/components/ui/UiSurfacePanel.vue'
 
 const captured = vi.hoisted(() => ({
   onChange: null as null | ((files: File[] | null) => void),
@@ -70,6 +72,19 @@ beforeEach(() => {
 })
 
 describe('settings profile', () => {
+  it('titles the avatar and personal-info sections with the same panel chrome', async () => {
+    const wrapper = mount(Page, { global: { stubs: { ...stubs, UiSurfacePanel, UiSection } } })
+    await flushPromises()
+
+    const headings = wrapper.findAll('h2')
+    expect(headings.map(h => h.text())).toEqual(['Ảnh đại diện', 'Thông tin cá nhân'])
+    expect(headings[0]!.classes()).toEqual(headings[1]!.classes())
+    const panels = headings.map(h => h.element.closest('.rounded-xl'))
+    expect(panels[0]).not.toBeNull()
+    expect(panels[0]!.className).toBe(panels[1]!.className)
+    expect(panels[0]).not.toBe(panels[1])
+  })
+
   it('uses shared initials for the fallback avatar', async () => {
     const previous = profile.value
     profile.value = { ...previous, fullName: 'Tùng Nguyễn Thanh', avatarUrl: null, hasCustomAvatar: false }
