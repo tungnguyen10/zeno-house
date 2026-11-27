@@ -70,6 +70,19 @@ beforeEach(() => {
 })
 
 describe('settings profile', () => {
+  it('uses shared initials for the fallback avatar', async () => {
+    const previous = profile.value
+    profile.value = { ...previous, fullName: 'Tùng Nguyễn Thanh', avatarUrl: null, hasCustomAvatar: false }
+    const wrapper = mount(Page, { global: { stubs } })
+    await flushPromises()
+
+    try {
+      expect(wrapper.get('span[aria-hidden="true"]').text()).toBe('TT')
+    }
+    finally {
+      profile.value = previous
+    }
+  })
   it('shows email and role as read-only text, not disabled inputs', async () => {
     const wrapper = mount(Page, { global: { stubs } })
     await flushPromises()

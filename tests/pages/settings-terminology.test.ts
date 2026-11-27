@@ -19,6 +19,6 @@ const SETTINGS_FILES = [
 
 describe('settings terminology', () => {
   it.each(SETTINGS_FILES)('%s uses xoá, khoá, huỷ and tòa nhà', (file) => {
-    expect(readFileSync(resolve(file), 'utf8')).not.toMatch(/[Xx]óa|[Kk]hóa|[Hh]ủy|[Tt]oà nhà/)
+    expect(readFileSync(resolve(file), 'utf8')).not.toMatch(/[Xx]óa|[Kk]hóa|[Hh]ủy|[Tt]oà nhà|[Hh]óa đơn|hiệu hóa/)
   })
 })

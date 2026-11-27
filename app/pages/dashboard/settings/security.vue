@@ -104,7 +104,7 @@ async function onSubmit() {
           :error="visibleError('password_confirmation')"
           @blur="touchField('password_confirmation')"
         />
-        <UiButton type="submit" :loading="saving" :disabled="!canSubmit">
+        <UiButton type="submit" class="min-h-11 sm:min-h-0" :loading="saving" :disabled="!canSubmit">
           Đổi mật khẩu
         </UiButton>
       </form>

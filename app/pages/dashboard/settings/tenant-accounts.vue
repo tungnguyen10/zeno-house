@@ -241,14 +241,14 @@ async function confirmRevoke() {
 
 const revokeMessage = computed(() =>
   revokeTarget.value
-    ? `Gỡ quyền truy cập portal của ${revokeTarget.value.tenantName}? Quyền truy cập sẽ bị chặn trước. Hệ thống sẽ xoá tài khoản Auth nếu an toàn; nếu còn dữ liệu tham chiếu, tài khoản sẽ được vô hiệu hóa để bảo toàn lịch sử.`
+    ? `Gỡ quyền truy cập portal của ${revokeTarget.value.tenantName}? Quyền truy cập sẽ bị chặn trước. Hệ thống sẽ xoá tài khoản Auth nếu an toàn; nếu còn dữ liệu tham chiếu, tài khoản sẽ được vô hiệu hoá để bảo toàn lịch sử.`
     : '',
 )
 
 function removalMessage(outcome: TenantAccountRemovalOutcome): string {
   return outcome === 'deleted'
     ? 'Đã xoá tài khoản Auth và giải phóng email.'
-    : 'Đã vô hiệu hóa tài khoản và gỡ liên kết portal; dữ liệu lịch sử được giữ lại.'
+    : 'Đã vô hiệu hoá tài khoản và gỡ liên kết portal; dữ liệu lịch sử được giữ lại.'
 }
 
 const orphanTarget = ref<TenantAccountOrphan | null>(null)
@@ -286,7 +286,7 @@ onMounted(() => {
     >
       <div ref="titleSentinel" aria-hidden="true" />
       <template #actions>
-        <UiButton variant="primary" @click="openProvision">
+        <UiButton variant="primary" class="min-h-11 sm:min-h-0" @click="openProvision">
           <IconPlus class="h-4 w-4" aria-hidden="true" />
           Cấp tài khoản
         </UiButton>
@@ -299,7 +299,7 @@ onMounted(() => {
       placeholder="Tìm theo tên, mã hoặc email"
       aria-label="Tìm tài khoản người thuê"
       density="normal"
-      class="mb-4 sm:max-w-sm"
+      class="mb-4 sm:max-w-sm [&_input]:min-h-11 sm:[&_input]:min-h-0"
     />
 
     <UiAlert v-if="error" severity="danger" title="Không tải được danh sách">
@@ -352,13 +352,13 @@ onMounted(() => {
     <section v-if="canReconcileOrphans" class="mt-8 space-y-3" aria-label="Tài khoản Auth mồ côi">
       <UiAlert v-if="orphansError" severity="danger" title="Không thể kiểm tra tài khoản mồ côi">
         <p>{{ getApiErrorMessage(orphansError, 'Hãy thử lại sau.') }}</p>
-        <UiButton class="mt-2" variant="secondary" size="sm" :loading="orphansLoading" @click="loadOrphans">Kiểm tra lại</UiButton>
+        <UiButton class="mt-2 min-h-11 sm:min-h-0" variant="secondary" size="sm" :loading="orphansLoading" @click="loadOrphans">Kiểm tra lại</UiButton>
       </UiAlert>
       <UiSkeleton v-else-if="orphansLoading && orphans.length === 0" class="h-12 w-full" />
       <div v-else-if="orphans.length === 0" class="flex items-center gap-3 rounded-lg border border-ui-border px-4 py-3">
         <IconCheckCircle class="h-4 w-4 shrink-0 text-status-success" aria-hidden="true" />
         <p class="min-w-0 flex-1 text-sm text-ui-muted">Không có tài khoản Auth mồ côi</p>
-        <UiButton variant="secondary" size="sm" :loading="orphansLoading" @click="loadOrphans">Kiểm tra lại</UiButton>
+        <UiButton class="min-h-11 sm:min-h-0" variant="secondary" size="sm" :loading="orphansLoading" @click="loadOrphans">Kiểm tra lại</UiButton>
       </div>
       <template v-else>
         <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
@@ -366,7 +366,7 @@ onMounted(() => {
             <h2 class="text-sm font-semibold text-ui-primary">{{ orphans.length }} tài khoản Auth mồ côi</h2>
             <p class="mt-1 text-sm text-ui-muted">Tài khoản mang vai trò người thuê nhưng không còn liên kết tới hồ sơ người thuê.</p>
           </div>
-          <UiButton variant="secondary" size="sm" :loading="orphansLoading" @click="loadOrphans">Kiểm tra lại</UiButton>
+          <UiButton class="min-h-11 sm:min-h-0" variant="secondary" size="sm" :loading="orphansLoading" @click="loadOrphans">Kiểm tra lại</UiButton>
         </div>
         <div class="-mx-4 space-y-2 sm:mx-0">
         <article
@@ -384,7 +384,7 @@ onMounted(() => {
               <span v-if="orphan.lastSignInAt"> · Đăng nhập gần nhất {{ new Date(orphan.lastSignInAt).toLocaleDateString('vi-VN') }}</span>
             </p>
           </div>
-          <UiButton variant="danger" size="sm" @click="orphanTarget = orphan">Xử lý tài khoản</UiButton>
+          <UiButton class="min-h-11 sm:min-h-0" variant="danger" size="sm" @click="orphanTarget = orphan">Xử lý tài khoản</UiButton>
         </article>
         </div>
       </template>
@@ -439,8 +439,9 @@ onMounted(() => {
       </div>
 
       <template #footer>
-        <UiButton variant="secondary" @click="provisionOpen = false">Huỷ</UiButton>
+        <UiButton class="min-h-11 sm:min-h-0" variant="secondary" @click="provisionOpen = false">Huỷ</UiButton>
         <UiButton
+          class="min-h-11 sm:min-h-0"
           variant="primary"
           :loading="provisionBusy"
           :disabled="!selectedTenant || selectedTenant.accessLevel === 'basic' || provisionBusy"
@@ -463,19 +464,19 @@ onMounted(() => {
               <p class="text-xs text-ui-muted">Email</p>
               <p class="truncate text-sm text-ui-primary">{{ credentials.email }}</p>
             </div>
-            <UiButton variant="secondary" size="sm" @click="copyText(credentials.email)">Sao chép</UiButton>
+            <UiButton class="min-h-11 sm:min-h-0" variant="secondary" size="sm" @click="copyText(credentials.email)">Sao chép</UiButton>
           </div>
           <div class="flex items-center justify-between gap-2 px-3 py-2">
             <div class="min-w-0">
               <p class="text-xs text-ui-muted">Mật khẩu tạm</p>
               <p class="truncate font-mono text-sm text-ui-primary">{{ credentials.tempPassword }}</p>
             </div>
-            <UiButton variant="secondary" size="sm" @click="copyText(credentials.tempPassword)">Sao chép</UiButton>
+            <UiButton class="min-h-11 sm:min-h-0" variant="secondary" size="sm" @click="copyText(credentials.tempPassword)">Sao chép</UiButton>
           </div>
         </div>
       </div>
       <template #footer>
-        <UiButton variant="primary" @click="closeCredentials">Đã hiểu</UiButton>
+        <UiButton class="min-h-11 sm:min-h-0" variant="primary" @click="closeCredentials">Đã hiểu</UiButton>
       </template>
     </UiModal>
 
@@ -505,7 +506,7 @@ onMounted(() => {
       :open="orphanTarget !== null"
       title="Xử lý tài khoản Auth mồ côi"
       :message="orphanTarget
-        ? `Xử lý ${orphanTarget.email ?? 'tài khoản không có email'}? Hệ thống sẽ xoá Auth user nếu an toàn; nếu còn tham chiếu lịch sử, tài khoản sẽ được vô hiệu hóa.`
+        ? `Xử lý ${orphanTarget.email ?? 'tài khoản không có email'}? Hệ thống sẽ xoá Auth user nếu an toàn; nếu còn tham chiếu lịch sử, tài khoản sẽ được vô hiệu hoá.`
         : ''"
       confirm-label="Xử lý tài khoản"
       :loading="orphanBusy"

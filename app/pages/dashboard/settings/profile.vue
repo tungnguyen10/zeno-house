@@ -2,7 +2,7 @@
 import { useDropZone, useFileDialog } from '@vueuse/core'
 import { getApiErrorMessage } from '~/utils/api-error'
 import { userAvatarUploadSchema } from '~/utils/validators/users'
-import { managedRoleLabel } from '~/utils/users/display'
+import { managedRoleLabel, userInitials } from '~/utils/users/display'
 
 // Mobile large-title collapse: fades into the persistent app header once scrolled past.
 const titleSentinel = ref<HTMLElement | null>(null)
@@ -120,7 +120,7 @@ const { isOverDropZone } = useDropZone(avatarDropZone, { onDrop: files => accept
 
     <UiAlert v-else-if="error || !profile" severity="danger" title="Không thể tải hồ sơ">
       <p>{{ getApiErrorMessage(error, 'Hãy tải lại trang và thử lại.') }}</p>
-      <UiButton class="mt-2" size="sm" variant="secondary" @click="refresh()">Thử lại</UiButton>
+      <UiButton class="mt-2 min-h-11 sm:min-h-0" size="sm" variant="secondary" @click="refresh()">Thử lại</UiButton>
     </UiAlert>
 
     <template v-else>
@@ -141,7 +141,7 @@ const { isOverDropZone } = useDropZone(avatarDropZone, { onDrop: files => accept
           class="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-ui-accent/20 text-lg font-semibold text-ui-accent"
           aria-hidden="true"
         >
-          {{ (profile.fullName ?? profile.email ?? 'U').charAt(0).toUpperCase() }}
+          {{ userInitials(profile.fullName, profile.email) }}
         </span>
         <div class="min-w-0 flex-1 basis-40">
           <h2 id="avatar-heading" class="text-sm font-medium text-ui-primary">Ảnh đại diện</h2>
@@ -171,7 +171,7 @@ const { isOverDropZone } = useDropZone(avatarDropZone, { onDrop: files => accept
               <UiDefinitionItem label="Email" :value="profile.email" />
               <UiDefinitionItem label="Vai trò" :value="roleLabel" />
             </UiDefinitionList>
-            <UiButton type="submit" :loading="saving" :disabled="!dirty">
+            <UiButton type="submit" class="min-h-11 sm:min-h-0" :loading="saving" :disabled="!dirty">
               Lưu thay đổi
             </UiButton>
           </form>

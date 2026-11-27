@@ -39,7 +39,7 @@ const buildings = computed(() => data.value?.data ?? [])
 
     <UiAlert v-if="error" severity="danger" title="Không tải được danh sách tòa nhà">
       <p>{{ getApiErrorMessage(error, 'Hãy thử lại sau.') }}</p>
-      <UiButton class="mt-2" size="sm" variant="secondary" @click="refresh()">Thử lại</UiButton>
+      <UiButton class="mt-2 min-h-11 sm:min-h-0" size="sm" variant="secondary" @click="refresh()">Thử lại</UiButton>
     </UiAlert>
 
     <div v-else-if="status === 'pending'" class="space-y-2">
