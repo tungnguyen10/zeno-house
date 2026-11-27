@@ -11,8 +11,9 @@ const props = withDefaults(defineProps<{
   disabled?: boolean
   id?: string
   labelClass?: string
-  /** Extra classes for the clickable row (`<label>`), e.g. a touch-size min height. */
-  rowClass?: string  /** Render a partial / mixed state (e.g. "select all" header with some rows selected). */
+  /** Extra classes for the clickable label row (e.g. touch-size min height). */
+  rowClass?: string
+  /** Render a partial / mixed state (e.g. "select all" header with some rows selected). */
   indeterminate?: boolean
   /** Accessible label when no visible `label` is rendered. */
   ariaLabel?: string
