@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import type { UiTableColumn } from '~/components/ui/UiTable.vue'
+import type { UiTabItem } from '~/components/ui/UiTabs.vue'
 import type { ApiSuccess } from '~/types/api'
 import type { AccessRequest, AccessRequestStatus, ApprovableRole } from '~/types/access-requests'
 import type { Building } from '~/types/buildings'
 import type { Tenant } from '~/types/tenants'
 import type { TenantAccountListItem } from '~/types/tenant-accounts'
 import { getApiErrorMessage } from '~/utils/api-error'
+import { userInitials } from '~/utils/users/display'
 
 definePageMeta({
   middleware: () => {
@@ -21,7 +22,7 @@ useIntersectionObserver(titleSentinel, ([entry]) => {
   isTitleCollapsed.value = !!entry && !entry.isIntersecting
 })
 const headerTitle = useAppHeaderTitle()
-const compactTitle = computed(() => (isTitleCollapsed.value ? 'Yêu cầu tài khoản' : null))
+const compactTitle = computed(() => (isTitleCollapsed.value ? 'Yêu cầu truy cập' : null))
 watchEffect(() => {
   headerTitle.value = compactTitle.value
 })
@@ -48,23 +49,22 @@ const linkedTenantIds = computed(() => new Set((tenantAccountsData.value?.data ?
 const tenants = computed(() => tenantOptions.value.filter(tenant =>
   !linkedTenantIds.value.has(tenant.id) || tenant.id === selectedRequest.value?.decisionTenantId,
 ))
-const columns: UiTableColumn<AccessRequest>[] = [
-  { key: 'identity', label: 'Tài khoản' },
-  { key: 'provider', label: 'Nguồn', hideOnMobile: true },
-  { key: 'createdAt', label: 'Ngày gửi', hideOnMobile: true },
-  { key: 'status', label: 'Trạng thái' },
-  { key: 'actions', action: true, width: 'w-40' },
-]
 const statusOptions = [
   { value: 'pending', label: 'Chờ duyệt' },
   { value: 'processing', label: 'Cần tiếp tục' },
   { value: 'approved', label: 'Đã duyệt' },
   { value: 'rejected', label: 'Đã từ chối' },
 ]
+const pendingCount = useAccessRequestPendingCount(true)
+const statusTabs = computed<UiTabItem[]>(() => statusOptions.map(option => ({
+  key: option.value,
+  label: option.label,
+  count: option.value === 'pending' && pendingCount.value ? pendingCount.value : undefined,
+})))
 const roleOptions = [
-  { value: 'owner', label: 'Owner' },
-  { value: 'manager', label: 'Manager' },
-  { value: 'tenant', label: 'Tenant' },
+  { value: 'owner', label: 'Chủ nhà' },
+  { value: 'manager', label: 'Quản lý' },
+  { value: 'tenant', label: 'Người thuê' },
 ]
 
 const approvalOpen = ref(false)
@@ -190,57 +190,92 @@ async function submitRejection() {
   }
 }
 
-function statusLabel(status: AccessRequestStatus) {
-  return statusOptions.find(option => option.value === status)?.label ?? status
+function roleLabel(role: string | null | undefined) {
+  return roleOptions.find(option => option.value === role)?.label ?? '—'
+}
+
+function providerLabel(provider: string) {
+  if (provider === 'google') return 'Google'
+  if (provider === 'email' || provider === 'password') return 'Email'
+  return provider.charAt(0).toLocaleUpperCase('vi') + provider.slice(1)
+}
+
+function formatDate(value: string) {
+  return new Date(value).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 </script>
 
 <template>
   <div class="space-y-6">
-    <AppSettingsSubNav />
-
     <UiPageHeader
-      title="Yêu cầu tài khoản"
-      description="Duyệt danh tính mới và gán đúng vai trò, phạm vi trước khi họ vào hệ thống."
+      title="Yêu cầu truy cập"
+      description="Duyệt danh tính mới, gán vai trò và phạm vi trước khi họ vào hệ thống."
+      back-to="/dashboard/settings"
+      :back-link="false"
+      :reserve-global-actions="false"
     >
       <div ref="titleSentinel" aria-hidden="true" />
-      <template #actions>
-        <UiSelect v-model="selectedStatus" class="w-full sm:w-48" label="Trạng thái" :options="statusOptions" />
-      </template>
     </UiPageHeader>
+
+    <UiTabs
+      class="mb-4"
+      :model-value="selectedStatus"
+      :tabs="statusTabs"
+      variant="segmented"
+      @update:model-value="selectedStatus = $event as AccessRequestStatus"
+    />
 
     <UiAlert v-if="listError" severity="danger" title="Không thể tải hàng đợi">
       {{ getApiErrorMessage(listError, 'Hãy tải lại trang và thử lại.') }}
     </UiAlert>
 
-    <UiTable
-      :rows="requests"
-      :columns="columns"
-      :loading="isLoading"
-      caption="Danh sách yêu cầu truy cập"
-      empty-title="Không có yêu cầu"
-      empty-description="Hàng đợi ở trạng thái này đang trống."
+    <div v-else-if="isLoading" class="space-y-2" aria-busy="true">
+      <UiSkeleton v-for="i in 3" :key="i" class="h-16 w-full" />
+    </div>
+
+    <UiEmptyState
+      v-else-if="requests.length === 0"
+      title="Không có yêu cầu"
+      description="Hàng đợi ở trạng thái này đang trống."
+    />
+
+    <ul
+      v-else
+      role="list"
+      class="-mx-4 divide-y divide-ui-border border-y border-ui-border bg-ui-surface sm:mx-0 sm:overflow-hidden sm:rounded-lg sm:border"
     >
-      <template #cell-identity="{ row }">
-        <div class="min-w-0">
-          <p class="truncate font-medium text-ui-primary">{{ row.fullName || 'Chưa cung cấp tên' }}</p>
-          <p class="max-w-56 truncate text-xs text-ui-muted" :title="row.email">{{ row.email }}</p>
-          <p v-if="!row.emailVerified" class="mt-1 text-xs text-status-warning">Email chưa xác minh</p>
+      <li
+        v-for="row in requests"
+        :key="row.id"
+        :data-request-id="row.id"
+        class="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center"
+      >
+        <div class="flex min-w-0 flex-1 items-center gap-3">
+          <span
+            class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-ui-accent/15 text-xs font-semibold text-ui-accent"
+            aria-hidden="true"
+          >
+            {{ userInitials(row.fullName, row.email) }}
+          </span>
+          <div class="min-w-0 flex-1">
+            <p class="truncate text-sm font-medium text-ui-primary">{{ row.fullName || 'Chưa cung cấp tên' }}</p>
+            <p class="flex flex-col text-xs text-ui-muted sm:flex-row sm:gap-1">
+              <span class="truncate" :title="row.email">{{ row.email }}</span>
+              <span class="shrink-0" data-request-meta><span class="hidden sm:inline">· </span>{{ providerLabel(row.provider) }} · {{ formatDate(row.createdAt) }}</span>
+            </p>
+          </div>
         </div>
-      </template>
-      <template #cell-provider="{ row }"><span class="capitalize text-ui-muted">{{ row.provider }}</span></template>
-      <template #cell-createdAt="{ row }"><span class="text-ui-muted">{{ new Date(row.createdAt).toLocaleDateString('vi-VN') }}</span></template>
-      <template #cell-status="{ row }">
-        <span class="rounded-full border border-ui-border bg-ui-chrome px-2 py-1 text-xs text-ui-muted">{{ statusLabel(row.status) }}</span>
-      </template>
-      <template #cell-actions="{ row }">
-        <div v-if="row.status === 'pending' || row.status === 'processing'" class="flex justify-end gap-2">
-          <UiButton v-if="row.status === 'pending'" size="sm" variant="ghost" @click="openRejection(row)">Từ chối</UiButton>
-          <UiButton size="sm" :disabled="!row.emailVerified" @click="openApproval(row)">{{ row.status === 'processing' ? 'Tiếp tục' : 'Duyệt' }}</UiButton>
+        <div class="flex items-center justify-end gap-2 sm:shrink-0">
+          <template v-if="row.status === 'pending' || row.status === 'processing'">
+            <UiButton v-if="row.status === 'pending'" class="min-h-11 sm:min-h-0" size="sm" variant="ghost" :aria-label="`Từ chối yêu cầu của ${row.fullName || row.email}`" @click="openRejection(row)">Từ chối</UiButton>
+            <UiBadge v-if="!row.emailVerified" variant="warning">Chưa xác minh email</UiBadge>
+            <UiButton v-else class="min-h-11 sm:min-h-0" size="sm" :aria-label="`${row.status === 'processing' ? 'Tiếp tục duyệt' : 'Duyệt'} yêu cầu của ${row.fullName || row.email}`" @click="openApproval(row)">{{ row.status === 'processing' ? 'Tiếp tục' : 'Duyệt' }}</UiButton>
+          </template>
+          <UiBadge v-else-if="row.status === 'approved'" variant="neutral">{{ roleLabel(row.decisionRole) }}</UiBadge>
+          <span v-else class="text-xs text-ui-muted">Đã từ chối</span>
         </div>
-        <span v-else class="block text-right text-xs text-ui-muted">{{ row.decisionRole || '—' }}</span>
-      </template>
-    </UiTable>
+      </li>
+    </ul>
 
     <UiModal :open="approvalOpen" title="Duyệt yêu cầu truy cập" size="md" @close="approvalOpen = false">
       <div class="space-y-5">
@@ -275,8 +310,8 @@ function statusLabel(status: AccessRequestStatus) {
         <UiAlert v-if="formError" severity="danger" role="alert">{{ formError }}</UiAlert>
       </div>
       <template #footer>
-        <UiButton variant="ghost" :disabled="busy" @click="approvalOpen = false">Hủy</UiButton>
-        <UiButton :loading="busy" @click="submitApproval">Duyệt và cấp quyền</UiButton>
+        <UiButton class="min-h-11 sm:min-h-0" variant="ghost" :disabled="busy" @click="approvalOpen = false">Huỷ</UiButton>
+        <UiButton class="min-h-11 sm:min-h-0" :loading="busy" @click="submitApproval">Duyệt và cấp quyền</UiButton>
       </template>
     </UiModal>
 
@@ -286,8 +321,8 @@ function statusLabel(status: AccessRequestStatus) {
         <UiAlert v-if="formError" severity="danger" role="alert">{{ formError }}</UiAlert>
       </div>
       <template #footer>
-        <UiButton variant="ghost" :disabled="busy" @click="rejectionOpen = false">Hủy</UiButton>
-        <UiButton variant="danger" :loading="busy" @click="submitRejection">Xác nhận từ chối</UiButton>
+        <UiButton class="min-h-11 sm:min-h-0" variant="ghost" :disabled="busy" @click="rejectionOpen = false">Huỷ</UiButton>
+        <UiButton class="min-h-11 sm:min-h-0" variant="danger" :loading="busy" @click="submitRejection">Xác nhận từ chối</UiButton>
       </template>
     </UiModal>
   </div>

@@ -85,24 +85,26 @@ describe('AppSidebar role visibility', () => {
       '/dashboard/shared-expenses',
       '/dashboard/operations-report',
     ])
-    expect(hrefsIn('administration')).toEqual(['/dashboard/settings/managers'])
+    expect(hrefsIn('administration')).toEqual(['/dashboard/settings'])
     expect(wrapper.get('[data-nav-section="primary"]').find('[data-nav-section-label]').exists()).toBe(false)
     expect(wrapper.get('[data-nav-section="administration"]').find('[data-nav-section-label]').exists()).toBe(false)
     expect(wrapper.text()).toContain('Tài sản & cho thuê')
     expect(wrapper.text()).toContain('Tài chính & vận hành')
-    expect(wrapper.text()).toContain('Quản trị')
+    expect(wrapper.text()).toContain('Cài đặt')
   })
 
-  it('shows the single administration entry to owner', () => {
+  it('shows the single settings entry to owner', () => {
     const wrapper = mountSidebar('owner')
     const administration = wrapper.get('[data-nav-section="administration"]')
 
-    expect(administration.text()).toContain('Quản trị')
+    expect(administration.text()).toContain('Cài đặt')
     expect(administration.findAll('a')).toHaveLength(1)
   })
 
-  it('omits the empty administration section for manager', () => {
-    expect(mountSidebar('manager').find('[data-nav-section="administration"]').exists()).toBe(false)
+  it('shows the settings entry to manager', () => {
+    const administration = mountSidebar('manager').get('[data-nav-section="administration"]')
+
+    expect(administration.findAll('a').map(link => link.attributes('href'))).toEqual(['/dashboard/settings'])
   })
 
   it('marks only Buildings current on a nested buildings route', () => {
@@ -118,9 +120,9 @@ describe('AppSidebar role visibility', () => {
     expect(currentLinks[0]?.attributes('href')).toBe('/dashboard/buildings')
   })
 
-  it('highlights Quản trị active across every /dashboard/settings sub-page', () => {
+  it('highlights Cài đặt across every /dashboard/settings sub-page', () => {
     const wrapper = mountSidebar('admin', '/dashboard/settings/history')
-    const administration = wrapper.get('a[href="/dashboard/settings/managers"]')
+    const administration = wrapper.get('a[href="/dashboard/settings"]')
 
     expect(administration.classes()).toContain('bg-ui-accent/10')
     expect(administration.attributes('aria-current')).toBe('page')
@@ -157,5 +159,11 @@ describe('AppSidebar role visibility', () => {
 
     expect(footer.classes()).toContain('rounded-xl')
     expect(footer.classes()).toContain('border-ui-border')
+  })
+
+  it('labels the signed-in role with product terms', () => {
+    expect(mountSidebar('admin').get('[data-sidebar-user]').text()).toContain('Quản trị viên')
+    expect(mountSidebar('owner').get('[data-sidebar-user]').text()).toContain('Chủ nhà')
+    expect(mountSidebar('manager').get('[data-sidebar-user]').text()).toContain('Quản lý')
   })
 })

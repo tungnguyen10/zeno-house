@@ -12,6 +12,7 @@ const props = withDefaults(defineProps<{
   bundle: CheckoutBundle | null
   loading: boolean
   error: string | null
+  inventoryRevision?: number
   contractId?: string
   contractCode: string
   contractStatus?: string
@@ -252,7 +253,7 @@ const confirmationContent = computed(() => {
         <details v-if="contractId" class="rounded-lg border border-ui-border">
           <summary class="cursor-pointer px-3 py-2 text-sm font-medium text-ui-secondary">Nội thất đã bàn giao</summary>
           <div class="border-t border-ui-border p-3">
-            <ContractHandoverSection :contract-id="contractId" />
+            <ContractHandoverSection :key="inventoryRevision" :contract-id="contractId" />
           </div>
         </details>
         <UiAlert v-if="actionError" severity="danger" role="alert">{{ actionError }}</UiAlert>

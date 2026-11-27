@@ -24,6 +24,8 @@ if (isUuid(id)) {
 }
 
 const { contract, isLoading, error, refresh: refreshContract } = useContractDetail(id)
+const handoverLocked = ref<boolean | null>(null)
+const handoverRevision = ref(0)
 const checkout = useContractCheckout(id)
 const { bundle: checkoutBundle, isLoading: checkoutLoading, error: checkoutError } = checkout
 
@@ -296,7 +298,10 @@ function sectionLinkClass(sectionId: string) {
         :active-occupant-count="activeOccupantCount"
       />
 
-      <ContractDocumentsSection :contract-id="contract.id" class="mt-4" />
+      <ContractDocumentsSection
+        :contract-id="contract.id" class="mt-4"
+        @documents-changed="handoverLocked = $event.some(doc => doc.type === 'contract' && (doc.status === 'issued' || doc.status === 'signed'))"
+      />
 
       <ContractAmendmentsSection
         :contract="contract"
@@ -361,11 +366,12 @@ function sectionLinkClass(sectionId: string) {
       <!-- Handover inventory section -->
       <UiSection id="handover" title="Nội thất bàn giao" class="mt-6 scroll-mt-20">
         <UiSurfacePanel density="compact">
-          <ContractHandoverSection :contract-id="contract.id" />
+          <ContractHandoverSection :contract-id="contract.id" :room-id="contract.room.id" :renewed="!!contract.previousContractId" editable :locked="handoverLocked" @saved="handoverRevision++" />
         </UiSurfacePanel>
       </UiSection>
 
       <ContractCheckoutSection
+        :inventory-revision="handoverRevision"
         :bundle="checkoutBundle"
         :loading="checkoutLoading"
         :error="checkoutError"

@@ -4,7 +4,7 @@ export const NAV_SECTIONS = [
   { key: 'primary', label: null },
   { key: 'rental', label: 'Tài sản & cho thuê' },
   { key: 'finance', label: 'Tài chính & vận hành' },
-  // Single "Quản trị" entry point — no section header needed, same as "primary".
+  // Single "Cài đặt" entry point — no section header needed, same as "primary".
   { key: 'administration', label: null },
 ] as const
 
@@ -34,30 +34,52 @@ export const NAV_ITEMS = [
   { key: 'invoices', label: 'Hoá đơn', to: '/dashboard/invoices', icon: 'IconReceipt', section: 'finance' },
   { key: 'shared-expenses', label: 'Chi phí dùng chung', to: '/dashboard/shared-expenses', icon: 'IconLayers', section: 'finance', roles: ['admin', 'owner'] },
   { key: 'operations-report', label: 'Báo cáo vận hành', to: '/dashboard/operations-report', icon: 'IconChart', section: 'finance' },
-  // Single entry point for admin/owner; sub-pages are reached via AppSettingsSubNav (see NAV_SETTINGS_ITEMS).
-  { key: 'administration', label: 'Quản trị', to: '/dashboard/settings/managers', activeMatch: '/dashboard/settings', icon: 'IconSettings', section: 'administration', roles: ['admin', 'owner'] },
+  // Single entry point for every role; sub-pages are reached via AppSettingsNav (see SETTINGS_NAV_ITEMS).
+  { key: 'settings', label: 'Cài đặt', to: '/dashboard/settings', activeMatch: '/dashboard/settings', icon: 'IconSettings', section: 'administration' },
 ] satisfies NavItem[]
 
-/**
- * Sub-pages under `/dashboard/settings/*`. Not rendered in the main sidebar —
- * shown as a contextual tab bar (`AppSettingsSubNav`) on those pages instead,
- * so the sidebar keeps a single "Quản trị" entry regardless of role.
- */
-export const NAV_SETTINGS_ITEMS = [
-  // User management is available to admin (global) and owner (scoped), not manager.
-  { key: 'settings', label: 'Quản lý người dùng', to: '/dashboard/settings/managers', icon: 'IconSettings', section: 'administration', roles: ['admin', 'owner'] },
-  { key: 'tenant-accounts', label: 'Tài khoản người thuê', to: '/dashboard/settings/tenant-accounts', icon: 'IconUser', section: 'administration', roles: ['admin', 'owner'] },
-  { key: 'building-visibility', label: 'Hiển thị toà nhà', to: '/dashboard/settings/buildings', icon: 'IconEye', section: 'administration', adminOnly: true },
-  { key: 'access-requests', label: 'Yêu cầu truy cập', to: '/dashboard/settings/access-requests', icon: 'IconLock', section: 'administration', adminOnly: true },
-  { key: 'history', label: 'Nhật ký hoạt động', to: '/dashboard/settings/history', icon: 'IconClock', section: 'administration', adminOnly: true },
-] satisfies NavItem[]
+export const SETTINGS_NAV_GROUPS = [
+  { key: 'personal', label: 'Cá nhân' },
+  { key: 'administration', label: 'Quản trị' },
+  { key: 'buildings', label: 'Tòa nhà' },
+] as const
+
+export type SettingsNavGroupKey = (typeof SETTINGS_NAV_GROUPS)[number]['key']
+
+export interface SettingsNavItem {
+  key: string
+  label: string
+  to: string
+  group: SettingsNavGroupKey
+  adminOnly?: boolean
+  roles?: UserRole[]
+}
+
+/** Items of the Settings area (`AppSettingsNav`); page middleware stays authoritative. */
+export const SETTINGS_NAV_ITEMS: SettingsNavItem[] = [
+  { key: 'profile', label: 'Hồ sơ', to: '/dashboard/settings/profile', group: 'personal' },
+  { key: 'security', label: 'Bảo mật', to: '/dashboard/settings/security', group: 'personal' },
+  { key: 'users', label: 'Người dùng', to: '/dashboard/settings/managers', group: 'administration', roles: ['admin', 'owner'] },
+  { key: 'tenant-accounts', label: 'Tài khoản người thuê', to: '/dashboard/settings/tenant-accounts', group: 'administration', roles: ['admin', 'owner'] },
+  { key: 'access-requests', label: 'Yêu cầu truy cập', to: '/dashboard/settings/access-requests', group: 'administration', adminOnly: true },
+  { key: 'building-visibility', label: 'Hiển thị tòa nhà', to: '/dashboard/settings/buildings', group: 'administration', adminOnly: true },
+  { key: 'history', label: 'Nhật ký hoạt động', to: '/dashboard/settings/history', group: 'administration', adminOnly: true },
+  { key: 'building-settings', label: 'Cài đặt tòa nhà', to: '/dashboard/settings/building-settings', group: 'buildings' },
+]
+
+export function getSettingsNavGroups(ctx: { isAdmin: boolean; role: UserRole | null }) {
+  const items = SETTINGS_NAV_ITEMS.filter(item => isNavItemVisible(item, ctx))
+  return SETTINGS_NAV_GROUPS
+    .map(group => ({ key: group.key, label: group.label, items: items.filter(item => item.group === group.key) }))
+    .filter(group => group.items.length > 0)
+}
 
 /**
  * Whether a nav item is visible to a user. Server routes remain authoritative;
  * this only controls sidebar presentation.
  */
 export function isNavItemVisible(
-  item: NavItem,
+  item: Pick<NavItem, 'adminOnly' | 'roles'>,
   ctx: { isAdmin: boolean; role: UserRole | null },
 ): boolean {
   if (item.adminOnly && !ctx.isAdmin) return false

@@ -17,7 +17,7 @@ useIntersectionObserver(titleSentinel, ([entry]) => {
   isTitleCollapsed.value = !!entry && !entry.isIntersecting
 })
 const headerTitle = useAppHeaderTitle()
-const compactTitle = computed(() => (isTitleCollapsed.value ? 'Hiển thị toà nhà' : null))
+const compactTitle = computed(() => (isTitleCollapsed.value ? 'Hiển thị tòa nhà' : null))
 watchEffect(() => {
   headerTitle.value = compactTitle.value
 })
@@ -35,6 +35,7 @@ const { data, status, error, refresh } = useFetch<ApiSuccess<Building[]> & { met
 const buildings = computed(() => data.value?.data ?? [])
 const isLoading = computed(() => status.value === 'pending')
 const hiddenCount = computed(() => buildings.value.filter(building => building.isHidden).length)
+const visibleCount = computed(() => buildings.value.length - hiddenCount.value)
 
 // Toggled rows render optimistically; the map holds the pending target state so
 // a failed request can fall back to whatever the server last confirmed.
@@ -59,7 +60,7 @@ async function setVisible(building: Building, visible: boolean) {
     await refresh()
   }
   catch (err) {
-    toast.error(getApiErrorMessage(err, 'Không thể đổi hiển thị toà nhà.'))
+    toast.error(getApiErrorMessage(err, 'Không thể đổi hiển thị tòa nhà.'))
   }
   finally {
     const { [building.id]: _removed, ...rest } = pending.value
@@ -70,16 +71,17 @@ async function setVisible(building: Building, visible: boolean) {
 
 <template>
   <div>
-    <AppSettingsSubNav />
-
     <UiPageHeader
-      title="Hiển thị toà nhà"
-      description="Tắt một toà nhà để loại dữ liệu của nó khỏi danh sách và số liệu tổng hợp. Link trực tiếp tới hồ sơ cũ vẫn mở được."
+      title="Hiển thị tòa nhà"
+      description="Tòa nhà bị ẩn không xuất hiện trong danh sách và số liệu tổng hợp. Link trực tiếp vẫn mở được."
+      back-to="/dashboard/settings"
+      :back-link="false"
+      :reserve-global-actions="false"
     >
       <div ref="titleSentinel" aria-hidden="true" />
     </UiPageHeader>
 
-    <UiAlert v-if="error" severity="danger" title="Không tải được danh sách toà nhà">
+    <UiAlert v-if="error" severity="danger" title="Không tải được danh sách tòa nhà">
       {{ getApiErrorMessage(error, 'Hãy thử lại sau.') }}
     </UiAlert>
 
@@ -89,22 +91,17 @@ async function setVisible(building: Building, visible: boolean) {
 
     <UiEmptyState
       v-else-if="buildings.length === 0"
-      title="Chưa có toà nhà nào"
-      description="Tạo toà nhà trước khi cấu hình hiển thị."
+      title="Chưa có tòa nhà nào"
+      description="Tạo tòa nhà trước khi cấu hình hiển thị."
     />
 
-    <UiFormSection
-      v-else
-      title="Toà nhà"
-      :description="hiddenCount > 0
-        ? `${hiddenCount} toà nhà đang ẩn khỏi danh sách và số liệu tổng hợp.`
-        : 'Tất cả toà nhà đang hiển thị.'"
-    >
-      <ul class="-my-1 divide-y divide-ui-border">
+    <div v-else>
+      <p class="mb-2 text-xs text-ui-muted">{{ visibleCount }}/{{ buildings.length }} tòa nhà đang hiển thị</p>
+      <ul role="list" class="-mx-4 divide-y divide-ui-border border-y border-ui-border bg-ui-surface sm:mx-0 sm:rounded-lg sm:border">
         <li
           v-for="building in buildings"
           :key="building.id"
-          class="flex items-center justify-between gap-4 py-3"
+          class="flex items-center justify-between gap-4 px-4 py-3"
         >
           <div class="min-w-0">
             <div class="flex flex-wrap items-center gap-2">
@@ -122,6 +119,6 @@ async function setVisible(building: Building, visible: boolean) {
           />
         </li>
       </ul>
-    </UiFormSection>
+    </div>
   </div>
 </template>
