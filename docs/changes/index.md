@@ -4,6 +4,8 @@
 
 ## In progress / planned
 
+- [contract-handover-editor](./contract-handover-editor/implementation-plan.md) — edit handover inventory and preview current room inventory; focused tests/typecheck/lint passed; full-suite verification affected by concurrent Settings changes, browser/deployment verification pending.
+
 - [Building other income](./operations-other-income/implementation-plan.md) — report receipts allocated to reserves or profit, with billing duplicate checks.
 - [settings-redesign](./settings-redesign/design.md) — unified Settings area (personal, administration, building settings entry) with vertical nav, user detail drawer and page polish; implemented and verified (admin browser QA; owner/manager sessions open), capabilities promoted — see [verification](./settings-redesign/verification.md).
 

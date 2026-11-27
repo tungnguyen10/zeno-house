@@ -30,6 +30,7 @@ describe('ContractDocumentsSection', () => {
     expect(w.find('[data-test="document-row"]').exists()).toBe(true)
     expect(w.text()).toContain('Hợp đồng · bản 1')
     expect(w.text()).toContain('Đã phát hành')
+    expect(w.emitted('documentsChanged')?.[0]?.[0]).toEqual([expect.objectContaining({ id: 'd-1', status: 'issued' })])
   })
 
   it('requires a reason (>=10 chars) before confirming a void', async () => {

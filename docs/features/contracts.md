@@ -245,3 +245,9 @@ A printable settlement statement is available at `/dashboard/contracts/[code]/se
 - Contract amendment UI: `app/components/contracts/ContractAmendmentsSection.vue`
 - Validators: `app/utils/validators/contracts.ts`
 - Mappers: `app/utils/mappers/contracts.ts`
+
+## Editing handover inventory
+
+In contract detail, owners/admins with `contracts.update` can choose **Chỉnh sửa** under **Nội thất bàn giao**. Edit individual items or confirm **Lấy lại từ phòng** to preview the room's current list; **Lưu bàn giao** updates only this contract, while **Hủy** discards the draft. Updating room inventory never automatically changes an existing contract.
+
+Issued/signed contract documents lock edits. Loading document metadata must succeed before editing is offered. The database remains authoritative if another session issues a document during editing. Failed writes preserve the draft. Checkout displays the refreshed list read-only. Renewed contracts cannot save an empty override because the current inventory lookup would otherwise inherit predecessor items.

@@ -5,6 +5,8 @@ import { useContractDocuments } from '~/composables/contracts/useContractDocumen
 
 const props = defineProps<{ contractId: string }>()
 
+const emit = defineEmits<{ documentsChanged: [documents: ContractDocument[]] }>()
+
 const authStore = useAuthStore()
 const docs = useContractDocuments(() => props.contractId)
 
@@ -28,6 +30,7 @@ function openPdf(docId: string) {
   void navigateTo(`/dashboard/contracts/${encodeURIComponent(props.contractId)}/documents/${encodeURIComponent(docId)}/print`, { open: { target: '_blank' } })
 }
 
+watch(docs.documents, documents => emit('documentsChanged', documents))
 onMounted(docs.refresh)
 
 const voidValid = computed(() => voidReason.value.trim().length >= 10)
