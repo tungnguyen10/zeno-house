@@ -102,6 +102,15 @@ describe('UserDetailDrawer', () => {
     expect(wrapper.emitted('unassign')).toEqual([['a1']])
   })
 
+  it('names each unassign button after its building', () => {
+    const wrapper = mount(UserDetailDrawer, { props: baseProps, global: { stubs } })
+    expect(button(wrapper, 'Bỏ gán').attributes('aria-label')).toBe('Bỏ gán Nguyễn Thành Tùng')
+
+    const orphaned = { ...row, assignments: [{ ...row.assignments[0], building: null }] } as unknown as ManagedUserWithAssignments
+    const fallback = mount(UserDetailDrawer, { props: { ...baseProps, row: orphaned }, global: { stubs } })
+    expect(button(fallback, 'Bỏ gán').attributes('aria-label')).toBe('Bỏ gán tòa nhà này')
+  })
+
   it('offers only unassigned buildings and emits assign', async () => {
     const wrapper = mount(UserDetailDrawer, { props: baseProps, global: { stubs } })
     const select = wrapper.get('[data-assign]')

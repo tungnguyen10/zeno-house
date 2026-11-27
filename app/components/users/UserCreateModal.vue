@@ -53,14 +53,14 @@ function submit() {
       </div>
       <fieldset v-if="buildings.length > 0">
         <legend class="mb-1.5 text-sm font-medium text-ui-muted">Tòa nhà phụ trách (tuỳ chọn)</legend>
-        <div class="max-h-48 space-y-2 overflow-y-auto rounded-xl border border-ui-border bg-ui-surface p-3">
-          <UiCheckbox
-            v-for="building in buildings"
-            :key="building.id"
-            :model-value="form.building_ids.includes(building.id)"
-            :label="building.name"
-            @update:model-value="toggleBuilding(building.id)"
-          />
+        <div class="max-h-48 overflow-y-auto rounded-xl border border-ui-border bg-ui-surface p-3 sm:space-y-2">
+          <div v-for="building in buildings" :key="building.id" class="flex min-h-11 items-center sm:min-h-0">
+            <UiCheckbox
+              :model-value="form.building_ids.includes(building.id)"
+              :label="building.name"
+              @update:model-value="toggleBuilding(building.id)"
+            />
+          </div>
         </div>
       </fieldset>
       <UiAlert v-if="error" severity="danger">{{ error }}</UiAlert>

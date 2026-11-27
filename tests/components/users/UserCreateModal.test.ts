@@ -74,6 +74,15 @@ describe('UserCreateModal', () => {
     expect(wrapper.find('button[aria-pressed]').exists()).toBe(false)
   })
 
+  it('gives each building checkbox a 44px row below sm', () => {
+    const wrapper = mount(UserCreateModal, { props, global: { stubs } })
+    const row = wrapper.get('input[data-building]').element.closest('label')!.parentElement!
+
+    expect(row.className).toContain('min-h-11')
+    expect(row.className).toContain('items-center')
+    expect(row.className).toContain('sm:min-h-0')
+  })
+
   it('shows a server error inside the modal and keeps entered data', async () => {
     const wrapper = mount(UserCreateModal, { props, global: { stubs } })
     await fill(wrapper, 'Email', 'linh@zeno.test')

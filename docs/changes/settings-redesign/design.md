@@ -78,7 +78,7 @@ Một trang cha `app/pages/dashboard/settings.vue` chứa khung và `<NuxtPage /
 - Cột phải: nội dung trang con, chiều rộng tối đa vừa đọc (danh sách dài vẫn trải đủ cột).
 
 **Mobile (`< lg`)**
-- `/dashboard/settings` là danh mục nhóm dạng danh sách. Trang con không hiện nav dọc; header app hiện nút quay lại về danh mục (đặt qua `backTo` của `UiPageHeader`, link quay lại trong trang chỉ hiện dưới `lg`) và tiêu đề thu gọn khi cuộn như hiện nay.
+- `/dashboard/settings` là danh mục nhóm dạng danh sách. Trang con không hiện nav dọc; header app hiện nút quay lại về danh mục (đặt qua `backTo` của `UiPageHeader`, link quay lại trong trang không bao giờ hiện trong Settings, chỉ còn mũi tên ở header) và tiêu đề thu gọn khi cuộn như hiện nay.
 
 **Khuôn tiêu đề trang con**
 - `UiPageHeader` thêm hai tuỳ chọn, mặc định giữ nguyên hành vi cũ: `reserveGlobalActions` (mặc định bật, tắt trong khu Cài đặt để hành động chính thẳng mép phải nội dung) và `backLink` (mặc định bật; tắt để chỉ giữ mũi tên quay lại trên header mobile).

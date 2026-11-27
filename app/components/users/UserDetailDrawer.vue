@@ -155,7 +155,7 @@ async function askDelete() {
                 <p class="truncate text-sm font-medium text-ui-primary">{{ assignment.building?.name ?? assignment.building_id }}</p>
                 <p v-if="assignment.building?.code" class="truncate font-mono text-xs text-ui-muted">{{ assignment.building.code }}</p>
               </div>
-              <UiButton class="min-h-11 shrink-0 hover:!text-status-danger sm:min-h-0" size="sm" variant="ghost" :loading="isBusy(`unassign:${assignment.id}`)" @click="emit('unassign', assignment.id)">Bỏ gán</UiButton>
+              <UiButton class="min-h-11 shrink-0 hover:!text-status-danger sm:min-h-0" size="sm" variant="ghost" :aria-label="`Bỏ gán ${assignment.building?.name ?? 'tòa nhà này'}`" :loading="isBusy(`unassign:${assignment.id}`)" @click="emit('unassign', assignment.id)">Bỏ gán</UiButton>
             </div>
             <UiToggle
               class="mt-1 min-h-11 sm:min-h-0"
