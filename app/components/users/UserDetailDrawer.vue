@@ -125,9 +125,12 @@ async function askDelete() {
 
     <div v-if="displayRow" class="space-y-6">
       <section ref="infoSection" aria-labelledby="user-info-heading">
-        <div class="mb-2 flex items-center justify-between">
-          <h3 id="user-info-heading" class="text-xs font-semibold uppercase tracking-wide text-ui-muted">Thông tin</h3>
-          <UiButton v-if="!editing" class="min-h-11 sm:min-h-0" size="sm" variant="secondary" @click="startEdit">Sửa</UiButton>
+        <div class="flex items-center justify-between gap-3" :class="editing && 'mb-3'">
+          <div class="min-w-0">
+            <h3 id="user-info-heading" class="text-xs font-semibold uppercase tracking-wide text-ui-muted">Thông tin đăng nhập</h3>
+            <p v-if="!editing" class="mt-1 text-xs text-ui-muted">Email, họ tên và mật khẩu</p>
+          </div>
+          <UiButton v-if="!editing" class="min-h-11 shrink-0 sm:min-h-0" size="sm" variant="secondary" @click="startEdit">Sửa</UiButton>
         </div>
         <form v-if="editing" class="space-y-3" novalidate @submit.prevent="submitEdit">
           <UiInput v-model="form.email" label="Email" type="email" autocomplete="off" />
@@ -140,33 +143,29 @@ async function askDelete() {
             <UiButton type="submit" class="min-h-11 sm:min-h-0" :loading="isBusy(`update:${displayRow.user.id}`)">Lưu</UiButton>
           </div>
         </form>
-        <UiDefinitionList v-else>
-          <UiDefinitionItem label="Email" :value="displayRow.user.email" />
-          <UiDefinitionItem label="Họ tên" :value="displayRow.user.name" />
-          <UiDefinitionItem label="Vai trò" :value="managedRoleLabel(displayRow.user.role)" />
-        </UiDefinitionList>
       </section>
 
       <section aria-labelledby="user-buildings-heading">
         <h3 id="user-buildings-heading" class="mb-2 text-xs font-semibold uppercase tracking-wide text-ui-muted">Tòa nhà phụ trách</h3>
         <p v-if="displayRow.assignments.length === 0" class="py-2 text-sm text-ui-muted">Chưa được gán tòa nhà nào.</p>
         <ul v-else role="list" class="divide-y divide-ui-border">
-          <li v-for="assignment in displayRow.assignments" :key="assignment.id" class="flex items-center gap-3 py-2.5">
-            <div class="min-w-0 flex-1">
-              <p class="truncate text-sm text-ui-primary">{{ assignment.building?.name ?? assignment.building_id }}</p>
-              <p class="truncate text-xs text-ui-muted">
-                <span v-if="assignment.building?.code" class="font-mono">{{ assignment.building.code }} · </span>Cho xoá dữ liệu
-              </p>
+          <li v-for="assignment in displayRow.assignments" :key="assignment.id" class="py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0">
+                <p class="truncate text-sm font-medium text-ui-primary">{{ assignment.building?.name ?? assignment.building_id }}</p>
+                <p v-if="assignment.building?.code" class="truncate font-mono text-xs text-ui-muted">{{ assignment.building.code }}</p>
+              </div>
+              <UiButton class="min-h-11 shrink-0 hover:!text-status-danger sm:min-h-0" size="sm" variant="ghost" :loading="isBusy(`unassign:${assignment.id}`)" @click="emit('unassign', assignment.id)">Bỏ gán</UiButton>
             </div>
             <UiToggle
-              class="-m-3 p-3 sm:m-0 sm:p-0"
+              class="mt-1 min-h-11 sm:min-h-0"
+              label="Cho phép xoá dữ liệu"
               :model-value="assignment.can_delete_master_data"
               size="sm"
-              :aria-label="`Cho xoá dữ liệu ở ${assignment.building?.name ?? 'tòa nhà này'}`"
+              :aria-label="`Cho phép xoá dữ liệu ở ${assignment.building?.name ?? 'tòa nhà này'}`"
               :disabled="isBusy(`toggle:${assignment.id}`)"
               @update:model-value="emit('toggleDelete', assignment.id, $event)"
             />
-            <UiButton class="min-h-11 sm:min-h-0" size="sm" variant="ghost" :loading="isBusy(`unassign:${assignment.id}`)" @click="emit('unassign', assignment.id)">Bỏ gán</UiButton>
           </li>
         </ul>
         <form
@@ -176,16 +175,26 @@ async function askDelete() {
           @submit.prevent="buildingToAssign && emit('assign', displayRow.user.id, buildingToAssign)"
         >
           <UiSelect v-model="buildingToAssign" :options="availableOptions" aria-label="Chọn tòa nhà để gán" class="min-w-0 flex-1" />
-          <UiButton type="submit" class="min-h-11 sm:min-h-0" size="sm" :disabled="!buildingToAssign" :loading="isBusy(`assign:${displayRow.user.id}`)">Gán</UiButton>
+          <UiButton type="submit" class="min-h-11 sm:min-h-10" :disabled="!buildingToAssign" :loading="isBusy(`assign:${displayRow.user.id}`)">Gán</UiButton>
         </form>
         <p v-else class="mt-2 text-xs text-ui-muted">Đã gán tất cả tòa nhà.</p>
       </section>
 
-      <section ref="dangerSection" aria-labelledby="user-danger-heading" class="rounded-lg border border-status-danger/30 p-3">
+      <section ref="dangerSection" aria-labelledby="user-danger-heading" class="rounded-lg border border-status-danger/25 p-3">
         <h3 id="user-danger-heading" class="text-xs font-semibold uppercase tracking-wide text-status-danger">Vùng nguy hiểm</h3>
-        <template v-if="!confirmingDelete">
-          <UiButton class="mt-2 min-h-11 sm:min-h-0" size="sm" variant="ghost" @click="askDelete">Xoá người dùng</UiButton>
-        </template>
+        <div v-if="!confirmingDelete" class="mt-2 flex items-center justify-between gap-3">
+          <div class="min-w-0">
+            <p class="text-sm font-medium text-ui-primary">Xoá người dùng</p>
+            <p class="text-xs text-ui-muted">Thu hồi quyền đăng nhập. Không thể hoàn tác.</p>
+          </div>
+          <UiButton
+            class="min-h-11 shrink-0 !border-status-danger/40 !text-status-danger hover:!bg-status-danger/10 sm:min-h-0"
+            size="sm"
+            variant="secondary"
+            aria-label="Xoá người dùng"
+            @click="askDelete"
+          >Xoá</UiButton>
+        </div>
         <div v-else class="mt-2 space-y-2">
           <p class="text-sm text-ui-primary">Xoá {{ displayName }} khỏi hệ thống? Hành động này sẽ thu hồi quyền đăng nhập của tài khoản và không thể hoàn tác.</p>
           <div class="flex justify-end gap-2">

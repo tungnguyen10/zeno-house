@@ -20,7 +20,7 @@ const UiButton = defineComponent({
 const stubs = {
   UiDrawer: { props: ['modelValue', 'title'], template: '<div v-if="modelValue"><slot name="header" /><slot /></div>' },
   UiButton,
-  UiToggle: defineComponent({ props: ['modelValue'], emits: ['update:modelValue'], setup: (props, { emit }) => () => h('input', { type: 'checkbox', 'data-toggle': '', checked: props.modelValue, onChange: () => emit('update:modelValue', !props.modelValue) }) }),
+  UiToggle: defineComponent({ props: ['modelValue', 'label', 'ariaLabel'], emits: ['update:modelValue'], setup: (props, { emit }) => () => h('label', [h('input', { type: 'checkbox', 'data-toggle': '', 'aria-label': props.ariaLabel, checked: props.modelValue, onChange: () => emit('update:modelValue', !props.modelValue) }), props.label]) }),
   UiSelect: defineComponent({ props: ['modelValue', 'options'], emits: ['update:modelValue'], setup: (props, { emit }) => () => h('select', { 'data-assign': '', onChange: (e: Event) => emit('update:modelValue', (e.target as HTMLSelectElement).value) }, (props.options as { value: string; label: string }[]).map(o => h('option', { value: o.value }, o.label))) }),
   UiInput: defineComponent({ props: ['modelValue', 'label'], emits: ['update:modelValue'], setup: (props, { emit }) => () => h('input', { 'data-label': props.label, value: props.modelValue, onInput: (e: Event) => emit('update:modelValue', (e.target as HTMLInputElement).value) }) }),
   UiAlert: { template: '<div role="alert"><slot /></div>' },
@@ -94,6 +94,8 @@ describe('UserDetailDrawer', () => {
 
     expect(wrapper.text()).toContain('Nguyễn Thành Tùng')
     expect(wrapper.text()).toContain('nttt')
+    expect(wrapper.get('[data-toggle]').attributes('aria-label')).toBe('Cho phép xoá dữ liệu ở Nguyễn Thành Tùng')
+    expect(wrapper.text()).toContain('Cho phép xoá dữ liệu')
     await wrapper.get('[data-toggle]').trigger('change')
     expect(wrapper.emitted('toggleDelete')).toEqual([['a1', true]])
     await button(wrapper, 'Bỏ gán').trigger('click')
@@ -113,7 +115,8 @@ describe('UserDetailDrawer', () => {
   it('requires a second confirmation before emitting remove', async () => {
     const wrapper = mount(UserDetailDrawer, { props: baseProps, global: { stubs } })
 
-    await button(wrapper, 'Xoá người dùng').trigger('click')
+    expect(wrapper.text()).toContain('Thu hồi quyền đăng nhập. Không thể hoàn tác.')
+    await button(wrapper, 'Xoá').trigger('click')
     expect(wrapper.emitted('remove')).toBeUndefined()
     expect(wrapper.text()).toContain('thu hồi quyền đăng nhập')
     await button(wrapper, 'Xoá vĩnh viễn').trigger('click')
@@ -123,9 +126,33 @@ describe('UserDetailDrawer', () => {
   it('cancelling the confirmation returns to the initial danger zone', async () => {
     const wrapper = mount(UserDetailDrawer, { props: baseProps, global: { stubs } })
 
-    await button(wrapper, 'Xoá người dùng').trigger('click')
+    await button(wrapper, 'Xoá').trigger('click')
     await button(wrapper, 'Huỷ').trigger('click')
-    expect(button(wrapper, 'Xoá người dùng')).toBeTruthy()
+    expect(button(wrapper, 'Xoá')).toBeTruthy()
+  })
+
+  it('shows a compact login-info row instead of a definition list in view mode', () => {
+    const wrapper = mount(UserDetailDrawer, { props: baseProps, global: { stubs } })
+    const info = wrapper.get('section[aria-labelledby="user-info-heading"]')
+
+    expect(info.text()).toContain('Thông tin đăng nhập')
+    expect(info.text()).toContain('Email, họ tên và mật khẩu')
+    expect(info.text()).not.toContain('duong@zeno.test')
+    expect(info.find('dl').exists()).toBe(false)
+    expect(info.find('form').exists()).toBe(false)
+  })
+
+  it('moves focus to the cancel button when asking for delete confirmation', async () => {
+    const host = document.createElement('div')
+    document.body.appendChild(host)
+    const wrapper = mount(UserDetailDrawer, { attachTo: host, props: baseProps, global: { stubs } })
+
+    await button(wrapper, 'Xoá').trigger('click')
+    await flushPromises()
+
+    expect(document.activeElement?.textContent?.trim()).toBe('Huỷ')
+    wrapper.unmount()
+    host.remove()
   })
 
   it('edits inline and omits role when the viewer cannot change roles', async () => {

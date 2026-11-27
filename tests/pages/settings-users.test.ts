@@ -119,6 +119,14 @@ describe('settings users page', () => {
     expect(wrapper.get('[data-row="m1"]').attributes('data-manageable')).toBe('true')
   })
 
+  it('puts the role tabs on their own row above the search input', async () => {
+    const wrapper = await mountPage()
+    const tabs = wrapper.get('[data-tabs]').element
+    const search = wrapper.get('[data-search]').element
+
+    expect(tabs.compareDocumentPosition(search) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
   it('keeps the drawer open and toasts on a failed unassign', async () => {
     api.unassign.mockRejectedValueOnce(new Error('boom'))
     const wrapper = await mountPage()

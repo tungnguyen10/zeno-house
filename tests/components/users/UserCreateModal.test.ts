@@ -17,6 +17,14 @@ const stubs = {
   UiModal: { props: ['open'], template: '<div v-if="open"><slot /><slot name="footer" /></div>' },
   UiInput,
   UiSelect: { props: ['modelValue'], template: '<select />' },
+  UiCheckbox: defineComponent({
+    props: ['modelValue', 'label'],
+    emits: ['update:modelValue'],
+    setup: (props, { emit }) => () => h('label', [
+      h('input', { type: 'checkbox', 'data-building': props.label, checked: props.modelValue, onChange: (e: Event) => emit('update:modelValue', (e.target as HTMLInputElement).checked) }),
+      props.label,
+    ]),
+  }),
   UiAlert: { template: '<div data-alert><slot /></div>' },
   IconPlus: true,
 }
@@ -46,7 +54,7 @@ describe('UserCreateModal', () => {
     const wrapper = mount(UserCreateModal, { props, global: { stubs } })
     await fill(wrapper, 'Email', 'Linh@Zeno.test')
     await fill(wrapper, 'Mật khẩu', 'Secret#2026')
-    await wrapper.get('button[aria-pressed]').trigger('click')
+    await wrapper.get('input[data-building="Zeno House Đào Duy Anh"]').setValue(true)
     await wrapper.get('form').trigger('submit')
 
     expect(wrapper.emitted('submit')?.[0]?.[0]).toEqual({
@@ -55,6 +63,15 @@ describe('UserCreateModal', () => {
       role: 'manager',
       building_ids: ['11111111-1111-4111-8111-111111111111'],
     })
+  })
+
+  it('labels the optional fields and lists buildings in a scrollable checkbox box', () => {
+    const wrapper = mount(UserCreateModal, { props, global: { stubs } })
+
+    expect(wrapper.find('input[data-label="Họ tên (tuỳ chọn)"]').exists()).toBe(true)
+    expect(wrapper.get('legend').text()).toBe('Tòa nhà phụ trách (tuỳ chọn)')
+    expect(wrapper.get('fieldset .max-h-48').classes()).toContain('overflow-y-auto')
+    expect(wrapper.find('button[aria-pressed]').exists()).toBe(false)
   })
 
   it('shows a server error inside the modal and keeps entered data', async () => {

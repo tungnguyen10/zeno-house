@@ -48,25 +48,19 @@ function submit() {
       <div class="grid gap-3 sm:grid-cols-2">
         <UiInput v-model="form.email" label="Email" type="email" autocomplete="off" required :error="fieldErrors.email?.[0]" />
         <UiInput v-model="form.password" label="Mật khẩu" type="password" autocomplete="new-password" required :error="fieldErrors.password?.[0]" />
-        <UiInput v-model="form.full_name" label="Họ tên" hint="Tuỳ chọn" :error="fieldErrors.full_name?.[0]" />
+        <UiInput v-model="form.full_name" label="Họ tên (tuỳ chọn)" :error="fieldErrors.full_name?.[0]" />
         <UiSelect v-model="form.role" label="Vai trò" :options="roleOptions" :disabled="roleOptions.length === 1" />
       </div>
       <fieldset v-if="buildings.length > 0">
-        <legend class="mb-1.5 text-sm font-medium text-ui-muted">Tòa nhà phụ trách <span class="font-normal">(tuỳ chọn)</span></legend>
-        <div class="flex flex-wrap gap-2">
-          <button
+        <legend class="mb-1.5 text-sm font-medium text-ui-muted">Tòa nhà phụ trách (tuỳ chọn)</legend>
+        <div class="max-h-48 space-y-2 overflow-y-auto rounded-xl border border-ui-border bg-ui-surface p-3">
+          <UiCheckbox
             v-for="building in buildings"
             :key="building.id"
-            type="button"
-            :aria-pressed="form.building_ids.includes(building.id)"
-            class="inline-flex min-h-11 items-center rounded-md border px-3 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-accent/40 sm:min-h-9 sm:text-xs"
-            :class="form.building_ids.includes(building.id)
-              ? 'border-ui-accent bg-ui-accent/15 text-ui-accent'
-              : 'border-ui-border text-ui-muted hover:border-ui-border-strong hover:text-ui-primary'"
-            @click="toggleBuilding(building.id)"
-          >
-            {{ building.name }}
-          </button>
+            :model-value="form.building_ids.includes(building.id)"
+            :label="building.name"
+            @update:model-value="toggleBuilding(building.id)"
+          />
         </div>
       </fieldset>
       <UiAlert v-if="error" severity="danger">{{ error }}</UiAlert>

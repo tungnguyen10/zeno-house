@@ -179,20 +179,20 @@ async function handleRemove(id: string) {
       {{ buildingsWithoutManager.map(building => building.name).join(', ') }}
     </UiAlert>
 
-    <div v-if="users.length > 0" class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center">
-      <UiSearchInput
-        v-model="query"
-        placeholder="Tìm theo tên hoặc email"
-        aria-label="Tìm người dùng"
-        density="normal"
-        class="sm:max-w-xs sm:flex-1 [&_input]:min-h-11 sm:[&_input]:min-h-0"
-      />
+    <div v-if="users.length > 0" class="mb-4 space-y-3">
       <UiTabs
         v-if="authStore.isAdmin"
         v-model="roleFilter"
         :tabs="roleTabs"
         variant="segmented"
         class="[&_[role=tab]]:px-2.5 sm:[&_[role=tab]]:px-3.5 lg:[&_[role=tab]]:px-4"
+      />
+      <UiSearchInput
+        v-model="query"
+        placeholder="Tìm theo tên hoặc email"
+        aria-label="Tìm người dùng"
+        density="normal"
+        class="sm:max-w-sm [&_input]:min-h-11 sm:[&_input]:min-h-0"
       />
     </div>
 
