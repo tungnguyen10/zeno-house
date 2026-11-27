@@ -8,8 +8,8 @@ describe('settings history page contract', () => {
 
   it('uses the shared display catalog and exposes explicit loading/error/load-more states', () => {
     expect(page).toContain('AUDIT_ENTITY_FILTER_OPTIONS')
-    expect(page).toContain('auditActionLabel')
-    expect(page).toContain('auditEntityDisplay')
+    expect(page).toContain('auditEventSentence')
+    expect(page).not.toContain('<UiBadge :variant="auditActionVariant')
     expect(page).toContain('Không thể tải nhật ký hoạt động')
     expect(page).toContain('Tải thêm')
     expect(page).toContain(':disabled="isLoadingMore"')

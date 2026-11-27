@@ -2,6 +2,7 @@
 import clsx from 'clsx'
 import { isNavItemVisible, NAV_ITEMS, NAV_SECTIONS } from '~/utils/constants/navigation'
 import type { NavItem } from '~/utils/constants/navigation'
+import { managedRoleLabel } from '~/utils/users/display'
 
 const _props = withDefaults(defineProps<{
   navItems?: NavItem[]
@@ -182,7 +183,7 @@ function sectionLabelClass() {
     <!-- User info -->
     <div class="px-3 pb-4 pt-2">
       <NuxtLink
-        to="/dashboard/profile"
+        to="/dashboard/settings/profile"
         data-sidebar-user
         class="flex items-center gap-3 rounded-xl border border-ui-border bg-ui-surface/40 px-3 py-2.5 transition-colors hover:border-ui-accent/20 hover:bg-ui-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ui-accent/40"
         :class="sidebarCollapsed && 'lg:justify-center lg:px-0'"
@@ -205,7 +206,7 @@ function sectionLabelClass() {
         </div>
         <div class="min-w-0 flex-1" :class="sidebarCollapsed && 'lg:hidden'">
           <p class="truncate text-sm font-medium text-ui-primary">{{ displayName }}</p>
-          <p class="truncate text-xs text-ui-muted">{{ authStore.role ?? 'user' }}</p>
+          <p class="truncate text-xs text-ui-muted">{{ managedRoleLabel(authStore.role) }}</p>
         </div>
       </NuxtLink>
       <AppVersionLabel class="mt-2 px-3" :class="sidebarCollapsed && 'lg:hidden'" />

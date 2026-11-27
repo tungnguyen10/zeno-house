@@ -5,6 +5,7 @@ const props = withDefaults(defineProps<{
   modelValue?: boolean
   /** Visible label text. When omitted, supply `ariaLabel` for accessibility. */
   label?: string
+  /** Overrides the accessible name, e.g. to add context to a repeated visible label. */
   ariaLabel?: string
   disabled?: boolean
   size?: 'sm' | 'md'
@@ -50,7 +51,7 @@ const thumbClass = computed(() =>
       type="button"
       role="switch"
       :aria-checked="modelValue"
-      :aria-label="!label ? ariaLabel : undefined"
+      :aria-label="ariaLabel"
       :disabled="disabled"
       :class="trackClass"
       @click="toggle"

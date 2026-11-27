@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onClickOutside, onKeyStroke } from '@vueuse/core'
 import clsx from 'clsx'
+import { managedRoleLabel } from '~/utils/users/display'
 
 const { logout } = useAuth()
 const authStore = useAuthStore()
@@ -10,11 +11,7 @@ const isOpen = ref(false)
 const menuRef = ref<HTMLElement | null>(null)
 const triggerRef = ref<HTMLElement | null>(null)
 
-const roleLabel = computed(() => {
-  const r = authStore.role
-  const map: Record<string, string> = { admin: 'Admin', manager: 'Manager', tenant: 'Tenant' }
-  return r ? (map[r] ?? r) : 'User'
-})
+const roleLabel = computed(() => managedRoleLabel(authStore.role))
 
 function toggle() {
   isOpen.value = !isOpen.value
@@ -111,7 +108,7 @@ onKeyStroke('Escape', () => {
 
         <div class="border-b border-ui-border py-1">
           <NuxtLink
-            to="/dashboard/profile"
+            to="/dashboard/settings/profile"
             role="menuitem"
             class="flex w-full items-center gap-3 px-4 py-2 text-sm text-ui-muted transition-colors hover:bg-ui-hover hover:text-ui-primary focus-visible:bg-ui-hover focus-visible:text-ui-primary focus-visible:outline-none"
             @click="close"

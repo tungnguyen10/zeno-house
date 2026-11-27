@@ -1,0 +1,22 @@
+{
+	"mcpServers": {
+		"chrome-devtools": {
+			"type": "stdio",
+			"command": "npx",
+			"args": [
+				"-y",
+				"chrome-devtools-mcp@latest"
+			],
+			"tools": [
+				"*"
+			]
+		},
+		"my-mcp-server-7600f657": {
+			"type": "http",
+			"url": "http://127.0.0.1:3845/mcp",
+			"tools": [
+				"*"
+			]
+		}
+	}
+}

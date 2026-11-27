@@ -159,3 +159,7 @@ Every user-visible UI change follows `.agents/skills/zeno-house/references/ui-po
 - Use `UiDatePicker` for domain/page date fields; keep values as ISO `YYYY-MM-DD` strings and declare `dateMode` for payment, reading, period, past, future, or operational dates.
 - Keep formatted numeric display fields as `type="text"` with explicit `inputmode` when the component formats while typing.
 - Use `error`/`hint` props for field helper text so primitives can wire `data-invalid`, `aria-invalid`, and `aria-describedby` consistently.
+
+### Contract handover editing
+
+`useContractHandoverInventory` owns imperative API loading, room inventory preview and Zod-validated writes. `ContractHandoverSection` keeps a detached draft with explicit cancel/save actions. Contract detail receives document metadata from `ContractDocumentsSection` and supplies the issued/signed lock to the editor; successful saves increment the checkout inventory revision so its read-only instance reloads. Existing server scope checks and the atomic database lock enforce write authorization.

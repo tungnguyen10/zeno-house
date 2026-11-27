@@ -12,6 +12,9 @@ vi.stubGlobal('useFetch', vi.fn(() => ({
   refresh,
 })))
 
+const refreshNuxtData = vi.fn(async () => {})
+vi.stubGlobal('refreshNuxtData', refreshNuxtData)
+
 describe('useAccessRequests', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -34,5 +37,7 @@ describe('useAccessRequests', () => {
       body: { reason: 'Không đủ thông tin xác minh' },
     })
     expect(refresh).toHaveBeenCalledTimes(2)
+    expect(refreshNuxtData).toHaveBeenCalledTimes(2)
+    expect(refreshNuxtData).toHaveBeenCalledWith('access-requests:pending-count')
   })
 })

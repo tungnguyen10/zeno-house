@@ -292,3 +292,24 @@ Contract draft behavior SHALL remain wizard-aware and versioned (including `curr
 #### Scenario: contractBulkActionSchema requires reason for delete
 - **WHEN** `contractBulkActionSchema.safeParse({ action: 'delete', ids: ['x'] })` is called
 - **THEN** `success === false` with error on `reason`
+
+### Requirement: Edit contract handover inventory
+Users with `contracts.update` SHALL be able to edit handover inventory in contract detail until a contract document is issued or signed. Unknown document status SHALL prevent editing. Checkout SHALL remain read-only and refresh its handover list after a successful edit.
+
+#### Scenario: Correct recently created handover
+- **WHEN** an authorized user edits an unlocked contract's inventory and saves
+- **THEN** the current contract's inventory is replaced through the scoped handover API; room inventory and other contracts are unchanged
+- **AND** validation or save failure preserves the draft and shows an actionable error
+
+#### Scenario: Reload inventory from room
+- **WHEN** a user with room read permission confirms “Lấy lại từ phòng”
+- **THEN** the current room inventory replaces only the editable draft for review; no contract write occurs until Save
+- **AND** cancelling editing leaves the saved handover unchanged
+
+#### Scenario: Document lock during editing
+- **WHEN** a contract document becomes issued/signed during editing or the server rejects a write as locked
+- **THEN** further editing and saving are disabled, the draft remains visible, and the lock is explained
+
+#### Scenario: Empty renewed inventory
+- **WHEN** a user attempts to save an empty inventory on a renewed contract
+- **THEN** the editor explains that empty overrides are unsupported and prevents a write that would restore predecessor inventory

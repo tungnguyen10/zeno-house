@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import type { UiTableColumn } from '~/components/ui/UiTable.vue'
 import type { Tenant } from '~/types/tenants'
 import type { ApiSuccess } from '~/types/api'
 import type {
@@ -52,12 +51,14 @@ const {
 }
   = useTenantAccounts()
 const canReconcileOrphans = computed(() => authStore.can('users.manage.global'))
-const columns: UiTableColumn<TenantAccountListItem>[] = [
-  { key: 'tenant', label: 'Khách thuê' },
-  { key: 'email', label: 'Email đăng nhập', hideOnMobile: true },
-  { key: 'health', label: 'Liên kết' },
-  { key: 'actions', action: true, width: 'w-14 md:w-80' },
-]
+const query = ref('')
+const filteredAccounts = computed(() => {
+  const needle = query.value.trim().toLocaleLowerCase('vi')
+  if (!needle) return accounts.value
+  return accounts.value.filter(account =>
+    [account.tenantName, account.tenantCode, account.email].some(value => value?.toLocaleLowerCase('vi').includes(needle)),
+  )
+})
 
 // ── Provision + tenant search ────────────────────────────────────────────────
 const provisionOpen = ref(false)
@@ -185,7 +186,7 @@ async function toggleStatus(item: TenantAccountListItem) {
     toast.success(item.status === 'active' ? 'Đã khoá tài khoản.' : 'Đã mở lại tài khoản.')
   }
   catch (e) {
-    toast.error(getApiErrorMessage(e))
+    toast.error(getApiErrorMessage(e, item.status === 'active' ? 'Không thể khoá tài khoản.' : 'Không thể mở lại tài khoản.'))
   }
   finally {
     busyTenantId.value = null
@@ -205,7 +206,7 @@ async function confirmReset() {
     toast.success('Đã đặt lại mật khẩu.')
   }
   catch (e) {
-    toast.error(getApiErrorMessage(e))
+    toast.error(getApiErrorMessage(e, 'Không thể đặt lại mật khẩu.'))
   }
   finally {
     resetBusy.value = false
@@ -224,7 +225,7 @@ async function confirmRevoke() {
     toast.success(removalMessage(result.outcome))
   }
   catch (e) {
-    toast.error(getApiErrorMessage(e))
+    toast.error(getApiErrorMessage(e, 'Không thể gỡ quyền truy cập.'))
   }
   finally {
     revokeBusy.value = false
@@ -233,14 +234,14 @@ async function confirmRevoke() {
 
 const revokeMessage = computed(() =>
   revokeTarget.value
-    ? `Gỡ quyền truy cập portal của ${revokeTarget.value.tenantName}? Quyền truy cập sẽ bị chặn trước. Hệ thống sẽ xóa tài khoản Auth nếu an toàn; nếu còn dữ liệu tham chiếu, tài khoản sẽ được vô hiệu hóa để bảo toàn lịch sử.`
+    ? `Gỡ quyền truy cập portal của ${revokeTarget.value.tenantName}? Quyền truy cập sẽ bị chặn trước. Hệ thống sẽ xoá tài khoản Auth nếu an toàn; nếu còn dữ liệu tham chiếu, tài khoản sẽ được vô hiệu hoá để bảo toàn lịch sử.`
     : '',
 )
 
 function removalMessage(outcome: TenantAccountRemovalOutcome): string {
   return outcome === 'deleted'
-    ? 'Đã xóa tài khoản Auth và giải phóng email.'
-    : 'Đã vô hiệu hóa tài khoản và gỡ liên kết portal; dữ liệu lịch sử được giữ lại.'
+    ? 'Đã xoá tài khoản Auth và giải phóng email.'
+    : 'Đã vô hiệu hoá tài khoản và gỡ liên kết portal; dữ liệu lịch sử được giữ lại.'
 }
 
 const orphanTarget = ref<TenantAccountOrphan | null>(null)
@@ -269,111 +270,107 @@ onMounted(() => {
 
 <template>
   <div>
-    <AppSettingsSubNav />
-
     <UiPageHeader
       title="Tài khoản người thuê"
       description="Cấp và quản lý tài khoản đăng nhập portal cho khách thuê đã có trong hệ thống."
+      back-to="/dashboard/settings"
+      :back-link="false"
+      :reserve-global-actions="false"
     >
       <div ref="titleSentinel" aria-hidden="true" />
       <template #actions>
-        <UiButton variant="primary" @click="openProvision">
+        <UiButton variant="primary" class="min-h-11 sm:min-h-0" aria-label="Cấp tài khoản" @click="openProvision">
           <IconPlus class="h-4 w-4" aria-hidden="true" />
-          Cấp tài khoản
+          <span class="sm:hidden">Cấp</span><span class="hidden sm:inline">Cấp tài khoản</span>
         </UiButton>
       </template>
     </UiPageHeader>
+
+    <UiSearchInput
+      v-if="accounts.length > 0"
+      v-model="query"
+      placeholder="Tìm theo tên, mã hoặc email"
+      aria-label="Tìm tài khoản người thuê"
+      density="normal"
+      class="mb-4 sm:max-w-sm [&_input]:min-h-11 sm:[&_input]:min-h-0"
+    />
 
     <UiAlert v-if="error" severity="danger" title="Không tải được danh sách">
       {{ getApiErrorMessage(error, 'Hãy tải lại trang và thử lại.') }}
     </UiAlert>
 
-    <UiTable
+    <div v-else-if="status === 'pending' && accounts.length === 0" class="space-y-2" aria-busy="true">
+      <UiSkeleton v-for="i in 3" :key="i" class="h-16 w-full" />
+    </div>
+
+    <UiEmptyState
+      v-else-if="filteredAccounts.length === 0"
+      :variant="query ? 'search' : 'default'"
+      :title="query ? 'Không tìm thấy tài khoản' : 'Chưa có tài khoản nào'"
+      :description="query ? 'Thử tên, mã hoặc email khác.' : 'Nhấn “Cấp tài khoản” để tạo tài khoản portal cho một khách thuê.'"
+    />
+
+    <ul
       v-else
-      :rows="accounts"
-      :columns="columns"
-      row-key="tenantId"
-      :loading="status === 'pending'"
-      caption="Danh sách tài khoản portal của người thuê"
-      empty-title="Chưa có tài khoản nào"
-      empty-description="Nhấn “Cấp tài khoản” để tạo tài khoản portal cho một khách thuê."
+      role="list"
+      class="-mx-4 divide-y divide-ui-border border-y border-ui-border bg-ui-surface sm:mx-0 sm:overflow-hidden sm:rounded-lg sm:border"
     >
-      <template #cell-tenant="{ row }">
-        <div class="min-w-40">
-          <p class="font-medium text-ui-primary">{{ row.tenantName }}</p>
-          <p class="text-xs text-ui-muted">{{ row.tenantCode }}</p>
-          <p class="mt-1 break-all text-xs text-ui-muted md:hidden">{{ row.email ?? 'Không có email Auth' }}</p>
+      <li
+        v-for="row in filteredAccounts"
+        :key="row.tenantId"
+        :data-tenant-id="row.tenantId"
+        class="flex items-center gap-3 px-4 py-3"
+      >
+        <div class="min-w-0 flex-1">
+          <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <p class="truncate text-sm font-medium text-ui-primary">{{ row.tenantName }}</p>
+            <UiStatusBadge :status="row.health === 'missing_auth' ? row.health : row.status" />
+          </div>
+          <p class="truncate text-xs text-ui-muted">
+            <span class="font-mono">{{ row.tenantCode }}</span>
+            <span aria-hidden="true"> · </span>
+            <span v-if="row.email">{{ row.email }}</span>
+            <span v-else class="text-status-warning">Không có email Auth</span>
+          </p>
         </div>
-      </template>
-      <template #cell-email="{ row }">
-        <span :class="row.email ? 'text-ui-primary' : 'text-status-warning'">{{ row.email ?? 'Không tìm thấy' }}</span>
-      </template>
-      <template #cell-health="{ row }">
-        <UiStatusBadge :status="row.health === 'missing_auth' ? row.health : row.status" />
-      </template>
-      <template #cell-actions="{ row }">
-        <div class="hidden min-w-52 flex-wrap items-center justify-end gap-2 md:flex">
-          <UiButton
-            variant="secondary"
-            size="sm"
-            :loading="busyTenantId === row.tenantId"
-            :disabled="row.health !== 'linked' || busyTenantId === row.tenantId"
-            @click="toggleStatus(row)"
-          >
-            {{ row.status === 'active' ? 'Khóa' : 'Mở lại' }}
-          </UiButton>
-          <UiButton
-            variant="secondary"
-            size="sm"
-            :disabled="row.health !== 'linked'"
-            @click="resetTarget = row"
-          >
-            Đặt lại mật khẩu
-          </UiButton>
-          <UiButton variant="danger" size="sm" @click="revokeTarget = row">
-            {{ row.health === 'missing_auth' ? 'Dọn liên kết' : 'Gỡ' }}
-          </UiButton>
-        </div>
-        <UiDropdownMenu class="ml-auto md:hidden" trigger-class="min-h-11 min-w-11" aria-label="Thao tác tài khoản">
+        <UiDropdownMenu class="shrink-0" trigger-class="min-h-11 min-w-11 md:min-h-9 md:min-w-9" :aria-label="`Thao tác cho ${row.tenantName}`">
           <UiDropdownMenuItem
             :disabled="row.health !== 'linked' || busyTenantId === row.tenantId"
             :loading="busyTenantId === row.tenantId"
             @click="toggleStatus(row)"
           >
-            {{ row.status === 'active' ? 'Khóa' : 'Mở lại' }}
+            {{ row.status === 'active' ? 'Khoá' : 'Mở lại' }}
           </UiDropdownMenuItem>
           <UiDropdownMenuItem :disabled="row.health !== 'linked'" @click="resetTarget = row">
             Đặt lại mật khẩu
           </UiDropdownMenuItem>
           <UiDropdownMenuItem variant="danger" @click="revokeTarget = row">
-            {{ row.health === 'missing_auth' ? 'Dọn liên kết' : 'Gỡ' }}
+            {{ row.health === 'missing_auth' ? 'Dọn liên kết' : 'Gỡ quyền truy cập' }}
           </UiDropdownMenuItem>
         </UiDropdownMenu>
-      </template>
-    </UiTable>
+      </li>
+    </ul>
 
-    <section v-if="canReconcileOrphans" class="mt-8 space-y-3" aria-labelledby="orphan-heading">
-      <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h2 id="orphan-heading" class="text-xs font-semibold uppercase tracking-wide text-ui-muted">Tài khoản Auth mồ côi</h2>
-          <p class="mt-1 text-sm text-ui-muted">Tài khoản mang vai trò tenant nhưng không còn liên kết tới hồ sơ người thuê.</p>
-        </div>
-        <UiButton variant="secondary" size="sm" :loading="orphansLoading" @click="loadOrphans">
-          Kiểm tra lại
-        </UiButton>
-      </div>
+    <section v-if="canReconcileOrphans" class="mt-8 space-y-3" aria-label="Tài khoản Auth mồ côi">
       <UiAlert v-if="orphansError" severity="danger" title="Không thể kiểm tra tài khoản mồ côi">
-        {{ getApiErrorMessage(orphansError, 'Hãy thử lại sau.') }}
+        <p>{{ getApiErrorMessage(orphansError, 'Hãy thử lại sau.') }}</p>
+        <UiButton class="mt-2 min-h-11 sm:min-h-0" variant="secondary" size="sm" :loading="orphansLoading" @click="loadOrphans">Kiểm tra lại</UiButton>
       </UiAlert>
-      <div v-else-if="orphansLoading" class="space-y-2">
-        <UiSkeleton v-for="n in 2" :key="n" class="h-16 w-full" />
+      <UiSkeleton v-else-if="orphansLoading && orphans.length === 0" class="h-12 w-full" />
+      <div v-else-if="orphans.length === 0" class="flex items-center gap-3 rounded-lg border border-ui-border px-4 py-3">
+        <IconCheckCircle class="h-4 w-4 shrink-0 text-status-success" aria-hidden="true" />
+        <p class="min-w-0 flex-1 text-sm text-ui-muted">Không có tài khoản Auth mồ côi</p>
+        <UiButton class="min-h-11 sm:min-h-0" variant="secondary" size="sm" :loading="orphansLoading" @click="loadOrphans">Kiểm tra lại</UiButton>
       </div>
-      <UiEmptyState
-        v-else-if="orphans.length === 0"
-        title="Không phát hiện tài khoản mồ côi"
-        description="Mọi tài khoản tenant hiện có đều đang được liên kết."
-      />
-      <div v-else class="-mx-4 space-y-2 sm:mx-0">
+      <template v-else>
+        <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h2 class="text-sm font-semibold text-ui-primary">{{ orphans.length }} tài khoản Auth mồ côi</h2>
+            <p class="mt-1 text-sm text-ui-muted">Tài khoản mang vai trò người thuê nhưng không còn liên kết tới hồ sơ người thuê.</p>
+          </div>
+          <UiButton class="min-h-11 sm:min-h-0" variant="secondary" size="sm" :loading="orphansLoading" @click="loadOrphans">Kiểm tra lại</UiButton>
+        </div>
+        <div class="-mx-4 space-y-2 sm:mx-0">
         <article
           v-for="orphan in orphans"
           :key="orphan.authUserId"
@@ -389,9 +386,10 @@ onMounted(() => {
               <span v-if="orphan.lastSignInAt"> · Đăng nhập gần nhất {{ new Date(orphan.lastSignInAt).toLocaleDateString('vi-VN') }}</span>
             </p>
           </div>
-          <UiButton variant="danger" size="sm" @click="orphanTarget = orphan">Xử lý tài khoản</UiButton>
+          <UiButton class="min-h-11 sm:min-h-0" variant="danger" size="sm" @click="orphanTarget = orphan">Xử lý tài khoản</UiButton>
         </article>
-      </div>
+        </div>
+      </template>
     </section>
 
     <!-- Provision modal -->
@@ -443,8 +441,9 @@ onMounted(() => {
       </div>
 
       <template #footer>
-        <UiButton variant="secondary" @click="provisionOpen = false">Huỷ</UiButton>
+        <UiButton class="min-h-11 sm:min-h-0" variant="secondary" @click="provisionOpen = false">Huỷ</UiButton>
         <UiButton
+          class="min-h-11 sm:min-h-0"
           variant="primary"
           :loading="provisionBusy"
           :disabled="!selectedTenant || selectedTenant.accessLevel === 'basic' || provisionBusy"
@@ -467,19 +466,19 @@ onMounted(() => {
               <p class="text-xs text-ui-muted">Email</p>
               <p class="truncate text-sm text-ui-primary">{{ credentials.email }}</p>
             </div>
-            <UiButton variant="secondary" size="sm" @click="copyText(credentials.email)">Sao chép</UiButton>
+            <UiButton class="min-h-11 sm:min-h-0" variant="secondary" size="sm" @click="copyText(credentials.email)">Sao chép</UiButton>
           </div>
           <div class="flex items-center justify-between gap-2 px-3 py-2">
             <div class="min-w-0">
               <p class="text-xs text-ui-muted">Mật khẩu tạm</p>
               <p class="truncate font-mono text-sm text-ui-primary">{{ credentials.tempPassword }}</p>
             </div>
-            <UiButton variant="secondary" size="sm" @click="copyText(credentials.tempPassword)">Sao chép</UiButton>
+            <UiButton class="min-h-11 sm:min-h-0" variant="secondary" size="sm" @click="copyText(credentials.tempPassword)">Sao chép</UiButton>
           </div>
         </div>
       </div>
       <template #footer>
-        <UiButton variant="primary" @click="closeCredentials">Đã hiểu</UiButton>
+        <UiButton class="min-h-11 sm:min-h-0" variant="primary" @click="closeCredentials">Đã hiểu</UiButton>
       </template>
     </UiModal>
 
@@ -497,9 +496,9 @@ onMounted(() => {
     <!-- Revoke confirm -->
     <UiConfirmModal
       :open="revokeTarget !== null"
-      title="Gỡ tài khoản"
+      title="Gỡ quyền truy cập"
       :message="revokeMessage"
-      confirm-label="Gỡ tài khoản"
+      confirm-label="Gỡ quyền truy cập"
       :loading="revokeBusy"
       @confirm="confirmRevoke"
       @cancel="revokeTarget = null"
@@ -509,7 +508,7 @@ onMounted(() => {
       :open="orphanTarget !== null"
       title="Xử lý tài khoản Auth mồ côi"
       :message="orphanTarget
-        ? `Xử lý ${orphanTarget.email ?? 'tài khoản không có email'}? Hệ thống sẽ xóa Auth user nếu an toàn; nếu còn tham chiếu lịch sử, tài khoản sẽ được vô hiệu hóa.`
+        ? `Xử lý ${orphanTarget.email ?? 'tài khoản không có email'}? Hệ thống sẽ xoá Auth user nếu an toàn; nếu còn tham chiếu lịch sử, tài khoản sẽ được vô hiệu hoá.`
         : ''"
       confirm-label="Xử lý tài khoản"
       :loading="orphanBusy"
