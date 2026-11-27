@@ -275,13 +275,14 @@ function managerInitials(row: ManagedUserWithAssignments): string {
 
 <template>
   <div class="space-y-6">
-    <AppSettingsSubNav />
-
     <UiPageHeader
       title="Quản lý người dùng"
       :description="authStore.isAdmin
         ? 'Tạo owner/quản lý, phân quyền theo tòa nhà và quyền xóa dữ liệu nhạy cảm.'
         : 'Tạo quản lý và phân quyền theo tòa nhà trong phạm vi của bạn.'"
+      back-to="/dashboard/settings"
+      back-mobile-only
+      :reserve-global-actions="false"
     >
       <div ref="titleSentinel" aria-hidden="true" />
     </UiPageHeader>

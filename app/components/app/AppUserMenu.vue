@@ -111,7 +111,7 @@ onKeyStroke('Escape', () => {
 
         <div class="border-b border-ui-border py-1">
           <NuxtLink
-            to="/dashboard/profile"
+            to="/dashboard/settings/profile"
             role="menuitem"
             class="flex w-full items-center gap-3 px-4 py-2 text-sm text-ui-muted transition-colors hover:bg-ui-hover hover:text-ui-primary focus-visible:bg-ui-hover focus-visible:text-ui-primary focus-visible:outline-none"
             @click="close"

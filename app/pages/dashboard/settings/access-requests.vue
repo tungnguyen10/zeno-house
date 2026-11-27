@@ -197,11 +197,12 @@ function statusLabel(status: AccessRequestStatus) {
 
 <template>
   <div class="space-y-6">
-    <AppSettingsSubNav />
-
     <UiPageHeader
       title="Yêu cầu tài khoản"
       description="Duyệt danh tính mới và gán đúng vai trò, phạm vi trước khi họ vào hệ thống."
+      back-to="/dashboard/settings"
+      back-mobile-only
+      :reserve-global-actions="false"
     >
       <div ref="titleSentinel" aria-hidden="true" />
       <template #actions>

@@ -11,8 +11,16 @@ const LEGACY_DASHBOARD_PREFIXES = [
   '/ui-showcase',
 ]
 
+const MOVED_DASHBOARD_ROUTES: Record<string, string> = {
+  '/dashboard/profile': '/dashboard/settings/profile',
+  '/dashboard/profile/password': '/dashboard/settings/security',
+}
+
 export function getLegacyDashboardRedirect(path: string): string | null {
-  const [pathname] = path.split(/[?#]/, 1)
+  const [pathname = ''] = path.split(/[?#]/, 1)
+  const moved = MOVED_DASHBOARD_ROUTES[pathname.replace(/\/$/, '')]
+  if (moved) return `${moved}${path.slice(pathname.length)}`
+
   const isLegacyPath = LEGACY_DASHBOARD_PREFIXES.some(prefix => (
     pathname === prefix || pathname?.startsWith(`${prefix}/`)
   ))

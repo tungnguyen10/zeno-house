@@ -8,7 +8,7 @@ useIntersectionObserver(titleSentinel, ([entry]) => {
   isTitleCollapsed.value = !!entry && !entry.isIntersecting
 })
 const headerTitle = useAppHeaderTitle()
-const compactTitle = computed(() => (isTitleCollapsed.value ? 'Hồ sơ của tôi' : null))
+const compactTitle = computed(() => (isTitleCollapsed.value ? 'Hồ sơ' : null))
 watchEffect(() => {
   headerTitle.value = compactTitle.value
 })
@@ -74,10 +74,13 @@ async function onAvatarRemove() {
 </script>
 
 <template>
-  <div class="mx-auto w-full max-w-2xl space-y-6">
+  <div class="w-full max-w-2xl space-y-6">
     <UiPageHeader
-      title="Hồ sơ của tôi"
-      description="Cập nhật tên hiển thị và ảnh đại diện dùng trong toàn bộ hệ thống."
+      title="Hồ sơ"
+      description="Tên và ảnh đại diện hiển thị trong toàn hệ thống."
+      back-to="/dashboard/settings"
+      back-mobile-only
+      :reserve-global-actions="false"
     >
       <div ref="titleSentinel" aria-hidden="true" />
     </UiPageHeader>
@@ -140,14 +143,6 @@ async function onAvatarRemove() {
               Lưu thay đổi
             </UiButton>
           </form>
-        </UiSection>
-      </UiSurfacePanel>
-
-      <UiSurfacePanel class="space-y-3">
-        <UiSection title="Bảo mật" description="Đổi mật khẩu đăng nhập.">
-          <UiButton variant="secondary" size="sm" @click="navigateTo('/dashboard/profile/password')">
-            Đổi mật khẩu
-          </UiButton>
         </UiSection>
       </UiSurfacePanel>
     </template>

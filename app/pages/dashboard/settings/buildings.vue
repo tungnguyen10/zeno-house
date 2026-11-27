@@ -70,11 +70,12 @@ async function setVisible(building: Building, visible: boolean) {
 
 <template>
   <div>
-    <AppSettingsSubNav />
-
     <UiPageHeader
       title="Hiển thị toà nhà"
       description="Tắt một toà nhà để loại dữ liệu của nó khỏi danh sách và số liệu tổng hợp. Link trực tiếp tới hồ sơ cũ vẫn mở được."
+      back-to="/dashboard/settings"
+      back-mobile-only
+      :reserve-global-actions="false"
     >
       <div ref="titleSentinel" aria-hidden="true" />
     </UiPageHeader>

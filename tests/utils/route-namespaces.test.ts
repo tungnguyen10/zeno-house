@@ -17,6 +17,9 @@ describe('route namespace structure', () => {
     ['/billing/toa-a/2026-06?invoice=inv-1', '/dashboard/billing/toa-a/2026-06?invoice=inv-1'],
     ['/settings/managers', '/dashboard/settings/managers'],
     ['/settings/history', '/dashboard/settings/history'],
+    ['/dashboard/profile', '/dashboard/settings/profile'],
+    ['/dashboard/profile/password', '/dashboard/settings/security'],
+    ['/dashboard/profile/password?from=menu', '/dashboard/settings/security?from=menu'],
   ])('maps legacy route %s to %s', (legacyPath, expected) => {
     expect(getLegacyDashboardRedirect(legacyPath)).toBe(expected)
   })

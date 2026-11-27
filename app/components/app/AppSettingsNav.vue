@@ -10,7 +10,7 @@ const props = withDefaults(defineProps<{
 
 const route = useRoute()
 const authStore = useAuthStore()
-
+const uid = useId()
 const groups = computed(() => getSettingsNavGroups({ isAdmin: authStore.isAdmin, role: authStore.role }))
 
 const pendingCount = useAccessRequestPendingCount(() => authStore.isAdmin)
@@ -49,13 +49,13 @@ function linkClass(to: string) {
   <nav aria-label="Cài đặt" class="space-y-5">
     <div v-for="group in groups" :key="group.key" :data-settings-group="group.key">
       <p
-        :id="`settings-group-${group.key}`"
-        class="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-wide text-ui-muted"
-        :class="variant === 'list' && 'px-0'"
+        :id="`${uid}-group-${group.key}`"
+        class="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-ui-muted"
+        :class="variant === 'list' ? 'px-0' : 'px-3'"
       >
         {{ group.label }}
       </p>
-      <ul role="list" :aria-labelledby="`settings-group-${group.key}`" :class="listClass()">
+      <ul role="list" :aria-labelledby="`${uid}-group-${group.key}`" :class="listClass()">
         <li v-for="item in group.items" :key="item.key">
           <NuxtLink
             :to="item.to"

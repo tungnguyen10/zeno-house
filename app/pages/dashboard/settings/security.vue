@@ -11,7 +11,7 @@ useIntersectionObserver(titleSentinel, ([entry]) => {
   isTitleCollapsed.value = !!entry && !entry.isIntersecting
 })
 const headerTitle = useAppHeaderTitle()
-const compactTitle = computed(() => (isTitleCollapsed.value ? 'Đổi mật khẩu' : null))
+const compactTitle = computed(() => (isTitleCollapsed.value ? 'Bảo mật' : null))
 watchEffect(() => {
   headerTitle.value = compactTitle.value
 })
@@ -54,17 +54,20 @@ async function onSubmit() {
   form.current_password = ''
   form.password = ''
   form.password_confirmation = ''
+  Object.keys(touched).forEach((key) => { touched[key as keyof UserPasswordChangeInput] = false })
+  submitted.value = false
   toast.success('Đã đổi mật khẩu.')
-  await navigateTo('/dashboard/profile')
 }
 </script>
 
 <template>
-  <div class="mx-auto w-full max-w-2xl space-y-6">
+  <div class="w-full max-w-2xl space-y-6">
     <UiPageHeader
-      title="Đổi mật khẩu"
-      description="Xác nhận mật khẩu hiện tại trước khi tạo mật khẩu mới."
-      :back-to="'/dashboard/profile'"
+      title="Bảo mật"
+      description="Đổi mật khẩu đăng nhập. Cần nhập mật khẩu hiện tại để xác nhận."
+      back-to="/dashboard/settings"
+      back-mobile-only
+      :reserve-global-actions="false"
     >
       <div ref="titleSentinel" aria-hidden="true" />
     </UiPageHeader>

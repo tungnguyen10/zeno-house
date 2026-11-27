@@ -182,7 +182,7 @@ function sectionLabelClass() {
     <!-- User info -->
     <div class="px-3 pb-4 pt-2">
       <NuxtLink
-        to="/dashboard/profile"
+        to="/dashboard/settings/profile"
         data-sidebar-user
         class="flex items-center gap-3 rounded-xl border border-ui-border bg-ui-surface/40 px-3 py-2.5 transition-colors hover:border-ui-accent/20 hover:bg-ui-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ui-accent/40"
         :class="sidebarCollapsed && 'lg:justify-center lg:px-0'"
