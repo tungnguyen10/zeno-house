@@ -52,12 +52,48 @@ export const NAV_SETTINGS_ITEMS = [
   { key: 'history', label: 'Nhật ký hoạt động', to: '/dashboard/settings/history', icon: 'IconClock', section: 'administration', adminOnly: true },
 ] satisfies NavItem[]
 
+export const SETTINGS_NAV_GROUPS = [
+  { key: 'personal', label: 'Cá nhân' },
+  { key: 'administration', label: 'Quản trị' },
+  { key: 'buildings', label: 'Tòa nhà' },
+] as const
+
+export type SettingsNavGroupKey = (typeof SETTINGS_NAV_GROUPS)[number]['key']
+
+export interface SettingsNavItem {
+  key: string
+  label: string
+  to: string
+  group: SettingsNavGroupKey
+  adminOnly?: boolean
+  roles?: UserRole[]
+}
+
+/** Items of the Settings area (`AppSettingsNav`); page middleware stays authoritative. */
+export const SETTINGS_NAV_ITEMS: SettingsNavItem[] = [
+  { key: 'profile', label: 'Hồ sơ', to: '/dashboard/settings/profile', group: 'personal' },
+  { key: 'security', label: 'Bảo mật', to: '/dashboard/settings/security', group: 'personal' },
+  { key: 'users', label: 'Người dùng', to: '/dashboard/settings/managers', group: 'administration', roles: ['admin', 'owner'] },
+  { key: 'tenant-accounts', label: 'Tài khoản người thuê', to: '/dashboard/settings/tenant-accounts', group: 'administration', roles: ['admin', 'owner'] },
+  { key: 'access-requests', label: 'Yêu cầu truy cập', to: '/dashboard/settings/access-requests', group: 'administration', adminOnly: true },
+  { key: 'building-visibility', label: 'Hiển thị tòa nhà', to: '/dashboard/settings/buildings', group: 'administration', adminOnly: true },
+  { key: 'history', label: 'Nhật ký hoạt động', to: '/dashboard/settings/history', group: 'administration', adminOnly: true },
+  { key: 'building-settings', label: 'Cài đặt tòa nhà', to: '/dashboard/settings/building-settings', group: 'buildings' },
+]
+
+export function getSettingsNavGroups(ctx: { isAdmin: boolean; role: UserRole | null }) {
+  const items = SETTINGS_NAV_ITEMS.filter(item => isNavItemVisible(item, ctx))
+  return SETTINGS_NAV_GROUPS
+    .map(group => ({ key: group.key, label: group.label, items: items.filter(item => item.group === group.key) }))
+    .filter(group => group.items.length > 0)
+}
+
 /**
  * Whether a nav item is visible to a user. Server routes remain authoritative;
  * this only controls sidebar presentation.
  */
 export function isNavItemVisible(
-  item: NavItem,
+  item: Pick<NavItem, 'adminOnly' | 'roles'>,
   ctx: { isAdmin: boolean; role: UserRole | null },
 ): boolean {
   if (item.adminOnly && !ctx.isAdmin) return false
