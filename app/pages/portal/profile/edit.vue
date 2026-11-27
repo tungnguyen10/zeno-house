@@ -36,6 +36,13 @@ const form = reactive<TenantProfileEditForm>({
 const touched = reactive<Partial<Record<keyof TenantProfileEditForm, boolean>>>({})
 const submitted = ref(false)
 
+watch(usePortalSessionKey('profile-edit'), () => {
+  baseline.value = null
+  Object.assign(form, { phone: '', occupation: '', emergency_contact_name: '', emergency_contact_phone: '' })
+  Object.assign(touched, { phone: false, occupation: false, emergency_contact_name: false, emergency_contact_phone: false })
+  submitted.value = false
+}, { flush: 'sync' })
+
 watch(profile, (value) => {
   if (!value || baseline.value) return
   const initial = toTenantProfileEditForm(value)

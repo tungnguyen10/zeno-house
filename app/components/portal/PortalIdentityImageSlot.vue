@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { TENANT_DOCUMENT_MAX_BYTES, TENANT_IDENTITY_IMAGE_MIME_TYPES } from '~/utils/validators/tenant-portal'
 
-withDefaults(defineProps<{
+const props = withDefaults(defineProps<{
   label: string
   signedUrl: string | null
   editable?: boolean
@@ -15,11 +15,13 @@ withDefaults(defineProps<{
 
 const emit = defineEmits<{
   (e: 'select', file: File): void
-  (e: 'remove'): void
+  (e: 'remove' | 'retry'): void
   (e: 'error', message: string): void
 }>()
 
 const inputRef = ref<HTMLInputElement | null>(null)
+const imageFailed = ref(false)
+watch(() => props.signedUrl, () => { imageFailed.value = false })
 
 function pick() {
   inputRef.value?.click()
@@ -48,11 +50,17 @@ function onChange(event: Event) {
     <p class="portal-type-label text-title">{{ label }}</p>
     <div class="relative aspect-[3/2] overflow-hidden rounded-2xl border border-border-light bg-smoke">
       <img
-        v-if="signedUrl"
+        v-if="signedUrl && !imageFailed"
         :src="signedUrl"
         :alt="label"
-        class="h-full w-full object-cover"
+        class="h-full w-full object-contain"
+        loading="lazy"
+        @error="imageFailed = true"
       >
+      <div v-else-if="imageFailed" class="flex h-full flex-col items-center justify-center gap-2 px-3 text-center">
+        <p class="portal-type-caption text-body">Ảnh chưa tải được hoặc liên kết đã hết hạn.</p>
+        <PortalButton variant="secondary" size="sm" @click="emit('retry')">Tải lại ảnh</PortalButton>
+      </div>
       <button
         v-else-if="editable"
         type="button"

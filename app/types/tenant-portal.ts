@@ -48,6 +48,9 @@ export interface TenantSupportRequest {
   description: string
   status: TenantSupportRequestStatus
   attachmentSignedUrl: string | null
+  attachmentUnavailable: boolean
+  publicResponse: string | null
+  respondedAt: string | null
   createdAt: string
   updatedAt: string
 }
@@ -102,6 +105,7 @@ export interface TenantPortalBootstrap {
   contract: TenantContractSummary | null
   contractAmendments: TenantContractAmendmentSummary[]
   invoices: TenantInvoiceListItem[]
+  financialSummary: TenantFinancialSummary
   invoiceMeta: {
     total: number
     page: number
@@ -110,8 +114,33 @@ export interface TenantPortalBootstrap {
   }
 }
 
+export interface TenantFinancialSummary {
+  outstandingAmount: number
+  outstandingCount: number
+  overdueAmount: number
+  overdueCount: number
+  nextInvoice: TenantInvoiceListItem | null
+}
+
+export interface TenantInvoicePayment {
+  id: string
+  amount: number
+  paidAt: string
+  method: string | null
+  fundingSource: 'cash' | 'deposit' | 'credit' | null
+}
+
+export interface TenantInvoiceMeterReading {
+  previousValue: number | null
+  currentValue: number | null
+  billableUsage: number | null
+  unit: 'kWh' | 'm³'
+  adjusted: boolean
+}
+
 export interface TenantInvoiceDetail extends TenantInvoiceListItem {
   invoiceProfile: InvoiceProfileDisplay | null
+  payments: TenantInvoicePayment[]
   charges: Array<{
     id: string
     chargeType: string
@@ -120,5 +149,6 @@ export interface TenantInvoiceDetail extends TenantInvoiceListItem {
     unitPrice: number
     amount: number
     sortOrder: number
+    meterReading: TenantInvoiceMeterReading | null
   }>
 }

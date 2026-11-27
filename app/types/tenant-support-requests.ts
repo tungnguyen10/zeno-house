@@ -6,7 +6,10 @@ export interface OperatorTenantSupportRequest extends TenantSupportRequest {
   contractId: string
   tenantCode: string
   tenantLabel: string
-  attachmentUnavailable: boolean
+}
+export interface TenantSupportRequestPage {
+  data: TenantSupportRequest[]
+  meta: { total: number; page: number; limit: number; totalPages: number }
 }
 export interface TenantSupportRequestQueuePage {
   data: OperatorTenantSupportRequest[]

@@ -102,4 +102,38 @@ describe('PortalBottomSheet', () => {
 
     wrapper.unmount()
   })
+
+  it('blocks background interaction and restores the original overflow on unmount', async () => {
+    const root = document.createElement('div')
+    root.id = '__nuxt'
+    root.inert = false
+    document.body.appendChild(root)
+    document.body.style.overflow = 'clip'
+    const wrapper = mount(PortalBottomSheet, { props: { modelValue: true, title: 'Chi tiết' }, global: { stubs: { IconX: true } } })
+    await nextTick()
+    expect(root.inert).toBe(true)
+    expect(document.body.style.overflow).toBe('hidden')
+    wrapper.unmount()
+    expect(root.inert).toBe(false)
+    expect(document.body.style.overflow).toBe('clip')
+    document.body.style.overflow = ''
+  })
+
+  it('keeps the dialog above a mobile keyboard within the visible viewport', async () => {
+    const previous = Object.getOwnPropertyDescriptor(window, 'visualViewport')
+    const viewport = Object.assign(new EventTarget(), { height: 420, offsetTop: 0, scale: 1 })
+    Object.defineProperty(window, 'visualViewport', { configurable: true, value: viewport })
+    const wrapper = mount(PortalBottomSheet, { props: { modelValue: true }, global: { stubs: { IconX: true } } })
+    await nextTick()
+    const dialog = document.body.querySelector<HTMLElement>('[role="dialog"]')!
+    expect(dialog.style.maxHeight).toBe('408px')
+    expect(dialog.style.bottom).toBe(`${Math.max(0, window.innerHeight - 420)}px`)
+    viewport.height = 680
+    viewport.dispatchEvent(new Event('resize'))
+    await nextTick()
+    expect(dialog.style.maxHeight).toBe('668px')
+    wrapper.unmount()
+    if (previous) Object.defineProperty(window, 'visualViewport', previous)
+    else Reflect.deleteProperty(window, 'visualViewport')
+  })
 })

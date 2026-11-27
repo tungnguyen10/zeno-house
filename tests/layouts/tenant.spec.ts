@@ -8,7 +8,12 @@ import TenantLayout from '~/layouts/tenant.vue'
 const initialize = vi.fn()
 const bootstrapStatus = ref<'pending' | 'success'>('success')
 vi.stubGlobal('usePortalTheme', () => ({ resolvedTheme: ref('dark'), initialize }))
-vi.stubGlobal('usePortalBootstrap', () => ({ status: bootstrapStatus }))
+vi.stubGlobal('usePortalBootstrap', () => ({ status: bootstrapStatus, refresh: vi.fn() }))
+vi.stubGlobal('usePortalConnection', () => ({ online: ref(true), reconnected: ref(false) }))
+vi.stubGlobal('usePortalViewport', () => ({ height: ref(null), bottom: ref(0) }))
+vi.stubGlobal('usePortalRefreshOnReturn', vi.fn())
+vi.stubGlobal('usePortalSessionKey', () => ref('portal-tenant-fixture-shell'))
+vi.stubGlobal('useRoute', () => ({ path: '/portal' }))
 
 function mountTenantLayout() {
   return mount(TenantLayout, {
@@ -67,7 +72,7 @@ describe('tenant layout', () => {
     const tenantLayout = readFileSync(resolve(layoutsDirectory, 'tenant.vue'), 'utf8')
 
     expect(tenantLayout).toContain('<PortalSplash v-if="showSplash" />')
-    expect(tenantLayout).toContain("status.value === 'pending' || !minDelayElapsed.value")
+    expect(tenantLayout).toContain('!initialResolved.value || !minDelayElapsed.value')
 
     for (const layoutFile of readdirSync(layoutsDirectory)) {
       if (!layoutFile.endsWith('.vue') || layoutFile === 'tenant.vue') continue

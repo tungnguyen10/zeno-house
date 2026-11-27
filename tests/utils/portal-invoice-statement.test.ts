@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import type { TenantInvoiceListItem } from '~/types/tenant-portal'
 import {
   groupTenantInvoicesByYear,
+  isPayableTenantInvoice,
+  isOverdueTenantInvoice,
   tenantInvoicePaymentProgress,
 } from '~/utils/tenant-portal/invoice-statement'
 
@@ -27,6 +29,8 @@ function invoice(
     paidAmount: 0,
     balanceAmount: 1_000_000,
     dueDate: '2026-07-15',
+    gracePeriodDays: 0,
+    overdueDate: '2026-07-15',
     status: 'issued',
     issuedAt: null,
     voidedAt: null,
@@ -62,6 +66,22 @@ describe('groupTenantInvoicesByYear', () => {
     expect(groupTenantInvoicesByYear(invoices)).toEqual([
       { year: 2026, invoices: [invoices[1], invoices[0], invoices[2]] },
     ])
+  })
+})
+
+describe('payable tenant balances', () => {
+  it.each(['void', 'draft', 'paid'] as const)('never treats %s invoices as payable even with a stale balance', (status) => {
+    const row = { ...invoice('test', 2026, 7), status }
+    expect(isPayableTenantInvoice(row)).toBe(false)
+    expect(isOverdueTenantInvoice(row, '2026-08-01')).toBe(false)
+  })
+
+  it('counts partial debt as overdue only after its issued grace deadline', () => {
+    const row = { ...invoice('partial', 2026, 7), status: 'partial' as const, overdueDate: '2026-07-17' }
+    expect(isOverdueTenantInvoice(row, '2026-07-17')).toBe(false)
+    expect(isOverdueTenantInvoice(row, '2026-07-18')).toBe(true)
+    expect(isPayableTenantInvoice({ ...row, balanceAmount: 0 })).toBe(false)
+    expect(isPayableTenantInvoice({ ...row, voidedAt: '2026-07-01T00:00:00Z' })).toBe(false)
   })
 })
 

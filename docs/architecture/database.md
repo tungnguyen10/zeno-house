@@ -18,7 +18,8 @@ Zeno House uses Supabase Postgres. Schema history lives in `supabase/migrations`
 | Tenants | `20260514000004_create_tenants.sql`, `20260530100000_tenant_enrichment.sql` |
 | Tenant identity | `20260708020000_tenant_id_images.sql`, `20260716083605_add_tenant_identity_foundation.sql`, `20260717001405_tenant_self_identity_images.sql`, `20260722085743_tenant_roommate_portal_access.sql`, `20260729120000_harden_tenant_account_lifecycle.sql` |
 | Tenant documents | `20260716233954_add_tenant_documents.sql` |
-| Tenant support requests | `20260717171947_add_tenant_support_requests.sql`, `20260717221849_harden_support_request_attachment_scope.sql` |
+| Tenant support requests | `20260717171947_add_tenant_support_requests.sql`, `20260717221849_harden_support_request_attachment_scope.sql`, `20261127091000_tenant_support_public_response.sql` (cloud rollout pending) |
+| Portal raw-data privacy | `20261127090000_tenant_portal_private_reads.sql` (cloud rollout pending) |
 | Deprecated room assignments | `20260514000005_create_room_assignments.sql`, `20260530000000_drop_room_assignments.sql` |
 | Contracts | `20260515000000_create_contracts.sql`, `20260517000001_contract_commercial_terms.sql`, `20260531000000_contracts_backfill_building_id.sql`, `20260531000001_contracts_payment_day.sql`, `20260615000000_document_codes.sql` |
 | Occupants and renewals | `20260517000002_occupants_and_meter_devices.sql`, `20260517000005_contract_renewals_table.sql`, `20260517000006_occupant_uniqueness.sql` |
@@ -72,10 +73,19 @@ contract, or reaching its end date removes shared access immediately.
 `support_requests` stores tenant-authored issues with server-derived tenant, active-contract, and
 building context. Status is limited to `new`, `in_progress`, or `resolved`; optional attachment
 paths point into the tenant-prefixed area of the existing private `tenant-documents` bucket.
-Tenant RLS is self-scoped through active `tenant_user_links`; owner/manager reads are scoped through
-`user_building_assignments`, while admin reads are unscoped. Request creation accepts a current
-primary tenant or active roommate and enforces the same title/description bounds as the server
-validator.
+Tenant reads are self-scoped in server services; operator reads require visible-building and full
+tenant access before private text or attachment signing. Request creation accepts a current primary
+tenant or active roommate and validates title/description/attachment on the server. Browser-role
+raw SELECT is already revoked; the prepared portal privacy migration also revokes direct writes.
+
+`20261127091000_tenant_support_public_response.sql` adds `public_response` and `responded_at`,
+enforces trimmed response length and paired nullability, and gives support rows a monotonic
+`updated_at` concurrency token. It adds a service-role-only six-argument RPC overload
+that accepts expected status/version and optional public reply. The existing four-argument status
+RPC remains service-role-only during rollout and preserves any public reply. Remove that legacy
+overload only after all application instances use the new signature. The row lock, response/status
+change, timestamps and safe audit event commit together; identical replay is a no-op. Cloud rollout
+and generated types are pending; the repository's narrow adapter must be removed after regeneration.
 
 `access_requests` stores one private lifecycle row per Supabase Auth user, including identity
 snapshot, provider, status, decision role/scope, reviewer, rejection reason, and timestamps. A
@@ -230,11 +240,11 @@ Errors raised by the RPCs (`PERIOD_NOT_FOUND`, `PERIOD_STATUS_INVALID`, `PERIOD_
 to 5 MB. Object paths start with the resolved tenant record id. Storage policies join that segment
 to an active `tenant_user_links` row, while server APIs return only five-minute signed URLs.
 
-`tenant-id-images` remains the canonical private bucket for both internal and tenant self-service
-identity uploads. Admin/owner and tenant flows share `${tenant_id}/front/...` and
-`${tenant_id}/back/...`; the existing tenant path columns identify the current object for each slot.
-Tenant policies match only an active linked tenant id, and API responses expose signed URLs rather
-than raw paths or public URLs.
+`tenant-id-images` remains the canonical private bucket for operator-managed identity images.
+`${tenant_id}/front/...` and `${tenant_id}/back/...` are shared canonical slots identified by the
+tenant path columns. Portal access is read-only through self-scoped signed previews; tenant
+POST/DELETE and direct tenant Storage INSERT/UPDATE/upsert/DELETE cannot modify canonical objects.
+Private correction attachments use a separate support-request path in `tenant-documents`.
 
 ## Contract Checkout And Settlement Model
 
@@ -253,11 +263,22 @@ Physical return and standard final billing are available after schema deployment
 - Do not use user-editable metadata for authorization decisions.
 - The app's business operations go through Nuxt server services and capability checks.
 - RLS remains a safety net for direct authenticated access.
-- Tenant self-read policies on `tenant_user_links`, `tenants`, `contract_occupants`, `contracts`,
-  and `invoices` resolve identity through `auth.uid()` and an active `tenant_user_links` row.
-  Roommate branches additionally require a current active occupancy and contract.
-- Manager safety-net reads of tenants, contracts, occupants, and invoices join
-  `user_building_assignments`; direct browser writes to those business tables are revoked.
+- Retained tenant row policies resolve identity through `auth.uid()` and an active
+  `tenant_user_links` row; roommate branches additionally require current housing. A row policy
+  does not grant table privileges. Raw tenant/request SELECT has already been revoked, and the
+  prepared portal privacy migration also removes table and legacy column SELECT grants on
+  `contracts`, `contract_occupants` and `invoices` from public/anon/authenticated roles.
+- Scoped operator and tenant application reads use authorized server services and retain
+  service-role grants. The prepared privacy migration also revokes direct browser-role
+  support-request INSERT/UPDATE/DELETE, including legacy column writes. RLS stays enabled.
+
+The new privacy migration has read-only catalog verification in
+`supabase/verification/tenant_portal_private_reads.sql`. Public-response verification in
+`supabase/verification/tenant_support_public_response.sql` instead creates fixture rows and an
+audit-failure trigger inside a rolled-back transaction; run the complete script as `postgres`
+with an existing Auth actor, first against a reviewed non-production dataset. Apply reviewed SQL,
+verify actual grants/RPC signatures and regenerate cloud types before the matching application release.
+Source checks do not prove cloud state; see the [active portal record](../changes/tenant-portal-production/index.md).
 
 ## Changing The Schema
 

@@ -1,6 +1,7 @@
 import { getRedirectByRole } from '~/utils/auth-redirect'
 import type { AuthRegistrationInput } from '~/utils/validators/access-requests'
 import { requiresTenantOnboarding } from '~/utils/tenant-onboarding'
+import { isPortalDataKey } from '~/utils/tenant-portal/session'
 
 export function useAuth() {
   const supabase = useSupabaseClient()
@@ -71,7 +72,9 @@ export function useAuth() {
   }
 
   async function logout() {
-    await supabase.auth.signOut()
+    const { error } = await supabase.auth.signOut()
+    if (error) throw error
+    clearNuxtData(isPortalDataKey)
     await navigateTo('/login')
   }
 

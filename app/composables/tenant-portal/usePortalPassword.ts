@@ -7,11 +7,22 @@ interface ValidationDetails {
 }
 
 export function usePortalPassword() {
+  const sessionKey = usePortalSessionKey('password-change')
   const saving = ref(false)
   const fieldErrors = ref<Record<string, string[]>>({})
   const apiError = ref<string | null>(null)
+  let activeRequest: AbortController | null = null
+  watch(sessionKey, () => {
+    activeRequest?.abort()
+    activeRequest = null
+    saving.value = false
+    fieldErrors.value = {}
+    apiError.value = null
+  }, { flush: 'sync' })
 
   async function change(input: TenantPasswordChangeInput): Promise<boolean> {
+    if (saving.value) return false
+    const actor = sessionKey.value
     fieldErrors.value = {}
     apiError.value = null
 
@@ -22,21 +33,29 @@ export function usePortalPassword() {
     }
 
     saving.value = true
+    const controller = new AbortController()
+    activeRequest = controller
+    const isCurrent = () => actor === sessionKey.value && activeRequest === controller
     try {
       await apiFetch('/api/tenant/password', {
         method: 'POST',
         body: parsed.data,
+        signal: controller.signal,
       })
-      return true
+      return isCurrent()
     }
     catch (error) {
+      if (!isCurrent()) return false
       const details = getApiErrorDetails<ValidationDetails>(error)
       fieldErrors.value = details?.fieldErrors ?? {}
       apiError.value = getApiErrorMessage(error)
       return false
     }
     finally {
-      saving.value = false
+      if (isCurrent()) {
+        saving.value = false
+        activeRequest = null
+      }
     }
   }
 

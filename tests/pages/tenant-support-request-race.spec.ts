@@ -2,6 +2,7 @@ import { mount } from '@vue/test-utils'
 import { defineComponent, h, ref } from 'vue'
 import { expect, it, vi } from 'vitest'
 import Page from '~/pages/dashboard/tenant-support-requests.vue'
+import { usePortalUnsavedChanges } from '~/composables/tenant-portal/usePortalUnsavedChanges'
 
 it('prevents switching requests while a status write is in flight', async () => {
   const first = { id: 'first', title: 'First fixture', tenantLabel: 'Fixture A', tenantCode: 'A', createdAt: '2026-01-01', status: 'new' }
@@ -9,6 +10,8 @@ it('prevents switching requests while a status write is in flight', async () => 
   const updating = ref(false)
   let finish!: (value: unknown) => void
   vi.stubGlobal('definePageMeta', vi.fn())
+  vi.stubGlobal('onBeforeRouteLeave', vi.fn())
+  vi.stubGlobal('usePortalUnsavedChanges', usePortalUnsavedChanges)
   vi.stubGlobal('useAuthStore', () => ({ can: () => true }))
   vi.stubGlobal('useTenantSupportRequestQueue', () => ({
     selectedStatus: ref(''), page: ref(1), requests: ref([first, second]),
@@ -20,7 +23,7 @@ it('prevents switching requests while a status write is in flight', async () => 
     UiTable: defineComponent({ props: ['rows'], setup(props, { slots }) { return () => h('div', props.rows.map((row: unknown) => slots['cell-actions']?.({ row }))) } }),
     UiDrawer: defineComponent({ props: ['modelValue'], emits: ['update:modelValue'], setup(props, { slots, emit }) { return () => props.modelValue ? h('div', [h('button', { 'data-close': '', onClick: () => emit('update:modelValue', false) }, 'Close'), slots.default?.(), slots.footer?.()]) : null } }),
     UiButton: defineComponent({ setup(_, { slots, attrs }) { return () => h('button', attrs, slots.default?.()) } }),
-    UiListToolbar: true, UiPagination: true, UiBadge: true, UiAlert: true, NuxtLink: true,
+    UiListToolbar: true, UiPagination: true, UiBadge: true, UiAlert: true, NuxtLink: true, UiSelect: true, UiTextarea: true, UiConfirmModal: true,
   } } })
   const views = () => wrapper.findAll('button').filter(button => button.text() === 'Xem')
   await views()[0]!.trigger('click')

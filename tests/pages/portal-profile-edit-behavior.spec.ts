@@ -11,6 +11,7 @@ const save = vi.fn(async () => false)
 const allowNextLeave = vi.fn()
 const navigate = vi.fn()
 const toastSuccess = vi.fn()
+const sessionKey = ref('portal-tenant-a-profile-edit')
 const stubs = {
   NuxtLink: { props: ['to'], template: '<a :href="to"><slot /></a>' },
   PortalCard: { template: '<section><slot /></section>' },
@@ -27,6 +28,8 @@ beforeEach(() => {
   saving.value = false
   apiError.value = null
   save.mockResolvedValue(false)
+  sessionKey.value = 'portal-tenant-a-profile-edit'
+  vi.stubGlobal('usePortalSessionKey', () => sessionKey)
   vi.stubGlobal('definePageMeta', () => {})
   vi.stubGlobal('onBeforeRouteLeave', vi.fn())
   vi.stubGlobal('navigateTo', navigate)
@@ -70,6 +73,19 @@ describe('four-field profile edit interaction', () => {
     expect(allowNextLeave).toHaveBeenCalledOnce()
     expect(navigate).toHaveBeenCalledWith('/portal/profile')
     expect(toastSuccess).toHaveBeenCalledWith('Đã cập nhật thông tin liên hệ.')
+    wrapper.unmount()
+  })
+
+  it('clears the previous tenant draft before a new account profile arrives', async () => {
+    const wrapper = mount(EditPage, { global: { stubs } })
+    await wrapper.get('[data-label="Nghề nghiệp"]').setValue('Draft of tenant A')
+    sessionKey.value = 'portal-tenant-b-profile-edit'
+    await nextTick()
+    expect((wrapper.get('[data-label="Nghề nghiệp"]').element as HTMLInputElement).value).toBe('')
+    profile.value = { ...original, id: 'tenant-b', occupation: 'Tenant B' }
+    await nextTick()
+    expect((wrapper.get('[data-label="Nghề nghiệp"]').element as HTMLInputElement).value).toBe('Tenant B')
+    expect(wrapper.get('button[type="submit"]').attributes('disabled')).toBeDefined()
     wrapper.unmount()
   })
 

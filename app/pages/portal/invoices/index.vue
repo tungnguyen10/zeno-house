@@ -3,6 +3,7 @@ import { portalInvoiceStatementAccent } from '~/utils/constants/portal-status'
 import { formatCurrency, formatCurrencyNumber } from '~/utils/format/currency'
 import { formatViDate } from '~/utils/format/time'
 import { groupTenantInvoicesByYear } from '~/utils/tenant-portal/invoice-statement'
+import { portalInvoiceState } from '~/utils/tenant-portal/invoice-state'
 
 definePageMeta({
   layout: 'tenant',
@@ -14,6 +15,7 @@ setChrome({ title: 'Hoá đơn', back: null })
 
 const {
   invoices,
+  total,
   status,
   error,
   refresh,
@@ -22,7 +24,10 @@ const {
   loadingMore,
   loadMoreError,
 } = usePortalInvoices()
-const invoiceYearGroups = computed(() => groupTenantInvoicesByYear(invoices.value))
+const invoiceYearGroups = computed(() => groupTenantInvoicesByYear(invoices.value).map(group => ({
+  ...group,
+  invoices: group.invoices.map(invoice => ({ ...invoice, displayState: portalInvoiceState(invoice) })),
+})))
 
 function openInvoice(invoiceId: string) {
   return navigateTo(`/portal/invoices/${invoiceId}`)
@@ -37,12 +42,13 @@ function openInvoice(invoiceId: string) {
         <h1 class="portal-type-title mt-1 min-w-0 text-title [overflow-wrap:anywhere]">Lịch sử hoá đơn</h1>
         <p class="portal-type-body mt-1 text-body">
           <template v-if="status === 'pending'">Đang tải lịch sử thanh toán…</template>
-          <template v-else>{{ invoices.length }} hoá đơn theo thứ tự mới nhất</template>
+          <template v-else>Đã tải {{ invoices.length }} / {{ total }} hoá đơn, mới nhất trước</template>
         </p>
+        <PortalButton variant="ghost" size="sm" class="mt-2" :loading="status === 'pending'" @click="refresh"><IconRefresh class="size-4" aria-hidden="true" />Làm mới</PortalButton>
       </header>
 
       <!-- Loading -->
-      <PortalCard v-if="status === 'pending'" :padded="false" class="overflow-hidden">
+      <PortalCard v-if="status === 'pending' && !invoices.length" :padded="false" class="overflow-hidden">
         <div
           v-for="n in 6"
           :key="n"
@@ -101,6 +107,7 @@ function openInvoice(invoiceId: string) {
                   <p v-if="invoice.dueDate" class="portal-type-caption mt-1 text-body">
                     Hạn thanh toán {{ formatViDate(invoice.dueDate) }}
                   </p>
+                  <p v-else class="portal-type-caption mt-1 text-body">{{ invoice.displayState.dueLabel }}</p>
                   <p class="portal-type-caption mt-1 text-body opacity-70">
                     Tổng {{ formatCurrency(invoice.totalAmount) }}
                     <span aria-hidden="true"> · </span>
@@ -110,13 +117,13 @@ function openInvoice(invoiceId: string) {
 
                 <div class="col-span-2 row-start-3 mt-3 flex items-end justify-between gap-3 border-t border-border-light pt-3 md:col-span-1 md:col-start-auto md:row-start-auto md:mt-0 md:block md:border-0 md:pt-0 md:text-right">
                   <p class="portal-type-caption text-body">
-                    {{ invoice.balanceAmount > 0 ? 'Còn phải thanh toán' : 'Tổng hoá đơn' }}
+                    {{ invoice.status === 'void' ? 'Giá trị trước khi huỷ' : invoice.displayState.outstanding ? 'Còn phải thanh toán' : 'Tổng hoá đơn' }}
                   </p>
                   <p
                     class="portal-money text-lg font-bold leading-6 md:mt-0.5"
-                    :class="`portal-money--${portalInvoiceStatementAccent(invoice.status)}`"
+                    :class="invoice.status === 'void' ? 'text-body' : `portal-money--${invoice.displayState.overdue ? 'overdue' : portalInvoiceStatementAccent(invoice.status)}`"
                   >
-                    <span>{{ formatCurrencyNumber(invoice.balanceAmount > 0 ? invoice.balanceAmount : invoice.totalAmount) }}</span><span class="portal-money-unit">₫</span>
+                    <span>{{ formatCurrencyNumber(invoice.displayState.outstanding ? invoice.balanceAmount : invoice.totalAmount) }}</span><span class="portal-money-unit">₫</span>
                   </p>
                 </div>
 
@@ -124,7 +131,7 @@ function openInvoice(invoiceId: string) {
                   data-invoice-status
                   class="col-start-2 row-start-2 mt-2 flex min-w-0 items-center gap-2 md:col-start-auto md:row-start-auto md:mt-0 md:justify-end"
                 >
-                  <PortalStatusBadge :status="invoice.status" />
+                  <PortalStatusBadge :status="invoice.displayState.overdue ? 'overdue' : invoice.status" />
                   <IconChevronRight
                     class="size-4 text-body opacity-50 transition-transform group-hover:translate-x-0.5 group-hover:opacity-80 motion-reduce:transition-none"
                     aria-hidden="true"

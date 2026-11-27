@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { ref } from 'vue'
+import { ref, unref } from 'vue'
 import type { TenantProfileUpdateInput } from '~/utils/validators/tenant-portal'
 import type { TenantInvoiceListItem, TenantProfile, TenantSupportRequest } from '~/types/tenant-portal'
+import { usePortalSessionKey } from '~/composables/tenant-portal/usePortalSessionKey'
 
 const fetchMock = vi.hoisted(() => vi.fn())
 const uploadMock = vi.hoisted(() => vi.fn())
@@ -9,6 +10,9 @@ const uploadMock = vi.hoisted(() => vi.fn())
 // apiFetch (setup.ts) proxies to $fetch; upload uses the XHR helper we mock here.
 vi.stubGlobal('$fetch', fetchMock)
 vi.mock('~/utils/upload', () => ({ uploadWithProgress: uploadMock }))
+const authUser = ref({ sub: 'tenant-fixture' })
+vi.stubGlobal('useSupabaseUser', () => authUser)
+vi.stubGlobal('usePortalSessionKey', usePortalSessionKey)
 
 let fetchData: unknown
 const useFetchMock = vi.fn(() => ({
@@ -44,28 +48,29 @@ beforeEach(() => {
 })
 
 describe('usePortalIdentityImages', () => {
-  it('uploads to the side-scoped endpoint without inventing a storage path', async () => {
-    uploadMock.mockResolvedValue({ data: { frontSignedUrl: 'https://signed/front', backSignedUrl: null } })
+  it('reads verified images through an account-scoped cache without exposing mutations', async () => {
+    fetchData = { data: { frontSignedUrl: 'https://signed/front', backSignedUrl: null } }
     const { usePortalIdentityImages } = await import('../../app/composables/tenant-portal/usePortalIdentityImages')
-    const { upload, images } = usePortalIdentityImages()
-
-    await upload('front', new File(['x'], 'front.jpg', { type: 'image/jpeg' }))
-
-    const [url, form] = uploadMock.mock.calls[0]!
-    expect(url).toBe('/api/tenant/id-images/front')
-    expect(form).toBeInstanceOf(FormData)
-    expect(images.value.frontSignedUrl).toBe('https://signed/front')
+    const identity = usePortalIdentityImages()
+    expect(identity.images.value.frontSignedUrl).toBe('https://signed/front')
+    expect(useFetchMock).toHaveBeenCalledWith('/api/tenant/id-images', expect.objectContaining({
+      key: expect.objectContaining({ value: 'portal-tenant-fixture-id-images' }),
+    }))
+    expect(identity).not.toHaveProperty('upload')
+    expect(identity).not.toHaveProperty('remove')
+    expect(uploadMock).not.toHaveBeenCalled()
+    expect(fetchMock).not.toHaveBeenCalled()
   })
 
-  it('removes a side through the DELETE endpoint', async () => {
-    fetchData = { data: { frontSignedUrl: 'x', backSignedUrl: null } }
-    fetchMock.mockResolvedValue({ data: { frontSignedUrl: null, backSignedUrl: null } })
+  it('retains an explicit retry and loading/error state when no image data is available', async () => {
+    fetchData = null
     const { usePortalIdentityImages } = await import('../../app/composables/tenant-portal/usePortalIdentityImages')
-    const { remove } = usePortalIdentityImages()
-
-    await remove('front')
-
-    expect(fetchMock).toHaveBeenCalledWith('/api/tenant/id-images/front', { method: 'DELETE' })
+    const identity = usePortalIdentityImages()
+    expect(identity.images.value).toEqual({ frontSignedUrl: null, backSignedUrl: null })
+    expect(identity.status).toBeDefined()
+    expect(identity.error).toBeDefined()
+    expect(identity.refresh).toBeTypeOf('function')
+    expect(fetchMock).not.toHaveBeenCalled()
   })
 })
 
@@ -92,7 +97,7 @@ describe('usePortalDocuments', () => {
 
     await remove('d1')
 
-    expect(fetchMock).toHaveBeenCalledWith('/api/tenant/documents/d1', { method: 'DELETE' })
+    expect(fetchMock).toHaveBeenCalledWith('/api/tenant/documents/d1', { method: 'DELETE', signal: expect.any(AbortSignal) })
     expect(documents.value).toHaveLength(0)
   })
 })
@@ -107,7 +112,7 @@ describe('usePortalProfile', () => {
     const ok = await save({ phone: '0999000000' })
 
     expect(ok).toBe(true)
-    expect(fetchMock).toHaveBeenCalledWith('/api/tenant/me', { method: 'PATCH', body: { phone: '0999000000' } })
+    expect(fetchMock).toHaveBeenCalledWith('/api/tenant/me', { method: 'PATCH', body: { phone: '0999000000' }, signal: expect.any(AbortSignal) })
     expect(profile.value?.phone).toBe('0999000000')
   })
 
@@ -135,6 +140,7 @@ describe('usePortalProfile', () => {
     expect(fetchMock).toHaveBeenCalledWith('/api/tenant/me', {
       method: 'PATCH',
       body: { occupation: null },
+      signal: expect.any(AbortSignal),
     })
   })
 
@@ -147,7 +153,7 @@ describe('usePortalProfile', () => {
     const pending = form.save({ phone: '+84 90 000 0001', occupation: 'Công việc giả lập', emergency_contact_name: 'Liên hệ giả lập', emergency_contact_phone: '0900000002' })
     expect(form.saving.value).toBe(true)
     expect(form.profile.value).toMatchObject({ ...baseProfile, phone: '0900000001', occupation: 'Công việc giả lập', emergencyContactName: 'Liên hệ giả lập', emergencyContactPhone: '0900000002' })
-    expect(fetchMock).toHaveBeenCalledWith('/api/tenant/me', { method: 'PATCH', body: { phone: '0900000001', occupation: 'Công việc giả lập', emergency_contact_name: 'Liên hệ giả lập', emergency_contact_phone: '0900000002' } })
+    expect(fetchMock).toHaveBeenCalledWith('/api/tenant/me', { method: 'PATCH', body: { phone: '0900000001', occupation: 'Công việc giả lập', emergency_contact_name: 'Liên hệ giả lập', emergency_contact_phone: '0900000002' }, signal: expect.any(AbortSignal) })
     resolveSave({ data: { ...baseProfile, phone: '0900000001' } })
     await expect(pending).resolves.toBe(true)
   })
@@ -182,7 +188,7 @@ describe('portal bootstrap data', () => {
     expect(useFetchMock).toHaveBeenCalledTimes(3)
     for (const call of useFetchMock.mock.calls.slice(-3)) {
       expect(call[0]).toBe('/api/tenant/bootstrap')
-      expect(call[1]).toMatchObject({ key: 'portal-bootstrap' })
+      expect(unref(call[1].key)).toBe('portal-tenant-fixture-bootstrap')
     }
   })
 
@@ -289,6 +295,9 @@ describe('usePortalRequests', () => {
     description: 'Nước rò dưới bồn rửa.',
     status: 'new',
     attachmentSignedUrl: null,
+    attachmentUnavailable: false,
+    publicResponse: null,
+    respondedAt: null,
     createdAt: '2026-07-17T10:00:00.000Z',
     updatedAt: '2026-07-17T10:00:00.000Z',
   }

@@ -2,6 +2,8 @@ import type { H3Event } from 'h3'
 import { randomUUID } from 'node:crypto'
 import type { AuthUser } from '~/types/auth'
 import type { TenantSupportRequest } from '~/types/tenant-portal'
+import type { TenantSupportRequestPage } from '~/types/tenant-support-requests'
+import { tenantSupportRequestListQuerySchema } from '~/utils/validators/tenant-support-requests'
 import { AUDIT_ACTIONS } from '~/utils/constants/audit'
 import { mapTenantSupportRequest, type TenantSupportRequestRow } from '~/utils/mappers/tenant-portal'
 import type { TENANT_DOCUMENT_MIME_TYPES } from '~/utils/validators/tenant-portal'
@@ -9,7 +11,7 @@ import { tenantSupportRequestCreateSchema } from '~/utils/validators/tenant-port
 import { TenantDocumentRepository } from '../../repositories/tenant-portal/documents'
 import { TenantSupportRequestRepository } from '../../repositories/tenant-portal/requests'
 import { TenantHousingRepository } from '../../repositories/tenant-portal/housing'
-import { throwConflict, throwForbidden, throwInternal, throwValidationError } from '../../utils/errors'
+import { throwConflict, throwForbidden, throwNotFound, throwValidationError } from '../../utils/errors'
 import { can } from '../../utils/permissions'
 import { resolveTenantId } from '../../utils/scope'
 import { AuditService } from '../audit'
@@ -46,22 +48,23 @@ async function withSignedAttachment(
   event: H3Event,
   row: TenantSupportRequestRow,
 ): Promise<TenantSupportRequest> {
+  let signedUrl: string | null = null
+  let unavailable = false
   if (row.attachment_path) {
-    const [tenantId, scope, objectName] = row.attachment_path.split('/')
+    const [tenantId, scope, ...segments] = row.attachment_path.split('/')
     const isOwnedRequestPath = tenantId === row.tenant_id
       && scope === 'requests'
-      && Boolean(objectName)
-    if (!isOwnedRequestPath) {
-      throwInternal(
-        new Error(`Invalid attachment scope for support request ${row.id}`),
-        'tenantPortal.requests.signAttachment',
-      )
+      && segments.length > 0
+      && segments.every(segment => segment !== '' && segment !== '.' && segment !== '..')
+    if (isOwnedRequestPath) {
+      try { signedUrl = await TenantDocumentRepository.createSignedUrl(event, row.attachment_path) }
+      catch { unavailable = true }
     }
+    if (!signedUrl) unavailable = true
   }
-  const signedUrl = row.attachment_path
-    ? await TenantDocumentRepository.createSignedUrl(event, row.attachment_path)
-    : null
-  return mapTenantSupportRequest(row, signedUrl)
+  // One expired/missing object must never hide the request or turn a successful
+  // creation into an apparent failure that encourages duplicate submissions.
+  return mapTenantSupportRequest(row, signedUrl, unavailable)
 }
 
 function parseSubmission(input: TenantSupportRequestSubmission) {
@@ -80,13 +83,27 @@ function parseSubmission(input: TenantSupportRequestSubmission) {
 }
 
 export const TenantSupportRequestService = {
-  async list(event: H3Event, user: AuthUser): Promise<TenantSupportRequest[]> {
+  async list(event: H3Event, user: AuthUser, input: unknown = {}): Promise<TenantSupportRequestPage> {
     if (!can(user, 'tenant.requests.read')) {
       throwForbidden('Không có quyền xem yêu cầu hỗ trợ')
     }
+    const parsed = tenantSupportRequestListQuerySchema.safeParse(input)
+    if (!parsed.success) throwValidationError('Trang yêu cầu không hợp lệ')
+    const query = parsed.data
     const tenantId = await resolveTenantId(event, user)
-    const rows = await TenantSupportRequestRepository.listByTenantId(event, tenantId)
-    return Promise.all(rows.map(row => withSignedAttachment(event, row)))
+    const { rows, total } = await TenantSupportRequestRepository.listByTenantId(event, tenantId, query)
+    return {
+      data: await Promise.all(rows.map(row => withSignedAttachment(event, row))),
+      meta: { total, page: query.page, limit: query.limit, totalPages: Math.ceil(total / query.limit) },
+    }
+  },
+
+  async detail(event: H3Event, user: AuthUser, id: string): Promise<TenantSupportRequest> {
+    if (!can(user, 'tenant.requests.read')) throwForbidden('Không có quyền xem yêu cầu hỗ trợ')
+    const tenantId = await resolveTenantId(event, user)
+    const row = await TenantSupportRequestRepository.findByTenantId(event, tenantId, id)
+    if (!row || row.tenant_id !== tenantId) throwNotFound('Không tìm thấy yêu cầu')
+    return withSignedAttachment(event, row)
   },
 
   async create(

@@ -1,6 +1,6 @@
 import type { H3Event } from 'h3'
 import type { AuthUser } from '~/types/auth'
-import type { TenantInvoiceDetail, TenantInvoiceListItem } from '~/types/tenant-portal'
+import type { TenantFinancialSummary, TenantInvoiceDetail, TenantInvoiceListItem } from '~/types/tenant-portal'
 import type { TenantInvoiceListQuery } from '~/utils/validators/tenant-portal'
 import { mapTenantInvoiceDetail, mapTenantInvoiceListItem } from '~/utils/mappers/tenant-portal'
 import { TenantInvoiceRepository, type TenantInvoiceScope } from '../../repositories/tenant-portal/invoices'
@@ -11,15 +11,8 @@ import { InvoiceProfileDisplayService } from '../billing/invoice-profile-display
 import { resolveTenantId } from '../../utils/scope'
 import { can } from '../../utils/permissions'
 import { throwForbidden, throwNotFound } from '../../utils/errors'
-
-function todayInHoChiMinh(): string {
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Ho_Chi_Minh',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(new Date())
-}
+import { compareTenantInvoicePriority, isOverdueTenantInvoice, isPayableTenantInvoice } from '~/utils/tenant-portal/invoice-statement'
+import { vietnamDateISO } from '../../utils/date'
 
 async function resolveInvoiceScope(
   event: H3Event,
@@ -33,11 +26,34 @@ async function resolveInvoiceScope(
 }
 
 export const TenantInvoiceService = {
+  async getFinancialSummary(
+    event: H3Event,
+    user: AuthUser,
+    today = vietnamDateISO(),
+  ): Promise<TenantFinancialSummary> {
+    if (!can(user, 'tenant.invoices.read')) throwForbidden('Không có quyền xem hoá đơn')
+    const tenantId = await resolveTenantId(event, user)
+    const scope = await resolveInvoiceScope(event, tenantId, today)
+    const rows = await TenantInvoiceRepository.listOutstanding(event, scope, today)
+    const payable = rows.map(row => mapTenantInvoiceListItem({
+      ...row,
+      status: deriveInvoiceListStatus(row, today),
+    })).filter(isPayableTenantInvoice)
+    const overdue = payable.filter(invoice => isOverdueTenantInvoice(invoice, today))
+    return {
+      outstandingAmount: payable.reduce((sum, invoice) => sum + invoice.balanceAmount, 0),
+      outstandingCount: payable.length,
+      overdueAmount: overdue.reduce((sum, invoice) => sum + invoice.balanceAmount, 0),
+      overdueCount: overdue.length,
+      nextInvoice: payable.sort((left, right) => compareTenantInvoicePriority(left, right, today))[0] ?? null,
+    }
+  },
+
   async list(
     event: H3Event,
     user: AuthUser,
     query: TenantInvoiceListQuery,
-    today = todayInHoChiMinh(),
+    today = vietnamDateISO(),
   ): Promise<{
     data: TenantInvoiceListItem[]
     meta: { total: number; page: number; limit: number; totalPages: number }
@@ -64,7 +80,7 @@ export const TenantInvoiceService = {
     event: H3Event,
     user: AuthUser,
     invoiceId: string,
-    today = todayInHoChiMinh(),
+    today = vietnamDateISO(),
   ): Promise<TenantInvoiceDetail> {
     if (!can(user, 'tenant.invoices.read')) throwForbidden('Không có quyền xem hoá đơn')
     const id = await resolveTenantId(event, user)
@@ -79,6 +95,6 @@ export const TenantInvoiceService = {
     return mapTenantInvoiceDetail({
       ...detail.invoice,
       status: deriveInvoiceListStatus(detail.invoice, today),
-    }, detail.charges, profiles.get(detail.invoice.id) ?? null)
+    }, detail.charges, profiles.get(detail.invoice.id) ?? null, detail.payments)
   },
 }

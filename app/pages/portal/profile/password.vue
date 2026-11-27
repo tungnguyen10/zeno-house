@@ -25,6 +25,11 @@ const form = reactive<TenantPasswordChangeInput>({
 })
 const touched = reactive<Partial<Record<keyof TenantPasswordChangeInput, boolean>>>({})
 const submitted = ref(false)
+watch(usePortalSessionKey('password-form'), () => {
+  Object.assign(form, { current_password: '', password: '', password_confirmation: '' })
+  Object.assign(touched, { current_password: false, password: false, password_confirmation: false })
+  submitted.value = false
+}, { flush: 'sync' })
 
 const validation = computed(() => tenantPasswordChangeSchema.safeParse(form))
 const clientFieldErrors = computed<Record<string, string[]>>(() => (
@@ -33,6 +38,11 @@ const clientFieldErrors = computed<Record<string, string[]>>(() => (
     : validation.value.error.flatten().fieldErrors as Record<string, string[]>
 ))
 const canSubmit = computed(() => validation.value.success && !saving.value)
+const dirty = computed(() => Object.values(form).some(Boolean))
+const guard = usePortalUnsavedChanges(dirty)
+onBeforeRouteLeave(guard.guardRouteLeave)
+onMounted(() => { window.addEventListener('beforeunload', guard.onBeforeUnload) })
+onBeforeUnmount(() => { window.removeEventListener('beforeunload', guard.onBeforeUnload) })
 
 function touchField(field: keyof TenantPasswordChangeInput) {
   touched[field] = true
@@ -53,6 +63,7 @@ async function onSubmit() {
   form.current_password = ''
   form.password = ''
   form.password_confirmation = ''
+  guard.allowNextLeave()
   toast.success('Đã đổi mật khẩu.')
   await navigateTo('/portal/profile')
 }
@@ -137,5 +148,12 @@ async function onSubmit() {
         Đổi mật khẩu
       </PortalButton>
     </form>
+    <PortalBottomSheet :model-value="guard.discardOpen.value" title="Bỏ thay đổi?" @update:model-value="guard.onDiscardSheetUpdate">
+      <p class="portal-type-body text-body">Mật khẩu vừa nhập chưa được lưu.</p>
+      <div class="mt-5 flex flex-col gap-2">
+        <PortalButton block @click="guard.keepEditing">Tiếp tục chỉnh sửa</PortalButton>
+        <PortalButton variant="secondary" block @click="guard.discardChanges">Bỏ thay đổi</PortalButton>
+      </div>
+    </PortalBottomSheet>
   </div>
 </template>

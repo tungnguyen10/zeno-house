@@ -9,7 +9,10 @@ vi.mock('../../../server/services/tenants/identity-conflict', () => ({ TenantIde
 vi.mock('../../../server/services/audit', () => ({ AuditService: { append: vi.fn() } }))
 vi.mock('../../../server/repositories/contracts', () => ({ ContractRepository: { findActiveByTenantId: async () => null } }))
 vi.mock('../../../server/services/tenant-portal/contract', () => ({ TenantContractService: { get: async () => null, listAmendments: async () => [] } }))
-vi.mock('../../../server/services/tenant-portal/invoices', () => ({ TenantInvoiceService: { list: async () => ({ data: [], meta: { total: 0, page: 1, limit: 20, totalPages: 0 } }) } }))
+vi.mock('../../../server/services/tenant-portal/invoices', () => ({ TenantInvoiceService: {
+  list: async () => ({ data: [], meta: { total: 0, page: 1, limit: 20, totalPages: 0 } }),
+  getFinancialSummary: async () => ({ outstandingAmount: 0, outstandingCount: 0, overdueAmount: 0, overdueCount: 0, nextInvoice: null }),
+} }))
 
 vi.mock('../../../server/utils/db', () => ({ db: dbMock }))
 vi.mock('../../../server/repositories/invoices', () => ({
@@ -94,7 +97,7 @@ describe('tenant portal repositories', () => {
       expect.anything(),
       expect.objectContaining({ page: 2, page_size: 10, today: '2026-07-16' }),
       { contractId: 'contract-1' },
-      { exactCount: false },
+      { exactCount: true },
     )
     expect(findCrossPeriodById).toHaveBeenCalledWith(expect.anything(), 'invoice-1', { contractId: 'contract-1' })
   })

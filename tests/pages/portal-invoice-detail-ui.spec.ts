@@ -59,7 +59,7 @@ describe('portal invoice detail refreshed UI', () => {
   it('uses semantic section headings and formats all invoice dates', () => {
     expect(page).toContain('<h2 class="portal-type-heading')
     expect(page).not.toContain('<h3 class="portal-type-heading')
-    expect(page).toContain('formatViDate(invoice.dueDate)')
+    expect(page).toContain('paymentState?.dueLabel')
   })
 
   it('keeps the invoice identity and room context ahead of the primary amount', () => {

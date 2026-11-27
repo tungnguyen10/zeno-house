@@ -2,6 +2,8 @@ import type {
   TenantContractSummary,
   TenantInvoiceDetail,
   TenantInvoiceListItem,
+  TenantInvoiceMeterReading,
+  TenantInvoicePayment,
   TenantProfile,
   TenantSupportRequest,
   TenantSupportRequestStatus,
@@ -56,9 +58,61 @@ interface TenantInvoiceChargeRow {
   unit_price: number
   amount: number
   sort_order: number
+  metadata?: unknown
 }
 
-export type TenantSupportRequestRow = Tables<'support_requests'>
+interface TenantInvoicePaymentRow {
+  id: string
+  amount: number
+  paid_at: string
+  payment_method: string | null
+  funding_source: string | null
+}
+
+function snapshotNumber(value: unknown): number | null {
+  if (typeof value !== 'number' && (typeof value !== 'string' || value.trim() === '')) return null
+  const result = Number(value)
+  return Number.isFinite(result) && result >= 0 ? result : null
+}
+
+function mapMeterReading(charge: TenantInvoiceChargeRow): TenantInvoiceMeterReading | null {
+  if (charge.charge_type !== 'electricity' && charge.charge_type !== 'water') return null
+  if (!charge.metadata || typeof charge.metadata !== 'object' || Array.isArray(charge.metadata)) return null
+  const metadata = charge.metadata as Record<string, unknown>
+  const previousValue = snapshotNumber(metadata.previous_reading_value)
+  const currentValue = snapshotNumber(metadata.current_reading_value)
+  const billableUsage = snapshotNumber(metadata.billable_usage)
+  if (previousValue === null && currentValue === null && billableUsage === null) return null
+  return {
+    previousValue,
+    currentValue,
+    billableUsage,
+    unit: charge.charge_type === 'electricity' ? 'kWh' : 'm³',
+    adjusted: metadata.source === 'usage_override'
+      || ['replacement', 'reset', 'correction', 'manual_adjustment'].includes(String(metadata.reason))
+      || (previousValue !== null && currentValue !== null && billableUsage !== null
+        && Math.abs(currentValue - previousValue - billableUsage) > 0.0005),
+  }
+}
+
+function mapTenantInvoicePayment(row: TenantInvoicePaymentRow): TenantInvoicePayment {
+  return {
+    id: row.id,
+    amount: Number(row.amount),
+    paidAt: row.paid_at,
+    method: row.payment_method,
+    fundingSource: row.funding_source === 'cash' || row.funding_source === 'deposit' || row.funding_source === 'credit'
+      ? row.funding_source
+      : null,
+  }
+}
+
+// The additive response migration is deployed before the application. Keep its
+// raw-row boundary explicit until cloud-generated database types are refreshed.
+export type TenantSupportRequestRow = Tables<'support_requests'> & {
+  public_response?: string | null
+  responded_at?: string | null
+}
 
 export function mapTenantProfile(row: TenantProfileRow): TenantProfile {
   return {
@@ -141,10 +195,12 @@ export function mapTenantInvoiceDetail(
   row: InvoiceListItem,
   charges: TenantInvoiceChargeRow[],
   invoiceProfile: InvoiceProfileDisplay | null = null,
+  payments: TenantInvoicePaymentRow[] = [],
 ): TenantInvoiceDetail {
   return {
     ...mapTenantInvoiceListItem(row),
     invoiceProfile,
+    payments: payments.map(mapTenantInvoicePayment),
     charges: charges.map(charge => ({
       id: charge.id,
       chargeType: charge.charge_type,
@@ -153,6 +209,7 @@ export function mapTenantInvoiceDetail(
       unitPrice: charge.unit_price,
       amount: charge.amount,
       sortOrder: charge.sort_order,
+      meterReading: mapMeterReading(charge),
     })),
   }
 }
@@ -160,6 +217,7 @@ export function mapTenantInvoiceDetail(
 export function mapTenantSupportRequest(
   row: TenantSupportRequestRow,
   attachmentSignedUrl: string | null = null,
+  attachmentUnavailable = false,
 ): TenantSupportRequest {
   return {
     id: row.id,
@@ -170,6 +228,9 @@ export function mapTenantSupportRequest(
     description: row.description,
     status: row.status as TenantSupportRequestStatus,
     attachmentSignedUrl,
+    attachmentUnavailable,
+    publicResponse: row.public_response ?? null,
+    respondedAt: row.responded_at ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }

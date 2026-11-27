@@ -10,7 +10,7 @@ const style = computed(() => PORTAL_STATUS_STYLES[props.status])
 
 <template>
   <span
-    class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold"
+    class="inline-flex shrink-0 items-center whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-semibold"
     :class="style.className"
   >
     {{ style.label }}

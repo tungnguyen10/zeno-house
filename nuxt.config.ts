@@ -171,7 +171,8 @@ export default defineNuxtConfig({
   pwa: {
     // Single installable PWA for the whole app on one domain. Install once,
     // then `getRedirectByRole` routes the user to /portal or /dashboard.
-    registerType: "autoUpdate",
+    registerType: "prompt",
+    injectRegister: false,
     // Custom SW so authenticated SSR pages + /api/tenant/** payloads (including
     // signed URLs) are NEVER cached; only static assets + offline shell are.
     strategies: "injectManifest",
@@ -203,6 +204,8 @@ export default defineNuxtConfig({
       ],
     },
     client: {
+      // Custom registration keeps another tab's update from discarding unsaved forms.
+      registerPlugin: false,
       // We present our own dismissible install prompt (PortalInstallPrompt).
       installPrompt: false,
     },

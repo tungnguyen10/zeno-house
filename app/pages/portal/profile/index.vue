@@ -26,6 +26,18 @@ const identity = usePortalIdentityImages()
 const docs = usePortalDocuments()
 
 const docInput = ref<HTMLInputElement | null>(null)
+const loggingOut = ref(false)
+const documentToRemove = ref<{ id: string; name: string } | null>(null)
+const removingDocument = ref(false)
+const sessionKey = usePortalSessionKey('profile-actions')
+watch(sessionKey, () => {
+  documentToRemove.value = null
+  removingDocument.value = false
+}, { flush: 'sync' })
+
+function isCancelled(error: unknown) {
+  return typeof error === 'object' && error !== null && 'name' in error && error.name === 'AbortError'
+}
 
 function pickDocument() {
   docInput.value?.click()
@@ -36,6 +48,7 @@ async function onDocumentChange(event: Event) {
   const file = target.files?.[0]
   target.value = ''
   if (!file) return
+  const actor = sessionKey.value
 
   if (!TENANT_DOCUMENT_MIME_TYPES.includes(file.type as (typeof TENANT_DOCUMENT_MIME_TYPES)[number])) {
     toast.error('Tài liệu phải là JPEG, PNG, WebP hoặc PDF.')
@@ -48,21 +61,27 @@ async function onDocumentChange(event: Event) {
 
   try {
     await docs.upload(file)
-    toast.success('Đã tải tài liệu lên.')
+    if (actor === sessionKey.value) toast.success('Đã tải tài liệu lên.')
   }
   catch (error) {
-    toast.error(getApiErrorMessage(error))
+    if (actor === sessionKey.value && !isCancelled(error)) toast.error(getApiErrorMessage(error))
   }
 }
 
 async function onDocumentRemove(id: string) {
+  if (removingDocument.value) return
+  const actor = sessionKey.value
+  removingDocument.value = true
   try {
     await docs.remove(id)
+    if (actor !== sessionKey.value) return
+    documentToRemove.value = null
     toast.success('Đã xóa tài liệu.')
   }
   catch (error) {
-    toast.error(getApiErrorMessage(error))
+    if (actor === sessionKey.value && !isCancelled(error)) toast.error(getApiErrorMessage(error))
   }
+  finally { if (actor === sessionKey.value) removingDocument.value = false }
 }
 
 function formatBytes(bytes: number): string {
@@ -72,14 +91,18 @@ function formatBytes(bytes: number): string {
 }
 
 async function onLogout() {
-  await logout()
+  if (loggingOut.value) return
+  loggingOut.value = true
+  try { await logout() }
+  catch (error) { toast.error(getApiErrorMessage(error, 'Chưa đăng xuất được. Vui lòng thử lại.')) }
+  finally { loggingOut.value = false }
 }
 </script>
 
 <template>
   <div>
     <div class="mx-auto w-full max-w-2xl space-y-5 px-4 py-5 lg:px-8 lg:py-8">
-      <div v-if="profileStatus === 'pending'" class="space-y-5">
+      <div v-if="profileStatus === 'pending' && !profile" class="space-y-5">
         <PortalSkeleton variant="statement" class="h-40" />
         <PortalSkeleton variant="card" class="h-64" />
         <PortalSkeleton variant="card" class="h-32" />
@@ -113,16 +136,27 @@ async function onLogout() {
               </p>
             </div>
           </div>
-          <PortalCard class="grid w-full gap-4 md:grid-cols-2">
+          <PortalSkeleton v-if="identity.status.value === 'pending'" variant="card" class="h-48" />
+          <PortalEmptyState
+            v-else-if="identity.error.value"
+            tone="error"
+            title="Không tải được ảnh định danh"
+            description="Chưa kiểm tra được ảnh trong hồ sơ. Hãy thử tải lại."
+            action-label="Thử lại"
+            @action="identity.refresh"
+          />
+          <PortalCard v-else class="grid w-full gap-4 md:grid-cols-2">
             <PortalIdentityImageSlot
               label="Mặt trước"
               :signed-url="identity.images.value.frontSignedUrl"
               :editable="false"
+              @retry="identity.refresh"
             />
             <PortalIdentityImageSlot
               label="Mặt sau"
               :signed-url="identity.images.value.backSignedUrl"
               :editable="false"
+              @retry="identity.refresh"
             />
           </PortalCard>
         </section>
@@ -242,7 +276,7 @@ async function onLogout() {
                   type="button"
                   class="flex size-11 shrink-0 items-center justify-center rounded-full text-body transition-colors hover:bg-portal-danger/10 hover:text-portal-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-portal-danger/40"
                   aria-label="Xóa tài liệu"
-                  @click="onDocumentRemove(document.id)"
+                  @click="documentToRemove = { id: document.id, name: document.name }"
                 >
                   <IconTrash class="h-4 w-4" aria-hidden="true" />
                 </button>
@@ -259,15 +293,28 @@ async function onLogout() {
           >
         </section>
 
+      </template>
+
         <div class="pt-1">
           <div class="rounded-xl bg-smoke-blue">
-            <PortalButton variant="ghost" block @click="onLogout">
+            <PortalButton variant="ghost" block :loading="loggingOut" @click="onLogout">
               <IconLogOut class="h-4 w-4" aria-hidden="true" />
               Đăng xuất
             </PortalButton>
           </div>
         </div>
-      </template>
     </div>
+    <PortalBottomSheet
+      :model-value="Boolean(documentToRemove)"
+      title="Xóa tài liệu?"
+      @update:model-value="open => { if (!open && !removingDocument) documentToRemove = null }"
+    >
+      <p class="portal-type-body break-words text-title">{{ documentToRemove?.name }}</p>
+      <p class="portal-type-body mt-2 text-body">Tài liệu sẽ được xóa khỏi hồ sơ. Bạn cần tải lại tệp nếu muốn sử dụng sau này.</p>
+      <div class="mt-5 grid grid-cols-2 gap-3">
+        <PortalButton variant="secondary" :disabled="removingDocument" @click="documentToRemove = null">Giữ tài liệu</PortalButton>
+        <PortalButton variant="danger" :loading="removingDocument" @click="documentToRemove && onDocumentRemove(documentToRemove.id)">Xóa tài liệu</PortalButton>
+      </div>
+    </PortalBottomSheet>
   </div>
 </template>

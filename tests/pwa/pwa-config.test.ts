@@ -39,9 +39,10 @@ const pngDimensions = (path: string) => {
 describe('PWA manifest + registration config', () => {
   const config = read('nuxt.config.ts')
 
-  it('registers a single installable PWA with autoUpdate', () => {
+  it('registers a single installable PWA with explicit safe updates', () => {
     expect(config).toContain('"@vite-pwa/nuxt"')
-    expect(config).toMatch(/registerType:\s*"autoUpdate"/)
+    expect(config).toMatch(/registerType:\s*"prompt"/)
+    expect(config).toMatch(/registerPlugin:\s*false/)
   })
 
   it('declares a valid manifest with vi lang, standalone, and 192/512 + maskable icons', () => {

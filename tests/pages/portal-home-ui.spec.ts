@@ -16,12 +16,12 @@ describe('portal home refreshed statement UI', () => {
   it('renders the latest invoice as a status-accented money statement', () => {
     expect(page).toContain(':accent="portalInvoiceStatementAccent(latest.status)"')
     expect(page).toContain('portal-money')
-    expect(page).toContain('formatCurrencyNumber(latest.balanceAmount)')
+    expect(page).toContain('formatCurrencyNumber(latest.totalAmount)')
     expect(page).toContain('class="portal-money-unit"')
   })
 
   it('matches the room keycard height while the hero is loading', () => {
-    expect(page).toContain('<PortalSkeleton v-if="loading" variant="statement" class="h-56"')
+    expect(page).toContain('<PortalSkeleton v-if="loading" variant="statement" class="h-40"')
   })
 
   it('labels roommate access and names the primary tenant', () => {
@@ -58,13 +58,11 @@ describe('portal home refreshed statement UI', () => {
     expect(page).not.toContain("navigateTo('/portal/profile')")
   })
 
-  it('turns an outstanding latest invoice into the primary debt action', () => {
-    expect(page).toContain('const latestInvoiceHeading = computed')
-    expect(page).toContain("'Công nợ cần xử lý'")
-    expect(page).toContain("'Hoá đơn mới nhất'")
-    expect(page).toContain('{{ latestInvoiceHeading }}')
-    expect(page).toContain('Xem chi tiết')
-    expect(page).toContain('formatViDate(latest.dueDate)')
+  it('prioritizes the complete server debt summary ahead of recent history', () => {
+    expect(page).toContain(':summary="financialSummary"')
+    expect(page.indexOf('<PortalDebtSummary')).toBeLessThan(page.indexOf('Hoá đơn gần đây'))
+    expect(page).toContain('latestState.dueLabel')
+    expect(page).toContain('Theo các hoá đơn đã tải')
   })
 
   it('replaces misleading empty content with a retry state when bootstrap fails', () => {
@@ -82,7 +80,13 @@ describe('portal home refreshed statement UI', () => {
 
   it('records the financial overview behavior in the accepted portal spec', () => {
     expect(spec).toContain('### Requirement: Tenant financial overview')
-    expect(spec).toContain('up to the six newest invoice periods in chronological order')
+    expect(spec).toContain('from the invoices already loaded and explicitly label that scope')
+    expect(spec).toContain('exclude drafts and void invoices')
+    expect(spec).toContain('up to the six newest loaded billing months in chronological order')
+    expect(spec).toContain('the loaded valid invoices cover at least two distinct months')
+    expect(spec).toContain('their amounts are added into one monthly bar and that month counts once in the average')
+    expect(spec).toContain('Average monthly value SHALL divide by displayed month count, not invoice count')
+    expect(spec).toContain('This chart SHALL NOT supply the complete outstanding-debt figure')
     expect(spec).toContain(
       'the chart displays each period’s total invoice value as one vertical bar',
     )

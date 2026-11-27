@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   contractGet: vi.fn(),
   amendmentList: vi.fn(),
   invoiceList: vi.fn(),
+  financialSummary: vi.fn(),
 }))
 
 vi.mock('../../../server/services/tenant-portal/profile', () => ({
@@ -14,7 +15,7 @@ vi.mock('../../../server/services/tenant-portal/contract', () => ({
   TenantContractService: { get: mocks.contractGet, listAmendments: mocks.amendmentList },
 }))
 vi.mock('../../../server/services/tenant-portal/invoices', () => ({
-  TenantInvoiceService: { list: mocks.invoiceList },
+  TenantInvoiceService: { list: mocks.invoiceList, getFinancialSummary: mocks.financialSummary },
 }))
 
 describe('TenantBootstrapService', () => {
@@ -26,6 +27,10 @@ describe('TenantBootstrapService', () => {
     mocks.invoiceList.mockResolvedValue({
       data: [],
       meta: { total: 0, page: 1, limit: 20, totalPages: 0 },
+    })
+    mocks.financialSummary.mockResolvedValue({
+      outstandingAmount: 1200, outstandingCount: 21,
+      overdueAmount: 200, overdueCount: 1, nextInvoice: { id: 'older-debt' },
     })
   })
 
@@ -40,10 +45,15 @@ describe('TenantBootstrapService', () => {
       contractAmendments: [],
       invoices: [],
       invoiceMeta: { total: 0, page: 1, limit: 20, totalPages: 0 },
+      financialSummary: {
+        outstandingAmount: 1200, outstandingCount: 21,
+        overdueAmount: 200, overdueCount: 1, nextInvoice: { id: 'older-debt' },
+      },
     })
     expect(mocks.profileGet).toHaveBeenCalledWith(event, user)
     expect(mocks.contractGet).toHaveBeenCalledWith(event, user, '2026-07-22')
     expect(mocks.amendmentList).toHaveBeenCalledWith(event, user, '2026-07-22')
+    expect(mocks.financialSummary).toHaveBeenCalledWith(event, user, '2026-07-22')
     expect(mocks.invoiceList).toHaveBeenCalledWith(
       event,
       user,

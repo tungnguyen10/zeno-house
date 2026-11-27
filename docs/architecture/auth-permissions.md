@@ -209,9 +209,11 @@ Internal building scope and tenant self-scope are separate mechanisms:
   Missing or disabled links resolve to the same not-found response. Client-supplied tenant ids
   are never used to establish tenant identity. Shared housing scope is then resolved from a
   current primary contract or active `contract_occupants` membership.
-- Tenant self-select RLS policies on `tenants`, `contract_occupants`, `contracts`, and `invoices`
-  also resolve identity through `tenant_user_links`, `auth.uid()`, and an active link. Roommates
-  can read the current shared contract and its invoices but never the primary tenant profile.
+- Retained tenant RLS policies resolve identity through the active link, but do not authorize raw
+  browser reads once table grants are revoked. Roommates receive only safe shared contract/invoice
+  DTOs through services, never the primary tenant profile or full official contract documents.
+  Primary tenants retain invoice history by `tenant_id`; official document downloads additionally
+  require the current active primary contract.
 
 Tenant account revocation is disable-first and reports its physical Auth outcome. A hard delete is
 attempted first. If retained history still references the Auth user, the repository uses
@@ -222,6 +224,19 @@ This is safe because browser code never queries business tables directly; all bu
 flows through `server/api/**` -> service -> repository. The client only uses Supabase for
 auth. Because RLS is bypassed by the service-role client, every access decision MUST be made
 in a service before the repository runs.
+
+The prepared `20261127090000_tenant_portal_private_reads.sql` migration closes raw table/column
+SELECT on contracts, occupants and invoices for public/anon/authenticated roles and direct
+support-request writes, retaining service-role access and RLS. It complements earlier profile and
+request SELECT revocations. The portal privacy middleware sends `private, no-store, max-age=0` for
+portal HTML and tenant API responses, including errors. Actor-keyed Nuxt data, synchronous session
+clearing and guarded in-flight responses prevent private client state crossing accounts.
+
+Support public replies require visible-building/full tenant access plus `tenants.update`, with
+expected status and `updated_at` enforced by the service-role-only atomic RPC. A public reply or
+resolved status never approves identity changes or records payment. Both new migrations, cloud
+type generation and live permission/device checks remain separate release gates in the
+[active portal change](../changes/tenant-portal-production/index.md).
 
 ## Internal Tenant Authorization
 

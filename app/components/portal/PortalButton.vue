@@ -28,18 +28,18 @@ if (props.iconOnly && !props.ariaLabel?.trim()) {
 // ≥44px touch targets for md/lg per the native-shell touch contract.
 const buttonClass = computed(() =>
   clsx(
-    'inline-flex items-center justify-center gap-2 font-semibold rounded-xl transition-transform select-none',
+    'inline-flex items-center justify-center gap-2 whitespace-nowrap font-semibold rounded-xl transition-transform select-none',
     '[transition-duration:var(--portal-motion-micro)] [transition-timing-function:var(--portal-ease-out)]',
     'active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-100',
     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-theme/40',
     props.block && 'w-full',
     !props.iconOnly && {
-      'px-3 min-h-[36px] text-sm': props.size === 'sm',
+      'px-3 min-h-[44px] text-sm': props.size === 'sm',
       'px-5 min-h-[44px] text-sm': props.size === 'md',
       'px-6 min-h-[52px] text-base': props.size === 'lg',
     },
     props.iconOnly && {
-      'size-9 text-sm': props.size === 'sm',
+      'size-11 text-sm': props.size === 'sm',
       'size-11 text-base': props.size === 'md',
       'size-[52px] text-base': props.size === 'lg',
     },

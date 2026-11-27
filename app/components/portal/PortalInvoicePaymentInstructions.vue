@@ -3,7 +3,7 @@ import type { InvoiceProfileDisplay } from '~/types/building-invoice-profile'
 import { usePortalToast } from '~/composables/tenant-portal/usePortalToast'
 import { formatCurrencyNumber } from '~/utils/format/currency'
 
-defineProps<{
+const props = defineProps<{
   profile: InvoiceProfileDisplay | null
   amount: number
   mode: 'outstanding' | 'history'
@@ -13,6 +13,8 @@ const toast = usePortalToast()
 type CopyField = 'account' | 'content'
 const copying = ref<CopyField | null>(null)
 const copied = ref<CopyField | null>(null)
+const qrFailed = ref(false)
+watch(() => props.profile?.qrImageUrl, () => { qrFailed.value = false })
 let copiedTimer: ReturnType<typeof setTimeout> | undefined
 
 async function copyValue(field: CopyField, value: string, successMessage: string) {
@@ -129,12 +131,13 @@ onBeforeUnmount(() => {
 
       <figure v-if="mode === 'outstanding'" class="mx-auto w-36">
         <img
-          v-if="profile.qrImageUrl"
+          v-if="profile.qrImageUrl && !qrFailed"
           :src="profile.qrImageUrl"
           alt="Mã QR chuyển khoản"
           width="144"
           height="144"
           class="aspect-square w-36 rounded-xl border border-border-light bg-white object-contain p-1.5"
+          @error="qrFailed = true"
         >
         <div
           v-else
@@ -143,7 +146,7 @@ onBeforeUnmount(() => {
           QR chưa khả dụng
         </div>
         <figcaption class="portal-type-caption mt-1.5 text-center text-body">
-          {{ profile.qrImageUrl ? 'Quét mã để thanh toán' : 'Dùng thông tin tài khoản' }}
+          {{ profile.qrImageUrl && !qrFailed ? 'Nhấn giữ để lưu QR. Kiểm tra số tiền và nội dung trước khi chuyển.' : 'Dùng thông tin tài khoản' }}
         </figcaption>
       </figure>
     </div>
@@ -157,7 +160,7 @@ onBeforeUnmount(() => {
       <div class="min-w-0">
         <h2 class="portal-type-heading text-title">Chưa có thông tin chuyển khoản</h2>
         <p class="portal-type-caption mt-1 leading-relaxed text-body">
-          Liên hệ quản lý để nhận thông tin thanh toán. Hệ thống không dùng cấu hình hiện tại để thay thế dữ liệu lịch sử của hoá đơn.
+          Liên hệ quản lý để xác nhận tài khoản nhận tiền của hoá đơn này.
         </p>
       </div>
     </div>

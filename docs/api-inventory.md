@@ -8,7 +8,7 @@ tags: [api, generated, engineering]
 # API Inventory And Performance Contracts
 
 Generated from checked-in handlers by `node scripts/generate-api-inventory.mjs`.
-Route count: **244**.
+Route count: **247**.
 
 All business routes require server-side authorization unless explicitly documented as an internal-secret route. Initial reads use Nuxt `useFetch`; imperative reads and mutations use `apiFetch` with a 15-second timeout, request ID, no automatic mutation retry, and normalized server envelopes.
 
@@ -215,22 +215,25 @@ All business routes require server-side authorization unless explicitly document
 | DELETE | `/api/tenant-accounts/orphans/[id]` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | GET | `/api/tenant-accounts/orphans` | domain-bounded | request/DTO policy | p95 ≤ 400ms |
 | PATCH | `/api/tenant-support-requests/[id]` | n/a | invalidate affected domain | p95 ≤ 250ms |
-| GET | `/api/tenant-support-requests` | domain-bounded | request/DTO policy | p95 ≤ 400ms |
-| GET | `/api/tenant/bootstrap` | n/a | request/DTO policy | p95 ≤ 800ms |
-| GET | `/api/tenant/contract` | n/a | request/DTO policy | p95 ≤ 250ms |
-| DELETE | `/api/tenant/documents/[id]` | n/a | invalidate affected domain | p95 ≤ 250ms |
-| GET | `/api/tenant/documents` | domain-bounded | request/DTO policy | p95 ≤ 400ms |
-| POST | `/api/tenant/documents` | n/a | invalidate affected domain | p95 ≤ 250ms |
-| DELETE | `/api/tenant/id-images/[side]` | n/a | invalidate affected domain | p95 ≤ 250ms |
-| POST | `/api/tenant/id-images/[side]` | n/a | invalidate affected domain | p95 ≤ 250ms |
-| GET | `/api/tenant/id-images` | domain-bounded | request/DTO policy | p95 ≤ 400ms |
-| GET | `/api/tenant/invoices/[id]` | n/a | request/DTO policy | p95 ≤ 250ms |
-| GET | `/api/tenant/invoices` | domain-bounded | request/DTO policy | p95 ≤ 400ms |
-| GET | `/api/tenant/me` | n/a | request/DTO policy | p95 ≤ 250ms |
-| PATCH | `/api/tenant/me` | n/a | invalidate affected domain | p95 ≤ 250ms |
-| POST | `/api/tenant/password` | n/a | invalidate affected domain | p95 ≤ 250ms |
-| GET | `/api/tenant/requests` | domain-bounded | request/DTO policy | p95 ≤ 400ms |
-| POST | `/api/tenant/requests` | n/a | invalidate affected domain | p95 ≤ 250ms |
+| GET | `/api/tenant-support-requests` | bounded | request/DTO policy | p95 ≤ 400ms |
+| GET | `/api/tenant/bootstrap` | n/a | no-store | p95 ≤ 800ms |
+| GET | `/api/tenant/contract-documents/[id]/download` | n/a | no-store | p95 ≤ 250ms |
+| GET | `/api/tenant/contract-documents` | domain-bounded | no-store | p95 ≤ 400ms |
+| GET | `/api/tenant/contract` | n/a | no-store | p95 ≤ 250ms |
+| DELETE | `/api/tenant/documents/[id]` | n/a | no-store | p95 ≤ 250ms |
+| GET | `/api/tenant/documents` | domain-bounded | no-store | p95 ≤ 400ms |
+| POST | `/api/tenant/documents` | n/a | no-store | p95 ≤ 250ms |
+| DELETE | `/api/tenant/id-images/[side]` | n/a | no-store | p95 ≤ 250ms |
+| POST | `/api/tenant/id-images/[side]` | n/a | no-store | p95 ≤ 250ms |
+| GET | `/api/tenant/id-images` | domain-bounded | no-store | p95 ≤ 400ms |
+| GET | `/api/tenant/invoices/[id]` | n/a | no-store | p95 ≤ 250ms |
+| GET | `/api/tenant/invoices` | bounded | no-store | p95 ≤ 400ms |
+| GET | `/api/tenant/me` | n/a | no-store | p95 ≤ 250ms |
+| PATCH | `/api/tenant/me` | n/a | no-store | p95 ≤ 250ms |
+| POST | `/api/tenant/password` | n/a | no-store | p95 ≤ 250ms |
+| GET | `/api/tenant/requests/[id]` | n/a | no-store | p95 ≤ 250ms |
+| GET | `/api/tenant/requests` | bounded | no-store | p95 ≤ 400ms |
+| POST | `/api/tenant/requests` | n/a | no-store | p95 ≤ 250ms |
 | DELETE | `/api/tenants/[id]` | n/a | invalidate affected domain | p95 ≤ 250ms |
 | GET | `/api/tenants/[id]` | n/a | request/DTO policy | p95 ≤ 250ms |
 | PATCH | `/api/tenants/[id]` | n/a | invalidate affected domain | p95 ≤ 250ms |

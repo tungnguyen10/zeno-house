@@ -3,10 +3,13 @@ import type { TenantInvoiceDetail } from '~/types/tenant-portal'
 
 /** Single invoice detail (with charge breakdown) for the signed-in tenant. */
 export function usePortalInvoiceDetail(id: MaybeRefOrGetter<string>) {
+  const key = usePortalSessionKey(() => `invoice-${toValue(id)}`)
   const { data, status, error, refresh } = useFetch<ApiSuccess<TenantInvoiceDetail>>(
     () => `/api/tenant/invoices/${toValue(id)}`,
-    { key: () => `portal-invoice-${toValue(id)}`, watch: [() => toValue(id)] },
+    { key, watch: [() => toValue(id)] },
   )
+
+  usePortalRefreshOnReturn(refresh, usePortalSessionKey('invoice-return'))
 
   const invoice = computed(() => data.value?.data ?? null)
 

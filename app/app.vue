@@ -41,5 +41,6 @@ watch(() => route.fullPath, (_next, previous) => {
       <NuxtPage />
     </NuxtLayout>
     <PortalInstallPrompt />
+    <PortalUpdatePrompt />
   </div>
 </template>

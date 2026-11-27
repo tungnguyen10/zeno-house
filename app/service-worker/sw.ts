@@ -16,12 +16,19 @@ interface ExtendableEventLike {
   waitUntil: (promise: Promise<unknown>) => void
 }
 
+interface MessageEventLike extends ExtendableEventLike {
+  data?: { type?: string }
+}
+
 interface ServiceWorkerScope {
   // workbox-build injects the precache manifest at the literal `self.__WB_MANIFEST`.
   __WB_MANIFEST: PrecacheEntry[]
   skipWaiting: () => void
   clients: { claim: () => Promise<void> }
-  addEventListener: (type: 'activate', listener: (event: ExtendableEventLike) => void) => void
+  addEventListener: {
+    (type: 'activate', listener: (event: ExtendableEventLike) => void): void
+    (type: 'message', listener: (event: MessageEventLike) => void): void
+  }
 }
 
 // Module-scoped ambient declaration shadows the DOM `self` with the SW surface
@@ -32,7 +39,9 @@ declare const self: ServiceWorkerScope
 // @vite-pwa/nuxt strips ".html" from precache URLs, so the entry key is "/offline".
 const OFFLINE_URL = '/offline'
 
-self.skipWaiting()
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'SKIP_WAITING') event.waitUntil(Promise.resolve(self.skipWaiting()))
+})
 self.addEventListener('activate', (event) => {
   event.waitUntil(self.clients.claim())
 })

@@ -6,16 +6,24 @@ const fetchMock = vi.fn()
 const refresh = vi.fn()
 vi.stubGlobal('apiFetch', fetchMock)
 vi.stubGlobal('useFetch', () => ({ data: ref({ data: [], meta: { page: 1, limit: 20, total: 0, totalPages: 0 } }), status: ref('success'), error: ref(null), refresh }))
-const request = { id: 'request-1', status: 'in_progress' } as OperatorTenantSupportRequest
+const request = { id: 'request-1', status: 'in_progress', updatedAt: '2026-11-10T00:00:00.000Z' } as OperatorTenantSupportRequest
 beforeEach(() => { vi.clearAllMocks() })
 describe('staff request workflow', () => {
   it('submits expected status to the dedicated endpoint without changing profile state', async () => {
     fetchMock.mockResolvedValue({ data: { ...request, status: 'resolved' } })
     const queue = useTenantSupportRequestQueue()
     expect((await queue.updateStatus(request, 'resolved'))?.status).toBe('resolved')
-    expect(fetchMock).toHaveBeenCalledWith('/api/tenant-support-requests/request-1', { method: 'PATCH', body: { status: 'resolved', expected_status: 'in_progress' } })
+    expect(fetchMock).toHaveBeenCalledWith('/api/tenant-support-requests/request-1', { method: 'PATCH', body: { status: 'resolved', expected_status: 'in_progress', expected_updated_at: request.updatedAt } })
     expect(refresh).toHaveBeenCalledTimes(1)
     expect(queue.updating.value).toBe(false)
+  })
+  it('submits a trimmed public reply with the version even when status is unchanged', async () => {
+    fetchMock.mockResolvedValue({ data: { ...request, publicResponse: 'Checked' } })
+    const queue = useTenantSupportRequestQueue()
+    expect((await queue.updateStatus(request, 'in_progress', ' Checked '))?.publicResponse).toBe('Checked')
+    expect(fetchMock).toHaveBeenCalledWith('/api/tenant-support-requests/request-1', { method: 'PATCH', body: {
+      status: 'in_progress', expected_status: 'in_progress', expected_updated_at: request.updatedAt, public_response: 'Checked',
+    } })
   })
   it('surfaces stale conflict safely and leaves the selected status unchanged', async () => {
     fetchMock.mockRejectedValue({ data: { error: { code: 'CONFLICT', message: 'raw database message' } } })

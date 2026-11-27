@@ -131,6 +131,29 @@ Add. The prompt stays hidden on first paint, after dismissal for the current app
 running in standalone mode. `PortalBottomSheet` owns dialog naming, focus containment, Escape close,
 scroll locking, and focus restoration for the manual guide.
 
+## Portal Session And PWA Updates
+
+Portal `useFetch` keys use `portal-<auth-identity>-<resource>`. The session plugin clears all portal
+async data synchronously on account changes, and successful logout clears it as well. Imperative
+profile/document/request mutations and paginated reads guard account identity and invalidated
+operation generations so an old response, error, rollback or progress callback cannot update the
+next tenant's state. Private drafts remain in memory and reset on identity changes. HTTP no-store
+headers complement these client safeguards; neither memory-only keys nor service-worker policy
+alone protects shared HTTP caches.
+
+`pwa-update.client.ts` owns registration with `registerType: prompt` and the module registration
+plugin disabled. `PortalUpdatePrompt` offers update/defer; the controller reloads only after this
+tab requested activation and its online/dirty/busy-form checks still pass. Worker activation in
+another tab does not reload this tab. Activation failure and timeout leave a retryable prompt.
+
+The custom worker precaches only the configured offline shell/icons/favicon and serves navigations
+through `NetworkOnly`, falling back to `/offline` without caching authenticated HTML. API/auth
+navigations are excluded. The portal labels offline data as potentially stale and uses
+`usePortalRefreshOnReturn` to attempt same-session reads after reconnect, visibility return or a
+persisted page return. It does not infer that a bank transfer succeeded or replay mutations offline.
+Source/unit checks do not replace installed iOS/Android update, keyboard, safe-area and offline
+testing; those gates remain in the [active portal change](../changes/tenant-portal-production/index.md).
+
 ## Styling
 
 The app is a dense operational tool, not a marketing site.

@@ -77,7 +77,7 @@ describe('PortalInvoicePaymentInstructions', () => {
 
     expect(wrapper.text()).toContain('Chưa có thông tin chuyển khoản')
     expect(wrapper.text()).toContain('Liên hệ quản lý')
-    expect(wrapper.text()).toContain('không dùng cấu hình hiện tại')
+    expect(wrapper.text()).toContain('Liên hệ quản lý để xác nhận tài khoản nhận tiền')
   })
 
   it('keeps text details available when the QR asset is unavailable', () => {

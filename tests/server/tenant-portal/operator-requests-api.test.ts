@@ -9,11 +9,12 @@ vi.stubGlobal('parseBody', mocks.body)
 vi.stubGlobal('getRouterParam', mocks.param)
 const user = { id: 'operator', app_metadata: { role: 'owner' } }
 const id = '11111111-1111-4111-8111-111111111111'
+const expectedVersion = '2026-11-10T00:00:00.000Z'
 beforeEach(() => {
   vi.clearAllMocks()
   mocks.auth.mockResolvedValue(user)
   mocks.query.mockReturnValue({ page: 1, limit: 20 })
-  mocks.body.mockResolvedValue({ status: 'in_progress', expected_status: 'new' })
+  mocks.body.mockResolvedValue({ status: 'in_progress', expected_status: 'new', expected_updated_at: expectedVersion })
   mocks.param.mockReturnValue(id)
 })
 describe('staff request endpoints', () => {
@@ -37,7 +38,7 @@ describe('staff request endpoints', () => {
     mocks.update.mockResolvedValue({ id, status: 'in_progress' })
     const { default: handler } = await import('../../../server/api/tenant-support-requests/[id].patch')
     expect(await handler({} as never)).toEqual({ data: { id, status: 'in_progress' } })
-    expect(mocks.update).toHaveBeenCalledWith(expect.anything(), user, id, { status: 'in_progress', expected_status: 'new' })
+    expect(mocks.update).toHaveBeenCalledWith(expect.anything(), user, id, { status: 'in_progress', expected_status: 'new', expected_updated_at: expectedVersion })
   })
   it('rejects malformed direct identifiers as404', async () => {
     mocks.param.mockReturnValue('not-an-id')
@@ -50,5 +51,8 @@ describe('staff request endpoints', () => {
     expect(tenantSupportRequestQueueQuerySchema.safeParse({ limit: 101 }).success).toBe(false)
     expect(tenantSupportRequestQueueQuerySchema.safeParse({ status: 'approved' }).success).toBe(false)
     expect(tenantSupportRequestStatusUpdateSchema.safeParse({ status: 'resolved', expected_status: 'new', description: 'Secret' }).success).toBe(false)
+    expect(tenantSupportRequestStatusUpdateSchema.safeParse({ status: 'in_progress', expected_status: 'new' }).success).toBe(false)
+    expect(tenantSupportRequestStatusUpdateSchema.safeParse({ status: 'in_progress', expected_status: 'new', expected_updated_at: 'yesterday' }).success).toBe(false)
+    expect(tenantSupportRequestStatusUpdateSchema.parse({ status: 'in_progress', expected_status: 'new', expected_updated_at: expectedVersion, public_response: ' Checked ' }).public_response).toBe('Checked')
   })
 })

@@ -41,7 +41,7 @@ const initials = computed(() => {
         :to="item.to"
         class="group flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-theme/40"
         :class="isActive(item)
-          ? 'bg-[color:var(--portal-chrome-active)] text-[color:var(--portal-accent)]'
+          ? 'bg-[color:var(--portal-chrome-active)] text-[color:var(--portal-chrome-ink)]'
           : 'text-[color:var(--portal-chrome-muted)] hover:bg-[color:var(--portal-chrome-active)] hover:text-[color:var(--portal-chrome-ink)]'"
         :aria-current="isActive(item) ? 'page' : undefined"
       >

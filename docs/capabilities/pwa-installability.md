@@ -13,22 +13,33 @@ generated:
 # pwa-installability Specification
 
 ## Purpose
-TBD - created by archiving change add-tenant-portal-ui-pwa. Update Purpose after archive.
+Define one installable application with private-data-safe offline behavior and explicit updates that preserve the active user's work. Source and local verification are recorded in the [active portal change](../changes/tenant-portal-production/index.md); installed-device and deployed-worker checks remain separate release gates.
 ## Requirements
 ### Requirement: Single-app installable PWA
-The app SHALL be installable as a single Progressive Web App for the whole product on one domain, using `@vite-pwa/nuxt` with a valid manifest (name, short_name, lang, `display: standalone`, theme/background colors, and 192/512 icons including a maskable icon) and `registerType: autoUpdate`. Installing once SHALL be followed by role-based redirect via `getRedirectByRole`.
+The app SHALL be installable as a single Progressive Web App for the whole product on one domain, using `@vite-pwa/nuxt` with a valid manifest (name, short_name, lang, `display: standalone`, theme/background colors, and 192/512 icons including a maskable icon) and `registerType: prompt`. One app-owned registration SHALL control updates; the module's automatic registration plugin SHALL be disabled. Installing once SHALL be followed by role-based redirect via `getRedirectByRole`.
 
 #### Scenario: App is installable
 - **WHEN** a supported browser loads the app
 - **THEN** a valid manifest and service worker enable installation
 
-#### Scenario: Service worker auto-updates
+#### Scenario: Update becomes available
 - **WHEN** a new deployment is available
-- **THEN** the service worker updates automatically per `autoUpdate`
+- **THEN** the app offers `Cập nhật` and `Để sau` without forcing an immediate reload
 
 #### Scenario: Install once, redirect by role
 - **WHEN** an installed user opens the app and authenticates
 - **THEN** `getRedirectByRole` routes them to `/portal` or `/dashboard`
+
+### Requirement: Safe explicit worker activation
+Worker activation SHALL require an explicit update request. The active tab SHALL reload only after it requested that update and remains safe to reload; another tab's activation SHALL NOT reload it. Offline state, unsaved form input, and detected busy form work SHALL block application of the update. The app SHALL recheck those conditions when activation completes, surface failure/timeout recovery, and allow deferral.
+
+#### Scenario: Unsaved input exists or arrives during activation
+- **WHEN** a form is dirty before applying an update or becomes dirty while activation is pending
+- **THEN** that tab does not reload until the user saves/discards the changes and explicitly updates again
+
+#### Scenario: Another tab updates the worker
+- **WHEN** another open tab activates a new worker
+- **THEN** the current tab keeps its form and waits for its own update choice
 
 ---
 
@@ -70,11 +81,11 @@ The app SHALL present one app-scoped, custom, dismissible install prompt driven 
 ---
 
 ### Requirement: Cache excludes authenticated personal data
-The PWA runtime cache SHALL precache static assets only and SHALL NOT cache authenticated personal-data API responses. There SHALL be no blanket runtime caching of `*.supabase.co` or `/api/tenant/**`; invoice, profile, contract, and document payloads, including signed URLs, SHALL never be written to the cache.
+The PWA SHALL precache only declared non-sensitive static assets and the offline shell. It SHALL NOT cache authenticated HTML or personal-data API responses. There SHALL be no blanket runtime caching of `*.supabase.co` or `/api/tenant/**`; invoice, profile, contract, request, and document payloads, including signed URLs, SHALL never be written to the cache. Portal HTTP responses SHALL also use private/no-store headers independently of service-worker behavior.
 
 #### Scenario: Static assets precached
 - **WHEN** the service worker installs
-- **THEN** it precaches static assets (js/css/html/images) only
+- **THEN** its configured entries contain the non-sensitive offline shell, icons and favicon, with no authenticated page or API glob
 
 #### Scenario: Personal data not cached
 - **WHEN** a tenant fetches invoices, profile, contract, identity images, or documents
@@ -83,8 +94,12 @@ The PWA runtime cache SHALL precache static assets only and SHALL NOT cache auth
 ---
 
 ### Requirement: Offline shell fallback
-The app SHALL provide a minimal, non-sensitive offline fallback (branding + retry) served through an SPA-aware `navigateFallback`, and the fallback SHALL never serve authenticated personal data.
+The custom `injectManifest` worker SHALL use `NetworkOnly` for navigations and fall back to the precached `/offline` shell when the network fails. API and auth navigations SHALL be excluded from that navigation fallback. The shell SHALL contain only branding and retry, never authenticated personal data. The portal SHALL explain offline/stale-information state and attempt a current-session server refresh after reconnecting, with normal error/retry handling if the read fails; it SHALL NOT queue financial or support mutations for background replay.
 
 #### Scenario: Offline fallback is non-sensitive
 - **WHEN** an offline navigation fallback is served
 - **THEN** it shows a minimal branded retry screen and does not serve authenticated personal data
+
+#### Scenario: Connection returns
+- **WHEN** the mounted portal observes a transition back online
+- **THEN** it attempts a refresh only for the same authenticated session, without claiming that an earlier payment or request was completed offline

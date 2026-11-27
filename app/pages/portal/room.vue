@@ -12,6 +12,7 @@ const { setChrome } = usePortalChrome()
 setChrome({ title: 'Phòng của bạn', back: null })
 
 const { contract, contractAmendments, status, error, refresh } = usePortalContract()
+const officialDocs = usePortalContractDocuments()
 
 const STATUS_LABELS: Record<ContractStatus, string> = {
   active: 'Đang hiệu lực',
@@ -32,7 +33,7 @@ const STATUS_CLASS: Record<ContractStatus, string> = {
 <template>
   <PortalPullToRefresh :on-refresh="refresh">
     <div class="mx-auto w-full max-w-2xl space-y-5 px-4 py-5 lg:px-8 lg:py-8">
-      <template v-if="status === 'pending'">
+      <template v-if="status === 'pending' && !contract">
         <PortalSkeleton variant="statement" />
         <PortalSkeleton variant="card" class="h-40" />
       </template>
@@ -160,6 +161,26 @@ const STATUS_CLASS: Record<ContractStatus, string> = {
           v-if="contract.assignmentRole === 'primary' && contractAmendments.length"
           :amendments="contractAmendments"
         />
+        <section v-if="contract.assignmentRole === 'primary'" aria-labelledby="portal-official-contract-heading" class="space-y-3">
+          <h2 id="portal-official-contract-heading" class="portal-type-heading text-title">Hợp đồng của bạn</h2>
+          <PortalSkeleton v-if="officialDocs.status.value === 'pending'" variant="card" />
+          <PortalEmptyState v-else-if="officialDocs.error.value" tone="error" title="Không tải được tài liệu hợp đồng" action-label="Thử lại" @action="officialDocs.refresh" />
+          <PortalCard v-else-if="officialDocs.documents.value.length === 0">
+            <p class="portal-type-body text-body">Chưa có bản hợp đồng được phát hành. Quản lý sẽ cung cấp tại đây sau khi hoàn tất.</p>
+          </PortalCard>
+          <PortalCard v-else :padded="false">
+            <ul class="divide-y divide-border-light">
+              <li v-for="document in officialDocs.documents.value" :key="document.id" class="space-y-2 px-4 py-3 sm:flex sm:items-center sm:justify-between sm:gap-3 sm:space-y-0">
+                <div class="min-w-0">
+                  <p class="portal-type-label text-title">{{ document.type === 'appendix' ? 'Phụ lục' : 'Hợp đồng thuê' }} · Bản {{ document.versionNo }}</p>
+                  <p class="portal-type-caption mt-1 text-body">{{ document.status === 'signed' ? 'Đã ký' : 'Đã phát hành' }}<template v-if="document.signedDate || document.issuedAt"> · {{ formatViDate(document.signedDate || document.issuedAt) }}</template></p>
+                </div>
+                <PortalButton variant="secondary" size="sm" :loading="officialDocs.downloading.value === document.id" :disabled="Boolean(officialDocs.downloading.value && officialDocs.downloading.value !== document.id)" @click="officialDocs.download(document.id)">Mở hợp đồng</PortalButton>
+              </li>
+            </ul>
+          </PortalCard>
+          <p v-if="officialDocs.downloadError.value" role="alert" class="portal-type-body text-portal-danger-ink">{{ officialDocs.downloadError.value }}</p>
+        </section>
       </template>
     </div>
   </PortalPullToRefresh>

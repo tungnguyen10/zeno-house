@@ -29,6 +29,9 @@ const explicitlyPaginated = new Set([
   '/api/invoices',
   '/api/rooms',
   '/api/tenants',
+  '/api/tenant/invoices',
+  '/api/tenant/requests',
+  '/api/tenant-support-requests',
 ])
 for (const file of files) {
   const source = await readFile(file, 'utf8')
@@ -47,7 +50,7 @@ for (const file of files) {
     ? '20s scoped'
     : path === '/api/operations-report'
       ? '15s open / versioned closed'
-      : isTenantExport
+      : isTenantExport || path.startsWith('/api/tenant/')
         ? 'no-store'
       : path.includes('/draft-grid') || path.includes('/meter-readings') || path.includes('/payments')
         ? 'no long cache'

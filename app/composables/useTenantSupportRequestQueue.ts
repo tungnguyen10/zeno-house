@@ -14,13 +14,19 @@ export function useTenantSupportRequestQueue() {
   const actionError = ref<string | null>(null)
   watch(selectedStatus, () => { page.value = 1 })
 
-  async function updateStatus(request: OperatorTenantSupportRequest, target: Exclude<TenantSupportRequestStatus, 'new'>) {
+  async function updateStatus(request: OperatorTenantSupportRequest, target: Exclude<TenantSupportRequestStatus, 'new'>, publicResponse?: string) {
     if (updating.value) return null
     updating.value = true
     actionError.value = null
     try {
       const result = await apiFetch<ApiSuccess<OperatorTenantSupportRequest>>(`/api/tenant-support-requests/${request.id}`, {
-        method: 'PATCH', body: { status: target, expected_status: request.status },
+        method: 'PATCH',
+        body: {
+          status: target,
+          expected_status: request.status,
+          expected_updated_at: request.updatedAt,
+          ...(publicResponse !== undefined ? { public_response: publicResponse.trim() } : {}),
+        },
       })
       await refresh()
       return result.data

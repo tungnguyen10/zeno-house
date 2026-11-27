@@ -56,6 +56,8 @@ describe('PortalStatusBadge', () => {
   it('uses the shared accent semantics while a request is in progress', () => {
     const wrapper = mount(PortalStatusBadge, { props: { status: 'in_progress' } })
     expect(wrapper.classes()).toContain('text-theme')
+    expect(wrapper.classes()).toContain('whitespace-nowrap')
+    expect(wrapper.classes()).toContain('shrink-0')
   })
 
   it('is the status badge used by the request list', () => {

@@ -18,6 +18,8 @@ const props = withDefaults(defineProps<{
   hint?: string
   disabled?: boolean
   required?: boolean
+  readonly?: boolean
+  maxlength?: number
 }>(), {
   type: 'text',
   revealable: false,
@@ -25,6 +27,7 @@ const props = withDefaults(defineProps<{
   rows: 4,
   disabled: false,
   required: false,
+  readonly: false,
 })
 
 const emit = defineEmits<{
@@ -59,7 +62,7 @@ const resolvedType = computed(() => (
 
 const fieldClass = computed(() =>
   clsx(
-    'w-full rounded-xl border bg-white px-3.5 text-base sm:text-sm text-title transition-colors',
+    'w-full rounded-xl border bg-white px-3.5 text-base lg:text-sm text-title transition-colors motion-reduce:transition-none',
     'placeholder:text-portal-muted focus:outline-none focus:border-theme',
     'focus-visible:ring-2 focus-visible:ring-theme/20',
     props.error
@@ -85,10 +88,12 @@ const fieldClass = computed(() =>
       :rows="rows"
       :placeholder="placeholder"
       :disabled="disabled"
+      :readonly="readonly"
+      :maxlength="maxlength"
       :required="required"
       :aria-invalid="error ? 'true' : undefined"
       :aria-describedby="feedbackId"
-      :class="[fieldClass, 'py-2.5']"
+      :class="[fieldClass, 'min-h-28 resize-y py-2.5']"
       @input="onInput"
       @blur="onBlur"
     />
@@ -102,6 +107,8 @@ const fieldClass = computed(() =>
         :inputmode="inputmode"
         :autocomplete="autocomplete"
         :disabled="disabled"
+        :readonly="readonly"
+        :maxlength="maxlength"
         :required="required"
         :aria-invalid="error ? 'true' : undefined"
         :aria-describedby="feedbackId"

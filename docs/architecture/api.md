@@ -40,7 +40,7 @@ server/api/*
 
 Initial SSR reads use `useFetch` so Nuxt payload hydration prevents a duplicate browser request. Imperative reads and mutations use the shared `apiFetch` wrapper, which supplies a 15-second timeout, an `x-request-id`, no automatic retry, explicit in-flight dedupe keys, and superseded-request cancellation through `createLatestApiRequest`.
 
-High-fan-out workspaces use authenticated bootstrap endpoints: `/api/tenant/bootstrap`, `/api/buildings/[id]/settings-bootstrap`, and `/api/billing/workspace/bootstrap`. Their clients use stable Nuxt data keys so one SSR response is reused during hydration. The billing bootstrap is an idempotent POST because opening a missing period is part of the existing workspace contract.
+High-fan-out workspaces use authenticated bootstrap endpoints: `/api/tenant/bootstrap`, `/api/buildings/[id]/settings-bootstrap`, and `/api/billing/workspace/bootstrap`. Their clients use stable Nuxt data keys so one SSR response is reused during hydration. Portal keys additionally include the Auth account identity and are cleared when that identity changes. The billing bootstrap is an idempotent POST because opening a missing period is part of the existing workspace contract.
 
 Every API response includes `x-request-id` and `Server-Timing`. Timing is split across auth, namespace, database, Storage, and other Supabase calls. Slow GET requests above 500 ms and mutations above 1 second emit structured diagnostics containing route, status, duration, response bytes, round trips, Vercel region, and cold-start state.
 
@@ -103,26 +103,53 @@ Invoice-profile updates use `multipart/form-data`. The initial save requires com
 Tenant portal handlers resolve the authenticated user's active `tenant_user_links` row and never
 accept a tenant id from the client. Document uploads use multipart field `document`, accept JPEG,
 PNG, WebP, or PDF files up to 5 MB, and return five-minute signed URLs from a private bucket.
-Identity-image routes use the existing `tenant-id-images` front/back slots shared with admin and
-owner workflows. Tenant uploads use multipart field `image`, accept JPEG/PNG/WebP up to 5 MB, and
-replace the same `id_card_front_path` or `id_card_back_path` value rather than creating actor-specific copies.
+Identity-image GET reads the existing private `tenant-id-images` front/back slots. Tenant POST and
+DELETE return 403 before multipart parsing or Storage mutation; canonical image changes remain
+operator-controlled. The tenant sends correction evidence through a private support request.
 Support requests accept JSON title/description when no file is present, or multipart fields `title`,
 `description`, and optional `attachment`. Attachments reuse the private `tenant-documents` bucket;
 the server derives tenant/building/contract context and returns five-minute signed URLs.
-Tenant profile PATCH accepts only the self-service whitelist; legal identity fields remain
-management-controlled. Invoice list pagination uses `page` and `page_size`, and the portal appends
-subsequent pages while preserving refresh/reset and inline retry states.
+Tenant profile PATCH accepts a strict nonempty object containing only `phone`, `occupation`,
+`emergency_contact_name`, and `emergency_contact_phone`; unknown/mixed keys reject the whole request.
+Legal identity fields and email remain management-controlled. Invoice pagination uses `page` and
+`page_size` (default 20, maximum 100), exact scoped metadata, and append/reset/retry behavior.
+Bootstrap's separate `financialSummary` scans complete payable scope instead of aggregating the
+first page. Scoped invoice detail adds safe non-deleted payment history and available immutable
+meter-reading snapshots; neither read authorizes tenant payment confirmation.
 
-| Method | Path |
-| --- | --- |
-| GET | `/api/tenant/documents` |
-| POST | `/api/tenant/documents` |
-| DELETE | `/api/tenant/documents/[id]` |
-| GET | `/api/tenant/id-images` |
-| POST | `/api/tenant/id-images/[side]` |
-| DELETE | `/api/tenant/id-images/[side]` |
-| GET | `/api/tenant/requests` |
-| POST | `/api/tenant/requests` |
+Request list pagination uses `page` and `limit` (default 20, maximum 50); detail renews attachment
+access and returns the full text and current public staff reply. An unavailable attachment does
+not hide the request. Operator PATCH at `/api/tenant-support-requests/[id]` requires full access,
+`status`, `expected_status`, `expected_updated_at`, and optional `public_response`; the versioned
+service-role RPC commits reply/status/audit atomically. No support operation modifies billing or
+canonical identity.
+
+Official contract-document list/download is restricted to the current active primary tenant and
+issued/signed rows. The list contains safe metadata; each download reauthorizes before returning a
+60-second signed URL. Roommates get an empty list and not-found on direct download. Portal HTML
+and all tenant API responses, including errors, carry `private, no-store, max-age=0`.
+
+| Method | Path | Behavior |
+| --- | --- | --- |
+| GET | `/api/tenant/bootstrap` | Safe shared bootstrap plus complete-scope financial summary |
+| GET / PATCH | `/api/tenant/me` | Own profile / four-field contact update |
+| POST | `/api/tenant/password` | Verified password change |
+| GET | `/api/tenant/contract` | Current primary or roommate terms summary |
+| GET | `/api/tenant/invoices` | Exact scoped pagination |
+| GET | `/api/tenant/invoices/[id]` | Charges, safe payments and issued meter snapshots |
+| GET | `/api/tenant/contract-documents` | Current-primary issued/signed metadata |
+| GET | `/api/tenant/contract-documents/[id]/download` | Reauthorized short-lived download |
+| GET / POST | `/api/tenant/documents` | Personal document list/upload |
+| DELETE | `/api/tenant/documents/[id]` | Own personal document removal |
+| GET | `/api/tenant/id-images` | Own read-only canonical previews |
+| POST / DELETE | `/api/tenant/id-images/[side]` | Forbidden compatibility endpoints |
+| GET / POST | `/api/tenant/requests` | Paged personal timeline / active-housing submission |
+| GET | `/api/tenant/requests/[id]` | Full self-scoped request detail |
+
+See [tenant portal requirements](../capabilities/tenant-portal-api.md),
+[support requirements](../capabilities/tenant-support-requests.md), and the
+[active release record](../changes/tenant-portal-production/index.md). New privacy/public-response
+migrations and cloud type generation must be verified before deploying the matching application.
 
 ## Tenant Account Administration
 

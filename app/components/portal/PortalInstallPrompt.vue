@@ -1,6 +1,7 @@
 <script setup lang="ts">
 const route = useRoute()
 const authStore = useAuthStore()
+const updateReady = useState<boolean>('pwa-update-ready', () => false)
 const { resolvedTheme, initialize } = usePortalTheme()
 const {
   showInstallPrompt,
@@ -27,6 +28,8 @@ onBeforeUnmount(() => {
 
 const showBanner = computed(() => (
   authStore.isAuthenticated
+  && !updateReady.value
+  && (isPortalRoute.value || isDashboardRoute.value)
   && ready.value
   && (showInstallPrompt.value || showIosGuide.value)
 ))
@@ -57,7 +60,7 @@ async function onInstall() {
         <div
           v-if="showBanner"
           class="portal-shell portal-install-host portal-safe-x fixed inset-x-0 z-[70] px-4"
-          :class="isPortalRoute ? 'bottom-[76px]' : isDashboardRoute ? 'bottom-[92px]' : 'bottom-4'"
+          :class="isPortalRoute ? 'bottom-[calc(6rem+env(safe-area-inset-bottom))] lg:bottom-4' : isDashboardRoute ? 'bottom-[calc(6rem+env(safe-area-inset-bottom))] lg:bottom-4' : 'bottom-4'"
           :data-theme="installTheme"
         >
           <div class="flex items-center gap-3 rounded-2xl border border-border-light bg-white p-3 m-1.5 shadow-lg">

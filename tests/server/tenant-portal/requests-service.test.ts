@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   resolveTenantId: vi.fn(),
   getVisibleBuildingIds: vi.fn(),
   listByTenantId: vi.fn(),
+  findByTenantId: vi.fn(),
   resolveHousing: vi.fn(),
   create: vi.fn(),
   listByBuildingIds: vi.fn(),
@@ -21,6 +22,7 @@ vi.mock('../../../server/utils/scope', () => ({
 vi.mock('../../../server/repositories/tenant-portal/requests', () => ({
   TenantSupportRequestRepository: {
     listByTenantId: mocks.listByTenantId,
+    findByTenantId: mocks.findByTenantId,
     create: mocks.create,
     listByBuildingIds: mocks.listByBuildingIds,
   },
@@ -64,7 +66,8 @@ beforeEach(() => {
   vi.clearAllMocks()
   mocks.resolveTenantId.mockResolvedValue('tenant-1')
   mocks.getVisibleBuildingIds.mockResolvedValue(['building-1'])
-  mocks.listByTenantId.mockResolvedValue([stored])
+  mocks.listByTenantId.mockResolvedValue({ rows: [stored], total: 1 })
+  mocks.findByTenantId.mockResolvedValue(stored)
   mocks.resolveHousing.mockResolvedValue({
     contractId: 'contract-1',
     buildingId: 'building-1',
@@ -86,40 +89,72 @@ beforeEach(() => {
 
 describe('TenantSupportRequestService tenant scope', () => {
   it('lists only requests for the resolved tenant and signs stored attachments', async () => {
-    mocks.listByTenantId.mockResolvedValue([{
+    mocks.listByTenantId.mockResolvedValue({ rows: [{
       ...stored,
       attachment_path: 'tenant-1/requests/request-1/photo.jpg',
-    }])
+    }], total: 21 })
     const svc = await service()
 
     const result = await svc.list({} as never, tenant)
 
     expect(mocks.resolveTenantId).toHaveBeenCalledWith(expect.anything(), tenant)
-    expect(mocks.listByTenantId).toHaveBeenCalledWith(expect.anything(), 'tenant-1')
+    expect(mocks.listByTenantId).toHaveBeenCalledWith(expect.anything(), 'tenant-1', { page: 1, limit: 20 })
     expect(mocks.createSignedUrl).toHaveBeenCalledWith(
       expect.anything(),
       'tenant-1/requests/request-1/photo.jpg',
     )
-    expect(result[0]).toMatchObject({
+    expect(result.data[0]).toMatchObject({
       id: 'request-1',
       tenantId: 'tenant-1',
       status: 'new',
       attachmentSignedUrl: 'https://signed.test/attachment',
     })
+    expect(result.meta).toEqual({ total: 21, page: 1, limit: 20, totalPages: 2 })
   })
 
   it('refuses to sign an attachment path outside the stored tenant request prefix', async () => {
-    mocks.listByTenantId.mockResolvedValue([{
+    mocks.listByTenantId.mockResolvedValue({ rows: [{
       ...stored,
       attachment_path: 'tenant-2/requests/secret.pdf',
-    }])
+    }], total: 1 })
     const svc = await service()
 
-    await expect(svc.list({} as never, tenant)).rejects.toMatchObject({
-      statusCode: 500,
-      data: { error: { code: 'INTERNAL' } },
+    expect((await svc.list({} as never, tenant)).data[0]).toMatchObject({
+      id: stored.id, attachmentSignedUrl: null, attachmentUnavailable: true,
     })
     expect(mocks.createSignedUrl).not.toHaveBeenCalled()
+  })
+
+  it('keeps every request readable when one attachment signing fails', async () => {
+    mocks.listByTenantId.mockResolvedValue({ rows: [
+      { ...stored, attachment_path: 'tenant-1/requests/missing.pdf' },
+      { ...stored, id: 'request-2', attachment_path: 'tenant-1/requests/available.pdf', public_response: 'We will visit tomorrow.', responded_at: '2026-07-18T10:00:00.000Z' },
+    ], total: 2 })
+    mocks.createSignedUrl.mockRejectedValueOnce(new Error('private object path'))
+    const result = await (await service()).list({} as never, tenant)
+    expect(result.data).toHaveLength(2)
+    expect(result.data[0]).toMatchObject({ attachmentUnavailable: true, attachmentSignedUrl: null })
+    expect(result.data[1]).toMatchObject({ attachmentUnavailable: false, publicResponse: 'We will visit tomorrow.' })
+    expect(JSON.stringify(result)).not.toContain('private object path')
+    expect(JSON.stringify(result)).not.toContain('attachment_path')
+  })
+
+  it('loads the full detail within the resolved tenant scope', async () => {
+    mocks.findByTenantId.mockResolvedValue({ ...stored, public_response: 'A public reply', responded_at: stored.updated_at })
+    const result = await (await service()).detail({} as never, tenant, stored.id)
+    expect(mocks.findByTenantId).toHaveBeenCalledWith(expect.anything(), 'tenant-1', stored.id)
+    expect(result).toMatchObject({ description: stored.description, publicResponse: 'A public reply', respondedAt: stored.updated_at })
+  })
+
+  it.each([null, { ...stored, tenant_id: 'tenant-2', attachment_path: 'tenant-2/requests/private.pdf' }])('rejects missing or foreign request details before signing', async (row) => {
+    mocks.findByTenantId.mockResolvedValue(row)
+    await expect((await service()).detail({} as never, tenant, stored.id)).rejects.toMatchObject({ statusCode: 404 })
+    expect(mocks.createSignedUrl).not.toHaveBeenCalled()
+  })
+
+  it('rejects unsupported or unbounded pagination before reading requests', async () => {
+    await expect((await service()).list({} as never, tenant, { page: 0, limit: 5000 })).rejects.toMatchObject({ statusCode: 422 })
+    expect(mocks.listByTenantId).not.toHaveBeenCalled()
   })
 
   it('derives tenant, building, contract, and status server-side', async () => {
@@ -172,6 +207,18 @@ describe('TenantSupportRequestService tenant scope', () => {
     expect(result.attachmentSignedUrl).toBe('https://signed.test/attachment')
   })
 
+  it('returns the created request if its preview cannot be signed', async () => {
+    mocks.createSignedUrl.mockRejectedValue(new Error('storage unavailable'))
+    const result = await (await service()).create({} as never, tenant, {
+      title: 'Issue', description: 'Details',
+      attachment: { name: 'Photo.jpg', mimeType: 'image/jpeg', data: Buffer.from('photo') },
+    })
+    expect(result).toMatchObject({ id: stored.id, attachmentSignedUrl: null, attachmentUnavailable: true })
+    expect(mocks.create).toHaveBeenCalledTimes(1)
+    expect(mocks.auditAppend).toHaveBeenCalledTimes(1)
+    expect(mocks.remove).not.toHaveBeenCalled()
+  })
+
   it('rejects creation when the tenant has no active contract context', async () => {
     mocks.resolveHousing.mockResolvedValue(null)
     const svc = await service()
@@ -188,6 +235,7 @@ describe('TenantSupportRequestService tenant scope', () => {
     const svc = await service()
 
     await expect(svc.list({} as never, admin)).rejects.toMatchObject({ statusCode: 403 })
+    await expect(svc.detail({} as never, admin, stored.id)).rejects.toMatchObject({ statusCode: 403 })
     await expect(svc.create({} as never, admin, {
       title: 'Issue', description: 'Details',
     })).rejects.toMatchObject({ statusCode: 403 })

@@ -8,11 +8,14 @@ const resetPasswordForEmail = vi.fn()
 const updateUser = vi.fn()
 const refreshSession = vi.fn()
 const signInWithOAuth = vi.fn()
+const signOut = vi.fn()
+const clearNuxtData = vi.fn()
 const apiFetch = vi.fn()
 const currentUser = ref<Record<string, unknown> | null>(null)
 
 vi.stubGlobal('navigateTo', navigateTo)
 vi.stubGlobal('apiFetch', apiFetch)
+vi.stubGlobal('clearNuxtData', clearNuxtData)
 vi.stubGlobal('useSupabaseUser', () => currentUser)
 vi.stubGlobal('useSupabaseClient', () => ({
   auth: {
@@ -22,7 +25,7 @@ vi.stubGlobal('useSupabaseClient', () => ({
     updateUser,
     refreshSession,
     signInWithOAuth,
-    signOut: vi.fn(),
+    signOut,
   },
 }))
 vi.stubGlobal('defineNuxtRouteMiddleware', (middleware: unknown) => middleware)
@@ -39,6 +42,8 @@ describe('auth landing routes', () => {
     updateUser.mockReset()
     refreshSession.mockReset()
     signInWithOAuth.mockReset()
+    signOut.mockReset()
+    clearNuxtData.mockReset()
   })
 
   it.each([
@@ -133,6 +138,29 @@ describe('auth landing routes', () => {
       method: 'POST', body: { password: 'password-123' },
     })
     expect(refreshSession).toHaveBeenCalledOnce()
+  })
+
+  it('clears all tenant portal account data after a successful sign-out', async () => {
+    signOut.mockResolvedValue({ error: null })
+
+    await useAuth().logout()
+
+    expect(signOut).toHaveBeenCalledOnce()
+    const predicate = clearNuxtData.mock.calls[0]![0] as (key: string) => boolean
+    expect(predicate('portal-tenant-a-bootstrap')).toBe(true)
+    expect(predicate('portal-tenant-b-requests')).toBe(true)
+    expect(predicate('dashboard-buildings')).toBe(false)
+    expect(navigateTo).toHaveBeenCalledWith('/login')
+  })
+
+  it('surfaces a sign-out failure without pretending the session ended', async () => {
+    const failure = new Error('Unable to sign out')
+    signOut.mockResolvedValue({ error: failure })
+
+    await expect(useAuth().logout()).rejects.toThrow(failure)
+
+    expect(clearNuxtData).not.toHaveBeenCalled()
+    expect(navigateTo).not.toHaveBeenCalled()
   })
 
   it.each([

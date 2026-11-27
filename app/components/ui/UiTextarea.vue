@@ -10,6 +10,7 @@ const props = withDefaults(defineProps<{
   required?: boolean
   disabled?: boolean
   rows?: number
+  maxlength?: number | string
   /** When `false`, locks resize. Defaults to `vertical` resize. */
   resize?: 'none' | 'vertical' | 'both'
   id?: string
@@ -76,6 +77,7 @@ const textareaClass = computed(() =>
       :disabled="disabled"
       :required="required"
       :rows="rows"
+      :maxlength="maxlength"
       :aria-invalid="!!error"
       :aria-describedby="error ? `${textareaId}-error` : hint ? `${textareaId}-hint` : undefined"
       :data-autofocus="autofocus ? '' : undefined"

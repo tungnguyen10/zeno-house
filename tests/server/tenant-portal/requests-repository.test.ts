@@ -32,9 +32,9 @@ describe('TenantSupportRequestRepository', () => {
     mocks.db.mockReturnValue({ from: mocks.from })
   })
 
-  it('lists the resolved tenant timeline newest first', async () => {
+  it('lists a bounded tenant page with exact count and deterministic newest-first order', async () => {
     const query = chain()
-    query.order.mockResolvedValue({ data: [row], error: null })
+    query.range = vi.fn().mockResolvedValue({ data: [row], count: 41, error: null })
     mocks.from.mockReturnValue(query)
     const { TenantSupportRequestRepository } = await import(
       '../../../server/repositories/tenant-portal/requests'
@@ -43,10 +43,21 @@ describe('TenantSupportRequestRepository', () => {
     await expect(TenantSupportRequestRepository.listByTenantId(
       {} as never,
       'tenant-1',
-    )).resolves.toEqual([row])
+      { page: 2, limit: 20 },
+    )).resolves.toEqual({ rows: [row], total: 41 })
     expect(mocks.from).toHaveBeenCalledWith('support_requests')
+    expect(query.select).toHaveBeenCalledWith(expect.stringContaining('public_response, responded_at'), { count: 'exact' })
     expect(query.eq).toHaveBeenCalledWith('tenant_id', 'tenant-1')
-    expect(query.order).toHaveBeenCalledWith('created_at', { ascending: false })
+    expect(query.order.mock.calls).toEqual([['created_at', { ascending: false }], ['id', { ascending: false }]])
+    expect(query.range).toHaveBeenCalledWith(20, 39)
+  })
+
+  it('scopes direct details by both tenant and request identifiers', async () => {
+    const query = chain({ maybeSingle: vi.fn().mockResolvedValue({ data: row, error: null }) })
+    mocks.from.mockReturnValue(query)
+    const { TenantSupportRequestRepository: repo } = await import('../../../server/repositories/tenant-portal/requests')
+    expect(await repo.findByTenantId({} as never, 'tenant-1', 'request-1')).toEqual(row)
+    expect(query.eq.mock.calls).toEqual([['tenant_id', 'tenant-1'], ['id', 'request-1']])
   })
 
   it('creates a new request and returns the stored row', async () => {
@@ -119,11 +130,20 @@ describe('operator request repository boundaries', () => {
     ['SUPPORT_REQUEST_STATUS_STALE', 409],
     ['SUPPORT_REQUEST_NOT_FOUND', 404],
     ['SUPPORT_REQUEST_STATUS_TRANSITION_INVALID', 422],
+    ['SUPPORT_REQUEST_RESPONSE_INVALID', 422],
   ])('maps %s without leaking database context', async (message, statusCode) => {
     const rpc = vi.fn().mockResolvedValue({ data: null, error: { message, code: 'P0001' } })
     mocks.db.mockReturnValue({ rpc })
     const { TenantSupportRequestRepository: repo } = await import('../../../server/repositories/tenant-portal/requests')
-    await expect(repo.updateStatusWithAudit({} as never, 'request-1', { status: 'resolved', expected_status: 'in_progress' }, 'actor')).rejects.toMatchObject({ statusCode })
-    expect(rpc).toHaveBeenCalledWith('update_tenant_support_request_status_with_audit', { p_request_id: 'request-1', p_expected_status: 'in_progress', p_status: 'resolved', p_actor_id: 'actor' })
+    await expect(repo.updateStatusWithAudit({} as never, 'request-1', { status: 'resolved', expected_status: 'in_progress', expected_updated_at: row.updated_at }, 'actor')).rejects.toMatchObject({ statusCode })
+    expect(rpc).toHaveBeenCalledWith('update_tenant_support_request_status_with_audit', { p_request_id: 'request-1', p_expected_status: 'in_progress', p_status: 'resolved', p_actor_id: 'actor', p_expected_updated_at: row.updated_at, p_public_response: null })
+  })
+  it('passes a public reply and version together to the atomic RPC', async () => {
+    const rpc = vi.fn().mockResolvedValue({ data: { ...row, public_response: 'Checked' }, error: null })
+    mocks.db.mockReturnValue({ rpc })
+    const { TenantSupportRequestRepository: repo } = await import('../../../server/repositories/tenant-portal/requests')
+    const result = await repo.updateStatusWithAudit({} as never, row.id, { status: 'in_progress', expected_status: 'new', expected_updated_at: row.updated_at, public_response: 'Checked' }, 'actor')
+    expect(result.public_response).toBe('Checked')
+    expect(rpc).toHaveBeenCalledWith('update_tenant_support_request_status_with_audit', expect.objectContaining({ p_expected_updated_at: row.updated_at, p_public_response: 'Checked' }))
   })
 })

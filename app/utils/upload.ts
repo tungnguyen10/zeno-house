@@ -20,13 +20,34 @@ interface UploadFailure {
   retriable?: boolean
 }
 
+function abortedUpload(): UploadFailure {
+  return { data: { error: { code: 'INTERNAL', message: 'Đã hủy tải lên.' } }, retriable: false }
+}
+
 function sendOnce<T>(
   url: string,
   form: FormData,
   options: UploadOptions,
 ): Promise<T> {
   return new Promise<T>((resolve, reject) => {
+    if (options.signal?.aborted) {
+      reject(abortedUpload())
+      return
+    }
     const xhr = new XMLHttpRequest()
+    let settled = false
+    const cleanup = () => options.signal?.removeEventListener('abort', onAbort)
+    const fail = (error: UploadFailure) => {
+      if (settled) return
+      settled = true
+      cleanup()
+      reject(error)
+    }
+    const onAbort = () => {
+      xhr.abort()
+      // Aborting before send() need not emit an XHR abort event.
+      fail(abortedUpload())
+    }
     xhr.open(options.method ?? 'POST', url)
     xhr.responseType = 'json'
     xhr.timeout = options.timeoutMs ?? 30_000
@@ -38,13 +59,16 @@ function sendOnce<T>(
     })
 
     xhr.addEventListener('load', () => {
+      if (settled) return
       if (xhr.status >= 200 && xhr.status < 300) {
+        settled = true
+        cleanup()
         options.onProgress?.(100)
         resolve(xhr.response as T)
         return
       }
       // A real HTTP response — not retriable, surface the server envelope.
-      reject({
+      fail({
         data: xhr.response ?? {
           error: { code: 'INTERNAL', message: 'Tải lên thất bại. Vui lòng thử lại.' },
         },
@@ -54,21 +78,17 @@ function sendOnce<T>(
     })
 
     const networkFail = () =>
-      reject({
+      fail({
         data: { error: { code: 'INTERNAL', message: 'Mất kết nối khi tải lên. Vui lòng thử lại.' } },
         retriable: true,
       } satisfies UploadFailure)
 
     xhr.addEventListener('error', networkFail)
     xhr.addEventListener('timeout', networkFail)
-    xhr.addEventListener('abort', () =>
-      reject({
-        data: { error: { code: 'INTERNAL', message: 'Đã hủy tải lên.' } },
-        retriable: false,
-      } satisfies UploadFailure),
-    )
+    xhr.addEventListener('abort', () => fail(abortedUpload()))
 
-    options.signal?.addEventListener('abort', () => xhr.abort())
+    options.signal?.addEventListener('abort', onAbort, { once: true })
+    if (options.signal?.aborted) { onAbort(); return }
     xhr.send(form)
   })
 }
@@ -81,6 +101,8 @@ export async function uploadWithProgress<T>(
   const retries = options.retries ?? 1
   let lastError: unknown
   for (let attempt = 0; attempt <= retries; attempt++) {
+    // Identity changes can abort between attempts; never send under new cookies.
+    if (options.signal?.aborted) throw abortedUpload()
     try {
       return await sendOnce<T>(url, form, options)
     }

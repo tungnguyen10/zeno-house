@@ -1,12 +1,22 @@
 import type { TenantSupportRequestStatus } from '~/types/tenant-portal'
-import type { TenantSupportRequestStatusUpdate } from '~/utils/validators/tenant-support-requests'
+import type { TenantSupportRequestListQuery, TenantSupportRequestStatusUpdate } from '~/utils/validators/tenant-support-requests'
 import { throwConflict, throwNotFound, throwValidationError } from '../../utils/errors'
 import type { H3Event } from 'h3'
 import type { TablesInsert } from '~/types/database.types'
 import type { TenantSupportRequestRow } from '~/utils/mappers/tenant-portal'
 import { db } from '../../utils/db'
 
-const COLUMNS = 'id, tenant_id, building_id, contract_id, title, description, status, attachment_path, created_at, updated_at'
+const COLUMNS = 'id, tenant_id, building_id, contract_id, title, description, status, attachment_path, public_response, responded_at, created_at, updated_at'
+
+// Remove this narrow adapter after regenerating types from the migrated cloud DB.
+type UpdateSupportRequestRpc = (name: 'update_tenant_support_request_status_with_audit', args: {
+  p_request_id: string
+  p_expected_status: string
+  p_status: string
+  p_actor_id: string
+  p_expected_updated_at: string
+  p_public_response: string | null
+}) => PromiseLike<{ data: unknown; error: { message: string; code?: string } | null }>
 
 export type TenantSupportRequestCandidate = Pick<TenantSupportRequestRow, 'id' | 'tenant_id' | 'building_id' | 'contract_id' | 'status' | 'created_at'>
 const CANDIDATE_COLUMNS = 'id, tenant_id, building_id, contract_id, status, created_at'
@@ -41,18 +51,20 @@ export const TenantSupportRequestRepository = {
     const { data, error } = await db(event).from('support_requests').select(COLUMNS).in('id', ids)
       .order('created_at', { ascending: false }).order('id', { ascending: false })
     if (error) throwDbError(error, 'tenantPortal.requests.operatorDetails')
-    return data ?? []
+    return (data ?? []) as unknown as TenantSupportRequestRow[]
   },
 
   async updateStatusWithAudit(event: H3Event, id: string, input: TenantSupportRequestStatusUpdate, actorId: string): Promise<TenantSupportRequestRow> {
     const client = db(event)
-    const { data, error } = await client.rpc('update_tenant_support_request_status_with_audit', {
+    const rpc = client.rpc.bind(client) as unknown as UpdateSupportRequestRpc
+    const { data, error } = await rpc('update_tenant_support_request_status_with_audit', {
       p_request_id: id, p_expected_status: input.expected_status, p_status: input.status, p_actor_id: actorId,
+      p_expected_updated_at: input.expected_updated_at, p_public_response: input.public_response ?? null,
     })
     if (error) {
       if (error.message === 'SUPPORT_REQUEST_STATUS_STALE') throwConflict('Yêu cầu đã được cập nhật. Vui lòng tải lại trước khi xử lý.')
       if (error.message === 'SUPPORT_REQUEST_NOT_FOUND') throwNotFound('Không tìm thấy yêu cầu')
-      if (['SUPPORT_REQUEST_STATUS_TRANSITION_INVALID', 'SUPPORT_REQUEST_STATUS_INPUT_INVALID'].includes(error.message)) throwValidationError('Không thể chuyển sang trạng thái này')
+      if (['SUPPORT_REQUEST_STATUS_TRANSITION_INVALID', 'SUPPORT_REQUEST_STATUS_INPUT_INVALID', 'SUPPORT_REQUEST_RESPONSE_INVALID'].includes(error.message)) throwValidationError('Trạng thái hoặc phản hồi chưa hợp lệ')
       throwDbError(error, 'tenantPortal.requests.updateStatusWithAudit')
     }
     if (!data || typeof data !== 'object' || Array.isArray(data)) throwInternal(new Error('Invalid support request status result'), 'tenantPortal.requests.updateStatusWithAudit')
@@ -62,15 +74,26 @@ export const TenantSupportRequestRepository = {
   async listByTenantId(
     event: H3Event,
     tenantId: string,
-  ): Promise<TenantSupportRequestRow[]> {
-    const { data, error } = await db(event)
+    query: TenantSupportRequestListQuery,
+  ): Promise<{ rows: TenantSupportRequestRow[]; total: number }> {
+    const from = (query.page - 1) * query.limit
+    const { data, error, count } = await db(event)
       .from('support_requests')
-      .select(COLUMNS)
+      .select(COLUMNS, { count: 'exact' })
       .eq('tenant_id', tenantId)
       .order('created_at', { ascending: false })
+      .order('id', { ascending: false })
+      .range(from, from + query.limit - 1)
 
     if (error) throwDbError(error, 'tenantPortal.requests.listByTenantId')
-    return data ?? []
+    return { rows: (data ?? []) as unknown as TenantSupportRequestRow[], total: count ?? 0 }
+  },
+
+  async findByTenantId(event: H3Event, tenantId: string, id: string): Promise<TenantSupportRequestRow | null> {
+    const { data, error } = await db(event).from('support_requests').select(COLUMNS)
+      .eq('tenant_id', tenantId).eq('id', id).maybeSingle()
+    if (error) throwDbError(error, 'tenantPortal.requests.findByTenantId')
+    return data as unknown as TenantSupportRequestRow | null
   },
 
   async create(
@@ -84,7 +107,7 @@ export const TenantSupportRequestRepository = {
       .single()
 
     if (error) throwDbError(error, 'tenantPortal.requests.create')
-    return data
+    return data as unknown as TenantSupportRequestRow
   },
 
   async listByBuildingIds(
@@ -101,6 +124,6 @@ export const TenantSupportRequestRepository = {
 
     const { data, error } = await query.order('created_at', { ascending: false })
     if (error) throwDbError(error, 'tenantPortal.requests.listByBuildingIds')
-    return data ?? []
+    return (data ?? []) as unknown as TenantSupportRequestRow[]
   },
 }

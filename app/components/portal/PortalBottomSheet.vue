@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { usePortalViewport } from '~/composables/tenant-portal/usePortalViewport'
+
 const props = defineProps<{
   modelValue: boolean
   title?: string
@@ -12,6 +14,7 @@ const emit = defineEmits<{
 
 const { resolvedTheme } = usePortalTheme()
 const effectiveTheme = computed(() => props.theme ?? resolvedTheme.value)
+const viewport = usePortalViewport()
 
 const dialogRef = ref<HTMLElement | null>(null)
 const previousFocus = ref<HTMLElement | null>(null)
@@ -21,6 +24,30 @@ const accessibleLabel = computed(() => props.title ? undefined : (props.ariaLabe
 const dragY = ref(0)
 const dragging = ref(false)
 let startY = 0
+let backgroundRoot: HTMLElement | null = null
+let previousOverflow = ''
+let previousInert = false
+let backgroundLocked = false
+
+function lockBackground() {
+  if (backgroundLocked) return
+  backgroundLocked = true
+  previousOverflow = document.body.style.overflow
+  document.body.style.overflow = 'hidden'
+  backgroundRoot = document.getElementById('__nuxt')
+  if (backgroundRoot) {
+    previousInert = backgroundRoot.inert
+    backgroundRoot.inert = true
+  }
+}
+
+function unlockBackground() {
+  if (!backgroundLocked) return
+  document.body.style.overflow = previousOverflow
+  if (backgroundRoot) backgroundRoot.inert = previousInert
+  backgroundRoot = null
+  backgroundLocked = false
+}
 
 function close() {
   emit('update:modelValue', false)
@@ -98,12 +125,12 @@ watch(
     if (typeof document === 'undefined') return
     if (open) {
       previousFocus.value = document.activeElement as HTMLElement | null
-      document.body.style.overflow = 'hidden'
+      lockBackground()
       await nextTick()
-      focusDialog()
+      if (props.modelValue) focusDialog()
     }
     else {
-      document.body.style.overflow = ''
+      unlockBackground()
       previousFocus.value?.focus?.()
     }
   },
@@ -111,14 +138,17 @@ watch(
 )
 
 onBeforeUnmount(() => {
-  if (!import.meta.client) return
-  document.body.style.overflow = ''
+  if (typeof document === 'undefined') return
+  unlockBackground()
+  previousFocus.value?.focus?.()
 })
 
 // Dynamic drag transform (gesture-driven, not a static design value).
-const sheetStyle = computed(() =>
-  dragging.value || dragY.value ? { transform: `translateY(${dragY.value}px)` } : undefined,
-)
+const sheetStyle = computed(() => ({
+  ...(dragging.value || dragY.value ? { transform: `translateY(${dragY.value}px)` } : {}),
+  bottom: `${viewport.bottom.value}px`,
+  ...(viewport.height.value ? { maxHeight: `${Math.max(0, viewport.height.value - 12)}px` } : {}),
+}))
 </script>
 
 <template>
@@ -146,7 +176,7 @@ const sheetStyle = computed(() =>
       <div
         v-if="modelValue"
         ref="dialogRef"
-        class="portal-shell portal-safe-bottom fixed inset-x-0 bottom-0 z-[76] rounded-t-3xl bg-white shadow-2xl"
+        class="portal-shell portal-bottom-sheet portal-safe-bottom fixed inset-x-0 bottom-0 z-[76] mx-auto flex w-full max-w-2xl flex-col rounded-t-3xl bg-white shadow-2xl"
         :data-theme="effectiveTheme"
         :class="{ 'transition-transform duration-200 [transition-timing-function:cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none': !dragging }"
         :style="sheetStyle"
@@ -158,7 +188,7 @@ const sheetStyle = computed(() =>
         @keydown="onKeydown"
       >
         <div
-          class="flex touch-none justify-center pt-3"
+          class="flex shrink-0 touch-none justify-center pt-3"
           @pointerdown="onPointerDown"
           @pointermove="onPointerMove"
           @pointerup="onPointerUp"
@@ -166,7 +196,7 @@ const sheetStyle = computed(() =>
         >
           <span class="h-1.5 w-10 rounded-full bg-smoke" aria-hidden="true" />
         </div>
-        <div class="flex items-center justify-between px-5 pb-1 pt-2">
+        <div class="flex shrink-0 items-center justify-between px-5 pb-1 pt-2">
           <h2 :id="titleId" class="text-lg font-semibold text-title">{{ title }}</h2>
           <button
             type="button"
@@ -177,10 +207,18 @@ const sheetStyle = computed(() =>
             <IconX class="h-5 w-5" aria-hidden="true" />
           </button>
         </div>
-        <div class="max-h-[75vh] overflow-y-auto px-5 pb-6">
+        <div class="min-h-0 overflow-y-auto overscroll-contain px-5 pb-6">
           <slot />
         </div>
       </div>
     </Transition>
   </Teleport>
 </template>
+
+<style scoped>
+.portal-shell.portal-bottom-sheet {
+  min-height: 0;
+  max-height: calc(100dvh - 0.75rem);
+  background: var(--portal-surface);
+}
+</style>

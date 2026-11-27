@@ -13,7 +13,7 @@ generated:
 # tenant-portal-ui Specification
 
 ## Purpose
-TBD - created by archiving change add-tenant-portal-ui-pwa. Update Purpose after archive.
+Define the mobile-first, self-scoped tenant experience for housing, invoices, support, profile and private documents. Production-completion behavior is reconciled with locally tested source; deployed journeys and physical-device verification remain tracked in the [active portal change](../changes/tenant-portal-production/index.md).
 ## Requirements
 ### Requirement: Isolated tenant mobile shell
 The system SHALL provide a tenant-only mobile layout under `/portal` that does not render any internal shell component (no `AppSidebar`, no internal AI dev chat). Portal pages SHALL be mobile-first with explicit loading, empty, and error states and touch-appropriate controls.
@@ -29,14 +29,14 @@ The system SHALL provide a tenant-only mobile layout under `/portal` that does n
 ---
 
 ### Requirement: Native-like app shell
-The tenant portal SHALL present a native-like app shell rather than a scrolling web page. It SHALL set `viewport-fit=cover` and apply `env(safe-area-inset-*)` padding so a fixed bottom tab bar and a sticky header respect the device notch and home indicator. Primary navigation SHALL be a fixed bottom tab bar with touch targets of at least 44px and an active indicator. Content SHALL be the only scrolling region, and route changes SHALL use page transitions that respect `prefers-reduced-motion`.
+The tenant portal SHALL present a native-like app shell rather than a scrolling web page. It SHALL set `viewport-fit=cover` and apply `env(safe-area-inset-*)` padding so a fixed mobile bottom tab bar and a sticky header respect the device notch and home indicator. Mobile primary navigation SHALL have touch targets of at least 44px and an active indicator; desktop MAY use the portal's own navigation rail. Content SHALL be the only scrolling region, and route changes SHALL use page transitions that respect `prefers-reduced-motion`.
 
 #### Scenario: Safe areas respected
 - **WHEN** the portal renders on a device with a notch or home indicator
 - **THEN** the header and bottom tab bar are padded by the safe-area insets and no control is obscured
 
 #### Scenario: Bottom tab navigation
-- **WHEN** a tenant navigates the portal
+- **WHEN** a tenant navigates the portal on a mobile viewport
 - **THEN** a fixed bottom tab bar provides primary navigation with ≥44px targets and an active indicator, and no desktop sidebar is shown
 
 #### Scenario: Reduced motion respected
@@ -176,7 +176,7 @@ The portal SHALL present `/portal/profile` as the complete personal dossier for 
 
 ---
 
-### Requirement: Identity and document upload bound to agreed storage
+### Requirement: Read-only identity and personal documents bound to agreed storage
 The portal document UI SHALL consume the archived storage convention and SHALL NOT invent paths or buckets. Canonical identity previews SHALL use `GET /api/tenant/id-images` against the shared private bucket; tenant POST/DELETE are forbidden. Proposed evidence uses a private support request attachment and never writes canonical slots. Free-form documents SHALL use `GET/POST /api/tenant/documents` and `DELETE /api/tenant/documents/[id]` against the `tenant-documents` bucket. The UI SHALL render only the server-returned short-lived signed URLs and SHALL rely on the server for path/bucket selection and mime/size validation.
 
 #### Scenario: Evidence pending manual handling
@@ -190,7 +190,11 @@ The portal document UI SHALL consume the archived storage convention and SHALL N
 
 #### Scenario: Upload UX on flaky network
 - **WHEN** a tenant uploads on a flaky mobile network
-- **THEN** the UI shows progress, allows retry, and surfaces mime/size errors before upload
+- **THEN** the UI shows progress, surfaces mime/size errors before upload, and offers an explicit retry after failure without silently repeating a non-idempotent POST
+
+#### Scenario: Identity image retrieval fails
+- **WHEN** the image endpoint fails or an ephemeral preview expires
+- **THEN** the UI shows a retrieval/retry state instead of claiming that the tenant has no identity image
 
 #### Scenario: Signed URLs are not persisted client-side
 - **WHEN** the portal renders a signed URL for an identity image or document
@@ -199,34 +203,37 @@ The portal document UI SHALL consume the archived storage convention and SHALL N
 ---
 
 ### Requirement: Tenant financial overview
-The portal home SHALL summarize recent invoice activity using existing tenant invoice data and the portal design system.
+The portal home SHALL summarize recent invoice activity from the invoices already loaded and explicitly label that scope. It SHALL exclude drafts and void invoices, group all loaded valid invoices in the same billing month into one bar, and show at most the six newest distinct months in chronological order. Average monthly value SHALL divide by displayed month count, not invoice count; paid ratio SHALL use those same displayed invoices and remain bounded from 0 to 100 percent. This chart SHALL NOT supply the complete outstanding-debt figure.
 
 #### Scenario: Tenant has enough invoice history
-- **WHEN** the tenant has at least two invoices
-- **THEN** the portal home displays up to the six newest invoice periods in chronological order
+- **WHEN** the loaded valid invoices cover at least two distinct months
+- **THEN** the portal home displays up to the six newest loaded billing months in chronological order
 - **AND** the chart displays each period’s total invoice value as one vertical bar
 - **AND** the home displays average monthly invoice value and the paid ratio
 - **AND** chart colors resolve from the active portal theme
 - **AND** chart animation is disabled when the tenant prefers reduced motion
 
 #### Scenario: Tenant has insufficient invoice history
-- **WHEN** the tenant has fewer than two invoices
+- **WHEN** the loaded valid invoices cover fewer than two distinct months
 - **THEN** the financial overview is not displayed
+
+#### Scenario: Multiple invoices share a month
+- **WHEN** two valid loaded invoices belong to the same billing month
+- **THEN** their amounts are added into one monthly bar and that month counts once in the average
 
 ---
 
 ### Requirement: Action-first portal home
-The portal home SHALL keep the active room as its primary identity surface, place the latest outstanding invoice immediately after it, and avoid duplicating destinations already present in primary portal navigation. Financial history and its supporting metrics SHALL be presented as one coherent region. A bootstrap failure SHALL replace content with an explicit retry state instead of being rendered as empty business data.
+The portal home SHALL keep the active room as its primary identity surface, then show the server-owned complete-scope `financialSummary`: outstanding amount/count, overdue amount/count and the prioritized `nextInvoice` action. Overdue obligations SHALL precede other debt, with earlier known due dates first. Recent invoice history SHALL remain secondary, and the loaded-history chart SHALL be presented as one coherent region with its supporting metrics. A bootstrap failure SHALL replace content with an explicit retry state instead of being rendered as empty business data.
 
-#### Scenario: Latest invoice has an outstanding balance
-- **WHEN** the latest invoice has a positive balance
-- **THEN** the home labels the region `Công nợ cần xử lý`
-- **AND** the invoice statement exposes an explicit `Xem chi tiết` affordance
-- **AND** its due date is formatted for the Vietnamese locale
+#### Scenario: An older obligation remains unpaid
+- **WHEN** an older authorized invoice has payable debt, even beyond the loaded page or while the latest invoice is paid
+- **THEN** the complete debt region still shows its amount and exposes the server-selected invoice action
+- **AND** dates and any grace/overdue explanation use the stored schedule
 
-#### Scenario: Latest invoice is settled
-- **WHEN** the latest invoice has no outstanding balance
-- **THEN** the home labels the region `Hoá đơn mới nhất`
+#### Scenario: No payable obligation remains
+- **WHEN** the server reports no outstanding invoices
+- **THEN** the debt region shows that state and the latest invoice remains available as history
 
 #### Scenario: Bootstrap fails
 - **WHEN** the portal bootstrap request fails
@@ -273,6 +280,11 @@ The portal invoice detail SHALL present transfer instructions only from the immu
 - **THEN** the immutable text fields remain usable
 - **AND** the portal shows `QR chưa khả dụng`
 
+#### Scenario: Tenant wants a transfer checked
+- **WHEN** a tenant follows the invoice's payment-report action
+- **THEN** the portal opens `/portal/requests?intent=payment-report&invoice=<invoiceCode>` with neutral reconciliation copy
+- **AND** it explains that sending evidence does not itself confirm payment or update the balance
+
 ---
 
 ### Requirement: Tenant invoice statement ledger
@@ -296,6 +308,38 @@ The portal invoice history SHALL present invoices as a year-grouped statement le
 - **THEN** outstanding transfer instructions remain before charge details
 - **AND** paid payment history remains after charge details
 - **AND** void invoices do not render transfer instructions
+
+#### Scenario: Recorded payment history is available
+- **WHEN** invoice detail includes recorded payments
+- **THEN** the portal shows date, amount and a user-facing method/source label, distinguishing deposit or credit allocations from cash payments
+- **AND** no tenant control records, changes or deletes a payment
+
+#### Scenario: Utility charge includes issued meter evidence
+- **WHEN** an electricity or water charge contains a usable reading snapshot
+- **THEN** the portal shows available opening/closing readings and billable usage with units, identifies adjusted usage, and leaves missing values unavailable
+- **AND** current meter readings are not presented as historical evidence
+
+### Requirement: Primary contract files and complete support detail
+The room page SHALL expose issued/signed official documents only for the current primary tenant. Roommates SHALL retain the shared terms summary without full legal-document controls. The request timeline SHALL support pagination and full detail with description, current public staff reply and response time, attachment availability and a detail refresh action. Request drafts SHALL stay in memory, preserve input after failure and warn before unsaved navigation.
+
+#### Scenario: Primary tenant opens an official document
+- **WHEN** a current primary tenant chooses an available official document
+- **THEN** the portal requests a newly authorized short-lived download URL and reports failure without substituting another contract's file
+
+#### Scenario: Full request has an expired attachment link
+- **WHEN** the tenant opens or refreshes a request
+- **THEN** detail is fetched through the self-scoped endpoint and can renew attachment access while preserving the text if signing is unavailable
+
+### Requirement: Session-isolated private state
+Portal async-data keys SHALL include the authenticated account identity. Account changes and logout SHALL clear portal private data; pagination, mutation generations, pending upload progress and local drafts SHALL not cross accounts. Responses from invalidated work SHALL not mutate the next account's state or trigger a stale success. Explicit refresh SHALL reset paginated history and invalidate older operations where applicable. Signed URLs and private drafts SHALL not be persisted in browser storage or service-worker caches.
+
+#### Scenario: Account switches while a response is pending
+- **WHEN** tenant A starts a profile save, upload, delete or list read and the active account changes to B
+- **THEN** late A data/errors/progress do not overwrite B's state and cannot produce A's successful result in B's flow
+
+#### Scenario: Same account returns after another session
+- **WHEN** the actor changes A→B→A while A's original work is still pending
+- **THEN** the original operation remains invalidated rather than becoming current solely because the account ID matches again
 
 ### Requirement: Tenant invoice grace explanation
 Tenant invoice detail and latest-outstanding surfaces SHALL display the invoice due date as the payment obligation date and SHALL explain an active grace interval without introducing a new invoice status.

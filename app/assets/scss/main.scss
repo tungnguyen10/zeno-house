@@ -495,6 +495,13 @@ input[type='number'] {
 .portal-shell .hover\:text-title:hover { color: var(--portal-title); }
 .portal-shell .text-body { color: var(--portal-body); }
 .portal-shell .text-theme { color: var(--portal-accent); }
+.portal-shell .text-portal-muted { color: var(--portal-muted); }
+.portal-shell .text-portal-positive,
+.portal-shell .text-portal-positive-ink { color: var(--portal-positive-ink); }
+.portal-shell .text-portal-warning,
+.portal-shell .text-portal-warning-ink { color: var(--portal-warning-ink); }
+.portal-shell .text-portal-danger,
+.portal-shell .text-portal-danger-ink { color: var(--portal-danger-ink); }
 
 /* Borders / dividers */
 .portal-shell .border-border-light { border-color: var(--portal-border); }

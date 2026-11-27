@@ -1,6 +1,6 @@
 import { mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import type { TenantInvoiceListItem } from '~/types/tenant-portal'
 
 const invoicesState = {
@@ -8,6 +8,11 @@ const invoicesState = {
   status: ref<'pending' | 'success' | 'error'>('success'),
   error: ref<unknown>(null),
   refresh: vi.fn(async () => {}),
+  total: computed(() => invoicesState.invoices.value.length),
+  hasMore: ref(false),
+  loadingMore: ref(false),
+  loadMoreError: ref(null),
+  loadMore: vi.fn(),
 }
 const navigateToMock = vi.fn()
 
@@ -85,6 +90,15 @@ describe('portal invoices page — states', () => {
     expect(empty.attributes('data-tone')).toBe('error')
   })
 
+  it('keeps the loaded ledger visible while refreshing it', () => {
+    invoicesState.invoices.value = [invoice()]
+    invoicesState.status.value = 'pending'
+    const wrapper = mountPage()
+    expect(wrapper.find('[data-invoice-row="inv-1"]').exists()).toBe(true)
+    expect(wrapper.find('[data-ledger-skeleton]').exists()).toBe(false)
+    wrapper.unmount()
+  })
+
   it('shows an empty state when there are no invoices', () => {
     const wrapper = mountPage()
     expect(wrapper.find('.empty').text()).toContain('Chưa có hoá đơn')
@@ -115,7 +129,7 @@ describe('portal invoices page — states', () => {
     const wrapper = mountPage()
 
     expect(wrapper.text()).toContain('Lịch sử hoá đơn')
-    expect(wrapper.text()).toContain('2 hoá đơn')
+    expect(wrapper.text()).toContain('Đã tải 2 / 2 hoá đơn')
     expect(wrapper.text()).toContain('Hạn thanh toán 15/7/2026')
     expect(wrapper.findAll('.badge')).toHaveLength(2)
     expect(wrapper.findAll('.portal-money')).toHaveLength(2)
@@ -132,6 +146,15 @@ describe('portal invoices page — states', () => {
     expect(row.findAll('button')).toHaveLength(0)
     await row.trigger('click')
     expect(navigateToMock).toHaveBeenCalledWith('/portal/invoices/inv-1')
+  })
+
+  it('never asks to pay a void invoice that retains a historical balance', () => {
+    invoicesState.invoices.value = [invoice({ status: 'void', balanceAmount: 750_000, dueDate: null })]
+    const wrapper = mountPage()
+    expect(wrapper.text()).not.toContain('Còn phải thanh toán')
+    expect(wrapper.text()).toContain('Giá trị trước khi huỷ')
+    expect(wrapper.text()).toContain('Chưa có hạn thanh toán')
+    expect(wrapper.get('.portal-money').text()).toBe('1.000.000₫')
   })
 
   it('keeps long statuses in normal flow on narrow screens', () => {

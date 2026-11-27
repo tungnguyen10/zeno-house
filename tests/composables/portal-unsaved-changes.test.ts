@@ -28,6 +28,16 @@ describe('usePortalUnsavedChanges', () => {
     await expect(decision).resolves.toBe(false)
   })
 
+  it('reuses the pending choice when navigation is requested repeatedly', async () => {
+    const guard = usePortalUnsavedChanges(ref(true))
+    const first = guard.guardRouteLeave()
+    const second = guard.guardRouteLeave()
+    expect(second).toBe(first)
+    guard.keepEditing()
+    await expect(first).resolves.toBe(false)
+    await expect(second).resolves.toBe(false)
+  })
+
   it('marks hard refresh as unsafe only while dirty', () => {
     const dirty = ref(true)
     const guard = usePortalUnsavedChanges(dirty)

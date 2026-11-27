@@ -10,6 +10,7 @@ const owner = { id: 'owner', app_metadata: { role: 'owner' } } as AuthUser
 const tenant = { id: 'tenant-user', app_metadata: { role: 'tenant' } } as AuthUser
 const row = { id: 'request-1', tenant_id: 'tenant-1', building_id: 'building-1', contract_id: 'contract-1', title: 'Correction', description: 'Private correction text', status: 'new', attachment_path: 'tenant-1/requests/one.pdf', created_at: '2026-11-10', updated_at: '2026-11-10' }
 const candidate = { id: row.id, tenant_id: row.tenant_id, building_id: row.building_id, contract_id: row.contract_id, status: row.status, created_at: row.created_at }
+const expectedVersion = '2026-11-10T00:00:00.000Z'
 const svc = async () => (await import('../../../server/services/tenant-portal/operator-requests')).TenantSupportRequestOperatorService
 beforeEach(() => {
   vi.clearAllMocks()
@@ -64,18 +65,18 @@ describe('staff request queue authorization', () => {
 })
 describe('staff request status', () => {
   it('authorizes full scope before invoking atomic RPC with actor and expected status', async () => {
-    await (await svc()).updateStatus({} as never, owner, 'request-1', { status: 'in_progress', expected_status: 'new' })
-    expect(mocks.update).toHaveBeenCalledWith(expect.anything(), 'request-1', { status: 'in_progress', expected_status: 'new' }, 'owner')
+    await (await svc()).updateStatus({} as never, owner, 'request-1', { status: 'in_progress', expected_status: 'new', expected_updated_at: expectedVersion })
+    expect(mocks.update).toHaveBeenCalledWith(expect.anything(), 'request-1', { status: 'in_progress', expected_status: 'new', expected_updated_at: expectedVersion }, 'owner')
     expect(mocks.access.mock.invocationCallOrder[0]).toBeLessThan(mocks.update.mock.invocationCallOrder[0]!)
   })
   it.each(['basic', 'none'])('returns consistent404 for %s access', async (level) => {
     mocks.access.mockResolvedValue(new Map([['tenant-1', { level }]]))
-    await expect((await svc()).updateStatus({} as never, owner, 'request-1', { status: 'resolved', expected_status: 'in_progress' })).rejects.toMatchObject({ statusCode: 404 })
+    await expect((await svc()).updateStatus({} as never, owner, 'request-1', { status: 'resolved', expected_status: 'in_progress', expected_updated_at: expectedVersion })).rejects.toMatchObject({ statusCode: 404 })
     expect(mocks.update).not.toHaveBeenCalled()
   })
   it('returns the same404 outside visible building scope', async () => {
     mocks.scope.mockResolvedValue(['other-building'])
-    await expect((await svc()).updateStatus({} as never, owner, 'request-1', { status: 'resolved', expected_status: 'in_progress' })).rejects.toMatchObject({ statusCode: 404 })
+    await expect((await svc()).updateStatus({} as never, owner, 'request-1', { status: 'resolved', expected_status: 'in_progress', expected_updated_at: expectedVersion })).rejects.toMatchObject({ statusCode: 404 })
     expect(mocks.access).not.toHaveBeenCalled()
     expect(mocks.update).not.toHaveBeenCalled()
   })
@@ -85,7 +86,26 @@ describe('staff request status', () => {
   })
   it('preserves atomic stale409 from the repository without a second write', async () => {
     mocks.update.mockRejectedValue({ statusCode: 409 })
-    await expect((await svc()).updateStatus({} as never, owner, 'request-1', { status: 'resolved', expected_status: 'in_progress' })).rejects.toMatchObject({ statusCode: 409 })
+    await expect((await svc()).updateStatus({} as never, owner, 'request-1', { status: 'resolved', expected_status: 'in_progress', expected_updated_at: expectedVersion })).rejects.toMatchObject({ statusCode: 409 })
     expect(mocks.update).toHaveBeenCalledTimes(1)
+  })
+  it('allows a reply-only update and returns only the public reply DTO', async () => {
+    mocks.update.mockResolvedValue({ ...row, status: 'in_progress', public_response: 'Checked with maintenance.', responded_at: expectedVersion })
+    const result = await (await svc()).updateStatus({} as never, owner, 'request-1', {
+      status: 'in_progress', expected_status: 'in_progress', expected_updated_at: expectedVersion,
+      public_response: '  Checked with maintenance.  ',
+    })
+    expect(mocks.update).toHaveBeenCalledWith(expect.anything(), 'request-1', expect.objectContaining({ expected_updated_at: expectedVersion, public_response: 'Checked with maintenance.' }), 'owner')
+    expect(result).toMatchObject({ publicResponse: 'Checked with maintenance.', respondedAt: expectedVersion })
+    expect(JSON.stringify(result)).not.toContain('attachment_path')
+  })
+  it.each([
+    { status: 'in_progress', expected_status: 'new' },
+    { status: 'in_progress', expected_status: 'new', expected_updated_at: expectedVersion, public_response: ' ' },
+    { status: 'in_progress', expected_status: 'new', expected_updated_at: expectedVersion, public_response: 'a'.repeat(4001) },
+  ])('rejects a missing version or invalid public reply before reading private details', async (input) => {
+    await expect((await svc()).updateStatus({} as never, owner, 'request-1', input)).rejects.toMatchObject({ statusCode: 422 })
+    expect(mocks.find).not.toHaveBeenCalled()
+    expect(mocks.update).not.toHaveBeenCalled()
   })
 })

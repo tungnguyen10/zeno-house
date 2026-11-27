@@ -259,7 +259,7 @@
       </div>
 
       <h1>Bạn đang ngoại tuyến</h1>
-      <p>Không có kết nối mạng. Ứng dụng vẫn mở được ở chế độ giới hạn — hãy kiểm tra kết nối để đồng bộ dữ liệu mới nhất.</p>
+      <p>Cần kết nối mạng để xem hóa đơn, hồ sơ và gửi yêu cầu. Trang này không lưu thông tin cá nhân. Thông tin đang nhập chưa gửi sẽ không tự động được lưu.</p>
 
       <div class="meta" id="statusMeta" data-online="false" aria-live="polite">
         <span class="pulse" aria-hidden="true"></span>
@@ -282,7 +282,7 @@
         function render() {
           var online = navigator.onLine;
           meta.setAttribute("data-online", String(online));
-          statusText.textContent = online ? "Đã có mạng. Đang tải lại..." : "Đang chờ kết nối lại...";
+          statusText.textContent = online ? "Đã có mạng. Nhấn Thử kết nối lại để tiếp tục." : "Đang chờ kết nối lại...";
         }
 
         retryBtn.addEventListener("click", function () {

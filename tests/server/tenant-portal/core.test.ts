@@ -215,6 +215,7 @@ describe('tenant portal mappers', () => {
       unitPrice: 5000000,
       amount: 5000000,
       sortOrder: 0,
+      meterReading: null,
     }])
   })
 
@@ -239,6 +240,9 @@ describe('tenant portal mappers', () => {
       description: 'Water is leaking under the sink.',
       status: 'new',
       attachmentSignedUrl: 'https://signed.test/photo',
+      attachmentUnavailable: false,
+      publicResponse: null,
+      respondedAt: null,
       createdAt: '2026-07-17T10:00:00.000Z',
       updatedAt: '2026-07-17T10:00:00.000Z',
     })

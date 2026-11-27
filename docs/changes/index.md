@@ -4,6 +4,8 @@
 
 ## In progress / planned
 
+- [tenant-portal-production](./tenant-portal-production/implementation-plan.md) — Mobile-first tenant portal completion, finance correctness, support feedback, session/data privacy and PWA release verification.
+
 - [Building other income](./operations-other-income/implementation-plan.md) — report receipts allocated to reserves or profit, with billing duplicate checks.
 
 - [harden-event-audit](./harden-event-audit/verification.md) — 12/16 tasks; atomic DB audit/contract correlation and durable cross-system intent remain incomplete.

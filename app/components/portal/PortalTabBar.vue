@@ -27,14 +27,14 @@ function isActive(tab: PortalNavItem): boolean {
       <li v-for="tab in tabs" :key="tab.key" class="flex min-w-0 flex-1 justify-center">
         <NuxtLink
           :to="tab.to"
-          class="flex min-h-[56px] w-full max-w-[70px] flex-col items-center justify-center gap-[5px] rounded-[10px] px-[5px] py-[5px] text-[12px] font-medium leading-normal text-[color:var(--portal-body)] transition-colors duration-150 [@media(hover:hover)]:hover:bg-[color:var(--portal-surface-muted)] active:bg-[color:var(--portal-surface-deep)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-theme/40 motion-reduce:transition-none"
-          :class="isActive(tab) ? 'bg-[color:var(--portal-surface-muted)]' : undefined"
+          class="flex min-h-[56px] w-full max-w-[70px] flex-col items-center justify-center gap-[5px] rounded-[10px] px-[5px] py-[5px] text-[12px] font-medium leading-normal transition-colors duration-150 [@media(hover:hover)]:hover:bg-[color:var(--portal-chrome-active)] active:bg-[color:var(--portal-chrome-active)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-theme/40 motion-reduce:transition-none"
+          :class="isActive(tab) ? 'bg-[color:var(--portal-chrome-active)] text-[color:var(--portal-chrome-ink)]' : 'text-[color:var(--portal-chrome-muted)]'"
           :aria-current="isActive(tab) ? 'page' : undefined"
         >
           <component
             :is="tabIconComponents[tab.key]"
             class="h-6 w-6 shrink-0"
-            :class="isActive(tab) ? 'text-[color:var(--portal-accent)]' : 'text-[color:var(--portal-muted)]'"
+            :class="isActive(tab) ? 'text-[color:var(--portal-chrome-ink)]' : 'text-[color:var(--portal-chrome-muted)]'"
             aria-hidden="true"
           />
           <span class="whitespace-nowrap">{{ tab.label }}</span>
