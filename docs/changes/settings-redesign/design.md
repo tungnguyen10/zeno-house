@@ -2,7 +2,7 @@
 type: Change Design
 title: "settings-redesign-design"
 status: draft
-change_state: design-approved
+change_state: implemented
 tags: [superpowers, change, settings, ux, ui, navigation]
 ---
 
@@ -145,7 +145,7 @@ Một trang cha `app/pages/dashboard/settings.vue` chứa khung và `<NuxtPage /
 ## 7. Thuật ngữ và phản hồi
 
 - Chính tả: "xoá", "hoá đơn", "tòa nhà" trên mọi trang trong khu Cài đặt và component nav.
-- Động từ: **Xoá** = xoá vĩnh viễn; **Bỏ gán** = gỡ người dùng khỏi một tòa, không xoá người dùng; **Gỡ quyền truy cập** = thu hồi portal của khách thuê; **Dọn liên kết** = xử lý tài khoản mồ côi.
+- Động từ: **Xoá** = xoá vĩnh viễn; **Bỏ gán** = gỡ người dùng khỏi một tòa, không xoá người dùng; **Gỡ quyền truy cập** = thu hồi portal của khách thuê; **Dọn liên kết** = dọn dòng người thuê mất tài khoản Auth; **Xử lý tài khoản** = xử lý tài khoản Auth mồ côi.
 - Toast: thành công "Đã <động từ> <đối tượng>.", thất bại ưu tiên thông điệp từ `getApiErrorMessage` với dự phòng "Không thể <động từ> <đối tượng>.". Bổ sung dự phòng còn thiếu ở tài khoản người thuê (khoá/mở lại, đặt lại mật khẩu, gỡ quyền truy cập), gán/bỏ gán tòa nhà và xoá ảnh đại diện.
 - Bảng thuật ngữ ghi vào `docs/ui-patterns/design-system.md`.
 

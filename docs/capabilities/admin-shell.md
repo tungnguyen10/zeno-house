@@ -73,7 +73,7 @@ App SHALL add an admin-only navigation item and `/dashboard/settings/access-requ
 ---
 
 ### Requirement: AppSidebar hiển thị navigation items
-AppSidebar SHALL nhận `navItems: NavItem[]` qua props và render các navigation link tới `/dashboard`-based paths theo nhóm tĩnh. `Dashboard` SHALL đứng riêng; các link còn lại SHALL thuộc `Tài sản & cho thuê`, `Tài chính & vận hành`, hoặc một entry point `Quản trị` duy nhất. `Quản trị` SHALL trỏ tới `/dashboard/settings/managers` và chỉ hiển thị cho role `admin`/`owner`; các sub-page (`Tài khoản người thuê`, `Yêu cầu truy cập`, `Nhật ký hoạt động`) SHALL không render item riêng trong sidebar mà được điều hướng qua `AppSettingsSubNav`. Section không còn item sau khi lọc theo role SHALL không được render. Item active SHALL được highlight bằng canonical cyan surface/border và expose `aria-current="page"`. Label của link SHALL vẫn là accessible name khi desktop sidebar thu gọn. AppSidebar SHALL hiển thị thông tin user đã đăng nhập trong một footer panel có avatar, email, và role. AppSidebar SHALL NOT render trong `/portal` namespace.
+AppSidebar SHALL nhận `navItems: NavItem[]` qua props và render các navigation link tới `/dashboard`-based paths theo nhóm tĩnh. `Dashboard` SHALL đứng riêng; các link còn lại SHALL thuộc `Tài sản & cho thuê`, `Tài chính & vận hành`, hoặc một entry point `Cài đặt` duy nhất. `Cài đặt` SHALL trỏ tới `/dashboard/settings`, hiển thị cho mọi role dashboard, và active cho mọi route dưới `/dashboard/settings`; các sub-page SHALL không render item riêng trong sidebar mà được điều hướng qua `AppSettingsNav`. Link hồ sơ trong footer sidebar và menu avatar SHALL trỏ tới `/dashboard/settings/profile`. Section không còn item sau khi lọc theo role SHALL không được render. Item active SHALL được highlight bằng canonical cyan surface/border và expose `aria-current="page"`. Label của link SHALL vẫn là accessible name khi desktop sidebar thu gọn. AppSidebar SHALL hiển thị thông tin user đã đăng nhập trong một footer panel có avatar, email, và role. AppSidebar SHALL NOT render trong `/portal` namespace.
 
 #### Scenario: Sidebar trỏ tới dashboard routes
 - **WHEN** admin layout mount
@@ -81,15 +81,39 @@ AppSidebar SHALL nhận `navItems: NavItem[]` qua props và render các navigati
 
 #### Scenario: Sidebar nhóm các destination liên quan
 - **WHEN** admin mở sidebar
-- **THEN** `Dashboard` đứng riêng, section `Tài sản & cho thuê` và `Tài chính & vận hành` hiển thị link theo đúng product relationship, và section `administration` chỉ có một link `Quản trị`
+- **THEN** `Dashboard` đứng riêng, section `Tài sản & cho thuê` và `Tài chính & vận hành` hiển thị link theo đúng product relationship, và section `administration` chỉ có một link `Cài đặt`
+
+#### Scenario: Mọi role thấy mục Cài đặt
+- **WHEN** admin, owner hoặc manager mở sidebar
+- **THEN** link `Cài đặt` trỏ tới `/dashboard/settings` được hiển thị và được đánh dấu active khi route nằm dưới `/dashboard/settings`
 
 #### Scenario: Empty role section is hidden
-- **WHEN** manager mở sidebar và không có item nào thuộc section `administration`
-- **THEN** section `administration` không được render
+- **WHEN** một section không còn item nào sau khi lọc theo role
+- **THEN** section đó không được render
 
-#### Scenario: Settings sub-pages điều hướng qua AppSettingsSubNav
-- **WHEN** admin/owner mở một trang dưới `/dashboard/settings/*`
-- **THEN** `AppSettingsSubNav` hiển thị tab ngang cho các sub-page mà role hiện tại được phép truy cập, ẩn các tab admin-only với owner, và đánh dấu tab hiện tại bằng `aria-current="page"`
+#### Scenario: Settings sub-pages điều hướng qua AppSettingsNav
+- **WHEN** người dùng mở một trang dưới `/dashboard/settings/*` trên `lg` trở lên
+- **THEN** `AppSettingsNav` (`<nav aria-label="Cài đặt">`) hiển thị nav dọc nhóm `Cá nhân` (Hồ sơ, Bảo mật), `Quản trị` (Người dùng, Tài khoản người thuê, Yêu cầu truy cập, Hiển thị tòa nhà, Nhật ký hoạt động) và `Tòa nhà` (Cài đặt tòa nhà), ẩn mục không được phép theo role, ẩn nhóm rỗng, và đánh dấu mục hiện tại bằng `aria-current="page"`
+
+#### Scenario: Manager chỉ thấy Cá nhân và Tòa nhà
+- **WHEN** manager mở khu Cài đặt
+- **THEN** chỉ có nhóm `Cá nhân` và `Tòa nhà` được hiển thị, nhóm `Quản trị` không được render
+
+#### Scenario: Owner thấy Người dùng và Tài khoản người thuê nhưng không thấy mục admin-only
+- **WHEN** owner mở khu Cài đặt
+- **THEN** nhóm `Quản trị` chỉ gồm `Người dùng` và `Tài khoản người thuê`
+
+#### Scenario: Mobile hiển thị danh mục Cài đặt
+- **WHEN** viewport nhỏ hơn `lg` và người dùng mở `/dashboard/settings`
+- **THEN** trang hiển thị danh mục theo nhóm, chạm vào một mục để mở trang con, và trang con có nút quay lại danh mục
+
+#### Scenario: Desktop chuyển /dashboard/settings sang mục đầu tiên
+- **WHEN** viewport từ `lg` trở lên và người dùng mở `/dashboard/settings`
+- **THEN** route được thay bằng mục đầu tiên mà role hiện tại được thấy
+
+#### Scenario: Route hồ sơ cũ chuyển hướng
+- **WHEN** người dùng mở `/dashboard/profile` hoặc `/dashboard/profile/password`
+- **THEN** app chuyển hướng tới `/dashboard/settings/profile` hoặc `/dashboard/settings/security` tương ứng
 
 #### Scenario: Active nav item được highlight
 - **WHEN** người dùng đang ở route `/dashboard/buildings`

@@ -11,7 +11,7 @@ Branch `feat/settings-redesign` @ `1a78347a`, verified 2026-11-27.
 
 | Gate | Result | Evidence |
 | --- | --- | --- |
-| `npm run knowledge:check` | Pass | `OKF structure verified: 358 concepts, 33 index files` |
+| `npm run knowledge:check` | Pass | `OKF structure verified: 359 concepts, 33 index files` |
 | `npm run typecheck` | Pass | `nuxt typecheck` exited 0 with no type errors |
 | `npm test` | Pass | 521 test files passed, 3320 tests passed |
 | `npm run lint` | Pass (0 errors, 1 warning) | `eslint .` reported 1 warning: `vue/no-v-html` at `app/components/app/AppAiDevChat.vue:427`. The file is not changed by this branch and the usage is documented as safe by `79f897ad` |
@@ -22,5 +22,6 @@ Branch `feat/settings-redesign` @ `1a78347a`, verified 2026-11-27.
 - Owner and manager browser sessions were not run (no accounts available); covered by `settings-navigation`, `AppSettingsNav`, `AppSidebar` and `settings-users` owner-case tests.
 - `prefers-reduced-motion: reduce` was not emulated in the browser.
 - The pending-access-request badge was not observed with real pending data (queue was empty).
-- Capability promotion (`admin-shell`, `manager-assignment-ui`) is pending user acceptance.
+- Capability promotion (`admin-shell`, `manager-assignment-ui`) was applied in the final fix wave; `docs/changes/index.md` is left to the controller.
+- Final fix wave re-ran `npx vitest run tests/pages tests/components tests/utils tests/composables` (243 files, 1440 tests passed), `npm run typecheck` (exit 0), `npm run lint` (0 errors, same single warning) and `npm run knowledge:check` (359 concepts).
 - Unrelated uncommitted contract-handover work in the checkout did not cause any gate failure.

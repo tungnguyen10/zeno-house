@@ -329,7 +329,8 @@ Standard for pages that get a full mobile-native pass (applied across `/dashboar
 | --- | --- | --- |
 | Xoá | Delete a record or account permanently | Deleting a user, an avatar, a receipt |
 | Bỏ gán | Remove a user from one building without deleting the user | Owner or manager building assignment |
-| Gỡ quyền truy cập | Revoke a tenant's portal access | Tenant account revocation |
-| Dọn liên kết | Clean up an orphaned account link | Orphaned tenant accounts |
+| Gỡ quyền truy cập | Revoke a tenant's portal access | Tenant account revocation for a linked account |
+| Dọn liên kết | Clean up a tenant row whose Auth account is missing (`missing_auth`) | Row menu in tenant accounts when the Auth account no longer exists |
+| Xử lý tài khoản | Resolve an orphaned Auth account that has no tenant record | Orphaned Auth accounts section in tenant accounts |
 
 Spelling inside the Settings area: "xoá", "khoá", "huỷ", "hoá đơn", "tòa nhà". Success toasts read "Đã <động từ> <đối tượng>."; failure toasts fall back to "Không thể <động từ> <đối tượng>.".

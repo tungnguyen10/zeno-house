@@ -7,15 +7,33 @@ tags: [engineering, reference]
 
 # Quản Lý Truy Cập Và Người Dùng
 
-Các màn hình trong chương này nằm trong mục **Cài đặt** và chủ yếu dành cho admin; một số phần owner cũng dùng được. Manager không thấy mục này.
+Mọi vai trò đều thấy mục **Cài đặt** trong thanh điều hướng (trên điện thoại, mục này nằm trong menu **Thêm**). Mục này mở `/dashboard/settings` với các nhóm:
+
+| Nhóm | Mục | Ai thấy |
+| --- | --- | --- |
+| Cá nhân | Hồ sơ, Bảo mật | Mọi vai trò |
+| Quản trị | Người dùng, Tài khoản người thuê | Admin và owner |
+| Quản trị | Yêu cầu truy cập, Hiển thị tòa nhà, Nhật ký hoạt động | Chỉ admin |
+| Tòa nhà | Cài đặt tòa nhà | Mọi vai trò (theo phạm vi tòa nhà của bạn) |
+
+Nhóm không còn mục nào cho vai trò của bạn thì không hiển thị: manager chỉ thấy **Cá nhân** và **Tòa nhà**.
+
+Trên máy tính, danh mục này là thanh điều hướng dọc bên trái nội dung; mục đang mở được đánh dấu. Trên điện thoại, `/dashboard/settings` là danh sách theo nhóm — chạm vào một mục để mở, dùng nút quay lại để về danh sách. Mục **Yêu cầu truy cập** có huy hiệu số yêu cầu đang chờ duyệt (chỉ admin thấy).
+
+## Hồ Sơ Và Bảo Mật
+
+- **Hồ sơ** (`/dashboard/settings/profile`): đổi tên hiển thị và ảnh đại diện (**Đổi ảnh** hoặc kéo thả ảnh JPEG/PNG/WebP, tối đa 2 MB; **Xoá ảnh** để về ảnh mặc định). Email và vai trò chỉ để xem.
+- **Bảo mật** (`/dashboard/settings/security`): đổi mật khẩu. Sau khi đổi thành công, bạn ở lại trang này.
+
+Các đường dẫn cũ `/dashboard/profile` và `/dashboard/profile/password` tự chuyển sang hai trang trên.
 
 ## Duyệt Yêu Cầu Truy Cập
 
 Route: `/dashboard/settings/access-requests` — chỉ admin.
 
-Khi ai đó đăng ký tài khoản mới (email/password hoặc đăng nhập Google lần đầu) mà chưa có vai trò, yêu cầu của họ xuất hiện ở đây với trạng thái **Chờ duyệt**.
+Khi ai đó đăng ký tài khoản mới (email/password hoặc đăng nhập Google lần đầu) mà chưa có vai trò, yêu cầu của họ xuất hiện ở đây. Chuyển giữa các tab **Chờ duyệt** (có số đếm), **Cần tiếp tục**, **Đã duyệt** và **Đã từ chối** để xem từng hàng đợi.
 
-Mỗi dòng hiển thị họ tên (hoặc "Chưa cung cấp tên"), email, cảnh báo **"Email chưa xác minh"** nếu email chưa được xác thực, nguồn đăng nhập, ngày gửi và trạng thái.
+Mỗi dòng hiển thị họ tên (hoặc "Chưa cung cấp tên"), email, nguồn đăng nhập, ngày gửi và trạng thái. Nếu email chưa được xác thực, nhãn **"Chưa xác minh email"** thay cho nút duyệt.
 
 ### Duyệt yêu cầu
 
@@ -29,58 +47,62 @@ Không thể duyệt một danh tính có email chưa xác minh. Nếu quá trì
 
 ### Từ chối yêu cầu
 
-1. Nhấn **Từ chối** (chỉ khả dụng khi yêu cầu đang **Chờ duyệt**).
+1. Nhấn **Từ chối** (chỉ khả dụng khi yêu cầu đang **Chờ duyệt**; vẫn dùng được kể cả khi email chưa xác minh).
 2. Nhập **lý do** (tối thiểu 3 ký tự) để người đăng ký biết cần xử lý gì.
 3. Nhấn **Xác nhận từ chối**.
 
 Từ chối là quyết định cuối cùng: người dùng không thể tự đăng ký lại trong phiên bản hiện tại.
 
-## Quản Lý Người Dùng (Managers)
+## Quản Lý Người Dùng
 
-Route: `/dashboard/settings/managers` — admin và owner (owner chỉ thấy phạm vi của mình).
+Route: `/dashboard/settings/managers` — admin và owner (owner chỉ thấy quản lý trong phạm vi của mình).
 
-Trang này dùng để tạo tài khoản owner/manager mới và gán họ vào tòa nhà.
+Trang là một danh sách gọn: mỗi dòng có avatar chữ cái đầu, tên, email, vai trò và số tòa nhà phụ trách (hoặc cảnh báo "Chưa có tòa"). Dùng ô tìm theo tên/email và, với admin, bộ lọc **Tất cả / Chủ nhà / Quản lý**. Nếu có tòa nhà chưa có quản lý nào, một cảnh báo phía trên danh sách nêu số lượng và tên các tòa đó.
 
-### Tạo người dùng mới
+### Thêm người dùng
 
-1. Điền **Email**, **Mật khẩu** tạm, **Họ tên** (tùy chọn).
-2. Chọn **vai trò**: admin/owner thấy cả "Chủ nhà (owner)" và "Quản lý (manager)"; owner chỉ tạo được "Quản lý (manager)".
-3. Tùy chọn gán ngay một hoặc nhiều **tòa nhà**.
-4. Nhấn **Tạo người dùng**, sau đó tự gửi email/mật khẩu cho người dùng đó — hệ thống không tự gửi.
+1. Nhấn **Thêm người dùng** để mở hộp thoại.
+2. Điền **Email**, **Mật khẩu** tạm, **Họ tên** (tùy chọn).
+3. Chọn **vai trò**: admin thấy cả "Chủ nhà" và "Quản lý"; owner chỉ tạo được "Quản lý".
+4. Tùy chọn chọn ngay một hoặc nhiều **tòa nhà**.
+5. Nhấn tạo. Nếu lỗi, thông báo hiện ngay trong hộp thoại và dữ liệu đã nhập được giữ lại. Hệ thống không tự gửi email — hãy tự gửi email và mật khẩu cho người dùng.
 
-Nếu có tòa nhà chưa có manager nào, trang hiển thị cảnh báo số lượng tòa nhà đang thiếu người quản lý.
+### Ngăn chi tiết người dùng
 
-### Gán/bỏ gán tòa nhà và quyền xóa dữ liệu
+Chạm vào một dòng để mở ngăn chi tiết (trên điện thoại là bảng trượt từ dưới lên; dòng mà bạn không được quản lý, ví dụ owner khác, không mở được). Trong ngăn:
 
-Mỗi thẻ người dùng liệt kê các tòa nhà đã gán. Với mỗi tòa nhà, bạn có thể:
+- **Thông tin**: nhấn **Sửa** để đổi email, họ tên, mật khẩu mới (để trống nếu không đổi) và vai trò (chỉ admin), rồi **Lưu** hoặc **Huỷ**.
+- **Tòa nhà phụ trách**: mỗi tòa nhà một dòng, có công tắc **Cho xoá dữ liệu** (cho phép người này thực hiện thao tác xoá nhạy cảm trong tòa nhà đó) và nút **Bỏ gán** (gỡ khỏi tòa nhà, không xoá người dùng). Chọn tòa nhà chưa gán rồi nhấn **Gán** để thêm.
+- **Vùng nguy hiểm**: **Xoá người dùng** hiện bước xác nhận ngay trong ngăn; nhấn **Xoá vĩnh viễn** để thu hồi quyền đăng nhập của tài khoản — không thể hoàn tác. Chọn **Huỷ** để quay lại.
 
-- Bật/tắt quyền **"Cho xóa dữ liệu"** (cho phép người này thực hiện thao tác xóa nhạy cảm trong phạm vi tòa nhà đó).
-- **Bỏ gán** khỏi tòa nhà.
-
-Dùng ô chọn tòa nhà và nút **+ Gán** để gán thêm tòa nhà chưa có.
-
-Nút **Sửa** cho phép đổi email/họ tên/mật khẩu (và vai trò nếu bạn là admin). Nút **Xoá** thu hồi quyền đăng nhập của tài khoản đó — thao tác này cần xác nhận vì không thể hoàn tác.
+Mỗi thao tác có thông báo thành công hoặc lỗi riêng, và ngăn vẫn mở khi có lỗi.
 
 ## Quản Lý Tài Khoản Người Thuê (Tenant Accounts)
 
-Route: `/dashboard/settings/tenant-accounts`.
+Route: `/dashboard/settings/tenant-accounts` — admin và owner.
 
-Trang này cấp và quản lý tài khoản đăng nhập cổng khách thuê (`/portal`) cho những khách thuê đã có hồ sơ trong hệ thống.
+Trang này cấp và quản lý tài khoản đăng nhập cổng khách thuê (`/portal`) cho những khách thuê đã có hồ sơ trong hệ thống. Dùng ô tìm theo tên, mã hoặc email để lọc danh sách.
 
 ### Cấp tài khoản mới
 
-1. Nhấn **+ Cấp tài khoản**.
+1. Nhấn **Cấp tài khoản**.
 2. Tìm và chọn khách thuê (theo tên, mã, số điện thoại hoặc CCCD) — trang hiển thị hợp đồng/phòng hiện tại của người này để bạn xác nhận đúng người.
 3. Nhập **email đăng nhập**, nhấn **Cấp tài khoản**.
 4. Hệ thống hiển thị **mật khẩu tạm chỉ một lần** — sao chép và gửi cho khách thuê ngay, vì màn hình này không hiển thị lại được.
 
-### Các thao tác khác trên một tài khoản
+### Menu thao tác của một tài khoản (⋯)
 
-- **Khóa / Mở lại**: tạm khóa hoặc mở lại quyền đăng nhập.
+- **Khoá / Mở lại**: tạm khoá hoặc mở lại quyền đăng nhập.
 - **Đặt lại mật khẩu**: tạo mật khẩu tạm mới (mật khẩu cũ ngừng hoạt động ngay).
-- **Gỡ**: thu hồi quyền truy cập cổng khách thuê. Hệ thống tự xóa tài khoản đăng nhập nếu an toàn, hoặc vô hiệu hóa (giữ lại lịch sử) nếu tài khoản còn dữ liệu tham chiếu.
+- **Gỡ quyền truy cập**: thu hồi quyền truy cập cổng khách thuê. Hệ thống tự xoá tài khoản đăng nhập nếu an toàn, hoặc vô hiệu hoá (giữ lại lịch sử) nếu tài khoản còn dữ liệu tham chiếu.
+- **Dọn liên kết**: thay cho **Gỡ quyền truy cập** ở dòng mà tài khoản đăng nhập không còn tồn tại.
 
-Nếu cột **Liên kết** hiển thị lỗi (tài khoản đăng nhập không tìm thấy hồ sơ tương ứng), admin có thêm khu vực **"Tài khoản Auth mồ côi"** để kiểm tra và xử lý (xóa hoặc vô hiệu hóa) những tài khoản đăng nhập không còn liên kết tới khách thuê nào.
+Admin có thêm khu vực **Tài khoản Auth mồ côi** (tài khoản đăng nhập mang vai trò người thuê nhưng không còn liên kết tới hồ sơ người thuê nào). Khi không có mục nào, khu vực chỉ là một dòng trạng thái với nút **Kiểm tra lại**; khi có, mỗi tài khoản có nút **Xử lý tài khoản** để xoá hoặc vô hiệu hoá.
+
+## Hiển Thị Tòa Nhà Và Cài Đặt Tòa Nhà
+
+- **Hiển thị tòa nhà** (`/dashboard/settings/buildings`, chỉ admin): bật/tắt tòa nhà nào đang hiển thị.
+- **Cài đặt tòa nhà** (`/dashboard/settings/building-settings`, mọi vai trò): danh sách tòa nhà trong phạm vi của bạn; nhấn **Mở cài đặt** để vào trang cài đặt của từng tòa.
 
 ## Nhật Ký Hoạt Động (Audit History)
 

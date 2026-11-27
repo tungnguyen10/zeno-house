@@ -2,7 +2,7 @@
 type: Change Implementation Plan
 title: "settings-redesign-implementation-plan"
 status: draft
-change_state: plan-review
+change_state: implemented
 tags: [superpowers, change, settings, ux, ui, navigation]
 ---
 
