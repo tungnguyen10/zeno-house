@@ -75,7 +75,7 @@ async function setVisible(building: Building, visible: boolean) {
       title="Hiển thị tòa nhà"
       description="Tòa nhà bị ẩn không xuất hiện trong danh sách và số liệu tổng hợp. Link trực tiếp vẫn mở được."
       back-to="/dashboard/settings"
-      back-mobile-only
+      :back-link="false"
       :reserve-global-actions="false"
     >
       <div ref="titleSentinel" aria-hidden="true" />

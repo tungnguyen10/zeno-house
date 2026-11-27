@@ -281,14 +281,14 @@ onMounted(() => {
       title="Tài khoản người thuê"
       description="Cấp và quản lý tài khoản đăng nhập portal cho khách thuê đã có trong hệ thống."
       back-to="/dashboard/settings"
-      back-mobile-only
+      :back-link="false"
       :reserve-global-actions="false"
     >
       <div ref="titleSentinel" aria-hidden="true" />
       <template #actions>
-        <UiButton variant="primary" class="min-h-11 sm:min-h-0" @click="openProvision">
+        <UiButton variant="primary" class="min-h-11 sm:min-h-0" aria-label="Cấp tài khoản" @click="openProvision">
           <IconPlus class="h-4 w-4" aria-hidden="true" />
-          Cấp tài khoản
+          <span class="sm:hidden">Cấp</span><span class="hidden sm:inline">Cấp tài khoản</span>
         </UiButton>
       </template>
     </UiPageHeader>

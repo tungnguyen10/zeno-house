@@ -29,4 +29,24 @@ describe('settings touch targets', () => {
     const tag = source(file).match(/<UiSearchInput\b[\s\S]*?\/>/)?.[0]
     expect(tag).toContain(SEARCH_TOUCH)
   })
+
+  it.each([
+    'access-requests', 'building-settings', 'buildings', 'history',
+    'managers', 'profile', 'security', 'tenant-accounts',
+  ])('settings/%s hides the inline back link (header arrow covers it)', (name) => {
+    const src = source(`app/pages/dashboard/settings/${name}.vue`)
+    expect(src).not.toContain('back-mobile-only')
+    expect(src).toContain(':back-link="false"')
+  })
+
+  it.each([
+    ['managers', 'Thêm người dùng', 'Thêm'],
+    ['tenant-accounts', 'Cấp tài khoản', 'Cấp'],
+  ])('settings/%s shortens its primary action below sm without losing the accessible name', (name, full, short) => {
+    const tag = source(`app/pages/dashboard/settings/${name}.vue`).match(/<UiButton\b[^>]*aria-label[^>]*>/)?.[0]
+    expect(tag).toContain(`aria-label="${full}"`)
+    const src = source(`app/pages/dashboard/settings/${name}.vue`)
+    expect(src).toContain(`<span class="sm:hidden">${short}</span>`)
+    expect(src).toContain(`<span class="hidden sm:inline">${full}</span>`)
+  })
 })

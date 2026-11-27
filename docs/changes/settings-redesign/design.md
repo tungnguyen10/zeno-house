@@ -81,7 +81,7 @@ Một trang cha `app/pages/dashboard/settings.vue` chứa khung và `<NuxtPage /
 - `/dashboard/settings` là danh mục nhóm dạng danh sách. Trang con không hiện nav dọc; header app hiện nút quay lại về danh mục (đặt qua `backTo` của `UiPageHeader`, link quay lại trong trang chỉ hiện dưới `lg`) và tiêu đề thu gọn khi cuộn như hiện nay.
 
 **Khuôn tiêu đề trang con**
-- `UiPageHeader` thêm hai tuỳ chọn, mặc định giữ nguyên hành vi cũ: `reserveGlobalActions` (mặc định bật, tắt trong khu Cài đặt để hành động chính thẳng mép phải nội dung) và `backMobileOnly` (mặc định tắt).
+- `UiPageHeader` thêm hai tuỳ chọn, mặc định giữ nguyên hành vi cũ: `reserveGlobalActions` (mặc định bật, tắt trong khu Cài đặt để hành động chính thẳng mép phải nội dung) và `backLink` (mặc định bật; tắt để chỉ giữ mũi tên quay lại trên header mobile).
 - Mỗi trang có tối đa một nút hành động chính (primary). Lọc và tìm kiếm nằm ở toolbar ngay dưới tiêu đề, không nằm trong header.
 
 ## 6. Từng trang

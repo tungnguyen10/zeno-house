@@ -66,7 +66,7 @@ async function onSubmit() {
       title="Bảo mật"
       description="Đổi mật khẩu đăng nhập. Cần nhập mật khẩu hiện tại để xác nhận."
       back-to="/dashboard/settings"
-      back-mobile-only
+      :back-link="false"
       :reserve-global-actions="false"
     >
       <div ref="titleSentinel" aria-hidden="true" />

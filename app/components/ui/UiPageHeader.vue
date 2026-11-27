@@ -12,7 +12,8 @@ import type { RouteLocationRaw } from 'vue-router'
  *                 pages instead of placing a back-button inside #actions.
  *   backLabel   → label shown next to the back-link arrow (default: 'Quay lại')
  *   reserveGlobalActions → default true; false drops `lg:pr-44`
- *   backMobileOnly → default false; true hides the inline back link at `lg+`
+ *   backLink    → default true; false hides the inline link at every width while
+ *                 `backTo` still feeds the mobile header arrow
  *
  * Slots:
  *   default → optional content rendered below description (e.g. breadcrumbs)
@@ -26,11 +27,11 @@ const props = withDefaults(defineProps<{
   backLabel?: string
   /** Leave room for the floating desktop header actions; turn off inside a shell that already does. */
   reserveGlobalActions?: boolean
-  /** Hide the inline back link at `lg+` where persistent navigation is visible. */
-  backMobileOnly?: boolean
+  /** Render the inline back link; `false` leaves only the header back arrow. */
+  backLink?: boolean
 }>(), {
   reserveGlobalActions: true,
-  backMobileOnly: false,
+  backLink: true,
 })
 
 // Mirrors `backTo` into the sticky mobile header so the back affordance stays
@@ -50,9 +51,9 @@ onBeforeUnmount(() => {
   <div :class="['mb-6 flex flex-wrap items-start gap-3', reserveGlobalActions && 'lg:pr-44']">
     <div class="min-w-[12rem] flex-1">
       <NuxtLink
-        v-if="backTo"
+        v-if="backTo && backLink"
         :to="backTo"
-        :class="['mb-1 inline-flex items-center gap-1 text-xs text-ui-muted hover:text-ui-primary', backMobileOnly && 'lg:hidden']"
+        class="mb-1 inline-flex items-center gap-1 text-xs text-ui-muted hover:text-ui-primary"
       >
         <IconArrowLeft class="w-3.5 h-3.5" aria-hidden="true" />
         {{ backLabel ?? 'Quay lại' }}

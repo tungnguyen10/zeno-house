@@ -110,7 +110,7 @@ const { isOverDropZone } = useDropZone(avatarDropZone, { onDrop: files => accept
       title="Hồ sơ"
       description="Tên và ảnh đại diện hiển thị trong toàn hệ thống."
       back-to="/dashboard/settings"
-      back-mobile-only
+      :back-link="false"
       :reserve-global-actions="false"
     >
       <div ref="titleSentinel" aria-hidden="true" />

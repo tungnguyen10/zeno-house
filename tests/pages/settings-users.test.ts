@@ -153,7 +153,7 @@ describe('settings users page', () => {
     wrapper.findComponent({ name: 'UserDetailDrawer' }).vm.$emit('remove', 'm1')
     await flushPromises()
 
-    expect(document.activeElement?.textContent?.trim()).toBe('Thêm người dùng')
+    expect(document.activeElement?.getAttribute('aria-label')).toBe('Thêm người dùng')
     wrapper.unmount()
     host.remove()
   })

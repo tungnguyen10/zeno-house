@@ -132,7 +132,7 @@ function clearFilters() {
       title="Nhật ký hoạt động"
       description="Ai đã làm gì, ở tòa nhà nào."
       back-to="/dashboard/settings"
-      back-mobile-only
+      :back-link="false"
       :reserve-global-actions="false"
     >
       <div ref="titleSentinel" aria-hidden="true" />

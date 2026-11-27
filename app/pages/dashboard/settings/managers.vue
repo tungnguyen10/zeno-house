@@ -158,14 +158,14 @@ async function handleRemove(id: string) {
         ? 'Chủ nhà và quản lý, phạm vi theo tòa nhà và quyền xoá dữ liệu.'
         : 'Quản lý trong phạm vi tòa nhà của bạn.'"
       back-to="/dashboard/settings"
-      back-mobile-only
+      :back-link="false"
       :reserve-global-actions="false"
     >
       <div ref="titleSentinel" aria-hidden="true" />
       <template #actions>
-        <UiButton ref="addButton" class="min-h-11 sm:min-h-0" @click="openCreate">
+        <UiButton ref="addButton" class="min-h-11 sm:min-h-0" aria-label="Thêm người dùng" @click="openCreate">
           <IconPlus class="h-4 w-4" aria-hidden="true" />
-          Thêm người dùng
+          <span class="sm:hidden">Thêm</span><span class="hidden sm:inline">Thêm người dùng</span>
         </UiButton>
       </template>
     </UiPageHeader>
