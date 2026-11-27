@@ -31,4 +31,31 @@ describe('UiPageHeader', () => {
 
     expect(wrapper.get('[data-page-actions]').classes()).toContain('whitespace-nowrap')
   })
+
+  it('can drop the desktop reservation inside a shell that already clears global actions', () => {
+    const wrapper = mount(UiPageHeader, {
+      props: { title: 'Người dùng', reserveGlobalActions: false },
+      global: { stubs: { NuxtLink: true, IconArrowLeft: true } },
+    })
+
+    expect(wrapper.classes()).not.toContain('lg:pr-44')
+  })
+
+  it('can hide the inline back link on desktop while keeping it on mobile', () => {
+    const wrapper = mount(UiPageHeader, {
+      props: { title: 'Hồ sơ', backTo: '/dashboard/settings', backMobileOnly: true },
+      global: { stubs: { NuxtLink: defineComponent({ template: '<a data-back><slot /></a>' }), IconArrowLeft: true } },
+    })
+
+    expect(wrapper.get('[data-back]').classes()).toContain('lg:hidden')
+  })
+
+  it('keeps the inline back link visible on desktop by default', () => {
+    const wrapper = mount(UiPageHeader, {
+      props: { title: 'Chi tiết', backTo: '/dashboard' },
+      global: { stubs: { NuxtLink: defineComponent({ template: '<a data-back><slot /></a>' }), IconArrowLeft: true } },
+    })
+
+    expect(wrapper.get('[data-back]').classes()).not.toContain('lg:hidden')
+  })
 })
