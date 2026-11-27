@@ -1,5 +1,8 @@
 <script setup lang="ts">
+import { useDropZone, useFileDialog } from '@vueuse/core'
 import { getApiErrorMessage } from '~/utils/api-error'
+import { userAvatarUploadSchema } from '~/utils/validators/users'
+import { managedRoleLabel } from '~/utils/users/display'
 
 // Mobile large-title collapse: fades into the persistent app header once scrolled past.
 const titleSentinel = ref<HTMLElement | null>(null)
@@ -50,11 +53,7 @@ const dirty = computed(() => (
 ))
 const nameError = computed(() => (touched.value ? fieldErrors.value.full_name?.[0] : undefined))
 
-const roleLabel = computed(() => {
-  const map: Record<string, string> = { admin: 'Admin', owner: 'Owner', manager: 'Manager' }
-  const role = profile.value?.role
-  return role ? (map[role] ?? role) : ''
-})
+const roleLabel = computed(() => managedRoleLabel(profile.value?.role ?? null))
 
 async function onSaveName() {
   touched.value = true
@@ -69,8 +68,30 @@ async function onAvatarSelect(file: File) {
 
 async function onAvatarRemove() {
   const ok = await removeAvatar()
-  if (ok) toast.success('Đã xóa ảnh đại diện.')
+  if (ok) toast.success('Đã xoá ảnh đại diện.')
+  else toast.error('Không thể xoá ảnh đại diện.')
 }
+
+const avatarDropZone = ref<HTMLElement | null>(null)
+
+function acceptAvatar(file: File | undefined) {
+  if (!file) return
+  if (!userAvatarUploadSchema.safeParse({ mimeType: file.type, size: file.size }).success) {
+    toast.error('Ảnh phải là JPEG, PNG hoặc WebP và không quá 2 MB.')
+    return
+  }
+  void onAvatarSelect(file)
+}
+
+const { open: openAvatarDialog, onChange: onAvatarDialogChange, reset: resetAvatarDialog } = useFileDialog({
+  multiple: false,
+  accept: 'image/jpeg,image/png,image/webp',
+})
+onAvatarDialogChange((files) => {
+  acceptAvatar(files?.[0])
+  resetAvatarDialog()
+})
+const { isOverDropZone } = useDropZone(avatarDropZone, { onDrop: files => acceptAvatar(files?.[0]) })
 </script>
 
 <template>
@@ -93,39 +114,38 @@ async function onAvatarRemove() {
     </UiAlert>
 
     <template v-else>
-      <UiSurfacePanel class="space-y-4">
-        <UiSection title="Ảnh đại diện" description="JPEG, PNG hoặc WebP, tối đa 2MB.">
-          <UiFileUpload
-            variant="image"
-            accept="image/jpeg,image/png,image/webp"
-            :max-bytes="2 * 1024 * 1024"
-            :preview-url="profile.avatarUrl"
-            preview-alt="Ảnh đại diện hiện tại"
-            pick-label="Tải ảnh lên"
-            replace-label="Đổi ảnh"
-            :disabled="uploadingAvatar"
-            @select="onAvatarSelect"
-          >
-            <template #empty>
-              <span
-                class="flex h-16 w-16 items-center justify-center rounded-full bg-ui-accent/20 text-lg font-semibold text-ui-accent"
-                aria-hidden="true"
-              >
-                {{ (profile.fullName ?? profile.email ?? 'U').charAt(0).toUpperCase() }}
-              </span>
-            </template>
-          </UiFileUpload>
-          <UiButton
-            v-if="profile.hasCustomAvatar"
-            size="sm"
-            variant="ghost"
-            :disabled="uploadingAvatar"
-            @click="onAvatarRemove"
-          >
-            Xóa ảnh đại diện
+      <section
+        ref="avatarDropZone"
+        aria-labelledby="avatar-heading"
+        class="flex flex-wrap items-center gap-4 rounded-lg border p-4 transition-colors"
+        :class="isOverDropZone ? 'border-ui-accent/60 bg-ui-accent/5' : 'border-ui-border bg-ui-surface'"
+      >
+        <img
+          v-if="profile.avatarUrl"
+          :src="profile.avatarUrl"
+          alt="Ảnh đại diện hiện tại"
+          class="h-14 w-14 shrink-0 rounded-full object-cover"
+        >
+        <span
+          v-else
+          class="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-ui-accent/20 text-lg font-semibold text-ui-accent"
+          aria-hidden="true"
+        >
+          {{ (profile.fullName ?? profile.email ?? 'U').charAt(0).toUpperCase() }}
+        </span>
+        <div class="min-w-0 flex-1 basis-40">
+          <h2 id="avatar-heading" class="text-sm font-medium text-ui-primary">Ảnh đại diện</h2>
+          <p class="text-xs text-ui-muted">JPEG, PNG hoặc WebP, tối đa 2 MB. Có thể kéo thả ảnh vào đây.</p>
+        </div>
+        <div class="flex shrink-0 gap-2">
+          <UiButton class="min-h-11 sm:min-h-0" size="sm" variant="secondary" :loading="uploadingAvatar" @click="openAvatarDialog()">
+            {{ profile.hasCustomAvatar ? 'Đổi ảnh' : 'Tải ảnh lên' }}
           </UiButton>
-        </UiSection>
-      </UiSurfacePanel>
+          <UiButton v-if="profile.hasCustomAvatar" class="min-h-11 sm:min-h-0" size="sm" variant="ghost" :disabled="uploadingAvatar" @click="onAvatarRemove">
+            Xoá ảnh
+          </UiButton>
+        </div>
+      </section>
 
       <UiSurfacePanel class="space-y-4">
         <UiSection title="Thông tin cá nhân">
@@ -137,8 +157,10 @@ async function onAvatarRemove() {
               :error="nameError"
               @blur="touched = true"
             />
-            <UiInput :model-value="profile.email ?? ''" label="Email" disabled />
-            <UiInput :model-value="roleLabel" label="Vai trò" disabled />
+            <UiDefinitionList>
+              <UiDefinitionItem label="Email" :value="profile.email" />
+              <UiDefinitionItem label="Vai trò" :value="roleLabel" />
+            </UiDefinitionList>
             <UiButton type="submit" :loading="saving" :disabled="!dirty">
               Lưu thay đổi
             </UiButton>
