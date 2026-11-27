@@ -22,7 +22,7 @@ const submitUpdate = vi.fn()
 const lazyFetch = vi.fn()
 const slot = defineComponent({ setup: (_, { slots }) => () => h('div', [slots.default?.(), slots.actions?.(), slots.footer?.()]) })
 const form = defineComponent({ props: ['modelValue'], emits: ['submit', 'select-id-image'], setup: (_, { emit }) => () => h('button', { 'data-test': 'edit-form', onClick: () => emit('submit', {}) }, 'Save') })
-const stubs = Object.fromEntries(['UiPageHeader', 'UiAlert', 'UiSurfacePanel', 'UiDefinitionList', 'UiDefinitionItem', 'UiBadge', 'UiListRow', 'UiButton', 'NuxtLink', 'UiModal', 'UiTable', 'UiEmptyState'].map(name => [name, slot]))
+const stubs = Object.fromEntries(['UiPageHeader', 'UiAlert', 'UiSurfacePanel', 'UiDefinitionList', 'UiDefinitionItem', 'UiBadge', 'UiListRow', 'UiButton', 'NuxtLink', 'UiModal', 'UiEmptyState'].map(name => [name, slot]))
 const combobox = defineComponent({ name: 'UiCombobox', props: ['options', 'modelValue'], emits: ['update:modelValue', 'search'], template: '<div />' })
 const allStubs = { ...stubs, IconArrowUpRight: true, IconDocument: true, IconDocumentText: true, IconDoor: true, IconMail: true, IconPhone: true, IconUsers: true, UiTextarea: true, UiDropdownMenu: slot, UiDropdownMenuItem: defineComponent({ setup: (_, { slots }) => () => h('button', slots.default?.()) }), UiButton: defineComponent({ setup: (_, { slots }) => () => h('button', slots.default?.()) }), TenantDetailHero: Hero, TenantBulkActionsBar: bulkBar, AppPullToRefresh: slot, TenantListToolbar: true, TenantBulkCreateModal: true, TenantExportModal: true, TenantForm: form, UiConfirmModal: true, UiSkeleton: true, UiCombobox: combobox, UiInput: true, UiStatusBadge: true }
 

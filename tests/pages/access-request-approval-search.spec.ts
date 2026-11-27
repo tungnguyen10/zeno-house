@@ -30,6 +30,13 @@ describe('access requests polish', () => {
     expect(page).not.toContain('label="Trạng thái" :options="statusOptions"')
   })
 
+  it('lists requests as rows with an initials avatar rather than a table', () => {
+    expect(page).not.toContain('<UiTable')
+    expect(page).toContain('role="list"')
+    expect(page).toContain('userInitials(row.fullName, row.email)')
+    expect(page).toContain('title="Không có yêu cầu"')
+  })
+
   it('uses product role names and huỷ spelling', () => {
     expect(page).toContain("{ value: 'owner', label: 'Chủ nhà' }")
     expect(page).toContain("{ value: 'manager', label: 'Quản lý' }")

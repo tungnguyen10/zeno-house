@@ -40,6 +40,17 @@ describe('settings touch targets', () => {
   })
 
   it.each([
+    'tenant-accounts',
+    'access-requests',
+  ])('settings/%s uses the shared list pattern instead of a table', (name) => {
+    const src = source(`app/pages/dashboard/settings/${name}.vue`)
+    expect(src).not.toContain('<UiTable')
+    expect(src).toContain('role="list"')
+    expect(src).toContain('divide-y divide-ui-border border-y border-ui-border bg-ui-surface sm:mx-0 sm:overflow-hidden sm:rounded-lg sm:border')
+    expect(src).toContain('px-4 py-3')
+  })
+
+  it.each([
     ['managers', 'Thêm người dùng', 'Thêm'],
     ['tenant-accounts', 'Cấp tài khoản', 'Cấp'],
   ])('settings/%s shortens its primary action below sm without losing the accessible name', (name, full, short) => {

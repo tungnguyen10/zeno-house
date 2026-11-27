@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import type { UiTableColumn } from '~/components/ui/UiTable.vue'
 import type { Tenant } from '~/types/tenants'
 import type { ApiSuccess } from '~/types/api'
 import type {
@@ -60,12 +59,6 @@ const filteredAccounts = computed(() => {
     [account.tenantName, account.tenantCode, account.email].some(value => value?.toLocaleLowerCase('vi').includes(needle)),
   )
 })
-const columns: UiTableColumn<TenantAccountListItem>[] = [
-  { key: 'tenant', label: 'Khách thuê' },
-  { key: 'email', label: 'Email đăng nhập', hideOnMobile: true },
-  { key: 'health', label: 'Liên kết', hideOnMobile: true },
-  { key: 'actions', action: true, width: 'w-14' },
-]
 
 // ── Provision + tenant search ────────────────────────────────────────────────
 const provisionOpen = ref(false)
@@ -306,32 +299,41 @@ onMounted(() => {
       {{ getApiErrorMessage(error, 'Hãy tải lại trang và thử lại.') }}
     </UiAlert>
 
-    <UiTable
+    <div v-else-if="status === 'pending'" class="space-y-2" aria-busy="true">
+      <UiSkeleton v-for="i in 3" :key="i" class="h-16 w-full" />
+    </div>
+
+    <UiEmptyState
+      v-else-if="filteredAccounts.length === 0"
+      :variant="query ? 'search' : 'default'"
+      :title="query ? 'Không tìm thấy tài khoản' : 'Chưa có tài khoản nào'"
+      :description="query ? 'Thử tên, mã hoặc email khác.' : 'Nhấn “Cấp tài khoản” để tạo tài khoản portal cho một khách thuê.'"
+    />
+
+    <ul
       v-else
-      :rows="filteredAccounts"
-      :columns="columns"
-      row-key="tenantId"
-      :loading="status === 'pending'"
-      caption="Danh sách tài khoản portal của người thuê"
-      :empty-title="query ? 'Không tìm thấy tài khoản' : 'Chưa có tài khoản nào'"
-      :empty-description="query ? 'Thử tên, mã hoặc email khác.' : 'Nhấn “Cấp tài khoản” để tạo tài khoản portal cho một khách thuê.'"
+      role="list"
+      class="-mx-4 divide-y divide-ui-border border-y border-ui-border bg-ui-surface sm:mx-0 sm:overflow-hidden sm:rounded-lg sm:border"
     >
-      <template #cell-tenant="{ row }">
-        <div class="min-w-0">
-          <p class="break-words font-medium text-ui-primary">{{ row.tenantName }}</p>
-          <p class="text-xs text-ui-muted">{{ row.tenantCode }}</p>
-          <p class="mt-1 break-all text-xs text-ui-muted md:hidden">{{ row.email ?? 'Không có email Auth' }}</p>
-          <UiStatusBadge class="mt-2 md:hidden" :status="row.health === 'missing_auth' ? row.health : row.status" />
+      <li
+        v-for="row in filteredAccounts"
+        :key="row.tenantId"
+        :data-tenant-id="row.tenantId"
+        class="flex items-center gap-3 px-4 py-3"
+      >
+        <div class="min-w-0 flex-1">
+          <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <p class="truncate text-sm font-medium text-ui-primary">{{ row.tenantName }}</p>
+            <UiStatusBadge :status="row.health === 'missing_auth' ? row.health : row.status" />
+          </div>
+          <p class="truncate text-xs text-ui-muted">
+            <span class="font-mono">{{ row.tenantCode }}</span>
+            <span aria-hidden="true"> · </span>
+            <span v-if="row.email">{{ row.email }}</span>
+            <span v-else class="text-status-warning">Không có email Auth</span>
+          </p>
         </div>
-      </template>
-      <template #cell-email="{ row }">
-        <span :class="row.email ? 'text-ui-primary' : 'text-status-warning'">{{ row.email ?? 'Không tìm thấy' }}</span>
-      </template>
-      <template #cell-health="{ row }">
-        <UiStatusBadge :status="row.health === 'missing_auth' ? row.health : row.status" />
-      </template>
-      <template #cell-actions="{ row }">
-        <UiDropdownMenu class="ml-auto" trigger-class="min-h-11 min-w-11 md:min-h-9 md:min-w-9" :aria-label="`Thao tác cho ${row.tenantName}`">
+        <UiDropdownMenu class="shrink-0" trigger-class="min-h-11 min-w-11 md:min-h-9 md:min-w-9" :aria-label="`Thao tác cho ${row.tenantName}`">
           <UiDropdownMenuItem
             :disabled="row.health !== 'linked' || busyTenantId === row.tenantId"
             :loading="busyTenantId === row.tenantId"
@@ -346,8 +348,8 @@ onMounted(() => {
             {{ row.health === 'missing_auth' ? 'Dọn liên kết' : 'Gỡ quyền truy cập' }}
           </UiDropdownMenuItem>
         </UiDropdownMenu>
-      </template>
-    </UiTable>
+      </li>
+    </ul>
 
     <section v-if="canReconcileOrphans" class="mt-8 space-y-3" aria-label="Tài khoản Auth mồ côi">
       <UiAlert v-if="orphansError" severity="danger" title="Không thể kiểm tra tài khoản mồ côi">
