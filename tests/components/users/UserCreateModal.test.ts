@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { defineComponent, h } from 'vue'
 import UserCreateModal from '~/components/users/UserCreateModal.vue'
+import UiCheckboxReal from '~/components/ui/UiCheckbox.vue'
 
 const UiInput = defineComponent({
   props: ['modelValue', 'label', 'error'],
@@ -74,13 +75,12 @@ describe('UserCreateModal', () => {
     expect(wrapper.find('button[aria-pressed]').exists()).toBe(false)
   })
 
-  it('gives each building checkbox a 44px row below sm', () => {
-    const wrapper = mount(UserCreateModal, { props, global: { stubs } })
-    const row = wrapper.get('input[data-building]').element.closest('label')!.parentElement!
+  it('gives each building checkbox label a 44px hit area below sm', () => {
+    const wrapper = mount(UserCreateModal, { props, global: { stubs: { ...stubs, UiCheckbox: UiCheckboxReal, IconCheckSmall: true } } })
+    const label = wrapper.get('fieldset label')
 
-    expect(row.className).toContain('min-h-11')
-    expect(row.className).toContain('items-center')
-    expect(row.className).toContain('sm:min-h-0')
+    expect(label.classes()).toEqual(expect.arrayContaining(['min-h-11', 'items-center', 'sm:min-h-0']))
+    expect(label.element.parentElement!.parentElement!.className).not.toContain('min-h-11')
   })
 
   it('shows a server error inside the modal and keeps entered data', async () => {

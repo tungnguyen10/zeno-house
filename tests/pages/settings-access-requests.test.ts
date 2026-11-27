@@ -94,6 +94,18 @@ describe('access requests page', () => {
     expect(row.text()).not.toContain('Tiếp tục')
   })
 
+  it('names each row action after the requester', async () => {
+    requests.value = [
+      { ...baseRequest, id: 'r10', email: 'p@x.com', fullName: 'Phạm P', status: 'pending', emailVerified: true, decisionRole: null },
+      { ...baseRequest, id: 'r11', email: 'q@x.com', fullName: null, status: 'processing', emailVerified: true, decisionRole: null },
+    ]
+    const wrapper = await mountPage()
+    const label = (id: string) => wrapper.get(`[data-request-id="${id}"]`).findAll('button').map(b => b.attributes('aria-label'))
+
+    expect(label('r10')).toEqual(['Từ chối yêu cầu của Phạm P', 'Duyệt yêu cầu của Phạm P'])
+    expect(label('r11')).toEqual(['Tiếp tục duyệt yêu cầu của q@x.com'])
+  })
+
   it('offers actions for a verified pending request', async () => {
     requests.value = [{ ...baseRequest, id: 'r2', email: 'b@x.com', fullName: 'B', status: 'pending', emailVerified: true, decisionRole: null }]
     const wrapper = await mountPage()

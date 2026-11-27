@@ -90,6 +90,7 @@ describe('tenant accounts page', () => {
 
   it('shows three skeleton rows while loading and the empty state when there are no accounts', async () => {
     status.value = 'pending'
+    accounts.value = []
     const loading = await mountPage()
     expect(loading.findAll('[data-skeleton]')).toHaveLength(3)
 
@@ -97,6 +98,15 @@ describe('tenant accounts page', () => {
     accounts.value = []
     const empty = await mountPage()
     expect(empty.get('[data-empty] h3').text()).toBe('Chưa có tài khoản nào')
+  })
+
+  it('keeps loaded rows rendered while a refetch is pending', async () => {
+    const wrapper = await mountPage()
+    status.value = 'pending'
+    await flushPromises()
+
+    expect(wrapper.findAll('[data-tenant-id]')).toHaveLength(2)
+    expect(wrapper.find('[data-skeleton]').exists()).toBe(false)
   })
 
   it('shows the load error instead of the list', async () => {

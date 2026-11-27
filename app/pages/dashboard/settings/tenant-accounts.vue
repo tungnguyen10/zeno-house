@@ -299,7 +299,7 @@ onMounted(() => {
       {{ getApiErrorMessage(error, 'Hãy tải lại trang và thử lại.') }}
     </UiAlert>
 
-    <div v-else-if="status === 'pending'" class="space-y-2" aria-busy="true">
+    <div v-else-if="status === 'pending' && accounts.length === 0" class="space-y-2" aria-busy="true">
       <UiSkeleton v-for="i in 3" :key="i" class="h-16 w-full" />
     </div>
 

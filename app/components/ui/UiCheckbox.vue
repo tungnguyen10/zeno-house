@@ -11,7 +11,8 @@ const props = withDefaults(defineProps<{
   disabled?: boolean
   id?: string
   labelClass?: string
-  /** Render a partial / mixed state (e.g. "select all" header with some rows selected). */
+  /** Extra classes for the clickable row (`<label>`), e.g. a touch-size min height. */
+  rowClass?: string  /** Render a partial / mixed state (e.g. "select all" header with some rows selected). */
   indeterminate?: boolean
   /** Accessible label when no visible `label` is rendered. */
   ariaLabel?: string
@@ -51,7 +52,7 @@ const boxClass = computed(() =>
   >
     <label
       :for="checkboxId"
-      :class="clsx('flex items-start gap-2', disabled && 'cursor-not-allowed')"
+      :class="clsx('flex items-start gap-2', disabled && 'cursor-not-allowed', rowClass)"
     >
       <span class="relative flex size-4 shrink-0 items-center justify-center">
         <input

@@ -264,9 +264,9 @@ function formatDate(value: string) {
         </div>
         <div class="flex items-center justify-end gap-2 sm:shrink-0">
           <template v-if="row.status === 'pending' || row.status === 'processing'">
-            <UiButton v-if="row.status === 'pending'" class="min-h-11 sm:min-h-0" size="sm" variant="ghost" @click="openRejection(row)">Từ chối</UiButton>
+            <UiButton v-if="row.status === 'pending'" class="min-h-11 sm:min-h-0" size="sm" variant="ghost" :aria-label="`Từ chối yêu cầu của ${row.fullName || row.email}`" @click="openRejection(row)">Từ chối</UiButton>
             <UiBadge v-if="!row.emailVerified" variant="warning">Chưa xác minh email</UiBadge>
-            <UiButton v-else class="min-h-11 sm:min-h-0" size="sm" @click="openApproval(row)">{{ row.status === 'processing' ? 'Tiếp tục' : 'Duyệt' }}</UiButton>
+            <UiButton v-else class="min-h-11 sm:min-h-0" size="sm" :aria-label="`${row.status === 'processing' ? 'Tiếp tục duyệt' : 'Duyệt'} yêu cầu của ${row.fullName || row.email}`" @click="openApproval(row)">{{ row.status === 'processing' ? 'Tiếp tục' : 'Duyệt' }}</UiButton>
           </template>
           <UiBadge v-else-if="row.status === 'approved'" variant="neutral">{{ roleLabel(row.decisionRole) }}</UiBadge>
           <span v-else class="text-xs text-ui-muted">Đã từ chối</span>
