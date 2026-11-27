@@ -1,6 +1,7 @@
 name: Release
 
 on:
+  status:
   workflow_dispatch:
     inputs:
       version:
@@ -13,7 +14,7 @@ on:
         type: string
 
 concurrency:
-  group: release
+  group: release-${{ inputs.commit || github.event.sha }}
   cancel-in-progress: false
 
 permissions:
@@ -22,13 +23,20 @@ permissions:
 jobs:
   release:
     name: Tag and publish the approved version
-    if: github.ref == 'refs/heads/main'
+    if: >-
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'status' && github.event.sender.login == 'vercel[bot]' &&
+       github.event.state == 'success' && github.event.context == 'Vercel' &&
+       github.event.description == 'Deployment has completed' &&
+       startsWith(github.event.target_url, 'https://vercel.com/zenocorp/zeno-house/'))
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      statuses: read
     env:
       RELEASE_VERSION: ${{ inputs.version }}
-      RELEASE_COMMIT: ${{ inputs.commit }}
+      RELEASE_COMMIT: ${{ inputs.commit || github.event.sha }}
+      RELEASE_EVENT: ${{ github.event_name }}
 
     steps:
       - uses: actions/checkout@v4
@@ -38,8 +46,26 @@ jobs:
           persist-credentials: false
 
       - name: Verify the version bump on main
+        id: verify
         shell: bash
         run: |
+          if [[ "$RELEASE_EVENT" == status ]]; then
+            if [[ ! "$RELEASE_COMMIT" =~ ^[a-f0-9]{40}$ ]] ||
+               ! git rev-list --first-parent HEAD | grep -Fx "$RELEASE_COMMIT" > /dev/null; then
+              echo "Deployment is outside the first-parent history of main."
+              exit 0
+            fi
+            version_at() {
+              git show "$1:package.json" | node -pe "JSON.parse(require('fs').readFileSync(0)).version"
+            }
+            RELEASE_VERSION="$(version_at "$RELEASE_COMMIT")"
+            if [[ "$(version_at "${RELEASE_COMMIT}^")" == "$RELEASE_VERSION" ]]; then
+              echo "Deployment does not introduce a new version."
+              exit 0
+            fi
+            export RELEASE_VERSION
+          fi
+
           if [[ ! "$RELEASE_VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ||
                 ! "$RELEASE_COMMIT" =~ ^[a-f0-9]{40}$ ]]; then
             echo "::error::Provide a stable version and a full lowercase commit SHA."
@@ -64,20 +90,25 @@ jobs:
           const manifest = read('release-package.json');
           const lock = read('release-lock.json');
 
-          if ([manifest.version, lock.version, lock.packages?.['']?.version,
-               read('main-package.json').version].some((version) => version !== expected)) {
-            throw new Error('The selected commit, its lockfile, and main must agree on the release version.');
+          if ([manifest.version, lock.version, lock.packages?.['']?.version]
+              .some((version) => version !== expected)) {
+            throw new Error('The selected commit and its lockfile must agree on the release version.');
           }
 
           if (read('previous-package.json').version === expected) {
             throw new Error('Choose the main commit that introduced the release version.');
           }
           NODE
+          echo "version=$RELEASE_VERSION" >> "$GITHUB_OUTPUT"
+          echo "latest=$(node -p "require(process.argv[1]).version === process.env.RELEASE_VERSION" "$RUNNER_TEMP/main-package.json")" >> "$GITHUB_OUTPUT"
 
       - name: Publish from the verified tag
+        if: steps.verify.outputs.version != ''
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
+          RELEASE_VERSION: ${{ steps.verify.outputs.version }}
+          MARK_LATEST: ${{ steps.verify.outputs.latest }}
         run: |
           tag="v$RELEASE_VERSION"
           repo="repos/$GITHUB_REPOSITORY"
@@ -99,6 +130,15 @@ jobs:
               exit 1
             fi
           }
+
+          vercel_status="$(gh api "$repo/commits/$RELEASE_COMMIT/statuses?per_page=100" --jq '
+            map(select(.creator.login == "vercel[bot]" and .context == "Vercel" and
+                       ((.target_url // "") | startswith("https://vercel.com/zenocorp/zeno-house/"))))
+            | first | if . == null then "" else [.state, .description] | @tsv end')"
+          if [[ "$vercel_status" != $'success\tDeployment has completed' ]]; then
+            echo "::error::The selected commit does not have a successful Vercel deployment."
+            exit 1
+          fi
 
           remote_tag="$(read_tag)"
           release="$(gh api --paginate "$repo/releases?per_page=100" --jq \
@@ -124,4 +164,4 @@ jobs:
           fi
 
           gh release create "$tag" --repo "$GITHUB_REPOSITORY" \
-            --verify-tag --title "$tag" --generate-notes
+            --verify-tag --title "$tag" --generate-notes --latest="$MARK_LATEST"
